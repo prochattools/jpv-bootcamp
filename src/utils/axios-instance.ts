@@ -1,0 +1,8 @@
+export const BASE_URL = "https://microsaasfast-cms-0cdd9366f0c0.herokuapp.com";
+export const getToken =
+  "9ad52acd0147467ce24fbd2362643e65be6573ab2527e99c199a91eacfda388bf2112fd797257938976769ebab01092914ae2cd51f0823c03c8a35cc075cba4a9ec1fb91e7a756a6cdb6c40ca3ce3629f34df55d105212c0098b63d51e5982008283bbfea1923d149f14d7fea540799ac2c6b155641ca54c59292d04bbfc9242";
+export const isLocal = false;
+
+// export const BASE_URL = "http://localhost:1337";
+// export const getToken =
+//   "b1dc77e96a25f2b9fa64d2d7f292cd448a87cceada758d23091afc65f0768da3978b105ff59acafc7548b7a83218838e3815933f2720ed06220d48419635a991a42653908f46344862260b8bcd88aaf8fbe476b260985abce279d9a53fcaf09025067513666ec13a8ccbeb68cd2cc9df012db750e47887ccaf1d3b494344b734";

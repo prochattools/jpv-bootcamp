@@ -1,0 +1,79 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+// .lucide {
+//     stroke: white;
+//     fill: white;
+//     width: 24px;
+//     height: 24px;
+// }
+
+::-webkit-scrollbar {
+	width: 0px;
+}
+
+.dark {
+	background: rgb(1 8 20 / var(--tw-bg-opacity, 1))
+}
+
+.blocks-class a {
+	color: #0000ee !important;
+	text-decoration: underline;
+}
+
+.blocks-class a:hover {
+	color: darkblue !important;
+}
+
+.video-class iframe {
+	max-width: 1050px;
+	width: 100%;
+	height: 550px;
+	border-radius: 16px;
+	margin: 0 auto;
+}
+
+@media (max-width: 1023px) {
+	.video-class iframe {
+		height: 450px;
+		max-width: 100%;
+	}
+}
+
+@media (max-width: 767px) {
+	.video-class iframe {
+		height: 400px;
+		max-width: 100%;
+	}
+}
+
+@media (max-width: 600px) {
+	.video-class iframe {
+		height: 330px;
+		max-width: 100%;
+	}
+}
+
+#theme-toggle:checked {
+	background-color: #373c53;
+}
+
+#theme-toggle:checked ~ span:last-child {
+	--tw-translate-x: 1.75rem;
+}
+
+.close-div button {
+	color: #fff;
+	display: none;
+}
+
+.glass {
+	background: #121a32;
+	background: linear-gradient(
+		155deg,
+		rgba(5, 0, 107, 0) 0%,
+		rgba(0, 50, 69, 0.18) 57%,
+		rgba(0, 30, 54, 0.24) 100%
+	);
+}
