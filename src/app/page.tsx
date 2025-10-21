@@ -88,22 +88,22 @@ export default function HomePage() {
     <main className="bg-jpv-gradient min-h-screen text-jpv-gray-50">
       <header className="bg-black/80 backdrop-blur border-b border-jpv-gray-700/40">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-8 px-6 py-5">
-          <div className="flex items-center gap-3">
-            <div className="h-14 w-14 overflow-hidden rounded-xl">
+          <div className="flex items-center gap-4">
+            <div className="h-[72px] w-[72px] overflow-hidden rounded-xl">
               <Image
                 src="/images/jpv-logo.jpg"
                 alt="JPV • Jesus Property Venture logo"
-                width={56}
-                height={56}
+                width={72}
+                height={72}
                 className="h-full w-full object-cover"
                 priority
               />
             </div>
             <div className="leading-tight">
-              <span className="block text-xl font-semibold tracking-tight text-white">
-                JPV {"\u2022"} Jesus Property Venture
+              <span className="block text-2xl font-semibold tracking-tight text-white">
+                JPV
               </span>
-              <span className="block text-sm font-medium text-jpv-green">Our passion is people</span>
+              <span className="block text-base font-medium text-jpv-green">Our passion is people</span>
             </div>
           </div>
           <nav className="hidden lg:flex items-center gap-8 text-sm text-jpv-gray-200">
