@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 export default function HomePage() {
   const navLinks = [
     { label: "Curriculum", href: "#curriculum" },
@@ -86,11 +88,23 @@ export default function HomePage() {
     <main className="bg-jpv-gradient min-h-screen text-jpv-gray-50">
       <header className="bg-black/80 backdrop-blur border-b border-jpv-gray-700/40">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-8 px-6 py-5">
-          <div className="leading-tight">
-            <span className="block text-xl font-semibold tracking-tight text-white">
-              JPV {"\u2022"} Jesus Property Venture
-            </span>
-            <span className="block text-sm font-medium text-jpv-green">Our passion is people</span>
+          <div className="flex items-center gap-3">
+            <div className="h-14 w-14 overflow-hidden rounded-xl">
+              <Image
+                src="/images/jpv-logo.jpg"
+                alt="JPV • Jesus Property Venture logo"
+                width={56}
+                height={56}
+                className="h-full w-full object-cover"
+                priority
+              />
+            </div>
+            <div className="leading-tight">
+              <span className="block text-xl font-semibold tracking-tight text-white">
+                JPV {"\u2022"} Jesus Property Venture
+              </span>
+              <span className="block text-sm font-medium text-jpv-green">Our passion is people</span>
+            </div>
           </div>
           <nav className="hidden lg:flex items-center gap-8 text-sm text-jpv-gray-200">
             {navLinks.map((item) => (
@@ -376,8 +390,19 @@ export default function HomePage() {
         </div>
       </section>
       <footer className="border-t border-jpv-gray-700/40 px-6 py-10">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 text-sm text-jpv-gray-500 sm:flex-row">
-          <span>© {new Date().getFullYear()} JPV {"\u2022"} Jesus Property Venture. All rights reserved.</span>
+        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-6 text-sm text-jpv-gray-500 sm:flex-row">
+          <div className="flex flex-col items-center gap-3 text-center sm:flex-row sm:text-left">
+            <div className="h-14 w-14 overflow-hidden rounded-xl">
+              <Image
+                src="/images/jpv-logo.jpg"
+                alt="JPV • Jesus Property Venture logo"
+                width={56}
+                height={56}
+                className="h-full w-full object-cover"
+              />
+            </div>
+            <span>© {new Date().getFullYear()} JPV {"\u2022"} Jesus Property Venture. All rights reserved.</span>
+          </div>
           <div className="flex items-center gap-6">
             <a href="#terms" className="transition hover:text-jpv-green">
               Terms

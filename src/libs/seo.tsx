@@ -52,7 +52,7 @@ export const getSEOTags = ({
       siteName: (openGraph?.siteName as string) || config.appName,
       images: [
         {
-          url: `${homeUrl}/opengraph-image.png`,
+          url: `${homeUrl}/images/jpv-logo.jpg`,
           width: 1200,
           height: 630,
           alt: config.appTagline,
@@ -64,7 +64,7 @@ export const getSEOTags = ({
     twitter: {
       title: openGraph?.title || defaultTitle,
       description: openGraph?.description || config.appDescription,
-      images: [`${homeUrl}/twitter-image.png`],
+      images: [`${homeUrl}/images/jpv-logo.jpg`],
       card: "summary_large_image",
       creator: "@dennis_babych",
     },
@@ -135,9 +135,9 @@ export const renderSchemaTags = () => {
           alternateName: "JPV Bootcamp",
           slogan: config.appTagline,
           description: config.appDescription,
-          image: `${homeUrl}/opengraph-image.png`,
+          image: `${homeUrl}/images/jpv-logo.jpg`,
           url: `${homeUrl}/`,
-          logo: `${homeUrl}/icon.png`,
+          logo: `${homeUrl}/images/jpv-logo.jpg`,
           sameAs: [`${homeUrl}/`],
           areaServed: {
             "@type": "Country",
