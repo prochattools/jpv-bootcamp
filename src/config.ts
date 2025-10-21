@@ -1,31 +1,21 @@
+import type { ConfigProps } from '@/types/config'
 import themes from 'daisyui/src/theming/themes'
 
-interface ConfigProps {
-	appName: string
-	appDescription: string
-	domainName: string
-	colors: {
-		theme: string
-		main: string
-	}
-	resend: {
-		fromAdmin: string
-		supportEmail: string
-		forwardRepliesTo: string
-		subjects: {
-			welcomeEmail: string
-		}
-	}
-}
+const domainName =
+	process.env.NEXT_PUBLIC_APP_DOMAIN ??
+	process.env.NEXT_PUBLIC_APP_URL?.replace(/^https?:\/\//, '').replace(/\/$/, '') ??
+	'jpvbootcamp.com'
 
 const config: ConfigProps = {
 	// REQUIRED
-	appName: 'Your App Name',
+	appName: 'JPV • Jesus Property Venture',
 	// REQUIRED: a short description of your app for SEO tags (can be overwritten)
 	appDescription:
-		'A clean, fast Next.js landing page boilerplate optimized for email collection and lead generation.',
+		'Members-only property investing bootcamp with coaching, tools, and a supportive community for ambitious deal makers.',
+	appTagline: 'Train for Property Success with JPV',
+	appPreheader: 'Learn a proven deal-making framework with mentors, templates, and real-world accountability.',
 	// REQUIRED (no https://, not trialing slash at the end, just the naked domain)
-	domainName: 'yourdomain.com',
+	domainName,
 	colors: {
 		// REQUIRED — The DaisyUI theme to use (added to the main layout.js). Leave blank for default (light & dark mode). If you any other theme than light/dark, you need to add it in config.tailwind.js in daisyui.themes.
 		theme: 'light',

@@ -1,5 +1,5 @@
 import { Providers } from '@/components/providers'
-import { getSEOTags } from '@/libs/seo'
+import { getSEOTags, renderSchemaTags } from '@/libs/seo'
 import { Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import { ReactNode } from 'react'
@@ -20,6 +20,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
 	return (
 		<html lang='en' suppressHydrationWarning>
 			<body className={font.className}>
+				{renderSchemaTags()}
 				<Providers>
 					<main className='min-h-screen bg-background'>{children}</main>
 				</Providers>

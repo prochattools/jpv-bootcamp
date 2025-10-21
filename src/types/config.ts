@@ -25,6 +25,8 @@ export type Theme =
 export interface ConfigProps {
   appName: string;
   appDescription: string;
+  appTagline: string;
+  appPreheader: string;
   domainName: string;
   colors: {
     theme: Theme;
