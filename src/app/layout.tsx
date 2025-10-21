@@ -14,7 +14,7 @@ export const viewport: Viewport = {
 	initialScale: 1,
 }
 
-export const metadata = getSEOTags()
+export const metadata = getSEOTags({ canonicalUrlRelative: '/' })
 
 export default function RootLayout({ children }: { children: ReactNode }) {
 	return (

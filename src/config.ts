@@ -9,11 +9,23 @@ const domainName =
 const config: ConfigProps = {
 	// REQUIRED
 	appName: 'JPV • Jesus Property Venture',
+	author: 'JPV • Jesus Property Venture',
+	siteTitle: 'JPV • Jesus Property Venture — Train for Property Success',
 	// REQUIRED: a short description of your app for SEO tags (can be overwritten)
 	appDescription:
-		'Members-only property investing bootcamp with coaching, tools, and a supportive community for ambitious deal makers.',
-	appTagline: 'Train for Property Success with JPV',
-	appPreheader: 'Learn a proven deal-making framework with mentors, templates, and real-world accountability.',
+		'Learn a proven deal-making framework with coaching, tools, and a community built for ambitious property investors.',
+	appTagline: 'Train for Property Success',
+	appPreheader: 'Join thousands learning to find, fund, and grow profitable property deals with JPV.',
+	ogDescription: 'Master property investing with step-by-step guidance, live coaching, and community support.',
+	twitterDescription: 'Join thousands learning to find, fund, and grow profitable property deals with JPV.',
+	canonicalPath: '/',
+	socialPreviewImage: '/assets/jpv-social-preview.jpg',
+	organizationLogo: '/assets/jpv-logo.png',
+	organizationSameAs: [
+		'https://www.facebook.com/jpvbootcamp',
+		'https://www.instagram.com/jpvbootcamp',
+		'https://www.linkedin.com/company/jpvbootcamp',
+	],
 	// REQUIRED (no https://, not trialing slash at the end, just the naked domain)
 	domainName,
 	colors: {

@@ -24,9 +24,17 @@ export type Theme =
 
 export interface ConfigProps {
   appName: string;
+  author: string;
+  siteTitle: string;
   appDescription: string;
   appTagline: string;
   appPreheader: string;
+  ogDescription: string;
+  twitterDescription: string;
+  canonicalPath: string;
+  socialPreviewImage: string;
+  organizationLogo: string;
+  organizationSameAs: string[];
   domainName: string;
   colors: {
     theme: Theme;
