@@ -144,6 +144,9 @@ export default function HomePage() {
             <p className="text-sm uppercase tracking-[0.4rem] text-jpv-green/80">Property mastery starts here</p>
             <h1 className="text-4xl font-bold leading-tight sm:text-5xl md:text-6xl">
               Train for Property Success with JPV
+              <span className="mt-3 block text-lg font-semibold text-jpv-green sm:text-xl">
+                Empowering Christians through property training to steward wealth with faith and purpose
+              </span>
             </h1>
             <p className="mx-auto max-w-2xl text-base text-jpv-gray-400 sm:text-lg">
               Learn a proven deal-making framework with coaching, tools, and a community built for ambitious property investors.
