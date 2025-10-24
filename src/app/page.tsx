@@ -115,13 +115,17 @@ export default function HomePage() {
           </nav>
           <div className="hidden md:flex items-center gap-3">
             <a
-              href="#signin"
+              href="https://portal.jpvbootcamp.com/community/?fcom_action=auth"
+              target="_blank"
+              rel="noopener noreferrer"
               className="rounded-full border border-jpv-gray-700 px-5 py-2 text-sm text-jpv-gray-200 transition hover:bg-jpv-bg-light hover:text-white"
             >
               Sign in
             </a>
             <a
-              href="#join"
+              href="https://portal.jpvbootcamp.com/community/?fcom_action=auth&form=register"
+              target="_blank"
+              rel="noopener noreferrer"
               className="rounded-full bg-jpv-green px-5 py-2 text-sm font-semibold text-black shadow-jpv-glow transition hover:bg-jpv-green-hover"
             >
               Join
