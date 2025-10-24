@@ -408,7 +408,7 @@ export default function HomePage() {
                 className="h-full w-full object-cover"
               />
             </div>
-            <span>© {new Date().getFullYear()} JPV {"\u2022"} Jesus Property Venture. All rights reserved.</span>
+            <span>© {new Date().getFullYear()} JPV. All rights reserved.</span>
           </div>
           <div className="flex items-center gap-6">
             <a href="#terms" className="transition hover:text-jpv-green">
