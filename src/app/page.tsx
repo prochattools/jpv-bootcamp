@@ -69,7 +69,7 @@ export default function HomePage() {
       description: "Everything to get profitable",
       features: ["Full course library", "Live monthly Q&A", "Deal analysis templates", "Active community access"],
       ctaLabel: "Start Pro",
-      ctaHref: "#pro",
+      ctaHref: "/api/stripe/checkout?plan=pro",
       highlight: true,
       badge: "Most popular",
       subcopy: "7-day money-back guarantee",
@@ -80,7 +80,7 @@ export default function HomePage() {
       description: "Hands-on support",
       features: ["All Pro features", "Weekly group coaching", "1:1 deal review (monthly)", "Priority support"],
       ctaLabel: "Apply for VIP",
-      ctaHref: "#vip",
+      ctaHref: "/api/stripe/checkout?plan=vip",
       highlight: false,
     },
   ];
@@ -408,7 +408,17 @@ export default function HomePage() {
                 className="h-full w-full object-cover"
               />
             </div>
-            <span>© {new Date().getFullYear()} JPV. All rights reserved.</span>
+            <span>
+              © {new Date().getFullYear()} JPV. All rights reserved. Powered by{" "}
+              <a
+                href="https://prochat.tools"
+                target="_blank"
+                rel="nofollow noopener noreferrer"
+                className="no-underline transition hover:no-underline hover:font-bold hover:text-jpv-green-hover focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-jpv-green/60 focus-visible:ring-offset-2 focus-visible:ring-offset-jpv-bg-dark"
+              >
+                ProChat
+              </a>
+            </span>
           </div>
           <div className="flex items-center gap-6">
             <a href="#terms" className="transition hover:text-jpv-green">
