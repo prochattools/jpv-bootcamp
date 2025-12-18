@@ -1,6 +1,17 @@
+"use client";
+
+import { useState, type FormEvent } from "react";
 import Image from "next/image";
 
 export default function HomePage() {
+  const signInHref = "https://portal.jpvbootcamp.com/community/?fcom_action=auth";
+  const [isSupportOpen, setIsSupportOpen] = useState(false);
+  const [isHowItWorksOpen, setIsHowItWorksOpen] = useState(false);
+  const [isTermsOpen, setIsTermsOpen] = useState(false);
+  const [isPrivacyOpen, setIsPrivacyOpen] = useState(false);
+  const [supportName, setSupportName] = useState("");
+  const [supportEmail, setSupportEmail] = useState("");
+  const [supportQuestion, setSupportQuestion] = useState("");
   const navLinks = [
     { label: "Curriculum", href: "#curriculum" },
     { label: "Community", href: "#community" },
@@ -14,6 +25,7 @@ export default function HomePage() {
     { value: "900+", label: "Deals reviewed" },
   ];
   const coreFocus = ["FCA basics", "Deal analysis", "Funding", "Lettings"];
+  const showHeroHighlights = false;
   const learnSections = [
     {
       title: "Foundations",
@@ -60,19 +72,21 @@ export default function HomePage() {
       description: "Get a feel for it",
       features: ["2 intro lessons", "Weekly newsletter", "Community read-only", "Basic calculators"],
       ctaLabel: "Create free account",
-      ctaHref: "#starter",
+      ctaHref: signInHref,
+      ctaTarget: "_blank",
+      ctaRel: "nofollow noopener noreferrer",
       highlight: false,
     },
     {
       name: "Pro",
-      price: "£39/mo",
+      price: "£49/mo",
       description: "Everything to get profitable",
       features: ["Full course library", "Live monthly Q&A", "Deal analysis templates", "Active community access"],
       ctaLabel: "Start Pro",
       ctaHref: "/api/stripe/checkout?plan=pro",
       highlight: true,
       badge: "Most popular",
-      subcopy: "7-day money-back guarantee",
+      subcopy: "14-day money-back guarantee",
     },
     {
       name: "VIP",
@@ -84,9 +98,81 @@ export default function HomePage() {
       highlight: false,
     },
   ];
+  const onboardingSteps = [
+    {
+      title: "Create your account",
+      description: "Sign up, confirm your email, and unlock the member dashboard.",
+    },
+    {
+      title: "Set your strategy",
+      description: "Pick your path and get a starter plan tailored to your goals.",
+    },
+    {
+      title: "Join the community",
+      description: "Introduce yourself, join a channel, and start sharing your first deal.",
+    },
+  ];
+  const termsSections = [
+    {
+      title: "Membership access",
+      body: "Access is granted upon successful registration and may be updated as modules and community features evolve.",
+    },
+    {
+      title: "Acceptable use",
+      body: "Please use the community respectfully and do not share proprietary materials outside the platform.",
+    },
+    {
+      title: "Billing and cancellations",
+      body: "Plans renew automatically until canceled. You can cancel anytime from your account settings.",
+    },
+  ];
+  const privacySections = [
+    {
+      title: "Data we collect",
+      body: "We collect the name and email you provide, plus engagement details to improve your experience.",
+    },
+    {
+      title: "How we use data",
+      body: "Your data helps us deliver onboarding, support, and relevant training updates.",
+    },
+    {
+      title: "Your choices",
+      body: "You can request access or deletion of your data by contacting support.",
+    },
+  ];
+
+  const handleSupportSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+  };
+
+  const handleSupportCancel = () => {
+    const shouldClose = window.confirm(
+      "Are you sure you want to cancel? You will lose the message you have written."
+    );
+
+    if (!shouldClose) {
+      return;
+    }
+
+    setIsSupportOpen(false);
+    setSupportName("");
+    setSupportEmail("");
+    setSupportQuestion("");
+  };
+
+  const handleHowItWorksClose = () => {
+    setIsHowItWorksOpen(false);
+  };
+  const handleTermsClose = () => {
+    setIsTermsOpen(false);
+  };
+
+  const handlePrivacyClose = () => {
+    setIsPrivacyOpen(false);
+  };
   return (
-    <main className="bg-jpv-gradient min-h-screen text-jpv-gray-50">
-      <header className="bg-black/80 backdrop-blur border-b border-jpv-gray-700/40">
+    <main className="relative bg-jpv-gradient min-h-screen text-jpv-gray-50">
+      <header className="absolute inset-x-0 top-0 z-50 bg-black/80 backdrop-blur border-b border-jpv-gray-700/40">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-8 px-6 py-5">
           <div className="flex items-center gap-4">
             <div className="h-[72px] w-[72px] overflow-hidden rounded-xl">
@@ -115,7 +201,7 @@ export default function HomePage() {
           </nav>
           <div className="hidden md:flex items-center gap-3">
             <a
-              href="https://portal.jpvbootcamp.com/community/?fcom_action=auth"
+              href={signInHref}
               target="_blank"
               rel="noopener noreferrer"
               className="rounded-full border border-jpv-gray-700 px-5 py-2 text-sm text-jpv-gray-200 transition hover:bg-jpv-bg-light hover:text-white"
@@ -123,9 +209,7 @@ export default function HomePage() {
               Sign in
             </a>
             <a
-              href="https://portal.jpvbootcamp.com/community/?fcom_action=auth&form=register"
-              target="_blank"
-              rel="noopener noreferrer"
+              href="#pricing"
               className="rounded-full bg-jpv-green px-5 py-2 text-sm font-semibold text-black shadow-jpv-glow transition hover:bg-jpv-green-hover"
             >
               Join
@@ -142,7 +226,7 @@ export default function HomePage() {
           </button>
         </div>
       </header>
-      <section className="px-6 py-24 sm:py-28">
+      <section className="h-screen flex items-center justify-center px-6 py-24 sm:py-28">
         <div className="mx-auto flex max-w-6xl flex-col items-center gap-12 text-center">
           <div className="space-y-6">
             <p className="text-sm uppercase tracking-[0.4rem] text-jpv-green/80">Property mastery starts here</p>
@@ -158,7 +242,7 @@ export default function HomePage() {
           </div>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
             <a
-              href="#join"
+              href="#pricing"
               className="rounded-full bg-jpv-green px-10 py-3 text-base font-semibold text-black shadow-jpv-glow transition hover:bg-jpv-green-hover"
             >
               Start learning
@@ -170,30 +254,32 @@ export default function HomePage() {
               See curriculum
             </a>
           </div>
-          <p className="text-sm text-jpv-gray-400 sm:text-base">7-day money-back guarantee · Cancel anytime</p>
-          <div className="w-full max-w-4xl space-y-4 sm:space-y-6">
-            <div className="grid grid-cols-2 gap-4 sm:gap-6 md:grid-cols-4">
-              {coreFocus.map((topic) => (
-                <div
-                  key={topic}
-                  className="flex items-center justify-center rounded-full border border-jpv-gray-700/50 bg-jpv-bg-dark/40 px-4 py-4 text-sm font-medium text-jpv-gray-200 shadow-jpv-card backdrop-blur sm:px-6"
-                >
-                  {topic}
-                </div>
-              ))}
+          <p className="text-sm text-jpv-gray-400 sm:text-base">14-day money-back guarantee · Cancel anytime</p>
+          {showHeroHighlights ? (
+            <div className="w-full max-w-4xl space-y-4 sm:space-y-6">
+              <div className="grid grid-cols-2 gap-4 sm:gap-6 md:grid-cols-4">
+                {coreFocus.map((topic) => (
+                  <div
+                    key={topic}
+                    className="flex items-center justify-center rounded-full border border-jpv-gray-700/50 bg-jpv-bg-dark/40 px-4 py-4 text-sm font-medium text-jpv-gray-200 shadow-jpv-card backdrop-blur sm:px-6"
+                  >
+                    {topic}
+                  </div>
+                ))}
+              </div>
+              <div className="grid grid-cols-2 gap-4 sm:gap-6 md:grid-cols-4">
+                {stats.map((stat) => (
+                  <div
+                    key={stat.label}
+                    className="flex h-full flex-col items-center justify-center rounded-3xl border border-jpv-gray-700/50 bg-jpv-bg-light/60 p-6 text-center shadow-jpv-card backdrop-blur"
+                  >
+                    <div className="text-3xl font-semibold text-jpv-green md:text-4xl">{stat.value}</div>
+                    <p className="mt-2 text-sm text-jpv-gray-400">{stat.label}</p>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="grid grid-cols-2 gap-4 sm:gap-6 md:grid-cols-4">
-              {stats.map((stat) => (
-                <div
-                  key={stat.label}
-                  className="flex h-full flex-col items-center justify-center rounded-3xl border border-jpv-gray-700/50 bg-jpv-bg-light/60 p-6 text-center shadow-jpv-card backdrop-blur"
-                >
-                  <div className="text-3xl font-semibold text-jpv-green md:text-4xl">{stat.value}</div>
-                  <p className="mt-2 text-sm text-jpv-gray-400">{stat.label}</p>
-                </div>
-              ))}
-            </div>
-          </div>
+          ) : null}
         </div>
       </section>
       <section id="curriculum" className="px-6 py-24 sm:py-28">
@@ -256,23 +342,29 @@ export default function HomePage() {
             </div>
             <div className="flex flex-wrap gap-3">
               <a
-                href="#join"
+                href="#pricing"
                 className="inline-flex items-center justify-center rounded-full bg-jpv-green px-10 py-3 text-base font-semibold text-black shadow-jpv-glow transition hover:bg-jpv-green-hover"
               >
                 Unlock access
               </a>
-              <a
-                href="#how-it-works"
+              <button
+                type="button"
+                onClick={() => {
+                  setIsHowItWorksOpen(true);
+                  setIsSupportOpen(false);
+                  setIsTermsOpen(false);
+                  setIsPrivacyOpen(false);
+                }}
                 className="inline-flex items-center justify-center rounded-full border border-jpv-gray-600 px-10 py-3 text-base font-semibold text-jpv-gray-200 transition hover:border-jpv-green hover:text-white"
               >
                 How it works
-              </a>
+              </button>
             </div>
           </div>
           <div className="w-full max-w-md rounded-3xl border border-jpv-gray-700/50 bg-jpv-bg-light/70 p-8 shadow-jpv-card backdrop-blur">
             <div className="mb-6 flex items-center justify-between text-sm text-jpv-gray-400">
               <span>#deal-analysis</span>
-              <span>Live</span>
+              <span>Demo</span>
             </div>
             <div className="space-y-5 text-sm text-jpv-gray-200">
               {communityMessages.map((message) => {
@@ -316,7 +408,7 @@ export default function HomePage() {
           <div className="space-y-4 text-center">
             <h2 className="text-3xl font-semibold md:text-4xl">Simple pricing</h2>
             <p className="mx-auto max-w-2xl text-base text-jpv-gray-400 md:text-lg">
-              Choose a plan, cancel anytime. VAT included for UK customers.
+              Choose a plan, cancel anytime.
             </p>
           </div>
           <div className="grid gap-6 md:grid-cols-3">
@@ -358,6 +450,8 @@ export default function HomePage() {
                 <div className="mt-8 space-y-3 text-left">
                   <a
                     href={plan.ctaHref}
+                    target={plan.ctaTarget}
+                    rel={plan.ctaRel}
                     className={`inline-flex w-full items-center justify-center rounded-full px-6 py-3 text-sm font-semibold transition ${
                       plan.highlight
                         ? "bg-jpv-green text-black shadow-jpv-glow hover:bg-jpv-green-hover"
@@ -421,18 +515,319 @@ export default function HomePage() {
             </span>
           </div>
           <div className="flex items-center gap-6">
-            <a href="#terms" className="transition hover:text-jpv-green">
+            <button
+              type="button"
+              onClick={() => {
+                setIsTermsOpen(true);
+                setIsSupportOpen(false);
+                setIsHowItWorksOpen(false);
+                setIsPrivacyOpen(false);
+              }}
+              className="transition hover:text-jpv-green"
+            >
               Terms
-            </a>
-            <a href="#privacy" className="transition hover:text-jpv-green">
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setIsPrivacyOpen(true);
+                setIsSupportOpen(false);
+                setIsHowItWorksOpen(false);
+                setIsTermsOpen(false);
+              }}
+              className="transition hover:text-jpv-green"
+            >
               Privacy
-            </a>
-            <a href="#support" className="transition hover:text-jpv-green">
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setIsSupportOpen(true);
+                setIsHowItWorksOpen(false);
+                setIsTermsOpen(false);
+                setIsPrivacyOpen(false);
+              }}
+              className="transition hover:text-jpv-green"
+            >
               Support
-            </a>
+            </button>
           </div>
         </div>
       </footer>
+      {isHowItWorksOpen ? (
+        <div className="fixed inset-0 z-[55] flex items-center justify-center bg-black/60 px-6 py-10 backdrop-blur-sm animate-[modal-fade_0.35s_ease-out]">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="how-it-works-title"
+            aria-describedby="how-it-works-desc"
+            className="w-full max-w-xl rounded-3xl border border-jpv-gray-700/60 bg-jpv-bg-dark/90 p-6 shadow-jpv-card backdrop-blur animate-[modal-rise_0.35s_ease-out]"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 id="how-it-works-title" className="text-xl font-semibold text-white">
+                  How onboarding works
+                </h3>
+                <p id="how-it-works-desc" className="mt-1 text-sm text-jpv-gray-400">
+                  A quick overview of the first steps once you join.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleHowItWorksClose}
+                className="rounded-full border border-jpv-gray-700/60 p-2 text-jpv-gray-200 transition hover:border-jpv-green hover:text-jpv-green"
+                aria-label="Close onboarding steps"
+              >
+                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none">
+                  <path
+                    d="M7 7l10 10M17 7L7 17"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </button>
+            </div>
+            <div className="mt-6 space-y-3">
+              {onboardingSteps.map((step, index) => (
+                <div
+                  key={step.title}
+                  className="rounded-2xl border border-jpv-gray-700/60 bg-jpv-bg-dark/70 p-4"
+                >
+                  <div className="flex items-start gap-4">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-jpv-green/20 text-sm font-semibold text-jpv-green">
+                      {index + 1}
+                    </span>
+                    <div className="space-y-1">
+                      <p className="text-sm font-semibold text-white">{step.title}</p>
+                      <p className="text-sm text-jpv-gray-400">{step.description}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-6 flex items-center justify-end">
+              <button
+                type="button"
+                onClick={handleHowItWorksClose}
+                className="inline-flex items-center justify-center rounded-full border border-jpv-gray-600 px-6 py-3 text-sm font-semibold text-jpv-gray-200 transition hover:border-jpv-green hover:text-white"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {isTermsOpen ? (
+        <div className="fixed inset-0 z-[55] flex items-center justify-center bg-black/60 px-6 py-10 backdrop-blur-sm animate-[modal-fade_0.35s_ease-out]">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="terms-title"
+            aria-describedby="terms-desc"
+            className="w-full max-w-xl rounded-3xl border border-jpv-gray-700/60 bg-jpv-bg-dark/90 p-6 shadow-jpv-card backdrop-blur animate-[modal-rise_0.35s_ease-out]"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 id="terms-title" className="text-xl font-semibold text-white">
+                  Terms of service
+                </h3>
+                <p id="terms-desc" className="mt-1 text-sm text-jpv-gray-400">
+                  Placeholder terms for now. Final language coming soon.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleTermsClose}
+                className="rounded-full border border-jpv-gray-700/60 p-2 text-jpv-gray-200 transition hover:border-jpv-green hover:text-jpv-green"
+                aria-label="Close terms"
+              >
+                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none">
+                  <path
+                    d="M7 7l10 10M17 7L7 17"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </button>
+            </div>
+            <div className="mt-6 space-y-3 text-sm text-jpv-gray-300">
+              {termsSections.map((section) => (
+                <div
+                  key={section.title}
+                  className="rounded-2xl border border-jpv-gray-700/60 bg-jpv-bg-dark/70 p-4"
+                >
+                  <p className="text-sm font-semibold text-white">{section.title}</p>
+                  <p className="mt-2 text-sm text-jpv-gray-400">{section.body}</p>
+                </div>
+              ))}
+            </div>
+            <div className="mt-6 flex items-center justify-end">
+              <button
+                type="button"
+                onClick={handleTermsClose}
+                className="inline-flex items-center justify-center rounded-full border border-jpv-gray-600 px-6 py-3 text-sm font-semibold text-jpv-gray-200 transition hover:border-jpv-green hover:text-white"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {isPrivacyOpen ? (
+        <div className="fixed inset-0 z-[55] flex items-center justify-center bg-black/60 px-6 py-10 backdrop-blur-sm animate-[modal-fade_0.35s_ease-out]">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="privacy-title"
+            aria-describedby="privacy-desc"
+            className="w-full max-w-xl rounded-3xl border border-jpv-gray-700/60 bg-jpv-bg-dark/90 p-6 shadow-jpv-card backdrop-blur animate-[modal-rise_0.35s_ease-out]"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 id="privacy-title" className="text-xl font-semibold text-white">
+                  Privacy policy
+                </h3>
+                <p id="privacy-desc" className="mt-1 text-sm text-jpv-gray-400">
+                  Placeholder privacy details for now. Final language coming soon.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handlePrivacyClose}
+                className="rounded-full border border-jpv-gray-700/60 p-2 text-jpv-gray-200 transition hover:border-jpv-green hover:text-jpv-green"
+                aria-label="Close privacy"
+              >
+                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none">
+                  <path
+                    d="M7 7l10 10M17 7L7 17"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </button>
+            </div>
+            <div className="mt-6 space-y-3 text-sm text-jpv-gray-300">
+              {privacySections.map((section) => (
+                <div
+                  key={section.title}
+                  className="rounded-2xl border border-jpv-gray-700/60 bg-jpv-bg-dark/70 p-4"
+                >
+                  <p className="text-sm font-semibold text-white">{section.title}</p>
+                  <p className="mt-2 text-sm text-jpv-gray-400">{section.body}</p>
+                </div>
+              ))}
+            </div>
+            <div className="mt-6 flex items-center justify-end">
+              <button
+                type="button"
+                onClick={handlePrivacyClose}
+                className="inline-flex items-center justify-center rounded-full border border-jpv-gray-600 px-6 py-3 text-sm font-semibold text-jpv-gray-200 transition hover:border-jpv-green hover:text-white"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {isSupportOpen ? (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 px-6 py-10 backdrop-blur-sm animate-[modal-fade_0.35s_ease-out]">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="support-title"
+            aria-describedby="support-desc"
+            className="w-full max-w-xl rounded-3xl border border-jpv-gray-700/60 bg-jpv-bg-dark/90 p-6 shadow-jpv-card backdrop-blur animate-[modal-rise_0.35s_ease-out]"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 id="support-title" className="text-xl font-semibold text-white">
+                  Support
+                </h3>
+                <p id="support-desc" className="mt-1 text-sm text-jpv-gray-400">
+                  Share your question and we will get back to you shortly.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleSupportCancel}
+                className="rounded-full border border-jpv-gray-700/60 p-2 text-jpv-gray-200 transition hover:border-jpv-green hover:text-jpv-green"
+                aria-label="Close support form"
+              >
+                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none">
+                  <path
+                    d="M7 7l10 10M17 7L7 17"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </button>
+            </div>
+            <form onSubmit={handleSupportSubmit} className="mt-6 space-y-4">
+              <div className="space-y-2">
+                <label htmlFor="support-name" className="text-sm font-medium text-jpv-gray-200">
+                  Name
+                </label>
+                <input
+                  id="support-name"
+                  type="text"
+                  value={supportName}
+                  onChange={(event) => setSupportName(event.target.value)}
+                  placeholder="Your name"
+                  className="w-full rounded-2xl border border-jpv-gray-700/60 bg-jpv-bg-dark/70 px-4 py-3 text-sm text-jpv-gray-100 placeholder:text-jpv-gray-500 focus:border-jpv-green focus:outline-none focus:ring-2 focus:ring-jpv-green/30"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="support-email" className="text-sm font-medium text-jpv-gray-200">
+                  Email address
+                </label>
+                <input
+                  id="support-email"
+                  type="email"
+                  value={supportEmail}
+                  onChange={(event) => setSupportEmail(event.target.value)}
+                  placeholder="you@email.com"
+                  className="w-full rounded-2xl border border-jpv-gray-700/60 bg-jpv-bg-dark/70 px-4 py-3 text-sm text-jpv-gray-100 placeholder:text-jpv-gray-500 focus:border-jpv-green focus:outline-none focus:ring-2 focus:ring-jpv-green/30"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="support-question" className="text-sm font-medium text-jpv-gray-200">
+                  Question
+                </label>
+                <textarea
+                  id="support-question"
+                  value={supportQuestion}
+                  onChange={(event) => setSupportQuestion(event.target.value)}
+                  placeholder="How can we help?"
+                  rows={4}
+                  className="w-full resize-none rounded-2xl border border-jpv-gray-700/60 bg-jpv-bg-dark/70 px-4 py-3 text-sm text-jpv-gray-100 placeholder:text-jpv-gray-500 focus:border-jpv-green focus:outline-none focus:ring-2 focus:ring-jpv-green/30"
+                  required
+                />
+              </div>
+              <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end">
+                <button
+                  type="button"
+                  onClick={handleSupportCancel}
+                  className="inline-flex items-center justify-center rounded-full border border-jpv-gray-600 px-6 py-3 text-sm font-semibold text-jpv-gray-200 transition hover:border-jpv-green hover:text-white"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="inline-flex items-center justify-center rounded-full bg-jpv-green px-6 py-3 text-sm font-semibold text-black shadow-jpv-glow transition hover:bg-jpv-green-hover"
+                >
+                  Submit
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }

@@ -71,6 +71,10 @@ A clean, fast Next.js landing page boilerplate optimized for email collection an
 - `DATABASE_URL` - Supabase PostgreSQL connection string
 - `RESEND_API_KEY` - Resend API key for email notifications
 
+## Project Notes
+
+- The hero core focus + stats section (FCA basics, Deal analysis, Funding, Lettings, and the stats cards) is currently hidden. Toggle `showHeroHighlights` in `src/app/page.tsx` to re-enable.
+
 ## Links
 
 - [📚 Documentation](https://docs.microsaasfast.me/)
