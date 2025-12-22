@@ -5,6 +5,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  shadowDatabaseUrl = env("SYSTEM_DATABASE_URL")
 }
 
 model EmailSubscriber {
@@ -16,4 +17,11 @@ model EmailSubscriber {
   updatedAt DateTime @updatedAt
 
   @@map("email_subscribers")
+}
+
+model StripeWebhookEvent {
+  eventId   String   @id @map("event_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("stripe_webhook_events")
 }

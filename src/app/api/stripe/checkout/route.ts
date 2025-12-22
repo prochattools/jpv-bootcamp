@@ -1,54 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getStripeClient } from '@/libs/stripe'
+import { config } from '@/lib/config'
+import { getPlanFromPriceId, type Plan } from '@/lib/plans'
+import { getStripe } from '@/lib/stripe'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-type PricingPlanKey = 'pro' | 'vip'
+type PricingPlanKey = Plan
 
 function isPricingPlanKey(value: string | null): value is PricingPlanKey {
 	return value === 'pro' || value === 'vip'
 }
 
-function getPlanFromProductId(productId: string | null): PricingPlanKey | null {
-	if (!productId) return null
-
-	// Backward compat: if callers still pass the membership product id, default to Pro.
-	if (productId === process.env.NEXT_PUBLIC_STRIPE_PRODUCT_JPV_BOOTCAMP_MEMBERSHIP) return 'pro'
-
-	return null
-}
-
-async function getPriceIdForPlan(plan: PricingPlanKey) {
-	const stripe = getStripeClient()
-
-	const productId = process.env.NEXT_PUBLIC_STRIPE_PRODUCT_JPV_BOOTCAMP_MEMBERSHIP
-
-	const configuredPriceId =
-		plan === 'pro'
-			? process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO
-			: process.env.NEXT_PUBLIC_STRIPE_PRICE_VIP
-
-	if (configuredPriceId) return { priceId: configuredPriceId, productId }
-
-	if (!productId) {
-		throw new Error(`Missing Stripe product id for plan: ${plan}`)
-	}
-
-	const product = await stripe.products.retrieve(productId)
-
-	const defaultPriceId =
-		typeof product.default_price === 'string' ? product.default_price : product.default_price?.id
-
-	if (!defaultPriceId) {
-		throw new Error(`No default_price found for Stripe product: ${productId}`)
-	}
-
-	return { priceId: defaultPriceId, productId }
+function getPriceIdForPlan(plan: PricingPlanKey) {
+	return plan === 'pro' ? config.stripe.pricePro : config.stripe.priceVip
 }
 
 async function getActiveMembershipSubscriptionForCustomer(customerId: string) {
-	const stripe = getStripeClient()
+	const stripe = getStripe()
 
 	const subs = await stripe.subscriptions.list({
 		customer: customerId,
@@ -78,34 +47,33 @@ function getCurrentPlanFromSubscription(sub: any): PricingPlanKey | null {
 
 	// If metadata isn't present, try to infer from price ids (best-effort)
 	const priceId = sub?.items?.data?.[0]?.price?.id
-	if (!priceId) return null
-	if (priceId === process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO) return 'pro'
-	if (priceId === process.env.NEXT_PUBLIC_STRIPE_PRICE_VIP) return 'vip'
+	return getPlanFromPriceId(priceId)
+}
 
-	return null
+function buildReturnUrl(pathOrUrl: string) {
+	return new URL(pathOrUrl, config.app.url).toString()
 }
 
 export async function GET(req: NextRequest) {
 	try {
 		const planParam = req.nextUrl.searchParams.get('plan')
-		const productParam = req.nextUrl.searchParams.get('product')
 		const customerParam = req.nextUrl.searchParams.get('customer')
 
-		const plan = isPricingPlanKey(planParam) ? planParam : getPlanFromProductId(productParam)
+		const plan = isPricingPlanKey(planParam) ? planParam : null
 
 		if (!plan) {
 			return NextResponse.json(
 				{
-					error:
-						"Invalid plan. Use ?plan=pro|vip (or a valid ?product=prod_... id).",
+					error: 'Invalid plan. Use ?plan=pro|vip.',
 				},
 				{ status: 400 }
 			)
 		}
 
-		const stripe = getStripeClient()
-		const origin = req.nextUrl.origin
-		const { priceId, productId } = await getPriceIdForPlan(plan)
+		const stripe = getStripe()
+		const priceId = getPriceIdForPlan(plan)
+		const successUrl = buildReturnUrl(config.stripe.successUrl)
+		const cancelUrl = buildReturnUrl(config.stripe.cancelUrl)
 
 		// If the user is already on Pro and is requesting VIP, send them to a Portal upgrade flow
 		// (prevents accidentally creating a 2nd subscription via Checkout).
@@ -126,7 +94,7 @@ export async function GET(req: NextRequest) {
 					// NOTE: Your Customer Portal configuration must allow upgrading to the VIP price.
 					const portalSession = await stripe.billingPortal.sessions.create({
 						customer: customerParam,
-						return_url: `${origin}/#pricing`,
+						return_url: cancelUrl,
 						flow_data: {
 							type: 'subscription_update_confirm',
 							subscription_update_confirm: {
@@ -157,12 +125,11 @@ export async function GET(req: NextRequest) {
 		const session = await stripe.checkout.sessions.create({
 			mode: 'subscription',
 			line_items: [{ price: priceId, quantity: 1 }],
-			success_url: `${origin}/success?session_id={CHECKOUT_SESSION_ID}`,
-			cancel_url: `${origin}/#pricing`,
+			success_url: successUrl,
+			cancel_url: cancelUrl,
 			allow_promotion_codes: true,
 			metadata: {
 				plan,
-				productId: productId ?? '',
 			},
 			subscription_data: {
 				metadata: {
