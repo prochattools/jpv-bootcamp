@@ -15,7 +15,7 @@ type PrismaClientLike = {
 	}
 }
 
-const prismaClient = prisma as PrismaClientLike
+const prismaClient = prisma as unknown as PrismaClientLike
 
 function pruneMemoryStore(now: number) {
 	for (const [eventId, timestamp] of memoryStore.entries()) {
