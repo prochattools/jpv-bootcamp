@@ -3,7 +3,14 @@ import type { NextRequest } from 'next/server'
 
 // Simple middleware for landing page - no authentication needed
 export function middleware(request: NextRequest) {
-  // Add any custom headers or redirects here if needed
+  const actionId = request.headers.get('next-action')
+  if (actionId) {
+    return NextResponse.json(
+      { error: 'Server Actions are not enabled for this deployment.' },
+      { status: 409 }
+    )
+  }
+
   return NextResponse.next()
 }
 
