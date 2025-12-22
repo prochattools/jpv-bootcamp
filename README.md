@@ -95,6 +95,35 @@ Reach out to me on [Twitter](https://twitter.com/DennisBabych) or hello@db2.io
 - Test preview deployments before merging
 - Merge to `main` only when ready for production
 
+## Sync ProKit docs/scripts
+
+Pulls the canonical ProKit docs/scripts into this repo via a sparse checkout sync.
+
+- Default repo: `https://github.com/prochattools/prokit.git`
+- Default ref: `main`
+
+Run:
+```bash
+./scripts/sync-prokit-assets.sh
+```
+
+Pin to a tag/commit:
+```bash
+PROKIT_REF=v0.1.0 ./scripts/sync-prokit-assets.sh
+```
+
+Use a different repo (rare):
+```bash
+PROKIT_REPO=https://github.com/prochattools/prokit.git PROKIT_REF=main ./scripts/sync-prokit-assets.sh
+```
+
+Outputs:
+- Docs → `./docs/`
+- Scripts → `./scripts/db` and `./scripts/dev`
+- Template README snapshot → `./README.prokit-template.md`
+
+Note: this sync overwrites the listed files and should be committed.
+
 ## Setup for New Projects
 
 For each new landing page project:
