@@ -18,11 +18,11 @@ type PrismaClientLike = {
 const prismaClient = prisma as unknown as PrismaClientLike
 
 function pruneMemoryStore(now: number) {
-	for (const [eventId, timestamp] of memoryStore.entries()) {
+	memoryStore.forEach((timestamp, eventId) => {
 		if (now - timestamp > ttlMs) {
 			memoryStore.delete(eventId)
 		}
-	}
+	})
 }
 
 function isPrismaUniqueError(error: unknown): boolean {
