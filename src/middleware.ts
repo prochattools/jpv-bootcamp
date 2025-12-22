@@ -3,14 +3,6 @@ import type { NextRequest } from 'next/server'
 
 // Simple middleware for landing page - no authentication needed
 export function middleware(request: NextRequest) {
-  const actionId = request.headers.get('next-action')
-  if (actionId) {
-    return NextResponse.json(
-      { error: 'Server Actions are not enabled for this deployment.' },
-      { status: 409 }
-    )
-  }
-
   const pathname = request.nextUrl.pathname
   const isApiRoute = pathname.startsWith('/api')
   const isNextRoute = pathname.startsWith('/_next')
@@ -19,6 +11,12 @@ export function middleware(request: NextRequest) {
       { error: 'POST requests to app routes are not supported.' },
       { status: 405 }
     )
+  }
+
+  if (request.headers.has('next-action')) {
+    const headers = new Headers(request.headers)
+    headers.delete('next-action')
+    return NextResponse.next({ request: { headers } })
   }
 
   return NextResponse.next()
