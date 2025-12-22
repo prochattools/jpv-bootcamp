@@ -6,6 +6,23 @@ export const dynamic = 'force-dynamic'
 
 type PricingPlanKey = 'pro' | 'vip'
 
+const STRIPE_PLAN_CONFIG: Record<
+	PricingPlanKey,
+	{
+		productId: string | undefined
+		priceId: string | undefined
+	}
+> = {
+	pro: {
+		productId: process.env.NEXT_PUBLIC_STRIPE_PRODUCT_JPV_BOOTCAMP_MEMBERSHIP,
+		priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO,
+	},
+	vip: {
+		productId: process.env.NEXT_PUBLIC_STRIPE_PRODUCT_JPV_BOOTCAMP_MEMBERSHIP,
+		priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_VIP,
+	},
+}
+
 function isPricingPlanKey(value: string | null): value is PricingPlanKey {
 	return value === 'pro' || value === 'vip'
 }
@@ -14,37 +31,32 @@ function getPlanFromProductId(productId: string | null): PricingPlanKey | null {
 	if (!productId) return null
 
 	// Backward compat: if callers still pass the membership product id, default to Pro.
-	if (productId === process.env.NEXT_PUBLIC_STRIPE_PRODUCT_JPV_BOOTCAMP_MEMBERSHIP) return 'pro'
+	const membershipProductId = STRIPE_PLAN_CONFIG.pro.productId
+	if (membershipProductId && productId === membershipProductId) return 'pro'
 
 	return null
 }
 
+function getPlanConfig(plan: PricingPlanKey) {
+	const config = STRIPE_PLAN_CONFIG[plan]
+
+	if (!config.productId) {
+		throw new Error(
+			'Missing Stripe product id. Set NEXT_PUBLIC_STRIPE_PRODUCT_JPV_BOOTCAMP_MEMBERSHIP.'
+		)
+	}
+
+	if (!config.priceId) {
+		const priceEnvName =
+			plan === 'pro' ? 'NEXT_PUBLIC_STRIPE_PRICE_PRO' : 'NEXT_PUBLIC_STRIPE_PRICE_VIP'
+		throw new Error(`Missing Stripe price id for plan: ${plan}. Set ${priceEnvName}.`)
+	}
+
+	return config
+}
+
 async function getPriceIdForPlan(plan: PricingPlanKey) {
-	const stripe = getStripeClient()
-
-	const productId = process.env.NEXT_PUBLIC_STRIPE_PRODUCT_JPV_BOOTCAMP_MEMBERSHIP
-
-	const configuredPriceId =
-		plan === 'pro'
-			? process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO
-			: process.env.NEXT_PUBLIC_STRIPE_PRICE_VIP
-
-	if (configuredPriceId) return { priceId: configuredPriceId, productId }
-
-	if (!productId) {
-		throw new Error(`Missing Stripe product id for plan: ${plan}`)
-	}
-
-	const product = await stripe.products.retrieve(productId)
-
-	const defaultPriceId =
-		typeof product.default_price === 'string' ? product.default_price : product.default_price?.id
-
-	if (!defaultPriceId) {
-		throw new Error(`No default_price found for Stripe product: ${productId}`)
-	}
-
-	return { priceId: defaultPriceId, productId }
+	return getPlanConfig(plan)
 }
 
 async function getActiveMembershipSubscriptionForCustomer(customerId: string) {
@@ -79,8 +91,8 @@ function getCurrentPlanFromSubscription(sub: any): PricingPlanKey | null {
 	// If metadata isn't present, try to infer from price ids (best-effort)
 	const priceId = sub?.items?.data?.[0]?.price?.id
 	if (!priceId) return null
-	if (priceId === process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO) return 'pro'
-	if (priceId === process.env.NEXT_PUBLIC_STRIPE_PRICE_VIP) return 'vip'
+	if (STRIPE_PLAN_CONFIG.pro.priceId && priceId === STRIPE_PLAN_CONFIG.pro.priceId) return 'pro'
+	if (STRIPE_PLAN_CONFIG.vip.priceId && priceId === STRIPE_PLAN_CONFIG.vip.priceId) return 'vip'
 
 	return null
 }
