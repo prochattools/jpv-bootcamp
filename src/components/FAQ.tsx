@@ -51,7 +51,7 @@ const StaticData = {
       id: 6,
       question: "Can I get a refund?",
       answer:
-        "After you purchase a product you will get an immediate access to all materials, so no. But rest assure that average time to launch micro SaaS startup is 7 days and start making money.",
+        "After you purchase a product you will get an immediate access to all materials, so no. But rest assure that average time to launch micro SaaS startup is 14 days and start making money.",
     },
   ],
 };

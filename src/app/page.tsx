@@ -5,10 +5,10 @@ import Image from "next/image";
 
 export default function HomePage() {
   const signInHref = "https://portal.jpvbootcamp.com/community/?fcom_action=auth";
+  const signUpHref = "https://portal.jpvbootcamp.com/community?fcom_action=auth&form=register";
+  const portalUpgradeUrl = process.env.NEXT_PUBLIC_PORTAL_UPGRADE_URL;
   const [isSupportOpen, setIsSupportOpen] = useState(false);
   const [isHowItWorksOpen, setIsHowItWorksOpen] = useState(false);
-  const [isTermsOpen, setIsTermsOpen] = useState(false);
-  const [isPrivacyOpen, setIsPrivacyOpen] = useState(false);
   const [supportName, setSupportName] = useState("");
   const [supportEmail, setSupportEmail] = useState("");
   const [supportQuestion, setSupportQuestion] = useState("");
@@ -72,7 +72,7 @@ export default function HomePage() {
       description: "Get a feel for it",
       features: ["2 intro lessons", "Weekly newsletter", "Community read-only", "Basic calculators"],
       ctaLabel: "Create free account",
-      ctaHref: signInHref,
+      ctaHref: signUpHref,
       ctaTarget: "_blank",
       ctaRel: "nofollow noopener noreferrer",
       highlight: false,
@@ -112,35 +112,6 @@ export default function HomePage() {
       description: "Introduce yourself, join a channel, and start sharing your first deal.",
     },
   ];
-  const termsSections = [
-    {
-      title: "Membership access",
-      body: "Access is granted upon successful registration and may be updated as modules and community features evolve.",
-    },
-    {
-      title: "Acceptable use",
-      body: "Please use the community respectfully and do not share proprietary materials outside the platform.",
-    },
-    {
-      title: "Billing and cancellations",
-      body: "Plans renew automatically until canceled. You can cancel anytime from your account settings.",
-    },
-  ];
-  const privacySections = [
-    {
-      title: "Data we collect",
-      body: "We collect the name and email you provide, plus engagement details to improve your experience.",
-    },
-    {
-      title: "How we use data",
-      body: "Your data helps us deliver onboarding, support, and relevant training updates.",
-    },
-    {
-      title: "Your choices",
-      body: "You can request access or deletion of your data by contacting support.",
-    },
-  ];
-
   const handleSupportSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
   };
@@ -162,13 +133,6 @@ export default function HomePage() {
 
   const handleHowItWorksClose = () => {
     setIsHowItWorksOpen(false);
-  };
-  const handleTermsClose = () => {
-    setIsTermsOpen(false);
-  };
-
-  const handlePrivacyClose = () => {
-    setIsPrivacyOpen(false);
   };
   return (
     <main className="relative bg-jpv-gradient min-h-screen text-jpv-gray-50">
@@ -352,8 +316,6 @@ export default function HomePage() {
                 onClick={() => {
                   setIsHowItWorksOpen(true);
                   setIsSupportOpen(false);
-                  setIsTermsOpen(false);
-                  setIsPrivacyOpen(false);
                 }}
                 className="inline-flex items-center justify-center rounded-full border border-jpv-gray-600 px-10 py-3 text-base font-semibold text-jpv-gray-200 transition hover:border-jpv-green hover:text-white"
               >
@@ -415,11 +377,10 @@ export default function HomePage() {
             {pricingPlans.map((plan) => (
               <div
                 key={plan.name}
-                className={`flex h-full flex-col justify-between rounded-3xl border p-8 shadow-jpv-card backdrop-blur ${
-                  plan.highlight
-                    ? "border-jpv-green/60 bg-jpv-bg-light/80"
-                    : "border-jpv-gray-700/50 bg-jpv-bg-dark/60"
-                }`}
+                className={`flex h-full flex-col justify-between rounded-3xl border p-8 shadow-jpv-card backdrop-blur ${plan.highlight
+                  ? "border-jpv-green/60 bg-jpv-bg-light/80"
+                  : "border-jpv-gray-700/50 bg-jpv-bg-dark/60"
+                  }`}
               >
                 <div className="space-y-6">
                   <div className="space-y-3 text-left">
@@ -452,15 +413,25 @@ export default function HomePage() {
                     href={plan.ctaHref}
                     target={plan.ctaTarget}
                     rel={plan.ctaRel}
-                    className={`inline-flex w-full items-center justify-center rounded-full px-6 py-3 text-sm font-semibold transition ${
-                      plan.highlight
-                        ? "bg-jpv-green text-black shadow-jpv-glow hover:bg-jpv-green-hover"
-                        : "border border-jpv-gray-600 text-jpv-gray-200 hover:border-jpv-green hover:text-white"
-                    }`}
+                    className={`inline-flex w-full items-center justify-center rounded-full px-6 py-3 text-sm font-semibold transition ${plan.highlight
+                      ? "bg-jpv-green text-black shadow-jpv-glow hover:bg-jpv-green-hover"
+                      : "border border-jpv-gray-600 text-jpv-gray-200 hover:border-jpv-green hover:text-white"
+                      }`}
                   >
                     {plan.ctaLabel}
                   </a>
                   {plan.subcopy ? <p className="text-xs text-jpv-green/80">{plan.subcopy}</p> : null}
+                  {plan.name === "VIP" && portalUpgradeUrl ? (
+                    <a
+                      href={portalUpgradeUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-3 block text-center text-sm text-white/60 hover:text-white/80 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-jpv-green/60 rounded"
+                      aria-label="Already a member? Upgrade in portal"
+                    >
+                      Already a member? Upgrade in portal
+                    </a>
+                  ) : null}
                 </div>
               </div>
             ))}
@@ -515,37 +486,20 @@ export default function HomePage() {
             </span>
           </div>
           <div className="flex items-center gap-6">
-            <button
-              type="button"
-              onClick={() => {
-                setIsTermsOpen(true);
-                setIsSupportOpen(false);
-                setIsHowItWorksOpen(false);
-                setIsPrivacyOpen(false);
-              }}
-              className="transition hover:text-jpv-green"
-            >
+            <a href="/terms" className="transition hover:text-jpv-green">
               Terms
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setIsPrivacyOpen(true);
-                setIsSupportOpen(false);
-                setIsHowItWorksOpen(false);
-                setIsTermsOpen(false);
-              }}
-              className="transition hover:text-jpv-green"
-            >
+            </a>
+            <a href="/privacy" className="transition hover:text-jpv-green">
               Privacy
-            </button>
+            </a>
+            <a href="/cookies" className="transition hover:text-jpv-green">
+              Cookies
+            </a>
             <button
               type="button"
               onClick={() => {
                 setIsSupportOpen(true);
                 setIsHowItWorksOpen(false);
-                setIsTermsOpen(false);
-                setIsPrivacyOpen(false);
               }}
               className="transition hover:text-jpv-green"
             >
@@ -610,120 +564,6 @@ export default function HomePage() {
               <button
                 type="button"
                 onClick={handleHowItWorksClose}
-                className="inline-flex items-center justify-center rounded-full border border-jpv-gray-600 px-6 py-3 text-sm font-semibold text-jpv-gray-200 transition hover:border-jpv-green hover:text-white"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
-      {isTermsOpen ? (
-        <div className="fixed inset-0 z-[55] flex items-center justify-center bg-black/60 px-6 py-10 backdrop-blur-sm animate-[modal-fade_0.35s_ease-out]">
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="terms-title"
-            aria-describedby="terms-desc"
-            className="w-full max-w-xl rounded-3xl border border-jpv-gray-700/60 bg-jpv-bg-dark/90 p-6 shadow-jpv-card backdrop-blur animate-[modal-rise_0.35s_ease-out]"
-          >
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h3 id="terms-title" className="text-xl font-semibold text-white">
-                  Terms of service
-                </h3>
-                <p id="terms-desc" className="mt-1 text-sm text-jpv-gray-400">
-                  Placeholder terms for now. Final language coming soon.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={handleTermsClose}
-                className="rounded-full border border-jpv-gray-700/60 p-2 text-jpv-gray-200 transition hover:border-jpv-green hover:text-jpv-green"
-                aria-label="Close terms"
-              >
-                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none">
-                  <path
-                    d="M7 7l10 10M17 7L7 17"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                  />
-                </svg>
-              </button>
-            </div>
-            <div className="mt-6 space-y-3 text-sm text-jpv-gray-300">
-              {termsSections.map((section) => (
-                <div
-                  key={section.title}
-                  className="rounded-2xl border border-jpv-gray-700/60 bg-jpv-bg-dark/70 p-4"
-                >
-                  <p className="text-sm font-semibold text-white">{section.title}</p>
-                  <p className="mt-2 text-sm text-jpv-gray-400">{section.body}</p>
-                </div>
-              ))}
-            </div>
-            <div className="mt-6 flex items-center justify-end">
-              <button
-                type="button"
-                onClick={handleTermsClose}
-                className="inline-flex items-center justify-center rounded-full border border-jpv-gray-600 px-6 py-3 text-sm font-semibold text-jpv-gray-200 transition hover:border-jpv-green hover:text-white"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
-      {isPrivacyOpen ? (
-        <div className="fixed inset-0 z-[55] flex items-center justify-center bg-black/60 px-6 py-10 backdrop-blur-sm animate-[modal-fade_0.35s_ease-out]">
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="privacy-title"
-            aria-describedby="privacy-desc"
-            className="w-full max-w-xl rounded-3xl border border-jpv-gray-700/60 bg-jpv-bg-dark/90 p-6 shadow-jpv-card backdrop-blur animate-[modal-rise_0.35s_ease-out]"
-          >
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h3 id="privacy-title" className="text-xl font-semibold text-white">
-                  Privacy policy
-                </h3>
-                <p id="privacy-desc" className="mt-1 text-sm text-jpv-gray-400">
-                  Placeholder privacy details for now. Final language coming soon.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={handlePrivacyClose}
-                className="rounded-full border border-jpv-gray-700/60 p-2 text-jpv-gray-200 transition hover:border-jpv-green hover:text-jpv-green"
-                aria-label="Close privacy"
-              >
-                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none">
-                  <path
-                    d="M7 7l10 10M17 7L7 17"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                  />
-                </svg>
-              </button>
-            </div>
-            <div className="mt-6 space-y-3 text-sm text-jpv-gray-300">
-              {privacySections.map((section) => (
-                <div
-                  key={section.title}
-                  className="rounded-2xl border border-jpv-gray-700/60 bg-jpv-bg-dark/70 p-4"
-                >
-                  <p className="text-sm font-semibold text-white">{section.title}</p>
-                  <p className="mt-2 text-sm text-jpv-gray-400">{section.body}</p>
-                </div>
-              ))}
-            </div>
-            <div className="mt-6 flex items-center justify-end">
-              <button
-                type="button"
-                onClick={handlePrivacyClose}
                 className="inline-flex items-center justify-center rounded-full border border-jpv-gray-600 px-6 py-3 text-sm font-semibold text-jpv-gray-200 transition hover:border-jpv-green hover:text-white"
               >
                 Close
