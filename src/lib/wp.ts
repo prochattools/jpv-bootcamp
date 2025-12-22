@@ -71,7 +71,11 @@ function generatePassword(): string {
 
 function extractErrorCode(response: WpResponse<unknown>): string | null {
 	if (response.ok) return null
-	return typeof response.data?.code === 'string' ? response.data.code : null
+	const data = response.data
+	if (typeof data !== 'object' || data === null) return null
+	const code =
+		'code' in data ? (data as { code?: unknown }).code : undefined
+	return typeof code === 'string' ? code : null
 }
 
 export async function wpFindUserByEmail(
