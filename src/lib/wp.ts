@@ -18,6 +18,8 @@ type WpResponse<T> =
 	| { ok: true; data: T }
 	| { ok: false; status: number; data: WpError | null; text: string }
 
+type WpErrorResponse = Extract<WpResponse<unknown>, { ok: false }>
+
 function getAuthHeader(): string {
 	const token = Buffer.from(
 		`${config.wp.username}:${config.wp.appPassword}`,
@@ -78,6 +80,10 @@ function extractErrorCode(response: WpResponse<unknown>): string | null {
 	return typeof code === 'string' ? code : null
 }
 
+function isWpErrorResponse<T>(response: WpResponse<T>): response is WpErrorResponse {
+	return !response.ok
+}
+
 export async function wpFindUserByEmail(
 	email: string
 ): Promise<{ id: number } | null> {
@@ -88,7 +94,7 @@ export async function wpFindUserByEmail(
 		{ method: 'GET' }
 	)
 
-	if (!response.ok) {
+	if (isWpErrorResponse(response)) {
 		console.warn('WP user search failed', { status: response.status })
 		return null
 	}
@@ -160,7 +166,7 @@ export async function wpCreateUser({
 		if (existing) return existing
 	}
 
-	if (!response.ok) {
+	if (isWpErrorResponse(response)) {
 		throw new Error(`WP user create failed with status ${response.status}`)
 	}
 
@@ -176,7 +182,7 @@ export async function wpSetUserRole(userId: number, role: string): Promise<void>
 		}
 	)
 
-	if (response.ok) return
+	if (!isWpErrorResponse(response)) return
 
 	console.warn('WP role update with roles failed', {
 		status: response.status,
@@ -191,7 +197,7 @@ export async function wpSetUserRole(userId: number, role: string): Promise<void>
 		}
 	)
 
-	if (!response.ok) {
+	if (isWpErrorResponse(response)) {
 		console.warn('WP role update failed', {
 			status: response.status,
 			code: extractErrorCode(response),
@@ -211,7 +217,7 @@ export async function wpUpdateUserMeta(
 		}
 	)
 
-	if (!response.ok) {
+	if (isWpErrorResponse(response)) {
 		console.warn('WP user meta update not supported', {
 			status: response.status,
 			code: extractErrorCode(response),
