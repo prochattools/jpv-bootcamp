@@ -6,17 +6,12 @@ export function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
   const isApiRoute = pathname.startsWith('/api')
   const isNextRoute = pathname.startsWith('/_next')
-  if (request.method === 'POST' && !isApiRoute && !isNextRoute) {
-    return NextResponse.json(
-      { error: 'POST requests to app routes are not supported.' },
-      { status: 405 }
-    )
+  if (request.headers.has('next-action')) {
+    return new Response(null, { status: 204 })
   }
 
-  if (request.headers.has('next-action')) {
-    const headers = new Headers(request.headers)
-    headers.delete('next-action')
-    return NextResponse.next({ request: { headers } })
+  if (request.method === 'POST' && !isApiRoute && !isNextRoute) {
+    return new Response(null, { status: 204 })
   }
 
   return NextResponse.next()
