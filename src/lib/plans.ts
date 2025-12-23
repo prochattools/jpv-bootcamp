@@ -13,6 +13,10 @@ export function getPlanFromPriceId(priceId: string | null | undefined): Plan | n
 	return PLAN_BY_PRICE_ID[priceId] ?? null
 }
 
+
 export function getWpRoleForPlan(plan: Plan): string {
-	return plan === 'vip' ? config.wp.roleVip : config.wp.rolePro
+	if (plan === 'vip') {
+		return config.wp.roleVip || config.wp.roleDefault
+	}
+	return config.wp.rolePro || config.wp.roleDefault
 }

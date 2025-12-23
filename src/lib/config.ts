@@ -2,8 +2,13 @@ import 'server-only'
 
 type EnvKey = keyof NodeJS.ProcessEnv
 
+
+function getEnv(key: EnvKey): string | undefined {
+	return process.env[key]
+}
+
 function requireEnv(key: EnvKey): string {
-	const value = process.env[key]
+	const value = getEnv(key)
 	if (!value) {
 		throw new Error(`Missing required env var: ${key}`)
 	}
@@ -49,8 +54,8 @@ export const config = {
 		baseUrl: requireUrlEnv('WP_BASE_URL'),
 		username: requireEnv('WP_ADMIN_USERNAME'),
 		appPassword: requireEnv('WP_APPLICATION_PASSWORD'),
-		rolePro: requireEnv('WP_ROLE_PRO'),
-		roleVip: requireEnv('WP_ROLE_VIP'),
+		rolePro: getEnv('WP_ROLE_PRO'),
+		roleVip: getEnv('WP_ROLE_VIP'),
 		roleDefault: requireEnv('WP_ROLE_DEFAULT'),
 	},
 	email: {
