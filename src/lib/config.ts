@@ -39,6 +39,7 @@ const stripePricePro = requireEnv('NEXT_PUBLIC_STRIPE_PRICE_PRO')
 const stripePriceVip = requireEnv('NEXT_PUBLIC_STRIPE_PRICE_VIP')
 const portalLoginUrl = requireEnv('PORTAL_LOGIN_URL')
 const portalSetPasswordUrl = requireEnv('PORTAL_SET_PASSWORD_URL')
+const resendFrom = getEnv('RESEND_FROM')
 
 export const config = {
 	app: { url: appUrl },
@@ -60,8 +61,9 @@ export const config = {
 	},
 	email: {
 		resendApiKey: requireEnv('RESEND_API_KEY'),
-		from: requireEnv('EMAIL_FROM'),
+		from: resendFrom && resendFrom.trim() ? resendFrom : requireEnv('EMAIL_FROM'),
 		replyTo: requireEnv('EMAIL_REPLY_TO'),
+		supportTo: requireEnv('SUPPORT_TO_EMAIL'),
 		portalLoginUrl,
 		portalSetPasswordUrl,
 	},

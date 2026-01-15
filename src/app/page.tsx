@@ -12,6 +12,9 @@ export default function HomePage() {
   const [supportName, setSupportName] = useState("");
   const [supportEmail, setSupportEmail] = useState("");
   const [supportQuestion, setSupportQuestion] = useState("");
+  const [supportStatus, setSupportStatus] = useState<"idle" | "sending" | "success" | "error">("idle");
+  const [supportError, setSupportError] = useState<string | null>(null);
+  const isSupportSending = supportStatus === "sending";
   const navLinks = [
     { label: "Curriculum", href: "#curriculum" },
     { label: "Community", href: "#community" },
@@ -112,8 +115,47 @@ export default function HomePage() {
       description: "Introduce yourself, join a channel, and start sharing your first deal.",
     },
   ];
-  const handleSupportSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSupportSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    if (supportStatus === "sending") {
+      return;
+    }
+
+    setSupportStatus("sending");
+    setSupportError(null);
+
+    try {
+      const response = await fetch("/api/support", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: supportName.trim(),
+          email: supportEmail.trim(),
+          question: supportQuestion.trim(),
+          source: "jpvbootcamp.com footer support modal",
+          page: window.location.pathname || "/",
+        }),
+      });
+
+      const payload = await response.json().catch(() => null);
+
+      if (response.ok && payload?.ok) {
+        setSupportStatus("success");
+        setSupportName("");
+        setSupportEmail("");
+        setSupportQuestion("");
+      } else {
+        setSupportStatus("error");
+        setSupportError(payload?.error || "Unable to send your request. Please try again.");
+      }
+    } catch (error) {
+      console.error("Support request failed:", error);
+      setSupportStatus("error");
+      setSupportError("Unable to send your request. Please try again.");
+    }
   };
 
   const handleSupportCancel = () => {
@@ -129,6 +171,8 @@ export default function HomePage() {
     setSupportName("");
     setSupportEmail("");
     setSupportQuestion("");
+    setSupportStatus("idle");
+    setSupportError(null);
   };
 
   const handleHowItWorksClose = () => {
@@ -500,6 +544,8 @@ export default function HomePage() {
               onClick={() => {
                 setIsSupportOpen(true);
                 setIsHowItWorksOpen(false);
+                setSupportStatus("idle");
+                setSupportError(null);
               }}
               className="transition hover:text-jpv-green"
             >
@@ -606,6 +652,19 @@ export default function HomePage() {
                 </svg>
               </button>
             </div>
+            {supportStatus !== "idle" ? (
+              <div className="mt-4 space-y-2 text-sm">
+                {supportStatus === "success" ? (
+                  <p className="text-jpv-green">Thanks! We&rsquo;ll reply shortly.</p>
+                ) : null}
+                {supportStatus === "error" && supportError ? (
+                  <p className="text-red-400">{supportError}</p>
+                ) : null}
+                {supportStatus === "sending" ? (
+                  <p className="text-jpv-gray-400">Sending your request...</p>
+                ) : null}
+              </div>
+            ) : null}
             <form onSubmit={handleSupportSubmit} className="mt-6 space-y-4">
               <div className="space-y-2">
                 <label htmlFor="support-name" className="text-sm font-medium text-jpv-gray-200">
@@ -615,9 +674,16 @@ export default function HomePage() {
                   id="support-name"
                   type="text"
                   value={supportName}
-                  onChange={(event) => setSupportName(event.target.value)}
+                  onChange={(event) => {
+                    if (supportStatus !== "idle") {
+                      setSupportStatus("idle");
+                      setSupportError(null);
+                    }
+                    setSupportName(event.target.value);
+                  }}
                   placeholder="Your name"
                   className="w-full rounded-2xl border border-jpv-gray-700/60 bg-jpv-bg-dark/70 px-4 py-3 text-sm text-jpv-gray-100 placeholder:text-jpv-gray-500 focus:border-jpv-green focus:outline-none focus:ring-2 focus:ring-jpv-green/30"
+                  disabled={isSupportSending}
                   required
                 />
               </div>
@@ -629,9 +695,16 @@ export default function HomePage() {
                   id="support-email"
                   type="email"
                   value={supportEmail}
-                  onChange={(event) => setSupportEmail(event.target.value)}
+                  onChange={(event) => {
+                    if (supportStatus !== "idle") {
+                      setSupportStatus("idle");
+                      setSupportError(null);
+                    }
+                    setSupportEmail(event.target.value);
+                  }}
                   placeholder="you@email.com"
                   className="w-full rounded-2xl border border-jpv-gray-700/60 bg-jpv-bg-dark/70 px-4 py-3 text-sm text-jpv-gray-100 placeholder:text-jpv-gray-500 focus:border-jpv-green focus:outline-none focus:ring-2 focus:ring-jpv-green/30"
+                  disabled={isSupportSending}
                   required
                 />
               </div>
@@ -642,10 +715,17 @@ export default function HomePage() {
                 <textarea
                   id="support-question"
                   value={supportQuestion}
-                  onChange={(event) => setSupportQuestion(event.target.value)}
+                  onChange={(event) => {
+                    if (supportStatus !== "idle") {
+                      setSupportStatus("idle");
+                      setSupportError(null);
+                    }
+                    setSupportQuestion(event.target.value);
+                  }}
                   placeholder="How can we help?"
                   rows={4}
                   className="w-full resize-none rounded-2xl border border-jpv-gray-700/60 bg-jpv-bg-dark/70 px-4 py-3 text-sm text-jpv-gray-100 placeholder:text-jpv-gray-500 focus:border-jpv-green focus:outline-none focus:ring-2 focus:ring-jpv-green/30"
+                  disabled={isSupportSending}
                   required
                 />
               </div>
@@ -659,9 +739,12 @@ export default function HomePage() {
                 </button>
                 <button
                   type="submit"
-                  className="inline-flex items-center justify-center rounded-full bg-jpv-green px-6 py-3 text-sm font-semibold text-black shadow-jpv-glow transition hover:bg-jpv-green-hover"
+                  disabled={isSupportSending}
+                  className={`inline-flex items-center justify-center rounded-full bg-jpv-green px-6 py-3 text-sm font-semibold text-black shadow-jpv-glow transition hover:bg-jpv-green-hover ${
+                    isSupportSending ? "cursor-not-allowed opacity-70 hover:bg-jpv-green" : ""
+                  }`}
                 >
-                  Submit
+                  {isSupportSending ? "Sending..." : "Submit"}
                 </button>
               </div>
             </form>
