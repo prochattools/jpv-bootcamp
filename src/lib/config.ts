@@ -64,6 +64,30 @@ function requireUrlEnvAny(keys: EnvKey[], label: string): string {
 	return value.replace(/\/$/, '')
 }
 
+const DEFAULT_STRIPE_SUCCESS_PATH = '/thank-you?session_id={CHECKOUT_SESSION_ID}'
+
+function normalizeStripeSuccessUrl(raw: string, appUrl: string): string {
+	const trimmed = raw.trim()
+	if (!trimmed) return DEFAULT_STRIPE_SUCCESS_PATH
+
+	// If success URL is set to the site root, force the thank-you page instead.
+	const normalizedApp = appUrl.replace(/\/$/, '')
+	const normalizedRaw = trimmed.replace(/\/$/, '')
+	if (normalizedRaw === normalizedApp) return DEFAULT_STRIPE_SUCCESS_PATH
+
+	try {
+		const resolved = new URL(trimmed, appUrl)
+		const app = new URL(appUrl)
+		if (resolved.origin === app.origin && resolved.pathname === '/') {
+			return DEFAULT_STRIPE_SUCCESS_PATH
+		}
+	} catch {
+		return DEFAULT_STRIPE_SUCCESS_PATH
+	}
+
+	return trimmed
+}
+
 export const publicConfig = {
 	app: {
 		url: requireUrlEnvAny(['NEXT_PUBLIC_APP_URL', 'APP_PUBLIC_URL'], 'NEXT_PUBLIC_APP_URL'),
@@ -133,9 +157,9 @@ export function getStripeConfig(): StripeConfig {
 		['STRIPE_PRICE_VIP', 'NEXT_PUBLIC_STRIPE_PRICE_VIP'],
 		'STRIPE_PRICE_VIP'
 	)
-	const successUrl = getEnvOrDefault(
-		'STRIPE_SUCCESS_URL',
-		'/thank-you?session_id={CHECKOUT_SESSION_ID}'
+	const successUrl = normalizeStripeSuccessUrl(
+		getEnvOrDefault('STRIPE_SUCCESS_URL', DEFAULT_STRIPE_SUCCESS_PATH),
+		appUrl
 	)
 	const cancelUrl = getEnvOrDefault('STRIPE_CANCEL_URL', '/')
 
@@ -192,9 +216,9 @@ export function getServerConfig(): ServerConfig {
 			secretKey: requireEnv('STRIPE_SECRET_KEY'),
 			pricePro: stripePricePro,
 			priceVip: stripePriceVip,
-			successUrl: getEnvOrDefault(
-				'STRIPE_SUCCESS_URL',
-				'/thank-you?session_id={CHECKOUT_SESSION_ID}'
+			successUrl: normalizeStripeSuccessUrl(
+				getEnvOrDefault('STRIPE_SUCCESS_URL', DEFAULT_STRIPE_SUCCESS_PATH),
+				appUrl
 			),
 			cancelUrl: getEnvOrDefault('STRIPE_CANCEL_URL', '/'),
 		},
