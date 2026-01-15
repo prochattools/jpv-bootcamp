@@ -6,7 +6,7 @@ This document describes the paid subscription provisioning flow and how to test 
 
 1) The checkout page calls `/api/stripe/checkout?plan=pro|vip`.
 2) Stripe fires `checkout.session.completed` after payment.
-3) The webhook verifies the signature, de-dupes the event, and provisions the WordPress user.
+3) The webhook (`/api/webhook/stripe`) verifies the signature, de-dupes the event, and provisions the WordPress user.
 4) The app stores the Stripe ↔ WordPress mapping and sends a welcome email with a reset link.
 
 ## Environment variables
@@ -75,7 +75,7 @@ curl -X POST "https://portal.jpvbootcamp.com/wp-json/jpv/v1/provision" \
 1) Listen for webhooks:
 
 ```bash
-stripe listen --forward-to localhost:3000/api/stripe/webhook
+stripe listen --forward-to localhost:3000/api/webhook/stripe
 ```
 
 2) Trigger a checkout session completion:
@@ -91,7 +91,7 @@ For full end-to-end testing, run a real Checkout session and confirm the event i
 ```text
 User → /api/stripe/checkout?plan=pro|vip
   → Stripe Checkout Session (metadata: plan, source)
-  → Stripe webhook (checkout.session.completed)
+  → Stripe webhook `/api/webhook/stripe` (checkout.session.completed)
     → Verify signature + idempotency
     → POST WP provisioning endpoint
     → Persist CustomerProvisioning + StripeWebhookEvent
@@ -103,3 +103,4 @@ User → /api/stripe/checkout?plan=pro|vip
 - Provisioning is webhook-driven only. The success URL never provisions.
 - WordPress roles remain `subscriber`.
 - Membership level is stored in user meta as `jpv_membership_level`.
+- Alias endpoint `/api/stripe/webhook` remains available for legacy configs.

@@ -6,7 +6,12 @@
 
 ## Run the webhook listener
 ```bash
-stripe listen --forward-to localhost:3000/api/stripe/webhook
+stripe listen --forward-to localhost:3000/api/webhook/stripe
+```
+
+Alias: `/api/stripe/webhook` (kept for backward compatibility).
+```bash
+stripe listen --forward-to localhost:3000/api/webhook/stripe
 ```
 
 Copy the `whsec_...` value into `STRIPE_WEBHOOK_SECRET`.

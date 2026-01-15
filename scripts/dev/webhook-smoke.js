@@ -25,6 +25,7 @@ const baseUrl =
   process.env.APP_PUBLIC_URL ||
   process.env.NEXT_PUBLIC_APP_URL ||
   'http://localhost:3000'
+const webhookPath = process.env.WEBHOOK_PATH || '/api/webhook/stripe'
 
 const secretKey = process.env.STRIPE_SECRET_KEY
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
@@ -63,7 +64,7 @@ const signature = stripe.webhooks.generateTestHeaderString({
 })
 
 async function sendWebhook() {
-  const response = await fetch(`${baseUrl.replace(/\/$/, '')}/api/stripe/webhook`, {
+  const response = await fetch(`${baseUrl.replace(/\/$/, '')}${webhookPath}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -76,7 +77,7 @@ async function sendWebhook() {
 }
 
 async function main() {
-  console.log(`[webhook-smoke] baseUrl=${baseUrl}`)
+  console.log(`[webhook-smoke] baseUrl=${baseUrl} path=${webhookPath}`)
   const first = await sendWebhook()
   assert.equal(first.status, expectStatus, `Unexpected webhook status: ${first.status}`)
   console.log('[webhook-smoke] first call ok')
