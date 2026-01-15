@@ -1,226 +1,96 @@
 import 'server-only'
-import crypto from 'node:crypto'
-import { config } from '@/lib/config'
+import { getServerConfig } from '@/lib/config'
 
-type WpUser = {
-	id: number
-	email?: string
-	user_email?: string
-	slug?: string
+type ProvisionPayload = {
+	email: string
+	plan: string
+	name?: string | null
+	stripeCustomerId?: string | null
 }
 
-type WpError = {
-	code?: string
-	message?: string
+type ProvisionResponse = {
+	ok?: boolean
+	wp_user_id?: number
+	wpUserId?: number
+	reset_link?: string
+	resetLink?: string
+	error?: string
 }
 
-type WpResponse<T> =
-	| { ok: true; data: T }
-	| { ok: false; status: number; data: WpError | null; text: string }
-
-type WpErrorResponse = Extract<WpResponse<unknown>, { ok: false }>
-
-function getAuthHeader(): string {
-	const token = Buffer.from(
-		`${config.wp.username}:${config.wp.appPassword}`,
-		'utf8'
-	).toString('base64')
-	return `Basic ${token}`
+export type ProvisionResult = {
+	wpUserId: number
+	resetLink: string
 }
 
-async function wpRequest<T>(path: string, init: RequestInit = {}): Promise<WpResponse<T>> {
-	const url = new URL(path, config.wp.baseUrl)
-	const response = await fetch(url, {
-		...init,
-		headers: {
-			Authorization: getAuthHeader(),
-			Accept: 'application/json',
-			...(init.body ? { 'Content-Type': 'application/json' } : {}),
-			...init.headers,
-		},
-		cache: 'no-store',
-	})
-
-	const text = await response.text()
-	let data: WpError | null = null
-	try {
-		data = text ? (JSON.parse(text) as WpError) : null
-	} catch {
-		data = null
-	}
-
-	if (!response.ok) {
-		return { ok: false, status: response.status, data, text }
-	}
-
-	return { ok: true, data: data as T }
+function normalizePlan(value: string): string {
+	return value.trim().toLowerCase()
 }
 
 function normalizeEmail(email: string): string {
 	return email.trim().toLowerCase()
 }
 
-function generateUsername(email: string): string {
-	const localPart = email.split('@')[0] ?? 'user'
-	const base = localPart.toLowerCase().replace(/[^a-z0-9]/g, '') || 'user'
-	const suffix = crypto.randomBytes(2).toString('hex')
-	return `${base}-${suffix}`
+function getProvisionUrl(): string {
+	const { wp } = getServerConfig()
+	return new URL(wp.provisionEndpoint, wp.baseUrl).toString()
 }
 
-function generatePassword(): string {
-	return crypto.randomBytes(24).toString('base64url')
-}
+export async function provisionWpUser(payload: ProvisionPayload): Promise<ProvisionResult> {
+	const email = normalizeEmail(payload.email)
+	const plan = normalizePlan(payload.plan)
 
-function extractErrorCode(response: WpResponse<unknown>): string | null {
-	if (response.ok) return null
-	const data = response.data
-	if (typeof data !== 'object' || data === null) return null
-	const code =
-		'code' in data ? (data as { code?: unknown }).code : undefined
-	return typeof code === 'string' ? code : null
-}
-
-function isWpErrorResponse<T>(response: WpResponse<T>): response is WpErrorResponse {
-	return !response.ok
-}
-
-export async function wpFindUserByEmail(
-	email: string
-): Promise<{ id: number } | null> {
-	const normalized = normalizeEmail(email)
-	const search = encodeURIComponent(normalized)
-	const response = await wpRequest<WpUser[]>(
-		`/wp-json/wp/v2/users?search=${search}&context=edit&per_page=100`,
-		{ method: 'GET' }
-	)
-
-	if (isWpErrorResponse(response)) {
-		console.warn('WP user search failed', { status: response.status })
-		return null
+	if (!email) {
+		throw new Error('WP provisioning requires a valid email.')
 	}
 
-	const match = response.data.find((user) => {
-		const userEmail = user.email ?? user.user_email
-		return userEmail?.toLowerCase() === normalized
-	})
-
-	if (match) return { id: match.id }
-
-	const localPart = normalized.split('@')[0] ?? ''
-	const slugMatch = response.data.find(
-		(user) => user.slug?.toLowerCase() === localPart
-	)
-	if (slugMatch) return { id: slugMatch.id }
-
-	if (response.data.length === 1) {
-		return { id: response.data[0].id }
+	if (!plan) {
+		throw new Error('WP provisioning requires a membership plan.')
 	}
 
-	return null
-}
-
-export async function wpCreateUser({
-	email,
-	username,
-	firstName,
-	lastName,
-	role,
-}: {
-	email: string
-	username?: string
-	firstName?: string
-	lastName?: string
-	role: string
-}): Promise<{ id: number }> {
-	const basePayload: Record<string, unknown> = {
+	const url = getProvisionUrl()
+	const body = {
 		email,
-		username: username ?? generateUsername(email),
-		password: generatePassword(),
+		plan,
+		name: payload.name ?? null,
+		stripe_customer_id: payload.stripeCustomerId ?? undefined,
 	}
 
-	if (firstName) basePayload.first_name = firstName
-	if (lastName) basePayload.last_name = lastName
-
-	const createWithPayload = async (payload: Record<string, unknown>) => {
-		return wpRequest<WpUser>(`/wp-json/wp/v2/users?context=edit`, {
-			method: 'POST',
-			body: JSON.stringify(payload),
-		})
-	}
-
-	let response = await createWithPayload({ ...basePayload, roles: [role] })
-	if (!response.ok && extractErrorCode(response) === 'rest_invalid_param') {
-		response = await createWithPayload({ ...basePayload, role })
-	}
-
-	if (!response.ok && extractErrorCode(response) === 'existing_user_login') {
-		const retryPayload = { ...basePayload, username: generateUsername(email) }
-		response = await createWithPayload({ ...retryPayload, roles: [role] })
-		if (!response.ok && extractErrorCode(response) === 'rest_invalid_param') {
-			response = await createWithPayload({ ...retryPayload, role })
-		}
-	}
-
-	if (!response.ok && extractErrorCode(response) === 'existing_user_email') {
-		const existing = await wpFindUserByEmail(email)
-		if (existing) return existing
-	}
-
-	if (isWpErrorResponse(response)) {
-		throw new Error(`WP user create failed with status ${response.status}`)
-	}
-
-	return { id: response.data.id }
-}
-
-export async function wpSetUserRole(userId: number, role: string): Promise<void> {
-	let response = await wpRequest<WpUser>(
-		`/wp-json/wp/v2/users/${userId}?context=edit`,
-		{
-			method: 'POST',
-			body: JSON.stringify({ roles: [role] }),
-		}
-	)
-
-	if (!isWpErrorResponse(response)) return
-
-	console.warn('WP role update with roles failed', {
-		status: response.status,
-		code: extractErrorCode(response),
+	const response = await fetch(url, {
+		method: 'POST',
+		headers: {
+			Authorization: `Bearer ${getServerConfig().wp.provisionToken}`,
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+		},
+		body: JSON.stringify(body),
+		cache: 'no-store',
 	})
 
-	response = await wpRequest<WpUser>(
-		`/wp-json/wp/v2/users/${userId}?context=edit`,
-		{
-			method: 'POST',
-			body: JSON.stringify({ role }),
-		}
-	)
-
-	if (isWpErrorResponse(response)) {
-		console.warn('WP role update failed', {
-			status: response.status,
-			code: extractErrorCode(response),
-		})
+	const text = await response.text()
+	let data: ProvisionResponse | null = null
+	try {
+		data = text ? (JSON.parse(text) as ProvisionResponse) : null
+	} catch {
+		data = null
 	}
-}
 
-export async function wpUpdateUserMeta(
-	userId: number,
-	meta: Record<string, string>
-): Promise<void> {
-	const response = await wpRequest<WpUser>(
-		`/wp-json/wp/v2/users/${userId}?context=edit`,
-		{
-			method: 'POST',
-			body: JSON.stringify({ meta }),
-		}
-	)
+	if (!response.ok) {
+		const message =
+			typeof data?.error === 'string'
+				? data.error
+				: `WP provisioning failed with status ${response.status}`
+		throw new Error(message)
+	}
 
-	if (isWpErrorResponse(response)) {
-		console.warn('WP user meta update not supported', {
-			status: response.status,
-			code: extractErrorCode(response),
-		})
+	const wpUserId = data?.wp_user_id ?? data?.wpUserId
+	const resetLink = data?.reset_link ?? data?.resetLink
+
+	if (!wpUserId || !resetLink) {
+		throw new Error('WP provisioning response missing required fields.')
+	}
+
+	return {
+		wpUserId,
+		resetLink,
 	}
 }

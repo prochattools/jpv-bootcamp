@@ -1,10 +1,15 @@
 import 'server-only'
 import type Stripe from 'stripe'
-import { config } from '@/lib/config'
+import prisma from '@/libs/prisma'
 import { sendWelcomeEmail } from '@/lib/email'
-import { getPlanFromPriceId, getWpRoleForPlan, type Plan } from '@/lib/plans'
+import { getPlanFromPriceId, type Plan } from '@/lib/plans'
 import { getStripe } from '@/lib/stripe'
-import { wpCreateUser, wpFindUserByEmail, wpSetUserRole, wpUpdateUserMeta } from '@/lib/wp'
+import { provisionWpUser } from '@/lib/wp'
+
+const ACTIVE_STATUSES = new Set<Stripe.Subscription.Status>([
+	'active',
+	'trialing',
+])
 
 function normalizePlan(value: string | null | undefined): Plan | null {
 	return value === 'pro' || value === 'vip' ? value : null
@@ -37,17 +42,16 @@ async function getCustomerEmail(
 	return fetched.email ?? null
 }
 
-async function getCheckoutSessionPriceId(
-	sessionId: string
-): Promise<string | null> {
+async function getCheckoutSessionPriceId(sessionId: string): Promise<string | null> {
 	const stripe = getStripe()
 	const lineItems = await stripe.checkout.sessions.listLineItems(sessionId, { limit: 10 })
 	return lineItems.data[0]?.price?.id ?? null
 }
 
-function getPlanFromSubscription(
-	subscription: Stripe.Subscription
-): { plan: Plan | null; priceId: string | null } {
+function getPlanFromSubscription(subscription: Stripe.Subscription): {
+	plan: Plan | null
+	priceId: string | null
+} {
 	const metadataPlan = normalizePlan(subscription.metadata?.plan)
 	const priceId = subscription.items?.data?.[0]?.price?.id ?? null
 	return {
@@ -88,18 +92,56 @@ async function resolvePlanFromCheckoutSession(
 	}
 }
 
-async function upsertWpUserByEmail(
-	email: string,
-	name?: string | null
-): Promise<{ id: number }> {
-	const existing = await wpFindUserByEmail(email)
-	if (existing) return existing
-	const { firstName, lastName } = splitName(name)
-	return wpCreateUser({
+async function upsertProvisioningRecord({
+	email,
+	stripeCustomerId,
+	stripeSubscriptionId,
+	wpUserId,
+	plan,
+	status,
+}: {
+	email: string
+	stripeCustomerId: string
+	stripeSubscriptionId?: string | null
+	wpUserId?: number | null
+	plan: string
+	status: string
+}): Promise<void> {
+	const existing = await prisma.customerProvisioning.findFirst({
+		where: {
+			OR: [{ stripeCustomerId }, { email }],
+		},
+	})
+
+	const updateData: {
+		email: string
+		stripeCustomerId: string
+		stripeSubscriptionId?: string | null
+		wpUserId?: number | null
+		currentPlan: string
+		status: string
+	} = {
 		email,
-		firstName,
-		lastName,
-		role: config.wp.roleDefault,
+		stripeCustomerId,
+		stripeSubscriptionId: stripeSubscriptionId ?? null,
+		currentPlan: plan,
+		status,
+	}
+
+	if (typeof wpUserId === 'number') {
+		updateData.wpUserId = wpUserId
+	}
+
+	if (existing) {
+		await prisma.customerProvisioning.update({
+			where: { id: existing.id },
+			data: updateData,
+		})
+		return
+	}
+
+	await prisma.customerProvisioning.create({
+		data: updateData,
 	})
 }
 
@@ -113,13 +155,21 @@ export async function provisionFromCheckoutSession(
 		return
 	}
 
+	if (session.payment_status && !['paid', 'no_payment_required'].includes(session.payment_status)) {
+		console.info('Checkout session not paid yet', {
+			sessionId: session.id,
+			paymentStatus: session.payment_status,
+		})
+		return
+	}
+
 	const email = session.customer_email ?? session.customer_details?.email
 	if (!email) {
 		console.warn('Checkout session missing email', { sessionId: session.id })
 		return
 	}
 
-	const { plan, priceId } = await resolvePlanFromCheckoutSession(session)
+	const { plan } = await resolvePlanFromCheckoutSession(session)
 	if (!plan) {
 		console.warn('Checkout session missing plan', { sessionId: session.id })
 		return
@@ -132,6 +182,11 @@ export async function provisionFromCheckoutSession(
 			? session.subscription
 			: session.subscription?.id ?? ''
 
+	if (!customerId) {
+		console.warn('Checkout session missing customer ID', { sessionId: session.id })
+		return
+	}
+
 	console.info('Provisioning checkout session', {
 		sessionId: session.id,
 		plan,
@@ -140,16 +195,30 @@ export async function provisionFromCheckoutSession(
 		emailDomain: getEmailDomain(email),
 	})
 
-	const user = await upsertWpUserByEmail(email, session.customer_details?.name)
-	await wpSetUserRole(user.id, getWpRoleForPlan(plan))
-	await wpUpdateUserMeta(user.id, {
-		stripe_customer_id: customerId,
-		stripe_subscription_id: subscriptionId,
-		jpv_plan: plan,
-		stripe_price_id: priceId ?? '',
-		stripe_checkout_session_id: session.id,
+	const { firstName, lastName } = splitName(session.customer_details?.name)
+	const displayName = [firstName, lastName].filter(Boolean).join(' ').trim()
+
+	const wpProvision = await provisionWpUser({
+		email,
+		plan,
+		name: displayName || session.customer_details?.name || null,
+		stripeCustomerId: customerId,
 	})
-	await sendWelcomeEmail({ to: email, plan })
+
+	await upsertProvisioningRecord({
+		email,
+		stripeCustomerId: customerId,
+		stripeSubscriptionId: subscriptionId || null,
+		wpUserId: wpProvision.wpUserId,
+		plan,
+		status: 'active',
+	})
+
+	await sendWelcomeEmail({
+		to: email,
+		plan,
+		resetUrl: wpProvision.resetLink,
+	})
 }
 
 export async function syncFromSubscription(subscriptionId: string): Promise<void> {
@@ -166,39 +235,44 @@ export async function syncFromSubscription(subscriptionId: string): Promise<void
 		return
 	}
 
-	const { plan, priceId } = getPlanFromSubscription(subscription)
+	const { plan } = getPlanFromSubscription(subscription)
 	const customerId =
 		typeof subscription.customer === 'string'
 			? subscription.customer
 			: subscription.customer?.id ?? ''
-
-	if (subscription.status === 'past_due' || subscription.status === 'unpaid') {
-		console.info('Subscription delinquent, no role change', {
-			subscriptionId: subscription.id,
-			status: subscription.status,
-			emailDomain: getEmailDomain(email),
-		})
+	if (!customerId) {
+		console.warn('Subscription missing customer ID', { subscriptionId: subscription.id })
 		return
 	}
 
-	const isActive = subscription.status === 'active' || subscription.status === 'trialing'
-	const targetRole = isActive && plan ? getWpRoleForPlan(plan) : config.wp.roleDefault
-	const planValue = isActive && plan ? plan : 'none'
+	const isActive = ACTIVE_STATUSES.has(subscription.status)
+	if (isActive && !plan) {
+		console.warn('Active subscription missing plan', { subscriptionId: subscription.id })
+		return
+	}
+	const nextPlan = isActive ? plan ?? 'none' : 'none'
+	const nextStatus = isActive ? 'active' : 'inactive'
 
 	console.info('Syncing subscription', {
 		subscriptionId: subscription.id,
 		status: subscription.status,
-		plan: planValue,
+		plan: nextPlan,
 		emailDomain: getEmailDomain(email),
 	})
 
-	const user = await upsertWpUserByEmail(email, null)
-	await wpSetUserRole(user.id, targetRole)
-	await wpUpdateUserMeta(user.id, {
-		stripe_customer_id: customerId,
-		stripe_subscription_id: subscription.id,
-		jpv_plan: planValue,
-		stripe_price_id: priceId ?? '',
-		stripe_checkout_session_id: '',
+	const wpProvision = await provisionWpUser({
+		email,
+		plan: nextPlan,
+		name: null,
+		stripeCustomerId: customerId || null,
+	})
+
+	await upsertProvisioningRecord({
+		email,
+		stripeCustomerId: customerId,
+		stripeSubscriptionId: subscription.id,
+		wpUserId: wpProvision.wpUserId,
+		plan: nextPlan,
+		status: nextStatus,
 	})
 }

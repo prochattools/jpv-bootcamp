@@ -19,6 +19,7 @@ export const getSEOTags = ({
   extraTags?: Record<string, any>;
 } = {}) => {
   const baseUrl =
+    process.env.APP_PUBLIC_URL?.replace(/\/$/, "") ||
     process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ||
     `https://${config.domainName}`;
   const metadataBase = new URL(baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`);
@@ -87,6 +88,7 @@ export const getSEOTags = ({
 
 export const renderSchemaTags = () => {
   const baseUrl =
+    process.env.APP_PUBLIC_URL?.replace(/\/$/, "") ||
     process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ||
     `https://${config.domainName}`;
   const homeUrl = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;

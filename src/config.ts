@@ -3,6 +3,7 @@ import themes from 'daisyui/src/theming/themes'
 
 const domainName =
 	process.env.NEXT_PUBLIC_APP_DOMAIN ??
+	process.env.APP_PUBLIC_URL?.replace(/^https?:\/\//, '').replace(/\/$/, '') ??
 	process.env.NEXT_PUBLIC_APP_URL?.replace(/^https?:\/\//, '').replace(/\/$/, '') ??
 	'jpvbootcamp.com'
 

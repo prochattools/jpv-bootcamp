@@ -1,7 +1,10 @@
 import { MetadataRoute } from 'next'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-    const currentUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    const currentUrl =
+        process.env.APP_PUBLIC_URL ||
+        process.env.NEXT_PUBLIC_APP_URL ||
+        'http://localhost:3000'
 
     return [
         {

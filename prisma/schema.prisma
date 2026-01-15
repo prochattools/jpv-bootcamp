@@ -20,8 +20,23 @@ model EmailSubscriber {
 }
 
 model StripeWebhookEvent {
-  eventId   String   @id @map("event_id")
+  id        String   @id @map("event_id")
+  type      String   @default("unknown") @map("type")
   createdAt DateTime @default(now()) @map("created_at")
 
   @@map("stripe_webhook_events")
+}
+
+model CustomerProvisioning {
+  id                   String   @id @default(cuid())
+  email                String   @unique
+  stripeCustomerId     String   @unique @map("stripe_customer_id")
+  stripeSubscriptionId String?  @unique @map("stripe_subscription_id")
+  wpUserId             Int?     @map("wp_user_id")
+  currentPlan          String   @map("current_plan")
+  status               String   @default("active")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  @@map("customer_provisioning")
 }

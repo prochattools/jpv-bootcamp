@@ -1,12 +1,24 @@
 import { NextResponse } from 'next/server'
 import type Stripe from 'stripe'
-import { config } from '@/lib/config'
+import { getServerConfig, getStripeWebhookSecret } from '@/lib/config'
 import { hasProcessed, markProcessed } from '@/lib/idempotency'
 import { provisionFromCheckoutSession, syncFromSubscription } from '@/lib/provisioning'
 import { getStripe } from '@/lib/stripe'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
+
+const PROVISIONING_EVENT_TYPES = new Set([
+	'checkout.session.completed',
+	'customer.subscription.updated',
+	'customer.subscription.deleted',
+])
+
+function isMissingEnvError(error: unknown): boolean {
+	return (
+		error instanceof Error && error.message.startsWith('Missing required env var:')
+	)
+}
 
 function getEmailDomain(email?: string | null): string | null {
 	if (!email) return null
@@ -49,6 +61,17 @@ export async function POST(req: Request) {
 		return NextResponse.json({ error: 'Missing Stripe signature.' }, { status: 400 })
 	}
 
+	let webhookSecret: string
+	try {
+		webhookSecret = getStripeWebhookSecret()
+	} catch (error) {
+		console.error('Stripe webhook secret missing', { message: (error as Error).message })
+		return NextResponse.json(
+			{ error: 'Missing Stripe webhook secret.' },
+			{ status: 500 }
+		)
+	}
+
 	const stripe = getStripe()
 	const rawBody = await req.arrayBuffer()
 	let event: Stripe.Event
@@ -57,7 +80,7 @@ export async function POST(req: Request) {
 		event = stripe.webhooks.constructEvent(
 			Buffer.from(rawBody),
 			signature,
-			config.stripe.webhookSecret
+			webhookSecret
 		)
 	} catch (error) {
 		console.error('Stripe webhook signature verification failed', {
@@ -72,6 +95,36 @@ export async function POST(req: Request) {
 	}
 
 	logEventSummary(event)
+
+	const requiresProvisioning = PROVISIONING_EVENT_TYPES.has(event.type)
+	const isProd = process.env.NODE_ENV === 'production'
+
+	if (requiresProvisioning) {
+		try {
+			getServerConfig()
+		} catch (error) {
+			if (isMissingEnvError(error)) {
+				const message = isProd
+					? 'Provisioning config missing; cannot provision in production.'
+					: 'Provisioning config missing; skipping provisioning.'
+				;(isProd ? console.error : console.warn)(message, {
+					eventId: event.id,
+					type: event.type,
+					env: process.env.NODE_ENV,
+				})
+				await markProcessed(event.id, event.type)
+				if (isProd) {
+					return NextResponse.json(
+						{ error: 'Missing required provisioning configuration.' },
+						{ status: 500 }
+					)
+				}
+				return NextResponse.json({ received: true, skipped: 'provisioning' })
+			}
+
+			throw error
+		}
+	}
 
 	try {
 		switch (event.type) {
@@ -105,7 +158,7 @@ export async function POST(req: Request) {
 				console.info('Stripe webhook ignored', { type: event.type })
 		}
 
-		await markProcessed(event.id)
+		await markProcessed(event.id, event.type)
 		return NextResponse.json({ received: true })
 	} catch (error) {
 		console.error('Stripe webhook handler failed', {

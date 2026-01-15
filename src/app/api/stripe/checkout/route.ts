@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { config } from '@/lib/config'
+import { getStripeConfig, type StripeConfig } from '@/lib/config'
 import { getPlanFromPriceId, type Plan } from '@/lib/plans'
 import { getStripe } from '@/lib/stripe'
 
@@ -12,8 +12,8 @@ function isPricingPlanKey(value: string | null): value is PricingPlanKey {
 	return value === 'pro' || value === 'vip'
 }
 
-function getPriceIdForPlan(plan: PricingPlanKey) {
-	return plan === 'pro' ? config.stripe.pricePro : config.stripe.priceVip
+function getPriceIdForPlan(plan: PricingPlanKey, stripeConfig: StripeConfig['stripe']) {
+	return plan === 'pro' ? stripeConfig.pricePro : stripeConfig.priceVip
 }
 
 async function getActiveMembershipSubscriptionForCustomer(customerId: string) {
@@ -50,12 +50,13 @@ function getCurrentPlanFromSubscription(sub: any): PricingPlanKey | null {
 	return getPlanFromPriceId(priceId)
 }
 
-function buildReturnUrl(pathOrUrl: string) {
-	return new URL(pathOrUrl, config.app.url).toString()
+function buildReturnUrl(pathOrUrl: string, appUrl: string) {
+	return new URL(pathOrUrl, appUrl).toString()
 }
 
 export async function GET(req: NextRequest) {
 	try {
+		const stripeConfig = getStripeConfig()
 		const planParam = req.nextUrl.searchParams.get('plan')
 		const customerParam = req.nextUrl.searchParams.get('customer')
 
@@ -71,9 +72,9 @@ export async function GET(req: NextRequest) {
 		}
 
 		const stripe = getStripe()
-		const priceId = getPriceIdForPlan(plan)
-		const successUrl = buildReturnUrl(config.stripe.successUrl)
-		const cancelUrl = buildReturnUrl(config.stripe.cancelUrl)
+		const priceId = getPriceIdForPlan(plan, stripeConfig.stripe)
+		const successUrl = buildReturnUrl(stripeConfig.stripe.successUrl, stripeConfig.app.url)
+		const cancelUrl = buildReturnUrl(stripeConfig.stripe.cancelUrl, stripeConfig.app.url)
 
 		// If the user is already on Pro and is requesting VIP, send them to a Portal upgrade flow
 		// (prevents accidentally creating a 2nd subscription via Checkout).
@@ -130,10 +131,12 @@ export async function GET(req: NextRequest) {
 			allow_promotion_codes: true,
 			metadata: {
 				plan,
+				source: 'landing',
 			},
 			subscription_data: {
 				metadata: {
 					plan,
+					source: 'landing',
 				},
 			},
 		})

@@ -1,23 +1,31 @@
 import 'server-only'
 import prisma from '@/libs/prisma'
-import { config } from '@/lib/config'
+import { getOpsConfig } from '@/lib/config'
 
-const ttlMs = config.ops.idempotencyTtlHours * 60 * 60 * 1000
 // In-memory fallback is only suitable for development; use DB/Redis in production.
 const memoryStore = new Map<string, number>()
 const shouldUsePrisma = Boolean(process.env.DATABASE_URL)
+let cachedTtlMs: number | null = null
+
+function getTtlMs(): number {
+	if (cachedTtlMs === null) {
+		const ops = getOpsConfig()
+		cachedTtlMs = ops.idempotencyTtlHours * 60 * 60 * 1000
+	}
+	return cachedTtlMs
+}
 
 type PrismaClientLike = {
 	stripeWebhookEvent?: {
-		findUnique: (args: { where: { eventId: string } }) => Promise<{ eventId: string } | null>
-		create: (args: { data: { eventId: string } }) => Promise<{ eventId: string }>
+		findUnique: (args: { where: { id: string } }) => Promise<{ id: string } | null>
+		create: (args: { data: { id: string; type: string } }) => Promise<{ id: string }>
 		deleteMany: (args: { where: { createdAt: { lt: Date } } }) => Promise<{ count: number }>
 	}
 }
 
 const prismaClient = prisma as unknown as PrismaClientLike
 
-function pruneMemoryStore(now: number) {
+function pruneMemoryStore(now: number, ttlMs: number) {
 	memoryStore.forEach((timestamp, eventId) => {
 		if (now - timestamp > ttlMs) {
 			memoryStore.delete(eventId)
@@ -38,7 +46,7 @@ export async function hasProcessed(eventId: string): Promise<boolean> {
 	if (shouldUsePrisma && prismaClient.stripeWebhookEvent) {
 		try {
 			const existing = await prismaClient.stripeWebhookEvent.findUnique({
-				where: { eventId },
+				where: { id: eventId },
 			})
 			return Boolean(existing)
 		} catch (error) {
@@ -49,15 +57,19 @@ export async function hasProcessed(eventId: string): Promise<boolean> {
 	}
 
 	const now = Date.now()
-	pruneMemoryStore(now)
+	const ttlMs = getTtlMs()
+	pruneMemoryStore(now, ttlMs)
 	const seenAt = memoryStore.get(eventId)
 	return typeof seenAt === 'number' && now - seenAt <= ttlMs
 }
 
-export async function markProcessed(eventId: string): Promise<void> {
+export async function markProcessed(eventId: string, eventType: string): Promise<void> {
+	const ttlMs = getTtlMs()
 	if (shouldUsePrisma && prismaClient.stripeWebhookEvent) {
 		try {
-			await prismaClient.stripeWebhookEvent.create({ data: { eventId } })
+			await prismaClient.stripeWebhookEvent.create({
+				data: { id: eventId, type: eventType },
+			})
 			await prismaClient.stripeWebhookEvent.deleteMany({
 				where: { createdAt: { lt: new Date(Date.now() - ttlMs) } },
 			})

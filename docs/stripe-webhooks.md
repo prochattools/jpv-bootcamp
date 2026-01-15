@@ -20,21 +20,21 @@ stripe trigger invoice.payment_failed
 ```
 
 ## Required env vars (minimum)
+- `APP_PUBLIC_URL` (or `NEXT_PUBLIC_APP_URL`)
 - `STRIPE_SECRET_KEY`
 - `STRIPE_WEBHOOK_SECRET`
-- `NEXT_PUBLIC_STRIPE_PRICE_PRO`
-- `NEXT_PUBLIC_STRIPE_PRICE_VIP`
-- `STRIPE_SUCCESS_URL`
-- `STRIPE_CANCEL_URL`
+- `STRIPE_PRICE_PRO` (or `NEXT_PUBLIC_STRIPE_PRICE_PRO`)
+- `STRIPE_PRICE_VIP` (or `NEXT_PUBLIC_STRIPE_PRICE_VIP`)
+- `WEBHOOK_IDEMPOTENCY_TTL_HOURS`
+
+## Provisioning env vars (required to provision in production)
 - `WP_BASE_URL`
-- `WP_ADMIN_USERNAME`
-- `WP_APPLICATION_PASSWORD`
-- `WP_ROLE_PRO`
-- `WP_ROLE_VIP`
-- `WP_ROLE_DEFAULT`
+- `WP_PROVISION_ENDPOINT`
+- `WP_PROVISION_TOKEN`
 - `RESEND_API_KEY`
 - `EMAIL_FROM`
 - `EMAIL_REPLY_TO`
-- `PORTAL_LOGIN_URL`
-- `PORTAL_SET_PASSWORD_URL`
-- `WEBHOOK_IDEMPOTENCY_TTL_HOURS`
+- `SUPPORT_TO_EMAIL`
+- `PORTAL_URL` (or `PORTAL_LOGIN_URL`)
+
+Note: In development, missing provisioning env vars will skip WordPress provisioning but still return 2xx to Stripe after idempotency is recorded.

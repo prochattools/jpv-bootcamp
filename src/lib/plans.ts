@@ -1,22 +1,23 @@
 import 'server-only'
-import { config } from '@/lib/config'
+import { getStripeConfig } from '@/lib/config'
 
 export type Plan = 'pro' | 'vip'
 
-const PLAN_BY_PRICE_ID: Record<string, Plan> = {
-	[config.stripe.pricePro]: 'pro',
-	[config.stripe.priceVip]: 'vip',
+let cachedPlanByPriceId: Record<string, Plan> | null = null
+
+function getPlanByPriceId(): Record<string, Plan> {
+	if (cachedPlanByPriceId) {
+		return cachedPlanByPriceId
+	}
+	const { stripe } = getStripeConfig()
+	cachedPlanByPriceId = {
+		[stripe.pricePro]: 'pro',
+		[stripe.priceVip]: 'vip',
+	}
+	return cachedPlanByPriceId
 }
 
 export function getPlanFromPriceId(priceId: string | null | undefined): Plan | null {
 	if (!priceId) return null
-	return PLAN_BY_PRICE_ID[priceId] ?? null
-}
-
-
-export function getWpRoleForPlan(plan: Plan): string {
-	if (plan === 'vip') {
-		return config.wp.roleVip || config.wp.roleDefault
-	}
-	return config.wp.rolePro || config.wp.roleDefault
+	return getPlanByPriceId()[priceId] ?? null
 }

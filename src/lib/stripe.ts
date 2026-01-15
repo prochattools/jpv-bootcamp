@@ -1,15 +1,18 @@
 import 'server-only'
 import Stripe from 'stripe'
-import { config } from '@/lib/config'
 
-let stripeClient: Stripe | null = null
+import { getStripeConfig } from '@/lib/config'
 
-export function getStripe() {
-	if (!stripeClient) {
-		stripeClient = new Stripe(config.stripe.secretKey, {
-			apiVersion: '2024-06-20',
-		})
-	}
+let cachedStripe: Stripe | null = null
 
-	return stripeClient
+export function getStripe(): Stripe {
+	if (cachedStripe) return cachedStripe
+
+	const cfg = getStripeConfig()
+
+	cachedStripe = new Stripe(cfg.stripe.secretKey, {
+		apiVersion: '2024-06-20',
+	})
+
+	return cachedStripe
 }

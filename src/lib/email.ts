@@ -1,10 +1,18 @@
 import 'server-only'
 import { Resend } from 'resend'
-import { config } from '@/lib/config'
+import { getServerConfig } from '@/lib/config'
 import type { Plan } from '@/lib/plans'
 
 // Canonical Resend helpers live in this module; server routes call these functions to send email.
-const resend = new Resend(config.email.resendApiKey)
+let resendClient: Resend | null = null
+
+function getResendClient(): Resend {
+	if (!resendClient) {
+		const { email } = getServerConfig()
+		resendClient = new Resend(email.resendApiKey)
+	}
+	return resendClient
+}
 
 const SUBJECT = 'Your JPV Bootcamp access is ready'
 const SUPPORT_SUBJECT_PREFIX = `JPV Bootcamp Support Request \u2014 `
@@ -16,31 +24,35 @@ function getPlanLabel(plan: Plan): string {
 export async function sendWelcomeEmail({
 	to,
 	plan,
+	resetUrl,
 }: {
 	to: string
 	plan: Plan
+	resetUrl: string
 }): Promise<void> {
+	const { email: emailConfig } = getServerConfig()
 	const planLabel = getPlanLabel(plan)
 	const text = [
 		`Your ${planLabel} plan is active.`,
 		'',
-		`Log in here: ${config.email.portalLoginUrl}`,
-		`Set or reset your password here: ${config.email.portalSetPasswordUrl}`,
+		`Log in here: ${emailConfig.portalUrl}`,
+		`Set or reset your password here: ${resetUrl}`,
 		'',
-		`If you need help, reply to this email: ${config.email.replyTo}`,
+		`If you need help, reply to this email: ${emailConfig.replyTo}`,
 	].join('\n')
 
 	const html = `
 		<p>Your <strong>${planLabel}</strong> plan is active.</p>
-		<p><a href="${config.email.portalLoginUrl}">Log in to the portal</a></p>
-		<p><a href="${config.email.portalSetPasswordUrl}">Set or reset your password</a></p>
-		<p>If you need help, reply to this email: ${config.email.replyTo}</p>
+		<p><a href="${emailConfig.portalUrl}">Log in to the portal</a></p>
+		<p><a href="${resetUrl}">Set or reset your password</a></p>
+		<p>If you need help, reply to this email: ${emailConfig.replyTo}</p>
 	`
 
+	const resend = getResendClient()
 	const { error } = await resend.emails.send({
-		from: config.email.from,
+		from: emailConfig.from,
 		to: [to],
-		replyTo: config.email.replyTo,
+		replyTo: emailConfig.replyTo,
 		subject: SUBJECT,
 		text,
 		html,
@@ -90,9 +102,10 @@ export async function sendSupportEmail({
 	page: string
 	submittedAt: string
 }): Promise<void> {
+	const { email: emailConfig } = getServerConfig()
 	// Support sender/recipient resolve from env-backed config (RESEND_FROM/EMAIL_FROM, SUPPORT_TO_EMAIL).
-	const supportFrom = config.email.from
-	const supportTo = config.email.supportTo
+	const supportFrom = emailConfig.from
+	const supportTo = emailConfig.supportTo
 	const supportFromAddress = extractEmailAddress(supportFrom)
 
 	if (!supportFrom) {
@@ -145,6 +158,7 @@ export async function sendSupportEmail({
 		console.log('[support] emailReplyTo', email)
 	}
 
+	const resend = getResendClient()
 	const { error } = await resend.emails.send({
 		from: supportFrom,
 		to: [supportTo],

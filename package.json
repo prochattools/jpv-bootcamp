@@ -3,11 +3,16 @@
 	"version": "0.1.0",
 	"private": true,
 	"scripts": {
+		"predev": "node scripts/dev/bootstrap-env.js && node scripts/db/init-tenant.js && npm run db:migrate:dev",
 		"dev": "next dev",
 		"build": "npx prisma generate && next build",
 		"start": "next start",
 		"lint": "next lint",
-		"migrate-db": "npx prisma migrate dev --name init"
+		"migrate-db": "npx prisma migrate dev --name init",
+		"db:init": "node scripts/db/init-tenant.js",
+		"db:cleanup": "node scripts/db/cleanup-tenant.js",
+		"db:migrate:dev": "npx prisma migrate deploy --schema=prisma/schema.prisma",
+		"db:migrate:prod": "npx prisma migrate deploy --schema=prisma/schema.prisma"
 	},
 	"dependencies": {
 		"@headlessui/react": "^1.7.18",
