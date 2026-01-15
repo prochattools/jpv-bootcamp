@@ -140,7 +140,14 @@ export default function HomePage() {
         }),
       });
 
-      const payload = await response.json().catch(() => null);
+      type SupportResponse = { ok?: boolean; error?: string };
+      let payload: SupportResponse | null = null;
+
+      try {
+        payload = (await response.json()) as SupportResponse;
+      } catch {
+        payload = null;
+      }
 
       if (response.ok && payload?.ok) {
         setSupportStatus("success");
