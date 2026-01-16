@@ -18,6 +18,7 @@ model EmailSubscriber {
   updatedAt DateTime @updatedAt
 
   @@map("email_subscribers")
+  @@schema("public")
 }
 
 model StripeWebhookEvent {
@@ -50,6 +51,8 @@ model Audiences {
   id        String @id
   resend_id String @unique
   name      String
+
+  @@schema("public")
 }
 
 model Project {
@@ -64,6 +67,8 @@ model Project {
   updatedAt     DateTime
   assistant_id  String?
   webhookLink   String
+
+  @@schema("public")
 }
 
 model Subscription {
@@ -77,9 +82,13 @@ model Subscription {
   stripe_customer_id String             @unique
   sub_stripe_id      String?
   user_clerk_id      String             @unique
+
+  @@schema("public")
 }
 
 enum SubscriptionStatus {
   active
   inactive
+
+  @@schema("public")
 }
