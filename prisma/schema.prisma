@@ -6,6 +6,7 @@ datasource db {
   provider          = "postgresql"
   url               = env("DATABASE_URL")
   shadowDatabaseUrl = env("SYSTEM_DATABASE_URL")
+  schemas           = ["public", "tenant_jpvbootcamp"]
 }
 
 model EmailSubscriber {
