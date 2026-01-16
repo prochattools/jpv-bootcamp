@@ -146,6 +146,7 @@ export type OpsConfig = {
 }
 
 let cachedStripeWebhookSecret: string | null = null
+let cachedStripeWebhookSecrets: string[] | null = null
 let cachedStripeConfig: StripeConfig | null = null
 let cachedOpsConfig: OpsConfig | null = null
 let cachedServerConfig: ServerConfig | null = null
@@ -186,8 +187,30 @@ export function getStripeConfig(): StripeConfig {
 
 export function getStripeWebhookSecret(): string {
 	if (cachedStripeWebhookSecret) return cachedStripeWebhookSecret
+	const secrets = getStripeWebhookSecrets()
+	if (secrets.length > 0) {
+		cachedStripeWebhookSecret = secrets[0]
+		return cachedStripeWebhookSecret
+	}
 	cachedStripeWebhookSecret = requireEnv('STRIPE_WEBHOOK_SECRET')
 	return cachedStripeWebhookSecret
+}
+
+export function getStripeWebhookSecrets(): string[] {
+	if (cachedStripeWebhookSecrets) return cachedStripeWebhookSecrets
+
+	const multi = getEnv('STRIPE_WEBHOOK_SECRETS')
+	if (multi) {
+		cachedStripeWebhookSecrets = multi
+			.split(',')
+			.map((value) => value.trim())
+			.filter(Boolean)
+		return cachedStripeWebhookSecrets
+	}
+
+	const single = getEnv('STRIPE_WEBHOOK_SECRET')
+	cachedStripeWebhookSecrets = single && single.trim().length > 0 ? [single.trim()] : []
+	return cachedStripeWebhookSecrets
 }
 
 export function getOpsConfig(): OpsConfig {

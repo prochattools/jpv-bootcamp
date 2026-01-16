@@ -22,7 +22,7 @@ stripe trigger invoice.payment_failed
 ## Required env vars (minimum)
 - `APP_PUBLIC_URL` (or `NEXT_PUBLIC_APP_URL`)
 - `STRIPE_SECRET_KEY`
-- `STRIPE_WEBHOOK_SECRET`
+- `STRIPE_WEBHOOK_SECRET` (single) or `STRIPE_WEBHOOK_SECRETS` (comma-separated)
 - `STRIPE_PRICE_PRO` (or `NEXT_PUBLIC_STRIPE_PRICE_PRO`)
 - `STRIPE_PRICE_VIP` (or `NEXT_PUBLIC_STRIPE_PRICE_VIP`)
 - `WEBHOOK_IDEMPOTENCY_TTL_HOURS`
@@ -39,3 +39,10 @@ stripe trigger invoice.payment_failed
 - `PORTAL_URL` (or `PORTAL_LOGIN_URL`)
 
 Note: In development, missing provisioning env vars will skip WordPress provisioning but still return 2xx to Stripe after idempotency is recorded.
+
+Recommendation: keep only one webhook destination per mode. Use `STRIPE_WEBHOOK_SECRETS`
+temporarily during secret rotation or when multiple webhook destinations are in-flight.
+
+Verification uses raw bytes via `arrayBuffer()`. If intermittent signature failures occur,
+suspect multiple running containers with mismatched `STRIPE_WEBHOOK_SECRET` values—deploy
+to a single replica or ensure all instances share the same secret(s).

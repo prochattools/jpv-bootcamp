@@ -1,8 +1,9 @@
 import 'server-only'
 
+import { createHash } from 'node:crypto'
 import { NextResponse } from 'next/server'
 import type Stripe from 'stripe'
-import { getServerConfig, getStripeWebhookSecret } from '@/lib/config'
+import { getServerConfig, getStripeWebhookSecrets } from '@/lib/config'
 import { hasProcessed, markProcessed } from '@/lib/idempotency'
 import { provisionFromCheckoutSession, syncFromSubscription } from '@/lib/provisioning'
 import { getStripe } from '@/lib/stripe'
@@ -64,6 +65,25 @@ function debugErrorPayload(message: string, debugInfo: WebhookDebugInfo) {
 function logDebugInfo(debugInfo: WebhookDebugInfo) {
 	if (!DEBUG_STRIPE_WEBHOOKS) return
 	console.info('Stripe webhook debug', debugInfo)
+}
+
+function getSignaturePrefix(signature: string | null): string | null {
+	if (!signature) return null
+	const parts = signature.split(',')
+	const prefix = parts.slice(0, 2).join(',')
+	return prefix.length > 80 ? prefix.slice(0, 80) : prefix
+}
+
+function getSecretPrefix(secret: string): string {
+	return secret.slice(0, 6)
+}
+
+function getSecretFingerprint(secret: string): string {
+	return createHash('sha256').update(secret).digest('hex').slice(0, 8)
+}
+
+function getBuildId(): string | null {
+	return process.env.VERCEL_GIT_COMMIT_SHA ?? process.env.APP_BUILD_ID ?? null
 }
 
 function getEmailDomain(email?: string | null): string | null {
@@ -133,27 +153,27 @@ function isEnvEnabled(value?: string): boolean {
 
 export async function handleStripeWebhook(req: Request) {
 	const signature = req.headers.get('stripe-signature')
-	const rawBody = await req.text()
-	let webhookSecret: string | null = null
-	let webhookSecretError: string | null = null
-
-	try {
-		webhookSecret = getStripeWebhookSecret()
-	} catch (error) {
-		webhookSecretError = (error as Error).message
-	}
+	const rawBody = await req.arrayBuffer()
+	const rawBuffer = Buffer.from(rawBody)
+	const webhookSecrets = getStripeWebhookSecrets()
+	const webhookSecretPrefix = webhookSecrets.length > 0 ? getSecretPrefix(webhookSecrets[0]) : null
+	const webhookSecretFingerprints = webhookSecrets.map(getSecretFingerprint)
+	const buildId = getBuildId()
 
 	const debugInfo = buildDebugInfo({
 		req,
 		signature,
-		rawBodyLength: Buffer.byteLength(rawBody),
-		secret: webhookSecret,
+		rawBodyLength: rawBuffer.length,
+		secret: webhookSecretPrefix,
 	})
 	logDebugInfo(debugInfo)
 	console.info('Stripe webhook request', {
+		handler: 'src/lib/stripe-webhook-handler.ts',
 		path: debugInfo.path,
 		hasSignature: debugInfo.hasSignatureHeader,
-		hasWebhookSecret: Boolean(webhookSecret),
+		hasWebhookSecret: webhookSecrets.length > 0,
+		secretFingerprints: webhookSecretFingerprints,
+		buildId,
 	})
 
 	if (!signature) {
@@ -166,9 +186,9 @@ export async function handleStripeWebhook(req: Request) {
 		)
 	}
 
-	if (!webhookSecret) {
+	if (webhookSecrets.length === 0) {
 		console.error('Stripe webhook secret missing', {
-			message: webhookSecretError ?? 'Unknown error',
+			message: 'No webhook secrets configured',
 		})
 		return NextResponse.json(
 			debugErrorPayload('Missing Stripe webhook secret.', debugInfo),
@@ -177,25 +197,49 @@ export async function handleStripeWebhook(req: Request) {
 	}
 
 	const stripe = getStripe()
-	let event: Stripe.Event
+	let event: Stripe.Event | null = null
+	let matchedSecretIndex = -1
+	let matchedSecretPrefix: string | null = null
+	let matchedSecretFingerprint: string | null = null
+	const failedIndices: number[] = []
+	let firstError: Error | null = null
 
-	try {
-		event = stripe.webhooks.constructEvent(
-			rawBody,
-			signature,
-			webhookSecret
-		)
-	} catch (error) {
+	for (let i = 0; i < webhookSecrets.length; i += 1) {
+		const secret = webhookSecrets[i]
+		try {
+			event = stripe.webhooks.constructEvent(rawBuffer, signature, secret)
+			matchedSecretIndex = i
+			matchedSecretPrefix = getSecretPrefix(secret)
+			matchedSecretFingerprint = getSecretFingerprint(secret)
+			break
+		} catch (error) {
+			if (!firstError) {
+				firstError = error as Error
+			}
+			failedIndices.push(i)
+		}
+	}
+
+	if (!event) {
 		console.error('Stripe webhook signature verification failed', {
-			message: (error as Error).message,
+			message: firstError?.message ?? 'Signature verification failed.',
+			verified: false,
 			path: debugInfo.path,
 			hasSignature: debugInfo.hasSignatureHeader,
+			numberOfSecretsTried: webhookSecrets.length,
+			failedIndices,
+			rawBodyLength: rawBuffer.length,
+			signaturePrefix: getSignaturePrefix(signature),
+			secretFingerprints: webhookSecretFingerprints,
+			buildId,
 		})
 		console.error('Stripe webhook verification failed meta', {
 			path: debugInfo.path,
 			hasSignature: debugInfo.hasSignatureHeader,
-			signaturePrefix: debugInfo.signaturePrefix,
-			rawBodyLength: debugInfo.rawBodyLength,
+			signaturePrefix: getSignaturePrefix(signature),
+			rawBodyLength: rawBuffer.length,
+			secretFingerprints: webhookSecretFingerprints,
+			buildId,
 			userAgent: req.headers.get('user-agent'),
 			contentType: req.headers.get('content-type'),
 			xForwardedFor: req.headers.get('x-forwarded-for'),
@@ -208,13 +252,15 @@ export async function handleStripeWebhook(req: Request) {
 		)
 	}
 
-	if (DEBUG_STRIPE_WEBHOOKS) {
-		console.info('Stripe webhook signature verified', {
-			eventId: event.id,
-			type: event.type,
-		})
-	}
-	console.info('Stripe webhook verified', { eventId: event.id, type: event.type })
+	console.info('Stripe webhook verification result', {
+		verified: true,
+		eventId: event.id,
+		type: event.type,
+		secretIndexMatched: matchedSecretIndex,
+		secretPrefix: matchedSecretPrefix,
+		secretFingerprint: matchedSecretFingerprint,
+		buildId,
+	})
 
 	logEventSummary(event)
 

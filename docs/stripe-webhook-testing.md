@@ -36,10 +36,14 @@ scripts/stripe/webhook_local_test.sh
 Required env vars for local test:
 - `STRIPE_SECRET_KEY`
 - `APP_PUBLIC_URL` (or `NEXT_PUBLIC_APP_URL`)
+- `STRIPE_WEBHOOK_SECRET` (single) or `STRIPE_WEBHOOK_SECRETS` (comma-separated)
 
 To enable provisioning, also set:
 - `PROVISIONING_ENABLED=true`
 - `WP_BASE_URL`, `WP_PROVISION_ENDPOINT`, `WP_PROVISION_TOKEN`
+
+Recommendation: keep one webhook destination per mode. Use `STRIPE_WEBHOOK_SECRETS`
+temporarily during secret rotation or when multiple destinations are active.
 
 ### Production smoke test
 ```bash
