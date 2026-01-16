@@ -145,8 +145,15 @@ export async function handleStripeWebhook(req: Request) {
 		secret: webhookSecret,
 	})
 	logDebugInfo(debugInfo)
+	console.info('Stripe webhook request', {
+		path: debugInfo.path,
+		hasSignature: debugInfo.hasSignatureHeader,
+	})
 
 	if (!signature) {
+		console.error('Stripe webhook missing signature', {
+			path: debugInfo.path,
+		})
 		return NextResponse.json(
 			debugErrorPayload('Missing Stripe signature.', debugInfo),
 			{ status: 400 }
@@ -175,6 +182,8 @@ export async function handleStripeWebhook(req: Request) {
 	} catch (error) {
 		console.error('Stripe webhook signature verification failed', {
 			message: (error as Error).message,
+			path: debugInfo.path,
+			hasSignature: debugInfo.hasSignatureHeader,
 		})
 		return NextResponse.json(
 			debugErrorPayload('Invalid Stripe signature.', debugInfo),
@@ -188,6 +197,7 @@ export async function handleStripeWebhook(req: Request) {
 			type: event.type,
 		})
 	}
+	console.info('Stripe webhook verified', { eventId: event.id, type: event.type })
 
 	logEventSummary(event)
 
@@ -218,9 +228,10 @@ export async function handleStripeWebhook(req: Request) {
 					env: process.env.NODE_ENV,
 				})
 				provisioningEnabled = false
+				// Continue without provisioning; do not fail webhook.
+			} else {
+				throw error
 			}
-
-			throw error
 		}
 	}
 

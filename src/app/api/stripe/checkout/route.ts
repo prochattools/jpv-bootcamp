@@ -59,6 +59,9 @@ export async function GET(req: NextRequest) {
 		const stripeConfig = getStripeConfig()
 		const planParam = req.nextUrl.searchParams.get('plan')
 		const customerParam = req.nextUrl.searchParams.get('customer')
+		if (!process.env.WP_PROVISION_ENDPOINT) {
+			console.info('WP provisioning config missing; checkout continues without provisioning.')
+		}
 
 		const plan = isPricingPlanKey(planParam) ? planParam : null
 

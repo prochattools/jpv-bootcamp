@@ -1,15 +1,12 @@
 /**
- * Checklist:
- * - STRIPE_WEBHOOK_SECRET set in production
- * - Stripe webhook endpoint configured (primary: /api/webhook/stripe, alias: /api/stripe/webhook)
- * - After deploy, use "Resend event" in the Stripe dashboard for failed events
- * - Local test: stripe listen --forward-to http://localhost:3000/api/stripe/webhook
+ * Disabled alias to avoid Stripe hitting the wrong handler.
+ * Use /api/webhook/stripe instead.
  */
-import { handleStripeWebhook } from '@/lib/stripe-webhook-handler'
+import { NextResponse } from 'next/server'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-export async function POST(req: Request) {
-	return handleStripeWebhook(req)
+export async function POST() {
+	return NextResponse.json({ error: 'Not found' }, { status: 404 })
 }
