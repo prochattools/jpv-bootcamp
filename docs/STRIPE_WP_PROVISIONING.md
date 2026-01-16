@@ -24,6 +24,7 @@ STRIPE_SUCCESS_URL=https://jpvbootcamp.com/thank-you?session_id={CHECKOUT_SESSIO
 STRIPE_CANCEL_URL=https://jpvbootcamp.com/
 
 # WordPress provisioning
+PROVISIONING_ENABLED=true
 WP_BASE_URL=https://portal.jpvbootcamp.com
 WP_PROVISION_ENDPOINT=/wp-json/jpv/v1/provision
 WP_PROVISION_TOKEN=

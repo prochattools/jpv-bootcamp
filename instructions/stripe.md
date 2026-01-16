@@ -296,6 +296,7 @@ stripe: {
    - `customer.subscription.updated`
    - `invoice.payment_failed`
 4. Copy webhook signing secret to `STRIPE_WEBHOOK_SECRET`
+5. Set `PROVISIONING_ENABLED=true` plus WP/Resend env vars to enable provisioning
 
 ### 3. Test Mode vs Live Mode
 

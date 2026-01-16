@@ -11,5 +11,6 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 export async function POST(req: Request) {
+	console.info('Stripe webhook route active: src/app/api/webhook/stripe/route.ts')
 	return handleStripeWebhook(req)
 }

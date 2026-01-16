@@ -28,6 +28,7 @@ stripe trigger invoice.payment_failed
 - `WEBHOOK_IDEMPOTENCY_TTL_HOURS`
 
 ## Provisioning env vars (required to provision in production)
+- `PROVISIONING_ENABLED=true` (default false)
 - `WP_BASE_URL`
 - `WP_PROVISION_ENDPOINT`
 - `WP_PROVISION_TOKEN`

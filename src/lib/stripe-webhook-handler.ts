@@ -126,6 +126,11 @@ function logEventSummary(event: Stripe.Event) {
 	})
 }
 
+function isEnvEnabled(value?: string): boolean {
+	if (!value) return false
+	return ['1', 'true', 'yes', 'on'].includes(value.trim().toLowerCase())
+}
+
 export async function handleStripeWebhook(req: Request) {
 	const signature = req.headers.get('stripe-signature')
 	const rawBody = await req.text()
@@ -148,6 +153,7 @@ export async function handleStripeWebhook(req: Request) {
 	console.info('Stripe webhook request', {
 		path: debugInfo.path,
 		hasSignature: debugInfo.hasSignatureHeader,
+		hasWebhookSecret: Boolean(webhookSecret),
 	})
 
 	if (!signature) {
@@ -226,28 +232,36 @@ export async function handleStripeWebhook(req: Request) {
 	}
 
 	const requiresProvisioning = PROVISIONING_EVENT_TYPES.has(event.type)
+	const provisioningFlag =
+		isEnvEnabled(process.env.PROVISIONING_ENABLED) ||
+		isEnvEnabled(process.env.WP_PROVISION_ENABLED)
 	let provisioningEnabled = false
 
 	if (requiresProvisioning) {
-		try {
-			const config = getServerConfig()
-			provisioningEnabled = config.wp.enabled
-			if (!provisioningEnabled) {
-				console.warn('Provisioning disabled; skipping provisioning.', {
-					eventId: event.id,
-					type: event.type,
-					env: process.env.NODE_ENV,
-				})
-			}
-		} catch (error) {
-			if (isMissingEnvError(error)) {
-				console.warn('Provisioning config missing; skipping provisioning.', {
-					eventId: event.id,
-					type: event.type,
-					env: process.env.NODE_ENV,
-				})
-				provisioningEnabled = false
-			} else {
+		if (!provisioningFlag) {
+			console.warn('Provisioning disabled; skipping provisioning.', {
+				eventId: event.id,
+				type: event.type,
+				env: process.env.NODE_ENV,
+				reason: 'PROVISIONING_ENABLED not set',
+			})
+		} else {
+			try {
+				getServerConfig()
+				provisioningEnabled = true
+			} catch (error) {
+				if (isMissingEnvError(error)) {
+					console.error('Provisioning enabled but config missing.', {
+						eventId: event.id,
+						type: event.type,
+						env: process.env.NODE_ENV,
+						error: (error as Error).message,
+					})
+					return NextResponse.json(
+						{ error: 'Provisioning enabled but configuration is missing.' },
+						{ status: 500 }
+					)
+				}
 				throw error
 			}
 		}

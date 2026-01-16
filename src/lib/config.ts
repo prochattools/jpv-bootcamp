@@ -216,7 +216,10 @@ export function getServerConfig(): ServerConfig {
 	)
 	const portalUrl = requireUrlEnvAny(['PORTAL_URL', 'PORTAL_LOGIN_URL'], 'PORTAL_URL')
 	const resendFrom = getEnv('RESEND_FROM')
-	const wpEnabled = getEnvBoolean('WP_PROVISION_ENABLED', false)
+	const wpEnabled = getEnvBoolean(
+		'PROVISIONING_ENABLED',
+		getEnvBoolean('WP_PROVISION_ENABLED', false)
+	)
 
 	const wpConfig: ServerConfig['wp'] = wpEnabled
 		? {

@@ -37,6 +37,10 @@ Required env vars for local test:
 - `STRIPE_SECRET_KEY`
 - `APP_PUBLIC_URL` (or `NEXT_PUBLIC_APP_URL`)
 
+To enable provisioning, also set:
+- `PROVISIONING_ENABLED=true`
+- `WP_BASE_URL`, `WP_PROVISION_ENDPOINT`, `WP_PROVISION_TOKEN`
+
 ### Production smoke test
 ```bash
 scripts/stripe/webhook_prod_test.sh
