@@ -2,8 +2,8 @@
 create schema if not exists tenant_jpvbootcamp;
 
 create table if not exists tenant_jpvbootcamp.stripe_webhook_events (
-  event_id text primary key,
-  type text not null default 'unknown',
+  stripe_event_id text primary key,
+  event_type text not null default 'unknown',
   livemode boolean not null default false,
   received_at timestamptz not null default now(),
   processed_at timestamptz,

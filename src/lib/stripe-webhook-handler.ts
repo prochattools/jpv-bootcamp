@@ -15,6 +15,7 @@ const PROVISIONING_EVENT_TYPES = new Set([
 ])
 const DEBUG_STRIPE_WEBHOOKS = process.env.DEBUG_STRIPE_WEBHOOKS === '1'
 const SKIP_PREDEV = process.env.SKIP_PREDEV === '1'
+let hasLoggedIdempotencyConfig = false
 
 type WebhookDebugInfo = {
 	hasSignatureHeader: boolean
@@ -175,6 +176,17 @@ export async function handleStripeWebhook(req: Request) {
 		secretFingerprints: webhookSecretFingerprints,
 		buildId,
 	})
+	if (!hasLoggedIdempotencyConfig) {
+		console.info('Stripe webhook idempotency config', {
+			model: 'StripeWebhookEvent',
+			table: 'stripe_webhook_events',
+			fields: {
+				stripeEventId: 'stripe_event_id',
+				eventType: 'event_type',
+			},
+		})
+		hasLoggedIdempotencyConfig = true
+	}
 
 	if (!signature) {
 		console.error('Stripe webhook missing signature', {

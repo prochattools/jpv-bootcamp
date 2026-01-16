@@ -17,17 +17,19 @@ function getTtlMs(): number {
 
 type PrismaClientLike = {
 	stripeWebhookEvent?: {
-		findUnique: (args: { where: { id: string } }) => Promise<{ id: string } | null>
+		findUnique: (args: {
+			where: { stripeEventId: string }
+		}) => Promise<{ stripeEventId: string } | null>
 		create: (args: {
 			data: {
-				id: string
-				type: string
+				stripeEventId: string
+				eventType: string
 				livemode?: boolean
 				receivedAt?: Date
 				processedAt?: Date | null
 				payload?: unknown
 			}
-		}) => Promise<{ id: string }>
+		}) => Promise<{ stripeEventId: string }>
 		deleteMany: (args: { where: { receivedAt: { lt: Date } } }) => Promise<{ count: number }>
 	}
 }
@@ -55,7 +57,7 @@ export async function hasProcessed(eventId: string): Promise<boolean> {
 	if (shouldUsePrisma && prismaClient.stripeWebhookEvent) {
 		try {
 			const existing = await prismaClient.stripeWebhookEvent.findUnique({
-				where: { id: eventId },
+				where: { stripeEventId: eventId },
 			})
 			return Boolean(existing)
 		} catch (error) {
@@ -84,8 +86,8 @@ export async function markProcessed(params: {
 		try {
 			await prismaClient.stripeWebhookEvent.create({
 				data: {
-					id: eventId,
-					type: eventType,
+					stripeEventId: eventId,
+					eventType,
 					livemode: Boolean(livemode),
 					receivedAt: new Date(),
 					processedAt: new Date(),
