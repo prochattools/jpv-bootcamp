@@ -1,4 +1,4 @@
-import { handleStripeWebhook } from '@/lib/stripeWebhookHandler'
+import { handleStripeWebhook } from '@/lib/stripe-webhook-handler'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'

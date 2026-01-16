@@ -3,7 +3,7 @@
 	"version": "0.1.0",
 	"private": true,
 	"scripts": {
-		"predev": "node scripts/dev/bootstrap-env.js && node scripts/db/init-tenant.js && npm run db:migrate:dev",
+		"predev": "node scripts/dev/predev.js",
 		"dev": "next dev",
 		"build": "npx prisma generate && next build",
 		"start": "next start",
