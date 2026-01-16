@@ -18,8 +18,17 @@ function getTtlMs(): number {
 type PrismaClientLike = {
 	stripeWebhookEvent?: {
 		findUnique: (args: { where: { id: string } }) => Promise<{ id: string } | null>
-		create: (args: { data: { id: string; type: string } }) => Promise<{ id: string }>
-		deleteMany: (args: { where: { createdAt: { lt: Date } } }) => Promise<{ count: number }>
+		create: (args: {
+			data: {
+				id: string
+				type: string
+				livemode?: boolean
+				receivedAt?: Date
+				processedAt?: Date | null
+				payload?: unknown
+			}
+		}) => Promise<{ id: string }>
+		deleteMany: (args: { where: { receivedAt: { lt: Date } } }) => Promise<{ count: number }>
 	}
 }
 
@@ -63,15 +72,28 @@ export async function hasProcessed(eventId: string): Promise<boolean> {
 	return typeof seenAt === 'number' && now - seenAt <= ttlMs
 }
 
-export async function markProcessed(eventId: string, eventType: string): Promise<void> {
+export async function markProcessed(params: {
+	eventId: string
+	eventType: string
+	livemode?: boolean
+	payload?: unknown
+}): Promise<void> {
 	const ttlMs = getTtlMs()
+	const { eventId, eventType, livemode, payload } = params
 	if (shouldUsePrisma && prismaClient.stripeWebhookEvent) {
 		try {
 			await prismaClient.stripeWebhookEvent.create({
-				data: { id: eventId, type: eventType },
+				data: {
+					id: eventId,
+					type: eventType,
+					livemode: Boolean(livemode),
+					receivedAt: new Date(),
+					processedAt: new Date(),
+					payload,
+				},
 			})
 			await prismaClient.stripeWebhookEvent.deleteMany({
-				where: { createdAt: { lt: new Date(Date.now() - ttlMs) } },
+				where: { receivedAt: { lt: new Date(Date.now() - ttlMs) } },
 			})
 			return
 		} catch (error) {

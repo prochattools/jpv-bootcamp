@@ -20,9 +20,12 @@ model EmailSubscriber {
 }
 
 model StripeWebhookEvent {
-  id        String   @id @map("event_id")
-  createdAt DateTime @default(now()) @map("created_at")
-  type      String   @default("unknown") @map("type")
+  id          String   @id @map("event_id")
+  type        String   @default("unknown") @map("type")
+  livemode    Boolean  @default(false) @map("livemode")
+  receivedAt  DateTime @default(now()) @map("received_at")
+  processedAt DateTime? @map("processed_at")
+  payload     Json?    @map("payload")
 
   @@map("stripe_webhook_events")
 }

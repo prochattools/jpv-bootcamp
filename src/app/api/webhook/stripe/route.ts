@@ -1,3 +1,10 @@
+/**
+ * Checklist:
+ * - STRIPE_WEBHOOK_SECRET set in production
+ * - Stripe webhook endpoint configured (primary: /api/webhook/stripe, alias: /api/stripe/webhook)
+ * - After deploy, use "Resend event" in the Stripe dashboard for failed events
+ * - Local test: stripe listen --forward-to http://localhost:3000/api/webhook/stripe
+ */
 import { handleStripeWebhook } from '@/lib/stripe-webhook-handler'
 
 export const runtime = 'nodejs'

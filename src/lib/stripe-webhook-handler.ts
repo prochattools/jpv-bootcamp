@@ -72,21 +72,46 @@ function getEmailDomain(email?: string | null): string | null {
 	return domain ?? null
 }
 
+function getId(value?: string | { id?: string } | null): string | null {
+	if (!value) return null
+	return typeof value === 'string' ? value : value.id ?? null
+}
+
+function getSubscriptionIdFromEvent(event: Stripe.Event): string | null {
+	switch (event.type) {
+		case 'checkout.session.completed': {
+			const session = event.data.object as Stripe.Checkout.Session
+			return getId(session.subscription ?? null)
+		}
+		case 'customer.subscription.updated':
+		case 'customer.subscription.deleted': {
+			const subscription = event.data.object as Stripe.Subscription
+			return subscription.id ?? null
+		}
+		case 'invoice.paid':
+		case 'invoice.payment_failed':
+		case 'invoice.payment_succeeded': {
+			const invoice = event.data.object as Stripe.Invoice
+			return getId(invoice.subscription ?? null)
+		}
+		default: {
+			const object = event.data.object as { subscription?: string | { id?: string } }
+			return getId(object.subscription ?? null)
+		}
+	}
+}
+
 function logEventSummary(event: Stripe.Event) {
 	const type = event.type
 	const object = event.data.object as {
 		customer?: string | { id?: string }
-		subscription?: string | { id?: string }
 		customer_email?: string | null
 		customer_details?: { email?: string | null } | null
 	}
 
 	const customerId =
 		typeof object.customer === 'string' ? object.customer : object.customer?.id
-	const subscriptionId =
-		typeof object.subscription === 'string'
-			? object.subscription
-			: object.subscription?.id
+	const subscriptionId = getSubscriptionIdFromEvent(event)
 	const email =
 		'customer_email' in object
 			? object.customer_email ?? object.customer_details?.email
@@ -103,7 +128,7 @@ function logEventSummary(event: Stripe.Event) {
 
 export async function handleStripeWebhook(req: Request) {
 	const signature = req.headers.get('stripe-signature')
-	const rawBody = await req.arrayBuffer()
+	const rawBody = await req.text()
 	let webhookSecret: string | null = null
 	let webhookSecretError: string | null = null
 
@@ -116,7 +141,7 @@ export async function handleStripeWebhook(req: Request) {
 	const debugInfo = buildDebugInfo({
 		req,
 		signature,
-		rawBodyLength: rawBody.byteLength,
+		rawBodyLength: Buffer.byteLength(rawBody),
 		secret: webhookSecret,
 	})
 	logDebugInfo(debugInfo)
@@ -143,7 +168,7 @@ export async function handleStripeWebhook(req: Request) {
 
 	try {
 		event = stripe.webhooks.constructEvent(
-			Buffer.from(rawBody),
+			rawBody,
 			signature,
 			webhookSecret
 		)
@@ -180,29 +205,19 @@ export async function handleStripeWebhook(req: Request) {
 	}
 
 	const requiresProvisioning = PROVISIONING_EVENT_TYPES.has(event.type)
-	const isProd = process.env.NODE_ENV === 'production'
+	let provisioningEnabled = true
 
 	if (requiresProvisioning) {
 		try {
 			getServerConfig()
 		} catch (error) {
 			if (isMissingEnvError(error)) {
-				const message = isProd
-					? 'Provisioning config missing; cannot provision in production.'
-					: 'Provisioning config missing; skipping provisioning.'
-				;(isProd ? console.error : console.warn)(message, {
+				console.warn('Provisioning config missing; skipping provisioning.', {
 					eventId: event.id,
 					type: event.type,
 					env: process.env.NODE_ENV,
 				})
-				await markProcessed(event.id, event.type)
-				if (isProd) {
-					return NextResponse.json(
-						{ error: 'Missing required provisioning configuration.' },
-						{ status: 500 }
-					)
-				}
-				return NextResponse.json({ received: true, skipped: 'provisioning' })
+				provisioningEnabled = false
 			}
 
 			throw error
@@ -212,28 +227,39 @@ export async function handleStripeWebhook(req: Request) {
 	try {
 		switch (event.type) {
 			case 'checkout.session.completed': {
-				const session = event.data.object as Stripe.Checkout.Session
-				await provisionFromCheckoutSession(session)
+				if (provisioningEnabled) {
+					const session = event.data.object as Stripe.Checkout.Session
+					await provisionFromCheckoutSession(session)
+				}
 				break
 			}
 			case 'customer.subscription.updated': {
-				const subscription = event.data.object as Stripe.Subscription
-				await syncFromSubscription(subscription.id)
+				if (provisioningEnabled) {
+					const subscription = event.data.object as Stripe.Subscription
+					await syncFromSubscription(subscription.id)
+				}
 				break
 			}
 			case 'customer.subscription.deleted': {
-				const subscription = event.data.object as Stripe.Subscription
-				await syncFromSubscription(subscription.id)
+				if (provisioningEnabled) {
+					const subscription = event.data.object as Stripe.Subscription
+					await syncFromSubscription(subscription.id)
+				}
+				break
+			}
+			case 'invoice.paid': {
+				const invoice = event.data.object as Stripe.Invoice
+				console.info('Invoice paid', {
+					invoiceId: invoice.id,
+					subscriptionId: getId(invoice.subscription ?? null),
+				})
 				break
 			}
 			case 'invoice.payment_failed': {
 				const invoice = event.data.object as Stripe.Invoice
 				console.info('Invoice payment failed', {
 					invoiceId: invoice.id,
-					subscriptionId:
-						typeof invoice.subscription === 'string'
-							? invoice.subscription
-							: invoice.subscription?.id,
+					subscriptionId: getId(invoice.subscription ?? null),
 				})
 				break
 			}
@@ -241,7 +267,12 @@ export async function handleStripeWebhook(req: Request) {
 				console.info('Stripe webhook ignored', { type: event.type })
 		}
 
-		await markProcessed(event.id, event.type)
+		await markProcessed({
+			eventId: event.id,
+			eventType: event.type,
+			livemode: event.livemode,
+			payload: event as unknown as Record<string, unknown>,
+		})
 		return NextResponse.json({ received: true })
 	} catch (error) {
 		console.error('Stripe webhook handler failed', {
