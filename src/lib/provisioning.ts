@@ -204,6 +204,9 @@ export async function provisionFromCheckoutSession(
 		name: displayName || session.customer_details?.name || null,
 		stripeCustomerId: customerId,
 	})
+	if (!wpProvision) {
+		return
+	}
 
 	await upsertProvisioningRecord({
 		email,
@@ -266,6 +269,9 @@ export async function syncFromSubscription(subscriptionId: string): Promise<void
 		name: null,
 		stripeCustomerId: customerId || null,
 	})
+	if (!wpProvision) {
+		return
+	}
 
 	await upsertProvisioningRecord({
 		email,

@@ -215,11 +215,19 @@ export async function handleStripeWebhook(req: Request) {
 	}
 
 	const requiresProvisioning = PROVISIONING_EVENT_TYPES.has(event.type)
-	let provisioningEnabled = true
+	let provisioningEnabled = false
 
 	if (requiresProvisioning) {
 		try {
-			getServerConfig()
+			const config = getServerConfig()
+			provisioningEnabled = config.wp.enabled
+			if (!provisioningEnabled) {
+				console.warn('Provisioning disabled; skipping provisioning.', {
+					eventId: event.id,
+					type: event.type,
+					env: process.env.NODE_ENV,
+				})
+			}
 		} catch (error) {
 			if (isMissingEnvError(error)) {
 				console.warn('Provisioning config missing; skipping provisioning.', {
@@ -228,7 +236,6 @@ export async function handleStripeWebhook(req: Request) {
 					env: process.env.NODE_ENV,
 				})
 				provisioningEnabled = false
-				// Continue without provisioning; do not fail webhook.
 			} else {
 				throw error
 			}

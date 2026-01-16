@@ -19,6 +19,12 @@ function getEnvOrDefault(key: EnvKey, fallback: string): string {
 	return value && value.trim().length > 0 ? value : fallback
 }
 
+function getEnvBoolean(key: EnvKey, fallback = false): boolean {
+	const value = getEnv(key)
+	if (!value) return fallback
+	return ['1', 'true', 'yes', 'on'].includes(value.trim().toLowerCase())
+}
+
 function requireEnv(key: EnvKey): string {
 	const value = getEnv(key)
 	if (!value) {
@@ -107,9 +113,10 @@ export type ServerConfig = {
 		secret: string
 	}
 	wp: {
-		baseUrl: string
-		provisionEndpoint: string
-		provisionToken: string
+		enabled: boolean
+		baseUrl?: string
+		provisionEndpoint?: string
+		provisionToken?: string
 	}
 	email: {
 		resendApiKey: string
@@ -209,6 +216,16 @@ export function getServerConfig(): ServerConfig {
 	)
 	const portalUrl = requireUrlEnvAny(['PORTAL_URL', 'PORTAL_LOGIN_URL'], 'PORTAL_URL')
 	const resendFrom = getEnv('RESEND_FROM')
+	const wpEnabled = getEnvBoolean('WP_PROVISION_ENABLED', false)
+
+	const wpConfig: ServerConfig['wp'] = wpEnabled
+		? {
+				enabled: true,
+				baseUrl: requireUrlEnv('WP_BASE_URL'),
+				provisionEndpoint: requireEnv('WP_PROVISION_ENDPOINT'),
+				provisionToken: requireEnv('WP_PROVISION_TOKEN'),
+		  }
+		: { enabled: false }
 
 	cachedServerConfig = {
 		app: { url: appUrl },
@@ -225,11 +242,7 @@ export function getServerConfig(): ServerConfig {
 		stripeWebhook: {
 			secret: requireEnv('STRIPE_WEBHOOK_SECRET'),
 		},
-		wp: {
-			baseUrl: requireUrlEnv('WP_BASE_URL'),
-			provisionEndpoint: requireEnv('WP_PROVISION_ENDPOINT'),
-			provisionToken: requireEnv('WP_PROVISION_TOKEN'),
-		},
+		wp: wpConfig,
 		email: {
 			resendApiKey: requireEnv('RESEND_API_KEY'),
 			from: resendFrom && resendFrom.trim() ? resendFrom : requireEnv('EMAIL_FROM'),

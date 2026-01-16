@@ -22,6 +22,8 @@ export type ProvisionResult = {
 	resetLink: string
 }
 
+let hasLoggedProvisioningDisabled = false
+
 function normalizePlan(value: string): string {
 	return value.trim().toLowerCase()
 }
@@ -32,10 +34,24 @@ function normalizeEmail(email: string): string {
 
 function getProvisionUrl(): string {
 	const { wp } = getServerConfig()
+	if (!wp.baseUrl || !wp.provisionEndpoint) {
+		throw new Error('WP provisioning is enabled but config is incomplete.')
+	}
 	return new URL(wp.provisionEndpoint, wp.baseUrl).toString()
 }
 
-export async function provisionWpUser(payload: ProvisionPayload): Promise<ProvisionResult> {
+export async function provisionWpUser(
+	payload: ProvisionPayload
+): Promise<ProvisionResult | null> {
+	const { wp } = getServerConfig()
+	if (!wp.enabled) {
+		if (!hasLoggedProvisioningDisabled) {
+			console.warn('WP provisioning disabled; skipping WP user provisioning.')
+			hasLoggedProvisioningDisabled = true
+		}
+		return null
+	}
+
 	const email = normalizeEmail(payload.email)
 	const plan = normalizePlan(payload.plan)
 
@@ -48,6 +64,9 @@ export async function provisionWpUser(payload: ProvisionPayload): Promise<Provis
 	}
 
 	const url = getProvisionUrl()
+	if (!wp.provisionToken) {
+		throw new Error('WP provisioning is enabled but token is missing.')
+	}
 	const body = {
 		email,
 		plan,
@@ -58,7 +77,7 @@ export async function provisionWpUser(payload: ProvisionPayload): Promise<Provis
 	const response = await fetch(url, {
 		method: 'POST',
 		headers: {
-			Authorization: `Bearer ${getServerConfig().wp.provisionToken}`,
+			Authorization: `Bearer ${wp.provisionToken}`,
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
 		},

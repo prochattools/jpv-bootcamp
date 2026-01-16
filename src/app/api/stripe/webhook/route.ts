@@ -8,5 +8,5 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 export async function POST() {
-	return NextResponse.json({ error: 'Not found' }, { status: 404 })
+	return NextResponse.json({ error: 'Use /api/webhook/stripe' }, { status: 404 })
 }
