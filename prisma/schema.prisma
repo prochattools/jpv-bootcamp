@@ -34,7 +34,7 @@ model StripeWebhookEvent {
 }
 
 model CustomerProvisioning {
-  id                   String   @id @default(cuid())
+  id                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid @map("id")
   email                String   @unique
   stripeCustomerId     String   @unique @map("stripe_customer_id")
   stripeSubscriptionId String?  @unique @map("stripe_subscription_id")

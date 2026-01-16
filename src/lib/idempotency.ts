@@ -34,6 +34,12 @@ type PrismaClientLike = {
 
 const prismaClient = prisma as unknown as PrismaClientLike
 
+export type MarkProcessedResult = {
+	dbAttempted: boolean
+	dbSuccess: boolean
+	error?: string
+}
+
 function pruneMemoryStore(now: number, ttlMs: number) {
 	memoryStore.forEach((timestamp, eventId) => {
 		if (now - timestamp > ttlMs) {
@@ -77,7 +83,7 @@ export async function markProcessed(params: {
 	eventType: string
 	livemode: boolean
 	payload?: unknown
-}): Promise<void> {
+}): Promise<MarkProcessedResult> {
 	const ttlMs = getTtlMs()
 	const { eventId, eventType, livemode, payload } = params
 	if (shouldUsePrisma && prismaClient.stripeWebhookEvent) {
@@ -95,14 +101,23 @@ export async function markProcessed(params: {
 			await prismaClient.stripeWebhookEvent.deleteMany({
 				where: { receivedAt: { lt: new Date(Date.now() - ttlMs) } },
 			})
-			return
+			return { dbAttempted: true, dbSuccess: true }
 		} catch (error) {
-			if (isPrismaUniqueError(error)) return
+			if (isPrismaUniqueError(error)) {
+				return { dbAttempted: true, dbSuccess: true }
+			}
 			console.debug('Prisma idempotency write failed, falling back to memory.', {
 				message: (error as Error).message,
 			})
+			memoryStore.set(eventId, Date.now())
+			return {
+				dbAttempted: true,
+				dbSuccess: false,
+				error: (error as Error).message,
+			}
 		}
 	}
 
 	memoryStore.set(eventId, Date.now())
+	return { dbAttempted: false, dbSuccess: false }
 }

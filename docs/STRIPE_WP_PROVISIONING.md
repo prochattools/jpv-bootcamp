@@ -119,3 +119,14 @@ User → /api/stripe/checkout?plan=pro|vip
 - Provisioning is webhook-driven only. The success URL never provisions.
 - WordPress roles remain `subscriber`.
 - Membership level is stored in user meta as `jpv_membership_level`.
+
+## Local sanity check (UUID id)
+
+If you need a quick local check that Prisma generates a UUID for `customer_provisioning.id`,
+run this against a dev database:
+
+```bash
+node -e "const {PrismaClient}=require('@prisma/client');const prisma=new PrismaClient();prisma.customerProvisioning.create({data:{email:'test+uuid@example.com',stripeCustomerId:'cus_test_uuid',status:'active',currentPlan:'pro'}}).then(r=>{console.log('ok',r.id)}).catch(e=>{console.error(e.message)}).finally(()=>prisma.$disconnect())"
+```
+
+This should print a UUID and will not require an explicit `id` in the data payload.

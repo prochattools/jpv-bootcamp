@@ -376,12 +376,20 @@ export async function handleStripeWebhook(req: Request) {
 				break
 		}
 
-		await markProcessed({
+		const idempotencyResult = await markProcessed({
 			eventId: event.id,
 			eventType: event.type,
 			livemode: event.livemode,
 			payload: event as unknown as Record<string, unknown>,
 		})
+
+		if (idempotencyResult.dbAttempted && !idempotencyResult.dbSuccess) {
+			console.warn('Stripe webhook idempotency write failed', {
+				table: 'tenant_jpvbootcamp.stripe_webhook_events',
+				keys: { eventId: event.id, type: event.type },
+				message: idempotencyResult.error,
+			})
+		}
 
 		const reason =
 			provisioningStatus === 'skipped' && requiresProvisioning
