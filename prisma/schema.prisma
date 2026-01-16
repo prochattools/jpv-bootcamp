@@ -3,8 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider          = "postgresql"
+  url               = env("DATABASE_URL")
   shadowDatabaseUrl = env("SYSTEM_DATABASE_URL")
 }
 
@@ -12,7 +12,7 @@ model EmailSubscriber {
   id        String   @id @default(uuid())
   email     String   @unique
   name      String?
-  source    String?  // Track where they signed up (hero, footer, etc.)
+  source    String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -21,8 +21,8 @@ model EmailSubscriber {
 
 model StripeWebhookEvent {
   id        String   @id @map("event_id")
-  type      String   @default("unknown") @map("type")
   createdAt DateTime @default(now()) @map("created_at")
+  type      String   @default("unknown") @map("type")
 
   @@map("stripe_webhook_events")
 }
@@ -36,7 +36,45 @@ model CustomerProvisioning {
   currentPlan          String   @map("current_plan")
   status               String   @default("active")
   createdAt            DateTime @default(now()) @map("created_at")
-  updatedAt            DateTime @updatedAt @map("updated_at")
+  updatedAt            DateTime @default(now()) @updatedAt @map("updated_at")
 
   @@map("customer_provisioning")
+}
+
+model Audiences {
+  id        String @id
+  resend_id String @unique
+  name      String
+}
+
+model Project {
+  id            String   @id
+  connection_id String
+  webhook_id    String
+  scenario_id   String
+  user_clerk_id String
+  type          String
+  status        String   @default("default")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime
+  assistant_id  String?
+  webhookLink   String
+}
+
+model Subscription {
+  id                 String             @id
+  user_email         String             @unique
+  sub_status         SubscriptionStatus @default(inactive)
+  sub_type           String
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime
+  last_stripe_cs_id  String             @unique
+  stripe_customer_id String             @unique
+  sub_stripe_id      String?
+  user_clerk_id      String             @unique
+}
+
+enum SubscriptionStatus {
+  active
+  inactive
 }
