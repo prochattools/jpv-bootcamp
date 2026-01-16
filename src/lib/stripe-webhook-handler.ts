@@ -185,6 +185,17 @@ export async function handleStripeWebhook(req: Request) {
 			path: debugInfo.path,
 			hasSignature: debugInfo.hasSignatureHeader,
 		})
+		console.error('Stripe webhook verification failed meta', {
+			path: debugInfo.path,
+			hasSignature: debugInfo.hasSignatureHeader,
+			signaturePrefix: debugInfo.signaturePrefix,
+			rawBodyLength: debugInfo.rawBodyLength,
+			userAgent: req.headers.get('user-agent'),
+			contentType: req.headers.get('content-type'),
+			xForwardedFor: req.headers.get('x-forwarded-for'),
+			cfConnectingIp: req.headers.get('cf-connecting-ip'),
+			xRealIp: req.headers.get('x-real-ip'),
+		})
 		return NextResponse.json(
 			debugErrorPayload('Invalid Stripe signature.', debugInfo),
 			{ status: 400 }
