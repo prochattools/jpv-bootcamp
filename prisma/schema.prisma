@@ -20,14 +20,14 @@ model EmailSubscriber {
 }
 
 model StripeWebhookEvent {
-  stripeEventId String   @id @map("stripe_event_id")
-  eventType     String   @default("unknown") @map("event_type")
-  livemode      Boolean  @default(false) @map("livemode")
-  receivedAt    DateTime @default(now()) @map("received_at")
-  processedAt   DateTime? @map("processed_at")
-  payload       Json?    @map("payload")
+  eventId     String   @id @map("event_id")
+  type        String   @default("unknown") @map("type")
+  receivedAt  DateTime @default(now()) @map("received_at")
+  processedAt DateTime? @map("processed_at")
+  payload     Json?    @map("payload")
 
   @@map("stripe_webhook_events")
+  @@schema("tenant_jpvbootcamp")
 }
 
 model CustomerProvisioning {
@@ -42,6 +42,7 @@ model CustomerProvisioning {
   updatedAt            DateTime @default(now()) @updatedAt @map("updated_at")
 
   @@map("customer_provisioning")
+  @@schema("tenant_jpvbootcamp")
 }
 
 model Audiences {

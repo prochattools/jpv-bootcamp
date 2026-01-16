@@ -17,19 +17,16 @@ function getTtlMs(): number {
 
 type PrismaClientLike = {
 	stripeWebhookEvent?: {
-		findUnique: (args: {
-			where: { stripeEventId: string }
-		}) => Promise<{ stripeEventId: string } | null>
+		findUnique: (args: { where: { eventId: string } }) => Promise<{ eventId: string } | null>
 		create: (args: {
 			data: {
-				stripeEventId: string
-				eventType: string
-				livemode?: boolean
+				eventId: string
+				type: string
 				receivedAt?: Date
 				processedAt?: Date | null
 				payload?: unknown
 			}
-		}) => Promise<{ stripeEventId: string }>
+		}) => Promise<{ eventId: string }>
 		deleteMany: (args: { where: { receivedAt: { lt: Date } } }) => Promise<{ count: number }>
 	}
 }
@@ -57,7 +54,7 @@ export async function hasProcessed(eventId: string): Promise<boolean> {
 	if (shouldUsePrisma && prismaClient.stripeWebhookEvent) {
 		try {
 			const existing = await prismaClient.stripeWebhookEvent.findUnique({
-				where: { stripeEventId: eventId },
+				where: { eventId },
 			})
 			return Boolean(existing)
 		} catch (error) {
@@ -77,18 +74,16 @@ export async function hasProcessed(eventId: string): Promise<boolean> {
 export async function markProcessed(params: {
 	eventId: string
 	eventType: string
-	livemode?: boolean
 	payload?: unknown
 }): Promise<void> {
 	const ttlMs = getTtlMs()
-	const { eventId, eventType, livemode, payload } = params
+	const { eventId, eventType, payload } = params
 	if (shouldUsePrisma && prismaClient.stripeWebhookEvent) {
 		try {
 			await prismaClient.stripeWebhookEvent.create({
 				data: {
-					stripeEventId: eventId,
-					eventType,
-					livemode: Boolean(livemode),
+					eventId,
+					type: eventType,
 					receivedAt: new Date(),
 					processedAt: new Date(),
 					payload,
@@ -100,7 +95,7 @@ export async function markProcessed(params: {
 			return
 		} catch (error) {
 			if (isPrismaUniqueError(error)) return
-			console.warn('Prisma idempotency write failed, falling back to memory.', {
+			console.debug('Prisma idempotency write failed, falling back to memory.', {
 				message: (error as Error).message,
 			})
 		}

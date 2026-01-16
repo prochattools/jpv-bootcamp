@@ -181,8 +181,8 @@ export async function handleStripeWebhook(req: Request) {
 			model: 'StripeWebhookEvent',
 			table: 'stripe_webhook_events',
 			fields: {
-				stripeEventId: 'stripe_event_id',
-				eventType: 'event_type',
+				eventId: 'event_id',
+				type: 'type',
 			},
 		})
 		hasLoggedIdempotencyConfig = true
@@ -371,7 +371,6 @@ export async function handleStripeWebhook(req: Request) {
 		await markProcessed({
 			eventId: event.id,
 			eventType: event.type,
-			livemode: event.livemode,
 			payload: event as unknown as Record<string, unknown>,
 		})
 		return NextResponse.json({ received: true })
