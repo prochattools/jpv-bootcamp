@@ -22,6 +22,7 @@ type PrismaClientLike = {
 			data: {
 				eventId: string
 				type: string
+				livemode: boolean
 				receivedAt?: Date
 				processedAt?: Date | null
 				payload?: unknown
@@ -58,7 +59,7 @@ export async function hasProcessed(eventId: string): Promise<boolean> {
 			})
 			return Boolean(existing)
 		} catch (error) {
-			console.warn('Prisma idempotency lookup failed, falling back to memory.', {
+			console.debug('Prisma idempotency lookup failed, falling back to memory.', {
 				message: (error as Error).message,
 			})
 		}
@@ -74,16 +75,18 @@ export async function hasProcessed(eventId: string): Promise<boolean> {
 export async function markProcessed(params: {
 	eventId: string
 	eventType: string
+	livemode: boolean
 	payload?: unknown
 }): Promise<void> {
 	const ttlMs = getTtlMs()
-	const { eventId, eventType, payload } = params
+	const { eventId, eventType, livemode, payload } = params
 	if (shouldUsePrisma && prismaClient.stripeWebhookEvent) {
 		try {
 			await prismaClient.stripeWebhookEvent.create({
 				data: {
 					eventId,
 					type: eventType,
+					livemode,
 					receivedAt: new Date(),
 					processedAt: new Date(),
 					payload,

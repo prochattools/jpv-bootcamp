@@ -54,6 +54,21 @@ npm run db:migrate:dev
 
 Production uses the same scripts inside Dokploy with `NODE_ENV=production`.
 
+## Production DB alignment (Supabase SQL scripts)
+
+The webhook expects the tenant schema `tenant_jpvbootcamp` with these columns:
+
+- `stripe_webhook_events`: `event_id`, `type`, `livemode`, `received_at`, `processed_at`, `payload`
+- `customer_provisioning`: `email`, `stripe_customer_id`, `stripe_subscription_id`, `wp_user_id`,
+  `status`, `plan` (legacy), `current_plan` (canonical), `last_event_id`, `created_at`, `updated_at`
+
+If production is missing any of these columns, apply the alignment scripts:
+
+- `docs/sql/001_align_stripe_webhook_events.sql`
+- `docs/sql/002_align_customer_provisioning.sql`
+
+These scripts only add missing columns/indexes and do not drop existing data.
+
 ## WordPress plugin install
 
 1) Copy `wordpress-plugin/jpv-provisioning` into `wp-content/plugins/`.

@@ -11,8 +11,20 @@ const ACTIVE_STATUSES = new Set<Stripe.Subscription.Status>([
 	'trialing',
 ])
 
+type ProvisioningRecord = {
+	id: string
+	wpUserId: number | null
+	currentPlan: string | null
+	plan: string | null
+}
+
 function normalizePlan(value: string | null | undefined): Plan | null {
 	return value === 'pro' || value === 'vip' ? value : null
+}
+
+function resolveStoredPlan(record: ProvisioningRecord | null): Plan | null {
+	if (!record) return null
+	return normalizePlan(record.currentPlan ?? record.plan ?? null)
 }
 
 function getEmailDomain(email: string): string {
@@ -92,6 +104,28 @@ async function resolvePlanFromCheckoutSession(
 	}
 }
 
+async function findProvisioningRecord(params: {
+	email?: string | null
+	stripeCustomerId?: string | null
+	stripeSubscriptionId?: string | null
+}): Promise<ProvisioningRecord | null> {
+	const clauses = []
+	if (params.stripeCustomerId) clauses.push({ stripeCustomerId: params.stripeCustomerId })
+	if (params.stripeSubscriptionId) clauses.push({ stripeSubscriptionId: params.stripeSubscriptionId })
+	if (params.email) clauses.push({ email: params.email })
+	if (clauses.length === 0) return null
+
+	return prisma.customerProvisioning.findFirst({
+		where: { OR: clauses },
+		select: {
+			id: true,
+			wpUserId: true,
+			currentPlan: true,
+			plan: true,
+		},
+	})
+}
+
 async function upsertProvisioningRecord({
 	email,
 	stripeCustomerId,
@@ -99,6 +133,7 @@ async function upsertProvisioningRecord({
 	wpUserId,
 	plan,
 	status,
+	lastEventId,
 }: {
 	email: string
 	stripeCustomerId: string
@@ -106,6 +141,7 @@ async function upsertProvisioningRecord({
 	wpUserId?: number | null
 	plan: string
 	status: string
+	lastEventId?: string | null
 }): Promise<void> {
 	const existing = await prisma.customerProvisioning.findFirst({
 		where: {
@@ -118,14 +154,18 @@ async function upsertProvisioningRecord({
 		stripeCustomerId: string
 		stripeSubscriptionId?: string | null
 		wpUserId?: number | null
-		currentPlan: string
+		plan?: string | null
+		currentPlan?: string | null
 		status: string
+		lastEventId?: string | null
 	} = {
 		email,
 		stripeCustomerId,
 		stripeSubscriptionId: stripeSubscriptionId ?? null,
-		currentPlan: plan,
+		plan: plan ?? null,
+		currentPlan: plan ?? null,
 		status,
+		lastEventId: lastEventId ?? null,
 	}
 
 	if (typeof wpUserId === 'number') {
@@ -146,7 +186,8 @@ async function upsertProvisioningRecord({
 }
 
 export async function provisionFromCheckoutSession(
-	session: Stripe.Checkout.Session
+	session: Stripe.Checkout.Session,
+	eventId?: string | null
 ): Promise<void> {
 	if (session.mode !== 'subscription') {
 		console.info('Checkout session ignored (non-subscription)', {
@@ -169,12 +210,6 @@ export async function provisionFromCheckoutSession(
 		return
 	}
 
-	const { plan } = await resolvePlanFromCheckoutSession(session)
-	if (!plan) {
-		console.warn('Checkout session missing plan', { sessionId: session.id })
-		return
-	}
-
 	const customerId =
 		typeof session.customer === 'string' ? session.customer : session.customer?.id ?? ''
 	const subscriptionId =
@@ -187,7 +222,38 @@ export async function provisionFromCheckoutSession(
 		return
 	}
 
-	console.info('Provisioning checkout session', {
+	const { plan: resolvedPlan } = await resolvePlanFromCheckoutSession(session)
+	const existing = await findProvisioningRecord({
+		email,
+		stripeCustomerId: customerId,
+		stripeSubscriptionId: subscriptionId || null,
+	})
+	const storedPlan = resolveStoredPlan(existing)
+	const plan = resolvedPlan ?? storedPlan
+	if (!plan) {
+		console.warn('Checkout session missing plan', { sessionId: session.id })
+		return
+	}
+
+	if (existing?.wpUserId) {
+		console.debug('Provisioning already complete; skipping WP call.', {
+			sessionId: session.id,
+			customerId,
+			emailDomain: getEmailDomain(email),
+		})
+		await upsertProvisioningRecord({
+			email,
+			stripeCustomerId: customerId,
+			stripeSubscriptionId: subscriptionId || null,
+			wpUserId: existing.wpUserId,
+			plan,
+			status: 'active',
+			lastEventId: eventId ?? null,
+		})
+		return
+	}
+
+	console.debug('Provisioning checkout session', {
 		sessionId: session.id,
 		plan,
 		customerId,
@@ -215,6 +281,7 @@ export async function provisionFromCheckoutSession(
 		wpUserId: wpProvision.wpUserId,
 		plan,
 		status: 'active',
+		lastEventId: eventId ?? null,
 	})
 
 	await sendWelcomeEmail({
@@ -224,7 +291,10 @@ export async function provisionFromCheckoutSession(
 	})
 }
 
-export async function syncFromSubscription(subscriptionId: string): Promise<void> {
+export async function syncFromSubscription(
+	subscriptionId: string,
+	eventId?: string | null
+): Promise<void> {
 	const stripe = getStripe()
 	const subscription = await stripe.subscriptions.retrieve(subscriptionId, {
 		expand: ['items.data.price'],
@@ -238,7 +308,7 @@ export async function syncFromSubscription(subscriptionId: string): Promise<void
 		return
 	}
 
-	const { plan } = getPlanFromSubscription(subscription)
+	const { plan: resolvedPlan } = getPlanFromSubscription(subscription)
 	const customerId =
 		typeof subscription.customer === 'string'
 			? subscription.customer
@@ -248,6 +318,14 @@ export async function syncFromSubscription(subscriptionId: string): Promise<void
 		return
 	}
 
+	const existing = await findProvisioningRecord({
+		email,
+		stripeCustomerId: customerId,
+		stripeSubscriptionId: subscription.id,
+	})
+	const storedPlan = resolveStoredPlan(existing)
+	const plan = resolvedPlan ?? storedPlan
+
 	const isActive = ACTIVE_STATUSES.has(subscription.status)
 	if (isActive && !plan) {
 		console.warn('Active subscription missing plan', { subscriptionId: subscription.id })
@@ -256,20 +334,33 @@ export async function syncFromSubscription(subscriptionId: string): Promise<void
 	const nextPlan = isActive ? plan ?? 'none' : 'none'
 	const nextStatus = isActive ? 'active' : 'inactive'
 
-	console.info('Syncing subscription', {
+	console.debug('Syncing subscription', {
 		subscriptionId: subscription.id,
 		status: subscription.status,
 		plan: nextPlan,
 		emailDomain: getEmailDomain(email),
 	})
 
-	const wpProvision = await provisionWpUser({
-		email,
-		plan: nextPlan,
-		name: null,
-		stripeCustomerId: customerId || null,
-	})
-	if (!wpProvision) {
+	if (!existing?.wpUserId) {
+		const wpProvision = await provisionWpUser({
+			email,
+			plan: nextPlan,
+			name: null,
+			stripeCustomerId: customerId || null,
+		})
+		if (!wpProvision) {
+			return
+		}
+
+		await upsertProvisioningRecord({
+			email,
+			stripeCustomerId: customerId,
+			stripeSubscriptionId: subscription.id,
+			wpUserId: wpProvision.wpUserId,
+			plan: nextPlan,
+			status: nextStatus,
+			lastEventId: eventId ?? null,
+		})
 		return
 	}
 
@@ -277,8 +368,9 @@ export async function syncFromSubscription(subscriptionId: string): Promise<void
 		email,
 		stripeCustomerId: customerId,
 		stripeSubscriptionId: subscription.id,
-		wpUserId: wpProvision.wpUserId,
+		wpUserId: existing.wpUserId,
 		plan: nextPlan,
 		status: nextStatus,
+		lastEventId: eventId ?? null,
 	})
 }

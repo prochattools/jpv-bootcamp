@@ -12,6 +12,7 @@ const PROVISIONING_EVENT_TYPES = new Set([
 	'checkout.session.completed',
 	'customer.subscription.updated',
 	'customer.subscription.deleted',
+	'invoice.paid',
 ])
 const DEBUG_STRIPE_WEBHOOKS = process.env.DEBUG_STRIPE_WEBHOOKS === '1'
 const SKIP_PREDEV = process.env.SKIP_PREDEV === '1'
@@ -63,11 +64,6 @@ function debugErrorPayload(message: string, debugInfo: WebhookDebugInfo) {
 	return DEBUG_STRIPE_WEBHOOKS ? { error: message, debug: debugInfo } : { error: message }
 }
 
-function logDebugInfo(debugInfo: WebhookDebugInfo) {
-	if (!DEBUG_STRIPE_WEBHOOKS) return
-	console.info('Stripe webhook debug', debugInfo)
-}
-
 function getSignaturePrefix(signature: string | null): string | null {
 	if (!signature) return null
 	const parts = signature.split(',')
@@ -87,64 +83,41 @@ function getBuildId(): string | null {
 	return process.env.VERCEL_GIT_COMMIT_SHA ?? process.env.APP_BUILD_ID ?? null
 }
 
-function getEmailDomain(email?: string | null): string | null {
-	if (!email) return null
-	const [, domain] = email.split('@')
-	return domain ?? null
-}
+type WebhookOutcome = 'processed' | 'deduped' | 'skipped' | 'rejected' | 'error'
 
-function getId(value?: string | { id?: string } | null): string | null {
-	if (!value) return null
-	return typeof value === 'string' ? value : value.id ?? null
-}
-
-function getSubscriptionIdFromEvent(event: Stripe.Event): string | null {
-	switch (event.type) {
-		case 'checkout.session.completed': {
-			const session = event.data.object as Stripe.Checkout.Session
-			return getId(session.subscription ?? null)
-		}
-		case 'customer.subscription.updated':
-		case 'customer.subscription.deleted': {
-			const subscription = event.data.object as Stripe.Subscription
-			return subscription.id ?? null
-		}
-		case 'invoice.paid':
-		case 'invoice.payment_failed':
-		case 'invoice.payment_succeeded': {
-			const invoice = event.data.object as Stripe.Invoice
-			return getId(invoice.subscription ?? null)
-		}
-		default: {
-			const object = event.data.object as { subscription?: string | { id?: string } }
-			return getId(object.subscription ?? null)
-		}
-	}
-}
-
-function logEventSummary(event: Stripe.Event) {
-	const type = event.type
-	const object = event.data.object as {
-		customer?: string | { id?: string }
-		customer_email?: string | null
-		customer_details?: { email?: string | null } | null
-	}
-
-	const customerId =
-		typeof object.customer === 'string' ? object.customer : object.customer?.id
-	const subscriptionId = getSubscriptionIdFromEvent(event)
-	const email =
-		'customer_email' in object
-			? object.customer_email ?? object.customer_details?.email
-			: null
-
-	console.info('Stripe webhook received', {
-		eventId: event.id,
+function logWebhookEvent(params: {
+	message?: string
+	eventId: string | null
+	type: string | null
+	verified: boolean
+	outcome: WebhookOutcome
+	reason?: string
+	meta?: Record<string, unknown>
+	debugInfo?: WebhookDebugInfo
+}) {
+	const { message, eventId, type, verified, outcome, reason, meta, debugInfo } = params
+	const payload: Record<string, unknown> = {
+		eventId,
 		type,
-		customerId,
-		subscriptionId,
-		emailDomain: getEmailDomain(email),
-	})
+		verified,
+		outcome,
+	}
+	if (reason) payload.reason = reason
+	if (meta) Object.assign(payload, meta)
+	if (DEBUG_STRIPE_WEBHOOKS && debugInfo) {
+		payload.debug = debugInfo
+	}
+
+	const label = message ?? 'Stripe webhook event'
+	if (outcome === 'error' || outcome === 'rejected') {
+		console.error(label, payload)
+		return
+	}
+	if (outcome === 'skipped' || outcome === 'deduped') {
+		console.warn(label, payload)
+		return
+	}
+	console.info(label, payload)
 }
 
 function isEnvEnabled(value?: string): boolean {
@@ -157,7 +130,6 @@ export async function handleStripeWebhook(req: Request) {
 	const rawBody = await req.arrayBuffer()
 	const rawBuffer = Buffer.from(rawBody)
 	const webhookSecrets = getStripeWebhookSecrets()
-	const webhookSecretPrefix = webhookSecrets.length > 0 ? getSecretPrefix(webhookSecrets[0]) : null
 	const webhookSecretFingerprints = webhookSecrets.map(getSecretFingerprint)
 	const buildId = getBuildId()
 
@@ -165,17 +137,9 @@ export async function handleStripeWebhook(req: Request) {
 		req,
 		signature,
 		rawBodyLength: rawBuffer.length,
-		secret: webhookSecretPrefix,
+		secret: webhookSecrets.length > 0 ? getSecretPrefix(webhookSecrets[0]) : null,
 	})
-	logDebugInfo(debugInfo)
-	console.info('Stripe webhook request', {
-		handler: 'src/lib/stripe-webhook-handler.ts',
-		path: debugInfo.path,
-		hasSignature: debugInfo.hasSignatureHeader,
-		hasWebhookSecret: webhookSecrets.length > 0,
-		secretFingerprints: webhookSecretFingerprints,
-		buildId,
-	})
+
 	if (!hasLoggedIdempotencyConfig) {
 		console.info('Stripe webhook idempotency config', {
 			model: 'StripeWebhookEvent',
@@ -183,14 +147,37 @@ export async function handleStripeWebhook(req: Request) {
 			fields: {
 				eventId: 'event_id',
 				type: 'type',
+				livemode: 'livemode',
+				receivedAt: 'received_at',
+				processedAt: 'processed_at',
+				payload: 'payload',
 			},
 		})
 		hasLoggedIdempotencyConfig = true
 	}
 
 	if (!signature) {
-		console.error('Stripe webhook missing signature', {
-			path: debugInfo.path,
+		logWebhookEvent({
+			message: 'Stripe webhook verification failed meta',
+			eventId: null,
+			type: null,
+			verified: false,
+			outcome: 'rejected',
+			reason: 'missing_signature',
+			meta: {
+				path: debugInfo.path,
+				hasSignature: debugInfo.hasSignatureHeader,
+				signaturePrefix: getSignaturePrefix(signature),
+				rawBodyLength: rawBuffer.length,
+				secretFingerprints: webhookSecretFingerprints,
+				buildId,
+				userAgent: req.headers.get('user-agent'),
+				contentType: req.headers.get('content-type'),
+				xForwardedFor: req.headers.get('x-forwarded-for'),
+				cfConnectingIp: req.headers.get('cf-connecting-ip'),
+				xRealIp: req.headers.get('x-real-ip'),
+			},
+			debugInfo,
 		})
 		return NextResponse.json(
 			debugErrorPayload('Missing Stripe signature.', debugInfo),
@@ -199,8 +186,18 @@ export async function handleStripeWebhook(req: Request) {
 	}
 
 	if (webhookSecrets.length === 0) {
-		console.error('Stripe webhook secret missing', {
-			message: 'No webhook secrets configured',
+		logWebhookEvent({
+			eventId: null,
+			type: null,
+			verified: false,
+			outcome: 'error',
+			reason: 'missing_webhook_secret',
+			meta: {
+				path: debugInfo.path,
+				hasWebhookSecret: false,
+				buildId,
+			},
+			debugInfo,
 		})
 		return NextResponse.json(
 			debugErrorPayload('Missing Stripe webhook secret.', debugInfo),
@@ -233,30 +230,30 @@ export async function handleStripeWebhook(req: Request) {
 	}
 
 	if (!event) {
-		console.error('Stripe webhook signature verification failed', {
-			message: firstError?.message ?? 'Signature verification failed.',
+		logWebhookEvent({
+			message: 'Stripe webhook verification failed meta',
+			eventId: null,
+			type: null,
 			verified: false,
-			path: debugInfo.path,
-			hasSignature: debugInfo.hasSignatureHeader,
-			numberOfSecretsTried: webhookSecrets.length,
-			failedIndices,
-			rawBodyLength: rawBuffer.length,
-			signaturePrefix: getSignaturePrefix(signature),
-			secretFingerprints: webhookSecretFingerprints,
-			buildId,
-		})
-		console.error('Stripe webhook verification failed meta', {
-			path: debugInfo.path,
-			hasSignature: debugInfo.hasSignatureHeader,
-			signaturePrefix: getSignaturePrefix(signature),
-			rawBodyLength: rawBuffer.length,
-			secretFingerprints: webhookSecretFingerprints,
-			buildId,
-			userAgent: req.headers.get('user-agent'),
-			contentType: req.headers.get('content-type'),
-			xForwardedFor: req.headers.get('x-forwarded-for'),
-			cfConnectingIp: req.headers.get('cf-connecting-ip'),
-			xRealIp: req.headers.get('x-real-ip'),
+			outcome: 'rejected',
+			reason: 'invalid_signature',
+			meta: {
+				path: debugInfo.path,
+				hasSignature: debugInfo.hasSignatureHeader,
+				numberOfSecretsTried: webhookSecrets.length,
+				failedIndices,
+				rawBodyLength: rawBuffer.length,
+				signaturePrefix: getSignaturePrefix(signature),
+				secretFingerprints: webhookSecretFingerprints,
+				buildId,
+				message: firstError?.message ?? 'Signature verification failed.',
+				userAgent: req.headers.get('user-agent'),
+				contentType: req.headers.get('content-type'),
+				xForwardedFor: req.headers.get('x-forwarded-for'),
+				cfConnectingIp: req.headers.get('cf-connecting-ip'),
+				xRealIp: req.headers.get('x-real-ip'),
+			},
+			debugInfo,
 		})
 		return NextResponse.json(
 			debugErrorPayload('Invalid Stripe signature.', debugInfo),
@@ -264,28 +261,35 @@ export async function handleStripeWebhook(req: Request) {
 		)
 	}
 
-	console.info('Stripe webhook verification result', {
-		verified: true,
-		eventId: event.id,
-		type: event.type,
-		secretIndexMatched: matchedSecretIndex,
-		secretPrefix: matchedSecretPrefix,
-		secretFingerprint: matchedSecretFingerprint,
-		buildId,
-	})
-
-	logEventSummary(event)
-
 	if (SKIP_PREDEV) {
-		console.warn('Stripe webhook DB skipped (SKIP_PREDEV=1)', {
+		logWebhookEvent({
 			eventId: event.id,
 			type: event.type,
+			verified: true,
+			outcome: 'skipped',
+			reason: 'skip_predev',
+			meta: {
+				path: debugInfo.path,
+				buildId,
+			},
+			debugInfo,
 		})
 		return NextResponse.json({ received: true, skipped: 'db' })
 	}
 
 	if (await hasProcessed(event.id)) {
-		console.info('Stripe webhook deduped', { eventId: event.id, type: event.type })
+		logWebhookEvent({
+			eventId: event.id,
+			type: event.type,
+			verified: true,
+			outcome: 'deduped',
+			reason: 'already_processed',
+			meta: {
+				path: debugInfo.path,
+				buildId,
+			},
+			debugInfo,
+		})
 		return NextResponse.json({ received: true })
 	}
 
@@ -294,26 +298,30 @@ export async function handleStripeWebhook(req: Request) {
 		isEnvEnabled(process.env.PROVISIONING_ENABLED) ||
 		isEnvEnabled(process.env.WP_PROVISION_ENABLED)
 	let provisioningEnabled = false
+	let provisioningStatus: 'enabled' | 'skipped' | 'not_applicable' = 'not_applicable'
 
 	if (requiresProvisioning) {
 		if (!provisioningFlag) {
-			console.warn('Provisioning disabled; skipping provisioning.', {
-				eventId: event.id,
-				type: event.type,
-				env: process.env.NODE_ENV,
-				reason: 'PROVISIONING_ENABLED not set',
-			})
+			provisioningStatus = 'skipped'
 		} else {
 			try {
 				getServerConfig()
 				provisioningEnabled = true
+				provisioningStatus = 'enabled'
 			} catch (error) {
 				if (isMissingEnvError(error)) {
-					console.error('Provisioning enabled but config missing.', {
+					logWebhookEvent({
 						eventId: event.id,
 						type: event.type,
-						env: process.env.NODE_ENV,
-						error: (error as Error).message,
+						verified: true,
+						outcome: 'error',
+						reason: 'provisioning_config_missing',
+						meta: {
+							path: debugInfo.path,
+							buildId,
+							message: (error as Error).message,
+						},
+						debugInfo,
 					})
 					return NextResponse.json(
 						{ error: 'Provisioning enabled but configuration is missing.' },
@@ -330,55 +338,86 @@ export async function handleStripeWebhook(req: Request) {
 			case 'checkout.session.completed': {
 				if (provisioningEnabled) {
 					const session = event.data.object as Stripe.Checkout.Session
-					await provisionFromCheckoutSession(session)
+					await provisionFromCheckoutSession(session, event.id)
 				}
 				break
 			}
 			case 'customer.subscription.updated': {
 				if (provisioningEnabled) {
 					const subscription = event.data.object as Stripe.Subscription
-					await syncFromSubscription(subscription.id)
+					await syncFromSubscription(subscription.id, event.id)
 				}
 				break
 			}
 			case 'customer.subscription.deleted': {
 				if (provisioningEnabled) {
 					const subscription = event.data.object as Stripe.Subscription
-					await syncFromSubscription(subscription.id)
+					await syncFromSubscription(subscription.id, event.id)
 				}
 				break
 			}
 			case 'invoice.paid': {
-				const invoice = event.data.object as Stripe.Invoice
-				console.info('Invoice paid', {
-					invoiceId: invoice.id,
-					subscriptionId: getId(invoice.subscription ?? null),
-				})
+				if (provisioningEnabled) {
+					const invoice = event.data.object as Stripe.Invoice
+					const subscriptionId =
+						typeof invoice.subscription === 'string'
+							? invoice.subscription
+							: invoice.subscription?.id ?? null
+					if (subscriptionId) {
+						await syncFromSubscription(subscriptionId, event.id)
+					}
+				}
 				break
 			}
 			case 'invoice.payment_failed': {
-				const invoice = event.data.object as Stripe.Invoice
-				console.info('Invoice payment failed', {
-					invoiceId: invoice.id,
-					subscriptionId: getId(invoice.subscription ?? null),
-				})
 				break
 			}
 			default:
-				console.info('Stripe webhook ignored', { type: event.type })
+				break
 		}
 
 		await markProcessed({
 			eventId: event.id,
 			eventType: event.type,
+			livemode: event.livemode,
 			payload: event as unknown as Record<string, unknown>,
+		})
+
+		const reason =
+			provisioningStatus === 'skipped' && requiresProvisioning
+				? 'provisioning_disabled'
+				: undefined
+
+		logWebhookEvent({
+			eventId: event.id,
+			type: event.type,
+			verified: true,
+			outcome: 'processed',
+			reason,
+			meta: {
+				path: debugInfo.path,
+				buildId,
+				secretIndexMatched: matchedSecretIndex,
+				secretPrefix: matchedSecretPrefix,
+				secretFingerprint: matchedSecretFingerprint,
+				provisioning: provisioningStatus,
+			},
+			debugInfo,
 		})
 		return NextResponse.json({ received: true })
 	} catch (error) {
-		console.error('Stripe webhook handler failed', {
+		logWebhookEvent({
 			eventId: event.id,
 			type: event.type,
-			message: (error as Error).message,
+			verified: true,
+			outcome: 'error',
+			reason: 'handler_failed',
+			meta: {
+				path: debugInfo.path,
+				buildId,
+				message: (error as Error).message,
+			},
+			debugInfo,
 		})
 		return NextResponse.json(
 			{ error: 'Stripe webhook handler failed.' },

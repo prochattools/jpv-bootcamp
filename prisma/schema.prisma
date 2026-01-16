@@ -24,6 +24,7 @@ model EmailSubscriber {
 model StripeWebhookEvent {
   eventId     String   @id @map("event_id")
   type        String   @default("unknown") @map("type")
+  livemode    Boolean  @map("livemode")
   receivedAt  DateTime @default(now()) @map("received_at")
   processedAt DateTime? @map("processed_at")
   payload     Json?    @map("payload")
@@ -38,8 +39,10 @@ model CustomerProvisioning {
   stripeCustomerId     String   @unique @map("stripe_customer_id")
   stripeSubscriptionId String?  @unique @map("stripe_subscription_id")
   wpUserId             Int?     @map("wp_user_id")
-  currentPlan          String   @map("current_plan")
+  plan                 String?  @map("plan")
+  currentPlan          String?  @map("current_plan")
   status               String   @default("active")
+  lastEventId          String?  @map("last_event_id")
   createdAt            DateTime @default(now()) @map("created_at")
   updatedAt            DateTime @default(now()) @updatedAt @map("updated_at")
 
