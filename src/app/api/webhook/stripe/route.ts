@@ -10,7 +10,28 @@ import { handleStripeWebhook } from '@/lib/stripe-webhook-handler'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
+const CANONICAL_PATH = '/api/webhook/stripe'
+let hasLoggedStartup = false
+
+function isEnvEnabled(value?: string): boolean {
+	if (!value) return false
+	return ['1', 'true', 'yes', 'on'].includes(value.trim().toLowerCase())
+}
+
+function getProvisioningEnabled(): boolean {
+	return (
+		isEnvEnabled(process.env.PROVISIONING_ENABLED) ||
+		isEnvEnabled(process.env.WP_PROVISION_ENABLED)
+	)
+}
+
 export async function POST(req: Request) {
-	console.info('Stripe webhook route active: src/app/api/webhook/stripe/route.ts')
+	if (!hasLoggedStartup) {
+		console.info('Stripe webhook route active', {
+			path: CANONICAL_PATH,
+			provisioningEnabled: getProvisioningEnabled(),
+		})
+		hasLoggedStartup = true
+	}
 	return handleStripeWebhook(req)
 }
