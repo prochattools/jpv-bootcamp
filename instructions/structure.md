@@ -165,7 +165,7 @@ The webhook handler is located at `src/app/api/webhook/stripe/route.ts`
 
 **Setup Instructions:**
 
-1. Configure webhook endpoint in Stripe Dashboard: `https://yourdomain.com/api/webhook/stripe`
+1. Configure webhook endpoint in Stripe Dashboard: `https://jpvbootcamp.com/api/webhook/stripe`
 2. Set `STRIPE_WEBHOOK_SECRET` environment variable
 3. Webhook automatically updates user subscription status in database
 4. Sends confirmation emails via Resend

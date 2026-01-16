@@ -103,4 +103,3 @@ User → /api/stripe/checkout?plan=pro|vip
 - Provisioning is webhook-driven only. The success URL never provisions.
 - WordPress roles remain `subscriber`.
 - Membership level is stored in user meta as `jpv_membership_level`.
-- Alias endpoint `/api/stripe/webhook` remains available for legacy configs.

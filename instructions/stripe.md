@@ -287,7 +287,7 @@ stripe: {
 ### 2. Configure Webhooks
 
 1. Go to Stripe Dashboard → Developers → Webhooks
-2. Add endpoint: `https://yourdomain.com/api/webhook/stripe`
+2. Add endpoint: `https://jpvbootcamp.com/api/webhook/stripe`
 3. Select events:
    - `checkout.session.completed`
    - `customer.subscription.deleted`

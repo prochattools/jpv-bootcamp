@@ -5,7 +5,6 @@ This guide documents how to verify Stripe webhook signature handling end-to-end.
 ## Primary endpoint
 
 - Primary: `/api/webhook/stripe`
-- Alias (legacy): `/api/stripe/webhook`
 
 ## Debug mode
 
