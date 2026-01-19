@@ -20,10 +20,36 @@ function jpv_provisioning_get_token() {
     return get_option(JPV_PROVISIONING_OPTION);
 }
 
+function jpv_provisioning_get_app_sync_token() {
+    if (defined('JPV_APP_SYNC_TOKEN') && JPV_APP_SYNC_TOKEN) {
+        return JPV_APP_SYNC_TOKEN;
+    }
+
+    if (defined('JPV_PROVISION_TOKEN') && JPV_PROVISION_TOKEN) {
+        return JPV_PROVISION_TOKEN;
+    }
+
+    return '';
+}
+
+function jpv_provisioning_get_app_sync_url() {
+    if (defined('JPV_APP_SYNC_URL') && JPV_APP_SYNC_URL) {
+        return JPV_APP_SYNC_URL;
+    }
+
+    return '';
+}
+
 function jpv_provisioning_register_routes() {
     register_rest_route('jpv/v1', '/provision', array(
         'methods' => 'POST',
         'callback' => 'jpv_provisioning_handle_request',
+        'permission_callback' => 'jpv_provisioning_check_auth',
+    ));
+
+    register_rest_route('jpv/v1', '/user-exists', array(
+        'methods' => 'GET',
+        'callback' => 'jpv_provisioning_handle_user_exists',
         'permission_callback' => 'jpv_provisioning_check_auth',
     ));
 }
@@ -47,6 +73,38 @@ function jpv_provisioning_check_auth($request) {
     }
 
     return true;
+}
+
+function jpv_provisioning_handle_user_exists(WP_REST_Request $request) {
+    $wp_user_id = absint($request->get_param('wp_user_id'));
+    $email = $request->get_param('email');
+    $email = $email ? sanitize_email($email) : '';
+
+    if (!$wp_user_id && !$email) {
+        return new WP_REST_Response(array('error' => 'wp_user_id or email is required.'), 400);
+    }
+
+    if ($email && !is_email($email)) {
+        return new WP_REST_Response(array('error' => 'Invalid email address.'), 400);
+    }
+
+    $user = null;
+    if ($wp_user_id) {
+        $user = get_user_by('id', $wp_user_id);
+    } elseif ($email) {
+        $user = get_user_by('email', $email);
+    }
+
+    if (!$user) {
+        return rest_ensure_response(array('ok' => true, 'exists' => false));
+    }
+
+    return rest_ensure_response(array(
+        'ok' => true,
+        'exists' => true,
+        'wp_user_id' => $user->ID,
+        'email' => $user->user_email,
+    ));
 }
 
 function jpv_provisioning_handle_request(WP_REST_Request $request) {
@@ -148,6 +206,50 @@ function jpv_provisioning_handle_request(WP_REST_Request $request) {
         'reset_link' => $reset_link,
     ));
 }
+
+function jpv_provisioning_notify_deletion($user_id) {
+    $url = jpv_provisioning_get_app_sync_url();
+    $token = jpv_provisioning_get_app_sync_token();
+
+    if (!$url || !$token) {
+        error_log('JPV provisioning deletion sync skipped: missing app sync URL or token.');
+        return;
+    }
+
+    $user = get_userdata($user_id);
+    $email = $user && isset($user->user_email) ? $user->user_email : '';
+
+    if (!$email) {
+        error_log('JPV provisioning deletion sync skipped: missing user email.');
+        return;
+    }
+
+    $payload = array(
+        'wp_user_id' => (int) $user_id,
+        'email' => $email,
+    );
+
+    $response = wp_remote_post($url, array(
+        'method' => 'POST',
+        'headers' => array(
+            'Authorization' => 'Bearer ' . $token,
+            'Content-Type' => 'application/json',
+        ),
+        'body' => wp_json_encode($payload),
+        'timeout' => 5,
+    ));
+
+    if (is_wp_error($response)) {
+        error_log('JPV provisioning deletion sync failed: ' . $response->get_error_message());
+        return;
+    }
+
+    $status = wp_remote_retrieve_response_code($response);
+    if ($status < 200 || $status >= 300) {
+        error_log('JPV provisioning deletion sync failed with status ' . $status);
+    }
+}
+add_action('delete_user', 'jpv_provisioning_notify_deletion', 10, 1);
 
 function jpv_provisioning_register_settings() {
     register_setting('jpv_provisioning', JPV_PROVISIONING_OPTION);

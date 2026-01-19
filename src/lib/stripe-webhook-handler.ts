@@ -5,7 +5,7 @@ import { NextResponse } from 'next/server'
 import type Stripe from 'stripe'
 import { getServerConfig, getStripeWebhookSecrets } from '@/lib/config'
 import { hasProcessed, markProcessed } from '@/lib/idempotency'
-import { provisionFromCheckoutSession, syncFromSubscription } from '@/lib/provisioning'
+import { logProvisioningDecision, provisionFromCheckoutSession, syncFromSubscription } from '@/lib/provisioning'
 import { getStripe } from '@/lib/stripe'
 
 const PROVISIONING_EVENT_TYPES = new Set([
@@ -123,6 +123,71 @@ function logWebhookEvent(params: {
 function isEnvEnabled(value?: string): boolean {
 	if (!value) return false
 	return ['1', 'true', 'yes', 'on'].includes(value.trim().toLowerCase())
+}
+
+function logProvisioningSkip(event: Stripe.Event, reason: string) {
+	let customerId: string | null = null
+	let subscriptionId: string | null = null
+	let email: string | null = null
+	let incomingPlan: string | null = null
+
+	switch (event.type) {
+		case 'checkout.session.completed': {
+			const session = event.data.object as Stripe.Checkout.Session
+			customerId =
+				typeof session.customer === 'string'
+					? session.customer
+					: session.customer?.id ?? null
+			subscriptionId =
+				typeof session.subscription === 'string'
+					? session.subscription
+					: session.subscription?.id ?? null
+			email = session.customer_email ?? session.customer_details?.email ?? null
+			incomingPlan =
+				typeof session.metadata?.plan === 'string' ? session.metadata.plan : null
+			break
+		}
+		case 'customer.subscription.updated':
+		case 'customer.subscription.deleted': {
+			const subscription = event.data.object as Stripe.Subscription
+			customerId =
+				typeof subscription.customer === 'string'
+					? subscription.customer
+					: subscription.customer?.id ?? null
+			subscriptionId = subscription.id ?? null
+			incomingPlan =
+				typeof subscription.metadata?.plan === 'string' ? subscription.metadata.plan : null
+			break
+		}
+		case 'invoice.paid': {
+			const invoice = event.data.object as Stripe.Invoice
+			customerId =
+				typeof invoice.customer === 'string'
+					? invoice.customer
+					: invoice.customer?.id ?? null
+			subscriptionId =
+				typeof invoice.subscription === 'string'
+					? invoice.subscription
+					: invoice.subscription?.id ?? null
+			email = invoice.customer_email ?? null
+			break
+		}
+		default:
+			break
+	}
+
+	logProvisioningDecision({
+		eventId: event.id,
+		type: event.type,
+		customerId,
+		subscriptionId,
+		email,
+		incomingPlan,
+		dbWpUserId: null,
+		wpExists: 'unknown',
+		decision: 'skip',
+		reason,
+	})
 }
 
 export async function handleStripeWebhook(req: Request) {
@@ -334,25 +399,29 @@ export async function handleStripeWebhook(req: Request) {
 	}
 
 	try {
+		if (requiresProvisioning && !provisioningEnabled) {
+			logProvisioningSkip(event, 'provisioning_disabled')
+		}
+
 		switch (event.type) {
 			case 'checkout.session.completed': {
 				if (provisioningEnabled) {
 					const session = event.data.object as Stripe.Checkout.Session
-					await provisionFromCheckoutSession(session, event.id)
+					await provisionFromCheckoutSession(session, event.id, event.type)
 				}
 				break
 			}
 			case 'customer.subscription.updated': {
 				if (provisioningEnabled) {
 					const subscription = event.data.object as Stripe.Subscription
-					await syncFromSubscription(subscription.id, event.id)
+					await syncFromSubscription(subscription.id, event.id, event.type)
 				}
 				break
 			}
 			case 'customer.subscription.deleted': {
 				if (provisioningEnabled) {
 					const subscription = event.data.object as Stripe.Subscription
-					await syncFromSubscription(subscription.id, event.id)
+					await syncFromSubscription(subscription.id, event.id, event.type)
 				}
 				break
 			}
@@ -364,7 +433,9 @@ export async function handleStripeWebhook(req: Request) {
 							? invoice.subscription
 							: invoice.subscription?.id ?? null
 					if (subscriptionId) {
-						await syncFromSubscription(subscriptionId, event.id)
+						await syncFromSubscription(subscriptionId, event.id, event.type)
+					} else {
+						logProvisioningSkip(event, 'missing_subscription_id')
 					}
 				}
 				break

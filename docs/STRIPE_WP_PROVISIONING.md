@@ -28,6 +28,8 @@ PROVISIONING_ENABLED=true
 WP_BASE_URL=https://portal.jpvbootcamp.com
 WP_PROVISION_ENDPOINT=/wp-json/jpv/v1/provision
 WP_PROVISION_TOKEN=
+APP_WP_SYNC_TOKEN=
+# or WP_TO_APP_TOKEN=
 
 # Email (Resend)
 RESEND_API_KEY=
@@ -76,6 +78,9 @@ These scripts only add missing columns/indexes and do not drop existing data.
 3) Set the bearer token:
    - Preferred: define `JPV_PROVISION_TOKEN` in `wp-config.php`.
    - Or set it in **Settings → JPV Provisioning**.
+4) Configure WP → app deletion sync in `wp-config.php`:
+   - `JPV_APP_SYNC_URL=https://<app>/api/wp/user-deleted`
+   - `JPV_APP_SYNC_TOKEN=...` (or reuse `JPV_PROVISION_TOKEN`)
 
 ## Example provisioning request
 
@@ -102,6 +107,12 @@ stripe trigger checkout.session.completed
 
 For full end-to-end testing, run a real Checkout session and confirm the event is delivered.
 
+## Reconciliation testing
+
+1) Delete a WordPress user in WP admin.
+2) Resend the Stripe webhook event for that user (e.g., `checkout.session.completed` or `customer.subscription.updated`).
+3) Confirm the webhook reprovisions the user and `customer_provisioning.wp_user_id` is set again.
+
 ## Lifecycle diagram
 
 ```text
@@ -116,6 +127,7 @@ User → /api/stripe/checkout?plan=pro|vip
 
 ## Notes
 
+- Provisioned means the WP user exists, not just that a row exists in `customer_provisioning`.
 - Provisioning is webhook-driven only. The success URL never provisions.
 - WordPress roles remain `subscriber`.
 - Membership level is stored in user meta as `jpv_membership_level`.

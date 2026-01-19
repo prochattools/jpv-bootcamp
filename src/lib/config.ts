@@ -221,6 +221,16 @@ export function getOpsConfig(): OpsConfig {
 	return cachedOpsConfig
 }
 
+export function getWpAppSyncToken(): string {
+	const syncToken = getEnvAny(['APP_WP_SYNC_TOKEN', 'WP_TO_APP_TOKEN'])
+	if (syncToken) return syncToken
+	const provisionToken = getEnv('WP_PROVISION_TOKEN')
+	if (provisionToken) return provisionToken
+	throw new Error(
+		'Missing required env var: APP_WP_SYNC_TOKEN (or WP_TO_APP_TOKEN/WP_PROVISION_TOKEN)'
+	)
+}
+
 // Full server config (includes WP). Lazy-loaded to avoid build-time env validation.
 // Use this in webhook/provisioning paths.
 export function getServerConfig(): ServerConfig {

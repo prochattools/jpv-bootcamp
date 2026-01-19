@@ -17,12 +17,30 @@ type ProvisionResponse = {
 	error?: string
 }
 
+type UserExistsResponse = {
+	ok?: boolean
+	exists?: boolean
+	wp_user_id?: number
+	wpUserId?: number
+	email?: string
+	error?: string
+}
+
 export type ProvisionResult = {
 	wpUserId: number
 	resetLink: string
 }
 
+export type WpUserExistsResult = {
+	exists: boolean
+	wpUserId?: number | null
+	email?: string | null
+}
+
 let hasLoggedProvisioningDisabled = false
+let hasLoggedUserExistsDisabled = false
+
+const USER_EXISTS_ENDPOINT = '/wp-json/jpv/v1/user-exists'
 
 function normalizePlan(value: string): string {
 	return value.trim().toLowerCase()
@@ -38,6 +56,14 @@ function getProvisionUrl(): string {
 		throw new Error('WP provisioning is enabled but config is incomplete.')
 	}
 	return new URL(wp.provisionEndpoint, wp.baseUrl).toString()
+}
+
+function getUserExistsUrl(): string {
+	const { wp } = getServerConfig()
+	if (!wp.baseUrl) {
+		throw new Error('WP provisioning is enabled but config is incomplete.')
+	}
+	return new URL(USER_EXISTS_ENDPOINT, wp.baseUrl).toString()
 }
 
 export async function provisionWpUser(
@@ -111,5 +137,73 @@ export async function provisionWpUser(
 	return {
 		wpUserId,
 		resetLink,
+	}
+}
+
+export async function getWpUserExists(params: {
+	wpUserId?: number | null
+	email?: string | null
+}): Promise<WpUserExistsResult | null> {
+	const { wp } = getServerConfig()
+	if (!wp.enabled) {
+		if (!hasLoggedUserExistsDisabled) {
+			console.warn('WP provisioning disabled; skipping WP user existence check.')
+			hasLoggedUserExistsDisabled = true
+		}
+		return null
+	}
+
+	const wpUserId =
+		typeof params.wpUserId === 'number' ? params.wpUserId : null
+	const email = params.email ? normalizeEmail(params.email) : null
+
+	if (!wpUserId && !email) {
+		throw new Error('WP user existence check requires wpUserId or email.')
+	}
+
+	const url = new URL(getUserExistsUrl())
+	if (wpUserId) {
+		url.searchParams.set('wp_user_id', String(wpUserId))
+	} else if (email) {
+		url.searchParams.set('email', email)
+	}
+
+	if (!wp.provisionToken) {
+		throw new Error('WP provisioning is enabled but token is missing.')
+	}
+
+	const response = await fetch(url.toString(), {
+		method: 'GET',
+		headers: {
+			Authorization: `Bearer ${wp.provisionToken}`,
+			Accept: 'application/json',
+		},
+		cache: 'no-store',
+	})
+
+	const text = await response.text()
+	let data: UserExistsResponse | null = null
+	try {
+		data = text ? (JSON.parse(text) as UserExistsResponse) : null
+	} catch {
+		data = null
+	}
+
+	if (!response.ok) {
+		const message =
+			typeof data?.error === 'string'
+				? data.error
+				: `WP user existence check failed with status ${response.status}`
+		throw new Error(message)
+	}
+
+	const exists = Boolean(data?.exists)
+	const resolvedUserId = data?.wp_user_id ?? data?.wpUserId ?? null
+	const resolvedEmail = typeof data?.email === 'string' ? data.email : null
+
+	return {
+		exists,
+		wpUserId: resolvedUserId,
+		email: resolvedEmail,
 	}
 }
