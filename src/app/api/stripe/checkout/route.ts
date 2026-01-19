@@ -60,7 +60,8 @@ export async function GET(req: NextRequest) {
 		const planParam = req.nextUrl.searchParams.get('plan')
 		const customerParam = req.nextUrl.searchParams.get('customer')
 
-		const plan = isPricingPlanKey(planParam) ? planParam : null
+		const normalizedPlan = planParam ? planParam.toLowerCase() : null
+		const plan = isPricingPlanKey(normalizedPlan) ? normalizedPlan : null
 
 		if (!plan) {
 			return NextResponse.json(

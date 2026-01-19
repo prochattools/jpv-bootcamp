@@ -51,7 +51,9 @@ export function logProvisioningDecision(params: {
 }
 
 function normalizePlan(value: string | null | undefined): Plan | null {
-	return value === 'pro' || value === 'vip' ? value : null
+	if (!value) return null
+	const normalized = value.trim().toLowerCase()
+	return normalized === 'pro' || normalized === 'vip' ? normalized : null
 }
 
 function normalizePlanName(value: string | null | undefined): string | null {
@@ -60,9 +62,8 @@ function normalizePlanName(value: string | null | undefined): string | null {
 	return normalized.length > 0 ? normalized : null
 }
 
-function resolveStoredPlan(record: ProvisioningRecord | null): Plan | null {
-	if (!record) return null
-	return normalizePlan(record.currentPlan ?? record.plan ?? null)
+function isProvisioningPlan(value: string | null | undefined): value is Plan {
+	return value === 'pro' || value === 'vip'
 }
 
 function resolveStoredPlanName(record: ProvisioningRecord | null): string | null {
@@ -306,15 +307,22 @@ export async function provisionFromCheckoutSession(
 		return
 	}
 
-	const { plan: resolvedPlan } = await resolvePlanFromCheckoutSession(session)
-	const storedPlan = resolveStoredPlan(existing)
+	const { plan } = await resolvePlanFromCheckoutSession(session)
 	const storedPlanName = resolveStoredPlanName(existing)
-	const plan = resolvedPlan ?? storedPlan
-	incomingPlan = normalizePlanName(plan)
-	if (!plan || !incomingPlan) {
-		logDecision('skip', 'missing_plan')
+
+	if (!plan) {
+		console.error('WP provisioning skipped: invalid plan', {
+			sessionId: session.id,
+			email,
+			customerId,
+			subscriptionId,
+			plan: plan ?? null,
+		})
+		logDecision('skip', 'invalid_plan')
 		return
 	}
+
+	incomingPlan = plan
 
 	const planChanged = storedPlanName !== incomingPlan
 	let decision: ProvisioningDecision = 'provision'
@@ -388,9 +396,16 @@ export async function provisionFromCheckoutSession(
 	const { firstName, lastName } = splitName(session.customer_details?.name)
 	const displayName = [firstName, lastName].filter(Boolean).join(' ').trim()
 
+	console.info('WP provisioning request', {
+		email,
+		customerId,
+		subscriptionId,
+		plan,
+	})
+
 	const wpProvision = await provisionWpUser({
 		email,
-		plan: incomingPlan,
+		plan,
 		name: displayName || session.customer_details?.name || null,
 		stripeCustomerId: customerId,
 	})
@@ -476,18 +491,32 @@ export async function syncFromSubscription(
 		return
 	}
 
-	const { plan: resolvedPlan } = getPlanFromSubscription(subscription)
-	const storedPlan = resolveStoredPlan(existing)
+	const { plan } = getPlanFromSubscription(subscription)
 	const storedPlanName = resolveStoredPlanName(existing)
-	const plan = resolvedPlan ?? storedPlan
 
 	const isActive = ACTIVE_STATUSES.has(subscription.status)
 	if (isActive && !plan) {
-		logDecision('skip', 'missing_plan')
+		console.error('WP provisioning skipped: invalid plan', {
+			subscriptionId: subscription.id,
+			email,
+			customerId,
+			plan: plan ?? null,
+		})
+		logDecision('skip', 'invalid_plan')
 		return
 	}
 	const nextPlan = isActive ? plan ?? 'none' : 'none'
 	incomingPlan = normalizePlanName(nextPlan)
+	if (!incomingPlan) {
+		console.error('WP provisioning skipped: invalid plan', {
+			subscriptionId: subscription.id,
+			email,
+			customerId,
+			plan: nextPlan ?? null,
+		})
+		logDecision('skip', 'invalid_plan')
+		return
+	}
 	const nextStatus = isActive ? 'active' : 'inactive'
 
 	console.debug('Syncing subscription', {
@@ -549,9 +578,37 @@ export async function syncFromSubscription(
 		return
 	}
 
+	if (!isProvisioningPlan(incomingPlan)) {
+		console.error('WP provisioning skipped: invalid plan', {
+			subscriptionId: subscription.id,
+			email,
+			customerId,
+			plan: incomingPlan ?? null,
+			status: subscription.status,
+		})
+		await upsertProvisioningRecord({
+			email,
+			stripeCustomerId: customerId,
+			stripeSubscriptionId: subscription.id,
+			wpUserId: existing?.wpUserId ?? null,
+			plan: incomingPlan ?? 'none',
+			status: nextStatus,
+			lastEventId: eventId ?? null,
+		})
+		logDecision('skip', 'invalid_plan')
+		return
+	}
+
+	console.info('WP provisioning request', {
+		email,
+		customerId,
+		subscriptionId: subscription.id,
+		plan: incomingPlan,
+	})
+
 	const wpProvision = await provisionWpUser({
 		email,
-		plan: incomingPlan ?? 'none',
+		plan: incomingPlan,
 		name: null,
 		stripeCustomerId: customerId || null,
 	})
@@ -565,7 +622,7 @@ export async function syncFromSubscription(
 		stripeCustomerId: customerId,
 		stripeSubscriptionId: subscription.id,
 		wpUserId: wpProvision.wpUserId,
-		plan: incomingPlan ?? 'none',
+		plan: incomingPlan,
 		status: nextStatus,
 		lastEventId: eventId ?? null,
 	})
