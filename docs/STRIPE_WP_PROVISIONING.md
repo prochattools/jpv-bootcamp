@@ -107,6 +107,22 @@ stripe trigger checkout.session.completed
 
 For full end-to-end testing, run a real Checkout session and confirm the event is delivered.
 
+## Billing portal entrypoint
+
+Use this route when Pro users click “Upgrade to VIP” inside Fluent Community.
+
+- Link format:
+  - `https://jpvbootcamp.com/billing/portal?return=https%3A%2F%2Fportal.jpvbootcamp.com%2Fcommunity%2F`
+- `return` is optional; if omitted or invalid, it defaults to:
+  - `https://portal.jpvbootcamp.com/community/`
+- Allowed return origins:
+  - `https://portal.jpvbootcamp.com`
+  - `https://jpvbootcamp.com`
+- If the app has no auth context, include `email=`:
+  - `https://jpvbootcamp.com/billing/portal?email=user%40example.com`
+  - The email must match a row in `tenant_jpvbootcamp.customer_provisioning`.
+  - Optional fallback (disabled by default): set `STRIPE_CUSTOMER_SEARCH_ENABLED=true` to allow Stripe customer search by email.
+
 ## Reconciliation testing
 
 1) Delete a WordPress user in WP admin.
