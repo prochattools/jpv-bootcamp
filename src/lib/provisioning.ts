@@ -44,7 +44,7 @@ export function logProvisioningDecision(params: {
 	reason: string
 	forceProvision?: boolean
 }) {
-	const payload = {
+	const payload: Record<string, unknown> = {
 		eventId: params.eventId ?? null,
 		type: params.type ?? null,
 		customerId: params.customerId ?? null,
