@@ -1,9 +1,10 @@
 import 'server-only'
 import { getServerConfig } from '@/lib/config'
+import { normalizePlan, type Plan } from '@/lib/plans'
 
 type ProvisionPayload = {
 	email: string
-	plan: string
+	plan: Plan
 	name?: string | null
 	stripeCustomerId?: string | null
 }
@@ -39,11 +40,32 @@ export type WpUserExistsResult = {
 
 let hasLoggedProvisioningDisabled = false
 let hasLoggedUserExistsDisabled = false
+let hasLoggedProvisioningEndpoint = false
 
 const USER_EXISTS_ENDPOINT = '/wp-json/jpv/v1/user-exists'
+const PROVISION_TIMEOUT_MS = 10000
+const MAX_BODY_LOG_CHARS = 500
 
-function normalizePlan(value: string): string {
-	return value.trim().toLowerCase()
+function getRedactedEndpoint(url: string): { endpoint: string; path: string } {
+	try {
+		const parsed = new URL(url)
+		return {
+			endpoint: `${parsed.protocol}//<redacted>${parsed.pathname}`,
+			path: parsed.pathname,
+		}
+	} catch {
+		return { endpoint: url, path: url }
+	}
+}
+
+function logProvisioningEndpointOnce(url: string): void {
+	if (hasLoggedProvisioningEndpoint) return
+	const redacted = getRedactedEndpoint(url)
+	console.info('WP provisioning endpoint configured', {
+		endpoint: redacted.endpoint,
+		path: redacted.path,
+	})
+	hasLoggedProvisioningEndpoint = true
 }
 
 function normalizeEmail(email: string): string {
@@ -55,7 +77,9 @@ function getProvisionUrl(): string {
 	if (!wp.baseUrl || !wp.provisionEndpoint) {
 		throw new Error('WP provisioning is enabled but config is incomplete.')
 	}
-	return new URL(wp.provisionEndpoint, wp.baseUrl).toString()
+	const url = new URL(wp.provisionEndpoint, wp.baseUrl).toString()
+	logProvisioningEndpointOnce(url)
+	return url
 }
 
 function getUserExistsUrl(): string {
@@ -90,42 +114,96 @@ export async function provisionWpUser(
 	}
 
 	const url = getProvisionUrl()
+	const endpointLog = getRedactedEndpoint(url)
 	if (!wp.provisionToken) {
 		throw new Error('WP provisioning is enabled but token is missing.')
 	}
 	const body = {
 		email,
 		plan,
+		jpv_membership_level: plan,
 		name: payload.name ?? null,
 		stripe_customer_id: payload.stripeCustomerId ?? undefined,
 	}
 
-	const response = await fetch(url, {
-		method: 'POST',
-		headers: {
-			Authorization: `Bearer ${wp.provisionToken}`,
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-		},
-		body: JSON.stringify(body),
-		cache: 'no-store',
+	console.info('WP provisioning request', {
+		email,
+		plan,
+		endpointPath: endpointLog.path,
+		timeoutMs: PROVISION_TIMEOUT_MS,
 	})
+
+	const controller = new AbortController()
+	const timeout = setTimeout(() => controller.abort(), PROVISION_TIMEOUT_MS)
+	let response: Response
+	try {
+		response = await fetch(url, {
+			method: 'POST',
+			headers: {
+				Authorization: `Bearer ${wp.provisionToken}`,
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify(body),
+			cache: 'no-store',
+			signal: controller.signal,
+		})
+	} catch (error) {
+		const err = error as Error
+		const isTimeout = err?.name === 'AbortError'
+		console.error('WP provisioning request failed', {
+			email,
+			plan,
+			endpointPath: endpointLog.path,
+			errorType: isTimeout ? 'timeout' : 'network_error',
+			message: err?.message ?? 'Unknown error',
+		})
+		throw error
+	} finally {
+		clearTimeout(timeout)
+	}
 
 	const text = await response.text()
 	let data: ProvisionResponse | null = null
+	let parseError: string | null = null
 	try {
 		data = text ? (JSON.parse(text) as ProvisionResponse) : null
 	} catch {
+		parseError = 'Invalid JSON'
 		data = null
 	}
 
+	const bodySnippet =
+		text.length > MAX_BODY_LOG_CHARS ? `${text.slice(0, MAX_BODY_LOG_CHARS)}...` : text
+
+	if (parseError) {
+		console.error('WP provisioning response parse error', {
+			endpointPath: endpointLog.path,
+			status: response.status,
+			errorType: 'parse_error',
+			bodySnippet,
+		})
+	}
+
 	if (!response.ok) {
+		console.error('WP provisioning response error', {
+			endpointPath: endpointLog.path,
+			status: response.status,
+			errorType: 'non_2xx',
+			bodySnippet,
+		})
 		const message =
 			typeof data?.error === 'string'
 				? data.error
 				: `WP provisioning failed with status ${response.status}`
 		throw new Error(message)
 	}
+
+	console.info('WP provisioning response', {
+		endpointPath: endpointLog.path,
+		status: response.status,
+		bodySnippet,
+	})
 
 	const wpUserId = data?.wp_user_id ?? data?.wpUserId
 	const resetLink = data?.reset_link ?? data?.resetLink

@@ -2,7 +2,7 @@ import 'server-only'
 import type Stripe from 'stripe'
 import prisma from '@/libs/prisma'
 import { sendWelcomeEmail } from '@/lib/email'
-import { getPlanFromPriceId, type Plan } from '@/lib/plans'
+import { resolvePlanFromStripe, type Plan } from '@/lib/plans'
 import { getStripe } from '@/lib/stripe'
 import { getWpUserExists, provisionWpUser } from '@/lib/wp'
 
@@ -10,6 +10,15 @@ const ACTIVE_STATUSES = new Set<Stripe.Subscription.Status>([
 	'active',
 	'trialing',
 ])
+
+function isEnvEnabled(value?: string): boolean {
+	if (!value) return false
+	return ['1', 'true', 'yes', 'on'].includes(value.trim().toLowerCase())
+}
+
+function isForceProvisionEnabled(): boolean {
+	return isEnvEnabled(process.env.WP_PROVISION_FORCE)
+}
 
 type ProvisioningRecord = {
 	id: string
@@ -33,6 +42,7 @@ export function logProvisioningDecision(params: {
 	wpExists?: WpExistsStatus
 	decision: ProvisioningDecision
 	reason: string
+	forceProvision?: boolean
 }) {
 	const payload = {
 		eventId: params.eventId ?? null,
@@ -47,13 +57,44 @@ export function logProvisioningDecision(params: {
 		reason: params.reason,
 	}
 
+	if (typeof params.forceProvision === 'boolean') {
+		payload.forceProvision = params.forceProvision
+	}
+
 	console.info(JSON.stringify(payload))
 }
 
-function normalizePlan(value: string | null | undefined): Plan | null {
-	if (!value) return null
-	const normalized = value.trim().toLowerCase()
-	return normalized === 'pro' || normalized === 'vip' ? normalized : null
+function normalizeSkipReason(reason: string): string {
+	return reason === 'wp_exists_plan_unchanged' ? 'wp_user_exists' : reason
+}
+
+function logProvisioningSkipDetails(params: {
+	context: 'checkout' | 'subscription'
+	eventId?: string | null
+	customerId?: string | null
+	subscriptionId?: string | null
+	email?: string | null
+	plan?: string | null
+	wpUserId?: number | null
+	reason: string
+	forceProvision?: boolean
+}) {
+	const payload = {
+		context: params.context,
+		eventId: params.eventId ?? null,
+		stripeCustomerId: params.customerId ?? null,
+		stripeSubscriptionId: params.subscriptionId ?? null,
+		email: params.email ?? null,
+		plan: params.plan ?? null,
+		wpUserId: typeof params.wpUserId === 'number' ? params.wpUserId : null,
+		reason: normalizeSkipReason(params.reason),
+	}
+
+	if (typeof params.forceProvision === 'boolean') {
+		payload.forceProvision = params.forceProvision
+	}
+
+	console.info('WP provisioning skipped', payload)
 }
 
 function normalizePlanName(value: string | null | undefined): string | null {
@@ -98,20 +139,38 @@ async function getCustomerEmail(
 	return fetched.email ?? null
 }
 
-async function getCheckoutSessionPriceId(sessionId: string): Promise<string | null> {
+async function getCheckoutSessionLineItemInfo(
+	sessionId: string
+): Promise<{ priceId: string | null; productId: string | null }> {
 	const stripe = getStripe()
 	const lineItems = await stripe.checkout.sessions.listLineItems(sessionId, { limit: 10 })
-	return lineItems.data[0]?.price?.id ?? null
+	const price = lineItems.data[0]?.price ?? null
+	const productId =
+		typeof price?.product === 'string'
+			? price.product
+			: price?.product?.id ?? null
+	return {
+		priceId: price?.id ?? null,
+		productId,
+	}
 }
 
 function getPlanFromSubscription(subscription: Stripe.Subscription): {
 	plan: Plan | null
 	priceId: string | null
 } {
-	const metadataPlan = normalizePlan(subscription.metadata?.plan)
-	const priceId = subscription.items?.data?.[0]?.price?.id ?? null
+	const metadataPlan =
+		typeof subscription.metadata?.plan === 'string'
+			? subscription.metadata.plan
+			: null
+	const price = subscription.items?.data?.[0]?.price ?? null
+	const priceId = price?.id ?? null
+	const productId =
+		typeof price?.product === 'string'
+			? price.product
+			: price?.product?.id ?? null
 	return {
-		plan: metadataPlan ?? getPlanFromPriceId(priceId),
+		plan: resolvePlanFromStripe({ metadataPlan, priceId, productId }),
 		priceId,
 	}
 }
@@ -120,11 +179,13 @@ async function resolvePlanFromCheckoutSession(
 	session: Stripe.Checkout.Session
 ): Promise<{ plan: Plan | null; priceId: string | null }> {
 	const stripe = getStripe()
-	const metadataPlan = normalizePlan(session.metadata?.plan)
-	const lineItemPriceId = await getCheckoutSessionPriceId(session.id)
+	const rawMetadataPlan =
+		typeof session.metadata?.plan === 'string' ? session.metadata.plan : null
+	const metadataPlan = resolvePlanFromStripe({ metadataPlan: rawMetadataPlan })
+	const lineItemInfo = await getCheckoutSessionLineItemInfo(session.id)
 
 	if (metadataPlan) {
-		return { plan: metadataPlan, priceId: lineItemPriceId }
+		return { plan: metadataPlan, priceId: lineItemInfo.priceId }
 	}
 
 	if (session.subscription) {
@@ -137,14 +198,23 @@ async function resolvePlanFromCheckoutSession(
 		})
 		const fromSubscription = getPlanFromSubscription(subscription)
 		return {
-			plan: fromSubscription.plan,
-			priceId: lineItemPriceId ?? fromSubscription.priceId,
+			plan:
+				fromSubscription.plan ??
+				resolvePlanFromStripe({
+					priceId: lineItemInfo.priceId,
+					productId: lineItemInfo.productId,
+				}),
+			priceId: lineItemInfo.priceId ?? fromSubscription.priceId,
 		}
 	}
 
 	return {
-		plan: getPlanFromPriceId(lineItemPriceId),
-		priceId: lineItemPriceId,
+		plan: resolvePlanFromStripe({
+			metadataPlan: rawMetadataPlan,
+			priceId: lineItemInfo.priceId,
+			productId: lineItemInfo.productId,
+		}),
+		priceId: lineItemInfo.priceId,
 	}
 }
 
@@ -254,6 +324,7 @@ export async function provisionFromCheckoutSession(
 	let incomingPlan: string | null = null
 	let dbWpUserId: number | null = null
 	let wpExists: WpExistsStatus = 'unknown'
+	const forceProvision = isForceProvisionEnabled()
 
 	const logDecision = (decision: ProvisioningDecision, reason: string) => {
 		logProvisioningDecision({
@@ -267,6 +338,7 @@ export async function provisionFromCheckoutSession(
 			wpExists,
 			decision,
 			reason,
+			forceProvision,
 		})
 	}
 
@@ -293,8 +365,12 @@ export async function provisionFromCheckoutSession(
 		stripeCustomerId: customerId,
 		stripeSubscriptionId: subscriptionId || null,
 	})
-	if (existing?.wpUserId) {
-		dbWpUserId = existing.wpUserId
+	const storedWpUserId =
+		typeof existing?.wpUserId === 'number' && existing.wpUserId > 0
+			? existing.wpUserId
+			: null
+	if (storedWpUserId) {
+		dbWpUserId = storedWpUserId
 	}
 
 	if (!email) {
@@ -329,11 +405,11 @@ export async function provisionFromCheckoutSession(
 	let reason = existing ? 'missing_wp_user_id' : 'no_provisioning_record'
 	let shouldSendWelcomeEmail = true
 
-	if (existing?.wpUserId) {
+	if (storedWpUserId) {
 		let lookupFailed = false
 		try {
 			const lookup = await getWpUserExists({
-				wpUserId: existing.wpUserId,
+				wpUserId: storedWpUserId,
 				email,
 			})
 			if (lookup) {
@@ -366,17 +442,36 @@ export async function provisionFromCheckoutSession(
 		}
 	}
 
-	if (decision === 'skip') {
-		console.debug('Provisioning already complete; skipping WP call.', {
+	if (decision === 'skip' && forceProvision && storedWpUserId) {
+		console.info('WP provisioning force enabled; bypassing skip.', {
 			sessionId: session.id,
 			customerId,
-			emailDomain: getEmailDomain(email),
+			subscriptionId,
+			wpUserId: storedWpUserId,
+			reason: normalizeSkipReason(reason),
+		})
+		decision = 'provision'
+		reason = 'force_reprovision'
+		shouldSendWelcomeEmail = false
+	}
+
+	if (decision === 'skip') {
+		logProvisioningSkipDetails({
+			context: 'checkout',
+			eventId: eventId ?? null,
+			customerId,
+			subscriptionId,
+			email,
+			plan: incomingPlan,
+			wpUserId: storedWpUserId,
+			reason,
+			forceProvision,
 		})
 		await upsertProvisioningRecord({
 			email,
 			stripeCustomerId: customerId,
 			stripeSubscriptionId: subscriptionId || null,
-			wpUserId: existing?.wpUserId ?? null,
+			wpUserId: storedWpUserId,
 			plan: incomingPlan,
 			status: 'active',
 			lastEventId: eventId ?? null,
@@ -445,6 +540,7 @@ export async function syncFromSubscription(
 	let incomingPlan: string | null = null
 	let dbWpUserId: number | null = null
 	let wpExists: WpExistsStatus = 'unknown'
+	const forceProvision = isForceProvisionEnabled()
 
 	const logDecision = (decision: ProvisioningDecision, reason: string) => {
 		logProvisioningDecision({
@@ -458,6 +554,7 @@ export async function syncFromSubscription(
 			wpExists,
 			decision,
 			reason,
+			forceProvision,
 		})
 	}
 
@@ -477,8 +574,12 @@ export async function syncFromSubscription(
 		stripeCustomerId: customerId,
 		stripeSubscriptionId: subscription.id,
 	})
-	if (existing?.wpUserId) {
-		dbWpUserId = existing.wpUserId
+	const storedWpUserId =
+		typeof existing?.wpUserId === 'number' && existing.wpUserId > 0
+			? existing.wpUserId
+			: null
+	if (storedWpUserId) {
+		dbWpUserId = storedWpUserId
 	}
 
 	if (!email) {
@@ -530,11 +631,11 @@ export async function syncFromSubscription(
 	let decision: ProvisioningDecision = 'provision'
 	let reason = existing ? 'missing_wp_user_id' : 'no_provisioning_record'
 
-	if (existing?.wpUserId) {
+	if (storedWpUserId) {
 		let lookupFailed = false
 		try {
 			const lookup = await getWpUserExists({
-				wpUserId: existing.wpUserId,
+				wpUserId: storedWpUserId,
 				email,
 			})
 			if (lookup) {
@@ -564,12 +665,34 @@ export async function syncFromSubscription(
 		}
 	}
 
+	if (decision === 'skip' && forceProvision && storedWpUserId) {
+		console.info('WP provisioning force enabled; bypassing skip.', {
+			subscriptionId: subscription.id,
+			customerId,
+			wpUserId: storedWpUserId,
+			reason: normalizeSkipReason(reason),
+		})
+		decision = 'provision'
+		reason = 'force_reprovision'
+	}
+
 	if (decision === 'skip') {
+		logProvisioningSkipDetails({
+			context: 'subscription',
+			eventId: eventId ?? null,
+			customerId,
+			subscriptionId: subscription.id,
+			email,
+			plan: incomingPlan,
+			wpUserId: storedWpUserId,
+			reason,
+			forceProvision,
+		})
 		await upsertProvisioningRecord({
 			email,
 			stripeCustomerId: customerId,
 			stripeSubscriptionId: subscription.id,
-			wpUserId: existing?.wpUserId ?? null,
+			wpUserId: storedWpUserId,
 			plan: incomingPlan ?? 'none',
 			status: nextStatus,
 			lastEventId: eventId ?? null,
@@ -590,7 +713,7 @@ export async function syncFromSubscription(
 			email,
 			stripeCustomerId: customerId,
 			stripeSubscriptionId: subscription.id,
-			wpUserId: existing?.wpUserId ?? null,
+			wpUserId: storedWpUserId,
 			plan: incomingPlan ?? 'none',
 			status: nextStatus,
 			lastEventId: eventId ?? null,
