@@ -79,7 +79,7 @@ function logProvisioningSkipDetails(params: {
 	reason: string
 	forceProvision?: boolean
 }) {
-	const payload = {
+	const payload: Record<string, unknown> = {
 		context: params.context,
 		eventId: params.eventId ?? null,
 		stripeCustomerId: params.customerId ?? null,
