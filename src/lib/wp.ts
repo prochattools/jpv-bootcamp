@@ -126,11 +126,12 @@ export async function provisionWpUser(
 	const lastName = payload.lastName ?? ''
 	const fullName = payload.fullName ?? ''
 	const fallbackName = [firstName, lastName].filter(Boolean).join(' ').trim()
+	const resolvedName = payload.name ?? (fullName || fallbackName || null)
 	const body = {
 		email,
 		plan,
 		jpv_membership_level: plan,
-		name: payload.name ?? fullName || fallbackName || null,
+		name: resolvedName,
 		firstName,
 		lastName,
 		fullName,
