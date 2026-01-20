@@ -41,3 +41,6 @@ next-env.d.ts
 public/robots.txt
 public/sitemap.xml
 public/sitemap-0.xml
+
+# wordpress
+wordpress/mu-plugins/
