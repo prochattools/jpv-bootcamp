@@ -2,7 +2,7 @@
 /**
  * Plugin Name: JPV Provisioning
  * Description: Provision WordPress users via a secure REST endpoint.
- * Version: 0.3.0
+ * Version: 0.4.0
  * Author: JPV Bootcamp
  *
  * This file is stored in the Next.js repo for manual deployment to WordPress; it is not auto-deployed.
@@ -126,6 +126,58 @@ function jpv_provisioning_extract_bearer_token(string $header): string {
     return '';
 }
 
+function jpv_provisioning_get_param_value(array $params, array $keys): array {
+    foreach ($keys as $key) {
+        if (array_key_exists($key, $params)) {
+            $value = $params[$key];
+            $value = is_string($value) ? $value : '';
+            return array(trim(sanitize_text_field($value)), true);
+        }
+    }
+
+    return array('', false);
+}
+
+function jpv_provisioning_extract_name_data(array $params, string $email): array {
+    list($first_raw, $first_present) = jpv_provisioning_get_param_value($params, array('firstName', 'first_name'));
+    list($last_raw, $last_present) = jpv_provisioning_get_param_value($params, array('lastName', 'last_name'));
+    list($full_raw, $full_present) = jpv_provisioning_get_param_value($params, array('fullName', 'full_name', 'name'));
+
+    $first = trim($first_raw);
+    $last = trim($last_raw);
+    $full = trim($full_raw);
+
+    $name_received = $first_present || $last_present || $full_present;
+
+    if ($first === '' && $last === '' && $full !== '') {
+        $parts = preg_split('/\s+/', $full);
+        if ($parts && count($parts) > 0) {
+            $first = array_shift($parts);
+            $last = trim(implode(' ', $parts));
+        }
+    }
+
+    $display_name = trim($first . ' ' . $last);
+    if ($display_name === '' && $full !== '') {
+        $display_name = $full;
+    }
+
+    $fallback_display = '';
+    if ($email) {
+        $local_part = strstr($email, '@', true);
+        $fallback_display = $local_part !== false ? $local_part : $email;
+        $fallback_display = trim((string) $fallback_display);
+    }
+
+    return array(
+        'first_name' => $first,
+        'last_name' => $last,
+        'display_name' => $display_name,
+        'fallback_display_name' => $fallback_display,
+        'name_received' => $name_received,
+    );
+}
+
 function jpv_provisioning_require_auth(WP_REST_Request $request): array {
     list($expected, $checked) = jpv_provisioning_get_token_sources();
 
@@ -228,6 +280,9 @@ function jpv_provisioning_handle_request(WP_REST_Request $request) {
 
     $email = isset($params['email']) ? sanitize_email($params['email']) : '';
     $plan_raw = isset($params['plan']) ? sanitize_text_field($params['plan']) : '';
+    $name_data = jpv_provisioning_extract_name_data($params, $email);
+    $name_received = $name_data['name_received'];
+    $name_set = false;
 
     $customer_id = '';
     if (isset($params['customerId'])) {
@@ -268,6 +323,11 @@ function jpv_provisioning_handle_request(WP_REST_Request $request) {
     $created = false;
 
     if (!$user_id) {
+        $display_name = $name_data['display_name'];
+        if ($display_name === '') {
+            $display_name = $name_data['fallback_display_name'];
+        }
+
         $base_username = sanitize_user(strstr($email, '@', true));
         if (!$base_username) {
             $base_username = 'jpv' . wp_generate_password(6, false, false);
@@ -287,6 +347,24 @@ function jpv_provisioning_handle_request(WP_REST_Request $request) {
             'user_pass' => wp_generate_password(24, true, true),
         );
 
+        if ($name_data['first_name'] !== '') {
+            $user_data['first_name'] = $name_data['first_name'];
+        }
+
+        if ($name_data['last_name'] !== '') {
+            $user_data['last_name'] = $name_data['last_name'];
+        }
+
+        if ($display_name !== '') {
+            $user_data['display_name'] = $display_name;
+            $user_data['nickname'] = $display_name;
+            $name_set = true;
+        }
+
+        if (!$name_set && ($name_data['first_name'] !== '' || $name_data['last_name'] !== '')) {
+            $name_set = true;
+        }
+
         $user_id = wp_insert_user($user_data);
         if (is_wp_error($user_id)) {
             return new WP_REST_Response(array('ok' => false, 'reason' => 'create_failed'), 500);
@@ -295,6 +373,30 @@ function jpv_provisioning_handle_request(WP_REST_Request $request) {
         $created = true;
     } else {
         error_log('existing_user_no_role_change');
+        if ($name_received) {
+            if ($name_data['first_name'] !== '') {
+                update_user_meta($user_id, 'first_name', $name_data['first_name']);
+                $name_set = true;
+            }
+
+            if ($name_data['last_name'] !== '') {
+                update_user_meta($user_id, 'last_name', $name_data['last_name']);
+                $name_set = true;
+            }
+
+            if ($name_data['display_name'] !== '') {
+                wp_update_user(array(
+                    'ID' => $user_id,
+                    'display_name' => $name_data['display_name'],
+                    'nickname' => $name_data['display_name'],
+                ));
+                $name_set = true;
+            }
+
+            if ($name_set) {
+                error_log('existing_user_name_updated userId=' . $user_id);
+            }
+        }
     }
 
     $effective_plan = $plan_meta;
@@ -333,6 +435,8 @@ function jpv_provisioning_handle_request(WP_REST_Request $request) {
         'ok' => true,
         'wp_user_id' => $user_id,
         'reset_link' => $reset_link,
+        'name_received' => $name_received,
+        'name_set' => $name_set,
     ));
 }
 

@@ -6,7 +6,11 @@ type ProvisionPayload = {
 	email: string
 	plan: Plan
 	name?: string | null
+	firstName?: string | null
+	lastName?: string | null
+	fullName?: string | null
 	stripeCustomerId?: string | null
+	stripeSubscriptionId?: string | null
 }
 
 type ProvisionResponse = {
@@ -118,12 +122,20 @@ export async function provisionWpUser(
 	if (!wp.provisionToken) {
 		throw new Error('WP provisioning is enabled but token is missing.')
 	}
+	const firstName = payload.firstName ?? ''
+	const lastName = payload.lastName ?? ''
+	const fullName = payload.fullName ?? ''
+	const fallbackName = [firstName, lastName].filter(Boolean).join(' ').trim()
 	const body = {
 		email,
 		plan,
 		jpv_membership_level: plan,
-		name: payload.name ?? null,
+		name: payload.name ?? fullName || fallbackName || null,
+		firstName,
+		lastName,
+		fullName,
 		stripe_customer_id: payload.stripeCustomerId ?? undefined,
+		stripe_subscription_id: payload.stripeSubscriptionId ?? undefined,
 	}
 
 	console.info('WP provisioning request', {

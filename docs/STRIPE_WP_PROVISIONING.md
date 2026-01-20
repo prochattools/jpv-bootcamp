@@ -111,17 +111,44 @@ For full end-to-end testing, run a real Checkout session and confirm the event i
 
 Use this route when Pro users click “Upgrade to VIP” inside Fluent Community.
 
-- Link format:
-  - `https://jpvbootcamp.com/billing/portal?return=https%3A%2F%2Fportal.jpvbootcamp.com%2Fcommunity%2F`
-- `return` is optional; if omitted or invalid, it defaults to:
+- Preferred link format (signed token from WordPress):
+  - `https://jpvbootcamp.com/billing/portal?token=<signed>`
+  - Token payload includes `email`, `returnUrl`, `iat`, `exp`, `nonce`.
+- WordPress secret source (CloudPanel PHP-FPM env):
+  - `env[BILLING_PORTAL_HMAC_SECRET]=...` (preferred)
+  - Optional fallback: `define('BILLING_PORTAL_HMAC_SECRET', '...')` in `wp-config.php`
+- Next.js secret:
+  - `BILLING_PORTAL_HMAC_SECRET=...` (server env)
+- `returnUrl` defaults to:
   - `https://portal.jpvbootcamp.com/community/`
 - Allowed return origins:
   - `https://portal.jpvbootcamp.com`
   - `https://jpvbootcamp.com`
-- If the app has no auth context, include `email=`:
+- Legacy/manual fallback (for testing only):
+  - `https://jpvbootcamp.com/billing/portal?return=https%3A%2F%2Fportal.jpvbootcamp.com%2Fcommunity%2F`
   - `https://jpvbootcamp.com/billing/portal?email=user%40example.com`
   - The email must match a row in `tenant_jpvbootcamp.customer_provisioning`.
   - Optional fallback (disabled by default): set `STRIPE_CUSTOMER_SEARCH_ENABLED=true` to allow Stripe customer search by email.
+
+### Billing portal health checks
+
+- WordPress (admin only, logged in):
+  - `GET https://portal.jpvbootcamp.com/wp-json/jpv/v1/billing-secret`
+  - Returns booleans only: `{ ok, secret_present, token_ready }`
+- Next.js (header required):
+  - `GET https://jpvbootcamp.com/api/health/billing-secret`
+  - Header: `x-jpv-health-secret: <BILLING_PORTAL_HMAC_SECRET>`
+  - Returns `{ ok: true }` or 500 if missing secret
+
+### Secret rotation
+
+If the secret is exposed, rotate it on both sides at the same time:
+
+1) Update CloudPanel PHP-FPM env:
+   - `env[BILLING_PORTAL_HMAC_SECRET]=<new>`
+2) Update Next.js env:
+   - `BILLING_PORTAL_HMAC_SECRET=<new>`
+3) Reload PHP-FPM and redeploy Next.js.
 
 ## Reconciliation testing
 

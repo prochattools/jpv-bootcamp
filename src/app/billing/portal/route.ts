@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/libs/prisma'
 import { getStripe } from '@/lib/stripe'
+import { verifyBillingPortalToken } from '@/lib/billing-portal-token'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -18,15 +19,36 @@ function isEnvEnabled(value?: string): boolean {
 
 function resolveReturnUrl(raw: string | null): string {
 	if (!raw) return DEFAULT_RETURN_URL
+	const trimmed = raw.trim()
+	if (!trimmed) return DEFAULT_RETURN_URL
+	const decoded = safeDecodeURIComponent(trimmed)
+	const candidate = stripChainedUrl(decoded)
 	try {
-		const candidate = new URL(raw, DEFAULT_RETURN_URL)
-		if (!ALLOWED_RETURN_ORIGINS.has(candidate.origin)) {
+		const resolved = new URL(candidate, DEFAULT_RETURN_URL)
+		if (!ALLOWED_RETURN_ORIGINS.has(resolved.origin)) {
 			return DEFAULT_RETURN_URL
 		}
-		return candidate.toString()
+		return resolved.toString()
 	} catch {
 		return DEFAULT_RETURN_URL
 	}
+}
+
+function safeDecodeURIComponent(value: string): string {
+	try {
+		return decodeURIComponent(value)
+	} catch {
+		return value
+	}
+}
+
+function stripChainedUrl(value: string): string {
+	const regex = /https?:\/\//gi
+	const first = regex.exec(value)
+	if (!first) return value
+	const second = regex.exec(value)
+	if (!second) return value
+	return value.slice(0, second.index)
 }
 
 function normalizeEmail(value: string | null): string | null {
@@ -35,18 +57,39 @@ function normalizeEmail(value: string | null): string | null {
 	return trimmed.length > 0 ? trimmed : null
 }
 
+function extractEmailDomain(email: string | null | undefined): string | null {
+	if (!email) return null
+	const atIndex = email.indexOf('@')
+	if (atIndex <= 0 || atIndex === email.length - 1) return null
+	return email.slice(atIndex + 1)
+}
+
 function logFailure(params: {
 	reason: string
 	status: number
 	message: string
 	email?: string | null
 	returnUrl: string
+	source: 'session' | 'token' | 'none'
 }) {
 	console.error('Billing portal error', {
 		reason: params.reason,
 		status: params.status,
 		message: params.message,
-		email: params.email ?? null,
+		source: params.source,
+		emailDomain: extractEmailDomain(params.email ?? null),
+		returnUrl: params.returnUrl,
+	})
+}
+
+function logSuccess(params: {
+	source: 'session' | 'token'
+	email: string
+	returnUrl: string
+}) {
+	console.info('Billing portal redirect', {
+		source: params.source,
+		emailDomain: extractEmailDomain(params.email),
 		returnUrl: params.returnUrl,
 	})
 }
@@ -78,16 +121,66 @@ async function searchStripeCustomerIdByEmail(email: string): Promise<string | nu
 }
 
 export async function GET(req: NextRequest) {
-	const returnUrl = resolveReturnUrl(req.nextUrl.searchParams.get('return'))
+	const returnParam = req.nextUrl.searchParams.get('return')
+	const returnUrlFromQuery = resolveReturnUrl(returnParam)
 	const emailParam = normalizeEmail(req.nextUrl.searchParams.get('email'))
+	const tokenParam = req.nextUrl.searchParams.get('token')
 	// Stripe email search is opt-in to avoid open-ended lookups by default.
 	const allowStripeSearch = isEnvEnabled(process.env.STRIPE_CUSTOMER_SEARCH_ENABLED)
+	let email = emailParam
+	let source: 'session' | 'token' | 'none' = email ? 'session' : 'none'
+	let returnUrl = returnUrlFromQuery
+	const tokenSecret = (process.env.BILLING_PORTAL_HMAC_SECRET || '').trim()
 
 	try {
-		const email = emailParam
+		if (!email && tokenParam) {
+			if (!tokenSecret) {
+				console.error('BILLING_PORTAL_HMAC_SECRET missing')
+				const message = 'Billing portal token verification is not configured.'
+				logFailure({
+					reason: 'missing_secret',
+					status: 500,
+					message,
+					email,
+					returnUrl,
+					source: 'token',
+				})
+				return plainError(500, message)
+			}
+
+			const verification = verifyBillingPortalToken(tokenParam, tokenSecret)
+			if (!verification.ok) {
+				const message =
+					verification.reason === 'malformed'
+						? 'Malformed billing portal token.'
+						: 'Billing portal token is invalid or expired.'
+				const status = verification.reason === 'malformed' ? 400 : 403
+				logFailure({
+					reason: verification.reason,
+					status,
+					message,
+					email,
+					returnUrl,
+					source: 'token',
+				})
+				return plainError(status, message)
+			}
+
+			email = normalizeEmail(verification.payload.email)
+			source = email ? 'token' : 'none'
+			returnUrl = resolveReturnUrl(verification.payload.returnUrl ?? null)
+		}
+
 		if (!email) {
 			const message = 'Email is required to access the billing portal.'
-			logFailure({ reason: 'missing_email', status: 403, message, email, returnUrl })
+			logFailure({
+				reason: 'missing_email',
+				status: 403,
+				message,
+				email,
+				returnUrl,
+				source,
+			})
 			return plainError(403, message)
 		}
 
@@ -102,7 +195,14 @@ export async function GET(req: NextRequest) {
 			const message = allowStripeSearch
 				? 'Stripe customer not found for the supplied email.'
 				: 'No provisioning record found for the supplied email.'
-			logFailure({ reason: 'customer_not_found', status, message, email, returnUrl })
+			logFailure({
+				reason: 'customer_not_found',
+				status,
+				message,
+				email,
+				returnUrl,
+				source,
+			})
 			return plainError(status, message)
 		}
 
@@ -114,14 +214,29 @@ export async function GET(req: NextRequest) {
 
 		if (!session.url) {
 			const message = 'Stripe portal session URL was not returned.'
-			logFailure({ reason: 'missing_portal_url', status: 500, message, email, returnUrl })
+			logFailure({
+				reason: 'missing_portal_url',
+				status: 500,
+				message,
+				email,
+				returnUrl,
+				source,
+			})
 			return plainError(500, message)
 		}
 
+		logSuccess({ source: source === 'token' ? 'token' : 'session', email, returnUrl })
 		return NextResponse.redirect(session.url, { status: 302 })
 	} catch (error) {
 		const message = (error as Error).message || 'Billing portal request failed.'
-		logFailure({ reason: 'unexpected_error', status: 500, message, email: emailParam, returnUrl })
+		logFailure({
+			reason: 'unexpected_error',
+			status: 500,
+			message,
+			email,
+			returnUrl,
+			source,
+		})
 		return plainError(500, 'Billing portal request failed.')
 	}
 }

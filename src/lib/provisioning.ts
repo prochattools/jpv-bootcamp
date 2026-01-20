@@ -30,6 +30,7 @@ type ProvisioningRecord = {
 type ProvisioningDecision = 'skip' | 'provision' | 'update_plan'
 
 type WpExistsStatus = boolean | 'unknown'
+type NameSource = 'db' | 'stripe_customer' | 'session_customer_details' | 'none'
 
 export function logProvisioningDecision(params: {
 	eventId?: string | null
@@ -117,26 +118,91 @@ function getEmailDomain(email: string): string {
 	return domain ?? 'unknown'
 }
 
-function splitName(fullName?: string | null): { firstName?: string; lastName?: string } {
-	if (!fullName) return {}
-	const parts = fullName.trim().split(/\s+/)
-	if (parts.length === 0) return {}
-	if (parts.length === 1) return { firstName: parts[0] }
-	return { firstName: parts[0], lastName: parts.slice(1).join(' ') }
+async function getLocalSubscriberName(email: string): Promise<string | null> {
+	const normalized = email.trim().toLowerCase()
+	if (!normalized) return null
+	const record = await prisma.emailSubscriber.findUnique({
+		where: { email: normalized },
+		select: { name: true },
+	})
+	const name = record?.name?.trim()
+	return name && name.length > 0 ? name : null
 }
 
-async function getCustomerEmail(
-	customer: Stripe.Subscription['customer']
-): Promise<string | null> {
+async function getStripeCustomerName(customerId: string | null): Promise<string | null> {
+	if (!customerId) return null
 	const stripe = getStripe()
-	if (!customer) return null
+	const customer = await stripe.customers.retrieve(customerId)
+	if ('deleted' in customer) return null
+	const name = customer.name?.trim()
+	return name && name.length > 0 ? name : null
+}
+
+async function resolveProvisioningNames(params: {
+	email: string
+	customerId?: string | null
+	sessionName?: string | null
+	stripeCustomerName?: string | null
+}): Promise<{ firstName: string; lastName: string; fullName: string; source: NameSource; hasName: boolean }> {
+	const localName = await getLocalSubscriberName(params.email)
+	if (localName) {
+		return {
+			firstName: '',
+			lastName: '',
+			fullName: localName,
+			source: 'db',
+			hasName: true,
+		}
+	}
+
+	let stripeName = params.stripeCustomerName?.trim() ?? null
+	if (!stripeName && params.customerId) {
+		stripeName = await getStripeCustomerName(params.customerId)
+	}
+	if (stripeName) {
+		return {
+			firstName: '',
+			lastName: '',
+			fullName: stripeName,
+			source: 'stripe_customer',
+			hasName: true,
+		}
+	}
+
+	const sessionName = params.sessionName?.trim()
+	if (sessionName) {
+		return {
+			firstName: '',
+			lastName: '',
+			fullName: sessionName,
+			source: 'session_customer_details',
+			hasName: true,
+		}
+	}
+
+	return {
+		firstName: '',
+		lastName: '',
+		fullName: '',
+		source: 'none',
+		hasName: false,
+	}
+}
+
+async function getCustomerProfile(
+	customer: Stripe.Subscription['customer']
+): Promise<{ email: string | null; name: string | null }> {
+	const stripe = getStripe()
+	if (!customer) return { email: null, name: null }
 	if (typeof customer !== 'string') {
-		return 'deleted' in customer ? null : customer.email ?? null
+		return 'deleted' in customer
+			? { email: null, name: null }
+			: { email: customer.email ?? null, name: customer.name ?? null }
 	}
 
 	const fetched = await stripe.customers.retrieve(customer)
-	if ('deleted' in fetched) return null
-	return fetched.email ?? null
+	if ('deleted' in fetched) return { email: null, name: null }
+	return { email: fetched.email ?? null, name: fetched.name ?? null }
 }
 
 async function getCheckoutSessionLineItemInfo(
@@ -488,8 +554,11 @@ export async function provisionFromCheckoutSession(
 		emailDomain: getEmailDomain(email),
 	})
 
-	const { firstName, lastName } = splitName(session.customer_details?.name)
-	const displayName = [firstName, lastName].filter(Boolean).join(' ').trim()
+	const nameInfo = await resolveProvisioningNames({
+		email,
+		customerId,
+		sessionName: session.customer_details?.name ?? null,
+	})
 
 	console.info('WP provisioning request', {
 		email,
@@ -498,11 +567,20 @@ export async function provisionFromCheckoutSession(
 		plan,
 	})
 
+	console.info('WP provisioning name fields', {
+		hasName: nameInfo.hasName,
+		source: nameInfo.source,
+	})
+
 	const wpProvision = await provisionWpUser({
 		email,
 		plan,
-		name: displayName || session.customer_details?.name || null,
+		name: nameInfo.fullName || null,
+		firstName: nameInfo.firstName,
+		lastName: nameInfo.lastName,
+		fullName: nameInfo.fullName,
 		stripeCustomerId: customerId,
+		stripeSubscriptionId: subscriptionId || null,
 	})
 	if (!wpProvision) {
 		logDecision('skip', 'wp_provision_disabled')
@@ -563,11 +641,13 @@ export async function syncFromSubscription(
 		expand: ['items.data.price'],
 	})
 
-	email = await getCustomerEmail(subscription.customer)
+	const customerProfile = await getCustomerProfile(subscription.customer)
+	email = customerProfile.email
 	customerId =
 		typeof subscription.customer === 'string'
 			? subscription.customer
 			: subscription.customer?.id ?? null
+	const stripeCustomerName = customerProfile.name
 
 	const existing = await findProvisioningRecord({
 		email,
@@ -729,11 +809,26 @@ export async function syncFromSubscription(
 		plan: incomingPlan,
 	})
 
+	const nameInfo = await resolveProvisioningNames({
+		email,
+		customerId,
+		stripeCustomerName,
+	})
+
+	console.info('WP provisioning name fields', {
+		hasName: nameInfo.hasName,
+		source: nameInfo.source,
+	})
+
 	const wpProvision = await provisionWpUser({
 		email,
 		plan: incomingPlan,
-		name: null,
+		name: nameInfo.fullName || null,
+		firstName: nameInfo.firstName,
+		lastName: nameInfo.lastName,
+		fullName: nameInfo.fullName,
 		stripeCustomerId: customerId || null,
+		stripeSubscriptionId: subscription.id,
 	})
 	if (!wpProvision) {
 		logDecision('skip', 'wp_provision_disabled')
