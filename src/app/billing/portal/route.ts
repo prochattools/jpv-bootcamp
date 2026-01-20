@@ -149,14 +149,15 @@ export async function GET(req: NextRequest) {
 			}
 
 			const verification = verifyBillingPortalToken(tokenParam, tokenSecret)
-			if (!verification.ok) {
+			if (verification.ok === false) {
+				const reason = verification.reason
 				const message =
-					verification.reason === 'malformed'
+					reason === 'malformed'
 						? 'Malformed billing portal token.'
 						: 'Billing portal token is invalid or expired.'
-				const status = verification.reason === 'malformed' ? 400 : 403
+				const status = reason === 'malformed' ? 400 : 403
 				logFailure({
-					reason: verification.reason,
+					reason,
 					status,
 					message,
 					email,
