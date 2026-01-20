@@ -2,7 +2,7 @@
 /**
  * Plugin Name: JPV Provisioning
  * Description: Provision WordPress users via a secure REST endpoint.
- * Version: 0.1.0
+ * Version: 0.3.0
  * Author: JPV Bootcamp
  *
  * This file is stored in the Next.js repo for manual deployment to WordPress; it is not auto-deployed.
@@ -12,15 +12,39 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-const JPV_PROVISIONING_OPTION = 'jpv_provisioning_token';
+const JPV_PROVISIONING_OPTION = 'jpv_provision_token';
+const JPV_PROVISIONING_LEGACY_OPTION = 'jpv_provisioning_token';
 
-function jpv_provisioning_get_token() {
-    if (defined('WP_PROVISION_TOKEN') && WP_PROVISION_TOKEN) {
-        return trim((string) WP_PROVISION_TOKEN);
+function jpv_provisioning_get_token_sources(): array {
+    $option = get_option(JPV_PROVISIONING_OPTION);
+    $option = $option ? trim((string) $option) : '';
+
+    if ($option === '') {
+        $legacy = get_option(JPV_PROVISIONING_LEGACY_OPTION);
+        $legacy = $legacy ? trim((string) $legacy) : '';
+        if ($legacy !== '') {
+            $option = $legacy;
+            update_option(JPV_PROVISIONING_OPTION, $legacy, false);
+        }
     }
 
-    $token = get_option(JPV_PROVISIONING_OPTION);
-    return $token ? trim((string) $token) : '';
+    $const = '';
+    if (defined('JPV_PROVISION_TOKEN') && JPV_PROVISION_TOKEN) {
+        $const = trim((string) JPV_PROVISION_TOKEN);
+    }
+
+    $env = getenv('JPV_PROVISION_TOKEN');
+    $env = $env ? trim((string) $env) : '';
+
+    $checked = array(
+        'option' => $option !== '',
+        'const' => $const !== '',
+        'env' => $env !== '',
+    );
+
+    $token = $option !== '' ? $option : ($const !== '' ? $const : ($env !== '' ? $env : ''));
+
+    return array($token, $checked);
 }
 
 function jpv_provisioning_get_app_sync_token() {
@@ -28,8 +52,8 @@ function jpv_provisioning_get_app_sync_token() {
         return JPV_APP_SYNC_TOKEN;
     }
 
-    if (defined('WP_PROVISION_TOKEN') && WP_PROVISION_TOKEN) {
-        return WP_PROVISION_TOKEN;
+    if (defined('JPV_PROVISION_TOKEN') && JPV_PROVISION_TOKEN) {
+        return JPV_PROVISION_TOKEN;
     }
 
     return '';
@@ -43,60 +67,133 @@ function jpv_provisioning_get_app_sync_url() {
     return '';
 }
 
+function jpv_provisioning_find_header(array $headers, string $key): string {
+    foreach ($headers as $header_key => $header_value) {
+        if (strcasecmp((string) $header_key, $key) === 0) {
+            return (string) $header_value;
+        }
+    }
+
+    return '';
+}
+
+function jpv_provisioning_get_auth_header(WP_REST_Request $request): string {
+    $header = $request->get_header('authorization');
+    if ($header) {
+        return trim((string) $header);
+    }
+
+    if (!empty($_SERVER['HTTP_AUTHORIZATION'])) {
+        return trim((string) $_SERVER['HTTP_AUTHORIZATION']);
+    }
+
+    if (!empty($_SERVER['REDIRECT_HTTP_AUTHORIZATION'])) {
+        return trim((string) $_SERVER['REDIRECT_HTTP_AUTHORIZATION']);
+    }
+
+    if (function_exists('getallheaders')) {
+        $headers = getallheaders();
+        if (is_array($headers)) {
+            $value = jpv_provisioning_find_header($headers, 'Authorization');
+            if ($value !== '') {
+                return trim((string) $value);
+            }
+        }
+    }
+
+    if (function_exists('apache_request_headers')) {
+        $headers = apache_request_headers();
+        if (is_array($headers)) {
+            $value = jpv_provisioning_find_header($headers, 'Authorization');
+            if ($value !== '') {
+                return trim((string) $value);
+            }
+        }
+    }
+
+    return '';
+}
+
+function jpv_provisioning_extract_bearer_token(string $header): string {
+    if ($header === '') {
+        return '';
+    }
+
+    if (preg_match('/^\s*Bearer\s+(.+)$/i', $header, $matches)) {
+        return trim((string) $matches[1]);
+    }
+
+    return '';
+}
+
+function jpv_provisioning_require_auth(WP_REST_Request $request): array {
+    list($expected, $checked) = jpv_provisioning_get_token_sources();
+
+    if ($expected === '') {
+        return array(
+            'authorized' => false,
+            'response' => new WP_REST_Response(
+                array(
+                    'ok' => false,
+                    'reason' => 'server_misconfigured',
+                    'missing' => 'provision_token',
+                    'checked' => $checked,
+                ),
+                500
+            ),
+        );
+    }
+
+    $header = jpv_provisioning_get_auth_header($request);
+    $provided = jpv_provisioning_extract_bearer_token($header);
+
+    if ($provided === '' || !hash_equals($expected, $provided)) {
+        return array(
+            'authorized' => false,
+            'response' => new WP_REST_Response(
+                array(
+                    'ok' => false,
+                    'reason' => 'unauthorized',
+                ),
+                401
+            ),
+        );
+    }
+
+    return array('authorized' => true);
+}
+
 function jpv_provisioning_register_routes() {
     register_rest_route('jpv/v1', '/provision', array(
         'methods' => 'POST',
         'callback' => 'jpv_provisioning_handle_request',
-        'permission_callback' => 'jpv_provisioning_check_auth',
-    ));
+        'permission_callback' => '__return_true',
+    ), true);
 
     register_rest_route('jpv/v1', '/user-exists', array(
         'methods' => 'GET',
         'callback' => 'jpv_provisioning_handle_user_exists',
-        'permission_callback' => 'jpv_provisioning_check_auth',
-    ));
+        'permission_callback' => '__return_true',
+    ), true);
 }
-add_action('rest_api_init', 'jpv_provisioning_register_routes');
-
-function jpv_provisioning_check_auth($request) {
-    $expected = jpv_provisioning_get_token();
-
-    if (!$expected) {
-        return new WP_Error(
-            'server_misconfigured',
-            'Server misconfigured.',
-            array('status' => 500, 'reason' => 'server_misconfigured', 'missing' => 'WP_PROVISION_TOKEN')
-        );
-    }
-
-    $header = $request->get_header('authorization');
-    if (!$header) {
-        return new WP_Error('jpv_missing_auth', 'Unauthorized.', array('status' => 401));
-    }
-
-    if (!preg_match('/Bearer\s+(.*)$/i', $header, $matches)) {
-        return new WP_Error('jpv_invalid_auth', 'Unauthorized.', array('status' => 401));
-    }
-
-    $provided = trim($matches[1]);
-    if (!$provided || !hash_equals($expected, $provided)) {
-        return new WP_Error('jpv_forbidden', 'Unauthorized.', array('status' => 401));
-    }
-
-    return true;
-}
+add_action('rest_api_init', 'jpv_provisioning_register_routes', 99);
 
 function jpv_provisioning_handle_user_exists(WP_REST_Request $request) {
+    $auth = jpv_provisioning_require_auth($request);
+    if (!$auth['authorized']) {
+        return $auth['response'];
+    }
+
     $wp_user_id = absint($request->get_param('wp_user_id'));
     $email = $request->get_param('email');
     $email = $email ? sanitize_email($email) : '';
 
     if (!$wp_user_id && !$email) {
-        return new WP_REST_Response(array('error' => 'wp_user_id or email is required.'), 400);
+        return new WP_REST_Response(array('ok' => false, 'reason' => 'missing_identifier'), 400);
     }
 
     if ($email && !is_email($email)) {
-        return new WP_REST_Response(array('error' => 'Invalid email address.'), 400);
+        return new WP_REST_Response(array('ok' => false, 'reason' => 'invalid_email'), 400);
     }
 
     $user = null;
@@ -119,35 +216,56 @@ function jpv_provisioning_handle_user_exists(WP_REST_Request $request) {
 }
 
 function jpv_provisioning_handle_request(WP_REST_Request $request) {
+    $auth = jpv_provisioning_require_auth($request);
+    if (!$auth['authorized']) {
+        return $auth['response'];
+    }
+
     $params = $request->get_json_params();
+    if (!is_array($params)) {
+        $params = array();
+    }
 
     $email = isset($params['email']) ? sanitize_email($params['email']) : '';
-    $plan = isset($params['plan']) ? sanitize_text_field($params['plan']) : '';
-    $name = isset($params['name']) ? sanitize_text_field($params['name']) : '';
-    $stripe_customer_id = '';
+    $plan_raw = isset($params['plan']) ? sanitize_text_field($params['plan']) : '';
 
-    if (isset($params['stripe_customer_id'])) {
-        $stripe_customer_id = sanitize_text_field($params['stripe_customer_id']);
+    $customer_id = '';
+    if (isset($params['customerId'])) {
+        $customer_id = sanitize_text_field($params['customerId']);
+    } elseif (isset($params['stripe_customer_id'])) {
+        $customer_id = sanitize_text_field($params['stripe_customer_id']);
     } elseif (isset($params['stripeCustomerId'])) {
-        $stripe_customer_id = sanitize_text_field($params['stripeCustomerId']);
+        $customer_id = sanitize_text_field($params['stripeCustomerId']);
+    }
+
+    $subscription_id = '';
+    if (isset($params['subscriptionId'])) {
+        $subscription_id = sanitize_text_field($params['subscriptionId']);
+    } elseif (isset($params['stripe_subscription_id'])) {
+        $subscription_id = sanitize_text_field($params['stripe_subscription_id']);
+    } elseif (isset($params['stripeSubscriptionId'])) {
+        $subscription_id = sanitize_text_field($params['stripeSubscriptionId']);
     }
 
     if (!is_email($email)) {
-        return new WP_REST_Response(array('error' => 'Invalid email address.'), 400);
+        return new WP_REST_Response(array('ok' => false, 'reason' => 'invalid_email'), 400);
     }
 
-    $plan = strtolower(trim($plan));
-    if ($plan === '') {
-        return new WP_REST_Response(array('error' => 'Plan is required.'), 400);
-    }
-
-    $allowed_plans = array('pro', 'vip', 'none');
-    if (!in_array($plan, $allowed_plans, true)) {
-        return new WP_REST_Response(array('error' => 'Invalid plan.'), 400);
+    $plan_meta = null;
+    if ($plan_raw !== '') {
+        $plan_norm = strtolower(trim($plan_raw));
+        if ($plan_norm === 'pro' || $plan_norm === 'vip') {
+            $plan_meta = $plan_norm;
+        } elseif ($plan_norm === 'free' || $plan_norm === 'none') {
+            $plan_meta = '';
+        } else {
+            return new WP_REST_Response(array('ok' => false, 'reason' => 'invalid_plan'), 400);
+        }
     }
 
     $user = get_user_by('email', $email);
     $user_id = $user ? $user->ID : 0;
+    $created = false;
 
     if (!$user_id) {
         $base_username = sanitize_user(strstr($email, '@', true));
@@ -169,36 +287,41 @@ function jpv_provisioning_handle_request(WP_REST_Request $request) {
             'user_pass' => wp_generate_password(24, true, true),
         );
 
-        if ($name) {
-            $parts = preg_split('/\s+/', trim($name));
-            if ($parts && count($parts) > 0) {
-                $user_data['first_name'] = $parts[0];
-                if (count($parts) > 1) {
-                    $user_data['last_name'] = implode(' ', array_slice($parts, 1));
-                }
-            }
-            $user_data['display_name'] = $name;
-        }
-
         $user_id = wp_insert_user($user_data);
         if (is_wp_error($user_id)) {
-            return new WP_REST_Response(array('error' => 'Failed to create user.'), 500);
+            return new WP_REST_Response(array('ok' => false, 'reason' => 'create_failed'), 500);
         }
+
+        $created = true;
+    } else {
+        error_log('existing_user_no_role_change');
     }
 
-    update_user_meta($user_id, 'jpv_membership_level', $plan);
-    if ($stripe_customer_id) {
-        update_user_meta($user_id, 'jpv_stripe_customer_id', $stripe_customer_id);
+    $effective_plan = $plan_meta;
+    if ($effective_plan === null && $created) {
+        $effective_plan = '';
+    }
+
+    if ($effective_plan !== null) {
+        update_user_meta($user_id, 'jpv_membership_level', $effective_plan);
+    }
+
+    if ($customer_id !== '') {
+        update_user_meta($user_id, 'jpv_stripe_customer_id', $customer_id);
+    }
+
+    if ($subscription_id !== '') {
+        update_user_meta($user_id, 'jpv_stripe_subscription_id', $subscription_id);
     }
 
     $user_for_reset = get_user_by('id', $user_id);
     if (!$user_for_reset) {
-        return new WP_REST_Response(array('error' => 'User not found after provisioning.'), 500);
+        return new WP_REST_Response(array('ok' => false, 'reason' => 'user_not_found'), 500);
     }
 
     $reset_key = get_password_reset_key($user_for_reset);
     if (is_wp_error($reset_key)) {
-        return new WP_REST_Response(array('error' => 'Failed to generate reset link.'), 500);
+        return new WP_REST_Response(array('ok' => false, 'reason' => 'reset_link_failed'), 500);
     }
 
     $reset_link = network_site_url(
@@ -278,16 +401,12 @@ function jpv_provisioning_render_settings_page() {
         return;
     }
 
-    $token = jpv_provisioning_get_token();
+    $token = get_option(JPV_PROVISIONING_OPTION);
+    $token = $token ? (string) $token : '';
     ?>
     <div class="wrap">
         <h1>JPV Provisioning</h1>
         <p>Set the bearer token used by the Next.js app when calling the provisioning endpoint.</p>
-        <?php if (defined('WP_PROVISION_TOKEN') && WP_PROVISION_TOKEN) : ?>
-            <div class="notice notice-info">
-                <p>WP_PROVISION_TOKEN is defined in wp-config.php and overrides this setting.</p>
-            </div>
-        <?php endif; ?>
         <form method="post" action="options.php">
             <?php settings_fields('jpv_provisioning'); ?>
             <table class="form-table" role="presentation">
