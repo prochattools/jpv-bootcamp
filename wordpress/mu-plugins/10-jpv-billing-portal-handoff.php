@@ -357,58 +357,6 @@ function jpv_billing_portal_handle_handoff(string $path, string $uri): void {
     exit;
 }
 
-function jpv_upgrade_vip_request(string $token, string $return_url): array {
-    $response = wp_remote_post(JPV_UPGRADE_VIP_ENDPOINT, array(
-        'timeout' => 12,
-        'headers' => array(
-            'Authorization' => 'Bearer ' . $token,
-            'Content-Type' => 'application/json',
-        ),
-        'body' => wp_json_encode(array(
-            'returnUrl' => $return_url,
-        )),
-    ));
-
-    if (is_wp_error($response)) {
-        return array(
-            'ok' => false,
-            'reason' => 'request_error',
-            'error' => $response->get_error_message(),
-        );
-    }
-
-    $status = (int) wp_remote_retrieve_response_code($response);
-    $body = wp_remote_retrieve_body($response);
-    $data = json_decode($body, true);
-
-    $redirect_url = '';
-    $reason = 'invalid_response';
-    if (is_array($data)) {
-        if (!empty($data['redirectUrl']) && is_string($data['redirectUrl'])) {
-            $redirect_url = $data['redirectUrl'];
-        }
-        if (!empty($data['reason']) && is_string($data['reason'])) {
-            $reason = $data['reason'];
-        } elseif (!empty($data['error']) && is_string($data['error'])) {
-            $reason = $data['error'];
-        }
-    }
-
-    if ($status >= 200 && $status < 300 && $redirect_url !== '' && wp_http_validate_url($redirect_url)) {
-        return array(
-            'ok' => true,
-            'redirect_url' => $redirect_url,
-            'reason' => $reason,
-            'status' => $status,
-        );
-    }
-
-    return array(
-        'ok' => false,
-        'reason' => $reason,
-        'status' => $status,
-    );
-}
 
 function jpv_billing_portal_build_signed_url(string $email, string $original_url, string $secret): string {
     $parts = wp_parse_url($original_url);
@@ -546,31 +494,12 @@ function jpv_upgrade_vip_handle_go_endpoint(): void {
     }
 
     $token = jpv_billing_portal_build_token($email, $return_url, $secret);
-    $result = jpv_upgrade_vip_request($token, $return_url);
+    $target = add_query_arg('token', $token, JPV_UPGRADE_VIP_ENDPOINT);
+    $why = 'billing_portal_redirect';
 
-    if (!empty($result['ok']) && !empty($result['redirect_url'])) {
-        $target = (string) $result['redirect_url'];
-        $why = !empty($result['reason']) && is_string($result['reason'])
-            ? $result['reason']
-            : 'upgrade_ok';
-        jpv_upgrade_vip_log($path, $logged_in, $why, $has_secret);
-        jpv_upgrade_vip_send_headers($path, $logged_in, $has_secret, $target, $why);
-        wp_safe_redirect($target, 302);
-        exit;
-    }
-
-    $why = !empty($result['reason']) && is_string($result['reason'])
-        ? $result['reason']
-        : 'next_error';
     jpv_upgrade_vip_log($path, $logged_in, $why, $has_secret);
-    jpv_upgrade_vip_send_headers(
-        $path,
-        $logged_in,
-        $has_secret,
-        JPV_BILLING_PORTAL_FALLBACK_URL,
-        $why
-    );
-    wp_safe_redirect(JPV_BILLING_PORTAL_FALLBACK_URL, 302);
+    jpv_upgrade_vip_send_headers($path, $logged_in, $has_secret, $target, $why);
+    wp_safe_redirect($target, 302);
     exit;
 }
 add_action('init', 'jpv_upgrade_vip_handle_go_endpoint', 0);

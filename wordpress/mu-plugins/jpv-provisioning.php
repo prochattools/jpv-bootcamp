@@ -28,6 +28,14 @@ function jpv_provisioning_get_token_sources(): array {
         }
     }
 
+    $wp_const = '';
+    if (defined('WP_PROVISION_TOKEN') && WP_PROVISION_TOKEN) {
+        $wp_const = trim((string) WP_PROVISION_TOKEN);
+    }
+
+    $wp_env = getenv('WP_PROVISION_TOKEN');
+    $wp_env = $wp_env ? trim((string) $wp_env) : '';
+
     $const = '';
     if (defined('JPV_PROVISION_TOKEN') && JPV_PROVISION_TOKEN) {
         $const = trim((string) JPV_PROVISION_TOKEN);
@@ -38,11 +46,21 @@ function jpv_provisioning_get_token_sources(): array {
 
     $checked = array(
         'option' => $option !== '',
+        'wp_const' => $wp_const !== '',
+        'wp_env' => $wp_env !== '',
         'const' => $const !== '',
         'env' => $env !== '',
     );
 
-    $token = $option !== '' ? $option : ($const !== '' ? $const : ($env !== '' ? $env : ''));
+    $token = $option !== ''
+        ? $option
+        : ($wp_const !== ''
+            ? $wp_const
+            : ($wp_env !== ''
+                ? $wp_env
+                : ($const !== ''
+                    ? $const
+                    : ($env !== '' ? $env : ''))));
 
     return array($token, $checked);
 }
@@ -50,6 +68,10 @@ function jpv_provisioning_get_token_sources(): array {
 function jpv_provisioning_get_app_sync_token() {
     if (defined('JPV_APP_SYNC_TOKEN') && JPV_APP_SYNC_TOKEN) {
         return JPV_APP_SYNC_TOKEN;
+    }
+
+    if (defined('WP_PROVISION_TOKEN') && WP_PROVISION_TOKEN) {
+        return WP_PROVISION_TOKEN;
     }
 
     if (defined('JPV_PROVISION_TOKEN') && JPV_PROVISION_TOKEN) {

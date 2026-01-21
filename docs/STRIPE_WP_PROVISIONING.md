@@ -73,11 +73,13 @@ These scripts only add missing columns/indexes and do not drop existing data.
 
 ## WordPress plugin install
 
-1) Copy `wordpress-plugin/jpv-provisioning` into `wp-content/plugins/`.
-2) Activate **JPV Provisioning** in the WordPress admin.
-3) Set the bearer token:
-   - Preferred: define `JPV_PROVISION_TOKEN` in `wp-config.php`.
-   - Or set it in **Settings → JPV Provisioning**.
+1) Copy these MU plugin files from this repo into `wp-content/mu-plugins/`:
+   - `wordpress/mu-plugins/00-portal-entrypoint-and-fluentcrm-sync.php`
+   - `wordpress/mu-plugins/10-jpv-billing-portal-handoff.php`
+   - `wordpress/mu-plugins/jpv-provisioning.php`
+2) MU plugins load automatically (no activation step).
+3) Set the bearer token in **Settings → JPV Provisioning** (stored in wp_options).
+   - Optional override: define `WP_PROVISION_TOKEN` or `JPV_PROVISION_TOKEN` in `wp-config.php`.
 4) Configure WP → app deletion sync in `wp-config.php`:
    - `JPV_APP_SYNC_URL=https://<app>/api/wp/user-deleted`
    - `JPV_APP_SYNC_TOKEN=...` (or reuse `JPV_PROVISION_TOKEN`)
