@@ -128,23 +128,28 @@ export async function GET(req: NextRequest) {
 	}
 
 	const allowStripeSearch = isEnvEnabled(process.env.STRIPE_CUSTOMER_SEARCH_ENABLED)
-	let stripeCustomerId = record?.stripeCustomerId ?? null
+	if (allowStripeSearch) {
+		let stripeCustomerId = record?.stripeCustomerId ?? null
 
-	if (!stripeCustomerId && allowStripeSearch) {
-		stripeCustomerId = await searchStripeCustomerIdByEmail(email)
-	}
+		if (!stripeCustomerId) {
+			stripeCustomerId = await searchStripeCustomerIdByEmail(email)
+		}
 
-	if (stripeCustomerId) {
-		const stripe = getStripe()
-		const list = await stripe.subscriptions.list({
-			customer: stripeCustomerId,
-			status: 'all',
-			limit: 10,
-			expand: ['data.items.data.price'],
-		})
-		const resolved = resolvePlanFromSubscriptions(list.data)
-		if (resolved) {
-			return NextResponse.json({ plan: resolved } satisfies EntitlementsResponse, { status: 200 })
+		if (stripeCustomerId) {
+			const stripe = getStripe()
+			const list = await stripe.subscriptions.list({
+				customer: stripeCustomerId,
+				status: 'all',
+				limit: 10,
+				expand: ['data.items.data.price'],
+			})
+			const resolved = resolvePlanFromSubscriptions(list.data)
+			if (resolved) {
+				return NextResponse.json(
+					{ plan: resolved } satisfies EntitlementsResponse,
+					{ status: 200 }
+				)
+			}
 		}
 	}
 
