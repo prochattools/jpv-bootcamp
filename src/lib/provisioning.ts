@@ -638,7 +638,7 @@ export async function syncFromSubscription(
 
 	const stripe = getStripe()
 	const subscription = await stripe.subscriptions.retrieve(subscriptionId, {
-		expand: ['items.data.price'],
+		expand: ['items.data.price', 'latest_invoice.payment_intent'],
 	})
 
 	const customerProfile = await getCustomerProfile(subscription.customer)
@@ -669,6 +669,36 @@ export async function syncFromSubscription(
 
 	if (!customerId) {
 		logDecision('skip', 'missing_customer_id')
+		return
+	}
+
+	const latestInvoice =
+		subscription.latest_invoice &&
+		typeof subscription.latest_invoice !== 'string'
+			? subscription.latest_invoice
+			: null
+	const paymentIntent =
+		latestInvoice &&
+		latestInvoice.payment_intent &&
+		typeof latestInvoice.payment_intent !== 'string'
+			? latestInvoice.payment_intent
+			: null
+	const paymentRequiresAction =
+		paymentIntent &&
+		new Set([
+			'requires_action',
+			'requires_payment_method',
+			'requires_confirmation',
+			'processing',
+		]).has(paymentIntent.status)
+	const paymentDue = (latestInvoice?.amount_due ?? 0) > 0
+	const isUpgradePending =
+		eventType === 'customer.subscription.updated' &&
+		paymentDue &&
+		paymentRequiresAction
+
+	if (isUpgradePending) {
+		logDecision('skip', 'awaiting_proration_payment')
 		return
 	}
 
