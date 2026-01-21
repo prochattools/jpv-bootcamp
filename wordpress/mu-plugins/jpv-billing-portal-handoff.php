@@ -2,9 +2,8 @@
 /**
  * MU Plugin: Billing portal signed handoff (JPV)
  *
- * Fluent Community menu link update (Steve):
- * - Old: https://jpvbootcamp.com/billing/portal?return=https%3A%2F%2Fportal.jpvbootcamp.com%2Fcommunity%2F
- * - New: https://portal.jpvbootcamp.com/go/billing-portal?return=https%3A%2F%2Fportal.jpvbootcamp.com%2Fcommunity%2F
+ * Use /go/billing-portal?return=... in Fluent Community menu
+ * Recommended filename prefix for MU load order: 10-jpv-billing-portal-handoff.php
  *
  * This file is stored in the Next.js repo for manual deployment to WordPress; it is not auto-deployed.
  */
@@ -156,6 +155,18 @@ function jpv_billing_portal_get_email_domain(string $email): string {
     return substr($email, $pos + 1);
 }
 
+function jpv_billing_portal_send_nocache_headers(): void {
+    if (headers_sent()) {
+        return;
+    }
+    if (function_exists('nocache_headers')) {
+        nocache_headers();
+    }
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0', true);
+    header('Pragma: no-cache', true);
+    header('Expires: 0', true);
+}
+
 function jpv_billing_portal_build_signed_url(string $email, string $original_url, string $secret): string {
     $parts = wp_parse_url($original_url);
     if (!empty($parts['query'])) {
@@ -218,16 +229,18 @@ function jpv_billing_portal_handle_go_endpoint(): void {
 
     $path = wp_parse_url($uri, PHP_URL_PATH);
     if (!$path) {
-        $path = $uri;
+        return;
     }
 
     if ($path !== '/go/billing-portal' && $path !== '/go/billing-portal/') {
         return;
     }
 
-    $login_url = site_url('/community/?fcom_action=auth');
-
     if (!is_user_logged_in()) {
+        $login_url = site_url('/community/?fcom_action=auth');
+        $redirect_to = home_url($uri);
+        $login_url = add_query_arg('redirect_to', $redirect_to, $login_url);
+        jpv_billing_portal_send_nocache_headers();
         wp_safe_redirect($login_url, 302);
         exit;
     }
@@ -235,13 +248,15 @@ function jpv_billing_portal_handle_go_endpoint(): void {
     $user = wp_get_current_user();
     $email = $user && isset($user->user_email) ? $user->user_email : '';
     if (!is_email($email)) {
-        wp_safe_redirect($login_url, 302);
+        jpv_billing_portal_send_nocache_headers();
+        wp_safe_redirect(JPV_BILLING_PORTAL_FALLBACK_URL, 302);
         exit;
     }
 
     $secret = get_billing_portal_hmac_secret();
     if (!$secret) {
         jpv_billing_portal_log_missing_secret_once();
+        jpv_billing_portal_send_nocache_headers();
         wp_safe_redirect(JPV_BILLING_PORTAL_FALLBACK_URL, 302);
         exit;
     }
@@ -254,15 +269,16 @@ function jpv_billing_portal_handle_go_endpoint(): void {
     $token = jpv_billing_portal_build_token($email, $return_url, $secret);
     $target = jpv_billing_portal_build_url($token);
 
-    error_log('[JPV Billing Portal] redirecting via go endpoint ' . wp_json_encode(array(
+    error_log('[JPV Billing Portal] go endpoint redirect ' . wp_json_encode(array(
         'emailDomain' => jpv_billing_portal_get_email_domain($email),
         'returnUrl' => $return_url,
     )));
 
+    jpv_billing_portal_send_nocache_headers();
     wp_safe_redirect($target, 302);
     exit;
 }
-add_action('init', 'jpv_billing_portal_handle_go_endpoint', 1);
+add_action('init', 'jpv_billing_portal_handle_go_endpoint', 0);
 
 function jpv_billing_portal_handle_redirect(): void {
     $uri = isset($_SERVER['REQUEST_URI']) ? (string) $_SERVER['REQUEST_URI'] : '';
