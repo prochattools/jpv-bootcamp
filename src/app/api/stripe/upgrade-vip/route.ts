@@ -228,12 +228,13 @@ export async function POST(req: NextRequest) {
 	}
 
 	const verification = verifyBillingPortalToken(token, tokenSecret)
-	if (!verification.ok) {
-		const status = verification.reason === 'malformed' ? 400 : 401
+	if (verification.ok === false) {
+		const reason = verification.reason
+		const status = reason === 'malformed' ? 400 : 401
 		return NextResponse.json(
 			{
 				ok: false,
-				reason: verification.reason,
+				reason,
 				error: 'Invalid token.',
 			} as UpgradeError,
 			{ status }
