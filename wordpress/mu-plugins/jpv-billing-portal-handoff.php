@@ -167,6 +167,69 @@ function jpv_billing_portal_send_nocache_headers(): void {
     header('Expires: 0', true);
 }
 
+function jpv_billing_portal_send_go_headers(string $path): void {
+    if (headers_sent()) {
+        return;
+    }
+    if (function_exists('nocache_headers')) {
+        nocache_headers();
+    }
+    header('X-JPV-Go-Handler: hit', true);
+    header('X-JPV-Go-Path: ' . substr($path, 0, 120), true);
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0', true);
+    header('Pragma: no-cache', true);
+    header('Expires: 0', true);
+}
+
+function jpv_billing_portal_build_full_url(string $uri): string {
+    $host = '';
+    if (!empty($_SERVER['HTTP_HOST'])) {
+        $host = (string) $_SERVER['HTTP_HOST'];
+    } elseif (!empty($_SERVER['SERVER_NAME'])) {
+        $host = (string) $_SERVER['SERVER_NAME'];
+    } else {
+        $parsed = wp_parse_url(home_url('/'));
+        if (!empty($parsed['host'])) {
+            $host = (string) $parsed['host'];
+        }
+    }
+
+    if ($host === '') {
+        return $uri;
+    }
+
+    $scheme = is_ssl() ? 'https' : 'https';
+    $path = $uri;
+    if ($path === '' || $path[0] !== '/') {
+        $path = '/' . ltrim($path, '/');
+    }
+
+    return $scheme . '://' . $host . $path;
+}
+
+function jpv_billing_portal_log_go_endpoint(array $data): void {
+    error_log('[JPV Billing Portal] go endpoint ' . wp_json_encode($data));
+}
+
+function jpv_billing_portal_path_matches_go(string $path): bool {
+    $needle = '/go/billing-portal';
+    if ($path === $needle || $path === $needle . '/') {
+        return true;
+    }
+
+    $trimmed = rtrim($path, '/');
+    if ($trimmed === $needle) {
+        return true;
+    }
+
+    if (substr($trimmed, -strlen($needle)) === $needle) {
+        return true;
+    }
+
+    $segment = trim($needle, '/');
+    return (bool) preg_match('#(^|/)' . preg_quote($segment, '#') . '(/|$)#', $path);
+}
+
 function jpv_billing_portal_build_signed_url(string $email, string $original_url, string $secret): string {
     $parts = wp_parse_url($original_url);
     if (!empty($parts['query'])) {
@@ -232,15 +295,25 @@ function jpv_billing_portal_handle_go_endpoint(): void {
         return;
     }
 
-    if ($path !== '/go/billing-portal' && $path !== '/go/billing-portal/') {
+    if (!jpv_billing_portal_path_matches_go($path)) {
         return;
     }
 
+    $logged_in = is_user_logged_in();
+    $secret = get_billing_portal_hmac_secret();
+    $has_secret = $secret ? true : false;
+    $original_url = jpv_billing_portal_build_full_url($uri);
+
     if (!is_user_logged_in()) {
         $login_url = site_url('/community/?fcom_action=auth');
-        $redirect_to = home_url($uri);
+        $redirect_to = $original_url;
         $login_url = add_query_arg('redirect_to', $redirect_to, $login_url);
-        jpv_billing_portal_send_nocache_headers();
+        jpv_billing_portal_log_go_endpoint(array(
+            'loggedIn' => $logged_in,
+            'hasSecret' => $has_secret,
+            'redirect' => 'login',
+        ));
+        jpv_billing_portal_send_go_headers($path);
         wp_safe_redirect($login_url, 302);
         exit;
     }
@@ -248,15 +321,25 @@ function jpv_billing_portal_handle_go_endpoint(): void {
     $user = wp_get_current_user();
     $email = $user && isset($user->user_email) ? $user->user_email : '';
     if (!is_email($email)) {
-        jpv_billing_portal_send_nocache_headers();
+        jpv_billing_portal_log_go_endpoint(array(
+            'loggedIn' => $logged_in,
+            'hasSecret' => $has_secret,
+            'redirect' => 'fallback_invalid_email',
+        ));
+        jpv_billing_portal_send_go_headers($path);
         wp_safe_redirect(JPV_BILLING_PORTAL_FALLBACK_URL, 302);
         exit;
     }
 
-    $secret = get_billing_portal_hmac_secret();
     if (!$secret) {
         jpv_billing_portal_log_missing_secret_once();
-        jpv_billing_portal_send_nocache_headers();
+        jpv_billing_portal_log_go_endpoint(array(
+            'loggedIn' => $logged_in,
+            'hasSecret' => $has_secret,
+            'redirect' => 'fallback_missing_secret',
+            'emailDomain' => jpv_billing_portal_get_email_domain($email),
+        ));
+        jpv_billing_portal_send_go_headers($path);
         wp_safe_redirect(JPV_BILLING_PORTAL_FALLBACK_URL, 302);
         exit;
     }
@@ -269,12 +352,16 @@ function jpv_billing_portal_handle_go_endpoint(): void {
     $token = jpv_billing_portal_build_token($email, $return_url, $secret);
     $target = jpv_billing_portal_build_url($token);
 
-    error_log('[JPV Billing Portal] go endpoint redirect ' . wp_json_encode(array(
+    jpv_billing_portal_log_go_endpoint(array(
+        'loggedIn' => $logged_in,
+        'hasSecret' => $has_secret,
+        'redirect' => 'billing_portal',
         'emailDomain' => jpv_billing_portal_get_email_domain($email),
         'returnUrl' => $return_url,
-    )));
+        'tokenPrefix' => substr($token, 0, 8),
+    ));
 
-    jpv_billing_portal_send_nocache_headers();
+    jpv_billing_portal_send_go_headers($path);
     wp_safe_redirect($target, 302);
     exit;
 }
