@@ -20,7 +20,7 @@ async function run(): Promise<void> {
 		process.exit(1)
 	}
 
-	const event = record.payload as Stripe.Event
+	const event = record.payload as unknown as Stripe.Event
 
 	switch (event.type) {
 		case 'checkout.session.completed': {
