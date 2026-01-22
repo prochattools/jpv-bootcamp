@@ -7,7 +7,7 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 const BILLING_PORTAL_RETURN_URL =
-	'https://portal.jpvbootcamp.com/community/?jpv_upgrade=success'
+	'https://portal.jpvbootcamp.com/community/?jpv_billing=return'
 
 function isEnvEnabled(value?: string): boolean {
 	if (!value) return false
@@ -34,10 +34,10 @@ function extractBearerToken(req: NextRequest): string | null {
 	return null
 }
 
-function buildReturnUrl(status: 'success' | 'error'): string {
+function buildReturnUrl(status: 'return' | 'error'): string {
 	try {
 		const url = new URL(BILLING_PORTAL_RETURN_URL)
-		url.searchParams.set('jpv_upgrade', status)
+		url.searchParams.set('jpv_billing', status)
 		return url.toString()
 	} catch {
 		return BILLING_PORTAL_RETURN_URL
@@ -70,7 +70,7 @@ async function searchStripeCustomerIdByEmail(email: string): Promise<string | nu
 	return result.data[0]?.id ?? null
 }
 
-async function handleUpgradeVip(req: NextRequest): Promise<NextResponse> {
+async function handleBillingPortal(req: NextRequest): Promise<NextResponse> {
 	const tokenSecret = (process.env.BILLING_PORTAL_HMAC_SECRET || '').trim()
 	if (!tokenSecret) {
 		console.error('BILLING_PORTAL_HMAC_SECRET missing')
@@ -79,7 +79,7 @@ async function handleUpgradeVip(req: NextRequest): Promise<NextResponse> {
 
 	const headerToken = extractBearerToken(req)
 	const queryToken = req.nextUrl.searchParams.get('token')
-	let token = headerToken || (queryToken ? queryToken.trim() : null)
+	const token = headerToken || (queryToken ? queryToken.trim() : null)
 
 	if (!token) {
 		return NextResponse.redirect(buildReturnUrl('error'), 302)
@@ -107,11 +107,10 @@ async function handleUpgradeVip(req: NextRequest): Promise<NextResponse> {
 		}
 
 		if (!stripeCustomerId) {
-			console.warn('VIP upgrade: customer not found', { emailDomain })
+			console.warn('Billing portal: customer not found', { emailDomain })
 			return NextResponse.redirect(buildReturnUrl('error'), 302)
 		}
 
-		// Stripe Billing Portal is the source of truth for upgrades + proration.
 		const session = await stripe.billingPortal.sessions.create({
 			customer: stripeCustomerId,
 			return_url: BILLING_PORTAL_RETURN_URL,
@@ -123,7 +122,7 @@ async function handleUpgradeVip(req: NextRequest): Promise<NextResponse> {
 
 		return NextResponse.redirect(session.url, 302)
 	} catch (error) {
-		console.error('VIP upgrade failed', {
+		console.error('Billing portal failed', {
 			emailDomain,
 			reason: (error as Error).message || 'unknown_error',
 		})
@@ -132,9 +131,9 @@ async function handleUpgradeVip(req: NextRequest): Promise<NextResponse> {
 }
 
 export async function GET(req: NextRequest) {
-	return handleUpgradeVip(req)
+	return handleBillingPortal(req)
 }
 
 export async function POST(req: NextRequest) {
-	return handleUpgradeVip(req)
+	return handleBillingPortal(req)
 }

@@ -216,3 +216,159 @@ add_action('updated_user_meta', function ($meta_id, $user_id, $meta_key, $meta_v
 /**
  * Provisioning endpoint lives in wordpress/mu-plugins/jpv-provisioning.php.
  */
+
+/** ----------------------------
+ *  6) Entitlements sync (Stripe -> Prisma -> FluentCRM)
+ *  ---------------------------- */
+
+const JPV_ENTITLEMENTS_ENDPOINT = 'https://jpvbootcamp.com/api/entitlements';
+const JPV_ENTITLEMENTS_SYNC_TTL = 300;
+
+function jpv_entitlements_get_secret(): string {
+    $env = getenv('BILLING_PORTAL_HMAC_SECRET');
+    if ($env !== false && trim((string) $env) !== '') {
+        return trim((string) $env);
+    }
+
+    if (!empty($_ENV['BILLING_PORTAL_HMAC_SECRET'])) {
+        return trim((string) $_ENV['BILLING_PORTAL_HMAC_SECRET']);
+    }
+
+    if (!empty($_SERVER['BILLING_PORTAL_HMAC_SECRET'])) {
+        return trim((string) $_SERVER['BILLING_PORTAL_HMAC_SECRET']);
+    }
+
+    if (defined('BILLING_PORTAL_HMAC_SECRET') && BILLING_PORTAL_HMAC_SECRET) {
+        return trim((string) BILLING_PORTAL_HMAC_SECRET);
+    }
+
+    return '';
+}
+
+function jpv_entitlements_base64url_encode(string $value): string {
+    return rtrim(strtr(base64_encode($value), '+/', '-_'), '=');
+}
+
+function jpv_entitlements_build_token(string $email, string $secret): string {
+    $issued_at = time();
+    try {
+        $nonce = bin2hex(random_bytes(12));
+    } catch (Throwable $e) {
+        $nonce = wp_generate_password(16, false, false);
+    }
+    $payload = array(
+        'email' => $email,
+        'iat' => $issued_at,
+        'exp' => $issued_at + 600,
+        'nonce' => $nonce,
+    );
+
+    $payload_json = wp_json_encode($payload);
+    $payload_b64 = jpv_entitlements_base64url_encode($payload_json);
+    $signature = hash_hmac('sha256', $payload_b64, $secret, true);
+    $signature_b64 = jpv_entitlements_base64url_encode($signature);
+
+    return $payload_b64 . '.' . $signature_b64;
+}
+
+function jpv_entitlements_fetch_plan(string $email): ?string {
+    $secret = jpv_entitlements_get_secret();
+    if ($secret === '') {
+        return null;
+    }
+
+    $token = jpv_entitlements_build_token($email, $secret);
+    $response = wp_remote_get(JPV_ENTITLEMENTS_ENDPOINT, array(
+        'timeout' => 5,
+        'headers' => array(
+            'Authorization' => 'Bearer ' . $token,
+            'Accept' => 'application/json',
+        ),
+    ));
+
+    if (is_wp_error($response)) {
+        return null;
+    }
+
+    $status = (int) wp_remote_retrieve_response_code($response);
+    if ($status < 200 || $status >= 300) {
+        return null;
+    }
+
+    $body = wp_remote_retrieve_body($response);
+    $data = json_decode($body, true);
+    if (!is_array($data)) {
+        return null;
+    }
+
+    $plan = isset($data['plan']) ? strtolower(trim((string) $data['plan'])) : '';
+    if (!in_array($plan, array('free', 'pro', 'vip'), true)) {
+        return null;
+    }
+
+    return $plan;
+}
+
+function jpv_entitlements_should_sync(int $user_id): bool {
+    $last = (int) get_user_meta($user_id, 'jpv_entitlements_last_sync', true);
+    if ($last && (time() - $last) < JPV_ENTITLEMENTS_SYNC_TTL) {
+        return false;
+    }
+    return true;
+}
+
+function jpv_entitlements_sync_user(int $user_id, string $context): void {
+    if (!$user_id || !jpv_entitlements_should_sync($user_id)) {
+        return;
+    }
+
+    update_user_meta($user_id, 'jpv_entitlements_last_sync', time());
+
+    $user = get_user_by('id', $user_id);
+    if (!$user || empty($user->user_email)) {
+        return;
+    }
+
+    $plan = jpv_entitlements_fetch_plan($user->user_email);
+    if ($plan === null) {
+        return;
+    }
+
+    $plan_meta = $plan === 'free' ? '' : $plan;
+    $current = get_user_meta($user_id, 'jpv_membership_level', true);
+    if ($current === 'none') {
+        $current = '';
+    }
+
+    if ($current !== $plan_meta) {
+        update_user_meta($user_id, 'jpv_membership_level', $plan_meta);
+    }
+}
+
+function jpv_entitlements_sync_on_login(string $user_login, WP_User $user): void {
+    jpv_entitlements_sync_user((int) $user->ID, 'login');
+}
+add_action('wp_login', 'jpv_entitlements_sync_on_login', 20, 2);
+
+function jpv_entitlements_sync_on_community(): void {
+    if (!is_user_logged_in()) {
+        return;
+    }
+    if (is_admin()) {
+        return;
+    }
+    if (defined('REST_REQUEST') && REST_REQUEST) {
+        return;
+    }
+    if (wp_doing_ajax()) {
+        return;
+    }
+
+    $uri = isset($_SERVER['REQUEST_URI']) ? (string) $_SERVER['REQUEST_URI'] : '';
+    if ($uri && stripos($uri, '/community') === false) {
+        return;
+    }
+
+    jpv_entitlements_sync_user((int) get_current_user_id(), 'community');
+}
+add_action('template_redirect', 'jpv_entitlements_sync_on_community', 5);

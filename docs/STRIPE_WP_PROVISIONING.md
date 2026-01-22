@@ -77,10 +77,11 @@ These scripts only add missing columns/indexes and do not drop existing data.
    - `wordpress/mu-plugins/00-portal-entrypoint-and-fluentcrm-sync.php`
    - `wordpress/mu-plugins/10-jpv-billing-portal-handoff.php`
    - `wordpress/mu-plugins/jpv-provisioning.php`
-2) MU plugins load automatically (no activation step).
-3) Set the bearer token in **Settings → JPV Provisioning** (stored in wp_options).
+2) Remove any old/duplicate MU plugins from the server (e.g. `11-jpv-upgrade-vip-handoff.php`).
+3) MU plugins load automatically (no activation step).
+4) Set the bearer token in **Settings → JPV Provisioning** (stored in wp_options).
    - Optional override: define `WP_PROVISION_TOKEN` or `JPV_PROVISION_TOKEN` in `wp-config.php`.
-4) Configure WP → app deletion sync in `wp-config.php`:
+5) Configure WP → app deletion sync in `wp-config.php`:
    - `JPV_APP_SYNC_URL=https://<app>/api/wp/user-deleted`
    - `JPV_APP_SYNC_TOKEN=...` (or reuse `JPV_PROVISION_TOKEN`)
 
@@ -109,38 +110,34 @@ stripe trigger checkout.session.completed
 
 For full end-to-end testing, run a real Checkout session and confirm the event is delivered.
 
-## Billing portal entrypoint
+## Billing portal entrypoints (Stripe-only upgrade flow)
 
-Use this route when Pro users click “Upgrade to VIP” inside Fluent Community.
+WordPress only signs a billing token and redirects the browser to Next.js.
+Next.js creates the Stripe Billing Portal session and redirects the browser to Stripe.
 
-- Preferred link format (signed token from WordPress):
-  - `https://jpvbootcamp.com/billing/portal?token=<signed>`
-  - Token payload includes `email`, `returnUrl`, `iat`, `exp`, `nonce`.
+- WordPress menu URLs:
+  - `https://portal.jpvbootcamp.com/go/billing-portal`
+  - `https://portal.jpvbootcamp.com/go/upgrade-vip`
+- WordPress → Next.js redirects:
+  - `https://jpvbootcamp.com/api/stripe/billing-portal?token=<signed>`
+  - `https://jpvbootcamp.com/api/stripe/upgrade-vip?token=<signed>`
+- Token payload includes `email`, `iat`, `exp`, `nonce` (HMAC with `BILLING_PORTAL_HMAC_SECRET`).
+- Stripe Billing Portal return URLs (fixed):
+  - Billing portal: `https://portal.jpvbootcamp.com/community/?jpv_billing=return`
+  - Upgrade VIP: `https://portal.jpvbootcamp.com/community/?jpv_upgrade=success`
+
+### Secret configuration
+
 - WordPress secret source (CloudPanel PHP-FPM env):
   - `env[BILLING_PORTAL_HMAC_SECRET]=...` (preferred)
   - Optional fallback: `define('BILLING_PORTAL_HMAC_SECRET', '...')` in `wp-config.php`
 - Next.js secret:
   - `BILLING_PORTAL_HMAC_SECRET=...` (server env)
-- `returnUrl` defaults to:
-  - `https://portal.jpvbootcamp.com/community/`
-- Allowed return origins:
-  - `https://portal.jpvbootcamp.com`
-  - `https://jpvbootcamp.com`
-- Legacy/manual fallback (for testing only):
-  - `https://jpvbootcamp.com/billing/portal?return=https%3A%2F%2Fportal.jpvbootcamp.com%2Fcommunity%2F`
-  - `https://jpvbootcamp.com/billing/portal?email=user%40example.com`
-  - The email must match a row in `tenant_jpvbootcamp.customer_provisioning`.
-  - Optional fallback (disabled by default): set `STRIPE_CUSTOMER_SEARCH_ENABLED=true` to allow Stripe customer search by email.
 
-### Billing portal health checks
+### Entitlements sync (WordPress → FluentCRM tags)
 
-- WordPress (admin only, logged in):
-  - `GET https://portal.jpvbootcamp.com/wp-json/jpv/v1/billing-secret`
-  - Returns booleans only: `{ ok, secret_present, token_ready }`
-- Next.js (header required):
-  - `GET https://jpvbootcamp.com/api/health/billing-secret`
-  - Header: `x-jpv-health-secret: <BILLING_PORTAL_HMAC_SECRET>`
-  - Returns `{ ok: true }` or 500 if missing secret
+On login and on community page load, WordPress calls `/api/entitlements` with a billing token
+and updates `jpv_membership_level` if it differs. The existing FluentCRM hooks then sync tags.
 
 ### Secret rotation
 

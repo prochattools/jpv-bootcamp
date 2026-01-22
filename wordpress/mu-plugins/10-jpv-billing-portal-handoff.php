@@ -2,8 +2,9 @@
 /**
  * MU Plugin: Billing portal signed handoff (JPV)
  *
- * Use /go/billing-portal?return=... in Fluent Community menu
- * Recommended filename prefix for MU load order: 10-jpv-billing-portal-handoff.php
+ * Menu URLs:
+ * - https://portal.jpvbootcamp.com/go/billing-portal
+ * - https://portal.jpvbootcamp.com/go/upgrade-vip
  *
  * This file is stored in the Next.js repo for manual deployment to WordPress; it is not auto-deployed.
  */
@@ -12,10 +13,10 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-const JPV_BILLING_PORTAL_URL = 'https://jpvbootcamp.com/billing/portal';
+const JPV_BILLING_PORTAL_API_URL = 'https://jpvbootcamp.com/api/stripe/billing-portal';
+const JPV_UPGRADE_VIP_API_URL = 'https://jpvbootcamp.com/api/stripe/upgrade-vip';
 const JPV_BILLING_PORTAL_DEFAULT_RETURN_URL = 'https://portal.jpvbootcamp.com/community/';
 const JPV_BILLING_PORTAL_FALLBACK_URL = 'https://jpvbootcamp.com/upgrade';
-const JPV_UPGRADE_VIP_ENDPOINT = 'https://jpvbootcamp.com/api/stripe/upgrade-vip';
 
 function jpv_billing_portal_allow_redirect_hosts(array $hosts): array {
     $hosts[] = 'jpvbootcamp.com';
@@ -100,24 +101,6 @@ function jpv_billing_portal_normalize_return_url(?string $raw): string {
     return $decoded;
 }
 
-function jpv_billing_portal_extract_return_url(string $url): string {
-    $parts = wp_parse_url($url);
-    if (empty($parts['query'])) {
-        return JPV_BILLING_PORTAL_DEFAULT_RETURN_URL;
-    }
-
-    parse_str($parts['query'], $query);
-    if (empty($query['return'])) {
-        return JPV_BILLING_PORTAL_DEFAULT_RETURN_URL;
-    }
-
-    return jpv_billing_portal_normalize_return_url($query['return']);
-}
-
-function jpv_billing_portal_is_target_url(string $url): bool {
-    return strpos($url, '/billing/portal') !== false;
-}
-
 function jpv_billing_portal_build_token(string $email, string $return_url, string $secret): string {
     $issued_at = time();
     $payload = array(
@@ -136,10 +119,6 @@ function jpv_billing_portal_build_token(string $email, string $return_url, strin
     return $payload_b64 . '.' . $signature_b64;
 }
 
-function jpv_billing_portal_build_url(string $token): string {
-    return JPV_BILLING_PORTAL_URL . '?token=' . rawurlencode($token);
-}
-
 function jpv_billing_portal_log_missing_secret_once(): void {
     static $logged = false;
     if ($logged) {
@@ -153,36 +132,15 @@ function jpv_billing_portal_log_missing_secret_once(): void {
     }
 
     set_transient($throttle_key, '1', HOUR_IN_SECONDS);
-    error_log('[JPV Billing Portal] BILLING_PORTAL_HMAC_SECRET missing; upgrade link disabled.');
+    error_log('[JPV Billing Portal] BILLING_PORTAL_HMAC_SECRET missing; redirect disabled.');
 }
 
-function jpv_billing_portal_get_email_domain(string $email): string {
-    $pos = strrpos($email, '@');
-    if ($pos === false || $pos === strlen($email) - 1) {
-        return '';
-    }
-    return substr($email, $pos + 1);
-}
-
-function jpv_billing_portal_send_nocache_headers(): void {
-    if (headers_sent()) {
-        return;
-    }
-    if (function_exists('nocache_headers')) {
-        nocache_headers();
-    }
-    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0', true);
-    header('Pragma: no-cache', true);
-    header('Expires: 0', true);
-}
-
-// TEMP DEBUG HEADERS: remove after 10 minutes once redirect flow is verified.
-function jpv_billing_portal_send_go_headers(
+function jpv_billing_portal_send_headers(
+    string $handler,
     string $path,
     bool $logged_in,
-    string $email,
     bool $has_secret,
-    string $intended_url,
+    string $target,
     string $why
 ): void {
     if (headers_sent()) {
@@ -191,43 +149,32 @@ function jpv_billing_portal_send_go_headers(
     if (function_exists('nocache_headers')) {
         nocache_headers();
     }
-    $safe_email = str_replace(array("\r", "\n"), '', $email);
-    $safe_intended = str_replace(array("\r", "\n"), '', $intended_url);
-    header('X-JPV-Go-Handler: hit', true);
-    header('X-JPV-Go-User: ' . ($logged_in ? 'logged_in' : 'logged_out'), true);
-    header('X-JPV-Go-Why: ' . $why, true);
-    header('X-JPV-Go-Email: ' . $safe_email, true);
-    header('X-JPV-Go-Secret: ' . ($has_secret ? 'present' : 'missing'), true);
-    header('X-JPV-Go-Intended: ' . $safe_intended, true);
-    header('X-JPV-Go-Path: ' . substr($path, 0, 120), true);
+    $safe_target = str_replace(array("\r", "\n"), '', $target);
+    header('X-JPV-Handler: ' . $handler, true);
+    header('X-JPV-User: ' . ($logged_in ? 'logged_in' : 'logged_out'), true);
+    header('X-JPV-Secret: ' . ($has_secret ? 'present' : 'missing'), true);
+    header('X-JPV-Why: ' . $why, true);
+    header('X-JPV-Target: ' . substr($safe_target, 0, 120), true);
+    header('X-JPV-Path: ' . substr($path, 0, 120), true);
     header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0', true);
     header('Pragma: no-cache', true);
     header('Expires: 0', true);
 }
 
-// TEMP DEBUG HEADERS: remove after 10 minutes once upgrade flow is verified.
-function jpv_upgrade_vip_send_headers(
+function jpv_billing_portal_log_redirect(
+    string $handler,
     string $path,
     bool $logged_in,
     bool $has_secret,
-    string $intended_url,
     string $why
 ): void {
-    if (headers_sent()) {
-        return;
-    }
-    if (function_exists('nocache_headers')) {
-        nocache_headers();
-    }
-    $safe_intended = str_replace(array("\r", "\n"), '', $intended_url);
-    header('X-JPV-Upgrade-Handler: hit', true);
-    header('X-JPV-Upgrade-User: ' . ($logged_in ? 'logged_in' : 'logged_out'), true);
-    header('X-JPV-Upgrade-Secret: ' . ($has_secret ? 'present' : 'missing'), true);
-    header('X-JPV-Upgrade-Why: ' . $why, true);
-    header('X-JPV-Upgrade-Intended: ' . $safe_intended, true);
-    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0', true);
-    header('Pragma: no-cache', true);
-    header('Expires: 0', true);
+    error_log('[JPV Billing Portal] ' . wp_json_encode(array(
+        'handler' => $handler,
+        'path' => $path,
+        'logged_in' => $logged_in,
+        'has_secret' => $has_secret,
+        'reason' => $why,
+    )));
 }
 
 function jpv_billing_portal_build_full_url(string $uri): string {
@@ -256,26 +203,7 @@ function jpv_billing_portal_build_full_url(string $uri): string {
     return $scheme . '://' . $host . $path;
 }
 
-function jpv_billing_portal_log_go_endpoint(string $path, bool $logged_in, string $reason, bool $has_secret): void {
-    error_log('[JPV Billing Portal] ' . wp_json_encode(array(
-        'path' => $path,
-        'logged_in' => $logged_in,
-        'reason' => $reason,
-        'has_secret' => $has_secret,
-    )));
-}
-
-function jpv_upgrade_vip_log(string $path, bool $logged_in, string $reason, bool $has_secret): void {
-    error_log('[JPV Upgrade VIP] ' . wp_json_encode(array(
-        'path' => $path,
-        'logged_in' => $logged_in,
-        'reason' => $reason,
-        'has_secret' => $has_secret,
-    )));
-}
-
-function jpv_billing_portal_path_matches_go(string $path): bool {
-    $needle = '/go/billing-portal';
+function jpv_billing_portal_path_matches(string $path, string $needle): bool {
     if ($path === $needle || $path === $needle . '/') {
         return true;
     }
@@ -293,40 +221,22 @@ function jpv_billing_portal_path_matches_go(string $path): bool {
     return (bool) preg_match('#(^|/)' . preg_quote($segment, '#') . '(/|$)#', $path);
 }
 
-function jpv_upgrade_vip_path_matches(string $path): bool {
-    $needle = '/go/upgrade-vip';
-    if ($path === $needle || $path === $needle . '/') {
-        return true;
-    }
-
-    $trimmed = rtrim($path, '/');
-    if ($trimmed === $needle) {
-        return true;
-    }
-
-    if (substr($trimmed, -strlen($needle)) === $needle) {
-        return true;
-    }
-
-    $segment = trim($needle, '/');
-    return (bool) preg_match('#(^|/)' . preg_quote($segment, '#') . '(/|$)#', $path);
-}
-
-function jpv_billing_portal_handle_handoff(string $path, string $uri): void {
+function jpv_billing_portal_handle_redirect(
+    string $handler,
+    string $path,
+    string $uri,
+    string $api_url
+): void {
     $logged_in = is_user_logged_in();
     $secret = get_billing_portal_hmac_secret();
     $has_secret = $secret ? true : false;
-    $return_param = isset($_GET['return']) ? (string) $_GET['return'] : '';
-    $return_url = $return_param !== ''
-        ? jpv_billing_portal_normalize_return_url($return_param)
-        : JPV_BILLING_PORTAL_DEFAULT_RETURN_URL;
 
     if (!$logged_in) {
         $login_url = site_url('/community/?fcom_action=auth');
         $redirect_to = jpv_billing_portal_build_full_url($uri);
         $login_url = add_query_arg('redirect_to', $redirect_to, $login_url);
-        jpv_billing_portal_log_go_endpoint($path, $logged_in, 'not_logged_in', $has_secret);
-        jpv_billing_portal_send_go_headers($path, $logged_in, '', $has_secret, $login_url, 'not_logged_in');
+        jpv_billing_portal_log_redirect($handler, $path, $logged_in, $has_secret, 'not_logged_in');
+        jpv_billing_portal_send_headers($handler, $path, $logged_in, $has_secret, $login_url, 'not_logged_in');
         wp_safe_redirect($login_url, 302);
         exit;
     }
@@ -334,83 +244,33 @@ function jpv_billing_portal_handle_handoff(string $path, string $uri): void {
     $user = wp_get_current_user();
     $email = $user && isset($user->user_email) ? $user->user_email : '';
     if (!is_email($email)) {
-        jpv_billing_portal_log_go_endpoint($path, $logged_in, 'invalid_email', $has_secret);
-        jpv_billing_portal_send_go_headers($path, $logged_in, $email, $has_secret, JPV_BILLING_PORTAL_FALLBACK_URL, 'invalid_email');
+        jpv_billing_portal_log_redirect($handler, $path, $logged_in, $has_secret, 'invalid_email');
+        jpv_billing_portal_send_headers($handler, $path, $logged_in, $has_secret, JPV_BILLING_PORTAL_FALLBACK_URL, 'invalid_email');
         wp_safe_redirect(JPV_BILLING_PORTAL_FALLBACK_URL, 302);
         exit;
     }
 
     if (!$secret) {
         jpv_billing_portal_log_missing_secret_once();
-        jpv_billing_portal_log_go_endpoint($path, $logged_in, 'missing_secret', $has_secret);
-        jpv_billing_portal_send_go_headers($path, $logged_in, $email, $has_secret, JPV_BILLING_PORTAL_FALLBACK_URL, 'secret_missing');
+        jpv_billing_portal_log_redirect($handler, $path, $logged_in, $has_secret, 'missing_secret');
+        jpv_billing_portal_send_headers($handler, $path, $logged_in, $has_secret, JPV_BILLING_PORTAL_FALLBACK_URL, 'missing_secret');
         wp_safe_redirect(JPV_BILLING_PORTAL_FALLBACK_URL, 302);
         exit;
     }
 
-    $token = jpv_billing_portal_build_token($email, $return_url, $secret);
-    $target = jpv_billing_portal_build_url($token);
+    $return_param = isset($_GET['return']) ? (string) $_GET['return'] : '';
+    $return_url = $return_param !== ''
+        ? jpv_billing_portal_normalize_return_url($return_param)
+        : JPV_BILLING_PORTAL_DEFAULT_RETURN_URL;
 
-    jpv_billing_portal_log_go_endpoint($path, $logged_in, 'built_token', $has_secret);
-    jpv_billing_portal_send_go_headers($path, $logged_in, $email, $has_secret, $target, 'built_token');
+    $token = jpv_billing_portal_build_token($email, $return_url, $secret);
+    $target = add_query_arg('token', $token, $api_url);
+
+    jpv_billing_portal_log_redirect($handler, $path, $logged_in, $has_secret, 'redirect');
+    jpv_billing_portal_send_headers($handler, $path, $logged_in, $has_secret, $target, 'redirect');
     wp_safe_redirect($target, 302);
     exit;
 }
-
-
-function jpv_billing_portal_build_signed_url(string $email, string $original_url, string $secret): string {
-    $parts = wp_parse_url($original_url);
-    if (!empty($parts['query'])) {
-        parse_str($parts['query'], $query);
-        if (!empty($query['token'])) {
-            return $original_url;
-        }
-    }
-
-    $return_url = jpv_billing_portal_extract_return_url($original_url);
-    $token = jpv_billing_portal_build_token($email, $return_url, $secret);
-    return jpv_billing_portal_build_url($token);
-}
-
-function jpv_billing_portal_filter_menu_items($items, $args) {
-    if (!is_array($items) || empty($items)) {
-        return $items;
-    }
-
-    $secret = get_billing_portal_hmac_secret();
-    $user = wp_get_current_user();
-    $email = $user && isset($user->user_email) ? $user->user_email : '';
-    $found_target = false;
-
-    foreach ($items as $index => $item) {
-        if (!is_object($item) || empty($item->url)) {
-            continue;
-        }
-        if (!jpv_billing_portal_is_target_url($item->url)) {
-            continue;
-        }
-        $found_target = true;
-
-        if (!is_user_logged_in() || !is_email($email)) {
-            unset($items[$index]);
-            continue;
-        }
-
-        if (!$secret) {
-            unset($items[$index]);
-            continue;
-        }
-
-        $item->url = jpv_billing_portal_build_signed_url($email, $item->url, $secret);
-    }
-
-    if ($found_target && !$secret) {
-        jpv_billing_portal_log_missing_secret_once();
-    }
-
-    return array_values($items);
-}
-add_filter('wp_nav_menu_objects', 'jpv_billing_portal_filter_menu_items', 10, 2);
 
 function jpv_billing_portal_handle_go_endpoint(): void {
     $uri = isset($_SERVER['REQUEST_URI']) ? (string) $_SERVER['REQUEST_URI'] : '';
@@ -423,11 +283,11 @@ function jpv_billing_portal_handle_go_endpoint(): void {
         return;
     }
 
-    if (!jpv_billing_portal_path_matches_go($path)) {
+    if (!jpv_billing_portal_path_matches($path, '/go/billing-portal')) {
         return;
     }
 
-    jpv_billing_portal_handle_handoff($path, $uri);
+    jpv_billing_portal_handle_redirect('billing-portal', $path, $uri, JPV_BILLING_PORTAL_API_URL);
 }
 add_action('init', 'jpv_billing_portal_handle_go_endpoint', 0);
 
@@ -442,234 +302,10 @@ function jpv_upgrade_vip_handle_go_endpoint(): void {
         return;
     }
 
-    if (!jpv_upgrade_vip_path_matches($path)) {
+    if (!jpv_billing_portal_path_matches($path, '/go/upgrade-vip')) {
         return;
     }
 
-    $logged_in = is_user_logged_in();
-    $secret = get_billing_portal_hmac_secret();
-    $has_secret = $secret ? true : false;
-    $return_param = isset($_GET['return']) ? (string) $_GET['return'] : '';
-    $return_url = $return_param !== ''
-        ? jpv_billing_portal_normalize_return_url($return_param)
-        : JPV_BILLING_PORTAL_DEFAULT_RETURN_URL;
-
-    if (!$logged_in) {
-        $login_url = site_url('/community/?fcom_action=auth');
-        $redirect_to = jpv_billing_portal_build_full_url($uri);
-        $login_url = add_query_arg('redirect_to', $redirect_to, $login_url);
-        jpv_upgrade_vip_log($path, $logged_in, 'not_logged_in', $has_secret);
-        jpv_upgrade_vip_send_headers($path, $logged_in, $has_secret, $login_url, 'not_logged_in');
-        wp_safe_redirect($login_url, 302);
-        exit;
-    }
-
-    $user = wp_get_current_user();
-    $email = $user && isset($user->user_email) ? $user->user_email : '';
-    if (!is_email($email)) {
-        jpv_upgrade_vip_log($path, $logged_in, 'invalid_email', $has_secret);
-        jpv_upgrade_vip_send_headers(
-            $path,
-            $logged_in,
-            $has_secret,
-            JPV_BILLING_PORTAL_FALLBACK_URL,
-            'invalid_email'
-        );
-        wp_safe_redirect(JPV_BILLING_PORTAL_FALLBACK_URL, 302);
-        exit;
-    }
-
-    if (!$secret) {
-        jpv_billing_portal_log_missing_secret_once();
-        jpv_upgrade_vip_log($path, $logged_in, 'missing_secret', $has_secret);
-        jpv_upgrade_vip_send_headers(
-            $path,
-            $logged_in,
-            $has_secret,
-            JPV_BILLING_PORTAL_FALLBACK_URL,
-            'secret_missing'
-        );
-        wp_safe_redirect(JPV_BILLING_PORTAL_FALLBACK_URL, 302);
-        exit;
-    }
-
-    $token = jpv_billing_portal_build_token($email, $return_url, $secret);
-    $target = add_query_arg('token', $token, JPV_UPGRADE_VIP_ENDPOINT);
-    $why = 'billing_portal_redirect';
-
-    jpv_upgrade_vip_log($path, $logged_in, $why, $has_secret);
-    jpv_upgrade_vip_send_headers($path, $logged_in, $has_secret, $target, $why);
-    wp_safe_redirect($target, 302);
-    exit;
+    jpv_billing_portal_handle_redirect('upgrade-vip', $path, $uri, JPV_UPGRADE_VIP_API_URL);
 }
 add_action('init', 'jpv_upgrade_vip_handle_go_endpoint', 0);
-
-function jpv_billing_portal_handle_community_action(): void {
-    $uri = isset($_SERVER['REQUEST_URI']) ? (string) $_SERVER['REQUEST_URI'] : '';
-    if ($uri === '') {
-        return;
-    }
-
-    $path = wp_parse_url($uri, PHP_URL_PATH);
-    if (!$path) {
-        return;
-    }
-
-    if (stripos($path, '/community') === false) {
-        return;
-    }
-
-    $action = isset($_GET['jpv_action']) ? (string) $_GET['jpv_action'] : '';
-    if ($action !== 'billing_portal') {
-        return;
-    }
-
-    jpv_billing_portal_handle_handoff($path, $uri);
-}
-add_action('template_redirect', 'jpv_billing_portal_handle_community_action', 0);
-
-function jpv_billing_portal_handle_redirect(): void {
-    $uri = isset($_SERVER['REQUEST_URI']) ? (string) $_SERVER['REQUEST_URI'] : '';
-    if ($uri === '') {
-        return;
-    }
-
-    $path = wp_parse_url($uri, PHP_URL_PATH);
-    if (!$path) {
-        $path = $uri;
-    }
-
-    if (stripos($path, '/jpv/billing/portal') !== 0) {
-        return;
-    }
-
-    $return_param = isset($_GET['return']) ? (string) $_GET['return'] : '';
-
-    if (!is_user_logged_in()) {
-        $redirect_back = home_url($uri);
-        $login_url = site_url('/community/?fcom_action=auth');
-        $login_url = add_query_arg('redirect_to', $redirect_back, $login_url);
-        wp_safe_redirect($login_url, 302);
-        exit;
-    }
-
-    $secret = get_billing_portal_hmac_secret();
-    if (!$secret) {
-        jpv_billing_portal_log_missing_secret_once();
-        wp_safe_redirect(JPV_BILLING_PORTAL_FALLBACK_URL, 302);
-        exit;
-    }
-
-    $user = wp_get_current_user();
-    $email = $user && isset($user->user_email) ? $user->user_email : '';
-    if (!is_email($email)) {
-        wp_safe_redirect(JPV_BILLING_PORTAL_FALLBACK_URL, 302);
-        exit;
-    }
-
-    $return_url = jpv_billing_portal_normalize_return_url($return_param);
-    $token = jpv_billing_portal_build_token($email, $return_url, $secret);
-    $target = jpv_billing_portal_build_url($token);
-
-    wp_safe_redirect($target, 302);
-    exit;
-}
-add_action('init', 'jpv_billing_portal_handle_redirect', 1);
-
-function jpv_billing_portal_rewrite_output(string $html): string {
-    $secret = get_billing_portal_hmac_secret();
-    if (!$secret || !is_user_logged_in()) {
-        return $html;
-    }
-
-    $user = wp_get_current_user();
-    $email = $user && isset($user->user_email) ? $user->user_email : '';
-    if (!is_email($email)) {
-        return $html;
-    }
-
-    $pattern = '#https://jpvbootcamp\\.com/billing/portal(?:\\?[^"\'\\s<>]*)?#i';
-    return preg_replace_callback($pattern, function ($matches) use ($email, $secret) {
-        return jpv_billing_portal_build_signed_url($email, $matches[0], $secret);
-    }, $html);
-}
-
-function jpv_billing_portal_start_output_buffer(): void {
-    // Preferred: /go/billing-portal endpoint (Fluent Community is a SPA).
-    if (is_admin()) {
-        return;
-    }
-    if (defined('REST_REQUEST') && REST_REQUEST) {
-        return;
-    }
-    if (wp_doing_ajax()) {
-        return;
-    }
-
-    $uri = isset($_SERVER['REQUEST_URI']) ? (string) $_SERVER['REQUEST_URI'] : '';
-    if ($uri && stripos($uri, '/community') === false) {
-        return;
-    }
-
-    $secret = get_billing_portal_hmac_secret();
-    if (!$secret) {
-        jpv_billing_portal_log_missing_secret_once();
-        return;
-    }
-
-    static $started = false;
-    if ($started) {
-        return;
-    }
-    $started = true;
-
-    ob_start('jpv_billing_portal_rewrite_output');
-}
-add_action('template_redirect', 'jpv_billing_portal_start_output_buffer', 1);
-
-function jpv_billing_portal_health_check(WP_REST_Request $request): WP_REST_Response {
-    $secret = get_billing_portal_hmac_secret();
-    $secret_present = (bool) $secret;
-
-    $token_ready = false;
-    if ($secret_present) {
-        $token = jpv_billing_portal_build_token('healthcheck@example.com', JPV_BILLING_PORTAL_DEFAULT_RETURN_URL, $secret);
-        $token_ready = is_string($token) && strpos($token, '.') !== false;
-    }
-
-    return new WP_REST_Response(array(
-        'ok' => $secret_present && $token_ready,
-        'secret_present' => $secret_present,
-        'token_ready' => $token_ready,
-    ), 200);
-}
-
-function jpv_billing_portal_register_health_route(): void {
-    register_rest_route('jpv/v1', '/billing-secret', array(
-        'methods' => 'GET',
-        'callback' => 'jpv_billing_portal_health_check',
-        'permission_callback' => '__return_true',
-    ));
-}
-add_action('rest_api_init', 'jpv_billing_portal_register_health_route');
-
-function jpv_upgrade_vip_health_check(WP_REST_Request $request): WP_REST_Response {
-    $secret = get_billing_portal_hmac_secret();
-    $secret_present = (bool) $secret;
-    $endpoint_present = defined('JPV_UPGRADE_VIP_ENDPOINT') && JPV_UPGRADE_VIP_ENDPOINT;
-
-    return new WP_REST_Response(array(
-        'ok' => $secret_present && $endpoint_present,
-        'secret_present' => $secret_present,
-        'endpoint_present' => (bool) $endpoint_present,
-    ), 200);
-}
-
-function jpv_upgrade_vip_register_health_route(): void {
-    register_rest_route('jpv/v1', '/upgrade-vip-health', array(
-        'methods' => 'GET',
-        'callback' => 'jpv_upgrade_vip_health_check',
-        'permission_callback' => '__return_true',
-    ));
-}
-add_action('rest_api_init', 'jpv_upgrade_vip_register_health_route');
