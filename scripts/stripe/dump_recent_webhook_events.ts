@@ -13,7 +13,7 @@ type EventSummary = {
 
 function extractSummary(payload: Stripe.Event | null, fallback: EventSummary): EventSummary {
 	if (!payload) return fallback
-	const data = payload.data?.object as Record<string, unknown> | undefined
+	const data = payload.data?.object as unknown as Record<string, unknown> | undefined
 	const type = payload.type ?? fallback.type
 
 	const customerId =
