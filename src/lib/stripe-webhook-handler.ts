@@ -182,6 +182,7 @@ function logProvisioningSkip(event: Stripe.Event, reason: string) {
 	logProvisioningDecision({
 		eventId: event.id,
 		type: event.type,
+		livemode: event.livemode,
 		customerId,
 		subscriptionId,
 		email,
@@ -205,8 +206,8 @@ export async function handleStripeWebhook(req: Request) {
 			message: (error as Error).message,
 		})
 		return NextResponse.json(
-			{ error: 'Stripe webhook configuration missing.' },
-			{ status: 500 }
+			{ received: true, skipped: 'config_missing' },
+			{ status: 200 }
 		)
 	}
 
@@ -456,28 +457,40 @@ export async function handleStripeWebhook(req: Request) {
 			case 'checkout.session.completed': {
 				if (provisioningEnabled) {
 					const session = event.data.object as Stripe.Checkout.Session
-					await provisionFromCheckoutSession(session, event.id, event.type)
+					await provisionFromCheckoutSession(session, event.id, event.type, {
+						allowEmail: true,
+						eventLivemode: event.livemode,
+					})
 				}
 				break
 			}
 			case 'customer.subscription.created': {
 				if (provisioningEnabled) {
 					const subscription = event.data.object as Stripe.Subscription
-					await syncFromSubscription(subscription.id, event.id, event.type)
+					await syncFromSubscription(subscription.id, event.id, event.type, {
+						allowEmail: true,
+						eventLivemode: event.livemode,
+					})
 				}
 				break
 			}
 			case 'customer.subscription.updated': {
 				if (provisioningEnabled) {
 					const subscription = event.data.object as Stripe.Subscription
-					await syncFromSubscription(subscription.id, event.id, event.type)
+					await syncFromSubscription(subscription.id, event.id, event.type, {
+						allowEmail: true,
+						eventLivemode: event.livemode,
+					})
 				}
 				break
 			}
 			case 'customer.subscription.deleted': {
 				if (provisioningEnabled) {
 					const subscription = event.data.object as Stripe.Subscription
-					await syncFromSubscription(subscription.id, event.id, event.type)
+					await syncFromSubscription(subscription.id, event.id, event.type, {
+						allowEmail: true,
+						eventLivemode: event.livemode,
+					})
 				}
 				break
 			}
@@ -489,7 +502,10 @@ export async function handleStripeWebhook(req: Request) {
 							? invoice.subscription
 							: invoice.subscription?.id ?? null
 					if (subscriptionId) {
-						await syncFromSubscription(subscriptionId, event.id, event.type)
+						await syncFromSubscription(subscriptionId, event.id, event.type, {
+							allowEmail: true,
+							eventLivemode: event.livemode,
+						})
 					} else {
 						logProvisioningSkip(event, 'missing_subscription_id')
 					}

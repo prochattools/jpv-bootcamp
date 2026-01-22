@@ -43,6 +43,9 @@ model CustomerProvisioning {
   currentPlan          String?  @map("current_plan")
   status               String   @default("active")
   lastEventId          String?  @map("last_event_id")
+  lastNotifiedPlan     String?  @map("last_notified_plan")
+  lastNotifiedAt       DateTime? @map("last_notified_at")
+  lastNotifiedEventId  String?  @map("last_notified_event_id")
   createdAt            DateTime @default(now()) @map("created_at")
   updatedAt            DateTime @default(now()) @updatedAt @map("updated_at")
 

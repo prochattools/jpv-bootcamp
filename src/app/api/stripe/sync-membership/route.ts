@@ -100,6 +100,8 @@ async function handleSyncMembership(req: NextRequest): Promise<NextResponse> {
 	const adminToken = req.headers.get('x-jpv-admin-token')?.trim() ?? ''
 	const adminSecret = getAdminToken()
 	const adminAuthorized = adminToken && adminSecret ? safeEqual(adminToken, adminSecret) : false
+	const forceEmailHeader = req.headers.get('x-jpv-force-email')?.trim() ?? ''
+	const allowEmail = adminAuthorized && (forceEmailHeader === '1' || forceEmailHeader === 'true')
 
 	let tokenEmail: string | null = null
 	let authorizedByToken = false
@@ -207,11 +209,9 @@ async function handleSyncMembership(req: NextRequest): Promise<NextResponse> {
 		)
 	}
 
-	const summary = await syncFromSubscription(
-		stripeSubscriptionId,
-		null,
-		'manual_sync'
-	)
+	const summary = await syncFromSubscription(stripeSubscriptionId, null, 'manual_sync', {
+		allowEmail,
+	})
 
 	return NextResponse.json(
 		{
