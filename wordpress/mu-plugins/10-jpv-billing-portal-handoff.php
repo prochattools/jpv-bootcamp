@@ -150,12 +150,38 @@ function jpv_billing_portal_send_headers(
         nocache_headers();
     }
     $safe_target = str_replace(array("\r", "\n"), '', $target);
-    header('X-JPV-Handler: ' . $handler, true);
-    header('X-JPV-User: ' . ($logged_in ? 'logged_in' : 'logged_out'), true);
-    header('X-JPV-Secret: ' . ($has_secret ? 'present' : 'missing'), true);
-    header('X-JPV-Why: ' . $why, true);
-    header('X-JPV-Target: ' . substr($safe_target, 0, 120), true);
-    header('X-JPV-Path: ' . substr($path, 0, 120), true);
+    header('X-JPV-Billing-Handler: ' . $handler, true);
+    header('X-JPV-Billing-User: ' . ($logged_in ? 'logged_in' : 'logged_out'), true);
+    header('X-JPV-Billing-Secret: ' . ($has_secret ? 'present' : 'missing'), true);
+    header('X-JPV-Billing-Why: ' . $why, true);
+    header('X-JPV-Billing-Target: ' . substr($safe_target, 0, 120), true);
+    header('X-JPV-Billing-Path: ' . substr($path, 0, 120), true);
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0', true);
+    header('Pragma: no-cache', true);
+    header('Expires: 0', true);
+}
+
+function jpv_upgrade_send_headers(
+    string $handler,
+    string $path,
+    bool $logged_in,
+    bool $has_secret,
+    string $target,
+    string $why
+): void {
+    if (headers_sent()) {
+        return;
+    }
+    if (function_exists('nocache_headers')) {
+        nocache_headers();
+    }
+    $safe_target = str_replace(array("\r", "\n"), '', $target);
+    header('X-JPV-Upgrade-Handler: ' . $handler, true);
+    header('X-JPV-Upgrade-User: ' . ($logged_in ? 'logged_in' : 'logged_out'), true);
+    header('X-JPV-Upgrade-Secret: ' . ($has_secret ? 'present' : 'missing'), true);
+    header('X-JPV-Upgrade-Why: ' . $why, true);
+    header('X-JPV-Upgrade-Target: ' . substr($safe_target, 0, 120), true);
+    header('X-JPV-Upgrade-Path: ' . substr($path, 0, 120), true);
     header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0', true);
     header('Pragma: no-cache', true);
     header('Expires: 0', true);
@@ -225,7 +251,8 @@ function jpv_billing_portal_handle_redirect(
     string $handler,
     string $path,
     string $uri,
-    string $api_url
+    string $api_url,
+    callable $header_sender
 ): void {
     $logged_in = is_user_logged_in();
     $secret = get_billing_portal_hmac_secret();
@@ -236,7 +263,7 @@ function jpv_billing_portal_handle_redirect(
         $redirect_to = jpv_billing_portal_build_full_url($uri);
         $login_url = add_query_arg('redirect_to', $redirect_to, $login_url);
         jpv_billing_portal_log_redirect($handler, $path, $logged_in, $has_secret, 'not_logged_in');
-        jpv_billing_portal_send_headers($handler, $path, $logged_in, $has_secret, $login_url, 'not_logged_in');
+        $header_sender($handler, $path, $logged_in, $has_secret, $login_url, 'not_logged_in');
         wp_safe_redirect($login_url, 302);
         exit;
     }
@@ -245,7 +272,7 @@ function jpv_billing_portal_handle_redirect(
     $email = $user && isset($user->user_email) ? $user->user_email : '';
     if (!is_email($email)) {
         jpv_billing_portal_log_redirect($handler, $path, $logged_in, $has_secret, 'invalid_email');
-        jpv_billing_portal_send_headers($handler, $path, $logged_in, $has_secret, JPV_BILLING_PORTAL_FALLBACK_URL, 'invalid_email');
+        $header_sender($handler, $path, $logged_in, $has_secret, JPV_BILLING_PORTAL_FALLBACK_URL, 'invalid_email');
         wp_safe_redirect(JPV_BILLING_PORTAL_FALLBACK_URL, 302);
         exit;
     }
@@ -253,7 +280,7 @@ function jpv_billing_portal_handle_redirect(
     if (!$secret) {
         jpv_billing_portal_log_missing_secret_once();
         jpv_billing_portal_log_redirect($handler, $path, $logged_in, $has_secret, 'missing_secret');
-        jpv_billing_portal_send_headers($handler, $path, $logged_in, $has_secret, JPV_BILLING_PORTAL_FALLBACK_URL, 'missing_secret');
+        $header_sender($handler, $path, $logged_in, $has_secret, JPV_BILLING_PORTAL_FALLBACK_URL, 'missing_secret');
         wp_safe_redirect(JPV_BILLING_PORTAL_FALLBACK_URL, 302);
         exit;
     }
@@ -267,7 +294,7 @@ function jpv_billing_portal_handle_redirect(
     $target = add_query_arg('token', $token, $api_url);
 
     jpv_billing_portal_log_redirect($handler, $path, $logged_in, $has_secret, 'redirect');
-    jpv_billing_portal_send_headers($handler, $path, $logged_in, $has_secret, $target, 'redirect');
+    $header_sender($handler, $path, $logged_in, $has_secret, $target, 'redirect');
     wp_safe_redirect($target, 302);
     exit;
 }
@@ -287,7 +314,13 @@ function jpv_billing_portal_handle_go_endpoint(): void {
         return;
     }
 
-    jpv_billing_portal_handle_redirect('billing-portal', $path, $uri, JPV_BILLING_PORTAL_API_URL);
+    jpv_billing_portal_handle_redirect(
+        'billing-portal',
+        $path,
+        $uri,
+        JPV_BILLING_PORTAL_API_URL,
+        'jpv_billing_portal_send_headers'
+    );
 }
 add_action('init', 'jpv_billing_portal_handle_go_endpoint', 0);
 
@@ -306,6 +339,12 @@ function jpv_upgrade_vip_handle_go_endpoint(): void {
         return;
     }
 
-    jpv_billing_portal_handle_redirect('upgrade-vip', $path, $uri, JPV_UPGRADE_VIP_API_URL);
+    jpv_billing_portal_handle_redirect(
+        'upgrade-vip',
+        $path,
+        $uri,
+        JPV_UPGRADE_VIP_API_URL,
+        'jpv_upgrade_send_headers'
+    );
 }
 add_action('init', 'jpv_upgrade_vip_handle_go_endpoint', 0);

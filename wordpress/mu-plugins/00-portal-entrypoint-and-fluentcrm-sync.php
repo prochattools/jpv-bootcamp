@@ -17,6 +17,74 @@
 if (!defined('ABSPATH')) exit;
 
 /** ----------------------------
+ *  0) Portal lock (block WP theme everywhere except allowlist)
+ *  ---------------------------- */
+
+function jpv_portal_lock_send_headers(string $why): void {
+    if (headers_sent()) {
+        return;
+    }
+    header('X-JPV-Portal-Lock: blocked', true);
+    header('X-JPV-Portal-Why: ' . $why, true);
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0', true);
+    header('Pragma: no-cache', true);
+    header('Expires: 0', true);
+}
+
+function jpv_portal_path_starts_with(string $path, string $prefix): bool {
+    return strncmp($path, $prefix, strlen($prefix)) === 0;
+}
+
+function jpv_portal_is_allowed_path(string $path): bool {
+    if ($path === '/wp-login.php') return true;
+    if ($path === '/wp-cron.php') return true;
+    if ($path === '/wp-admin/admin-ajax.php') return true;
+    if ($path === '/favicon.ico' || $path === '/robots.txt') return true;
+
+    if (jpv_portal_path_starts_with($path, '/wp-json')) return true;
+    if (jpv_portal_path_starts_with($path, '/community')) return true;
+    if (jpv_portal_path_starts_with($path, '/go/billing-portal')) return true;
+    if (jpv_portal_path_starts_with($path, '/go/upgrade-vip')) return true;
+    if (jpv_portal_path_starts_with($path, '/wp-content')) return true;
+    if (jpv_portal_path_starts_with($path, '/wp-includes')) return true;
+
+    if (jpv_portal_path_starts_with($path, '/wp-admin')) {
+        return current_user_can('manage_options');
+    }
+
+    return false;
+}
+
+function jpv_portal_lockdown(): void {
+    if (defined('WP_CLI') && WP_CLI) {
+        return;
+    }
+
+    $uri = $_SERVER['REQUEST_URI'] ?? '';
+    if ($uri === '') {
+        return;
+    }
+
+    $path = wp_parse_url($uri, PHP_URL_PATH);
+    if (!$path) {
+        return;
+    }
+
+    if (jpv_portal_is_allowed_path($path)) {
+        return;
+    }
+
+    $target = is_user_logged_in()
+        ? site_url('/community/')
+        : site_url('/community/?fcom_action=auth');
+
+    jpv_portal_lock_send_headers('route_blocked');
+    wp_safe_redirect($target, 302);
+    exit;
+}
+add_action('init', 'jpv_portal_lockdown', 0);
+
+/** ----------------------------
  *  1) Portal routing / redirects
  *  ---------------------------- */
 

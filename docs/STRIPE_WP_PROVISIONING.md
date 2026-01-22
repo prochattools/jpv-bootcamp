@@ -139,6 +139,28 @@ Next.js creates the Stripe Billing Portal session and redirects the browser to S
 On login and on community page load, WordPress calls `/api/entitlements` with a billing token
 and updates `jpv_membership_level` if it differs. The existing FluentCRM hooks then sync tags.
 
+## Portal routing lock + /go 404 troubleshooting
+
+If `/go/upgrade-vip` returns 404 without any `X-JPV-*` headers, the request is likely not reaching
+WordPress (nginx/CloudPanel routing). The portal vhost must include:
+
+```
+try_files $uri $uri/ /index.php?$args;
+```
+
+Use the smoke script to verify redirects and headers:
+
+```bash
+BASE_URL=https://portal.jpvbootcamp.com scripts/smoke-portal.sh
+```
+
+## Stripe Billing Portal settings
+
+In Stripe Dashboard → **Settings → Billing → Customer portal**:
+- Enable **Subscription management**.
+- Allow customers to **switch plans** between Pro and VIP.
+- Ensure **proration** is enabled (Stripe-managed).
+
 ### Secret rotation
 
 If the secret is exposed, rotate it on both sides at the same time:

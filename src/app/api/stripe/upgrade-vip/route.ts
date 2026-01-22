@@ -34,10 +34,17 @@ function extractBearerToken(req: NextRequest): string | null {
 	return null
 }
 
-function buildReturnUrl(status: 'success' | 'error'): string {
+function sanitizeWhy(value: string): string {
+	return value.replace(/[^a-z0-9_-]/gi, '').slice(0, 40) || 'error'
+}
+
+function buildReturnUrl(status: 'success' | 'error', why?: string): string {
 	try {
 		const url = new URL(BILLING_PORTAL_RETURN_URL)
 		url.searchParams.set('jpv_upgrade', status)
+		if (status === 'error') {
+			url.searchParams.set('why', sanitizeWhy(why ?? 'error'))
+		}
 		return url.toString()
 	} catch {
 		return BILLING_PORTAL_RETURN_URL
@@ -74,7 +81,7 @@ async function handleUpgradeVip(req: NextRequest): Promise<NextResponse> {
 	const tokenSecret = (process.env.BILLING_PORTAL_HMAC_SECRET || '').trim()
 	if (!tokenSecret) {
 		console.error('BILLING_PORTAL_HMAC_SECRET missing')
-		return NextResponse.redirect(buildReturnUrl('error'), 302)
+		return NextResponse.redirect(buildReturnUrl('error', 'missing_secret'), 302)
 	}
 
 	const headerToken = extractBearerToken(req)
@@ -82,17 +89,17 @@ async function handleUpgradeVip(req: NextRequest): Promise<NextResponse> {
 	let token = headerToken || (queryToken ? queryToken.trim() : null)
 
 	if (!token) {
-		return NextResponse.redirect(buildReturnUrl('error'), 302)
+		return NextResponse.redirect(buildReturnUrl('error', 'missing_token'), 302)
 	}
 
 	const verification = verifyBillingPortalToken(token, tokenSecret)
 	if (verification.ok === false) {
-		return NextResponse.redirect(buildReturnUrl('error'), 302)
+		return NextResponse.redirect(buildReturnUrl('error', 'invalid_token'), 302)
 	}
 
 	const email = normalizeEmail(verification.payload.email)
 	if (!email) {
-		return NextResponse.redirect(buildReturnUrl('error'), 302)
+		return NextResponse.redirect(buildReturnUrl('error', 'missing_email'), 302)
 	}
 
 	const emailDomain = extractEmailDomain(email)
@@ -108,7 +115,7 @@ async function handleUpgradeVip(req: NextRequest): Promise<NextResponse> {
 
 		if (!stripeCustomerId) {
 			console.warn('VIP upgrade: customer not found', { emailDomain })
-			return NextResponse.redirect(buildReturnUrl('error'), 302)
+			return NextResponse.redirect(buildReturnUrl('error', 'customer_not_found'), 302)
 		}
 
 		// Stripe Billing Portal is the source of truth for upgrades + proration.
@@ -118,7 +125,7 @@ async function handleUpgradeVip(req: NextRequest): Promise<NextResponse> {
 		})
 
 		if (!session.url) {
-			return NextResponse.redirect(buildReturnUrl('error'), 302)
+			return NextResponse.redirect(buildReturnUrl('error', 'portal_unavailable'), 302)
 		}
 
 		return NextResponse.redirect(session.url, 302)
@@ -127,7 +134,7 @@ async function handleUpgradeVip(req: NextRequest): Promise<NextResponse> {
 			emailDomain,
 			reason: (error as Error).message || 'unknown_error',
 		})
-		return NextResponse.redirect(buildReturnUrl('error'), 302)
+		return NextResponse.redirect(buildReturnUrl('error', 'upgrade_failed'), 302)
 	}
 }
 
