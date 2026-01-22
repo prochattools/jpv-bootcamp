@@ -15,10 +15,10 @@ function getPlanByPriceId(): Record<string, Plan> {
 	if (cachedPlanByPriceId) {
 		return cachedPlanByPriceId
 	}
-	const { stripe } = getStripeConfig()
+	const { pricePro, priceVip } = getStripeConfig()
 	cachedPlanByPriceId = {
-		[stripe.pricePro]: 'pro',
-		[stripe.priceVip]: 'vip',
+		[pricePro]: 'pro',
+		[priceVip]: 'vip',
 	}
 	return cachedPlanByPriceId
 }
