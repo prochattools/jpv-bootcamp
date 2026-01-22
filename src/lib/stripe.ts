@@ -1,7 +1,7 @@
 import 'server-only'
 import Stripe from 'stripe'
 
-import { getStripeConfig } from '@/lib/config'
+import { getStripeConfig } from '@/lib/stripe-config'
 
 let cachedStripe: Stripe | null = null
 

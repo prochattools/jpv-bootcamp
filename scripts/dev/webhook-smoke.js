@@ -27,11 +27,13 @@ const baseUrl =
   'http://localhost:3000'
 const webhookPath = process.env.WEBHOOK_PATH || '/api/webhook/stripe'
 
-const secretKey = process.env.STRIPE_SECRET_KEY
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
+const stripeEnv = (process.env.STRIPE_ENV || 'test').trim().toLowerCase()
+const envSuffix = stripeEnv === 'live' ? 'LIVE' : 'TEST'
+const secretKey = process.env[`STRIPE_SECRET_KEY_${envSuffix}`]
+const webhookSecret = process.env[`STRIPE_WEBHOOK_SECRET_${envSuffix}`]
 
 if (!secretKey || !webhookSecret) {
-  console.error('[webhook-smoke] missing STRIPE_SECRET_KEY or STRIPE_WEBHOOK_SECRET')
+  console.error('[webhook-smoke] missing Stripe keys for STRIPE_ENV')
   process.exit(1)
 }
 
@@ -51,7 +53,7 @@ const payload = {
       id: `cs_smoke_${Date.now()}`,
       object: 'checkout.session',
       mode: 'subscription',
-      customer: 'cus_smoke_123',
+      customer: 'customer_smoke_123',
       customer_email: 'smoke@example.com',
     },
   },

@@ -73,8 +73,8 @@ DATABASE_URL="postgresql://username:password@localhost:5432/database_name"
 ### Authentication (Clerk)
 
 ```
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="pk_test_..."
-CLERK_SECRET_KEY="sk_test_..."
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="pk_testkey"
+CLERK_SECRET_KEY="sk_testkey"
 ```
 
 - **Source**: Clerk Dashboard → API Keys
@@ -83,9 +83,17 @@ CLERK_SECRET_KEY="sk_test_..."
 ### Payment Processing (Stripe)
 
 ```
-STRIPE_SECRET_KEY="sk_test_..."
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY="pk_test_..."
-STRIPE_WEBHOOK_SECRET="whsec_..."
+STRIPE_ENV="test"
+STRIPE_SECRET_KEY_TEST="sk_testkey"
+STRIPE_SECRET_KEY_LIVE="sk_livekey"
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_TEST="pk_testkey"
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_LIVE="pk_livekey"
+STRIPE_WEBHOOK_SECRET_TEST="whsecKey"
+STRIPE_WEBHOOK_SECRET_LIVE="whsecKey"
+STRIPE_PRICE_PRO_TEST="proPriceId"
+STRIPE_PRICE_VIP_TEST="vipPriceId"
+STRIPE_PRICE_PRO_LIVE="proPriceId"
+STRIPE_PRICE_VIP_LIVE="vipPriceId"
 ```
 
 - **Source**: Stripe Dashboard → Developers → API Keys
@@ -166,7 +174,7 @@ The webhook handler is located at `src/app/api/webhook/stripe/route.ts`
 **Setup Instructions:**
 
 1. Configure webhook endpoint in Stripe Dashboard: `https://jpvbootcamp.com/api/webhook/stripe`
-2. Set `STRIPE_WEBHOOK_SECRET` environment variable
+2. Set `STRIPE_WEBHOOK_SECRET_TEST` / `STRIPE_WEBHOOK_SECRET_LIVE` plus `STRIPE_ENV`
 3. Set `PROVISIONING_ENABLED=true` plus WP/Resend env vars to enable provisioning
 4. Webhook automatically updates user subscription status in database
 5. Sends confirmation emails via Resend
@@ -181,8 +189,8 @@ stripe: {
     {
       type: 'subscription', // or 'one-time'
       title: 'Product Name',
-      productId: 'prod_...',
-      priceId: 'price_...',
+      productId: 'product-id',
+      priceId: 'price-id',
       price: 25,
       features: [...]
     }

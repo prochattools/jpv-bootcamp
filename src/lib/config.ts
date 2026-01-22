@@ -1,5 +1,7 @@
 import 'server-only'
 
+import { getStripeConfig as getStripeModeConfig } from '@/lib/stripe-config'
+
 type EnvKey = keyof NodeJS.ProcessEnv
 
 function getEnv(key: EnvKey): string | undefined {
@@ -145,8 +147,6 @@ export type OpsConfig = {
 	idempotencyTtlHours: number
 }
 
-let cachedStripeWebhookSecret: string | null = null
-let cachedStripeWebhookSecrets: string[] | null = null
 let cachedStripeConfig: StripeConfig | null = null
 let cachedOpsConfig: OpsConfig | null = null
 let cachedServerConfig: ServerConfig | null = null
@@ -157,14 +157,7 @@ export function getStripeConfig(): StripeConfig {
 	if (cachedStripeConfig) return cachedStripeConfig
 
 	const appUrl = requireUrlEnvAny(['APP_PUBLIC_URL', 'NEXT_PUBLIC_APP_URL'], 'APP_PUBLIC_URL')
-	const stripePricePro = requireEnvAny(
-		['STRIPE_PRICE_PRO', 'NEXT_PUBLIC_STRIPE_PRICE_PRO'],
-		'STRIPE_PRICE_PRO'
-	)
-	const stripePriceVip = requireEnvAny(
-		['STRIPE_PRICE_VIP', 'NEXT_PUBLIC_STRIPE_PRICE_VIP'],
-		'STRIPE_PRICE_VIP'
-	)
+	const stripeConfig = getStripeModeConfig()
 	const successUrl = normalizeStripeSuccessUrl(
 		getEnvOrDefault('STRIPE_SUCCESS_URL', DEFAULT_STRIPE_SUCCESS_PATH),
 		appUrl
@@ -174,43 +167,15 @@ export function getStripeConfig(): StripeConfig {
 	cachedStripeConfig = {
 		app: { url: appUrl },
 		stripe: {
-			secretKey: requireEnv('STRIPE_SECRET_KEY'),
-			pricePro: stripePricePro,
-			priceVip: stripePriceVip,
+			secretKey: stripeConfig.secretKey,
+			pricePro: stripeConfig.pricePro,
+			priceVip: stripeConfig.priceVip,
 			successUrl,
 			cancelUrl,
 		},
 	}
 
 	return cachedStripeConfig
-}
-
-export function getStripeWebhookSecret(): string {
-	if (cachedStripeWebhookSecret) return cachedStripeWebhookSecret
-	const secrets = getStripeWebhookSecrets()
-	if (secrets.length > 0) {
-		cachedStripeWebhookSecret = secrets[0]
-		return cachedStripeWebhookSecret
-	}
-	cachedStripeWebhookSecret = requireEnv('STRIPE_WEBHOOK_SECRET')
-	return cachedStripeWebhookSecret
-}
-
-export function getStripeWebhookSecrets(): string[] {
-	if (cachedStripeWebhookSecrets) return cachedStripeWebhookSecrets
-
-	const multi = getEnv('STRIPE_WEBHOOK_SECRETS')
-	if (multi) {
-		cachedStripeWebhookSecrets = multi
-			.split(',')
-			.map((value) => value.trim())
-			.filter(Boolean)
-		return cachedStripeWebhookSecrets
-	}
-
-	const single = getEnv('STRIPE_WEBHOOK_SECRET')
-	cachedStripeWebhookSecrets = single && single.trim().length > 0 ? [single.trim()] : []
-	return cachedStripeWebhookSecrets
 }
 
 export function getOpsConfig(): OpsConfig {
@@ -239,14 +204,7 @@ export function getServerConfig(): ServerConfig {
 	}
 
 	const appUrl = requireUrlEnvAny(['APP_PUBLIC_URL', 'NEXT_PUBLIC_APP_URL'], 'APP_PUBLIC_URL')
-	const stripePricePro = requireEnvAny(
-		['STRIPE_PRICE_PRO', 'NEXT_PUBLIC_STRIPE_PRICE_PRO'],
-		'STRIPE_PRICE_PRO'
-	)
-	const stripePriceVip = requireEnvAny(
-		['STRIPE_PRICE_VIP', 'NEXT_PUBLIC_STRIPE_PRICE_VIP'],
-		'STRIPE_PRICE_VIP'
-	)
+	const stripeConfig = getStripeModeConfig()
 	const portalUrl = requireUrlEnvAny(['PORTAL_URL', 'PORTAL_LOGIN_URL'], 'PORTAL_URL')
 	const resendFrom = getEnv('RESEND_FROM')
 	const wpEnabled = getEnvBoolean(
@@ -266,9 +224,9 @@ export function getServerConfig(): ServerConfig {
 	cachedServerConfig = {
 		app: { url: appUrl },
 		stripe: {
-			secretKey: requireEnv('STRIPE_SECRET_KEY'),
-			pricePro: stripePricePro,
-			priceVip: stripePriceVip,
+			secretKey: stripeConfig.secretKey,
+			pricePro: stripeConfig.pricePro,
+			priceVip: stripeConfig.priceVip,
 			successUrl: normalizeStripeSuccessUrl(
 				getEnvOrDefault('STRIPE_SUCCESS_URL', DEFAULT_STRIPE_SUCCESS_PATH),
 				appUrl
@@ -276,7 +234,7 @@ export function getServerConfig(): ServerConfig {
 			cancelUrl: getEnvOrDefault('STRIPE_CANCEL_URL', '/'),
 		},
 		stripeWebhook: {
-			secret: requireEnv('STRIPE_WEBHOOK_SECRET'),
+			secret: stripeConfig.webhookSecret,
 		},
 		wp: wpConfig,
 		email: {

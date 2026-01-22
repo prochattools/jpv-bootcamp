@@ -18,13 +18,21 @@ npm install stripe@16.0.0 @stripe/stripe-js@4.7.0
 
 ```bash
 # Required for server-side operations
-STRIPE_SECRET_KEY="sk_test_..." # or sk_live_... for production
+STRIPE_ENV="test"
+STRIPE_SECRET_KEY_TEST="sk_testkey"
+STRIPE_SECRET_KEY_LIVE="sk_livekey"
 
 # Required for client-side operations
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY="pk_test_..." # or pk_live_... for production
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_TEST="pk_testkey"
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_LIVE="pk_livekey"
 
 # Required for webhook verification
-STRIPE_WEBHOOK_SECRET="whsec_..."
+STRIPE_WEBHOOK_SECRET_TEST="whsecKey"
+STRIPE_WEBHOOK_SECRET_LIVE="whsecKey"
+STRIPE_PRICE_PRO_TEST="proPriceId"
+STRIPE_PRICE_VIP_TEST="vipPriceId"
+STRIPE_PRICE_PRO_LIVE="proPriceId"
+STRIPE_PRICE_VIP_LIVE="vipPriceId"
 ```
 
 ## Stripe CLI Setup and Usage
@@ -54,9 +62,8 @@ stripe login
 # Forward webhooks to local development server
 stripe listen --forward-to localhost:3000/api/webhook/stripe
 
-# This will output a webhook signing secret like:
-# Ready! Your webhook signing secret is whsec_1234567890abcdef...
-# Copy this to your .env.local as STRIPE_WEBHOOK_SECRET
+# This will output a webhook signing secret value.
+# Copy it to your .env.local as STRIPE_WEBHOOK_SECRET_TEST (or _LIVE) and set STRIPE_ENV.
 ```
 
 ### Testing Webhooks
@@ -150,13 +157,13 @@ const event = stripe.webhooks.constructEvent(
 model Subscription {
   id                 String             @id @default(uuid())
   user_email         String             @unique
-  sub_status         SubscriptionStatus @default(inactive)
-  sub_type           String
+  subscription_status SubscriptionStatus @default(inactive)
+  subscription_type   String
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
   last_stripe_cs_id  String             @unique
   stripe_customer_id String             @unique
-  sub_stripe_id      String?
+  subscription_stripe_id String?
   user_clerk_id      String             @unique
 }
 ```
@@ -220,7 +227,7 @@ const handlePurchase = async (priceId: string) => {
 }
 
 // Update the button to call the function
-;<button onClick={() => handlePurchase('price_1234567890')} disabled={loading}>
+;<button onClick={() => handlePurchase('price-id-1234567890')} disabled={loading}>
 	Get MicroSaaSFast
 </button>
 ```
@@ -258,16 +265,16 @@ stripe: {
     {
       type: 'one-time',
       title: 'Starter',
-      productId: 'prod_starter',
-      priceId: 'price_starter_207', // Replace with actual Stripe price ID
+      productId: 'product-id-starter',
+      priceId: 'price-id-starter', // Replace with actual Stripe price ID
       price: 207,
       features: [...]
     },
     {
       type: 'one-time',
       title: 'Full package',
-      productId: 'prod_full',
-      priceId: 'price_full_247', // Replace with actual Stripe price ID
+      productId: 'product-id-full',
+      priceId: 'price-id-full', // Replace with actual Stripe price ID
       price: 247,
       features: [...]
     }
@@ -295,13 +302,13 @@ stripe: {
    - `checkout.session.expired`
    - `customer.subscription.updated`
    - `invoice.payment_failed`
-4. Copy webhook signing secret to `STRIPE_WEBHOOK_SECRET`
+4. Copy webhook signing secret to `STRIPE_WEBHOOK_SECRET_TEST` (or `_LIVE`) and set `STRIPE_ENV`
 5. Set `PROVISIONING_ENABLED=true` plus WP/Resend env vars to enable provisioning
 
 ### 3. Test Mode vs Live Mode
 
-- **Test Mode**: Use `sk_test_` and `pk_test_` keys
-- **Live Mode**: Use `sk_live_` and `pk_live_` keys
+- **Test Mode**: Use test-mode keys that match `STRIPE_ENV=test`
+- **Live Mode**: Use live-mode keys that match `STRIPE_ENV=live`
 - **Test Cards**: Use Stripe's test card numbers (e.g., 4242 4242 4242 4242)
 
 ## Error Handling
@@ -310,7 +317,7 @@ stripe: {
 
 #### 1. Webhook Signature Verification Failed
 
-- Check `STRIPE_WEBHOOK_SECRET` is correct
+- Check `STRIPE_WEBHOOK_SECRET_TEST` / `STRIPE_WEBHOOK_SECRET_LIVE` is correct for `STRIPE_ENV`
 - Ensure webhook endpoint URL matches Stripe dashboard
 - Verify request body isn't modified
 

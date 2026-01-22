@@ -9,7 +9,7 @@
 stripe listen --forward-to localhost:3000/api/webhook/stripe
 ```
 
-Copy the `whsec_...` value into `STRIPE_WEBHOOK_SECRET`.
+Copy the webhook secret value into `STRIPE_WEBHOOK_SECRET_TEST` (or `_LIVE`) and set `STRIPE_ENV`.
 
 ## Trigger test events
 ```bash
@@ -21,10 +21,11 @@ stripe trigger invoice.payment_failed
 
 ## Required env vars (minimum)
 - `APP_PUBLIC_URL` (or `NEXT_PUBLIC_APP_URL`)
-- `STRIPE_SECRET_KEY`
-- `STRIPE_WEBHOOK_SECRET` (single) or `STRIPE_WEBHOOK_SECRETS` (comma-separated)
-- `STRIPE_PRICE_PRO` (or `NEXT_PUBLIC_STRIPE_PRICE_PRO`)
-- `STRIPE_PRICE_VIP` (or `NEXT_PUBLIC_STRIPE_PRICE_VIP`)
+- `STRIPE_ENV`
+- `STRIPE_SECRET_KEY_TEST` / `STRIPE_SECRET_KEY_LIVE`
+- `STRIPE_WEBHOOK_SECRET_TEST` / `STRIPE_WEBHOOK_SECRET_LIVE` (comma-separated allowed for rotation)
+- `STRIPE_PRICE_PRO_TEST` / `STRIPE_PRICE_PRO_LIVE`
+- `STRIPE_PRICE_VIP_TEST` / `STRIPE_PRICE_VIP_LIVE`
 - `WEBHOOK_IDEMPOTENCY_TTL_HOURS`
 
 ## Provisioning env vars (required to provision in production)
@@ -40,9 +41,9 @@ stripe trigger invoice.payment_failed
 
 Note: In development, missing provisioning env vars will skip WordPress provisioning but still return 2xx to Stripe after idempotency is recorded.
 
-Recommendation: keep only one webhook destination per mode. Use `STRIPE_WEBHOOK_SECRETS`
-temporarily during secret rotation or when multiple webhook destinations are in-flight.
+Recommendation: keep only one webhook destination per mode. During secret rotation,
+you can provide multiple secrets in the same `STRIPE_WEBHOOK_SECRET_TEST`/`_LIVE` value.
 
 Verification uses raw bytes via `arrayBuffer()`. If intermittent signature failures occur,
-suspect multiple running containers with mismatched `STRIPE_WEBHOOK_SECRET` values—deploy
+suspect multiple running containers with mismatched webhook secret values—deploy
 to a single replica or ensure all instances share the same secret(s).

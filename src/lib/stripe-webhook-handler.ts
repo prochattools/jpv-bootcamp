@@ -3,13 +3,15 @@ import 'server-only'
 import { createHash } from 'node:crypto'
 import { NextResponse } from 'next/server'
 import type Stripe from 'stripe'
-import { getServerConfig, getStripeWebhookSecrets } from '@/lib/config'
+import { getServerConfig } from '@/lib/config'
+import { getStripeConfig, getStripeWebhookSecrets } from '@/lib/stripe-config'
 import { hasProcessed, markProcessed } from '@/lib/idempotency'
 import { logProvisioningDecision, provisionFromCheckoutSession, syncFromSubscription } from '@/lib/provisioning'
 import { getStripe } from '@/lib/stripe'
 
 const PROVISIONING_EVENT_TYPES = new Set([
 	'checkout.session.completed',
+	'customer.subscription.created',
 	'customer.subscription.updated',
 	'customer.subscription.deleted',
 	'invoice.paid',
@@ -147,6 +149,7 @@ function logProvisioningSkip(event: Stripe.Event, reason: string) {
 				typeof session.metadata?.plan === 'string' ? session.metadata.plan : null
 			break
 		}
+		case 'customer.subscription.created':
 		case 'customer.subscription.updated':
 		case 'customer.subscription.deleted': {
 			const subscription = event.data.object as Stripe.Subscription
@@ -194,6 +197,19 @@ export async function handleStripeWebhook(req: Request) {
 	const signature = req.headers.get('stripe-signature')
 	const rawBody = await req.arrayBuffer()
 	const rawBuffer = Buffer.from(rawBody)
+	let stripeConfig
+	try {
+		stripeConfig = getStripeConfig()
+	} catch (error) {
+		console.error('Stripe webhook config missing', {
+			message: (error as Error).message,
+		})
+		return NextResponse.json(
+			{ error: 'Stripe webhook configuration missing.' },
+			{ status: 500 }
+		)
+	}
+
 	const webhookSecrets = getStripeWebhookSecrets()
 	const webhookSecretFingerprints = webhookSecrets.map(getSecretFingerprint)
 	const buildId = getBuildId()
@@ -326,6 +342,39 @@ export async function handleStripeWebhook(req: Request) {
 		)
 	}
 
+	const expectedLivemode = stripeConfig.env === 'live'
+	if (event.livemode !== expectedLivemode) {
+		const idempotencyResult = await markProcessed({
+			eventId: event.id,
+			eventType: event.type,
+			livemode: event.livemode,
+			payload: event as unknown as Record<string, unknown>,
+		})
+		if (idempotencyResult.dbAttempted && !idempotencyResult.dbSuccess) {
+			console.warn('Stripe webhook idempotency write failed', {
+				table: 'tenant_jpvbootcamp.stripe_webhook_events',
+				keys: { eventId: event.id, type: event.type },
+				message: idempotencyResult.error,
+			})
+		}
+
+		logWebhookEvent({
+			eventId: event.id,
+			type: event.type,
+			verified: true,
+			outcome: 'skipped',
+			reason: 'livemode_mismatch',
+			meta: {
+				path: debugInfo.path,
+				buildId,
+				expectedEnv: stripeConfig.env,
+				eventLivemode: event.livemode,
+			},
+			debugInfo,
+		})
+		return NextResponse.json({ received: true, skipped: 'livemode_mismatch' })
+	}
+
 	if (SKIP_PREDEV) {
 		logWebhookEvent({
 			eventId: event.id,
@@ -408,6 +457,13 @@ export async function handleStripeWebhook(req: Request) {
 				if (provisioningEnabled) {
 					const session = event.data.object as Stripe.Checkout.Session
 					await provisionFromCheckoutSession(session, event.id, event.type)
+				}
+				break
+			}
+			case 'customer.subscription.created': {
+				if (provisioningEnabled) {
+					const subscription = event.data.object as Stripe.Subscription
+					await syncFromSubscription(subscription.id, event.id, event.type)
 				}
 				break
 			}

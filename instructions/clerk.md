@@ -18,10 +18,10 @@ npm install @clerk/nextjs@5.7.1
 
 ```bash
 # Required for client-side operations
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="pk_test_..."
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="pk_testkey"
 
 # Required for server-side operations
-CLERK_SECRET_KEY="sk_test_..."
+CLERK_SECRET_KEY="sk_testkey"
 
 # Optional: Custom domain for authentication pages
 NEXT_PUBLIC_CLERK_SIGN_IN_URL="/sign-in"
@@ -364,8 +364,8 @@ export default async function Dashboard() {
 		redirect('/sign-in')
 	}
 
-	const sub = await getSubscriptionByUserId(userId)
-	const isInactive = sub ? sub?.sub_status !== 'active' : true
+	const subscription = await getSubscriptionByUserId(userId)
+	const isInactive = subscription ? subscription?.subscription_status !== 'active' : true
 
 	if (isInactive) {
 		redirect('/processing-page')

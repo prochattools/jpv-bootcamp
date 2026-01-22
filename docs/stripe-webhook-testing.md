@@ -34,27 +34,31 @@ scripts/stripe/webhook_local_test.sh
 ```
 
 Required env vars for local test:
-- `STRIPE_SECRET_KEY`
+- `STRIPE_ENV`
+- `STRIPE_SECRET_KEY_TEST` / `STRIPE_SECRET_KEY_LIVE`
+- `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_TEST` / `_LIVE`
+- `STRIPE_PRICE_PRO_TEST` / `_LIVE`
+- `STRIPE_PRICE_VIP_TEST` / `_LIVE`
+- `STRIPE_WEBHOOK_SECRET_TEST` / `_LIVE`
 - `APP_PUBLIC_URL` (or `NEXT_PUBLIC_APP_URL`)
-- `STRIPE_WEBHOOK_SECRET` (single) or `STRIPE_WEBHOOK_SECRETS` (comma-separated)
 
 To enable provisioning, also set:
 - `PROVISIONING_ENABLED=true`
 - `WP_BASE_URL`, `WP_PROVISION_ENDPOINT`, `WP_PROVISION_TOKEN`
 
-Recommendation: keep one webhook destination per mode. Use `STRIPE_WEBHOOK_SECRETS`
-temporarily during secret rotation or when multiple destinations are active.
+Recommendation: keep one webhook destination per mode. If you need rotation,
+set multiple secrets in `STRIPE_WEBHOOK_SECRET_TEST` or `STRIPE_WEBHOOK_SECRET_LIVE`.
 
-### Production smoke test
+### Live smoke test
 ```bash
-scripts/stripe/webhook_prod_test.sh
+scripts/stripe/webhook_live_test.sh
 ```
 
 Optional signed test (requires live destination secret):
 ```bash
-PROD_STRIPE_WEBHOOK_SECRET=whsec_live_... \
-PROD_STRIPE_SECRET_KEY=sk_live_... \
-scripts/stripe/webhook_prod_test.sh
+STRIPE_WEBHOOK_SECRET_LIVE=webhookSecretValue \
+STRIPE_SECRET_KEY_LIVE=sk_livekey \
+scripts/stripe/webhook_live_test.sh
 ```
 
 ### Run everything

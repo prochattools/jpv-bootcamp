@@ -28,8 +28,10 @@ const baseUrl =
 const webhookPath = process.env.WEBHOOK_PATH || '/api/webhook/stripe'
 const webhookUrl = `${baseUrl.replace(/\/$/, '')}${webhookPath}`
 
-const stripeSecretKey = process.env.STRIPE_SECRET_KEY
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
+const stripeEnv = (process.env.STRIPE_ENV || 'test').trim().toLowerCase()
+const envSuffix = stripeEnv === 'live' ? 'LIVE' : 'TEST'
+const stripeSecretKey = process.env[`STRIPE_SECRET_KEY_${envSuffix}`]
+const webhookSecret = process.env[`STRIPE_WEBHOOK_SECRET_${envSuffix}`]
 
 const hasStripeCli = (() => {
   try {
@@ -45,9 +47,10 @@ console.log('[webhook-diagnostics] webhookPath:', webhookPath)
 console.log('[webhook-diagnostics] webhookUrl:', webhookUrl)
 console.log('[webhook-diagnostics] NODE_ENV:', process.env.NODE_ENV || 'unset')
 console.log('[webhook-diagnostics] DEBUG_STRIPE_WEBHOOKS:', process.env.DEBUG_STRIPE_WEBHOOKS || 'unset')
-console.log('[webhook-diagnostics] STRIPE_SECRET_KEY present:', Boolean(stripeSecretKey))
+console.log('[webhook-diagnostics] STRIPE_ENV:', stripeEnv)
+console.log('[webhook-diagnostics] Stripe secret key present:', Boolean(stripeSecretKey))
 console.log(
-  '[webhook-diagnostics] STRIPE_WEBHOOK_SECRET prefix:',
+  '[webhook-diagnostics] Stripe webhook secret prefix:',
   webhookSecret ? webhookSecret.slice(0, 6) : 'unset'
 )
 console.log('[webhook-diagnostics] stripe CLI available:', hasStripeCli)

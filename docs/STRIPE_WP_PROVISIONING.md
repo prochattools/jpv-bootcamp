@@ -16,10 +16,17 @@ This document describes the paid subscription provisioning flow and how to test 
 APP_PUBLIC_URL=
 
 # Stripe
-STRIPE_SECRET_KEY=
-STRIPE_WEBHOOK_SECRET=
-STRIPE_PRICE_PRO=
-STRIPE_PRICE_VIP=
+STRIPE_ENV=test
+STRIPE_SECRET_KEY_TEST=
+STRIPE_SECRET_KEY_LIVE=
+STRIPE_WEBHOOK_SECRET_TEST=
+STRIPE_WEBHOOK_SECRET_LIVE=
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_TEST=
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_LIVE=
+STRIPE_PRICE_PRO_TEST=
+STRIPE_PRICE_VIP_TEST=
+STRIPE_PRICE_PRO_LIVE=
+STRIPE_PRICE_VIP_LIVE=
 STRIPE_SUCCESS_URL=https://jpvbootcamp.com/thank-you?session_id={CHECKOUT_SESSION_ID}
 STRIPE_CANCEL_URL=https://jpvbootcamp.com/
 
@@ -202,7 +209,7 @@ If you need a quick local check that Prisma generates a UUID for `customer_provi
 run this against a dev database:
 
 ```bash
-node -e "const {PrismaClient}=require('@prisma/client');const prisma=new PrismaClient();prisma.customerProvisioning.create({data:{email:'test+uuid@example.com',stripeCustomerId:'cus_test_uuid',status:'active',currentPlan:'pro'}}).then(r=>{console.log('ok',r.id)}).catch(e=>{console.error(e.message)}).finally(()=>prisma.$disconnect())"
+node -e "const {PrismaClient}=require('@prisma/client');const prisma=new PrismaClient();prisma.customerProvisioning.create({data:{email:'test+uuid@example.com',stripeCustomerId:'customer_test_uuid',status:'active',currentPlan:'pro'}}).then(r=>{console.log('ok',r.id)}).catch(e=>{console.error(e.message)}).finally(()=>prisma.$disconnect())"
 ```
 
 This should print a UUID and will not require an explicit `id` in the data payload.

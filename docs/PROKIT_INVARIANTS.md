@@ -15,10 +15,11 @@ This file captures the contracts that must stay stable while rebranding the boil
   - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY` – turn on Clerk middleware + components.  
   - `NEXT_PUBLIC_CLERK_SIGN_IN_URL`, `NEXT_PUBLIC_CLERK_SIGN_UP_URL`, `NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL`, `NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL` – optional route overrides.
 - Billing (Stripe)  
-  - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` – client checkout.  
-  - `STRIPE_SECRET_KEY` – server Stripe client.  
-  - `STRIPE_WEBHOOK_SECRET` – webhook signature verification.  
-  - Pricing/plan IDs live in `src/config.ts` and are treated as the source of truth.
+  - `STRIPE_ENV` – selects test vs live mode.  
+  - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_TEST` / `_LIVE` – client checkout.  
+  - `STRIPE_SECRET_KEY_TEST` / `_LIVE` – server Stripe client.  
+  - `STRIPE_WEBHOOK_SECRET_TEST` / `_LIVE` – webhook signature verification.  
+  - `STRIPE_PRICE_PRO_TEST` / `_LIVE`, `STRIPE_PRICE_VIP_TEST` / `_LIVE` – pricing ids.
 - Email (Resend)  
   - `RESEND_API_KEY` – used by `resendService` for waiting list + thank-you emails.
 - Automation (Make)  
@@ -56,18 +57,18 @@ This file captures the contracts that must stay stable while rebranding the boil
 ## Critical Flows (behavior to preserve)
 - **Signup → workspace → dashboard**  
   - Clerk handles sign-in/sign-up (`/sign-in`, `/sign-up`); `middleware.ts` guards all routes when Clerk keys are set, otherwise runs in mock mode.  
-  - After auth, users hit `/dashboard`, which checks `subscription.sub_status` via `getSubscriptionByUserId`. Inactive or missing subs redirect to `/processing-page` to complete checkout. Active subs see the automation dashboard (`Scenarios` + thank-you modal).  
+  - After auth, users hit `/dashboard`, which checks `subscription.status` via `getSubscriptionByUserId`. Inactive or missing subs redirect to `/processing-page` to complete checkout. Active subs see the automation dashboard (`Scenarios` + thank-you modal).  
   - “Workspace” is the app-level tenant created by `db:init` (one schema/user per app); no per-user multitenancy in runtime.
 - **Workspace / tenant DB creation / migration**  
   - Dev: `npm run dev` → `predev` writes `.env`, provisions `tenant_dev`, applies migrations to local Postgres on `localhost:5433`.  
   - Prod: Dokploy job runs `NODE_ENV=production npm run db:init -- --slug <slug>` followed by `npm run db:migrate:prod` against Supabase at `10.0.2.4:5433`.
 - **Subscription flow (Stripe)**  
   - Checkout initiated client-side via `CheckoutButton` → `/api/stripe/create-checkout` (uses config price IDs) → Stripe Checkout.  
-  - Webhook (`/api/webhook/stripe`) verifies with `STRIPE_WEBHOOK_SECRET` and dispatches:  
+  - Webhook (`/api/webhook/stripe`) verifies with `STRIPE_WEBHOOK_SECRET_TEST` / `STRIPE_WEBHOOK_SECRET_LIVE` and dispatches:  
     - `checkout.session.completed` → `processCheckoutSuccessWebhook` upserts `subscription` row (active, links Stripe customer + optional subscription ID), then emits thank-you email via Resend.  
     - `invoice.paid` keeps subscription `active`; `customer.subscription.deleted` marks it `inactive`.  
   - Billing portal: `/api/stripe/create-portal` uses stored `stripe_customer_id` to create a customer portal session.  
-  - Dashboard gating uses `subscription.sub_status !== 'active'` to restrict access.
+  - Dashboard gating uses `subscription.status !== 'active'` to restrict access.
 - **Example feature CRUD (Projects / automation clones)**  
   - `prisma.system.prisma` models `Project` with Make/n8n metadata.  
   - Creation: `Scenarios` UI posts to either `/api/scenarios/openAIAssistant` (Make) or `/api/workflows/openAIAssistant` (n8n). Each clones a template scenario/workflow using Make or n8n APIs, stamps new credentials/webhook paths, activates the flow, and stores a `project` row with `assistant_id`, `webhookLink`, `status`, etc.  

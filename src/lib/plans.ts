@@ -1,5 +1,5 @@
 import 'server-only'
-import { getStripeConfig } from '@/lib/config'
+import { getStripeConfig } from '@/lib/stripe-config'
 
 export type Plan = 'pro' | 'vip'
 

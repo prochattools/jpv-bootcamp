@@ -21,7 +21,7 @@ Create `.env` (or let `npm run dev` generate it) and set:
 - `SYSTEM_DATABASE_URL` – admin DB URL for scripts
 - `TENANT_DB_PASSWORD` – tenant DB password (required in prod; defaults to `devpass` locally)
 - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY` – Clerk keys
-- `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` – Stripe keys
+- `STRIPE_ENV`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_TEST` / `_LIVE`, `STRIPE_SECRET_KEY_TEST` / `_LIVE`, `STRIPE_WEBHOOK_SECRET_TEST` / `_LIVE` – Stripe keys
 - `NEXT_PUBLIC_APP_URL` – app base URL (e.g., http://localhost:3000)
 - Optional: MAKE_*, N8N_*, RESEND_API_KEY, WP_REST_ENDPOINT, MCP_* as needed
 

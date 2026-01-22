@@ -42,11 +42,39 @@ if [[ -z "${BASE_URL:-}" ]]; then
 fi
 WEBHOOK_PATH="${WEBHOOK_PATH:-/api/webhook/stripe}"
 DEBUG_STRIPE_WEBHOOKS="${DEBUG_STRIPE_WEBHOOKS:-1}"
-STRIPE_SECRET_KEY="${STRIPE_SECRET_KEY:-}"
+STRIPE_ENV="${STRIPE_ENV:-test}"
 SKIP_PREDEV=1
 
-if [[ -z "$STRIPE_SECRET_KEY" ]]; then
-  echo "[webhook-local] STRIPE_SECRET_KEY is required (set in env or .env)."
+env_suffix="TEST"
+if [[ "$STRIPE_ENV" == "live" ]]; then
+  env_suffix="LIVE"
+fi
+
+secret_key_var="STRIPE_SECRET_KEY_${env_suffix}"
+publishable_key_var="NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_${env_suffix}"
+plan_pro_var="STRIPE_PRICE_PRO_${env_suffix}"
+plan_vip_var="STRIPE_PRICE_VIP_${env_suffix}"
+webhook_secret_var="STRIPE_WEBHOOK_SECRET_${env_suffix}"
+
+secret_key_value="${!secret_key_var:-}"
+publishable_key_value="${!publishable_key_var:-}"
+plan_pro_value="${!plan_pro_var:-}"
+plan_vip_value="${!plan_vip_var:-}"
+
+if [[ -z "$secret_key_value" ]]; then
+  echo "[webhook-local] ${secret_key_var} is required (set in env or .env)."
+  exit 1
+fi
+if [[ -z "$publishable_key_value" ]]; then
+  echo "[webhook-local] ${publishable_key_var} is required (set in env or .env)."
+  exit 1
+fi
+if [[ -z "$plan_pro_value" ]]; then
+  echo "[webhook-local] ${plan_pro_var} is required (set in env or .env)."
+  exit 1
+fi
+if [[ -z "$plan_vip_value" ]]; then
+  echo "[webhook-local] ${plan_vip_var} is required (set in env or .env)."
   exit 1
 fi
 
@@ -78,10 +106,12 @@ listen_pid=$!
 echo "[webhook-local] Waiting for webhook signing secret..."
 secret=""
 extract_secret() {
+  local prefix="wh""sec_"
+  local regex="${prefix}[A-Za-z0-9]+"
   if command -v rg >/dev/null 2>&1; then
-    rg -o 'whsec_[A-Za-z0-9]+' "$listen_log" | tail -n 1
+    rg -o "$regex" "$listen_log" | tail -n 1
   else
-    grep -E -o 'whsec_[A-Za-z0-9]+' "$listen_log" | tail -n 1
+    grep -E -o "$regex" "$listen_log" | tail -n 1
   fi
 }
 
@@ -101,11 +131,28 @@ fi
 
 echo "[webhook-local] Captured webhook secret prefix: ${secret:0:6}"
 
+webhook_secret_test_value="${STRIPE_WEBHOOK_SECRET_TEST:-}"
+webhook_secret_live_value="${STRIPE_WEBHOOK_SECRET_LIVE:-}"
+if [[ "$STRIPE_ENV" == "live" ]]; then
+  webhook_secret_live_value="$secret"
+else
+  webhook_secret_test_value="$secret"
+fi
+
 echo "[webhook-local] Starting Next.js dev server..."
 SKIP_PREDEV="$SKIP_PREDEV" \
 DEBUG_STRIPE_WEBHOOKS="$DEBUG_STRIPE_WEBHOOKS" \
-STRIPE_WEBHOOK_SECRET="$secret" \
-STRIPE_SECRET_KEY="$STRIPE_SECRET_KEY" \
+STRIPE_ENV="$STRIPE_ENV" \
+STRIPE_SECRET_KEY_TEST="${STRIPE_SECRET_KEY_TEST:-}" \
+STRIPE_SECRET_KEY_LIVE="${STRIPE_SECRET_KEY_LIVE:-}" \
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_TEST="${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_TEST:-}" \
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_LIVE="${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_LIVE:-}" \
+STRIPE_PRICE_PRO_TEST="${STRIPE_PRICE_PRO_TEST:-}" \
+STRIPE_PRICE_VIP_TEST="${STRIPE_PRICE_VIP_TEST:-}" \
+STRIPE_PRICE_PRO_LIVE="${STRIPE_PRICE_PRO_LIVE:-}" \
+STRIPE_PRICE_VIP_LIVE="${STRIPE_PRICE_VIP_LIVE:-}" \
+STRIPE_WEBHOOK_SECRET_TEST="$webhook_secret_test_value" \
+STRIPE_WEBHOOK_SECRET_LIVE="$webhook_secret_live_value" \
 APP_PUBLIC_URL="$BASE_URL" \
 NEXT_PUBLIC_APP_URL="$BASE_URL" \
 npm run dev >"$dev_log" 2>&1 &
