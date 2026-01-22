@@ -14,6 +14,15 @@ function getResendClient(): Resend {
 	return resendClient
 }
 
+function isEnvEnabled(value?: string): boolean {
+	if (!value) return false
+	return ['1', 'true', 'yes', 'on'].includes(value.trim().toLowerCase())
+}
+
+function isNonWebhookEmailDisabled(): boolean {
+	return isEnvEnabled(process.env.DISABLE_NON_WEBHOOK_EMAILS)
+}
+
 const SUBJECT = 'Your JPV Bootcamp access is ready'
 const SUPPORT_SUBJECT_PREFIX = `JPV Bootcamp Support Request \u2014 `
 
@@ -102,6 +111,15 @@ export async function sendSupportEmail({
 	page: string
 	submittedAt: string
 }): Promise<void> {
+	if (isNonWebhookEmailDisabled()) {
+		console.info('Non-webhook email skipped', {
+			email,
+			templateKey: 'support_request',
+			source: 'support',
+		})
+		return
+	}
+
 	const { email: emailConfig } = getServerConfig()
 	// Support sender/recipient resolve from env-backed config (RESEND_FROM/EMAIL_FROM, SUPPORT_TO_EMAIL).
 	const supportFrom = emailConfig.from

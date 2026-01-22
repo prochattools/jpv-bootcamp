@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
 		// Send welcome email
 		try {
 			const { resendService } = await import('@/libs/resend')
-			await resendService.sendWelcomeEmail(email, name)
+			await resendService.sendWelcomeEmail(email, name, 'signup')
 		} catch (emailError) {
 			console.error('Failed to send welcome email:', emailError)
 			// Don't fail the subscription if email fails

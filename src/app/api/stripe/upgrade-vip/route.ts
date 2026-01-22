@@ -9,11 +9,6 @@ export const dynamic = 'force-dynamic'
 const BILLING_PORTAL_RETURN_URL =
 	'https://portal.jpvbootcamp.com/community/?jpv_upgrade=success'
 
-function isEnvEnabled(value?: string): boolean {
-	if (!value) return false
-	return ['1', 'true', 'yes', 'on'].includes(value.trim().toLowerCase())
-}
-
 function normalizeEmail(value: string | null | undefined): string | null {
 	if (!value) return null
 	const trimmed = value.trim().toLowerCase()
@@ -68,13 +63,57 @@ async function getStripeCustomerRecord(email: string): Promise<{
 	}
 }
 
-async function searchStripeCustomerIdByEmail(email: string): Promise<string | null> {
-	const stripe = getStripe()
-	const result = await stripe.customers.search({
-		query: `email:"${email}"`,
-		limit: 10,
+type CustomerResolutionSource = 'provisioning_record' | 'customers_list' | 'none'
+
+function isStripeCustomerMissing(error: unknown): boolean {
+	if (!error || typeof error !== 'object') return false
+	const stripeError = error as { code?: string; message?: string }
+	if (stripeError.code === 'resource_missing') return true
+	return Boolean(stripeError.message?.includes('No such customer'))
+}
+
+async function updateProvisioningCustomerId(
+	email: string,
+	stripeCustomerId: string
+): Promise<void> {
+	await prisma.customerProvisioning.updateMany({
+		where: { email: { equals: email, mode: 'insensitive' } },
+		data: { stripeCustomerId },
 	})
-	return result.data[0]?.id ?? null
+}
+
+async function resolveStripeCustomerId(
+	email: string
+): Promise<{ customerId: string | null; source: CustomerResolutionSource }> {
+	const stripe = getStripe()
+	const record = await getStripeCustomerRecord(email)
+	const storedCustomerId = record.stripeCustomerId
+
+	if (storedCustomerId) {
+		try {
+			const customer = await stripe.customers.retrieve(storedCustomerId)
+			if (!('deleted' in customer)) {
+				return { customerId: storedCustomerId, source: 'provisioning_record' }
+			}
+		} catch (error) {
+			if (!isStripeCustomerMissing(error)) {
+				throw error
+			}
+		}
+	}
+
+	const list = await stripe.customers.list({ email, limit: 10 })
+	const sorted = [...list.data].sort((a, b) => (b.created ?? 0) - (a.created ?? 0))
+	const fallback = sorted[0] ?? null
+	if (!fallback) {
+		return { customerId: null, source: 'none' }
+	}
+
+	if (fallback.id && fallback.id !== storedCustomerId) {
+		await updateProvisioningCustomerId(email, fallback.id)
+	}
+
+	return { customerId: fallback.id, source: 'customers_list' }
 }
 
 async function handleUpgradeVip(req: NextRequest): Promise<NextResponse> {
@@ -103,24 +142,27 @@ async function handleUpgradeVip(req: NextRequest): Promise<NextResponse> {
 	}
 
 	const emailDomain = extractEmailDomain(email)
-	const allowStripeSearch = isEnvEnabled(process.env.STRIPE_CUSTOMER_SEARCH_ENABLED)
+	let resolvedCustomerId: string | null = null
+	let resolvedCustomerSource: CustomerResolutionSource = 'none'
 
 	try {
 		const stripe = getStripe()
-		let { stripeCustomerId } = await getStripeCustomerRecord(email)
+		const resolution = await resolveStripeCustomerId(email)
+		resolvedCustomerId = resolution.customerId
+		resolvedCustomerSource = resolution.source
 
-		if (!stripeCustomerId && allowStripeSearch) {
-			stripeCustomerId = await searchStripeCustomerIdByEmail(email)
-		}
-
-		if (!stripeCustomerId) {
-			console.warn('VIP upgrade: customer not found', { emailDomain })
+		if (!resolvedCustomerId) {
+			console.warn('VIP upgrade: customer not found', {
+				emailDomain,
+				resolvedCustomerId,
+				source: resolvedCustomerSource,
+			})
 			return NextResponse.redirect(buildReturnUrl('error', 'customer_not_found'), 302)
 		}
 
 		// Stripe Billing Portal is the source of truth for upgrades + proration.
 		const session = await stripe.billingPortal.sessions.create({
-			customer: stripeCustomerId,
+			customer: resolvedCustomerId,
 			return_url: BILLING_PORTAL_RETURN_URL,
 		})
 
@@ -133,6 +175,8 @@ async function handleUpgradeVip(req: NextRequest): Promise<NextResponse> {
 		console.error('VIP upgrade failed', {
 			emailDomain,
 			reason: (error as Error).message || 'unknown_error',
+			resolvedCustomerId,
+			source: resolvedCustomerSource,
 		})
 		return NextResponse.redirect(buildReturnUrl('error', 'upgrade_failed'), 302)
 	}

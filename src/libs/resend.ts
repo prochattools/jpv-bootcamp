@@ -4,7 +4,21 @@ import { Resend } from 'resend'
 class ResendService {
 	private resend = new Resend(process.env.RESEND_API_KEY)
 
-	public async sendWelcomeEmail(toMail: string, name?: string) {
+	private isNonWebhookEmailDisabled(): boolean {
+		const value = process.env.DISABLE_NON_WEBHOOK_EMAILS ?? ''
+		return ['1', 'true', 'yes', 'on'].includes(value.trim().toLowerCase())
+	}
+
+	public async sendWelcomeEmail(toMail: string, name?: string, source = 'signup') {
+		if (this.isNonWebhookEmailDisabled()) {
+			console.info('Non-webhook email skipped', {
+				email: toMail,
+				templateKey: 'newsletter_welcome',
+				source,
+			})
+			return null
+		}
+
 		const { data, error } = await this.resend.emails.send({
 			from: config.resend.fromAdmin,
 			to: [toMail],

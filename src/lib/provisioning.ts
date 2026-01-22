@@ -10,6 +10,8 @@ const ACTIVE_STATUSES = new Set<Stripe.Subscription.Status>([
 	'active',
 	'trialing',
 ])
+const MEMBERSHIP_EMAIL_TEMPLATE_KEY = 'membership_access_ready'
+const EMAIL_DEDUPE_WINDOW_MS = 2 * 60 * 1000
 
 function isEnvEnabled(value?: string): boolean {
 	if (!value) return false
@@ -41,6 +43,7 @@ type ProvisioningDecision = 'skip' | 'provision' | 'update_plan'
 type WpExistsStatus = boolean | 'unknown'
 type NameSource = 'db' | 'stripe_customer' | 'session_customer_details' | 'none'
 type EmailSource = 'session' | 'stripe_customer' | 'provisioning_record' | 'none'
+type EmailSendSource = 'webhook' | 'manual_sync'
 
 type WpActions = {
 	addTags: string[]
@@ -278,6 +281,7 @@ function evaluateEmailNotification(params: {
 	oldPlan: string | null
 	newPlan: string | null
 	lastNotifiedPlan: string | null
+	lastNotifiedAt: Date | null
 	lastNotifiedEventId: string | null
 	eventId?: string | null
 }): { shouldSend: boolean; reason: string } {
@@ -287,14 +291,20 @@ function evaluateEmailNotification(params: {
 	if (!isProvisioningPlan(params.newPlan)) {
 		return { shouldSend: false, reason: 'not_membership_plan' }
 	}
-	if (params.oldPlan === params.newPlan) {
-		return { shouldSend: false, reason: 'plan_unchanged' }
-	}
-	if (params.lastNotifiedPlan === params.newPlan) {
-		return { shouldSend: false, reason: 'already_notified_plan' }
-	}
 	if (params.eventId && params.lastNotifiedEventId === params.eventId) {
 		return { shouldSend: false, reason: 'event_already_notified' }
+	}
+	if (params.lastNotifiedPlan === params.newPlan) {
+		if (
+			params.lastNotifiedAt &&
+			Date.now() - params.lastNotifiedAt.getTime() < EMAIL_DEDUPE_WINDOW_MS
+		) {
+			return { shouldSend: false, reason: 'recent_duplicate' }
+		}
+		return { shouldSend: false, reason: 'already_notified_plan' }
+	}
+	if (params.oldPlan === params.newPlan) {
+		return { shouldSend: false, reason: 'plan_unchanged' }
 	}
 	return { shouldSend: true, reason: 'plan_changed' }
 }
@@ -307,6 +317,10 @@ function resolveStoredPlanName(record: ProvisioningRecord | null): string | null
 function getEmailDomain(email: string): string {
 	const [, domain] = email.split('@')
 	return domain ?? 'unknown'
+}
+
+function resolveEmailSource(eventType?: string | null): EmailSendSource {
+	return eventType === 'manual_sync' ? 'manual_sync' : 'webhook'
 }
 
 let hasLoggedMissingEmailSubscriberTable = false
@@ -667,9 +681,11 @@ export async function provisionFromCheckoutSession(
 	let emailReason: string | null = null
 	const forceProvision = isForceProvisionEnabled()
 	const dryRun = isDryRunWpSync(options)
-	const allowEmail = options?.allowEmail ?? true
+	const allowEmail = options?.allowEmail ?? false
+	const disableNonWebhookEmails = isEnvEnabled(process.env.DISABLE_NON_WEBHOOK_EMAILS)
 	const eventLivemode =
 		typeof options?.eventLivemode === 'boolean' ? options?.eventLivemode : null
+	const emailSource = resolveEmailSource(eventType)
 
 	const logDecision = (decision: ProvisioningDecision, reason: string) => {
 		logProvisioningDecision({
@@ -782,6 +798,7 @@ export async function provisionFromCheckoutSession(
 	resolvedPriceId = priceId
 	const storedPlanName = resolveStoredPlanName(existing)
 	const lastNotifiedPlan = existing?.lastNotifiedPlan ?? null
+	const lastNotifiedAt = existing?.lastNotifiedAt ?? null
 	const lastNotifiedEventId = existing?.lastNotifiedEventId ?? null
 
 	if (!plan) {
@@ -808,6 +825,7 @@ export async function provisionFromCheckoutSession(
 		oldPlan,
 		newPlan,
 		lastNotifiedPlan,
+		lastNotifiedAt,
 		lastNotifiedEventId,
 		eventId,
 	})
@@ -972,28 +990,49 @@ export async function provisionFromCheckoutSession(
 	})
 
 	if (emailEval.shouldSend && !dryRun) {
-		try {
-			await sendWelcomeEmail({
-				to: email,
-				plan,
-				resetUrl: wpProvision.resetLink,
-			})
-			emailSent = true
-			await markProvisioningNotified({
-				stripeCustomerId: customerId,
-				email,
-				plan,
-				eventId: eventId ?? null,
-			})
-		} catch (error) {
+		if (disableNonWebhookEmails && emailSource !== 'webhook') {
 			emailSent = false
-			emailReason = 'send_failed'
-			console.error('Membership email failed', {
-				emailDomain: getEmailDomain(email),
+			emailReason = 'non_webhook_disabled'
+			console.info('Non-webhook email skipped', {
+				email,
+				templateKey: MEMBERSHIP_EMAIL_TEMPLATE_KEY,
 				plan,
 				eventId: eventId ?? null,
-				message: (error as Error).message ?? 'unknown_error',
+				source: emailSource,
+				dedupeReason: emailReason,
 			})
+		} else {
+			try {
+				await sendWelcomeEmail({
+					to: email,
+					plan,
+					resetUrl: wpProvision.resetLink,
+				})
+				emailSent = true
+				await markProvisioningNotified({
+					stripeCustomerId: customerId,
+					email,
+					plan,
+					eventId: eventId ?? null,
+				})
+				console.info('Membership email sent', {
+					email,
+					templateKey: MEMBERSHIP_EMAIL_TEMPLATE_KEY,
+					plan,
+					eventId: eventId ?? null,
+					source: emailSource,
+					dedupeReason: emailReason,
+				})
+			} catch (error) {
+				emailSent = false
+				emailReason = 'send_failed'
+				console.error('Membership email failed', {
+					emailDomain: getEmailDomain(email),
+					plan,
+					eventId: eventId ?? null,
+					message: (error as Error).message ?? 'unknown_error',
+				})
+			}
 		}
 	}
 
@@ -1024,9 +1063,11 @@ export async function syncFromSubscription(
 	let emailReason: string | null = null
 	const forceProvision = isForceProvisionEnabled()
 	const dryRun = isDryRunWpSync(options)
-	const allowEmail = options?.allowEmail ?? true
+	const allowEmail = options?.allowEmail ?? false
+	const disableNonWebhookEmails = isEnvEnabled(process.env.DISABLE_NON_WEBHOOK_EMAILS)
 	const eventLivemode =
 		typeof options?.eventLivemode === 'boolean' ? options?.eventLivemode : null
+	const emailSource = resolveEmailSource(eventType)
 
 	const logDecision = (decision: ProvisioningDecision, reason: string) => {
 		logProvisioningDecision({
@@ -1187,6 +1228,7 @@ export async function syncFromSubscription(
 	})
 
 	const lastNotifiedPlan = existing?.lastNotifiedPlan ?? null
+	const lastNotifiedAt = existing?.lastNotifiedAt ?? null
 	const lastNotifiedEventId = existing?.lastNotifiedEventId ?? null
 	oldPlan = storedPlanName
 	newPlan = incomingPlan
@@ -1195,6 +1237,7 @@ export async function syncFromSubscription(
 		oldPlan,
 		newPlan,
 		lastNotifiedPlan,
+		lastNotifiedAt,
 		lastNotifiedEventId,
 		eventId,
 	})
@@ -1374,28 +1417,49 @@ export async function syncFromSubscription(
 	})
 
 	if (emailEval.shouldSend && !dryRun) {
-		try {
-			await sendWelcomeEmail({
-				to: email,
-				plan: incomingPlan,
-				resetUrl: wpProvision.resetLink,
-			})
-			emailSent = true
-			await markProvisioningNotified({
-				stripeCustomerId: customerId,
-				email,
-				plan: incomingPlan,
-				eventId: eventId ?? null,
-			})
-		} catch (error) {
+		if (disableNonWebhookEmails && emailSource !== 'webhook') {
 			emailSent = false
-			emailReason = 'send_failed'
-			console.error('Membership email failed', {
-				emailDomain: getEmailDomain(email),
+			emailReason = 'non_webhook_disabled'
+			console.info('Non-webhook email skipped', {
+				email,
+				templateKey: MEMBERSHIP_EMAIL_TEMPLATE_KEY,
 				plan: incomingPlan,
 				eventId: eventId ?? null,
-				message: (error as Error).message ?? 'unknown_error',
+				source: emailSource,
+				dedupeReason: emailReason,
 			})
+		} else {
+			try {
+				await sendWelcomeEmail({
+					to: email,
+					plan: incomingPlan,
+					resetUrl: wpProvision.resetLink,
+				})
+				emailSent = true
+				await markProvisioningNotified({
+					stripeCustomerId: customerId,
+					email,
+					plan: incomingPlan,
+					eventId: eventId ?? null,
+				})
+				console.info('Membership email sent', {
+					email,
+					templateKey: MEMBERSHIP_EMAIL_TEMPLATE_KEY,
+					plan: incomingPlan,
+					eventId: eventId ?? null,
+					source: emailSource,
+					dedupeReason: emailReason,
+				})
+			} catch (error) {
+				emailSent = false
+				emailReason = 'send_failed'
+				console.error('Membership email failed', {
+					emailDomain: getEmailDomain(email),
+					plan: incomingPlan,
+					eventId: eventId ?? null,
+					message: (error as Error).message ?? 'unknown_error',
+				})
+			}
 		}
 	}
 
