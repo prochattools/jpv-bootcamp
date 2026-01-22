@@ -10,7 +10,7 @@ export function getStripe(): Stripe {
 
 	const cfg = getStripeConfig()
 
-	cachedStripe = new Stripe(cfg.stripe.secretKey, {
+	cachedStripe = new Stripe(cfg.secretKey, {
 		apiVersion: '2024-06-20',
 	})
 
