@@ -27,6 +27,7 @@ function isDryRunWpSync(options?: { dryRun?: boolean }): boolean {
 
 type ProvisioningRecord = {
 	id: string
+	email: string | null
 	wpUserId: number | null
 	currentPlan: string | null
 	plan: string | null
@@ -435,6 +436,7 @@ async function findProvisioningRecord(params: {
 		where: { OR: clauses },
 		select: {
 			id: true,
+			email: true,
 			wpUserId: true,
 			currentPlan: true,
 			plan: true,
