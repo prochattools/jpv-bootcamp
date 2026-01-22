@@ -72,7 +72,7 @@ async function run(): Promise<void> {
 			priceId: null,
 		}
 
-		const payload = event.payload as Stripe.Event | null
+		const payload = event.payload as unknown as Stripe.Event | null
 		const summary = extractSummary(payload, fallback)
 		console.log(JSON.stringify(summary))
 	}
