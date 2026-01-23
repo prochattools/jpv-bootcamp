@@ -2,7 +2,7 @@
 /**
  * Plugin Name: JPV Provisioning
  * Description: Provision WordPress users via a secure REST endpoint.
- * Version: 0.4.0
+ * Version: 0.6.0
  * Author: JPV Bootcamp
  *
  * This file is stored in the Next.js repo for manual deployment to WordPress; it is not auto-deployed.
@@ -14,6 +14,60 @@ if (!defined('ABSPATH')) {
 
 const JPV_PROVISIONING_OPTION = 'jpv_provision_token';
 const JPV_PROVISIONING_LEGACY_OPTION = 'jpv_provisioning_token';
+const JPV_PROVISIONING_MAIL_FROM = 'support@jpvbootcamp.com';
+const JPV_PROVISIONING_MAIL_FROM_NAME = 'JPV Bootcamp Support';
+
+function jpv_provisioning_mail_from($from) {
+    return JPV_PROVISIONING_MAIL_FROM;
+}
+
+function jpv_provisioning_mail_from_name($name) {
+    return JPV_PROVISIONING_MAIL_FROM_NAME;
+}
+
+function jpv_provisioning_log_event(string $event, array $payload = array()): void {
+    $payload['event'] = $event;
+    $payload['ts'] = time();
+    error_log('[JPV Provisioning] ' . wp_json_encode($payload));
+}
+
+function jpv_provisioning_send_new_user_email(int $user_id, string $email): void {
+    add_filter('wp_mail_from', 'jpv_provisioning_mail_from');
+    add_filter('wp_mail_from_name', 'jpv_provisioning_mail_from_name');
+
+    try {
+        $result = null;
+        if (function_exists('wp_new_user_notification')) {
+            $result = wp_new_user_notification($user_id, null, 'user');
+        }
+
+        if ($result === false) {
+            jpv_provisioning_log_event('email_sent_failed', array(
+                'userId' => $user_id,
+                'email' => $email,
+                'method' => 'wp_new_user_notification',
+                'reason' => 'wp_mail_failed',
+            ));
+        } else {
+            jpv_provisioning_log_event('email_sent_success', array(
+                'userId' => $user_id,
+                'email' => $email,
+                'method' => 'wp_new_user_notification',
+            ));
+        }
+    } catch (Throwable $e) {
+        jpv_provisioning_log_event('email_sent_failed', array(
+            'userId' => $user_id,
+            'email' => $email,
+            'method' => 'wp_new_user_notification',
+            'reason' => 'exception',
+            'error' => $e->getMessage(),
+        ));
+    }
+
+    remove_filter('wp_mail_from', 'jpv_provisioning_mail_from');
+    remove_filter('wp_mail_from_name', 'jpv_provisioning_mail_from_name');
+}
 
 function jpv_provisioning_get_token_sources(): array {
     $option = get_option(JPV_PROVISIONING_OPTION);
@@ -394,14 +448,13 @@ function jpv_provisioning_handle_request(WP_REST_Request $request) {
 
         $created = true;
 
-        if (function_exists('wp_new_user_notification')) {
-            try {
-                wp_new_user_notification($user_id, null, 'user');
-                error_log('[JPV Provisioning] sent_wp_welcome userId=' . $user_id);
-            } catch (Throwable $e) {
-                error_log('[JPV Provisioning] wp_welcome_failed userId=' . $user_id . ' err=' . $e->getMessage());
-            }
-        }
+        jpv_provisioning_log_event('user_created', array(
+            'userId' => $user_id,
+            'email' => $email,
+            'plan' => $plan_meta,
+        ));
+
+        jpv_provisioning_send_new_user_email((int) $user_id, $email);
     } else {
         error_log('existing_user_no_role_change');
         if ($name_received) {
