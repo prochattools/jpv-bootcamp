@@ -50,6 +50,7 @@
 	},
 	"devDependencies": {
 		"@types/jest": "^29.5.12",
+		"@types/pg": "^8.10.9",
 		"@types/mdx": "^2.0.12",
 		"@types/node": "^20",
 		"@types/pdfkit": "^0.13.5",
