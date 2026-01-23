@@ -9,8 +9,9 @@ export type StripeConfig = {
 	publishableKey: string
 	pricePro: string
 	priceVip: string
+	productPro: string
+	productVip: string
 	portalConfigurationId: string
-	productMembership?: string
 }
 
 type EnvKey = keyof NodeJS.ProcessEnv
@@ -79,6 +80,8 @@ export function getStripeConfig(): StripeConfig {
 	const suffix = env === 'test' ? 'TEST' : 'LIVE'
 	const priceProKey = `STRIPE_PRICE_PRO_${suffix}`
 	const priceVipKey = `STRIPE_PRICE_VIP_${suffix}`
+	const productProKey = `STRIPE_PRODUCT_JPV_BOOTCAMP_PRO_MEMBERSHIP_${suffix}`
+	const productVipKey = `STRIPE_PRODUCT_JPV_BOOTCAMP_VIP_MEMBERSHIP_${suffix}`
 	const portalConfigKey = `STRIPE_PORTAL_CONFIGURATION_ID_${suffix}`
 
 	const secretKey = requireEnv(`STRIPE_SECRET_KEY_${suffix}`)
@@ -86,8 +89,9 @@ export function getStripeConfig(): StripeConfig {
 	const publishableKey = requireEnv(`NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_${suffix}`)
 	const pricePro = requireEnv(priceProKey)
 	const priceVip = requireEnv(priceVipKey)
+	const productPro = requireEnv(productProKey)
+	const productVip = requireEnv(productVipKey)
 	const portalConfigurationId = requireEnv(portalConfigKey)
-	const productMembership = getEnv(`STRIPE_PRODUCT_MEMBERSHIP_${suffix}`)?.trim() || undefined
 
 	const prefixes = getPrefixes(env)
 	const webhookSecrets = splitSecrets(webhookSecretRaw)
@@ -99,10 +103,9 @@ export function getStripeConfig(): StripeConfig {
 	}
 	assertPrefix(pricePro, prefixes.pricePrefix, 'Stripe Pro price')
 	assertPrefix(priceVip, prefixes.pricePrefix, 'Stripe VIP price')
+	assertPrefix(productPro, prefixes.productPrefix, 'Stripe Pro product')
+	assertPrefix(productVip, prefixes.productPrefix, 'Stripe VIP product')
 	assertPrefix(portalConfigurationId, 'bpc_', 'Stripe portal configuration')
-	if (productMembership) {
-		assertPrefix(productMembership, prefixes.productPrefix, 'Stripe membership product')
-	}
 
 	cachedWebhookSecrets = webhookSecrets
 	cachedStripeConfig = {
@@ -112,16 +115,19 @@ export function getStripeConfig(): StripeConfig {
 		publishableKey,
 		pricePro,
 		priceVip,
+		productPro,
+		productVip,
 		portalConfigurationId,
-		...(productMembership ? { productMembership } : {}),
 	}
 
 	if (!hasLoggedEnv) {
 		console.info('Stripe env configured', {
-			env,
-			priceVars: {
+			stripeEnv: env,
+			varsPresent: {
 				[priceProKey]: Boolean(getEnv(priceProKey)),
 				[priceVipKey]: Boolean(getEnv(priceVipKey)),
+				[productProKey]: Boolean(getEnv(productProKey)),
+				[productVipKey]: Boolean(getEnv(productVipKey)),
 				[portalConfigKey]: Boolean(getEnv(portalConfigKey)),
 			},
 		})

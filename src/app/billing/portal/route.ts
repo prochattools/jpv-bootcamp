@@ -208,12 +208,20 @@ export async function GET(req: NextRequest) {
 			return plainError(status, message)
 		}
 
-		const portalConfigId = getStripeConfig().portalConfigurationId
+		const stripeConfig = getStripeConfig()
+		const portalConfigId = stripeConfig.portalConfigurationId
 		const stripe = getStripe()
 		const session = await stripe.billingPortal.sessions.create({
 			customer: stripeCustomerId,
 			return_url: returnUrl,
 			configuration: portalConfigId,
+		})
+
+		console.info('portal_session_created', {
+			stripeEnv: stripeConfig.env,
+			configurationId: portalConfigId,
+			customerId: stripeCustomerId,
+			sourceRoute: '/billing/portal',
 		})
 
 		if (!session.url) {

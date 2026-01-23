@@ -13,6 +13,7 @@
 		"db:cleanup": "node scripts/db/cleanup-tenant.js",
 		"db:migrate:dev": "npx prisma migrate deploy --schema=prisma/schema.prisma",
 		"db:migrate:prod": "npx prisma migrate deploy --schema=prisma/schema.prisma",
+		"stripe:check-products": "tsx scripts/stripe/check_price_products.ts",
 		"mcp:discover": "tsx scripts/mcp-discover.ts",
 		"mcp:provision": "tsx scripts/mcp-provision-tenant.ts"
 	},

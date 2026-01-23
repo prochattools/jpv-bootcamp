@@ -170,6 +170,13 @@ async function handleBillingPortal(req: NextRequest): Promise<NextResponse> {
 			configuration: portalConfigId,
 		})
 
+		console.info('portal_session_created', {
+			stripeEnv: stripeConfig.env,
+			configurationId: portalConfigId,
+			customerId: resolvedCustomerId,
+			sourceRoute: '/api/stripe/billing-portal',
+		})
+
 		if (!session.url) {
 			console.error('Billing portal failed', {
 				emailDomain,

@@ -8,9 +8,16 @@
 
 ## Stripe Env + Portal Configuration
 - Stripe environment is selected by `STRIPE_ENV=test|live`.
+- Two-product model is required for Portal upgrades:
+  - Pro and VIP are **separate Stripe products**, each with one recurring GBP price.
 - Portal sessions must include an explicit configuration id:
   - `STRIPE_PORTAL_CONFIGURATION_ID_TEST`
   - `STRIPE_PORTAL_CONFIGURATION_ID_LIVE`
+- Env vars used for plan resolution + provisioning:
+  - `STRIPE_PRICE_PRO_TEST` / `STRIPE_PRICE_PRO_LIVE`
+  - `STRIPE_PRICE_VIP_TEST` / `STRIPE_PRICE_VIP_LIVE`
+  - `STRIPE_PRODUCT_JPV_BOOTCAMP_PRO_MEMBERSHIP_TEST` / `_LIVE`
+  - `STRIPE_PRODUCT_JPV_BOOTCAMP_VIP_MEMBERSHIP_TEST` / `_LIVE`
 - Portal session creation routes use `configuration=<id>` to ensure Stripe-hosted upgrades + proration are enabled.
 
 ## Canonical Event for Membership Emails
@@ -36,7 +43,25 @@
   - FluentCRM tags: **add** VIP/Pro, **remove** opposite
 - On upgrade (Pro→VIP), the subscription update event is authoritative.
 
+## Plan Resolution (Stripe → JPV Plan)
+- **Primary:** Price id match (Pro/VIP).
+- **Secondary:** Product id match (Pro/VIP).
+- **Fallback:** Subscription metadata `plan` if present.
+- Any mismatch or unknown ids resolve to `none` and will not provision a plan.
+
+## Upgrade Test (Pro → VIP)
+1) Create a Pro subscription via Checkout.
+2) Use the billing portal upgrade flow (VIP) from the portal endpoint.
+3) Confirm the **same subscription** is updated (no new subscription created).
+4) Confirm `customer.subscription.updated` webhook resolves to `vip` by price id.
+5) Verify WP membership level + FluentCRM tags updated (VIP added, Pro removed).
+
 ## Verification Commands
+### Verify Pro/VIP prices map to different products
+```
+npm run stripe:check-products
+```
+
 ### Replay a stored webhook event (dry run)
 ```
 DRY_RUN_WP_SYNC=1 tsx scripts/stripe/simulate_sync_from_event.ts evt_123
@@ -74,6 +99,7 @@ Non-webhook email skipped { email, templateKey, source }
 - Customer Portal configuration allows:
   - Subscription management
   - Price switch from PRO to VIP
+  - **Both products included** (Pro product + VIP product)
   - Proration enabled (Stripe-managed)
 
 ## URLs

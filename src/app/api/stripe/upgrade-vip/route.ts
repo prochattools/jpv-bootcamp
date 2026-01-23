@@ -177,6 +177,13 @@ async function handleUpgradeVip(req: NextRequest): Promise<NextResponse> {
 			configuration: portalConfigId,
 		})
 
+		console.info('portal_session_created', {
+			stripeEnv: stripeConfig.env,
+			configurationId: portalConfigId,
+			customerId: resolvedCustomerId,
+			sourceRoute: '/api/stripe/upgrade-vip',
+		})
+
 		if (!session.url) {
 			return NextResponse.redirect(buildReturnUrl('error', 'portal_unavailable'), 302)
 		}

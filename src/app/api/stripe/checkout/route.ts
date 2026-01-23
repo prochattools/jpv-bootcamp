@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getStripeConfig, type StripeConfig } from '@/lib/config'
-import { getPlanFromPriceId, type Plan } from '@/lib/plans'
+import { getStripeEnv } from '@/lib/stripe-config'
+import { resolvePlanFromStripe, type Plan } from '@/lib/plans'
 import { getStripe } from '@/lib/stripe'
 
 export const runtime = 'nodejs'
@@ -26,11 +27,21 @@ async function getActiveMembershipSubscriptionForCustomer(customerId: string) {
 		expand: ['data.items.data.price'],
 	})
 
-	// Prefer a subscription that looks like our membership (metadata.plan set by our Checkout)
-	const byMetadata = subs.data.find((s) =>
-		s.metadata?.plan === 'pro' || s.metadata?.plan === 'vip'
+	// Prefer a subscription that contains our membership price/product.
+	const byPrice = subs.data.find((sub) =>
+		sub.items?.data?.some((item) => {
+			const price = item.price ?? null
+			const priceId = price?.id ?? null
+			const productId =
+				typeof price?.product === 'string'
+					? price.product
+					: price?.product?.id ?? null
+			const metadataPlan =
+				typeof sub.metadata?.plan === 'string' ? sub.metadata.plan : null
+			return Boolean(resolvePlanFromStripe({ metadataPlan, priceId, productId }))
+		})
 	)
-	if (byMetadata) return byMetadata
+	if (byPrice) return byPrice
 
 	// Fallback: pick the first active subscription
 	return subs.data[0] ?? null
@@ -42,12 +53,13 @@ function getSubscriptionItemId(sub: any): string | null {
 }
 
 function getCurrentPlanFromSubscription(sub: any): PricingPlanKey | null {
-	const meta = sub?.metadata?.plan
-	if (meta === 'pro' || meta === 'vip') return meta
-
-	// If metadata isn't present, try to infer from price ids (best-effort)
-	const priceId = sub?.items?.data?.[0]?.price?.id
-	return getPlanFromPriceId(priceId)
+	// Prefer price-based inference to avoid stale metadata after portal upgrades.
+	const price = sub?.items?.data?.[0]?.price ?? null
+	const priceId = price?.id ?? null
+	const productId =
+		typeof price?.product === 'string' ? price.product : price?.product?.id ?? null
+	const metadataPlan = typeof sub?.metadata?.plan === 'string' ? sub.metadata.plan : null
+	return resolvePlanFromStripe({ metadataPlan, priceId, productId })
 }
 
 function buildReturnUrl(pathOrUrl: string, appUrl: string) {
@@ -112,6 +124,13 @@ export async function GET(req: NextRequest) {
 						},
 					},
 					)
+
+					console.info('portal_session_created', {
+						stripeEnv: getStripeEnv(),
+						configurationId: stripeConfig.stripe.portalConfigurationId,
+						customerId: customerParam,
+						sourceRoute: '/api/stripe/checkout',
+					})
 
 					if (!portalSession.url) {
 						return NextResponse.json(
