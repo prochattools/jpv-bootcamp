@@ -721,7 +721,8 @@ async function upsertProvisioningRecord({
 			return
 		}
 
-		if (!updateData.stripeCustomerId) {
+		const stripeCustomerIdForCreate = updateData.stripeCustomerId
+		if (!stripeCustomerIdForCreate) {
 			logProvisioningConflict({
 				reason: 'missing_stripe_customer_id',
 				email,
@@ -733,7 +734,10 @@ async function upsertProvisioningRecord({
 		}
 
 		await prisma.customerProvisioning.create({
-			data: updateData,
+			data: {
+				...updateData,
+				stripeCustomerId: stripeCustomerIdForCreate,
+			},
 		})
 	} catch (error) {
 		const message = (error as Error).message ?? 'unknown_error'
