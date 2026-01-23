@@ -163,7 +163,7 @@ export async function GET(req: NextRequest) {
 				return plainError(status, message)
 			}
 
-			email = normalizeEmail(verification.payload.email)
+			email = normalizeEmailAddress(verification.payload.email)
 			source = email ? 'token' : 'none'
 			returnUrl = resolveReturnUrl(verification.payload.returnUrl ?? null)
 		}
