@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/libs/prisma'
 import { getStripe } from '@/lib/stripe'
+import { getStripeConfig } from '@/lib/stripe-config'
 import { verifyBillingPortalToken } from '@/lib/billing-portal-token'
 
 export const runtime = 'nodejs'
@@ -139,6 +140,8 @@ async function handleBillingPortal(req: NextRequest): Promise<NextResponse> {
 	let resolvedCustomerSource: CustomerResolutionSource = 'none'
 
 	try {
+		const stripeConfig = getStripeConfig()
+		const portalConfigId = stripeConfig.portalConfigurationId
 		const stripe = getStripe()
 		const resolution = await resolveStripeCustomerId(email)
 		resolvedCustomerId = resolution.customerId
@@ -154,9 +157,17 @@ async function handleBillingPortal(req: NextRequest): Promise<NextResponse> {
 			return NextResponse.redirect(buildReturnUrl('error'), 302)
 		}
 
+		console.info('Billing portal session', {
+			env: stripeConfig.env,
+			configurationId: portalConfigId,
+			resolvedCustomerId,
+			source: resolvedCustomerSource,
+		})
+
 		const session = await stripe.billingPortal.sessions.create({
 			customer: resolvedCustomerId,
 			return_url: BILLING_PORTAL_RETURN_URL,
+			configuration: portalConfigId,
 		})
 
 		if (!session.url) {

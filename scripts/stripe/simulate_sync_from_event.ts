@@ -22,6 +22,8 @@ async function run(): Promise<void> {
 
 	const event = record.payload as unknown as Stripe.Event
 
+	const allowEmail = event.type === 'customer.subscription.updated'
+
 	switch (event.type) {
 		case 'checkout.session.completed': {
 			const session = event.data.object as Stripe.Checkout.Session
@@ -29,7 +31,7 @@ async function run(): Promise<void> {
 				session,
 				event.id,
 				event.type,
-				{ dryRun: true }
+				{ dryRun: true, allowEmail }
 			)
 			console.log(JSON.stringify(summary))
 			break
@@ -42,7 +44,7 @@ async function run(): Promise<void> {
 				subscription.id,
 				event.id,
 				event.type,
-				{ dryRun: true }
+				{ dryRun: true, allowEmail }
 			)
 			console.log(JSON.stringify(summary))
 			break
@@ -61,7 +63,7 @@ async function run(): Promise<void> {
 				subscriptionId,
 				event.id,
 				event.type,
-				{ dryRun: true }
+				{ dryRun: true, allowEmail }
 			)
 			console.log(JSON.stringify(summary))
 			break

@@ -97,6 +97,7 @@ export async function GET(req: NextRequest) {
 					const portalSession = await stripe.billingPortal.sessions.create({
 						customer: customerParam,
 						return_url: cancelUrl,
+						configuration: stripeConfig.stripe.portalConfigurationId,
 						flow_data: {
 							type: 'subscription_update_confirm',
 							subscription_update_confirm: {

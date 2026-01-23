@@ -278,6 +278,7 @@ function isProvisioningPlan(value: string | null | undefined): value is Plan {
 
 function evaluateEmailNotification(params: {
 	allowEmail: boolean
+	disabledReason?: string
 	oldPlan: string | null
 	newPlan: string | null
 	lastNotifiedPlan: string | null
@@ -286,7 +287,7 @@ function evaluateEmailNotification(params: {
 	eventId?: string | null
 }): { shouldSend: boolean; reason: string } {
 	if (!params.allowEmail) {
-		return { shouldSend: false, reason: 'disabled' }
+		return { shouldSend: false, reason: params.disabledReason ?? 'disabled' }
 	}
 	if (!isProvisioningPlan(params.newPlan)) {
 		return { shouldSend: false, reason: 'not_membership_plan' }
@@ -820,8 +821,10 @@ export async function provisionFromCheckoutSession(
 	let reason = existing ? 'missing_wp_user_id' : 'no_provisioning_record'
 	oldPlan = storedPlanName
 	newPlan = incomingPlan
+	const isCanonicalEmailEvent = eventType === 'customer.subscription.updated' || eventType === 'manual_sync'
 	const emailEval = evaluateEmailNotification({
-		allowEmail,
+		allowEmail: allowEmail && isCanonicalEmailEvent,
+		disabledReason: !isCanonicalEmailEvent ? 'event_not_canonical' : undefined,
 		oldPlan,
 		newPlan,
 		lastNotifiedPlan,
@@ -1232,8 +1235,10 @@ export async function syncFromSubscription(
 	const lastNotifiedEventId = existing?.lastNotifiedEventId ?? null
 	oldPlan = storedPlanName
 	newPlan = incomingPlan
+	const isCanonicalEmailEvent = eventType === 'customer.subscription.updated' || eventType === 'manual_sync'
 	const emailEval = evaluateEmailNotification({
-		allowEmail,
+		allowEmail: allowEmail && isCanonicalEmailEvent,
+		disabledReason: !isCanonicalEmailEvent ? 'event_not_canonical' : undefined,
 		oldPlan,
 		newPlan,
 		lastNotifiedPlan,

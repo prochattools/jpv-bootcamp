@@ -393,6 +393,15 @@ function jpv_provisioning_handle_request(WP_REST_Request $request) {
         }
 
         $created = true;
+
+        if (function_exists('wp_new_user_notification')) {
+            try {
+                wp_new_user_notification($user_id, null, 'user');
+                error_log('[JPV Provisioning] sent_wp_welcome userId=' . $user_id);
+            } catch (Throwable $e) {
+                error_log('[JPV Provisioning] wp_welcome_failed userId=' . $user_id . ' err=' . $e->getMessage());
+            }
+        }
     } else {
         error_log('existing_user_no_role_change');
         if ($name_received) {

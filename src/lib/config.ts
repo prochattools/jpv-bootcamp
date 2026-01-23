@@ -108,6 +108,7 @@ export type ServerConfig = {
 		secretKey: string
 		pricePro: string
 		priceVip: string
+		portalConfigurationId: string
 		successUrl: string
 		cancelUrl: string
 	}
@@ -138,6 +139,7 @@ export type StripeConfig = {
 		secretKey: string
 		pricePro: string
 		priceVip: string
+		portalConfigurationId: string
 		successUrl: string
 		cancelUrl: string
 	}
@@ -170,6 +172,7 @@ export function getStripeConfig(): StripeConfig {
 			secretKey: stripeConfig.secretKey,
 			pricePro: stripeConfig.pricePro,
 			priceVip: stripeConfig.priceVip,
+			portalConfigurationId: stripeConfig.portalConfigurationId,
 			successUrl,
 			cancelUrl,
 		},
@@ -227,6 +230,7 @@ export function getServerConfig(): ServerConfig {
 			secretKey: stripeConfig.secretKey,
 			pricePro: stripeConfig.pricePro,
 			priceVip: stripeConfig.priceVip,
+			portalConfigurationId: stripeConfig.portalConfigurationId,
 			successUrl: normalizeStripeSuccessUrl(
 				getEnvOrDefault('STRIPE_SUCCESS_URL', DEFAULT_STRIPE_SUCCESS_PATH),
 				appUrl

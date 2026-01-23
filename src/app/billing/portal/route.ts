@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/libs/prisma'
 import { getStripe } from '@/lib/stripe'
+import { getStripeConfig } from '@/lib/stripe-config'
 import { verifyBillingPortalToken } from '@/lib/billing-portal-token'
 
 export const runtime = 'nodejs'
@@ -207,10 +208,12 @@ export async function GET(req: NextRequest) {
 			return plainError(status, message)
 		}
 
+		const portalConfigId = getStripeConfig().portalConfigurationId
 		const stripe = getStripe()
 		const session = await stripe.billingPortal.sessions.create({
 			customer: stripeCustomerId,
 			return_url: returnUrl,
+			configuration: portalConfigId,
 		})
 
 		if (!session.url) {
