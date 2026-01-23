@@ -4,6 +4,7 @@ import prisma from '@/libs/prisma'
 import { getStripe } from '@/lib/stripe'
 import { syncFromSubscription } from '@/lib/provisioning'
 import { verifyBillingPortalToken } from '@/lib/billing-portal-token'
+import { normalizeEmail as normalizeEmailAddress } from '@/lib/normalize-email'
 import type Stripe from 'stripe'
 
 export const runtime = 'nodejs'
@@ -31,12 +32,6 @@ type SyncResponse = {
 function isEnvEnabled(value?: string): boolean {
 	if (!value) return false
 	return ['1', 'true', 'yes', 'on'].includes(value.trim().toLowerCase())
-}
-
-function normalizeEmail(value: string | null | undefined): string | null {
-	if (!value) return null
-	const trimmed = value.trim().toLowerCase()
-	return trimmed.length > 0 ? trimmed : null
 }
 
 function extractBearerToken(req: NextRequest): string | null {
@@ -134,7 +129,7 @@ async function handleSyncMembership(req: NextRequest): Promise<NextResponse> {
 			)
 		}
 
-		tokenEmail = normalizeEmail(verification.payload.email)
+		tokenEmail = normalizeEmailAddress(verification.payload.email)
 		if (!tokenEmail) {
 			return NextResponse.json(
 				{ ok: false, reason: 'unauthorized' } satisfies SyncResponse,
@@ -156,7 +151,7 @@ async function handleSyncMembership(req: NextRequest): Promise<NextResponse> {
 		'subscriptionId',
 	])
 
-	const email = authorizedByToken ? tokenEmail : normalizeEmail(rawEmail)
+	const email = authorizedByToken ? tokenEmail : normalizeEmailAddress(rawEmail)
 	let stripeCustomerId = rawCustomerId ?? null
 	let stripeSubscriptionId = rawSubscriptionId ?? null
 
@@ -168,8 +163,8 @@ async function handleSyncMembership(req: NextRequest): Promise<NextResponse> {
 	}
 
 	if (email) {
-		const record = await prisma.customerProvisioning.findFirst({
-			where: { email: { equals: email, mode: 'insensitive' } },
+		const record = await prisma.customerProvisioning.findUnique({
+			where: { normalizedEmail: email },
 			select: { stripeCustomerId: true, stripeSubscriptionId: true },
 		})
 		if (!stripeCustomerId) {

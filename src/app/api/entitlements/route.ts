@@ -3,6 +3,7 @@ import prisma from '@/libs/prisma'
 import { getStripe } from '@/lib/stripe'
 import { normalizePlan, resolvePlanFromStripe, type Plan } from '@/lib/plans'
 import { verifyBillingPortalToken } from '@/lib/billing-portal-token'
+import { normalizeEmail as normalizeEmailAddress } from '@/lib/normalize-email'
 import type Stripe from 'stripe'
 
 export const runtime = 'nodejs'
@@ -30,12 +31,6 @@ type EntitlementsError = {
 function isEnvEnabled(value?: string): boolean {
 	if (!value) return false
 	return ['1', 'true', 'yes', 'on'].includes(value.trim().toLowerCase())
-}
-
-function normalizeEmail(value: string | null | undefined): string | null {
-	if (!value) return null
-	const trimmed = value.trim().toLowerCase()
-	return trimmed.length > 0 ? trimmed : null
 }
 
 function extractBearerToken(req: NextRequest): string | null {
@@ -103,7 +98,7 @@ export async function GET(req: NextRequest) {
 		)
 	}
 
-	const email = normalizeEmail(verification.payload.email)
+	const email = normalizeEmailAddress(verification.payload.email)
 	if (!email) {
 		return NextResponse.json(
 			{ ok: false, reason: 'unauthorized', error: 'Invalid token.' } as EntitlementsError,
@@ -111,10 +106,8 @@ export async function GET(req: NextRequest) {
 		)
 	}
 
-	const record = await prisma.customerProvisioning.findFirst({
-		where: {
-			email: { equals: email, mode: 'insensitive' },
-		},
+	const record = await prisma.customerProvisioning.findUnique({
+		where: { normalizedEmail: email },
 		select: {
 			currentPlan: true,
 			plan: true,

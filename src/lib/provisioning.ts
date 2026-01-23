@@ -4,6 +4,7 @@ import prisma from '@/libs/prisma'
 import { sendWelcomeEmail } from '@/lib/email'
 import { resolvePlanFromStripe, type Plan } from '@/lib/plans'
 import { getStripe } from '@/lib/stripe'
+import { normalizeEmail as normalizeEmailAddress } from '@/lib/normalize-email'
 import { getWpUserExists, provisionWpUser } from '@/lib/wp'
 
 const ACTIVE_STATUSES = new Set<Stripe.Subscription.Status>([
@@ -30,6 +31,9 @@ function isDryRunWpSync(options?: { dryRun?: boolean }): boolean {
 type ProvisioningRecord = {
 	id: string
 	email: string | null
+	normalizedEmail: string | null
+	stripeCustomerId: string | null
+	stripeSubscriptionId: string | null
 	wpUserId: number | null
 	currentPlan: string | null
 	plan: string | null
@@ -545,10 +549,30 @@ async function findProvisioningRecord(params: {
 	stripeCustomerId?: string | null
 	stripeSubscriptionId?: string | null
 }): Promise<ProvisioningRecord | null> {
+	const normalizedEmail = normalizeEmailAddress(params.email)
+	if (normalizedEmail) {
+		const byEmail = await prisma.customerProvisioning.findUnique({
+			where: { normalizedEmail },
+			select: {
+				id: true,
+				email: true,
+				normalizedEmail: true,
+				stripeCustomerId: true,
+				stripeSubscriptionId: true,
+				wpUserId: true,
+				currentPlan: true,
+				plan: true,
+				lastNotifiedPlan: true,
+				lastNotifiedAt: true,
+				lastNotifiedEventId: true,
+			},
+		})
+		if (byEmail) return byEmail
+	}
+
 	const clauses = []
 	if (params.stripeCustomerId) clauses.push({ stripeCustomerId: params.stripeCustomerId })
 	if (params.stripeSubscriptionId) clauses.push({ stripeSubscriptionId: params.stripeSubscriptionId })
-	if (params.email) clauses.push({ email: params.email })
 	if (clauses.length === 0) return null
 
 	return prisma.customerProvisioning.findFirst({
@@ -556,6 +580,9 @@ async function findProvisioningRecord(params: {
 		select: {
 			id: true,
 			email: true,
+			normalizedEmail: true,
+			stripeCustomerId: true,
+			stripeSubscriptionId: true,
 			wpUserId: true,
 			currentPlan: true,
 			plan: true,
@@ -563,6 +590,32 @@ async function findProvisioningRecord(params: {
 			lastNotifiedAt: true,
 			lastNotifiedEventId: true,
 		},
+	})
+}
+
+function logProvisioningConflict(params: {
+	reason: string
+	email?: string | null
+	normalizedEmail?: string | null
+	stripeCustomerId?: string | null
+	existingStripeCustomerId?: string | null
+	existingNormalizedEmail?: string | null
+	subscriptionId?: string | null
+	eventId?: string | null
+	eventType?: string | null
+	context: string
+}) {
+	console.warn('customer_provisioning_conflict', {
+		reason: params.reason,
+		email: params.email ?? null,
+		normalizedEmail: params.normalizedEmail ?? null,
+		stripeCustomerId: params.stripeCustomerId ?? null,
+		existingStripeCustomerId: params.existingStripeCustomerId ?? null,
+		existingNormalizedEmail: params.existingNormalizedEmail ?? null,
+		subscriptionId: params.subscriptionId ?? null,
+		eventId: params.eventId ?? null,
+		eventType: params.eventType ?? null,
+		context: params.context,
 	})
 }
 
@@ -583,15 +636,47 @@ async function upsertProvisioningRecord({
 	status: string
 	lastEventId?: string | null
 }): Promise<void> {
-	const existing = await prisma.customerProvisioning.findFirst({
-		where: {
-			OR: [{ stripeCustomerId }, { email }],
-		},
+	const normalizedEmail = normalizeEmailAddress(email)
+	if (!normalizedEmail) {
+		logProvisioningConflict({
+			reason: 'invalid_email',
+			email,
+			normalizedEmail,
+			stripeCustomerId,
+			context: 'upsert',
+		})
+		return
+	}
+
+	const existingByEmail = await prisma.customerProvisioning.findUnique({
+		where: { normalizedEmail },
+		select: { id: true, stripeCustomerId: true, normalizedEmail: true },
 	})
+
+	const existingByCustomer = await prisma.customerProvisioning.findUnique({
+		where: { stripeCustomerId },
+		select: { id: true, stripeCustomerId: true, normalizedEmail: true },
+	})
+
+	if (existingByCustomer && existingByCustomer.normalizedEmail !== normalizedEmail) {
+		logProvisioningConflict({
+			reason: 'stripe_customer_id_mismatch',
+			email,
+			normalizedEmail,
+			stripeCustomerId,
+			existingStripeCustomerId: existingByCustomer.stripeCustomerId,
+			existingNormalizedEmail: existingByCustomer.normalizedEmail,
+			context: 'upsert',
+		})
+		return
+	}
+
+	const existing = existingByEmail ?? existingByCustomer
 
 	const updateData: {
 		email: string
-		stripeCustomerId: string
+		normalizedEmail: string
+		stripeCustomerId?: string
 		stripeSubscriptionId?: string | null
 		wpUserId?: number | null
 		plan?: string | null
@@ -600,6 +685,7 @@ async function upsertProvisioningRecord({
 		lastEventId?: string | null
 	} = {
 		email,
+		normalizedEmail,
 		stripeCustomerId,
 		stripeSubscriptionId: stripeSubscriptionId ?? null,
 		plan: plan ?? null,
@@ -612,17 +698,61 @@ async function upsertProvisioningRecord({
 		updateData.wpUserId = wpUserId
 	}
 
-	if (existing) {
-		await prisma.customerProvisioning.update({
-			where: { id: existing.id },
-			data: updateData,
+	if (existing?.stripeCustomerId && existing.stripeCustomerId !== stripeCustomerId) {
+		logProvisioningConflict({
+			reason: 'stripe_customer_id_mismatch',
+			email,
+			normalizedEmail,
+			stripeCustomerId,
+			existingStripeCustomerId: existing.stripeCustomerId,
+			existingNormalizedEmail: existing.normalizedEmail,
+			context: 'upsert',
 		})
-		return
+		// Keep existing Stripe customer id to avoid clobbering.
+		delete updateData.stripeCustomerId
 	}
 
-	await prisma.customerProvisioning.create({
-		data: updateData,
-	})
+	try {
+		if (existing) {
+			await prisma.customerProvisioning.update({
+				where: { id: existing.id },
+				data: updateData,
+			})
+			return
+		}
+
+		if (!updateData.stripeCustomerId) {
+			logProvisioningConflict({
+				reason: 'missing_stripe_customer_id',
+				email,
+				normalizedEmail,
+				stripeCustomerId,
+				context: 'upsert',
+			})
+			return
+		}
+
+		await prisma.customerProvisioning.create({
+			data: updateData,
+		})
+	} catch (error) {
+		const message = (error as Error).message ?? 'unknown_error'
+		logProvisioningConflict({
+			reason: 'upsert_failed',
+			email,
+			normalizedEmail,
+			stripeCustomerId,
+			existingStripeCustomerId: existing?.stripeCustomerId ?? null,
+			existingNormalizedEmail: existing?.normalizedEmail ?? null,
+			context: 'upsert',
+		})
+		console.error('customer_provisioning_upsert_failed', {
+			message,
+			email,
+			normalizedEmail,
+			stripeCustomerId,
+		})
+	}
 }
 
 async function markProvisioningNotified(params: {
@@ -632,16 +762,46 @@ async function markProvisioningNotified(params: {
 	eventId?: string | null
 }): Promise<void> {
 	const now = new Date()
-	await prisma.customerProvisioning.updateMany({
-		where: {
-			OR: [{ stripeCustomerId: params.stripeCustomerId }, { email: params.email }],
-		},
-		data: {
-			lastNotifiedPlan: params.plan,
-			lastNotifiedAt: now,
-			lastNotifiedEventId: params.eventId ?? null,
-		},
+	const normalizedEmail = normalizeEmailAddress(params.email)
+	const byEmail = normalizedEmail
+		? await prisma.customerProvisioning.findUnique({
+				where: { normalizedEmail },
+				select: { id: true },
+		  })
+		: null
+	const byCustomer = await prisma.customerProvisioning.findUnique({
+		where: { stripeCustomerId: params.stripeCustomerId },
+		select: { id: true },
 	})
+	const targetId = byEmail?.id ?? byCustomer?.id ?? null
+	if (!targetId) {
+		console.warn('customer_provisioning_missing_for_notification', {
+			email: params.email,
+			normalizedEmail,
+			stripeCustomerId: params.stripeCustomerId,
+			eventId: params.eventId ?? null,
+		})
+		return
+	}
+
+	try {
+		await prisma.customerProvisioning.update({
+			where: { id: targetId },
+			data: {
+				lastNotifiedPlan: params.plan,
+				lastNotifiedAt: now,
+				lastNotifiedEventId: params.eventId ?? null,
+			},
+		})
+	} catch (error) {
+		console.error('customer_provisioning_notification_update_failed', {
+			email: params.email,
+			normalizedEmail,
+			stripeCustomerId: params.stripeCustomerId,
+			eventId: params.eventId ?? null,
+			message: (error as Error).message ?? 'unknown_error',
+		})
+	}
 }
 
 async function markProvisioningNeedsReprovision(

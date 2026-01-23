@@ -35,7 +35,8 @@ model StripeWebhookEvent {
 
 model CustomerProvisioning {
   id                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid @map("id")
-  email                String   @unique
+  email                String
+  normalizedEmail      String   @map("normalized_email")
   stripeCustomerId     String   @unique @map("stripe_customer_id")
   stripeSubscriptionId String?  @unique @map("stripe_subscription_id")
   wpUserId             Int?     @map("wp_user_id")
@@ -49,6 +50,7 @@ model CustomerProvisioning {
   createdAt            DateTime @default(now()) @map("created_at")
   updatedAt            DateTime @default(now()) @updatedAt @map("updated_at")
 
+  @@unique([normalizedEmail])
   @@map("customer_provisioning")
   @@schema("tenant_jpvbootcamp")
 }

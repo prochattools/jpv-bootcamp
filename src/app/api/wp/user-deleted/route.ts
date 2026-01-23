@@ -4,6 +4,7 @@ import { timingSafeEqual } from 'node:crypto'
 import { NextResponse } from 'next/server'
 import prisma from '@/libs/prisma'
 import { getWpAppSyncToken } from '@/lib/config'
+import { normalizeEmail as normalizeEmailAddress } from '@/lib/normalize-email'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -57,7 +58,7 @@ export async function POST(req: Request) {
 	const wpUserId = Number.isFinite(numericWpUserId) && numericWpUserId > 0
 		? numericWpUserId
 		: null
-	const email = typeof payload.email === 'string' ? payload.email.trim().toLowerCase() : null
+	const email = normalizeEmailAddress(payload.email ?? null)
 
 	if (!wpUserId && !email) {
 		return NextResponse.json(
@@ -66,13 +67,17 @@ export async function POST(req: Request) {
 		)
 	}
 
-	const clauses = [] as Array<{ wpUserId?: number; email?: string }>
-	if (wpUserId) clauses.push({ wpUserId })
-	if (email) clauses.push({ email })
-
-	const record = await prisma.customerProvisioning.findFirst({
-		where: { OR: clauses },
-	})
+	let record =
+		email
+			? await prisma.customerProvisioning.findUnique({
+					where: { normalizedEmail: email },
+			  })
+			: null
+	if (!record && wpUserId) {
+		record = await prisma.customerProvisioning.findFirst({
+			where: { wpUserId },
+		})
+	}
 
 	if (!record) {
 		console.warn('WP deletion sync: no provisioning record found', {

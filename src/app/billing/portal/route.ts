@@ -3,6 +3,7 @@ import prisma from '@/libs/prisma'
 import { getStripe } from '@/lib/stripe'
 import { getStripeConfig } from '@/lib/stripe-config'
 import { verifyBillingPortalToken } from '@/lib/billing-portal-token'
+import { normalizeEmail as normalizeEmailAddress } from '@/lib/normalize-email'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -52,12 +53,6 @@ function stripChainedUrl(value: string): string {
 	return value.slice(0, second.index)
 }
 
-function normalizeEmail(value: string | null): string | null {
-	if (!value) return null
-	const trimmed = value.trim().toLowerCase()
-	return trimmed.length > 0 ? trimmed : null
-}
-
 function extractEmailDomain(email: string | null | undefined): string | null {
 	if (!email) return null
 	const atIndex = email.indexOf('@')
@@ -103,10 +98,10 @@ function plainError(status: number, message: string) {
 }
 
 async function getStripeCustomerIdByEmail(email: string): Promise<string | null> {
-	const record = await prisma.customerProvisioning.findFirst({
-		where: {
-			email: { equals: email, mode: 'insensitive' },
-		},
+	const normalizedEmail = normalizeEmailAddress(email)
+	if (!normalizedEmail) return null
+	const record = await prisma.customerProvisioning.findUnique({
+		where: { normalizedEmail },
 		select: { stripeCustomerId: true },
 	})
 	return record?.stripeCustomerId ?? null
@@ -124,7 +119,7 @@ async function searchStripeCustomerIdByEmail(email: string): Promise<string | nu
 export async function GET(req: NextRequest) {
 	const returnParam = req.nextUrl.searchParams.get('return')
 	const returnUrlFromQuery = resolveReturnUrl(returnParam)
-	const emailParam = normalizeEmail(req.nextUrl.searchParams.get('email'))
+	const emailParam = normalizeEmailAddress(req.nextUrl.searchParams.get('email'))
 	const tokenParam = req.nextUrl.searchParams.get('token')
 	// Stripe email search is opt-in to avoid open-ended lookups by default.
 	const allowStripeSearch = isEnvEnabled(process.env.STRIPE_CUSTOMER_SEARCH_ENABLED)

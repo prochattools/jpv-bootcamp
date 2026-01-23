@@ -3,18 +3,13 @@ import prisma from '@/libs/prisma'
 import { getStripe } from '@/lib/stripe'
 import { getStripeConfig } from '@/lib/stripe-config'
 import { verifyBillingPortalToken } from '@/lib/billing-portal-token'
+import { normalizeEmail as normalizeEmailAddress } from '@/lib/normalize-email'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 const BILLING_PORTAL_RETURN_URL =
 	'https://portal.jpvbootcamp.com/community/?jpv_upgrade=success'
-
-function normalizeEmail(value: string | null | undefined): string | null {
-	if (!value) return null
-	const trimmed = value.trim().toLowerCase()
-	return trimmed.length > 0 ? trimmed : null
-}
 
 function extractEmailDomain(email: string | null): string | null {
 	if (!email) return null
@@ -51,10 +46,12 @@ async function getStripeCustomerRecord(email: string): Promise<{
 	stripeCustomerId: string | null
 	stripeSubscriptionId: string | null
 }> {
-	const record = await prisma.customerProvisioning.findFirst({
-		where: {
-			email: { equals: email, mode: 'insensitive' },
-		},
+	const normalizedEmail = normalizeEmailAddress(email)
+	if (!normalizedEmail) {
+		return { stripeCustomerId: null, stripeSubscriptionId: null }
+	}
+	const record = await prisma.customerProvisioning.findUnique({
+		where: { normalizedEmail },
 		select: { stripeCustomerId: true, stripeSubscriptionId: true },
 	})
 
@@ -77,8 +74,25 @@ async function updateProvisioningCustomerId(
 	email: string,
 	stripeCustomerId: string
 ): Promise<void> {
-	await prisma.customerProvisioning.updateMany({
-		where: { email: { equals: email, mode: 'insensitive' } },
+	const normalizedEmail = normalizeEmailAddress(email)
+	if (!normalizedEmail) return
+	const record = await prisma.customerProvisioning.findUnique({
+		where: { normalizedEmail },
+		select: { id: true, stripeCustomerId: true },
+	})
+	if (!record) return
+	if (record.stripeCustomerId && record.stripeCustomerId !== stripeCustomerId) {
+		console.warn('customer_provisioning_conflict', {
+			reason: 'stripe_customer_id_mismatch',
+			normalizedEmail,
+			stripeCustomerId,
+			existingStripeCustomerId: record.stripeCustomerId,
+			context: 'upgrade-vip',
+		})
+		return
+	}
+	await prisma.customerProvisioning.update({
+		where: { id: record.id },
 		data: { stripeCustomerId },
 	})
 }
@@ -137,7 +151,7 @@ async function handleUpgradeVip(req: NextRequest): Promise<NextResponse> {
 		return NextResponse.redirect(buildReturnUrl('error', 'invalid_token'), 302)
 	}
 
-	const email = normalizeEmail(verification.payload.email)
+	const email = normalizeEmailAddress(verification.payload.email)
 	if (!email) {
 		return NextResponse.redirect(buildReturnUrl('error', 'missing_email'), 302)
 	}
