@@ -4,60 +4,22 @@ import { getStripe } from '@/lib/stripe'
 import { getStripeConfig } from '@/lib/stripe-config'
 import { verifyBillingPortalToken } from '@/lib/billing-portal-token'
 import { normalizeEmail as normalizeEmailAddress } from '@/lib/normalize-email'
+import {
+	BILLING_PORTAL_DEFAULT_RETURN_URL,
+	describeBillingPortalReturnUrl,
+} from '@/lib/billing-portal-return'
+import { redactEmail } from '@/lib/log-redact'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-const DEFAULT_RETURN_URL = 'https://portal.jpvbootcamp.com/community/'
-const ALLOWED_RETURN_ORIGINS = new Set([
-	'https://portal.jpvbootcamp.com',
-	'https://jpvbootcamp.com',
-])
-
-function safeDecodeURIComponent(value: string): string {
-	try {
-		return decodeURIComponent(value)
-	} catch {
-		return value
-	}
-}
-
-function stripChainedUrl(value: string): string {
-	const regex = /https?:\/\//gi
-	const first = regex.exec(value)
-	if (!first) return value
-	const second = regex.exec(value)
-	if (!second) return value
-	return value.slice(0, second.index)
-}
-
-function resolveReturnUrl(raw: string | null | undefined): string {
-	if (!raw) return DEFAULT_RETURN_URL
-	const trimmed = raw.trim()
-	if (!trimmed) return DEFAULT_RETURN_URL
-	const decoded = safeDecodeURIComponent(trimmed)
-	const candidate = stripChainedUrl(decoded)
-	try {
-		const resolved = new URL(candidate, DEFAULT_RETURN_URL)
-		if (!ALLOWED_RETURN_ORIGINS.has(resolved.origin)) {
-			return DEFAULT_RETURN_URL
-		}
-		return resolved.toString()
-	} catch {
-		return DEFAULT_RETURN_URL
-	}
-}
-
-function buildReturnUrl(
-	baseUrl: string,
-	status: 'return' | 'error'
-): string {
+function buildReturnUrl(baseUrl: string, status: 'return' | 'error'): string {
 	try {
 		const url = new URL(baseUrl)
 		url.searchParams.set('jpv_billing', status)
 		return url.toString()
 	} catch {
-		return DEFAULT_RETURN_URL
+		return BILLING_PORTAL_DEFAULT_RETURN_URL
 	}
 }
 
@@ -124,9 +86,9 @@ async function updateProvisioningCustomerId(
 	if (existingByCustomer && existingByCustomer.normalizedEmail !== normalizedEmail) {
 		console.warn('customer_provisioning_conflict', {
 			reason: 'stripe_customer_id_in_use',
-			normalizedEmail,
+			normalizedEmail: redactEmail(normalizedEmail),
 			stripeCustomerId,
-			existingNormalizedEmail: existingByCustomer.normalizedEmail,
+			existingNormalizedEmail: redactEmail(existingByCustomer.normalizedEmail),
 			context: 'billing-portal',
 		})
 		return
@@ -140,7 +102,7 @@ async function updateProvisioningCustomerId(
 	if (record.stripeCustomerId && record.stripeCustomerId !== stripeCustomerId) {
 		console.warn('customer_provisioning_conflict', {
 			reason: 'stripe_customer_id_mismatch',
-			normalizedEmail,
+			normalizedEmail: redactEmail(normalizedEmail),
 			stripeCustomerId,
 			existingStripeCustomerId: record.stripeCustomerId,
 			context: 'billing-portal',
@@ -201,7 +163,10 @@ async function handleBillingPortal(req: NextRequest): Promise<NextResponse> {
 	const tokenSecret = (process.env.BILLING_PORTAL_HMAC_SECRET || '').trim()
 	if (!tokenSecret) {
 		console.error('BILLING_PORTAL_HMAC_SECRET missing')
-		return NextResponse.redirect(buildReturnUrl(DEFAULT_RETURN_URL, 'error'), 302)
+		return NextResponse.redirect(
+			buildReturnUrl(BILLING_PORTAL_DEFAULT_RETURN_URL, 'error'),
+			302
+		)
 	}
 
 	const headerToken = extractBearerToken(req)
@@ -209,26 +174,40 @@ async function handleBillingPortal(req: NextRequest): Promise<NextResponse> {
 	const token = headerToken || (queryToken ? queryToken.trim() : null)
 
 	if (!token) {
-		return NextResponse.redirect(buildReturnUrl(DEFAULT_RETURN_URL, 'error'), 302)
+		return NextResponse.redirect(
+			buildReturnUrl(BILLING_PORTAL_DEFAULT_RETURN_URL, 'error'),
+			302
+		)
 	}
 
 	const verification = verifyBillingPortalToken(token, tokenSecret)
 	if (verification.ok === false) {
-		return NextResponse.redirect(buildReturnUrl(DEFAULT_RETURN_URL, 'error'), 302)
+		console.warn('billing_portal_token_invalid', {
+			reason: verification.reason,
+		})
+		return NextResponse.redirect(
+			buildReturnUrl(BILLING_PORTAL_DEFAULT_RETURN_URL, 'error'),
+			302
+		)
 	}
 
 	const email = normalizeEmailAddress(verification.payload.email)
 	if (!email) {
-		return NextResponse.redirect(buildReturnUrl(DEFAULT_RETURN_URL, 'error'), 302)
+		return NextResponse.redirect(
+			buildReturnUrl(BILLING_PORTAL_DEFAULT_RETURN_URL, 'error'),
+			302
+		)
 	}
-	const returnUrl = resolveReturnUrl(verification.payload.returnUrl)
+	const returnInfo = describeBillingPortalReturnUrl(verification.payload.returnUrl)
+	const returnUrl = returnInfo.url
 
 	const emailDomain = extractEmailDomain(email)
 	let resolvedCustomerId: string | null = null
 	let resolvedCustomerSource: CustomerResolutionSource = 'none'
+	let stripeConfig: ReturnType<typeof getStripeConfig> | null = null
 
 	try {
-		const stripeConfig = getStripeConfig()
+		stripeConfig = getStripeConfig()
 		const portalConfigId = stripeConfig.portalConfigurationId
 		const stripe = getStripe()
 		const resolution = await resolveStripeCustomerId(email)
@@ -242,6 +221,17 @@ async function handleBillingPortal(req: NextRequest): Promise<NextResponse> {
 				resolvedCustomerId,
 				source: resolvedCustomerSource,
 			})
+			console.warn('portal_session_created', {
+				stripeEnv: stripeConfig.env,
+				configurationId: portalConfigId,
+				customerId: resolvedCustomerId,
+				sourceRoute: '/api/stripe/billing-portal',
+				source: resolvedCustomerSource,
+				return_host: returnInfo.host,
+				return_path: returnInfo.path,
+				ok: false,
+				reason: 'customer_not_found',
+			})
 			return NextResponse.redirect(buildReturnUrl(returnUrl, 'error'), 302)
 		}
 
@@ -250,7 +240,8 @@ async function handleBillingPortal(req: NextRequest): Promise<NextResponse> {
 			configurationId: portalConfigId,
 			resolvedCustomerId,
 			source: resolvedCustomerSource,
-			returnUrl,
+			returnHost: returnInfo.host,
+			returnPath: returnInfo.path,
 		})
 
 		const session = await stripe.billingPortal.sessions.create({
@@ -263,8 +254,12 @@ async function handleBillingPortal(req: NextRequest): Promise<NextResponse> {
 			stripeEnv: stripeConfig.env,
 			configurationId: portalConfigId,
 			customerId: resolvedCustomerId,
+			portal_session_id: session.id ?? null,
 			sourceRoute: '/api/stripe/billing-portal',
 			source: resolvedCustomerSource,
+			return_host: returnInfo.host,
+			return_path: returnInfo.path,
+			ok: true,
 		})
 
 		if (!session.url) {
@@ -273,6 +268,18 @@ async function handleBillingPortal(req: NextRequest): Promise<NextResponse> {
 				reason: 'portal_unavailable',
 				resolvedCustomerId,
 				source: resolvedCustomerSource,
+			})
+			console.warn('portal_session_created', {
+				stripeEnv: stripeConfig.env,
+				configurationId: portalConfigId,
+				customerId: resolvedCustomerId,
+				portal_session_id: session.id ?? null,
+				sourceRoute: '/api/stripe/billing-portal',
+				source: resolvedCustomerSource,
+				return_host: returnInfo.host,
+				return_path: returnInfo.path,
+				ok: false,
+				reason: 'portal_unavailable',
 			})
 			return NextResponse.redirect(buildReturnUrl(returnUrl, 'error'), 302)
 		}
@@ -285,7 +292,19 @@ async function handleBillingPortal(req: NextRequest): Promise<NextResponse> {
 			resolvedCustomerId,
 			source: resolvedCustomerSource,
 		})
-		return NextResponse.redirect(buildReturnUrl(DEFAULT_RETURN_URL, 'error'), 302)
+		console.warn('portal_session_created', {
+			stripeEnv: stripeConfig?.env ?? null,
+			configurationId: stripeConfig?.portalConfigurationId ?? null,
+			customerId: resolvedCustomerId,
+			sourceRoute: '/api/stripe/billing-portal',
+			source: resolvedCustomerSource,
+			ok: false,
+			reason: 'unexpected_error',
+		})
+		return NextResponse.redirect(
+			buildReturnUrl(BILLING_PORTAL_DEFAULT_RETURN_URL, 'error'),
+			302
+		)
 	}
 }
 

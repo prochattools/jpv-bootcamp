@@ -1,6 +1,5 @@
 import 'server-only'
 
-import { createHash } from 'node:crypto'
 import { NextResponse } from 'next/server'
 import type Stripe from 'stripe'
 import { getServerConfig } from '@/lib/config'
@@ -22,12 +21,10 @@ let hasLoggedIdempotencyConfig = false
 
 type WebhookDebugInfo = {
 	hasSignatureHeader: boolean
-	signaturePrefix: string | null
 	rawBodyLength: number
 	method: string
 	path: string
 	nodeEnv?: string
-	secretPrefix: string | null
 }
 
 function isMissingEnvError(error: unknown): boolean {
@@ -48,37 +45,19 @@ function buildDebugInfo(params: {
 	req: Request
 	signature: string | null
 	rawBodyLength: number
-	secret: string | null
 }): WebhookDebugInfo {
-	const { req, signature, rawBodyLength, secret } = params
+	const { req, signature, rawBodyLength } = params
 	return {
 		hasSignatureHeader: Boolean(signature),
-		signaturePrefix: signature ? signature.slice(0, 16) : null,
 		rawBodyLength,
 		method: req.method,
 		path: getRequestPath(req),
 		nodeEnv: process.env.NODE_ENV,
-		secretPrefix: secret ? secret.slice(0, 6) : null,
 	}
 }
 
 function debugErrorPayload(message: string, debugInfo: WebhookDebugInfo) {
 	return DEBUG_STRIPE_WEBHOOKS ? { error: message, debug: debugInfo } : { error: message }
-}
-
-function getSignaturePrefix(signature: string | null): string | null {
-	if (!signature) return null
-	const parts = signature.split(',')
-	const prefix = parts.slice(0, 2).join(',')
-	return prefix.length > 80 ? prefix.slice(0, 80) : prefix
-}
-
-function getSecretPrefix(secret: string): string {
-	return secret.slice(0, 6)
-}
-
-function getSecretFingerprint(secret: string): string {
-	return createHash('sha256').update(secret).digest('hex').slice(0, 8)
 }
 
 function getBuildId(): string | null {
@@ -212,14 +191,12 @@ export async function handleStripeWebhook(req: Request) {
 	}
 
 	const webhookSecrets = getStripeWebhookSecrets()
-	const webhookSecretFingerprints = webhookSecrets.map(getSecretFingerprint)
 	const buildId = getBuildId()
 
 	const debugInfo = buildDebugInfo({
 		req,
 		signature,
 		rawBodyLength: rawBuffer.length,
-		secret: webhookSecrets.length > 0 ? getSecretPrefix(webhookSecrets[0]) : null,
 	})
 
 	if (!hasLoggedIdempotencyConfig) {
@@ -249,15 +226,8 @@ export async function handleStripeWebhook(req: Request) {
 			meta: {
 				path: debugInfo.path,
 				hasSignature: debugInfo.hasSignatureHeader,
-				signaturePrefix: getSignaturePrefix(signature),
 				rawBodyLength: rawBuffer.length,
-				secretFingerprints: webhookSecretFingerprints,
 				buildId,
-				userAgent: req.headers.get('user-agent'),
-				contentType: req.headers.get('content-type'),
-				xForwardedFor: req.headers.get('x-forwarded-for'),
-				cfConnectingIp: req.headers.get('cf-connecting-ip'),
-				xRealIp: req.headers.get('x-real-ip'),
 			},
 			debugInfo,
 		})
@@ -282,16 +252,14 @@ export async function handleStripeWebhook(req: Request) {
 			debugInfo,
 		})
 		return NextResponse.json(
-			debugErrorPayload('Missing Stripe webhook secret.', debugInfo),
-			{ status: 500 }
+			{ received: true, skipped: 'missing_webhook_secret' },
+			{ status: 200 }
 		)
 	}
 
 	const stripe = getStripe()
 	let event: Stripe.Event | null = null
 	let matchedSecretIndex = -1
-	let matchedSecretPrefix: string | null = null
-	let matchedSecretFingerprint: string | null = null
 	const failedIndices: number[] = []
 	let firstError: Error | null = null
 
@@ -300,8 +268,6 @@ export async function handleStripeWebhook(req: Request) {
 		try {
 			event = stripe.webhooks.constructEvent(rawBuffer, signature, secret)
 			matchedSecretIndex = i
-			matchedSecretPrefix = getSecretPrefix(secret)
-			matchedSecretFingerprint = getSecretFingerprint(secret)
 			break
 		} catch (error) {
 			if (!firstError) {
@@ -325,15 +291,8 @@ export async function handleStripeWebhook(req: Request) {
 				numberOfSecretsTried: webhookSecrets.length,
 				failedIndices,
 				rawBodyLength: rawBuffer.length,
-				signaturePrefix: getSignaturePrefix(signature),
-				secretFingerprints: webhookSecretFingerprints,
 				buildId,
 				message: firstError?.message ?? 'Signature verification failed.',
-				userAgent: req.headers.get('user-agent'),
-				contentType: req.headers.get('content-type'),
-				xForwardedFor: req.headers.get('x-forwarded-for'),
-				cfConnectingIp: req.headers.get('cf-connecting-ip'),
-				xRealIp: req.headers.get('x-real-ip'),
 			},
 			debugInfo,
 		})
@@ -394,6 +353,7 @@ export async function handleStripeWebhook(req: Request) {
 
 	if (await hasProcessed(event.id)) {
 		logWebhookEvent({
+			message: 'webhook_duplicate_ignored',
 			eventId: event.id,
 			type: event.type,
 			verified: true,
@@ -439,8 +399,8 @@ export async function handleStripeWebhook(req: Request) {
 						debugInfo,
 					})
 					return NextResponse.json(
-						{ error: 'Provisioning enabled but configuration is missing.' },
-						{ status: 500 }
+						{ received: true, skipped: 'provisioning_config_missing' },
+						{ status: 200 }
 					)
 				}
 				throw error
@@ -551,8 +511,6 @@ export async function handleStripeWebhook(req: Request) {
 				path: debugInfo.path,
 				buildId,
 				secretIndexMatched: matchedSecretIndex,
-				secretPrefix: matchedSecretPrefix,
-				secretFingerprint: matchedSecretFingerprint,
 				provisioning: provisioningStatus,
 			},
 			debugInfo,
@@ -572,9 +530,6 @@ export async function handleStripeWebhook(req: Request) {
 			},
 			debugInfo,
 		})
-		return NextResponse.json(
-			{ error: 'Stripe webhook handler failed.' },
-			{ status: 500 }
-		)
+		return NextResponse.json({ received: true, skipped: 'handler_failed' })
 	}
 }

@@ -5,6 +5,7 @@ import { sendWelcomeEmail } from '@/lib/email'
 import { resolvePlanFromStripe, type Plan } from '@/lib/plans'
 import { getStripe } from '@/lib/stripe'
 import { normalizeEmail as normalizeEmailAddress } from '@/lib/normalize-email'
+import { redactEmail } from '@/lib/log-redact'
 import { getWpUserExists, provisionWpUser } from '@/lib/wp'
 
 const ACTIVE_STATUSES = new Set<Stripe.Subscription.Status>([
@@ -106,7 +107,7 @@ export function logProvisioningDecision(params: {
 		livemode: typeof params.livemode === 'boolean' ? params.livemode : null,
 		customerId: params.customerId ?? null,
 		subscriptionId: params.subscriptionId ?? null,
-		email: params.email ?? null,
+		email: redactEmail(params.email ?? null),
 		incomingPlan: params.incomingPlan ?? null,
 		dbWpUserId: typeof params.dbWpUserId === 'number' ? params.dbWpUserId : null,
 		wpExists: params.wpExists ?? 'unknown',
@@ -115,7 +116,7 @@ export function logProvisioningDecision(params: {
 	}
 
 	if (params.resolvedEmail !== undefined) {
-		payload.resolvedEmail = params.resolvedEmail
+		payload.resolvedEmail = redactEmail(params.resolvedEmail)
 	}
 	if (params.resolvedEmailSource !== undefined) {
 		payload.resolvedEmailSource = params.resolvedEmailSource
@@ -186,14 +187,14 @@ function logProvisioningSkipDetails(params: {
 		livemode: typeof params.livemode === 'boolean' ? params.livemode : null,
 		stripeCustomerId: params.customerId ?? null,
 		stripeSubscriptionId: params.subscriptionId ?? null,
-		email: params.email ?? null,
+		email: redactEmail(params.email ?? null),
 		plan: params.plan ?? null,
 		wpUserId: typeof params.wpUserId === 'number' ? params.wpUserId : null,
 		reason: normalizeSkipReason(params.reason),
 	}
 
 	if (params.resolvedEmail !== undefined) {
-		payload.resolvedEmail = params.resolvedEmail
+		payload.resolvedEmail = redactEmail(params.resolvedEmail)
 	}
 	if (params.resolvedEmailSource !== undefined) {
 		payload.resolvedEmailSource = params.resolvedEmailSource
@@ -288,7 +289,7 @@ function evaluateEmailNotification(params: {
 	lastNotifiedPlan: string | null
 	lastNotifiedAt: Date | null
 	lastNotifiedEventId: string | null
-	eventId?: string | null
+	sendKey?: string | null
 }): { shouldSend: boolean; reason: string } {
 	if (!params.allowEmail) {
 		return { shouldSend: false, reason: params.disabledReason ?? 'disabled' }
@@ -296,8 +297,8 @@ function evaluateEmailNotification(params: {
 	if (!isProvisioningPlan(params.newPlan)) {
 		return { shouldSend: false, reason: 'not_membership_plan' }
 	}
-	if (params.eventId && params.lastNotifiedEventId === params.eventId) {
-		return { shouldSend: false, reason: 'event_already_notified' }
+	if (params.sendKey && params.lastNotifiedEventId === params.sendKey) {
+		return { shouldSend: false, reason: 'send_key_already_notified' }
 	}
 	if (params.lastNotifiedPlan === params.newPlan) {
 		if (
@@ -312,6 +313,21 @@ function evaluateEmailNotification(params: {
 		return { shouldSend: false, reason: 'plan_unchanged' }
 	}
 	return { shouldSend: true, reason: 'plan_changed' }
+}
+
+function buildEmailSendKey(params: {
+	eventId?: string | null
+	subscriptionId?: string | null
+	plan?: string | null
+	effectiveAt?: number | null
+}): string | null {
+	if (params.eventId) {
+		return params.eventId
+	}
+	if (params.subscriptionId && params.plan) {
+		return `sub:${params.subscriptionId}:${params.plan}:${params.effectiveAt ?? 'na'}`
+	}
+	return null
 }
 
 function resolveStoredPlanName(record: ProvisioningRecord | null): string | null {
@@ -607,11 +623,11 @@ function logProvisioningConflict(params: {
 }) {
 	console.warn('customer_provisioning_conflict', {
 		reason: params.reason,
-		email: params.email ?? null,
-		normalizedEmail: params.normalizedEmail ?? null,
+		email: redactEmail(params.email ?? null),
+		normalizedEmail: redactEmail(params.normalizedEmail ?? null),
 		stripeCustomerId: params.stripeCustomerId ?? null,
 		existingStripeCustomerId: params.existingStripeCustomerId ?? null,
-		existingNormalizedEmail: params.existingNormalizedEmail ?? null,
+		existingNormalizedEmail: redactEmail(params.existingNormalizedEmail ?? null),
 		subscriptionId: params.subscriptionId ?? null,
 		eventId: params.eventId ?? null,
 		eventType: params.eventType ?? null,
@@ -641,7 +657,7 @@ async function upsertProvisioningRecord({
 		logProvisioningConflict({
 			reason: 'invalid_email',
 			email,
-			normalizedEmail,
+			normalizedEmail: redactEmail(normalizedEmail),
 			stripeCustomerId,
 			context: 'upsert',
 		})
@@ -662,7 +678,7 @@ async function upsertProvisioningRecord({
 		logProvisioningConflict({
 			reason: 'stripe_customer_id_mismatch',
 			email,
-			normalizedEmail,
+			normalizedEmail: redactEmail(normalizedEmail),
 			stripeCustomerId,
 			existingStripeCustomerId: existingByCustomer.stripeCustomerId,
 			existingNormalizedEmail: existingByCustomer.normalizedEmail,
@@ -752,8 +768,8 @@ async function upsertProvisioningRecord({
 		})
 		console.error('customer_provisioning_upsert_failed', {
 			message,
-			email,
-			normalizedEmail,
+			email: redactEmail(email),
+			normalizedEmail: redactEmail(normalizedEmail),
 			stripeCustomerId,
 		})
 	}
@@ -763,7 +779,7 @@ async function markProvisioningNotified(params: {
 	stripeCustomerId: string
 	email: string
 	plan: string
-	eventId?: string | null
+	sendKey?: string | null
 }): Promise<void> {
 	const now = new Date()
 	const normalizedEmail = normalizeEmailAddress(params.email)
@@ -780,10 +796,10 @@ async function markProvisioningNotified(params: {
 	const targetId = byEmail?.id ?? byCustomer?.id ?? null
 	if (!targetId) {
 		console.warn('customer_provisioning_missing_for_notification', {
-			email: params.email,
-			normalizedEmail,
+			email: redactEmail(params.email),
+			normalizedEmail: redactEmail(normalizedEmail),
 			stripeCustomerId: params.stripeCustomerId,
-			eventId: params.eventId ?? null,
+			sendKey: params.sendKey ?? null,
 		})
 		return
 	}
@@ -794,15 +810,15 @@ async function markProvisioningNotified(params: {
 			data: {
 				lastNotifiedPlan: params.plan,
 				lastNotifiedAt: now,
-				lastNotifiedEventId: params.eventId ?? null,
+				lastNotifiedEventId: params.sendKey ?? null,
 			},
 		})
 	} catch (error) {
 		console.error('customer_provisioning_notification_update_failed', {
-			email: params.email,
-			normalizedEmail,
+			email: redactEmail(params.email),
+			normalizedEmail: redactEmail(normalizedEmail),
 			stripeCustomerId: params.stripeCustomerId,
-			eventId: params.eventId ?? null,
+			sendKey: params.sendKey ?? null,
 			message: (error as Error).message ?? 'unknown_error',
 		})
 	}
@@ -961,6 +977,14 @@ export async function provisionFromCheckoutSession(
 	const { plan, priceId } = await resolvePlanFromCheckoutSession(session)
 	resolvedPlan = plan
 	resolvedPriceId = priceId
+	if (!resolvedPriceId) {
+		console.warn('provisioning_missing_price_id', {
+			context: 'checkout',
+			sessionId: session.id,
+			subscriptionId,
+			eventId: eventId ?? null,
+		})
+	}
 	const storedPlanName = resolveStoredPlanName(existing)
 	const lastNotifiedPlan = existing?.lastNotifiedPlan ?? null
 	const lastNotifiedAt = existing?.lastNotifiedAt ?? null
@@ -969,7 +993,7 @@ export async function provisionFromCheckoutSession(
 	if (!plan) {
 		console.error('WP provisioning skipped: invalid plan', {
 			sessionId: session.id,
-			email,
+			email: redactEmail(email),
 			customerId,
 			subscriptionId,
 			plan: plan ?? null,
@@ -979,6 +1003,12 @@ export async function provisionFromCheckoutSession(
 	}
 
 	incomingPlan = plan
+	const emailSendKey = buildEmailSendKey({
+		eventId: eventId ?? null,
+		subscriptionId,
+		plan: incomingPlan,
+		effectiveAt: typeof session.created === 'number' ? session.created : null,
+	})
 
 	const planChanged = storedPlanName !== incomingPlan
 	let decision: ProvisioningDecision = 'provision'
@@ -994,7 +1024,7 @@ export async function provisionFromCheckoutSession(
 		lastNotifiedPlan,
 		lastNotifiedAt,
 		lastNotifiedEventId,
-		eventId,
+		sendKey: emailSendKey,
 	})
 	emailReason = emailEval.reason
 
@@ -1119,7 +1149,7 @@ export async function provisionFromCheckoutSession(
 	})
 
 	console.info('WP provisioning request', {
-		email,
+		email: redactEmail(email),
 		customerId,
 		subscriptionId,
 		plan,
@@ -1161,7 +1191,7 @@ export async function provisionFromCheckoutSession(
 			emailSent = false
 			emailReason = 'non_webhook_disabled'
 			console.info('Non-webhook email skipped', {
-				email,
+				email: redactEmail(email),
 				templateKey: MEMBERSHIP_EMAIL_TEMPLATE_KEY,
 				plan,
 				eventId: eventId ?? null,
@@ -1191,10 +1221,10 @@ export async function provisionFromCheckoutSession(
 					stripeCustomerId: customerId,
 					email,
 					plan,
-					eventId: eventId ?? null,
+					sendKey: emailSendKey ?? null,
 				})
 				console.info('Membership email sent', {
-					email,
+					email: redactEmail(email),
 					templateKey: MEMBERSHIP_EMAIL_TEMPLATE_KEY,
 					plan: incomingPlan,
 					eventId: eventId ?? null,
@@ -1368,16 +1398,28 @@ export async function syncFromSubscription(
 		return buildSummary('skip', 'awaiting_proration_payment')
 	}
 
+	if (!subscription.items?.data || subscription.items.data.length === 0) {
+		logDecision('skip', 'missing_subscription_items')
+		return buildSummary('skip', 'missing_subscription_items')
+	}
+
 	const { plan, priceId } = getPlanFromSubscription(subscription)
 	resolvedPlan = plan
 	resolvedPriceId = priceId
+	if (!resolvedPriceId) {
+		console.warn('provisioning_missing_price_id', {
+			context: 'subscription',
+			subscriptionId: subscription.id,
+			eventId: eventId ?? null,
+		})
+	}
 	const storedPlanName = resolveStoredPlanName(existing)
 
 	const isActive = ACTIVE_STATUSES.has(subscription.status)
 	if (isActive && !plan) {
 		console.error('WP provisioning skipped: invalid plan', {
 			subscriptionId: subscription.id,
-			email,
+			email: redactEmail(email),
 			customerId,
 			plan: plan ?? null,
 		})
@@ -1389,7 +1431,7 @@ export async function syncFromSubscription(
 	if (!incomingPlan) {
 		console.error('WP provisioning skipped: invalid plan', {
 			subscriptionId: subscription.id,
-			email,
+			email: redactEmail(email),
 			customerId,
 			plan: nextPlan ?? null,
 		})
@@ -1397,6 +1439,15 @@ export async function syncFromSubscription(
 		return buildSummary('skip', 'invalid_plan')
 	}
 	const nextStatus = isActive ? 'active' : 'inactive'
+	const emailSendKey = buildEmailSendKey({
+		eventId: eventId ?? null,
+		subscriptionId: subscription.id,
+		plan: incomingPlan,
+		effectiveAt:
+			typeof subscription.current_period_start === 'number'
+				? subscription.current_period_start
+				: null,
+	})
 
 	console.debug('Syncing subscription', {
 		subscriptionId: subscription.id,
@@ -1419,7 +1470,7 @@ export async function syncFromSubscription(
 		lastNotifiedPlan,
 		lastNotifiedAt,
 		lastNotifiedEventId,
-		eventId,
+		sendKey: emailSendKey,
 	})
 	emailReason = emailEval.reason
 
@@ -1553,7 +1604,7 @@ export async function syncFromSubscription(
 	}
 
 	console.info('WP provisioning request', {
-		email,
+		email: redactEmail(email),
 		customerId,
 		subscriptionId: subscription.id,
 		plan: incomingPlan,
@@ -1601,7 +1652,7 @@ export async function syncFromSubscription(
 			emailSent = false
 			emailReason = 'non_webhook_disabled'
 			console.info('Non-webhook email skipped', {
-				email,
+				email: redactEmail(email),
 				templateKey: MEMBERSHIP_EMAIL_TEMPLATE_KEY,
 				plan: incomingPlan,
 				eventId: eventId ?? null,
@@ -1631,10 +1682,10 @@ export async function syncFromSubscription(
 					stripeCustomerId: customerId,
 					email,
 					plan: incomingPlan,
-					eventId: eventId ?? null,
+					sendKey: emailSendKey ?? null,
 				})
 				console.info('Membership email sent', {
-					email,
+					email: redactEmail(email),
 					templateKey: MEMBERSHIP_EMAIL_TEMPLATE_KEY,
 					plan: incomingPlan,
 					eventId: eventId ?? null,

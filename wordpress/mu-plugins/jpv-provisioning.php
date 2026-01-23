@@ -16,6 +16,8 @@ const JPV_PROVISIONING_OPTION = 'jpv_provision_token';
 const JPV_PROVISIONING_LEGACY_OPTION = 'jpv_provisioning_token';
 const JPV_PROVISIONING_MAIL_FROM = 'support@jpvbootcamp.com';
 const JPV_PROVISIONING_MAIL_FROM_NAME = 'JPV Bootcamp Support';
+const JPV_WELCOME_EMAIL_SENT_AT = 'jpv_welcome_email_sent_at';
+const JPV_WELCOME_EMAIL_SENT_REASON = 'jpv_welcome_email_sent_reason';
 
 function jpv_provisioning_mail_from($from) {
     return JPV_PROVISIONING_MAIL_FROM;
@@ -31,14 +33,32 @@ function jpv_provisioning_log_event(string $event, array $payload = array()): vo
     error_log('[JPV Provisioning] ' . wp_json_encode($payload));
 }
 
-function jpv_provisioning_send_new_user_email(int $user_id, string $email): void {
-    add_filter('wp_mail_from', 'jpv_provisioning_mail_from');
-    add_filter('wp_mail_from_name', 'jpv_provisioning_mail_from_name');
+function jpv_provisioning_send_new_user_email(int $user_id, string $email): bool {
+    $mail_from_ok = is_email(JPV_PROVISIONING_MAIL_FROM);
+    if (!$mail_from_ok) {
+        jpv_provisioning_log_event('invalid_mail_from_config', array(
+            'userId' => $user_id,
+            'email' => $email,
+        ));
+    } else {
+        add_filter('wp_mail_from', 'jpv_provisioning_mail_from');
+        add_filter('wp_mail_from_name', 'jpv_provisioning_mail_from_name');
+    }
+
+    $sent = false;
 
     try {
         $result = null;
         if (function_exists('wp_new_user_notification')) {
             $result = wp_new_user_notification($user_id, null, 'user');
+        } else {
+            jpv_provisioning_log_event('email_sent_failed', array(
+                'userId' => $user_id,
+                'email' => $email,
+                'method' => 'wp_new_user_notification',
+                'reason' => 'function_missing',
+            ));
+            $result = false;
         }
 
         if ($result === false) {
@@ -49,6 +69,7 @@ function jpv_provisioning_send_new_user_email(int $user_id, string $email): void
                 'reason' => 'wp_mail_failed',
             ));
         } else {
+            $sent = true;
             jpv_provisioning_log_event('email_sent_success', array(
                 'userId' => $user_id,
                 'email' => $email,
@@ -65,8 +86,12 @@ function jpv_provisioning_send_new_user_email(int $user_id, string $email): void
         ));
     }
 
-    remove_filter('wp_mail_from', 'jpv_provisioning_mail_from');
-    remove_filter('wp_mail_from_name', 'jpv_provisioning_mail_from_name');
+    if ($mail_from_ok) {
+        remove_filter('wp_mail_from', 'jpv_provisioning_mail_from');
+        remove_filter('wp_mail_from_name', 'jpv_provisioning_mail_from_name');
+    }
+
+    return $sent;
 }
 
 function jpv_provisioning_get_token_sources(): array {
@@ -354,6 +379,19 @@ function jpv_provisioning_handle_request(WP_REST_Request $request) {
         $params = array();
     }
 
+    $send_wp_email = false;
+    if (array_key_exists('send_wp_email', $params)) {
+        $raw_send = $params['send_wp_email'];
+        if (is_bool($raw_send)) {
+            $send_wp_email = $raw_send;
+        } elseif (is_string($raw_send)) {
+            $value = strtolower(trim($raw_send));
+            $send_wp_email = ($value === 'true' || $value === '1');
+        } elseif (is_int($raw_send)) {
+            $send_wp_email = ($raw_send === 1);
+        }
+    }
+
     $email = isset($params['email']) ? sanitize_email($params['email']) : '';
     $plan_raw = isset($params['plan']) ? sanitize_text_field($params['plan']) : '';
     $name_data = jpv_provisioning_extract_name_data($params, $email);
@@ -441,8 +479,20 @@ function jpv_provisioning_handle_request(WP_REST_Request $request) {
             $name_set = true;
         }
 
-        $user_id = wp_insert_user($user_data);
+        try {
+            $user_id = wp_insert_user($user_data);
+        } catch (Throwable $e) {
+            jpv_provisioning_log_event('user_create_failed', array(
+                'email' => $email,
+                'error' => $e->getMessage(),
+            ));
+            return new WP_REST_Response(array('ok' => false, 'reason' => 'create_failed'), 500);
+        }
         if (is_wp_error($user_id)) {
+            jpv_provisioning_log_event('user_create_failed', array(
+                'email' => $email,
+                'error' => $user_id->get_error_message(),
+            ));
             return new WP_REST_Response(array('ok' => false, 'reason' => 'create_failed'), 500);
         }
 
@@ -454,9 +504,40 @@ function jpv_provisioning_handle_request(WP_REST_Request $request) {
             'plan' => $plan_meta,
         ));
 
-        jpv_provisioning_send_new_user_email((int) $user_id, $email);
+        if ($send_wp_email) {
+            $already_sent = get_user_meta($user_id, JPV_WELCOME_EMAIL_SENT_AT, true);
+            if (!empty($already_sent)) {
+                jpv_provisioning_log_event('email_gate_blocked', array(
+                    'userId' => $user_id,
+                    'email' => $email,
+                    'reason' => 'already_sent',
+                ));
+            } else {
+            jpv_provisioning_log_event('email_gate_allowed', array(
+                'userId' => $user_id,
+                'email' => $email,
+            ));
+                $sent = jpv_provisioning_send_new_user_email((int) $user_id, $email);
+                if ($sent) {
+                    update_user_meta($user_id, JPV_WELCOME_EMAIL_SENT_AT, time());
+                    update_user_meta($user_id, JPV_WELCOME_EMAIL_SENT_REASON, 'provisioning');
+                }
+            }
+        } else {
+            jpv_provisioning_log_event('email_gate_blocked', array(
+                'userId' => $user_id,
+                'email' => $email,
+                'reason' => 'send_flag_false',
+            ));
+        }
     } else {
         error_log('existing_user_no_role_change');
+        if ($send_wp_email) {
+            jpv_provisioning_log_event('email_gate_ignored_existing_user', array(
+                'userId' => $user_id,
+                'email' => $email,
+            ));
+        }
         if ($name_received) {
             if ($name_data['first_name'] !== '') {
                 update_user_meta($user_id, 'first_name', $name_data['first_name']);
@@ -505,7 +586,16 @@ function jpv_provisioning_handle_request(WP_REST_Request $request) {
         return new WP_REST_Response(array('ok' => false, 'reason' => 'user_not_found'), 500);
     }
 
-    $reset_key = get_password_reset_key($user_for_reset);
+    try {
+        $reset_key = get_password_reset_key($user_for_reset);
+    } catch (Throwable $e) {
+        jpv_provisioning_log_event('reset_link_failed', array(
+            'userId' => $user_id,
+            'email' => $email,
+            'error' => $e->getMessage(),
+        ));
+        return new WP_REST_Response(array('ok' => false, 'reason' => 'reset_link_failed'), 500);
+    }
     if (is_wp_error($reset_key)) {
         return new WP_REST_Response(array('ok' => false, 'reason' => 'reset_link_failed'), 500);
     }
@@ -521,6 +611,9 @@ function jpv_provisioning_handle_request(WP_REST_Request $request) {
         'reset_link' => $reset_link,
         'name_received' => $name_received,
         'name_set' => $name_set,
+        'created' => (bool) $created,
+        'wp_email_requested' => (bool) $send_wp_email,
+        'wp_email_attempted' => (bool) ($created && $send_wp_email),
     ));
 }
 

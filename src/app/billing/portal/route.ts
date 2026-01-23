@@ -4,53 +4,14 @@ import { getStripe } from '@/lib/stripe'
 import { getStripeConfig } from '@/lib/stripe-config'
 import { verifyBillingPortalToken } from '@/lib/billing-portal-token'
 import { normalizeEmail as normalizeEmailAddress } from '@/lib/normalize-email'
+import { describeBillingPortalReturnUrl } from '@/lib/billing-portal-return'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-const DEFAULT_RETURN_URL = 'https://portal.jpvbootcamp.com/community/'
-const ALLOWED_RETURN_ORIGINS = new Set([
-	'https://portal.jpvbootcamp.com',
-	'https://jpvbootcamp.com',
-])
-
 function isEnvEnabled(value?: string): boolean {
 	if (!value) return false
 	return ['1', 'true', 'yes', 'on'].includes(value.trim().toLowerCase())
-}
-
-function resolveReturnUrl(raw: string | null): string {
-	if (!raw) return DEFAULT_RETURN_URL
-	const trimmed = raw.trim()
-	if (!trimmed) return DEFAULT_RETURN_URL
-	const decoded = safeDecodeURIComponent(trimmed)
-	const candidate = stripChainedUrl(decoded)
-	try {
-		const resolved = new URL(candidate, DEFAULT_RETURN_URL)
-		if (!ALLOWED_RETURN_ORIGINS.has(resolved.origin)) {
-			return DEFAULT_RETURN_URL
-		}
-		return resolved.toString()
-	} catch {
-		return DEFAULT_RETURN_URL
-	}
-}
-
-function safeDecodeURIComponent(value: string): string {
-	try {
-		return decodeURIComponent(value)
-	} catch {
-		return value
-	}
-}
-
-function stripChainedUrl(value: string): string {
-	const regex = /https?:\/\//gi
-	const first = regex.exec(value)
-	if (!first) return value
-	const second = regex.exec(value)
-	if (!second) return value
-	return value.slice(0, second.index)
 }
 
 function extractEmailDomain(email: string | null | undefined): string | null {
@@ -65,7 +26,7 @@ function logFailure(params: {
 	status: number
 	message: string
 	email?: string | null
-	returnUrl: string
+	returnInfo: { host: string | null; path: string | null }
 	source: 'session' | 'token' | 'none'
 }) {
 	console.error('Billing portal error', {
@@ -74,19 +35,21 @@ function logFailure(params: {
 		message: params.message,
 		source: params.source,
 		emailDomain: extractEmailDomain(params.email ?? null),
-		returnUrl: params.returnUrl,
+		returnHost: params.returnInfo.host,
+		returnPath: params.returnInfo.path,
 	})
 }
 
 function logSuccess(params: {
 	source: 'session' | 'token'
 	email: string
-	returnUrl: string
+	returnInfo: { host: string | null; path: string | null }
 }) {
 	console.info('Billing portal redirect', {
 		source: params.source,
 		emailDomain: extractEmailDomain(params.email),
-		returnUrl: params.returnUrl,
+		returnHost: params.returnInfo.host,
+		returnPath: params.returnInfo.path,
 	})
 }
 
@@ -118,14 +81,14 @@ async function searchStripeCustomerIdByEmail(email: string): Promise<string | nu
 
 export async function GET(req: NextRequest) {
 	const returnParam = req.nextUrl.searchParams.get('return')
-	const returnUrlFromQuery = resolveReturnUrl(returnParam)
+	const returnInfoFromQuery = describeBillingPortalReturnUrl(returnParam)
 	const emailParam = normalizeEmailAddress(req.nextUrl.searchParams.get('email'))
 	const tokenParam = req.nextUrl.searchParams.get('token')
 	// Stripe email search is opt-in to avoid open-ended lookups by default.
 	const allowStripeSearch = isEnvEnabled(process.env.STRIPE_CUSTOMER_SEARCH_ENABLED)
 	let email = emailParam
 	let source: 'session' | 'token' | 'none' = email ? 'session' : 'none'
-	let returnUrl = returnUrlFromQuery
+	let returnInfo = returnInfoFromQuery
 	const tokenSecret = (process.env.BILLING_PORTAL_HMAC_SECRET || '').trim()
 
 	try {
@@ -138,7 +101,7 @@ export async function GET(req: NextRequest) {
 					status: 500,
 					message,
 					email,
-					returnUrl,
+					returnInfo,
 					source: 'token',
 				})
 				return plainError(500, message)
@@ -157,7 +120,7 @@ export async function GET(req: NextRequest) {
 					status,
 					message,
 					email,
-					returnUrl,
+					returnInfo,
 					source: 'token',
 				})
 				return plainError(status, message)
@@ -165,7 +128,7 @@ export async function GET(req: NextRequest) {
 
 			email = normalizeEmailAddress(verification.payload.email)
 			source = email ? 'token' : 'none'
-			returnUrl = resolveReturnUrl(verification.payload.returnUrl ?? null)
+			returnInfo = describeBillingPortalReturnUrl(verification.payload.returnUrl ?? null)
 		}
 
 		if (!email) {
@@ -175,7 +138,7 @@ export async function GET(req: NextRequest) {
 				status: 403,
 				message,
 				email,
-				returnUrl,
+				returnInfo,
 				source,
 			})
 			return plainError(403, message)
@@ -197,7 +160,7 @@ export async function GET(req: NextRequest) {
 				status,
 				message,
 				email,
-				returnUrl,
+				returnInfo,
 				source,
 			})
 			return plainError(status, message)
@@ -208,7 +171,7 @@ export async function GET(req: NextRequest) {
 		const stripe = getStripe()
 		const session = await stripe.billingPortal.sessions.create({
 			customer: stripeCustomerId,
-			return_url: returnUrl,
+			return_url: returnInfo.url,
 			configuration: portalConfigId,
 		})
 
@@ -232,7 +195,11 @@ export async function GET(req: NextRequest) {
 			return plainError(500, message)
 		}
 
-		logSuccess({ source: source === 'token' ? 'token' : 'session', email, returnUrl })
+		logSuccess({
+			source: source === 'token' ? 'token' : 'session',
+			email,
+			returnInfo,
+		})
 		return NextResponse.redirect(session.url, { status: 302 })
 	} catch (error) {
 		const message = (error as Error).message || 'Billing portal request failed.'
@@ -241,7 +208,7 @@ export async function GET(req: NextRequest) {
 			status: 500,
 			message,
 			email,
-			returnUrl,
+			returnInfo,
 			source,
 		})
 		return plainError(500, 'Billing portal request failed.')

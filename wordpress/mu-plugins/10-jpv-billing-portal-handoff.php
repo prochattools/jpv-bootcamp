@@ -17,6 +17,7 @@ const JPV_BILLING_PORTAL_API_URL = 'https://jpvbootcamp.com/api/stripe/billing-p
 const JPV_UPGRADE_VIP_API_URL = 'https://jpvbootcamp.com/api/stripe/upgrade-vip';
 const JPV_BILLING_PORTAL_DEFAULT_RETURN_URL = 'https://portal.jpvbootcamp.com/community/';
 const JPV_BILLING_PORTAL_FALLBACK_URL = 'https://jpvbootcamp.com/upgrade';
+const JPV_BILLING_PORTAL_MAX_RETURN_LENGTH = 2048;
 
 function jpv_billing_portal_allow_redirect_hosts(array $hosts): array {
     $hosts[] = 'jpvbootcamp.com';
@@ -70,22 +71,50 @@ function jpv_billing_portal_strip_chained_url(string $value): string {
     return substr($value, 0, $second);
 }
 
-function jpv_billing_portal_normalize_return_url(?string $raw): string {
-    if (!$raw) {
-        return JPV_BILLING_PORTAL_DEFAULT_RETURN_URL;
+function jpv_billing_portal_strip_crlf(string $value): string {
+    return str_replace(array("\r", "\n"), '', $value);
+}
+
+function jpv_billing_portal_has_unsafe_scheme(string $value): bool {
+    $lower = strtolower(trim($value));
+    return strpos($lower, 'javascript:') === 0 || strpos($lower, 'data:') === 0;
+}
+
+function jpv_billing_portal_validate_return_url($raw): array {
+    $present = $raw !== null && trim((string) $raw) !== '';
+    if (!$present) {
+        return array(
+            'url' => JPV_BILLING_PORTAL_DEFAULT_RETURN_URL,
+            'present' => false,
+            'valid' => false,
+            'host' => '',
+            'path' => '/community/',
+        );
     }
 
     $candidate = trim((string) $raw);
-    if ($candidate === '') {
-        return JPV_BILLING_PORTAL_DEFAULT_RETURN_URL;
+    $candidate = jpv_billing_portal_strip_crlf($candidate);
+    if (strlen($candidate) > JPV_BILLING_PORTAL_MAX_RETURN_LENGTH || jpv_billing_portal_has_unsafe_scheme($candidate)) {
+        return array(
+            'url' => JPV_BILLING_PORTAL_DEFAULT_RETURN_URL,
+            'present' => true,
+            'valid' => false,
+            'host' => '',
+            'path' => '/community/',
+        );
     }
-
     $decoded = rawurldecode($candidate);
     $decoded = jpv_billing_portal_strip_chained_url($decoded);
 
     $parts = wp_parse_url($decoded);
     if (!$parts || empty($parts['scheme']) || empty($parts['host'])) {
-        return JPV_BILLING_PORTAL_DEFAULT_RETURN_URL;
+        return array(
+            'url' => JPV_BILLING_PORTAL_DEFAULT_RETURN_URL,
+            'present' => true,
+            'valid' => false,
+            'host' => '',
+            'path' => '/community/',
+        );
     }
 
     $origin = $parts['scheme'] . '://' . $parts['host'];
@@ -93,12 +122,17 @@ function jpv_billing_portal_normalize_return_url(?string $raw): string {
         $origin .= ':' . $parts['port'];
     }
 
-    $allowed = array('https://portal.jpvbootcamp.com', 'https://jpvbootcamp.com');
-    if (!in_array($origin, $allowed, true)) {
-        return JPV_BILLING_PORTAL_DEFAULT_RETURN_URL;
-    }
+    $allowed = array('https://portal.jpvbootcamp.com', 'https://jpvbootcamp.com', 'https://www.jpvbootcamp.com');
+    $valid = $parts['scheme'] === 'https' && in_array($origin, $allowed, true);
+    $path = isset($parts['path']) ? (string) $parts['path'] : '/';
 
-    return $decoded;
+    return array(
+        'url' => $valid ? $decoded : JPV_BILLING_PORTAL_DEFAULT_RETURN_URL,
+        'present' => true,
+        'valid' => $valid,
+        'host' => isset($parts['host']) ? (string) $parts['host'] : '',
+        'path' => $path !== '' ? $path : '/',
+    );
 }
 
 function jpv_billing_portal_build_token(string $email, string $return_url, string $secret): string {
@@ -192,7 +226,8 @@ function jpv_billing_portal_log_redirect(
     string $path,
     bool $logged_in,
     bool $has_secret,
-    string $why
+    string $why,
+    array $return_info
 ): void {
     error_log('[JPV Billing Portal] ' . wp_json_encode(array(
         'handler' => $handler,
@@ -200,6 +235,10 @@ function jpv_billing_portal_log_redirect(
         'logged_in' => $logged_in,
         'has_secret' => $has_secret,
         'reason' => $why,
+        'return_present' => !empty($return_info['present']),
+        'return_valid' => !empty($return_info['valid']),
+        'return_host' => isset($return_info['host']) ? $return_info['host'] : '',
+        'return_path' => isset($return_info['path']) ? $return_info['path'] : '',
     )));
 }
 
@@ -257,12 +296,15 @@ function jpv_billing_portal_handle_redirect(
     $logged_in = is_user_logged_in();
     $secret = get_billing_portal_hmac_secret();
     $has_secret = $secret ? true : false;
+    $return_param = isset($_GET['return']) ? (string) $_GET['return'] : null;
+    $return_info = jpv_billing_portal_validate_return_url($return_param);
+    $return_url = $return_info['url'];
 
     if (!$logged_in) {
-        $login_url = site_url('/community/?fcom_action=auth');
-        $redirect_to = jpv_billing_portal_build_full_url($uri);
-        $login_url = add_query_arg('redirect_to', $redirect_to, $login_url);
-        jpv_billing_portal_log_redirect($handler, $path, $logged_in, $has_secret, 'not_logged_in');
+        $go_url = jpv_billing_portal_build_full_url($path);
+        $go_url = add_query_arg('return', $return_url, $go_url);
+        $login_url = wp_login_url($go_url);
+        jpv_billing_portal_log_redirect($handler, $path, $logged_in, $has_secret, 'not_logged_in', $return_info);
         $header_sender($handler, $path, $logged_in, $has_secret, $login_url, 'not_logged_in');
         wp_safe_redirect($login_url, 302);
         exit;
@@ -271,7 +313,7 @@ function jpv_billing_portal_handle_redirect(
     $user = wp_get_current_user();
     $email = $user && isset($user->user_email) ? $user->user_email : '';
     if (!is_email($email)) {
-        jpv_billing_portal_log_redirect($handler, $path, $logged_in, $has_secret, 'invalid_email');
+        jpv_billing_portal_log_redirect($handler, $path, $logged_in, $has_secret, 'invalid_email', $return_info);
         $header_sender($handler, $path, $logged_in, $has_secret, JPV_BILLING_PORTAL_FALLBACK_URL, 'invalid_email');
         wp_safe_redirect(JPV_BILLING_PORTAL_FALLBACK_URL, 302);
         exit;
@@ -279,21 +321,16 @@ function jpv_billing_portal_handle_redirect(
 
     if (!$secret) {
         jpv_billing_portal_log_missing_secret_once();
-        jpv_billing_portal_log_redirect($handler, $path, $logged_in, $has_secret, 'missing_secret');
+        jpv_billing_portal_log_redirect($handler, $path, $logged_in, $has_secret, 'missing_secret', $return_info);
         $header_sender($handler, $path, $logged_in, $has_secret, JPV_BILLING_PORTAL_FALLBACK_URL, 'missing_secret');
         wp_safe_redirect(JPV_BILLING_PORTAL_FALLBACK_URL, 302);
         exit;
     }
 
-    $return_param = isset($_GET['return']) ? (string) $_GET['return'] : '';
-    $return_url = $return_param !== ''
-        ? jpv_billing_portal_normalize_return_url($return_param)
-        : JPV_BILLING_PORTAL_DEFAULT_RETURN_URL;
-
     $token = jpv_billing_portal_build_token($email, $return_url, $secret);
     $target = add_query_arg('token', $token, $api_url);
 
-    jpv_billing_portal_log_redirect($handler, $path, $logged_in, $has_secret, 'redirect');
+    jpv_billing_portal_log_redirect($handler, $path, $logged_in, $has_secret, 'redirect', $return_info);
     $header_sender($handler, $path, $logged_in, $has_secret, $target, 'redirect');
     wp_safe_redirect($target, 302);
     exit;
