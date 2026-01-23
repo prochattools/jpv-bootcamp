@@ -453,12 +453,14 @@ export async function handleStripeWebhook(req: Request) {
 			logProvisioningSkip(event, 'provisioning_disabled')
 		}
 
+		const allowMembershipEmail = event.type === 'customer.subscription.updated'
+
 		switch (event.type) {
 			case 'checkout.session.completed': {
 				if (provisioningEnabled) {
 					const session = event.data.object as Stripe.Checkout.Session
 					await provisionFromCheckoutSession(session, event.id, event.type, {
-						allowEmail: event.type === 'customer.subscription.updated',
+						allowEmail: allowMembershipEmail,
 						eventLivemode: event.livemode,
 					})
 				}
@@ -468,7 +470,7 @@ export async function handleStripeWebhook(req: Request) {
 				if (provisioningEnabled) {
 					const subscription = event.data.object as Stripe.Subscription
 					await syncFromSubscription(subscription.id, event.id, event.type, {
-						allowEmail: event.type === 'customer.subscription.updated',
+						allowEmail: allowMembershipEmail,
 						eventLivemode: event.livemode,
 					})
 				}
@@ -478,7 +480,7 @@ export async function handleStripeWebhook(req: Request) {
 				if (provisioningEnabled) {
 					const subscription = event.data.object as Stripe.Subscription
 					await syncFromSubscription(subscription.id, event.id, event.type, {
-						allowEmail: event.type === 'customer.subscription.updated',
+						allowEmail: allowMembershipEmail,
 						eventLivemode: event.livemode,
 					})
 				}
@@ -488,7 +490,7 @@ export async function handleStripeWebhook(req: Request) {
 				if (provisioningEnabled) {
 					const subscription = event.data.object as Stripe.Subscription
 					await syncFromSubscription(subscription.id, event.id, event.type, {
-						allowEmail: event.type === 'customer.subscription.updated',
+						allowEmail: allowMembershipEmail,
 						eventLivemode: event.livemode,
 					})
 				}
@@ -503,7 +505,7 @@ export async function handleStripeWebhook(req: Request) {
 							: invoice.subscription?.id ?? null
 					if (subscriptionId) {
 						await syncFromSubscription(subscriptionId, event.id, event.type, {
-							allowEmail: event.type === 'customer.subscription.updated',
+							allowEmail: allowMembershipEmail,
 							eventLivemode: event.livemode,
 						})
 					} else {
