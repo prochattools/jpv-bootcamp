@@ -1009,7 +1009,7 @@ export async function provisionFromCheckoutSession(
 				const dedupeKey = `${email}|${subscriptionId ?? 'none'}|${incomingPlan}`
 				await sendWelcomeEmail({
 					to: email,
-					plan: incomingPlan,
+					plan,
 					resetUrl: wpProvision.resetLink,
 					meta: {
 						templateKey: MEMBERSHIP_EMAIL_TEMPLATE_KEY,
@@ -1026,7 +1026,7 @@ export async function provisionFromCheckoutSession(
 				await markProvisioningNotified({
 					stripeCustomerId: customerId,
 					email,
-					plan: incomingPlan,
+					plan,
 					eventId: eventId ?? null,
 				})
 				console.info('Membership email sent', {
