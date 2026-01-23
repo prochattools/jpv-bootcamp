@@ -30,15 +30,69 @@ function getPlanLabel(plan: Plan): string {
 	return plan === 'vip' ? 'VIP' : 'Pro'
 }
 
+type EmailAttemptMeta = {
+	templateKey?: string
+	eventId?: string | null
+	eventType?: string | null
+	subscriptionId?: string | null
+	customerId?: string | null
+	source?: string | null
+	dedupeKey?: string | null
+	stackHint?: string
+}
+
+function logEmailAttempt(params: {
+	templateKey: string
+	email: string
+	plan?: Plan | null
+	eventId?: string | null
+	eventType?: string | null
+	subscriptionId?: string | null
+	customerId?: string | null
+	source?: string | null
+	dedupeKey?: string | null
+	stackHint: string
+}) {
+	console.info('email_attempt', {
+		at: 'email_attempt',
+		templateKey: params.templateKey,
+		email: params.email,
+		plan: params.plan ?? null,
+		eventId: params.eventId ?? null,
+		eventType: params.eventType ?? null,
+		subscriptionId: params.subscriptionId ?? null,
+		customerId: params.customerId ?? null,
+		source: params.source ?? null,
+		dedupeKey: params.dedupeKey ?? null,
+		stackHint: params.stackHint,
+	})
+}
+
 export async function sendWelcomeEmail({
 	to,
 	plan,
 	resetUrl,
+	meta,
 }: {
 	to: string
 	plan: Plan
 	resetUrl: string
+	meta?: EmailAttemptMeta
 }): Promise<void> {
+	const templateKey = meta?.templateKey ?? 'membership_access_ready'
+	logEmailAttempt({
+		templateKey,
+		email: to,
+		plan,
+		eventId: meta?.eventId ?? null,
+		eventType: meta?.eventType ?? null,
+		subscriptionId: meta?.subscriptionId ?? null,
+		customerId: meta?.customerId ?? null,
+		source: meta?.source ?? null,
+		dedupeKey: meta?.dedupeKey ?? null,
+		stackHint: meta?.stackHint ?? 'lib/email:sendWelcomeEmail',
+	})
+
 	const { email: emailConfig } = getServerConfig()
 	const planLabel = getPlanLabel(plan)
 	const text = [
@@ -111,6 +165,13 @@ export async function sendSupportEmail({
 	page: string
 	submittedAt: string
 }): Promise<void> {
+	logEmailAttempt({
+		templateKey: 'support_request',
+		email,
+		stackHint: 'lib/email:sendSupportEmail',
+		source: 'support',
+	})
+
 	if (isNonWebhookEmailDisabled()) {
 		console.info('Non-webhook email skipped', {
 			email,

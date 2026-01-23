@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/libs/prisma'
 
+function isEnvEnabled(value?: string): boolean {
+	if (!value) return false
+	return ['1', 'true', 'yes', 'on'].includes(value.trim().toLowerCase())
+}
+
 export async function POST(req: NextRequest) {
 	try {
 		const { email, name, source } = await req.json()
@@ -36,6 +41,12 @@ export async function POST(req: NextRequest) {
 
 		// Send welcome email
 		try {
+			console.info('newsletter_attempt', {
+				at: 'newsletter_attempt',
+				email,
+				sourceRoute: '/api/subscribe',
+				disableNonWebhookEmails: isEnvEnabled(process.env.DISABLE_NON_WEBHOOK_EMAILS),
+			})
 			const { resendService } = await import('@/libs/resend')
 			await resendService.sendWelcomeEmail(email, name, 'signup')
 		} catch (emailError) {

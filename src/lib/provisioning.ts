@@ -1006,22 +1006,33 @@ export async function provisionFromCheckoutSession(
 			})
 		} else {
 			try {
+				const dedupeKey = `${email}|${subscriptionId ?? 'none'}|${incomingPlan}`
 				await sendWelcomeEmail({
 					to: email,
-					plan,
+					plan: incomingPlan,
 					resetUrl: wpProvision.resetLink,
+					meta: {
+						templateKey: MEMBERSHIP_EMAIL_TEMPLATE_KEY,
+						eventId: eventId ?? null,
+						eventType: eventType ?? null,
+						subscriptionId: subscriptionId ?? null,
+						customerId,
+						source: emailSource,
+						dedupeKey,
+						stackHint: 'lib/provisioning:provisionFromCheckoutSession',
+					},
 				})
 				emailSent = true
 				await markProvisioningNotified({
 					stripeCustomerId: customerId,
 					email,
-					plan,
+					plan: incomingPlan,
 					eventId: eventId ?? null,
 				})
 				console.info('Membership email sent', {
 					email,
 					templateKey: MEMBERSHIP_EMAIL_TEMPLATE_KEY,
-					plan,
+					plan: incomingPlan,
 					eventId: eventId ?? null,
 					source: emailSource,
 					dedupeReason: emailReason,
@@ -1435,10 +1446,21 @@ export async function syncFromSubscription(
 			})
 		} else {
 			try {
+				const dedupeKey = `${email}|${subscription.id}|${incomingPlan}`
 				await sendWelcomeEmail({
 					to: email,
 					plan: incomingPlan,
 					resetUrl: wpProvision.resetLink,
+					meta: {
+						templateKey: MEMBERSHIP_EMAIL_TEMPLATE_KEY,
+						eventId: eventId ?? null,
+						eventType: eventType ?? null,
+						subscriptionId: subscription.id,
+						customerId,
+						source: emailSource,
+						dedupeKey,
+						stackHint: 'lib/provisioning:syncFromSubscription',
+					},
 				})
 				emailSent = true
 				await markProvisioningNotified({

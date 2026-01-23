@@ -10,6 +10,20 @@ class ResendService {
 	}
 
 	public async sendWelcomeEmail(toMail: string, name?: string, source = 'signup') {
+		console.info('email_attempt', {
+			at: 'email_attempt',
+			templateKey: 'newsletter_welcome',
+			email: toMail,
+			plan: null,
+			eventId: null,
+			eventType: null,
+			subscriptionId: null,
+			customerId: null,
+			source,
+			dedupeKey: null,
+			stackHint: 'libs/resend:sendWelcomeEmail',
+		})
+
 		if (this.isNonWebhookEmailDisabled()) {
 			console.info('Non-webhook email skipped', {
 				email: toMail,
