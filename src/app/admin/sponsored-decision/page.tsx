@@ -1,4 +1,11 @@
-type DecisionResult = 'approved' | 'rejected' | 'expired' | 'already_processed'
+type DecisionResult =
+	| 'approved'
+	| 'rejected'
+	| 'expired'
+	| 'invalid'
+	| 'no_seats'
+	| 'already_processed'
+	| 'wp_failed'
 
 function getMessage(result: DecisionResult) {
 	switch (result) {
@@ -6,8 +13,14 @@ function getMessage(result: DecisionResult) {
 			return 'Application approved. The sponsored month is now active.'
 		case 'rejected':
 			return 'Application rejected.'
+		case 'no_seats':
+			return 'No sponsored seats are available right now.'
+		case 'wp_failed':
+			return 'Approved, but membership sync failed. Please check logs.'
 		case 'already_processed':
 			return 'This decision link has already been used.'
+		case 'invalid':
+			return 'This decision link is invalid.'
 		case 'expired':
 		default:
 			return 'This decision link is expired or invalid.'
@@ -21,7 +34,12 @@ export default function SponsoredDecisionPage({
 }) {
 	const raw = searchParams?.result
 	const result =
-		raw === 'approved' || raw === 'rejected' || raw === 'already_processed'
+		raw === 'approved' ||
+		raw === 'rejected' ||
+		raw === 'already_processed' ||
+		raw === 'no_seats' ||
+		raw === 'invalid' ||
+		raw === 'wp_failed'
 			? (raw as DecisionResult)
 			: 'expired'
 

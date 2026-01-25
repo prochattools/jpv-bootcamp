@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
 		)
 	}
 
-	const secret = (process.env.PARTNERS_HANDOFF_SECRET || '').trim()
+	const secret = (process.env.SPONSORED_DECISION_SECRET || '').trim()
 	const hasResendKey = Boolean((process.env.RESEND_API_KEY || '').trim())
 	const hasAdminRecipients = Boolean(
 		(process.env.SPONSORED_APPLICATION_ADMIN_EMAILS || '').trim()

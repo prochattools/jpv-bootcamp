@@ -14,7 +14,14 @@ import { getPublicBaseUrl } from '@/lib/public-base-url'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-type RedirectResult = 'approved' | 'rejected' | 'expired' | 'already_processed'
+type RedirectResult =
+	| 'approved'
+	| 'rejected'
+	| 'expired'
+	| 'invalid'
+	| 'no_seats'
+	| 'already_processed'
+	| 'wp_failed'
 
 function buildRedirect(req: NextRequest, result: RedirectResult) {
 	const baseUrl = getPublicBaseUrl()
@@ -25,24 +32,68 @@ function buildRedirect(req: NextRequest, result: RedirectResult) {
 
 export async function GET(req: NextRequest) {
 	const token = req.nextUrl.searchParams.get('token') || ''
-	const secret = (process.env.PARTNERS_HANDOFF_SECRET || '').trim()
+	const secret = (process.env.SPONSORED_DECISION_SECRET || '').trim()
 	if (!secret) {
-		return buildRedirect(req, 'expired')
+		throw new Error('Missing required env var: SPONSORED_DECISION_SECRET')
 	}
 
 	const verification = verifySponsoredDecisionToken(token, secret)
 	if (!verification.ok) {
-		const reason = 'reason' in verification ? verification.reason : 'expired'
-		return buildRedirect(req, reason === 'expired' ? 'expired' : 'expired')
+		const baseUrl = getPublicBaseUrl()
+		const host = (() => {
+			try {
+				return new URL(baseUrl).host
+			} catch {
+				return 'unknown'
+			}
+		})()
+		const rawReason = 'reason' in verification ? verification.reason : 'malformed'
+		const reason =
+			rawReason === 'missing'
+				? 'missing'
+				: rawReason === 'invalid_signature'
+					? 'bad_sig'
+					: rawReason === 'decode_error'
+						? 'decode_error'
+						: rawReason === 'expired'
+							? 'expired'
+							: 'decode_error'
+		const now = Math.floor(Date.now() / 1000)
+		console.warn('sponsored_decision_token_verify_failed', {
+			reason,
+			now,
+			iat: 'iat' in verification ? verification.iat ?? null : null,
+			exp: 'exp' in verification ? verification.exp ?? null : null,
+			host,
+		})
+		return buildRedirect(
+			req,
+			reason === 'expired' ? 'expired' : 'invalid'
+		)
 	}
 
 	const { applicationId, action } = verification.payload
+	{
+		const baseUrl = getPublicBaseUrl()
+		const host = (() => {
+			try {
+				return new URL(baseUrl).host
+			} catch {
+				return 'unknown'
+			}
+		})()
+		console.info('sponsored_decision_token_verified', {
+			applicationId,
+			action,
+			host,
+		})
+	}
 	const application = await prisma.sponsoredApplication.findUnique({
 		where: { id: applicationId },
 	})
 
 	if (!application) {
-		return buildRedirect(req, 'expired')
+		return buildRedirect(req, 'invalid')
 	}
 
 	if (application.status !== 'pending') {
@@ -163,39 +214,18 @@ export async function GET(req: NextRequest) {
 		}
 
 		if (message === 'no_seat_available') {
-			await prisma.sponsoredApplication.updateMany({
-				where: { id: applicationId, status: 'pending' },
-				data: {
-					status: 'rejected',
-					reviewedByWpUserId: null,
-					reviewedAt: new Date(),
-					decisionNote: null,
-				},
-			})
-			if (applicantEmail) {
-				try {
-					await sendSponsoredApplicantRejectedEmail({ to: applicantEmail })
-				} catch (emailError) {
-					console.error('sponsored_applicant_email_failed', {
-						applicationId,
-						email: redactEmail(applicantEmail),
-						status: 'rejected',
-						message: (emailError as Error).message,
-					})
-				}
-			}
-			return buildRedirect(req, 'rejected')
+			return buildRedirect(req, 'no_seats')
 		}
 
 		console.error('sponsored_application_decision_failed', {
 			applicationId,
 			message,
 		})
-		return buildRedirect(req, 'expired')
+		return buildRedirect(req, 'invalid')
 	}
 
 	if (!seatId || !grantId) {
-		return buildRedirect(req, 'expired')
+		return buildRedirect(req, 'invalid')
 	}
 
 	const grantResult = await applySponsoredGrant({
@@ -210,6 +240,7 @@ export async function GET(req: NextRequest) {
 			wpUserId,
 			message: grantResult.reason ?? 'provision_failed',
 		})
+		return buildRedirect(req, 'wp_failed')
 	}
 
 	if (applicantEmail) {

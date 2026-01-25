@@ -15,6 +15,7 @@ export type SponsoredDecisionResult =
 	| {
 			ok: false
 			reason:
+				| 'missing'
 				| 'malformed'
 				| 'invalid_signature'
 				| 'invalid_payload'
@@ -22,10 +23,13 @@ export type SponsoredDecisionResult =
 				| 'iat_too_old'
 				| 'iat_in_future'
 				| 'too_long'
+				| 'decode_error'
+			iat?: number
+			exp?: number
 	  }
 
 const MAX_TOKEN_AGE_SECONDS = 60 * 60 * 48
-const MAX_IAT_SKEW_SECONDS = 60
+const MAX_IAT_SKEW_SECONDS = 60 * 5
 const MAX_TOKEN_LENGTH = 2048
 const UUID_REGEX = /^[0-9a-fA-F-]{36}$/
 const ALLOWED_KEYS = new Set(['applicationId', 'action', 'iat', 'exp', 'nonce'])
@@ -85,7 +89,7 @@ export function verifySponsoredDecisionToken(
 	nowEpochSeconds: number = Math.floor(Date.now() / 1000)
 ): SponsoredDecisionResult {
 	const token = sanitizeToken(rawToken)
-	if (!token) return { ok: false, reason: 'malformed' }
+	if (!token) return { ok: false, reason: 'missing' }
 	if (token.length > MAX_TOKEN_LENGTH) {
 		return { ok: false, reason: 'too_long' }
 	}
@@ -98,7 +102,7 @@ export function verifySponsoredDecisionToken(
 	const payloadBuffer = base64UrlDecodeToBuffer(parts[0])
 	const signatureBuffer = base64UrlDecodeToBuffer(parts[1])
 	if (!payloadBuffer || !signatureBuffer || signatureBuffer.length === 0) {
-		return { ok: false, reason: 'malformed' }
+		return { ok: false, reason: 'decode_error' }
 	}
 
 	const expectedSignature = createHmac('sha256', secret).update(parts[0]).digest()
@@ -142,23 +146,23 @@ export function verifySponsoredDecisionToken(
 	const iat = Number(payload.iat)
 	const exp = Number(payload.exp)
 	if (!Number.isFinite(iat) || !Number.isFinite(exp) || exp < iat) {
-		return { ok: false, reason: 'invalid_payload' }
+		return { ok: false, reason: 'invalid_payload', iat, exp }
 	}
 
 	if (exp - iat > MAX_TOKEN_AGE_SECONDS) {
-		return { ok: false, reason: 'invalid_payload' }
+		return { ok: false, reason: 'invalid_payload', iat, exp }
 	}
 
-	if (exp < nowEpochSeconds) {
-		return { ok: false, reason: 'expired' }
+	if (exp < nowEpochSeconds - MAX_IAT_SKEW_SECONDS) {
+		return { ok: false, reason: 'expired', iat, exp }
 	}
 
 	if (iat > nowEpochSeconds + MAX_IAT_SKEW_SECONDS) {
-		return { ok: false, reason: 'iat_in_future' }
+		return { ok: false, reason: 'iat_in_future', iat, exp }
 	}
 
-	if (nowEpochSeconds - iat > MAX_TOKEN_AGE_SECONDS) {
-		return { ok: false, reason: 'iat_too_old' }
+	if (nowEpochSeconds - iat > MAX_TOKEN_AGE_SECONDS + MAX_IAT_SKEW_SECONDS) {
+		return { ok: false, reason: 'iat_too_old', iat, exp }
 	}
 
 	const nonce = typeof payload.nonce === 'string' ? payload.nonce.trim() : ''
