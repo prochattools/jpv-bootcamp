@@ -24,11 +24,13 @@ export default function PartnersPage() {
 						<Link
 							key={category.slug}
 							href={`/partners/${category.slug}`}
-							className="rounded-lg border border-neutral-200 bg-white p-4 transition hover:border-neutral-300"
+							className="rounded-lg border border-neutral-200 bg-white p-4 text-neutral-900 transition hover:border-neutral-300 hover:bg-neutral-50"
 						>
-							<div className="text-lg font-medium">{category.name}</div>
+							<div className="text-lg font-medium text-neutral-900">
+								{category.name}
+							</div>
 							{category.description ? (
-								<p className="text-sm text-muted-foreground">
+								<p className="text-sm text-neutral-600">
 									{category.description}
 								</p>
 							) : null}
