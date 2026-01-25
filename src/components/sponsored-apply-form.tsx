@@ -35,13 +35,12 @@ export default function SponsoredApplyForm({ initialCounts }: Props) {
 				setNote(payload?.reason ?? 'Unable to submit right now.')
 				return
 			}
-			if (payload?.alreadyPending) {
-				setStatus('success')
-				setNote('Your application is already pending. We will be in touch soon.')
-				return
-			}
 			setStatus('success')
-			setNote('Application received. We will email you if approved.')
+			if (payload?.updatedExisting) {
+				setNote('Your application is already pending. We updated it.')
+			} else {
+				setNote('Application received. We will email you if approved.')
+			}
 		} catch (error) {
 			setStatus('error')
 			setNote('Unable to submit right now.')

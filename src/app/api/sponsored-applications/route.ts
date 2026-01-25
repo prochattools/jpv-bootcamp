@@ -20,6 +20,8 @@ type ApplicationPayload = {
 	message?: string
 }
 
+const ADMIN_EMAIL_THROTTLE_MS = 1000 * 60 * 15
+
 export async function POST(req: NextRequest) {
 	const sessionCookie = req.cookies.get('partners_session')?.value
 	const sessionId = sanitizeSessionId(sessionCookie)
@@ -84,23 +86,18 @@ export async function POST(req: NextRequest) {
 		orderBy: { createdAt: 'desc' },
 	})
 
-	let action: 'insert' | 'update_legacy' | 'blocked_existing_pending' = 'insert'
-	let pendingEmailNull: boolean | null = null
+	let action: 'created_new' | 'updated_existing_pending' = 'created_new'
 	let applicationId: string | null = null
+	let shouldSendAdminEmail = true
 
 	if (existingPending) {
-		pendingEmailNull = !existingPending.email
-		if (existingPending.email) {
-			action = 'blocked_existing_pending'
-			console.info('sponsored_apply_submit', {
-				wpUserId: session.wpUserId,
-				action,
-				pendingEmailNull,
-			})
-			return NextResponse.json({ ok: true, alreadyPending: true })
+		action = 'updated_existing_pending'
+		const lastSent = existingPending.lastAdminEmailSentAt
+		if (lastSent) {
+			const elapsed = Date.now() - lastSent.getTime()
+			shouldSendAdminEmail = elapsed >= ADMIN_EMAIL_THROTTLE_MS
 		}
 
-		action = 'update_legacy'
 		const updated = await prisma.sponsoredApplication.update({
 			where: { id: existingPending.id },
 			data: {
@@ -108,6 +105,7 @@ export async function POST(req: NextRequest) {
 				emailHash: hashEmail(normalizedEmail),
 				name,
 				message: message || null,
+				updatedAt: new Date(),
 			},
 		})
 		applicationId = updated.id
@@ -120,6 +118,7 @@ export async function POST(req: NextRequest) {
 				emailHash: hashEmail(normalizedEmail),
 				name,
 				message: message || null,
+				updatedAt: new Date(),
 			},
 		})
 		applicationId = created.id
@@ -128,7 +127,7 @@ export async function POST(req: NextRequest) {
 	console.info('sponsored_apply_submit', {
 		wpUserId: session.wpUserId,
 		action,
-		pendingEmailNull,
+		applicationId,
 	})
 
 	if (!applicationId) {
@@ -183,23 +182,29 @@ export async function POST(req: NextRequest) {
 		counts = undefined
 	}
 
-	try {
-		await sendSponsoredApplicationAdminEmail({
-			applicationId: applicationId,
-			applicantName: name,
-			applicantEmail: normalizedEmail,
-			message: message || null,
-			approveUrl,
-			rejectUrl,
-			counts,
-		})
-	} catch (error) {
-		console.error('sponsored_application_admin_email_failed', {
-			applicationId: applicationId,
-			email: redactEmail(normalizedEmail),
-			message: (error as Error).message,
-		})
+	if (shouldSendAdminEmail) {
+		try {
+			await sendSponsoredApplicationAdminEmail({
+				applicationId: applicationId,
+				applicantName: name,
+				applicantEmail: normalizedEmail,
+				message: message || null,
+				approveUrl,
+				rejectUrl,
+				counts,
+			})
+			await prisma.sponsoredApplication.updateMany({
+				where: { id: applicationId },
+				data: { lastAdminEmailSentAt: new Date() },
+			})
+		} catch (error) {
+			console.error('sponsored_application_admin_email_failed', {
+				applicationId: applicationId,
+				email: redactEmail(normalizedEmail),
+				message: (error as Error).message,
+			})
+		}
 	}
 
-	return NextResponse.json({ ok: true })
+	return NextResponse.json({ ok: true, updatedExisting: action === 'updated_existing_pending' })
 }
