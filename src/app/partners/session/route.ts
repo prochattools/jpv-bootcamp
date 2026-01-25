@@ -34,8 +34,9 @@ export async function GET(req: NextRequest) {
 
 	const verification = verifyPartnersHandoffToken(token, secret)
 	if (!verification.ok) {
+		const reason = 'reason' in verification ? verification.reason : 'invalid'
 		console.warn('partners_handoff_invalid', {
-			reason: verification.reason,
+			reason,
 		})
 		return NextResponse.redirect(PORTAL_PARTNERS_URL)
 	}
