@@ -81,21 +81,62 @@ export async function POST(req: NextRequest) {
 			wpUserId: session.wpUserId,
 			status: 'pending',
 		},
+		orderBy: { createdAt: 'desc' },
 	})
+
+	let action: 'insert' | 'update_legacy' | 'blocked_existing_pending' = 'insert'
+	let pendingEmailNull: boolean | null = null
+	let applicationId: string | null = null
+
 	if (existingPending) {
-		return NextResponse.json({ ok: true, alreadyPending: true })
+		pendingEmailNull = !existingPending.email
+		if (existingPending.email) {
+			action = 'blocked_existing_pending'
+			console.info('sponsored_apply_submit', {
+				wpUserId: session.wpUserId,
+				action,
+				pendingEmailNull,
+			})
+			return NextResponse.json({ ok: true, alreadyPending: true })
+		}
+
+		action = 'update_legacy'
+		const updated = await prisma.sponsoredApplication.update({
+			where: { id: existingPending.id },
+			data: {
+				email: normalizedEmail,
+				emailHash: hashEmail(normalizedEmail),
+				name,
+				message: message || null,
+			},
+		})
+		applicationId = updated.id
+	} else {
+		const created = await prisma.sponsoredApplication.create({
+			data: {
+				status: 'pending',
+				wpUserId: session.wpUserId,
+				email: normalizedEmail,
+				emailHash: hashEmail(normalizedEmail),
+				name,
+				message: message || null,
+			},
+		})
+		applicationId = created.id
 	}
 
-	const application = await prisma.sponsoredApplication.create({
-		data: {
-			status: 'pending',
-			wpUserId: session.wpUserId,
-			email: normalizedEmail,
-			emailHash: hashEmail(normalizedEmail),
-			name,
-			message: message || null,
-		},
+	console.info('sponsored_apply_submit', {
+		wpUserId: session.wpUserId,
+		action,
+		pendingEmailNull,
 	})
+
+	if (!applicationId) {
+		return NextResponse.json(
+			{ ok: false, reason: 'create_failed' },
+			{ status: 500 }
+		)
+	}
 
 	const appBaseUrl = (
 		process.env.NEXT_PUBLIC_APP_URL ||
@@ -109,7 +150,7 @@ export async function POST(req: NextRequest) {
 	const exp = now + 60 * 60 * 48
 	const approveToken = signSponsoredDecisionToken(
 		{
-			applicationId: application.id,
+			applicationId: applicationId,
 			action: 'approve',
 			iat: now,
 			exp,
@@ -119,7 +160,7 @@ export async function POST(req: NextRequest) {
 	)
 	const rejectToken = signSponsoredDecisionToken(
 		{
-			applicationId: application.id,
+			applicationId: applicationId,
 			action: 'reject',
 			iat: now,
 			exp,
@@ -144,7 +185,7 @@ export async function POST(req: NextRequest) {
 
 	try {
 		await sendSponsoredApplicationAdminEmail({
-			applicationId: application.id,
+			applicationId: applicationId,
 			applicantName: name,
 			applicantEmail: normalizedEmail,
 			message: message || null,
@@ -154,7 +195,7 @@ export async function POST(req: NextRequest) {
 		})
 	} catch (error) {
 		console.error('sponsored_application_admin_email_failed', {
-			applicationId: application.id,
+			applicationId: applicationId,
 			email: redactEmail(normalizedEmail),
 			message: (error as Error).message,
 		})

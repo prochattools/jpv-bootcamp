@@ -7,6 +7,7 @@ import { getStripeConfig, getStripeWebhookSecrets } from '@/lib/stripe-config'
 import { hasProcessed, markProcessed } from '@/lib/idempotency'
 import { logProvisioningDecision, provisionFromCheckoutSession, syncFromSubscription } from '@/lib/provisioning'
 import { isSponsoredSeatSession, upsertSponsoredSeatFromSession } from '@/lib/sponsored-seats'
+import { notifySponsoredSeatPurchase } from '@/lib/sponsored-seat-notifications'
 import { getStripe } from '@/lib/stripe'
 
 const PROVISIONING_EVENT_TYPES = new Set([
@@ -431,6 +432,15 @@ export async function handleStripeWebhook(req: Request) {
 						created: seatResult.created,
 						eventId: event.id,
 					})
+					if (seatResult.seatId) {
+						const donorEmail =
+							session.customer_details?.email ?? session.customer_email ?? null
+						await notifySponsoredSeatPurchase({
+							seatId: seatResult.seatId,
+							tier: sponsoredTier,
+							donorEmail,
+						})
+					}
 				}
 				if (provisioningEnabled) {
 					await provisionFromCheckoutSession(session, event.id, event.type, {

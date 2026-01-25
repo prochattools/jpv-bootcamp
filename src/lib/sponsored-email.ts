@@ -212,3 +212,78 @@ export async function sendSponsoredApplicantRejectedEmail(params: {
 		throw error
 	}
 }
+
+export async function sendSponsoredDonorEmail(params: {
+	to: string
+	tier: 'pro' | 'vip'
+}): Promise<void> {
+	const resend = getResendClient()
+	const from = getMailFrom()
+	const tierLabel = params.tier === 'vip' ? 'VIP' : 'Pro'
+
+	const html = `
+		<p>Thanks for sponsoring a ${tierLabel} month.</p>
+		<p>Your purchase has added one sponsored seat. You won&apos;t receive access yourself.</p>
+	`
+	const text = `Thanks for sponsoring a ${tierLabel} month.\nYour purchase has added one sponsored seat. You won't receive access yourself.`
+
+	const { error } = await resend.emails.send({
+		from,
+		to: [params.to],
+		subject: 'Thanks for sponsoring a month',
+		html,
+		text,
+	})
+
+	if (error) {
+		console.error('sponsored_donor_email_failed', {
+			email: redactEmail(params.to),
+			tier: params.tier,
+			message: error.message,
+		})
+		throw error
+	}
+}
+
+export async function sendSponsoredSeatAdminEmail(params: {
+	donorEmail: string | null
+	tier: 'pro' | 'vip'
+	occurredAt: Date
+}): Promise<void> {
+	const resend = getResendClient()
+	const from = getMailFrom()
+	const to = getAdminRecipients()
+	const tierLabel = params.tier === 'vip' ? 'VIP' : 'Pro'
+	const donor = params.donorEmail ? escapeHtml(params.donorEmail) : 'unknown'
+	const timestamp = params.occurredAt.toISOString()
+
+	const html = `
+		<p>A sponsored seat purchase was completed.</p>
+		<p><strong>Tier:</strong> ${tierLabel}</p>
+		<p><strong>Donor email:</strong> ${donor}</p>
+		<p><strong>Timestamp:</strong> ${escapeHtml(timestamp)}</p>
+	`
+	const text = [
+		'A sponsored seat purchase was completed.',
+		`Tier: ${tierLabel}`,
+		`Donor email: ${params.donorEmail ?? 'unknown'}`,
+		`Timestamp: ${timestamp}`,
+	].join('\n')
+
+	const { error } = await resend.emails.send({
+		from,
+		to,
+		subject: 'Sponsored seat purchased',
+		html,
+		text,
+	})
+
+	if (error) {
+		console.error('sponsored_seat_admin_email_failed', {
+			email: params.donorEmail ? redactEmail(params.donorEmail) : null,
+			tier: params.tier,
+			message: error.message,
+		})
+		throw error
+	}
+}
