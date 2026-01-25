@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getStripe } from '@/lib/stripe'
 import {
-	getSponsoredSeatPriceId,
 	getSponsoredSeatRedirects,
+	getSponsoredPriceId,
 	normalizeSponsoredTier,
+	resolveSponsoredCheckoutMode,
 } from '@/lib/sponsored-seats'
 
 export const runtime = 'nodejs'
@@ -29,10 +30,12 @@ export async function POST(req: NextRequest) {
 		)
 	}
 
-	const priceId = getSponsoredSeatPriceId(tier)
+	const mode = resolveSponsoredCheckoutMode()
+	console.info('sponsored_checkout_mode', { mode, tier })
+	const priceId = getSponsoredPriceId({ tier, mode })
 	if (!priceId) {
 		return NextResponse.json(
-			{ ok: false, reason: 'price_missing' },
+			{ ok: false, reason: 'missing_price_id', mode, tier },
 			{ status: 400 }
 		)
 	}
