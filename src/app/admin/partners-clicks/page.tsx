@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers'
 import { notFound } from 'next/navigation'
 import prisma from '@/libs/prisma'
+import { Prisma } from '@prisma/client'
 import {
 	PARTNERS_SESSION_COOKIE,
 	sanitizeSessionId,
@@ -56,10 +57,7 @@ export default async function PartnersClicksAdminPage({
 	const wpUserIdFilter = Number(searchParams?.wp_user_id)
 	const partnerSlugFilter = normalizeSlug(searchParams?.partner_slug)
 
-	const filters: {
-		wpUserId?: number
-		partnerSlug?: string
-	} = {}
+	const filters: Prisma.PartnerClickWhereInput = {}
 
 	if (Number.isInteger(wpUserIdFilter) && wpUserIdFilter > 0) {
 		filters.wpUserId = wpUserIdFilter
@@ -68,19 +66,33 @@ export default async function PartnersClicksAdminPage({
 		filters.partnerSlug = partnerSlugFilter
 	}
 
+	const whereParts: Prisma.Sql[] = []
+	if (filters.wpUserId) {
+		whereParts.push(Prisma.sql`wp_user_id = ${filters.wpUserId}`)
+	}
+	if (filters.partnerSlug) {
+		whereParts.push(Prisma.sql`partner_slug = ${filters.partnerSlug}`)
+	}
+	const whereSql =
+		whereParts.length > 0
+			? Prisma.sql`WHERE ${Prisma.join(whereParts, Prisma.sql` AND `)}`
+			: Prisma.empty
+
 	const [partnerTotals, categoryTotals, recentClicks] = await Promise.all([
-		prisma.partnerClick.groupBy({
-			by: ['partnerSlug'],
-			_count: { _all: true },
-			where: filters,
-			orderBy: { _count: { _all: 'desc' } },
-		}),
-		prisma.partnerClick.groupBy({
-			by: ['categorySlug'],
-			_count: { _all: true },
-			where: filters,
-			orderBy: { _count: { _all: 'desc' } },
-		}),
+		prisma.$queryRaw<{ partner_slug: string; count: number }[]>(Prisma.sql`
+			SELECT partner_slug, COUNT(*)::int AS count
+			FROM tenant_jpvbootcamp.partner_clicks
+			${whereSql}
+			GROUP BY partner_slug
+			ORDER BY count DESC
+		`),
+		prisma.$queryRaw<{ category_slug: string; count: number }[]>(Prisma.sql`
+			SELECT category_slug, COUNT(*)::int AS count
+			FROM tenant_jpvbootcamp.partner_clicks
+			${whereSql}
+			GROUP BY category_slug
+			ORDER BY count DESC
+		`),
 		prisma.partnerClick.findMany({
 			where: filters,
 			orderBy: { createdAt: 'desc' },
@@ -104,9 +116,9 @@ export default async function PartnersClicksAdminPage({
 					<h2 className="text-lg font-semibold">Clicks by partner</h2>
 					<ul className="mt-3 space-y-2 text-sm">
 						{partnerTotals.map((item) => (
-							<li key={item.partnerSlug} className="flex justify-between">
-								<span>{item.partnerSlug}</span>
-								<span>{item._count._all}</span>
+							<li key={item.partner_slug} className="flex justify-between">
+								<span>{item.partner_slug}</span>
+								<span>{item.count}</span>
 							</li>
 						))}
 					</ul>
@@ -115,12 +127,12 @@ export default async function PartnersClicksAdminPage({
 					<h2 className="text-lg font-semibold">Clicks by category</h2>
 					<ul className="mt-3 space-y-2 text-sm">
 						{categoryTotals.map((item) => (
-							<li key={item.categorySlug} className="flex justify-between">
+							<li key={item.category_slug} className="flex justify-between">
 								<span>
-									{categoryNameBySlug.get(item.categorySlug) ??
-										item.categorySlug}
+									{categoryNameBySlug.get(item.category_slug) ??
+										item.category_slug}
 								</span>
-								<span>{item._count._all}</span>
+								<span>{item.count}</span>
 							</li>
 						))}
 					</ul>
