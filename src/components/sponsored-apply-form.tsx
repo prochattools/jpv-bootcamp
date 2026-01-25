@@ -36,10 +36,17 @@ export default function SponsoredApplyForm({ initialCounts }: Props) {
 				return
 			}
 			setStatus('success')
-			if (payload?.updatedExisting) {
-				setNote('Your application is already pending. We updated it.')
-			} else {
-				setNote('Application received. We will email you if approved.')
+			switch (payload?.outcome) {
+				case 'updated_existing_pending':
+					setNote('Application updated. Status: still pending.')
+					break
+				case 'blocked_existing_pending':
+					setNote('Already pending.')
+					break
+				case 'created_new':
+				default:
+					setNote('Application submitted. Status: pending.')
+					break
 			}
 		} catch (error) {
 			setStatus('error')

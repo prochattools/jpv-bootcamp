@@ -1,6 +1,7 @@
 import 'server-only'
 import { Resend } from 'resend'
 import { redactEmail } from '@/lib/log-redact'
+import { getPublicBaseUrl } from '@/lib/public-base-url'
 
 type SponsoredCounts = {
 	pro: number
@@ -81,8 +82,8 @@ export async function sendSponsoredApplicationAdminEmail(params: {
 	applicantName: string
 	applicantEmail: string
 	message?: string | null
-	approveUrl: string
-	rejectUrl: string
+	approveToken: string
+	rejectToken: string
 	counts?: SponsoredCounts
 }): Promise<void> {
 	const resend = getResendClient()
@@ -97,6 +98,24 @@ export async function sendSponsoredApplicationAdminEmail(params: {
 		? `Available seats: ${params.counts.pro} Pro / ${params.counts.vip} VIP`
 		: null
 
+	const baseUrl = getPublicBaseUrl()
+	const host = (() => {
+		try {
+			return new URL(baseUrl).host
+		} catch {
+			return 'unknown'
+		}
+	})()
+
+	console.info('sponsored_email_base_url', { host })
+
+	const approveUrl = `${baseUrl}/api/sponsored-applications/decision?token=${encodeURIComponent(
+		params.approveToken
+	)}`
+	const rejectUrl = `${baseUrl}/api/sponsored-applications/decision?token=${encodeURIComponent(
+		params.rejectToken
+	)}`
+
 	const html = `
 		<h2>New sponsored membership application</h2>
 		<p><strong>Name:</strong> ${safeName}</p>
@@ -104,10 +123,10 @@ export async function sendSponsoredApplicationAdminEmail(params: {
 		${safeMessage ? `<p><strong>Message:</strong><br/>${safeMessage}</p>` : ''}
 		${countsLine ? `<p>${escapeHtml(countsLine)}</p>` : ''}
 		<p>
-			<a href="${params.approveUrl}" style="display:inline-block;padding:10px 16px;background:#0f172a;color:#ffffff;text-decoration:none;border-radius:6px;margin-right:8px;">
+			<a href="${approveUrl}" style="display:inline-block;padding:10px 16px;background:#0f172a;color:#ffffff;text-decoration:none;border-radius:6px;margin-right:8px;">
 				Approve
 			</a>
-			<a href="${params.rejectUrl}" style="display:inline-block;padding:10px 16px;background:#ef4444;color:#ffffff;text-decoration:none;border-radius:6px;">
+			<a href="${rejectUrl}" style="display:inline-block;padding:10px 16px;background:#ef4444;color:#ffffff;text-decoration:none;border-radius:6px;">
 				Reject
 			</a>
 		</p>
@@ -122,8 +141,8 @@ export async function sendSponsoredApplicationAdminEmail(params: {
 		`Email: ${params.applicantEmail}`,
 		params.message ? `Message: ${params.message}` : null,
 		countsLine ? countsLine : null,
-		`Approve: ${params.approveUrl}`,
-		`Reject: ${params.rejectUrl}`,
+		`Approve: ${approveUrl}`,
+		`Reject: ${rejectUrl}`,
 		`Application ID: ${params.applicationId}`,
 	]
 		.filter(Boolean)

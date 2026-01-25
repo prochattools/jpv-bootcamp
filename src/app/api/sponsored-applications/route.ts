@@ -86,29 +86,47 @@ export async function POST(req: NextRequest) {
 		orderBy: { createdAt: 'desc' },
 	})
 
-	let action: 'created_new' | 'updated_existing_pending' = 'created_new'
+	let outcome: 'created_new' | 'updated_existing_pending' | 'blocked_existing_pending' =
+		'created_new'
 	let applicationId: string | null = null
 	let shouldSendAdminEmail = true
 
 	if (existingPending) {
-		action = 'updated_existing_pending'
-		const lastSent = existingPending.lastAdminEmailSentAt
-		if (lastSent) {
-			const elapsed = Date.now() - lastSent.getTime()
-			shouldSendAdminEmail = elapsed >= ADMIN_EMAIL_THROTTLE_MS
-		}
+		const existingEmail = existingPending.email
+			? existingPending.email.trim().toLowerCase()
+			: null
+		const existingName = existingPending.name.trim()
+		const existingMessage = existingPending.message?.trim() ?? ''
+		const incomingMessage = message || ''
 
-		const updated = await prisma.sponsoredApplication.update({
-			where: { id: existingPending.id },
-			data: {
-				email: normalizedEmail,
-				emailHash: hashEmail(normalizedEmail),
-				name,
-				message: message || null,
-				updatedAt: new Date(),
-			},
-		})
-		applicationId = updated.id
+		const hasChanges =
+			existingEmail !== normalizedEmail ||
+			existingName !== name ||
+			existingMessage !== incomingMessage
+
+		if (!hasChanges) {
+			outcome = 'blocked_existing_pending'
+			shouldSendAdminEmail = false
+			applicationId = existingPending.id
+		} else {
+			outcome = 'updated_existing_pending'
+			const lastSent = existingPending.lastAdminEmailSentAt
+			if (lastSent) {
+				const elapsed = Date.now() - lastSent.getTime()
+				shouldSendAdminEmail = elapsed >= ADMIN_EMAIL_THROTTLE_MS
+			}
+
+			const updated = await prisma.sponsoredApplication.update({
+				where: { id: existingPending.id },
+				data: {
+					email: normalizedEmail,
+					emailHash: hashEmail(normalizedEmail),
+					name,
+					message: message || null,
+				},
+			})
+			applicationId = updated.id
+		}
 	} else {
 		const created = await prisma.sponsoredApplication.create({
 			data: {
@@ -118,7 +136,6 @@ export async function POST(req: NextRequest) {
 				emailHash: hashEmail(normalizedEmail),
 				name,
 				message: message || null,
-				updatedAt: new Date(),
 			},
 		})
 		applicationId = created.id
@@ -126,8 +143,8 @@ export async function POST(req: NextRequest) {
 
 	console.info('sponsored_apply_submit', {
 		wpUserId: session.wpUserId,
-		action,
 		applicationId,
+		action: outcome,
 	})
 
 	if (!applicationId) {
@@ -136,14 +153,6 @@ export async function POST(req: NextRequest) {
 			{ status: 500 }
 		)
 	}
-
-	const appBaseUrl = (
-		process.env.NEXT_PUBLIC_APP_URL ||
-		process.env.APP_PUBLIC_URL ||
-		'https://jpvbootcamp.com'
-	)
-		.trim()
-		.replace(/\/$/, '')
 
 	const now = Math.floor(Date.now() / 1000)
 	const exp = now + 60 * 60 * 48
@@ -168,13 +177,6 @@ export async function POST(req: NextRequest) {
 		secret
 	)
 
-	const approveUrl = `${appBaseUrl}/api/sponsored-applications/decision?token=${encodeURIComponent(
-		approveToken
-	)}`
-	const rejectUrl = `${appBaseUrl}/api/sponsored-applications/decision?token=${encodeURIComponent(
-		rejectToken
-	)}`
-
 	let counts: { pro: number; vip: number } | undefined
 	try {
 		counts = await getSponsoredSeatCounts()
@@ -189,8 +191,8 @@ export async function POST(req: NextRequest) {
 				applicantName: name,
 				applicantEmail: normalizedEmail,
 				message: message || null,
-				approveUrl,
-				rejectUrl,
+				approveToken,
+				rejectToken,
 				counts,
 			})
 			await prisma.sponsoredApplication.updateMany({
@@ -206,5 +208,5 @@ export async function POST(req: NextRequest) {
 		}
 	}
 
-	return NextResponse.json({ ok: true, updatedExisting: action === 'updated_existing_pending' })
+	return NextResponse.json({ ok: true, outcome, applicationId })
 }

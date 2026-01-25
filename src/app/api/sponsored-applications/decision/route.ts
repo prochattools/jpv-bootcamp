@@ -9,6 +9,7 @@ import {
 	sendSponsoredApplicantRejectedEmail,
 } from '@/lib/sponsored-email'
 import { applySponsoredGrant, getGrantWindow } from '@/lib/sponsored-grants'
+import { getPublicBaseUrl } from '@/lib/public-base-url'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -16,9 +17,9 @@ export const dynamic = 'force-dynamic'
 type RedirectResult = 'approved' | 'rejected' | 'expired' | 'already_processed'
 
 function buildRedirect(req: NextRequest, result: RedirectResult) {
-	const origin = new URL(req.url).origin
+	const baseUrl = getPublicBaseUrl()
 	return NextResponse.redirect(
-		`${origin}/admin/sponsored-decision?result=${result}`
+		`${baseUrl}/admin/sponsored-decision?result=${result}`
 	)
 }
 
