@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import Image from "next/image";
+import SponsoredPayItForward from "@/components/sponsored-pay-it-forward";
 
 export default function HomePage() {
   const signInHref = "https://portal.jpvbootcamp.com/community/?fcom_action=auth";
@@ -472,6 +473,14 @@ export default function HomePage() {
                     {plan.ctaLabel}
                   </a>
                   {plan.subcopy ? <p className="text-xs text-jpv-green/80">{plan.subcopy}</p> : null}
+                  {plan.name === "Starter" ? (
+                    <p className="text-xs text-jpv-gray-400">
+                      Can&apos;t afford Pro?{" "}
+                      <a href="/sponsored" className="text-jpv-green hover:underline">
+                        You may be eligible for a sponsored month.
+                      </a>
+                    </p>
+                  ) : null}
                   {plan.name === "VIP" && portalUpgradeUrl ? (
                     <a
                       href={portalUpgradeUrl}
@@ -490,6 +499,9 @@ export default function HomePage() {
           <p className="text-sm text-jpv-gray-400">
             Need invoicing for teams? Contact us for group pricing.
           </p>
+          <div className="pt-6">
+            <SponsoredPayItForward />
+          </div>
         </div>
       </section>
       <section id="faq" className="px-6 py-24 sm:py-28">

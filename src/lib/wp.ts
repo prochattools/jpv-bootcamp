@@ -42,6 +42,8 @@ export type WpUserExistsResult = {
 	email?: string | null
 }
 
+export type MembershipPlan = 'pro' | 'vip' | 'free'
+
 let hasLoggedProvisioningDisabled = false
 let hasLoggedUserExistsDisabled = false
 let hasLoggedProvisioningEndpoint = false
@@ -297,4 +299,80 @@ export async function getWpUserExists(params: {
 		wpUserId: resolvedUserId,
 		email: resolvedEmail,
 	}
+}
+
+export async function updateWpMembershipLevel(params: {
+	email: string
+	plan: MembershipPlan
+	name?: string | null
+	firstName?: string | null
+	lastName?: string | null
+	fullName?: string | null
+	stripeCustomerId?: string | null
+	stripeSubscriptionId?: string | null
+}): Promise<boolean> {
+	const { wp } = getServerConfig()
+	if (!wp.enabled) {
+		if (!hasLoggedProvisioningDisabled) {
+			console.warn('WP provisioning disabled; skipping membership update.')
+			hasLoggedProvisioningDisabled = true
+		}
+		return false
+	}
+
+	const email = normalizeEmail(params.email)
+	const plan = params.plan.trim().toLowerCase() as MembershipPlan
+	if (!email) {
+		throw new Error('WP membership update requires a valid email.')
+	}
+	if (!['pro', 'vip', 'free'].includes(plan)) {
+		throw new Error('WP membership update requires a valid plan.')
+	}
+
+	const url = getProvisionUrl()
+	const endpointLog = getRedactedEndpoint(url)
+	if (!wp.provisionToken) {
+		throw new Error('WP provisioning is enabled but token is missing.')
+	}
+
+	const firstName = params.firstName ?? ''
+	const lastName = params.lastName ?? ''
+	const fullName = params.fullName ?? ''
+	const fallbackName = [firstName, lastName].filter(Boolean).join(' ').trim()
+	const resolvedName = params.name ?? (fullName || fallbackName || null)
+
+	const body = {
+		email,
+		plan,
+		jpv_membership_level: plan,
+		name: resolvedName,
+		firstName,
+		lastName,
+		fullName,
+		stripe_customer_id: params.stripeCustomerId ?? undefined,
+		stripe_subscription_id: params.stripeSubscriptionId ?? undefined,
+	}
+
+	const response = await fetch(url, {
+		method: 'POST',
+		headers: {
+			Authorization: `Bearer ${wp.provisionToken}`,
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+		},
+		body: JSON.stringify(body),
+		cache: 'no-store',
+	})
+
+	if (!response.ok) {
+		const bodyText = await response.text()
+		console.error('WP membership update failed', {
+			endpointPath: endpointLog.path,
+			status: response.status,
+			bodySnippet: bodyText.slice(0, MAX_BODY_LOG_CHARS),
+		})
+		throw new Error(`WP membership update failed with status ${response.status}`)
+	}
+
+	return true
 }

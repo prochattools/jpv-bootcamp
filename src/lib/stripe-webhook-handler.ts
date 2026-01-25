@@ -6,6 +6,7 @@ import { getServerConfig } from '@/lib/config'
 import { getStripeConfig, getStripeWebhookSecrets } from '@/lib/stripe-config'
 import { hasProcessed, markProcessed } from '@/lib/idempotency'
 import { logProvisioningDecision, provisionFromCheckoutSession, syncFromSubscription } from '@/lib/provisioning'
+import { isSponsoredSeatSession, upsertSponsoredSeatFromSession } from '@/lib/sponsored-seats'
 import { getStripe } from '@/lib/stripe'
 
 const PROVISIONING_EVENT_TYPES = new Set([
@@ -417,8 +418,21 @@ export async function handleStripeWebhook(req: Request) {
 
 		switch (event.type) {
 			case 'checkout.session.completed': {
+				const session = event.data.object as Stripe.Checkout.Session
+				const sponsoredTier = isSponsoredSeatSession(session)
+				if (sponsoredTier) {
+					const seatResult = await upsertSponsoredSeatFromSession({
+						session,
+						tier: sponsoredTier,
+					})
+					console.info('sponsored_seat_created', {
+						tier: sponsoredTier,
+						seatId: seatResult.seatId ?? null,
+						created: seatResult.created,
+						eventId: event.id,
+					})
+				}
 				if (provisioningEnabled) {
-					const session = event.data.object as Stripe.Checkout.Session
 					await provisionFromCheckoutSession(session, event.id, event.type, {
 						allowEmail: allowMembershipEmail,
 						eventLivemode: event.livemode,

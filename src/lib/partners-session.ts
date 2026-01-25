@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from 'crypto'
 import prisma from '@/libs/prisma'
 import { normalizeEmail } from '@/lib/normalize-email'
+import { enforceSponsoredGrantStatus } from '@/lib/sponsored-grants'
 
 export const PARTNERS_SESSION_COOKIE = 'partners_session'
 export const PARTNERS_SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 7
@@ -92,6 +93,7 @@ export async function getPartnerSession(
 		}
 		return null
 	}
+	await enforceSponsoredGrantStatus(record.wpUserId)
 	return {
 		sessionId: record.sessionId,
 		wpUserId: record.wpUserId,

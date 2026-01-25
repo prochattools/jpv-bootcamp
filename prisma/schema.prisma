@@ -89,6 +89,60 @@ model PartnerClick {
   @@schema("tenant_jpvbootcamp")
 }
 
+model SponsoredSeat {
+  id                     String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid @map("id")
+  createdAt              DateTime @default(now()) @map("created_at")
+  tier                   String   @map("tier")
+  stripePaymentIntentId  String   @unique @map("stripe_payment_intent_id")
+  stripeCheckoutSessionId String  @unique @map("stripe_checkout_session_id")
+  donatedByEmailHash     String?  @map("donated_by_email_hash")
+  claimedByWpUserId      Int?     @map("claimed_by_wp_user_id")
+  claimedAt              DateTime? @map("claimed_at")
+
+  grants SponsoredGrant[]
+
+  @@index([claimedByWpUserId])
+  @@index([createdAt])
+  @@map("sponsored_seats")
+  @@schema("tenant_jpvbootcamp")
+}
+
+model SponsoredApplication {
+  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid @map("id")
+  createdAt          DateTime @default(now()) @map("created_at")
+  status             String   @map("status")
+  wpUserId           Int      @map("wp_user_id")
+  emailHash          String   @map("email_hash")
+  name               String   @map("name")
+  message            String?  @map("message")
+  reviewedByWpUserId Int?     @map("reviewed_by_wp_user_id")
+  reviewedAt         DateTime? @map("reviewed_at")
+  decisionNote       String?  @map("decision_note")
+
+  @@index([status])
+  @@index([wpUserId])
+  @@map("sponsored_applications")
+  @@schema("tenant_jpvbootcamp")
+}
+
+model SponsoredGrant {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid @map("id")
+  createdAt DateTime @default(now()) @map("created_at")
+  wpUserId  Int      @map("wp_user_id")
+  tier      String   @map("tier")
+  seatId    String   @map("seat_id") @db.Uuid
+  startsAt  DateTime @map("starts_at")
+  endsAt    DateTime @map("ends_at")
+  revokedAt DateTime? @map("revoked_at")
+
+  seat SponsoredSeat @relation(fields: [seatId], references: [id])
+
+  @@index([wpUserId])
+  @@index([endsAt])
+  @@map("sponsored_grants")
+  @@schema("tenant_jpvbootcamp")
+}
+
 model Audiences {
   id        String @id
   resend_id String @unique
