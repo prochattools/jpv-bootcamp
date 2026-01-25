@@ -55,6 +55,40 @@ model CustomerProvisioning {
   @@schema("tenant_jpvbootcamp")
 }
 
+model PartnerSession {
+  sessionId   String   @id @map("session_id")
+  wpUserId    Int      @map("wp_user_id")
+  wpEmailHash String   @map("wp_email_hash")
+  wpName      String   @map("wp_name")
+  createdAt   DateTime @default(now()) @map("created_at")
+  expiresAt   DateTime @map("expires_at")
+
+  @@index([wpUserId])
+  @@index([expiresAt])
+  @@map("partner_sessions")
+  @@schema("tenant_jpvbootcamp")
+}
+
+model PartnerClick {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid @map("id")
+  createdAt    DateTime @default(now()) @map("created_at")
+  sessionId    String   @map("session_id")
+  wpUserId     Int      @map("wp_user_id")
+  partnerSlug  String   @map("partner_slug")
+  categorySlug String   @map("category_slug")
+  refPath      String?  @map("ref_path")
+  userAgentHash String? @map("user_agent_hash")
+  ipHash       String?  @map("ip_hash")
+
+  @@index([sessionId])
+  @@index([wpUserId])
+  @@index([partnerSlug])
+  @@index([categorySlug])
+  @@index([createdAt])
+  @@map("partner_clicks")
+  @@schema("tenant_jpvbootcamp")
+}
+
 model Audiences {
   id        String @id
   resend_id String @unique
