@@ -58,6 +58,14 @@ export function getSponsoredPortalUrl(): string {
 	return raw
 }
 
+function getSponsoredPortalBaseUrl(): string {
+	const raw = (process.env.SPONSORED_PORTAL_BASE_URL || '').trim()
+	if (!raw) {
+		return 'https://portal.jpvbootcamp.com'
+	}
+	return raw.replace(/\/$/, '')
+}
+
 function escapeHtml(value: string): string {
 	return value.replace(/[&<>"']/g, (char) => {
 		switch (char) {
@@ -85,6 +93,7 @@ export async function sendSponsoredApplicationAdminEmail(params: {
 	approveToken: string
 	rejectToken: string
 	counts?: SponsoredCounts
+	tier?: 'pro' | 'vip'
 }): Promise<void> {
 	const resend = getResendClient()
 	const from = getMailFrom()
@@ -116,8 +125,10 @@ export async function sendSponsoredApplicationAdminEmail(params: {
 		params.rejectToken
 	)}`
 
+	const tierLabel = params.tier === 'vip' ? 'VIP' : 'Pro'
 	const html = `
 		<h2>New sponsored membership application</h2>
+		<p><strong>Requested tier:</strong> ${tierLabel}</p>
 		<p><strong>Name:</strong> ${safeName}</p>
 		<p><strong>Email:</strong> ${safeEmail}</p>
 		${safeMessage ? `<p><strong>Message:</strong><br/>${safeMessage}</p>` : ''}
@@ -137,6 +148,7 @@ export async function sendSponsoredApplicationAdminEmail(params: {
 
 	const text = [
 		'New sponsored membership application',
+		`Requested tier: ${tierLabel}`,
 		`Name: ${params.applicantName}`,
 		`Email: ${params.applicantEmail}`,
 		params.message ? `Message: ${params.message}` : null,
@@ -160,6 +172,48 @@ export async function sendSponsoredApplicationAdminEmail(params: {
 		console.error('sponsored_application_admin_email_failed', {
 			applicationId: params.applicationId,
 			email: redactEmail(params.applicantEmail),
+			message: error.message,
+		})
+		throw error
+	}
+}
+
+export async function sendSponsoredClaimEmail(params: {
+	to: string
+	tier: 'pro' | 'vip'
+	claimToken: string
+}): Promise<void> {
+	const resend = getResendClient()
+	const from = getMailFrom()
+	const tierLabel = params.tier === 'vip' ? 'VIP' : 'Pro'
+	const portalBase = getSponsoredPortalBaseUrl()
+	const claimUrl = `${portalBase}/go/sponsored-claim?token=${encodeURIComponent(
+		params.claimToken
+	)}`
+
+	const html = `
+		<p>Your sponsored ${tierLabel} month is ready.</p>
+		<p><a href="${claimUrl}">Claim your sponsored month</a></p>
+		<p>This link expires in 7 days.</p>
+	`
+	const text = [
+		`Your sponsored ${tierLabel} month is ready.`,
+		`Claim your sponsored month: ${claimUrl}`,
+		'This link expires in 7 days.',
+	].join('\n')
+
+	const { error } = await resend.emails.send({
+		from,
+		to: [params.to],
+		subject: 'Claim your sponsored month',
+		html,
+		text,
+	})
+
+	if (error) {
+		console.error('sponsored_claim_email_failed', {
+			email: redactEmail(params.to),
+			tier: params.tier,
 			message: error.message,
 		})
 		throw error

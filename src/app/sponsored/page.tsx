@@ -1,24 +1,9 @@
-import { cookies } from 'next/headers'
-import { redirect } from 'next/navigation'
 import SponsoredApplyForm from '@/components/sponsored-apply-form'
-import { getPartnerSession, sanitizeSessionId } from '@/lib/partners-session'
 import { getSponsoredSeatCounts } from '@/lib/sponsored-seats'
 
 export const dynamic = 'force-dynamic'
 
-const PORTAL_PARTNERS_URL = 'https://portal.jpvbootcamp.com/go/partners'
-
 export default async function SponsoredApplyPage() {
-	const sessionCookie = cookies().get('partners_session')?.value
-	const sessionId = sanitizeSessionId(sessionCookie)
-	if (!sessionId) {
-		redirect(PORTAL_PARTNERS_URL)
-	}
-	const session = await getPartnerSession(sessionId)
-	if (!session) {
-		redirect(PORTAL_PARTNERS_URL)
-	}
-
 	const counts = await getSponsoredSeatCounts()
 
 	return (

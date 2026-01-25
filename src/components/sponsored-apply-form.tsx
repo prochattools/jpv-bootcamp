@@ -40,8 +40,14 @@ export default function SponsoredApplyForm({ initialCounts }: Props) {
 				case 'updated_existing_pending':
 					setNote('Application updated. Status: still pending.')
 					break
-				case 'blocked_existing_pending':
-					setNote('Already pending.')
+				case 'already_approved':
+					setNote('Your application was already approved. Check your email.')
+					break
+				case 'already_claimed':
+					setNote('Your sponsored access is already claimed.')
+					break
+				case 'already_rejected':
+					setNote('Your application was already reviewed. Please check your email.')
 					break
 				case 'created_new':
 				default:

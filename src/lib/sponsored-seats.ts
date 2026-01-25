@@ -33,12 +33,14 @@ export async function getSponsoredSeatCounts(): Promise<SponsoredSeatCounts> {
 			where: {
 				tier: 'pro',
 				claimedByWpUserId: null,
+				reservedByApplicationId: null,
 			},
 		}),
 		prisma.sponsoredSeat.count({
 			where: {
 				tier: 'vip',
 				claimedByWpUserId: null,
+				reservedByApplicationId: null,
 			},
 		}),
 	])

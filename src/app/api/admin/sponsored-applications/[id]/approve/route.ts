@@ -63,6 +63,13 @@ export async function POST(
 		)
 	}
 
+	if (!application.wpUserId) {
+		return NextResponse.json(
+			{ ok: false, reason: 'missing_wp_user_id' },
+			{ status: 400 }
+		)
+	}
+
 	const now = new Date()
 	const { startsAt, endsAt } = getGrantWindow()
 

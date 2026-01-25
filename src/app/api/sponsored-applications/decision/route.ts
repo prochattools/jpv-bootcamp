@@ -1,14 +1,15 @@
+import { randomUUID } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { Prisma } from '@prisma/client'
 import prisma from '@/libs/prisma'
 import { redactEmail } from '@/lib/log-redact'
 import { verifySponsoredDecisionToken } from '@/lib/sponsored-approval-token'
 import {
-	getSponsoredPortalUrl,
-	sendSponsoredApplicantApprovedEmail,
 	sendSponsoredApplicantRejectedEmail,
+	sendSponsoredClaimEmail,
 } from '@/lib/sponsored-email'
-import { applySponsoredGrant, getGrantWindow } from '@/lib/sponsored-grants'
+import { normalizeSponsoredTier } from '@/lib/sponsored-seats'
+import { signSponsoredClaimToken } from '@/lib/sponsored-claim-token'
 import { getPublicBaseUrl } from '@/lib/public-base-url'
 
 export const runtime = 'nodejs'
@@ -21,7 +22,6 @@ type RedirectResult =
 	| 'invalid'
 	| 'no_seats'
 	| 'already_processed'
-	| 'wp_failed'
 
 function buildRedirect(req: NextRequest, result: RedirectResult) {
 	const baseUrl = getPublicBaseUrl()
@@ -105,6 +105,8 @@ export async function GET(req: NextRequest) {
 			where: { id: applicationId, status: 'pending' },
 			data: {
 				status: 'rejected',
+				decision: 'rejected',
+				decidedAt: new Date(),
 				reviewedByWpUserId: null,
 				reviewedAt: new Date(),
 				decisionNote: null,
@@ -131,13 +133,11 @@ export async function GET(req: NextRequest) {
 		return buildRedirect(req, 'rejected')
 	}
 
+	const tier = normalizeSponsoredTier(application.tier ?? null) ?? 'pro'
 	const now = new Date()
-	const { startsAt, endsAt } = getGrantWindow()
 	let seatId: string | null = null
-	let grantId: string | null = null
-	let wpUserId = application.wpUserId
-	let applicantName = application.name
 	let applicantEmail = application.email
+	let applicantName = application.name
 
 	try {
 		await prisma.$transaction(async (tx) => {
@@ -145,12 +145,12 @@ export async function GET(req: NextRequest) {
 				{
 					id: string
 					status: string
-					wp_user_id: number
 					name: string
 					email: string | null
+					tier: string | null
 				}[]
 			>(Prisma.sql`
-				SELECT id, status, wp_user_id, name, email
+				SELECT id, status, name, email, tier
 				FROM tenant_jpvbootcamp.sponsored_applications
 				WHERE id = ${applicationId}
 				FOR UPDATE
@@ -160,19 +160,25 @@ export async function GET(req: NextRequest) {
 				throw new Error('already_processed')
 			}
 
-			wpUserId = locked[0].wp_user_id
 			applicantName = locked[0].name
 			applicantEmail = locked[0].email
 
+			if (!applicantEmail) {
+				throw new Error('missing_email')
+			}
+
+			const lockedTier = normalizeSponsoredTier(locked[0].tier ?? null) ?? tier
+
 			const claimed = await tx.$queryRaw<{ id: string }[]>(Prisma.sql`
 				UPDATE tenant_jpvbootcamp.sponsored_seats
-				SET claimed_by_wp_user_id = ${wpUserId},
-					claimed_at = ${now}
+				SET reserved_by_application_id = ${applicationId},
+					reserved_at = ${now}
 				WHERE id = (
 					SELECT id
 					FROM tenant_jpvbootcamp.sponsored_seats
 					WHERE claimed_by_wp_user_id IS NULL
-						AND tier = 'pro'
+						AND reserved_by_application_id IS NULL
+						AND tier = ${lockedTier}
 					ORDER BY created_at ASC
 					FOR UPDATE SKIP LOCKED
 					LIMIT 1
@@ -186,21 +192,14 @@ export async function GET(req: NextRequest) {
 
 			seatId = claimed[0].id
 
-			const grant = await tx.sponsoredGrant.create({
-				data: {
-					wpUserId,
-					tier: 'pro',
-					seatId: seatId,
-					startsAt,
-					endsAt,
-				},
-			})
-			grantId = grant.id
-
 			await tx.sponsoredApplication.update({
 				where: { id: applicationId },
 				data: {
 					status: 'approved',
+					decision: 'approved',
+					decidedAt: now,
+					tier: lockedTier,
+					seatId: seatId,
 					reviewedByWpUserId: null,
 					reviewedAt: now,
 					decisionNote: null,
@@ -224,39 +223,44 @@ export async function GET(req: NextRequest) {
 		return buildRedirect(req, 'invalid')
 	}
 
-	if (!seatId || !grantId) {
+	if (!seatId || !applicantEmail) {
 		return buildRedirect(req, 'invalid')
 	}
 
-	const grantResult = await applySponsoredGrant({
-		wpUserId,
-		tier: 'pro',
-		name: applicantName,
-	})
-
-	if (!grantResult.ok) {
-		console.error('sponsored_grant_provision_failed', {
-			applicationId,
-			wpUserId,
-			message: grantResult.reason ?? 'provision_failed',
-		})
-		return buildRedirect(req, 'wp_failed')
+	const claimSecret = (process.env.SPONSORED_CLAIM_SECRET || '').trim()
+	if (!claimSecret) {
+		throw new Error('Missing required env var: SPONSORED_CLAIM_SECRET')
 	}
 
-	if (applicantEmail) {
-		try {
-			await sendSponsoredApplicantApprovedEmail({
-				to: applicantEmail,
-				portalUrl: getSponsoredPortalUrl(),
-			})
-		} catch (error) {
-			console.error('sponsored_applicant_email_failed', {
-				applicationId,
-				email: redactEmail(applicantEmail),
-				status: 'approved',
-				message: (error as Error).message,
-			})
-		}
+	const nowEpoch = Math.floor(Date.now() / 1000)
+	const claimToken = signSponsoredClaimToken(
+		{
+			applicationId,
+			email: applicantEmail,
+			tier,
+			iat: nowEpoch,
+			exp: nowEpoch + 60 * 60 * 24 * 7,
+			nonce: randomUUID(),
+		},
+		claimSecret
+	)
+
+	try {
+		await sendSponsoredClaimEmail({
+			to: applicantEmail,
+			tier,
+			claimToken,
+		})
+		await prisma.sponsoredApplication.updateMany({
+			where: { id: applicationId },
+			data: { claimTokenSentAt: new Date() },
+		})
+	} catch (error) {
+		console.error('sponsored_claim_email_failed', {
+			applicationId,
+			email: redactEmail(applicantEmail),
+			message: (error as Error).message,
+		})
 	}
 
 	return buildRedirect(req, 'approved')

@@ -2,14 +2,14 @@ import { randomUUID } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/libs/prisma'
 import { normalizeEmail } from '@/lib/normalize-email'
-import {
-	getPartnerSession,
-	sanitizeSessionId,
-} from '@/lib/partners-session'
 import { redactEmail } from '@/lib/log-redact'
 import { signSponsoredDecisionToken } from '@/lib/sponsored-approval-token'
 import { sendSponsoredApplicationAdminEmail } from '@/lib/sponsored-email'
-import { getSponsoredSeatCounts, hashEmail } from '@/lib/sponsored-seats'
+import {
+	getSponsoredSeatCounts,
+	hashEmail,
+	normalizeSponsoredTier,
+} from '@/lib/sponsored-seats'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -18,22 +18,12 @@ type ApplicationPayload = {
 	name?: string
 	email?: string
 	message?: string
+	tier?: string
 }
 
 const ADMIN_EMAIL_THROTTLE_MS = 1000 * 60 * 15
 
 export async function POST(req: NextRequest) {
-	const sessionCookie = req.cookies.get('partners_session')?.value
-	const sessionId = sanitizeSessionId(sessionCookie)
-	if (!sessionId) {
-		return NextResponse.json({ ok: false, reason: 'unauthorized' }, { status: 401 })
-	}
-
-	const session = await getPartnerSession(sessionId)
-	if (!session) {
-		return NextResponse.json({ ok: false, reason: 'unauthorized' }, { status: 401 })
-	}
-
 	let body: ApplicationPayload | null = null
 	try {
 		body = (await req.json()) as ApplicationPayload
@@ -56,6 +46,8 @@ export async function POST(req: NextRequest) {
 			{ status: 400 }
 		)
 	}
+
+	const tier = normalizeSponsoredTier(body?.tier ?? null) ?? 'pro'
 
 	const secret = (process.env.SPONSORED_DECISION_SECRET || '').trim()
 	const hasResendKey = Boolean((process.env.RESEND_API_KEY || '').trim())
@@ -80,32 +72,29 @@ export async function POST(req: NextRequest) {
 
 	const existingPending = await prisma.sponsoredApplication.findFirst({
 		where: {
-			wpUserId: session.wpUserId,
-			status: 'pending',
+			email: normalizedEmail,
 		},
 		orderBy: { createdAt: 'desc' },
 	})
 
-	let outcome: 'created_new' | 'updated_existing_pending' | 'blocked_existing_pending' =
-		'created_new'
+	let outcome:
+		| 'created_new'
+		| 'updated_existing_pending'
+		| 'already_approved'
+		| 'already_rejected'
+		| 'already_claimed' = 'created_new'
 	let applicationId: string | null = null
 	let shouldSendAdminEmail = true
 
 	if (existingPending) {
-		const existingEmail = existingPending.email
-			? existingPending.email.trim().toLowerCase()
-			: null
-		const existingName = existingPending.name.trim()
-		const existingMessage = existingPending.message?.trim() ?? ''
-		const incomingMessage = message || ''
-
-		const hasChanges =
-			existingEmail !== normalizedEmail ||
-			existingName !== name ||
-			existingMessage !== incomingMessage
-
-		if (!hasChanges) {
-			outcome = 'blocked_existing_pending'
+		if (existingPending.status !== 'pending') {
+			if (existingPending.status === 'approved') {
+				outcome = 'already_approved'
+			} else if (existingPending.status === 'claimed') {
+				outcome = 'already_claimed'
+			} else {
+				outcome = 'already_rejected'
+			}
 			shouldSendAdminEmail = false
 			applicationId = existingPending.id
 		} else {
@@ -123,6 +112,7 @@ export async function POST(req: NextRequest) {
 					emailHash: hashEmail(normalizedEmail),
 					name,
 					message: message || null,
+					tier,
 				},
 			})
 			applicationId = updated.id
@@ -131,20 +121,19 @@ export async function POST(req: NextRequest) {
 		const created = await prisma.sponsoredApplication.create({
 			data: {
 				status: 'pending',
-				wpUserId: session.wpUserId,
 				email: normalizedEmail,
 				emailHash: hashEmail(normalizedEmail),
 				name,
 				message: message || null,
+				tier,
 			},
 		})
 		applicationId = created.id
 	}
 
 	console.info('sponsored_apply_submit', {
-		wpUserId: session.wpUserId,
 		applicationId,
-		action: outcome,
+		outcome,
 	})
 
 	if (!applicationId) {
@@ -194,6 +183,7 @@ export async function POST(req: NextRequest) {
 				approveToken,
 				rejectToken,
 				counts,
+				tier,
 			})
 			await prisma.sponsoredApplication.updateMany({
 				where: { id: applicationId },

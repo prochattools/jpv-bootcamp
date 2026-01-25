@@ -57,7 +57,13 @@ export default async function SponsoredApplicationsAdminPage() {
 								<div>
 									<div className="text-lg font-semibold">{application.name}</div>
 									<p className="text-xs text-muted-foreground">
-										WP User ID: {application.wpUserId}
+										Email: {application.email ?? 'unknown'}
+									</p>
+									<p className="text-xs text-muted-foreground">
+										WP User ID: {application.wpUserId ?? 'N/A'}
+									</p>
+									<p className="text-xs text-muted-foreground">
+										Requested tier: {application.tier}
 									</p>
 									<p className="text-xs text-muted-foreground">
 										Submitted: {application.createdAt.toISOString()}
