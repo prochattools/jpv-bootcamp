@@ -75,7 +75,7 @@ export default async function PartnersClicksAdminPage({
 	}
 	const whereSql =
 		whereParts.length > 0
-			? Prisma.sql`WHERE ${Prisma.join(whereParts, Prisma.sql` AND `)}`
+			? Prisma.sql`WHERE ${Prisma.join(whereParts, ' AND ')}`
 			: Prisma.empty
 
 	const [partnerTotals, categoryTotals, recentClicks] = await Promise.all([
