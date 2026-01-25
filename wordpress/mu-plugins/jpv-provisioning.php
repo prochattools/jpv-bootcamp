@@ -18,6 +18,18 @@ const JPV_PROVISIONING_MAIL_FROM = 'support@jpvbootcamp.com';
 const JPV_PROVISIONING_MAIL_FROM_NAME = 'JPV Bootcamp Support';
 const JPV_WELCOME_EMAIL_SENT_AT = 'jpv_welcome_email_sent_at';
 const JPV_WELCOME_EMAIL_SENT_REASON = 'jpv_welcome_email_sent_reason';
+const JPV_WELCOME_EMAIL_SENT_METHOD = 'jpv_welcome_email_send_method';
+
+function jpv_provisioning_redact_email(string $email): string {
+    if (!is_email($email)) {
+        return '';
+    }
+    $parts = explode('@', $email);
+    $local = $parts[0] ?? '';
+    $domain = $parts[1] ?? '';
+    $tail = $local !== '' ? substr($local, -2) : '';
+    return '***' . $tail . '@' . $domain;
+}
 
 function jpv_provisioning_mail_from($from) {
     return JPV_PROVISIONING_MAIL_FROM;
@@ -33,28 +45,37 @@ function jpv_provisioning_log_event(string $event, array $payload = array()): vo
     error_log('[JPV Provisioning] ' . wp_json_encode($payload));
 }
 
-function jpv_provisioning_send_new_user_email(int $user_id, string $email): bool {
+function jpv_provisioning_send_new_user_email(int $user_id, string $email, string $reset_link): array {
     $mail_from_ok = is_email(JPV_PROVISIONING_MAIL_FROM);
     if (!$mail_from_ok) {
         jpv_provisioning_log_event('invalid_mail_from_config', array(
             'userId' => $user_id,
-            'email' => $email,
+            'email' => jpv_provisioning_redact_email($email),
         ));
-    } else {
-        add_filter('wp_mail_from', 'jpv_provisioning_mail_from');
-        add_filter('wp_mail_from_name', 'jpv_provisioning_mail_from_name');
     }
 
     $sent = false;
+    $method = null;
 
     try {
         $result = null;
         if (function_exists('wp_new_user_notification')) {
-            $result = wp_new_user_notification($user_id, null, 'user');
+            if ($mail_from_ok) {
+                add_filter('wp_mail_from', 'jpv_provisioning_mail_from');
+                add_filter('wp_mail_from_name', 'jpv_provisioning_mail_from_name');
+            }
+            try {
+                $result = wp_new_user_notification($user_id, null, 'user');
+            } finally {
+                if ($mail_from_ok) {
+                    remove_filter('wp_mail_from', 'jpv_provisioning_mail_from');
+                    remove_filter('wp_mail_from_name', 'jpv_provisioning_mail_from_name');
+                }
+            }
         } else {
             jpv_provisioning_log_event('email_sent_failed', array(
                 'userId' => $user_id,
-                'email' => $email,
+                'email' => jpv_provisioning_redact_email($email),
                 'method' => 'wp_new_user_notification',
                 'reason' => 'function_missing',
             ));
@@ -64,34 +85,76 @@ function jpv_provisioning_send_new_user_email(int $user_id, string $email): bool
         if ($result === false) {
             jpv_provisioning_log_event('email_sent_failed', array(
                 'userId' => $user_id,
-                'email' => $email,
+                'email' => jpv_provisioning_redact_email($email),
                 'method' => 'wp_new_user_notification',
                 'reason' => 'wp_mail_failed',
             ));
         } else {
             $sent = true;
+            $method = 'wp_new_user_notification';
             jpv_provisioning_log_event('email_sent_success', array(
                 'userId' => $user_id,
-                'email' => $email,
-                'method' => 'wp_new_user_notification',
+                'email' => jpv_provisioning_redact_email($email),
+                'method' => $method,
             ));
         }
     } catch (Throwable $e) {
         jpv_provisioning_log_event('email_sent_failed', array(
             'userId' => $user_id,
-            'email' => $email,
+            'email' => jpv_provisioning_redact_email($email),
             'method' => 'wp_new_user_notification',
             'reason' => 'exception',
             'error' => $e->getMessage(),
         ));
     }
 
-    if ($mail_from_ok) {
-        remove_filter('wp_mail_from', 'jpv_provisioning_mail_from');
-        remove_filter('wp_mail_from_name', 'jpv_provisioning_mail_from_name');
+    if (!$sent) {
+        $subject = 'Set your password for JPV Bootcamp';
+        $body = "Hi,\n\nUse the link below to set your password:\n" . $reset_link . "\n\nIf you did not request this, you can ignore this email.\n";
+        $fallback_result = false;
+        $fallback_error_logged = false;
+        if ($mail_from_ok) {
+            add_filter('wp_mail_from', 'jpv_provisioning_mail_from');
+            add_filter('wp_mail_from_name', 'jpv_provisioning_mail_from_name');
+        }
+        try {
+            $fallback_result = wp_mail($email, $subject, $body);
+        } catch (Throwable $e) {
+            jpv_provisioning_log_event('email_sent_failed', array(
+                'userId' => $user_id,
+                'email' => jpv_provisioning_redact_email($email),
+                'method' => 'fallback_wp_mail',
+                'reason' => 'exception',
+                'error' => $e->getMessage(),
+            ));
+            $fallback_error_logged = true;
+        }
+        if ($mail_from_ok) {
+            remove_filter('wp_mail_from', 'jpv_provisioning_mail_from');
+            remove_filter('wp_mail_from_name', 'jpv_provisioning_mail_from_name');
+        }
+        if ($fallback_result) {
+            $sent = true;
+            $method = 'fallback_wp_mail';
+            jpv_provisioning_log_event('email_sent_success', array(
+                'userId' => $user_id,
+                'email' => jpv_provisioning_redact_email($email),
+                'method' => $method,
+            ));
+        } elseif (!$fallback_error_logged) {
+            jpv_provisioning_log_event('email_sent_failed', array(
+                'userId' => $user_id,
+                'email' => jpv_provisioning_redact_email($email),
+                'method' => 'fallback_wp_mail',
+                'reason' => 'wp_mail_failed',
+            ));
+        }
     }
 
-    return $sent;
+    return array(
+        'sent' => $sent,
+        'method' => $method,
+    );
 }
 
 function jpv_provisioning_get_token_sources(): array {
@@ -420,6 +483,8 @@ function jpv_provisioning_handle_request(WP_REST_Request $request) {
         return new WP_REST_Response(array('ok' => false, 'reason' => 'invalid_email'), 400);
     }
 
+    $redacted_email = jpv_provisioning_redact_email($email);
+
     $plan_meta = null;
     if ($plan_raw !== '') {
         $plan_norm = strtolower(trim($plan_raw));
@@ -435,6 +500,7 @@ function jpv_provisioning_handle_request(WP_REST_Request $request) {
     $user = get_user_by('email', $email);
     $user_id = $user ? $user->ID : 0;
     $created = false;
+    $welcome_email_attempted = false;
 
     if (!$user_id) {
         $display_name = $name_data['display_name'];
@@ -483,14 +549,14 @@ function jpv_provisioning_handle_request(WP_REST_Request $request) {
             $user_id = wp_insert_user($user_data);
         } catch (Throwable $e) {
             jpv_provisioning_log_event('user_create_failed', array(
-                'email' => $email,
+                'email' => $redacted_email,
                 'error' => $e->getMessage(),
             ));
             return new WP_REST_Response(array('ok' => false, 'reason' => 'create_failed'), 500);
         }
         if (is_wp_error($user_id)) {
             jpv_provisioning_log_event('user_create_failed', array(
-                'email' => $email,
+                'email' => $redacted_email,
                 'error' => $user_id->get_error_message(),
             ));
             return new WP_REST_Response(array('ok' => false, 'reason' => 'create_failed'), 500);
@@ -500,44 +566,11 @@ function jpv_provisioning_handle_request(WP_REST_Request $request) {
 
         jpv_provisioning_log_event('user_created', array(
             'userId' => $user_id,
-            'email' => $email,
+            'email' => $redacted_email,
             'plan' => $plan_meta,
         ));
-
-        if ($send_wp_email) {
-            $already_sent = get_user_meta($user_id, JPV_WELCOME_EMAIL_SENT_AT, true);
-            if (!empty($already_sent)) {
-                jpv_provisioning_log_event('email_gate_blocked', array(
-                    'userId' => $user_id,
-                    'email' => $email,
-                    'reason' => 'already_sent',
-                ));
-            } else {
-            jpv_provisioning_log_event('email_gate_allowed', array(
-                'userId' => $user_id,
-                'email' => $email,
-            ));
-                $sent = jpv_provisioning_send_new_user_email((int) $user_id, $email);
-                if ($sent) {
-                    update_user_meta($user_id, JPV_WELCOME_EMAIL_SENT_AT, time());
-                    update_user_meta($user_id, JPV_WELCOME_EMAIL_SENT_REASON, 'provisioning');
-                }
-            }
-        } else {
-            jpv_provisioning_log_event('email_gate_blocked', array(
-                'userId' => $user_id,
-                'email' => $email,
-                'reason' => 'send_flag_false',
-            ));
-        }
     } else {
         error_log('existing_user_no_role_change');
-        if ($send_wp_email) {
-            jpv_provisioning_log_event('email_gate_ignored_existing_user', array(
-                'userId' => $user_id,
-                'email' => $email,
-            ));
-        }
         if ($name_received) {
             if ($name_data['first_name'] !== '') {
                 update_user_meta($user_id, 'first_name', $name_data['first_name']);
@@ -591,7 +624,7 @@ function jpv_provisioning_handle_request(WP_REST_Request $request) {
     } catch (Throwable $e) {
         jpv_provisioning_log_event('reset_link_failed', array(
             'userId' => $user_id,
-            'email' => $email,
+            'email' => $redacted_email,
             'error' => $e->getMessage(),
         ));
         return new WP_REST_Response(array('ok' => false, 'reason' => 'reset_link_failed'), 500);
@@ -605,6 +638,53 @@ function jpv_provisioning_handle_request(WP_REST_Request $request) {
         'login'
     );
 
+    // Test plan: new user gets one email; retry provisioning blocks; force wp_new_user_notification fail -> fallback email sends.
+    if ($created) {
+        $now = time();
+        $sent_at_raw = get_user_meta($user_id, JPV_WELCOME_EMAIL_SENT_AT, true);
+        $sent_at_ts = is_numeric($sent_at_raw) ? (int) $sent_at_raw : 0;
+        $gate_blocked = false;
+        $gate_reason = '';
+        if (!empty($sent_at_raw)) {
+            if ($sent_at_ts > 0) {
+                $age = $now - $sent_at_ts;
+                if ($age < 0) {
+                    $age = 0;
+                }
+                if ($age < (365 * DAY_IN_SECONDS)) {
+                    $gate_blocked = true;
+                    $gate_reason = 'already_sent_recent';
+                }
+            } else {
+                $gate_blocked = true;
+                $gate_reason = 'sent_at_invalid';
+            }
+        }
+
+        if ($gate_blocked) {
+            jpv_provisioning_log_event('email_gate_blocked', array(
+                'userId' => $user_id,
+                'email' => $redacted_email,
+                'reason' => $gate_reason,
+            ));
+        } else {
+            jpv_provisioning_log_event('email_gate_allowed', array(
+                'userId' => $user_id,
+                'email' => $redacted_email,
+                'reason' => 'created',
+            ));
+            $welcome_email_attempted = true;
+            $send_result = jpv_provisioning_send_new_user_email((int) $user_id, $email, $reset_link);
+            if (!empty($send_result['sent'])) {
+                update_user_meta($user_id, JPV_WELCOME_EMAIL_SENT_AT, $now);
+                update_user_meta($user_id, JPV_WELCOME_EMAIL_SENT_REASON, 'created');
+                if (!empty($send_result['method'])) {
+                    update_user_meta($user_id, JPV_WELCOME_EMAIL_SENT_METHOD, (string) $send_result['method']);
+                }
+            }
+        }
+    }
+
     return rest_ensure_response(array(
         'ok' => true,
         'wp_user_id' => $user_id,
@@ -613,7 +693,7 @@ function jpv_provisioning_handle_request(WP_REST_Request $request) {
         'name_set' => $name_set,
         'created' => (bool) $created,
         'wp_email_requested' => (bool) $send_wp_email,
-        'wp_email_attempted' => (bool) ($created && $send_wp_email),
+        'wp_email_attempted' => (bool) $welcome_email_attempted,
     ));
 }
 
