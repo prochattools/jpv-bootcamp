@@ -94,6 +94,15 @@ function jpv_partners_handoff_handle_request(): void {
     $logged_in = is_user_logged_in();
     $secret = jpv_partners_handoff_get_secret();
     $has_secret = $secret ? true : false;
+    jpv_partners_handoff_log_event('request_seen', array(
+        'path' => $path,
+        'logged_in' => $logged_in,
+        'has_secret' => $has_secret,
+    ));
+
+    if (function_exists('nocache_headers')) {
+        nocache_headers();
+    }
 
     if (!$logged_in) {
         $login_url = wp_login_url(home_url('/go/partners'));
