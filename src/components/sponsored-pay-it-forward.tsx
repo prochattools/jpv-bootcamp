@@ -52,7 +52,11 @@ export default function SponsoredPayItForward() {
 			})
 			const payload = await response.json()
 			if (!response.ok || !payload?.url) {
-				setError('Unable to start checkout right now.')
+				setError(
+					payload?.reason === 'missing_env'
+						? 'Sponsor checkout is temporarily unavailable.'
+						: 'Unable to start checkout right now.'
+				)
 				return
 			}
 			window.location.href = payload.url

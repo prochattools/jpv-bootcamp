@@ -2,7 +2,6 @@ import 'server-only'
 import { createHash } from 'crypto'
 import prisma from '@/libs/prisma'
 import type Stripe from 'stripe'
-import { getStripeConfig } from '@/lib/stripe-config'
 
 export type SponsoredTier = 'pro' | 'vip'
 
@@ -10,8 +9,6 @@ export type SponsoredSeatCounts = {
 	pro: number
 	vip: number
 }
-
-export type SponsoredMode = 'test' | 'live'
 
 const VALID_TIERS: SponsoredTier[] = ['pro', 'vip']
 
@@ -23,24 +20,6 @@ export function normalizeSponsoredTier(
 	return VALID_TIERS.includes(normalized as SponsoredTier)
 		? (normalized as SponsoredTier)
 		: null
-}
-
-export function resolveSponsoredCheckoutMode(): SponsoredMode {
-	if (process.env.STRIPE_LIVEMODE === 'true') {
-		return 'live'
-	}
-	let secretKey = ''
-	try {
-		secretKey = getStripeConfig().secretKey
-	} catch {
-		secretKey =
-			(process.env.STRIPE_SECRET_KEY_TEST || process.env.STRIPE_SECRET_KEY_LIVE || '')
-				.trim() || ''
-	}
-	if (secretKey.startsWith('sk_live_')) {
-		return 'live'
-	}
-	return 'test'
 }
 
 export function hashEmail(value: string): string {
@@ -70,11 +49,11 @@ export async function getSponsoredSeatCounts(): Promise<SponsoredSeatCounts> {
 	}
 }
 
-export function getSponsoredPriceId(params: {
-	tier: SponsoredTier
-	mode: SponsoredMode
-}): string | null {
-	const key = `SPONSORED_${params.tier.toUpperCase()}_PRICE_ID_${params.mode.toUpperCase()}`
+export function getSponsoredPriceId(tier: SponsoredTier): string | null {
+	const key =
+		tier === 'vip'
+			? 'SPONSORED_VIP_PRICE_ID_TEST'
+			: 'SPONSORED_PRO_PRICE_ID_TEST'
 	const value = process.env[key] || ''
 	const trimmed = value.trim()
 	return trimmed.length > 0 ? trimmed : null

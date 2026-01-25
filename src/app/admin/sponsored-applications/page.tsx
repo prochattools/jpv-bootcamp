@@ -9,7 +9,6 @@ import { isSponsoredSeatsAdmin } from '@/lib/sponsored-admin'
 import {
 	getSponsoredSeatCounts,
 	getSponsoredPriceId,
-	resolveSponsoredCheckoutMode,
 } from '@/lib/sponsored-seats'
 
 export const dynamic = 'force-dynamic'
@@ -34,8 +33,7 @@ export default async function SponsoredApplicationsAdminPage() {
 		getSponsoredSeatCounts(),
 	])
 
-	const mode = resolveSponsoredCheckoutMode()
-	const hasVip = Boolean(getSponsoredPriceId({ tier: 'vip', mode }))
+	const hasVip = Boolean(getSponsoredPriceId('vip'))
 
 	return (
 		<main className="mx-auto max-w-5xl px-6 py-12">

@@ -4,7 +4,6 @@ import {
 	getSponsoredSeatRedirects,
 	getSponsoredPriceId,
 	normalizeSponsoredTier,
-	resolveSponsoredCheckoutMode,
 } from '@/lib/sponsored-seats'
 
 export const runtime = 'nodejs'
@@ -30,12 +29,40 @@ export async function POST(req: NextRequest) {
 		)
 	}
 
-	const mode = resolveSponsoredCheckoutMode()
-	console.info('sponsored_checkout_mode', { mode, tier })
-	const priceId = getSponsoredPriceId({ tier, mode })
+	const stripeEnv = (process.env.STRIPE_ENV || '').trim() || 'unknown'
+	const hasSecretKey = Boolean((process.env.STRIPE_SECRET_KEY_TEST || '').trim())
+	const hasPublishableKey = Boolean(
+		(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_TEST || '').trim()
+	)
+	const hasPricePro = Boolean(getSponsoredPriceId('pro'))
+	const hasPriceVip = Boolean(getSponsoredPriceId('vip'))
+
+	console.info('sponsored_checkout_env_check', {
+		stripeEnv,
+		hasSecretKey,
+		hasPublishableKey,
+		hasPricePro,
+		hasPriceVip,
+		tier,
+	})
+
+	if (
+		stripeEnv !== 'test' ||
+		!hasSecretKey ||
+		!hasPublishableKey ||
+		!hasPricePro ||
+		(tier === 'vip' && !hasPriceVip)
+	) {
+		return NextResponse.json(
+			{ ok: false, reason: 'missing_env' },
+			{ status: 400 }
+		)
+	}
+
+	const priceId = getSponsoredPriceId(tier)
 	if (!priceId) {
 		return NextResponse.json(
-			{ ok: false, reason: 'missing_price_id', mode, tier },
+			{ ok: false, reason: 'missing_env' },
 			{ status: 400 }
 		)
 	}
@@ -45,31 +72,43 @@ export async function POST(req: NextRequest) {
 		redirects = getSponsoredSeatRedirects()
 	} catch (error) {
 		return NextResponse.json(
-			{ ok: false, reason: 'redirects_missing' },
+			{ ok: false, reason: 'missing_env' },
 			{ status: 500 }
 		)
 	}
 
-	const stripe = getStripe()
-	const session = await stripe.checkout.sessions.create({
-		mode: 'payment',
-		line_items: [
-			{
-				price: priceId,
-				quantity: 1,
+	let session: { url?: string | null } | null = null
+	try {
+		const stripe = getStripe()
+		session = await stripe.checkout.sessions.create({
+			mode: 'payment',
+			line_items: [
+				{
+					price: priceId,
+					quantity: 1,
+				},
+			],
+			success_url: redirects.successUrl,
+			cancel_url: redirects.cancelUrl,
+			metadata: {
+				purpose: 'sponsored_seat',
+				tier,
 			},
-		],
-		success_url: redirects.successUrl,
-		cancel_url: redirects.cancelUrl,
-		metadata: {
-			purpose: 'sponsored_seat',
+		})
+	} catch (error) {
+		console.error('sponsored_checkout_failed', {
 			tier,
-		},
-	})
-
-	if (!session.url) {
+			message: (error as Error).message,
+		})
 		return NextResponse.json(
-			{ ok: false, reason: 'missing_session_url' },
+			{ ok: false, reason: 'stripe_error' },
+			{ status: 500 }
+		)
+	}
+
+	if (!session?.url) {
+		return NextResponse.json(
+			{ ok: false, reason: 'stripe_error' },
 			{ status: 500 }
 		)
 	}

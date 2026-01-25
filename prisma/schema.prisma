@@ -112,6 +112,7 @@ model SponsoredApplication {
   createdAt          DateTime @default(now()) @map("created_at")
   status             String   @map("status")
   wpUserId           Int      @map("wp_user_id")
+  email              String?  @map("email")
   emailHash          String   @map("email_hash")
   name               String   @map("name")
   message            String?  @map("message")
