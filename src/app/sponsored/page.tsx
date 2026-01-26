@@ -4,7 +4,12 @@ import { getSponsoredSeatCounts } from '@/lib/sponsored-seats'
 export const dynamic = 'force-dynamic'
 
 export default async function SponsoredApplyPage() {
-	const counts = await getSponsoredSeatCounts()
+	let counts = { pro: 0, vip: 0 }
+	try {
+		counts = await getSponsoredSeatCounts()
+	} catch (error) {
+		console.error('sponsored_counts_failed', error)
+	}
 
 	return (
 		<main className="mx-auto max-w-3xl px-6 py-12">

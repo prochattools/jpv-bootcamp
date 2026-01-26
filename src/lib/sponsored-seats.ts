@@ -52,11 +52,13 @@ export async function getSponsoredSeatCounts(): Promise<SponsoredSeatCounts> {
 }
 
 export function getSponsoredPriceId(tier: SponsoredTier): string | null {
-	const key =
+	const testKey =
 		tier === 'vip'
 			? 'SPONSORED_VIP_PRICE_ID_TEST'
 			: 'SPONSORED_PRO_PRICE_ID_TEST'
-	const value = process.env[key] || ''
+	const fallbackKey =
+		tier === 'vip' ? 'SPONSORED_VIP_PRICE_ID' : 'SPONSORED_PRO_PRICE_ID'
+	const value = process.env[testKey] || process.env[fallbackKey] || ''
 	const trimmed = value.trim()
 	return trimmed.length > 0 ? trimmed : null
 }
