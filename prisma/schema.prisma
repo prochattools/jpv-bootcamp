@@ -198,6 +198,20 @@ model Subscription {
   @@schema("public")
 }
 
+model Tenant {
+  slug       String   @id
+  schemaName String   @map("schema_name")
+  dbUser     String   @map("db_user")
+  dbPassword String   @map("db_password")
+  type       String
+  externalId String?  @map("external_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @default(now()) @map("updated_at")
+
+  @@map("tenants")
+  @@schema("public")
+}
+
 enum SubscriptionStatus {
   active
   inactive

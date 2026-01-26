@@ -55,6 +55,26 @@ function validateSlug(slug) {
   }
 }
 
+function isSafeSchemaName(name) {
+  return /^[a-z0-9_]+$/.test(name)
+}
+
+function readPrismaSchemas() {
+  const prismaPath = path.join(process.cwd(), 'prisma', 'schema.prisma')
+  if (!fs.existsSync(prismaPath)) return []
+  const content = fs.readFileSync(prismaPath, 'utf8')
+  const regex = /@@schema\(["']([^"']+)["']\)/g
+  const schemas = new Set()
+  let match = null
+  while ((match = regex.exec(content))) {
+    if (match[1]) {
+      schemas.add(match[1])
+    }
+  }
+  schemas.delete('public')
+  return Array.from(schemas)
+}
+
 function loadEnvFile(envPath) {
   if (!fs.existsSync(envPath)) return {}
   const lines = fs
@@ -103,6 +123,19 @@ async function main() {
 
   const { slug: rawSlug, preview, externalId } = parseArgs()
   let slug = (rawSlug || '').trim()
+  const prismaSchemas = !isProd ? readPrismaSchemas() : []
+  const tenantSchemas = prismaSchemas
+    .filter((schemaName) => schemaName.startsWith('tenant_'))
+    .filter((schemaName) => isSafeSchemaName(schemaName))
+  if (!slug || slug === 'dev') {
+    if (!isProd && tenantSchemas.length === 1) {
+      const derived = tenantSchemas[0].slice('tenant_'.length)
+      if (derived && derived !== 'dev') {
+        slug = derived
+        console.log(`ℹ️ Prisma schema targets ${tenantSchemas[0]}; using slug "${slug}".`)
+      }
+    }
+  }
   if (!slug) {
     if (isProd) {
       fail('No tenant slug provided. Use --slug <slug> or set APP_SLUG.')
@@ -115,6 +148,15 @@ async function main() {
   const schema = `tenant_${slug}`
   const user = `${schema}_user`
   const tenantType = preview ? 'preview' : 'prod'
+  const extraSchemas =
+    !isProd
+      ? readPrismaSchemas().filter(
+          (schemaName) =>
+            schemaName !== 'public' &&
+            schemaName !== schema &&
+            isSafeSchemaName(schemaName)
+        )
+      : []
 
   let password = process.env.TENANT_DB_PASSWORD
   if (!password) {
@@ -140,6 +182,35 @@ async function main() {
   try {
     await client.connect()
 
+    const extraSchemaSql = extraSchemas
+      .map(
+        (schemaName) => `
+      CREATE SCHEMA IF NOT EXISTS ${schemaName};
+      GRANT USAGE ON SCHEMA ${schemaName} TO ${user};
+      GRANT ALL PRIVILEGES ON SCHEMA ${schemaName} TO ${user};
+    `
+      )
+      .join('\n')
+
+    const publicGrantSql = isProd
+      ? `GRANT USAGE ON SCHEMA public TO ${user};`
+      : `
+      GRANT USAGE ON SCHEMA public TO ${user};
+      GRANT CREATE ON SCHEMA public TO ${user};
+      GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO ${user};
+      ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO ${user};
+    `
+
+    const schemaGrantSql = isProd
+      ? `GRANT USAGE ON SCHEMA ${schema} TO ${user};
+      GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA ${schema} TO ${user};
+      ALTER DEFAULT PRIVILEGES IN SCHEMA ${schema} GRANT ALL ON TABLES TO ${user};`
+      : `
+      GRANT USAGE ON SCHEMA ${schema} TO ${user};
+      GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA ${schema} TO ${user};
+      ALTER DEFAULT PRIVILEGES IN SCHEMA ${schema} GRANT ALL ON TABLES TO ${user};
+    `
+
     const ddlSql = `
       CREATE SCHEMA IF NOT EXISTS ${schema};
 
@@ -158,6 +229,11 @@ async function main() {
       GRANT USAGE ON SCHEMA ${schema} TO ${user};
       ALTER ROLE ${user} SET search_path = ${schema};
       GRANT ALL PRIVILEGES ON SCHEMA ${schema} TO ${user};
+      ${schemaGrantSql}
+
+      ${publicGrantSql}
+
+      ${extraSchemaSql}
     `
 
     await client.query(ddlSql)

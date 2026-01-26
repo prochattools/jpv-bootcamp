@@ -22,14 +22,19 @@ export default function HomePage() {
     { label: "Pricing", href: "#pricing" },
     { label: "FAQ", href: "#faq" },
   ];
-  const stats = [
-    { value: "3,200+", label: "Learners" },
-    { value: "18%", label: "Avg ROI" },
-    { value: "25", label: "Cities" },
-    { value: "900+", label: "Deals reviewed" },
+  const heroNotices = [
+    {
+      title: "Zoom training day",
+      meta: "1 March 2026 · Included with Pro",
+      description: "Join the live Zoom training day course to map your next steps with the JPV team.",
+    },
+    {
+      title: "Inheritance Builders Bootcamp",
+      meta: "27 March 2026 · London",
+      description:
+        "A person-to-person bootcamp with 100+ churches from England and Wales. Dedicated event page + exhibitor registration coming soon.",
+    },
   ];
-  const coreFocus = ["FCA basics", "Deal analysis", "Funding", "Lettings"];
-  const showHeroHighlights = false;
   const learnSections = [
     {
       title: "Foundations",
@@ -242,8 +247,8 @@ export default function HomePage() {
           </button>
         </div>
       </header>
-      <section className="h-screen flex items-center justify-center px-6 py-24 sm:py-28">
-        <div className="mx-auto flex max-w-6xl flex-col items-center gap-12 text-center">
+      <section className="h-screen flex items-center justify-center px-6 pb-12 pt-32 sm:pt-36">
+        <div className="mx-auto flex max-w-6xl flex-col items-center gap-10 text-center">
           <div className="space-y-6">
             <p className="text-sm uppercase tracking-[0.4rem] text-jpv-green/80">Property mastery starts here</p>
             <h1 className="text-4xl font-bold leading-tight sm:text-5xl md:text-6xl">
@@ -271,31 +276,22 @@ export default function HomePage() {
             </a>
           </div>
           <p className="text-sm text-jpv-gray-400 sm:text-base">14-day money-back guarantee · Cancel anytime</p>
-          {showHeroHighlights ? (
-            <div className="w-full max-w-4xl space-y-4 sm:space-y-6">
-              <div className="grid grid-cols-2 gap-4 sm:gap-6 md:grid-cols-4">
-                {coreFocus.map((topic) => (
-                  <div
-                    key={topic}
-                    className="flex items-center justify-center rounded-full border border-jpv-gray-700/50 bg-jpv-bg-dark/40 px-4 py-4 text-sm font-medium text-jpv-gray-200 shadow-jpv-card backdrop-blur sm:px-6"
-                  >
-                    {topic}
+          <div className="w-full max-w-4xl">
+            <div className="grid gap-4 text-left sm:grid-cols-2">
+              {heroNotices.map((notice) => (
+                <div
+                  key={notice.title}
+                  className="rounded-2xl border border-jpv-gray-700/50 bg-jpv-bg-dark/40 p-4 text-sm text-jpv-gray-300 shadow-jpv-card backdrop-blur"
+                >
+                  <div className="text-sm font-semibold text-white">{notice.title}</div>
+                  <div className="mt-1 text-xs uppercase tracking-[0.2rem] text-jpv-green/80">
+                    {notice.meta}
                   </div>
-                ))}
-              </div>
-              <div className="grid grid-cols-2 gap-4 sm:gap-6 md:grid-cols-4">
-                {stats.map((stat) => (
-                  <div
-                    key={stat.label}
-                    className="flex h-full flex-col items-center justify-center rounded-3xl border border-jpv-gray-700/50 bg-jpv-bg-light/60 p-6 text-center shadow-jpv-card backdrop-blur"
-                  >
-                    <div className="text-3xl font-semibold text-jpv-green md:text-4xl">{stat.value}</div>
-                    <p className="mt-2 text-sm text-jpv-gray-400">{stat.label}</p>
-                  </div>
-                ))}
-              </div>
+                  <p className="mt-2 text-sm text-jpv-gray-400">{notice.description}</p>
+                </div>
+              ))}
             </div>
-          ) : null}
+          </div>
         </div>
       </section>
       <section id="curriculum" className="px-6 py-24 sm:py-28">
