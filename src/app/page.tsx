@@ -24,15 +24,16 @@ export default function HomePage() {
   ];
   const heroNotices = [
     {
-      title: "Zoom training day",
-      meta: "1 March 2026 · Included with Pro",
-      description: "Join the live Zoom training day course to map your next steps with the JPV team.",
+      title: "Next Online Training",
+      meta: "13 February · Pro and VIP",
+      description:
+        "Weekly online training for 5 weeks for Pro and 1 additional in-person live session for VIPs.",
     },
     {
-      title: "Inheritance Builders Bootcamp",
+      title: "Inheritance Builders Bootcamp Conference",
       meta: "27 March 2026 · London",
       description:
-        "A person-to-person bootcamp with 100+ churches from England and Wales. Dedicated event page + exhibitor registration coming soon.",
+        "A flagship Christian business event for believers growing in biblical stewardship and Kingdom impact through wise investment.",
     },
   ];
   const learnSections = [
@@ -281,7 +282,7 @@ export default function HomePage() {
               {heroNotices.map((notice) => (
                 <div
                   key={notice.title}
-                  className="rounded-2xl border border-jpv-gray-700/50 bg-jpv-bg-dark/40 p-4 text-sm text-jpv-gray-300 shadow-jpv-card backdrop-blur"
+                  className="relative flex h-full flex-col rounded-2xl border border-jpv-green/60 bg-jpv-bg-dark/40 p-4 text-sm text-jpv-gray-300 shadow-jpv-card backdrop-blur before:pointer-events-none before:absolute before:inset-0 before:rounded-2xl before:border before:border-jpv-green/90 before:opacity-100 before:animate-pulse"
                 >
                   <div className="text-sm font-semibold text-white">{notice.title}</div>
                   <div className="mt-1 text-xs uppercase tracking-[0.2rem] text-jpv-green/80">

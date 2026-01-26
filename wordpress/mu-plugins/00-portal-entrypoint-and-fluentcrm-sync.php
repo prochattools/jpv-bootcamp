@@ -66,6 +66,27 @@ function jpv_portal_lockdown(): void {
         return;
     }
 
+    // ---- Fluent Community editor fix: never portal-lock programmatic requests ----
+    // OPTIONS preflight: redirecting these can make SPAs hang.
+    $method = strtoupper((string)($_SERVER['REQUEST_METHOD'] ?? 'GET'));
+    if ($method === 'OPTIONS') {
+        return;
+    }
+
+    // WP AJAX: editor relies on admin-ajax and other AJAX calls.
+    if (function_exists('wp_doing_ajax') && wp_doing_ajax()) {
+        return;
+    }
+
+    // WP REST: sometimes uses /wp-json/... but can also hit "/?rest_route=..."
+    if (defined('REST_REQUEST') && REST_REQUEST) {
+        return;
+    }
+    if (!empty($_GET['rest_route'])) {
+        return;
+    }
+    // ---------------------------------------------------------------------------
+
     $path = wp_parse_url($uri, PHP_URL_PATH);
     if (!$path) {
         return;
