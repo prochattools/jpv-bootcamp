@@ -49,6 +49,15 @@ function jpv_portal_is_allowed_path(string $path): bool {
     if (jpv_portal_path_starts_with($path, '/wp-content')) return true;
     if (jpv_portal_path_starts_with($path, '/wp-includes')) return true;
 
+    /**
+     * PATCH (Fluent Community editor bootstrap):
+     * Fluent Community uses a bootstrap request on "/" like:
+     *   /?fluent_community_block_editor=1&context=...
+     * If we portal-lock "/" we 302 that request to /community/ and the editor loads forever.
+     * Allow that bootstrap request through WITHOUT changing any other routing.
+     */
+    if ($path === '/' && isset($_GET['fluent_community_block_editor'])) return true;
+
     if (jpv_portal_path_starts_with($path, '/wp-admin')) {
         return current_user_can('manage_options');
     }
@@ -65,27 +74,6 @@ function jpv_portal_lockdown(): void {
     if ($uri === '') {
         return;
     }
-
-    // ---- Fluent Community editor fix: never portal-lock programmatic requests ----
-    // OPTIONS preflight: redirecting these can make SPAs hang.
-    $method = strtoupper((string)($_SERVER['REQUEST_METHOD'] ?? 'GET'));
-    if ($method === 'OPTIONS') {
-        return;
-    }
-
-    // WP AJAX: editor relies on admin-ajax and other AJAX calls.
-    if (function_exists('wp_doing_ajax') && wp_doing_ajax()) {
-        return;
-    }
-
-    // WP REST: sometimes uses /wp-json/... but can also hit "/?rest_route=..."
-    if (defined('REST_REQUEST') && REST_REQUEST) {
-        return;
-    }
-    if (!empty($_GET['rest_route'])) {
-        return;
-    }
-    // ---------------------------------------------------------------------------
 
     $path = wp_parse_url($uri, PHP_URL_PATH);
     if (!$path) {
@@ -329,7 +317,7 @@ function jpv_entitlements_get_secret(): string {
     }
 
     if (defined('BILLING_PORTAL_HMAC_SECRET') && BILLING_PORTAL_HMAC_SECRET) {
-        return trim((string) BILLING_PORTAL_HMAC_SECRET);
+        return trim((string) $env);
     }
 
     return '';
