@@ -21,6 +21,7 @@ export default function HomePage() {
     { label: "Community", href: "#community" },
     { label: "Pricing", href: "#pricing" },
     { label: "FAQ", href: "#faq" },
+    { label: "Events", href: "/builders-bootcamp" },
   ];
   const heroNotices = [
     {
