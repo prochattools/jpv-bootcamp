@@ -145,7 +145,7 @@ export default function BuildersBootcampPage() {
         </div>
       </header>
 
-      <section id="overview" className="relative flex min-h-screen items-center justify-center overflow-hidden px-6 pb-12 pt-28 sm:pt-24">
+      <section id="overview" className="relative flex min-h-screen items-center justify-center overflow-hidden px-6 pb-9 pt-21 sm:pt-18">
         <div className="absolute inset-0 z-0">
           <Image
             src={hallInteriorOne}
@@ -200,7 +200,7 @@ export default function BuildersBootcampPage() {
         </div>
       </section>
 
-      <section className="relative px-6 py-24">
+      <section className="relative px-6 py-24 sm:py-36">
         <div className="mx-auto grid max-w-7xl gap-8 md:grid-cols-2">
           {/* Visitors / What to Expect */}
           <div className="flex flex-col rounded-[40px] border border-jpv-gray-800 bg-jpv-bg-dark/40 p-10 backdrop-blur-xl shadow-2xl transition-all hover:border-jpv-green/30">
@@ -258,7 +258,7 @@ export default function BuildersBootcampPage() {
         </div>
       </section>
 
-      <section id="inheritance" className="relative overflow-hidden px-6 py-32 sm:py-48">
+      <section id="inheritance" className="relative overflow-hidden px-6 py-24 sm:py-36">
         <div className="mx-auto grid max-w-7xl gap-20 lg:grid-cols-2 lg:items-start">
           <div className="space-y-8">
             <div className="space-y-4">
@@ -297,7 +297,7 @@ export default function BuildersBootcampPage() {
         </div>
       </section>
 
-      <section className="relative border-y border-jpv-gray-700/40 bg-jpv-bg-dark/60 px-6 py-32 sm:py-48 overflow-hidden">
+      <section className="relative border-y border-jpv-gray-700/40 bg-jpv-bg-dark/60 px-6 py-24 sm:py-36 overflow-hidden">
         <div className="mx-auto grid max-w-7xl gap-16 lg:grid-cols-2 relative z-10">
           <div className="space-y-8">
             <div className="space-y-4">
@@ -340,7 +340,7 @@ export default function BuildersBootcampPage() {
         </div>
       </section>
 
-      <section id="speakers" className="px-6 py-32 sm:py-48">
+      <section id="speakers" className="px-6 py-24 sm:py-36">
         <div className="mx-auto max-w-7xl space-y-20">
           <div className="max-w-3xl space-y-6">
             <p className="text-sm font-bold uppercase tracking-[0.3em] text-jpv-green/80">Voices of Experience</p>
@@ -393,7 +393,7 @@ export default function BuildersBootcampPage() {
       </section>
 
 
-      <section id="tickets" className="px-6 py-32 sm:py-48">
+      <section id="tickets" className="px-6 py-24 sm:py-36">
         <div className="mx-auto max-w-7xl">
           <div className="relative overflow-hidden rounded-[60px] bg-jpv-green p-12 lg:p-24">
             <div className="absolute top-0 right-0 w-1/3 h-full bg-black/5 -skew-x-12 translate-x-1/2" />
