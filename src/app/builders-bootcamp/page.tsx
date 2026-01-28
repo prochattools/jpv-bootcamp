@@ -135,8 +135,8 @@ export default function BuildersBootcampPage() {
         </div>
       </header>
 
-      <section id="overview" className="relative flex min-h-screen items-center justify-center overflow-hidden px-6 pt-20">
-        <div className="absolute inset-0 -z-10 overflow-hidden">
+      <section id="overview" className="relative flex min-h-screen items-center justify-center overflow-hidden px-6 pt-24">
+        <div className="absolute inset-0 z-0">
           <Image
             src={hallInteriorOne}
             alt="Builders Bootcamp Venue"
@@ -144,13 +144,13 @@ export default function BuildersBootcampPage() {
             className="object-cover"
             priority
           />
-          <div className="absolute inset-0 bg-black/60" />
+          <div className="absolute inset-0 bg-black/40" />
         </div>
 
-        <div className="mx-auto grid max-w-7xl items-center gap-16 lg:grid-cols-[1fr,450px]">
+        <div className="relative z-10 mx-auto grid max-w-7xl items-center gap-16 lg:grid-cols-[1fr,450px]">
           <div className="space-y-10">
             <div className="space-y-4">
-              <div className="inline-flex items-center gap-2 rounded-full border border-jpv-green/30 bg-jpv-green/5 px-4 py-1.5 md:px-5 md:py-2">
+              <div className="inline-flex items-center gap-2 rounded-full border border-jpv-green/30 bg-jpv-green/5 px-4 py-1.5 md:px-5 md:py-2 backdrop-blur-sm">
                 <span className="relative flex h-2 w-2">
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-jpv-green opacity-75"></span>
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-jpv-green"></span>
@@ -159,11 +159,11 @@ export default function BuildersBootcampPage() {
                   One-Day Kingdom Business Gathering
                 </span>
               </div>
-              <h1 className="text-5xl font-black leading-[1.1] text-white sm:text-6xl lg:text-7xl xl:text-8xl">
+              <h1 className="text-5xl font-black leading-[1.1] text-white drop-shadow-2xl sm:text-6xl lg:text-7xl xl:text-8xl">
                 Inheritance <br />
                 <span className="text-jpv-green">Builders</span> Bootcamp
               </h1>
-              <p className="max-w-2xl text-xl font-medium text-jpv-gray-300 md:text-2xl">
+              <p className="max-w-2xl text-xl font-medium text-white drop-shadow-lg md:text-2xl">
                 Practical biblical stewardship, business, and property training for generational impact.
               </p>
             </div>
@@ -172,13 +172,13 @@ export default function BuildersBootcampPage() {
               {eventHighlights.map((highlight) => (
                 <div
                   key={highlight.title}
-                  className="group relative overflow-hidden rounded-2xl border border-jpv-gray-700/50 bg-jpv-bg-dark/40 p-6 transition-all hover:border-jpv-green/30 hover:bg-jpv-bg-dark/60"
+                  className="group relative overflow-hidden rounded-2xl border border-jpv-gray-700/50 bg-black/40 p-6 backdrop-blur-md transition-all hover:border-jpv-green/30 hover:bg-black/60"
                 >
-                  <p className="text-xs font-bold uppercase tracking-widest text-jpv-green/60 group-hover:text-jpv-green">
+                  <p className="text-xs font-bold uppercase tracking-widest text-jpv-green/80 group-hover:text-jpv-green">
                     {highlight.title}
                   </p>
                   <p className="mt-3 text-lg font-bold text-white group-hover:text-jpv-green transition-colors">{highlight.value}</p>
-                  <p className="mt-1 text-xs font-medium text-jpv-gray-400">{highlight.meta}</p>
+                  <p className="mt-1 text-xs font-medium text-jpv-gray-300">{highlight.meta}</p>
                 </div>
               ))}
             </div>
@@ -196,7 +196,7 @@ export default function BuildersBootcampPage() {
               <a
                 href={flyerHref}
                 download
-                className="flex items-center justify-center gap-2 rounded-full border border-jpv-gray-700 px-8 py-5 text-lg font-bold text-white transition-all hover:border-jpv-green hover:bg-white/5"
+                className="flex items-center justify-center gap-2 rounded-full border border-jpv-gray-700 bg-black/20 backdrop-blur-md px-8 py-5 text-lg font-bold text-white transition-all hover:border-jpv-green hover:bg-black/40"
               >
                 Event Leaflet
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
