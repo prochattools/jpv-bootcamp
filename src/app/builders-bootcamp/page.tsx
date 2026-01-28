@@ -32,12 +32,12 @@ const eventHighlights = [
 ];
 
 const bootcampHighlights = [
-  "One-day Christian gathering",
-  "UK & international speakers",
-  "Practical insights on business and property",
-  "Biblical stewardship without religious heaviness",
-  "Real testimonies from trained investors",
-  "Purpose-driven, values-aligned networking",
+  "UK & international speakers sharing real, faith-based business strategies",
+  "Practical insights on property investment, business growth, and wealth building",
+  "Powerful testimonies from trained Christian investors who’ve already bought property",
+  "Live Christian business exhibition featuring Kingdom-focused entrepreneurs",
+  "Purpose-driven, values-aligned networking opportunities",
+  "A space for bold believers ready to take action and build wealth God’s way",
 ];
 
 const whyMatters = [
@@ -206,7 +206,7 @@ export default function BuildersBootcampPage() {
           <div className="flex flex-col rounded-[40px] border border-jpv-gray-800 bg-jpv-bg-dark/40 p-10 backdrop-blur-xl shadow-2xl transition-all hover:border-jpv-green/30">
             <div className="flex-1">
               <h3 className="text-2xl font-black text-white uppercase tracking-wider">What to Expect</h3>
-              <p className="mt-4 text-jpv-gray-400 font-medium italic">&ldquo;Wisdom and structure for generational legacy.&rdquo;</p>
+              <p className="mt-4 text-jpv-gray-400 font-medium italic">&ldquo;One-day Christian business gathering in the heart of London&rdquo;</p>
               <ul className="mt-10 space-y-6">
                 {bootcampHighlights.map((item) => (
                   <li key={item} className="flex items-start gap-4 text-jpv-gray-200">
