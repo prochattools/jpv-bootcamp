@@ -135,7 +135,7 @@ export default function BuildersBootcampPage() {
         </div>
       </header>
 
-      <section id="overview" className="relative flex min-h-screen items-center justify-center overflow-hidden px-6 pt-24">
+      <section id="overview" className="relative flex min-h-screen items-center justify-center overflow-hidden px-6 pb-12 pt-28 sm:pt-24">
         <div className="absolute inset-0 z-0">
           <Image
             src={hallInteriorOne}
@@ -144,7 +144,8 @@ export default function BuildersBootcampPage() {
             className="object-cover"
             priority
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/50 to-transparent" />
+          {/* Vertical gradient on mobile, horizontal on desktop */}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/90 via-black/40 to-black/20 md:bg-gradient-to-r md:from-black/95 md:via-black/50 md:to-transparent" />
         </div>
 
         <div className="relative z-10 mx-auto max-w-7xl">
@@ -159,16 +160,16 @@ export default function BuildersBootcampPage() {
                   One-Day Kingdom Business Gathering
                 </span>
               </div>
-              <h1 className="text-5xl font-black leading-[1.1] text-white drop-shadow-2xl sm:text-6xl lg:text-7xl xl:text-8xl">
+              <h1 className="text-4xl font-black leading-[1.1] text-white drop-shadow-2xl sm:text-6xl lg:text-7xl xl:text-8xl">
                 Inheritance <br />
                 <span className="text-jpv-green">Builders</span> Bootcamp
               </h1>
-              <p className="max-w-2xl text-xl font-medium text-white drop-shadow-lg md:text-2xl">
+              <p className="max-w-2xl text-lg font-medium text-white drop-shadow-lg sm:text-xl md:text-2xl">
                 Practical biblical stewardship, business, and property training for generational impact.
               </p>
             </div>
 
-            <div className="grid gap-6 sm:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {eventHighlights.map((highlight) => (
                 <div
                   key={highlight.title}
