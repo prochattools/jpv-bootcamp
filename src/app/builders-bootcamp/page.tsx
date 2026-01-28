@@ -199,7 +199,7 @@ export default function BuildersBootcampPage() {
         </div>
       </section>
 
-      <section className="relative px-6 py-12 -mt-20">
+      <section className="relative px-6 py-24">
         <div className="mx-auto grid max-w-7xl gap-8 md:grid-cols-2">
           {/* Visitors / What to Expect */}
           <div className="flex flex-col rounded-[40px] border border-jpv-gray-800 bg-jpv-bg-dark/40 p-10 backdrop-blur-xl shadow-2xl transition-all hover:border-jpv-green/30">
