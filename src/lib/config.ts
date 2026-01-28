@@ -108,6 +108,7 @@ export type ServerConfig = {
 		secretKey: string
 		pricePro: string
 		priceVip: string
+		priceExhibitor: string
 		portalConfigurationId: string
 		successUrl: string
 		cancelUrl: string
@@ -139,6 +140,7 @@ export type StripeConfig = {
 		secretKey: string
 		pricePro: string
 		priceVip: string
+		priceExhibitor: string
 		portalConfigurationId: string
 		successUrl: string
 		cancelUrl: string
@@ -172,6 +174,7 @@ export function getStripeConfig(): StripeConfig {
 			secretKey: stripeConfig.secretKey,
 			pricePro: stripeConfig.pricePro,
 			priceVip: stripeConfig.priceVip,
+			priceExhibitor: stripeConfig.priceExhibitor,
 			portalConfigurationId: stripeConfig.portalConfigurationId,
 			successUrl,
 			cancelUrl,
@@ -217,11 +220,11 @@ export function getServerConfig(): ServerConfig {
 
 	const wpConfig: ServerConfig['wp'] = wpEnabled
 		? {
-				enabled: true,
-				baseUrl: requireUrlEnv('WP_BASE_URL'),
-				provisionEndpoint: requireEnv('WP_PROVISION_ENDPOINT'),
-				provisionToken: requireEnv('WP_PROVISION_TOKEN'),
-		  }
+			enabled: true,
+			baseUrl: requireUrlEnv('WP_BASE_URL'),
+			provisionEndpoint: requireEnv('WP_PROVISION_ENDPOINT'),
+			provisionToken: requireEnv('WP_PROVISION_TOKEN'),
+		}
 		: { enabled: false }
 
 	cachedServerConfig = {
@@ -230,6 +233,7 @@ export function getServerConfig(): ServerConfig {
 			secretKey: stripeConfig.secretKey,
 			pricePro: stripeConfig.pricePro,
 			priceVip: stripeConfig.priceVip,
+			priceExhibitor: stripeConfig.priceExhibitor,
 			portalConfigurationId: stripeConfig.portalConfigurationId,
 			successUrl: normalizeStripeSuccessUrl(
 				getEnvOrDefault('STRIPE_SUCCESS_URL', DEFAULT_STRIPE_SUCCESS_PATH),

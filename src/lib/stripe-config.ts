@@ -9,6 +9,7 @@ export type StripeConfig = {
 	publishableKey: string
 	pricePro: string
 	priceVip: string
+	priceExhibitor: string
 	productPro: string
 	productVip: string
 	portalConfigurationId: string
@@ -80,6 +81,7 @@ export function getStripeConfig(): StripeConfig {
 	const suffix = env === 'test' ? 'TEST' : 'LIVE'
 	const priceProKey = `STRIPE_PRICE_PRO_${suffix}`
 	const priceVipKey = `STRIPE_PRICE_VIP_${suffix}`
+	const priceExhibitorKey = `STRIPE_PRICE_TABLE_${suffix}`
 	const productProKey = `STRIPE_PRODUCT_JPV_BOOTCAMP_PRO_MEMBERSHIP_${suffix}`
 	const productVipKey = `STRIPE_PRODUCT_JPV_BOOTCAMP_VIP_MEMBERSHIP_${suffix}`
 	const portalConfigKey = `STRIPE_PORTAL_CONFIGURATION_ID_${suffix}`
@@ -89,6 +91,7 @@ export function getStripeConfig(): StripeConfig {
 	const publishableKey = requireEnv(`NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_${suffix}`)
 	const pricePro = requireEnv(priceProKey)
 	const priceVip = requireEnv(priceVipKey)
+	const priceExhibitor = requireEnv(priceExhibitorKey)
 	const productPro = requireEnv(productProKey)
 	const productVip = requireEnv(productVipKey)
 	const portalConfigurationId = requireEnv(portalConfigKey)
@@ -103,6 +106,7 @@ export function getStripeConfig(): StripeConfig {
 	}
 	assertPrefix(pricePro, prefixes.pricePrefix, 'Stripe Pro price')
 	assertPrefix(priceVip, prefixes.pricePrefix, 'Stripe VIP price')
+	assertPrefix(priceExhibitor, prefixes.pricePrefix, 'Stripe Exhibitor price')
 	assertPrefix(productPro, prefixes.productPrefix, 'Stripe Pro product')
 	assertPrefix(productVip, prefixes.productPrefix, 'Stripe VIP product')
 	assertPrefix(portalConfigurationId, 'bpc_', 'Stripe portal configuration')
@@ -115,6 +119,7 @@ export function getStripeConfig(): StripeConfig {
 		publishableKey,
 		pricePro,
 		priceVip,
+		priceExhibitor,
 		productPro,
 		productVip,
 		portalConfigurationId,

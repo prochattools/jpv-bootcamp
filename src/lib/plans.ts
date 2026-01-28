@@ -1,12 +1,12 @@
 import 'server-only'
 import { getStripeConfig } from '@/lib/stripe-config'
 
-export type Plan = 'pro' | 'vip'
+export type Plan = 'pro' | 'vip' | 'exhibitor'
 
 export function normalizePlan(value: string | null | undefined): Plan | null {
 	if (!value) return null
 	const normalized = value.trim().toLowerCase()
-	return normalized === 'pro' || normalized === 'vip' ? normalized : null
+	return normalized === 'pro' || normalized === 'vip' || normalized === 'exhibitor' ? normalized : null
 }
 
 let cachedPlanByPriceId: Record<string, Plan> | null = null
@@ -16,10 +16,11 @@ function getPlanByPriceId(): Record<string, Plan> {
 	if (cachedPlanByPriceId) {
 		return cachedPlanByPriceId
 	}
-	const { pricePro, priceVip } = getStripeConfig()
+	const { pricePro, priceVip, priceExhibitor } = getStripeConfig()
 	cachedPlanByPriceId = {
 		[pricePro]: 'pro',
 		[priceVip]: 'vip',
+		[priceExhibitor]: 'exhibitor',
 	}
 	return cachedPlanByPriceId
 }

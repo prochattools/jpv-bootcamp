@@ -10,11 +10,13 @@ export const dynamic = 'force-dynamic'
 type PricingPlanKey = Plan
 
 function isPricingPlanKey(value: string | null): value is PricingPlanKey {
-	return value === 'pro' || value === 'vip'
+	return value === 'pro' || value === 'vip' || value === 'exhibitor'
 }
 
 function getPriceIdForPlan(plan: PricingPlanKey, stripeConfig: StripeConfig['stripe']) {
-	return plan === 'pro' ? stripeConfig.pricePro : stripeConfig.priceVip
+	if (plan === 'pro') return stripeConfig.pricePro
+	if (plan === 'vip') return stripeConfig.priceVip
+	return stripeConfig.priceExhibitor
 }
 
 async function getActiveMembershipSubscriptionForCustomer(customerId: string) {
@@ -78,7 +80,7 @@ export async function GET(req: NextRequest) {
 		if (!plan) {
 			return NextResponse.json(
 				{
-					error: 'Invalid plan. Use ?plan=pro|vip.',
+					error: 'Invalid plan. Use ?plan=pro|vip|exhibitor.',
 				},
 				{ status: 400 }
 			)
@@ -145,7 +147,7 @@ export async function GET(req: NextRequest) {
 		}
 
 		const session = await stripe.checkout.sessions.create({
-			mode: 'subscription',
+			mode: plan === 'exhibitor' ? 'payment' : 'subscription',
 			line_items: [{ price: priceId, quantity: 1 }],
 			success_url: successUrl,
 			cancel_url: cancelUrl,

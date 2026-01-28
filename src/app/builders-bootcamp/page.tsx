@@ -245,8 +245,7 @@ export default function BuildersBootcampPage() {
             </div>
             <div className="mt-12 pt-8 border-t border-jpv-gray-800">
               <a
-                href={flyerHref}
-                download
+                href="/api/stripe/checkout?plan=exhibitor"
                 className="group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-full bg-jpv-green py-5 text-xl font-black text-black shadow-jpv-glow transition-all hover:scale-105 active:scale-95"
               >
                 Exhibitors
