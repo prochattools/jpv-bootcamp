@@ -125,7 +125,9 @@ export default function BuildersBootcampPage() {
               Main site
             </a>
             <a
-              href="#tickets"
+              href="https://www.eventbrite.com/e/inheritance-builders-bootcamp-tickets-1981871918258?aff=oddtdtcreator"
+              target="_blank"
+              rel="noopener noreferrer nofollow"
               className="rounded-full bg-jpv-green px-6 py-2.5 text-sm font-bold text-black shadow-jpv-glow transition-all hover:scale-105 hover:bg-jpv-green-hover active:scale-95"
             >
               Register
