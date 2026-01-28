@@ -144,7 +144,7 @@ export default function BuildersBootcampPage() {
             className="object-cover"
             priority
           />
-          <div className="absolute inset-0 bg-black/40" />
+          <div className="absolute inset-0 bg-black/65" />
         </div>
 
         <div className="relative z-10 mx-auto grid max-w-7xl items-center gap-16 lg:grid-cols-[1fr,450px]">
