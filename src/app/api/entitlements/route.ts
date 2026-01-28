@@ -19,7 +19,7 @@ const ALLOWED_STATUSES = new Set<Stripe.Subscription.Status>([
 // curl -i -H "Authorization: Bearer <token>" https://jpvbootcamp.com/api/entitlements
 
 type EntitlementsResponse = {
-	plan: 'free' | 'pro' | 'vip'
+	plan: Plan | 'free'
 }
 
 type EntitlementsError = {
@@ -56,6 +56,7 @@ function resolvePlanFromSubscriptions(subscriptions: Stripe.Subscription[]): Pla
 			const plan = resolvePlanFromStripe({ metadataPlan, priceId, productId })
 			if (plan === 'vip') return 'vip'
 			if (plan === 'pro') found = 'pro'
+			if (plan === 'exhibitor' && !found) found = 'exhibitor'
 		}
 	}
 	return found
