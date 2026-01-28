@@ -32,12 +32,12 @@ const eventHighlights = [
 ];
 
 const bootcampHighlights = [
-  "UK & international speakers sharing real, faith-based business strategies",
-  "Practical insights on property investment, business growth, and wealth building",
-  "Powerful testimonies from trained Christian investors who’ve already bought property",
-  "Live Christian business exhibition featuring Kingdom-focused entrepreneurs",
-  "Purpose-driven, values-aligned networking opportunities",
-  "A space for bold believers ready to take action and build wealth God’s way",
+  "Faith-based business strategies from global speakers",
+  "Insights on property investment, growth & wealth",
+  "Testimonies from trained Christian property investors",
+  "Live exhibition with Kingdom-focused entrepreneurs",
+  "Purpose-driven, values-aligned networking",
+  "Building Kingdom wealth and legacy God's way",
 ];
 
 const whyMatters = [
@@ -240,7 +240,11 @@ export default function BuildersBootcampPage() {
               <ul className="mt-10 space-y-6">
                 {exhibitorHighlights.map((item) => (
                   <li key={item} className="flex items-start gap-4 text-jpv-gray-200">
-                    <span className="flex h-1.5 w-1.5 shrink-0 translate-y-2.5 rounded-full bg-jpv-green shadow-jpv-glow" />
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-jpv-green/10 text-jpv-green">
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </span>
                     <span className="text-lg font-bold">{item}</span>
                   </li>
                 ))}
