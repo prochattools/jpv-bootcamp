@@ -399,19 +399,19 @@ export default function BuildersBootcampPage() {
             <div className="relative z-10 grid gap-16 lg:grid-cols-2 lg:items-center">
               <div className="space-y-10 text-black">
                 <div className="space-y-4">
-                  <p className="text-sm font-black uppercase tracking-[0.4em] text-black/60">Final Call</p>
-                  <h2 className="text-5xl font-black sm:text-7xl leading-[1.1]">Register Today</h2>
-                  <p className="text-xl font-bold max-w-md">Limited in-person capacity. Secure your place at the heart of London.</p>
+                  <p className="text-sm font-black uppercase tracking-[0.4em] text-white">Final Call</p>
+                  <h2 className="text-5xl font-black sm:text-7xl leading-[1.1] text-black">Register Today</h2>
+                  <p className="text-xl font-bold max-w-md text-white">Limited in-person capacity. Secure your place at the heart of London.</p>
                 </div>
 
                 <div className="grid gap-6 sm:grid-cols-2">
                   <div className="space-y-2">
-                    <p className="text-xs font-black uppercase tracking-widest text-black/50">Location</p>
-                    <p className="text-lg font-black leading-tight">Emmanuel Centre<br />9-23 Marsham St, SW1P</p>
+                    <p className="text-xs font-black uppercase tracking-widest text-white/80">Location</p>
+                    <p className="text-lg font-black leading-tight text-black">Emmanuel Centre<br />9-23 Marsham St, SW1P</p>
                   </div>
                   <div className="space-y-2">
-                    <p className="text-xs font-black uppercase tracking-widest text-black/50">Schedule</p>
-                    <p className="text-lg font-black leading-tight">10:30 AM Registration<br />11 AM - 4 PM Program</p>
+                    <p className="text-xs font-black uppercase tracking-widest text-white/80">Schedule</p>
+                    <p className="text-lg font-black leading-tight text-black">10:30 AM Registration<br />11 AM - 4 PM Program</p>
                   </div>
                 </div>
 
@@ -432,13 +432,13 @@ export default function BuildersBootcampPage() {
                 </div>
               </div>
 
-              <div className="rounded-[40px] bg-black/10 p-10 backdrop-blur-sm border border-black/10">
+              <div className="rounded-[40px] bg-black/10 p-10 backdrop-blur-sm border border-white/20">
                 <blockquote className="space-y-8">
-                  <div className="text-3xl font-black text-black leading-tight">
+                  <div className="text-3xl font-black text-white leading-tight">
                     &ldquo;Inheritance isn&apos;t just what we leave behind. It&apos;s what the next generation, and those God sends to us, walk into.&rdquo;
                   </div>
-                  <footer className="pt-8 border-t border-black/10">
-                    <p className="text-lg font-bold text-black/70 italic">Join us to build wisdom, provision, and legacy with faith at the center.</p>
+                  <footer className="pt-8 border-t border-white/20">
+                    <p className="text-lg font-bold text-white italic">Join us to build wisdom, provision, and legacy with faith at the center.</p>
                   </footer>
                 </blockquote>
               </div>
