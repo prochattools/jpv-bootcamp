@@ -137,8 +137,14 @@ export default function BuildersBootcampPage() {
 
       <section id="overview" className="relative flex min-h-screen items-center justify-center overflow-hidden px-6 pt-20">
         <div className="absolute inset-0 -z-10 overflow-hidden">
-          <div className="absolute -left-[10%] -top-[10%] h-[50%] w-[50%] rounded-full bg-jpv-green/10 blur-[120px]" />
-          <div className="absolute -right-[10%] bottom-[10%] h-[40%] w-[40%] rounded-full bg-jpv-green/5 blur-[100px]" />
+          <Image
+            src={hallInteriorOne}
+            alt="Builders Bootcamp Venue"
+            fill
+            className="object-cover"
+            priority
+          />
+          <div className="absolute inset-0 bg-black/60" />
         </div>
 
         <div className="mx-auto grid max-w-7xl items-center gap-16 lg:grid-cols-[1fr,450px]">
@@ -179,21 +185,22 @@ export default function BuildersBootcampPage() {
 
             <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
               <a
-                href="#exhibitors"
+                href="#tickets"
                 className="group relative flex items-center justify-center gap-2 overflow-hidden rounded-full bg-jpv-green px-12 py-5 text-lg font-black text-black shadow-jpv-glow transition-all hover:scale-[1.02] hover:bg-jpv-green-hover active:scale-95"
               >
-                Exhibitors
+                Register now
                 <svg className="h-5 w-5 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                 </svg>
               </a>
               <a
-                href="#tickets"
+                href={flyerHref}
+                download
                 className="flex items-center justify-center gap-2 rounded-full border border-jpv-gray-700 px-8 py-5 text-lg font-bold text-white transition-all hover:border-jpv-green hover:bg-white/5"
               >
-                Visitors
-                <svg className="h-5 w-5 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                Event Leaflet
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                 </svg>
               </a>
             </div>
@@ -283,14 +290,6 @@ export default function BuildersBootcampPage() {
       </section>
 
       <section className="relative border-y border-jpv-gray-700/40 bg-jpv-bg-dark/60 px-6 py-32 sm:py-48 overflow-hidden">
-        <div className="absolute inset-0 opacity-10 grayscale pointer-events-none">
-          <Image
-            src={hallInteriorOne}
-            alt=""
-            fill
-            className="object-cover"
-          />
-        </div>
         <div className="mx-auto grid max-w-7xl gap-16 lg:grid-cols-2 relative z-10">
           <div className="space-y-8">
             <div className="space-y-4">
