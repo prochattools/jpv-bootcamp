@@ -151,11 +151,11 @@ export default function BuildersBootcampPage() {
             src={hallInteriorOne}
             alt="Builders Bootcamp Venue"
             fill
-            className="object-cover saturate-[0.5] brightness-[0.8]"
+            className="object-cover saturate-[0.5] brightness-[0.9]"
             priority
           />
-          {/* Vertical gradient on mobile, horizontal on desktop - deeper on the right to hide pink tones */}
-          <div className="absolute inset-0 bg-gradient-to-b from-black/95 via-black/60 to-black/40 md:bg-gradient-to-r md:from-black/95 md:via-black/70 md:to-black/20" />
+          {/* Subtle gradient to ensure text readability without blacking out the image */}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/40 to-black/20 md:bg-gradient-to-r md:from-black/90 md:via-black/40 md:to-transparent" />
         </div>
 
         <div className="relative z-10 mx-auto max-w-7xl">
