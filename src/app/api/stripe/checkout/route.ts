@@ -156,12 +156,14 @@ export async function GET(req: NextRequest) {
 				plan,
 				source: 'landing',
 			},
-			subscription_data: {
-				metadata: {
-					plan,
-					source: 'landing',
+			...(plan !== 'exhibitor' && {
+				subscription_data: {
+					metadata: {
+						plan,
+						source: 'landing',
+					},
 				},
-			},
+			}),
 		})
 
 		if (!session.url) {
