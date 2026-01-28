@@ -144,11 +144,11 @@ export default function BuildersBootcampPage() {
             className="object-cover"
             priority
           />
-          <div className="absolute inset-0 bg-black/65" />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/50 to-transparent" />
         </div>
 
-        <div className="relative z-10 mx-auto grid max-w-7xl items-center gap-16 lg:grid-cols-[1fr,450px]">
-          <div className="space-y-10">
+        <div className="relative z-10 mx-auto max-w-7xl">
+          <div className="max-w-4xl space-y-10">
             <div className="space-y-4">
               <div className="inline-flex items-center gap-2 rounded-full border border-jpv-green/30 bg-jpv-green/5 px-4 py-1.5 md:px-5 md:py-2 backdrop-blur-sm">
                 <span className="relative flex h-2 w-2">
@@ -206,32 +206,6 @@ export default function BuildersBootcampPage() {
             </div>
           </div>
 
-          <div className="relative hidden lg:block">
-            <div className="absolute -inset-4 rounded-[40px] bg-jpv-green/20 blur-2xl opacity-50" />
-            <div className="relative aspect-[4/5] overflow-hidden rounded-3xl border border-jpv-gray-700/50 bg-jpv-bg-dark/80 shadow-2xl transition-transform hover:scale-[1.01]">
-              <Image
-                src={posterSrc}
-                alt="Inheritance Builders Bootcamp event flyer"
-                width={620}
-                height={775}
-                className="h-full w-full object-cover"
-                priority
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-              <div className="absolute bottom-6 left-6 right-6">
-                <div className="flex flex-wrap gap-2">
-                  {programPillars.map((pillar) => (
-                    <span
-                      key={pillar}
-                      className="rounded-full bg-white/10 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white backdrop-blur-md"
-                    >
-                      {pillar}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </section>
 
@@ -497,6 +471,6 @@ export default function BuildersBootcampPage() {
           </div>
         </div>
       </section>
-    </main>
+    </main >
   );
 }
