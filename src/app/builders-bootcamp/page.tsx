@@ -71,6 +71,15 @@ const speakerNotes = [
 
 const programPillars = ["Speakers & insights", "Networking with purpose", "Testimonies"];
 
+const exhibitorHighlights = [
+  "Reach decision-makers and founders",
+  "Showcase values-aligned services",
+  "Strategic upper hall placement",
+  "Access to 23+ professional stalls",
+  "Direct Kingdom-impact networking",
+  "Build long-term strategic partnerships",
+];
+
 export default function BuildersBootcampPage() {
   const flyerHref = "/events/inheritance-builders/Inheritance Builders Bootcamp Event Flyer.pdf";
   const hallLayoutHref =
@@ -184,23 +193,66 @@ export default function BuildersBootcampPage() {
               ))}
             </div>
 
-            <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
+            {/* Buttons moved to features section below */}
+          </div>
+
+        </div>
+      </section>
+
+      <section className="relative px-6 py-12 -mt-20">
+        <div className="mx-auto grid max-w-7xl gap-8 md:grid-cols-2">
+          {/* Visitors / What to Expect */}
+          <div className="flex flex-col rounded-[40px] border border-jpv-gray-800 bg-jpv-bg-dark/40 p-10 backdrop-blur-xl shadow-2xl transition-all hover:border-jpv-green/30">
+            <div className="flex-1">
+              <h3 className="text-2xl font-black text-white uppercase tracking-wider">What to Expect</h3>
+              <p className="mt-4 text-jpv-gray-400 font-medium italic">&ldquo;Wisdom and structure for generational legacy.&rdquo;</p>
+              <ul className="mt-10 space-y-6">
+                {bootcampHighlights.map((item) => (
+                  <li key={item} className="flex items-start gap-4 text-jpv-gray-200">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-jpv-green/10 text-jpv-green">
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </span>
+                    <span className="text-lg font-bold">{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="mt-12 pt-8 border-t border-jpv-gray-800">
               <a
                 href="#tickets"
-                className="group relative flex items-center justify-center gap-2 overflow-hidden rounded-full bg-jpv-green px-12 py-5 text-lg font-black text-black shadow-jpv-glow transition-all hover:scale-[1.02] hover:bg-jpv-green-hover active:scale-95"
+                className="group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-full bg-jpv-green py-5 text-xl font-black text-black shadow-jpv-glow transition-all hover:scale-105 active:scale-95"
               >
                 Visitors
               </a>
+            </div>
+          </div>
+
+          {/* Exhibitors / Why Exhibit */}
+          <div className="flex flex-col rounded-[40px] border border-jpv-gray-800 bg-jpv-bg-dark/40 p-10 backdrop-blur-xl shadow-2xl transition-all hover:border-jpv-green/30">
+            <div className="flex-1">
+              <h3 className="text-2xl font-black text-white uppercase tracking-wider">Why Exhibit?</h3>
+              <p className="mt-4 text-jpv-gray-400 font-medium italic">&ldquo;Position your brand where faith meets enterprise.&rdquo;</p>
+              <ul className="mt-10 space-y-6">
+                {exhibitorHighlights.map((item) => (
+                  <li key={item} className="flex items-start gap-4 text-jpv-gray-200">
+                    <span className="flex h-1.5 w-1.5 shrink-0 translate-y-2.5 rounded-full bg-jpv-green shadow-jpv-glow" />
+                    <span className="text-lg font-bold">{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="mt-12 pt-8 border-t border-jpv-gray-800">
               <a
                 href={flyerHref}
                 download
-                className="group relative flex items-center justify-center gap-2 overflow-hidden rounded-full bg-jpv-green px-12 py-5 text-lg font-black text-black shadow-jpv-glow transition-all hover:scale-[1.02] hover:bg-jpv-green-hover active:scale-95"
+                className="group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-full bg-jpv-green py-5 text-xl font-black text-black shadow-jpv-glow transition-all hover:scale-105 active:scale-95"
               >
                 Exhibitors
               </a>
             </div>
           </div>
-
         </div>
       </section>
 
@@ -227,22 +279,7 @@ export default function BuildersBootcampPage() {
             </div>
           </div>
 
-          <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-1">
-            <div className="rounded-3xl border border-jpv-gray-800 bg-jpv-bg-dark/20 p-8 backdrop-blur-sm">
-              <h3 className="text-xl font-bold text-white uppercase tracking-wider">What to Expect</h3>
-              <ul className="mt-8 space-y-5">
-                {bootcampHighlights.map((item) => (
-                  <li key={item} className="flex items-start gap-4 text-jpv-gray-300">
-                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-jpv-green/10 text-jpv-green">
-                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                      </svg>
-                    </span>
-                    <span className="font-medium">{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
+          <div className="grid gap-8">
             <div className="rounded-3xl border border-jpv-gray-800 bg-jpv-bg-dark/20 p-8 backdrop-blur-sm">
               <h3 className="text-xl font-bold text-white uppercase tracking-wider">Who it&apos;s for</h3>
               <ul className="mt-8 space-y-5">
