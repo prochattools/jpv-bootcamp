@@ -390,63 +390,6 @@ export default function BuildersBootcampPage() {
         </div>
       </section>
 
-      <section id="exhibitors" className="relative bg-jpv-bg-dark/80 px-6 py-32 sm:py-48 overflow-hidden">
-        <div className="absolute top-0 right-0 w-1/2 h-full bg-jpv-green/5 -skew-x-12 translate-x-1/4" />
-        <div className="mx-auto grid max-w-7xl items-center gap-20 lg:grid-cols-2 relative z-10">
-          <div className="space-y-10">
-            <div className="space-y-4">
-              <p className="text-sm font-bold uppercase tracking-[0.3em] text-jpv-green/80">Collaborate</p>
-              <h2 className="text-4xl font-black text-white sm:text-5xl lg:text-6xl leading-[1.1]">Exhibitor Tables</h2>
-            </div>
-            <p className="text-xl text-jpv-gray-300 leading-relaxed">
-              Engage directly with founders, investors, and leaders who are building for the long term with clarity, integrity, and a heart to serve others.
-            </p>
-
-            <div className="space-y-6">
-              <div className="flex items-start gap-4 p-6 rounded-2xl bg-black/40 border border-jpv-gray-800">
-                <svg className="h-6 w-6 shrink-0 text-jpv-green mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                </svg>
-                <div>
-                  <h4 className="font-bold text-white">Strategic Layout</h4>
-                  <p className="text-jpv-gray-400 mt-1">Accommodates up to 23 professional exhibition tables in the main upper hall.</p>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-4 sm:flex-row">
-                <a
-                  href={phoneHref}
-                  className="rounded-full bg-jpv-green px-10 py-5 text-lg font-black text-black shadow-jpv-glow transition-all hover:scale-[1.02] hover:bg-jpv-green-hover text-center"
-                >
-                  Book Your Table
-                </a>
-                <a
-                  href={hallLayoutHref}
-                  download
-                  className="rounded-full border border-jpv-gray-700 px-10 py-5 text-lg font-bold text-white transition-all hover:border-jpv-green hover:bg-white/5 text-center"
-                >
-                  Hall Layout (PDF)
-                </a>
-              </div>
-            </div>
-          </div>
-          <div className="relative group">
-            <div className="absolute -inset-4 rounded-[40px] bg-jpv-green/10 blur-2xl opacity-0 transition-opacity group-hover:opacity-100" />
-            <div className="overflow-hidden rounded-[40px] border border-jpv-gray-700/50 shadow-2xl relative">
-              <Image
-                src={venueEntrance}
-                alt="Entrance of the Emmanuel Centre in London"
-                width={800}
-                height={600}
-                className="h-full w-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700"
-              />
-              <div className="absolute bottom-10 left-10">
-                <p className="bg-black/80 backdrop-blur px-4 py-2 rounded-lg text-white font-bold text-sm tracking-widest border border-jpv-gray-700">EMMANUEL CENTRE, LONDON</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
 
       <section id="tickets" className="px-6 py-32 sm:py-48">
         <div className="mx-auto max-w-7xl">
