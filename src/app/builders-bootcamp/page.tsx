@@ -72,12 +72,12 @@ const speakerNotes = [
 const programPillars = ["Speakers & insights", "Networking with purpose", "Testimonies"];
 
 const exhibitorHighlights = [
-  "Reach decision-makers and founders",
-  "Showcase values-aligned services",
-  "Strategic upper hall placement",
-  "Access to 23+ professional stalls",
-  "Direct Kingdom-impact networking",
-  "Build long-term strategic partnerships",
+  "Engage directly with pre-qualified investors",
+  "Connect with key Kingdom decision-makers",
+  "Close lucrative business deals on-site",
+  "Opportunities for immediate growth",
+  "Build lasting strategic global alliances",
+  "Gain powerful brand exposure in our community",
 ];
 
 export default function BuildersBootcampPage() {
