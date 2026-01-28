@@ -10,7 +10,6 @@ const navLinks = [
   { label: "Overview", href: "#overview" },
   { label: "Inheritance", href: "#inheritance" },
   { label: "Speakers", href: "#speakers" },
-  { label: "Exhibitors", href: "#exhibitors" },
   { label: "Tickets", href: "#tickets" },
 ];
 
