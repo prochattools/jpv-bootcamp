@@ -189,20 +189,14 @@ export default function BuildersBootcampPage() {
                 href="#tickets"
                 className="group relative flex items-center justify-center gap-2 overflow-hidden rounded-full bg-jpv-green px-12 py-5 text-lg font-black text-black shadow-jpv-glow transition-all hover:scale-[1.02] hover:bg-jpv-green-hover active:scale-95"
               >
-                Register now
-                <svg className="h-5 w-5 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                </svg>
+                Visitors
               </a>
               <a
                 href={flyerHref}
                 download
-                className="flex items-center justify-center gap-2 rounded-full border border-jpv-gray-700 bg-black/20 backdrop-blur-md px-8 py-5 text-lg font-bold text-white transition-all hover:border-jpv-green hover:bg-black/40"
+                className="group relative flex items-center justify-center gap-2 overflow-hidden rounded-full bg-jpv-green px-12 py-5 text-lg font-black text-black shadow-jpv-glow transition-all hover:scale-[1.02] hover:bg-jpv-green-hover active:scale-95"
               >
-                Event Leaflet
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                </svg>
+                Exhibitors
               </a>
             </div>
           </div>
