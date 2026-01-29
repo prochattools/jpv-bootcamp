@@ -7,8 +7,7 @@ if [[ -z "${APP_SLUG:-}" ]]; then
 fi
 
 if [[ -z "${TENANT_DB_PASSWORD:-}" ]]; then
-  echo "TENANT_DB_PASSWORD is required." >&2
-  exit 1
+  echo "TENANT_DB_PASSWORD not set; db:init will generate a new tenant password." >&2
 fi
 
 if [[ -z "${SYSTEM_DATABASE_URL:-}" ]]; then
@@ -17,4 +16,4 @@ if [[ -z "${SYSTEM_DATABASE_URL:-}" ]]; then
 fi
 
 node scripts/db/init-tenant.js --slug "${APP_SLUG}"
-npx prisma migrate deploy
+npx prisma migrate deploy --schema=prisma/system.prisma

@@ -29,7 +29,7 @@ function loadEnvFile(envPath) {
 }
 
 function readPrismaSchemas() {
-  const prismaPath = path.join(process.cwd(), 'prisma', 'schema.prisma')
+  const prismaPath = path.join(process.cwd(), 'prisma', 'system.prisma')
   if (!fs.existsSync(prismaPath)) return ['public']
   const content = fs.readFileSync(prismaPath, 'utf8')
   const schemas = new Set(['public'])
@@ -155,7 +155,7 @@ async function main() {
     }
     run(
       prismaCmd,
-      ['prisma', 'db', 'push', '--schema=prisma/schema.prisma', '--skip-generate'],
+      ['prisma', 'db', 'push', '--schema=prisma/system.prisma', '--skip-generate'],
       pushEnv
     )
 
@@ -164,7 +164,7 @@ async function main() {
     for (const name of migrations) {
       run(
         prismaCmd,
-        ['prisma', 'migrate', 'resolve', '--schema=prisma/schema.prisma', '--applied', name],
+        ['prisma', 'migrate', 'resolve', '--schema=prisma/system.prisma', '--applied', name],
         resolveEnv
       )
     }

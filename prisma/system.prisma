@@ -1,0 +1,220 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider          = "postgresql"
+  url               = env("DATABASE_URL")
+  shadowDatabaseUrl = env("SYSTEM_DATABASE_URL")
+  schemas           = ["public", "tenant_jpvbootcamp"]
+}
+
+model EmailSubscriber {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String?
+  source    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("email_subscribers")
+  @@schema("public")
+}
+
+model StripeWebhookEvent {
+  eventId     String   @id @map("event_id")
+  type        String   @default("unknown") @map("type")
+  livemode    Boolean  @map("livemode")
+  receivedAt  DateTime @default(now()) @map("received_at")
+  processedAt DateTime? @map("processed_at")
+  payload     Json?    @map("payload")
+
+  @@map("stripe_webhook_events")
+  @@schema("tenant_jpvbootcamp")
+}
+
+model CustomerProvisioning {
+  id                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid @map("id")
+  email                String
+  normalizedEmail      String   @map("normalized_email")
+  stripeCustomerId     String   @unique @map("stripe_customer_id")
+  stripeSubscriptionId String?  @unique @map("stripe_subscription_id")
+  wpUserId             Int?     @map("wp_user_id")
+  plan                 String?  @map("plan")
+  currentPlan          String?  @map("current_plan")
+  status               String   @default("active")
+  lastEventId          String?  @map("last_event_id")
+  lastNotifiedPlan     String?  @map("last_notified_plan")
+  lastNotifiedAt       DateTime? @map("last_notified_at")
+  lastNotifiedEventId  String?  @map("last_notified_event_id")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@unique([normalizedEmail])
+  @@map("customer_provisioning")
+  @@schema("tenant_jpvbootcamp")
+}
+
+model PartnerSession {
+  sessionId   String   @id @map("session_id")
+  wpUserId    Int      @map("wp_user_id")
+  wpEmailHash String   @map("wp_email_hash")
+  wpName      String   @map("wp_name")
+  createdAt   DateTime @default(now()) @map("created_at")
+  expiresAt   DateTime @map("expires_at")
+
+  @@index([wpUserId])
+  @@index([expiresAt])
+  @@map("partner_sessions")
+  @@schema("tenant_jpvbootcamp")
+}
+
+model PartnerClick {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid @map("id")
+  createdAt    DateTime @default(now()) @map("created_at")
+  sessionId    String   @map("session_id")
+  wpUserId     Int      @map("wp_user_id")
+  partnerSlug  String   @map("partner_slug")
+  categorySlug String   @map("category_slug")
+  refPath      String?  @map("ref_path")
+  userAgentHash String? @map("user_agent_hash")
+  ipHash       String?  @map("ip_hash")
+
+  @@index([sessionId])
+  @@index([wpUserId])
+  @@index([partnerSlug])
+  @@index([categorySlug])
+  @@index([createdAt])
+  @@map("partner_clicks")
+  @@schema("tenant_jpvbootcamp")
+}
+
+model SponsoredSeat {
+  id                     String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid @map("id")
+  createdAt              DateTime @default(now()) @map("created_at")
+  tier                   String   @map("tier")
+  stripePaymentIntentId  String   @unique @map("stripe_payment_intent_id")
+  stripeCheckoutSessionId String  @unique @map("stripe_checkout_session_id")
+  donatedByEmailHash     String?  @map("donated_by_email_hash")
+  reservedByApplicationId String? @db.Uuid @map("reserved_by_application_id")
+  reservedAt             DateTime? @map("reserved_at")
+  donorEmailSentAt       DateTime? @map("donor_email_sent_at")
+  adminNotifiedAt        DateTime? @map("admin_notified_at")
+  claimedByWpUserId      Int?     @map("claimed_by_wp_user_id")
+  claimedAt              DateTime? @map("claimed_at")
+
+  grants SponsoredGrant[]
+
+  @@index([claimedByWpUserId])
+  @@index([reservedByApplicationId])
+  @@index([createdAt])
+  @@map("sponsored_seats")
+  @@schema("tenant_jpvbootcamp")
+}
+
+model SponsoredApplication {
+  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid @map("id")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @default(now()) @updatedAt @map("updated_at")
+  status             String   @map("status")
+  decision           String?  @map("decision")
+  decidedAt          DateTime? @map("decided_at")
+  tier               String   @map("tier")
+  wpUserId           Int?     @map("wp_user_id")
+  email              String?  @map("email")
+  emailHash          String   @map("email_hash")
+  name               String   @map("name")
+  message            String?  @map("message")
+  lastAdminEmailSentAt DateTime? @map("last_admin_email_sent_at")
+  seatId             String?  @db.Uuid @map("seat_id")
+  claimTokenSentAt   DateTime? @map("claim_token_sent_at")
+  claimedAt          DateTime? @map("claimed_at")
+  reviewedByWpUserId Int?     @map("reviewed_by_wp_user_id")
+  reviewedAt         DateTime? @map("reviewed_at")
+  decisionNote       String?  @map("decision_note")
+
+  @@index([status])
+  @@index([wpUserId])
+  @@index([email])
+  @@index([seatId])
+  @@map("sponsored_applications")
+  @@schema("tenant_jpvbootcamp")
+}
+
+model SponsoredGrant {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid @map("id")
+  createdAt DateTime @default(now()) @map("created_at")
+  wpUserId  Int      @map("wp_user_id")
+  tier      String   @map("tier")
+  seatId    String   @map("seat_id") @db.Uuid
+  startsAt  DateTime @map("starts_at")
+  endsAt    DateTime @map("ends_at")
+  revokedAt DateTime? @map("revoked_at")
+
+  seat SponsoredSeat @relation(fields: [seatId], references: [id])
+
+  @@index([wpUserId])
+  @@index([endsAt])
+  @@map("sponsored_grants")
+  @@schema("tenant_jpvbootcamp")
+}
+
+model Audiences {
+  id        String @id
+  resend_id String @unique
+  name      String
+
+  @@schema("public")
+}
+
+model Project {
+  id            String   @id
+  connection_id String
+  webhook_id    String
+  scenario_id   String
+  user_clerk_id String
+  type          String
+  status        String   @default("default")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime
+  assistant_id  String?
+  webhookLink   String
+
+  @@schema("public")
+}
+
+model Subscription {
+  id                 String             @id
+  user_email         String             @unique
+  sub_status         SubscriptionStatus @default(inactive)
+  sub_type           String
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime
+  last_stripe_cs_id  String             @unique
+  stripe_customer_id String             @unique
+  sub_stripe_id      String?
+  user_clerk_id      String             @unique
+
+  @@schema("public")
+}
+
+model Tenant {
+  slug       String   @id
+  schemaName String   @map("schema_name")
+  dbUser     String   @map("db_user")
+  dbPassword String   @map("db_password")
+  type       String
+  externalId String?  @map("external_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @default(now()) @map("updated_at")
+
+  @@map("tenants")
+  @@schema("public")
+}
+
+enum SubscriptionStatus {
+  active
+  inactive
+
+  @@schema("public")
+}
