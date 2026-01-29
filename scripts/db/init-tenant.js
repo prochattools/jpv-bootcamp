@@ -11,11 +11,12 @@
  *
  * Env:
  *   APP_SLUG            used as a fallback slug
- *   TENANT_DB_PASSWORD  required in production, defaults to "devpass" in dev
+ *   TENANT_DB_PASSWORD  optional override; if not set, a new password is generated
  *   SYSTEM_DATABASE_URL admin connection for provisioning (required in prod)
  */
 
 const { Client } = require('pg')
+const crypto = require('node:crypto')
 const fs = require('fs')
 const path = require('path')
 
@@ -55,12 +56,26 @@ function validateSlug(slug) {
   }
 }
 
+function isAlphanumeric(value) {
+  return /^[a-zA-Z0-9]+$/.test(value)
+}
+
+function generatePassword(length = 24) {
+  const alphabet = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+  const bytes = crypto.randomBytes(length)
+  let output = ''
+  for (let i = 0; i < length; i++) {
+    output += alphabet[bytes[i] % alphabet.length]
+  }
+  return output
+}
+
 function isSafeSchemaName(name) {
   return /^[a-z0-9_]+$/.test(name)
 }
 
 function readPrismaSchemas() {
-  const prismaPath = path.join(process.cwd(), 'prisma', 'schema.prisma')
+  const prismaPath = path.join(process.cwd(), 'prisma', 'system.prisma')
   if (!fs.existsSync(prismaPath)) return []
   const content = fs.readFileSync(prismaPath, 'utf8')
   const regex = /@@schema\(["']([^"']+)["']\)/g
@@ -106,6 +121,8 @@ function persistEnv(envPath, updates) {
 async function main() {
   const env = process.env.NODE_ENV || 'development'
   const isProd = env === 'production'
+  const envPath = path.join(process.cwd(), '.env')
+  const envFile = !isProd ? loadEnvFile(envPath) : {}
 
   let systemUrl = process.env.SYSTEM_DATABASE_URL
   if (!systemUrl) {
@@ -158,16 +175,15 @@ async function main() {
         )
       : []
 
-  let password = process.env.TENANT_DB_PASSWORD
-  if (!password) {
-    if (isProd) {
-      fail('TENANT_DB_PASSWORD is required in production')
-    } else {
-      password = 'devpass'
-      console.log(
-        'ℹ️ TENANT_DB_PASSWORD not set, using default dev password "devpass".'
-      )
+  let password =
+    process.env.TENANT_DB_PASSWORD || (!isProd ? envFile.TENANT_DB_PASSWORD : undefined)
+  if (password) {
+    if (!isAlphanumeric(password)) {
+      fail('TENANT_DB_PASSWORD must be alphanumeric only.')
     }
+  } else {
+    password = generatePassword()
+    console.log('ℹ️ TENANT_DB_PASSWORD not set; generated a new tenant password.')
   }
 
   console.log('--------------------------------------------------')
@@ -360,12 +376,22 @@ async function main() {
     const port = parsedUrl.port || '5433'
     const runtimeDbUrl = `postgresql://${user}:${password}@${host}:${port}/postgres?schema=${schema}`
 
+    const envProductionPath = path.join(process.cwd(), '.env.production')
+    const productionUpdates = {
+      APP_SLUG: slug,
+      NODE_ENV: 'production',
+      DATABASE_URL: runtimeDbUrl,
+      SYSTEM_DATABASE_URL: systemUrl,
+      TENANT_DB_PASSWORD: password
+    }
+    persistEnv(envProductionPath, productionUpdates)
+
     if (!isProd) {
-      const envPath = path.join(process.cwd(), '.env')
       const updates = {
         APP_SLUG: slug,
         NODE_ENV: 'development',
-        DATABASE_URL: runtimeDbUrl
+        DATABASE_URL: runtimeDbUrl,
+        TENANT_DB_PASSWORD: password
       }
 
       if (!loadEnvFile(envPath).SYSTEM_DATABASE_URL) {
@@ -377,7 +403,8 @@ async function main() {
       console.log('   DATABASE_URL=', runtimeDbUrl)
       console.log('--------------------------------------------------')
     } else {
-      console.log('🔑 Suggested DATABASE_URL (production):')
+      console.log('✅ Updated .env.production for production reference')
+      console.log('🔑 DATABASE_URL (production):')
       console.log(runtimeDbUrl)
       console.log('--------------------------------------------------')
     }
