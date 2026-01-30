@@ -93,9 +93,13 @@ async function main() {
   }
 
   const targetSchemas = readPrismaSchemas()
+  const schemaFromUrl = new URL(tenantUrl).searchParams.get('schema')
+  if (schemaFromUrl && !targetSchemas.includes(schemaFromUrl)) {
+    targetSchemas.push(schemaFromUrl)
+  }
   const tenantSchema =
     targetSchemas.find((schemaName) => schemaName.startsWith('tenant_')) ||
-    (new URL(tenantUrl)).searchParams.get('schema') ||
+    schemaFromUrl ||
     'public'
 
   const client = new Client({ connectionString: adminUrl })

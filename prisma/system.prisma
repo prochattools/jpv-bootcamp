@@ -6,7 +6,7 @@ datasource db {
   provider          = "postgresql"
   url               = env("DATABASE_URL")
   shadowDatabaseUrl = env("SYSTEM_DATABASE_URL")
-  schemas           = ["public", "tenant_jpvbootcamp"]
+  schemas           = ["tenant_jpvbootcamp"]
 }
 
 model EmailSubscriber {
@@ -18,7 +18,7 @@ model EmailSubscriber {
   updatedAt DateTime @updatedAt
 
   @@map("email_subscribers")
-  @@schema("public")
+  @@schema("tenant_jpvbootcamp")
 }
 
 model StripeWebhookEvent {
@@ -164,7 +164,7 @@ model Audiences {
   resend_id String @unique
   name      String
 
-  @@schema("public")
+  @@schema("tenant_jpvbootcamp")
 }
 
 model Project {
@@ -180,7 +180,7 @@ model Project {
   assistant_id  String?
   webhookLink   String
 
-  @@schema("public")
+  @@schema("tenant_jpvbootcamp")
 }
 
 model Subscription {
@@ -195,26 +195,12 @@ model Subscription {
   sub_stripe_id      String?
   user_clerk_id      String             @unique
 
-  @@schema("public")
-}
-
-model Tenant {
-  slug       String   @id
-  schemaName String   @map("schema_name")
-  dbUser     String   @map("db_user")
-  dbPassword String   @map("db_password")
-  type       String
-  externalId String?  @map("external_id")
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @default(now()) @map("updated_at")
-
-  @@map("tenants")
-  @@schema("public")
+  @@schema("tenant_jpvbootcamp")
 }
 
 enum SubscriptionStatus {
   active
   inactive
 
-  @@schema("public")
+  @@schema("tenant_jpvbootcamp")
 }

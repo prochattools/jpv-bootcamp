@@ -208,23 +208,24 @@ async function main() {
       )
       .join('\n')
 
-    const publicGrantSql = isProd
-      ? `GRANT USAGE ON SCHEMA public TO ${user};`
-      : `
-      GRANT USAGE ON SCHEMA public TO ${user};
-      GRANT CREATE ON SCHEMA public TO ${user};
-      GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO ${user};
-      ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO ${user};
+    const revokePublicSql = `
+      REVOKE ALL ON SCHEMA public FROM ${user};
+      REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM ${user};
+      REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public FROM ${user};
+      REVOKE ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public FROM ${user};
+      ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON TABLES FROM ${user};
+      ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON SEQUENCES FROM ${user};
+      ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON FUNCTIONS FROM ${user};
     `
 
-    const schemaGrantSql = isProd
-      ? `GRANT USAGE ON SCHEMA ${schema} TO ${user};
-      GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA ${schema} TO ${user};
-      ALTER DEFAULT PRIVILEGES IN SCHEMA ${schema} GRANT ALL ON TABLES TO ${user};`
-      : `
+    const schemaGrantSql = `
       GRANT USAGE ON SCHEMA ${schema} TO ${user};
       GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA ${schema} TO ${user};
+      GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA ${schema} TO ${user};
+      GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA ${schema} TO ${user};
       ALTER DEFAULT PRIVILEGES IN SCHEMA ${schema} GRANT ALL ON TABLES TO ${user};
+      ALTER DEFAULT PRIVILEGES IN SCHEMA ${schema} GRANT ALL ON SEQUENCES TO ${user};
+      ALTER DEFAULT PRIVILEGES IN SCHEMA ${schema} GRANT ALL ON FUNCTIONS TO ${user};
     `
 
     const ddlSql = `
@@ -243,11 +244,11 @@ async function main() {
       $$;
 
       GRANT USAGE ON SCHEMA ${schema} TO ${user};
-      ALTER ROLE ${user} SET search_path = ${schema};
+      ALTER ROLE ${user} SET search_path = ${schema}, pg_catalog;
       GRANT ALL PRIVILEGES ON SCHEMA ${schema} TO ${user};
       ${schemaGrantSql}
 
-      ${publicGrantSql}
+      ${revokePublicSql}
 
       ${extraSchemaSql}
     `
