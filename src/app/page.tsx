@@ -42,6 +42,9 @@ export default function HomePage() {
       meta: "27 March 2026 · London",
       description:
         "A flagship Christian business event for believers growing in biblical stewardship and Kingdom impact through wise investment.",
+      href: "https://ibbootcamp.co.uk",
+      target: "_blank",
+      rel: "nofollow noopener noreferrer",
     },
   ];
   const learnSections = [
@@ -287,18 +290,40 @@ export default function HomePage() {
           <p className="text-sm text-jpv-gray-400 sm:text-base">14-day money-back guarantee · Cancel anytime</p>
           <div className="w-full max-w-4xl">
             <div className="grid gap-4 text-left sm:grid-cols-2">
-              {heroNotices.map((notice) => (
-                <div
-                  key={notice.title}
-                  className="relative flex h-full flex-col rounded-2xl border border-jpv-green/60 bg-jpv-bg-dark/40 p-4 text-sm text-jpv-gray-300 shadow-jpv-card backdrop-blur before:pointer-events-none before:absolute before:inset-0 before:rounded-2xl before:border before:border-jpv-green/90 before:opacity-100 before:animate-pulse"
-                >
-                  <div className="text-lg font-bold text-white uppercase tracking-wide">{notice.title}</div>
-                  <div className="mt-1 text-xs uppercase tracking-[0.2rem] text-jpv-green/80">
-                    {notice.meta}
+              {heroNotices.map((notice) => {
+                const content = (
+                  <>
+                    <div className="text-lg font-bold text-white uppercase tracking-wide">{notice.title}</div>
+                    <div className="mt-1 text-xs uppercase tracking-[0.2rem] text-jpv-green/80">
+                      {notice.meta}
+                    </div>
+                    <p className="mt-2 text-sm text-jpv-gray-400">{notice.description}</p>
+                  </>
+                );
+
+                const cardClassName =
+                  "relative flex h-full flex-col rounded-2xl border border-jpv-green/60 bg-jpv-bg-dark/40 p-4 text-sm text-jpv-gray-300 shadow-jpv-card backdrop-blur before:pointer-events-none before:absolute before:inset-0 before:rounded-2xl before:border before:border-jpv-green/90 before:opacity-100 before:animate-pulse";
+
+                if (notice.href) {
+                  return (
+                    <a
+                      key={notice.title}
+                      href={notice.href}
+                      target={notice.target}
+                      rel={notice.rel}
+                      className={`${cardClassName} cursor-pointer transition hover:border-jpv-green`}
+                    >
+                      {content}
+                    </a>
+                  );
+                }
+
+                return (
+                  <div key={notice.title} className={cardClassName}>
+                    {content}
                   </div>
-                  <p className="mt-2 text-sm text-jpv-gray-400">{notice.description}</p>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>
