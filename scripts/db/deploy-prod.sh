@@ -55,9 +55,14 @@ require_cmd psql
 require_cmd pg_dump
 require_cmd pg_restore
 
+SYSTEM_DATABASE_URL_CLEAN="$SYSTEM_DATABASE_URL"
+if [[ "$SYSTEM_DATABASE_URL" == *schema=* ]]; then
+  SYSTEM_DATABASE_URL_CLEAN="$(node -e "const u=new URL(process.env.SYSTEM_DATABASE_URL);u.searchParams.delete('schema');process.stdout.write(u.toString());")"
+fi
+
 get_pg_major() {
   local version_num
-  version_num=$(psql "$SYSTEM_DATABASE_URL" -v ON_ERROR_STOP=1 -tA -c "SHOW server_version_num;")
+  version_num=$(psql "$SYSTEM_DATABASE_URL_CLEAN" -v ON_ERROR_STOP=1 -tA -c "SHOW server_version_num;")
   if [[ -z "$version_num" ]]; then
     echo "failed to read server_version_num" >&2
     exit 1
@@ -108,7 +113,7 @@ detect_migrations() {
   fi
 
   local schema_exists table_exists failed_count rolled_count
-  schema_exists=$(psql "$SYSTEM_DATABASE_URL" -v ON_ERROR_STOP=1 -tA \
+  schema_exists=$(psql "$SYSTEM_DATABASE_URL_CLEAN" -v ON_ERROR_STOP=1 -tA \
     -c "SELECT 1 FROM information_schema.schemata WHERE schema_name='${APP_SCHEMA}';")
 
   if [[ "$schema_exists" != "1" ]]; then
@@ -118,7 +123,7 @@ detect_migrations() {
     return 0
   fi
 
-  table_exists=$(psql "$SYSTEM_DATABASE_URL" -v ON_ERROR_STOP=1 -tA \
+  table_exists=$(psql "$SYSTEM_DATABASE_URL_CLEAN" -v ON_ERROR_STOP=1 -tA \
     -c "SELECT 1 FROM information_schema.tables WHERE table_schema='${APP_SCHEMA}' AND table_name='_prisma_migrations';")
 
   if [[ "$table_exists" != "1" ]]; then
@@ -127,14 +132,14 @@ detect_migrations() {
     return 0
   fi
 
-  failed_count=$(psql "$SYSTEM_DATABASE_URL" -v ON_ERROR_STOP=1 -tA \
+  failed_count=$(psql "$SYSTEM_DATABASE_URL_CLEAN" -v ON_ERROR_STOP=1 -tA \
     -c "SELECT count(*) FROM ${APP_SCHEMA}._prisma_migrations WHERE finished_at IS NULL AND rolled_back_at IS NULL;")
   if [[ "$failed_count" != "0" ]]; then
     echo "found unfinished migrations in ${APP_SCHEMA} (count=$failed_count)" >&2
     exit 1
   fi
 
-  rolled_count=$(psql "$SYSTEM_DATABASE_URL" -v ON_ERROR_STOP=1 -tA \
+  rolled_count=$(psql "$SYSTEM_DATABASE_URL_CLEAN" -v ON_ERROR_STOP=1 -tA \
     -c "SELECT count(*) FROM ${APP_SCHEMA}._prisma_migrations WHERE rolled_back_at IS NOT NULL;")
   if [[ "$rolled_count" != "0" ]]; then
     echo "found rolled-back migrations in ${APP_SCHEMA} (count=$rolled_count)" >&2
@@ -145,7 +150,7 @@ detect_migrations() {
   disk_list=$(find "$MIGRATIONS_DIR" -mindepth 2 -maxdepth 2 -type f -name migration.sql \
     -printf '%P\n' | cut -d/ -f1 | sort -u)
 
-  db_list=$(psql "$SYSTEM_DATABASE_URL" -v ON_ERROR_STOP=1 -tA \
+  db_list=$(psql "$SYSTEM_DATABASE_URL_CLEAN" -v ON_ERROR_STOP=1 -tA \
     -c "SELECT migration_name FROM ${APP_SCHEMA}._prisma_migrations WHERE finished_at IS NOT NULL AND rolled_back_at IS NULL ORDER BY migration_name;")
 
   list_to_stream() {
@@ -174,7 +179,7 @@ detect_migrations() {
 
 backup_schema() {
   BACKUP_PATH="${BACKUP_DIR}/${APP_SCHEMA}_${TS}.dump"
-  pg_dump --dbname="$SYSTEM_DATABASE_URL" \
+  pg_dump --dbname="$SYSTEM_DATABASE_URL_CLEAN" \
     --format=custom --no-owner --no-acl \
     --schema="$APP_SCHEMA" \
     --file="$BACKUP_PATH"
@@ -220,7 +225,7 @@ restore_schema() {
     return 1
   fi
 
-  pg_restore --dbname="$SYSTEM_DATABASE_URL" \
+  pg_restore --dbname="$SYSTEM_DATABASE_URL_CLEAN" \
     --clean --if-exists --no-owner --no-acl \
     --schema="$APP_SCHEMA" \
     --single-transaction --exit-on-error \
