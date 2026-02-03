@@ -197,24 +197,24 @@ backup_schema() {
 }
 
 smoke_check() {
-  psql "$DATABASE_URL_CLEAN" -v ON_ERROR_STOP=1 -v app_schema="$APP_SCHEMA" <<'SQL'
-DO $$
+  psql "$DATABASE_URL_CLEAN" -v ON_ERROR_STOP=1 <<SQL
+DO \$\$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.schemata
-    WHERE schema_name = :'app_schema'
+    WHERE schema_name = '${APP_SCHEMA}'
   ) THEN
     RAISE EXCEPTION 'missing tenant schema';
   END IF;
 
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.tables
-    WHERE table_schema = :'app_schema'
+    WHERE table_schema = '${APP_SCHEMA}'
       AND table_name = '_prisma_migrations'
   ) THEN
     RAISE EXCEPTION 'missing _prisma_migrations table';
   END IF;
-END $$;
+END \$\$;
 SQL
 }
 
