@@ -60,6 +60,11 @@ if [[ "$SYSTEM_DATABASE_URL" == *schema=* ]]; then
   SYSTEM_DATABASE_URL_CLEAN="$(node -e "const u=new URL(process.env.SYSTEM_DATABASE_URL);u.searchParams.delete('schema');process.stdout.write(u.toString());")"
 fi
 
+DATABASE_URL_CLEAN="$DATABASE_URL"
+if [[ "$DATABASE_URL" == *schema=* ]]; then
+  DATABASE_URL_CLEAN="$(node -e "const u=new URL(process.env.DATABASE_URL);u.searchParams.delete('schema');process.stdout.write(u.toString());")"
+fi
+
 get_pg_major() {
   local version_num
   version_num=$(psql "$SYSTEM_DATABASE_URL_CLEAN" -v ON_ERROR_STOP=1 -tA -c "SHOW server_version_num;")
@@ -192,7 +197,7 @@ backup_schema() {
 }
 
 smoke_check() {
-  psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -v app_schema="$APP_SCHEMA" <<'SQL'
+  psql "$DATABASE_URL_CLEAN" -v ON_ERROR_STOP=1 -v app_schema="$APP_SCHEMA" <<'SQL'
 DO $$
 BEGIN
   IF NOT EXISTS (
