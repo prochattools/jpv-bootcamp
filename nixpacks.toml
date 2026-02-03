@@ -1,0 +1,5 @@
+[phases.setup]
+nixPkgs = ["postgresql_15"]
+
+[phases.build]
+cmds = ["NODE_OPTIONS=--max-old-space-size=3072 npm run build"]
