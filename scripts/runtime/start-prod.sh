@@ -16,6 +16,19 @@ require_env SYSTEM_DATABASE_URL
 require_env DATABASE_URL
 require_env NODE_ENV
 
+require_cmd() {
+  local name="$1"
+  if ! command -v "$name" >/dev/null 2>&1; then
+    echo "missing required command: $name" >&2
+    echo "Install Postgres client tools (e.g. nixpacks.toml with postgresql_15)." >&2
+    exit 1
+  fi
+}
+
+require_cmd psql
+require_cmd pg_dump
+require_cmd pg_restore
+
 PORT="${PORT:-3000}"
 export PORT
 
