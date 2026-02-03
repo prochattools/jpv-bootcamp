@@ -13,7 +13,7 @@ If anything in this repo conflicts with the Brain, the Brain wins.
 - .ai/brain/03-PRODUCTS/ProKit/development.md
 - .ai/brain/03-PRODUCTS/ProKit/database.md
 - .ai/brain/03-PRODUCTS/ProKit/deploy_dokploy.md
-- .ai/brain/03-PRODUCTS/ProKit/deploy_vercel.md
+- .ai/brain/03-PRODUCTS/ProKit/deploy_vercel.md 
 
 ## Notice
 ProKit is internal to ProChat. See PROKIT_NOTICE.md for usage terms.
