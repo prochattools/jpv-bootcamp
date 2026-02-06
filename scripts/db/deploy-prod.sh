@@ -283,7 +283,18 @@ npm run db:init -- --slug "$APP_SLUG"
 
 echo "[deploy] running db:migrate:prod"
 clear_unfinished_migrations
+
+# Run migrations with admin credentials so we can alter objects not owned by the tenant user.
+ORIGINAL_DATABASE_URL="$DATABASE_URL"
+MIGRATION_DATABASE_URL="$SYSTEM_DATABASE_URL_CLEAN"
+if [[ "$MIGRATION_DATABASE_URL" == *\?* ]]; then
+  MIGRATION_DATABASE_URL="${MIGRATION_DATABASE_URL}&schema=${APP_SCHEMA}"
+else
+  MIGRATION_DATABASE_URL="${MIGRATION_DATABASE_URL}?schema=${APP_SCHEMA}"
+fi
+export DATABASE_URL="$MIGRATION_DATABASE_URL"
 NODE_ENV=production npm run db:migrate:prod
+export DATABASE_URL="$ORIGINAL_DATABASE_URL"
 
 MIGRATION_STATUS="success"
 write_status
