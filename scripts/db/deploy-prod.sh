@@ -111,6 +111,28 @@ write_status
 
 echo "[deploy] app schema: $APP_SCHEMA"
 
+clear_unfinished_migrations() {
+  local table_exists count
+  table_exists=$(psql "$SYSTEM_DATABASE_URL_CLEAN" -v ON_ERROR_STOP=1 -tA \
+    -c "SELECT 1 FROM information_schema.tables WHERE table_schema='${APP_SCHEMA}' AND table_name='_prisma_migrations';")
+  if [[ "$table_exists" != "1" ]]; then
+    return 0
+  fi
+
+  count=$(psql "$SYSTEM_DATABASE_URL_CLEAN" -v ON_ERROR_STOP=1 -tA \
+    -c "SELECT count(*) FROM ${APP_SCHEMA}._prisma_migrations WHERE finished_at IS NULL AND rolled_back_at IS NULL;")
+  if [[ "$count" == "0" ]]; then
+    return 0
+  fi
+
+  echo "[deploy] clearing unfinished migrations (count=$count)"
+  psql "$SYSTEM_DATABASE_URL_CLEAN" -v ON_ERROR_STOP=1 \
+    -c "SELECT migration_name, started_at FROM ${APP_SCHEMA}._prisma_migrations WHERE finished_at IS NULL AND rolled_back_at IS NULL ORDER BY started_at ASC;"
+
+  psql "$SYSTEM_DATABASE_URL_CLEAN" -v ON_ERROR_STOP=1 \
+    -c "DELETE FROM ${APP_SCHEMA}._prisma_migrations WHERE finished_at IS NULL AND rolled_back_at IS NULL;"
+}
+
 detect_migrations() {
   if [[ ! -d "$MIGRATIONS_DIR" ]]; then
     echo "missing migrations dir: $MIGRATIONS_DIR" >&2
@@ -140,8 +162,10 @@ detect_migrations() {
   failed_count=$(psql "$SYSTEM_DATABASE_URL_CLEAN" -v ON_ERROR_STOP=1 -tA \
     -c "SELECT count(*) FROM ${APP_SCHEMA}._prisma_migrations WHERE finished_at IS NULL AND rolled_back_at IS NULL;")
   if [[ "$failed_count" != "0" ]]; then
-    echo "found unfinished migrations in ${APP_SCHEMA} (count=$failed_count)" >&2
-    exit 1
+    echo "[deploy] found unfinished migrations in ${APP_SCHEMA} (count=$failed_count)" >&2
+    DETECTED_MIGRATIONS="yes"
+    DETECT_REASON="unfinished_in_db"
+    return 0
   fi
 
   rolled_count=$(psql "$SYSTEM_DATABASE_URL_CLEAN" -v ON_ERROR_STOP=1 -tA \
@@ -258,6 +282,7 @@ echo "[deploy] running db:init"
 npm run db:init -- --slug "$APP_SLUG"
 
 echo "[deploy] running db:migrate:prod"
+clear_unfinished_migrations
 NODE_ENV=production npm run db:migrate:prod
 
 MIGRATION_STATUS="success"
