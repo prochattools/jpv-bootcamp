@@ -225,10 +225,17 @@ function jpv_fluentcrm_sync_user(int $user_id, string $reason = 'unknown'): void
     $email = $user->user_email;
     $plan  = jpv_get_user_plan($user_id); // Free|Pro|VIP
 
-    // enforce exactly one plan tag
+    $tags = ['Free'];
+    if ($plan === 'Pro') {
+        $tags[] = 'Pro';
+    } elseif ($plan === 'VIP') {
+        $tags[] = 'Pro';
+        $tags[] = 'VIP';
+    }
+
     $detach = [];
     foreach (['Free','Pro','VIP'] as $t) {
-        if ($t !== $plan) $detach[] = $t;
+        if (!in_array($t, $tags, true)) $detach[] = $t;
     }
 
     try {
@@ -242,7 +249,7 @@ function jpv_fluentcrm_sync_user(int $user_id, string $reason = 'unknown'): void
             'user_id'    => (int)$user_id,
 
             'lists'       => ['Members'],
-            'tags'        => [$plan],
+            'tags'        => $tags,
             'detach_tags' => $detach,
         ];
 

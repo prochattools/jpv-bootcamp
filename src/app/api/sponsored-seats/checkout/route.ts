@@ -90,6 +90,7 @@ export async function POST(req: NextRequest) {
 			],
 			success_url: redirects.successUrl,
 			cancel_url: redirects.cancelUrl,
+			allow_promotion_codes: true,
 			metadata: {
 				purpose: 'sponsored_seat',
 				tier,
