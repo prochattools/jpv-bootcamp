@@ -30,9 +30,13 @@ export async function POST(req: NextRequest) {
 	}
 
 	const stripeEnv = (process.env.STRIPE_ENV || '').trim() || 'unknown'
-	const hasSecretKey = Boolean((process.env.STRIPE_SECRET_KEY_TEST || '').trim())
+	const stripeEnvNormalized = stripeEnv.toLowerCase()
+	const stripeEnvSuffix = stripeEnvNormalized === 'live' ? 'LIVE' : 'TEST'
+	const hasSecretKey = Boolean(
+		(process.env[`STRIPE_SECRET_KEY_${stripeEnvSuffix}`] || '').trim()
+	)
 	const hasPublishableKey = Boolean(
-		(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_TEST || '').trim()
+		(process.env[`NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_${stripeEnvSuffix}`] || '').trim()
 	)
 	const hasPricePro = Boolean(getSponsoredPriceId('pro'))
 	const hasPriceVip = Boolean(getSponsoredPriceId('vip'))
@@ -47,7 +51,7 @@ export async function POST(req: NextRequest) {
 	})
 
 	if (
-		stripeEnv !== 'test' ||
+		(stripeEnvNormalized !== 'test' && stripeEnvNormalized !== 'live') ||
 		!hasSecretKey ||
 		!hasPublishableKey ||
 		!hasPricePro ||

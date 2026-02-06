@@ -52,13 +52,15 @@ export async function getSponsoredSeatCounts(): Promise<SponsoredSeatCounts> {
 }
 
 export function getSponsoredPriceId(tier: SponsoredTier): string | null {
-	const testKey =
+	const stripeEnv = (process.env.STRIPE_ENV || '').trim().toLowerCase()
+	const suffix = stripeEnv === 'live' ? 'LIVE' : 'TEST'
+	const envKey =
 		tier === 'vip'
-			? 'SPONSORED_VIP_PRICE_ID_TEST'
-			: 'SPONSORED_PRO_PRICE_ID_TEST'
+			? `SPONSORED_VIP_PRICE_ID_${suffix}`
+			: `SPONSORED_PRO_PRICE_ID_${suffix}`
 	const fallbackKey =
 		tier === 'vip' ? 'SPONSORED_VIP_PRICE_ID' : 'SPONSORED_PRO_PRICE_ID'
-	const value = process.env[testKey] || process.env[fallbackKey] || ''
+	const value = process.env[envKey] || process.env[fallbackKey] || ''
 	const trimmed = value.trim()
 	return trimmed.length > 0 ? trimmed : null
 }
