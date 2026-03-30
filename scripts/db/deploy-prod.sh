@@ -8,7 +8,7 @@ MIGRATIONS_DIR="${MIGRATIONS_DIR:-prisma/migrations}"
 : "${SYSTEM_DATABASE_URL:?set SYSTEM_DATABASE_URL}"
 : "${DATABASE_URL:?set DATABASE_URL}"
 
-APP_SCHEMA="tenant_${APP_SLUG}"
+APP_SCHEMA="${APP_SLUG}"
 BACKUP_DIR="${BACKUP_ROOT}/${APP_SLUG}"
 TS="$(date -u +%Y%m%dT%H%M%SZ)"
 LOG_FILE="${BACKUP_DIR}/deploy_${TS}.log"

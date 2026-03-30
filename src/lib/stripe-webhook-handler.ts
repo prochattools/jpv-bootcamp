@@ -314,7 +314,7 @@ export async function handleStripeWebhook(req: Request) {
 		})
 		if (idempotencyResult.dbAttempted && !idempotencyResult.dbSuccess) {
 			console.warn('Stripe webhook idempotency write failed', {
-				table: 'tenant_jpvbootcamp.stripe_webhook_events',
+				table: 'jpvbootcamp.stripe_webhook_events',
 				keys: { eventId: event.id, type: event.type },
 				message: idempotencyResult.error,
 			})
@@ -514,7 +514,7 @@ export async function handleStripeWebhook(req: Request) {
 
 		if (idempotencyResult.dbAttempted && !idempotencyResult.dbSuccess) {
 			console.warn('Stripe webhook idempotency write failed', {
-				table: 'tenant_jpvbootcamp.stripe_webhook_events',
+				table: 'jpvbootcamp.stripe_webhook_events',
 				keys: { eventId: event.id, type: event.type },
 				message: idempotencyResult.error,
 			})

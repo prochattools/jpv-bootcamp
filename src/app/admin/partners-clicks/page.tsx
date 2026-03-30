@@ -81,14 +81,14 @@ export default async function PartnersClicksAdminPage({
 	const [partnerTotals, categoryTotals, recentClicks] = await Promise.all([
 		prisma.$queryRaw<{ partner_slug: string; count: number }[]>(Prisma.sql`
 			SELECT partner_slug, COUNT(*)::int AS count
-			FROM tenant_jpvbootcamp.partner_clicks
+			FROM jpvbootcamp.partner_clicks
 			${whereSql}
 			GROUP BY partner_slug
 			ORDER BY count DESC
 		`),
 		prisma.$queryRaw<{ category_slug: string; count: number }[]>(Prisma.sql`
 			SELECT category_slug, COUNT(*)::int AS count
-			FROM tenant_jpvbootcamp.partner_clicks
+			FROM jpvbootcamp.partner_clicks
 			${whereSql}
 			GROUP BY category_slug
 			ORDER BY count DESC

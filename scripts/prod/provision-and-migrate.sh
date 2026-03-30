@@ -37,7 +37,7 @@ if [[ -z "${DATABASE_URL:-}" ]]; then
     exit 1
   fi
 
-  derived_database_url="$(node -e "const { URL } = require('url'); const u = new URL(process.env.SYSTEM_DATABASE_URL); const schema = 'tenant_' + process.env.APP_SLUG; const user = schema + '_user'; const port = u.port || '5433'; process.stdout.write('postgresql://' + user + ':' + process.env.TENANT_DB_PASSWORD + '@' + u.hostname + ':' + port + '/postgres?schema=' + schema);")"
+  derived_database_url="$(node -e "const { URL } = require('url'); const u = new URL(process.env.SYSTEM_DATABASE_URL); const schema = process.env.APP_SLUG; const user = schema + '_user'; const port = u.port || '5433'; const dbName = u.pathname.replace(/^\\//, '') || 'postgres'; process.stdout.write('postgresql://' + user + ':' + process.env.TENANT_DB_PASSWORD + '@' + u.hostname + ':' + port + '/' + dbName + '?schema=' + schema);")"
   export DATABASE_URL="${derived_database_url}"
 fi
 

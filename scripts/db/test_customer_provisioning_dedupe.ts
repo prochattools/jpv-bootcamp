@@ -24,7 +24,7 @@ async function run(): Promise<void> {
 	const { rows: indexRows } = await client.query(
 		`select indexname
 		 from pg_indexes
-		 where schemaname = 'tenant_jpvbootcamp'
+		 where schemaname = 'jpvbootcamp'
 		   and tablename = 'customer_provisioning'
 		   and indexname = 'customer_provisioning_normalized_email_key'`
 	)
@@ -47,14 +47,14 @@ async function run(): Promise<void> {
 		await client.query('BEGIN')
 		try {
 			await client.query(
-				`delete from tenant_jpvbootcamp.customer_provisioning
+				`delete from jpvbootcamp.customer_provisioning
 				 where normalized_email = $1`,
 				[NORMALIZED_EMAIL]
 			)
 
 			if (!hasUniqueIndex) {
 				await client.query(
-					`insert into tenant_jpvbootcamp.customer_provisioning
+					`insert into jpvbootcamp.customer_provisioning
 						(email, normalized_email, stripe_customer_id, status, created_at, updated_at)
 					 values
 						($1, $1, 'cus_test_dedupe_1', 'active', now(), now()),
@@ -67,7 +67,7 @@ async function run(): Promise<void> {
 
 			const { rows } = await client.query(
 				`select count(*)::int as count
-				 from tenant_jpvbootcamp.customer_provisioning
+				 from jpvbootcamp.customer_provisioning
 				 where normalized_email = $1`,
 				[NORMALIZED_EMAIL]
 			)
@@ -82,7 +82,7 @@ async function run(): Promise<void> {
 	} else {
 		const { rows } = await client.query(
 			`select normalized_email, count(*)::int as count
-			 from tenant_jpvbootcamp.customer_provisioning
+			 from jpvbootcamp.customer_provisioning
 			 group by normalized_email
 			 having count(*) > 1
 			 order by count desc

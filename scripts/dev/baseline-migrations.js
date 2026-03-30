@@ -98,8 +98,8 @@ async function main() {
     targetSchemas.push(schemaFromUrl)
   }
   const tenantSchema =
-    targetSchemas.find((schemaName) => schemaName.startsWith('tenant_')) ||
     schemaFromUrl ||
+    targetSchemas.find((schemaName) => schemaName !== 'public') ||
     'public'
 
   const client = new Client({ connectionString: adminUrl })

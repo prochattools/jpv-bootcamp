@@ -141,15 +141,14 @@ async function main() {
   const { slug: rawSlug, preview, externalId } = parseArgs()
   let slug = (rawSlug || '').trim()
   const prismaSchemas = !isProd ? readPrismaSchemas() : []
-  const tenantSchemas = prismaSchemas
-    .filter((schemaName) => schemaName.startsWith('tenant_'))
-    .filter((schemaName) => isSafeSchemaName(schemaName))
+  const appSchemas = prismaSchemas
+    .filter((schemaName) => schemaName !== 'public' && isSafeSchemaName(schemaName))
   if (!slug || slug === 'dev') {
-    if (!isProd && tenantSchemas.length === 1) {
-      const derived = tenantSchemas[0].slice('tenant_'.length)
+    if (!isProd && appSchemas.length === 1) {
+      const derived = appSchemas[0]
       if (derived && derived !== 'dev') {
         slug = derived
-        console.log(`ℹ️ Prisma schema targets ${tenantSchemas[0]}; using slug "${slug}".`)
+        console.log(`ℹ️ Prisma schema targets ${appSchemas[0]}; using slug "${slug}".`)
       }
     }
   }
@@ -162,7 +161,7 @@ async function main() {
   }
   validateSlug(slug)
 
-  const schema = `tenant_${slug}`
+  const schema = slug
   const user = `${schema}_user`
   const tenantType = preview ? 'preview' : 'prod'
   const extraSchemas =
@@ -375,7 +374,8 @@ async function main() {
     const parsedUrl = new URL(systemUrl)
     const host = parsedUrl.hostname
     const port = parsedUrl.port || '5433'
-    const runtimeDbUrl = `postgresql://${user}:${password}@${host}:${port}/postgres?schema=${schema}`
+    const dbName = parsedUrl.pathname.replace(/^\//, '') || 'postgres'
+    const runtimeDbUrl = `postgresql://${user}:${password}@${host}:${port}/${dbName}?schema=${schema}`
 
     const envProductionPath = path.join(process.cwd(), '.env.production')
     const productionUpdates = {

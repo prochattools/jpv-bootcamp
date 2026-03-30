@@ -78,12 +78,12 @@ export async function POST(
 	try {
 		await prisma.$transaction(async (tx) => {
 			const claimed = await tx.$queryRaw<{ id: string }[]>(Prisma.sql`
-				UPDATE tenant_jpvbootcamp.sponsored_seats
+				UPDATE jpvbootcamp.sponsored_seats
 				SET claimed_by_wp_user_id = ${application.wpUserId},
 					claimed_at = ${now}
 				WHERE id = (
 					SELECT id
-					FROM tenant_jpvbootcamp.sponsored_seats
+					FROM jpvbootcamp.sponsored_seats
 					WHERE claimed_by_wp_user_id IS NULL
 						AND tier = ${tier}
 					ORDER BY created_at ASC

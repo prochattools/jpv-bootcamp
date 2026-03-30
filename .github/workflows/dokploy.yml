@@ -1,0 +1,22 @@
+name: Deploy to Dokploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Dokploy deployment
+        run: |
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X POST https://dokploy.prochat.tools/api/application.deploy \
+            -H "x-api-key: ${{ secrets.DOKPLOY_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{"applicationId": "aPR9SvYn_JvGdMTk3CzeI"}')
+          echo "Response: $RESPONSE"
+          if [ "$RESPONSE" != "200" ]; then
+            echo "Deployment failed with status $RESPONSE"
+            exit 1
+          fi

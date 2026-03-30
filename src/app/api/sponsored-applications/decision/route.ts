@@ -151,7 +151,7 @@ export async function GET(req: NextRequest) {
 				}[]
 			>(Prisma.sql`
 				SELECT id, status, name, email, tier
-				FROM tenant_jpvbootcamp.sponsored_applications
+				FROM jpvbootcamp.sponsored_applications
 				WHERE id = ${applicationId}
 				FOR UPDATE
 			`)
@@ -170,12 +170,12 @@ export async function GET(req: NextRequest) {
 			const lockedTier = normalizeSponsoredTier(locked[0].tier ?? null) ?? tier
 
 			const claimed = await tx.$queryRaw<{ id: string }[]>(Prisma.sql`
-				UPDATE tenant_jpvbootcamp.sponsored_seats
+				UPDATE jpvbootcamp.sponsored_seats
 				SET reserved_by_application_id = ${applicationId},
 					reserved_at = ${now}
 				WHERE id = (
 					SELECT id
-					FROM tenant_jpvbootcamp.sponsored_seats
+					FROM jpvbootcamp.sponsored_seats
 					WHERE claimed_by_wp_user_id IS NULL
 						AND reserved_by_application_id IS NULL
 						AND tier = ${lockedTier}
