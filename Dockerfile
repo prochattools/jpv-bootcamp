@@ -13,6 +13,8 @@ RUN --mount=type=cache,target=/root/.npm \
 FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+# Prisma PrismaClient() reads DATABASE_URL at module-eval during page data collection.
+ENV DATABASE_URL=postgresql://build:build@localhost:5432/build
 RUN --mount=type=cache,target=/app/.next/cache \
     npx prisma generate --schema=prisma/system.prisma && \
     npm run build
