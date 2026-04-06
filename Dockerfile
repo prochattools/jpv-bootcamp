@@ -1,5 +1,5 @@
 # ---- Base ----
-FROM node:18-bullseye AS base
+FROM node:20-bullseye AS base
 WORKDIR /app
 
 # ---- Deps ----
@@ -18,7 +18,7 @@ RUN --mount=type=cache,target=/app/.next/cache \
     npm run build
 
 # ---- Runner ----
-FROM node:18-bullseye AS runner
+FROM node:20-bullseye AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
