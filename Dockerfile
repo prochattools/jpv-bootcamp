@@ -15,6 +15,9 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 # Prisma PrismaClient() reads DATABASE_URL at module-eval during page data collection.
 ENV DATABASE_URL=postgresql://build:build@localhost:5432/build
+# NEXT_PUBLIC_* vars are baked into the client bundle at build time — must use real production value.
+ENV NEXT_PUBLIC_APP_URL=https://jpvbootcamp.com
+ENV APP_BASE_URL=https://jpvbootcamp.com
 RUN --mount=type=cache,target=/app/.next/cache \
     npx prisma generate --schema=prisma/system.prisma && \
     npm run build
