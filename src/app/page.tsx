@@ -303,7 +303,7 @@ export default function HomePage() {
           </nav>
         </div>
       )}
-      <section className="min-h-[100dvh] flex items-center justify-center px-6 pt-28 pb-12">
+      <section className="min-h-[100dvh] flex flex-col items-center justify-start lg:justify-center px-6 pt-28 pb-12">
         <div className="mx-auto flex max-w-6xl flex-col items-center gap-10 text-center">
           <div className="space-y-6">
             <p className="text-sm uppercase tracking-[0.4rem] text-jpv-green/80">Property mastery starts here</p>
