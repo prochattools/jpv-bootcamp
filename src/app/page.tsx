@@ -8,6 +8,7 @@ export default function HomePage() {
   const signInHref = "https://portal.jpvbootcamp.com/community/?fcom_action=auth";
   const signUpHref = "https://portal.jpvbootcamp.com/community?fcom_action=auth&form=register";
   const portalUpgradeUrl = process.env.NEXT_PUBLIC_PORTAL_UPGRADE_URL;
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [isSupportOpen, setIsSupportOpen] = useState(false);
   const [isHowItWorksOpen, setIsHowItWorksOpen] = useState(false);
   const [supportName, setSupportName] = useState("");
@@ -205,7 +206,7 @@ export default function HomePage() {
   };
   return (
     <main className="relative bg-jpv-gradient min-h-screen text-jpv-gray-50">
-      <header className="absolute inset-x-0 top-0 z-50 bg-black/80 backdrop-blur border-b border-jpv-gray-700/40">
+      <header className="fixed inset-x-0 top-0 z-50 bg-black/80 backdrop-blur border-b border-jpv-gray-700/40">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-8 px-6 py-5">
           <div className="flex items-center gap-4">
             <div className="h-[72px] w-[72px] overflow-hidden rounded-xl">
@@ -250,16 +251,59 @@ export default function HomePage() {
           </div>
           <button
             type="button"
+            onClick={() => setIsMobileNavOpen(!isMobileNavOpen)}
+            aria-expanded={isMobileNavOpen}
+            aria-label={isMobileNavOpen ? "Close navigation" : "Open navigation"}
             className="inline-flex items-center justify-center rounded-full border border-jpv-gray-700 p-2 text-jpv-gray-200 transition hover:border-jpv-green hover:text-jpv-green lg:hidden"
           >
-            <span className="sr-only">Open navigation</span>
-            <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5">
-              <path d="M5 7h14M5 12h14M5 17h14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
+            <span className="sr-only">{isMobileNavOpen ? "Close navigation" : "Open navigation"}</span>
+            {isMobileNavOpen ? (
+              <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5">
+                <path d="M6 18L18 6M6 6l12 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
+            ) : (
+              <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5">
+                <path d="M5 7h14M5 12h14M5 17h14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
+            )}
           </button>
         </div>
       </header>
-      <section className="h-screen flex items-center justify-center px-6 pb-12 pt-32 sm:pt-36">
+      {isMobileNavOpen && (
+        <div className="fixed inset-x-0 top-[112px] z-40 bg-black/95 backdrop-blur-md border-b border-jpv-gray-700/40 lg:hidden animate-in slide-in-from-top-2 duration-200">
+          <nav className="flex flex-col px-6 py-4 gap-0 max-w-7xl mx-auto">
+            {navLinks.map((item) => (
+              <a
+                key={item.label}
+                href={item.href}
+                onClick={() => setIsMobileNavOpen(false)}
+                className="py-3.5 text-base text-jpv-gray-200 transition hover:text-jpv-green border-b border-jpv-gray-700/30 last:border-0"
+              >
+                {item.label}
+              </a>
+            ))}
+            <div className="flex gap-3 pt-4 pb-2">
+              <a
+                href={signInHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setIsMobileNavOpen(false)}
+                className="flex-1 text-center rounded-full border border-jpv-gray-700 px-5 py-2.5 text-sm text-jpv-gray-200 transition hover:bg-jpv-bg-light hover:text-white"
+              >
+                Sign in
+              </a>
+              <a
+                href="#pricing"
+                onClick={() => setIsMobileNavOpen(false)}
+                className="flex-1 text-center rounded-full bg-jpv-green px-5 py-2.5 text-sm font-semibold text-black shadow-jpv-glow transition hover:bg-jpv-green-hover"
+              >
+                Join
+              </a>
+            </div>
+          </nav>
+        </div>
+      )}
+      <section className="min-h-[100dvh] flex items-center justify-center px-6 pt-28 pb-12">
         <div className="mx-auto flex max-w-6xl flex-col items-center gap-10 text-center">
           <div className="space-y-6">
             <p className="text-sm uppercase tracking-[0.4rem] text-jpv-green/80">Property mastery starts here</p>
@@ -328,7 +372,7 @@ export default function HomePage() {
           </div>
         </div>
       </section>
-      <section id="curriculum" className="px-6 py-24 sm:py-28">
+      <section id="curriculum" className="scroll-mt-28 px-6 py-24 sm:py-28">
         <div className="mx-auto max-w-6xl space-y-12">
           <div className="text-center">
             <h2 className="text-3xl font-semibold md:text-4xl">What you&rsquo;ll learn</h2>
@@ -360,7 +404,7 @@ export default function HomePage() {
       </section>
       <section
         id="community"
-        className="relative border-y border-jpv-gray-700/40 bg-jpv-bg-dark/70 px-6 py-24 sm:py-28"
+        className="scroll-mt-28 relative border-y border-jpv-gray-700/40 bg-jpv-bg-dark/70 px-6 py-24 sm:py-28"
       >
         <div className="absolute inset-x-0 top-0 -z-10 h-64 bg-jpv-green/5 blur-3xl" />
         <div className="mx-auto flex max-w-6xl flex-col gap-12 lg:flex-row lg:items-center lg:justify-between">
@@ -447,7 +491,7 @@ export default function HomePage() {
           </div>
         </div>
       </section>
-      <section id="pricing" className="px-6 py-24 sm:py-28">
+      <section id="pricing" className="scroll-mt-28 px-6 py-24 sm:py-28">
         <div className="mx-auto max-w-6xl space-y-12 text-center md:text-left">
           <div className="space-y-4 text-center">
             <h2 className="text-3xl font-semibold md:text-4xl">Simple pricing</h2>
@@ -535,7 +579,7 @@ export default function HomePage() {
           </div>
         </div>
       </section>
-      <section id="faq" className="px-6 py-24 sm:py-28">
+      <section id="faq" className="scroll-mt-28 px-6 py-24 sm:py-28">
         <div className="mx-auto max-w-4xl space-y-10">
           <div className="space-y-3 text-center md:text-left">
             <h2 className="text-3xl font-semibold md:text-4xl">Frequently asked questions</h2>
