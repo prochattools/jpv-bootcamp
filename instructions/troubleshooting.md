@@ -4,6 +4,8 @@
 
 This guide provides resources and strategies for solving problems independently when AI assistance reaches its limits or when you need to verify solutions.
 
+> Stripe note: In this repo, every Stripe reference means the JPV Bootcamp Stripe account.
+
 ## General Troubleshooting Strategy
 
 ### 1. Error Analysis Framework

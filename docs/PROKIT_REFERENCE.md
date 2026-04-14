@@ -13,11 +13,13 @@ Ship small B2B SaaS products fast, cheap, and often. Aim for 80% ideation/valida
 - Auth: Clerk  
 - Database: PostgreSQL (Supabase) + Prisma  
 - Email: Resend  
-- Payments: Stripe  
+- Payments: Stripe (JPV Bootcamp Stripe account)  
 - Automation: n8n  
 - Included utilities: SEO + blog (Headless WordPress), dashboard, invoice generator, waiting list, component library/animations, built-in analytics and deployment workflow
 
 Ideas must adapt to this stack, not vice versa.
+
+> Stripe note: In this repo, every Stripe reference means the JPV Bootcamp Stripe account.
 
 ## 4. Operating philosophy
 1. Speed over perfection: MVP in 1–2 days.  

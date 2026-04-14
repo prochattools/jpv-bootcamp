@@ -2,7 +2,7 @@
  * Checklist:
  * - STRIPE_WEBHOOK_SECRET_TEST / STRIPE_WEBHOOK_SECRET_LIVE set for STRIPE_ENV
  * - Stripe webhook endpoint configured: /api/webhook/stripe
- * - After deploy, use "Resend event" in the Stripe dashboard for failed events
+ * - After deploy, use "Resend event" in the JPV Bootcamp Stripe dashboard for failed events
  * - Local test: stripe listen --forward-to http://localhost:3000/api/webhook/stripe
  */
 import { handleStripeWebhook } from '@/lib/stripe-webhook-handler'

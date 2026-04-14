@@ -1,4 +1,6 @@
-# Stripe Integration Guide - MicroSaaS Fast Boilerplate
+# Stripe Integration Guide - JPV Bootcamp Stripe Account
+
+> Stripe note: In this repo, every Stripe reference means the JPV Bootcamp Stripe account.
 
 ## Stripe Version and Setup
 
@@ -282,18 +284,18 @@ stripe: {
 }
 ```
 
-## Stripe Dashboard Setup
+## Stripe Dashboard Setup (JPV Bootcamp Stripe Account)
 
 ### 1. Create Products and Prices
 
-1. Go to Stripe Dashboard → Products
+1. Go to the JPV Bootcamp Stripe Dashboard → Products
 2. Create products matching your config
 3. Add prices for each product
 4. Copy price IDs to your config
 
 ### 2. Configure Webhooks
 
-1. Go to Stripe Dashboard → Developers → Webhooks
+1. Go to the JPV Bootcamp Stripe Dashboard → Developers → Webhooks
 2. Add endpoint: `https://jpvbootcamp.com/api/webhook/stripe`
 3. Select events:
    - `checkout.session.completed`

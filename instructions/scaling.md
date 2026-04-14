@@ -28,7 +28,7 @@ This guide provides a comprehensive overview of existing functionality and strat
 - Custom user fields
 - SSO integration
 
-#### Payment Processing (Stripe)
+#### Payment Processing (Stripe, JPV Bootcamp Stripe Account)
 
 **Location**: `src/app/api/stripe/`, `src/helpers/checkout.ts`
 **Components**: `src/components/CheckoutButton.tsx`, `src/components/StripePortalButton.tsx`

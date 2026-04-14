@@ -5,7 +5,9 @@ This is the working agreement for building SaaS products with ProKit. It keeps t
 ## Who/what we’re building for
 - Solo indie workflow.
 - B2B micro-SaaS that copies proven products, fills gaps, and stays small/sane.
-- Default stack: Next.js (App Router preferred), TypeScript, React + Tailwind/shadcn/ui, Clerk, Postgres/Prisma, Resend, Stripe, n8n.
+- Default stack: Next.js (App Router preferred), TypeScript, React + Tailwind/shadcn/ui, Clerk, Postgres/Prisma, Resend, Stripe (JPV Bootcamp Stripe account), n8n.
+
+> Stripe note: In this repo, every Stripe reference means the JPV Bootcamp Stripe account.
 
 ## Base expectations for ProKit projects
 - Layout: `app/` routes, `components/` shared UI, `lib/` utilities, `styles/` for global styling, typed env access.  

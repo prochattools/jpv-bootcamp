@@ -1,12 +1,14 @@
 # Stripe Membership Flow (JPV Bootcamp)
 
+> Stripe note: In this repo, every Stripe reference means the JPV Bootcamp Stripe account.
+
 ## Contract (Email + Provisioning)
 - Exactly **2 emails** on a successful PRO or VIP purchase:
   1) **Membership email** from Resend (support@jpvbootcamp.com or configured sender) – sent **only** from the Stripe webhook provisioning path and **only once** per plan change.
   2) **WordPress account email** (from enquiries@jpvbootcamp.com) with set/reset password link – sent **only** when a WP user is created (or re-provisioned because the WP user is missing).
 - **No “Free/newsletter” email** is sent on Stripe purchase/upgrade flows. Newsletter email is only sent via `/api/subscribe` and can be disabled globally with `DISABLE_NON_WEBHOOK_EMAILS=1`.
 
-## Stripe Env + Portal Configuration
+## JPV Bootcamp Stripe Env + Portal Configuration
 - Stripe environment is selected by `STRIPE_ENV=test|live`.
 - Two-product model is required for Portal upgrades:
   - Pro and VIP are **separate Stripe products**, each with one recurring GBP price.
@@ -43,7 +45,7 @@
   - FluentCRM tags: **add** VIP/Pro, **remove** opposite
 - On upgrade (Pro→VIP), the subscription update event is authoritative.
 
-## Plan Resolution (Stripe → JPV Plan)
+## Plan Resolution (JPV Bootcamp Stripe → JPV Plan)
 - **Primary:** Price id match (Pro/VIP).
 - **Secondary:** Product id match (Pro/VIP).
 - **Fallback:** Subscription metadata `plan` if present.

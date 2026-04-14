@@ -1,6 +1,8 @@
-# Stripe Webhook Testing
+# Stripe Webhook Testing (JPV Bootcamp Stripe Account)
 
 This guide documents how to verify Stripe webhook signature handling end-to-end.
+
+> Stripe note: In this repo, every Stripe reference means the JPV Bootcamp Stripe account.
 
 ## Primary endpoint
 

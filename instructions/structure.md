@@ -80,7 +80,7 @@ CLERK_SECRET_KEY="sk_testkey"
 - **Source**: Clerk Dashboard → API Keys
 - **Setup**: Create a Clerk application and copy the publishable and secret keys
 
-### Payment Processing (Stripe)
+### Payment Processing (Stripe, JPV Bootcamp Stripe Account)
 
 ```
 STRIPE_ENV="test"
@@ -96,10 +96,10 @@ STRIPE_PRICE_PRO_LIVE="proPriceId"
 STRIPE_PRICE_VIP_LIVE="vipPriceId"
 ```
 
-- **Source**: Stripe Dashboard → Developers → API Keys
+- **Source**: Stripe Dashboard for the JPV Bootcamp Stripe account → Developers → API Keys
 - **Setup**:
-  - Create a Stripe account and get API keys
-  - For webhook secret: Stripe Dashboard → Developers → Webhooks → Add endpoint → Copy signing secret
+  - Use the JPV Bootcamp Stripe account and get API keys
+  - For webhook secret: Stripe Dashboard for the JPV Bootcamp Stripe account → Developers → Webhooks → Add endpoint → Copy signing secret
 
 ### Email Service (Resend)
 
@@ -173,7 +173,7 @@ The webhook handler is located at `src/app/api/webhook/stripe/route.ts`
 
 **Setup Instructions:**
 
-1. Configure webhook endpoint in Stripe Dashboard: `https://jpvbootcamp.com/api/webhook/stripe`
+1. Configure webhook endpoint in the JPV Bootcamp Stripe Dashboard: `https://jpvbootcamp.com/api/webhook/stripe`
 2. Set `STRIPE_WEBHOOK_SECRET_TEST` / `STRIPE_WEBHOOK_SECRET_LIVE` plus `STRIPE_ENV`
 3. Set `PROVISIONING_ENABLED=true` plus WP/Resend env vars to enable provisioning
 4. Webhook automatically updates user subscription status in database

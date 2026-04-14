@@ -14,7 +14,7 @@ This file captures the contracts that must stay stable while rebranding the boil
 - Auth (Clerk)  
   - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY` – turn on Clerk middleware + components.  
   - `NEXT_PUBLIC_CLERK_SIGN_IN_URL`, `NEXT_PUBLIC_CLERK_SIGN_UP_URL`, `NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL`, `NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL` – optional route overrides.
-- Billing (Stripe)  
+- Billing (Stripe, JPV Bootcamp Stripe account)  
   - `STRIPE_ENV` – selects test vs live mode.  
   - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_TEST` / `_LIVE` – client checkout.  
   - `STRIPE_SECRET_KEY_TEST` / `_LIVE` – server Stripe client.  
@@ -69,6 +69,8 @@ This file captures the contracts that must stay stable while rebranding the boil
     - `invoice.paid` keeps subscription `active`; `customer.subscription.deleted` marks it `inactive`.  
   - Billing portal: `/api/stripe/create-portal` uses stored `stripe_customer_id` to create a customer portal session.  
   - Dashboard gating uses `subscription.status !== 'active'` to restrict access.
+
+> Stripe note: In this repo, every Stripe reference means the JPV Bootcamp Stripe account.
 - **Example feature CRUD (Projects / automation clones)**  
   - `prisma.system.prisma` models `Project` with Make/n8n metadata.  
   - Creation: `Scenarios` UI posts to either `/api/scenarios/openAIAssistant` (Make) or `/api/workflows/openAIAssistant` (n8n). Each clones a template scenario/workflow using Make or n8n APIs, stamps new credentials/webhook paths, activates the flow, and stores a `project` row with `assistant_id`, `webhookLink`, `status`, etc.  

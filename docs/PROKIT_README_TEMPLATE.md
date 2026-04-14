@@ -1,5 +1,7 @@
 # 🚀 ProKit SaaS Starter — Optional Feature README Template
 
+> Stripe note: In this repo, every Stripe reference means the JPV Bootcamp Stripe account.
+
 > ⚠️ Optional template  
 > Use this only when documenting an add-on module (trustless, push-first, public-link, etc.). It is **not** an instruction to change core ProKit behavior.
 

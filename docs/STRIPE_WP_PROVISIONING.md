@@ -1,4 +1,6 @@
-# Stripe → WordPress Provisioning
+# Stripe (JPV Bootcamp Stripe Account) → WordPress Provisioning
+
+> Stripe note: In this repo, every Stripe reference means the JPV Bootcamp Stripe account.
 
 This document describes the paid subscription provisioning flow and how to test it locally.
 
@@ -107,7 +109,7 @@ curl -X POST "https://portal.jpvbootcamp.com/wp-json/jpv/v1/provision" \
   -d '{"email":"user@example.com","plan":"pro","name":"Example User"}'
 ```
 
-## Stripe CLI testing
+## JPV Bootcamp Stripe CLI testing
 
 1) Listen for webhooks:
 
@@ -169,7 +171,7 @@ BASE_URL=https://portal.jpvbootcamp.com scripts/smoke-portal.sh
 
 ## Stripe Billing Portal settings
 
-In Stripe Dashboard → **Settings → Billing → Customer portal**:
+In the JPV Bootcamp Stripe Dashboard → **Settings → Billing → Customer portal**:
 - Enable **Subscription management**.
 - Allow customers to **switch plans** between Pro and VIP.
 - Ensure **proration** is enabled (Stripe-managed).

@@ -1,6 +1,8 @@
 # 🚀 ProKit Trustless Module — Optional Technical Blueprint
 
-**Stack:** Next.js 14 + TypeScript + Prisma + Supabase (Postgres) + Clerk + Stripe + Resend + n8n + Web Push  
+> Stripe note: In this repo, every Stripe reference means the JPV Bootcamp Stripe account.
+
+**Stack:** Next.js 14 + TypeScript + Prisma + Supabase (Postgres) + Clerk + Stripe (JPV Bootcamp Stripe account) + Resend + n8n + Web Push  
 **Architecture:** Trustless, passwordless, push-first SaaS engine
 
 ---

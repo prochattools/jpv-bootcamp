@@ -1,6 +1,8 @@
 # ProKit Overview
 
-ProKit is ProChat’s internal SaaS starter (built by Steve Westhoek) for launching micro-SaaS apps quickly. It preserves the existing Next.js + TypeScript + Tailwind/shadcn + Clerk + Postgres/Prisma + Stripe + Resend + n8n stack while standardizing infra and workflows.
+ProKit is ProChat’s internal SaaS starter (built by Steve Westhoek) for launching micro-SaaS apps quickly. It preserves the existing Next.js + TypeScript + Tailwind/shadcn + Clerk + Postgres/Prisma + Stripe (JPV Bootcamp Stripe account) + Resend + n8n stack while standardizing infra and workflows.
+
+> Stripe note: In this repo, every Stripe reference means the JPV Bootcamp Stripe account.
 
 ## Quick links
 - Invariants: `docs/PROKIT_INVARIANTS.md`

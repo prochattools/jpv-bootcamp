@@ -1,4 +1,6 @@
-# Stripe Webhooks (Local Testing)
+# Stripe Webhooks (JPV Bootcamp Stripe Account, Local Testing)
+
+> Stripe note: In this repo, every Stripe reference means the JPV Bootcamp Stripe account.
 
 ## Prereqs
 - Stripe CLI installed and authenticated (`stripe login`)
