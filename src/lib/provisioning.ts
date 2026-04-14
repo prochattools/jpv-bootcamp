@@ -1175,6 +1175,7 @@ export async function provisionFromCheckoutSession(
 		return buildSummary('skip', 'wp_provision_disabled')
 	}
 	wpUserId = wpProvision.wpUserId
+	const emailVariant = wpProvision.created ? 'welcome' : 'upgrade'
 
 	await upsertProvisioningRecord({
 		email,
@@ -1207,6 +1208,7 @@ export async function provisionFromCheckoutSession(
 					resetUrl: wpProvision.resetLink,
 					meta: {
 						templateKey: MEMBERSHIP_EMAIL_TEMPLATE_KEY,
+						variant: emailVariant,
 						eventId: eventId ?? null,
 						eventType: eventType ?? null,
 						subscriptionId: subscriptionId ?? null,
@@ -1636,6 +1638,7 @@ export async function syncFromSubscription(
 		return buildSummary('skip', 'wp_provision_disabled')
 	}
 	wpUserId = wpProvision.wpUserId
+	const emailVariant = wpProvision.created ? 'welcome' : 'upgrade'
 
 	await upsertProvisioningRecord({
 		email,
@@ -1668,6 +1671,7 @@ export async function syncFromSubscription(
 					resetUrl: wpProvision.resetLink,
 					meta: {
 						templateKey: MEMBERSHIP_EMAIL_TEMPLATE_KEY,
+						variant: emailVariant,
 						eventId: eventId ?? null,
 						eventType: eventType ?? null,
 						subscriptionId: subscription.id,

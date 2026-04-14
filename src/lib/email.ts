@@ -32,6 +32,7 @@ function getPlanLabel(plan: Plan): string {
 
 type EmailAttemptMeta = {
 	templateKey?: string
+	variant?: 'welcome' | 'upgrade'
 	eventId?: string | null
 	eventType?: string | null
 	subscriptionId?: string | null
@@ -79,7 +80,10 @@ export async function sendWelcomeEmail({
 	resetUrl: string
 	meta?: EmailAttemptMeta
 }): Promise<void> {
-	const templateKey = meta?.templateKey ?? 'membership_access_ready'
+	const variant = meta?.variant ?? 'welcome'
+	const templateKey =
+		meta?.templateKey ??
+		(variant === 'upgrade' ? 'membership_upgrade_ready' : 'membership_access_ready')
 	logEmailAttempt({
 		templateKey,
 		email: to,
@@ -95,8 +99,12 @@ export async function sendWelcomeEmail({
 
 	const { email: emailConfig } = getServerConfig()
 	const planLabel = getPlanLabel(plan)
+	const introLine =
+		variant === 'upgrade'
+			? `You've been upgraded to ${planLabel}.`
+			: `Your ${planLabel} plan is active.`
 	const text = [
-		`Your ${planLabel} plan is active.`,
+		introLine,
 		'',
 		`Log in here: ${emailConfig.portalUrl}`,
 		`Set or reset your password here: ${resetUrl}`,
@@ -105,7 +113,7 @@ export async function sendWelcomeEmail({
 	].join('\n')
 
 	const html = `
-		<p>Your <strong>${planLabel}</strong> plan is active.</p>
+		<p>${variant === 'upgrade' ? `You've been upgraded to <strong>${planLabel}</strong>.` : `Your <strong>${planLabel}</strong> plan is active.`}</p>
 		<p><a href="${emailConfig.portalUrl}">Log in to the portal</a></p>
 		<p><a href="${resetUrl}">Set or reset your password</a></p>
 		<p>If you need help, reply to this email: ${emailConfig.replyTo}</p>

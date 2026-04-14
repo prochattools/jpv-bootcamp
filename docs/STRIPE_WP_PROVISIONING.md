@@ -132,9 +132,11 @@ Next.js creates the Stripe Billing Portal session and redirects the browser to S
 
 - WordPress menu URLs:
   - `https://portal.jpvbootcamp.com/go/billing-portal`
+  - `https://portal.jpvbootcamp.com/go/upgrade-pro`
   - `https://portal.jpvbootcamp.com/go/upgrade-vip`
 - WordPress → Next.js redirects:
   - `https://jpvbootcamp.com/api/stripe/billing-portal?token=<signed>`
+  - `https://jpvbootcamp.com/api/stripe/checkout?plan=pro&token=<signed>`
   - `https://jpvbootcamp.com/api/stripe/upgrade-vip?token=<signed>`
 - Token payload includes `email`, `iat`, `exp`, `nonce` (HMAC with `BILLING_PORTAL_HMAC_SECRET`).
 - Stripe Billing Portal return URLs (fixed):
@@ -210,6 +212,8 @@ User → /api/stripe/checkout?plan=pro|vip
 - Provisioning is webhook-driven only. The success URL never provisions.
 - WordPress roles remain `subscriber`.
 - Membership level is stored in user meta as `jpv_membership_level`.
+- Free → Pro uses a signed WordPress handoff to Stripe Checkout.
+- Pro → VIP uses a signed WordPress handoff to the Stripe Billing Portal.
 
 ## Local sanity check (UUID id)
 

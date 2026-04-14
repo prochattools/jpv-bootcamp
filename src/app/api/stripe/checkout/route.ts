@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getStripeConfig, type StripeConfig } from '@/lib/config'
 import { getStripeEnv } from '@/lib/stripe-config'
+import { verifyBillingPortalToken } from '@/lib/billing-portal-token'
 import { resolvePlanFromStripe, type Plan } from '@/lib/plans'
 import { getStripe } from '@/lib/stripe'
 
@@ -68,11 +69,20 @@ function buildReturnUrl(pathOrUrl: string, appUrl: string) {
 	return new URL(pathOrUrl, appUrl).toString()
 }
 
+function extractBearerToken(req: NextRequest): string | null {
+	const auth = req.headers.get('authorization') ?? ''
+	const match = auth.match(/Bearer\s+(.*)$/i)
+	if (match) return match[1].trim()
+	return null
+}
+
 export async function GET(req: NextRequest) {
 	try {
 		const stripeConfig = getStripeConfig()
 		const planParam = req.nextUrl.searchParams.get('plan')
 		const customerParam = req.nextUrl.searchParams.get('customer')
+		const tokenParam =
+			extractBearerToken(req) || req.nextUrl.searchParams.get('token')?.trim() || null
 
 		const normalizedPlan = planParam ? planParam.toLowerCase() : null
 		const plan = isPricingPlanKey(normalizedPlan) ? normalizedPlan : null
@@ -90,6 +100,27 @@ export async function GET(req: NextRequest) {
 		const priceId = getPriceIdForPlan(plan, stripeConfig.stripe)
 		const successUrl = buildReturnUrl(stripeConfig.stripe.successUrl, stripeConfig.app.url)
 		const cancelUrl = buildReturnUrl(stripeConfig.stripe.cancelUrl, stripeConfig.app.url)
+		let customerEmail: string | null = null
+
+		if (tokenParam) {
+			const tokenSecret = (process.env.BILLING_PORTAL_HMAC_SECRET || '').trim()
+			if (!tokenSecret) {
+				return NextResponse.json(
+					{ error: 'Billing token verification is not configured.' },
+					{ status: 500 }
+				)
+			}
+
+			const verification = verifyBillingPortalToken(tokenParam, tokenSecret)
+			if (!verification.ok) {
+				return NextResponse.json(
+					{ error: 'Invalid or expired billing token.' },
+					{ status: 401 }
+				)
+			}
+
+			customerEmail = verification.payload.email
+		}
 
 		// If the user is already on Pro and is requesting VIP, send them to a Portal upgrade flow
 		// (prevents accidentally creating a 2nd subscription via Checkout).
@@ -152,6 +183,11 @@ export async function GET(req: NextRequest) {
 			success_url: successUrl,
 			cancel_url: cancelUrl,
 			allow_promotion_codes: true,
+			...(customerEmail && plan === 'pro'
+				? {
+						customer_email: customerEmail,
+				  }
+				: {}),
 			metadata: {
 				plan,
 				source: 'landing',

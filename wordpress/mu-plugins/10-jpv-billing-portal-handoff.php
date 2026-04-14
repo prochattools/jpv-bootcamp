@@ -4,6 +4,7 @@
  *
  * Menu URLs:
  * - https://portal.jpvbootcamp.com/go/billing-portal
+ * - https://portal.jpvbootcamp.com/go/upgrade-pro
  * - https://portal.jpvbootcamp.com/go/upgrade-vip
  *
  * This file is stored in the Next.js repo for manual deployment to WordPress; it is not auto-deployed.
@@ -14,6 +15,7 @@ if (!defined('ABSPATH')) {
 }
 
 const JPV_BILLING_PORTAL_API_URL = 'https://jpvbootcamp.com/api/stripe/billing-portal';
+const JPV_UPGRADE_PRO_API_URL = 'https://jpvbootcamp.com/api/stripe/checkout?plan=pro';
 const JPV_UPGRADE_VIP_API_URL = 'https://jpvbootcamp.com/api/stripe/upgrade-vip';
 const JPV_BILLING_PORTAL_DEFAULT_RETURN_URL = 'https://portal.jpvbootcamp.com/community/';
 const JPV_BILLING_PORTAL_FALLBACK_URL = 'https://jpvbootcamp.com/upgrade';
@@ -385,3 +387,62 @@ function jpv_upgrade_vip_handle_go_endpoint(): void {
     );
 }
 add_action('init', 'jpv_upgrade_vip_handle_go_endpoint', 0);
+
+function jpv_upgrade_pro_handle_go_endpoint(): void {
+    $uri = isset($_SERVER['REQUEST_URI']) ? (string) $_SERVER['REQUEST_URI'] : '';
+    if ($uri === '') {
+        return;
+    }
+
+    $path = wp_parse_url($uri, PHP_URL_PATH);
+    if (!$path) {
+        return;
+    }
+
+    if (!jpv_billing_portal_path_matches($path, '/go/upgrade-pro')) {
+        return;
+    }
+
+    $logged_in = is_user_logged_in();
+    $secret = get_billing_portal_hmac_secret();
+    $has_secret = $secret ? true : false;
+    $return_param = isset($_GET['return']) ? (string) $_GET['return'] : null;
+    $return_info = jpv_billing_portal_validate_return_url($return_param);
+    $return_url = $return_info['url'];
+
+    if (!$logged_in) {
+        $go_url = jpv_billing_portal_build_full_url($path);
+        $go_url = add_query_arg('return', $return_url, $go_url);
+        $login_url = wp_login_url($go_url);
+        jpv_billing_portal_log_redirect('upgrade-pro', $path, $logged_in, $has_secret, 'not_logged_in', $return_info);
+        jpv_upgrade_send_headers('upgrade-pro', $path, $logged_in, $has_secret, $login_url, 'not_logged_in');
+        wp_safe_redirect($login_url, 302);
+        exit;
+    }
+
+    $user = wp_get_current_user();
+    $email = $user && isset($user->user_email) ? $user->user_email : '';
+    if (!is_email($email)) {
+        jpv_billing_portal_log_redirect('upgrade-pro', $path, $logged_in, $has_secret, 'invalid_email', $return_info);
+        jpv_upgrade_send_headers('upgrade-pro', $path, $logged_in, $has_secret, JPV_UPGRADE_PRO_API_URL, 'invalid_email');
+        wp_safe_redirect(JPV_UPGRADE_PRO_API_URL, 302);
+        exit;
+    }
+
+    if (!$secret) {
+        jpv_billing_portal_log_missing_secret_once();
+        jpv_billing_portal_log_redirect('upgrade-pro', $path, $logged_in, $has_secret, 'missing_secret', $return_info);
+        jpv_upgrade_send_headers('upgrade-pro', $path, $logged_in, $has_secret, JPV_UPGRADE_PRO_API_URL, 'missing_secret');
+        wp_safe_redirect(JPV_UPGRADE_PRO_API_URL, 302);
+        exit;
+    }
+
+    $token = jpv_billing_portal_build_token($email, $return_url, $secret);
+    $target = add_query_arg('token', $token, JPV_UPGRADE_PRO_API_URL);
+
+    jpv_billing_portal_log_redirect('upgrade-pro', $path, $logged_in, $has_secret, 'redirect', $return_info);
+    jpv_upgrade_send_headers('upgrade-pro', $path, $logged_in, $has_secret, $target, 'redirect');
+    wp_safe_redirect($target, 302);
+    exit;
+}
+add_action('init', 'jpv_upgrade_pro_handle_go_endpoint', 0);

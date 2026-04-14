@@ -19,6 +19,7 @@ type ProvisionResponse = {
 	wpUserId?: number
 	reset_link?: string
 	resetLink?: string
+	created?: boolean
 	error?: string
 }
 
@@ -34,6 +35,7 @@ type UserExistsResponse = {
 export type ProvisionResult = {
 	wpUserId: number
 	resetLink: string
+	created: boolean
 }
 
 export type WpUserExistsResult = {
@@ -222,6 +224,7 @@ export async function provisionWpUser(
 
 	const wpUserId = data?.wp_user_id ?? data?.wpUserId
 	const resetLink = data?.reset_link ?? data?.resetLink
+	const created = Boolean(data?.created)
 
 	if (!wpUserId || !resetLink) {
 		throw new Error('WP provisioning response missing required fields.')
@@ -230,6 +233,7 @@ export async function provisionWpUser(
 	return {
 		wpUserId,
 		resetLink,
+		created,
 	}
 }
 

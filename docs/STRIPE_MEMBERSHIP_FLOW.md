@@ -107,7 +107,9 @@ Non-webhook email skipped { email, templateKey, source }
 ## URLs
 - WP entrypoints:
   - `https://portal.jpvbootcamp.com/go/billing-portal`
+  - `https://portal.jpvbootcamp.com/go/upgrade-pro`
   - `https://portal.jpvbootcamp.com/go/upgrade-vip`
 - Next.js portal endpoints:
   - `https://jpvbootcamp.com/api/stripe/billing-portal?token=...`
+  - `https://jpvbootcamp.com/api/stripe/checkout?plan=pro&token=...`
   - `https://jpvbootcamp.com/api/stripe/upgrade-vip?token=...`

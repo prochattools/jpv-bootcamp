@@ -44,6 +44,7 @@ function jpv_portal_is_allowed_path(string $path): bool {
     if (jpv_portal_path_starts_with($path, '/wp-json')) return true;
     if (jpv_portal_path_starts_with($path, '/community')) return true;
     if (jpv_portal_path_starts_with($path, '/go/billing-portal')) return true;
+    if (jpv_portal_path_starts_with($path, '/go/upgrade-pro')) return true;
     if (jpv_portal_path_starts_with($path, '/go/upgrade-vip')) return true;
     if (jpv_portal_path_starts_with($path, '/go/partners')) return true;
     if (jpv_portal_path_starts_with($path, '/wp-content')) return true;
