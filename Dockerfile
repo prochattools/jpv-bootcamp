@@ -22,11 +22,20 @@ RUN --mount=type=cache,target=/app/.next/cache \
     npx prisma generate --schema=prisma/system.prisma && \
     npm run build
 
+# ---- New Relic deps (isolated, no npm cache in final image) ----
+FROM node:20-bullseye-slim AS newrelic-deps
+WORKDIR /nr
+RUN echo '{"dependencies":{"newrelic":"^13.18.0"}}' > package.json
+RUN npm install --omit=dev --ignore-scripts 2>&1 | tail -1
+
 # ---- Runner ----
 FROM node:20-bullseye AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV HOSTNAME=0.0.0.0
+ENV PORT=3000
 
 # Install postgresql-client-15
 RUN apt-get update && apt-get install -y \
@@ -39,16 +48,16 @@ RUN apt-get update && apt-get install -y \
     && apt-get update && apt-get install -y postgresql-client-15 \
     && rm -rf /var/lib/apt/lists/*
 
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/scripts ./scripts
+COPY --from=newrelic-deps /nr/node_modules ./node_modules
 
 EXPOSE 3000
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-  CMD curl -f http://localhost:3000/ || exit 1
+  CMD node -e "require('http').get('http://127.0.0.1:3000/', res => process.exit(res.statusCode < 500 ? 0 : 1)).on('error', () => process.exit(1))"
 
 CMD ["bash", "scripts/runtime/start-prod.sh"]

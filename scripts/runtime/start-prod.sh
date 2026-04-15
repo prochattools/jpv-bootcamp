@@ -60,22 +60,4 @@ script_exists() {
   node -e "const pkg=require('./package.json');process.exit(pkg.scripts&&pkg.scripts['$1']?0:1)" >/dev/null 2>&1
 }
 
-if script_exists start:app; then
-  exec npm run start:app
-fi
-
-if script_exists start:prod; then
-  exec npm run start:prod
-fi
-
-if script_exists start:production; then
-  exec npm run start:production
-fi
-
-if [[ -d .next && -f .next/BUILD_ID && -x node_modules/.bin/next ]]; then
-  exec node_modules/.bin/next start -p "$PORT"
-fi
-
-echo "no production start command found" >&2
-echo "Define scripts.start:app (preferred) or scripts.start:prod in package.json." >&2
-exit 1
+exec node server.js
