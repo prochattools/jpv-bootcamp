@@ -1,18 +1,9 @@
-# GitHub Actions workflow — Build Docker image on GitHub, push to GHCR, trigger Dokploy redeploy.
-# Copy to .github/workflows/deploy.yml in any repo that deploys to Dokploy via image pull.
+# Build Docker image on GitHub → push to GHCR → trigger Dokploy redeploy.
+# This replaces source-based builds (Dokploy running docker build on the VM).
 #
 # Required GitHub secrets:
-#   DOKPLOY_API_KEY  — generate in Dokploy dashboard → Settings → API
-#   DOKPLOY_APP_ID   — found in app settings URL in the Dokploy dashboard
-#
-# NEXT_PUBLIC_* vars:
-#   These are baked into the JS bundle at build time (not injectable at runtime).
-#   Pass them as build-args from GitHub repo variables (Settings → Variables → Actions).
-#   See the commented build-args block below.
-#
-# Registry:
-#   Images are pushed to GHCR (ghcr.io) using the built-in GITHUB_TOKEN.
-#   Dokploy needs a read-only PAT (read:packages) registered in Dokploy Settings → Registry.
+#   DOKPLOY_WEBHOOK_TOKEN  — Dokploy app → Deployments → Webhook token (refreshToken)
+#   DOKPLOY_URL            — https://dokploy.prochat.tools
 
 name: Build and Deploy
 
@@ -49,19 +40,11 @@ jobs:
             ghcr.io/${{ github.repository }}:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          # Uncomment and extend for apps with NEXT_PUBLIC_* env vars.
-          # Values live in GitHub repo Settings → Variables → Actions (not secrets).
-          # build-args: |
-          #   NEXT_PUBLIC_APP_URL=${{ vars.NEXT_PUBLIC_APP_URL }}
 
       - name: Trigger Dokploy redeploy
         run: |
-          DOKPLOY_URL="${{ secrets.DOKPLOY_URL || 'https://dokploy.prochat.tools' }}"
           RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
-            -X POST "$DOKPLOY_URL/api/application.deploy" \
-            -H "x-api-key: ${{ secrets.DOKPLOY_API_KEY }}" \
-            -H "Content-Type: application/json" \
-            -d "{\"applicationId\": \"${{ secrets.DOKPLOY_APP_ID }}\"}")
+            -X GET "${{ secrets.DOKPLOY_URL }}/api/deploy/${{ secrets.DOKPLOY_WEBHOOK_TOKEN }}")
 
           echo "HTTP status: $RESPONSE"
 
