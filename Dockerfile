@@ -22,11 +22,15 @@ RUN --mount=type=cache,target=/app/.next/cache \
     npx prisma generate --schema=prisma/system.prisma && \
     npm run build
 
-# ---- New Relic deps (isolated, no npm cache in final image) ----
-FROM node:20-bullseye-slim AS newrelic-deps
+# ---- Runtime deps (isolated: newrelic + pg + prisma, no npm cache in final image) ----
+# newrelic: loaded via NODE_OPTIONS=--require newrelic
+# pg: used by scripts/db/init-tenant.js (deploy gate)
+# prisma: CLI needed for db:migrate:prod
+FROM node:20-bullseye-slim AS runtime-deps
 WORKDIR /nr
-RUN echo '{"dependencies":{"newrelic":"^13.18.0"}}' > package.json
+RUN echo '{"dependencies":{"newrelic":"^13.18.0","pg":"^8"}}' > package.json
 RUN npm install --omit=dev --ignore-scripts 2>&1 | tail -1
+RUN npm install --omit=dev prisma@6.15.0 2>&1 | tail -1
 
 # ---- Runner ----
 FROM node:20-bullseye AS runner
@@ -53,7 +57,8 @@ COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/scripts ./scripts
-COPY --from=newrelic-deps /nr/node_modules ./node_modules
+COPY --from=builder /app/package.json ./package.json
+COPY --from=runtime-deps /nr/node_modules ./node_modules
 
 EXPOSE 3000
 
