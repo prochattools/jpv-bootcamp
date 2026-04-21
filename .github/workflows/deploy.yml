@@ -2,6 +2,7 @@
 # This replaces source-based builds (Dokploy running docker build on the VM).
 #
 # Required GitHub secrets:
+#   DOKPLOY_APP_ID   must match the live JPV Bootcamp application in Dokploy
 #   DOKPLOY_API_KEY  — Dokploy server API key
 #   DOKPLOY_APP_ID   — Dokploy application ID for this app
 
