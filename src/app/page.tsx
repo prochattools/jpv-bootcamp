@@ -29,7 +29,7 @@ export default function HomePage() {
       title: "Next Online Training",
       meta: (
         <>
-          10 April · <a href="#pricing-pro" className="hover:text-white transition-colors underline decoration-jpv-green/40 underline-offset-4">Pro</a> and <a href="#pricing-vip" className="hover:text-white transition-colors underline decoration-jpv-green/40 underline-offset-4">VIP</a>
+          Friday, 24 April, 7 pm · <a href="#pricing-pro" className="hover:text-white transition-colors underline decoration-jpv-green/40 underline-offset-4">Pro</a> and <a href="#pricing-vip" className="hover:text-white transition-colors underline decoration-jpv-green/40 underline-offset-4">VIP</a>
         </>
       ),
       description: (
