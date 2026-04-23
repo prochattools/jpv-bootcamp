@@ -7,7 +7,7 @@ This is the authoritative reference for how ProKit talks to Postgres: the schema
 - One app per schema (`tenant_<APP_SLUG>`) with a dedicated DB role (`tenant_<APP_SLUG>_user`).
 - Registry table `public.tenants` is for infra scripts only; runtime never touches it.
 - Deterministic scripts for provisioning, migrations, and cleanup.
-- Safe-by-default: dev on Docker Postgres at `localhost:5433`, prod on Supabase reachable only inside the Dokploy VNet.
+- Safe-by-default: dev on Docker Postgres at `localhost:5444`, prod on Supabase reachable only inside the Dokploy VNet.
 - AI-friendly: assistants call scripts, not ad-hoc SQL.
 - Optional PR preview tenants with scripted create/cleanup.
 
@@ -20,7 +20,7 @@ This is the authoritative reference for how ProKit talks to Postgres: the schema
 - Registry lives in `public.tenants` for infra (provision/cleanup) only.
 
 ### Environment picture
-- **Development**: Docker Postgres on `localhost:5433`; app + scripts connect directly.
+- **Development**: Docker Postgres on `localhost:5444`; app + scripts connect directly.
 - **Production**: Supabase Postgres on `10.0.2.4:5433`, reachable from Dokploy in the VNet; no public DB access. Dokploy runs app containers and any DB jobs.
 
 ### Tenant types
@@ -37,8 +37,8 @@ Registry columns (infra-only):
 Examples:
 ```
 # Development
-DATABASE_URL=postgresql://tenant_demo_user:***@localhost:5433/postgres?schema=tenant_demo
-SYSTEM_DATABASE_URL=postgresql://postgres:devpass@localhost:5433/postgres?schema=public
+DATABASE_URL=postgresql://tenant_demo_user:***@localhost:5444/postgres?schema=tenant_demo
+SYSTEM_DATABASE_URL=postgresql://postgres:devpass@localhost:5444/postgres?schema=public
 
 # Production
 DATABASE_URL=postgresql://tenant_demo_user:***@10.0.2.4:5433/postgres?schema=tenant_demo
@@ -46,7 +46,7 @@ SYSTEM_DATABASE_URL=postgresql://postgres:prodpass@10.0.2.4:5433/postgres?schema
 ```
 
 Responsibilities:
-- Dev: scripts + runtime hit `localhost:5433`; scripts use `SYSTEM_DATABASE_URL`, runtime uses `DATABASE_URL`.
+- Dev: scripts + runtime hit `localhost:5444`; scripts use `SYSTEM_DATABASE_URL`, runtime uses `DATABASE_URL`.
 - Prod: scripts run inside Dokploy with `SYSTEM_DATABASE_URL`; runtime uses `DATABASE_URL` (tenant user).
 
 ## Provisioning & Managing Tenants
@@ -93,7 +93,7 @@ Command: `npm run db:cleanup -- --slug <slug> [--force]`
 5) Drop role `db_user` if it exists.  
 6) Delete registry row.  
 
-- Dev: runs against `localhost:5433` via `SYSTEM_DATABASE_URL`.  
+- Dev: runs against `localhost:5444` via `SYSTEM_DATABASE_URL`.  
 - Prod: runs inside Dokploy against Supabase via `SYSTEM_DATABASE_URL`.
 
 ### Preview tenants (optional)
@@ -104,7 +104,7 @@ Command: `npm run db:cleanup -- --slug <slug> [--force]`
 
 ## Migrations & Schema Sync
 - Prisma schema: `prisma/system.prisma`.  
-- Dev: `npm run db:migrate:dev` → `prisma migrate deploy --schema=prisma/system.prisma` against `localhost:5433`, applying existing migrations.  
+- Dev: `npm run db:migrate:dev` → `prisma migrate deploy --schema=prisma/system.prisma` against `localhost:5444`, applying existing migrations.  
 - Prod: `NODE_ENV=production npm run db:migrate:prod` → `prisma migrate deploy --schema=prisma/system.prisma` inside Dokploy.  
 - Contract: new app versions must not boot without successful `db:migrate:prod`; no raw SQL migrations outside Prisma; `prisma/system.prisma` and `prisma/migrations` stay aligned.
 
@@ -133,3 +133,5 @@ Command: `npm run db:cleanup -- --slug <slug> [--force]`
 - Infra/network layout: `docs/PROKIT_INFRASTRUCTURE.md`  
 - Dev workflow: `docs/PROKIT_DEV_GUIDE.md`  
 - Cleanup details: `docs/PROKIT_TENANT_CLEANUP.md`
+- Shared local app and OrbStack database inventory: `/Users/Office/Repos/stevewesthoek/brain/operations/infrastructure/local-apps.md`
+- Standalone OrbStack Postgres map: `/Users/Office/Repos/stevewesthoek/brain/operations/database/standalone/README.md`

@@ -1,10 +1,10 @@
--- Deduplicate customer_provisioning rows by normalized email (tenant_jpvbootcamp).
+-- Deduplicate customer_provisioning rows by normalized email (jpvbootcamp).
 -- Idempotent: safe to run multiple times.
 
-ALTER TABLE tenant_jpvbootcamp.customer_provisioning
+ALTER TABLE jpvbootcamp.customer_provisioning
 	ADD COLUMN IF NOT EXISTS normalized_email text;
 
-UPDATE tenant_jpvbootcamp.customer_provisioning
+UPDATE jpvbootcamp.customer_provisioning
 SET normalized_email = lower(trim(email))
 WHERE normalized_email IS NULL OR normalized_email = '';
 
@@ -19,7 +19,7 @@ WITH ranked AS (
 				COALESCE(updated_at, created_at) DESC,
 				created_at DESC
 		) AS rn
-	FROM tenant_jpvbootcamp.customer_provisioning
+	FROM jpvbootcamp.customer_provisioning
 ),
 canonical AS (
 	SELECT * FROM ranked WHERE rn = 1
@@ -41,7 +41,7 @@ merged AS (
 	FROM ranked
 	GROUP BY normalized_email
 )
-UPDATE tenant_jpvbootcamp.customer_provisioning cp
+UPDATE jpvbootcamp.customer_provisioning cp
 SET
 	wp_user_id = COALESCE(cp.wp_user_id, m.best_wp_user_id),
 	stripe_customer_id = COALESCE(cp.stripe_customer_id, m.best_stripe_customer_id),
@@ -58,13 +58,13 @@ FROM canonical c
 JOIN merged m ON m.normalized_email = c.normalized_email
 WHERE cp.id = c.id;
 
-DELETE FROM tenant_jpvbootcamp.customer_provisioning cp
+DELETE FROM jpvbootcamp.customer_provisioning cp
 USING canonical c
 WHERE cp.normalized_email = c.normalized_email
   AND cp.id <> c.id;
 
-ALTER TABLE tenant_jpvbootcamp.customer_provisioning
+ALTER TABLE jpvbootcamp.customer_provisioning
 	ALTER COLUMN normalized_email SET NOT NULL;
 
 CREATE UNIQUE INDEX IF NOT EXISTS customer_provisioning_normalized_email_key
-	ON tenant_jpvbootcamp.customer_provisioning (normalized_email);
+	ON jpvbootcamp.customer_provisioning (normalized_email);

@@ -6,6 +6,11 @@
 - Dokploy Preview Deployments are enabled: each branch auto-deploys to its own preview domain.
 - Merge to `main` only after testing preview.
 
+## Dokploy Notes
+- For JPV Bootcamp, the live deploy path is `main` push -> GitHub Actions -> GHCR image push -> Dokploy API trigger.
+- Dokploy deployment history for this app can lag or show stale entries; trust `application.readLogs` and the live site as the source of truth when there is a mismatch.
+- The JPV Bootcamp Dokploy app must keep `buildType=dockerfile` with `dockerfile=Dockerfile` so Dokploy recognizes the repo root Dockerfile.
+
 ## Steps
 1. git checkout main && git pull origin main
 2. git checkout -b feature/branch-name

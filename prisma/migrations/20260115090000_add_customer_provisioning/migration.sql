@@ -1,14 +1,14 @@
 -- Add event type for webhook idempotency
 DO $$
 BEGIN
-  IF to_regclass('tenant_jpvbootcamp.stripe_webhook_events') IS NOT NULL THEN
-    ALTER TABLE "tenant_jpvbootcamp"."stripe_webhook_events"
+  IF to_regclass('jpvbootcamp.stripe_webhook_events') IS NOT NULL THEN
+    ALTER TABLE "jpvbootcamp"."stripe_webhook_events"
     ADD COLUMN IF NOT EXISTS "type" TEXT NOT NULL DEFAULT 'unknown';
   END IF;
 END $$;
 
 -- Create provisioning map table
-CREATE TABLE IF NOT EXISTS "tenant_jpvbootcamp"."customer_provisioning" (
+CREATE TABLE IF NOT EXISTS "jpvbootcamp"."customer_provisioning" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "email" TEXT NOT NULL,
     "normalized_email" TEXT NOT NULL,
@@ -29,10 +29,10 @@ CREATE TABLE IF NOT EXISTS "tenant_jpvbootcamp"."customer_provisioning" (
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS "customer_provisioning_normalized_email_key"
-  ON "tenant_jpvbootcamp"."customer_provisioning"("normalized_email");
+  ON "jpvbootcamp"."customer_provisioning"("normalized_email");
 
 CREATE UNIQUE INDEX IF NOT EXISTS "customer_provisioning_stripe_customer_id_key"
-  ON "tenant_jpvbootcamp"."customer_provisioning"("stripe_customer_id");
+  ON "jpvbootcamp"."customer_provisioning"("stripe_customer_id");
 
 CREATE UNIQUE INDEX IF NOT EXISTS "customer_provisioning_stripe_subscription_id_key"
-  ON "tenant_jpvbootcamp"."customer_provisioning"("stripe_subscription_id");
+  ON "jpvbootcamp"."customer_provisioning"("stripe_subscription_id");

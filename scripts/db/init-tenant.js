@@ -124,13 +124,18 @@ async function main() {
   const envPath = path.join(process.cwd(), '.env')
   const envFile = !isProd ? loadEnvFile(envPath) : {}
 
-  let systemUrl = process.env.SYSTEM_DATABASE_URL
+  const mergedEnv = {
+    ...envFile,
+    ...process.env
+  }
+
+  let systemUrl = mergedEnv.SYSTEM_DATABASE_URL
   if (!systemUrl) {
     if (isProd) {
       fail('SYSTEM_DATABASE_URL is required in production')
     } else {
       systemUrl =
-        'postgresql://postgres:postgres@localhost:5433/postgres?schema=public'
+        'postgresql://postgres:postgres@localhost:5444/postgres?schema=public'
       console.log(
         'ℹ️ SYSTEM_DATABASE_URL not set, using default local Docker Postgres:',
         systemUrl
@@ -175,7 +180,7 @@ async function main() {
       : []
 
   let password =
-    process.env.TENANT_DB_PASSWORD || (!isProd ? envFile.TENANT_DB_PASSWORD : undefined)
+    mergedEnv.TENANT_DB_PASSWORD || (!isProd ? envFile.TENANT_DB_PASSWORD : undefined)
   if (password) {
     if (!isAlphanumeric(password)) {
       fail('TENANT_DB_PASSWORD must be alphanumeric only.')

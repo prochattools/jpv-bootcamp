@@ -20,6 +20,7 @@ This file captures the contracts that must stay stable while rebranding the boil
   - `STRIPE_SECRET_KEY_TEST` / `_LIVE` – server Stripe client.  
   - `STRIPE_WEBHOOK_SECRET_TEST` / `_LIVE` – webhook signature verification.  
   - `STRIPE_PRICE_PRO_TEST` / `_LIVE`, `STRIPE_PRICE_VIP_TEST` / `_LIVE` – pricing ids.
+  - `STRIPE_PRODUCT_JPV_BOOTCAMP_PRO_MEMBERSHIP_TEST` / `_LIVE`, `STRIPE_PRODUCT_JPV_BOOTCAMP_VIP_MEMBERSHIP_TEST` / `_LIVE` – product ids used as fallback plan mapping; Pro and VIP must not share the same product ID.
 - Email (Resend)  
   - `RESEND_API_KEY` – used by `resendService` for waiting list + thank-you emails.
 - Automation (Make)  
@@ -30,7 +31,7 @@ This file captures the contracts that must stay stable while rebranding the boil
 - Content (WordPress)  
   - `WP_REST_ENDPOINT` – pull posts for blog/sitemap (other WordPress/MySQL vars only feed docker-compose for local content).
 - Local infra + optional helpers  
-  - `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DBNAME` – docker-compose Postgres defaults (host port 5433 → container 5432).  
+- `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DBNAME` – docker-compose Postgres defaults (host port 5444 → container 5432).  
   - `MCP_API_URL`, `MCP_SECRET` – optional MCP bridge for remote script triggering.  
   - `MOCK_USER_ID` – optional dev seed/mocking aid; not consumed by current code.
 
@@ -60,7 +61,7 @@ This file captures the contracts that must stay stable while rebranding the boil
   - After auth, users hit `/dashboard`, which checks `subscription.status` via `getSubscriptionByUserId`. Inactive or missing subs redirect to `/processing-page` to complete checkout. Active subs see the automation dashboard (`Scenarios` + thank-you modal).  
   - “Workspace” is the app-level tenant created by `db:init` (one schema/user per app); no per-user multitenancy in runtime.
 - **Workspace / tenant DB creation / migration**  
-  - Dev: `npm run dev` → `predev` writes `.env`, provisions `tenant_dev`, applies migrations to local Postgres on `localhost:5433`.  
+- Dev: `npm run dev` → `predev` writes `.env`, provisions `tenant_dev`, applies migrations to local Postgres on `localhost:5444`.  
   - Prod: Dokploy job runs `NODE_ENV=production npm run db:init -- --slug <slug>` followed by `npm run db:migrate:prod` against Supabase at `10.0.2.4:5433`.
 - **Subscription flow (Stripe)**  
   - Checkout initiated client-side via `CheckoutButton` → `/api/stripe/create-checkout` (uses config price IDs) → Stripe Checkout.  

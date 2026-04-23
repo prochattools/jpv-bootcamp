@@ -8,6 +8,26 @@
 //   node scripts/db/cleanup-tenant.js --slug myapp --force   # dangerous
 
 const { Client } = require('pg')
+const fs = require('fs')
+const path = require('path')
+
+function loadEnvFile(envPath) {
+  if (!fs.existsSync(envPath)) return {}
+  const lines = fs
+    .readFileSync(envPath, 'utf8')
+    .split('\n')
+    .filter((l) => l.trim().length > 0 && !l.trim().startsWith('#'))
+
+  const map = {}
+  for (const line of lines) {
+    const idx = line.indexOf('=')
+    if (idx <= 0) continue
+    const key = line.slice(0, idx).trim()
+    const value = line.slice(idx + 1).trim()
+    map[key] = value
+  }
+  return map
+}
 
 function parseArgs() {
   const args = process.argv.slice(2)
@@ -39,7 +59,9 @@ function parseArgs() {
 
 async function main() {
   const { slug, force } = parseArgs()
-  const systemUrl = process.env.SYSTEM_DATABASE_URL
+  const envPath = path.join(process.cwd(), '.env')
+  const envFile = loadEnvFile(envPath)
+  const systemUrl = process.env.SYSTEM_DATABASE_URL || envFile.SYSTEM_DATABASE_URL
 
   if (!systemUrl) {
     console.error('❌ SYSTEM_DATABASE_URL is not set.')

@@ -18,7 +18,7 @@ const slug = rawSlug.trim() || 'dev'
 
 const systemUrl =
   process.env.SYSTEM_DATABASE_URL ||
-  'postgresql://postgres:postgres@localhost:5433/postgres?schema=public'
+  'postgresql://postgres:postgres@localhost:5444/postgres?schema=public'
 
 const content = [
   `APP_SLUG=${slug}`,

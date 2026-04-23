@@ -71,6 +71,19 @@ npm run db:migrate:dev
 
 Production uses the same scripts inside Dokploy with `NODE_ENV=production`.
 
+For this repo specifically, the local OrbStack PostgreSQL container is defined in `brain/operations/database/standalone/jpvbootcamp/docker-compose.yml` and publishes host port `5444`.
+The shared local app and database registry is documented in:
+
+- `/Users/Office/Repos/stevewesthoek/brain/operations/infrastructure/local-apps.md`
+- `/Users/Office/Repos/stevewesthoek/brain/operations/database/standalone/README.md`
+
+## Stripe plan mapping invariant
+
+- `STRIPE_PRICE_PRO_*` and `STRIPE_PRICE_VIP_*` must resolve to different Stripe price IDs.
+- The corresponding `STRIPE_PRODUCT_JPV_BOOTCAMP_PRO_MEMBERSHIP_*` and `STRIPE_PRODUCT_JPV_BOOTCAMP_VIP_MEMBERSHIP_*` values should also resolve to different product IDs.
+- The app prefers price IDs first, but it falls back to product IDs when a price ID is missing.
+- If Pro and VIP share the same product ID, the product fallback maps that shared product to VIP and can misclassify a Pro purchase as VIP.
+
 ## Production DB alignment (Supabase SQL scripts)
 
 The webhook expects the tenant schema `tenant_jpvbootcamp` with these columns:

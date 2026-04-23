@@ -4,8 +4,11 @@ Follow these steps to run ProKit locally and complete the first sign-in/checkout
 
 ## Prerequisites
 - Node.js + npm
-- Docker running Postgres on host port `5433` (maps to container `5432`)
+- Docker running Postgres on host port `5444` (maps to container `5432`)
 - Stripe (JPV Bootcamp Stripe account) + Clerk test keys
+- Local port and database assignments are tracked in the shared brain registry:
+  - `/Users/Office/Repos/stevewesthoek/brain/operations/infrastructure/local-apps.md`
+  - `/Users/Office/Repos/stevewesthoek/brain/operations/database/standalone/README.md`
 
 > Stripe note: In this repo, every Stripe reference means the JPV Bootcamp Stripe account.
 

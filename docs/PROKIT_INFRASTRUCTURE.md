@@ -7,16 +7,19 @@ ProKit ships with a scripted, environment-safe way to provision databases, run m
 - One app → one schema (`tenant_<slug>`) → one DB user (`tenant_<slug>_user`).  
 - Registry table `public.tenants` is infra-only (provision/cleanup), never read by runtime.  
 - Prisma manages schema + migrations (`prisma/system.prisma`).  
-- Dev runtime + provisioning hit Docker Postgres on `localhost:5433`.  
+- Dev runtime + provisioning hit Docker Postgres on `localhost:5444`.  
 - Prod provisioning/migrations run inside Dokploy to Supabase `10.0.2.4:5433` via `SYSTEM_DATABASE_URL`.  
 - Prod runtime uses `DATABASE_URL` (tenant user) only.  
 - Optional MCP bridge (`https://mcp.prochat.tools`) wraps the same commands.
 
 Environment split:
-- **Dev**: scripts → `SYSTEM_DATABASE_URL` @ `localhost:5433`; runtime → `DATABASE_URL` @ `localhost:5433`; env file `.env`.  
+- **Dev**: scripts → `SYSTEM_DATABASE_URL` @ `localhost:5444`; runtime → `DATABASE_URL` @ `localhost:5444`; env file `.env`.  
 - **Prod**: scripts inside Dokploy → `SYSTEM_DATABASE_URL` @ `10.0.2.4:5433`; runtime → `DATABASE_URL` (tenant user); env via Dokploy or `.env.production`.
 
 For database behavior details, see `docs/PROKIT_DATABASE.md`. Cleanup specifics live in `docs/PROKIT_TENANT_CLEANUP.md`.
+The shared local app registry and OrbStack database inventory live in:
+- `/Users/Office/Repos/stevewesthoek/brain/operations/infrastructure/local-apps.md`
+- `/Users/Office/Repos/stevewesthoek/brain/operations/database/standalone/README.md`
 
 ## Automation commands
 - Provision: `npm run db:init -- --slug <slug> [--preview] [--external-id <id>]`  
@@ -30,12 +33,12 @@ For database behavior details, see `docs/PROKIT_DATABASE.md`. Cleanup specifics 
 AI/agents must use these commands (or MCP wrappers), not raw SQL.
 
 ## Prerequisites
-- Docker Desktop with Postgres exposed on host `5433` (mapped to container `5432`).  
+- Docker Desktop with Postgres exposed on host `5444` (mapped to container `5432`).  
 - Dokploy with network access to Supabase Postgres `10.0.2.4:5433`.  
 - Optional MCP bridge available for remote-triggered operations.  
 - `.env` / `.env.production` include tenant/runtime and system URLs:
-  - `DATABASE_URL=postgresql://tenant_<slug>_user:<password>@localhost:5433/postgres?schema=tenant_<slug>`
-  - `SYSTEM_DATABASE_URL=postgresql://postgres:<admin>@localhost:5433/postgres?schema=public`
+  - `DATABASE_URL=postgresql://tenant_<slug>_user:<password>@localhost:5444/postgres?schema=tenant_<slug>`
+  - `SYSTEM_DATABASE_URL=postgresql://postgres:<admin>@localhost:5444/postgres?schema=public`
 
 ## Starting a new project
 1) Clone + install  
@@ -48,7 +51,7 @@ npm install
 ```
 npm run db:init -- --slug <slug>
 ```
-   - Dev: hits `localhost:5433` via `SYSTEM_DATABASE_URL`.  
+   - Dev: hits `localhost:5444` via `SYSTEM_DATABASE_URL`.  
    - Prod: run inside Dokploy against `10.0.2.4:5433`.  
    - Creates schema/user + registry; in dev writes `DATABASE_URL`/`APP_SLUG` (and sets `SYSTEM_DATABASE_URL` if missing) into `.env`.
 

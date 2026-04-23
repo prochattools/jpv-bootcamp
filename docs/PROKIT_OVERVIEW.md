@@ -21,7 +21,7 @@ ProKit is ProChat’s internal SaaS starter (built by Steve Westhoek) for launch
 - Provision with `npm run db:init -- --slug <slug> [--preview]`; cleanup with `npm run db:cleanup -- --slug <slug> [--force]`; migrations via `npm run db:migrate:dev|prod`.
 
 ## Infra expectations
-- Dev: Docker Postgres on `localhost:5433`; `npm run dev` bootstraps `.env`, provisions default tenant, runs migrations, and starts Next.js dev server.  
+- Dev: Docker Postgres on `localhost:5444`; `npm run dev` bootstraps `.env`, provisions default tenant, runs migrations, and starts Next.js dev server.  
 - Prod: Dokploy containers inside a VNet with Supabase Postgres at `10.0.2.4:5433`; Dokploy jobs run the same scripts for provisioning/migrations. Optional MCP bridge can trigger those scripts remotely.
 
 ## Day-to-day dev workflow

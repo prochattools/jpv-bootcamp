@@ -1,9 +1,9 @@
--- Align tenant_jpvbootcamp.stripe_webhook_events to expected columns.
+-- Align jpvbootcamp.stripe_webhook_events to expected columns.
 -- Adds missing columns only; no drops.
 
-create schema if not exists tenant_jpvbootcamp;
+create schema if not exists jpvbootcamp;
 
-create table if not exists tenant_jpvbootcamp.stripe_webhook_events (
+create table if not exists jpvbootcamp.stripe_webhook_events (
   event_id text primary key,
   type text,
   livemode boolean,
@@ -12,7 +12,7 @@ create table if not exists tenant_jpvbootcamp.stripe_webhook_events (
   payload jsonb
 );
 
-alter table tenant_jpvbootcamp.stripe_webhook_events
+alter table jpvbootcamp.stripe_webhook_events
   add column if not exists event_id text,
   add column if not exists type text,
   add column if not exists livemode boolean,
@@ -21,4 +21,4 @@ alter table tenant_jpvbootcamp.stripe_webhook_events
   add column if not exists payload jsonb;
 
 create unique index if not exists stripe_webhook_events_event_id_idx
-  on tenant_jpvbootcamp.stripe_webhook_events (event_id);
+  on jpvbootcamp.stripe_webhook_events (event_id);
