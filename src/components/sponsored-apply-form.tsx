@@ -14,6 +14,7 @@ type Props = {
 export default function SponsoredApplyForm({ initialCounts }: Props) {
 	const [name, setName] = useState('')
 	const [email, setEmail] = useState('')
+	const [phone, setPhone] = useState('')
 	const [message, setMessage] = useState('')
 	const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle')
 	const [note, setNote] = useState('')
@@ -27,7 +28,7 @@ export default function SponsoredApplyForm({ initialCounts }: Props) {
 			const response = await fetch('/api/sponsored-applications', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ name, email, message }),
+				body: JSON.stringify({ name, email, phone, message }),
 			})
 			const payload = await response.json()
 			if (!response.ok) {
@@ -86,6 +87,24 @@ export default function SponsoredApplyForm({ initialCounts }: Props) {
 						className="mt-2 w-full rounded border border-neutral-300 px-3 py-2 text-sm"
 						placeholder="you@example.com"
 					/>
+				</div>
+				<div>
+					<label className="text-sm font-medium text-neutral-900">
+						Phone number
+					</label>
+					<input
+						type="tel"
+						value={phone}
+						onChange={(event) => setPhone(event.target.value)}
+						required
+						autoComplete="tel"
+						inputMode="tel"
+						className="mt-2 w-full rounded border border-neutral-300 px-3 py-2 text-sm"
+						placeholder="+44 20 7946 0958"
+					/>
+					<p className="mt-1 text-xs text-neutral-500">
+						Include the country code. Any international format is fine.
+					</p>
 				</div>
 				<div>
 					<label className="text-sm font-medium text-neutral-900">

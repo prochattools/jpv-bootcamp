@@ -2,6 +2,7 @@ import 'server-only'
 import { Resend } from 'resend'
 import { redactEmail } from '@/lib/log-redact'
 import { getPublicBaseUrl } from '@/lib/public-base-url'
+import { formatPhoneForDisplay } from '@/lib/normalize-phone'
 
 type SponsoredCounts = {
 	pro: number
@@ -89,6 +90,7 @@ export async function sendSponsoredApplicationAdminEmail(params: {
 	applicationId: string
 	applicantName: string
 	applicantEmail: string
+	applicantPhone: string
 	message?: string | null
 	approveToken: string
 	rejectToken: string
@@ -101,6 +103,7 @@ export async function sendSponsoredApplicationAdminEmail(params: {
 
 	const safeName = escapeHtml(params.applicantName)
 	const safeEmail = escapeHtml(params.applicantEmail)
+	const safePhone = escapeHtml(formatPhoneForDisplay(params.applicantPhone))
 	const safeMessage = params.message ? escapeHtml(params.message) : ''
 
 	const countsLine = params.counts
@@ -131,6 +134,7 @@ export async function sendSponsoredApplicationAdminEmail(params: {
 		<p><strong>Requested tier:</strong> ${tierLabel}</p>
 		<p><strong>Name:</strong> ${safeName}</p>
 		<p><strong>Email:</strong> ${safeEmail}</p>
+		<p><strong>Phone:</strong> ${safePhone}</p>
 		${safeMessage ? `<p><strong>Message:</strong><br/>${safeMessage}</p>` : ''}
 		${countsLine ? `<p>${escapeHtml(countsLine)}</p>` : ''}
 		<p>
@@ -151,6 +155,7 @@ export async function sendSponsoredApplicationAdminEmail(params: {
 		`Requested tier: ${tierLabel}`,
 		`Name: ${params.applicantName}`,
 		`Email: ${params.applicantEmail}`,
+		`Phone: ${formatPhoneForDisplay(params.applicantPhone)}`,
 		params.message ? `Message: ${params.message}` : null,
 		countsLine ? countsLine : null,
 		`Approve: ${approveUrl}`,

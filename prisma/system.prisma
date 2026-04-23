@@ -124,6 +124,7 @@ model SponsoredApplication {
   email              String?  @map("email")
   emailHash          String   @map("email_hash")
   name               String   @map("name")
+  phone              String   @map("phone")
   message            String?  @map("message")
   lastAdminEmailSentAt DateTime? @map("last_admin_email_sent_at")
   seatId             String?  @db.Uuid @map("seat_id")

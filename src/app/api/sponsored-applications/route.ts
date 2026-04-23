@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/libs/prisma'
 import { normalizeEmail } from '@/lib/normalize-email'
 import { redactEmail } from '@/lib/log-redact'
+import { isValidInternationalPhone, normalizePhone } from '@/lib/normalize-phone'
 import { signSponsoredDecisionToken } from '@/lib/sponsored-approval-token'
 import { sendSponsoredApplicationAdminEmail } from '@/lib/sponsored-email'
 import {
@@ -17,6 +18,7 @@ export const dynamic = 'force-dynamic'
 type ApplicationPayload = {
 	name?: string
 	email?: string
+	phone?: string
 	message?: string
 	tier?: string
 }
@@ -34,6 +36,7 @@ export async function POST(req: NextRequest) {
 	const name = (body?.name ?? '').trim()
 	const emailInput = typeof body?.email === 'string' ? body?.email : ''
 	const normalizedEmail = normalizeEmail(emailInput)
+	const phone = normalizePhone(body?.phone ?? '')
 	const message = (body?.message ?? '').trim()
 
 	if (!name) {
@@ -43,6 +46,13 @@ export async function POST(req: NextRequest) {
 	if (!normalizedEmail || !normalizedEmail.includes('@')) {
 		return NextResponse.json(
 			{ ok: false, reason: 'missing_email' },
+			{ status: 400 }
+		)
+	}
+
+	if (!phone || !isValidInternationalPhone(phone)) {
+		return NextResponse.json(
+			{ ok: false, reason: 'invalid_phone' },
 			{ status: 400 }
 		)
 	}
@@ -111,6 +121,7 @@ export async function POST(req: NextRequest) {
 					email: normalizedEmail,
 					emailHash: hashEmail(normalizedEmail),
 					name,
+					phone,
 					message: message || null,
 					tier,
 				},
@@ -124,6 +135,7 @@ export async function POST(req: NextRequest) {
 				email: normalizedEmail,
 				emailHash: hashEmail(normalizedEmail),
 				name,
+				phone,
 				message: message || null,
 				tier,
 			},
@@ -179,6 +191,7 @@ export async function POST(req: NextRequest) {
 				applicationId: applicationId,
 				applicantName: name,
 				applicantEmail: normalizedEmail,
+				applicantPhone: phone,
 				message: message || null,
 				approveToken,
 				rejectToken,

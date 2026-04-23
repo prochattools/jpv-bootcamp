@@ -10,6 +10,7 @@ import {
 	getSponsoredSeatCounts,
 	getSponsoredPriceId,
 } from '@/lib/sponsored-seats'
+import { formatPhoneForDisplay } from '@/lib/normalize-phone'
 
 export const dynamic = 'force-dynamic'
 
@@ -58,6 +59,9 @@ export default async function SponsoredApplicationsAdminPage() {
 									<div className="text-lg font-semibold">{application.name}</div>
 									<p className="text-xs text-muted-foreground">
 										Email: {application.email ?? 'unknown'}
+									</p>
+									<p className="text-xs text-muted-foreground">
+										Phone: {formatPhoneForDisplay(application.phone)}
 									</p>
 									<p className="text-xs text-muted-foreground">
 										WP User ID: {application.wpUserId ?? 'N/A'}
