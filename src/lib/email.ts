@@ -2,6 +2,12 @@ import 'server-only'
 import { Resend } from 'resend'
 import { getServerConfig } from '@/lib/config'
 import type { Plan } from '@/lib/plans'
+import {
+	getMembershipEmailIntro,
+	getMembershipEmailIntroHtml,
+	getPlanLabel,
+	type MembershipEmailVariant,
+} from '@/lib/membership-email-copy'
 
 // Canonical Resend helpers live in this module; server routes call these functions to send email.
 let resendClient: Resend | null = null
@@ -26,13 +32,9 @@ function isNonWebhookEmailDisabled(): boolean {
 const SUBJECT = 'Your JPV Bootcamp access is ready'
 const SUPPORT_SUBJECT_PREFIX = `JPV Bootcamp Support Request \u2014 `
 
-function getPlanLabel(plan: Plan): string {
-	return plan === 'vip' ? 'VIP' : 'Pro'
-}
-
 type EmailAttemptMeta = {
 	templateKey?: string
-	variant?: 'welcome' | 'upgrade'
+	variant?: MembershipEmailVariant
 	eventId?: string | null
 	eventType?: string | null
 	subscriptionId?: string | null
@@ -99,10 +101,7 @@ export async function sendWelcomeEmail({
 
 	const { email: emailConfig } = getServerConfig()
 	const planLabel = getPlanLabel(plan)
-	const introLine =
-		variant === 'upgrade'
-			? `You've been upgraded to ${planLabel}.`
-			: `Your ${planLabel} plan is active.`
+	const introLine = getMembershipEmailIntro({ plan, variant })
 	const text = [
 		introLine,
 		'',
@@ -113,7 +112,7 @@ export async function sendWelcomeEmail({
 	].join('\n')
 
 	const html = `
-		<p>${variant === 'upgrade' ? `You've been upgraded to <strong>${planLabel}</strong>.` : `Your <strong>${planLabel}</strong> plan is active.`}</p>
+		<p>${getMembershipEmailIntroHtml({ plan, variant })}</p>
 		<p><a href="${emailConfig.portalUrl}">Log in to the portal</a></p>
 		<p><a href="${resetUrl}">Set or reset your password</a></p>
 		<p>If you need help, reply to this email: ${emailConfig.replyTo}</p>

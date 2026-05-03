@@ -9,6 +9,7 @@ import { logProvisioningDecision, provisionFromCheckoutSession, syncFromSubscrip
 import { isSponsoredSeatSession, upsertSponsoredSeatFromSession } from '@/lib/sponsored-seats'
 import { notifySponsoredSeatPurchase } from '@/lib/sponsored-seat-notifications'
 import { getStripe } from '@/lib/stripe'
+import { shouldSendMembershipEmailForEvent } from '@/lib/stripe-membership-email-gate'
 
 const PROVISIONING_EVENT_TYPES = new Set([
 	'checkout.session.completed',
@@ -415,7 +416,7 @@ export async function handleStripeWebhook(req: Request) {
 			logProvisioningSkip(event, 'provisioning_disabled')
 		}
 
-		const allowMembershipEmail = event.type === 'customer.subscription.updated'
+		const allowMembershipEmail = shouldSendMembershipEmailForEvent(event.type)
 
 		switch (event.type) {
 			case 'checkout.session.completed': {
