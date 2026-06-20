@@ -2,8 +2,8 @@
 FROM node:20-bullseye AS base
 WORKDIR /app
 
-# Enable corepack so pnpm is available without a separate install step
-RUN corepack enable
+# Pin pnpm 10.x which supports Node 20 (pnpm 11+ requires Node 22)
+RUN npm install -g pnpm@10.33.0
 
 # ---- Deps ----
 FROM base AS deps
