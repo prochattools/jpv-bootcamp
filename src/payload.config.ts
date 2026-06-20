@@ -12,6 +12,20 @@ import { PayloadCategories } from './collections/PayloadCategories'
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
 
+// Strip Prisma-only ?schema= param — pg doesn't understand it and PostgreSQL
+// rejects it as an unknown configuration parameter, causing connection failure.
+// schemaName below already sets the search_path for Payload's adapter.
+function cleanDbUrl(url: string | undefined): string {
+  if (!url) return ''
+  try {
+    const u = new URL(url)
+    u.searchParams.delete('schema')
+    return u.toString()
+  } catch {
+    return url
+  }
+}
+
 export default buildConfig({
   admin: {
     user: 'payload_users',
@@ -36,7 +50,7 @@ export default buildConfig({
   },
   db: postgresAdapter({
     pool: {
-      connectionString: process.env.DATABASE_URL,
+      connectionString: cleanDbUrl(process.env.DATABASE_URL),
     },
     schemaName: 'jpvbootcamp',
   }),
