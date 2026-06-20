@@ -34,8 +34,11 @@ RUN --mount=type=cache,target=/app/.next/cache \
 # prisma: CLI needed for db:migrate:prod (devDep, not included in standalone)
 FROM node:20-bullseye-slim AS script-deps
 WORKDIR /script-deps
-RUN echo '{"dependencies":{"newrelic":"^13.18.0","pg":"^8","prisma":"6.15.0"}}' > package.json
-RUN npm install --omit=dev --ignore-scripts 2>&1 | tail -1
+# payload + sibling packages needed to run `payload migrate` (Payload's CLI loads config via jiti).
+# Installed with npm (not pnpm) so node_modules uses flat layout — no pnpm symlinks that
+# would conflict with standalone's node_modules when overlaid.
+RUN echo '{"dependencies":{"newrelic":"^13.18.0","pg":"^8","prisma":"6.15.0","payload":"3.85.1","@payloadcms/db-postgres":"3.85.1","@payloadcms/richtext-lexical":"3.85.1","@payloadcms/next":"3.85.1","@payloadcms/ui":"3.85.1","graphql":"^16"}}' > package.json
+RUN npm install --omit=dev --ignore-scripts --legacy-peer-deps 2>&1 | tail -3
 
 # ---- Runner ----
 FROM node:20-bullseye AS runner
@@ -69,6 +72,9 @@ COPY --from=builder /app/public ./public
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/scripts ./scripts
 COPY --from=builder /app/package.json ./package.json
+# Payload CLI needs the TypeScript source to load payload.config via jiti at migrate time
+COPY --from=builder /app/src ./src
+ENV PAYLOAD_CONFIG_PATH=src/payload.config.ts
 
 EXPOSE 3000
 
