@@ -256,10 +256,12 @@ const dirname = path.dirname(filename)
 export default buildConfig({
   admin: {
     user: 'payload_users',
-    routePrefix: '/app',
     importMap: {
       baseDir: path.resolve(dirname),
     },
+  },
+  routes: {
+    admin: '/app',
   },
   collections: [
     PayloadUsers,

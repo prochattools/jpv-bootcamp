@@ -51,8 +51,10 @@ The admin panel lives at `/app` (not the default `/admin`). This is configured v
 // payload.config.ts
 admin: {
   user: 'payload_users',
-  routePrefix: '/app',
-}
+},
+routes: {
+  admin: '/app',
+},
 ```
 
 The Next.js route group at `src/app/(payload)/app/[[...segments]]/page.tsx` maps the `/app` path to Payload's admin handler.
