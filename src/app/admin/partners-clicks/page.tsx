@@ -12,10 +12,10 @@ import { partnerCategories } from '@/content/partners'
 export const dynamic = 'force-dynamic'
 
 type PageProps = {
-	searchParams?: {
+	searchParams?: Promise<{
 		wp_user_id?: string
 		partner_slug?: string
-	}
+	}>
 }
 
 function parseAdminIds(raw: string | undefined): Set<number> {
@@ -38,7 +38,11 @@ function normalizeSlug(value: string | undefined): string | undefined {
 export default async function PartnersClicksAdminPage({
 	searchParams,
 }: PageProps) {
-	const sessionCookie = cookies().get(PARTNERS_SESSION_COOKIE)?.value
+	const [cookieStore, resolvedSearchParams] = await Promise.all([
+		cookies(),
+		searchParams,
+	])
+	const sessionCookie = cookieStore.get(PARTNERS_SESSION_COOKIE)?.value
 	const sessionId = sanitizeSessionId(sessionCookie)
 	if (!sessionId) {
 		notFound()
@@ -54,8 +58,8 @@ export default async function PartnersClicksAdminPage({
 		notFound()
 	}
 
-	const wpUserIdFilter = Number(searchParams?.wp_user_id)
-	const partnerSlugFilter = normalizeSlug(searchParams?.partner_slug)
+	const wpUserIdFilter = Number(resolvedSearchParams?.wp_user_id)
+	const partnerSlugFilter = normalizeSlug(resolvedSearchParams?.partner_slug)
 
 	const filters: Prisma.PartnerClickWhereInput = {}
 

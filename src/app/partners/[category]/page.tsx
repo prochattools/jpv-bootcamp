@@ -9,11 +9,11 @@ import {
 export const dynamic = 'force-dynamic'
 
 type PageProps = {
-	params: { category: string }
+	params: Promise<{ category: string }>
 }
 
-export default function PartnersCategoryPage({ params }: PageProps) {
-	const categorySlug = params.category
+export default async function PartnersCategoryPage({ params }: PageProps) {
+	const { category: categorySlug } = await params
 	if (!isPartnerCategory(categorySlug)) {
 		notFound()
 	}
