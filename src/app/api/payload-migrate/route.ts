@@ -46,20 +46,24 @@ export async function POST() {
     const payload = await getPayload({ config })
     // Payload 3.x postgres adapter exposes migrateUp / migrate on db
     const db = payload.db as unknown as Record<string, unknown>
-    const dbKeys = Object.getOwnPropertyNames(db).filter(k => typeof db[k] === 'function')
-    // Log available methods for diagnostics
-    const protoKeys = Object.getOwnPropertyNames(Object.getPrototypeOf(db)).filter(k => typeof (db as Record<string, unknown>)[k] === 'function')
-    migrateError = `Available db methods (own): ${dbKeys.join(', ')} | proto: ${protoKeys.join(', ')}`
-    // Try each known migration method
-    if (typeof (db as {migrateUp?: ()=>Promise<void>}).migrateUp === 'function') {
-      await (db as {migrateUp: ()=>Promise<void>}).migrateUp()
-      migrateError = null
-    } else if (typeof (db as {migrate?: ()=>Promise<void>}).migrate === 'function') {
-      await (db as {migrate: ()=>Promise<void>}).migrate()
-      migrateError = null
-    } else if (typeof (db as {push?: ()=>Promise<void>}).push === 'function') {
+    // Enumerate all methods — own + prototype
+    const allMethods: string[] = []
+    let proto = db
+    while (proto && proto !== Object.prototype) {
+      Object.getOwnPropertyNames(proto)
+        .filter(k => k !== 'constructor' && typeof (db as Record<string, unknown>)[k] === 'function')
+        .forEach(k => { if (!allMethods.includes(k)) allMethods.push(k) })
+      proto = Object.getPrototypeOf(proto) as Record<string, unknown>
+    }
+    // First: try push (direct schema sync, no migration files needed)
+    if (typeof (db as {push?: ()=>Promise<void>}).push === 'function') {
       await (db as {push: ()=>Promise<void>}).push()
       migrateError = null
+    } else if (typeof (db as {migrateUp?: ()=>Promise<void>}).migrateUp === 'function') {
+      await (db as {migrateUp: ()=>Promise<void>}).migrateUp()
+      migrateError = null
+    } else {
+      migrateError = `No push/migrateUp found. Available methods: ${allMethods.join(', ')}`
     }
   } catch (err: unknown) {
     migrateError = err instanceof Error ? err.message : String(err)
