@@ -1,17 +1,13 @@
 import type React from 'react'
-import { handleServerFunctions, RootLayout } from '@payloadcms/next/layouts'
+import { RootLayout } from '@payloadcms/next/layouts'
 import config from '@payload-config'
 import '@payloadcms/ui/scss/app.scss'
 
 import importMap from './importMap.js'
+import { serverFunction } from './actions.js'
 
 type Args = {
   children: React.ReactNode
-}
-
-const serverFunction: Parameters<typeof RootLayout>[0]['serverFunction'] = async (args) => {
-  'use server'
-  return handleServerFunctions({ ...args, config, importMap })
 }
 
 export default async function Layout({ children }: Args) {
