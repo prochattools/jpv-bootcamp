@@ -6,7 +6,8 @@ ProKit ships with a scripted, environment-safe way to provision databases, run m
 - One Postgres per environment (`postgres` DB).  
 - One app → one schema (`tenant_<slug>`) → one DB user (`tenant_<slug>_user`).  
 - Registry table `public.tenants` is infra-only (provision/cleanup), never read by runtime.  
-- Prisma manages schema + migrations (`prisma/system.prisma`).  
+- Prisma manages schema + migrations (`prisma/system.prisma`) for all non-Payload tables.
+- **Payload CMS** manages its own `payload_*` tables autonomously within the same schema; admin panel at `/app`.
 - Dev runtime + provisioning hit Docker Postgres on `localhost:5444`.  
 - Prod provisioning/migrations run inside Dokploy to Supabase `10.0.2.4:5433` via `SYSTEM_DATABASE_URL`.  
 - Prod runtime uses `DATABASE_URL` (tenant user) only.  
@@ -75,3 +76,11 @@ Runtime always uses `DATABASE_URL`; no host-based tenant routing.
 - Dev: edit `prisma/system.prisma` → `npm run db:migrate:dev` (generates/applies migrations locally).  
 - Prod: deploy code + migrations; Dokploy runs `NODE_ENV=production npm run db:migrate:prod` against `10.0.2.4:5433`.  
 - MCP (optional) may trigger the same commands; must not bypass scripts.
+- Payload CMS tables (`payload_*`) are managed by Payload itself — do not add them to Prisma migrations.
+
+## Payload CMS service
+- Admin URL: `https://jpvbootcamp.com/app`
+- Installed inside the `jpv-bootcamp` Next.js repo (not a separate service)
+- Additional env vars required: `PAYLOAD_SECRET`, `NEXT_PUBLIC_SERVER_URL`
+- Node 20 required (`.nvmrc` enforces this); pnpm required (`package.json` enforces this)
+- See `docs/PAYLOAD_CMS.md` and `docs/PAYLOAD_INTEGRATION_PLAN.md` for full details

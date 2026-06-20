@@ -2,6 +2,8 @@
 
 > Stripe note: In this repo, every Stripe reference means the JPV Bootcamp Stripe account.
 
+> **Payload CMS note**: The Payload admin panel (`/app`) is a future editorial surface. It does NOT handle Stripe webhooks, WP provisioning, or billing portal flows. Those remain exclusively in the existing Next.js routes. Do not route Stripe events through Payload's webhook endpoint.
+
 ## Contract (Email + Provisioning)
 - Exactly **2 emails** on a successful PRO or VIP purchase:
   1) **Membership email** from Resend (support@jpvbootcamp.com or configured sender) – sent **only** from the Stripe webhook provisioning path and **only once** per plan change.

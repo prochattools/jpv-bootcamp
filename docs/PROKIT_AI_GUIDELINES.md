@@ -63,6 +63,15 @@ ProKit must remain generic.
 - Infra changes must be reflected in `README.md`, `docs/PROKIT_DATABASE.md`, `docs/PROKIT_INFRASTRUCTURE.md`, `docs/PROKIT_TENANT_CLEANUP.md`.
 - If anything conflicts with this file, this file wins unless a human explicitly approves the change.
 
+## 7) Payload CMS rules (jpv-bootcamp specific)
+- All Payload collections must use `dbName` prefixed with `payload_` to avoid collisions with Prisma tables.
+- Do not add `payload_*` tables to `prisma/system.prisma` — Payload manages them.
+- Do not query Prisma tables from Payload hooks, and do not query Payload tables from Prisma clients.
+- The `payload_users` collection is for CMS editorial users only — not Clerk users, WP members, or Stripe customers.
+- The existing Stripe webhook handler at `/api/webhook/stripe` must not be altered. It is independent of Payload.
+- When adding Payload collections or plugins, always run `pnpm payload generate:types` and `pnpm payload generate:importmap`.
+- Payload environment changes must be reflected in `docs/PAYLOAD_CMS.md` and `docs/PAYLOAD_INTEGRATION_PLAN.md`.
+
 ## 7) Summary
 ProKit is a stable SaaS starter. AI may improve features, fix bugs, and enhance DX, but must not:
 - break single-tenant architecture  
