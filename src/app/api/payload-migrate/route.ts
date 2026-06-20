@@ -45,18 +45,21 @@ export async function POST() {
   try {
     const payload = await getPayload({ config })
     // Payload 3.x postgres adapter exposes migrateUp / migrate on db
-    const db = payload.db as unknown as {
-      migrateUp?: () => Promise<void>
-      migrate?: () => Promise<void>
-      connect?: () => Promise<void>
-      migrateStatus?: () => Promise<unknown>
-    }
-    if (typeof db.migrateUp === 'function') {
-      await db.migrateUp()
-    } else if (typeof db.migrate === 'function') {
-      await db.migrate()
-    } else {
-      migrateError = `db.migrateUp not available. db keys: ${Object.keys(db).join(', ')}`
+    const db = payload.db as unknown as Record<string, unknown>
+    const dbKeys = Object.getOwnPropertyNames(db).filter(k => typeof db[k] === 'function')
+    // Log available methods for diagnostics
+    const protoKeys = Object.getOwnPropertyNames(Object.getPrototypeOf(db)).filter(k => typeof (db as Record<string, unknown>)[k] === 'function')
+    migrateError = `Available db methods (own): ${dbKeys.join(', ')} | proto: ${protoKeys.join(', ')}`
+    // Try each known migration method
+    if (typeof (db as {migrateUp?: ()=>Promise<void>}).migrateUp === 'function') {
+      await (db as {migrateUp: ()=>Promise<void>}).migrateUp()
+      migrateError = null
+    } else if (typeof (db as {migrate?: ()=>Promise<void>}).migrate === 'function') {
+      await (db as {migrate: ()=>Promise<void>}).migrate()
+      migrateError = null
+    } else if (typeof (db as {push?: ()=>Promise<void>}).push === 'function') {
+      await (db as {push: ()=>Promise<void>}).push()
+      migrateError = null
     }
   } catch (err: unknown) {
     migrateError = err instanceof Error ? err.message : String(err)
