@@ -1,0 +1,6 @@
+Loading existing graph...
+Graph: 985 nodes, 1714 edges
+Re-clustering...
+Done - 128 communities. GRAPH_REPORT.md, graph.json and graph.html updated.
+applied deterministic community names communities=128
+injected community names into graph.html communities=128

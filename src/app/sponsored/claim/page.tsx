@@ -7,7 +7,7 @@ import { normalizeSponsoredTier } from '@/lib/sponsored-seats'
 export const dynamic = 'force-dynamic'
 
 type PageProps = {
-	searchParams?: { token?: string }
+	searchParams?: Promise<{ token?: string }>
 }
 
 type ClaimOutcome =
@@ -34,7 +34,8 @@ function messageForOutcome(outcome: ClaimOutcome) {
 }
 
 export default async function SponsoredClaimPage({ searchParams }: PageProps) {
-	const token = (searchParams?.token ?? '').trim()
+	const params = await searchParams
+	const token = (params?.token ?? '').trim()
 	const secret = (process.env.SPONSORED_CLAIM_SECRET || '').trim()
 	if (!secret) {
 		throw new Error('Missing required env var: SPONSORED_CLAIM_SECRET')

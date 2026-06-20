@@ -1,0 +1,5 @@
+[graphify extract] incremental scan of /Users/Office/Repos/prochattools/clients/jc-citadel/jpv-bootcamp
+[graphify extract] 0 code, 0 docs, 0 papers, 0 images changed; 19 unchanged; 275 deleted
+[graphify] backed up semantic+curated graph (6 files) -> 2026-06-20/
+[graphify extract] wrote /Users/Office/Repos/prochattools/clients/jc-citadel/jpv-bootcamp/graphify-out/graph.json — 0 nodes, 0 edges (no clustering)
+merged phase overlay graph nodes=985 edges=1714

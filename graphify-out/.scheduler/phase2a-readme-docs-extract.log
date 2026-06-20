@@ -1,0 +1,7 @@
+[graphify extract] incremental scan of /Users/Office/Repos/prochattools/clients/jc-citadel/jpv-bootcamp
+[graphify extract] 0 code, 1 docs, 0 papers, 0 images changed; 0 unchanged; 275 deleted
+[graphify extract] semantic extraction on 1 files via ollama...
+[graphify extract] chunk 1/1 done
+[graphify extract] wrote /Users/Office/Repos/prochattools/clients/jc-citadel/jpv-bootcamp/graphify-out/graph.json — 3 nodes, 2 edges (no clustering)
+[graphify extract] tokens: 579 in / 910 out, est. cost: $0.0000
+merged phase overlay graph nodes=989 edges=1726
