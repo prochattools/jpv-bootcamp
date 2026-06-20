@@ -2,12 +2,15 @@
 FROM node:20-bullseye AS base
 WORKDIR /app
 
+# Pin pnpm 10.x which supports Node 20 (pnpm 11+ requires Node 22)
+RUN npm install -g pnpm@10.33.0
+
 # ---- Deps ----
 FROM base AS deps
-COPY package.json package-lock.json* ./
+COPY package.json pnpm-lock.yaml .npmrc ./
 COPY prisma ./prisma
-RUN --mount=type=cache,target=/root/.npm \
-    npm ci
+RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile
 
 # ---- Builder ----
 FROM base AS builder
@@ -18,19 +21,21 @@ ENV DATABASE_URL=postgresql://build:build@localhost:5432/build
 # NEXT_PUBLIC_* vars are baked into the client bundle at build time — must use real production value.
 ENV NEXT_PUBLIC_APP_URL=https://jpvbootcamp.com
 ENV APP_BASE_URL=https://jpvbootcamp.com
+ENV NEXT_PUBLIC_SERVER_URL=https://jpvbootcamp.com
 RUN --mount=type=cache,target=/app/.next/cache \
-    npx prisma generate --schema=prisma/system.prisma && \
-    npm run build
+    node_modules/.bin/prisma generate --schema=prisma/system.prisma && \
+    pnpm run build
 
-# ---- Runtime deps (isolated: newrelic + pg + prisma, no npm cache in final image) ----
-# newrelic: loaded via NODE_OPTIONS=--require newrelic
-# pg: used by scripts/db/init-tenant.js (deploy gate)
-# prisma: CLI needed for db:migrate:prod
-FROM node:20-bullseye-slim AS runtime-deps
-WORKDIR /nr
-RUN echo '{"dependencies":{"newrelic":"^13.18.0","pg":"^8"}}' > package.json
+# ---- Script deps (kept separate to avoid conflicting with standalone's pnpm symlinks) ----
+# standalone/node_modules uses pnpm symlinks; overlaying a second node_modules on top
+# causes "cannot copy to non-directory" in buildkit. Separate path avoids the conflict.
+# newrelic: loaded via NODE_OPTIONS=--require newrelic (not traced by Next.js standalone)
+# pg: used by scripts/db/init-tenant.js at deploy time
+# prisma: CLI needed for db:migrate:prod (devDep, not included in standalone)
+FROM node:20-bullseye-slim AS script-deps
+WORKDIR /script-deps
+RUN echo '{"dependencies":{"newrelic":"^13.18.0","pg":"^8","prisma":"6.15.0"}}' > package.json
 RUN npm install --omit=dev --ignore-scripts 2>&1 | tail -1
-RUN npm install --omit=dev prisma@6.15.0 2>&1 | tail -1
 
 # ---- Runner ----
 FROM node:20-bullseye AS runner
@@ -52,13 +57,18 @@ RUN apt-get update && apt-get install -y \
     && apt-get update && apt-get install -y postgresql-client-15 \
     && rm -rf /var/lib/apt/lists/*
 
+# Script-only deps at a separate path — does not touch standalone's node_modules
+COPY --from=script-deps /script-deps/node_modules /script-deps/node_modules
+# prisma CLI available to npm run scripts; pg + newrelic resolvable via NODE_PATH
+ENV PATH="/script-deps/node_modules/.bin:${PATH}"
+ENV NODE_PATH=/script-deps/node_modules
+
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/scripts ./scripts
 COPY --from=builder /app/package.json ./package.json
-COPY --from=runtime-deps /nr/node_modules ./node_modules
 
 EXPOSE 3000
 

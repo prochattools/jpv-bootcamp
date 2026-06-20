@@ -103,10 +103,24 @@ Command: `npm run db:cleanup -- --slug <slug> [--force]`
 - Cleanup: `NODE_ENV=production npm run db:cleanup -- --slug pr_42`
 
 ## Migrations & Schema Sync
+
+### Prisma migrations (existing tables)
 - Prisma schema: `prisma/system.prisma`.  
 - Dev: `npm run db:migrate:dev` → `prisma migrate deploy --schema=prisma/system.prisma` against `localhost:5444`, applying existing migrations.  
 - Prod: `NODE_ENV=production npm run db:migrate:prod` → `prisma migrate deploy --schema=prisma/system.prisma` inside Dokploy.  
 - Contract: new app versions must not boot without successful `db:migrate:prod`; no raw SQL migrations outside Prisma; `prisma/system.prisma` and `prisma/migrations` stay aligned.
+
+### Payload CMS migrations (payload_* tables)
+- Payload manages its own tables autonomously (all prefixed `payload_`).
+- Payload auto-applies its own migrations on startup — no manual migration command is needed.
+- Payload tables live in the same `jpvbootcamp` schema alongside Prisma tables; the `payload_` prefix prevents naming conflicts.
+- Do not add `payload_*` tables to `prisma/system.prisma` — Payload owns them exclusively.
+- Do not touch Payload tables from Prisma, and do not touch Prisma tables from Payload hooks.
+
+| Manager | Owns | Command |
+|---------|------|---------|
+| Prisma | `customer_provisioning`, `stripe_webhook_events`, `Subscription`, `Project`, etc. | `npm run db:migrate:dev` / `db:migrate:prod` |
+| Payload | `payload_users`, `payload_posts`, `payload_pages`, `payload_media`, `payload_categories`, `payload_migrations`, `payload_preferences`, `payload_sessions` | Auto on startup |
 
 ## Optional MCP / Automation Bridge
 - RPC layer at `https://mcp.prochat.tools` (replaceable).  
@@ -133,5 +147,7 @@ Command: `npm run db:cleanup -- --slug <slug> [--force]`
 - Infra/network layout: `docs/PROKIT_INFRASTRUCTURE.md`  
 - Dev workflow: `docs/PROKIT_DEV_GUIDE.md`  
 - Cleanup details: `docs/PROKIT_TENANT_CLEANUP.md`
+- Payload CMS database model: `docs/PAYLOAD_CMS.md`
+- Payload integration plan: `docs/PAYLOAD_INTEGRATION_PLAN.md`
 - Shared local app and OrbStack database inventory: `/Users/Office/Repos/stevewesthoek/brain/operations/infrastructure/local-apps.md`
 - Standalone OrbStack Postgres map: `/Users/Office/Repos/stevewesthoek/brain/operations/database/standalone/README.md`

@@ -2,6 +2,14 @@
 
 This file captures the contracts that must stay stable while rebranding the boilerplate into **ProKit**. Behavior stays the same; wording and structure can change later phases.
 
+## Payload CMS additions (jpv-bootcamp specific)
+- `PAYLOAD_SECRET` – Payload auth token signing secret (32+ chars, required).
+- `NEXT_PUBLIC_SERVER_URL` – Base URL for Payload admin links (e.g. `https://jpvbootcamp.com`).
+- Node 20 is required (`.nvmrc`); pnpm is required (`engines.pnpm` in `package.json`).
+- Payload admin panel is at `/app` (not the Payload default `/admin`).
+- All Payload tables are prefixed `payload_` and live in the `jpvbootcamp` schema.
+- Payload manages its own migrations; do not include `payload_*` tables in `prisma/system.prisma`.
+
 ## Environment Contract (must exist unless marked optional)
 - Core DB + runtime  
   - `APP_SLUG` – canonical tenant slug (becomes `tenant_<slug>` schema + user).  

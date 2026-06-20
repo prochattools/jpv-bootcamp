@@ -15,7 +15,7 @@ import { formatPhoneForDisplay } from '@/lib/normalize-phone'
 export const dynamic = 'force-dynamic'
 
 export default async function SponsoredApplicationsAdminPage() {
-	const sessionCookie = cookies().get('partners_session')?.value
+	const sessionCookie = (await cookies()).get('partners_session')?.value
 	const sessionId = sanitizeSessionId(sessionCookie)
 	if (!sessionId) {
 		notFound()

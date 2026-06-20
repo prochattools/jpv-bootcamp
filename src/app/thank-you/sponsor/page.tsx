@@ -4,11 +4,12 @@ import { isSponsoredSeatSession } from '@/lib/sponsored-seats'
 export const dynamic = 'force-dynamic'
 
 type PageProps = {
-	searchParams?: { session_id?: string }
+	searchParams?: Promise<{ session_id?: string }>
 }
 
 export default async function SponsoredThankYouPage({ searchParams }: PageProps) {
-	const sessionId = (searchParams?.session_id ?? '').trim()
+	const params = await searchParams
+	const sessionId = (params?.session_id ?? '').trim()
 	let tierLabel: string | null = null
 
 	if (sessionId) {

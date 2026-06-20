@@ -21,9 +21,10 @@ function isSafeAffiliateUrl(url: string): boolean {
 
 export async function GET(
 	req: NextRequest,
-	{ params }: { params: { partnerSlug: string } }
+	{ params }: { params: Promise<{ partnerSlug: string }> }
 ) {
-	const partnerSlug = params.partnerSlug?.toLowerCase() ?? ''
+	const { partnerSlug: rawSlug } = await params
+	const partnerSlug = rawSlug?.toLowerCase() ?? ''
 	const partner = partnerSlug ? getPartnerBySlug(partnerSlug) : null
 	if (!partner || !isSafeAffiliateUrl(partner.affiliate_url)) {
 		return NextResponse.redirect(DEFAULT_PARTNERS_URL)

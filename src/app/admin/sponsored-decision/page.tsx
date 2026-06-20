@@ -27,12 +27,13 @@ function getMessage(result: DecisionResult) {
 	}
 }
 
-export default function SponsoredDecisionPage({
+export default async function SponsoredDecisionPage({
 	searchParams,
 }: {
-	searchParams?: { result?: string }
+	searchParams?: Promise<{ result?: string }>
 }) {
-	const raw = searchParams?.result
+	const params = await searchParams
+	const raw = params?.result
 	const result =
 		raw === 'approved' ||
 		raw === 'rejected' ||

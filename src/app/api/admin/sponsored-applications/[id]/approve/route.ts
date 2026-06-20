@@ -31,7 +31,7 @@ async function parsePayload(req: NextRequest): Promise<ApprovePayload> {
 
 export async function POST(
 	req: NextRequest,
-	{ params }: { params: { id: string } }
+	{ params }: { params: Promise<{ id: string }> }
 ) {
 	const sessionCookie = req.cookies.get('partners_session')?.value
 	const sessionId = sanitizeSessionId(sessionCookie)
@@ -44,7 +44,7 @@ export async function POST(
 		return NextResponse.json({ ok: false, reason: 'forbidden' }, { status: 403 })
 	}
 
-	const applicationId = params.id
+	const { id: applicationId } = await params
 	if (!applicationId) {
 		return NextResponse.json({ ok: false, reason: 'missing_id' }, { status: 400 })
 	}

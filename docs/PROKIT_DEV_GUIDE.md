@@ -6,6 +6,12 @@ This is the working agreement for building SaaS products with ProKit. It keeps t
 - Solo indie workflow.
 - B2B micro-SaaS that copies proven products, fills gaps, and stays small/sane.
 - Default stack: Next.js (App Router preferred), TypeScript, React + Tailwind/shadcn/ui, Clerk, Postgres/Prisma, Resend, Stripe (JPV Bootcamp Stripe account), n8n.
+- **Content layer**: Payload CMS (admin at `/app`), running side by side with WordPress during gradual migration.
+
+## Node and package manager requirements (jpv-bootcamp)
+- **Node 20** — Payload 3.x requires Node ≤ 20. Use `nvm use 20` (`.nvmrc` is set to `20`).
+- **pnpm** — Payload requires pnpm. Install globally: `npm install -g pnpm`. `package.json` enforces `pnpm: ^9 || ^10`.
+- All dev commands below use `pnpm`; DB provisioning scripts still use `npm run` (they do not depend on pnpm).
 
 > Stripe note: In this repo, every Stripe reference means the JPV Bootcamp Stripe account.
 
@@ -50,6 +56,15 @@ When asked for ideas, give one primary and 1–2 lighter options with ICP, value
 4) Include env vars, schema changes, and dependencies when needed.
 
 Large refactors should be phased and highlight risk areas (auth, billing, data migrations).
+
+### Payload CMS commands
+```bash
+pnpm payload generate:types       # Regenerate payload-types.ts after schema changes
+pnpm payload generate:importmap   # Regenerate import map after adding collections/plugins
+pnpm dev                          # Payload auto-migrates its tables on first run
+```
+
+Payload admin panel: `http://localhost:3000/app` (dev) / `https://jpvbootcamp.com/app` (prod).
 
 ## Business/ethics overlay
 - Favor honest UX and clear pricing; avoid dark patterns.  
