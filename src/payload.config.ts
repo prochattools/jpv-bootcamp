@@ -54,10 +54,8 @@ export default buildConfig({
       connectionString: cleanDbUrl(process.env.DATABASE_URL),
     },
     schemaName: 'jpvbootcamp',
-    migrations,
-    // Run pending migrations automatically on startup in production.
-    // Idempotent: already-applied migrations are skipped.
-    // This replaces the payload CLI migrate step which fails due to ESM/CJS interop.
+    // Run pending migrations automatically on connect in production (NODE_ENV=production).
+    // Idempotent: already-applied migrations are skipped via payload_migrations table.
     prodMigrations: migrations,
   }),
   serverURL: process.env.NEXT_PUBLIC_SERVER_URL,
