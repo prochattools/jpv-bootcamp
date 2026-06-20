@@ -299,9 +299,7 @@ export DATABASE_URL="$ORIGINAL_DATABASE_URL"
 MIGRATION_STATUS="success"
 write_status
 
-echo "[deploy] running payload:migrate (creates payload_* tables if missing)"
-export DATABASE_URL="$ORIGINAL_DATABASE_URL"
-npm run payload:migrate || true
+echo "[deploy] payload_* tables will be created on first app startup via prodMigrations option"
 
 SMOKE_STATUS="running"
 write_status

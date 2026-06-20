@@ -24,8 +24,7 @@
 		"db:cleanup:public": "node scripts/db/cleanup-public-runtime.js",
 		"db:migrate:dev": "prisma migrate deploy --schema=prisma/system.prisma",
 		"db:migrate:prod": "prisma migrate deploy --schema=prisma/system.prisma",
-		"payload:migrate": "payload migrate",
-		"db:dedupe:check": "tsx scripts/db/test_customer_provisioning_dedupe.ts",
+				"db:dedupe:check": "tsx scripts/db/test_customer_provisioning_dedupe.ts",
 		"stripe:check-products": "tsx scripts/stripe/check_price_products.ts",
 		"mcp:discover": "tsx scripts/mcp-discover.ts",
 		"mcp:provision": "tsx scripts/mcp-provision-tenant.ts"

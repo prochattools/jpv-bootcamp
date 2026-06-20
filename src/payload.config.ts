@@ -8,6 +8,7 @@ import { PayloadMedia } from './collections/PayloadMedia'
 import { PayloadPages } from './collections/PayloadPages'
 import { PayloadPosts } from './collections/PayloadPosts'
 import { PayloadCategories } from './collections/PayloadCategories'
+import { migrations } from './migrations'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -53,6 +54,11 @@ export default buildConfig({
       connectionString: cleanDbUrl(process.env.DATABASE_URL),
     },
     schemaName: 'jpvbootcamp',
+    migrations,
+    // Run pending migrations automatically on startup in production.
+    // Idempotent: already-applied migrations are skipped.
+    // This replaces the payload CLI migrate step which fails due to ESM/CJS interop.
+    prodMigrations: migrations,
   }),
   serverURL: process.env.NEXT_PUBLIC_SERVER_URL,
 })
