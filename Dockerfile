@@ -2,12 +2,15 @@
 FROM node:20-bullseye AS base
 WORKDIR /app
 
+# Enable corepack so pnpm is available without a separate install step
+RUN corepack enable
+
 # ---- Deps ----
 FROM base AS deps
-COPY package.json package-lock.json* ./
+COPY package.json pnpm-lock.yaml .npmrc ./
 COPY prisma ./prisma
-RUN --mount=type=cache,target=/root/.npm \
-    npm ci
+RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile
 
 # ---- Builder ----
 FROM base AS builder
@@ -18,11 +21,12 @@ ENV DATABASE_URL=postgresql://build:build@localhost:5432/build
 # NEXT_PUBLIC_* vars are baked into the client bundle at build time — must use real production value.
 ENV NEXT_PUBLIC_APP_URL=https://jpvbootcamp.com
 ENV APP_BASE_URL=https://jpvbootcamp.com
+ENV NEXT_PUBLIC_SERVER_URL=https://jpvbootcamp.com
 RUN --mount=type=cache,target=/app/.next/cache \
-    npx prisma generate --schema=prisma/system.prisma && \
-    npm run build
+    node_modules/.bin/prisma generate --schema=prisma/system.prisma && \
+    pnpm run build
 
-# ---- Runtime deps (isolated: newrelic + pg + prisma, no npm cache in final image) ----
+# ---- Runtime deps (isolated: newrelic + pg + prisma, no pnpm cache in final image) ----
 # newrelic: loaded via NODE_OPTIONS=--require newrelic
 # pg: used by scripts/db/init-tenant.js (deploy gate)
 # prisma: CLI needed for db:migrate:prod
