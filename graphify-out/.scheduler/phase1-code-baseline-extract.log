@@ -1,7 +1,0 @@
-[graphify extract] incremental scan of /Users/Office/Repos/prochattools/clients/jc-citadel/jpv-bootcamp
-[graphify extract] 0 code, 0 docs, 0 papers, 0 images changed; 253 unchanged; 41 deleted
-[graphify] backed up semantic+curated graph (6 files) -> 2026-06-20/
-[graphify extract] wrote /Users/Office/Repos/prochattools/clients/jc-citadel/jpv-bootcamp/graphify-out/graph.json: 985 nodes, 1714 edges, 128 communities
-[graphify extract] wrote /Users/Office/Repos/prochattools/clients/jc-citadel/jpv-bootcamp/graphify-out/.graphify_analysis.json
-[graphify extract] incremental summary: 253 files cached/unchanged, 0 re-extracted, 41 deleted
-[graphify extract] next: run `graphify cluster-only /Users/Office/Repos/prochattools/clients/jc-citadel/jpv-bootcamp` to generate GRAPH_REPORT.md and name communities
