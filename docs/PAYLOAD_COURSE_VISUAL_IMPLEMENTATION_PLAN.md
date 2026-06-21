@@ -28,6 +28,8 @@ As of `20260621_194424_course_system_phase1` on `feature/course-branding-and-pre
 - `src/lib/payloadCourse/reconcileEntitlements.ts` and `scripts/payload/reconcile-entitlements.mts` contain a read-only entitlement reconciliation dry-run. It compares members, published courses, policies, active grants, subscriptions, and effective access decisions.
 - `src/lib/payloadCourse/stripeShadowSync.ts` contains the Stripe-to-Payload billing mirror service. It is wired into the verified Stripe webhook handler behind `PAYLOAD_BILLING_SHADOW_SYNC_ENABLED`; when disabled, the current WordPress/FluentCRM provisioning path is unchanged.
 - `scripts/payload_course_stripe_shadow_sync.test.ts` covers active subscription mirroring, duplicate Stripe event idempotency, cancellation blocking, payment failure blocking, payment recovery restore, and preserving manually suspended accounts.
+- `src/lib/payloadCourse/emailSender.ts` contains the queued Payload email sender. It consumes `payload_email_events`, renders active `payload_email_templates`, sends through Resend with an idempotency key, and updates delivery state. It is not scheduled or auto-enabled.
+- `scripts/payload/send-queued-emails.mts` is the operator command for queued Payload emails. It defaults to dry-run without delivery-state writes; `--apply` is required before any Resend send or send-failure write happens.
 - `scripts/payload/seed-course-admin-data.mts` contains an idempotent seed runner for access groups, prototype/admin courses, modules, lessons, email templates, community spaces, and access policies. It defaults to dry-run and writes only with `--apply`.
 - `src/migrations/20260621_194424_course_system_phase1.ts` creates the course-system Payload tables and has been applied to staging.
 - Staging now has 56 `payload_*` tables and records both Payload migrations in `payload_migrations`.
@@ -36,7 +38,7 @@ As of `20260621_194424_course_system_phase1` on `feature/course-branding-and-pre
 - `scripts/db/deploy-prod.sh` normalizes schema object ownership to the tenant user before Payload `prodMigrations` run on app startup.
 - `/course-preview` routes are still static demonstration pages and are guarded by `PAYLOAD_COURSE_PROTOTYPE_ENABLED`.
 
-This is scaffolding and groundwork plus tested read-side, admin mutation, reconciliation, and Stripe shadow-sync services. It does not yet make Payload the live runtime source for Stripe provisioning, student login flows, actual Resend sends, or community posting. Stripe shadow sync remains a feature-flagged mirror until staging replay and reconciliation pass.
+This is scaffolding and groundwork plus tested read-side, admin mutation, reconciliation, Stripe shadow-sync, and queued-email sender services. It does not yet make Payload the live runtime source for Stripe provisioning, student login flows, scheduled Resend sends, or community posting. Stripe shadow sync remains a feature-flagged mirror until staging replay and reconciliation pass.
 
 ## Critical findings from review
 
@@ -768,6 +770,13 @@ Done when:
 - Each template has a key, subject, audience, active flag, and last-reviewed date.
 - Sending uses the active reviewed template.
 
+Implementation status:
+
+- `src/lib/payloadCourse/emailSender.ts` sends only queued `payload_email_events` and only with an active matching `payload_email_templates` record.
+- Resend sends use the event `dedupeKey` as the SDK `idempotencyKey`, truncated with a SHA-256 suffix if needed to stay within Resend's 256 character limit.
+- `scripts/payload/send-queued-emails.mts` defaults to dry-run without delivery-state writes and sends only with `--apply`.
+- The sender is not cron-scheduled and is not enabled automatically in staging or production.
+
 ### Phase 7 - Learner frontend with real access
 
 Purpose: replace the visual preview with authenticated, gated learner pages.
@@ -1035,8 +1044,8 @@ Stop and request an architectural decision if:
 The first scaffolding slice is complete. Do this next:
 
 1. Shadow-sync Stripe/customer provisioning into Payload billing/member/access records without changing live access.
-2. Add Resend email sending jobs that consume queued `payload_email_events` idempotently.
-3. Build the member login/account pages against `payload_members`.
+2. Build the member login/account pages against `payload_members`.
+3. Add a reviewed scheduler/worker for `payload:email:send -- --apply` only after template review and staging replay are approved.
 4. Add community routes only after access checks and moderation states are enforced server-side.
 
 Keep the order: scaffolding and groundwork first, then shadow services, then functional runtime systems, then migration and cutover.

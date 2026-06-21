@@ -182,6 +182,8 @@ The branch registers the original visual prototype collections plus the first pr
 
 `src/lib/payloadCourse/stripeShadowSync.ts` mirrors verified Stripe events into the Payload billing/member/contact projection only when `PAYLOAD_BILLING_SHADOW_SYNC_ENABLED=1|true|yes|on`. It writes by Payload Local API, keeps the existing WordPress/FluentCRM webhook behavior unchanged, and catches mirror failures so Stripe webhook processing can continue. Keep the flag disabled until staging replay and reconciliation are approved.
 
+`src/lib/payloadCourse/emailSender.ts` sends queued `payload_email_events` through active `payload_email_templates` using Resend's SDK idempotency key option. `pnpm payload:email:send` dry-runs queued sends without updating delivery state; `pnpm payload:email:send -- --apply` is required to send or mark send failures. There is no scheduler/cron enabled yet.
+
 ### Migrations
 
 Payload manages its own migrations via the `prodMigrations` option in `postgresAdapter`:
