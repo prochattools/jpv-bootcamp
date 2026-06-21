@@ -172,6 +172,10 @@ The branch registers the original visual prototype collections plus the first pr
 
 `src/migrations/20260621_194424_course_system_phase1.ts` creates these additional Payload-managed tables and updates Payload internal relationship tables. In staging, this brings `jpvbootcamp_staging` to 56 `payload_*` tables.
 
+`src/lib/payloadCourse/accessService.ts` is the first runtime service boundary for course and lesson access. It reads Payload collections through the server-side Local API and then delegates the actual allow/deny decision to `src/lib/entitlements/evaluateAccess.ts`; user-facing routes must use this service boundary or an equivalent fail-closed check before fetching private content.
+
+`pnpm payload:course:seed` dry-runs the course-system admin seed plan. `pnpm payload:course:seed -- --apply` writes the seed records. The current staging seed is 3 courses, 5 lessons, 4 access groups, 3 spaces, 7 email templates, and 6 access policies. These records are scaffolding/admin demo data until Stripe shadow sync, member login, and migration reconciliation are complete.
+
 ### Migrations
 
 Payload manages its own migrations via the `prodMigrations` option in `postgresAdapter`:

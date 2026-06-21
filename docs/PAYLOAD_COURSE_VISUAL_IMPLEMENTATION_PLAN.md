@@ -22,12 +22,15 @@ As of `20260621_194424_course_system_phase1` on `feature/course-branding-and-pre
 - Staging is database `jpvbootcamp`, schema `jpvbootcamp_staging`.
 - The branch contains Payload collection scaffolding for members, course runtime, access control, billing mirror, CRM/email, community, and audit.
 - `src/lib/entitlements/evaluateAccess.ts` contains a pure fail-closed entitlement evaluator with focused tests in `scripts/payload_entitlement_evaluator.test.ts`.
+- `src/lib/payloadCourse/accessService.ts` contains Local API service functions that load Payload course/lesson, member, billing, policy, grant, group, and progress records, then call the pure evaluator. These services intentionally use server-side Local API reads and treat `evaluateAccess` as the runtime authorization boundary.
+- `scripts/payload/seed-course-admin-data.mts` contains an idempotent seed runner for access groups, prototype/admin courses, modules, lessons, email templates, community spaces, and access policies. It defaults to dry-run and writes only with `--apply`.
 - `src/migrations/20260621_194424_course_system_phase1.ts` creates the course-system Payload tables and has been applied to staging.
 - Staging now has 56 `payload_*` tables and records both Payload migrations in `payload_migrations`.
+- Staging seed data has been applied through the seed runner: 3 courses, 5 lessons, 4 access groups, 3 spaces, 7 email templates, and 6 access policies.
 - `scripts/db/deploy-prod.sh` normalizes schema object ownership to the tenant user before Payload `prodMigrations` run on app startup.
 - `/course-preview` routes are still static demonstration pages and are guarded by `PAYLOAD_COURSE_PROTOTYPE_ENABLED`.
 
-This is scaffolding and groundwork. It does not yet make Payload the live runtime source for Stripe provisioning, student login flows, email automations, or community posting.
+This is scaffolding and groundwork plus a tested read-side access service. It does not yet make Payload the live runtime source for Stripe provisioning, student login flows, email automations, or community posting.
 
 ## Critical findings from review
 
@@ -1012,11 +1015,12 @@ Stop and request an architectural decision if:
 
 The first scaffolding slice is complete. Do this next:
 
-1. Wire read-only admin seed data for courses, access groups, email templates, and community spaces.
-2. Add Payload Local API services that read the new collections and call `evaluateAccess`.
-3. Shadow-sync Stripe/customer provisioning into Payload billing/member/access records without changing live access.
-4. Add Resend email event recording and idempotent admin/student notification jobs.
-5. Build the member login/account pages against `payload_members`.
-6. Add community routes only after access checks and moderation states are enforced server-side.
+1. Add admin grant/revoke services for `payload_access_grants` that write `payload_audit_events` and can be called from future Payload admin actions or scripts.
+2. Add account block/restore services for `payload_members` that write member security events, audit events, and queued email events.
+3. Add entitlement reconciliation dry-run command that reports mismatches between billing projections, grants, groups, and effective access.
+4. Shadow-sync Stripe/customer provisioning into Payload billing/member/access records without changing live access.
+5. Add Resend email event recording and idempotent admin/student notification jobs.
+6. Build the member login/account pages against `payload_members`.
+7. Add community routes only after access checks and moderation states are enforced server-side.
 
 Keep the order: scaffolding and groundwork first, then shadow services, then functional runtime systems, then migration and cutover.
