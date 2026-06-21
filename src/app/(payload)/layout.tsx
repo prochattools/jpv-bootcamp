@@ -1,7 +1,7 @@
 import type React from 'react'
 import { RootLayout } from '@payloadcms/next/layouts'
 import config from '@payload-config'
-import '@payloadcms/ui/styles.css'
+import '@payloadcms/next/css'
 
 import importMap from './importMap.js'
 import { serverFunction } from './actions'
