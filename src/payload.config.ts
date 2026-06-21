@@ -8,6 +8,12 @@ import { PayloadMedia } from './collections/PayloadMedia'
 import { PayloadPages } from './collections/PayloadPages'
 import { PayloadPosts } from './collections/PayloadPosts'
 import { PayloadCategories } from './collections/PayloadCategories'
+import {
+  PayloadCourseAccessPreview,
+  PayloadCourseModules,
+  PayloadCourses,
+  PayloadLessons,
+} from './collections/PayloadCoursePrototype'
 import { migrations } from './migrations'
 
 const filename = fileURLToPath(import.meta.url)
@@ -33,6 +39,16 @@ export default buildConfig({
     importMap: {
       baseDir: path.resolve(dirname),
     },
+    components: {
+      graphics: {
+        Logo: './components/payload/JPVAdminBranding#JPVAdminLogo',
+        Icon: './components/payload/JPVAdminBranding#JPVAdminIcon',
+      },
+      Nav: './components/payload/JPVAdminBranding#JPVAdminNav',
+    },
+    meta: {
+      titleSuffix: ' — JPV Bootcamp',
+    },
   },
   routes: {
     admin: '/app',
@@ -43,6 +59,10 @@ export default buildConfig({
     PayloadPages,
     PayloadPosts,
     PayloadCategories,
+    PayloadCourses,
+    PayloadCourseModules,
+    PayloadLessons,
+    PayloadCourseAccessPreview,
   ],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',
