@@ -10,7 +10,7 @@ name: Build and Deploy
 
 on:
   push:
-    branches: [main, feature/payload-v2, feature/course-branding-and-preview]
+    branches: [main]
 
 jobs:
   build-and-deploy:
