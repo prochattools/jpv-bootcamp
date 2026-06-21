@@ -64,9 +64,6 @@ echo "[start] running deploy-prod.sh"
 ./scripts/db/deploy-prod.sh
 echo "[start] deploy-prod.sh completed"
 
-echo "[start] generating payload import map"
-pnpm exec payload generate:importmap
-
 script_exists() {
   node -e "const pkg=require('./package.json');process.exit(pkg.scripts&&pkg.scripts['$1']?0:1)" >/dev/null 2>&1
 }
