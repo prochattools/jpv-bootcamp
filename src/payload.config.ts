@@ -19,9 +19,56 @@ import { migrations } from './migrations'
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
 
-// Strip Prisma-only ?schema= param — pg doesn't understand it and PostgreSQL
-// rejects it as an unknown configuration parameter, causing connection failure.
-// schemaName below already sets the search_path for Payload's adapter.
+const collectionBranding = {
+  payload_users: { singular: 'Administrator', plural: 'Administrators', group: 'Administration' },
+  payload_media: { singular: 'Media Item', plural: 'Media', group: 'Content' },
+  payload_pages: { singular: 'Page', plural: 'Pages', group: 'Content' },
+  payload_posts: { singular: 'Post', plural: 'Posts', group: 'Content' },
+  payload_categories: { singular: 'Category', plural: 'Categories', group: 'Content' },
+  payload_courses: { singular: 'Course', plural: 'Courses', group: 'Course Management' },
+  payload_course_modules: { singular: 'Module', plural: 'Modules', group: 'Course Management' },
+  payload_lessons: { singular: 'Lesson', plural: 'Lessons', group: 'Course Management' },
+  payload_course_access_preview: {
+    singular: 'Access Preview',
+    plural: 'Access Preview',
+    group: 'Course Management',
+  },
+} as const
+
+for (const collection of [
+  PayloadUsers,
+  PayloadMedia,
+  PayloadPages,
+  PayloadPosts,
+  PayloadCategories,
+  PayloadCourses,
+  PayloadCourseModules,
+  PayloadLessons,
+  PayloadCourseAccessPreview,
+]) {
+  const branding = collectionBranding[collection.slug as keyof typeof collectionBranding]
+
+  if (branding) {
+    collection.labels = {
+      singular: branding.singular,
+      plural: branding.plural,
+    }
+    collection.admin = {
+      ...collection.admin,
+      group: branding.group,
+    }
+  }
+}
+
+function getDbSchema(url: string | undefined): string {
+  if (!url) return 'jpvbootcamp'
+  try {
+    return new URL(url).searchParams.get('schema') || 'jpvbootcamp'
+  } catch {
+    return 'jpvbootcamp'
+  }
+}
+
 function cleanDbUrl(url: string | undefined): string {
   if (!url) return ''
   try {
@@ -47,7 +94,21 @@ export default buildConfig({
       Nav: './components/payload/JPVAdminBranding#JPVAdminNav',
     },
     meta: {
+      title: 'JPV Bootcamp',
       titleSuffix: ' — JPV Bootcamp',
+      description: 'JPV Bootcamp course and content management',
+      icons: [
+        {
+          rel: 'icon',
+          type: 'image/jpeg',
+          url: '/images/jpv-logo.jpg',
+        },
+        {
+          rel: 'apple-touch-icon',
+          type: 'image/jpeg',
+          url: '/images/jpv-logo.jpg',
+        },
+      ],
     },
   },
   routes: {
@@ -73,7 +134,7 @@ export default buildConfig({
     pool: {
       connectionString: cleanDbUrl(process.env.DATABASE_URL),
     },
-    schemaName: 'jpvbootcamp',
+    schemaName: getDbSchema(process.env.DATABASE_URL),
     // Run pending migrations automatically on connect in production (NODE_ENV=production).
     // Idempotent: already-applied migrations are skipped via payload_migrations table.
     prodMigrations: migrations,

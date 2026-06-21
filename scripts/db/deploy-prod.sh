@@ -223,7 +223,7 @@ backup_schema() {
 }
 
 smoke_check() {
-  psql "$DATABASE_URL_CLEAN" -v ON_ERROR_STOP=1 <<SQL
+  psql "$SYSTEM_DATABASE_URL_CLEAN" -v ON_ERROR_STOP=1 <<SQL
 DO \$\$
 BEGIN
   IF NOT EXISTS (
