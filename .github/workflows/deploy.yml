@@ -10,7 +10,7 @@ name: Build and Deploy
 
 on:
   push:
-    branches: [main]
+    branches: [main, feature/payload-v2]
 
 jobs:
   build-and-deploy:
@@ -37,12 +37,13 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}:latest
+            ghcr.io/${{ github.repository }}:${{ github.ref_name == 'main' && 'latest' || 'payload-v2' }}
             ghcr.io/${{ github.repository }}:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
       - name: Trigger Dokploy redeploy
+        if: github.ref_name == 'main'
         run: |
           COMMIT_MSG=$(git log -1 --pretty=format:"%s" ${{ github.sha }})
           COMMIT_AUTHOR=$(git log -1 --pretty=format:"%an" ${{ github.sha }})

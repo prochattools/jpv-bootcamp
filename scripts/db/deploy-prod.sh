@@ -299,6 +299,8 @@ export DATABASE_URL="$ORIGINAL_DATABASE_URL"
 MIGRATION_STATUS="success"
 write_status
 
+echo "[deploy] payload_* tables will be created on first app startup via prodMigrations option"
+
 SMOKE_STATUS="running"
 write_status
 
