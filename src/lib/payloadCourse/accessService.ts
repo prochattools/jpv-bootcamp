@@ -13,9 +13,9 @@ import {
   type SubscriptionPlan,
 } from '@/lib/entitlements/evaluateAccess'
 
-type PayloadId = string | number
+export type PayloadId = string | number
 
-type PayloadDocument = {
+export type PayloadDocument = {
   id: PayloadId
   [key: string]: unknown
 }
@@ -43,6 +43,20 @@ type PayloadFindByIDArgs = {
 export type PayloadCourseAccessAPI = {
   find(args: PayloadFindArgs): Promise<PayloadFindResult>
   findByID(args: PayloadFindByIDArgs): Promise<PayloadDocument>
+}
+
+export type PayloadCourseWriteAPI = PayloadCourseAccessAPI & {
+  create(args: {
+    collection: string
+    data: Record<string, unknown>
+    overrideAccess?: boolean
+  }): Promise<PayloadDocument>
+  update(args: {
+    collection: string
+    id: PayloadId
+    data: Record<string, unknown>
+    overrideAccess?: boolean
+  }): Promise<PayloadDocument>
 }
 
 export type PayloadAccessServiceResult = {

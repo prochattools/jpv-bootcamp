@@ -28,7 +28,7 @@
     "db:migrate:dev": "prisma migrate deploy --schema=prisma/system.prisma",
     "db:migrate:prod": "prisma migrate deploy --schema=prisma/system.prisma",
     "db:dedupe:check": "tsx scripts/db/test_customer_provisioning_dedupe.ts",
-    "test:payload-course": "tsx scripts/payload_entitlement_evaluator.test.ts && tsx scripts/payload_course_access_service.test.ts",
+    "test:payload-course": "tsx scripts/payload_entitlement_evaluator.test.ts && tsx scripts/payload_course_access_service.test.ts && tsx scripts/payload_course_admin_services.test.ts",
     "payload:course:seed": "tsx scripts/payload/seed-course-admin-data.mts",
     "stripe:check-products": "tsx scripts/stripe/check_price_products.ts",
     "mcp:discover": "tsx scripts/mcp-discover.ts",
