@@ -4,7 +4,7 @@ import config from '@payload-config'
 import '@payloadcms/ui/scss/app.scss'
 
 import importMap from './importMap.js'
-import { serverFunction } from './actions.js'
+import { serverFunction } from './actions'
 
 type Args = {
   children: React.ReactNode
