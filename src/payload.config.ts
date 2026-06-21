@@ -110,6 +110,7 @@ export default buildConfig({
         },
       ],
     },
+    logoutRoute: '/',
   },
   routes: {
     admin: '/app',
