@@ -39,26 +39,18 @@ export PORT
 
 echo "[start] checking backup root: $BACKUP_ROOT"
 if [[ ! -d "$BACKUP_ROOT" ]]; then
-  echo "[start] ERROR: backup root missing: $BACKUP_ROOT" >&2
-  echo "Dokploy UI: App -> General -> Volumes/Mounts -> Bind Mount -> Host Path + Mount Path" >&2
-  echo "Add bind mount: host /var/backups/pgdump -> container /var/backups/pgdump (RW)" >&2
-  exit 1
+  echo "[start] WARNING: backup root missing (staging/preview mode): $BACKUP_ROOT"
+  echo "[start] Backups will be disabled"
+else
+  if ! awk -v p="$BACKUP_ROOT" '$5==p {found=1} END {exit !found}' /proc/self/mountinfo; then
+    echo "[start] WARNING: bind mount missing for $BACKUP_ROOT (staging/preview mode)"
+  elif ! touch "${BACKUP_ROOT}/.write_test" 2>/dev/null; then
+    echo "[start] WARNING: backup root not writable (staging/preview mode): $BACKUP_ROOT"
+  else
+    rm -f "${BACKUP_ROOT}/.write_test"
+    echo "[start] Backup root is ready"
+  fi
 fi
-
-if ! awk -v p="$BACKUP_ROOT" '$5==p {found=1} END {exit !found}' /proc/self/mountinfo; then
-  echo "[start] ERROR: bind mount missing for $BACKUP_ROOT" >&2
-  echo "Dokploy UI: App -> General -> Volumes/Mounts -> Bind Mount -> Host Path + Mount Path" >&2
-  echo "Add bind mount: host /var/backups/pgdump -> container /var/backups/pgdump (RW)" >&2
-  exit 1
-fi
-
-if ! touch "${BACKUP_ROOT}/.write_test" 2>/dev/null; then
-  echo "[start] ERROR: backup root not writable: $BACKUP_ROOT" >&2
-  echo "Dokploy UI: App -> General -> Volumes/Mounts -> Bind Mount -> Host Path + Mount Path" >&2
-  echo "Add bind mount: host /var/backups/pgdump -> container /var/backups/pgdump (RW)" >&2
-  exit 1
-fi
-rm -f "${BACKUP_ROOT}/.write_test"
 
 echo "[start] running deploy-prod.sh"
 ./scripts/db/deploy-prod.sh

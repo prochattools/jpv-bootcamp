@@ -10,7 +10,7 @@ name: Build and Deploy
 
 on:
   push:
-    branches: [main, feature/payload-v2]
+    branches: [main]
 
 jobs:
   build-and-deploy:
@@ -30,6 +30,16 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Determine Docker tag
+        id: docker-tag
+        run: |
+          if [ "${{ github.ref_name }}" = "main" ]; then
+            TAG="latest"
+          else
+            TAG=$(echo "${{ github.ref_name }}" | sed 's|/|-|g')
+          fi
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
@@ -37,7 +47,7 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}:${{ github.ref_name == 'main' && 'latest' || 'payload-v2' }}
+            ghcr.io/${{ github.repository }}:${{ steps.docker-tag.outputs.tag }}
             ghcr.io/${{ github.repository }}:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

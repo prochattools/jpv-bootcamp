@@ -278,8 +278,18 @@ fi
 MIGRATION_STATUS="running"
 write_status
 
-echo "[deploy] running db:init"
-npm run db:init -- --slug "$APP_SLUG"
+# Skip db:init if schema already exists (e.g., in staging/preview environments)
+schema_exists=$(psql "$SYSTEM_DATABASE_URL_CLEAN" -v ON_ERROR_STOP=1 -tA \
+  -c "SELECT 1 FROM information_schema.schemata WHERE schema_name='${APP_SCHEMA}';")
+
+if [[ "$schema_exists" == "1" ]]; then
+  echo "[deploy] schema already exists; skipping db:init"
+else
+  echo "[deploy] running db:init"
+  export SYSTEM_DATABASE_URL
+  export DATABASE_URL
+  npm run db:init -- --slug "$APP_SLUG"
+fi
 
 echo "[deploy] running db:migrate:prod"
 clear_unfinished_migrations
