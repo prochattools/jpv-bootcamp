@@ -8,7 +8,9 @@ MIGRATIONS_DIR="${MIGRATIONS_DIR:-prisma/migrations}"
 : "${SYSTEM_DATABASE_URL:?set SYSTEM_DATABASE_URL}"
 : "${DATABASE_URL:?set DATABASE_URL}"
 
-APP_SCHEMA="${APP_SLUG}"
+# Derive schema from DATABASE_URL ?schema= param if present, otherwise fall back to APP_SLUG
+_db_schema_param="$(node -e "try{const u=new URL(process.env.DATABASE_URL);const s=u.searchParams.get('schema');if(s)process.stdout.write(s)}catch(e){}")"
+APP_SCHEMA="${_db_schema_param:-${APP_SLUG}}"
 BACKUP_DIR="${BACKUP_ROOT}/${APP_SLUG}"
 TS="$(date -u +%Y%m%dT%H%M%SZ)"
 LOG_FILE="${BACKUP_DIR}/deploy_${TS}.log"
