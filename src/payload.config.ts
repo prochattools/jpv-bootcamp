@@ -139,5 +139,5 @@ export default buildConfig({
     // Idempotent: already-applied migrations are skipped via payload_migrations table.
     prodMigrations: migrations,
   }),
-  serverURL: process.env.NEXT_PUBLIC_SERVER_URL,
+  serverURL: process.env.PAYLOAD_SERVER_URL || process.env.NEXT_PUBLIC_SERVER_URL,
 })
