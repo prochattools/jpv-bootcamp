@@ -5,6 +5,10 @@ const prototypeAdminGroup = 'Course Prototype'
 export const PayloadCourses: CollectionConfig = {
   slug: 'payload_courses',
   dbName: 'payload_courses',
+  labels: {
+    singular: 'Course',
+    plural: 'Courses',
+  },
   admin: {
     group: prototypeAdminGroup,
     useAsTitle: 'title',
@@ -102,6 +106,10 @@ export const PayloadCourses: CollectionConfig = {
 export const PayloadCourseModules: CollectionConfig = {
   slug: 'payload_course_modules',
   dbName: 'payload_course_modules',
+  labels: {
+    singular: 'Module',
+    plural: 'Modules',
+  },
   admin: {
     group: prototypeAdminGroup,
     useAsTitle: 'title',
@@ -133,6 +141,10 @@ export const PayloadCourseModules: CollectionConfig = {
 export const PayloadLessons: CollectionConfig = {
   slug: 'payload_lessons',
   dbName: 'payload_lessons',
+  labels: {
+    singular: 'Lesson',
+    plural: 'Lessons',
+  },
   admin: {
     group: prototypeAdminGroup,
     useAsTitle: 'title',
@@ -213,6 +225,10 @@ export const PayloadLessons: CollectionConfig = {
 export const PayloadCourseAccessPreview: CollectionConfig = {
   slug: 'payload_course_access_preview',
   dbName: 'payload_course_access_preview',
+  labels: {
+    singular: 'Access Preview',
+    plural: 'Access Previews',
+  },
   admin: {
     group: prototypeAdminGroup,
     useAsTitle: 'displayLabel',

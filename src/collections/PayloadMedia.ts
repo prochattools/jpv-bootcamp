@@ -8,6 +8,13 @@ const dirname = path.dirname(filename)
 export const PayloadMedia: CollectionConfig = {
   slug: 'payload_media',
   dbName: 'payload_media',
+  labels: {
+    singular: 'Media Item',
+    plural: 'Media',
+  },
+  admin: {
+    group: 'Content',
+  },
   upload: {
     staticDir: path.resolve(dirname, '../../public/media'),
   },
