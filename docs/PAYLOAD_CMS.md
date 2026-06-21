@@ -180,6 +180,8 @@ The branch registers the original visual prototype collections plus the first pr
 
 `pnpm payload:course:seed` dry-runs the course-system admin seed plan. `pnpm payload:course:seed -- --apply` writes the seed records. The current staging seed is 3 courses, 5 lessons, 4 access groups, 3 spaces, 7 email templates, and 6 access policies. These records are scaffolding/admin demo data until Stripe shadow sync, member login, and migration reconciliation are complete.
 
+`src/lib/payloadCourse/stripeShadowSync.ts` mirrors verified Stripe events into the Payload billing/member/contact projection only when `PAYLOAD_BILLING_SHADOW_SYNC_ENABLED=1|true|yes|on`. It writes by Payload Local API, keeps the existing WordPress/FluentCRM webhook behavior unchanged, and catches mirror failures so Stripe webhook processing can continue. Keep the flag disabled until staging replay and reconciliation are approved.
+
 ### Migrations
 
 Payload manages its own migrations via the `prodMigrations` option in `postgresAdapter`:

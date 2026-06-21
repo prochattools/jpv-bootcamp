@@ -26,6 +26,8 @@ As of `20260621_194424_course_system_phase1` on `feature/course-branding-and-pre
 - `src/lib/payloadCourse/adminGrants.ts` contains admin/system grant and revoke services for `payload_access_grants`. These services write audit events, entitlement events, and queued email-event records; they do not send email directly.
 - `src/lib/members/accountStatus.ts`, `src/lib/members/blockMember.ts`, and `src/lib/members/restoreMember.ts` contain account block/restore services. These services write member security events, audit events, and queued email-event records; they do not send email directly.
 - `src/lib/payloadCourse/reconcileEntitlements.ts` and `scripts/payload/reconcile-entitlements.mts` contain a read-only entitlement reconciliation dry-run. It compares members, published courses, policies, active grants, subscriptions, and effective access decisions.
+- `src/lib/payloadCourse/stripeShadowSync.ts` contains the Stripe-to-Payload billing mirror service. It is wired into the verified Stripe webhook handler behind `PAYLOAD_BILLING_SHADOW_SYNC_ENABLED`; when disabled, the current WordPress/FluentCRM provisioning path is unchanged.
+- `scripts/payload_course_stripe_shadow_sync.test.ts` covers active subscription mirroring, duplicate Stripe event idempotency, cancellation blocking, payment failure blocking, payment recovery restore, and preserving manually suspended accounts.
 - `scripts/payload/seed-course-admin-data.mts` contains an idempotent seed runner for access groups, prototype/admin courses, modules, lessons, email templates, community spaces, and access policies. It defaults to dry-run and writes only with `--apply`.
 - `src/migrations/20260621_194424_course_system_phase1.ts` creates the course-system Payload tables and has been applied to staging.
 - Staging now has 56 `payload_*` tables and records both Payload migrations in `payload_migrations`.
@@ -34,7 +36,7 @@ As of `20260621_194424_course_system_phase1` on `feature/course-branding-and-pre
 - `scripts/db/deploy-prod.sh` normalizes schema object ownership to the tenant user before Payload `prodMigrations` run on app startup.
 - `/course-preview` routes are still static demonstration pages and are guarded by `PAYLOAD_COURSE_PROTOTYPE_ENABLED`.
 
-This is scaffolding and groundwork plus tested read-side and admin mutation services. It does not yet make Payload the live runtime source for Stripe provisioning, student login flows, actual Resend sends, or community posting.
+This is scaffolding and groundwork plus tested read-side, admin mutation, reconciliation, and Stripe shadow-sync services. It does not yet make Payload the live runtime source for Stripe provisioning, student login flows, actual Resend sends, or community posting. Stripe shadow sync remains a feature-flagged mirror until staging replay and reconciliation pass.
 
 ## Critical findings from review
 
@@ -694,6 +696,13 @@ Done when:
 - When enabled in staging, the handler also writes Payload billing projections.
 - Duplicate Stripe events do not duplicate projections, emails, or entitlements.
 
+Implementation status:
+
+- `src/lib/stripe-webhook-handler.ts` calls `shadowSyncStripeEventToPayload(event)` after verified Stripe event handling and before the existing Prisma idempotency mark.
+- The shadow call catches and logs Payload mirror failures so it cannot interrupt the current Stripe/WordPress flow.
+- `src/lib/payloadCourse/stripeShadowSync.ts` writes `payload_stripe_events`, `payload_billing_accounts`, `payload_subscriptions`, `payload_payments`, `payload_billing_actions`, `payload_members`, `payload_contacts`, audit events, member security events, and queued email events by Payload Local API only.
+- `PAYLOAD_BILLING_SHADOW_SYNC_ENABLED` is the activation gate. Leave it unset/false outside an approved staging replay.
+
 #### Task 5.3 - Add billing hold and restore state transitions
 
 Done when:
@@ -702,6 +711,12 @@ Done when:
 - `invoice.paid` recomputes status and restores access only when allowed.
 - `customer.subscription.deleted` revokes subscription-derived access.
 - Admin and student emails are queued once per event.
+
+Implementation status:
+
+- Code-level state transitions are implemented and unit-tested.
+- Stripe can block or restore billing holds but does not override `suspended` or `deleted` member accounts.
+- Actual staging webhook replay and representative member reconciliation remain required before cutover.
 
 #### Task 5.4 - Run shadow comparison
 

@@ -10,6 +10,7 @@ import { isSponsoredSeatSession, upsertSponsoredSeatFromSession } from '@/lib/sp
 import { notifySponsoredSeatPurchase } from '@/lib/sponsored-seat-notifications'
 import { getStripe } from '@/lib/stripe'
 import { shouldSendMembershipEmailForEvent } from '@/lib/stripe-membership-email-gate'
+import { shadowSyncStripeEventToPayload } from '@/lib/payloadCourse/stripeShadowSync'
 
 const PROVISIONING_EVENT_TYPES = new Set([
 	'checkout.session.completed',
@@ -504,6 +505,25 @@ export async function handleStripeWebhook(req: Request) {
 			}
 			default:
 				break
+		}
+
+		try {
+			const shadowResult = await shadowSyncStripeEventToPayload(event)
+			if (shadowResult.enabled) {
+				console.info('payload_billing_shadow_sync_result', {
+					eventId: event.id,
+					type: event.type,
+					processed: shadowResult.processed,
+					deduped: shadowResult.deduped,
+					actions: shadowResult.actions,
+				})
+			}
+		} catch (error) {
+			console.error('payload_billing_shadow_sync_failed', {
+				eventId: event.id,
+				type: event.type,
+				message: (error as Error).message,
+			})
 		}
 
 		const idempotencyResult = await markProcessed({
