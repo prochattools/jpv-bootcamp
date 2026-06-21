@@ -72,7 +72,7 @@ COPY --from=builder /app/package.json ./package.json
 
 EXPOSE 3000
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=3 \
   CMD node -e "require('http').get('http://127.0.0.1:3000/', res => process.exit(res.statusCode < 500 ? 0 : 1)).on('error', () => process.exit(1))"
 
 CMD ["bash", "scripts/runtime/start-prod.sh"]
