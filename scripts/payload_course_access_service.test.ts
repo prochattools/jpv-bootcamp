@@ -191,6 +191,30 @@ async function run() {
   }
 
   {
+    const result = await evaluatePayloadCourseAccess(
+      buildPayload({
+        payload_subscriptions: [
+          {
+            id: 'sub_canceling',
+            member: 'member_active',
+            status: 'active',
+            plan: 'pro',
+            cancelAtPeriodEnd: true,
+            updatedAt: '2026-01-01T00:00:00.000Z',
+          },
+        ],
+      }),
+      {
+        memberId: 'member_active',
+        courseSlug: 'pro-course',
+        now: '2026-01-01T00:00:00.000Z',
+      }
+    )
+    assert.equal(result.decision.allowed, false)
+    assert.equal(result.decision.reason, 'billing_not_active')
+  }
+
+  {
     const result = await evaluatePayloadCourseAccess(buildPayload(), {
       courseSlug: 'public-course',
     })

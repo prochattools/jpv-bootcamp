@@ -176,6 +176,8 @@ The branch registers the original visual prototype collections plus the first pr
 
 `src/lib/payloadCourse/adminGrants.ts` and `src/lib/members/accountStatus.ts` are the first admin mutation service boundaries. They write access grants/revokes, member block/restores, audit events, entitlement/security events, and queued email-event records. They do not send Resend email directly.
 
+`pnpm payload:course:reconcile` runs the read-only entitlement reconciliation dry-run. It compares members, published courses, policies, subscriptions, active grants, and effective course access decisions. On the current staging seed state it reports 0 members, 3 courses, 6 policies, and 0 issues.
+
 `pnpm payload:course:seed` dry-runs the course-system admin seed plan. `pnpm payload:course:seed -- --apply` writes the seed records. The current staging seed is 3 courses, 5 lessons, 4 access groups, 3 spaces, 7 email templates, and 6 access policies. These records are scaffolding/admin demo data until Stripe shadow sync, member login, and migration reconciliation are complete.
 
 ### Migrations

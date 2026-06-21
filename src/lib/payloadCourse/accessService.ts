@@ -310,8 +310,13 @@ async function getBillingContext(
     subscriptions.docs[0]
 
   if (subscription) {
+    const subscriptionStatus =
+      subscription.cancelAtPeriodEnd || subscription.canceledAt
+        ? 'canceled'
+        : normalizeBillingStatus(subscription.status)
+
     return {
-      status: normalizeBillingStatus(subscription.status),
+      status: subscriptionStatus,
       plan: normalizePlan(subscription.plan),
     }
   }

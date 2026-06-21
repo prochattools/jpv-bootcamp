@@ -25,10 +25,12 @@ As of `20260621_194424_course_system_phase1` on `feature/course-branding-and-pre
 - `src/lib/payloadCourse/accessService.ts` contains Local API service functions that load Payload course/lesson, member, billing, policy, grant, group, and progress records, then call the pure evaluator. These services intentionally use server-side Local API reads and treat `evaluateAccess` as the runtime authorization boundary.
 - `src/lib/payloadCourse/adminGrants.ts` contains admin/system grant and revoke services for `payload_access_grants`. These services write audit events, entitlement events, and queued email-event records; they do not send email directly.
 - `src/lib/members/accountStatus.ts`, `src/lib/members/blockMember.ts`, and `src/lib/members/restoreMember.ts` contain account block/restore services. These services write member security events, audit events, and queued email-event records; they do not send email directly.
+- `src/lib/payloadCourse/reconcileEntitlements.ts` and `scripts/payload/reconcile-entitlements.mts` contain a read-only entitlement reconciliation dry-run. It compares members, published courses, policies, active grants, subscriptions, and effective access decisions.
 - `scripts/payload/seed-course-admin-data.mts` contains an idempotent seed runner for access groups, prototype/admin courses, modules, lessons, email templates, community spaces, and access policies. It defaults to dry-run and writes only with `--apply`.
 - `src/migrations/20260621_194424_course_system_phase1.ts` creates the course-system Payload tables and has been applied to staging.
 - Staging now has 56 `payload_*` tables and records both Payload migrations in `payload_migrations`.
 - Staging seed data has been applied through the seed runner: 3 courses, 5 lessons, 4 access groups, 3 spaces, 7 email templates, and 6 access policies.
+- Staging entitlement reconciliation dry-run currently reports 0 members, 3 courses, 6 policies, 0 subscriptions, 0 active grants, 0 decisions, and 0 issues.
 - `scripts/db/deploy-prod.sh` normalizes schema object ownership to the tenant user before Payload `prodMigrations` run on app startup.
 - `/course-preview` routes are still static demonstration pages and are guarded by `PAYLOAD_COURSE_PROTOTYPE_ENABLED`.
 
@@ -359,7 +361,7 @@ Never infer access from a badge, label, role name, email domain, or UI state.
 | `invoice.paid` | Recompute subscription and restore only if subscription is now allowed. |
 | `customer.subscription.deleted` | Revoke subscription-derived access. |
 
-Business policy decision required before implementation: if a customer cancels but remains paid through the current period, choose either immediate blocking or paid-through-period access. The user's requested default is immediate blocking on cancellation.
+Business policy decision: if a customer cancels but remains paid through the current period, the user's requested default is immediate blocking on cancellation. The Payload course access service therefore treats `cancelAtPeriodEnd` and `canceledAt` as denied billing state even when the Stripe subscription status is still `active`.
 
 ## Email contract
 
@@ -1017,10 +1019,9 @@ Stop and request an architectural decision if:
 
 The first scaffolding slice is complete. Do this next:
 
-1. Add entitlement reconciliation dry-run command that reports mismatches between billing projections, grants, groups, and effective access.
-2. Shadow-sync Stripe/customer provisioning into Payload billing/member/access records without changing live access.
-3. Add Resend email sending jobs that consume queued `payload_email_events` idempotently.
-4. Build the member login/account pages against `payload_members`.
-5. Add community routes only after access checks and moderation states are enforced server-side.
+1. Shadow-sync Stripe/customer provisioning into Payload billing/member/access records without changing live access.
+2. Add Resend email sending jobs that consume queued `payload_email_events` idempotently.
+3. Build the member login/account pages against `payload_members`.
+4. Add community routes only after access checks and moderation states are enforced server-side.
 
 Keep the order: scaffolding and groundwork first, then shadow services, then functional runtime systems, then migration and cutover.
