@@ -1,139 +1,268 @@
 # Payload CMS — JPV Bootcamp
 
-Payload CMS is the content management layer added to `jpvbootcamp.com` alongside the existing WordPress installation. Both CMS systems run side by side during the gradual WordPress → Payload migration.
+**Status: live in production as of 2026-06-21 (commit `131e15c`, tag `restore/payload-baseline`)**
 
-## Philosophy
+Payload CMS is the content management layer added to `jpvbootcamp.com`. It runs alongside WordPress during the gradual WordPress → Payload migration. The two systems coexist: WordPress manages membership and billing; Payload manages structured content, pages, and posts.
 
-WordPress continues to manage membership, FluentCRM tags, billing portal handoffs, and WP user provisioning. Payload manages structured content, pages, posts, and the editorial workflow. The two systems share the same Supabase PostgreSQL database (different tables, same schema) and are accessed via different URLs:
+---
 
-- `https://jpvbootcamp.com` — Next.js frontend (always)
-- `https://jpvbootcamp.com/app` — Payload CMS admin panel
-- `https://portal.jpvbootcamp.com` — WordPress site (unchanged)
+## URLs
+
+| URL | What it serves |
+|-----|---------------|
+| `https://jpvbootcamp.com` | Next.js frontend — always |
+| `https://jpvbootcamp.com/app` | Payload CMS admin panel |
+| `https://portal.jpvbootcamp.com` | WordPress — unchanged |
+
+---
+
+## Tech stack
+
+| Layer | Technology | Version |
+|-------|-----------|---------|
+| Runtime | Node.js | 20.x |
+| Framework | Next.js | 16.2.6 |
+| UI library | React | 19.2.7 |
+| CMS | Payload | 3.85.1 |
+| CMS adapter | `@payloadcms/next` | 3.85.1 |
+| CMS database | `@payloadcms/db-postgres` | 3.85.1 |
+| CMS editor | `@payloadcms/richtext-lexical` | 3.85.1 |
+| CMS UI | `@payloadcms/ui` | 3.85.1 |
+| Database | PostgreSQL 15 (Supabase on Azure) | 15.8 |
+| ORM (app tables) | Prisma | 6.15.0 |
+| Package manager | pnpm | 10.33.0 |
+| Language | TypeScript | 5.x |
+| Styles | SCSS / CSS modules | sass 1.82.0 |
+| Deployment | Docker → Dokploy (Docker Swarm) | — |
+| Registry | GHCR (`ghcr.io/prochattools/jpv-bootcamp`) | — |
+
+---
 
 ## Architecture
 
-### Integration approach
+### How Payload is installed
 
-Payload CMS is installed **inside the `jpv-bootcamp` Next.js repo** — not a separate repo or service. It runs as a Next.js route group `(payload)` nested under `/app`, which makes the admin panel available at `/app` without affecting any other routes.
+Payload is installed **inside the `jpv-bootcamp` Next.js repo** — not as a separate service or repo. It runs as a Next.js App Router route group `(payload)` and is served from the same Node.js process, the same Docker container, and the same domain as the frontend.
 
-### Database
+This is the standard, officially supported way to install Payload into an existing Next.js app. No reverse proxy, no separate process.
 
-- **Schema**: `jpvbootcamp` (same schema as existing Prisma tables)
-- **Table prefix**: All Payload-managed tables use `payload_` prefix via `dbName` on each collection
-- **Adapter**: `@payloadcms/db-postgres` with `schemaName: 'jpvbootcamp'`
-- **Migration manager**: Payload manages its own `payload_*` tables autonomously (auto-migrates on startup)
-- **No conflict**: Prisma manages its tables (`customer_provisioning`, `stripe_webhook_events`, `Subscription`, `Project`, etc.); Payload manages only `payload_*` tables
+### Next.js route groups
 
-### Dual migration managers
-
-| Manager | Tables | Trigger |
-|---------|--------|---------|
-| Prisma | All non-`payload_*` tables | `npm run db:migrate:dev` / `db:migrate:prod` |
-| Payload | All `payload_*` tables | Auto-applied on startup (Payload manages its own migrations) |
-
-Both managers target the same `jpvbootcamp` schema via the same `DATABASE_URL`.
-
-### Connection strings
-
-Payload uses the existing `DATABASE_URL` (tenant-scoped runtime connection):
+Next.js App Router uses route groups (folders in parentheses) to split the app into independent layout trees without affecting URLs:
 
 ```
-DATABASE_URL=postgresql://jpvbootcamp_user:<password>@10.0.2.4:5433/jpvbootcamp?schema=jpvbootcamp
+src/app/
+├── layout.tsx                  # Root layout — returns children only (no html/body)
+├── (frontend)/                 # All original website routes
+│   ├── layout.tsx              # Frontend html/body/Providers/fonts
+│   ├── page.tsx                # /
+│   ├── billing/                # /billing/*
+│   ├── blog/                   # /blog
+│   ├── builders-bootcamp/      # /builders-bootcamp
+│   └── ... (all other routes)
+└── (payload)/                  # Payload CMS routes — completely separate layout tree
+    ├── layout.tsx              # Payload html/body (via RootLayout from @payloadcms/next)
+    ├── actions.ts              # serverFunction — top-level 'use server' file
+    ├── importMap.js            # Auto-populated by withPayload at build time
+    └── app/
+        └── [[...segments]]/
+            └── page.tsx        # Renders all Payload admin pages at /app/*
 ```
 
-`SYSTEM_DATABASE_URL` is not used by Payload — only by provisioning scripts.
+The `(frontend)` and `(payload)` groups share zero layout — each has its own `<html>` and `<body>`. Payload's `RootLayout` component provides its own full HTML document. The frontend layout provides its own with ThemeProvider, fonts, and global styles.
 
-## Admin route
+URLs are **not affected** by route groups. `/builders-bootcamp` still resolves correctly even though the file is at `src/app/(frontend)/builders-bootcamp/page.tsx`.
 
-The admin panel lives at `/app` (not the default `/admin`). This is configured via:
+### Payload REST API
+
+```
+src/app/api/[...slug]/route.ts   # Payload REST catch-all
+```
+
+This catch-all handles Payload's REST API endpoints (e.g., `GET /api/payload-users`, `POST /api/payload-posts`). Named routes defined in `src/app/api/` take priority over this catch-all — existing API routes are not affected.
+
+### Key files
+
+| File | Purpose |
+|------|---------|
+| `src/payload.config.ts` | Payload configuration: collections, DB adapter, admin route, secret |
+| `src/app/(payload)/layout.tsx` | Imports `@payloadcms/next/css` and wraps children in Payload's `RootLayout` |
+| `src/app/(payload)/actions.ts` | Exports `serverFunction` as a top-level `'use server'` file (required for Next.js server action serialization) |
+| `src/app/(payload)/app/[[...segments]]/page.tsx` | Delegates to Payload's `RootPage` for all admin views |
+| `src/app/api/[...slug]/route.ts` | Payload REST API catch-all |
+| `src/migrations/20260620_213328.ts` | Initial Payload migration: creates all 13 `payload_*` tables |
+| `src/migrations/index.ts` | Migration registry — imported by `prodMigrations` in the DB adapter |
+
+---
+
+## Database
+
+### Connection
+
+Payload uses the same `DATABASE_URL` environment variable as the existing Prisma-managed app. There is no separate database connection for Payload.
+
+```dotenv
+DATABASE_URL=postgresql://jpvbootcamp_user:<password>@10.0.2.4:5433/postgres?schema=jpvbootcamp
+```
+
+The `cleanDbUrl()` function in `payload.config.ts` strips the `?schema=jpvbootcamp` query parameter before passing the URL to Payload's pg pool — `pg` does not understand that Prisma-specific parameter and would reject the connection with it present. The `schemaName: 'jpvbootcamp'` option in the adapter sets the PostgreSQL `search_path` instead.
+
+### Schema ownership split
+
+Both Prisma and Payload manage tables in the `jpvbootcamp` schema. They are kept completely separate by naming convention:
+
+| Manager | Table naming | Who touches them |
+|---------|-------------|-----------------|
+| Prisma | No prefix (e.g., `Subscription`, `customer_provisioning`) | App code + Prisma migrations only |
+| Payload | `payload_` prefix on all tables | Payload CMS only — never touch from Prisma |
+
+**Rule: Prisma never references `payload_*` tables. Payload never references app tables.**
+
+### Full table inventory
+
+**App tables (Prisma-managed) — 11 tables:**
+
+| Table | Description |
+|-------|-------------|
+| `Audiences` | Email audience segments |
+| `Project` | Tenant/project records |
+| `Subscription` | Stripe subscription records |
+| `_prisma_migrations` | Prisma migration history |
+| `customer_provisioning` | Customer provisioning state |
+| `email_subscribers` | Email subscriber list |
+| `partner_clicks` | Affiliate link click tracking |
+| `partner_sessions` | Affiliate session records |
+| `sponsored_applications` | Sponsored seat applications |
+| `sponsored_grants` | Approved sponsored grants |
+| `sponsored_seats` | Available sponsored seats |
+| `stripe_webhook_events` | Stripe webhook event log (idempotency) |
+
+**Payload tables (Payload-managed) — 13 tables:**
+
+| Table | Description |
+|-------|-------------|
+| `payload_categories` | Post/page categories |
+| `payload_kv` | Payload internal key-value store |
+| `payload_locked_documents` | Document lock records (prevents concurrent edits) |
+| `payload_locked_documents_rels` | Relationships for locked documents |
+| `payload_media` | Uploaded media file metadata |
+| `payload_migrations` | Payload migration history |
+| `payload_pages` | CMS pages |
+| `payload_posts` | CMS posts and articles |
+| `payload_posts_rels` | Relationships for post categories |
+| `payload_preferences` | Per-user admin UI preferences |
+| `payload_preferences_rels` | Relationships for preferences |
+| `payload_users` | CMS admin users |
+| `payload_users_sessions` | CMS user session records |
+
+### Migrations
+
+Payload manages its own migrations via the `prodMigrations` option in `postgresAdapter`:
 
 ```ts
-// payload.config.ts
-admin: {
-  user: 'payload_users',
-},
+db: postgresAdapter({
+  pool: { connectionString: cleanDbUrl(process.env.DATABASE_URL) },
+  schemaName: 'jpvbootcamp',
+  prodMigrations: migrations,  // auto-applies on startup in production
+}),
+```
+
+Payload migrations run automatically when the container starts. They are idempotent — already-applied migrations (tracked in `payload_migrations`) are skipped. No manual migration command is ever needed for Payload tables.
+
+Prisma migrations continue to run via `deploy-prod.sh` → `npm run db:migrate:prod` as before.
+
+---
+
+## Collections
+
+Collections are Payload's equivalent of database tables / content types. Each collection maps to one or more database tables.
+
+| Collection slug | DB table | Purpose |
+|-----------------|----------|---------|
+| `payload_users` | `payload_users` + `payload_users_sessions` | CMS admin users — not Clerk/WP users |
+| `payload_media` | `payload_media` | Uploaded files and images |
+| `payload_pages` | `payload_pages` | Static CMS pages (landing pages, etc.) |
+| `payload_posts` | `payload_posts` + `payload_posts_rels` | Blog posts and articles |
+| `payload_categories` | `payload_categories` | Taxonomy for posts and pages |
+
+Collection definitions live in `src/collections/`. The `slug` is the API identifier; `dbName` sets the actual PostgreSQL table name.
+
+### PayloadPosts fields
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `title` | text | Required |
+| `slug` | text | Unique, indexed |
+| `content` | richText (Lexical) | Full rich text editor |
+| `status` | select | `draft` \| `published` |
+| `categories` | relationship (hasMany) | Links to `payload_categories` |
+
+### PayloadPages fields
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `title` | text | Required |
+| `slug` | text | Unique, indexed |
+| `content` | richText (Lexical) | Full rich text editor |
+
+---
+
+## Admin panel
+
+**URL**: `https://jpvbootcamp.com/app`
+
+The admin route is `/app` because `/admin` is already used by the existing application (Clerk-authenticated admin pages). Configured in `payload.config.ts`:
+
+```ts
 routes: {
   admin: '/app',
 },
 ```
 
-The Next.js route group at `src/app/(payload)/app/[[...segments]]/page.tsx` maps the `/app` path to Payload's admin handler.
+**Admin users** (`payload_users`) are independent from all other user systems (Clerk auth, WordPress users, Stripe customers). A user in `payload_users` has access only to the Payload admin panel and has no connection to any subscription or billing record.
 
-## Collections
-
-All collections use `dbName` to prefix their PostgreSQL table names with `payload_`, preventing any collision with Prisma-managed tables.
-
-| Collection slug | Table name | Purpose |
-|-----------------|------------|---------|
-| `payload_users` | `payload_users` | CMS admin users (separate from Clerk/WP users) |
-| `payload_media` | `payload_media` | Uploaded files and images |
-| `payload_pages` | `payload_pages` | Static CMS pages |
-| `payload_posts` | `payload_posts` | Blog posts and articles |
-| `payload_categories` | `payload_categories` | Post/page categories |
-
-> Stripe note: In this repo, every Stripe reference means the JPV Bootcamp Stripe account.
-
-## Stripe plugin
-
-The `@payloadcms/plugin-stripe` plugin is included to:
-- Add a `stripeCustomerID` field to the `payload_users` collection
-- Register `/api/stripe/webhooks` (Payload's webhook endpoint — separate from existing `/api/webhook/stripe`)
-- Register `/api/stripe/rest` for Stripe REST proxy operations
-
-**Important**: The existing Stripe webhook handler at `/api/webhook/stripe` is NOT touched by the Payload Stripe plugin. They coexist at different paths. The existing webhook flow (WP provisioning, FluentCRM sync, Resend emails) continues unchanged.
+---
 
 ## Environment variables
 
-Add these to `.env` / Dokploy environment:
-
 ```dotenv
-# Payload CMS
-PAYLOAD_SECRET=<generate-random-32-char-secret>
+# Required for Payload — must be set in Dokploy environment
+PAYLOAD_SECRET=<random 32+ character string>
 NEXT_PUBLIC_SERVER_URL=https://jpvbootcamp.com
 
-# DATABASE_URL is shared with existing app — no new variable needed
+# Shared with existing app — already set, no change needed
+DATABASE_URL=postgresql://...
 ```
 
-> `PAYLOAD_SECRET` must be a strong random string (32+ characters). It signs auth cookies and tokens.
+`PAYLOAD_SECRET` signs authentication cookies and JWT tokens. It must be a strong, stable random string. Changing it invalidates all active Payload sessions.
 
-## Node and package manager requirements
+---
 
-- **Node**: 20.x (Payload 3.x requires Node ≤ 20; `.nvmrc` contains `"20"`)
-- **Package manager**: pnpm (Payload scaffold requires pnpm; `package.json` enforces `pnpm: ^9 || ^10`)
-- **Next.js**: 16.2.6 (Payload 3.85.1 requires Next.js 16)
+## Restore points
 
-## File structure (within jpv-bootcamp)
+| Tag | State | How to restore |
+|-----|-------|----------------|
+| `restore/pre-payload` | Application WITHOUT Payload | `git checkout restore/pre-payload` + redeploy |
+| `restore/payload-baseline` | First clean working Payload install (= current `main`) | `git checkout restore/payload-baseline` + redeploy |
 
-```
-src/
-├── app/
-│   ├── (frontend)/         # Existing frontend routes (unchanged)
-│   └── (payload)/
-│       └── app/
-│           └── [[...segments]]/
-│               └── page.tsx  # Payload admin handler
-├── collections/
-│   ├── PayloadUsers.ts
-│   ├── PayloadMedia.ts
-│   ├── PayloadPages.ts
-│   ├── PayloadPosts.ts
-│   └── PayloadCategories.ts
-└── payload.config.ts
-```
+---
 
 ## Guardrails
 
-- Do not rename or remove the `payload_` prefix from any collection `dbName` — changing a table name after data exists will cause data loss
-- Do not modify Prisma tables from Payload hooks, and do not modify Payload tables from Prisma
-- The `payload_users` collection is for CMS editorial users only — not for Stripe customers, Clerk users, or WP members
-- Payload's auto-migration on startup is safe and non-destructive (creates tables if missing, applies schema changes via its own migration system)
-- Keep `DATABASE_URL` and `SYSTEM_DATABASE_URL` semantics unchanged — Payload only uses `DATABASE_URL`
+- Do not rename or remove the `payload_` prefix from any collection `dbName` — changing a table name after data exists will cause data loss without a migration
+- Do not modify Prisma tables from Payload hooks; do not modify Payload tables from Prisma
+- `payload_users` is for CMS editorial users only — not Stripe customers, Clerk users, or WordPress members
+- Payload's auto-migration on startup is safe and idempotent
+- Keep `DATABASE_URL` and `SYSTEM_DATABASE_URL` semantics unchanged — Payload only reads `DATABASE_URL`
+- Do not add `payload_*` tables to `prisma/system.prisma` — Payload owns them exclusively
+- The Payload Stripe plugin is not installed — do not confuse Payload's `/api/*` REST routes with the existing `/api/webhook/stripe` handler
+
+---
 
 ## References
 
-- Integration plan: `docs/PAYLOAD_INTEGRATION_PLAN.md`
-- Database model: `docs/PROKIT_DATABASE.md`
+- Database details: `docs/PROKIT_DATABASE.md`
 - Infrastructure: `docs/PROKIT_INFRASTRUCTURE.md`
-- ProKit invariants: `docs/PROKIT_INVARIANTS.md`
+- WordPress → Payload migration: `docs/PAYLOAD_MIGRATION.md`
 - Stripe flow: `docs/STRIPE_MEMBERSHIP_FLOW.md`
-- Stripe WP provisioning: `docs/STRIPE_WP_PROVISIONING.md`
+- ProKit invariants: `docs/PROKIT_INVARIANTS.md`

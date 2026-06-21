@@ -111,16 +111,16 @@ Command: `npm run db:cleanup -- --slug <slug> [--force]`
 - Contract: new app versions must not boot without successful `db:migrate:prod`; no raw SQL migrations outside Prisma; `prisma/system.prisma` and `prisma/migrations` stay aligned.
 
 ### Payload CMS migrations (payload_* tables)
-- Payload manages its own tables autonomously (all prefixed `payload_`).
-- Payload auto-applies its own migrations on startup — no manual migration command is needed.
+- Payload manages its own 13 tables autonomously (all prefixed `payload_`).
+- Payload auto-applies its own migrations on startup via the `prodMigrations` option in `postgresAdapter` — no manual migration command is needed.
 - Payload tables live in the same `jpvbootcamp` schema alongside Prisma tables; the `payload_` prefix prevents naming conflicts.
 - Do not add `payload_*` tables to `prisma/system.prisma` — Payload owns them exclusively.
 - Do not touch Payload tables from Prisma, and do not touch Prisma tables from Payload hooks.
 
 | Manager | Owns | Command |
 |---------|------|---------|
-| Prisma | `customer_provisioning`, `stripe_webhook_events`, `Subscription`, `Project`, etc. | `npm run db:migrate:dev` / `db:migrate:prod` |
-| Payload | `payload_users`, `payload_posts`, `payload_pages`, `payload_media`, `payload_categories`, `payload_migrations`, `payload_preferences`, `payload_sessions` | Auto on startup |
+| Prisma | `Audiences`, `Project`, `Subscription`, `customer_provisioning`, `email_subscribers`, `partner_clicks`, `partner_sessions`, `sponsored_applications`, `sponsored_grants`, `sponsored_seats`, `stripe_webhook_events` | `npm run db:migrate:dev` / `db:migrate:prod` |
+| Payload | `payload_categories`, `payload_kv`, `payload_locked_documents`, `payload_locked_documents_rels`, `payload_media`, `payload_migrations`, `payload_pages`, `payload_posts`, `payload_posts_rels`, `payload_preferences`, `payload_preferences_rels`, `payload_users`, `payload_users_sessions` | Auto on startup (prodMigrations) |
 
 ## Optional MCP / Automation Bridge
 - RPC layer at `https://mcp.prochat.tools` (replaceable).  
@@ -147,7 +147,7 @@ Command: `npm run db:cleanup -- --slug <slug> [--force]`
 - Infra/network layout: `docs/PROKIT_INFRASTRUCTURE.md`  
 - Dev workflow: `docs/PROKIT_DEV_GUIDE.md`  
 - Cleanup details: `docs/PROKIT_TENANT_CLEANUP.md`
-- Payload CMS database model: `docs/PAYLOAD_CMS.md`
-- Payload integration plan: `docs/PAYLOAD_INTEGRATION_PLAN.md`
+- Payload CMS architecture and table inventory: `docs/PAYLOAD_CMS.md`
+- WordPress → Payload migration guide: `docs/PAYLOAD_MIGRATION.md`
 - Shared local app and OrbStack database inventory: `/Users/Office/Repos/stevewesthoek/brain/operations/infrastructure/local-apps.md`
 - Standalone OrbStack Postgres map: `/Users/Office/Repos/stevewesthoek/brain/operations/database/standalone/README.md`
