@@ -5,6 +5,8 @@
 **Restore point before starting**: `restore/payload-baseline` (tag on `main`)
 **Migration work branch**: create `feature/payload-migration` from `main`
 
+**Required reading before this document**: `docs/ARCHITECTURE.md` — maps every system, integration, and data flow in the current production application. The migration is a content-only operation; all Stripe, WordPress provisioning, FluentCRM, and billing infrastructure remains untouched throughout.
+
 ---
 
 ## Overview
@@ -551,9 +553,14 @@ Every schema change must be followed by a Payload migration (`pnpm payload migra
 
 ## References
 
-- Payload CMS architecture: `docs/PAYLOAD_CMS.md`
-- Database model: `docs/PROKIT_DATABASE.md`
-- Infrastructure: `docs/PROKIT_INFRASTRUCTURE.md`
-- Payload Lexical docs: https://payloadcms.com/docs/rich-text/lexical
-- WordPress REST API docs: https://developer.wordpress.org/rest-api/reference/
-- Payload Local API docs: https://payloadcms.com/docs/local-api/overview
+| Document | What it covers |
+|----------|---------------|
+| `docs/ARCHITECTURE.md` | Full system map: Stripe, WP, FluentCRM, MU plugins, all data flows — **read first** |
+| `docs/PAYLOAD_CMS.md` | Payload installation, collections, tables, restore points |
+| `docs/PROKIT_DATABASE.md` | Database schema, connections, Prisma vs Payload ownership |
+| `docs/STRIPE_MEMBERSHIP_FLOW.md` | Stripe events, plan resolution, email deduplication |
+| `docs/STRIPE_WP_PROVISIONING.md` | WP provisioning endpoint, MU plugin setup, billing portal handoff, env vars |
+| `docs/PROKIT_INFRASTRUCTURE.md` | Dokploy, VNet, deployment pipeline |
+| Payload Lexical docs | https://payloadcms.com/docs/rich-text/lexical |
+| WordPress REST API docs | https://developer.wordpress.org/rest-api/reference/ |
+| Payload Local API docs | https://payloadcms.com/docs/local-api/overview |
