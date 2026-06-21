@@ -19,46 +19,6 @@ import { migrations } from './migrations'
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
 
-const collectionBranding = {
-  payload_users: { singular: 'Administrator', plural: 'Administrators', group: 'Administration' },
-  payload_media: { singular: 'Media Item', plural: 'Media', group: 'Content' },
-  payload_pages: { singular: 'Page', plural: 'Pages', group: 'Content' },
-  payload_posts: { singular: 'Post', plural: 'Posts', group: 'Content' },
-  payload_categories: { singular: 'Category', plural: 'Categories', group: 'Content' },
-  payload_courses: { singular: 'Course', plural: 'Courses', group: 'Course Management' },
-  payload_course_modules: { singular: 'Module', plural: 'Modules', group: 'Course Management' },
-  payload_lessons: { singular: 'Lesson', plural: 'Lessons', group: 'Course Management' },
-  payload_course_access_preview: {
-    singular: 'Access Preview',
-    plural: 'Access Preview',
-    group: 'Course Management',
-  },
-} as const
-
-for (const collection of [
-  PayloadUsers,
-  PayloadMedia,
-  PayloadPages,
-  PayloadPosts,
-  PayloadCategories,
-  PayloadCourses,
-  PayloadCourseModules,
-  PayloadLessons,
-  PayloadCourseAccessPreview,
-]) {
-  const branding = collectionBranding[collection.slug as keyof typeof collectionBranding]
-
-  if (branding) {
-    collection.labels = {
-      singular: branding.singular,
-      plural: branding.plural,
-    }
-    collection.admin = {
-      ...collection.admin,
-      group: branding.group,
-    }
-  }
-}
 
 function getDbSchema(url: string | undefined): string {
   if (!url) return 'jpvbootcamp'
