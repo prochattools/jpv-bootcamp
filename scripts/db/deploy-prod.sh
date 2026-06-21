@@ -286,6 +286,8 @@ if [[ "$schema_exists" == "1" ]]; then
   echo "[deploy] schema already exists; skipping db:init"
 else
   echo "[deploy] running db:init"
+  export SYSTEM_DATABASE_URL
+  export DATABASE_URL
   npm run db:init -- --slug "$APP_SLUG"
 fi
 
