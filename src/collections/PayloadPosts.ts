@@ -3,6 +3,10 @@ import type { CollectionConfig } from 'payload'
 export const PayloadPosts: CollectionConfig = {
   slug: 'payload_posts',
   dbName: 'payload_posts',
+  labels: {
+    singular: 'Post',
+    plural: 'Posts',
+  },
   admin: {
     useAsTitle: 'title',
     defaultColumns: ['title', 'status', 'createdAt'],

@@ -3,6 +3,10 @@ import type { CollectionConfig } from 'payload'
 export const PayloadCourses: CollectionConfig = {
   slug: 'payload_courses',
   dbName: 'payload_courses',
+  labels: {
+    singular: 'Course',
+    plural: 'Courses',
+  },
   admin: {
     useAsTitle: 'title',
     defaultColumns: ['title', 'status', 'visibility', 'accessBadge', 'updatedAt'],
@@ -99,6 +103,10 @@ export const PayloadCourses: CollectionConfig = {
 export const PayloadCourseModules: CollectionConfig = {
   slug: 'payload_course_modules',
   dbName: 'payload_course_modules',
+  labels: {
+    singular: 'Module',
+    plural: 'Modules',
+  },
   admin: {
     useAsTitle: 'title',
     defaultColumns: ['title', 'course', 'sortOrder', 'publishedPreview', 'updatedAt'],
@@ -129,6 +137,10 @@ export const PayloadCourseModules: CollectionConfig = {
 export const PayloadLessons: CollectionConfig = {
   slug: 'payload_lessons',
   dbName: 'payload_lessons',
+  labels: {
+    singular: 'Lesson',
+    plural: 'Lessons',
+  },
   admin: {
     useAsTitle: 'title',
     defaultColumns: ['title', 'module', 'sortOrder', 'mockCompletionState', 'visualLockState'],
@@ -208,6 +220,10 @@ export const PayloadLessons: CollectionConfig = {
 export const PayloadCourseAccessPreview: CollectionConfig = {
   slug: 'payload_course_access_preview',
   dbName: 'payload_course_access_preview',
+  labels: {
+    singular: 'Access Preview',
+    plural: 'Access Previews',
+  },
   admin: {
     useAsTitle: 'displayLabel',
     defaultColumns: ['displayLabel', 'type', 'visualState', 'course', 'updatedAt'],
