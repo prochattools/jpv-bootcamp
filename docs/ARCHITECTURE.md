@@ -27,9 +27,11 @@ This document maps every system, integration, and data flow in the current produ
 | Manager | Tables | How changes are applied |
 |---------|--------|------------------------|
 | Prisma | `Audiences`, `Project`, `Subscription`, `customer_provisioning`, `email_subscribers`, `partner_clicks`, `partner_sessions`, `sponsored_applications`, `sponsored_grants`, `sponsored_seats`, `stripe_webhook_events`, `_prisma_migrations` | `npm run db:migrate:prod` in `deploy-prod.sh` |
-| Payload | `payload_categories`, `payload_kv`, `payload_locked_documents`, `payload_locked_documents_rels`, `payload_media`, `payload_migrations`, `payload_pages`, `payload_posts`, `payload_posts_rels`, `payload_preferences`, `payload_preferences_rels`, `payload_users`, `payload_users_sessions` | Auto via `prodMigrations` on container startup |
+| Payload | All `payload_*` tables: CMS admin/media/pages/posts plus course-system member, course, access, billing, CRM, community, and audit collections | Auto via `prodMigrations` on container startup after deploy ownership normalization |
 
 WordPress has its own separate MySQL database (not Supabase). No cross-database queries.
+
+The staging course-system branch uses database `jpvbootcamp` with schema `jpvbootcamp_staging`; after `20260621_194424_course_system_phase1`, that schema has 56 Payload-managed tables. The full course/community replacement plan is `docs/PAYLOAD_COURSE_VISUAL_IMPLEMENTATION_PLAN.md`.
 
 ---
 

@@ -1,3 +1,10 @@
+import { notFound } from 'next/navigation'
+
+import {
+  PAYLOAD_COURSE_PROTOTYPE_BANNER,
+  PAYLOAD_COURSE_PROTOTYPE_ENABLED,
+} from '@/lib/payloadCoursePrototype'
+
 const courses = [
   {
     title: 'JPV Foundations',
@@ -39,10 +46,14 @@ const modulePreview = [
 ]
 
 export default function CoursePreviewPage() {
+  if (!PAYLOAD_COURSE_PROTOTYPE_ENABLED) {
+    notFound()
+  }
+
   return (
     <div className='min-h-screen bg-[#f4f1e9] text-[#14261d]'>
       <div className='border-b border-[#193f2f]/10 bg-[#10281f] px-5 py-2 text-center text-xs font-semibold uppercase tracking-[0.2em] text-[#d7c99c]'>
-        Visual prototype only — not connected to the live portal, members or billing
+        {PAYLOAD_COURSE_PROTOTYPE_BANNER}
       </div>
 
       <header className='border-b border-[#193f2f]/10 bg-white/90 backdrop-blur'>

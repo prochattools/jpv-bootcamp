@@ -11,6 +11,11 @@ MIGRATIONS_DIR="${MIGRATIONS_DIR:-prisma/migrations}"
 # Derive schema from DATABASE_URL ?schema= param if present, otherwise fall back to APP_SLUG
 _db_schema_param="$(node -e "try{const u=new URL(process.env.DATABASE_URL);const s=u.searchParams.get('schema');if(s)process.stdout.write(s)}catch(e){}")"
 APP_SCHEMA="${_db_schema_param:-${APP_SLUG}}"
+if [[ ! "$APP_SCHEMA" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
+  echo "invalid APP_SCHEMA: $APP_SCHEMA" >&2
+  exit 1
+fi
+APP_DB_USER="${APP_SCHEMA}_user"
 BACKUP_DIR="${BACKUP_ROOT}/${APP_SLUG}"
 TS="$(date -u +%Y%m%dT%H%M%SZ)"
 LOG_FILE="${BACKUP_DIR}/deploy_${TS}.log"
@@ -244,6 +249,54 @@ END \$\$;
 SQL
 }
 
+ensure_schema_object_owner() {
+  echo "[deploy] ensuring schema object ownership for ${APP_SCHEMA}"
+  psql "$SYSTEM_DATABASE_URL_CLEAN" -v ON_ERROR_STOP=1 <<SQL
+DO \$\$
+DECLARE
+  target_schema text := '${APP_SCHEMA}';
+  target_owner text := '${APP_DB_USER}';
+  obj record;
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = target_owner
+  ) THEN
+    RAISE EXCEPTION 'tenant role % does not exist', target_owner;
+  END IF;
+
+  EXECUTE format('ALTER SCHEMA %I OWNER TO %I', target_schema, target_owner);
+
+  FOR obj IN
+    SELECT table_name
+    FROM information_schema.tables
+    WHERE table_schema = target_schema
+  LOOP
+    EXECUTE format('ALTER TABLE %I.%I OWNER TO %I', target_schema, obj.table_name, target_owner);
+  END LOOP;
+
+  FOR obj IN
+    SELECT sequence_name
+    FROM information_schema.sequences
+    WHERE sequence_schema = target_schema
+  LOOP
+    EXECUTE format('ALTER SEQUENCE %I.%I OWNER TO %I', target_schema, obj.sequence_name, target_owner);
+  END LOOP;
+
+  FOR obj IN
+    SELECT t.typname
+    FROM pg_catalog.pg_type t
+    JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
+    WHERE n.nspname = target_schema
+      AND t.typtype IN ('d', 'e')
+      AND t.typname NOT LIKE '\\_%'
+  LOOP
+    EXECUTE format('ALTER TYPE %I.%I OWNER TO %I', target_schema, obj.typname, target_owner);
+  END LOOP;
+END
+\$\$;
+SQL
+}
+
 restore_schema() {
   local dump_path="$1"
   if [[ ! -f "$dump_path" ]]; then
@@ -308,10 +361,12 @@ export DATABASE_URL="$MIGRATION_DATABASE_URL"
 NODE_ENV=production npm run db:migrate:prod
 export DATABASE_URL="$ORIGINAL_DATABASE_URL"
 
+ensure_schema_object_owner
+
 MIGRATION_STATUS="success"
 write_status
 
-echo "[deploy] payload_* tables will be created on first app startup via prodMigrations option"
+echo "[deploy] payload_* tables will be created/updated on first app startup via prodMigrations option"
 
 SMOKE_STATUS="running"
 write_status

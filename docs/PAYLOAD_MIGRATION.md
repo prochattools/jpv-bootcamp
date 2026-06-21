@@ -5,7 +5,9 @@
 **Restore point before starting**: `restore/payload-baseline` (tag on `main`)
 **Migration work branch**: create `feature/payload-migration` from `main`
 
-**Required reading before this document**: `docs/ARCHITECTURE.md` — maps every system, integration, and data flow in the current production application. The migration is a content-only operation; all Stripe, WordPress provisioning, FluentCRM, and billing infrastructure remains untouched throughout.
+**Required reading before this document**: `docs/ARCHITECTURE.md` — maps every system, integration, and data flow in the current production application. The migration described here is a content-only operation; all Stripe, WordPress provisioning, FluentCRM, and billing infrastructure remains untouched throughout.
+
+**Course/community replacement note**: full replacement of FluentCommunity, FluentCRM, member accounts, entitlements, billing access, course progress, groups, chat, and transactional email is covered by `docs/PAYLOAD_COURSE_VISUAL_IMPLEMENTATION_PLAN.md`. Do not use this content migration guide as authorization to migrate or replace those systems.
 
 ---
 
@@ -557,6 +559,7 @@ Every schema change must be followed by a Payload migration (`pnpm payload migra
 |----------|---------------|
 | `docs/ARCHITECTURE.md` | Full system map: Stripe, WP, FluentCRM, MU plugins, all data flows — **read first** |
 | `docs/PAYLOAD_CMS.md` | Payload installation, collections, tables, restore points |
+| `docs/PAYLOAD_COURSE_VISUAL_IMPLEMENTATION_PLAN.md` | Full Payload course system, entitlements, billing, CRM, groups, chat, and cutover plan |
 | `docs/PROKIT_DATABASE.md` | Database schema, connections, Prisma vs Payload ownership |
 | `docs/STRIPE_MEMBERSHIP_FLOW.md` | Stripe events, plan resolution, email deduplication |
 | `docs/STRIPE_WP_PROVISIONING.md` | WP provisioning endpoint, MU plugin setup, billing portal handoff, env vars |

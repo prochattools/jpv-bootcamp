@@ -28,6 +28,7 @@
     "db:migrate:dev": "prisma migrate deploy --schema=prisma/system.prisma",
     "db:migrate:prod": "prisma migrate deploy --schema=prisma/system.prisma",
     "db:dedupe:check": "tsx scripts/db/test_customer_provisioning_dedupe.ts",
+    "test:payload-course": "tsx scripts/payload_entitlement_evaluator.test.ts",
     "stripe:check-products": "tsx scripts/stripe/check_price_products.ts",
     "mcp:discover": "tsx scripts/mcp-discover.ts",
     "mcp:provision": "tsx scripts/mcp-provision-tenant.ts"

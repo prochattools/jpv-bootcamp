@@ -14,6 +14,13 @@ import {
   PayloadCourses,
   PayloadLessons,
 } from './collections/PayloadCoursePrototype'
+import { accessControlCollections } from './collections/access'
+import { auditCollections } from './collections/audit'
+import { billingCollections } from './collections/billing'
+import { communityCollections } from './collections/community'
+import { courseRuntimeCollections } from './collections/courses'
+import { crmCollections } from './collections/crm'
+import { memberCollections } from './collections/members'
 import { migrations } from './migrations'
 
 const filename = fileURLToPath(import.meta.url)
@@ -77,6 +84,13 @@ export default buildConfig({
     PayloadCourseModules,
     PayloadLessons,
     PayloadCourseAccessPreview,
+    ...memberCollections,
+    ...courseRuntimeCollections,
+    ...accessControlCollections,
+    ...billingCollections,
+    ...crmCollections,
+    ...communityCollections,
+    ...auditCollections,
   ],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',

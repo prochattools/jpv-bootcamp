@@ -137,7 +137,7 @@ Both Prisma and Payload manage tables in the `jpvbootcamp` schema. They are kept
 | `sponsored_seats` | Available sponsored seats |
 | `stripe_webhook_events` | Stripe webhook event log (idempotency) |
 
-**Payload tables (Payload-managed) — 13 tables:**
+**Payload baseline tables (Payload-managed, `restore/payload-baseline`) — 13 tables:**
 
 | Table | Description |
 |-------|-------------|
@@ -155,6 +155,23 @@ Both Prisma and Payload manage tables in the `jpvbootcamp` schema. They are kept
 | `payload_users` | CMS admin users |
 | `payload_users_sessions` | CMS user session records |
 
+**Course system feature branch state (`feature/course-branding-and-preview`):**
+
+The branch registers the original visual prototype collections plus the first production-oriented course-system scaffolding:
+
+| Area | Collection files | Purpose |
+|------|------------------|---------|
+| Visual course prototype | `src/collections/PayloadCoursePrototype.ts` | Demo course/module/lesson/access-label records. Still not authoritative access control. |
+| Members | `src/collections/members/` | Student/client auth collection, member profile, member security events. |
+| Course runtime | `src/collections/courses/` | Lesson resources, enrollments, lesson progress. |
+| Access control | `src/collections/access/` | Access groups, policies, grants, entitlement events. |
+| Billing mirror | `src/collections/billing/` | Stripe customer/subscription/payment/event/action records for admin visibility. |
+| CRM/email | `src/collections/crm/` | Contacts, tags, notes, email templates/events, admin notifications. |
+| Community | `src/collections/community/` | Member groups, spaces, memberships, posts, comments, files, chat threads/messages. |
+| Audit | `src/collections/audit/` | Admin/member/system audit events. |
+
+`src/migrations/20260621_194424_course_system_phase1.ts` creates these additional Payload-managed tables and updates Payload internal relationship tables. In staging, this brings `jpvbootcamp_staging` to 56 `payload_*` tables.
+
 ### Migrations
 
 Payload manages its own migrations via the `prodMigrations` option in `postgresAdapter`:
@@ -162,14 +179,16 @@ Payload manages its own migrations via the `prodMigrations` option in `postgresA
 ```ts
 db: postgresAdapter({
   pool: { connectionString: cleanDbUrl(process.env.DATABASE_URL) },
-  schemaName: 'jpvbootcamp',
+  schemaName: getDbSchema(process.env.DATABASE_URL),
   prodMigrations: migrations,  // auto-applies on startup in production
 }),
 ```
 
-Payload migrations run automatically when the container starts. They are idempotent — already-applied migrations (tracked in `payload_migrations`) are skipped. No manual migration command is ever needed for Payload tables.
+Payload migrations run automatically when the container starts. They are idempotent — already-applied migrations (tracked in `payload_migrations`) are skipped. New Payload collections are not production-safe until their migration exists and has been reviewed.
 
 Prisma migrations continue to run via `deploy-prod.sh` → `npm run db:migrate:prod` as before.
+
+`deploy-prod.sh` also normalizes schema object ownership to the tenant user after admin-run Prisma migrations. This is required because Payload startup migrations use the tenant `DATABASE_URL`; the tenant role must own existing `payload_*` tables it needs to alter.
 
 ---
 
@@ -186,6 +205,19 @@ Collections are Payload's equivalent of database tables / content types. Each co
 | `payload_categories` | `payload_categories` | Taxonomy for posts and pages |
 
 Collection definitions live in `src/collections/`. The `slug` is the API identifier; `dbName` sets the actual PostgreSQL table name.
+
+### Course prototype collections
+
+The course prototype collections are visual proof-of-concept structures only:
+
+| Collection slug | Purpose | Production caveat |
+|-----------------|---------|-------------------|
+| `payload_courses` | Prototype course details, labels, and mock progress | Must be redesigned before becoming the authoritative course collection |
+| `payload_course_modules` | Prototype ordered course sections | Safe only as demo data until migration and access model are approved |
+| `payload_lessons` | Prototype lesson content, media labels, mock completion, visual lock state | Visual lock state is not authorization |
+| `payload_course_access_preview` | Static access labels such as Free, Pro, VIP, Manual, Private | Never use this collection for real access decisions |
+
+For the full course, billing, CRM, group, and migration plan, use `docs/PAYLOAD_COURSE_VISUAL_IMPLEMENTATION_PLAN.md`.
 
 ### PayloadPosts fields
 
@@ -256,6 +288,8 @@ DATABASE_URL=postgresql://...
 - Keep `DATABASE_URL` and `SYSTEM_DATABASE_URL` semantics unchanged — Payload only reads `DATABASE_URL`
 - Do not add `payload_*` tables to `prisma/system.prisma` — Payload owns them exclusively
 - The Payload Stripe plugin is not installed — do not confuse Payload's `/api/*` REST routes with the existing `/api/webhook/stripe` handler
+- Do not treat visual course prototype labels or badges as access control
+- Do not deploy registered Payload collections without a corresponding reviewed Payload migration
 
 ---
 
@@ -264,5 +298,6 @@ DATABASE_URL=postgresql://...
 - Database details: `docs/PROKIT_DATABASE.md`
 - Infrastructure: `docs/PROKIT_INFRASTRUCTURE.md`
 - WordPress → Payload migration: `docs/PAYLOAD_MIGRATION.md`
+- Payload course system plan: `docs/PAYLOAD_COURSE_VISUAL_IMPLEMENTATION_PLAN.md`
 - Stripe flow: `docs/STRIPE_MEMBERSHIP_FLOW.md`
 - ProKit invariants: `docs/PROKIT_INVARIANTS.md`
