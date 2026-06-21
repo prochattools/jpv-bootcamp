@@ -56,29 +56,10 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Trigger Dokploy preview redeploy
+      - name: Image pushed to GHCR
         run: |
-          COMMIT_MSG=$(git log -1 --pretty=format:"%s" ${{ github.sha }})
-          COMMIT_AUTHOR=$(git log -1 --pretty=format:"%an" ${{ github.sha }})
-          COMMIT_DATE=$(git log -1 --pretty=format:"%ci" ${{ github.sha }})
-          DESCRIPTION="${COMMIT_AUTHOR} · ${COMMIT_DATE}"$'\n\n'"${{ github.sha }}"
-
-          RESPONSE=$(curl -s -o /tmp/dokploy_response.json -w "%{http_code}" \
-            -X POST "${{ secrets.DOKPLOY_API_BASE_URL }}/api/application.deploy" \
-            -H "x-api-key: ${{ secrets.DOKPLOY_API_KEY }}" \
-            -H "Content-Type: application/json" \
-            -d "{
-              \"applicationId\": \"${{ secrets.DOKPLOY_PREVIEW_APP_ID }}\",
-              \"title\": $(echo "$COMMIT_MSG" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read().strip()))'),
-              \"description\": $(echo "$DESCRIPTION" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read().strip()))')
-            }")
-
-          echo "HTTP status: $RESPONSE"
-          cat /tmp/dokploy_response.json
-
-          if [ "$RESPONSE" != "200" ]; then
-            echo "Dokploy preview trigger failed with status $RESPONSE"
-            exit 1
-          fi
-
-          echo "Preview deployment triggered successfully for branch: ${{ github.ref_name }}"
+          echo "✅ Docker image built and pushed to GHCR:"
+          echo "   ghcr.io/${{ github.repository }}:${{ steps.docker-tag.outputs.tag }}"
+          echo ""
+          echo "Dokploy staging app will pull and redeploy automatically."
+          echo "Access preview at: https://preview.jpvbootcamp.com"
