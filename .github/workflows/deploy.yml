@@ -36,7 +36,7 @@ jobs:
           if [ "${{ github.ref_name }}" = "main" ]; then
             TAG="latest"
           else
-            TAG="${{ github.ref_name }}" | sed 's|/|-|g'
+            TAG=$(echo "${{ github.ref_name }}" | sed 's|/|-|g')
           fi
           echo "tag=$TAG" >> $GITHUB_OUTPUT
 
