@@ -86,13 +86,6 @@ export default buildConfig({
     importMap: {
       baseDir: path.resolve(dirname),
     },
-    components: {
-      graphics: {
-        Logo: './components/payload/JPVAdminBranding#JPVAdminLogo',
-        Icon: './components/payload/JPVAdminBranding#JPVAdminIcon',
-      },
-      Nav: './components/payload/JPVAdminBranding#JPVAdminNav',
-    },
     meta: {
       title: 'JPV Bootcamp',
       titleSuffix: ' — JPV Bootcamp',
