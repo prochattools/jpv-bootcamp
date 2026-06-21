@@ -24,7 +24,6 @@ ENV APP_BASE_URL=https://jpvbootcamp.com
 ENV NEXT_PUBLIC_SERVER_URL=https://jpvbootcamp.com
 RUN --mount=type=cache,target=/app/.next/cache \
     node_modules/.bin/prisma generate --schema=prisma/system.prisma && \
-    pnpm exec payload generate:importmap && \
     pnpm run build
 
 # ---- Script deps (kept separate to avoid conflicting with standalone's pnpm symlinks) ----
