@@ -6,7 +6,6 @@ datasource db {
   provider          = "postgresql"
   url               = env("DATABASE_URL")
   shadowDatabaseUrl = env("SYSTEM_DATABASE_URL")
-  schemas           = ["jpvbootcamp"]
 }
 
 model EmailSubscriber {
@@ -18,7 +17,6 @@ model EmailSubscriber {
   updatedAt DateTime @updatedAt
 
   @@map("email_subscribers")
-  @@schema("jpvbootcamp")
 }
 
 model StripeWebhookEvent {
@@ -30,7 +28,6 @@ model StripeWebhookEvent {
   payload     Json?    @map("payload")
 
   @@map("stripe_webhook_events")
-  @@schema("jpvbootcamp")
 }
 
 model CustomerProvisioning {
@@ -52,7 +49,6 @@ model CustomerProvisioning {
 
   @@unique([normalizedEmail])
   @@map("customer_provisioning")
-  @@schema("jpvbootcamp")
 }
 
 model PartnerSession {
@@ -66,7 +62,6 @@ model PartnerSession {
   @@index([wpUserId])
   @@index([expiresAt])
   @@map("partner_sessions")
-  @@schema("jpvbootcamp")
 }
 
 model PartnerClick {
@@ -86,7 +81,6 @@ model PartnerClick {
   @@index([categorySlug])
   @@index([createdAt])
   @@map("partner_clicks")
-  @@schema("jpvbootcamp")
 }
 
 model SponsoredSeat {
@@ -109,7 +103,6 @@ model SponsoredSeat {
   @@index([reservedByApplicationId])
   @@index([createdAt])
   @@map("sponsored_seats")
-  @@schema("jpvbootcamp")
 }
 
 model SponsoredApplication {
@@ -139,7 +132,6 @@ model SponsoredApplication {
   @@index([email])
   @@index([seatId])
   @@map("sponsored_applications")
-  @@schema("jpvbootcamp")
 }
 
 model SponsoredGrant {
@@ -157,7 +149,6 @@ model SponsoredGrant {
   @@index([wpUserId])
   @@index([endsAt])
   @@map("sponsored_grants")
-  @@schema("jpvbootcamp")
 }
 
 model Audiences {
@@ -165,7 +156,7 @@ model Audiences {
   resend_id String @unique
   name      String
 
-  @@schema("jpvbootcamp")
+  @@map("audiences")
 }
 
 model Project {
@@ -180,8 +171,6 @@ model Project {
   updatedAt     DateTime
   assistant_id  String?
   webhookLink   String
-
-  @@schema("jpvbootcamp")
 }
 
 model Subscription {
@@ -195,13 +184,9 @@ model Subscription {
   stripe_customer_id String             @unique
   sub_stripe_id      String?
   user_clerk_id      String             @unique
-
-  @@schema("jpvbootcamp")
 }
 
 enum SubscriptionStatus {
   active
   inactive
-
-  @@schema("jpvbootcamp")
 }
