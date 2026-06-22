@@ -32,8 +32,11 @@ As of `20260621_194424_course_system_phase1` on `feature/course-branding-and-pre
 - `scripts/payload/send-queued-emails.mts` is the operator command for queued Payload emails. It defaults to dry-run without delivery-state writes; `--apply` is required before any Resend send or send-failure write happens.
 - `src/lib/members/currentMember.ts` reads the current Payload member session from the HTTP-only Payload auth cookie and rejects admin-user sessions for learner routes.
 - `src/lib/payloadCourse/memberPortal.ts` builds the member dashboard/account/course/lesson projections. It evaluates course access before fetching module and lesson outlines, and lesson access before rendering lesson details or writing progress.
+- `payload_private_media` stores protected course files outside `public/`; `payload_lesson_resources.protectedFile` is the preferred file relationship for paid/private lesson resources.
+- `src/lib/payloadCourse/lessonResources.ts` lists and resolves published lesson resources only after server-side lesson access passes, including previous-lesson enforcement. It prefers `protectedFile` and treats the original public `file` field as a non-confidential fallback.
 - `/learn/login`, `/learn`, and `/learn/account` are dynamic Node routes backed by `payload_members`. Public self-signup remains disabled; accounts still come from admin, Stripe shadow sync, or migration flows.
 - `/learn/[courseSlug]` and `/learn/[courseSlug]/[lessonSlug]` are dynamic Node routes with server-side access checks and mark-complete support.
+- `/learn/resources/[resourceId]` is the only learner-facing lesson-resource URL. It requires a Payload member session, rechecks lesson access, serves private files from `private/payload-course-media`, and returns the file with `private, no-store` headers.
 - `scripts/payload/seed-course-admin-data.mts` contains an idempotent seed runner for access groups, prototype/admin courses, modules, lessons, email templates, community spaces, and access policies. It defaults to dry-run and writes only with `--apply`.
 - `src/migrations/20260621_194424_course_system_phase1.ts` creates the course-system Payload tables and has been applied to staging.
 - Staging now has 56 `payload_*` tables and records both Payload migrations in `payload_migrations`.
@@ -42,7 +45,7 @@ As of `20260621_194424_course_system_phase1` on `feature/course-branding-and-pre
 - `scripts/db/deploy-prod.sh` normalizes schema object ownership to the tenant user before Payload `prodMigrations` run on app startup.
 - `/course-preview` routes are still static demonstration pages and are guarded by `PAYLOAD_COURSE_PROTOTYPE_ENABLED`.
 
-This is scaffolding and groundwork plus tested read-side, admin mutation, reconciliation, Stripe shadow-sync, queued-email sender, and member learner-page services. It does not yet make Payload the live runtime source for Stripe provisioning, public signup, scheduled Resend sends, rich lesson rendering, protected downloads, comments, migration, or community posting. Stripe shadow sync remains a feature-flagged mirror until staging replay and reconciliation pass.
+This is scaffolding and groundwork plus tested read-side, admin mutation, reconciliation, Stripe shadow-sync, queued-email sender, member learner-page services, private lesson-resource storage, and guarded lesson-resource download URLs. It does not yet make Payload the live runtime source for Stripe provisioning, public signup, scheduled Resend sends, rich lesson rendering, comments, migration, or community posting. Stripe shadow sync remains a feature-flagged mirror until staging replay and reconciliation pass. Private course files are no longer stored under `public/`, but production cutover still requires a persistent volume or Payload-supported storage adapter for `private/payload-course-media`.
 
 ## Critical findings from review
 
@@ -273,7 +276,8 @@ Do not create all collections in one change. Create them in the phase order belo
 | `payload_courses` | Course title, slug, status, privacy, layout, thumbnail, description, enrollment type, drip/schedule policy, access policy relationship. |
 | `payload_course_modules` | Ordered sections belonging to one course. |
 | `payload_lessons` | Ordered lesson content, media embeds, resources, preview flag, comments flag, duration, required previous lesson. |
-| `payload_lesson_resources` | Downloadable files scoped to lesson/course access. |
+| `payload_private_media` | Protected course resource files stored outside the public static directory. |
+| `payload_lesson_resources` | Downloadable files scoped to lesson/course access. Use `protectedFile` for private resources; public `file` is only for non-confidential fallback assets. |
 | `payload_course_enrollments` | Member enrollment in a course, enrollment source, enrollment date, status. |
 | `payload_lesson_progress` | Per-member lesson progress and completion timestamps. |
 
@@ -871,7 +875,11 @@ Implementation status:
 - It evaluates lesson access and previous-lesson completion before rendering lesson details.
 - Denied lessons render a generic lock view; title, summary, video, downloads, comments, and files are not shown.
 - Allowed lessons render a controlled lesson shell and can write idempotent `payload_lesson_progress` completion records through `completeLessonAction`.
-- Rich text rendering, protected lesson downloads, comments, and media players remain future work and must keep their own server-side access checks.
+- Lesson-resource links are now rendered only for allowed lessons, and each download goes through `/learn/resources/[resourceId]`.
+- The download route loads the current `payload_members` session, confirms the resource is published, recomputes lesson access including previous-lesson enforcement, and serves private files from `private/payload-course-media` with private no-store headers.
+- Rich text rendering, comments, and media players remain future work and must keep their own server-side access checks.
+- Do not upload confidential paid resources to the public `file` field. Production-confidential lesson resources must use `protectedFile` and should be included in migration reconciliation.
+- Before cutover, `private/payload-course-media` must be mounted as durable storage or replaced with a Payload-supported storage adapter. Container-local files are acceptable for staging proof-of-concept testing only.
 
 ### Phase 8 - Groups, spaces, discussions, and chat
 
@@ -1094,9 +1102,10 @@ Stop and request an architectural decision if:
 
 The first scaffolding slice is complete. Do this next:
 
-1. Add protected lesson resource/download serving with lesson-level access checks.
-2. Add community read routes only after access checks and moderation states are enforced server-side.
-3. Add rich text/media rendering only after renderer behavior and sanitization are reviewed.
-4. Add a reviewed scheduler/worker for `payload:email:send -- --apply` only after template review and staging replay are approved.
+1. Add migration/source reconciliation checks that reject private lesson resources still pointing at public `payload_media`.
+2. Verify durable storage for `private/payload-course-media` in staging, or choose and configure a Payload storage adapter before production cutover.
+3. Add community read routes only after access checks and moderation states are enforced server-side.
+4. Add rich text/media rendering only after renderer behavior and sanitization are reviewed.
+5. Add a reviewed scheduler/worker for `payload:email:send -- --apply` only after template review and staging replay are approved.
 
 Keep the order: scaffolding and groundwork first, then shadow services, then functional runtime systems, then migration and cutover.

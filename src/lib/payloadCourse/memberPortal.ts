@@ -6,6 +6,10 @@ import {
   type PayloadId,
   type PayloadCourseWriteAPI,
 } from '@/lib/payloadCourse/accessService'
+import {
+  listPublishedLessonResources,
+  type MemberLessonResource,
+} from '@/lib/payloadCourse/lessonResources'
 
 export type MemberPortalLesson = {
   id: string
@@ -73,6 +77,7 @@ export type MemberPortalLessonDetail = {
     previewLesson: boolean
     videoProviderLabel: string | null
     videoIdOrPreviewUrl: string | null
+    resources: MemberLessonResource[]
     completed: boolean
   } | null
   allowed: boolean
@@ -487,6 +492,9 @@ export async function getMemberLessonDetail(
   })
   const allowed = access.decision.allowed
   const lessonTitle = asString(lesson.title) ?? 'Untitled lesson'
+  const resources = allowed
+    ? await listPublishedLessonResources(payload, lesson.id)
+    : []
 
   return {
     course: {
@@ -508,6 +516,7 @@ export async function getMemberLessonDetail(
           previewLesson: asBoolean(lesson.previewLesson),
           videoProviderLabel: asString(lesson.videoProviderLabel),
           videoIdOrPreviewUrl: asString(lesson.videoIdOrPreviewUrl),
+          resources,
           completed: completedLessonIds.has(String(lesson.id)),
         }
       : {
@@ -519,6 +528,7 @@ export async function getMemberLessonDetail(
           previewLesson: false,
           videoProviderLabel: null,
           videoIdOrPreviewUrl: null,
+          resources: [],
           completed: false,
         },
     allowed,

@@ -163,7 +163,7 @@ The branch registers the original visual prototype collections plus the first pr
 |------|------------------|---------|
 | Visual course prototype | `src/collections/PayloadCoursePrototype.ts` | Demo course/module/lesson/access-label records. Still not authoritative access control. |
 | Members | `src/collections/members/` | Student/client auth collection, member profile, member security events. |
-| Course runtime | `src/collections/courses/` | Lesson resources, enrollments, lesson progress. |
+| Course runtime | `src/collections/courses/` | Private course files, lesson resources, enrollments, lesson progress. |
 | Access control | `src/collections/access/` | Access groups, policies, grants, entitlement events. |
 | Billing mirror | `src/collections/billing/` | Stripe customer/subscription/payment/event/action records for admin visibility. |
 | CRM/email | `src/collections/crm/` | Contacts, tags, notes, email templates/events, admin notifications. |
@@ -188,7 +188,11 @@ The branch registers the original visual prototype collections plus the first pr
 
 `src/lib/payloadCourse/memberPortal.ts` builds member dashboard/account/course/lesson projections for `/learn`, `/learn/account`, `/learn/[courseSlug]`, and `/learn/[courseSlug]/[lessonSlug]`. It calls the fail-closed access service before loading module and lesson outlines, and calls lesson access before rendering lesson details or writing progress.
 
-`/learn/login`, `/learn`, `/learn/account`, `/learn/[courseSlug]`, and `/learn/[courseSlug]/[lessonSlug]` are dynamic Node routes backed by `payload_members`. Public member signup is still disabled; member creation remains controlled by Payload admin, Stripe shadow sync, or migration flows until verification and abuse controls are approved. Lesson rich text, protected downloads, media players, and comments are not live yet.
+`payload_private_media` is the protected upload collection for paid/private course resource files. It stores files under `private/payload-course-media`, outside the public static directory. `payload_lesson_resources.protectedFile` should be used for confidential lesson downloads; the older `file` relationship to `payload_media` is a non-confidential fallback only. Before production cutover, `private/payload-course-media` must be backed by durable storage or replaced with a Payload-supported storage adapter.
+
+`src/lib/payloadCourse/lessonResources.ts` lists and resolves lesson resources only after server-side lesson access passes. `/learn/resources/[resourceId]` is the guarded learner download route; it requires a Payload member session, confirms the resource is published, recomputes lesson access including previous-lesson enforcement, and serves private files with private no-store headers.
+
+`/learn/login`, `/learn`, `/learn/account`, `/learn/[courseSlug]`, `/learn/[courseSlug]/[lessonSlug]`, and `/learn/resources/[resourceId]` are dynamic Node routes backed by `payload_members`. Public member signup is still disabled; member creation remains controlled by Payload admin, Stripe shadow sync, or migration flows until verification and abuse controls are approved. Lesson rich text, media players, and comments are not live yet.
 
 ### Migrations
 

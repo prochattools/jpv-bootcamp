@@ -88,11 +88,39 @@ export default async function LearnLessonPage({
                 </p>
                 <h2 className='mt-3 text-2xl font-bold'>Payload lesson renderer placeholder</h2>
                 <p className='mt-3 text-sm leading-6 text-[#d5e0da]'>
-                  Access has passed. Rich text, media downloads, comments, and files should be rendered here only after their final renderers and file access checks are added.
+                  Access has passed. Rich text, media players, and comments should be rendered here only after their final renderers and checks are added.
                 </p>
                 {detail.lesson.videoIdOrPreviewUrl && (
                   <p className='mt-4 rounded-2xl border border-white/15 bg-white/[0.06] p-4 text-sm'>
                     Video: {detail.lesson.videoProviderLabel ?? 'provider'} · {detail.lesson.videoIdOrPreviewUrl}
+                  </p>
+                )}
+              </div>
+
+              <div className='mt-6 rounded-[24px] border border-[#153f2e]/10 bg-[#f4f1e9] p-6'>
+                <p className='text-xs font-bold uppercase tracking-[0.2em] text-[#8a7450]'>
+                  Resources
+                </p>
+                {detail.lesson.resources.length > 0 ? (
+                  <div className='mt-5 grid gap-3'>
+                    {detail.lesson.resources.map((resource) => (
+                      <a
+                        className='rounded-2xl border border-[#153f2e]/10 bg-white p-4 text-sm font-bold text-[#153f2e] transition hover:border-[#9d864b]/60'
+                        href={resource.downloadUrl}
+                        key={resource.id}
+                      >
+                        <span className='block'>{resource.title}</span>
+                        {(resource.fileName || resource.description) && (
+                          <span className='mt-1 block text-xs font-medium leading-5 text-[#68766f]'>
+                            {resource.description ?? resource.fileName}
+                          </span>
+                        )}
+                      </a>
+                    ))}
+                  </div>
+                ) : (
+                  <p className='mt-4 text-sm leading-6 text-[#68766f]'>
+                    No published lesson resources are available yet.
                   </p>
                 )}
               </div>

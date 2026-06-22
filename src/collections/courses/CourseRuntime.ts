@@ -1,4 +1,5 @@
 import type { CollectionConfig } from 'payload'
+import path from 'node:path'
 
 import {
   adminOnlyCollectionAccess,
@@ -8,6 +9,41 @@ import {
 } from '@/lib/access/payloadAccess'
 
 const courseSystemGroup = 'Course System'
+
+export const PayloadPrivateMedia: CollectionConfig = {
+  slug: 'payload_private_media',
+  dbName: 'payload_private_media',
+  labels: {
+    singular: 'Private Course File',
+    plural: 'Private Course Files',
+  },
+  admin: {
+    group: courseSystemGroup,
+    useAsTitle: 'alt',
+    defaultColumns: ['alt', 'filename', 'mimeType', 'updatedAt'],
+  },
+  upload: {
+    staticDir: path.resolve(process.cwd(), 'private/payload-course-media'),
+  },
+  access: {
+    admin: adminOnlyCollectionAccess.admin,
+    create: requirePayloadAdmin,
+    read: requirePayloadAdmin,
+    update: requirePayloadAdmin,
+    delete: requirePayloadAdmin,
+  },
+  fields: [
+    {
+      name: 'alt',
+      type: 'text',
+      required: true,
+      admin: {
+        description: 'Internal label for administrators. Private course files are not publicly linked.',
+      },
+    },
+  ],
+  timestamps: true,
+}
 
 export const PayloadLessonResources: CollectionConfig = {
   slug: 'payload_lesson_resources',
@@ -41,7 +77,17 @@ export const PayloadLessonResources: CollectionConfig = {
       name: 'file',
       type: 'upload',
       relationTo: 'payload_media',
-      required: true,
+      admin: {
+        description: 'Public media fallback only. Do not use this field for confidential paid lesson files.',
+      },
+    },
+    {
+      name: 'protectedFile',
+      type: 'upload',
+      relationTo: 'payload_private_media',
+      admin: {
+        description: 'Use this for private paid lesson resources. Learners can only download it through the guarded route.',
+      },
     },
     {
       name: 'status',
@@ -205,4 +251,3 @@ export const PayloadLessonProgress: CollectionConfig = {
   ],
   timestamps: true,
 }
-

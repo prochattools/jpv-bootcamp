@@ -14,6 +14,7 @@ import {
   getMemberLessonDetail,
   markMemberLessonComplete,
 } from '../src/lib/payloadCourse/memberPortal'
+import { resolveMemberLessonResourceDownload } from '../src/lib/payloadCourse/lessonResources'
 
 type CollectionMap = Record<string, PayloadDocument[]>
 
@@ -272,6 +273,55 @@ function buildPayload() {
         status: 'completed',
       },
     ],
+    payload_lesson_resources: [
+      {
+        id: 'resource_foundations_1',
+        lesson: 'lesson_foundations_2',
+        protectedFile: 'private_media_resource_1',
+        title: 'Workbook',
+        description: 'Lesson workbook PDF',
+        status: 'published',
+        sortOrder: 10,
+      },
+      {
+        id: 'resource_foundations_draft',
+        lesson: 'lesson_foundations_2',
+        file: 'media_resource_2',
+        title: 'Draft worksheet',
+        status: 'draft',
+        sortOrder: 20,
+      },
+      {
+        id: 'resource_later_lesson',
+        lesson: 'lesson_foundations_3',
+        file: 'media_resource_3',
+        title: 'Advanced worksheet',
+        status: 'published',
+        sortOrder: 10,
+      },
+    ],
+    payload_media: [
+      {
+        id: 'media_resource_2',
+        filename: 'draft.pdf',
+        mimeType: 'application/pdf',
+        filesize: 1024,
+      },
+      {
+        id: 'media_resource_3',
+        filename: 'advanced.pdf',
+        mimeType: 'application/pdf',
+        filesize: 4096,
+      },
+    ],
+    payload_private_media: [
+      {
+        id: 'private_media_resource_1',
+        filename: 'workbook.pdf',
+        mimeType: 'application/pdf',
+        filesize: 2048,
+      },
+    ],
     payload_member_profiles: [
       {
         id: 'profile_1',
@@ -370,6 +420,10 @@ async function run() {
     assert.equal(detail?.lesson?.title, 'Principles')
     assert.equal(detail?.previousLesson?.completed, true)
     assert.equal(detail?.nextLesson?.slug, 'advanced-step')
+    assert.equal(detail?.lesson?.resources.length, 1)
+    assert.equal(detail?.lesson?.resources[0]?.title, 'Workbook')
+    assert.equal(detail?.lesson?.resources[0]?.downloadUrl, '/learn/resources/resource_foundations_1')
+    assert.notEqual(detail?.lesson?.resources[0]?.downloadUrl, '/media/workbook.pdf')
   }
 
   {
@@ -380,6 +434,49 @@ async function run() {
     assert.equal(detail?.decisionReason, 'previous_lesson_required')
     assert.equal(detail?.lesson?.title, null)
     assert.equal(detail?.lesson?.summary, null)
+    assert.equal(detail?.lesson?.resources.length, 0)
+  }
+
+  {
+    const payload = buildPayload()
+    const download = await resolveMemberLessonResourceDownload(
+      payload,
+      'member_active',
+      'resource_foundations_1'
+    )
+
+    assert.equal(download.allowed, true)
+    if (download.allowed) {
+      assert.equal(download.media.filename, 'workbook.pdf')
+      assert.equal(download.media.storage, 'private')
+      assert.equal(download.mimeType, 'application/pdf')
+      assert.equal(download.downloadUrl, '/learn/resources/resource_foundations_1')
+    }
+  }
+
+  {
+    const payload = buildPayload()
+    const download = await resolveMemberLessonResourceDownload(
+      payload,
+      'member_active',
+      'resource_foundations_draft'
+    )
+
+    assert.equal(download.allowed, false)
+    assert.equal(download.reason, 'resource_not_published')
+  }
+
+  {
+    const payload = buildPayload()
+    const download = await resolveMemberLessonResourceDownload(
+      payload,
+      'member_active',
+      'resource_later_lesson'
+    )
+
+    assert.equal(download.allowed, false)
+    assert.equal(download.reason, 'access_denied')
+    assert.equal(download.decisionReason, 'previous_lesson_required')
   }
 
   {
