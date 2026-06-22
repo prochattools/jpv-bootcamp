@@ -2,7 +2,15 @@
 
 **Status: live in production as of 2026-06-21 (commit `131e15c`, tag `restore/payload-baseline`)**
 
-Payload CMS is the content management layer added to `jpvbootcamp.com`. It runs alongside WordPress during the gradual WordPress → Payload migration. The two systems coexist: WordPress manages membership and billing; Payload manages structured content, pages, and posts.
+Payload CMS is the administrator-only back office for JPV Bootcamp. The application uses three explicit surfaces with separate responsibilities and authorization boundaries:
+
+- `/` serves the public website.
+- `/admin` serves Payload CMS for verified administrators only.
+- `/portal` serves the member-facing Next.js application.
+
+A shared login entry at `/login` may authenticate both audiences, but redirect decisions are based on verified identity and role: administrators go to `/admin`; members go to `/portal`. Payload administrator accounts and member identities remain separate security domains. Members must never receive Payload admin access, administrator API access, or administrator capabilities.
+
+Existing WordPress and production flows remain unchanged until the documented cutover gates are complete.
 
 ---
 
@@ -10,9 +18,11 @@ Payload CMS is the content management layer added to `jpvbootcamp.com`. It runs 
 
 | URL | What it serves |
 |-----|---------------|
-| `https://jpvbootcamp.com` | Next.js frontend — always |
-| `https://jpvbootcamp.com/app` | Payload CMS admin panel |
-| `https://portal.jpvbootcamp.com` | WordPress — unchanged |
+| `https://jpvbootcamp.com/` | Public website |
+| `https://jpvbootcamp.com/login` | Shared login entry and role-based redirect |
+| `https://jpvbootcamp.com/admin` | Payload CMS back office for administrators only |
+| `https://jpvbootcamp.com/portal` | Member-facing course, community, account, and billing portal |
+| `https://portal.jpvbootcamp.com` | Existing WordPress portal until explicit cutover |
 
 ---
 
@@ -280,6 +290,31 @@ routes: {
 ```
 
 **Admin users** (`payload_users`) are independent from all other user systems (Clerk auth, WordPress users, Stripe customers). A user in `payload_users` has access only to the Payload admin panel and has no connection to any subscription or billing record.
+
+### Sidebar organization
+
+The Payload admin sidebar is organized into 5 focused groups for administrator usability:
+
+| Group | Visible items | Purpose |
+|-------|---|---|
+| **Courses** | Courses, Modules, Lessons | Course content creation and management |
+| **Members & Access** | Members, Member Groups, Access Groups | Account, tier, and permission management |
+| **Community** | Community Spaces, Community Posts | Community feed and announcements |
+| **Billing** | Subscriptions, Payments, Billing Accounts | Stripe billing visibility and reconciliation |
+| **Administration** | Administrators | Payload admin user management |
+
+**Hidden from sidebar** (accessible via direct URL or relationships, but not in navigation):
+
+- Member Profiles, Member Security Events (accessed from Member detail view)
+- Access Policies, Access Grants, Entitlement Events (system plumbing for access decisions)
+- Stripe Events, Billing Actions (operational logs)
+- Private Course Files, Lesson Resources, Course Enrollments, Lesson Progress (accessed from Course/Lesson context)
+- Space Memberships, Community Comments, Community Files (accessed from Space context)
+- Chat Threads, Chat Messages (not yet active)
+- Contacts, CRM Tags, Contact Tag Assignments, Contact Notes, Email Templates, Email Events, Admin Notifications (CRM not prioritized at this stage)
+- Audit Events (operational log)
+- Access Previews (visual prototype)
+- Media, Pages, Posts, Categories (CMS content not prioritized at this stage)
 
 ---
 

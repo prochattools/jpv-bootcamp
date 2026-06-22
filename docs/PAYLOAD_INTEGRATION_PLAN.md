@@ -1,555 +1,262 @@
 # Payload CMS Integration Plan
 
-This document is the canonical implementation plan for adding Payload CMS to the `jpv-bootcamp` Next.js repo. Code must follow this plan step by step. Nothing is done outside this plan without updating it first.
+This is the canonical execution plan for JPV Bootcamp. Code changes must follow this plan in order. Update this document before changing the architecture, security model, rollout sequence, or production boundary.
+
+## Final architecture
+
+JPV Bootcamp has three application surfaces:
+
+| Surface | Route | Audience | Purpose |
+|---|---|---|---|
+| Public website | `/` | Everyone | Marketing, pricing, public content, and login entry |
+| Administrator back office | `/admin` | Verified administrators only | Payload CMS administration |
+| Member portal | `/portal` | Verified members only | Courses, community, private groups, account, and billing |
+
+`/login` is the shared authentication entry. After authentication:
+
+- verified administrators redirect to `/admin`;
+- verified members redirect to `/portal`;
+- unresolved, blocked, or unauthorized identities receive no privileged access.
+
+Payload administrator accounts and member identities are separate security domains, even when one person holds both. Members must never receive Payload admin access, administrator API access, or administrator capabilities.
+
+## Binding security rules
+
+1. Authorization is enforced server-side and fails closed.
+2. Hidden navigation is usability only; it is never an authorization control.
+3. Every protected route, API operation, Local API call, mutation, and file operation verifies the authenticated identity and required role or entitlement.
+4. Course, community, private-group, and billing access requires explicit roles, policies, grants, and effective entitlements.
+5. Administrator capabilities are granted explicitly and minimally.
+6. Member sessions cannot be accepted as Payload administrator sessions.
+7. Password onboarding and recovery use expiring set-password or reset links. Plaintext passwords are never emailed.
+8. Secrets, tokens, password-reset codes, Stripe credentials, and private file URLs are never exposed to clients or logs.
+9. Stripe webhooks remain signature-verified and idempotent.
+10. Access is removed or restricted when the authoritative entitlement state no longer permits it.
+
+## Current implementation baseline
+
+All work happens on `feature/course-branding-and-preview`. `main` remains the production-safe restore branch.
+
+The repository already contains:
+
+- Payload CMS in the existing Next.js application;
+- Node 20, pnpm, Next.js 16, React 19, PostgreSQL, and Payload migrations;
+- the administrator route at `/admin`;
+- Payload collections for administrators, members, courses, modules, lessons, access control, billing mirrors, community, CRM/email, and audit records;
+- fail-closed entitlement evaluation and server-side access services;
+- Stripe shadow synchronization behind explicit feature boundaries;
+- queued email processing with dry-run and apply modes;
+- documentation for the target course and member system.
+
+The member portal at `/portal`, shared role-based login routing, final administrator navigation, and production cutover remain implementation work.
 
 ## Strategy
 
-- **No migration from `jpv-bootcamp-app`** — that scaffold was reference only; it is deleted in Phase 0
-- **Side-by-side with WordPress** — both systems run simultaneously; WordPress handles membership/billing/WP provisioning; Payload handles content
-- **One repo** — Payload is installed inside `jpv-bootcamp`, not a separate service
-- **One database** — the existing `jpvbootcamp` Supabase schema; all Payload tables prefixed with `payload_`
-- **Non-destructive** — no existing tables, routes, env vars, or automations are altered
-- **Database last** — all local work is completed and verified before any production DB changes
-- **Always revertible** — every phase ends with a git commit; reverting means `git checkout main`
+- **One repository** — the public site, Payload back office, and member portal remain inside `jpv-bootcamp`.
+- **Separate surfaces** — administrators use `/admin`; members use `/portal`.
+- **Separate security domains** — administrator and member identities are never treated as interchangeable.
+- **Payload for administration** — Payload manages administrative records and workflows; members do not use the Payload admin interface.
+- **Custom member experience** — `/portal` is a dedicated Next.js interface for member tasks.
+- **Explicit entitlements** — runtime access is derived from authoritative roles, policies, grants, subscription state, and account state.
+- **Non-destructive rollout** — existing WordPress, Stripe, email, and production flows remain unchanged until replacement paths pass all gates.
+- **Database last** — production schema or data changes occur only after local validation and migration review.
+- **Small reversible steps** — each implementation phase has focused validation, an explicit commit, and a rollback point.
 
-## Restore points
+## Execution roadmap
 
-| Point | How to revert |
-|-------|---------------|
-| Before anything starts | `git checkout main` in `jpv-bootcamp` |
-| After docs committed | `git checkout main` (discards feature branch) |
-| After npm→pnpm | `git checkout main` (restores `package.json`, `package-lock.json`) |
-| After Next.js upgrade | `git checkout main` |
-| After React upgrade | `git checkout main` |
-| After Payload install | `git checkout main` |
+### Phase 1 — Finalize the administrator boundary
 
-**The `main` branch is always the safe restore point. All work happens on `feature/payload-integration`.**
+Deliverables:
 
----
+- Payload is served only from `/admin`;
+- `/admin` and administrator APIs reject non-administrators;
+- the Payload login and admin UI use JPV Bootcamp branding;
+- logout terminates the administrator session and returns to the login screen;
+- the administrator sidebar is concise and grouped by daily tasks;
+- operational collections remain available through relationships or direct authorized workflows but are not primary navigation.
 
-## Phase 0 — Groundwork (local only, no database changes)
+Visible administrator navigation:
 
-### Step 0.1 — Commit existing doc changes to main
+- **Courses** — Courses, Modules, Lessons
+- **Members & Access** — Members, Member Groups, Access Groups
+- **Community** — Community Spaces, Community Posts
+- **Billing** — Subscriptions, Payments, Billing Accounts
+- **Administration** — Administrators
 
-The 8 documentation files updated in the prior session must be committed to `main` before branching. This locks in the doc changes as a stable snapshot and makes `main` a clean restore point.
+Validation:
 
-```bash
-cd jpv-bootcamp
-git add docs/PROKIT_AI_GUIDELINES.md docs/PROKIT_DATABASE.md docs/PROKIT_DEV_GUIDE.md \
-        docs/PROKIT_INFRASTRUCTURE.md docs/PROKIT_INVARIANTS.md docs/PROKIT_OVERVIEW.md \
-        docs/STRIPE_MEMBERSHIP_FLOW.md docs/PAYLOAD_CMS.md docs/PAYLOAD_INTEGRATION_PLAN.md
-git commit -m "docs: add Payload CMS integration documentation"
-```
+- anonymous and member requests to `/admin` fail closed;
+- administrator login succeeds and redirects to `/admin`;
+- logout does not automatically re-authenticate;
+- direct collection URLs enforce the same access rules as navigation;
+- Payload import-map generation and TypeScript checks pass under Node 20.
 
-**Restore point**: `git checkout main` will always restore to this commit.
+### Phase 2 — Implement shared login routing
 
-### Step 0.2 — Create feature branch
+Deliverables:
 
-All implementation work happens here. `main` is never touched again until the feature is complete and verified.
+- `/login` authenticates without assuming the destination;
+- verified administrators redirect to `/admin`;
+- verified members redirect to `/portal`;
+- blocked, suspended, unresolved, or conflicting identities receive a safe error state;
+- administrator and member sessions remain isolated.
 
-```bash
-git checkout -b feature/payload-integration
-```
+Validation:
 
-**Verification**: `git branch` shows `* feature/payload-integration`.
+- role routing is determined server-side;
+- redirect parameters cannot escape approved routes;
+- a member account cannot obtain an administrator session;
+- an administrator without a member identity does not automatically receive member entitlements;
+- logout clears only the intended session and returns to a non-privileged screen.
 
-### Step 0.3 — Delete jpv-bootcamp-app
+### Phase 3 — Build the member portal shell
 
-The `jpv-bootcamp-app` repo was a reference scaffold with no live data. It is now safe to delete because:
-- All architecture decisions are documented in this plan and `docs/PAYLOAD_CMS.md`
-- All collection patterns from it are replicated in Steps 3–4 of Phase 1
+Create:
 
-```bash
-# Verify it has no live data worth keeping
-rm -rf /Users/Office/Repos/prochattools/clients/jc-citadel/jpv-bootcamp-app
-```
+- `/portal`
+- `/portal/courses`
+- `/portal/community`
+- `/portal/groups`
+- `/portal/account`
+- `/portal/billing`
 
-**Verification**: Directory no longer exists. Nothing in `jpv-bootcamp` references it.
+Deliverables:
 
-### Step 0.4 — Switch from npm to pnpm
+- member-specific navigation;
+- responsive authenticated layout;
+- account overview;
+- empty, loading, unauthorized, blocked, and error states;
+- no Payload administrative components or terminology.
 
-Payload requires pnpm. The existing `jpv-bootcamp` uses npm. This step converts the project.
+Validation:
 
-```bash
-# Install pnpm globally if not already installed
-npm install -g pnpm
+- anonymous users redirect to `/login`;
+- administrators do not receive member access unless they also have a valid member identity;
+- all portal data is loaded through server-side authorization boundaries.
 
-# In jpv-bootcamp root:
-# 1. Remove npm lockfile
-rm package-lock.json
+### Phase 4 — Enforce course and group access
 
-# 2. Add pnpm engine constraint to package.json
-# Add: "pnpm": "^9 || ^10" under "engines"
+Deliverables:
 
-# 3. Add .npmrc for pnpm
-echo "shamefully-hoist=true" > .npmrc
+- member course listing from effective entitlements;
+- course, module, lesson, community, and private-group access checks;
+- explicit Free, Pro, VIP, manual, suspended, expired, and revoked states;
+- private media and document delivery through authorized server paths;
+- administrative grant and revoke workflows with audit records.
 
-# 4. Install with pnpm (generates pnpm-lock.yaml)
-pnpm install
-```
+Validation:
 
-**Verification**: `pnpm-lock.yaml` exists; `node_modules` was installed by pnpm; `pnpm dev` starts the app on port 3000.
+- every protected resource denies access when no explicit entitlement exists;
+- hidden UI cannot be bypassed through direct URLs or APIs;
+- entitlement changes take effect predictably;
+- reconciliation reports identify inconsistent access states;
+- private Bunny or storage assets are never exposed through permanent public URLs.
 
-**Revert if broken**: `git checkout main` restores `package.json` and `package-lock.json`; `npm install` works again.
+### Phase 5 — Complete account and password workflows
 
-Commit after verification:
-```bash
-git add package.json package-lock.json pnpm-lock.yaml .npmrc
-git commit -m "chore: switch from npm to pnpm"
-```
+Deliverables:
 
-### Step 0.5 — Upgrade Next.js 14 → 16
+- secure member invitation;
+- expiring set-password and reset-password links;
+- member password change;
+- profile update;
+- account block and restore;
+- administrator audit visibility.
 
-Payload 3.85.1 requires Next.js 16. This is a major upgrade — Next.js 15 and 16 have breaking changes.
+Validation:
 
-**Known breaking changes to check:**
-- `next/headers` API changes (async in Next.js 15+)
-- `next/image` defaults changed
-- Route segment config types changed
-- Metadata API changes
+- no plaintext passwords are stored, logged, or emailed;
+- tokens are single-use, time-limited, and invalidated after success;
+- blocked accounts lose portal access;
+- sensitive account changes require appropriate re-authentication or verification.
 
-```bash
-pnpm add next@16.2.6 eslint-config-next@16.2.6
-```
+### Phase 6 — Complete billing self-service
 
-Then run the Next.js codemod for automatic migrations:
-```bash
-npx @next/codemod@latest next-async-request-api .
-```
+Deliverables:
 
-**Verification**: `pnpm build` completes without errors. Manually test:
-- `http://localhost:3000` (homepage loads)
-- `http://localhost:3000/api/health` returns 200
-- No TypeScript errors: `pnpm tsc --noEmit`
+- current plan and billing state in `/portal/billing`;
+- Stripe-hosted customer portal or equivalent secure self-service;
+- Pro-to-VIP upgrade;
+- cancellation and renewal-state visibility;
+- webhook-driven billing mirror and entitlement reconciliation.
 
-**Revert if broken**: `git checkout feature/payload-integration` at pre-upgrade state, or `git checkout main` to abandon entirely.
+Validation:
 
-Commit after verification:
-```bash
-git add -A
-git commit -m "chore: upgrade Next.js 14 to 16"
-```
+- Stripe remains authoritative for payment state;
+- webhook signatures and idempotency are verified;
+- client input never directly grants paid access;
+- failed, canceled, refunded, disputed, and recovered payments produce defined entitlement states;
+- administrators can inspect billing state without exposing secrets.
 
-### Step 0.6 — Upgrade React 18 → 19
+### Phase 7 — Complete community and announcements
 
-Payload 3.85.1 requires React 19.
+Deliverables:
 
-**Known breaking changes to check:**
-- Clerk components (verify `@clerk/nextjs` supports React 19)
-- Radix UI components (verify all `@radix-ui/*` packages support React 19)
-- `react-hot-toast` compatibility
-- `formik` compatibility
+- member community feed;
+- announcements;
+- authorized community and private-group publishing;
+- text, images, video references, links, and documents;
+- Bunny integration through private, authorized delivery paths where required.
 
-```bash
-pnpm add react@19 react-dom@19
-pnpm add -D @types/react@19 @types/react-dom@19
-```
+Validation:
 
-**Verification**: `pnpm build` completes. Manually test:
-- All pages render without hydration errors
-- Clerk sign-in flow works
-- No console errors on homepage
+- publishing permissions are explicit;
+- private-group content cannot be fetched by unauthorized members;
+- uploads enforce type, size, and ownership rules;
+- external media identifiers and signed URLs are handled server-side.
 
-**Revert if broken**: `git checkout main` and report which specific dependency is incompatible.
+### Phase 8 — Shadow validation and cutover
 
-Commit after verification:
-```bash
-git add -A
-git commit -m "chore: upgrade React 18 to 19"
-```
+Before replacing any existing production flow:
 
-### Step 0.7 — Verify all existing critical routes
+1. Run identity, entitlement, billing, email, and content reconciliation.
+2. Verify reviewed Payload migrations touch only approved `payload_*` objects.
+3. Test administrator and member journeys in an isolated environment.
+4. Test rollback without deleting production data.
+5. Confirm monitoring, audit, support, and recovery procedures.
+6. Obtain explicit approval for each cutover boundary.
 
-Before touching Payload, confirm every existing automation endpoint still works:
+Only then may an existing WordPress or production responsibility be disabled or redirected.
 
-```bash
-# Health check
-curl http://localhost:3000/api/health
-
-# Build succeeds
-pnpm build
-
-# TypeScript clean
-pnpm tsc --noEmit
-
-# Lint clean
-pnpm lint
-```
-
-Also manually verify in browser:
-- [ ] Homepage loads
-- [ ] Clerk auth middleware works (protected routes redirect to sign-in)
-- [ ] No console errors
-
-**If anything is broken here, stop and fix before proceeding to Phase 1.**
-
-Commit if any fixes were needed:
-```bash
-git add -A
-git commit -m "fix: compatibility fixes for Next.js 16 / React 19"
-```
-
----
-
-## Phase 1 — Install Payload CMS (local only, no database changes)
-
-All steps in Phase 1 work locally. No production database is touched. Payload's auto-migration only runs when connecting to a database — which is deferred to Phase 2.
-
-### Step 1 — Install Payload dependencies
-
-```bash
-pnpm add payload@3.85.1 @payloadcms/next@3.85.1 @payloadcms/db-postgres@3.85.1 \
-         @payloadcms/richtext-lexical@3.85.1 @payloadcms/ui@3.85.1
-```
-
-**Verification**: `node_modules/payload` exists; `pnpm tsc --noEmit` still passes.
-
-Commit:
-```bash
-git add package.json pnpm-lock.yaml
-git commit -m "chore: add Payload CMS dependencies"
-```
-
-### Step 2 — Add env vars
-
-Add to `.env` (local dev):
-
-```dotenv
-PAYLOAD_SECRET=<generate-random-32-char-secret>
-NEXT_PUBLIC_SERVER_URL=http://localhost:3000
-```
-
-For production (Dokploy), these will be added in Phase 2:
-```dotenv
-PAYLOAD_SECRET=<same-or-different-production-secret>
-NEXT_PUBLIC_SERVER_URL=https://jpvbootcamp.com
-```
-
-> `PAYLOAD_SECRET` must be a strong random string (32+ characters).
-
-Update `.env.example` with these two new keys (no values). Commit `.env.example` — never commit `.env`.
-
-```bash
-git add .env.example
-git commit -m "chore: add Payload env vars to .env.example"
-```
-
-### Step 3 — Create payload.config.ts
-
-Create `src/payload.config.ts`:
-
-```ts
-import path from 'path'
-import { fileURLToPath } from 'url'
-import { buildConfig } from 'payload'
-import { postgresAdapter } from '@payloadcms/db-postgres'
-import { lexicalEditor } from '@payloadcms/richtext-lexical'
-import { PayloadUsers } from './collections/PayloadUsers'
-import { PayloadMedia } from './collections/PayloadMedia'
-import { PayloadPages } from './collections/PayloadPages'
-import { PayloadPosts } from './collections/PayloadPosts'
-import { PayloadCategories } from './collections/PayloadCategories'
-
-const filename = fileURLToPath(import.meta.url)
-const dirname = path.dirname(filename)
-
-export default buildConfig({
-  admin: {
-    user: 'payload_users',
-    importMap: {
-      baseDir: path.resolve(dirname),
-    },
-  },
-  routes: {
-    admin: '/app',
-  },
-  collections: [
-    PayloadUsers,
-    PayloadMedia,
-    PayloadPages,
-    PayloadPosts,
-    PayloadCategories,
-  ],
-  editor: lexicalEditor(),
-  secret: process.env.PAYLOAD_SECRET || '',
-  typescript: {
-    outputFile: path.resolve(dirname, 'payload-types.ts'),
-  },
-  db: postgresAdapter({
-    pool: {
-      connectionString: process.env.DATABASE_URL,
-    },
-    schemaName: 'jpvbootcamp',
-  }),
-  serverURL: process.env.NEXT_PUBLIC_SERVER_URL,
-})
-```
-
-**Verification**: `pnpm tsc --noEmit` passes.
-
-### Step 4 — Create collections
-
-Create `src/collections/PayloadUsers.ts`:
-```ts
-import type { CollectionConfig } from 'payload'
-
-export const PayloadUsers: CollectionConfig = {
-  slug: 'payload_users',
-  dbName: 'payload_users',
-  auth: true,
-  admin: { useAsTitle: 'email' },
-  fields: [],
-}
-```
-
-Create `src/collections/PayloadMedia.ts`:
-```ts
-import type { CollectionConfig } from 'payload'
-import path from 'path'
-import { fileURLToPath } from 'url'
-
-const filename = fileURLToPath(import.meta.url)
-const dirname = path.dirname(filename)
-
-export const PayloadMedia: CollectionConfig = {
-  slug: 'payload_media',
-  dbName: 'payload_media',
-  upload: {
-    staticDir: path.resolve(dirname, '../../public/media'),
-  },
-  fields: [
-    { name: 'alt', type: 'text', required: true },
-  ],
-}
-```
-
-Create `src/collections/PayloadCategories.ts`:
-```ts
-import type { CollectionConfig } from 'payload'
-
-export const PayloadCategories: CollectionConfig = {
-  slug: 'payload_categories',
-  dbName: 'payload_categories',
-  admin: { useAsTitle: 'title' },
-  fields: [
-    { name: 'title', type: 'text', required: true },
-  ],
-}
-```
-
-Create `src/collections/PayloadPosts.ts`:
-```ts
-import type { CollectionConfig } from 'payload'
-
-export const PayloadPosts: CollectionConfig = {
-  slug: 'payload_posts',
-  dbName: 'payload_posts',
-  admin: {
-    useAsTitle: 'title',
-    defaultColumns: ['title', 'status', 'createdAt'],
-  },
-  fields: [
-    { name: 'title', type: 'text', required: true },
-    { name: 'slug', type: 'text', unique: true, index: true },
-    { name: 'content', type: 'richText' },
-    {
-      name: 'status',
-      type: 'select',
-      options: ['draft', 'published'],
-      defaultValue: 'draft',
-    },
-    {
-      name: 'categories',
-      type: 'relationship',
-      relationTo: 'payload_categories',
-      hasMany: true,
-    },
-  ],
-  timestamps: true,
-}
-```
-
-Create `src/collections/PayloadPages.ts`:
-```ts
-import type { CollectionConfig } from 'payload'
-
-export const PayloadPages: CollectionConfig = {
-  slug: 'payload_pages',
-  dbName: 'payload_pages',
-  admin: {
-    useAsTitle: 'title',
-    defaultColumns: ['title', 'slug', 'createdAt'],
-  },
-  fields: [
-    { name: 'title', type: 'text', required: true },
-    { name: 'slug', type: 'text', unique: true, index: true },
-    { name: 'content', type: 'richText' },
-  ],
-  timestamps: true,
-}
-```
-
-**Verification**: `pnpm tsc --noEmit` passes.
-
-### Step 5 — Wire Payload into Next.js
-
-Add `@payload-config` path alias to `tsconfig.json`:
-```json
-{
-  "compilerOptions": {
-    "paths": {
-      "@payload-config": ["./src/payload.config.ts"]
-    }
-  }
-}
-```
-
-Create `src/app/(payload)/layout.tsx`:
-```tsx
-import React from 'react'
-export default function PayloadLayout({ children }: { children: React.ReactNode }) {
-  return children
-}
-```
-
-Create `src/app/(payload)/app/[[...segments]]/page.tsx`:
-```tsx
-import type { Metadata } from 'next'
-import { RootPage, generatePageMetadata } from '@payloadcms/next/views'
-import config from '@payload-config'
-
-export const generateMetadata = ({ params }: { params: { segments: string[] } }): Promise<Metadata> =>
-  generatePageMetadata({ config, params })
-
-export default function Page({ params }: { params: { segments: string[] } }) {
-  return RootPage({ config, params })
-}
-```
-
-Create `src/app/(payload)/app/[[...segments]]/not-found.tsx`:
-```tsx
-export default function NotFound() {
-  return <div>404 — Not Found</div>
-}
-```
-
-**Verification**: `pnpm build` completes without errors.
-
-### Step 6 — Generate types and import map
-
-```bash
-# These commands require DATABASE_URL to be set but will fail gracefully if DB unreachable
-pnpm payload generate:types
-pnpm payload generate:importmap
-```
-
-> If the local database is not available, `generate:types` can be skipped until Phase 2. The build and admin UI still work; only the generated `payload-types.ts` will be missing.
-
-Commit all Phase 1 work:
-```bash
-git add -A
-git commit -m "feat: add Payload CMS to jpv-bootcamp (local, pre-DB)"
-```
-
-### Step 7 — Local smoke test (no production DB)
-
-Build and run locally:
-```bash
-pnpm build
-pnpm start
-```
-
-Verify:
-- [ ] `http://localhost:3000` — existing frontend loads
-- [ ] `http://localhost:3000/app` — Payload admin login screen appears (will show DB error until Phase 2)
-- [ ] `http://localhost:3000/api/health` — returns 200
-- [ ] No existing routes are broken
-
----
-
-## Phase 2 — Database (production only, Dokploy)
-
-**Only proceed to Phase 2 after Phase 1 is fully verified locally.**
-
-Phase 2 is the only point where the production Supabase database is touched. Because Payload's `payload_*` tables are entirely separate from all Prisma tables, there is zero risk of data loss or interference with existing tables.
-
-### Step 8 — Add env vars to Dokploy
-
-In Dokploy environment settings, add:
-```
-PAYLOAD_SECRET=<strong-random-32-char-string>
-NEXT_PUBLIC_SERVER_URL=https://jpvbootcamp.com
-```
-
-`DATABASE_URL` is already set. No other changes.
-
-### Step 9 — Deploy to Dokploy
-
-The feature branch is merged to `main` and pushed. Dokploy deploys.
-
-On first startup, Payload auto-creates its tables:
-- `payload_users`
-- `payload_posts`
-- `payload_pages`
-- `payload_media`
-- `payload_categories`
-- `payload_migrations`
-- `payload_preferences`
-- `payload_sessions`
-
-These are created non-destructively alongside existing Prisma tables.
-
-**Verification via psql** (inside Dokploy VNet or MCP bridge):
-```sql
-SELECT table_name
-FROM information_schema.tables
-WHERE table_schema = 'jpvbootcamp'
-  AND table_name LIKE 'payload_%'
-ORDER BY table_name;
-```
-
-### Step 10 — Smoke test production
-
-- [ ] `https://jpvbootcamp.com` loads (frontend unaffected)
-- [ ] `https://jpvbootcamp.com/app` shows Payload admin login
-- [ ] Create first admin user in Payload
-- [ ] `https://jpvbootcamp.com/api/health` returns 200
-- [ ] `https://jpvbootcamp.com/api/webhook/stripe` still responds correctly
-- [ ] Run: `stripe trigger checkout.session.completed` — verify WP provisioning flow fires
-
-### Step 11 — Verify all existing automations
-
-Run through critical existing flows:
-- [ ] Stripe checkout → WP provisioning → Resend email
-- [ ] Billing portal redirect works
-- [ ] Entitlements sync works
-- [ ] FluentCRM tag sync works
-
----
-
-## Rollback plan (any phase)
-
-### Phase 0 / Phase 1 rollback (local only)
-```bash
-git checkout main
-npm install   # restores npm + Next.js 14 + React 18
-```
-No database was touched. Full revert in under a minute.
-
-### Phase 2 rollback (if production deploy breaks something)
-1. Revert deploy in Dokploy to the previous `main` commit
-2. `payload_*` tables in the database can remain — they are completely inert to the existing app
-3. Remove `PAYLOAD_SECRET` and `NEXT_PUBLIC_SERVER_URL` from Dokploy env (optional cleanup)
-
-The existing `customer_provisioning`, `stripe_webhook_events`, `Subscription`, `Project` tables and all Stripe/WP automations are **never touched by any step in this plan**.
-
----
-
-## What is NOT in this plan
-
-- No migration of content from WordPress to Payload (future phase)
-- No Clerk/Payload user sync (Payload users are editorial users only)
-- No Payload Stripe plugin (existing Stripe webhook handler is sufficient; plugin can be added later)
-- No changes to `prisma/system.prisma`
-- No changes to existing API routes
-- No changes to existing env vars
+## Migration and database guardrails
+
+- Payload collection schema changes require generated types and reviewed migration output.
+- Stop if a Payload migration touches an unapproved non-`payload_*` table or object.
+- Never apply prototype or unreviewed migrations to production.
+- Production writes require an explicit apply step; dry-run is the default for reconciliation, email delivery, and migration inspection tools.
+- Existing production tables, users, subscriptions, automations, and WordPress flows remain intact until their specific cutover is approved.
+
+## Validation gate for every phase
+
+A phase is complete only when:
+
+- the smallest relevant type check passes;
+- focused tests for changed authorization and business rules pass;
+- the affected administrator and member journeys are manually verified;
+- no secret or private data is exposed;
+- migrations are reviewed when schemas change;
+- rollback is documented and tested where risk warrants it;
+- documentation matches the implemented behavior;
+- changes are committed on `feature/course-branding-and-preview` with explicit paths.
+
+## Rollback
+
+- Before production cutover, revert the phase-specific feature-branch commit.
+- `main` remains the production-safe code restore branch.
+- Feature flags default off for shadow integrations and incomplete replacement paths.
+- Do not delete production data as part of rollback.
+- Keep inert `payload_*` records when removal would increase recovery risk.
+- Re-enable or retain the existing WordPress, Stripe, email, and automation path until the replacement is proven.
+
+## Stop conditions
+
+Stop implementation when:
+
+- administrator and member authorization cannot be proven separate;
+- a protected operation relies only on hidden navigation or client-side checks;
+- an entitlement decision is ambiguous or fails open;
+- a migration affects an unapproved database object;
+- Stripe or email processing is not idempotent;
+- private assets can be accessed without authorization;
+- rollback is unavailable;
+- the implementation contradicts this plan or the canonical invariants.

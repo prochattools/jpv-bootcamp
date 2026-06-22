@@ -2,18 +2,28 @@
 
 ## Status and verdict
 
-This document is the executable plan for moving from the current WordPress, FluentCommunity, and FluentCRM course/community stack to a Payload CMS based course system.
+This document is the executable roadmap for the final JPV Bootcamp application architecture:
 
-The old version of this document was a visual-only prototype plan. That plan was safe, but it was not sufficient for the goal now requested. A full replacement is feasible, but only if it is built in strict phases:
+- `/` is the public website.
+- `/login` is the shared authentication entry.
+- `/admin` is the administrator-only Payload CMS back office.
+- `/portal` is the member-facing Next.js application.
 
-1. Keep the existing WordPress, FluentCommunity, FluentCRM, Stripe, and Resend flows untouched.
-2. Finish and validate the isolated Payload visual prototype.
-3. Build the target Payload data model with no side effects.
-4. Build member identity, entitlement, billing, email, CRM, and group access as a fail-closed application layer.
-5. Shadow-test Stripe and migration data before granting real access.
-6. Cut over only after reconciliation, rollback, and admin workflows are proven.
+Administrators and members are separate security domains, even when one person holds both identities. Verified administrators redirect to `/admin`; verified members redirect to `/portal`. Members must never receive Payload admin access, administrator API access, or administrator capabilities. Navigation visibility is not authorization; every protected operation is enforced server-side and fails closed.
 
-Payload can support this target system through documented collections, auth collections, access control, hooks, Local API, relationship fields, jobs queue, and Postgres migrations. It is not an LMS plugin by itself. The FluentCommunity-like behavior must be implemented as custom Payload collections and Next.js application services.
+Course, community, private-group, and billing access is granted only through explicit roles, policies, and entitlements. Password onboarding and recovery use expiring set-password or reset links; plaintext passwords are never emailed.
+
+Implementation proceeds in strict phases:
+
+1. Preserve the existing WordPress, FluentCommunity, FluentCRM, Stripe, Resend, and production flows.
+2. Complete the `/app` to `/admin` administrator-route migration with redirect, authentication, and rollback validation.
+3. Finalize the administrator information architecture and enforce administrator-only access.
+4. Build `/portal` as a separate member-facing Next.js application.
+5. Build member identity, entitlement, course, community, private-group, billing, and email services as fail-closed application layers.
+6. Shadow-test identity, Stripe, entitlement, email, and migration behavior before granting live access.
+7. Cut over only after reconciliation, rollback, security, and administrator workflows are proven.
+
+Payload supplies the administrator back office, collections, authentication primitives, access control, hooks, Local API, relationships, jobs, and Postgres migrations. The member experience is implemented in `/portal`; it does not reuse or expose the Payload admin interface.
 
 ## Current implementation status
 
@@ -1136,9 +1146,34 @@ Stop and request an architectural decision if:
 - chat requires infrastructure not documented for Dokploy/Next.js;
 - a cancellation policy decision is unresolved.
 
+## Admin interface organization
+
+The Payload admin sidebar has been reorganized for focused, minimal navigation:
+
+### Visible groups (5 total, 14 items)
+
+- **Courses**: Courses, Modules, Lessons
+- **Members & Access**: Members, Member Groups, Access Groups
+- **Community**: Community Spaces, Community Posts
+- **Billing**: Subscriptions, Payments, Billing Accounts
+- **Administration**: Administrators
+
+### Hidden from sidebar (still accessible via URL, preserved in relationships)
+
+Administrative plumbing, logs, and future features remain in the database and accessible via direct links or relationships but are not listed in the sidebar navigation:
+
+- Member identity internals: Profiles, Security Events
+- Access control internals: Policies, Grants, Entitlement Events
+- Billing logs: Stripe Events, Billing Actions
+- Course internals: Private Files, Lesson Resources, Enrollments, Progress
+- Community internals: Space Memberships, Comments, Files, Chat Threads, Chat Messages
+- CRM (future): Contacts, Tags, Tag Assignments, Notes, Email Templates, Events, Notifications
+- Audit & operations: Audit Events
+- Prototype/legacy: Access Previews, Media, Pages, Posts, Categories
+
 ## Next recommended implementation slice
 
-The first scaffolding and read-side runtime slices are complete. Do this next:
+The first scaffolding, read-side runtime, and admin interface slices are complete. Do this next:
 
 1. Verify durable storage for `private/payload-course-media` in staging, or choose and configure a Payload storage adapter before production cutover.
 2. Add admin-managed space membership mutations, request-access workflow, role-change audit events, and moderation actions.

@@ -5,9 +5,18 @@ This file captures the contracts that must stay stable while rebranding the boil
 ## Payload CMS additions (jpv-bootcamp specific)
 - `PAYLOAD_SECRET` – Payload auth token signing secret (32+ chars, required).
 - `NEXT_PUBLIC_SERVER_URL` – Base URL for Payload admin links (e.g. `https://jpvbootcamp.com`).
-- Node 20 is required (`.nvmrc`); pnpm is required (`engines.pnpm` in `package.json`).
-- Payload admin panel is at `/app` (not the Payload default `/admin`).
-- All Payload tables are prefixed `payload_` and live in the `jpvbootcamp` schema.
+- Node 20 is required; pnpm is required (`engines.pnpm` in `package.json`).
+- `/` is the public website.
+- `/login` is the shared authentication entry and may redirect only after verified identity and role resolution.
+- `/admin` is the administrator-only Payload CMS back office.
+- `/portal` is the member-facing Next.js application.
+- Payload administrator accounts and member identities are separate security domains, even when one person holds both.
+- Members must never receive Payload admin access, administrator API access, or administrator capabilities.
+- Navigation visibility is not authorization. Every protected route, API operation, Local API call, and mutation must enforce server-side access and fail closed.
+- Course, community, private-group, and billing access requires explicit roles, policies, and entitlements.
+- Password onboarding and recovery use expiring set-password or reset links; plaintext passwords are never emailed.
+- Existing WordPress and production flows remain unchanged until documented validation, reconciliation, rollback, and cutover gates pass.
+- All Payload tables are prefixed `payload_` and live in the approved JPV Bootcamp schema.
 - Payload manages its own migrations; do not include `payload_*` tables in `prisma/system.prisma`.
 
 ## Environment Contract (must exist unless marked optional)
