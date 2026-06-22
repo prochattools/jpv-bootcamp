@@ -31,7 +31,7 @@ The `jpv-bootcamp` app also includes **Payload CMS** as a content layer alongsid
 ## Day-to-day dev workflow
 1. `nvm use 20` (Payload requires Node 20; `.nvmrc` is set)
 2. `pnpm install` (pnpm is required for Payload)
-3. `pnpm dev` (auto-writes `.env`, provisions `tenant_dev`, applies Prisma migrations, starts Next.js on 3000; Payload auto-migrates its own tables on first run)
+3. `pnpm dev` (auto-writes `.env`, provisions `tenant_dev`, applies Prisma migrations, starts Next.js on 3000; run reviewed Payload migrations with `pnpm payload migrate` when Payload collection schemas change)
 4. Build: `pnpm build`; Prod start: `pnpm start`
 5. Database tasks: `npm run db:init`, `npm run db:migrate:dev`, `npm run db:migrate:prod`, `npm run db:cleanup`
 6. Payload tasks: `pnpm payload generate:types`, `pnpm payload generate:importmap`

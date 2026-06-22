@@ -42,10 +42,12 @@ As of `20260621_194424_course_system_phase1` on `feature/course-branding-and-pre
 - Staging now has 56 `payload_*` tables and records both Payload migrations in `payload_migrations`.
 - Staging seed data has been applied through the seed runner: 3 courses, 5 lessons, 4 access groups, 3 spaces, 7 email templates, and 6 access policies.
 - Staging entitlement reconciliation dry-run currently reports 0 members, 3 courses, 6 policies, 0 subscriptions, 0 active grants, 0 decisions, and 0 issues.
-- `scripts/db/deploy-prod.sh` normalizes schema object ownership to the tenant user before Payload `prodMigrations` run on app startup.
+- `scripts/db/deploy-prod.sh` normalizes schema object ownership to the tenant user before reviewed Payload migrations are applied with `pnpm payload migrate`.
 - `/course-preview` routes are still static demonstration pages and are guarded by `PAYLOAD_COURSE_PROTOTYPE_ENABLED`.
 
 This is scaffolding and groundwork plus tested read-side, admin mutation, reconciliation, Stripe shadow-sync, queued-email sender, member learner-page services, private lesson-resource storage, and guarded lesson-resource download URLs. It does not yet make Payload the live runtime source for Stripe provisioning, public signup, scheduled Resend sends, rich lesson rendering, comments, migration, or community posting. Stripe shadow sync remains a feature-flagged mirror until staging replay and reconciliation pass. Private course files are no longer stored under `public/`, but production cutover still requires a persistent volume or Payload-supported storage adapter for `private/payload-course-media`.
+
+Staging currently records three Payload migrations: `20260620_213328`, `20260621_194424_course_system_phase1`, and `20260622_093852_course_private_media`. In this Dokploy standalone deployment, the new private-media migration did not apply on container startup; it was applied explicitly with `pnpm payload migrate` against `jpvbootcamp_staging`. Treat explicit reviewed Payload migration execution plus verification in `payload_migrations` as the required operational step for future schema changes.
 
 ## Critical findings from review
 

@@ -366,7 +366,7 @@ ensure_schema_object_owner
 MIGRATION_STATUS="success"
 write_status
 
-echo "[deploy] payload_* tables will be created/updated on first app startup via prodMigrations option"
+echo "[deploy] Payload migrations must be applied explicitly with pnpm payload migrate after review"
 
 SMOKE_STATUS="running"
 write_status

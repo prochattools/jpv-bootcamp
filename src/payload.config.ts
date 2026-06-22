@@ -102,8 +102,8 @@ export default buildConfig({
       connectionString: cleanDbUrl(process.env.DATABASE_URL),
     },
     schemaName: getDbSchema(process.env.DATABASE_URL),
-    // Run pending migrations automatically on connect in production (NODE_ENV=production).
-    // Idempotent: already-applied migrations are skipped via payload_migrations table.
+    // Register reviewed Payload migrations. In Dokploy standalone deployments,
+    // apply them explicitly with `pnpm payload migrate` and verify payload_migrations.
     prodMigrations: migrations,
   }),
   serverURL: process.env.PAYLOAD_SERVER_URL || process.env.NEXT_PUBLIC_SERVER_URL,

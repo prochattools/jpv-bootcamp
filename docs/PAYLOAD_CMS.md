@@ -196,21 +196,21 @@ The branch registers the original visual prototype collections plus the first pr
 
 ### Migrations
 
-Payload manages its own migrations via the `prodMigrations` option in `postgresAdapter`:
+Payload migrations are registered through the `prodMigrations` option in `postgresAdapter`:
 
 ```ts
 db: postgresAdapter({
   pool: { connectionString: cleanDbUrl(process.env.DATABASE_URL) },
   schemaName: getDbSchema(process.env.DATABASE_URL),
-  prodMigrations: migrations,  // auto-applies on startup in production
+  prodMigrations: migrations,
 }),
 ```
 
-Payload migrations run automatically when the container starts. They are idempotent — already-applied migrations (tracked in `payload_migrations`) are skipped. New Payload collections are not production-safe until their migration exists and has been reviewed.
+In the Dokploy standalone deployment, do not rely on container startup to apply new Payload migrations. After a reviewed Payload migration is committed and deployed, run `pnpm payload migrate` with the target app environment and verify the migration row in `payload_migrations`. Already-applied migrations are idempotently skipped. New Payload collections are not production-safe until their migration exists, has been reviewed, has been applied to the target schema, and has been verified.
 
 Prisma migrations continue to run via `deploy-prod.sh` → `npm run db:migrate:prod` as before.
 
-`deploy-prod.sh` also normalizes schema object ownership to the tenant user after admin-run Prisma migrations. This is required because Payload startup migrations use the tenant `DATABASE_URL`; the tenant role must own existing `payload_*` tables it needs to alter.
+`deploy-prod.sh` also normalizes schema object ownership to the tenant user after admin-run Prisma migrations. This is required because explicit Payload migrations use the tenant `DATABASE_URL`; the tenant role must own existing `payload_*` tables it needs to alter.
 
 ---
 

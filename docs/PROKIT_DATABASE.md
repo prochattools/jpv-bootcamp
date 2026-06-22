@@ -112,17 +112,17 @@ Command: `npm run db:cleanup -- --slug <slug> [--force]`
 
 ### Payload CMS migrations (payload_* tables)
 - Payload manages its own tables autonomously (all prefixed `payload_`).
-- Payload auto-applies its own migrations on startup via the `prodMigrations` option in `postgresAdapter` — no manual migration command is needed.
+- Payload migrations are registered via the `prodMigrations` option in `postgresAdapter`, but Dokploy standalone deployments must apply reviewed Payload migrations explicitly with `pnpm payload migrate`.
 - Payload tables live in the active tenant schema from `DATABASE_URL?schema=...`; the `payload_` prefix prevents naming conflicts.
 - Do not add `payload_*` tables to `prisma/system.prisma` — Payload owns them exclusively.
 - Do not touch Payload tables from Prisma, and do not touch Prisma tables from Payload hooks.
-- Course/community collections are created by `src/migrations/20260621_194424_course_system_phase1.ts`; staging `jpvbootcamp_staging` currently has 56 `payload_*` tables after this migration.
-- `deploy-prod.sh` normalizes schema object ownership to the tenant user after admin-run Prisma migrations. This is required because Payload `prodMigrations` run through the tenant `DATABASE_URL` on app startup.
+- Course/community collections are created by `src/migrations/20260621_194424_course_system_phase1.ts`; private course media is added by `src/migrations/20260622_093852_course_private_media.ts`. Staging `jpvbootcamp_staging` currently has 57 `payload_*` tables after these migrations.
+- `deploy-prod.sh` normalizes schema object ownership to the tenant user after admin-run Prisma migrations. This is required because explicit Payload migrations run through the tenant `DATABASE_URL`.
 
 | Manager | Owns | Command |
 |---------|------|---------|
 | Prisma | `Audiences`, `Project`, `Subscription`, `customer_provisioning`, `email_subscribers`, `partner_clicks`, `partner_sessions`, `sponsored_applications`, `sponsored_grants`, `sponsored_seats`, `stripe_webhook_events` | `npm run db:migrate:dev` / `db:migrate:prod` |
-| Payload | All `payload_*` tables, including admin CMS, media/pages/posts, member/course/access/billing/CRM/community/audit collections | Auto on startup (`prodMigrations`) after deploy ownership normalization |
+| Payload | All `payload_*` tables, including admin CMS, media/pages/posts, member/course/access/billing/CRM/community/audit collections | `pnpm payload migrate` after review and deploy ownership normalization |
 
 ## Optional MCP / Automation Bridge
 - RPC layer at `https://mcp.prochat.tools` (replaceable).  

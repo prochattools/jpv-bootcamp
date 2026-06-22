@@ -61,7 +61,7 @@ Large refactors should be phased and highlight risk areas (auth, billing, data m
 ```bash
 pnpm payload generate:types       # Regenerate payload-types.ts after schema changes
 pnpm payload generate:importmap   # Regenerate import map after adding collections/plugins
-pnpm dev                          # Payload auto-migrates its tables on first run
+pnpm dev                          # run pnpm payload migrate separately after Payload schema changes
 ```
 
 Payload admin panel: `http://localhost:3000/app` (dev) / `https://jpvbootcamp.com/app` (prod).
