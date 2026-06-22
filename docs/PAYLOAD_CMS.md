@@ -184,6 +184,12 @@ The branch registers the original visual prototype collections plus the first pr
 
 `src/lib/payloadCourse/emailSender.ts` sends queued `payload_email_events` through active `payload_email_templates` using Resend's SDK idempotency key option. `pnpm payload:email:send` dry-runs queued sends without updating delivery state; `pnpm payload:email:send -- --apply` is required to send or mark send failures. There is no scheduler/cron enabled yet.
 
+`src/lib/members/currentMember.ts` is the server-side member-session helper for learner routes. It reads the Payload HTTP-only auth cookie through `payload.auth({ headers })` and only accepts users from the `payload_members` collection.
+
+`src/lib/payloadCourse/memberPortal.ts` builds member dashboard/account projections for `/learn` and `/learn/account`. It calls the fail-closed access service before loading module and lesson outlines, so locked private/secret courses expose only course-level metadata and a lock reason.
+
+`/learn/login`, `/learn`, and `/learn/account` are dynamic Node routes backed by `payload_members`. Public member signup is still disabled; member creation remains controlled by Payload admin, Stripe shadow sync, or migration flows until verification and abuse controls are approved.
+
 ### Migrations
 
 Payload manages its own migrations via the `prodMigrations` option in `postgresAdapter`:

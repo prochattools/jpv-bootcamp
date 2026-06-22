@@ -3,6 +3,7 @@ import {
   adminOnlyCollectionAccess,
   denyPublicWrite,
   requirePayloadAdmin,
+  requirePayloadAdminOrRelatedMember,
   requirePayloadAdminOrMemberSelf,
 } from '@/lib/access/payloadAccess'
 
@@ -83,8 +84,8 @@ export const PayloadMemberProfiles: CollectionConfig = {
   access: {
     admin: adminOnlyCollectionAccess.admin,
     create: requirePayloadAdmin,
-    read: requirePayloadAdminOrMemberSelf,
-    update: requirePayloadAdminOrMemberSelf,
+    read: requirePayloadAdminOrRelatedMember('member'),
+    update: requirePayloadAdminOrRelatedMember('member'),
     delete: requirePayloadAdmin,
   },
   fields: [

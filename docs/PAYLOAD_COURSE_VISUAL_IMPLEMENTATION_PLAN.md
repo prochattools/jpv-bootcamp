@@ -30,6 +30,9 @@ As of `20260621_194424_course_system_phase1` on `feature/course-branding-and-pre
 - `scripts/payload_course_stripe_shadow_sync.test.ts` covers active subscription mirroring, duplicate Stripe event idempotency, cancellation blocking, payment failure blocking, payment recovery restore, and preserving manually suspended accounts.
 - `src/lib/payloadCourse/emailSender.ts` contains the queued Payload email sender. It consumes `payload_email_events`, renders active `payload_email_templates`, sends through Resend with an idempotency key, and updates delivery state. It is not scheduled or auto-enabled.
 - `scripts/payload/send-queued-emails.mts` is the operator command for queued Payload emails. It defaults to dry-run without delivery-state writes; `--apply` is required before any Resend send or send-failure write happens.
+- `src/lib/members/currentMember.ts` reads the current Payload member session from the HTTP-only Payload auth cookie and rejects admin-user sessions for learner routes.
+- `src/lib/payloadCourse/memberPortal.ts` builds the member dashboard/account projections. It evaluates course access before fetching module and lesson outlines, so locked private/secret courses do not render lesson content.
+- `/learn/login`, `/learn`, and `/learn/account` are dynamic Node routes backed by `payload_members`. Public self-signup remains disabled; accounts still come from admin, Stripe shadow sync, or migration flows.
 - `scripts/payload/seed-course-admin-data.mts` contains an idempotent seed runner for access groups, prototype/admin courses, modules, lessons, email templates, community spaces, and access policies. It defaults to dry-run and writes only with `--apply`.
 - `src/migrations/20260621_194424_course_system_phase1.ts` creates the course-system Payload tables and has been applied to staging.
 - Staging now has 56 `payload_*` tables and records both Payload migrations in `payload_migrations`.
@@ -38,7 +41,7 @@ As of `20260621_194424_course_system_phase1` on `feature/course-branding-and-pre
 - `scripts/db/deploy-prod.sh` normalizes schema object ownership to the tenant user before Payload `prodMigrations` run on app startup.
 - `/course-preview` routes are still static demonstration pages and are guarded by `PAYLOAD_COURSE_PROTOTYPE_ENABLED`.
 
-This is scaffolding and groundwork plus tested read-side, admin mutation, reconciliation, Stripe shadow-sync, and queued-email sender services. It does not yet make Payload the live runtime source for Stripe provisioning, student login flows, scheduled Resend sends, or community posting. Stripe shadow sync remains a feature-flagged mirror until staging replay and reconciliation pass.
+This is scaffolding and groundwork plus tested read-side, admin mutation, reconciliation, Stripe shadow-sync, queued-email sender, and member learner-page services. It does not yet make Payload the live runtime source for Stripe provisioning, public signup, scheduled Resend sends, complete course/lesson playback, migration, or community posting. Stripe shadow sync remains a feature-flagged mirror until staging replay and reconciliation pass.
 
 ## Critical findings from review
 
@@ -795,6 +798,36 @@ Done when:
 - Locked content explains the reason without leaking private lesson content.
 - Admin/test users can verify access decisions.
 
+Implementation status:
+
+- `/learn/login` signs in only against the `payload_members` auth collection through Payload's server auth helper.
+- `/learn` redirects unauthenticated visitors to `/learn/login?next=/learn`.
+- `/learn` reads the current `payload_members` session from the Payload HTTP-only cookie and rejects `payload_users` admin sessions.
+- `/learn` shows published courses with access decisions from `src/lib/payloadCourse/memberPortal.ts`.
+- Locked courses show only course-level metadata and a lock reason; module and lesson outlines are fetched only after `evaluatePayloadCourseAccess` allows the member.
+- `scripts/payload_member_portal.test.ts` covers the dashboard projection, locked-course no-lesson-fetch behavior, account projection, and member-profile self-access scoping.
+- Public member registration is intentionally not enabled until email verification, abuse controls, and transactional templates are approved.
+
+#### Task 7.1a - Build member account page
+
+Route:
+
+```text
+/learn/account
+```
+
+Done when:
+
+- Member sees their Payload account status and verification state.
+- Member sees the Payload billing account projection, subscriptions, and active access groups.
+- Member can update only their own profile fields.
+
+Implementation status:
+
+- `/learn/account` reads `payload_member_profiles`, `payload_billing_accounts`, `payload_subscriptions`, and active `payload_access_groups` for the current member.
+- `payload_member_profiles` self-read/update now uses the `member` relationship instead of comparing the profile document id to the member id.
+- Profile writes are handled by a server action scoped to the current Payload member session.
+
 #### Task 7.2 - Build course overview
 
 Route proposal:
@@ -1043,9 +1076,9 @@ Stop and request an architectural decision if:
 
 The first scaffolding slice is complete. Do this next:
 
-1. Shadow-sync Stripe/customer provisioning into Payload billing/member/access records without changing live access.
-2. Build the member login/account pages against `payload_members`.
-3. Add a reviewed scheduler/worker for `payload:email:send -- --apply` only after template review and staging replay are approved.
-4. Add community routes only after access checks and moderation states are enforced server-side.
+1. Build `/learn/[courseSlug]` with the same fail-closed access boundary and no private lesson fetch before course access is allowed.
+2. Build `/learn/[courseSlug]/[lessonSlug]` with lesson-level access checks and mark-complete writes.
+3. Add community read routes only after access checks and moderation states are enforced server-side.
+4. Add a reviewed scheduler/worker for `payload:email:send -- --apply` only after template review and staging replay are approved.
 
 Keep the order: scaffolding and groundwork first, then shadow services, then functional runtime systems, then migration and cutover.
