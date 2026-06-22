@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
 import { getCurrentPayloadMember } from '@/lib/members/currentMember'
@@ -63,13 +64,14 @@ export default async function LearnDashboardPage() {
                   <p className='mt-3 text-sm text-[#d5e0da]'>
                     {dashboard.continueLesson.estimatedDuration ?? 'Lesson duration pending'}
                   </p>
-                  <button
-                    className='mt-5 rounded-full bg-[#d9c897] px-5 py-3 text-sm font-bold text-[#153f2e]'
-                    disabled
-                    type='button'
-                  >
-                    Lesson page coming next
-                  </button>
+                  {dashboard.continueLesson.courseSlug && dashboard.continueLesson.lessonSlug && (
+                    <Link
+                      className='mt-5 inline-flex rounded-full bg-[#d9c897] px-5 py-3 text-sm font-bold text-[#153f2e]'
+                      href={`/learn/${dashboard.continueLesson.courseSlug}/${dashboard.continueLesson.lessonSlug}`}
+                    >
+                      Open lesson
+                    </Link>
+                  )}
                 </div>
               ) : (
                 <div className='mt-6 rounded-2xl border border-white/10 bg-white/[0.03] p-5'>
@@ -146,13 +148,14 @@ export default async function LearnDashboardPage() {
                           style={{ width: `${course.progressPercent ?? 0}%` }}
                         />
                       </div>
-                      <button
-                        className='mt-6 w-full rounded-full bg-[#153f2e] px-5 py-3 text-sm font-bold text-white'
-                        disabled
-                        type='button'
-                      >
-                        Course overview coming next
-                      </button>
+                      {course.slug && (
+                        <Link
+                          className='mt-6 flex w-full justify-center rounded-full bg-[#153f2e] px-5 py-3 text-sm font-bold text-white'
+                          href={`/learn/${course.slug}`}
+                        >
+                          Open course
+                        </Link>
+                      )}
                     </div>
                   ) : (
                     <div className='mt-6 rounded-2xl border border-[#153f2e]/10 bg-[#f4f1e9] p-4'>

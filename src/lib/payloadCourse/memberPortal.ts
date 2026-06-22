@@ -1,8 +1,10 @@
 import {
   evaluatePayloadCourseAccess,
+  evaluatePayloadLessonAccess,
   type PayloadCourseAccessAPI,
   type PayloadDocument,
   type PayloadId,
+  type PayloadCourseWriteAPI,
 } from '@/lib/payloadCourse/accessService'
 
 export type MemberPortalLesson = {
@@ -50,6 +52,41 @@ export type MemberCourseDashboard = {
   memberId: string
   courses: MemberPortalCourse[]
   continueLesson: MemberPortalContinueLesson
+}
+
+export type MemberPortalLessonDetail = {
+  course: {
+    id: string
+    title: string
+    slug: string | null
+  }
+  module: {
+    id: string
+    title: string
+  }
+  lesson: {
+    id: string
+    title: string | null
+    slug: string | null
+    summary: string | null
+    estimatedDuration: string | null
+    previewLesson: boolean
+    videoProviderLabel: string | null
+    videoIdOrPreviewUrl: string | null
+    completed: boolean
+  } | null
+  allowed: boolean
+  decisionReason: string
+  lockReason: string | null
+  previousLesson: {
+    title: string
+    slug: string | null
+    completed: boolean
+  } | null
+  nextLesson: {
+    title: string
+    slug: string | null
+  } | null
 }
 
 export type MemberAccountOverview = {
@@ -123,6 +160,17 @@ function bySortOrder(a: PayloadDocument, b: PayloadDocument): number {
   const bOrder = typeof b.sortOrder === 'number' ? b.sortOrder : 0
   if (aOrder !== bOrder) return aOrder - bOrder
   return String(a.title ?? '').localeCompare(String(b.title ?? ''))
+}
+
+function courseMetadata(course: PayloadDocument) {
+  return {
+    id: String(course.id),
+    title: asString(course.title) ?? 'Untitled course',
+    slug: asString(course.slug),
+    shortDescription: asString(course.shortDescription),
+    accessBadge: asString(course.accessBadge),
+    estimatedDuration: asString(course.estimatedDuration),
+  }
 }
 
 function lockReason(reason: string): string {
@@ -236,6 +284,71 @@ async function getAllowedCourseModules(
   return outlines
 }
 
+async function getCourseSequence(
+  payload: PayloadCourseAccessAPI,
+  courseId: PayloadId
+): Promise<Array<{ module: PayloadDocument; lesson: PayloadDocument }>> {
+  const modules = await findAll(payload, 'payload_course_modules', {
+    where: {
+      course: { equals: String(courseId) },
+    },
+    sort: 'sortOrder',
+    limit: 100,
+  })
+
+  const sequence: Array<{ module: PayloadDocument; lesson: PayloadDocument }> = []
+  for (const module of modules.sort(bySortOrder)) {
+    const lessons = await findAll(payload, 'payload_lessons', {
+      where: {
+        module: { equals: String(module.id) },
+      },
+      sort: 'sortOrder',
+      limit: 200,
+    })
+
+    for (const lesson of lessons.sort(bySortOrder)) {
+      sequence.push({ module, lesson })
+    }
+  }
+
+  return sequence
+}
+
+function buildCourseProjection(args: {
+  course: PayloadDocument
+  allowed: boolean
+  decisionReason: string
+  modules: MemberPortalModule[]
+}): MemberPortalCourse {
+  const lessonCount = args.allowed
+    ? args.modules.reduce((count, module) => count + module.lessons.length, 0)
+    : null
+  const completedLessonCount = args.allowed
+    ? args.modules.reduce(
+        (count, module) => count + module.lessons.filter((lesson) => lesson.completed).length,
+        0
+      )
+    : null
+  const progressPercent =
+    args.allowed && lessonCount && completedLessonCount !== null
+      ? Math.round((completedLessonCount / lessonCount) * 100)
+      : args.allowed
+        ? 0
+        : null
+  const metadata = courseMetadata(args.course)
+
+  return {
+    ...metadata,
+    allowed: args.allowed,
+    decisionReason: args.decisionReason,
+    lockReason: args.allowed ? null : lockReason(args.decisionReason),
+    lessonCount,
+    completedLessonCount,
+    progressPercent,
+    modules: args.modules,
+  }
+}
+
 function findContinueLesson(courses: MemberPortalCourse[]): MemberPortalContinueLesson {
   for (const course of courses) {
     if (!course.allowed) continue
@@ -283,37 +396,13 @@ export async function getMemberCourseDashboard(
     const modules = allowed
       ? await getAllowedCourseModules(payload, course.id, completedLessonIds)
       : []
-    const lessonCount = allowed
-      ? modules.reduce((count, module) => count + module.lessons.length, 0)
-      : null
-    const completedLessonCount = allowed
-      ? modules.reduce(
-          (count, module) => count + module.lessons.filter((lesson) => lesson.completed).length,
-          0
-        )
-      : null
-    const progressPercent =
-      allowed && lessonCount && completedLessonCount !== null
-        ? Math.round((completedLessonCount / lessonCount) * 100)
-        : allowed
-          ? 0
-          : null
 
-    dashboardCourses.push({
-      id: String(course.id),
-      title: asString(course.title) ?? 'Untitled course',
-      slug: asString(course.slug),
-      shortDescription: asString(course.shortDescription),
-      accessBadge: asString(course.accessBadge),
-      estimatedDuration: asString(course.estimatedDuration),
+    dashboardCourses.push(buildCourseProjection({
+      course,
       allowed,
       decisionReason: access.decision.reason,
-      lockReason: allowed ? null : lockReason(access.decision.reason),
-      lessonCount,
-      completedLessonCount,
-      progressPercent,
       modules,
-    })
+    }))
   }
 
   return {
@@ -321,6 +410,175 @@ export async function getMemberCourseDashboard(
     courses: dashboardCourses,
     continueLesson: findContinueLesson(dashboardCourses),
   }
+}
+
+export async function getMemberCourseOverview(
+  payload: PayloadCourseAccessAPI,
+  memberId: PayloadId,
+  courseSlug: string
+): Promise<MemberPortalCourse | null> {
+  const normalizedMemberId = String(memberId)
+  const course = await findOne(payload, 'payload_courses', {
+    and: [
+      { slug: { equals: courseSlug } },
+      { status: { equals: 'published' } },
+    ],
+  })
+
+  if (!course) return null
+
+  const access = await evaluatePayloadCourseAccess(payload, {
+    memberId: normalizedMemberId,
+    courseId: course.id,
+  })
+  const allowed = access.decision.allowed
+  const completedLessonIds = allowed
+    ? await getCompletedLessonIds(payload, normalizedMemberId)
+    : new Set<string>()
+  const modules = allowed
+    ? await getAllowedCourseModules(payload, course.id, completedLessonIds)
+    : []
+
+  return buildCourseProjection({
+    course,
+    allowed,
+    decisionReason: access.decision.reason,
+    modules,
+  })
+}
+
+export async function getMemberLessonDetail(
+  payload: PayloadCourseAccessAPI,
+  memberId: PayloadId,
+  courseSlug: string,
+  lessonSlug: string
+): Promise<MemberPortalLessonDetail | null> {
+  const normalizedMemberId = String(memberId)
+  const lesson = await findOne(payload, 'payload_lessons', {
+    slug: { equals: lessonSlug },
+  })
+  if (!lesson) return null
+
+  const moduleId = getDocumentId(lesson.module)
+  const module = await findOne(payload, 'payload_course_modules', {
+    id: { equals: moduleId },
+  })
+  const courseId = getDocumentId(module?.course)
+  const course = await findOne(payload, 'payload_courses', {
+    and: [
+      { id: { equals: courseId } },
+      { status: { equals: 'published' } },
+      { slug: { equals: courseSlug } },
+    ],
+  })
+
+  if (!module || !course) return null
+
+  const completedLessonIds = await getCompletedLessonIds(payload, normalizedMemberId)
+  const sequence = await getCourseSequence(payload, course.id)
+  const index = sequence.findIndex((entry) => String(entry.lesson.id) === String(lesson.id))
+  const previous = index > 0 ? sequence[index - 1] : null
+  const next = index >= 0 ? sequence[index + 1] ?? null : null
+  const access = await evaluatePayloadLessonAccess(payload, {
+    memberId: normalizedMemberId,
+    lessonId: lesson.id,
+    requiresPreviousCompletion: Boolean(previous),
+    previousLessonId: previous?.lesson.id ?? null,
+  })
+  const allowed = access.decision.allowed
+  const lessonTitle = asString(lesson.title) ?? 'Untitled lesson'
+
+  return {
+    course: {
+      id: String(course.id),
+      title: asString(course.title) ?? 'Untitled course',
+      slug: asString(course.slug),
+    },
+    module: {
+      id: String(module.id),
+      title: asString(module.title) ?? 'Untitled module',
+    },
+    lesson: allowed
+      ? {
+          id: String(lesson.id),
+          title: lessonTitle,
+          slug: asString(lesson.slug),
+          summary: asString(lesson.summary),
+          estimatedDuration: asString(lesson.estimatedDuration),
+          previewLesson: asBoolean(lesson.previewLesson),
+          videoProviderLabel: asString(lesson.videoProviderLabel),
+          videoIdOrPreviewUrl: asString(lesson.videoIdOrPreviewUrl),
+          completed: completedLessonIds.has(String(lesson.id)),
+        }
+      : {
+          id: String(lesson.id),
+          title: null,
+          slug: asString(lesson.slug),
+          summary: null,
+          estimatedDuration: null,
+          previewLesson: false,
+          videoProviderLabel: null,
+          videoIdOrPreviewUrl: null,
+          completed: false,
+        },
+    allowed,
+    decisionReason: access.decision.reason,
+    lockReason: allowed ? null : lockReason(access.decision.reason),
+    previousLesson: previous
+      ? {
+          title: asString(previous.lesson.title) ?? 'Previous lesson',
+          slug: asString(previous.lesson.slug),
+          completed: completedLessonIds.has(String(previous.lesson.id)),
+        }
+      : null,
+    nextLesson: allowed && next
+      ? {
+          title: asString(next.lesson.title) ?? 'Next lesson',
+          slug: asString(next.lesson.slug),
+        }
+      : null,
+  }
+}
+
+export async function markMemberLessonComplete(
+  payload: PayloadCourseWriteAPI,
+  memberId: PayloadId,
+  lessonId: PayloadId,
+  lessonTitle: string
+): Promise<PayloadDocument> {
+  const normalizedMemberId = String(memberId)
+  const normalizedLessonId = String(lessonId)
+  const existing = await findOne(payload, 'payload_lesson_progress', {
+    and: [
+      { member: { equals: normalizedMemberId } },
+      { lesson: { equals: normalizedLessonId } },
+    ],
+  })
+  const completedAt = new Date().toISOString()
+  const data = {
+    displayName: `${normalizedMemberId}:${lessonTitle}`,
+    member: normalizedMemberId,
+    lesson: normalizedLessonId,
+    status: 'completed',
+    percentComplete: 100,
+    completedAt,
+    startedAt: existing?.startedAt ?? completedAt,
+  }
+
+  if (existing) {
+    return payload.update({
+      collection: 'payload_lesson_progress',
+      id: existing.id,
+      data,
+      overrideAccess: true,
+    })
+  }
+
+  return payload.create({
+    collection: 'payload_lesson_progress',
+    data,
+    overrideAccess: true,
+  })
 }
 
 export async function getMemberAccountOverview(

@@ -5,10 +5,14 @@ import type {
   PayloadCourseAccessAPI,
   PayloadDocument,
   PayloadId,
+  PayloadCourseWriteAPI,
 } from '../src/lib/payloadCourse/accessService'
 import {
   getMemberAccountOverview,
   getMemberCourseDashboard,
+  getMemberCourseOverview,
+  getMemberLessonDetail,
+  markMemberLessonComplete,
 } from '../src/lib/payloadCourse/memberPortal'
 
 type CollectionMap = Record<string, PayloadDocument[]>
@@ -45,8 +49,9 @@ function matchesWhere(doc: PayloadDocument, where?: Record<string, unknown>): bo
   })
 }
 
-class FakePayload implements PayloadCourseAccessAPI {
+class FakePayload implements PayloadCourseWriteAPI {
   readonly findCalls: Array<{ collection: string; where?: Record<string, unknown> }> = []
+  private nextId = 100
 
   constructor(private readonly collections: CollectionMap) {}
 
@@ -77,6 +82,31 @@ class FakePayload implements PayloadCourseAccessAPI {
     const doc = (this.collections[args.collection] ?? []).find((item) => String(item.id) === String(args.id))
     if (!doc) throw new Error(`missing ${args.collection}:${args.id}`)
     return doc
+  }
+
+  async create(args: { collection: string; data: Record<string, unknown> }) {
+    const doc = {
+      id: `${args.collection}_${this.nextId++}`,
+      ...args.data,
+    }
+    this.collections[args.collection] = this.collections[args.collection] ?? []
+    this.collections[args.collection].push(doc)
+    return doc
+  }
+
+  async update(args: { collection: string; id: PayloadId; data: Record<string, unknown> }) {
+    const docs = this.collections[args.collection] ?? []
+    const index = docs.findIndex((doc) => String(doc.id) === String(args.id))
+    if (index < 0) throw new Error(`missing ${args.collection}:${args.id}`)
+    docs[index] = {
+      ...docs[index],
+      ...args.data,
+    }
+    return docs[index]
+  }
+
+  docs(collection: string) {
+    return this.collections[collection] ?? []
   }
 }
 
@@ -210,6 +240,14 @@ function buildPayload() {
         sortOrder: 20,
       },
       {
+        id: 'lesson_foundations_3',
+        module: 'module_foundations',
+        title: 'Advanced Step',
+        slug: 'advanced-step',
+        estimatedDuration: '16 min',
+        sortOrder: 30,
+      },
+      {
         id: 'lesson_pro_1',
         module: 'module_pro',
         title: 'Pro Preview',
@@ -276,9 +314,9 @@ async function run() {
 
     const foundations = dashboard.courses.find((course) => course.id === 'course_foundations')
     assert.equal(foundations?.allowed, true)
-    assert.equal(foundations?.lessonCount, 2)
+    assert.equal(foundations?.lessonCount, 3)
     assert.equal(foundations?.completedLessonCount, 1)
-    assert.equal(foundations?.progressPercent, 50)
+    assert.equal(foundations?.progressPercent, 33)
 
     const pro = dashboard.courses.find((course) => course.id === 'course_pro')
     assert.equal(pro?.allowed, true)
@@ -298,6 +336,65 @@ async function run() {
       )
     })
     assert.equal(vipLessonFetch, undefined)
+  }
+
+  {
+    const payload = buildPayload()
+    const overview = await getMemberCourseOverview(payload, 'member_active', 'pro-lab')
+
+    assert.equal(overview?.allowed, true)
+    assert.equal(overview?.modules[0]?.lessons[0]?.title, 'Pro Preview')
+  }
+
+  {
+    const payload = buildPayload()
+    const overview = await getMemberCourseOverview(payload, 'member_active', 'vip-lab')
+
+    assert.equal(overview?.allowed, false)
+    assert.equal(overview?.modules.length, 0)
+
+    const vipLessonFetch = payload.findCalls.find((call) => {
+      return (
+        call.collection === 'payload_lessons' &&
+        JSON.stringify(call.where).includes('module_vip')
+      )
+    })
+    assert.equal(vipLessonFetch, undefined)
+  }
+
+  {
+    const payload = buildPayload()
+    const detail = await getMemberLessonDetail(payload, 'member_active', 'foundations', 'principles')
+
+    assert.equal(detail?.allowed, true)
+    assert.equal(detail?.lesson?.title, 'Principles')
+    assert.equal(detail?.previousLesson?.completed, true)
+    assert.equal(detail?.nextLesson?.slug, 'advanced-step')
+  }
+
+  {
+    const payload = buildPayload()
+    const detail = await getMemberLessonDetail(payload, 'member_active', 'foundations', 'advanced-step')
+
+    assert.equal(detail?.allowed, false)
+    assert.equal(detail?.decisionReason, 'previous_lesson_required')
+    assert.equal(detail?.lesson?.title, null)
+    assert.equal(detail?.lesson?.summary, null)
+  }
+
+  {
+    const payload = buildPayload()
+
+    await markMemberLessonComplete(payload, 'member_active', 'lesson_foundations_2', 'Principles')
+    assert.equal(payload.docs('payload_lesson_progress').length, 2)
+    const created = payload
+      .docs('payload_lesson_progress')
+      .find((doc) => doc.lesson === 'lesson_foundations_2')
+    assert.equal(created?.status, 'completed')
+    assert.equal(created?.percentComplete, 100)
+
+    await markMemberLessonComplete(payload, 'member_active', 'lesson_foundations_2', 'Principles')
+    assert.equal(payload.docs('payload_lesson_progress').length, 2)
   }
 
   {

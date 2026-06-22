@@ -7,6 +7,10 @@ import { getPayload } from 'payload'
 
 import { getCurrentPayloadMember } from '@/lib/members/currentMember'
 import { normalizeEmail } from '@/lib/normalize-email'
+import {
+  getMemberLessonDetail,
+  markMemberLessonComplete,
+} from '@/lib/payloadCourse/memberPortal'
 
 export type MemberLoginActionState = {
   error?: string
@@ -142,4 +146,30 @@ export async function updateMemberProfileAction(
   }
 
   redirect('/learn/account?updated=1')
+}
+
+export async function completeLessonAction(formData: FormData) {
+  const courseSlug = formString(formData.get('courseSlug'))
+  const lessonSlug = formString(formData.get('lessonSlug'))
+  const { member, payload } = await getCurrentPayloadMember()
+
+  if (!member) {
+    redirect(`/learn/login?next=/learn/${courseSlug}/${lessonSlug}`)
+  }
+
+  if (!courseSlug || !lessonSlug) {
+    redirect('/learn')
+  }
+
+  const detail = await getMemberLessonDetail(payload, member.id, courseSlug, lessonSlug)
+  if (!detail?.lesson) {
+    redirect(`/learn/${courseSlug}`)
+  }
+
+  if (!detail.allowed || !detail.lesson.title) {
+    redirect(`/learn/${courseSlug}/${lessonSlug}?blocked=1`)
+  }
+
+  await markMemberLessonComplete(payload, member.id, detail.lesson.id, detail.lesson.title)
+  redirect(`/learn/${courseSlug}/${lessonSlug}?completed=1`)
 }

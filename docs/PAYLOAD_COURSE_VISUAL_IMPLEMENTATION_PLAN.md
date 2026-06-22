@@ -31,8 +31,9 @@ As of `20260621_194424_course_system_phase1` on `feature/course-branding-and-pre
 - `src/lib/payloadCourse/emailSender.ts` contains the queued Payload email sender. It consumes `payload_email_events`, renders active `payload_email_templates`, sends through Resend with an idempotency key, and updates delivery state. It is not scheduled or auto-enabled.
 - `scripts/payload/send-queued-emails.mts` is the operator command for queued Payload emails. It defaults to dry-run without delivery-state writes; `--apply` is required before any Resend send or send-failure write happens.
 - `src/lib/members/currentMember.ts` reads the current Payload member session from the HTTP-only Payload auth cookie and rejects admin-user sessions for learner routes.
-- `src/lib/payloadCourse/memberPortal.ts` builds the member dashboard/account projections. It evaluates course access before fetching module and lesson outlines, so locked private/secret courses do not render lesson content.
+- `src/lib/payloadCourse/memberPortal.ts` builds the member dashboard/account/course/lesson projections. It evaluates course access before fetching module and lesson outlines, and lesson access before rendering lesson details or writing progress.
 - `/learn/login`, `/learn`, and `/learn/account` are dynamic Node routes backed by `payload_members`. Public self-signup remains disabled; accounts still come from admin, Stripe shadow sync, or migration flows.
+- `/learn/[courseSlug]` and `/learn/[courseSlug]/[lessonSlug]` are dynamic Node routes with server-side access checks and mark-complete support.
 - `scripts/payload/seed-course-admin-data.mts` contains an idempotent seed runner for access groups, prototype/admin courses, modules, lessons, email templates, community spaces, and access policies. It defaults to dry-run and writes only with `--apply`.
 - `src/migrations/20260621_194424_course_system_phase1.ts` creates the course-system Payload tables and has been applied to staging.
 - Staging now has 56 `payload_*` tables and records both Payload migrations in `payload_migrations`.
@@ -41,7 +42,7 @@ As of `20260621_194424_course_system_phase1` on `feature/course-branding-and-pre
 - `scripts/db/deploy-prod.sh` normalizes schema object ownership to the tenant user before Payload `prodMigrations` run on app startup.
 - `/course-preview` routes are still static demonstration pages and are guarded by `PAYLOAD_COURSE_PROTOTYPE_ENABLED`.
 
-This is scaffolding and groundwork plus tested read-side, admin mutation, reconciliation, Stripe shadow-sync, queued-email sender, and member learner-page services. It does not yet make Payload the live runtime source for Stripe provisioning, public signup, scheduled Resend sends, complete course/lesson playback, migration, or community posting. Stripe shadow sync remains a feature-flagged mirror until staging replay and reconciliation pass.
+This is scaffolding and groundwork plus tested read-side, admin mutation, reconciliation, Stripe shadow-sync, queued-email sender, and member learner-page services. It does not yet make Payload the live runtime source for Stripe provisioning, public signup, scheduled Resend sends, rich lesson rendering, protected downloads, comments, migration, or community posting. Stripe shadow sync remains a feature-flagged mirror until staging replay and reconciliation pass.
 
 ## Critical findings from review
 
@@ -841,6 +842,14 @@ Done when:
 - Course overview shows modules, lessons, preview state, completion state, and locked state.
 - Private lessons are not fetched/rendered unless access allows it.
 
+Implementation status:
+
+- `/learn/[courseSlug]` redirects unauthenticated visitors to the member login route.
+- The route returns 404 for missing/unpublished courses.
+- It evaluates course access before loading modules and lesson outlines.
+- Locked courses render course-level metadata and a lock reason only.
+- Allowed courses render modules, lessons, preview badges, completion badges, and progress.
+
 #### Task 7.3 - Build lesson page
 
 Route proposal:
@@ -854,6 +863,15 @@ Done when:
 - Lesson content, media, comments, and downloads are gated by the access evaluator.
 - Mark-complete writes `payload_lesson_progress`.
 - Lesson order enforcement is respected.
+
+Implementation status:
+
+- `/learn/[courseSlug]/[lessonSlug]` redirects unauthenticated visitors to member login.
+- The route confirms that the lesson belongs to the requested published course.
+- It evaluates lesson access and previous-lesson completion before rendering lesson details.
+- Denied lessons render a generic lock view; title, summary, video, downloads, comments, and files are not shown.
+- Allowed lessons render a controlled lesson shell and can write idempotent `payload_lesson_progress` completion records through `completeLessonAction`.
+- Rich text rendering, protected lesson downloads, comments, and media players remain future work and must keep their own server-side access checks.
 
 ### Phase 8 - Groups, spaces, discussions, and chat
 
@@ -1076,9 +1094,9 @@ Stop and request an architectural decision if:
 
 The first scaffolding slice is complete. Do this next:
 
-1. Build `/learn/[courseSlug]` with the same fail-closed access boundary and no private lesson fetch before course access is allowed.
-2. Build `/learn/[courseSlug]/[lessonSlug]` with lesson-level access checks and mark-complete writes.
-3. Add community read routes only after access checks and moderation states are enforced server-side.
+1. Add protected lesson resource/download serving with lesson-level access checks.
+2. Add community read routes only after access checks and moderation states are enforced server-side.
+3. Add rich text/media rendering only after renderer behavior and sanitization are reviewed.
 4. Add a reviewed scheduler/worker for `payload:email:send -- --apply` only after template review and staging replay are approved.
 
 Keep the order: scaffolding and groundwork first, then shadow services, then functional runtime systems, then migration and cutover.

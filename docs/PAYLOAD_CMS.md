@@ -186,9 +186,9 @@ The branch registers the original visual prototype collections plus the first pr
 
 `src/lib/members/currentMember.ts` is the server-side member-session helper for learner routes. It reads the Payload HTTP-only auth cookie through `payload.auth({ headers })` and only accepts users from the `payload_members` collection.
 
-`src/lib/payloadCourse/memberPortal.ts` builds member dashboard/account projections for `/learn` and `/learn/account`. It calls the fail-closed access service before loading module and lesson outlines, so locked private/secret courses expose only course-level metadata and a lock reason.
+`src/lib/payloadCourse/memberPortal.ts` builds member dashboard/account/course/lesson projections for `/learn`, `/learn/account`, `/learn/[courseSlug]`, and `/learn/[courseSlug]/[lessonSlug]`. It calls the fail-closed access service before loading module and lesson outlines, and calls lesson access before rendering lesson details or writing progress.
 
-`/learn/login`, `/learn`, and `/learn/account` are dynamic Node routes backed by `payload_members`. Public member signup is still disabled; member creation remains controlled by Payload admin, Stripe shadow sync, or migration flows until verification and abuse controls are approved.
+`/learn/login`, `/learn`, `/learn/account`, `/learn/[courseSlug]`, and `/learn/[courseSlug]/[lessonSlug]` are dynamic Node routes backed by `payload_members`. Public member signup is still disabled; member creation remains controlled by Payload admin, Stripe shadow sync, or migration flows until verification and abuse controls are approved. Lesson rich text, protected downloads, media players, and comments are not live yet.
 
 ### Migrations
 
