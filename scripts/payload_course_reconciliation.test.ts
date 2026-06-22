@@ -91,6 +91,13 @@ function baseCollections(overrides: Partial<CollectionMap> = {}): CollectionMap 
     payload_access_groups: [],
     payload_billing_accounts: [],
     payload_lesson_progress: [],
+    payload_course_modules: [
+      { id: 'module_pro', course: 'course_pro', title: 'Module', sortOrder: 10 },
+    ],
+    payload_lessons: [
+      { id: 'lesson_pro', module: 'module_pro', title: 'Lesson', slug: 'lesson', sortOrder: 10 },
+    ],
+    payload_lesson_resources: [],
     ...overrides,
   }
 }
@@ -102,6 +109,70 @@ async function run() {
     })
     assert.equal(report.totals.decisions, 1)
     assert.equal(report.totals.issues, 0)
+  }
+
+  {
+    const report = await reconcilePayloadEntitlements(
+      new FakePayload(
+        baseCollections({
+          payload_lesson_resources: [
+            {
+              id: 'resource_public_file',
+              lesson: 'lesson_pro',
+              file: 'media_public',
+              status: 'published',
+            },
+          ],
+        })
+      ),
+      {
+        now: '2026-01-01T00:00:00.000Z',
+      }
+    )
+    assert.equal(report.totals.lessonResources, 1)
+    assert.equal(report.issues.some((issue) => issue.code === 'private_lesson_resource_public_file'), true)
+  }
+
+  {
+    const report = await reconcilePayloadEntitlements(
+      new FakePayload(
+        baseCollections({
+          payload_lesson_resources: [
+            {
+              id: 'resource_protected_file',
+              lesson: 'lesson_pro',
+              protectedFile: 'private_media',
+              status: 'published',
+            },
+          ],
+        })
+      ),
+      {
+        now: '2026-01-01T00:00:00.000Z',
+      }
+    )
+    assert.equal(report.totals.lessonResources, 1)
+    assert.equal(report.issues.some((issue) => issue.code === 'private_lesson_resource_public_file'), false)
+  }
+
+  {
+    const report = await reconcilePayloadEntitlements(
+      new FakePayload(
+        baseCollections({
+          payload_lesson_resources: [
+            {
+              id: 'resource_missing_file',
+              lesson: 'lesson_pro',
+              status: 'published',
+            },
+          ],
+        })
+      ),
+      {
+        now: '2026-01-01T00:00:00.000Z',
+      }
+    )
+    assert.equal(report.issues.some((issue) => issue.code === 'lesson_resource_missing_file'), true)
   }
 
   {

@@ -34,6 +34,7 @@ async function main() {
   console.log(`[reconcile:dry-run] Policies: ${report.totals.policies}`)
   console.log(`[reconcile:dry-run] Subscriptions: ${report.totals.subscriptions}`)
   console.log(`[reconcile:dry-run] Active grants: ${report.totals.activeGrants}`)
+  console.log(`[reconcile:dry-run] Published lesson resources: ${report.totals.lessonResources}`)
   console.log(`[reconcile:dry-run] Decisions evaluated: ${report.totals.decisions}`)
   console.log(`[reconcile:dry-run] Issues: ${report.totals.issues}`)
 

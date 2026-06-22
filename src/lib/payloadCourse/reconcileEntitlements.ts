@@ -16,6 +16,9 @@ type IssueCode =
   | 'orphan_grant_member_missing'
   | 'orphan_grant_group_missing'
   | 'orphan_grant_resource_missing'
+  | 'lesson_resource_missing_file'
+  | 'orphan_lesson_resource_parent_missing'
+  | 'private_lesson_resource_public_file'
 
 type RelationshipValue = PayloadId | { id?: PayloadId } | null | undefined
 
@@ -40,6 +43,7 @@ export type ReconciliationReport = {
     policies: number
     subscriptions: number
     activeGrants: number
+    lessonResources: number
     decisions: number
     issues: number
   }
@@ -144,6 +148,19 @@ function policyAllowsSubscription(
   return allowedPlans(policy).includes(plan)
 }
 
+function courseRequiresProtectedResources(course: PayloadDocument, policies: PayloadDocument[]) {
+  if (course.visibility !== 'public') return true
+
+  return policies.some((policy) => {
+    return (
+      policy.status === 'active' &&
+      policy.resourceType === 'course' &&
+      String(policy.resourceId) === String(course.id) &&
+      policy.privacy !== 'public'
+    )
+  })
+}
+
 export async function reconcilePayloadEntitlements(
   payload: PayloadCourseAccessAPI,
   args: ReconcilePayloadEntitlementsArgs = {}
@@ -152,7 +169,17 @@ export async function reconcilePayloadEntitlements(
   const resourceLimit = args.resourceLimit ?? 100
   const now = args.now ?? new Date().toISOString()
 
-  const [members, courses, policies, subscriptions, grants, accessGroups] = await Promise.all([
+  const [
+    members,
+    courses,
+    policies,
+    subscriptions,
+    grants,
+    accessGroups,
+    lessonResources,
+    lessons,
+    modules,
+  ] = await Promise.all([
     findAll(payload, 'payload_members', { limit: memberLimit }),
     findAll(payload, 'payload_courses', {
       where: { status: { equals: 'published' } },
@@ -166,12 +193,21 @@ export async function reconcilePayloadEntitlements(
       limit: 1000,
     }),
     findAll(payload, 'payload_access_groups', { limit: 1000 }),
+    findAll(payload, 'payload_lesson_resources', {
+      where: { status: { equals: 'published' } },
+      limit: 1000,
+    }),
+    findAll(payload, 'payload_lessons', { limit: 1000 }),
+    findAll(payload, 'payload_course_modules', { limit: 1000 }),
   ])
 
   const issues: ReconciliationIssue[] = []
   const memberIds = new Set(members.map((member) => String(member.id)))
   const courseIds = new Set(courses.map((course) => String(course.id)))
   const groupIds = new Set(accessGroups.map((group) => String(group.id)))
+  const lessonsById = new Map(lessons.map((lesson) => [String(lesson.id), lesson]))
+  const modulesById = new Map(modules.map((module) => [String(module.id), module]))
+  const coursesById = new Map(courses.map((course) => [String(course.id), course]))
   let decisions = 0
 
   for (const grant of grants) {
@@ -212,6 +248,51 @@ export async function reconcilePayloadEntitlements(
         resourceId,
         grantId,
         detail: `Active grant ${grantId} references missing course ${resourceId}.`,
+      })
+    }
+  }
+
+  for (const resource of lessonResources) {
+    const resourceId = String(resource.id)
+    const lessonId = idOf(resource.lesson as RelationshipValue)
+    const publicFileId = idOf(resource.file as RelationshipValue)
+    const protectedFileId = idOf(resource.protectedFile as RelationshipValue)
+
+    if (!publicFileId && !protectedFileId) {
+      issues.push({
+        code: 'lesson_resource_missing_file',
+        severity: 'error',
+        resourceType: 'lesson_resource',
+        resourceId,
+        detail: `Published lesson resource ${resourceId} has no public file or protected file.`,
+      })
+      continue
+    }
+
+    const lesson = lessonId ? lessonsById.get(lessonId) : null
+    const moduleId = idOf(lesson?.module as RelationshipValue)
+    const module = moduleId ? modulesById.get(moduleId) : null
+    const courseId = idOf(module?.course as RelationshipValue)
+    const course = courseId ? coursesById.get(courseId) : null
+
+    if (!lesson || !module || !course) {
+      issues.push({
+        code: 'orphan_lesson_resource_parent_missing',
+        severity: 'error',
+        resourceType: 'lesson_resource',
+        resourceId,
+        detail: `Published lesson resource ${resourceId} is missing its lesson, module, or published course parent.`,
+      })
+      continue
+    }
+
+    if (publicFileId && !protectedFileId && courseRequiresProtectedResources(course, policies)) {
+      issues.push({
+        code: 'private_lesson_resource_public_file',
+        severity: 'error',
+        resourceType: 'lesson_resource',
+        resourceId,
+        detail: `Published lesson resource ${resourceId} belongs to non-public course ${courseId} but uses public payload_media file ${publicFileId}; move it to protectedFile before migration/cutover.`,
       })
     }
   }
@@ -278,6 +359,7 @@ export async function reconcilePayloadEntitlements(
       policies: policies.length,
       subscriptions: subscriptions.length,
       activeGrants: grants.length,
+      lessonResources: lessonResources.length,
       decisions,
       issues: issues.length,
     },

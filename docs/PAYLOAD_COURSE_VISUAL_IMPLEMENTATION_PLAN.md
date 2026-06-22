@@ -25,7 +25,7 @@ As of `20260621_194424_course_system_phase1` on `feature/course-branding-and-pre
 - `src/lib/payloadCourse/accessService.ts` contains Local API service functions that load Payload course/lesson, member, billing, policy, grant, group, and progress records, then call the pure evaluator. These services intentionally use server-side Local API reads and treat `evaluateAccess` as the runtime authorization boundary.
 - `src/lib/payloadCourse/adminGrants.ts` contains admin/system grant and revoke services for `payload_access_grants`. These services write audit events, entitlement events, and queued email-event records; they do not send email directly.
 - `src/lib/members/accountStatus.ts`, `src/lib/members/blockMember.ts`, and `src/lib/members/restoreMember.ts` contain account block/restore services. These services write member security events, audit events, and queued email-event records; they do not send email directly.
-- `src/lib/payloadCourse/reconcileEntitlements.ts` and `scripts/payload/reconcile-entitlements.mts` contain a read-only entitlement reconciliation dry-run. It compares members, published courses, policies, active grants, subscriptions, and effective access decisions.
+- `src/lib/payloadCourse/reconcileEntitlements.ts` and `scripts/payload/reconcile-entitlements.mts` contain a read-only entitlement reconciliation dry-run. It compares members, published courses, policies, active grants, subscriptions, effective access decisions, and published lesson-resource storage safety.
 - `src/lib/payloadCourse/stripeShadowSync.ts` contains the Stripe-to-Payload billing mirror service. It is wired into the verified Stripe webhook handler behind `PAYLOAD_BILLING_SHADOW_SYNC_ENABLED`; when disabled, the current WordPress/FluentCRM provisioning path is unchanged.
 - `scripts/payload_course_stripe_shadow_sync.test.ts` covers active subscription mirroring, duplicate Stripe event idempotency, cancellation blocking, payment failure blocking, payment recovery restore, and preserving manually suspended accounts.
 - `src/lib/payloadCourse/emailSender.ts` contains the queued Payload email sender. It consumes `payload_email_events`, renders active `payload_email_templates`, sends through Resend with an idempotency key, and updates delivery state. It is not scheduled or auto-enabled.
@@ -1104,10 +1104,9 @@ Stop and request an architectural decision if:
 
 The first scaffolding slice is complete. Do this next:
 
-1. Add migration/source reconciliation checks that reject private lesson resources still pointing at public `payload_media`.
-2. Verify durable storage for `private/payload-course-media` in staging, or choose and configure a Payload storage adapter before production cutover.
-3. Add community read routes only after access checks and moderation states are enforced server-side.
-4. Add rich text/media rendering only after renderer behavior and sanitization are reviewed.
-5. Add a reviewed scheduler/worker for `payload:email:send -- --apply` only after template review and staging replay are approved.
+1. Verify durable storage for `private/payload-course-media` in staging, or choose and configure a Payload storage adapter before production cutover.
+2. Add community read routes only after access checks and moderation states are enforced server-side.
+3. Add rich text/media rendering only after renderer behavior and sanitization are reviewed.
+4. Add a reviewed scheduler/worker for `payload:email:send -- --apply` only after template review and staging replay are approved.
 
 Keep the order: scaffolding and groundwork first, then shadow services, then functional runtime systems, then migration and cutover.
