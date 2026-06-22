@@ -34,6 +34,7 @@ As of the latest `feature/course-branding-and-preview` implementation:
 - `src/lib/payloadCourse/memberPortal.ts` builds the member dashboard/account/course/lesson projections. It evaluates course access before fetching module and lesson outlines, and lesson access before rendering lesson details or writing progress.
 - `src/lib/payloadCourse/communityPortal.ts` builds member community-space projections. It evaluates space access before fetching visible posts, hides denied secret spaces, and treats active `payload_space_memberships` as explicit space grants after account and billing denials are checked.
 - `src/lib/payloadCourse/spaceMemberships.ts` contains admin/system/migration services for adding/removing space memberships and member services for private-space access requests. These services write audit events, entitlement events where access changes, and queued email-event records; they do not expose public write routes or send email directly.
+- `src/lib/payloadCourse/communityPosting.ts` contains service-level discussion and comment creation plus moderation updates. Member-created posts/comments start as `pending_review`, enforce active space membership and simple rate limits, and write audit/admin-notification records; no public write routes or rich text renderer are enabled.
 - `payload_private_media` stores protected course files outside `public/`; `payload_lesson_resources.protectedFile` is the preferred file relationship for paid/private lesson resources.
 - `src/lib/payloadCourse/lessonResources.ts` lists and resolves published lesson resources only after server-side lesson access passes, including previous-lesson enforcement. It prefers `protectedFile` and treats the original public `file` field as a non-confidential fallback.
 - `/learn/login`, `/learn`, and `/learn/account` are dynamic Node routes backed by `payload_members`. Public self-signup remains disabled; accounts still come from admin, Stripe shadow sync, or migration flows.
@@ -48,7 +49,7 @@ As of the latest `feature/course-branding-and-preview` implementation:
 - `scripts/db/deploy-prod.sh` normalizes schema object ownership to the tenant user before reviewed Payload migrations are applied with `pnpm payload migrate`.
 - `/course-preview` routes are still static demonstration pages and are guarded by `PAYLOAD_COURSE_PROTOTYPE_ENABLED`.
 
-This is scaffolding and groundwork plus tested read-side, admin mutation, reconciliation, Stripe shadow-sync, queued-email sender, member learner-page services, private lesson-resource storage, guarded lesson-resource download URLs, read-only community space routes, and service-level community membership mutations. It does not yet make Payload the live runtime source for Stripe provisioning, public signup, scheduled Resend sends, rich lesson rendering, comment/post creation, migration, or community chat. Stripe shadow sync remains a feature-flagged mirror until staging replay and reconciliation pass. Private course files are no longer stored under `public/`, but production cutover still requires a persistent volume or Payload-supported storage adapter for `private/payload-course-media`.
+This is scaffolding and groundwork plus tested read-side, admin mutation, reconciliation, Stripe shadow-sync, queued-email sender, member learner-page services, private lesson-resource storage, guarded lesson-resource download URLs, read-only community space routes, service-level community membership mutations, and service-level pending-review post/comment creation. It does not yet make Payload the live runtime source for Stripe provisioning, public signup, scheduled Resend sends, rich lesson rendering, learner-facing post/comment forms, migration, or community chat. Stripe shadow sync remains a feature-flagged mirror until staging replay and reconciliation pass. Private course files are no longer stored under `public/`, but production cutover still requires a persistent volume or Payload-supported storage adapter for `private/payload-course-media`.
 
 Staging currently records three Payload migrations: `20260620_213328`, `20260621_194424_course_system_phase1`, and `20260622_093852_course_private_media`. In this Dokploy standalone deployment, the new private-media migration did not apply on container startup; it was applied explicitly with `pnpm payload migrate` against `jpvbootcamp_staging`. Treat explicit reviewed Payload migration execution plus verification in `payload_migrations` as the required operational step for future schema changes.
 
@@ -936,7 +937,11 @@ Implementation status:
 
 - Allowed spaces can list visible post titles and visible comment counts.
 - Hidden/deleted/pending posts and comments are excluded from learner projections.
-- Post bodies, rich text rendering, post creation, comments, moderation actions, and file attachments remain gated future work.
+- `src/lib/payloadCourse/communityPosting.ts` can create posts and comments for members who pass space access and have an active membership.
+- Member-created posts/comments start as `pending_review`; visible learner projections continue to exclude them until moderation marks them visible.
+- Simple per-member create rate limits run before writes.
+- Moderators/admins can hide/delete posts and comments through service functions; moderation writes audit events.
+- Learner-facing post/comment forms, rich text rendering, and file attachments remain gated future work.
 
 #### Task 8.4 - Build group chat
 
@@ -1138,7 +1143,7 @@ The first scaffolding and read-side runtime slices are complete. Do this next:
 1. Verify durable storage for `private/payload-course-media` in staging, or choose and configure a Payload storage adapter before production cutover.
 2. Add admin-managed space membership mutations, request-access workflow, role-change audit events, and moderation actions.
 3. Add rich text/media rendering only after renderer behavior and sanitization are reviewed.
-4. Add community post/comment creation only after rate limits, moderation states, and audit requirements are implemented.
+4. Add learner-facing community post/comment forms only after CSRF, route-level rate limits, and rich text renderer behavior are reviewed.
 5. Add a reviewed scheduler/worker for `payload:email:send -- --apply` only after template review and staging replay are approved.
 
 Keep the order: scaffolding and groundwork first, then shadow services, then functional runtime systems, then migration and cutover.
