@@ -190,6 +190,8 @@ The branch registers the original visual prototype collections plus the first pr
 
 `src/lib/payloadCourse/communityPortal.ts` builds member community-space projections for `/learn/community` and `/learn/community/[spaceSlug]`. It calls the fail-closed access service before loading posts, hides denied secret spaces, and only includes visible post titles/comment counts. Rich text bodies, post/comment creation, moderation actions, and chat routes are not enabled yet.
 
+`src/lib/payloadCourse/spaceMemberships.ts` provides service-level community membership mutations. Admin/system/migration actors can add/update or remove memberships, members can request access to published private spaces as pending memberships, and the service writes audit, entitlement, and queued email-event records without exposing public write routes or sending email directly.
+
 `payload_private_media` is the protected upload collection for paid/private course resource files. It stores files under `private/payload-course-media`, outside the public static directory. `payload_lesson_resources.protectedFile` should be used for confidential lesson downloads; the older `file` relationship to `payload_media` is a non-confidential fallback only. Before production cutover, `private/payload-course-media` must be backed by durable storage or replaced with a Payload-supported storage adapter.
 
 `src/lib/payloadCourse/lessonResources.ts` lists and resolves lesson resources only after server-side lesson access passes. `/learn/resources/[resourceId]` is the guarded learner download route; it requires a Payload member session, confirms the resource is published, recomputes lesson access including previous-lesson enforcement, and serves private files with private no-store headers.

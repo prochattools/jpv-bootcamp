@@ -28,7 +28,7 @@
     "db:migrate:dev": "prisma migrate deploy --schema=prisma/system.prisma",
     "db:migrate:prod": "prisma migrate deploy --schema=prisma/system.prisma",
     "db:dedupe:check": "tsx scripts/db/test_customer_provisioning_dedupe.ts",
-    "test:payload-course": "tsx scripts/payload_entitlement_evaluator.test.ts && tsx scripts/payload_course_access_service.test.ts && tsx scripts/payload_course_admin_services.test.ts && tsx scripts/payload_course_reconciliation.test.ts && tsx scripts/payload_course_stripe_shadow_sync.test.ts && tsx scripts/payload_course_email_sender.test.ts && tsx scripts/payload_member_portal.test.ts && tsx scripts/payload_community_portal.test.ts",
+    "test:payload-course": "tsx scripts/payload_entitlement_evaluator.test.ts && tsx scripts/payload_course_access_service.test.ts && tsx scripts/payload_course_admin_services.test.ts && tsx scripts/payload_course_reconciliation.test.ts && tsx scripts/payload_course_stripe_shadow_sync.test.ts && tsx scripts/payload_course_email_sender.test.ts && tsx scripts/payload_member_portal.test.ts && tsx scripts/payload_community_portal.test.ts && tsx scripts/payload_space_memberships.test.ts",
     "payload:course:seed": "tsx scripts/payload/seed-course-admin-data.mts",
     "payload:course:reconcile": "tsx scripts/payload/reconcile-entitlements.mts",
     "payload:email:send": "tsx scripts/payload/send-queued-emails.mts",

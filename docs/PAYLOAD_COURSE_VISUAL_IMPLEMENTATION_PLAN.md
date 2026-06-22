@@ -33,6 +33,7 @@ As of the latest `feature/course-branding-and-preview` implementation:
 - `src/lib/members/currentMember.ts` reads the current Payload member session from the HTTP-only Payload auth cookie and rejects admin-user sessions for learner routes.
 - `src/lib/payloadCourse/memberPortal.ts` builds the member dashboard/account/course/lesson projections. It evaluates course access before fetching module and lesson outlines, and lesson access before rendering lesson details or writing progress.
 - `src/lib/payloadCourse/communityPortal.ts` builds member community-space projections. It evaluates space access before fetching visible posts, hides denied secret spaces, and treats active `payload_space_memberships` as explicit space grants after account and billing denials are checked.
+- `src/lib/payloadCourse/spaceMemberships.ts` contains admin/system/migration services for adding/removing space memberships and member services for private-space access requests. These services write audit events, entitlement events where access changes, and queued email-event records; they do not expose public write routes or send email directly.
 - `payload_private_media` stores protected course files outside `public/`; `payload_lesson_resources.protectedFile` is the preferred file relationship for paid/private lesson resources.
 - `src/lib/payloadCourse/lessonResources.ts` lists and resolves published lesson resources only after server-side lesson access passes, including previous-lesson enforcement. It prefers `protectedFile` and treats the original public `file` field as a non-confidential fallback.
 - `/learn/login`, `/learn`, and `/learn/account` are dynamic Node routes backed by `payload_members`. Public self-signup remains disabled; accounts still come from admin, Stripe shadow sync, or migration flows.
@@ -47,7 +48,7 @@ As of the latest `feature/course-branding-and-preview` implementation:
 - `scripts/db/deploy-prod.sh` normalizes schema object ownership to the tenant user before reviewed Payload migrations are applied with `pnpm payload migrate`.
 - `/course-preview` routes are still static demonstration pages and are guarded by `PAYLOAD_COURSE_PROTOTYPE_ENABLED`.
 
-This is scaffolding and groundwork plus tested read-side, admin mutation, reconciliation, Stripe shadow-sync, queued-email sender, member learner-page services, private lesson-resource storage, guarded lesson-resource download URLs, and read-only community space routes. It does not yet make Payload the live runtime source for Stripe provisioning, public signup, scheduled Resend sends, rich lesson rendering, comment/post creation, migration, or community chat. Stripe shadow sync remains a feature-flagged mirror until staging replay and reconciliation pass. Private course files are no longer stored under `public/`, but production cutover still requires a persistent volume or Payload-supported storage adapter for `private/payload-course-media`.
+This is scaffolding and groundwork plus tested read-side, admin mutation, reconciliation, Stripe shadow-sync, queued-email sender, member learner-page services, private lesson-resource storage, guarded lesson-resource download URLs, read-only community space routes, and service-level community membership mutations. It does not yet make Payload the live runtime source for Stripe provisioning, public signup, scheduled Resend sends, rich lesson rendering, comment/post creation, migration, or community chat. Stripe shadow sync remains a feature-flagged mirror until staging replay and reconciliation pass. Private course files are no longer stored under `public/`, but production cutover still requires a persistent volume or Payload-supported storage adapter for `private/payload-course-media`.
 
 Staging currently records three Payload migrations: `20260620_213328`, `20260621_194424_course_system_phase1`, and `20260622_093852_course_private_media`. In this Dokploy standalone deployment, the new private-media migration did not apply on container startup; it was applied explicitly with `pnpm payload migrate` against `jpvbootcamp_staging`. Treat explicit reviewed Payload migration execution plus verification in `payload_migrations` as the required operational step for future schema changes.
 
@@ -917,7 +918,11 @@ Done when:
 Implementation status:
 
 - Read-side role/status display is implemented for the current member.
-- Admin add/remove, request access, and role-change audit workflows are not implemented yet.
+- `src/lib/payloadCourse/spaceMemberships.ts` can add/update and remove memberships for admin/system/migration actors.
+- Members can request access to published private spaces through a service that creates or updates a pending membership only; pending memberships do not grant access.
+- Add/remove/request writes `payload_audit_events`; active adds write `access_granted` entitlement events; removals write `access_revoked` entitlement events.
+- Student/admin notifications are queued in `payload_email_events`, but no scheduler or direct send path is enabled.
+- Public request routes, Payload admin custom actions, and moderator UI remain future work.
 
 #### Task 8.3 - Build discussions and comments
 
