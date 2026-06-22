@@ -40,9 +40,20 @@ type PayloadFindByIDArgs = {
   overrideAccess?: boolean
 }
 
+type PayloadCountArgs = {
+  collection: string
+  where?: Record<string, unknown>
+  overrideAccess?: boolean
+}
+
+type PayloadCountResult = {
+  totalDocs: number
+}
+
 export type PayloadCourseAccessAPI = {
   find(args: PayloadFindArgs): Promise<PayloadFindResult>
   findByID(args: PayloadFindByIDArgs): Promise<PayloadDocument>
+  count?(args: PayloadCountArgs): Promise<PayloadCountResult>
 }
 
 export type PayloadCourseWriteAPI = PayloadCourseAccessAPI & {
@@ -75,6 +86,13 @@ export type EvaluatePayloadCourseAccessArgs = {
   memberId?: PayloadId | null
   courseId?: PayloadId | null
   courseSlug?: string | null
+  now?: Date | string
+}
+
+export type EvaluatePayloadSpaceAccessArgs = {
+  memberId?: PayloadId | null
+  spaceId?: PayloadId | null
+  spaceSlug?: string | null
   now?: Date | string
 }
 
@@ -125,6 +143,14 @@ function normalizeContentStatus(value: unknown): ContentStatus {
 function normalizeCoursePrivacy(value: unknown): ResourcePrivacy {
   if (value === 'public' || value === 'members') return value
   if (value === 'secret') return 'secret'
+  return 'private'
+}
+
+function normalizeSpacePrivacy(value: unknown): ResourcePrivacy {
+  if (value === 'public' || value === 'members' || value === 'private' || value === 'secret') {
+    return value
+  }
+
   return 'private'
 }
 
@@ -210,6 +236,30 @@ async function findCourse(
 
   return findOne(payload, 'payload_courses', {
     slug: { equals: args.courseSlug },
+  })
+}
+
+async function findSpace(
+  payload: PayloadCourseAccessAPI,
+  args: EvaluatePayloadSpaceAccessArgs
+): Promise<PayloadDocument | null> {
+  if (args.spaceId) {
+    try {
+      return await payload.findByID({
+        collection: 'payload_spaces',
+        id: args.spaceId,
+        depth: 0,
+        overrideAccess: true,
+      })
+    } catch {
+      return null
+    }
+  }
+
+  if (!args.spaceSlug) return null
+
+  return findOne(payload, 'payload_spaces', {
+    slug: { equals: args.spaceSlug },
   })
 }
 
@@ -401,6 +451,40 @@ async function getGrantContexts(
   }))
 }
 
+async function getSpaceMembershipGrantContexts(
+  payload: PayloadCourseAccessAPI,
+  memberId: PayloadId | null | undefined,
+  spaceId: PayloadId
+): Promise<GrantAccessContext[]> {
+  if (!memberId) return []
+
+  const result = await payload.find({
+    collection: 'payload_space_memberships',
+    where: {
+      and: [
+        { member: { equals: String(memberId) } },
+        { space: { equals: String(spaceId) } },
+      ],
+    },
+    limit: 20,
+    depth: 0,
+    overrideAccess: true,
+  })
+
+  return result.docs
+    .filter((doc) => doc.status === 'active')
+    .map((doc): GrantAccessContext => ({
+      id: `space-membership:${doc.id}`,
+      memberId: String(memberId),
+      groupId: null,
+      resourceType: 'space',
+      resourceId: String(spaceId),
+      status: 'active',
+      startsAt: doc.joinedAt as GrantAccessContext['startsAt'],
+      expiresAt: doc.expiresAt as GrantAccessContext['expiresAt'],
+    }))
+}
+
 async function hasCompletedLesson(
   payload: PayloadCourseAccessAPI,
   memberId: string | null | undefined,
@@ -434,6 +518,15 @@ function courseResource(course: PayloadDocument): ResourceAccessContext {
   }
 }
 
+function spaceResource(space: PayloadDocument): ResourceAccessContext {
+  return {
+    type: 'space',
+    id: String(space.id),
+    status: normalizeContentStatus(space.status),
+    privacy: normalizeSpacePrivacy(space.visibility),
+  }
+}
+
 function lessonResource(lesson: PayloadDocument, course: PayloadDocument): ResourceAccessContext {
   return {
     type: 'lesson',
@@ -455,6 +548,7 @@ async function evaluatePayloadResourceAccess(
     now?: Date | string
     requiresPreviousCompletion?: boolean
     previousLessonId?: PayloadId | null
+    additionalGrants?: GrantAccessContext[]
   }
 ): Promise<PayloadAccessServiceResult> {
   const member = await getMemberContext(payload, args.memberId)
@@ -483,7 +577,7 @@ async function evaluatePayloadResourceAccess(
     billing,
     resource: args.resource,
     policy: activePolicy,
-    grants: [...grants, ...fallbackGrants].map((grant) => ({
+    grants: [...grants, ...fallbackGrants, ...(args.additionalGrants ?? [])].map((grant) => ({
       ...grant,
       resourceType: args.resource.type,
       resourceId: args.resource.id,
@@ -508,6 +602,31 @@ async function evaluatePayloadResourceAccess(
       slug: args.slug ?? null,
     },
   }
+}
+
+export async function evaluatePayloadSpaceAccess(
+  payload: PayloadCourseAccessAPI,
+  args: EvaluatePayloadSpaceAccessArgs
+): Promise<PayloadAccessServiceResult> {
+  const space = await findSpace(payload, args)
+  if (!space) {
+    return failClosed('content_not_published', { resourceType: 'space', notFound: true })
+  }
+
+  const membershipGrants = await getSpaceMembershipGrantContexts(
+    payload,
+    args.memberId,
+    space.id
+  )
+
+  return evaluatePayloadResourceAccess(payload, {
+    memberId: args.memberId,
+    resource: spaceResource(space),
+    title: asString(space.name),
+    slug: asString(space.slug),
+    now: args.now,
+    additionalGrants: membershipGrants,
+  })
 }
 
 export async function evaluatePayloadCourseAccess(

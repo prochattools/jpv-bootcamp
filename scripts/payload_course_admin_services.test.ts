@@ -79,7 +79,7 @@ class FakePayload implements PayloadCourseWriteAPI {
     return docs[index]
   }
 
-  count(collection: string) {
+  countDocs(collection: string) {
     return (this.collections[collection] ?? []).length
   }
 
@@ -120,10 +120,10 @@ async function run() {
 
     assert.equal(result.changed, true)
     assert.equal(result.grant?.status, 'active')
-    assert.equal(payload.count('payload_access_grants'), 1)
-    assert.equal(payload.count('payload_audit_events'), 1)
-    assert.equal(payload.count('payload_entitlement_events'), 1)
-    assert.equal(payload.count('payload_email_events'), 2)
+    assert.equal(payload.countDocs('payload_access_grants'), 1)
+    assert.equal(payload.countDocs('payload_audit_events'), 1)
+    assert.equal(payload.countDocs('payload_entitlement_events'), 1)
+    assert.equal(payload.countDocs('payload_email_events'), 2)
   }
 
   {
@@ -147,9 +147,9 @@ async function run() {
 
     assert.equal(result.changed, true)
     assert.equal(result.grant?.status, 'revoked')
-    assert.equal(payload.count('payload_access_grants'), 1)
-    assert.equal(payload.count('payload_audit_events'), 2)
-    assert.equal(payload.count('payload_entitlement_events'), 2)
+    assert.equal(payload.countDocs('payload_access_grants'), 1)
+    assert.equal(payload.countDocs('payload_audit_events'), 2)
+    assert.equal(payload.countDocs('payload_entitlement_events'), 2)
   }
 
   {
@@ -165,9 +165,9 @@ async function run() {
     assert.equal(result.changed, true)
     assert.equal(result.member.accountStatus, 'blocked')
     assert.equal(result.member.billingHoldReason, 'payment_failed')
-    assert.equal(payload.count('payload_member_security_events'), 1)
-    assert.equal(payload.count('payload_audit_events'), 1)
-    assert.equal(payload.count('payload_email_events'), 2)
+    assert.equal(payload.countDocs('payload_member_security_events'), 1)
+    assert.equal(payload.countDocs('payload_audit_events'), 1)
+    assert.equal(payload.countDocs('payload_email_events'), 2)
 
     const duplicate = await blockMember(payload, {
       actor: { type: 'stripe', id: 'evt_payment_failed' },
@@ -178,7 +178,7 @@ async function run() {
     })
 
     assert.equal(duplicate.changed, false)
-    assert.equal(payload.count('payload_email_events'), 2)
+    assert.equal(payload.countDocs('payload_email_events'), 2)
   }
 
   {
@@ -201,9 +201,9 @@ async function run() {
     assert.equal(result.changed, true)
     assert.equal(result.member.accountStatus, 'active')
     assert.equal(result.member.billingHoldReason, null)
-    assert.equal(payload.count('payload_member_security_events'), 2)
-    assert.equal(payload.count('payload_audit_events'), 2)
-    assert.equal(payload.count('payload_email_events'), 3)
+    assert.equal(payload.countDocs('payload_member_security_events'), 2)
+    assert.equal(payload.countDocs('payload_audit_events'), 2)
+    assert.equal(payload.countDocs('payload_email_events'), 3)
   }
 }
 

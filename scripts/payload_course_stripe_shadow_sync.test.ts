@@ -82,7 +82,7 @@ class FakePayload implements PayloadCourseWriteAPI {
     return docs[index]
   }
 
-  count(collection: string) {
+  countDocs(collection: string) {
     return (this.collections[collection] ?? []).length
   }
 
@@ -188,13 +188,13 @@ async function run() {
     })
 
     assert.equal(result.processed, true)
-    assert.equal(payload.count('payload_members'), 1)
+    assert.equal(payload.countDocs('payload_members'), 1)
     assert.equal(payload.docs('payload_members')[0]?.accountStatus, 'active')
-    assert.equal(payload.count('payload_billing_accounts'), 1)
+    assert.equal(payload.countDocs('payload_billing_accounts'), 1)
     assert.equal(payload.docs('payload_billing_accounts')[0]?.billingStatus, 'active')
-    assert.equal(payload.count('payload_subscriptions'), 1)
+    assert.equal(payload.countDocs('payload_subscriptions'), 1)
     assert.equal(payload.docs('payload_subscriptions')[0]?.plan, 'pro')
-    assert.equal(payload.count('payload_email_events'), 2)
+    assert.equal(payload.countDocs('payload_email_events'), 2)
     assert.equal(payload.docs('payload_stripe_events')[0]?.processingStatus, 'processed')
 
     const duplicate = await mirrorStripeEventToPayload(payload, stripeEvent, {
@@ -203,9 +203,9 @@ async function run() {
     })
 
     assert.equal(duplicate.deduped, true)
-    assert.equal(payload.count('payload_members'), 1)
-    assert.equal(payload.count('payload_subscriptions'), 1)
-    assert.equal(payload.count('payload_email_events'), 2)
+    assert.equal(payload.countDocs('payload_members'), 1)
+    assert.equal(payload.countDocs('payload_subscriptions'), 1)
+    assert.equal(payload.countDocs('payload_email_events'), 2)
   }
 
   {
@@ -274,7 +274,7 @@ async function run() {
     assert.equal(payload.docs('payload_members')[0]?.billingHoldReason, 'canceled')
     assert.equal(payload.docs('payload_subscriptions')[0]?.cancelAtPeriodEnd, true)
     assert.equal(payload.docs('payload_billing_accounts')[0]?.billingStatus, 'canceled')
-    assert.equal(payload.count('payload_member_security_events'), 1)
+    assert.equal(payload.countDocs('payload_member_security_events'), 1)
   }
 
   {

@@ -172,7 +172,7 @@ The branch registers the original visual prototype collections plus the first pr
 
 `src/migrations/20260621_194424_course_system_phase1.ts` creates these additional Payload-managed tables and updates Payload internal relationship tables. In staging, this brings `jpvbootcamp_staging` to 56 `payload_*` tables.
 
-`src/lib/payloadCourse/accessService.ts` is the first runtime service boundary for course and lesson access. It reads Payload collections through the server-side Local API and then delegates the actual allow/deny decision to `src/lib/entitlements/evaluateAccess.ts`; user-facing routes must use this service boundary or an equivalent fail-closed check before fetching private content.
+`src/lib/payloadCourse/accessService.ts` is the runtime service boundary for course, lesson, and space access. It reads Payload collections through the server-side Local API and then delegates the actual allow/deny decision to `src/lib/entitlements/evaluateAccess.ts`; user-facing routes must use this service boundary or an equivalent fail-closed check before fetching private content.
 
 `src/lib/payloadCourse/adminGrants.ts` and `src/lib/members/accountStatus.ts` are the first admin mutation service boundaries. They write access grants/revokes, member block/restores, audit events, entitlement/security events, and queued email-event records. They do not send Resend email directly.
 
@@ -188,11 +188,13 @@ The branch registers the original visual prototype collections plus the first pr
 
 `src/lib/payloadCourse/memberPortal.ts` builds member dashboard/account/course/lesson projections for `/learn`, `/learn/account`, `/learn/[courseSlug]`, and `/learn/[courseSlug]/[lessonSlug]`. It calls the fail-closed access service before loading module and lesson outlines, and calls lesson access before rendering lesson details or writing progress.
 
+`src/lib/payloadCourse/communityPortal.ts` builds member community-space projections for `/learn/community` and `/learn/community/[spaceSlug]`. It calls the fail-closed access service before loading posts, hides denied secret spaces, and only includes visible post titles/comment counts. Rich text bodies, post/comment creation, moderation actions, and chat routes are not enabled yet.
+
 `payload_private_media` is the protected upload collection for paid/private course resource files. It stores files under `private/payload-course-media`, outside the public static directory. `payload_lesson_resources.protectedFile` should be used for confidential lesson downloads; the older `file` relationship to `payload_media` is a non-confidential fallback only. Before production cutover, `private/payload-course-media` must be backed by durable storage or replaced with a Payload-supported storage adapter.
 
 `src/lib/payloadCourse/lessonResources.ts` lists and resolves lesson resources only after server-side lesson access passes. `/learn/resources/[resourceId]` is the guarded learner download route; it requires a Payload member session, confirms the resource is published, recomputes lesson access including previous-lesson enforcement, and serves private files with private no-store headers.
 
-`/learn/login`, `/learn`, `/learn/account`, `/learn/[courseSlug]`, `/learn/[courseSlug]/[lessonSlug]`, and `/learn/resources/[resourceId]` are dynamic Node routes backed by `payload_members`. Public member signup is still disabled; member creation remains controlled by Payload admin, Stripe shadow sync, or migration flows until verification and abuse controls are approved. Lesson rich text, media players, and comments are not live yet.
+`/learn/login`, `/learn`, `/learn/account`, `/learn/[courseSlug]`, `/learn/[courseSlug]/[lessonSlug]`, `/learn/resources/[resourceId]`, `/learn/community`, and `/learn/community/[spaceSlug]` are dynamic Node routes backed by `payload_members`. Public member signup is still disabled; member creation remains controlled by Payload admin, Stripe shadow sync, or migration flows until verification and abuse controls are approved. Lesson rich text, media players, comments, community posting, moderation actions, and chat are not live yet.
 
 ### Migrations
 

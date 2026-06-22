@@ -17,12 +17,12 @@ Payload can support this target system through documented collections, auth coll
 
 ## Current implementation status
 
-As of `20260621_194424_course_system_phase1` on `feature/course-branding-and-preview`:
+As of the latest `feature/course-branding-and-preview` implementation:
 
 - Staging is database `jpvbootcamp`, schema `jpvbootcamp_staging`.
 - The branch contains Payload collection scaffolding for members, course runtime, access control, billing mirror, CRM/email, community, and audit.
 - `src/lib/entitlements/evaluateAccess.ts` contains a pure fail-closed entitlement evaluator with focused tests in `scripts/payload_entitlement_evaluator.test.ts`.
-- `src/lib/payloadCourse/accessService.ts` contains Local API service functions that load Payload course/lesson, member, billing, policy, grant, group, and progress records, then call the pure evaluator. These services intentionally use server-side Local API reads and treat `evaluateAccess` as the runtime authorization boundary.
+- `src/lib/payloadCourse/accessService.ts` contains Local API service functions that load Payload course/lesson/space, member, billing, policy, grant, group, membership, and progress records, then call the pure evaluator. These services intentionally use server-side Local API reads and treat `evaluateAccess` as the runtime authorization boundary.
 - `src/lib/payloadCourse/adminGrants.ts` contains admin/system grant and revoke services for `payload_access_grants`. These services write audit events, entitlement events, and queued email-event records; they do not send email directly.
 - `src/lib/members/accountStatus.ts`, `src/lib/members/blockMember.ts`, and `src/lib/members/restoreMember.ts` contain account block/restore services. These services write member security events, audit events, and queued email-event records; they do not send email directly.
 - `src/lib/payloadCourse/reconcileEntitlements.ts` and `scripts/payload/reconcile-entitlements.mts` contain a read-only entitlement reconciliation dry-run. It compares members, published courses, policies, active grants, subscriptions, effective access decisions, and published lesson-resource storage safety.
@@ -32,11 +32,13 @@ As of `20260621_194424_course_system_phase1` on `feature/course-branding-and-pre
 - `scripts/payload/send-queued-emails.mts` is the operator command for queued Payload emails. It defaults to dry-run without delivery-state writes; `--apply` is required before any Resend send or send-failure write happens.
 - `src/lib/members/currentMember.ts` reads the current Payload member session from the HTTP-only Payload auth cookie and rejects admin-user sessions for learner routes.
 - `src/lib/payloadCourse/memberPortal.ts` builds the member dashboard/account/course/lesson projections. It evaluates course access before fetching module and lesson outlines, and lesson access before rendering lesson details or writing progress.
+- `src/lib/payloadCourse/communityPortal.ts` builds member community-space projections. It evaluates space access before fetching visible posts, hides denied secret spaces, and treats active `payload_space_memberships` as explicit space grants after account and billing denials are checked.
 - `payload_private_media` stores protected course files outside `public/`; `payload_lesson_resources.protectedFile` is the preferred file relationship for paid/private lesson resources.
 - `src/lib/payloadCourse/lessonResources.ts` lists and resolves published lesson resources only after server-side lesson access passes, including previous-lesson enforcement. It prefers `protectedFile` and treats the original public `file` field as a non-confidential fallback.
 - `/learn/login`, `/learn`, and `/learn/account` are dynamic Node routes backed by `payload_members`. Public self-signup remains disabled; accounts still come from admin, Stripe shadow sync, or migration flows.
 - `/learn/[courseSlug]` and `/learn/[courseSlug]/[lessonSlug]` are dynamic Node routes with server-side access checks and mark-complete support.
 - `/learn/resources/[resourceId]` is the only learner-facing lesson-resource URL. It requires a Payload member session, rechecks lesson access, serves private files from `private/payload-course-media`, and returns the file with `private, no-store` headers.
+- `/learn/community` and `/learn/community/[spaceSlug]` are dynamic Node routes with server-side space access checks. Public and private spaces can be listed, denied private spaces show a lock/request-pending state without loading posts, and denied secret spaces return 404/hidden.
 - `scripts/payload/seed-course-admin-data.mts` contains an idempotent seed runner for access groups, prototype/admin courses, modules, lessons, email templates, community spaces, and access policies. It defaults to dry-run and writes only with `--apply`.
 - `src/migrations/20260621_194424_course_system_phase1.ts` creates the course-system Payload tables and has been applied to staging.
 - Staging now has 56 `payload_*` tables and records both Payload migrations in `payload_migrations`.
@@ -45,7 +47,7 @@ As of `20260621_194424_course_system_phase1` on `feature/course-branding-and-pre
 - `scripts/db/deploy-prod.sh` normalizes schema object ownership to the tenant user before reviewed Payload migrations are applied with `pnpm payload migrate`.
 - `/course-preview` routes are still static demonstration pages and are guarded by `PAYLOAD_COURSE_PROTOTYPE_ENABLED`.
 
-This is scaffolding and groundwork plus tested read-side, admin mutation, reconciliation, Stripe shadow-sync, queued-email sender, member learner-page services, private lesson-resource storage, and guarded lesson-resource download URLs. It does not yet make Payload the live runtime source for Stripe provisioning, public signup, scheduled Resend sends, rich lesson rendering, comments, migration, or community posting. Stripe shadow sync remains a feature-flagged mirror until staging replay and reconciliation pass. Private course files are no longer stored under `public/`, but production cutover still requires a persistent volume or Payload-supported storage adapter for `private/payload-course-media`.
+This is scaffolding and groundwork plus tested read-side, admin mutation, reconciliation, Stripe shadow-sync, queued-email sender, member learner-page services, private lesson-resource storage, guarded lesson-resource download URLs, and read-only community space routes. It does not yet make Payload the live runtime source for Stripe provisioning, public signup, scheduled Resend sends, rich lesson rendering, comment/post creation, migration, or community chat. Stripe shadow sync remains a feature-flagged mirror until staging replay and reconciliation pass. Private course files are no longer stored under `public/`, but production cutover still requires a persistent volume or Payload-supported storage adapter for `private/payload-course-media`.
 
 Staging currently records three Payload migrations: `20260620_213328`, `20260621_194424_course_system_phase1`, and `20260622_093852_course_private_media`. In this Dokploy standalone deployment, the new private-media migration did not apply on container startup; it was applied explicitly with `pnpm payload migrate` against `jpvbootcamp_staging`. Treat explicit reviewed Payload migration execution plus verification in `payload_migrations` as the required operational step for future schema changes.
 
@@ -895,6 +897,14 @@ Done when:
 - Private spaces show lock/request flow.
 - Secret spaces are hidden unless the member has a grant or invite.
 
+Implementation status:
+
+- `evaluatePayloadSpaceAccess` evaluates `payload_spaces` through the same fail-closed entitlement service used by courses and lessons.
+- Active `payload_space_memberships` are treated as explicit space grants after account and billing denials have run.
+- `/learn/community` lists published public/private spaces that the member may see and omits denied secret spaces.
+- Denied private spaces show a lock/request-pending state without fetching posts.
+- `/learn/community/[spaceSlug]` returns 404 for missing, unpublished, or denied secret spaces.
+
 #### Task 8.2 - Build space memberships and roles
 
 Done when:
@@ -904,6 +914,11 @@ Done when:
 - Members can request access to private spaces if enabled.
 - Role changes write audit events.
 
+Implementation status:
+
+- Read-side role/status display is implemented for the current member.
+- Admin add/remove, request access, and role-change audit workflows are not implemented yet.
+
 #### Task 8.3 - Build discussions and comments
 
 Done when:
@@ -911,6 +926,12 @@ Done when:
 - Authorized members can create posts and comments.
 - Moderators can hide/delete posts.
 - Unauthorized users cannot read private/secret posts.
+
+Implementation status:
+
+- Allowed spaces can list visible post titles and visible comment counts.
+- Hidden/deleted/pending posts and comments are excluded from learner projections.
+- Post bodies, rich text rendering, post creation, comments, moderation actions, and file attachments remain gated future work.
 
 #### Task 8.4 - Build group chat
 
@@ -924,6 +945,11 @@ Done when:
 - Only authorized members can read/write chat messages.
 - Message writes are rate-limited and audited enough for moderation.
 - Real-time implementation choice is documented before shipping.
+
+Implementation status:
+
+- Chat collections exist only as schema scaffolding.
+- No learner chat read/write route is enabled yet.
 
 ### Phase 9 - Source audit and migration
 
@@ -1102,11 +1128,12 @@ Stop and request an architectural decision if:
 
 ## Next recommended implementation slice
 
-The first scaffolding slice is complete. Do this next:
+The first scaffolding and read-side runtime slices are complete. Do this next:
 
 1. Verify durable storage for `private/payload-course-media` in staging, or choose and configure a Payload storage adapter before production cutover.
-2. Add community read routes only after access checks and moderation states are enforced server-side.
+2. Add admin-managed space membership mutations, request-access workflow, role-change audit events, and moderation actions.
 3. Add rich text/media rendering only after renderer behavior and sanitization are reviewed.
-4. Add a reviewed scheduler/worker for `payload:email:send -- --apply` only after template review and staging replay are approved.
+4. Add community post/comment creation only after rate limits, moderation states, and audit requirements are implemented.
+5. Add a reviewed scheduler/worker for `payload:email:send -- --apply` only after template review and staging replay are approved.
 
 Keep the order: scaffolding and groundwork first, then shadow services, then functional runtime systems, then migration and cutover.
