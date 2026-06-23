@@ -70,6 +70,23 @@ export type PayloadCourseWriteAPI = PayloadCourseAccessAPI & {
   }): Promise<PayloadDocument>
 }
 
+export type PayloadMemberAuthAPI = PayloadCourseWriteAPI & {
+  forgotPassword(args: {
+    collection: 'payload_members'
+    data: {
+      email: string
+    }
+    disableEmail: true
+  }): Promise<string | { token?: string | null } | null | undefined>
+  resetPassword(args: {
+    collection: 'payload_members'
+    data: {
+      password: string
+      token: string
+    }
+  }): Promise<unknown>
+}
+
 export type PayloadAccessServiceResult = {
   decision: AccessDecision
   resource?: {

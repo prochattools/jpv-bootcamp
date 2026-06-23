@@ -14,7 +14,11 @@ export const PayloadMembers: CollectionConfig = {
     singular: 'Member',
     plural: 'Members',
   },
-  auth: true,
+  auth: {
+    forgotPassword: {
+      expiration: 60 * 60 * 1000,
+    },
+  },
   admin: {
     useAsTitle: 'email',
     defaultColumns: ['email', 'accountStatus', 'source', 'billingHoldReason', 'updatedAt'],
