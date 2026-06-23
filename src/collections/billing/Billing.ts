@@ -2,7 +2,7 @@ import type { CollectionConfig } from 'payload'
 
 import { adminOnlyCollectionAccess } from '@/lib/access/payloadAccess'
 
-const courseSystemGroup = 'Course System'
+const billingGroup = 'Billing'
 
 const stripeModeOptions = [
   { label: 'Test', value: 'test' },
@@ -17,7 +17,7 @@ export const PayloadBillingAccounts: CollectionConfig = {
     plural: 'Billing Accounts',
   },
   admin: {
-    group: courseSystemGroup,
+    group: billingGroup,
     useAsTitle: 'displayName',
     defaultColumns: ['displayName', 'member', 'stripeCustomerId', 'billingStatus', 'updatedAt'],
   },
@@ -70,7 +70,7 @@ export const PayloadSubscriptions: CollectionConfig = {
     plural: 'Subscriptions',
   },
   admin: {
-    group: courseSystemGroup,
+    group: billingGroup,
     useAsTitle: 'displayName',
     defaultColumns: ['displayName', 'member', 'plan', 'status', 'currentPeriodEnd', 'updatedAt'],
   },
@@ -141,7 +141,7 @@ export const PayloadPayments: CollectionConfig = {
     plural: 'Payments',
   },
   admin: {
-    group: courseSystemGroup,
+    group: billingGroup,
     useAsTitle: 'displayName',
     defaultColumns: ['displayName', 'member', 'amount', 'currency', 'status', 'paidAt'],
   },
@@ -193,9 +193,10 @@ export const PayloadStripeEvents: CollectionConfig = {
     plural: 'Stripe Events',
   },
   admin: {
-    group: courseSystemGroup,
+    group: billingGroup,
     useAsTitle: 'eventId',
     defaultColumns: ['eventId', 'eventType', 'livemode', 'processingStatus', 'processedAt'],
+    hidden: true,
   },
   access: adminOnlyCollectionAccess,
   fields: [
@@ -231,9 +232,10 @@ export const PayloadBillingActions: CollectionConfig = {
     plural: 'Billing Actions',
   },
   admin: {
-    group: courseSystemGroup,
+    group: billingGroup,
     useAsTitle: 'displayName',
     defaultColumns: ['displayName', 'member', 'actionType', 'status', 'createdAt'],
+    hidden: true,
   },
   access: adminOnlyCollectionAccess,
   fields: [

@@ -53,6 +53,12 @@ export default buildConfig({
     importMap: {
       baseDir: path.resolve(dirname),
     },
+    components: {
+      graphics: {
+        Logo: './components/payload/JPVAdminBranding#JPVAdminLogo',
+        Icon: './components/payload/JPVAdminBranding#JPVAdminIcon',
+      },
+    },
     meta: {
       title: 'JPV Bootcamp',
       titleSuffix: ' — JPV Bootcamp',
@@ -72,7 +78,7 @@ export default buildConfig({
     },
   },
   routes: {
-    admin: '/app',
+    admin: '/admin',
   },
   collections: [
     PayloadUsers,

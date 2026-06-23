@@ -9,6 +9,7 @@ export const PayloadCategories: CollectionConfig = {
   },
   admin: {
     useAsTitle: 'title',
+    hidden: true,
   },
   fields: [
     { name: 'title', type: 'text', required: true },

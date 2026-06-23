@@ -1,0 +1,44 @@
+import Link from 'next/link'
+import type { ReactNode } from 'react'
+
+import { requirePortalMember } from '@/lib/auth/requirePortalMember'
+
+const portalLinks = [
+  { href: '/portal', label: 'Dashboard' },
+  { href: '/portal/courses', label: 'Courses' },
+  { href: '/portal/community', label: 'Community' },
+  { href: '/portal/groups', label: 'Groups' },
+  { href: '/portal/account', label: 'Account' },
+  { href: '/portal/billing', label: 'Billing' },
+] as const
+
+export default async function PortalLayout({ children }: { children: ReactNode }) {
+  await requirePortalMember('/portal')
+
+  return (
+    <div className='min-h-screen bg-neutral-50 text-neutral-950'>
+      <header className='border-b border-neutral-200 bg-white'>
+        <div className='mx-auto flex max-w-6xl flex-col gap-4 px-6 py-5 md:flex-row md:items-center md:justify-between'>
+          <Link className='flex items-center gap-3' href='/portal'>
+            <img alt='JPV Bootcamp' className='h-10 w-10 object-contain' src='/images/jpv-logo.png' />
+            <span className='text-lg font-semibold'>Member Portal</span>
+          </Link>
+
+          <nav aria-label='Member portal' className='flex flex-wrap gap-2'>
+            {portalLinks.map((link) => (
+              <Link
+                className='rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 transition hover:bg-neutral-100 hover:text-neutral-950'
+                href={link.href}
+                key={link.href}
+              >
+                {link.label}
+              </Link>
+            ))}
+          </nav>
+        </div>
+      </header>
+
+      <main className='mx-auto w-full max-w-6xl px-6 py-10'>{children}</main>
+    </div>
+  )
+}

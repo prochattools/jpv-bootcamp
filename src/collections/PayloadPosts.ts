@@ -10,6 +10,7 @@ export const PayloadPosts: CollectionConfig = {
   admin: {
     useAsTitle: 'title',
     defaultColumns: ['title', 'status', 'createdAt'],
+    hidden: true,
   },
   fields: [
     { name: 'title', type: 'text', required: true },

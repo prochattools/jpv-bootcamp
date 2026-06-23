@@ -26,7 +26,7 @@ type RedirectResult =
 function buildRedirect(req: NextRequest, result: RedirectResult) {
 	const baseUrl = getPublicBaseUrl()
 	return NextResponse.redirect(
-		`${baseUrl}/admin/sponsored-decision?result=${result}`
+		`${baseUrl}/operations/sponsored-decision?result=${result}`
 	)
 }
 

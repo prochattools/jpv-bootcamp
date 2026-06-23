@@ -7,7 +7,7 @@ import {
   requirePayloadAdminOrRelatedMember,
 } from '@/lib/access/payloadAccess'
 
-const courseSystemGroup = 'Course System'
+const communityGroup = 'Community'
 
 const moderationStatusOptions = [
   { label: 'Visible', value: 'visible' },
@@ -24,7 +24,7 @@ export const PayloadMemberGroups: CollectionConfig = {
     plural: 'Member Groups',
   },
   admin: {
-    group: courseSystemGroup,
+    group: 'Members & Access',
     useAsTitle: 'name',
     defaultColumns: ['name', 'slug', 'status', 'visibility', 'updatedAt'],
   },
@@ -73,7 +73,7 @@ export const PayloadSpaces: CollectionConfig = {
     plural: 'Community Spaces',
   },
   admin: {
-    group: courseSystemGroup,
+    group: communityGroup,
     useAsTitle: 'name',
     defaultColumns: ['name', 'slug', 'spaceType', 'visibility', 'status'],
   },
@@ -142,9 +142,10 @@ export const PayloadSpaceMemberships: CollectionConfig = {
     plural: 'Space Memberships',
   },
   admin: {
-    group: courseSystemGroup,
+    group: communityGroup,
     useAsTitle: 'displayName',
     defaultColumns: ['displayName', 'member', 'space', 'role', 'status'],
+    hidden: true,
   },
   access: {
     admin: adminOnlyCollectionAccess.admin,
@@ -208,7 +209,7 @@ export const PayloadSpacePosts: CollectionConfig = {
     plural: 'Community Posts',
   },
   admin: {
-    group: courseSystemGroup,
+    group: communityGroup,
     useAsTitle: 'title',
     defaultColumns: ['title', 'space', 'author', 'moderationStatus', 'createdAt'],
   },
@@ -273,9 +274,10 @@ export const PayloadSpaceComments: CollectionConfig = {
     plural: 'Community Comments',
   },
   admin: {
-    group: courseSystemGroup,
+    group: communityGroup,
     useAsTitle: 'displayName',
     defaultColumns: ['displayName', 'post', 'author', 'moderationStatus', 'createdAt'],
+    hidden: true,
   },
   access: {
     admin: adminOnlyCollectionAccess.admin,
@@ -325,9 +327,10 @@ export const PayloadSpaceFiles: CollectionConfig = {
     plural: 'Community Files',
   },
   admin: {
-    group: courseSystemGroup,
+    group: communityGroup,
     useAsTitle: 'title',
     defaultColumns: ['title', 'space', 'uploadedBy', 'moderationStatus', 'createdAt'],
+    hidden: true,
   },
   access: {
     admin: adminOnlyCollectionAccess.admin,
@@ -378,9 +381,10 @@ export const PayloadChatThreads: CollectionConfig = {
     plural: 'Chat Threads',
   },
   admin: {
-    group: courseSystemGroup,
+    group: communityGroup,
     useAsTitle: 'title',
     defaultColumns: ['title', 'space', 'status', 'lastMessageAt'],
+    hidden: true,
   },
   access: adminOnlyCollectionAccess,
   fields: [
@@ -422,9 +426,10 @@ export const PayloadChatMessages: CollectionConfig = {
     plural: 'Chat Messages',
   },
   admin: {
-    group: courseSystemGroup,
+    group: communityGroup,
     useAsTitle: 'displayName',
     defaultColumns: ['displayName', 'thread', 'author', 'moderationStatus', 'createdAt'],
+    hidden: true,
   },
   access: {
     admin: adminOnlyCollectionAccess.admin,

@@ -1,8 +1,12 @@
-# Payload Course System Implementation Plan
+# Payload Course System Visual Reference
 
-## Status and verdict
+## Document role
 
-This document is the executable roadmap for the final JPV Bootcamp application architecture:
+This document is supporting visual and implementation reference material for the JPV Bootcamp Payload programme. The single canonical philosophy, architecture, security model, current status, roadmap, phase order, and cutover boundary are defined in `docs/PAYLOAD_INTEGRATION_PLAN.md`.
+
+This visual reference may describe screens, collections, workflows, and technical detail, but it must not introduce a competing roadmap. Where wording, phase numbering, scope, or status differs, `docs/PAYLOAD_INTEGRATION_PLAN.md` is authoritative. Detailed partner-affiliate design is maintained in `docs/PAYLOAD_PARTNER_AFFILIATE_PLAN.md` as the specification for the canonical partner-affiliate phase.
+
+The final JPV Bootcamp application architecture is:
 
 - `/` is the public website.
 - `/login` is the shared authentication entry.

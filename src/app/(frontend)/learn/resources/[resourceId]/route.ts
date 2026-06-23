@@ -1,72 +1,86 @@
-import { readFile } from 'node:fs/promises'
+import config from '@payload-config'
+import { createReadStream } from 'node:fs'
+import { stat } from 'node:fs/promises'
 import path from 'node:path'
+import { Readable } from 'node:stream'
+import { getPayload } from 'payload'
 
-import { NextResponse } from 'next/server'
-
-import { getCurrentPayloadMember } from '@/lib/members/currentMember'
+import { resolvePayloadRequestSession } from '@/lib/auth/payloadSession'
+import { decideSharedLogin } from '@/lib/auth/sharedLoginDecision'
+import type { PayloadCourseAccessAPI } from '@/lib/payloadCourse/accessService'
+import {
+  buildAttachmentContentDisposition,
+  isSafeResourceId,
+  resolveSafeStoredFilePath,
+  safeMimeType,
+} from '@/lib/payloadCourse/lessonResourceDelivery'
 import { resolveMemberLessonResourceDownload } from '@/lib/payloadCourse/lessonResources'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-const privateMediaRoot = path.join(process.cwd(), 'private', 'payload-course-media')
-const publicMediaRoot = path.join(process.cwd(), 'public', 'media')
+type ResourceRouteContext = {
+  params: Promise<{ resourceId: string }>
+}
 
-function plain(status: number, message: string): NextResponse {
-  return new NextResponse(message, {
-    status,
+function notFoundResponse(): Response {
+  return new Response('Not found', {
+    status: 404,
     headers: {
-      'cache-control': 'private, no-store',
-      'content-type': 'text/plain; charset=utf-8',
-      'x-content-type-options': 'nosniff',
+      'Cache-Control': 'private, no-store',
+      'Content-Type': 'text/plain; charset=utf-8',
+      'X-Content-Type-Options': 'nosniff',
     },
   })
 }
 
-function safeContentDispositionFileName(value: string): string {
-  const cleaned = value.replace(/["\r\n\\]/g, '_').trim()
-  return cleaned || 'lesson-resource'
-}
+export async function GET(request: Request, context: ResourceRouteContext): Promise<Response> {
+  const { resourceId } = await context.params
+  if (!isSafeResourceId(resourceId)) return notFoundResponse()
 
-export async function GET(
-  _request: Request,
-  { params }: { params: Promise<{ resourceId: string }> }
-) {
-  const { resourceId } = await params
-  const { member, payload } = await getCurrentPayloadMember()
-
-  if (!member) {
-    return plain(401, 'Sign in to download this resource.')
-  }
-
-  const result = await resolveMemberLessonResourceDownload(payload, member.id, resourceId)
-  if (result.allowed === false) {
-    const status = result.reason === 'access_denied' ? 403 : 404
-    return plain(status, 'Resource is not available.')
-  }
-
-  const mediaRoot = result.media.storage === 'private' ? privateMediaRoot : publicMediaRoot
-  const filePath = path.resolve(mediaRoot, result.media.filename)
-  if (!filePath.startsWith(`${mediaRoot}${path.sep}`)) {
-    return plain(404, 'Resource is not available.')
-  }
-
-  let body: Buffer
   try {
-    body = await readFile(filePath)
-  } catch {
-    return plain(404, 'Resource file is not available.')
-  }
+    const session = await resolvePayloadRequestSession(request.headers)
+    const decision = decideSharedLogin(session, '/portal')
 
-  const downloadName = safeContentDispositionFileName(result.fileName ?? result.media.filename)
-  return new NextResponse(new Uint8Array(body), {
-    status: 200,
-    headers: {
-      'cache-control': 'private, no-store',
-      'content-disposition': `attachment; filename="${downloadName}"`,
-      'content-length': String(body.byteLength),
-      'content-type': result.media.mimeType ?? 'application/octet-stream',
-      'x-content-type-options': 'nosniff',
-    },
-  })
+    if (!decision.allowed || decision.identity.kind !== 'member' || !session.member?.id) {
+      return notFoundResponse()
+    }
+
+    const payload = await getPayload({ config })
+    const resolution = await resolveMemberLessonResourceDownload(
+      payload as unknown as PayloadCourseAccessAPI,
+      session.member.id,
+      resourceId,
+    )
+
+    if (!resolution.allowed) return notFoundResponse()
+
+    const storageRoot =
+      resolution.media.storage === 'private'
+        ? path.resolve(process.cwd(), 'private/payload-course-media')
+        : path.resolve(process.cwd(), 'public/media')
+    const filePath = resolveSafeStoredFilePath(storageRoot, resolution.media.filename)
+    if (!filePath) return notFoundResponse()
+
+    const fileStat = await stat(filePath)
+    if (!fileStat.isFile()) return notFoundResponse()
+
+    const nodeStream = createReadStream(filePath)
+    const body = Readable.toWeb(nodeStream) as ReadableStream<Uint8Array>
+
+    return new Response(body, {
+      status: 200,
+      headers: {
+        'Cache-Control': 'private, no-store',
+        'Content-Disposition': buildAttachmentContentDisposition(
+          resolution.fileName ?? resolution.media.filename,
+        ),
+        'Content-Length': String(fileStat.size),
+        'Content-Type': safeMimeType(resolution.media.mimeType),
+        'X-Content-Type-Options': 'nosniff',
+      },
+    })
+  } catch {
+    return notFoundResponse()
+  }
 }

@@ -10,6 +10,7 @@ export const PayloadPages: CollectionConfig = {
   admin: {
     useAsTitle: 'title',
     defaultColumns: ['title', 'slug', 'createdAt'],
+    hidden: true,
   },
   fields: [
     { name: 'title', type: 'text', required: true },

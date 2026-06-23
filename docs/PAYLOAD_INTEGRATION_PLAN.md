@@ -1,6 +1,38 @@
 # Payload CMS Integration Plan
 
-This is the canonical execution plan for JPV Bootcamp. Code changes must follow this plan in order. Update this document before changing the architecture, security model, rollout sequence, or production boundary.
+This is the single canonical product, architecture, security, roadmap, and execution plan for the JPV Bootcamp Payload programme. Code changes must follow this plan in order. Update this document before changing the architecture, security model, product boundary, rollout sequence, or production boundary.
+
+## Documentation hierarchy
+
+To keep the repository cohesive and unambiguous, documents have explicit roles:
+
+1. **Canonical plan — this document.** It owns the philosophy, strategy, architecture, security rules, current status, ordered roadmap, acceptance gates, and cutover boundary.
+2. **Feature specifications.** These define implementation detail for a roadmap phase but cannot change the canonical architecture or phase order. Current feature specification:
+   - `docs/PAYLOAD_PARTNER_AFFILIATE_PLAN.md` — detailed specification for Phase 8.
+3. **Visual reference.** `docs/PAYLOAD_COURSE_VISUAL_IMPLEMENTATION_PLAN.md` illustrates screens, collections, and workflows. It is supporting reference material, not a second roadmap. Where it differs from this document, this document wins.
+4. **Legacy archive.** `docs/archive/PARTNER_AFFILIATE_LEGACY.md` records retained obsolete behavior for migration and reconciliation. Archive documents never define the target architecture.
+5. **Platform invariants and operations.** `docs/PROKIT_OVERVIEW.md`, `docs/PROKIT_INVARIANTS.md`, and infrastructure documents define stable platform and operational contracts. They do not replace this product roadmap.
+
+Do not create another general Payload roadmap. New features must first be added here as a phase or deliverable. Create a separate feature specification only when the detailed schema, workflow, privacy, migration, or acceptance material would make this canonical plan harder to use.
+
+## Philosophy
+
+- Build one coherent application rather than parallel member systems.
+- Keep public, administrator, and member surfaces separate and explicit.
+- Treat identity, authorization, entitlements, privacy, and auditability as product foundations.
+- Preserve proven production flows until their replacements are tested, reconciled, reversible, and approved.
+- Prefer small, demonstrable, independently validated phases over a broad migration rewrite.
+- Keep Payload as the administrative system of record and Next.js as the controlled member experience.
+- Retain legacy systems as migration sources, never as accidental target architecture.
+
+## Strategy
+
+- Establish the administrator boundary and shared identity routing first.
+- Build the protected portal and core course experience next.
+- Enforce entitlements and protected resource delivery before expanding account or billing workflows.
+- Add member account, billing, community, and partner-affiliate capabilities as explicit phases on the same security model.
+- Shadow-test and reconcile every replacement before production cutover.
+- Make production database and traffic changes only after the corresponding acceptance gate passes.
 
 ## Final architecture
 
@@ -205,11 +237,39 @@ Validation:
 - uploads enforce type, size, and ownership rules;
 - external media identifiers and signed URLs are handled server-side.
 
-### Phase 8 — Shadow validation and cutover
+### Phase 8 — Implement partner affiliate applications and reporting
+
+Deliverables:
+
+- Payload-managed partner affiliate directory;
+- authenticated member partner-selection and application form;
+- member application history in `/portal`;
+- administrator application, click, submission, and delivery reporting in `/admin`;
+- server-side CSV export with audit records;
+- queued email, webhook, redirect, or manual-export delivery modes;
+- privacy-safe event tracking for partner views, clicks, submissions, delivery, retries, status changes, and exports;
+- dry-run reconciliation against retained Prisma and WordPress partner records.
+
+Validation:
+
+- every application is linked to the authenticated Payload member and selected active partner;
+- the application record exists before redirect or external delivery;
+- members can read only their own application history;
+- administrators can filter and export authorized partner reports;
+- client input cannot supply trusted affiliate URLs, webhook endpoints, recipient addresses, member IDs, or delivery status;
+- delivery is idempotent and retryable;
+- legacy partner sessions, clicks, sponsored applications, and reports remain unchanged until explicit cutover approval.
+
+Implementation details and legacy inventory are defined in:
+
+- `docs/PAYLOAD_PARTNER_AFFILIATE_PLAN.md`;
+- `docs/archive/PARTNER_AFFILIATE_LEGACY.md`.
+
+### Phase 9 — Shadow validation and cutover
 
 Before replacing any existing production flow:
 
-1. Run identity, entitlement, billing, email, and content reconciliation.
+1. Run identity, entitlement, billing, email, content, and partner-affiliate reconciliation.
 2. Verify reviewed Payload migrations touch only approved `payload_*` objects.
 3. Test administrator and member journeys in an isolated environment.
 4. Test rollback without deleting production data.

@@ -10,6 +10,7 @@ export const PayloadUsers: CollectionConfig = {
   auth: true,
   admin: {
     useAsTitle: 'email',
+    group: 'Administration',
   },
   fields: [],
 }

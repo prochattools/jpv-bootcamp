@@ -8,16 +8,17 @@ export function middleware(request: NextRequest) {
 	const pathname = request.nextUrl.pathname
 	const isApiRoute = pathname.startsWith('/api')
 	const isNextRoute = pathname.startsWith('/_next')
+	const isPayloadAdminRoute = pathname === '/admin' || pathname.startsWith('/admin/')
 	const isPartnersRoute =
 		pathname === '/partners' ||
 		pathname.startsWith('/partners/') ||
 		pathname.startsWith('/out/')
 	const isPartnersSession = pathname === '/partners/session'
-	if (request.headers.has('next-action')) {
+	if (request.headers.has('next-action') && !isPayloadAdminRoute) {
 		return new Response(null, { status: 204 })
 	}
 
-	if (request.method === 'POST' && !isApiRoute && !isNextRoute) {
+	if (request.method === 'POST' && !isApiRoute && !isNextRoute && !isPayloadAdminRoute) {
 		return new Response(null, { status: 204 })
 	}
 

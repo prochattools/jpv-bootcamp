@@ -10,9 +10,10 @@ export const PayloadAuditEvents: CollectionConfig = {
     plural: 'Audit Events',
   },
   admin: {
-    group: 'Course System',
+    group: 'Administration',
     useAsTitle: 'displayName',
     defaultColumns: ['displayName', 'actorType', 'action', 'targetCollection', 'createdAt'],
+    hidden: true,
   },
   access: adminOnlyCollectionAccess,
   fields: [

@@ -2,7 +2,7 @@ import type { CollectionConfig } from 'payload'
 
 import { adminOnlyCollectionAccess } from '@/lib/access/payloadAccess'
 
-const courseSystemGroup = 'Course System'
+const crmGroup = 'Administration'
 
 export const PayloadContacts: CollectionConfig = {
   slug: 'payload_contacts',
@@ -12,7 +12,8 @@ export const PayloadContacts: CollectionConfig = {
     plural: 'Contacts',
   },
   admin: {
-    group: courseSystemGroup,
+    group: crmGroup,
+    hidden: true,
     useAsTitle: 'email',
     defaultColumns: ['email', 'member', 'lifecycleStage', 'emailStatus', 'updatedAt'],
   },
@@ -70,7 +71,8 @@ export const PayloadCrmTags: CollectionConfig = {
     plural: 'CRM Tags',
   },
   admin: {
-    group: courseSystemGroup,
+    group: crmGroup,
+    hidden: true,
     useAsTitle: 'name',
     defaultColumns: ['name', 'slug', 'status', 'updatedAt'],
   },
@@ -101,7 +103,8 @@ export const PayloadContactTags: CollectionConfig = {
     plural: 'Contact Tag Assignments',
   },
   admin: {
-    group: courseSystemGroup,
+    group: crmGroup,
+    hidden: true,
     useAsTitle: 'displayName',
     defaultColumns: ['displayName', 'contact', 'tag', 'source', 'createdAt'],
   },
@@ -148,7 +151,8 @@ export const PayloadContactNotes: CollectionConfig = {
     plural: 'Contact Notes',
   },
   admin: {
-    group: courseSystemGroup,
+    group: crmGroup,
+    hidden: true,
     useAsTitle: 'title',
     defaultColumns: ['title', 'contact', 'noteType', 'createdAt'],
   },
@@ -189,7 +193,8 @@ export const PayloadEmailTemplates: CollectionConfig = {
     plural: 'Email Templates',
   },
   admin: {
-    group: courseSystemGroup,
+    group: crmGroup,
+    hidden: true,
     useAsTitle: 'name',
     defaultColumns: ['name', 'templateKey', 'status', 'purpose', 'updatedAt'],
   },
@@ -246,7 +251,8 @@ export const PayloadEmailEvents: CollectionConfig = {
     plural: 'Email Events',
   },
   admin: {
-    group: courseSystemGroup,
+    group: crmGroup,
+    hidden: true,
     useAsTitle: 'displayName',
     defaultColumns: ['displayName', 'toEmail', 'templateKey', 'deliveryStatus', 'createdAt'],
   },
@@ -296,7 +302,8 @@ export const PayloadAdminNotifications: CollectionConfig = {
     plural: 'Admin Notifications',
   },
   admin: {
-    group: courseSystemGroup,
+    group: crmGroup,
+    hidden: true,
     useAsTitle: 'title',
     defaultColumns: ['title', 'notificationType', 'severity', 'status', 'createdAt'],
   },

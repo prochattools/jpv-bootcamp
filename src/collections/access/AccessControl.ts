@@ -2,7 +2,7 @@ import type { CollectionConfig } from 'payload'
 
 import { adminOnlyCollectionAccess, requirePayloadAdmin } from '@/lib/access/payloadAccess'
 
-const courseSystemGroup = 'Course System'
+const accessControlGroup = 'Members & Access'
 
 const resourceTypeOptions = [
   { label: 'Course', value: 'course' },
@@ -27,7 +27,7 @@ export const PayloadAccessGroups: CollectionConfig = {
     plural: 'Access Groups',
   },
   admin: {
-    group: courseSystemGroup,
+    group: accessControlGroup,
     useAsTitle: 'name',
     defaultColumns: ['name', 'slug', 'status', 'groupType', 'updatedAt'],
   },
@@ -80,9 +80,10 @@ export const PayloadAccessPolicies: CollectionConfig = {
     plural: 'Access Policies',
   },
   admin: {
-    group: courseSystemGroup,
+    group: accessControlGroup,
     useAsTitle: 'name',
     defaultColumns: ['name', 'resourceType', 'resourceId', 'status', 'priority', 'updatedAt'],
+    hidden: true,
   },
   access: adminOnlyCollectionAccess,
   fields: [
@@ -173,9 +174,10 @@ export const PayloadAccessGrants: CollectionConfig = {
     plural: 'Access Grants',
   },
   admin: {
-    group: courseSystemGroup,
+    group: accessControlGroup,
     useAsTitle: 'displayName',
     defaultColumns: ['displayName', 'member', 'accessGroup', 'resourceType', 'status', 'source'],
+    hidden: true,
   },
   access: adminOnlyCollectionAccess,
   fields: [
@@ -248,9 +250,10 @@ export const PayloadEntitlementEvents: CollectionConfig = {
     plural: 'Entitlement Events',
   },
   admin: {
-    group: courseSystemGroup,
+    group: accessControlGroup,
     useAsTitle: 'displayName',
     defaultColumns: ['displayName', 'member', 'eventType', 'resourceType', 'result', 'createdAt'],
+    hidden: true,
   },
   access: {
     ...adminOnlyCollectionAccess,

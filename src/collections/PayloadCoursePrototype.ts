@@ -11,6 +11,7 @@ export const PayloadCourses: CollectionConfig = {
     useAsTitle: 'title',
     defaultColumns: ['title', 'status', 'visibility', 'accessBadge', 'updatedAt'],
     description: 'Visual prototype only. Not connected to Stripe, WordPress, FluentCRM, or FluentCommunity.',
+    group: 'Courses',
   },
   fields: [
     {
@@ -111,6 +112,7 @@ export const PayloadCourseModules: CollectionConfig = {
     useAsTitle: 'title',
     defaultColumns: ['title', 'course', 'sortOrder', 'publishedPreview', 'updatedAt'],
     description: 'Ordered course sections for the visual prototype.',
+    group: 'Courses',
   },
   fields: [
     {
@@ -145,6 +147,7 @@ export const PayloadLessons: CollectionConfig = {
     useAsTitle: 'title',
     defaultColumns: ['title', 'module', 'sortOrder', 'mockCompletionState', 'visualLockState'],
     description: 'Visual lesson content only. Progress and permissions are not persisted or enforced.',
+    group: 'Courses',
   },
   fields: [
     {
@@ -228,6 +231,7 @@ export const PayloadCourseAccessPreview: CollectionConfig = {
     useAsTitle: 'displayLabel',
     defaultColumns: ['displayLabel', 'type', 'visualState', 'course', 'updatedAt'],
     description: 'Visual access examples only. No real member, billing, or entitlement data is connected.',
+    hidden: true,
   },
   fields: [
     {

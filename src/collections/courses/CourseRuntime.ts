@@ -8,7 +8,7 @@ import {
   requirePayloadAdminOrRelatedMember,
 } from '@/lib/access/payloadAccess'
 
-const courseSystemGroup = 'Course System'
+const courseGroup = 'Courses'
 
 export const PayloadPrivateMedia: CollectionConfig = {
   slug: 'payload_private_media',
@@ -18,9 +18,10 @@ export const PayloadPrivateMedia: CollectionConfig = {
     plural: 'Private Course Files',
   },
   admin: {
-    group: courseSystemGroup,
+    group: courseGroup,
     useAsTitle: 'alt',
     defaultColumns: ['alt', 'filename', 'mimeType', 'updatedAt'],
+    hidden: true,
   },
   upload: {
     staticDir: path.resolve(process.cwd(), 'private/payload-course-media'),
@@ -53,9 +54,10 @@ export const PayloadLessonResources: CollectionConfig = {
     plural: 'Lesson Resources',
   },
   admin: {
-    group: courseSystemGroup,
+    group: courseGroup,
     useAsTitle: 'title',
     defaultColumns: ['title', 'lesson', 'status', 'downloadRequiresAccess', 'updatedAt'],
+    hidden: true,
   },
   access: {
     admin: adminOnlyCollectionAccess.admin,
@@ -122,9 +124,10 @@ export const PayloadCourseEnrollments: CollectionConfig = {
     plural: 'Course Enrollments',
   },
   admin: {
-    group: courseSystemGroup,
+    group: courseGroup,
     useAsTitle: 'displayName',
     defaultColumns: ['displayName', 'member', 'course', 'status', 'source', 'updatedAt'],
+    hidden: true,
   },
   access: {
     admin: adminOnlyCollectionAccess.admin,
@@ -199,9 +202,10 @@ export const PayloadLessonProgress: CollectionConfig = {
     plural: 'Lesson Progress',
   },
   admin: {
-    group: courseSystemGroup,
+    group: courseGroup,
     useAsTitle: 'displayName',
     defaultColumns: ['displayName', 'member', 'lesson', 'status', 'completedAt', 'updatedAt'],
+    hidden: true,
   },
   access: {
     admin: adminOnlyCollectionAccess.admin,

@@ -15,6 +15,9 @@ export const PayloadMedia: CollectionConfig = {
   upload: {
     staticDir: path.resolve(dirname, '../../public/media'),
   },
+  admin: {
+    hidden: true,
+  },
   fields: [
     { name: 'alt', type: 'text', required: true },
   ],
