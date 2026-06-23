@@ -3,7 +3,7 @@ const logoSrc = '/images/jpv-logo.png'
 export function JPVAdminLogo() {
   return (
     <img
-      alt='JPV Bootcamp'
+      alt='JPV Bootcamp Portal'
       src={logoSrc}
       style={{
         display: 'block',
@@ -20,7 +20,7 @@ export function JPVAdminLogo() {
 export function JPVAdminIcon() {
   return (
     <img
-      alt='JPV Bootcamp'
+      alt='JPV Bootcamp Portal'
       src={logoSrc}
       style={{
         display: 'block',

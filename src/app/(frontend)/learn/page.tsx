@@ -8,7 +8,7 @@ import { PortalShell, StatusPill } from './PortalShell'
 
 export const metadata = {
   title: 'My Courses | JPV Bootcamp',
-  description: 'Payload-backed JPV Bootcamp member dashboard.',
+  description: 'Your JPV Bootcamp courses, progress, and member access.',
 }
 
 export const runtime = 'nodejs'
@@ -39,10 +39,10 @@ export default async function LearnDashboardPage() {
                 Member dashboard
               </span>
               <h1 className='mt-7 max-w-3xl text-4xl font-bold leading-tight tracking-tight sm:text-5xl'>
-                Your courses and access are now evaluated through Payload.
+                Your JPV Bootcamp courses and access in one secure place.
               </h1>
               <p className='mt-5 max-w-2xl text-base leading-7 text-[#d5e0da] sm:text-lg'>
-                This page reads your `payload_members` account, evaluates each published course server-side, and only loads lesson outlines for courses you can access.
+                Your account and course access are checked securely, and lesson outlines load only for courses available to you.
               </p>
               <div className='mt-8 flex flex-wrap gap-3'>
                 <StatusPill tone={memberStatusTone(accountStatus)}>Account {accountStatus}</StatusPill>

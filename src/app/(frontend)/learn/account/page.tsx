@@ -8,7 +8,7 @@ import { PortalShell, StatusPill } from '../PortalShell'
 
 export const metadata = {
   title: 'My Account | JPV Bootcamp',
-  description: 'Payload-backed JPV Bootcamp member account page.',
+  description: 'Manage your JPV Bootcamp profile, access, and account security.',
 }
 
 export const runtime = 'nodejs'
@@ -67,7 +67,7 @@ export default async function LearnAccountPage({
             </p>
             <h1 className='mt-3 text-3xl font-bold tracking-tight text-[#153f2e]'>Account overview</h1>
             <p className='mt-3 text-sm leading-6 text-[#68766f]'>
-              This page reads from `payload_members` and related Payload billing, group, subscription, and profile records.
+              Manage your profile, access, subscriptions, and account details for JPV Bootcamp.
             </p>
 
             <div className='mt-6 space-y-4'>

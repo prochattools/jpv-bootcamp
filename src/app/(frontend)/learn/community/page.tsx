@@ -8,7 +8,7 @@ import { PortalShell, StatusPill } from '../PortalShell'
 
 export const metadata = {
   title: 'Community | JPV Bootcamp',
-  description: 'Payload-backed JPV Bootcamp community spaces.',
+  description: 'Your JPV Bootcamp community spaces and member access.',
 }
 
 export const runtime = 'nodejs'
@@ -38,7 +38,7 @@ export default async function LearnCommunityPage() {
             Member community
           </span>
           <h1 className='mt-7 max-w-3xl text-4xl font-bold leading-tight tracking-tight sm:text-5xl'>
-            Spaces are visible only after Payload evaluates your community access.
+            Your JPV Bootcamp community spaces appear according to your member access.
           </h1>
           <p className='mt-5 max-w-2xl text-base leading-7 text-[#d5e0da] sm:text-lg'>
             Public spaces can appear to active members, private spaces show a lock state, and secret spaces stay hidden unless your account has access.

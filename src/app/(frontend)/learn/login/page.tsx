@@ -7,7 +7,7 @@ import { PortalShell } from '../PortalShell'
 
 export const metadata = {
   title: 'Member Sign In | JPV Bootcamp',
-  description: 'Sign in to the JPV Bootcamp Payload learning portal.',
+  description: 'Sign in to your JPV Bootcamp learning portal.',
 }
 
 export const runtime = 'nodejs'
@@ -43,13 +43,13 @@ export default async function LearnLoginPage({
       <main className='mx-auto grid min-h-[calc(100vh-84px)] max-w-7xl items-center gap-10 px-6 py-12 lg:grid-cols-[1fr_0.85fr] lg:px-10'>
         <section>
           <p className='text-xs font-bold uppercase tracking-[0.2em] text-[#8a7450]'>
-            Payload member access
+            JPV Bootcamp member access
           </p>
           <h1 className='mt-4 max-w-2xl text-4xl font-bold leading-tight tracking-tight text-[#153f2e] sm:text-5xl'>
             Sign in to your JPV Bootcamp learning portal.
           </h1>
           <p className='mt-5 max-w-xl text-base leading-7 text-[#64736c]'>
-            This proof-of-concept uses the `payload_members` auth collection. Course access is still evaluated server-side before private lessons are loaded.
+            Your course access is checked securely before private lessons and member content are loaded.
           </p>
         </section>
 
@@ -57,7 +57,7 @@ export default async function LearnLoginPage({
           <div className='mb-6'>
             <h2 className='text-2xl font-bold text-[#153f2e]'>Member sign in</h2>
             <p className='mt-2 text-sm leading-6 text-[#68766f]'>
-              Use a staging Payload member account created through admin, Stripe shadow sync, or migration tooling.
+              Use the JPV Bootcamp member account provided through the approved enrollment or migration process.
             </p>
           </div>
 
@@ -70,7 +70,7 @@ export default async function LearnLoginPage({
           <LoginForm nextPath={nextPath} />
 
           <p className='mt-6 text-xs leading-5 text-[#7b8982]'>
-            Public self-signup is intentionally not enabled in this slice. New member creation remains controlled by Payload admin, Stripe, or migration flows until email verification and abuse controls are approved.
+            Public self-signup is not enabled. New member accounts are created through approved JPV Bootcamp enrollment and migration processes.
           </p>
         </section>
       </main>

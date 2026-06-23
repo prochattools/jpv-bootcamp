@@ -60,9 +60,9 @@ export default buildConfig({
       },
     },
     meta: {
-      title: 'JPV Bootcamp',
-      titleSuffix: ' — JPV Bootcamp',
-      description: 'JPV Bootcamp course and content management',
+      title: 'JPV Bootcamp Portal',
+      titleSuffix: ' — JPV Bootcamp Portal',
+      description: 'JPV Bootcamp Portal administration',
       icons: [
         {
           rel: 'icon',

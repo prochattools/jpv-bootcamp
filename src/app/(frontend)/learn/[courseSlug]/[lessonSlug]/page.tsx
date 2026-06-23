@@ -86,7 +86,7 @@ export default async function LearnLessonPage({
                 <p className='text-xs font-bold uppercase tracking-[0.2em] text-[#d9c897]'>
                   Lesson content
                 </p>
-                <h2 className='mt-3 text-2xl font-bold'>Payload lesson renderer placeholder</h2>
+                <h2 className='mt-3 text-2xl font-bold'>JPV Bootcamp lesson content</h2>
                 <p className='mt-3 text-sm leading-6 text-[#d5e0da]'>
                   Access has passed. Rich text, media players, and comments should be rendered here only after their final renderers and checks are added.
                 </p>

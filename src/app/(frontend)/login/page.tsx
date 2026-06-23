@@ -64,10 +64,10 @@ export default async function SharedLoginPage({ searchParams }: LoginPageProps) 
             className='rounded-lg bg-neutral-950 px-4 py-3 text-center text-sm font-semibold text-white'
             href='/admin/login'
           >
-            Administrator sign in
+            JPV Bootcamp Portal sign in
           </Link>
           <div className='rounded-lg border border-neutral-200 px-4 py-3 text-center text-sm text-neutral-600'>
-            Member sign-in continues through the protected member portal setup.
+            JPV Bootcamp student and member sign-in continues through the secure member area.
           </div>
         </div>
       </section>

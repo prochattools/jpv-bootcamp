@@ -41,7 +41,7 @@ export function PortalShell({ children, memberEmail }: PortalShellProps) {
             <div className='flex items-center gap-3'>
               <div className='hidden text-right sm:block'>
                 <p className='text-sm font-semibold text-[#153f2e]'>{memberEmail}</p>
-                <p className='text-xs text-[#6f7f77]'>Payload member</p>
+                <p className='text-xs text-[#6f7f77]'>JPV Bootcamp member</p>
               </div>
               <form action={logoutMemberAction}>
                 <button

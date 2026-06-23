@@ -101,7 +101,7 @@ export const courseSeeds: CourseSeed[] = [
     slug: 'jpv-bootcamp-foundations',
     prototypeKey: 'seed:jpv-bootcamp-foundations',
     title: 'JPV Bootcamp Foundations',
-    shortDescription: 'Foundational course structure for the Payload proof of concept.',
+    shortDescription: 'Foundational learning path for getting started with JPV Bootcamp.',
     visibility: 'members',
     accessBadge: 'free',
     estimatedDuration: '2 hours',
@@ -250,7 +250,7 @@ export const emailTemplateSeeds: EmailTemplateSeed[] = [
     name: 'Admin Notification',
     purpose: 'admin_notification',
     subject: 'JPV Bootcamp admin notification',
-    textBody: 'An administrative course-system event requires review in Payload.',
+    textBody: 'An administrative JPV Bootcamp event requires review in JPV Bootcamp Portal.',
   },
 ]
 

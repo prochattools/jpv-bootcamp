@@ -15,6 +15,18 @@ To keep the repository cohesive and unambiguous, documents have explicit roles:
 
 Do not create another general Payload roadmap. New features must first be added here as a phase or deliverable. Create a separate feature specification only when the detailed schema, workflow, privacy, migration, or acceptance material would make this canonical plan harder to use.
 
+## Public naming and white-label contract
+
+- The public product name is **JPV Bootcamp**.
+- The administrator back office is named **JPV Bootcamp Portal**.
+- Students, clients, and other external users must not see the terms **Payload**, **Payload CMS**, or internal collection and service names in page titles, labels, help text, emails, or client-facing documentation.
+- Payload may remain in source code, developer documentation, migration notes, infrastructure documentation, and other clearly internal technical references.
+- Administrator branding must use Payload's documented `admin.meta` and `admin.components.graphics` configuration so upgrades remain compatible. Do not fork or replace Payload's authentication views merely to change branding.
+- Public and client-facing documentation must describe the system as JPV Bootcamp or JPV Bootcamp Portal according to the audience and surface.
+- Any unavoidable vendor name shown by a third-party runtime must be reviewed before release and either removed through supported configuration or recorded as an explicit exception.
+
+This naming pass is a bounded prerequisite to completing Phase 5. It changes presentation and documentation only; it does not alter identity, authorization, data ownership, or roadmap order.
+
 ## Philosophy
 
 - Build one coherent application rather than parallel member systems.
