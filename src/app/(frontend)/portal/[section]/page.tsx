@@ -1,6 +1,9 @@
-import { notFound } from 'next/navigation'
+import { revalidatePath } from 'next/cache'
+import { notFound, redirect } from 'next/navigation'
 
 import { requirePortalMember } from '@/lib/auth/requirePortalMember'
+import { updateMemberProfile } from '@/lib/members/updateMemberProfile'
+import type { PayloadCourseWriteAPI } from '@/lib/payloadCourse/accessService'
 import { getMemberAccountOverview } from '@/lib/payloadCourse/memberPortal'
 
 const sectionContent = {
@@ -20,6 +23,7 @@ type PortalSection = 'community' | 'groups' | 'account' | 'billing'
 
 type PortalSectionPageProps = {
   params: Promise<{ section: string }>
+  searchParams?: Promise<{ updated?: string; error?: string }>
 }
 
 function isPortalSection(value: string): value is PortalSection {
@@ -30,14 +34,38 @@ function displayValue(value: string | null): string {
   return value?.trim() || 'Not provided'
 }
 
-export default async function PortalSectionPage({ params }: PortalSectionPageProps) {
+function formText(value: FormDataEntryValue | null): string {
+  return typeof value === 'string' ? value : ''
+}
+
+async function updatePortalMemberProfileAction(formData: FormData) {
+  'use server'
+
+  const { memberId, payload } = await requirePortalMember('/portal/account')
+  const result = await updateMemberProfile(payload as unknown as PayloadCourseWriteAPI, memberId, {
+    displayName: formText(formData.get('displayName')),
+    company: formText(formData.get('company')),
+    phone: formText(formData.get('phone')),
+    timezone: formText(formData.get('timezone')),
+  })
+
+  if (!result.ok) redirect('/portal/account?error=display-name')
+
+  revalidatePath('/portal/account')
+  redirect('/portal/account?updated=1')
+}
+
+export default async function PortalSectionPage({ params, searchParams }: PortalSectionPageProps) {
   const { section } = await params
   if (!isPortalSection(section)) notFound()
 
   const { memberId, payload } = await requirePortalMember(`/portal/${section}`)
 
   if (section === 'account') {
-    const account = await getMemberAccountOverview(payload, memberId)
+    const [account, query] = await Promise.all([
+      getMemberAccountOverview(payload, memberId),
+      searchParams ?? Promise.resolve<{ updated?: string; error?: string }>({}),
+    ])
 
     return (
       <div className='space-y-8'>
@@ -45,7 +73,7 @@ export default async function PortalSectionPage({ params }: PortalSectionPagePro
           <p className='text-sm font-semibold uppercase tracking-[0.2em] text-neutral-500'>Profile</p>
           <h1 className='mt-3 text-3xl font-semibold tracking-tight'>Account</h1>
           <p className='mt-3 max-w-2xl text-sm leading-6 text-neutral-600'>
-            Review the profile details currently associated with your member account.
+            Review and update the profile details associated with your member account.
           </p>
         </section>
 
@@ -82,6 +110,80 @@ export default async function PortalSectionPage({ params }: PortalSectionPagePro
               No member profile has been completed yet.
             </p>
           ) : null}
+        </section>
+
+        <section className='rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm'>
+          <div>
+            <h2 className='text-xl font-semibold text-neutral-950'>Edit profile</h2>
+            <p className='mt-2 text-sm leading-6 text-neutral-600'>
+              These details are used in your member experience. Internal notes and access settings cannot be changed here.
+            </p>
+          </div>
+
+          <div className='mt-5' aria-live='polite'>
+            {query.updated === '1' ? (
+              <p className='rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800'>
+                Your profile has been updated.
+              </p>
+            ) : null}
+            {query.error === 'display-name' ? (
+              <p className='rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800'>
+                Enter a display name before saving your profile.
+              </p>
+            ) : null}
+          </div>
+
+          <form action={updatePortalMemberProfileAction} className='mt-6 grid gap-5 sm:grid-cols-2'>
+            <label className='text-sm font-medium text-neutral-800'>
+              Display name
+              <input
+                name='displayName'
+                type='text'
+                required
+                maxLength={80}
+                defaultValue={account.profile?.displayName ?? ''}
+                className='mt-2 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm text-neutral-950'
+              />
+            </label>
+            <label className='text-sm font-medium text-neutral-800'>
+              Company
+              <input
+                name='company'
+                type='text'
+                maxLength={100}
+                defaultValue={account.profile?.company ?? ''}
+                className='mt-2 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm text-neutral-950'
+              />
+            </label>
+            <label className='text-sm font-medium text-neutral-800'>
+              Phone
+              <input
+                name='phone'
+                type='tel'
+                maxLength={40}
+                defaultValue={account.profile?.phone ?? ''}
+                className='mt-2 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm text-neutral-950'
+              />
+            </label>
+            <label className='text-sm font-medium text-neutral-800'>
+              Timezone
+              <input
+                name='timezone'
+                type='text'
+                maxLength={80}
+                defaultValue={account.profile?.timezone ?? ''}
+                className='mt-2 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm text-neutral-950'
+              />
+            </label>
+            <div className='sm:col-span-2'>
+              <button
+                type='submit'
+                className='rounded-lg bg-neutral-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-neutral-800'
+              >
+                Save profile
+              </button>
+            </div>
+          </form>
         </section>
       </div>
     )
