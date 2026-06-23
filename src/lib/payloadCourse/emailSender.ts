@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto'
 
 import { normalizeEmail } from '@/lib/normalize-email'
+import { redactDeliveredResetLink } from '@/lib/members/redactDeliveredResetLink'
 import type {
   PayloadCourseWriteAPI,
   PayloadDocument,
@@ -380,14 +381,11 @@ export async function sendQueuedPayloadEmail(
     resendEmailId: resendEmailId ?? undefined,
     sentAt,
     failureReason: null,
-    metadata: {
-      ...asRecord(event.metadata),
-      lastSend: {
-        idempotencyKey,
-        provider: 'resend',
-        sentAt: sentAt.toISOString(),
-      },
-    },
+  })
+  await redactDeliveredResetLink(payload, event, {
+    sentAt,
+    idempotencyKey,
+    provider: 'resend',
   })
 
   return {

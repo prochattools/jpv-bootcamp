@@ -279,12 +279,155 @@ async function testEligibleResetRequest() {
   assert.equal(protectedRecords.includes('reset-raw-token'), false)
 }
 
+async function testPasswordResetPolicyAndSuccess() {
+  const { completePasswordReset } = await import('../src/lib/members/completePasswordReset')
+  const payload = new FakePayload({
+    payload_members: [{ id: 'member', email: 'member@example.com', accountStatus: 'active' }],
+    payload_member_security_events: [],
+  })
+
+  assert.deepEqual(
+    await completePasswordReset(payload, {
+      token: 'token',
+      password: 'short',
+      passwordConfirmation: 'short',
+    }),
+    { ok: false, error: 'password_too_short' },
+  )
+  assert.deepEqual(
+    await completePasswordReset(payload, {
+      token: 'token',
+      password: 'long-enough-password',
+      passwordConfirmation: 'different-password',
+    }),
+    { ok: false, error: 'password_mismatch' },
+  )
+
+  const result = await completePasswordReset(payload, {
+    token: 'trusted-reset-token',
+    password: 'long-enough-password',
+    passwordConfirmation: 'long-enough-password',
+    memberId: 'browser-supplied-id',
+  } as Parameters<typeof completePasswordReset>[1] & { memberId: string })
+
+  assert.equal(result.ok, true)
+  const resetCall = payload.calls.find((call) => call.method === 'resetPassword')
+  assert.deepEqual(resetCall?.data, {
+    token: 'trusted-reset-token',
+    password: 'long-enough-password',
+  })
+  assert.equal(JSON.stringify(resetCall?.data).includes('browser-supplied-id'), false)
+  assert.equal(payload.docs('payload_member_security_events').length, 1)
+  assert.equal(payload.docs('payload_member_security_events')[0].eventType, 'password_changed')
+  assert.equal(
+    persistedText(payload, ['payload_member_security_events']).includes('trusted-reset-token'),
+    false,
+  )
+  assert.equal(
+    persistedText(payload, ['payload_member_security_events']).includes('long-enough-password'),
+    false,
+  )
+}
+
+async function testInvalidResetDoesNotRecordSecurityEvent() {
+  const { completePasswordReset } = await import('../src/lib/members/completePasswordReset')
+  const payload = new FakePayload({ payload_member_security_events: [] })
+  payload.resetPassword = async () => {
+    throw new Error('expired')
+  }
+
+  const result = await completePasswordReset(payload, {
+    token: 'expired-token',
+    password: 'long-enough-password',
+    passwordConfirmation: 'long-enough-password',
+  })
+
+  assert.deepEqual(result, { ok: false, error: 'invalid_or_expired_token' })
+  assert.equal(payload.docs('payload_member_security_events').length, 0)
+}
+
+async function testMemberSetupActivationAndRefusal() {
+  const { completeMemberSetup } = await import('../src/lib/members/completeMemberSetup')
+
+  for (const status of ['pending', 'active']) {
+    const payload = new FakePayload({
+      payload_members: [{ id: 'member', email: 'member@example.com', accountStatus: status }],
+      payload_member_security_events: [],
+      payload_audit_events: [],
+    })
+
+    const result = await completeMemberSetup(payload, {
+      token: `${status}-token`,
+      password: 'long-enough-password',
+      passwordConfirmation: 'long-enough-password',
+    })
+
+    assert.deepEqual(result, { ok: true, activated: status === 'pending' })
+    assert.equal(payload.docs('payload_members')[0].accountStatus, 'active')
+    assert.equal(payload.docs('payload_member_security_events').length, 1)
+    const audit = payload.docs('payload_audit_events')[0]
+    assert.equal(audit.action, 'member.setup.completed')
+    assert.equal(audit.actorId, 'member')
+    assert.equal((audit.metadata as Record<string, unknown>).activated, status === 'pending')
+  }
+
+  for (const status of ['blocked', 'deleted']) {
+    const payload = new FakePayload({
+      payload_members: [{ id: 'member', email: 'member@example.com', accountStatus: status }],
+      payload_member_security_events: [],
+      payload_audit_events: [],
+    })
+
+    const result = await completeMemberSetup(payload, {
+      token: `${status}-token`,
+      password: 'long-enough-password',
+      passwordConfirmation: 'long-enough-password',
+    })
+
+    assert.deepEqual(result, { ok: false, error: 'account_ineligible' })
+    assert.equal(payload.docs('payload_members')[0].accountStatus, status)
+    assert.equal(payload.docs('payload_audit_events').length, 0)
+  }
+}
+
+async function testDeliveredResetLinkRedaction() {
+  const { redactDeliveredResetLink } = await import('../src/lib/members/redactDeliveredResetLink')
+  const payload = new FakePayload({
+    payload_email_events: [{
+      id: 'event_1',
+      templateKey: 'member-password-reset',
+      metadata: {
+        purpose: 'password_reset',
+        actionUrl: 'https://example.com/reset-password?token=raw-sensitive-token',
+      },
+    }],
+  })
+  const event = payload.docs('payload_email_events')[0]
+
+  await redactDeliveredResetLink(payload, event, {
+    sentAt: new Date('2026-06-23T12:00:00.000Z'),
+    idempotencyKey: 'safe-idempotency-key',
+    provider: 'resend',
+  })
+
+  const stored = payload.docs('payload_email_events')[0]
+  const metadata = stored.metadata as Record<string, unknown>
+  assert.equal('actionUrl' in metadata, false)
+  assert.equal(metadata.purpose, 'password_reset')
+  assert.equal(metadata.deliveryProvider, 'resend')
+  assert.equal(JSON.stringify(stored).includes('raw-sensitive-token'), false)
+}
+
 async function main() {
   await testNewInvitationAndAttribution()
   await testReinvitationAndDedupe()
   await testInvitationRefusal()
   await testGenericMissingAndSuppressedReset()
   await testEligibleResetRequest()
+  await testPasswordResetPolicyAndSuccess()
+  await testInvalidResetDoesNotRecordSecurityEvent()
+  await testMemberSetupActivationAndRefusal()
+  await testDeliveredResetLinkRedaction()
   console.log('payload_member_invitation.test.ts passed')
 }
 

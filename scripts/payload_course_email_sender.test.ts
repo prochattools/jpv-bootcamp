@@ -317,3 +317,64 @@ run()
     console.error(error)
     process.exit(1)
   })
+
+
+
+
+async function testPasswordWorkflowEmailRedactionAfterDelivery() {
+  const payload = new FakePayload({
+    payload_email_templates: [
+      {
+        id: 'template_password_reset',
+        templateKey: 'member-password-reset',
+        status: 'active',
+        subject: 'Reset your password',
+        textBody: 'Open {{actionUrl}}',
+        htmlBody: '<p><a href="{{actionUrl}}">Reset password</a></p>',
+      },
+    ],
+    payload_email_events: [
+      {
+        id: 'event_password_reset',
+        toEmail: 'member@example.com',
+        templateKey: 'member-password-reset',
+        deliveryStatus: 'queued',
+        dedupeKey: 'member-password-reset:member_1:fingerprint',
+        metadata: {
+          purpose: 'password_reset',
+          actionUrl: 'https://example.com/reset-password?token=raw-sensitive-token',
+        },
+        createdAt: '2026-06-23T12:00:00.000Z',
+      },
+    ],
+  })
+  const resend: PayloadEmailSenderClient = {
+    emails: {
+      async send(message) {
+        assert.equal(message.text.includes('raw-sensitive-token'), true)
+        return { data: { id: 'resend_password_reset' } }
+      },
+    },
+  }
+
+  const result = await sendQueuedPayloadEmail(payload, 'event_password_reset', {
+    resend,
+    emailConfig: { from: 'JPV Bootcamp <support@example.com>' },
+  })
+
+  assert.equal(result.status, 'sent')
+  const stored = payload.doc('payload_email_events', 'event_password_reset')
+  assert.ok(stored)
+  assert.equal(stored.deliveryStatus, 'sent')
+  assert.equal(stored.resendEmailId, 'resend_password_reset')
+  const metadata = stored.metadata as Record<string, unknown>
+  assert.equal('actionUrl' in metadata, false)
+  assert.equal(metadata.purpose, 'password_reset')
+  assert.equal(metadata.deliveryProvider, 'resend')
+  assert.equal(JSON.stringify(stored).includes('raw-sensitive-token'), false)
+}
+
+testPasswordWorkflowEmailRedactionAfterDelivery().catch((error) => {
+  console.error(error)
+  process.exitCode = 1
+})
