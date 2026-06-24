@@ -1,6 +1,4 @@
-import config from '@payload-config'
-import { headers } from 'next/headers'
-import { getPayload } from 'payload'
+import type { getPayload } from 'payload'
 
 import type { PayloadDocument } from '@/lib/payloadCourse/accessService'
 
@@ -11,17 +9,43 @@ export type CurrentPayloadMember = PayloadDocument & {
   emailVerifiedAt?: string | Date | null
 }
 
+export function isEligibleCurrentMember(member: Pick<CurrentPayloadMember, 'accountStatus'> | null | undefined): boolean {
+  return member?.accountStatus === 'active'
+}
+
 export async function getCurrentPayloadMember(): Promise<{
   member: CurrentPayloadMember | null
   payload: Awaited<ReturnType<typeof getPayload>>
 }> {
-  const payload = await getPayload({ config })
+  const [{ default: config }, { headers }, { getPayload: loadPayload }] = await Promise.all([
+    import('@payload-config'),
+    import('next/headers'),
+    import('payload'),
+  ])
+  const payload = await loadPayload({ config })
   const auth = await payload.auth({ headers: await headers() })
   const user = auth.user as CurrentPayloadMember | null | undefined
 
-  if (!user || user.collection !== 'payload_members') {
+  if (!user || user.collection !== 'payload_members' || !user.id) {
     return { member: null, payload }
   }
 
-  return { member: user, payload }
+  const freshMember = (await payload.findByID({
+    collection: 'payload_members',
+    id: user.id,
+    depth: 0,
+    overrideAccess: true,
+  })) as CurrentPayloadMember
+
+  if (!isEligibleCurrentMember(freshMember)) {
+    return { member: null, payload }
+  }
+
+  return {
+    member: {
+      ...freshMember,
+      collection: 'payload_members',
+    },
+    payload,
+  }
 }

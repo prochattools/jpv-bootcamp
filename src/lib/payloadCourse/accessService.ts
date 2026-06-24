@@ -71,6 +71,18 @@ export type PayloadCourseWriteAPI = PayloadCourseAccessAPI & {
 }
 
 export type PayloadMemberAuthAPI = PayloadCourseWriteAPI & {
+  login(args: {
+    collection: 'payload_members'
+    data: {
+      email: string
+      password: string
+    }
+    overrideAccess?: boolean
+  }): Promise<{
+    user?: PayloadDocument | null
+    token?: string | null
+    exp?: number | null
+  }>
   forgotPassword(args: {
     collection: 'payload_members'
     data: {

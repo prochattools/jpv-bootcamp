@@ -12,8 +12,9 @@ export const PayloadAuditEvents: CollectionConfig = {
   admin: {
     group: 'Administration',
     useAsTitle: 'displayName',
-    defaultColumns: ['displayName', 'actorType', 'action', 'targetCollection', 'createdAt'],
-    hidden: true,
+    defaultColumns: ['displayName', 'actorType', 'action', 'severity', 'targetCollection', 'createdAt'],
+    hidden: false,
+    description: 'Administrator-visible operational and security audit history.',
   },
   access: adminOnlyCollectionAccess,
   fields: [

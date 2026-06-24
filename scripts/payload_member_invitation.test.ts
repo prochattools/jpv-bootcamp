@@ -91,6 +91,14 @@ class FakePayload implements PayloadMemberAuthAPI {
     return docs[index]
   }
 
+  async login(_args: {
+    collection: 'payload_members'
+    data: { email: string; password: string }
+    overrideAccess?: boolean
+  }) {
+    return { user: { id: 'member' } }
+  }
+
   async forgotPassword(args: {
     collection: 'payload_members'
     data: { email: string }

@@ -126,9 +126,10 @@ export const PayloadMemberSecurityEvents: CollectionConfig = {
   },
   admin: {
     useAsTitle: 'eventType',
-    defaultColumns: ['eventType', 'member', 'createdAt'],
+    defaultColumns: ['eventType', 'member', 'source', 'createdAt'],
     group: 'Members & Access',
-    hidden: true,
+    hidden: false,
+    description: 'Member authentication and account-security events for administrator review.',
   },
   access: adminOnlyCollectionAccess,
   fields: [
