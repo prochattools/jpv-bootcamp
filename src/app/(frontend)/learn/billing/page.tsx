@@ -4,7 +4,10 @@ import { getCurrentPayloadMember } from '@/lib/members/currentMember'
 import { getMemberBillingOverview } from '@/lib/payloadCourse/memberPortal'
 
 import { PortalShell, StatusPill } from '../PortalShell'
-import { openMemberBillingPortalAction } from './actions'
+import {
+  openMemberBillingPortalAction,
+  openMemberVipUpgradeAction,
+} from './actions'
 
 export const metadata = {
   title: 'Billing | JPV Bootcamp',
@@ -54,6 +57,7 @@ export default async function LearnBillingPage({
 
   const params = await searchParams
   const portalUnavailable = firstParam(params.portal) === 'unavailable'
+  const upgradeUnavailable = firstParam(params.upgrade) === 'unavailable'
   const overview = await getMemberBillingOverview(payload, member.id)
   const email = typeof member.email === 'string' ? member.email : null
   const effectiveStatus = overview.subscriptionStatus ?? overview.billingStatus
@@ -62,6 +66,11 @@ export default async function LearnBillingPage({
     overview.subscriptionStatus === 'canceled' ||
     overview.subscriptionStatus === 'unpaid'
   const periodLabel = accessEnds ? 'Access until' : 'Renews on'
+  const canUpgradeToVip =
+    overview.plan === 'pro' &&
+    (overview.subscriptionStatus === 'active' || overview.subscriptionStatus === 'trialing') &&
+    !overview.cancelAtPeriodEnd &&
+    overview.billingAccount !== null
 
   return (
     <PortalShell memberEmail={email}>
@@ -84,6 +93,15 @@ export default async function LearnBillingPage({
               <p className='font-bold'>Billing management is temporarily unavailable</p>
               <p className='mt-2 text-sm leading-6'>
                 We could not open the secure billing portal. Please try again later.
+              </p>
+            </div>
+          ) : null}
+
+          {upgradeUnavailable ? (
+            <div className='mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-900'>
+              <p className='font-bold'>VIP upgrade is temporarily unavailable</p>
+              <p className='mt-2 text-sm leading-6'>
+                We could not open the secure upgrade flow. Please review your billing status or try again later.
               </p>
             </div>
           ) : null}
@@ -136,6 +154,17 @@ export default async function LearnBillingPage({
                 type='submit'
               >
                 Manage billing securely
+              </button>
+            </form>
+          ) : null}
+
+          {canUpgradeToVip ? (
+            <form action={openMemberVipUpgradeAction} className='mt-4'>
+              <button
+                className='rounded-full border border-[#153f2e]/20 bg-white px-6 py-3 text-sm font-bold text-[#153f2e] transition hover:border-[#153f2e]/40'
+                type='submit'
+              >
+                Upgrade to VIP securely
               </button>
             </form>
           ) : null}
