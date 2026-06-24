@@ -29,6 +29,9 @@ export function PortalShell({ children, memberEmail }: PortalShellProps) {
             <Link className='transition hover:text-[#153f2e]' href='/learn'>
               Courses
             </Link>
+            <Link className='transition hover:text-[#153f2e]' href='/learn/billing'>
+              Billing
+            </Link>
             <Link className='transition hover:text-[#153f2e]' href='/learn/community'>
               Community
             </Link>

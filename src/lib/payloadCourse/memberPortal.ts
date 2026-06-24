@@ -591,6 +591,83 @@ export async function markMemberLessonComplete(
   })
 }
 
+export type MemberBillingOverview = {
+  billingAccount: {
+    billingStatus: string | null
+    stripeMode: string | null
+    updatedAt: string | null
+  } | null
+  subscription: {
+    id: string
+    plan: string | null
+    status: string | null
+    cancelAtPeriodEnd: boolean
+    currentPeriodEnd: string | null
+  } | null
+  hasPaidSubscription: boolean
+  plan: string
+  billingStatus: string | null
+  subscriptionStatus: string | null
+  cancelAtPeriodEnd: boolean
+  currentPeriodEnd: string | null
+}
+
+export async function getMemberBillingOverview(
+  payload: PayloadCourseAccessAPI,
+  memberId: PayloadId
+): Promise<MemberBillingOverview> {
+  const normalizedMemberId = String(memberId)
+  const [billingAccount, subscriptions] = await Promise.all([
+    findOne(
+      payload,
+      'payload_billing_accounts',
+      { member: { equals: normalizedMemberId } },
+      '-updatedAt'
+    ),
+    findAll(payload, 'payload_subscriptions', {
+      where: {
+        member: { equals: normalizedMemberId },
+      },
+      sort: '-updatedAt',
+      limit: 25,
+    }),
+  ])
+
+  const normalizedSubscriptions = subscriptions.map((subscription) => ({
+    id: String(subscription.id),
+    plan: asString(subscription.plan),
+    status: asString(subscription.status),
+    cancelAtPeriodEnd: asBoolean(subscription.cancelAtPeriodEnd),
+    currentPeriodEnd: asDateString(subscription.currentPeriodEnd),
+  }))
+  const subscription =
+    normalizedSubscriptions.find(
+      (candidate) => candidate.plan !== null && candidate.plan !== 'free' && candidate.status !== 'incomplete_expired'
+    ) ??
+    normalizedSubscriptions.find(
+      (candidate) => candidate.plan !== null && candidate.plan !== 'free'
+    ) ??
+    null
+  const hasPaidSubscription = Boolean(subscription)
+
+  return {
+    billingAccount: billingAccount
+      ? {
+          billingStatus: asString(billingAccount.billingStatus),
+          stripeMode: asString(billingAccount.stripeMode),
+          updatedAt: asDateString(billingAccount.updatedAt),
+        }
+      : null,
+    subscription,
+    hasPaidSubscription,
+    plan: subscription?.plan ?? 'free',
+    billingStatus: asString(billingAccount?.billingStatus),
+    subscriptionStatus: subscription?.status ?? null,
+    cancelAtPeriodEnd: subscription?.cancelAtPeriodEnd ?? false,
+    currentPeriodEnd: subscription?.currentPeriodEnd ?? null,
+  }
+}
+
 export async function getMemberAccountOverview(
   payload: PayloadCourseAccessAPI,
   memberId: PayloadId
