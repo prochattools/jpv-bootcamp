@@ -186,8 +186,15 @@ function membershipRole(membership: PayloadDocument | null): SpaceRole | null {
   return null
 }
 
+const approvedPublishingRoles: readonly SpaceRole[] = ['moderator', 'admin']
+
 function membershipAllowsWrite(membership: PayloadDocument | null) {
-  return membership?.status === 'active' && Boolean(membershipRole(membership))
+  const role = membershipRole(membership)
+  return (
+    membership?.status === 'active' &&
+    role !== null &&
+    approvedPublishingRoles.includes(role)
+  )
 }
 
 function membershipAllowsModeration(membership: PayloadDocument | null) {

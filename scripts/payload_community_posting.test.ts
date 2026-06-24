@@ -222,20 +222,66 @@ async function run() {
   {
     const payload = buildPayload()
     const result = await createSpacePost(payload, {
-      memberId: 'member_active',
+      memberId: 'member_moderator',
       spaceId: 'space_private',
       title: 'New private discussion',
       body: richTextBody,
       adminEmail: 'admin@example.com',
-    })
+      author: 'member_active',
+      moderationStatus: 'visible',
+      role: 'admin',
+      status: 'active',
+      visibility: 'public',
+    } as Parameters<typeof createSpacePost>[1] & Record<string, unknown>)
 
+    assert.equal(result.document.author, 'member_moderator')
     assert.equal(result.document.moderationStatus, 'pending_review')
     assert.equal(payload.countDocs('payload_space_posts'), 3)
     assert.equal(payload.countDocs('payload_audit_events'), 1)
     assert.equal(payload.countDocs('payload_email_events'), 1)
 
-    const detail = await getMemberCommunitySpaceDetail(payload, 'member_active', 'private-space')
+    const detail = await getMemberCommunitySpaceDetail(payload, 'member_moderator', 'private-space')
     assert.equal(detail?.posts.some((post) => post.title === 'New private discussion'), false)
+  }
+
+  {
+    const payload = buildPayload({
+      payload_members: [
+        {
+          id: 'member_admin',
+          email: 'admin-member@example.com',
+          accountStatus: 'active',
+          emailVerifiedAt: '2026-01-01T00:00:00.000Z',
+        },
+      ],
+      payload_space_memberships: [
+        {
+          id: 'membership_admin',
+          displayName: 'member_admin:private',
+          member: 'member_admin',
+          space: 'space_private',
+          role: 'admin',
+          status: 'active',
+        },
+      ],
+    })
+
+    const postResult = await createSpacePost(payload, {
+      memberId: 'member_admin',
+      spaceId: 'space_private',
+      title: 'Admin discussion',
+      body: richTextBody,
+    })
+    const commentResult = await createSpaceComment(payload, {
+      memberId: 'member_admin',
+      postId: 'post_visible',
+      body: richTextBody,
+    })
+
+    assert.equal(postResult.document.author, 'member_admin')
+    assert.equal(postResult.document.moderationStatus, 'pending_review')
+    assert.equal(commentResult.document.author, 'member_admin')
+    assert.equal(commentResult.document.moderationStatus, 'pending_review')
   }
 
   {
@@ -245,7 +291,7 @@ async function run() {
           id: 'recent_post',
           title: 'Recent',
           space: 'space_private',
-          author: 'member_active',
+          author: 'member_moderator',
           postType: 'discussion',
           body: richTextBody,
           moderationStatus: 'pending_review',
@@ -256,7 +302,7 @@ async function run() {
 
     await assert.rejects(
       () => createSpacePost(payload, {
-        memberId: 'member_active',
+        memberId: 'member_moderator',
         spaceId: 'space_private',
         title: 'Too soon',
         body: richTextBody,
@@ -266,25 +312,97 @@ async function run() {
     )
   }
 
-  {
+  for (const status of ['pending', 'muted', 'blocked', 'removed']) {
     const payload = buildPayload({
       payload_space_memberships: [
         {
-          id: 'membership_muted',
-          displayName: 'member_active:private',
-          member: 'member_active',
+          id: `membership_${status}`,
+          displayName: `member_moderator:private:${status}`,
+          member: 'member_moderator',
           space: 'space_private',
-          role: 'member',
-          status: 'muted',
+          role: 'moderator',
+          status,
         },
       ],
     })
 
     await assert.rejects(
       () => createSpacePost(payload, {
+        memberId: 'member_moderator',
+        spaceId: 'space_private',
+        title: `${status} post`,
+        body: richTextBody,
+      }),
+      /Space access denied|Active space membership is required/
+    )
+  }
+
+  {
+    const payload = buildPayload()
+    await assert.rejects(
+      () => createSpacePost(payload, {
         memberId: 'member_active',
         spaceId: 'space_private',
-        title: 'Muted post',
+        title: 'Member role post',
+        body: richTextBody,
+      }),
+      /Active space membership is required/
+    )
+  }
+
+  {
+    const payload = buildPayload({
+      payload_space_memberships: [],
+    })
+    await assert.rejects(
+      () => createSpacePost(payload, {
+        memberId: 'member_moderator',
+        spaceId: 'space_private',
+        title: 'Missing membership post',
+        body: richTextBody,
+      }),
+      /Space access denied|Active space membership is required/
+    )
+  }
+
+  for (const visibility of ['private', 'secret']) {
+    const payload = buildPayload({
+      payload_members: [
+        {
+          id: 'member_outsider',
+          email: 'outsider@example.com',
+          accountStatus: 'active',
+          emailVerifiedAt: '2026-01-01T00:00:00.000Z',
+        },
+      ],
+      payload_spaces: [
+        {
+          id: `space_${visibility}`,
+          name: `${visibility} space`,
+          slug: `${visibility}-space`,
+          status: 'published',
+          visibility,
+        },
+      ],
+      payload_access_policies: [
+        {
+          id: `policy_${visibility}`,
+          resourceType: 'space',
+          resourceId: `space_${visibility}`,
+          status: 'active',
+          privacy: visibility,
+          requireActiveBilling: false,
+          priority: 10,
+        },
+      ],
+      payload_space_memberships: [],
+    })
+
+    await assert.rejects(
+      () => createSpacePost(payload, {
+        memberId: 'member_outsider',
+        spaceId: `space_${visibility}`,
+        title: 'Unauthorized post',
         body: richTextBody,
       }),
       /Space access denied/
@@ -294,12 +412,18 @@ async function run() {
   {
     const payload = buildPayload()
     const result = await createSpaceComment(payload, {
-      memberId: 'member_active',
+      memberId: 'member_moderator',
       postId: 'post_visible',
       body: richTextBody,
       adminEmail: 'admin@example.com',
-    })
+      author: 'member_active',
+      moderationStatus: 'visible',
+      role: 'admin',
+      status: 'active',
+      visibility: 'public',
+    } as Parameters<typeof createSpaceComment>[1] & Record<string, unknown>)
 
+    assert.equal(result.document.author, 'member_moderator')
     assert.equal(result.document.moderationStatus, 'pending_review')
     assert.equal(payload.countDocs('payload_space_comments'), 2)
     assert.equal(payload.countDocs('payload_audit_events'), 1)
