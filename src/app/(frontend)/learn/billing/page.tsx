@@ -4,6 +4,7 @@ import { getCurrentPayloadMember } from '@/lib/members/currentMember'
 import { getMemberBillingOverview } from '@/lib/payloadCourse/memberPortal'
 
 import { PortalShell, StatusPill } from '../PortalShell'
+import { openMemberBillingPortalAction } from './actions'
 
 export const metadata = {
   title: 'Billing | JPV Bootcamp',
@@ -12,6 +13,10 @@ export const metadata = {
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
+
+function firstParam(value: string | string[] | undefined): string {
+  return Array.isArray(value) ? value[0] ?? '' : value ?? ''
+}
 
 function titleCase(value: string | null | undefined): string {
   if (!value) return 'Not available'
@@ -37,12 +42,18 @@ function statusTone(status: string | null): 'good' | 'warn' | 'neutral' {
   return 'neutral'
 }
 
-export default async function LearnBillingPage() {
+export default async function LearnBillingPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+}) {
   const { member, payload } = await getCurrentPayloadMember()
   if (!member) {
     redirect('/learn/login?next=/learn/billing')
   }
 
+  const params = await searchParams
+  const portalUnavailable = firstParam(params.portal) === 'unavailable'
   const overview = await getMemberBillingOverview(payload, member.id)
   const email = typeof member.email === 'string' ? member.email : null
   const effectiveStatus = overview.subscriptionStatus ?? overview.billingStatus
@@ -67,6 +78,15 @@ export default async function LearnBillingPage() {
               This page reflects the latest billing state synchronized securely from the payment provider.
             </p>
           </div>
+
+          {portalUnavailable ? (
+            <div className='mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-900'>
+              <p className='font-bold'>Billing management is temporarily unavailable</p>
+              <p className='mt-2 text-sm leading-6'>
+                We could not open the secure billing portal. Please try again later.
+              </p>
+            </div>
+          ) : null}
 
           {overview.hasPaidSubscription ? (
             <div className='mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-4'>
@@ -109,6 +129,17 @@ export default async function LearnBillingPage() {
             </div>
           )}
 
+          {overview.hasPaidSubscription && overview.billingAccount ? (
+            <form action={openMemberBillingPortalAction} className='mt-6'>
+              <button
+                className='rounded-full bg-[#153f2e] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#0f3023]'
+                type='submit'
+              >
+                Manage billing securely
+              </button>
+            </form>
+          ) : null}
+
           {overview.cancelAtPeriodEnd ? (
             <div className='mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-900'>
               <p className='font-bold'>Cancellation scheduled</p>
@@ -123,8 +154,8 @@ export default async function LearnBillingPage() {
             <div className='mt-6 rounded-2xl border border-[#153f2e]/10 bg-white p-5'>
               <p className='text-sm font-bold text-[#153f2e]'>Billing attention may be required</p>
               <p className='mt-2 text-sm leading-6 text-[#68766f]'>
-                The current synchronized status is {titleCase(effectiveStatus)}. Secure billing-management actions
-                will be added in a later Phase 6 slice.
+                The current synchronized status is {titleCase(effectiveStatus)}. Use the secure billing portal to
+                review payment methods, invoices, or cancellation settings.
               </p>
             </div>
           ) : null}
