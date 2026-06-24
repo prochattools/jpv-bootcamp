@@ -40,6 +40,16 @@ export type MemberCommunityPost = {
   commentCount: number
 }
 
+export type MemberAnnouncement = {
+  id: string
+  title: string
+  spaceId: string
+  spaceName: string
+  spaceSlug: string | null
+  pinned: boolean
+  createdAt: string | null
+}
+
 export type MemberCommunitySpaceDetail = MemberCommunitySpace & {
   posts: MemberCommunityPost[]
 }
@@ -361,4 +371,64 @@ export async function getMemberCommunitySpaceDetail(
     ...projection,
     posts: postProjections,
   }
+}
+
+
+
+export async function getMemberAnnouncements(
+  payload: PayloadCourseAccessAPI,
+  memberId: PayloadId
+): Promise<MemberAnnouncement[]> {
+  const normalizedMemberId = String(memberId)
+  const spaces = await findAll(payload, 'payload_spaces', {
+    where: {
+      and: [
+        { status: { equals: 'published' } },
+        { spaceType: { equals: 'announcement' } },
+      ],
+    },
+    sort: 'sortOrder',
+    limit: 100,
+  })
+
+  const announcements: Array<{
+    post: PayloadDocument
+    space: PayloadDocument
+  }> = []
+
+  for (const space of spaces.sort(bySortOrder)) {
+    const access = await evaluatePayloadSpaceAccess(payload, {
+      memberId: normalizedMemberId,
+      spaceId: space.id,
+    })
+    if (!access.decision.allowed) continue
+
+    const posts = await findAll(payload, 'payload_space_posts', {
+      where: {
+        and: [
+          { space: { equals: String(space.id) } },
+          { postType: { equals: 'announcement' } },
+          { moderationStatus: { equals: 'visible' } },
+        ],
+      },
+      sort: '-createdAt',
+      limit: 100,
+    })
+
+    for (const post of posts) {
+      announcements.push({ post, space })
+    }
+  }
+
+  return announcements
+    .sort((a, b) => byPinnedAndDate(a.post, b.post))
+    .map(({ post, space }) => ({
+      id: String(post.id),
+      title: asString(post.title) ?? 'Untitled announcement',
+      spaceId: String(space.id),
+      spaceName: asString(space.name) ?? 'Announcements',
+      spaceSlug: asString(space.slug),
+      pinned: asBoolean(post.pinned),
+      createdAt: asDateString(post.createdAt),
+    }))
 }

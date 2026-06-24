@@ -2,7 +2,10 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
 import { getCurrentPayloadMember } from '@/lib/members/currentMember'
-import { getMemberCommunityDashboard } from '@/lib/payloadCourse/communityPortal'
+import {
+  getMemberAnnouncements,
+  getMemberCommunityDashboard,
+} from '@/lib/payloadCourse/communityPortal'
 
 import { PortalShell, StatusPill } from '../PortalShell'
 
@@ -20,13 +23,27 @@ function visibilityLabel(value: string) {
     : value.charAt(0).toUpperCase() + value.slice(1)
 }
 
+function formatDate(value: string | null) {
+  if (!value) return 'Date pending'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return 'Date pending'
+  return new Intl.DateTimeFormat('en', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  }).format(date)
+}
+
 export default async function LearnCommunityPage() {
   const { member, payload } = await getCurrentPayloadMember()
   if (!member) {
     redirect('/learn/login?next=/learn/community')
   }
 
-  const dashboard = await getMemberCommunityDashboard(payload, member.id)
+  const [dashboard, announcements] = await Promise.all([
+    getMemberCommunityDashboard(payload, member.id),
+    getMemberAnnouncements(payload, member.id),
+  ])
   const email = typeof member.email === 'string' ? member.email : null
   const unlockedCount = dashboard.spaces.filter((space) => space.allowed).length
 
@@ -46,6 +63,51 @@ export default async function LearnCommunityPage() {
           <div className='mt-8 flex flex-wrap gap-3'>
             <StatusPill tone='neutral'>{unlockedCount} unlocked</StatusPill>
             <StatusPill tone='neutral'>{dashboard.spaces.length} visible spaces</StatusPill>
+          </div>
+        </section>
+
+        <section className='mt-14'>
+          <div>
+            <p className='text-xs font-bold uppercase tracking-[0.2em] text-[#8a7450]'>
+              Announcements
+            </p>
+            <h2 className='mt-2 text-3xl font-bold tracking-tight text-[#153f2e]'>Latest updates</h2>
+            <p className='mt-2 max-w-2xl text-[#64736c]'>
+              Only announcements from community spaces available to your member account appear here.
+            </p>
+          </div>
+
+          <div className='mt-8 space-y-4'>
+            {announcements.length > 0 ? (
+              announcements.map((announcement) => (
+                <article
+                  className='rounded-[22px] border border-[#153f2e]/10 bg-white p-6 shadow-[0_14px_35px_rgba(31,52,43,0.07)]'
+                  key={announcement.id}
+                >
+                  <div className='flex flex-wrap items-center gap-3 text-xs font-bold uppercase tracking-[0.14em] text-[#8a7450]'>
+                    {announcement.pinned ? <span>Pinned</span> : null}
+                    <span>{announcement.spaceName}</span>
+                    <span>{formatDate(announcement.createdAt)}</span>
+                  </div>
+                  <h3 className='mt-3 text-xl font-bold text-[#153f2e]'>{announcement.title}</h3>
+                  {announcement.spaceSlug ? (
+                    <Link
+                      className='mt-4 inline-flex text-sm font-bold text-[#6c5a36] hover:text-[#153f2e]'
+                      href={`/learn/community/${announcement.spaceSlug}`}
+                    >
+                      Open announcement space
+                    </Link>
+                  ) : null}
+                </article>
+              ))
+            ) : (
+              <div className='rounded-[22px] border border-dashed border-[#153f2e]/20 bg-[#f4f1e9] p-7'>
+                <h3 className='text-xl font-bold text-[#153f2e]'>No announcements available</h3>
+                <p className='mt-3 text-sm leading-6 text-[#68766f]'>
+                  New announcements from your authorized community spaces will appear here.
+                </p>
+              </div>
+            )}
           </div>
         </section>
 
