@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
 import { getCurrentPayloadMember } from '@/lib/members/currentMember'
+import { getMemberCommunityFiles } from '@/lib/payloadCourse/communityFileDelivery'
 import {
   getMemberAnnouncements,
   getMemberCommunityDashboard,
@@ -34,15 +35,22 @@ function formatDate(value: string | null) {
   }).format(date)
 }
 
+function formatByteSize(value: number) {
+  if (value < 1024) return `${value} B`
+  if (value < 1024 * 1024) return `${Math.ceil(value / 1024)} KB`
+  return `${(value / (1024 * 1024)).toFixed(1)} MB`
+}
+
 export default async function LearnCommunityPage() {
   const { member, payload } = await getCurrentPayloadMember()
   if (!member) {
     redirect('/learn/login?next=/learn/community')
   }
 
-  const [dashboard, announcements] = await Promise.all([
+  const [dashboard, announcements, files] = await Promise.all([
     getMemberCommunityDashboard(payload, member.id),
     getMemberAnnouncements(payload, member.id),
+    getMemberCommunityFiles(payload, member.id),
   ])
   const email = typeof member.email === 'string' ? member.email : null
   const unlockedCount = dashboard.spaces.filter((space) => space.allowed).length
@@ -63,6 +71,49 @@ export default async function LearnCommunityPage() {
           <div className='mt-8 flex flex-wrap gap-3'>
             <StatusPill tone='neutral'>{unlockedCount} unlocked</StatusPill>
             <StatusPill tone='neutral'>{dashboard.spaces.length} visible spaces</StatusPill>
+          </div>
+        </section>
+
+        <section className='mt-14'>
+          <div>
+            <p className='text-xs font-bold uppercase tracking-[0.2em] text-[#8a7450]'>
+              Shared files
+            </p>
+            <h2 className='mt-2 text-3xl font-bold tracking-tight text-[#153f2e]'>
+              Community resources
+            </h2>
+            <p className='mt-2 max-w-2xl text-[#64736c]'>
+              Only visible files from community spaces available to your member account appear here.
+            </p>
+          </div>
+
+          <div className='mt-8 grid gap-5 md:grid-cols-2'>
+            {files.length > 0 ? (
+              files.map((file) => (
+                <article
+                  className='rounded-[22px] border border-[#153f2e]/10 bg-white p-6 shadow-[0_14px_35px_rgba(31,52,43,0.07)]'
+                  key={file.id}
+                >
+                  <div className='flex flex-wrap items-center gap-3 text-xs font-bold uppercase tracking-[0.14em] text-[#8a7450]'>
+                    <span>{file.spaceName}</span>
+                    <span>{formatByteSize(file.byteSize)}</span>
+                    <span>{file.mimeType}</span>
+                  </div>
+                  <h3 className='mt-3 text-xl font-bold text-[#153f2e]'>{file.title}</h3>
+                  <p className='mt-2 break-all text-sm text-[#64736c]'>{file.filename}</p>
+                  <Link
+                    className='mt-5 inline-flex rounded-full bg-[#153f2e] px-5 py-2.5 text-sm font-bold text-white transition hover:bg-[#0f3023]'
+                    href={file.downloadUrl}
+                  >
+                    Download file
+                  </Link>
+                </article>
+              ))
+            ) : (
+              <div className='rounded-[22px] border border-dashed border-[#153f2e]/20 bg-[#f4f1e9] p-6 text-sm leading-6 text-[#64736c] md:col-span-2'>
+                No shared community files are currently available to your account.
+              </div>
+            )}
           </div>
         </section>
 

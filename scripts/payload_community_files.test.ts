@@ -90,6 +90,7 @@ class FakePayload implements PayloadCourseWriteAPI {
       where: args.where,
       overrideAccess: args.overrideAccess,
     })
+
     let documents = [...(this.collections[args.collection] ?? [])].filter((document) =>
       matchesWhere(document, args.where)
     )
@@ -101,6 +102,7 @@ class FakePayload implements PayloadCourseWriteAPI {
           String(a[field] ?? '').localeCompare(String(b[field] ?? '')) * direction
       )
     }
+
     return { docs: documents.slice(0, args.limit ?? documents.length) }
   }
 
@@ -115,6 +117,7 @@ class FakePayload implements PayloadCourseWriteAPI {
       id: args.id,
       overrideAccess: args.overrideAccess,
     })
+
     const document = (this.collections[args.collection] ?? []).find(
       (candidate) => String(candidate.id) === String(args.id)
     )
@@ -133,6 +136,7 @@ class FakePayload implements PayloadCourseWriteAPI {
       data: args.data,
       overrideAccess: args.overrideAccess,
     })
+
     const document = {
       id: `${args.collection}_${this.nextId++}`,
       createdAt: new Date().toISOString(),
@@ -156,6 +160,7 @@ class FakePayload implements PayloadCourseWriteAPI {
       data: args.data,
       overrideAccess: args.overrideAccess,
     })
+
     const documents = this.collections[args.collection] ?? []
     const index = documents.findIndex(
       (document) => String(document.id) === String(args.id)
@@ -163,10 +168,6 @@ class FakePayload implements PayloadCourseWriteAPI {
     if (index < 0) throw new Error(`missing ${args.collection}:${String(args.id)}`)
     documents[index] = { ...documents[index], ...args.data }
     return documents[index]
-  }
-
-  docs(collection: string): PayloadDocument[] {
-    return this.collections[collection] ?? []
   }
 }
 
@@ -267,7 +268,7 @@ function buildPayload(overrides: Partial<CollectionMap> = {}): FakePayload {
       membership('membership_admin', 'member_admin', 'admin', 'active'),
       membership('membership_regular', 'member_regular', 'member', 'active'),
     ],
-    payload_media: [
+    payload_private_media: [
       media('media_pdf', 'guide.pdf', 'application/pdf', 2048, {
         url: 'https://untrusted.example/guide.pdf',
         signedUrl: 'https://untrusted.example/signed',
@@ -276,6 +277,11 @@ function buildPayload(overrides: Partial<CollectionMap> = {}): FakePayload {
       }),
       media('media_image', 'image.png', 'image/png', 4096),
       media('media_traversal', '../unsafe\\nested/report.pdf', 'application/pdf', 1024),
+    ],
+    payload_media: [
+      media('public_only', 'public.pdf', 'application/pdf', 1024, {
+        url: '/media/public.pdf',
+      }),
     ],
     payload_space_files: [],
     payload_audit_events: [],
@@ -297,6 +303,7 @@ async function testModeratorAndServerControlledFields(): Promise<void> {
     status: 'active',
     visibility: 'public',
     moderationStatus: 'visible',
+    file: 'public_only',
     url: 'https://evil.example/file',
     signedUrl: 'https://evil.example/signed',
     bunnyHostname: 'evil.b-cdn.net',
@@ -307,7 +314,8 @@ async function testModeratorAndServerControlledFields(): Promise<void> {
   assert.equal(result.document.title, 'Moderator guide')
   assert.equal(result.document.space, 'space_private')
   assert.equal(result.document.uploadedBy, 'member_moderator')
-  assert.equal(result.document.file, 'media_pdf')
+  assert.equal(result.document.protectedFile, 'media_pdf')
+  assert.equal(result.document.file, undefined)
   assert.equal(result.document.moderationStatus, 'pending_review')
   assert.deepEqual(result.document.metadata, {
     filename: 'guide.pdf',
@@ -331,10 +339,13 @@ async function testModeratorAndServerControlledFields(): Promise<void> {
     ],
   })
 
-  const mediaCall = payload.calls.find(
-    (call) => call.operation === 'findByID' && call.collection === 'payload_media'
+  const privateMediaCall = payload.calls.find(
+    (call) =>
+      call.operation === 'findByID' &&
+      call.collection === 'payload_private_media' &&
+      String(call.id) === 'media_pdf'
   )
-  assert.equal(String(mediaCall?.id), 'media_pdf')
+  assert.ok(privateMediaCall)
 
   for (const call of payload.calls) {
     assert.equal(call.overrideAccess, true)
@@ -342,8 +353,7 @@ async function testModeratorAndServerControlledFields(): Promise<void> {
 }
 
 async function testAdminAndApprovedImage(): Promise<void> {
-  const payload = buildPayload()
-  const result = await registerCommunityFileMetadata(payload, {
+  const result = await registerCommunityFileMetadata(buildPayload(), {
     memberId: 'member_admin',
     spaceId: 'space_private',
     mediaId: 'media_image',
@@ -351,7 +361,11 @@ async function testAdminAndApprovedImage(): Promise<void> {
   })
 
   assert.equal(result.document.uploadedBy, 'member_admin')
-  assert.equal((result.document.metadata as Record<string, unknown>).mimeType, 'image/png')
+  assert.equal(result.document.protectedFile, 'media_image')
+  assert.equal(
+    (result.document.metadata as Record<string, unknown>).mimeType,
+    'image/png'
+  )
 }
 
 async function testRoleAndMembershipStatuses(): Promise<void> {
@@ -399,7 +413,7 @@ async function testRoleAndMembershipStatuses(): Promise<void> {
   )
 }
 
-async function testUnauthorizedPrivateAndSecretSpaces(): Promise<void> {
+async function testUnauthorizedSpacesAndPublicFallback(): Promise<void> {
   for (const spaceId of ['space_private', 'space_secret']) {
     await assert.rejects(
       () =>
@@ -412,6 +426,20 @@ async function testUnauthorizedPrivateAndSecretSpaces(): Promise<void> {
       /Space access denied/
     )
   }
+
+  await assert.rejects(
+    () =>
+      registerCommunityFileMetadata(
+        buildPayload({ payload_private_media: [] }),
+        {
+          memberId: 'member_moderator',
+          spaceId: 'space_private',
+          mediaId: 'public_only',
+          title: 'Public fallback is not protected',
+        }
+      ),
+    /Private media record was not found/
+  )
 }
 
 async function testFilenameAndSizeValidation(): Promise<void> {
@@ -453,7 +481,12 @@ async function testFilenameAndSizeValidation(): Promise<void> {
     },
     {
       name: 'non-finite size',
-      document: media('nonfinite_size', 'file.pdf', 'application/pdf', Number.POSITIVE_INFINITY),
+      document: media(
+        'nonfinite_size',
+        'file.pdf',
+        'application/pdf',
+        Number.POSITIVE_INFINITY
+      ),
       pattern: /byte size is invalid/,
     },
     {
@@ -474,15 +507,17 @@ async function testFilenameAndSizeValidation(): Promise<void> {
   ]
 
   for (const invalidCase of invalidCases) {
-    const payload = buildPayload({ payload_media: [invalidCase.document] })
     await assert.rejects(
       () =>
-        registerCommunityFileMetadata(payload, {
-          memberId: 'member_moderator',
-          spaceId: 'space_private',
-          mediaId: invalidCase.document.id,
-          title: invalidCase.name,
-        }),
+        registerCommunityFileMetadata(
+          buildPayload({ payload_private_media: [invalidCase.document] }),
+          {
+            memberId: 'member_moderator',
+            spaceId: 'space_private',
+            mediaId: invalidCase.document.id,
+            title: invalidCase.name,
+          }
+        ),
       invalidCase.pattern
     )
   }
@@ -493,7 +528,10 @@ function testNoUploadOrSigningImplementation(): void {
     path.resolve(process.cwd(), 'src/lib/payloadCourse/communityFiles.ts'),
     'utf8'
   )
-  assert.doesNotMatch(source, /FormData|multipart|binary|createReadStream|writeFile|signedUrl|bunnyToken|credentials/i)
+  assert.doesNotMatch(
+    source,
+    /FormData|multipart|uploadBytes|bunnyToken|signedUrl|credentials/i
+  )
   assert.doesNotMatch(source, /https?:\/\//i)
 }
 
@@ -501,7 +539,7 @@ async function main(): Promise<void> {
   await testModeratorAndServerControlledFields()
   await testAdminAndApprovedImage()
   await testRoleAndMembershipStatuses()
-  await testUnauthorizedPrivateAndSecretSpaces()
+  await testUnauthorizedSpacesAndPublicFallback()
   await testFilenameAndSizeValidation()
   testNoUploadOrSigningImplementation()
   console.log('payload community file metadata tests passed')

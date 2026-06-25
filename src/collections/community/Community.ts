@@ -359,7 +359,17 @@ export const PayloadSpaceFiles: CollectionConfig = {
       name: 'file',
       type: 'upload',
       relationTo: 'payload_media',
-      required: true,
+      admin: {
+        description: 'Public media fallback only. Do not use this field for restricted community files.',
+      },
+    },
+    {
+      name: 'protectedFile',
+      type: 'upload',
+      relationTo: 'payload_private_media',
+      admin: {
+        description: 'Use this for restricted community files served only through the guarded member route.',
+      },
     },
     {
       name: 'moderationStatus',
