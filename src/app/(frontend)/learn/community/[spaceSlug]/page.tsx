@@ -5,6 +5,7 @@ import { getCurrentPayloadMember } from '@/lib/members/currentMember'
 import { getMemberCommunitySpaceDetail } from '@/lib/payloadCourse/communityPortal'
 
 import { PortalShell, StatusPill } from '../../PortalShell'
+import { submitCommunityPost } from '../actions'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -12,6 +13,9 @@ export const dynamic = 'force-dynamic'
 type PageProps = {
   params: Promise<{
     spaceSlug: string
+  }>
+  searchParams: Promise<{
+    submission?: string
   }>
 }
 
@@ -26,12 +30,16 @@ function formatDate(value: string | null) {
   }).format(date)
 }
 
-export default async function LearnCommunitySpacePage({ params }: PageProps) {
+export default async function LearnCommunitySpacePage({
+  params,
+  searchParams,
+}: PageProps) {
+  const [{ spaceSlug }, query] = await Promise.all([params, searchParams])
   const { member, payload } = await getCurrentPayloadMember()
-  const { spaceSlug } = await params
+  const encodedSpaceSlug = encodeURIComponent(spaceSlug)
 
   if (!member) {
-    redirect(`/learn/login?next=/learn/community/${spaceSlug}`)
+    redirect(`/learn/login?next=/learn/community/${encodedSpaceSlug}`)
   }
 
   const detail = await getMemberCommunitySpaceDetail(payload, member.id, spaceSlug)
@@ -40,6 +48,11 @@ export default async function LearnCommunitySpacePage({ params }: PageProps) {
   }
 
   const email = typeof member.email === 'string' ? member.email : null
+  const canPublish =
+    detail.allowed &&
+    detail.membership?.status === 'active' &&
+    (detail.membership.role === 'moderator' || detail.membership.role === 'admin')
+  const submitPost = submitCommunityPost.bind(null, spaceSlug)
 
   return (
     <PortalShell memberEmail={email}>
@@ -67,47 +80,102 @@ export default async function LearnCommunitySpacePage({ params }: PageProps) {
           </p>
         </section>
 
-        {detail.allowed ? (
-          <section className='mt-10'>
-            <div className='flex flex-col justify-between gap-4 sm:flex-row sm:items-end'>
-              <div>
-                <p className='text-xs font-bold uppercase tracking-[0.2em] text-[#8a7450]'>
-                  Discussions
-                </p>
-                <h2 className='mt-2 text-3xl font-bold tracking-tight text-[#153f2e]'>
-                  Visible posts
-                </h2>
-              </div>
-              <p className='max-w-sm text-sm leading-6 text-[#68766f]'>
-                Post creation, rich text rendering, and live chat remain disabled until the moderation and renderer gates are approved.
-              </p>
-            </div>
+        {query.submission === 'pending' && (
+          <div className='mt-6 rounded-[18px] border border-[#2f7355]/20 bg-[#eaf4ee] px-5 py-4 text-sm font-semibold text-[#24543f]'>
+            Your post was submitted for review. It will appear after approval.
+          </div>
+        )}
+        {query.submission === 'error' && (
+          <div className='mt-6 rounded-[18px] border border-[#9c5c4f]/20 bg-[#f8ece8] px-5 py-4 text-sm font-semibold text-[#78463d]'>
+            The post could not be submitted. Review the form and try again later.
+          </div>
+        )}
 
-            <div className='mt-8 space-y-4'>
-              {detail.posts.length > 0 ? (
-                detail.posts.map((post) => (
-                  <article
-                    className='rounded-[22px] border border-[#153f2e]/10 bg-white p-6 shadow-[0_14px_35px_rgba(31,52,43,0.07)]'
-                    key={post.id}
+        {detail.allowed ? (
+          <>
+            {canPublish && (
+              <section className='mt-10 rounded-[24px] border border-[#153f2e]/10 bg-white p-7 shadow-[0_14px_35px_rgba(31,52,43,0.07)] sm:p-8'>
+                <p className='text-xs font-bold uppercase tracking-[0.2em] text-[#8a7450]'>
+                  Moderated publishing
+                </p>
+                <h2 className='mt-2 text-2xl font-bold text-[#153f2e]'>Create a post</h2>
+                <p className='mt-3 max-w-2xl text-sm leading-6 text-[#68766f]'>
+                  New posts enter review before becoming visible to members.
+                </p>
+                <form action={submitPost} className='mt-6 space-y-5'>
+                  <label className='block'>
+                    <span className='text-sm font-bold text-[#153f2e]'>Title</span>
+                    <input
+                      className='mt-2 w-full rounded-[14px] border border-[#153f2e]/15 px-4 py-3 text-[#24372f] outline-none transition focus:border-[#8a7450]'
+                      maxLength={160}
+                      name='title'
+                      required
+                      type='text'
+                    />
+                  </label>
+                  <label className='block'>
+                    <span className='text-sm font-bold text-[#153f2e]'>Post</span>
+                    <textarea
+                      className='mt-2 min-h-40 w-full rounded-[14px] border border-[#153f2e]/15 px-4 py-3 text-[#24372f] outline-none transition focus:border-[#8a7450]'
+                      maxLength={10000}
+                      name='body'
+                      required
+                    />
+                  </label>
+                  <button
+                    className='rounded-full bg-[#153f2e] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#0f3023]'
+                    type='submit'
                   >
-                    <div className='flex flex-wrap items-center gap-3 text-xs font-bold uppercase tracking-[0.14em] text-[#8a7450]'>
-                      {post.pinned && <span>Pinned</span>}
-                      <span>{post.postType ?? 'discussion'}</span>
-                      <span>{formatDate(post.createdAt)}</span>
-                    </div>
-                    <h3 className='mt-3 text-xl font-bold text-[#153f2e]'>{post.title}</h3>
-                    <p className='mt-3 text-sm text-[#68766f]'>
-                      {post.commentCount} visible comments
-                    </p>
-                  </article>
-                ))
-              ) : (
-                <div className='rounded-[22px] border border-[#153f2e]/10 bg-white p-8 text-[#68766f]'>
-                  No visible posts are published in this space yet.
+                    Submit for review
+                  </button>
+                </form>
+              </section>
+            )}
+
+            <section className='mt-10'>
+              <div className='flex flex-col justify-between gap-4 sm:flex-row sm:items-end'>
+                <div>
+                  <p className='text-xs font-bold uppercase tracking-[0.2em] text-[#8a7450]'>
+                    Discussions
+                  </p>
+                  <h2 className='mt-2 text-3xl font-bold tracking-tight text-[#153f2e]'>
+                    Visible posts
+                  </h2>
                 </div>
-              )}
-            </div>
-          </section>
+                <p className='max-w-sm text-sm leading-6 text-[#68766f]'>
+                  Open a discussion to read its approved rich-text content and visible replies. Moderator submissions enter review first.
+                </p>
+              </div>
+
+              <div className='mt-8 space-y-4'>
+                {detail.posts.length > 0 ? (
+                  detail.posts.map((post) => (
+                    <Link
+                      className='block rounded-[22px] border border-[#153f2e]/10 bg-white p-6 shadow-[0_14px_35px_rgba(31,52,43,0.07)] transition hover:-translate-y-0.5 hover:border-[#8a7450]/40'
+                      href={`/learn/community/${encodedSpaceSlug}/posts/${encodeURIComponent(post.id)}`}
+                      key={post.id}
+                    >
+                      <article>
+                        <div className='flex flex-wrap items-center gap-3 text-xs font-bold uppercase tracking-[0.14em] text-[#8a7450]'>
+                          {post.pinned && <span>Pinned</span>}
+                          <span>{post.postType ?? 'discussion'}</span>
+                          <span>{formatDate(post.createdAt)}</span>
+                        </div>
+                        <h3 className='mt-3 text-xl font-bold text-[#153f2e]'>{post.title}</h3>
+                        <p className='mt-3 text-sm text-[#68766f]'>
+                          {post.commentCount} visible comments
+                        </p>
+                      </article>
+                    </Link>
+                  ))
+                ) : (
+                  <div className='rounded-[22px] border border-[#153f2e]/10 bg-white p-8 text-[#68766f]'>
+                    No visible posts are published in this space yet.
+                  </div>
+                )}
+              </div>
+            </section>
+          </>
         ) : (
           <section className='mt-10 rounded-[24px] border border-[#153f2e]/10 bg-white p-8 shadow-[0_14px_35px_rgba(31,52,43,0.07)]'>
             <h2 className='text-2xl font-bold text-[#153f2e]'>This space is locked</h2>
