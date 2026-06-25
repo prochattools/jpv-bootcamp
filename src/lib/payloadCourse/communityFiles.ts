@@ -295,6 +295,20 @@ export async function registerCommunityFileMetadata(
     },
   })
 
+  try {
+    const { queuePendingCommunityModerationNotifications } = await import(
+      '@/lib/payloadCourse/communityModerationNotifications'
+    )
+    await queuePendingCommunityModerationNotifications(payload, {
+      kind: 'file',
+      recordId: document.id,
+      spaceId,
+    })
+  } catch {
+    // File registration and auditing must remain successful when notification
+    // recipient resolution or event queuing is unavailable.
+  }
+
   return { document, auditEvent }
 }
 
@@ -376,6 +390,172 @@ export async function resolveMemberCommunityFileDownload(
     spaceId,
   })
   if (!access.decision.allowed) return { allowed: false, reason: 'not_found' }
+
+  const [space, media] = await Promise.all([
+    findByIdSafe(payload, 'payload_spaces', spaceId),
+    findByIdSafe(payload, 'payload_private_media', protectedMediaId),
+  ])
+  if (!space || !media) return { allowed: false, reason: 'not_found' }
+
+  try {
+    const filename = normalizeDownloadFilename(media.filename)
+    const mimeType = normalizeMimeType(media)
+    const byteSize = normalizeByteSize(media)
+    const projection = buildMemberCommunityFile(
+      file,
+      space,
+      media,
+      filename,
+      mimeType,
+      byteSize
+    )
+
+    return {
+      ...projection,
+      allowed: true,
+      media: {
+        id: protectedMediaId,
+        filename,
+        mimeType,
+        byteSize,
+        storage: 'private',
+      },
+    }
+  } catch {
+    return { allowed: false, reason: 'not_found' }
+  }
+}
+
+export type ModerateCommunityFileResult = {
+  document: PayloadDocument
+  auditEvent: PayloadDocument | null
+  changed: boolean
+}
+
+export type ResolveModerationCommunityFileDownloadResult =
+  | MemberCommunityFileDownload
+  | MemberCommunityFileDownloadDenied
+
+function normalizeModerationReason(
+  status: 'visible' | 'hidden',
+  reason?: string | null
+): string | null {
+  const normalized = typeof reason === 'string' ? reason.trim() : ''
+  if (status === 'hidden') {
+    if (!normalized) throw new Error('A moderation reason is required.')
+    if (normalized.length > 500) throw new Error('The moderation reason is too long.')
+    return normalized
+  }
+
+  if (!normalized) return null
+  if (normalized.length > 500) throw new Error('The moderation reason is too long.')
+  return normalized
+}
+
+export async function moderateCommunityFile(
+  payload: PayloadCourseWriteAPI,
+  input: {
+    actor: import('@/lib/payloadCourse/communityModeration').CommunityModerationActor
+    fileId: PayloadId
+    moderationStatus: 'visible' | 'hidden'
+    reason?: string | null
+  }
+): Promise<ModerateCommunityFileResult> {
+  const fileId = String(input.fileId)
+  if (!isSafeResourceId(fileId)) throw new Error('Community file was not found.')
+
+  const file = await findByIdSafe(payload, 'payload_space_files', fileId)
+  if (!file) throw new Error('Community file was not found.')
+
+  if (file.moderationStatus === input.moderationStatus) {
+    return {
+      document: file,
+      auditEvent: null,
+      changed: false,
+    }
+  }
+  if (file.moderationStatus !== 'pending_review') {
+    throw new Error('Community file was not found.')
+  }
+
+  const spaceId = getDocumentId(file.space)
+  if (!spaceId) throw new Error('Community file was not found.')
+
+  const { getCommunityModerationCapability } = await import(
+    '@/lib/payloadCourse/communityModeration'
+  )
+  const capability = await getCommunityModerationCapability(
+    payload,
+    input.actor,
+    spaceId
+  )
+  if (!capability.allowed) throw new Error('Community file was not found.')
+
+  const reason = normalizeModerationReason(input.moderationStatus, input.reason)
+  const actorId = input.actor.id ? String(input.actor.id) : input.actor.type
+  const metadata =
+    file.metadata && typeof file.metadata === 'object' && !Array.isArray(file.metadata)
+      ? (file.metadata as Record<string, unknown>)
+      : {}
+
+  const updated = await payload.update({
+    collection: 'payload_space_files',
+    id: file.id,
+    data: {
+      moderationStatus: input.moderationStatus,
+      metadata: {
+        ...metadata,
+        moderationReason: reason,
+        moderatedBy: actorId,
+      },
+    },
+    overrideAccess: true,
+  })
+
+  const auditEvent = await createAuditEvent(payload, {
+    actorType: input.actor.type,
+    actorId: input.actor.id ?? null,
+    action: 'space_file.moderated',
+    targetCollection: 'payload_space_files',
+    targetId: updated.id,
+    before: file,
+    after: updated,
+    metadata: {
+      spaceId,
+      moderationStatus: input.moderationStatus,
+      reason,
+    },
+  })
+
+  return {
+    document: updated,
+    auditEvent,
+    changed: true,
+  }
+}
+
+export async function resolveModerationCommunityFileDownload(
+  payload: PayloadCourseAccessAPI,
+  actor: import('@/lib/payloadCourse/communityModeration').CommunityModerationActor,
+  fileIdInput: PayloadId
+): Promise<ResolveModerationCommunityFileDownloadResult> {
+  const fileId = String(fileIdInput)
+  if (!isSafeResourceId(fileId)) return { allowed: false, reason: 'not_found' }
+
+  const file = await findByIdSafe(payload, 'payload_space_files', fileId)
+  if (!file || file.moderationStatus !== 'pending_review') {
+    return { allowed: false, reason: 'not_found' }
+  }
+
+  const spaceId = getDocumentId(file.space)
+  const protectedMediaId = getDocumentId(file.protectedFile)
+  if (!spaceId || !protectedMediaId) return { allowed: false, reason: 'not_found' }
+
+  const { getCommunityModerationCapability } = await import(
+    '@/lib/payloadCourse/communityModeration'
+  )
+  const capability = await getCommunityModerationCapability(payload, actor, spaceId)
+  if (!capability.allowed) return { allowed: false, reason: 'not_found' }
 
   const [space, media] = await Promise.all([
     findByIdSafe(payload, 'payload_spaces', spaceId),

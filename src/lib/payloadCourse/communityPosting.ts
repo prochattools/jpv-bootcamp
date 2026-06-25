@@ -290,6 +290,15 @@ async function queueModerationEmail(
     memberId?: PayloadId | null
   }
 ) {
+  const { queuePendingCommunityModerationNotifications } = await import(
+    '@/lib/payloadCourse/communityModerationNotifications'
+  )
+  await queuePendingCommunityModerationNotifications(payload, {
+    kind: args.action === 'space-post-created' ? 'post' : 'comment',
+    recordId: args.document.id,
+    spaceId: args.spaceId,
+  })
+
   if (!args.adminEmail) return []
 
   const { event } = await queueEmailEvent(payload, {

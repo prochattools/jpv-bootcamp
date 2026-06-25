@@ -9,6 +9,7 @@ import { resolvePayloadRequestSession } from '@/lib/auth/payloadSession'
 import { decideSharedLogin } from '@/lib/auth/sharedLoginDecision'
 import type { PayloadCourseAccessAPI } from '@/lib/payloadCourse/accessService'
 import { resolveMemberCommunityFileDownload } from '@/lib/payloadCourse/communityFileDelivery'
+import { resolveModerationCommunityFileDownload } from '@/lib/payloadCourse/communityFiles'
 import {
   buildAttachmentContentDisposition,
   isSafeResourceId,
@@ -50,11 +51,20 @@ export async function GET(
     }
 
     const payload = await getPayload({ config })
-    const resolution = await resolveMemberCommunityFileDownload(
-      payload as unknown as PayloadCourseAccessAPI,
-      session.member.id,
-      fileId
-    )
+    const accessPayload = payload as unknown as PayloadCourseAccessAPI
+    const moderationPreview =
+      new URL(request.url).searchParams.get('moderation') === 'preview'
+    const resolution = moderationPreview
+      ? await resolveModerationCommunityFileDownload(
+          accessPayload,
+          { type: 'member', id: session.member.id },
+          fileId
+        )
+      : await resolveMemberCommunityFileDownload(
+          accessPayload,
+          session.member.id,
+          fileId
+        )
 
     if (!resolution.allowed) return notFoundResponse()
 
