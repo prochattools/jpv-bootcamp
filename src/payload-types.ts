@@ -88,6 +88,9 @@ export interface Config {
     payload_access_policies: PayloadAccessPolicy;
     payload_access_grants: PayloadAccessGrant;
     payload_entitlement_events: PayloadEntitlementEvent;
+    payload_affiliates: PayloadAffiliate;
+    payload_affiliate_referrals: PayloadAffiliateReferral;
+    payload_affiliate_commissions: PayloadAffiliateCommission;
     payload_billing_accounts: PayloadBillingAccount;
     payload_subscriptions: PayloadSubscription;
     payload_payments: PayloadPayment;
@@ -136,6 +139,9 @@ export interface Config {
     payload_access_policies: PayloadAccessPoliciesSelect<false> | PayloadAccessPoliciesSelect<true>;
     payload_access_grants: PayloadAccessGrantsSelect<false> | PayloadAccessGrantsSelect<true>;
     payload_entitlement_events: PayloadEntitlementEventsSelect<false> | PayloadEntitlementEventsSelect<true>;
+    payload_affiliates: PayloadAffiliatesSelect<false> | PayloadAffiliatesSelect<true>;
+    payload_affiliate_referrals: PayloadAffiliateReferralsSelect<false> | PayloadAffiliateReferralsSelect<true>;
+    payload_affiliate_commissions: PayloadAffiliateCommissionsSelect<false> | PayloadAffiliateCommissionsSelect<true>;
     payload_billing_accounts: PayloadBillingAccountsSelect<false> | PayloadBillingAccountsSelect<true>;
     payload_subscriptions: PayloadSubscriptionsSelect<false> | PayloadSubscriptionsSelect<true>;
     payload_payments: PayloadPaymentsSelect<false> | PayloadPaymentsSelect<true>;
@@ -773,6 +779,48 @@ export interface PayloadEntitlementEvent {
     | number
     | boolean
     | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_affiliates".
+ */
+export interface PayloadAffiliate {
+  id: number;
+  displayName: string;
+  member: number | PayloadMember;
+  referralCode: string;
+  status: 'pending' | 'active' | 'suspended';
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_affiliate_referrals".
+ */
+export interface PayloadAffiliateReferral {
+  id: number;
+  displayName: string;
+  affiliate: number | PayloadAffiliate;
+  referredMember?: (number | null) | PayloadMember;
+  status: 'tracked' | 'converted' | 'rejected';
+  convertedAt?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_affiliate_commissions".
+ */
+export interface PayloadAffiliateCommission {
+  id: number;
+  displayName: string;
+  affiliate: number | PayloadAffiliate;
+  referral: number | PayloadAffiliateReferral;
+  amountMinor: number;
+  currency: string;
+  status: 'pending' | 'approved' | 'void';
   updatedAt: string;
   createdAt: string;
 }
@@ -1479,6 +1527,18 @@ export interface PayloadLockedDocument {
         value: number | PayloadEntitlementEvent;
       } | null)
     | ({
+        relationTo: 'payload_affiliates';
+        value: number | PayloadAffiliate;
+      } | null)
+    | ({
+        relationTo: 'payload_affiliate_referrals';
+        value: number | PayloadAffiliateReferral;
+      } | null)
+    | ({
+        relationTo: 'payload_affiliate_commissions';
+        value: number | PayloadAffiliateCommission;
+      } | null)
+    | ({
         relationTo: 'payload_billing_accounts';
         value: number | PayloadBillingAccount;
       } | null)
@@ -1964,6 +2024,45 @@ export interface PayloadEntitlementEventsSelect<T extends boolean = true> {
   result?: T;
   reason?: T;
   metadata?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_affiliates_select".
+ */
+export interface PayloadAffiliatesSelect<T extends boolean = true> {
+  displayName?: T;
+  member?: T;
+  referralCode?: T;
+  status?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_affiliate_referrals_select".
+ */
+export interface PayloadAffiliateReferralsSelect<T extends boolean = true> {
+  displayName?: T;
+  affiliate?: T;
+  referredMember?: T;
+  status?: T;
+  convertedAt?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_affiliate_commissions_select".
+ */
+export interface PayloadAffiliateCommissionsSelect<T extends boolean = true> {
+  displayName?: T;
+  affiliate?: T;
+  referral?: T;
+  amountMinor?: T;
+  currency?: T;
+  status?: T;
   updatedAt?: T;
   createdAt?: T;
 }

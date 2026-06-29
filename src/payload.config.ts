@@ -15,6 +15,7 @@ import {
   PayloadLessons,
 } from './collections/PayloadCoursePrototype'
 import { accessControlCollections } from './collections/access'
+import { affiliateCollections } from './collections/affiliates'
 import { auditCollections } from './collections/audit'
 import { billingCollections } from './collections/billing'
 import { communityCollections } from './collections/community'
@@ -93,6 +94,7 @@ export default buildConfig({
     ...memberCollections,
     ...courseRuntimeCollections,
     ...accessControlCollections,
+    ...affiliateCollections,
     ...billingCollections,
     ...crmCollections,
     ...communityCollections,
