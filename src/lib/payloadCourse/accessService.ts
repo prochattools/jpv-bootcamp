@@ -21,28 +21,28 @@ export type PayloadDocument = {
 }
 
 type PayloadFindResult = {
-  docs: PayloadDocument[]
+  docs: any[]
 }
 
 type PayloadFindArgs = {
-  collection: string
-  where?: Record<string, unknown>
+  collection: any
+  where?: any
   limit?: number
   depth?: number
-  sort?: string
+  sort?: any
   overrideAccess?: boolean
 }
 
 type PayloadFindByIDArgs = {
-  collection: string
-  id: PayloadId
+  collection: any
+  id: any
   depth?: number
   overrideAccess?: boolean
 }
 
 type PayloadCountArgs = {
-  collection: string
-  where?: Record<string, unknown>
+  collection: any
+  where?: any
   overrideAccess?: boolean
 }
 
@@ -52,22 +52,22 @@ type PayloadCountResult = {
 
 export type PayloadCourseAccessAPI = {
   find(args: PayloadFindArgs): Promise<PayloadFindResult>
-  findByID(args: PayloadFindByIDArgs): Promise<PayloadDocument>
+  findByID(args: PayloadFindByIDArgs): Promise<any>
   count?(args: PayloadCountArgs): Promise<PayloadCountResult>
 }
 
 export type PayloadCourseWriteAPI = PayloadCourseAccessAPI & {
   create(args: {
-    collection: string
-    data: Record<string, unknown>
+    collection: any
+    data: any
     overrideAccess?: boolean
-  }): Promise<PayloadDocument>
+  }): Promise<any>
   update(args: {
-    collection: string
-    id: PayloadId
-    data: Record<string, unknown>
+    collection: any
+    id: any
+    data: any
     overrideAccess?: boolean
-  }): Promise<PayloadDocument>
+  }): Promise<any>
 }
 
 export type PayloadMemberAuthAPI = PayloadCourseWriteAPI & {

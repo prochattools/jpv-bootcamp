@@ -24,7 +24,7 @@ export async function getCurrentPayloadMember(): Promise<{
   ])
   const payload = await loadPayload({ config })
   const auth = await payload.auth({ headers: await headers() })
-  const user = auth.user as CurrentPayloadMember | null | undefined
+  const user = auth.user as unknown as CurrentPayloadMember | null | undefined
 
   if (!user || user.collection !== 'payload_members' || !user.id) {
     return { member: null, payload }
@@ -35,7 +35,7 @@ export async function getCurrentPayloadMember(): Promise<{
     id: user.id,
     depth: 0,
     overrideAccess: true,
-  })) as CurrentPayloadMember
+  })) as unknown as CurrentPayloadMember
 
   if (!isEligibleCurrentMember(freshMember)) {
     return { member: null, payload }

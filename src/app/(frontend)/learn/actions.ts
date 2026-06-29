@@ -103,6 +103,14 @@ export async function updateMemberProfileAction(
     redirect('/learn/login?next=/learn/account')
   }
 
+  if (typeof member.id === 'string') {
+    const normalizedMemberId = Number(member.id)
+    if (!Number.isSafeInteger(normalizedMemberId) || normalizedMemberId <= 0) {
+      return { error: 'Unable to update your profile.' }
+    }
+    member.id = normalizedMemberId
+  }
+
   const displayName = cleanOptionalText(formData.get('displayName'), 80)
   if (!displayName) {
     return { error: 'Display name is required.' }
