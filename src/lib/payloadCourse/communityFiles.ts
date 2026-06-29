@@ -35,6 +35,8 @@ export type RegisterCommunityFileMetadataInput = {
   spaceId: PayloadId
   mediaId: PayloadId
   title: string
+  postId?: PayloadId
+  commentId?: PayloadId
 }
 
 export type RegisterCommunityFileMetadataResult = {
@@ -237,6 +239,47 @@ export async function registerCommunityFileMetadata(
   const spaceId = String(input.spaceId)
   const mediaId = String(input.mediaId)
   const title = assertTitle(input.title)
+  const parentInput = input as RegisterCommunityFileMetadataInput & {
+    postId?: PayloadId
+    commentId?: PayloadId
+  }
+  const requestedPostId = parentInput.postId == null ? null : String(parentInput.postId)
+  const requestedCommentId = parentInput.commentId == null ? null : String(parentInput.commentId)
+
+  if (requestedPostId && requestedCommentId) {
+    throw new Error('A community file cannot belong to both a post and a comment.')
+  }
+
+  let trustedPostId: string | null = null
+  let trustedCommentId: string | null = null
+
+  if (requestedPostId) {
+    const post = await findByIdSafe(payload, 'payload_space_posts', requestedPostId)
+    if (!post) throw new Error('Parent post was not found.')
+
+    const parentSpaceId = getDocumentId(post.space)
+    if (!parentSpaceId || parentSpaceId !== spaceId) {
+      throw new Error('Parent post does not belong to the selected space.')
+    }
+    trustedPostId = requestedPostId
+  }
+
+  if (requestedCommentId) {
+    const comment = await findByIdSafe(payload, 'payload_space_comments', requestedCommentId)
+    if (!comment) throw new Error('Parent comment was not found.')
+
+    const commentPostId = getDocumentId(comment.post)
+    if (!commentPostId) throw new Error('Parent comment is not linked to a trusted post.')
+
+    const commentPost = await findByIdSafe(payload, 'payload_space_posts', commentPostId)
+    if (!commentPost) throw new Error('Parent comment post was not found.')
+
+    const parentSpaceId = getDocumentId(commentPost.space)
+    if (!parentSpaceId || parentSpaceId !== spaceId) {
+      throw new Error('Parent comment does not belong to the selected space.')
+    }
+    trustedCommentId = requestedCommentId
+  }
 
   const access = await evaluatePayloadSpaceAccess(payload, {
     memberId,
@@ -264,6 +307,8 @@ export async function registerCommunityFileMetadata(
     data: {
       title,
       space: spaceId,
+      ...(trustedPostId ? { post: trustedPostId } : {}),
+      ...(trustedCommentId ? { comment: trustedCommentId } : {}),
       uploadedBy: memberId,
       protectedFile: mediaId,
       moderationStatus: 'pending_review',

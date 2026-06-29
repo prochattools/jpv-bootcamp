@@ -546,3 +546,161 @@ async function main(): Promise<void> {
 }
 
 void main()
+
+
+
+
+async function testStructuredAttachmentParentInvariants() {
+  function createdFileData(payload: FakePayload): Record<string, unknown> {
+    const call = payload.calls.find(
+      (candidate) =>
+        candidate.operation === 'create' && candidate.collection === 'payload_space_files'
+    )
+    assert.ok(call?.data, 'expected a payload_space_files create call')
+    return call.data
+  }
+
+  const standalonePayload = buildPayload()
+  await registerCommunityFileMetadata(standalonePayload, {
+    memberId: 'member_moderator',
+    spaceId: 'space_private',
+    mediaId: 'media_pdf',
+    title: 'Standalone guide',
+  })
+  const standaloneData = createdFileData(standalonePayload)
+  assert.equal('post' in standaloneData, false)
+  assert.equal('comment' in standaloneData, false)
+
+  const postPayload = buildPayload({
+    payload_space_posts: [
+      {
+        id: 'post_private',
+        space: 'space_private',
+        author: 'member_moderator',
+        moderationStatus: 'published',
+      },
+    ],
+  })
+  await registerCommunityFileMetadata(postPayload, {
+    memberId: 'member_moderator',
+    spaceId: 'space_private',
+    mediaId: 'media_pdf',
+    title: 'Post attachment',
+    postId: 'post_private',
+  })
+  const postData = createdFileData(postPayload)
+  assert.equal(postData.post, 'post_private')
+  assert.equal('comment' in postData, false)
+
+  const commentPayload = buildPayload({
+    payload_space_posts: [
+      {
+        id: 'post_private',
+        space: 'space_private',
+        author: 'member_moderator',
+        moderationStatus: 'published',
+      },
+    ],
+    payload_space_comments: [
+      {
+        id: 'comment_private',
+        post: 'post_private',
+        author: 'member_moderator',
+        moderationStatus: 'published',
+      },
+    ],
+  })
+  await registerCommunityFileMetadata(commentPayload, {
+    memberId: 'member_moderator',
+    spaceId: 'space_private',
+    mediaId: 'media_pdf',
+    title: 'Comment attachment',
+    commentId: 'comment_private',
+  })
+  const commentData = createdFileData(commentPayload)
+  assert.equal(commentData.comment, 'comment_private')
+  assert.equal('post' in commentData, false)
+
+  await assert.rejects(
+    registerCommunityFileMetadata(buildPayload(), {
+      memberId: 'member_moderator',
+      spaceId: 'space_private',
+      mediaId: 'media_pdf',
+      title: 'Invalid dual parent',
+      postId: 'post_private',
+      commentId: 'comment_private',
+    }),
+    /cannot belong to both a post and a comment/
+  )
+
+  await assert.rejects(
+    registerCommunityFileMetadata(
+      buildPayload({
+        payload_space_posts: [
+          {
+            id: 'post_secret',
+            space: 'space_secret',
+            author: 'member_moderator',
+            moderationStatus: 'published',
+          },
+        ],
+      }),
+      {
+        memberId: 'member_moderator',
+        spaceId: 'space_private',
+        mediaId: 'media_pdf',
+        title: 'Cross-space post attachment',
+        postId: 'post_secret',
+      }
+    ),
+    /does not belong to the selected space/
+  )
+
+  await assert.rejects(
+    registerCommunityFileMetadata(
+      buildPayload({
+        payload_space_posts: [
+          {
+            id: 'post_secret',
+            space: 'space_secret',
+            author: 'member_moderator',
+            moderationStatus: 'published',
+          },
+        ],
+        payload_space_comments: [
+          {
+            id: 'comment_secret',
+            post: 'post_secret',
+            author: 'member_moderator',
+            moderationStatus: 'published',
+          },
+        ],
+      }),
+      {
+        memberId: 'member_moderator',
+        spaceId: 'space_private',
+        mediaId: 'media_pdf',
+        title: 'Cross-space comment attachment',
+        commentId: 'comment_secret',
+      }
+    ),
+    /does not belong to the selected space/
+  )
+
+  const uploaderPayload = buildPayload()
+  await registerCommunityFileMetadata(uploaderPayload, {
+    memberId: 'member_moderator',
+    spaceId: 'space_private',
+    mediaId: 'media_pdf',
+    title: 'Trusted uploader',
+    uploadedBy: 'member_outsider',
+  } as Parameters<typeof registerCommunityFileMetadata>[1] & { uploadedBy: string })
+  assert.equal(createdFileData(uploaderPayload).uploadedBy, 'member_moderator')
+
+  console.log('structured community attachment parent invariant tests passed')
+}
+
+void testStructuredAttachmentParentInvariants().catch((error) => {
+  console.error(error)
+  process.exitCode = 1
+})
