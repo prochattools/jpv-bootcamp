@@ -304,11 +304,6 @@ async function testModeratorAndServerControlledFields(): Promise<void> {
     visibility: 'public',
     moderationStatus: 'visible',
     file: 'public_only',
-    url: 'https://evil.example/file',
-    signedUrl: 'https://evil.example/signed',
-    bunnyHostname: 'evil.b-cdn.net',
-    bunnyToken: 'client-token',
-    credentials: 'client-secret',
   } as Parameters<typeof registerCommunityFileMetadata>[1] & Record<string, unknown>)
 
   assert.equal(result.document.title, 'Moderator guide')
@@ -328,6 +323,20 @@ async function testModeratorAndServerControlledFields(): Promise<void> {
   const metadataText = JSON.stringify(result.document.metadata)
   assert.doesNotMatch(metadataText, /url|signed|bunny|token|credential/i)
   assert.equal(result.auditEvent.action, 'space_file.created')
+
+  for (const unsafeKey of ['signedUrl', 'token', 'secret', 'hostname', 'storagePath'] as const) {
+    await assert.rejects(
+      registerCommunityFileMetadata(buildPayload(), {
+        memberId: 'member_moderator',
+        spaceId: 'space_private',
+        mediaId: 'media_pdf',
+        title: `Rejected ${unsafeKey}`,
+        attachmentType: 'document',
+        [unsafeKey]: 'must-not-persist',
+      } as Parameters<typeof registerCommunityFileMetadata>[1] & Record<typeof unsafeKey, string>),
+      /Unsafe attachment metadata is not accepted/
+    )
+  }
 
   const membershipCall = payload.calls.find(
     (call) => call.collection === 'payload_space_memberships'
@@ -528,9 +537,14 @@ function testNoUploadOrSigningImplementation(): void {
     path.resolve(process.cwd(), 'src/lib/payloadCourse/communityFiles.ts'),
     'utf8'
   )
+  assert.doesNotMatch(source, /\b(?:FormData|multipart|uploadBytes)\b/i)
   assert.doesNotMatch(
     source,
-    /FormData|multipart|uploadBytes|bunnyToken|signedUrl|credentials/i
+    /\b(?:create|generate|get|sign)[A-Za-z0-9_]*(?:SignedUrl|Signature|Token|Credentials)\s*\(/i
+  )
+  assert.doesNotMatch(
+    source,
+    /\b(?:fetch|axios|request)\s*\(|process\.env|Authorization\s*:/i
   )
   assert.doesNotMatch(source, /https?:\/\//i)
 }
@@ -701,6 +715,216 @@ async function testStructuredAttachmentParentInvariants() {
 }
 
 void testStructuredAttachmentParentInvariants().catch((error) => {
+  console.error(error)
+  process.exitCode = 1
+})
+
+
+
+
+async function testStructuredAttachmentMediaInvariants() {
+  function createdFileData(payload: FakePayload): Record<string, unknown> {
+    const call = payload.calls.find(
+      (candidate) =>
+        candidate.operation === 'create' && candidate.collection === 'payload_space_files'
+    )
+    assert.ok(call?.data, 'expected a payload_space_files create call')
+    return call.data
+  }
+
+  const documentPayload = buildPayload()
+  await registerCommunityFileMetadata(documentPayload, {
+    memberId: 'member_moderator',
+    spaceId: 'space_private',
+    mediaId: 'media_pdf',
+    title: 'Protected document',
+    attachmentType: 'document',
+  })
+  const documentData = createdFileData(documentPayload)
+  assert.equal(documentData.attachmentType, 'document')
+  assert.equal(documentData.protectedFile, 'media_pdf')
+
+  await assert.rejects(
+    registerCommunityFileMetadata(buildPayload(), {
+      memberId: 'member_moderator',
+      spaceId: 'space_private',
+      title: 'Missing protected file',
+      attachmentType: 'document',
+    }),
+    /Protected private media is required/
+  )
+
+  const imagePayload = buildPayload()
+  await registerCommunityFileMetadata(imagePayload, {
+    memberId: 'member_moderator',
+    spaceId: 'space_private',
+    mediaId: 'media_image',
+    title: 'Accessible image',
+    attachmentType: 'image',
+    altText: 'Instructor pointing to the lesson diagram',
+  })
+  const imageData = createdFileData(imagePayload)
+  assert.equal(imageData.attachmentType, 'image')
+  assert.equal(imageData.altText, 'Instructor pointing to the lesson diagram')
+
+  await assert.rejects(
+    registerCommunityFileMetadata(buildPayload(), {
+      memberId: 'member_moderator',
+      spaceId: 'space_private',
+      mediaId: 'media_pdf',
+      title: 'Wrong image media',
+      attachmentType: 'image',
+      altText: 'Not really an image',
+    }),
+    /require image media/
+  )
+
+  await assert.rejects(
+    registerCommunityFileMetadata(buildPayload(), {
+      memberId: 'member_moderator',
+      spaceId: 'space_private',
+      mediaId: 'media_image',
+      title: 'Image without alt text',
+      attachmentType: 'image',
+    }),
+    /Image alt text is required/
+  )
+
+  for (const input of [
+    {
+      title: 'YouTube lesson',
+      externalProvider: 'youtube' as const,
+      externalMediaId: 'dQw4w9WgXcQ',
+    },
+    {
+      title: 'Vimeo lesson',
+      externalProvider: 'vimeo' as const,
+      externalMediaId: '123456789',
+    },
+  ]) {
+    const payload = buildPayload()
+    await registerCommunityFileMetadata(payload, {
+      memberId: 'member_moderator',
+      spaceId: 'space_private',
+      attachmentType: 'external_video',
+      ...input,
+    })
+    const data = createdFileData(payload)
+    assert.equal(data.attachmentType, 'external_video')
+    assert.equal(data.externalProvider, input.externalProvider)
+    assert.equal(data.externalMediaId, input.externalMediaId)
+    assert.equal('protectedFile' in data, false)
+  }
+
+  await assert.rejects(
+    registerCommunityFileMetadata(buildPayload(), {
+      memberId: 'member_moderator',
+      spaceId: 'space_private',
+      title: 'Unsupported provider',
+      attachmentType: 'external_video',
+      externalProvider: 'dailymotion',
+      externalMediaId: 'valid-looking-id',
+    } as unknown as Parameters<typeof registerCommunityFileMetadata>[1]),
+    /provider must be YouTube or Vimeo/
+  )
+
+  await assert.rejects(
+    registerCommunityFileMetadata(buildPayload(), {
+      memberId: 'member_moderator',
+      spaceId: 'space_private',
+      title: 'Unsafe external URL',
+      attachmentType: 'external_video',
+      externalProvider: 'youtube',
+      externalMediaId: 'https://youtube.example/watch?v=abc',
+    }),
+    /media ID is invalid/
+  )
+
+  const privateVideoPayload = buildPayload()
+  await registerCommunityFileMetadata(privateVideoPayload, {
+    memberId: 'member_moderator',
+    spaceId: 'space_private',
+    title: 'Private Bunny lesson',
+    attachmentType: 'private_video',
+    bunnyVideoId: '123e4567-e89b-12d3-a456-426614174000',
+    bunnyLibraryId: '987654',
+  })
+  const privateVideoData = createdFileData(privateVideoPayload)
+  assert.equal(privateVideoData.attachmentType, 'private_video')
+  assert.equal(privateVideoData.bunnyVideoId, '123e4567-e89b-12d3-a456-426614174000')
+  assert.equal(privateVideoData.bunnyLibraryId, '987654')
+
+  await assert.rejects(
+    registerCommunityFileMetadata(buildPayload(), {
+      memberId: 'member_moderator',
+      spaceId: 'space_private',
+      title: 'Invalid Bunny video',
+      attachmentType: 'private_video',
+      bunnyVideoId: 'not-a-uuid',
+      bunnyLibraryId: '987654',
+    }),
+    /Bunny video ID is invalid/
+  )
+
+  await assert.rejects(
+    registerCommunityFileMetadata(buildPayload(), {
+      memberId: 'member_moderator',
+      spaceId: 'space_private',
+      title: 'Invalid Bunny library',
+      attachmentType: 'private_video',
+      bunnyVideoId: '123e4567-e89b-12d3-a456-426614174000',
+      bunnyLibraryId: 'library-987654',
+    }),
+    /Bunny library ID is invalid/
+  )
+
+  await assert.rejects(
+    registerCommunityFileMetadata(buildPayload(), {
+      memberId: 'member_moderator',
+      spaceId: 'space_private',
+      mediaId: 'media_pdf',
+      title: 'Incompatible fields',
+      attachmentType: 'external_video',
+      externalProvider: 'youtube',
+      externalMediaId: 'dQw4w9WgXcQ',
+    }),
+    /incompatible/
+  )
+
+  for (const unsafeKey of ['signedUrl', 'token', 'secret', 'hostname', 'storagePath'] as const) {
+    await assert.rejects(
+      registerCommunityFileMetadata(buildPayload(), {
+        memberId: 'member_moderator',
+        spaceId: 'space_private',
+        mediaId: 'media_pdf',
+        title: `Unsafe ${unsafeKey}`,
+        attachmentType: 'document',
+        [unsafeKey]: 'must-not-persist',
+      } as Parameters<typeof registerCommunityFileMetadata>[1] & Record<typeof unsafeKey, string>),
+      /Unsafe attachment metadata is not accepted/
+    )
+  }
+
+  const safePersistencePayload = buildPayload()
+  await registerCommunityFileMetadata(safePersistencePayload, {
+    memberId: 'member_moderator',
+    spaceId: 'space_private',
+    mediaId: 'media_pdf',
+    title: 'Allowlisted persistence',
+    attachmentType: 'document',
+  })
+  const persistedCreateData = safePersistencePayload.calls
+    .filter((candidate) => candidate.operation === 'create')
+    .map((candidate) => candidate.data)
+  assert.doesNotMatch(
+    JSON.stringify(persistedCreateData),
+    /signedUrl|token|secret|hostname|storagePath|untrusted\.example/i
+  )
+
+  console.log('structured community attachment media invariant tests passed')
+}
+
+void testStructuredAttachmentMediaInvariants().catch((error) => {
   console.error(error)
   process.exitCode = 1
 })

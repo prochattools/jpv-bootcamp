@@ -30,13 +30,27 @@ export const COMMUNITY_FILE_MIME_TYPES = [
 
 type CommunityFileMimeType = (typeof COMMUNITY_FILE_MIME_TYPES)[number]
 
+export type CommunityAttachmentType =
+  | 'document'
+  | 'image'
+  | 'external_video'
+  | 'private_video'
+
+export type CommunityExternalVideoProvider = 'youtube' | 'vimeo'
+
 export type RegisterCommunityFileMetadataInput = {
   memberId: PayloadId
   spaceId: PayloadId
-  mediaId: PayloadId
+  mediaId?: PayloadId
   title: string
   postId?: PayloadId
   commentId?: PayloadId
+  attachmentType?: CommunityAttachmentType
+  altText?: string
+  externalProvider?: CommunityExternalVideoProvider
+  externalMediaId?: string
+  bunnyVideoId?: string
+  bunnyLibraryId?: string
 }
 
 export type RegisterCommunityFileMetadataResult = {
@@ -44,18 +58,50 @@ export type RegisterCommunityFileMetadataResult = {
   auditEvent: PayloadDocument
 }
 
-export type MemberCommunityFile = {
+type MemberCommunityAttachmentBase = {
   id: string
   title: string
+  spaceId: string
+  spaceName: string
+}
+
+export type MemberCommunityProtectedFile = MemberCommunityAttachmentBase & {
+  attachmentType?: 'document' | 'image'
   filename: string
   mimeType: CommunityFileMimeType
   byteSize: number
-  spaceId: string
-  spaceName: string
   downloadUrl: string
+  altText?: string
 }
 
-export type MemberCommunityFileDownload = MemberCommunityFile & {
+export type MemberCommunityExternalVideo = MemberCommunityAttachmentBase & {
+  attachmentType: 'external_video'
+  externalProvider: CommunityExternalVideoProvider
+  externalMediaId: string
+  filename?: never
+  mimeType?: never
+  byteSize?: never
+  downloadUrl?: never
+  altText?: never
+}
+
+export type MemberCommunityPrivateVideo = MemberCommunityAttachmentBase & {
+  attachmentType: 'private_video'
+  bunnyVideoId: string
+  bunnyLibraryId: string
+  filename?: never
+  mimeType?: never
+  byteSize?: never
+  downloadUrl?: never
+  altText?: never
+}
+
+export type MemberCommunityFile =
+  | MemberCommunityProtectedFile
+  | MemberCommunityExternalVideo
+  | MemberCommunityPrivateVideo
+
+export type MemberCommunityProtectedFileDownload = MemberCommunityProtectedFile & {
   allowed: true
   media: {
     id: string
@@ -66,9 +112,83 @@ export type MemberCommunityFileDownload = MemberCommunityFile & {
   }
 }
 
+export type MemberCommunityAttachmentResolution =
+  | MemberCommunityProtectedFileDownload
+  | (MemberCommunityExternalVideo & { allowed: true })
+  | (MemberCommunityPrivateVideo & { allowed: true })
+
+export type MemberCommunityFileDownload = MemberCommunityProtectedFileDownload
+
 export type MemberCommunityFileDownloadDenied = {
   allowed: false
   reason: 'not_found'
+}
+
+function normalizeStoredAttachmentType(file: PayloadDocument): CommunityAttachmentType | null {
+  const value = asString(file.attachmentType)
+  if (!value) return 'document'
+  return value === 'document' ||
+    value === 'image' ||
+    value === 'external_video' ||
+    value === 'private_video'
+    ? value
+    : null
+}
+
+function normalizeExternalVideoIdentity(
+  file: PayloadDocument
+): { externalProvider: CommunityExternalVideoProvider; externalMediaId: string } | null {
+  const externalProvider = asString(file.externalProvider)
+  const externalMediaId = asString(file.externalMediaId)
+  if (externalProvider !== 'youtube' && externalProvider !== 'vimeo') return null
+  const valid =
+    externalProvider === 'youtube'
+      ? /^[A-Za-z0-9_-]{6,32}$/.test(externalMediaId ?? '')
+      : /^\d{6,20}$/.test(externalMediaId ?? '')
+  return valid && externalMediaId ? { externalProvider, externalMediaId } : null
+}
+
+function normalizeBunnyVideoIdentity(
+  file: PayloadDocument
+): { bunnyVideoId: string; bunnyLibraryId: string } | null {
+  const bunnyVideoId = asString(file.bunnyVideoId)
+  const bunnyLibraryId = asString(file.bunnyLibraryId)
+  if (
+    !bunnyVideoId ||
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      bunnyVideoId
+    ) ||
+    !bunnyLibraryId ||
+    !/^\d{1,20}$/.test(bunnyLibraryId)
+  ) {
+    return null
+  }
+  return { bunnyVideoId, bunnyLibraryId }
+}
+
+async function hasTrustedCommunityFileParent(
+  payload: PayloadCourseAccessAPI,
+  file: PayloadDocument,
+  spaceId: string
+): Promise<boolean> {
+  const postId = getDocumentId(file.post)
+  const commentId = getDocumentId(file.comment)
+  if (postId && commentId) return false
+
+  if (postId) {
+    const post = await findByIdSafe(payload, 'payload_space_posts', postId)
+    return getDocumentId(post?.space) === spaceId
+  }
+
+  if (commentId) {
+    const comment = await findByIdSafe(payload, 'payload_space_comments', commentId)
+    const commentPostId = getDocumentId(comment?.post)
+    if (!commentPostId) return false
+    const post = await findByIdSafe(payload, 'payload_space_posts', commentPostId)
+    return getDocumentId(post?.space) === spaceId
+  }
+
+  return true
 }
 
 function asString(value: unknown): string | null {
@@ -218,7 +338,7 @@ function buildMemberCommunityFile(
   filename: string,
   mimeType: CommunityFileMimeType,
   byteSize: number
-): MemberCommunityFile {
+): MemberCommunityProtectedFile {
   return {
     id: String(file.id),
     title: asString(file.title) ?? 'Community file',
@@ -237,14 +357,23 @@ export async function registerCommunityFileMetadata(
 ): Promise<RegisterCommunityFileMetadataResult> {
   const memberId = String(input.memberId)
   const spaceId = String(input.spaceId)
-  const mediaId = String(input.mediaId)
+  const mediaId = input.mediaId == null ? null : String(input.mediaId)
   const title = assertTitle(input.title)
-  const parentInput = input as RegisterCommunityFileMetadataInput & {
-    postId?: PayloadId
-    commentId?: PayloadId
+  const attachmentType = input.attachmentType ?? 'document'
+  const requestedPostId = input.postId == null ? null : String(input.postId)
+  const requestedCommentId = input.commentId == null ? null : String(input.commentId)
+  const altText = input.altText?.trim() || null
+  const externalProvider = input.externalProvider ?? null
+  const externalMediaId = input.externalMediaId?.trim() || null
+  const bunnyVideoId = input.bunnyVideoId?.trim() || null
+  const bunnyLibraryId = input.bunnyLibraryId?.trim() || null
+
+  const unsafeInputKey = Object.keys(input).find((key) =>
+    /(?:signedurl|token|secret|hostname|storagepath|filepath)/i.test(key)
+  )
+  if (unsafeInputKey) {
+    throw new Error(`Unsafe attachment metadata is not accepted: ${unsafeInputKey}`)
   }
-  const requestedPostId = parentInput.postId == null ? null : String(parentInput.postId)
-  const requestedCommentId = parentInput.commentId == null ? null : String(parentInput.commentId)
 
   if (requestedPostId && requestedCommentId) {
     throw new Error('A community file cannot belong to both a post and a comment.')
@@ -294,13 +423,56 @@ export async function registerCommunityFileMetadata(
     throw new Error('Active moderator or admin space membership is required.')
   }
 
-  const media = await findByIdSafe(payload, 'payload_private_media', mediaId)
-  if (!media) throw new Error('Private media record was not found.')
+  let filename: string | null = null
+  let mimeType: CommunityFileMimeType | null = null
+  let byteSize: number | null = null
 
-  const filename = normalizeFilename(media.filename)
-  const mimeType = normalizeMimeType(media)
-  const byteSize = normalizeByteSize(media)
-  const storageReference = mediaId
+  if (attachmentType === 'document' || attachmentType === 'image') {
+    if (!mediaId) throw new Error('Protected private media is required for this attachment type.')
+    if (externalProvider || externalMediaId || bunnyVideoId || bunnyLibraryId) {
+      throw new Error('Video identifiers are incompatible with protected file attachments.')
+    }
+
+    const media = await findByIdSafe(payload, 'payload_private_media', mediaId)
+    if (!media) throw new Error('Private media record was not found.')
+
+    filename = normalizeFilename(media.filename)
+    mimeType = normalizeMimeType(media)
+    byteSize = normalizeByteSize(media)
+
+    if (attachmentType === 'document' && altText) {
+      throw new Error('Alt text is only supported for image attachments.')
+    }
+    if (attachmentType === 'image') {
+      if (!mimeType.startsWith('image/')) throw new Error('Image attachments require image media.')
+      if (!altText) throw new Error('Image alt text is required.')
+      if (altText.length > 250) throw new Error('Image alt text is too long.')
+    }
+  } else if (attachmentType === 'external_video') {
+    if (mediaId || altText || bunnyVideoId || bunnyLibraryId) {
+      throw new Error('External video fields are incompatible with protected or private video fields.')
+    }
+    if (externalProvider !== 'youtube' && externalProvider !== 'vimeo') {
+      throw new Error('External video provider must be YouTube or Vimeo.')
+    }
+    const validExternalId =
+      externalProvider === 'youtube'
+        ? /^[A-Za-z0-9_-]{6,32}$/.test(externalMediaId ?? '')
+        : /^\d{6,20}$/.test(externalMediaId ?? '')
+    if (!validExternalId) throw new Error('External video media ID is invalid.')
+  } else if (attachmentType === 'private_video') {
+    if (mediaId || altText || externalProvider || externalMediaId) {
+      throw new Error('Private video fields are incompatible with protected or external video fields.')
+    }
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(bunnyVideoId ?? '')) {
+      throw new Error('Bunny video ID is invalid.')
+    }
+    if (!/^\d{1,20}$/.test(bunnyLibraryId ?? '')) {
+      throw new Error('Bunny library ID is invalid.')
+    }
+  } else {
+    throw new Error('Attachment type is invalid.')
+  }
 
   const document = await payload.create({
     collection: 'payload_space_files',
@@ -310,13 +482,19 @@ export async function registerCommunityFileMetadata(
       ...(trustedPostId ? { post: trustedPostId } : {}),
       ...(trustedCommentId ? { comment: trustedCommentId } : {}),
       uploadedBy: memberId,
-      protectedFile: mediaId,
+      attachmentType,
+      ...(mediaId ? { protectedFile: mediaId } : {}),
+      ...(altText ? { altText } : {}),
+      ...(externalProvider ? { externalProvider } : {}),
+      ...(externalMediaId ? { externalMediaId } : {}),
+      ...(bunnyVideoId ? { bunnyVideoId } : {}),
+      ...(bunnyLibraryId ? { bunnyLibraryId } : {}),
       moderationStatus: 'pending_review',
       metadata: {
-        filename,
-        mimeType,
-        byteSize,
-        storageReference,
+        ...(filename ? { filename } : {}),
+        ...(mimeType ? { mimeType } : {}),
+        ...(byteSize != null ? { byteSize } : {}),
+        ...(mediaId ? { storageReference: mediaId } : {}),
         createdByService: 'communityFiles.registerCommunityFileMetadata',
       },
     },
@@ -332,11 +510,15 @@ export async function registerCommunityFileMetadata(
     after: document,
     metadata: {
       spaceId,
-      mediaId,
-      filename,
-      mimeType,
-      byteSize,
-      storageReference,
+      attachmentType,
+      ...(mediaId ? { mediaId } : {}),
+      ...(filename ? { filename } : {}),
+      ...(mimeType ? { mimeType } : {}),
+      ...(byteSize != null ? { byteSize } : {}),
+      ...(externalProvider ? { externalProvider } : {}),
+      ...(externalMediaId ? { externalMediaId } : {}),
+      ...(bunnyVideoId ? { bunnyVideoId } : {}),
+      ...(bunnyLibraryId ? { bunnyLibraryId } : {}),
     },
   })
 
@@ -355,6 +537,65 @@ export async function registerCommunityFileMetadata(
   }
 
   return { document, auditEvent }
+}
+
+async function buildMemberCommunityAttachmentProjection(
+  payload: PayloadCourseAccessAPI,
+  file: PayloadDocument,
+  space: PayloadDocument
+): Promise<MemberCommunityFile | null> {
+  const attachmentType = normalizeStoredAttachmentType(file)
+  if (!attachmentType) return null
+
+  const base: MemberCommunityAttachmentBase = {
+    id: String(file.id),
+    title: asString(file.title) ?? 'Community attachment',
+    spaceId: String(space.id),
+    spaceName: asString(space.name) ?? 'Community space',
+  }
+  const protectedMediaId = getDocumentId(file.protectedFile)
+  const altText = asString(file.altText)
+  const hasExternalFields = Boolean(asString(file.externalProvider) || asString(file.externalMediaId))
+  const hasBunnyFields = Boolean(asString(file.bunnyVideoId) || asString(file.bunnyLibraryId))
+
+  if (attachmentType === 'document' || attachmentType === 'image') {
+    if (!protectedMediaId || hasExternalFields || hasBunnyFields) return null
+    if (attachmentType === 'document' && altText) return null
+
+    const media = await findByIdSafe(payload, 'payload_private_media', protectedMediaId)
+    if (!media) return null
+
+    try {
+      const filename = normalizeDownloadFilename(media.filename)
+      const mimeType = normalizeMimeType(media)
+      const byteSize = normalizeByteSize(media)
+      if (attachmentType === 'image') {
+        if (!mimeType.startsWith('image/') || !altText || altText.length > 250) return null
+      }
+
+      return {
+        ...base,
+        attachmentType,
+        filename,
+        mimeType,
+        byteSize,
+        downloadUrl: `/learn/community/files/${String(file.id)}`,
+        ...(attachmentType === 'image' && altText ? { altText } : {}),
+      }
+    } catch {
+      return null
+    }
+  }
+
+  if (attachmentType === 'external_video') {
+    if (protectedMediaId || altText || hasBunnyFields) return null
+    const identity = normalizeExternalVideoIdentity(file)
+    return identity ? { ...base, attachmentType, ...identity } : null
+  }
+
+  if (protectedMediaId || altText || hasExternalFields) return null
+  const identity = normalizeBunnyVideoIdentity(file)
+  return identity ? { ...base, attachmentType, ...identity } : null
 }
 
 export async function getMemberCommunityFiles(
@@ -382,41 +623,26 @@ export async function getMemberCommunityFiles(
 
   for (const file of files) {
     const spaceId = getDocumentId(file.space)
-    const protectedMediaId = getDocumentId(file.protectedFile)
-    if (!spaceId || !protectedMediaId) continue
+    if (!spaceId) continue
 
-    const access = await evaluatePayloadSpaceAccess(payload, {
-      memberId,
-      spaceId,
-    })
+    const access = await evaluatePayloadSpaceAccess(payload, { memberId, spaceId })
     if (!access.decision.allowed) continue
+    if (!(await hasTrustedCommunityFileParent(payload, file, spaceId))) continue
 
-    const [space, media] = await Promise.all([
-      findByIdSafe(payload, 'payload_spaces', spaceId),
-      findByIdSafe(payload, 'payload_private_media', protectedMediaId),
-    ])
-    if (!space || !media) continue
-
-    try {
-      const filename = normalizeDownloadFilename(media.filename)
-      const mimeType = normalizeMimeType(media)
-      const byteSize = normalizeByteSize(media)
-      projections.push(
-        buildMemberCommunityFile(file, space, media, filename, mimeType, byteSize)
-      )
-    } catch {
-      continue
-    }
+    const space = await findByIdSafe(payload, 'payload_spaces', spaceId)
+    if (!space) continue
+    const projection = await buildMemberCommunityAttachmentProjection(payload, file, space)
+    if (projection) projections.push(projection)
   }
 
   return projections
 }
 
-export async function resolveMemberCommunityFileDownload(
+export async function resolveMemberCommunityAttachment(
   payload: PayloadCourseAccessAPI,
   memberIdInput: PayloadId,
   fileIdInput: PayloadId
-): Promise<MemberCommunityFileDownload | MemberCommunityFileDownloadDenied> {
+): Promise<MemberCommunityAttachmentResolution | MemberCommunityFileDownloadDenied> {
   const fileId = String(fileIdInput)
   if (!isSafeResourceId(fileId)) return { allowed: false, reason: 'not_found' }
 
@@ -427,48 +653,48 @@ export async function resolveMemberCommunityFileDownload(
 
   const memberId = String(memberIdInput)
   const spaceId = getDocumentId(file.space)
-  const protectedMediaId = getDocumentId(file.protectedFile)
-  if (!spaceId || !protectedMediaId) return { allowed: false, reason: 'not_found' }
+  if (!spaceId) return { allowed: false, reason: 'not_found' }
 
-  const access = await evaluatePayloadSpaceAccess(payload, {
-    memberId,
-    spaceId,
-  })
+  const access = await evaluatePayloadSpaceAccess(payload, { memberId, spaceId })
   if (!access.decision.allowed) return { allowed: false, reason: 'not_found' }
-
-  const [space, media] = await Promise.all([
-    findByIdSafe(payload, 'payload_spaces', spaceId),
-    findByIdSafe(payload, 'payload_private_media', protectedMediaId),
-  ])
-  if (!space || !media) return { allowed: false, reason: 'not_found' }
-
-  try {
-    const filename = normalizeDownloadFilename(media.filename)
-    const mimeType = normalizeMimeType(media)
-    const byteSize = normalizeByteSize(media)
-    const projection = buildMemberCommunityFile(
-      file,
-      space,
-      media,
-      filename,
-      mimeType,
-      byteSize
-    )
-
-    return {
-      ...projection,
-      allowed: true,
-      media: {
-        id: protectedMediaId,
-        filename,
-        mimeType,
-        byteSize,
-        storage: 'private',
-      },
-    }
-  } catch {
+  if (!(await hasTrustedCommunityFileParent(payload, file, spaceId))) {
     return { allowed: false, reason: 'not_found' }
   }
+
+  const space = await findByIdSafe(payload, 'payload_spaces', spaceId)
+  if (!space) return { allowed: false, reason: 'not_found' }
+  const projection = await buildMemberCommunityAttachmentProjection(payload, file, space)
+  if (!projection) return { allowed: false, reason: 'not_found' }
+
+  if (projection.attachmentType === 'external_video' || projection.attachmentType === 'private_video') {
+    return { ...projection, allowed: true }
+  }
+
+  const protectedMediaId = getDocumentId(file.protectedFile)
+  if (!protectedMediaId) return { allowed: false, reason: 'not_found' }
+  return {
+    ...projection,
+    allowed: true,
+    media: {
+      id: protectedMediaId,
+      filename: projection.filename,
+      mimeType: projection.mimeType,
+      byteSize: projection.byteSize,
+      storage: 'private',
+    },
+  }
+}
+
+export async function resolveMemberCommunityFileDownload(
+  payload: PayloadCourseAccessAPI,
+  memberIdInput: PayloadId,
+  fileIdInput: PayloadId
+): Promise<MemberCommunityFileDownload | MemberCommunityFileDownloadDenied> {
+  const resolution = await resolveMemberCommunityAttachment(payload, memberIdInput, fileIdInput)
+  if (!resolution.allowed || !('media' in resolution)) {
+    return { allowed: false, reason: 'not_found' }
+  }
+  return resolution
 }
 
 export type ModerateCommunityFileResult = {
