@@ -6,6 +6,11 @@ import type {
   PayloadId,
 } from '../src/lib/payloadCourse/accessService'
 import { getAffiliateSummary } from '../src/lib/payloadCourse/affiliateReporting'
+import {
+  buildAffiliateReportingMigrationUpSql,
+  getAffiliateReportingMigrationSchema,
+} from '../src/lib/affiliateReportingMigrationSql'
+import { shouldRegisterPayloadProdMigrations } from '../src/lib/payloadMigrations'
 
 type CollectionMap = Record<string, PayloadDocument[]>
 
@@ -303,11 +308,64 @@ async function testMalformedAndMixedCurrencies(): Promise<void> {
   )
 }
 
+function testAffiliateMigrationSchemaSelection(): void {
+  assert.equal(getAffiliateReportingMigrationSchema(undefined), 'jpvbootcamp')
+  assert.equal(getAffiliateReportingMigrationSchema(''), 'jpvbootcamp')
+
+  assert.throws(
+    () => getAffiliateReportingMigrationSchema('not-a-url'),
+    /Malformed DATABASE_URL/
+  )
+
+  const stagingUrl =
+    'postgresql://tenant:password@example.com:5432/postgres?schema=jpvbootcamp_staging'
+  const productionUrl = 'postgresql://tenant:password@example.com:5432/postgres?schema=jpvbootcamp'
+
+  assert.equal(getAffiliateReportingMigrationSchema(stagingUrl), 'jpvbootcamp_staging')
+  assert.equal(getAffiliateReportingMigrationSchema(productionUrl), 'jpvbootcamp')
+  assert.equal(getAffiliateReportingMigrationSchema('postgresql://tenant:password@example.com:5432/postgres'), 'jpvbootcamp')
+
+  for (const schema of ['bad-schema', '1bad', 'bad.schema', 'bad schema', 'bad"schema']) {
+    assert.throws(
+      () =>
+        getAffiliateReportingMigrationSchema(
+          `postgresql://tenant:password@example.com:5432/postgres?schema=${encodeURIComponent(
+            schema
+          )}`
+        ),
+      /Invalid Payload migration schema/
+    )
+  }
+
+  const stagingSql = buildAffiliateReportingMigrationUpSql(stagingUrl)
+  assert.match(stagingSql, /"jpvbootcamp_staging"\."payload_affiliates"/)
+  assert.match(stagingSql, /"jpvbootcamp_staging"\."payload_affiliate_referrals"/)
+  assert.match(stagingSql, /"jpvbootcamp_staging"\."payload_affiliate_commissions"/)
+  assert.match(stagingSql, /"jpvbootcamp_staging"\."payload_locked_documents_rels"/)
+  assert.match(stagingSql, /payload_affiliate_commissions_amount_minor_check/)
+  assert.match(stagingSql, /ON DELETE restrict/)
+  assert.match(stagingSql, /ON DELETE set null/)
+  assert.doesNotMatch(stagingSql, /"jpvbootcamp"\./)
+}
+
+function testPayloadMigrationRegistrationGate(): void {
+  assert.equal(shouldRegisterPayloadProdMigrations(['node', 'next', 'start']), false)
+  assert.equal(shouldRegisterPayloadProdMigrations(['node', 'next', 'build']), false)
+  assert.equal(shouldRegisterPayloadProdMigrations(['node', 'next', 'dev']), false)
+  assert.equal(shouldRegisterPayloadProdMigrations(['node', 'payload', 'migrate']), true)
+  assert.equal(shouldRegisterPayloadProdMigrations(['node', 'payload', 'migrate:create']), true)
+  assert.equal(shouldRegisterPayloadProdMigrations(['node', 'payload', 'migrate:status']), true)
+  assert.equal(shouldRegisterPayloadProdMigrations(['node', 'script', '--migration-file']), false)
+  assert.equal(shouldRegisterPayloadProdMigrations(['node', 'script', 'migration']), false)
+}
+
 async function main(): Promise<void> {
   await testAuthorizedAggregation()
   await testAuthorizationDenials()
   await testMalformedAmounts()
   await testMalformedAndMixedCurrencies()
+  testAffiliateMigrationSchemaSelection()
+  testPayloadMigrationRegistrationGate()
   console.log('payload affiliate reporting tests passed')
 }
 

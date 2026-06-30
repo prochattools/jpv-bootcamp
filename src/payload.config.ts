@@ -22,6 +22,7 @@ import { communityCollections } from './collections/community'
 import { courseRuntimeCollections } from './collections/courses'
 import { crmCollections } from './collections/crm'
 import { memberCollections } from './collections/members'
+import { shouldRegisterPayloadProdMigrations } from './lib/payloadMigrations'
 import { migrations } from './migrations'
 
 const filename = fileURLToPath(import.meta.url)
@@ -110,9 +111,8 @@ export default buildConfig({
       connectionString: cleanDbUrl(process.env.DATABASE_URL),
     },
     schemaName: getDbSchema(process.env.DATABASE_URL),
-    // Register reviewed Payload migrations. In Dokploy standalone deployments,
-    // apply them explicitly with `pnpm payload migrate` and verify payload_migrations.
-    prodMigrations: migrations,
+    // Only expose reviewed Payload migrations to explicit migrate commands.
+    prodMigrations: shouldRegisterPayloadProdMigrations() ? migrations : undefined,
   }),
   serverURL: process.env.PAYLOAD_SERVER_URL || process.env.NEXT_PUBLIC_SERVER_URL,
 })
