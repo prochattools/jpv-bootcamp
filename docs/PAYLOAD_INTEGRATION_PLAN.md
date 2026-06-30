@@ -1,334 +1,340 @@
 # Payload CMS Integration Plan
 
-This is the single canonical product, architecture, security, roadmap, and execution plan for the JPV Bootcamp Payload programme. Code changes must follow this plan in order. Update this document before changing the architecture, security model, product boundary, rollout sequence, or production boundary.
+This is the single canonical product, architecture, security, roadmap, and execution plan for the JPV Bootcamp Payload programme. Code and operational changes must follow this plan in order. Update this document before changing architecture, security, product boundaries, rollout order, or production responsibilities.
 
 ## Documentation hierarchy
 
-To keep the repository cohesive and unambiguous, documents have explicit roles:
+1. **Canonical plan — this document.** Owns philosophy, architecture, security, current status, roadmap order, validation gates, and cutover boundaries.
+2. **Feature specifications.** Define implementation detail without changing roadmap order:
+   - `docs/PAYLOAD_COMMUNICATIONS_PLAN.md` — branded communications, FreeResend delivery, templates, events, preferences, audit, and acceptance criteria for Phase 6.
+   - `docs/PAYLOAD_PARTNER_AFFILIATE_PLAN.md` — detailed Partner Affiliates specification for Phase 9.
+3. **Visual reference.** `docs/PAYLOAD_COURSE_VISUAL_IMPLEMENTATION_PLAN.md` illustrates screens and workflows but does not replace this plan.
+4. **Client progress document.** `docs/client/JPV_Minimal_Payload_Course_Plan_v2_2.docx` communicates progress and remaining work in concise, non-technical language. It must remain aligned with this plan and the feature specifications.
+5. **Legacy archive.** `docs/archive/PARTNER_AFFILIATE_LEGACY.md` records retained obsolete behavior for migration and reconciliation.
+6. **Platform invariants and operations.** `docs/PROKIT_OVERVIEW.md`, `docs/PROKIT_INVARIANTS.md`, and infrastructure documents define stable operational contracts.
 
-1. **Canonical plan — this document.** It owns the philosophy, strategy, architecture, security rules, current status, ordered roadmap, acceptance gates, and cutover boundary.
-2. **Feature specifications.** These define implementation detail for a roadmap phase but cannot change the canonical architecture or phase order. Current feature specification:
-   - `docs/PAYLOAD_PARTNER_AFFILIATE_PLAN.md` — detailed specification for Phase 8.
-3. **Visual reference.** `docs/PAYLOAD_COURSE_VISUAL_IMPLEMENTATION_PLAN.md` illustrates screens, collections, and workflows. It is supporting reference material, not a second roadmap. Where it differs from this document, this document wins.
-4. **Legacy archive.** `docs/archive/PARTNER_AFFILIATE_LEGACY.md` records retained obsolete behavior for migration and reconciliation. Archive documents never define the target architecture.
-5. **Platform invariants and operations.** `docs/PROKIT_OVERVIEW.md`, `docs/PROKIT_INVARIANTS.md`, and infrastructure documents define stable platform and operational contracts. They do not replace this product roadmap.
-
-Do not create another general Payload roadmap. New features must first be added here as a phase or deliverable. Create a separate feature specification only when the detailed schema, workflow, privacy, migration, or acceptance material would make this canonical plan harder to use.
+Do not create another general Payload roadmap. New work must first be added here as a phase or deliverable. Create a feature specification only when the detailed workflow, privacy, migration, or acceptance material would make this canonical plan harder to use.
 
 ## Public naming and white-label contract
 
 - The public product name is **JPV Bootcamp**.
-- The administrator back office is named **JPV Bootcamp Portal**.
-- Students, clients, and other external users must not see the terms **Payload**, **Payload CMS**, or internal collection and service names in page titles, labels, help text, emails, or client-facing documentation.
-- Payload may remain in source code, developer documentation, migration notes, infrastructure documentation, and other clearly internal technical references.
-- Administrator branding must use Payload's documented `admin.meta` and `admin.components.graphics` configuration so upgrades remain compatible. Do not fork or replace Payload's authentication views merely to change branding.
-- Public and client-facing documentation must describe the system as JPV Bootcamp or JPV Bootcamp Portal according to the audience and surface.
-- Any unavoidable vendor name shown by a third-party runtime must be reviewed before release and either removed through supported configuration or recorded as an explicit exception.
-
-This naming pass is a bounded prerequisite to completing Phase 5. It changes presentation and documentation only; it does not alter identity, authorization, data ownership, or roadmap order.
+- The administrator back office is **JPV Bootcamp Portal**.
+- Students, clients, and other external users must not see **Payload**, **Payload CMS**, internal collection names, or service internals in pages, help text, emails, or client-facing documentation.
+- Payload may remain in source code, internal technical documentation, migrations, and operations notes.
+- Administrator branding uses supported `admin.meta` and `admin.components.graphics` configuration.
+- Client-facing email uses one JPV Bootcamp white-label design delivered through the existing FreeResend service.
 
 ## Philosophy
 
 - Build one coherent application rather than parallel member systems.
-- Keep public, administrator, and member surfaces separate and explicit.
-- Treat identity, authorization, entitlements, privacy, and auditability as product foundations.
-- Preserve proven production flows until their replacements are tested, reconciled, reversible, and approved.
-- Prefer small, demonstrable, independently validated phases over a broad migration rewrite.
+- Keep public, administrator, and member surfaces separate.
+- Treat identity, authorization, entitlements, privacy, communication, and auditability as product foundations.
+- Preserve proven production flows until replacements are tested, reconciled, reversible, and approved.
+- Prefer small, demonstrable phases over broad rewrites.
 - Keep Payload as the administrative system of record and Next.js as the controlled member experience.
 - Retain legacy systems as migration sources, never as accidental target architecture.
 
-## Strategy
-
-- Establish the administrator boundary and shared identity routing first.
-- Build the protected portal and core course experience next.
-- Enforce entitlements and protected resource delivery before expanding account or billing workflows.
-- Add member account, billing, community, and partner-affiliate capabilities as explicit phases on the same security model.
-- Shadow-test and reconcile every replacement before production cutover.
-- Make production database and traffic changes only after the corresponding acceptance gate passes.
-
 ## Final architecture
-
-JPV Bootcamp has three application surfaces:
 
 | Surface | Route | Audience | Purpose |
 |---|---|---|---|
 | Public website | `/` | Everyone | Marketing, pricing, public content, and login entry |
-| Administrator back office | `/admin` | Verified administrators only | Payload CMS administration |
-| Member portal | `/portal` | Verified members only | Courses, community, private groups, account, and billing |
+| Shared login | `/login` | Administrators and members | Direct each verified identity to the correct area |
+| Administrator back office | `/admin` | Verified administrators | Content, members, access, billing, community, affiliates, audit, and operations |
+| Member portal | `/portal` | Verified members | Courses, community, groups, account, billing, and partner activity |
 
-`/login` is the shared authentication entry. After authentication:
-
-- verified administrators redirect to `/admin`;
-- verified members redirect to `/portal`;
-- unresolved, blocked, or unauthorized identities receive no privileged access.
-
-Payload administrator accounts and member identities are separate security domains, even when one person holds both. Members must never receive Payload admin access, administrator API access, or administrator capabilities.
+Administrator accounts and member identities are separate security domains, even when one person holds both. Members never receive administrator access merely because they have an active member record.
 
 ## Binding security rules
 
 1. Authorization is enforced server-side and fails closed.
-2. Hidden navigation is usability only; it is never an authorization control.
-3. Every protected route, API operation, Local API call, mutation, and file operation verifies the authenticated identity and required role or entitlement.
-4. Course, community, private-group, and billing access requires explicit roles, policies, grants, and effective entitlements.
-5. Administrator capabilities are granted explicitly and minimally.
-6. Member sessions cannot be accepted as Payload administrator sessions.
-7. Password onboarding and recovery use expiring set-password or reset links. Plaintext passwords are never emailed.
-8. Secrets, tokens, password-reset codes, Stripe credentials, and private file URLs are never exposed to clients or logs.
-9. Stripe webhooks remain signature-verified and idempotent.
-10. Access is removed or restricted when the authoritative entitlement state no longer permits it.
+2. Hidden navigation is usability only, never authorization.
+3. Every protected route, API operation, mutation, and file request verifies identity and required access.
+4. Member sessions cannot be accepted as administrator sessions.
+5. Password onboarding and recovery use expiring links. Plaintext passwords are never emailed.
+6. Secrets, tokens, reset codes, payment credentials, and private file URLs are never exposed to clients or logs.
+7. Stripe remains authoritative for payment state; verified webhooks are idempotent.
+8. FreeResend delivery events are verified before changing message delivery state.
+9. Production schema and traffic changes require explicit approval.
 
-## Current implementation baseline
+## Current implementation status — 30 June 2026
 
-All work happens on `feature/course-branding-and-preview`. `main` remains the production-safe restore branch.
+### Implemented and manually demonstrated
 
-The repository already contains:
+- Preview deployment runs from `feature/course-branding-and-preview`.
+- Payload administrator area is available at `/admin`.
+- Administrator navigation is grouped by Administration, Courses, Members & Access, Partners & Affiliates, Billing, and Community.
+- Administrator and member records are separate.
+- Course, lesson, entitlement, progress, community-read, billing-mirror, affiliate-reporting, and protected-resource foundations exist.
+- Protected files are served through guarded server routes.
+- Runtime database-schema isolation was repaired for staging migrations.
+- Normal application requests no longer auto-run reviewed Payload migrations.
 
-- Payload CMS in the existing Next.js application;
-- Node 20, pnpm, Next.js 16, React 19, PostgreSQL, and Payload migrations;
-- the administrator route at `/admin`;
-- Payload collections for administrators, members, courses, modules, lessons, access control, billing mirrors, community, CRM/email, and audit records;
-- fail-closed entitlement evaluation and server-side access services;
-- Stripe shadow synchronization behind explicit feature boundaries;
-- queued email processing with dry-run and apply modes;
-- documentation for the target course and member system.
+### Implemented foundation but not complete
 
-The member portal at `/portal`, shared role-based login routing, final administrator navigation, and production cutover remain implementation work.
+- Shared role decision and safe redirect rules exist.
+- Member portal pages exist at `/portal` and related routes.
+- Member records and account status exist.
+- Affiliate collections and administrator summaries exist.
+- JPV administrator branding components exist in source.
+- Queued email and FreeResend-related application capability exists outside Payload.
 
-## Strategy
+### Incomplete validation or user journey
 
-- **One repository** — the public site, Payload back office, and member portal remain inside `jpv-bootcamp`.
-- **Separate surfaces** — administrators use `/admin`; members use `/portal`.
-- **Separate security domains** — administrator and member identities are never treated as interchangeable.
-- **Payload for administration** — Payload manages administrative records and workflows; members do not use the Payload admin interface.
-- **Custom member experience** — `/portal` is a dedicated Next.js interface for member tasks.
-- **Explicit entitlements** — runtime access is derived from authoritative roles, policies, grants, subscription state, and account state.
-- **Non-destructive rollout** — existing WordPress, Stripe, email, and production flows remain unchanged until replacement paths pass all gates.
-- **Database last** — production schema or data changes occur only after local validation and migration review.
-- **Small reversible steps** — each implementation phase has focused validation, an explicit commit, and a rollback point.
+- Ordinary members cannot yet complete a usable credential login flow.
+- The current Payload login screen still shows Payload branding instead of the JPV Bootcamp logo.
+- Payload is not yet connected to the existing FreeResend delivery path.
+- Invitation, verification, set-password, reset-password, password-change, and profile-change emails are incomplete.
+- Member logout, blocked/suspended states, and recovery journeys need end-to-end validation.
+- The affiliate Payload migration still requires explicit staging application and verification.
+- Billing self-service, community publishing, partner application delivery, and cutover remain pending.
 
 ## Execution roadmap
 
 ### Phase 1 — Finalize the administrator boundary
 
-Deliverables:
+**Status:** Implemented foundation; branding validation remains.
 
-- Payload is served only from `/admin`;
-- `/admin` and administrator APIs reject non-administrators;
-- the Payload login and admin UI use JPV Bootcamp branding;
-- logout terminates the administrator session and returns to the login screen;
-- the administrator sidebar is concise and grouped by daily tasks;
-- operational collections remain available through relationships or direct authorized workflows but are not primary navigation.
+Tasks:
 
-Visible administrator navigation:
-
-- **Courses** — Courses, Modules, Lessons
-- **Members & Access** — Members, Member Groups, Access Groups
-- **Community** — Community Spaces, Community Posts
-- **Billing** — Subscriptions, Payments, Billing Accounts
-- **Administration** — Administrators
+- serve administration only from `/admin`;
+- reject non-administrators from administrator routes and APIs;
+- group navigation by daily work;
+- keep operational records available without dominating navigation;
+- replace the Payload login logo and titles with JPV Bootcamp Portal branding;
+- verify administrator login and logout.
 
 Validation:
 
-- anonymous and member requests to `/admin` fail closed;
-- administrator login succeeds and redirects to `/admin`;
-- logout does not automatically re-authenticate;
-- direct collection URLs enforce the same access rules as navigation;
-- Payload import-map generation and TypeScript checks pass under Node 20.
+- administrator login succeeds;
+- member and anonymous requests fail closed;
+- direct collection URLs enforce access rules;
+- the login screen shows JPV Bootcamp branding only.
 
-### Phase 2 — Implement shared login routing
+### Phase 2 — Complete shared login and member authentication
 
-Deliverables:
+**Status:** Server-side routing foundation exists; credential journey incomplete.
 
-- `/login` authenticates without assuming the destination;
-- verified administrators redirect to `/admin`;
-- verified members redirect to `/portal`;
-- blocked, suspended, unresolved, or conflicting identities receive a safe error state;
-- administrator and member sessions remain isolated.
+Tasks:
+
+- provide a branded member login form at `/login`;
+- authenticate members against the member auth collection;
+- redirect administrators to `/admin` and members to `/portal`;
+- keep administrator and member sessions isolated;
+- complete member and administrator logout;
+- handle blocked, suspended, unresolved, and conflicting identities safely.
 
 Validation:
 
-- role routing is determined server-side;
-- redirect parameters cannot escape approved routes;
-- a member account cannot obtain an administrator session;
-- an administrator without a member identity does not automatically receive member entitlements;
-- logout clears only the intended session and returns to a non-privileged screen.
+- an active member can sign in and reach `/portal`;
+- a member cannot obtain an administrator session;
+- blocked and suspended members receive no privileged access;
+- redirect parameters cannot escape approved routes.
 
-### Phase 3 — Build the member portal shell
+### Phase 3 — Complete the member portal shell
 
-Create:
+**Status:** Implemented foundation.
 
-- `/portal`
-- `/portal/courses`
-- `/portal/community`
-- `/portal/groups`
-- `/portal/account`
-- `/portal/billing`
+Tasks:
 
-Deliverables:
-
-- member-specific navigation;
-- responsive authenticated layout;
-- account overview;
-- empty, loading, unauthorized, blocked, and error states;
-- no Payload administrative components or terminology.
+- finish `/portal`, courses, community, groups, account, and billing navigation;
+- complete responsive, loading, empty, unauthorized, and error states;
+- remove all Payload terminology from member pages;
+- finish member-owned account summaries.
 
 Validation:
 
 - anonymous users redirect to `/login`;
-- administrators do not receive member access unless they also have a valid member identity;
-- all portal data is loaded through server-side authorization boundaries.
+- all portal data loads through server-side authorization;
+- representative mobile and desktop journeys pass.
 
-### Phase 4 — Enforce course and group access
+### Phase 4 — Complete course, group, and protected-resource access
 
-Deliverables:
+**Status:** Implemented and validated foundation.
 
-- member course listing from effective entitlements;
-- course, module, lesson, community, and private-group access checks;
-- explicit Free, Pro, VIP, manual, suspended, expired, and revoked states;
-- private media and document delivery through authorized server paths;
-- administrative grant and revoke workflows with audit records.
+Tasks:
+
+- finish course, module, lesson, community, and group checks;
+- preserve Free, Pro, VIP, manual, suspended, expired, and revoked states;
+- finish grant/revoke administration and reconciliation;
+- move private storage to production-suitable shared or object storage before cutover.
 
 Validation:
 
-- every protected resource denies access when no explicit entitlement exists;
-- hidden UI cannot be bypassed through direct URLs or APIs;
+- direct URLs and APIs cannot bypass access checks;
 - entitlement changes take effect predictably;
-- reconciliation reports identify inconsistent access states;
-- private Bunny or storage assets are never exposed through permanent public URLs.
+- private assets never expose permanent public URLs.
 
 ### Phase 5 — Complete account and password workflows
 
-Deliverables:
+**Status:** Planned; required before wider member rollout.
+
+Tasks:
 
 - secure member invitation;
+- email verification;
 - expiring set-password and reset-password links;
 - member password change;
-- profile update;
-- account block and restore;
+- profile and email-address update;
+- account block, suspend, restore, and deletion workflows;
 - administrator audit visibility.
 
 Validation:
 
-- no plaintext passwords are stored, logged, or emailed;
-- tokens are single-use, time-limited, and invalidated after success;
+- no plaintext password is stored, logged, or emailed;
+- tokens are single-use and time-limited;
 - blocked accounts lose portal access;
-- sensitive account changes require appropriate re-authentication or verification.
+- sensitive changes require re-authentication or verification.
 
-### Phase 6 — Complete billing self-service
+### Phase 6 — Complete branded communications and FreeResend delivery
 
-Deliverables:
+**Status:** Approved and documented; implementation pending.
 
-- current plan and billing state in `/portal/billing`;
-- Stripe-hosted customer portal or equivalent secure self-service;
-- Pro-to-VIP upgrade;
-- cancellation and renewal-state visibility;
-- webhook-driven billing mirror and entitlement reconciliation.
+Detailed specification: `docs/PAYLOAD_COMMUNICATIONS_PLAN.md`.
+
+Tasks:
+
+- connect Payload to the existing FreeResend service;
+- use one JPV Bootcamp HTML and plain-text template system;
+- add delivery records, verified provider events, bounded retries, and administrator visibility;
+- implement account, verification, invitation, password, profile, and security messages;
+- implement purchase, subscription, payment, retry, cancellation, refund, invoice, billing-hold, and access-restored messages;
+- implement enrollment, release, progress, completion, certificate, community, group, and moderation notifications;
+- implement partner application, referral, commission, payout, delivery, and operational alerts;
+- separate transactional, notification, and broadcast communication;
+- add preference and unsubscribe handling for optional messages.
 
 Validation:
 
-- Stripe remains authoritative for payment state;
-- webhook signatures and idempotency are verified;
-- client input never directly grants paid access;
-- failed, canceled, refunded, disputed, and recovered payments produce defined entitlement states;
-- administrators can inspect billing state without exposing secrets.
+- Payload sends through FreeResend in staging;
+- authentication and password journeys work end to end;
+- every approved template has HTML and plain-text output;
+- security links are server-generated, time-limited, and environment-correct;
+- optional messages respect preferences;
+- provider events are verified and idempotent;
+- no client-facing message contains Payload branding.
 
-### Phase 7 — Complete community and announcements
+### Phase 7 — Complete billing self-service
 
-Deliverables:
+**Status:** Planned; billing mirror foundation exists.
 
-- member community feed;
-- announcements;
-- authorized community and private-group publishing;
+Tasks:
+
+- show current plan and billing state in `/portal/billing`;
+- provide Stripe-hosted customer self-service;
+- support upgrades, cancellation, renewal, failed-payment recovery, refunds, and billing holds;
+- reconcile webhook-driven billing state with entitlements;
+- connect billing events to Phase 6 communications.
+
+Validation:
+
+- Stripe remains authoritative;
+- client input cannot grant paid access;
+- failed, canceled, refunded, disputed, and recovered payments produce defined access and email outcomes.
+
+### Phase 8 — Complete community publishing and notifications
+
+**Status:** Read-only foundation exists.
+
+Tasks:
+
+- member community feed and announcements;
+- authorized publishing for community and private groups;
 - text, images, video references, links, and documents;
-- Bunny integration through private, authorized delivery paths where required.
+- moderation and reporting;
+- mentions, replies, announcements, group changes, digests, and preferences through Phase 6.
 
 Validation:
 
 - publishing permissions are explicit;
 - private-group content cannot be fetched by unauthorized members;
 - uploads enforce type, size, and ownership rules;
-- external media identifiers and signed URLs are handled server-side.
+- optional notifications respect preferences.
 
-### Phase 8 — Implement partner affiliate applications and reporting
+### Phase 9 — Complete partner affiliates and reporting
 
-Deliverables:
+**Status:** Administrator collection and reporting foundation implemented; member and delivery journeys pending.
 
-- Payload-managed partner affiliate directory;
-- authenticated member partner-selection and application form;
-- member application history in `/portal`;
-- administrator application, click, submission, and delivery reporting in `/admin`;
-- server-side CSV export with audit records;
-- queued email, webhook, redirect, or manual-export delivery modes;
-- privacy-safe event tracking for partner views, clicks, submissions, delivery, retries, status changes, and exports;
-- dry-run reconciliation against retained Prisma and WordPress partner records.
+Detailed specification: `docs/PAYLOAD_PARTNER_AFFILIATE_PLAN.md`.
+
+Tasks:
+
+- complete the partner directory;
+- add authenticated member application and history;
+- record applications before redirect or delivery;
+- complete reports, CSV export, delivery modes, retries, and audit;
+- add partner and affiliate communications through Phase 6;
+- reconcile retained legacy partner records before cutover.
 
 Validation:
 
-- every application is linked to the authenticated Payload member and selected active partner;
-- the application record exists before redirect or external delivery;
-- members can read only their own application history;
-- administrators can filter and export authorized partner reports;
-- client input cannot supply trusted affiliate URLs, webhook endpoints, recipient addresses, member IDs, or delivery status;
+- members read only their own applications;
+- trusted destinations are never supplied by the browser;
 - delivery is idempotent and retryable;
-- legacy partner sessions, clicks, sponsored applications, and reports remain unchanged until explicit cutover approval.
+- administrators can filter and export authorized reports.
 
-Implementation details and legacy inventory are defined in:
+### Phase 10 — Shadow validation and cutover
 
-- `docs/PAYLOAD_PARTNER_AFFILIATE_PLAN.md`;
-- `docs/archive/PARTNER_AFFILIATE_LEGACY.md`.
-
-### Phase 9 — Shadow validation and cutover
+**Status:** Pending.
 
 Before replacing any existing production flow:
 
-1. Run identity, entitlement, billing, email, content, and partner-affiliate reconciliation.
-2. Verify reviewed Payload migrations touch only approved `payload_*` objects.
-3. Test administrator and member journeys in an isolated environment.
+1. Apply and verify reviewed migrations only in the approved environment.
+2. Run identity, entitlement, billing, email, content, and partner reconciliation.
+3. Test administrator and member journeys in isolation.
 4. Test rollback without deleting production data.
-5. Confirm monitoring, audit, support, and recovery procedures.
+5. Confirm monitoring, audit, support, delivery, and recovery procedures.
 6. Obtain explicit approval for each cutover boundary.
 
-Only then may an existing WordPress or production responsibility be disabled or redirected.
+Only then may an existing production responsibility be disabled or redirected.
+
+## Communication scope summary
+
+The approved communication system distinguishes:
+
+- **Transactional:** account, security, billing, enrollment, access, and required operational messages.
+- **Notification:** learning reminders, community activity, progress, and announcements.
+- **Broadcast:** newsletters, promotions, events, and administrator-selected group messages.
+- **Administrator:** invitations, role changes, reports, delivery failures, payment/webhook failures, security, and operations.
+- **Member:** account, learning, billing, group, community, and partner activity.
+
+The complete event inventory, recipient rules, content, action buttons, preferences, audit, retries, and delivery states are defined in `docs/PAYLOAD_COMMUNICATIONS_PLAN.md`.
 
 ## Migration and database guardrails
 
-- Payload collection schema changes require generated types and reviewed migration output.
-- Stop if a Payload migration touches an unapproved non-`payload_*` table or object.
-- Never apply prototype or unreviewed migrations to production.
-- Production writes require an explicit apply step; dry-run is the default for reconciliation, email delivery, and migration inspection tools.
-- Existing production tables, users, subscriptions, automations, and WordPress flows remain intact until their specific cutover is approved.
+- Payload schema changes require generated types and reviewed migration output.
+- Migrations must resolve the intended runtime schema and fail closed on invalid configuration.
+- Normal application requests must not auto-apply reviewed migrations.
+- Production writes require an explicit approved apply step.
+- Existing production users, subscriptions, automations, content, and legacy flows remain intact until their cutover is approved.
 
 ## Validation gate for every phase
 
 A phase is complete only when:
 
 - the smallest relevant type check passes;
-- focused tests for changed authorization and business rules pass;
-- the affected administrator and member journeys are manually verified;
+- focused authorization and business-rule tests pass;
+- affected administrator and member journeys are manually verified;
+- documentation and client progress status are updated;
 - no secret or private data is exposed;
-- migrations are reviewed when schemas change;
-- rollback is documented and tested where risk warrants it;
-- documentation matches the implemented behavior;
-- changes are committed on `feature/course-branding-and-preview` with explicit paths.
+- migrations and provider events are reviewed where relevant;
+- rollback or recovery is understood;
+- explicit approval is recorded for production boundary changes.
 
-## Rollback
+## Immediate milestone
 
-- Before production cutover, revert the phase-specific feature-branch commit.
-- `main` remains the production-safe code restore branch.
-- Feature flags default off for shadow integrations and incomplete replacement paths.
-- Do not delete production data as part of rollback.
-- Keep inert `payload_*` records when removal would increase recovery risk.
-- Re-enable or retain the existing WordPress, Stripe, email, and automation path until the replacement is proven.
+Complete member authentication, account security, JPV login branding, and the FreeResend communications foundation. Then continue with billing self-service, community publishing, partner delivery, and the representative pilot.
 
-## Stop conditions
+## Definition of done
 
-Stop implementation when:
-
-- administrator and member authorization cannot be proven separate;
-- a protected operation relies only on hidden navigation or client-side checks;
-- an entitlement decision is ambiguous or fails open;
-- a migration affects an unapproved database object;
-- Stripe or email processing is not idempotent;
-- private assets can be accessed without authorization;
-- rollback is unavailable;
-- the implementation contradicts this plan or the canonical invariants.
+- Administrator and member areas are visibly and technically separate.
+- Shared login sends every verified identity to the correct area.
+- Members can learn, download allowed resources, and track progress.
+- Account invitation, verification, setup, reset, profile, and security workflows are complete.
+- All approved client-facing communication uses the JPV Bootcamp design and FreeResend delivery.
+- Billing status, recovery, and payment communication are available to the correct member.
+- Community publishing and notifications follow explicit permissions and preferences.
+- Members can apply to approved partners and see their own history.
+- Administrators can manage partners, inspect delivery, and export reports.
+- A representative pilot passes the acceptance plan.
+- Migration, reconciliation, rollback, and cutover are demonstrated and approved.
