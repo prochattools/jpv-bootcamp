@@ -53,6 +53,10 @@ jobs:
           tags: |
             ghcr.io/${{ github.repository }}:${{ steps.docker-tag.outputs.tag }}
             ghcr.io/${{ github.repository }}:${{ github.sha }}
+          build-args: |
+            NEXT_PUBLIC_APP_URL=https://preview.jpvbootcamp.com
+            APP_BASE_URL=https://preview.jpvbootcamp.com
+            NEXT_PUBLIC_SERVER_URL=https://preview.jpvbootcamp.com
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
