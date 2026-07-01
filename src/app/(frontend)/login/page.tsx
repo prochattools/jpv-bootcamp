@@ -3,12 +3,14 @@ import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 
 import { MemberLoginForm } from '@/components/auth/MemberLoginForm'
+import { MemberVerificationResendForm } from '@/components/auth/MemberVerificationResendForm'
 import { resolvePayloadRequestSession } from '@/lib/auth/payloadSession'
 import { decideSharedLogin } from '@/lib/auth/sharedLoginDecision'
 
 type LoginSearchParams = {
   next?: string | string[]
   redirect?: string | string[]
+  verification?: string | string[]
 }
 
 type LoginPageProps = {
@@ -23,6 +25,15 @@ function firstValue(value: string | string[] | undefined): string | null {
 export default async function SharedLoginPage({ searchParams }: LoginPageProps) {
   const [requestHeaders, params] = await Promise.all([headers(), searchParams])
   const requestedDestination = firstValue(params?.next) ?? firstValue(params?.redirect)
+  const verificationResult = firstValue(params?.verification)
+  const verificationMessage =
+    verificationResult === 'success'
+      ? 'Your email address has been verified. You can now continue with member sign-in.'
+      : verificationResult === 'used'
+        ? 'This verification link has already been used. You can request another email below if needed.'
+        : verificationResult === 'invalid'
+          ? 'This verification link is invalid or expired. You can request another email below.'
+          : null
 
   let status: 'anonymous' | 'denied' | 'unavailable' = 'anonymous'
 
@@ -59,8 +70,17 @@ export default async function SharedLoginPage({ searchParams }: LoginPageProps) 
         />
         <h1 className='mt-8 text-center text-3xl font-semibold text-neutral-950'>Sign in</h1>
         <p className='mt-3 text-center text-sm leading-6 text-neutral-600'>{message}</p>
+        {verificationMessage ? (
+          <p
+            className='mt-4 rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm leading-6 text-neutral-700'
+            role='status'
+          >
+            {verificationMessage}
+          </p>
+        ) : null}
 
         <MemberLoginForm requestedDestination={requestedDestination} />
+        <MemberVerificationResendForm />
 
         <div className='mt-6 border-t border-neutral-200 pt-6'>
           <p className='text-center text-sm text-neutral-600'>Administrator account?</p>

@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto'
 
 import { normalizeEmail } from '@/lib/normalize-email'
+import { getSystemEmailTemplate } from '@/lib/payloadCourse/systemEmailTemplates'
 import { redactDeliveredResetLink } from '@/lib/members/redactDeliveredResetLink'
 import type {
   PayloadCourseWriteAPI,
@@ -183,12 +184,14 @@ async function findActiveTemplate(
   payload: PayloadCourseWriteAPI,
   templateKey: string
 ): Promise<PayloadDocument | null> {
-  return findOne(payload, 'payload_email_templates', {
+  const storedTemplate = await findOne(payload, 'payload_email_templates', {
     and: [
       { templateKey: { equals: templateKey } },
       { status: { equals: 'active' } },
     ],
   })
+
+  return storedTemplate ?? getSystemEmailTemplate(templateKey)
 }
 
 function buildSendPayload(
