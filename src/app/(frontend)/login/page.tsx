@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 
+import { MemberLoginForm } from '@/components/auth/MemberLoginForm'
 import { resolvePayloadRequestSession } from '@/lib/auth/payloadSession'
 import { decideSharedLogin } from '@/lib/auth/sharedLoginDecision'
 
@@ -59,16 +60,16 @@ export default async function SharedLoginPage({ searchParams }: LoginPageProps) 
         <h1 className='mt-8 text-center text-3xl font-semibold text-neutral-950'>Sign in</h1>
         <p className='mt-3 text-center text-sm leading-6 text-neutral-600'>{message}</p>
 
-        <div className='mt-8 grid gap-3'>
+        <MemberLoginForm requestedDestination={requestedDestination} />
+
+        <div className='mt-6 border-t border-neutral-200 pt-6'>
+          <p className='text-center text-sm text-neutral-600'>Administrator account?</p>
           <Link
-            className='rounded-lg bg-neutral-950 px-4 py-3 text-center text-sm font-semibold text-white'
+            className='mt-3 block rounded-lg border border-neutral-300 px-4 py-3 text-center text-sm font-semibold text-neutral-950'
             href='/admin/login'
           >
-            JPV Bootcamp Portal sign in
+            JPV Bootcamp Portal administrator sign in
           </Link>
-          <div className='rounded-lg border border-neutral-200 px-4 py-3 text-center text-sm text-neutral-600'>
-            JPV Bootcamp student and member sign-in continues through the secure member area.
-          </div>
         </div>
       </section>
     </main>

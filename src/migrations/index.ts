@@ -3,6 +3,7 @@ import * as migration_20260621_194424_course_system_phase1 from './20260621_1944
 import * as migration_20260622_093852_course_private_media from './20260622_093852_course_private_media';
 import * as migration_20260627_010700_structured_community_attachments from './20260627_010700_structured_community_attachments';
 import * as migration_20260630_100730_affiliate_reporting from './20260630_100730_affiliate_reporting';
+import * as migration_20260630_190000_payload_preferences_id_constraint from './20260630_190000_payload_preferences_id_constraint';
 
 export const migrations = [
   {
@@ -28,6 +29,11 @@ export const migrations = [
   {
     up: migration_20260630_100730_affiliate_reporting.up,
     down: migration_20260630_100730_affiliate_reporting.down,
-    name: '20260630_100730_affiliate_reporting'
+    name: '20260630_100730_affiliate_reporting',
+  },
+  {
+    up: migration_20260630_190000_payload_preferences_id_constraint.up,
+    down: migration_20260630_190000_payload_preferences_id_constraint.down,
+    name: '20260630_190000_payload_preferences_id_constraint',
   },
 ];

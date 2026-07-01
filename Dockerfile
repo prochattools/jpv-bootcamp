@@ -27,6 +27,7 @@ ENV APP_BASE_URL=${APP_BASE_URL}
 ENV NEXT_PUBLIC_SERVER_URL=${NEXT_PUBLIC_SERVER_URL}
 RUN --mount=type=cache,target=/app/.next/cache \
     node_modules/.bin/prisma generate --schema=prisma/system.prisma && \
+    pnpm generate:importmap && \
     pnpm run build
 
 # ---- Script deps (kept separate to avoid conflicting with standalone's pnpm symlinks) ----

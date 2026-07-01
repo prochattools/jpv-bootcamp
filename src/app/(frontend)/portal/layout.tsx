@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 
+import { MemberLogoutButton } from '@/components/auth/MemberLogoutButton'
 import { requirePortalMember } from '@/lib/auth/requirePortalMember'
 
 const portalLinks = [
@@ -24,17 +25,20 @@ export default async function PortalLayout({ children }: { children: ReactNode }
             <span className='text-lg font-semibold'>Member Portal</span>
           </Link>
 
-          <nav aria-label='Member portal' className='flex flex-wrap gap-2'>
-            {portalLinks.map((link) => (
-              <Link
-                className='rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 transition hover:bg-neutral-100 hover:text-neutral-950'
-                href={link.href}
-                key={link.href}
-              >
-                {link.label}
-              </Link>
-            ))}
-          </nav>
+          <div className='flex flex-col gap-3 md:items-end'>
+            <nav aria-label='Member portal' className='flex flex-wrap gap-2'>
+              {portalLinks.map((link) => (
+                <Link
+                  className='rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 transition hover:bg-neutral-100 hover:text-neutral-950'
+                  href={link.href}
+                  key={link.href}
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </nav>
+            <MemberLogoutButton />
+          </div>
         </div>
       </header>
 
