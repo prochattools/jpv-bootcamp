@@ -1,0 +1,52 @@
+import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+
+function read(path: string): string {
+  return readFileSync(new URL(`../${path}`, import.meta.url), 'utf8')
+}
+
+const validation = read('.github/workflows/deploy-preview.yml')
+const publication = read('.github/workflows/publish-preview-image.yml')
+const docs = read('docs/PREVIEW_RELEASE_READINESS.md')
+
+assert.match(validation, /name: Preview Validation/)
+assert.match(validation, /push:/)
+assert.match(validation, /pull_request:/)
+assert.match(validation, /permissions:\s*\n\s*contents: read/)
+assert.doesNotMatch(validation, /packages: write/)
+assert.doesNotMatch(validation, /docker\/login-action/)
+assert.doesNotMatch(validation, /push: true/)
+assert.match(validation, /push: false/)
+assert.doesNotMatch(validation, /DOKPLOY|application\.deploy|payload:staging:migrate|payload:email:send|--apply/)
+assert.match(validation, /pnpm type-check:payload/)
+assert.match(validation, /pnpm run build/)
+assert.match(validation, /timeout-minutes: 30/)
+assert.match(validation, /cancel-in-progress: true/)
+
+assert.match(publication, /name: Publish Preview Image/)
+assert.match(publication, /workflow_dispatch:/)
+assert.match(publication, /commit_sha:/)
+assert.match(publication, /confirmation:/)
+assert.match(publication, /source_date:/)
+assert.match(publication, /environment: preview-image-publish/)
+assert.match(publication, /contents: read/)
+assert.match(publication, /packages: write/)
+assert.match(publication, /REQUESTED_SHA/)
+assert.match(publication, /CONFIRMATION: \$\{\{ inputs\.confirmation \}\}/)
+assert.match(publication, /SOURCE_DATE: \$\{\{ inputs\.source_date \}\}/)
+assert.match(publication, /\$\{#REQUESTED_SHA\}" -ne 40/)
+assert.match(publication, /\[ "\$CONFIRMATION" != "publish-preview-image" \]/)
+assert.match(publication, /source_date is required/)
+assert.match(publication, /git rev-parse HEAD/)
+assert.match(publication, /docker\/login-action@v3/)
+assert.match(publication, /push: true/)
+assert.match(publication, /IMAGE_REFERENCE: ghcr\.io\/\$\{\{ github\.repository \}\}:\$\{\{ inputs\.commit_sha \}\}/)
+assert.doesNotMatch(publication, /:latest/)
+assert.doesNotMatch(publication, /DOKPLOY|application\.deploy|payload:staging:migrate|payload:email:send|--apply/)
+assert.match(publication, /Image publication does not deploy/)
+
+assert.match(docs, /Preview Validation/)
+assert.match(docs, /Publish Preview Image/)
+assert.doesNotMatch(docs, /push authorizes image publication/i)
+
+console.log('preview_workflow_safety.test.ts passed')

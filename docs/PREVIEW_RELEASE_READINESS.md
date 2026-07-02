@@ -1,12 +1,65 @@
 # JPV Bootcamp Preview Release Readiness
 
-This runbook separates repository changes, image publication, Payload migrations, Prisma startup behavior, provider email delivery, and preview deployment into independent approval categories.
+This runbook separates repository changes, image publication, Payload migrations, Prisma startup behavior, provider email delivery, preview deployment, and smoke verification into independent approval categories.
 
 ## Scope and safety boundary
 
 The preview release path must use the reviewed feature branch and an exact commit. Approval for one operation never authorizes another.
 
 The protected local files `.graphifyignore` and `docs/HANDOFF_AUTH_BRANDING_STAGING_2026-06-30.md` are outside this runbook and must not be staged.
+
+## Workflow architecture
+
+The previous preview workflow published an image from ordinary feature-branch pushes. That behavior is intentionally replaced.
+
+### Preview Validation
+
+`.github/workflows/deploy-preview.yml` is now named `Preview Validation`. It runs on feature-branch pushes and pull requests with `contents: read` permission only.
+
+It may install dependencies, run preview/release safety tests, type-check, build the application, and build the Dockerfile with `push: false`.
+
+It must not log in to GHCR, publish an image, call Dokploy, deploy, run Payload migrations, run Prisma migrations, execute `database-deploy` startup, initialize a database, run queued provider email, or perform live smoke checks.
+
+### Publish Preview Image
+
+`.github/workflows/publish-preview-image.yml` is named `Publish Preview Image`. It runs only by `workflow_dispatch`, requires a full `commit_sha`, a target environment, a confirmation phrase, and a reproducible `source_date`, checks out exactly that SHA, verifies `git rev-parse HEAD`, and publishes only an immutable SHA-tagged image such as:
+
+```text
+ghcr.io/<repository>:<full-commit-sha>
+```
+
+It uses the `preview-image-publish` GitHub environment, `contents: read`, and `packages: write`. It must not publish `latest`, deploy, call Dokploy, run migrations, start database-deploy behavior, call a provider, or perform live smoke checks.
+
+A Git push does not authorize image publication. Image publication does not authorize deployment. Image publication does not authorize Payload migrations, Prisma/database-deploy startup, provider dry-run, provider apply, or smoke verification.
+
+## Release manifest and offline preflight
+
+Generate non-secret release metadata with:
+
+```sh
+pnpm preview:release:manifest --commit-sha=<40-char-sha> --image-reference=<immutable-image> --target-environment=preview
+```
+
+The manifest records repository, commit, immutable image reference, target environment, startup mode, deployment runtime, Node 20, pnpm 10.33.0, the exact Payload migration order, authorization booleans, required configuration names, and optional rollback/artifact metadata. It must not contain secrets, database URLs, connection strings, sender addresses, recipient addresses, tokens, action URLs, GitHub tokens, or provider credentials.
+
+Validate a local authorization packet without performing operations:
+
+```sh
+pnpm preview:release:preflight --authorization-file=<local-json>
+```
+
+Offline preflight validates each category independently:
+
+- Git push;
+- image publication;
+- Payload migration;
+- Prisma/database-deploy startup;
+- provider dry-run;
+- provider apply;
+- preview deployment;
+- post-deployment smoke verification.
+
+Preflight does not push, log in to a registry, connect to a database, run migration status, execute migrations, initialize Payload, call a provider, call deployment infrastructure, or perform smoke requests.
 
 ## Pending Payload migration order
 
@@ -91,6 +144,32 @@ Apply mode requires:
 
 No provider delivery should occur merely because a preview image was published or deployed.
 
+Supported account-security provider flow/template keys for release authorization are:
+
+- `member-email-verification`
+- `member-invitation`
+- `member-password-reset`
+- `member-password-changed`
+- `member-email-change-confirmation`
+- `member-email-change-requested`
+- `member-email-changed`
+- `access-blocked`
+- `access-restored`
+
+Provider dry-run and provider apply are mutually independent. Dry-run authorization never authorizes provider apply. Provider apply requires an approved non-secret sender identity identifier, recipient scope, exact flow list, retry policy, operator, and stop conditions.
+
+## Smoke verification
+
+Plan smoke verification without making network requests:
+
+```sh
+pnpm preview:smoke:plan
+```
+
+The default smoke harness is inert and prints a plan. Future live execution requires explicit `--execute`, an exact HTTPS target, and a valid authorization file. Smoke authorization remains separate from Git push, image publication, migrations, provider dry-run, provider apply, and deployment.
+
+Planned checks classify whether they require network access, authentication, mutation, database reads, database writes, provider calls, and the authorization category required. Do not embed credentials, recipient addresses, real tokens, or provider secrets in smoke plans.
+
 ## Public account-action route controls
 
 Member account-action API routes accept only bounded JSON request bodies and return `Cache-Control: no-store`. Token completion routes redirect to fixed clean login result URLs rather than reflecting callback destinations.
@@ -165,6 +244,20 @@ Window: <time>
 This does not authorize Payload migrations, Prisma migration/startup behavior, provider email delivery, preview deployment, production deployment, merge, rebase, reset, or force-push.
 ```
 
+### Image publication authorization
+
+```text
+Authorize image publication only.
+Repository: prochattools-jpv-bootcamp
+Commit: <exact 40-character commit>
+Target environment label: <preview|staging>
+Image reference: ghcr.io/<repository>:<exact commit>
+Operator: <name>
+Stop conditions: <conditions>
+
+This does not authorize Git push, Payload migrations, Prisma/database-deploy startup, provider dry-run, provider apply, preview deployment, production deployment, live smoke checks, merge, rebase, reset, or force-push.
+```
+
 ### Payload migration authorization
 
 ```text
@@ -231,4 +324,19 @@ Rollback image and owner: <exact values>
 Window: <time>
 
 This does not authorize push, Payload migrations, Prisma database operations, provider delivery, production deployment, or operations on main.
+```
+
+### Post-deployment smoke authorization
+
+```text
+Authorize post-deployment smoke verification only.
+Commit/image: <exact value>
+Target: <exact HTTPS target>
+Allowed checks: <exact list>
+Database access allowed: <yes/no>
+Provider email allowed: <yes/no>
+Operator: <name>
+Stop conditions: <conditions>
+
+This does not authorize push, image publication, Payload migrations, Prisma/database-deploy startup, provider apply, preview deployment, production deployment, or operations on main.
 ```

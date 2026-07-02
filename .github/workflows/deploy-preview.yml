@@ -1,72 +1,66 @@
-# Deploy feature branches to preview/staging environment.
-# - Builds Docker image on GitHub
-# - Pushes to GHCR with branch tag
-# - Publishes a Docker image for the preview app
-# - External preview automation may redeploy after the image is published
-# - The runtime must keep STARTUP_MODE=application-only unless database deployment is separately approved
-# - Push, Payload migrations, Prisma startup behavior, provider email delivery, and deployment remain independent approvals
-#
-# Required GitHub secrets:
-#   DOKPLOY_PREVIEW_APP_ID — Dokploy application ID for the preview/staging app
-#   DOKPLOY_API_KEY        — Dokploy server API key
-#   DOKPLOY_API_BASE_URL   — Dokploy API base URL (e.g., https://dokploy.prochat.tools)
-
-name: Build and Deploy to Preview
+name: Preview Validation
 
 on:
   push:
     branches:
       - 'feature/**'
       - 'pr/**'
+  pull_request:
+    branches:
+      - main
+      - 'feature/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: preview-validation-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  build-and-deploy-preview:
+  validate-preview:
+    name: Validate preview release inputs
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
+    timeout-minutes: 30
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out commit
+        uses: actions/checkout@v4
 
-      - uses: docker/setup-buildx-action@v3
-
-      - uses: docker/login-action@v3
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          node-version: '20'
+          cache: pnpm
 
-      - name: Determine Docker tag
-        id: docker-tag
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run preview and release safety tests
         run: |
-          if [ "${{ github.ref_name }}" = "main" ]; then
-            TAG="latest"
-          else
-            TAG=$(echo "${{ github.ref_name }}" | sed 's|/|-|g')
-          fi
-          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          pnpm exec tsx scripts/preview_readiness_config.test.ts
+          pnpm exec tsx scripts/preview_startup_mode.test.ts
+          pnpm exec tsx scripts/preview_workflow_safety.test.ts
+          pnpm exec tsx scripts/preview_release_manifest.test.ts
+          pnpm exec tsx scripts/preview_release_preflight.test.ts
+          pnpm exec tsx scripts/preview_smoke_plan.test.ts
 
-      - name: Build and push
+      - name: Type-check
+        run: pnpm type-check:payload
+
+      - name: Build application
+        run: pnpm run build
+
+      - name: Validate Dockerfile without publishing
         uses: docker/build-push-action@v5
         with:
           context: .
+          file: Dockerfile
           platforms: linux/amd64
-          push: true
-          tags: |
-            ghcr.io/${{ github.repository }}:${{ steps.docker-tag.outputs.tag }}
-            ghcr.io/${{ github.repository }}:${{ github.sha }}
-          build-args: |
-            NEXT_PUBLIC_APP_URL=https://preview.jpvbootcamp.com
-            APP_BASE_URL=https://preview.jpvbootcamp.com
-            NEXT_PUBLIC_SERVER_URL=https://preview.jpvbootcamp.com
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Image pushed to GHCR
-        run: |
-          echo "✅ Docker image built and pushed to GHCR:"
-          echo "   ghcr.io/${{ github.repository }}:${{ steps.docker-tag.outputs.tag }}"
-          echo ""
-          echo "External preview automation may pull this image after separate deployment authorization."
-          echo "Runtime must remain STARTUP_MODE=application-only unless database deployment is separately approved."
+          push: false
+          tags: ghcr.io/${{ github.repository }}:${{ github.sha }}
+          cache-from: type=gha,scope=preview-validation
+          cache-to: type=gha,mode=max,scope=preview-validation

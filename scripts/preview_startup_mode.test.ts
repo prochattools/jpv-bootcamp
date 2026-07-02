@@ -33,9 +33,12 @@ assert.match(nixpacks, /pnpm@10\.33\.0/)
 assert.match(nixpacks, /pnpm install --frozen-lockfile/)
 assert.match(nixpacks, /bash scripts\/runtime\/start-prod\.sh/)
 
+assert.match(previewWorkflow, /name: Preview Validation/)
 assert.match(previewWorkflow, /docker\/build-push-action@v5/)
 assert.match(previewWorkflow, /context: \./)
-assert.match(previewWorkflow, /STARTUP_MODE=application-only/)
+assert.match(previewWorkflow, /push: false/)
+assert.doesNotMatch(previewWorkflow, /push: true/)
+assert.doesNotMatch(previewWorkflow, /packages: write/)
 assert.doesNotMatch(previewWorkflow, /nixpacks/i)
 
 assert.match(startup, /STARTUP_MODE="\$\{STARTUP_MODE:-application-only\}"/)

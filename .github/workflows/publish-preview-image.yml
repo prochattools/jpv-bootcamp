@@ -1,0 +1,159 @@
+name: Publish Preview Image
+
+on:
+  workflow_dispatch:
+    inputs:
+      commit_sha:
+        description: Full 40-character commit SHA to publish
+        required: true
+        type: string
+      target_environment:
+        description: Target environment label for publication metadata
+        required: true
+        type: choice
+        options:
+          - preview
+          - staging
+      confirmation:
+        description: Type publish-preview-image to confirm image publication only
+        required: true
+        type: string
+      release_label:
+        description: Optional immutable release label for the manifest
+        required: false
+        type: string
+      source_date:
+        description: Reproducible source date or build timestamp for labels and manifest
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: preview-image-publish-${{ inputs.target_environment }}
+  cancel-in-progress: false
+
+jobs:
+  publish-preview-image:
+    name: Publish commit-pinned preview image
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: preview-image-publish
+
+    env:
+      REQUESTED_SHA: ${{ inputs.commit_sha }}
+      TARGET_ENVIRONMENT: ${{ inputs.target_environment }}
+      CONFIRMATION: ${{ inputs.confirmation }}
+      RELEASE_LABEL: ${{ inputs.release_label }}
+      SOURCE_DATE: ${{ inputs.source_date }}
+      IMAGE_TAG: ${{ inputs.commit_sha }}
+      IMAGE_REFERENCE: ghcr.io/${{ github.repository }}:${{ inputs.commit_sha }}
+
+    steps:
+      - name: Validate manual inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$REQUESTED_SHA" in
+            *[!0-9a-fA-F]*)
+              echo "commit_sha must be a hexadecimal Git SHA" >&2
+              exit 1
+              ;;
+          esac
+          if [ "${#REQUESTED_SHA}" -ne 40 ]; then
+            echo "commit_sha must be exactly 40 characters" >&2
+            exit 1
+          fi
+          if [ "$CONFIRMATION" != "publish-preview-image" ]; then
+            echo "confirmation must be publish-preview-image" >&2
+            exit 1
+          fi
+          if [ -z "$SOURCE_DATE" ]; then
+            echo "source_date is required" >&2
+            exit 1
+          fi
+
+      - name: Check out requested commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.commit_sha }}
+          fetch-depth: 1
+
+      - name: Verify checked-out commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          ACTUAL_SHA="$(git rev-parse HEAD)"
+          if [ "$ACTUAL_SHA" != "$REQUESTED_SHA" ]; then
+            echo "Checked-out commit does not match requested commit" >&2
+            exit 1
+          fi
+          echo "Publishing image for commit $ACTUAL_SHA"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: pnpm
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate release manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm --silent preview:release:manifest \
+            --repository="${{ github.repository }}" \
+            --commit-sha="$REQUESTED_SHA" \
+            --image-reference="$IMAGE_REFERENCE" \
+            --target-environment="$TARGET_ENVIRONMENT" \
+            --startup-mode=application-only \
+            --deployment-runtime=docker \
+            --source-date="$SOURCE_DATE" \
+            --release-label="$RELEASE_LABEL" \
+            > preview-release-manifest.json
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and publish immutable image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: ${{ env.IMAGE_REFERENCE }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ env.REQUESTED_SHA }}
+            org.opencontainers.image.created=${{ env.SOURCE_DATE }}
+            org.opencontainers.image.version=${{ env.RELEASE_LABEL }}
+          cache-from: type=gha,scope=preview-image-publish
+          cache-to: type=gha,mode=max,scope=preview-image-publish
+
+      - name: Upload release manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: preview-release-manifest-${{ inputs.commit_sha }}
+          path: preview-release-manifest.json
+
+      - name: Report image reference
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Published image: $IMAGE_REFERENCE"
+          echo "Image publication does not deploy, run migrations, start database-deploy mode, or invoke provider email."
