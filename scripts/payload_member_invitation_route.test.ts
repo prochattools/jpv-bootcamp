@@ -260,6 +260,31 @@ async function testAuthorizationAndValidation() {
   assert.equal(malformed.status, 400)
   assert.equal((await responseBody(malformed)).error, 'invalid_request')
 
+  const wrongContentType = await handleMemberInvitationRequest(
+    new Request('https://preview.jpvbootcamp.test/api/admin/member-invitations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ email: 'member@example.test' }),
+    }),
+    createHandlerDependencies(fixture, 'payload_users'),
+  )
+  assert.equal(wrongContentType.status, 415)
+  assert.equal((await responseBody(wrongContentType)).error, 'unsupported_media_type')
+
+  const oversized = await handleMemberInvitationRequest(
+    new Request('https://preview.jpvbootcamp.test/api/admin/member-invitations', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': '4097',
+      },
+      body: JSON.stringify({ email: 'member@example.test' }),
+    }),
+    createHandlerDependencies(fixture, 'payload_users'),
+  )
+  assert.equal(oversized.status, 413)
+  assert.equal((await responseBody(oversized)).error, 'payload_too_large')
+
   for (const email of ['bad-email', `${'a'.repeat(310)}@example.test`]) {
     const response = await handleMemberInvitationRequest(
       jsonRequest({ email }),

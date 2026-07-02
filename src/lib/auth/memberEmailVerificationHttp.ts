@@ -2,6 +2,7 @@ import type {
   VerificationCompletionResult,
   VerificationRequestResult,
 } from './memberEmailVerification'
+import { readBoundedJsonObject, routeThrottle } from './accountActionRouteSafety'
 
 export const GENERIC_VERIFICATION_REQUEST_MESSAGE =
   'If an eligible account exists, a verification email will be sent shortly.'
@@ -22,20 +23,24 @@ export async function handleMemberEmailVerificationResend(
   request: Request,
   service: MemberEmailVerificationHttpService,
 ): Promise<Response> {
-  let body: unknown
-  try {
-    body = await request.json()
-  } catch {
-    return jsonResponse({ accepted: false, message: 'Invalid request.' }, 400)
+  const parsed = await readBoundedJsonObject(request)
+  if (parsed.ok === false) {
+    return jsonResponse({ accepted: false, message: 'Invalid request.' }, parsed.status)
   }
 
-  if (!body || typeof body !== 'object' || Array.isArray(body)) {
-    return jsonResponse({ accepted: false, message: 'Invalid request.' }, 400)
-  }
-
-  const email = (body as { email?: unknown }).email
+  const email = parsed.body.email
   if (typeof email !== 'string' || email.trim().length < 3 || email.length > 320) {
     return jsonResponse({ accepted: false, message: 'Invalid request.' }, 400)
+  }
+
+  const throttle = routeThrottle(request, {
+    scope: 'member-email-verification-resend',
+    identity: email,
+    maxAttempts: 5,
+    windowMs: 15 * 60 * 1000,
+  })
+  if (!throttle.allowed) {
+    return jsonResponse({ accepted: true, message: GENERIC_VERIFICATION_REQUEST_MESSAGE })
   }
 
   try {

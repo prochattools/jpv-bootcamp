@@ -1,3 +1,4 @@
+import { readBoundedJsonObject, routeThrottle } from '@/lib/auth/accountActionRouteSafety'
 import { getPayloadMemberAccountActionContext } from '@/lib/auth/memberAccountActionApplication'
 import { requestPasswordReset } from '@/lib/members/requestPasswordReset'
 
@@ -13,21 +14,21 @@ function json(body: unknown, status = 200): Response {
 }
 
 export async function POST(request: Request): Promise<Response> {
-  let body: unknown
-  try {
-    body = await request.json()
-  } catch {
-    return json({ ok: false, error: 'invalid_request' }, 400)
-  }
+  const parsed = await readBoundedJsonObject(request)
+  if (parsed.ok === false) return json({ ok: false, error: parsed.error }, parsed.status)
 
-  if (!body || typeof body !== 'object' || Array.isArray(body)) {
-    return json({ ok: false, error: 'invalid_request' }, 400)
-  }
-
-  const email = (body as { email?: unknown }).email
+  const email = parsed.body.email
   if (typeof email !== 'string' || email.trim().length < 3 || email.length > 320) {
     return json({ ok: true, message: GENERIC_MESSAGE })
   }
+
+  const throttle = routeThrottle(request, {
+    scope: 'member-password-forgot',
+    identity: email,
+    maxAttempts: 5,
+    windowMs: 15 * 60 * 1000,
+  })
+  if (!throttle.allowed) return json({ ok: true, message: GENERIC_MESSAGE })
 
   try {
     const { payload, service } = await getPayloadMemberAccountActionContext()

@@ -1,3 +1,5 @@
+import { readBoundedJsonObject } from '@/lib/auth/accountActionRouteSafety'
+
 import type { InviteMemberInput, InviteMemberResult } from './inviteMember'
 
 type InvitationAdministrator = {
@@ -26,18 +28,11 @@ export async function handleMemberInvitationRequest(
     return json({ ok: false, error: 'forbidden' }, 403)
   }
 
-  let body: unknown
-  try {
-    body = await request.json()
-  } catch {
-    return json({ ok: false, error: 'invalid_request' }, 400)
-  }
-  if (!body || typeof body !== 'object' || Array.isArray(body)) {
-    return json({ ok: false, error: 'invalid_request' }, 400)
-  }
+  const parsed = await readBoundedJsonObject(request)
+  if (parsed.ok === false) return json({ ok: false, error: parsed.error }, parsed.status)
 
-  const email = (body as { email?: unknown }).email
-  const displayName = (body as { displayName?: unknown }).displayName
+  const email = parsed.body.email
+  const displayName = parsed.body.displayName
   if (typeof email !== 'string' || email.trim().length < 3 || email.length > 320) {
     return json({ ok: false, error: 'invalid_email' }, 400)
   }

@@ -91,6 +91,14 @@ Apply mode requires:
 
 No provider delivery should occur merely because a preview image was published or deployed.
 
+## Public account-action route controls
+
+Member account-action API routes accept only bounded JSON request bodies and return `Cache-Control: no-store`. Token completion routes redirect to fixed clean login result URLs rather than reflecting callback destinations.
+
+Public issuance routes such as verification resend and forgot password use generic responses for unknown, already-complete, blocked, deleted, or otherwise ineligible accounts. Route-boundary throttles hash normalized identity and network inputs before tracking attempts. Per-token cooldowns and maximum send attempts remain enforced by the account-action services.
+
+Authenticated profile email-change requests must be same-origin and keep the current sign-in email active until the new address is confirmed.
+
 ## Delivery observability
 
 Operators correlate delivery through:

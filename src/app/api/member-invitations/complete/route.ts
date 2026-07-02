@@ -1,3 +1,4 @@
+import { readBoundedJsonObject } from '@/lib/auth/accountActionRouteSafety'
 import { getPayloadMemberAccountActionContext } from '@/lib/auth/memberAccountActionApplication'
 import { completeMemberSetup } from '@/lib/members/completeMemberSetup'
 
@@ -16,21 +17,16 @@ function stringField(body: Record<string, unknown>, key: string): string {
 }
 
 export async function POST(request: Request): Promise<Response> {
-  let body: unknown
-  try {
-    body = await request.json()
-  } catch {
-    return json({ ok: false, error: 'invalid_request' }, 400)
-  }
+  const parsed = await readBoundedJsonObject(request)
+  if (parsed.ok === false) return json({ ok: false, error: parsed.error }, parsed.status)
 
-  if (!body || typeof body !== 'object' || Array.isArray(body)) {
-    return json({ ok: false, error: 'invalid_request' }, 400)
-  }
-
-  const record = body as Record<string, unknown>
+  const record = parsed.body
   const token = stringField(record, 'token')
   if (!token || token.length < 20 || token.length > 512) {
     return json({ ok: false, error: 'invalid_or_expired_token' }, 400)
+  }
+  if (stringField(record, 'password').length > 256 || stringField(record, 'passwordConfirmation').length > 256) {
+    return json({ ok: false, error: 'invalid_request' }, 400)
   }
 
   try {
