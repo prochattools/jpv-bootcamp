@@ -6,6 +6,7 @@ import { requirePortalMember } from '@/lib/auth/requirePortalMember'
 import { updateMemberProfile } from '@/lib/members/updateMemberProfile'
 import type { PayloadCourseWriteAPI } from '@/lib/payloadCourse/accessService'
 import { getMemberAccountOverview } from '@/lib/payloadCourse/memberPortal'
+import { BillingPortalButton } from '@/components/portal/BillingPortalButton'
 
 const sectionContent = {
   community: {
@@ -61,7 +62,7 @@ export default async function PortalSectionPage({ params, searchParams }: Portal
   const { section } = await params
   if (!isPortalSection(section)) notFound()
 
-  const { memberId, payload } = await requirePortalMember(`/portal/${section}`)
+  const { memberId, memberEmail, payload } = await requirePortalMember(`/portal/${section}`)
 
   if (section === 'account') {
     const [account, query] = await Promise.all([
@@ -218,6 +219,30 @@ export default async function PortalSectionPage({ params, searchParams }: Portal
             <p className='text-sm text-neutral-600'>No groups are currently assigned to this account.</p>
           </section>
         )}
+      </div>
+    )
+  }
+
+  if (section === 'billing') {
+    return (
+      <div className='space-y-8'>
+        <section>
+          <p className='text-sm font-semibold uppercase tracking-[0.2em] text-neutral-500'>Membership</p>
+          <h1 className='mt-3 text-3xl font-semibold tracking-tight'>Billing</h1>
+          <p className='mt-3 max-w-2xl text-sm leading-6 text-neutral-600'>
+            Manage your subscription, invoices, and payment methods through our secure billing portal.
+          </p>
+        </section>
+
+        <section className='rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm'>
+          <h2 className='text-lg font-semibold text-neutral-950'>Manage subscription</h2>
+          <p className='mt-2 text-sm text-neutral-600'>
+            Access your billing account to update payment methods, view invoices, and manage your subscription settings.
+          </p>
+          <div className='mt-6'>
+            <BillingPortalButton memberId={memberId} memberEmail={memberEmail} />
+          </div>
+        </section>
       </div>
     )
   }

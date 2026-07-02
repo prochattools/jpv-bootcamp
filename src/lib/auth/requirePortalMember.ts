@@ -11,6 +11,7 @@ import type { PayloadCourseAccessAPI } from '@/lib/payloadCourse/accessService'
 
 export type PortalMemberContext = {
   memberId: string
+  memberEmail: string
   payload: PayloadCourseAccessAPI
 }
 
@@ -30,9 +31,21 @@ export async function requirePortalMember(
   }
 
   const payload = await getPayload({ config })
+  const member = await payload.findByID({
+    collection: 'payload_members',
+    id: session.member.id,
+    overrideAccess: false,
+    user: session,
+  })
+
+  const memberEmail = typeof member?.email === 'string' ? member.email : ''
+  if (!memberEmail) {
+    redirect(`/login?next=${encodeURIComponent(requestedPath)}`)
+  }
 
   return {
     memberId: String(session.member.id),
+    memberEmail,
     payload: payload as unknown as PayloadCourseAccessAPI,
   }
 }
