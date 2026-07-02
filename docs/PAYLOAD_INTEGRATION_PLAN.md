@@ -254,7 +254,7 @@ Completed in this slice:
   - `subscriptionCurrentPeriodEnd` (current period end date)
   - `subscriptionCancelAtPeriodEnd` (cancellation flag)
   - `subscriptionUpdatedAt` (sync timestamp)
-- Migration source created but not executed: `prisma/migrations/20260703_120000_add_subscription_projection.sql`
+- Migration source created but not executed: `prisma/migrations/20260703_120000_add_subscription_projection/migration.sql`
 
 **Subscription Sync (Phase 4):**
 - `syncFromSubscription` now persists subscription state to CustomerProvisioning;
@@ -266,14 +266,21 @@ Completed in this slice:
 **Billing Summary UI (Phase 4):**
 - New helper: `src/lib/billing/billingStatusHelper.ts`;
 - Reads member subscription state from CustomerProvisioning (no Stripe calls);
-- Returns plan label, subscription status, period end date, cancellation flag;
+- Returns plan label, subscription status, period end date, cancellation flag, and active-subscription state;
 - Portal `/portal/billing` now displays:
   - Current plan (human-readable label);
   - Subscription status (active, trialing, past_due, etc.);
   - Renewal or cancellation date;
   - Cancellation notice if scheduled;
-  - "No active account" state when no billing record exists;
-  - Manage billing button (only when account exists).
+  - Checkout options when no active subscription exists;
+  - Manage billing when a billing account exists.
+
+**Member Checkout (Phase 5):**
+- Authenticated members can start Pro or VIP Stripe Checkout from `/portal/billing`;
+- Member identity, email, customer ownership, success URL, and cancel URL are derived server-side;
+- Existing active, trialing, past-due, or unpaid subscriptions cannot create a duplicate checkout;
+- Existing Stripe customers are reused; otherwise the authenticated member email is passed to Stripe;
+- No database migration, Stripe request, deployment, or provider operation was executed during implementation.
 
 Remaining Phase 7 tasks:
 
@@ -385,7 +392,7 @@ A phase is complete only when:
 
 ## Immediate milestone
 
-Close the controlled preview/provider verification for member account-security email. After that boundary is either completed or explicitly blocked, resume Phase 7 billing self-service before community publishing, partner delivery, and the representative pilot.
+Continue Phase 7 billing self-service while member account-security email remains implementation-complete and operationally blocked. The next billing slice is failed-payment state and basic billing communication, followed by subscription-based access enforcement; real preview/provider acceptance remains a separate operational milestone.
 
 ## Definition of done
 

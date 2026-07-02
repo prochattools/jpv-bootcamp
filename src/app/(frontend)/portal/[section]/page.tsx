@@ -7,6 +7,7 @@ import { updateMemberProfile } from '@/lib/members/updateMemberProfile'
 import type { PayloadCourseWriteAPI } from '@/lib/payloadCourse/accessService'
 import { getMemberAccountOverview } from '@/lib/payloadCourse/memberPortal'
 import { BillingPortalButton } from '@/components/portal/BillingPortalButton'
+import { MemberCheckoutButtons } from '@/components/portal/MemberCheckoutButtons'
 import { getBillingStatus } from '@/lib/billing/billingStatusHelper'
 
 const sectionContent = {
@@ -237,7 +238,7 @@ export default async function PortalSectionPage({ params, searchParams }: Portal
           </p>
         </section>
 
-        {billingStatus.hasBillingAccount ? (
+        {billingStatus.hasActiveSubscription ? (
           <>
             <section className='rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm'>
               <h2 className='text-lg font-semibold text-neutral-950'>Subscription status</h2>
@@ -292,11 +293,28 @@ export default async function PortalSectionPage({ params, searchParams }: Portal
             </section>
           </>
         ) : (
-          <section className='rounded-2xl border border-dashed border-neutral-300 bg-white p-8'>
-            <p className='text-sm text-neutral-600'>
-              No active billing account. Start a subscription to manage payment methods and invoices.
-            </p>
-          </section>
+          <div className='space-y-6'>
+            <section className='rounded-2xl border border-dashed border-neutral-300 bg-white p-8'>
+              <h2 className='text-lg font-semibold text-neutral-950'>Choose a membership</h2>
+              <p className='mt-2 text-sm text-neutral-600'>
+                Start a secure Stripe checkout for the membership that fits you.
+              </p>
+              <div className='mt-6'>
+                <MemberCheckoutButtons />
+              </div>
+            </section>
+            {billingStatus.hasBillingAccount && (
+              <section className='rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm'>
+                <h2 className='text-lg font-semibold text-neutral-950'>Existing billing account</h2>
+                <p className='mt-2 text-sm text-neutral-600'>
+                  Review payment methods or previous invoices in the secure billing portal.
+                </p>
+                <div className='mt-6'>
+                  <BillingPortalButton />
+                </div>
+              </section>
+            )}
+          </div>
         )}
       </div>
     )

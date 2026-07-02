@@ -5,12 +5,15 @@ import { normalizeEmail } from '@/lib/normalize-email'
 
 export type BillingStatus = {
 	hasBillingAccount: boolean
+	hasActiveSubscription: boolean
 	planLabel: string | null
 	subscriptionStatus: string | null
 	periodEndDate: Date | null
 	cancelAtPeriodEnd: boolean
 	manageBillingAvailable: boolean
 }
+
+const ACTIVE_SUBSCRIPTION_STATUSES = new Set(['active', 'trialing', 'past_due', 'unpaid'])
 
 /**
  * Get billing status for an authenticated member without calling Stripe.
@@ -23,6 +26,7 @@ export async function getBillingStatus(
 	if (!normalizedEmail) {
 		return {
 			hasBillingAccount: false,
+			hasActiveSubscription: false,
 			planLabel: null,
 			subscriptionStatus: null,
 			periodEndDate: null,
@@ -45,6 +49,7 @@ export async function getBillingStatus(
 	if (!record || !record.stripeCustomerId) {
 		return {
 			hasBillingAccount: false,
+			hasActiveSubscription: false,
 			planLabel: null,
 			subscriptionStatus: null,
 			periodEndDate: null,
@@ -60,6 +65,9 @@ export async function getBillingStatus(
 
 	return {
 		hasBillingAccount: true,
+		hasActiveSubscription: Boolean(
+			record.subscriptionStatus && ACTIVE_SUBSCRIPTION_STATUSES.has(record.subscriptionStatus),
+		),
 		planLabel,
 		subscriptionStatus: record.subscriptionStatus,
 		periodEndDate: record.subscriptionCurrentPeriodEnd,
