@@ -213,7 +213,7 @@ function testNoBrowserSelectableBillingIdentity(): void {
   assert.doesNotMatch(pageSource, /<input/i)
   assert.doesNotMatch(pageSource, /type=['"]hidden['"]/i)
   assert.doesNotMatch(pageSource, /formData/i)
-  assert.match(pageSource, /firstParam\(params\.portal\) === 'unavailable'/)
+  assert.doesNotMatch(pageSource, /searchParams/)
 
   assert.match(actionSource, /openMemberBillingPortalAction\(\): Promise<void>/)
   assert.match(actionSource, /createMemberBillingPortalSession\(payload, member\.id\)/)

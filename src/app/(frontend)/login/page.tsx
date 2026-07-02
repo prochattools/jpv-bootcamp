@@ -4,6 +4,10 @@ import { redirect } from 'next/navigation'
 
 import { MemberLoginForm } from '@/components/auth/MemberLoginForm'
 import { MemberVerificationResendForm } from '@/components/auth/MemberVerificationResendForm'
+import {
+  getMemberLoginPageMessage,
+  type MemberLoginPageStatus,
+} from '@/lib/auth/memberLoginFlow'
 import { resolvePayloadRequestSession } from '@/lib/auth/payloadSession'
 import { decideSharedLogin } from '@/lib/auth/sharedLoginDecision'
 
@@ -41,7 +45,7 @@ export default async function SharedLoginPage({ searchParams }: LoginPageProps) 
               ? 'This verification link is invalid or expired. You can request another email below.'
               : null
 
-  let status: 'anonymous' | 'denied' | 'unavailable' = 'anonymous'
+  let status: MemberLoginPageStatus = 'anonymous'
 
   try {
     const session = await resolvePayloadRequestSession(requestHeaders)
@@ -51,7 +55,13 @@ export default async function SharedLoginPage({ searchParams }: LoginPageProps) 
       redirect(decision.destination)
     }
 
-    status = decision.reason === 'no_authenticated_identity' ? 'anonymous' : 'denied'
+    if (decision.reason === 'no_authenticated_identity') {
+      status = 'anonymous'
+    } else if (decision.reason === 'member_email_unverified') {
+      status = 'verification_required'
+    } else {
+      status = 'denied'
+    }
   } catch (error) {
     if (error && typeof error === 'object' && 'digest' in error) {
       throw error
@@ -59,12 +69,7 @@ export default async function SharedLoginPage({ searchParams }: LoginPageProps) 
     status = 'unavailable'
   }
 
-  const message =
-    status === 'anonymous'
-      ? 'Choose the secure area that matches your account.'
-      : status === 'unavailable'
-        ? 'Sign-in is temporarily unavailable. Please try again shortly.'
-        : 'We could not safely continue this session. Sign out and try again, or contact support.'
+  const message = getMemberLoginPageMessage(status)
 
   return (
     <main className='mx-auto flex min-h-screen max-w-xl items-center px-6 py-16'>

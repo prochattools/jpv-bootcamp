@@ -17,10 +17,6 @@ export const metadata = {
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-function firstParam(value: string | string[] | undefined): string {
-  return Array.isArray(value) ? value[0] ?? '' : value ?? ''
-}
-
 function titleCase(value: string | null | undefined): string {
   if (!value) return 'Not available'
   return value
@@ -45,19 +41,12 @@ function statusTone(status: string | null): 'good' | 'warn' | 'neutral' {
   return 'neutral'
 }
 
-export default async function LearnBillingPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
-}) {
+export default async function LearnBillingPage() {
   const { member, payload } = await getCurrentPayloadMember()
   if (!member) {
     redirect('/learn/login?next=/learn/billing')
   }
 
-  const params = await searchParams
-  const portalUnavailable = firstParam(params.portal) === 'unavailable'
-  const upgradeUnavailable = firstParam(params.upgrade) === 'unavailable'
   const overview = await getMemberBillingOverview(payload, member.id)
   const email = typeof member.email === 'string' ? member.email : null
   const effectiveStatus = overview.subscriptionStatus ?? overview.billingStatus
@@ -87,24 +76,6 @@ export default async function LearnBillingPage({
               This page reflects the latest billing state synchronized securely from the payment provider.
             </p>
           </div>
-
-          {portalUnavailable ? (
-            <div className='mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-900'>
-              <p className='font-bold'>Billing management is temporarily unavailable</p>
-              <p className='mt-2 text-sm leading-6'>
-                We could not open the secure billing portal. Please try again later.
-              </p>
-            </div>
-          ) : null}
-
-          {upgradeUnavailable ? (
-            <div className='mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-900'>
-              <p className='font-bold'>VIP upgrade is temporarily unavailable</p>
-              <p className='mt-2 text-sm leading-6'>
-                We could not open the secure upgrade flow. Please review your billing status or try again later.
-              </p>
-            </div>
-          ) : null}
 
           {overview.hasPaidSubscription ? (
             <div className='mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-4'>

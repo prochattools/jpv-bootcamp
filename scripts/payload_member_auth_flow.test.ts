@@ -2,8 +2,10 @@ import assert from 'node:assert/strict'
 
 import {
   GENERIC_MEMBER_LOGIN_ERROR,
+  MEMBER_LOGIN_PAGE_DENIED_MESSAGE,
   UNAVAILABLE_MEMBER_LOGIN_ERROR,
   VERIFICATION_MEMBER_LOGIN_ERROR,
+  getMemberLoginPageMessage,
   getMemberLoginErrorMessage,
   parseMemberSessionResponse,
   resolveMemberDestination,
@@ -98,5 +100,15 @@ assert.equal(getMemberLoginErrorMessage(unauthenticated), GENERIC_MEMBER_LOGIN_E
 assert.equal(shouldClearDeniedMemberSession(verification), true)
 assert.equal(shouldClearDeniedMemberSession(parseMemberSessionResponse({ nope: true })), true)
 assert.equal(shouldClearDeniedMemberSession(allowed), false)
+assert.equal(getMemberLoginPageMessage('verification_required'), VERIFICATION_MEMBER_LOGIN_ERROR)
+assert.notEqual(getMemberLoginPageMessage('verification_required'), MEMBER_LOGIN_PAGE_DENIED_MESSAGE)
+assert.equal(
+  [
+    getMemberLoginPageMessage('verification_required'),
+    'This verification link is invalid or expired. You can request another email below.',
+  ].includes(MEMBER_LOGIN_PAGE_DENIED_MESSAGE),
+  false,
+)
+assert.equal(getMemberLoginPageMessage('denied'), MEMBER_LOGIN_PAGE_DENIED_MESSAGE)
 
 console.log('payload member authentication flow tests passed')

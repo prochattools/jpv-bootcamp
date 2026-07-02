@@ -28,7 +28,7 @@ export async function openMemberBillingPortalAction(): Promise<void> {
           ? error.code
           : 'unexpected_error',
     })
-    redirect('/learn/billing?portal=unavailable')
+    redirect('/learn/billing')
   }
 
   redirect(portalUrl)
@@ -53,7 +53,7 @@ export async function openMemberVipUpgradeAction(): Promise<void> {
           ? error.code
           : 'unexpected_error',
     })
-    redirect('/learn/billing?upgrade=unavailable')
+    redirect('/learn/billing')
   }
 
   redirect(portalUrl)

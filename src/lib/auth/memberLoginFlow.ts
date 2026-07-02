@@ -6,6 +6,10 @@ export const UNAVAILABLE_MEMBER_LOGIN_ERROR =
   'This account cannot sign in at the moment. Please contact support.'
 export const VERIFICATION_MEMBER_LOGIN_ERROR =
   'Please verify your email before signing in.'
+export const MEMBER_LOGIN_PAGE_ANONYMOUS_MESSAGE =
+  'Choose the secure area that matches your account.'
+export const MEMBER_LOGIN_PAGE_DENIED_MESSAGE =
+  'We could not safely continue this session. Sign out and try again, or contact support.'
 
 export type MemberSessionDecision =
   | { allowed: true; destination: string }
@@ -13,6 +17,12 @@ export type MemberSessionDecision =
       allowed: false
       reason: 'verification_required' | 'account_unavailable' | 'unauthenticated' | 'malformed'
     }
+
+export type MemberLoginPageStatus =
+  | 'anonymous'
+  | 'verification_required'
+  | 'denied'
+  | 'unavailable'
 
 export function resolveMemberDestination(value: string | null | undefined): string {
   if (!value) return '/portal'
@@ -70,4 +80,11 @@ export function getMemberLoginErrorMessage(decision: MemberSessionDecision): str
 
 export function shouldClearDeniedMemberSession(decision: MemberSessionDecision): boolean {
   return !decision.allowed
+}
+
+export function getMemberLoginPageMessage(status: MemberLoginPageStatus): string {
+  if (status === 'anonymous') return MEMBER_LOGIN_PAGE_ANONYMOUS_MESSAGE
+  if (status === 'verification_required') return VERIFICATION_MEMBER_LOGIN_ERROR
+  if (status === 'unavailable') return TEMPORARY_MEMBER_LOGIN_ERROR
+  return MEMBER_LOGIN_PAGE_DENIED_MESSAGE
 }
