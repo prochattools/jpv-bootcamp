@@ -57,7 +57,7 @@ Administrator accounts and member identities are separate security domains, even
 8. FreeResend delivery events are verified before changing message delivery state.
 9. Production schema and traffic changes require explicit approval.
 
-## Current implementation status — 2 July 2026
+## Current implementation status — 3 July 2026
 
 ### Implemented and manually demonstrated
 
@@ -92,7 +92,8 @@ Administrator accounts and member identities are separate security domains, even
   1. `20260701_201500_member_email_verification`
   2. `20260702_001500_member_account_action_purposes`
 - Real-provider acceptance remains pending until preview provider credentials, sender identity, controlled test recipient, deployment access, and preview database ownership/backup evidence are available to the approved operator.
-- 2 July 2026 Codex stop point: implementation, local validation, branch push, and feature-branch GitHub validation are complete; preview migration, deployment, and real-provider verification are blocked because this session did not have independently verified preview database ownership, recoverable backup or snapshot evidence, deployment target/operator access, provider sender credentials, or an approved controlled recipient.
+- 2 July 2026 Codex stop point: Phase 6 account-security email implementation, local validation, branch push, and feature-branch GitHub validation completed. Preview migration, deployment, and real-provider verification remain blocked.
+- 3 July 2026 Haiku stop point: Phase 7 first billing slice completed. Members can access Stripe Billing Portal from `/portal/billing` with full authentication and error handling. Next slice: webhook-driven subscription state reconciliation and billing communications.
 - The affiliate Payload migration still requires explicit staging application and verification.
 - Genuine deferred product work after account-security email verification is billing self-service, then community publishing, partner application delivery, and cutover.
 
@@ -227,15 +228,23 @@ Validation:
 
 ### Phase 7 — Complete billing self-service
 
-**Status:** Planned; billing mirror foundation exists.
+**Status:** First slice implemented; broader integration planned.
 
-Tasks:
+Completed in this slice:
 
-- show current plan and billing state in `/portal/billing`;
-- provide Stripe-hosted customer self-service;
-- support upgrades, cancellation, renewal, failed-payment recovery, refunds, and billing holds;
-- reconcile webhook-driven billing state with entitlements;
-- connect billing events to Phase 6 communications.
+- Authenticated members access Stripe Billing Portal from `/portal/billing`;
+- server action `openBillingPortal` validates member identity and creates secure portal session;
+- safe return URL to `/portal/community/` prevents redirect attacks;
+- member email verified and Stripe customer ID confirmed before portal creation;
+- comprehensive tests for authentication, error cases, and portal session creation.
+
+Remaining Phase 7 tasks:
+
+- show current plan and billing state summary in `/portal/billing`;
+- support plan upgrades and cancellation flows inside the Stripe portal;
+- reconcile webhook-driven subscription changes with entitlements;
+- connect billing events (subscription created, payment failed, canceled, refunded) to Phase 6 communications;
+- handle failed payments with hold/restore workflows and member notifications.
 
 Validation:
 
