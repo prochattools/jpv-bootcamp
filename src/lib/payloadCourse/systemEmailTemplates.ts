@@ -9,6 +9,8 @@ export const MEMBER_PROFILE_CHANGED_TEMPLATE_KEY = 'member-profile-changed'
 export const MEMBER_EMAIL_CHANGE_CONFIRMATION_TEMPLATE_KEY = 'member-email-change-confirmation'
 export const MEMBER_EMAIL_CHANGE_REQUESTED_TEMPLATE_KEY = 'member-email-change-requested'
 export const MEMBER_EMAIL_CHANGED_TEMPLATE_KEY = 'member-email-changed'
+export const BILLING_PAYMENT_FAILED_TEMPLATE_KEY = 'billing-payment-failed'
+export const BILLING_PAYMENT_RECOVERED_TEMPLATE_KEY = 'billing-payment-recovered'
 export const ACCESS_BLOCKED_TEMPLATE_KEY = 'access-blocked'
 export const ACCESS_SUSPENDED_TEMPLATE_KEY = 'access-suspended'
 export const ACCESS_RESTORED_TEMPLATE_KEY = 'access-restored'
@@ -163,6 +165,29 @@ const templates: Record<string, PayloadDocument> = {
       'The sign-in email for your JPV Bootcamp member account was changed successfully.',
       'For security, you were not signed in automatically. Use the new address the next time you sign in.',
       'If you did not make this change, contact support immediately.',
+    ],
+  }),
+  [BILLING_PAYMENT_FAILED_TEMPLATE_KEY]: brandedTemplate({
+    key: BILLING_PAYMENT_FAILED_TEMPLATE_KEY,
+    name: 'Membership payment failed',
+    subject: 'Your JPV Bootcamp payment needs attention',
+    preheader: 'Review your billing details to avoid future membership disruption.',
+    heading: 'Payment needs attention',
+    paragraphs: [
+      'We could not process a recent payment for your JPV Bootcamp membership.',
+      'Your account access has not been changed by this notice. Review your billing details in the member portal.',
+      'If you recently updated your payment method, no further action may be needed.',
+    ],
+  }),
+  [BILLING_PAYMENT_RECOVERED_TEMPLATE_KEY]: brandedTemplate({
+    key: BILLING_PAYMENT_RECOVERED_TEMPLATE_KEY,
+    name: 'Membership payment recovered',
+    subject: 'Your JPV Bootcamp payment was received',
+    preheader: 'A previously unsuccessful membership payment has now completed.',
+    heading: 'Payment received',
+    paragraphs: [
+      'A previously unsuccessful payment for your JPV Bootcamp membership was received successfully.',
+      'No action is required. This message did not sign you in or change your account security settings.',
     ],
   }),
   [ACCESS_BLOCKED_TEMPLATE_KEY]: brandedTemplate({

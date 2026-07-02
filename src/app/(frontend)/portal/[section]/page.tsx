@@ -238,6 +238,28 @@ export default async function PortalSectionPage({ params, searchParams }: Portal
           </p>
         </section>
 
+        {billingStatus.showPaymentWarning && (
+          <section
+            role='alert'
+            className='rounded-2xl border border-amber-300 bg-amber-50 p-6 text-amber-950'
+          >
+            <h2 className='text-lg font-semibold'>Payment needs attention</h2>
+            <p className='mt-2 text-sm leading-6'>
+              We could not process a recent membership payment. Review your billing details in the secure billing portal.
+            </p>
+            {billingStatus.paymentFailedAt && (
+              <p className='mt-2 text-xs text-amber-800'>
+                Last detected on{' '}
+                {new Intl.DateTimeFormat('en-US', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                }).format(billingStatus.paymentFailedAt)}.
+              </p>
+            )}
+          </section>
+        )}
+
         {billingStatus.hasActiveSubscription ? (
           <>
             <section className='rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm'>

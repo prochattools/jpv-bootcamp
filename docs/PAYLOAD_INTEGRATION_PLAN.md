@@ -235,7 +235,7 @@ Validation:
 
 ### Phase 7 — Complete billing self-service
 
-**Status:** Security-hardened portal access and subscription projection implemented; remaining billing flows planned.
+**Status:** Portal access, subscription projection, checkout, and failed-payment communications implemented; access enforcement and advanced billing remain.
 
 Completed in this slice:
 
@@ -282,11 +282,22 @@ Completed in this slice:
 - Existing Stripe customers are reused; otherwise the authenticated member email is passed to Stripe;
 - No database migration, Stripe request, deployment, or provider operation was executed during implementation.
 
+**Failed-payment state and communications (Phase 6):**
+- Verified `invoice.payment_failed` and `invoice.paid` events update a local CustomerProvisioning payment projection;
+- Added payment status, failed/recovered timestamps, update timestamp, and last event/invoice identifiers;
+- Additive migration source created but not executed: `prisma/migrations/20260703_130000_add_payment_state_projection/migration.sql`;
+- `/portal/billing` shows a safe payment-needs-attention warning from local data only;
+- One branded member failed-payment notice and one recovery notice are queued through `payload_email_events`;
+- Dedupe keys are stable per invoice, so Stripe retries do not create duplicate notices or security events;
+- Billing payment failure and recovery are recorded in `payload_member_security_events`;
+- Invoice events do not block, restore, revoke, or grant member access in this slice.
+
 Remaining Phase 7 tasks:
 
 - support plan upgrades and cancellation flows inside the Stripe portal;
-- connect billing events (subscription created, payment failed, canceled, refunded) to Phase 6 communications;
-- handle failed payments with hold/restore workflows and member notifications;
+- implement subscription-based access enforcement and explicit hold/restore policy;
+- add refunded/disputed payment states and communications;
+- perform preview migration, webhook, checkout, and provider verification;
 - email feature remains:
   - Code and automated validation complete;
   - Real preview/provider acceptance pending;
@@ -392,7 +403,7 @@ A phase is complete only when:
 
 ## Immediate milestone
 
-Continue Phase 7 billing self-service while member account-security email remains implementation-complete and operationally blocked. The next billing slice is failed-payment state and basic billing communication, followed by subscription-based access enforcement; real preview/provider acceptance remains a separate operational milestone.
+Continue Phase 7 billing self-service while member account-security email remains implementation-complete and operationally blocked. The next billing slice is explicit subscription-based access enforcement and hold/restore policy; real preview/provider acceptance remains a separate operational milestone.
 
 ## Definition of done
 

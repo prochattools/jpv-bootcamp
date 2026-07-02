@@ -149,6 +149,8 @@ export const PayloadMemberSecurityEvents: CollectionConfig = {
         { label: 'Email verified', value: 'email_verified' },
         { label: 'Password reset requested', value: 'password_reset_requested' },
         { label: 'Password changed', value: 'password_changed' },
+        { label: 'Billing payment failed', value: 'billing_payment_failed' },
+        { label: 'Billing payment recovered', value: 'billing_payment_recovered' },
         { label: 'Invitation created', value: 'invitation_created' },
         { label: 'Invitation consumed', value: 'invitation_consumed' },
         { label: 'Profile changed', value: 'profile_changed' },

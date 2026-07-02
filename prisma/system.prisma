@@ -49,6 +49,12 @@ model CustomerProvisioning {
   subscriptionCurrentPeriodEnd DateTime? @map("subscription_current_period_end")
   subscriptionCancelAtPeriodEnd Boolean? @map("subscription_cancel_at_period_end")
   subscriptionUpdatedAt DateTime? @map("subscription_updated_at")
+  paymentStatus        String?  @map("payment_status")
+  paymentFailedAt      DateTime? @map("payment_failed_at")
+  paymentRecoveredAt   DateTime? @map("payment_recovered_at")
+  paymentUpdatedAt     DateTime? @map("payment_updated_at")
+  paymentLastEventId   String?  @map("payment_last_event_id")
+  paymentLastInvoiceId String?  @map("payment_last_invoice_id")
   createdAt            DateTime @default(now()) @map("created_at")
   updatedAt            DateTime @default(now()) @updatedAt @map("updated_at")
 

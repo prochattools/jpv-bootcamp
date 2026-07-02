@@ -10,6 +10,9 @@ export type BillingStatus = {
 	subscriptionStatus: string | null
 	periodEndDate: Date | null
 	cancelAtPeriodEnd: boolean
+	paymentStatus: 'failed' | 'paid' | null
+	paymentFailedAt: Date | null
+	showPaymentWarning: boolean
 	manageBillingAvailable: boolean
 }
 
@@ -31,6 +34,9 @@ export async function getBillingStatus(
 			subscriptionStatus: null,
 			periodEndDate: null,
 			cancelAtPeriodEnd: false,
+			paymentStatus: null,
+			paymentFailedAt: null,
+			showPaymentWarning: false,
 			manageBillingAvailable: false,
 		}
 	}
@@ -43,6 +49,8 @@ export async function getBillingStatus(
 			subscriptionStatus: true,
 			subscriptionCurrentPeriodEnd: true,
 			subscriptionCancelAtPeriodEnd: true,
+			paymentStatus: true,
+			paymentFailedAt: true,
 		},
 	})
 
@@ -54,6 +62,9 @@ export async function getBillingStatus(
 			subscriptionStatus: null,
 			periodEndDate: null,
 			cancelAtPeriodEnd: false,
+			paymentStatus: null,
+			paymentFailedAt: null,
+			showPaymentWarning: false,
 			manageBillingAvailable: false,
 		}
 	}
@@ -62,6 +73,11 @@ export async function getBillingStatus(
 	const planLabel = record.currentPlan
 		? record.currentPlan.charAt(0).toUpperCase() + record.currentPlan.slice(1)
 		: null
+
+	const paymentStatus =
+		record.paymentStatus === 'failed' || record.paymentStatus === 'paid'
+			? record.paymentStatus
+			: null
 
 	return {
 		hasBillingAccount: true,
@@ -72,6 +88,9 @@ export async function getBillingStatus(
 		subscriptionStatus: record.subscriptionStatus,
 		periodEndDate: record.subscriptionCurrentPeriodEnd,
 		cancelAtPeriodEnd: record.subscriptionCancelAtPeriodEnd ?? false,
+		paymentStatus,
+		paymentFailedAt: record.paymentFailedAt,
+		showPaymentWarning: paymentStatus === 'failed',
 		manageBillingAvailable: true,
 	}
 }

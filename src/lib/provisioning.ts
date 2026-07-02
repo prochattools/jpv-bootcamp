@@ -795,6 +795,93 @@ async function upsertProvisioningRecord({
 	}
 }
 
+export type InvoicePaymentProjectionStatus = 'failed' | 'paid'
+
+export type InvoicePaymentProjectionResult = {
+	updated: boolean
+	deduped: boolean
+	stale: boolean
+	recovered: boolean
+	previousStatus: string | null
+}
+
+export async function projectInvoicePaymentState(params: {
+	stripeCustomerId?: string | null
+	stripeSubscriptionId?: string | null
+	stripeInvoiceId?: string | null
+	eventId: string
+	paymentStatus: InvoicePaymentProjectionStatus
+	occurredAt?: Date
+}): Promise<InvoicePaymentProjectionResult> {
+	const stripeCustomerId = params.stripeCustomerId?.trim() || null
+	const stripeSubscriptionId = params.stripeSubscriptionId?.trim() || null
+	const stripeInvoiceId = params.stripeInvoiceId?.trim() || null
+	const occurredAt = params.occurredAt ?? new Date()
+	const whereOr: Array<Record<string, unknown>> = []
+	if (stripeCustomerId) whereOr.push({ stripeCustomerId })
+	if (stripeSubscriptionId) whereOr.push({ stripeSubscriptionId })
+
+	if (whereOr.length === 0) {
+		return { updated: false, deduped: false, stale: false, recovered: false, previousStatus: null }
+	}
+
+	const existing = await prisma.customerProvisioning.findFirst({
+		where: { OR: whereOr },
+		select: {
+			id: true,
+			paymentStatus: true,
+			paymentRecoveredAt: true,
+			paymentUpdatedAt: true,
+			paymentLastEventId: true,
+		},
+	})
+
+	if (!existing) {
+		return { updated: false, deduped: false, stale: false, recovered: false, previousStatus: null }
+	}
+
+	if (existing.paymentLastEventId === params.eventId) {
+		return {
+			updated: false,
+			deduped: true,
+			stale: false,
+			recovered: false,
+			previousStatus: existing.paymentStatus,
+		}
+	}
+
+	if (existing.paymentUpdatedAt && existing.paymentUpdatedAt.getTime() > occurredAt.getTime()) {
+		return {
+			updated: false,
+			deduped: false,
+			stale: true,
+			recovered: false,
+			previousStatus: existing.paymentStatus,
+		}
+	}
+
+	const recovered = params.paymentStatus === 'paid' && existing.paymentStatus === 'failed'
+	await prisma.customerProvisioning.update({
+		where: { id: existing.id },
+		data: {
+			paymentStatus: params.paymentStatus,
+			paymentFailedAt: params.paymentStatus === 'failed' ? occurredAt : undefined,
+			paymentRecoveredAt: recovered ? occurredAt : existing.paymentRecoveredAt,
+			paymentUpdatedAt: occurredAt,
+			paymentLastEventId: params.eventId,
+			paymentLastInvoiceId: stripeInvoiceId,
+		},
+	})
+
+	return {
+		updated: true,
+		deduped: false,
+		stale: false,
+		recovered,
+		previousStatus: existing.paymentStatus,
+	}
+}
+
 async function markProvisioningNotified(params: {
 	stripeCustomerId: string
 	email: string

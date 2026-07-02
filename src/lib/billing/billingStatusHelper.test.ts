@@ -17,6 +17,9 @@ async function main() {
     'subscriptionStatus',
     'periodEndDate',
     'cancelAtPeriodEnd',
+    'paymentStatus',
+    'paymentFailedAt',
+    'showPaymentWarning',
     'manageBillingAvailable',
   ]) {
     assert.match(typeBlock, new RegExp(field))

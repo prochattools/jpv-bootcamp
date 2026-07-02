@@ -10,6 +10,10 @@ import type {
   PayloadId,
 } from '@/lib/payloadCourse/accessService'
 import { createAuditEvent, queueEmailEvent } from '@/lib/payloadCourse/events'
+import {
+  BILLING_PAYMENT_FAILED_TEMPLATE_KEY,
+  BILLING_PAYMENT_RECOVERED_TEMPLATE_KEY,
+} from '@/lib/payloadCourse/systemEmailTemplates'
 import { redactEmail } from '@/lib/log-redact'
 
 type Plan = 'pro' | 'vip' | 'exhibitor'
@@ -65,6 +69,7 @@ type BillingSubject = {
   contact: PayloadDocument
   billingAccount: PayloadDocument
   stripeCustomerId: string
+  previousBillingStatus: PayloadBillingStatus | null
 }
 
 type SubscriptionProjection = {
@@ -92,6 +97,22 @@ function isEnvEnabled(value?: string): boolean {
 
 export function isPayloadBillingShadowSyncEnabled(): boolean {
   return isEnvEnabled(process.env.PAYLOAD_BILLING_SHADOW_SYNC_ENABLED)
+}
+
+const PAYLOAD_BILLING_STATUSES = new Set<PayloadBillingStatus>([
+  'none',
+  'active',
+  'trialing',
+  'billing_hold',
+  'past_due',
+  'unpaid',
+  'canceled',
+])
+
+function asPayloadBillingStatus(value: unknown): PayloadBillingStatus | null {
+  return typeof value === 'string' && PAYLOAD_BILLING_STATUSES.has(value as PayloadBillingStatus)
+    ? (value as PayloadBillingStatus)
+    : null
 }
 
 function dateFromUnix(value: number | null | undefined): Date | null {
@@ -386,7 +407,7 @@ function canStripeChangeMemberStatus(member: PayloadDocument): boolean {
 async function createMemberSecurityEvent(
   payload: PayloadCourseWriteAPI,
   memberId: PayloadId,
-  eventType: 'account_created',
+  eventType: 'account_created' | 'billing_payment_failed' | 'billing_payment_recovered',
   eventId: string
 ) {
   return payload.create({
@@ -565,18 +586,27 @@ async function getBillingSubject(
     email?: string | null
     billingStatus: PayloadBillingStatus
     defaultPaymentMethodId?: string | null
+    preserveMemberStatus?: boolean
   }
 ): Promise<BillingSubject | null> {
   const email = await resolveCustomerEmail(stripe, params.stripeCustomerId, params.email)
   if (!email) return null
 
   const memberState = memberStatusForBilling(params.billingStatus)
-  const memberResult = await upsertMember(payload, {
-    email,
-    targetStatus: memberState.accountStatus,
-    holdReason: memberState.holdReason,
-    eventId: params.eventId,
-  })
+  const memberResult = params.preserveMemberStatus
+    ? await (async () => {
+        const existingMember = await findOne(payload, 'payload_members', {
+          email: { equals: email },
+        })
+        return existingMember ? { member: existingMember, created: false } : null
+      })()
+    : await upsertMember(payload, {
+        email,
+        targetStatus: memberState.accountStatus,
+        holdReason: memberState.holdReason,
+        eventId: params.eventId,
+      })
+  if (!memberResult) return null
   const lifecycleStage = params.billingStatus === 'canceled' ? 'churned' : 'student'
   const contact = await upsertContact(payload, {
     email,
@@ -584,6 +614,10 @@ async function getBillingSubject(
     lifecycleStage,
     eventId: params.eventId,
   })
+  const previousBillingAccount = await findOne(payload, 'payload_billing_accounts', {
+    stripeCustomerId: { equals: params.stripeCustomerId },
+  })
+  const previousBillingStatus = asPayloadBillingStatus(previousBillingAccount?.billingStatus)
   const billingAccount = await upsertBillingAccount(payload, {
     memberId: memberResult.member.id,
     email,
@@ -601,6 +635,7 @@ async function getBillingSubject(
     contact,
     billingAccount,
     stripeCustomerId: params.stripeCustomerId,
+    previousBillingStatus,
   }
 }
 
@@ -886,7 +921,7 @@ async function syncInvoice(
   event: Stripe.Event,
   invoice: Stripe.Invoice,
   paymentStatus: 'paid' | 'failed',
-  options: ShadowSyncOptions
+  _options: ShadowSyncOptions
 ): Promise<string[]> {
   const subscriptionId = getInvoiceSubscriptionId(invoice)
   const customerId = getCustomerId(invoice.customer as Stripe.Invoice['customer'])
@@ -906,19 +941,8 @@ async function syncInvoice(
       email: invoice.customer_email ?? projection.email,
       billingStatus,
       defaultPaymentMethodId: projection.defaultPaymentMethodId,
+      preserveMemberStatus: true,
     })
-    await syncSubscription(payload, stripe, event, subscription, options)
-    if (paymentStatus === 'failed') {
-      subject = await getBillingSubject(payload, stripe, {
-        eventId: event.id,
-        eventType: event.type,
-        livemode: event.livemode,
-        stripeCustomerId: projection.stripeCustomerId,
-        email: invoice.customer_email ?? projection.email,
-        billingStatus,
-        defaultPaymentMethodId: projection.defaultPaymentMethodId,
-      })
-    }
   } else if (customerId) {
     subject = await getBillingSubject(payload, stripe, {
       eventId: event.id,
@@ -927,6 +951,7 @@ async function syncInvoice(
       stripeCustomerId: customerId,
       email: invoice.customer_email,
       billingStatus,
+      preserveMemberStatus: true,
     })
   }
 
@@ -985,38 +1010,50 @@ async function syncInvoice(
     },
   })
 
-  await queueBillingEmails(payload, {
-    email: subject.email,
-    contactId: subject.contact.id,
-    memberId: subject.member.id,
-    adminEmail: options.adminEmail,
-    eventId: event.id,
-    templateKey: paymentStatus === 'paid' ? 'payment-succeeded' : 'payment-failed',
-    studentDedupeKey:
-      paymentStatus === 'paid'
-        ? `payment-succeeded:${stripeInvoiceId}`
-        : `payment-failed:${stripeInvoiceId}:${event.id}`,
-    adminDedupeKey:
-      paymentStatus === 'paid'
-        ? `admin-notification:payment-succeeded:${event.id}`
-        : `admin-notification:payment-failed:${event.id}`,
-    metadata: {
-      stripeInvoiceId,
-      subscriptionId,
-      amount,
-      currency: invoice.currency ?? 'usd',
-    },
-  })
+  const isRecovery =
+    paymentStatus === 'paid' &&
+    (subject.previousBillingStatus === 'past_due' ||
+      subject.previousBillingStatus === 'unpaid' ||
+      subject.previousBillingStatus === 'billing_hold')
 
-  await syncMemberBillingHold(payload, {
-    member: subject.member,
-    billingStatus,
-    reason: paymentStatus === 'paid' ? 'payment_recovered' : 'past_due',
-    eventId: event.id,
-    adminEmail: options.adminEmail,
-  })
+  if (paymentStatus === 'failed' || isRecovery) {
+    const templateKey =
+      paymentStatus === 'failed'
+        ? BILLING_PAYMENT_FAILED_TEMPLATE_KEY
+        : BILLING_PAYMENT_RECOVERED_TEMPLATE_KEY
+    const dedupeKey =
+      paymentStatus === 'failed'
+        ? `billing-payment-failed:${stripeInvoiceId}`
+        : `billing-payment-recovered:${stripeInvoiceId}`
 
-  return [paymentStatus === 'paid' ? 'invoice_paid_synced' : 'invoice_payment_failed_synced']
+    const queuedNotice = await queueEmailEvent(payload, {
+      toEmail: subject.email,
+      contact: subject.contact.id,
+      templateKey,
+      dedupeKey,
+      metadata: {
+        memberId: String(subject.member.id),
+        eventId: event.id,
+        paymentState: paymentStatus === 'failed' ? 'failed' : 'recovered',
+      },
+    })
+    if (queuedNotice.created) {
+      await createMemberSecurityEvent(
+        payload,
+        subject.member.id,
+        paymentStatus === 'failed' ? 'billing_payment_failed' : 'billing_payment_recovered',
+        event.id
+      )
+    }
+  }
+
+  return [
+    paymentStatus === 'failed'
+      ? 'invoice_payment_failed_synced'
+      : isRecovery
+        ? 'invoice_payment_recovered_synced'
+        : 'invoice_paid_synced',
+  ]
 }
 
 async function syncCheckoutSession(

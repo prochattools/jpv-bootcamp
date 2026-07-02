@@ -5,7 +5,12 @@ import type Stripe from 'stripe'
 import { getServerConfig } from '@/lib/config'
 import { getStripeConfig, getStripeWebhookSecrets } from '@/lib/stripe-config'
 import { hasProcessed, markProcessed } from '@/lib/idempotency'
-import { logProvisioningDecision, provisionFromCheckoutSession, syncFromSubscription } from '@/lib/provisioning'
+import {
+	logProvisioningDecision,
+	projectInvoicePaymentState,
+	provisionFromCheckoutSession,
+	syncFromSubscription,
+} from '@/lib/provisioning'
 import { isSponsoredSeatSession, upsertSponsoredSeatFromSession } from '@/lib/sponsored-seats'
 import { notifySponsoredSeatPurchase } from '@/lib/sponsored-seat-notifications'
 import { getStripe } from '@/lib/stripe'
@@ -43,6 +48,15 @@ function getRequestPath(req: Request): string {
 	} catch {
 		return req.url
 	}
+}
+
+function stripeRelationshipId(value: unknown): string | null {
+	if (typeof value === 'string' && value.trim()) return value
+	if (value && typeof value === 'object' && 'id' in value) {
+		const id = (value as { id?: unknown }).id
+		return typeof id === 'string' && id.trim() ? id : null
+	}
+	return null
 }
 
 function buildDebugInfo(params: {
@@ -483,12 +497,19 @@ export async function handleStripeWebhook(req: Request) {
 				break
 			}
 			case 'invoice.paid': {
+				const invoice = event.data.object as Stripe.Invoice
+				const subscriptionId = stripeRelationshipId(
+					(invoice as Stripe.Invoice & { subscription?: unknown }).subscription,
+				)
+				await projectInvoicePaymentState({
+					stripeCustomerId: stripeRelationshipId(invoice.customer),
+					stripeSubscriptionId: subscriptionId,
+					stripeInvoiceId: invoice.id,
+					eventId: event.id,
+					paymentStatus: 'paid',
+					occurredAt: new Date(event.created * 1000),
+				})
 				if (provisioningEnabled) {
-					const invoice = event.data.object as Stripe.Invoice
-					const subscriptionId =
-						typeof invoice.subscription === 'string'
-							? invoice.subscription
-							: invoice.subscription?.id ?? null
 					if (subscriptionId) {
 						await syncFromSubscription(subscriptionId, event.id, event.type, {
 							allowEmail: allowMembershipEmail,
@@ -501,6 +522,17 @@ export async function handleStripeWebhook(req: Request) {
 				break
 			}
 			case 'invoice.payment_failed': {
+				const invoice = event.data.object as Stripe.Invoice
+				await projectInvoicePaymentState({
+					stripeCustomerId: stripeRelationshipId(invoice.customer),
+					stripeSubscriptionId: stripeRelationshipId(
+						(invoice as Stripe.Invoice & { subscription?: unknown }).subscription,
+					),
+					stripeInvoiceId: invoice.id,
+					eventId: event.id,
+					paymentStatus: 'failed',
+					occurredAt: new Date(event.created * 1000),
+				})
 				break
 			}
 			default:
