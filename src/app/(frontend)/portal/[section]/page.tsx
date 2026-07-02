@@ -7,6 +7,7 @@ import { updateMemberProfile } from '@/lib/members/updateMemberProfile'
 import type { PayloadCourseWriteAPI } from '@/lib/payloadCourse/accessService'
 import { getMemberAccountOverview } from '@/lib/payloadCourse/memberPortal'
 import { BillingPortalButton } from '@/components/portal/BillingPortalButton'
+import { getBillingStatus } from '@/lib/billing/billingStatusHelper'
 
 const sectionContent = {
   community: {
@@ -224,6 +225,8 @@ export default async function PortalSectionPage({ params, searchParams }: Portal
   }
 
   if (section === 'billing') {
+    const billingStatus = await getBillingStatus(memberEmail)
+
     return (
       <div className='space-y-8'>
         <section>
@@ -234,15 +237,67 @@ export default async function PortalSectionPage({ params, searchParams }: Portal
           </p>
         </section>
 
-        <section className='rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm'>
-          <h2 className='text-lg font-semibold text-neutral-950'>Manage subscription</h2>
-          <p className='mt-2 text-sm text-neutral-600'>
-            Access your billing account to update payment methods, view invoices, and manage your subscription settings.
-          </p>
-          <div className='mt-6'>
-            <BillingPortalButton memberId={memberId} memberEmail={memberEmail} />
-          </div>
-        </section>
+        {billingStatus.hasBillingAccount ? (
+          <>
+            <section className='rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm'>
+              <h2 className='text-lg font-semibold text-neutral-950'>Subscription status</h2>
+              <dl className='mt-6 grid gap-6 sm:grid-cols-2'>
+                {billingStatus.planLabel && (
+                  <div>
+                    <dt className='text-sm font-medium text-neutral-500'>Current plan</dt>
+                    <dd className='mt-2 text-base font-semibold text-neutral-950'>
+                      {billingStatus.planLabel}
+                    </dd>
+                  </div>
+                )}
+                {billingStatus.subscriptionStatus && (
+                  <div>
+                    <dt className='text-sm font-medium text-neutral-500'>Status</dt>
+                    <dd className='mt-2 text-base font-semibold text-neutral-950'>
+                      {billingStatus.subscriptionStatus.charAt(0).toUpperCase() +
+                        billingStatus.subscriptionStatus.slice(1)}
+                    </dd>
+                  </div>
+                )}
+                {billingStatus.periodEndDate && (
+                  <div>
+                    <dt className='text-sm font-medium text-neutral-500'>
+                      {billingStatus.cancelAtPeriodEnd ? 'Cancels on' : 'Renews on'}
+                    </dt>
+                    <dd className='mt-2 text-base font-semibold text-neutral-950'>
+                      {new Intl.DateTimeFormat('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                      }).format(billingStatus.periodEndDate)}
+                    </dd>
+                  </div>
+                )}
+              </dl>
+              {billingStatus.cancelAtPeriodEnd && (
+                <p className='mt-6 border-t border-neutral-200 pt-6 text-sm text-neutral-600'>
+                  Your subscription is scheduled to cancel at the end of the current billing period.
+                </p>
+              )}
+            </section>
+
+            <section className='rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm'>
+              <h2 className='text-lg font-semibold text-neutral-950'>Manage subscription</h2>
+              <p className='mt-2 text-sm text-neutral-600'>
+                Update payment methods, view invoices, and adjust your subscription settings.
+              </p>
+              <div className='mt-6'>
+                <BillingPortalButton />
+              </div>
+            </section>
+          </>
+        ) : (
+          <section className='rounded-2xl border border-dashed border-neutral-300 bg-white p-8'>
+            <p className='text-sm text-neutral-600'>
+              No active billing account. Start a subscription to manage payment methods and invoices.
+            </p>
+          </section>
+        )}
       </div>
     )
   }

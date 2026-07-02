@@ -3,15 +3,7 @@
 import { useState } from 'react'
 import { openBillingPortal } from '@/lib/actions/openBillingPortal'
 
-export type BillingPortalButtonProps = {
-	memberId: string
-	memberEmail: string
-}
-
-export function BillingPortalButton({
-	memberId,
-	memberEmail,
-}: BillingPortalButtonProps) {
+export function BillingPortalButton() {
 	const [isLoading, setIsLoading] = useState(false)
 	const [error, setError] = useState<string | null>(null)
 
@@ -20,7 +12,7 @@ export function BillingPortalButton({
 		setError(null)
 
 		try {
-			const result = await openBillingPortal(memberId, memberEmail)
+			const result = await openBillingPortal()
 
 			if (result.ok === false) {
 				const errorMap: Record<string, string> = {
@@ -42,6 +34,7 @@ export function BillingPortalButton({
 	return (
 		<div className='space-y-4'>
 			<button
+				type='button'
 				onClick={handleClick}
 				disabled={isLoading}
 				className='inline-flex items-center rounded-lg bg-neutral-950 px-4 py-2.5 text-sm font-semibold text-white transition disabled:opacity-50 hover:enabled:bg-neutral-800'

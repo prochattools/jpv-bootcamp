@@ -44,6 +44,11 @@ model CustomerProvisioning {
   lastNotifiedPlan     String?  @map("last_notified_plan")
   lastNotifiedAt       DateTime? @map("last_notified_at")
   lastNotifiedEventId  String?  @map("last_notified_event_id")
+  stripePriceId        String?  @map("stripe_price_id")
+  subscriptionStatus   String?  @map("subscription_status")
+  subscriptionCurrentPeriodEnd DateTime? @map("subscription_current_period_end")
+  subscriptionCancelAtPeriodEnd Boolean? @map("subscription_cancel_at_period_end")
+  subscriptionUpdatedAt DateTime? @map("subscription_updated_at")
   createdAt            DateTime @default(now()) @map("created_at")
   updatedAt            DateTime @default(now()) @updatedAt @map("updated_at")
 

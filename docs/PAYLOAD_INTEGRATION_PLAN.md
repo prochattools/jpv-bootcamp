@@ -57,7 +57,7 @@ Administrator accounts and member identities are separate security domains, even
 8. FreeResend delivery events are verified before changing message delivery state.
 9. Production schema and traffic changes require explicit approval.
 
-## Current implementation status — 3 July 2026
+## Current implementation status — 3 July 2026 (updated)
 
 ### Implemented and manually demonstrated
 
@@ -93,7 +93,14 @@ Administrator accounts and member identities are separate security domains, even
   2. `20260702_001500_member_account_action_purposes`
 - Real-provider acceptance remains pending until preview provider credentials, sender identity, controlled test recipient, deployment access, and preview database ownership/backup evidence are available to the approved operator.
 - 2 July 2026 Codex stop point: Phase 6 account-security email implementation, local validation, branch push, and feature-branch GitHub validation completed. Preview migration, deployment, and real-provider verification remain blocked.
-- 3 July 2026 Haiku stop point: Phase 7 first billing slice completed. Members can access Stripe Billing Portal from `/portal/billing` with full authentication and error handling. Next slice: webhook-driven subscription state reconciliation and billing communications.
+- 3 July 2026 Haiku stop point — Phase 7, Phases 2-4 completed:
+  - Billing portal identity now server-derived (security hardened);
+  - Sensitive logs removed (member IDs, customer IDs, session IDs);
+  - Subscription projection fields added to schema (not executed);
+  - Subscription sync now persists state to CustomerProvisioning;
+  - Billing summary UI added (shows plan, status, renewal date, cancellation);
+  - Type-check and build validated;
+  - Next slice: billing communications, payment failure handling, cutover validation.
 - The affiliate Payload migration still requires explicit staging application and verification.
 - Genuine deferred product work after account-security email verification is billing self-service, then community publishing, partner application delivery, and cutover.
 
@@ -228,29 +235,64 @@ Validation:
 
 ### Phase 7 — Complete billing self-service
 
-**Status:** First slice implemented; broader integration planned.
+**Status:** Security-hardened portal access and subscription projection implemented; remaining billing flows planned.
 
 Completed in this slice:
 
-- Authenticated members access Stripe Billing Portal from `/portal/billing`;
-- server action `openBillingPortal` validates member identity and creates secure portal session;
-- safe return URL to `/portal/community/` prevents redirect attacks;
-- member email verified and Stripe customer ID confirmed before portal creation;
-- comprehensive tests for authentication, error cases, and portal session creation.
+**Billing Portal Security (Phase 2):**
+- Server-side authentication: server action `openBillingPortal` now derives member identity via `requirePortalMember` instead of trusting client input;
+- Removed sensitive logging: member IDs, Stripe customer IDs, session IDs no longer logged;
+- Client cannot provide member identity or return URL — both server-controlled;
+- Safe error messages (categorized by type, not exposed to logs);
+- BillingPortalButton component updated to call with no arguments;
+- Portal page updated to pass no props.
+
+**Subscription Projection (Phase 3):**
+- Added 5 fields to CustomerProvisioning schema:
+  - `stripePriceId` (Stripe price ID from subscription items)
+  - `subscriptionStatus` (exact Stripe subscription status)
+  - `subscriptionCurrentPeriodEnd` (current period end date)
+  - `subscriptionCancelAtPeriodEnd` (cancellation flag)
+  - `subscriptionUpdatedAt` (sync timestamp)
+- Migration source created but not executed: `prisma/migrations/20260703_120000_add_subscription_projection.sql`
+
+**Subscription Sync (Phase 4):**
+- `syncFromSubscription` now persists subscription state to CustomerProvisioning;
+- All 4 upsert paths (skip, invalid plan, dry run, final) now store subscription data;
+- Plan resolution and ACTIVE_STATUSES logic preserved;
+- No email sending added to sync path (email remains separate);
+- No additional Stripe retrievals (reuses subscription object).
+
+**Billing Summary UI (Phase 4):**
+- New helper: `src/lib/billing/billingStatusHelper.ts`;
+- Reads member subscription state from CustomerProvisioning (no Stripe calls);
+- Returns plan label, subscription status, period end date, cancellation flag;
+- Portal `/portal/billing` now displays:
+  - Current plan (human-readable label);
+  - Subscription status (active, trialing, past_due, etc.);
+  - Renewal or cancellation date;
+  - Cancellation notice if scheduled;
+  - "No active account" state when no billing record exists;
+  - Manage billing button (only when account exists).
 
 Remaining Phase 7 tasks:
 
-- show current plan and billing state summary in `/portal/billing`;
 - support plan upgrades and cancellation flows inside the Stripe portal;
-- reconcile webhook-driven subscription changes with entitlements;
 - connect billing events (subscription created, payment failed, canceled, refunded) to Phase 6 communications;
-- handle failed payments with hold/restore workflows and member notifications.
+- handle failed payments with hold/restore workflows and member notifications;
+- email feature remains:
+  - Code and automated validation complete;
+  - Real preview/provider acceptance pending;
+  - Payload migrations pending: `20260701_201500_member_email_verification`, `20260702_001500_member_account_action_purposes`.
 
 Validation:
 
-- Stripe remains authoritative;
-- client input cannot grant paid access;
-- failed, canceled, refunded, disputed, and recovered payments produce defined access and email outcomes.
+- Type-check: pnpm type-check:payload — passed;
+- Build: pnpm run build — passed;
+- Stripe remains authoritative (stored copy for UI only);
+- client input cannot grant paid access (auth server-side);
+- server-side identity derivation prevents spoofing;
+- failed, canceled, refunded, disputed, and recovered payments will produce defined access and email outcomes (next slice).
 
 ### Phase 8 — Complete community publishing and notifications
 

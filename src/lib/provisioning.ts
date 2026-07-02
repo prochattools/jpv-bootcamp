@@ -643,6 +643,11 @@ async function upsertProvisioningRecord({
 	plan,
 	status,
 	lastEventId,
+	stripePriceId,
+	subscriptionStatus,
+	subscriptionCurrentPeriodEnd,
+	subscriptionCancelAtPeriodEnd,
+	subscriptionUpdatedAt,
 }: {
 	email: string
 	stripeCustomerId: string
@@ -651,6 +656,11 @@ async function upsertProvisioningRecord({
 	plan: string
 	status: string
 	lastEventId?: string | null
+	stripePriceId?: string | null
+	subscriptionStatus?: string | null
+	subscriptionCurrentPeriodEnd?: Date | null
+	subscriptionCancelAtPeriodEnd?: boolean | null
+	subscriptionUpdatedAt?: Date | null
 }): Promise<void> {
 	const normalizedEmail = normalizeEmailAddress(email)
 	if (!normalizedEmail) {
@@ -699,6 +709,11 @@ async function upsertProvisioningRecord({
 		currentPlan?: string | null
 		status: string
 		lastEventId?: string | null
+		stripePriceId?: string | null
+		subscriptionStatus?: string | null
+		subscriptionCurrentPeriodEnd?: Date | null
+		subscriptionCancelAtPeriodEnd?: boolean | null
+		subscriptionUpdatedAt?: Date | null
 	} = {
 		email,
 		normalizedEmail,
@@ -708,6 +723,11 @@ async function upsertProvisioningRecord({
 		currentPlan: plan ?? null,
 		status,
 		lastEventId: lastEventId ?? null,
+		stripePriceId: stripePriceId ?? null,
+		subscriptionStatus: subscriptionStatus ?? null,
+		subscriptionCurrentPeriodEnd: subscriptionCurrentPeriodEnd ?? null,
+		subscriptionCancelAtPeriodEnd: subscriptionCancelAtPeriodEnd ?? null,
+		subscriptionUpdatedAt: subscriptionUpdatedAt ?? null,
 	}
 
 	if (typeof wpUserId === 'number') {
@@ -1417,6 +1437,18 @@ export async function syncFromSubscription(
 	}
 	const storedPlanName = resolveStoredPlanName(existing)
 
+	// Extract subscription projection data for state reconciliation
+	const subscriptionDataForProjection = {
+		stripePriceId: priceId ?? null,
+		subscriptionStatus: subscription.status ?? null,
+		subscriptionCurrentPeriodEnd:
+			typeof subscription.current_period_end === 'number'
+				? new Date(subscription.current_period_end * 1000)
+				: null,
+		subscriptionCancelAtPeriodEnd: subscription.cancel_at_period_end ?? null,
+		subscriptionUpdatedAt: new Date(),
+	}
+
 	const isActive = ACTIVE_STATUSES.has(subscription.status)
 	if (isActive && !plan) {
 		console.error('WP provisioning skipped: invalid plan', {
@@ -1556,6 +1588,13 @@ export async function syncFromSubscription(
 			plan: incomingPlan ?? 'none',
 			status: nextStatus,
 			lastEventId: eventId ?? null,
+			stripePriceId: resolvedPriceId,
+			subscriptionStatus: subscription.status,
+			subscriptionCurrentPeriodEnd: subscription.current_period_end
+				? new Date(subscription.current_period_end * 1000)
+				: null,
+			subscriptionCancelAtPeriodEnd: subscription.cancel_at_period_end ?? null,
+			subscriptionUpdatedAt: new Date(),
 		})
 		logDecision('skip', reason)
 		return buildSummary('skip', reason)
@@ -1577,6 +1616,13 @@ export async function syncFromSubscription(
 			plan: incomingPlan ?? 'none',
 			status: nextStatus,
 			lastEventId: eventId ?? null,
+			stripePriceId: resolvedPriceId,
+			subscriptionStatus: subscription.status,
+			subscriptionCurrentPeriodEnd: subscription.current_period_end
+				? new Date(subscription.current_period_end * 1000)
+				: null,
+			subscriptionCancelAtPeriodEnd: subscription.cancel_at_period_end ?? null,
+			subscriptionUpdatedAt: new Date(),
 		})
 		logDecision('skip', 'invalid_plan')
 		return buildSummary('skip', 'invalid_plan')
@@ -1600,6 +1646,13 @@ export async function syncFromSubscription(
 			plan: incomingPlan,
 			status: nextStatus,
 			lastEventId: eventId ?? null,
+			stripePriceId: resolvedPriceId,
+			subscriptionStatus: subscription.status,
+			subscriptionCurrentPeriodEnd: subscription.current_period_end
+				? new Date(subscription.current_period_end * 1000)
+				: null,
+			subscriptionCancelAtPeriodEnd: subscription.cancel_at_period_end ?? null,
+			subscriptionUpdatedAt: new Date(),
 		})
 		logDecision(decision, reason)
 		return buildSummary(decision, reason)
@@ -1648,6 +1701,13 @@ export async function syncFromSubscription(
 		plan: incomingPlan,
 		status: nextStatus,
 		lastEventId: eventId ?? null,
+		stripePriceId: resolvedPriceId,
+		subscriptionStatus: subscription.status,
+		subscriptionCurrentPeriodEnd: subscription.current_period_end
+			? new Date(subscription.current_period_end * 1000)
+			: null,
+		subscriptionCancelAtPeriodEnd: subscription.cancel_at_period_end ?? null,
+		subscriptionUpdatedAt: new Date(),
 	})
 
 	if (emailEval.shouldSend && !dryRun) {

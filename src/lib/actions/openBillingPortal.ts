@@ -7,6 +7,7 @@ import { getStripe } from '@/lib/stripe'
 import { getStripeConfig } from '@/lib/stripe-config'
 import { normalizeEmail } from '@/lib/normalize-email'
 import { BILLING_PORTAL_DEFAULT_RETURN_URL } from '@/lib/billing-portal-return'
+import { requirePortalMember } from '@/lib/auth/requirePortalMember'
 
 export type OpenBillingPortalResult =
 	| { ok: true; portalUrl: string }
@@ -19,11 +20,13 @@ export type OpenBillingPortalResult =
 				| 'unexpected_error'
 	  }
 
-export async function openBillingPortal(
-	memberId: string,
-	memberEmail: string
-): Promise<OpenBillingPortalResult> {
-	if (!memberId || !memberEmail) {
+export async function openBillingPortal(): Promise<OpenBillingPortalResult> {
+	let memberEmail: string
+
+	try {
+		const portalMember = await requirePortalMember('/portal/billing')
+		memberEmail = portalMember.memberEmail
+	} catch {
 		return { ok: false, error: 'unauthenticated' }
 	}
 
@@ -39,12 +42,7 @@ export async function openBillingPortal(
 		})
 
 		if (!customerRecord?.stripeCustomerId) {
-			console.warn('No Stripe customer found', {
-				memberId,
-				emailDomain: memberEmail.includes('@')
-					? memberEmail.split('@')[1]
-					: undefined,
-			})
+			console.warn('No Stripe customer found')
 			return { ok: false, error: 'no_stripe_customer' }
 		}
 
@@ -58,25 +56,16 @@ export async function openBillingPortal(
 		})
 
 		if (!session.url) {
-			console.error('Billing portal session created but no URL returned', {
-				memberId,
-				sessionId: session.id,
-			})
+			console.error('Billing portal session created but no URL returned')
 			return { ok: false, error: 'stripe_error' }
 		}
 
-		console.info('Billing portal session opened', {
-			memberId,
-			customerId: customerRecord.stripeCustomerId,
-		})
+		console.info('Billing portal session opened successfully')
 
 		return { ok: true, portalUrl: session.url }
 	} catch (error) {
 		const errorMessage = (error as Error).message || 'Unknown error'
-		console.error('Failed to open billing portal', {
-			memberId,
-			error: errorMessage,
-		})
+		console.error('Failed to open billing portal: internal server error')
 
 		if (
 			errorMessage.includes('No such customer') ||
