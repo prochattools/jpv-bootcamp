@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { getCurrentPayloadMember } from '@/lib/members/currentMember'
 import { getMemberAccountOverview } from '@/lib/payloadCourse/memberPortal'
 
+import { EmailChangeForm } from '../EmailChangeForm'
 import { PasswordChangeForm } from '../PasswordChangeForm'
 import { ProfileForm } from '../ProfileForm'
 import { PortalShell, StatusPill } from '../PortalShell'
@@ -109,15 +110,28 @@ export default async function LearnAccountPage({
           </section>
         </section>
 
-        <section className='mt-8 rounded-[24px] border border-[#153f2e]/10 bg-white p-7 shadow-[0_16px_45px_rgba(31,52,43,0.08)]'>
-          <p className='text-xs font-bold uppercase tracking-[0.2em] text-[#8a7450]'>Security</p>
-          <h2 className='mt-3 text-2xl font-bold text-[#153f2e]'>Change password</h2>
-          <p className='mt-2 text-sm leading-6 text-[#68766f]'>
-            Confirm your current password before choosing a new one.
-          </p>
-          <div className='mt-6'>
-            <PasswordChangeForm />
-          </div>
+        <section className='mt-8 grid gap-6 lg:grid-cols-2'>
+          <article className='rounded-[24px] border border-[#153f2e]/10 bg-white p-7 shadow-[0_16px_45px_rgba(31,52,43,0.08)]'>
+            <p className='text-xs font-bold uppercase tracking-[0.2em] text-[#8a7450]'>Security</p>
+            <h2 className='mt-3 text-2xl font-bold text-[#153f2e]'>Change password</h2>
+            <p className='mt-2 text-sm leading-6 text-[#68766f]'>
+              Confirm your current password before choosing a new one.
+            </p>
+            <div className='mt-6'>
+              <PasswordChangeForm />
+            </div>
+          </article>
+
+          <article className='rounded-[24px] border border-[#153f2e]/10 bg-white p-7 shadow-[0_16px_45px_rgba(31,52,43,0.08)]'>
+            <p className='text-xs font-bold uppercase tracking-[0.2em] text-[#8a7450]'>Sign-in email</p>
+            <h2 className='mt-3 text-2xl font-bold text-[#153f2e]'>Change email address</h2>
+            <p className='mt-2 text-sm leading-6 text-[#68766f]'>
+              Confirm a new address before it replaces your current sign-in email.
+            </p>
+            <div className='mt-6'>
+              <EmailChangeForm />
+            </div>
+          </article>
         </section>
 
         <section className='mt-8 grid gap-6 lg:grid-cols-3'>

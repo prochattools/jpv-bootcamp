@@ -1,6 +1,7 @@
 import { revalidatePath } from 'next/cache'
 import { notFound, redirect } from 'next/navigation'
 
+import { resolveMemberVerificationPublicBaseUrl } from '@/lib/auth/memberEmailVerificationApplication'
 import { requirePortalMember } from '@/lib/auth/requirePortalMember'
 import { updateMemberProfile } from '@/lib/members/updateMemberProfile'
 import type { PayloadCourseWriteAPI } from '@/lib/payloadCourse/accessService'
@@ -47,6 +48,7 @@ async function updatePortalMemberProfileAction(formData: FormData) {
     company: formText(formData.get('company')),
     phone: formText(formData.get('phone')),
     timezone: formText(formData.get('timezone')),
+    baseUrl: resolveMemberVerificationPublicBaseUrl(),
   })
 
   if (!result.ok) redirect('/portal/account?error=display-name')

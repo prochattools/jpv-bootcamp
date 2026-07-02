@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict'
 
-import { blockMember, restoreMember } from '../src/lib/members/accountStatus'
+import {
+  blockMember,
+  deleteMember,
+  restoreMember,
+  suspendMember,
+} from '../src/lib/members/accountStatus'
 import { changeMemberPassword } from '../src/lib/members/changeMemberPassword'
 import { cleanupSensitiveEmailEvents } from '../src/lib/members/cleanupSensitiveEmailEvents'
 import { isEligibleCurrentMember } from '../src/lib/members/currentMember'
@@ -139,7 +144,7 @@ async function testPasswordChangeControls() {
   {
     const payload = buildPayload()
     const result = await changeMemberPassword(payload, validInput)
-    assert.deepEqual(result, { ok: true })
+    assert.deepEqual(result, { ok: true, confirmationQueued: false })
     assert.equal(payload.docs('payload_member_security_events').length, 1)
     assert.equal(payload.docs('payload_member_security_events')[0].eventType, 'password_changed')
     const stored = JSON.stringify(payload.docs('payload_member_security_events'))
@@ -251,6 +256,42 @@ async function testBlockAndRestore() {
   assert.equal(restoreNoop.auditEvent.action, 'member.restore.noop')
 }
 
+async function testSuspendAndDeleteNotices() {
+  const suspendedPayload = buildPayload()
+  const suspended = await suspendMember(suspendedPayload, {
+    memberId: 'member_1',
+    actor: { type: 'admin', id: 'admin_1' },
+    reason: 'private moderation detail',
+    baseUrl: 'https://preview.jpvbootcamp.test',
+  })
+  assert.equal(suspended.changed, true)
+  assert.equal(suspended.member.accountStatus, 'suspended')
+  assert.equal(
+    suspendedPayload.docs('payload_member_security_events').at(-1)?.eventType,
+    'account_suspended',
+  )
+  const suspendedEmail = suspendedPayload.docs('payload_email_events').at(-1)
+  assert.equal(suspendedEmail?.templateKey, 'access-suspended')
+  assert.equal(JSON.stringify(suspendedEmail?.metadata).includes('private moderation detail'), false)
+
+  const deletedPayload = buildPayload()
+  const deleted = await deleteMember(deletedPayload, {
+    memberId: 'member_1',
+    actor: { type: 'admin', id: 'admin_1' },
+    reason: 'private deletion detail',
+    baseUrl: 'https://preview.jpvbootcamp.test',
+  })
+  assert.equal(deleted.changed, true)
+  assert.equal(deleted.member.accountStatus, 'deleted')
+  assert.equal(
+    deletedPayload.docs('payload_member_security_events').at(-1)?.eventType,
+    'account_deleted',
+  )
+  const deletedEmail = deletedPayload.docs('payload_email_events').at(-1)
+  assert.equal(deletedEmail?.templateKey, 'access-deleted')
+  assert.equal(JSON.stringify(deletedEmail?.metadata).includes('private deletion detail'), false)
+}
+
 async function testSensitiveEmailCleanup() {
   const now = new Date('2026-06-23T12:00:00.000Z')
   const payload = new FakePayload({
@@ -316,6 +357,7 @@ async function main() {
   await testPasswordChangeControls()
   testCurrentMemberEligibility()
   await testBlockAndRestore()
+  await testSuspendAndDeleteNotices()
   await testSensitiveEmailCleanup()
   console.log('payload_member_security_controls.test.ts passed')
 }

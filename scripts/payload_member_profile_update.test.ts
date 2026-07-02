@@ -105,6 +105,9 @@ class FakePayload implements PayloadCourseWriteAPI {
 
 async function testValidUpdateAndPreservation() {
   const payload = new FakePayload({
+    payload_members: [
+      { id: 'member_1', email: 'member@example.test', accountStatus: 'active' },
+    ],
     payload_member_profiles: [
       {
         id: 'profile_1',
@@ -144,7 +147,12 @@ async function testValidUpdateAndPreservation() {
 }
 
 async function testProfileCreation() {
-  const payload = new FakePayload({ payload_member_profiles: [] })
+  const payload = new FakePayload({
+    payload_members: [
+      { id: 'member_create', email: 'create@example.test', accountStatus: 'active' },
+    ],
+    payload_member_profiles: [],
+  })
 
   const result = await updateMemberProfile(payload, 'member_create', {
     displayName: 'Created Member',
@@ -174,7 +182,12 @@ async function testMissingDisplayName() {
 }
 
 async function testMaximumLengths() {
-  const payload = new FakePayload({ payload_member_profiles: [] })
+  const payload = new FakePayload({
+    payload_members: [
+      { id: 'member_1', email: 'member@example.test', accountStatus: 'active' },
+    ],
+    payload_member_profiles: [],
+  })
   const result = await updateMemberProfile(payload, 'member_1', {
     displayName: 'D'.repeat(100),
     company: 'C'.repeat(120),
@@ -192,6 +205,10 @@ async function testMaximumLengths() {
 
 async function testAuthenticatedMemberOwnership() {
   const payload = new FakePayload({
+    payload_members: [
+      { id: 'member_a', email: 'a@example.test', accountStatus: 'active' },
+      { id: 'member_b', email: 'b@example.test', accountStatus: 'active' },
+    ],
     payload_member_profiles: [
       { id: 'profile_a', member: 'member_a', displayName: 'Member A' },
       { id: 'profile_b', member: 'member_b', displayName: 'Member B' },

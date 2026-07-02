@@ -5,6 +5,7 @@ import {
   sendQueuedPayloadEmail,
   type PayloadEmailSenderClient,
 } from '../src/lib/payloadCourse/emailSender'
+import { cleanupSensitiveEmailEvents } from '../src/lib/members/cleanupSensitiveEmailEvents'
 import type {
   PayloadCourseWriteAPI,
   PayloadDocument,
@@ -28,6 +29,14 @@ function matchesCondition(value: unknown, condition: unknown): boolean {
     const expected = String(record.equals)
     if (Array.isArray(value)) return value.some((item) => relationValue(item) === expected)
     return relationValue(value) === expected
+  }
+
+  if ('in' in record && Array.isArray(record.in)) {
+    return record.in.map(String).includes(relationValue(value))
+  }
+
+  if ('less_than' in record) {
+    return String(value ?? '') < String(record.less_than ?? '')
   }
 
   return false
@@ -141,6 +150,173 @@ function fakeResend() {
     },
   }
   return { client, sends }
+}
+
+const accountSecurityTemplateKeys = [
+  'member-invitation',
+  'member-password-reset',
+  'member-password-changed',
+  'member-account-ready',
+  'member-profile-changed',
+  'member-email-change-confirmation',
+  'member-email-change-requested',
+  'member-email-changed',
+  'access-blocked',
+  'access-suspended',
+  'access-restored',
+  'access-deleted',
+] as const
+
+const sensitiveAccountTemplateKeys = [
+  'member-invitation',
+  'member-password-reset',
+  'member-email-verification',
+  'member-email-change-confirmation',
+] as const
+
+async function testAccountSecuritySystemTemplates() {
+  for (const templateKey of accountSecurityTemplateKeys) {
+    const eventId = `event_${templateKey}`
+    const payload = buildPayload({
+      payload_email_templates: [],
+      payload_email_events: [
+        {
+          id: eventId,
+          toEmail: 'member@example.test',
+          templateKey,
+          deliveryStatus: 'queued',
+          dedupeKey: `${templateKey}:member_1:event_1`,
+          metadata: {
+            displayName: '<Member & Admin>',
+            logoUrl: 'https://preview.jpvbootcamp.test/images/jpv-logo.png',
+            actionUrl: 'https://preview.jpvbootcamp.test/account-action?token=fake-sensitive-value',
+            verificationUrl: 'https://preview.jpvbootcamp.test/verify?token=fake-sensitive-value',
+            moderationReason: 'private-moderation-detail',
+            administratorIdentity: 'private-administrator-identity',
+            password: 'private-password-value',
+            sessionToken: 'private-session-value',
+          },
+          createdAt: '2026-07-02T03:00:00.000Z',
+        },
+      ],
+    })
+    const resend = fakeResend()
+    const result = await sendQueuedPayloadEmail(payload, eventId, {
+      resend: resend.client,
+      emailConfig: { from: 'JPV Bootcamp <support@example.test>' },
+    })
+
+    assert.equal(result.status, 'sent', templateKey)
+    assert.equal(resend.sends.length, 1, templateKey)
+    const message = resend.sends[0]?.payload as {
+      subject?: string
+      text?: string
+      html?: string
+    }
+    assert.ok(message.subject?.trim(), templateKey)
+    assert.ok(message.text?.trim(), templateKey)
+    assert.ok(message.html?.trim(), templateKey)
+    assert.match(message.html ?? '', /JPV/)
+    assert.match(message.html ?? '', /jpv-logo\.png/)
+    assert.match(message.html ?? '', /&lt;Member &amp; Admin&gt;/)
+    assert.equal((message.html ?? '').includes('<Member & Admin>'), false)
+
+    const rendered = `${message.subject ?? ''}\n${message.text ?? ''}\n${message.html ?? ''}`
+    for (const privateValue of [
+      'private-moderation-detail',
+      'private-administrator-identity',
+      'private-password-value',
+      'private-session-value',
+    ]) {
+      assert.equal(rendered.includes(privateValue), false, `${templateKey}:${privateValue}`)
+    }
+  }
+}
+
+async function testSensitiveAccountLinkRedaction() {
+  for (const templateKey of sensitiveAccountTemplateKeys) {
+    const eventId = `sensitive_${templateKey}`
+    const payload = buildPayload({
+      payload_email_templates: [],
+      payload_email_events: [
+        {
+          id: eventId,
+          toEmail: 'member@example.test',
+          templateKey,
+          deliveryStatus: 'queued',
+          dedupeKey: `${templateKey}:member_1:sensitive`,
+          metadata: {
+            purpose: templateKey,
+            displayName: 'Member',
+            logoUrl: 'https://preview.jpvbootcamp.test/images/jpv-logo.png',
+            actionUrl: 'https://preview.jpvbootcamp.test/action?token=fake-sensitive-value',
+            verificationUrl: 'https://preview.jpvbootcamp.test/verify?token=fake-sensitive-value',
+          },
+          createdAt: '2026-07-02T03:00:00.000Z',
+        },
+      ],
+    })
+    const resend = fakeResend()
+    const result = await sendQueuedPayloadEmail(payload, eventId, {
+      resend: resend.client,
+      emailConfig: { from: 'JPV Bootcamp <support@example.test>' },
+    })
+    assert.equal(result.status, 'sent', templateKey)
+    const stored = payload.doc('payload_email_events', eventId)
+    assert.ok(stored, templateKey)
+    const serialized = JSON.stringify(stored?.metadata)
+    assert.equal(serialized.includes('actionUrl'), false, templateKey)
+    assert.equal(serialized.includes('verificationUrl'), false, templateKey)
+    assert.equal(serialized.includes('fake-sensitive-value'), false, templateKey)
+  }
+}
+
+async function testStaleSensitiveAccountLinkCleanup() {
+  const oldEvents = sensitiveAccountTemplateKeys.map((templateKey, index) => ({
+    id: `stale_${index}`,
+    toEmail: 'member@example.test',
+    templateKey,
+    deliveryStatus: index % 2 === 0 ? 'queued' : 'failed',
+    dedupeKey: `${templateKey}:stale:${index}`,
+    metadata: {
+      purpose: templateKey,
+      actionUrl: `https://preview.jpvbootcamp.test/action?token=stale-sensitive-${index}`,
+      verificationUrl: `https://preview.jpvbootcamp.test/verify?token=stale-sensitive-${index}`,
+    },
+    createdAt: '2026-07-02T01:00:00.000Z',
+  }))
+  const payload = buildPayload({
+    payload_email_templates: [],
+    payload_email_events: [
+      ...oldEvents,
+      {
+        id: 'recent_sensitive',
+        toEmail: 'member@example.test',
+        templateKey: 'member-password-reset',
+        deliveryStatus: 'queued',
+        dedupeKey: 'member-password-reset:recent',
+        metadata: { actionUrl: 'https://preview.jpvbootcamp.test/action?token=recent-value' },
+        createdAt: '2026-07-02T03:30:00.000Z',
+      },
+    ],
+  })
+
+  const result = await cleanupSensitiveEmailEvents(payload, {
+    now: new Date('2026-07-02T04:00:00.000Z'),
+    retentionMs: 60 * 60 * 1000,
+  })
+  assert.equal(result.redacted, sensitiveAccountTemplateKeys.length)
+  for (const event of oldEvents) {
+    const stored = payload.doc('payload_email_events', event.id)
+    const serialized = JSON.stringify(stored?.metadata)
+    assert.equal(serialized.includes('actionUrl'), false, event.templateKey)
+    assert.equal(serialized.includes('verificationUrl'), false, event.templateKey)
+    assert.equal(serialized.includes('stale-sensitive-'), false, event.templateKey)
+  }
+  assert.equal(
+    JSON.stringify(payload.doc('payload_email_events', 'recent_sensitive')?.metadata).includes('recent-value'),
+    true,
+  )
 }
 
 async function run() {
@@ -307,6 +483,11 @@ async function run() {
     assert.equal(payload.doc('payload_email_events', 'event_1')?.deliveryStatus, 'failed')
     assert.equal(payload.doc('payload_email_events', 'event_1')?.failureReason, 'provider_unavailable')
   }
+
+  await testAccountSecuritySystemTemplates()
+  await testSensitiveAccountLinkRedaction()
+  await testStaleSensitiveAccountLinkCleanup()
+  await testPasswordWorkflowEmailRedactionAfterDelivery()
 }
 
 run()
@@ -374,7 +555,3 @@ async function testPasswordWorkflowEmailRedactionAfterDelivery() {
   assert.equal(JSON.stringify(stored).includes('raw-sensitive-token'), false)
 }
 
-testPasswordWorkflowEmailRedactionAfterDelivery().catch((error) => {
-  console.error(error)
-  process.exitCode = 1
-})

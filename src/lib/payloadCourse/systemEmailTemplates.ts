@@ -1,33 +1,216 @@
 import type { PayloadDocument } from '@/lib/payloadCourse/accessService'
 
-const MEMBER_EMAIL_VERIFICATION_TEMPLATE_KEY = 'member-email-verification'
+export const MEMBER_EMAIL_VERIFICATION_TEMPLATE_KEY = 'member-email-verification'
+export const MEMBER_INVITATION_TEMPLATE_KEY = 'member-invitation'
+export const MEMBER_PASSWORD_RESET_TEMPLATE_KEY = 'member-password-reset'
+export const MEMBER_PASSWORD_CHANGED_TEMPLATE_KEY = 'member-password-changed'
+export const MEMBER_ACCOUNT_READY_TEMPLATE_KEY = 'member-account-ready'
+export const MEMBER_PROFILE_CHANGED_TEMPLATE_KEY = 'member-profile-changed'
+export const MEMBER_EMAIL_CHANGE_CONFIRMATION_TEMPLATE_KEY = 'member-email-change-confirmation'
+export const MEMBER_EMAIL_CHANGE_REQUESTED_TEMPLATE_KEY = 'member-email-change-requested'
+export const MEMBER_EMAIL_CHANGED_TEMPLATE_KEY = 'member-email-changed'
+export const ACCESS_BLOCKED_TEMPLATE_KEY = 'access-blocked'
+export const ACCESS_SUSPENDED_TEMPLATE_KEY = 'access-suspended'
+export const ACCESS_RESTORED_TEMPLATE_KEY = 'access-restored'
+export const ACCESS_DELETED_TEMPLATE_KEY = 'access-deleted'
 
-const memberEmailVerificationTemplate: PayloadDocument = {
-  id: 'system-member-email-verification',
-  name: 'Member email verification',
-  templateKey: MEMBER_EMAIL_VERIFICATION_TEMPLATE_KEY,
-  status: 'active',
-  purpose: 'account_created',
-  subject: 'Verify your JPV Bootcamp email address',
-  preheader: 'Secure your JPV Bootcamp member account by verifying your email address.',
-  textBody: [
+function brandedTemplate(input: {
+  key: string
+  name: string
+  subject: string
+  preheader: string
+  heading: string
+  paragraphs: string[]
+  actionLabel?: string
+  actionUrlVariable?: string
+}): PayloadDocument {
+  const textLines = [
     'Hi {{displayName}},',
     '',
-    'Please verify your email address to finish securing your JPV Bootcamp member account.',
-    '{{verificationUrl}}',
-    '',
-    'This link expires in one hour and can only be used once.',
-    'If you did not request this, you can ignore this message.',
-  ].join('\n'),
-  htmlBody: '<!doctype html><html><body style="font-family:Arial,sans-serif;color:#17202a"><div style="max-width:560px;margin:auto;padding:24px"><img src="{{logoUrl}}" alt="JPV" style="max-width:180px;height:auto"/><h1>Verify your email</h1><p>Hi {{displayName}},</p><p>Please verify your email address to finish securing your JPV Bootcamp member account.</p><p><a href="{{verificationUrl}}" style="display:inline-block;background:#111;color:#fff;padding:12px 18px;text-decoration:none;border-radius:6px">Verify email address</a></p><p>This link expires in one hour and can only be used once.</p><p>If you did not request this, you can ignore this message.</p></div></body></html>',
-  adminCopyRequired: false,
+    ...input.paragraphs.flatMap((paragraph) => [paragraph, '']),
+  ]
+  if (input.actionUrlVariable) textLines.push(input.actionUrlVariable, '')
+  textLines.push('JPV Bootcamp')
+
+  const paragraphs = input.paragraphs.map((paragraph) => `<p>${paragraph}</p>`).join('')
+  const action = input.actionUrlVariable
+    ? `<p><a href="${input.actionUrlVariable}" style="display:inline-block;background:#153f2e;color:#fff;padding:12px 18px;text-decoration:none;border-radius:6px">${input.actionLabel ?? 'Continue'}</a></p>`
+    : ''
+
+  return {
+    id: `system-${input.key}`,
+    name: input.name,
+    templateKey: input.key,
+    status: 'active',
+    purpose: 'account_created',
+    subject: input.subject,
+    preheader: input.preheader,
+    textBody: textLines.join('\n'),
+    htmlBody: `<!doctype html><html><body style="font-family:Arial,sans-serif;color:#17202a"><div style="max-width:560px;margin:auto;padding:24px"><img src="{{logoUrl}}" alt="JPV" style="max-width:180px;height:auto"/><h1>${input.heading}</h1><p>Hi {{displayName}},</p>${paragraphs}${action}<p>JPV Bootcamp</p></div></body></html>`,
+    adminCopyRequired: false,
+  }
+}
+
+const templates: Record<string, PayloadDocument> = {
+  [MEMBER_EMAIL_VERIFICATION_TEMPLATE_KEY]: brandedTemplate({
+    key: MEMBER_EMAIL_VERIFICATION_TEMPLATE_KEY,
+    name: 'Member email verification',
+    subject: 'Verify your JPV Bootcamp email address',
+    preheader: 'Secure your JPV Bootcamp member account by verifying your email address.',
+    heading: 'Verify your email',
+    paragraphs: [
+      'Please verify your email address to finish securing your JPV Bootcamp member account.',
+      'This link expires in one hour and can only be used once.',
+      'If you did not request this, you can ignore this message.',
+    ],
+    actionLabel: 'Verify email address',
+    actionUrlVariable: '{{verificationUrl}}',
+  }),
+  [MEMBER_INVITATION_TEMPLATE_KEY]: brandedTemplate({
+    key: MEMBER_INVITATION_TEMPLATE_KEY,
+    name: 'Member invitation',
+    subject: 'Set up your JPV Bootcamp member account',
+    preheader: 'Create your password and finish setting up your member account.',
+    heading: 'You are invited',
+    paragraphs: [
+      'An administrator created a pending JPV Bootcamp member account for this email address.',
+      'Use the secure link below to choose a password. The link expires in 24 hours and can only be used once.',
+      'If you were not expecting this invitation, you can ignore this message.',
+    ],
+    actionLabel: 'Set your password',
+    actionUrlVariable: '{{actionUrl}}',
+  }),
+  [MEMBER_PASSWORD_RESET_TEMPLATE_KEY]: brandedTemplate({
+    key: MEMBER_PASSWORD_RESET_TEMPLATE_KEY,
+    name: 'Member password reset',
+    subject: 'Reset your JPV Bootcamp password',
+    preheader: 'Use this secure, single-use link to reset your password.',
+    heading: 'Reset your password',
+    paragraphs: [
+      'A password reset was requested for your JPV Bootcamp member account.',
+      'This link expires in one hour and can only be used once.',
+      'If you did not request a reset, you can ignore this message and your password will remain unchanged.',
+    ],
+    actionLabel: 'Choose a new password',
+    actionUrlVariable: '{{actionUrl}}',
+  }),
+  [MEMBER_PASSWORD_CHANGED_TEMPLATE_KEY]: brandedTemplate({
+    key: MEMBER_PASSWORD_CHANGED_TEMPLATE_KEY,
+    name: 'Member password changed',
+    subject: 'Your JPV Bootcamp password was changed',
+    preheader: 'A security confirmation for your member account.',
+    heading: 'Password changed',
+    paragraphs: [
+      'The password for your JPV Bootcamp member account was changed successfully.',
+      'If you did not make this change, contact support immediately.',
+    ],
+  }),
+  [MEMBER_ACCOUNT_READY_TEMPLATE_KEY]: brandedTemplate({
+    key: MEMBER_ACCOUNT_READY_TEMPLATE_KEY,
+    name: 'Member account ready',
+    subject: 'Your JPV Bootcamp member account is ready',
+    preheader: 'Your password is set and you can now sign in.',
+    heading: 'Your account is ready',
+    paragraphs: [
+      'Your password was set successfully and your pending member account is now active.',
+      'For security, this confirmation did not sign you in automatically. Return to the JPV Bootcamp sign-in page to continue.',
+    ],
+  }),
+  [MEMBER_PROFILE_CHANGED_TEMPLATE_KEY]: brandedTemplate({
+    key: MEMBER_PROFILE_CHANGED_TEMPLATE_KEY,
+    name: 'Member profile changed',
+    subject: 'Your JPV Bootcamp profile was updated',
+    preheader: 'A confirmation of changes to your member profile.',
+    heading: 'Profile updated',
+    paragraphs: [
+      'Your JPV Bootcamp member profile was updated successfully.',
+      'If you did not make this change, contact support.',
+    ],
+  }),
+  [MEMBER_EMAIL_CHANGE_CONFIRMATION_TEMPLATE_KEY]: brandedTemplate({
+    key: MEMBER_EMAIL_CHANGE_CONFIRMATION_TEMPLATE_KEY,
+    name: 'Member email change confirmation',
+    subject: 'Confirm your new JPV Bootcamp email address',
+    preheader: 'Confirm this address before it becomes your member sign-in email.',
+    heading: 'Confirm your new email',
+    paragraphs: [
+      'A request was made to use this address for a JPV Bootcamp member account.',
+      'Confirm the change with the secure link below. The link expires in one hour and can only be used once.',
+      'If you did not request this, you can ignore this message.',
+    ],
+    actionLabel: 'Confirm new email address',
+    actionUrlVariable: '{{actionUrl}}',
+  }),
+  [MEMBER_EMAIL_CHANGE_REQUESTED_TEMPLATE_KEY]: brandedTemplate({
+    key: MEMBER_EMAIL_CHANGE_REQUESTED_TEMPLATE_KEY,
+    name: 'Member email change requested',
+    subject: 'A JPV Bootcamp email change was requested',
+    preheader: 'Your current sign-in email remains unchanged until confirmation.',
+    heading: 'Email change requested',
+    paragraphs: [
+      'A request was made to change the email address on your JPV Bootcamp member account.',
+      'Your current sign-in email remains active until the new address is confirmed.',
+      'If you did not request this change, contact support.',
+    ],
+  }),
+  [MEMBER_EMAIL_CHANGED_TEMPLATE_KEY]: brandedTemplate({
+    key: MEMBER_EMAIL_CHANGED_TEMPLATE_KEY,
+    name: 'Member email changed',
+    subject: 'Your JPV Bootcamp email address was changed',
+    preheader: 'A security confirmation for your member sign-in email.',
+    heading: 'Email address changed',
+    paragraphs: [
+      'The sign-in email for your JPV Bootcamp member account was changed successfully.',
+      'For security, you were not signed in automatically. Use the new address the next time you sign in.',
+      'If you did not make this change, contact support immediately.',
+    ],
+  }),
+  [ACCESS_BLOCKED_TEMPLATE_KEY]: brandedTemplate({
+    key: ACCESS_BLOCKED_TEMPLATE_KEY,
+    name: 'Member account blocked',
+    subject: 'Your JPV Bootcamp account access changed',
+    preheader: 'Your member account is currently blocked.',
+    heading: 'Account access changed',
+    paragraphs: [
+      'Your JPV Bootcamp member account is currently blocked and cannot sign in.',
+      'Contact support if you believe this is unexpected.',
+    ],
+  }),
+  [ACCESS_SUSPENDED_TEMPLATE_KEY]: brandedTemplate({
+    key: ACCESS_SUSPENDED_TEMPLATE_KEY,
+    name: 'Member account suspended',
+    subject: 'Your JPV Bootcamp account is suspended',
+    preheader: 'Your member account is temporarily unavailable.',
+    heading: 'Account suspended',
+    paragraphs: [
+      'Your JPV Bootcamp member account is temporarily suspended and cannot sign in.',
+      'Contact support for assistance.',
+    ],
+  }),
+  [ACCESS_RESTORED_TEMPLATE_KEY]: brandedTemplate({
+    key: ACCESS_RESTORED_TEMPLATE_KEY,
+    name: 'Member account restored',
+    subject: 'Your JPV Bootcamp account access was restored',
+    preheader: 'Your member account is active again.',
+    heading: 'Account access restored',
+    paragraphs: [
+      'Access to your JPV Bootcamp member account was restored.',
+      'This did not sign you in automatically or change your email verification status.',
+    ],
+  }),
+  [ACCESS_DELETED_TEMPLATE_KEY]: brandedTemplate({
+    key: ACCESS_DELETED_TEMPLATE_KEY,
+    name: 'Member account deleted',
+    subject: 'Your JPV Bootcamp account was closed',
+    preheader: 'A confirmation that member access was removed.',
+    heading: 'Account closed',
+    paragraphs: [
+      'Your JPV Bootcamp member account was closed and can no longer sign in.',
+      'Contact support if you believe this is unexpected.',
+    ],
+  }),
 }
 
 export function getSystemEmailTemplate(templateKey: string): PayloadDocument | null {
-  if (templateKey === MEMBER_EMAIL_VERIFICATION_TEMPLATE_KEY) {
-    return memberEmailVerificationTemplate
-  }
-  return null
+  return templates[templateKey] ?? null
 }
-
-export { MEMBER_EMAIL_VERIFICATION_TEMPLATE_KEY }

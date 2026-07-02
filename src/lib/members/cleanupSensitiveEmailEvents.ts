@@ -3,7 +3,12 @@ import type {
   PayloadDocument,
 } from '@/lib/payloadCourse/accessService'
 
-const SENSITIVE_TEMPLATES = ['member-invitation', 'member-password-reset'] as const
+const SENSITIVE_TEMPLATES = [
+  'member-invitation',
+  'member-password-reset',
+  'member-email-verification',
+  'member-email-change-confirmation',
+] as const
 const DEFAULT_RETENTION_MS = 60 * 60 * 1000
 
 export type CleanupSensitiveEmailEventsInput = {

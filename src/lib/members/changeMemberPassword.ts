@@ -3,6 +3,7 @@ import type {
   PayloadId,
   PayloadMemberAuthAPI,
 } from '@/lib/payloadCourse/accessService'
+import { createAuditEvent, queueEmailEvent } from '@/lib/payloadCourse/events'
 
 export type ChangeMemberPasswordInput = {
   memberId: PayloadId
@@ -10,10 +11,11 @@ export type ChangeMemberPasswordInput = {
   currentPassword: string
   newPassword: string
   newPasswordConfirmation: string
+  baseUrl?: string
 }
 
 export type ChangeMemberPasswordResult =
-  | { ok: true }
+  | { ok: true; confirmationQueued: boolean }
   | {
       ok: false
       error:
@@ -37,11 +39,7 @@ export async function changeMemberPassword(
   if (!email || !input.currentPassword || !input.newPassword || !input.newPasswordConfirmation) {
     return { ok: false, error: 'invalid_request' }
   }
-
-  if (input.newPassword.length < 12) {
-    return { ok: false, error: 'password_too_short' }
-  }
-
+  if (input.newPassword.length < 12) return { ok: false, error: 'password_too_short' }
   if (input.newPassword !== input.newPasswordConfirmation) {
     return { ok: false, error: 'password_mismatch' }
   }
@@ -50,10 +48,7 @@ export async function changeMemberPassword(
   try {
     const loginResult = await payload.login({
       collection: 'payload_members',
-      data: {
-        email,
-        password: input.currentPassword,
-      },
+      data: { email, password: input.currentPassword },
       overrideAccess: false,
     })
     authenticatedMemberId = loginResult.user?.id ?? null
@@ -64,7 +59,6 @@ export async function changeMemberPassword(
   if (!sameId(authenticatedMemberId, input.memberId)) {
     return { ok: false, error: 'invalid_current_password' }
   }
-
   if (input.currentPassword === input.newPassword) {
     return { ok: false, error: 'password_reused' }
   }
@@ -82,13 +76,11 @@ export async function changeMemberPassword(
   await payload.update({
     collection: 'payload_members',
     id: input.memberId,
-    data: {
-      password: input.newPassword,
-    },
+    data: { password: input.newPassword },
     overrideAccess: true,
   })
 
-  await payload.create({
+  const securityEvent = await payload.create({
     collection: 'payload_member_security_events',
     data: {
       member: input.memberId,
@@ -96,10 +88,53 @@ export async function changeMemberPassword(
       source: 'member_reauthentication',
       metadata: {
         purpose: 'member_password_change',
+        automaticLogin: false,
       },
     },
     overrideAccess: true,
   })
 
-  return { ok: true }
+  await createAuditEvent(payload, {
+    actorType: 'member',
+    actorId: input.memberId,
+    action: 'member.password.changed',
+    targetCollection: 'payload_members',
+    targetId: input.memberId,
+    metadata: {
+      securityEventId: String(securityEvent.id),
+      automaticLogin: false,
+    },
+  })
+
+  let confirmationQueued = false
+  try {
+    const baseUrl = new URL(input.baseUrl)
+    const queued = await queueEmailEvent(payload, {
+      toEmail: email,
+      templateKey: 'member-password-changed',
+      dedupeKey: `member-password-changed:${input.memberId}:${securityEvent.id}`,
+      metadata: {
+        memberId: String(input.memberId),
+        purpose: 'member_password_change_confirmation',
+        displayName: email.split('@')[0] || 'there',
+        logoUrl: `${baseUrl.origin}/images/jpv-logo.png`,
+      },
+    })
+    confirmationQueued = queued.created
+  } catch {
+    try {
+      await createAuditEvent(payload, {
+        actorType: 'system',
+        action: 'member.password.changed.confirmation_failed',
+        targetCollection: 'payload_members',
+        targetId: input.memberId,
+        severity: 'warning',
+        metadata: { securityEventId: String(securityEvent.id) },
+      })
+    } catch {
+      // Confirmation delivery must never roll back a completed password change.
+    }
+  }
+
+  return { ok: true, confirmationQueued }
 }

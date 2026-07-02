@@ -13,7 +13,8 @@ function isSensitivePasswordTemplate(templateKey: unknown): boolean {
   return (
     templateKey === 'member-invitation' ||
     templateKey === 'member-password-reset' ||
-    templateKey === 'member-email-verification'
+    templateKey === 'member-email-verification' ||
+    templateKey === 'member-email-change-confirmation'
   )
 }
 

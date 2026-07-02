@@ -5,8 +5,13 @@ import { login, logout } from '@payloadcms/next/auth'
 import { redirect } from 'next/navigation'
 import { getPayload } from 'payload'
 
+import { getPayloadMemberAccountActionContext } from '@/lib/auth/memberAccountActionApplication'
+import { resolveMemberVerificationPublicBaseUrl } from '@/lib/auth/memberEmailVerificationApplication'
+import { requestMemberEmailChange } from '@/lib/members/changeMemberEmail'
 import { getCurrentPayloadMember } from '@/lib/members/currentMember'
+import { updateMemberProfile } from '@/lib/members/updateMemberProfile'
 import { normalizeEmail } from '@/lib/normalize-email'
+import type { PayloadCourseWriteAPI, PayloadMemberAuthAPI } from '@/lib/payloadCourse/accessService'
 import {
   getMemberLessonDetail,
   markMemberLessonComplete,
@@ -19,6 +24,12 @@ export type MemberLoginActionState = {
 
 export type MemberProfileActionState = {
   error?: string
+}
+
+export type MemberEmailChangeActionState = {
+  error?: string
+  submitted?: boolean
+  message?: string
 }
 
 function formString(value: FormDataEntryValue | null): string {
@@ -103,57 +114,65 @@ export async function updateMemberProfileAction(
     redirect('/learn/login?next=/learn/account')
   }
 
-  if (typeof member.id === 'string') {
-    const normalizedMemberId = Number(member.id)
-    if (!Number.isSafeInteger(normalizedMemberId) || normalizedMemberId <= 0) {
-      return { error: 'Unable to update your profile.' }
-    }
-    member.id = normalizedMemberId
-  }
-
   const displayName = cleanOptionalText(formData.get('displayName'), 80)
-  if (!displayName) {
-    return { error: 'Display name is required.' }
-  }
+  if (!displayName) return { error: 'Display name is required.' }
 
-  const data = {
-    displayName,
-    timezone: cleanOptionalText(formData.get('timezone'), 80),
-    phone: cleanOptionalText(formData.get('phone'), 40),
-    company: cleanOptionalText(formData.get('company'), 100),
-  }
-
-  const existing = await payload.find({
-    collection: 'payload_member_profiles',
-    where: {
-      member: { equals: String(member.id) },
+  const result = await updateMemberProfile(
+    payload as unknown as PayloadCourseWriteAPI,
+    member.id,
+    {
+      displayName,
+      timezone: cleanOptionalText(formData.get('timezone'), 80),
+      phone: cleanOptionalText(formData.get('phone'), 40),
+      company: cleanOptionalText(formData.get('company'), 100),
+      baseUrl: resolveMemberVerificationPublicBaseUrl(),
     },
-    limit: 1,
-    depth: 0,
-    overrideAccess: true,
-  })
+  )
 
-  if (existing.docs[0]) {
-    await payload.update({
-      collection: 'payload_member_profiles',
-      id: existing.docs[0].id,
-      data,
-      overrideAccess: true,
-    })
-  } else {
-    await payload.create({
-      collection: 'payload_member_profiles',
-      data: {
-        ...data,
-        member: member.id,
-        marketingConsent: false,
-        transactionalEmailConsent: true,
-      },
-      overrideAccess: true,
-    })
+  if (!result.ok) return { error: 'Unable to update your profile.' }
+  redirect('/learn/account?updated=1')
+}
+
+export async function requestMemberEmailChangeAction(
+  _previousState: MemberEmailChangeActionState,
+  formData: FormData,
+): Promise<MemberEmailChangeActionState> {
+  const { member, payload } = await getCurrentPayloadMember()
+  if (!member) redirect('/learn/login?next=/learn/account')
+
+  const currentEmail = typeof member.email === 'string' ? member.email : ''
+  const newEmail = formString(formData.get('newEmail'))
+  if (!currentEmail || !newEmail) {
+    return { error: 'Enter a valid new email address.' }
   }
 
-  redirect('/learn/account?updated=1')
+  const { service, publicBaseUrl } = await getPayloadMemberAccountActionContext()
+  const result = await requestMemberEmailChange(
+    payload as unknown as PayloadMemberAuthAPI,
+    service,
+    {
+      memberId: member.id,
+      currentEmail,
+      newEmail,
+      displayName: currentEmail.split('@')[0] || 'Member',
+      baseUrl: publicBaseUrl,
+    },
+  )
+
+  if (result.ok === false) {
+    if (result.error === 'same_email') {
+      return { error: 'Enter an email address different from your current address.' }
+    }
+    if (result.error === 'invalid_email') {
+      return { error: 'Enter a valid new email address.' }
+    }
+    return { error: 'That email address cannot be used for this account.' }
+  }
+
+  return {
+    submitted: true,
+    message: 'Check the new email address for a confirmation link. Your current sign-in email remains active until confirmation.',
+  }
 }
 
 export async function completeLessonAction(formData: FormData) {
@@ -220,6 +239,7 @@ export async function changeMemberPasswordAction(
       currentPassword,
       newPassword,
       newPasswordConfirmation,
+      baseUrl: resolveMemberVerificationPublicBaseUrl(),
     },
   )
 

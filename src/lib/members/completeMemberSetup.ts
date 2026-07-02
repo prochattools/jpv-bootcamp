@@ -1,12 +1,7 @@
-import type {
-  PayloadDocument,
-  PayloadMemberAuthAPI,
-} from '@/lib/payloadCourse/accessService'
-import { createAuditEvent } from '@/lib/payloadCourse/events'
-import {
-  completePasswordReset,
-  type CompletePasswordResetInput,
-} from '@/lib/members/completePasswordReset'
+import type { MemberAccountActionService } from '@/lib/auth/memberAccountActions'
+import type { PayloadMemberAuthAPI } from '@/lib/payloadCourse/accessService'
+import { createAuditEvent, queueEmailEvent } from '@/lib/payloadCourse/events'
+import type { CompletePasswordResetInput } from '@/lib/members/completePasswordReset'
 
 export type CompleteMemberSetupResult =
   | {
@@ -24,63 +19,98 @@ export type CompleteMemberSetupResult =
         | 'member_unavailable'
     }
 
-function statusOf(member: PayloadDocument): string {
-  return typeof member.accountStatus === 'string' ? member.accountStatus : 'pending'
-}
-
 export async function completeMemberSetup(
   payload: PayloadMemberAuthAPI,
+  actions: MemberAccountActionService,
   input: CompletePasswordResetInput,
 ): Promise<CompleteMemberSetupResult> {
-  const reset = await completePasswordReset(payload, input)
-  if (reset.ok === false) {
-    return { ok: false, error: reset.error }
+  const token = input.token.trim()
+  if (!token || !input.password || !input.passwordConfirmation) {
+    return { ok: false, error: 'invalid_request' }
   }
-  if (!reset.member) return { ok: false, error: 'member_unavailable' }
+  if (input.password.length < 12) return { ok: false, error: 'password_too_short' }
+  if (input.password !== input.passwordConfirmation) {
+    return { ok: false, error: 'password_mismatch' }
+  }
+
+  const completion = await actions.completeAction(token, 'member_invitation')
+  if (completion.consumed === false) {
+    return { ok: false, error: 'invalid_or_expired_token' }
+  }
 
   const member = await payload.findByID({
     collection: 'payload_members',
-    id: reset.member.id,
+    id: completion.memberId,
     depth: 0,
     overrideAccess: true,
   })
-
-  const status = statusOf(member)
-  if (status === 'blocked' || status === 'deleted') {
+  if (!member) return { ok: false, error: 'member_unavailable' }
+  if (member.accountStatus !== 'pending') {
     return { ok: false, error: 'account_ineligible' }
   }
 
-  let savedMember = member
-  let activated = false
+  const updated = await payload.update({
+    collection: 'payload_members',
+    id: member.id,
+    data: {
+      password: input.password,
+      accountStatus: 'active',
+    },
+    overrideAccess: true,
+  })
 
-  if (status === 'pending') {
-    savedMember = await payload.update({
-      collection: 'payload_members',
-      id: member.id,
-      data: {
-        accountStatus: 'active',
+  const invitationEvent = await payload.create({
+    collection: 'payload_member_security_events',
+    data: {
+      member: member.id,
+      eventType: 'invitation_consumed',
+      source: 'member_invitation',
+      metadata: {
+        activated: true,
+        automaticLogin: false,
       },
-      overrideAccess: true,
-    })
-    activated = true
-  }
+    },
+    overrideAccess: true,
+  })
+  await payload.create({
+    collection: 'payload_member_security_events',
+    data: {
+      member: member.id,
+      eventType: 'password_changed',
+      source: 'member_invitation',
+      metadata: {
+        purpose: 'set_password',
+        automaticLogin: false,
+      },
+    },
+    overrideAccess: true,
+  })
 
   await createAuditEvent(payload, {
     actorType: 'member',
-    actorId: savedMember.id,
+    actorId: member.id,
     action: 'member.setup.completed',
     targetCollection: 'payload_members',
-    targetId: savedMember.id,
-    before: {
-      accountStatus: status,
-    },
-    after: {
-      accountStatus: statusOf(savedMember),
-    },
+    targetId: member.id,
+    before: { accountStatus: 'pending' },
+    after: { accountStatus: 'active' },
     metadata: {
-      activated,
+      activated: true,
+      automaticLogin: false,
+      securityEventId: String(invitationEvent.id),
     },
   })
 
-  return { ok: true, activated }
+  const email = typeof updated.email === 'string' ? updated.email : completion.email
+  await queueEmailEvent(payload, {
+    toEmail: email,
+    templateKey: 'member-account-ready',
+    dedupeKey: `member-account-ready:${member.id}:${invitationEvent.id}`,
+    metadata: {
+      memberId: String(member.id),
+      purpose: 'member_setup_completed',
+    },
+  })
+
+  return { ok: true, activated: true }
 }

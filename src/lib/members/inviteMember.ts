@@ -1,18 +1,18 @@
-import { createHash, randomBytes } from 'node:crypto'
+import { randomBytes } from 'node:crypto'
 
+import type { MemberAccountActionService } from '@/lib/auth/memberAccountActions'
 import { normalizeEmail } from '@/lib/normalize-email'
 import type {
   PayloadDocument,
   PayloadId,
   PayloadMemberAuthAPI,
 } from '@/lib/payloadCourse/accessService'
-import { createAuditEvent, queueEmailEvent } from '@/lib/payloadCourse/events'
+import { createAuditEvent } from '@/lib/payloadCourse/events'
 
 export type InviteMemberInput = {
   administratorId: PayloadId
   email: string
   displayName?: string | null
-  baseUrl: string
 }
 
 export type InviteMemberResult =
@@ -21,10 +21,11 @@ export type InviteMemberResult =
       memberId: string
       created: boolean
       emailQueued: boolean
+      delivery: 'queued' | 'suppressed' | 'failed'
     }
   | {
       ok: false
-      error: 'invalid_email' | 'account_ineligible' | 'token_unavailable'
+      error: 'invalid_email' | 'account_ineligible'
     }
 
 function validEmail(value: string): boolean {
@@ -36,26 +37,8 @@ function cleanDisplayName(value: string | null | undefined): string | null {
   return cleaned || null
 }
 
-function tokenFromResult(value: Awaited<ReturnType<PayloadMemberAuthAPI['forgotPassword']>>): string | null {
-  if (typeof value === 'string' && value.trim()) return value
-  if (value && typeof value === 'object' && typeof value.token === 'string' && value.token.trim()) {
-    return value.token
-  }
-  return null
-}
-
 function memberStatus(member: PayloadDocument): string {
   return typeof member.accountStatus === 'string' ? member.accountStatus : 'pending'
-}
-
-function memberEmail(member: PayloadDocument): string | null {
-  return typeof member.email === 'string' ? normalizeEmail(member.email) : null
-}
-
-function actionUrl(baseUrl: string, token: string): string {
-  const url = new URL('/set-password', baseUrl)
-  url.searchParams.set('token', token)
-  return url.toString()
 }
 
 async function findMember(payload: PayloadMemberAuthAPI, email: string): Promise<PayloadDocument | null> {
@@ -88,6 +71,7 @@ async function createPendingMember(
 
 export async function inviteMember(
   payload: PayloadMemberAuthAPI,
+  actions: MemberAccountActionService,
   input: InviteMemberInput,
 ): Promise<InviteMemberResult> {
   const email = normalizeEmail(input.email)
@@ -95,13 +79,9 @@ export async function inviteMember(
 
   let member = await findMember(payload, email)
   const created = !member
+  if (!member) member = await createPendingMember(payload, email)
 
-  if (!member) {
-    member = await createPendingMember(payload, email)
-  }
-
-  const status = memberStatus(member)
-  if (status === 'blocked' || status === 'deleted') {
+  if (memberStatus(member) !== 'pending') {
     return { ok: false, error: 'account_ineligible' }
   }
 
@@ -129,23 +109,25 @@ export async function inviteMember(
     }
   }
 
-  const resetResult = await payload.forgotPassword({
-    collection: 'payload_members',
-    data: { email },
-    disableEmail: true,
+  const issued = await actions.issueAction({
+    memberId: String(member.id),
+    email,
+    displayName,
+    purpose: 'member_invitation',
+    templateKey: 'member-invitation',
+    actionPath: '/set-password',
+    ttlMs: 24 * 60 * 60 * 1000,
   })
-  const token = tokenFromResult(resetResult)
-  if (!token) return { ok: false, error: 'token_unavailable' }
 
   await payload.create({
     collection: 'payload_member_security_events',
     data: {
       member: member.id,
-      eventType: 'password_reset_requested',
+      eventType: 'invitation_created',
       source: 'admin_invitation',
       metadata: {
         administratorId: String(input.administratorId),
-        purpose: 'member_invitation',
+        delivery: issued.delivery,
       },
     },
     overrideAccess: true,
@@ -158,23 +140,12 @@ export async function inviteMember(
     targetCollection: 'payload_members',
     targetId: member.id,
     after: {
-      email: memberEmail(member) ?? email,
-      accountStatus: status,
+      email,
+      accountStatus: 'pending',
     },
     metadata: {
       purpose: 'member_invitation',
-      emailQueued: true,
-    },
-  })
-
-  const tokenFingerprint = createHash('sha256').update(token).digest('hex').slice(0, 20)
-  const queued = await queueEmailEvent(payload, {
-    toEmail: email,
-    templateKey: 'member-invitation',
-    dedupeKey: `member-invitation:${member.id}:${tokenFingerprint}`,
-    metadata: {
-      actionUrl: actionUrl(input.baseUrl, token),
-      purpose: 'member_invitation',
+      delivery: issued.delivery,
     },
   })
 
@@ -182,6 +153,7 @@ export async function inviteMember(
     ok: true,
     memberId: String(member.id),
     created,
-    emailQueued: queued.created,
+    emailQueued: issued.delivery === 'queued',
+    delivery: issued.delivery,
   }
 }

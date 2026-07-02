@@ -33,6 +33,10 @@ export const PayloadMemberVerificationRecords: CollectionConfig = {
       defaultValue: 'member_email_verification',
       options: [
         { label: 'Member email verification', value: 'member_email_verification' },
+        { label: 'Member invitation', value: 'member_invitation' },
+        { label: 'Set password', value: 'set_password' },
+        { label: 'Password reset', value: 'password_reset' },
+        { label: 'Email change confirmation', value: 'email_change_confirmation' },
       ],
       index: true,
     },

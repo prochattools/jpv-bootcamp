@@ -1,10 +1,7 @@
 'use server'
 
-import config from '@payload-config'
-import { getPayload } from 'payload'
-
+import { getPayloadMemberAccountActionContext } from '@/lib/auth/memberAccountActionApplication'
 import { completeMemberSetup } from '@/lib/members/completeMemberSetup'
-import type { PayloadMemberAuthAPI } from '@/lib/payloadCourse/accessService'
 
 export type SetPasswordActionState = {
   ok?: boolean
@@ -19,8 +16,8 @@ export async function completeMemberSetupAction(
   _previousState: SetPasswordActionState,
   formData: FormData,
 ): Promise<SetPasswordActionState> {
-  const payload = await getPayload({ config })
-  const result = await completeMemberSetup(payload as unknown as PayloadMemberAuthAPI, {
+  const { payload, service } = await getPayloadMemberAccountActionContext()
+  const result = await completeMemberSetup(payload, service, {
     token: formString(formData.get('token')),
     password: formString(formData.get('password')),
     passwordConfirmation: formString(formData.get('passwordConfirmation')),

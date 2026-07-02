@@ -11,6 +11,7 @@ type LoginSearchParams = {
   next?: string | string[]
   redirect?: string | string[]
   verification?: string | string[]
+  emailChange?: string | string[]
 }
 
 type LoginPageProps = {
@@ -26,14 +27,19 @@ export default async function SharedLoginPage({ searchParams }: LoginPageProps) 
   const [requestHeaders, params] = await Promise.all([headers(), searchParams])
   const requestedDestination = firstValue(params?.next) ?? firstValue(params?.redirect)
   const verificationResult = firstValue(params?.verification)
+  const emailChangeResult = firstValue(params?.emailChange)
   const verificationMessage =
-    verificationResult === 'success'
-      ? 'Your email address has been verified. You can now continue with member sign-in.'
-      : verificationResult === 'used'
-        ? 'This verification link has already been used. You can request another email below if needed.'
-        : verificationResult === 'invalid'
-          ? 'This verification link is invalid or expired. You can request another email below.'
-          : null
+    emailChangeResult === 'success'
+      ? 'Your sign-in email address was changed successfully. Use the new address when you sign in.'
+      : emailChangeResult === 'invalid'
+        ? 'This email-change link is invalid or expired. Sign in with your current address to request another link.'
+        : verificationResult === 'success'
+          ? 'Your email address has been verified. You can now continue with member sign-in.'
+          : verificationResult === 'used'
+            ? 'This verification link has already been used. You can request another email below if needed.'
+            : verificationResult === 'invalid'
+              ? 'This verification link is invalid or expired. You can request another email below.'
+              : null
 
   let status: 'anonymous' | 'denied' | 'unavailable' = 'anonymous'
 
