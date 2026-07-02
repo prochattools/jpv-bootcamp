@@ -1,5 +1,8 @@
 import { getPayloadMemberEmailVerificationService } from '@/lib/auth/memberEmailVerificationApplication'
-import { handleMemberEmailVerificationResend } from '@/lib/auth/memberEmailVerificationHttp'
+import {
+  GENERIC_VERIFICATION_REQUEST_MESSAGE,
+  handleMemberEmailVerificationResend,
+} from '@/lib/auth/memberEmailVerificationHttp'
 
 export const dynamic = 'force-dynamic'
 
@@ -11,7 +14,7 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json(
       {
         accepted: true,
-        message: 'If an eligible account exists, a verification email will be sent shortly.',
+        message: GENERIC_VERIFICATION_REQUEST_MESSAGE,
       },
       {
         status: 200,
