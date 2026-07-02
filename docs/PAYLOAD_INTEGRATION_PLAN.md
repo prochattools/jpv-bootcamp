@@ -57,7 +57,7 @@ Administrator accounts and member identities are separate security domains, even
 8. FreeResend delivery events are verified before changing message delivery state.
 9. Production schema and traffic changes require explicit approval.
 
-## Current implementation status — 30 June 2026
+## Current implementation status — 2 July 2026
 
 ### Implemented and manually demonstrated
 
@@ -78,14 +78,22 @@ Administrator accounts and member identities are separate security domains, even
 - Affiliate collections and administrator summaries exist.
 - JPV administrator branding components exist in source.
 - Queued Payload email events, system templates, Resend-compatible delivery, and account-action-token services exist for member account-security mail.
+- Member email verification, invitation, set-password, forgot-password, reset-password, password-change confirmation, pending email change, email-change confirmation, blocked-account notice, and restored-account notice are implemented in source and wired to the normal application routes and services.
+- Account-action tokens are purpose-bound, digest-only, expiring, single-use, and consumed through the reviewed atomic SQL helpers.
+- Preview release automation separates ordinary branch validation from image publication, migration authorization, provider authorization, deployment authorization, and smoke verification.
 
 ### Remaining validation or rollout boundaries
 
 - Ordinary member credential flows now use JPV-branded login, set-password, forgot-password, reset-password, account, and email-change surfaces.
 - Invitation, verification, set-password, reset-password, password-change confirmation, email-change confirmation, email-changed notices, blocked notices, and restored notices queue through `payload_email_events`.
-- Member logout, blocked/suspended states, recovery journeys, queued delivery, and account-security audit have database-free focused validation.
+- Member logout, blocked/suspended states, recovery journeys, queued delivery, account-security audit, route safety, migration source, sender behavior, type-check, and production build have automated local validation.
+- Preview runtime verification is still pending until the target preview environment is confirmed, a recoverable preview database backup or snapshot is verified, the required Payload migrations are applied, the feature-branch commit or immutable image is deployed, and one controlled real-provider verification email/token flow succeeds.
+- Required Payload migrations must be applied in this exact order:
+  1. `20260701_201500_member_email_verification`
+  2. `20260702_001500_member_account_action_purposes`
+- Real-provider acceptance remains pending until preview provider credentials, sender identity, controlled test recipient, deployment access, and preview database ownership/backup evidence are available to the approved operator.
 - The affiliate Payload migration still requires explicit staging application and verification.
-- Billing self-service, community publishing, partner application delivery, and cutover remain pending.
+- Genuine deferred product work after account-security email verification is billing self-service, then community publishing, partner application delivery, and cutover.
 
 ## Execution roadmap
 
@@ -165,7 +173,7 @@ Validation:
 
 ### Phase 5 — Complete account and password workflows
 
-**Status:** Source-complete; runtime activation still requires independent migration, provider-email, and deployment authorization.
+**Status:** Implemented and locally validated; preview runtime acceptance remains pending until the required Payload migrations and controlled real-provider verification test are completed in the approved preview environment.
 
 Implemented source tasks:
 
@@ -183,19 +191,23 @@ Validation coverage:
 - tokens are single-use and time-limited;
 - blocked accounts lose portal access;
 - sensitive changes require re-authentication or verification.
+- focused route, account-action, email-verification, invitation, email-change, migration-source, sender, type-check, and production-build validation completed locally;
+- preview activation requires Payload migrations in order: `20260701_201500_member_email_verification`, then `20260702_001500_member_account_action_purposes`;
+- real-provider closure requires one controlled preview member email-verification delivery and accepted token flow; password-reset delivery may be checked only with an approved safe test account.
 
 ### Phase 6 — Complete branded communications and FreeResend delivery
 
-**Status:** Approved and documented; implementation pending.
+**Status:** Account-security communications are implemented and locally validated; broader billing, learning, community, partner, broadcast, preference, and unsubscribe communications remain planned.
 
 Detailed specification: `docs/PAYLOAD_COMMUNICATIONS_PLAN.md`.
 
 Tasks:
 
-- connect Payload to the existing FreeResend service;
-- use one JPV Bootcamp HTML and plain-text template system;
-- add delivery records, verified provider events, bounded retries, and administrator visibility;
+- connect Payload to the existing FreeResend service for account-security messages;
+- use one JPV Bootcamp HTML and plain-text template system for account-security messages;
+- add delivery records, bounded retries, safe provider-error handling, and administrator visibility for queued account-security delivery;
 - implement account, verification, invitation, password, profile, and security messages;
+- preserve provider execution as a separately authorized preview operation until real-provider acceptance is completed;
 - implement purchase, subscription, payment, retry, cancellation, refund, invoice, billing-hold, and access-restored messages;
 - implement enrollment, release, progress, completion, certificate, community, group, and moderation notifications;
 - implement partner application, referral, commission, payout, delivery, and operational alerts;
@@ -204,12 +216,12 @@ Tasks:
 
 Validation:
 
-- Payload sends through FreeResend in staging;
-- authentication and password journeys work end to end;
-- every approved template has HTML and plain-text output;
-- security links are server-generated, time-limited, and environment-correct;
+- account-security Payload email events queue through the existing sender abstraction in local validation;
+- authentication and password journeys have focused route/service validation;
+- every account-security template has HTML and plain-text output;
+- security links are server-generated, time-limited, purpose-bound, and environment-configured;
 - optional messages respect preferences;
-- provider events are verified and idempotent;
+- provider events are verified and idempotent where the existing delivery pipeline applies;
 - no client-facing message contains Payload branding.
 
 ### Phase 7 — Complete billing self-service
@@ -321,7 +333,7 @@ A phase is complete only when:
 
 ## Immediate milestone
 
-Complete member authentication, account security, JPV login branding, and the FreeResend communications foundation. Then continue with billing self-service, community publishing, partner delivery, and the representative pilot.
+Close the controlled preview/provider verification for member account-security email. After that boundary is either completed or explicitly blocked, resume Phase 7 billing self-service before community publishing, partner delivery, and the representative pilot.
 
 ## Definition of done
 
