@@ -49,6 +49,8 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV HOSTNAME=0.0.0.0
 ENV PORT=3000
+ENV STARTUP_MODE=application-only
+ENV DEPLOYMENT_RUNTIME=docker
 
 # Install postgresql-client-15
 RUN apt-get update && apt-get install -y \

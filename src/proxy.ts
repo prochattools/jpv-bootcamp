@@ -4,7 +4,7 @@ import { sanitizePartnersToken } from '@/lib/partners-token-sanitize'
 import { sanitizePathOnly, PARTNERS_DEFAULT_PATH } from '@/lib/partners-url'
 
 // Simple middleware for landing page - no authentication needed
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
 	const pathname = request.nextUrl.pathname
 	const isApiRoute = pathname.startsWith('/api')
 	const isNextRoute = pathname.startsWith('/_next')

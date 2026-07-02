@@ -47,6 +47,7 @@ assert.match(replaceSql, /\$1::integer/)
 assert.match(replaceSql, /\$8::varchar/)
 assert.doesNotMatch(replaceSql, /verification-token-value/)
 
+assert.match(consumeSql, /"purpose" = 'member_email_verification'/)
 assert.match(consumeSql, /"consumed_at" IS NULL/)
 assert.match(consumeSql, /"invalidated_at" IS NULL/)
 assert.match(consumeSql, /"expires_at" > \$2::timestamptz/)

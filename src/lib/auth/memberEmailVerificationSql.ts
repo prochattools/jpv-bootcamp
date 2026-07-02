@@ -126,6 +126,7 @@ UPDATE ${table}
 SET "consumed_at" = $2::timestamptz,
     "updated_at" = $2::timestamptz
 WHERE "token_digest" = $1::varchar
+  AND "purpose" = 'member_email_verification'
   AND "consumed_at" IS NULL
   AND "invalidated_at" IS NULL
   AND "expires_at" > $2::timestamptz

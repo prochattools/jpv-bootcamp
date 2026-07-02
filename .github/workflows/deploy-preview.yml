@@ -1,7 +1,10 @@
 # Deploy feature branches to preview/staging environment.
 # - Builds Docker image on GitHub
 # - Pushes to GHCR with branch tag
-# - Triggers Dokploy preview app redeployment
+# - Publishes a Docker image for the preview app
+# - External preview automation may redeploy after the image is published
+# - The runtime must keep STARTUP_MODE=application-only unless database deployment is separately approved
+# - Push, Payload migrations, Prisma startup behavior, provider email delivery, and deployment remain independent approvals
 #
 # Required GitHub secrets:
 #   DOKPLOY_PREVIEW_APP_ID — Dokploy application ID for the preview/staging app
@@ -65,5 +68,5 @@ jobs:
           echo "✅ Docker image built and pushed to GHCR:"
           echo "   ghcr.io/${{ github.repository }}:${{ steps.docker-tag.outputs.tag }}"
           echo ""
-          echo "Dokploy staging app will pull and redeploy automatically."
-          echo "Access preview at: https://preview.jpvbootcamp.com"
+          echo "External preview automation may pull this image after separate deployment authorization."
+          echo "Runtime must remain STARTUP_MODE=application-only unless database deployment is separately approved."

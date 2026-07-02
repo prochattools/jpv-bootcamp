@@ -7,15 +7,14 @@
     "node": ">=20.9.0",
     "pnpm": "^9 || ^10"
   },
-  "prisma": {
-    "schema": "prisma/system.prisma"
-  },
   "scripts": {
     "predev": "node scripts/dev/predev.js",
     "dev": "next dev",
     "build": "prisma generate --schema=prisma/system.prisma && next build",
     "generate:importmap": "payload generate:importmap",
     "type-check:payload": "tsc --noEmit --pretty false",
+    "preview:readiness:check": "tsx scripts/preview/readiness-config.mts",
+    "test:preview-readiness": "tsx scripts/preview_readiness_config.test.ts && tsx scripts/preview_startup_mode.test.ts",
     "payload:branding:check": "pnpm generate:importmap && pnpm type-check:payload",
     "payload:staging:migrate:status": "tsx scripts/payload/run-staging-migrations.mts --status",
     "payload:staging:migrate": "tsx scripts/payload/run-staging-migrations.mts --apply",

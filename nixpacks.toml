@@ -1,5 +1,14 @@
 [phases.setup]
-nixPkgs = ["nodejs_18", "npm-9_x", "openssl", "postgresql_15"]
+nixPkgs = ["nodejs_20", "openssl", "postgresql_15"]
+
+[phases.install]
+cmds = [
+  "npm install -g pnpm@10.33.0",
+  "pnpm install --frozen-lockfile"
+]
 
 [phases.build]
-cmds = ["NODE_OPTIONS=--max-old-space-size=3072 npm run build"]
+cmds = ["NODE_OPTIONS=--max-old-space-size=3072 pnpm run build"]
+
+[start]
+cmd = "bash scripts/runtime/start-prod.sh"

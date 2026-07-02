@@ -1,12 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "[start] boot at $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-echo "[start] NODE_PATH=${NODE_PATH:-unset}"
-echo "[start] APP_SLUG=${APP_SLUG:-unset}"
-echo "[start] NODE_ENV=${NODE_ENV:-unset}"
-
 BACKUP_ROOT="/var/backups/pgdump"
+STARTUP_MODE="${STARTUP_MODE:-application-only}"
+PORT="${PORT:-3000}"
+export PORT
 
 require_env() {
   local name="$1"
@@ -16,49 +14,68 @@ require_env() {
   fi
 }
 
-require_env APP_SLUG
-require_env SYSTEM_DATABASE_URL
-require_env DATABASE_URL
-require_env NODE_ENV
-
 require_cmd() {
   local name="$1"
   if ! command -v "$name" >/dev/null 2>&1; then
     echo "missing required command: $name" >&2
-    echo "Install Postgres client tools (e.g. nixpacks.toml with postgresql_15)." >&2
+    echo "Install matching PostgreSQL client tools before database-deploy startup." >&2
     exit 1
   fi
 }
 
-require_cmd psql
-require_cmd pg_dump
-require_cmd pg_restore
+prepare_database_deploy() {
+  require_env DEPLOYMENT_ENV
+  case "$DEPLOYMENT_ENV" in
+    preview|staging|production)
+      ;;
+    *)
+      echo "invalid DEPLOYMENT_ENV; expected preview, staging, or production" >&2
+      exit 1
+      ;;
+  esac
 
-PORT="${PORT:-3000}"
-export PORT
+  require_env APP_SLUG
+  require_env SYSTEM_DATABASE_URL
+  require_env DATABASE_URL
+  require_env NODE_ENV
 
-echo "[start] checking backup root: $BACKUP_ROOT"
-if [[ ! -d "$BACKUP_ROOT" ]]; then
-  echo "[start] WARNING: backup root missing (staging/preview mode): $BACKUP_ROOT"
-  echo "[start] Backups will be disabled"
-else
-  if ! awk -v p="$BACKUP_ROOT" '$5==p {found=1} END {exit !found}' /proc/self/mountinfo; then
-    echo "[start] WARNING: bind mount missing for $BACKUP_ROOT (staging/preview mode)"
+  require_cmd psql
+  require_cmd pg_dump
+  require_cmd pg_restore
+
+  echo "[start] database-deploy mode selected for $DEPLOYMENT_ENV"
+  echo "[start] checking backup root"
+  if [[ ! -d "$BACKUP_ROOT" ]]; then
+    echo "[start] WARNING: backup root missing; deploy-prod.sh will enforce its own backup requirements"
+  elif ! awk -v p="$BACKUP_ROOT" '$5==p {found=1} END {exit !found}' /proc/self/mountinfo; then
+    echo "[start] WARNING: backup bind mount is not detected"
   elif ! touch "${BACKUP_ROOT}/.write_test" 2>/dev/null; then
-    echo "[start] WARNING: backup root not writable (staging/preview mode): $BACKUP_ROOT"
+    echo "[start] WARNING: backup root is not writable"
   else
     rm -f "${BACKUP_ROOT}/.write_test"
-    echo "[start] Backup root is ready"
+    echo "[start] backup root is ready"
   fi
-fi
 
-echo "[start] running deploy-prod.sh"
-./scripts/db/deploy-prod.sh
-echo "[start] deploy-prod.sh completed"
-
-script_exists() {
-  node -e "const pkg=require('./package.json');process.exit(pkg.scripts&&pkg.scripts['$1']?0:1)" >/dev/null 2>&1
+  echo "[start] running reviewed database deployment"
+  ./scripts/db/deploy-prod.sh
+  echo "[start] reviewed database deployment completed"
 }
 
-echo "[start] starting node server.js"
+echo "[start] boot at $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+echo "[start] startup mode: $STARTUP_MODE"
+
+case "$STARTUP_MODE" in
+  application-only)
+    echo "[start] application-only mode: schema initialization and migrations are skipped"
+    ;;
+  database-deploy)
+    prepare_database_deploy
+    ;;
+  *)
+    echo "invalid STARTUP_MODE; expected application-only or database-deploy" >&2
+    exit 1
+    ;;
+esac
+
+echo "[start] starting standalone Next.js server"
 exec node server.js
