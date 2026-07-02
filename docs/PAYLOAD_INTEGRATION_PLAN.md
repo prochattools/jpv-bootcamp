@@ -92,6 +92,7 @@ Administrator accounts and member identities are separate security domains, even
   1. `20260701_201500_member_email_verification`
   2. `20260702_001500_member_account_action_purposes`
 - Real-provider acceptance remains pending until preview provider credentials, sender identity, controlled test recipient, deployment access, and preview database ownership/backup evidence are available to the approved operator.
+- 2 July 2026 Codex stop point: implementation, local validation, branch push, and feature-branch GitHub validation are complete; preview migration, deployment, and real-provider verification are blocked because this session did not have independently verified preview database ownership, recoverable backup or snapshot evidence, deployment target/operator access, provider sender credentials, or an approved controlled recipient.
 - The affiliate Payload migration still requires explicit staging application and verification.
 - Genuine deferred product work after account-security email verification is billing self-service, then community publishing, partner application delivery, and cutover.
 
