@@ -70,22 +70,20 @@ Administrator accounts and member identities are separate security domains, even
 - Runtime database-schema isolation was repaired for staging migrations.
 - Normal application requests no longer auto-run reviewed Payload migrations.
 
-### Implemented foundation but not complete
+### Implemented account-security foundation
 
 - Shared role decision and safe redirect rules exist.
 - Member portal pages exist at `/portal` and related routes.
 - Member records and account status exist.
 - Affiliate collections and administrator summaries exist.
 - JPV administrator branding components exist in source.
-- Queued email and FreeResend-related application capability exists outside Payload.
+- Queued Payload email events, system templates, Resend-compatible delivery, and account-action-token services exist for member account-security mail.
 
-### Incomplete validation or user journey
+### Remaining validation or rollout boundaries
 
-- Ordinary members cannot yet complete a usable credential login flow.
-- The current Payload login screen still shows Payload branding instead of the JPV Bootcamp logo.
-- Payload is not yet connected to the existing FreeResend delivery path.
-- Invitation, verification, set-password, reset-password, password-change, and profile-change emails are incomplete.
-- Member logout, blocked/suspended states, and recovery journeys need end-to-end validation.
+- Ordinary member credential flows now use JPV-branded login, set-password, forgot-password, reset-password, account, and email-change surfaces.
+- Invitation, verification, set-password, reset-password, password-change confirmation, email-change confirmation, email-changed notices, blocked notices, and restored notices queue through `payload_email_events`.
+- Member logout, blocked/suspended states, recovery journeys, queued delivery, and account-security audit have database-free focused validation.
 - The affiliate Payload migration still requires explicit staging application and verification.
 - Billing self-service, community publishing, partner application delivery, and cutover remain pending.
 
@@ -113,7 +111,7 @@ Validation:
 
 ### Phase 2 — Complete shared login and member authentication
 
-**Status:** Server-side routing foundation exists; credential journey incomplete.
+**Status:** Source-complete; runtime rollout remains gated by the independent release approvals.
 
 Tasks:
 
@@ -167,9 +165,9 @@ Validation:
 
 ### Phase 5 — Complete account and password workflows
 
-**Status:** Planned; required before wider member rollout.
+**Status:** Source-complete; runtime activation still requires independent migration, provider-email, and deployment authorization.
 
-Tasks:
+Implemented source tasks:
 
 - secure member invitation;
 - email verification;
@@ -179,7 +177,7 @@ Tasks:
 - account block, suspend, restore, and deletion workflows;
 - administrator audit visibility.
 
-Validation:
+Validation coverage:
 
 - no plaintext password is stored, logged, or emailed;
 - tokens are single-use and time-limited;
