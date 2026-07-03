@@ -2,11 +2,11 @@ import { redirect } from 'next/navigation'
 
 import { getCurrentPayloadMember } from '@/lib/members/currentMember'
 import { getMemberBillingOverview } from '@/lib/payloadCourse/memberPortal'
+import { MemberCheckoutButtons } from '@/components/portal/MemberCheckoutButtons'
 
 import { PortalShell, StatusPill } from '../PortalShell'
 import {
   openMemberBillingPortalAction,
-  openMemberVipUpgradeAction,
 } from './actions'
 
 export const metadata = {
@@ -55,11 +55,6 @@ export default async function LearnBillingPage() {
     overview.subscriptionStatus === 'canceled' ||
     overview.subscriptionStatus === 'unpaid'
   const periodLabel = accessEnds ? 'Access until' : 'Renews on'
-  const canUpgradeToVip =
-    overview.plan === 'pro' &&
-    (overview.subscriptionStatus === 'active' || overview.subscriptionStatus === 'trialing') &&
-    !overview.cancelAtPeriodEnd &&
-    overview.billingAccount !== null
 
   return (
     <PortalShell memberEmail={email}>
@@ -74,6 +69,7 @@ export default async function LearnBillingPage() {
             </h1>
             <p className='mt-4 text-sm leading-6 text-[#68766f] sm:text-base'>
               This page reflects the latest billing state synchronized securely from the payment provider.
+              Plan changes, cancellation, and payment-method updates are managed in the Stripe billing portal.
             </p>
           </div>
 
@@ -129,15 +125,16 @@ export default async function LearnBillingPage() {
             </form>
           ) : null}
 
-          {canUpgradeToVip ? (
-            <form action={openMemberVipUpgradeAction} className='mt-4'>
-              <button
-                className='rounded-full border border-[#153f2e]/20 bg-white px-6 py-3 text-sm font-bold text-[#153f2e] transition hover:border-[#153f2e]/40'
-                type='submit'
-              >
-                Upgrade to VIP securely
-              </button>
-            </form>
+          {!overview.hasPaidSubscription ? (
+            <div className='mt-6 rounded-2xl border border-[#153f2e]/10 bg-white p-5'>
+              <p className='text-sm font-bold text-[#153f2e]'>Start a paid plan</p>
+              <p className='mt-2 text-sm leading-6 text-[#68766f]'>
+                Checkout is available for members without an active subscription.
+              </p>
+              <div className='mt-4'>
+                <MemberCheckoutButtons />
+              </div>
+            </div>
           ) : null}
 
           {overview.cancelAtPeriodEnd ? (
