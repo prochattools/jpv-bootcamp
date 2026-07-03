@@ -59,6 +59,49 @@ function stripeRelationshipId(value: unknown): string | null {
 	return null
 }
 
+function stripeChargeContext(value: unknown) {
+	const charge = value && typeof value === 'object'
+		? value as {
+			id?: unknown
+			customer?: unknown
+			invoice?: unknown
+			payment_intent?: unknown
+		}
+		: null
+	const invoice = charge?.invoice && typeof charge.invoice === 'object'
+		? charge.invoice as { id?: unknown; subscription?: unknown }
+		: null
+
+	return {
+		stripeChargeId: stripeRelationshipId(charge),
+		stripeCustomerId: stripeRelationshipId(charge?.customer),
+		stripeInvoiceId: stripeRelationshipId(charge?.invoice),
+		stripeSubscriptionId: stripeRelationshipId(invoice?.subscription),
+		stripePaymentIntentId: stripeRelationshipId(charge?.payment_intent),
+	}
+}
+
+function stripeDisputeContext(dispute: Stripe.Dispute) {
+	const chargeContext = stripeChargeContext(
+		(dispute as Stripe.Dispute & { charge?: unknown }).charge,
+	)
+	return {
+		...chargeContext,
+		stripePaymentIntentId:
+			stripeRelationshipId(
+				(dispute as Stripe.Dispute & { payment_intent?: unknown }).payment_intent,
+			) ?? chargeContext.stripePaymentIntentId,
+	}
+}
+
+function disputeProjectionStatus(
+	status: Stripe.Dispute.Status,
+): 'dispute_won' | 'dispute_lost' | 'dispute_resolved' {
+	if (status === 'won') return 'dispute_won'
+	if (status === 'lost') return 'dispute_lost'
+	return 'dispute_resolved'
+}
+
 function buildDebugInfo(params: {
 	req: Request
 	signature: string | null
@@ -505,6 +548,9 @@ export async function handleStripeWebhook(req: Request) {
 					stripeCustomerId: stripeRelationshipId(invoice.customer),
 					stripeSubscriptionId: subscriptionId,
 					stripeInvoiceId: invoice.id,
+					stripePaymentIntentId: stripeRelationshipId(
+						(invoice as Stripe.Invoice & { payment_intent?: unknown }).payment_intent,
+					),
 					eventId: event.id,
 					paymentStatus: 'paid',
 					occurredAt: new Date(event.created * 1000),
@@ -529,8 +575,43 @@ export async function handleStripeWebhook(req: Request) {
 						(invoice as Stripe.Invoice & { subscription?: unknown }).subscription,
 					),
 					stripeInvoiceId: invoice.id,
+					stripePaymentIntentId: stripeRelationshipId(
+						(invoice as Stripe.Invoice & { payment_intent?: unknown }).payment_intent,
+					),
 					eventId: event.id,
 					paymentStatus: 'failed',
+					occurredAt: new Date(event.created * 1000),
+				})
+				break
+			}
+			case 'charge.refunded': {
+				const context = stripeChargeContext(event.data.object)
+				await projectInvoicePaymentState({
+					...context,
+					eventId: event.id,
+					paymentStatus: 'refunded',
+					occurredAt: new Date(event.created * 1000),
+				})
+				break
+			}
+			case 'charge.dispute.created': {
+				const dispute = event.data.object as Stripe.Dispute
+				await projectInvoicePaymentState({
+					...stripeDisputeContext(dispute),
+					disputeStatus: dispute.status,
+					eventId: event.id,
+					paymentStatus: 'disputed',
+					occurredAt: new Date(event.created * 1000),
+				})
+				break
+			}
+			case 'charge.dispute.closed': {
+				const dispute = event.data.object as Stripe.Dispute
+				await projectInvoicePaymentState({
+					...stripeDisputeContext(dispute),
+					disputeStatus: dispute.status,
+					eventId: event.id,
+					paymentStatus: disputeProjectionStatus(dispute.status),
 					occurredAt: new Date(event.created * 1000),
 				})
 				break

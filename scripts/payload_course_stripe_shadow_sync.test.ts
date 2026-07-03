@@ -149,6 +149,41 @@ function invoice(overrides: Partial<Stripe.Invoice> = {}): Stripe.Invoice {
   } as Stripe.Invoice
 }
 
+function charge(overrides: Partial<Stripe.Charge> = {}): Stripe.Charge {
+  return {
+    id: 'ch_123',
+    object: 'charge',
+    customer: 'cus_123',
+    invoice: 'in_123',
+    payment_intent: 'pi_123',
+    amount: 4900,
+    amount_refunded: 4900,
+    currency: 'gbp',
+    billing_details: {
+      address: null,
+      email: 'student@example.com',
+      name: 'Student Example',
+      phone: null,
+      tax_id: null,
+    },
+    ...overrides,
+  } as Stripe.Charge
+}
+
+function dispute(overrides: Partial<Stripe.Dispute> = {}): Stripe.Dispute {
+  return {
+    id: 'dp_123',
+    object: 'dispute',
+    amount: 4900,
+    currency: 'gbp',
+    charge: charge(),
+    payment_intent: 'pi_123',
+    status: 'needs_response',
+    reason: 'fraudulent',
+    ...overrides,
+  } as Stripe.Dispute
+}
+
 function event(type: string, object: unknown, id = `evt_${type.replace(/\W+/g, '_')}`): Stripe.Event {
   return {
     id,
@@ -391,6 +426,128 @@ async function run() {
     assert.equal(
       payload.docs('payload_billing_actions').filter((action) => action.actionType === 'access_restored').length,
       1
+    )
+  }
+
+  {
+    const payload = buildPayload({
+      payload_members: [
+        {
+          id: 'member_1',
+          email: 'student@example.com',
+          accountStatus: 'active',
+          billingHoldReason: null,
+        },
+      ],
+      payload_contacts: [
+        { id: 'contact_1', member: 'member_1', email: 'student@example.com' },
+      ],
+      payload_billing_accounts: [
+        {
+          id: 'billing_1',
+          member: 'member_1',
+          stripeCustomerId: 'cus_123',
+          billingStatus: 'active',
+        },
+      ],
+      payload_payments: [
+        {
+          id: 'payment_1',
+          member: 'member_1',
+          stripeInvoiceId: 'in_123',
+          stripePaymentIntentId: 'pi_123',
+          amount: 4900,
+          currency: 'gbp',
+          status: 'paid',
+          metadata: {},
+        },
+      ],
+    })
+
+    await mirrorStripeEventToPayload(payload, event('charge.refunded', charge(), 'evt_refund_1'), {
+      stripe: fakeStripe(),
+    })
+    await mirrorStripeEventToPayload(payload, event('charge.refunded', charge(), 'evt_refund_2'), {
+      stripe: fakeStripe(),
+    })
+
+    assert.equal(payload.docs('payload_payments')[0]?.status, 'refunded')
+    assert.equal(payload.docs('payload_members')[0]?.accountStatus, 'active')
+    assert.equal(
+      payload.docs('payload_email_events').filter((emailEvent) => emailEvent.templateKey === 'billing-payment-refunded').length,
+      1,
+    )
+    assert.equal(
+      payload.docs('payload_member_security_events').filter((item) => item.eventType === 'billing_payment_refunded').length,
+      1,
+    )
+    assert.equal(
+      payload.docs('payload_billing_actions').some((action) => action.actionType === 'access_blocked'),
+      false,
+    )
+  }
+
+  {
+    const payload = buildPayload({
+      payload_members: [
+        {
+          id: 'member_1',
+          email: 'student@example.com',
+          accountStatus: 'active',
+          billingHoldReason: null,
+        },
+      ],
+      payload_contacts: [
+        { id: 'contact_1', member: 'member_1', email: 'student@example.com' },
+      ],
+      payload_billing_accounts: [
+        {
+          id: 'billing_1',
+          member: 'member_1',
+          stripeCustomerId: 'cus_123',
+          billingStatus: 'active',
+        },
+      ],
+      payload_payments: [
+        {
+          id: 'payment_1',
+          member: 'member_1',
+          stripeInvoiceId: 'in_123',
+          stripePaymentIntentId: 'pi_123',
+          amount: 4900,
+          currency: 'gbp',
+          status: 'paid',
+          metadata: {},
+        },
+      ],
+    })
+
+    await mirrorStripeEventToPayload(payload, event('charge.dispute.created', dispute(), 'evt_dispute_open'), {
+      stripe: fakeStripe(),
+    })
+    await mirrorStripeEventToPayload(
+      payload,
+      event('charge.dispute.closed', dispute({ status: 'won' }), 'evt_dispute_closed'),
+      { stripe: fakeStripe() },
+    )
+
+    assert.equal(payload.docs('payload_payments')[0]?.status, 'dispute_resolved')
+    assert.equal(payload.docs('payload_members')[0]?.accountStatus, 'active')
+    assert.equal(
+      payload.docs('payload_email_events').filter((emailEvent) => emailEvent.templateKey === 'billing-payment-disputed').length,
+      1,
+    )
+    assert.equal(
+      payload.docs('payload_member_security_events').filter((item) => item.eventType === 'billing_payment_disputed').length,
+      1,
+    )
+    assert.equal(
+      payload.docs('payload_member_security_events').filter((item) => item.eventType === 'billing_dispute_resolved').length,
+      1,
+    )
+    assert.equal(
+      payload.docs('payload_billing_actions').some((action) => action.actionType === 'access_blocked' || action.actionType === 'access_restored'),
+      false,
     )
   }
 

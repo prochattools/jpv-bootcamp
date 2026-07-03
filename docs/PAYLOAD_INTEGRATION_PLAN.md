@@ -235,7 +235,7 @@ Validation:
 
 ### Phase 7 — Complete billing self-service
 
-**Status:** Portal access, subscription projection, checkout, failed-payment communications, and subscription access enforcement implemented; advanced billing and preview verification remain.
+**Status:** Portal access, subscription/payment projection, checkout, failed-payment communications, access enforcement, and refund/dispute handling implemented; plan-change refinement and preview verification remain.
 
 Completed in this slice:
 
@@ -301,10 +301,19 @@ Completed in this slice:
 - Repeated events are idempotent: no duplicate hold or restoration action occurs when member state is already aligned;
 - `/portal/billing` displays a safe local access state: available, on billing hold, inactive, or pending billing status.
 
+**Refund and dispute state (Phase 7 slice):**
+- Verified `charge.refunded`, `charge.dispute.created`, and `charge.dispute.closed` events update the local CustomerProvisioning payment projection;
+- Added refund/dispute timestamps, dispute status, and last charge/payment-intent identifiers;
+- Additive migration source created but not executed: `prisma/migrations/20260703_140000_add_refund_dispute_projection/migration.sql`;
+- Payload payment records store refunded, disputed, and dispute-resolved states;
+- One branded refund notice and one dispute-open notice are queued with stable charge/dispute dedupe keys;
+- Refund, dispute-open, and dispute-resolution events are recorded in billing actions and member security events;
+- Refunds and disputes do not block, restore, revoke, or grant access by themselves; subscription status remains authoritative;
+- `/portal/billing` shows safe refund and open-dispute notices from local data only.
+
 Remaining Phase 7 tasks:
 
 - support plan upgrades and cancellation flows inside the Stripe portal;
-- add refunded/disputed payment states and communications;
 - perform preview migration, webhook, checkout, and provider verification;
 - email feature remains:
   - Code and automated validation complete;
@@ -318,7 +327,7 @@ Validation:
 - Stripe remains authoritative (stored copy for UI only);
 - client input cannot grant paid access (auth server-side);
 - server-side identity derivation prevents spoofing;
-- failed, unpaid, canceled, and recovered subscription states now have defined, idempotent access outcomes; refunded and disputed states remain a later slice.
+- failed, unpaid, canceled, and recovered subscription states have defined, idempotent access outcomes; refunded and disputed payments are projected and communicated without changing access by themselves.
 
 ### Phase 8 — Complete community publishing and notifications
 
@@ -411,7 +420,7 @@ A phase is complete only when:
 
 ## Immediate milestone
 
-Continue Phase 7 billing self-service while member account-security email remains implementation-complete and operationally blocked. The next billing slice is refunded and disputed payment state with basic member communication; real preview/provider acceptance remains a separate operational milestone.
+Continue Phase 7 billing self-service while member account-security email remains implementation-complete and operationally blocked. The next billing slice is plan-change refinement inside the existing Stripe portal, followed by controlled preview migration, webhook, checkout, and provider verification.
 
 ## Definition of done
 

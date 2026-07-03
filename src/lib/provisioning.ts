@@ -795,7 +795,14 @@ async function upsertProvisioningRecord({
 	}
 }
 
-export type InvoicePaymentProjectionStatus = 'failed' | 'paid'
+export type InvoicePaymentProjectionStatus =
+	| 'failed'
+	| 'paid'
+	| 'refunded'
+	| 'disputed'
+	| 'dispute_won'
+	| 'dispute_lost'
+	| 'dispute_resolved'
 
 export type InvoicePaymentProjectionResult = {
 	updated: boolean
@@ -809,6 +816,9 @@ export async function projectInvoicePaymentState(params: {
 	stripeCustomerId?: string | null
 	stripeSubscriptionId?: string | null
 	stripeInvoiceId?: string | null
+	stripeChargeId?: string | null
+	stripePaymentIntentId?: string | null
+	disputeStatus?: string | null
 	eventId: string
 	paymentStatus: InvoicePaymentProjectionStatus
 	occurredAt?: Date
@@ -816,10 +826,15 @@ export async function projectInvoicePaymentState(params: {
 	const stripeCustomerId = params.stripeCustomerId?.trim() || null
 	const stripeSubscriptionId = params.stripeSubscriptionId?.trim() || null
 	const stripeInvoiceId = params.stripeInvoiceId?.trim() || null
+	const stripeChargeId = params.stripeChargeId?.trim() || null
+	const stripePaymentIntentId = params.stripePaymentIntentId?.trim() || null
+	const disputeStatus = params.disputeStatus?.trim() || null
 	const occurredAt = params.occurredAt ?? new Date()
 	const whereOr: Array<Record<string, unknown>> = []
 	if (stripeCustomerId) whereOr.push({ stripeCustomerId })
 	if (stripeSubscriptionId) whereOr.push({ stripeSubscriptionId })
+	if (stripePaymentIntentId) whereOr.push({ paymentLastPaymentIntentId: stripePaymentIntentId })
+	if (stripeChargeId) whereOr.push({ paymentLastChargeId: stripeChargeId })
 
 	if (whereOr.length === 0) {
 		return { updated: false, deduped: false, stale: false, recovered: false, previousStatus: null }
@@ -831,8 +846,15 @@ export async function projectInvoicePaymentState(params: {
 			id: true,
 			paymentStatus: true,
 			paymentRecoveredAt: true,
+			paymentRefundedAt: true,
+			paymentDisputeStatus: true,
+			paymentDisputedAt: true,
+			paymentDisputeResolvedAt: true,
 			paymentUpdatedAt: true,
 			paymentLastEventId: true,
+			paymentLastInvoiceId: true,
+			paymentLastChargeId: true,
+			paymentLastPaymentIntentId: true,
 		},
 	})
 
@@ -861,15 +883,29 @@ export async function projectInvoicePaymentState(params: {
 	}
 
 	const recovered = params.paymentStatus === 'paid' && existing.paymentStatus === 'failed'
+	const disputeResolved =
+		params.paymentStatus === 'dispute_won' ||
+		params.paymentStatus === 'dispute_lost' ||
+		params.paymentStatus === 'dispute_resolved'
 	await prisma.customerProvisioning.update({
 		where: { id: existing.id },
 		data: {
 			paymentStatus: params.paymentStatus,
 			paymentFailedAt: params.paymentStatus === 'failed' ? occurredAt : undefined,
 			paymentRecoveredAt: recovered ? occurredAt : existing.paymentRecoveredAt,
+			paymentRefundedAt:
+				params.paymentStatus === 'refunded' ? occurredAt : existing.paymentRefundedAt,
+			paymentDisputeStatus: disputeStatus ?? existing.paymentDisputeStatus,
+			paymentDisputedAt:
+				params.paymentStatus === 'disputed' ? occurredAt : existing.paymentDisputedAt,
+			paymentDisputeResolvedAt:
+				disputeResolved ? occurredAt : existing.paymentDisputeResolvedAt,
 			paymentUpdatedAt: occurredAt,
 			paymentLastEventId: params.eventId,
-			paymentLastInvoiceId: stripeInvoiceId,
+			paymentLastInvoiceId: stripeInvoiceId ?? existing.paymentLastInvoiceId,
+			paymentLastChargeId: stripeChargeId ?? existing.paymentLastChargeId,
+			paymentLastPaymentIntentId:
+				stripePaymentIntentId ?? existing.paymentLastPaymentIntentId,
 		},
 	})
 

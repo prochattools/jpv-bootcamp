@@ -260,6 +260,24 @@ export default async function PortalSectionPage({ params, searchParams }: Portal
           </section>
         )}
 
+        {billingStatus.showRefundNotice && (
+          <section className='rounded-2xl border border-sky-200 bg-sky-50 p-6 text-sky-950'>
+            <h2 className='text-lg font-semibold'>Refund recorded</h2>
+            <p className='mt-2 text-sm leading-6'>
+              A recent membership payment was refunded. This does not change access by itself; subscription status remains authoritative.
+            </p>
+          </section>
+        )}
+
+        {billingStatus.showDisputeNotice && (
+          <section role='alert' className='rounded-2xl border border-orange-300 bg-orange-50 p-6 text-orange-950'>
+            <h2 className='text-lg font-semibold'>Payment under review</h2>
+            <p className='mt-2 text-sm leading-6'>
+              A recent membership payment is under dispute review. This does not change access by itself.
+            </p>
+          </section>
+        )}
+
         {billingStatus.hasActiveSubscription ? (
           <>
             <section className='rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm'>

@@ -20,7 +20,13 @@ async function main() {
     'cancelAtPeriodEnd',
     'paymentStatus',
     'paymentFailedAt',
+    'paymentRefundedAt',
+    'paymentDisputeStatus',
+    'paymentDisputedAt',
+    'paymentDisputeResolvedAt',
     'showPaymentWarning',
+    'showRefundNotice',
+    'showDisputeNotice',
     'manageBillingAvailable',
   ]) {
     assert.match(typeBlock, new RegExp(field))

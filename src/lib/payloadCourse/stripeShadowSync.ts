@@ -11,8 +11,10 @@ import type {
 } from '@/lib/payloadCourse/accessService'
 import { createAuditEvent, queueEmailEvent } from '@/lib/payloadCourse/events'
 import {
+  BILLING_PAYMENT_DISPUTED_TEMPLATE_KEY,
   BILLING_PAYMENT_FAILED_TEMPLATE_KEY,
   BILLING_PAYMENT_RECOVERED_TEMPLATE_KEY,
+  BILLING_PAYMENT_REFUNDED_TEMPLATE_KEY,
 } from '@/lib/payloadCourse/systemEmailTemplates'
 import { redactEmail } from '@/lib/log-redact'
 
@@ -44,6 +46,9 @@ type BillingActionType =
   | 'subscription_canceled'
   | 'payment_succeeded'
   | 'payment_failed'
+  | 'payment_refunded'
+  | 'payment_disputed'
+  | 'dispute_resolved'
   | 'access_blocked'
   | 'access_restored'
 
@@ -458,7 +463,13 @@ export function decideBillingAccessTransition(
 async function createMemberSecurityEvent(
   payload: PayloadCourseWriteAPI,
   memberId: PayloadId,
-  eventType: 'account_created' | 'billing_payment_failed' | 'billing_payment_recovered',
+  eventType:
+    | 'account_created'
+    | 'billing_payment_failed'
+    | 'billing_payment_recovered'
+    | 'billing_payment_refunded'
+    | 'billing_payment_disputed'
+    | 'billing_dispute_resolved',
   eventId: string
 ) {
   return payload.create({
@@ -586,6 +597,69 @@ async function upsertBillingAccount(
   )
 
   return doc
+}
+
+async function getExistingBillingSubject(
+  payload: PayloadCourseWriteAPI,
+  params: {
+    stripeCustomerId?: string | null
+    stripePaymentIntentId?: string | null
+    email?: string | null
+  }
+): Promise<BillingSubject | null> {
+  const payment = params.stripePaymentIntentId
+    ? await findOne(payload, 'payload_payments', {
+        stripePaymentIntentId: { equals: params.stripePaymentIntentId },
+      })
+    : null
+  const paymentMemberId = relationshipId(payment?.member)
+  const billingAccountByCustomer = params.stripeCustomerId
+    ? await findOne(payload, 'payload_billing_accounts', {
+        stripeCustomerId: { equals: params.stripeCustomerId },
+      })
+    : null
+  const billingAccount =
+    billingAccountByCustomer ??
+    (paymentMemberId
+      ? await findOne(payload, 'payload_billing_accounts', {
+          member: { equals: paymentMemberId },
+        })
+      : null)
+  const memberId = paymentMemberId ?? relationshipId(billingAccount?.member)
+  if (!memberId || !billingAccount) return null
+
+  let member: PayloadDocument
+  try {
+    member = await payload.findByID({
+      collection: 'payload_members',
+      id: memberId,
+      depth: 0,
+      overrideAccess: true,
+    })
+  } catch {
+    return null
+  }
+  const memberEmail = typeof member.email === 'string' ? normalizeEmail(member.email) : ''
+  const suppliedEmail = normalizeEmail(params.email ?? '')
+  const email = memberEmail || suppliedEmail
+  if (!email) return null
+
+  const contact =
+    (await findOne(payload, 'payload_contacts', { member: { equals: member.id } })) ??
+    (await findOne(payload, 'payload_contacts', { email: { equals: email } }))
+  if (!contact) return null
+
+  return {
+    email,
+    member,
+    contact,
+    billingAccount,
+    stripeCustomerId:
+      typeof billingAccount.stripeCustomerId === 'string'
+        ? billingAccount.stripeCustomerId
+        : params.stripeCustomerId ?? '',
+    previousBillingStatus: asPayloadBillingStatus(billingAccount.billingStatus),
+  }
 }
 
 async function getBillingSubject(
@@ -1072,6 +1146,174 @@ async function syncInvoice(
   ]
 }
 
+function chargeEventContext(value: unknown) {
+  const charge = value && typeof value === 'object'
+    ? value as {
+        id?: unknown
+        customer?: unknown
+        invoice?: unknown
+        payment_intent?: unknown
+        billing_details?: { email?: unknown } | null
+        amount_refunded?: unknown
+        amount?: unknown
+        currency?: unknown
+      }
+    : null
+  const invoice = charge?.invoice && typeof charge.invoice === 'object'
+    ? charge.invoice as { id?: unknown }
+    : null
+
+  return {
+    stripeChargeId: relationshipId(charge),
+    stripeCustomerId: relationshipId(charge?.customer),
+    stripeInvoiceId: relationshipId(charge?.invoice) ?? relationshipId(invoice),
+    stripePaymentIntentId: relationshipId(charge?.payment_intent),
+    email:
+      typeof charge?.billing_details?.email === 'string'
+        ? charge.billing_details.email
+        : null,
+    amount:
+      typeof charge?.amount_refunded === 'number'
+        ? charge.amount_refunded
+        : typeof charge?.amount === 'number'
+          ? charge.amount
+          : 0,
+    currency: typeof charge?.currency === 'string' ? charge.currency : 'usd',
+  }
+}
+
+async function syncRefundOrDispute(
+  payload: PayloadCourseWriteAPI,
+  event: Stripe.Event,
+  kind: 'refunded' | 'disputed' | 'dispute_resolved'
+): Promise<string[]> {
+  const dispute = kind === 'refunded' ? null : event.data.object as Stripe.Dispute
+  const chargeValue = kind === 'refunded'
+    ? event.data.object
+    : (dispute as Stripe.Dispute & { charge?: unknown }).charge
+  const charge = chargeEventContext(chargeValue)
+  const disputePaymentIntentId = dispute
+    ? relationshipId((dispute as Stripe.Dispute & { payment_intent?: unknown }).payment_intent)
+    : null
+  const stripePaymentIntentId = disputePaymentIntentId ?? charge.stripePaymentIntentId
+  const subject = await getExistingBillingSubject(payload, {
+    stripeCustomerId: charge.stripeCustomerId,
+    stripePaymentIntentId,
+    email: charge.email,
+  })
+  const actionType: BillingActionType =
+    kind === 'refunded'
+      ? 'payment_refunded'
+      : kind === 'disputed'
+        ? 'payment_disputed'
+        : 'dispute_resolved'
+
+  if (!subject) {
+    await writeBillingAction(payload, {
+      actionType,
+      status: 'skipped',
+      eventId: event.id,
+      notes: 'missing_local_billing_subject',
+    })
+    return [`${kind}_skipped_missing_subject`]
+  }
+
+  const existingPayment = stripePaymentIntentId
+    ? await findOne(payload, 'payload_payments', {
+        stripePaymentIntentId: { equals: stripePaymentIntentId },
+      })
+    : null
+  const paymentStatus = kind === 'refunded'
+    ? 'refunded'
+    : kind === 'disputed'
+      ? 'disputed'
+      : 'dispute_resolved'
+  const metadata = {
+    ...(existingPayment?.metadata && typeof existingPayment.metadata === 'object'
+      ? existingPayment.metadata as Record<string, unknown>
+      : {}),
+    eventId: event.id,
+    stripeChargeId: charge.stripeChargeId,
+    disputeId: dispute?.id ?? null,
+    disputeStatus: dispute?.status ?? null,
+  }
+
+  if (existingPayment) {
+    await updateById(payload, 'payload_payments', existingPayment.id, {
+      status: paymentStatus,
+      metadata,
+    })
+  } else {
+    const syntheticInvoiceId = charge.stripeInvoiceId ?? `charge:${charge.stripeChargeId ?? event.id}`
+    await upsertByWhere(
+      payload,
+      'payload_payments',
+      { stripeInvoiceId: { equals: syntheticInvoiceId } },
+      {
+        displayName: `${paymentStatus} ${syntheticInvoiceId}`,
+        member: subject.member.id,
+        stripeInvoiceId: syntheticInvoiceId,
+        stripePaymentIntentId: stripePaymentIntentId ?? undefined,
+        amount: Math.max(charge.amount, 0),
+        currency: charge.currency,
+        status: paymentStatus,
+        metadata,
+      }
+    )
+  }
+
+  await writeBillingAction(payload, {
+    memberId: subject.member.id,
+    actionType,
+    status: 'completed',
+    eventId: event.id,
+    metadata: {
+      stripeChargeId: charge.stripeChargeId,
+      disputeId: dispute?.id ?? null,
+      disputeStatus: dispute?.status ?? null,
+    },
+  })
+
+  if (kind === 'refunded' || kind === 'disputed') {
+    const templateKey =
+      kind === 'refunded'
+        ? BILLING_PAYMENT_REFUNDED_TEMPLATE_KEY
+        : BILLING_PAYMENT_DISPUTED_TEMPLATE_KEY
+    const dedupeKey =
+      kind === 'refunded'
+        ? `billing-payment-refunded:${charge.stripeChargeId ?? event.id}`
+        : `billing-payment-disputed:${dispute?.id ?? event.id}`
+    const queuedNotice = await queueEmailEvent(payload, {
+      toEmail: subject.email,
+      contact: subject.contact.id,
+      templateKey,
+      dedupeKey,
+      metadata: {
+        memberId: String(subject.member.id),
+        eventId: event.id,
+        paymentState: kind,
+      },
+    })
+    if (queuedNotice.created) {
+      await createMemberSecurityEvent(
+        payload,
+        subject.member.id,
+        kind === 'refunded' ? 'billing_payment_refunded' : 'billing_payment_disputed',
+        event.id
+      )
+    }
+  } else {
+    await createMemberSecurityEvent(
+      payload,
+      subject.member.id,
+      'billing_dispute_resolved',
+      event.id
+    )
+  }
+
+  return [`${kind}_synced`]
+}
+
 async function syncCheckoutSession(
   payload: PayloadCourseWriteAPI,
   stripe: ShadowStripeClient,
@@ -1228,6 +1470,15 @@ export async function mirrorStripeEventToPayload(
           'failed',
           options
         )
+        break
+      case 'charge.refunded':
+        actions = await syncRefundOrDispute(payload, event, 'refunded')
+        break
+      case 'charge.dispute.created':
+        actions = await syncRefundOrDispute(payload, event, 'disputed')
+        break
+      case 'charge.dispute.closed':
+        actions = await syncRefundOrDispute(payload, event, 'dispute_resolved')
         break
       default:
         await markStripeEvent(payload, event, 'skipped')

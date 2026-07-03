@@ -11,6 +11,8 @@ export const MEMBER_EMAIL_CHANGE_REQUESTED_TEMPLATE_KEY = 'member-email-change-r
 export const MEMBER_EMAIL_CHANGED_TEMPLATE_KEY = 'member-email-changed'
 export const BILLING_PAYMENT_FAILED_TEMPLATE_KEY = 'billing-payment-failed'
 export const BILLING_PAYMENT_RECOVERED_TEMPLATE_KEY = 'billing-payment-recovered'
+export const BILLING_PAYMENT_REFUNDED_TEMPLATE_KEY = 'billing-payment-refunded'
+export const BILLING_PAYMENT_DISPUTED_TEMPLATE_KEY = 'billing-payment-disputed'
 export const ACCESS_BLOCKED_TEMPLATE_KEY = 'access-blocked'
 export const ACCESS_SUSPENDED_TEMPLATE_KEY = 'access-suspended'
 export const ACCESS_RESTORED_TEMPLATE_KEY = 'access-restored'
@@ -188,6 +190,30 @@ const templates: Record<string, PayloadDocument> = {
     paragraphs: [
       'A previously unsuccessful payment for your JPV Bootcamp membership was received successfully.',
       'No action is required. This message did not sign you in or change your account security settings.',
+    ],
+  }),
+  [BILLING_PAYMENT_REFUNDED_TEMPLATE_KEY]: brandedTemplate({
+    key: BILLING_PAYMENT_REFUNDED_TEMPLATE_KEY,
+    name: 'Membership payment refunded',
+    subject: 'A JPV Bootcamp payment was refunded',
+    preheader: 'A refund was recorded for a recent membership payment.',
+    heading: 'Refund recorded',
+    paragraphs: [
+      'A refund was recorded for a recent JPV Bootcamp membership payment.',
+      'This notice does not change your account access by itself. Your subscription status remains the source of truth for membership access.',
+      'Review your billing history in the member portal if you need more detail.',
+    ],
+  }),
+  [BILLING_PAYMENT_DISPUTED_TEMPLATE_KEY]: brandedTemplate({
+    key: BILLING_PAYMENT_DISPUTED_TEMPLATE_KEY,
+    name: 'Membership payment disputed',
+    subject: 'A JPV Bootcamp payment is under review',
+    preheader: 'A recent membership payment entered a dispute review.',
+    heading: 'Payment under review',
+    paragraphs: [
+      'A recent JPV Bootcamp membership payment entered a dispute review.',
+      'This notice does not change your account access by itself. Subscription status remains authoritative.',
+      'Contact support if you do not recognize this billing activity.',
     ],
   }),
   [ACCESS_BLOCKED_TEMPLATE_KEY]: brandedTemplate({
