@@ -204,6 +204,8 @@ Sensitive content, password tokens, and full payment details must not be stored 
 - add environment-safe link generation;
 - add template preview and test-send support for administrators.
 
+Repository status: the source now contains the first offline communication foundation slice, including a typed registry, member communication preference defaults and sanitization helpers, and a signed unsubscribe-token validator. Payload persistence, the member settings screen, mention-aware notification queuing, digest planning, and admin queue visibility are still pending.
+
 ### Communications Phase B — Account and security
 
 - invitation, verification, welcome, password setup/reset/change;

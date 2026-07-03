@@ -212,6 +212,8 @@ Validation coverage:
 
 Detailed specification: `docs/PAYLOAD_COMMUNICATIONS_PLAN.md`.
 
+Communication foundation work now includes a typed registry, member preference defaults and sanitization helpers, and a signed unsubscribe-token validator for optional categories. Those pieces are intentionally pure and offline-only; Payload-backed member preference persistence, the member settings UI, mention resolution, notification queue wiring, digest planning, and admin queue visibility remain pending.
+
 Tasks:
 
 - connect Payload to the existing FreeResend service for account-security messages;
