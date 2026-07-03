@@ -82,6 +82,10 @@ pnpm preview:rollback:plan --mode=validate-evidence --evidence-file=<local-json>
 
 Both commands are repository-only. They never authorize pushes, images, migrations, deployment, provider delivery, billing verification, community verification, partner verification, rollback execution, or cutover.
 
+The rollback draft now derives migration backout entries from the canonical nine-item inventory, keeps planned freeze controls separate from confirmed evidence, and records whether repository-only planning mode is missing approvals.
+
+The release packet now binds the exact branch, HEAD, repository identifier, immutable image reference, migration order, and typed approval records. Placeholder approvals, duplicate approval references, missing evidence, and repository drift fail closed.
+
 ## Phase 10 shadow validation and cutover readiness
 
 Phase 10 adds a repository-only shadow-validation report and a separate approval track for the final cutover boundary. The approval categories remain independent:
@@ -225,6 +229,8 @@ The default smoke harness is inert and prints a plan. Offline plan validation us
 The rehearsal matrix now covers public/auth, course, billing, community, partner, and operations checks. Every check declares a stable key, description, authorization category, automation mode, network/auth/database-read/database-write/mutation/provider risk flags, prerequisites, expected result, required evidence fields, and stop conditions. Smoke/read-only approval never authorizes provider calls, writes, migrations, deployment, or cutover.
 
 Safe evidence is schema-validated and rejects unknown check keys, missing fields, invalid time ranges, authorization mismatches, non-immutable image references, and notes containing secrets, cookies, tokens, emails, provider/customer IDs, database URLs, or URLs with path/query components.
+
+The staging-candidate report is read-only and tells the operator whether the current commit is ready to request live approvals. Repository readiness does not mean live authorization, and protected-only worktree dirt is tolerated only when it is explicitly excluded from the report.
 
 ## Fast safe sequence
 

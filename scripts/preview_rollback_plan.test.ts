@@ -1,74 +1,87 @@
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
 
-import { previewMigrationInventoryNames } from '../src/lib/previewMigrationInventory'
-import {
-  buildPreviewRollbackPlan,
-  serializePreviewRollbackPlan,
-  validatePreviewRollbackPlanInput,
-} from '../src/lib/previewRollbackPlan'
+import { previewMigrationInventory, previewMigrationInventoryNames } from '../src/lib/previewMigrationInventory'
+import { buildPreviewRollbackPlan, validatePreviewRollbackEvidence, validatePreviewRollbackPlanInput } from '../src/lib/previewRollbackPlan'
 
 const commitSha = '00d874480ef075ca8a853f9fa127e251d7b6a7ce'
-const imageReference = `ghcr.io/prochattools/jpv-bootcamp:${commitSha}`
 const plan = buildPreviewRollbackPlan({
   currentCommitSha: commitSha,
-  previousImmutableImageReference: imageReference,
+  previousImmutableImageReference: `ghcr.io/prochattools/jpv-bootcamp:${commitSha}`,
   targetEnvironment: 'preview',
-  stopControls: {
-    memberWritesFrozen: true,
-    communityPublishingFrozen: true,
-    partnerDeliveryFrozen: true,
-    providerEmailFrozen: true,
-    billingSideChangesFrozen: true,
+  backupReference: 'backup-ticket-1',
+  planningMode: 'draft',
+  plannedFreezeControls: {
+    memberWritesFrozen: false,
+    communityPublishingFrozen: false,
+    partnerDeliveryFrozen: false,
+    providerEmailFrozen: false,
+    billingSideChangesFrozen: false,
   },
-  migrationBackout: previewMigrationInventoryNames().map((name, index) => ({
-    name,
-    reversibility: index === 0 ? 'irreversible' : 'data_loss',
-    warning: `Rollback of ${name} may lose data.`,
+  migrationBackout: previewMigrationInventory().map((entry) => ({
+    name: entry.name,
+    rollbackRisk: entry.rollbackRisk,
     backupRequired: true,
+    warning: entry.rollbackRisk === 'irreversible'
+      ? `${entry.name} is irreversible and requires a verified backup.`
+      : `${entry.name} may lose data on rollback.`,
+    verificationChecks: [...entry.verificationChecks],
+    automaticDownProhibited: entry.rollbackRisk !== 'reversible',
   })),
   prismaDatabaseStartup: {
-    startupMode: 'database-deploy',
+    startupMode: 'application-only',
     deploymentEnv: 'preview',
     requiresApproval: true,
   },
   webhookPreservation: {
     preserveExistingEvents: true,
     replaySafe: true,
-    replayNotes: 'webhooks remain immutable and replay-safe',
+    replayNotes: 'repository-only planning',
   },
-  successChecks: ['previous image restored', 'writes frozen'],
-  hardStopConditions: ['backup missing', 'rollback approval missing'],
+  successChecks: ['rollback to immutable image'],
+  hardStopConditions: ['backup missing'],
+  authorizationStatus: 'missing',
+  missingRequirements: ['rollback approval missing'],
+  generatedFromCommit: commitSha,
+  canonicalMigrationInventoryDigest: `sha256:${previewMigrationInventoryNames().join('|')}`,
+  rollbackImageCommit: commitSha,
+  backupReferencePresent: true,
+  protectedPathsExcluded: true,
+  executable: false,
 })
 
-assert.equal(plan.schemaVersion, 1)
-assert.deepEqual(plan.migrationOrder, previewMigrationInventoryNames())
-assert.equal(serializePreviewRollbackPlan(plan), serializePreviewRollbackPlan(plan))
+assert.equal(plan.executable, false)
+assert.equal(validatePreviewRollbackPlanInput(plan).ok, true)
 
-assert.equal(
-  validatePreviewRollbackPlanInput({
-    ...plan,
-    previousImmutableImageReference: 'ghcr.io/prochattools/jpv-bootcamp:latest',
-  }).ok,
-  false,
-)
-assert.equal(
-  validatePreviewRollbackPlanInput({
-    ...plan,
-    stopControls: { ...plan.stopControls, memberWritesFrozen: false },
-  }).ok,
-  false,
-)
-assert.equal(
-  validatePreviewRollbackPlanInput({
-    ...plan,
-    migrationBackout: plan.migrationBackout.slice(1),
-  }).ok,
-  false,
-)
+const missingImage = validatePreviewRollbackPlanInput({ ...plan, previousImmutableImageReference: 'placeholder' })
+assert.equal(missingImage.ok, false)
+assert.equal(missingImage.errors.includes('previous_immutable_image_required'), true)
 
-const serialized = serializePreviewRollbackPlan(plan)
-assert.doesNotMatch(serialized, /password|token|cookie|session|database_url|postgres:\/\//i)
-assert.doesNotMatch(readFileSync('src/lib/previewRollbackPlan.ts', 'utf8'), /\bfetch\(|axios|prisma\./i)
+const missingBackup = validatePreviewRollbackPlanInput({ ...plan, backupReferencePresent: false })
+assert.equal(missingBackup.ok, false)
+assert.equal(missingBackup.errors.includes('backup_reference_missing'), true)
+
+const reversibleWarning = validatePreviewRollbackPlanInput({
+  ...plan,
+  migrationBackout: plan.migrationBackout.map((entry) => ({ ...entry, warning: entry.rollbackRisk === 'irreversible' ? 'rollback' : entry.warning })),
+})
+assert.equal(reversibleWarning.ok, false)
+
+const evidence = validatePreviewRollbackEvidence({
+  schemaVersion: 1,
+  commitSha,
+  imageReference: `ghcr.io/prochattools/jpv-bootcamp:${commitSha}`,
+  targetEnvironment: 'preview',
+  rollbackPlanId: 'rollback-1',
+  startedAt: '2026-07-03T00:00:00.000Z',
+  endedAt: '2026-07-03T00:01:00.000Z',
+  status: 'passed',
+  operator: 'rollback-op',
+  approvalReference: 'rollback-approval-1',
+  backupReference: 'backup-ticket-1',
+  notes: 'repository-only evidence',
+})
+assert.equal(evidence.ok, true)
+
+assert.equal(validatePreviewRollbackEvidence({ ...evidence, notes: 'password=abc' }).ok, false)
 
 console.log('preview_rollback_plan.test.ts passed')

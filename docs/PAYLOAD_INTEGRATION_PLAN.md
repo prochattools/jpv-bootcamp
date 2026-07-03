@@ -459,6 +459,8 @@ A phase is complete only when:
 
 Prepare the exact current commit for controlled staging as quickly as the independent approvals allow: finalize rollback planning, validate the release packet, publish an immutable preview image only after approval, execute only the reviewed migration order in the approved preview environment, deploy that exact image, and run the authorized rehearsal matrix. The first visible staging review should cover administrator/member separation, login and account security, courses and protected resources, billing portal/checkout, community publishing, partner applications/reporting, and shadow evidence. Provider delivery, migration execution, deployment, live smoke checks, rollback execution, and cutover remain separately authorized operations. Phase 11 remains future LiveKit-plus-PayloadCMS work and must not delay the core staging milestone.
 
+This slice hardens the repository-only candidate gate: rollback and packet drafts are generated from explicit local inputs, placeholder approvals are rejected, packet validation is bound to exact branch/HEAD/repository state, rehearsal checks come from the real smoke matrix, and no live operation has been authorized yet. The next required live step after this commit is branch push authorization.
+
 ## Definition of done
 
 - Administrator and member areas are visibly and technically separate.
