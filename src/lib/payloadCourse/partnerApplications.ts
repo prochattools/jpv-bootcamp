@@ -1,5 +1,6 @@
 import type { PayloadCourseWriteAPI, PayloadDocument, PayloadId } from '@/lib/payloadCourse/accessService'
 import { createAuditEvent, queueEmailEvent } from '@/lib/payloadCourse/events'
+import { recordPartnerEvent } from '@/lib/payloadCourse/partnerDelivery'
 
 export type PartnerApplicationMode = 'redirect' | 'email' | 'webhook' | 'manual_export'
 export type PartnerStatus = 'draft' | 'active' | 'paused' | 'archived'
@@ -116,6 +117,10 @@ async function findActivePartner(payload: PayloadCourseWriteAPI, partnerSlug: st
   return partner
 }
 
+function buildApplicationReference(memberId: string, partnerId: string): string {
+  return `partner-${memberId}-${partnerId}`.slice(0, 120)
+}
+
 async function findExistingSubmission(
   payload: PayloadCourseWriteAPI,
   memberId: string,
@@ -218,16 +223,28 @@ export async function submitPartnerApplication(
       status: 'submitted',
       deliveryMethod: partner.applicationMode,
       submittedAt: now.toISOString(),
+      applicationReference: buildApplicationReference(String(member.id), String(partner.id)),
       consentAcceptedAt: sanitized.consentAccepted ? now.toISOString() : null,
       memberNameSnapshot: asNonEmptyString(member.displayName) ?? asNonEmptyString(member.email),
       memberEmailSnapshot: asNonEmptyString(member.email),
       memberPhoneSnapshot: asNonEmptyString(member.phone),
       partnerSlugSnapshot: asString(partner.slug),
       partnerNameSnapshot: asNonEmptyString(partner.name),
-      applicationSnapshot: sanitized,
+      companySnapshot: sanitized.company,
+      countrySnapshot: sanitized.country,
+      experienceSnapshot: sanitized.experience,
+      messageSnapshot: sanitized.message,
       deliveryAttempts: 0,
-      trustedDestinationSnapshot: undefined,
-      statusReason: null,
+      trustedDestinationSnapshot:
+        partner.applicationMode === 'redirect'
+          ? asNonEmptyString(partner.affiliateUrl)
+          : partner.applicationMode === 'email'
+            ? null
+            : asNonEmptyString(partner.affiliateUrl),
+      source: 'portal',
+      metadata: {
+        consentAccepted: sanitized.consentAccepted,
+      },
     },
     overrideAccess: true,
   })
@@ -246,6 +263,16 @@ export async function submitPartnerApplication(
     },
   })
 
+  await recordPartnerEvent(payload, {
+    partnerId: partner.id,
+    applicationId: created.id,
+    memberId: member.id,
+    eventType: 'partner_application_submitted',
+    sourceRoute: `/portal/partners/${partner.slug}`,
+    status: 'submitted',
+    deliveryMethod: partner.applicationMode as PartnerApplicationMode,
+  })
+
   if (partner.applicationMode === 'email') {
     await queueEmailEvent(payload, {
       toEmail: asNonEmptyString(member.email)!,
@@ -257,11 +284,37 @@ export async function submitPartnerApplication(
   }
 
   if (partner.applicationMode === 'redirect') {
+    await recordPartnerEvent(payload, {
+      partnerId: partner.id,
+      applicationId: created.id,
+      memberId: member.id,
+      eventType: 'partner_viewed',
+      sourceRoute: `/portal/partners/${partner.slug}`,
+      status: 'submitted',
+      deliveryMethod: partner.applicationMode as PartnerApplicationMode,
+    })
     return {
       outcome: 'redirect_pending',
       applicationId: String(created.id),
     }
   }
+
+  await payload.update({
+    collection: 'payload_partner_applications',
+    id: created.id,
+    data: { status: 'delivery_pending' },
+    overrideAccess: true,
+  })
+
+  await recordPartnerEvent(payload, {
+    partnerId: partner.id,
+    applicationId: created.id,
+    memberId: member.id,
+    eventType: 'partner_application_delivery_pending',
+    sourceRoute: `/portal/partners/${partner.slug}`,
+    status: 'delivery_pending',
+    deliveryMethod: partner.applicationMode as PartnerApplicationMode,
+  })
 
   return { outcome: 'queued', applicationId: String(created.id) }
 }

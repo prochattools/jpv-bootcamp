@@ -6,6 +6,7 @@ import * as migration_20260630_100730_affiliate_reporting from './20260630_10073
 import * as migration_20260630_190000_payload_preferences_id_constraint from './20260630_190000_payload_preferences_id_constraint';
 import * as migration_20260701_201500_member_email_verification from './20260701_201500_member_email_verification';
 import * as migration_20260702_001500_member_account_action_purposes from './20260702_001500_member_account_action_purposes';
+import * as migration_20260703_000000_partner_affiliate_operations from './20260703_000000_partner_affiliate_operations';
 
 export const migrations = [
   {
@@ -47,5 +48,10 @@ export const migrations = [
     up: migration_20260702_001500_member_account_action_purposes.up,
     down: migration_20260702_001500_member_account_action_purposes.down,
     name: '20260702_001500_member_account_action_purposes',
+  },
+  {
+    up: migration_20260703_000000_partner_affiliate_operations.up,
+    down: migration_20260703_000000_partner_affiliate_operations.down,
+    name: '20260703_000000_partner_affiliate_operations',
   },
 ];
