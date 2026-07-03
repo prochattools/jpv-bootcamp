@@ -375,7 +375,7 @@ Validation:
 
 ### Phase 10 — Shadow validation and cutover
 
-**Status:** Read-only Payload snapshot reconciliation and safe evidence export are implemented; live migration, deployment, provider, reconciliation, preview acceptance, and cutover approvals remain pending.
+**Status:** Read-only Payload snapshot reconciliation, offline rehearsal matrix validation, and safe evidence export are implemented; live migration, deployment, provider, reconciliation, preview acceptance, rollback rehearsal, and cutover approvals remain pending.
 
 Before replacing any existing production flow:
 
@@ -423,7 +423,7 @@ A phase is complete only when:
 
 ## Immediate milestone
 
-Continue Phase 10 read-only Payload snapshot reconciliation and cutover readiness while live migration, deployment, provider, reconciliation, and cutover approvals remain pending. The next operational milestone is controlled preview verification for the existing billing portal, webhook, checkout, provider behavior, community journeys, and partner delivery; live verification remains pending.
+Continue Phase 10 read-only Payload snapshot reconciliation and cutover readiness while live migration, deployment, provider, reconciliation, and cutover approvals remain pending. The next operational milestone is controlled preview verification for the existing billing portal, webhook, checkout, provider behavior, community journeys, and partner delivery; live verification remains pending. Offline rehearsal matrix validation and safe evidence checks are now implemented and stay repository-only until explicit live approvals exist.
 
 ## Definition of done
 

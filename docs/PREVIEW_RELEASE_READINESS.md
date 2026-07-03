@@ -197,9 +197,11 @@ Plan smoke verification without making network requests:
 pnpm preview:smoke:plan
 ```
 
-The default smoke harness is inert and prints a plan. Future live execution requires explicit `--execute`, an exact HTTPS target, and a valid authorization file. Smoke authorization remains separate from Git push, image publication, migrations, provider dry-run, provider apply, and deployment.
+The default smoke harness is inert and prints a plan. Offline plan validation uses `--mode=print-plan`, `--mode=validate-plan`, and `--mode=validate-evidence`. These modes never use network, database, provider, or migration calls. Future live execution requires explicit `--execute`, an exact HTTPS target, and a valid authorization file. Smoke authorization remains separate from Git push, image publication, migrations, provider dry-run, provider apply, deployment, or cutover.
 
-Planned checks classify whether they require network access, authentication, mutation, database reads, database writes, provider calls, and the authorization category required. Do not embed credentials, recipient addresses, real tokens, or provider secrets in smoke plans.
+The rehearsal matrix now covers public/auth, course, billing, community, partner, and operations checks. Every check declares a stable key, description, authorization category, automation mode, network/auth/database-read/database-write/mutation/provider risk flags, prerequisites, expected result, required evidence fields, and stop conditions. Smoke/read-only approval never authorizes provider calls, writes, migrations, deployment, or cutover.
+
+Safe evidence is schema-validated and rejects unknown check keys, missing fields, invalid time ranges, authorization mismatches, non-immutable image references, and notes containing secrets, cookies, tokens, emails, provider/customer IDs, database URLs, or URLs with path/query components.
 
 ## Public account-action route controls
 
