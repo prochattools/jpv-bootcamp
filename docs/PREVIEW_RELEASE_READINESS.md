@@ -18,7 +18,7 @@ The previous preview workflow published an image from ordinary feature-branch pu
 
 It may install dependencies, run preview/release safety tests, type-check, build the application, and build the Dockerfile with `push: false`.
 
-It must not log in to GHCR, publish an image, call Dokploy, deploy, run Payload migrations, run Prisma migrations, execute `database-deploy` startup, initialize a database, run queued provider email, or perform live smoke checks.
+It must not log in to GHCR, publish an image, call Dokploy, deploy, run Payload migrations, run Prisma migrations, execute `database-deploy` startup, initialize a database, run queued provider email, or perform live smoke checks unless the feature-branch publish workflow is the authorized path.
 
 ### Publish Preview Image
 
@@ -30,7 +30,7 @@ ghcr.io/<repository>:<full-commit-sha>
 
 It uses the `preview-image-publish` GitHub environment, `contents: read`, and `packages: write`. It must not publish `latest`, deploy, call Dokploy, run migrations, start database-deploy behavior, call a provider, or perform live smoke checks.
 
-A Git push does not authorize image publication. Image publication does not authorize deployment. Image publication does not authorize Payload migrations, Prisma/database-deploy startup, provider dry-run, provider apply, or smoke verification.
+A Git push to an authorized feature branch can publish the branch-tagged preview image through workflow execution. Image publication does not authorize deployment. Image publication does not authorize Payload migrations, Prisma/database-deploy startup, provider dry-run, provider apply, or smoke verification.
 
 ## Release manifest and offline preflight
 
@@ -184,7 +184,7 @@ Unknown startup or deployment environment values fail closed.
 
 The supported preview path builds the repository Dockerfile with Node 20 and pnpm 10.33.0. The fallback Nixpacks configuration also uses Node 20 and pnpm 10.33.0, but preview automation should use the Docker build path.
 
-Feature-branch workflow execution publishes an image. External infrastructure may redeploy after image publication, so push and deployment authorization must be considered separately.
+Feature-branch workflow execution publishes the branch-tagged preview image and the immutable SHA tag. External infrastructure may redeploy after image publication, so push and deployment authorization must be considered separately.
 
 ## Queued email dry-run and apply behavior
 
