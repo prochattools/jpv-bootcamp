@@ -376,7 +376,7 @@ Validation:
 
 ### Phase 10 — Shadow validation and cutover
 
-**Status:** Read-only Payload snapshot reconciliation, offline rehearsal matrix validation, and safe evidence export are implemented; live migration, deployment, provider, reconciliation, preview acceptance, rollback rehearsal, and cutover approvals remain pending.
+**Status:** Read-only Payload snapshot reconciliation, offline rehearsal matrix validation, and safe evidence export are implemented; live migration, deployment, provider, reconciliation, preview acceptance, rollback rehearsal, and cutover approvals remain pending. Phase 10 is still incomplete until live staging evidence exists.
 
 Before replacing any existing production flow:
 
@@ -457,7 +457,7 @@ A phase is complete only when:
 
 ## Immediate milestone
 
-Prepare the exact current commit for controlled staging as quickly as the independent approvals allow: finalize rollback planning, validate the release packet, publish an immutable preview image only after approval, execute only the reviewed migration order in the approved preview environment, deploy that exact image, and run the authorized rehearsal matrix. The first visible staging review should cover administrator/member separation, login and account security, courses and protected resources, billing portal/checkout, community publishing, partner applications/reporting, and shadow evidence. Provider delivery, migration execution, deployment, live smoke checks, rollback execution, and cutover remain separately authorized operations. Phase 11 LiveKit group calls remain research-only and must not delay the core staging milestone.
+Prepare the exact current commit for controlled staging as quickly as the independent approvals allow: finalize rollback planning, validate the release packet, publish an immutable preview image only after approval, execute only the reviewed migration order in the approved preview environment, deploy that exact image, and run the authorized rehearsal matrix. The first visible staging review should cover administrator/member separation, login and account security, courses and protected resources, billing portal/checkout, community publishing, partner applications/reporting, and shadow evidence. Provider delivery, migration execution, deployment, live smoke checks, rollback execution, and cutover remain separately authorized operations. Phase 11 remains future LiveKit-plus-PayloadCMS work and must not delay the core staging milestone.
 
 ## Definition of done
 

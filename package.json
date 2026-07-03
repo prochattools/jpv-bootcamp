@@ -17,6 +17,8 @@
     "preview:release:manifest": "tsx scripts/preview/release-manifest.mts",
     "preview:release:preflight": "tsx scripts/preview/release-preflight.mts",
     "preview:smoke:plan": "tsx scripts/preview/smoke-check.mts",
+    "preview:rollback:plan": "tsx scripts/preview/rollback-plan.mts",
+    "preview:release:packet": "tsx scripts/preview/release-packet.mts",
     "test:preview-readiness": "tsx scripts/preview_readiness_config.test.ts && tsx scripts/preview_startup_mode.test.ts",
     "payload:branding:check": "pnpm generate:importmap && pnpm type-check:payload",
     "payload:staging:migrate:status": "tsx scripts/payload/run-staging-migrations.mts --status",

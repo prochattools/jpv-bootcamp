@@ -59,6 +59,29 @@ Offline preflight validates each category independently:
 - preview deployment;
 - post-deployment smoke verification.
 
+## Rollback plan and staging packet
+
+Generate a deterministic rollback plan without touching a database or provider:
+
+```sh
+pnpm preview:rollback:plan
+```
+
+Generate the release packet used by the staging gate:
+
+```sh
+pnpm preview:release:packet
+```
+
+Validate an existing packet or rollback evidence file without making live calls:
+
+```sh
+pnpm preview:release:packet --mode=validate --packet-file=<local-json>
+pnpm preview:rollback:plan --mode=validate-evidence --evidence-file=<local-json>
+```
+
+Both commands are repository-only. They never authorize pushes, images, migrations, deployment, provider delivery, billing verification, community verification, partner verification, rollback execution, or cutover.
+
 ## Phase 10 shadow validation and cutover readiness
 
 Phase 10 adds a repository-only shadow-validation report and a separate approval track for the final cutover boundary. The approval categories remain independent:
@@ -202,6 +225,83 @@ The default smoke harness is inert and prints a plan. Offline plan validation us
 The rehearsal matrix now covers public/auth, course, billing, community, partner, and operations checks. Every check declares a stable key, description, authorization category, automation mode, network/auth/database-read/database-write/mutation/provider risk flags, prerequisites, expected result, required evidence fields, and stop conditions. Smoke/read-only approval never authorizes provider calls, writes, migrations, deployment, or cutover.
 
 Safe evidence is schema-validated and rejects unknown check keys, missing fields, invalid time ranges, authorization mismatches, non-immutable image references, and notes containing secrets, cookies, tokens, emails, provider/customer IDs, database URLs, or URLs with path/query components.
+
+## Fast safe sequence
+
+Use this order for the staging gate:
+
+1. Validate the current commit.
+   - Prerequisites: clean intended paths, correct branch, approved commit.
+   - Command: `git branch --show-current && git rev-parse HEAD && git status --short`
+   - Evidence: branch name, commit SHA, no unexpected intended-path changes.
+   - Success: the repo is on `feature/course-branding-and-preview` at the reviewed commit.
+   - Stop: branch mismatch, dirty intended paths, or protected-path changes.
+2. Create the release packet.
+   - Prerequisites: exact commit, immutable image placeholder, canonical migration order, approval references.
+   - Command: `pnpm preview:release:packet`
+   - Evidence: serialized packet JSON.
+   - Success: packet validates and includes only non-secret configuration names.
+   - Stop: mutable image, migration drift, missing backup reference, or approval reuse.
+3. Approve and push the branch.
+   - Prerequisites: release packet is valid and approvals are isolated.
+   - Command: `git push` only after separate push approval.
+   - Evidence: remote branch update.
+   - Success: branch is published without image or deployment side effects.
+   - Stop: wrong branch, dirty working tree, or unauthorized push.
+4. Publish the immutable image.
+   - Prerequisites: push approval and image publication approval are separate.
+   - Command: publish workflow with the exact 40-character commit SHA.
+   - Evidence: immutable SHA-tagged image reference.
+   - Success: image exists and matches the reviewed commit.
+   - Stop: mutable tag, wrong commit, or missing publish approval.
+5. Verify backup and migration authorization.
+   - Prerequisites: backup evidence and target schema are present.
+   - Command: preflight/authorization review only.
+   - Evidence: backup reference, schema, migration order, operator, maintenance window.
+   - Success: migration execution is explicitly authorized and separate from deploy/image approvals.
+   - Stop: missing backup, drifted migration order, or approval reuse.
+6. Run the exact reviewed migrations.
+   - Prerequisites: migration approval, backup evidence, and maintenance window.
+   - Command: the reviewed migration runner for the approved environment.
+   - Evidence: migration logs and applied migration order.
+   - Success: all nine reviewed migrations complete in order.
+   - Stop: error, drift, or any destructive rollback attempt.
+7. Deploy the exact image.
+   - Prerequisites: image publication approval and deployment approval are separate.
+   - Command: deployment workflow for the immutable image reference.
+   - Evidence: deployment record and image digest.
+   - Success: preview runs the reviewed immutable image.
+   - Stop: mutable image, wrong target, or deployment without approval.
+8. Run authorized read-only checks first.
+   - Prerequisites: smoke verification approval only.
+   - Command: `pnpm preview:smoke:plan`
+   - Evidence: rehearsal matrix and safe evidence output.
+   - Success: read-only checks pass without writes, provider calls, or migrations.
+   - Stop: any provider call, write path, or approval mismatch.
+9. Run separately approved write/provider checks.
+   - Prerequisites: exact provider/billing/community/partner approvals.
+   - Command: approval-specific live workflows only.
+   - Evidence: operator references, approval references, and operation logs.
+   - Success: only the explicitly approved write/provider checks execute.
+   - Stop: read-only approval reused for writes, provider calls, or deployment.
+10. Collect evidence.
+   - Prerequisites: checks complete or are blocked for a recorded reason.
+   - Command: repository evidence validation only.
+   - Evidence: check key, times, status, safe status, operator, approval reference, artifact digest.
+   - Success: evidence validates and contains no secrets.
+   - Stop: malformed evidence, unsafe notes, or missing approval references.
+11. Rehearse rollback.
+   - Prerequisites: immutable previous image, backup reference, and rollback approval.
+   - Command: `pnpm preview:rollback:plan`
+   - Evidence: rollback plan plus rollback evidence.
+   - Success: application rollback, frozen writes, and webhook preservation are proven offline.
+   - Stop: any destructive command, data-loss ambiguity, or missing backup.
+12. Stop before production cutover.
+   - Prerequisites: staging evidence exists, but production cutover is not approved.
+   - Command: none.
+   - Evidence: explicit pending cutover state.
+   - Success: work stops with production still untouched.
+   - Stop: any attempt to treat staging evidence as production authorization.
 
 ## Public account-action route controls
 
