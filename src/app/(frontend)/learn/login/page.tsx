@@ -71,7 +71,7 @@ export default async function LearnLoginPage({
           <LoginForm nextPath={nextPath} />
 
           <p className='mt-6 text-xs leading-5 text-[#7b8982]'>
-            Public self-signup is not enabled. New member accounts are created through approved JPV Bootcamp enrollment and migration processes.
+            New students can create a free account and verify their email before signing in. Pro and VIP access still require the approved paid upgrade flow.
           </p>
           <div className='mt-5 flex flex-col gap-3 sm:flex-row'>
             <Link className='rounded-lg border border-[#153f2e]/20 px-4 py-3 text-center text-sm font-semibold text-[#153f2e]' href='/register'>

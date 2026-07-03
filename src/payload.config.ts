@@ -57,6 +57,7 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
     components: {
+      beforeLogin: ['./components/payload/JPVAdminBranding#JPVAdminLoginBranding'],
       graphics: {
         Logo: './components/payload/JPVAdminBranding#JPVAdminLogo',
         Icon: './components/payload/JPVAdminBranding#JPVAdminIcon',

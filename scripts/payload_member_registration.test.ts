@@ -147,6 +147,11 @@ async function main(): Promise<void> {
   assert.match(loginPage, /Create free account/)
   assert.match(loginPage, /Resend verification/)
 
+  const learnLoginPage = readFileSync('src/app/(frontend)/learn/login/page.tsx', 'utf8')
+  assert.match(learnLoginPage, /Create free account/)
+  assert.match(learnLoginPage, /New students can create a free account/)
+  assert.doesNotMatch(learnLoginPage, /Public self-signup is not enabled/)
+
   const registerPage = readFileSync('src/app/(frontend)/register/page.tsx', 'utf8')
   assert.match(registerPage, /Create free account/)
   assert.match(registerPage, /Free is a real member tier/)
