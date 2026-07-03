@@ -8,6 +8,7 @@ This is the single canonical product, architecture, security, roadmap, and execu
 2. **Feature specifications.** Define implementation detail without changing roadmap order:
    - `docs/PAYLOAD_COMMUNICATIONS_PLAN.md` — branded communications, FreeResend delivery, templates, events, preferences, audit, and acceptance criteria for Phase 6.
    - `docs/PAYLOAD_PARTNER_AFFILIATE_PLAN.md` — detailed Partner Affiliates specification for Phase 9.
+   - `docs/LIVEKIT_TINACMS_GROUP_CALLS_PLAN.md` — future group-call use cases, LiveKit runtime architecture, TinaCMS content-only boundary, security, privacy, and acceptance gates for Phase 11.
 3. **Visual reference.** `docs/PAYLOAD_COURSE_VISUAL_IMPLEMENTATION_PLAN.md` illustrates screens and workflows but does not replace this plan.
 4. **Client progress document.** `docs/client/JPV_Minimal_Payload_Course_Plan_v2_2.docx` communicates progress and remaining work in concise, non-technical language. It must remain aligned with this plan and the feature specifications.
 5. **Legacy archive.** `docs/archive/PARTNER_AFFILIATE_LEGACY.md` records retained obsolete behavior for migration and reconciliation.
@@ -388,6 +389,39 @@ Before replacing any existing production flow:
 
 Only then may an existing production responsibility be disabled or redirected.
 
+### Phase 11 — Future community group calls with LiveKit
+
+**Status:** Future feature; research and architecture defined, implementation intentionally deferred.
+
+Detailed research and specification: `docs/LIVEKIT_TINACMS_GROUP_CALLS_PLAN.md`.
+
+Product scope:
+
+- scheduled audio/video calls linked to authorized community groups;
+- server-derived room membership and host/moderator/attendee roles;
+- LiveKit for real-time rooms, media, screen sharing, participant state, and lifecycle webhooks;
+- TinaCMS, if adopted, limited to editable call-page content and schedule presentation;
+- Payload/member authorization remains authoritative for identity, group access, call records, attendance, moderation, and audit;
+- recording, replay, captions, transcripts, and livestreaming require separate privacy and operational approval.
+
+Validation:
+
+- unauthorized members cannot discover or join private or secret group calls;
+- LiveKit JWTs are short-lived, least privilege, and generated only by the backend;
+- browser input cannot choose trusted participant identity, room, group, or role;
+- webhook events are signature-verified and idempotent;
+- no LiveKit secret, participant token, or private recording URL is stored in TinaCMS;
+- representative desktop/mobile, accessibility, privacy, support, cost, monitoring, and rollback gates pass before rollout.
+
+## Overall delivery status — July 2026
+
+The roadmap now contains eleven phases, including the deferred LiveKit group-call phase. Weighted implementation progress is approximately **72% complete**. The source implementation of the core course platform is substantially further advanced than Version 2.2 recorded, while production readiness remains gated by controlled staging operations.
+
+- **Implemented or source-complete foundations:** Phases 1–5.
+- **Substantial implementation with live acceptance or refinement pending:** Phases 6–10.
+- **Future research-defined feature:** Phase 11.
+- **Primary remaining work:** staging deployment, reviewed migration execution, real provider and billing acceptance, community/partner live journeys, rollback rehearsal, final cutover approval, and later LiveKit implementation.
+
 ## Communication scope summary
 
 The approved communication system distinguishes:
@@ -423,7 +457,7 @@ A phase is complete only when:
 
 ## Immediate milestone
 
-Continue Phase 10 read-only Payload snapshot reconciliation and cutover readiness while live migration, deployment, provider, reconciliation, and cutover approvals remain pending. The next operational milestone is controlled preview verification for the existing billing portal, webhook, checkout, provider behavior, community journeys, and partner delivery; live verification remains pending. Offline rehearsal matrix validation and safe evidence checks are now implemented and stay repository-only until explicit live approvals exist.
+Prepare the exact current commit for controlled staging as quickly as the independent approvals allow: finalize rollback planning, validate the release packet, publish an immutable preview image only after approval, execute only the reviewed migration order in the approved preview environment, deploy that exact image, and run the authorized rehearsal matrix. The first visible staging review should cover administrator/member separation, login and account security, courses and protected resources, billing portal/checkout, community publishing, partner applications/reporting, and shadow evidence. Provider delivery, migration execution, deployment, live smoke checks, rollback execution, and cutover remain separately authorized operations. Phase 11 LiveKit group calls remain research-only and must not delay the core staging milestone.
 
 ## Definition of done
 
