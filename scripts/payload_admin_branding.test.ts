@@ -4,6 +4,7 @@ import { existsSync, readFileSync } from 'node:fs'
 const payloadConfig = readFileSync('src/payload.config.ts', 'utf8')
 const brandingSource = readFileSync('src/components/payload/JPVAdminBranding.tsx', 'utf8')
 const importMap = readFileSync('src/app/(payload)/admin/importMap.js', 'utf8')
+const rootImportMap = readFileSync('src/app/(payload)/importMap.js', 'utf8')
 const dockerfile = readFileSync('Dockerfile', 'utf8')
 
 const logoKey = './components/payload/JPVAdminBranding#JPVAdminLogo'
@@ -19,6 +20,8 @@ assert.match(importMap, /import \{ JPVAdminLogo as /, 'import map must import JP
 assert.match(importMap, /import \{ JPVAdminIcon as /, 'import map must import JPVAdminIcon')
 assert.ok(importMap.includes(`"${logoKey}"`), 'import map object must contain the JPVAdminLogo key')
 assert.ok(importMap.includes(`"${iconKey}"`), 'import map object must contain the JPVAdminIcon key')
+assert.match(rootImportMap, /export \{ importMap \} from '\.\/admin\/importMap\.js'/, 'root import map must re-export the generated admin import map')
+assert.match(rootImportMap, /export \{ importMap as default \} from '\.\/admin\/importMap\.js'/, 'root import map must provide the generated admin import map as default')
 
 const generateIndex = dockerfile.indexOf('pnpm generate:importmap')
 const buildIndex = dockerfile.indexOf('pnpm run build')

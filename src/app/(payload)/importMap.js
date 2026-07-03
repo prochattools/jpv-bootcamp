@@ -1,3 +1,3 @@
-export const importMap = {}
+export { importMap } from './admin/importMap.js'
 
-export default importMap
+export { importMap as default } from './admin/importMap.js'
