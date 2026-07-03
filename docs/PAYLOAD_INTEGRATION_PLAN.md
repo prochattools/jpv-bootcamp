@@ -374,7 +374,7 @@ Validation:
 
 ### Phase 10 — Shadow validation and cutover
 
-**Status:** Partial offline shadow validation complete; live migration, deployment, provider, reconciliation, and cutover approvals remain pending.
+**Status:** Partial offline reconciliation complete; live migration, deployment, provider, reconciliation, preview acceptance, and cutover approvals remain pending.
 
 Before replacing any existing production flow:
 
@@ -422,7 +422,7 @@ A phase is complete only when:
 
 ## Immediate milestone
 
-Continue Phase 10 shadow validation and cutover readiness while live migration, deployment, provider, reconciliation, and cutover approvals remain pending. The next operational milestone is controlled preview verification for the existing billing portal, webhook, checkout, provider behavior, community journeys, and partner delivery; live verification remains pending.
+Continue Phase 10 offline reconciliation and cutover readiness while live migration, deployment, provider, reconciliation, and cutover approvals remain pending. The next operational milestone is controlled preview verification for the existing billing portal, webhook, checkout, provider behavior, community journeys, and partner delivery; live verification remains pending.
 
 ## Definition of done
 

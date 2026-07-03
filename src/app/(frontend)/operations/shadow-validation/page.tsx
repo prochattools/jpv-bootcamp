@@ -42,6 +42,19 @@ export default async function ShadowValidationPage(): Promise<JSX.Element> {
       </section>
 
       <section className='rounded-lg border border-neutral-200 bg-white p-5'>
+        <h2 className='font-semibold'>Domain totals</h2>
+        <div className='mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4'>
+          {Object.entries(report.domains).map(([domain, summary]) => (
+            <article key={domain} className='rounded-md border border-neutral-200 px-4 py-3'>
+              <p className='text-sm font-medium capitalize'>{domain}</p>
+              <p className='text-sm text-neutral-600'>Ready: {String(summary.ready)}</p>
+              <p className='text-sm text-neutral-600'>Issues: {summary.issueCount}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className='rounded-lg border border-neutral-200 bg-white p-5'>
         <h2 className='font-semibold'>Pending migrations</h2>
         <ul className='mt-3 list-disc pl-5 text-sm text-neutral-700'>
           {report.metadata.migrationOrder.map((migration) => (
@@ -51,14 +64,13 @@ export default async function ShadowValidationPage(): Promise<JSX.Element> {
       </section>
 
       <section className='grid gap-4 md:grid-cols-2'>
-        {Object.entries(report.domains).map(([domain, summary]) => (
-          <article key={domain} className='rounded-lg border border-neutral-200 bg-white p-5'>
-            <h2 className='font-semibold capitalize'>{domain}</h2>
-            <p className='mt-2 text-sm text-neutral-600'>Ready: {String(summary.ready)}</p>
-            <p className='text-sm text-neutral-600'>Issues: {summary.issueCount}</p>
-            {'pendingMigrations' in summary ? (
-              <p className='text-xs text-neutral-500'>Pending migrations: {summary.pendingMigrations.length}</p>
-            ) : null}
+        {report.journeys.map((journey) => (
+          <article key={journey.key} className='rounded-lg border border-neutral-200 bg-white p-5'>
+            <h2 className='font-semibold'>{journey.label}</h2>
+            <p className='mt-2 text-sm text-neutral-600'>Implemented: {String(journey.implemented)}</p>
+            <p className='text-sm text-neutral-600'>Focused test present: {String(journey.focusedTestPresent)}</p>
+            <p className='text-sm text-neutral-600'>Live verification required: {String(journey.liveVerificationRequired)}</p>
+            <p className='text-sm text-neutral-600'>Blockers: {journey.blockers.length}</p>
           </article>
         ))}
       </section>
@@ -73,6 +85,30 @@ export default async function ShadowValidationPage(): Promise<JSX.Element> {
                 <p className='text-xs uppercase tracking-wide text-neutral-500'>{issue.domain} / {issue.severity}</p>
               </div>
               <p className='mt-1 text-sm text-neutral-700'>{issue.detail}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className='rounded-lg border border-neutral-200 bg-white p-5'>
+        <h2 className='font-semibold'>Acceptance matrix</h2>
+        <div className='mt-3 space-y-3'>
+          {report.journeys.map((journey) => (
+            <article key={`${journey.key}-matrix`} className='rounded-md border border-neutral-200 px-4 py-3'>
+              <div className='flex flex-wrap items-center justify-between gap-3'>
+                <p className='text-sm font-semibold'>{journey.label}</p>
+                <p className='text-xs uppercase tracking-wide text-neutral-500'>{journey.key}</p>
+              </div>
+              <div className='mt-2 grid gap-1 text-sm text-neutral-700 md:grid-cols-3'>
+                <p>Implemented: {String(journey.implemented)}</p>
+                <p>Focused test present: {String(journey.focusedTestPresent)}</p>
+                <p>Live verification required: {String(journey.liveVerificationRequired)}</p>
+              </div>
+              <ul className='mt-2 list-disc pl-5 text-sm text-neutral-600'>
+                {journey.blockers.map((blocker) => (
+                  <li key={blocker}>{blocker}</li>
+                ))}
+              </ul>
             </article>
           ))}
         </div>

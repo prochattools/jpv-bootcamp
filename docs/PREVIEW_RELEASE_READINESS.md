@@ -74,6 +74,8 @@ Phase 10 adds a repository-only shadow-validation report and a separate approval
 
 The shadow report and preflight helpers never authorize live migration, deployment, provider delivery, or cutover by themselves. A healthy repository state still leaves `cutoverReady` false until every live approval is present.
 
+The admin-only `/operations/shadow-validation` page shows concrete domain totals, issue codes, and an executable acceptance matrix for the core member, billing, email, community, and partner journeys. It remains read-only and does not perform any live verification.
+
 Preflight does not push, log in to a registry, connect to a database, run migration status, execute migrations, initialize Payload, call a provider, call deployment infrastructure, or perform smoke requests.
 
 ## Billing readiness checklist
