@@ -239,6 +239,24 @@ GET https://portal.jpvbootcamp.com/wp-json/wp/v2/tags?per_page=100
 
 Pagination: responses include `X-WP-Total` and `X-WP-TotalPages` headers. Loop `?page=1`, `?page=2`, etc. until the page count is exhausted.
 
+---
+
+## Preview migration inventory
+
+The reviewed Payload migration inventory used for preview readiness is unified in code and in release policy. The canonical ordered list is:
+
+1. `20260620_213328`
+2. `20260621_194424_course_system_phase1`
+3. `20260622_093852_course_private_media`
+4. `20260627_010700_structured_community_attachments`
+5. `20260630_100730_affiliate_reporting`
+6. `20260630_190000_payload_preferences_id_constraint`
+7. `20260701_201500_member_email_verification`
+8. `20260702_001500_member_account_action_purposes`
+9. `20260703_000000_partner_affiliate_operations`
+
+This inventory is a repository-only contract for ordering, validation, and preview planning. It does not imply that any migration has been executed, applied, or approved for live rollout.
+
 ### What a WordPress post looks like
 
 ```json

@@ -1,7 +1,8 @@
 import {
   ACCOUNT_EMAIL_PROVIDER_FLOWS,
-  REQUIRED_PAYLOAD_MIGRATIONS,
-  hasExactMigrationOrder,
+  PREVIEW_MIGRATION_INVENTORY,
+  previewMigrationInventoryForPayload,
+  validatePreviewMigrationInventoryOrder,
   isFullGitSha,
   isImmutableImageReference,
   knownProviderFlows,
@@ -200,7 +201,7 @@ export function validatePreviewReleasePreflight(
       !present(payloadMigration.environment) && 'environment_required',
       !present(payloadMigration.databaseIdentifier) && 'database_identifier_required',
       !present(payloadMigration.schema) && 'schema_required',
-      !hasExactMigrationOrder(payloadMigration.migrations) && 'migration_order_required',
+      !validatePreviewMigrationInventoryOrder(payloadMigration.migrations) && 'migration_order_required',
       !present(payloadMigration.backupEvidence) && 'backup_evidence_required',
       !present(payloadMigration.maintenanceWindow) && 'maintenance_window_required',
       !present(payloadMigration.operator) && 'operator_required',
@@ -270,7 +271,7 @@ export function validatePreviewReleaseCutoverPreflight(
   return {
     migrationExecution: result(migrationExecution.authorized, [
       !present(migrationExecution.environment) && 'environment_required',
-      !hasExactMigrationOrder(migrationExecution.migrationOrder) && 'migration_order_required',
+      !validatePreviewMigrationInventoryOrder(migrationExecution.migrationOrder) && 'migration_order_required',
       !present(migrationExecution.operator) && 'operator_required',
       !present(migrationExecution.approvalReference) && 'approval_reference_required',
       !hasStops(migrationExecution.stopConditions) && 'stop_conditions_required',
@@ -323,5 +324,7 @@ export function knownProviderFlowList(): string[] {
 }
 
 export function expectedPayloadMigrationOrder(): string[] {
-  return [...REQUIRED_PAYLOAD_MIGRATIONS]
+  return previewMigrationInventoryForPayload()
 }
+
+export { PREVIEW_MIGRATION_INVENTORY }

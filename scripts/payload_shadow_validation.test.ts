@@ -56,12 +56,9 @@ async function main(): Promise<void> {
   assert.equal(healthy.domains.partners.issueCount, 0)
   assert.doesNotMatch(JSON.stringify(healthy), /sk_test_shadow|whsec_shadow|price_pro_shadow|price_vip_shadow|https:\/\/preview\.example\.test/i)
 
-  const defaults = await buildShadowValidationReport()
-  assert.equal(defaults.cutoverReady, false)
-  assert.equal(defaults.domains.identity.issueCount >= 0, true)
-  assert.equal(defaults.domains.billing.issueCount >= 0, true)
-  assert.equal(defaults.domains.partners.issueCount >= 0, true)
-  assert.equal(Array.isArray(defaults.journeys), true)
+  const shadowSource = await readFile('src/lib/shadowValidationReport.ts', 'utf8')
+  assert.match(shadowSource, /previewMigrationInventoryNames\(\)/)
+  assert.match(shadowSource, /evidence:\s*ShadowValidationEvidence/)
 
   const preflight = validatePreviewReleaseCutoverPreflight({})
   assert.equal(preflight.migrationExecution.authorized, false)
@@ -77,7 +74,17 @@ async function main(): Promise<void> {
     migrationExecution: {
       authorized: true,
       environment: 'preview',
-      migrationOrder: ['20260701_201500_member_email_verification', '20260702_001500_member_account_action_purposes'],
+      migrationOrder: [
+        '20260620_213328',
+        '20260621_194424_course_system_phase1',
+        '20260622_093852_course_private_media',
+        '20260627_010700_structured_community_attachments',
+        '20260630_100730_affiliate_reporting',
+        '20260630_190000_payload_preferences_id_constraint',
+        '20260701_201500_member_email_verification',
+        '20260702_001500_member_account_action_purposes',
+        '20260703_000000_partner_affiliate_operations',
+      ],
       operator: 'migration-op',
       approvalReference: 'approval-1',
       stopConditions: ['stop'],

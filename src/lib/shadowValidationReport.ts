@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises'
 
 import { buildBillingReadinessReport } from '@/lib/billingReadiness'
-import { expectedPayloadMigrationOrder } from '@/lib/previewReleasePreflight'
+import { previewMigrationInventoryNames } from '@/lib/previewMigrationInventory'
 import type { PayloadCourseAccessAPI, PayloadDocument, PayloadId } from '@/lib/payloadCourse/accessService'
 
 export type ShadowIssueCode =
@@ -825,7 +825,7 @@ export async function buildShadowValidationReport(
     readFailures: options.adapterResult?.readFailures ?? [],
     issues: reconciliationIssues.map((item) => ({ code: item.code, severity: item.severity, domain: item.domain, ids: item.ids })),
     journeys: buildJourneys(fileInventory),
-    migrationOrder: expectedPayloadMigrationOrder(),
+    migrationOrder: previewMigrationInventoryNames(),
     approvalsPresent: {
       migrationExecution: Boolean(fixture.cutoverApprovals?.migrationExecution),
       previewDeployment: Boolean(fixture.cutoverApprovals?.previewDeployment),
@@ -846,7 +846,7 @@ export async function buildShadowValidationReport(
     liveVerificationPending,
     cutoverReady,
     domains: {
-      identity: { ready: isHealthy(issueCounts.identity), issueCount: issueCounts.identity, pendingMigrations: expectedPayloadMigrationOrder() },
+      identity: { ready: isHealthy(issueCounts.identity), issueCount: issueCounts.identity, pendingMigrations: previewMigrationInventoryNames() },
       entitlements: { ready: isHealthy(issueCounts.entitlements), issueCount: issueCounts.entitlements },
       billing: { ready: isHealthy(issueCounts.billing), issueCount: issueCounts.billing },
       email: { ready: isHealthy(issueCounts.email), issueCount: issueCounts.email, pendingMigrations: ['20260701_201500_member_email_verification', '20260702_001500_member_account_action_purposes'] },
@@ -862,7 +862,7 @@ export async function buildShadowValidationReport(
       nodeVersion: '20',
       pnpmVersion: '10.33.0',
       startupMode: env.STARTUP_MODE ?? null,
-      migrationOrder: expectedPayloadMigrationOrder(),
+      migrationOrder: previewMigrationInventoryNames(),
       approvalsPresent: {
         migrationExecution: Boolean(fixture.cutoverApprovals?.migrationExecution),
         previewDeployment: Boolean(fixture.cutoverApprovals?.previewDeployment),

@@ -1,9 +1,16 @@
+import {
+  PREVIEW_MIGRATION_INVENTORY,
+  PREVIEW_MIGRATION_INVENTORY_VERSION,
+  assertPreviewMigrationInventoryMatch,
+  previewMigrationInventory,
+  previewMigrationInventoryForPayload,
+  previewMigrationInventoryNames,
+  validatePreviewMigrationInventoryOrder,
+} from './previewMigrationInventory'
+
 export const PREVIEW_RELEASE_SCHEMA_VERSION = 1
 
-export const REQUIRED_PAYLOAD_MIGRATIONS = [
-  '20260701_201500_member_email_verification',
-  '20260702_001500_member_account_action_purposes',
-] as const
+export const REQUIRED_PAYLOAD_MIGRATIONS = previewMigrationInventoryNames()
 
 export const ACCOUNT_EMAIL_PROVIDER_FLOWS = [
   'member-email-verification',
@@ -52,9 +59,7 @@ export function isImmutableImageReference(value: unknown): value is string {
 }
 
 export function hasExactMigrationOrder(value: unknown): value is string[] {
-  return Array.isArray(value) &&
-    value.length === REQUIRED_PAYLOAD_MIGRATIONS.length &&
-    REQUIRED_PAYLOAD_MIGRATIONS.every((migration, index) => value[index] === migration)
+  return validatePreviewMigrationInventoryOrder(value)
 }
 
 export function knownProviderFlows(flows: unknown): flows is string[] {
@@ -64,4 +69,14 @@ export function knownProviderFlows(flows: unknown): flows is string[] {
       typeof flow === 'string' &&
       (ACCOUNT_EMAIL_PROVIDER_FLOWS as readonly string[]).includes(flow)
     )
+}
+
+export {
+  PREVIEW_MIGRATION_INVENTORY,
+  PREVIEW_MIGRATION_INVENTORY_VERSION,
+  assertPreviewMigrationInventoryMatch,
+  previewMigrationInventory,
+  previewMigrationInventoryForPayload,
+  previewMigrationInventoryNames,
+  validatePreviewMigrationInventoryOrder,
 }

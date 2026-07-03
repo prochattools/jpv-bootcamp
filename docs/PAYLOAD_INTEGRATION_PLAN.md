@@ -101,6 +101,7 @@ Administrator accounts and member identities are separate security domains, even
   - Billing summary UI added (shows plan, status, renewal date, cancellation);
   - Type-check and build validated;
   - Next slice: billing communications, payment failure handling, cutover validation.
+- The reviewed Payload migration inventory is now unified in code and release policy; the nine reviewed migrations are ordered canonically, but execution remains pending and no live migration has been authorized.
 - The affiliate Payload migration still requires explicit staging application and verification.
 - Genuine deferred product work after account-security email verification is billing self-service, then community publishing, partner application delivery, and cutover.
 

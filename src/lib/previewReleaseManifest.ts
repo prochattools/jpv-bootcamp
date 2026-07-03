@@ -1,7 +1,7 @@
 import {
   PREVIEW_RELEASE_SCHEMA_VERSION,
-  REQUIRED_PAYLOAD_MIGRATIONS,
-  hasExactMigrationOrder,
+  previewMigrationInventoryForPayload,
+  validatePreviewMigrationInventoryOrder,
   isFullGitSha,
   isImmutableImageReference,
 } from './previewReleasePolicy'
@@ -107,7 +107,7 @@ export function validatePreviewReleaseManifestInput(
   if (input.imageReference && !isImmutableImageReference(input.imageReference)) {
     errors.push('invalid_or_mutable_image_reference')
   }
-  if (!hasExactMigrationOrder(input.payloadMigrations ?? [...REQUIRED_PAYLOAD_MIGRATIONS])) {
+  if (!validatePreviewMigrationInventoryOrder(input.payloadMigrations ?? previewMigrationInventoryForPayload())) {
     errors.push('invalid_payload_migration_order')
   }
   if (input.startupMode === 'database-deploy' && !input.deploymentEnv?.trim()) {
@@ -146,7 +146,7 @@ export function buildPreviewReleaseManifest(
     deploymentEnv: input.deploymentEnv,
     nodeVersion: '20',
     pnpmVersion: '10.33.0',
-    payloadMigrations: [...(input.payloadMigrations ?? REQUIRED_PAYLOAD_MIGRATIONS)],
+    payloadMigrations: [...(input.payloadMigrations ?? previewMigrationInventoryForPayload())],
     authorizations: {
       payloadMigrations: Boolean(input.authorizations?.payloadMigrations),
       prismaDatabaseDeploy: Boolean(input.authorizations?.prismaDatabaseDeploy),

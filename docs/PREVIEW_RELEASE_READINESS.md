@@ -76,6 +76,8 @@ The shadow report and preflight helpers never authorize live migration, deployme
 
 The admin-only `/operations/shadow-validation` page now reads a bounded Payload snapshot, shows collection counts, domain totals, issue codes, and an executable acceptance matrix for the core member, billing, email, community, and partner journeys, and offers a safe evidence download. It remains read-only and does not perform any live verification.
 
+The canonical reviewed migration inventory is now unified across policy, manifest, preflight, shadow evidence, and validation. It lists the nine reviewed Payload migrations in exact order, but execution remains pending until an explicit migration authorization is granted.
+
 Preflight does not push, log in to a registry, connect to a database, run migration status, execute migrations, initialize Payload, call a provider, call deployment infrastructure, or perform smoke requests.
 
 ## Billing readiness checklist
