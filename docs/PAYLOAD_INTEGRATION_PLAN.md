@@ -352,7 +352,7 @@ Validation:
 
 ### Phase 9 — Complete partner affiliates and reporting
 
-**Status:** Administrator collection and reporting foundation implemented; member and delivery journeys pending.
+**Status:** Partial raw implementation complete; member application and affiliate summary journeys are now functional, while delivery, reconciliation, export, and admin operations remain pending.
 
 Detailed specification: `docs/PAYLOAD_PARTNER_AFFILIATE_PLAN.md`.
 
@@ -369,8 +369,8 @@ Validation:
 
 - members read only their own applications;
 - trusted destinations are never supplied by the browser;
-- delivery is idempotent and retryable;
-- administrators can filter and export authorized reports.
+- delivery is idempotent and retryable where implemented;
+- administrators can filter and export authorized reports once the remaining delivery/admin work lands.
 
 ### Phase 10 — Shadow validation and cutover
 

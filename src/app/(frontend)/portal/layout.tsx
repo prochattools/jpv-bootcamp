@@ -8,6 +8,7 @@ const portalLinks = [
   { href: '/portal', label: 'Dashboard' },
   { href: '/portal/courses', label: 'Courses' },
   { href: '/portal/community', label: 'Community' },
+  { href: '/portal/partners', label: 'Partners' },
   { href: '/portal/groups', label: 'Groups' },
   { href: '/portal/account', label: 'Account' },
   { href: '/portal/billing', label: 'Billing' },

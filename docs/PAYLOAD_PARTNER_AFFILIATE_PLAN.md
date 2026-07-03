@@ -4,7 +4,7 @@
 
 This document defines the target replacement for the retained Prisma/WordPress partner-click and sponsored-application implementation documented in `docs/archive/PARTNER_AFFILIATE_LEGACY.md`.
 
-This phase is inventory and architecture only. It does not authorize collection creation, migrations, seeds, routes, delivery jobs, or production cutover.
+Raw member-facing partner application and affiliate-summary wiring is implemented in the portal. Delivery orchestration, reconciliation, payouts, admin UX, and live preview acceptance remain deferred.
 
 ## Product goal
 
@@ -369,3 +369,9 @@ Before implementation, approve:
 8. Add legacy dry-run reconciliation.
 9. Run shadow validation and rollback tests.
 10. Obtain explicit cutover approval.
+## Current implementation evidence
+
+- Member-safe partner directory and partner detail screens now exist under the portal convention.
+- Application submission is created server-side before any redirect or queued delivery state.
+- Own-history and affiliate-summary views are derived from authenticated member identity.
+- Remaining work: delivery retries, reconciliation, payouts, admin reporting/export, richer moderation, and live provider verification.
