@@ -362,6 +362,80 @@ function buildPayload(
         moderationStatus: 'deleted',
       },
     ],
+    payload_space_files: [
+      {
+        id: 'file_document_visible',
+        title: 'Guide PDF',
+        space: 'space_private',
+        post: 'post_visible',
+        uploadedBy: 'member_mod',
+        attachmentType: 'document',
+        moderationStatus: 'visible',
+        protectedFile: 'media_document',
+        metadata: { filename: 'guide.pdf', mimeType: 'application/pdf', byteSize: 1024 },
+      },
+      {
+        id: 'file_image_visible',
+        title: 'Diagram',
+        space: 'space_private',
+        post: 'post_visible',
+        uploadedBy: 'member_mod',
+        attachmentType: 'image',
+        altText: 'Diagram alt text',
+        moderationStatus: 'visible',
+        protectedFile: 'media_image',
+        metadata: { filename: 'diagram.png', mimeType: 'image/png', byteSize: 2048 },
+      },
+      {
+        id: 'file_video_visible',
+        title: 'Workshop clip',
+        space: 'space_private',
+        post: 'post_visible',
+        uploadedBy: 'member_mod',
+        attachmentType: 'external_video',
+        externalProvider: 'youtube',
+        externalMediaId: 'YOUTUB1E',
+        moderationStatus: 'visible',
+        metadata: { createdByService: 'test' },
+      },
+      {
+        id: 'file_private_video_visible',
+        title: 'Private replay',
+        space: 'space_private',
+        post: 'post_visible',
+        uploadedBy: 'member_mod',
+        attachmentType: 'private_video',
+        bunnyVideoId: '123e4567-e89b-12d3-a456-426614174000',
+        bunnyLibraryId: '12345',
+        moderationStatus: 'visible',
+        metadata: { createdByService: 'test' },
+      },
+      {
+        id: 'file_hidden',
+        title: 'Hidden file',
+        space: 'space_private',
+        post: 'post_visible',
+        uploadedBy: 'member_mod',
+        attachmentType: 'document',
+        moderationStatus: 'hidden',
+        protectedFile: 'media_document',
+        metadata: { filename: 'hidden.pdf', mimeType: 'application/pdf', byteSize: 1024 },
+      },
+    ],
+    payload_private_media: [
+      {
+        id: 'media_document',
+        filename: 'guide.pdf',
+        mimeType: 'application/pdf',
+        filesize: 1024,
+      },
+      {
+        id: 'media_image',
+        filename: 'diagram.png',
+        mimeType: 'image/png',
+        filesize: 2048,
+      },
+    ],
   })
 }
 
@@ -384,10 +458,18 @@ async function testAuthorizedProjection(): Promise<void> {
     result.post.comments.map((comment) => comment.id),
     ['comment_first', 'comment_second']
   )
-  assert.deepEqual(result.post.attachments, [])
+  assert.deepEqual(
+    result.post.attachments.map((attachment) => attachment.id),
+    ['file_document_visible', 'file_image_visible', 'file_video_visible', 'file_private_video_visible']
+  )
+  assert.equal(result.post.attachments[0]?.downloadUrl, '/learn/community/files/file_document_visible')
+  assert.equal(result.post.attachments[1]?.attachmentType, 'image')
+  assert.equal(result.post.attachments[2]?.attachmentType, 'external_video')
+  assert.equal(result.post.attachments[3]?.attachmentType, 'private_video')
 
   const serialized = JSON.stringify(result)
   assert.doesNotMatch(serialized, /member_mod|author_post|author_comment|@private\.example/i)
+  assert.doesNotMatch(serialized, /hidden file|file_hidden/i)
 
   const callLog = JSON.stringify(payload.calls)
   assert.match(callLog, /member_mod/)

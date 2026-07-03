@@ -332,7 +332,7 @@ Validation:
 
 ### Phase 8 — Complete community publishing and notifications
 
-**Status:** Read-only foundation exists.
+**Status:** Partial raw implementation complete; member community publishing is visibly functional end to end, while mentions, digest scheduling, richer editor/upload UX, and live preview acceptance remain deferred.
 
 Tasks:
 
@@ -347,7 +347,8 @@ Validation:
 - publishing permissions are explicit;
 - private-group content cannot be fetched by unauthorized members;
 - uploads enforce type, size, and ownership rules;
-- optional notifications respect preferences.
+- optional notifications respect preferences;
+- live preview acceptance and richer editor/upload UX remain deferred.
 
 ### Phase 9 — Complete partner affiliates and reporting
 

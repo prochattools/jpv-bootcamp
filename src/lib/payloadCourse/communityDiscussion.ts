@@ -4,6 +4,10 @@ import {
   type PayloadDocument,
   type PayloadId,
 } from '@/lib/payloadCourse/accessService'
+import {
+  resolveMemberCommunityAttachment,
+  type MemberCommunityAttachmentResolution,
+} from '@/lib/payloadCourse/communityFiles'
 
 export type SafeCommunityTextMarks = {
   bold: boolean
@@ -72,7 +76,7 @@ export type MemberCommunityPostDetail = {
   }
   body: SafeCommunityRichTextNode
   comments: MemberCommunityComment[]
-  attachments: []
+  attachments: MemberCommunityAttachmentResolution[]
   canPublish: boolean
   canComment: boolean
 }
@@ -328,6 +332,35 @@ async function findByIdSafe(
   }
 }
 
+async function findVisiblePostAttachments(
+  payload: PayloadCourseAccessAPI,
+  memberId: string,
+  postId: string
+): Promise<MemberCommunityAttachmentResolution[]> {
+  const files = await findAll(payload, 'payload_space_files', {
+    where: {
+      and: [
+        { post: { equals: postId } },
+        { moderationStatus: { equals: 'visible' } },
+      ],
+    },
+    sort: 'sortOrder',
+    limit: 100,
+  })
+
+  const attachments: MemberCommunityAttachmentResolution[] = []
+  for (const file of files) {
+    const resolved = await resolveMemberCommunityAttachment(
+      payload,
+      memberId,
+      file.id
+    )
+    if (resolved.allowed) attachments.push(resolved)
+  }
+
+  return attachments
+}
+
 function memberDisplayName(member: PayloadDocument | null): string {
   const direct =
     asString(member?.displayName) ??
@@ -428,6 +461,7 @@ export async function getMemberCommunityPostDetail(
   const postAuthorId = getDocumentId(post.author)
   const postAuthor = await findByIdSafe(payload, 'payload_members', postAuthorId)
   const canPublish = await publishingCapability(payload, memberId, spaceId)
+  const attachments = await findVisiblePostAttachments(payload, memberId, postId)
 
   const commentProjections: MemberCommunityComment[] = []
   for (const comment of comments) {
@@ -458,7 +492,7 @@ export async function getMemberCommunityPostDetail(
       },
       body: projectCommunityRichText(post.body),
       comments: commentProjections,
-      attachments: [],
+      attachments,
       canPublish,
       canComment: canPublish && !asBoolean(post.locked),
     },

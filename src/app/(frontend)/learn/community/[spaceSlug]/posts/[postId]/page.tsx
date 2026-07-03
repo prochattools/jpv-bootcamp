@@ -3,6 +3,9 @@ import { notFound, redirect } from 'next/navigation'
 
 import { getCurrentPayloadMember } from '@/lib/members/currentMember'
 import { getMemberCommunityPostDetail } from '@/lib/payloadCourse/communityDiscussion'
+import {
+  type MemberCommunityAttachmentResolution,
+} from '@/lib/payloadCourse/communityFiles'
 
 import { PortalShell, StatusPill } from '../../../../PortalShell'
 import { submitCommunityComment } from '../../../actions'
@@ -32,6 +35,61 @@ function formatDate(value: string | null) {
     hour: 'numeric',
     minute: '2-digit',
   }).format(date)
+}
+
+function attachmentLabel(attachment: MemberCommunityAttachmentResolution): string {
+  if (attachment.attachmentType === 'external_video') {
+    return attachment.externalProvider === 'youtube' ? 'YouTube' : 'Vimeo'
+  }
+  if (attachment.attachmentType === 'private_video') {
+    return 'Private video'
+  }
+  return attachment.attachmentType === 'image' ? 'Image' : 'Protected file'
+}
+
+function AttachmentCard({ attachment }: { attachment: MemberCommunityAttachmentResolution }) {
+  if (attachment.attachmentType === 'external_video') {
+    return (
+      <article className='rounded-[18px] border border-[#153f2e]/10 bg-[#f4f1e9] p-5'>
+        <p className='text-xs font-bold uppercase tracking-[0.14em] text-[#8a7450]'>
+          {attachmentLabel(attachment)}
+        </p>
+        <h3 className='mt-2 text-lg font-bold text-[#153f2e]'>{attachment.title}</h3>
+        <p className='mt-2 text-sm text-[#68766f]'>Reference ID: {attachment.externalMediaId}</p>
+      </article>
+    )
+  }
+
+  if (attachment.attachmentType === 'private_video') {
+    return (
+      <article className='rounded-[18px] border border-[#153f2e]/10 bg-[#f4f1e9] p-5'>
+        <p className='text-xs font-bold uppercase tracking-[0.14em] text-[#8a7450]'>
+          {attachmentLabel(attachment)}
+        </p>
+        <h3 className='mt-2 text-lg font-bold text-[#153f2e]'>{attachment.title}</h3>
+        <p className='mt-2 text-sm text-[#68766f]'>Private delivery is enabled through the member file route.</p>
+      </article>
+    )
+  }
+
+  return (
+    <article className='rounded-[18px] border border-[#153f2e]/10 bg-[#f4f1e9] p-5'>
+      <p className='text-xs font-bold uppercase tracking-[0.14em] text-[#8a7450]'>
+        {attachmentLabel(attachment)}
+      </p>
+      <h3 className='mt-2 text-lg font-bold text-[#153f2e]'>{attachment.title}</h3>
+      <p className='mt-2 text-sm text-[#68766f]'>{attachment.filename}</p>
+      <p className='mt-2 text-xs font-semibold uppercase tracking-[0.12em] text-[#8a7450]'>
+        {attachment.mimeType} · {attachment.byteSize} bytes
+      </p>
+      <a
+        className='mt-4 inline-flex rounded-full bg-[#153f2e] px-4 py-2.5 text-sm font-bold text-white transition hover:bg-[#0f3023]'
+        href={attachment.downloadUrl}
+      >
+        Download
+      </a>
+    </article>
+  )
 }
 
 export default async function LearnCommunityPostPage({
@@ -90,6 +148,30 @@ export default async function LearnCommunityPostPage({
             <CommunityRichText value={post.body} />
           </div>
         </article>
+
+        {post.attachments.length > 0 && (
+          <section className='mt-10'>
+            <div className='flex flex-wrap items-end justify-between gap-4'>
+              <div>
+                <p className='text-xs font-bold uppercase tracking-[0.2em] text-[#8a7450]'>
+                  Attachments
+                </p>
+                <h2 className='mt-2 text-3xl font-bold tracking-tight text-[#153f2e]'>
+                  Visible attachments
+                </h2>
+              </div>
+            </div>
+
+            <div className='mt-6 grid gap-4 md:grid-cols-2'>
+              {post.attachments.map((attachment, index) => (
+                <AttachmentCard
+                  attachment={attachment}
+                  key={`${attachment.attachmentType}:${attachment.id}:${index}`}
+                />
+              ))}
+            </div>
+          </section>
+        )}
 
         {query.submission === 'pending' && (
           <div className='mt-6 rounded-[18px] border border-[#2f7355]/20 bg-[#eaf4ee] px-5 py-4 text-sm font-semibold text-[#24543f]'>
