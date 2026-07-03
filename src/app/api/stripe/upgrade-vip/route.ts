@@ -5,14 +5,14 @@ export const dynamic = 'force-dynamic'
 
 export async function GET() {
 	return NextResponse.json(
-		{ error: 'This upgrade path is no longer available. Use /portal/billing.' },
+		{ error: 'This upgrade path is no longer available. Use /learn/billing.' },
 		{ status: 410 }
 	)
 }
 
 export async function POST() {
 	return NextResponse.json(
-		{ error: 'This upgrade path is no longer available. Use /portal/billing.' },
+		{ error: 'This upgrade path is no longer available. Use /learn/billing.' },
 		{ status: 410 }
 	)
 }

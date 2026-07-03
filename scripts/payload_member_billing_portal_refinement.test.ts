@@ -21,7 +21,7 @@ async function main() {
   assert.doesNotMatch(billingPage, /getStripe\(\)|stripe\.checkout|stripe\.billingPortal/)
 
   assert.match(upgradeRoute, /status: 410/)
-  assert.match(upgradeRoute, /Use \/portal\/billing/)
+  assert.match(upgradeRoute, /Use \/learn\/billing/)
   assert.doesNotMatch(upgradeRoute, /getStripe\(|stripe\.billingPortal|verifyBillingPortalToken|normalizeEmail/)
 
   assert.match(checkoutButtons, /startMemberCheckout\(plan\)/)

@@ -235,7 +235,7 @@ Validation:
 
 ### Phase 7 — Complete billing self-service
 
-**Status:** Portal access, subscription/payment projection, checkout, failed-payment communications, access enforcement, refund/dispute handling, and plan-change refinement implemented; controlled preview verification remains.
+**Status:** Portal access, subscription/payment projection, checkout, failed-payment communications, access enforcement, refund/dispute handling, plan-change refinement, and offline billing readiness implemented; billing live verification remains pending.
 
 Completed in this slice:
 
@@ -315,6 +315,7 @@ Remaining Phase 7 tasks:
 
 - perform controlled preview verification for billing portal, webhook, checkout, and provider behavior;
 - deferred billing work remains limited to preview-safe validation and any Stripe-side configuration checks discovered during that verification;
+- billing live verification remains pending;
 - email feature remains:
   - Code and automated validation complete;
   - Real email preview/provider acceptance still pending;
@@ -420,7 +421,7 @@ A phase is complete only when:
 
 ## Immediate milestone
 
-Continue Phase 7 billing self-service while member account-security email remains implementation-complete and operationally blocked. The next operational milestone is controlled preview verification for the existing billing portal, webhook, checkout, and provider behavior.
+Continue Phase 7 billing self-service while member account-security email remains implementation-complete and operationally blocked. The next operational milestone is controlled preview verification for the existing billing portal, webhook, checkout, and provider behavior; live billing verification remains pending.
 
 ## Definition of done
 

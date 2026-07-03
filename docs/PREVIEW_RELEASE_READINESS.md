@@ -61,6 +61,18 @@ Offline preflight validates each category independently:
 
 Preflight does not push, log in to a registry, connect to a database, run migration status, execute migrations, initialize Payload, call a provider, call deployment infrastructure, or perform smoke requests.
 
+## Billing readiness checklist
+
+Billing readiness is a separate authorization track from image publication and deployment. The reviewer must confirm each category independently before any live billing operation is attempted.
+
+- Migration execution authorization: approve the exact migration set, target database, schema, operator, and maintenance window before running the two pending Payload migrations.
+- Deployment authorization: approve the reviewed preview commit or image separately from migrations and provider operations.
+- Webhook configuration authorization: confirm the canonical Stripe webhook route and event set without changing production settings.
+- Checkout and portal smoke verification authorization: approve controlled preview smoke checks for member checkout and billing portal flow behavior only.
+- Provider email acceptance authorization: separately approve real provider email delivery, sender identity, and controlled recipient scope.
+
+The checklist only gates operations. It does not claim live success or imply that any provider, deployment, or database step has already happened.
+
 ## Pending Payload migration order
 
 Apply only after an explicit migration authorization naming the environment, database, schema, operator, backup, and maintenance window:
