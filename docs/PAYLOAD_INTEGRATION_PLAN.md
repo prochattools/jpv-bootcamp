@@ -8,7 +8,7 @@ This is the single canonical product, architecture, security, roadmap, and execu
 2. **Feature specifications.** Define implementation detail without changing roadmap order:
    - `docs/PAYLOAD_COMMUNICATIONS_PLAN.md` — branded communications, FreeResend delivery, templates, events, preferences, audit, and acceptance criteria for Phase 6.
    - `docs/PAYLOAD_PARTNER_AFFILIATE_PLAN.md` — detailed Partner Affiliates specification for Phase 9.
-   - `docs/LIVEKIT_TINACMS_GROUP_CALLS_PLAN.md` — future group-call use cases, LiveKit runtime architecture, TinaCMS content-only boundary, security, privacy, and acceptance gates for Phase 11.
+   - `docs/LIVEKIT_PAYLOADCMS_GROUP_CALLS_PLAN.md` — future group-call use cases, LiveKit runtime architecture, PayloadCMS collections and authorization boundary, security, privacy, and acceptance gates for Phase 11.
 3. **Visual reference.** `docs/PAYLOAD_COURSE_VISUAL_IMPLEMENTATION_PLAN.md` illustrates screens and workflows but does not replace this plan.
 4. **Client progress document.** `docs/client/JPV_Minimal_Payload_Course_Plan_v2_2.docx` communicates progress and remaining work in concise, non-technical language. It must remain aligned with this plan and the feature specifications.
 5. **Legacy archive.** `docs/archive/PARTNER_AFFILIATE_LEGACY.md` records retained obsolete behavior for migration and reconciliation.
@@ -393,14 +393,14 @@ Only then may an existing production responsibility be disabled or redirected.
 
 **Status:** Future feature; research and architecture defined, implementation intentionally deferred.
 
-Detailed research and specification: `docs/LIVEKIT_TINACMS_GROUP_CALLS_PLAN.md`.
+Detailed research and specification: `docs/LIVEKIT_PAYLOADCMS_GROUP_CALLS_PLAN.md`.
 
 Product scope:
 
 - scheduled audio/video calls linked to authorized community groups;
 - server-derived room membership and host/moderator/attendee roles;
 - LiveKit for real-time rooms, media, screen sharing, participant state, and lifecycle webhooks;
-- TinaCMS, if adopted, limited to editable call-page content and schedule presentation;
+- PayloadCMS manages editable call-page content, scheduling, group relationships, attendance summaries, moderation state, and audit;
 - Payload/member authorization remains authoritative for identity, group access, call records, attendance, moderation, and audit;
 - recording, replay, captions, transcripts, and livestreaming require separate privacy and operational approval.
 
@@ -410,7 +410,7 @@ Validation:
 - LiveKit JWTs are short-lived, least privilege, and generated only by the backend;
 - browser input cannot choose trusted participant identity, room, group, or role;
 - webhook events are signature-verified and idempotent;
-- no LiveKit secret, participant token, or private recording URL is stored in TinaCMS;
+- no LiveKit secret, participant token, or private recording URL is stored in member-readable PayloadCMS fields or exposed in logs;
 - representative desktop/mobile, accessibility, privacy, support, cost, monitoring, and rollback gates pass before rollout.
 
 ## Overall delivery status — July 2026
