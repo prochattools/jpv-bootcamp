@@ -94,6 +94,66 @@ export type PreviewReleasePreflightInput = {
   }
 }
 
+export type PreviewReleaseCutoverPreflightInput = {
+  migrationExecution?: {
+    authorized?: boolean
+    environment?: string
+    migrationOrder?: string[]
+    operator?: string
+    approvalReference?: string
+    stopConditions?: string[]
+  }
+  previewDeployment?: {
+    authorized?: boolean
+    commitSha?: string
+    imageReference?: string
+    operator?: string
+    approvalReference?: string
+    stopConditions?: string[]
+  }
+  billingVerification?: {
+    authorized?: boolean
+    checkout?: boolean
+    portal?: boolean
+    webhook?: boolean
+    operator?: string
+    approvalReference?: string
+    stopConditions?: string[]
+  }
+  providerEmailDryRun?: {
+    authorized?: boolean
+    operator?: string
+    approvalReference?: string
+    stopConditions?: string[]
+  }
+  providerEmailApply?: {
+    authorized?: boolean
+    operator?: string
+    approvalReference?: string
+    stopConditions?: string[]
+  }
+  communityVerification?: {
+    authorized?: boolean
+    operator?: string
+    approvalReference?: string
+    stopConditions?: string[]
+  }
+  partnerDeliveryVerification?: {
+    authorized?: boolean
+    operator?: string
+    approvalReference?: string
+    stopConditions?: string[]
+  }
+  finalCutover?: {
+    authorized?: boolean
+    operator?: string
+    approvalReference?: string
+    stopConditions?: string[]
+  }
+}
+
+export type PreviewReleaseCutoverPreflightResult = Record<keyof Required<PreviewReleaseCutoverPreflightInput>, CategoryResult>
+
 export type PreviewReleasePreflightResult = Record<keyof Required<PreviewReleasePreflightInput>, CategoryResult>
 
 function present(value: unknown): boolean {
@@ -191,6 +251,69 @@ export function validatePreviewReleasePreflight(
       typeof smokeVerification.providerEmailAllowed !== 'boolean' && 'provider_permission_required',
       !present(smokeVerification.operator) && 'operator_required',
       !hasStops(smokeVerification.stopConditions) && 'stop_conditions_required',
+    ].filter(Boolean) as string[]),
+  }
+}
+
+export function validatePreviewReleaseCutoverPreflight(
+  input: PreviewReleaseCutoverPreflightInput,
+): PreviewReleaseCutoverPreflightResult {
+  const migrationExecution = input.migrationExecution ?? {}
+  const previewDeployment = input.previewDeployment ?? {}
+  const billingVerification = input.billingVerification ?? {}
+  const providerEmailDryRun = input.providerEmailDryRun ?? {}
+  const providerEmailApply = input.providerEmailApply ?? {}
+  const communityVerification = input.communityVerification ?? {}
+  const partnerDeliveryVerification = input.partnerDeliveryVerification ?? {}
+  const finalCutover = input.finalCutover ?? {}
+
+  return {
+    migrationExecution: result(migrationExecution.authorized, [
+      !present(migrationExecution.environment) && 'environment_required',
+      !hasExactMigrationOrder(migrationExecution.migrationOrder) && 'migration_order_required',
+      !present(migrationExecution.operator) && 'operator_required',
+      !present(migrationExecution.approvalReference) && 'approval_reference_required',
+      !hasStops(migrationExecution.stopConditions) && 'stop_conditions_required',
+    ].filter(Boolean) as string[]),
+    previewDeployment: result(previewDeployment.authorized, [
+      !isFullGitSha(previewDeployment.commitSha) && 'commit_sha_required',
+      !isImmutableImageReference(previewDeployment.imageReference) && 'immutable_image_required',
+      !present(previewDeployment.operator) && 'operator_required',
+      !present(previewDeployment.approvalReference) && 'approval_reference_required',
+      !hasStops(previewDeployment.stopConditions) && 'stop_conditions_required',
+    ].filter(Boolean) as string[]),
+    billingVerification: result(billingVerification.authorized, [
+      billingVerification.checkout !== true && 'checkout_verification_required',
+      billingVerification.portal !== true && 'portal_verification_required',
+      billingVerification.webhook !== true && 'webhook_verification_required',
+      !present(billingVerification.operator) && 'operator_required',
+      !present(billingVerification.approvalReference) && 'approval_reference_required',
+      !hasStops(billingVerification.stopConditions) && 'stop_conditions_required',
+    ].filter(Boolean) as string[]),
+    providerEmailDryRun: result(providerEmailDryRun.authorized, [
+      !present(providerEmailDryRun.operator) && 'operator_required',
+      !present(providerEmailDryRun.approvalReference) && 'approval_reference_required',
+      !hasStops(providerEmailDryRun.stopConditions) && 'stop_conditions_required',
+    ].filter(Boolean) as string[]),
+    providerEmailApply: result(providerEmailApply.authorized, [
+      !present(providerEmailApply.operator) && 'operator_required',
+      !present(providerEmailApply.approvalReference) && 'approval_reference_required',
+      !hasStops(providerEmailApply.stopConditions) && 'stop_conditions_required',
+    ].filter(Boolean) as string[]),
+    communityVerification: result(communityVerification.authorized, [
+      !present(communityVerification.operator) && 'operator_required',
+      !present(communityVerification.approvalReference) && 'approval_reference_required',
+      !hasStops(communityVerification.stopConditions) && 'stop_conditions_required',
+    ].filter(Boolean) as string[]),
+    partnerDeliveryVerification: result(partnerDeliveryVerification.authorized, [
+      !present(partnerDeliveryVerification.operator) && 'operator_required',
+      !present(partnerDeliveryVerification.approvalReference) && 'approval_reference_required',
+      !hasStops(partnerDeliveryVerification.stopConditions) && 'stop_conditions_required',
+    ].filter(Boolean) as string[]),
+    finalCutover: result(finalCutover.authorized, [
+      !present(finalCutover.operator) && 'operator_required',
+      !present(finalCutover.approvalReference) && 'approval_reference_required',
+      !hasStops(finalCutover.stopConditions) && 'stop_conditions_required',
     ].filter(Boolean) as string[]),
   }
 }

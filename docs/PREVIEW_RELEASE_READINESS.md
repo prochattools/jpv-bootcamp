@@ -59,6 +59,21 @@ Offline preflight validates each category independently:
 - preview deployment;
 - post-deployment smoke verification.
 
+## Phase 10 shadow validation and cutover readiness
+
+Phase 10 adds a repository-only shadow-validation report and a separate approval track for the final cutover boundary. The approval categories remain independent:
+
+- migration execution;
+- preview deployment;
+- billing webhook, checkout, and portal verification;
+- provider email dry-run;
+- provider email apply;
+- community journey verification;
+- partner delivery verification;
+- final cutover approval.
+
+The shadow report and preflight helpers never authorize live migration, deployment, provider delivery, or cutover by themselves. A healthy repository state still leaves `cutoverReady` false until every live approval is present.
+
 Preflight does not push, log in to a registry, connect to a database, run migration status, execute migrations, initialize Payload, call a provider, call deployment infrastructure, or perform smoke requests.
 
 ## Billing readiness checklist
