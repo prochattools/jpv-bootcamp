@@ -85,6 +85,7 @@ export const PayloadMemberProfiles: CollectionConfig = {
     defaultColumns: ['displayName', 'member', 'company', 'updatedAt'],
     group: 'Members & Access',
     hidden: true,
+    description: 'Member profile details and communication preferences.',
   },
   access: {
     admin: adminOnlyCollectionAccess.admin,

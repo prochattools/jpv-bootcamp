@@ -16,6 +16,7 @@ type LoginSearchParams = {
   redirect?: string | string[]
   verification?: string | string[]
   emailChange?: string | string[]
+  registration?: string | string[]
 }
 
 type LoginPageProps = {
@@ -31,6 +32,7 @@ export default async function SharedLoginPage({ searchParams }: LoginPageProps) 
   const [requestHeaders, params] = await Promise.all([headers(), searchParams])
   const requestedDestination = firstValue(params?.next) ?? firstValue(params?.redirect)
   const verificationResult = firstValue(params?.verification)
+  const registrationResult = firstValue(params?.registration)
   const emailChangeResult = firstValue(params?.emailChange)
   const verificationMessage =
     emailChangeResult === 'success'
@@ -41,9 +43,13 @@ export default async function SharedLoginPage({ searchParams }: LoginPageProps) 
           ? 'Your email address has been verified. You can now continue with member sign-in.'
           : verificationResult === 'used'
             ? 'This verification link has already been used. You can request another email below if needed.'
-            : verificationResult === 'invalid'
+          : verificationResult === 'invalid'
               ? 'This verification link is invalid or expired. You can request another email below.'
               : null
+  const registrationMessage =
+    registrationResult === 'success'
+      ? 'Your free account has been created. Check your email to verify before signing in.'
+      : null
 
   let status: MemberLoginPageStatus = 'anonymous'
 
@@ -89,8 +95,30 @@ export default async function SharedLoginPage({ searchParams }: LoginPageProps) 
             {verificationMessage}
           </p>
         ) : null}
+        {registrationMessage ? (
+          <p
+            className='mt-4 rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm leading-6 text-neutral-700'
+            role='status'
+          >
+            {registrationMessage}
+          </p>
+        ) : null}
 
         <MemberLoginForm requestedDestination={requestedDestination} />
+        <div className='mt-4 grid gap-3 sm:grid-cols-2'>
+          <Link
+            className='rounded-lg border border-neutral-300 px-4 py-3 text-center text-sm font-semibold text-neutral-950'
+            href='/register'
+          >
+            Create free account
+          </Link>
+          <Link
+            className='rounded-lg border border-neutral-300 px-4 py-3 text-center text-sm font-semibold text-neutral-950'
+            href='/login?verification=invalid'
+          >
+            Resend verification
+          </Link>
+        </div>
         <MemberVerificationResendForm />
 
         <div className='mt-6 border-t border-neutral-200 pt-6'>

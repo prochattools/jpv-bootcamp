@@ -20,6 +20,7 @@ export const PayloadBillingAccounts: CollectionConfig = {
     group: billingGroup,
     useAsTitle: 'displayName',
     defaultColumns: ['displayName', 'member', 'stripeCustomerId', 'billingStatus', 'updatedAt'],
+    description: 'Billing account projections mirrored from Stripe and member actions.',
   },
   access: adminOnlyCollectionAccess,
   fields: [
@@ -73,6 +74,7 @@ export const PayloadSubscriptions: CollectionConfig = {
     group: billingGroup,
     useAsTitle: 'displayName',
     defaultColumns: ['displayName', 'member', 'plan', 'status', 'currentPeriodEnd', 'updatedAt'],
+    description: 'Subscription projections and current access tier.',
   },
   access: adminOnlyCollectionAccess,
   fields: [
@@ -144,6 +146,7 @@ export const PayloadPayments: CollectionConfig = {
     group: billingGroup,
     useAsTitle: 'displayName',
     defaultColumns: ['displayName', 'member', 'amount', 'currency', 'status', 'paidAt'],
+    description: 'Payment history and refund/dispute projections.',
   },
   access: adminOnlyCollectionAccess,
   fields: [
@@ -284,4 +287,3 @@ export const PayloadBillingActions: CollectionConfig = {
   ],
   timestamps: true,
 }
-

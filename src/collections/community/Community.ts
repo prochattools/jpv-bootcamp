@@ -27,6 +27,7 @@ export const PayloadMemberGroups: CollectionConfig = {
     group: 'Members & Access',
     useAsTitle: 'name',
     defaultColumns: ['name', 'slug', 'status', 'visibility', 'updatedAt'],
+    description: 'Member group records used by access and moderation workflows.',
   },
   access: adminOnlyCollectionAccess,
   fields: [
@@ -76,6 +77,7 @@ export const PayloadSpaces: CollectionConfig = {
     group: communityGroup,
     useAsTitle: 'name',
     defaultColumns: ['name', 'slug', 'spaceType', 'visibility', 'status'],
+    description: 'Community spaces and their visibility rules.',
   },
   access: adminOnlyCollectionAccess,
   fields: [
@@ -145,6 +147,7 @@ export const PayloadSpaceMemberships: CollectionConfig = {
     group: communityGroup,
     useAsTitle: 'displayName',
     defaultColumns: ['displayName', 'member', 'space', 'role', 'status'],
+    description: 'Community membership records.',
     hidden: true,
   },
   access: {
@@ -212,6 +215,7 @@ export const PayloadSpacePosts: CollectionConfig = {
     group: communityGroup,
     useAsTitle: 'title',
     defaultColumns: ['title', 'space', 'author', 'moderationStatus', 'createdAt'],
+    description: 'Community post records and moderation state.',
   },
   access: {
     admin: adminOnlyCollectionAccess.admin,
@@ -520,4 +524,3 @@ export const PayloadChatMessages: CollectionConfig = {
   ],
   timestamps: true,
 }
-

@@ -378,7 +378,7 @@ Validation:
 
 ### Phase 10 — Shadow validation and cutover
 
-**Status:** Read-only Payload snapshot reconciliation, offline rehearsal matrix validation, and safe evidence export are implemented; live migration, deployment, provider, reconciliation, preview acceptance, rollback rehearsal, and cutover approvals remain pending. Phase 10 is still incomplete until live staging evidence exists.
+**Status:** Read-only Payload snapshot reconciliation, the offline rehearsal matrix, and safe evidence validation/export are implemented; live migration, deployment, provider, reconciliation, preview acceptance, rollback rehearsal, and cutover approvals remain pending. Phase 10 is still incomplete until live staging evidence exists.
 
 Before replacing any existing production flow:
 

@@ -21,6 +21,7 @@ export const PayloadPrivateMedia: CollectionConfig = {
     group: courseGroup,
     useAsTitle: 'alt',
     defaultColumns: ['alt', 'filename', 'mimeType', 'updatedAt'],
+    description: 'Private media used for protected lesson resources.',
     hidden: true,
   },
   upload: {
@@ -57,6 +58,7 @@ export const PayloadLessonResources: CollectionConfig = {
     group: courseGroup,
     useAsTitle: 'title',
     defaultColumns: ['title', 'lesson', 'status', 'downloadRequiresAccess', 'updatedAt'],
+    description: 'Course file and protected resource records.',
     hidden: true,
   },
   access: {
@@ -127,6 +129,7 @@ export const PayloadCourseEnrollments: CollectionConfig = {
     group: courseGroup,
     useAsTitle: 'displayName',
     defaultColumns: ['displayName', 'member', 'course', 'status', 'source', 'updatedAt'],
+    description: 'Course enrollment projections from billing and manual grants.',
     hidden: true,
   },
   access: {
@@ -205,6 +208,7 @@ export const PayloadLessonProgress: CollectionConfig = {
     group: courseGroup,
     useAsTitle: 'displayName',
     defaultColumns: ['displayName', 'member', 'lesson', 'status', 'completedAt', 'updatedAt'],
+    description: 'Member lesson progress and completion state.',
     hidden: true,
   },
   access: {

@@ -4,6 +4,7 @@ import { getCurrentPayloadMember } from '@/lib/members/currentMember'
 
 import { LoginForm } from '../LoginForm'
 import { PortalShell } from '../PortalShell'
+import Link from 'next/link'
 
 export const metadata = {
   title: 'Member Sign In | JPV Bootcamp',
@@ -72,6 +73,14 @@ export default async function LearnLoginPage({
           <p className='mt-6 text-xs leading-5 text-[#7b8982]'>
             Public self-signup is not enabled. New member accounts are created through approved JPV Bootcamp enrollment and migration processes.
           </p>
+          <div className='mt-5 flex flex-col gap-3 sm:flex-row'>
+            <Link className='rounded-lg border border-[#153f2e]/20 px-4 py-3 text-center text-sm font-semibold text-[#153f2e]' href='/register'>
+              Create free account
+            </Link>
+            <Link className='rounded-lg border border-[#153f2e]/20 px-4 py-3 text-center text-sm font-semibold text-[#153f2e]' href='/learn/login?loggedOut=1'>
+              Resend verification
+            </Link>
+          </div>
         </section>
       </main>
     </PortalShell>

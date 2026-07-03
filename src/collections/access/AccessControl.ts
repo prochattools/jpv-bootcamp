@@ -30,6 +30,7 @@ export const PayloadAccessGroups: CollectionConfig = {
     group: accessControlGroup,
     useAsTitle: 'name',
     defaultColumns: ['name', 'slug', 'status', 'groupType', 'updatedAt'],
+    description: 'Member access groups used by course, community, and billing rules.',
   },
   access: adminOnlyCollectionAccess,
   fields: [
@@ -83,6 +84,7 @@ export const PayloadAccessPolicies: CollectionConfig = {
     group: accessControlGroup,
     useAsTitle: 'name',
     defaultColumns: ['name', 'resourceType', 'resourceId', 'status', 'priority', 'updatedAt'],
+    description: 'Access policies that resolve whether a member may view a resource.',
     hidden: true,
   },
   access: adminOnlyCollectionAccess,
@@ -177,6 +179,7 @@ export const PayloadAccessGrants: CollectionConfig = {
     group: accessControlGroup,
     useAsTitle: 'displayName',
     defaultColumns: ['displayName', 'member', 'accessGroup', 'resourceType', 'status', 'source'],
+    description: 'Access grants issued directly or through group membership.',
     hidden: true,
   },
   access: adminOnlyCollectionAccess,
@@ -253,6 +256,7 @@ export const PayloadEntitlementEvents: CollectionConfig = {
     group: accessControlGroup,
     useAsTitle: 'displayName',
     defaultColumns: ['displayName', 'member', 'eventType', 'resourceType', 'result', 'createdAt'],
+    description: 'Entitlement audit trail for access decisions.',
     hidden: true,
   },
   access: {
@@ -301,4 +305,3 @@ export const PayloadEntitlementEvents: CollectionConfig = {
   ],
   timestamps: true,
 }
-

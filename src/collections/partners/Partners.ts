@@ -33,6 +33,7 @@ export const PayloadPartnerAffiliates: CollectionConfig = {
     group: partnerGroup,
     useAsTitle: 'name',
     defaultColumns: ['name', 'slug', 'status', 'applicationMode', 'updatedAt'],
+    description: 'Partner directory and delivery rules used for affiliate and application operations.',
   },
   access: adminOnlyCollectionAccess,
   fields: [
@@ -75,6 +76,7 @@ export const PayloadPartnerApplications: CollectionConfig = {
     group: partnerGroup,
     useAsTitle: 'displayName',
     defaultColumns: ['displayName', 'partner', 'member', 'status', 'deliveryMethod', 'updatedAt'],
+    description: 'Partner application history and delivery tracking.',
   },
   access: adminOnlyCollectionAccess,
   fields: [
@@ -127,6 +129,7 @@ export const PayloadPartnerEvents: CollectionConfig = {
     group: partnerGroup,
     useAsTitle: 'displayName',
     defaultColumns: ['displayName', 'eventType', 'partner', 'application', 'createdAt'],
+    description: 'Partner delivery and application event history.',
   },
   access: adminOnlyCollectionAccess,
   fields: [

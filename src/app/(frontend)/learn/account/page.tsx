@@ -42,6 +42,15 @@ function statusTone(status: string | null | undefined): 'good' | 'warn' | 'neutr
   return status === 'active' || status === 'trialing' ? 'good' : status ? 'warn' : 'neutral'
 }
 
+function currentTier(overview: Awaited<ReturnType<typeof getMemberAccountOverview>>): string {
+  const subscription = overview.subscriptions.find((item) => item.status === 'active' || item.status === 'trialing')
+  const plan = typeof subscription?.plan === 'string' ? subscription.plan : null
+  if (plan === 'pro' || plan === 'vip' || plan === 'free' || plan === 'exhibitor') {
+    return plan.slice(0, 1).toUpperCase() + plan.slice(1)
+  }
+  return 'Free'
+}
+
 export default async function LearnAccountPage({
   searchParams,
 }: {
@@ -82,6 +91,10 @@ export default async function LearnAccountPage({
                 <div className='mt-3'>
                   <StatusPill tone={statusTone(accountStatus)}>{titleCase(accountStatus)}</StatusPill>
                 </div>
+              </div>
+              <div className='rounded-2xl border border-[#153f2e]/10 bg-[#f4f1e9] p-4'>
+                <p className='text-xs font-bold uppercase tracking-[0.14em] text-[#8a7450]'>Member tier</p>
+                <p className='mt-2 text-sm font-semibold text-[#153f2e]'>{currentTier(overview)}</p>
               </div>
               <div className='rounded-2xl border border-[#153f2e]/10 bg-[#f4f1e9] p-4'>
                 <p className='text-xs font-bold uppercase tracking-[0.14em] text-[#8a7450]'>Email verified</p>
