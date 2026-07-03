@@ -282,6 +282,18 @@ export default async function PortalSectionPage({ params, searchParams }: Portal
                     </dd>
                   </div>
                 )}
+                <div>
+                  <dt className='text-sm font-medium text-neutral-500'>Membership access</dt>
+                  <dd className='mt-2 text-base font-semibold text-neutral-950'>
+                    {billingStatus.billingAccessState === 'available'
+                      ? 'Available'
+                      : billingStatus.billingAccessState === 'billing_hold'
+                        ? 'On billing hold'
+                        : billingStatus.billingAccessState === 'inactive'
+                          ? 'Inactive'
+                          : 'Pending billing status'}
+                  </dd>
+                </div>
                 {billingStatus.periodEndDate && (
                   <div>
                     <dt className='text-sm font-medium text-neutral-500'>

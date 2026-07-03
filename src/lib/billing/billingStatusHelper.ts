@@ -3,11 +3,14 @@ import 'server-only'
 import prisma from '@/libs/prisma'
 import { normalizeEmail } from '@/lib/normalize-email'
 
+export type BillingAccessState = 'available' | 'billing_hold' | 'inactive' | 'unknown'
+
 export type BillingStatus = {
 	hasBillingAccount: boolean
 	hasActiveSubscription: boolean
 	planLabel: string | null
 	subscriptionStatus: string | null
+	billingAccessState: BillingAccessState
 	periodEndDate: Date | null
 	cancelAtPeriodEnd: boolean
 	paymentStatus: 'failed' | 'paid' | null
@@ -17,6 +20,19 @@ export type BillingStatus = {
 }
 
 const ACTIVE_SUBSCRIPTION_STATUSES = new Set(['active', 'trialing', 'past_due', 'unpaid'])
+const BILLING_HOLD_SUBSCRIPTION_STATUSES = new Set(['past_due', 'unpaid', 'canceled'])
+
+function resolveBillingAccessState(
+	subscriptionStatus: string | null,
+	paymentStatus: 'failed' | 'paid' | null,
+): BillingAccessState {
+	if (paymentStatus === 'failed' || (subscriptionStatus && BILLING_HOLD_SUBSCRIPTION_STATUSES.has(subscriptionStatus))) {
+		return 'billing_hold'
+	}
+	if (subscriptionStatus === 'active' || subscriptionStatus === 'trialing') return 'available'
+	if (subscriptionStatus) return 'inactive'
+	return 'unknown'
+}
 
 /**
  * Get billing status for an authenticated member without calling Stripe.
@@ -32,6 +48,7 @@ export async function getBillingStatus(
 			hasActiveSubscription: false,
 			planLabel: null,
 			subscriptionStatus: null,
+			billingAccessState: 'unknown',
 			periodEndDate: null,
 			cancelAtPeriodEnd: false,
 			paymentStatus: null,
@@ -60,6 +77,7 @@ export async function getBillingStatus(
 			hasActiveSubscription: false,
 			planLabel: null,
 			subscriptionStatus: null,
+			billingAccessState: 'unknown',
 			periodEndDate: null,
 			cancelAtPeriodEnd: false,
 			paymentStatus: null,
@@ -86,6 +104,7 @@ export async function getBillingStatus(
 		),
 		planLabel,
 		subscriptionStatus: record.subscriptionStatus,
+		billingAccessState: resolveBillingAccessState(record.subscriptionStatus, paymentStatus),
 		periodEndDate: record.subscriptionCurrentPeriodEnd,
 		cancelAtPeriodEnd: record.subscriptionCancelAtPeriodEnd ?? false,
 		paymentStatus,

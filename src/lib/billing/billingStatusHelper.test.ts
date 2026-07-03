@@ -15,6 +15,7 @@ async function main() {
     'hasActiveSubscription',
     'planLabel',
     'subscriptionStatus',
+    'billingAccessState',
     'periodEndDate',
     'cancelAtPeriodEnd',
     'paymentStatus',
@@ -36,6 +37,11 @@ async function main() {
   }
 
   assert.match(source, /ACTIVE_SUBSCRIPTION_STATUSES/)
+  assert.match(source, /BILLING_HOLD_SUBSCRIPTION_STATUSES/)
+  assert.match(source, /return 'billing_hold'/)
+  assert.match(source, /return 'available'/)
+  assert.match(source, /return 'inactive'/)
+  assert.match(source, /return 'unknown'/)
   assert.match(source, /record\.subscriptionStatus/)
   assert.match(source, /record\.currentPlan/)
 

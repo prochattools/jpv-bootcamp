@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import type Stripe from 'stripe'
 
 import {
+  decideBillingAccessTransition,
   mirrorStripeEventToPayload,
 } from '../src/lib/payloadCourse/stripeShadowSync'
 import type {
@@ -178,6 +179,39 @@ function fakeStripe(subscriptionRecord = subscription()): Pick<Stripe, 'subscrip
 }
 
 async function run() {
+  assert.deepEqual(
+    decideBillingAccessTransition({ accountStatus: 'active', billingHoldReason: null }, 'past_due'),
+    { action: 'hold', reason: 'past_due' },
+  )
+  assert.deepEqual(
+    decideBillingAccessTransition({ accountStatus: 'active', billingHoldReason: null }, 'unpaid'),
+    { action: 'hold', reason: 'unpaid' },
+  )
+  assert.deepEqual(
+    decideBillingAccessTransition({ accountStatus: 'active', billingHoldReason: null }, 'canceled'),
+    { action: 'hold', reason: 'canceled' },
+  )
+  assert.deepEqual(
+    decideBillingAccessTransition({ accountStatus: 'blocked', billingHoldReason: 'past_due' }, 'active'),
+    { action: 'restore', reason: 'billing_recovered' },
+  )
+  assert.deepEqual(
+    decideBillingAccessTransition({ accountStatus: 'blocked', billingHoldReason: 'manual_review' }, 'active'),
+    { action: 'none', reason: 'manual_status' },
+  )
+  assert.deepEqual(
+    decideBillingAccessTransition({ accountStatus: 'suspended', billingHoldReason: null }, 'active'),
+    { action: 'none', reason: 'manual_status' },
+  )
+  assert.deepEqual(
+    decideBillingAccessTransition({ accountStatus: 'deleted', billingHoldReason: null }, 'active'),
+    { action: 'none', reason: 'manual_status' },
+  )
+  assert.deepEqual(
+    decideBillingAccessTransition({ accountStatus: 'pending', billingHoldReason: null }, 'active'),
+    { action: 'none', reason: 'pending_member' },
+  )
+
   {
     const payload = buildPayload()
     const stripeEvent = event('customer.subscription.updated', subscription(), 'evt_sub_active')
@@ -299,8 +333,8 @@ async function run() {
       adminEmail: 'admin@example.com',
     })
 
-    assert.equal(payload.docs('payload_members')[0]?.accountStatus, 'active')
-    assert.equal(payload.docs('payload_members')[0]?.billingHoldReason, null)
+    assert.equal(payload.docs('payload_members')[0]?.accountStatus, 'blocked')
+    assert.equal(payload.docs('payload_members')[0]?.billingHoldReason, 'past_due')
     assert.equal(payload.docs('payload_payments')[0]?.status, 'failed')
     assert.equal(payload.docs('payload_billing_accounts')[0]?.billingStatus, 'past_due')
     assert.equal(
@@ -312,8 +346,8 @@ async function run() {
       1
     )
     assert.equal(
-      payload.docs('payload_billing_actions').some((action) => action.actionType === 'access_blocked'),
-      false
+      payload.docs('payload_billing_actions').filter((action) => action.actionType === 'access_blocked').length,
+      1
     )
   }
 
@@ -342,8 +376,8 @@ async function run() {
       adminEmail: 'admin@example.com',
     })
 
-    assert.equal(payload.docs('payload_members')[0]?.accountStatus, 'blocked')
-    assert.equal(payload.docs('payload_members')[0]?.billingHoldReason, 'past_due')
+    assert.equal(payload.docs('payload_members')[0]?.accountStatus, 'active')
+    assert.equal(payload.docs('payload_members')[0]?.billingHoldReason, null)
     assert.equal(payload.docs('payload_payments')[0]?.status, 'paid')
     assert.equal(payload.docs('payload_billing_accounts')[0]?.billingStatus, 'active')
     assert.equal(
@@ -355,8 +389,8 @@ async function run() {
       1
     )
     assert.equal(
-      payload.docs('payload_billing_actions').some((action) => action.actionType === 'access_restored'),
-      false
+      payload.docs('payload_billing_actions').filter((action) => action.actionType === 'access_restored').length,
+      1
     )
   }
 
@@ -379,6 +413,34 @@ async function run() {
 
     assert.equal(payload.docs('payload_members')[0]?.accountStatus, 'suspended')
     assert.equal(payload.docs('payload_members')[0]?.billingHoldReason, 'manual_review')
+    assert.equal(
+      payload.docs('payload_billing_actions').some((action) => action.actionType === 'access_restored'),
+      false,
+    )
+  }
+
+  {
+    const payload = buildPayload({
+      payload_members: [
+        {
+          id: 'member_1',
+          email: 'student@example.com',
+          accountStatus: 'deleted',
+          billingHoldReason: null,
+        },
+      ],
+    })
+
+    await mirrorStripeEventToPayload(payload, event('invoice.paid', invoice(), 'evt_deleted_paid'), {
+      stripe: fakeStripe(subscription()),
+      adminEmail: 'admin@example.com',
+    })
+
+    assert.equal(payload.docs('payload_members')[0]?.accountStatus, 'deleted')
+    assert.equal(
+      payload.docs('payload_billing_actions').some((action) => action.actionType === 'access_restored'),
+      false,
+    )
   }
 }
 

@@ -400,8 +400,59 @@ function makeShadowPassword(): string {
   return randomBytes(36).toString('base64url')
 }
 
-function canStripeChangeMemberStatus(member: PayloadDocument): boolean {
-  return member.accountStatus !== 'suspended' && member.accountStatus !== 'deleted'
+const BILLING_HOLD_STATUSES = new Set<PayloadBillingStatus>([
+  'billing_hold',
+  'past_due',
+  'unpaid',
+  'canceled',
+])
+
+export type BillingAccessTransition =
+  | { action: 'none'; reason: 'already_aligned' | 'manual_status' | 'pending_member' | 'not_enforced' }
+  | { action: 'hold'; reason: 'billing_hold' | 'past_due' | 'unpaid' | 'canceled' }
+  | { action: 'restore'; reason: 'billing_recovered' }
+
+export function decideBillingAccessTransition(
+  member: object,
+  billingStatus: PayloadBillingStatus,
+): BillingAccessTransition {
+  const accountStatus =
+    'accountStatus' in member && typeof member.accountStatus === 'string'
+      ? member.accountStatus
+      : null
+  const holdReason =
+    'billingHoldReason' in member && typeof member.billingHoldReason === 'string'
+      ? member.billingHoldReason
+      : null
+
+  if (accountStatus === 'suspended' || accountStatus === 'deleted') {
+    return { action: 'none', reason: 'manual_status' }
+  }
+  if (accountStatus === 'pending') {
+    return { action: 'none', reason: 'pending_member' }
+  }
+  if (accountStatus === 'blocked' && holdReason && !BILLING_HOLD_STATUSES.has(holdReason as PayloadBillingStatus)) {
+    return { action: 'none', reason: 'manual_status' }
+  }
+
+  if (billingStatus === 'active' || billingStatus === 'trialing') {
+    if (accountStatus === 'blocked' && holdReason && BILLING_HOLD_STATUSES.has(holdReason as PayloadBillingStatus)) {
+      return { action: 'restore', reason: 'billing_recovered' }
+    }
+    return { action: 'none', reason: 'already_aligned' }
+  }
+
+  if (BILLING_HOLD_STATUSES.has(billingStatus)) {
+    if (accountStatus === 'active') {
+      return { action: 'hold', reason: billingStatus as 'billing_hold' | 'past_due' | 'unpaid' | 'canceled' }
+    }
+    if (accountStatus === 'blocked' && holdReason && !BILLING_HOLD_STATUSES.has(holdReason as PayloadBillingStatus)) {
+      return { action: 'none', reason: 'manual_status' }
+    }
+    return { action: 'none', reason: 'already_aligned' }
+  }
+
+  return { action: 'none', reason: 'not_enforced' }
 }
 
 async function createMemberSecurityEvent(
@@ -469,45 +520,7 @@ async function upsertMember(
     return { member, created: true }
   }
 
-  if (!canStripeChangeMemberStatus(existing)) {
-    return { member: existing, created: false }
-  }
-
-  if (existing.accountStatus === 'blocked' && params.targetStatus === 'active') {
-    return { member: existing, created: false }
-  }
-
-  if (existing.accountStatus !== 'blocked' && params.targetStatus === 'blocked') {
-    return { member: existing, created: false }
-  }
-
-  const data: Record<string, unknown> = {}
-  if (existing.accountStatus !== params.targetStatus) data.accountStatus = params.targetStatus
-  const currentHoldReason =
-    typeof existing.billingHoldReason === 'string' ? existing.billingHoldReason : null
-  if (currentHoldReason !== params.holdReason) data.billingHoldReason = params.holdReason
-
-  if (Object.keys(data).length === 0) {
-    return { member: existing, created: false }
-  }
-
-  const member = await updateById(payload, 'payload_members', existing.id, data)
-  await createAuditEvent(payload, {
-    actorType: 'stripe',
-    actorId: params.eventId,
-    action: 'member.status_synced_from_stripe_shadow',
-    targetCollection: 'payload_members',
-    targetId: member.id,
-    before: existing,
-    after: member,
-    metadata: {
-      eventId: params.eventId,
-      targetStatus: params.targetStatus,
-      holdReason: params.holdReason,
-    },
-  })
-
-  return { member, created: false }
+  return { member: existing, created: false }
 }
 
 async function upsertContact(
@@ -728,47 +741,42 @@ async function syncMemberBillingHold(
     adminEmail?: string | null
   }
 ) {
-  if (!canStripeChangeMemberStatus(params.member)) return
+  const decision = decideBillingAccessTransition(params.member, params.billingStatus)
+  if (decision.action === 'none') return
 
-  if (params.billingStatus === 'active' || params.billingStatus === 'trialing') {
-    if (
-      params.member.accountStatus === 'blocked' &&
-      (params.member.billingHoldReason === 'past_due' ||
-        params.member.billingHoldReason === 'unpaid' ||
-        params.member.billingHoldReason === 'billing_hold' ||
-        params.member.billingHoldReason === 'canceled')
-    ) {
-      await restoreMember(payload, {
-        actor: { type: 'stripe', id: params.eventId },
-        memberId: params.member.id,
-        reason: params.reason,
-        eventId: params.eventId,
-        adminEmail: params.adminEmail,
-      })
-      await writeBillingAction(payload, {
-        memberId: params.member.id,
-        actionType: 'access_restored',
-        status: 'completed',
-        eventId: params.eventId,
-        notes: params.reason,
-      })
-    }
+  if (decision.action === 'restore') {
+    const result = await restoreMember(payload, {
+      actor: { type: 'stripe', id: params.eventId },
+      memberId: params.member.id,
+      reason: params.reason,
+      eventId: params.eventId,
+      adminEmail: params.adminEmail,
+    })
+    if (!result.changed) return
+    await writeBillingAction(payload, {
+      memberId: params.member.id,
+      actionType: 'access_restored',
+      status: 'completed',
+      eventId: params.eventId,
+      notes: decision.reason,
+    })
     return
   }
 
-  await blockMember(payload, {
+  const result = await blockMember(payload, {
     actor: { type: 'stripe', id: params.eventId },
     memberId: params.member.id,
-    reason: params.reason,
+    reason: decision.reason,
     eventId: params.eventId,
     adminEmail: params.adminEmail,
   })
+  if (!result.changed) return
   await writeBillingAction(payload, {
     memberId: params.member.id,
     actionType: 'access_blocked',
     status: 'completed',
     eventId: params.eventId,
-    notes: params.reason,
+    notes: decision.reason,
   })
 }
 
@@ -921,7 +929,7 @@ async function syncInvoice(
   event: Stripe.Event,
   invoice: Stripe.Invoice,
   paymentStatus: 'paid' | 'failed',
-  _options: ShadowSyncOptions
+  options: ShadowSyncOptions
 ): Promise<string[]> {
   const subscriptionId = getInvoiceSubscriptionId(invoice)
   const customerId = getCustomerId(invoice.customer as Stripe.Invoice['customer'])
@@ -1046,6 +1054,14 @@ async function syncInvoice(
       )
     }
   }
+
+  await syncMemberBillingHold(payload, {
+    member: subject.member,
+    billingStatus,
+    reason: paymentStatus === 'failed' ? billingStatus : 'payment_recovered',
+    eventId: event.id,
+    adminEmail: options.adminEmail,
+  })
 
   return [
     paymentStatus === 'failed'

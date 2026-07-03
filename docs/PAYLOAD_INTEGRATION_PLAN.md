@@ -235,7 +235,7 @@ Validation:
 
 ### Phase 7 — Complete billing self-service
 
-**Status:** Portal access, subscription projection, checkout, and failed-payment communications implemented; access enforcement and advanced billing remain.
+**Status:** Portal access, subscription projection, checkout, failed-payment communications, and subscription access enforcement implemented; advanced billing and preview verification remain.
 
 Completed in this slice:
 
@@ -289,13 +289,21 @@ Completed in this slice:
 - `/portal/billing` shows a safe payment-needs-attention warning from local data only;
 - One branded member failed-payment notice and one recovery notice are queued through `payload_email_events`;
 - Dedupe keys are stable per invoice, so Stripe retries do not create duplicate notices or security events;
-- Billing payment failure and recovery are recorded in `payload_member_security_events`;
-- Invoice events do not block, restore, revoke, or grant member access in this slice.
+- Billing payment failure and recovery are recorded in `payload_member_security_events`.
+
+**Subscription access enforcement (Phase 7):**
+- Active and trialing subscriptions retain access and restore only Stripe-managed billing holds;
+- `past_due`, `unpaid`, `billing_hold`, and canceled subscriptions place active members on a billing hold;
+- Successful invoice recovery restores only members blocked for a known Stripe billing reason;
+- Pending members are not automatically activated by Stripe;
+- Manually blocked members keep their manual reason, and suspended or deleted members are never restored by Stripe;
+- Hold and restoration transitions use the existing account-status service, audit records, security events, and queued access notices;
+- Repeated events are idempotent: no duplicate hold or restoration action occurs when member state is already aligned;
+- `/portal/billing` displays a safe local access state: available, on billing hold, inactive, or pending billing status.
 
 Remaining Phase 7 tasks:
 
 - support plan upgrades and cancellation flows inside the Stripe portal;
-- implement subscription-based access enforcement and explicit hold/restore policy;
 - add refunded/disputed payment states and communications;
 - perform preview migration, webhook, checkout, and provider verification;
 - email feature remains:
@@ -310,7 +318,7 @@ Validation:
 - Stripe remains authoritative (stored copy for UI only);
 - client input cannot grant paid access (auth server-side);
 - server-side identity derivation prevents spoofing;
-- failed, canceled, refunded, disputed, and recovered payments will produce defined access and email outcomes (next slice).
+- failed, unpaid, canceled, and recovered subscription states now have defined, idempotent access outcomes; refunded and disputed states remain a later slice.
 
 ### Phase 8 — Complete community publishing and notifications
 
@@ -403,7 +411,7 @@ A phase is complete only when:
 
 ## Immediate milestone
 
-Continue Phase 7 billing self-service while member account-security email remains implementation-complete and operationally blocked. The next billing slice is explicit subscription-based access enforcement and hold/restore policy; real preview/provider acceptance remains a separate operational milestone.
+Continue Phase 7 billing self-service while member account-security email remains implementation-complete and operationally blocked. The next billing slice is refunded and disputed payment state with basic member communication; real preview/provider acceptance remains a separate operational milestone.
 
 ## Definition of done
 

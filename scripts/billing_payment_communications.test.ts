@@ -37,14 +37,19 @@ async function main() {
   assert.match(invoiceSync, /queueEmailEvent/)
   assert.match(invoiceSync, /billing_payment_failed/)
   assert.match(invoiceSync, /billing_payment_recovered/)
-  assert.doesNotMatch(invoiceSync, /syncMemberBillingHold/)
-  assert.doesNotMatch(invoiceSync, /access_blocked|access_restored/)
+  assert.match(invoiceSync, /syncMemberBillingHold/)
+  assert.match(shadowSync, /decideBillingAccessTransition/)
+  assert.match(shadowSync, /manual_status/)
+  assert.match(shadowSync, /pending_member/)
 
   assert.match(webhook, /case 'invoice\.payment_failed'/)
   assert.match(webhook, /case 'invoice\.paid'/)
   assert.match(webhook, /projectInvoicePaymentState/)
   assert.match(helper, /showPaymentWarning: paymentStatus === 'failed'/)
+  assert.match(helper, /billingAccessState/)
   assert.match(page, /Payment needs attention/)
+  assert.match(page, /Membership access/)
+  assert.match(page, /On billing hold/)
 
   for (const field of [
     'paymentStatus',
