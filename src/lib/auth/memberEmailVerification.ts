@@ -165,6 +165,15 @@ export function createMemberEmailVerificationService(options: VerificationServic
   const randomToken = options.randomToken ?? (() => randomBytes(options.tokenBytes ?? 32).toString('base64url'))
   const genericMessage = 'If an eligible account exists, a verification email will be sent shortly.'
 
+  async function recordDeliverySafely(event: Parameters<VerificationRepository['recordDelivery']>[0]) {
+    try {
+      await options.repository.recordDelivery(event)
+      return true
+    } catch {
+      return false
+    }
+  }
+
   return {
     async requestVerification(emailInput: string): Promise<VerificationRequestResult> {
       const email = normalizeEmail(emailInput)
@@ -179,7 +188,7 @@ export function createMemberEmailVerificationService(options: VerificationServic
       if (existing && !existing.consumedAt && new Date(existing.expiresAt).getTime() > currentTime.getTime()) {
         const lastSentAt = existing.lastSentAt ? new Date(existing.lastSentAt).getTime() : 0
         if (lastSentAt && currentTime.getTime() - lastSentAt < sendCooldownMs) {
-          await options.repository.recordDelivery({
+          await recordDeliverySafely({
             memberId: member.id,
             idempotencyKey: existing.idempotencyKey,
             status: 'suppressed',
@@ -190,7 +199,7 @@ export function createMemberEmailVerificationService(options: VerificationServic
           return { accepted: true, message: genericMessage }
         }
         if (existing.sendAttempts >= maxSendAttempts) {
-          await options.repository.recordDelivery({
+          await recordDeliverySafely({
             memberId: member.id,
             idempotencyKey: existing.idempotencyKey,
             status: 'suppressed',
@@ -231,7 +240,7 @@ export function createMemberEmailVerificationService(options: VerificationServic
 
       try {
         await options.transport.send(delivery)
-        await options.repository.recordDelivery({
+        await recordDeliverySafely({
           memberId: member.id,
           idempotencyKey,
           status: 'sent',
@@ -239,7 +248,7 @@ export function createMemberEmailVerificationService(options: VerificationServic
           occurredAt: currentTime.toISOString(),
         })
       } catch {
-        await options.repository.recordDelivery({
+        await recordDeliverySafely({
           memberId: member.id,
           idempotencyKey,
           status: 'failed',

@@ -22,6 +22,7 @@ class MemoryVerificationRepository implements VerificationRepository {
     occurredAt: string
     reason?: string
   }> = []
+  failDeliveryRecording = false
 
   async findMemberByEmail(email: string) {
     return [...this.members.values()].find((member) => member.email.toLowerCase() === email.toLowerCase()) ?? null
@@ -57,6 +58,7 @@ class MemoryVerificationRepository implements VerificationRepository {
   }
 
   async recordDelivery(event: (typeof this.deliveries)[number]) {
+    if (this.failDeliveryRecording) throw new Error('delivery recording failure')
     this.deliveries.push(structuredClone(event))
   }
 }
@@ -149,6 +151,14 @@ async function run() {
   assert.equal(fixture.transport.deliveries.length, 1)
   assert.equal(fixture.repository.deliveries.at(-1)?.status, 'suppressed')
   assert.equal(fixture.repository.deliveries.at(-1)?.reason, 'cooldown')
+
+  const resilientFixture = createFixture({ token: 'resilient-token-value-that-is-long-enough' })
+  resilientFixture.repository.failDeliveryRecording = true
+  const resilientResult = await resilientFixture.service.requestVerification('student@example.test')
+  assert.deepEqual(resilientResult, firstResult)
+  assert.equal(resilientFixture.transport.deliveries.length, 1)
+  assert.equal(resilientFixture.repository.tokens.size, 1)
+  assert.equal(resilientFixture.repository.deliveries.length, 0)
 
   const unknown = await fixture.service.requestVerification('unknown@example.test')
   assert.deepEqual(unknown, firstResult)
