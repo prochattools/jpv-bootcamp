@@ -54,6 +54,40 @@ class FakePayload implements PayloadCourseWriteAPI {
     ['payload_member_security_events', []],
     ['payload_audit_events', []],
   ])
+  db = {
+    pool: {
+      query: async (sql: string, values?: readonly unknown[]) => this.handleQuery(sql, values),
+    },
+  }
+
+  private async handleQuery(sql: string, values?: readonly unknown[]) {
+    if (sql.includes('INSERT INTO') && sql.includes('payload_email_events')) {
+      const [displayName, toEmail, templateKey, dedupeKey, metadata] = values ?? []
+      const document: PayloadDocument = {
+        id: ++this.sequence,
+        displayName,
+        toEmail,
+        templateKey,
+        deliveryStatus: 'queued',
+        dedupeKey,
+        metadata,
+        createdAt: '2026-07-01T20:00:00.000Z',
+        updatedAt: '2026-07-01T20:00:00.000Z',
+      }
+      const collection = this.collections.get('payload_email_events') ?? []
+      collection.push(document)
+      this.collections.set('payload_email_events', collection)
+      return { rows: [{ id: document.id }], rowCount: 1 }
+    }
+    if (sql.includes('SELECT "id"') && sql.includes('payload_email_events')) {
+      const dedupeKey = String(values?.[0] ?? '')
+      const event = (this.collections.get('payload_email_events') ?? []).find(
+        (entry) => String(entry.dedupeKey) === dedupeKey,
+      )
+      return event ? { rows: [{ id: event.id }], rowCount: 1 } : { rows: [], rowCount: 0 }
+    }
+    return { rows: [{ id: 1 }], rowCount: 1 }
+  }
 
   async find(args: {
     collection: string
@@ -141,6 +175,7 @@ function createMemoryAtomicStore(payload: FakePayload): AtomicVerificationStore 
 }
 
 async function run() {
+  process.env.DATABASE_URL ??= 'postgresql://redacted.invalid/app?schema=jpvbootcamp_staging'
   assert.equal(
     resolveMemberVerificationPublicBaseUrl({ APP_PUBLIC_URL: 'https://preview.jpvbootcamp.test/path?q=1' } as unknown as NodeJS.ProcessEnv),
     'https://preview.jpvbootcamp.test/',
