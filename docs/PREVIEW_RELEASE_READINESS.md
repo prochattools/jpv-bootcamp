@@ -107,6 +107,23 @@ The canonical reviewed migration inventory is now unified across policy, manifes
 
 Preflight does not push, log in to a registry, connect to a database, run migration status, execute migrations, initialize Payload, call a provider, call deployment infrastructure, or perform smoke requests.
 
+## Provider email readiness (staging)
+
+**Current status (4 July 2026):**
+
+Staging image rebuilt with `DISABLE_NON_WEBHOOK_EMAILS=false` and confirmed via `/api/health/deployment`:
+- `resendApiKeyPresent`: true
+- `senderIdentityPresent`: true
+- `webhookEmailsDisabled`: false
+- `readyForApply`: true
+
+Queued email sender enhanced with `--event-id` targeting to prevent bulk sends and enforce single-event authorization.
+
+When ready to send one controlled verification email:
+```sh
+pnpm exec tsx scripts/payload/send-queued-emails.mts --apply --event-id=<redacted-id>
+```
+
 ## Billing readiness checklist
 
 Billing readiness is a separate authorization track from image publication and deployment. The reviewer must confirm each category independently before any live billing operation is attempted.
@@ -115,7 +132,7 @@ Billing readiness is a separate authorization track from image publication and d
 - Deployment authorization: approve the reviewed preview commit or image separately from migrations and provider operations.
 - Webhook configuration authorization: confirm the canonical Stripe webhook route and event set without changing production settings.
 - Checkout and portal smoke verification authorization: approve controlled preview smoke checks for member checkout and billing portal flow behavior only.
-- Provider email acceptance authorization: separately approve real provider email delivery, sender identity, and controlled recipient scope.
+- Provider email acceptance authorization: separately approve real provider email delivery, sender identity, and controlled recipient scope. Staging has confirmed `readyForApply: true`. One test verification email can be sent per operator event-id targeting.
 
 The checklist only gates operations. It does not claim live success or imply that any provider, deployment, or database step has already happened.
 

@@ -125,16 +125,19 @@ The `jpvbootcamp_staging` schema may be repaired, reconciled, or reset for stagi
 - The reviewed Payload migration inventory is now unified in code and release policy; the ten reviewed migrations are ordered canonically, with partner schema reconciliation last. The staging schema `jpvbootcamp_staging` has been explicitly verified with all ten reviewed Payload migrations marked ran.
 - Partner/Affiliate staging schema drift was reconciled by `20260704_090000_partner_schema_reconciliation`; the missing Partner Affiliate recipient-email array table and Partner Application snapshot columns are present in staging.
 - Duplicate admin login branding, portal-native member login mode, free-registration copy, operational admin dashboard cards, and clearer Affiliates vs Partner Affiliates admin descriptions are implemented in source and await deployment to staging.
-- 4 July 2026 Haiku live acceptance pass — Phase 5 staging verification completed:
-  - Free account registration: tested, creates pending member, queues email verification event;
-  - Email readiness: registration queues events successfully, email delivery blocks at provider apply (expected);
+- 4 July 2026 Haiku live acceptance pass — Phase 6 email acceptance preparation completed:
+  - Phase 5 staging verification: free account registration creates pending member, queues email verification event;
   - Email readiness booleans added to `/api/health/deployment` for operator clarity;
+  - Dokploy staging `DISABLE_NON_WEBHOOK_EMAILS` env var disabled (false) to enable provider email delivery;
+  - Staged image redeploy confirms `readyForApply: true` in health endpoint;
+  - Queued email sender enhanced with `--event-id` targeting and bulk-apply safety guard;
+  - All focused tests pass (registration, auth, email verification, routes, deployment health);
+  - Type-check and build clean, no TinaCMS references;
+  - Email provider accept ready for next phase: one controlled verification-email send per operator authorization;
   - Login routing: all redirects working (`/login` and `/learn/login` → `/portal?mode=login`);
   - Admin branding: JPV Bootcamp Portal login verified;
   - Admin dashboard: operational cards present and linked;
-  - All focused tests pass (registration, auth, email verification, routes, deployment health, branding, dashboard);
-  - Type-check and build clean, no TinaCMS references.
-  - Genuine deferred product work: provide real-provider email credentials for staging, authorized migration execution, authorized deployment, then live verification email/login flow completion.
+  - Browser-based registration and verification link flow remains for manual operator test (same-origin security check on registration endpoint).
 
 ## Execution roadmap
 
