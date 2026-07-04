@@ -56,12 +56,14 @@ assert.doesNotMatch(routes.emailChangeRequest, /new Resend|memberId: result|acti
 
 assert.match(routes.emailChangeComplete, /new URL\('\/portal', request\.url\)/)
 assert.doesNotMatch(routes.emailChangeComplete, /next|redirect=|callback|returnUrl/)
-assert.match(routes.verificationComplete, /new URL\('\/portal', request\.url\)/)
+assert.match(routes.verificationComplete, /resolveMemberVerificationPublicBaseUrl\(\)/)
+assert.match(routes.verificationComplete, /new URL\('\/portal', resolveMemberVerificationPublicBaseUrl\(\)\)/)
 assert.match(routes.verificationResend, /GENERIC_VERIFICATION_REQUEST_MESSAGE/)
 
 const verificationHttp = read('src/lib/auth/memberEmailVerificationHttp.ts')
 assert.match(verificationHttp, /readBoundedJsonObject\(request\)/)
 assert.match(verificationHttp, /scope: 'member-email-verification-resend'/)
 assert.doesNotMatch(verificationHttp, /request\.json\(/)
+assert.match(verificationHttp, /publicBaseUrl\?: string/)
 
 console.log('payload_member_account_email_routes.test.ts passed')

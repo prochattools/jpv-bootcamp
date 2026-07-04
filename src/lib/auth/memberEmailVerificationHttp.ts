@@ -12,6 +12,10 @@ type MemberEmailVerificationHttpService = {
   completeVerification(token: string): Promise<VerificationCompletionResult>
 }
 
+type MemberEmailVerificationHttpOptions = {
+  publicBaseUrl?: string
+}
+
 function jsonResponse(body: unknown, status = 200): Response {
   return Response.json(body, {
     status,
@@ -51,8 +55,13 @@ export async function handleMemberEmailVerificationResend(
   }
 }
 
-function loginResultUrl(request: Request, result: 'success' | 'used' | 'invalid'): URL {
-  const url = new URL('/portal', request.url)
+function loginResultUrl(
+  request: Request,
+  result: 'success' | 'used' | 'invalid',
+  options?: MemberEmailVerificationHttpOptions,
+): URL {
+  const baseUrl = options?.publicBaseUrl ?? new URL(request.url).origin
+  const url = new URL('/portal', baseUrl)
   url.searchParams.set('mode', 'login')
   url.searchParams.set('verification', result)
   return url
@@ -61,22 +70,23 @@ function loginResultUrl(request: Request, result: 'success' | 'used' | 'invalid'
 export async function handleMemberEmailVerificationComplete(
   request: Request,
   service: MemberEmailVerificationHttpService,
+  options?: MemberEmailVerificationHttpOptions,
 ): Promise<Response> {
   const token = new URL(request.url).searchParams.get('token')
   if (!token || token.length < 20 || token.length > 512) {
-    return Response.redirect(loginResultUrl(request, 'invalid'), 303)
+    return Response.redirect(loginResultUrl(request, 'invalid', options), 303)
   }
 
   try {
     const result = await service.completeVerification(token)
     if (result.verified === true) {
-      return Response.redirect(loginResultUrl(request, 'success'), 303)
+      return Response.redirect(loginResultUrl(request, 'success', options), 303)
     }
     return Response.redirect(
-      loginResultUrl(request, result.reason === 'already_used' ? 'used' : 'invalid'),
+      loginResultUrl(request, result.reason === 'already_used' ? 'used' : 'invalid', options),
       303,
     )
   } catch {
-    return Response.redirect(loginResultUrl(request, 'invalid'), 303)
+    return Response.redirect(loginResultUrl(request, 'invalid', options), 303)
   }
 }

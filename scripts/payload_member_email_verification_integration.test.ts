@@ -289,11 +289,12 @@ async function run() {
   assert.equal(malformedResponse.status, 400)
 
   const completionResponse = await handleMemberEmailVerificationComplete(
-    new Request(`https://preview.jpvbootcamp.test/api/member-email-verification/complete?token=${rawToken}&next=https://evil.example`),
+    new Request(`http://0.0.0.0:3000/api/member-email-verification/complete?token=${rawToken}&next=https://evil.example`),
     {
       requestVerification: async () => ({ accepted: true, message: GENERIC_VERIFICATION_REQUEST_MESSAGE }),
       completeVerification: async () => ({ verified: true, memberId: '1' }),
     },
+    { publicBaseUrl: 'https://preview.jpvbootcamp.test' },
   )
   assert.equal(completionResponse.status, 303)
   const completionLocation = new URL(completionResponse.headers.get('location') ?? '')
