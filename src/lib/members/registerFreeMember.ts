@@ -136,19 +136,23 @@ export async function registerFreeMember(
     overrideAccess: true,
   })
 
-  await createAuditEvent(payload, {
-    actorType: 'member',
-    actorId: member.id,
-    action: 'member.free_registered',
-    targetCollection: 'payload_members',
-    targetId: member.id,
-    after: {
-      accountStatus: 'pending',
-      source: 'self_signup',
-      freeTier: true,
-    },
-    metadata: { termsAcceptedVersion: input.termsVersion, freeTier: true },
-  })
+  try {
+    await createAuditEvent(payload, {
+      actorType: 'member',
+      actorId: member.id,
+      action: 'member.free_registered',
+      targetCollection: 'payload_members',
+      targetId: member.id,
+      after: {
+        accountStatus: 'pending',
+        source: 'self_signup',
+        freeTier: true,
+      },
+      metadata: { termsAcceptedVersion: input.termsVersion, freeTier: true },
+    })
+  } catch {
+    // audit event creation failure should not block registration flow
+  }
 
   const verificationResult = await verification.requestVerification(email)
 
