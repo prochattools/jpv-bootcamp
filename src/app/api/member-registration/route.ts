@@ -52,7 +52,9 @@ export async function POST(request: Request): Promise<Response> {
     }
     const failure = result as Extract<typeof result, { ok: false }>
     return json({ ok: false, error: failure.error }, failure.status)
-  } catch {
+  } catch (error) {
+    console.error('[member-registration] Error:', error instanceof Error ? error.message : String(error))
+    if (error instanceof Error) console.error('[member-registration] Stack:', error.stack)
     return json({ ok: true, message: REGISTRATION_UNAVAILABLE_MESSAGE })
   }
 }
