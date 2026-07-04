@@ -53,6 +53,13 @@ export async function GET() {
     fileExists('public/images/jpv-logo.png'),
   ])
 
+  const resendApiKeyPresent = Boolean(readEnv('RESEND_API_KEY'))
+  const senderIdentityPresent = Boolean(readEnv('RESEND_FROM') || readEnv('EMAIL_FROM'))
+  const webhookEmailsDisabled = Boolean(
+    readEnv('DISABLE_NON_WEBHOOK_EMAILS')?.toLowerCase() === 'true' ||
+    readEnv('DISABLE_NON_WEBHOOK_EMAILS') === '1'
+  )
+
   return NextResponse.json({
     ok: true,
     commitSha: readEnv('VERCEL_GIT_COMMIT_SHA') ?? readEnv('GITHUB_SHA') ?? null,
@@ -63,6 +70,12 @@ export async function GET() {
     importMap: {
       ...importMap,
       publicLogoExists,
+    },
+    emailReadiness: {
+      resendApiKeyPresent,
+      senderIdentityPresent,
+      webhookEmailsDisabled,
+      readyForApply: resendApiKeyPresent && senderIdentityPresent && !webhookEmailsDisabled,
     },
     migrationInventoryNames: previewMigrationInventoryNames(),
     runtime: {

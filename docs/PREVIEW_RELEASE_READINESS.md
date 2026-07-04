@@ -154,6 +154,21 @@ Required before real queued email apply mode:
 - optional `EMAIL_REPLY_TO`
 - reviewed `DISABLE_NON_WEBHOOK_EMAILS` mode
 
+Email readiness is observable from `/api/health/deployment` without secrets:
+
+```json
+{
+  "emailReadiness": {
+    "resendApiKeyPresent": boolean,
+    "senderIdentityPresent": boolean,
+    "webhookEmailsDisabled": boolean,
+    "readyForApply": boolean
+  }
+}
+```
+
+When `readyForApply` is false, registration and email verification queue properly but delivery requires the missing configuration. Operators run dry-run only to inspect queue without credentials.
+
 Run the safe checker only in an approved environment:
 
 ```sh
