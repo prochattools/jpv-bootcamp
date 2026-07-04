@@ -51,6 +51,9 @@ class MemoryVerificationRepository implements VerificationRepository {
     const member = this.members.get(memberId)
     if (!member) throw new Error('member missing')
     member.emailVerifiedAt = verifiedAt
+    if (member.source === 'self_signup' && member.accountStatus === 'pending') {
+      member.accountStatus = 'active'
+    }
   }
 
   async recordDelivery(event: (typeof this.deliveries)[number]) {
@@ -82,6 +85,8 @@ function createFixture(input?: {
     id: 'member-1',
     email: 'student@example.test',
     displayName: 'Student',
+    accountStatus: 'pending',
+    source: 'self_signup',
   })
   const service = createMemberEmailVerificationService({
     repository,
@@ -164,6 +169,7 @@ async function run() {
   const completed = await fixture.service.completeVerification(rawToken)
   assert.deepEqual(completed, { verified: true, memberId: 'member-1' })
   assert(fixture.repository.members.get('member-1')?.emailVerifiedAt)
+  assert.equal(fixture.repository.members.get('member-1')?.accountStatus, 'active')
   assert(fixture.repository.tokens.get(digest)?.consumedAt)
 
   const reused = await fixture.service.completeVerification(rawToken)

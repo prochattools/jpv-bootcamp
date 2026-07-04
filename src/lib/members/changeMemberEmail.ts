@@ -4,6 +4,7 @@ import type { MemberAccountActionService } from '@/lib/auth/memberAccountActions
 import { normalizeEmail } from '@/lib/normalize-email'
 import type { PayloadId, PayloadMemberAuthAPI } from '@/lib/payloadCourse/accessService'
 import { createAuditEvent, queueEmailEvent } from '@/lib/payloadCourse/events'
+import { isEligibleCurrentMember } from '@/lib/members/currentMember'
 
 export type RequestMemberEmailChangeInput = {
   memberId: PayloadId
@@ -50,7 +51,7 @@ export async function requestMemberEmailChange(
     overrideAccess: true,
   })
   if (
-    member.accountStatus !== 'active' ||
+    !isEligibleCurrentMember(member) ||
     typeof member.email !== 'string' ||
     normalizeEmail(member.email) !== currentEmail
   ) {
@@ -145,7 +146,7 @@ export async function completeMemberEmailChange(
     depth: 0,
     overrideAccess: true,
   })
-  if (member.accountStatus !== 'active' || typeof member.email !== 'string') {
+  if (!isEligibleCurrentMember(member) || typeof member.email !== 'string') {
     return { ok: false, error: 'account_ineligible' }
   }
 

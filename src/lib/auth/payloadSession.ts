@@ -8,11 +8,13 @@ import {
   MEMBER_COLLECTION,
   type PayloadRequestSession,
 } from '@/lib/auth/payloadSessionMapping'
+import { resolveEligibleMemberAccountStatus } from '@/lib/members/currentMember'
 
 type PayloadMemberRecord = {
   id: string | number
   accountStatus?: string | null
   emailVerifiedAt?: string | Date | null
+  source?: string | null
 }
 
 export async function resolvePayloadRequestSession(
@@ -37,7 +39,11 @@ export async function resolvePayloadRequestSession(
     ...mappedSession,
     member: {
       id: member.id,
-      accountStatus: member.accountStatus ?? null,
+      accountStatus: resolveEligibleMemberAccountStatus({
+        accountStatus: member.accountStatus ?? null,
+        emailVerifiedAt: member.emailVerifiedAt ?? null,
+        source: member.source ?? null,
+      }),
       emailVerifiedAt: member.emailVerifiedAt ?? null,
     },
   }

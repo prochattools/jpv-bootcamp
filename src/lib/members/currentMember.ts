@@ -6,11 +6,25 @@ export type CurrentPayloadMember = PayloadDocument & {
   collection?: string
   email?: string
   accountStatus?: string
+  source?: string
   emailVerifiedAt?: string | Date | null
 }
 
-export function isEligibleCurrentMember(member: Pick<CurrentPayloadMember, 'accountStatus'> | null | undefined): boolean {
-  return member?.accountStatus === 'active'
+type SignInEligibleMember = Pick<CurrentPayloadMember, 'accountStatus' | 'source' | 'emailVerifiedAt'>
+
+export function isEligibleCurrentMember(member: SignInEligibleMember | null | undefined): boolean {
+  if (member?.accountStatus === 'active') return true
+  return (
+    member?.accountStatus === 'pending' &&
+    member.source === 'self_signup' &&
+    Boolean(member.emailVerifiedAt)
+  )
+}
+
+export function resolveEligibleMemberAccountStatus(
+  member: SignInEligibleMember | null | undefined,
+): string | null {
+  return isEligibleCurrentMember(member) ? 'active' : member?.accountStatus ?? null
 }
 
 export async function getCurrentPayloadMember(): Promise<{

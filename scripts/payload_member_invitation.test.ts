@@ -248,6 +248,49 @@ async function run() {
   assert.equal(payload.calls.includes('forbidden:forgotPassword'), false)
   assert.equal(payload.calls.includes('forbidden:resetPassword'), false)
 
+  const verifiedSignupPayload = new FakePayload({
+    payload_members: [
+      {
+        id: 2,
+        email: 'verified@example.test',
+        accountStatus: 'pending',
+        source: 'self_signup',
+        emailVerifiedAt: '2026-07-02T00:00:00.000Z',
+        password: 'existing-password',
+      },
+    ],
+    payload_member_profiles: [{ id: 2, member: 2, displayName: 'Verified Student' }],
+    payload_member_security_events: [],
+    payload_audit_events: [],
+    payload_email_events: [],
+  })
+  let resetToken = 'verified-self-signup-password-reset-value'
+  const verifiedSignupTransport = new FakeTransport()
+  const verifiedSignupService = createMemberAccountActionService({
+    repository: new MemoryActions(),
+    transport: verifiedSignupTransport,
+    publicBaseUrl: 'https://preview.jpvbootcamp.test',
+    now: () => new Date('2026-07-02T01:00:00.000Z'),
+    randomToken: () => resetToken,
+  })
+  const verifiedSignupReset = await requestPasswordReset(verifiedSignupPayload, verifiedSignupService, {
+    email: 'verified@example.test',
+  })
+  assert.deepEqual(verifiedSignupReset, knownReset)
+  assert.equal(verifiedSignupPayload.docs('payload_member_security_events').at(-1)?.eventType, 'password_reset_requested')
+  assert.equal(
+    verifiedSignupTransport.deliveries.some((delivery) => delivery.templateKey === 'member-password-reset'),
+    true,
+  )
+  const verifiedSignupCompleted = await completePasswordReset(verifiedSignupPayload, verifiedSignupService, {
+    token: resetToken,
+    password: 'replacement-password-value',
+    passwordConfirmation: 'replacement-password-value',
+  })
+  assert.equal(verifiedSignupCompleted.ok, true)
+  assert.equal(verifiedSignupPayload.docs('payload_members')[0]?.accountStatus, 'pending')
+  assert.equal(verifiedSignupPayload.docs('payload_email_events').some((event) => event.templateKey === 'member-password-changed'), true)
+
   console.log('payload_member_invitation.test.ts passed')
 }
 

@@ -8,7 +8,10 @@ import {
 } from '../src/lib/members/accountStatus'
 import { changeMemberPassword } from '../src/lib/members/changeMemberPassword'
 import { cleanupSensitiveEmailEvents } from '../src/lib/members/cleanupSensitiveEmailEvents'
-import { isEligibleCurrentMember } from '../src/lib/members/currentMember'
+import {
+  isEligibleCurrentMember,
+  resolveEligibleMemberAccountStatus,
+} from '../src/lib/members/currentMember'
 import type {
   PayloadDocument,
   PayloadId,
@@ -211,6 +214,22 @@ async function testPasswordChangeControls() {
 
 function testCurrentMemberEligibility() {
   assert.equal(isEligibleCurrentMember({ accountStatus: 'active' }), true)
+  assert.equal(
+    isEligibleCurrentMember({
+      accountStatus: 'pending',
+      source: 'self_signup',
+      emailVerifiedAt: '2026-07-04T00:00:00.000Z',
+    }),
+    true,
+  )
+  assert.equal(
+    resolveEligibleMemberAccountStatus({
+      accountStatus: 'pending',
+      source: 'self_signup',
+      emailVerifiedAt: '2026-07-04T00:00:00.000Z',
+    }),
+    'active',
+  )
   for (const accountStatus of ['pending', 'blocked', 'suspended', 'deleted']) {
     assert.equal(isEligibleCurrentMember({ accountStatus }), false)
   }

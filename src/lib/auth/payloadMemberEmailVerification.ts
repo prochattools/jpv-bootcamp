@@ -164,6 +164,7 @@ export function createPayloadVerificationRepository(
         displayName: asString(profile?.displayName) ?? undefined,
         emailVerifiedAt: toIsoString(member.emailVerifiedAt),
         accountStatus: asString(member.accountStatus) ?? undefined,
+        source: asString(member.source) ?? undefined,
       }
     },
 
@@ -209,10 +210,23 @@ export function createPayloadVerificationRepository(
     },
 
     async markMemberVerified(memberId, verifiedAt) {
+      const memberResult = await payload.find({
+        collection: 'payload_members',
+        where: { id: { equals: memberId } },
+        limit: 1,
+        depth: 0,
+        overrideAccess: true,
+      })
+      const member = memberResult.docs[0] as PayloadDocument | undefined
+      const shouldActivate = member?.source === 'self_signup' && member?.accountStatus === 'pending'
+
       await payload.update({
         collection: 'payload_members',
         id: memberId,
-        data: { emailVerifiedAt: verifiedAt },
+        data: {
+          emailVerifiedAt: verifiedAt,
+          ...(shouldActivate ? { accountStatus: 'active' } : {}),
+        },
         overrideAccess: true,
       })
       await payload.create({

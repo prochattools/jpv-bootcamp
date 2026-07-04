@@ -46,7 +46,7 @@ function matchesWhere(document: PayloadDocument, where: Record<string, unknown> 
 class FakePayload implements PayloadCourseWriteAPI {
   sequence = 100
   collections = new Map<string, PayloadDocument[]>([
-    ['payload_members', [{ id: 1, email: 'student@example.test', accountStatus: 'pending' }]],
+    ['payload_members', [{ id: 1, email: 'student@example.test', accountStatus: 'pending', source: 'self_signup' }]],
     ['payload_member_profiles', [{ id: 11, member: 1, displayName: 'Student' }]],
     ['payload_member_verification_tokens', []],
     ['payload_email_events', []],
@@ -232,7 +232,7 @@ async function run() {
   )
   const member = (payload.collections.get('payload_members') ?? [])[0]
   assert(member?.emailVerifiedAt)
-  assert.equal(member?.accountStatus, 'pending')
+  assert.equal(member?.accountStatus, 'active')
   assert.equal(
     (payload.collections.get('payload_member_security_events') ?? []).at(-1)?.eventType,
     'email_verified',

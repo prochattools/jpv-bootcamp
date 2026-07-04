@@ -4,6 +4,7 @@ import type {
   PayloadDocument,
   PayloadMemberAuthAPI,
 } from '@/lib/payloadCourse/accessService'
+import { isEligibleCurrentMember } from '@/lib/members/currentMember'
 
 export type RequestPasswordResetInput = {
   email: string
@@ -17,10 +18,6 @@ export type RequestPasswordResetResult = {
 const GENERIC_RESULT: RequestPasswordResetResult = {
   ok: true,
   message: 'If an eligible account exists, password reset instructions have been sent.',
-}
-
-function memberStatus(member: PayloadDocument): string {
-  return typeof member.accountStatus === 'string' ? member.accountStatus : 'pending'
 }
 
 export async function requestPasswordReset(
@@ -39,7 +36,7 @@ export async function requestPasswordReset(
     overrideAccess: true,
   })
   const member = existing.docs[0]
-  if (!member || memberStatus(member) !== 'active') return GENERIC_RESULT
+  if (!member || !isEligibleCurrentMember(member)) return GENERIC_RESULT
 
   const profileResult = await payload.find({
     collection: 'payload_member_profiles',

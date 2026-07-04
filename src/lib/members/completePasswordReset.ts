@@ -4,6 +4,7 @@ import type {
   PayloadMemberAuthAPI,
 } from '@/lib/payloadCourse/accessService'
 import { createAuditEvent, queueEmailEvent } from '@/lib/payloadCourse/events'
+import { isEligibleCurrentMember } from '@/lib/members/currentMember'
 
 export type CompletePasswordResetInput = {
   token: string
@@ -46,7 +47,7 @@ export async function completePasswordReset(
     depth: 0,
     overrideAccess: true,
   })
-  if (member.accountStatus !== 'active') {
+  if (!isEligibleCurrentMember(member)) {
     return { ok: false, error: 'account_ineligible' }
   }
 

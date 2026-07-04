@@ -22,6 +22,7 @@ export type VerificationMember = {
   displayName?: string
   emailVerifiedAt?: string
   accountStatus?: string
+  source?: string
 }
 
 export type VerificationDelivery = {
