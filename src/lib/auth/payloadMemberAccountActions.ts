@@ -1,5 +1,6 @@
 import type { PayloadCourseWriteAPI, PayloadDocument } from '@/lib/payloadCourse/accessService'
-import { createAuditEvent, queueEmailEvent } from '@/lib/payloadCourse/events'
+import { createAuditEvent } from '@/lib/payloadCourse/events'
+import { quotePgIdentifier } from '@/lib/payloadMigrationSchema'
 
 import {
   createMemberAccountActionService,
@@ -16,6 +17,7 @@ import {
 import { getMemberEmailVerificationSchema } from './memberEmailVerificationSql'
 
 const actionCollection = 'payload_member_verification_tokens'
+const emailEventCollection = 'payload_email_events'
 
 function asRecord(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return {}
@@ -223,24 +225,60 @@ export function createPayloadMemberAccountActionRepository(
 export function createQueuedMemberAccountActionTransport(
   payload: PayloadCourseWriteAPI,
 ): MemberAccountActionTransport {
+  const client = resolveQueryClient(payload)
+  const schemaName = getMemberEmailVerificationSchema()
+  const table = `${quotePgIdentifier(schemaName)}.${quotePgIdentifier(emailEventCollection)}`
+
   return {
     async send(delivery) {
       const actionUrl = new URL(delivery.actionUrl)
-      const { event } = await queueEmailEvent(payload, {
-        toEmail: delivery.to,
-        templateKey: delivery.templateKey,
-        dedupeKey: `${delivery.templateKey}:${delivery.memberId}:${delivery.idempotencyKey}`,
-        displayName: `${delivery.templateKey} -> ${delivery.to}`,
-        metadata: {
-          memberId: delivery.memberId,
-          purpose: delivery.purpose,
-          attempt: delivery.attempt,
-          displayName: delivery.displayName,
-          actionUrl: actionUrl.toString(),
-          logoUrl: `${actionUrl.origin}/images/jpv-logo.png`,
-        },
-      })
-      return { providerMessageId: String(event.id) }
+      const dedupeKey = `${delivery.templateKey}:${delivery.memberId}:${delivery.idempotencyKey}`
+      const displayName = `${delivery.templateKey} -> ${delivery.to}`
+      const metadata = {
+        memberId: delivery.memberId,
+        purpose: delivery.purpose,
+        attempt: delivery.attempt,
+        displayName: delivery.displayName,
+        actionUrl: actionUrl.toString(),
+        logoUrl: `${actionUrl.origin}/images/jpv-logo.png`,
+      }
+
+      const insertResult = await client.query(
+        `
+INSERT INTO ${table} (
+  "display_name",
+  "to_email",
+  "template_key",
+  "delivery_status",
+  "dedupe_key",
+  "metadata"
+)
+VALUES ($1::varchar, $2::varchar, $3::varchar, 'queued', $4::varchar, $5::jsonb)
+ON CONFLICT ("dedupe_key") DO NOTHING
+RETURNING "id";
+`,
+        [displayName, delivery.to, delivery.templateKey, dedupeKey, metadata],
+      )
+
+      const queuedId = insertResult.rows?.[0]?.id
+      if (queuedId !== null && queuedId !== undefined) {
+        return { providerMessageId: String(queuedId) }
+      }
+
+      const existingResult = await client.query(
+        `
+SELECT "id"
+FROM ${table}
+WHERE "dedupe_key" = $1::varchar
+LIMIT 1;
+`,
+        [dedupeKey],
+      )
+      const existingId = existingResult.rows?.[0]?.id
+      if (existingId === null || existingId === undefined) {
+        throw new Error('Queued member account action email could not be persisted')
+      }
+      return { providerMessageId: String(existingId) }
     },
   }
 }

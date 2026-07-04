@@ -10,6 +10,7 @@ import {
   type MemberAccountActionRecord,
   type MemberAccountActionRepository,
 } from '../src/lib/auth/memberAccountActions'
+import { createQueuedMemberAccountActionTransport } from '../src/lib/auth/payloadMemberAccountActions'
 import {
   MEMBER_ACCOUNT_ACTION_PURPOSES,
   MEMBER_ACCOUNT_SECURITY_EVENTS,
@@ -20,6 +21,8 @@ import {
   buildConsumeMemberAccountActionSql,
   buildReplaceActiveMemberAccountActionSql,
 } from '../src/lib/auth/memberAccountActionSql'
+
+process.env.DATABASE_URL ??= 'postgresql://redacted.invalid/app?schema=jpvbootcamp_staging'
 
 class MemoryActionRepository implements MemberAccountActionRepository {
   records: MemberAccountActionRecord[] = []
@@ -94,6 +97,44 @@ class FakeTransport {
     this.sent.push(structuredClone(delivery))
     if (this.fail) throw new Error('fake transport failure')
     return { providerMessageId: `fake-${this.sent.length}` }
+  }
+}
+
+class FakePayload {
+  events: Array<Record<string, unknown>> = []
+
+  db = {
+    pool: {
+      query: async (sql: string, values?: readonly unknown[]) => this.handleQuery(sql, values),
+    },
+  }
+
+  private handleQuery(sql: string, values?: readonly unknown[]) {
+    if (sql.includes('INSERT INTO') && sql.includes('payload_email_events')) {
+      const dedupeKey = String(values?.[3] ?? '')
+      const existing = this.events.find((event) => event.dedupe_key === dedupeKey)
+      if (existing) return { rows: [], rowCount: 0 }
+
+      const event = {
+        id: `email_${this.events.length + 1}`,
+        display_name: values?.[0],
+        to_email: values?.[1],
+        template_key: values?.[2],
+        delivery_status: 'queued',
+        dedupe_key: dedupeKey,
+        metadata: values?.[4],
+      }
+      this.events.push(event)
+      return { rows: [{ id: event.id }], rowCount: 1 }
+    }
+
+    if (sql.includes('SELECT "id"') && sql.includes('payload_email_events')) {
+      const dedupeKey = String(values?.[0] ?? '')
+      const event = this.events.find((candidate) => candidate.dedupe_key === dedupeKey)
+      return { rows: event ? [{ id: event.id }] : [], rowCount: event ? 1 : 0 }
+    }
+
+    throw new Error(`Unhandled query: ${sql}`)
   }
 }
 
@@ -225,6 +266,35 @@ async function run() {
     migrationIndex.lastIndexOf("name: '20260702_001500_member_account_action_purposes'") >
       migrationIndex.lastIndexOf("name: '20260701_201500_member_email_verification'"),
   )
+
+  const emailPayload = new FakePayload()
+  const accountActionTransport = createQueuedMemberAccountActionTransport(emailPayload as never)
+  const queued = await accountActionTransport.send({
+    to: 'student@example.test',
+    templateKey: 'member-password-reset',
+    actionUrl: 'https://preview.jpvbootcamp.test/reset-password?token=token-value-that-is-long-enough',
+    displayName: 'Student',
+    memberId: '42',
+    purpose: 'password_reset',
+    idempotencyKey: 'dedupe-key',
+    attempt: 1,
+  })
+  assert.equal(queued.providerMessageId, 'email_1')
+  assert.equal(emailPayload.events.length, 1)
+  assert.equal(emailPayload.events[0]?.dedupe_key, 'member-password-reset:42:dedupe-key')
+
+  const deduped = await accountActionTransport.send({
+    to: 'student@example.test',
+    templateKey: 'member-password-reset',
+    actionUrl: 'https://preview.jpvbootcamp.test/reset-password?token=token-value-that-is-long-enough',
+    displayName: 'Student',
+    memberId: '42',
+    purpose: 'password_reset',
+    idempotencyKey: 'dedupe-key',
+    attempt: 2,
+  })
+  assert.equal(deduped.providerMessageId, 'email_1')
+  assert.equal(emailPayload.events.length, 1)
 
   console.log('member account action checks passed')
 }
