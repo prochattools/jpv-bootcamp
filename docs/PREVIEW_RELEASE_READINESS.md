@@ -22,13 +22,13 @@ It must not log in to GHCR, publish an image, call Dokploy, deploy, run Payload 
 
 ### Publish Preview Image
 
-`.github/workflows/publish-preview-image.yml` is named `Publish Preview Image`. It runs only by `workflow_dispatch`, requires a full `commit_sha`, a target environment, a confirmation phrase, and a reproducible `source_date`, checks out exactly that SHA, verifies `git rev-parse HEAD`, and publishes only an immutable SHA-tagged image such as:
+`.github/workflows/publish-preview-image.yml` is named `Publish Preview Image`. Manual publication runs by `workflow_dispatch`, requires a full `commit_sha`, a target environment, a confirmation phrase, and a reproducible `source_date`, checks out exactly that SHA, verifies `git rev-parse HEAD`, and publishes an immutable SHA-tagged image such as:
 
 ```text
 ghcr.io/<repository>:<full-commit-sha>
 ```
 
-It uses the `preview-image-publish` GitHub environment, `contents: read`, and `packages: write`. It must not publish `latest`, deploy, call Dokploy, run migrations, start database-deploy behavior, call a provider, or perform live smoke checks.
+Authorized feature/pr pushes may also publish the branch-tagged preview image plus the immutable SHA tag. The workflow uses the `preview-image-publish` GitHub environment, `contents: read`, and `packages: write`. It must not publish `latest`, deploy, call Dokploy, run migrations, start database-deploy behavior, call a provider, or perform live smoke checks.
 
 A Git push to an authorized feature branch can publish the branch-tagged preview image through workflow execution. Image publication does not authorize deployment. Image publication does not authorize Payload migrations, Prisma/database-deploy startup, provider dry-run, provider apply, or smoke verification.
 
@@ -103,7 +103,7 @@ The shadow report and preflight helpers never authorize live migration, deployme
 
 The admin-only `/operations/shadow-validation` page now reads a bounded Payload snapshot, shows collection counts, domain totals, issue codes, and an executable acceptance matrix for the core member, billing, email, community, and partner journeys, and offers a safe evidence download. It remains read-only and does not perform any live verification.
 
-The canonical reviewed migration inventory is now unified across policy, manifest, preflight, shadow evidence, and validation. It lists the nine reviewed Payload migrations in exact order, but execution remains pending until an explicit migration authorization is granted.
+The canonical reviewed migration inventory is now unified across policy, manifest, preflight, shadow evidence, and validation. It lists the ten reviewed Payload migrations in exact order, ending with `20260704_090000_partner_schema_reconciliation`, but execution remains pending until an explicit migration authorization is granted.
 
 Preflight does not push, log in to a registry, connect to a database, run migration status, execute migrations, initialize Payload, call a provider, call deployment infrastructure, or perform smoke requests.
 
@@ -270,7 +270,7 @@ Use this order for the staging gate:
    - Prerequisites: migration approval, backup evidence, and maintenance window.
    - Command: the reviewed migration runner for the approved environment.
    - Evidence: migration logs and applied migration order.
-   - Success: all nine reviewed migrations complete in order.
+   - Success: all ten reviewed migrations complete in order.
    - Stop: error, drift, or any destructive rollback attempt.
 7. Deploy the exact image.
    - Prerequisites: image publication approval and deployment approval are separate.

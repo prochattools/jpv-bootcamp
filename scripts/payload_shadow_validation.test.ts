@@ -84,6 +84,7 @@ async function main(): Promise<void> {
         '20260701_201500_member_email_verification',
         '20260702_001500_member_account_action_purposes',
         '20260703_000000_partner_affiliate_operations',
+        '20260704_090000_partner_schema_reconciliation',
       ],
       operator: 'migration-op',
       approvalReference: 'approval-1',

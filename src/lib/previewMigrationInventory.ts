@@ -110,6 +110,16 @@ export const PREVIEW_MIGRATION_INVENTORY = [
     verificationChecks: ['registry-match', 'ordered-exactly', 'partner-operations'],
     authorizationCategory: 'payloadMigration',
   },
+  {
+    name: '20260704_090000_partner_schema_reconciliation',
+    system: 'payload',
+    order: 10,
+    purpose: 'Reconcile partner affiliate array tables and application snapshot columns with the current Payload schema.',
+    requiredForPreview: true,
+    rollbackRisk: 'data_loss',
+    verificationChecks: ['registry-match', 'ordered-exactly', 'partner-schema-reconciliation'],
+    authorizationCategory: 'payloadMigration',
+  },
 ] as const satisfies readonly PreviewMigrationInventoryEntry[]
 
 export const PREVIEW_MIGRATION_INVENTORY_VERSION = 1

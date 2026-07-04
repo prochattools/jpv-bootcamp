@@ -39,12 +39,32 @@ Do not create another general Payload roadmap. New work must first be added here
 
 | Surface | Route | Audience | Purpose |
 |---|---|---|---|
-| Public website | `/` | Everyone | Marketing, pricing, public content, and login entry |
-| Shared login | `/login` | Administrators and members | Direct each verified identity to the correct area |
-| Administrator back office | `/admin` | Verified administrators | Content, members, access, billing, community, affiliates, audit, and operations |
-| Member portal | `/portal` | Verified members | Courses, community, groups, account, billing, and partner activity |
+| Public website | `/` | Everyone | Marketing, pricing, public content, and member portal entry |
+| Administrator back office | `/admin` | Verified administrators | Content, members, access, billing, community, affiliates, audit, operations, and health triage |
+| Member/student portal | `/portal` | Verified members and students | The single member-facing entry point for sign-in, free registration, courses, community, account, billing, and partner activity |
+| Compatibility redirects | `/login`, `/learn/login`, `/register` | Existing links and tests | Preserve older links but direct users toward the simpler `/portal` member flow |
 
-Administrator accounts and member identities are separate security domains, even when one person holds both. Members never receive administrator access merely because they have an active member record.
+Administrator accounts and member identities are separate security domains, even when one person holds both. Members never receive administrator access merely because they have an active member record. The product rule is intentionally simple: humans see two sign-in doors only — `/admin` for operators and `/portal` for students/members. Supporting routes may exist for compatibility, but new navigation should point members to `/portal`.
+
+### Route and dashboard design rationale
+
+Mature learning platforms separate operator work from learner work. Moodle’s dashboard pattern centers course overview, deadlines, and activity blocks rather than raw navigation lists; Canvas exposes course progress, reports, and analytics for instructors/admins; commercial platforms such as Thinkific/Kajabi separate owner/admin capabilities from learner-facing access and commerce operations. JPV Bootcamp follows the same principle with fewer surfaces: `/admin` should be an operational cockpit, and `/portal` should be the single member/student doorway.
+
+Admin dashboard cards should therefore show decision-oriented signals first: platform errors, failed deliveries, active members, active subscriptions, pending partner applications, affiliate commission exceptions, upcoming course/call items, and recent community moderation needs. The dashboard should not primarily duplicate every collection card already present in the sidebar. Affiliates represent JPV’s tracking and commission side of member acquisition. Partners represent third-party organizations or destinations that receive applications/leads. They can share a navigation group, but their collection names and dashboard descriptions must make this distinction clear.
+
+### Member authentication and free registration contract
+
+`/admin` is the only administrator login. `/portal` is the canonical member/student entry point and must support sign in, free account creation, forgot password, and resend-verification paths. `/register` may remain as a compatibility or deep-link route for the free account form until registration is portal-native. `/login` and `/learn/login` are transitional shared/member routes only; preferred behavior is to redirect or link into `/portal?mode=login`.
+
+New students can create a Free account without payment. Pro and VIP are paid upgrade-only plans and must not appear as selectors in free registration. Registration creates a pending member and requires email verification before sign-in. Successful registration copy must state that the free account was created and verification is required. Duplicate-account copy must guide the user to sign in or resend verification without using ambiguous eligible-account language.
+
+### Partner and affiliate domain language
+
+Affiliates are the internal referral and commission programme: referral codes, referred members, commission rows, payout state, and administrator review. Partner Affiliates are external partner organizations or destinations: partner profile, application mode, recipient emails, trusted destination or webhook, public partner applications, and operations handoff. They share an operations group because the workflows meet at acquisition and reporting, but they are not duplicate collections.
+
+### Staging-only partner schema recovery
+
+The `jpvbootcamp_staging` schema may be repaired, reconciled, or reset for staging validation when explicitly authorized. The true production database, `public` schema, and any non-staging schema remain outside this boundary. Partner schema drift must be corrected by reviewed Payload migrations that derive the active schema from `DATABASE_URL`/runtime configuration and do not hardcode production schema names.
 
 ## Binding security rules
 
@@ -102,7 +122,7 @@ Administrator accounts and member identities are separate security domains, even
   - Billing summary UI added (shows plan, status, renewal date, cancellation);
   - Type-check and build validated;
   - Next slice: billing communications, payment failure handling, cutover validation.
-- The reviewed Payload migration inventory is now unified in code and release policy; the nine reviewed migrations are ordered canonically, but execution remains pending and no live migration has been authorized.
+- The reviewed Payload migration inventory is now unified in code and release policy; the ten reviewed migrations are ordered canonically, with partner schema reconciliation last. Execution remains pending until the staging schema operation is explicitly run and verified.
 - The affiliate Payload migration still requires explicit staging application and verification.
 - Genuine deferred product work after account-security email verification is billing self-service, then community publishing, partner application delivery, and cutover.
 

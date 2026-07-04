@@ -254,6 +254,7 @@ The reviewed Payload migration inventory used for preview readiness is unified i
 7. `20260701_201500_member_email_verification`
 8. `20260702_001500_member_account_action_purposes`
 9. `20260703_000000_partner_affiliate_operations`
+10. `20260704_090000_partner_schema_reconciliation`
 
 This inventory is a repository-only contract for ordering, validation, and preview planning. It does not imply that any migration has been executed, applied, or approved for live rollout.
 

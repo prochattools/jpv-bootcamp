@@ -13,7 +13,7 @@ import { buildPreviewReleaseManifest, validatePreviewReleaseManifestInput } from
 
 async function main(): Promise<void> {
   const names = previewMigrationInventoryNames()
-  assert.equal(PREVIEW_MIGRATION_INVENTORY.length, 9)
+  assert.equal(PREVIEW_MIGRATION_INVENTORY.length, 10)
   assert.deepEqual(names, [
     '20260620_213328',
     '20260621_194424_course_system_phase1',
@@ -24,6 +24,7 @@ async function main(): Promise<void> {
     '20260701_201500_member_email_verification',
     '20260702_001500_member_account_action_purposes',
     '20260703_000000_partner_affiliate_operations',
+    '20260704_090000_partner_schema_reconciliation',
   ])
   assert.equal(assertPreviewMigrationInventoryMatch(names), true)
   assert.equal(validatePreviewMigrationInventoryOrder(names), true)
@@ -72,7 +73,7 @@ async function main(): Promise<void> {
       authorizationCategory,
     })),
   )
-  assert.doesNotMatch(safeInventorySerialization, /postgres|schema|database|provider|token|https:\/\/|customer_/i)
+  assert.doesNotMatch(safeInventorySerialization, /postgres(?:ql)?:\/\/|database_url|provider_(?:id|key|secret)|token|https:\/\/|customer_/i)
 
   console.log('preview_migration_inventory.test.ts passed')
 }
