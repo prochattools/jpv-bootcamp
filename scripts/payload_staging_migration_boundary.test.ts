@@ -10,12 +10,12 @@ function expectError(fn: () => unknown, pattern: RegExp) {
 }
 
 const accepted = parseStagingDatabaseUrl(
-  'postgresql://staging_user:super-secret@db.preview.internal:5432/jpv_preview?schema=jpvbootcamp_staging',
+  'postgresql://staging_user:super-secret@db.preview.internal:5432/jpvbootcamp?schema=jpvbootcamp_staging',
 )
 
 assert.deepEqual(accepted, {
   hostname: 'db.preview.internal',
-  database: 'jpv_preview',
+  database: 'jpvbootcamp',
   schema: 'jpvbootcamp_staging',
 })
 
@@ -41,6 +41,10 @@ expectError(() => parseStagingDatabaseUrl('not a URL'), /DATABASE_URL is malform
 expectError(
   () => parseStagingDatabaseUrl('postgresql://user:pass@db:5432/?schema=jpvbootcamp_staging'),
   /database name is missing/,
+)
+expectError(
+  () => parseStagingDatabaseUrl('postgresql://user:pass@db:5432/other_db?schema=jpvbootcamp_staging'),
+  /database must be exactly jpvbootcamp/,
 )
 
 assert.equal(resolveMode(['--status']), 'status')

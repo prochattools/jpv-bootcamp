@@ -1,4 +1,5 @@
 const REQUIRED_SCHEMA = 'jpvbootcamp_staging'
+const REQUIRED_DATABASE = 'jpvbootcamp'
 
 export type StagingMigrationMode = 'status' | 'apply'
 
@@ -38,6 +39,9 @@ export function parseStagingDatabaseUrl(
 
   const database = parsed.pathname.replace(/^\//, '')
   if (!database) throw new Error('DATABASE_URL database name is missing')
+  if (database !== REQUIRED_DATABASE) {
+    throw new Error(`Refusing Payload migration: database must be exactly ${REQUIRED_DATABASE}`)
+  }
 
   return {
     hostname: parsed.hostname,
