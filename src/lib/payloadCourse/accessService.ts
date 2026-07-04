@@ -67,6 +67,7 @@ export type PayloadCourseWriteAPI = PayloadCourseAccessAPI & {
     id: any
     data: any
     overrideAccess?: boolean
+    overrideLock?: boolean
   }): Promise<any>
 }
 

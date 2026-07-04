@@ -56,6 +56,7 @@ function matchesWhere(doc: PayloadDocument, where?: Record<string, unknown>): bo
 
 class FakePayload implements PayloadCourseWriteAPI {
   private nextId = 100
+  updates: Array<Record<string, unknown>> = []
 
   constructor(private readonly collections: CollectionMap) {}
 
@@ -91,6 +92,7 @@ class FakePayload implements PayloadCourseWriteAPI {
   }
 
   async update(args: { collection: string; id: PayloadId; data: Record<string, unknown> }) {
+    this.updates.push(args as Record<string, unknown>)
     const docs = this.collections[args.collection] ?? []
     const index = docs.findIndex((doc) => String(doc.id) === String(args.id))
     if (index < 0) throw new Error(`missing ${args.collection}:${args.id}`)
@@ -488,6 +490,7 @@ async function run() {
   await testSensitiveAccountLinkRedaction()
   await testStaleSensitiveAccountLinkCleanup()
   await testPasswordWorkflowEmailRedactionAfterDelivery()
+  await testEmailSenderBypassesDocumentLocks()
 }
 
 run()
@@ -555,3 +558,45 @@ async function testPasswordWorkflowEmailRedactionAfterDelivery() {
   assert.equal(JSON.stringify(stored).includes('raw-sensitive-token'), false)
 }
 
+async function testEmailSenderBypassesDocumentLocks() {
+  const payload = new FakePayload({
+    payload_email_templates: [
+      {
+        id: 'template_lock',
+        templateKey: 'subscription-started',
+        status: 'active',
+        subject: 'Lock override test',
+        textBody: 'Hello {{plan}}',
+      },
+    ],
+    payload_email_events: [
+      {
+        id: 'event_lock',
+        toEmail: 'student@example.com',
+        templateKey: 'subscription-started',
+        deliveryStatus: 'queued',
+        dedupeKey: 'subscription-started:lock-test',
+        metadata: {
+          plan: 'pro',
+        },
+        createdAt: '2026-07-04T00:00:00.000Z',
+      },
+    ],
+  })
+
+  const result = await sendQueuedPayloadEmail(payload, 'event_lock', {
+    resend: {
+      emails: {
+        async send() {
+          return { data: { id: 'email_lock' } }
+        },
+      },
+    },
+    emailConfig: { from: 'JPV Bootcamp <support@example.com>' },
+  })
+
+  assert.equal(result.status, 'sent')
+  assert.equal(payload.updates.length, 2)
+  assert.equal(payload.updates.every((update) => update.overrideAccess === true), true)
+  assert.equal(payload.updates.every((update) => update.overrideLock === true), true)
+}

@@ -50,6 +50,7 @@ export async function redactDeliveredResetLink(
         },
       },
       overrideAccess: true,
+      overrideLock: true,
     })
   }
 
@@ -60,5 +61,6 @@ export async function redactDeliveredResetLink(
       metadata: safeMetadata,
     },
     overrideAccess: true,
+    overrideLock: true,
   })
 }

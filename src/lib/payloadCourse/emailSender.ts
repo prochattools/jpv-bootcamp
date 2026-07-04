@@ -178,6 +178,7 @@ async function updateEmailEvent(
     id: eventId,
     data,
     overrideAccess: true,
+    overrideLock: true,
   })
 }
 
