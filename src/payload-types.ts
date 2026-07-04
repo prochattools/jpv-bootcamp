@@ -80,6 +80,7 @@ export interface Config {
     payload_members: PayloadMember;
     payload_member_profiles: PayloadMemberProfile;
     payload_member_security_events: PayloadMemberSecurityEvent;
+    payload_member_verification_tokens: PayloadMemberVerificationToken;
     payload_private_media: PayloadPrivateMedia;
     payload_lesson_resources: PayloadLessonResource;
     payload_course_enrollments: PayloadCourseEnrollment;
@@ -91,6 +92,9 @@ export interface Config {
     payload_affiliates: PayloadAffiliate;
     payload_affiliate_referrals: PayloadAffiliateReferral;
     payload_affiliate_commissions: PayloadAffiliateCommission;
+    payload_partner_affiliates: PayloadPartnerAffiliate;
+    payload_partner_applications: PayloadPartnerApplication;
+    payload_partner_events: PayloadPartnerEvent;
     payload_billing_accounts: PayloadBillingAccount;
     payload_subscriptions: PayloadSubscription;
     payload_payments: PayloadPayment;
@@ -131,6 +135,7 @@ export interface Config {
     payload_members: PayloadMembersSelect<false> | PayloadMembersSelect<true>;
     payload_member_profiles: PayloadMemberProfilesSelect<false> | PayloadMemberProfilesSelect<true>;
     payload_member_security_events: PayloadMemberSecurityEventsSelect<false> | PayloadMemberSecurityEventsSelect<true>;
+    payload_member_verification_tokens: PayloadMemberVerificationTokensSelect<false> | PayloadMemberVerificationTokensSelect<true>;
     payload_private_media: PayloadPrivateMediaSelect<false> | PayloadPrivateMediaSelect<true>;
     payload_lesson_resources: PayloadLessonResourcesSelect<false> | PayloadLessonResourcesSelect<true>;
     payload_course_enrollments: PayloadCourseEnrollmentsSelect<false> | PayloadCourseEnrollmentsSelect<true>;
@@ -142,6 +147,9 @@ export interface Config {
     payload_affiliates: PayloadAffiliatesSelect<false> | PayloadAffiliatesSelect<true>;
     payload_affiliate_referrals: PayloadAffiliateReferralsSelect<false> | PayloadAffiliateReferralsSelect<true>;
     payload_affiliate_commissions: PayloadAffiliateCommissionsSelect<false> | PayloadAffiliateCommissionsSelect<true>;
+    payload_partner_affiliates: PayloadPartnerAffiliatesSelect<false> | PayloadPartnerAffiliatesSelect<true>;
+    payload_partner_applications: PayloadPartnerApplicationsSelect<false> | PayloadPartnerApplicationsSelect<true>;
+    payload_partner_events: PayloadPartnerEventsSelect<false> | PayloadPartnerEventsSelect<true>;
     payload_billing_accounts: PayloadBillingAccountsSelect<false> | PayloadBillingAccountsSelect<true>;
     payload_subscriptions: PayloadSubscriptionsSelect<false> | PayloadSubscriptionsSelect<true>;
     payload_payments: PayloadPaymentsSelect<false> | PayloadPaymentsSelect<true>;
@@ -501,6 +509,8 @@ export interface PayloadMember {
   collection: 'payload_members';
 }
 /**
+ * Member profile details and communication preferences.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload_member_profiles".
  */
@@ -531,9 +541,21 @@ export interface PayloadMemberSecurityEvent {
     | 'email_verified'
     | 'password_reset_requested'
     | 'password_changed'
+    | 'billing_payment_failed'
+    | 'billing_payment_recovered'
+    | 'billing_payment_refunded'
+    | 'billing_payment_disputed'
+    | 'billing_dispute_resolved'
+    | 'invitation_created'
+    | 'invitation_consumed'
+    | 'profile_changed'
+    | 'email_change_requested'
+    | 'email_changed'
     | 'login_failed'
     | 'account_blocked'
-    | 'account_restored';
+    | 'account_suspended'
+    | 'account_restored'
+    | 'account_deleted';
   source?: string | null;
   ipAddress?: string | null;
   userAgent?: string | null;
@@ -550,6 +572,34 @@ export interface PayloadMemberSecurityEvent {
   createdAt: string;
 }
 /**
+ * Digest-only, single-use member verification records. Plaintext tokens are never stored.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_member_verification_tokens".
+ */
+export interface PayloadMemberVerificationToken {
+  id: number;
+  member: number | PayloadMember;
+  email: string;
+  purpose:
+    | 'member_email_verification'
+    | 'member_invitation'
+    | 'set_password'
+    | 'password_reset'
+    | 'email_change_confirmation';
+  tokenDigest: string;
+  expiresAt: string;
+  consumedAt?: string | null;
+  invalidatedAt?: string | null;
+  lastSentAt?: string | null;
+  sendAttempts: number;
+  idempotencyKey: string;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Private media used for protected lesson resources.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload_private_media".
  */
@@ -572,6 +622,8 @@ export interface PayloadPrivateMedia {
   focalY?: number | null;
 }
 /**
+ * Course file and protected resource records.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload_lesson_resources".
  */
@@ -598,6 +650,8 @@ export interface PayloadLessonResource {
   createdAt: string;
 }
 /**
+ * Course enrollment projections from billing and manual grants.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload_course_enrollments".
  */
@@ -629,6 +683,8 @@ export interface PayloadCourseEnrollment {
   createdAt: string;
 }
 /**
+ * Member lesson progress and completion state.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload_lesson_progress".
  */
@@ -655,6 +711,8 @@ export interface PayloadLessonProgress {
   createdAt: string;
 }
 /**
+ * Member access groups used by course, community, and billing rules.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload_access_groups".
  */
@@ -682,6 +740,8 @@ export interface PayloadAccessGroup {
   createdAt: string;
 }
 /**
+ * Access policies that resolve whether a member may view a resource.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload_access_policies".
  */
@@ -719,6 +779,8 @@ export interface PayloadAccessPolicy {
   createdAt: string;
 }
 /**
+ * Access grants issued directly or through group membership.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload_access_grants".
  */
@@ -758,6 +820,8 @@ export interface PayloadAccessGrant {
   createdAt: string;
 }
 /**
+ * Entitlement audit trail for access decisions.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload_entitlement_events".
  */
@@ -783,6 +847,8 @@ export interface PayloadEntitlementEvent {
   createdAt: string;
 }
 /**
+ * Internal referral programme records: affiliate members, referral codes, referral history, commission state, and payout review.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload_affiliates".
  */
@@ -796,6 +862,8 @@ export interface PayloadAffiliate {
   createdAt: string;
 }
 /**
+ * Internal affiliate referral history and conversion state for the referral and commission programme.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload_affiliate_referrals".
  */
@@ -810,6 +878,8 @@ export interface PayloadAffiliateReferral {
   createdAt: string;
 }
 /**
+ * Internal affiliate commission rows, status, and administrator payout review.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload_affiliate_commissions".
  */
@@ -825,6 +895,130 @@ export interface PayloadAffiliateCommission {
   createdAt: string;
 }
 /**
+ * External partner organizations and destinations: profiles, recipient emails, trusted destinations, webhook rules, and public partner application handoff.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_partner_affiliates".
+ */
+export interface PayloadPartnerAffiliate {
+  id: number;
+  name: string;
+  slug: string;
+  status: 'draft' | 'active' | 'paused' | 'archived';
+  category: string;
+  summary?: string | null;
+  logo?: string | null;
+  applicationMode: 'redirect' | 'email' | 'webhook' | 'manual_export';
+  affiliateUrl?: string | null;
+  recipientEmails?:
+    | {
+        email: string;
+        id?: string | null;
+      }[]
+    | null;
+  webhookEndpoint?: string | null;
+  requiredFields?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  privacyNotice?: string | null;
+  sortOrder?: number | null;
+  externalReference?: string | null;
+  metadata?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Public partner application history, delivery state, retries, export readiness, and operations handoff.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_partner_applications".
+ */
+export interface PayloadPartnerApplication {
+  id: number;
+  displayName: string;
+  member: number | PayloadMember;
+  partner: number | PayloadPartnerAffiliate;
+  status: 'submitted' | 'delivery_pending' | 'delivered' | 'delivery_failed';
+  submittedAt?: string | null;
+  deliveredAt?: string | null;
+  applicationReference?: string | null;
+  memberNameSnapshot?: string | null;
+  memberEmailSnapshot?: string | null;
+  memberPhoneSnapshot?: string | null;
+  partnerSlugSnapshot?: string | null;
+  partnerNameSnapshot?: string | null;
+  companySnapshot?: string | null;
+  countrySnapshot?: string | null;
+  experienceSnapshot?: string | null;
+  messageSnapshot?: string | null;
+  consentAcceptedAt?: string | null;
+  deliveryMethod: 'redirect' | 'email' | 'webhook' | 'manual_export';
+  deliveryAttempts: number;
+  lastDeliveryError?: string | null;
+  trustedDestinationSnapshot?: string | null;
+  source?: string | null;
+  legacyWpUserId?: number | null;
+  legacyReference?: string | null;
+  internalNotes?: string | null;
+  metadata?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Partner delivery and application event history for external partner operations.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_partner_events".
+ */
+export interface PayloadPartnerEvent {
+  id: number;
+  displayName: string;
+  partner?: (number | null) | PayloadPartnerAffiliate;
+  application?: (number | null) | PayloadPartnerApplication;
+  member?: (number | null) | PayloadMember;
+  eventType: string;
+  sourceRoute?: string | null;
+  status?: string | null;
+  deliveryMethod?: ('redirect' | 'email' | 'webhook' | 'manual_export') | null;
+  attempt?: number | null;
+  deliveryError?: string | null;
+  metadata?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Billing account projections mirrored from Stripe and member actions.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload_billing_accounts".
  */
@@ -851,6 +1045,8 @@ export interface PayloadBillingAccount {
   createdAt: string;
 }
 /**
+ * Subscription projections and current access tier.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload_subscriptions".
  */
@@ -884,6 +1080,8 @@ export interface PayloadSubscription {
   createdAt: string;
 }
 /**
+ * Payment history and refund/dispute projections.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload_payments".
  */
@@ -896,7 +1094,7 @@ export interface PayloadPayment {
   stripePaymentIntentId?: string | null;
   amount: number;
   currency: string;
-  status: 'pending' | 'paid' | 'failed' | 'refunded' | 'voided';
+  status: 'pending' | 'paid' | 'failed' | 'refunded' | 'disputed' | 'dispute_resolved' | 'voided';
   paidAt?: string | null;
   failedAt?: string | null;
   failureReason?: string | null;
@@ -952,6 +1150,9 @@ export interface PayloadBillingAction {
     | 'subscription_canceled'
     | 'payment_succeeded'
     | 'payment_failed'
+    | 'payment_refunded'
+    | 'payment_disputed'
+    | 'dispute_resolved'
     | 'access_blocked'
     | 'access_restored';
   status: 'pending' | 'completed' | 'failed' | 'skipped';
@@ -1137,6 +1338,8 @@ export interface PayloadAdminNotification {
   createdAt: string;
 }
 /**
+ * Member group records used by access and moderation workflows.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload_member_groups".
  */
@@ -1161,6 +1364,8 @@ export interface PayloadMemberGroup {
   createdAt: string;
 }
 /**
+ * Community spaces and their visibility rules.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload_spaces".
  */
@@ -1188,6 +1393,8 @@ export interface PayloadSpace {
   createdAt: string;
 }
 /**
+ * Community membership records.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload_space_memberships".
  */
@@ -1213,6 +1420,8 @@ export interface PayloadSpaceMembership {
   createdAt: string;
 }
 /**
+ * Community post records and moderation state.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload_space_posts".
  */
@@ -1495,6 +1704,10 @@ export interface PayloadLockedDocument {
         value: number | PayloadMemberSecurityEvent;
       } | null)
     | ({
+        relationTo: 'payload_member_verification_tokens';
+        value: number | PayloadMemberVerificationToken;
+      } | null)
+    | ({
         relationTo: 'payload_private_media';
         value: number | PayloadPrivateMedia;
       } | null)
@@ -1537,6 +1750,18 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'payload_affiliate_commissions';
         value: number | PayloadAffiliateCommission;
+      } | null)
+    | ({
+        relationTo: 'payload_partner_affiliates';
+        value: number | PayloadPartnerAffiliate;
+      } | null)
+    | ({
+        relationTo: 'payload_partner_applications';
+        value: number | PayloadPartnerApplication;
+      } | null)
+    | ({
+        relationTo: 'payload_partner_events';
+        value: number | PayloadPartnerEvent;
       } | null)
     | ({
         relationTo: 'payload_billing_accounts';
@@ -1885,6 +2110,24 @@ export interface PayloadMemberSecurityEventsSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_member_verification_tokens_select".
+ */
+export interface PayloadMemberVerificationTokensSelect<T extends boolean = true> {
+  member?: T;
+  email?: T;
+  purpose?: T;
+  tokenDigest?: T;
+  expiresAt?: T;
+  consumedAt?: T;
+  invalidatedAt?: T;
+  lastSentAt?: T;
+  sendAttempts?: T;
+  idempotencyKey?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload_private_media_select".
  */
 export interface PayloadPrivateMediaSelect<T extends boolean = true> {
@@ -2063,6 +2306,87 @@ export interface PayloadAffiliateCommissionsSelect<T extends boolean = true> {
   amountMinor?: T;
   currency?: T;
   status?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_partner_affiliates_select".
+ */
+export interface PayloadPartnerAffiliatesSelect<T extends boolean = true> {
+  name?: T;
+  slug?: T;
+  status?: T;
+  category?: T;
+  summary?: T;
+  logo?: T;
+  applicationMode?: T;
+  affiliateUrl?: T;
+  recipientEmails?:
+    | T
+    | {
+        email?: T;
+        id?: T;
+      };
+  webhookEndpoint?: T;
+  requiredFields?: T;
+  privacyNotice?: T;
+  sortOrder?: T;
+  externalReference?: T;
+  metadata?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_partner_applications_select".
+ */
+export interface PayloadPartnerApplicationsSelect<T extends boolean = true> {
+  displayName?: T;
+  member?: T;
+  partner?: T;
+  status?: T;
+  submittedAt?: T;
+  deliveredAt?: T;
+  applicationReference?: T;
+  memberNameSnapshot?: T;
+  memberEmailSnapshot?: T;
+  memberPhoneSnapshot?: T;
+  partnerSlugSnapshot?: T;
+  partnerNameSnapshot?: T;
+  companySnapshot?: T;
+  countrySnapshot?: T;
+  experienceSnapshot?: T;
+  messageSnapshot?: T;
+  consentAcceptedAt?: T;
+  deliveryMethod?: T;
+  deliveryAttempts?: T;
+  lastDeliveryError?: T;
+  trustedDestinationSnapshot?: T;
+  source?: T;
+  legacyWpUserId?: T;
+  legacyReference?: T;
+  internalNotes?: T;
+  metadata?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_partner_events_select".
+ */
+export interface PayloadPartnerEventsSelect<T extends boolean = true> {
+  displayName?: T;
+  partner?: T;
+  application?: T;
+  member?: T;
+  eventType?: T;
+  sourceRoute?: T;
+  status?: T;
+  deliveryMethod?: T;
+  attempt?: T;
+  deliveryError?: T;
+  metadata?: T;
   updatedAt?: T;
   createdAt?: T;
 }
