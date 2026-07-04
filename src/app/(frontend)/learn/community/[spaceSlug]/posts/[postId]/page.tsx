@@ -101,7 +101,7 @@ export default async function LearnCommunityPostPage({
 
   if (!member) {
     redirect(
-      `/learn/login?next=/learn/community/${encodeURIComponent(spaceSlug)}/posts/${encodeURIComponent(postId)}`
+      '/portal?mode=login'
     )
   }
 

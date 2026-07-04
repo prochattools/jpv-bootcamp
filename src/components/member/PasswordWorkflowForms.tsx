@@ -42,7 +42,7 @@ function AuthCard({
         <p className='mt-3 text-center text-sm leading-6 text-neutral-600'>{description}</p>
         {children}
         <p className='mt-6 text-center text-sm text-neutral-600'>
-          <Link className='font-semibold text-neutral-950 underline' href='/login'>
+          <Link className='font-semibold text-neutral-950 underline' href='/portal?mode=login'>
             Back to sign in
           </Link>
         </p>

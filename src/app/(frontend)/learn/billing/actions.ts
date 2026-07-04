@@ -11,7 +11,7 @@ import {
 export async function openMemberBillingPortalAction(): Promise<void> {
   const { member, payload } = await getCurrentPayloadMember()
   if (!member) {
-    redirect('/learn/login?next=/learn/billing')
+    redirect('/portal?mode=login')
   }
 
   let portalUrl: string

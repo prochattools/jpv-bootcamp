@@ -120,7 +120,7 @@ export async function submitCommunityPost(
   const { member, payload } = await getCurrentPayloadMember()
 
   if (!member) {
-    redirect(`/learn/login?next=${encodeURIComponent(destination)}`)
+    redirect('/portal?mode=login')
   }
 
   try {
@@ -158,7 +158,7 @@ export async function submitCommunityComment(
   const { member, payload } = await getCurrentPayloadMember()
 
   if (!member) {
-    redirect(`/learn/login?next=${encodeURIComponent(destination)}`)
+    redirect('/portal?mode=login')
   }
 
   try {

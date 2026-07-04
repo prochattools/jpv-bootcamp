@@ -8,6 +8,8 @@ type RegistrationResult = {
   error?: string
 }
 
+const FALLBACK_MESSAGE = 'Your account request was received. Check your email for the next verification step.'
+
 export function MemberRegistrationForm() {
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
@@ -45,12 +47,12 @@ export function MemberRegistrationForm() {
       } catch {
         payload = null
       }
-      setMessage(payload?.message ?? 'If an eligible account exists, verification instructions will be sent.')
+      setMessage(payload?.message ?? FALLBACK_MESSAGE)
       if (response.ok) {
-        window.location.assign('/login?registration=success')
+        window.location.assign('/portal?mode=login&registration=success')
       }
     } catch {
-      setMessage('If an eligible account exists, verification instructions will be sent.')
+      setMessage('Your account request could not be completed from this environment. Contact support or try again later.')
     } finally {
       setSubmitting(false)
     }

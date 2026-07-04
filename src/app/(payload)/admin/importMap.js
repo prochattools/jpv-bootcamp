@@ -23,7 +23,7 @@ import { BoldFeatureClient as BoldFeatureClient_e70f5e05f09f93e00b997edb1ef0c864
 import { ItalicFeatureClient as ItalicFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
 import { JPVAdminIcon as JPVAdminIcon_e1a31f211abab0fe933e22515323266f } from '../../../components/payload/JPVAdminBranding'
 import { JPVAdminLogo as JPVAdminLogo_e1a31f211abab0fe933e22515323266f } from '../../../components/payload/JPVAdminBranding'
-import { JPVAdminLoginBranding as JPVAdminLoginBranding_e1a31f211abab0fe933e22515323266f } from '../../../components/payload/JPVAdminBranding'
+import { JPVAdminDashboard as JPVAdminDashboard_938699ac8009387ebe0ba6157521c00a } from '../../../components/payload/JPVAdminDashboard'
 import { CollectionCards as CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1 } from '@payloadcms/next/rsc'
 
 /** @type import('payload').ImportMap */
@@ -53,6 +53,6 @@ export const importMap = {
   "@payloadcms/richtext-lexical/client#ItalicFeatureClient": ItalicFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
   "./components/payload/JPVAdminBranding#JPVAdminIcon": JPVAdminIcon_e1a31f211abab0fe933e22515323266f,
   "./components/payload/JPVAdminBranding#JPVAdminLogo": JPVAdminLogo_e1a31f211abab0fe933e22515323266f,
-  "./components/payload/JPVAdminBranding#JPVAdminLoginBranding": JPVAdminLoginBranding_e1a31f211abab0fe933e22515323266f,
+  "./components/payload/JPVAdminDashboard#JPVAdminDashboard": JPVAdminDashboard_938699ac8009387ebe0ba6157521c00a,
   "@payloadcms/next/rsc#CollectionCards": CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1
 }

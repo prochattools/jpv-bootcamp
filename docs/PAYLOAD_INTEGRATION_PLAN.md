@@ -122,9 +122,10 @@ The `jpvbootcamp_staging` schema may be repaired, reconciled, or reset for stagi
   - Billing summary UI added (shows plan, status, renewal date, cancellation);
   - Type-check and build validated;
   - Next slice: billing communications, payment failure handling, cutover validation.
-- The reviewed Payload migration inventory is now unified in code and release policy; the ten reviewed migrations are ordered canonically, with partner schema reconciliation last. Execution remains pending until the staging schema operation is explicitly run and verified.
-- The affiliate Payload migration still requires explicit staging application and verification.
-- Genuine deferred product work after account-security email verification is billing self-service, then community publishing, partner application delivery, and cutover.
+- The reviewed Payload migration inventory is now unified in code and release policy; the ten reviewed migrations are ordered canonically, with partner schema reconciliation last. The staging schema `jpvbootcamp_staging` has been explicitly verified with all ten reviewed Payload migrations marked ran.
+- Partner/Affiliate staging schema drift was reconciled by `20260704_090000_partner_schema_reconciliation`; the missing Partner Affiliate recipient-email array table and Partner Application snapshot columns are present in staging.
+- Duplicate admin login branding, portal-native member login mode, free-registration copy, operational admin dashboard cards, and clearer Affiliates vs Partner Affiliates admin descriptions are implemented in source and await deployment to staging.
+- Genuine deferred product work after this stabilization slice is deployment of the updated image, authenticated live UI retest, provider/email delivery verification, rollback rehearsal, and final cutover.
 
 ## Execution roadmap
 

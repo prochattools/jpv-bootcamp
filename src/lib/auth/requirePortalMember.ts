@@ -27,7 +27,7 @@ export async function requirePortalMember(
     decision.identity.kind !== 'member' ||
     !session.member?.id
   ) {
-    redirect(`/login?next=${encodeURIComponent(requestedPath)}`)
+    redirect(`/portal?mode=login&next=${encodeURIComponent(requestedPath)}`)
   }
 
   const payload = await getPayload({ config })
@@ -40,7 +40,7 @@ export async function requirePortalMember(
 
   const memberEmail = typeof member?.email === 'string' ? member.email : ''
   if (!memberEmail) {
-    redirect(`/login?next=${encodeURIComponent(requestedPath)}`)
+    redirect(`/portal?mode=login&next=${encodeURIComponent(requestedPath)}`)
   }
 
   return {

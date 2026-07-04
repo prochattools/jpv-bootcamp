@@ -653,7 +653,7 @@ function testPageActionAndPostingSources(): void {
     /formData\.get\(['"](?:memberId|author|role|status|visibility|moderationStatus|rateLimit|audit)/
   )
   const postCatch = actions.indexOf('export async function submitCommunityPost')
-  const postAuthRedirect = actions.indexOf('redirect(`/learn/login', postCatch)
+  const postAuthRedirect = actions.indexOf("redirect('/portal?mode=login')", postCatch)
   const postTry = actions.indexOf('try {', postCatch)
   assert.ok(postAuthRedirect > postCatch && postAuthRedirect < postTry)
   const successRedirect = actions.indexOf('redirect(`${destination}?submission=pending`)', postTry)

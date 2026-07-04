@@ -26,7 +26,7 @@ export default async function LearnCoursePage({
   const { courseSlug } = await params
   const { member, payload } = await getCurrentPayloadMember()
   if (!member) {
-    redirect(`/learn/login?next=/learn/${courseSlug}`)
+    redirect('/portal?mode=login')
   }
 
   const email = typeof member.email === 'string' ? member.email : null

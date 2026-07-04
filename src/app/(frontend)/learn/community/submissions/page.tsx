@@ -70,7 +70,7 @@ export default async function CommunitySubmissionsPage() {
   const { member, payload } = await getCurrentPayloadMember()
 
   if (!member) {
-    redirect(`/learn/login?next=${encodeURIComponent(destination)}`)
+    redirect('/portal?mode=login')
   }
 
   const submissions = await getMemberCommunitySubmissions(payload, member.id)

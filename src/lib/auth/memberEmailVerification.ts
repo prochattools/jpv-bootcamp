@@ -75,7 +75,7 @@ export type VerificationServiceOptions = {
 }
 
 export type VerificationRequestResult = {
-  accepted: true
+  accepted: boolean
   message: string
 }
 
@@ -246,6 +246,7 @@ export function createMemberEmailVerificationService(options: VerificationServic
           occurredAt: currentTime.toISOString(),
           reason: 'transport_error',
         })
+        return { accepted: false, message: genericMessage }
       }
 
       return { accepted: true, message: genericMessage }

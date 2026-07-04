@@ -45,7 +45,7 @@ async function submitModerationDecision(formData: FormData): Promise<void> {
   const destination = '/learn/community/moderation'
   const { member, payload } = await getCurrentPayloadMember()
   if (!member) {
-    redirect(`/learn/login?next=${encodeURIComponent(destination)}`)
+    redirect('/portal?mode=login')
   }
 
   const kind = formText(formData, 'kind')
@@ -232,7 +232,7 @@ export default async function CommunityModerationPage({ searchParams }: PageProp
   const { member, payload } = await getCurrentPayloadMember()
 
   if (!member) {
-    redirect('/learn/login?next=/learn/community/moderation')
+    redirect('/portal?mode=login')
   }
 
   const inbox = await getPendingCommunityModerationItems(payload, {

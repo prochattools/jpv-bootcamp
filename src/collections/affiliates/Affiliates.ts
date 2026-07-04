@@ -21,7 +21,7 @@ export const PayloadAffiliates: CollectionConfig = {
     group: affiliateGroup,
     useAsTitle: 'displayName',
     defaultColumns: ['displayName', 'member', 'referralCode', 'status', 'updatedAt'],
-    description: 'Affiliate, referral, and commission records for partner operations. These are read-only operational views for administrators.',
+    description: 'Internal referral programme records: affiliate members, referral codes, referral history, commission state, and payout review.',
   },
   access: adminOnlyCollectionAccess,
   fields: [
@@ -67,7 +67,7 @@ export const PayloadAffiliateReferrals: CollectionConfig = {
     group: affiliateGroup,
     useAsTitle: 'displayName',
     defaultColumns: ['displayName', 'affiliate', 'referredMember', 'status', 'convertedAt'],
-    description: 'Tracks affiliate referral history and conversion state.',
+    description: 'Internal affiliate referral history and conversion state for the referral and commission programme.',
   },
   access: adminOnlyCollectionAccess,
   fields: [
@@ -112,7 +112,7 @@ export const PayloadAffiliateCommissions: CollectionConfig = {
     group: affiliateGroup,
     useAsTitle: 'displayName',
     defaultColumns: ['displayName', 'affiliate', 'referral', 'amountMinor', 'currency', 'status'],
-    description: 'Tracks commission rows and payout review state.',
+    description: 'Internal affiliate commission rows, status, and administrator payout review.',
   },
   access: adminOnlyCollectionAccess,
   fields: [

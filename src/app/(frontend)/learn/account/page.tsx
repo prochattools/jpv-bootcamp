@@ -58,7 +58,7 @@ export default async function LearnAccountPage({
 }) {
   const { member, payload } = await getCurrentPayloadMember()
   if (!member) {
-    redirect('/learn/login?next=/learn/account')
+    redirect('/portal?mode=login')
   }
 
   const params = await searchParams

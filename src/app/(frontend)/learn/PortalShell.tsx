@@ -58,7 +58,7 @@ export function PortalShell({ children, memberEmail }: PortalShellProps) {
           ) : (
             <Link
               className='rounded-full bg-[#153f2e] px-5 py-2.5 text-sm font-bold text-white'
-              href='/learn/login'
+              href='/portal?mode=login'
             >
               Sign in
             </Link>

@@ -77,7 +77,8 @@ async function main(): Promise<void> {
   )
 
   assert.equal(result.ok, true)
-  assert.equal(result.status, 'queued')
+  assert.equal(result.status, 'created')
+  assert.equal(result.message, 'Your free account has been created. Check your email to verify your address before signing in.')
   assert.equal(verificationCalls[0], 'ada@example.test')
   assert.equal(payload['docs'].payload_members[0]?.accountStatus, 'pending')
   assert.equal(payload['docs'].payload_member_profiles[0]?.displayName, 'Ada Lovelace')
@@ -105,6 +106,41 @@ async function main(): Promise<void> {
     },
   )
   assert.equal(duplicate.ok, true)
+  assert.equal(duplicate.status, 'duplicate')
+  assert.equal(duplicate.message, 'An account already exists for this email. Sign in or resend verification.')
+
+  const unavailable = await registerFreeMember(
+    new FakePayload({
+      payload_members: [],
+      payload_member_profiles: [],
+      payload_member_security_events: [],
+      payload_audit_events: [],
+    }) as never,
+    {
+      async requestVerification() {
+        return { accepted: false, message: 'not configured' }
+      },
+    },
+    new Request('https://app.test/api/member-registration', {
+      method: 'POST',
+      headers: { origin: 'https://app.test' },
+    }),
+    {
+      firstName: 'Grace',
+      lastName: 'Hopper',
+      email: 'grace@example.test',
+      password: 'long-enough-password',
+      passwordConfirmation: 'long-enough-password',
+      acceptedTerms: true,
+      termsVersion: '2026-07',
+    },
+  )
+  assert.equal(unavailable.ok, true)
+  assert.equal(unavailable.status, 'verification_unavailable')
+  assert.equal(
+    unavailable.message,
+    'Your account was created, but verification email could not be sent from this environment. Contact support or try resend verification.',
+  )
 
   for (const bad of [
     { acceptedTerms: false },
@@ -143,18 +179,25 @@ async function main(): Promise<void> {
   assert.ok(names.includes('APP_PUBLIC_URL'))
   assert.ok(names.includes('PAYLOAD_SECRET'))
 
-  const loginPage = readFileSync('src/app/(frontend)/login/page.tsx', 'utf8')
-  assert.match(loginPage, /Create free account/)
-  assert.match(loginPage, /Resend verification/)
+  const portalPage = readFileSync('src/app/(frontend)/portal/page.tsx', 'utf8')
+  assert.match(portalPage, /params\?\.mode\) === 'login'/)
+  assert.match(portalPage, /Create free account/)
+  assert.match(portalPage, /Forgot password/)
+  assert.match(portalPage, /resend verification/i)
 
   const learnLoginPage = readFileSync('src/app/(frontend)/learn/login/page.tsx', 'utf8')
-  assert.match(learnLoginPage, /Create free account/)
-  assert.match(learnLoginPage, /New students can create a free account/)
+  assert.match(learnLoginPage, /redirect\('\/portal\?mode=login'\)/)
   assert.doesNotMatch(learnLoginPage, /Public self-signup is not enabled/)
+
+  const loginPage = readFileSync('src/app/(frontend)/login/page.tsx', 'utf8')
+  assert.match(loginPage, /redirect\(`\/portal\?\$\{target\.toString\(\)\}`\)/)
+  assert.doesNotMatch(loginPage, /MemberLoginForm/)
 
   const registerPage = readFileSync('src/app/(frontend)/register/page.tsx', 'utf8')
   assert.match(registerPage, /Create free account/)
   assert.match(registerPage, /Free is a real member tier/)
+  const registrationRoute = readFileSync('src/app/api/member-registration/route.ts', 'utf8')
+  assert.doesNotMatch(registrationRoute, /eligible account exists/)
 
   const serialized = JSON.stringify({ names, support, result })
   for (const forbidden of ['token=', 'password=', 'postgres://', 'cookie', '@example.com']) {

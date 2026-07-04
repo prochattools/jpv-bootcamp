@@ -42,7 +42,7 @@ assert.doesNotMatch(routes.forgot, /memberId|actionUrl|token:/)
 for (const source of [routes.reset, routes.invitationComplete]) {
   assert.match(source, /token\.length < 20 \|\| token\.length > 512/)
   assert.match(source, /password'\)\.length > 256/)
-  assert.match(source, /destination: '\/login'/)
+  assert.match(source, /destination: '\/portal\?mode=login'/)
   assert.doesNotMatch(source, /destination: record|redirect|next|callback|returnUrl/)
   assert.doesNotMatch(source, /memberId|actionUrl|password: input|tokenDigest/)
 }
@@ -54,9 +54,9 @@ assert.match(routes.emailChangeRequest, /newEmail\.length > 320/)
 assert.match(routes.emailChangeRequest, /current sign-in email remains active/)
 assert.doesNotMatch(routes.emailChangeRequest, /new Resend|memberId: result|actionUrl|tokenDigest/)
 
-assert.match(routes.emailChangeComplete, /new URL\('\/login', request\.url\)/)
+assert.match(routes.emailChangeComplete, /new URL\('\/portal', request\.url\)/)
 assert.doesNotMatch(routes.emailChangeComplete, /next|redirect=|callback|returnUrl/)
-assert.match(routes.verificationComplete, /new URL\('\/login', request\.url\)/)
+assert.match(routes.verificationComplete, /new URL\('\/portal', request\.url\)/)
 assert.match(routes.verificationResend, /GENERIC_VERIFICATION_REQUEST_MESSAGE/)
 
 const verificationHttp = read('src/lib/auth/memberEmailVerificationHttp.ts')

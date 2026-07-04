@@ -44,7 +44,7 @@ function formatByteSize(value: number) {
 export default async function LearnCommunityPage() {
   const { member, payload } = await getCurrentPayloadMember()
   if (!member) {
-    redirect('/learn/login?next=/learn/community')
+    redirect('/portal?mode=login')
   }
 
   const [dashboard, announcements, files] = await Promise.all([

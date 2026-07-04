@@ -37,7 +37,7 @@ export async function POST(request: Request): Promise<Response> {
       passwordConfirmation: stringField(record, 'passwordConfirmation'),
     })
 
-    if (result.ok === true) return json({ ok: true, destination: '/login' })
+    if (result.ok === true) return json({ ok: true, destination: '/portal?mode=login' })
     const status = result.error === 'invalid_request' ? 400 : 200
     return json({ ok: false, error: result.error }, status)
   } catch {

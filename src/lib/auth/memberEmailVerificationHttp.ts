@@ -52,7 +52,8 @@ export async function handleMemberEmailVerificationResend(
 }
 
 function loginResultUrl(request: Request, result: 'success' | 'used' | 'invalid'): URL {
-  const url = new URL('/login', request.url)
+  const url = new URL('/portal', request.url)
+  url.searchParams.set('mode', 'login')
   url.searchParams.set('verification', result)
   return url
 }

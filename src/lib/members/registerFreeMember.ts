@@ -17,14 +17,16 @@ export type RegisterFreeMemberInput = {
 }
 
 export type RegisterFreeMemberResult =
-  | { ok: true; status: 'queued'; message: string }
+  | { ok: true; status: 'created' | 'duplicate' | 'verification_unavailable'; message: string }
   | { ok: false; status: 400 | 403; error: 'invalid_request' | 'invalid_email' | 'password_too_short' | 'password_mismatch' | 'terms_required' | 'forbidden' }
 
 export type RegistrationVerificationRequester = {
   requestVerification(email: string): Promise<VerificationRequestResult>
 }
 
-const GENERIC_MESSAGE = 'If an eligible account exists, verification instructions will be sent.'
+export const FREE_REGISTRATION_CREATED_MESSAGE = 'Your free account has been created. Check your email to verify your address before signing in.'
+export const FREE_REGISTRATION_DUPLICATE_MESSAGE = 'An account already exists for this email. Sign in or resend verification.'
+export const FREE_REGISTRATION_VERIFICATION_UNAVAILABLE_MESSAGE = 'Your account was created, but verification email could not be sent from this environment. Contact support or try resend verification.'
 
 function cleanText(value: string, maxLength: number): string {
   return value.replace(/\s+/g, ' ').trim().slice(0, maxLength)
@@ -102,7 +104,7 @@ export async function registerFreeMember(
 
   const existing = await findMemberByEmail(payload, email)
   if (existing) {
-    return { ok: true, status: 'queued', message: GENERIC_MESSAGE }
+    return { ok: true, status: 'duplicate', message: FREE_REGISTRATION_DUPLICATE_MESSAGE }
   }
 
   const member = await payload.create({
@@ -148,7 +150,11 @@ export async function registerFreeMember(
     metadata: { termsAcceptedVersion: input.termsVersion, freeTier: true },
   })
 
-  await verification.requestVerification(email)
+  const verificationResult = await verification.requestVerification(email)
 
-  return { ok: true, status: 'queued', message: GENERIC_MESSAGE }
+  if (!verificationResult.accepted) {
+    return { ok: true, status: 'verification_unavailable', message: FREE_REGISTRATION_VERIFICATION_UNAVAILABLE_MESSAGE }
+  }
+
+  return { ok: true, status: 'created', message: FREE_REGISTRATION_CREATED_MESSAGE }
 }

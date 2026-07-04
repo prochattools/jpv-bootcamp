@@ -9,36 +9,31 @@ const dockerfile = readFileSync('Dockerfile', 'utf8')
 
 const logoKey = './components/payload/JPVAdminBranding#JPVAdminLogo'
 const iconKey = './components/payload/JPVAdminBranding#JPVAdminIcon'
-const loginBrandingKey = './components/payload/JPVAdminBranding#JPVAdminLoginBranding'
 
 assert.ok(payloadConfig.includes(logoKey), 'payload.config.ts must configure JPVAdminLogo')
-assert.ok(iconKey && payloadConfig.includes(iconKey), 'payload.config.ts must configure JPVAdminIcon')
-assert.ok(
-  payloadConfig.includes(loginBrandingKey),
-  'payload.config.ts must render explicit JPV branding before the admin login form',
+assert.ok(payloadConfig.includes(iconKey), 'payload.config.ts must configure JPVAdminIcon')
+assert.doesNotMatch(
+  payloadConfig,
+  /beforeLogin:\s*\[/,
+  'payload.config.ts must not add a second logo through beforeLogin',
 )
 assert.match(brandingSource, /export function JPVAdminLogo\(/, 'JPVAdminLogo export is required')
 assert.match(brandingSource, /export function JPVAdminIcon\(/, 'JPVAdminIcon export is required')
-assert.match(
+assert.doesNotMatch(
   brandingSource,
-  /export function JPVAdminLoginBranding\(/,
-  'JPVAdminLoginBranding export is required',
+  /JPVAdminLoginBranding/,
+  'extra admin login branding must not duplicate the configured logo',
 )
 assert.ok(brandingSource.includes('/images/jpv-logo.png'), 'branding must use the existing JPV logo asset')
-assert.ok(brandingSource.includes('Administrator sign-in'), 'admin login must show JPV administrator copy')
 assert.ok(existsSync('public/images/jpv-logo.png'), 'public/images/jpv-logo.png must exist')
 assert.match(importMap, /import \{ JPVAdminLogo as /, 'import map must import JPVAdminLogo')
 assert.match(importMap, /import \{ JPVAdminIcon as /, 'import map must import JPVAdminIcon')
-assert.match(
-  importMap,
-  /import \{ JPVAdminLoginBranding as /,
-  'import map must import JPVAdminLoginBranding',
-)
 assert.ok(importMap.includes(`"${logoKey}"`), 'import map object must contain the JPVAdminLogo key')
 assert.ok(importMap.includes(`"${iconKey}"`), 'import map object must contain the JPVAdminIcon key')
-assert.ok(
-  importMap.includes(`"${loginBrandingKey}"`),
-  'import map object must contain the JPVAdminLoginBranding key',
+assert.doesNotMatch(
+  importMap,
+  /JPVAdminLoginBranding/,
+  'import map must not include the duplicate login branding component',
 )
 assert.match(rootImportMap, /export \{ importMap \} from '\.\/admin\/importMap\.js'/, 'root import map must re-export the generated admin import map')
 assert.match(rootImportMap, /export \{ importMap as default \} from '\.\/admin\/importMap\.js'/, 'root import map must provide the generated admin import map as default')

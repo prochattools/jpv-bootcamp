@@ -21,7 +21,7 @@ export function MemberLogoutButton() {
         return
       }
 
-      window.location.assign('/login')
+      window.location.assign('/portal?mode=login&loggedOut=1')
     } catch {
       setError('Sign out is temporarily unavailable. Please try again.')
     } finally {

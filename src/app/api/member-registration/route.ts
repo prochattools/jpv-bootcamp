@@ -4,6 +4,9 @@ import { registerFreeMember } from '@/lib/members/registerFreeMember'
 
 export const dynamic = 'force-dynamic'
 
+const REGISTRATION_THROTTLED_MESSAGE = 'Try again shortly, then check your email to verify your free account.'
+const REGISTRATION_UNAVAILABLE_MESSAGE = 'Your account request could not be completed from this environment. Contact support or try again later.'
+
 function json(body: unknown, status = 200): Response {
   return Response.json(body, { status, headers: { 'Cache-Control': 'no-store' } })
 }
@@ -21,7 +24,7 @@ export async function POST(request: Request): Promise<Response> {
     windowMs: 15 * 60 * 1000,
   })
   if (!throttle.allowed) {
-    return json({ ok: true, message: 'If an eligible account exists, verification instructions will be sent.' })
+    return json({ ok: true, message: REGISTRATION_THROTTLED_MESSAGE })
   }
 
   try {
@@ -50,6 +53,6 @@ export async function POST(request: Request): Promise<Response> {
     const failure = result as Extract<typeof result, { ok: false }>
     return json({ ok: false, error: failure.error }, failure.status)
   } catch {
-    return json({ ok: true, message: 'If an eligible account exists, verification instructions will be sent.' })
+    return json({ ok: true, message: REGISTRATION_UNAVAILABLE_MESSAGE })
   }
 }

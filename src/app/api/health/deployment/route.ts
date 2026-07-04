@@ -1,4 +1,4 @@
-import { access, readFile } from 'node:fs/promises'
+import { access } from 'node:fs/promises'
 
 import { NextResponse } from 'next/server'
 
@@ -6,15 +6,6 @@ import { previewMigrationInventoryNames } from '@/lib/previewMigrationInventory'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
-
-async function fileContains(path: string, pattern: RegExp): Promise<boolean> {
-  try {
-    const source = await readFile(path, 'utf8')
-    return pattern.test(source)
-  } catch {
-    return false
-  }
-}
 
 async function fileExists(path: string): Promise<boolean> {
   try {
@@ -30,21 +21,35 @@ function readEnv(name: string): string | null {
   return value ? value : null
 }
 
-export async function GET() {
-  const rootImportMapPath = 'src/app/(payload)/importMap.js'
-  const adminImportMapPath = 'src/app/(payload)/admin/importMap.js'
+async function readImportMapStatus() {
+  try {
+    const rootImportMap = await import('../../../(payload)/importMap.js') as { importMap?: unknown; default?: unknown }
+    const adminImportMap = await import('../../../(payload)/admin/importMap.js') as { importMap?: unknown; default?: unknown }
+    const rootMap = rootImportMap.importMap ?? rootImportMap.default
+    const adminMap = adminImportMap.importMap ?? adminImportMap.default
+    const adminKeys = adminMap && typeof adminMap === 'object' ? Object.keys(adminMap) : []
 
-  const [
-    rootImportMapExists,
-    rootReexportsAdminImportMap,
-    adminImportMapExists,
-    adminHasBrandingKeys,
-    publicLogoExists,
-  ] = await Promise.all([
-    fileContains(rootImportMapPath, /export \{ importMap \} from '\.\/admin\/importMap\.js'/),
-    fileContains(rootImportMapPath, /export \{ importMap as default \} from '\.\/admin\/importMap\.js'/),
-    fileContains(adminImportMapPath, /JPVAdminLogo/),
-    fileContains(adminImportMapPath, /JPVAdminIcon/),
+    return {
+      rootImportMapExists: Boolean(rootMap),
+      rootReexportsAdminImportMap: rootMap === adminMap,
+      adminImportMapExists: Boolean(adminMap),
+      adminHasBrandingKeys:
+        adminKeys.includes('./components/payload/JPVAdminBranding#JPVAdminLogo') &&
+        adminKeys.includes('./components/payload/JPVAdminBranding#JPVAdminIcon'),
+    }
+  } catch {
+    return {
+      rootImportMapExists: false,
+      rootReexportsAdminImportMap: false,
+      adminImportMapExists: false,
+      adminHasBrandingKeys: false,
+    }
+  }
+}
+
+export async function GET() {
+  const [importMap, publicLogoExists] = await Promise.all([
+    readImportMapStatus(),
     fileExists('public/images/jpv-logo.png'),
   ])
 
@@ -56,10 +61,7 @@ export async function GET() {
     appVersion: process.env.npm_package_version ?? '1.0.6',
     nodeVersion: process.version,
     importMap: {
-      rootImportMapExists,
-      rootReexportsAdminImportMap,
-      adminImportMapExists,
-      adminHasBrandingKeys,
+      ...importMap,
       publicLogoExists,
     },
     migrationInventoryNames: previewMigrationInventoryNames(),

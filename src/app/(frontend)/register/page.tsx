@@ -42,7 +42,7 @@ export default async function RegisterPage() {
 
         <p className='mt-6 text-sm text-[#68766f]'>
           Already verified?{' '}
-          <Link className='font-semibold text-[#153f2e] underline underline-offset-4' href='/login'>
+          <Link className='font-semibold text-[#153f2e] underline underline-offset-4' href='/portal?mode=login'>
             Sign in
           </Link>
         </p>
@@ -50,4 +50,3 @@ export default async function RegisterPage() {
     </main>
   )
 }
-

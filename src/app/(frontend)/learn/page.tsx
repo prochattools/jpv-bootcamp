@@ -21,7 +21,7 @@ function memberStatusTone(status: unknown): 'good' | 'warn' | 'neutral' {
 export default async function LearnDashboardPage() {
   const { member, payload } = await getCurrentPayloadMember()
   if (!member) {
-    redirect('/learn/login?next=/learn')
+    redirect('/portal?mode=login')
   }
 
   const dashboard = await getMemberCourseDashboard(payload, member.id)

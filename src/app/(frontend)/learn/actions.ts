@@ -102,7 +102,7 @@ export async function loginMemberAction(
 
 export async function logoutMemberAction() {
   await logout({ config })
-  redirect('/learn/login?loggedOut=1')
+  redirect('/portal?mode=login&loggedOut=1')
 }
 
 export async function updateMemberProfileAction(
@@ -111,7 +111,7 @@ export async function updateMemberProfileAction(
 ): Promise<MemberProfileActionState> {
   const { member, payload } = await getCurrentPayloadMember()
   if (!member) {
-    redirect('/learn/login?next=/learn/account')
+    redirect('/portal?mode=login')
   }
 
   const displayName = cleanOptionalText(formData.get('displayName'), 80)
@@ -138,7 +138,7 @@ export async function requestMemberEmailChangeAction(
   formData: FormData,
 ): Promise<MemberEmailChangeActionState> {
   const { member, payload } = await getCurrentPayloadMember()
-  if (!member) redirect('/learn/login?next=/learn/account')
+  if (!member) redirect('/portal?mode=login')
 
   const currentEmail = typeof member.email === 'string' ? member.email : ''
   const newEmail = formString(formData.get('newEmail'))
@@ -181,7 +181,7 @@ export async function completeLessonAction(formData: FormData) {
   const { member, payload } = await getCurrentPayloadMember()
 
   if (!member) {
-    redirect(`/learn/login?next=/learn/${courseSlug}/${lessonSlug}`)
+    redirect('/portal?mode=login')
   }
 
   if (!courseSlug || !lessonSlug) {
@@ -215,7 +215,7 @@ export async function changeMemberPasswordAction(
 ): Promise<MemberPasswordChangeActionState> {
   const { member, payload } = await getCurrentPayloadMember()
   if (!member) {
-    redirect('/learn/login?next=/learn/account')
+    redirect('/portal?mode=login')
   }
 
   const email = typeof member.email === 'string' ? member.email : ''

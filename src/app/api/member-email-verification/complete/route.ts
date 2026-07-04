@@ -8,7 +8,8 @@ export async function GET(request: Request): Promise<Response> {
     const service = await getPayloadMemberEmailVerificationService()
     return handleMemberEmailVerificationComplete(request, service)
   } catch {
-    const url = new URL('/login', request.url)
+    const url = new URL('/portal', request.url)
+    url.searchParams.set('mode', 'login')
     url.searchParams.set('verification', 'invalid')
     return Response.redirect(url, 303)
   }

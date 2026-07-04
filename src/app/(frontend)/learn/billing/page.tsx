@@ -44,7 +44,7 @@ function statusTone(status: string | null): 'good' | 'warn' | 'neutral' {
 export default async function LearnBillingPage() {
   const { member, payload } = await getCurrentPayloadMember()
   if (!member) {
-    redirect('/learn/login?next=/learn/billing')
+    redirect('/portal?mode=login')
   }
 
   const overview = await getMemberBillingOverview(payload, member.id)

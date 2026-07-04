@@ -39,7 +39,7 @@ export default async function LearnCommunitySpacePage({
   const encodedSpaceSlug = encodeURIComponent(spaceSlug)
 
   if (!member) {
-    redirect(`/learn/login?next=/learn/community/${encodedSpaceSlug}`)
+    redirect('/portal?mode=login')
   }
 
   const detail = await getMemberCommunitySpaceDetail(payload, member.id, spaceSlug)
