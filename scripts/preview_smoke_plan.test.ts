@@ -10,12 +10,49 @@ import {
 const inert = buildPreviewSmokePlan()
 assert.equal(inert.executable, false)
 assert.equal(inert.errors.includes('execute_flag_required'), true)
+const expectedKeys = [
+  'public-root',
+  'admin-member-separation',
+  'invalid-invitation-token',
+  'invalid-verification-token',
+  'invalid-setup-token',
+  'invalid-reset-token',
+  'test-member-account-flows',
+  'authorized-course-module-lesson',
+  'denied-entitlement',
+  'protected-resource',
+  'progress-read-write',
+  'billing-checkout',
+  'existing-subscription-rejection',
+  'billing-portal',
+  'billing-webhook-projection',
+  'failed-recovered-payment',
+  'refund-dispute',
+  'community-access',
+  'community-post-comment',
+  'community-moderation',
+  'community-protected-attachment',
+  'partner-directory-detail',
+  'partner-application-history',
+  'partner-delivery-pending',
+  'partner-admin-report-export-retry',
+  'shadow-page-evidence',
+  'migration-verification',
+  'provider-dry-run',
+  'provider-apply',
+  'final-cutover-readiness',
+] as const
+assert.deepEqual(PREVIEW_SMOKE_CHECKS.map((check) => check.key), [...expectedKeys])
 assert.ok(PREVIEW_SMOKE_CHECKS.some((check) => check.key === 'public-root' && check.risk.networkRequired))
 assert.ok(PREVIEW_SMOKE_CHECKS.some((check) => check.key === 'provider-apply' && check.risk.providerCallPossible))
 assert.ok(PREVIEW_SMOKE_CHECKS.some((check) => check.key === 'test-member-account-flows' && check.risk.mutationPossible))
 assert.ok(PREVIEW_SMOKE_CHECKS.every((check) => check.prerequisites.length > 0))
 assert.ok(PREVIEW_SMOKE_CHECKS.every((check) => check.requiredEvidenceFields.length > 0))
 assert.ok(PREVIEW_SMOKE_CHECKS.every((check) => check.stopConditions.length > 0))
+assert.ok(PREVIEW_SMOKE_CHECKS.every((check) => check.requiredEvidenceFields.includes('checkKey')))
+assert.ok(PREVIEW_SMOKE_CHECKS.every((check) => check.requiredEvidenceFields.includes('environmentLabel')))
+assert.ok(PREVIEW_SMOKE_CHECKS.every((check) => check.requiredEvidenceFields.includes('status')))
+assert.ok(PREVIEW_SMOKE_CHECKS.every((check) => check.requiredEvidenceFields.includes('safeStatus')))
 assert.deepEqual(PREVIEW_SMOKE_CHECKS.map((check) => check.key), [...PREVIEW_SMOKE_CHECKS].map((check) => check.key))
 
 const invalidExecute = buildPreviewSmokePlan({
@@ -69,6 +106,21 @@ const validEvidence = validatePreviewSmokeEvidence({
 })
 assert.equal(validEvidence.ok, true)
 assert.deepEqual(validEvidence.errors, [])
+assert.equal(
+  validatePreviewSmokeEvidence({
+    schemaVersion: 1,
+    commitSha,
+    environmentLabel: 'preview',
+    checkKey: 'public-root',
+    startTime: '2026-07-03T00:00:00.000Z',
+    endTime: '2026-07-03T00:01:00.000Z',
+    status: 'passed',
+    safeStatus: 'unsafe',
+    artifactDigest: 'sha256:0123456789abcdef',
+    authorizationCategory: 'smokeVerification',
+  }).ok,
+  false,
+)
 
 for (const bad of [
   { schemaVersion: 2 },
@@ -78,6 +130,10 @@ for (const bad of [
   { status: 'passed', safeStatus: 'unsafe' },
   { status: 'failed' },
   { notes: 'password=abc' },
+  { operator: 'recipient@example.test' },
+  { approvalReference: 'https://preview.example.test/approval?token=abc' },
+  { artifactDigest: 'sha256:bad-digest' },
+  { unexpected: 'field' },
 ] as Array<Partial<Parameters<typeof validatePreviewSmokeEvidence>[0]>>) {
   assert.equal(validatePreviewSmokeEvidence({
     schemaVersion: 1,

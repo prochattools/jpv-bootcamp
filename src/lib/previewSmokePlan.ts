@@ -672,15 +672,43 @@ function isIsoTimestamp(value: unknown): value is string {
 }
 
 function hasSensitiveMaterial(value: string): boolean {
-  return /(?:password|cookie|token|secret|apikey|api_key|session|customer[_-]?id|provider[_-]?id|database_url|postgres:\/\/|mysql:\/\/|https?:\/\/[^/\s]+\/[^\s?]+(?:\?[^\s]*)?)/i.test(value) ||
+  return /(?:password|cookie|token|secret|apikey|api_key|session|customer[_-]?id|provider[_-]?id|database_url|postgres(?:ql)?:\/\/|mysql:\/\/|https?:\/\/[^/\s]+\/[^\s?]+(?:\?[^\s]*)?)/i.test(value) ||
     /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/.test(value)
 }
 
 const smokeCheckKeys = new Set(PREVIEW_SMOKE_CHECKS.map((check) => check.key))
 const evidenceStatuses = new Set<SmokeEvidenceStatus>(['passed', 'failed', 'blocked', 'skipped'])
+const smokeEvidenceSafeStatuses = new Map<SmokeEvidenceStatus, readonly string[]>([
+  ['passed', ['ok']],
+  ['failed', ['failed', 'blocked']],
+  ['blocked', ['blocked']],
+  ['skipped', ['skipped']],
+])
+const smokeEvidenceKeys = new Set<keyof SmokeEvidenceInput>([
+  'schemaVersion',
+  'commitSha',
+  'imageReference',
+  'environmentLabel',
+  'checkKey',
+  'startTime',
+  'endTime',
+  'status',
+  'safeStatus',
+  'errorCode',
+  'operator',
+  'approvalReference',
+  'notes',
+  'artifactDigest',
+  'authorizationCategory',
+])
+
+function hasOnlySmokeEvidenceKeys(input: Record<string, unknown>): boolean {
+  return Object.keys(input).every((key) => smokeEvidenceKeys.has(key as keyof SmokeEvidenceInput))
+}
 
 export function validatePreviewSmokeEvidence(input: Partial<SmokeEvidenceInput>): SmokeEvidenceValidationResult {
   const errors: string[] = []
+  if (!hasOnlySmokeEvidenceKeys(input as Record<string, unknown>)) errors.push('unknown_evidence_keys')
   if (input.schemaVersion !== 1) errors.push('schema_version_required')
   if (!hasRequiredString(input.commitSha) || !/^[0-9a-f]{40}$/i.test(input.commitSha)) errors.push('commit_sha_required')
   if (input.imageReference !== undefined && !isImmutableImageReference(input.imageReference)) errors.push('immutable_image_required')
@@ -697,12 +725,13 @@ export function validatePreviewSmokeEvidence(input: Partial<SmokeEvidenceInput>)
   }
   const check = PREVIEW_SMOKE_CHECKS.find((entry) => entry.key === input.checkKey)
   if (check && input.authorizationCategory !== check.authorizationCategory) errors.push('authorization_category_mismatch')
-  if (check && input.status === 'passed' && input.safeStatus !== 'ok') errors.push('invalid_passed_status')
+  if (check && input.status && !smokeEvidenceSafeStatuses.get(input.status as SmokeEvidenceStatus)?.includes(input.safeStatus)) errors.push('invalid_status_transition')
   if (check && input.status === 'failed' && !hasRequiredString(input.errorCode)) errors.push('error_code_required')
   if (hasRequiredString(input.notes) && hasSensitiveMaterial(input.notes)) errors.push('sensitive_notes_rejected')
-  if (hasRequiredString(input.operator) && hasSensitiveMaterial(input.operator)) errors.push('sensitive_notes_rejected')
-  if (hasRequiredString(input.approvalReference) && hasSensitiveMaterial(input.approvalReference)) errors.push('sensitive_notes_rejected')
+  if (hasRequiredString(input.operator) && hasSensitiveMaterial(input.operator)) errors.push('sensitive_operator_rejected')
+  if (hasRequiredString(input.approvalReference) && hasSensitiveMaterial(input.approvalReference)) errors.push('sensitive_approval_reference_rejected')
   if (hasRequiredString(input.imageReference) && !isImmutableImageReference(input.imageReference)) errors.push('immutable_image_required')
+  if (hasRequiredString(input.artifactDigest) && !/^sha256:[0-9a-f]{16,}$/i.test(input.artifactDigest)) errors.push('artifact_digest_required')
   return { ok: errors.length === 0, errors }
 }
 

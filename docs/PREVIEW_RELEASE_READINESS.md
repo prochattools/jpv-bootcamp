@@ -228,7 +228,7 @@ The default smoke harness is inert and prints a plan. Offline plan validation us
 
 The rehearsal matrix now covers the full offline preview surface: public/auth, course, billing, community, partner, and operations checks. Every check declares a stable key, description, authorization category, automation mode, network/auth/database-read/database-write/mutation/provider risk flags, prerequisites, expected result, required evidence fields, and stop conditions. Smoke/read-only approval never authorizes provider calls, writes, migrations, deployment, or cutover.
 
-Safe evidence is schema-validated and rejects unknown check keys, missing fields, invalid time ranges, authorization mismatches, non-immutable image references, and notes containing secrets, cookies, tokens, emails, provider/customer IDs, database URLs, or URLs with path/query components. Evidence validation is offline-only and does not perform live network, database, migration, or provider calls.
+Safe evidence is schema-validated and rejects unknown keys, missing fields, invalid time ranges, authorization mismatches, invalid status transitions, non-immutable commit/image identities, and notes or references containing secrets, cookies, tokens, emails, provider/customer IDs, database URLs, or URLs with path/query components. Evidence validation is offline-only and does not perform live network, database, migration, or provider calls.
 
 The staging-candidate report is read-only and tells the operator whether the current commit is ready to request live approvals. Repository readiness does not mean live authorization, and protected-only worktree dirt is tolerated only when it is explicitly excluded from the report.
 
