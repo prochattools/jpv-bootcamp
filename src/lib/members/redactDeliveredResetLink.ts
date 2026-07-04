@@ -3,6 +3,21 @@ import type {
   PayloadDocument,
   PayloadId,
 } from '@/lib/payloadCourse/accessService'
+import { createLocalReq } from 'payload'
+
+type PayloadDbWriteAdapter = {
+  updateOne(args: {
+    collection: string
+    id: PayloadId
+    data: Record<string, unknown>
+    returning?: boolean
+    req?: unknown
+  }): Promise<PayloadDocument>
+}
+
+async function createWriteReq(payload: PayloadCourseWriteAPI) {
+  return createLocalReq({ req: {} }, payload as never)
+}
 
 function asRecord(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return {}
@@ -33,6 +48,43 @@ export async function redactDeliveredResetLink(
     deliveredAt: delivery.sentAt.toISOString(),
     deliveryProvider: delivery.provider,
     deliveryIdempotencyKey: delivery.idempotencyKey,
+  }
+
+  const db = (payload as PayloadCourseWriteAPI & { db?: PayloadDbWriteAdapter }).db
+  if (db?.updateOne) {
+    const req = await createWriteReq(payload)
+    if (!isSensitivePasswordTemplate(event.templateKey)) {
+      return db.updateOne({
+        collection: 'payload_email_events',
+        id: event.id as PayloadId,
+        data: {
+          ...event,
+          metadata: {
+            ...metadata,
+            lastSend: {
+              idempotencyKey: delivery.idempotencyKey,
+              provider: delivery.provider,
+              sentAt: delivery.sentAt.toISOString(),
+            },
+          },
+          updatedAt: delivery.sentAt.toISOString(),
+        },
+        returning: true,
+        req,
+      })
+    }
+
+    return db.updateOne({
+      collection: 'payload_email_events',
+      id: event.id as PayloadId,
+      data: {
+        ...event,
+        metadata: safeMetadata,
+        updatedAt: delivery.sentAt.toISOString(),
+      },
+      returning: true,
+      req,
+    })
   }
 
   if (!isSensitivePasswordTemplate(event.templateKey)) {

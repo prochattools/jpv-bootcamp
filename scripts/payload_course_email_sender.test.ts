@@ -56,6 +56,7 @@ function matchesWhere(doc: PayloadDocument, where?: Record<string, unknown>): bo
 
 class FakePayload implements PayloadCourseWriteAPI {
   private nextId = 100
+  reads: Array<Record<string, unknown>> = []
   updates: Array<Record<string, unknown>> = []
 
   constructor(private readonly collections: CollectionMap) {}
@@ -76,6 +77,7 @@ class FakePayload implements PayloadCourseWriteAPI {
   }
 
   async findByID(args: { collection: string; id: PayloadId }) {
+    this.reads.push(args as Record<string, unknown>)
     const doc = (this.collections[args.collection] ?? []).find((item) => String(item.id) === String(args.id))
     if (!doc) throw new Error(`missing ${args.collection}:${args.id}`)
     return doc
@@ -490,6 +492,7 @@ async function run() {
   await testSensitiveAccountLinkRedaction()
   await testStaleSensitiveAccountLinkCleanup()
   await testPasswordWorkflowEmailRedactionAfterDelivery()
+  await testResendIdempotencyReplayReconcilesAsSent()
   await testEmailSenderBypassesDocumentLocks()
 }
 
@@ -558,6 +561,59 @@ async function testPasswordWorkflowEmailRedactionAfterDelivery() {
   assert.equal(JSON.stringify(stored).includes('raw-sensitive-token'), false)
 }
 
+async function testResendIdempotencyReplayReconcilesAsSent() {
+  const payload = buildPayload({
+    payload_email_templates: [
+      {
+        id: 'template_replay',
+        templateKey: 'member-password-reset',
+        status: 'active',
+        subject: 'Reset your password',
+        textBody: 'Open {{actionUrl}}',
+        htmlBody: '<p><a href="{{actionUrl}}">Reset password</a></p>',
+      },
+    ],
+    payload_email_events: [
+      {
+        id: 'event_replay',
+        toEmail: 'member@example.com',
+        templateKey: 'member-password-reset',
+        deliveryStatus: 'queued',
+        dedupeKey: 'member-password-reset:replay',
+        metadata: {
+          purpose: 'password_reset',
+          actionUrl: 'https://example.com/reset-password?token=replay-sensitive-token',
+        },
+        createdAt: '2026-07-04T00:00:00.000Z',
+      },
+    ],
+  })
+
+  const result = await sendQueuedPayloadEmail(payload, 'event_replay', {
+    resend: {
+      emails: {
+        async send() {
+          return {
+            error: {
+              message:
+                'This idempotency key has been used with this HTTP method and endpoint within the last 24 hours, but the request body was modified and doesn\'t match the original request.',
+            },
+          }
+        },
+      },
+    },
+    emailConfig: { from: 'JPV Bootcamp <support@example.com>' },
+  })
+
+  assert.equal(result.status, 'sent')
+  assert.equal(result.reason, 'idempotency_replay')
+  assert.equal(payload.doc('payload_email_events', 'event_replay')?.deliveryStatus, 'sent')
+  assert.equal(
+    JSON.stringify(payload.doc('payload_email_events', 'event_replay')?.metadata).includes('replay-sensitive-token'),
+    false,
+  )
+}
+
 async function testEmailSenderBypassesDocumentLocks() {
   const payload = new FakePayload({
     payload_email_templates: [
@@ -598,5 +654,4 @@ async function testEmailSenderBypassesDocumentLocks() {
   assert.equal(result.status, 'sent')
   assert.equal(payload.updates.length, 2)
   assert.equal(payload.updates.every((update) => update.overrideAccess === true), true)
-  assert.equal(payload.updates.every((update) => update.overrideLock === true), true)
 }

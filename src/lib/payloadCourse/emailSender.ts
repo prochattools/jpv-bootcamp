@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto'
+import { createLocalReq } from 'payload'
 
 import { normalizeEmail } from '@/lib/normalize-email'
 import { getSystemEmailTemplate } from '@/lib/payloadCourse/systemEmailTemplates'
@@ -53,6 +54,20 @@ type ProcessQueuedPayloadEmailsArgs = {
   resend?: PayloadEmailSenderClient
   emailConfig: PayloadEmailSenderConfig
   targetEventId?: string | null
+}
+
+type PayloadDbWriteAdapter = {
+  updateOne(args: {
+    collection: string
+    id: PayloadId
+    data: Record<string, unknown>
+    returning?: boolean
+    req?: unknown
+  }): Promise<PayloadDocument>
+}
+
+async function createWriteReq(payload: PayloadCourseWriteAPI) {
+  return createLocalReq({ req: {} }, payload as never)
 }
 
 function asString(value: unknown): string | null {
@@ -152,6 +167,13 @@ function errorMessage(error: unknown): string {
   return JSON.stringify(error)
 }
 
+function isResendIdempotencyReplay(reason: string): boolean {
+  return (
+    reason.includes('idempotency key has been used') &&
+    reason.includes("request body was modified")
+  )
+}
+
 async function findOne(
   payload: PayloadCourseWriteAPI,
   collection: string,
@@ -170,12 +192,28 @@ async function findOne(
 
 async function updateEmailEvent(
   payload: PayloadCourseWriteAPI,
-  eventId: PayloadId,
+  event: PayloadDocument,
   data: Record<string, unknown>
 ): Promise<PayloadDocument> {
+  const db = (payload as PayloadCourseWriteAPI & { db?: PayloadDbWriteAdapter }).db
+  if (db?.updateOne) {
+    const req = await createWriteReq(payload)
+    return db.updateOne({
+      collection: 'payload_email_events',
+      id: event.id,
+      data: {
+        ...event,
+        ...data,
+        updatedAt: new Date().toISOString(),
+      },
+      returning: true,
+      req,
+    })
+  }
+
   return payload.update({
     collection: 'payload_email_events',
-    id: eventId,
+    id: event.id,
     data,
     overrideAccess: true,
     overrideLock: true,
@@ -262,7 +300,7 @@ export async function sendQueuedPayloadEmail(
 
   if (!templateKey) {
     if (!args.dryRun) {
-      await updateEmailEvent(payload, event.id, {
+      await updateEmailEvent(payload, event, {
         deliveryStatus: 'failed',
         failureReason: 'missing_template_key',
       })
@@ -279,7 +317,7 @@ export async function sendQueuedPayloadEmail(
   const template = await findActiveTemplate(payload, templateKey)
   if (!template) {
     if (!args.dryRun) {
-      await updateEmailEvent(payload, event.id, {
+      await updateEmailEvent(payload, event, {
         deliveryStatus: 'failed',
         failureReason: 'active_template_missing',
       })
@@ -299,7 +337,7 @@ export async function sendQueuedPayloadEmail(
   } catch (error) {
     const reason = errorMessage(error)
     if (!args.dryRun) {
-      await updateEmailEvent(payload, event.id, {
+      await updateEmailEvent(payload, event, {
         deliveryStatus: 'failed',
         failureReason: reason,
       })
@@ -329,7 +367,7 @@ export async function sendQueuedPayloadEmail(
   }
 
   if (!args.resend) {
-    await updateEmailEvent(payload, event.id, {
+    await updateEmailEvent(payload, event, {
       deliveryStatus: 'failed',
       failureReason: 'resend_client_missing',
     })
@@ -348,7 +386,7 @@ export async function sendQueuedPayloadEmail(
     sendResult = await args.resend.emails.send(sendPayload, { idempotencyKey })
   } catch (error) {
     const reason = errorMessage(error)
-    await updateEmailEvent(payload, event.id, {
+    await updateEmailEvent(payload, event, {
       deliveryStatus: 'failed',
       failureReason: reason,
     })
@@ -365,7 +403,29 @@ export async function sendQueuedPayloadEmail(
   const { data, error } = sendResult
   if (error) {
     const reason = errorMessage(error)
-    await updateEmailEvent(payload, event.id, {
+    if (isResendIdempotencyReplay(reason)) {
+      const sentAt = new Date()
+      await updateEmailEvent(payload, event, {
+        deliveryStatus: 'sent',
+        sentAt,
+        failureReason: null,
+      })
+      await redactDeliveredResetLink(payload, event, {
+        sentAt,
+        idempotencyKey,
+        provider: 'resend',
+      })
+      return {
+        eventId: String(event.id),
+        templateKey,
+        toEmail,
+        status: 'sent',
+        reason: 'idempotency_replay',
+        resendEmailId: null,
+        idempotencyKey,
+      }
+    }
+    await updateEmailEvent(payload, event, {
       deliveryStatus: 'failed',
       failureReason: reason,
     })
@@ -381,7 +441,7 @@ export async function sendQueuedPayloadEmail(
 
   const resendEmailId = data?.id ?? null
   const sentAt = new Date()
-  await updateEmailEvent(payload, event.id, {
+  await updateEmailEvent(payload, event, {
     deliveryStatus: 'sent',
     resendEmailId: resendEmailId ?? undefined,
     sentAt,
