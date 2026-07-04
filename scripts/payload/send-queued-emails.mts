@@ -10,6 +10,8 @@ import {
 const apply = process.argv.includes('--apply')
 const limitArg = process.argv.find((arg) => arg.startsWith('--limit='))
 const limit = limitArg ? Number(limitArg.split('=')[1]) : 25
+const eventIdArg = process.argv.find((arg) => arg.startsWith('--event-id='))
+const targetEventId = eventIdArg ? eventIdArg.split('=')[1]?.trim() : null
 
 function requireEnv(name: string): string {
   const value = process.env[name]
@@ -41,10 +43,16 @@ async function main() {
     throw new Error('--limit must be a positive number.')
   }
 
+  if (!targetEventId && apply) {
+    throw new Error(
+      'Refusing bulk apply without explicit targeting. Use --apply --event-id=<id> to target exactly one event.'
+    )
+  }
+
   console.log(
     apply
-      ? `[payload-email] Sending up to ${limit} queued Payload email events`
-      : `[payload-email:dry-run] Previewing up to ${limit} queued Payload email events`
+      ? `[payload-email] Sending queued Payload email events${targetEventId ? ` (event: [redacted])` : ''}`
+      : `[payload-email:dry-run] Previewing up to ${limit} queued Payload email events${targetEventId ? ` (event: [redacted])` : ''}`
   )
 
   const payload = await getPayload({ config })
@@ -54,6 +62,7 @@ async function main() {
     dryRun: !apply,
     resend,
     emailConfig: emailConfig(apply),
+    targetEventId,
   })
 
   const summary = outcomes.reduce<Record<string, number>>((acc, outcome) => {
@@ -69,12 +78,12 @@ async function main() {
   for (const outcome of outcomes) {
     console.log(
       JSON.stringify({
-        eventId: outcome.eventId,
+        eventId: '[redacted]',
         templateKey: outcome.templateKey,
-        toEmail: outcome.toEmail,
+        toEmail: outcome.toEmail ? '[redacted]' : null,
         status: outcome.status,
         reason: outcome.reason ?? null,
-        resendEmailId: outcome.resendEmailId ?? null,
+        resendEmailId: outcome.resendEmailId ? '[redacted]' : null,
       })
     )
   }

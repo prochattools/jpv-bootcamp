@@ -52,6 +52,7 @@ type ProcessQueuedPayloadEmailsArgs = {
   dryRun?: boolean
   resend?: PayloadEmailSenderClient
   emailConfig: PayloadEmailSenderConfig
+  targetEventId?: string | null
 }
 
 function asString(value: unknown): string | null {
@@ -405,11 +406,16 @@ export async function processQueuedPayloadEmails(
   payload: PayloadCourseWriteAPI,
   args: ProcessQueuedPayloadEmailsArgs
 ): Promise<SendQueuedPayloadEmailResult[]> {
+  const where: Record<string, unknown> = {
+    deliveryStatus: { equals: 'queued' },
+  }
+  if (args.targetEventId) {
+    where.id = { equals: args.targetEventId }
+  }
+
   const result = await payload.find({
     collection: 'payload_email_events',
-    where: {
-      deliveryStatus: { equals: 'queued' },
-    },
+    where,
     limit: args.limit ?? 25,
     depth: 0,
     sort: 'createdAt',
