@@ -49,15 +49,16 @@ async function findMemberByEmail(payload: PayloadCourseWriteAPI, email: string) 
 
 async function upsertProfile(payload: PayloadCourseWriteAPI, memberId: string, firstName: string, lastName: string) {
   const displayName = [firstName, lastName].filter(Boolean).join(' ').trim() || firstName || lastName || 'Member'
+  const memberIdNum = Number(memberId)
   const existing = await payload.find({
     collection: 'payload_member_profiles',
-    where: { member: { equals: memberId } },
+    where: { member: { equals: memberIdNum } },
     limit: 1,
     depth: 0,
     overrideAccess: true,
   })
   const data: Record<string, unknown> = {
-    member: memberId,
+    member: memberIdNum,
     displayName,
     company: null,
     phone: null,
