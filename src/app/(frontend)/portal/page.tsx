@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 
 import { MemberLoginForm } from '@/components/auth/MemberLoginForm'
 import { MemberVerificationResendForm } from '@/components/auth/MemberVerificationResendForm'
@@ -87,6 +88,9 @@ function PortalLoginMode({ params }: { params: PortalSearchParams | undefined })
 
 export default async function PortalDashboardPage({ searchParams }: PortalDashboardPageProps) {
   const params = await searchParams
+  if (firstValue(params?.mode) === 'register') {
+    return redirect('/register')
+  }
   if (firstValue(params?.mode) === 'login') {
     return <PortalLoginMode params={params} />
   }

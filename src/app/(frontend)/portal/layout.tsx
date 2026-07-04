@@ -2,7 +2,8 @@ import Link from 'next/link'
 import type { ReactNode } from 'react'
 
 import { MemberLogoutButton } from '@/components/auth/MemberLogoutButton'
-import { requirePortalMember } from '@/lib/auth/requirePortalMember'
+import { resolvePayloadRequestSession } from '@/lib/auth/payloadSession'
+import { headers } from 'next/headers'
 
 const portalLinks = [
   { href: '/portal', label: 'Dashboard' },
@@ -15,7 +16,9 @@ const portalLinks = [
 ] as const
 
 export default async function PortalLayout({ children }: { children: ReactNode }) {
-  await requirePortalMember('/portal')
+  const requestHeaders = await headers()
+  const session = await resolvePayloadRequestSession(requestHeaders)
+  const showLogout = Boolean(session.member?.id || session.administratorId)
 
   return (
     <div className='min-h-screen bg-neutral-50 text-neutral-950'>
@@ -38,7 +41,7 @@ export default async function PortalLayout({ children }: { children: ReactNode }
                 </Link>
               ))}
             </nav>
-            <MemberLogoutButton />
+            {showLogout ? <MemberLogoutButton /> : null}
           </div>
         </div>
       </header>

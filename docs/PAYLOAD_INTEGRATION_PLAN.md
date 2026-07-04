@@ -54,7 +54,7 @@ Admin dashboard cards should therefore show decision-oriented signals first: pla
 
 ### Member authentication and free registration contract
 
-`/admin` is the only administrator login. `/portal` is the canonical member/student entry point and must support sign in, free account creation, forgot password, and resend-verification paths. `/register` may remain as a compatibility or deep-link route for the free account form until registration is portal-native. `/login` and `/learn/login` are transitional shared/member routes only; preferred behavior is to redirect or link into `/portal?mode=login`.
+`/admin` is the only administrator login. `/portal` is the canonical member/student entry point and must support sign in, free account creation, forgot password, and resend-verification paths. `/portal?mode=login` renders the member sign-in surface without tripping the portal auth gate, and `/portal?mode=register` now routes to `/register` for free account creation. `/register` may remain as a compatibility or deep-link route for the free account form until registration is portal-native. `/login` and `/learn/login` are transitional shared/member routes only; preferred behavior is to redirect or link into `/portal?mode=login`.
 
 New students can create a Free account without payment. Pro and VIP are paid upgrade-only plans and must not appear as selectors in free registration. Registration creates a pending member and requires email verification before sign-in. Successful registration copy must state that the free account was created and verification is required. Duplicate-account copy must guide the user to sign in or resend verification without using ambiguous eligible-account language.
 
