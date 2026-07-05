@@ -24,9 +24,14 @@ export async function GET(request: NextRequest): Promise<Response> {
 
   const payload = await getPayload({ config })
 
+  const statusFilter = request.nextUrl.searchParams.get('status') || 'queued'
+  const where = statusFilter === 'all'
+    ? {}
+    : { deliveryStatus: { equals: statusFilter } }
+
   const result = await payload.find({
     collection: 'payload_email_events',
-    where: { deliveryStatus: { equals: 'queued' } },
+    where,
     limit: 10,
     depth: 0,
     sort: '-createdAt',
