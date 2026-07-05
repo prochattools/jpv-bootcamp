@@ -246,8 +246,11 @@ async function run() {
 
   const replaceSql = buildReplaceActiveMemberAccountActionSql('jpvbootcamp_staging')
   const consumeSql = buildConsumeMemberAccountActionSql('jpvbootcamp_staging')
-  assert.match(replaceSql, /"purpose" = \$3/)
+  assert.match(replaceSql, /\$3/)
   assert.match(replaceSql, /\$9::varchar/)
+  assert.match(replaceSql, /ON CONFLICT \("member_id", "purpose"\)/)
+  assert.match(replaceSql, /WHERE "consumed_at" IS NULL AND "invalidated_at" IS NULL/)
+  assert.match(replaceSql, /"token_digest" = EXCLUDED\."token_digest"/)
   assert.match(consumeSql, /"purpose" = \$2/)
   assert.match(consumeSql, /"consumed_at" IS NULL/)
   assert.match(consumeSql, /"invalidated_at" IS NULL/)
