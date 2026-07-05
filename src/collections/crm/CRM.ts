@@ -246,6 +246,7 @@ export const PayloadEmailTemplates: CollectionConfig = {
 export const PayloadEmailEvents: CollectionConfig = {
   slug: 'payload_email_events',
   dbName: 'payload_email_events',
+  lockDocuments: false,
   labels: {
     singular: 'Email Event',
     plural: 'Email Events',
