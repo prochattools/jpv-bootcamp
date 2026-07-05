@@ -1,16 +1,13 @@
 'use client'
 
 import Link from 'next/link'
-import { useActionState } from 'react'
+import { useActionState, useState, type FormEvent } from 'react'
 
 import {
   requestPasswordResetAction,
   type ForgotPasswordActionState,
 } from '@/app/(frontend)/forgot-password/actions'
-import {
-  completePasswordResetAction,
-  type ResetPasswordActionState,
-} from '@/app/(frontend)/reset-password/actions'
+import { type ResetPasswordActionState } from '@/app/(frontend)/reset-password/actions'
 import {
   completeMemberSetupAction,
   type SetPasswordActionState,
@@ -117,11 +114,61 @@ function PasswordFields({ token }: { token: string }) {
   )
 }
 
+type ResetPasswordApiResponse = {
+  ok?: boolean
+  error?: string
+}
+
+function resetPasswordErrorMessage(error: string | undefined): string {
+  if (error === 'password_too_short') return 'Use at least 12 characters.'
+  if (error === 'password_mismatch') return 'The password confirmation does not match.'
+  if (error === 'invalid_request') return 'Enter and confirm your new password.'
+  return 'This password link is invalid, expired, or already used.'
+}
+
 export function ResetPasswordForm({ token }: { token: string }) {
-  const [state, action, pending] = useActionState<ResetPasswordActionState, FormData>(
-    completePasswordResetAction,
-    {},
-  )
+  const [state, setState] = useState<ResetPasswordActionState>({})
+  const [pending, setPending] = useState(false)
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const formData = new FormData(event.currentTarget)
+    setPending(true)
+    setState({})
+
+    try {
+      const response = await fetch('/api/member-password/reset', {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          token,
+          password: String(formData.get('password') ?? ''),
+          passwordConfirmation: String(formData.get('passwordConfirmation') ?? ''),
+        }),
+      })
+
+      const contentType = response.headers.get('content-type') ?? ''
+      if (!contentType.includes('application/json')) {
+        setState({ error: 'This password link is invalid, expired, or already used.' })
+        return
+      }
+
+      const result = (await response.json()) as ResetPasswordApiResponse
+      if (response.ok && result.ok === true) {
+        setState({ ok: true })
+        return
+      }
+
+      setState({ error: resetPasswordErrorMessage(result.error) })
+    } catch {
+      setState({ error: 'This password link is invalid, expired, or already used.' })
+    } finally {
+      setPending(false)
+    }
+  }
 
   return (
     <AuthCard title='Choose a new password' description='Use at least 12 characters.'>
@@ -130,7 +177,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
           Your password has been updated. You can now sign in.
         </p>
       ) : (
-        <form action={action} className='mt-8'>
+        <form className='mt-8' onSubmit={handleSubmit}>
           <PasswordFields token={token} />
           {state.error && (
             <p className='mt-4 rounded-lg bg-neutral-100 px-4 py-3 text-sm text-neutral-700'>
