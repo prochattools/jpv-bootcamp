@@ -132,12 +132,19 @@ The `jpvbootcamp_staging` schema may be repaired, reconciled, or reset for stagi
   - Staged image redeploy confirms `readyForApply: true` in health endpoint;
   - Queued email sender enhanced with `--event-id` targeting and bulk-apply safety guard;
   - All focused tests pass (registration, auth, email verification, routes, deployment health);
-  - Type-check and build clean, no TinaCMS references;
+  - Type-check and build clean, no legacy CMS references;
   - Email provider accept ready for next phase: one controlled verification-email send per operator authorization;
   - Login routing: all redirects working (`/login` and `/learn/login` → `/portal?mode=login`);
   - Admin branding: JPV Bootcamp Portal login verified;
   - Admin dashboard: operational cards present and linked;
   - Browser-based registration and verification link flow remains for manual operator test (same-origin security check on registration endpoint).
+- 5 July 2026 account recovery staging pass:
+  - Controlled member row for `i***@yeshua.academy` exists exactly once, remains active and verified, and no longer has a lock timestamp blocking login;
+  - Login failure was traced to account lockout/unknown password rather than verification, session, or portal routing;
+  - Reset request and queued-email blockers were fixed in application code: email-event queue writes no longer rely on a non-unique conflict target, active account-action replacement uses the reviewed partial unique index safely, reset completion clears lockout state best-effort, and queued email send status now persists through the collection update path;
+  - Staging preview health remains `application-only`/Docker with ten reviewed Payload migrations in inventory and email readiness `readyForApply: true`;
+  - One controlled password-reset email was sent for the member account with event, recipient, provider ID, and action URL redacted from logs and reports;
+  - Operator reset completion and post-reset login acceptance are still pending. Do not send another reset email without a new explicit operator authorization.
 
 ## Execution roadmap
 

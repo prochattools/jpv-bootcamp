@@ -124,6 +124,14 @@ When ready to send one controlled verification email:
 pnpm exec tsx scripts/payload/send-queued-emails.mts --apply --event-id=<redacted-id>
 ```
 
+**Account recovery update (5 July 2026):**
+
+- Staging preview remains healthy with `application-only`/Docker runtime, ten reviewed Payload migrations in inventory, and email readiness `readyForApply: true`.
+- The controlled member account `i***@yeshua.academy` is active and verified. Login was blocked by failed-password/lockout history and an unknown current password, not by verification, session, or portal routing.
+- Source fixes for account recovery are deployed on the feature branch: password-reset queue writes avoid a non-unique conflict target, active reset actions can be replaced safely, reset completion clears lockout state best-effort, and queued email send status persists through the collection update path.
+- Exactly one targeted password-reset email was sent for the controlled account. The reset action and email artifacts were inspected only through sanitized yes/no evidence. Event IDs, provider IDs, recipient values, action URLs, token digests, and password hashes were not recorded in docs.
+- Operator reset completion and login acceptance remain pending. Do not run another provider apply or send another reset email without a new explicit authorization.
+
 ## Billing readiness checklist
 
 Billing readiness is a separate authorization track from image publication and deployment. The reviewer must confirm each category independently before any live billing operation is attempted.
