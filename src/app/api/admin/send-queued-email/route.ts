@@ -53,28 +53,33 @@ export async function POST(request: NextRequest): Promise<Response> {
 
   const emailConfig: PayloadEmailSenderConfig = {
     from,
-    replyTo: process.env.EMAIL_REPLY_TO ?? undefined,
+    replyTo: process.env.EMAIL_REPLY_TO || null,
   }
 
-  const payload = await getPayload({ config })
-  const resend = !dryRun && resendApiKey ? new Resend(resendApiKey) : undefined
+  try {
+    const payload = await getPayload({ config })
+    const resend = !dryRun && resendApiKey ? new Resend(resendApiKey) : undefined
 
-  const outcomes = await processQueuedPayloadEmails(payload, {
-    limit: 1,
-    dryRun,
-    resend,
-    emailConfig,
-    targetEventId: eventId,
-  })
+    const outcomes = await processQueuedPayloadEmails(payload, {
+      limit: 1,
+      dryRun,
+      resend,
+      emailConfig,
+      targetEventId: eventId,
+    })
 
-  const outcome = outcomes[0]
-  if (!outcome) {
-    return json({ ok: false, error: 'event_not_found_or_not_queued' }, 404)
+    const outcome = outcomes[0]
+    if (!outcome) {
+      return json({ ok: false, error: 'event_not_found_or_not_queued' }, 404)
+    }
+
+    return json({
+      ok: outcome.status === 'sent' || outcome.status === 'dry_run',
+      status: outcome.status,
+      reason: outcome.reason ?? null,
+    })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'unknown_error'
+    return json({ ok: false, error: 'processing_failed', detail: message }, 500)
   }
-
-  return json({
-    ok: outcome.status === 'sent' || outcome.status === 'dry_run',
-    status: outcome.status,
-    reason: outcome.reason ?? null,
-  })
 }
