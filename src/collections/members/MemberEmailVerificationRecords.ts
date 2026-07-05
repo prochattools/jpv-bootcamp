@@ -16,6 +16,7 @@ export const PayloadMemberVerificationRecords: CollectionConfig = {
     defaultColumns: ['member', 'purpose', 'expiresAt', 'consumedAt', 'invalidatedAt'],
     description: 'Digest-only, single-use member verification records. Plaintext tokens are never stored.',
   },
+  lockDocuments: false,
   access: adminOnlyCollectionAccess,
   fields: [
     {
