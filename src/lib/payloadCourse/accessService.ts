@@ -97,7 +97,16 @@ export type PayloadMemberAuthAPI = PayloadCourseWriteAPI & {
       password: string
       token: string
     }
+    overrideAccess?: boolean
   }): Promise<unknown>
+  db?: {
+    updateOne(args: {
+      id: PayloadId
+      collection: 'payload_members'
+      data: Record<string, unknown>
+      req?: unknown
+    }): Promise<PayloadDocument>
+  }
 }
 
 export type PayloadAccessServiceResult = {

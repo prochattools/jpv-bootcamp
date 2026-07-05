@@ -22,6 +22,25 @@ export type CompletePasswordResetResult =
       error: 'invalid_request' | 'password_too_short' | 'password_mismatch' | 'invalid_or_expired_token' | 'account_ineligible'
     }
 
+async function preparePayloadPasswordResetToken(
+  payload: PayloadMemberAuthAPI,
+  memberId: PayloadDocument['id'],
+  token: string,
+): Promise<void> {
+  if (!payload.db?.updateOne) {
+    throw new Error('Payload db.updateOne is required for member password reset preparation')
+  }
+
+  await payload.db.updateOne({
+    collection: 'payload_members',
+    id: memberId,
+    data: {
+      resetPasswordToken: token,
+      resetPasswordExpiration: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+    },
+  })
+}
+
 export async function completePasswordReset(
   payload: PayloadMemberAuthAPI,
   actions: MemberAccountActionService,
@@ -36,14 +55,14 @@ export async function completePasswordReset(
     return { ok: false, error: 'password_mismatch' }
   }
 
-  const completion = await actions.completeAction(token, 'password_reset')
-  if (completion.consumed === false) {
+  const action = await actions.findCompletableAction(token, 'password_reset')
+  if (action.valid === false) {
     return { ok: false, error: 'invalid_or_expired_token' }
   }
 
   const member = await payload.findByID({
     collection: 'payload_members',
-    id: completion.memberId,
+    id: action.memberId,
     depth: 0,
     overrideAccess: true,
   })
@@ -51,15 +70,30 @@ export async function completePasswordReset(
     return { ok: false, error: 'account_ineligible' }
   }
 
+  await preparePayloadPasswordResetToken(payload, member.id, token)
+  await payload.resetPassword({
+    collection: 'payload_members',
+    data: {
+      token,
+      password: input.password,
+    },
+    overrideAccess: true,
+  })
+
+  const consumeResult = await actions.completeAction(token, 'password_reset')
+  if (consumeResult.consumed === false) {
+    return { ok: false, error: 'invalid_or_expired_token' }
+  }
+
   const updated = await payload.update({
     collection: 'payload_members',
     id: member.id,
     data: {
-      password: input.password,
       loginAttempts: 0,
       lockUntil: null,
     },
     overrideAccess: true,
+    overrideLock: true,
   })
 
   try {
@@ -89,7 +123,7 @@ export async function completePasswordReset(
       },
     })
 
-    const email = typeof updated.email === 'string' ? updated.email : completion.email
+    const email = typeof updated.email === 'string' ? updated.email : action.email
     await queueEmailEvent(payload, {
       toEmail: email,
       templateKey: 'member-password-changed',

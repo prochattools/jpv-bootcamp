@@ -91,6 +91,10 @@ export type CompleteMemberAccountActionResult =
   | { consumed: true; memberId: string; email: string }
   | { consumed: false; reason: 'invalid_or_expired' | 'already_used' }
 
+export type CompletableMemberAccountActionResult =
+  | { valid: true; memberId: string; email: string }
+  | { valid: false; reason: 'invalid_or_expired' | 'already_used' }
+
 const DEFAULT_SEND_COOLDOWN_MS = 5 * 60 * 1000
 const DEFAULT_MAX_SEND_ATTEMPTS = 3
 
@@ -225,24 +229,40 @@ export function createMemberAccountActionService(options: MemberAccountActionSer
       }
     },
 
+    async findCompletableAction(
+      token: string,
+      purpose: MemberAccountActionPurpose,
+    ): Promise<CompletableMemberAccountActionResult> {
+      if (!token || token.length < 20 || token.length > 512) {
+        return { valid: false, reason: 'invalid_or_expired' }
+      }
+
+      const tokenDigest = digestMemberAccountAction(token)
+      const record = await options.repository.findActionByDigest(tokenDigest, purpose)
+      if (!record) return { valid: false, reason: 'invalid_or_expired' }
+      if (record.consumedAt) return { valid: false, reason: 'already_used' }
+      if (record.invalidatedAt || new Date(record.expiresAt).getTime() <= now().getTime()) {
+        return { valid: false, reason: 'invalid_or_expired' }
+      }
+      if (!memberAccountActionDigestMatches(token, record.tokenDigest)) {
+        return { valid: false, reason: 'invalid_or_expired' }
+      }
+
+      return { valid: true, memberId: record.memberId, email: record.email }
+    },
+
     async completeAction(
       token: string,
       purpose: MemberAccountActionPurpose,
     ): Promise<CompleteMemberAccountActionResult> {
-      if (!token || token.length < 20 || token.length > 512) {
-        return { consumed: false, reason: 'invalid_or_expired' }
+      const completable = await this.findCompletableAction(token, purpose)
+      if (completable.valid === false) {
+        return { consumed: false, reason: completable.reason }
       }
 
       const tokenDigest = digestMemberAccountAction(token)
       const record = await options.repository.findActionByDigest(tokenDigest, purpose)
       if (!record) return { consumed: false, reason: 'invalid_or_expired' }
-      if (record.consumedAt) return { consumed: false, reason: 'already_used' }
-      if (record.invalidatedAt || new Date(record.expiresAt).getTime() <= now().getTime()) {
-        return { consumed: false, reason: 'invalid_or_expired' }
-      }
-      if (!memberAccountActionDigestMatches(token, record.tokenDigest)) {
-        return { consumed: false, reason: 'invalid_or_expired' }
-      }
 
       const consumedAt = now().toISOString()
       const consumedMemberId = await options.repository.consumeAction(
