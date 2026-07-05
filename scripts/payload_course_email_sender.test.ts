@@ -58,8 +58,33 @@ class FakePayload implements PayloadCourseWriteAPI {
   private nextId = 100
   reads: Array<Record<string, unknown>> = []
   updates: Array<Record<string, unknown>> = []
+  db?: {
+    updateOne(args: {
+      collection: string
+      id: PayloadId
+      data: Record<string, unknown>
+      returning?: boolean
+      req?: unknown
+    }): Promise<PayloadDocument>
+  }
 
-  constructor(private readonly collections: CollectionMap) {}
+  constructor(private readonly collections: CollectionMap, options?: { dbUpdateOne?: boolean }) {
+    if (options?.dbUpdateOne) {
+      this.db = {
+        updateOne: async (args) => {
+          this.updates.push(args as Record<string, unknown>)
+          const docs = this.collections[args.collection] ?? []
+          const index = docs.findIndex((doc) => String(doc.id) === String(args.id))
+          if (index < 0) throw new Error(`missing ${args.collection}:${args.id}`)
+          docs[index] = {
+            ...docs[index],
+            ...args.data,
+          }
+          return docs[index]
+        },
+      }
+    }
+  }
 
   async find(args: {
     collection: string
@@ -493,6 +518,7 @@ async function run() {
   await testStaleSensitiveAccountLinkCleanup()
   await testPasswordWorkflowEmailRedactionAfterDelivery()
   await testResendIdempotencyReplayReconcilesAsSent()
+  await testLowLevelSensitiveRedactionPreservesDeliveryState()
   await testEmailSenderBypassesDocumentLocks()
 }
 
@@ -610,6 +636,59 @@ async function testResendIdempotencyReplayReconcilesAsSent() {
   assert.equal(payload.doc('payload_email_events', 'event_replay')?.deliveryStatus, 'sent')
   assert.equal(
     JSON.stringify(payload.doc('payload_email_events', 'event_replay')?.metadata).includes('replay-sensitive-token'),
+    false,
+  )
+}
+
+async function testLowLevelSensitiveRedactionPreservesDeliveryState() {
+  const payload = new FakePayload({
+    payload_email_templates: [
+      {
+        id: 'template_password_reset',
+        templateKey: 'member-password-reset',
+        status: 'active',
+        subject: 'Reset your password',
+        textBody: 'Open {{actionUrl}}',
+        htmlBody: '<p><a href="{{actionUrl}}">Reset password</a></p>',
+      },
+    ],
+    payload_email_events: [
+      {
+        id: 'event_password_reset_db',
+        toEmail: 'member@example.com',
+        templateKey: 'member-password-reset',
+        deliveryStatus: 'queued',
+        dedupeKey: 'member-password-reset:member_1:db-redaction',
+        metadata: {
+          purpose: 'password_reset',
+          actionUrl: 'https://example.com/reset-password?token=raw-sensitive-token',
+        },
+        createdAt: '2026-07-05T00:00:00.000Z',
+      },
+    ],
+  }, { dbUpdateOne: true })
+
+  const result = await sendQueuedPayloadEmail(payload, 'event_password_reset_db', {
+    resend: {
+      emails: {
+        async send() {
+          return { data: { id: 'resend_password_reset_db' } }
+        },
+      },
+    },
+    emailConfig: { from: 'JPV Bootcamp <support@example.com>' },
+  })
+
+  const stored = payload.doc('payload_email_events', 'event_password_reset_db')
+  assert.equal(result.status, 'sent')
+  assert.equal(stored?.deliveryStatus, 'sent')
+  assert.equal(stored?.resendEmailId, 'resend_password_reset_db')
+  assert.equal(JSON.stringify(stored).includes('raw-sensitive-token'), false)
+  assert.equal(
+    payload.updates.some((update) => {
+      const data = update.data as Record<string, unknown> | undefined
+      return data?.deliveryStatus === 'queued'
+    }),
     false,
   )
 }

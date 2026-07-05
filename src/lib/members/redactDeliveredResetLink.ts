@@ -16,7 +16,11 @@ type PayloadDbWriteAdapter = {
 }
 
 async function createWriteReq(payload: PayloadCourseWriteAPI) {
-  return createLocalReq({ req: {} }, payload as never)
+  try {
+    return await createLocalReq({ req: {} }, payload as never)
+  } catch {
+    return undefined
+  }
 }
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -58,7 +62,6 @@ export async function redactDeliveredResetLink(
         collection: 'payload_email_events',
         id: event.id as PayloadId,
         data: {
-          ...event,
           metadata: {
             ...metadata,
             lastSend: {
@@ -78,7 +81,6 @@ export async function redactDeliveredResetLink(
       collection: 'payload_email_events',
       id: event.id as PayloadId,
       data: {
-        ...event,
         metadata: safeMetadata,
         updatedAt: delivery.sentAt.toISOString(),
       },
