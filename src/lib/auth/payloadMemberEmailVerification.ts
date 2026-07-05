@@ -1,3 +1,5 @@
+import { Client } from 'pg'
+
 import type { PayloadCourseWriteAPI, PayloadDocument } from '@/lib/payloadCourse/accessService'
 import { createAuditEvent } from '@/lib/payloadCourse/events'
 import { quotePgIdentifier } from '@/lib/payloadMigrationSchema'
@@ -83,7 +85,7 @@ type QueryClient = {
   query(sql: string, values?: readonly unknown[]): Promise<QueryResult>
 }
 
-function resolveQueryClient(payload: PayloadCourseWriteAPI): QueryClient {
+function resolvePayloadQueryClient(payload: PayloadCourseWriteAPI): QueryClient | null {
   const database = asRecord((payload as unknown as { db?: unknown }).db)
   const directPool = database.pool
   if (directPool && typeof directPool === 'object' && 'query' in directPool) {
@@ -97,7 +99,34 @@ function resolveQueryClient(payload: PayloadCourseWriteAPI): QueryClient {
     return sessionClient as QueryClient
   }
 
-  throw new Error('Payload PostgreSQL query client is unavailable')
+  return null
+}
+
+function createPostgresQueryClient(databaseUrl?: string): QueryClient {
+  if (!databaseUrl) {
+    throw new Error('DATABASE_URL is required for member email verification writes')
+  }
+
+  return {
+    async query(sql, values) {
+      const client = new Client({ connectionString: databaseUrl })
+      await client.connect()
+      try {
+        return (await client.query(sql, values as any[] | undefined)) as unknown as QueryResult
+      } finally {
+        await client.end()
+      }
+    },
+  }
+}
+
+function resolveQueryClient(payload: PayloadCourseWriteAPI): QueryClient {
+  const databaseUrl = process.env.DATABASE_URL
+  if (process.env.NODE_ENV === 'production') {
+    return createPostgresQueryClient(databaseUrl)
+  }
+
+  return resolvePayloadQueryClient(payload) ?? createPostgresQueryClient(databaseUrl)
 }
 
 export function createPostgresAtomicVerificationStore(
