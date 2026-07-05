@@ -6,6 +6,8 @@ import {
   buildConsumeVerificationSql,
   buildMemberEmailVerificationDownSql,
   buildMemberEmailVerificationUpSql,
+  buildInsertVerificationSql,
+  buildInvalidateActiveVerificationSql,
   buildReplaceActiveVerificationSql,
   getMemberEmailVerificationSchema,
 } from '../src/lib/auth/memberEmailVerificationSql'
@@ -14,6 +16,8 @@ const stagingUrl = 'postgresql://redacted.invalid/app?schema=jpvbootcamp_staging
 const upSql = buildMemberEmailVerificationUpSql(stagingUrl)
 const downSql = buildMemberEmailVerificationDownSql(stagingUrl)
 const replaceSql = buildReplaceActiveVerificationSql('jpvbootcamp_staging')
+const invalidateSql = buildInvalidateActiveVerificationSql('jpvbootcamp_staging')
+const insertSql = buildInsertVerificationSql('jpvbootcamp_staging')
 const consumeSql = buildConsumeVerificationSql('jpvbootcamp_staging')
 
 assert.equal(getMemberEmailVerificationSchema(stagingUrl), 'jpvbootcamp_staging')
@@ -46,6 +50,14 @@ assert.match(replaceSql, /INSERT INTO "jpvbootcamp_staging"\."payload_member_ver
 assert.match(replaceSql, /\$1::integer/)
 assert.match(replaceSql, /\$8::varchar/)
 assert.doesNotMatch(replaceSql, /verification-token-value/)
+
+assert.match(invalidateSql, /UPDATE "jpvbootcamp_staging"\."payload_member_verification_tokens"/)
+assert.match(invalidateSql, /SET "invalidated_at" = \$2::timestamptz/)
+assert.doesNotMatch(invalidateSql, /INSERT INTO/)
+
+assert.match(insertSql, /INSERT INTO "jpvbootcamp_staging"\."payload_member_verification_tokens"/)
+assert.match(insertSql, /RETURNING "id"/)
+assert.doesNotMatch(insertSql, /UPDATE\s+"jpvbootcamp_staging"\."payload_member_verification_tokens"/)
 
 assert.match(consumeSql, /"purpose" = 'member_email_verification'/)
 assert.match(consumeSql, /"consumed_at" IS NULL/)

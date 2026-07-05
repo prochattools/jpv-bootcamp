@@ -118,6 +118,36 @@ RETURNING "id";
 `
 }
 
+export function buildInvalidateActiveVerificationSql(schemaName: string): string {
+  const schema = quotePgIdentifier(schemaName)
+  const table = `${schema}.${quotePgIdentifier(tableName)}`
+  return `
+UPDATE ${table}
+SET "invalidated_at" = $2::timestamptz,
+    "updated_at" = $2::timestamptz
+WHERE "member_id" = $1::integer
+  AND "purpose" = '${purpose}'
+  AND "consumed_at" IS NULL
+  AND "invalidated_at" IS NULL;
+`
+}
+
+export function buildInsertVerificationSql(schemaName: string): string {
+  const schema = quotePgIdentifier(schemaName)
+  const table = `${schema}.${quotePgIdentifier(tableName)}`
+  return `
+INSERT INTO ${table} (
+  "member_id", "email", "purpose", "token_digest", "expires_at", "last_sent_at",
+  "send_attempts", "idempotency_key", "created_at", "updated_at"
+)
+VALUES (
+  $1::integer, $2::varchar, '${purpose}', $3::varchar, $4::timestamptz, $5::timestamptz,
+  $6::numeric, $8::varchar, $7::timestamptz, $7::timestamptz
+)
+RETURNING "id";
+`
+}
+
 export function buildConsumeVerificationSql(schemaName: string): string {
   const schema = quotePgIdentifier(schemaName)
   const table = `${schema}.${quotePgIdentifier(tableName)}`

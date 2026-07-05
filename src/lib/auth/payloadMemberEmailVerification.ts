@@ -15,6 +15,8 @@ import {
 } from './memberEmailVerification'
 import {
   buildConsumeVerificationSql,
+  buildInsertVerificationSql,
+  buildInvalidateActiveVerificationSql,
   buildReplaceActiveVerificationSql,
   getMemberEmailVerificationSchema,
 } from './memberEmailVerificationSql'
@@ -132,16 +134,21 @@ function resolveQueryClient(payload: PayloadCourseWriteAPI): QueryClient {
 export function createPostgresAtomicVerificationStore(
   payload: PayloadCourseWriteAPI,
   databaseUrl = process.env.DATABASE_URL,
+  clientOverride?: QueryClient,
 ): AtomicVerificationStore {
-  const client = resolveQueryClient(payload)
+  const client = clientOverride ?? resolveQueryClient(payload)
   const schemaName = getMemberEmailVerificationSchema(databaseUrl)
   const replaceSql = buildReplaceActiveVerificationSql(schemaName)
+  const invalidateSql = buildInvalidateActiveVerificationSql(schemaName)
+  const insertSql = buildInsertVerificationSql(schemaName)
   const consumeSql = buildConsumeVerificationSql(schemaName)
 
   return {
     async replaceActive(record) {
-      await client.query(replaceSql, [
-        memberIdNumber(record.memberId),
+      const memberId = memberIdNumber(record.memberId)
+      const invalidateValues = [memberId, record.createdAt] as const
+      const insertValues = [
+        memberId,
         record.email,
         record.tokenDigest,
         record.expiresAt,
@@ -149,7 +156,26 @@ export function createPostgresAtomicVerificationStore(
         record.sendAttempts,
         record.createdAt,
         record.idempotencyKey,
-      ])
+      ] as const
+
+      if (process.env.NODE_ENV === 'production') {
+        await client.query('BEGIN')
+        try {
+          await client.query(invalidateSql, invalidateValues)
+          await client.query(insertSql, insertValues)
+          await client.query('COMMIT')
+          return
+        } catch (error) {
+          try {
+            await client.query('ROLLBACK')
+          } catch {
+            // Ignore rollback failures; preserve the original error.
+          }
+          throw error
+        }
+      }
+
+      await client.query(replaceSql, insertValues)
     },
 
     async consume(tokenDigest, consumedAt) {

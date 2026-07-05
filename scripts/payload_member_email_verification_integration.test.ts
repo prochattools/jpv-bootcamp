@@ -374,6 +374,55 @@ async function run() {
   assert.equal((queryCalls[0]?.sql ?? '').includes(String(record.tokenDigest)), false)
   assert.equal(queryCalls[0]?.values?.[2], record.tokenDigest)
 
+  const env = process.env as NodeJS.ProcessEnv & { NODE_ENV?: string }
+  const previousNodeEnv = env.NODE_ENV
+  env.NODE_ENV = 'production'
+  try {
+    const productionQueryCalls: Array<{ sql: string; values?: readonly unknown[] }> = []
+    const productionQueryClient = {
+      async query(sql: string, values?: readonly unknown[]) {
+        productionQueryCalls.push({ sql, values })
+        if (sql === 'BEGIN' || sql === 'COMMIT' || sql === 'ROLLBACK') {
+          return { rows: [], rowCount: 0 }
+        }
+        if (sql.includes('INSERT INTO') && sql.includes('payload_member_verification_tokens')) {
+          return { rows: [{ id: 42 }], rowCount: 1 }
+        }
+        return { rows: [{ id: 1 }], rowCount: 1 }
+      },
+    }
+    const productionStore = createPostgresAtomicVerificationStore(
+      new FakePayload(),
+      'postgresql://redacted.invalid/app?schema=jpvbootcamp_staging',
+      productionQueryClient,
+    )
+    await productionStore.replaceActive({
+      memberId: '1',
+      email: 'student@example.test',
+      tokenDigest: String(record.tokenDigest),
+      expiresAt: String(record.expiresAt),
+      createdAt: String(record.createdAt),
+      lastSentAt: String(record.lastSentAt),
+      sendAttempts: 1,
+      idempotencyKey: String(record.idempotencyKey),
+    })
+    assert.deepEqual(productionQueryCalls.map((entry) => entry.sql), [
+      'BEGIN',
+      productionQueryCalls[1]?.sql ?? '',
+      productionQueryCalls[2]?.sql ?? '',
+      'COMMIT',
+    ])
+    assert.match(productionQueryCalls[1]?.sql ?? '', /UPDATE "jpvbootcamp_staging"\."payload_member_verification_tokens"/)
+    assert.match(productionQueryCalls[2]?.sql ?? '', /INSERT INTO "jpvbootcamp_staging"\."payload_member_verification_tokens"/)
+    assert.equal((productionQueryCalls[1]?.sql ?? '').includes(String(record.tokenDigest)), false)
+    assert.equal(productionQueryCalls[1]?.values?.length, 2)
+    assert.equal(productionQueryCalls[1]?.values?.[0], 1)
+    assert.equal(productionQueryCalls[1]?.values?.[1], record.createdAt)
+    assert.equal(productionQueryCalls[2]?.values?.[2], record.tokenDigest)
+  } finally {
+    env.NODE_ENV = previousNodeEnv
+  }
+
   console.log('member email verification integration checks passed')
 }
 
