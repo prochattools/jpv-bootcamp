@@ -188,6 +188,35 @@ async function run() {
   assert.equal(transport.sent.length, 1)
   assert.equal(repository.deliveries.at(-1)?.reason, 'cooldown')
 
+  now = new Date(now.getTime() + 60_001)
+  const secondInviteToken = 'second-member-invitation-token-that-is-never-stored'
+  nextToken = secondInviteToken
+  const secondInvite = await service.issueAction({
+    memberId: '1',
+    email: 'student@example.test',
+    purpose: 'member_invitation',
+    templateKey: 'member-invitation',
+    actionPath: '/set-password',
+    ttlMs: 60 * 60 * 1000,
+  })
+  assert.equal(secondInvite.delivery, 'queued')
+  assert.equal(transport.sent.length, 2)
+
+  now = new Date(now.getTime() + 60_001)
+  nextToken = 'third-member-invitation-token-that-is-never-stored'
+  const maxInvite = await service.issueAction({
+    memberId: '1',
+    email: 'student@example.test',
+    purpose: 'member_invitation',
+    templateKey: 'member-invitation',
+    actionPath: '/set-password',
+    ttlMs: 60 * 60 * 1000,
+  })
+  assert.equal(maxInvite.delivery, 'suppressed')
+  assert.equal(repository.deliveries.at(-1)?.reason, 'max_attempts')
+  assert.equal(transport.sent.length, 2)
+
+  nextToken = secondInviteToken
   const wrongPurpose = await service.completeAction(nextToken, 'password_reset')
   assert.deepEqual(wrongPurpose, { consumed: false, reason: 'invalid_or_expired' })
 
@@ -218,6 +247,48 @@ async function run() {
     consumed: false,
     reason: 'invalid_or_expired',
   })
+
+  const resetRepository = new MemoryActionRepository()
+  const resetTransport = new FakeTransport()
+  let resetNow = new Date('2026-07-02T02:00:00.000Z')
+  let resetToken = 'first-password-reset-token-that-is-never-stored'
+  const resetService = createMemberAccountActionService({
+    repository: resetRepository,
+    transport: resetTransport,
+    publicBaseUrl: 'https://preview.jpvbootcamp.test',
+    now: () => new Date(resetNow),
+    randomToken: () => resetToken,
+    sendCooldownMs: 60_000,
+    maxSendAttempts: 1,
+  })
+  await resetService.issueAction({
+    memberId: '2',
+    email: 'student@example.test',
+    purpose: 'password_reset',
+    templateKey: 'member-password-reset',
+    actionPath: '/reset-password',
+    ttlMs: 60 * 60 * 1000,
+  })
+  resetNow = new Date(resetNow.getTime() + 60_001)
+  resetToken = 'rotated-password-reset-token-that-is-never-stored'
+  const rotatedReset = await resetService.issueAction({
+    memberId: '2',
+    email: 'student@example.test',
+    purpose: 'password_reset',
+    templateKey: 'member-password-reset',
+    actionPath: '/reset-password',
+    ttlMs: 60 * 60 * 1000,
+  })
+  assert.equal(rotatedReset.delivery, 'queued')
+  assert.equal(resetTransport.sent.length, 2)
+  assert.equal(
+    resetRepository.records.filter((record) => record.purpose === 'password_reset' && !record.invalidatedAt).length,
+    1,
+  )
+  assert.equal(
+    JSON.stringify(resetRepository.records).includes('rotated-password-reset-token-that-is-never-stored'),
+    false,
+  )
 
   nextToken = 'email-change-token-value-that-is-never-stored'
   now = new Date(now.getTime() + 1)

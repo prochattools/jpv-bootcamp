@@ -151,7 +151,7 @@ export function createMemberAccountActionService(options: MemberAccountActionSer
           })
           return { accepted: true, delivery: 'suppressed' }
         }
-        if (existing.sendAttempts >= maxSendAttempts) {
+        if (input.purpose !== 'password_reset' && existing.sendAttempts >= maxSendAttempts) {
           await options.repository.recordDelivery({
             memberId: input.memberId,
             purpose: input.purpose,
