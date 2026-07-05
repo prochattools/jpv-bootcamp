@@ -1,5 +1,4 @@
 import { createHash } from 'node:crypto'
-import { createLocalReq } from 'payload'
 
 import { normalizeEmail } from '@/lib/normalize-email'
 import { getSystemEmailTemplate } from '@/lib/payloadCourse/systemEmailTemplates'
@@ -54,20 +53,6 @@ type ProcessQueuedPayloadEmailsArgs = {
   resend?: PayloadEmailSenderClient
   emailConfig: PayloadEmailSenderConfig
   targetEventId?: string | null
-}
-
-type PayloadDbWriteAdapter = {
-  updateOne(args: {
-    collection: string
-    id: PayloadId
-    data: Record<string, unknown>
-    returning?: boolean
-    req?: unknown
-  }): Promise<PayloadDocument>
-}
-
-async function createWriteReq(payload: PayloadCourseWriteAPI) {
-  return createLocalReq({ req: {} }, payload as never)
 }
 
 function asString(value: unknown): string | null {
@@ -195,22 +180,6 @@ async function updateEmailEvent(
   event: PayloadDocument,
   data: Record<string, unknown>
 ): Promise<PayloadDocument> {
-  const db = (payload as PayloadCourseWriteAPI & { db?: PayloadDbWriteAdapter }).db
-  if (db?.updateOne) {
-    const req = await createWriteReq(payload)
-    return db.updateOne({
-      collection: 'payload_email_events',
-      id: event.id,
-      data: {
-        ...event,
-        ...data,
-        updatedAt: new Date().toISOString(),
-      },
-      returning: true,
-      req,
-    })
-  }
-
   return payload.update({
     collection: 'payload_email_events',
     id: event.id,
