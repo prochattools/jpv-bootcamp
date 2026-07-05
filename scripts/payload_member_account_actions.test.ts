@@ -102,6 +102,7 @@ class FakeTransport {
 
 class FakePayload {
   events: Array<Record<string, unknown>> = []
+  queries: string[] = []
 
   db = {
     pool: {
@@ -110,6 +111,7 @@ class FakePayload {
   }
 
   private handleQuery(sql: string, values?: readonly unknown[]) {
+    this.queries.push(sql)
     if (sql.includes('INSERT INTO') && sql.includes('payload_email_events')) {
       const dedupeKey = String(values?.[3] ?? '')
       const existing = this.events.find((event) => event.dedupe_key === dedupeKey)
@@ -282,6 +284,7 @@ async function run() {
   assert.equal(queued.providerMessageId, 'email_1')
   assert.equal(emailPayload.events.length, 1)
   assert.equal(emailPayload.events[0]?.dedupe_key, 'member-password-reset:42:dedupe-key')
+  assert.equal(emailPayload.queries.some((query) => /ON CONFLICT/i.test(query)), false)
 
   const deduped = await accountActionTransport.send({
     to: 'student@example.test',

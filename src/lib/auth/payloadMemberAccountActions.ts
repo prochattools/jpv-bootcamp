@@ -243,6 +243,20 @@ export function createQueuedMemberAccountActionTransport(
         logoUrl: `${actionUrl.origin}/images/jpv-logo.png`,
       }
 
+      const existingResult = await client.query(
+        `
+SELECT "id"
+FROM ${table}
+WHERE "dedupe_key" = $1::varchar
+LIMIT 1;
+`,
+        [dedupeKey],
+      )
+      const existingId = existingResult.rows?.[0]?.id
+      if (existingId !== null && existingId !== undefined) {
+        return { providerMessageId: String(existingId) }
+      }
+
       const insertResult = await client.query(
         `
 INSERT INTO ${table} (
@@ -254,7 +268,6 @@ INSERT INTO ${table} (
   "metadata"
 )
 VALUES ($1::varchar, $2::varchar, $3::varchar, 'queued', $4::varchar, $5::jsonb)
-ON CONFLICT ("dedupe_key") DO NOTHING
 RETURNING "id";
 `,
         [displayName, delivery.to, delivery.templateKey, dedupeKey, metadata],
@@ -265,20 +278,10 @@ RETURNING "id";
         return { providerMessageId: String(queuedId) }
       }
 
-      const existingResult = await client.query(
-        `
-SELECT "id"
-FROM ${table}
-WHERE "dedupe_key" = $1::varchar
-LIMIT 1;
-`,
-        [dedupeKey],
-      )
-      const existingId = existingResult.rows?.[0]?.id
-      if (existingId === null || existingId === undefined) {
+      if (queuedId === null || queuedId === undefined) {
         throw new Error('Queued member account action email could not be persisted')
       }
-      return { providerMessageId: String(existingId) }
+      return { providerMessageId: String(queuedId) }
     },
   }
 }
