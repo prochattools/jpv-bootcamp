@@ -54,46 +54,54 @@ export async function completePasswordReset(
   const updated = await payload.update({
     collection: 'payload_members',
     id: member.id,
-    data: { password: input.password },
-    overrideAccess: true,
-  })
-
-  const securityEvent = await payload.create({
-    collection: 'payload_member_security_events',
     data: {
-      member: member.id,
-      eventType: 'password_changed',
-      source: 'member_reset',
-      metadata: {
-        purpose: 'password_reset',
-        automaticLogin: false,
-      },
+      password: input.password,
+      loginAttempts: 0,
+      lockUntil: null,
     },
     overrideAccess: true,
   })
 
-  await createAuditEvent(payload, {
-    actorType: 'member',
-    actorId: member.id,
-    action: 'member.password.reset.completed',
-    targetCollection: 'payload_members',
-    targetId: member.id,
-    metadata: {
-      automaticLogin: false,
-      securityEventId: String(securityEvent.id),
-    },
-  })
+  try {
+    const securityEvent = await payload.create({
+      collection: 'payload_member_security_events',
+      data: {
+        member: member.id,
+        eventType: 'password_changed',
+        source: 'member_reset',
+        metadata: {
+          purpose: 'password_reset',
+          automaticLogin: false,
+        },
+      },
+      overrideAccess: true,
+    })
 
-  const email = typeof updated.email === 'string' ? updated.email : completion.email
-  await queueEmailEvent(payload, {
-    toEmail: email,
-    templateKey: 'member-password-changed',
-    dedupeKey: `member-password-changed:${member.id}:${securityEvent.id}`,
-    metadata: {
-      memberId: String(member.id),
-      purpose: 'password_reset_confirmation',
-    },
-  })
+    await createAuditEvent(payload, {
+      actorType: 'member',
+      actorId: member.id,
+      action: 'member.password.reset.completed',
+      targetCollection: 'payload_members',
+      targetId: member.id,
+      metadata: {
+        automaticLogin: false,
+        securityEventId: String(securityEvent.id),
+      },
+    })
+
+    const email = typeof updated.email === 'string' ? updated.email : completion.email
+    await queueEmailEvent(payload, {
+      toEmail: email,
+      templateKey: 'member-password-changed',
+      dedupeKey: `member-password-changed:${member.id}:${securityEvent.id}`,
+      metadata: {
+        memberId: String(member.id),
+        purpose: 'password_reset_confirmation',
+      },
+    })
+  } catch {
+    // Best effort: password is already changed; side effects must not break the flow
+  }
 
   return { ok: true, member: updated }
 }

@@ -55,62 +55,68 @@ export async function completeMemberSetup(
     data: {
       password: input.password,
       accountStatus: 'active',
+      loginAttempts: 0,
+      lockUntil: null,
     },
     overrideAccess: true,
   })
 
-  const invitationEvent = await payload.create({
-    collection: 'payload_member_security_events',
-    data: {
-      member: member.id,
-      eventType: 'invitation_consumed',
-      source: 'member_invitation',
+  try {
+    const invitationEvent = await payload.create({
+      collection: 'payload_member_security_events',
+      data: {
+        member: member.id,
+        eventType: 'invitation_consumed',
+        source: 'member_invitation',
+        metadata: {
+          activated: true,
+          automaticLogin: false,
+        },
+      },
+      overrideAccess: true,
+    })
+    await payload.create({
+      collection: 'payload_member_security_events',
+      data: {
+        member: member.id,
+        eventType: 'password_changed',
+        source: 'member_invitation',
+        metadata: {
+          purpose: 'set_password',
+          automaticLogin: false,
+        },
+      },
+      overrideAccess: true,
+    })
+
+    await createAuditEvent(payload, {
+      actorType: 'member',
+      actorId: member.id,
+      action: 'member.setup.completed',
+      targetCollection: 'payload_members',
+      targetId: member.id,
+      before: { accountStatus: 'pending' },
+      after: { accountStatus: 'active' },
       metadata: {
         activated: true,
         automaticLogin: false,
+        securityEventId: String(invitationEvent.id),
       },
-    },
-    overrideAccess: true,
-  })
-  await payload.create({
-    collection: 'payload_member_security_events',
-    data: {
-      member: member.id,
-      eventType: 'password_changed',
-      source: 'member_invitation',
+    })
+
+    const email = typeof updated.email === 'string' ? updated.email : completion.email
+    await queueEmailEvent(payload, {
+      toEmail: email,
+      templateKey: 'member-account-ready',
+      dedupeKey: `member-account-ready:${member.id}:${invitationEvent.id}`,
       metadata: {
-        purpose: 'set_password',
-        automaticLogin: false,
+        memberId: String(member.id),
+        purpose: 'member_setup_completed',
       },
-    },
-    overrideAccess: true,
-  })
-
-  await createAuditEvent(payload, {
-    actorType: 'member',
-    actorId: member.id,
-    action: 'member.setup.completed',
-    targetCollection: 'payload_members',
-    targetId: member.id,
-    before: { accountStatus: 'pending' },
-    after: { accountStatus: 'active' },
-    metadata: {
-      activated: true,
-      automaticLogin: false,
-      securityEventId: String(invitationEvent.id),
-    },
-  })
-
-  const email = typeof updated.email === 'string' ? updated.email : completion.email
-  await queueEmailEvent(payload, {
-    toEmail: email,
-    templateKey: 'member-account-ready',
-    dedupeKey: `member-account-ready:${member.id}:${invitationEvent.id}`,
-    metadata: {
-      memberId: String(member.id),
-      purpose: 'member_setup_completed',
-    },
-  })
+    })
+  } catch {
+    // Best effort: account is already activated; side effects must not break the flow
+  }
 
   return { ok: true, activated: true }
 }
