@@ -124,4 +124,17 @@ assert(
   'last-login metadata failures must not block valid member login',
 )
 
+const currentMemberSource = readFileSync('src/lib/members/currentMember.ts', 'utf8')
+const eligibleMemberIndex = currentMemberSource.indexOf('if (!isEligibleCurrentMember(freshMember))')
+const currentRecordLoginIndex = currentMemberSource.indexOf('await recordCurrentMemberLogin(payload, freshMember.id)')
+assert(eligibleMemberIndex > -1, 'current member helper must gate eligible portal members')
+assert(
+  currentRecordLoginIndex > eligibleMemberIndex,
+  'portal member acceptance should update lastLoginAt only after eligibility is confirmed',
+)
+assert(
+  currentMemberSource.includes('Last-login metadata should not block an otherwise valid member session'),
+  'portal last-login metadata failures must not block valid member sessions',
+)
+
 console.log('payload member authentication flow tests passed')

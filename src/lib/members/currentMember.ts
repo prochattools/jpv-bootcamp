@@ -27,6 +27,24 @@ export function resolveEligibleMemberAccountStatus(
   return isEligibleCurrentMember(member) ? 'active' : member?.accountStatus ?? null
 }
 
+async function recordCurrentMemberLogin(
+  payload: Awaited<ReturnType<typeof getPayload>>,
+  memberId: string | number,
+): Promise<void> {
+  try {
+    await payload.update({
+      collection: 'payload_members',
+      id: memberId,
+      data: {
+        lastLoginAt: new Date().toISOString(),
+      },
+      overrideAccess: true,
+    })
+  } catch {
+    // Last-login metadata should not block an otherwise valid member session.
+  }
+}
+
 export async function getCurrentPayloadMember(): Promise<{
   member: CurrentPayloadMember | null
   payload: Awaited<ReturnType<typeof getPayload>>
@@ -54,6 +72,8 @@ export async function getCurrentPayloadMember(): Promise<{
   if (!isEligibleCurrentMember(freshMember)) {
     return { member: null, payload }
   }
+
+  await recordCurrentMemberLogin(payload, freshMember.id)
 
   return {
     member: {
