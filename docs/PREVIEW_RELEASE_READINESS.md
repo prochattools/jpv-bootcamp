@@ -139,6 +139,19 @@ pnpm exec tsx scripts/payload/send-queued-emails.mts --apply --event-id=<redacte
   - visible portal evidence included dashboard navigation, the "Welcome back" dashboard, the JPV Bootcamp Foundations course card, and the sign-out control.
 - Non-blocking hardening follow-ups remain: `lastLoginAt` was not confirmed/set, the password-changed security event was not recorded, and the password-changed confirmation email was not queued/sent. These are not blockers to account recovery, login, or portal acceptance.
 
+**Account-security side-effect hardening update (6 July 2026):**
+
+- Source commit `8cd4f95161bfb418e6a37057d4f1a281ca3ba7bf` hardens the focused Phase 6 side effects without reopening the account recovery flow:
+  - accepted member sessions record `lastLoginAt` best-effort only after the member portal destination is allowed;
+  - successful password resets record a `password_changed` member security event after Payload auth reset and lockout cleanup;
+  - the password-changed confirmation email queues after the security event exists, and audit/queue failures are isolated from reset success.
+- Local validation passed for the focused reset, auth, account-action, account-email-route, security-control, deployment-health, type-check, production-build, whitespace, and CMS-exclusion gates.
+- Feature-branch GitHub preview validation and preview image publication passed for the same commit.
+- The existing Dokploy staging app `JPV Bootcamp | Payload CMS` was redeployed with `ghcr.io/prochattools/jpv-bootcamp:feature-course-branding-and-preview`; `/api/health/deployment` returned 200 JSON with Docker/application-only runtime, ten reviewed Payload migrations in inventory, and email readiness `readyForApply: true`.
+- Live side-effect acceptance remains a controlled-operator step:
+  - `lastLoginAt` needs one normal member login on staging, followed by sanitized metadata inspection;
+  - password-changed security-event and confirmation-email verification need separate authorization for another password-reset email/reset cycle before any provider email is requested or sent.
+
 ## Billing readiness checklist
 
 Billing readiness is a separate authorization track from image publication and deployment. The reviewer must confirm each category independently before any live billing operation is attempted.

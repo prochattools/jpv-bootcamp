@@ -149,6 +149,13 @@ The `jpvbootcamp_staging` schema may be repaired, reconciled, or reset for stagi
   - Login with the newly set password was accepted and the member portal loaded without visible error text;
   - Visible portal evidence included the Member Portal dashboard, Dashboard/Courses/Community/Partners/Groups/Account/Billing navigation, the "Welcome back" dashboard, the JPV Bootcamp Foundations course card, and the sign-out control;
   - Non-blocking hardening follow-ups remain: `lastLoginAt` was not confirmed as set, the password-changed security event was not recorded, and the password-changed confirmation email was not queued/sent. These side effects do not block account recovery, login, or portal acceptance.
+- 6 July 2026 account-security side-effect hardening:
+  - Source fixes were committed in `8cd4f95161bfb418e6a37057d4f1a281ca3ba7bf` and deployed to the existing Dokploy staging app image `ghcr.io/prochattools/jpv-bootcamp:feature-course-branding-and-preview`;
+  - Successful member session acceptance now records `lastLoginAt` best-effort after the shared login decision allows a member portal destination;
+  - Successful password reset now records the `password_changed` security event after the Payload auth reset flow and lockout cleanup complete, then queues the password-changed confirmation email independently so audit or queue failures do not roll back the reset;
+  - Local focused validation, feature-branch preview validation, and preview image publication passed for the hardening commit;
+  - Staging health after redeploy returned 200 JSON with Docker/application-only runtime, ten reviewed Payload migrations in inventory, and email readiness `readyForApply: true`;
+  - Live side-effect acceptance remains pending: a normal operator login is required to confirm `lastLoginAt` on staging, and another password-reset email/reset cycle requires separate explicit authorization before confirming the password-changed security event and confirmation email in staging.
 
 ## Execution roadmap
 
