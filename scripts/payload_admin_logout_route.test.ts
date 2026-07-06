@@ -9,6 +9,9 @@ assert(source.includes('x-forwarded-host'), 'must read x-forwarded-host header')
 assert(source.includes('x-forwarded-proto'), 'must read x-forwarded-proto header')
 assert(source.includes('resolvePublicOrigin'), 'must use resolvePublicOrigin helper')
 assert(source.includes('isInternalHost'), 'must reject internal hosts')
+assert(source.includes('resolvePublicProtocol'), 'must normalize forwarded protocol before building the public origin')
+assert(source.includes("split(',')[0]?.trim().toLowerCase()"), 'must normalize comma-separated forwarded protocol values')
+assert(source.includes('PUBLIC_ORIGIN_PROTOCOL'), 'must use an explicit safe protocol for public redirects')
 
 // Internal host rejection
 assert(source.includes('0.0.0.0'), 'must reject 0.0.0.0 as internal host')

@@ -4,6 +4,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { getPayload } from 'payload'
 
 const INTERNAL_HOSTS = ['0.0.0.0', 'localhost', '127.0.0.1', '::1']
+const PUBLIC_ORIGIN_PROTOCOL = 'https'
 
 function isInternalHost(host: string): boolean {
   const normalized = host.trim().toLowerCase()
@@ -16,8 +17,13 @@ function isInternalHost(host: string): boolean {
   return INTERNAL_HOSTS.includes(hostname)
 }
 
+function resolvePublicProtocol(request: NextRequest): string {
+  const proto = request.headers.get('x-forwarded-proto')?.split(',')[0]?.trim().toLowerCase()
+  return proto === PUBLIC_ORIGIN_PROTOCOL ? proto : PUBLIC_ORIGIN_PROTOCOL
+}
+
 function resolvePublicOrigin(request: NextRequest): string {
-  const proto = request.headers.get('x-forwarded-proto') || 'https'
+  const proto = resolvePublicProtocol(request)
   const forwardedHost = request.headers.get('x-forwarded-host')
   const hostHeader = request.headers.get('host')
 
