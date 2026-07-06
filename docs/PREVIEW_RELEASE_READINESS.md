@@ -162,6 +162,15 @@ pnpm exec tsx scripts/payload/send-queued-emails.mts --apply --event-id=<redacte
 - No regression to member portal login was reported.
 - Sanitized read-only metadata for `i***@yeshua.academy` confirms exactly one active, verified, unlocked member row with login attempts below threshold, but `lastLoginAt` is still not accepted after the hardening deployment. One fresh successful member login followed by sanitized inspection remains required for that Phase 6 side-effect.
 
+**Member last-login acceptance update (6 July 2026):**
+
+- Source commit `e6e59eebae42f8269726f28501db88bea7932cc7` hardens the accepted member-session metadata path by using the Payload database `updateOne` adapter for `lastLoginAt` after member eligibility succeeds.
+- Staging health returned HTTP 200 with Docker/application-only runtime, ten reviewed Payload migrations in inventory, and email readiness `readyForApply: true`.
+- Operator acceptance confirms a fresh login for `i***@yeshua.academy` succeeded after the `e6e59ee` deployment, the member portal loaded, and no visible error text was reported.
+- Sanitized read-only staging metadata confirms exactly one active, verified, unlocked controlled member row with login attempts below threshold and `lastLoginAt` set after the `e6e59ee` deployment.
+- Phase 6 `lastLoginAt` live acceptance is complete.
+- No regression was reported for account recovery, member portal loading, administrator unauthorized handling, administrator logout, or administrator login.
+
 ## Billing readiness checklist
 
 Billing readiness is a separate authorization track from image publication and deployment. The reviewer must confirm each category independently before any live billing operation is attempted.

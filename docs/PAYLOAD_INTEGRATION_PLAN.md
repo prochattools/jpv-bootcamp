@@ -164,6 +164,12 @@ The `jpvbootcamp_staging` schema may be repaired, reconciled, or reset for stagi
   - The prior internal-host redirect regression is fixed: logout no longer sends operators to `http://0.0.0.0:3000`;
   - Operator acceptance confirms admin login works after logout, with no reported regression to member portal login;
   - Sanitized read-only metadata for `i***@yeshua.academy` still shows `lastLoginAt` not accepted after the hardening deployment, so that Phase 6 side-effect remains pending until one fresh successful member login is followed by sanitized inspection.
+- 6 July 2026 member last-login live acceptance:
+  - Source commit `e6e59eebae42f8269726f28501db88bea7932cc7` hardened the focused last-login metadata path by using the Payload database `updateOne` adapter after member eligibility is accepted, avoiding auth-collection update access as a blocker;
+  - The existing Dokploy staging app was redeployed from `feature/course-branding-and-preview`, and `/api/health/deployment` returned HTTP 200 with Docker/application-only runtime, ten reviewed Payload migrations in inventory, and email readiness `readyForApply: true`;
+  - Operator acceptance confirms a fresh member login for `i***@yeshua.academy` succeeded after the `e6e59ee` deployment, the portal loaded, and no visible error text was reported;
+  - Sanitized read-only staging metadata confirms exactly one controlled member row, active status, verified email state, login attempts below threshold, no blocking lockout, and `lastLoginAt` set after the `e6e59ee` deployment;
+  - Phase 6 `lastLoginAt` live acceptance is complete, with no reported regression to account recovery, member portal loading, the administrator unauthorized boundary, administrator logout, or administrator login.
 
 ## Execution roadmap
 
