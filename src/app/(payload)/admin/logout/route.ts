@@ -3,8 +3,38 @@ import { cookies } from 'next/headers'
 import { NextResponse, type NextRequest } from 'next/server'
 import { getPayload } from 'payload'
 
+const INTERNAL_HOSTS = ['0.0.0.0', 'localhost', '127.0.0.1', '::1']
+
+function isInternalHost(host: string): boolean {
+  const hostname = host.split(':')[0]
+  return INTERNAL_HOSTS.includes(hostname)
+}
+
+function resolvePublicOrigin(request: NextRequest): string {
+  const proto = request.headers.get('x-forwarded-proto') || 'https'
+  const forwardedHost = request.headers.get('x-forwarded-host')
+  const hostHeader = request.headers.get('host')
+
+  const host = forwardedHost || hostHeader || ''
+
+  if (host && !isInternalHost(host)) {
+    return `${proto}://${host}`
+  }
+
+  if (process.env.NEXT_PUBLIC_SERVER_URL) {
+    return process.env.NEXT_PUBLIC_SERVER_URL.replace(/\/$/, '')
+  }
+
+  if (process.env.NEXT_PUBLIC_PAYLOAD_URL) {
+    return process.env.NEXT_PUBLIC_PAYLOAD_URL.replace(/\/$/, '')
+  }
+
+  return 'https://preview.jpvbootcamp.com'
+}
+
 function logoutRedirect(request: NextRequest): URL {
-  const target = new URL('/admin/login', request.url)
+  const origin = resolvePublicOrigin(request)
+  const target = new URL('/admin/login', origin)
   target.searchParams.set('loggedOut', '1')
   return target
 }

@@ -3,14 +3,40 @@ import { readFileSync } from 'node:fs'
 
 const source = readFileSync('src/app/(payload)/admin/logout/route.ts', 'utf8')
 
-assert(source.includes("new URL('/admin/login'"), 'admin logout should redirect to admin login')
-assert(source.includes("target.searchParams.set('loggedOut', '1')"), 'admin logout redirect should carry loggedOut state')
-assert(source.includes('cookie.name.startsWith(prefix)'), 'admin logout should clear all Payload-prefixed cookies')
-assert(source.includes('names.add(`${prefix}-token`)'), 'admin logout should clear the default Payload token cookie')
-assert(source.includes('expires: new Date(0)'), 'admin logout should expire auth cookies')
-assert(source.includes('path: \'/\''), 'admin logout cookie clearing should target the root path')
-assert(source.includes('export async function GET'), 'admin logout should support GET navigation')
-assert(source.includes('export async function POST'), 'admin logout should support POST submission')
-assert(!source.includes('Coolify'), 'admin logout route must not mention Coolify')
+// Public origin resolution
+assert(!source.includes("new URL('/admin/login', request.url)"), 'must not use request.url directly as base for redirect')
+assert(source.includes('x-forwarded-host'), 'must read x-forwarded-host header')
+assert(source.includes('x-forwarded-proto'), 'must read x-forwarded-proto header')
+assert(source.includes('resolvePublicOrigin'), 'must use resolvePublicOrigin helper')
+assert(source.includes('isInternalHost'), 'must reject internal hosts')
+
+// Internal host rejection
+assert(source.includes('0.0.0.0'), 'must reject 0.0.0.0 as internal host')
+assert(source.includes('localhost'), 'must reject localhost as internal host')
+assert(source.includes('127.0.0.1'), 'must reject 127.0.0.1 as internal host')
+assert(source.includes('::1'), 'must reject ::1 as internal host')
+
+// Fallback chain
+assert(source.includes('NEXT_PUBLIC_SERVER_URL'), 'must fall back to NEXT_PUBLIC_SERVER_URL')
+assert(source.includes('NEXT_PUBLIC_PAYLOAD_URL'), 'must fall back to NEXT_PUBLIC_PAYLOAD_URL')
+assert(source.includes('preview.jpvbootcamp.com'), 'must have staging fallback origin')
+
+// Redirect target
+assert(source.includes("'/admin/login'"), 'must redirect to /admin/login')
+assert(source.includes("'loggedOut'"), 'must carry loggedOut query param')
+
+// Cookie clearing
+assert(source.includes('cookie.name.startsWith(prefix)'), 'must clear all Payload-prefixed cookies')
+assert(source.includes('names.add(`${prefix}-token`)'), 'must clear the default Payload token cookie')
+assert(source.includes('expires: new Date(0)'), 'must expire auth cookies')
+assert(source.includes("path: '/'"), 'must target root path for cookie clearing')
+
+// HTTP methods
+assert(source.includes('export async function GET'), 'must support GET navigation')
+assert(source.includes('export async function POST'), 'must support POST submission')
+
+// Forbidden mentions
+assert(!source.includes('Coolify'), 'must not mention Coolify')
+assert(!source.includes('TinaCMS'), 'must not mention TinaCMS')
 
 console.log('payload_admin_logout_route.test.ts passed')
