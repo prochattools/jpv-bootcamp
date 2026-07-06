@@ -32,13 +32,13 @@ async function recordCurrentMemberLogin(
   memberId: string | number,
 ): Promise<void> {
   try {
-    await payload.update({
+    if (!payload.db?.updateOne) return
+    await payload.db.updateOne({
       collection: 'payload_members',
       id: memberId,
       data: {
         lastLoginAt: new Date().toISOString(),
       },
-      overrideAccess: true,
     })
   } catch {
     // Last-login metadata should not block an otherwise valid member session.

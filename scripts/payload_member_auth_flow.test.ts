@@ -120,6 +120,10 @@ assert(allowedBranchIndex > -1, 'member session route must gate successful membe
 assert(recordLoginIndex > allowedBranchIndex, 'member login metadata should update only after the member session is allowed')
 assert(lastLoginIndex > -1, 'member login metadata should update lastLoginAt')
 assert(
+  sessionRouteSource.includes('payload.db.updateOne'),
+  'member login metadata must use db.updateOne to bypass auth-collection access restrictions',
+)
+assert(
   sessionRouteSource.includes('Login metadata should not block an otherwise valid member session'),
   'last-login metadata failures must not block valid member login',
 )
@@ -131,6 +135,10 @@ assert(eligibleMemberIndex > -1, 'current member helper must gate eligible porta
 assert(
   currentRecordLoginIndex > eligibleMemberIndex,
   'portal member acceptance should update lastLoginAt only after eligibility is confirmed',
+)
+assert(
+  currentMemberSource.includes('payload.db.updateOne'),
+  'portal last-login metadata must use db.updateOne to bypass auth-collection access restrictions',
 )
 assert(
   currentMemberSource.includes('Last-login metadata should not block an otherwise valid member session'),

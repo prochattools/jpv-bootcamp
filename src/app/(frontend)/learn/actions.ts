@@ -84,14 +84,15 @@ export async function loginMemberAction(
   if (memberId) {
     try {
       const payload = await getPayload({ config })
-      await payload.update({
-        collection: 'payload_members',
-        id: memberId,
-        data: {
-          lastLoginAt: new Date().toISOString(),
-        },
-        overrideAccess: true,
-      })
+      if (payload.db?.updateOne) {
+        await payload.db.updateOne({
+          collection: 'payload_members',
+          id: memberId,
+          data: {
+            lastLoginAt: new Date().toISOString(),
+          },
+        })
+      }
     } catch {
       // Last-login metadata should not block an otherwise successful login.
     }
