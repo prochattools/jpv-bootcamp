@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 
 import {
   GENERIC_MEMBER_LOGIN_ERROR,
@@ -110,5 +111,17 @@ assert.equal(
   false,
 )
 assert.equal(getMemberLoginPageMessage('denied'), MEMBER_LOGIN_PAGE_DENIED_MESSAGE)
+
+const sessionRouteSource = readFileSync('src/app/api/member-session/route.ts', 'utf8')
+const allowedBranchIndex = sessionRouteSource.indexOf("decision.identity.kind === 'member'")
+const recordLoginIndex = sessionRouteSource.indexOf('await recordMemberLogin(session.member.id)')
+const lastLoginIndex = sessionRouteSource.indexOf('lastLoginAt: new Date().toISOString()')
+assert(allowedBranchIndex > -1, 'member session route must gate successful member sessions')
+assert(recordLoginIndex > allowedBranchIndex, 'member login metadata should update only after the member session is allowed')
+assert(lastLoginIndex > -1, 'member login metadata should update lastLoginAt')
+assert(
+  sessionRouteSource.includes('Login metadata should not block an otherwise valid member session'),
+  'last-login metadata failures must not block valid member login',
+)
 
 console.log('payload member authentication flow tests passed')

@@ -1,5 +1,7 @@
 import { headers } from 'next/headers'
 import { NextResponse } from 'next/server'
+import config from '@payload-config'
+import { getPayload } from 'payload'
 
 import { resolvePayloadRequestSession } from '@/lib/auth/payloadSession'
 import { decideSharedLogin } from '@/lib/auth/sharedLoginDecision'
@@ -8,6 +10,22 @@ function mapDeniedReason(reason: string): 'verification_required' | 'account_una
   if (reason === 'member_email_unverified') return 'verification_required'
   if (reason === 'no_authenticated_identity') return 'unauthenticated'
   return 'account_unavailable'
+}
+
+async function recordMemberLogin(memberId: string | number): Promise<void> {
+  try {
+    const payload = await getPayload({ config })
+    await payload.update({
+      collection: 'payload_members',
+      id: memberId,
+      data: {
+        lastLoginAt: new Date().toISOString(),
+      },
+      overrideAccess: true,
+    })
+  } catch {
+    // Login metadata should not block an otherwise valid member session.
+  }
 }
 
 export async function GET(request: Request) {
@@ -21,9 +39,11 @@ export async function GET(request: Request) {
     if (
       decision.allowed &&
       decision.identity.kind === 'member' &&
+      session.member &&
       decision.destination &&
       (decision.destination === '/portal' || decision.destination.startsWith('/portal/'))
     ) {
+      await recordMemberLogin(session.member.id)
       return NextResponse.json({
         allowed: true,
         destination: decision.destination,

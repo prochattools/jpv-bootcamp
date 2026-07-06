@@ -96,8 +96,9 @@ export async function completePasswordReset(
     overrideLock: true,
   })
 
+  let securityEvent: PayloadDocument | null = null
   try {
-    const securityEvent = await payload.create({
+    securityEvent = await payload.create({
       collection: 'payload_member_security_events',
       data: {
         member: member.id,
@@ -110,31 +111,54 @@ export async function completePasswordReset(
       },
       overrideAccess: true,
     })
-
-    await createAuditEvent(payload, {
-      actorType: 'member',
-      actorId: member.id,
-      action: 'member.password.reset.completed',
-      targetCollection: 'payload_members',
-      targetId: member.id,
-      metadata: {
-        automaticLogin: false,
-        securityEventId: String(securityEvent.id),
-      },
-    })
-
-    const email = typeof updated.email === 'string' ? updated.email : action.email
-    await queueEmailEvent(payload, {
-      toEmail: email,
-      templateKey: 'member-password-changed',
-      dedupeKey: `member-password-changed:${member.id}:${securityEvent.id}`,
-      metadata: {
-        memberId: String(member.id),
-        purpose: 'password_reset_confirmation',
-      },
-    })
   } catch {
-    // Best effort: password is already changed; side effects must not break the flow
+    // Best effort: password is already changed; event write failures must not break the flow.
+  }
+
+  if (securityEvent) {
+    try {
+      await createAuditEvent(payload, {
+        actorType: 'member',
+        actorId: member.id,
+        action: 'member.password.reset.completed',
+        targetCollection: 'payload_members',
+        targetId: member.id,
+        metadata: {
+          automaticLogin: false,
+          securityEventId: String(securityEvent.id),
+        },
+      })
+    } catch {
+      // Audit metadata should not suppress the password-changed confirmation.
+    }
+  }
+
+  if (securityEvent) {
+    try {
+      const email = typeof updated.email === 'string' ? updated.email : action.email
+      await queueEmailEvent(payload, {
+        toEmail: email,
+        templateKey: 'member-password-changed',
+        dedupeKey: `member-password-changed:${member.id}:${securityEvent.id}`,
+        metadata: {
+          memberId: String(member.id),
+          purpose: 'password_reset_confirmation',
+        },
+      })
+    } catch {
+      try {
+        await createAuditEvent(payload, {
+          actorType: 'system',
+          action: 'member.password.reset.confirmation_failed',
+          targetCollection: 'payload_members',
+          targetId: member.id,
+          severity: 'warning',
+          metadata: { securityEventId: String(securityEvent.id) },
+        })
+      } catch {
+        // Confirmation delivery failures must never roll back a completed password reset.
+      }
+    }
   }
 
   return { ok: true, member: updated }
