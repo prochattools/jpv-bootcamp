@@ -156,6 +156,14 @@ The `jpvbootcamp_staging` schema may be repaired, reconciled, or reset for stagi
   - Local focused validation, feature-branch preview validation, and preview image publication passed for the hardening commit;
   - Staging health after redeploy returned 200 JSON with Docker/application-only runtime, ten reviewed Payload migrations in inventory, and email readiness `readyForApply: true`;
   - Live side-effect acceptance remains pending: a normal operator login is required to confirm `lastLoginAt` on staging, and another password-reset email/reset cycle requires separate explicit authorization before confirming the password-changed security event and confirmation email in staging.
+- 6 July 2026 administrator logout boundary acceptance:
+  - The existing Dokploy staging app was redeployed from `feature/course-branding-and-preview` after commits `742d7b2d18b3cda3b07820b0a20484418bfae138` and `3473e25fbe512963aae97fd9d505048d15a41c89`;
+  - `/api/health/deployment` returned HTTP 200 with Docker/application-only runtime, ten reviewed Payload migrations in inventory, and email readiness `readyForApply: true`;
+  - A member reaching `/admin` sees the unauthorized boundary and can use logout without looping back to the unauthorized page;
+  - `/admin/logout` clears Payload-prefixed member auth cookies and redirects to the public preview admin login URL using the HTTPS preview origin;
+  - The prior internal-host redirect regression is fixed: logout no longer sends operators to `http://0.0.0.0:3000`;
+  - Operator acceptance confirms admin login works after logout, with no reported regression to member portal login;
+  - Sanitized read-only metadata for `i***@yeshua.academy` still shows `lastLoginAt` not accepted after the hardening deployment, so that Phase 6 side-effect remains pending until one fresh successful member login is followed by sanitized inspection.
 
 ## Execution roadmap
 

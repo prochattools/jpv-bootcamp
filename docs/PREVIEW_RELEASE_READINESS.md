@@ -152,6 +152,16 @@ pnpm exec tsx scripts/payload/send-queued-emails.mts --apply --event-id=<redacte
   - `lastLoginAt` needs one normal member login on staging, followed by sanitized metadata inspection;
   - password-changed security-event and confirmation-email verification need separate authorization for another password-reset email/reset cycle before any provider email is requested or sent.
 
+**Admin logout boundary acceptance update (6 July 2026):**
+
+- The existing Dokploy staging app was redeployed from `feature/course-branding-and-preview` for commits `742d7b2d18b3cda3b07820b0a20484418bfae138` and `3473e25fbe512963aae97fd9d505048d15a41c89`.
+- Staging health returned HTTP 200 with Docker/application-only runtime, ten reviewed Payload migrations in inventory, and email readiness `readyForApply: true`.
+- Live route checks showed both GET and POST `/admin/logout` return a public HTTPS preview admin-login redirect with `loggedOut=1` and no internal origin.
+- Cookie-clearing evidence showed Payload-prefixed auth cookies are expired while unrelated cookies are not targeted.
+- Operator acceptance confirms the member-to-admin unauthorized boundary no longer traps the user in an unauthorized loop, the prior `http://0.0.0.0:3000` redirect regression is fixed, and admin login works after logout.
+- No regression to member portal login was reported.
+- Sanitized read-only metadata for `i***@yeshua.academy` confirms exactly one active, verified, unlocked member row with login attempts below threshold, but `lastLoginAt` is still not accepted after the hardening deployment. One fresh successful member login followed by sanitized inspection remains required for that Phase 6 side-effect.
+
 ## Billing readiness checklist
 
 Billing readiness is a separate authorization track from image publication and deployment. The reviewer must confirm each category independently before any live billing operation is attempted.
