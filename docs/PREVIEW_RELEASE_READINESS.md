@@ -130,7 +130,14 @@ pnpm exec tsx scripts/payload/send-queued-emails.mts --apply --event-id=<redacte
 - The controlled member account `i***@yeshua.academy` is active and verified. Login was blocked by failed-password/lockout history and an unknown current password, not by verification, session, or portal routing.
 - Source fixes for account recovery are deployed on the feature branch: password-reset queue writes avoid a non-unique conflict target, active reset actions can be replaced safely, reset completion clears lockout state best-effort, and queued email send status persists through the collection update path.
 - Exactly one targeted password-reset email was sent for the controlled account. The reset action and email artifacts were inspected only through sanitized yes/no evidence. Event IDs, provider IDs, recipient values, action URLs, token digests, and password hashes were not recorded in docs.
-- Operator reset completion and login acceptance remain pending. Do not run another provider apply or send another reset email without a new explicit authorization.
+- Operator reset completion, login, and portal acceptance are now complete for the controlled account:
+  - reset completed on the preview domain through the JSON reset route and Payload auth reset flow;
+  - the custom reset action was consumed only after the password update path completed;
+  - lockout no longer blocked login, login attempts were below threshold, and the active reset action was absent after completion;
+  - login with the newly set password succeeded;
+  - the Member Portal dashboard loaded with no visible error text;
+  - visible portal evidence included dashboard navigation, the "Welcome back" dashboard, the JPV Bootcamp Foundations course card, and the sign-out control.
+- Non-blocking hardening follow-ups remain: `lastLoginAt` was not confirmed/set, the password-changed security event was not recorded, and the password-changed confirmation email was not queued/sent. These are not blockers to account recovery, login, or portal acceptance.
 
 ## Billing readiness checklist
 

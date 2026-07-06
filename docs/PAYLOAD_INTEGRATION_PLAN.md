@@ -144,7 +144,11 @@ The `jpvbootcamp_staging` schema may be repaired, reconciled, or reset for stagi
   - Reset request and queued-email blockers were fixed in application code: email-event queue writes no longer rely on a non-unique conflict target, active account-action replacement uses the reviewed partial unique index safely, reset completion clears lockout state best-effort, and queued email send status now persists through the collection update path;
   - Staging preview health remains `application-only`/Docker with ten reviewed Payload migrations in inventory and email readiness `readyForApply: true`;
   - One controlled password-reset email was sent for the member account with event, recipient, provider ID, and action URL redacted from logs and reports;
-  - Operator reset completion and post-reset login acceptance are still pending. Do not send another reset email without a new explicit operator authorization.
+  - Operator completed the newest reset flow on the preview domain, using the JSON reset API route and the Payload auth reset flow;
+  - The custom reset action was consumed only after the password update path completed, the account stayed active and verified, login attempts remained below threshold, lockout no longer blocked login, and active reset actions were absent after completion;
+  - Login with the newly set password was accepted and the member portal loaded without visible error text;
+  - Visible portal evidence included the Member Portal dashboard, Dashboard/Courses/Community/Partners/Groups/Account/Billing navigation, the "Welcome back" dashboard, the JPV Bootcamp Foundations course card, and the sign-out control;
+  - Non-blocking hardening follow-ups remain: `lastLoginAt` was not confirmed as set, the password-changed security event was not recorded, and the password-changed confirmation email was not queued/sent. These side effects do not block account recovery, login, or portal acceptance.
 
 ## Execution roadmap
 
@@ -224,7 +228,7 @@ Validation:
 
 ### Phase 5 — Complete account and password workflows
 
-**Status:** Implemented and locally validated; preview runtime acceptance remains pending until the required Payload migrations and controlled real-provider verification test are completed in the approved preview environment.
+**Status:** Implemented and locally validated; controlled preview account-recovery reset, login, and portal acceptance passed for the approved member account. Broader rollout remains gated by the independent release approvals and follow-up hardening noted below.
 
 Implemented source tasks:
 
@@ -245,6 +249,8 @@ Validation coverage:
 - focused route, account-action, email-verification, invitation, email-change, migration-source, sender, type-check, and production-build validation completed locally;
 - preview activation requires Payload migrations in order: `20260701_201500_member_email_verification`, then `20260702_001500_member_account_action_purposes`;
 - real-provider closure requires one controlled preview member email-verification delivery and accepted token flow; password-reset delivery may be checked only with an approved safe test account.
+- controlled preview account recovery now has accepted evidence: reset completed on the preview domain, the consumed custom reset action indicates the Payload password update path completed first, login with the new password succeeded, and the portal dashboard loaded.
+- non-blocking hardening remains for post-reset `lastLoginAt`, password-changed security-event recording, and password-changed confirmation email queueing.
 
 ### Phase 6 — Complete branded communications and FreeResend delivery
 
