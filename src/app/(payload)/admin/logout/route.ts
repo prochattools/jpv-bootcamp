@@ -6,7 +6,13 @@ import { getPayload } from 'payload'
 const INTERNAL_HOSTS = ['0.0.0.0', 'localhost', '127.0.0.1', '::1']
 
 function isInternalHost(host: string): boolean {
-  const hostname = host.split(':')[0]
+  const normalized = host.trim().toLowerCase()
+  const closingBracket = normalized.startsWith('[') ? normalized.indexOf(']') : -1
+  const hostname = closingBracket > 0
+    ? normalized.slice(1, closingBracket)
+    : normalized.includes(':') && normalized.split(':').length === 2
+      ? normalized.split(':')[0]
+      : normalized
   return INTERNAL_HOSTS.includes(hostname)
 }
 

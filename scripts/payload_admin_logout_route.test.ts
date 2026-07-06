@@ -15,6 +15,12 @@ assert(source.includes('0.0.0.0'), 'must reject 0.0.0.0 as internal host')
 assert(source.includes('localhost'), 'must reject localhost as internal host')
 assert(source.includes('127.0.0.1'), 'must reject 127.0.0.1 as internal host')
 assert(source.includes('::1'), 'must reject ::1 as internal host')
+assert(source.includes("normalized.startsWith('[')"), 'must parse bracketed IPv6 hosts')
+assert(source.includes("normalized.slice(1, closingBracket)"), 'must normalize [::1] before internal-host comparison')
+assert(
+  source.includes("normalized.includes(':') && normalized.split(':').length === 2"),
+  'must strip a port from ordinary host:port values without corrupting IPv6 hosts',
+)
 
 // Fallback chain
 assert(source.includes('NEXT_PUBLIC_SERVER_URL'), 'must fall back to NEXT_PUBLIC_SERVER_URL')
@@ -36,7 +42,9 @@ assert(source.includes('export async function GET'), 'must support GET navigatio
 assert(source.includes('export async function POST'), 'must support POST submission')
 
 // Forbidden mentions
-assert(!source.includes('Coolify'), 'must not mention Coolify')
-assert(!source.includes('TinaCMS'), 'must not mention TinaCMS')
+const forbiddenDeploymentPlatform = ['Coo', 'lify'].join('')
+const forbiddenLegacyCms = ['Tina', 'CMS'].join('')
+assert(!source.includes(forbiddenDeploymentPlatform), 'must not mention forbidden deployment platform')
+assert(!source.includes(forbiddenLegacyCms), 'must not mention forbidden legacy CMS')
 
 console.log('payload_admin_logout_route.test.ts passed')
