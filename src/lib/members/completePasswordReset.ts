@@ -232,16 +232,21 @@ export async function completePasswordReset(
     return { ok: false, error: 'invalid_or_expired_token' }
   }
 
-  const updated = await payload.update({
-    collection: 'payload_members',
-    id: member.id,
-    data: {
-      loginAttempts: 0,
-      lockUntil: null,
-    },
-    overrideAccess: true,
-    overrideLock: true,
-  })
+  let updated = member
+  try {
+    updated = await payload.update({
+      collection: 'payload_members',
+      id: member.id,
+      data: {
+        loginAttempts: 0,
+        lockUntil: null,
+      },
+      overrideAccess: true,
+      overrideLock: true,
+    })
+  } catch {
+    // Password reset has already succeeded; cleanup failures must not consume the link with an error.
+  }
 
   let securityEvent: PayloadDocument | null = null
   try {
