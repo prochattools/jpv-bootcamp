@@ -3,7 +3,9 @@ import type {
   PayloadDocument,
   PayloadMemberAuthAPI,
 } from '@/lib/payloadCourse/accessService'
+import { getMemberEmailVerificationSchema } from '@/lib/auth/memberEmailVerificationSql'
 import { createAuditEvent, queueEmailEvent } from '@/lib/payloadCourse/events'
+import { quotePgIdentifier } from '@/lib/payloadMigrationSchema'
 import { isEligibleCurrentMember } from '@/lib/members/currentMember'
 
 export type CompletePasswordResetInput = {
@@ -39,6 +41,151 @@ async function preparePayloadPasswordResetToken(
       resetPasswordExpiration: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
     },
   })
+}
+
+type QueryResult = {
+  rows?: Array<Record<string, unknown>>
+}
+
+type QueryClient = {
+  query(sql: string, values?: readonly unknown[]): Promise<QueryResult>
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {}
+  return value as Record<string, unknown>
+}
+
+function asString(value: unknown): string | null {
+  if (typeof value === 'string' && value.trim()) return value
+  if (typeof value === 'number') return String(value)
+  return null
+}
+
+function resolveQueryClient(payload: PayloadMemberAuthAPI): QueryClient {
+  const database = asRecord((payload as unknown as { db?: unknown }).db)
+  const directPool = database.pool
+  if (directPool && typeof directPool === 'object' && 'query' in directPool) {
+    return directPool as QueryClient
+  }
+
+  const drizzle = asRecord(database.drizzle)
+  const session = asRecord(drizzle.session)
+  const sessionClient = session.client
+  if (sessionClient && typeof sessionClient === 'object' && 'query' in sessionClient) {
+    return sessionClient as QueryClient
+  }
+
+  throw new Error('Payload PostgreSQL query client is unavailable')
+}
+
+async function createPasswordChangedSecurityEvent(
+  payload: PayloadMemberAuthAPI,
+  memberId: PayloadDocument['id'],
+): Promise<PayloadDocument> {
+  try {
+    return await payload.create({
+      collection: 'payload_member_security_events',
+      data: {
+        member: memberId,
+        eventType: 'password_changed',
+        source: 'member_reset',
+        metadata: {
+          purpose: 'password_reset',
+          automaticLogin: false,
+        },
+      },
+      overrideAccess: true,
+    })
+  } catch {
+    const schemaName = getMemberEmailVerificationSchema()
+    const table = `${quotePgIdentifier(schemaName)}.${quotePgIdentifier('payload_member_security_events')}`
+    const result = await resolveQueryClient(payload).query(
+      `
+INSERT INTO ${table} (
+  "member_id",
+  "event_type",
+  "source",
+  "metadata",
+  "updated_at",
+  "created_at"
+)
+VALUES ($1, 'password_changed', 'member_reset', $2::jsonb, now(), now())
+RETURNING "id";
+`,
+      [
+        memberId,
+        JSON.stringify({
+          purpose: 'password_reset',
+          automaticLogin: false,
+        }),
+      ],
+    )
+    const id = asString(result.rows?.[0]?.id)
+    if (!id) throw new Error('Password changed security event could not be persisted')
+    return { id }
+  }
+}
+
+async function queuePasswordChangedConfirmation(
+  payload: PayloadMemberAuthAPI,
+  input: {
+    memberId: PayloadDocument['id']
+    email: string
+    securityEventId: PayloadDocument['id']
+  },
+): Promise<void> {
+  const dedupeKey = `member-password-changed:${input.memberId}:${input.securityEventId}`
+  const metadata = {
+    memberId: String(input.memberId),
+    purpose: 'password_reset_confirmation',
+  }
+
+  try {
+    await queueEmailEvent(payload, {
+      toEmail: input.email,
+      templateKey: 'member-password-changed',
+      dedupeKey,
+      metadata,
+    })
+    return
+  } catch {
+    const schemaName = getMemberEmailVerificationSchema()
+    const table = `${quotePgIdentifier(schemaName)}.${quotePgIdentifier('payload_email_events')}`
+    const client = resolveQueryClient(payload)
+    const existing = await client.query(
+      `
+SELECT "id"
+FROM ${table}
+WHERE "dedupe_key" = $1::varchar
+LIMIT 1;
+`,
+      [dedupeKey],
+    )
+    if (existing.rows?.[0]?.id !== null && existing.rows?.[0]?.id !== undefined) return
+
+    await client.query(
+      `
+INSERT INTO ${table} (
+  "display_name",
+  "to_email",
+  "template_key",
+  "delivery_status",
+  "dedupe_key",
+  "metadata",
+  "updated_at",
+  "created_at"
+)
+VALUES ($1::varchar, $2::varchar, 'member-password-changed', 'queued', $3::varchar, $4::jsonb, now(), now());
+`,
+      [
+        `member-password-changed -> ${input.email}`,
+        input.email,
+        dedupeKey,
+        JSON.stringify(metadata),
+      ],
+    )
+  }
 }
 
 export async function completePasswordReset(
@@ -98,19 +245,7 @@ export async function completePasswordReset(
 
   let securityEvent: PayloadDocument | null = null
   try {
-    securityEvent = await payload.create({
-      collection: 'payload_member_security_events',
-      data: {
-        member: member.id,
-        eventType: 'password_changed',
-        source: 'member_reset',
-        metadata: {
-          purpose: 'password_reset',
-          automaticLogin: false,
-        },
-      },
-      overrideAccess: true,
-    })
+    securityEvent = await createPasswordChangedSecurityEvent(payload, member.id)
   } catch {
     // Best effort: password is already changed; event write failures must not break the flow.
   }
@@ -136,14 +271,10 @@ export async function completePasswordReset(
   if (securityEvent) {
     try {
       const email = typeof updated.email === 'string' ? updated.email : action.email
-      await queueEmailEvent(payload, {
-        toEmail: email,
-        templateKey: 'member-password-changed',
-        dedupeKey: `member-password-changed:${member.id}:${securityEvent.id}`,
-        metadata: {
-          memberId: String(member.id),
-          purpose: 'password_reset_confirmation',
-        },
+      await queuePasswordChangedConfirmation(payload, {
+        memberId: member.id,
+        email,
+        securityEventId: securityEvent.id,
       })
     } catch {
       try {
