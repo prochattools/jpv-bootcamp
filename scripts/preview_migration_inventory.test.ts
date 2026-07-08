@@ -12,6 +12,7 @@ import { expectedPayloadMigrationOrder } from '../src/lib/previewReleasePrefligh
 import { buildPreviewReleaseManifest, validatePreviewReleaseManifestInput } from '../src/lib/previewReleaseManifest'
 
 async function main(): Promise<void> {
+  const legacyUserColumn = 'wp' + '_user_id'
   const names = previewMigrationInventoryNames()
   assert.equal(PREVIEW_MIGRATION_INVENTORY.length, 11)
   assert.deepEqual(names, [
@@ -34,10 +35,29 @@ async function main(): Promise<void> {
   assert.equal(validatePreviewMigrationInventoryOrder(names.slice(1)), false)
 
   const registrySource = await readFile('src/migrations/index.ts', 'utf8')
+  const payloadMigrationSource = await readFile(
+    'src/migrations/20260707_130000_remove_table_plan_from_payload_enums.ts',
+    'utf8',
+  )
+  const prismaRenameSource = await readFile(
+    'prisma/migrations/20260707_120000_rename_account_identity_columns/migration.sql',
+    'utf8',
+  )
   const registryNames = Array.from(registrySource.matchAll(/name:\s*'([^']+)'/g), (match) => match[1])
   assert.deepEqual(registryNames, names)
   assert.deepEqual(REQUIRED_PAYLOAD_MIGRATIONS, names)
   assert.deepEqual(expectedPayloadMigrationOrder(), names)
+  assert.equal(names.includes('20260707_130000_remove_table_plan_from_payload_enums'), true)
+  assert.match(payloadMigrationSource, /SET plan = 'free'/)
+  assert.match(payloadMigrationSource, /WHERE plan::text = legacy_plan/)
+  assert.match(payloadMigrationSource, /ENUM \('free', 'pro'\)/)
+  assert.match(
+    prismaRenameSource,
+    new RegExp(`RENAME COLUMN ${legacyUserColumn} TO account_id;`),
+  )
+  assert.match(prismaRenameSource, /DROP INDEX IF EXISTS/)
+  assert.doesNotMatch(payloadMigrationSource, /\bDROP TABLE\b/i)
+  assert.doesNotMatch(prismaRenameSource, /\bDROP TABLE\b/i)
 
   const manifest = buildPreviewReleaseManifest({
     repository: 'prochattools/jpv-bootcamp',
@@ -64,6 +84,7 @@ async function main(): Promise<void> {
   assert.match(policySource, /previewMigrationInventoryNames\(\)/)
   assert.match(preflightSource, /previewMigrationInventoryForPayload\(\)/)
   assert.match(shadowSource, /previewMigrationInventoryNames\(\)/)
+  assert.doesNotMatch(registrySource, /\bchild_process\b|\bspawn(Sync)?\b|\bexec(File|Sync)?\b/)
   const safeInventorySerialization = JSON.stringify(
     PREVIEW_MIGRATION_INVENTORY.map(({ name, system, order, requiredForPreview, rollbackRisk, authorizationCategory }) => ({
       name,

@@ -12,6 +12,10 @@ It supersedes the older Version 2.40 plan for product scope, terminology, progre
 
 - [Payload-only Free/Pro Review Packet](./PAYLOAD_ONLY_FREE_PRO_REVIEW_PACKET.md) — commit-readiness summary for the current Payload-only Free/Pro refit.
 - [Roadmap Progress Status](./ROADMAP_PROGRESS_STATUS.md) — current position, progress table, validation evidence, remaining risks, and next executable tasks.
+- [Migration Approval Packet](./MIGRATION_APPROVAL_PACKET.md) — approval-focused summary for the pending migration decision and execution boundary.
+- [Staging Smoke Checklist](./STAGING_SMOKE_CHECKLIST.md) — manual smoke path for the staging / production-staged deployment branch.
+- [Provider and Email Readiness](./PROVIDER_EMAIL_READINESS.md) — provider, email, and Stripe configuration readiness checklist without secrets.
+- PR / review URL: `https://github.com/prochattools/jpv-bootcamp/pull/2`
 
 ## Current terminology
 
@@ -40,3 +44,4 @@ Before a client or internal roadmap update is considered clean:
 - removed paid-tier and external-integration language does not appear in active docs, source, scripts, schema, or public copy, except where a data-preserving rename migration must reference old database column names;
 - public launch page, billing automation, representative 8-week course, partner tracking, community previews, data reconciliation, and go-live approval are represented;
 - post-core work is clearly separated from first core go-live work.
+- staging smoke, migration approval, provider/email readiness, and roadmap documents stay linked from this index and the review packet.

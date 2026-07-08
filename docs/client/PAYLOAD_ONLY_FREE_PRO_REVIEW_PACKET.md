@@ -5,13 +5,16 @@
 - Branch: `feature/course-branding-and-preview`
 - PR / review URL: `https://github.com/prochattools/jpv-bootcamp/pull/2`
 - Staging deployment target: this feature branch is the staging / production-staged deployment branch.
-- Latest validated commit: `80012b7 fix: staging readiness audit — access semantics, shadow sync, docs, and test fixes`
+- Latest validated pre-migration-handoff commit: `587862b fix: harden checkout validation and success URL safety`
 - Push status: local branch and `origin/feature/course-branding-and-preview` are in sync.
 - Roadmap progress: `docs/client/ROADMAP_PROGRESS_STATUS.md`
+- Migration approval packet: `docs/client/MIGRATION_APPROVAL_PACKET.md`
+- Staging smoke checklist: `docs/client/STAGING_SMOKE_CHECKLIST.md`
+- Provider/email readiness: `docs/client/PROVIDER_EMAIL_READINESS.md`
 
 ## Scope summary
 
-This branch refits JPV Bootcamp to the Version 3.3 Payload-only and Free/Pro product model. It prepares the worktree for human review before any commit, database migration apply, preview deployment, or production cutover.
+This branch refits JPV Bootcamp to the Version 3.3 Payload-only and Free/Pro product model. It prepares the repository for human review before any approved database migration apply, preview deployment, or production cutover.
 
 The branch removes active legacy integration paths, old public plan labels, old checkout aliases, and stale documentation that no longer matches the client truth. It keeps Payload as the administrative source, Next.js as the app/runtime surface, Stripe as the paid subscription processor, and Resend-compatible delivery for email.
 
@@ -81,6 +84,8 @@ git diff --check
 ./node_modules/.bin/prisma validate --schema=prisma/schema.prisma
 ./node_modules/.bin/tsc --noEmit --pretty false --incremental false
 ./node_modules/.bin/tsx scripts/billing_readiness_report.test.ts
+./node_modules/.bin/tsx scripts/preview_migration_inventory.test.ts
+./node_modules/.bin/tsx scripts/migration_readiness_static.test.ts
 ./node_modules/.bin/tsx scripts/member_checkout.test.ts
 ./node_modules/.bin/tsx scripts/membership_email_copy.test.ts
 ./node_modules/.bin/tsx scripts/payload_course_stripe_shadow_sync.test.ts
@@ -110,6 +115,9 @@ Expected grep exceptions:
 - Deployment target: staging / production-staged.
 - PR / review URL: `https://github.com/prochattools/jpv-bootcamp/pull/2`
 - Validation commands: see the validation summary above.
+- Approval packet: `docs/client/MIGRATION_APPROVAL_PACKET.md`
+- Manual smoke checklist: `docs/client/STAGING_SMOKE_CHECKLIST.md`
+- Provider/email readiness: `docs/client/PROVIDER_EMAIL_READINESS.md`
 - Expected grep exceptions: see the grep summary above.
 - Migration warning: table-plan-to-Free mapping requires explicit target-environment approval before migration execution.
 - No migrations applied: confirmed.

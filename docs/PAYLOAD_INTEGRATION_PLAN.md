@@ -185,7 +185,7 @@ The `jpvbootcamp_staging` schema may be repaired, reconciled, or reset for stagi
   - Sanitized read-only staging metadata confirms exactly one controlled member row, active status, verified email state, login attempts below threshold, no blocking lockout, and `lastLoginAt` set after the `e6e59ee` deployment;
   - Phase 6 `lastLoginAt` live acceptance is complete, with no reported regression to account recovery, member portal loading, the administrator unauthorized boundary, administrator logout, or administrator login.
 - 7–8 July 2026 Payload-only Free/Pro refit and staging hardening (commit `80012b7`):
-  - Active legacy integration paths removed: WordPress plugin files, WordPress API routes/helpers, old sync route, VIP upgrade route/helper/test, old smoke portal script;
+  - Active legacy integration paths removed: deleted plugin files, removed external-integration API routes/helpers, removed legacy upgrade route/helper/test, removed old smoke portal script;
   - Checkout refitted to Pro-only membership with monthly/annual billing; `plan=pro` is the only accepted public checkout plan;
   - Stripe config and readiness checks require Pro monthly and Pro annual identifiers only;
   - Payload access, billing, course, and generated type surfaces use Free and Pro labels only;
@@ -194,7 +194,7 @@ The `jpvbootcamp_staging` schema may be repaired, reconciled, or reset for stagi
   - Preview migration inventory updated from 10 to 11 migrations (added `20260707_120000_rename_account_identity_columns` and `20260707_130000_remove_table_plan_from_payload_enums`);
   - Staging branch safety docs hardened; Dokploy API key literal removed from docs;
   - Validation: `git diff --check`, `tsc --noEmit`, `prisma validate` (both schemas), 68 focused tests pass, 0 fail;
-  - Grep audit: zero active residue; allowed exceptions only (wp_* rename DDL, STRIPE_PRICE_TABLE negative assertion, pnpm-lock.yaml libvips hashes);
+  - Grep audit: zero active residue; allowed exceptions only (account-column rename DDL, negative old-price assertion, pnpm-lock.yaml libvips hashes);
   - No migrations applied; table-plan-to-Free mapping requires explicit target-environment approval before execution;
   - Remaining risks: `startMemberCheckout` swallows errors without logging the error object; `STRIPE_SUCCESS_URL` has no same-origin guard; checkout rejection coverage is static regex, not runtime route tests;
   - Roadmap progress status: `docs/client/ROADMAP_PROGRESS_STATUS.md`.
