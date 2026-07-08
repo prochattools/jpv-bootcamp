@@ -18,7 +18,8 @@ Local toolchain is pinned to `pnpm@10.33.0`; run `pnpm toolchain:check` before o
 ## Review packet
 
 - [Payload-only Free/Pro Review Packet](./PAYLOAD_ONLY_FREE_PRO_REVIEW_PACKET.md) — commit-readiness summary for the current Payload-only Free/Pro refit.
-- [JPV Bootcamp Go-Live Plan v3.4 Summary](./JPV_BOOTCAMP_GO_LIVE_PLAN_V3_4_SUMMARY.md) — current client-plan update, timeline, and milestone summary.
+- [JPV Bootcamp Go-Live Plan v3.4 Summary](./JPV_BOOTCAMP_GO_LIVE_PLAN_V3_4_SUMMARY.md) — current client-plan update, timeline, and milestone summary (readable Markdown version).
+- [JPV Bootcamp Platform Expansion Go-Live Plan v3.4 (DOCX)](./JPV_Bootcamp_Platform_Expansion_Go_Live_Plan_v3_4.docx) — client-facing binary artifact document.
 - [Roadmap Progress Status](./ROADMAP_PROGRESS_STATUS.md) — current position, progress table, validation evidence, remaining risks, and next executable tasks.
 - [Migration Approval Packet](./MIGRATION_APPROVAL_PACKET.md) — approval-focused summary for the pending migration decision and execution boundary.
 - [Migration Approval Status](./MIGRATION_APPROVAL_STATUS.md) — current blocked/approved state for future agents and operators.

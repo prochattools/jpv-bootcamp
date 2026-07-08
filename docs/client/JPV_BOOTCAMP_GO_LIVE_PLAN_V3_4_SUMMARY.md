@@ -1,6 +1,6 @@
 # JPV Bootcamp Platform Expansion & Go-Live Plan — Version 3.4 Summary
 
-> DOCX note: `docs/client/JPV_Bootcamp_Platform_Expansion_Go_Live_Plan_v3_4.docx` is not present in the repo at the time of this update. This markdown file is the tracked v3.4 summary until the operator places the binary document in the repository.
+This markdown file provides the tracked readable v3.4 status summary. The client-facing binary document is at `docs/client/JPV_Bootcamp_Platform_Expansion_Go_Live_Plan_v3_4.docx`.
 
 ## Version distinction
 
