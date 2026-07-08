@@ -14,7 +14,7 @@ WITH ranked AS (
 		row_number() OVER (
 			PARTITION BY normalized_email
 			ORDER BY
-				(wp_user_id IS NOT NULL) DESC,
+				(account_id IS NOT NULL) DESC,
 				(stripe_customer_id IS NOT NULL) DESC,
 				COALESCE(updated_at, created_at) DESC,
 				created_at DESC
@@ -27,7 +27,7 @@ canonical AS (
 merged AS (
 	SELECT
 		normalized_email,
-		(array_agg(wp_user_id ORDER BY (wp_user_id IS NOT NULL) DESC, updated_at DESC NULLS LAST, created_at DESC NULLS LAST))[1] AS best_wp_user_id,
+		(array_agg(account_id ORDER BY (account_id IS NOT NULL) DESC, updated_at DESC NULLS LAST, created_at DESC NULLS LAST))[1] AS best_account_id,
 		(array_agg(stripe_customer_id ORDER BY (stripe_customer_id IS NOT NULL) DESC, updated_at DESC NULLS LAST, created_at DESC NULLS LAST))[1] AS best_stripe_customer_id,
 		(array_agg(stripe_subscription_id ORDER BY (stripe_subscription_id IS NOT NULL) DESC, updated_at DESC NULLS LAST, created_at DESC NULLS LAST))[1] AS best_stripe_subscription_id,
 		(array_agg(plan ORDER BY (plan IS NOT NULL) DESC, updated_at DESC NULLS LAST, created_at DESC NULLS LAST))[1] AS best_plan,
@@ -43,7 +43,7 @@ merged AS (
 )
 UPDATE jpvbootcamp.customer_provisioning cp
 SET
-	wp_user_id = COALESCE(cp.wp_user_id, m.best_wp_user_id),
+	account_id = COALESCE(cp.account_id, m.best_account_id),
 	stripe_customer_id = COALESCE(cp.stripe_customer_id, m.best_stripe_customer_id),
 	stripe_subscription_id = COALESCE(cp.stripe_subscription_id, m.best_stripe_subscription_id),
 	plan = COALESCE(cp.plan, m.best_plan),

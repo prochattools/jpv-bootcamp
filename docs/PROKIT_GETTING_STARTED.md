@@ -28,7 +28,7 @@ Create `.env` (or let `npm run dev` generate it) and set:
 - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY` – Clerk keys
 - `STRIPE_ENV`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_TEST` / `_LIVE`, `STRIPE_SECRET_KEY_TEST` / `_LIVE`, `STRIPE_WEBHOOK_SECRET_TEST` / `_LIVE` – Stripe keys for the JPV Bootcamp Stripe account
 - `NEXT_PUBLIC_APP_URL` – app base URL (e.g., http://localhost:3000)
-- Optional: MAKE_*, N8N_*, RESEND_API_KEY, WP_REST_ENDPOINT, MCP_* as needed
+- Optional: MAKE_*, N8N_*, RESEND_API_KEY, MCP_* as needed
 
 Reference: `.env.example`.
 

@@ -15,7 +15,7 @@ Ship small B2B SaaS products fast, cheap, and often. Aim for 80% ideation/valida
 - Email: Resend  
 - Payments: Stripe (JPV Bootcamp Stripe account)  
 - Automation: n8n  
-- Included utilities: SEO + blog (Headless WordPress), dashboard, invoice generator, waiting list, component library/animations, built-in analytics and deployment workflow
+- Included utilities: SEO + Payload-managed content, dashboard, invoice generator, waiting list, component library/animations, built-in analytics and deployment workflow
 
 Ideas must adapt to this stack, not vice versa.
 
@@ -77,7 +77,7 @@ Speed and simplicity are sacred. ProKit is the product factory; n8n is the engin
 7. Repeat.
 
 ## Appendix: Folder tree snapshot (Feb 2025)
-Preserves the folder tree from the active RebuildWP boilerplate to give future assistants context and avoid duplicating utilities.
+Preserves the folder tree from the active Payload/Next.js boilerplate to give future assistants context and avoid duplicating utilities.
 
 ```
 Dockerfile

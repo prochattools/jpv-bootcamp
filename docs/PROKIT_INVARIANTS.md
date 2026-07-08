@@ -15,7 +15,7 @@ This file captures the contracts that must stay stable while rebranding the boil
 - Navigation visibility is not authorization. Every protected route, API operation, Local API call, and mutation must enforce server-side access and fail closed.
 - Course, community, private-group, and billing access requires explicit roles, policies, and entitlements.
 - Password onboarding and recovery use expiring set-password or reset links; plaintext passwords are never emailed.
-- Existing WordPress and production flows remain unchanged until documented validation, reconciliation, rollback, and cutover gates pass.
+- Current production flows remain unchanged until documented validation, reconciliation, rollback, and cutover gates pass.
 - All Payload tables are prefixed `payload_` and live in the approved JPV Bootcamp schema.
 - Payload manages its own migrations; do not include `payload_*` tables in `prisma/system.prisma`.
 
@@ -36,8 +36,9 @@ This file captures the contracts that must stay stable while rebranding the boil
   - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_TEST` / `_LIVE` – client checkout.  
   - `STRIPE_SECRET_KEY_TEST` / `_LIVE` – server Stripe client.  
   - `STRIPE_WEBHOOK_SECRET_TEST` / `_LIVE` – webhook signature verification.  
-  - `STRIPE_PRICE_PRO_TEST` / `_LIVE`, `STRIPE_PRICE_VIP_TEST` / `_LIVE` – pricing ids.
-  - `STRIPE_PRODUCT_JPV_BOOTCAMP_PRO_MEMBERSHIP_TEST` / `_LIVE`, `STRIPE_PRODUCT_JPV_BOOTCAMP_VIP_MEMBERSHIP_TEST` / `_LIVE` – product ids used as fallback plan mapping; Pro and VIP must not share the same product ID.
+  - `STRIPE_PRICE_PRO_MONTHLY_TEST` / `_LIVE`, `STRIPE_PRICE_PRO_ANNUAL_TEST` / `_LIVE` – Pro monthly and annual price IDs.
+  - `STRIPE_PRODUCT_JPV_BOOTCAMP_PRO_MEMBERSHIP_TEST` / `_LIVE` – Pro product ID used as fallback plan mapping.
+  - Removed paid-tier variables are not target required config and must not power an active checkout option.
 - Email (Resend)  
   - `RESEND_API_KEY` – used by `resendService` for waiting list + thank-you emails.
 - Automation (Make)  
@@ -45,10 +46,10 @@ This file captures the contracts that must stay stable while rebranding the boil
   - `MAKE_ORGANIZATION_ID` – present in `.env.example`, unused by code (safe to leave blank).
 - Automation (n8n)  
   - `N8N_API_KEY`, `N8N_API_URL`, `N8N_WEBHOOK_URL` – required for cloning/activating n8n workflows.
-- Content (WordPress)  
-  - `WP_REST_ENDPOINT` – pull posts for blog/sitemap (other WordPress/MySQL vars only feed docker-compose for local content).
-- Local infra + optional helpers  
-- `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DBNAME` – docker-compose Postgres defaults (host port 5444 → container 5432).  
+- Content (Payload)
+  - Payload Local API and collections are the source for managed course, page, and member content.
+- Local infra + optional helpers
+- `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DBNAME` – docker-compose Postgres defaults (host port 5444 -> container 5432).
   - `MCP_API_URL`, `MCP_SECRET` – optional MCP bridge for remote script triggering.  
   - `MOCK_USER_ID` – optional dev seed/mocking aid; not consumed by current code.
 

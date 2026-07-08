@@ -7,11 +7,12 @@ This is the single canonical product, architecture, security, roadmap, and execu
 1. **Canonical plan — this document.** Owns philosophy, architecture, security, current status, roadmap order, validation gates, and cutover boundaries.
 2. **Feature specifications.** Define implementation detail without changing roadmap order:
    - `docs/PAYLOAD_COMMUNICATIONS_PLAN.md` — branded communications, FreeResend delivery, templates, events, preferences, audit, and acceptance criteria for Phase 6.
+   - `docs/PAYLOAD_SUPPORT_PAY_IT_FORWARD_PLAN.md` — support credits, sponsored access, applicant review, expiry, receipts, and administrator controls for the Free/Pro access model.
    - `docs/PAYLOAD_PARTNER_AFFILIATE_PLAN.md` — detailed Partner Affiliates specification for Phase 9.
    - `docs/LIVEKIT_PAYLOADCMS_GROUP_CALLS_PLAN.md` — future group-call use cases, LiveKit runtime architecture, PayloadCMS collections and authorization boundary, security, privacy, and acceptance gates for Phase 11.
 3. **Visual reference.** `docs/PAYLOAD_COURSE_VISUAL_IMPLEMENTATION_PLAN.md` illustrates screens and workflows but does not replace this plan.
-4. **Client progress document.** `docs/client/JPV_Minimal_Payload_Course_Plan_v2_2.docx` communicates progress and remaining work in concise, non-technical language. It must remain aligned with this plan and the feature specifications.
-5. **Legacy archive.** `docs/archive/PARTNER_AFFILIATE_LEGACY.md` records retained obsolete behavior for migration and reconciliation.
+4. **Client truth document.** `JPV Bootcamp Platform Expansion & Go-Live Plan v3.3` is the latest client-communicated scope. It supersedes the older Version 2.40 progress framing and must stay aligned with this internal plan.
+5. **Client document inventory.** `docs/client/README.md` records which client-facing document is current and which older documents are historical.
 6. **Platform invariants and operations.** `docs/PROKIT_OVERVIEW.md`, `docs/PROKIT_INVARIANTS.md`, and infrastructure documents define stable operational contracts.
 
 Do not create another general Payload roadmap. New work must first be added here as a phase or deliverable. Create a feature specification only when the detailed workflow, privacy, migration, or acceptance material would make this canonical plan harder to use.
@@ -30,10 +31,23 @@ Do not create another general Payload roadmap. New work must first be added here
 - Build one coherent application rather than parallel member systems.
 - Keep public, administrator, and member surfaces separate.
 - Treat identity, authorization, entitlements, privacy, communication, and auditability as product foundations.
-- Preserve proven production flows until replacements are tested, reconciled, reversible, and approved.
+- Keep this feature branch Payload-only; removed external community, CRM, and portal integrations must not remain as active code, transition wiring, rollback docs, or archive material here.
 - Prefer small, demonstrable phases over broad rewrites.
 - Keep Payload as the administrative system of record and Next.js as the controlled member experience.
-- Retain legacy systems as migration sources, never as accidental target architecture.
+- Treat historical data only as reviewed import material that maps into neutral account, Free access, Pro subscription, expired, revoked, suspended, or administrator-review states.
+- Keep the public offer simple: Free for approved non-paid access and Pro for the single paid subscription.
+
+## Version 3.3 platform direction and terminology
+
+The current client-communicated scope is Version 3.3. The finish line is no longer only a minimal course-area replacement. It is a phased commercial platform launch with public offer clarity, billing automation, support/pay-it-forward access, public landing-page readiness, representative 8-week course content, partner tracking, community previews, migration rehearsal, and go-live controls.
+
+Canonical product terminology:
+
+- **Free** — non-paid access state for approved support, pay-it-forward recipients, staff/test access, or other administrator-created access. Free may exist in the system and in administrator reporting, but it is not the main public sales offer.
+- **Pro** — the single paid JPV Bootcamp subscription. Public copy should describe Pro with two payment options: monthly with a 12-month commitment, and annual upfront with the approved annual discount.
+- **Historical tiers** — old paid and non-paid labels are migration inputs only. They must be mapped into Free, Pro, expired, revoked, suspended, or administrator-approved access states before cutover.
+
+The v3.3 readiness baseline replaces older v2.40 percentages: expanded-platform readiness is about 58% overall, first core go-live readiness is about 62%, carried-forward build foundation readiness is about 78%, and expanded launch readiness is about 52%. Older v2.40 progress numbers may be cited only as historical context for the narrower scope.
 
 ## Final architecture
 
@@ -41,7 +55,7 @@ Do not create another general Payload roadmap. New work must first be added here
 |---|---|---|---|
 | Public website | `/` | Everyone | Marketing, pricing, public content, and member portal entry |
 | Administrator back office | `/admin` | Verified administrators | Content, members, access, billing, community, affiliates, audit, operations, and health triage |
-| Member/student portal | `/portal` | Verified members and students | The single member-facing entry point for sign-in, free registration, courses, community, account, billing, and partner activity |
+| Member/student portal | `/portal` | Verified members and students | The single member-facing entry point for sign-in, Free access, Pro subscription, courses, community, account, billing, and partner activity |
 | Compatibility redirects | `/login`, `/learn/login`, `/register` | Existing links and tests | Preserve older links but direct users toward the simpler `/portal` member flow |
 
 Administrator accounts and member identities are separate security domains, even when one person holds both. Members never receive administrator access merely because they have an active member record. The product rule is intentionally simple: humans see two sign-in doors only — `/admin` for operators and `/portal` for students/members. Supporting routes may exist for compatibility, but new navigation should point members to `/portal`.
@@ -52,11 +66,11 @@ Mature learning platforms separate operator work from learner work. Moodle’s d
 
 Admin dashboard cards should therefore show decision-oriented signals first: platform errors, failed deliveries, active members, active subscriptions, pending partner applications, affiliate commission exceptions, upcoming course/call items, and recent community moderation needs. The dashboard should not primarily duplicate every collection card already present in the sidebar. Affiliates represent JPV’s tracking and commission side of member acquisition. Partners represent third-party organizations or destinations that receive applications/leads. They can share a navigation group, but their collection names and dashboard descriptions must make this distinction clear.
 
-### Member authentication and free registration contract
+### Member authentication and Free/Pro access contract
 
-`/admin` is the only administrator login. `/portal` is the canonical member/student entry point and must support sign in, free account creation, forgot password, and resend-verification paths. `/portal?mode=login` renders the member sign-in surface without tripping the portal auth gate, and `/portal?mode=register` now routes to `/register` for free account creation. `/register` may remain as a compatibility or deep-link route for the free account form until registration is portal-native. `/login` and `/learn/login` are transitional shared/member routes only; preferred behavior is to redirect or link into `/portal?mode=login`.
+`/admin` is the only administrator login. `/portal` is the canonical member/student entry point and must support sign in, forgot password, resend-verification paths, Free access where approved, and Pro subscription self-service. `/portal?mode=login` renders the member sign-in surface without tripping the portal auth gate. `/register` and `/portal?mode=register` are compatibility routes for Free access creation or support/pay-it-forward intake only where the business rule explicitly allows it; they must not present competing paid tiers. `/login` and `/learn/login` are transitional shared/member routes only; preferred behavior is to redirect or link into `/portal?mode=login`.
 
-New students can create a Free account without payment. Pro and VIP are paid upgrade-only plans and must not appear as selectors in free registration. Registration creates a pending member and requires email verification before sign-in. Successful registration copy must state that the free account was created and verification is required. Duplicate-account copy must guide the user to sign in or resend verification without using ambiguous eligible-account language.
+Public paid access is **Pro** only. Pro must have two payment options: monthly with a 12-month commitment, and annual upfront with the approved annual discount. Free remains a controlled access state for approved support, pay-it-forward, staff/test, or administrator-created access. Registration or support intake creates a pending member and requires email verification before sign-in. Successful copy must clearly state whether the account is pending Free access, awaiting support review, or ready to upgrade to Pro. Duplicate-account copy must guide the user to sign in or resend verification without ambiguous eligible-account language.
 
 ### Partner and affiliate domain language
 
@@ -237,7 +251,8 @@ Validation:
 Tasks:
 
 - finish course, module, lesson, community, and group checks;
-- preserve Free, Pro, VIP, manual, suspended, expired, and revoked states;
+- preserve Free, Pro, support/pay-it-forward, manual, suspended, expired, and revoked states;
+- map historical access records into the new Free/Pro access model before cutover;
 - finish grant/revoke administration and reconciliation;
 - move private storage to production-suitable shared or object storage before cutover.
 
@@ -347,7 +362,7 @@ Completed in this slice:
   - Manage billing when a billing account exists.
 
 **Member Checkout (Phase 5):**
-- Authenticated members can start Pro or VIP Stripe Checkout from `/portal/billing`;
+- Authenticated members can start Pro Stripe Checkout from `/portal/billing`, choosing either the monthly 12-month commitment option or the annual upfront option;
 - Member identity, email, customer ownership, success URL, and cancel URL are derived server-side;
 - Existing active, trialing, past-due, or unpaid subscriptions cannot create a duplicate checkout;
 - Existing Stripe customers are reused; otherwise the authenticated member email is passed to Stripe;
@@ -484,12 +499,12 @@ Validation:
 
 ## Overall delivery status — July 2026
 
-The roadmap now contains eleven phases, including the deferred LiveKit group-call phase. Weighted implementation progress is approximately **72% complete**. The source implementation of the core course platform is substantially further advanced than Version 2.2 recorded, while production readiness remains gated by controlled staging operations.
+The roadmap now contains the original eleven technical phases plus the Version 3.3 commercial-launch expansion. Expanded-platform readiness is approximately **58% complete** overall, with about **62% readiness for the first core go-live**. The older v2.40 percentage remains historical evidence for the narrower course/staging scope only.
 
-- **Implemented or source-complete foundations:** Phases 1–5.
-- **Substantial implementation with live acceptance or refinement pending:** Phases 6–10.
-- **Future research-defined feature:** Phase 11.
-- **Primary remaining work:** staging deployment, reviewed migration execution, real provider and billing acceptance, community/partner live journeys, rollback rehearsal, final cutover approval, and later LiveKit implementation.
+- **Carried-forward strong foundations:** administrator boundary, shared login, account security, member portal shell, course/access foundations, billing projection, community foundations, partner foundations, and staging evidence.
+- **Core go-live scope:** public landing page, Free/Pro terminology refit, Pro checkout options, billing automation/recovery, representative 8-week course pilot, support/pay-it-forward access controls, migration rehearsal, rollback, and explicit go-live approval.
+- **Controlled follow-up releases:** richer partner reporting/delivery, community/private-room refinements, notifications/digests, private messaging if accepted, and later LiveKit group calls.
+- **Primary remaining work:** refit old tier assumptions into Free/Pro, verify Stripe/payment paths, complete public copy/content, run representative course and storage acceptance, reconcile migration mapping, preview community/private-room behavior, verify partner links/forms/reports, rehearse rollback, and approve cutover.
 
 ## Communication scope summary
 
@@ -526,7 +541,7 @@ A phase is complete only when:
 
 ## Immediate milestone
 
-Prepare the exact current commit for controlled staging as quickly as the independent approvals allow: finalize rollback planning, validate the release packet, publish an immutable preview image only after approval, execute only the reviewed migration order in the approved preview environment, deploy that exact image, and run the authorized rehearsal matrix. The first visible staging review should cover administrator/member separation, login and account security, courses and protected resources, billing portal/checkout, community publishing, partner applications/reporting, and shadow evidence. Provider delivery, migration execution, deployment, live smoke checks, rollback execution, and cutover remain separately authorized operations. The offline rehearsal matrix and safe evidence validator are now implemented; the remaining work is live approval execution, not plan design. Phase 11 remains future LiveKit-plus-PayloadCMS work and must not delay the core staging milestone.
+Align the current implementation with the Version 3.3 commercial-launch scope before production cutover: refit all public and billing language to Free/Pro, keep Pro as the only paid subscription, validate Pro monthly/annual checkout behavior, confirm support/pay-it-forward rules, prepare representative 8-week course content, confirm public landing-page copy, and rehearse migration from historical access states into the new Free/Pro access model. The first core go-live candidate remains the public landing page, Pro subscription, secure member portal, billing automation, account flows, course access, administrator controls, migration rehearsal, rollback, and explicit approval. Community/private-room previews and partner links/forms/reports should be included where accepted; private messaging, advanced notifications, payouts/webhooks, and LiveKit calls remain post-core unless explicitly marked launch-critical.
 
 This slice hardens the repository-only candidate gate: rollback and packet drafts are generated from explicit local inputs, placeholder approvals are rejected, packet validation is bound to exact branch/HEAD/repository state, rehearsal checks come from the real smoke matrix, and no live operation has been authorized yet. The next required live step after this commit is branch push authorization.
 

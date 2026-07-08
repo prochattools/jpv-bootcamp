@@ -10,7 +10,7 @@ The `jpv-bootcamp` app uses a strict three-surface architecture:
 
 A shared login entry at `/login` redirects verified administrators to `/admin` and verified members to `/portal`. Payload administrator accounts and member identities are separate security domains, even when one person holds both. Members must never receive Payload admin access, administrator API access, or administrator capabilities. Navigation visibility is not authorization; all access decisions are enforced server-side and fail closed.
 
-Payload is the administrative system for courses, members, access, community, billing visibility, and editorial workflows. Member access to courses, communities, private groups, and billing features is granted only through explicit roles and entitlements. Existing WordPress and production flows remain unchanged until a documented, tested cutover phase is completed.
+Payload is the administrative system for courses, members, access, community, billing visibility, and editorial workflows. Member access to courses, communities, private groups, and billing features is granted only through explicit roles and entitlements. Cutover requires documented validation, rollback, and client approval.
 
 > Stripe note: In this repo, every Stripe reference means the JPV Bootcamp Stripe account.
 

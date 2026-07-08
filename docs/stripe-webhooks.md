@@ -26,22 +26,20 @@ stripe trigger invoice.payment_failed
 - `STRIPE_ENV`
 - `STRIPE_SECRET_KEY_TEST` / `STRIPE_SECRET_KEY_LIVE`
 - `STRIPE_WEBHOOK_SECRET_TEST` / `STRIPE_WEBHOOK_SECRET_LIVE` (comma-separated allowed for rotation)
-- `STRIPE_PRICE_PRO_TEST` / `STRIPE_PRICE_PRO_LIVE`
-- `STRIPE_PRICE_VIP_TEST` / `STRIPE_PRICE_VIP_LIVE`
+- `STRIPE_PRICE_PRO_MONTHLY_TEST` / `STRIPE_PRICE_PRO_MONTHLY_LIVE`
+- `STRIPE_PRICE_PRO_ANNUAL_TEST` / `STRIPE_PRICE_PRO_ANNUAL_LIVE`
 - `WEBHOOK_IDEMPOTENCY_TTL_HOURS`
 
-## Provisioning env vars (required to provision in production)
-- `PROVISIONING_ENABLED=true` (default false)
-- `WP_BASE_URL`
-- `WP_PROVISION_ENDPOINT`
-- `WP_PROVISION_TOKEN`
+Removed paid-tier price variables are not required target config and must not represent an active checkout option.
+
+## Membership projection env vars
 - `RESEND_API_KEY`
 - `EMAIL_FROM`
 - `EMAIL_REPLY_TO`
 - `SUPPORT_TO_EMAIL`
 - `PORTAL_URL` (or `PORTAL_LOGIN_URL`)
 
-Note: In development, missing provisioning env vars will skip WordPress provisioning but still return 2xx to Stripe after idempotency is recorded.
+Note: In development, missing email env vars should not prevent Stripe signature or idempotency verification.
 
 Recommendation: keep only one webhook destination per mode. During secret rotation,
 you can provide multiple secrets in the same `STRIPE_WEBHOOK_SECRET_TEST`/`_LIVE` value.

@@ -2,9 +2,9 @@
 
 ## Status and scope
 
-This document defines the target replacement for the retained Prisma/WordPress partner-click and sponsored-application implementation documented in `docs/archive/PARTNER_AFFILIATE_LEGACY.md`.
+This document defines the target partner-click, sponsored-application, and reporting implementation for the Payload member portal.
 
-Raw member-facing partner application, delivery foundation, and affiliate-summary wiring are implemented in the portal. Reconciliation, payouts, richer admin UX, live provider verification, and preview acceptance remain deferred.
+Version 3.3 first release keeps this feature practical and measurable: partner links/pages, simple application forms, click/application tracking, administrator reports, CSV export, and queued email or manual export. Reconciliation, payouts, direct webhooks, richer admin UX, live provider verification, and advanced conversion tracking remain post-core unless explicitly marked launch-critical.
 
 ## Product goal
 
@@ -77,7 +77,7 @@ Recommended fields:
 - `deliveryAttempts`;
 - `lastDeliveryError` — sanitized and administrator-only;
 - `source` — `portal`, `administrator`, `migration`;
-- optional `legacyWpUserId` and legacy record references;
+- optional `sourceMemberId` and legacy record references;
 - internal notes restricted to administrators;
 - timestamps.
 
@@ -292,14 +292,14 @@ Legacy sources:
 - `partner_sessions`;
 - `partner_clicks`;
 - `sponsored_applications` only where records genuinely represent partner applications;
-- WordPress user IDs and email hashes;
+- member account IDs and email hashes;
 - static partner definitions and category slugs.
 
 Migration rules:
 
 - do not treat sponsored-seat applications as partner applications without an explicit mapping decision;
 - preserve legacy IDs in dedicated reference fields;
-- map WordPress users to Payload members through reviewed identity reconciliation;
+- map imported users to Payload members through reviewed identity reconciliation;
 - import click events only when partner slug and member mapping are reliable;
 - do not invent delivery success for historical clicks;
 - retain raw legacy exports outside member-facing records;
@@ -375,4 +375,5 @@ Before implementation, approve:
 - Application submission is created server-side before any redirect or queued delivery state.
 - Partner collections and event streams are now registered in Payload.
 - Own-history and affiliate-summary views are derived from authenticated member identity.
-- Remaining work: live delivery/provider verification, reconciliation, payouts, richer admin UX, and preview acceptance.
+- Remaining core work: client-supplied partner links/form questions, preview acceptance, application/report verification, CSV export checks, and queued email/manual export acceptance.
+- Post-core work: direct webhooks, payout/commission workflows, richer admin UX, advanced conversion tracking, and deeper provider reconciliation.

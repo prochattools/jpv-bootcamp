@@ -150,6 +150,6 @@ Command: `npm run db:cleanup -- --slug <slug> [--force]`
 - Dev workflow: `docs/PROKIT_DEV_GUIDE.md`  
 - Cleanup details: `docs/PROKIT_TENANT_CLEANUP.md`
 - Payload CMS architecture and table inventory: `docs/PAYLOAD_CMS.md`
-- WordPress → Payload migration guide: `docs/PAYLOAD_MIGRATION.md`
+- Payload CMS target reference: `docs/PAYLOAD_CMS.md`
 - Shared local app and OrbStack database inventory: `/Users/Office/Repos/stevewesthoek/brain/operations/infrastructure/local-apps.md`
 - Standalone OrbStack Postgres map: `/Users/Office/Repos/stevewesthoek/brain/operations/database/standalone/README.md`

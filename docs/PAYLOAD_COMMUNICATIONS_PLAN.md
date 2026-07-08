@@ -1,10 +1,10 @@
 # JPV Bootcamp Communications Plan
 
-This specification defines the approved communication system for the JPV Bootcamp Payload programme. It is subordinate to `docs/PAYLOAD_INTEGRATION_PLAN.md` and must remain aligned with the client progress document.
+This specification defines the approved communication system for the JPV Bootcamp Payload programme. It is subordinate to `docs/PAYLOAD_INTEGRATION_PLAN.md` and must remain aligned with the Version 3.3 client truth document.
 
 ## Purpose
 
-Build one branded, auditable communication system for administrators, members, billing, learning, community, and partner-affiliate workflows. The existing FreeResend service is the delivery provider. Client-facing messages must use JPV Bootcamp branding and must not expose Payload terminology.
+Build one branded, auditable communication system for administrators, Free access holders, Pro subscribers, billing, learning, community, support/pay-it-forward, and partner-affiliate workflows. The existing FreeResend service is the delivery provider. Client-facing messages must use JPV Bootcamp branding and must not expose Payload terminology.
 
 ## Communication principles
 
@@ -62,6 +62,11 @@ Newsletters, promotions, events, and administrator-selected group communication.
 | Account restored | Member | Immediately | Access restored | Sign in |
 | Account deletion requested | Member; administrator | Immediately | Request summary and consequences | Confirm or cancel |
 | Account deleted/anonymized | Member; administrator audit | After completion | Final confirmation | None |
+| Support application received | Applicant; administrator | Immediately | Review process, expected response, support terms | View support status |
+| Support access approved | Recipient; administrator audit | Immediately | Free access terms, start/end date, next step | Open portal |
+| Sponsored access purchased | Sponsor; finance audit | Immediately | Receipt, sponsored quantity, thank-you message | View receipt |
+| Sponsored access assigned | Recipient; administrator audit | Immediately | Free access terms, sponsor-safe wording, start/end date | Open portal |
+| Support or sponsored access expiring | Recipient; administrator | Scheduled | Expiry date and renewal/support path | Contact support |
 
 ### 2. Password and security
 
@@ -100,13 +105,13 @@ Newsletters, promotions, events, and administrator-selected group communication.
 |---|---|---|---|---|
 | Purchase completed | Customer; finance audit | Immediately | Product, amount, tax, access | View receipt |
 | Subscription started | Customer | Immediately | Plan, billing cycle, next date | Manage subscription |
-| Trial started | Customer | Immediately | Trial end and conversion terms | Manage plan |
-| Trial ending | Customer | Scheduled | End date and next charge | Manage plan |
+| Pro subscription started | Customer | Immediately | Pro payment option, billing cycle, next date | Manage subscription |
 | Payment succeeded | Customer | Immediately | Amount, currency, invoice/receipt | View receipt |
-| Payment failed | Customer; finance administrator | Immediately | Reason where safe, retry date | Update payment method |
-| Retry scheduled | Customer | Before retry | Retry date and amount | Update payment method |
-| Final retry failed | Customer; finance administrator | Immediately | Access impact and support | Resolve payment |
-| Subscription changed | Customer | Immediately | Old/new plan and proration | Review subscription |
+| Payment failed | Customer; finance administrator | Immediately | Reason where safe and payment-update path | Update payment method |
+| Payment still unresolved after 24 hours | Customer; finance administrator | After 24 hours | Access impact, login retained, and recovery path | Update payment method |
+| Pro access restricted for non-payment | Customer; finance administrator | Immediately | Course-access impact and recovery path | Resolve payment |
+| Payment recovered | Customer; finance administrator | Immediately | Pro access restored and receipt status | Continue learning |
+| Pro payment option changed | Customer | Immediately | Old/new payment option and proration where applicable | Review subscription |
 | Cancellation scheduled | Customer | Immediately | End date and retained access | Resume subscription |
 | Subscription canceled | Customer | At cancellation | Final status | Rejoin |
 | Refund requested | Customer; finance administrator | Immediately | Request reference | View billing |

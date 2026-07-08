@@ -1,0 +1,41 @@
+# JPV Bootcamp Client Document Inventory
+
+This folder tracks client-facing documents so internal roadmap documentation stays aligned with the latest communicated client truth.
+
+## Current client truth
+
+**JPV Bootcamp Platform Expansion & Go-Live Plan v3.3** is the current client-communicated scope and planning baseline.
+
+It supersedes the older Version 2.40 plan for product scope, terminology, progress framing, and launch expectations.
+
+## Review packet
+
+- [Payload-only Free/Pro Review Packet](./PAYLOAD_ONLY_FREE_PRO_REVIEW_PACKET.md) — commit-readiness summary for the current Payload-only Free/Pro refit.
+
+## Current terminology
+
+- **Free** — controlled non-paid access for approved support, pay-it-forward recipients, staff/test access, migration outcomes, or administrator-created access.
+- **Pro** — the single paid subscription. Pro has two payment options: monthly with a 12-month commitment and annual upfront with the approved discount.
+- Removed historical paid tiers and non-Pro payment products must not be described as target tiers, public offers, checkout options, transition states, archived strategy, or future product labels in this feature branch.
+
+## Internal alignment rule
+
+`docs/PAYLOAD_INTEGRATION_PLAN.md` is the canonical internal roadmap and implementation plan. It must remain aligned with the current client truth and subordinate feature specifications.
+
+Do not create a second general roadmap. Update the canonical plan first, then update feature specifications and client-facing summaries.
+
+## Historical documents
+
+- `JPV_Minimal_Payload_Course_Plan_v2_40` remains useful for historical staging progress and earlier scope comparison.
+- Earlier v2.x client documents must not be used as current scope unless the client explicitly re-approves that older scope.
+
+## Consistency checklist
+
+Before a client or internal roadmap update is considered clean:
+
+- public offer uses Free and Pro only;
+- Pro is the only paid subscription;
+- support/pay-it-forward is controlled Free access, not a third tier;
+- removed paid-tier and external-integration language does not appear in active docs, source, scripts, schema, or public copy, except where a data-preserving rename migration must reference old database column names;
+- public launch page, billing automation, representative 8-week course, partner tracking, community previews, data reconciliation, and go-live approval are represented;
+- post-core work is clearly separated from first core go-live work.

@@ -36,7 +36,7 @@ RESEND_API_KEY="re_..."
 # App URL
 NEXT_PUBLIC_APP_URL="http://localhost:3000"
 
-# Portal upgrade URL (Fluent Community)
+# Portal upgrade URL (Payload member portal)
 NEXT_PUBLIC_PORTAL_UPGRADE_URL="https://YOUR_PORTAL_DOMAIN/path-to-upgrade"
 ```
 

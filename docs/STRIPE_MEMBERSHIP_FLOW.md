@@ -1,117 +1,58 @@
-# Stripe Membership Flow (JPV Bootcamp)
+# Stripe Membership Flow
 
-> Stripe note: In this repo, every Stripe reference means the JPV Bootcamp Stripe account.
+This document is the Version 3.3 Stripe membership contract.
 
-> **Payload CMS note**: The Payload admin panel (`/app`) is a future editorial surface. It does NOT handle Stripe webhooks, WP provisioning, or billing portal flows. Those remain exclusively in the existing Next.js routes. Do not route Stripe events through Payload's webhook endpoint.
+## Product Truth
 
-## Contract (Email + Provisioning)
-- Exactly **2 emails** on a successful PRO or VIP purchase:
-  1) **Membership email** from Resend (support@jpvbootcamp.com or configured sender) – sent **only** from the Stripe webhook provisioning path and **only once** per plan change.
-  2) **WordPress account email** (from enquiries@jpvbootcamp.com) with set/reset password link – sent **only** when a WP user is created (or re-provisioned because the WP user is missing).
-- **No “Free/newsletter” email** is sent on Stripe purchase/upgrade flows. Newsletter email is only sent via `/api/subscribe` and can be disabled globally with `DISABLE_NON_WEBHOOK_EMAILS=1`.
+- Free is controlled non-paid access for support, pay-it-forward, staff, test, admin-created, or approved migration outcomes.
+- Pro is the only paid subscription.
+- Pro has two payment options: monthly with a 12-month commitment, and annual upfront.
+- Support and pay-it-forward are controlled Free access paths, not product tiers.
 
-## JPV Bootcamp Stripe Env + Portal Configuration
-- Stripe environment is selected by `STRIPE_ENV=test|live`.
-- Two-product model is required for Portal upgrades:
-  - Pro and VIP are **separate Stripe products**, each with one recurring GBP price.
-- Portal sessions must include an explicit configuration id:
-  - `STRIPE_PORTAL_CONFIGURATION_ID_TEST`
-  - `STRIPE_PORTAL_CONFIGURATION_ID_LIVE`
-- Env vars used for plan resolution + provisioning:
-  - `STRIPE_PRICE_PRO_TEST` / `STRIPE_PRICE_PRO_LIVE`
-  - `STRIPE_PRICE_VIP_TEST` / `STRIPE_PRICE_VIP_LIVE`
-  - `STRIPE_PRODUCT_JPV_BOOTCAMP_PRO_MEMBERSHIP_TEST` / `_LIVE`
-  - `STRIPE_PRODUCT_JPV_BOOTCAMP_VIP_MEMBERSHIP_TEST` / `_LIVE`
-- Portal session creation routes use `configuration=<id>` to ensure Stripe-hosted upgrades + proration are enabled.
+## Checkout
 
-## Canonical Event for Membership Emails
-- Membership emails are sent **only** on `customer.subscription.updated`.
-- All other Stripe events (checkout.session.completed, subscription.created, invoice.paid, etc.) **do not** send membership emails.
-- Manual sync (`/api/stripe/sync-membership`) can send email **only** with explicit admin override header.
+Public and portal checkout entry points call the app-owned checkout route with:
 
-## Dedupe Strategy (Persistent)
-- Dedupe fields stored in `tenant_jpvbootcamp.customer_provisioning`:
-  - `last_notified_plan`
-  - `last_notified_event_id`
-  - `last_notified_at`
-- Email send is allowed only if:
-  - `newPlan` is `pro|vip`
-  - `oldPlan != newPlan`
-  - `last_notified_plan != newPlan`
-  - `last_notified_event_id != eventId`
-  - `last_notified_at` is older than 2 minutes
+- `plan=pro`
+- `billing=monthly` or `billing=annual`
 
-## Provisioning + Tag Sync
-- Webhook provisioning updates:
-  - WP `jpv_membership_level`
-  - FluentCRM tags: **add** VIP/Pro, **remove** opposite
-- On upgrade (Pro→VIP), the subscription update event is authoritative.
+Checkout must reject any non-Pro public plan value. Checkout metadata should be sufficient for webhook projection and audit logs. It must not create, preserve, or route to any additional paid plan, one-off table product, or public upgrade alias inside the membership checkout path.
 
-## Plan Resolution (JPV Bootcamp Stripe → JPV Plan)
-- **Primary:** Price id match (Pro/VIP).
-- **Secondary:** Product id match (Pro/VIP).
-- **Fallback:** Subscription metadata `plan` if present.
-- Any mismatch or unknown ids resolve to `none` and will not provision a plan.
+## Webhooks
 
-## Upgrade Test (Pro → VIP)
-1) Create a Pro subscription via Checkout.
-2) Use the billing portal upgrade flow (VIP) from the portal endpoint.
-3) Confirm the **same subscription** is updated (no new subscription created).
-4) Confirm `customer.subscription.updated` webhook resolves to `vip` by price id.
-5) Verify WP membership level + FluentCRM tags updated (VIP added, Pro removed).
+Stripe webhook handling must:
 
-## Verification Commands
-### Verify Pro/VIP prices map to different products
-```
-npm run stripe:check-products
-```
+- verify the Stripe signature;
+- record idempotency before side effects;
+- project active Pro subscription state into local member access;
+- fail closed on invalid, unpaid, canceled, incomplete, or disputed states;
+- send membership email only through configured, deduplicated paths;
+- keep support/pay-it-forward access separate from paid subscription state.
 
-### Replay a stored webhook event (dry run)
-```
-DRY_RUN_WP_SYNC=1 tsx scripts/stripe/simulate_sync_from_event.ts evt_123
-```
+## Billing Portal
 
-### Dump recent webhook events from DB
-```
-tsx scripts/stripe/dump_recent_webhook_events.ts
-```
+Billing portal sessions are for existing Stripe customers. They should return to the app-owned portal billing page and must remain separate from checkout.
 
-### SQL checks (Supabase / Postgres)
-```
-select email,
-       stripe_customer_id,
-       stripe_subscription_id,
-       current_plan,
-       last_notified_plan,
-       last_notified_event_id,
-       last_notified_at
-from tenant_jpvbootcamp.customer_provisioning
-where email = 'user@example.com';
-```
+## Environment
 
-### Expected logs
-- Membership email sent:
-```
-Membership email sent { email, templateKey, plan, eventId, source, dedupeReason }
-```
-- Non-webhook email blocked:
-```
-Non-webhook email skipped { email, templateKey, source }
-```
+Required current billing configuration:
 
-## Stripe Portal Settings to Verify
-- Customer Portal configuration allows:
-  - Subscription management
-  - Price switch from PRO to VIP
-  - **Both products included** (Pro product + VIP product)
-  - Proration enabled (Stripe-managed)
+- Stripe secret key and publishable key for the active environment;
+- Pro monthly price id;
+- Pro annual price id;
+- Pro product id where product matching is used;
+- Stripe webhook secret;
+- billing portal configuration id where portal sessions are enabled.
 
-## URLs
-- WP entrypoints:
-  - `https://portal.jpvbootcamp.com/go/billing-portal`
-  - `https://portal.jpvbootcamp.com/go/upgrade-pro`
-  - `https://portal.jpvbootcamp.com/go/upgrade-vip`
-- Next.js portal endpoints:
-  - `https://jpvbootcamp.com/api/stripe/billing-portal?token=...`
-  - `https://jpvbootcamp.com/api/stripe/checkout?plan=pro&token=...`
-  - `https://jpvbootcamp.com/api/stripe/upgrade-vip?token=...`
+Removed product configuration must not be required for current checkout, webhook processing, or billing portal handoff.
+
+## Validation
+
+Before launch, verify:
+
+- monthly checkout creates the approved Pro subscription terms;
+- annual checkout creates the approved Pro upfront subscription;
+- webhook projection grants Pro access only for active or trialing subscriptions;
+- payment failure and cancellation remove private paid access;
+- billing portal return lands inside the app;
+- support/pay-it-forward grants controlled Free access only.
