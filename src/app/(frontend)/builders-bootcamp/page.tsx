@@ -70,7 +70,7 @@ const speakerNotes = [
 
 const programPillars = ["Speakers & insights", "Networking with purpose", "Testimonies"];
 
-const exhibitorHighlights = [
+const partnerTableHighlights = [
   "Engage directly with pre-qualified investors",
   "Connect with key Kingdom decision-makers",
   "Close lucrative business deals on-site",
@@ -232,13 +232,13 @@ export default function BuildersBootcampPage() {
             </div>
           </div>
 
-          {/* Exhibitors / Why Exhibit */}
+          {/* Partner tables */}
           <div className="flex flex-col rounded-[40px] border border-jpv-gray-800 bg-jpv-bg-dark/40 p-10 backdrop-blur-xl shadow-2xl transition-all hover:border-jpv-green/30">
             <div className="flex-1">
-              <h3 className="text-2xl font-black text-white uppercase tracking-wider">Why Exhibit?</h3>
+              <h3 className="text-2xl font-black text-white uppercase tracking-wider">Partner Tables</h3>
               <p className="mt-4 text-jpv-gray-400 font-medium italic">&ldquo;Position your brand where faith meets enterprise.&rdquo;</p>
               <ul className="mt-10 space-y-6">
-                {exhibitorHighlights.map((item) => (
+                {partnerTableHighlights.map((item) => (
                   <li key={item} className="flex items-start gap-4 text-jpv-gray-200">
                     <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-jpv-green/10 text-jpv-green">
                       <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -252,10 +252,10 @@ export default function BuildersBootcampPage() {
             </div>
             <div className="mt-12 pt-8 border-t border-jpv-gray-800">
               <a
-                href="/api/stripe/checkout?plan=exhibitor"
+                href="mailto:jpvbootcamp@gmail.com?subject=Inheritance%20Builders%20Partner%20Table"
                 className="group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-full bg-jpv-green py-5 text-xl font-black text-black shadow-jpv-glow transition-all hover:scale-105 active:scale-95"
               >
-                Exhibitors
+                Partner tables
               </a>
             </div>
           </div>

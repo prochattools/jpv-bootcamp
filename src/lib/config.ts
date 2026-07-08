@@ -21,12 +21,6 @@ function getEnvOrDefault(key: EnvKey, fallback: string): string {
 	return value && value.trim().length > 0 ? value : fallback
 }
 
-function getEnvBoolean(key: EnvKey, fallback = false): boolean {
-	const value = getEnv(key)
-	if (!value) return fallback
-	return ['1', 'true', 'yes', 'on'].includes(value.trim().toLowerCase())
-}
-
 function requireEnv(key: EnvKey): string {
 	const value = getEnv(key)
 	if (!value) {
@@ -50,16 +44,6 @@ function requireNumberEnv(key: EnvKey): number {
 		throw new Error(`Invalid number for env var: ${key}`)
 	}
 	return value
-}
-
-function requireUrlEnv(key: EnvKey): string {
-	const value = requireEnv(key)
-	try {
-		new URL(value)
-	} catch {
-		throw new Error(`Invalid URL for env var: ${key}`)
-	}
-	return value.replace(/\/$/, '')
 }
 
 function requireUrlEnvAny(keys: EnvKey[], label: string): string {
@@ -107,20 +91,13 @@ export type ServerConfig = {
 	stripe: {
 		secretKey: string
 		pricePro: string
-		priceVip: string
-		priceExhibitor: string
+		priceProAnnual: string
 		portalConfigurationId: string
 		successUrl: string
 		cancelUrl: string
 	}
 	stripeWebhook: {
 		secret: string
-	}
-	wp: {
-		enabled: boolean
-		baseUrl?: string
-		provisionEndpoint?: string
-		provisionToken?: string
 	}
 	email: {
 		resendApiKey: string
@@ -139,8 +116,7 @@ export type StripeConfig = {
 	stripe: {
 		secretKey: string
 		pricePro: string
-		priceVip: string
-		priceExhibitor: string
+		priceProAnnual: string
 		portalConfigurationId: string
 		successUrl: string
 		cancelUrl: string
@@ -156,7 +132,7 @@ let cachedOpsConfig: OpsConfig | null = null
 let cachedServerConfig: ServerConfig | null = null
 
 // Stripe-only server config. Lazy-loaded to avoid build-time env validation.
-// Use this for checkout flows; WP provisioning should happen on webhook.
+// Use this for checkout flows.
 export function getStripeConfig(): StripeConfig {
 	if (cachedStripeConfig) return cachedStripeConfig
 
@@ -173,8 +149,7 @@ export function getStripeConfig(): StripeConfig {
 		stripe: {
 			secretKey: stripeConfig.secretKey,
 			pricePro: stripeConfig.pricePro,
-			priceVip: stripeConfig.priceVip,
-			priceExhibitor: stripeConfig.priceExhibitor,
+			priceProAnnual: stripeConfig.priceProAnnual,
 			portalConfigurationId: stripeConfig.portalConfigurationId,
 			successUrl,
 			cancelUrl,
@@ -192,18 +167,8 @@ export function getOpsConfig(): OpsConfig {
 	return cachedOpsConfig
 }
 
-export function getWpAppSyncToken(): string {
-	const syncToken = getEnvAny(['APP_WP_SYNC_TOKEN', 'WP_TO_APP_TOKEN'])
-	if (syncToken) return syncToken
-	const provisionToken = getEnv('WP_PROVISION_TOKEN')
-	if (provisionToken) return provisionToken
-	throw new Error(
-		'Missing required env var: APP_WP_SYNC_TOKEN (or WP_TO_APP_TOKEN/WP_PROVISION_TOKEN)'
-	)
-}
-
-// Full server config (includes WP). Lazy-loaded to avoid build-time env validation.
-// Use this in webhook/provisioning paths.
+// Full server config. Lazy-loaded to avoid build-time env validation.
+// Use this in webhook, email, and billing projection paths.
 export function getServerConfig(): ServerConfig {
 	if (cachedServerConfig) {
 		return cachedServerConfig
@@ -211,29 +176,17 @@ export function getServerConfig(): ServerConfig {
 
 	const appUrl = requireUrlEnvAny(['APP_PUBLIC_URL', 'NEXT_PUBLIC_APP_URL'], 'APP_PUBLIC_URL')
 	const stripeConfig = getStripeModeConfig()
-	const portalUrl = requireUrlEnvAny(['PORTAL_URL', 'PORTAL_LOGIN_URL'], 'PORTAL_URL')
+	const portalUrl = getEnvAny(['PORTAL_URL', 'PORTAL_LOGIN_URL'])
+		? requireUrlEnvAny(['PORTAL_URL', 'PORTAL_LOGIN_URL'], 'PORTAL_URL')
+		: `${appUrl}/portal`
 	const resendFrom = getEnv('RESEND_FROM')
-	const wpEnabled = getEnvBoolean(
-		'PROVISIONING_ENABLED',
-		getEnvBoolean('WP_PROVISION_ENABLED', false)
-	)
-
-	const wpConfig: ServerConfig['wp'] = wpEnabled
-		? {
-			enabled: true,
-			baseUrl: requireUrlEnv('WP_BASE_URL'),
-			provisionEndpoint: requireEnv('WP_PROVISION_ENDPOINT'),
-			provisionToken: requireEnv('WP_PROVISION_TOKEN'),
-		}
-		: { enabled: false }
 
 	cachedServerConfig = {
 		app: { url: appUrl },
 		stripe: {
 			secretKey: stripeConfig.secretKey,
 			pricePro: stripeConfig.pricePro,
-			priceVip: stripeConfig.priceVip,
-			priceExhibitor: stripeConfig.priceExhibitor,
+			priceProAnnual: stripeConfig.priceProAnnual,
 			portalConfigurationId: stripeConfig.portalConfigurationId,
 			successUrl: normalizeStripeSuccessUrl(
 				getEnvOrDefault('STRIPE_SUCCESS_URL', DEFAULT_STRIPE_SUCCESS_PATH),
@@ -244,7 +197,6 @@ export function getServerConfig(): ServerConfig {
 		stripeWebhook: {
 			secret: stripeConfig.webhookSecret,
 		},
-		wp: wpConfig,
 		email: {
 			resendApiKey: requireEnv('RESEND_API_KEY'),
 			from: resendFrom && resendFrom.trim() ? resendFrom : requireEnv('EMAIL_FROM'),

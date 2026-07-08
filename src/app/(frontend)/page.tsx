@@ -5,9 +5,8 @@ import Image from "next/image";
 import SponsoredPayItForward from "@/components/sponsored-pay-it-forward";
 
 export default function HomePage() {
-  const signInHref = "https://portal.jpvbootcamp.com/community/?fcom_action=auth";
-  const signUpHref = "https://portal.jpvbootcamp.com/community?fcom_action=auth&form=register";
-  const portalUpgradeUrl = process.env.NEXT_PUBLIC_PORTAL_UPGRADE_URL;
+  const signInHref = "/portal?mode=login";
+  const signUpHref = "/register";
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [isSupportOpen, setIsSupportOpen] = useState(false);
   const [isHowItWorksOpen, setIsHowItWorksOpen] = useState(false);
@@ -29,12 +28,12 @@ export default function HomePage() {
       title: "Next Online Training",
       meta: (
         <>
-          Friday, 24 April, 7 pm · <a href="#pricing-pro" className="hover:text-white transition-colors underline decoration-jpv-green/40 underline-offset-4">Pro</a> and <a href="#pricing-vip" className="hover:text-white transition-colors underline decoration-jpv-green/40 underline-offset-4">VIP</a>
+          Friday, 24 April, 7 pm · <a href="#pricing-pro" className="hover:text-white transition-colors underline decoration-jpv-green/40 underline-offset-4">Pro membership</a>
         </>
       ),
       description: (
         <>
-          Weekly online training for 5 weeks for <a href="#pricing-pro" className="hover:text-white hover:underline transition-colors">Pro</a> and 1 additional in-person live session for <a href="#pricing-vip" className="hover:text-white hover:underline transition-colors">VIPs</a>.
+          Weekly online training, mentorship modules, community access, and billing self-service through <a href="#pricing-pro" className="hover:text-white hover:underline transition-colors">Pro</a>.
         </>
       ),
     },
@@ -89,35 +88,25 @@ export default function HomePage() {
   ];
   const pricingPlans = [
     {
-      name: "Starter",
-      price: "Free",
-      description: "Get a feel for it",
-      features: ["2 intro lessons", "Quarterly newsletter", "Community read-only", "Basic calculators"],
-      ctaLabel: "Create free account",
+      name: "Free",
+      price: "Support access",
+      description: "Approved non-paid access",
+      features: ["Support and pay-it-forward access", "Administrator approval", "Clear access dates", "Upgrade path to Pro"],
+      ctaLabel: "Apply for support",
       ctaHref: signUpHref,
-      ctaTarget: "_blank",
-      ctaRel: "nofollow noopener noreferrer",
       highlight: false,
+      subcopy: "Free access is reviewed and assigned safely.",
     },
     {
       name: "Pro",
-      price: "£49/mo",
-      description: "Everything to get profitable",
-      features: ["Full course library", "Live Zoom training", "Deal analysis templates", "Active community access"],
+      price: "£80/mo or £880/yr",
+      description: "One paid membership",
+      features: ["8-week course structure", "Mentorship modules", "Protected resources", "Community access"],
       ctaLabel: "Start Pro",
-      ctaHref: "/api/stripe/checkout?plan=pro",
+      ctaHref: "/api/stripe/checkout?plan=pro&billing=monthly",
       highlight: true,
-      badge: "Most popular",
-      subcopy: "14-day money-back guarantee",
-    },
-    {
-      name: "VIP",
-      price: "£149/mo",
-      description: "Hands-on support",
-      features: ["All Pro features", "Weekly group coaching", "1:1 deal review (when needed)", "Live Event"],
-      ctaLabel: "Apply for VIP",
-      ctaHref: "/api/stripe/checkout?plan=vip",
-      highlight: false,
+      badge: "Single paid membership",
+      subcopy: "Monthly commitment or annual upfront with one month free.",
     },
   ];
   const onboardingSteps = [
@@ -507,7 +496,7 @@ export default function HomePage() {
                   ? "border-jpv-green/60 bg-jpv-bg-light/80"
                   : "border-jpv-gray-700/50 bg-jpv-bg-dark/60"
                   }`}
-                id={plan.name === "Pro" ? "pricing-pro" : plan.name === "VIP" ? "pricing-vip" : undefined}
+                id={plan.name === "Pro" ? "pricing-pro" : plan.name === "Free" ? "pricing-free" : undefined}
               >
                 <div className="space-y-6">
                   <div className="space-y-3 text-left">
@@ -538,8 +527,6 @@ export default function HomePage() {
                 <div className="mt-8 space-y-3 text-left">
                   <a
                     href={plan.ctaHref}
-                    target={plan.ctaTarget}
-                    rel={plan.ctaRel}
                     className={`inline-flex w-full items-center justify-center rounded-full px-6 py-3 text-sm font-semibold transition ${plan.highlight
                       ? "bg-jpv-green text-black shadow-jpv-glow hover:bg-jpv-green-hover"
                       : "border border-jpv-gray-600 text-jpv-gray-200 hover:border-jpv-green hover:text-white"
@@ -548,24 +535,13 @@ export default function HomePage() {
                     {plan.ctaLabel}
                   </a>
                   {plan.subcopy ? <p className="text-xs text-jpv-green/80">{plan.subcopy}</p> : null}
-                  {plan.name === "Starter" ? (
+                  {plan.name === "Free" ? (
                     <p className="text-xs text-jpv-gray-400">
-                      Can&apos;t afford Pro?{" "}
+                      Need help accessing Pro?{" "}
                       <a href="/sponsored" className="text-jpv-green hover:underline">
-                        You may be eligible for a sponsored month.
+                        Apply for support or pay-it-forward access.
                       </a>
                     </p>
-                  ) : null}
-                  {plan.name === "VIP" && portalUpgradeUrl ? (
-                    <a
-                      href={portalUpgradeUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mt-3 block text-center text-sm text-white/60 hover:text-white/80 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-jpv-green/60 rounded"
-                      aria-label="Already a member? Upgrade in portal"
-                    >
-                      Already a member? Upgrade in portal
-                    </a>
                   ) : null}
                 </div>
               </div>

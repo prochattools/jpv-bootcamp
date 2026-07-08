@@ -6,7 +6,7 @@ import type {
 } from '@/lib/payloadCourse/accessService'
 
 export const MEMBER_BILLING_PORTAL_RETURN_URL =
-  'https://portal.jpvbootcamp.com/learn/billing'
+  'https://jpvbootcamp.com/portal/billing'
 
 type BillingPortalSessionClient = {
   billingPortal: {

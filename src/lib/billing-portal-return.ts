@@ -1,6 +1,5 @@
-const DEFAULT_RETURN_URL = 'https://portal.jpvbootcamp.com/community/'
+const DEFAULT_RETURN_URL = 'https://jpvbootcamp.com/portal'
 const ALLOWED_RETURN_ORIGINS = new Set([
-	'https://portal.jpvbootcamp.com',
 	'https://jpvbootcamp.com',
 	'https://www.jpvbootcamp.com',
 ])
@@ -49,7 +48,7 @@ export function describeBillingPortalReturnUrl(
 			present: false,
 			valid: false,
 			host: null,
-			path: '/community/',
+			path: '/portal',
 		}
 	}
 	const trimmed = stripCrLf(raw.trim())
@@ -59,7 +58,7 @@ export function describeBillingPortalReturnUrl(
 			present: false,
 			valid: false,
 			host: null,
-			path: '/community/',
+			path: '/portal',
 		}
 	}
 	if (trimmed.length > MAX_RETURN_URL_LENGTH || stripUnsafeSchemes(trimmed)) {
@@ -68,7 +67,7 @@ export function describeBillingPortalReturnUrl(
 			present: true,
 			valid: false,
 			host: null,
-			path: '/community/',
+			path: '/portal',
 		}
 	}
 	const decoded = safeDecodeURIComponent(trimmed)
@@ -92,7 +91,7 @@ export function describeBillingPortalReturnUrl(
 				present: true,
 				valid: false,
 				host,
-				path: '/community/',
+				path: '/portal',
 			}
 		}
 		return {
@@ -108,7 +107,7 @@ export function describeBillingPortalReturnUrl(
 			present: true,
 			valid: false,
 			host: null,
-			path: '/community/',
+			path: '/portal',
 		}
 	}
 }

@@ -96,7 +96,7 @@ export function MemberRegistrationForm() {
       </label>
 
       <p className='text-sm leading-6 text-neutral-600'>
-        Free accounts are verified by email before sign in. Pro and VIP access are not selected here.
+        Free accounts are verified by email before sign in. Pro access is handled through checkout.
       </p>
 
       {message ? (

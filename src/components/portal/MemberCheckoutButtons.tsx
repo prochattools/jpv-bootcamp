@@ -2,23 +2,33 @@
 
 import { useState } from 'react'
 
-import { startMemberCheckout, type MemberCheckoutPlan } from '@/lib/actions/startMemberCheckout'
+import { startMemberCheckout, type MemberCheckoutBilling } from '@/lib/actions/startMemberCheckout'
 
-const LABELS: Record<MemberCheckoutPlan, string> = {
-  pro: 'Start Pro membership',
-  vip: 'Start VIP membership',
-}
+const PLAN = 'pro'
+const OPTIONS: Array<{ billing: MemberCheckoutBilling; label: string; description: string }> = [
+  {
+    billing: 'monthly',
+    label: 'Start Pro monthly',
+    description: 'Monthly payments with a 12-month commitment.',
+  },
+  {
+    billing: 'annual',
+    label: 'Start Pro annual',
+    description: 'Annual upfront payment.',
+  },
+]
 
 export function MemberCheckoutButtons() {
-  const [loadingPlan, setLoadingPlan] = useState<MemberCheckoutPlan | null>(null)
+  const [loading, setLoading] = useState<MemberCheckoutBilling | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  async function handleCheckout(plan: MemberCheckoutPlan) {
-    setLoadingPlan(plan)
+  async function handleCheckout(billing: MemberCheckoutBilling) {
+    const plan = PLAN
+    setLoading(billing)
     setError(null)
 
     try {
-      const result = await startMemberCheckout(plan)
+      const result = await startMemberCheckout(plan, billing)
       if (result.ok === true) {
         window.location.href = result.checkoutUrl
         return
@@ -32,22 +42,25 @@ export function MemberCheckoutButtons() {
             : 'Checkout is temporarily unavailable. Please try again.'
       setError(message)
     } finally {
-      setLoadingPlan(null)
+      setLoading(null)
     }
   }
 
   return (
     <div className='space-y-4'>
-      <div className='flex flex-wrap gap-3'>
-        {(['pro', 'vip'] as const).map((plan) => (
+      <div className='grid gap-3 sm:grid-cols-2'>
+        {OPTIONS.map((option) => (
           <button
-            key={plan}
+            key={option.billing}
             type='button'
-            disabled={loadingPlan !== null}
-            onClick={() => handleCheckout(plan)}
-            className='inline-flex items-center rounded-lg bg-neutral-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-neutral-800 disabled:opacity-50'
+            disabled={loading !== null}
+            onClick={() => handleCheckout(option.billing)}
+            className='rounded-lg bg-neutral-950 px-4 py-3 text-left text-sm text-white transition hover:bg-neutral-800 disabled:opacity-50'
           >
-            {loadingPlan === plan ? 'Opening checkout...' : LABELS[plan]}
+            <span className='block font-semibold'>
+              {loading === option.billing ? 'Opening checkout...' : option.label}
+            </span>
+            <span className='mt-1 block text-xs text-neutral-300'>{option.description}</span>
           </button>
         ))}
       </div>

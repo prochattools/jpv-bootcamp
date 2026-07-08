@@ -26,7 +26,7 @@ export default async function RegisterPage() {
           Create a free account. Verify email. Start learning.
         </h1>
         <p className='mt-5 max-w-xl text-base leading-7 text-[#64736c]'>
-          Free is a real member tier. Pro and VIP remain paid tiers managed through the existing billing flow.
+          Free is controlled support or pay-it-forward access. Pro is the only paid membership and is managed inside the new JPV Bootcamp platform.
         </p>
       </section>
 

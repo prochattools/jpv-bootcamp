@@ -6,7 +6,7 @@ export type BillingReadinessCode =
   | 'STRIPE_SECRET_KEY_MISSING'
   | 'STRIPE_WEBHOOK_SECRET_MISSING'
   | 'STRIPE_PRICE_PRO_MISSING'
-  | 'STRIPE_PRICE_VIP_MISSING'
+  | 'STRIPE_PRICE_PRO_ANNUAL_MISSING'
   | 'STRIPE_PRICE_MATCH'
   | 'PREVIEW_PUBLIC_URL_MISSING'
   | 'PREVIEW_PUBLIC_URL_INVALID'
@@ -29,7 +29,7 @@ export type BillingReadinessReport = {
   checks: {
     stripeSecretKey: { present: boolean }
     webhookSecrets: { present: boolean; count: number }
-    priceIds: { proPresent: boolean; vipPresent: boolean; distinct: boolean }
+    priceIds: { proMonthlyPresent: boolean; proAnnualPresent: boolean; distinct: boolean }
     previewPublicUrl: {
       present: boolean
       validHttps: boolean
@@ -154,7 +154,7 @@ export async function buildBillingReadinessReport(env: NodeJS.ProcessEnv = proce
   const suffix = stripeEnv === 'test' ? 'TEST' : stripeEnv === 'live' ? 'LIVE' : null
   const secretKey = suffix ? clean(env[`STRIPE_SECRET_KEY_${suffix}`]) : null
   const pricePro = suffix ? clean(env[`STRIPE_PRICE_PRO_${suffix}`]) : null
-  const priceVip = suffix ? clean(env[`STRIPE_PRICE_VIP_${suffix}`]) : null
+  const priceProAnnual = suffix ? clean(env[`STRIPE_PRICE_PRO_ANNUAL_${suffix}`]) : null
   const webhookSecrets = suffix ? splitSecrets(env[`STRIPE_WEBHOOK_SECRET_${suffix}`]) : []
   const webhookRouteSource = await readText('src/app/api/webhook/stripe/route.ts')
   const checkoutSource = await readText('src/app/api/stripe/checkout/route.ts')
@@ -190,8 +190,8 @@ export async function buildBillingReadinessReport(env: NodeJS.ProcessEnv = proce
   }
   if (webhookSecrets.length === 0) configurationCodes.push('STRIPE_WEBHOOK_SECRET_MISSING')
   if (!pricePro) configurationCodes.push('STRIPE_PRICE_PRO_MISSING')
-  if (!priceVip) configurationCodes.push('STRIPE_PRICE_VIP_MISSING')
-  if (pricePro && pricePro === priceVip) {
+  if (!priceProAnnual) configurationCodes.push('STRIPE_PRICE_PRO_ANNUAL_MISSING')
+  if (pricePro && priceProAnnual && pricePro === priceProAnnual) {
     configurationCodes.push('STRIPE_PRICE_MATCH')
   }
   if (!previewPublicUrl.present) configurationCodes.push('PREVIEW_PUBLIC_URL_MISSING')
@@ -225,9 +225,9 @@ export async function buildBillingReadinessReport(env: NodeJS.ProcessEnv = proce
       stripeSecretKey: { present: Boolean(secretKey) },
       webhookSecrets: { present: webhookSecrets.length > 0, count: webhookSecrets.length },
       priceIds: {
-        proPresent: Boolean(pricePro),
-        vipPresent: Boolean(priceVip),
-        distinct: pricePro !== priceVip,
+        proMonthlyPresent: Boolean(pricePro),
+        proAnnualPresent: Boolean(priceProAnnual),
+        distinct: pricePro !== priceProAnnual,
       },
       previewPublicUrl,
       checkoutUrls: {

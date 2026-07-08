@@ -8,10 +8,8 @@ export type StripeConfig = {
 	webhookSecret: string
 	publishableKey: string
 	pricePro: string
-	priceVip: string
-	priceExhibitor: string
+	priceProAnnual: string
 	productPro: string
-	productVip: string
 	portalConfigurationId: string
 }
 
@@ -80,20 +78,16 @@ export function getStripeConfig(): StripeConfig {
 	const env = normalizeStripeEnv(getEnv('STRIPE_ENV'))
 	const suffix = env === 'test' ? 'TEST' : 'LIVE'
 	const priceProKey = `STRIPE_PRICE_PRO_${suffix}`
-	const priceVipKey = `STRIPE_PRICE_VIP_${suffix}`
-	const priceExhibitorKey = `STRIPE_PRICE_TABLE_${suffix}`
+	const priceProAnnualKey = `STRIPE_PRICE_PRO_ANNUAL_${suffix}`
 	const productProKey = `STRIPE_PRODUCT_JPV_BOOTCAMP_PRO_MEMBERSHIP_${suffix}`
-	const productVipKey = `STRIPE_PRODUCT_JPV_BOOTCAMP_VIP_MEMBERSHIP_${suffix}`
 	const portalConfigKey = `STRIPE_PORTAL_CONFIGURATION_ID_${suffix}`
 
 	const secretKey = requireEnv(`STRIPE_SECRET_KEY_${suffix}`)
 	const webhookSecretRaw = requireEnv(`STRIPE_WEBHOOK_SECRET_${suffix}`)
 	const publishableKey = requireEnv(`NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_${suffix}`)
 	const pricePro = requireEnv(priceProKey)
-	const priceVip = requireEnv(priceVipKey)
-	const priceExhibitor = requireEnv(priceExhibitorKey)
+	const priceProAnnual = requireEnv(priceProAnnualKey)
 	const productPro = requireEnv(productProKey)
-	const productVip = requireEnv(productVipKey)
 	const portalConfigurationId = requireEnv(portalConfigKey)
 
 	const prefixes = getPrefixes(env)
@@ -104,11 +98,9 @@ export function getStripeConfig(): StripeConfig {
 	for (const secret of webhookSecrets) {
 		assertPrefix(secret, prefixes.webhookPrefix, 'Stripe webhook secret')
 	}
-	assertPrefix(pricePro, prefixes.pricePrefix, 'Stripe Pro price')
-	assertPrefix(priceVip, prefixes.pricePrefix, 'Stripe VIP price')
-	assertPrefix(priceExhibitor, prefixes.pricePrefix, 'Stripe Exhibitor price')
+	assertPrefix(pricePro, prefixes.pricePrefix, 'Stripe Pro monthly price')
+	assertPrefix(priceProAnnual, prefixes.pricePrefix, 'Stripe Pro annual price')
 	assertPrefix(productPro, prefixes.productPrefix, 'Stripe Pro product')
-	assertPrefix(productVip, prefixes.productPrefix, 'Stripe VIP product')
 	assertPrefix(portalConfigurationId, 'bpc_', 'Stripe portal configuration')
 
 	cachedWebhookSecrets = webhookSecrets
@@ -118,10 +110,8 @@ export function getStripeConfig(): StripeConfig {
 		webhookSecret: webhookSecrets[0] ?? '',
 		publishableKey,
 		pricePro,
-		priceVip,
-		priceExhibitor,
+		priceProAnnual,
 		productPro,
-		productVip,
 		portalConfigurationId,
 	}
 
@@ -130,9 +120,8 @@ export function getStripeConfig(): StripeConfig {
 			stripeEnv: env,
 			varsPresent: {
 				[priceProKey]: Boolean(getEnv(priceProKey)),
-				[priceVipKey]: Boolean(getEnv(priceVipKey)),
+				[priceProAnnualKey]: Boolean(getEnv(priceProAnnualKey)),
 				[productProKey]: Boolean(getEnv(productProKey)),
-				[productVipKey]: Boolean(getEnv(productVipKey)),
 				[portalConfigKey]: Boolean(getEnv(portalConfigKey)),
 			},
 		})
@@ -144,15 +133,10 @@ export function getStripeConfig(): StripeConfig {
 
 export function getStripeWebhookSecrets(): string[] {
 	if (cachedWebhookSecrets) return cachedWebhookSecrets
-	const config = getStripeConfig()
-	cachedWebhookSecrets = config.webhookSecret ? [config.webhookSecret] : []
-	return cachedWebhookSecrets
+	getStripeConfig()
+	return cachedWebhookSecrets ?? []
 }
 
 export function getStripeEnv(): StripeEnv {
 	return getStripeConfig().env
-}
-
-export function isStripeLiveMode(): boolean {
-	return getStripeEnv() === 'live'
 }

@@ -65,7 +65,7 @@ export default function TermsPage() {
                 <div className="mt-3 space-y-2 text-sm text-jpv-gray-300">
                   <p>
                     We offer subscription-based access to our training content an...ding
-                    Starter, Pro, and VIP plans. JPV • Jesus Property Venture
+                    Free support access and Pro membership. JPV • Jesus Property Venture
                   </p>
                   <p>
                     Payments are processed via Stripe. By subscribing, you agree to Stripe’s
@@ -88,8 +88,8 @@ export default function TermsPage() {
                 </h3>
                 <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-jpv-gray-300">
                   <li>
-                    Refunds are offered as part of our 14-day money-back guarantee for Pro
-                    and VIP plans.
+                    Refunds are offered as part of our approved money-back guarantee for Pro
+                    membership payments.
                   </li>
                   <li>
                     To request a refund, contact us within 14 days of purchase w...nd any

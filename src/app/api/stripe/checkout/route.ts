@@ -1,68 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getStripeConfig, type StripeConfig } from '@/lib/config'
-import { getStripeEnv } from '@/lib/stripe-config'
 import { verifyBillingPortalToken } from '@/lib/billing-portal-token'
-import { resolvePlanFromStripe, type Plan } from '@/lib/plans'
 import { getStripe } from '@/lib/stripe'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-type PricingPlanKey = Plan
+type PricingPlanKey = 'pro'
+type ProBillingOption = 'monthly' | 'annual'
 
 function isPricingPlanKey(value: string | null): value is PricingPlanKey {
-	return value === 'pro' || value === 'vip' || value === 'exhibitor'
+	return value === 'pro'
 }
 
-function getPriceIdForPlan(plan: PricingPlanKey, stripeConfig: StripeConfig['stripe']) {
-	if (plan === 'pro') return stripeConfig.pricePro
-	if (plan === 'vip') return stripeConfig.priceVip
-	return stripeConfig.priceExhibitor
+function isProBillingOption(value: string | null): value is ProBillingOption {
+	return value === 'monthly' || value === 'annual'
 }
 
-async function getActiveMembershipSubscriptionForCustomer(customerId: string) {
-	const stripe = getStripe()
-
-	const subs = await stripe.subscriptions.list({
-		customer: customerId,
-		status: 'active',
-		limit: 10,
-		expand: ['data.items.data.price'],
-	})
-
-	// Prefer a subscription that contains our membership price/product.
-	const byPrice = subs.data.find((sub) =>
-		sub.items?.data?.some((item) => {
-			const price = item.price ?? null
-			const priceId = price?.id ?? null
-			const productId =
-				typeof price?.product === 'string'
-					? price.product
-					: price?.product?.id ?? null
-			const metadataPlan =
-				typeof sub.metadata?.plan === 'string' ? sub.metadata.plan : null
-			return Boolean(resolvePlanFromStripe({ metadataPlan, priceId, productId }))
-		})
-	)
-	if (byPrice) return byPrice
-
-	// Fallback: pick the first active subscription
-	return subs.data[0] ?? null
-}
-
-function getSubscriptionItemId(sub: any): string | null {
-	const item = sub?.items?.data?.[0]
-	return item?.id ?? null
-}
-
-function getCurrentPlanFromSubscription(sub: any): PricingPlanKey | null {
-	// Prefer price-based inference to avoid stale metadata after portal upgrades.
-	const price = sub?.items?.data?.[0]?.price ?? null
-	const priceId = price?.id ?? null
-	const productId =
-		typeof price?.product === 'string' ? price.product : price?.product?.id ?? null
-	const metadataPlan = typeof sub?.metadata?.plan === 'string' ? sub.metadata.plan : null
-	return resolvePlanFromStripe({ metadataPlan, priceId, productId })
+function getPriceIdForPlan(
+	plan: PricingPlanKey,
+	billing: ProBillingOption,
+	stripeConfig: StripeConfig['stripe']
+) {
+	return billing === 'annual' ? stripeConfig.priceProAnnual : stripeConfig.pricePro
 }
 
 function buildReturnUrl(pathOrUrl: string, appUrl: string) {
@@ -80,24 +40,25 @@ export async function GET(req: NextRequest) {
 	try {
 		const stripeConfig = getStripeConfig()
 		const planParam = req.nextUrl.searchParams.get('plan')
-		const customerParam = req.nextUrl.searchParams.get('customer')
+		const billingParam = req.nextUrl.searchParams.get('billing')
 		const tokenParam =
 			extractBearerToken(req) || req.nextUrl.searchParams.get('token')?.trim() || null
 
 		const normalizedPlan = planParam ? planParam.toLowerCase() : null
 		const plan = isPricingPlanKey(normalizedPlan) ? normalizedPlan : null
+		const billing = isProBillingOption(billingParam?.toLowerCase() ?? null) ? billingParam!.toLowerCase() as ProBillingOption : 'monthly'
 
 		if (!plan) {
 			return NextResponse.json(
 				{
-					error: 'Invalid plan. Use ?plan=pro|vip|exhibitor.',
+					error: 'Invalid plan. Use ?plan=pro with optional &billing=monthly|annual.',
 				},
 				{ status: 400 }
 			)
 		}
 
 		const stripe = getStripe()
-		const priceId = getPriceIdForPlan(plan, stripeConfig.stripe)
+		const priceId = getPriceIdForPlan(plan, billing, stripeConfig.stripe)
 		const successUrl = buildReturnUrl(stripeConfig.stripe.successUrl, stripeConfig.app.url)
 		const cancelUrl = buildReturnUrl(stripeConfig.stripe.cancelUrl, stripeConfig.app.url)
 		let customerEmail: string | null = null
@@ -122,84 +83,29 @@ export async function GET(req: NextRequest) {
 			customerEmail = verification.payload.email
 		}
 
-		// If the user is already on Pro and is requesting VIP, send them to a Portal upgrade flow
-		// (prevents accidentally creating a 2nd subscription via Checkout).
-		if (customerParam && plan === 'vip') {
-			const activeSub = await getActiveMembershipSubscriptionForCustomer(customerParam)
-			if (activeSub) {
-				const currentPlan = getCurrentPlanFromSubscription(activeSub)
-				if (currentPlan === 'pro') {
-					const itemId = getSubscriptionItemId(activeSub)
-					if (!itemId) {
-						return NextResponse.json(
-							{ error: 'Could not determine subscription item to upgrade.' },
-							{ status: 500 }
-						)
-					}
-
-					// Stripe-hosted upgrade confirmation flow.
-					// NOTE: Your Customer Portal configuration must allow upgrading to the VIP price.
-					const portalSession = await stripe.billingPortal.sessions.create({
-						customer: customerParam,
-						return_url: cancelUrl,
-						configuration: stripeConfig.stripe.portalConfigurationId,
-						flow_data: {
-							type: 'subscription_update_confirm',
-							subscription_update_confirm: {
-								subscription: activeSub.id,
-								items: [
-									{
-										id: itemId,
-										price: priceId,
-									},
-								],
-							},
-						},
-					},
-					)
-
-					console.info('portal_session_created', {
-						stripeEnv: getStripeEnv(),
-						configurationId: stripeConfig.stripe.portalConfigurationId,
-						customerId: customerParam,
-						sourceRoute: '/api/stripe/checkout',
-					})
-
-					if (!portalSession.url) {
-						return NextResponse.json(
-							{ error: 'Stripe portal session URL was not returned.' },
-							{ status: 500 }
-						)
-					}
-
-					return NextResponse.redirect(portalSession.url, { status: 303 })
-				}
-			}
-		}
-
 		const session = await stripe.checkout.sessions.create({
-			mode: plan === 'exhibitor' ? 'payment' : 'subscription',
+			mode: 'subscription',
 			line_items: [{ price: priceId, quantity: 1 }],
 			success_url: successUrl,
 			cancel_url: cancelUrl,
 			allow_promotion_codes: true,
-			...(customerEmail && plan === 'pro'
+			...(customerEmail
 				? {
 						customer_email: customerEmail,
 				  }
 				: {}),
 			metadata: {
 				plan,
+				billing,
 				source: 'landing',
 			},
-			...(plan !== 'exhibitor' && {
-				subscription_data: {
-					metadata: {
-						plan,
-						source: 'landing',
-					},
+			subscription_data: {
+				metadata: {
+					plan,
+					billing,
+					source: 'landing',
 				},
-			}),
+			},
 		})
 
 		if (!session.url) {

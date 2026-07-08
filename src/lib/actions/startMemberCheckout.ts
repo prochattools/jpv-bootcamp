@@ -6,10 +6,10 @@ import prisma from '@/libs/prisma'
 import { requirePortalMember } from '@/lib/auth/requirePortalMember'
 import { getStripeConfig } from '@/lib/config'
 import { normalizeEmail } from '@/lib/normalize-email'
-import type { Plan } from '@/lib/plans'
 import { getStripe } from '@/lib/stripe'
 
-export type MemberCheckoutPlan = Extract<Plan, 'pro' | 'vip'>
+export type MemberCheckoutPlan = 'pro'
+export type MemberCheckoutBilling = 'monthly' | 'annual'
 
 export type StartMemberCheckoutResult =
   | { ok: true; checkoutUrl: string }
@@ -17,12 +17,12 @@ export type StartMemberCheckoutResult =
 
 const ACTIVE_SUBSCRIPTION_STATUSES = new Set(['active', 'trialing', 'past_due', 'unpaid'])
 
-function isMemberCheckoutPlan(value: string): value is MemberCheckoutPlan {
-  return value === 'pro' || value === 'vip'
-}
-
-export async function startMemberCheckout(plan: string): Promise<StartMemberCheckoutResult> {
-  if (!isMemberCheckoutPlan(plan)) return { ok: false, error: 'invalid_plan' }
+export async function startMemberCheckout(
+  plan: string,
+  billing: MemberCheckoutBilling = 'monthly'
+): Promise<StartMemberCheckoutResult> {
+  if (plan !== 'pro') return { ok: false, error: 'invalid_plan' }
+  if (billing !== 'monthly' && billing !== 'annual') return { ok: false, error: 'invalid_plan' }
 
   let memberEmail: string
   try {
@@ -46,7 +46,7 @@ export async function startMemberCheckout(plan: string): Promise<StartMemberChec
     }
 
     const config = getStripeConfig()
-    const priceId = plan === 'pro' ? config.stripe.pricePro : config.stripe.priceVip
+    const priceId = billing === 'annual' ? config.stripe.priceProAnnual : config.stripe.pricePro
     const successUrl = new URL('/portal/billing?checkout=success', config.app.url).toString()
     const cancelUrl = new URL('/portal/billing?checkout=cancelled', config.app.url).toString()
 
@@ -59,8 +59,8 @@ export async function startMemberCheckout(plan: string): Promise<StartMemberChec
       ...(record?.stripeCustomerId
         ? { customer: record.stripeCustomerId }
         : { customer_email: memberEmail }),
-      metadata: { plan, source: 'member_portal' },
-      subscription_data: { metadata: { plan, source: 'member_portal' } },
+      metadata: { plan: 'pro', billing, source: 'member_portal' },
+      subscription_data: { metadata: { plan: 'pro', billing, source: 'member_portal' } },
     })
 
     if (!session.url) return { ok: false, error: 'stripe_error' }
