@@ -126,6 +126,7 @@ Run static preflight and operator acceptance tests:
 
 ## Related Documents
 
+- [Front-End Copy Approval Packet](./FRONTEND_COPY_APPROVAL_PACKET.md) — exact public copy and content approval details
 - [Roadmap Progress Status](./ROADMAP_PROGRESS_STATUS.md)
 - [JPV Bootcamp Go-Live Plan v3.4 Summary](./JPV_BOOTCAMP_GO_LIVE_PLAN_V3_4_SUMMARY.md)
 - [Operator Handoff Summary](./OPERATOR_HANDOFF_SUMMARY.md)

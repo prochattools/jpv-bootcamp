@@ -6,6 +6,8 @@ Version 3.4 is the current client-plan update; Version 3.3 remains the baseline 
 Cross-links:
 - Review packet: `docs/client/PAYLOAD_ONLY_FREE_PRO_REVIEW_PACKET.md`
 - Version 3.4 summary: `docs/client/JPV_BOOTCAMP_GO_LIVE_PLAN_V3_4_SUMMARY.md`
+- Front-end copy approval: `docs/client/FRONTEND_COPY_APPROVAL_PACKET.md`
+- Front-end content intake: `docs/client/FRONTEND_CONTENT_INTAKE_CHECKLIST.md`
 - Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`
 - Migration approval packet: `docs/client/MIGRATION_APPROVAL_PACKET.md`
 - Migration approval status: `docs/client/MIGRATION_APPROVAL_STATUS.md`
@@ -85,7 +87,7 @@ The front-end website go-live milestone (22 July 2026) is delivery-ready from th
 
 **This front-end milestone does not authorize migration execution or full platform cutover.** Migration decision and staging smoke remain separate and blocked pending migration approval, target-environment confirmation, and provider/email verification.
 
-See `docs/client/FRONTEND_CONTENT_INTAKE_CHECKLIST.md` for the complete operator/client-facing checklist.
+See `docs/client/FRONTEND_CONTENT_INTAKE_CHECKLIST.md` for the complete operator/client-facing checklist and `docs/client/FRONTEND_COPY_APPROVAL_PACKET.md` for the exact public copy and content approval requirements.
 
 ---
 
