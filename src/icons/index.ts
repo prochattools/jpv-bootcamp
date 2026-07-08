@@ -29,7 +29,7 @@ export { default as Stripe } from "./stripe";
 export { default as Shadecn } from "./shadecn";
 export { default as Tailwind } from "./tailwind";
 export { default as Typescript } from "./typescript";
-export { default as Wordpress } from "./wordpress";
+export { default as Cms } from "./cms";
 export { default as Postgres } from "./postgres";
 export { default as Youtube } from "./youtube";
 export { default as Twitter } from "./twitter";

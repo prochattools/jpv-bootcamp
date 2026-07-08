@@ -145,13 +145,13 @@ function buildPayload() {
         sortOrder: 20,
       },
       {
-        id: 'course_vip',
-        title: 'VIP Lab',
-        slug: 'vip-lab',
+        id: 'course_private',
+        title: 'Private Lab',
+        slug: 'private-lab',
         status: 'published',
         visibility: 'restricted',
-        accessBadge: 'vip',
-        shortDescription: 'VIP course',
+        accessBadge: 'private',
+        shortDescription: 'Private course',
         estimatedDuration: '6 hours',
         sortOrder: 30,
       },
@@ -172,18 +172,18 @@ function buildPayload() {
         resourceId: 'course_pro',
         status: 'active',
         privacy: 'private',
-        allowedPlans: ['pro', 'vip'],
+        allowedPlans: ['pro', 'private'],
         requiredGroups: ['group_pro'],
         requireActiveBilling: true,
         priority: 20,
       },
       {
-        id: 'policy_vip',
+        id: 'policy_private',
         resourceType: 'course',
-        resourceId: 'course_vip',
+        resourceId: 'course_private',
         status: 'active',
         privacy: 'secret',
-        allowedPlans: ['vip'],
+        allowedPlans: ['private'],
         requireActiveBilling: true,
         priority: 30,
       },
@@ -221,7 +221,7 @@ function buildPayload() {
     payload_course_modules: [
       { id: 'module_foundations', course: 'course_foundations', title: 'Start Here', sortOrder: 10 },
       { id: 'module_pro', course: 'course_pro', title: 'Systems', sortOrder: 10 },
-      { id: 'module_vip', course: 'course_vip', title: 'Private Track', sortOrder: 10 },
+      { id: 'module_private', course: 'course_private', title: 'Private Track', sortOrder: 10 },
     ],
     payload_lessons: [
       {
@@ -257,10 +257,10 @@ function buildPayload() {
         sortOrder: 10,
       },
       {
-        id: 'lesson_vip_1',
-        module: 'module_vip',
-        title: 'VIP Secret Lesson',
-        slug: 'vip-secret',
+        id: 'lesson_private_1',
+        module: 'module_private',
+        title: 'Private Secret Lesson',
+        slug: 'private-secret',
         estimatedDuration: '12 min',
         sortOrder: 10,
       },
@@ -373,19 +373,19 @@ async function run() {
     assert.equal(pro?.decisionReason, 'required_group')
     assert.equal(pro?.lessonCount, 1)
 
-    const vip = dashboard.courses.find((course) => course.id === 'course_vip')
-    assert.equal(vip?.allowed, false)
-    assert.equal(vip?.modules.length, 0)
-    assert.equal(vip?.lessonCount, null)
-    assert.match(vip?.lockReason ?? '', /does not currently include/)
+    const privateCourse = dashboard.courses.find((course) => course.id === 'course_private')
+    assert.equal(privateCourse?.allowed, false)
+    assert.equal(privateCourse?.modules.length, 0)
+    assert.equal(privateCourse?.lessonCount, null)
+    assert.match(privateCourse?.lockReason ?? '', /does not currently include/)
 
-    const vipLessonFetch = payload.findCalls.find((call) => {
+    const privateLessonFetch = payload.findCalls.find((call) => {
       return (
         call.collection === 'payload_lessons' &&
-        JSON.stringify(call.where).includes('module_vip')
+        JSON.stringify(call.where).includes('module_private')
       )
     })
-    assert.equal(vipLessonFetch, undefined)
+    assert.equal(privateLessonFetch, undefined)
   }
 
   {
@@ -398,18 +398,18 @@ async function run() {
 
   {
     const payload = buildPayload()
-    const overview = await getMemberCourseOverview(payload, 'member_active', 'vip-lab')
+    const overview = await getMemberCourseOverview(payload, 'member_active', 'private-lab')
 
     assert.equal(overview?.allowed, false)
     assert.equal(overview?.modules.length, 0)
 
-    const vipLessonFetch = payload.findCalls.find((call) => {
+    const privateLessonFetch = payload.findCalls.find((call) => {
       return (
         call.collection === 'payload_lessons' &&
-        JSON.stringify(call.where).includes('module_vip')
+        JSON.stringify(call.where).includes('module_private')
       )
     })
-    assert.equal(vipLessonFetch, undefined)
+    assert.equal(privateLessonFetch, undefined)
   }
 
   {

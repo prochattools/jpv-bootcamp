@@ -27,9 +27,9 @@ const courses = [
     featured: false,
   },
   {
-    title: 'VIP Mastermind',
-    description: 'Advanced implementation sessions, private resources and focused support.',
-    badge: 'VIP',
+    title: 'Mentorship Modules',
+    description: 'Focused implementation sessions and support resources for approved Free or Pro access.',
+    badge: 'SUPPORT',
     progress: 0,
     lessons: 8,
     duration: '4h 10m',

@@ -288,7 +288,7 @@ async function run() {
   const publicRoot = path.resolve('/tmp/jpv-public-media')
   const privateRoot = path.resolve('/tmp/jpv-private-media')
   assert.equal(resolveSafeStoredFilePath(publicRoot, 'workbook.pdf'), path.join(publicRoot, 'workbook.pdf'))
-  assert.equal(resolveSafeStoredFilePath(privateRoot, 'vip-guide.pdf'), path.join(privateRoot, 'vip-guide.pdf'))
+  assert.equal(resolveSafeStoredFilePath(privateRoot, 'private-guide.pdf'), path.join(privateRoot, 'private-guide.pdf'))
   assert.equal(resolveSafeStoredFilePath(publicRoot, '../secret.pdf'), null)
   assert.equal(resolveSafeStoredFilePath(publicRoot, 'folder/secret.pdf'), null)
   assert.equal(resolveSafeStoredFilePath(privateRoot, 'folder\\secret.pdf'), null)

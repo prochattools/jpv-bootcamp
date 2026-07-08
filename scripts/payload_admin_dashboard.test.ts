@@ -30,7 +30,7 @@ for (const forbidden of [
   /stripe\./i,
   /resend/i,
   /fetch\(/i,
-  /process\.env\.(?:DATABASE_URL|STRIPE|RESEND|N8N|WP|MYSQL|SECRET|TOKEN)/,
+  /process\.env\.(?:DATABASE_URL|STRIPE|RESEND|N8N|MYSQL|SECRET|TOKEN)/,
   /sk_live|whsec_|postgresql:\/\//i,
 ]) {
   assert.doesNotMatch(dashboard, forbidden)

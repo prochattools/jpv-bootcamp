@@ -108,7 +108,7 @@ async function testValidPortalSessionCreation(): Promise<void> {
 
 	const session = await stripe.billingPortal.sessions.create({
 		customer: record.stripeCustomerId,
-		return_url: 'https://portal.jpvbootcamp.com/community/',
+		return_url: 'https://jpvbootcamp.com/portal',
 		configuration: 'bpc_test',
 	})
 
@@ -150,7 +150,7 @@ async function testStripeErrorHandledSafely(): Promise<void> {
 
 function testConfiguredReturnUrl(): void {
 	// Verify the default return URL is configured correctly
-	const defaultReturnUrl = 'https://portal.jpvbootcamp.com/community/'
+	const defaultReturnUrl = 'https://jpvbootcamp.com/portal'
 	assert.match(defaultReturnUrl, /^https:\/\/.+/)
 	assert.ok(defaultReturnUrl.length > 0)
 	assert.ok(defaultReturnUrl.length < 2048)

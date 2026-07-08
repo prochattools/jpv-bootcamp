@@ -126,13 +126,13 @@ async function testTrustedMemberLookupAndStoredCustomer(): Promise<void> {
   assert.deepEqual(stripe.calls, [
     {
       customer: 'cus_trusted',
-      return_url: 'https://portal.jpvbootcamp.com/learn/billing',
+      return_url: 'https://jpvbootcamp.com/portal/billing',
       configuration: 'bpc_trusted',
     },
   ])
   assert.equal(
     MEMBER_BILLING_PORTAL_RETURN_URL,
-    'https://portal.jpvbootcamp.com/learn/billing'
+    'https://jpvbootcamp.com/portal/billing'
   )
 }
 

@@ -9,7 +9,7 @@ async function run(): Promise<void> {
 		process.exit(1)
 	}
 
-	process.env.DRY_RUN_WP_SYNC = process.env.DRY_RUN_WP_SYNC || '1'
+	process.env.DRY_RUN_MEMBERSHIP_SYNC = process.env.DRY_RUN_MEMBERSHIP_SYNC || '1'
 
 	const record = await prisma.stripeWebhookEvent.findUnique({
 		where: { eventId },

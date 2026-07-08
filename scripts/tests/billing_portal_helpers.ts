@@ -12,9 +12,9 @@ import { redactEmail } from '@/lib/log-redact'
 
 function testReturnUrlValidation() {
 	const validPortal = describeBillingPortalReturnUrl(
-		'https://portal.jpvbootcamp.com/community/?foo=1'
+		'https://jpvbootcamp.com/portal?foo=1'
 	)
-	assert.equal(validPortal.url.includes('portal.jpvbootcamp.com'), true)
+	assert.equal(validPortal.url.includes('jpvbootcamp.com'), true)
 	assert.equal(validPortal.valid, true)
 
 	const validApp = describeBillingPortalReturnUrl('https://jpvbootcamp.com/upgrade')
@@ -25,7 +25,7 @@ function testReturnUrlValidation() {
 	assert.equal(invalid.url, BILLING_PORTAL_DEFAULT_RETURN_URL)
 	assert.equal(invalid.valid, false)
 
-	const invalidScheme = describeBillingPortalReturnUrl('http://portal.jpvbootcamp.com/')
+	const invalidScheme = describeBillingPortalReturnUrl('http://jpvbootcamp.com/')
 	assert.equal(invalidScheme.url, BILLING_PORTAL_DEFAULT_RETURN_URL)
 	assert.equal(invalidScheme.valid, false)
 
@@ -38,7 +38,7 @@ function testTokenVerification() {
 	const now = Math.floor(Date.now() / 1000)
 	const payload: BillingPortalTokenPayload = {
 		email: 'test@example.com',
-		returnUrl: 'https://portal.jpvbootcamp.com/community/',
+		returnUrl: 'https://jpvbootcamp.com/portal',
 		iat: now,
 		exp: now + 60,
 		nonce: 'abc123',

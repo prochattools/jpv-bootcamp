@@ -8,18 +8,17 @@ const readyEnv = {
   STRIPE_SECRET_KEY_TEST: 'sk_test_ready',
   STRIPE_WEBHOOK_SECRET_TEST: 'whsec_ready_a,whsec_ready_b',
   STRIPE_PRICE_PRO_TEST: 'price_pro_ready',
-  STRIPE_PRICE_VIP_TEST: 'price_vip_ready',
+  STRIPE_PRICE_PRO_ANNUAL_TEST: 'price_pro_annual_ready',
   APP_PUBLIC_URL: 'https://preview.example.test',
 }
 
 async function main() {
-  const [report, readinessSource, checkoutSource, portalSource, upgradeRoute, webhookSource] =
+  const [report, readinessSource, checkoutSource, portalSource, webhookSource] =
     await Promise.all([
       buildBillingReadinessReport(readyEnv as unknown as NodeJS.ProcessEnv),
       readFile('src/lib/billingReadiness.ts', 'utf8'),
       readFile('src/app/api/stripe/checkout/route.ts', 'utf8'),
       readFile('src/app/(frontend)/billing/portal/route.ts', 'utf8'),
-      readFile('src/app/api/stripe/upgrade-vip/route.ts', 'utf8'),
       readFile('src/lib/stripe-webhook-handler.ts', 'utf8'),
     ])
 
@@ -33,8 +32,8 @@ async function main() {
   assert.equal(report.checks.stripeSecretKey.present, true)
   assert.equal(report.checks.webhookSecrets.present, true)
   assert.equal(report.checks.webhookSecrets.count, 2)
-  assert.equal(report.checks.priceIds.proPresent, true)
-  assert.equal(report.checks.priceIds.vipPresent, true)
+  assert.equal(report.checks.priceIds.proMonthlyPresent, true)
+  assert.equal(report.checks.priceIds.proAnnualPresent, true)
   assert.equal(report.checks.priceIds.distinct, true)
   assert.equal(report.checks.previewPublicUrl.validHttps, true)
   assert.equal(report.checks.checkoutUrls.successTrusted, true)
@@ -49,7 +48,7 @@ async function main() {
   assert.equal(JSON.stringify(report).includes('sk_test_ready'), false)
   assert.equal(JSON.stringify(report).includes('whsec_ready_a'), false)
   assert.equal(JSON.stringify(report).includes('price_pro_ready'), false)
-  assert.equal(JSON.stringify(report).includes('price_vip_ready'), false)
+  assert.equal(JSON.stringify(report).includes('price_pro_annual_ready'), false)
   assert.equal(JSON.stringify(report).includes('https://preview.example.test'), false)
 
   const missingSecret = await buildBillingReadinessReport({
@@ -67,7 +66,7 @@ async function main() {
 
   const mismatchedPrices = await buildBillingReadinessReport({
     ...readyEnv,
-    STRIPE_PRICE_VIP_TEST: 'price_pro_ready',
+    STRIPE_PRICE_PRO_ANNUAL_TEST: 'price_pro_ready',
   } as unknown as NodeJS.ProcessEnv)
   assert.equal(mismatchedPrices.sections.configuration.codes.includes('STRIPE_PRICE_MATCH'), true)
 
@@ -80,9 +79,14 @@ async function main() {
   assert.match(readinessSource, /buildBillingReadinessReport/)
   assert.doesNotMatch(readinessSource, /\bfetch\(|\baxios\b|\bgetStripe\(/i)
   assert.match(checkoutSource, /checkout\.sessions\.create/)
+  assert.match(checkoutSource, /return value === 'pro'/)
+  assert.match(checkoutSource, /mode: 'subscription'/)
+  assert.doesNotMatch(checkoutSource, /mode:\s*'payment'/)
+  assert.doesNotMatch(checkoutSource, /STRIPE_PRICE_TABLE/)
+  assert.match(checkoutSource, /billingParam/)
+  assert.match(checkoutSource, /billing=monthly\|annual/)
+  assert.match(checkoutSource, /priceProAnnual/)
   assert.match(portalSource, /billingPortal\.sessions\.create/)
-  assert.match(upgradeRoute, /status: 410/)
-  assert.match(upgradeRoute, /\/learn\/billing/)
   for (const eventName of [
     'checkout.session.completed',
     'customer.subscription.created',

@@ -15,7 +15,7 @@ async function main(): Promise<void> {
       STRIPE_SECRET_KEY_TEST: 'sk_test_shadow',
       STRIPE_WEBHOOK_SECRET_TEST: 'whsec_shadow',
       STRIPE_PRICE_PRO_TEST: 'price_pro_shadow',
-      STRIPE_PRICE_VIP_TEST: 'price_vip_shadow',
+      STRIPE_PRICE_PRO_ANNUAL_TEST: 'price_pro_annual_shadow',
       APP_PUBLIC_URL: 'https://preview.example.test',
       STARTUP_MODE: 'application-only',
       DEPLOYMENT_RUNTIME: 'docker',
@@ -54,7 +54,7 @@ async function main(): Promise<void> {
   assert.equal(healthy.issues.length, 0)
   assert.equal(healthy.domains.identity.issueCount, 0)
   assert.equal(healthy.domains.partners.issueCount, 0)
-  assert.doesNotMatch(JSON.stringify(healthy), /sk_test_shadow|whsec_shadow|price_pro_shadow|price_vip_shadow|https:\/\/preview\.example\.test/i)
+  assert.doesNotMatch(JSON.stringify(healthy), /sk_test_shadow|whsec_shadow|price_pro_shadow|price_pro_annual_shadow|https:\/\/preview\.example\.test/i)
 
   const shadowSource = await readFile('src/lib/shadowValidationReport.ts', 'utf8')
   assert.match(shadowSource, /previewMigrationInventoryNames\(\)/)

@@ -120,7 +120,7 @@ async function testActivePaidSubscriptionOverview(): Promise<void> {
       {
         id: 'subscription_expired',
         member: 'member_trusted',
-        plan: 'vip',
+        plan: 'private',
         status: 'incomplete_expired',
         cancelAtPeriodEnd: false,
         currentPeriodEnd: '2026-06-29T00:00:00.000Z',
@@ -138,7 +138,7 @@ async function testActivePaidSubscriptionOverview(): Promise<void> {
       {
         id: 'subscription_other',
         member: 'member_other',
-        plan: 'vip',
+        plan: 'private',
         status: 'active',
         cancelAtPeriodEnd: false,
         currentPeriodEnd: '2026-08-01T00:00:00.000Z',
@@ -174,7 +174,7 @@ async function testCancelAtPeriodEndOverview(): Promise<void> {
       {
         id: 'subscription_canceling',
         member: 'member_trusted',
-        plan: 'vip',
+        plan: 'private',
         status: 'active',
         cancelAtPeriodEnd: true,
         currentPeriodEnd: '2026-07-31T00:00:00.000Z',
@@ -185,7 +185,7 @@ async function testCancelAtPeriodEndOverview(): Promise<void> {
 
   const overview = await getMemberBillingOverview(payload, 'member_trusted')
 
-  assert.equal(overview.plan, 'vip')
+  assert.equal(overview.plan, 'private')
   assert.equal(overview.subscriptionStatus, 'active')
   assert.equal(overview.cancelAtPeriodEnd, true)
   assert.equal(overview.currentPeriodEnd, '2026-07-31T00:00:00.000Z')

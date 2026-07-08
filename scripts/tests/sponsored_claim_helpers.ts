@@ -9,7 +9,6 @@ function basePayload(now: number): SponsoredClaimPayload {
 	return {
 		applicationId: '11111111-1111-1111-1111-111111111111',
 		email: 'member@example.com',
-		tier: 'pro',
 		iat: now,
 		exp: now + 60 * 60 * 24 * 7,
 		nonce: 'nonce123',

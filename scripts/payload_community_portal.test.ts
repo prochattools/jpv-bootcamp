@@ -101,9 +101,9 @@ function buildPayload(overrides: Partial<CollectionMap> = {}) {
         status: 'published',
       },
       {
-        id: 'course_vip',
-        title: 'VIP Lab',
-        slug: 'vip-lab',
+        id: 'course_private',
+        title: 'Private Lab',
+        slug: 'private-lab',
         status: 'published',
       },
     ],
@@ -158,14 +158,14 @@ function buildPayload(overrides: Partial<CollectionMap> = {}) {
         sortOrder: 20,
       },
       {
-        id: 'space_vip',
-        name: 'VIP Mastermind',
-        slug: 'vip-mastermind',
+        id: 'space_private',
+        name: 'Private Mastermind',
+        slug: 'private-mastermind',
         status: 'published',
         spaceType: 'chat',
         visibility: 'secret',
-        description: 'Secret VIP discussion.',
-        linkedCourse: 'course_vip',
+        description: 'Secret Private discussion.',
+        linkedCourse: 'course_private',
         sortOrder: 30,
       },
       {
@@ -194,19 +194,19 @@ function buildPayload(overrides: Partial<CollectionMap> = {}) {
         resourceId: 'space_pro',
         status: 'active',
         privacy: 'private',
-        allowedPlans: ['pro', 'vip'],
+        allowedPlans: ['pro', 'private'],
         requiredGroups: ['group_pro'],
         requireActiveBilling: true,
         priority: 20,
       },
       {
-        id: 'policy_vip',
+        id: 'policy_private',
         resourceType: 'space',
-        resourceId: 'space_vip',
+        resourceId: 'space_private',
         status: 'active',
         privacy: 'secret',
-        allowedPlans: ['vip'],
-        requiredGroups: ['group_vip'],
+        allowedPlans: ['private'],
+        requiredGroups: ['group_private'],
         requireActiveBilling: true,
         priority: 30,
       },
@@ -239,9 +239,9 @@ function buildPayload(overrides: Partial<CollectionMap> = {}) {
         createdAt: '2026-01-04T00:00:00.000Z',
       },
       {
-        id: 'post_vip_visible',
-        title: 'VIP operating thread',
-        space: 'space_vip',
+        id: 'post_private_visible',
+        title: 'Private operating thread',
+        space: 'space_private',
         postType: 'discussion',
         moderationStatus: 'visible',
         createdAt: '2026-01-05T00:00:00.000Z',
@@ -329,7 +329,7 @@ async function run() {
 
   {
     const payload = buildPayload()
-    const detail = await getMemberCommunitySpaceDetail(payload, 'member_active', 'vip-mastermind')
+    const detail = await getMemberCommunitySpaceDetail(payload, 'member_active', 'private-mastermind')
 
     assert.equal(detail, null)
   }
@@ -338,10 +338,10 @@ async function run() {
     const payload = buildPayload({
       payload_space_memberships: [
         {
-          id: 'membership_vip',
-          displayName: 'member_active:vip',
+          id: 'membership_private',
+          displayName: 'member_active:private',
           member: 'member_active',
-          space: 'space_vip',
+          space: 'space_private',
           role: 'member',
           status: 'active',
           joinedAt: '2026-01-01T00:00:00.000Z',
@@ -349,13 +349,13 @@ async function run() {
       ],
     })
     const dashboard = await getMemberCommunityDashboard(payload, 'member_active')
-    const vip = dashboard.spaces.find((space) => space.slug === 'vip-mastermind')
-    const detail = await getMemberCommunitySpaceDetail(payload, 'member_active', 'vip-mastermind')
+    const privateSpace = dashboard.spaces.find((space) => space.slug === 'private-mastermind')
+    const detail = await getMemberCommunitySpaceDetail(payload, 'member_active', 'private-mastermind')
 
-    assert.equal(vip?.allowed, true)
-    assert.equal(vip?.decisionReason, 'direct_grant')
-    assert.equal(vip?.membership?.role, 'member')
-    assert.equal(detail?.posts[0]?.title, 'VIP operating thread')
+    assert.equal(privateSpace?.allowed, true)
+    assert.equal(privateSpace?.decisionReason, 'direct_grant')
+    assert.equal(privateSpace?.membership?.role, 'member')
+    assert.equal(detail?.posts[0]?.title, 'Private operating thread')
   }
 }
 

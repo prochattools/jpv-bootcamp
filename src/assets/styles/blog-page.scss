@@ -4,7 +4,7 @@ scss body {
   color: #1f2937;
 }
 .article {
-  h2.wp-block-heading {
+  h2.article-heading {
     font-size: 1.2rem;
     font-weight: 600;
     margin-bottom: 1rem;
@@ -29,7 +29,7 @@ scss body {
       }
     }
   }
-  h3.wp-block-heading {
+  h3.article-heading {
     font-size: 1.125rem;
     font-weight: 600;
     margin-bottom: 0.5rem;
@@ -51,7 +51,7 @@ scss body {
     @apply bg-[#0F1121] dark:bg-gray-500 text-white p-1 rounded-md;
   }
 
-  figure.wp-block-image {
+  figure.article-image {
     margin: 1.5rem 0;
     img {
       width: 100%;
@@ -59,7 +59,7 @@ scss body {
       border-radius: 0.5rem;
     }
   }
-  // blockquote.wp-block-quote {
+  // blockquote.article-quote {
   //   background-color: #ffffff;
   //   padding: 1rem;
   //   border-radius: 0.5rem;
@@ -70,7 +70,7 @@ scss body {
   //   }
   // }
 
-  blockquote.wp-block-quote {
+  blockquote.article-quote {
     background-color: #1e293b; // Matching the background color from the image
     padding: 1rem;
     border-radius: 0.5rem;
@@ -83,7 +83,7 @@ scss body {
       @apply text-white p-1 rounded-md;
     }
   }
-  ul.wp-block-list {
+  ul.article-list {
     list-style-type: disc;
     padding-left: 1.5rem;
     margin-bottom: 1rem;
@@ -91,7 +91,7 @@ scss body {
       margin-bottom: 0.5rem;
     }
   }
-  .wp-block-embed {
+  .article-embed {
     margin: 1.5rem 0;
     &__wrapper {
       position: relative;

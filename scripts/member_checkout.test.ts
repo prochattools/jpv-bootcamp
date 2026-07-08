@@ -19,7 +19,9 @@ async function main() {
   assert.doesNotMatch(action, /returnUrl:\s*string/)
   assert.doesNotMatch(action, /console\.(info|warn).*customer/i)
 
-  assert.match(component, /startMemberCheckout\(plan\)/)
+  assert.match(component, /Start Pro monthly/)
+  assert.match(component, /Start Pro annual/)
+  assert.match(component, /startMemberCheckout\(plan, billing\)/)
   assert.match(component, /type='button'/)
   assert.doesNotMatch(component, /memberId|memberEmail|stripeCustomerId|returnUrl/)
 

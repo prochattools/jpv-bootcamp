@@ -18,7 +18,7 @@ async function main(): Promise<void> {
       STRIPE_SECRET_KEY_TEST: 'sk_test_shadow',
       STRIPE_WEBHOOK_SECRET_TEST: 'whsec_shadow',
       STRIPE_PRICE_PRO_TEST: 'price_pro_shadow',
-      STRIPE_PRICE_VIP_TEST: 'price_vip_shadow',
+      STRIPE_PRICE_PRO_ANNUAL_TEST: 'price_pro_annual_shadow',
       APP_PUBLIC_URL: 'https://preview.example.test',
       STARTUP_MODE: 'application-only',
       DEPLOYMENT_RUNTIME: 'docker',
@@ -126,7 +126,7 @@ async function main(): Promise<void> {
   )
 
   const serialized = JSON.stringify(brokenIssues)
-  assert.doesNotMatch(serialized, /sk_test_shadow|whsec_shadow|price_pro_shadow|price_vip_shadow|cus_secret_123|sub_secret_123|in_secret_123|pi_secret_123|a@example\.test|token=abc|provider payload/i)
+  assert.doesNotMatch(serialized, /sk_test_shadow|whsec_shadow|price_pro_shadow|price_pro_annual_shadow|cus_secret_123|sub_secret_123|in_secret_123|pi_secret_123|a@example\.test|token=abc|provider payload/i)
 
   const healthyIssueOrder = validateShadowValidationSnapshot(buildDefaultSnapshot()).map((issue) => `${issue.domain}:${issue.code}`)
   assert.deepEqual(healthyIssueOrder, [...healthyIssueOrder].sort())
