@@ -4,7 +4,7 @@ export type CourseSeed = {
   title: string
   shortDescription: string
   visibility: 'public' | 'members' | 'restricted'
-  accessBadge: 'free' | 'pro' | 'vip' | 'manual'
+  accessBadge: 'free' | 'pro' | 'manual'
   estimatedDuration: string
   sortOrder: number
   featured?: boolean
@@ -62,7 +62,7 @@ export type AccessPolicySeed = {
   resourceType: 'course' | 'space'
   resourceSlug: string
   privacy: 'public' | 'members' | 'private' | 'secret'
-  allowedPlans?: ('free' | 'exhibitor' | 'pro' | 'vip')[]
+  allowedPlans?: ('free' | 'pro')[]
   requiredAccessGroupSlugs?: string[]
   requireActiveBilling: boolean
   allowPreviewLessons?: boolean
@@ -81,12 +81,6 @@ export const courseAccessGroupSeeds: AccessGroupSeed[] = [
     name: 'Pro Courses',
     groupType: 'plan',
     description: 'Members with the Pro course subscription entitlement.',
-  },
-  {
-    slug: 'vip-mastermind',
-    name: 'VIP Mastermind',
-    groupType: 'plan',
-    description: 'Members with VIP subscription and mastermind access.',
   },
   {
     slug: 'private-clients',
@@ -167,24 +161,24 @@ export const courseSeeds: CourseSeed[] = [
     ],
   },
   {
-    slug: 'vip-client-accelerator',
-    prototypeKey: 'seed:vip-client-accelerator',
-    title: 'VIP Client Accelerator',
-    shortDescription: 'VIP-only course area for private client access validation.',
+    slug: 'private-client-accelerator',
+    prototypeKey: 'seed:private-client-accelerator',
+    title: 'Private Client Accelerator',
+    shortDescription: 'Private client course area for manual access validation.',
     visibility: 'restricted',
-    accessBadge: 'vip',
+    accessBadge: 'manual',
     estimatedDuration: '6 hours',
     sortOrder: 30,
     modules: [
       {
         title: 'Private Client Track',
-        description: 'VIP delivery and implementation track.',
+        description: 'Private delivery and implementation track.',
         sortOrder: 10,
         lessons: [
           {
-            slug: 'vip-accelerator-orientation',
-            title: 'VIP Accelerator Orientation',
-            summary: 'VIP onboarding lesson.',
+            slug: 'private-accelerator-orientation',
+            title: 'Private Accelerator Orientation',
+            summary: 'Private client onboarding lesson.',
             sortOrder: 10,
             estimatedDuration: '12 min',
           },
@@ -274,14 +268,14 @@ export const spaceSeeds: SpaceSeed[] = [
     linkedCourseSlug: 'pro-operator-lab',
   },
   {
-    slug: 'vip-mastermind',
-    name: 'VIP Mastermind',
+    slug: 'private-client-room',
+    name: 'Private Client Room',
     spaceType: 'chat',
     visibility: 'secret',
-    description: 'Secret VIP mastermind space.',
+    description: 'Secret private client space.',
     sortOrder: 30,
-    requiredAccessGroupSlugs: ['vip-mastermind'],
-    linkedCourseSlug: 'vip-client-accelerator',
+    requiredAccessGroupSlugs: ['private-clients'],
+    linkedCourseSlug: 'private-client-accelerator',
   },
 ]
 
@@ -291,7 +285,7 @@ export const accessPolicySeeds: AccessPolicySeed[] = [
     resourceType: 'course',
     resourceSlug: 'jpv-bootcamp-foundations',
     privacy: 'members',
-    allowedPlans: ['free', 'pro', 'vip'],
+    allowedPlans: ['free', 'pro'],
     requireActiveBilling: false,
     allowPreviewLessons: true,
     priority: 10,
@@ -301,19 +295,18 @@ export const accessPolicySeeds: AccessPolicySeed[] = [
     resourceType: 'course',
     resourceSlug: 'pro-operator-lab',
     privacy: 'private',
-    allowedPlans: ['pro', 'vip'],
+    allowedPlans: ['pro'],
     requiredAccessGroupSlugs: ['pro-courses'],
     requireActiveBilling: true,
     allowPreviewLessons: true,
     priority: 20,
   },
   {
-    name: 'VIP Accelerator subscription access',
+    name: 'Private Accelerator manual access',
     resourceType: 'course',
-    resourceSlug: 'vip-client-accelerator',
+    resourceSlug: 'private-client-accelerator',
     privacy: 'secret',
-    allowedPlans: ['vip'],
-    requiredAccessGroupSlugs: ['vip-mastermind'],
+    requiredAccessGroupSlugs: ['private-clients'],
     requireActiveBilling: true,
     priority: 30,
   },
@@ -330,18 +323,17 @@ export const accessPolicySeeds: AccessPolicySeed[] = [
     resourceType: 'space',
     resourceSlug: 'pro-community',
     privacy: 'private',
-    allowedPlans: ['pro', 'vip'],
+    allowedPlans: ['pro'],
     requiredAccessGroupSlugs: ['pro-courses'],
     requireActiveBilling: true,
     priority: 20,
   },
   {
-    name: 'VIP Mastermind secret access',
+    name: 'Private Client Room secret access',
     resourceType: 'space',
-    resourceSlug: 'vip-mastermind',
+    resourceSlug: 'private-client-room',
     privacy: 'secret',
-    allowedPlans: ['vip'],
-    requiredAccessGroupSlugs: ['vip-mastermind'],
+    requiredAccessGroupSlugs: ['private-clients'],
     requireActiveBilling: true,
     priority: 30,
   },

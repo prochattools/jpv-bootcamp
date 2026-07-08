@@ -9615,7 +9615,6 @@
       "values": [
         "free",
         "pro",
-        "vip",
         "manual"
       ]
     },
@@ -9654,7 +9653,6 @@
       "values": [
         "free",
         "pro",
-        "vip",
         "manual",
         "private"
       ]
@@ -9764,9 +9762,7 @@
       "schema": "jpvbootcamp",
       "values": [
         "free",
-        "exhibitor",
-        "pro",
-        "vip"
+        "pro"
       ]
     },
     "jpvbootcamp.enum_payload_access_policies_status": {
@@ -9886,9 +9882,7 @@
       "schema": "jpvbootcamp",
       "values": [
         "free",
-        "exhibitor",
-        "pro",
-        "vip"
+        "pro"
       ]
     },
     "jpvbootcamp.enum_payload_subscriptions_status": {

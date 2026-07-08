@@ -135,9 +135,7 @@ export const PayloadAccessPolicies: CollectionConfig = {
       hasMany: true,
       options: [
         { label: 'Free', value: 'free' },
-        { label: 'Exhibitor', value: 'exhibitor' },
         { label: 'Pro', value: 'pro' },
-        { label: 'VIP', value: 'vip' },
       ],
     },
     {

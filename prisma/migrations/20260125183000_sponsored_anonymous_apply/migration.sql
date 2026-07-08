@@ -14,7 +14,7 @@ ADD COLUMN IF NOT EXISTS claim_token_sent_at timestamptz,
 ADD COLUMN IF NOT EXISTS claimed_at timestamptz;
 
 ALTER TABLE IF EXISTS jpvbootcamp.sponsored_applications
-ALTER COLUMN wp_user_id DROP NOT NULL;
+ALTER COLUMN account_id DROP NOT NULL;
 
 UPDATE jpvbootcamp.sponsored_applications
 SET tier = COALESCE(tier, 'pro')

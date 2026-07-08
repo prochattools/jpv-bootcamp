@@ -10,7 +10,7 @@ export const PayloadCourses: CollectionConfig = {
   admin: {
     useAsTitle: 'title',
     defaultColumns: ['title', 'status', 'visibility', 'accessBadge', 'updatedAt'],
-    description: 'Visual prototype only. Not connected to Stripe, WordPress, FluentCRM, or FluentCommunity.',
+    description: 'Visual prototype only. Not connected to billing or entitlement enforcement.',
     group: 'Courses',
   },
   fields: [
@@ -71,7 +71,6 @@ export const PayloadCourses: CollectionConfig = {
       options: [
         { label: 'Free', value: 'free' },
         { label: 'Pro', value: 'pro' },
-        { label: 'VIP', value: 'vip' },
         { label: 'Manual', value: 'manual' },
       ],
       admin: {
@@ -248,7 +247,6 @@ export const PayloadCourseAccessPreview: CollectionConfig = {
       options: [
         { label: 'Free', value: 'free' },
         { label: 'Pro', value: 'pro' },
-        { label: 'VIP', value: 'vip' },
         { label: 'Manual', value: 'manual' },
         { label: 'Private', value: 'private' },
       ],

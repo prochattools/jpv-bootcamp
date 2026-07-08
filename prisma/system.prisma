@@ -36,7 +36,7 @@ model CustomerProvisioning {
   normalizedEmail      String   @map("normalized_email")
   stripeCustomerId     String   @unique @map("stripe_customer_id")
   stripeSubscriptionId String?  @unique @map("stripe_subscription_id")
-  wpUserId             Int?     @map("wp_user_id")
+  accountId             Int?     @map("account_id")
   plan                 String?  @map("plan")
   currentPlan          String?  @map("current_plan")
   status               String   @default("active")
@@ -70,13 +70,13 @@ model CustomerProvisioning {
 
 model PartnerSession {
   sessionId   String   @id @map("session_id")
-  wpUserId    Int      @map("wp_user_id")
-  wpEmailHash String   @map("wp_email_hash")
-  wpName      String   @map("wp_name")
+  accountId    Int      @map("account_id")
+  accountEmailHash String   @map("account_email_hash")
+  accountName      String   @map("account_name")
   createdAt   DateTime @default(now()) @map("created_at")
   expiresAt   DateTime @map("expires_at")
 
-  @@index([wpUserId])
+  @@index([accountId])
   @@index([expiresAt])
   @@map("partner_sessions")
 }
@@ -85,7 +85,7 @@ model PartnerClick {
   id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid @map("id")
   createdAt    DateTime @default(now()) @map("created_at")
   sessionId    String   @map("session_id")
-  wpUserId     Int      @map("wp_user_id")
+  accountId     Int      @map("account_id")
   partnerSlug  String   @map("partner_slug")
   categorySlug String   @map("category_slug")
   refPath      String?  @map("ref_path")
@@ -93,7 +93,7 @@ model PartnerClick {
   ipHash       String?  @map("ip_hash")
 
   @@index([sessionId])
-  @@index([wpUserId])
+  @@index([accountId])
   @@index([partnerSlug])
   @@index([categorySlug])
   @@index([createdAt])
@@ -111,12 +111,12 @@ model SponsoredSeat {
   reservedAt             DateTime? @map("reserved_at")
   donorEmailSentAt       DateTime? @map("donor_email_sent_at")
   adminNotifiedAt        DateTime? @map("admin_notified_at")
-  claimedByWpUserId      Int?     @map("claimed_by_wp_user_id")
+  claimedByAccountId      Int?     @map("claimed_by_account_id")
   claimedAt              DateTime? @map("claimed_at")
 
   grants SponsoredGrant[]
 
-  @@index([claimedByWpUserId])
+  @@index([claimedByAccountId])
   @@index([reservedByApplicationId])
   @@index([createdAt])
   @@map("sponsored_seats")
@@ -130,7 +130,7 @@ model SponsoredApplication {
   decision           String?  @map("decision")
   decidedAt          DateTime? @map("decided_at")
   tier               String   @map("tier")
-  wpUserId           Int?     @map("wp_user_id")
+  accountId           Int?     @map("account_id")
   email              String?  @map("email")
   emailHash          String   @map("email_hash")
   name               String   @map("name")
@@ -140,12 +140,12 @@ model SponsoredApplication {
   seatId             String?  @db.Uuid @map("seat_id")
   claimTokenSentAt   DateTime? @map("claim_token_sent_at")
   claimedAt          DateTime? @map("claimed_at")
-  reviewedByWpUserId Int?     @map("reviewed_by_wp_user_id")
+  reviewedByAccountId Int?     @map("reviewed_by_account_id")
   reviewedAt         DateTime? @map("reviewed_at")
   decisionNote       String?  @map("decision_note")
 
   @@index([status])
-  @@index([wpUserId])
+  @@index([accountId])
   @@index([email])
   @@index([seatId])
   @@map("sponsored_applications")
@@ -154,7 +154,7 @@ model SponsoredApplication {
 model SponsoredGrant {
   id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid @map("id")
   createdAt DateTime @default(now()) @map("created_at")
-  wpUserId  Int      @map("wp_user_id")
+  accountId  Int      @map("account_id")
   tier      String   @map("tier")
   seatId    String   @map("seat_id") @db.Uuid
   startsAt  DateTime @map("starts_at")
@@ -163,7 +163,7 @@ model SponsoredGrant {
 
   seat SponsoredSeat @relation(fields: [seatId], references: [id])
 
-  @@index([wpUserId])
+  @@index([accountId])
   @@index([endsAt])
   @@map("sponsored_grants")
 }

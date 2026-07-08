@@ -63,11 +63,11 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
 
    CREATE TYPE ${schema}."enum_payload_courses_status" AS ENUM('draft', 'published', 'archived');
   CREATE TYPE ${schema}."enum_payload_courses_visibility" AS ENUM('public', 'members', 'restricted');
-  CREATE TYPE ${schema}."enum_payload_courses_access_badge" AS ENUM('free', 'pro', 'vip', 'manual');
+  CREATE TYPE ${schema}."enum_payload_courses_access_badge" AS ENUM('free', 'pro', 'manual');
   CREATE TYPE ${schema}."enum_payload_lessons_video_provider_label" AS ENUM('none', 'youtube', 'vimeo', 'mux', 'other');
   CREATE TYPE ${schema}."enum_payload_lessons_mock_completion_state" AS ENUM('not_started', 'in_progress', 'completed');
   CREATE TYPE ${schema}."enum_payload_lessons_visual_lock_state" AS ENUM('available', 'locked', 'coming_soon');
-  CREATE TYPE ${schema}."enum_payload_course_access_preview_type" AS ENUM('free', 'pro', 'vip', 'manual', 'private');
+  CREATE TYPE ${schema}."enum_payload_course_access_preview_type" AS ENUM('free', 'pro', 'manual', 'private');
   CREATE TYPE ${schema}."enum_payload_course_access_preview_visual_state" AS ENUM('available', 'locked', 'coming_soon');
   CREATE TYPE ${schema}."enum_payload_members_account_status" AS ENUM('pending', 'active', 'blocked', 'suspended', 'deleted');
   CREATE TYPE ${schema}."enum_payload_members_source" AS ENUM('self_signup', 'admin_created', 'stripe_checkout', 'migration');
@@ -78,7 +78,7 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   CREATE TYPE ${schema}."enum_payload_lesson_progress_status" AS ENUM('not_started', 'in_progress', 'completed');
   CREATE TYPE ${schema}."enum_payload_access_groups_status" AS ENUM('active', 'archived');
   CREATE TYPE ${schema}."enum_payload_access_groups_group_type" AS ENUM('manual', 'plan', 'cohort', 'migration');
-  CREATE TYPE ${schema}."enum_payload_access_policies_allowed_plans" AS ENUM('free', 'exhibitor', 'pro', 'vip');
+  CREATE TYPE ${schema}."enum_payload_access_policies_allowed_plans" AS ENUM('free', 'pro');
   CREATE TYPE ${schema}."enum_payload_access_policies_status" AS ENUM('draft', 'active', 'paused', 'archived');
   CREATE TYPE ${schema}."enum_payload_access_policies_resource_type" AS ENUM('course', 'lesson', 'space', 'access_group');
   CREATE TYPE ${schema}."enum_payload_access_policies_privacy" AS ENUM('public', 'members', 'private', 'secret');
@@ -90,7 +90,7 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   CREATE TYPE ${schema}."enum_payload_entitlement_events_result" AS ENUM('allowed', 'denied', 'changed');
   CREATE TYPE ${schema}."enum_payload_billing_accounts_stripe_mode" AS ENUM('test', 'live');
   CREATE TYPE ${schema}."enum_payload_billing_accounts_billing_status" AS ENUM('none', 'active', 'trialing', 'billing_hold', 'past_due', 'unpaid', 'canceled');
-  CREATE TYPE ${schema}."enum_payload_subscriptions_plan" AS ENUM('free', 'exhibitor', 'pro', 'vip');
+  CREATE TYPE ${schema}."enum_payload_subscriptions_plan" AS ENUM('free', 'pro');
   CREATE TYPE ${schema}."enum_payload_subscriptions_status" AS ENUM('incomplete', 'incomplete_expired', 'trialing', 'active', 'past_due', 'canceled', 'unpaid', 'paused');
   CREATE TYPE ${schema}."enum_payload_payments_status" AS ENUM('pending', 'paid', 'failed', 'refunded', 'voided');
   CREATE TYPE ${schema}."enum_payload_stripe_events_processing_status" AS ENUM('received', 'processed', 'deduped', 'skipped', 'failed');

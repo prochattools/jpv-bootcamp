@@ -113,7 +113,7 @@ export const PayloadPartnerApplications: CollectionConfig = {
     { name: 'lastDeliveryError', type: 'textarea' },
     { name: 'trustedDestinationSnapshot', type: 'text' },
     { name: 'source', type: 'text', defaultValue: 'portal' },
-    { name: 'legacyWpUserId', type: 'number' },
+    { name: 'sourceMemberId', type: 'number' },
     { name: 'legacyReference', type: 'text' },
     { name: 'internalNotes', type: 'textarea' },
     { name: 'metadata', type: 'json' },

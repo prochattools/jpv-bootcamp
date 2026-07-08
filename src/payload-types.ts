@@ -337,7 +337,7 @@ export interface PayloadCategory {
   createdAt: string;
 }
 /**
- * Visual prototype only. Not connected to Stripe, WordPress, FluentCRM, or FluentCommunity.
+ * Visual prototype only. Not connected to billing or entitlement enforcement.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload_courses".
@@ -376,7 +376,7 @@ export interface PayloadCourse {
   /**
    * Visual label only. This does not grant or enforce access.
    */
-  accessBadge: 'free' | 'pro' | 'vip' | 'manual';
+  accessBadge: 'free' | 'pro' | 'manual';
   estimatedDuration?: string | null;
   sortOrder?: number | null;
   showInPrototypeDashboard?: boolean | null;
@@ -462,7 +462,7 @@ export interface PayloadCourseAccessPreview {
   id: number;
   prototype?: boolean | null;
   displayLabel: string;
-  type: 'free' | 'pro' | 'vip' | 'manual' | 'private';
+  type: 'free' | 'pro' | 'manual' | 'private';
   description?: string | null;
   badgeText?: string | null;
   exampleMemberName?: string | null;
@@ -755,7 +755,7 @@ export interface PayloadAccessPolicy {
    */
   resourceId: string;
   privacy: 'public' | 'members' | 'private' | 'secret';
-  allowedPlans?: ('free' | 'exhibitor' | 'pro' | 'vip')[] | null;
+  allowedPlans?: ('free' | 'pro')[] | null;
   requiredGroups?: (number | PayloadAccessGroup)[] | null;
   /**
    * Fail-closed for private paid resources when billing status is not active or trialing.
@@ -971,7 +971,7 @@ export interface PayloadPartnerApplication {
   lastDeliveryError?: string | null;
   trustedDestinationSnapshot?: string | null;
   source?: string | null;
-  legacyWpUserId?: number | null;
+  sourceMemberId?: number | null;
   legacyReference?: string | null;
   internalNotes?: string | null;
   metadata?:
@@ -1058,7 +1058,7 @@ export interface PayloadSubscription {
   stripeSubscriptionId: string;
   stripePriceId?: string | null;
   stripeProductId?: string | null;
-  plan: 'free' | 'exhibitor' | 'pro' | 'vip';
+  plan: 'free' | 'pro';
   status: 'incomplete' | 'incomplete_expired' | 'trialing' | 'active' | 'past_due' | 'canceled' | 'unpaid' | 'paused';
   cancelAtPeriodEnd?: boolean | null;
   currentPeriodStart?: string | null;
@@ -2364,7 +2364,7 @@ export interface PayloadPartnerApplicationsSelect<T extends boolean = true> {
   lastDeliveryError?: T;
   trustedDestinationSnapshot?: T;
   source?: T;
-  legacyWpUserId?: T;
+  sourceMemberId?: T;
   legacyReference?: T;
   internalNotes?: T;
   metadata?: T;
