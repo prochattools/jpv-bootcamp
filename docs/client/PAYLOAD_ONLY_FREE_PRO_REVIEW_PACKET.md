@@ -5,8 +5,9 @@
 - Branch: `feature/course-branding-and-preview`
 - PR / review URL: `https://github.com/prochattools/jpv-bootcamp/pull/2`
 - Staging deployment target: this feature branch is the staging / production-staged deployment branch.
-- Latest validated implementation commit before this staging-readiness handoff: `0c757f6 chore: remove remaining legacy assets and plugins`
-- Push status at handoff: local branch and `origin/feature/course-branding-and-preview` were in sync.
+- Latest validated commit: `80012b7 fix: staging readiness audit — access semantics, shadow sync, docs, and test fixes`
+- Push status: local branch and `origin/feature/course-branding-and-preview` are in sync.
+- Roadmap progress: `docs/client/ROADMAP_PROGRESS_STATUS.md`
 
 ## Scope summary
 

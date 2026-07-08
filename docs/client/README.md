@@ -11,6 +11,7 @@ It supersedes the older Version 2.40 plan for product scope, terminology, progre
 ## Review packet
 
 - [Payload-only Free/Pro Review Packet](./PAYLOAD_ONLY_FREE_PRO_REVIEW_PACKET.md) — commit-readiness summary for the current Payload-only Free/Pro refit.
+- [Roadmap Progress Status](./ROADMAP_PROGRESS_STATUS.md) — current position, progress table, validation evidence, remaining risks, and next executable tasks.
 
 ## Current terminology
 

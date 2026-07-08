@@ -47,7 +47,7 @@ Canonical product terminology:
 - **Pro** — the single paid JPV Bootcamp subscription. Public copy should describe Pro with two payment options: monthly with a 12-month commitment, and annual upfront with the approved annual discount.
 - **Historical tiers** — old paid and non-paid labels are migration inputs only. They must be mapped into Free, Pro, expired, revoked, suspended, or administrator-approved access states before cutover.
 
-The v3.3 readiness baseline replaces older v2.40 percentages: expanded-platform readiness is about 58% overall, first core go-live readiness is about 62%, carried-forward build foundation readiness is about 78%, and expanded launch readiness is about 52%. Older v2.40 progress numbers may be cited only as historical context for the narrower scope.
+The v3.3 readiness baseline (set at start of branch): expanded-platform readiness was about 58% overall, first core go-live readiness about 62%, carried-forward build foundation readiness about 78%, and expanded launch readiness about 52%. After the Payload-only Free/Pro refit and staging hardening completed on 8 July 2026, current estimates are: expanded-platform ~65%, core staging readiness ~88%, build foundation ~86%, testing/release readiness ~80%, migration readiness ~30%, live cutover readiness ~15%. See `docs/client/ROADMAP_PROGRESS_STATUS.md` for full delta evidence. Older v2.40 progress numbers may be cited only as historical context for the narrower scope.
 
 ## Final architecture
 
@@ -136,7 +136,7 @@ The `jpvbootcamp_staging` schema may be repaired, reconciled, or reset for stagi
   - Billing summary UI added (shows plan, status, renewal date, cancellation);
   - Type-check and build validated;
   - Next slice: billing communications, payment failure handling, cutover validation.
-- The reviewed Payload migration inventory is now unified in code and release policy; the ten reviewed migrations are ordered canonically, with partner schema reconciliation last. The staging schema `jpvbootcamp_staging` has been explicitly verified with all ten reviewed Payload migrations marked ran.
+- The reviewed Payload migration inventory is now unified in code and release policy; the eleven reviewed migrations are ordered canonically, with partner schema reconciliation last. The staging schema `jpvbootcamp_staging` has been explicitly verified with all ten prior reviewed Payload migrations marked ran (the two new 20260707 migrations are pending application).
 - Partner/Affiliate staging schema drift was reconciled by `20260704_090000_partner_schema_reconciliation`; the missing Partner Affiliate recipient-email array table and Partner Application snapshot columns are present in staging.
 - Duplicate admin login branding, portal-native member login mode, free-registration copy, operational admin dashboard cards, and clearer Affiliates vs Partner Affiliates admin descriptions are implemented in source and await deployment to staging.
 - 4 July 2026 Haiku live acceptance pass — Phase 6 email acceptance preparation completed:
@@ -184,6 +184,20 @@ The `jpvbootcamp_staging` schema may be repaired, reconciled, or reset for stagi
   - Operator acceptance confirms a fresh member login for `i***@yeshua.academy` succeeded after the `e6e59ee` deployment, the portal loaded, and no visible error text was reported;
   - Sanitized read-only staging metadata confirms exactly one controlled member row, active status, verified email state, login attempts below threshold, no blocking lockout, and `lastLoginAt` set after the `e6e59ee` deployment;
   - Phase 6 `lastLoginAt` live acceptance is complete, with no reported regression to account recovery, member portal loading, the administrator unauthorized boundary, administrator logout, or administrator login.
+- 7–8 July 2026 Payload-only Free/Pro refit and staging hardening (commit `80012b7`):
+  - Active legacy integration paths removed: WordPress plugin files, WordPress API routes/helpers, old sync route, VIP upgrade route/helper/test, old smoke portal script;
+  - Checkout refitted to Pro-only membership with monthly/annual billing; `plan=pro` is the only accepted public checkout plan;
+  - Stripe config and readiness checks require Pro monthly and Pro annual identifiers only;
+  - Payload access, billing, course, and generated type surfaces use Free and Pro labels only;
+  - Support and pay-it-forward now grant controlled Free access; sponsored tier semantics corrected from Pro to Free;
+  - Annual Pro Stripe shadow sync fixed; sponsored access provisioning fixed;
+  - Preview migration inventory updated from 10 to 11 migrations (added `20260707_120000_rename_account_identity_columns` and `20260707_130000_remove_table_plan_from_payload_enums`);
+  - Staging branch safety docs hardened; Dokploy API key literal removed from docs;
+  - Validation: `git diff --check`, `tsc --noEmit`, `prisma validate` (both schemas), 68 focused tests pass, 0 fail;
+  - Grep audit: zero active residue; allowed exceptions only (wp_* rename DDL, STRIPE_PRICE_TABLE negative assertion, pnpm-lock.yaml libvips hashes);
+  - No migrations applied; table-plan-to-Free mapping requires explicit target-environment approval before execution;
+  - Remaining risks: `startMemberCheckout` swallows errors without logging the error object; `STRIPE_SUCCESS_URL` has no same-origin guard; checkout rejection coverage is static regex, not runtime route tests;
+  - Roadmap progress status: `docs/client/ROADMAP_PROGRESS_STATUS.md`.
 
 ## Execution roadmap
 
@@ -497,9 +511,9 @@ Validation:
 - no LiveKit secret, participant token, or private recording URL is stored in member-readable PayloadCMS fields or exposed in logs;
 - representative desktop/mobile, accessibility, privacy, support, cost, monitoring, and rollback gates pass before rollout.
 
-## Overall delivery status — July 2026
+## Overall delivery status — 8 July 2026 (updated)
 
-The roadmap now contains the original eleven technical phases plus the Version 3.3 commercial-launch expansion. Expanded-platform readiness is approximately **58% complete** overall, with about **62% readiness for the first core go-live**. The older v2.40 percentage remains historical evidence for the narrower course/staging scope only.
+The roadmap now contains the original eleven technical phases plus the Version 3.3 commercial-launch expansion. Expanded-platform readiness is approximately **65% complete** overall (up from ~58% at the v3.3 baseline), with about **88% core staging readiness** for the feature branch (up from ~68%). The older v2.40 percentage remains historical evidence for the narrower course/staging scope only. See `docs/client/ROADMAP_PROGRESS_STATUS.md` for the full progress table and per-area delta evidence.
 
 - **Carried-forward strong foundations:** administrator boundary, shared login, account security, member portal shell, course/access foundations, billing projection, community foundations, partner foundations, and staging evidence.
 - **Core go-live scope:** public landing page, Free/Pro terminology refit, Pro checkout options, billing automation/recovery, representative 8-week course pilot, support/pay-it-forward access controls, migration rehearsal, rollback, and explicit go-live approval.
