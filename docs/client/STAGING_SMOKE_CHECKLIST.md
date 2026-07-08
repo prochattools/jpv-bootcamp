@@ -10,6 +10,7 @@ Manual smoke checklist for `feature/course-branding-and-preview`, the staging / 
 - Date:
 - Environment URL:
 - PR / review URL: `https://github.com/prochattools/jpv-bootcamp/pull/2`
+- Migrations applied: `No`
 - Operator handoff summary: `docs/client/OPERATOR_HANDOFF_SUMMARY.md`
 - Evidence review checklist: `docs/client/EVIDENCE_REVIEW_CHECKLIST.md`
 - Evidence template: `docs/client/STAGING_SMOKE_EVIDENCE_TEMPLATE.md`

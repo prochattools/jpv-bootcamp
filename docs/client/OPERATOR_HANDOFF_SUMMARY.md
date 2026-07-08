@@ -3,10 +3,12 @@
 ## Current state
 
 - Branch: `feature/course-branding-and-preview`
-- Latest baseline commit: `5a8cfe5 docs: add staging evidence capture templates`
+- Last recorded validated baseline before this status update: `3bc8b7e docs: finalize operator handoff evidence review`
+- Branch tip verification: verify the current tip with `git log --oneline -1` before operator action
 - PR / review URL: `https://github.com/prochattools/jpv-bootcamp/pull/2`
 - Migrations applied: `No`
 - Staging deployment target: this feature branch
+- Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`
 
 ## What is complete
 
@@ -36,10 +38,11 @@
 
 1. Review `docs/client/MIGRATION_APPROVAL_PACKET.md`.
 2. Update `docs/client/MIGRATION_APPROVAL_STATUS.md` only after real approval.
-3. Complete `docs/client/STAGING_SMOKE_EVIDENCE_TEMPLATE.md` during staging smoke.
-4. Complete `docs/client/PROVIDER_EMAIL_EVIDENCE_TEMPLATE.md` during provider/email checks.
-5. Do not apply migrations until approval is complete.
-6. Do not touch `main`.
+3. Review `docs/client/STATUS_UPDATE_PROCEDURE.md` before changing any roadmap percentages.
+4. Complete `docs/client/STAGING_SMOKE_EVIDENCE_TEMPLATE.md` during staging smoke.
+5. Complete `docs/client/PROVIDER_EMAIL_EVIDENCE_TEMPLATE.md` during provider/email checks.
+6. Do not apply migrations until approval is complete.
+7. Do not touch `main`.
 
 ## Hard stops
 

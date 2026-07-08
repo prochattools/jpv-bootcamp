@@ -47,7 +47,7 @@ Canonical product terminology:
 - **Pro** — the single paid JPV Bootcamp subscription. Public copy should describe Pro with two payment options: monthly with a 12-month commitment, and annual upfront with the approved annual discount.
 - **Historical tiers** — old paid and non-paid labels are migration inputs only. They must be mapped into Free, Pro, expired, revoked, suspended, or administrator-approved access states before cutover.
 
-The v3.3 readiness baseline (set at start of branch): expanded-platform readiness was about 58% overall, first core go-live readiness about 62%, carried-forward build foundation readiness about 78%, and expanded launch readiness about 52%. After the Payload-only Free/Pro refit and staging hardening completed on 8 July 2026, current estimates are: expanded-platform ~65%, core staging readiness ~88%, build foundation ~86%, testing/release readiness ~80%, migration readiness ~30%, live cutover readiness ~15%. See `docs/client/ROADMAP_PROGRESS_STATUS.md` for full delta evidence. Older v2.40 progress numbers may be cited only as historical context for the narrower scope.
+The v3.3 readiness baseline (set at start of branch): expanded-platform readiness was about 58% overall, first core go-live readiness about 62%, carried-forward build foundation readiness about 78%, and expanded launch readiness about 52%. After the Payload-only Free/Pro refit and status-documentation hardening completed on 8 July 2026, current estimates are: expanded-platform ~71%, core staging readiness ~95%, build foundation ~88%, testing/release readiness ~90%, migration readiness ~52%, live cutover readiness ~20%. See `docs/client/ROADMAP_PROGRESS_STATUS.md` for full delta evidence. Older v2.40 progress numbers may be cited only as historical context for the narrower scope.
 
 ## Final architecture
 
@@ -93,6 +93,11 @@ The `jpvbootcamp_staging` schema may be repaired, reconciled, or reset for stagi
 9. Production schema and traffic changes require explicit approval.
 
 ## Current implementation status — 4 July 2026 (updated)
+
+Current operator branch: `feature/course-branding-and-preview`.
+Verify the exact branch tip with `git log --oneline -1` before operator action.
+No migrations have been applied.
+Do not touch `main`.
 
 ### Implemented and manually demonstrated
 

@@ -8,6 +8,8 @@ This folder tracks client-facing documents so internal roadmap documentation sta
 
 It supersedes the older Version 2.40 plan for product scope, terminology, progress framing, and launch expectations.
 
+Current deployment branch: `feature/course-branding-and-preview`.
+
 ## Review packet
 
 - [Payload-only Free/Pro Review Packet](./PAYLOAD_ONLY_FREE_PRO_REVIEW_PACKET.md) — commit-readiness summary for the current Payload-only Free/Pro refit.
@@ -17,6 +19,7 @@ It supersedes the older Version 2.40 plan for product scope, terminology, progre
 - [Migration Rehearsal Runbook](./MIGRATION_REHEARSAL_RUNBOOK.md) — operator-facing static-only runbook for rehearsal preparation and evidence capture.
 - [Operator Handoff Summary](./OPERATOR_HANDOFF_SUMMARY.md) — concise operator-facing state summary and next-step handoff.
 - [Evidence Review Checklist](./EVIDENCE_REVIEW_CHECKLIST.md) — checklist for reviewing completed staging and provider evidence.
+- [Status Update Procedure](./STATUS_UPDATE_PROCEDURE.md) — operator procedure for conservative roadmap updates and drift prevention.
 - [Staging Smoke Checklist](./STAGING_SMOKE_CHECKLIST.md) — manual smoke path for the staging / production-staged deployment branch.
 - [Staging Smoke Evidence Template](./STAGING_SMOKE_EVIDENCE_TEMPLATE.md) — fillable evidence capture template for smoke verification.
 - [Provider and Email Readiness](./PROVIDER_EMAIL_READINESS.md) — provider, email, and Stripe configuration readiness checklist without secrets.

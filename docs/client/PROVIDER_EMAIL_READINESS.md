@@ -4,7 +4,9 @@ Repository-only checklist for provider/email readiness before any approved live 
 
 ## Rules
 
+- Branch: `feature/course-branding-and-preview`
 - Verify environment variable names only. Never record secret values.
+- Migrations applied: `No`
 - Do not apply migrations from this checklist.
 - Do not use this checklist as authorization to send live email by itself.
 - Operator handoff summary: `docs/client/OPERATOR_HANDOFF_SUMMARY.md`

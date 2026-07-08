@@ -3,9 +3,13 @@
 ## Branch
 
 - Branch: `feature/course-branding-and-preview`
+- Do not touch `main`.
 - PR / review URL: `https://github.com/prochattools/jpv-bootcamp/pull/2`
 - Staging deployment target: this feature branch is the staging / production-staged deployment branch.
+- Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`
 - Latest validated pre-migration-handoff commit: `50f7966 docs: add migration rehearsal safety handoff`
+- Latest verified branch tip before this pass: `3bc8b7e docs: finalize operator handoff evidence review`
+- Verify the current branch tip with `git log --oneline -1` before operator action.
 - Push status: local branch and `origin/feature/course-branding-and-preview` are in sync.
 - Roadmap progress: `docs/client/ROADMAP_PROGRESS_STATUS.md`
 - Migration approval packet: `docs/client/MIGRATION_APPROVAL_PACKET.md`
@@ -76,7 +80,7 @@ This is data-preserving at the record/table level, but it is business-significan
 
 ### Apply boundary
 
-No migration has been applied by this review packet. Migration application must go through the approved database migration path with the target environment, schema, operator, backup/snapshot, and maintenance window explicitly approved.
+No migrations have been applied. Migration application must go through the approved database migration path with the target environment, schema, operator, backup/snapshot, and maintenance window explicitly approved.
 
 Pushing or deploying `feature/course-branding-and-preview` must not automatically apply Prisma or Payload migrations. Migration execution is a separate approval category.
 
@@ -120,6 +124,7 @@ Expected grep exceptions:
 - Branch: `feature/course-branding-and-preview`
 - Deployment target: staging / production-staged.
 - PR / review URL: `https://github.com/prochattools/jpv-bootcamp/pull/2`
+- Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`
 - Validation commands: see the validation summary above.
 - Approval packet: `docs/client/MIGRATION_APPROVAL_PACKET.md`
 - Approval status: `docs/client/MIGRATION_APPROVAL_STATUS.md`

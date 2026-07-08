@@ -3,12 +3,15 @@
 ## Scope
 
 - Branch: `feature/course-branding-and-preview`
+- Do not touch `main`.
 - PR / review URL: `https://github.com/prochattools/jpv-bootcamp/pull/2`
 - Latest validated pre-packet commit: `50f7966 docs: add migration rehearsal safety handoff`
+- Current branch tip must be verified with `git log --oneline -1` before operator action.
 - No migrations have been applied.
 - Canonical reviewed Payload migration inventory count: `11`
 - Approval status tracker: `docs/client/MIGRATION_APPROVAL_STATUS.md`
 - Rehearsal runbook: `docs/client/MIGRATION_REHEARSAL_RUNBOOK.md`
+- Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`
 
 ## Migration inventory
 

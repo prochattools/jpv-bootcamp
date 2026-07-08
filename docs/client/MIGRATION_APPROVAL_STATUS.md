@@ -6,6 +6,7 @@
 - Migrations applied: `No`
 - Operator handoff summary: `docs/client/OPERATOR_HANDOFF_SUMMARY.md`
 - Evidence review checklist: `docs/client/EVIDENCE_REVIEW_CHECKLIST.md`
+- Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`
 - Target-environment table-plan-to-Free approval: `Pending`
 - Account-column rename approval: `Pending`
 - Approved migration path: `Pending confirmation`

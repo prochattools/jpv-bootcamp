@@ -6,6 +6,13 @@ This runbook separates repository changes, image publication, Payload migrations
 
 The preview release path must use the reviewed feature branch and an exact commit. Approval for one operation never authorizes another.
 
+Current operator branch: `feature/course-branding-and-preview`.
+Verify the exact branch tip with `git log --oneline -1` before operator action.
+No migrations have been applied.
+Do not touch `main`.
+
+Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`
+
 The protected local files `.graphifyignore` and `docs/HANDOFF_AUTH_BRANDING_STAGING_2026-06-30.md` are outside this runbook and must not be staged.
 
 ## Workflow architecture
