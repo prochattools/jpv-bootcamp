@@ -2,6 +2,8 @@
 
 Operator-facing evidence template for staging smoke on `feature/course-branding-and-preview`.
 
+**Note:** This is a template. Operator fills this evidence manually during actual staging smoke execution. Draft evidence files can be generated from this template using `npx tsx scripts/create_staging_evidence_artifacts.ts` (local-only, no migrations applied). Use `npx tsx scripts/validate_staging_evidence_artifacts.ts` to validate completed evidence for safety and secret-leakage.
+
 ## Header
 
 - Branch: `feature/course-branding-and-preview`

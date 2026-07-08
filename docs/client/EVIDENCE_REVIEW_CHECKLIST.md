@@ -1,6 +1,9 @@
 # Evidence Review Checklist
 
-Use this checklist after an operator fills the evidence templates.
+Use this checklist after an operator fills the evidence templates in `docs/client/evidence/`.
+
+Generated evidence files can be created with `npx tsx scripts/create_staging_evidence_artifacts.ts` (local-only, no migrations applied).
+Completed evidence can be validated with `npx tsx scripts/validate_staging_evidence_artifacts.ts` (local-only, checks for secrets and consistency).
 
 ## Review checks
 

@@ -24,6 +24,8 @@
 - Provider/email readiness checklist
 - Provider/email evidence template
 - Static safety tests
+- Evidence artifact automation (local-only generator and validator)
+- Evidence output folder ready
 
 ## What is blocked
 
@@ -39,10 +41,12 @@
 1. Review `docs/client/MIGRATION_APPROVAL_PACKET.md`.
 2. Update `docs/client/MIGRATION_APPROVAL_STATUS.md` only after real approval.
 3. Review `docs/client/STATUS_UPDATE_PROCEDURE.md` before changing any roadmap percentages.
-4. Complete `docs/client/STAGING_SMOKE_EVIDENCE_TEMPLATE.md` during staging smoke.
-5. Complete `docs/client/PROVIDER_EMAIL_EVIDENCE_TEMPLATE.md` during provider/email checks.
-6. Do not apply migrations until approval is complete.
-7. Do not touch `main`.
+4. **Optional:** Run `npx tsx scripts/create_staging_evidence_artifacts.ts` to generate draft evidence templates.
+5. **During staging smoke:** Complete `docs/client/STAGING_SMOKE_EVIDENCE_TEMPLATE.md` in `docs/client/evidence/`.
+6. **During provider/email checks:** Complete `docs/client/PROVIDER_EMAIL_EVIDENCE_TEMPLATE.md` in `docs/client/evidence/`.
+7. **Before closing out:** Run `npx tsx scripts/validate_staging_evidence_artifacts.ts` to validate completed evidence for safety and consistency.
+8. Do not apply migrations until approval is complete.
+9. Do not touch `main`.
 
 ## Hard stops
 

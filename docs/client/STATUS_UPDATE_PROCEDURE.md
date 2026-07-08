@@ -45,6 +45,9 @@ Before publishing a status update, verify these links are present and correct:
 - `docs/client/STAGING_SMOKE_EVIDENCE_TEMPLATE.md`
 - `docs/client/PROVIDER_EMAIL_READINESS.md`
 - `docs/client/PROVIDER_EMAIL_EVIDENCE_TEMPLATE.md`
+- `scripts/create_staging_evidence_artifacts.ts` (local-only generator)
+- `scripts/validate_staging_evidence_artifacts.ts` (local-only validator)
+- `docs/client/evidence/` (evidence output folder)
 
 Also keep the review packet and README index aligned:
 

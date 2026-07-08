@@ -24,6 +24,16 @@ Current deployment branch: `feature/course-branding-and-preview`.
 - [Staging Smoke Evidence Template](./STAGING_SMOKE_EVIDENCE_TEMPLATE.md) — fillable evidence capture template for smoke verification.
 - [Provider and Email Readiness](./PROVIDER_EMAIL_READINESS.md) — provider, email, and Stripe configuration readiness checklist without secrets.
 - [Provider and Email Evidence Template](./PROVIDER_EMAIL_EVIDENCE_TEMPLATE.md) — fillable evidence capture template for provider/email verification.
+
+## Evidence artifact automation
+
+Local-only helper scripts for creating and validating evidence draft files:
+
+- [`scripts/create_staging_evidence_artifacts.ts`](../../scripts/create_staging_evidence_artifacts.ts) — generates DRAFT evidence templates under [`evidence/`](./evidence/) without applying migrations or touching secrets. Operator fills evidence manually during actual staging smoke and provider checks.
+- [`scripts/validate_staging_evidence_artifacts.ts`](../../scripts/validate_staging_evidence_artifacts.ts) — validates evidence files for safety, secret-leakage, and branch consistency. Does not connect to database or network.
+- [Evidence folder](./evidence/) — stores completed evidence artifacts after operator verification. `.gitkeep` placeholder indicates folder is ready but evidence may not exist yet.
+
+**Important:** Generated draft files do not prove any checks passed. Operator must complete evidence during actual staging/provider verification. No migrations are applied by these scripts.
 - PR / review URL: `https://github.com/prochattools/jpv-bootcamp/pull/2`
 
 ## Current terminology
