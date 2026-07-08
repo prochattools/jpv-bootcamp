@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
 	}
 
 	const session = await getPartnerSession(sessionId)
-	if (!session || !isSponsoredSeatsAdmin(session.wpUserId)) {
+	if (!session || !isSponsoredSeatsAdmin(session.accountId)) {
 		return NextResponse.json({ ok: false, reason: 'forbidden' }, { status: 403 })
 	}
 

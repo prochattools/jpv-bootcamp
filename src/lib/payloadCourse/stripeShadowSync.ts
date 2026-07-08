@@ -18,7 +18,7 @@ import {
 } from '@/lib/payloadCourse/systemEmailTemplates'
 import { redactEmail } from '@/lib/log-redact'
 
-type Plan = 'pro' | 'vip' | 'exhibitor'
+type Plan = 'pro'
 
 type PayloadBillingStatus =
   | 'none'
@@ -176,7 +176,7 @@ function findPrimaryPrice(subscription: Stripe.Subscription): {
 function normalizePlan(value: string | null | undefined): Plan | null {
   if (!value) return null
   const normalized = value.trim().toLowerCase()
-  if (normalized === 'pro' || normalized === 'vip' || normalized === 'exhibitor') {
+  if (normalized === 'pro') {
     return normalized
   }
   return null
@@ -194,8 +194,6 @@ function resolvePlanFromPriceId(priceId: string | null | undefined): Plan | null
 
   for (const suffix of stripeEnvSuffixes()) {
     if (process.env[`STRIPE_PRICE_PRO_${suffix}`] === priceId) return 'pro'
-    if (process.env[`STRIPE_PRICE_VIP_${suffix}`] === priceId) return 'vip'
-    if (process.env[`STRIPE_PRICE_TABLE_${suffix}`] === priceId) return 'exhibitor'
   }
 
   return null
@@ -207,9 +205,6 @@ function resolvePlanFromProductId(productId: string | null | undefined): Plan | 
   for (const suffix of stripeEnvSuffixes()) {
     if (process.env[`STRIPE_PRODUCT_JPV_BOOTCAMP_PRO_MEMBERSHIP_${suffix}`] === productId) {
       return 'pro'
-    }
-    if (process.env[`STRIPE_PRODUCT_JPV_BOOTCAMP_VIP_MEMBERSHIP_${suffix}`] === productId) {
-      return 'vip'
     }
   }
 

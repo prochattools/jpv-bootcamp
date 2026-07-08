@@ -9,7 +9,7 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 function isAdminId(value: number): boolean {
-  const raw = process.env.PARTNERS_ADMIN_WP_USER_IDS ?? ''
+  const raw = process.env.PARTNERS_ADMIN_ACCOUNT_IDS ?? ''
   return raw
     .split(',')
     .map((item) => Number(item.trim()))
@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
   const sessionId = sanitizeSessionId(req.cookies.get(PARTNERS_SESSION_COOKIE)?.value)
   if (!sessionId) return NextResponse.json({ ok: false, reason: 'unauthorized' }, { status: 401 })
   const session = await getPartnerSession(sessionId)
-  if (!session || !isAdminId(session.wpUserId)) return NextResponse.json({ ok: false, reason: 'forbidden' }, { status: 403 })
+  if (!session || !isAdminId(session.accountId)) return NextResponse.json({ ok: false, reason: 'forbidden' }, { status: 403 })
 
   const payload = await getPayload({ config })
   const report = await buildPartnerAdminReport(payload as never, {})

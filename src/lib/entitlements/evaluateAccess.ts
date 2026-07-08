@@ -12,7 +12,7 @@ export type BillingStatus =
   | 'incomplete_expired'
   | 'paused'
 
-export type SubscriptionPlan = 'free' | 'exhibitor' | 'pro' | 'vip'
+export type SubscriptionPlan = 'free' | 'pro'
 
 export type ResourceType = 'course' | 'lesson' | 'space' | 'access_group'
 

@@ -1,4 +1,4 @@
-export function parseAdminWpUserIds(raw: string | undefined): Set<number> {
+export function parseAdminAccountIds(raw: string | undefined): Set<number> {
 	if (!raw) return new Set()
 	return new Set(
 		raw
@@ -8,7 +8,7 @@ export function parseAdminWpUserIds(raw: string | undefined): Set<number> {
 	)
 }
 
-export function isSponsoredSeatsAdmin(wpUserId: number): boolean {
-	const admins = parseAdminWpUserIds(process.env.SPONSORED_SEATS_ADMIN_WP_USER_IDS)
-	return admins.has(wpUserId)
+export function isSponsoredSeatsAdmin(accountId: number): boolean {
+	const admins = parseAdminAccountIds(process.env.SPONSORED_SEATS_ADMIN_ACCOUNT_IDS)
+	return admins.has(accountId)
 }

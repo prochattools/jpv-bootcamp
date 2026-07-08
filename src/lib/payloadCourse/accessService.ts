@@ -220,7 +220,7 @@ function normalizeBillingStatus(value: unknown): BillingStatus {
 }
 
 function normalizePlan(value: unknown): SubscriptionPlan | null {
-  if (value === 'free' || value === 'exhibitor' || value === 'pro' || value === 'vip') {
+  if (value === 'free' || value === 'pro') {
     return value
   }
 

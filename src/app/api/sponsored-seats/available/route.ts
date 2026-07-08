@@ -12,16 +12,13 @@ export async function GET() {
 		const counts = await getSponsoredSeatCounts()
 		return NextResponse.json({
 			...counts,
-			proEnabled: Boolean(getSponsoredPriceId('pro')),
-			vipEnabled: Boolean(getSponsoredPriceId('vip')),
+			enabled: Boolean(getSponsoredPriceId()),
 		})
 	} catch (error) {
 		console.error('sponsored_seat_counts_failed', error)
 		return NextResponse.json({
-			pro: 0,
-			vip: 0,
-			proEnabled: Boolean(getSponsoredPriceId('pro')),
-			vipEnabled: Boolean(getSponsoredPriceId('vip')),
+			available: 0,
+			enabled: Boolean(getSponsoredPriceId()),
 		})
 	}
 }

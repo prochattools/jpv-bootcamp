@@ -1,8 +1,5 @@
 import prisma from '@/libs/prisma'
-import { getWpUserExists, provisionWpUser, updateWpMembershipLevel } from '@/lib/wp'
-import { redactEmail } from '@/lib/log-redact'
 import { verifySponsoredClaimToken } from '@/lib/sponsored-claim-token'
-import { normalizeSponsoredTier } from '@/lib/sponsored-seats'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,17 +12,17 @@ type ClaimOutcome =
 	| 'already_claimed'
 	| 'invalid'
 	| 'expired'
-	| 'provision_failed'
+	| 'activation_failed'
 
 function messageForOutcome(outcome: ClaimOutcome) {
 	switch (outcome) {
 		case 'claimed':
-			return "You're in. Your sponsored month is active."
+			return "You're in. Your sponsored Free access is active."
 		case 'already_claimed':
-			return 'Your sponsored month is already active.'
+			return 'Your sponsored Free access is already active.'
 		case 'expired':
 			return 'This claim link has expired.'
-		case 'provision_failed':
+		case 'activation_failed':
 			return 'We could not activate your access yet. Please contact support.'
 		case 'invalid':
 		default:
@@ -68,7 +65,7 @@ export default async function SponsoredClaimPage({ searchParams }: PageProps) {
 		)
 	}
 
-	const { applicationId, email, tier } = verification.payload
+	const { applicationId, email } = verification.payload
 	const application = await prisma.sponsoredApplication.findUnique({
 		where: { id: applicationId },
 	})
@@ -130,7 +127,6 @@ export default async function SponsoredClaimPage({ searchParams }: PageProps) {
 		)
 	}
 
-	const normalizedTier = normalizeSponsoredTier(application.tier ?? null) ?? tier
 	if (application.email?.trim().toLowerCase() !== email) {
 		return (
 			<main className="bg-jpv-gradient min-h-screen text-jpv-gray-50">
@@ -150,30 +146,8 @@ export default async function SponsoredClaimPage({ searchParams }: PageProps) {
 		)
 	}
 
-	let wpUserId = application.wpUserId ?? null
-	try {
-		const lookup = await getWpUserExists({ email })
-		if (lookup?.exists && lookup.wpUserId) {
-			wpUserId = lookup.wpUserId
-			await updateWpMembershipLevel({
-				email,
-				plan: normalizedTier,
-				name: application.name,
-			})
-		} else {
-			const provisioned = await provisionWpUser({
-				email,
-				plan: normalizedTier,
-				name: application.name,
-			})
-			wpUserId = provisioned?.wpUserId ?? null
-		}
-	} catch (error) {
-		console.error('sponsored_claim_provision_failed', {
-			applicationId,
-			email: redactEmail(email),
-			message: (error as Error).message,
-		})
+	const accountId = application.accountId ?? null
+	if (!accountId || !application.seatId) {
 		return (
 			<main className="bg-jpv-gradient min-h-screen text-jpv-gray-50">
 				<section className="px-6 py-24 sm:py-28">
@@ -183,26 +157,7 @@ export default async function SponsoredClaimPage({ searchParams }: PageProps) {
 								Sponsored claim
 							</h1>
 							<p className="mt-4 text-base text-jpv-gray-300">
-								{messageForOutcome('provision_failed')}
-							</p>
-						</div>
-					</div>
-				</section>
-			</main>
-		)
-	}
-
-	if (!wpUserId || !application.seatId) {
-		return (
-			<main className="bg-jpv-gradient min-h-screen text-jpv-gray-50">
-				<section className="px-6 py-24 sm:py-28">
-					<div className="mx-auto max-w-3xl">
-						<div className="rounded-3xl border border-jpv-gray-700/50 bg-jpv-bg-dark/60 p-8 shadow-jpv-card backdrop-blur">
-							<h1 className="text-3xl font-semibold text-white sm:text-4xl">
-								Sponsored claim
-							</h1>
-							<p className="mt-4 text-base text-jpv-gray-300">
-								{messageForOutcome('invalid')}
+								{messageForOutcome('activation_failed')}
 							</p>
 						</div>
 					</div>
@@ -219,10 +174,10 @@ export default async function SponsoredClaimPage({ searchParams }: PageProps) {
 				where: {
 					id: application.seatId!,
 					reservedByApplicationId: applicationId,
-					claimedByWpUserId: null,
+					claimedByAccountId: null,
 				},
 				data: {
-					claimedByWpUserId: wpUserId!,
+					claimedByAccountId: accountId!,
 					claimedAt: now,
 					reservedByApplicationId: null,
 					reservedAt: null,
@@ -235,8 +190,8 @@ export default async function SponsoredClaimPage({ searchParams }: PageProps) {
 
 			await tx.sponsoredGrant.create({
 				data: {
-					wpUserId: wpUserId!,
-					tier: normalizedTier,
+					accountId: accountId!,
+					tier: 'pro',
 					seatId: application.seatId!,
 					startsAt: now,
 					endsAt,
@@ -248,7 +203,7 @@ export default async function SponsoredClaimPage({ searchParams }: PageProps) {
 				data: {
 					status: 'claimed',
 					claimedAt: now,
-					wpUserId: wpUserId!,
+					accountId: accountId!,
 				},
 			})
 		})

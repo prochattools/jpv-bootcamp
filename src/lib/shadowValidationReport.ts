@@ -734,11 +734,11 @@ export async function buildShadowValidationReport(
   env: NodeJS.ProcessEnv = process.env,
   options: ShadowValidationOptions = {},
 ): Promise<ShadowValidationReport> {
-  const [billing, phase10Doc, integrationDoc, migrationDoc, communityPage, partnerPage, reconciliationTest, billingTest, partnerTest, partnerApplicationsTest, shadowReconciliationTest, preflightTest] = await Promise.all([
+  const [billing, phase10Doc, integrationDoc, coursePlanDoc, communityPage, partnerPage, reconciliationTest, billingTest, partnerTest, partnerApplicationsTest, shadowReconciliationTest, preflightTest] = await Promise.all([
     buildBillingReadinessReport(env),
     safeRead('docs/PREVIEW_RELEASE_READINESS.md'),
     safeRead('docs/PAYLOAD_INTEGRATION_PLAN.md'),
-    safeRead('docs/PAYLOAD_MIGRATION.md'),
+    safeRead('docs/PAYLOAD_COURSE_VISUAL_IMPLEMENTATION_PLAN.md'),
     safeRead('src/app/(frontend)/learn/community/page.tsx'),
     safeRead('src/app/(frontend)/portal/partners/page.tsx'),
     safeRead('scripts/payload_course_reconciliation.test.ts'),
@@ -778,7 +778,7 @@ export async function buildShadowValidationReport(
     'src/app/(frontend)/portal/partners/page.tsx': Boolean(partnerPage),
     'docs/PREVIEW_RELEASE_READINESS.md': Boolean(phase10Doc),
     'docs/PAYLOAD_INTEGRATION_PLAN.md': Boolean(integrationDoc),
-    'docs/PAYLOAD_MIGRATION.md': Boolean(migrationDoc),
+    'docs/PAYLOAD_COURSE_VISUAL_IMPLEMENTATION_PLAN.md': Boolean(coursePlanDoc),
   })
 
   const journeys = buildJourneys(fileInventory)
@@ -811,7 +811,7 @@ export async function buildShadowValidationReport(
     )
     .sort((a, b) => `${a.domain}:${a.code}:${a.detail}`.localeCompare(`${b.domain}:${b.code}:${b.detail}`))
 
-  const repositoryReady = fixture.repositoryReady ?? Boolean(billing.repositoryReady && phase10Doc && integrationDoc && migrationDoc && communityPage && partnerPage && (options.adapterResult ? options.adapterResult.snapshot !== null : true))
+  const repositoryReady = fixture.repositoryReady ?? Boolean(billing.repositoryReady && phase10Doc && integrationDoc && coursePlanDoc && communityPage && partnerPage && (options.adapterResult ? options.adapterResult.snapshot !== null : true))
   const configurationReady = fixture.configurationReady ?? billing.configurationReady
   const migrationExecutionPending = !(fixture.cutoverApprovals?.migrationExecution ?? false)
   const liveVerificationPending = true

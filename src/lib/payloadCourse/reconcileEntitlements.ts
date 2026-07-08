@@ -80,14 +80,14 @@ function isActiveSubscription(subscription: PayloadDocument) {
 
 function planOf(subscription: PayloadDocument): SubscriptionPlan | null {
   const plan = subscription.plan
-  if (plan === 'free' || plan === 'exhibitor' || plan === 'pro' || plan === 'vip') return plan
+  if (plan === 'free' || plan === 'pro') return plan
   return null
 }
 
 function allowedPlans(policy: PayloadDocument): SubscriptionPlan[] {
   if (!Array.isArray(policy.allowedPlans)) return []
   return policy.allowedPlans.filter((plan): plan is SubscriptionPlan => {
-    return plan === 'free' || plan === 'exhibitor' || plan === 'pro' || plan === 'vip'
+    return plan === 'free' || plan === 'pro'
   })
 }
 

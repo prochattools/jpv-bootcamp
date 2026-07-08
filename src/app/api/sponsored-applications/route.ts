@@ -9,7 +9,6 @@ import { sendSponsoredApplicationAdminEmail } from '@/lib/sponsored-email'
 import {
 	getSponsoredSeatCounts,
 	hashEmail,
-	normalizeSponsoredTier,
 } from '@/lib/sponsored-seats'
 
 export const runtime = 'nodejs'
@@ -20,7 +19,6 @@ type ApplicationPayload = {
 	email?: string
 	phone?: string
 	message?: string
-	tier?: string
 }
 
 const ADMIN_EMAIL_THROTTLE_MS = 1000 * 60 * 15
@@ -56,8 +54,6 @@ export async function POST(req: NextRequest) {
 			{ status: 400 }
 		)
 	}
-
-	const tier = normalizeSponsoredTier(body?.tier ?? null) ?? 'pro'
 
 	const secret = (process.env.SPONSORED_DECISION_SECRET || '').trim()
 	const hasResendKey = Boolean((process.env.RESEND_API_KEY || '').trim())
@@ -123,7 +119,7 @@ export async function POST(req: NextRequest) {
 					name,
 					phone,
 					message: message || null,
-					tier,
+					tier: 'pro',
 				},
 			})
 			applicationId = updated.id
@@ -137,7 +133,7 @@ export async function POST(req: NextRequest) {
 				name,
 				phone,
 				message: message || null,
-				tier,
+				tier: 'pro',
 			},
 		})
 		applicationId = created.id
@@ -178,7 +174,7 @@ export async function POST(req: NextRequest) {
 		secret
 	)
 
-	let counts: { pro: number; vip: number } | undefined
+	let counts: { available: number } | undefined
 	try {
 		counts = await getSponsoredSeatCounts()
 	} catch {
@@ -196,7 +192,6 @@ export async function POST(req: NextRequest) {
 				approveToken,
 				rejectToken,
 				counts,
-				tier,
 			})
 			await prisma.sponsoredApplication.updateMany({
 				where: { id: applicationId },

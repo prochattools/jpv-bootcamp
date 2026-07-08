@@ -54,9 +54,7 @@ function resolvePlanFromSubscriptions(subscriptions: Stripe.Subscription[]): Pla
 					? price.product
 					: price?.product?.id ?? null
 			const plan = resolvePlanFromStripe({ metadataPlan, priceId, productId })
-			if (plan === 'vip') return 'vip'
 			if (plan === 'pro') found = 'pro'
-			if (plan === 'exhibitor' && !found) found = 'exhibitor'
 		}
 	}
 	return found

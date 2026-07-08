@@ -8,7 +8,6 @@ import {
 import { isSponsoredSeatsAdmin } from '@/lib/sponsored-admin'
 import {
 	getSponsoredSeatCounts,
-	getSponsoredPriceId,
 } from '@/lib/sponsored-seats'
 import { formatPhoneForDisplay } from '@/lib/normalize-phone'
 
@@ -22,7 +21,7 @@ export default async function SponsoredApplicationsAdminPage() {
 	}
 
 	const session = await getPartnerSession(sessionId)
-	if (!session || !isSponsoredSeatsAdmin(session.wpUserId)) {
+	if (!session || !isSponsoredSeatsAdmin(session.accountId)) {
 		notFound()
 	}
 
@@ -34,13 +33,11 @@ export default async function SponsoredApplicationsAdminPage() {
 		getSponsoredSeatCounts(),
 	])
 
-	const hasVip = Boolean(getSponsoredPriceId('vip'))
-
 	return (
 		<main className="mx-auto max-w-5xl px-6 py-12">
 			<h1 className="text-2xl font-semibold">Sponsored Applications</h1>
 			<p className="mt-2 text-sm text-muted-foreground">
-				Available seats: {counts.pro} Pro / {counts.vip} VIP
+				Available sponsored Free access seats: {counts.available}
 			</p>
 
 			<div className="mt-8 space-y-6">
@@ -64,10 +61,10 @@ export default async function SponsoredApplicationsAdminPage() {
 										Phone: {formatPhoneForDisplay(application.phone)}
 									</p>
 									<p className="text-xs text-muted-foreground">
-										WP User ID: {application.wpUserId ?? 'N/A'}
+										Linked account ID: {application.accountId ?? 'N/A'}
 									</p>
 									<p className="text-xs text-muted-foreground">
-										Requested tier: {application.tier}
+										Requested access: Controlled Free access
 									</p>
 									<p className="text-xs text-muted-foreground">
 										Submitted: {application.createdAt.toISOString()}
@@ -84,18 +81,7 @@ export default async function SponsoredApplicationsAdminPage() {
 										method="post"
 										className="flex flex-col gap-2"
 									>
-										{hasVip ? (
-											<select
-												name="tier"
-												className="rounded border border-neutral-300 px-2 py-1 text-sm"
-												defaultValue="pro"
-											>
-												<option value="pro">Approve Pro</option>
-												<option value="vip">Approve VIP</option>
-											</select>
-										) : (
-											<input type="hidden" name="tier" value="pro" />
-										)}
+										<input type="hidden" name="tier" value="pro" />
 										<input
 											type="text"
 											name="note"

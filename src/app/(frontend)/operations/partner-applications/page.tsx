@@ -18,7 +18,7 @@ type PageProps = {
 }
 
 function isAdminId(value: number): boolean {
-  const raw = process.env.PARTNERS_ADMIN_WP_USER_IDS ?? ''
+  const raw = process.env.PARTNERS_ADMIN_ACCOUNT_IDS ?? ''
   return raw
     .split(',')
     .map((item) => Number(item.trim()))
@@ -30,7 +30,7 @@ export default async function PartnerApplicationsAdminPage({ searchParams }: Pag
   const sessionId = sanitizeSessionId(cookieStore.get(PARTNERS_SESSION_COOKIE)?.value)
   if (!sessionId) notFound()
   const session = await getPartnerSession(sessionId)
-  if (!session || !isAdminId(session.wpUserId)) notFound()
+  if (!session || !isAdminId(session.accountId)) notFound()
 
   const payload = await getPayload({ config })
   const filters = await (searchParams ?? Promise.resolve({ partner_id: undefined, status: undefined, mode: undefined }))

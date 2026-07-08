@@ -45,7 +45,7 @@ function statusTone(status: string | null | undefined): 'good' | 'warn' | 'neutr
 function currentTier(overview: Awaited<ReturnType<typeof getMemberAccountOverview>>): string {
   const subscription = overview.subscriptions.find((item) => item.status === 'active' || item.status === 'trialing')
   const plan = typeof subscription?.plan === 'string' ? subscription.plan : null
-  if (plan === 'pro' || plan === 'vip' || plan === 'free' || plan === 'exhibitor') {
+  if (plan === 'pro' || plan === 'free') {
     return plan.slice(0, 1).toUpperCase() + plan.slice(1)
   }
   return 'Free'

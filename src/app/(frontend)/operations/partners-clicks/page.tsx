@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic'
 
 type PageProps = {
 	searchParams?: Promise<{
-		wp_user_id?: string
+		account_id?: string
 		partner_slug?: string
 	}>
 }
@@ -53,26 +53,26 @@ export default async function PartnersClicksAdminPage({
 		notFound()
 	}
 
-	const adminIds = parseAdminIds(process.env.PARTNERS_ADMIN_WP_USER_IDS)
-	if (!adminIds.has(session.wpUserId)) {
+	const adminIds = parseAdminIds(process.env.PARTNERS_ADMIN_ACCOUNT_IDS)
+	if (!adminIds.has(session.accountId)) {
 		notFound()
 	}
 
-	const wpUserIdFilter = Number(resolvedSearchParams?.wp_user_id)
+	const accountIdFilter = Number(resolvedSearchParams?.account_id)
 	const partnerSlugFilter = normalizeSlug(resolvedSearchParams?.partner_slug)
 
 	const filters: Prisma.PartnerClickWhereInput = {}
 
-	if (Number.isInteger(wpUserIdFilter) && wpUserIdFilter > 0) {
-		filters.wpUserId = wpUserIdFilter
+	if (Number.isInteger(accountIdFilter) && accountIdFilter > 0) {
+		filters.accountId = accountIdFilter
 	}
 	if (partnerSlugFilter) {
 		filters.partnerSlug = partnerSlugFilter
 	}
 
 	const whereParts: Prisma.Sql[] = []
-	if (filters.wpUserId) {
-		whereParts.push(Prisma.sql`wp_user_id = ${filters.wpUserId}`)
+	if (filters.accountId) {
+		whereParts.push(Prisma.sql`account_id = ${filters.accountId}`)
 	}
 	if (filters.partnerSlug) {
 		whereParts.push(Prisma.sql`partner_slug = ${filters.partnerSlug}`)
@@ -150,7 +150,7 @@ export default async function PartnersClicksAdminPage({
 						<thead className="bg-neutral-50 text-left">
 							<tr>
 								<th className="px-3 py-2">Time</th>
-								<th className="px-3 py-2">WP User</th>
+								<th className="px-3 py-2">Account</th>
 								<th className="px-3 py-2">Partner</th>
 								<th className="px-3 py-2">Category</th>
 								<th className="px-3 py-2">Ref path</th>
@@ -162,7 +162,7 @@ export default async function PartnersClicksAdminPage({
 									<td className="px-3 py-2">
 										{click.createdAt.toISOString()}
 									</td>
-									<td className="px-3 py-2">{click.wpUserId}</td>
+									<td className="px-3 py-2">{click.accountId}</td>
 									<td className="px-3 py-2">{click.partnerSlug}</td>
 									<td className="px-3 py-2">{click.categorySlug}</td>
 									<td className="px-3 py-2">{click.refPath ?? '-'}</td>

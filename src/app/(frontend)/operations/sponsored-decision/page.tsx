@@ -5,7 +5,7 @@ type DecisionResult =
 	| 'invalid'
 	| 'no_seats'
 	| 'already_processed'
-	| 'wp_failed'
+	| 'account_failed'
 
 function getMessage(result: DecisionResult) {
 	switch (result) {
@@ -15,7 +15,7 @@ function getMessage(result: DecisionResult) {
 			return 'Application rejected.'
 		case 'no_seats':
 			return 'No sponsored seats are available right now.'
-		case 'wp_failed':
+		case 'account_failed':
 			return 'Approved, but membership sync failed. Please check logs.'
 		case 'already_processed':
 			return 'This decision link has already been used.'
@@ -40,7 +40,7 @@ export default async function SponsoredDecisionPage({
 		raw === 'already_processed' ||
 		raw === 'no_seats' ||
 		raw === 'invalid' ||
-		raw === 'wp_failed'
+		raw === 'account_failed'
 			? (raw as DecisionResult)
 			: 'expired'
 

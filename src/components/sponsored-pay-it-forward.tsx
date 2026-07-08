@@ -3,18 +3,14 @@
 import { useEffect, useState } from 'react'
 
 type SponsoredCounts = {
-	pro: number
-	vip: number
-	proEnabled?: boolean
-	vipEnabled?: boolean
+	available: number
+	enabled?: boolean
 }
 
 export default function SponsoredPayItForward() {
 	const [counts, setCounts] = useState<SponsoredCounts>({
-		pro: 0,
-		vip: 0,
-		proEnabled: true,
-		vipEnabled: false,
+		available: 0,
+		enabled: true,
 	})
 	const [loading, setLoading] = useState(false)
 	const [error, setError] = useState('')
@@ -26,29 +22,27 @@ export default function SponsoredPayItForward() {
 			.then((data) => {
 				if (!mounted) return
 				setCounts({
-					pro: Number(data?.pro ?? 0),
-					vip: Number(data?.vip ?? 0),
-					proEnabled: Boolean(data?.proEnabled ?? true),
-					vipEnabled: Boolean(data?.vipEnabled ?? false),
+					available: Number(data?.available ?? 0),
+					enabled: Boolean(data?.enabled ?? true),
 				})
 			})
 			.catch(() => {
 				if (!mounted) return
-				setCounts({ pro: 0, vip: 0 })
+				setCounts({ available: 0 })
 			})
 		return () => {
 			mounted = false
 		}
 	}, [])
 
-	async function handleCheckout(tier: 'pro' | 'vip') {
+	async function handleCheckout() {
 		setLoading(true)
 		setError('')
 		try {
 			const response = await fetch('/api/sponsored-seats/checkout', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ tier }),
+				body: JSON.stringify({}),
 			})
 			const payload = await response.json()
 			if (!response.ok || !payload?.url) {
@@ -72,32 +66,22 @@ export default function SponsoredPayItForward() {
 			<div className="space-y-3">
 				<h3 className="text-xl font-semibold text-white">Pay it forward</h3>
 				<p className="text-sm text-jpv-gray-300">
-					Some members choose to sponsor a 1-month membership for someone who
-					can&apos;t afford it yet.
+					Some members choose to fund controlled Free access for someone who
+					can&apos;t pay yet.
 				</p>
 				<p className="text-xs text-jpv-gray-400">
-					{counts.pro + counts.vip} sponsored memberships currently available
+					{counts.available} sponsored access seats currently available
 				</p>
 			</div>
 			<div className="mt-6 flex flex-wrap gap-3">
 				<button
 					type="button"
-					onClick={() => handleCheckout('pro')}
-					disabled={loading}
+					onClick={() => handleCheckout()}
+					disabled={loading || !counts.enabled}
 					className="rounded-full border border-jpv-gray-600 px-4 py-2 text-sm font-semibold text-jpv-gray-100 hover:border-jpv-green hover:text-white"
 				>
-					Sponsor a Pro month
+					Sponsor Free access
 				</button>
-				{counts.vipEnabled ? (
-					<button
-						type="button"
-						onClick={() => handleCheckout('vip')}
-						disabled={loading}
-						className="rounded-full border border-jpv-gray-600 px-4 py-2 text-sm font-semibold text-jpv-gray-100 hover:border-jpv-green hover:text-white"
-					>
-						Sponsor a VIP month
-					</button>
-				) : null}
 			</div>
 			{error ? <p className="mt-3 text-xs text-red-400">{error}</p> : null}
 		</div>

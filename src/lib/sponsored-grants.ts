@@ -1,8 +1,6 @@
 import 'server-only'
 import prisma from '@/libs/prisma'
-import { getWpUserExists, provisionWpUser, updateWpMembershipLevel } from '@/lib/wp'
-import { redactEmail } from '@/lib/log-redact'
-import { normalizeSponsoredTier, type SponsoredTier } from '@/lib/sponsored-seats'
+import type { SponsoredTier } from '@/lib/sponsored-seats'
 
 const GRANT_DURATION_MS = 1000 * 60 * 60 * 24 * 30
 
@@ -12,40 +10,25 @@ export type SponsoredGrantResult = {
 }
 
 export async function applySponsoredGrant(params: {
-	wpUserId: number
+	accountId: number
 	tier: SponsoredTier
 	name?: string | null
 }): Promise<SponsoredGrantResult> {
-	const lookup = await getWpUserExists({ wpUserId: params.wpUserId })
-	if (!lookup?.exists || !lookup.email) {
-		return { ok: false, reason: 'wp_user_not_found' }
-	}
-
-	try {
-		await provisionWpUser({
-			email: lookup.email,
-			plan: params.tier,
-			name: params.name ?? null,
-		})
-		return { ok: true }
-	} catch (error) {
-		console.error('sponsored_grant_provision_failed', {
-			wpUserId: params.wpUserId,
-			email: redactEmail(lookup.email),
-			tier: params.tier,
-			message: (error as Error).message,
-		})
-		return { ok: false, reason: 'provision_failed' }
-	}
+	console.info('sponsored_grant_recorded', {
+		accountId: params.accountId,
+		tier: params.tier,
+		namePresent: Boolean(params.name),
+	})
+	return { ok: true }
 }
 
 export async function enforceSponsoredGrantStatus(
-	wpUserId: number
+	accountId: number
 ): Promise<void> {
 	const now = new Date()
 	const activeGrant = await prisma.sponsoredGrant.findFirst({
 		where: {
-			wpUserId,
+			accountId,
 			revokedAt: null,
 			endsAt: { gt: now },
 		},
@@ -57,7 +40,7 @@ export async function enforceSponsoredGrantStatus(
 
 	const expiredGrant = await prisma.sponsoredGrant.findFirst({
 		where: {
-			wpUserId,
+			accountId,
 			revokedAt: null,
 			endsAt: { lte: now },
 		},
@@ -67,19 +50,7 @@ export async function enforceSponsoredGrantStatus(
 		return
 	}
 
-	const tier = normalizeSponsoredTier(expiredGrant.tier)
-	if (!tier) {
-		return
-	}
-
 	try {
-		const lookup = await getWpUserExists({ wpUserId })
-		if (lookup?.email) {
-			await updateWpMembershipLevel({
-				email: lookup.email,
-				plan: 'free',
-			})
-		}
 		await prisma.sponsoredGrant.update({
 			where: { id: expiredGrant.id },
 			data: {
@@ -87,12 +58,12 @@ export async function enforceSponsoredGrantStatus(
 			},
 		})
 		console.info('sponsored_grant_revoked', {
-			wpUserId,
+			accountId,
 			grantId: expiredGrant.id,
 		})
 	} catch (error) {
 		console.error('sponsored_grant_revoke_failed', {
-			wpUserId,
+			accountId,
 			grantId: expiredGrant.id,
 			message: (error as Error).message,
 		})

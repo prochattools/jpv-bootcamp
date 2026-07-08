@@ -10,7 +10,7 @@ import { buildShadowValidationReport, createShadowValidationAdapter } from '@/li
 export const dynamic = 'force-dynamic'
 
 function isAdminId(value: number): boolean {
-  const raw = process.env.SPONSORED_SEATS_ADMIN_WP_USER_IDS ?? ''
+  const raw = process.env.SPONSORED_SEATS_ADMIN_ACCOUNT_IDS ?? ''
   return raw.split(',').map((item) => Number(item.trim())).some((id) => Number.isInteger(id) && id === value)
 }
 
@@ -19,7 +19,7 @@ export default async function ShadowValidationPage(): Promise<JSX.Element> {
   const sessionId = sanitizeSessionId(sessionCookie)
   if (!sessionId) notFound()
   const session = await getPartnerSession(sessionId)
-  if (!session || (!isSponsoredSeatsAdmin(session.wpUserId) && !isAdminId(session.wpUserId))) notFound()
+  if (!session || (!isSponsoredSeatsAdmin(session.accountId) && !isAdminId(session.accountId))) notFound()
 
   const payload = await getPayload({ config })
   const report = await buildShadowValidationReport(process.env, {

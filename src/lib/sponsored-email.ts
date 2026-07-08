@@ -5,8 +5,7 @@ import { getPublicBaseUrl } from '@/lib/public-base-url'
 import { formatPhoneForDisplay } from '@/lib/normalize-phone'
 
 type SponsoredCounts = {
-	pro: number
-	vip: number
+	available: number
 }
 
 let resendClient: Resend | null = null
@@ -54,7 +53,7 @@ function getAdminRecipients(): string[] {
 export function getSponsoredPortalUrl(): string {
 	const raw = (process.env.SPONSORED_PORTAL_URL || '').trim()
 	if (!raw) {
-		return 'https://portal.jpvbootcamp.com/community/'
+		return `${getPublicBaseUrl().replace(/\/$/, '')}/portal`
 	}
 	return raw
 }
@@ -62,7 +61,7 @@ export function getSponsoredPortalUrl(): string {
 function getSponsoredPortalBaseUrl(): string {
 	const raw = (process.env.SPONSORED_PORTAL_BASE_URL || '').trim()
 	if (!raw) {
-		return 'https://portal.jpvbootcamp.com'
+		return getPublicBaseUrl().replace(/\/$/, '')
 	}
 	return raw.replace(/\/$/, '')
 }
@@ -95,7 +94,6 @@ export async function sendSponsoredApplicationAdminEmail(params: {
 	approveToken: string
 	rejectToken: string
 	counts?: SponsoredCounts
-	tier?: 'pro' | 'vip'
 }): Promise<void> {
 	const resend = getResendClient()
 	const from = getMailFrom()
@@ -107,7 +105,7 @@ export async function sendSponsoredApplicationAdminEmail(params: {
 	const safeMessage = params.message ? escapeHtml(params.message) : ''
 
 	const countsLine = params.counts
-		? `Available seats: ${params.counts.pro} Pro / ${params.counts.vip} VIP`
+		? `Available sponsored access seats: ${params.counts.available}`
 		: null
 
 	const baseUrl = getPublicBaseUrl()
@@ -128,10 +126,9 @@ export async function sendSponsoredApplicationAdminEmail(params: {
 		params.rejectToken
 	)}`
 
-	const tierLabel = params.tier === 'vip' ? 'VIP' : 'Pro'
 	const html = `
 		<h2>New sponsored membership application</h2>
-		<p><strong>Requested tier:</strong> ${tierLabel}</p>
+		<p><strong>Requested access:</strong> Controlled Free access</p>
 		<p><strong>Name:</strong> ${safeName}</p>
 		<p><strong>Email:</strong> ${safeEmail}</p>
 		<p><strong>Phone:</strong> ${safePhone}</p>
@@ -152,7 +149,7 @@ export async function sendSponsoredApplicationAdminEmail(params: {
 
 	const text = [
 		'New sponsored membership application',
-		`Requested tier: ${tierLabel}`,
+		'Requested access: Controlled Free access',
 		`Name: ${params.applicantName}`,
 		`Email: ${params.applicantEmail}`,
 		`Phone: ${formatPhoneForDisplay(params.applicantPhone)}`,
@@ -185,32 +182,30 @@ export async function sendSponsoredApplicationAdminEmail(params: {
 
 export async function sendSponsoredClaimEmail(params: {
 	to: string
-	tier: 'pro' | 'vip'
 	claimToken: string
 }): Promise<void> {
 	const resend = getResendClient()
 	const from = getMailFrom()
-	const tierLabel = params.tier === 'vip' ? 'VIP' : 'Pro'
 	const portalBase = getSponsoredPortalBaseUrl()
 	const claimUrl = `${portalBase}/go/sponsored-claim?token=${encodeURIComponent(
 		params.claimToken
 	)}`
 
 	const html = `
-		<p>Your sponsored ${tierLabel} month is ready.</p>
-		<p><a href="${claimUrl}">Claim your sponsored month</a></p>
+		<p>Your sponsored Free access is ready.</p>
+		<p><a href="${claimUrl}">Claim your sponsored access</a></p>
 		<p>This link expires in 7 days.</p>
 	`
 	const text = [
-		`Your sponsored ${tierLabel} month is ready.`,
-		`Claim your sponsored month: ${claimUrl}`,
+		'Your sponsored Free access is ready.',
+		`Claim your sponsored access: ${claimUrl}`,
 		'This link expires in 7 days.',
 	].join('\n')
 
 	const { error } = await resend.emails.send({
 		from,
 		to: [params.to],
-		subject: 'Claim your sponsored month',
+		subject: 'Claim your sponsored access',
 		html,
 		text,
 	})
@@ -218,7 +213,6 @@ export async function sendSponsoredClaimEmail(params: {
 	if (error) {
 		console.error('sponsored_claim_email_failed', {
 			email: redactEmail(params.to),
-			tier: params.tier,
 			message: error.message,
 		})
 		throw error
@@ -234,19 +228,19 @@ export async function sendSponsoredApplicantApprovedEmail(params: {
 	const portalUrl = params.portalUrl
 
 	const html = `
-		<p>Your sponsored month is now active.</p>
+		<p>Your sponsored Free access is now active.</p>
 		<p><a href="${portalUrl}">Visit the JPV Bootcamp portal</a></p>
 	`
 
 	const text = [
-		'Your sponsored month is now active.',
+		'Your sponsored Free access is now active.',
 		`Visit the JPV Bootcamp portal: ${portalUrl}`,
 	].join('\n')
 
 	const { error } = await resend.emails.send({
 		from,
 		to: [params.to],
-		subject: 'Approved — your sponsored month is active',
+		subject: 'Approved — your sponsored access is active',
 		html,
 		text,
 	})
@@ -293,22 +287,20 @@ export async function sendSponsoredApplicantRejectedEmail(params: {
 
 export async function sendSponsoredDonorEmail(params: {
 	to: string
-	tier: 'pro' | 'vip'
 }): Promise<void> {
 	const resend = getResendClient()
 	const from = getMailFrom()
-	const tierLabel = params.tier === 'vip' ? 'VIP' : 'Pro'
 
 	const html = `
-		<p>Thanks for sponsoring a ${tierLabel} month.</p>
-		<p>Your purchase has added one sponsored seat. You won&apos;t receive access yourself.</p>
+		<p>Thanks for sponsoring Free access.</p>
+		<p>Your purchase has added one sponsored access seat. You won&apos;t receive access yourself.</p>
 	`
-	const text = `Thanks for sponsoring a ${tierLabel} month.\nYour purchase has added one sponsored seat. You won't receive access yourself.`
+	const text = `Thanks for sponsoring Free access.\nYour purchase has added one sponsored access seat. You won't receive access yourself.`
 
 	const { error } = await resend.emails.send({
 		from,
 		to: [params.to],
-		subject: 'Thanks for sponsoring a month',
+		subject: 'Thanks for sponsoring access',
 		html,
 		text,
 	})
@@ -316,7 +308,6 @@ export async function sendSponsoredDonorEmail(params: {
 	if (error) {
 		console.error('sponsored_donor_email_failed', {
 			email: redactEmail(params.to),
-			tier: params.tier,
 			message: error.message,
 		})
 		throw error
@@ -325,25 +316,23 @@ export async function sendSponsoredDonorEmail(params: {
 
 export async function sendSponsoredSeatAdminEmail(params: {
 	donorEmail: string | null
-	tier: 'pro' | 'vip'
 	occurredAt: Date
 }): Promise<void> {
 	const resend = getResendClient()
 	const from = getMailFrom()
 	const to = getAdminRecipients()
-	const tierLabel = params.tier === 'vip' ? 'VIP' : 'Pro'
 	const donor = params.donorEmail ? escapeHtml(params.donorEmail) : 'unknown'
 	const timestamp = params.occurredAt.toISOString()
 
 	const html = `
 		<p>A sponsored seat purchase was completed.</p>
-		<p><strong>Tier:</strong> ${tierLabel}</p>
+		<p><strong>Access:</strong> Controlled Free access</p>
 		<p><strong>Donor email:</strong> ${donor}</p>
 		<p><strong>Timestamp:</strong> ${escapeHtml(timestamp)}</p>
 	`
 	const text = [
 		'A sponsored seat purchase was completed.',
-		`Tier: ${tierLabel}`,
+		'Access: Controlled Free access',
 		`Donor email: ${params.donorEmail ?? 'unknown'}`,
 		`Timestamp: ${timestamp}`,
 	].join('\n')
@@ -359,7 +348,6 @@ export async function sendSponsoredSeatAdminEmail(params: {
 	if (error) {
 		console.error('sponsored_seat_admin_email_failed', {
 			email: params.donorEmail ? redactEmail(params.donorEmail) : null,
-			tier: params.tier,
 			message: error.message,
 		})
 		throw error

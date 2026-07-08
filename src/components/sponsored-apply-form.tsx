@@ -3,8 +3,7 @@
 import { useState } from 'react'
 
 type SponsoredCounts = {
-	pro: number
-	vip: number
+	available: number
 }
 
 type Props = {
@@ -64,7 +63,7 @@ export default function SponsoredApplyForm({ initialCounts }: Props) {
 	return (
 		<div className="space-y-6">
 			<div className="rounded-lg border border-neutral-200 bg-white p-4 text-sm text-neutral-700">
-				Available right now: {counts.pro} Pro / {counts.vip} VIP
+				Available right now: {counts.available} sponsored Free access seats
 			</div>
 			<form onSubmit={handleSubmit} className="space-y-4">
 				<div>
