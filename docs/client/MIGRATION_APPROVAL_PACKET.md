@@ -7,6 +7,8 @@
 - Latest validated pre-packet commit: `587862b fix: harden checkout validation and success URL safety`
 - No migrations have been applied.
 - Canonical reviewed Payload migration inventory count: `11`
+- Approval status tracker: `docs/client/MIGRATION_APPROVAL_STATUS.md`
+- Rehearsal runbook: `docs/client/MIGRATION_REHEARSAL_RUNBOOK.md`
 
 ## Migration inventory
 

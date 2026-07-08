@@ -9,6 +9,8 @@
 - Push status: local branch and `origin/feature/course-branding-and-preview` are in sync.
 - Roadmap progress: `docs/client/ROADMAP_PROGRESS_STATUS.md`
 - Migration approval packet: `docs/client/MIGRATION_APPROVAL_PACKET.md`
+- Migration approval status: `docs/client/MIGRATION_APPROVAL_STATUS.md`
+- Migration rehearsal runbook: `docs/client/MIGRATION_REHEARSAL_RUNBOOK.md`
 - Staging smoke checklist: `docs/client/STAGING_SMOKE_CHECKLIST.md`
 - Provider/email readiness: `docs/client/PROVIDER_EMAIL_READINESS.md`
 
@@ -116,6 +118,8 @@ Expected grep exceptions:
 - PR / review URL: `https://github.com/prochattools/jpv-bootcamp/pull/2`
 - Validation commands: see the validation summary above.
 - Approval packet: `docs/client/MIGRATION_APPROVAL_PACKET.md`
+- Approval status: `docs/client/MIGRATION_APPROVAL_STATUS.md`
+- Rehearsal runbook: `docs/client/MIGRATION_REHEARSAL_RUNBOOK.md`
 - Manual smoke checklist: `docs/client/STAGING_SMOKE_CHECKLIST.md`
 - Provider/email readiness: `docs/client/PROVIDER_EMAIL_READINESS.md`
 - Expected grep exceptions: see the grep summary above.
