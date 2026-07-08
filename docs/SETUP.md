@@ -98,16 +98,16 @@ The `EmailForm` component handles email collection:
 ### Using Dokploy
 
 1. Follow the [Git workflow](./git-workflow.md)
-2. Push to feature branch
-3. Test preview deployment
-4. Merge to main for production
+2. Push `feature/course-branding-and-preview`
+3. Test the staging / production-staged deployment target
+4. Keep `main` outside this staging deployment path
 
 ### Manual Deployment
 
 1. Build the project: `npm run build`
 2. Deploy to your hosting platform
 3. Set environment variables
-4. Run database migrations
+4. Do not run database migrations unless the target environment and table-plan-to-Free mapping have explicit approval
 
 ## Features
 

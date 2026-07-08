@@ -3,8 +3,10 @@
 ## Branch
 
 - Branch: `feature/course-branding-and-preview`
-- Last commit before review changes: `93a0159 fix: preserve password reset success after cleanup failure`
-- Commit status: no commit has been made for this review packet or the Free/Pro cleanup.
+- PR / review URL: `https://github.com/prochattools/jpv-bootcamp/pull/2`
+- Staging deployment target: this feature branch is the staging / production-staged deployment branch.
+- Latest validated implementation commit before this staging-readiness handoff: `0c757f6 chore: remove remaining legacy assets and plugins`
+- Push status at handoff: local branch and `origin/feature/course-branding-and-preview` were in sync.
 
 ## Scope summary
 
@@ -64,6 +66,8 @@ This is data-preserving at the record/table level, but it is business-significan
 
 No migration has been applied by this review packet. Migration application must go through the approved database migration path with the target environment, schema, operator, backup/snapshot, and maintenance window explicitly approved.
 
+Pushing or deploying `feature/course-branding-and-preview` must not automatically apply Prisma or Payload migrations. Migration execution is a separate approval category.
+
 ## Validation summary
 
 The following commands passed during final review:
@@ -97,10 +101,20 @@ Expected grep exceptions:
 - `pnpm-lock.yaml` can match `libvips` package names and integrity hashes. Those are Sharp dependency names or checksum text, not project integration references.
 - This review packet mentions removed integration/product names only to state that they must not remain as active paths.
 
+## Staging handoff
+
+- Branch: `feature/course-branding-and-preview`
+- Deployment target: staging / production-staged.
+- PR / review URL: `https://github.com/prochattools/jpv-bootcamp/pull/2`
+- Validation commands: see the validation summary above.
+- Expected grep exceptions: see the grep summary above.
+- Migration warning: table-plan-to-Free mapping requires explicit target-environment approval before migration execution.
+- No migrations applied: confirmed.
+
 ## Remaining business approval item
 
 Before applying migrations, approve the Payload table-plan-to-Free mapping: legacy table-plan subscription values will become controlled Free access, and obsolete allowed-plan rows will be removed.
 
-## Commit status
+## Commit and migration status
 
-No commit was made.
+This branch has been split into reviewable commits and pushed for staging review. No migrations were applied during the branch work or this handoff.
