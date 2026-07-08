@@ -34,7 +34,7 @@ export function proxy(request: NextRequest) {
 			if (token) {
 				return NextResponse.next()
 			}
-			return NextResponse.redirect('https://portal.jpvbootcamp.com/go/partners')
+			return NextResponse.redirect(new URL('/partners', request.url))
 		}
 		if (token) {
 			const redirectUrl = request.nextUrl.clone()
@@ -46,7 +46,7 @@ export function proxy(request: NextRequest) {
 			return NextResponse.redirect(redirectUrl)
 		}
 
-		return NextResponse.redirect('https://portal.jpvbootcamp.com/go/partners')
+		return NextResponse.redirect(new URL('/partners', request.url))
 	}
 
 	return NextResponse.next()

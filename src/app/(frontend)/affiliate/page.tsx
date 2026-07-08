@@ -3,8 +3,8 @@ export const metadata = {
   description: "Earn commission by introducing new members to JPV Bootcamp.",
 };
 
-const signInHref = "https://portal.jpvbootcamp.com/community/?fcom_action=auth";
-const signUpHref = "https://portal.jpvbootcamp.com/community?fcom_action=auth&form=register";
+const signInHref = "/portal";
+const signUpHref = "/register";
 const applyHref = "mailto:jpvbootcamp@gmail.com?subject=Affiliate%20Application";
 
 const affiliateResources = [

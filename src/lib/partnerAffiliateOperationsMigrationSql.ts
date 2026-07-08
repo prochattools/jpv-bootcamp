@@ -71,7 +71,7 @@ export function buildPartnerAffiliateOperationsMigrationUpSql(databaseUrl = proc
     "last_delivery_error" text,
     "trusted_destination_snapshot" varchar,
     "source" varchar DEFAULT 'portal' NOT NULL,
-    "legacy_wp_user_id" numeric,
+    "source_member_id" numeric,
     "legacy_reference" varchar,
     "internal_notes" text,
     "metadata" jsonb,

@@ -2,7 +2,6 @@ import 'server-only'
 
 import { NextResponse } from 'next/server'
 import type Stripe from 'stripe'
-import { getServerConfig } from '@/lib/config'
 import { getStripeConfig, getStripeWebhookSecrets } from '@/lib/stripe-config'
 import { hasProcessed, markProcessed } from '@/lib/idempotency'
 import {
@@ -34,12 +33,6 @@ type WebhookDebugInfo = {
 	method: string
 	path: string
 	nodeEnv?: string
-}
-
-function isMissingEnvError(error: unknown): boolean {
-	return (
-		error instanceof Error && error.message.startsWith('Missing required env var:')
-	)
 }
 
 function getRequestPath(req: Request): string {
@@ -162,11 +155,6 @@ function logWebhookEvent(params: {
 	console.info(label, payload)
 }
 
-function isEnvEnabled(value?: string): boolean {
-	if (!value) return false
-	return ['1', 'true', 'yes', 'on'].includes(value.trim().toLowerCase())
-}
-
 function logProvisioningSkip(event: Stripe.Event, reason: string) {
 	let customerId: string | null = null
 	let subscriptionId: string | null = null
@@ -219,7 +207,7 @@ function logProvisioningSkip(event: Stripe.Event, reason: string) {
 			break
 	}
 
-	logProvisioningDecision({
+		logProvisioningDecision({
 		eventId: event.id,
 		type: event.type,
 		livemode: event.livemode,
@@ -227,8 +215,6 @@ function logProvisioningSkip(event: Stripe.Event, reason: string) {
 		subscriptionId,
 		email,
 		incomingPlan,
-		dbWpUserId: null,
-		wpExists: 'unknown',
 		decision: 'skip',
 		reason,
 	})
@@ -430,50 +416,11 @@ export async function handleStripeWebhook(req: Request) {
 	}
 
 	const requiresProvisioning = PROVISIONING_EVENT_TYPES.has(event.type)
-	const provisioningFlag =
-		isEnvEnabled(process.env.PROVISIONING_ENABLED) ||
-		isEnvEnabled(process.env.WP_PROVISION_ENABLED)
-	let provisioningEnabled = false
-	let provisioningStatus: 'enabled' | 'skipped' | 'not_applicable' = 'not_applicable'
-
-	if (requiresProvisioning) {
-		if (!provisioningFlag) {
-			provisioningStatus = 'skipped'
-		} else {
-			try {
-				getServerConfig()
-				provisioningEnabled = true
-				provisioningStatus = 'enabled'
-			} catch (error) {
-				if (isMissingEnvError(error)) {
-					logWebhookEvent({
-						eventId: event.id,
-						type: event.type,
-						verified: true,
-						outcome: 'error',
-						reason: 'provisioning_config_missing',
-						meta: {
-							path: debugInfo.path,
-							buildId,
-							message: (error as Error).message,
-						},
-						debugInfo,
-					})
-					return NextResponse.json(
-						{ received: true, skipped: 'provisioning_config_missing' },
-						{ status: 200 }
-					)
-				}
-				throw error
-			}
-		}
-	}
+	const provisioningStatus: 'enabled' | 'not_applicable' = requiresProvisioning
+		? 'enabled'
+		: 'not_applicable'
 
 	try {
-		if (requiresProvisioning && !provisioningEnabled) {
-			logProvisioningSkip(event, 'provisioning_disabled')
-		}
-
 		const allowMembershipEmail = shouldSendMembershipEmailForEvent(event.type)
 
 		switch (event.type) {
@@ -496,47 +443,38 @@ export async function handleStripeWebhook(req: Request) {
 							session.customer_details?.email ?? session.customer_email ?? null
 						await notifySponsoredSeatPurchase({
 							seatId: seatResult.seatId,
-							tier: sponsoredTier,
 							donorEmail,
 						})
 					}
 				}
-				if (provisioningEnabled) {
-					await provisionFromCheckoutSession(session, event.id, event.type, {
-						allowEmail: allowMembershipEmail,
-						eventLivemode: event.livemode,
-					})
-				}
+				await provisionFromCheckoutSession(session, event.id, event.type, {
+					allowEmail: allowMembershipEmail,
+					eventLivemode: event.livemode,
+				})
 				break
 			}
 			case 'customer.subscription.created': {
-				if (provisioningEnabled) {
-					const subscription = event.data.object as Stripe.Subscription
-					await syncFromSubscription(subscription.id, event.id, event.type, {
-						allowEmail: allowMembershipEmail,
-						eventLivemode: event.livemode,
-					})
-				}
+				const subscription = event.data.object as Stripe.Subscription
+				await syncFromSubscription(subscription.id, event.id, event.type, {
+					allowEmail: allowMembershipEmail,
+					eventLivemode: event.livemode,
+				})
 				break
 			}
 			case 'customer.subscription.updated': {
-				if (provisioningEnabled) {
-					const subscription = event.data.object as Stripe.Subscription
-					await syncFromSubscription(subscription.id, event.id, event.type, {
-						allowEmail: allowMembershipEmail,
-						eventLivemode: event.livemode,
-					})
-				}
+				const subscription = event.data.object as Stripe.Subscription
+				await syncFromSubscription(subscription.id, event.id, event.type, {
+					allowEmail: allowMembershipEmail,
+					eventLivemode: event.livemode,
+				})
 				break
 			}
 			case 'customer.subscription.deleted': {
-				if (provisioningEnabled) {
-					const subscription = event.data.object as Stripe.Subscription
-					await syncFromSubscription(subscription.id, event.id, event.type, {
-						allowEmail: allowMembershipEmail,
-						eventLivemode: event.livemode,
-					})
-				}
+				const subscription = event.data.object as Stripe.Subscription
+				await syncFromSubscription(subscription.id, event.id, event.type, {
+					allowEmail: allowMembershipEmail,
+					eventLivemode: event.livemode,
+				})
 				break
 			}
 			case 'invoice.paid': {
@@ -555,15 +493,13 @@ export async function handleStripeWebhook(req: Request) {
 					paymentStatus: 'paid',
 					occurredAt: new Date(event.created * 1000),
 				})
-				if (provisioningEnabled) {
-					if (subscriptionId) {
-						await syncFromSubscription(subscriptionId, event.id, event.type, {
-							allowEmail: allowMembershipEmail,
-							eventLivemode: event.livemode,
-						})
-					} else {
-						logProvisioningSkip(event, 'missing_subscription_id')
-					}
+				if (subscriptionId) {
+					await syncFromSubscription(subscriptionId, event.id, event.type, {
+						allowEmail: allowMembershipEmail,
+						eventLivemode: event.livemode,
+					})
+				} else {
+					logProvisioningSkip(event, 'missing_subscription_id')
 				}
 				break
 			}
@@ -654,17 +590,11 @@ export async function handleStripeWebhook(req: Request) {
 			})
 		}
 
-		const reason =
-			provisioningStatus === 'skipped' && requiresProvisioning
-				? 'provisioning_disabled'
-				: undefined
-
 		logWebhookEvent({
 			eventId: event.id,
 			type: event.type,
 			verified: true,
 			outcome: 'processed',
-			reason,
 			meta: {
 				path: debugInfo.path,
 				buildId,

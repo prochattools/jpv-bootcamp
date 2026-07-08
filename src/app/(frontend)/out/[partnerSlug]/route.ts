@@ -7,7 +7,6 @@ import { sanitizeRefPath } from '@/lib/partners-url'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-const PORTAL_PARTNERS_URL = 'https://portal.jpvbootcamp.com/go/partners'
 const DEFAULT_PARTNERS_URL = 'https://jpvbootcamp.com/partners'
 const CLICK_DEDUPE_WINDOW_MS = 3000
 
@@ -33,12 +32,12 @@ export async function GET(
 	const sessionCookie = req.cookies.get('partners_session')?.value
 	const sessionId = sanitizeSessionId(sessionCookie)
 	if (!sessionId) {
-		return NextResponse.redirect(PORTAL_PARTNERS_URL)
+		return NextResponse.redirect(DEFAULT_PARTNERS_URL)
 	}
 
 	const session = await getPartnerSession(sessionId)
 	if (!session) {
-		return NextResponse.redirect(PORTAL_PARTNERS_URL)
+		return NextResponse.redirect(DEFAULT_PARTNERS_URL)
 	}
 
 	const now = Date.now()
@@ -64,7 +63,7 @@ export async function GET(
 			await prisma.partnerClick.create({
 				data: {
 					sessionId,
-					wpUserId: session.wpUserId,
+					accountId: session.accountId,
 					partnerSlug: partner.slug,
 					categorySlug: partner.category,
 					refPath,

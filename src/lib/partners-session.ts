@@ -9,9 +9,9 @@ export const PARTNERS_COOKIE_DOMAIN = 'jpvbootcamp.com'
 
 export type PartnerSessionRecord = {
 	sessionId: string
-	wpUserId: number
-	wpEmailHash: string
-	wpName: string
+	accountId: number
+	accountEmailHash: string
+	accountName: string
 	createdAt: Date
 	expiresAt: Date
 }
@@ -45,24 +45,24 @@ export function buildSessionCookieOptions() {
 }
 
 export async function createPartnerSession(params: {
-	wpUserId: number
-	wpEmail: string
-	wpName: string
+	accountId: number
+	accountEmail: string
+	accountName: string
 }): Promise<PartnerSessionRecord> {
 	const now = new Date()
 	const expiresAt = new Date(
 		now.getTime() + PARTNERS_SESSION_MAX_AGE_SECONDS * 1000
 	)
 	const sessionId = randomUUID()
-	const wpEmailHash = hashEmail(params.wpEmail)
-	const wpName = params.wpName.trim().slice(0, 120)
+	const accountEmailHash = hashEmail(params.accountEmail)
+	const accountName = params.accountName.trim().slice(0, 120)
 
 	const record = await prisma.partnerSession.create({
 		data: {
 			sessionId,
-			wpUserId: params.wpUserId,
-			wpEmailHash,
-			wpName,
+			accountId: params.accountId,
+			accountEmailHash,
+			accountName,
 			createdAt: now,
 			expiresAt,
 		},
@@ -70,9 +70,9 @@ export async function createPartnerSession(params: {
 
 	return {
 		sessionId: record.sessionId,
-		wpUserId: record.wpUserId,
-		wpEmailHash: record.wpEmailHash,
-		wpName: record.wpName,
+		accountId: record.accountId,
+		accountEmailHash: record.accountEmailHash,
+		accountName: record.accountName,
 		createdAt: record.createdAt,
 		expiresAt: record.expiresAt,
 	}
@@ -93,12 +93,12 @@ export async function getPartnerSession(
 		}
 		return null
 	}
-	await enforceSponsoredGrantStatus(record.wpUserId)
+	await enforceSponsoredGrantStatus(record.accountId)
 	return {
 		sessionId: record.sessionId,
-		wpUserId: record.wpUserId,
-		wpEmailHash: record.wpEmailHash,
-		wpName: record.wpName,
+		accountId: record.accountId,
+		accountEmailHash: record.accountEmailHash,
+		accountName: record.accountName,
 		createdAt: record.createdAt,
 		expiresAt: record.expiresAt,
 	}
