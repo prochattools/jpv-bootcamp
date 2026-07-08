@@ -15,6 +15,8 @@ It supersedes the older Version 2.40 plan for product scope, terminology, progre
 - [Migration Approval Packet](./MIGRATION_APPROVAL_PACKET.md) — approval-focused summary for the pending migration decision and execution boundary.
 - [Migration Approval Status](./MIGRATION_APPROVAL_STATUS.md) — current blocked/approved state for future agents and operators.
 - [Migration Rehearsal Runbook](./MIGRATION_REHEARSAL_RUNBOOK.md) — operator-facing static-only runbook for rehearsal preparation and evidence capture.
+- [Operator Handoff Summary](./OPERATOR_HANDOFF_SUMMARY.md) — concise operator-facing state summary and next-step handoff.
+- [Evidence Review Checklist](./EVIDENCE_REVIEW_CHECKLIST.md) — checklist for reviewing completed staging and provider evidence.
 - [Staging Smoke Checklist](./STAGING_SMOKE_CHECKLIST.md) — manual smoke path for the staging / production-staged deployment branch.
 - [Staging Smoke Evidence Template](./STAGING_SMOKE_EVIDENCE_TEMPLATE.md) — fillable evidence capture template for smoke verification.
 - [Provider and Email Readiness](./PROVIDER_EMAIL_READINESS.md) — provider, email, and Stripe configuration readiness checklist without secrets.
@@ -48,4 +50,4 @@ Before a client or internal roadmap update is considered clean:
 - removed paid-tier and external-integration language does not appear in active docs, source, scripts, schema, or public copy, except where a data-preserving rename migration must reference old database column names;
 - public launch page, billing automation, representative 8-week course, partner tracking, community previews, data reconciliation, and go-live approval are represented;
 - post-core work is clearly separated from first core go-live work.
-- staging smoke, migration approval, approval status, migration rehearsal, staging/provider evidence templates, provider/email readiness, and roadmap documents stay linked from this index and the review packet.
+- staging smoke, migration approval, approval status, migration rehearsal, operator handoff, evidence review, staging/provider evidence templates, provider/email readiness, and roadmap documents stay linked from this index and the review packet.

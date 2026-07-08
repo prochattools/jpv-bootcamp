@@ -4,6 +4,8 @@
 - Branch: `feature/course-branding-and-preview`
 - Latest known commit: `50f7966 docs: add migration rehearsal safety handoff`
 - Migrations applied: `No`
+- Operator handoff summary: `docs/client/OPERATOR_HANDOFF_SUMMARY.md`
+- Evidence review checklist: `docs/client/EVIDENCE_REVIEW_CHECKLIST.md`
 - Target-environment table-plan-to-Free approval: `Pending`
 - Account-column rename approval: `Pending`
 - Approved migration path: `Pending confirmation`
@@ -21,3 +23,5 @@
 - [ ] Rollback or recovery review
 - [ ] Provider and email live verification
 - [ ] Staging smoke run
+- [ ] Operator handoff summary reviewed
+- [ ] Evidence review checklist ready

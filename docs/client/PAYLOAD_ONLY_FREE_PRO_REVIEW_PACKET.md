@@ -11,6 +11,8 @@
 - Migration approval packet: `docs/client/MIGRATION_APPROVAL_PACKET.md`
 - Migration approval status: `docs/client/MIGRATION_APPROVAL_STATUS.md`
 - Migration rehearsal runbook: `docs/client/MIGRATION_REHEARSAL_RUNBOOK.md`
+- Operator handoff summary: `docs/client/OPERATOR_HANDOFF_SUMMARY.md`
+- Evidence review checklist: `docs/client/EVIDENCE_REVIEW_CHECKLIST.md`
 - Staging smoke checklist: `docs/client/STAGING_SMOKE_CHECKLIST.md`
 - Staging smoke evidence template: `docs/client/STAGING_SMOKE_EVIDENCE_TEMPLATE.md`
 - Provider/email readiness: `docs/client/PROVIDER_EMAIL_READINESS.md`

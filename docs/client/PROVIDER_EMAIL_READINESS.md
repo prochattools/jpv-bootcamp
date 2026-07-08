@@ -7,6 +7,8 @@ Repository-only checklist for provider/email readiness before any approved live 
 - Verify environment variable names only. Never record secret values.
 - Do not apply migrations from this checklist.
 - Do not use this checklist as authorization to send live email by itself.
+- Operator handoff summary: `docs/client/OPERATOR_HANDOFF_SUMMARY.md`
+- Evidence review checklist: `docs/client/EVIDENCE_REVIEW_CHECKLIST.md`
 
 ## Environment variables to verify by name only
 
@@ -43,10 +45,6 @@ Repository-only checklist for provider/email readiness before any approved live 
 3. Confirm `DISABLE_NON_WEBHOOK_EMAILS` is set to the reviewed mode for controlled sends.
 4. Confirm provider dry-run or queue inspection is completed before any live send approval.
 5. Confirm one controlled live-delivery verification plan exists for the target environment.
-
-## Evidence capture
-
-Use `docs/client/PROVIDER_EMAIL_EVIDENCE_TEMPLATE.md` to record the operator evidence after provider and email checks are run.
 
 ## Evidence capture
 
