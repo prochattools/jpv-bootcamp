@@ -45,6 +45,7 @@ Before publishing a status update, verify these links are present and correct:
 - `docs/client/STAGING_SMOKE_EVIDENCE_TEMPLATE.md`
 - `docs/client/PROVIDER_EMAIL_READINESS.md`
 - `docs/client/PROVIDER_EMAIL_EVIDENCE_TEMPLATE.md`
+- `pnpm staging:static-preflight` (local-only static preflight; no migrations, no DB access, no live network checks)
 - `scripts/create_staging_evidence_artifacts.ts`
 - `scripts/validate_staging_evidence_artifacts.ts`
 - `docs/client/evidence/`
@@ -78,6 +79,7 @@ Run the focused static docs tests that cover the current handoff and evidence se
 ./node_modules/.bin/tsx scripts/status_docs_consistency.test.ts
 ./node_modules/.bin/tsx scripts/evidence_artifact_automation.test.ts
 ./node_modules/.bin/tsx scripts/evidence_package_scripts.test.ts
+./node_modules/.bin/tsx scripts/staging_static_preflight_package.test.ts
 ./node_modules/.bin/tsx scripts/billing_readiness_report.test.ts
 ./node_modules/.bin/tsx scripts/member_checkout.test.ts
 ```
@@ -90,6 +92,7 @@ Run the focused static docs tests that cover the current handoff and evidence se
 - Do not paste secrets into docs or evidence.
 - Do not claim staging smoke, provider/email, or live cutover are done unless the operator evidence files are actually completed.
 - Do not increase migration readiness or live cutover readiness beyond the evidence that exists.
+- Do not claim `pnpm staging:static-preflight` proves operator approval, staging smoke, or provider/email verification.
 
 ## Recommended update pattern
 
@@ -98,6 +101,7 @@ When the status changes, update the roadmap and the operator handoff together so
 Use wording that stays valid after future documentation-only commits:
 
 - `Current branch tip must be verified with git log --oneline -1 before operator action.`
+- `Run pnpm staging:static-preflight, then operator completes approval, staging smoke, and provider/email evidence without applying migrations.`
 - `Last recorded validated baseline before this status update: <commit>`
 - `No migrations have been applied.`
 

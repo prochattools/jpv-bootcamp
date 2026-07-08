@@ -33,6 +33,7 @@ Local-only helper scripts for creating and validating evidence draft files:
 - [`scripts/validate_staging_evidence_artifacts.ts`](../../scripts/validate_staging_evidence_artifacts.ts) — validates evidence files for safety, secret-leakage, and branch consistency. Does not connect to database or network.
 - `pnpm evidence:create` — generates draft evidence files locally.
 - `pnpm evidence:validate` — validates evidence files locally.
+- `pnpm staging:static-preflight` — runs the approved local-only static preflight checks before manual staging smoke and evidence capture.
 - [Evidence folder](./evidence/) — stores completed evidence artifacts after operator verification. `.gitkeep` placeholder indicates folder is ready but evidence may not exist yet.
 
 **Important:** Generated draft files do not prove any checks passed. Operator must complete evidence during actual staging/provider verification. No migrations are applied by these scripts.

@@ -24,6 +24,7 @@
     "evidence:create": "tsx scripts/create_staging_evidence_artifacts.ts",
     "evidence:validate": "tsx scripts/validate_staging_evidence_artifacts.ts",
     "evidence:test": "tsx scripts/evidence_artifact_automation.test.ts && tsx scripts/evidence_package_scripts.test.ts",
+    "staging:static-preflight": "git diff --check && ./node_modules/.bin/tsc --noEmit --pretty false --incremental false && ./node_modules/.bin/prisma validate --schema=prisma/system.prisma && ./node_modules/.bin/prisma validate --schema=prisma/schema.prisma && ./node_modules/.bin/tsx scripts/evidence_artifact_automation.test.ts && ./node_modules/.bin/tsx scripts/evidence_package_scripts.test.ts && ./node_modules/.bin/tsx scripts/status_docs_consistency.test.ts && ./node_modules/.bin/tsx scripts/preview_migration_inventory.test.ts && ./node_modules/.bin/tsx scripts/migration_readiness_static.test.ts && ./node_modules/.bin/tsx scripts/migration_rehearsal_safety.test.ts && ./node_modules/.bin/tsx scripts/staging_evidence_static.test.ts && ./node_modules/.bin/tsx scripts/operator_handoff_static.test.ts && ./node_modules/.bin/tsx scripts/billing_readiness_report.test.ts && ./node_modules/.bin/tsx scripts/member_checkout.test.ts && pnpm evidence:validate",
     "payload:branding:check": "pnpm generate:importmap && pnpm type-check:payload",
     "payload:staging:migrate:status": "tsx scripts/payload/run-staging-migrations.mts --status",
     "payload:staging:migrate": "tsx scripts/payload/run-staging-migrations.mts --apply",

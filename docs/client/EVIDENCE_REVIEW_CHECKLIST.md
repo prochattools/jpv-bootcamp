@@ -2,7 +2,8 @@
 
 Use this checklist after an operator fills the evidence templates in `docs/client/evidence/`.
 
-Generated evidence files can be created with `pnpm evidence:create` or `tsx scripts/create_staging_evidence_artifacts.ts` (local-only, no migrations applied, no DB access, no network access).
+Run `pnpm staging:static-preflight` before manual staging smoke or evidence capture. It performs local-only checks, does not apply migrations, does not run live network checks, and does not prove operator approval.
+Generated evidence files can be created with `pnpm evidence:create` or `tsx scripts/create_staging_evidence_artifacts.ts` (optional, local-only, no migrations applied, no DB access, no network access).
 Completed evidence can be validated with `pnpm evidence:validate` or `tsx scripts/validate_staging_evidence_artifacts.ts` (local-only, checks for secrets and consistency).
 Generated drafts do not prove checks passed.
 
@@ -18,6 +19,7 @@ Generated drafts do not prove checks passed.
 - [ ] Pass/fail status is recorded for each smoke area
 - [ ] Blockers are listed with owners
 - [ ] Provider/email mode is recorded
+- [ ] `pnpm staging:static-preflight` was run before manual staging smoke or evidence capture
 - [ ] Old WordPress, Fluent, and portal-path checks were recorded
 - [ ] Free vs Pro access evidence was recorded
 - [ ] Reviewer signoff exists

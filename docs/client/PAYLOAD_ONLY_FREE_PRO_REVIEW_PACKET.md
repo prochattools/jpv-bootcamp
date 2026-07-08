@@ -21,6 +21,7 @@
 - Staging smoke evidence template: `docs/client/STAGING_SMOKE_EVIDENCE_TEMPLATE.md`
 - Provider/email readiness: `docs/client/PROVIDER_EMAIL_READINESS.md`
 - Provider/email evidence template: `docs/client/PROVIDER_EMAIL_EVIDENCE_TEMPLATE.md`
+- Static preflight: `pnpm staging:static-preflight`
 
 ## Scope summary
 
@@ -118,6 +119,7 @@ Expected grep exceptions:
 - `STRIPE_PRICE_TABLE` remains only in a negative readiness assertion that verifies membership checkout no longer uses the old table price configuration.
 - `pnpm-lock.yaml` can match `libvips` package names and integrity hashes. Those are Sharp dependency names or checksum text, not project integration references.
 - This review packet mentions removed integration/product names only to state that they must not remain as active paths.
+- `pnpm staging:static-preflight` is a local-only validation bundle and does not generate or validate operator approval evidence.
 
 ## Staging handoff
 
@@ -125,6 +127,7 @@ Expected grep exceptions:
 - Deployment target: staging / production-staged.
 - PR / review URL: `https://github.com/prochattools/jpv-bootcamp/pull/2`
 - Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`
+- Static preflight: `pnpm staging:static-preflight`
 - Validation commands: see the validation summary above.
 - Approval packet: `docs/client/MIGRATION_APPROVAL_PACKET.md`
 - Approval status: `docs/client/MIGRATION_APPROVAL_STATUS.md`

@@ -157,6 +157,7 @@ Do not touch `main`.
   - Admin branding: JPV Bootcamp Portal login verified;
   - Admin dashboard: operational cards present and linked;
   - Browser-based registration and verification link flow remains for manual operator test (same-origin security check on registration endpoint).
+- Static preflight automation is available via `pnpm staging:static-preflight`; it is local-only and does not apply migrations, run live network checks, or prove operator approval.
 - 5 July 2026 account recovery staging pass:
   - Controlled member row for `i***@yeshua.academy` exists exactly once, remains active and verified, and no longer has a lock timestamp blocking login;
   - Login failure was traced to account lockout/unknown password rather than verification, session, or portal routing;

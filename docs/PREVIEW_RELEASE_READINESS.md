@@ -15,6 +15,8 @@ Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`
 
 The protected local files `.graphifyignore` and `docs/HANDOFF_AUTH_BRANDING_STAGING_2026-06-30.md` are outside this runbook and must not be staged.
 
+Static preflight automation is available via `pnpm staging:static-preflight`; it is local-only and does not authorize migrations, deployment, or live provider checks.
+
 ## Workflow architecture
 
 The previous preview workflow published an image from ordinary feature-branch pushes. That behavior is intentionally replaced.

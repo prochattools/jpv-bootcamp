@@ -9,6 +9,7 @@
 - Migrations applied: `No`
 - Staging deployment target: this feature branch
 - Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`
+- Static preflight: `pnpm staging:static-preflight`
 - Evidence artifact generator: `pnpm evidence:create`
 - Evidence artifact validator: `pnpm evidence:validate`
 
@@ -27,6 +28,7 @@
 - Provider/email evidence template
 - Static safety tests
 - Evidence artifact automation (local-only generator and validator)
+- Static preflight automation
 - Evidence output folder ready
 
 ## What is blocked
@@ -43,13 +45,14 @@
 1. Review `docs/client/MIGRATION_APPROVAL_PACKET.md`.
 2. Update `docs/client/MIGRATION_APPROVAL_STATUS.md` only after real approval.
 3. Review `docs/client/STATUS_UPDATE_PROCEDURE.md` before changing any roadmap percentages.
-4. **Optional:** Run `pnpm evidence:create` to generate draft evidence templates.
-5. **During staging smoke:** Complete `docs/client/STAGING_SMOKE_EVIDENCE_TEMPLATE.md` in `docs/client/evidence/`.
-6. **During provider/email checks:** Complete `docs/client/PROVIDER_EMAIL_EVIDENCE_TEMPLATE.md` in `docs/client/evidence/`.
-7. **Before closing out:** Run `pnpm evidence:validate` to validate completed evidence for safety and consistency.
-8. Do not commit unfilled draft evidence files unless explicitly desired.
-9. Do not apply migrations until approval is complete.
-10. Do not touch `main`.
+4. Run `pnpm staging:static-preflight` before manual staging smoke or evidence capture.
+5. **Optional:** Run `pnpm evidence:create` to generate draft evidence templates.
+6. **During staging smoke:** Complete `docs/client/STAGING_SMOKE_EVIDENCE_TEMPLATE.md` in `docs/client/evidence/`.
+7. **During provider/email checks:** Complete `docs/client/PROVIDER_EMAIL_EVIDENCE_TEMPLATE.md` in `docs/client/evidence/`.
+8. **Before closing out:** Run `pnpm evidence:validate` to validate completed evidence for safety and consistency.
+9. Do not commit unfilled draft evidence files unless explicitly desired.
+10. Do not apply migrations until approval is complete.
+11. Do not touch `main`.
 
 ## Hard stops
 

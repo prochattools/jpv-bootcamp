@@ -69,26 +69,30 @@ async function main(): Promise<void> {
   assert.match(docs.roadmap, /Target-environment approval for table-plan-to-Free mapping is still required/)
   assert.match(docs.roadmap, /provider email live verification pending/i)
   assert.match(docs.roadmap, /post-refit staging smoke/i)
-  assert.match(docs.roadmap, /~72%/)
-  assert.match(docs.roadmap, /~95%/)
+  assert.match(docs.roadmap, /~73%/)
+  assert.match(docs.roadmap, /~96%/)
   assert.match(docs.roadmap, /~88%/)
-  assert.match(docs.roadmap, /~92%/)
-  assert.match(docs.roadmap, /~53%/)
+  assert.match(docs.roadmap, /~93%/)
+  assert.match(docs.roadmap, /~54%/)
   assert.match(docs.roadmap, /~20%/)
   assert.match(docs.roadmap, /Verify the current branch tip with `git log --oneline -1` before operator action/)
+  assert.match(docs.roadmap, /Run `pnpm staging:static-preflight`, then operator completes approval, staging smoke, and provider\/email evidence without applying migrations\./)
 
   assert.match(docs.operatorHandoff, /Last recorded validated baseline before this status update: `143a6f8 docs: add staging evidence artifact automation`/)
   assert.match(docs.operatorHandoff, /Branch tip verification: verify the current tip with `git log --oneline -1` before operator action/)
   assert.match(docs.operatorHandoff, /Status update procedure: `docs\/client\/STATUS_UPDATE_PROCEDURE\.md`/)
+  assert.match(docs.operatorHandoff, /Static preflight: `pnpm staging:static-preflight`/)
   assert.match(docs.operatorHandoff, /Migrations applied: `No`/)
   assert.match(docs.operatorHandoff, /No `main` branch work\./)
 
   assert.match(docs.reviewPacket, /Latest verified branch tip before this pass: `143a6f8 docs: add staging evidence artifact automation`/)
   assert.match(docs.reviewPacket, /Verify the current branch tip with `git log --oneline -1` before operator action\./)
   assert.match(docs.reviewPacket, /Status update procedure: `docs\/client\/STATUS_UPDATE_PROCEDURE\.md`/)
+  assert.match(docs.reviewPacket, /Static preflight: `pnpm staging:static-preflight`/)
   assert.match(docs.reviewPacket, /Do not touch `main`/)
   assert.match(docs.reviewPacket, /No migrations have been applied\./)
   assert.match(docs.reviewPacket, /table-plan-to-Free mapping requires explicit target-environment approval before migration execution\./)
+  assert.match(docs.reviewPacket, /`pnpm staging:static-preflight` is a local-only validation bundle and does not generate or validate operator approval evidence\./)
 
   assert.match(docs.approvalPacket, /Do not touch `main`/)
   assert.match(docs.approvalPacket, /Current branch tip must be verified with `git log --oneline -1` before operator action\./)
@@ -113,6 +117,7 @@ async function main(): Promise<void> {
   assert.match(docs.evidenceChecklist, /Migrations applied remains `No`/)
   assert.match(docs.evidenceChecklist, /Old WordPress, Fluent, and portal-path checks were recorded/)
   assert.match(docs.evidenceChecklist, /Reviewer signoff exists/)
+  assert.match(docs.evidenceChecklist, /`pnpm staging:static-preflight` was run before manual staging smoke or evidence capture/)
 
   assert.match(docs.stagingChecklist, /feature\/course-branding-and-preview/)
   assert.match(docs.stagingChecklist, /Migrations applied: `No`/)
@@ -135,17 +140,20 @@ async function main(): Promise<void> {
 
   assert.match(docs.readme, /Status Update Procedure/)
   assert.match(docs.readme, /roadmap documents stay linked from this index and the review packet/)
+  assert.match(docs.readme, /`pnpm staging:static-preflight`/)
 
   assert.match(docs.integrationPlan, /feature\/course-branding-and-preview/)
   assert.match(docs.integrationPlan, /Verify the exact branch tip with `git log --oneline -1` before operator action\./)
   assert.match(docs.integrationPlan, /No migrations have been applied\./)
   assert.match(docs.integrationPlan, /Do not touch `main`/)
+  assert.match(docs.integrationPlan, /`pnpm staging:static-preflight`/)
 
   assert.match(docs.previewReadiness, /feature\/course-branding-and-preview/)
   assert.match(docs.previewReadiness, /Verify the exact branch tip with `git log --oneline -1` before operator action\./)
   assert.match(docs.previewReadiness, /No migrations have been applied\./)
   assert.match(docs.previewReadiness, /Do not touch `main`/)
   assert.match(docs.previewReadiness, /Status update procedure: `docs\/client\/STATUS_UPDATE_PROCEDURE\.md`/)
+  assert.match(docs.previewReadiness, /`pnpm staging:static-preflight`/)
 
   for (const secretPattern of noSecrets) {
     assert.doesNotMatch(allDocs, secretPattern, `combined docs should not contain ${secretPattern}`)
