@@ -16,7 +16,9 @@ It supersedes the older Version 2.40 plan for product scope, terminology, progre
 - [Migration Approval Status](./MIGRATION_APPROVAL_STATUS.md) — current blocked/approved state for future agents and operators.
 - [Migration Rehearsal Runbook](./MIGRATION_REHEARSAL_RUNBOOK.md) — operator-facing static-only runbook for rehearsal preparation and evidence capture.
 - [Staging Smoke Checklist](./STAGING_SMOKE_CHECKLIST.md) — manual smoke path for the staging / production-staged deployment branch.
+- [Staging Smoke Evidence Template](./STAGING_SMOKE_EVIDENCE_TEMPLATE.md) — fillable evidence capture template for smoke verification.
 - [Provider and Email Readiness](./PROVIDER_EMAIL_READINESS.md) — provider, email, and Stripe configuration readiness checklist without secrets.
+- [Provider and Email Evidence Template](./PROVIDER_EMAIL_EVIDENCE_TEMPLATE.md) — fillable evidence capture template for provider/email verification.
 - PR / review URL: `https://github.com/prochattools/jpv-bootcamp/pull/2`
 
 ## Current terminology
@@ -46,4 +48,4 @@ Before a client or internal roadmap update is considered clean:
 - removed paid-tier and external-integration language does not appear in active docs, source, scripts, schema, or public copy, except where a data-preserving rename migration must reference old database column names;
 - public launch page, billing automation, representative 8-week course, partner tracking, community previews, data reconciliation, and go-live approval are represented;
 - post-core work is clearly separated from first core go-live work.
-- staging smoke, migration approval, approval status, migration rehearsal, provider/email readiness, and roadmap documents stay linked from this index and the review packet.
+- staging smoke, migration approval, approval status, migration rehearsal, staging/provider evidence templates, provider/email readiness, and roadmap documents stay linked from this index and the review packet.

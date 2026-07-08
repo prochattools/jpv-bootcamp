@@ -10,6 +10,7 @@ Manual smoke checklist for `feature/course-branding-and-preview`, the staging / 
 - Date:
 - Environment URL:
 - PR / review URL: `https://github.com/prochattools/jpv-bootcamp/pull/2`
+- Evidence template: `docs/client/STAGING_SMOKE_EVIDENCE_TEMPLATE.md`
 
 ## Pass / fail fields
 
@@ -82,3 +83,7 @@ Manual smoke checklist for `feature/course-branding-and-preview`, the staging / 
 - Blocking issue summary:
 - Escalate to:
 - Follow-up ticket or doc:
+
+## Evidence capture
+
+Use `docs/client/STAGING_SMOKE_EVIDENCE_TEMPLATE.md` to record the final operator evidence after the checklist is run.

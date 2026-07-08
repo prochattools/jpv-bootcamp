@@ -4,7 +4,7 @@
 
 - Branch: `feature/course-branding-and-preview`
 - PR / review URL: `https://github.com/prochattools/jpv-bootcamp/pull/2`
-- Latest validated pre-packet commit: `587862b fix: harden checkout validation and success URL safety`
+- Latest validated pre-packet commit: `50f7966 docs: add migration rehearsal safety handoff`
 - No migrations have been applied.
 - Canonical reviewed Payload migration inventory count: `11`
 - Approval status tracker: `docs/client/MIGRATION_APPROVAL_STATUS.md`

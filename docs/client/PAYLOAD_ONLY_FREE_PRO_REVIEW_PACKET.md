@@ -5,14 +5,16 @@
 - Branch: `feature/course-branding-and-preview`
 - PR / review URL: `https://github.com/prochattools/jpv-bootcamp/pull/2`
 - Staging deployment target: this feature branch is the staging / production-staged deployment branch.
-- Latest validated pre-migration-handoff commit: `587862b fix: harden checkout validation and success URL safety`
+- Latest validated pre-migration-handoff commit: `50f7966 docs: add migration rehearsal safety handoff`
 - Push status: local branch and `origin/feature/course-branding-and-preview` are in sync.
 - Roadmap progress: `docs/client/ROADMAP_PROGRESS_STATUS.md`
 - Migration approval packet: `docs/client/MIGRATION_APPROVAL_PACKET.md`
 - Migration approval status: `docs/client/MIGRATION_APPROVAL_STATUS.md`
 - Migration rehearsal runbook: `docs/client/MIGRATION_REHEARSAL_RUNBOOK.md`
 - Staging smoke checklist: `docs/client/STAGING_SMOKE_CHECKLIST.md`
+- Staging smoke evidence template: `docs/client/STAGING_SMOKE_EVIDENCE_TEMPLATE.md`
 - Provider/email readiness: `docs/client/PROVIDER_EMAIL_READINESS.md`
+- Provider/email evidence template: `docs/client/PROVIDER_EMAIL_EVIDENCE_TEMPLATE.md`
 
 ## Scope summary
 
@@ -121,7 +123,9 @@ Expected grep exceptions:
 - Approval status: `docs/client/MIGRATION_APPROVAL_STATUS.md`
 - Rehearsal runbook: `docs/client/MIGRATION_REHEARSAL_RUNBOOK.md`
 - Manual smoke checklist: `docs/client/STAGING_SMOKE_CHECKLIST.md`
+- Smoke evidence template: `docs/client/STAGING_SMOKE_EVIDENCE_TEMPLATE.md`
 - Provider/email readiness: `docs/client/PROVIDER_EMAIL_READINESS.md`
+- Provider/email evidence template: `docs/client/PROVIDER_EMAIL_EVIDENCE_TEMPLATE.md`
 - Expected grep exceptions: see the grep summary above.
 - Migration warning: table-plan-to-Free mapping requires explicit target-environment approval before migration execution.
 - No migrations applied: confirmed.

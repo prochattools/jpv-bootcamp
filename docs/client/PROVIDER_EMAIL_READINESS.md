@@ -44,6 +44,14 @@ Repository-only checklist for provider/email readiness before any approved live 
 4. Confirm provider dry-run or queue inspection is completed before any live send approval.
 5. Confirm one controlled live-delivery verification plan exists for the target environment.
 
+## Evidence capture
+
+Use `docs/client/PROVIDER_EMAIL_EVIDENCE_TEMPLATE.md` to record the operator evidence after provider and email checks are run.
+
+## Evidence capture
+
+Use `docs/client/PROVIDER_EMAIL_EVIDENCE_TEMPLATE.md` to record the operator evidence after provider and email checks are run.
+
 ## Notification smoke list
 
 - Failed payment notification smoke

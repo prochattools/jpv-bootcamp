@@ -2,7 +2,7 @@
 
 - Current status: `BLOCKED`
 - Branch: `feature/course-branding-and-preview`
-- Latest known commit: `62867fd docs: prepare migration approval and staging smoke handoff`
+- Latest known commit: `50f7966 docs: add migration rehearsal safety handoff`
 - Migrations applied: `No`
 - Target-environment table-plan-to-Free approval: `Pending`
 - Account-column rename approval: `Pending`
