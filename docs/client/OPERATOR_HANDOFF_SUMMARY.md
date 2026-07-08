@@ -3,12 +3,14 @@
 ## Current state
 
 - Branch: `feature/course-branding-and-preview`
-- Last recorded validated baseline before this status update: `3bc8b7e docs: finalize operator handoff evidence review`
+- Last recorded validated baseline before this status update: `143a6f8 docs: add staging evidence artifact automation`
 - Branch tip verification: verify the current tip with `git log --oneline -1` before operator action
 - PR / review URL: `https://github.com/prochattools/jpv-bootcamp/pull/2`
 - Migrations applied: `No`
 - Staging deployment target: this feature branch
 - Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`
+- Evidence artifact generator: `pnpm evidence:create`
+- Evidence artifact validator: `pnpm evidence:validate`
 
 ## What is complete
 
@@ -41,12 +43,13 @@
 1. Review `docs/client/MIGRATION_APPROVAL_PACKET.md`.
 2. Update `docs/client/MIGRATION_APPROVAL_STATUS.md` only after real approval.
 3. Review `docs/client/STATUS_UPDATE_PROCEDURE.md` before changing any roadmap percentages.
-4. **Optional:** Run `npx tsx scripts/create_staging_evidence_artifacts.ts` to generate draft evidence templates.
+4. **Optional:** Run `pnpm evidence:create` to generate draft evidence templates.
 5. **During staging smoke:** Complete `docs/client/STAGING_SMOKE_EVIDENCE_TEMPLATE.md` in `docs/client/evidence/`.
 6. **During provider/email checks:** Complete `docs/client/PROVIDER_EMAIL_EVIDENCE_TEMPLATE.md` in `docs/client/evidence/`.
-7. **Before closing out:** Run `npx tsx scripts/validate_staging_evidence_artifacts.ts` to validate completed evidence for safety and consistency.
-8. Do not apply migrations until approval is complete.
-9. Do not touch `main`.
+7. **Before closing out:** Run `pnpm evidence:validate` to validate completed evidence for safety and consistency.
+8. Do not commit unfilled draft evidence files unless explicitly desired.
+9. Do not apply migrations until approval is complete.
+10. Do not touch `main`.
 
 ## Hard stops
 

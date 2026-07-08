@@ -31,7 +31,7 @@ Payload-only Free/Pro refit is committed, pushed, clean, validated, staging-hard
 Target-environment approval for table-plan-to-Free mapping is still required before migration rehearsal or execution.
 
 **NEXT EXECUTABLE TASK:**
-Human/operator runs `scripts/create_staging_evidence_artifacts.ts` to generate draft evidence templates, then captures actual staging smoke and provider/email evidence without applying migrations. Validates completed evidence with `scripts/validate_staging_evidence_artifacts.ts` before closing out operator pass.
+Operator runs `pnpm evidence:create`, completes approval/staging/provider evidence manually, then validates it with `pnpm evidence:validate` without applying migrations.
 
 **DO NOT:**
 Do not apply migrations. Do not touch `main`.
@@ -44,7 +44,7 @@ Do not apply migrations. Do not touch `main`.
 | --- | --- |
 | Branch | `feature/course-branding-and-preview` |
 | Staging deployment target | This feature branch is the staging / production-staged deployment branch |
-| Last recorded validated baseline before this status update | `3bc8b7e docs: finalize operator handoff evidence review` |
+| Last recorded validated baseline before this status update | `143a6f8 docs: add staging evidence artifact automation` |
 | Branch tip verification | Verify the current branch tip with `git log --oneline -1` before operator action |
 | PR / review URL | `https://github.com/prochattools/jpv-bootcamp/pull/2` |
 | Migrations applied | None |
@@ -62,8 +62,8 @@ Basis: v3.3 baseline set in `docs/PAYLOAD_INTEGRATION_PLAN.md` (expanded-platfor
 | Overall expanded platform | ~58% | ~72% | +14% | Free/Pro refit committed/pushed/clean; legacy paths removed; billing hardening; focused validation passed; migration approval/status/runbook/evidence docs, status-update procedure, evidence automation (local-only generator and validator), and evidence output folder added; Prisma and tsc validated | Live cutover unapproved; migrations unapplied; production content incomplete; provider email live verification pending |
 | Core staging readiness | ~68% | ~95% | +27% | Branch pushed, clean, validated, hardened; shadow sync fixed; sponsored access corrected; docs hardened; approval packet, approval status, rehearsal runbook, operator handoff, evidence review, evidence templates, smoke checklist, provider/email readiness checklist, status procedure, and evidence automation prepared | Migration approval; post-refit staging smoke; provider email live verification |
 | Build foundation | ~78% | ~88% | +10% | Payload-only refit; legacy code deleted; `server-only@0.0.1` added; type-check clean; Prisma schemas valid; SVG assets validated; checkout helper extraction and same-origin return URL guard added | Migration approval and rehearsal |
-| Testing / release readiness | ~70% | ~91% | +21% | Focused checkout validation, migration static coverage, and status-doc consistency coverage added; approval-status, rehearsal, evidence, operator handoff, evidence-review, and evidence-automation safety tests added; billing, entitlement, course access, shadow sync, sponsored claim/decision helpers covered | Batch-runner timing artifact (tests pass individually); migration rehearsal not executed |
-| Migration readiness | ~25% | ~52% | +27% | Migration sources written and reviewed; inventory unified to 11 in policy/manifest/preflight; approval packet, approval status, runbook, operator handoff, evidence review, evidence templates, status procedure, evidence automation, and safety tests prepared; table-plan-to-Free migration static checks expanded | table-plan-to-Free approval required; no migrations applied; approved apply path not yet executed |
+| Testing / release readiness | ~70% | ~92% | +22% | Focused checkout validation, migration static coverage, status-doc consistency coverage, and evidence-package safety tests added; approval-status, rehearsal, evidence, operator handoff, evidence-review, and evidence-automation safety tests added; billing, entitlement, course access, shadow sync, sponsored claim/decision helpers covered | Batch-runner timing artifact (tests pass individually); migration rehearsal not executed |
+| Migration readiness | ~25% | ~53% | +28% | Migration sources written and reviewed; inventory unified to 11 in policy/manifest/preflight; approval packet, approval status, runbook, operator handoff, evidence review, evidence templates, status procedure, evidence automation, and safety tests prepared; table-plan-to-Free migration static checks expanded | table-plan-to-Free approval required; no migrations applied; approved apply path not yet executed |
 | Live cutover readiness | ~12% | ~20% | +8% | Code is staging-ready and validated; migration sources, staging smoke checklist, evidence templates, operator handoff, evidence review checklist, status procedure, and evidence automation are prepared; provider/email readiness checklist and evidence template are prepared | Migrations unapplied; target-environment approval pending; provider email live verification pending; course content incomplete |
 
 ---

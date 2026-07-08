@@ -17,7 +17,7 @@ Before updating any status text:
 5. Migrations applied remains `No` unless a separate approved migration record exists.
 6. Verify the latest recorded operator evidence or handoff note is still current.
 
-Latest verified branch tip before this procedure was written: `3bc8b7e docs: finalize operator handoff evidence review`.
+Latest verified branch tip before this procedure was written: `143a6f8 docs: add staging evidence artifact automation`.
 
 Do not treat this document's commit reference as approval to run migrations. Always verify the branch tip directly before operator action.
 
@@ -45,9 +45,11 @@ Before publishing a status update, verify these links are present and correct:
 - `docs/client/STAGING_SMOKE_EVIDENCE_TEMPLATE.md`
 - `docs/client/PROVIDER_EMAIL_READINESS.md`
 - `docs/client/PROVIDER_EMAIL_EVIDENCE_TEMPLATE.md`
-- `scripts/create_staging_evidence_artifacts.ts` (local-only generator)
-- `scripts/validate_staging_evidence_artifacts.ts` (local-only validator)
-- `docs/client/evidence/` (evidence output folder)
+- `scripts/create_staging_evidence_artifacts.ts`
+- `scripts/validate_staging_evidence_artifacts.ts`
+- `docs/client/evidence/`
+- `pnpm evidence:create` (local-only draft generator)
+- `pnpm evidence:validate` (local-only validator)
 
 Also keep the review packet and README index aligned:
 
@@ -74,6 +76,8 @@ Run the focused static docs tests that cover the current handoff and evidence se
 ./node_modules/.bin/tsx scripts/staging_evidence_static.test.ts
 ./node_modules/.bin/tsx scripts/operator_handoff_static.test.ts
 ./node_modules/.bin/tsx scripts/status_docs_consistency.test.ts
+./node_modules/.bin/tsx scripts/evidence_artifact_automation.test.ts
+./node_modules/.bin/tsx scripts/evidence_package_scripts.test.ts
 ./node_modules/.bin/tsx scripts/billing_readiness_report.test.ts
 ./node_modules/.bin/tsx scripts/member_checkout.test.ts
 ```

@@ -8,7 +8,7 @@
 - Staging deployment target: this feature branch is the staging / production-staged deployment branch.
 - Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`
 - Latest validated pre-migration-handoff commit: `50f7966 docs: add migration rehearsal safety handoff`
-- Latest verified branch tip before this pass: `3bc8b7e docs: finalize operator handoff evidence review`
+- Latest verified branch tip before this pass: `143a6f8 docs: add staging evidence artifact automation`
 - Verify the current branch tip with `git log --oneline -1` before operator action.
 - Push status: local branch and `origin/feature/course-branding-and-preview` are in sync.
 - Roadmap progress: `docs/client/ROADMAP_PROGRESS_STATUS.md`

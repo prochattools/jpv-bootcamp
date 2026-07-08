@@ -15,6 +15,22 @@ const EVIDENCE_DIR = 'docs/client/evidence'
 const STAGING_SMOKE_TEMPLATE = 'docs/client/STAGING_SMOKE_EVIDENCE_TEMPLATE.md'
 const PROVIDER_EMAIL_TEMPLATE = 'docs/client/PROVIDER_EMAIL_EVIDENCE_TEMPLATE.md'
 
+function showHelp() {
+  console.log(`Usage: pnpm evidence:create
+   or: tsx scripts/create_staging_evidence_artifacts.ts
+
+Generate local DRAFT evidence files for operator use.
+
+This command is local-only:
+- no migrations are applied
+- no database access occurs
+- no network access occurs
+- no .env files are read
+- generated drafts do not prove checks passed
+- operator must fill evidence manually during actual staging smoke/provider checks
+`)
+}
+
 const DRAFT_HEADER = `<!-- DRAFT ONLY -->
 <!-- This file is a template draft and does not represent actual evidence. -->
 <!-- Operator must fill in results manually during actual staging smoke and provider checks. -->
@@ -59,6 +75,11 @@ function createDraftFile(templatePath: string, outputFileName: string): boolean 
 }
 
 function main() {
+  if (process.argv.includes('--help') || process.argv.includes('-h')) {
+    showHelp()
+    process.exit(0)
+  }
+
   ensureDir()
 
   if (!validateTemplates()) {

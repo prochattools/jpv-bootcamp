@@ -2,8 +2,9 @@
 
 Use this checklist after an operator fills the evidence templates in `docs/client/evidence/`.
 
-Generated evidence files can be created with `npx tsx scripts/create_staging_evidence_artifacts.ts` (local-only, no migrations applied).
-Completed evidence can be validated with `npx tsx scripts/validate_staging_evidence_artifacts.ts` (local-only, checks for secrets and consistency).
+Generated evidence files can be created with `pnpm evidence:create` or `tsx scripts/create_staging_evidence_artifacts.ts` (local-only, no migrations applied, no DB access, no network access).
+Completed evidence can be validated with `pnpm evidence:validate` or `tsx scripts/validate_staging_evidence_artifacts.ts` (local-only, checks for secrets and consistency).
+Generated drafts do not prove checks passed.
 
 ## Review checks
 
@@ -20,6 +21,8 @@ Completed evidence can be validated with `npx tsx scripts/validate_staging_evide
 - [ ] Old WordPress, Fluent, and portal-path checks were recorded
 - [ ] Free vs Pro access evidence was recorded
 - [ ] Reviewer signoff exists
+- [ ] Unfilled draft evidence files are not being committed
+- [ ] No secrets were pasted into evidence files
 
 ## Hard stop
 

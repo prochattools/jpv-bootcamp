@@ -14,6 +14,23 @@ import * as path from 'path'
 const EVIDENCE_DIR = 'docs/client/evidence'
 const EXPECTED_BRANCH = 'feature/course-branding-and-preview'
 
+function showHelp() {
+  console.log(`Usage: pnpm evidence:validate
+   or: tsx scripts/validate_staging_evidence_artifacts.ts
+
+Validate local evidence files for safety and consistency.
+
+This command is local-only:
+- no migrations are applied
+- no database access occurs
+- no network access occurs
+- no .env files are read
+- empty evidence folder is accepted
+- generated drafts do not prove checks passed
+- operator must fill evidence manually during actual staging smoke/provider checks
+`)
+}
+
 // Secret patterns to reject
 const SECRET_PATTERNS = [
   /sk_live_/i,
@@ -27,6 +44,8 @@ const SECRET_PATTERNS = [
   /BEGIN PRIVATE KEY/,
   /BEGIN RSA PRIVATE KEY/,
 ]
+
+const PASS_CLAIM_PATTERNS = [/checks passed/i, /validation passed/i]
 
 interface ValidationResult {
   valid: boolean
@@ -92,6 +111,15 @@ function validateEvidenceFile(filePath: string): ValidationResult {
       result.valid = false
     }
 
+    for (const pattern of PASS_CLAIM_PATTERNS) {
+      if (pattern.test(content)) {
+        result.errors.push(
+          `${fileName}: Evidence file must not claim checks passed (${pattern.source})`
+        )
+        result.valid = false
+      }
+    }
+
     // Check for required fields (operator, date, environment)
     const hasOperator = /operator\s*:/i.test(content)
     const hasDate = /date|time/i.test(content)
@@ -133,6 +161,11 @@ function validateEvidenceFile(filePath: string): ValidationResult {
 }
 
 function main() {
+  if (process.argv.includes('--help') || process.argv.includes('-h')) {
+    showHelp()
+    process.exit(0)
+  }
+
   console.log(`\nValidating staging evidence artifacts in: ${EVIDENCE_DIR}`)
 
   if (!fs.existsSync(EVIDENCE_DIR)) {
