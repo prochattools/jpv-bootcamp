@@ -13,6 +13,7 @@
 - Static preflight: `pnpm staging:static-preflight`
 - Evidence artifact generator: `pnpm evidence:create`
 - Evidence artifact validator: `pnpm evidence:validate`
+- Draft evidence `.md` files under `docs/client/evidence/` are local operator artifacts and must not be committed unless explicitly approved.
 
 ## What is complete
 
@@ -30,6 +31,7 @@
 - Static safety tests
 - Evidence artifact automation (local-only generator and validator)
 - Static preflight automation
+- Committed-evidence guard
 - Evidence output folder ready
 
 ## What is blocked
@@ -51,7 +53,7 @@
 6. **During staging smoke:** Complete `docs/client/STAGING_SMOKE_EVIDENCE_TEMPLATE.md` in `docs/client/evidence/`.
 7. **During provider/email checks:** Complete `docs/client/PROVIDER_EMAIL_EVIDENCE_TEMPLATE.md` in `docs/client/evidence/`.
 8. **Before closing out:** Run `pnpm evidence:validate` to validate completed evidence for safety and consistency.
-9. Do not commit unfilled draft evidence files unless explicitly desired.
+9. Do not commit unfilled draft evidence files unless explicitly approved.
 10. Do not apply migrations until approval is complete.
 11. Do not touch `main`.
 

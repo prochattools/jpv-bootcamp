@@ -25,7 +25,7 @@ Cross-links:
 ## Current Position
 
 **CURRENT POSITION:**
-Payload-only Free/Pro refit is committed, pushed, clean, validated, staging-hardened, and now has migration approval, approval-status, rehearsal-runbook, operator handoff, evidence-review, evidence-template, status-update-procedure, evidence-automation (local-only generator and validator), static-preflight automation, and pinned toolchain preflight automation prepared on `feature/course-branding-and-preview`.
+Payload-only Free/Pro refit is committed, pushed, clean, validated, staging-hardened, and now has migration approval, approval-status, rehearsal-runbook, operator handoff, evidence-review, evidence-template, status-update-procedure, evidence-automation (local-only generator and validator), static-preflight automation, pinned toolchain preflight automation, and committed-evidence guard automation prepared on `feature/course-branding-and-preview`.
 
 **NEXT BLOCKER:**
 Target-environment approval for table-plan-to-Free mapping is still required before migration rehearsal or execution.
@@ -60,10 +60,10 @@ Basis: v3.3 baseline set in `docs/PAYLOAD_INTEGRATION_PLAN.md` (expanded-platfor
 | Area / Phase | Previous | Current | Delta | Evidence | Remaining blocker |
 | --- | ---: | ---: | ---: | --- | --- |
 | Overall expanded platform | ~58% | ~73% | +15% | Free/Pro refit committed/pushed/clean; legacy paths removed; billing hardening; focused validation passed; migration approval/status/runbook/evidence docs, status-update procedure, evidence automation (local-only generator and validator), static-preflight automation, and evidence output folder added; Prisma and tsc validated | Live cutover unapproved; migrations unapplied; production content incomplete; provider email live verification pending |
-| Core staging readiness | ~68% | ~96% | +28% | Branch pushed, clean, validated, hardened; shadow sync fixed; sponsored access corrected; docs hardened; approval packet, approval status, rehearsal runbook, operator handoff, evidence review, evidence templates, smoke checklist, provider/email readiness checklist, status procedure, evidence automation, and static-preflight automation prepared | Migration approval; post-refit staging smoke; provider email live verification |
+| Core staging readiness | ~68% | ~97% | +29% | Branch pushed, clean, validated, hardened; shadow sync fixed; sponsored access corrected; docs hardened; approval packet, approval status, rehearsal runbook, operator handoff, evidence review, evidence templates, smoke checklist, provider/email readiness checklist, status procedure, evidence automation, static-preflight automation, pinned toolchain preflight, and committed-evidence guard prepared | Migration approval; post-refit staging smoke; provider email live verification |
 | Build foundation | ~78% | ~89% | +11% | Payload-only refit; legacy code deleted; `server-only@0.0.1` added; type-check clean; Prisma schemas valid; SVG assets validated; checkout helper extraction and same-origin return URL guard added; pinned toolchain preflight added and validated | Migration approval and rehearsal |
-| Testing / release readiness | ~70% | ~93% | +23% | Focused checkout validation, migration static coverage, status-doc consistency coverage, evidence-package safety tests, and static-preflight package guard tests added; approval-status, rehearsal, evidence, operator handoff, evidence-review, evidence-automation, and static-preflight safety tests added; billing, entitlement, course access, shadow sync, sponsored claim/decision helpers covered | Batch-runner timing artifact (tests pass individually); migration rehearsal not executed |
-| Migration readiness | ~25% | ~54% | +29% | Migration sources written and reviewed; inventory unified to 11 in policy/manifest/preflight; approval packet, approval status, runbook, operator handoff, evidence review, evidence templates, status procedure, evidence automation, static-preflight, and safety tests prepared; table-plan-to-Free migration static checks expanded | table-plan-to-Free approval required; no migrations applied; approved apply path not yet executed |
+| Testing / release readiness | ~70% | ~94% | +24% | Focused checkout validation, migration static coverage, status-doc consistency coverage, evidence-package safety tests, committed-evidence guard tests, and static-preflight package guard tests added; approval-status, rehearsal, evidence, operator handoff, evidence-review, evidence-automation, and static-preflight safety tests added; billing, entitlement, course access, shadow sync, sponsored claim/decision helpers covered | Batch-runner timing artifact (tests pass individually); migration rehearsal not executed |
+| Migration readiness | ~25% | ~55% | +30% | Migration sources written and reviewed; inventory unified to 11 in policy/manifest/preflight; approval packet, approval status, runbook, operator handoff, evidence review, evidence templates, status procedure, evidence automation, static-preflight, committed-evidence guard, and safety tests prepared; table-plan-to-Free migration static checks expanded | table-plan-to-Free approval required; no migrations applied; approved apply path not yet executed |
 | Live cutover readiness | ~12% | ~20% | +8% | Code is staging-ready and validated; migration sources, staging smoke checklist, evidence templates, operator handoff, evidence review checklist, status procedure, and evidence automation are prepared; provider/email readiness checklist and evidence template are prepared | Migrations unapplied; target-environment approval pending; provider email live verification pending; course content incomplete |
 
 ---
@@ -90,6 +90,7 @@ git diff --check
 ./node_modules/.bin/tsx scripts/payload_course_stripe_shadow_sync.test.ts
 ./node_modules/.bin/tsx scripts/payload_entitlement_evaluator.test.ts
 ./node_modules/.bin/tsx scripts/payload_course_access_service.test.ts
+./node_modules/.bin/tsx scripts/committed_evidence_guard.test.ts
 ./node_modules/.bin/tsx scripts/staging_static_preflight_package.test.ts
 ./node_modules/.bin/tsx scripts/tests/sponsored_claim_helpers.ts
 ./node_modules/.bin/tsx scripts/tests/sponsored_decision_helpers.ts
@@ -109,6 +110,7 @@ Expected and allowed exceptions only:
 - `pnpm-lock.yaml` can match `libvips` package names and integrity hashes (Sharp dependency — not project integration references).
 - Review packet, roadmap, approval packet, approval status, rehearsal runbook, operator handoff, evidence review, evidence templates, and staging/provider checklists may mention removed integration/product names only to state they must not remain as active paths.
 - `pnpm staging:static-preflight` is a local-only validation bundle and must not be read as operator approval or evidence of manual smoke completion.
+- Draft evidence `.md` files under `docs/client/evidence/` are local operator artifacts and must not be committed unless explicitly approved.
 
 Zero active residue confirmed.
 

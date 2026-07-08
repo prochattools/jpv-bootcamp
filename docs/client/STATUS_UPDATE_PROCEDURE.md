@@ -46,7 +46,7 @@ Before publishing a status update, verify these links are present and correct:
 - `docs/client/STAGING_SMOKE_EVIDENCE_TEMPLATE.md`
 - `docs/client/PROVIDER_EMAIL_READINESS.md`
 - `docs/client/PROVIDER_EMAIL_EVIDENCE_TEMPLATE.md`
-- `pnpm staging:static-preflight` (local-only static preflight; no migrations, no DB access, no live network checks)
+- `pnpm staging:static-preflight` (local-only static preflight; no migrations, no DB access, no live network checks, includes committed-evidence guard)
 - `pnpm toolchain:check` (local-only toolchain preflight; no migrations, no DB access, no live network checks)
 - `scripts/create_staging_evidence_artifacts.ts`
 - `scripts/validate_staging_evidence_artifacts.ts`
@@ -92,6 +92,7 @@ Run the focused static docs tests that cover the current handoff and evidence se
 - Do not apply migrations.
 - Do not run DB-mutating commands.
 - Do not paste secrets into docs or evidence.
+- Do not commit unfilled draft evidence files unless explicitly approved.
 - Do not claim staging smoke, provider/email, or live cutover are done unless the operator evidence files are actually completed.
 - Do not increase migration readiness or live cutover readiness beyond the evidence that exists.
 - Do not claim `pnpm staging:static-preflight` proves operator approval, staging smoke, or provider/email verification.
@@ -105,6 +106,7 @@ Use wording that stays valid after future documentation-only commits:
 
 - `Current branch tip must be verified with git log --oneline -1 before operator action.`
 - `Run pnpm staging:static-preflight, then operator completes approval, staging smoke, and provider/email evidence without applying migrations.`
+- `Draft evidence .md files under docs/client/evidence/ are local operator artifacts and must not be committed unless explicitly approved.`
 - `Last recorded validated baseline before this status update: <commit>`
 - `No migrations have been applied.`
 

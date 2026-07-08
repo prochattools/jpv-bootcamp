@@ -3,8 +3,8 @@
 Use this checklist after an operator fills the evidence templates in `docs/client/evidence/`.
 
 Run `pnpm toolchain:check` before manual staging smoke or evidence capture if your shell pnpm version is not already pinned to `pnpm@10.33.0`.
-Run `pnpm staging:static-preflight` before manual staging smoke or evidence capture. It performs local-only checks, does not apply migrations, does not run live network checks, and does not prove operator approval.
-Generated evidence files can be created with `pnpm evidence:create` or `tsx scripts/create_staging_evidence_artifacts.ts` (optional, local-only, no migrations applied, no DB access, no network access).
+Run `pnpm staging:static-preflight` before manual staging smoke or evidence capture. It performs local-only checks, includes a committed-evidence guard, does not apply migrations, does not run live network checks, and does not prove operator approval.
+Generated evidence files can be created with `pnpm evidence:create` or `tsx scripts/create_staging_evidence_artifacts.ts` (optional, local-only, no migrations applied, no DB access, no network access). Draft evidence `.md` files under `docs/client/evidence/` are local operator artifacts and must not be committed unless explicitly approved. `pnpm evidence:create` is separate from static preflight.
 Completed evidence can be validated with `pnpm evidence:validate` or `tsx scripts/validate_staging_evidence_artifacts.ts` (local-only, checks for secrets and consistency).
 Generated drafts do not prove checks passed.
 
@@ -22,6 +22,7 @@ Generated drafts do not prove checks passed.
 - [ ] Blockers are listed with owners
 - [ ] Provider/email mode is recorded
 - [ ] `pnpm staging:static-preflight` was run before manual staging smoke or evidence capture
+- [ ] Draft evidence `.md` files were not committed unless explicitly approved
 - [ ] Old WordPress, Fluent, and portal-path checks were recorded
 - [ ] Free vs Pro access evidence was recorded
 - [ ] Reviewer signoff exists

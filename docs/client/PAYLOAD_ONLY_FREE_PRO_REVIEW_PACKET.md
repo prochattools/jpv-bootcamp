@@ -24,6 +24,7 @@
 - Provider/email evidence template: `docs/client/PROVIDER_EMAIL_EVIDENCE_TEMPLATE.md`
 - Static preflight: `pnpm staging:static-preflight`
 - `pnpm staging:static-preflight` now starts with the local toolchain check and remains local-only.
+- Draft evidence `.md` files under `docs/client/evidence/` are local operator artifacts and must not be committed unless explicitly approved.
 
 ## Scope summary
 
@@ -123,6 +124,7 @@ Expected grep exceptions:
 - This review packet mentions removed integration/product names only to state that they must not remain as active paths.
 - `pnpm staging:static-preflight` is a local-only validation bundle and does not generate or validate operator approval evidence.
 - `pnpm toolchain:check` is local-only, does not apply migrations, does not touch the database, and does not run live network checks.
+- `pnpm evidence:create` is separate from static preflight and produces local draft evidence only.
 
 ## Staging handoff
 

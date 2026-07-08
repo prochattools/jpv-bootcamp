@@ -36,10 +36,10 @@ Local-only helper scripts for creating and validating evidence draft files:
 - `pnpm evidence:create` — generates draft evidence files locally.
 - `pnpm evidence:validate` — validates evidence files locally.
 - `pnpm toolchain:check` — verifies the pinned local toolchain before operator preflight.
-- `pnpm staging:static-preflight` — runs the approved local-only static preflight checks, starting with the toolchain check, before manual staging smoke and evidence capture.
+- `pnpm staging:static-preflight` — runs the approved local-only static preflight checks, starting with the toolchain check and including a committed-evidence guard, before manual staging smoke and evidence capture.
 - [Evidence folder](./evidence/) — stores completed evidence artifacts after operator verification. `.gitkeep` placeholder indicates folder is ready but evidence may not exist yet.
 
-**Important:** Generated draft files do not prove any checks passed. Operator must complete evidence during actual staging/provider verification. No migrations are applied by these scripts.
+**Important:** Generated draft files do not prove any checks passed. Draft evidence `.md` files under `docs/client/evidence/` are local operator artifacts and must not be committed unless explicitly approved. `pnpm evidence:create` is separate from static preflight. Operator must complete evidence during actual staging/provider verification. No migrations are applied by these scripts.
 - PR / review URL: `https://github.com/prochattools/jpv-bootcamp/pull/2`
 
 ## Current terminology
