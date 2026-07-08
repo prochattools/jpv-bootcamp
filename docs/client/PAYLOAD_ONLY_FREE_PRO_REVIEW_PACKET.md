@@ -11,6 +11,7 @@
 - Latest verified branch tip before this pass: `143a6f8 docs: add staging evidence artifact automation`
 - Verify the current branch tip with `git log --oneline -1` before operator action.
 - Push status: local branch and `origin/feature/course-branding-and-preview` are in sync.
+- Toolchain check: `pnpm toolchain:check`
 - Roadmap progress: `docs/client/ROADMAP_PROGRESS_STATUS.md`
 - Migration approval packet: `docs/client/MIGRATION_APPROVAL_PACKET.md`
 - Migration approval status: `docs/client/MIGRATION_APPROVAL_STATUS.md`
@@ -22,6 +23,7 @@
 - Provider/email readiness: `docs/client/PROVIDER_EMAIL_READINESS.md`
 - Provider/email evidence template: `docs/client/PROVIDER_EMAIL_EVIDENCE_TEMPLATE.md`
 - Static preflight: `pnpm staging:static-preflight`
+- `pnpm staging:static-preflight` now starts with the local toolchain check and remains local-only.
 
 ## Scope summary
 
@@ -120,6 +122,7 @@ Expected grep exceptions:
 - `pnpm-lock.yaml` can match `libvips` package names and integrity hashes. Those are Sharp dependency names or checksum text, not project integration references.
 - This review packet mentions removed integration/product names only to state that they must not remain as active paths.
 - `pnpm staging:static-preflight` is a local-only validation bundle and does not generate or validate operator approval evidence.
+- `pnpm toolchain:check` is local-only, does not apply migrations, does not touch the database, and does not run live network checks.
 
 ## Staging handoff
 

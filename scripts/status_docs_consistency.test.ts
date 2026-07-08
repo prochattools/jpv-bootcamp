@@ -60,6 +60,7 @@ async function main(): Promise<void> {
   assert.match(docs.statusProcedure, /docs\/client\/STAGING_SMOKE_EVIDENCE_TEMPLATE\.md/)
   assert.match(docs.statusProcedure, /docs\/client\/PROVIDER_EMAIL_READINESS\.md/)
   assert.match(docs.statusProcedure, /docs\/client\/PROVIDER_EMAIL_EVIDENCE_TEMPLATE\.md/)
+  assert.match(docs.statusProcedure, /pnpm toolchain:check/)
 
   assert.match(docs.roadmap, /Status update procedure: `docs\/client\/STATUS_UPDATE_PROCEDURE\.md`/)
   assert.match(docs.roadmap, /feature\/course-branding-and-preview/)
@@ -71,16 +72,17 @@ async function main(): Promise<void> {
   assert.match(docs.roadmap, /post-refit staging smoke/i)
   assert.match(docs.roadmap, /~73%/)
   assert.match(docs.roadmap, /~96%/)
-  assert.match(docs.roadmap, /~88%/)
+  assert.match(docs.roadmap, /~89%/)
   assert.match(docs.roadmap, /~93%/)
   assert.match(docs.roadmap, /~54%/)
   assert.match(docs.roadmap, /~20%/)
   assert.match(docs.roadmap, /Verify the current branch tip with `git log --oneline -1` before operator action/)
-  assert.match(docs.roadmap, /Run `pnpm staging:static-preflight`, then operator completes approval, staging smoke, and provider\/email evidence without applying migrations\./)
+  assert.match(docs.roadmap, /Run `pnpm toolchain:check` and then `pnpm staging:static-preflight`, then operator completes approval, staging smoke, and provider\/email evidence without applying migrations\./)
 
   assert.match(docs.operatorHandoff, /Last recorded validated baseline before this status update: `143a6f8 docs: add staging evidence artifact automation`/)
   assert.match(docs.operatorHandoff, /Branch tip verification: verify the current tip with `git log --oneline -1` before operator action/)
   assert.match(docs.operatorHandoff, /Status update procedure: `docs\/client\/STATUS_UPDATE_PROCEDURE\.md`/)
+  assert.match(docs.operatorHandoff, /Toolchain check: `pnpm toolchain:check`/)
   assert.match(docs.operatorHandoff, /Static preflight: `pnpm staging:static-preflight`/)
   assert.match(docs.operatorHandoff, /Migrations applied: `No`/)
   assert.match(docs.operatorHandoff, /No `main` branch work\./)
@@ -88,6 +90,7 @@ async function main(): Promise<void> {
   assert.match(docs.reviewPacket, /Latest verified branch tip before this pass: `143a6f8 docs: add staging evidence artifact automation`/)
   assert.match(docs.reviewPacket, /Verify the current branch tip with `git log --oneline -1` before operator action\./)
   assert.match(docs.reviewPacket, /Status update procedure: `docs\/client\/STATUS_UPDATE_PROCEDURE\.md`/)
+  assert.match(docs.reviewPacket, /Toolchain check: `pnpm toolchain:check`/)
   assert.match(docs.reviewPacket, /Static preflight: `pnpm staging:static-preflight`/)
   assert.match(docs.reviewPacket, /Do not touch `main`/)
   assert.match(docs.reviewPacket, /No migrations have been applied\./)
@@ -140,6 +143,7 @@ async function main(): Promise<void> {
 
   assert.match(docs.readme, /Status Update Procedure/)
   assert.match(docs.readme, /roadmap documents stay linked from this index and the review packet/)
+  assert.match(docs.readme, /pnpm toolchain:check/)
   assert.match(docs.readme, /`pnpm staging:static-preflight`/)
 
   assert.match(docs.integrationPlan, /feature\/course-branding-and-preview/)

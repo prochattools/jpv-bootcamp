@@ -9,6 +9,7 @@
 - Migrations applied: `No`
 - Staging deployment target: this feature branch
 - Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`
+- Toolchain check: `pnpm toolchain:check`
 - Static preflight: `pnpm staging:static-preflight`
 - Evidence artifact generator: `pnpm evidence:create`
 - Evidence artifact validator: `pnpm evidence:validate`
@@ -45,7 +46,7 @@
 1. Review `docs/client/MIGRATION_APPROVAL_PACKET.md`.
 2. Update `docs/client/MIGRATION_APPROVAL_STATUS.md` only after real approval.
 3. Review `docs/client/STATUS_UPDATE_PROCEDURE.md` before changing any roadmap percentages.
-4. Run `pnpm staging:static-preflight` before manual staging smoke or evidence capture.
+4. Run `pnpm toolchain:check` and `pnpm staging:static-preflight` before manual staging smoke or evidence capture when the shell pnpm version is not already pinned.
 5. **Optional:** Run `pnpm evidence:create` to generate draft evidence templates.
 6. **During staging smoke:** Complete `docs/client/STAGING_SMOKE_EVIDENCE_TEMPLATE.md` in `docs/client/evidence/`.
 7. **During provider/email checks:** Complete `docs/client/PROVIDER_EMAIL_EVIDENCE_TEMPLATE.md` in `docs/client/evidence/`.
@@ -58,5 +59,7 @@
 
 - No migrations without written target-environment approval.
 - No DB-mutating commands from this handoff.
+- No migrations are applied by toolchain or static preflight.
+- No live network checks are run by toolchain or static preflight.
 - No secrets in docs or evidence.
 - No `main` branch work.

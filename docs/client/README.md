@@ -9,6 +9,7 @@ This folder tracks client-facing documents so internal roadmap documentation sta
 It supersedes the older Version 2.40 plan for product scope, terminology, progress framing, and launch expectations.
 
 Current deployment branch: `feature/course-branding-and-preview`.
+Local toolchain is pinned to `pnpm@10.33.0`; run `pnpm toolchain:check` before operator preflight if your shell pnpm version is not already aligned.
 
 ## Review packet
 
@@ -31,9 +32,11 @@ Local-only helper scripts for creating and validating evidence draft files:
 
 - [`scripts/create_staging_evidence_artifacts.ts`](../../scripts/create_staging_evidence_artifacts.ts) — generates DRAFT evidence templates under [`evidence/`](./evidence/) without applying migrations or touching secrets. Operator fills evidence manually during actual staging smoke and provider checks.
 - [`scripts/validate_staging_evidence_artifacts.ts`](../../scripts/validate_staging_evidence_artifacts.ts) — validates evidence files for safety, secret-leakage, and branch consistency. Does not connect to database or network.
+- [`scripts/toolchain_preflight.ts`](../../scripts/toolchain_preflight.ts) — static local check for the pinned pnpm and Node toolchain; prints the Corepack and fallback commands but does not apply migrations, touch the database, or run network checks.
 - `pnpm evidence:create` — generates draft evidence files locally.
 - `pnpm evidence:validate` — validates evidence files locally.
-- `pnpm staging:static-preflight` — runs the approved local-only static preflight checks before manual staging smoke and evidence capture.
+- `pnpm toolchain:check` — verifies the pinned local toolchain before operator preflight.
+- `pnpm staging:static-preflight` — runs the approved local-only static preflight checks, starting with the toolchain check, before manual staging smoke and evidence capture.
 - [Evidence folder](./evidence/) — stores completed evidence artifacts after operator verification. `.gitkeep` placeholder indicates folder is ready but evidence may not exist yet.
 
 **Important:** Generated draft files do not prove any checks passed. Operator must complete evidence during actual staging/provider verification. No migrations are applied by these scripts.
