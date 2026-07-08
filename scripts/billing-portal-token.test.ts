@@ -36,7 +36,7 @@ const secret = 'test-secret'
 run('verifies a valid token', () => {
 	const payload = {
 		email: 'user@example.com',
-		returnUrl: 'https://portal.jpvbootcamp.com/community/',
+		returnUrl: 'https://jpvbootcamp.com/portal',
 		iat: now,
 		exp: now + 300,
 		nonce: 'abc123',
@@ -52,7 +52,7 @@ run('verifies a valid token', () => {
 run('rejects a token with a bad signature', () => {
 	const payload = {
 		email: 'user@example.com',
-		returnUrl: 'https://portal.jpvbootcamp.com/community/',
+		returnUrl: 'https://jpvbootcamp.com/portal',
 		iat: now,
 		exp: now + 300,
 		nonce: 'abc123',
@@ -68,7 +68,7 @@ run('rejects a token with a bad signature', () => {
 run('rejects an expired token', () => {
 	const payload = {
 		email: 'user@example.com',
-		returnUrl: 'https://portal.jpvbootcamp.com/community/',
+		returnUrl: 'https://jpvbootcamp.com/portal',
 		iat: now - 400,
 		exp: now - 10,
 		nonce: 'abc123',
@@ -84,7 +84,7 @@ run('rejects an expired token', () => {
 run('rejects a tampered payload', () => {
 	const payload = {
 		email: 'user@example.com',
-		returnUrl: 'https://portal.jpvbootcamp.com/community/',
+		returnUrl: 'https://jpvbootcamp.com/portal',
 		iat: now,
 		exp: now + 300,
 		nonce: 'abc123',
