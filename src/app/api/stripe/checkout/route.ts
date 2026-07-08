@@ -1,33 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getStripeConfig, type StripeConfig } from '@/lib/config'
+import { getStripeConfig } from '@/lib/config'
 import { verifyBillingPortalToken } from '@/lib/billing-portal-token'
+import {
+	buildSameOriginReturnUrl,
+	getCheckoutPriceId,
+	parseCheckoutPlan,
+	resolveCheckoutBilling,
+} from '@/lib/stripe-checkout-config'
 import { getStripe } from '@/lib/stripe'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
-
-type PricingPlanKey = 'pro'
-type ProBillingOption = 'monthly' | 'annual'
-
-function isPricingPlanKey(value: string | null): value is PricingPlanKey {
-	return value === 'pro'
-}
-
-function isProBillingOption(value: string | null): value is ProBillingOption {
-	return value === 'monthly' || value === 'annual'
-}
-
-function getPriceIdForPlan(
-	plan: PricingPlanKey,
-	billing: ProBillingOption,
-	stripeConfig: StripeConfig['stripe']
-) {
-	return billing === 'annual' ? stripeConfig.priceProAnnual : stripeConfig.pricePro
-}
-
-function buildReturnUrl(pathOrUrl: string, appUrl: string) {
-	return new URL(pathOrUrl, appUrl).toString()
-}
 
 function extractBearerToken(req: NextRequest): string | null {
 	const auth = req.headers.get('authorization') ?? ''
@@ -44,9 +27,8 @@ export async function GET(req: NextRequest) {
 		const tokenParam =
 			extractBearerToken(req) || req.nextUrl.searchParams.get('token')?.trim() || null
 
-		const normalizedPlan = planParam ? planParam.toLowerCase() : null
-		const plan = isPricingPlanKey(normalizedPlan) ? normalizedPlan : null
-		const billing = isProBillingOption(billingParam?.toLowerCase() ?? null) ? billingParam!.toLowerCase() as ProBillingOption : 'monthly'
+		const plan = parseCheckoutPlan(planParam)
+		const billing = resolveCheckoutBilling(billingParam)
 
 		if (!plan) {
 			return NextResponse.json(
@@ -58,9 +40,17 @@ export async function GET(req: NextRequest) {
 		}
 
 		const stripe = getStripe()
-		const priceId = getPriceIdForPlan(plan, billing, stripeConfig.stripe)
-		const successUrl = buildReturnUrl(stripeConfig.stripe.successUrl, stripeConfig.app.url)
-		const cancelUrl = buildReturnUrl(stripeConfig.stripe.cancelUrl, stripeConfig.app.url)
+		const priceId = getCheckoutPriceId(plan, billing, stripeConfig.stripe)
+		const successUrl = buildSameOriginReturnUrl(
+			stripeConfig.stripe.successUrl,
+			stripeConfig.app.url,
+			'STRIPE_SUCCESS_URL'
+		)
+		const cancelUrl = buildSameOriginReturnUrl(
+			stripeConfig.stripe.cancelUrl,
+			stripeConfig.app.url,
+			'STRIPE_CANCEL_URL'
+		)
 		let customerEmail: string | null = null
 
 		if (tokenParam) {

@@ -65,8 +65,8 @@ export async function startMemberCheckout(
 
     if (!session.url) return { ok: false, error: 'stripe_error' }
     return { ok: true, checkoutUrl: session.url }
-  } catch {
-    console.error('Failed to create member checkout session')
+  } catch (error) {
+    console.error('Failed to create member checkout session', error)
     return { ok: false, error: 'stripe_error' }
   }
 }

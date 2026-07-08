@@ -1,6 +1,10 @@
 import 'server-only'
 
 import { getStripeConfig as getStripeModeConfig } from '@/lib/stripe-config'
+import {
+	buildSameOriginReturnUrl,
+	DEFAULT_STRIPE_SUCCESS_PATH,
+} from '@/lib/stripe-checkout-config'
 
 type EnvKey = keyof NodeJS.ProcessEnv
 
@@ -56,8 +60,6 @@ function requireUrlEnvAny(keys: EnvKey[], label: string): string {
 	return value.replace(/\/$/, '')
 }
 
-const DEFAULT_STRIPE_SUCCESS_PATH = '/thank-you?session_id={CHECKOUT_SESSION_ID}'
-
 function normalizeStripeSuccessUrl(raw: string, appUrl: string): string {
 	const trimmed = raw.trim()
 	if (!trimmed) return DEFAULT_STRIPE_SUCCESS_PATH
@@ -67,16 +69,18 @@ function normalizeStripeSuccessUrl(raw: string, appUrl: string): string {
 	const normalizedRaw = trimmed.replace(/\/$/, '')
 	if (normalizedRaw === normalizedApp) return DEFAULT_STRIPE_SUCCESS_PATH
 
-	try {
-		const resolved = new URL(trimmed, appUrl)
-		const app = new URL(appUrl)
-		if (resolved.origin === app.origin && resolved.pathname === '/') {
-			return DEFAULT_STRIPE_SUCCESS_PATH
-		}
-	} catch {
+	const resolved = new URL(buildSameOriginReturnUrl(trimmed, appUrl, 'STRIPE_SUCCESS_URL'))
+	if (resolved.pathname === '/') {
 		return DEFAULT_STRIPE_SUCCESS_PATH
 	}
 
+	return trimmed
+}
+
+function normalizeStripeCancelUrl(raw: string, appUrl: string): string {
+	const trimmed = raw.trim()
+	if (!trimmed) return '/'
+	buildSameOriginReturnUrl(trimmed, appUrl, 'STRIPE_CANCEL_URL')
 	return trimmed
 }
 
@@ -142,7 +146,7 @@ export function getStripeConfig(): StripeConfig {
 		getEnvOrDefault('STRIPE_SUCCESS_URL', DEFAULT_STRIPE_SUCCESS_PATH),
 		appUrl
 	)
-	const cancelUrl = getEnvOrDefault('STRIPE_CANCEL_URL', '/')
+	const cancelUrl = normalizeStripeCancelUrl(getEnvOrDefault('STRIPE_CANCEL_URL', '/'), appUrl)
 
 	cachedStripeConfig = {
 		app: { url: appUrl },
@@ -192,7 +196,7 @@ export function getServerConfig(): ServerConfig {
 				getEnvOrDefault('STRIPE_SUCCESS_URL', DEFAULT_STRIPE_SUCCESS_PATH),
 				appUrl
 			),
-			cancelUrl: getEnvOrDefault('STRIPE_CANCEL_URL', '/'),
+			cancelUrl: normalizeStripeCancelUrl(getEnvOrDefault('STRIPE_CANCEL_URL', '/'), appUrl),
 		},
 		stripeWebhook: {
 			secret: stripeConfig.webhookSecret,

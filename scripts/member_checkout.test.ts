@@ -15,6 +15,8 @@ async function main() {
   assert.match(action, /new URL\('\/portal\/billing\?checkout=cancelled'/)
   assert.match(action, /customer: record\.stripeCustomerId/)
   assert.match(action, /customer_email: memberEmail/)
+  assert.match(action, /catch \(error\)/)
+  assert.match(action, /console\.error\('Failed to create member checkout session', error\)/)
   assert.doesNotMatch(action, /customerId:\s*string/)
   assert.doesNotMatch(action, /returnUrl:\s*string/)
   assert.doesNotMatch(action, /console\.(info|warn).*customer/i)

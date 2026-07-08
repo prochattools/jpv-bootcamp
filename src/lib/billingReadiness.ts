@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises'
 
 import { BILLING_PORTAL_DEFAULT_RETURN_URL, describeBillingPortalReturnUrl } from '@/lib/billing-portal-return'
+import { buildSameOriginReturnUrl, DEFAULT_STRIPE_SUCCESS_PATH } from '@/lib/stripe-checkout-config'
 
 export type BillingReadinessCode =
   | 'STRIPE_SECRET_KEY_MISSING'
@@ -108,6 +109,23 @@ function isTrustedReturnUrl(raw: string | null | undefined) {
   return { trusted: info.valid, host: info.host ?? null }
 }
 
+function isTrustedCheckoutReturnUrl(
+  raw: string | null | undefined,
+  appUrl: string | null | undefined,
+  fallback: string,
+  label: string,
+) {
+  const app = clean(appUrl ?? undefined)
+  if (!app) return false
+
+  try {
+    buildSameOriginReturnUrl(clean(raw ?? undefined) ?? fallback, app, label)
+    return true
+  } catch {
+    return false
+  }
+}
+
 function sectionFromCodes(codes: BillingReadinessCode[]): BillingReadinessSection {
   return { ready: codes.length === 0, codes }
 }
@@ -171,13 +189,19 @@ export async function buildBillingReadinessReport(env: NodeJS.ProcessEnv = proce
       null,
   )
   const portalReturn = isTrustedReturnUrl(BILLING_PORTAL_DEFAULT_RETURN_URL)
-  const checkoutSuccessTrusted = Boolean(
+  const checkoutHasSameOriginGuard = Boolean(
     checkoutSource?.includes('successUrl') &&
       checkoutSource?.includes('cancelUrl') &&
       checkoutSource?.includes('stripeConfig.stripe.successUrl') &&
-      checkoutSource?.includes('stripeConfig.stripe.cancelUrl'),
+      checkoutSource?.includes('stripeConfig.stripe.cancelUrl') &&
+      checkoutSource?.includes('buildSameOriginReturnUrl'),
   )
-  const checkoutCancelTrusted = checkoutSuccessTrusted
+  const checkoutSuccessTrusted =
+    checkoutHasSameOriginGuard &&
+    isTrustedCheckoutReturnUrl(env.STRIPE_SUCCESS_URL, clean(env.APP_PUBLIC_URL) ?? clean(env.NEXT_PUBLIC_APP_URL), DEFAULT_STRIPE_SUCCESS_PATH, 'STRIPE_SUCCESS_URL')
+  const checkoutCancelTrusted =
+    checkoutHasSameOriginGuard &&
+    isTrustedCheckoutReturnUrl(env.STRIPE_CANCEL_URL, clean(env.APP_PUBLIC_URL) ?? clean(env.NEXT_PUBLIC_APP_URL), '/', 'STRIPE_CANCEL_URL')
   const requiredEvents = hasEvents(
     [webhookRouteSource, checkoutSource, portalRouteSource, webhookHandlerSource]
       .filter((value): value is string => Boolean(value))

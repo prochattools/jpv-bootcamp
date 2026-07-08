@@ -13,11 +13,12 @@ const readyEnv = {
 }
 
 async function main() {
-  const [report, readinessSource, checkoutSource, portalSource, webhookSource] =
+  const [report, readinessSource, checkoutSource, checkoutHelperSource, portalSource, webhookSource] =
     await Promise.all([
       buildBillingReadinessReport(readyEnv as unknown as NodeJS.ProcessEnv),
       readFile('src/lib/billingReadiness.ts', 'utf8'),
       readFile('src/app/api/stripe/checkout/route.ts', 'utf8'),
+      readFile('src/lib/stripe-checkout-config.ts', 'utf8'),
       readFile('src/app/(frontend)/billing/portal/route.ts', 'utf8'),
       readFile('src/lib/stripe-webhook-handler.ts', 'utf8'),
     ])
@@ -76,16 +77,33 @@ async function main() {
   } as unknown as NodeJS.ProcessEnv)
   assert.equal(invalidUrl.sections.configuration.codes.includes('PREVIEW_PUBLIC_URL_INVALID'), true)
 
+  const externalSuccessUrl = await buildBillingReadinessReport({
+    ...readyEnv,
+    STRIPE_SUCCESS_URL: 'https://external.example.test/thank-you',
+  } as unknown as NodeJS.ProcessEnv)
+  assert.equal(externalSuccessUrl.checks.checkoutUrls.successTrusted, false)
+  assert.equal(externalSuccessUrl.sections.configuration.codes.includes('CHECKOUT_URL_UNTRUSTED'), true)
+
+  const externalCancelUrl = await buildBillingReadinessReport({
+    ...readyEnv,
+    STRIPE_CANCEL_URL: 'https://external.example.test/',
+  } as unknown as NodeJS.ProcessEnv)
+  assert.equal(externalCancelUrl.checks.checkoutUrls.cancelTrusted, false)
+  assert.equal(externalCancelUrl.sections.configuration.codes.includes('CHECKOUT_URL_UNTRUSTED'), true)
+
   assert.match(readinessSource, /buildBillingReadinessReport/)
   assert.doesNotMatch(readinessSource, /\bfetch\(|\baxios\b|\bgetStripe\(/i)
   assert.match(checkoutSource, /checkout\.sessions\.create/)
-  assert.match(checkoutSource, /return value === 'pro'/)
+  assert.match(checkoutSource, /parseCheckoutPlan\(planParam\)/)
+  assert.match(checkoutSource, /buildSameOriginReturnUrl/)
   assert.match(checkoutSource, /mode: 'subscription'/)
   assert.doesNotMatch(checkoutSource, /mode:\s*'payment'/)
   assert.doesNotMatch(checkoutSource, /STRIPE_PRICE_TABLE/)
   assert.match(checkoutSource, /billingParam/)
   assert.match(checkoutSource, /billing=monthly\|annual/)
-  assert.match(checkoutSource, /priceProAnnual/)
+  assert.match(checkoutHelperSource, /priceProAnnual/)
+  assert.match(checkoutHelperSource, /normalized === 'pro'/)
+  assert.match(checkoutHelperSource, /resolved\.origin !== appOrigin/)
   assert.match(portalSource, /billingPortal\.sessions\.create/)
   for (const eventName of [
     'checkout.session.completed',
