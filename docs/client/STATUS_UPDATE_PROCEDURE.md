@@ -2,6 +2,8 @@
 
 Procedure for future agents and operators who update roadmap progress and related status docs for `feature/course-branding-and-preview`.
 
+Version 3.4 is the current client-plan progress update. Version 3.3 remains the prior baseline and the current client truth should be tracked in `docs/client/JPV_BOOTCAMP_GO_LIVE_PLAN_V3_4_SUMMARY.md`.
+
 ## Purpose
 
 This procedure prevents status drift. It keeps roadmap percentages, migration readiness, staging readiness, and evidence language aligned with the actual branch state and the approved operator record.
@@ -18,7 +20,7 @@ Before updating any status text:
 6. Verify the latest recorded operator evidence or handoff note is still current.
 7. Run `pnpm toolchain:check` before `pnpm staging:static-preflight` if your local pnpm version is not already pinned to `pnpm@10.33.0`.
 
-Latest verified branch tip before this procedure was written: `143a6f8 docs: add staging evidence artifact automation`.
+Latest verified branch tip before this procedure was written: `4a8f79b chore: guard against committed draft evidence`.
 
 Do not treat this document's commit reference as approval to run migrations. Always verify the branch tip directly before operator action.
 
@@ -46,6 +48,7 @@ Before publishing a status update, verify these links are present and correct:
 - `docs/client/STAGING_SMOKE_EVIDENCE_TEMPLATE.md`
 - `docs/client/PROVIDER_EMAIL_READINESS.md`
 - `docs/client/PROVIDER_EMAIL_EVIDENCE_TEMPLATE.md`
+- `docs/client/JPV_BOOTCAMP_GO_LIVE_PLAN_V3_4_SUMMARY.md`
 - `pnpm staging:static-preflight` (local-only static preflight; no migrations, no DB access, no live network checks, includes committed-evidence guard)
 - `pnpm toolchain:check` (local-only toolchain preflight; no migrations, no DB access, no live network checks)
 - `scripts/create_staging_evidence_artifacts.ts`
@@ -100,7 +103,7 @@ Run the focused static docs tests that cover the current handoff and evidence se
 
 ## Recommended update pattern
 
-When the status changes, update the roadmap and the operator handoff together so the numbers, blockers, and next executable task match.
+When the status changes, update the roadmap and the operator handoff together so the numbers, blockers, and next executable task match. Keep the front-end website milestone visible: 15 July 2026 client content/input due, 22 July 2026 front-end website go-live, 23 July 2026 handover buffer, 24 July 2026 finished-by date. The 22 July milestone does not authorize migration execution.
 
 Use wording that stays valid after future documentation-only commits:
 

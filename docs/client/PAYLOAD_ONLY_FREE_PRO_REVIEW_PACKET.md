@@ -6,9 +6,10 @@
 - Do not touch `main`.
 - PR / review URL: `https://github.com/prochattools/jpv-bootcamp/pull/2`
 - Staging deployment target: this feature branch is the staging / production-staged deployment branch.
+- Version 3.4 summary: `docs/client/JPV_BOOTCAMP_GO_LIVE_PLAN_V3_4_SUMMARY.md`
 - Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`
 - Latest validated pre-migration-handoff commit: `50f7966 docs: add migration rehearsal safety handoff`
-- Latest verified branch tip before this pass: `143a6f8 docs: add staging evidence artifact automation`
+- Latest verified branch tip before this pass: `4a8f79b chore: guard against committed draft evidence`
 - Verify the current branch tip with `git log --oneline -1` before operator action.
 - Push status: local branch and `origin/feature/course-branding-and-preview` are in sync.
 - Toolchain check: `pnpm toolchain:check`
@@ -28,7 +29,9 @@
 
 ## Scope summary
 
-This branch refits JPV Bootcamp to the Version 3.3 Payload-only and Free/Pro product model. It prepares the repository for human review before any approved database migration apply, preview deployment, or production cutover.
+This branch refits JPV Bootcamp to the Version 3.4 client-plan update, built from the Version 3.3 baseline, and keeps the Payload-only Free/Pro product model intact. It prepares the repository for human review before any approved database migration apply, preview deployment, or production cutover.
+
+The Version 3.4 plan summary records the 22 July 2026 front-end website go-live milestone, the 23 July 2026 handover buffer, the 24 July 2026 client-requested finished-by date, and the Wednesday 15 July 2026 client content/input deadline. Those dates are delivery markers only; they do not authorize migration execution.
 
 The branch removes active legacy integration paths, old public plan labels, old checkout aliases, and stale documentation that no longer matches the client truth. It keeps Payload as the administrative source, Next.js as the app/runtime surface, Stripe as the paid subscription processor, and Resend-compatible delivery for email.
 

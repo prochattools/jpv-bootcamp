@@ -4,9 +4,13 @@ This folder tracks client-facing documents so internal roadmap documentation sta
 
 ## Current client truth
 
-**JPV Bootcamp Platform Expansion & Go-Live Plan v3.3** is the current client-communicated scope and planning baseline.
+**JPV Bootcamp Platform Expansion & Go-Live Plan v3.4** is the current client-plan progress update. Version 3.3 remains the prior baseline for comparison.
 
 It supersedes the older Version 2.40 plan for product scope, terminology, progress framing, and launch expectations.
+
+Version 3.4 milestone markers remain explicit: the front-end website go-live milestone is 22 July 2026, the internal delivery / handover buffer is 23 July 2026, the client-requested finished-by date is 24 July 2026, and client content/input is due Wednesday 15 July 2026. Those dates do not authorize migration execution.
+
+No migrations have been applied.
 
 Current deployment branch: `feature/course-branding-and-preview`.
 Local toolchain is pinned to `pnpm@10.33.0`; run `pnpm toolchain:check` before operator preflight if your shell pnpm version is not already aligned.
@@ -14,6 +18,7 @@ Local toolchain is pinned to `pnpm@10.33.0`; run `pnpm toolchain:check` before o
 ## Review packet
 
 - [Payload-only Free/Pro Review Packet](./PAYLOAD_ONLY_FREE_PRO_REVIEW_PACKET.md) — commit-readiness summary for the current Payload-only Free/Pro refit.
+- [JPV Bootcamp Go-Live Plan v3.4 Summary](./JPV_BOOTCAMP_GO_LIVE_PLAN_V3_4_SUMMARY.md) — current client-plan update, timeline, and milestone summary.
 - [Roadmap Progress Status](./ROADMAP_PROGRESS_STATUS.md) — current position, progress table, validation evidence, remaining risks, and next executable tasks.
 - [Migration Approval Packet](./MIGRATION_APPROVAL_PACKET.md) — approval-focused summary for the pending migration decision and execution boundary.
 - [Migration Approval Status](./MIGRATION_APPROVAL_STATUS.md) — current blocked/approved state for future agents and operators.

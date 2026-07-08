@@ -13,6 +13,7 @@ async function main(): Promise<void> {
     providerReadiness: 'docs/client/PROVIDER_EMAIL_READINESS.md',
     readme: 'docs/client/README.md',
     roadmap: 'docs/client/ROADMAP_PROGRESS_STATUS.md',
+    summaryV34: 'docs/client/JPV_BOOTCAMP_GO_LIVE_PLAN_V3_4_SUMMARY.md',
     reviewPacket: 'docs/client/PAYLOAD_ONLY_FREE_PRO_REVIEW_PACKET.md',
     rehearsalRunbook: 'docs/client/MIGRATION_REHEARSAL_RUNBOOK.md',
     stagingChecklist: 'docs/client/STAGING_SMOKE_CHECKLIST.md',
@@ -60,6 +61,7 @@ async function main(): Promise<void> {
   assert.match(docs.statusProcedure, /docs\/client\/STAGING_SMOKE_EVIDENCE_TEMPLATE\.md/)
   assert.match(docs.statusProcedure, /docs\/client\/PROVIDER_EMAIL_READINESS\.md/)
   assert.match(docs.statusProcedure, /docs\/client\/PROVIDER_EMAIL_EVIDENCE_TEMPLATE\.md/)
+  assert.match(docs.statusProcedure, /docs\/client\/JPV_BOOTCAMP_GO_LIVE_PLAN_V3_4_SUMMARY\.md/)
   assert.match(docs.statusProcedure, /pnpm toolchain:check/)
 
   assert.match(docs.roadmap, /Status update procedure: `docs\/client\/STATUS_UPDATE_PROCEDURE\.md`/)
@@ -67,7 +69,11 @@ async function main(): Promise<void> {
   assert.match(docs.roadmap, /Do not apply migrations\./)
   assert.match(docs.roadmap, /Do not touch `main`/)
   assert.match(docs.roadmap, /Migrations applied \| None \|/)
+  assert.match(docs.roadmap, /Version 3\.4 is the current client-plan update/)
   assert.match(docs.roadmap, /Target-environment approval for table-plan-to-Free mapping is still required/)
+  assert.match(docs.roadmap, /front-end website go-live milestone/i)
+  assert.match(docs.roadmap, /22 July 2026/)
+  assert.match(docs.roadmap, /15 July 2026 client content\/input deadline/)
   assert.match(docs.roadmap, /provider email live verification pending/i)
   assert.match(docs.roadmap, /post-refit staging smoke/i)
   assert.match(docs.roadmap, /~73%/)
@@ -80,7 +86,9 @@ async function main(): Promise<void> {
   assert.match(docs.roadmap, /Run `pnpm toolchain:check` and then `pnpm staging:static-preflight`, then operator completes approval, staging smoke, and provider\/email evidence without applying migrations\./)
   assert.match(docs.roadmap, /Draft evidence `\.md` files under `docs\/client\/evidence\/` are local operator artifacts and must not be committed unless explicitly approved\./)
 
-  assert.match(docs.operatorHandoff, /Last recorded validated baseline before this status update: `143a6f8 docs: add staging evidence artifact automation`/)
+  assert.match(docs.operatorHandoff, /Version 3\.4 current client-plan update; Version 3\.3 remains the baseline/)
+  assert.match(docs.operatorHandoff, /Last recorded validated baseline before this status update: `4a8f79b chore: guard against committed draft evidence`/)
+  assert.match(docs.operatorHandoff, /Front-end website go-live milestone: 22 July 2026/)
   assert.match(docs.operatorHandoff, /Branch tip verification: verify the current tip with `git log --oneline -1` before operator action/)
   assert.match(docs.operatorHandoff, /Status update procedure: `docs\/client\/STATUS_UPDATE_PROCEDURE\.md`/)
   assert.match(docs.operatorHandoff, /Toolchain check: `pnpm toolchain:check`/)
@@ -88,7 +96,8 @@ async function main(): Promise<void> {
   assert.match(docs.operatorHandoff, /Migrations applied: `No`/)
   assert.match(docs.operatorHandoff, /No `main` branch work\./)
 
-  assert.match(docs.reviewPacket, /Latest verified branch tip before this pass: `143a6f8 docs: add staging evidence artifact automation`/)
+  assert.match(docs.reviewPacket, /Version 3\.4 summary: `docs\/client\/JPV_BOOTCAMP_GO_LIVE_PLAN_V3_4_SUMMARY\.md`/)
+  assert.match(docs.reviewPacket, /Latest verified branch tip before this pass: `4a8f79b chore: guard against committed draft evidence`/)
   assert.match(docs.reviewPacket, /Verify the current branch tip with `git log --oneline -1` before operator action\./)
   assert.match(docs.reviewPacket, /Status update procedure: `docs\/client\/STATUS_UPDATE_PROCEDURE\.md`/)
   assert.match(docs.reviewPacket, /Toolchain check: `pnpm toolchain:check`/)
@@ -96,6 +105,7 @@ async function main(): Promise<void> {
   assert.match(docs.reviewPacket, /Do not touch `main`/)
   assert.match(docs.reviewPacket, /No migrations have been applied\./)
   assert.match(docs.reviewPacket, /table-plan-to-Free mapping requires explicit target-environment approval before migration execution\./)
+  assert.match(docs.reviewPacket, /22 July 2026 front-end website go-live milestone/)
   assert.match(docs.reviewPacket, /`pnpm staging:static-preflight` is a local-only validation bundle and does not generate or validate operator approval evidence\./)
   assert.match(docs.reviewPacket, /`pnpm evidence:create` is separate from static preflight and produces local draft evidence only\./)
 
@@ -144,6 +154,7 @@ async function main(): Promise<void> {
   assert.match(docs.providerEvidence, /main was not touched\./)
 
   assert.match(docs.readme, /Status Update Procedure/)
+  assert.match(docs.readme, /JPV Bootcamp Go-Live Plan v3\.4 Summary/)
   assert.match(docs.readme, /roadmap documents stay linked from this index and the review packet/)
   assert.match(docs.readme, /pnpm toolchain:check/)
   assert.match(docs.readme, /`pnpm staging:static-preflight`/)

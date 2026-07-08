@@ -3,11 +3,17 @@
 ## Current state
 
 - Branch: `feature/course-branding-and-preview`
-- Last recorded validated baseline before this status update: `143a6f8 docs: add staging evidence artifact automation`
+- Version 3.4 current client-plan update; Version 3.3 remains the baseline
+- Version 3.4 summary: `docs/client/JPV_BOOTCAMP_GO_LIVE_PLAN_V3_4_SUMMARY.md`
+- Last recorded validated baseline before this status update: `4a8f79b chore: guard against committed draft evidence`
 - Branch tip verification: verify the current tip with `git log --oneline -1` before operator action
 - PR / review URL: `https://github.com/prochattools/jpv-bootcamp/pull/2`
 - Migrations applied: `No`
 - Staging deployment target: this feature branch
+- Front-end website go-live milestone: 22 July 2026
+- Internal delivery / handover buffer: 23 July 2026
+- Client-requested finished-by date: 24 July 2026
+- Client content/input due: Wednesday 15 July 2026
 - Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`
 - Toolchain check: `pnpm toolchain:check`
 - Static preflight: `pnpm staging:static-preflight`

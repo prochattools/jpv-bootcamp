@@ -1,9 +1,11 @@
 # JPV Bootcamp — Roadmap Progress Status
 
 Canonical progress and current-position record for the `feature/course-branding-and-preview` branch.
+Version 3.4 is the current client-plan update; Version 3.3 remains the baseline for comparison.
 
 Cross-links:
 - Review packet: `docs/client/PAYLOAD_ONLY_FREE_PRO_REVIEW_PACKET.md`
+- Version 3.4 summary: `docs/client/JPV_BOOTCAMP_GO_LIVE_PLAN_V3_4_SUMMARY.md`
 - Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`
 - Migration approval packet: `docs/client/MIGRATION_APPROVAL_PACKET.md`
 - Migration approval status: `docs/client/MIGRATION_APPROVAL_STATUS.md`
@@ -25,10 +27,13 @@ Cross-links:
 ## Current Position
 
 **CURRENT POSITION:**
-Payload-only Free/Pro refit is committed, pushed, clean, validated, staging-hardened, and now has migration approval, approval-status, rehearsal-runbook, operator handoff, evidence-review, evidence-template, status-update-procedure, evidence-automation (local-only generator and validator), static-preflight automation, pinned toolchain preflight automation, and committed-evidence guard automation prepared on `feature/course-branding-and-preview`.
+Payload-only Free/Pro refit is committed, pushed, clean, validated, staging-hardened, and now has migration approval, approval-status, rehearsal-runbook, operator handoff, evidence-review, evidence-template, status-update-procedure, evidence-automation (local-only generator and validator), static-preflight automation, pinned toolchain preflight automation, committed-evidence guard automation, and Version 3.4 summary prepared on `feature/course-branding-and-preview`.
 
 **NEXT BLOCKER:**
 Target-environment approval for table-plan-to-Free mapping is still required before migration rehearsal or execution.
+
+**FRONT-END MILESTONE:**
+The 15 July 2026 client content/input deadline and the 22 July 2026 front-end website go-live milestone are delivery markers only; they do not authorize migration execution. The handover buffer remains 23 July 2026 and the client-requested finished-by date remains 24 July 2026.
 
 **NEXT EXECUTABLE TASK:**
 Run `pnpm toolchain:check` and then `pnpm staging:static-preflight`, then operator completes approval, staging smoke, and provider/email evidence without applying migrations.
@@ -44,7 +49,7 @@ Do not apply migrations. Do not touch `main`.
 | --- | --- |
 | Branch | `feature/course-branding-and-preview` |
 | Staging deployment target | This feature branch is the staging / production-staged deployment branch |
-| Last recorded validated baseline before this status update | `143a6f8 docs: add staging evidence artifact automation` |
+| Last recorded validated baseline before this status update | `4a8f79b chore: guard against committed draft evidence` |
 | Branch tip verification | Verify the current branch tip with `git log --oneline -1` before operator action |
 | PR / review URL | `https://github.com/prochattools/jpv-bootcamp/pull/2` |
 | Migrations applied | None |
@@ -55,16 +60,16 @@ Do not apply migrations. Do not touch `main`.
 
 ## Progress Table — 8 July 2026
 
-Basis: v3.3 baseline set in `docs/PAYLOAD_INTEGRATION_PLAN.md` (expanded-platform ~58%, first core go-live ~62%, build foundation ~78%, expanded launch ~52%). Percentages marked as estimates; delta is justified by specific completed work listed in Evidence column.
+Basis: v3.3 baseline set in `docs/PAYLOAD_INTEGRATION_PLAN.md` (expanded-platform ~58%, first core go-live ~62%, build foundation ~78%, expanded launch ~52%). Version 3.4 current update records current branch progress on `feature/course-branding-and-preview` with expanded-platform ~73%, core staging readiness ~97%, build foundation ~89%, testing/release readiness ~94%, migration readiness ~55%, and live cutover readiness ~20%.
 
 | Area / Phase | Previous | Current | Delta | Evidence | Remaining blocker |
 | --- | ---: | ---: | ---: | --- | --- |
-| Overall expanded platform | ~58% | ~73% | +15% | Free/Pro refit committed/pushed/clean; legacy paths removed; billing hardening; focused validation passed; migration approval/status/runbook/evidence docs, status-update procedure, evidence automation (local-only generator and validator), static-preflight automation, and evidence output folder added; Prisma and tsc validated | Live cutover unapproved; migrations unapplied; production content incomplete; provider email live verification pending |
-| Core staging readiness | ~68% | ~97% | +29% | Branch pushed, clean, validated, hardened; shadow sync fixed; sponsored access corrected; docs hardened; approval packet, approval status, rehearsal runbook, operator handoff, evidence review, evidence templates, smoke checklist, provider/email readiness checklist, status procedure, evidence automation, static-preflight automation, pinned toolchain preflight, and committed-evidence guard prepared | Migration approval; post-refit staging smoke; provider email live verification |
+| Overall expanded platform | ~58% | ~73% | +15% | Free/Pro refit committed/pushed/clean; legacy paths removed; billing hardening; focused validation passed; migration approval/status/runbook/evidence docs, status-update procedure, evidence automation (local-only generator and validator), static-preflight automation, committed-evidence guard, and Version 3.4 summary added; Prisma and tsc validated | Live cutover unapproved; migrations unapplied; production content incomplete; provider email live verification pending |
+| Core staging readiness | ~68% | ~97% | +29% | Branch pushed, clean, validated, hardened; shadow sync fixed; sponsored access corrected; docs hardened; approval packet, approval status, rehearsal runbook, operator handoff, evidence review, evidence templates, smoke checklist, provider/email readiness checklist, status procedure, evidence automation, static-preflight automation, pinned toolchain preflight, committed-evidence guard, and Version 3.4 summary prepared | Migration approval; post-refit staging smoke; provider email live verification |
 | Build foundation | ~78% | ~89% | +11% | Payload-only refit; legacy code deleted; `server-only@0.0.1` added; type-check clean; Prisma schemas valid; SVG assets validated; checkout helper extraction and same-origin return URL guard added; pinned toolchain preflight added and validated | Migration approval and rehearsal |
-| Testing / release readiness | ~70% | ~94% | +24% | Focused checkout validation, migration static coverage, status-doc consistency coverage, evidence-package safety tests, committed-evidence guard tests, and static-preflight package guard tests added; approval-status, rehearsal, evidence, operator handoff, evidence-review, evidence-automation, and static-preflight safety tests added; billing, entitlement, course access, shadow sync, sponsored claim/decision helpers covered | Batch-runner timing artifact (tests pass individually); migration rehearsal not executed |
+| Testing / release readiness | ~70% | ~94% | +24% | Focused checkout validation, migration static coverage, status-doc consistency coverage, evidence-package safety tests, committed-evidence guard tests, version-3.4 plan consistency test, and static-preflight package guard tests added; approval-status, rehearsal, evidence, operator handoff, evidence-review, evidence-automation, and static-preflight safety tests added; billing, entitlement, course access, shadow sync, sponsored claim/decision helpers covered | Batch-runner timing artifact (tests pass individually); migration rehearsal not executed |
 | Migration readiness | ~25% | ~55% | +30% | Migration sources written and reviewed; inventory unified to 11 in policy/manifest/preflight; approval packet, approval status, runbook, operator handoff, evidence review, evidence templates, status procedure, evidence automation, static-preflight, committed-evidence guard, and safety tests prepared; table-plan-to-Free migration static checks expanded | table-plan-to-Free approval required; no migrations applied; approved apply path not yet executed |
-| Live cutover readiness | ~12% | ~20% | +8% | Code is staging-ready and validated; migration sources, staging smoke checklist, evidence templates, operator handoff, evidence review checklist, status procedure, and evidence automation are prepared; provider/email readiness checklist and evidence template are prepared | Migrations unapplied; target-environment approval pending; provider email live verification pending; course content incomplete |
+| Live cutover readiness | ~12% | ~20% | +8% | Code is staging-ready and validated; migration sources, staging smoke checklist, evidence templates, operator handoff, evidence review checklist, status procedure, and evidence automation are prepared; provider/email readiness checklist and evidence template are prepared; front-end website go-live milestone is defined for 22 July 2026 with 23 July handover and 24 July finish-by dates | Migrations unapplied; target-environment approval pending; provider email live verification pending; course content incomplete |
 
 ---
 

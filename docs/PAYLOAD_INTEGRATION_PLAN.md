@@ -11,7 +11,7 @@ This is the single canonical product, architecture, security, roadmap, and execu
    - `docs/PAYLOAD_PARTNER_AFFILIATE_PLAN.md` — detailed Partner Affiliates specification for Phase 9.
    - `docs/LIVEKIT_PAYLOADCMS_GROUP_CALLS_PLAN.md` — future group-call use cases, LiveKit runtime architecture, PayloadCMS collections and authorization boundary, security, privacy, and acceptance gates for Phase 11.
 3. **Visual reference.** `docs/PAYLOAD_COURSE_VISUAL_IMPLEMENTATION_PLAN.md` illustrates screens and workflows but does not replace this plan.
-4. **Client truth document.** `JPV Bootcamp Platform Expansion & Go-Live Plan v3.3` is the latest client-communicated scope. It supersedes the older Version 2.40 progress framing and must stay aligned with this internal plan.
+4. **Client truth document.** `docs/client/JPV_BOOTCAMP_GO_LIVE_PLAN_V3_4_SUMMARY.md` is the current client-plan progress summary. Version 3.3 remains the prior baseline. It supersedes the older Version 2.40 progress framing and must stay aligned with this internal plan.
 5. **Client document inventory.** `docs/client/README.md` records which client-facing document is current and which older documents are historical.
 6. **Platform invariants and operations.** `docs/PROKIT_OVERVIEW.md`, `docs/PROKIT_INVARIANTS.md`, and infrastructure documents define stable operational contracts.
 
@@ -37,9 +37,9 @@ Do not create another general Payload roadmap. New work must first be added here
 - Treat historical data only as reviewed import material that maps into neutral account, Free access, Pro subscription, expired, revoked, suspended, or administrator-review states.
 - Keep the public offer simple: Free for approved non-paid access and Pro for the single paid subscription.
 
-## Version 3.3 platform direction and terminology
+## Version 3.4 platform direction and terminology
 
-The current client-communicated scope is Version 3.3. The finish line is no longer only a minimal course-area replacement. It is a phased commercial platform launch with public offer clarity, billing automation, support/pay-it-forward access, public landing-page readiness, representative 8-week course content, partner tracking, community previews, migration rehearsal, and go-live controls.
+Version 3.3 remains the historical baseline, but the current client-plan update is Version 3.4. The finish line is no longer only a minimal course-area replacement. It is a phased commercial platform launch with public offer clarity, billing automation, support/pay-it-forward access, public landing-page readiness, representative 8-week course content, partner tracking, community previews, migration rehearsal, and go-live controls.
 
 Canonical product terminology:
 
@@ -47,7 +47,7 @@ Canonical product terminology:
 - **Pro** — the single paid JPV Bootcamp subscription. Public copy should describe Pro with two payment options: monthly with a 12-month commitment, and annual upfront with the approved annual discount.
 - **Historical tiers** — old paid and non-paid labels are migration inputs only. They must be mapped into Free, Pro, expired, revoked, suspended, or administrator-approved access states before cutover.
 
-The v3.3 readiness baseline (set at start of branch): expanded-platform readiness was about 58% overall, first core go-live readiness about 62%, carried-forward build foundation readiness about 78%, and expanded launch readiness about 52%. After the Payload-only Free/Pro refit and status-documentation hardening completed on 8 July 2026, current estimates are: expanded-platform ~71%, core staging readiness ~95%, build foundation ~88%, testing/release readiness ~90%, migration readiness ~52%, live cutover readiness ~20%. See `docs/client/ROADMAP_PROGRESS_STATUS.md` for full delta evidence. Older v2.40 progress numbers may be cited only as historical context for the narrower scope.
+The v3.3 readiness baseline (set at start of branch): expanded-platform readiness was about 58% overall, first core go-live readiness about 62%, carried-forward build foundation readiness about 78%, and expanded launch readiness about 52%. After the Payload-only Free/Pro refit and status-documentation hardening completed on 8 July 2026, current estimates are: expanded-platform ~73%, core staging readiness ~97%, build foundation ~89%, testing/release readiness ~94%, migration readiness ~55%, live cutover readiness ~20%. See `docs/client/ROADMAP_PROGRESS_STATUS.md` for full delta evidence. Older v2.40 progress numbers may be cited only as historical context for the narrower scope.
 
 ## Final architecture
 
@@ -92,7 +92,7 @@ The `jpvbootcamp_staging` schema may be repaired, reconciled, or reset for stagi
 8. FreeResend delivery events are verified before changing message delivery state.
 9. Production schema and traffic changes require explicit approval.
 
-## Current implementation status — 4 July 2026 (updated)
+## Current implementation status — 8 July 2026 (Version 3.4 update)
 
 Current operator branch: `feature/course-branding-and-preview`.
 Verify the exact branch tip with `git log --oneline -1` before operator action.
@@ -517,14 +517,14 @@ Validation:
 - no LiveKit secret, participant token, or private recording URL is stored in member-readable PayloadCMS fields or exposed in logs;
 - representative desktop/mobile, accessibility, privacy, support, cost, monitoring, and rollback gates pass before rollout.
 
-## Overall delivery status — 8 July 2026 (updated)
+## Overall delivery status — 8 July 2026 (Version 3.4 update)
 
-The roadmap now contains the original eleven technical phases plus the Version 3.3 commercial-launch expansion. Expanded-platform readiness is approximately **65% complete** overall (up from ~58% at the v3.3 baseline), with about **88% core staging readiness** for the feature branch (up from ~68%). The older v2.40 percentage remains historical evidence for the narrower course/staging scope only. See `docs/client/ROADMAP_PROGRESS_STATUS.md` for the full progress table and per-area delta evidence.
+The roadmap now contains the original eleven technical phases plus the Version 3.4 client-plan update. Expanded-platform readiness is approximately **73% complete** overall (up from ~58% at the v3.3 baseline), with about **97% core staging readiness** for the feature branch (up from ~68%). The older v2.40 percentage remains historical evidence for the narrower course/staging scope only. See `docs/client/ROADMAP_PROGRESS_STATUS.md` for the full progress table and per-area delta evidence.
 
 - **Carried-forward strong foundations:** administrator boundary, shared login, account security, member portal shell, course/access foundations, billing projection, community foundations, partner foundations, and staging evidence.
-- **Core go-live scope:** public landing page, Free/Pro terminology refit, Pro checkout options, billing automation/recovery, representative 8-week course pilot, support/pay-it-forward access controls, migration rehearsal, rollback, and explicit go-live approval.
+- **Core go-live scope:** public landing page, Free/Pro terminology refit, Pro checkout options, billing automation/recovery, representative 8-week course pilot, support/pay-it-forward access controls, migration rehearsal, rollback, and explicit go-live approval. The public front-end website milestone is 22 July 2026, the handover buffer is 23 July 2026, and the client-requested finished-by date is 24 July 2026.
 - **Controlled follow-up releases:** richer partner reporting/delivery, community/private-room refinements, notifications/digests, private messaging if accepted, and later LiveKit group calls.
-- **Primary remaining work:** refit old tier assumptions into Free/Pro, verify Stripe/payment paths, complete public copy/content, run representative course and storage acceptance, reconcile migration mapping, preview community/private-room behavior, verify partner links/forms/reports, rehearse rollback, and approve cutover.
+- **Primary remaining work:** refit old tier assumptions into Free/Pro, verify Stripe/payment paths, complete public copy/content by the 15 July 2026 client-input deadline, run representative course and storage acceptance, reconcile migration mapping, preview community/private-room behavior, verify partner links/forms/reports, rehearse rollback, and approve cutover.
 
 ## Communication scope summary
 
@@ -561,7 +561,7 @@ A phase is complete only when:
 
 ## Immediate milestone
 
-Align the current implementation with the Version 3.3 commercial-launch scope before production cutover: refit all public and billing language to Free/Pro, keep Pro as the only paid subscription, validate Pro monthly/annual checkout behavior, confirm support/pay-it-forward rules, prepare representative 8-week course content, confirm public landing-page copy, and rehearse migration from historical access states into the new Free/Pro access model. The first core go-live candidate remains the public landing page, Pro subscription, secure member portal, billing automation, account flows, course access, administrator controls, migration rehearsal, rollback, and explicit approval. Community/private-room previews and partner links/forms/reports should be included where accepted; private messaging, advanced notifications, payouts/webhooks, and LiveKit calls remain post-core unless explicitly marked launch-critical.
+Align the current implementation with the Version 3.4 commercial-launch scope before production cutover: refit all public and billing language to Free/Pro, keep Pro as the only paid subscription, validate Pro monthly/annual checkout behavior, confirm support/pay-it-forward rules, prepare representative 8-week course content, confirm public landing-page copy, and rehearse migration from historical access states into the new Free/Pro access model. The front-end website go-live milestone is 22 July 2026, the internal handover buffer is 23 July 2026, the client-requested finished-by date is 24 July 2026, and the client content/input due date is Wednesday 15 July 2026. This milestone does not authorize migration execution. The first core go-live candidate remains the public landing page, Pro subscription, secure member portal, billing automation, account flows, course access, administrator controls, migration rehearsal, rollback, and explicit approval. Community/private-room previews and partner links/forms/reports should be included where accepted; private messaging, advanced notifications, payouts/webhooks, and LiveKit calls remain post-core unless explicitly marked launch-critical.
 
 This slice hardens the repository-only candidate gate: rollback and packet drafts are generated from explicit local inputs, placeholder approvals are rejected, packet validation is bound to exact branch/HEAD/repository state, rehearsal checks come from the real smoke matrix, and no live operation has been authorized yet. The next required live step after this commit is branch push authorization.
 

@@ -11,6 +11,11 @@ Verify the exact branch tip with `git log --oneline -1` before operator action.
 No migrations have been applied.
 Do not touch `main`.
 
+Version 3.4 summary: `docs/client/JPV_BOOTCAMP_GO_LIVE_PLAN_V3_4_SUMMARY.md`
+Front-end website go-live milestone: 22 July 2026
+Client content/input due: Wednesday 15 July 2026
+The front-end milestone is a delivery marker only and does not authorize migration execution.
+
 Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`
 
 The protected local files `.graphifyignore` and `docs/HANDOFF_AUTH_BRANDING_STAGING_2026-06-30.md` are outside this runbook and must not be staged.
