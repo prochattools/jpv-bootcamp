@@ -60,16 +60,32 @@ Do not apply migrations. Do not touch `main`.
 
 ## Progress Table — 8 July 2026
 
-Basis: v3.3 baseline set in `docs/PAYLOAD_INTEGRATION_PLAN.md` (expanded-platform ~58%, first core go-live ~62%, build foundation ~78%, expanded launch ~52%). Version 3.4 current update records current branch progress on `feature/course-branding-and-preview` with expanded-platform ~73%, core staging readiness ~97%, build foundation ~89%, testing/release readiness ~94%, migration readiness ~55%, and live cutover readiness ~20%.
+Basis: v3.3 baseline set in `docs/PAYLOAD_INTEGRATION_PLAN.md` (expanded-platform ~58%, first core go-live ~62%, build foundation ~78%, expanded launch ~52%). Version 3.4 current update records current branch progress on `feature/course-branding-and-preview` with expanded-platform ~74%, core staging readiness ~97%, build foundation ~89%, testing/release readiness ~95%, migration readiness ~55%, and live cutover readiness ~20%.
 
 | Area / Phase | Previous | Current | Delta | Evidence | Remaining blocker |
 | --- | ---: | ---: | ---: | --- | --- |
-| Overall expanded platform | ~58% | ~73% | +15% | Free/Pro refit committed/pushed/clean; legacy paths removed; billing hardening; focused validation passed; migration approval/status/runbook/evidence docs, status-update procedure, evidence automation (local-only generator and validator), static-preflight automation, committed-evidence guard, and Version 3.4 summary added; Prisma and tsc validated | Live cutover unapproved; migrations unapplied; production content incomplete; provider email live verification pending |
+| Overall expanded platform | ~58% | ~74% | +16% | Free/Pro refit committed/pushed/clean; legacy paths removed; billing hardening; focused validation passed; migration approval/status/runbook/evidence docs, status-update procedure, evidence automation (local-only generator and validator), static-preflight automation, committed-evidence guard, front-end milestone static test, and Version 3.4 summary added; Prisma and tsc validated | Live cutover unapproved; migrations unapplied; client content/input due 15 July; production content incomplete; provider email live verification pending |
 | Core staging readiness | ~68% | ~97% | +29% | Branch pushed, clean, validated, hardened; shadow sync fixed; sponsored access corrected; docs hardened; approval packet, approval status, rehearsal runbook, operator handoff, evidence review, evidence templates, smoke checklist, provider/email readiness checklist, status procedure, evidence automation, static-preflight automation, pinned toolchain preflight, committed-evidence guard, and Version 3.4 summary prepared | Migration approval; post-refit staging smoke; provider email live verification |
 | Build foundation | ~78% | ~89% | +11% | Payload-only refit; legacy code deleted; `server-only@0.0.1` added; type-check clean; Prisma schemas valid; SVG assets validated; checkout helper extraction and same-origin return URL guard added; pinned toolchain preflight added and validated | Migration approval and rehearsal |
-| Testing / release readiness | ~70% | ~94% | +24% | Focused checkout validation, migration static coverage, status-doc consistency coverage, evidence-package safety tests, committed-evidence guard tests, version-3.4 plan consistency test, and static-preflight package guard tests added; approval-status, rehearsal, evidence, operator handoff, evidence-review, evidence-automation, and static-preflight safety tests added; billing, entitlement, course access, shadow sync, sponsored claim/decision helpers covered | Batch-runner timing artifact (tests pass individually); migration rehearsal not executed |
+| Testing / release readiness | ~70% | ~95% | +25% | Focused checkout validation, migration static coverage, status-doc consistency coverage, evidence-package safety tests, committed-evidence guard tests, version-3.4 plan consistency test, front-end milestone static test, and static-preflight package guard tests added; approval-status, rehearsal, evidence, operator handoff, evidence-review, evidence-automation, and static-preflight safety tests added; billing, entitlement, course access, shadow sync, sponsored claim/decision helpers covered | Batch-runner timing artifact (tests pass individually); migration rehearsal not executed |
 | Migration readiness | ~25% | ~55% | +30% | Migration sources written and reviewed; inventory unified to 11 in policy/manifest/preflight; approval packet, approval status, runbook, operator handoff, evidence review, evidence templates, status procedure, evidence automation, static-preflight, committed-evidence guard, and safety tests prepared; table-plan-to-Free migration static checks expanded | table-plan-to-Free approval required; no migrations applied; approved apply path not yet executed |
 | Live cutover readiness | ~12% | ~20% | +8% | Code is staging-ready and validated; migration sources, staging smoke checklist, evidence templates, operator handoff, evidence review checklist, status procedure, and evidence automation are prepared; provider/email readiness checklist and evidence template are prepared; front-end website go-live milestone is defined for 22 July 2026 with 23 July handover and 24 July finish-by dates | Migrations unapplied; target-environment approval pending; provider email live verification pending; course content incomplete |
+
+---
+
+## Front-End Milestone Readiness Note
+
+**Front-end delivery readiness / evidence preparation: ~85–90%**
+
+The front-end website go-live milestone (22 July 2026) is delivery-ready from the code and infrastructure perspective. Remaining blockers are external:
+
+- **Client content/input due 15 July 2026** — client must provide final or approved placeholder copy for hero headline, pricing, membership description, support/pay-it-forward wording, FAQ answers, and onboarding flow.
+- **Operator acceptance** — manual front-end website load and UX verification.
+- **Final public copy approval** — unless placeholders have been explicitly approved.
+
+**This front-end milestone does not authorize migration execution or full platform cutover.** Migration decision and staging smoke remain separate and blocked pending migration approval, target-environment confirmation, and provider/email verification.
+
+See `docs/client/FRONTEND_CONTENT_INTAKE_CHECKLIST.md` for the complete operator/client-facing checklist.
 
 ---
 
@@ -83,6 +99,7 @@ git diff --check
 ./node_modules/.bin/tsc --noEmit --pretty false --incremental false
 ./node_modules/.bin/prisma validate --schema=prisma/system.prisma
 ./node_modules/.bin/prisma validate --schema=prisma/schema.prisma
+./node_modules/.bin/tsx scripts/frontend_milestone_static.test.ts
 ./node_modules/.bin/tsx scripts/preview_migration_inventory.test.ts
 ./node_modules/.bin/tsx scripts/migration_readiness_static.test.ts
 ./node_modules/.bin/tsx scripts/migration_rehearsal_safety.test.ts

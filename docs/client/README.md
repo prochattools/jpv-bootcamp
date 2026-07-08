@@ -31,6 +31,7 @@ Local toolchain is pinned to `pnpm@10.33.0`; run `pnpm toolchain:check` before o
 - [Staging Smoke Evidence Template](./STAGING_SMOKE_EVIDENCE_TEMPLATE.md) — fillable evidence capture template for smoke verification.
 - [Provider and Email Readiness](./PROVIDER_EMAIL_READINESS.md) — provider, email, and Stripe configuration readiness checklist without secrets.
 - [Provider and Email Evidence Template](./PROVIDER_EMAIL_EVIDENCE_TEMPLATE.md) — fillable evidence capture template for provider/email verification.
+- [Front-End Content Intake Checklist](./FRONTEND_CONTENT_INTAKE_CHECKLIST.md) — operator/client-facing checklist for 22 July front-end website go-live milestone, content dependencies, and acceptance criteria.
 
 ## Evidence artifact automation
 
