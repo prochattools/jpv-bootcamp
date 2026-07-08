@@ -13,7 +13,7 @@ import { buildPreviewReleaseManifest, validatePreviewReleaseManifestInput } from
 
 async function main(): Promise<void> {
   const names = previewMigrationInventoryNames()
-  assert.equal(PREVIEW_MIGRATION_INVENTORY.length, 10)
+  assert.equal(PREVIEW_MIGRATION_INVENTORY.length, 11)
   assert.deepEqual(names, [
     '20260620_213328',
     '20260621_194424_course_system_phase1',
@@ -25,6 +25,7 @@ async function main(): Promise<void> {
     '20260702_001500_member_account_action_purposes',
     '20260703_000000_partner_affiliate_operations',
     '20260704_090000_partner_schema_reconciliation',
+    '20260707_130000_remove_table_plan_from_payload_enums',
   ])
   assert.equal(assertPreviewMigrationInventoryMatch(names), true)
   assert.equal(validatePreviewMigrationInventoryOrder(names), true)

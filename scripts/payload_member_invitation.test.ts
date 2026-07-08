@@ -82,9 +82,26 @@ class FakePayload implements PayloadMemberAuthAPI {
     return 'legacy-token'
   }
 
-  async resetPassword() {
-    this.calls.push('forbidden:resetPassword')
-    return { user: { id: 1 } }
+  async resetPassword(args: { collection: string; data: { token: string; password: string }; overrideAccess?: boolean }) {
+    const documents = this.collections[args.collection] ?? []
+    const document = documents.find(
+      (entry) => String(entry.resetPasswordToken ?? '') === String(args.data.token),
+    )
+    if (!document) throw new Error(`resetPassword: no member found with matching token`)
+    document.passwordHash = 'payload-managed-hash'
+    delete document.resetPasswordToken
+    delete document.resetPasswordExpiration
+    return { user: document }
+  }
+
+  db = {
+    updateOne: async (args: { collection: string; id: unknown; data: Record<string, unknown> }) => {
+      const documents = this.collections[args.collection] ?? []
+      const document = documents.find((entry) => String(entry.id) === String(args.id))
+      if (!document) throw new Error(`missing ${args.collection}:${args.id}`)
+      Object.assign(document, args.data)
+      return document
+    },
   }
 
   docs(collection: string) {

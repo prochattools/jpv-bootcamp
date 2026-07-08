@@ -31,10 +31,10 @@ assert.equal(support.cooldownActive, true)
 assert.equal(support.email, 'member@example.test')
 
 const payloadConfig = readFileSync('src/collections/affiliates/Affiliates.ts', 'utf8')
-assert.match(payloadConfig, /Affiliate, referral, and commission records/)
+assert.match(payloadConfig, /Internal referral programme records/)
 
 const partnersConfig = readFileSync('src/collections/partners/Partners.ts', 'utf8')
-assert.match(partnersConfig, /Partner directory and delivery rules/)
+assert.match(partnersConfig, /External partner organizations and destinations/)
 
 const billingConfig = readFileSync('src/collections/billing/Billing.ts', 'utf8')
 assert.match(billingConfig, /Billing account projections/)

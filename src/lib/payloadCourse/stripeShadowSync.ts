@@ -194,6 +194,7 @@ function resolvePlanFromPriceId(priceId: string | null | undefined): Plan | null
 
   for (const suffix of stripeEnvSuffixes()) {
     if (process.env[`STRIPE_PRICE_PRO_${suffix}`] === priceId) return 'pro'
+    if (process.env[`STRIPE_PRICE_PRO_ANNUAL_${suffix}`] === priceId) return 'pro'
   }
 
   return null

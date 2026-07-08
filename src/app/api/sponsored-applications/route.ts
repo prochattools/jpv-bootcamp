@@ -119,7 +119,7 @@ export async function POST(req: NextRequest) {
 					name,
 					phone,
 					message: message || null,
-					tier: 'pro',
+					tier: 'free',
 				},
 			})
 			applicationId = updated.id
@@ -133,7 +133,7 @@ export async function POST(req: NextRequest) {
 				name,
 				phone,
 				message: message || null,
-				tier: 'pro',
+				tier: 'free',
 			},
 		})
 		applicationId = created.id

@@ -52,6 +52,8 @@ This migration renames old account identity columns and indexes to neutral `acco
 
 Each column rename is guarded by an existence check. Old indexes are dropped with `DROP INDEX IF EXISTS`, and replacement indexes are created only when the target column exists. The migration does not drop tables.
 
+For the authorization template governing Prisma startup and migration operations (including `database-deploy` startup and Prisma production migration execution), see the Prisma startup authorization template in `docs/PREVIEW_RELEASE_READINESS.md` under Independent authorization templates.
+
 ### Payload table-plan enum cleanup
 
 Migration:

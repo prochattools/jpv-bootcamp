@@ -51,7 +51,7 @@ const token = signUnsubscribeToken(
     purpose: 'communication_unsubscribe',
     preferenceKey: 'communityReplies',
     memberDigest: 'digest',
-    expiresAt: '2026-07-04T01:00:00.000Z',
+    expiresAt: '2027-07-08T01:00:00.000Z',
     nonce: 'nonce',
   },
   secret,

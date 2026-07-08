@@ -1,14 +1,14 @@
 # Preview Deployment Setup
 
 ## Overview
-Feature branches now auto-deploy to a preview/staging environment completely isolated from production. This allows safe testing of new features before merging to main.
+Feature branches can be deployed to a preview/staging environment completely isolated from production. Deployment is not automatic — it requires separate manual authorization. See `docs/PREVIEW_RELEASE_READINESS.md` for the approved release process.
 
 ## Infrastructure
 
 ### Database
 ✅ **Created:** `jpvbootcamp_staging` schema
 - Duplicated from production `jpvbootcamp` schema
-- Connection: `postgresql://jpvbootcamp_staging_user:yR7pQ1wKfZ9mH2bTnC4xV6sLdP8eA3uB@10.0.2.4:5433/jpvbootcamp?schema=jpvbootcamp_staging`
+- Connection: `<staging DATABASE_URL — stored in Dokploy env>`
 - User: `jpvbootcamp_staging_user`
 - All 25 tables copied with production data snapshot
 - **Safety:** Completely isolated from production data
@@ -67,24 +67,24 @@ NEW_RELIC_APP_NAME=JPV Bootcamp Preview
 - Deploys to production Dokploy app
 - Uses production database
 
-### Preview Deployment (feature branches)
+### Preview CI (feature branches)
 - Triggers on push to `feature/*` or `pr/*` branches
-- Builds Docker image
-- Pushes to GHCR with branch name tag (e.g., `feature-course-branding-and-preview`)
-- Deploys to preview Dokploy app
-- Uses staging database
-- Completely isolated from production
+- **Preview Validation workflow:** builds and tests the image only — no image push, no deployment
+- **Publish Preview Image workflow:** builds and pushes a tagged image to GHCR (e.g., `feature-course-branding-and-preview`) — no deployment
+- Neither workflow calls Dokploy or deploys to the preview environment
+- Deployment requires separate manual authorization per `docs/PREVIEW_RELEASE_READINESS.md`
 
 ## Usage
 
 ### Testing a feature branch in preview:
 
 1. Push to feature branch (e.g., `feature/my-feature`)
-2. GitHub Actions automatically builds and deploys to preview
-3. Visit `https://preview.jpvbootcamp.com` to test
-4. Verify changes in staging database
-5. If everything works, merge to main
-6. GitHub Actions automatically deploys main to production
+2. GitHub Actions runs Preview Validation (build/test only) and Publish Preview Image (image publication only) — no automatic deployment occurs
+3. Follow the manual authorization steps in `docs/PREVIEW_RELEASE_READINESS.md` to deploy to preview
+4. Visit `https://preview.jpvbootcamp.com` to test
+5. Verify changes in staging database
+6. If everything works, merge to main
+7. GitHub Actions automatically deploys main to production
 
 ### Rolling back:
 
@@ -104,7 +104,7 @@ NEW_RELIC_APP_NAME=JPV Bootcamp Preview
 
 1. **Add GitHub secrets** (listed above)
 2. **Update Dokploy preview app env vars** (database URLs + domain)
-3. **Test:** Push a change to a feature branch and verify it deploys to preview
+3. **Test:** Push a change to a feature branch, authorize deployment per `docs/PREVIEW_RELEASE_READINESS.md`, and verify it deploys to preview
 4. **Merge to main** when confident and ready for production
 
 ---

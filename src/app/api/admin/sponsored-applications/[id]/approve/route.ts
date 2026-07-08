@@ -7,6 +7,7 @@ import {
 } from '@/lib/partners-session'
 import { isSponsoredSeatsAdmin } from '@/lib/sponsored-admin'
 import { applySponsoredGrant, getGrantWindow } from '@/lib/sponsored-grants'
+import type { SponsoredTier } from '@/lib/sponsored-seats'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -47,7 +48,7 @@ export async function POST(
 	}
 
 	const payload = await parsePayload(req)
-	const tier = 'pro'
+	const tier: SponsoredTier = 'free'
 	const note = payload.note?.trim() ?? null
 
 	const application = await prisma.sponsoredApplication.findUnique({

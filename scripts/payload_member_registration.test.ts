@@ -195,7 +195,7 @@ async function main(): Promise<void> {
 
   const registerPage = readFileSync('src/app/(frontend)/register/page.tsx', 'utf8')
   assert.match(registerPage, /Create free account/)
-  assert.match(registerPage, /Free is a real member tier/)
+  assert.match(registerPage, /Free is controlled support or pay-it-forward access/)
   const registrationRoute = readFileSync('src/app/api/member-registration/route.ts', 'utf8')
   assert.doesNotMatch(registrationRoute, /eligible account exists/)
 

@@ -3,13 +3,13 @@ import { createHash } from 'crypto'
 import prisma from '@/libs/prisma'
 import type Stripe from 'stripe'
 
-export type SponsoredTier = 'pro'
+export type SponsoredTier = 'free'
 
 export type SponsoredSeatCounts = {
 	available: number
 }
 
-const VALID_TIERS: SponsoredTier[] = ['pro']
+const VALID_TIERS: SponsoredTier[] = ['free']
 
 export function normalizeSponsoredTier(
 	value: string | null | undefined
@@ -29,7 +29,7 @@ export function hashEmail(value: string): string {
 export async function getSponsoredSeatCounts(): Promise<SponsoredSeatCounts> {
 	const available = await prisma.sponsoredSeat.count({
 		where: {
-			tier: 'pro',
+			tier: 'free',
 			claimedByAccountId: null,
 			reservedByApplicationId: null,
 		},
@@ -65,7 +65,7 @@ export function isSponsoredSeatSession(
 ): SponsoredTier | null {
 	const purpose = session.metadata?.purpose?.trim().toLowerCase()
 	if (purpose !== 'support_credit' && purpose !== 'sponsored_seat') return null
-	return 'pro'
+	return 'free'
 }
 
 export async function upsertSponsoredSeatFromSession(params: {

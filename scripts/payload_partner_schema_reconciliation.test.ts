@@ -15,11 +15,11 @@ const downSql = buildPartnerSchemaReconciliationMigrationDownSql(stagingUrl)
 const migrationSource = readFileSync('src/migrations/index.ts', 'utf8')
 const migrationNames = Array.from(migrationSource.matchAll(/name:\s*'([^']+)'/g), (match) => match[1])
 
-assert.deepEqual(previewMigrationInventoryNames().slice(-2), [
+assert.deepEqual(previewMigrationInventoryNames().slice(-3, -1), [
   '20260703_000000_partner_affiliate_operations',
   '20260704_090000_partner_schema_reconciliation',
 ])
-assert.deepEqual(migrationNames.slice(-2), [
+assert.deepEqual(migrationNames.slice(-3, -1), [
   '20260703_000000_partner_affiliate_operations',
   '20260704_090000_partner_schema_reconciliation',
 ])

@@ -191,7 +191,7 @@ export default async function SponsoredClaimPage({ searchParams }: PageProps) {
 			await tx.sponsoredGrant.create({
 				data: {
 					accountId: accountId!,
-					tier: 'pro',
+					tier: 'free',
 					seatId: application.seatId!,
 					startsAt: now,
 					endsAt,

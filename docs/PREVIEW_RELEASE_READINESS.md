@@ -103,7 +103,7 @@ The shadow report and preflight helpers never authorize live migration, deployme
 
 The admin-only `/operations/shadow-validation` page now reads a bounded Payload snapshot, shows collection counts, domain totals, issue codes, and an executable acceptance matrix for the core member, billing, email, community, and partner journeys, and offers a safe evidence download. It remains read-only and does not perform any live verification.
 
-The canonical reviewed migration inventory is now unified across policy, manifest, preflight, shadow evidence, and validation. It lists the ten reviewed Payload migrations in exact order, ending with `20260704_090000_partner_schema_reconciliation`, but execution remains pending until an explicit migration authorization is granted.
+The canonical reviewed migration inventory is now unified across policy, manifest, preflight, shadow evidence, and validation. It lists the eleven reviewed Payload migrations in exact order, ending with `20260707_130000_remove_table_plan_from_payload_enums`, but execution remains pending until an explicit migration authorization is granted.
 
 Preflight does not push, log in to a registry, connect to a database, run migration status, execute migrations, initialize Payload, call a provider, call deployment infrastructure, or perform smoke requests.
 
@@ -126,7 +126,7 @@ pnpm exec tsx scripts/payload/send-queued-emails.mts --apply --event-id=<redacte
 
 **Account recovery update (5 July 2026):**
 
-- Staging preview remains healthy with `application-only`/Docker runtime, ten reviewed Payload migrations in inventory, and email readiness `readyForApply: true`.
+- Staging preview remains healthy with `application-only`/Docker runtime, eleven reviewed Payload migrations in inventory, and email readiness `readyForApply: true`.
 - The controlled member account `i***@yeshua.academy` is active and verified. Login was blocked by failed-password/lockout history and an unknown current password, not by verification, session, or portal routing.
 - Source fixes for account recovery are deployed on the feature branch: password-reset queue writes avoid a non-unique conflict target, active reset actions can be replaced safely, reset completion clears lockout state best-effort, and queued email send status persists through the collection update path.
 - Exactly one targeted password-reset email was sent for the controlled account. The reset action and email artifacts were inspected only through sanitized yes/no evidence. Event IDs, provider IDs, recipient values, action URLs, token digests, and password hashes were not recorded in docs.
@@ -147,7 +147,7 @@ pnpm exec tsx scripts/payload/send-queued-emails.mts --apply --event-id=<redacte
   - the password-changed confirmation email queues after the security event exists, and audit/queue failures are isolated from reset success.
 - Local validation passed for the focused reset, auth, account-action, account-email-route, security-control, deployment-health, type-check, production-build, whitespace, and CMS-exclusion gates.
 - Feature-branch GitHub preview validation and preview image publication passed for the same commit.
-- The existing Dokploy staging app `JPV Bootcamp | Payload CMS` was redeployed with `ghcr.io/prochattools/jpv-bootcamp:feature-course-branding-and-preview`; `/api/health/deployment` returned 200 JSON with Docker/application-only runtime, ten reviewed Payload migrations in inventory, and email readiness `readyForApply: true`.
+- The existing Dokploy staging app `JPV Bootcamp | Payload CMS` was redeployed with `ghcr.io/prochattools/jpv-bootcamp:feature-course-branding-and-preview`; `/api/health/deployment` returned 200 JSON with Docker/application-only runtime, eleven reviewed Payload migrations in inventory, and email readiness `readyForApply: true`.
 - Live side-effect acceptance remains a controlled-operator step:
   - `lastLoginAt` needs one normal member login on staging, followed by sanitized metadata inspection;
   - password-changed security-event and confirmation-email verification need separate authorization for another password-reset email/reset cycle before any provider email is requested or sent.
@@ -155,7 +155,7 @@ pnpm exec tsx scripts/payload/send-queued-emails.mts --apply --event-id=<redacte
 **Admin logout boundary acceptance update (6 July 2026):**
 
 - The existing Dokploy staging app was redeployed from `feature/course-branding-and-preview` for commits `742d7b2d18b3cda3b07820b0a20484418bfae138` and `3473e25fbe512963aae97fd9d505048d15a41c89`.
-- Staging health returned HTTP 200 with Docker/application-only runtime, ten reviewed Payload migrations in inventory, and email readiness `readyForApply: true`.
+- Staging health returned HTTP 200 with Docker/application-only runtime, eleven reviewed Payload migrations in inventory, and email readiness `readyForApply: true`.
 - Live route checks showed both GET and POST `/admin/logout` return a public HTTPS preview admin-login redirect with `loggedOut=1` and no internal origin.
 - Cookie-clearing evidence showed Payload-prefixed auth cookies are expired while unrelated cookies are not targeted.
 - Operator acceptance confirms the member-to-admin unauthorized boundary no longer traps the user in an unauthorized loop, the prior `http://0.0.0.0:3000` redirect regression is fixed, and admin login works after logout.
@@ -165,7 +165,7 @@ pnpm exec tsx scripts/payload/send-queued-emails.mts --apply --event-id=<redacte
 **Member last-login acceptance update (6 July 2026):**
 
 - Source commit `e6e59eebae42f8269726f28501db88bea7932cc7` hardens the accepted member-session metadata path by using the Payload database `updateOne` adapter for `lastLoginAt` after member eligibility succeeds.
-- Staging health returned HTTP 200 with Docker/application-only runtime, ten reviewed Payload migrations in inventory, and email readiness `readyForApply: true`.
+- Staging health returned HTTP 200 with Docker/application-only runtime, eleven reviewed Payload migrations in inventory, and email readiness `readyForApply: true`.
 - Operator acceptance confirms a fresh login for `i***@yeshua.academy` succeeded after the `e6e59ee` deployment, the member portal loaded, and no visible error text was reported.
 - Sanitized read-only staging metadata confirms exactly one active, verified, unlocked controlled member row with login attempts below threshold and `lastLoginAt` set after the `e6e59ee` deployment.
 - Phase 6 `lastLoginAt` live acceptance is complete.
@@ -185,14 +185,30 @@ The checklist only gates operations. It does not claim live success or imply tha
 
 ## Pending Payload migration order
 
-Apply only after an explicit migration authorization naming the environment, database, schema, operator, backup, and maintenance window:
+The eleven reviewed Payload migrations span the full canonical inventory. The first six are already applied to the staging database. Migrations 7 through 11 are pending and must be applied only after an explicit migration authorization naming the environment, database, schema, operator, backup, and maintenance window.
 
-1. `20260701_201500_member_email_verification`
-2. `20260702_001500_member_account_action_purposes`
+**Applied (do not re-run):**
 
-The first migration creates the digest-only member action table, constraints, indexes, and original purpose enum. Its down migration drops the table and loses action records.
+1. `20260620_213328`
+2. `20260621_194424_course_system_phase1`
+3. `20260622_093852_course_private_media`
+4. `20260627_010700_structured_community_attachments`
+5. `20260630_100730_affiliate_reporting`
+6. `20260630_190000_payload_preferences_id_constraint`
 
-The second migration adds account-action purposes and security-event enum values. Rolling back that migration alone intentionally retains the added PostgreSQL enum values.
+**Pending (apply in order, one authorization per run):**
+
+7. `20260701_201500_member_email_verification`
+8. `20260702_001500_member_account_action_purposes`
+9. `20260703_000000_partner_affiliate_operations`
+10. `20260704_090000_partner_schema_reconciliation`
+11. `20260707_130000_remove_table_plan_from_payload_enums`
+
+Migration 7 creates the digest-only member action table, constraints, indexes, and original purpose enum. Its down migration drops the table and loses action records.
+
+Migration 8 adds account-action purposes and security-event enum values. Rolling back that migration alone intentionally retains the added PostgreSQL enum values.
+
+Migrations 9 and 10 extend partner and affiliate schema. Migration 11 removes the `table_plan` value from the Payload enum and requires the column to be absent from existing rows before running.
 
 Payload migrations are separate from Prisma migration/startup behavior and are not applied by `scripts/db/deploy-prod.sh`.
 
@@ -349,7 +365,7 @@ Use this order for the staging gate:
    - Prerequisites: migration approval, backup evidence, and maintenance window.
    - Command: the reviewed migration runner for the approved environment.
    - Evidence: migration logs and applied migration order.
-   - Success: all ten reviewed migrations complete in order.
+   - Success: all eleven reviewed migrations complete in order.
    - Stop: error, drift, or any destructive rollback attempt.
 7. Deploy the exact image.
    - Prerequisites: image publication approval and deployment approval are separate.
@@ -493,6 +509,27 @@ Operator: <name>
 Rollback owner: <name>
 
 This does not authorize push, Prisma migrations, schema initialization, provider delivery, or deployment.
+```
+
+### Prisma migration authorization (account-column rename)
+
+`prisma/migrations/20260707_120000_rename_account_identity_columns/migration.sql` renames identity columns in the account table. This migration runs inside `database-deploy` startup via `scripts/db/deploy-prod.sh`. It requires separate authorization from Payload migrations, image publication, provider delivery, and preview deployment.
+
+```text
+Authorize Prisma account-column rename migration only.
+Migration: prisma/migrations/20260707_120000_rename_account_identity_columns/migration.sql
+Commit/image: <exact value>
+Environment: <preview|staging|production>
+STARTUP_MODE: database-deploy
+DEPLOYMENT_ENV: <exact environment>
+Backup and restore point: <confirmed evidence>
+Column rename scope confirmed: <yes/no>
+Downstream query compatibility reviewed: <yes/no>
+Maintenance window: <time>
+Operator: <name>
+Rollback owner: <name>
+
+This does not authorize Payload migrations, push, provider delivery, preview deployment, or any other Prisma migrations beyond this file.
 ```
 
 ### Prisma startup authorization

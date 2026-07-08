@@ -120,6 +120,16 @@ export const PREVIEW_MIGRATION_INVENTORY = [
     verificationChecks: ['registry-match', 'ordered-exactly', 'partner-schema-reconciliation'],
     authorizationCategory: 'payloadMigration',
   },
+  {
+    name: '20260707_130000_remove_table_plan_from_payload_enums',
+    system: 'payload',
+    order: 11,
+    purpose: 'Remove the legacy table-plan value from Payload membership-tier enumerations; mapped to Free access.',
+    requiredForPreview: true,
+    rollbackRisk: 'irreversible',
+    verificationChecks: ['registry-match', 'ordered-exactly', 'table-plan-removal'],
+    authorizationCategory: 'payloadMigration',
+  },
 ] as const satisfies readonly PreviewMigrationInventoryEntry[]
 
 export const PREVIEW_MIGRATION_INVENTORY_VERSION = 1
