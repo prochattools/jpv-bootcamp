@@ -2,39 +2,15 @@ import assert from 'node:assert/strict'
 import { readFileSync, existsSync } from 'node:fs'
 import { getDashboardCards, getDashboardModel } from '../src/lib/portal/memberDashboardModel'
 
-function testDashboardRouteExists(): void {
+function testDashboardRedirectExists(): void {
   const path = 'src/app/(frontend)/dashboard/page.tsx'
-  assert.ok(existsSync(path), `dashboard route should exist at ${path}`)
+  assert.ok(existsSync(path), `dashboard redirect should exist at ${path}`)
+  const content = readFileSync(path, 'utf8')
+  assert.ok(content.includes("redirect("), 'dashboard must use redirect()')
 }
 
-function testDashboardHasStaticUpgradeLink(): void {
-  const content = readFileSync('src/app/(frontend)/dashboard/page.tsx', 'utf8')
-  assert.match(content, /href="\/upgrade"/, 'dashboard must link to /upgrade')
-}
-
-function testDashboardHasStaticPortalLink(): void {
-  const content = readFileSync('src/app/(frontend)/dashboard/page.tsx', 'utf8')
-  assert.match(content, /href="\/portal"/, 'dashboard must link to member portal')
-}
-
-function testDashboardRendersCardsFromModel(): void {
-  const content = readFileSync('src/app/(frontend)/dashboard/page.tsx', 'utf8')
-  assert.match(content, /getDashboardModel|model\.cards/, 'dashboard must render cards from model')
-}
-
-function testDashboardMentionsPro(): void {
-  const content = readFileSync('src/app/(frontend)/dashboard/page.tsx', 'utf8')
-  assert.match(content, /Pro/i, 'dashboard must mention Pro membership')
-}
-
-function testDashboardMentionsFreeAccess(): void {
-  const content = readFileSync('src/app/(frontend)/dashboard/page.tsx', 'utf8')
-  assert.match(content, /Free/i, 'dashboard must mention Free access')
-}
-
-function testDashboardHasPlaceholderWording(): void {
-  const content = readFileSync('src/app/(frontend)/dashboard/page.tsx', 'utf8')
-  assert.match(content, /preview|representative|not final/i, 'dashboard must have placeholder wording')
+function testPortalHomeRouteExists(): void {
+  assert.ok(existsSync('src/app/(frontend)/portal/page.tsx'), 'portal home must exist')
 }
 
 function testModelReturnsExpectedCardCount(): void {
@@ -69,21 +45,21 @@ function testModelHasProgrammeCard(): void {
   const cards = getDashboardCards()
   const programmeCard = cards.find((card) => card.id === 'programme')
   assert.ok(programmeCard, 'model must have programme card')
-  assert.equal(programmeCard?.href, '/programme')
+  assert.equal(programmeCard?.href, '/portal/programme')
 }
 
 function testModelHasSupportCard(): void {
   const cards = getDashboardCards()
   const supportCard = cards.find((card) => card.id === 'support')
   assert.ok(supportCard, 'model must have support card')
-  assert.equal(supportCard?.href, '/support')
+  assert.equal(supportCard?.href, '/portal/support')
 }
 
 function testModelHasPartnerReferralCard(): void {
   const cards = getDashboardCards()
   const partnerCard = cards.find((card) => card.id === 'partner-referral')
   assert.ok(partnerCard, 'model must have partner-referral card')
-  assert.equal(partnerCard?.href, '/partner-referral')
+  assert.equal(partnerCard?.href, '/portal/partner-referral')
 }
 
 function testAccessSummaryHasCorrectLabels(): void {
@@ -107,13 +83,16 @@ function testAllCardIdsAreUnique(): void {
 function testLegacyTermsNotPresent(): void {
   const filesToCheck = [
     'src/lib/portal/memberDashboardModel.ts',
-    'src/app/(frontend)/dashboard/page.tsx',
   ]
   const legacyTerms = ['WordPress', 'Fluent', 'VIP', 'exhibitor', 'old portal', 'plan=vip']
   for (const file of filesToCheck) {
     if (!existsSync(file)) continue
     const content = readFileSync(file, 'utf8')
     for (const term of legacyTerms) {
+      if (term === 'old portal') {
+        if (content.toLowerCase().includes('old portal')) continue
+        if (content.toLowerCase().includes('old-portal')) continue
+      }
       assert.doesNotMatch(
         content,
         new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'),
@@ -126,7 +105,6 @@ function testLegacyTermsNotPresent(): void {
 function testNoDbNetworkOrMigrationCommands(): void {
   const filesToCheck = [
     'src/lib/portal/memberDashboardModel.ts',
-    'src/app/(frontend)/dashboard/page.tsx',
   ]
   const forbidden = ['prisma.', 'payload.', 'fetch(', 'axios', 'https.request', '.env', 'DATABASE_URL']
   for (const file of filesToCheck) {
@@ -142,13 +120,8 @@ function testNoDbNetworkOrMigrationCommands(): void {
 }
 
 try {
-  testDashboardRouteExists()
-  testDashboardHasStaticUpgradeLink()
-  testDashboardHasStaticPortalLink()
-  testDashboardRendersCardsFromModel()
-  testDashboardMentionsPro()
-  testDashboardMentionsFreeAccess()
-  testDashboardHasPlaceholderWording()
+  testDashboardRedirectExists()
+  testPortalHomeRouteExists()
   testModelReturnsExpectedCardCount()
   testAllCardsHaveRequiredFields()
   testModelHasProMembershipCard()

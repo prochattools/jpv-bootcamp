@@ -107,25 +107,26 @@ function testReferenceIsUnique(): void {
   }
 }
 
-function testSupportRouteExists(): void {
+function testSupportRedirectExists(): void {
   const path = 'src/app/(frontend)/support/page.tsx'
-  assert.ok(existsSync(path), `support route should exist at ${path}`)
+  assert.ok(existsSync(path), `support redirect should exist at ${path}`)
+  const content = readFileSync(path, 'utf8')
+  assert.ok(content.includes("redirect("), 'support page must use redirect()')
 }
 
-function testPageCopyIsCorrect(): void {
-  const content = readFileSync('src/app/(frontend)/support/page.tsx', 'utf8')
+function testPortalSupportPageCopyIsCorrect(): void {
+  const content = readFileSync('src/app/(frontend)/portal/support/page.tsx', 'utf8')
   assert.match(content, /controlled Free access/i)
   assert.match(content, /manual follow-up|manual review/i)
-  assert.match(content, /not a public free tier|reviewed and assigned/i)
+  assert.match(content, /third public tier/i)
   assert.match(content, /View Pro membership/i)
-  assert.match(content, /href="\/sponsored"/)
-  assert.match(content, /href="\/sponsored\/claim"/)
 }
 
 function testLegacyTermsNotPresent(): void {
   const filesToCheck = [
     'src/lib/support/payItForwardService.ts',
     'src/app/(frontend)/support/page.tsx',
+    'src/app/(frontend)/portal/support/page.tsx',
   ]
   const legacyTerms = ['WordPress', 'Fluent', 'VIP', 'exhibitor', 'old portal', 'plan=vip']
   for (const file of filesToCheck) {
@@ -145,6 +146,7 @@ function testNoDbNetworkOrMigrationCommands(): void {
   const filesToCheck = [
     'src/lib/support/payItForwardService.ts',
     'src/app/(frontend)/support/page.tsx',
+    'src/app/(frontend)/portal/support/page.tsx',
   ]
   const forbidden = ['prisma.', 'payload.', 'fetch(', 'axios', 'https.request', '.env', 'DATABASE_URL']
   for (const file of filesToCheck) {
@@ -171,8 +173,8 @@ try {
   testValidSupportCodeAccepted()
   testMultipleErrorsReturned()
   testReferenceIsUnique()
-  testSupportRouteExists()
-  testPageCopyIsCorrect()
+  testSupportRedirectExists()
+  testPortalSupportPageCopyIsCorrect()
   testLegacyTermsNotPresent()
   testNoDbNetworkOrMigrationCommands()
   console.log('pay_it_forward_mvp.test.ts passed')

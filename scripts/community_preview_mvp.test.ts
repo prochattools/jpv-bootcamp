@@ -5,6 +5,11 @@ import { getDashboardCards } from '../src/lib/portal/memberDashboardModel'
 
 const COMMUNITY_FILES = [
   'src/lib/community/communityPreviewModel.ts',
+  'src/app/(frontend)/portal/community/page.tsx',
+  'src/app/(frontend)/portal/community/[spaceSlug]/page.tsx',
+]
+
+const ROOT_COMMUNITY_REDIRECT_FILES = [
   'src/app/(frontend)/community/page.tsx',
   'src/app/(frontend)/community/[spaceSlug]/page.tsx',
 ]
@@ -53,37 +58,44 @@ function testGetSpaceBySlug(): void {
   assert.equal(getSpaceBySlug('nonexistent-slug'), undefined, 'unknown slug must return undefined')
 }
 
-function testCommunityRouteExists(): void {
+function testPortalCommunityRouteExists(): void {
   const routeFiles = [
-    'src/app/(frontend)/community/page.tsx',
-    'src/app/(frontend)/community/[spaceSlug]/page.tsx',
+    'src/app/(frontend)/portal/community/page.tsx',
+    'src/app/(frontend)/portal/community/[spaceSlug]/page.tsx',
   ]
   for (const file of routeFiles) {
     assert.ok(existsSync(file), `route file must exist: ${file}`)
   }
 }
 
-function testDashboardLinksToCommunity(): void {
+function testRootCommunityRoutesAreRedirects(): void {
+  for (const file of ROOT_COMMUNITY_REDIRECT_FILES) {
+    const content = readFileSync(file, 'utf8')
+    assert.ok(content.includes("redirect("), `${file} must use redirect()`)
+  }
+}
+
+function testDashboardLinksToPortalCommunity(): void {
   const cards = getDashboardCards()
   const communityCard = cards.find((card) => card.id === 'community')
   assert.ok(communityCard, 'dashboard model must have a community card')
-  assert.equal(communityCard?.href, '/community', 'community card must link to /community')
+  assert.equal(communityCard?.href, '/portal/community', 'community card must link to /portal/community')
 }
 
 function testCommunityPageLinksToUpgrade(): void {
-  const content = readFileSync('src/app/(frontend)/community/page.tsx', 'utf8')
+  const content = readFileSync('src/app/(frontend)/portal/community/page.tsx', 'utf8')
   assert.ok(content.includes('/upgrade'), 'community page must link to /upgrade')
 }
 
 function testCommunitySpacePageLinksToUpgrade(): void {
-  const content = readFileSync('src/app/(frontend)/community/[spaceSlug]/page.tsx', 'utf8')
+  const content = readFileSync('src/app/(frontend)/portal/community/[spaceSlug]/page.tsx', 'utf8')
   assert.ok(content.includes('/upgrade'), 'community space page must link to /upgrade')
 }
 
 function testPageCopyIncludesPreviewWording(): void {
   const files = [
-    'src/app/(frontend)/community/page.tsx',
-    'src/app/(frontend)/community/[spaceSlug]/page.tsx',
+    'src/app/(frontend)/portal/community/page.tsx',
+    'src/app/(frontend)/portal/community/[spaceSlug]/page.tsx',
   ]
   for (const file of files) {
     const content = readFileSync(file, 'utf8')
@@ -96,8 +108,8 @@ function testPageCopyIncludesPreviewWording(): void {
 
 function testPageCopyDoesNotClaimLiveCutover(): void {
   const files = [
-    'src/app/(frontend)/community/page.tsx',
-    'src/app/(frontend)/community/[spaceSlug]/page.tsx',
+    'src/app/(frontend)/portal/community/page.tsx',
+    'src/app/(frontend)/portal/community/[spaceSlug]/page.tsx',
   ]
   const liveClaims = [
     /live community (is|has been|now) (live|launched|complete|ready)/i,
@@ -114,8 +126,8 @@ function testPageCopyDoesNotClaimLiveCutover(): void {
 
 function testCommunityPageDoesNotClaimLiveMessaging(): void {
   const files = [
-    'src/app/(frontend)/community/page.tsx',
-    'src/app/(frontend)/community/[spaceSlug]/page.tsx',
+    'src/app/(frontend)/portal/community/page.tsx',
+    'src/app/(frontend)/portal/community/[spaceSlug]/page.tsx',
   ]
   const messagingClaims = [
     /send (messages|replies|comments)/i,
@@ -132,8 +144,9 @@ function testCommunityPageDoesNotClaimLiveMessaging(): void {
 }
 
 function testLegacyTermsNotPresent(): void {
+  const allFiles = [...COMMUNITY_FILES, ...ROOT_COMMUNITY_REDIRECT_FILES]
   const legacyTerms = ['WordPress', 'Fluent', 'VIP', 'exhibitor', 'old portal', 'plan=vip']
-  for (const file of COMMUNITY_FILES) {
+  for (const file of allFiles) {
     if (!existsSync(file)) continue
     const content = readFileSync(file, 'utf8')
     for (const term of legacyTerms) {
@@ -151,8 +164,9 @@ function testLegacyTermsNotPresent(): void {
 }
 
 function testNoDbNetworkOrMigrationCommands(): void {
+  const allFiles = [...COMMUNITY_FILES, ...ROOT_COMMUNITY_REDIRECT_FILES]
   const forbidden = ['prisma.', 'payload.', 'fetch(', 'axios', 'https.request', '.env', 'DATABASE_URL']
-  for (const file of COMMUNITY_FILES) {
+  for (const file of allFiles) {
     if (!existsSync(file)) continue
     const content = readFileSync(file, 'utf8')
     for (const pattern of forbidden) {
@@ -171,8 +185,9 @@ try {
   testEverySpaceHasRequiredFields()
   testPublicSafeSummaryExists()
   testGetSpaceBySlug()
-  testCommunityRouteExists()
-  testDashboardLinksToCommunity()
+  testPortalCommunityRouteExists()
+  testRootCommunityRoutesAreRedirects()
+  testDashboardLinksToPortalCommunity()
   testCommunityPageLinksToUpgrade()
   testCommunitySpacePageLinksToUpgrade()
   testPageCopyIncludesPreviewWording()

@@ -87,20 +87,21 @@ function testPlaceholderStatus(): void {
   }
 }
 
-function testProgrammeRouteExists(): void {
+function testProgrammeRedirectExists(): void {
   const path = 'src/app/(frontend)/programme/page.tsx'
-  assert.ok(existsSync(path), `programme route should exist at ${path}`)
+  assert.ok(existsSync(path), `programme redirect should exist at ${path}`)
+  const content = readFileSync(path, 'utf8')
+  assert.ok(content.includes("redirect("), 'programme page must use redirect()')
 }
 
-function testProgrammeRouteContainsProCta(): void {
-  const content = readFileSync('src/app/(frontend)/programme/page.tsx', 'utf8')
-  assert.match(content, /href="\/upgrade"/, 'programme page must link to /upgrade')
-  assert.match(content, /Pro membership/i, 'programme page must mention Pro membership')
-  assert.match(content, /support/i, 'programme page must include support route')
+function testPortalProgrammeRouteContainsProCta(): void {
+  const content = readFileSync('src/app/(frontend)/portal/programme/page.tsx', 'utf8')
+  assert.match(content, /href="\/upgrade"/, 'portal programme page must link to /upgrade')
+  assert.match(content, /Pro membership/i, 'portal programme page must mention Pro membership')
 }
 
-function testProgrammeRoutePlaceholderNotice(): void {
-  const content = readFileSync('src/app/(frontend)/programme/page.tsx', 'utf8')
+function testPortalProgrammeRoutePlaceholderNotice(): void {
+  const content = readFileSync('src/app/(frontend)/portal/programme/page.tsx', 'utf8')
   assert.match(content, /placeholder|representative|subject to client approval/i)
 }
 
@@ -108,6 +109,7 @@ function testLegacyTermsNotPresent(): void {
   const filesToCheck = [
     'src/lib/course/programmeCatalog.ts',
     'src/app/(frontend)/programme/page.tsx',
+    'src/app/(frontend)/portal/programme/page.tsx',
   ]
   const legacyTerms = ['WordPress', 'Fluent', 'VIP', 'exhibitor', 'old portal', 'plan=vip']
   for (const file of filesToCheck) {
@@ -127,6 +129,7 @@ function testNoDbNetworkOrMigrationCommands(): void {
   const filesToCheck = [
     'src/lib/course/programmeCatalog.ts',
     'src/app/(frontend)/programme/page.tsx',
+    'src/app/(frontend)/portal/programme/page.tsx',
   ]
   const forbidden = ['prisma.', 'payload.', 'fetch(', 'axios', 'https.request', '.env', 'DATABASE_URL']
   for (const file of filesToCheck) {
@@ -151,9 +154,9 @@ try {
   testProgressionOrder()
   testMentorshipWeeks()
   testPlaceholderStatus()
-  testProgrammeRouteExists()
-  testProgrammeRouteContainsProCta()
-  testProgrammeRoutePlaceholderNotice()
+  testProgrammeRedirectExists()
+  testPortalProgrammeRouteContainsProCta()
+  testPortalProgrammeRoutePlaceholderNotice()
   testLegacyTermsNotPresent()
   testNoDbNetworkOrMigrationCommands()
   console.log('course_programme_mvp.test.ts passed')

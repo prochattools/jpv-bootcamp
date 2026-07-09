@@ -1,6 +1,13 @@
 import assert from 'node:assert/strict'
 import { existsSync, readFileSync } from 'node:fs'
-import { getMvpRoutes, getPublicNavigationRoutes, getOperatorNavigationRoutes, getRouteById, getRoutesByGroup } from '../src/lib/navigation/mvpRouteRegistry'
+import {
+  getMvpRoutes,
+  getPublicNavigationRoutes,
+  getOperatorNavigationRoutes,
+  getRouteById,
+  getRoutesByGroup,
+  getCanonicalRoutes,
+} from '../src/lib/navigation/mvpRouteRegistry'
 import { getAdminReviewSections, getReviewSectionBySlug, getAdminReviewExportRows } from '../src/lib/admin/adminReviewModel'
 
 const INTEGRATION_FILES = [
@@ -16,6 +23,14 @@ const EXPECTED_PUBLIC_ROUTE_IDS = [
   'community',
   'support',
   'partner-referral',
+  'upgrade',
+]
+
+const EXPECTED_PUBLIC_CANONICAL_IDS = [
+  'portal-programme',
+  'portal-community',
+  'portal-support',
+  'portal-partner-referral',
   'upgrade',
 ]
 
@@ -42,6 +57,7 @@ function testEveryRouteHasRequiredFields(): void {
   const validGroups = ['public', 'member_preview', 'operator', 'billing_membership']
   const validStatuses = ['ready_for_testing', 'preview', 'auth_required', 'manual_review']
   const validAccess = ['public', 'controlled_free', 'pro', 'operator', 'auth_required']
+  const validKinds = ['canonical', 'compatibility_redirect']
 
   for (const route of routes) {
     assert.ok(typeof route.id === 'string' && route.id.length > 0, 'route must have id')
@@ -51,6 +67,10 @@ function testEveryRouteHasRequiredFields(): void {
     assert.ok(validGroups.includes(route.group), `route ${route.id} invalid group: ${route.group}`)
     assert.ok(validStatuses.includes(route.status), `route ${route.id} invalid status: ${route.status}`)
     assert.ok(validAccess.includes(route.access), `route ${route.id} invalid access: ${route.access}`)
+    assert.ok(validKinds.includes(route.kind), `route ${route.id} invalid kind: ${route.kind}`)
+    if (route.kind === 'compatibility_redirect') {
+      assert.ok(typeof route.canonicalHref === 'string', `compatibility route ${route.id} must have canonicalHref`)
+    }
   }
 }
 
@@ -64,8 +84,7 @@ function testEveryRouteHrefPointsToExistingFileOrBase(): void {
     const path = `${knownBases[0]}${href}`
     const asPage = `${path}/page.tsx`
     const hasPage = existsSync(asPage)
-    const hasDir = existsSync(path) && !hasPage
-    assert.ok(hasPage || hasDir, `route ${route.id} (${route.href}) must resolve: checked ${asPage}`)
+    assert.ok(hasPage, `route ${route.id} (${route.href}) must resolve to existing file: ${asPage}`)
   }
 }
 
@@ -75,6 +94,24 @@ function testPublicNavigationRoutes(): void {
 
   for (const expectedId of EXPECTED_PUBLIC_ROUTE_IDS) {
     assert.ok(publicIds.includes(expectedId), `public routes must include ${expectedId}`)
+  }
+}
+
+function testCanonicalRoutesIncluded(): void {
+  const canonical = getCanonicalRoutes()
+  const canonicalIds = canonical.map((r) => r.id)
+  for (const expectedId of EXPECTED_PUBLIC_CANONICAL_IDS) {
+    assert.ok(canonicalIds.includes(expectedId), `canonical routes must include ${expectedId}`)
+  }
+}
+
+function testCompatibilityRedirectsHaveCanonicalHref(): void {
+  const compatibilityRoutes = getMvpRoutes().filter((r) => r.kind === 'compatibility_redirect')
+  for (const route of compatibilityRoutes) {
+    assert.ok(typeof route.canonicalHref === 'string', `compatibility route ${route.id} must have canonicalHref`)
+    const canonicalRoute = getMvpRoutes().find((r) => r.href === route.canonicalHref)
+    assert.ok(canonicalRoute, `canonical route for ${route.id} (${route.canonicalHref}) must exist`)
+    assert.equal(canonicalRoute?.kind, 'canonical', `canonical target for ${route.id} must be canonical`)
   }
 }
 
@@ -100,16 +137,16 @@ function testOperatorRoutesIncludeAdminReview(): void {
   assert.ok(operatorSlugs.includes('/admin/review'), 'operator routes must include /admin/review')
 }
 
-function testDashboardDistinguishesFromPortal(): void {
+function testDashboardIsRedirectToPortal(): void {
   const content = readFileSync('src/app/(frontend)/dashboard/page.tsx', 'utf8')
+  assert.match(content, /redirect\s*\(\s*['"]\/portal['"]\s*\)/, 'dashboard must redirect to /portal')
+}
+
+function testPortalHomeRequiresPayloadAuth(): void {
+  const content = readFileSync('src/app/(frontend)/portal/page.tsx', 'utf8')
   assert.ok(
-    content.includes('public preview dashboard') ||
-    content.includes('/dashboard') && content.includes('/portal'),
-    'dashboard must distinguish itself from /portal',
-  )
-  assert.ok(
-    content.toLowerCase().includes('payload'),
-    'dashboard must mention Payload DB requirement for /portal',
+    content.includes('requirePortalMember') && content.includes('getMemberCourseDashboard'),
+    'portal page must use Payload DB-backed auth and course data',
   )
 }
 
@@ -123,7 +160,6 @@ function testAdminDetailPageExists(): void {
 function testEveryAdminSectionHasDetailUrl(): void {
   const sections = getAdminReviewSections()
   for (const section of sections) {
-    const detailPath = `src/app/(frontend)/admin/review/${section.slug}/page.tsx`
     assert.ok(
       existsSync('src/app/(frontend)/admin/review/[sectionSlug]/page.tsx'),
       `section ${section.slug} uses dynamic [sectionSlug] route`,
@@ -220,10 +256,13 @@ try {
   testEveryRouteHasRequiredFields()
   testEveryRouteHrefPointsToExistingFileOrBase()
   testPublicNavigationRoutes()
+  testCanonicalRoutesIncluded()
+  testCompatibilityRedirectsHaveCanonicalHref()
   testGetRouteById()
   testGetRoutesByGroup()
   testOperatorRoutesIncludeAdminReview()
-  testDashboardDistinguishesFromPortal()
+  testDashboardIsRedirectToPortal()
+  testPortalHomeRequiresPayloadAuth()
   testAdminDetailPageExists()
   testEveryAdminSectionHasDetailUrl()
   testAdminDetailUsesGetReviewSectionBySlug()
