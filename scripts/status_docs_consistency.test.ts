@@ -12,6 +12,8 @@ async function main(): Promise<void> {
     providerEvidence: 'docs/client/PROVIDER_EMAIL_EVIDENCE_TEMPLATE.md',
     providerReadiness: 'docs/client/PROVIDER_EMAIL_READINESS.md',
     readme: 'docs/client/README.md',
+    clientContentRequest: 'docs/client/CLIENT_CONTENT_REQUEST_15_JULY.md',
+    frontEndContentTracker: 'docs/client/FRONTEND_CONTENT_STATUS_TRACKER.md',
     roadmap: 'docs/client/ROADMAP_PROGRESS_STATUS.md',
     summaryV34: 'docs/client/JPV_BOOTCAMP_GO_LIVE_PLAN_V3_4_SUMMARY.md',
     reviewPacket: 'docs/client/PAYLOAD_ONLY_FREE_PRO_REVIEW_PACKET.md',

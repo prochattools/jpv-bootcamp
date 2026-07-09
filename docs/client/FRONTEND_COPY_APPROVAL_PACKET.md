@@ -17,6 +17,11 @@ This packet identifies the exact front-end copy and content that requires approv
 
 **Migrations applied: No.** No migrations have been applied to this branch and must not be applied to meet the front-end website go-live milestone.
 
+Related collection documents:
+
+- `docs/client/CLIENT_CONTENT_REQUEST_15_JULY.md` — client-sendable request for approval or replacement copy by 15 July 2026.
+- `docs/client/FRONTEND_CONTENT_STATUS_TRACKER.md` — operator tracker for pending, approved, and replacement content.
+
 ---
 
 ## Public Offer Summary

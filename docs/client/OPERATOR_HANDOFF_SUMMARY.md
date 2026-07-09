@@ -14,6 +14,8 @@
 - Internal delivery / handover buffer: 23 July 2026
 - Client-requested finished-by date: 24 July 2026
 - Client content/input due: Wednesday 15 July 2026
+- Client content request: `docs/client/CLIENT_CONTENT_REQUEST_15_JULY.md`
+- Front-end content status tracker: `docs/client/FRONTEND_CONTENT_STATUS_TRACKER.md`
 - Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`
 - Toolchain check: `pnpm toolchain:check`
 - Static preflight: `pnpm staging:static-preflight`
@@ -51,17 +53,19 @@
 
 ## Exact next operator sequence
 
-1. Review `docs/client/MIGRATION_APPROVAL_PACKET.md`.
-2. Update `docs/client/MIGRATION_APPROVAL_STATUS.md` only after real approval.
-3. Review `docs/client/STATUS_UPDATE_PROCEDURE.md` before changing any roadmap percentages.
-4. Run `pnpm toolchain:check` and `pnpm staging:static-preflight` before manual staging smoke or evidence capture when the shell pnpm version is not already pinned.
-5. **Optional:** Run `pnpm evidence:create` to generate draft evidence templates.
-6. **During staging smoke:** Complete `docs/client/STAGING_SMOKE_EVIDENCE_TEMPLATE.md` in `docs/client/evidence/`.
-7. **During provider/email checks:** Complete `docs/client/PROVIDER_EMAIL_EVIDENCE_TEMPLATE.md` in `docs/client/evidence/`.
-8. **Before closing out:** Run `pnpm evidence:validate` to validate completed evidence for safety and consistency.
-9. Do not commit unfilled draft evidence files unless explicitly approved.
-10. Do not apply migrations until approval is complete.
-11. Do not touch `main`.
+1. Send or adapt `docs/client/CLIENT_CONTENT_REQUEST_15_JULY.md` to collect front-end copy/content decisions by 15 July 2026.
+2. Track responses in `docs/client/FRONTEND_CONTENT_STATUS_TRACKER.md` without marking items approved unless the client explicitly approves them.
+3. Review `docs/client/MIGRATION_APPROVAL_PACKET.md`.
+4. Update `docs/client/MIGRATION_APPROVAL_STATUS.md` only after real approval.
+5. Review `docs/client/STATUS_UPDATE_PROCEDURE.md` before changing any roadmap percentages.
+6. Run `pnpm toolchain:check` and `pnpm staging:static-preflight` before manual staging smoke or evidence capture when the shell pnpm version is not already pinned.
+7. **Optional:** Run `pnpm evidence:create` to generate draft evidence templates.
+8. **During staging smoke:** Complete `docs/client/STAGING_SMOKE_EVIDENCE_TEMPLATE.md` in `docs/client/evidence/`.
+9. **During provider/email checks:** Complete `docs/client/PROVIDER_EMAIL_EVIDENCE_TEMPLATE.md` in `docs/client/evidence/`.
+10. **Before closing out:** Run `pnpm evidence:validate` to validate completed evidence for safety and consistency.
+11. Do not commit unfilled draft evidence files unless explicitly approved.
+12. Do not apply migrations until approval is complete.
+13. Do not touch `main`.
 
 ## Hard stops
 

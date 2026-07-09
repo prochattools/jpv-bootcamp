@@ -47,7 +47,7 @@ This markdown file provides the tracked readable v3.4 status summary. The client
 
 ## Timeline
 
-- 15 July 2026: client content/input due.
+- 15 July 2026: client content/input due; request and tracking docs are `docs/client/CLIENT_CONTENT_REQUEST_15_JULY.md` and `docs/client/FRONTEND_CONTENT_STATUS_TRACKER.md`.
 - 16-18 July 2026: front-end test and copy polish.
 - 22 July 2026: front-end website go-live milestone.
 - 23 July 2026: delivery / handover buffer.

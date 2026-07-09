@@ -7,6 +7,8 @@
 - PR / review URL: `https://github.com/prochattools/jpv-bootcamp/pull/2`
 - Staging deployment target: this feature branch is the staging / production-staged deployment branch.
 - Version 3.4 summary: `docs/client/JPV_BOOTCAMP_GO_LIVE_PLAN_V3_4_SUMMARY.md`
+- Client content request: `docs/client/CLIENT_CONTENT_REQUEST_15_JULY.md`
+- Front-end content status tracker: `docs/client/FRONTEND_CONTENT_STATUS_TRACKER.md`
 - Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`
 - Latest validated pre-migration-handoff commit: `50f7966 docs: add migration rehearsal safety handoff`
 - Latest verified branch tip before this pass: `4a8f79b chore: guard against committed draft evidence`

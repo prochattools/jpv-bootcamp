@@ -7,6 +7,8 @@ Cross-links:
 - Review packet: `docs/client/PAYLOAD_ONLY_FREE_PRO_REVIEW_PACKET.md`
 - Version 3.4 summary: `docs/client/JPV_BOOTCAMP_GO_LIVE_PLAN_V3_4_SUMMARY.md`
 - Front-end copy approval: `docs/client/FRONTEND_COPY_APPROVAL_PACKET.md`
+- Front-end content request: `docs/client/CLIENT_CONTENT_REQUEST_15_JULY.md`
+- Front-end content status tracker: `docs/client/FRONTEND_CONTENT_STATUS_TRACKER.md`
 - Front-end content intake: `docs/client/FRONTEND_CONTENT_INTAKE_CHECKLIST.md`
 - Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`
 - Migration approval packet: `docs/client/MIGRATION_APPROVAL_PACKET.md`
@@ -77,11 +79,11 @@ Basis: v3.3 baseline set in `docs/PAYLOAD_INTEGRATION_PLAN.md` (expanded-platfor
 
 ## Front-End Milestone Readiness Note
 
-**Front-end delivery readiness / evidence preparation: ~85–90%**
+**Front-end delivery readiness / evidence preparation: ~88–90%**
 
-The front-end website go-live milestone (22 July 2026) is delivery-ready from the code and infrastructure perspective. Remaining blockers are external:
+The front-end website go-live milestone (22 July 2026) is delivery-ready from the code and infrastructure perspective, and now has a client-sendable content request plus an operator status tracker. Remaining blockers are external:
 
-- **Client content/input due 15 July 2026** — client must provide final or approved placeholder copy for hero headline, pricing, membership description, support/pay-it-forward wording, FAQ answers, and onboarding flow.
+- **Client content/input due 15 July 2026** — client must approve current wording/placeholders or provide replacement copy using `docs/client/CLIENT_CONTENT_REQUEST_15_JULY.md`; operator tracks decisions in `docs/client/FRONTEND_CONTENT_STATUS_TRACKER.md`.
 - **Operator acceptance** — manual front-end website load and UX verification.
 - **Final public copy approval** — unless placeholders have been explicitly approved.
 

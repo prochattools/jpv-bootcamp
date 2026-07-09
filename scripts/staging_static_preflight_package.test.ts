@@ -26,6 +26,7 @@ function main(): void {
   assert.match(command, /scripts\/operator_handoff_static\.test\.ts/)
   assert.match(command, /scripts\/billing_readiness_report\.test\.ts/)
   assert.match(command, /scripts\/member_checkout\.test\.ts/)
+  assert.match(command, /scripts\/frontend_content_request_static\.test\.ts/)
   assert.match(command, /pnpm toolchain:check/)
   assert.match(command, /pnpm evidence:validate/)
 

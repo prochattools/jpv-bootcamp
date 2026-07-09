@@ -33,6 +33,8 @@ Local toolchain is pinned to `pnpm@10.33.0`; run `pnpm toolchain:check` before o
 - [Provider and Email Evidence Template](./PROVIDER_EMAIL_EVIDENCE_TEMPLATE.md) — fillable evidence capture template for provider/email verification.
 - [Front-End Content Intake Checklist](./FRONTEND_CONTENT_INTAKE_CHECKLIST.md) — operator/client-facing checklist for 22 July front-end website go-live milestone, content dependencies, and acceptance criteria.
 - [Front-End Copy Approval Packet](./FRONTEND_COPY_APPROVAL_PACKET.md) — exact public-facing copy, content dependencies, and client approval requirements for the front-end website launch.
+- [Client Content Request for 15 July](./CLIENT_CONTENT_REQUEST_15_JULY.md) — client-sendable request for copy/content approval or replacement before the 22 July front-end milestone.
+- [Front-End Content Status Tracker](./FRONTEND_CONTENT_STATUS_TRACKER.md) — operator tracker for pending, approved, and replacement content against the 15 July deadline.
 
 ## Evidence artifact automation
 
