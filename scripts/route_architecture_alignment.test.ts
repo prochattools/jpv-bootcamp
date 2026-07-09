@@ -171,6 +171,57 @@ function testNoDbNetworkOrMigrationCommands(): void {
   }
 }
 
+function testAuthRequiredForProgrammeAndCommunity(): void {
+  // /portal/programme requires auth
+  const programmePage = readFileSync('src/app/(frontend)/portal/programme/page.tsx', 'utf8')
+  assert.ok(programmePage.includes('requirePortalMember'), '/portal/programme must import requirePortalMember')
+  assert.ok(programmePage.includes("'/portal/programme'"), '/portal/programme must require auth for /portal/programme path')
+
+  // /portal/community requires auth
+  const communityPage = readFileSync('src/app/(frontend)/portal/community/page.tsx', 'utf8')
+  assert.ok(communityPage.includes('requirePortalMember'), '/portal/community must import requirePortalMember')
+  assert.ok(communityPage.includes("'/portal/community'"), '/portal/community must require auth for /portal/community path')
+
+  // /portal/community/[spaceSlug] requires auth
+  const communitySpacePage = readFileSync('src/app/(frontend)/portal/community/[spaceSlug]/page.tsx', 'utf8')
+  assert.ok(communitySpacePage.includes('requirePortalMember'), '/portal/community/[spaceSlug] must import requirePortalMember')
+  assert.ok(communitySpacePage.includes('/portal/community/'), '/portal/community/[spaceSlug] must require auth for portal/community path')
+}
+
+function testSupportAndPartnerReferralRemainPublicIntake(): void {
+  // Support page should be public and clearly marked as intake form
+  const supportPage = readFileSync('src/app/(frontend)/portal/support/page.tsx', 'utf8')
+  assert.ok(!supportPage.includes('requirePortalMember'), '/portal/support must remain public intake')
+  assert.ok(supportPage.includes('Support') || supportPage.includes('support'), '/portal/support must mention support')
+  assert.ok(supportPage.includes('Free access'), '/portal/support must mention Free access')
+
+  // Partner referral page should be public and clearly marked as intake form
+  const partnerPage = readFileSync('src/app/(frontend)/portal/partner-referral/page.tsx', 'utf8')
+  assert.ok(!partnerPage.includes('requirePortalMember'), '/portal/partner-referral must remain public intake')
+  assert.ok(partnerPage.includes('Partner'), '/portal/partner-referral must mention partner')
+}
+
+function testRouteRegistryAuthAlignment(): void {
+  const canonical = getCanonicalRoutes()
+  const programmeRoute = canonical.find((r) => r.id === 'portal-programme')
+  assert.ok(programmeRoute, 'route registry must include portal-programme')
+  assert.equal(programmeRoute?.access, 'auth_required', 'portal-programme must be auth_required in registry')
+  assert.equal(programmeRoute?.group, 'member_preview', 'portal-programme must be in member_preview group')
+
+  const communityRoute = canonical.find((r) => r.id === 'portal-community')
+  assert.ok(communityRoute, 'route registry must include portal-community')
+  assert.equal(communityRoute?.access, 'auth_required', 'portal-community must be auth_required in registry')
+  assert.equal(communityRoute?.group, 'member_preview', 'portal-community must be in member_preview group')
+
+  const supportRoute = canonical.find((r) => r.id === 'portal-support')
+  assert.ok(supportRoute, 'route registry must include portal-support')
+  assert.equal(supportRoute?.access, 'public', 'portal-support must be public in registry')
+
+  const partnerRoute = canonical.find((r) => r.id === 'portal-partner-referral')
+  assert.ok(partnerRoute, 'route registry must include portal-partner-referral')
+  assert.equal(partnerRoute?.access, 'public', 'portal-partner-referral must be public in registry')
+}
+
 try {
   testDocumentedArchitecture()
   testPortalPageExists()
@@ -183,6 +234,9 @@ try {
   testNoRootMvpRoutesAsCanonical()
   testLegacyTermsNotPresent()
   testNoDbNetworkOrMigrationCommands()
+  testAuthRequiredForProgrammeAndCommunity()
+  testSupportAndPartnerReferralRemainPublicIntake()
+  testRouteRegistryAuthAlignment()
   console.log('route_architecture_alignment.test.ts passed')
 } catch (error) {
   console.error('route_architecture_alignment.test.ts failed', error instanceof Error ? error.message : error)

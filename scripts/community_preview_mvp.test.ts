@@ -179,6 +179,18 @@ function testNoDbNetworkOrMigrationCommands(): void {
   }
 }
 
+function testCommunityPagesRequireAuth(): void {
+  // /portal/community page must require auth
+  const communityPage = readFileSync('src/app/(frontend)/portal/community/page.tsx', 'utf8')
+  assert.ok(communityPage.includes('requirePortalMember'), '/portal/community page must call requirePortalMember')
+  assert.ok(communityPage.includes('server-only'), '/portal/community page must be server-only')
+
+  // /portal/community/[spaceSlug] page must require auth
+  const communitySpacePage = readFileSync('src/app/(frontend)/portal/community/[spaceSlug]/page.tsx', 'utf8')
+  assert.ok(communitySpacePage.includes('requirePortalMember'), '/portal/community/[spaceSlug] page must call requirePortalMember')
+  assert.ok(communitySpacePage.includes('server-only'), '/portal/community/[spaceSlug] page must be server-only')
+}
+
 try {
   testModelExists()
   testAtLeastThreeSpaces()
@@ -195,6 +207,7 @@ try {
   testCommunityPageDoesNotClaimLiveMessaging()
   testLegacyTermsNotPresent()
   testNoDbNetworkOrMigrationCommands()
+  testCommunityPagesRequireAuth()
   console.log('community_preview_mvp.test.ts passed')
 } catch (error) {
   console.error('community_preview_mvp.test.ts failed', error instanceof Error ? error.message : error)

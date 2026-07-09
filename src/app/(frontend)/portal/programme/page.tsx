@@ -1,5 +1,8 @@
+import 'server-only'
+
 import Link from 'next/link'
 import { getAllWeeks, getProgrammeSummary, type WeekEntry } from '@/lib/course/programmeCatalog'
+import { requirePortalMember } from '@/lib/auth/requirePortalMember'
 
 export const dynamic = 'force-dynamic'
 
@@ -42,7 +45,9 @@ function WeekCard({ week, index }: { week: WeekEntry; index: number }) {
   )
 }
 
-export default function PortalProgrammePage() {
+export default async function PortalProgrammePage() {
+  await requirePortalMember('/portal/programme')
+
   const weeks = getAllWeeks()
   const summary = getProgrammeSummary()
 

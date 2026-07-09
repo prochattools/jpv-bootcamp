@@ -1,5 +1,8 @@
+import 'server-only'
+
 import Link from 'next/link'
 import { getAllSpaces, getPublicSafeSummary } from '@/lib/community/communityPreviewModel'
+import { requirePortalMember } from '@/lib/auth/requirePortalMember'
 
 export const dynamic = 'force-dynamic'
 
@@ -29,7 +32,9 @@ function statusBadge(status: string): { label: string; className: string } {
   }
 }
 
-export default function PortalCommunityPage() {
+export default async function PortalCommunityPage() {
+  await requirePortalMember('/portal/community')
+
   const spaces = getAllSpaces()
   const summary = getPublicSafeSummary()
 

@@ -1,6 +1,9 @@
+import 'server-only'
+
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getSpaceBySlug, type CommunityAccessLabel, type CommunityStatus } from '@/lib/community/communityPreviewModel'
+import { requirePortalMember } from '@/lib/auth/requirePortalMember'
 
 type PortalCommunitySpacePageProps = {
   params: Promise<{ spaceSlug: string }>
@@ -29,6 +32,8 @@ function statusBadge(status: CommunityStatus): { label: string; className: strin
 }
 
 export default async function PortalCommunitySpacePage({ params }: PortalCommunitySpacePageProps) {
+  await requirePortalMember(`/portal/community/${(await params).spaceSlug}`)
+
   const { spaceSlug } = await params
   const space = getSpaceBySlug(spaceSlug)
 

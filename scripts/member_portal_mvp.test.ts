@@ -119,6 +119,19 @@ function testNoDbNetworkOrMigrationCommands(): void {
   }
 }
 
+function testProgrammeAndCommunityRequireAuth(): void {
+  // Programme card exists and links to auth-required route
+  const cards = getDashboardCards()
+  const programmeCard = cards.find((card) => card.id === 'programme')
+  assert.ok(programmeCard, 'model must have programme card')
+  assert.equal(programmeCard?.href, '/portal/programme', 'programme card must link to /portal/programme')
+
+  // Community card exists and links to auth-required route
+  const communityCard = cards.find((card) => card.id === 'community')
+  assert.ok(communityCard, 'model must have community card')
+  assert.equal(communityCard?.href, '/portal/community', 'community card must link to /portal/community')
+}
+
 try {
   testDashboardRedirectExists()
   testPortalHomeRouteExists()
@@ -133,6 +146,7 @@ try {
   testAllCardIdsAreUnique()
   testLegacyTermsNotPresent()
   testNoDbNetworkOrMigrationCommands()
+  testProgrammeAndCommunityRequireAuth()
   console.log('member_portal_mvp.test.ts passed')
 } catch (error) {
   console.error('member_portal_mvp.test.ts failed', error instanceof Error ? error.message : error)
