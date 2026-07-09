@@ -52,6 +52,7 @@ Before publishing a status update, verify these links are present and correct:
 - `docs/client/FRONTEND_COPY_APPROVAL_PACKET.md`
 - `docs/client/CLIENT_CONTENT_REQUEST_15_JULY.md`
 - `docs/client/FRONTEND_CONTENT_STATUS_TRACKER.md`
+- `docs/client/FRONTEND_ACCEPTANCE_EVIDENCE_TEMPLATE.md`
 - `docs/client/FRONTEND_CONTENT_INTAKE_CHECKLIST.md`
 - `pnpm staging:static-preflight` (local-only static preflight; no migrations, no DB access, no live network checks, includes committed-evidence guard)
 - `pnpm toolchain:check` (local-only toolchain preflight; no migrations, no DB access, no live network checks)

@@ -35,6 +35,7 @@ Local toolchain is pinned to `pnpm@10.33.0`; run `pnpm toolchain:check` before o
 - [Front-End Copy Approval Packet](./FRONTEND_COPY_APPROVAL_PACKET.md) — exact public-facing copy, content dependencies, and client approval requirements for the front-end website launch.
 - [Client Content Request for 15 July](./CLIENT_CONTENT_REQUEST_15_JULY.md) — client-sendable request for copy/content approval or replacement before the 22 July front-end milestone.
 - [Front-End Content Status Tracker](./FRONTEND_CONTENT_STATUS_TRACKER.md) — operator tracker for pending, approved, and replacement content against the 15 July deadline.
+- [Front-End Acceptance Evidence Template](./FRONTEND_ACCEPTANCE_EVIDENCE_TEMPLATE.md) — operator template for capturing manual front-end website acceptance after real checks.
 
 ## Evidence artifact automation
 

@@ -14,6 +14,7 @@ async function main(): Promise<void> {
     readme: 'docs/client/README.md',
     clientContentRequest: 'docs/client/CLIENT_CONTENT_REQUEST_15_JULY.md',
     frontEndContentTracker: 'docs/client/FRONTEND_CONTENT_STATUS_TRACKER.md',
+    frontEndAcceptanceEvidence: 'docs/client/FRONTEND_ACCEPTANCE_EVIDENCE_TEMPLATE.md',
     roadmap: 'docs/client/ROADMAP_PROGRESS_STATUS.md',
     summaryV34: 'docs/client/JPV_BOOTCAMP_GO_LIVE_PLAN_V3_4_SUMMARY.md',
     reviewPacket: 'docs/client/PAYLOAD_ONLY_FREE_PRO_REVIEW_PACKET.md',

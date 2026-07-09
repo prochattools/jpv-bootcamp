@@ -16,6 +16,7 @@
 - Client content/input due: Wednesday 15 July 2026
 - Client content request: `docs/client/CLIENT_CONTENT_REQUEST_15_JULY.md`
 - Front-end content status tracker: `docs/client/FRONTEND_CONTENT_STATUS_TRACKER.md`
+- Front-end acceptance evidence template: `docs/client/FRONTEND_ACCEPTANCE_EVIDENCE_TEMPLATE.md`
 - Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`
 - Toolchain check: `pnpm toolchain:check`
 - Static preflight: `pnpm staging:static-preflight`
@@ -59,13 +60,14 @@
 4. Update `docs/client/MIGRATION_APPROVAL_STATUS.md` only after real approval.
 5. Review `docs/client/STATUS_UPDATE_PROCEDURE.md` before changing any roadmap percentages.
 6. Run `pnpm toolchain:check` and `pnpm staging:static-preflight` before manual staging smoke or evidence capture when the shell pnpm version is not already pinned.
-7. **Optional:** Run `pnpm evidence:create` to generate draft evidence templates.
-8. **During staging smoke:** Complete `docs/client/STAGING_SMOKE_EVIDENCE_TEMPLATE.md` in `docs/client/evidence/`.
-9. **During provider/email checks:** Complete `docs/client/PROVIDER_EMAIL_EVIDENCE_TEMPLATE.md` in `docs/client/evidence/`.
-10. **Before closing out:** Run `pnpm evidence:validate` to validate completed evidence for safety and consistency.
-11. Do not commit unfilled draft evidence files unless explicitly approved.
-12. Do not apply migrations until approval is complete.
-13. Do not touch `main`.
+7. Fill `docs/client/FRONTEND_ACCEPTANCE_EVIDENCE_TEMPLATE.md` only after real manual front-end checks; this does not approve migrations or full platform cutover.
+8. **Optional:** Run `pnpm evidence:create` to generate draft evidence templates.
+9. **During staging smoke:** Complete `docs/client/STAGING_SMOKE_EVIDENCE_TEMPLATE.md` in `docs/client/evidence/`.
+10. **During provider/email checks:** Complete `docs/client/PROVIDER_EMAIL_EVIDENCE_TEMPLATE.md` in `docs/client/evidence/`.
+11. **Before closing out:** Run `pnpm evidence:validate` to validate completed evidence for safety and consistency.
+12. Do not commit unfilled draft evidence files unless explicitly approved.
+13. Do not apply migrations until approval is complete.
+14. Do not touch `main`.
 
 ## Hard stops
 

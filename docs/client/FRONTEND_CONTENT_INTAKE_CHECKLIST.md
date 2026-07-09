@@ -21,6 +21,7 @@ Related collection documents:
 - `docs/client/CLIENT_CONTENT_REQUEST_15_JULY.md` — client-sendable request for approval or replacement copy by 15 July 2026.
 - `docs/client/FRONTEND_CONTENT_STATUS_TRACKER.md` — operator tracker for Pending / Approved / Replacement received content decisions.
 - `docs/client/FRONTEND_COPY_APPROVAL_PACKET.md` — exact public copy and approval table.
+- `docs/client/FRONTEND_ACCEPTANCE_EVIDENCE_TEMPLATE.md` — manual front-end acceptance evidence template for real operator checks.
 
 **Important:** The front-end website go-live milestone does not authorize migration execution or full platform cutover. That decision remains separate and blocked pending migration approval, staging smoke, provider/email verification, and final acceptance.
 

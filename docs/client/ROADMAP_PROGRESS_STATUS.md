@@ -9,6 +9,7 @@ Cross-links:
 - Front-end copy approval: `docs/client/FRONTEND_COPY_APPROVAL_PACKET.md`
 - Front-end content request: `docs/client/CLIENT_CONTENT_REQUEST_15_JULY.md`
 - Front-end content status tracker: `docs/client/FRONTEND_CONTENT_STATUS_TRACKER.md`
+- Front-end acceptance evidence template: `docs/client/FRONTEND_ACCEPTANCE_EVIDENCE_TEMPLATE.md`
 - Front-end content intake: `docs/client/FRONTEND_CONTENT_INTAKE_CHECKLIST.md`
 - Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`
 - Migration approval packet: `docs/client/MIGRATION_APPROVAL_PACKET.md`
@@ -81,7 +82,7 @@ Basis: v3.3 baseline set in `docs/PAYLOAD_INTEGRATION_PLAN.md` (expanded-platfor
 
 **Front-end delivery readiness / evidence preparation: ~88–90%**
 
-The front-end website go-live milestone (22 July 2026) is delivery-ready from the code and infrastructure perspective, and now has a client-sendable content request plus an operator status tracker. Remaining blockers are external:
+The front-end website go-live milestone (22 July 2026) is delivery-ready from the code and infrastructure perspective, and now has a client-sendable content request, operator status tracker, and manual front-end acceptance evidence template. No acceptance is claimed yet. Remaining blockers are external:
 
 - **Client content/input due 15 July 2026** — client must approve current wording/placeholders or provide replacement copy using `docs/client/CLIENT_CONTENT_REQUEST_15_JULY.md`; operator tracks decisions in `docs/client/FRONTEND_CONTENT_STATUS_TRACKER.md`.
 - **Operator acceptance** — manual front-end website load and UX verification.
@@ -89,7 +90,7 @@ The front-end website go-live milestone (22 July 2026) is delivery-ready from th
 
 **This front-end milestone does not authorize migration execution or full platform cutover.** Migration decision and staging smoke remain separate and blocked pending migration approval, target-environment confirmation, and provider/email verification.
 
-See `docs/client/FRONTEND_CONTENT_INTAKE_CHECKLIST.md` for the complete operator/client-facing checklist and `docs/client/FRONTEND_COPY_APPROVAL_PACKET.md` for the exact public copy and content approval requirements.
+See `docs/client/FRONTEND_CONTENT_INTAKE_CHECKLIST.md` for the complete operator/client-facing checklist, `docs/client/FRONTEND_COPY_APPROVAL_PACKET.md` for exact public copy requirements, and `docs/client/FRONTEND_ACCEPTANCE_EVIDENCE_TEMPLATE.md` for manual acceptance evidence capture after real operator checks.
 
 ---
 
