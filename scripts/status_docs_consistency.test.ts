@@ -81,7 +81,7 @@ async function main(): Promise<void> {
   assert.match(docs.roadmap, /post-refit staging smoke/i)
   assert.match(docs.roadmap, /~75%/)
   assert.match(docs.roadmap, /~97%/)
-  assert.match(docs.roadmap, /~94%/)
+  assert.match(docs.roadmap, /~95%/)
   assert.match(docs.roadmap, /~99%/)
   assert.match(docs.roadmap, /~55%/)
   assert.match(docs.roadmap, /~20%/)

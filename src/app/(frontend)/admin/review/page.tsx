@@ -103,12 +103,20 @@ export default function AdminReviewPage() {
                       </span>
                     ) : null}
                   </div>
-                  <Link
-                    href={section.href}
-                    className="mt-5 inline-flex text-sm font-semibold text-neutral-950 underline-offset-4 hover:underline"
-                  >
-                    View section
-                  </Link>
+                  <div className="mt-5 flex flex-wrap gap-3">
+                    <Link
+                      href={`/admin/review/${section.slug}`}
+                      className="inline-flex rounded-lg bg-neutral-950 px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-800"
+                    >
+                      View details
+                    </Link>
+                    <Link
+                      href={section.href}
+                      className="inline-flex text-sm font-semibold text-neutral-700 underline-offset-4 hover:text-neutral-950 hover:underline"
+                    >
+                      Implementation
+                    </Link>
+                  </div>
                 </article>
               )
             })}
@@ -187,6 +195,12 @@ export default function AdminReviewPage() {
               className="rounded-lg bg-neutral-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-neutral-800"
             >
               View Pro membership
+            </Link>
+            <Link
+              href="/portal"
+              className="rounded-lg border border-neutral-300 px-4 py-2.5 text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
+            >
+              Member portal
             </Link>
           </div>
         </section>

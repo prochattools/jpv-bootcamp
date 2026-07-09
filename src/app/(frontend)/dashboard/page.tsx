@@ -1,10 +1,23 @@
 import Link from 'next/link'
 import { getDashboardModel } from '@/lib/portal/memberDashboardModel'
+import { getPublicNavigationRoutes } from '@/lib/navigation/mvpRouteRegistry'
 
 export const dynamic = 'force-dynamic'
 
+function statusLabel(status: string): string {
+  switch (status) {
+    case 'ready_for_testing':
+      return 'Ready for testing'
+    case 'preview':
+      return 'Preview'
+    default:
+      return status
+  }
+}
+
 export default function DashboardPage() {
   const model = getDashboardModel()
+  const navRoutes = getPublicNavigationRoutes()
 
   return (
     <main className="bg-neutral-50">
@@ -25,6 +38,40 @@ export default function DashboardPage() {
             </div>
           ) : null}
         </div>
+
+        <section className="mt-8">
+          <div className="rounded-xl border border-blue-100 bg-blue-50/50 px-5 py-4 text-sm leading-6 text-blue-900">
+            <span className="font-semibold text-blue-950">About this dashboard:</span>{' '}
+            <code className="rounded bg-blue-100/80 px-1.5 py-0.5 text-xs font-mono">/dashboard</code>{' '}
+            is the public preview dashboard for testing MVP feature routes.
+            No login or database connection is required. Use this page to explore
+            all implemented features. The real authenticated member portal at{' '}
+            <code className="rounded bg-blue-100/80 px-1.5 py-0.5 text-xs font-mono">/portal</code>{' '}
+            requires a Payload DB-backed session and is not usable without credentials
+            or migration approval.
+          </div>
+        </section>
+
+        <section className="mt-10">
+          <h2 className="text-xl font-semibold text-neutral-950">All MVP routes</h2>
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
+            {navRoutes.map((route) => (
+              <Link
+                key={route.id}
+                href={route.href}
+                className="rounded-xl border border-neutral-200 bg-white p-5 shadow-sm transition hover:border-neutral-300 hover:shadow-md"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <h3 className="text-base font-semibold text-neutral-950">{route.label}</h3>
+                  <span className="shrink-0 rounded-full bg-neutral-100 px-2.5 py-0.5 text-xs font-semibold text-neutral-600">
+                    {statusLabel(route.status)}
+                  </span>
+                </div>
+                <p className="mt-2 text-sm leading-5 text-neutral-600">{route.summary}</p>
+              </Link>
+            ))}
+          </div>
+        </section>
 
         <section className="mt-10">
           <h2 className="text-xl font-semibold text-neutral-950">Platform features</h2>
@@ -82,6 +129,12 @@ export default function DashboardPage() {
               className="rounded-lg border border-neutral-300 px-4 py-2.5 text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
             >
               Member portal
+            </Link>
+            <Link
+              href="/admin/review"
+              className="rounded-lg border border-neutral-300 px-4 py-2.5 text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
+            >
+              Admin review
             </Link>
           </div>
         </section>
