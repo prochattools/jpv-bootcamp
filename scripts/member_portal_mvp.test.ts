@@ -37,9 +37,9 @@ function testDashboardHasPlaceholderWording(): void {
   assert.match(content, /preview|representative|not final/i, 'dashboard must have placeholder wording')
 }
 
-function testModelReturnsExactlyFourCards(): void {
+function testModelReturnsExpectedCardCount(): void {
   const cards = getDashboardCards()
-  assert.equal(cards.length, 4, 'model must have exactly 4 cards')
+  assert.equal(cards.length, 5, 'model must have exactly 5 cards (pro-membership, programme, community, support, partner-referral)')
 }
 
 function testAllCardsHaveRequiredFields(): void {
@@ -149,7 +149,7 @@ try {
   testDashboardMentionsPro()
   testDashboardMentionsFreeAccess()
   testDashboardHasPlaceholderWording()
-  testModelReturnsExactlyFourCards()
+  testModelReturnsExpectedCardCount()
   testAllCardsHaveRequiredFields()
   testModelHasProMembershipCard()
   testModelHasProgrammeCard()

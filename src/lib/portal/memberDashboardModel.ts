@@ -36,6 +36,14 @@ const CARDS: DashboardCard[] = [
     badge: 'info',
   },
   {
+    id: 'community',
+    title: 'Community',
+    summary: 'Preview of community spaces, forums, and private rooms. Full access requires Pro membership.',
+    href: '/community',
+    ctaLabel: 'View community preview',
+    badge: 'info',
+  },
+  {
     id: 'support',
     title: 'Support & Pay It Forward',
     summary: 'Sponsor a Free access seat or apply for controlled Free access after review.',
