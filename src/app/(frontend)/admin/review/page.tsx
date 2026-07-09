@@ -185,12 +185,6 @@ export default function AdminReviewPage() {
               Community preview
             </Link>
             <Link
-              href="/dashboard"
-              className="rounded-lg border border-neutral-300 px-4 py-2.5 text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
-            >
-              Preview dashboard
-            </Link>
-            <Link
               href="/upgrade"
               className="rounded-lg bg-neutral-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-neutral-800"
             >
