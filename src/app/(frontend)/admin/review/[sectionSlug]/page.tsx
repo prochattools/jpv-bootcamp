@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getReviewSectionBySlug, getAdminReviewExportRows } from '@/lib/admin/adminReviewModel'
+import { requireCurrentPayloadAdmin } from '@/lib/admin/currentAdmin'
 
 type AdminReviewDetailPageProps = {
   params: Promise<{ sectionSlug: string }>
@@ -22,6 +23,8 @@ function statusBadge(status: string): { label: string; className: string } {
 }
 
 export default async function AdminReviewDetailPage({ params }: AdminReviewDetailPageProps) {
+  await requireCurrentPayloadAdmin()
+
   const { sectionSlug } = await params
   const section = getReviewSectionBySlug(sectionSlug)
 

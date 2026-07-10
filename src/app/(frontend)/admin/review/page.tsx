@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { getAdminReviewSections, getAdminReviewSummary, getAdminReviewExportRows } from '@/lib/admin/adminReviewModel'
+import { requireCurrentPayloadAdmin } from '@/lib/admin/currentAdmin'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,7 +19,9 @@ function statusBadge(status: string): { label: string; className: string } {
   }
 }
 
-export default function AdminReviewPage() {
+export default async function AdminReviewPage() {
+  await requireCurrentPayloadAdmin()
+
   const sections = getAdminReviewSections()
   const summary = getAdminReviewSummary()
   const exportRows = getAdminReviewExportRows()
