@@ -17,73 +17,32 @@ export default function HomePage() {
   const [supportError, setSupportError] = useState<string | null>(null);
   const isSupportSending = supportStatus === "sending";
   const navLinks = [
-    { label: "Curriculum", href: "#curriculum" },
+    { label: "Programme", href: "#curriculum" },
     { label: "Community", href: "#community" },
     { label: "Pricing", href: "#pricing" },
     { label: "FAQ", href: "#faq" },
     { label: "Events", href: "https://ibbootcamp.co.uk/" },
   ];
-  const heroNotices = [
-    {
-      title: "Next Online Training",
-      meta: (
-        <>
-          Friday, 24 April, 7 pm · <a href="#pricing-pro" className="hover:text-white transition-colors underline decoration-jpv-green/40 underline-offset-4">Pro membership</a>
-        </>
-      ),
-      description: (
-        <>
-          Weekly online training, mentorship modules, community access, and billing self-service through <a href="#pricing-pro" className="hover:text-white hover:underline transition-colors">Pro</a>.
-        </>
-      ),
-    },
-    {
-      title: "Inheritance Builders Bootcamp Conference",
-      meta: "27 March 2026 · London",
-      description:
-        "A flagship Christian business event for believers growing in biblical stewardship and Kingdom impact through wise investment.",
-      href: "https://ibbootcamp.co.uk",
-      target: "_blank",
-      rel: "nofollow noopener noreferrer",
-    },
-  ];
-  const learnSections = [
-    {
-      title: "Foundations",
-      points: ["Strategy selection", "Market and area analysis", "Team and power circle"],
-    },
-    {
-      title: "Numbers that matter",
-      points: ["Yield vs ROI", "BRRR and flips", "Risk management"],
-    },
-    {
-      title: "Doing deals",
-      points: ["Sourcing and negotiation", "Funding options", "Refurbs and lettings"],
-    },
-  ];
   const communityMessages = [
-    { author: "Amelia", content: "Would you do BRRR on a 3-bed terrace in Leeds? Numbers in thread." },
-    { author: "Coach", content: "Post the ARV and refurb budget. Quick rule: 75% ARV − costs = max offer." },
-    { author: "Noah", content: "Used buy-to-let calc → ROI 17.8% assuming 5.5% interest-only." },
-    { author: "Amelia", content: "ARV £195k, refurb £22k, rent est £1,050. Thoughts on lenders?" },
+    { author: "Member", content: "I’m reviewing a sample property scenario." },
+    { author: "Community", content: "Share the assumptions so the group can discuss them." },
+    { author: "Member", content: "I’ve added the figures to the example worksheet." },
+    { author: "Community", content: "The example is ready for review." },
   ];
   const faqItems = [
     {
       question: "How do payments work?",
-      answer: "We accept debit/credit via Stripe. Subscriptions renew monthly; cancel any time from your account.",
-    },
-    {
-      question: "Do you provide certificates?",
       answer:
-        "Yes—complete the core modules and quizzes to earn a completion certificate you can add to LinkedIn.",
+        "Card payments are processed through Stripe. The available monthly and annual options are shown in the pricing section.",
     },
     {
-      question: "Is there support for beginners?",
-      answer: "Absolutely—start with the foundations track and join the weekly newcomer clinic.",
+      question: "What does Pro include?",
+      answer:
+        "Pro provides access to the current programme, protected resources, and community features available in the member portal.",
     },
     {
-      question: "Can I upgrade later?",
-      answer: "Upgrades pro-rate instantly; your remaining balance is credited automatically.",
+      question: "Where can I ask a question?",
+      answer: "Use the support form at the bottom of this page.",
     },
   ];
   const pricingPlans = [
@@ -101,26 +60,26 @@ export default function HomePage() {
       name: "Pro",
       price: "£80/mo or £880/yr",
       description: "One paid membership",
-      features: ["8-week course structure", "Mentorship modules", "Protected resources", "Community access"],
+      features: ["Programme access", "Protected resources", "Community access", "Billing self-service"],
       ctaLabel: "Start Pro",
       ctaHref: "/api/stripe/checkout?plan=pro&billing=monthly",
       highlight: true,
       badge: "Single paid membership",
-      subcopy: "Monthly commitment or annual upfront with one month free.",
+      subcopy: "Monthly and annual checkout options.",
     },
   ];
   const onboardingSteps = [
     {
       title: "Create your account",
-      description: "Sign up, confirm your email, and unlock the member dashboard.",
+      description: "Sign up and confirm your email.",
     },
     {
-      title: "Set your strategy",
-      description: "Pick your path and get a starter plan tailored to your goals.",
+      title: "Review membership",
+      description: "Choose an available membership option.",
     },
     {
-      title: "Join the community",
-      description: "Introduce yourself, join a channel, and start sharing your first deal.",
+      title: "Use the member portal",
+      description: "Access available programme, resource, and community features.",
     },
   ];
   const handleSupportSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -295,15 +254,12 @@ export default function HomePage() {
       <section className="min-h-[100dvh] flex flex-col items-center justify-start lg:justify-center px-6 pt-28 pb-12">
         <div className="mx-auto flex max-w-6xl flex-col items-center gap-10 text-center">
           <div className="space-y-6">
-            <p className="text-sm uppercase tracking-[0.4rem] text-jpv-green/80">Property mastery starts here</p>
+            <p className="text-sm uppercase tracking-[0.4rem] text-jpv-green/80">JPV Bootcamp</p>
             <h1 className="text-4xl font-bold leading-tight sm:text-5xl md:text-6xl">
-              Train for Property Success with JPV
-              <span className="mt-3 block text-lg font-semibold text-jpv-green sm:text-xl">
-                Empowering Christians through property training to steward wealth with faith and purpose
-              </span>
+              Property training and community with JPV
             </h1>
             <p className="mx-auto max-w-2xl text-base text-jpv-gray-400 sm:text-lg">
-              Learn a proven deal-making framework with coaching, tools, and a community built for ambitious property investors.
+              Explore the programme, member resources, and available membership options.
             </p>
           </div>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
@@ -311,84 +267,29 @@ export default function HomePage() {
               href="#pricing"
               className="rounded-full bg-jpv-green px-10 py-3 text-base font-semibold text-black shadow-jpv-glow transition hover:bg-jpv-green-hover"
             >
-              Start learning
+              View membership
             </a>
             <a
               href="#curriculum"
               className="rounded-full border border-jpv-gray-700 px-10 py-3 text-base font-medium text-white transition hover:bg-jpv-bg-light"
             >
-              See curriculum
+              View programme
             </a>
-          </div>
-          <p className="text-sm text-jpv-gray-400 sm:text-base">14-day money-back guarantee · Cancel anytime</p>
-          <div className="w-full max-w-4xl">
-            <div className="grid gap-4 text-left sm:grid-cols-2">
-              {heroNotices.map((notice) => {
-                const content = (
-                  <>
-                    <div className="text-lg font-bold text-white uppercase tracking-wide">{notice.title}</div>
-                    <div className="mt-1 text-xs uppercase tracking-[0.2rem] text-jpv-green/80">
-                      {notice.meta}
-                    </div>
-                    <p className="mt-2 text-sm text-jpv-gray-400">{notice.description}</p>
-                  </>
-                );
-
-                const cardClassName =
-                  "relative flex h-full flex-col rounded-2xl border border-jpv-green/60 bg-jpv-bg-dark/40 p-4 text-sm text-jpv-gray-300 shadow-jpv-card backdrop-blur before:pointer-events-none before:absolute before:inset-0 before:rounded-2xl before:border before:border-jpv-green/90 before:opacity-100 before:animate-pulse";
-
-                if (notice.href) {
-                  return (
-                    <a
-                      key={notice.title}
-                      href={notice.href}
-                      target={notice.target}
-                      rel={notice.rel}
-                      className={`${cardClassName} cursor-pointer transition hover:border-jpv-green`}
-                    >
-                      {content}
-                    </a>
-                  );
-                }
-
-                return (
-                  <div key={notice.title} className={cardClassName}>
-                    {content}
-                  </div>
-                );
-              })}
-            </div>
           </div>
         </div>
       </section>
       <section id="curriculum" className="scroll-mt-28 px-6 py-24 sm:py-28">
-        <div className="mx-auto max-w-6xl space-y-12">
-          <div className="text-center">
-            <h2 className="text-3xl font-semibold md:text-4xl">What you&rsquo;ll learn</h2>
-            <p className="mt-4 text-base text-jpv-gray-400 md:text-lg">
-              A practical pathway from first deal to scaling a portfolio.
-            </p>
-          </div>
-          <div className="grid gap-6 md:grid-cols-3">
-            {learnSections.map((section) => (
-              <div
-                key={section.title}
-                className="flex h-full flex-col gap-6 rounded-3xl border border-jpv-gray-700/50 bg-jpv-bg-dark/60 p-8 shadow-jpv-card backdrop-blur"
-              >
-                <div>
-                  <h3 className="text-xl font-semibold text-jpv-green">{section.title}</h3>
-                </div>
-                <ul className="space-y-3 text-sm text-jpv-gray-200">
-                  {section.points.map((point) => (
-                    <li key={point} className="flex items-start gap-3">
-                      <span className="mt-1 inline-flex h-2.5 w-2.5 flex-shrink-0 rounded-full bg-jpv-green/70 shadow-jpv-glow" />
-                      <span>{point}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
+        <div className="mx-auto max-w-4xl text-center">
+          <h2 className="text-3xl font-semibold md:text-4xl">Programme overview</h2>
+          <p className="mt-4 text-base text-jpv-gray-400 md:text-lg">
+            Final module titles and learning-outcome wording are pending client approval.
+          </p>
+          <a
+            href="#pricing"
+            className="mt-8 inline-flex items-center justify-center rounded-full border border-jpv-gray-600 px-8 py-3 text-sm font-semibold text-jpv-gray-200 transition hover:border-jpv-green hover:text-white"
+          >
+            View membership options
+          </a>
         </div>
       </section>
       <section
@@ -399,32 +300,16 @@ export default function HomePage() {
         <div className="mx-auto flex max-w-6xl flex-col gap-12 lg:flex-row lg:items-center lg:justify-between">
           <div className="max-w-xl space-y-6">
             <p className="text-sm uppercase tracking-[0.4rem] text-jpv-green/80">Community</p>
-            <h2 className="text-3xl font-semibold md:text-4xl">Members-only community</h2>
-            <div className="space-y-4 text-base text-jpv-gray-400 md:text-lg">
-              <p>
-                Ask questions, share deals, and get feedback from peers and mentors. Channels for sourcing, analysis, renovations, lettings, and more.
-              </p>
-              <ul className="space-y-2 text-sm text-jpv-gray-300 md:text-base">
-                <li className="flex items-center gap-2">
-                  <span className="text-jpv-green">•</span>
-                  <span>Accountability squads</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="text-jpv-green">•</span>
-                  <span>Monthly deal review live call</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="text-jpv-green">•</span>
-                  <span>Local meetups calendar</span>
-                </li>
-              </ul>
-            </div>
+            <h2 className="text-3xl font-semibold md:text-4xl">Member community</h2>
+            <p className="text-base text-jpv-gray-400 md:text-lg">
+              Use the member portal to access available community discussions and programme support.
+            </p>
             <div className="flex flex-wrap gap-3">
               <a
                 href="#pricing"
                 className="inline-flex items-center justify-center rounded-full bg-jpv-green px-10 py-3 text-base font-semibold text-black shadow-jpv-glow transition hover:bg-jpv-green-hover"
               >
-                Unlock access
+                View membership
               </a>
               <button
                 type="button"
@@ -485,7 +370,7 @@ export default function HomePage() {
           <div className="space-y-4 text-center">
             <h2 className="text-3xl font-semibold md:text-4xl">Simple pricing</h2>
             <p className="mx-auto max-w-2xl text-base text-jpv-gray-400 md:text-lg">
-              Choose a plan, cancel anytime.
+              Review the available membership options.
             </p>
           </div>
           <div className="grid gap-6 md:grid-cols-3">
@@ -547,9 +432,6 @@ export default function HomePage() {
               </div>
             ))}
           </div>
-          <p className="text-sm text-jpv-gray-400">
-            Need invoicing for teams? Contact us for group pricing.
-          </p>
           <div className="pt-6">
             <SponsoredPayItForward />
           </div>
@@ -703,7 +585,7 @@ export default function HomePage() {
                   Support
                 </h3>
                 <p id="support-desc" className="mt-1 text-sm text-jpv-gray-400">
-                  Share your question and we will get back to you shortly.
+                  Submit your question through this form.
                 </p>
               </div>
               <button
@@ -725,7 +607,7 @@ export default function HomePage() {
             {supportStatus !== "idle" ? (
               <div className="mt-4 space-y-2 text-sm">
                 {supportStatus === "success" ? (
-                  <p className="text-jpv-green">Thanks! We&rsquo;ll reply shortly.</p>
+                  <p className="text-jpv-green">Thanks. Your request has been submitted.</p>
                 ) : null}
                 {supportStatus === "error" && supportError ? (
                   <p className="text-red-400">{supportError}</p>

@@ -11,14 +11,14 @@ const config: ConfigProps = {
 	// REQUIRED
 	appName: 'JPV • Jesus Property Venture',
 	author: 'JPV • Jesus Property Venture',
-	siteTitle: 'JPV • Jesus Property Venture — Train for Property Success',
+	siteTitle: 'JPV • Jesus Property Venture — Property Training and Community',
 	// REQUIRED: a short description of your app for SEO tags (can be overwritten)
 	appDescription:
-		'Learn a proven deal-making framework with coaching, tools, and a community built for ambitious property investors.',
-	appTagline: 'Train for Property Success',
-	appPreheader: 'Join thousands learning to find, fund, and grow profitable property deals with JPV.',
-	ogDescription: 'Master property investing with step-by-step guidance, live coaching, and community support.',
-	twitterDescription: 'Join thousands learning to find, fund, and grow profitable property deals with JPV.',
+		'Explore JPV Bootcamp property training, member resources, community features, and membership options.',
+	appTagline: 'Property Training and Community',
+	appPreheader: 'Explore JPV Bootcamp programmes, resources, and membership options.',
+	ogDescription: 'JPV Bootcamp property training, member resources, and community features.',
+	twitterDescription: 'Explore JPV Bootcamp programmes, resources, and membership options.',
 	canonicalPath: '/',
 	socialPreviewImage: '/assets/jpv-social-preview.jpg',
 	organizationLogo: '/assets/jpv-logo.png',
