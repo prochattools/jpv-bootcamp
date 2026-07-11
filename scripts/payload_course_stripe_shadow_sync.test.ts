@@ -368,10 +368,12 @@ async function run() {
       adminEmail: 'admin@example.com',
     })
 
-    assert.equal(payload.docs('payload_members')[0]?.accountStatus, 'blocked')
-    assert.equal(payload.docs('payload_members')[0]?.billingHoldReason, 'past_due')
+    assert.equal(payload.docs('payload_members')[0]?.accountStatus, 'active')
+    assert.equal(payload.docs('payload_members')[0]?.billingHoldReason, null)
     assert.equal(payload.docs('payload_payments')[0]?.status, 'failed')
     assert.equal(payload.docs('payload_billing_accounts')[0]?.billingStatus, 'past_due')
+    assert.equal(payload.countDocs('payload_subscriptions'), 1)
+    assert.ok(payload.docs('payload_subscriptions')[0]?.paymentGraceEndsAt)
     assert.equal(
       payload.docs('payload_email_events').filter((emailEvent) => emailEvent.templateKey === 'billing-payment-failed').length,
       1
@@ -382,7 +384,7 @@ async function run() {
     )
     assert.equal(
       payload.docs('payload_billing_actions').filter((action) => action.actionType === 'access_blocked').length,
-      1
+      0
     )
   }
 

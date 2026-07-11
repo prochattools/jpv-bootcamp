@@ -97,6 +97,7 @@ export type ServerConfig = {
 		pricePro: string
 		priceProAnnual: string
 		portalConfigurationId: string
+		commitmentPortalConfigurationId: string | null
 		successUrl: string
 		cancelUrl: string
 	}
@@ -122,6 +123,7 @@ export type StripeConfig = {
 		pricePro: string
 		priceProAnnual: string
 		portalConfigurationId: string
+		commitmentPortalConfigurationId: string | null
 		successUrl: string
 		cancelUrl: string
 	}
@@ -155,6 +157,7 @@ export function getStripeConfig(): StripeConfig {
 			pricePro: stripeConfig.pricePro,
 			priceProAnnual: stripeConfig.priceProAnnual,
 			portalConfigurationId: stripeConfig.portalConfigurationId,
+			commitmentPortalConfigurationId: stripeConfig.commitmentPortalConfigurationId,
 			successUrl,
 			cancelUrl,
 		},
@@ -192,6 +195,7 @@ export function getServerConfig(): ServerConfig {
 			pricePro: stripeConfig.pricePro,
 			priceProAnnual: stripeConfig.priceProAnnual,
 			portalConfigurationId: stripeConfig.portalConfigurationId,
+			commitmentPortalConfigurationId: stripeConfig.commitmentPortalConfigurationId,
 			successUrl: normalizeStripeSuccessUrl(
 				getEnvOrDefault('STRIPE_SUCCESS_URL', DEFAULT_STRIPE_SUCCESS_PATH),
 				appUrl

@@ -19,9 +19,12 @@ async function main() {
   assert.doesNotMatch(billingPage, /openMemberPaidUpgradeAction/)
   assert.doesNotMatch(billingPage, /getStripe\(\)|stripe\.checkout|stripe\.billingPortal/)
 
-  assert.match(checkoutButtons, /Start Pro monthly/)
-  assert.match(checkoutButtons, /Start Pro annual/)
-  assert.match(checkoutButtons, /startMemberCheckout\(plan, billing\)/)
+  assert.match(checkoutButtons, /Start Pro — pay £80 now/)
+  assert.match(checkoutButtons, /Start Pro annual — pay £880 now/)
+  assert.match(checkoutButtons, /Contract acknowledgment/)
+  assert.match(checkoutButtons, /Immediate access request/)
+  assert.match(checkoutButtons, /startMemberCheckout\(/)
+  assert.match(checkoutButtons, /contractAccepted, immediateAccessRequested/)
   assert.match(checkoutButtons, /existing_subscription/)
   assert.match(checkoutButtons, /Use Manage billing instead\./)
 

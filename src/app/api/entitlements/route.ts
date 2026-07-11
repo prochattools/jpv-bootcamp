@@ -111,10 +111,46 @@ export async function GET(req: NextRequest) {
 			currentPlan: true,
 			plan: true,
 			stripeCustomerId: true,
+			subscriptionStatus: true,
+			billingCadence: true,
+			paymentStatus: true,
+			paymentGraceEndsAt: true,
+			lastPaidInvoiceId: true,
 		},
 	})
 
 	const storedPlan = normalizePlan(record?.currentPlan ?? record?.plan ?? null)
+	const subscriptionStatus = record?.subscriptionStatus ?? null
+	const graceActive = Boolean(
+		record?.paymentGraceEndsAt && record.paymentGraceEndsAt.getTime() >= Date.now(),
+	)
+	const monthlyCommitment = record?.billingCadence === 'monthly_commitment'
+	const monthlyPaymentVerified = !monthlyCommitment || Boolean(record?.lastPaidInvoiceId)
+
+	if (subscriptionStatus === 'unpaid' || subscriptionStatus === 'canceled') {
+		return NextResponse.json({ plan: 'free' } satisfies EntitlementsResponse, { status: 200 })
+	}
+	if (subscriptionStatus === 'past_due') {
+		return NextResponse.json(
+			{ plan: graceActive && storedPlan ? storedPlan : 'free' } satisfies EntitlementsResponse,
+			{ status: 200 },
+		)
+	}
+	if (subscriptionStatus === 'active' || subscriptionStatus === 'trialing') {
+		return NextResponse.json(
+			{ plan: monthlyPaymentVerified && storedPlan ? storedPlan : 'free' } satisfies EntitlementsResponse,
+			{ status: 200 },
+		)
+	}
+	if (record?.paymentStatus === 'failed' || record?.paymentStatus === 'action_required') {
+		return NextResponse.json(
+			{ plan: graceActive && storedPlan ? storedPlan : 'free' } satisfies EntitlementsResponse,
+			{ status: 200 },
+		)
+	}
+	if (subscriptionStatus) {
+		return NextResponse.json({ plan: 'free' } satisfies EntitlementsResponse, { status: 200 })
+	}
 	if (storedPlan) {
 		return NextResponse.json({ plan: storedPlan } satisfies EntitlementsResponse, { status: 200 })
 	}

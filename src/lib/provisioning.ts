@@ -5,6 +5,8 @@ import { getServerConfig } from '@/lib/config'
 import { sendWelcomeEmail } from '@/lib/email'
 import { resolvePlanFromStripe, type Plan } from '@/lib/plans'
 import { getStripe } from '@/lib/stripe'
+import { paymentGraceEnd } from '@/lib/billing/commitmentPolicy'
+import { isMonthlyCommitmentMetadata } from '@/lib/stripe-commitment'
 import { normalizeEmail as normalizeEmailAddress } from '@/lib/normalize-email'
 import { redactEmail } from '@/lib/log-redact'
 
@@ -28,6 +30,13 @@ type ProvisioningRecord = {
 	stripeSubscriptionId: string | null
 	currentPlan: string | null
 	plan: string | null
+	billingCadence: string | null
+	commitmentStatus: string | null
+	commitmentStartAt: Date | null
+	commitmentEndAt: Date | null
+	paymentGraceEndsAt: Date | null
+	lastPaidInvoiceId: string | null
+	lastPaymentFailureAt: Date | null
 	lastNotifiedPlan: string | null
 	lastNotifiedAt: Date | null
 	lastNotifiedEventId: string | null
@@ -176,6 +185,12 @@ function normalizePlanName(value: string | null | undefined): string | null {
 	if (!value) return null
 	const normalized = value.trim().toLowerCase()
 	return normalized.length > 0 ? normalized : null
+}
+
+function dateFromIsoString(value: string | null | undefined): Date | null {
+	if (!value) return null
+	const date = new Date(value)
+	return Number.isNaN(date.getTime()) ? null : date
 }
 
 function safeResolvePlanFromStripe(
@@ -501,6 +516,13 @@ async function findProvisioningRecord(params: {
 				stripeSubscriptionId: true,
 				currentPlan: true,
 				plan: true,
+				billingCadence: true,
+				commitmentStatus: true,
+				commitmentStartAt: true,
+				commitmentEndAt: true,
+				paymentGraceEndsAt: true,
+				lastPaidInvoiceId: true,
+				lastPaymentFailureAt: true,
 				lastNotifiedPlan: true,
 				lastNotifiedAt: true,
 				lastNotifiedEventId: true,
@@ -524,6 +546,13 @@ async function findProvisioningRecord(params: {
 			stripeSubscriptionId: true,
 			currentPlan: true,
 			plan: true,
+			billingCadence: true,
+			commitmentStatus: true,
+			commitmentStartAt: true,
+			commitmentEndAt: true,
+			paymentGraceEndsAt: true,
+			lastPaidInvoiceId: true,
+			lastPaymentFailureAt: true,
 			lastNotifiedPlan: true,
 			lastNotifiedAt: true,
 			lastNotifiedEventId: true,
@@ -569,6 +598,22 @@ async function upsertProvisioningRecord({
 	subscriptionCurrentPeriodEnd,
 	subscriptionCancelAtPeriodEnd,
 	subscriptionUpdatedAt,
+	stripeSubscriptionScheduleId,
+	stripeCheckoutSessionId,
+	billingCadence,
+	commitmentStatus,
+	commitmentStartAt,
+	commitmentEndAt,
+	cancellationRequestedAt,
+	cancellationEffectiveAt,
+	paymentGraceEndsAt,
+	lastPaidInvoiceId,
+	lastPaymentFailureAt,
+	contractVersion,
+	contractAcceptedAt,
+	immediateAccessConsentAt,
+	earlyTerminationReason,
+	earlyTerminationApprovedBy,
 }: {
 	email: string
 	stripeCustomerId: string
@@ -581,6 +626,22 @@ async function upsertProvisioningRecord({
 	subscriptionCurrentPeriodEnd?: Date | null
 	subscriptionCancelAtPeriodEnd?: boolean | null
 	subscriptionUpdatedAt?: Date | null
+	stripeSubscriptionScheduleId?: string | null
+	stripeCheckoutSessionId?: string | null
+	billingCadence?: string | null
+	commitmentStatus?: string | null
+	commitmentStartAt?: Date | null
+	commitmentEndAt?: Date | null
+	cancellationRequestedAt?: Date | null
+	cancellationEffectiveAt?: Date | null
+	paymentGraceEndsAt?: Date | null
+	lastPaidInvoiceId?: string | null
+	lastPaymentFailureAt?: Date | null
+	contractVersion?: string | null
+	contractAcceptedAt?: Date | null
+	immediateAccessConsentAt?: Date | null
+	earlyTerminationReason?: string | null
+	earlyTerminationApprovedBy?: string | null
 }): Promise<void> {
 	const normalizedEmail = normalizeEmailAddress(email)
 	if (!normalizedEmail) {
@@ -633,6 +694,22 @@ async function upsertProvisioningRecord({
 		subscriptionCurrentPeriodEnd?: Date | null
 		subscriptionCancelAtPeriodEnd?: boolean | null
 		subscriptionUpdatedAt?: Date | null
+		stripeSubscriptionScheduleId?: string | null
+		stripeCheckoutSessionId?: string | null
+		billingCadence?: string | null
+		commitmentStatus?: string | null
+		commitmentStartAt?: Date | null
+		commitmentEndAt?: Date | null
+		cancellationRequestedAt?: Date | null
+		cancellationEffectiveAt?: Date | null
+		paymentGraceEndsAt?: Date | null
+		lastPaidInvoiceId?: string | null
+		lastPaymentFailureAt?: Date | null
+		contractVersion?: string | null
+		contractAcceptedAt?: Date | null
+		immediateAccessConsentAt?: Date | null
+		earlyTerminationReason?: string | null
+		earlyTerminationApprovedBy?: string | null
 	} = {
 		email,
 		normalizedEmail,
@@ -647,6 +724,39 @@ async function upsertProvisioningRecord({
 		subscriptionCurrentPeriodEnd: subscriptionCurrentPeriodEnd ?? null,
 		subscriptionCancelAtPeriodEnd: subscriptionCancelAtPeriodEnd ?? null,
 		subscriptionUpdatedAt: subscriptionUpdatedAt ?? null,
+	}
+
+	if (stripeSubscriptionScheduleId !== undefined) {
+		updateData.stripeSubscriptionScheduleId = stripeSubscriptionScheduleId
+	}
+	if (stripeCheckoutSessionId !== undefined) {
+		updateData.stripeCheckoutSessionId = stripeCheckoutSessionId
+	}
+	if (billingCadence !== undefined) updateData.billingCadence = billingCadence
+	if (commitmentStatus !== undefined) updateData.commitmentStatus = commitmentStatus
+	if (commitmentStartAt !== undefined) updateData.commitmentStartAt = commitmentStartAt
+	if (commitmentEndAt !== undefined) updateData.commitmentEndAt = commitmentEndAt
+	if (cancellationRequestedAt !== undefined) {
+		updateData.cancellationRequestedAt = cancellationRequestedAt
+	}
+	if (cancellationEffectiveAt !== undefined) {
+		updateData.cancellationEffectiveAt = cancellationEffectiveAt
+	}
+	if (paymentGraceEndsAt !== undefined) updateData.paymentGraceEndsAt = paymentGraceEndsAt
+	if (lastPaidInvoiceId !== undefined) updateData.lastPaidInvoiceId = lastPaidInvoiceId
+	if (lastPaymentFailureAt !== undefined) {
+		updateData.lastPaymentFailureAt = lastPaymentFailureAt
+	}
+	if (contractVersion !== undefined) updateData.contractVersion = contractVersion
+	if (contractAcceptedAt !== undefined) updateData.contractAcceptedAt = contractAcceptedAt
+	if (immediateAccessConsentAt !== undefined) {
+		updateData.immediateAccessConsentAt = immediateAccessConsentAt
+	}
+	if (earlyTerminationReason !== undefined) {
+		updateData.earlyTerminationReason = earlyTerminationReason
+	}
+	if (earlyTerminationApprovedBy !== undefined) {
+		updateData.earlyTerminationApprovedBy = earlyTerminationApprovedBy
 	}
 
 	if (existing?.stripeCustomerId && existing.stripeCustomerId !== stripeCustomerId) {
@@ -712,6 +822,7 @@ async function upsertProvisioningRecord({
 
 export type InvoicePaymentProjectionStatus =
 	| 'failed'
+	| 'action_required'
 	| 'paid'
 	| 'refunded'
 	| 'disputed'
@@ -759,6 +870,12 @@ export async function projectInvoicePaymentState(params: {
 		where: { OR: whereOr },
 		select: {
 			id: true,
+			billingCadence: true,
+			commitmentStatus: true,
+			subscriptionStatus: true,
+			paymentGraceEndsAt: true,
+			lastPaidInvoiceId: true,
+			lastPaymentFailureAt: true,
 			paymentStatus: true,
 			paymentRecoveredAt: true,
 			paymentRefundedAt: true,
@@ -797,16 +914,24 @@ export async function projectInvoicePaymentState(params: {
 		}
 	}
 
-	const recovered = params.paymentStatus === 'paid' && existing.paymentStatus === 'failed'
+	const paid = params.paymentStatus === 'paid'
+	const paymentAttentionRequired =
+		params.paymentStatus === 'failed' || params.paymentStatus === 'action_required'
+	const recovered = paid && existing.paymentStatus === 'failed'
 	const disputeResolved =
 		params.paymentStatus === 'dispute_won' ||
 		params.paymentStatus === 'dispute_lost' ||
 		params.paymentStatus === 'dispute_resolved'
+	const monthlyCommitment = existing.billingCadence === 'monthly_commitment'
+	const providerAllowsAccess =
+		existing.subscriptionStatus === 'active' || existing.subscriptionStatus === 'trialing'
+	const activateMonthlyAccess = monthlyCommitment && paid && providerAllowsAccess
+
 	await prisma.customerProvisioning.update({
 		where: { id: existing.id },
 		data: {
 			paymentStatus: params.paymentStatus,
-			paymentFailedAt: params.paymentStatus === 'failed' ? occurredAt : undefined,
+			paymentFailedAt: paymentAttentionRequired ? occurredAt : undefined,
 			paymentRecoveredAt: recovered ? occurredAt : existing.paymentRecoveredAt,
 			paymentRefundedAt:
 				params.paymentStatus === 'refunded' ? occurredAt : existing.paymentRefundedAt,
@@ -821,6 +946,20 @@ export async function projectInvoicePaymentState(params: {
 			paymentLastChargeId: stripeChargeId ?? existing.paymentLastChargeId,
 			paymentLastPaymentIntentId:
 				stripePaymentIntentId ?? existing.paymentLastPaymentIntentId,
+			lastPaidInvoiceId: paid ? stripeInvoiceId ?? existing.lastPaidInvoiceId : undefined,
+			lastPaymentFailureAt: paymentAttentionRequired ? occurredAt : undefined,
+			paymentGraceEndsAt: paymentAttentionRequired
+				? paymentGraceEnd(occurredAt)
+				: paid
+					? null
+					: undefined,
+			plan: activateMonthlyAccess ? 'pro' : undefined,
+			currentPlan: activateMonthlyAccess ? 'pro' : undefined,
+			status: activateMonthlyAccess ? 'active' : undefined,
+			commitmentStatus:
+				activateMonthlyAccess && existing.commitmentStatus === 'pending'
+					? 'active'
+					: undefined,
 		},
 	})
 
@@ -905,6 +1044,20 @@ export async function provisionFromCheckoutSession(
 	const eventLivemode =
 		typeof options?.eventLivemode === 'boolean' ? options?.eventLivemode : null
 	const emailSource = resolveEmailSource(eventType)
+	const billingCadence =
+		typeof session.metadata?.billing_cadence === 'string'
+			? session.metadata.billing_cadence
+			: session.metadata?.billing === 'monthly'
+				? 'monthly_commitment'
+				: session.metadata?.billing === 'annual'
+					? 'annual'
+					: null
+	const monthlyCommitment = isMonthlyCommitmentMetadata(session.metadata)
+	const contractVersion = session.metadata?.contract_version ?? null
+	const contractAcceptedAt = dateFromIsoString(session.metadata?.contract_accepted_at)
+	const immediateAccessConsentAt = dateFromIsoString(
+		session.metadata?.immediate_access_consent_at,
+	)
 
 	const logDecision = (decision: ProvisioningDecision, reason: string) => {
 		logProvisioningDecision({
@@ -948,6 +1101,14 @@ export async function provisionFromCheckoutSession(
 	if (session.mode !== 'subscription') {
 		logDecision('skip', 'non_subscription')
 		return buildSummary('skip', 'non_subscription')
+	}
+
+	if (
+		monthlyCommitment &&
+		(!contractVersion || !contractAcceptedAt || !immediateAccessConsentAt)
+	) {
+		logDecision('skip', 'missing_commitment_consent')
+		return buildSummary('skip', 'missing_commitment_consent')
 	}
 
 	if (session.payment_status && !['paid', 'no_payment_required'].includes(session.payment_status)) {
@@ -1067,10 +1228,16 @@ export async function provisionFromCheckoutSession(
 		email,
 		stripeCustomerId: customerId,
 		stripeSubscriptionId: subscriptionId || null,
-		plan: incomingPlan,
-		status: 'active',
+		plan: monthlyCommitment ? 'none' : incomingPlan,
+		status: monthlyCommitment ? 'pending_payment' : 'active',
 		lastEventId: eventId ?? null,
 		stripePriceId: resolvedPriceId,
+		stripeCheckoutSessionId: session.id,
+		billingCadence,
+		commitmentStatus: monthlyCommitment ? 'pending' : undefined,
+		contractVersion: monthlyCommitment ? contractVersion : undefined,
+		contractAcceptedAt: monthlyCommitment ? contractAcceptedAt : undefined,
+		immediateAccessConsentAt: monthlyCommitment ? immediateAccessConsentAt : undefined,
 	})
 
 	if (emailEval.shouldSend) {
@@ -1294,7 +1461,12 @@ export async function syncFromSubscription(
 	}
 
 	const isActive = ACTIVE_STATUSES.has(subscription.status)
-	if (isActive && (!plan || !isProvisioningPlan(plan))) {
+	const monthlyCommitment =
+		isMonthlyCommitmentMetadata(subscription.metadata) ||
+		existing?.billingCadence === 'monthly_commitment'
+	const hasVerifiedPaidInvoice = Boolean(existing?.lastPaidInvoiceId)
+	const accessActive = isActive && (!monthlyCommitment || hasVerifiedPaidInvoice)
+	if (accessActive && (!plan || !isProvisioningPlan(plan))) {
 		console.error('membership projection skipped: invalid plan', {
 			subscriptionId: subscription.id,
 			email: redactEmail(email),
@@ -1304,7 +1476,7 @@ export async function syncFromSubscription(
 		logDecision('skip', 'invalid_plan')
 		return buildSummary('skip', 'invalid_plan')
 	}
-	const nextPlan = isActive ? plan ?? 'none' : 'none'
+	const nextPlan = accessActive ? plan ?? 'none' : 'none'
 	incomingPlan = normalizePlanName(nextPlan)
 	if (!incomingPlan) {
 		console.error('membership projection skipped: invalid plan', {
@@ -1316,7 +1488,19 @@ export async function syncFromSubscription(
 		logDecision('skip', 'invalid_plan')
 		return buildSummary('skip', 'invalid_plan')
 	}
-	const nextStatus = isActive ? 'active' : 'inactive'
+	const nextStatus = accessActive
+		? 'active'
+		: isActive && monthlyCommitment
+			? 'pending_payment'
+			: 'inactive'
+	const projectedBillingCadence = monthlyCommitment
+		? 'monthly_commitment'
+		: subscription.metadata?.billing_cadence === 'annual' || subscription.metadata?.billing === 'annual'
+			? 'annual'
+			: existing?.billingCadence ?? null
+	const projectedCommitmentStatus = monthlyCommitment
+		? existing?.commitmentStatus ?? (hasVerifiedPaidInvoice ? 'active' : 'pending')
+		: undefined
 	const emailSendKey = buildEmailSendKey({
 		eventId: eventId ?? null,
 		subscriptionId: subscription.id,
@@ -1399,6 +1583,8 @@ export async function syncFromSubscription(
 				: null,
 			subscriptionCancelAtPeriodEnd: subscription.cancel_at_period_end ?? null,
 			subscriptionUpdatedAt: new Date(),
+			billingCadence: projectedBillingCadence,
+			commitmentStatus: projectedCommitmentStatus,
 		})
 		logDecision('skip', reason)
 		return buildSummary('skip', reason)
@@ -1426,6 +1612,8 @@ export async function syncFromSubscription(
 				: null,
 			subscriptionCancelAtPeriodEnd: subscription.cancel_at_period_end ?? null,
 			subscriptionUpdatedAt: new Date(),
+			billingCadence: projectedBillingCadence,
+			commitmentStatus: projectedCommitmentStatus,
 		})
 		logDecision('skip', 'invalid_plan')
 		return buildSummary('skip', 'invalid_plan')
@@ -1454,6 +1642,8 @@ export async function syncFromSubscription(
 			: null,
 		subscriptionCancelAtPeriodEnd: subscription.cancel_at_period_end ?? null,
 		subscriptionUpdatedAt: new Date(),
+		billingCadence: projectedBillingCadence,
+		commitmentStatus: projectedCommitmentStatus,
 	})
 
 	if (emailEval.shouldSend) {

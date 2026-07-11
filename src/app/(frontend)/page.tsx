@@ -58,14 +58,19 @@ export default function HomePage() {
     },
     {
       name: "Pro",
-      price: "£80/mo or £880/yr",
-      description: "One paid membership",
-      features: ["Programme access", "Protected resources", "Community access", "Billing self-service"],
-      ctaLabel: "Start Pro",
-      ctaHref: "/api/stripe/checkout?plan=pro&billing=monthly",
+      price: "£80/month",
+      description: "Initial 12-month commitment · £960 total",
+      features: [
+        "Continues at £80 month-to-month after the initial term",
+        "£880 annual option paid upfront",
+        "Programme access",
+        "Protected resources and community access",
+      ],
+      ctaLabel: "Review Pro checkout",
+      ctaHref: "/portal/billing",
       highlight: true,
       badge: "Single paid membership",
-      subcopy: "Monthly and annual checkout options.",
+      subcopy: "Monthly commitment terms and both required acknowledgments are shown before payment.",
     },
   ];
   const onboardingSteps = [

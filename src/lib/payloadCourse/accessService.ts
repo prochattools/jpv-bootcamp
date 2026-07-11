@@ -379,7 +379,8 @@ async function getMemberContext(
 
 async function getBillingContext(
   payload: PayloadCourseAccessAPI,
-  memberId: string | null | undefined
+  memberId: string | null | undefined,
+  nowValue?: Date | string,
 ): Promise<BillingAccessContext | null> {
   if (!memberId) return null
 
@@ -399,10 +400,22 @@ async function getBillingContext(
     subscriptions.docs[0]
 
   if (subscription) {
-    const subscriptionStatus =
-      subscription.cancelAtPeriodEnd || subscription.canceledAt
-        ? 'canceled'
-        : normalizeBillingStatus(subscription.status)
+    const rawStatus = normalizeBillingStatus(subscription.status)
+    const now = nowValue ? new Date(nowValue) : new Date()
+    const paymentGraceEndsAt = subscription.paymentGraceEndsAt
+      ? new Date(String(subscription.paymentGraceEndsAt))
+      : null
+    const withinPaymentGrace = Boolean(
+      rawStatus === 'past_due' &&
+        paymentGraceEndsAt &&
+        !Number.isNaN(paymentGraceEndsAt.getTime()) &&
+        paymentGraceEndsAt.getTime() >= now.getTime(),
+    )
+    const subscriptionStatus = subscription.canceledAt
+      ? 'canceled'
+      : withinPaymentGrace
+        ? 'active'
+        : rawStatus
 
     return {
       status: subscriptionStatus,
@@ -591,7 +604,7 @@ async function evaluatePayloadResourceAccess(
   }
 ): Promise<PayloadAccessServiceResult> {
   const member = await getMemberContext(payload, args.memberId)
-  const billing = await getBillingContext(payload, member?.id)
+  const billing = await getBillingContext(payload, member?.id, args.now)
   const policyMatch = await getPolicyContext(payload, args.resource)
   const fallbackPolicyMatch =
     policyMatch.policy || !args.fallbackPolicyResource

@@ -16,6 +16,7 @@ export type OpenBillingPortalResult =
 			error:
 				| 'unauthenticated'
 				| 'no_stripe_customer'
+				| 'restricted_portal_unavailable'
 				| 'stripe_error'
 				| 'unexpected_error'
 	  }
@@ -38,7 +39,11 @@ export async function openBillingPortal(): Promise<OpenBillingPortalResult> {
 	try {
 		const customerRecord = await prisma.customerProvisioning.findUnique({
 			where: { normalizedEmail },
-			select: { stripeCustomerId: true },
+			select: {
+				stripeCustomerId: true,
+				billingCadence: true,
+				commitmentStatus: true,
+			},
 		})
 
 		if (!customerRecord?.stripeCustomerId) {
@@ -47,12 +52,24 @@ export async function openBillingPortal(): Promise<OpenBillingPortalResult> {
 		}
 
 		const stripeConfig = getStripeConfig()
+		const restrictedPortalRequired =
+			customerRecord.billingCadence === 'monthly_commitment' &&
+			(customerRecord.commitmentStatus === 'pending' ||
+				customerRecord.commitmentStatus === 'active' ||
+				customerRecord.commitmentStatus === 'cancellation_requested')
+		const portalConfigurationId = restrictedPortalRequired
+			? stripeConfig.commitmentPortalConfigurationId
+			: stripeConfig.portalConfigurationId
+		if (!portalConfigurationId) {
+			console.error('Restricted billing portal configuration is unavailable')
+			return { ok: false, error: 'restricted_portal_unavailable' }
+		}
 		const stripe = getStripe()
 
 		const session = await stripe.billingPortal.sessions.create({
 			customer: customerRecord.stripeCustomerId,
 			return_url: BILLING_PORTAL_DEFAULT_RETURN_URL,
-			configuration: stripeConfig.portalConfigurationId,
+			configuration: portalConfigurationId,
 		})
 
 		if (!session.url) {

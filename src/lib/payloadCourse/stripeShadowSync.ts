@@ -17,6 +17,7 @@ import {
   BILLING_PAYMENT_REFUNDED_TEMPLATE_KEY,
 } from '@/lib/payloadCourse/systemEmailTemplates'
 import { redactEmail } from '@/lib/log-redact'
+import { paymentGraceEnd } from '@/lib/billing/commitmentPolicy'
 
 type Plan = 'pro'
 
@@ -253,7 +254,7 @@ function normalizeSubscriptionStatus(status: Stripe.Subscription.Status): Payloa
 }
 
 function billingStatusFromSubscription(subscription: Stripe.Subscription): PayloadBillingStatus {
-  if (subscription.cancel_at_period_end || subscription.canceled_at) return 'canceled'
+  if (subscription.canceled_at) return 'canceled'
   if (subscription.status === 'active') return 'active'
   if (subscription.status === 'trialing') return 'trialing'
   if (subscription.status === 'past_due') return 'past_due'
@@ -998,12 +999,14 @@ async function syncInvoice(
   stripe: ShadowStripeClient,
   event: Stripe.Event,
   invoice: Stripe.Invoice,
-  paymentStatus: 'paid' | 'failed',
+  paymentStatus: 'paid' | 'failed' | 'action_required',
   options: ShadowSyncOptions
 ): Promise<string[]> {
   const subscriptionId = getInvoiceSubscriptionId(invoice)
   const customerId = getCustomerId(invoice.customer as Stripe.Invoice['customer'])
   let subject: BillingSubject | null = null
+  let invoiceSubscriptionProjection: SubscriptionProjection | null = null
+  const paymentAttentionRequired = paymentStatus !== 'paid'
   let billingStatus: PayloadBillingStatus = paymentStatus === 'paid' ? 'active' : 'past_due'
 
   if (subscriptionId) {
@@ -1011,6 +1014,7 @@ async function syncInvoice(
     billingStatus =
       paymentStatus === 'paid' ? billingStatusFromSubscription(subscription) : 'past_due'
     const projection = subscriptionProjection(subscription)
+    invoiceSubscriptionProjection = projection
     subject = await getBillingSubject(payload, stripe, {
       eventId: event.id,
       eventType: event.type,
@@ -1043,6 +1047,39 @@ async function syncInvoice(
     return ['invoice_skipped_missing_subject']
   }
 
+  if (invoiceSubscriptionProjection) {
+    await upsertByWhere(
+      payload,
+      'payload_subscriptions',
+      {
+        stripeSubscriptionId: {
+          equals: invoiceSubscriptionProjection.stripeSubscriptionId,
+        },
+      },
+      {
+        displayName: `${invoiceSubscriptionProjection.plan} / ${invoiceSubscriptionProjection.stripeSubscriptionId}`,
+        member: subject.member.id,
+        billingAccount: subject.billingAccount.id,
+        stripeSubscriptionId: invoiceSubscriptionProjection.stripeSubscriptionId,
+        stripePriceId: invoiceSubscriptionProjection.priceId ?? undefined,
+        stripeProductId: invoiceSubscriptionProjection.productId ?? undefined,
+        plan: invoiceSubscriptionProjection.plan,
+        status: invoiceSubscriptionProjection.status,
+        cancelAtPeriodEnd: invoiceSubscriptionProjection.cancelAtPeriodEnd,
+        currentPeriodStart: invoiceSubscriptionProjection.currentPeriodStart ?? undefined,
+        currentPeriodEnd: invoiceSubscriptionProjection.currentPeriodEnd ?? undefined,
+        trialEndsAt: invoiceSubscriptionProjection.trialEndsAt ?? undefined,
+        canceledAt: invoiceSubscriptionProjection.canceledAt ?? undefined,
+        paymentGraceEndsAt: paymentAttentionRequired
+          ? paymentGraceEnd(new Date(event.created * 1000))
+          : null,
+        lastStripeEventId: event.id,
+        lastSyncedAt: new Date(),
+        metadata: invoiceSubscriptionProjection.metadata,
+      },
+    )
+  }
+
   const stripeInvoiceId = invoice.id ?? `event:${event.id}`
   const amount =
     paymentStatus === 'paid'
@@ -1062,11 +1099,12 @@ async function syncInvoice(
       currency: invoice.currency ?? 'usd',
       status: paymentStatus,
       paidAt: paymentStatus === 'paid' ? dateFromUnix(invoice.status_transitions?.paid_at) ?? new Date() : undefined,
-      failedAt: paymentStatus === 'failed' ? new Date() : undefined,
-      failureReason:
-        paymentStatus === 'failed'
-          ? invoice.last_finalization_error?.message ?? 'invoice_payment_failed'
-          : undefined,
+      failedAt: paymentAttentionRequired ? new Date(event.created * 1000) : undefined,
+      failureReason: paymentAttentionRequired
+        ? paymentStatus === 'action_required'
+          ? 'invoice_payment_action_required'
+          : invoice.last_finalization_error?.message ?? 'invoice_payment_failed'
+        : undefined,
       metadata: {
         eventId: event.id,
         subscriptionId,
@@ -1094,15 +1132,13 @@ async function syncInvoice(
       subject.previousBillingStatus === 'unpaid' ||
       subject.previousBillingStatus === 'billing_hold')
 
-  if (paymentStatus === 'failed' || isRecovery) {
-    const templateKey =
-      paymentStatus === 'failed'
-        ? BILLING_PAYMENT_FAILED_TEMPLATE_KEY
-        : BILLING_PAYMENT_RECOVERED_TEMPLATE_KEY
-    const dedupeKey =
-      paymentStatus === 'failed'
-        ? `billing-payment-failed:${stripeInvoiceId}`
-        : `billing-payment-recovered:${stripeInvoiceId}`
+  if (paymentAttentionRequired || isRecovery) {
+    const templateKey = paymentAttentionRequired
+      ? BILLING_PAYMENT_FAILED_TEMPLATE_KEY
+      : BILLING_PAYMENT_RECOVERED_TEMPLATE_KEY
+    const dedupeKey = paymentAttentionRequired
+      ? `billing-payment-${paymentStatus}:${stripeInvoiceId}`
+      : `billing-payment-recovered:${stripeInvoiceId}`
 
     const queuedNotice = await queueEmailEvent(payload, {
       toEmail: subject.email,
@@ -1112,30 +1148,34 @@ async function syncInvoice(
       metadata: {
         memberId: String(subject.member.id),
         eventId: event.id,
-        paymentState: paymentStatus === 'failed' ? 'failed' : 'recovered',
+        paymentState: paymentAttentionRequired ? paymentStatus : 'recovered',
       },
     })
     if (queuedNotice.created) {
       await createMemberSecurityEvent(
         payload,
         subject.member.id,
-        paymentStatus === 'failed' ? 'billing_payment_failed' : 'billing_payment_recovered',
+        paymentAttentionRequired ? 'billing_payment_failed' : 'billing_payment_recovered',
         event.id
       )
     }
   }
 
-  await syncMemberBillingHold(payload, {
-    member: subject.member,
-    billingStatus,
-    reason: paymentStatus === 'failed' ? billingStatus : 'payment_recovered',
-    eventId: event.id,
-    adminEmail: options.adminEmail,
-  })
+  if (paymentStatus === 'paid') {
+    await syncMemberBillingHold(payload, {
+      member: subject.member,
+      billingStatus,
+      reason: 'payment_recovered',
+      eventId: event.id,
+      adminEmail: options.adminEmail,
+    })
+  }
 
   return [
-    paymentStatus === 'failed'
-      ? 'invoice_payment_failed_synced'
+    paymentAttentionRequired
+      ? paymentStatus === 'action_required'
+        ? 'invoice_payment_action_required_synced'
+        : 'invoice_payment_failed_synced'
       : isRecovery
         ? 'invoice_payment_recovered_synced'
         : 'invoice_paid_synced',
@@ -1400,6 +1440,60 @@ async function markStripeEvent(
   )
 }
 
+async function syncSubscriptionSchedule(
+  payload: PayloadCourseWriteAPI,
+  event: Stripe.Event,
+  schedule: Stripe.SubscriptionSchedule,
+): Promise<string[]> {
+  const subscriptionId = relationshipId(schedule.subscription)
+  if (!subscriptionId) return ['subscription_schedule_skipped_missing_subscription']
+
+  const subscriptionDoc = await findOne(payload, 'payload_subscriptions', {
+    stripeSubscriptionId: { equals: subscriptionId },
+  })
+  if (!subscriptionDoc) return ['subscription_schedule_skipped_missing_projection']
+
+  const phase = schedule.current_phase ?? schedule.phases[0] ?? null
+  const existingCommitmentStatus =
+    typeof subscriptionDoc.commitmentStatus === 'string'
+      ? subscriptionDoc.commitmentStatus
+      : null
+  const commitmentStatus =
+    event.type === 'subscription_schedule.completed' ||
+    event.type === 'subscription_schedule.released'
+      ? 'completed'
+      : event.type === 'subscription_schedule.canceled' ||
+          event.type === 'subscription_schedule.aborted'
+        ? 'terminated'
+        : existingCommitmentStatus === 'cancellation_requested'
+          ? 'cancellation_requested'
+          : schedule.status === 'not_started'
+            ? 'pending'
+            : 'active'
+
+  await payload.update({
+    collection: 'payload_subscriptions',
+    id: subscriptionDoc.id,
+    data: {
+      stripeSubscriptionScheduleId: schedule.id,
+      billingCadence: 'monthly_commitment',
+      commitmentStatus,
+      commitmentStartAt: phase ? new Date(phase.start_date * 1000) : undefined,
+      commitmentEndAt: phase ? new Date(phase.end_date * 1000) : undefined,
+      cancellationEffectiveAt:
+        commitmentStatus === 'cancellation_requested' && phase
+          ? new Date(phase.end_date * 1000)
+          : undefined,
+      lastStripeEventId: event.id,
+      lastSyncedAt: new Date(),
+    },
+    overrideAccess: true,
+    overrideLock: true,
+  })
+
+  return ['subscription_schedule_synced']
+}
+
 export async function mirrorStripeEventToPayload(
   payload: PayloadCourseWriteAPI,
   event: Stripe.Event,
@@ -1426,8 +1520,9 @@ export async function mirrorStripeEventToPayload(
   let actions: string[] = []
 
   try {
-    switch (event.type) {
+    switch (String(event.type)) {
       case 'checkout.session.completed':
+      case 'checkout.session.async_payment_succeeded':
         actions = await syncCheckoutSession(
           payload,
           stripe,
@@ -1435,6 +1530,9 @@ export async function mirrorStripeEventToPayload(
           event.data.object as Stripe.Checkout.Session,
           options
         )
+        break
+      case 'checkout.session.async_payment_failed':
+        actions = ['checkout_async_payment_failed_observed']
         break
       case 'customer.subscription.created':
       case 'customer.subscription.updated':
@@ -1445,6 +1543,19 @@ export async function mirrorStripeEventToPayload(
           event,
           event.data.object as Stripe.Subscription,
           options
+        )
+        break
+      case 'subscription_schedule.created':
+      case 'subscription_schedule.updated':
+      case 'subscription_schedule.expiring':
+      case 'subscription_schedule.completed':
+      case 'subscription_schedule.released':
+      case 'subscription_schedule.canceled':
+      case 'subscription_schedule.aborted':
+        actions = await syncSubscriptionSchedule(
+          payload,
+          event,
+          event.data.object as Stripe.SubscriptionSchedule,
         )
         break
       case 'invoice.paid':
@@ -1458,19 +1569,26 @@ export async function mirrorStripeEventToPayload(
         )
         break
       case 'invoice.payment_failed':
+      case 'invoice.payment_action_required':
         actions = await syncInvoice(
           payload,
           stripe,
           event,
           event.data.object as Stripe.Invoice,
-          'failed',
+          event.type === 'invoice.payment_action_required' ? 'action_required' : 'failed',
           options
         )
+        break
+      case 'refund.created':
+      case 'refund.updated':
+      case 'refund.failed':
+        actions = ['refund_lifecycle_observed']
         break
       case 'charge.refunded':
         actions = await syncRefundOrDispute(payload, event, 'refunded')
         break
       case 'charge.dispute.created':
+      case 'charge.dispute.updated':
         actions = await syncRefundOrDispute(payload, event, 'disputed')
         break
       case 'charge.dispute.closed':

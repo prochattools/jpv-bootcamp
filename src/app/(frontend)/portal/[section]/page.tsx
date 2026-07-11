@@ -9,6 +9,7 @@ import { getMemberAccountOverview } from '@/lib/payloadCourse/memberPortal'
 import { BillingPortalButton } from '@/components/portal/BillingPortalButton'
 import { MemberCheckoutButtons } from '@/components/portal/MemberCheckoutButtons'
 import { getBillingStatus } from '@/lib/billing/billingStatusHelper'
+import { requestMembershipCancellation } from '@/lib/actions/requestMembershipCancellation'
 
 const sectionContent = {
   community: {
@@ -326,6 +327,42 @@ export default async function PortalSectionPage({ params, searchParams }: Portal
                     </dd>
                   </div>
                 )}
+                {billingStatus.commitmentStartAt && (
+                  <div>
+                    <dt className='text-sm font-medium text-neutral-500'>Commitment started</dt>
+                    <dd className='mt-2 text-base font-semibold text-neutral-950'>
+                      {new Intl.DateTimeFormat('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                      }).format(billingStatus.commitmentStartAt)}
+                    </dd>
+                  </div>
+                )}
+                {billingStatus.commitmentEndAt && (
+                  <div>
+                    <dt className='text-sm font-medium text-neutral-500'>Initial commitment ends</dt>
+                    <dd className='mt-2 text-base font-semibold text-neutral-950'>
+                      {new Intl.DateTimeFormat('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                      }).format(billingStatus.commitmentEndAt)}
+                    </dd>
+                  </div>
+                )}
+                {billingStatus.cancellationEffectiveAt && (
+                  <div>
+                    <dt className='text-sm font-medium text-neutral-500'>Cancellation effective</dt>
+                    <dd className='mt-2 text-base font-semibold text-neutral-950'>
+                      {new Intl.DateTimeFormat('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                      }).format(billingStatus.cancellationEffectiveAt)}
+                    </dd>
+                  </div>
+                )}
               </dl>
               {billingStatus.cancelAtPeriodEnd && (
                 <p className='mt-6 border-t border-neutral-200 pt-6 text-sm text-neutral-600'>
@@ -336,12 +373,38 @@ export default async function PortalSectionPage({ params, searchParams }: Portal
 
             <section className='rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm'>
               <h2 className='text-lg font-semibold text-neutral-950'>Manage subscription</h2>
-              <p className='mt-2 text-sm text-neutral-600'>
-                Update payment methods, view invoices, and adjust your subscription settings.
-              </p>
-              <div className='mt-6'>
+              {billingStatus.restrictedPortalRequired ? (
+                <p className='mt-2 text-sm leading-6 text-neutral-600'>
+                  Your Pro Monthly membership is within its initial 12-month commitment. You can
+                  update payment details and view invoices in the secure billing portal. Plan changes
+                  require support review, and an ordinary cancellation request takes effect at the
+                  commitment end date shown above.
+                </p>
+              ) : (
+                <p className='mt-2 text-sm text-neutral-600'>
+                  Update payment methods, view invoices, and manage period-end cancellation.
+                </p>
+              )}
+              <div className='mt-6 flex flex-wrap gap-3'>
                 <BillingPortalButton />
+                {billingStatus.restrictedPortalRequired &&
+                  billingStatus.commitmentStatus !== 'cancellation_requested' && (
+                    <form action={requestMembershipCancellation}>
+                      <button
+                        type='submit'
+                        className='rounded-lg border border-neutral-300 px-4 py-2.5 text-sm font-semibold text-neutral-800 transition hover:bg-neutral-50'
+                      >
+                        Request end-of-term cancellation
+                      </button>
+                    </form>
+                  )}
               </div>
+              {billingStatus.commitmentStatus === 'cancellation_requested' && (
+                <p className='mt-4 rounded-lg border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900'>
+                  Your cancellation request is recorded. Billing and access continue while payments
+                  remain current, and cancellation takes effect on the date shown above.
+                </p>
+              )}
             </section>
           </>
         ) : (

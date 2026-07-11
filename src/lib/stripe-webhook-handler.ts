@@ -15,13 +15,30 @@ import { notifySponsoredSeatPurchase } from '@/lib/sponsored-seat-notifications'
 import { getStripe } from '@/lib/stripe'
 import { shouldSendMembershipEmailForEvent } from '@/lib/stripe-membership-email-gate'
 import { shadowSyncStripeEventToPayload } from '@/lib/payloadCourse/stripeShadowSync'
+import {
+	projectAsyncCheckoutFailure,
+	projectCheckoutCommitment,
+	projectSubscriptionSchedule,
+} from '@/lib/billing/commitmentProjection'
+import { ensureMonthlyCommitmentSchedule } from '@/lib/stripe-commitment'
 
 const PROVISIONING_EVENT_TYPES = new Set([
 	'checkout.session.completed',
+	'checkout.session.async_payment_succeeded',
+	'checkout.session.async_payment_failed',
 	'customer.subscription.created',
 	'customer.subscription.updated',
 	'customer.subscription.deleted',
 	'invoice.paid',
+	'invoice.payment_failed',
+	'invoice.payment_action_required',
+	'subscription_schedule.created',
+	'subscription_schedule.updated',
+	'subscription_schedule.expiring',
+	'subscription_schedule.completed',
+	'subscription_schedule.released',
+	'subscription_schedule.canceled',
+	'subscription_schedule.aborted',
 ])
 const DEBUG_STRIPE_WEBHOOKS = process.env.DEBUG_STRIPE_WEBHOOKS === '1'
 const SKIP_PREDEV = process.env.SKIP_PREDEV === '1'
@@ -423,34 +440,59 @@ export async function handleStripeWebhook(req: Request) {
 	try {
 		const allowMembershipEmail = shouldSendMembershipEmailForEvent(event.type)
 
-		switch (event.type) {
-			case 'checkout.session.completed': {
+		switch (String(event.type)) {
+			case 'checkout.session.completed':
+			case 'checkout.session.async_payment_succeeded': {
 				const session = event.data.object as Stripe.Checkout.Session
-				const sponsoredTier = isSponsoredSeatSession(session)
-				if (sponsoredTier) {
-					const seatResult = await upsertSponsoredSeatFromSession({
-						session,
-						tier: sponsoredTier,
-					})
-					console.info('sponsored_seat_created', {
-						tier: sponsoredTier,
-						seatId: seatResult.seatId ?? null,
-						created: seatResult.created,
-						eventId: event.id,
-					})
-					if (seatResult.seatId) {
-						const donorEmail =
-							session.customer_details?.email ?? session.customer_email ?? null
-						await notifySponsoredSeatPurchase({
-							seatId: seatResult.seatId,
-							donorEmail,
+				if (event.type === 'checkout.session.completed') {
+					const sponsoredTier = isSponsoredSeatSession(session)
+					if (sponsoredTier) {
+						const seatResult = await upsertSponsoredSeatFromSession({
+							session,
+							tier: sponsoredTier,
 						})
+						console.info('sponsored_seat_created', {
+							tier: sponsoredTier,
+							seatId: seatResult.seatId ?? null,
+							created: seatResult.created,
+							eventId: event.id,
+						})
+						if (seatResult.seatId) {
+							const donorEmail =
+								session.customer_details?.email ?? session.customer_email ?? null
+							await notifySponsoredSeatPurchase({
+								seatId: seatResult.seatId,
+								donorEmail,
+							})
+						}
 					}
 				}
 				await provisionFromCheckoutSession(session, event.id, event.type, {
 					allowEmail: allowMembershipEmail,
 					eventLivemode: event.livemode,
 				})
+				const schedule = await ensureMonthlyCommitmentSchedule({
+					stripe: getStripe(),
+					session,
+				})
+				if (schedule) {
+					await projectCheckoutCommitment({ session, schedule, eventId: event.id })
+				}
+				break
+			}
+			case 'checkout.session.async_payment_failed': {
+				const session = event.data.object as Stripe.Checkout.Session
+				const projected = await projectAsyncCheckoutFailure({
+					session,
+					eventId: event.id,
+					occurredAt: new Date(event.created * 1000),
+				})
+				if (!projected) {
+					console.warn('monthly_commitment_async_payment_failure_unmatched', {
+						eventId: event.id,
+						checkoutSessionId: session.id,
+					})
+				}
 				break
 			}
 			case 'customer.subscription.created': {
@@ -520,6 +562,66 @@ export async function handleStripeWebhook(req: Request) {
 				})
 				break
 			}
+			case 'invoice.payment_action_required': {
+				const invoice = event.data.object as Stripe.Invoice
+				await projectInvoicePaymentState({
+					stripeCustomerId: stripeRelationshipId(invoice.customer),
+					stripeSubscriptionId: stripeRelationshipId(
+						(invoice as Stripe.Invoice & { subscription?: unknown }).subscription,
+					),
+					stripeInvoiceId: invoice.id,
+					stripePaymentIntentId: stripeRelationshipId(
+						(invoice as Stripe.Invoice & { payment_intent?: unknown }).payment_intent,
+					),
+					eventId: event.id,
+					paymentStatus: 'action_required',
+					occurredAt: new Date(event.created * 1000),
+				})
+				break
+			}
+			case 'subscription_schedule.created':
+			case 'subscription_schedule.updated':
+			case 'subscription_schedule.expiring':
+			case 'subscription_schedule.completed':
+			case 'subscription_schedule.released':
+			case 'subscription_schedule.canceled':
+			case 'subscription_schedule.aborted': {
+				const eventSchedule = event.data.object as Stripe.SubscriptionSchedule
+				const retrieveCurrentState =
+					event.type === 'subscription_schedule.created' ||
+					event.type === 'subscription_schedule.updated' ||
+					event.type === 'subscription_schedule.expiring'
+				const schedule = retrieveCurrentState
+					? await getStripe().subscriptionSchedules.retrieve(eventSchedule.id)
+					: eventSchedule
+				const projected = await projectSubscriptionSchedule({
+					schedule,
+					eventId: event.id,
+					eventType: event.type,
+				})
+				if (!projected.updated) {
+					console.warn('subscription_schedule_projection_unmatched', {
+						eventId: event.id,
+						type: event.type,
+						scheduleId: eventSchedule.id,
+					})
+				}
+				break
+			}
+			case 'refund.created':
+			case 'refund.updated':
+			case 'refund.failed': {
+				const refund = event.data.object as Stripe.Refund
+				console.info('stripe_refund_lifecycle_observed', {
+					eventId: event.id,
+					type: event.type,
+					refundId: refund.id,
+					status: refund.status ?? null,
+					chargeId: stripeRelationshipId(refund.charge),
+					paymentIntentId: stripeRelationshipId(refund.payment_intent),
+				})
+				break
+			}
 			case 'charge.refunded': {
 				const context = stripeChargeContext(event.data.object)
 				await projectInvoicePaymentState({
@@ -530,7 +632,8 @@ export async function handleStripeWebhook(req: Request) {
 				})
 				break
 			}
-			case 'charge.dispute.created': {
+			case 'charge.dispute.created':
+			case 'charge.dispute.updated': {
 				const dispute = event.data.object as Stripe.Dispute
 				await projectInvoicePaymentState({
 					...stripeDisputeContext(dispute),

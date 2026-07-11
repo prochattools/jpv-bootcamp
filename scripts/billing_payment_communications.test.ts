@@ -44,7 +44,7 @@ async function main() {
     shadowSync.indexOf('async function syncInvoice'),
     shadowSync.indexOf('async function syncCheckoutSession'),
   )
-  assert.match(invoiceSync, /billing-payment-failed:/)
+  assert.match(invoiceSync, /billing-payment-\$\{paymentStatus\}:/)
   assert.match(invoiceSync, /billing-payment-recovered:/)
   assert.match(invoiceSync, /queueEmailEvent/)
   assert.match(invoiceSync, /billing_payment_failed/)
@@ -55,6 +55,7 @@ async function main() {
   assert.match(shadowSync, /pending_member/)
 
   assert.match(webhook, /case 'invoice\.payment_failed'/)
+  assert.match(webhook, /case 'invoice\.payment_action_required'/)
   assert.match(webhook, /case 'invoice\.paid'/)
   assert.match(webhook, /case 'charge\.refunded'/)
   assert.match(webhook, /case 'charge\.dispute\.created'/)
@@ -64,7 +65,8 @@ async function main() {
   assert.match(shadowSync, /billing-payment-refunded:/)
   assert.match(shadowSync, /billing-payment-disputed:/)
   assert.doesNotMatch(shadowSync.slice(shadowSync.indexOf('async function syncRefundOrDispute'), shadowSync.indexOf('async function syncCheckoutSession')), /syncMemberBillingHold|blockMember|restoreMember/)
-  assert.match(helper, /showPaymentWarning: paymentStatus === 'failed'/)
+  assert.match(helper, /paymentStatus === 'failed'/)
+  assert.match(helper, /paymentStatus === 'action_required'/)
   assert.match(helper, /showRefundNotice: paymentStatus === 'refunded'/)
   assert.match(helper, /showDisputeNotice: paymentStatus === 'disputed'/)
   assert.match(helper, /billingAccessState/)

@@ -195,6 +195,30 @@ async function run() {
       buildPayload({
         payload_subscriptions: [
           {
+            id: 'sub_grace',
+            member: 'member_active',
+            status: 'past_due',
+            plan: 'pro',
+            paymentGraceEndsAt: '2026-01-08T00:00:00.000Z',
+            updatedAt: '2026-01-01T00:00:00.000Z',
+          },
+        ],
+      }),
+      {
+        memberId: 'member_active',
+        courseSlug: 'pro-course',
+        now: '2026-01-05T00:00:00.000Z',
+      }
+    )
+    assert.equal(result.decision.allowed, true)
+    assert.equal(result.decision.reason, 'required_group')
+  }
+
+  {
+    const result = await evaluatePayloadCourseAccess(
+      buildPayload({
+        payload_subscriptions: [
+          {
             id: 'sub_canceling',
             member: 'member_active',
             status: 'active',
@@ -210,8 +234,8 @@ async function run() {
         now: '2026-01-01T00:00:00.000Z',
       }
     )
-    assert.equal(result.decision.allowed, false)
-    assert.equal(result.decision.reason, 'billing_not_active')
+    assert.equal(result.decision.allowed, true)
+    assert.equal(result.decision.reason, 'required_group')
   }
 
   {

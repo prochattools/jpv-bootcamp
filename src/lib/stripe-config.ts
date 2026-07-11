@@ -11,6 +11,7 @@ export type StripeConfig = {
 	priceProAnnual: string
 	productPro: string
 	portalConfigurationId: string
+	commitmentPortalConfigurationId: string | null
 }
 
 type EnvKey = keyof NodeJS.ProcessEnv
@@ -81,6 +82,7 @@ export function getStripeConfig(): StripeConfig {
 	const priceProAnnualKey = `STRIPE_PRICE_PRO_ANNUAL_${suffix}`
 	const productProKey = `STRIPE_PRODUCT_JPV_BOOTCAMP_PRO_MEMBERSHIP_${suffix}`
 	const portalConfigKey = `STRIPE_PORTAL_CONFIGURATION_ID_${suffix}`
+	const commitmentPortalConfigKey = `STRIPE_PORTAL_COMMITMENT_CONFIGURATION_ID_${suffix}`
 
 	const secretKey = requireEnv(`STRIPE_SECRET_KEY_${suffix}`)
 	const webhookSecretRaw = requireEnv(`STRIPE_WEBHOOK_SECRET_${suffix}`)
@@ -89,6 +91,7 @@ export function getStripeConfig(): StripeConfig {
 	const priceProAnnual = requireEnv(priceProAnnualKey)
 	const productPro = requireEnv(productProKey)
 	const portalConfigurationId = requireEnv(portalConfigKey)
+	const commitmentPortalConfigurationId = getEnv(commitmentPortalConfigKey)?.trim() || null
 
 	const prefixes = getPrefixes(env)
 	const webhookSecrets = splitSecrets(webhookSecretRaw)
@@ -102,6 +105,13 @@ export function getStripeConfig(): StripeConfig {
 	assertPrefix(priceProAnnual, prefixes.pricePrefix, 'Stripe Pro annual price')
 	assertPrefix(productPro, prefixes.productPrefix, 'Stripe Pro product')
 	assertPrefix(portalConfigurationId, 'bpc_', 'Stripe portal configuration')
+	if (commitmentPortalConfigurationId) {
+		assertPrefix(
+			commitmentPortalConfigurationId,
+			'bpc_',
+			'Stripe commitment portal configuration',
+		)
+	}
 
 	cachedWebhookSecrets = webhookSecrets
 	cachedStripeConfig = {
@@ -113,6 +123,7 @@ export function getStripeConfig(): StripeConfig {
 		priceProAnnual,
 		productPro,
 		portalConfigurationId,
+		commitmentPortalConfigurationId,
 	}
 
 	if (!hasLoggedEnv) {
@@ -123,6 +134,7 @@ export function getStripeConfig(): StripeConfig {
 				[priceProAnnualKey]: Boolean(getEnv(priceProAnnualKey)),
 				[productProKey]: Boolean(getEnv(productProKey)),
 				[portalConfigKey]: Boolean(getEnv(portalConfigKey)),
+				[commitmentPortalConfigKey]: Boolean(getEnv(commitmentPortalConfigKey)),
 			},
 		})
 		hasLoggedEnv = true

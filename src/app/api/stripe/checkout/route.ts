@@ -8,6 +8,7 @@ import {
 	resolveCheckoutBilling,
 } from '@/lib/stripe-checkout-config'
 import { getStripe } from '@/lib/stripe'
+import { buildCheckoutContractMetadata } from '@/lib/stripe-commitment'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -36,6 +37,13 @@ export async function GET(req: NextRequest) {
 					error: 'Invalid plan. Use ?plan=pro with optional &billing=monthly|annual.',
 				},
 				{ status: 400 }
+			)
+		}
+
+		if (billing === 'monthly') {
+			return NextResponse.redirect(
+				new URL('/portal/billing?checkout=consent_required', stripeConfig.app.url),
+				{ status: 303 }
 			)
 		}
 
@@ -73,6 +81,10 @@ export async function GET(req: NextRequest) {
 			customerEmail = verification.payload.email
 		}
 
+		const metadata = buildCheckoutContractMetadata({
+			billing,
+			source: 'landing',
+		})
 		const session = await stripe.checkout.sessions.create({
 			mode: 'subscription',
 			line_items: [{ price: priceId, quantity: 1 }],
@@ -84,18 +96,8 @@ export async function GET(req: NextRequest) {
 						customer_email: customerEmail,
 				  }
 				: {}),
-			metadata: {
-				plan,
-				billing,
-				source: 'landing',
-			},
-			subscription_data: {
-				metadata: {
-					plan,
-					billing,
-					source: 'landing',
-				},
-			},
+			metadata,
+			subscription_data: { metadata },
 		})
 
 		if (!session.url) {
