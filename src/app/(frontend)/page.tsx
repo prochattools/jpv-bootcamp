@@ -112,7 +112,13 @@ export default function HomePage() {
         }),
       });
 
-      type SupportResponse = { ok?: boolean; error?: string };
+      type SupportResponse = {
+        ok?: boolean;
+        accepted?: boolean;
+        duplicate?: boolean;
+        error?: string;
+        retryable?: boolean;
+      };
       let payload: SupportResponse | null = null;
 
       try {
@@ -121,19 +127,18 @@ export default function HomePage() {
         payload = null;
       }
 
-      if (response.ok && payload?.ok) {
+      if (response.ok && payload?.ok && payload.accepted) {
         setSupportStatus("success");
         setSupportName("");
         setSupportEmail("");
         setSupportQuestion("");
       } else {
         setSupportStatus("error");
-        setSupportError(payload?.error || "Unable to send your request. Please try again.");
+        setSupportError("We could not save your request. Please try again shortly.");
       }
-    } catch (error) {
-      console.error("Support request failed:", error);
+    } catch {
       setSupportStatus("error");
-      setSupportError("Unable to send your request. Please try again.");
+      setSupportError("We could not save your request. Please try again shortly.");
     }
   };
 
@@ -612,13 +617,13 @@ export default function HomePage() {
             {supportStatus !== "idle" ? (
               <div className="mt-4 space-y-2 text-sm">
                 {supportStatus === "success" ? (
-                  <p className="text-jpv-green">Thanks. Your request has been submitted.</p>
+                  <p className="text-jpv-green">Thanks. Your request has been saved for review.</p>
                 ) : null}
                 {supportStatus === "error" && supportError ? (
                   <p className="text-red-400">{supportError}</p>
                 ) : null}
                 {supportStatus === "sending" ? (
-                  <p className="text-jpv-gray-400">Sending your request...</p>
+                  <p className="text-jpv-gray-400">Saving your request...</p>
                 ) : null}
               </div>
             ) : null}

@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getPayload } from 'payload'
 
+import payloadConfig from '@/payload.config'
+import { getServerConfig } from '@/lib/config'
 import { guardPublicRequest } from '@/lib/publicRequestGuard'
 import {
   getPublicRequestApplicationOrigin,
@@ -8,6 +11,14 @@ import {
   publicRequestRateLimiter,
   trustPublicRequestProxyHeaders,
 } from '@/lib/publicRequestRoute'
+import { queueEmailEvent } from '@/lib/payloadCourse/events'
+import type { PayloadCourseWriteAPI } from '@/lib/payloadCourse/accessService'
+import {
+  createSupportIntakeService,
+  type SupportRequestCreateData,
+  type SupportRequestUpdateData,
+} from '@/lib/support/supportIntake'
+import prisma from '@/libs/prisma'
 
 const SUPPORT_MAX_BYTES = 8 * 1024
 
@@ -18,6 +29,17 @@ const supportFields = {
   source: { type: 'string', maxLength: 80 },
   page: { type: 'string', maxLength: 200 },
 } as const
+
+function safeSupportLog(event: {
+  event: 'support_intake'
+  decision: 'accepted' | 'duplicate' | 'persistence_failed' | 'queue_failed'
+  reason: string
+}): void {
+  console.info(event.event, {
+    decision: event.decision,
+    reason: event.reason,
+  })
+}
 
 export async function POST(req: NextRequest) {
   const guarded = await guardPublicRequest(req, {
@@ -44,13 +66,54 @@ export async function POST(req: NextRequest) {
     return publicRequestFailureResponse(guarded)
   }
 
-  return NextResponse.json(
-    {
-      ok: false,
-      error: 'preview_only',
-      message:
-        'Support requests are preview-only and are not submitted, stored, emailed, or assigned a reference.',
+  const service = createSupportIntakeService({
+    async createRequest(data: SupportRequestCreateData) {
+      return prisma.supportRequest.create({ data })
     },
-    { status: 503 },
-  )
+    async updateRequest(id: string, data: SupportRequestUpdateData) {
+      await prisma.supportRequest.update({ where: { id }, data })
+    },
+    async queueNotification(input) {
+      const payload = await getPayload({ config: payloadConfig })
+      const { supportTo } = getServerConfig().email
+      await queueEmailEvent(payload as unknown as PayloadCourseWriteAPI, {
+        toEmail: supportTo,
+        templateKey: 'admin-notification',
+        dedupeKey: input.dedupeKey,
+        displayName: 'Support request pending review',
+        metadata: {
+          purpose: 'support_request_pending_review',
+          supportRequestId: input.requestId,
+          reviewStatus: input.reviewStatus,
+        },
+      })
+    },
+    now: () => new Date(),
+    log: safeSupportLog,
+  })
+
+  const result = await service({
+    normalizedEmail: guarded.data.email,
+    name: guarded.data.name,
+    question: guarded.data.question,
+    source: guarded.data.source,
+    page: guarded.data.page,
+  })
+
+  if (result.ok === false) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: result.code,
+        retryable: true,
+      },
+      { status: 503 },
+    )
+  }
+
+  return NextResponse.json({
+    ok: true,
+    accepted: true,
+    duplicate: result.duplicate,
+  })
 }

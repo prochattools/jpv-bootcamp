@@ -56,10 +56,13 @@ for (const forbidden of [
 }
 
 assert.match(supportRoute, /guardPublicRequest\(req/)
-assert.match(supportRoute, /error:\s*'preview_only'/)
+assert.match(supportRoute, /prisma\.supportRequest\.create/)
+assert.match(supportRoute, /queueEmailEvent/)
+assert.match(supportRoute, /accepted:\s*true/)
+assert.match(supportRoute, /duplicate:\s*result\.duplicate/)
 assert.match(supportRoute, /status:\s*503/)
-assert.equal(supportRoute.includes('prisma.supportRequest'), false)
-assert.equal(supportRoute.includes('queueEmailEvent'), false)
-assert.equal(supportRoute.includes('ok: true'), false)
+assert.equal(supportRoute.includes("error: 'preview_only'"), false)
+assert.equal(supportRoute.includes('SponsoredApplication'), false)
+assert.equal(supportRoute.includes('SponsoredGrant'), false)
 
 console.log('support request schema contract test passed')

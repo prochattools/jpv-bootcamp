@@ -91,20 +91,30 @@ function testSupport(): void {
       "name: { type: 'string', required: true, minLength: 2, maxLength: 120 }",
       "email: { type: 'email', required: true, maxLength: 320 }",
       "question: { type: 'string', required: true, minLength: 10, maxLength: 2_000 }",
-      "error: 'preview_only'",
-      'are not submitted, stored, emailed, or assigned a reference',
+      'const service = createSupportIntakeService',
+      'prisma.supportRequest.create',
+      'prisma.supportRequest.update',
+      'queueEmailEvent',
+      "templateKey: 'admin-notification'",
+      "purpose: 'support_request_pending_review'",
+      'accepted: true',
+      'duplicate: result.duplicate',
+      'error: result.code',
       '{ status: 503 }',
     ],
     'support route',
   )
+  assertGuardBefore(support, 'const service = createSupportIntakeService', 'support')
+  assertGuardBefore(support, 'const result = await service', 'support')
   for (const forbidden of [
-    'prisma.',
     'sendSupportEmail',
     'resendService',
     'randomUUID',
     'Math.random',
-    'success: true',
-    'ok: true',
+    "error: 'preview_only'",
+    'applicationId',
+    'SponsoredApplication',
+    'SponsoredGrant',
   ]) {
     assert.equal(support.includes(forbidden), false, `support must not contain ${forbidden}`)
   }
