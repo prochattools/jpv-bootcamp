@@ -167,6 +167,32 @@ model SponsoredApplication {
   @@map("sponsored_applications")
 }
 
+model SupportRequest {
+  id                        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid @map("id")
+  createdAt                 DateTime  @default(now()) @map("created_at")
+  updatedAt                 DateTime  @default(now()) @updatedAt @map("updated_at")
+  normalizedEmail           String    @map("normalized_email")
+  name                      String    @map("name")
+  question                  String    @map("question")
+  source                    String?   @map("source")
+  page                      String?   @map("page")
+  dedupeKey                 String    @unique @map("dedupe_key")
+  reviewStatus              String    @default("pending") @map("review_status")
+  notificationStatus        String    @default("pending") @map("notification_status")
+  notificationAttemptCount  Int       @default(0) @map("notification_attempt_count")
+  notificationLastAttemptAt DateTime? @map("notification_last_attempt_at")
+  notificationNextAttemptAt DateTime? @map("notification_next_attempt_at")
+  notificationLastErrorCode String?   @map("notification_last_error_code")
+  reviewedAt                DateTime? @map("reviewed_at")
+  reviewedByAccountId       Int?      @map("reviewed_by_account_id")
+
+  @@index([normalizedEmail])
+  @@index([reviewStatus])
+  @@index([notificationStatus])
+  @@index([createdAt])
+  @@map("support_requests")
+}
+
 model SponsoredGrant {
   id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid @map("id")
   createdAt DateTime @default(now()) @map("created_at")
