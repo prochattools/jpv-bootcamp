@@ -615,7 +615,12 @@ export default function HomePage() {
               </button>
             </div>
             {supportStatus !== "idle" ? (
-              <div className="mt-4 space-y-2 text-sm">
+              <div
+                aria-atomic="true"
+                aria-live="polite"
+                className="mt-4 space-y-2 text-sm"
+                role="status"
+              >
                 {supportStatus === "success" ? (
                   <p className="text-jpv-green">Thanks. Your request has been saved for review.</p>
                 ) : null}
