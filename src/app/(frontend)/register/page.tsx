@@ -14,7 +14,7 @@ export const dynamic = 'force-dynamic'
 
 export default async function RegisterPage() {
   const { member } = await getCurrentPayloadMember()
-  if (member) redirect('/learn')
+  if (member) redirect('/portal')
 
   return (
     <main className='mx-auto grid min-h-screen max-w-7xl items-center px-6 py-12 lg:grid-cols-[1fr_0.9fr] lg:px-10'>
