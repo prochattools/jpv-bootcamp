@@ -45,10 +45,12 @@ function testLandingClaimsAreApprovalSafe(): void {
     'landing page',
   )
 
-  assert.ok(landing.includes('£80/mo or £880/yr'), 'approved public prices must remain visible')
+  assert.ok(landing.includes('£80/month'), 'approved monthly price must remain visible')
+  assert.ok(landing.includes('Initial 12-month commitment'), 'approved commitment wording must remain visible')
+  assert.ok(landing.includes('£880 annual option paid upfront'), 'approved annual price must remain visible')
   assert.ok(
-    landing.includes('/api/stripe/checkout?plan=pro&billing=monthly'),
-    'the existing Pro monthly checkout entry point must remain available',
+    landing.includes('ctaHref: "/portal/billing"'),
+    'the authenticated Pro billing entry point must remain available',
   )
   assert.ok(landing.includes('href="/terms"'), 'landing page must link to canonical terms')
   assert.ok(landing.includes('href="/privacy"'), 'landing page must link to canonical privacy')

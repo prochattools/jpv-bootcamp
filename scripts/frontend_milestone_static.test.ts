@@ -36,9 +36,11 @@ function main(): void {
   // Verify Pro membership is presented
   assert.match(frontendPage, /Pro.*membership|membership.*Pro/i, 'Landing page should mention Pro membership')
 
-  // Verify checkout CTAs use plan=pro only (not plan=vip or plan=exhibitor)
-  assert.match(frontendPage, /\/api\/stripe\/checkout\?plan=pro&billing=monthly/, 'Landing page should have plan=pro monthly checkout')
-  assert.match(frontendPage, /£80.*mo.*or.*£880.*yr/, 'Landing page should show £80/mo or £880/yr pricing text')
+  // Verify the public CTA enters authenticated portal billing with approved Pro terms
+  assert.match(frontendPage, /ctaHref: "\/portal\/billing"/, 'Landing page should route Pro checkout through authenticated portal billing')
+  assert.match(frontendPage, /£80\/month/, 'Landing page should show the approved monthly price')
+  assert.match(frontendPage, /Initial 12-month commitment/, 'Landing page should state the initial commitment')
+  assert.match(frontendPage, /£880 annual option paid upfront/, 'Landing page should show the approved annual option')
   assert.ok(!frontendPage.includes('plan=vip'), 'Landing page should not use plan=vip')
   assert.ok(!frontendPage.includes('plan=exhibitor'), 'Landing page should not use plan=exhibitor')
 
