@@ -11,7 +11,8 @@ Verify the exact branch tip with `git log --oneline -1` before operator action.
 No migrations have been applied.
 Do not touch `main`.
 
-Version 3.4 summary: `docs/client/JPV_BOOTCAMP_GO_LIVE_PLAN_V3_4_SUMMARY.md`
+Version 3.5 client plan: `docs/client/JPV_Bootcamp_Platform_Expansion_Go_Live_Plan_v3_5.docx`
+Version 3.5 codebase audit: `docs/V3_5_CODEBASE_ALIGNMENT_ASSESSMENT.md`
 Front-end website go-live milestone: 22 July 2026
 Client content/input due: Wednesday 15 July 2026
 The front-end milestone is a delivery marker only and does not authorize migration execution.
@@ -21,6 +22,69 @@ Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`
 The protected local files `.graphifyignore` and `docs/HANDOFF_AUTH_BRANDING_STAGING_2026-06-30.md` are outside this runbook and must not be staged.
 
 Static preflight automation is available via `pnpm staging:static-preflight`; it is local-only and does not authorize migrations, deployment, or live provider checks.
+
+## Current repository-owned readiness snapshot
+
+Readiness baseline before this release-evidence update: `1e5c4ed feat: complete M1-06 launch content views`
+
+**Outcome:** `NOT READY FOR CONTROLLED STAGING RELEASE PROCESS`
+
+### Completed launch-scoped implementation
+
+- M0-01 through M0-09 are implemented on this branch.
+- M1-01 through M1-06 are implemented on this branch.
+- `M1-06` completed in state **B**:
+  - `/portal/programme` remains an explicit preview because approved representative programme content is still missing.
+  - `/portal/community` and discussion views use persisted read-only member views.
+  - interactive community posting, replies, uploads, and moderation actions remain deferred.
+- M2-01 remains post-core and is not promoted by this packet.
+
+### Deterministic local validation baseline
+
+- `pnpm test:release` passed `116/116`
+- `pnpm test:e2e` passed `56/56`
+- `pnpm test:release:full` passed
+- `pnpm staging:static-preflight` passed
+- `pnpm exec tsc --noEmit --pretty false --incremental false` passed
+- `pnpm build` passed
+- `pnpm exec prisma validate --schema=prisma/system.prisma` passed
+- `pnpm exec prisma validate --schema=prisma/schema.prisma` passed
+- `pnpm exec pnpm audit --prod --audit-level high` passed the high-severity gate; remaining advisories are `2 moderate`
+- `pnpm exec tsx scripts/no_legacy_learn_namespace.test.ts` passed
+- no migration, deployment, provider, or push action occurred during this validation baseline
+
+### Remaining release gates
+
+| Gate | Current status | Evidence owner | Notes |
+| --- | --- | --- | --- |
+| Migration approval and apply path | Blocked | `docs/client/MIGRATION_APPROVAL_PACKET.md`, `docs/client/MIGRATION_APPROVAL_STATUS.md` | Migrations remain unapplied and require explicit target-environment approval. |
+| Migration rehearsal and rollback ownership | Ready but not executed | `docs/client/MIGRATION_REHEARSAL_RUNBOOK.md` | Static rehearsal evidence exists; live rehearsal is still gated. |
+| Support-request migration application | Blocked | `prisma/migrations/20260712_151700_add_support_requests/migration.sql` | Additive migration exists but remains unapplied. |
+| Provider/email verification | Ready but not executed | `docs/client/PROVIDER_EMAIL_READINESS.md`, `docs/client/PROVIDER_EMAIL_EVIDENCE_TEMPLATE.md` | Requires credentials and operator evidence. |
+| Stripe checkout/webhook/billing portal live verification | Ready but not executed | `docs/client/PROVIDER_EMAIL_READINESS.md` | Local validation passed; live verification is separate. |
+| Representative programme and public-copy approval | Blocked | `docs/client/FRONTEND_CONTENT_INTAKE_CHECKLIST.md`, `docs/client/FRONTEND_COPY_APPROVAL_PACKET.md` | Programme remains preview-only until approved content exists. |
+| Staging smoke | Ready but not executed | `docs/client/STAGING_SMOKE_CHECKLIST.md`, `docs/client/STAGING_SMOKE_EVIDENCE_TEMPLATE.md` | Requires approved deployment target and operator evidence. |
+| Formal go/no-go | Not executed | operator review process | Must follow staging, provider, content, and migration evidence review. |
+| Production operation | Blocked | this runbook plus client evidence docs | Production is blocked until every independent gate is complete. |
+
+### Required operator sequence before staging
+
+1. confirm the exact approved branch tip with `git log --oneline -1`;
+2. confirm client content/public-copy decisions, especially representative programme content;
+3. confirm migration approval, rollback owner, and exact apply path;
+4. execute the manual staging smoke checklist and capture evidence;
+5. execute provider/email verification and capture evidence;
+6. review the evidence packet and hold the formal go/no-go.
+
+### Production blockers
+
+- support-request migration remains unapplied;
+- table-plan-to-Free mapping approval remains pending;
+- account-column rename approval remains pending;
+- representative programme content is still blocked;
+- provider/email verification is still pending;
+- staging smoke is still pending;
+- formal go/no-go is still pending.
 
 ## Workflow architecture
 

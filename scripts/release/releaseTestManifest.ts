@@ -218,6 +218,7 @@ export const RELEASE_TEST_MANIFEST: ReleaseTestEntry[] = [
   test('evidence.preview-rollback-plan', 'release evidence and operator handoff checks', 'scripts/preview_rollback_plan.test.ts', 'Protects rollback planning and immutable artifact use.', 'Preview rollback cannot be executed safely.', 'M1-02'),
   test('evidence.preview-release-packet', 'release evidence and operator handoff checks', 'scripts/preview_release_packet.test.ts', 'Protects the complete preview release packet contract.', 'Release evidence categories can diverge or omit blockers.', 'M1-02'),
   test('evidence.staging-candidate', 'release evidence and operator handoff checks', 'scripts/staging_candidate_report.test.ts', 'Protects staging candidate reporting without deployment.', 'Candidate reports can overstate release readiness.', 'M1-02'),
+  test('evidence.core-go-live-readiness', 'release evidence and operator handoff checks', 'scripts/core_go_live_readiness.test.ts', 'Protects the repository-owned core go-live readiness snapshot and prevents false staging or production claims.', 'Readiness docs can drift away from the validated implementation and remaining blockers.', 'readiness'),
   command('evidence.validate-local', 'release evidence and operator handoff checks', 'pnpm', ['evidence:validate'], 'Validates approved local evidence structure without generating or publishing it.', 'Existing release evidence is malformed or unsafe.', 'M1-02'),
 ]
 

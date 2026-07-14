@@ -1,6 +1,6 @@
 # JPV Bootcamp - Roadmap Progress Status
 
-Current status for `feature/course-branding-and-preview`, audited against commit `236227c fix: require portal auth for member content` on 10 July 2026.
+Current status for `feature/course-branding-and-preview`, using the 10 July 2026 audit at `236227c fix: require portal auth for member content` as the historical baseline and `1e5c4ed feat: complete M1-06 launch content views` as the current local readiness baseline.
 
 Current client truth: `docs/client/JPV_Bootcamp_Platform_Expansion_Go_Live_Plan_v3_5.docx`. Version 3.4 is the prior progress baseline. Canonical execution plan: `docs/PAYLOAD_INTEGRATION_PLAN.md`. Detailed audit evidence: `docs/V3_5_CODEBASE_ALIGNMENT_ASSESSMENT.md`.
 
@@ -8,9 +8,9 @@ Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`.
 
 ## Current position
 
-**Position:** The core Payload, authentication, entitlement, billing projection, migration-safety, and operator-evidence foundations are strong. The branch is not release-ready because several visible MVPs are static/client-only prototypes and P0 security, billing-contract, public-copy, abuse-control, dependency, and test gaps remain.
+**Position:** Core go-live implementation and deterministic local validation are complete. The branch is still **not ready for the controlled staging release process** because representative 8-week programme content remains unapproved, the support-request migration remains unapplied, provider/email verification and staging smoke remain unexecuted, and the formal go/no-go decision has not happened.
 
-**Next task:** M0-01 under H0-01 - protect or remove the unauthenticated `/admin/review` prototype.
+**Next task:** Complete the controlled staging release process prerequisites: content approval, migration approval and rehearsal confirmation, provider/email verification, staging smoke evidence, and formal go/no-go review. `M2-01` remains deferred post-core unless explicitly promoted.
 
 **Front-end schedule:** The 22 July front-end milestone is achievable only if immediate public blockers and the billing decision close by 13 July, all launch-scoped P0 implementation closes by 17 July, and client content, pricing/commitment language, legal wording, and course input arrive or placeholders are explicitly approved by 15 July. The 23 July handover buffer and 24 July client finished-by date remain.
 
@@ -24,25 +24,26 @@ Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`.
 | --- | --- |
 | Branch | `feature/course-branding-and-preview` |
 | Staging target | This feature branch is the staging / production-staged deployment branch |
-| Audited commit | `236227c fix: require portal auth for member content` |
+| Historical audit baseline | `236227c fix: require portal auth for member content` |
+| Current local readiness baseline | `1e5c4ed feat: complete M1-06 launch content views` |
 | PR / review | `https://github.com/prochattools/jpv-bootcamp/pull/2` |
 | Migrations applied | None |
 | Migration approval | Blocked pending table-plan-to-Free, account-column rename, path, backup, rollback, and owner approval |
-| Provider/email acceptance | Pending |
-| Complete staging/browser smoke | Pending |
+| Provider/email acceptance | Pending operator verification |
+| Complete staging/browser smoke | Local browser validation passed; staging smoke pending |
 
 No migrations have been applied on this branch.
 
 ## Audited readiness
 
-These figures replace earlier Version 3.4 estimates. The rebaseline distinguishes code presence, static prototypes, durable operational workflows, automated validation, and accepted runtime evidence. It is a measurement correction, not a code regression.
+These figures are the 10 July audited baseline, not the final current-state gate status. Since that audit, the repository has completed the launch-scoped M0/M1 implementation packets and passed the deterministic local release/browser/build/Prisma/audit gates. Live cutover status remains blocked by non-local approvals and operator execution.
 
 | Area | Version 3.4 estimate | Version 3.5 audited | Evidence | Main blocker |
 | --- | ---: | ---: | --- | --- |
 | Expanded platform | ~73-75% | ~68% | Core services are substantial; recent MVP routes exist | Several MVPs are placeholders or client-only; release blockers remain |
 | Core staging/code | ~97% | ~82% | Auth, account security, entitlements, billing projection, migrations, and CI build are mature | Public operator route, route duplication, endpoint hardening, dependency advisories |
 | Build foundation | ~89-95% | ~86% | Most domains have typed services and focused tests | Starter/template residue and remaining hardening/test gaps |
-| Testing/release | ~94-99% | ~76% | 96 script-style tests, type-check, Prisma validation, CI build | Static preflight runs a subset; no browser E2E, coverage gate, or full release command |
+| Testing/release | ~94-99% | ~76% (historical audit baseline) | 10 July audit evidence before M1-02/M1-03/M1-06 completion | Current branch now has `test:release`, browser E2E, `test:release:full`, and static preflight; staging/provider/go-no-go evidence still pending |
 | Migration | ~55% | ~55% | Sources, inventory, approvals packet, runbook, and safety tests exist | No approval, rehearsal, rollback evidence, or application |
 | Live cutover | ~20% | ~20% | Handoff/evidence templates exist | No migrations, full smoke, provider/email acceptance, content acceptance, or go-live approval |
 
@@ -50,38 +51,36 @@ These figures replace earlier Version 3.4 estimates. The rebaseline distinguishe
 
 | Deliverable | Current state | Complete when |
 | --- | --- | --- |
-| Public landing page | Implemented but contains stale dates, unsupported claims, and cancel-any-time wording | Client-approved copy, canonical legal routes, accurate billing terms, mobile/desktop browser acceptance |
-| Pro checkout | Monthly/annual checkout and projection logic implemented | 12-month commitment behavior is approved and enforced; provider smoke passes |
-| Controlled Free access | Entitlement and sponsored-access foundations implemented | Public intake persists, queues review/notifications, and grants only after approval |
-| Member portal | Auth and mature services exist under `/portal`; removed member routes are blocked | `/portal` owns all real views; removed member routes stay unavailable; full journey passes |
-| 8-week course | Eight typed placeholder weeks | Representative approved content is persisted, editable, authorized, and smoke-tested |
-| Community preview | Payload services exist; canonical portal uses local placeholder preview | Canonical portal uses authorized persisted data and private-room acceptance passes |
-| Partner referral | Existing partner services exist; new referral form is client-only | Persist-before-success, delivery/retry, admin review, member history, and tests pass |
-| Admin operations | Payload dashboard exists; separate static `/admin/review` is public | One authenticated admin surface shows real operational status |
-| Release evidence | Templates and static tooling exist | Complete browser, provider/email, migration rehearsal, and rollback evidence is accepted |
+| Public landing page | Implemented with local browser coverage; public/legal/client copy approval still pending | Client-approved copy, canonical legal routes, accurate billing terms, and staging acceptance |
+| Pro checkout | Monthly/annual checkout, projection, and local browser validation implemented | Provider smoke, staging verification, and go/no-go approval pass |
+| Controlled Free access | Durable support intake, review state, and notification queue behavior implemented; migration remains unapplied | Approved migration path is executed and staging/provider verification passes |
+| Member portal | Canonical `/portal` routes, account/billing parity, auth protection, and removed-member blocking are implemented and locally validated | Staging acceptance confirms the portal journeys and no live blocker remains |
+| 8-week course | Portal programme remains explicit placeholder preview; Payload-backed courses and lessons exist | Representative approved programme content is accepted and staging smoke confirms access behavior |
+| Community preview | Canonical portal uses persisted read-only member views; interactive posting/replies remain deferred | Private-room/community preview acceptance is recorded without promoting deferred interactions |
+| Partner referral | Preview-only boundary remains intentional and locally guarded | Business scope explicitly promotes persistence or leaves preview-only status accepted |
+| Admin operations | Payload dashboard and protected review routes are implemented and locally validated | Staging/admin acceptance confirms the operator surface and protected paths |
+| Release evidence | Local release/browser/build/Prisma/audit gates passed | Staging smoke, provider/email verification, migration approval/rehearsal ownership, and go/no-go evidence are accepted |
 
-## Hardening-first execution queue
+## Completed launch-scoped implementation packets
 
-Execute one `M0-*` or `M1-*` packet per clean change set. Every code packet includes focused tests; no migration or provider operation is implied. The exact file scopes, dependencies, effort ranges, and stop conditions are in `docs/V3_5_CODEBASE_ALIGNMENT_ASSESSMENT.md`.
+The launch-scoped implementation packets now completed on this branch are:
 
-| Order | Task | Scope | Required validation |
-| ---: | --- | --- | --- |
-| 1 | H0-01 | Protect/remove public `/admin/review` and keep one Payload admin surface | Anonymous/member denial plus admin acceptance |
-| 2 | H0-02 | Remove MicroSassFast legal routes, stale sitemap entries, and reachable public template copy | Route/sitemap/public-copy regression tests |
-| 3 | H0-03 | Decide and enforce monthly 12-month commitment; align landing, terms, portal, and Stripe | Billing unit/route tests plus controlled provider smoke |
-| 4 | H0-04 | Disable false-success support/referral forms, then wire to existing durable services | Persistence, idempotency, queue, and failure tests |
-| 5 | H0-05 | Bound and protect public write/email endpoints; redact PII/log diagnostics | Abuse, origin, size, redirect, and log tests |
-| 6 | H0-06 | Resolve production dependency advisories | Production audit, type-check, build, Payload admin smoke |
-| 7 | H1-01 | Keep `/portal` as the sole member namespace and block removed member routes from returning | Route parity, auth, direct URL, mobile/desktop journeys |
-| 8 | H1-02 | Add one complete `test:release` command and browser E2E suite | CI executes full critical matrix |
-| 9 | H1-03 | Replace static course/community/admin status with persisted operational data | Empty/partial/complete/unauthorized tests |
-| 10 | H1-04 | Replace `PAYLOAD_SECRET` bearer reuse with scoped operator auth | Missing/wrong/valid/rotated credential tests |
-| 11 | H1-05 | Add tested security headers and trim remote image allowlists | Public/portal/API/admin browser checks |
-| 12 | H2-01 | Remove unreachable starter routes, sample data, components, icons, and utilities | Import and route allowlist tests |
-| 13 | H2-02 | Break community file/moderation import cycle | Existing community file/moderation suite |
-| 14 | H2-03 | Narrow trust-boundary casts and `overrideAccess` usage | Service authorization and regression tests |
+- M0-01 through M0-09
+- M1-01 through M1-06
+- `M1-06` completed in state **B**: programme remains preview-only because approved representative content is still missing; community remains persisted read-only preview; deferred interactive community behavior is not promoted.
 
-Exact file boundaries and acceptance criteria are in `docs/V3_5_CODEBASE_ALIGNMENT_ASSESSMENT.md`.
+`M2-01` remains post-core and must not be promoted implicitly.
+
+## Remaining core go-live gates
+
+These are the remaining gates before the controlled staging release process can complete:
+
+1. explicit representative programme/public-copy content approval or placeholder acceptance;
+2. migration approval, rehearsal ownership, and exact apply-path confirmation;
+3. provider/email verification with evidence;
+4. staging smoke execution with evidence;
+5. formal go/no-go review;
+6. production-operation ownership and rollback signoff.
 
 ## Timeline and decision gates
 
@@ -98,12 +97,20 @@ Exact file boundaries and acceptance criteria are in `docs/V3_5_CODEBASE_ALIGNME
 
 ## Test and security evidence
 
-- `git diff --check`, TypeScript, both Prisma schema validations, and prior focused suites have passed on the branch.
+- `git diff --check` passed.
+- `pnpm test:release` passed `116/116`.
+- `pnpm test:e2e` passed `56/56`.
+- `pnpm test:release:full` passed.
+- `pnpm staging:static-preflight` passed.
+- root TypeScript passed.
+- production build passed.
+- both Prisma schema validations passed.
+- production audit high-severity gate passed; remaining advisories are `2 moderate`.
+- `scripts/no_legacy_learn_namespace.test.ts` passed.
 - Feature-branch CI type-checks and builds the application and Docker image without publishing from the validation job.
-- Repository inventory contains 96 `*.test.ts` script files; the static preflight invokes only a curated subset.
-- No Playwright/Cypress E2E configuration or coverage threshold is present.
+- Repository inventory now includes deterministic release-manifest coverage and Playwright launch browser E2E.
 - Graph analysis found an import cycle between `communityFiles.ts` and `communityModeration.ts`.
-- `pnpm audit --prod` on 10 July reported 26 advisories: 3 high, 18 moderate, and 5 low. High findings are `undici` paths through Payload.
+- `pnpm audit --prod --audit-level high` now passes the release gate.
 - Global application security headers are not defined in `next.config.js`.
 
 ## Migration warning
