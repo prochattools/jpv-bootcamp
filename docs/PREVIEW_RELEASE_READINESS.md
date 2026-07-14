@@ -79,6 +79,11 @@ The repository-owned preparation contract is complete and validated locally. Ope
 - migration runbook: `docs/release/SUPPORT_REQUESTS_MIGRATION_RUNBOOK.md`
 - provider verification runbook: `docs/release/PROVIDER_VERIFICATION_RUNBOOK.md`
 - go / no-go checklist: `docs/release/GO_NO_GO_CHECKLIST.md`
+- programme content intake template: `docs/client/PROGRAMME_CONTENT_INTAKE_TEMPLATE.md`
+- programme approval record template: `docs/client/PROGRAMME_CONTENT_APPROVAL_RECORD.md`
+- programme content validation: `pnpm content:programme:validate -- <repository-relative-json-path>`
+- programme content acceptance report: `pnpm content:programme:acceptance -- <repository-relative-json-path>`
+- programme content import plan: `pnpm content:programme:import-plan -- <repository-relative-json-path>`
 - migration preflight command: `pnpm staging:migration-preflight`
 - staging smoke plan command: `pnpm staging:smoke-plan`
 - release evidence dry run: `pnpm release:evidence:dry-run`
@@ -89,18 +94,19 @@ These assets are repository-ready only. They do not mark migration applied, prov
 
 1. confirm the exact approved branch tip with `git log --oneline -1`;
 2. run `pnpm staging:migration-preflight`, `pnpm staging:smoke-plan`, and `pnpm release:evidence:dry-run` at that exact tip;
-3. confirm client content/public-copy decisions, especially representative programme content;
-4. confirm migration approval, rollback owner, and exact apply path;
-5. execute the manual staging smoke checklist and capture evidence;
-6. execute provider/email verification and capture evidence;
-7. review the evidence packet and hold the formal go/no-go.
+3. convert the approved representative programme package into the canonical JSON contract and run `pnpm content:programme:validate`, `pnpm content:programme:acceptance`, and `pnpm content:programme:import-plan`;
+4. confirm client content/public-copy decisions, especially representative programme content;
+5. confirm migration approval, rollback owner, and exact apply path;
+6. execute the manual staging smoke checklist and capture evidence;
+7. execute provider/email verification and capture evidence;
+8. review the evidence packet and hold the formal go/no-go.
 
 ### Production blockers
 
 - support-request migration remains unapplied;
 - table-plan-to-Free mapping approval remains pending;
 - account-column rename approval remains pending;
-- representative programme content is still blocked;
+- representative programme content is still blocked until a complete approved package passes the repository intake, acceptance, and import-plan checks;
 - provider/email verification is still pending;
 - staging smoke is still pending;
 - formal go/no-go is still pending.
