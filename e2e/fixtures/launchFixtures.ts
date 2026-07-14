@@ -25,15 +25,16 @@ const html = (title: string, body: string) => `<!doctype html>
 <body>${body}</body>
 </html>`
 
-export function portalPageHtml(section: 'home' | 'billing' | 'account' | 'referral' | 'support'): string {
+export function portalPageHtml(section: 'home' | 'billing-checkout' | 'billing-active' | 'account' | 'referral' | 'support'): string {
   const content = {
     home: '<h1>Welcome back</h1><p>Your courses and member navigation are available.</p>',
-    billing: '<h1>Billing</h1><p>Choose a supported Pro billing option.</p><button data-billing="monthly">£80/month</button><button data-billing="annual">£880 annual option paid upfront</button><p>Initial 12-month commitment.</p>',
-    account: '<h1>Account</h1><p>Manage your member profile.</p>',
+    'billing-checkout': '<h1>Billing</h1><p>Choose a supported Pro billing option.</p><button data-billing="monthly">£80/month</button><button data-billing="annual">£880 annual option paid upfront</button><p>Initial 12-month commitment.</p><section><h2>Billing projection summary</h2><p>Projected plan: Free</p></section>',
+    'billing-active': '<h1>Billing</h1><p>Manage your subscription, invoices, and payment methods through our secure billing portal.</p><section><h2>Subscription status</h2><p>Current plan</p><p>Pro</p><p>Billing cadence</p><p>Monthly commitment</p><p>Commitment state</p><p>Active</p></section><section><h2>Manage subscription</h2><button type="button">Manage billing</button><button type="button">Request end-of-term cancellation</button></section><section><h2>Billing projection summary</h2><p>Projected plan: Pro</p><p>Projected subscription status: Active</p></section>',
+    account: '<h1>Account</h1><p>Manage your member profile.</p><section><h2>Profile</h2><label>Display name<input name="displayName" type="text" /></label><button type="button">Save profile</button></section><section><h2>Security</h2><label>Current password<input name="currentPassword" type="password" /></label><label>New password<input name="newPassword" type="password" /></label><button type="button">Change password</button></section><section><h2>Change email address</h2><label>New email address<input name="newEmail" type="email" /></label><button type="button">Request email change</button></section><section><h2>Access plans</h2><p>Pro</p></section><section><h2>Access groups</h2><p>Pro Courses</p></section><section><h2>Billing projection</h2><p>Status: Active</p></section>',
     referral: '<h1>Partner Referral</h1><div class="notice">Preview only — this form does not submit, create a record, send a notification, or generate a reference.</div><button disabled>Submission unavailable in preview</button>',
     support: '<h1>Support and Free access</h1><div class="notice">Preview only — these forms do not submit, create records, send notifications, generate references, or grant access.</div><form aria-label="Free access application preview"><label>Reason<textarea disabled></textarea></label><button disabled>Application unavailable in preview</button></form>',
   }[section]
-  const billingScript = section === 'billing'
+  const billingScript = section === 'billing-checkout'
     ? `<script>document.addEventListener('click', async (event) => { const target = event.target; if (!(target instanceof HTMLButtonElement) || !target.dataset.billing) return; const response = await fetch('/api/stripe/checkout?plan=pro&billing=' + encodeURIComponent(target.dataset.billing), { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' }); document.body.dataset.checkoutStatus = String(response.status); });</script>`
     : ''
 
@@ -76,9 +77,15 @@ export function adminDeniedHtml(): string {
   )
 }
 
-export async function mockAuthenticatedPortal(page: Page): Promise<void> {
+export async function mockAuthenticatedPortal(
+  page: Page,
+  options: { billingState?: 'checkout' | 'active' } = {},
+): Promise<void> {
+  const billingState = options.billingState ?? 'checkout'
   await page.route('**/portal', async (route) => fulfillPortalDocument(route, 'home'))
-  await page.route('**/portal/billing', async (route) => fulfillPortalDocument(route, 'billing'))
+  await page.route('**/portal/billing', async (route) =>
+    fulfillPortalDocument(route, billingState === 'active' ? 'billing-active' : 'billing-checkout'),
+  )
   await page.route('**/portal/account', async (route) => fulfillPortalDocument(route, 'account'))
   await page.route('**/portal/support', async (route) => fulfillPortalDocument(route, 'support'))
   await page.route('**/portal/partner-referral', async (route) => fulfillPortalDocument(route, 'referral'))
@@ -86,7 +93,7 @@ export async function mockAuthenticatedPortal(page: Page): Promise<void> {
 
 async function fulfillPortalDocument(
   route: Route,
-  section: 'home' | 'billing' | 'account' | 'referral' | 'support',
+  section: 'home' | 'billing-checkout' | 'billing-active' | 'account' | 'referral' | 'support',
 ): Promise<void> {
   if (route.request().resourceType() !== 'document') {
     await route.continue()

@@ -68,7 +68,7 @@ test.describe('authentication, portal, and administrator denial', () => {
     await mockAuthenticatedPortal(page)
 
     await page.goto('/portal/billing')
-    await expect(page.getByRole('heading', { name: 'Billing' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Billing', exact: true })).toBeVisible()
     await expect(page.getByRole('button', { name: '£80/month' })).toBeVisible()
     await expect(page.getByRole('button', { name: '£880 annual option paid upfront' })).toBeVisible()
     await expect(page.getByText('Initial 12-month commitment.')).toBeVisible()
@@ -76,6 +76,32 @@ test.describe('authentication, portal, and administrator denial', () => {
     await page.goto('/portal/account')
     await expect(page.getByRole('heading', { name: 'Account' })).toBeVisible()
     await expect(page.getByText('Manage your member profile.')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Security' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Change email address' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Access plans' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Access groups' })).toBeVisible()
+    await page.getByRole('textbox', { name: 'Display name' }).focus()
+    await expect(page.getByRole('textbox', { name: 'Display name' })).toBeFocused()
+    await page.keyboard.press('Tab')
+    await expect(page.getByRole('button', { name: 'Save profile' })).toBeFocused()
+    await page.keyboard.press('Tab')
+    await expect(page.getByLabel('Current password')).toBeFocused()
+    await assertNoHorizontalOverflow(page)
+    await assertNoSeriousAccessibilityViolations(page)
+  })
+
+  test('mocked authenticated billing route exposes portal and cancellation controls when active', async ({ page }) => {
+    await mockAuthenticatedPortal(page, { billingState: 'active' })
+
+    await page.goto('/portal/billing')
+    await expect(page.getByRole('heading', { name: 'Billing', exact: true })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Subscription status' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Manage subscription' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Manage billing' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Request end-of-term cancellation' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Billing projection summary' })).toBeVisible()
+    await assertNoHorizontalOverflow(page)
+    await assertNoSeriousAccessibilityViolations(page)
   })
 
   test('anonymous and ordinary-member operator routes are denied', async ({ page }) => {

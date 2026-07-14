@@ -5,11 +5,18 @@ import { resolveMemberVerificationPublicBaseUrl } from '@/lib/auth/memberEmailVe
 import { requirePortalMember } from '@/lib/auth/requirePortalMember'
 import { updateMemberProfile } from '@/lib/members/updateMemberProfile'
 import type { PayloadCourseWriteAPI } from '@/lib/payloadCourse/accessService'
-import { getMemberAccountOverview } from '@/lib/payloadCourse/memberPortal'
+import {
+  getMemberAccountOverview,
+  getMemberBillingOverview,
+} from '@/lib/payloadCourse/memberPortal'
 import { BillingPortalButton } from '@/components/portal/BillingPortalButton'
 import { MemberCheckoutButtons } from '@/components/portal/MemberCheckoutButtons'
 import { getBillingStatus } from '@/lib/billing/billingStatusHelper'
 import { requestMembershipCancellation } from '@/lib/actions/requestMembershipCancellation'
+import { resolvePortalBillingPresentation } from '@/lib/portal/portalBillingPresentation'
+
+import { EmailChangeForm } from '../../learn/EmailChangeForm'
+import { PasswordChangeForm } from '../../learn/PasswordChangeForm'
 
 const sectionContent = {
   community: {
@@ -28,7 +35,14 @@ type PortalSection = 'community' | 'groups' | 'account' | 'billing'
 
 type PortalSectionPageProps = {
   params: Promise<{ section: string }>
-  searchParams?: Promise<{ updated?: string; error?: string }>
+  searchParams?: Promise<{
+    updated?: string
+    error?: string
+    checkout?: string
+    cancellation_requested?: string
+    cancellation_effective_at?: string
+    cancellation_error?: string
+  }>
 }
 
 function isPortalSection(value: string): value is PortalSection {
@@ -41,6 +55,89 @@ function displayValue(value: string | null): string {
 
 function formText(value: FormDataEntryValue | null): string {
   return typeof value === 'string' ? value : ''
+}
+
+function firstParam(value: string | string[] | undefined): string {
+  return Array.isArray(value) ? value[0] ?? '' : value ?? ''
+}
+
+function titleCase(value: string | null | undefined): string {
+  if (!value) return 'Not available'
+  return value
+    .split(/[_\s-]+/)
+    .filter(Boolean)
+    .map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`)
+    .join(' ')
+}
+
+function formatDate(value: string | Date | null): string {
+  if (!value) return 'Not available'
+  const date = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(date.getTime())) return 'Not available'
+  return new Intl.DateTimeFormat('en', {
+    dateStyle: 'long',
+  }).format(date)
+}
+
+function accountStatusTone(status: string | null | undefined): 'good' | 'warn' | 'neutral' {
+  return status === 'active' || status === 'trialing' ? 'good' : status ? 'warn' : 'neutral'
+}
+
+function currentTier(overview: Awaited<ReturnType<typeof getMemberAccountOverview>>): string {
+  const subscription = overview.subscriptions.find((item) => item.status === 'active' || item.status === 'trialing')
+  const plan = typeof subscription?.plan === 'string' ? subscription.plan : null
+  if (plan === 'pro' || plan === 'free') {
+    return plan.slice(0, 1).toUpperCase() + plan.slice(1)
+  }
+  return 'Free'
+}
+
+function billingNotice(query: {
+  checkout?: string
+  cancellation_requested?: string
+  cancellation_effective_at?: string
+  cancellation_error?: string
+}): { tone: 'neutral' | 'success' | 'error'; message: string } | null {
+  const checkout = firstParam(query.checkout)
+  const cancellationRequested = firstParam(query.cancellation_requested)
+  const cancellationEffectiveAt = firstParam(query.cancellation_effective_at)
+  const cancellationError = firstParam(query.cancellation_error)
+
+  if (checkout === 'success') {
+    return {
+      tone: 'success',
+      message: 'Checkout completed. Billing updates can take a moment to appear in your account.',
+    }
+  }
+  if (checkout === 'cancelled') {
+    return {
+      tone: 'neutral',
+      message: 'Checkout was cancelled before any subscription change was confirmed.',
+    }
+  }
+  if (cancellationRequested === '1') {
+    const effectiveLabel = formatDate(cancellationEffectiveAt || null)
+    return {
+      tone: 'success',
+      message:
+        effectiveLabel === 'Not available'
+          ? 'Your end-of-term cancellation request has been recorded.'
+          : `Your end-of-term cancellation request has been recorded. Effective date: ${effectiveLabel}.`,
+    }
+  }
+  if (cancellationError === 'billing_record_missing' || cancellationError === 'effective_date_missing') {
+    return {
+      tone: 'error',
+      message: 'Unable to record your cancellation request right now. Try again from this page.',
+    }
+  }
+  if (cancellationError === 'invalid_email') {
+    return {
+      tone: 'error',
+      message: 'Unable to confirm your billing identity right now. Sign in again and retry.',
+    }
+  }
+  return null
 }
 
 async function updatePortalMemberProfileAction(formData: FormData) {
@@ -68,10 +165,23 @@ export default async function PortalSectionPage({ params, searchParams }: Portal
   const { memberId, memberEmail, payload } = await requirePortalMember(`/portal/${section}`)
 
   if (section === 'account') {
-    const [account, query] = await Promise.all([
+    const [account, memberRecord, query] = await Promise.all([
       getMemberAccountOverview(payload, memberId),
+      payload.findByID({
+        collection: 'payload_members',
+        id: memberId,
+        depth: 0,
+        overrideAccess: true,
+      }),
       searchParams ?? Promise.resolve<{ updated?: string; error?: string }>({}),
     ])
+    const accountStatus =
+      typeof memberRecord.accountStatus === 'string' ? memberRecord.accountStatus : 'pending'
+    const emailVerifiedAt =
+      typeof memberRecord.emailVerifiedAt === 'string' || memberRecord.emailVerifiedAt instanceof Date
+        ? String(memberRecord.emailVerifiedAt)
+        : null
+    const fallbackDisplayName = memberEmail.split('@')[0] || 'Member'
 
     return (
       <div className='space-y-8'>
@@ -79,43 +189,47 @@ export default async function PortalSectionPage({ params, searchParams }: Portal
           <p className='text-sm font-semibold uppercase tracking-[0.2em] text-neutral-500'>Profile</p>
           <h1 className='mt-3 text-3xl font-semibold tracking-tight'>Account</h1>
           <p className='mt-3 max-w-2xl text-sm leading-6 text-neutral-600'>
-            Review and update the profile details associated with your member account.
+            Manage your member profile, access, subscriptions, and account security.
           </p>
         </section>
 
         <section className='rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm'>
-          <dl className='grid gap-6 sm:grid-cols-2'>
+          <dl className='grid gap-6 sm:grid-cols-2 xl:grid-cols-4'>
             <div>
-              <dt className='text-sm font-medium text-neutral-500'>Display name</dt>
+              <dt className='text-sm font-medium text-neutral-500'>Email</dt>
               <dd className='mt-2 text-base font-semibold text-neutral-950'>
-                {displayValue(account.profile?.displayName ?? null)}
+                {memberEmail}
               </dd>
             </div>
             <div>
-              <dt className='text-sm font-medium text-neutral-500'>Company</dt>
+              <dt className='text-sm font-medium text-neutral-500'>Account status</dt>
               <dd className='mt-2 text-base font-semibold text-neutral-950'>
-                {displayValue(account.profile?.company ?? null)}
+                <span
+                  className={`inline-flex rounded-full px-3 py-1 text-sm ${
+                    accountStatusTone(accountStatus) === 'good'
+                      ? 'bg-emerald-100 text-emerald-900'
+                      : accountStatusTone(accountStatus) === 'warn'
+                        ? 'bg-amber-100 text-amber-900'
+                        : 'bg-neutral-100 text-neutral-800'
+                  }`}
+                >
+                  {titleCase(accountStatus)}
+                </span>
               </dd>
             </div>
             <div>
-              <dt className='text-sm font-medium text-neutral-500'>Phone</dt>
+              <dt className='text-sm font-medium text-neutral-500'>Member tier</dt>
               <dd className='mt-2 text-base font-semibold text-neutral-950'>
-                {displayValue(account.profile?.phone ?? null)}
+                {currentTier(account)}
               </dd>
             </div>
             <div>
-              <dt className='text-sm font-medium text-neutral-500'>Timezone</dt>
+              <dt className='text-sm font-medium text-neutral-500'>Email verified</dt>
               <dd className='mt-2 text-base font-semibold text-neutral-950'>
-                {displayValue(account.profile?.timezone ?? null)}
+                {emailVerifiedAt ? formatDate(emailVerifiedAt) : 'Not verified'}
               </dd>
             </div>
           </dl>
-
-          {!account.profile ? (
-            <p className='mt-6 border-t border-neutral-200 pt-6 text-sm text-neutral-600'>
-              No member profile has been completed yet.
-            </p>
-          ) : null}
         </section>
 
         <section className='rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm'>
@@ -147,7 +261,7 @@ export default async function PortalSectionPage({ params, searchParams }: Portal
                 type='text'
                 required
                 maxLength={80}
-                defaultValue={account.profile?.displayName ?? ''}
+                defaultValue={account.profile?.displayName ?? fallbackDisplayName}
                 className='mt-2 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm text-neutral-950'
               />
             </label>
@@ -191,6 +305,108 @@ export default async function PortalSectionPage({ params, searchParams }: Portal
             </div>
           </form>
         </section>
+
+        <section className='grid gap-6 lg:grid-cols-2'>
+          <article className='rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm'>
+            <div>
+              <p className='text-sm font-semibold uppercase tracking-[0.2em] text-neutral-500'>Security</p>
+              <h2 className='mt-3 text-2xl font-semibold text-neutral-950'>Change password</h2>
+              <p className='mt-2 text-sm leading-6 text-neutral-600'>
+                Confirm your current password before choosing a new one.
+              </p>
+            </div>
+            <div className='mt-6'>
+              <PasswordChangeForm />
+            </div>
+          </article>
+
+          <article className='rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm'>
+            <div>
+              <p className='text-sm font-semibold uppercase tracking-[0.2em] text-neutral-500'>Sign-in email</p>
+              <h2 className='mt-3 text-2xl font-semibold text-neutral-950'>Change email address</h2>
+              <p className='mt-2 text-sm leading-6 text-neutral-600'>
+                Confirm a new address before it replaces your current sign-in email.
+              </p>
+            </div>
+            <div className='mt-6'>
+              <EmailChangeForm />
+            </div>
+          </article>
+        </section>
+
+        <section className='grid gap-6 lg:grid-cols-3'>
+          <article className='rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm'>
+            <p className='text-sm font-semibold uppercase tracking-[0.2em] text-neutral-500'>Billing</p>
+            <h2 className='mt-3 text-2xl font-semibold text-neutral-950'>Billing projection</h2>
+            <div className='mt-5 space-y-3 text-sm text-neutral-600'>
+              <p>
+                Status:{' '}
+                <span className='font-semibold text-neutral-950'>
+                  {titleCase(account.billingAccount?.billingStatus)}
+                </span>
+              </p>
+              <p>
+                Stripe mode:{' '}
+                <span className='font-semibold text-neutral-950'>
+                  {titleCase(account.billingAccount?.stripeMode)}
+                </span>
+              </p>
+              <p>
+                Updated:{' '}
+                <span className='font-semibold text-neutral-950'>
+                  {formatDate(account.billingAccount?.updatedAt ?? null)}
+                </span>
+              </p>
+            </div>
+            <p className='mt-5 text-xs leading-5 text-neutral-500'>
+              This is the member billing mirror used to project access and subscription state.
+            </p>
+          </article>
+
+          <article className='rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm'>
+            <p className='text-sm font-semibold uppercase tracking-[0.2em] text-neutral-500'>Subscriptions</p>
+            <h2 className='mt-3 text-2xl font-semibold text-neutral-950'>Access plans</h2>
+            <div className='mt-5 space-y-3'>
+              {account.subscriptions.length > 0 ? (
+                account.subscriptions.map((subscription) => (
+                  <div className='rounded-2xl border border-neutral-200 bg-neutral-50 p-4' key={subscription.id}>
+                    <div className='flex items-center justify-between gap-3'>
+                      <p className='text-sm font-semibold text-neutral-950'>{titleCase(subscription.plan)}</p>
+                      <span className='rounded-full bg-neutral-200 px-3 py-1 text-xs font-semibold text-neutral-800'>
+                        {titleCase(subscription.status)}
+                      </span>
+                    </div>
+                    <p className='mt-2 text-xs text-neutral-600'>
+                      Renews/ends: {formatDate(subscription.currentPeriodEnd)}
+                      {subscription.cancelAtPeriodEnd ? ' · canceling' : ''}
+                    </p>
+                  </div>
+                ))
+              ) : (
+                <p className='text-sm leading-6 text-neutral-600'>No billing projection exists yet for this account.</p>
+              )}
+            </div>
+          </article>
+
+          <article className='rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm'>
+            <p className='text-sm font-semibold uppercase tracking-[0.2em] text-neutral-500'>Groups</p>
+            <h2 className='mt-3 text-2xl font-semibold text-neutral-950'>Access groups</h2>
+            <div className='mt-5 flex flex-wrap gap-2'>
+              {account.groups.length > 0 ? (
+                account.groups.map((group) => (
+                  <span
+                    className='rounded-full bg-neutral-100 px-3 py-1 text-sm font-medium text-neutral-800'
+                    key={group.id}
+                  >
+                    {group.name}
+                  </span>
+                ))
+              ) : (
+                <p className='text-sm leading-6 text-neutral-600'>No active group memberships are projected yet.</p>
+              )}
+            </div>
+          </article>
+        </section>
       </div>
     )
   }
@@ -227,7 +443,18 @@ export default async function PortalSectionPage({ params, searchParams }: Portal
   }
 
   if (section === 'billing') {
-    const billingStatus = await getBillingStatus(memberEmail)
+    const [query, billingStatus, billingOverview] = await Promise.all([
+      searchParams ?? Promise.resolve<{
+        checkout?: string
+        cancellation_requested?: string
+        cancellation_effective_at?: string
+        cancellation_error?: string
+      }>({}),
+      getBillingStatus(memberEmail),
+      getMemberBillingOverview(payload, memberId),
+    ])
+    const presentation = resolvePortalBillingPresentation(billingStatus, billingOverview)
+    const notice = billingNotice(query)
 
     return (
       <div className='space-y-8'>
@@ -238,6 +465,22 @@ export default async function PortalSectionPage({ params, searchParams }: Portal
             Manage your subscription, invoices, and payment methods through our secure billing portal.
           </p>
         </section>
+
+        {notice ? (
+          <section aria-live='polite'>
+            <p
+              className={`rounded-2xl px-4 py-3 text-sm ${
+                notice.tone === 'success'
+                  ? 'border border-emerald-200 bg-emerald-50 text-emerald-900'
+                  : notice.tone === 'error'
+                    ? 'border border-red-200 bg-red-50 text-red-900'
+                    : 'border border-neutral-200 bg-neutral-50 text-neutral-800'
+              }`}
+            >
+              {notice.message}
+            </p>
+          </section>
+        ) : null}
 
         {billingStatus.showPaymentWarning && (
           <section
@@ -279,25 +522,43 @@ export default async function PortalSectionPage({ params, searchParams }: Portal
           </section>
         )}
 
+        {presentation.projectionSyncState === 'status_missing' ? (
+          <section className='rounded-2xl border border-sky-200 bg-sky-50 p-6 text-sky-950'>
+            <h2 className='text-lg font-semibold'>Billing status is syncing</h2>
+            <p className='mt-2 text-sm leading-6'>
+              Your member billing mirror shows subscription history, but the operational billing projection is not yet available.
+              Checkout remains disabled until the authoritative billing status is ready.
+            </p>
+          </section>
+        ) : null}
+
+        {presentation.projectionSyncState === 'projection_missing' ? (
+          <section className='rounded-2xl border border-neutral-200 bg-neutral-50 p-6 text-neutral-900'>
+            <h2 className='text-lg font-semibold'>Billing projection pending</h2>
+            <p className='mt-2 text-sm leading-6 text-neutral-700'>
+              Your operational billing status is available. The member billing mirror is still catching up and may not show the latest subscription summary yet.
+            </p>
+          </section>
+        ) : null}
+
         {billingStatus.hasActiveSubscription ? (
           <>
             <section className='rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm'>
               <h2 className='text-lg font-semibold text-neutral-950'>Subscription status</h2>
               <dl className='mt-6 grid gap-6 sm:grid-cols-2'>
-                {billingStatus.planLabel && (
+                {presentation.displayPlanLabel && (
                   <div>
                     <dt className='text-sm font-medium text-neutral-500'>Current plan</dt>
                     <dd className='mt-2 text-base font-semibold text-neutral-950'>
-                      {billingStatus.planLabel}
+                      {presentation.displayPlanLabel}
                     </dd>
                   </div>
                 )}
-                {billingStatus.subscriptionStatus && (
+                {presentation.displaySubscriptionStatus && (
                   <div>
                     <dt className='text-sm font-medium text-neutral-500'>Status</dt>
                     <dd className='mt-2 text-base font-semibold text-neutral-950'>
-                      {billingStatus.subscriptionStatus.charAt(0).toUpperCase() +
-                        billingStatus.subscriptionStatus.slice(1)}
+                      {titleCase(presentation.displaySubscriptionStatus)}
                     </dd>
                   </div>
                 )}
@@ -313,17 +574,29 @@ export default async function PortalSectionPage({ params, searchParams }: Portal
                           : 'Pending billing status'}
                   </dd>
                 </div>
-                {billingStatus.periodEndDate && (
+                {presentation.displayPeriodEndDate && (
                   <div>
                     <dt className='text-sm font-medium text-neutral-500'>
                       {billingStatus.cancelAtPeriodEnd ? 'Cancels on' : 'Renews on'}
                     </dt>
                     <dd className='mt-2 text-base font-semibold text-neutral-950'>
-                      {new Intl.DateTimeFormat('en-US', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                      }).format(billingStatus.periodEndDate)}
+                      {formatDate(presentation.displayPeriodEndDate)}
+                    </dd>
+                  </div>
+                )}
+                {presentation.billingCadenceLabel && (
+                  <div>
+                    <dt className='text-sm font-medium text-neutral-500'>Billing cadence</dt>
+                    <dd className='mt-2 text-base font-semibold text-neutral-950'>
+                      {presentation.billingCadenceLabel}
+                    </dd>
+                  </div>
+                )}
+                {presentation.commitmentStatusLabel && (
+                  <div>
+                    <dt className='text-sm font-medium text-neutral-500'>Commitment state</dt>
+                    <dd className='mt-2 text-base font-semibold text-neutral-950'>
+                      {presentation.commitmentStatusLabel}
                     </dd>
                   </div>
                 )}
@@ -406,18 +679,60 @@ export default async function PortalSectionPage({ params, searchParams }: Portal
                 </p>
               )}
             </section>
+
+            <section className='rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm'>
+              <h2 className='text-lg font-semibold text-neutral-950'>Billing projection summary</h2>
+              <p className='mt-2 text-sm leading-6 text-neutral-600'>
+                Operational billing controls use the current billing status. This section shows the member billing mirror used for entitlement projection and account summaries.
+              </p>
+              <dl className='mt-6 grid gap-6 sm:grid-cols-2'>
+                <div>
+                  <dt className='text-sm font-medium text-neutral-500'>Projected plan</dt>
+                  <dd className='mt-2 text-base font-semibold text-neutral-950'>
+                    {presentation.overviewPlanLabel}
+                  </dd>
+                </div>
+                <div>
+                  <dt className='text-sm font-medium text-neutral-500'>Projected billing status</dt>
+                  <dd className='mt-2 text-base font-semibold text-neutral-950'>
+                    {titleCase(billingOverview.billingStatus)}
+                  </dd>
+                </div>
+                <div>
+                  <dt className='text-sm font-medium text-neutral-500'>Projected subscription status</dt>
+                  <dd className='mt-2 text-base font-semibold text-neutral-950'>
+                    {titleCase(presentation.overviewSubscriptionStatus)}
+                  </dd>
+                </div>
+                <div>
+                  <dt className='text-sm font-medium text-neutral-500'>Projected renewal/end date</dt>
+                  <dd className='mt-2 text-base font-semibold text-neutral-950'>
+                    {formatDate(presentation.overviewPeriodEndDate)}
+                  </dd>
+                </div>
+              </dl>
+            </section>
           </>
         ) : (
           <div className='space-y-6'>
             <section className='rounded-2xl border border-dashed border-neutral-300 bg-white p-8'>
-              <h2 className='text-lg font-semibold text-neutral-950'>Choose a membership</h2>
-              <p className='mt-2 text-sm text-neutral-600'>
-                Start a secure Stripe checkout for the membership that fits you.
+              <h2 className='text-lg font-semibold text-neutral-950'>No paid subscription found</h2>
+              <p className='mt-2 max-w-2xl text-sm leading-6 text-neutral-600'>
+                Your account does not currently have a paid JPV Bootcamp subscription in the billing mirror.
+                Any course access already assigned to your member account remains visible in the portal.
               </p>
-              <div className='mt-6'>
-                <MemberCheckoutButtons />
-              </div>
             </section>
+            {presentation.allowCheckout ? (
+              <section className='rounded-2xl border border-dashed border-neutral-300 bg-white p-8'>
+                <h2 className='text-lg font-semibold text-neutral-950'>Choose a membership</h2>
+                <p className='mt-2 text-sm text-neutral-600'>
+                  Start a secure Stripe checkout for the membership that fits you.
+                </p>
+                <div className='mt-6'>
+                  <MemberCheckoutButtons />
+                </div>
+              </section>
+            ) : null}
             {billingStatus.hasBillingAccount && (
               <section className='rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm'>
                 <h2 className='text-lg font-semibold text-neutral-950'>Existing billing account</h2>
@@ -429,6 +744,41 @@ export default async function PortalSectionPage({ params, searchParams }: Portal
                 </div>
               </section>
             )}
+            <section className='rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm'>
+              <h2 className='text-lg font-semibold text-neutral-950'>Billing projection summary</h2>
+              {presentation.hasProjectionData ? (
+                <dl className='mt-6 grid gap-6 sm:grid-cols-2'>
+                  <div>
+                    <dt className='text-sm font-medium text-neutral-500'>Projected plan</dt>
+                    <dd className='mt-2 text-base font-semibold text-neutral-950'>
+                      {presentation.overviewPlanLabel}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className='text-sm font-medium text-neutral-500'>Projected billing status</dt>
+                    <dd className='mt-2 text-base font-semibold text-neutral-950'>
+                      {titleCase(billingOverview.billingStatus)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className='text-sm font-medium text-neutral-500'>Projected subscription status</dt>
+                    <dd className='mt-2 text-base font-semibold text-neutral-950'>
+                      {titleCase(presentation.overviewSubscriptionStatus)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className='text-sm font-medium text-neutral-500'>Projected renewal/end date</dt>
+                    <dd className='mt-2 text-base font-semibold text-neutral-950'>
+                      {formatDate(presentation.overviewPeriodEndDate)}
+                    </dd>
+                  </div>
+                </dl>
+              ) : (
+                <p className='mt-2 text-sm text-neutral-600'>
+                  No member billing projection exists yet for this account.
+                </p>
+              )}
+            </section>
           </div>
         )}
       </div>
