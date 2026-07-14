@@ -63,8 +63,9 @@ export default async function PortalProgrammePage() {
           Content is representative and does not reflect final client-approved copy.
         </p>
         <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          Preview only — programme content is placeholder. Full access requires Pro membership
-          or approved Free access. Client input due 15 July 2026.
+          Preview only — programme content is placeholder until a complete approved content package
+          passes repository validation, acceptance, and approval evidence review. Full access
+          requires Pro membership or approved Free access. Client input due 15 July 2026.
         </div>
       </section>
 
