@@ -25,9 +25,11 @@ Static preflight automation is available via `pnpm staging:static-preflight`; it
 
 ## Current repository-owned readiness snapshot
 
-Readiness baseline before this release-evidence update: `1e5c4ed feat: complete M1-06 launch content views`
+Readiness baseline before this staging-operations packet: `af6de62 docs: record core go-live readiness`
 
 **Outcome:** `NOT READY FOR CONTROLLED STAGING RELEASE PROCESS`
+
+**Repository-owned staging operations status:** `REPOSITORY READY FOR CONTROLLED STAGING OPERATIONS`
 
 ### Completed launch-scoped implementation
 
@@ -41,10 +43,13 @@ Readiness baseline before this release-evidence update: `1e5c4ed feat: complete 
 
 ### Deterministic local validation baseline
 
-- `pnpm test:release` passed `116/116`
+- `pnpm test:release` passed `120/120`
 - `pnpm test:e2e` passed `56/56`
 - `pnpm test:release:full` passed
 - `pnpm staging:static-preflight` passed
+- `pnpm staging:migration-preflight` passed
+- `pnpm staging:smoke-plan` passed
+- `pnpm release:evidence:dry-run` produced a deterministic repository-only summary
 - `pnpm exec tsc --noEmit --pretty false --incremental false` passed
 - `pnpm build` passed
 - `pnpm exec prisma validate --schema=prisma/system.prisma` passed
@@ -67,14 +72,28 @@ Readiness baseline before this release-evidence update: `1e5c4ed feat: complete 
 | Formal go/no-go | Not executed | operator review process | Must follow staging, provider, content, and migration evidence review. |
 | Production operation | Blocked | this runbook plus client evidence docs | Production is blocked until every independent gate is complete. |
 
+### Repository-owned staging operations contract
+
+The repository-owned preparation contract is complete and validated locally. Operators now have:
+
+- migration runbook: `docs/release/SUPPORT_REQUESTS_MIGRATION_RUNBOOK.md`
+- provider verification runbook: `docs/release/PROVIDER_VERIFICATION_RUNBOOK.md`
+- go / no-go checklist: `docs/release/GO_NO_GO_CHECKLIST.md`
+- migration preflight command: `pnpm staging:migration-preflight`
+- staging smoke plan command: `pnpm staging:smoke-plan`
+- release evidence dry run: `pnpm release:evidence:dry-run`
+
+These assets are repository-ready only. They do not mark migration applied, provider verified, staging passed, or go-live approved.
+
 ### Required operator sequence before staging
 
 1. confirm the exact approved branch tip with `git log --oneline -1`;
-2. confirm client content/public-copy decisions, especially representative programme content;
-3. confirm migration approval, rollback owner, and exact apply path;
-4. execute the manual staging smoke checklist and capture evidence;
-5. execute provider/email verification and capture evidence;
-6. review the evidence packet and hold the formal go/no-go.
+2. run `pnpm staging:migration-preflight`, `pnpm staging:smoke-plan`, and `pnpm release:evidence:dry-run` at that exact tip;
+3. confirm client content/public-copy decisions, especially representative programme content;
+4. confirm migration approval, rollback owner, and exact apply path;
+5. execute the manual staging smoke checklist and capture evidence;
+6. execute provider/email verification and capture evidence;
+7. review the evidence packet and hold the formal go/no-go.
 
 ### Production blockers
 

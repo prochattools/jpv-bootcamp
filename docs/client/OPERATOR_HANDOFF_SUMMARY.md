@@ -6,7 +6,7 @@
 - Version 3.5 current client go-live plan; Version 3.4 is the prior progress baseline
 - Version 3.5 client plan: `docs/client/JPV_Bootcamp_Platform_Expansion_Go_Live_Plan_v3_5.docx`
 - Codebase alignment assessment: `docs/V3_5_CODEBASE_ALIGNMENT_ASSESSMENT.md`
-- Current local readiness baseline: `1e5c4ed feat: complete M1-06 launch content views`
+- Current local readiness baseline before this staging-operations packet: `af6de62 docs: record core go-live readiness`
 - Branch tip verification: verify the current tip with `git log --oneline -1` before operator action
 - PR / review URL: `https://github.com/prochattools/jpv-bootcamp/pull/2`
 - Migrations applied: `No`
@@ -34,10 +34,17 @@
 - Pro-only checkout hardening with monthly and annual billing options
 - Support/pay-it-forward controlled Free semantics and durable support intake
 - Canonical `/portal` member portal ownership
-- Deterministic non-browser release gate: `pnpm test:release` (`116/116`)
+- Deterministic non-browser release gate: `pnpm test:release` (`120/120`)
 - Launch browser E2E: `pnpm test:e2e` (`56/56`)
 - Combined release/browser gate: `pnpm test:release:full`
 - Static preflight, root TypeScript, production build, both Prisma validations, and production high-severity audit gate
+- Repository-owned staging operations contract
+- Migration preflight command: `pnpm staging:migration-preflight`
+- Staging smoke plan command: `pnpm staging:smoke-plan`
+- Release evidence dry run: `pnpm release:evidence:dry-run`
+- Support-request migration runbook
+- Provider verification runbook
+- Go / no-go checklist
 - Migration approval packet
 - Migration approval status tracker
 - Migration rehearsal runbook
@@ -65,18 +72,30 @@
 - Formal go/no-go review
 - Production operation remains blocked until every independent gate passes
 
+## Repository-owned staging operations contract
+
+- Status: `REPOSITORY READY FOR CONTROLLED STAGING OPERATIONS`
+- Migration runbook: `docs/release/SUPPORT_REQUESTS_MIGRATION_RUNBOOK.md`
+- Provider verification runbook: `docs/release/PROVIDER_VERIFICATION_RUNBOOK.md`
+- Go / no-go checklist: `docs/release/GO_NO_GO_CHECKLIST.md`
+- Read-only migration preflight: `pnpm staging:migration-preflight`
+- Plan-only staging smoke command: `pnpm staging:smoke-plan`
+- Repository-only release evidence summary: `pnpm release:evidence:dry-run`
+- This contract does not mark migration applied, provider verified, staging passed, or go-live approved.
+
 ## Exact next operator sequence
 
 1. Review `docs/PREVIEW_RELEASE_READINESS.md` as the current repository-owned readiness source of truth.
-2. Confirm the exact branch tip with `git log --oneline -1`, then rerun `pnpm toolchain:check`, `pnpm staging:static-preflight`, `pnpm test:release`, and `pnpm test:e2e` at that tip before any operator execution.
+2. Confirm the exact branch tip with `git log --oneline -1`, then rerun `pnpm toolchain:check`, `pnpm staging:migration-preflight`, `pnpm staging:smoke-plan`, `pnpm release:evidence:dry-run`, `pnpm staging:static-preflight`, `pnpm test:release`, and `pnpm test:e2e` at that tip before any operator execution.
 3. Collect and record client content decisions by 15 July using the content request and status tracker; programme remains preview-only until approved content exists.
 4. Confirm migration approval, rehearsal ownership, rollback ownership, and exact apply path before any migration action.
 5. Execute staging smoke from the approved deployment target and record evidence in the staging smoke template.
 6. Execute provider/email verification separately and record evidence in the provider template.
-7. Hold a formal go/no-go review using the completed repository, staging, provider, and migration evidence.
-8. Keep `M2-01` deferred post-core unless explicitly promoted.
-9. Do not apply migrations until approval, rehearsal, backup, owner, and rollback evidence are complete.
-10. Do not touch `main`.
+7. Update `docs/release/GO_NO_GO_CHECKLIST.md` with real evidence only after migration, provider, staging, and content evidence exists.
+8. Hold a formal go/no-go review using the completed repository, staging, provider, and migration evidence.
+9. Keep `M2-01` deferred post-core unless explicitly promoted.
+10. Do not apply migrations until approval, rehearsal, backup, owner, and rollback evidence are complete.
+11. Do not touch `main`.
 
 ## Hard stops
 

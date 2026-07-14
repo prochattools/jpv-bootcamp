@@ -1,6 +1,6 @@
 # JPV Bootcamp - Roadmap Progress Status
 
-Current status for `feature/course-branding-and-preview`, using the 10 July 2026 audit at `236227c fix: require portal auth for member content` as the historical baseline and `1e5c4ed feat: complete M1-06 launch content views` as the current local readiness baseline.
+Current status for `feature/course-branding-and-preview`, using the 10 July 2026 audit at `236227c fix: require portal auth for member content` as the historical baseline and `af6de62 docs: record core go-live readiness` as the current local staging-operations baseline.
 
 Current client truth: `docs/client/JPV_Bootcamp_Platform_Expansion_Go_Live_Plan_v3_5.docx`. Version 3.4 is the prior progress baseline. Canonical execution plan: `docs/PAYLOAD_INTEGRATION_PLAN.md`. Detailed audit evidence: `docs/V3_5_CODEBASE_ALIGNMENT_ASSESSMENT.md`.
 
@@ -8,9 +8,9 @@ Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`.
 
 ## Current position
 
-**Position:** Core go-live implementation and deterministic local validation are complete. The branch is still **not ready for the controlled staging release process** because representative 8-week programme content remains unapproved, the support-request migration remains unapplied, provider/email verification and staging smoke remain unexecuted, and the formal go/no-go decision has not happened.
+**Position:** Core go-live implementation and deterministic local validation are complete. The repository is now ready for controlled staging operations documentation and preflight, but the branch is still **not ready for the controlled staging release process** because representative 8-week programme content remains unapproved, the support-request migration remains unapplied, provider/email verification and staging smoke remain unexecuted, and the formal go/no-go decision has not happened.
 
-**Next task:** Complete the controlled staging release process prerequisites: content approval, migration approval and rehearsal confirmation, provider/email verification, staging smoke evidence, and formal go/no-go review. `M2-01` remains deferred post-core unless explicitly promoted.
+**Next task:** Execute the controlled staging release process prerequisites using the repository-owned contracts: content approval, migration approval and rehearsal confirmation, provider/email verification, staging smoke evidence, and formal go/no-go review. `M2-01` remains deferred post-core unless explicitly promoted.
 
 **Front-end schedule:** The 22 July front-end milestone is achievable only if immediate public blockers and the billing decision close by 13 July, all launch-scoped P0 implementation closes by 17 July, and client content, pricing/commitment language, legal wording, and course input arrive or placeholders are explicitly approved by 15 July. The 23 July handover buffer and 24 July client finished-by date remain.
 
@@ -25,7 +25,7 @@ Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`.
 | Branch | `feature/course-branding-and-preview` |
 | Staging target | This feature branch is the staging / production-staged deployment branch |
 | Historical audit baseline | `236227c fix: require portal auth for member content` |
-| Current local readiness baseline | `1e5c4ed feat: complete M1-06 launch content views` |
+| Current local staging-operations baseline | `af6de62 docs: record core go-live readiness` |
 | PR / review | `https://github.com/prochattools/jpv-bootcamp/pull/2` |
 | Migrations applied | None |
 | Migration approval | Blocked pending table-plan-to-Free, account-column rename, path, backup, rollback, and owner approval |
@@ -82,6 +82,19 @@ These are the remaining gates before the controlled staging release process can 
 5. formal go/no-go review;
 6. production-operation ownership and rollback signoff.
 
+## Repository-owned staging operations contract
+
+Repository-owned staging preparation is now complete and validated through:
+
+- `docs/release/SUPPORT_REQUESTS_MIGRATION_RUNBOOK.md`
+- `docs/release/PROVIDER_VERIFICATION_RUNBOOK.md`
+- `docs/release/GO_NO_GO_CHECKLIST.md`
+- `pnpm staging:migration-preflight`
+- `pnpm staging:smoke-plan`
+- `pnpm release:evidence:dry-run`
+
+These assets make the repository ready for controlled staging operations without claiming live migration, provider verification, staging acceptance, or go-live approval.
+
 ## Timeline and decision gates
 
 | Date | Gate |
@@ -98,10 +111,13 @@ These are the remaining gates before the controlled staging release process can 
 ## Test and security evidence
 
 - `git diff --check` passed.
-- `pnpm test:release` passed `116/116`.
+- `pnpm test:release` passed `120/120`.
 - `pnpm test:e2e` passed `56/56`.
 - `pnpm test:release:full` passed.
 - `pnpm staging:static-preflight` passed.
+- `pnpm staging:migration-preflight` passed.
+- `pnpm staging:smoke-plan` passed.
+- `pnpm release:evidence:dry-run` produced a deterministic repository-only summary.
 - root TypeScript passed.
 - production build passed.
 - both Prisma schema validations passed.
