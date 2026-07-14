@@ -23,7 +23,7 @@ const CARDS: DashboardCard[] = [
     id: 'pro-membership',
     title: 'Pro Membership',
     summary: 'Full course access, mentorship sessions, protected resources, and community. £80/month or £880/year.',
-    href: '/upgrade',
+    href: '/portal/billing',
     ctaLabel: 'View Pro',
     badge: 'pro',
   },

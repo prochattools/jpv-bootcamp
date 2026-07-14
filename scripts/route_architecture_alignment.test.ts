@@ -75,7 +75,7 @@ function testDashboardModelLinksToCanonicalPortalRoutes(): void {
   const cards = getDashboardCards()
   for (const card of cards) {
     assert.ok(
-      card.href.startsWith('/portal/') || card.href === '/upgrade' || card.href === '/portal' || card.href.startsWith('/admin/'),
+      card.href.startsWith('/portal/') || card.href === '/portal' || card.href.startsWith('/admin/'),
       `dashboard card "${card.id}" must link to canonical portal route, got: ${card.href}`,
     )
   }

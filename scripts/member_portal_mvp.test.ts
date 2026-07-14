@@ -37,7 +37,7 @@ function testModelHasProMembershipCard(): void {
   const cards = getDashboardCards()
   const proCard = cards.find((card) => card.id === 'pro-membership')
   assert.ok(proCard, 'model must have pro-membership card')
-  assert.equal(proCard?.href, '/upgrade')
+  assert.equal(proCard?.href, '/portal/billing')
   assert.equal(proCard?.badge, 'pro')
 }
 

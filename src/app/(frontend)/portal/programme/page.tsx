@@ -83,7 +83,7 @@ export default async function PortalProgrammePage() {
         </p>
         <div className="mt-4 flex flex-wrap gap-3">
           <Link
-            href="/upgrade"
+            href="/portal/billing"
             className="rounded-lg bg-neutral-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-neutral-800"
           >
             View Pro membership
