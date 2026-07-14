@@ -40,8 +40,23 @@ test.describe('public launch routes', () => {
     })
   }
 
-  test('sitemap contains canonical launch routes', async ({ request }) => {
-    const response = await request.get('/sitemap.xml')
+test('sitemap contains canonical launch routes', async ({ request }) => {
+    let response = null
+    let lastError: unknown = null
+
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      try {
+        response = await request.get('/sitemap.xml')
+        break
+      } catch (error) {
+        lastError = error
+      }
+    }
+
+    if (!response) {
+      throw lastError instanceof Error ? lastError : new Error('Unable to fetch /sitemap.xml')
+    }
+
     expect(response.ok()).toBe(true)
     const sitemap = await response.text()
     expect(sitemap).toContain('/privacy')
