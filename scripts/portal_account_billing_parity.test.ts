@@ -6,8 +6,10 @@ import type { MemberBillingOverview } from '../src/lib/payloadCourse/memberPorta
 import { resolvePortalBillingPresentation } from '../src/lib/portal/portalBillingPresentation'
 
 const portalSectionsSource = readFileSync('src/app/(frontend)/portal/[section]/page.tsx', 'utf8')
+const learnIndexSource = readFileSync('src/app/(frontend)/learn/page.tsx', 'utf8')
 const learnAccountSource = readFileSync('src/app/(frontend)/learn/account/page.tsx', 'utf8')
 const learnBillingSource = readFileSync('src/app/(frontend)/learn/billing/page.tsx', 'utf8')
+const learnLoginSource = readFileSync('src/app/(frontend)/learn/login/page.tsx', 'utf8')
 
 function billingStatus(overrides: Partial<BillingStatus> = {}): BillingStatus {
   return {
@@ -150,11 +152,13 @@ function testBillingPrecedenceRules(): void {
   assert.equal(projectionMissingPresentation.allowCheckout, true)
 }
 
-function testLegacyRoutesRemainActiveAndUnredirected(): void {
-  assert.match(learnAccountSource, /getCurrentPayloadMember\(\)/)
-  assert.match(learnBillingSource, /getCurrentPayloadMember\(\)/)
-  assert.doesNotMatch(learnAccountSource, /redirect\('\/portal\/account'\)/)
-  assert.doesNotMatch(learnBillingSource, /redirect\('\/portal\/billing'\)/)
+function testLegacyRoutesRedirectToCanonicalPortal(): void {
+  assert.match(learnIndexSource, /redirect\('\/portal'\)/)
+  assert.match(learnAccountSource, /redirect\(destination\)/)
+  assert.match(learnAccountSource, /\/portal\/account/)
+  assert.match(learnBillingSource, /redirect\(destination\)/)
+  assert.match(learnBillingSource, /\/portal\/billing/)
+  assert.match(learnLoginSource, /redirect\('\/portal\?mode=login'\)/)
 }
 
 function testDeeperLearnRoutesRemainPresent(): void {
@@ -177,7 +181,7 @@ try {
   testCanonicalAccountParity()
   testCanonicalBillingParity()
   testBillingPrecedenceRules()
-  testLegacyRoutesRemainActiveAndUnredirected()
+  testLegacyRoutesRedirectToCanonicalPortal()
   testDeeperLearnRoutesRemainPresent()
   console.log('portal_account_billing_parity.test.ts passed')
 } catch (error) {

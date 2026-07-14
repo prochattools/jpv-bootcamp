@@ -133,6 +133,69 @@ export async function mockAdminDenial(page: Page): Promise<void> {
   }
 }
 
+export async function mockLegacyMemberShellRedirects(page: Page): Promise<void> {
+  const redirects = new Map<string, string>([
+    ['/learn', '/portal'],
+    ['/learn/account', '/portal/account'],
+    ['/learn/billing', '/portal/billing'],
+    ['/learn/login', '/portal?mode=login'],
+  ])
+
+  const handleRoute = async (route: Route): Promise<void> => {
+    const request = route.request()
+    if (request.resourceType() !== 'document') {
+      await route.continue()
+      return
+    }
+
+    const url = new URL(request.url())
+    const destination = redirects.get(url.pathname)
+    if (destination) {
+      await route.fulfill({
+        status: 307,
+        headers: {
+          location: destination,
+        },
+        body: '',
+      })
+      return
+    }
+
+    const section =
+      url.pathname === '/portal'
+        ? url.searchParams.get('mode') === 'login'
+          ? 'login'
+          : 'home'
+        : url.pathname === '/portal/account'
+          ? 'account'
+          : url.pathname === '/portal/billing'
+            ? 'billing-checkout'
+            : null
+
+    if (!section) {
+      await route.continue()
+      return
+    }
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'text/html',
+      body:
+        section === 'login'
+          ? loginPageHtml()
+          : portalPageHtml(
+              section === 'account'
+                ? 'account'
+                : section === 'billing-checkout'
+                  ? 'billing-checkout'
+                  : 'home',
+            ),
+    })
+  }
+
+  await page.route('**/*', handleRoute)
+}
+
 export async function mockSafePublicDependencies(page: Page): Promise<void> {
   await page.route('**/api/sponsored-seats/available', async (route) => {
     await route.fulfill({

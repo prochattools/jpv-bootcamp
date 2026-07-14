@@ -13,9 +13,15 @@ async function main() {
   assert.doesNotMatch(billingAction, /openBillingPortal\([^)]*(memberId|memberEmail|stripeCustomerId|returnUrl)/)
   assert.doesNotMatch(billingAction, /openBillingPortal\([^)]*customer:/)
 
-  assert.match(billingPage, /Plan changes, cancellation, and payment-method updates are managed in the Stripe billing portal\./)
-  assert.match(billingPage, /MemberCheckoutButtons/)
-  assert.match(billingPage, /Checkout is available for members without an active subscription\./)
+  assert.match(billingPage, /import \{ redirect \} from 'next\/navigation'/)
+  assert.match(billingPage, /new URLSearchParams\(\)/)
+  assert.match(billingPage, /checkout/)
+  assert.match(billingPage, /cancellation_requested/)
+  assert.match(billingPage, /cancellation_effective_at/)
+  assert.match(billingPage, /cancellation_error/)
+  assert.match(billingPage, /redirect\(destination\)/)
+  assert.doesNotMatch(billingPage, /MemberCheckoutButtons/)
+  assert.doesNotMatch(billingPage, /Checkout is available for members without an active subscription\./)
   assert.doesNotMatch(billingPage, /openMemberPaidUpgradeAction/)
   assert.doesNotMatch(billingPage, /getStripe\(\)|stripe\.checkout|stripe\.billingPortal/)
 

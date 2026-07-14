@@ -9,6 +9,7 @@ import {
   mockAdminDenial,
   mockAnonymousPortalRedirect,
   mockAuthenticatedPortal,
+  mockLegacyMemberShellRedirects,
   mockLoginShell,
 } from './fixtures/launchFixtures'
 
@@ -44,6 +45,22 @@ test.describe('authentication, portal, and administrator denial', () => {
     await mockAnonymousPortalRedirect(page)
     await page.goto('/portal/billing')
     await expect(page.getByRole('heading', { name: 'Member sign in' })).toBeVisible()
+  })
+
+  test('legacy member shell routes redirect to canonical portal routes', async ({ page }) => {
+    await mockLegacyMemberShellRedirects(page)
+
+    await page.goto('/learn')
+    await expect(page).toHaveURL(/\/portal$/)
+
+    await page.goto('/learn/account')
+    await expect(page).toHaveURL(/\/portal\/account$/)
+
+    await page.goto('/learn/billing')
+    await expect(page).toHaveURL(/\/portal\/billing$/)
+
+    await page.goto('/learn/login')
+    await expect(page).toHaveURL(/\/portal\?mode=login$/)
   })
 
   test('logout and expired-session notices remain safe', async ({ page }) => {

@@ -229,10 +229,14 @@ function testPageUsesOnlyAuthenticatedMemberIdentity(): void {
     'utf8'
   )
 
-  assert.match(pageSource, /getCurrentPayloadMember\(\)/)
-  assert.match(pageSource, /getMemberBillingOverview\(payload, member\.id\)/)
-  assert.doesNotMatch(pageSource, /searchParams/)
-  assert.doesNotMatch(pageSource, /\bmemberId\b/)
+  assert.match(pageSource, /import \{ redirect \} from 'next\/navigation'/)
+  assert.match(pageSource, /new URLSearchParams\(\)/)
+  assert.match(pageSource, /cancellation_requested/)
+  assert.match(pageSource, /cancellation_effective_at/)
+  assert.match(pageSource, /cancellation_error/)
+  assert.match(pageSource, /redirect\(destination\)/)
+  assert.doesNotMatch(pageSource, /getCurrentPayloadMember\(\)/)
+  assert.doesNotMatch(pageSource, /getMemberBillingOverview\(payload, member\.id\)/)
   assert.doesNotMatch(pageSource, /\bcustomerId\b/)
   assert.doesNotMatch(pageSource, /\bsubscriptionId\b/)
 }

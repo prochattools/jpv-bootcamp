@@ -204,24 +204,19 @@ function testNoBrowserSelectableBillingIdentity(): void {
     path.resolve(process.cwd(), 'src/app/(frontend)/learn/billing/page.tsx'),
     'utf8'
   )
-  const actionSource = fs.readFileSync(
-    path.resolve(process.cwd(), 'src/app/(frontend)/learn/billing/actions.ts'),
-    'utf8'
-  )
 
-  assert.match(pageSource, /form action=\{openMemberBillingPortalAction\}/)
-  assert.doesNotMatch(pageSource, /<input/i)
-  assert.doesNotMatch(pageSource, /type=['"]hidden['"]/i)
-  assert.doesNotMatch(pageSource, /formData/i)
-  assert.doesNotMatch(pageSource, /searchParams/)
-
-  assert.match(actionSource, /openMemberBillingPortalAction\(\): Promise<void>/)
-  assert.match(actionSource, /createMemberBillingPortalSession\(payload, member\.id\)/)
-  assert.doesNotMatch(actionSource, /FormData/)
-  assert.doesNotMatch(actionSource, /searchParams/)
-  assert.doesNotMatch(actionSource, /customerId/)
-  assert.doesNotMatch(actionSource, /returnUrl/)
-  assert.doesNotMatch(actionSource, /formData\.get/)
+  assert.match(pageSource, /import \{ redirect \} from 'next\/navigation'/)
+  assert.match(pageSource, /new URLSearchParams\(\)/)
+  assert.match(pageSource, /checkout/)
+  assert.match(pageSource, /cancellation_requested/)
+  assert.match(pageSource, /cancellation_effective_at/)
+  assert.match(pageSource, /cancellation_error/)
+  assert.match(pageSource, /redirect\(destination\)/)
+  assert.doesNotMatch(pageSource, /openMemberBillingPortalAction/)
+  assert.doesNotMatch(pageSource, /createMemberBillingPortalSession/)
+  assert.doesNotMatch(pageSource, /FormData/)
+  assert.doesNotMatch(pageSource, /customerId/)
+  assert.doesNotMatch(pageSource, /returnUrl/)
 }
 
 async function main(): Promise<void> {

@@ -197,6 +197,7 @@ export const RELEASE_TEST_MANIFEST: ReleaseTestEntry[] = [
   test('sponsored.referral', 'sponsored application, review, and access behavior', 'scripts/partner_referral_mvp.test.ts', 'Keeps referral behavior within its approved preview boundary.', 'Referral workflows can falsely claim persistence or rewards.', 'M1-02'),
 
   test('routes.architecture', 'route architecture and MVP integration', 'scripts/route_architecture_alignment.test.ts', 'Protects canonical public, portal, API, and admin route ownership.', 'Duplicate or public operator routes can reappear.', 'M0-01', ['M0-01']),
+  test('routes.legacy-member-shell-redirects', 'route architecture and MVP integration', 'scripts/legacy_member_shell_redirects.test.ts', 'Protects direct compatibility redirects from the legacy member shell to canonical portal routes.', 'Legacy member-shell aliases can continue rendering duplicate UI or performing member lookups.', 'M1-05', ['M1-05']),
   test('routes.mvp-integration', 'route architecture and MVP integration', 'scripts/mvp_route_integration.test.ts', 'Protects cross-feature route integration and imports.', 'Launch-critical routes no longer compose safely.', 'M1-02'),
   test('routes.community-preview', 'route architecture and MVP integration', 'scripts/community_preview_mvp.test.ts', 'Protects community preview routing and access claims.', 'Community preview can over-promise persisted behavior.', 'M1-02'),
 
