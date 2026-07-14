@@ -422,7 +422,7 @@ async function run() {
     assert.equal(detail?.nextLesson?.slug, 'advanced-step')
     assert.equal(detail?.lesson?.resources.length, 1)
     assert.equal(detail?.lesson?.resources[0]?.title, 'Workbook')
-    assert.equal(detail?.lesson?.resources[0]?.downloadUrl, '/learn/resources/resource_foundations_1')
+    assert.equal(detail?.lesson?.resources[0]?.downloadUrl, '/portal/resources/resource_foundations_1')
     assert.notEqual(detail?.lesson?.resources[0]?.downloadUrl, '/media/workbook.pdf')
   }
 
@@ -450,7 +450,7 @@ async function run() {
       assert.equal(download.media.filename, 'workbook.pdf')
       assert.equal(download.media.storage, 'private')
       assert.equal(download.mimeType, 'application/pdf')
-      assert.equal(download.downloadUrl, '/learn/resources/resource_foundations_1')
+      assert.equal(download.downloadUrl, '/portal/resources/resource_foundations_1')
     }
   }
 

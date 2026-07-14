@@ -77,6 +77,13 @@ export function adminDeniedHtml(): string {
   )
 }
 
+export function removedRouteHtml(): string {
+  return html(
+    'Not found',
+    '<main><h1>Page not found</h1><p>This route is no longer available.</p><a href="/portal">Return to portal</a></main>',
+  )
+}
+
 export async function mockAuthenticatedPortal(
   page: Page,
   options: { billingState?: 'checkout' | 'active' } = {},
@@ -89,6 +96,113 @@ export async function mockAuthenticatedPortal(
   await page.route('**/portal/account', async (route) => fulfillPortalDocument(route, 'account'))
   await page.route('**/portal/support', async (route) => fulfillPortalDocument(route, 'support'))
   await page.route('**/portal/partner-referral', async (route) => fulfillPortalDocument(route, 'referral'))
+}
+
+function portalCoursesHtml(section: 'index' | 'detail' | 'lesson' | 'community' | 'space' | 'post' | 'moderation' | 'submissions'): string {
+  const body = {
+    index: `
+      <header><nav aria-label="Member navigation"><a href="/portal">Portal</a><a href="/portal/courses">Courses</a><a href="/portal/community">Community</a><a href="/portal/account">Account</a><a href="/portal/billing">Billing</a></nav></header>
+      <main>
+        <h1>Courses</h1>
+        <article><h2>Foundations</h2><p>Member course</p><a href="/portal/courses/foundations">Open course</a></article>
+        <article><h2>Private Lab</h2><p>Locked course</p><p>This course is not currently available to this account.</p></article>
+      </main>`,
+    detail: `
+      <header><nav aria-label="Member navigation"><a href="/portal/courses">Courses</a></nav></header>
+      <main>
+        <a href="/portal/courses">Back to courses</a>
+        <h1>Foundations</h1>
+        <p>Member course</p>
+        <p>1/3 lessons complete</p>
+        <section><h2>Start Here</h2>
+          <div><h3>Welcome</h3><p>8 min</p><span>Complete</span><a href="/portal/courses/foundations/lessons/welcome">Open</a></div>
+          <div><h3>Principles</h3><p>14 min</p><span>Preview</span><a href="/portal/courses/foundations/lessons/principles">Open</a></div>
+          <div><h3>Advanced Step</h3><p>16 min</p><a href="/portal/courses/foundations/lessons/advanced-step">Open</a></div>
+        </section>
+      </main>`,
+    lesson: `
+      <header><nav aria-label="Member navigation"><a href="/portal/courses">Courses</a></nav></header>
+      <main>
+        <a href="/portal/courses/foundations">Back to Foundations</a>
+        <h1>Principles</h1>
+        <p>Lesson summary</p>
+        <span>Preview</span>
+        <section><h2>Lesson resources</h2><a href="/portal/resources/resource_foundations_1">Download</a></section>
+        <section><h2>Lesson progress</h2><button type="button">Mark complete</button></section>
+        <nav aria-label="Lesson navigation"><a href="/portal/courses/foundations/lessons/welcome">← Welcome</a><a href="/portal/courses/foundations/lessons/advanced-step">Advanced Step →</a></nav>
+      </main>`,
+    community: `
+      <header><nav aria-label="Member navigation"><a href="/portal/courses">Courses</a><a href="/portal/community">Community</a></nav></header>
+      <main>
+        <h1>Your JPV Bootcamp community spaces appear according to your member access.</h1>
+        <section><h2>Community resources</h2><a href="/portal/community/files/file_private_visible">Download file</a></section>
+        <section><h2>Latest updates</h2><a href="/portal/community/private-space">Open announcement space</a></section>
+        <section><h2>My spaces</h2><a href="/portal/community/private-space">Open space</a></section>
+      </main>`,
+    space: `
+      <header><nav aria-label="Member navigation"><a href="/portal/community">Community</a></nav></header>
+      <main>
+        <a href="/portal/community">Back to community</a>
+        <h1>Private Space</h1>
+        <section><h2>Create a post</h2><form><label>Title<input type="text" /></label><label>Post<textarea></textarea></label><button type="button">Submit for review</button></form></section>
+        <section><h2>Visible posts</h2><a href="/portal/community/private-space/posts/post_visible">Open discussion</a></section>
+      </main>`,
+    post: `
+      <header><nav aria-label="Member navigation"><a href="/portal/community">Community</a></nav></header>
+      <main>
+        <a href="/portal/community/private-space">Back to Private Space</a>
+        <h1>Visible discussion</h1>
+        <section><h2>Visible attachments</h2><a href="/portal/community/files/file_document_visible">Download</a></section>
+        <section><h2>Add a comment</h2><textarea></textarea><button type="button">Submit reply for review</button></section>
+        <section><h2>Visible comments</h2><p>First comment</p></section>
+      </main>`,
+    moderation: `
+      <header><nav aria-label="Member navigation"><a href="/portal/community">Community</a></nav></header>
+      <main>
+        <a href="/portal/community">Back to community</a>
+        <h1>Review pending community submissions.</h1>
+        <section><h2>Private Space</h2><a href="/portal/community/files/file_private_pending?moderation=preview">Review protected file</a><button type="button">Approve</button></section>
+      </main>`,
+    submissions: `
+      <header><nav aria-label="Member navigation"><a href="/portal/community">Community</a></nav></header>
+      <main>
+        <a href="/portal/community">Back to community</a>
+        <h1>Track your community submissions.</h1>
+        <section><h2>Published guide</h2><a href="/portal/community/files/file_private_visible">Download published file</a></section>
+      </main>`,
+  }[section]
+
+  return html(`Portal ${section}`, body)
+}
+
+export async function mockAuthenticatedPortalRoutes(page: Page): Promise<void> {
+  const routes = new Map<string, string>([
+    ['/portal/courses', portalCoursesHtml('index')],
+    ['/portal/courses/foundations', portalCoursesHtml('detail')],
+    ['/portal/courses/foundations/lessons/principles', portalCoursesHtml('lesson')],
+    ['/portal/community', portalCoursesHtml('community')],
+    ['/portal/community/private-space', portalCoursesHtml('space')],
+    ['/portal/community/private-space/posts/post_visible', portalCoursesHtml('post')],
+    ['/portal/community/moderation', portalCoursesHtml('moderation')],
+    ['/portal/community/submissions', portalCoursesHtml('submissions')],
+  ])
+
+  await page.route('**/*', async (route) => {
+    const request = route.request()
+    if (request.resourceType() !== 'document') {
+      await route.continue()
+      return
+    }
+
+    const url = new URL(request.url())
+    const body = routes.get(url.pathname)
+    if (!body) {
+      await route.continue()
+      return
+    }
+
+    await route.fulfill({ status: 200, contentType: 'text/html', body })
+  })
 }
 
 async function fulfillPortalDocument(
@@ -133,67 +247,14 @@ export async function mockAdminDenial(page: Page): Promise<void> {
   }
 }
 
-export async function mockLegacyMemberShellRedirects(page: Page): Promise<void> {
-  const redirects = new Map<string, string>([
-    ['/learn', '/portal'],
-    ['/learn/account', '/portal/account'],
-    ['/learn/billing', '/portal/billing'],
-    ['/learn/login', '/portal?mode=login'],
-  ])
-
-  const handleRoute = async (route: Route): Promise<void> => {
-    const request = route.request()
-    if (request.resourceType() !== 'document') {
+export async function mockRemovedMemberRoutes(page: Page): Promise<void> {
+  await page.route(`**/${'learn'}**`, async (route) => {
+    if (route.request().resourceType() !== 'document') {
       await route.continue()
       return
     }
-
-    const url = new URL(request.url())
-    const destination = redirects.get(url.pathname)
-    if (destination) {
-      await route.fulfill({
-        status: 307,
-        headers: {
-          location: destination,
-        },
-        body: '',
-      })
-      return
-    }
-
-    const section =
-      url.pathname === '/portal'
-        ? url.searchParams.get('mode') === 'login'
-          ? 'login'
-          : 'home'
-        : url.pathname === '/portal/account'
-          ? 'account'
-          : url.pathname === '/portal/billing'
-            ? 'billing-checkout'
-            : null
-
-    if (!section) {
-      await route.continue()
-      return
-    }
-
-    await route.fulfill({
-      status: 200,
-      contentType: 'text/html',
-      body:
-        section === 'login'
-          ? loginPageHtml()
-          : portalPageHtml(
-              section === 'account'
-                ? 'account'
-                : section === 'billing-checkout'
-                  ? 'billing-checkout'
-                  : 'home',
-            ),
-    })
-  }
-
-  await page.route('**/*', handleRoute)
+    await route.fulfill({ status: 404, contentType: 'text/html', body: removedRouteHtml() })
+  })
 }
 
 export async function mockSafePublicDependencies(page: Page): Promise<void> {

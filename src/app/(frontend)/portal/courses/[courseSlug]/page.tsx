@@ -42,6 +42,11 @@ export default async function PortalCoursePage({ params }: CoursePageProps) {
             {course.estimatedDuration ? (
               <span className='rounded-full bg-neutral-100 px-3 py-1 text-neutral-700'>{course.estimatedDuration}</span>
             ) : null}
+            {course.completedLessonCount !== null && course.lessonCount !== null ? (
+              <span className='rounded-full bg-neutral-100 px-3 py-1 text-neutral-700'>
+                {course.completedLessonCount}/{course.lessonCount} lessons complete
+              </span>
+            ) : null}
             {course.progressPercent !== null ? (
               <span className='rounded-full bg-neutral-950 px-3 py-1 text-white'>{course.progressPercent}% complete</span>
             ) : null}
@@ -77,6 +82,9 @@ export default async function PortalCoursePage({ params }: CoursePageProps) {
                       <p className='text-xs font-medium text-neutral-500'>Lesson {lessonIndex + 1}</p>
                       <h3 className='mt-1 font-semibold text-neutral-950'>{lesson.title}</h3>
                       {lesson.summary ? <p className='mt-1 text-sm text-neutral-600'>{lesson.summary}</p> : null}
+                      {lesson.estimatedDuration ? (
+                        <p className='mt-1 text-xs font-medium text-neutral-500'>{lesson.estimatedDuration}</p>
+                      ) : null}
                     </div>
 
                     <div className='flex shrink-0 items-center gap-3'>

@@ -201,21 +201,17 @@ function testBlockedMemberEligibility(): void {
 
 function testNoBrowserSelectableBillingIdentity(): void {
   const pageSource = fs.readFileSync(
-    path.resolve(process.cwd(), 'src/app/(frontend)/learn/billing/page.tsx'),
+    path.resolve(process.cwd(), 'src/app/(frontend)/portal/[section]/page.tsx'),
     'utf8'
   )
 
-  assert.match(pageSource, /import \{ redirect \} from 'next\/navigation'/)
-  assert.match(pageSource, /new URLSearchParams\(\)/)
-  assert.match(pageSource, /checkout/)
-  assert.match(pageSource, /cancellation_requested/)
-  assert.match(pageSource, /cancellation_effective_at/)
-  assert.match(pageSource, /cancellation_error/)
-  assert.match(pageSource, /redirect\(destination\)/)
+  assert.match(pageSource, /requirePortalMember\(`\/portal\/\$\{section\}`\)/)
+  assert.match(pageSource, /getMemberBillingOverview\(payload, memberId\)/)
+  assert.match(pageSource, /getBillingStatus\(memberEmail\)/)
+  assert.match(pageSource, /<form action=\{requestMembershipCancellation\}>/)
   assert.doesNotMatch(pageSource, /openMemberBillingPortalAction/)
-  assert.doesNotMatch(pageSource, /createMemberBillingPortalSession/)
-  assert.doesNotMatch(pageSource, /FormData/)
-  assert.doesNotMatch(pageSource, /customerId/)
+  assert.doesNotMatch(pageSource, /getCurrentPayloadMember\(\)/)
+  assert.doesNotMatch(pageSource, /customerId\s*[:=]/)
   assert.doesNotMatch(pageSource, /returnUrl/)
 }
 

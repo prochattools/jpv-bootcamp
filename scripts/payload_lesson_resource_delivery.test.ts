@@ -311,7 +311,7 @@ async function run() {
   if (privateDownload.allowed) {
     assert.equal(privateDownload.media.storage, 'private')
     assert.equal(privateDownload.media.filename, 'workbook.pdf')
-    assert.equal(privateDownload.downloadUrl, '/learn/resources/resource_foundations_1')
+    assert.equal(privateDownload.downloadUrl, '/portal/resources/resource_foundations_1')
   }
 
   const missing = await resolveMemberLessonResourceDownload(payload, 'member_active', 'missing_resource')

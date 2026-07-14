@@ -5,12 +5,12 @@ const requirePortalMember = readFileSync('src/lib/auth/requirePortalMember.ts', 
 const portalPage = readFileSync('src/app/(frontend)/portal/page.tsx', 'utf8')
 const portalLayout = readFileSync('src/app/(frontend)/portal/layout.tsx', 'utf8')
 const loginPage = readFileSync('src/app/(frontend)/login/page.tsx', 'utf8')
-const learnLoginPage = readFileSync('src/app/(frontend)/learn/login/page.tsx', 'utf8')
 const registerPage = readFileSync('src/app/(frontend)/register/page.tsx', 'utf8')
 const verificationHttp = readFileSync('src/lib/auth/memberEmailVerificationHttp.ts', 'utf8')
 const emailChangeComplete = readFileSync('src/app/api/member-email-change/complete/route.ts', 'utf8')
 const passwordReset = readFileSync('src/app/api/member-password/reset/route.ts', 'utf8')
 const memberSetup = readFileSync('src/app/api/member-invitations/complete/route.ts', 'utf8')
+const removedMemberNamespacePattern = new RegExp(`redirect\\('${'/' + 'learn'}`)
 
 assert.match(requirePortalMember, /\/portal\?mode=login&next=/)
 assert.doesNotMatch(requirePortalMember, /redirect\(`\/login/)
@@ -31,11 +31,8 @@ assert.match(loginPage, /new URLSearchParams\(\{ mode: 'login' \}\)/)
 assert.match(loginPage, /redirect\(`\/portal/)
 assert.doesNotMatch(loginPage, /MemberLoginForm/)
 
-assert.match(learnLoginPage, /redirect\('\/portal\?mode=login'\)/)
-assert.doesNotMatch(learnLoginPage, /LoginForm/)
-
 assert.match(registerPage, /if \(member\) redirect\('\/portal'\)/)
-assert.doesNotMatch(registerPage, /if \(member\) redirect\('\/learn'\)/)
+assert.doesNotMatch(registerPage, removedMemberNamespacePattern)
 
 assert.match(verificationHttp, /new URL\('\/portal'/)
 assert.match(verificationHttp, /mode', 'login'/)

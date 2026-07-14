@@ -460,7 +460,7 @@ async function testPendingFilePreview() {
   assert.equal(allowed.allowed, true)
   if (allowed.allowed) {
     assert.equal(allowed.filename, 'pending-guide.pdf')
-    assert.equal(allowed.downloadUrl, '/learn/community/files/file_private_pending')
+    assert.equal(allowed.downloadUrl, '/portal/community/files/file_private_pending')
     assert.equal(JSON.stringify(allowed).includes('/private/'), false)
   }
 
@@ -628,7 +628,7 @@ async function testMemberSubmissionProjection() {
   assert.equal(visibleFile?.status, 'Published')
   assert.equal(
     visibleFile?.downloadUrl,
-    '/learn/community/files/file_private_visible'
+    '/portal/community/files/file_private_visible'
   )
 
   for (const item of submissions.filter(
@@ -660,9 +660,9 @@ async function testSourceContracts() {
     'src/lib/payloadCourse/communityModerationNotifications.ts',
     'src/lib/payloadCourse/communityFiles.ts',
     'src/lib/payloadCourse/communityPosting.ts',
-    'src/app/(frontend)/learn/community/files/[fileId]/route.ts',
-    'src/app/(frontend)/learn/community/moderation/page.tsx',
-    'src/app/(frontend)/learn/community/submissions/page.tsx',
+    'src/app/(frontend)/portal/community/files/[fileId]/route.ts',
+    'src/app/(frontend)/portal/community/moderation/page.tsx',
+    'src/app/(frontend)/portal/community/submissions/page.tsx',
   ]
   const sources = await Promise.all(
     files.map((file) => readFile(path.join(root, file), 'utf8'))

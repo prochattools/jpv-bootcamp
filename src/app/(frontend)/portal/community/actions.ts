@@ -3,8 +3,8 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 
-import { getCurrentPayloadMember } from '@/lib/members/currentMember'
-import type { PayloadCourseWriteAPI } from '@/lib/payloadCourse/accessService'
+import { requirePortalMember } from '@/lib/auth/requirePortalMember'
+import type { PayloadCourseWriteAPI, PayloadDocument } from '@/lib/payloadCourse/accessService'
 import { getMemberCommunityPostDetail } from '@/lib/payloadCourse/communityDiscussion'
 import { getMemberCommunitySpaceDetail } from '@/lib/payloadCourse/communityPortal'
 import {
@@ -17,11 +17,7 @@ function formText(formData: FormData, name: string): string {
   return typeof value === 'string' ? value.trim() : ''
 }
 
-function boundedText(
-  value: string,
-  label: string,
-  maxLength: number
-): string {
+function boundedText(value: string, label: string, maxLength: number): string {
   if (!value) throw new Error(`${label} is required.`)
   if (value.length > maxLength) throw new Error(`${label} is too long.`)
   return value
@@ -105,26 +101,32 @@ function memberDisplayName(member: Record<string, unknown>): string {
 }
 
 function spacePath(spaceSlug: string): string {
-  return `/learn/community/${encodeURIComponent(spaceSlug)}`
+  return `/portal/community/${encodeURIComponent(spaceSlug)}`
 }
 
 function postPath(spaceSlug: string, postId: string): string {
   return `${spacePath(spaceSlug)}/posts/${encodeURIComponent(postId)}`
 }
 
-export async function submitCommunityPost(
-  spaceSlug: string,
-  formData: FormData
-): Promise<void> {
-  const destination = spacePath(spaceSlug)
-  const { member, payload } = await getCurrentPayloadMember()
+async function loadMemberRecord(
+  payload: PayloadCourseWriteAPI,
+  memberId: string,
+): Promise<Record<string, unknown>> {
+  const member = await payload.findByID({
+    collection: 'payload_members',
+    id: memberId,
+    depth: 0,
+    overrideAccess: true,
+  })
+  return member as PayloadDocument
+}
 
-  if (!member) {
-    redirect('/portal?mode=login')
-  }
+export async function submitCommunityPost(spaceSlug: string, formData: FormData): Promise<void> {
+  const destination = spacePath(spaceSlug)
+  const { memberId, payload } = await requirePortalMember(destination)
 
   try {
-    const detail = await getMemberCommunitySpaceDetail(payload, member.id, spaceSlug)
+    const detail = await getMemberCommunitySpaceDetail(payload, memberId, spaceSlug)
     const canPublish =
       detail?.allowed === true &&
       detail.membership?.status === 'active' &&
@@ -136,7 +138,7 @@ export async function submitCommunityPost(
     const bodyText = boundedText(formText(formData, 'body'), 'Body', 10_000)
 
     await createSpacePost(payload as unknown as PayloadCourseWriteAPI, {
-      memberId: member.id,
+      memberId,
       spaceId: detail.id,
       title,
       body: plainTextRichText(bodyText),
@@ -152,30 +154,22 @@ export async function submitCommunityPost(
 export async function submitCommunityComment(
   spaceSlug: string,
   postId: string,
-  formData: FormData
+  formData: FormData,
 ): Promise<void> {
   const destination = postPath(spaceSlug, postId)
-  const { member, payload } = await getCurrentPayloadMember()
-
-  if (!member) {
-    redirect('/portal?mode=login')
-  }
+  const { memberId, payload } = await requirePortalMember(destination)
 
   try {
-    const detail = await getMemberCommunityPostDetail(
-      payload,
-      member.id,
-      spaceSlug,
-      postId
-    )
+    const detail = await getMemberCommunityPostDetail(payload, memberId, spaceSlug, postId)
     if (!detail.allowed || !detail.post.canComment) {
       throw new Error('Submission unavailable.')
     }
 
+    const member = await loadMemberRecord(payload as unknown as PayloadCourseWriteAPI, memberId)
     const bodyText = boundedText(formText(formData, 'body'), 'Body', 10_000)
 
     await createSpaceComment(payload as unknown as PayloadCourseWriteAPI, {
-      memberId: member.id,
+      memberId,
       postId: detail.post.id,
       displayName: memberDisplayName(member),
       body: plainTextRichText(bodyText),

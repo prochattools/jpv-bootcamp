@@ -297,7 +297,7 @@ async function testAuthorizedListingAndResolution(): Promise<void> {
     files.map((file) => file.id),
     ['file_private_visible', 'file_secret_visible']
   )
-  assert.equal(files[0]?.downloadUrl, '/learn/community/files/file_private_visible')
+  assert.equal(files[0]?.downloadUrl, '/portal/community/files/file_private_visible')
   assert.equal(files[0]?.filename, 'guide.pdf')
   assert.equal(files[0]?.spaceName, 'Private Space')
 
@@ -399,7 +399,7 @@ function testRouteAndPageSources(): void {
   const routeSource = fs.readFileSync(
     path.resolve(
       process.cwd(),
-      'src/app/(frontend)/learn/community/files/[fileId]/route.ts'
+      'src/app/(frontend)/portal/community/files/[fileId]/route.ts'
     ),
     'utf8'
   )
@@ -412,7 +412,7 @@ function testRouteAndPageSources(): void {
   assert.doesNotMatch(routeSource, /status:\s*401|status:\s*403|Forbidden|Unauthorized/)
 
   const pageSource = fs.readFileSync(
-    path.resolve(process.cwd(), 'src/app/(frontend)/learn/community/page.tsx'),
+    path.resolve(process.cwd(), 'src/app/(frontend)/portal/community/page.tsx'),
     'utf8'
   )
   assert.match(pageSource, /href=\{file\.downloadUrl\}/)

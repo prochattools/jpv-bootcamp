@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
+import { redirect } from 'next/navigation'
 
 import { requirePortalMember } from '@/lib/auth/requirePortalMember'
 import type { PayloadCourseWriteAPI } from '@/lib/payloadCourse/accessService'
@@ -11,6 +12,7 @@ import {
 
 type LessonPageProps = {
   params: Promise<{ courseSlug: string; lessonSlug: string }>
+  searchParams?: Promise<{ completed?: string | string[] | undefined }>
 }
 
 function getLessonPath(courseSlug: string, lessonSlug: string): string {
@@ -69,13 +71,20 @@ async function completeLesson(formData: FormData) {
   revalidatePath('/portal/courses')
   revalidatePath(`/portal/courses/${courseSlug}`)
   revalidatePath(requestedPath)
+  redirect(`${requestedPath}?completed=1`)
 }
 
-export default async function PortalLessonPage({ params }: LessonPageProps) {
+function firstParam(value: string | string[] | undefined): string | null {
+  if (Array.isArray(value)) return value[0] ?? null
+  return value ?? null
+}
+
+export default async function PortalLessonPage({ params, searchParams }: LessonPageProps) {
   const { courseSlug, lessonSlug } = await params
   const requestedPath = getLessonPath(courseSlug, lessonSlug)
   const { memberId, payload } = await requirePortalMember(requestedPath)
   const detail = await getMemberLessonDetail(payload, memberId, courseSlug, lessonSlug)
+  const query = searchParams ? await searchParams : undefined
 
   if (!detail) notFound()
 
@@ -97,6 +106,11 @@ export default async function PortalLessonPage({ params }: LessonPageProps) {
           <p className='mt-3 text-sm leading-6 text-amber-900'>
             {detail.lockReason ?? 'Your account does not currently have access to this lesson.'}
           </p>
+          {detail.previousLesson && !detail.previousLesson.completed ? (
+            <p className='mt-4 rounded-xl border border-amber-200 bg-white px-4 py-3 text-sm font-medium text-amber-800'>
+              Complete the previous lesson before opening this one.
+            </p>
+          ) : null}
         </section>
       ) : (
         <>
@@ -125,6 +139,12 @@ export default async function PortalLessonPage({ params }: LessonPageProps) {
               </div>
             </div>
           </section>
+
+          {firstParam(query?.completed) === '1' ? (
+            <p className='rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800'>
+              Lesson marked complete.
+            </p>
+          ) : null}
 
           <section className='rounded-2xl border border-neutral-200 bg-white p-8 shadow-sm'>
             <h2 className='text-xl font-semibold'>Lesson content</h2>

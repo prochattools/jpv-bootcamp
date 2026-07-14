@@ -1,15 +1,12 @@
 import assert from 'node:assert/strict'
-import { existsSync, readFileSync } from 'node:fs'
+import { readFileSync } from 'node:fs'
 
 import type { BillingStatus } from '../src/lib/billing/billingStatusHelper'
 import type { MemberBillingOverview } from '../src/lib/payloadCourse/memberPortal'
 import { resolvePortalBillingPresentation } from '../src/lib/portal/portalBillingPresentation'
 
 const portalSectionsSource = readFileSync('src/app/(frontend)/portal/[section]/page.tsx', 'utf8')
-const learnIndexSource = readFileSync('src/app/(frontend)/learn/page.tsx', 'utf8')
-const learnAccountSource = readFileSync('src/app/(frontend)/learn/account/page.tsx', 'utf8')
-const learnBillingSource = readFileSync('src/app/(frontend)/learn/billing/page.tsx', 'utf8')
-const learnLoginSource = readFileSync('src/app/(frontend)/learn/login/page.tsx', 'utf8')
+const removedImportPattern = new RegExp(`(?:from|import).+${'learn'}/`)
 
 function billingStatus(overrides: Partial<BillingStatus> = {}): BillingStatus {
   return {
@@ -78,6 +75,7 @@ function testCanonicalAccountParity(): void {
   assert.match(portalSectionsSource, /collection: 'payload_members'/)
   assert.match(portalSectionsSource, /redirect\('\/portal\/account\?updated=1'\)/)
   assert.match(portalSectionsSource, /redirect\('\/portal\/account\?error=display-name'\)/)
+  assert.doesNotMatch(portalSectionsSource, removedImportPattern)
 }
 
 function testCanonicalBillingParity(): void {
@@ -152,37 +150,10 @@ function testBillingPrecedenceRules(): void {
   assert.equal(projectionMissingPresentation.allowCheckout, true)
 }
 
-function testLegacyRoutesRedirectToCanonicalPortal(): void {
-  assert.match(learnIndexSource, /redirect\('\/portal'\)/)
-  assert.match(learnAccountSource, /redirect\(destination\)/)
-  assert.match(learnAccountSource, /\/portal\/account/)
-  assert.match(learnBillingSource, /redirect\(destination\)/)
-  assert.match(learnBillingSource, /\/portal\/billing/)
-  assert.match(learnLoginSource, /redirect\('\/portal\?mode=login'\)/)
-}
-
-function testDeeperLearnRoutesRemainPresent(): void {
-  for (const path of [
-    'src/app/(frontend)/learn/[courseSlug]/page.tsx',
-    'src/app/(frontend)/learn/[courseSlug]/[lessonSlug]/page.tsx',
-    'src/app/(frontend)/learn/community/page.tsx',
-    'src/app/(frontend)/learn/community/[spaceSlug]/page.tsx',
-    'src/app/(frontend)/learn/community/[spaceSlug]/posts/[postId]/page.tsx',
-    'src/app/(frontend)/learn/community/moderation/page.tsx',
-    'src/app/(frontend)/learn/community/submissions/page.tsx',
-    'src/app/(frontend)/learn/community/files/[fileId]/route.ts',
-    'src/app/(frontend)/learn/resources/[resourceId]/route.ts',
-  ]) {
-    assert.ok(existsSync(path), `expected deeper learn route to remain active: ${path}`)
-  }
-}
-
 try {
   testCanonicalAccountParity()
   testCanonicalBillingParity()
   testBillingPrecedenceRules()
-  testLegacyRoutesRedirectToCanonicalPortal()
-  testDeeperLearnRoutesRemainPresent()
   console.log('portal_account_billing_parity.test.ts passed')
 } catch (error) {
   console.error(

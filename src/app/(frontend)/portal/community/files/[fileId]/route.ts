@@ -37,7 +37,7 @@ function notFoundResponse(): Response {
 
 export async function GET(
   request: Request,
-  context: CommunityFileRouteContext
+  context: CommunityFileRouteContext,
 ): Promise<Response> {
   const { fileId } = await context.params
   if (!isSafeResourceId(fileId)) return notFoundResponse()
@@ -52,19 +52,14 @@ export async function GET(
 
     const payload = await getPayload({ config })
     const accessPayload = payload as unknown as PayloadCourseAccessAPI
-    const moderationPreview =
-      new URL(request.url).searchParams.get('moderation') === 'preview'
+    const moderationPreview = new URL(request.url).searchParams.get('moderation') === 'preview'
     const resolution = moderationPreview
       ? await resolveModerationCommunityFileDownload(
           accessPayload,
           { type: 'member', id: session.member.id },
-          fileId
+          fileId,
         )
-      : await resolveMemberCommunityFileDownload(
-          accessPayload,
-          session.member.id,
-          fileId
-        )
+      : await resolveMemberCommunityFileDownload(accessPayload, session.member.id, fileId)
 
     if (!resolution.allowed) return notFoundResponse()
 

@@ -6,7 +6,7 @@ import { useFormStatus } from 'react-dom'
 import {
   requestMemberEmailChangeAction,
   type MemberEmailChangeActionState,
-} from './actions'
+} from '@/components/member/memberAccountActions'
 
 function SubmitButton() {
   const { pending } = useFormStatus()

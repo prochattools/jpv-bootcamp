@@ -375,7 +375,7 @@ async function projectFile(
     uploaderName: displayName(uploader),
     createdAt: asDateString(file.createdAt),
     space: spaceProjection(space),
-    downloadUrl: `/learn/community/files/${encodeURIComponent(id)}`,
+    downloadUrl: `/portal/community/files/${encodeURIComponent(id)}`,
   }
 }
 
@@ -859,7 +859,7 @@ export async function getMemberCommunitySubmissions(
       status,
       downloadUrl:
         status === 'Published' && id
-          ? `/learn/community/files/${encodeURIComponent(id)}`
+          ? `/portal/community/files/${encodeURIComponent(id)}`
           : null,
     })
   }

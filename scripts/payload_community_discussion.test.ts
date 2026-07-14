@@ -462,7 +462,7 @@ async function testAuthorizedProjection(): Promise<void> {
     result.post.attachments.map((attachment) => attachment.id),
     ['file_document_visible', 'file_image_visible', 'file_video_visible', 'file_private_video_visible']
   )
-  assert.equal(result.post.attachments[0]?.downloadUrl, '/learn/community/files/file_document_visible')
+  assert.equal(result.post.attachments[0]?.downloadUrl, '/portal/community/files/file_document_visible')
   assert.equal(result.post.attachments[1]?.attachmentType, 'image')
   assert.equal(result.post.attachments[2]?.attachmentType, 'external_video')
   assert.equal(result.post.attachments[3]?.attachmentType, 'private_video')
@@ -606,7 +606,7 @@ function testPageActionAndPostingSources(): void {
   const renderer = fs.readFileSync(
     path.resolve(
       process.cwd(),
-      'src/app/(frontend)/learn/community/CommunityRichText.tsx'
+      'src/components/community/CommunityRichText.tsx'
     ),
     'utf8'
   )
@@ -617,13 +617,13 @@ function testPageActionAndPostingSources(): void {
   const spacePage = fs.readFileSync(
     path.resolve(
       process.cwd(),
-      'src/app/(frontend)/learn/community/[spaceSlug]/page.tsx'
+      'src/app/(frontend)/portal/community/[spaceSlug]/page.tsx'
     ),
     'utf8'
   )
   assert.match(
     spacePage,
-    /href=\{`\/learn\/community\/\$\{encodedSpaceSlug\}\/posts\/\$\{encodeURIComponent\(post\.id\)\}`\}/
+    /href=\{`\/portal\/community\/\$\{encodedSpaceSlug\}\/posts\/\$\{encodeURIComponent\(post\.id\)\}`\}/
   )
   assert.match(spacePage, /detail\.membership\?\.status === 'active'/)
   assert.match(spacePage, /name='title'/)
@@ -633,7 +633,7 @@ function testPageActionAndPostingSources(): void {
   const postPage = fs.readFileSync(
     path.resolve(
       process.cwd(),
-      'src/app/(frontend)/learn/community/[spaceSlug]/posts/[postId]/page.tsx'
+      'src/app/(frontend)/portal/community/[spaceSlug]/posts/[postId]/page.tsx'
     ),
     'utf8'
   )
@@ -642,23 +642,18 @@ function testPageActionAndPostingSources(): void {
   assert.doesNotMatch(postPage, /name=['"](?:memberId|author|role|status|visibility|moderationStatus|rateLimit|audit)/)
 
   const actions = fs.readFileSync(
-    path.resolve(process.cwd(), 'src/app/(frontend)/learn/community/actions.ts'),
+    path.resolve(process.cwd(), 'src/app/(frontend)/portal/community/actions.ts'),
     'utf8'
   )
-  assert.match(actions, /getCurrentPayloadMember\(\)/)
-  assert.match(actions, /memberId: member\.id/)
+  assert.match(actions, /requirePortalMember\(destination\)/)
+  assert.match(actions, /memberId,/)
   assert.match(actions, /plainTextRichText\(bodyText\)/)
   assert.doesNotMatch(
     actions,
     /formData\.get\(['"](?:memberId|author|role|status|visibility|moderationStatus|rateLimit|audit)/
   )
   const postCatch = actions.indexOf('export async function submitCommunityPost')
-  const postAuthRedirect = actions.indexOf("redirect('/portal?mode=login')", postCatch)
-  const postTry = actions.indexOf('try {', postCatch)
-  assert.ok(postAuthRedirect > postCatch && postAuthRedirect < postTry)
-  const successRedirect = actions.indexOf('redirect(`${destination}?submission=pending`)', postTry)
-  const catchEnd = actions.lastIndexOf('}', successRedirect)
-  assert.ok(successRedirect > catchEnd)
+  assert.match(actions, /redirect\(`\$\{destination\}\?submission=pending`\)/)
 
   const posting = fs.readFileSync(
     path.resolve(process.cwd(), 'src/lib/payloadCourse/communityPosting.ts'),

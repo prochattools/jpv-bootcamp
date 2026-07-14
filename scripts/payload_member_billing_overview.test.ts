@@ -225,20 +225,16 @@ function testBlockedMemberEligibility(): void {
 
 function testPageUsesOnlyAuthenticatedMemberIdentity(): void {
   const pageSource = fs.readFileSync(
-    path.resolve(process.cwd(), 'src/app/(frontend)/learn/billing/page.tsx'),
+    path.resolve(process.cwd(), 'src/app/(frontend)/portal/[section]/page.tsx'),
     'utf8'
   )
 
-  assert.match(pageSource, /import \{ redirect \} from 'next\/navigation'/)
-  assert.match(pageSource, /new URLSearchParams\(\)/)
-  assert.match(pageSource, /cancellation_requested/)
-  assert.match(pageSource, /cancellation_effective_at/)
-  assert.match(pageSource, /cancellation_error/)
-  assert.match(pageSource, /redirect\(destination\)/)
+  assert.match(pageSource, /requirePortalMember\(`\/portal\/\$\{section\}`\)/)
+  assert.match(pageSource, /getMemberBillingOverview\(payload, memberId\)/)
+  assert.match(pageSource, /resolvePortalBillingPresentation\(/)
   assert.doesNotMatch(pageSource, /getCurrentPayloadMember\(\)/)
-  assert.doesNotMatch(pageSource, /getMemberBillingOverview\(payload, member\.id\)/)
   assert.doesNotMatch(pageSource, /\bcustomerId\b/)
-  assert.doesNotMatch(pageSource, /\bsubscriptionId\b/)
+  assert.doesNotMatch(pageSource, /stripeCustomerId/)
 }
 
 async function main(): Promise<void> {

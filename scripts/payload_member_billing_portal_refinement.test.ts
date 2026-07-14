@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises'
 async function main() {
   const [billingAction, billingPage, checkoutButtons] = await Promise.all([
     readFile('src/lib/actions/openBillingPortal.ts', 'utf8'),
-    readFile('src/app/(frontend)/learn/billing/page.tsx', 'utf8'),
+    readFile('src/app/(frontend)/portal/[section]/page.tsx', 'utf8'),
     readFile('src/components/portal/MemberCheckoutButtons.tsx', 'utf8'),
   ])
 
@@ -13,15 +13,11 @@ async function main() {
   assert.doesNotMatch(billingAction, /openBillingPortal\([^)]*(memberId|memberEmail|stripeCustomerId|returnUrl)/)
   assert.doesNotMatch(billingAction, /openBillingPortal\([^)]*customer:/)
 
-  assert.match(billingPage, /import \{ redirect \} from 'next\/navigation'/)
-  assert.match(billingPage, /new URLSearchParams\(\)/)
-  assert.match(billingPage, /checkout/)
-  assert.match(billingPage, /cancellation_requested/)
-  assert.match(billingPage, /cancellation_effective_at/)
-  assert.match(billingPage, /cancellation_error/)
-  assert.match(billingPage, /redirect\(destination\)/)
-  assert.doesNotMatch(billingPage, /MemberCheckoutButtons/)
-  assert.doesNotMatch(billingPage, /Checkout is available for members without an active subscription\./)
+  assert.match(billingPage, /MemberCheckoutButtons/)
+  assert.match(billingPage, /BillingPortalButton/)
+  assert.match(billingPage, /requestMembershipCancellation/)
+  assert.match(billingPage, /checkout === 'success'/)
+  assert.match(billingPage, /checkout === 'cancelled'/)
   assert.doesNotMatch(billingPage, /openMemberPaidUpgradeAction/)
   assert.doesNotMatch(billingPage, /getStripe\(\)|stripe\.checkout|stripe\.billingPortal/)
 

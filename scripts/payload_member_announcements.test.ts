@@ -272,11 +272,11 @@ async function testAuthorizedAnnouncementsAndFiltering(): Promise<void> {
 
 function testNoBrowserSelectableAnnouncementAccess(): void {
   const pageSource = fs.readFileSync(
-    path.resolve(process.cwd(), 'src/app/(frontend)/learn/community/page.tsx'),
+    path.resolve(process.cwd(), 'src/app/(frontend)/portal/community/page.tsx'),
     'utf8'
   )
 
-  assert.match(pageSource, /getMemberAnnouncements\(payload, member\.id\)/)
+  assert.match(pageSource, /getMemberAnnouncements\(payload, memberId\)/)
   assert.doesNotMatch(pageSource, /searchParams/)
   assert.doesNotMatch(pageSource, /FormData/)
   assert.doesNotMatch(pageSource, /<form/i)

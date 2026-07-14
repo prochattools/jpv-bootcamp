@@ -2,16 +2,15 @@ import Link from 'next/link'
 import { revalidatePath } from 'next/cache'
 import { notFound, redirect } from 'next/navigation'
 
-import { getCurrentPayloadMember } from '@/lib/members/currentMember'
+import { CommunityRichText } from '@/components/community/CommunityRichText'
+import { StatusPill } from '@/components/portal/StatusPill'
+import { requirePortalMember } from '@/lib/auth/requirePortalMember'
 import type { PayloadCourseWriteAPI } from '@/lib/payloadCourse/accessService'
 import {
   getPendingCommunityModerationItems,
   moderatePendingCommunityItem,
   type PendingCommunityModerationItem,
 } from '@/lib/payloadCourse/communityModeration'
-
-import { PortalShell, StatusPill } from '../../PortalShell'
-import { CommunityRichText } from '../CommunityRichText'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -27,26 +26,19 @@ function formText(formData: FormData, name: string): string {
   return typeof value === 'string' ? value.trim() : ''
 }
 
-function isModerationKind(
-  value: string
-): value is PendingCommunityModerationItem['kind'] {
+function isModerationKind(value: string): value is PendingCommunityModerationItem['kind'] {
   return value === 'post' || value === 'comment' || value === 'file'
 }
 
-function isModerationDecision(
-  value: string
-): value is 'approve' | 'reject' {
+function isModerationDecision(value: string): value is 'approve' | 'reject' {
   return value === 'approve' || value === 'reject'
 }
 
 async function submitModerationDecision(formData: FormData): Promise<void> {
   'use server'
 
-  const destination = '/learn/community/moderation'
-  const { member, payload } = await getCurrentPayloadMember()
-  if (!member) {
-    redirect('/portal?mode=login')
-  }
+  const destination = '/portal/community/moderation'
+  const { memberId, payload } = await requirePortalMember(destination)
 
   const kind = formText(formData, 'kind')
   const id = formText(formData, 'id')
@@ -64,23 +56,20 @@ async function submitModerationDecision(formData: FormData): Promise<void> {
     redirect(`${destination}?decision=error`)
   }
 
-  const result = await moderatePendingCommunityItem(
-    payload as unknown as PayloadCourseWriteAPI,
-    {
-      actor: { type: 'member', id: member.id },
-      kind,
-      id,
-      decision,
-      reason: reason || null,
-    }
-  )
+  const result = await moderatePendingCommunityItem(payload as unknown as PayloadCourseWriteAPI, {
+    actor: { type: 'member', id: memberId },
+    kind,
+    id,
+    decision,
+    reason: reason || null,
+  })
 
   if (!result.allowed) {
     redirect(`${destination}?decision=error`)
   }
 
   revalidatePath(destination)
-  revalidatePath('/learn/community')
+  revalidatePath('/portal/community')
   redirect(`${destination}?decision=success`)
 }
 
@@ -104,11 +93,7 @@ function formatByteSize(value: number): string {
 }
 
 function groupItems(items: PendingCommunityModerationItem[]) {
-  const groups = new Map<string, {
-    name: string
-    slug: string | null
-    items: PendingCommunityModerationItem[]
-  }>()
+  const groups = new Map<string, { name: string; slug: string | null; items: PendingCommunityModerationItem[] }>()
 
   for (const item of items) {
     const key = `${item.space.name}\u0000${item.space.slug ?? ''}`
@@ -229,78 +214,67 @@ function ModerationItemCard({ item }: { item: PendingCommunityModerationItem }) 
 
 export default async function CommunityModerationPage({ searchParams }: PageProps) {
   const query = await searchParams
-  const { member, payload } = await getCurrentPayloadMember()
-
-  if (!member) {
-    redirect('/portal?mode=login')
-  }
+  const { memberId, memberEmail, payload } = await requirePortalMember('/portal/community/moderation')
 
   const inbox = await getPendingCommunityModerationItems(payload, {
     type: 'member',
-    id: member.id,
+    id: memberId,
   })
-  if (!inbox.actorRole) {
-    notFound()
-  }
+  if (!inbox.actorRole) notFound()
 
   const groups = groupItems(inbox.items)
-  const email = typeof member.email === 'string' ? member.email : null
 
   return (
-    <PortalShell memberEmail={email}>
-      <main className='mx-auto max-w-6xl px-6 py-10 lg:px-10 lg:py-14'>
-        <Link className='text-sm font-bold text-[#6c5a36] hover:text-[#153f2e]' href='/learn/community'>
-          Back to community
-        </Link>
+    <div className='mx-auto max-w-6xl space-y-10'>
+      <Link className='text-sm font-bold text-[#6c5a36] hover:text-[#153f2e]' href='/portal/community'>
+        Back to community
+      </Link>
 
-        <section className='mt-6 rounded-[28px] bg-[#153f2e] p-8 text-white shadow-[0_24px_70px_rgba(20,55,40,0.18)] sm:p-10 lg:p-14'>
-          <StatusPill tone='neutral'>Moderation inbox</StatusPill>
-          <h1 className='mt-7 text-4xl font-bold leading-tight tracking-tight sm:text-5xl'>
-            Review pending community submissions.
-          </h1>
-          <p className='mt-5 max-w-2xl text-base leading-7 text-[#d5e0da] sm:text-lg'>
-            Only submissions from spaces assigned to your moderator account appear here.
-          </p>
-        </section>
+      <section className='rounded-[28px] bg-[#153f2e] p-8 text-white shadow-[0_24px_70px_rgba(20,55,40,0.18)] sm:p-10 lg:p-14'>
+        <StatusPill tone='neutral'>Moderation inbox</StatusPill>
+        <h1 className='mt-7 text-4xl font-bold leading-tight tracking-tight sm:text-5xl'>
+          Review pending community submissions.
+        </h1>
+        <p className='mt-5 max-w-2xl text-base leading-7 text-[#d5e0da] sm:text-lg'>
+          This view is available only to approved community moderators and space administrators.
+        </p>
+        <p className='mt-4 text-sm text-[#d5e0da]'>{memberEmail}</p>
+      </section>
 
-        {query.decision === 'success' && (
-          <div className='mt-6 rounded-[18px] border border-[#2f7355]/20 bg-[#eaf4ee] px-5 py-4 text-sm font-semibold text-[#24543f]'>
-            The moderation decision was recorded.
-          </div>
-        )}
-        {query.decision === 'error' && (
-          <div className='mt-6 rounded-[18px] border border-[#9c5c4f]/20 bg-[#f8ece8] px-5 py-4 text-sm font-semibold text-[#78463d]'>
-            The moderation decision could not be completed.
-          </div>
-        )}
+      {query.decision === 'success' ? (
+        <div className='rounded-[18px] border border-[#2f7355]/20 bg-[#eaf4ee] px-5 py-4 text-sm font-semibold text-[#24543f]'>
+          Moderation decision recorded.
+        </div>
+      ) : null}
+      {query.decision === 'error' ? (
+        <div className='rounded-[18px] border border-[#9c5c4f]/20 bg-[#f8ece8] px-5 py-4 text-sm font-semibold text-[#78463d]'>
+          The moderation decision could not be recorded.
+        </div>
+      ) : null}
 
-        {groups.length > 0 ? (
-          <div className='mt-12 space-y-12'>
-            {groups.map((group) => (
-              <section key={`${group.name}:${group.slug ?? ''}`}>
-                <div className='flex flex-wrap items-end justify-between gap-4'>
-                  <div>
-                    <p className='text-xs font-bold uppercase tracking-[0.2em] text-[#8a7450]'>
-                      Community space
-                    </p>
-                    <h2 className='mt-2 text-3xl font-bold text-[#153f2e]'>{group.name}</h2>
-                  </div>
-                  <StatusPill tone='neutral'>{group.items.length} pending</StatusPill>
-                </div>
-                <div className='mt-7 grid gap-6 lg:grid-cols-2'>
-                  {group.items.map((item) => (
-                    <ModerationItemCard item={item} key={`${item.kind}:${item.id}`} />
-                  ))}
-                </div>
-              </section>
-            ))}
-          </div>
-        ) : (
-          <section className='mt-12 rounded-[24px] border border-dashed border-[#153f2e]/20 bg-[#f4f1e9] p-8 text-[#64736c]'>
-            No pending submissions currently require review.
+      {groups.length > 0 ? (
+        groups.map((group) => (
+          <section key={group.name} className='space-y-5'>
+            <div>
+              <h2 className='text-2xl font-bold tracking-tight text-[#153f2e]'>{group.name}</h2>
+              {group.slug ? (
+                <Link className='mt-2 inline-flex text-sm font-bold text-[#6c5a36] hover:text-[#153f2e]' href={`/portal/community/${group.slug}`}>
+                  Open space
+                </Link>
+              ) : null}
+            </div>
+            <div className='grid gap-5 lg:grid-cols-2'>
+              {group.items.map((item) => (
+                <ModerationItemCard item={item} key={`${item.kind}:${item.id}`} />
+              ))}
+            </div>
           </section>
-        )}
-      </main>
-    </PortalShell>
+        ))
+      ) : (
+        <section className='rounded-[24px] border border-dashed border-[#153f2e]/20 bg-[#f4f1e9] p-8 text-[#64736c]'>
+          No pending community moderation items are waiting for review.
+        </section>
+      )}
+    </div>
   )
 }

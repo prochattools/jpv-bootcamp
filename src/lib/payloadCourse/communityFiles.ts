@@ -347,7 +347,7 @@ function buildMemberCommunityFile(
     byteSize,
     spaceId: String(space.id),
     spaceName: asString(space.name) ?? 'Community space',
-    downloadUrl: `/learn/community/files/${String(file.id)}`,
+    downloadUrl: `/portal/community/files/${encodeURIComponent(String(file.id))}`,
   }
 }
 
@@ -579,7 +579,7 @@ async function buildMemberCommunityAttachmentProjection(
         filename,
         mimeType,
         byteSize,
-        downloadUrl: `/learn/community/files/${String(file.id)}`,
+        downloadUrl: `/portal/community/files/${encodeURIComponent(String(file.id))}`,
         ...(attachmentType === 'image' && altText ? { altText } : {}),
       }
     } catch {

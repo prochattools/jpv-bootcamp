@@ -191,7 +191,7 @@ function buildResourceProjection(resource: PayloadDocument, media: PayloadDocume
     id: String(resource.id),
     title: asString(resource.title) ?? 'Lesson resource',
     description: asString(resource.description),
-    downloadUrl: `/learn/resources/${resource.id}`,
+    downloadUrl: `/portal/resources/${encodeURIComponent(String(resource.id))}`,
     fileName: getMediaFileName(media),
     fileSize: getMediaFileSize(media),
     mimeType: getMediaMimeType(media),

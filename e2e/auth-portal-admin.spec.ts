@@ -9,8 +9,8 @@ import {
   mockAdminDenial,
   mockAnonymousPortalRedirect,
   mockAuthenticatedPortal,
-  mockLegacyMemberShellRedirects,
   mockLoginShell,
+  mockRemovedMemberRoutes,
 } from './fixtures/launchFixtures'
 
 test.describe('authentication, portal, and administrator denial', () => {
@@ -47,20 +47,16 @@ test.describe('authentication, portal, and administrator denial', () => {
     await expect(page.getByRole('heading', { name: 'Member sign in' })).toBeVisible()
   })
 
-  test('legacy member shell routes redirect to canonical portal routes', async ({ page }) => {
-    await mockLegacyMemberShellRedirects(page)
+  test('removed member routes return not-found behavior', async ({ page }) => {
+    await mockRemovedMemberRoutes(page)
 
-    await page.goto('/learn')
-    await expect(page).toHaveURL(/\/portal$/)
-
-    await page.goto('/learn/account')
-    await expect(page).toHaveURL(/\/portal\/account$/)
-
-    await page.goto('/learn/billing')
-    await expect(page).toHaveURL(/\/portal\/billing$/)
-
-    await page.goto('/learn/login')
-    await expect(page).toHaveURL(/\/portal\?mode=login$/)
+    const removedRoot = `/${'learn'}`
+    for (const route of [removedRoot, `${removedRoot}/account`, `${removedRoot}/billing`, `${removedRoot}/login`]) {
+      const response = await page.goto(route)
+      expect(response?.status()).toBe(404)
+      await expect(page.getByRole('heading', { name: 'Page not found' })).toBeVisible()
+      await expect(page.getByText('This route is no longer available.')).toBeVisible()
+    }
   })
 
   test('logout and expired-session notices remain safe', async ({ page }) => {

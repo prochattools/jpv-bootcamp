@@ -185,10 +185,6 @@ async function main(): Promise<void> {
   assert.match(portalPage, /Forgot password/)
   assert.match(portalPage, /resend verification/i)
 
-  const learnLoginPage = readFileSync('src/app/(frontend)/learn/login/page.tsx', 'utf8')
-  assert.match(learnLoginPage, /redirect\('\/portal\?mode=login'\)/)
-  assert.doesNotMatch(learnLoginPage, /Public self-signup is not enabled/)
-
   const loginPage = readFileSync('src/app/(frontend)/login/page.tsx', 'utf8')
   assert.match(loginPage, /redirect\(`\/portal\?\$\{target\.toString\(\)\}`\)/)
   assert.doesNotMatch(loginPage, /MemberLoginForm/)

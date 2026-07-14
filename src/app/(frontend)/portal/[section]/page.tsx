@@ -15,8 +15,8 @@ import { getBillingStatus } from '@/lib/billing/billingStatusHelper'
 import { requestMembershipCancellation } from '@/lib/actions/requestMembershipCancellation'
 import { resolvePortalBillingPresentation } from '@/lib/portal/portalBillingPresentation'
 
-import { EmailChangeForm } from '../../learn/EmailChangeForm'
-import { PasswordChangeForm } from '../../learn/PasswordChangeForm'
+import { EmailChangeForm } from '@/components/member/EmailChangeForm'
+import { PasswordChangeForm } from '@/components/member/PasswordChangeForm'
 
 const sectionContent = {
   community: {
