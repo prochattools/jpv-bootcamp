@@ -707,7 +707,7 @@ export default function HomePage() {
                 <button
                   type="submit"
                   disabled={isSupportSending}
-                  className={`inline-flex items-center justify-center rounded-full bg-jpv-green px-6 py-3 text-sm font-semibold text-black shadow-jpv-glow transition hover:bg-jpv-green-hover ${isSupportSending ? "cursor-not-allowed opacity-70 hover:bg-jpv-green" : ""
+                  className={`inline-flex items-center justify-center rounded-full bg-jpv-green px-6 py-3 text-sm font-semibold text-black shadow-jpv-glow transition hover:bg-jpv-green-hover ${isSupportSending ? "cursor-not-allowed hover:bg-jpv-green" : ""
                     }`}
                 >
                   {isSupportSending ? "Sending..." : "Submit"}
