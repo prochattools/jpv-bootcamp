@@ -76,6 +76,11 @@ function main(): void {
   assert.match(previewReadiness, /pnpm staging:migration-preflight/)
   assert.match(previewReadiness, /pnpm staging:smoke-plan/)
   assert.match(previewReadiness, /pnpm release:evidence:dry-run/)
+  assert.match(previewReadiness, /PROGRAMME_CONTENT_INTAKE_TEMPLATE\.md/)
+  assert.match(previewReadiness, /PROGRAMME_CONTENT_APPROVAL_RECORD\.md/)
+  assert.match(previewReadiness, /content:programme:validate/)
+  assert.match(previewReadiness, /content:programme:acceptance/)
+  assert.match(previewReadiness, /content:programme:import-plan/)
   assert.match(previewReadiness, /2 moderate/)
   assert.doesNotMatch(previewReadiness, /READY FOR PRODUCTION|production-ready|go-live complete/i)
 
@@ -92,6 +97,11 @@ function main(): void {
   assert.match(operatorHandoff, /pnpm staging:migration-preflight/)
   assert.match(operatorHandoff, /pnpm staging:smoke-plan/)
   assert.match(operatorHandoff, /pnpm release:evidence:dry-run/)
+  assert.match(operatorHandoff, /PROGRAMME_CONTENT_INTAKE_TEMPLATE\.md/)
+  assert.match(operatorHandoff, /PROGRAMME_CONTENT_APPROVAL_RECORD\.md/)
+  assert.match(operatorHandoff, /content:programme:validate/)
+  assert.match(operatorHandoff, /content:programme:acceptance/)
+  assert.match(operatorHandoff, /content:programme:import-plan/)
 
   console.log('core_go_live_readiness.test.ts passed')
 }

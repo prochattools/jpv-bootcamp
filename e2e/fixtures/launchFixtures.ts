@@ -44,6 +44,13 @@ export function portalPageHtml(section: 'home' | 'billing-checkout' | 'billing-a
   )
 }
 
+export function programmePreviewHtml(): string {
+  return html(
+    'Programme preview',
+    `<header><nav aria-label="Member navigation"><a href="/portal">Portal</a><a href="/portal/programme">Programme</a><a href="/portal/billing">Billing</a><a href="/portal/community">Community</a></nav></header><main><h1>8-Week Programme</h1><p>Representative content preview only. No approved programme package is loaded in runtime.</p><div class="notice">Preview only. This page must not imply client-approved content or publication readiness.</div><section><h2>Current state</h2><p>Programme content remains blocked pending approved intake, validation, acceptance, and approval evidence.</p></section><section><h2>Membership</h2><a href="/portal/billing">View Pro membership</a></section></main>`,
+  )
+}
+
 export function loginPageHtml(loggedOut = false): string {
   return html(
     'Member sign in',
@@ -178,6 +185,7 @@ function portalCoursesHtml(section: 'index' | 'detail' | 'lesson' | 'community' 
 
 export async function mockAuthenticatedPortalRoutes(page: Page): Promise<void> {
   const routes = new Map<string, string>([
+    ['/portal/programme', programmePreviewHtml()],
     ['/portal/courses', portalCoursesHtml('index')],
     ['/portal/courses/foundations', portalCoursesHtml('detail')],
     ['/portal/courses/foundations/lessons/principles', portalCoursesHtml('lesson')],

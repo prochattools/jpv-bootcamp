@@ -11,6 +11,22 @@ test.describe('canonical portal courses and community routes', () => {
   const removedRoot = `/${'learn'}`
   const removedHrefSelector = `a[href*="${removedRoot}"]`
 
+  test('programme preview remains explicit and non-publishable', async ({ page }) => {
+    await mockAuthenticatedPortalRoutes(page)
+
+    await page.goto('/portal/programme')
+    await expect(page.getByRole('heading', { name: '8-Week Programme' })).toBeVisible()
+    await expect(
+      page.getByText(/preview only\. this page must not imply client-approved content or publication readiness\./i),
+    ).toBeVisible()
+    await expect(page.getByText(/no approved programme package is loaded in runtime/i)).toBeVisible()
+    await expect(page.getByRole('link', { name: 'View Pro membership' })).toHaveAttribute('href', '/portal/billing')
+    await expect(page.locator('a[href="/upgrade"]')).toHaveCount(0)
+    await expect(page.locator(removedHrefSelector)).toHaveCount(0)
+    await assertNoHorizontalOverflow(page)
+    await assertNoSeriousAccessibilityViolations(page)
+  })
+
   test('course index, detail, and lesson surfaces use portal ownership only', async ({ page }) => {
     await mockAuthenticatedPortalRoutes(page)
 
