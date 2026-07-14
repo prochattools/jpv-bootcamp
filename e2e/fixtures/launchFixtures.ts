@@ -135,6 +135,7 @@ function portalCoursesHtml(section: 'index' | 'detail' | 'lesson' | 'community' 
       <header><nav aria-label="Member navigation"><a href="/portal/courses">Courses</a><a href="/portal/community">Community</a></nav></header>
       <main>
         <h1>Your JPV Bootcamp community spaces appear according to your member access.</h1>
+        <section><h2>Launch preview</h2><p>Visible spaces and approved discussions are shown from persisted Payload data.</p></section>
         <section><h2>Community resources</h2><a href="/portal/community/files/file_private_visible">Download file</a></section>
         <section><h2>Latest updates</h2><a href="/portal/community/private-space">Open announcement space</a></section>
         <section><h2>My spaces</h2><a href="/portal/community/private-space">Open space</a></section>
@@ -144,7 +145,7 @@ function portalCoursesHtml(section: 'index' | 'detail' | 'lesson' | 'community' 
       <main>
         <a href="/portal/community">Back to community</a>
         <h1>Private Space</h1>
-        <section><h2>Create a post</h2><form><label>Title<input type="text" /></label><label>Post<textarea></textarea></label><button type="button">Submit for review</button></form></section>
+        <section><h2>Read-only member view</h2><p>Visible spaces and approved discussions are shown from persisted Payload data. Member posting, replies, uploads, and moderation actions remain deferred outside this launch preview.</p></section>
         <section><h2>Visible posts</h2><a href="/portal/community/private-space/posts/post_visible">Open discussion</a></section>
       </main>`,
     post: `
@@ -153,7 +154,7 @@ function portalCoursesHtml(section: 'index' | 'detail' | 'lesson' | 'community' 
         <a href="/portal/community/private-space">Back to Private Space</a>
         <h1>Visible discussion</h1>
         <section><h2>Visible attachments</h2><a href="/portal/community/files/file_document_visible">Download</a></section>
-        <section><h2>Add a comment</h2><textarea></textarea><button type="button">Submit reply for review</button></section>
+        <section><h2>Read-only discussion view</h2><p>Visible discussions and published comments appear here from persisted Payload data. Member replies, uploads, and moderation actions remain deferred outside this launch preview.</p></section>
         <section><h2>Visible comments</h2><p>First comment</p></section>
       </main>`,
     moderation: `

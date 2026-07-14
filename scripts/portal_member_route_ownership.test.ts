@@ -78,10 +78,12 @@ function testProtectedFileRoutesAreCanonical(): void {
 
 function testPortalLayoutOwnsMemberNavigation(): void {
   const layout = source(FILES.portalLayout)
+  assert.match(layout, /\/portal\/programme/)
   assert.match(layout, /\/portal\/courses/)
   assert.match(layout, /\/portal\/community/)
   assert.match(layout, /\/portal\/account/)
   assert.match(layout, /\/portal\/billing/)
+  assert.doesNotMatch(layout, /\/portal\/groups/)
   assert.doesNotMatch(layout, removedNamespacePattern)
 }
 

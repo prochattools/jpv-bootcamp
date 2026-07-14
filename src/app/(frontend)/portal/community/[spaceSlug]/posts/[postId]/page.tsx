@@ -7,8 +7,6 @@ import { requirePortalMember } from '@/lib/auth/requirePortalMember'
 import { getMemberCommunityPostDetail } from '@/lib/payloadCourse/communityDiscussion'
 import type { MemberCommunityAttachmentResolution } from '@/lib/payloadCourse/communityFiles'
 
-import { submitCommunityComment } from '../../../actions'
-
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
@@ -68,7 +66,6 @@ export default async function PortalCommunityPostPage({ params, searchParams }: 
   if (!result.allowed) notFound()
 
   const post = result.post
-  const submitComment = submitCommunityComment.bind(null, spaceSlug, postId)
 
   return (
     <div className='mx-auto max-w-4xl space-y-10'>
@@ -120,41 +117,23 @@ export default async function PortalCommunityPostPage({ params, searchParams }: 
 
       {query.submission === 'pending' && (
         <div className='rounded-[18px] border border-[#2f7355]/20 bg-[#eaf4ee] px-5 py-4 text-sm font-semibold text-[#24543f]'>
-          Your reply was submitted for review. It will appear after approval.
+          Community replies are not enabled in this launch preview.
         </div>
       )}
       {query.submission === 'error' && (
         <div className='rounded-[18px] border border-[#9c5c4f]/20 bg-[#f8ece8] px-5 py-4 text-sm font-semibold text-[#78463d]'>
-          The reply could not be submitted. Review the form and try again later.
+          Community replies are not enabled in this launch preview.
         </div>
       )}
 
-      {post.canComment && (
-        <section className='rounded-[24px] border border-[#153f2e]/10 bg-white p-7 shadow-[0_14px_35px_rgba(31,52,43,0.07)] sm:p-8'>
-          <p className='text-xs font-bold uppercase tracking-[0.2em] text-[#8a7450]'>Moderated reply</p>
-          <h2 className='mt-2 text-2xl font-bold text-[#153f2e]'>Add a comment</h2>
-          <p className='mt-3 max-w-2xl text-sm leading-6 text-[#68766f]'>
-            Replies enter review before becoming visible to other members.
-          </p>
-          <form action={submitComment} className='mt-6 space-y-5'>
-            <label className='block'>
-              <span className='text-sm font-bold text-[#153f2e]'>Reply</span>
-              <textarea
-                className='mt-2 min-h-36 w-full rounded-[14px] border border-[#153f2e]/15 px-4 py-3 text-[#24372f] outline-none transition focus:border-[#8a7450]'
-                maxLength={10000}
-                name='body'
-                required
-              />
-            </label>
-            <button
-              className='rounded-full bg-[#153f2e] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#0f3023]'
-              type='submit'
-            >
-              Submit reply for review
-            </button>
-          </form>
-        </section>
-      )}
+      <section className='rounded-[24px] border border-[#153f2e]/10 bg-white p-7 shadow-[0_14px_35px_rgba(31,52,43,0.07)] sm:p-8'>
+        <p className='text-xs font-bold uppercase tracking-[0.2em] text-[#8a7450]'>Launch preview</p>
+        <h2 className='mt-2 text-2xl font-bold text-[#153f2e]'>Read-only discussion view</h2>
+        <p className='mt-3 max-w-2xl text-sm leading-6 text-[#68766f]'>
+          Visible discussions and published comments appear here from persisted Payload data. Member replies,
+          uploads, and moderation actions remain deferred outside this launch preview.
+        </p>
+      </section>
 
       <section>
         <div className='flex flex-wrap items-end justify-between gap-4'>
@@ -162,9 +141,7 @@ export default async function PortalCommunityPostPage({ params, searchParams }: 
             <p className='text-xs font-bold uppercase tracking-[0.2em] text-[#8a7450]'>Discussion</p>
             <h2 className='mt-2 text-3xl font-bold tracking-tight text-[#153f2e]'>Visible comments</h2>
           </div>
-          <StatusPill tone={post.canComment ? 'good' : 'neutral'}>
-            {post.canComment ? 'Moderator replies enabled' : 'Read only'}
-          </StatusPill>
+          <StatusPill tone='neutral'>Read only</StatusPill>
         </div>
 
         <div className='mt-7 space-y-5'>

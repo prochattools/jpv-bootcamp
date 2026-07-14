@@ -625,10 +625,11 @@ function testPageActionAndPostingSources(): void {
     spacePage,
     /href=\{`\/portal\/community\/\$\{encodedSpaceSlug\}\/posts\/\$\{encodeURIComponent\(post\.id\)\}`\}/
   )
-  assert.match(spacePage, /detail\.membership\?\.status === 'active'/)
-  assert.match(spacePage, /name='title'/)
-  assert.match(spacePage, /name='body'/)
-  assert.doesNotMatch(spacePage, /name=['"](?:memberId|author|role|status|visibility|moderationStatus|rateLimit|audit)/)
+  assert.match(spacePage, /Read-only member view/)
+  assert.match(spacePage, /persisted Payload data/)
+  assert.doesNotMatch(spacePage, /submitCommunityPost/)
+  assert.doesNotMatch(spacePage, /Create a post/)
+  assert.doesNotMatch(spacePage, /name=['"](?:title|body|memberId|author|role|status|visibility|moderationStatus|rateLimit|audit)/)
 
   const postPage = fs.readFileSync(
     path.resolve(
@@ -637,9 +638,11 @@ function testPageActionAndPostingSources(): void {
     ),
     'utf8'
   )
-  assert.match(postPage, /post\.canComment &&/)
-  assert.match(postPage, /name='body'/)
-  assert.doesNotMatch(postPage, /name=['"](?:memberId|author|role|status|visibility|moderationStatus|rateLimit|audit)/)
+  assert.match(postPage, /Read-only discussion view/)
+  assert.match(postPage, /StatusPill tone='neutral'>Read only/)
+  assert.doesNotMatch(postPage, /submitCommunityComment/)
+  assert.doesNotMatch(postPage, /Add a comment/)
+  assert.doesNotMatch(postPage, /name=['"](?:body|memberId|author|role|status|visibility|moderationStatus|rateLimit|audit)/)
 
   const actions = fs.readFileSync(
     path.resolve(process.cwd(), 'src/app/(frontend)/portal/community/actions.ts'),
@@ -652,7 +655,6 @@ function testPageActionAndPostingSources(): void {
     actions,
     /formData\.get\(['"](?:memberId|author|role|status|visibility|moderationStatus|rateLimit|audit)/
   )
-  const postCatch = actions.indexOf('export async function submitCommunityPost')
   assert.match(actions, /redirect\(`\$\{destination\}\?submission=pending`\)/)
 
   const posting = fs.readFileSync(
