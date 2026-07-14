@@ -1,6 +1,6 @@
 # JPV Bootcamp Architecture
 
-This document describes the target Payload-only Version 3.3 system.
+This document describes the target Payload-only Version 3.5 system. Current implementation status and hardening order are tracked in `docs/PAYLOAD_INTEGRATION_PLAN.md`; static preview routes do not count as operational architecture until their persistence, authorization, failure handling, and tests pass.
 
 ## Canonical Access Model
 
@@ -14,7 +14,7 @@ This document describes the target Payload-only Version 3.3 system.
 | Surface | Owner | Purpose |
 | --- | --- | --- |
 | Public site | Next.js | Landing page, registration, checkout entry, course preview |
-| Member portal | Next.js + Payload | Member account, course access, billing handoff |
+| Member portal | Next.js + Payload | Canonical `/portal` account, course, community, partner, support, and billing experience |
 | Admin CMS | Payload | Course, member, access, community, and operational content |
 | Billing | Stripe + Next.js routes | Pro checkout, subscription webhooks, billing portal sessions |
 | Email | Resend | Membership, support, sponsored-access, and admin notifications |
@@ -26,7 +26,7 @@ This document describes the target Payload-only Version 3.3 system.
 2. Checkout supports `plan=pro` with `billing=monthly` or `billing=annual` where applicable.
 3. Stripe webhooks verify signatures, record idempotency, project membership state locally, and send configured emails.
 4. Billing portal handoff remains separate from checkout and returns to the app-owned portal billing page.
-5. Removed upgrade routes must stay disabled during the Free/Pro refit.
+5. The public Pro membership page may remain at `/upgrade`, but member billing ownership stays under `/portal/billing` and no legacy paid-plan aliases may return.
 
 ## Access Projection
 

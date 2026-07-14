@@ -2,7 +2,7 @@
 
 Procedure for future agents and operators who update roadmap progress and related status docs for `feature/course-branding-and-preview`.
 
-Version 3.4 is the current client-plan progress update. Version 3.3 remains the prior baseline and the current client truth should be tracked in `docs/client/JPV_BOOTCAMP_GO_LIVE_PLAN_V3_4_SUMMARY.md`.
+Version 3.5 is the current client go-live plan. Version 3.4 is the prior progress baseline. Current truth is `docs/client/JPV_Bootcamp_Platform_Expansion_Go_Live_Plan_v3_5.docx`; audit evidence is `docs/V3_5_CODEBASE_ALIGNMENT_ASSESSMENT.md`.
 
 ## Purpose
 
@@ -20,7 +20,7 @@ Before updating any status text:
 6. Verify the latest recorded operator evidence or handoff note is still current.
 7. Run `pnpm toolchain:check` before `pnpm staging:static-preflight` if your local pnpm version is not already pinned to `pnpm@10.33.0`.
 
-Latest verified branch tip before this procedure was written: `4a8f79b chore: guard against committed draft evidence`.
+Historical audit baseline for roadmap percentages: `236227c fix: require portal auth for member content`.
 
 Do not treat this document's commit reference as approval to run migrations. Always verify the branch tip directly before operator action.
 
@@ -33,6 +33,8 @@ Do not treat this document's commit reference as approval to run migrations. Alw
 5. Never mark migration readiness as execution-ready until target-environment approval and rehearsal evidence exist.
 6. Never mark live cutover complete until migrations, staging smoke, provider/email verification, and content checks are actually complete.
 7. Keep blocker language explicit when approval, rehearsal, or operator evidence is still pending.
+8. Count a workflow as operational only when persistence, authorization, failure behavior, focused tests, and required runtime evidence exist. A route, static model, or source file alone is not completion evidence.
+9. Do not raise testing/release readiness from test-file count. Record which suite runs the test, whether build/browser checks exist, and whether operator evidence is complete.
 
 ## Required cross-link checks
 
@@ -48,7 +50,9 @@ Before publishing a status update, verify these links are present and correct:
 - `docs/client/STAGING_SMOKE_EVIDENCE_TEMPLATE.md`
 - `docs/client/PROVIDER_EMAIL_READINESS.md`
 - `docs/client/PROVIDER_EMAIL_EVIDENCE_TEMPLATE.md`
-- `docs/client/JPV_BOOTCAMP_GO_LIVE_PLAN_V3_4_SUMMARY.md`
+- `docs/client/JPV_Bootcamp_Platform_Expansion_Go_Live_Plan_v3_5.docx`
+- `docs/V3_5_CODEBASE_ALIGNMENT_ASSESSMENT.md`
+- `docs/client/JPV_BOOTCAMP_GO_LIVE_PLAN_V3_4_SUMMARY.md` (prior baseline only)
 - `docs/client/FRONTEND_COPY_APPROVAL_PACKET.md`
 - `docs/client/CLIENT_CONTENT_REQUEST_15_JULY.md`
 - `docs/client/FRONTEND_CONTENT_STATUS_TRACKER.md`
@@ -108,7 +112,7 @@ Run the focused static docs tests that cover the current handoff and evidence se
 
 ## Recommended update pattern
 
-When the status changes, update the roadmap and the operator handoff together so the numbers, blockers, and next executable task match. Keep the front-end website milestone visible: 15 July 2026 client content/input due, 22 July 2026 front-end website go-live, 23 July 2026 handover buffer, 24 July 2026 finished-by date. The 22 July milestone does not authorize migration execution.
+When status changes, update the roadmap and operator handoff together so the numbers, blockers, and next task match. Keep the 15/22/23/24 July dates visible, but mark the 22 July milestone conditional while any P0 hardening or public-acceptance blocker remains. The milestone does not authorize migration execution.
 
 Use wording that stays valid after future documentation-only commits:
 

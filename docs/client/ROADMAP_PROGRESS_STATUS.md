@@ -1,6 +1,6 @@
 # JPV Bootcamp - Roadmap Progress Status
 
-Current status for `feature/course-branding-and-preview`, using the 10 July 2026 audit at `236227c fix: require portal auth for member content` as the historical baseline and `af6de62 docs: record core go-live readiness` as the current local staging-operations baseline.
+Current status for `feature/course-branding-and-preview`, using the 10 July 2026 audit at `236227c fix: require portal auth for member content` as the historical baseline and `af6de62 docs: record core go-live readiness` as the last validated readiness baseline.
 
 Current client truth: `docs/client/JPV_Bootcamp_Platform_Expansion_Go_Live_Plan_v3_5.docx`. Version 3.4 is the prior progress baseline. Canonical execution plan: `docs/PAYLOAD_INTEGRATION_PLAN.md`. Detailed audit evidence: `docs/V3_5_CODEBASE_ALIGNMENT_ASSESSMENT.md`.
 
@@ -25,7 +25,7 @@ Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`.
 | Branch | `feature/course-branding-and-preview` |
 | Staging target | This feature branch is the staging / production-staged deployment branch |
 | Historical audit baseline | `236227c fix: require portal auth for member content` |
-| Current local staging-operations baseline | `af6de62 docs: record core go-live readiness` |
+| Last validated readiness baseline | `af6de62 docs: record core go-live readiness` |
 | PR / review | `https://github.com/prochattools/jpv-bootcamp/pull/2` |
 | Migrations applied | None |
 | Migration approval | Blocked pending table-plan-to-Free, account-column rename, path, backup, rollback, and owner approval |

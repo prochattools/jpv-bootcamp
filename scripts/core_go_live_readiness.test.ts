@@ -85,7 +85,7 @@ function main(): void {
   assert.match(roadmap, /M1-01 through M1-06/)
   assert.match(roadmap, /M2-01.*deferred post-core/i)
 
-  assert.match(operatorHandoff, /Current local readiness baseline before this staging-operations packet: `af6de62 docs: record core go-live readiness`/)
+  assert.match(operatorHandoff, /Last validated readiness baseline: `af6de62 docs: record core go-live readiness`/)
   assert.match(operatorHandoff, /Deterministic non-browser release gate: `pnpm test:release` \(`120\/120`\)/)
   assert.match(operatorHandoff, /Launch browser E2E: `pnpm test:e2e` \(`56\/56`\)/)
   assert.match(operatorHandoff, /M2-01.*deferred post-core/i)

@@ -25,7 +25,7 @@ Static preflight automation is available via `pnpm staging:static-preflight`; it
 
 ## Current repository-owned readiness snapshot
 
-Readiness baseline before this staging-operations packet: `af6de62 docs: record core go-live readiness`
+Last validated readiness baseline: `af6de62 docs: record core go-live readiness`
 
 **Outcome:** `NOT READY FOR CONTROLLED STAGING RELEASE PROCESS`
 

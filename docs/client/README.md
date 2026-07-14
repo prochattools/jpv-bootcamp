@@ -4,11 +4,11 @@ This folder tracks client-facing documents so internal roadmap documentation sta
 
 ## Current client truth
 
-**JPV Bootcamp Platform Expansion & Go-Live Plan v3.4** is the current client-plan progress update. Version 3.3 remains the prior baseline for comparison.
+**JPV Bootcamp Platform Expansion & Go-Live Plan v3.5** is the current client go-live plan. Version 3.4 is the prior progress baseline.
 
 It supersedes the older Version 2.40 plan for product scope, terminology, progress framing, and launch expectations.
 
-Version 3.4 milestone markers remain explicit: the front-end website go-live milestone is 22 July 2026, the internal delivery / handover buffer is 23 July 2026, the client-requested finished-by date is 24 July 2026, and client content/input is due Wednesday 15 July 2026. Those dates do not authorize migration execution.
+Version 3.5 keeps the front-end website milestone at 22 July 2026, the internal delivery / handover buffer at 23 July 2026, the client-requested finished-by date at 24 July 2026, and client content/input due Wednesday 15 July 2026. The 22 July milestone is conditional on P0 hardening and public acceptance. None of these dates authorizes migration execution.
 
 No migrations have been applied.
 
@@ -17,9 +17,11 @@ Local toolchain is pinned to `pnpm@10.33.0`; run `pnpm toolchain:check` before o
 
 ## Review packet
 
-- [Payload-only Free/Pro Review Packet](./PAYLOAD_ONLY_FREE_PRO_REVIEW_PACKET.md) — commit-readiness summary for the current Payload-only Free/Pro refit.
-- [JPV Bootcamp Go-Live Plan v3.4 Summary](./JPV_BOOTCAMP_GO_LIVE_PLAN_V3_4_SUMMARY.md) — current client-plan update, timeline, and milestone summary (readable Markdown version).
-- [JPV Bootcamp Platform Expansion Go-Live Plan v3.4 (DOCX)](./JPV_Bootcamp_Platform_Expansion_Go_Live_Plan_v3_4.docx) — client-facing binary artifact document.
+- [JPV Bootcamp Platform Expansion Go-Live Plan v3.5 (DOCX)](./JPV_Bootcamp_Platform_Expansion_Go_Live_Plan_v3_5.docx) — current client-facing plan, status, timeline, and launch gates.
+- [Roadmap/code alignment assessment](../V3_5_CODEBASE_ALIGNMENT_ASSESSMENT.md) — internal audit evidence, hardening backlog, and GPT-5.4-mini execution contract.
+- [Payload-only Free/Pro Review Packet](./PAYLOAD_ONLY_FREE_PRO_REVIEW_PACKET.md) — historical commit-readiness summary for the Free/Pro refit.
+- [JPV Bootcamp Go-Live Plan v3.4 Summary](./JPV_BOOTCAMP_GO_LIVE_PLAN_V3_4_SUMMARY.md) — prior progress baseline.
+- [JPV Bootcamp Platform Expansion Go-Live Plan v3.4 (DOCX)](./JPV_Bootcamp_Platform_Expansion_Go_Live_Plan_v3_4.docx) — prior client-facing baseline artifact.
 - [Roadmap Progress Status](./ROADMAP_PROGRESS_STATUS.md) — current position, progress table, validation evidence, remaining risks, and next executable tasks.
 - [Migration Approval Packet](./MIGRATION_APPROVAL_PACKET.md) — approval-focused summary for the pending migration decision and execution boundary.
 - [Migration Approval Status](./MIGRATION_APPROVAL_STATUS.md) — current blocked/approved state for future agents and operators.
@@ -79,5 +81,7 @@ Before a client or internal roadmap update is considered clean:
 - support/pay-it-forward is controlled Free access, not a third tier;
 - removed paid-tier and external-integration language does not appear in active docs, source, scripts, schema, or public copy, except where a data-preserving rename migration must reference old database column names;
 - public launch page, billing automation, representative 8-week course, partner tracking, community previews, data reconciliation, and go-live approval are represented;
+- static prototypes are not counted as operational deliverables until persistence, authorization, error handling, and tests pass;
+- P0 hardening is complete before new feature work is promoted into the launch scope;
 - post-core work is clearly separated from first core go-live work.
 - staging smoke, migration approval, approval status, migration rehearsal, operator handoff, evidence review, staging/provider evidence templates, provider/email readiness, and roadmap documents stay linked from this index and the review packet.

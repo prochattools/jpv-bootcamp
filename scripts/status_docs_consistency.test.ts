@@ -80,7 +80,7 @@ async function main(): Promise<void> {
   assert.match(docs.roadmap, /client content.*by 15 July/i)
   assert.match(docs.roadmap, /Provider\/email acceptance \| Pending operator verification \|/)
   assert.match(docs.roadmap, /Local browser validation passed; staging smoke pending/)
-  assert.match(docs.roadmap, /historical baseline and `af6de62 docs: record core go-live readiness` as the current local staging-operations baseline/)
+  assert.match(docs.roadmap, /historical baseline and `af6de62 docs: record core go-live readiness` as the last validated readiness baseline/)
   assert.match(docs.roadmap, /Core go-live implementation and deterministic local validation are complete/i)
   assert.match(docs.roadmap, /not ready for the controlled staging release process/i)
   assert.match(docs.roadmap, /M0-01 through M0-09/)
@@ -92,7 +92,7 @@ async function main(): Promise<void> {
   assert.match(docs.roadmap, /Repository inventory now includes deterministic release-manifest coverage and Playwright launch browser E2E\./)
 
   assert.match(docs.operatorHandoff, /Version 3\.5 current client go-live plan; Version 3\.4 is the prior progress baseline/)
-  assert.match(docs.operatorHandoff, /Current local readiness baseline before this staging-operations packet: `af6de62 docs: record core go-live readiness`/)
+  assert.match(docs.operatorHandoff, /Last validated readiness baseline: `af6de62 docs: record core go-live readiness`/)
   assert.match(docs.operatorHandoff, /Front-end website go-live milestone: 22 July 2026/)
   assert.match(docs.operatorHandoff, /Branch tip verification: verify the current tip with `git log --oneline -1` before operator action/)
   assert.match(docs.operatorHandoff, /Status update procedure: `docs\/client\/STATUS_UPDATE_PROCEDURE\.md`/)

@@ -6,7 +6,7 @@
 - Version 3.5 current client go-live plan; Version 3.4 is the prior progress baseline
 - Version 3.5 client plan: `docs/client/JPV_Bootcamp_Platform_Expansion_Go_Live_Plan_v3_5.docx`
 - Codebase alignment assessment: `docs/V3_5_CODEBASE_ALIGNMENT_ASSESSMENT.md`
-- Current local readiness baseline before this staging-operations packet: `af6de62 docs: record core go-live readiness`
+- Last validated readiness baseline: `af6de62 docs: record core go-live readiness`
 - Branch tip verification: verify the current tip with `git log --oneline -1` before operator action
 - PR / review URL: `https://github.com/prochattools/jpv-bootcamp/pull/2`
 - Migrations applied: `No`
