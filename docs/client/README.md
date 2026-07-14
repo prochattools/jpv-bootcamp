@@ -4,11 +4,11 @@ This folder tracks client-facing documents so internal roadmap documentation sta
 
 ## Current client truth
 
-**JPV Bootcamp Platform Expansion & Go-Live Plan v3.5** is the current client go-live plan. Version 3.4 is the prior progress baseline.
+**JPV Bootcamp Platform Expansion & Go-Live Plan v3.6** is the current client go-live plan. Version 3.4 is the prior progress baseline.
 
 It supersedes the older Version 2.40 plan for product scope, terminology, progress framing, and launch expectations.
 
-Version 3.5 keeps the front-end website milestone at 22 July 2026, the internal delivery / handover buffer at 23 July 2026, the client-requested finished-by date at 24 July 2026, and client content/input due Wednesday 15 July 2026. The 22 July milestone is conditional on P0 hardening and public acceptance. None of these dates authorizes migration execution.
+Version 3.6 keeps the front-end website milestone at 22 July 2026, the internal delivery / handover buffer at 23 July 2026, the client-requested finished-by date at 24 July 2026, and client content/input due Wednesday 15 July 2026. The 22 July milestone is conditional on P0 hardening and public acceptance. None of these dates authorizes migration execution.
 
 No migrations have been applied.
 
@@ -17,7 +17,7 @@ Local toolchain is pinned to `pnpm@10.33.0`; run `pnpm toolchain:check` before o
 
 ## Review packet
 
-- [JPV Bootcamp Platform Expansion Go-Live Plan v3.5 (DOCX)](./JPV_Bootcamp_Platform_Expansion_Go_Live_Plan_v3_5.docx) — current client-facing plan, status, timeline, and launch gates.
+- [JPV Bootcamp Platform Expansion Go-Live Plan v3.6 (DOCX)](./JPV_Bootcamp_Platform_Expansion_Go_Live_Plan_v3_6.docx) — current client-facing plan, status, timeline, and launch gates.
 - [Roadmap/code alignment assessment](../V3_5_CODEBASE_ALIGNMENT_ASSESSMENT.md) — internal audit evidence, hardening backlog, and GPT-5.4-mini execution contract.
 - [Payload-only Free/Pro Review Packet](./PAYLOAD_ONLY_FREE_PRO_REVIEW_PACKET.md) — historical commit-readiness summary for the Free/Pro refit.
 - [JPV Bootcamp Go-Live Plan v3.4 Summary](./JPV_BOOTCAMP_GO_LIVE_PLAN_V3_4_SUMMARY.md) — prior progress baseline.

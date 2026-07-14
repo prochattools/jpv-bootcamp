@@ -1,14 +1,14 @@
 # JPV Bootcamp - Roadmap Progress Status
 
-Current status for `feature/course-branding-and-preview`, using the 10 July 2026 audit at `236227c fix: require portal auth for member content` as the historical baseline and `af6de62 docs: record core go-live readiness` as the last validated readiness baseline.
+Current status for `feature/course-branding-and-preview`, using the 10 July 2026 audit at `236227c fix: require portal auth for member content` as the historical baseline, `af6de62 docs: record core go-live readiness` as the previous readiness baseline, and `d55229f test: enforce programme content readiness` as the current validated baseline.
 
-Current client truth: `docs/client/JPV_Bootcamp_Platform_Expansion_Go_Live_Plan_v3_5.docx`. Version 3.4 is the prior progress baseline. Canonical execution plan: `docs/PAYLOAD_INTEGRATION_PLAN.md`. Detailed audit evidence: `docs/V3_5_CODEBASE_ALIGNMENT_ASSESSMENT.md`.
+Current client truth: `docs/client/JPV_Bootcamp_Platform_Expansion_Go_Live_Plan_v3_6.docx`. Version 3.4 is the prior progress baseline. Canonical execution plan: `docs/PAYLOAD_INTEGRATION_PLAN.md`. Detailed audit evidence: `docs/V3_5_CODEBASE_ALIGNMENT_ASSESSMENT.md`.
 
 Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`.
 
 ## Current position
 
-**Position:** Core go-live implementation and deterministic local validation are complete. The repository is now ready for controlled staging operations documentation and preflight, but the branch is still **not ready for the controlled staging release process** because representative 8-week programme content remains unapproved, the support-request migration remains unapplied, provider/email verification and staging smoke remain unexecuted, and the formal go/no-go decision has not happened.
+**Position:** Core go-live implementation and deterministic local validation are complete. The repository is ready to accept programme content and ready for controlled staging operations documentation and preflight, but the branch is still **not ready for the controlled staging release process** because representative 8-week programme content remains unapproved, the support-request migration remains unapplied, provider/email verification and staging smoke remain unexecuted, and the formal go/no-go decision has not happened.
 
 **Next task:** Execute the controlled staging release process prerequisites using the repository-owned contracts: content approval, migration approval and rehearsal confirmation, provider/email verification, staging smoke evidence, and formal go/no-go review. `M2-01` remains deferred post-core unless explicitly promoted.
 
@@ -25,7 +25,8 @@ Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`.
 | Branch | `feature/course-branding-and-preview` |
 | Staging target | This feature branch is the staging / production-staged deployment branch |
 | Historical audit baseline | `236227c fix: require portal auth for member content` |
-| Last validated readiness baseline | `af6de62 docs: record core go-live readiness` |
+| Previous readiness baseline | `af6de62 docs: record core go-live readiness` |
+| Current validated readiness baseline | `d55229f test: enforce programme content readiness` |
 | PR / review | `https://github.com/prochattools/jpv-bootcamp/pull/2` |
 | Migrations applied | None |
 | Migration approval | Blocked pending table-plan-to-Free, account-column rename, path, backup, rollback, and owner approval |
@@ -55,7 +56,7 @@ These figures are the 10 July audited baseline, not the final current-state gate
 | Pro checkout | Monthly/annual checkout, projection, and local browser validation implemented | Provider smoke, staging verification, and go/no-go approval pass |
 | Controlled Free access | Durable support intake, review state, and notification queue behavior implemented; migration remains unapplied | Approved migration path is executed and staging/provider verification passes |
 | Member portal | Canonical `/portal` routes, account/billing parity, auth protection, and removed-member blocking are implemented and locally validated | Staging acceptance confirms the portal journeys and no live blocker remains |
-| 8-week course | Portal programme remains explicit placeholder preview; Payload-backed courses and lessons exist | Representative approved programme content is accepted and staging smoke confirms access behavior |
+| 8-week course | Portal programme remains explicit placeholder preview; Payload-backed courses and lessons exist; repository intake and acceptance tooling is ready | Representative approved programme content is supplied, accepted, imported through the approved path, and staging smoke confirms access behavior |
 | Community preview | Canonical portal uses persisted read-only member views; interactive posting/replies remain deferred | Private-room/community preview acceptance is recorded without promoting deferred interactions |
 | Partner referral | Preview-only boundary remains intentional and locally guarded | Business scope explicitly promotes persistence or leaves preview-only status accepted |
 | Admin operations | Payload dashboard and protected review routes are implemented and locally validated | Staging/admin acceptance confirms the operator surface and protected paths |
@@ -68,6 +69,7 @@ The launch-scoped implementation packets now completed on this branch are:
 - M0-01 through M0-09
 - M1-01 through M1-06
 - `M1-06` completed in state **B**: programme remains preview-only because approved representative content is still missing; community remains persisted read-only preview; deferred interactive community behavior is not promoted.
+- Programme-content acceptance and release-candidate preparation is complete at repository level; no client content was invented or approved by the repository.
 
 `M2-01` remains post-core and must not be promoted implicitly.
 
@@ -111,8 +113,9 @@ These assets make the repository ready for controlled staging operations without
 ## Test and security evidence
 
 - `git diff --check` passed.
-- `pnpm test:release` passed `120/120`.
-- `pnpm test:e2e` passed `56/56`.
+- `pnpm test:release` passed `121/121`.
+- `pnpm test:e2e` passed `58/58` across desktop and mobile Chromium projects.
+- Programme contract, path-safety, import-plan, readiness, acceptance-report, and preview-only browser checks passed.
 - `pnpm test:release:full` passed.
 - `pnpm staging:static-preflight` passed.
 - `pnpm staging:migration-preflight` passed.

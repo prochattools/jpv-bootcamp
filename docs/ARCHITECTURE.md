@@ -1,6 +1,6 @@
 # JPV Bootcamp Architecture
 
-This document describes the target Payload-only Version 3.5 system. Current implementation status and hardening order are tracked in `docs/PAYLOAD_INTEGRATION_PLAN.md`; static preview routes do not count as operational architecture until their persistence, authorization, failure handling, and tests pass.
+This document describes the target Payload-only Version 3.6 system. Current implementation status and hardening order are tracked in `docs/PAYLOAD_INTEGRATION_PLAN.md`; static preview routes do not count as operational architecture until their persistence, authorization, failure handling, and tests pass.
 
 ## Canonical Access Model
 

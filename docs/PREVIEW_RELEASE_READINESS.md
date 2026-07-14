@@ -11,7 +11,7 @@ Verify the exact branch tip with `git log --oneline -1` before operator action.
 No migrations have been applied.
 Do not touch `main`.
 
-Version 3.5 client plan: `docs/client/JPV_Bootcamp_Platform_Expansion_Go_Live_Plan_v3_5.docx`
+Version 3.6 client plan: `docs/client/JPV_Bootcamp_Platform_Expansion_Go_Live_Plan_v3_6.docx`
 Version 3.5 codebase audit: `docs/V3_5_CODEBASE_ALIGNMENT_ASSESSMENT.md`
 Front-end website go-live milestone: 22 July 2026
 Client content/input due: Wednesday 15 July 2026
@@ -25,7 +25,7 @@ Static preflight automation is available via `pnpm staging:static-preflight`; it
 
 ## Current repository-owned readiness snapshot
 
-Last validated readiness baseline: `af6de62 docs: record core go-live readiness`
+Current validated readiness baseline: `d55229f test: enforce programme content readiness`
 
 **Outcome:** `NOT READY FOR CONTROLLED STAGING RELEASE PROCESS`
 
@@ -39,12 +39,13 @@ Last validated readiness baseline: `af6de62 docs: record core go-live readiness`
   - `/portal/programme` remains an explicit preview because approved representative programme content is still missing.
   - `/portal/community` and discussion views use persisted read-only member views.
   - interactive community posting, replies, uploads, and moderation actions remain deferred.
+- The programme-content acceptance and release-candidate packet is complete: the repository-owned contract, client intake template, non-publishable fixture, validation, acceptance-report, import-plan, approval-record, release-manifest, and preview guards are present and tested.
 - M2-01 remains post-core and is not promoted by this packet.
 
 ### Deterministic local validation baseline
 
-- `pnpm test:release` passed `120/120`
-- `pnpm test:e2e` passed `56/56`
+- `pnpm test:release` passed `121/121`
+- `pnpm test:e2e` passed `58/58` across desktop and mobile Chromium projects
 - `pnpm test:release:full` passed
 - `pnpm staging:static-preflight` passed
 - `pnpm staging:migration-preflight` passed
@@ -106,7 +107,7 @@ These assets are repository-ready only. They do not mark migration applied, prov
 - support-request migration remains unapplied;
 - table-plan-to-Free mapping approval remains pending;
 - account-column rename approval remains pending;
-- representative programme content is still blocked until a complete approved package passes the repository intake, acceptance, and import-plan checks;
+- representative programme content is still blocked until the client supplies a complete approved package and it passes the repository intake, acceptance, and import-plan checks; the repository is ready to accept that package;
 - provider/email verification is still pending;
 - staging smoke is still pending;
 - formal go/no-go is still pending.

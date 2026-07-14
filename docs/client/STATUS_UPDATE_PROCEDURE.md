@@ -2,7 +2,7 @@
 
 Procedure for future agents and operators who update roadmap progress and related status docs for `feature/course-branding-and-preview`.
 
-Version 3.5 is the current client go-live plan. Version 3.4 is the prior progress baseline. Current truth is `docs/client/JPV_Bootcamp_Platform_Expansion_Go_Live_Plan_v3_5.docx`; audit evidence is `docs/V3_5_CODEBASE_ALIGNMENT_ASSESSMENT.md`.
+Version 3.6 is the current client go-live plan. Version 3.4 is the prior progress baseline. Current truth is `docs/client/JPV_Bootcamp_Platform_Expansion_Go_Live_Plan_v3_6.docx`; audit evidence is `docs/V3_5_CODEBASE_ALIGNMENT_ASSESSMENT.md`.
 
 ## Purpose
 
@@ -50,7 +50,7 @@ Before publishing a status update, verify these links are present and correct:
 - `docs/client/STAGING_SMOKE_EVIDENCE_TEMPLATE.md`
 - `docs/client/PROVIDER_EMAIL_READINESS.md`
 - `docs/client/PROVIDER_EMAIL_EVIDENCE_TEMPLATE.md`
-- `docs/client/JPV_Bootcamp_Platform_Expansion_Go_Live_Plan_v3_5.docx`
+- `docs/client/JPV_Bootcamp_Platform_Expansion_Go_Live_Plan_v3_6.docx`
 - `docs/V3_5_CODEBASE_ALIGNMENT_ASSESSMENT.md`
 - `docs/client/JPV_BOOTCAMP_GO_LIVE_PLAN_V3_4_SUMMARY.md` (prior baseline only)
 - `docs/client/FRONTEND_COPY_APPROVAL_PACKET.md`

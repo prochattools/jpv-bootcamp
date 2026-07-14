@@ -11,7 +11,7 @@ This is the single canonical product, architecture, security, roadmap, and execu
    - `docs/PAYLOAD_PARTNER_AFFILIATE_PLAN.md` — detailed Partner Affiliates specification for Phase 9.
    - `docs/LIVEKIT_PAYLOADCMS_GROUP_CALLS_PLAN.md` — future group-call use cases, LiveKit runtime architecture, PayloadCMS collections and authorization boundary, security, privacy, and acceptance gates for Phase 11.
 3. **Visual reference.** `docs/PAYLOAD_COURSE_VISUAL_IMPLEMENTATION_PLAN.md` illustrates screens and workflows but does not replace this plan.
-4. **Client truth document.** `docs/client/JPV_Bootcamp_Platform_Expansion_Go_Live_Plan_v3_5.docx` is the current client go-live plan. Version 3.4 is the prior progress baseline. It supersedes older progress framing and must stay aligned with this internal plan.
+4. **Client truth document.** `docs/client/JPV_Bootcamp_Platform_Expansion_Go_Live_Plan_v3_6.docx` is the current client go-live plan. Version 3.4 is the prior progress baseline. It supersedes older progress framing and must stay aligned with this internal plan.
 5. **Client document inventory.** `docs/client/README.md` records which client-facing document is current and which older documents are historical.
 6. **Platform invariants and operations.** `docs/PROKIT_OVERVIEW.md`, `docs/PROKIT_INVARIANTS.md`, and infrastructure documents define stable operational contracts.
 
@@ -37,9 +37,9 @@ Do not create another general Payload roadmap. New work must first be added here
 - Treat historical data only as reviewed import material that maps into neutral account, Free access, Pro subscription, expired, revoked, suspended, or administrator-review states.
 - Keep the public offer simple: Free for approved non-paid access and Pro for the single paid subscription.
 
-## Version 3.5 platform direction and terminology
+## Version 3.6 platform direction and terminology
 
-Version 3.4 remains the prior progress baseline, but the current client plan is Version 3.5. The finish line is a phased commercial platform launch with public offer clarity, billing automation, support/pay-it-forward access, public landing-page readiness, representative 8-week course content, partner tracking, community previews, migration rehearsal, and go-live controls.
+Version 3.4 remains the prior progress baseline, but the current client plan is Version 3.6. The finish line is a phased commercial platform launch with public offer clarity, billing automation, support/pay-it-forward access, public landing-page readiness, representative 8-week course content, partner tracking, community previews, migration rehearsal, and go-live controls.
 
 Canonical product terminology:
 
@@ -122,7 +122,9 @@ Do not touch `main`.
 - Account-action tokens are purpose-bound, digest-only, expiring, single-use, and consumed through the reviewed atomic SQL helpers.
 - Release automation separates ordinary branch validation from image publication, migration authorization, provider authorization, deployment authorization, and smoke verification.
 
-### Confirmed incomplete or contradictory surfaces
+### Confirmed incomplete or contradictory surfaces in the 10 July audit
+
+The findings below are the historical audit snapshot at `236227c`. Later M0/M1 packets and the programme-content readiness packet closed several of these implementation and testing gaps; current status is maintained in `docs/PREVIEW_RELEASE_READINESS.md` and `docs/client/ROADMAP_PROGRESS_STATUS.md`.
 
 - `/admin/review/**` is a static operator prototype without an administrator-authentication check and must be protected or removed before public release.
 - `/tos` and `/privacy-policy` still contain unrelated starter-product content and are indexed by the sitemap; canonical JPV `/terms` and `/privacy` pages already exist.
@@ -483,12 +485,28 @@ Validation:
 
 ## Overall delivery status — 10 July 2026 (Version 3.5 audit)
 
-The roadmap retains the eleven product phases but places the Version 3.5 hardening gate before unfinished feature work. Audited readiness is approximately **68% for the expanded platform**, **82% for core staging/code**, **86% for build foundation**, **76% for testing/release**, **55% for migration**, and **20% for live cutover**. These figures distinguish static prototypes from operational workflows and accepted runtime evidence. See `docs/client/ROADMAP_PROGRESS_STATUS.md` for the current status and `docs/V3_5_CODEBASE_ALIGNMENT_ASSESSMENT.md` for findings.
+The roadmap retains the eleven product phases but places the historical Version 3.5 hardening gate before unfinished feature work. Audited readiness is approximately **68% for the expanded platform**, **82% for core staging/code**, **86% for build foundation**, **76% for testing/release**, **55% for migration**, and **20% for live cutover**. These figures distinguish static prototypes from operational workflows and accepted runtime evidence. See `docs/client/ROADMAP_PROGRESS_STATUS.md` for the current status and `docs/V3_5_CODEBASE_ALIGNMENT_ASSESSMENT.md` for findings.
 
 - **Carried-forward strong foundations:** Payload administration, shared login, account security, entitlement evaluation, billing projection, protected resources, migration controls, and staging-evidence tooling.
 - **Core go-live scope:** public landing page, Free/Pro terminology refit, Pro checkout options, billing automation/recovery, representative 8-week course pilot, support/pay-it-forward access controls, migration rehearsal, rollback, and explicit go-live approval. The public front-end website milestone is 22 July 2026, the handover buffer is 23 July 2026, and the client-requested finished-by date is 24 July 2026.
 - **Controlled follow-up releases:** richer partner reporting/delivery, community/private-room refinements, notifications/digests, private messaging if accepted, and later LiveKit group calls.
 - **Primary remaining work:** close P0 security/public-copy/billing/submission/dependency blockers; consolidate the member route tree; add complete release and browser tests; complete public copy/content by 15 July; run representative course/storage acceptance; verify partner/community workflows; rehearse migration and rollback; and approve cutover.
+
+## Current milestone verification — 14 July 2026
+
+The current validated repository baseline is `d55229f test: enforce programme content readiness`. M0-01 through M0-09 and M1-01 through M1-06 are implemented; M1-06 remains in state B, with `/portal/programme` explicitly preview-only and community interaction still deferred. The follow-up programme-content acceptance and release-candidate packet is complete at repository level.
+
+The repository is **READY TO ACCEPT PROGRAMME CONTENT**, not ready to publish it. The canonical contract, client intake template, non-publishable example fixture, validation command, acceptance report, import plan, approval record, release-manifest coverage, focused tests, and preview-only browser guard are present. No client programme content was invented or approved.
+
+Verified local evidence at this baseline:
+
+- `pnpm test:release` passed `121/121`;
+- `pnpm test:e2e` passed `58/58` across desktop and mobile Chromium projects;
+- `pnpm test:release:full` and `pnpm staging:static-preflight` remain required repeatable gates at the exact operator tip;
+- TypeScript, production build, both Prisma schema validations, and the production high-severity audit gate passed;
+- no migration, deployment, provider, or push action occurred.
+
+The next controlled work is to collect the client package, run `content:programme:validate`, `content:programme:acceptance`, and `content:programme:import-plan`, record approval evidence, then complete the independent migration, provider/email, staging-smoke, rollback, and go/no-go gates. M2-01 remains post-core unless explicitly promoted.
 
 ## Communication scope summary
 
@@ -525,9 +543,9 @@ A phase is complete only when:
 
 ## Immediate milestone
 
-Close the Version 3.5 P0 hardening gate before production cutover: protect operator surfaces, remove reachable template/legal residue, make Stripe behavior match the 12-month commitment, stop prototype forms from claiming persistence, harden public write endpoints, and resolve high dependency advisories. Then consolidate `/portal`, run the complete release/browser matrix, complete public copy/content by Wednesday 15 July 2026, and obtain evidence. The front-end website milestone is 22 July 2026, the handover buffer is 23 July 2026, and the client-requested finished-by date is 24 July 2026. Those dates do not authorize migration execution. Full platform cutover remains conditional on migration approval, rehearsal, rollback evidence, provider/email verification, staging smoke, and explicit go-live approval.
+The M0/M1 hardening, canonical portal alignment, release/browser matrix, and programme-content acceptance packet are complete at repository level. The next milestone is to collect the client package due by 15 July 2026, run the canonical validation, acceptance-report, and import-plan commands, record approval evidence, and complete the independent staging, provider/email, migration, rehearsal, rollback, and go/no-go gates. The front-end website milestone is 22 July 2026, the handover buffer is 23 July 2026, and the client-requested finished-by date is 24 July 2026. Those dates do not authorize migration execution. Full platform cutover remains conditional on migration approval, rehearsal, rollback evidence, provider/email verification, staging smoke, and explicit go-live approval.
 
-The next implementation task is M0-01 under H0-01 in `docs/V3_5_CODEBASE_ALIGNMENT_ASSESSMENT.md`. No live operation or migration is authorized by this plan.
+The next controlled task is the approved programme-content intake and release-candidate evidence sequence described above. No live operation or migration is authorized by this plan.
 
 ## Definition of done
 

@@ -7,6 +7,8 @@ Migration state: no migrations applied
 
 This is an audit record, not a second roadmap. Execution order and completion state remain canonical in `docs/PAYLOAD_INTEGRATION_PLAN.md` and `docs/client/ROADMAP_PROGRESS_STATUS.md`.
 
+The findings and percentages below are the 10 July historical snapshot. The current validated baseline is `d55229f test: enforce programme content readiness`; consult the canonical plan and preview-readiness runbook for later M0/M1 completion, programme-content acceptance tooling, and current release evidence.
+
 ## Assessment outcome
 
 The core Payload, member-authentication, entitlement, billing-projection, migration-safety, and operator-evidence foundations are substantial. The repository is not yet release-ready, however. Several recent MVP additions are static or client-only prototypes, public copy over-promises unfinished behavior, public legacy template routes remain reachable, and the release test gate does not exercise the whole product.

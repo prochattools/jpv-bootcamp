@@ -3,10 +3,10 @@
 ## Current state
 
 - Branch: `feature/course-branding-and-preview`
-- Version 3.5 current client go-live plan; Version 3.4 is the prior progress baseline
-- Version 3.5 client plan: `docs/client/JPV_Bootcamp_Platform_Expansion_Go_Live_Plan_v3_5.docx`
+- Version 3.6 current client go-live plan; Version 3.4 is the prior progress baseline
+- Version 3.6 client plan: `docs/client/JPV_Bootcamp_Platform_Expansion_Go_Live_Plan_v3_6.docx`
 - Codebase alignment assessment: `docs/V3_5_CODEBASE_ALIGNMENT_ASSESSMENT.md`
-- Last validated readiness baseline: `af6de62 docs: record core go-live readiness`
+- Current validated readiness baseline: `d55229f test: enforce programme content readiness`
 - Branch tip verification: verify the current tip with `git log --oneline -1` before operator action
 - PR / review URL: `https://github.com/prochattools/jpv-bootcamp/pull/2`
 - Migrations applied: `No`
@@ -35,12 +35,13 @@
 - Payload-only Free/Pro refit
 - M0-01 through M0-09 implementation
 - M1-01 through M1-06 implementation
+- Programme-content acceptance and release-candidate tooling: canonical contract, client intake template, non-publishable fixture, validation, acceptance report, import plan, approval record, release-manifest coverage, and preview guards
 - Legacy WordPress, Fluent, VIP, exhibitor, and removed member namespace active path removal
 - Pro-only checkout hardening with monthly and annual billing options
 - Support/pay-it-forward controlled Free semantics and durable support intake
 - Canonical `/portal` member portal ownership
-- Deterministic non-browser release gate: `pnpm test:release` (`120/120`)
-- Launch browser E2E: `pnpm test:e2e` (`56/56`)
+- Deterministic non-browser release gate: `pnpm test:release` (`121/121`)
+- Launch browser E2E: `pnpm test:e2e` (`58/58`, desktop and mobile Chromium)
 - Combined release/browser gate: `pnpm test:release:full`
 - Static preflight, root TypeScript, production build, both Prisma validations, and production high-severity audit gate
 - Repository-owned staging operations contract
@@ -66,7 +67,7 @@
 ## What is blocked
 
 - Representative 8-week programme content approval or explicit placeholder acceptance
-- Canonical programme content package intake, validation, acceptance report, import plan, and approval record must be completed before the representative programme can leave preview-only state
+- The repository-owned programme content intake, validation, acceptance report, import plan, and approval record are complete; the client package and approval evidence are still required before the representative programme can leave preview-only state
 - Final public-copy and front-end content approval
 - Support-request migration remains unapplied pending the normal release migration process
 - Table-plan-to-Free target-environment approval

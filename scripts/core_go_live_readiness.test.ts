@@ -68,8 +68,8 @@ function main(): void {
 
   assert.match(previewReadiness, /NOT READY FOR CONTROLLED STAGING RELEASE PROCESS/)
   assert.match(previewReadiness, /M2-01.*post-core/i)
-  assert.match(previewReadiness, /pnpm test:release.*120\/120/i)
-  assert.match(previewReadiness, /pnpm test:e2e.*56\/56/i)
+  assert.match(previewReadiness, /pnpm test:release.*121\/121/i)
+  assert.match(previewReadiness, /pnpm test:e2e.*58\/58/i)
   assert.match(previewReadiness, /pnpm test:release:full/)
   assert.match(previewReadiness, /pnpm staging:static-preflight/)
   assert.match(previewReadiness, /REPOSITORY READY FOR CONTROLLED STAGING OPERATIONS/)
@@ -90,9 +90,9 @@ function main(): void {
   assert.match(roadmap, /M1-01 through M1-06/)
   assert.match(roadmap, /M2-01.*deferred post-core/i)
 
-  assert.match(operatorHandoff, /Last validated readiness baseline: `af6de62 docs: record core go-live readiness`/)
-  assert.match(operatorHandoff, /Deterministic non-browser release gate: `pnpm test:release` \(`120\/120`\)/)
-  assert.match(operatorHandoff, /Launch browser E2E: `pnpm test:e2e` \(`56\/56`\)/)
+  assert.match(operatorHandoff, /Current validated readiness baseline: `d55229f test: enforce programme content readiness`/)
+  assert.match(operatorHandoff, /Deterministic non-browser release gate: `pnpm test:release` \(`121\/121`\)/)
+  assert.match(operatorHandoff, /Launch browser E2E: `pnpm test:e2e` \(`58\/58`, desktop and mobile Chromium\)/)
   assert.match(operatorHandoff, /M2-01.*deferred post-core/i)
   assert.match(operatorHandoff, /pnpm staging:migration-preflight/)
   assert.match(operatorHandoff, /pnpm staging:smoke-plan/)
