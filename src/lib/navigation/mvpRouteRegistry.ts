@@ -71,9 +71,9 @@ const ROUTES: MvpRoute[] = [
   },
   {
     id: 'upgrade',
-    label: 'Pro Membership',
+    label: 'Pro membership page',
     href: '/upgrade',
-    summary: 'Pro membership pricing: £80/month or £880/year. Full course access, mentorship, and community.',
+    summary: 'Public Pro membership page for pricing and checkout entry. Member billing ownership stays under /portal/billing.',
     group: 'billing_membership',
     status: 'preview',
     access: 'public',

@@ -84,8 +84,8 @@ const SECTIONS: AdminReviewSection[] = [
   {
     slug: 'membership-billing',
     title: 'Membership & Billing',
-    summary: 'Pro membership page and billing readiness links configured.',
-    description: 'Pro membership upgrade page at /upgrade with monthly (£80) and annual (£880) options. Billing readiness report present. No live subscription or payment processing is active in preview.',
+    summary: 'Public Pro membership page and member billing ownership are configured.',
+    description: 'The public Pro membership page at /upgrade presents monthly (£80) and annual (£880) options. Canonical member billing remains under /portal/billing. Billing readiness reporting is present, but no live subscription or payment processing is active in preview.',
     status: 'preview',
     ownerLabel: 'MVP owner',
     href: '/upgrade',

@@ -24,7 +24,7 @@ export default async function Blog() {
 				
 				<div className='text-center py-12'>
 					<p className='text-gray-600 dark:text-gray-400'>
-						Blog posts coming soon! In the meantime, check out our landing page features.
+						Articles are outside the current launch scope. Use the main site and member portal for current JPV Bootcamp information.
 					</p>
 				</div>
 			</div>
