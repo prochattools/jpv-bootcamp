@@ -11,7 +11,7 @@ This is the single canonical product, architecture, security, roadmap, and execu
    - `docs/PAYLOAD_PARTNER_AFFILIATE_PLAN.md` — detailed Partner Affiliates specification for Phase 9.
    - `docs/LIVEKIT_PAYLOADCMS_GROUP_CALLS_PLAN.md` — future group-call use cases, LiveKit runtime architecture, PayloadCMS collections and authorization boundary, security, privacy, and acceptance gates for Phase 11.
 3. **Visual reference.** `docs/PAYLOAD_COURSE_VISUAL_IMPLEMENTATION_PLAN.md` illustrates screens and workflows but does not replace this plan.
-4. **Client truth document.** `docs/client/JPV_BOOTCAMP_GO_LIVE_PLAN_V3_4_SUMMARY.md` is the current client-plan progress summary. Version 3.3 remains the prior baseline. It supersedes the older Version 2.40 progress framing and must stay aligned with this internal plan.
+4. **Client truth document.** `docs/client/JPV_Bootcamp_Platform_Expansion_Go_Live_Plan_v3_5.docx` is the current client go-live plan. Version 3.4 is the prior progress baseline. It supersedes older progress framing and must stay aligned with this internal plan.
 5. **Client document inventory.** `docs/client/README.md` records which client-facing document is current and which older documents are historical.
 6. **Platform invariants and operations.** `docs/PROKIT_OVERVIEW.md`, `docs/PROKIT_INVARIANTS.md`, and infrastructure documents define stable operational contracts.
 
@@ -37,9 +37,9 @@ Do not create another general Payload roadmap. New work must first be added here
 - Treat historical data only as reviewed import material that maps into neutral account, Free access, Pro subscription, expired, revoked, suspended, or administrator-review states.
 - Keep the public offer simple: Free for approved non-paid access and Pro for the single paid subscription.
 
-## Version 3.4 platform direction and terminology
+## Version 3.5 platform direction and terminology
 
-Version 3.3 remains the historical baseline, but the current client-plan update is Version 3.4. The finish line is no longer only a minimal course-area replacement. It is a phased commercial platform launch with public offer clarity, billing automation, support/pay-it-forward access, public landing-page readiness, representative 8-week course content, partner tracking, community previews, migration rehearsal, and go-live controls.
+Version 3.4 remains the prior progress baseline, but the current client plan is Version 3.5. The finish line is a phased commercial platform launch with public offer clarity, billing automation, support/pay-it-forward access, public landing-page readiness, representative 8-week course content, partner tracking, community previews, migration rehearsal, and go-live controls.
 
 Canonical product terminology:
 
@@ -47,7 +47,7 @@ Canonical product terminology:
 - **Pro** — the single paid JPV Bootcamp subscription. Public copy should describe Pro with two payment options: monthly with a 12-month commitment, and annual upfront with the approved annual discount.
 - **Historical tiers** — old paid and non-paid labels are migration inputs only. They must be mapped into Free, Pro, expired, revoked, suspended, or administrator-approved access states before cutover.
 
-The v3.3 readiness baseline (set at start of branch): expanded-platform readiness was about 58% overall, first core go-live readiness about 62%, carried-forward build foundation readiness about 78%, and expanded launch readiness about 52%. After the Payload-only Free/Pro refit and status-documentation hardening completed on 8 July 2026, current estimates are: expanded-platform ~73%, core staging readiness ~97%, build foundation ~89%, testing/release readiness ~94%, migration readiness ~55%, live cutover readiness ~20%. See `docs/client/ROADMAP_PROGRESS_STATUS.md` for full delta evidence. Older v2.40 progress numbers may be cited only as historical context for the narrower scope.
+The 10 July Version 3.5 codebase audit rebaselines current readiness after separating source presence, static prototypes, operational workflows, and accepted runtime evidence: expanded platform ~68%, core staging/code ~82%, build foundation ~86%, testing/release ~76%, migration ~55%, and live cutover ~20%. The lower figures are a measurement correction, not a code regression. See `docs/client/ROADMAP_PROGRESS_STATUS.md` and `docs/V3_5_CODEBASE_ALIGNMENT_ASSESSMENT.md` for evidence.
 
 ## Final architecture
 
@@ -56,7 +56,7 @@ The v3.3 readiness baseline (set at start of branch): expanded-platform readines
 | Public website | `/` | Everyone | Marketing, pricing, public content, and member portal entry |
 | Administrator back office | `/admin` | Verified administrators | Content, members, access, billing, community, affiliates, audit, operations, and health triage |
 | Member/student portal | `/portal` | Verified members and students | The single member-facing entry point for sign-in, Free access, Pro subscription, courses, community, account, billing, and partner activity |
-| Compatibility redirects | `/login`, `/learn/login`, `/register` | Existing links and tests | Preserve older links but direct users toward the simpler `/portal` member flow |
+| Compatibility redirects | `/login`, `/register` | Existing links and tests | Preserve older links but direct users toward the simpler `/portal` member flow |
 
 Administrator accounts and member identities are separate security domains, even when one person holds both. Members never receive administrator access merely because they have an active member record. The product rule is intentionally simple: humans see two sign-in doors only — `/admin` for operators and `/portal` for students/members. Supporting routes may exist for compatibility, but new navigation should point members to `/portal`.
 
@@ -68,7 +68,7 @@ Admin dashboard cards should therefore show decision-oriented signals first: pla
 
 ### Member authentication and Free/Pro access contract
 
-`/admin` is the only administrator login. `/portal` is the canonical member/student entry point and must support sign in, forgot password, resend-verification paths, Free access where approved, and Pro subscription self-service. `/portal?mode=login` renders the member sign-in surface without tripping the portal auth gate. `/register` and `/portal?mode=register` are compatibility routes for Free access creation or support/pay-it-forward intake only where the business rule explicitly allows it; they must not present competing paid tiers. `/login` and `/learn/login` are transitional shared/member routes only; preferred behavior is to redirect or link into `/portal?mode=login`.
+`/admin` is the only administrator login. `/portal` is the canonical member/student entry point and must support sign in, forgot password, resend-verification paths, Free access where approved, and Pro subscription self-service. `/portal?mode=login` renders the member sign-in surface without tripping the portal auth gate. `/register` and `/portal?mode=register` are compatibility routes for Free access creation or support/pay-it-forward intake only where the business rule explicitly allows it; they must not present competing paid tiers. `/login` is the only remaining member-login compatibility route, and it should redirect or link into `/portal?mode=login`.
 
 Public paid access is **Pro** only. Pro must have two payment options: monthly with a 12-month commitment, and annual upfront with the approved annual discount. Free remains a controlled access state for approved support, pay-it-forward, staff/test, or administrator-created access. Registration or support intake creates a pending member and requires email verification before sign-in. Successful copy must clearly state whether the account is pending Free access, awaiting support review, or ready to upgrade to Pro. Duplicate-account copy must guide the user to sign in or resend verification without ambiguous eligible-account language.
 
@@ -92,124 +92,88 @@ The `jpvbootcamp_staging` schema may be repaired, reconciled, or reset for stagi
 8. FreeResend delivery events are verified before changing message delivery state.
 9. Production schema and traffic changes require explicit approval.
 
-## Current implementation status — 8 July 2026 (Version 3.4 update)
+## Current implementation status — 10 July 2026 (Version 3.5 audit)
 
 Current operator branch: `feature/course-branding-and-preview`.
 Verify the exact branch tip with `git log --oneline -1` before operator action.
 No migrations have been applied.
 Do not touch `main`.
 
-### Implemented and manually demonstrated
+### Implemented foundations
 
-- Preview deployment runs from `feature/course-branding-and-preview`.
+- The staging target runs from `feature/course-branding-and-preview`.
 - Payload administrator area is available at `/admin`.
 - Administrator navigation is grouped by Administration, Courses, Members & Access, Partners & Affiliates, Billing, and Community.
 - Administrator and member records are separate.
-- Course, lesson, entitlement, progress, community-read, billing-mirror, affiliate-reporting, and protected-resource foundations exist.
+- Course, lesson, entitlement, progress, community, billing-mirror, affiliate-reporting, partner, and protected-resource foundations exist.
 - Protected files are served through guarded server routes.
 - Runtime database-schema isolation was repaired for staging migrations.
 - Normal application requests no longer auto-run reviewed Payload migrations.
 
-### Implemented account-security foundation
+### Implemented security and release foundations
 
-- Shared role decision and safe redirect rules exist.
-- Member portal pages exist at `/portal` and related routes.
+- Shared role decision, same-origin helpers, bounded account-action inputs, and safe redirect rules exist.
+- Member portal pages, protected resource delivery, and community file delivery now live under `/portal`.
 - Member records and account status exist.
 - Affiliate collections and administrator summaries exist.
 - JPV administrator branding components exist in source.
 - Queued Payload email events, system templates, Resend-compatible delivery, and account-action-token services exist for member account-security mail.
 - Member email verification, invitation, set-password, forgot-password, reset-password, password-change confirmation, pending email change, email-change confirmation, blocked-account notice, and restored-account notice are implemented in source and wired to the normal application routes and services.
 - Account-action tokens are purpose-bound, digest-only, expiring, single-use, and consumed through the reviewed atomic SQL helpers.
-- Preview release automation separates ordinary branch validation from image publication, migration authorization, provider authorization, deployment authorization, and smoke verification.
+- Release automation separates ordinary branch validation from image publication, migration authorization, provider authorization, deployment authorization, and smoke verification.
 
-### Remaining validation or rollout boundaries
+### Confirmed incomplete or contradictory surfaces
 
-- Ordinary member credential flows now use JPV-branded login, set-password, forgot-password, reset-password, account, and email-change surfaces.
-- Invitation, verification, set-password, reset-password, password-change confirmation, email-change confirmation, email-changed notices, blocked notices, and restored notices queue through `payload_email_events`.
-- Member logout, blocked/suspended states, recovery journeys, queued delivery, account-security audit, route safety, migration source, sender behavior, type-check, and production build have automated local validation.
-- Preview runtime verification is still pending until the target preview environment is confirmed, a recoverable preview database backup or snapshot is verified, the required Payload migrations are applied, the feature-branch commit or immutable image is deployed, and one controlled real-provider verification email/token flow succeeds.
-- Required Payload migrations must be applied in this exact order:
-  1. `20260701_201500_member_email_verification`
-  2. `20260702_001500_member_account_action_purposes`
-- Real-provider acceptance remains pending until preview provider credentials, sender identity, controlled test recipient, deployment access, and preview database ownership/backup evidence are available to the approved operator.
-- 2 July 2026 Codex stop point: Phase 6 account-security email implementation, local validation, branch push, and feature-branch GitHub validation completed. Preview migration, deployment, and real-provider verification remain blocked.
-- 3 July 2026 Haiku stop point — Phase 7, Phases 2-4 completed:
-  - Billing portal identity now server-derived (security hardened);
-  - Sensitive logs removed (member IDs, customer IDs, session IDs);
-  - Subscription projection fields added to schema (not executed);
-  - Subscription sync now persists state to CustomerProvisioning;
-  - Billing summary UI added (shows plan, status, renewal date, cancellation);
-  - Type-check and build validated;
-  - Next slice: billing communications, payment failure handling, cutover validation.
-- The reviewed Payload migration inventory is now unified in code and release policy; the eleven reviewed migrations are ordered canonically, with partner schema reconciliation last. The staging schema `jpvbootcamp_staging` has been explicitly verified with all ten prior reviewed Payload migrations marked ran (the two new 20260707 migrations are pending application).
-- Partner/Affiliate staging schema drift was reconciled by `20260704_090000_partner_schema_reconciliation`; the missing Partner Affiliate recipient-email array table and Partner Application snapshot columns are present in staging.
-- Duplicate admin login branding, portal-native member login mode, free-registration copy, operational admin dashboard cards, and clearer Affiliates vs Partner Affiliates admin descriptions are implemented in source and await deployment to staging.
-- 4 July 2026 Haiku live acceptance pass — Phase 6 email acceptance preparation completed:
-  - Phase 5 staging verification: free account registration creates pending member, queues email verification event;
-  - Email readiness booleans added to `/api/health/deployment` for operator clarity;
-  - Dokploy staging `DISABLE_NON_WEBHOOK_EMAILS` env var disabled (false) to enable provider email delivery;
-  - Staged image redeploy confirms `readyForApply: true` in health endpoint;
-  - Queued email sender enhanced with `--event-id` targeting and bulk-apply safety guard;
-  - All focused tests pass (registration, auth, email verification, routes, deployment health);
-  - Type-check and build clean, no legacy CMS references;
-  - Email provider accept ready for next phase: one controlled verification-email send per operator authorization;
-  - Login routing: all redirects working (`/login` and `/learn/login` → `/portal?mode=login`);
-  - Admin branding: JPV Bootcamp Portal login verified;
-  - Admin dashboard: operational cards present and linked;
-  - Browser-based registration and verification link flow remains for manual operator test (same-origin security check on registration endpoint).
-- Static preflight automation is available via `pnpm staging:static-preflight`; it is local-only and does not apply migrations, run live network checks, or prove operator approval.
-- 5 July 2026 account recovery staging pass:
-  - Controlled member row for `i***@yeshua.academy` exists exactly once, remains active and verified, and no longer has a lock timestamp blocking login;
-  - Login failure was traced to account lockout/unknown password rather than verification, session, or portal routing;
-  - Reset request and queued-email blockers were fixed in application code: email-event queue writes no longer rely on a non-unique conflict target, active account-action replacement uses the reviewed partial unique index safely, reset completion clears lockout state best-effort, and queued email send status now persists through the collection update path;
-  - Staging preview health remains `application-only`/Docker with ten reviewed Payload migrations in inventory and email readiness `readyForApply: true`;
-  - One controlled password-reset email was sent for the member account with event, recipient, provider ID, and action URL redacted from logs and reports;
-  - Operator completed the newest reset flow on the preview domain, using the JSON reset API route and the Payload auth reset flow;
-  - The custom reset action was consumed only after the password update path completed, the account stayed active and verified, login attempts remained below threshold, lockout no longer blocked login, and active reset actions were absent after completion;
-  - Login with the newly set password was accepted and the member portal loaded without visible error text;
-  - Visible portal evidence included the Member Portal dashboard, Dashboard/Courses/Community/Partners/Groups/Account/Billing navigation, the "Welcome back" dashboard, the JPV Bootcamp Foundations course card, and the sign-out control;
-  - Non-blocking hardening follow-ups remain: `lastLoginAt` was not confirmed as set, the password-changed security event was not recorded, and the password-changed confirmation email was not queued/sent. These side effects do not block account recovery, login, or portal acceptance.
-- 6 July 2026 account-security side-effect hardening:
-  - Source fixes were committed in `8cd4f95161bfb418e6a37057d4f1a281ca3ba7bf` and deployed to the existing Dokploy staging app image `ghcr.io/prochattools/jpv-bootcamp:feature-course-branding-and-preview`;
-  - Successful member session acceptance now records `lastLoginAt` best-effort after the shared login decision allows a member portal destination;
-  - Successful password reset now records the `password_changed` security event after the Payload auth reset flow and lockout cleanup complete, then queues the password-changed confirmation email independently so audit or queue failures do not roll back the reset;
-  - Local focused validation, feature-branch preview validation, and preview image publication passed for the hardening commit;
-  - Staging health after redeploy returned 200 JSON with Docker/application-only runtime, ten reviewed Payload migrations in inventory, and email readiness `readyForApply: true`;
-  - Live side-effect acceptance remains pending: a normal operator login is required to confirm `lastLoginAt` on staging, and another password-reset email/reset cycle requires separate explicit authorization before confirming the password-changed security event and confirmation email in staging.
-- 6 July 2026 administrator logout boundary acceptance:
-  - The existing Dokploy staging app was redeployed from `feature/course-branding-and-preview` after commits `742d7b2d18b3cda3b07820b0a20484418bfae138` and `3473e25fbe512963aae97fd9d505048d15a41c89`;
-  - `/api/health/deployment` returned HTTP 200 with Docker/application-only runtime, ten reviewed Payload migrations in inventory, and email readiness `readyForApply: true`;
-  - A member reaching `/admin` sees the unauthorized boundary and can use logout without looping back to the unauthorized page;
-  - `/admin/logout` clears Payload-prefixed member auth cookies and redirects to the public preview admin login URL using the HTTPS preview origin;
-  - The prior internal-host redirect regression is fixed: logout no longer sends operators to `http://0.0.0.0:3000`;
-  - Operator acceptance confirms admin login works after logout, with no reported regression to member portal login;
-  - Sanitized read-only metadata for `i***@yeshua.academy` still shows `lastLoginAt` not accepted after the hardening deployment, so that Phase 6 side-effect remains pending until one fresh successful member login is followed by sanitized inspection.
-- 6 July 2026 member last-login live acceptance:
-  - Source commit `e6e59eebae42f8269726f28501db88bea7932cc7` hardened the focused last-login metadata path by using the Payload database `updateOne` adapter after member eligibility is accepted, avoiding auth-collection update access as a blocker;
-  - The existing Dokploy staging app was redeployed from `feature/course-branding-and-preview`, and `/api/health/deployment` returned HTTP 200 with Docker/application-only runtime, ten reviewed Payload migrations in inventory, and email readiness `readyForApply: true`;
-  - Operator acceptance confirms a fresh member login for `i***@yeshua.academy` succeeded after the `e6e59ee` deployment, the portal loaded, and no visible error text was reported;
-  - Sanitized read-only staging metadata confirms exactly one controlled member row, active status, verified email state, login attempts below threshold, no blocking lockout, and `lastLoginAt` set after the `e6e59ee` deployment;
-  - Phase 6 `lastLoginAt` live acceptance is complete, with no reported regression to account recovery, member portal loading, the administrator unauthorized boundary, administrator logout, or administrator login.
-- 7–8 July 2026 Payload-only Free/Pro refit and staging hardening (commit `80012b7`):
-  - Active legacy integration paths removed: deleted plugin files, removed external-integration API routes/helpers, removed legacy upgrade route/helper/test, removed old smoke portal script;
-  - Checkout refitted to Pro-only membership with monthly/annual billing; `plan=pro` is the only accepted public checkout plan;
-  - Stripe config and readiness checks require Pro monthly and Pro annual identifiers only;
-  - Payload access, billing, course, and generated type surfaces use Free and Pro labels only;
-  - Support and pay-it-forward now grant controlled Free access; sponsored tier semantics corrected from Pro to Free;
-  - Annual Pro Stripe shadow sync fixed; sponsored access provisioning fixed;
-  - Preview migration inventory updated from 10 to 11 migrations (added `20260707_120000_rename_account_identity_columns` and `20260707_130000_remove_table_plan_from_payload_enums`);
-  - Staging branch safety docs hardened; Dokploy API key literal removed from docs;
-  - Validation: `git diff --check`, `tsc --noEmit`, `prisma validate` (both schemas), 68 focused tests pass, 0 fail;
-  - Grep audit: zero active residue; allowed exceptions only (account-column rename DDL, negative old-price assertion, pnpm-lock.yaml libvips hashes);
-  - No migrations applied; table-plan-to-Free mapping requires explicit target-environment approval before execution;
-  - Remaining risks: `startMemberCheckout` swallows errors without logging the error object; `STRIPE_SUCCESS_URL` has no same-origin guard; checkout rejection coverage is static regex, not runtime route tests;
-  - Roadmap progress status: `docs/client/ROADMAP_PROGRESS_STATUS.md`.
+- `/admin/review/**` is a static operator prototype without an administrator-authentication check and must be protected or removed before public release.
+- `/tos` and `/privacy-policy` still contain unrelated starter-product content and are indexed by the sitemap; canonical JPV `/terms` and `/privacy` pages already exist.
+- The landing page says subscriptions can be canceled at any time, while the client truth is a monthly 12-month commitment; repository Stripe setup does not yet prove enforcement of that commitment.
+- Support/pay-it-forward and partner-referral MVP forms validate in the browser and generate temporary references but do not persist or notify. They must not claim durable submission until wired to existing services.
+- `/portal` is the only approved member route tree. Keep the removed legacy member namespace blocked by route ownership tests, browser coverage, and the repository invariant.
+- All eight programme weeks and community-preview threads are placeholder data. The static admin review model is not operational evidence.
+- Public write/email endpoints have inconsistent body limits, origin controls, rate limiting, redirect validation, and PII logging.
+- `pnpm audit --prod` reports 26 production advisories, including three high-severity `undici` findings through Payload.
+- The repository contains 96 script-style test files, but static preflight runs a subset and has no browser E2E or coverage gate.
+- No migration, provider/email acceptance, complete staging smoke, rollback rehearsal, or final go-live approval exists.
+
+Detailed evidence and task definitions: `docs/V3_5_CODEBASE_ALIGNMENT_ASSESSMENT.md`.
+
+## Hardening-first execution order
+
+No new feature phase starts until the applicable hardening gate passes. Execute one task ID per clean change set and add focused tests in the same task.
+
+| Priority | Task | Deliverable | Gate |
+| --- | --- | --- | --- |
+| P0 | H0-01 | Protect or remove the unauthenticated `/admin/review` prototype | Anonymous/member denial and administrator acceptance tests |
+| P0 | H0-02 | Remove starter legal/template routes and fix sitemap/public copy | No reachable non-JPV copy; route/sitemap regression tests |
+| P0 | H0-03 | Enforce the monthly 12-month commitment and align public/legal copy | Written billing decision, automated tests, controlled Stripe smoke |
+| P0 | H0-04 | Disable false-success prototype forms, then connect them to durable services | Persist-before-success, idempotency, queue, and failure tests |
+| P0 | H0-05 | Harden public write/email endpoints | Bounded input, abuse control, safe origin/redirects, redacted logs |
+| P0 | H0-06 | Resolve high production dependency advisories | Clean/accepted audit plus build and Payload-admin smoke |
+| P1 | H1-01 | Keep `/portal` as the sole member namespace | One implementation owner per member feature; invariant and route coverage block regressions |
+| P1 | H1-02 | Add one complete release test command and browser E2E suite | CI runs critical unit, route, migration, build, and browser journeys |
+| P1 | H1-03 | Replace static MVP status with persisted/accepted operational evidence | Course, community, submissions, and admin status use real services |
+| P1 | H1-04 | Replace `PAYLOAD_SECRET` bearer reuse with scoped operator auth | Dedicated credential/session and negative tests |
+| P1 | H1-05 | Add tested security headers and trim remote image allowlists | Public, portal, API, and admin header/browser checks |
+| P2 | H2-01 | Remove unreachable starter/template code | Route/import allowlist proves deletions are safe |
+| P2 | H2-02 | Break the community file/moderation import cycle | One-way dependency and unchanged focused behavior |
+| P2 | H2-03 | Reduce broad trust-boundary casts and `overrideAccess` use | Narrow interfaces and explicit authorization reasons |
+
+Execution detail, atomic GPT-5.4 mini work packets, file boundaries, dependencies, effort ranges, and acceptance criteria are in `docs/V3_5_CODEBASE_ALIGNMENT_ASSESSMENT.md`. The broad H0/H1 IDs are outcomes; the `M0-*` and `M1-*` packet IDs are the executable change sets.
+
+Schedule rule:
+
+- 10-13 July: close M0-01 through M0-04, obtain the M0-05 billing decision, and complete dependency triage;
+- 14-17 July: close M0-06 through M0-09 and M1-01 only if support intake is approved for core go-live;
+- 18-20 July: complete the launch-scoped portal/content/release packets and capture approved smoke evidence;
+- 21 July: formal go/no-go with zero unresolved P0 blockers.
+
+This is approximately 6-9 reviewed engineering days before external approvals and content. It leaves little contingency but is more achievable than treating all six broad P0 outcomes as a three-day task.
 
 ## Execution roadmap
 
 ### Phase 1 — Finalize the administrator boundary
 
-**Status:** Implemented foundation; branding validation remains.
+**Status:** Payload admin foundation and branding exist. Release blocker H0-01 remains because the separate `/admin/review` prototype is not administrator-protected.
 
 Tasks:
 
@@ -249,7 +213,7 @@ Validation:
 
 ### Phase 3 — Complete the member portal shell
 
-**Status:** Implemented foundation.
+**Status:** Canonical member routing now lives under `/portal`, including course, lesson, community, moderation, submission, and protected file ownership. H1-01 remains a hardening guardrail through invariant, route, and browser coverage so the removed namespace does not return.
 
 Tasks:
 
@@ -266,7 +230,7 @@ Validation:
 
 ### Phase 4 — Complete course, group, and protected-resource access
 
-**Status:** Implemented and validated foundation.
+**Status:** Strong service foundation with focused tests. Canonical `/portal` parity, representative content, shared/private storage acceptance, and runtime evidence remain incomplete.
 
 Tasks:
 
@@ -310,7 +274,7 @@ Validation coverage:
 
 ### Phase 6 — Complete branded communications and FreeResend delivery
 
-**Status:** Account-security communications are implemented and locally validated; broader billing, learning, community, partner, broadcast, preference, and unsubscribe communications remain planned.
+**Status:** Account-security communications are implemented and locally validated. Public email/write endpoint hardening, provider acceptance, and broader billing, learning, community, partner, preference, and unsubscribe communications remain incomplete.
 
 Detailed specification: `docs/PAYLOAD_COMMUNICATIONS_PLAN.md`.
 
@@ -341,7 +305,7 @@ Validation:
 
 ### Phase 7 — Complete billing self-service
 
-**Status:** Portal access, subscription/payment projection, checkout, failed-payment communications, access enforcement, refund/dispute handling, plan-change refinement, and offline billing readiness implemented; billing live verification remains pending.
+**Status:** Portal access, subscription/payment projection, checkout, failed-payment communications, access enforcement, refund/dispute handling, and offline billing readiness are implemented. The 12-month monthly commitment is not yet proven by Stripe behavior, public copy conflicts with it, and live verification remains pending; H0-03 is a release blocker.
 
 Completed in this slice:
 
@@ -438,7 +402,7 @@ Validation:
 
 ### Phase 8 — Complete community publishing and notifications
 
-**Status:** Partial raw implementation complete; member community publishing is visibly functional end to end, while mentions, digest scheduling, richer editor/upload UX, and live preview acceptance remain deferred.
+**Status:** Payload-backed community services and tests exist under the older member route tree. Canonical `/portal/community` currently renders a local preview model with placeholder threads. Route consolidation, persisted-data acceptance, mentions, digests, richer editor/upload UX, and live acceptance remain incomplete.
 
 Tasks:
 
@@ -458,7 +422,7 @@ Validation:
 
 ### Phase 9 — Complete partner affiliates and reporting
 
-**Status:** Partial raw implementation complete; member application, delivery foundation, admin reporting, and affiliate summary journeys are now functional, while live provider verification, reconciliation, payouts, and preview acceptance remain pending.
+**Status:** Partner application, delivery, reporting, and affiliate service foundations exist. The new partner-referral MVP is client-only and does not persist; it must be connected to the existing service before it is called operational. Live provider verification, reconciliation, payouts, and preview acceptance remain pending.
 
 Detailed specification: `docs/PAYLOAD_PARTNER_AFFILIATE_PLAN.md`.
 
@@ -517,14 +481,14 @@ Validation:
 - no LiveKit secret, participant token, or private recording URL is stored in member-readable PayloadCMS fields or exposed in logs;
 - representative desktop/mobile, accessibility, privacy, support, cost, monitoring, and rollback gates pass before rollout.
 
-## Overall delivery status — 8 July 2026 (Version 3.4 update)
+## Overall delivery status — 10 July 2026 (Version 3.5 audit)
 
-The roadmap now contains the original eleven technical phases plus the Version 3.4 client-plan update. Expanded-platform readiness is approximately **73% complete** overall (up from ~58% at the v3.3 baseline), with about **97% core staging readiness** for the feature branch (up from ~68%). The older v2.40 percentage remains historical evidence for the narrower course/staging scope only. See `docs/client/ROADMAP_PROGRESS_STATUS.md` for the full progress table and per-area delta evidence.
+The roadmap retains the eleven product phases but places the Version 3.5 hardening gate before unfinished feature work. Audited readiness is approximately **68% for the expanded platform**, **82% for core staging/code**, **86% for build foundation**, **76% for testing/release**, **55% for migration**, and **20% for live cutover**. These figures distinguish static prototypes from operational workflows and accepted runtime evidence. See `docs/client/ROADMAP_PROGRESS_STATUS.md` for the current status and `docs/V3_5_CODEBASE_ALIGNMENT_ASSESSMENT.md` for findings.
 
-- **Carried-forward strong foundations:** administrator boundary, shared login, account security, member portal shell, course/access foundations, billing projection, community foundations, partner foundations, and staging evidence.
+- **Carried-forward strong foundations:** Payload administration, shared login, account security, entitlement evaluation, billing projection, protected resources, migration controls, and staging-evidence tooling.
 - **Core go-live scope:** public landing page, Free/Pro terminology refit, Pro checkout options, billing automation/recovery, representative 8-week course pilot, support/pay-it-forward access controls, migration rehearsal, rollback, and explicit go-live approval. The public front-end website milestone is 22 July 2026, the handover buffer is 23 July 2026, and the client-requested finished-by date is 24 July 2026.
 - **Controlled follow-up releases:** richer partner reporting/delivery, community/private-room refinements, notifications/digests, private messaging if accepted, and later LiveKit group calls.
-- **Primary remaining work:** refit old tier assumptions into Free/Pro, verify Stripe/payment paths, complete public copy/content by the 15 July 2026 client-input deadline, run representative course and storage acceptance, reconcile migration mapping, preview community/private-room behavior, verify partner links/forms/reports, rehearse rollback, and approve cutover.
+- **Primary remaining work:** close P0 security/public-copy/billing/submission/dependency blockers; consolidate the member route tree; add complete release and browser tests; complete public copy/content by 15 July; run representative course/storage acceptance; verify partner/community workflows; rehearse migration and rollback; and approve cutover.
 
 ## Communication scope summary
 
@@ -561,9 +525,9 @@ A phase is complete only when:
 
 ## Immediate milestone
 
-Align the current implementation with the Version 3.4 commercial-launch scope before production cutover: refit all public and billing language to Free/Pro, keep Pro as the only paid subscription, validate Pro monthly/annual checkout behavior, confirm support/pay-it-forward rules, prepare representative 8-week course content, confirm public landing-page copy, and rehearse migration from historical access states into the new Free/Pro access model. The front-end website go-live milestone is 22 July 2026, the internal handover buffer is 23 July 2026, the client-requested finished-by date is 24 July 2026, and the client content/input due date is Wednesday 15 July 2026. This milestone does not authorize migration execution. The first core go-live candidate remains the public landing page, Pro subscription, secure member portal, billing automation, account flows, course access, administrator controls, migration rehearsal, rollback, and explicit approval. Community/private-room previews and partner links/forms/reports should be included where accepted; private messaging, advanced notifications, payouts/webhooks, and LiveKit calls remain post-core unless explicitly marked launch-critical.
+Close the Version 3.5 P0 hardening gate before production cutover: protect operator surfaces, remove reachable template/legal residue, make Stripe behavior match the 12-month commitment, stop prototype forms from claiming persistence, harden public write endpoints, and resolve high dependency advisories. Then consolidate `/portal`, run the complete release/browser matrix, complete public copy/content by Wednesday 15 July 2026, and obtain evidence. The front-end website milestone is 22 July 2026, the handover buffer is 23 July 2026, and the client-requested finished-by date is 24 July 2026. Those dates do not authorize migration execution. Full platform cutover remains conditional on migration approval, rehearsal, rollback evidence, provider/email verification, staging smoke, and explicit go-live approval.
 
-This slice hardens the repository-only candidate gate: rollback and packet drafts are generated from explicit local inputs, placeholder approvals are rejected, packet validation is bound to exact branch/HEAD/repository state, rehearsal checks come from the real smoke matrix, and no live operation has been authorized yet. The next required live step after this commit is branch push authorization.
+The next implementation task is M0-01 under H0-01 in `docs/V3_5_CODEBASE_ALIGNMENT_ASSESSMENT.md`. No live operation or migration is authorized by this plan.
 
 ## Definition of done
 
