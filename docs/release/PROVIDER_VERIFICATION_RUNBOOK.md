@@ -7,6 +7,8 @@ Repository-owned verification contract for controlled staging checks. This runbo
 - Branch: `feature/course-branding-and-preview`
 - Staging smoke plan command: `pnpm staging:smoke-plan`
 - Migration preflight command: `pnpm staging:migration-preflight`
+- Provider simulation command: `pnpm staging:provider-simulation`
+- Local simulated smoke command: `pnpm staging:smoke-simulated`
 - Existing evidence templates:
   - `docs/client/PROVIDER_EMAIL_EVIDENCE_TEMPLATE.md`
   - `docs/client/STAGING_SMOKE_EVIDENCE_TEMPLATE.md`
@@ -169,6 +171,8 @@ Fail criteria:
 
 ## Current repository status
 
+- Provider simulation is available locally and must remain mocked-only.
+- Local simulated staging smoke is available and must remain repository-only evidence.
 - Provider verification is documented but unexecuted.
 - Email verification is documented but unexecuted.
 - Stripe verification is documented but unexecuted.

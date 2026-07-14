@@ -13,7 +13,11 @@ This runbook documents the operator sequence. It does not authorize execution by
   - `scripts/preview_migration_inventory.test.ts`
   - `scripts/migration_readiness_static.test.ts`
   - `scripts/migration_rehearsal_safety.test.ts`
+  - `scripts/staging_migration_rehearsal.test.ts`
+  - `scripts/migration_rehearsal_evidence.test.ts`
 - Repository preflight command: `pnpm staging:migration-preflight`
+- Repository rehearsal command: `pnpm staging:migration-rehearsal`
+- Repository rehearsal evidence: `pnpm staging:migration-rehearsal:evidence`
 - Branch: `feature/course-branding-and-preview`
 
 ## Preconditions
@@ -27,6 +31,7 @@ This runbook documents the operator sequence. It does not authorize execution by
 - Rollback owner is assigned before execution.
 - Required maintenance window is approved for the target environment if that environment has live operator traffic.
 - `pnpm staging:migration-preflight` passes from the repository root.
+- `pnpm staging:migration-rehearsal` passes in static mode before any target-environment migration window is opened.
 - Both Prisma schema validations pass:
   - `./node_modules/.bin/prisma validate --schema=prisma/system.prisma`
   - `./node_modules/.bin/prisma validate --schema=prisma/schema.prisma`
@@ -59,6 +64,12 @@ Rules:
 - Do not echo secret values.
 - Do not bundle deployment, provider checks, or application startup into the migration command.
 - Do not call Stripe, Resend, or any provider from this sequence.
+
+Important distinction:
+
+- `pnpm staging:migration-rehearsal` is a repository-owned rehearsal command.
+- Its default mode is static and must not mutate a database.
+- Its optional execution mode is for an explicitly supplied localhost-only disposable database only; it is not the approved target-environment apply path.
 
 ## Post-apply verification
 
@@ -114,6 +125,10 @@ Post-rollback verification:
 2. Re-run both Prisma schema validations.
 3. Confirm the application is still on the approved code version for that restored state.
 4. Record the exact recovery evidence and owner decision.
+
+Repository-owned rollback evidence checklist:
+
+- `docs/release/ROLLBACK_EVIDENCE_CHECKLIST.md`
 
 ## Rollback trigger criteria
 

@@ -2,7 +2,7 @@
 
 - Current status: `BLOCKED`
 - Branch: `feature/course-branding-and-preview`
-- Latest known commit: `50f7966 docs: add migration rehearsal safety handoff`
+- Branch tip verification: verify the current tip with `git log --oneline -1` before operator action
 - Migrations applied: `No`
 - Operator handoff summary: `docs/client/OPERATOR_HANDOFF_SUMMARY.md`
 - Evidence review checklist: `docs/client/EVIDENCE_REVIEW_CHECKLIST.md`

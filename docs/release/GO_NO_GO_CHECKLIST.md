@@ -18,7 +18,11 @@ Do not change this checklist to `GO` until the required operator evidence exists
 ## Repository-owned green gates
 
 - [ ] `pnpm staging:migration-preflight`
+- [ ] `pnpm staging:migration-rehearsal`
+- [ ] `pnpm staging:migration-rehearsal:evidence`
+- [ ] `pnpm staging:provider-simulation`
 - [ ] `pnpm staging:smoke-plan`
+- [ ] `pnpm staging:smoke-simulated`
 - [ ] `pnpm release:evidence:dry-run`
 - [ ] `pnpm test:release`
 - [ ] `pnpm test:e2e`
@@ -32,8 +36,11 @@ Do not change this checklist to `GO` until the required operator evidence exists
 
 ## Required external gates
 
+- [ ] representative programme content approved or placeholder accepted
+- [ ] migration approval complete
 - [ ] migration applied through approved path
 - [ ] post-migration verification complete
+- [ ] rollback evidence from staging or production window captured
 - [ ] provider/email verification complete
 - [ ] Stripe verification complete
 - [ ] Payload/admin staging verification complete
@@ -41,7 +48,7 @@ Do not change this checklist to `GO` until the required operator evidence exists
 - [ ] staging smoke complete
 - [ ] browser acceptance evidence complete
 - [ ] monitoring readiness confirmed
-- [ ] representative programme content approved or placeholder accepted
+- [ ] formal approval recorded
 
 ## Required green-gate status
 
@@ -54,11 +61,16 @@ Do not change this checklist to `GO` until the required operator evidence exists
 | Prisma validation | pass | |
 | dependency audit | pass at high severity gate | |
 | migration preflight | pass | |
+| migration rehearsal | pass in static mode or explicit localhost-only disposable mode | |
+| migration rehearsal evidence | pass | |
+| provider simulation | pass | |
 | migration applied | pending until executed | |
 | post-migration verification | pending until executed | |
 | provider verification | pending until executed | |
+| local simulated smoke | pass | |
 | staging smoke | pending until executed | |
-| rollback readiness | documented and approved | |
+| rollback readiness | documented and repository-owned checklist complete | |
+| rollback evidence from staging | pending until executed | |
 | monitoring readiness | owner assigned and evidence captured | |
 | content approval | pending until explicit approval | |
 
@@ -87,7 +99,7 @@ Do not change this checklist to `GO` until the required operator evidence exists
 Current default:
 
 - Decision: `NO-GO`
-- Reason: repository-owned preparation may be complete, but live migration, provider verification, staging smoke, content approval, and formal approval remain external gates until evidenced.
+- Reason: repository-owned preparation may be complete, but actual migration approval and apply, staging/provider verification, staging rollback evidence, content approval, and formal approval remain external gates until evidenced.
 
 ## Approval record
 

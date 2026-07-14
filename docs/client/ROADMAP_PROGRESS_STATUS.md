@@ -8,7 +8,7 @@ Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`.
 
 ## Current position
 
-**Position:** Core go-live implementation and deterministic local validation are complete. The repository is ready to accept programme content and ready for controlled staging operations documentation and preflight, but the branch is still **not ready for the controlled staging release process** because representative 8-week programme content remains unapproved, the support-request migration remains unapplied, provider/email verification and staging smoke remain unexecuted, and the formal go/no-go decision has not happened.
+**Position:** Core go-live implementation and deterministic local validation are complete. The repository is ready to accept programme content and is now **repository-ready for controlled staging operations** through validated static rehearsal, provider simulation, and local simulated smoke. The branch is still **not ready for the controlled staging release process** because representative 8-week programme content remains unapproved, the support-request migration remains unapplied, live provider/email verification and actual staging smoke remain unexecuted, and the formal go/no-go decision has not happened.
 
 **Next task:** Execute the controlled staging release process prerequisites using the repository-owned contracts: content approval, migration approval and rehearsal confirmation, provider/email verification, staging smoke evidence, and formal go/no-go review. `M2-01` remains deferred post-core unless explicitly promoted.
 
@@ -95,7 +95,12 @@ Repository-owned staging preparation is now complete and validated through:
 - `pnpm staging:smoke-plan`
 - `pnpm release:evidence:dry-run`
 
-These assets make the repository ready for controlled staging operations without claiming live migration, provider verification, staging acceptance, or go-live approval.
+These assets make the repository ready for controlled staging operations without claiming live migration, provider verification, staging acceptance, or go-live approval. The repository-owned rehearsal and simulation commands now also pass locally:
+
+- `pnpm staging:migration-rehearsal` in static mode
+- `pnpm staging:migration-rehearsal:evidence`
+- `pnpm staging:provider-simulation`
+- `pnpm staging:smoke-simulated`
 
 ## Timeline and decision gates
 
@@ -113,13 +118,17 @@ These assets make the repository ready for controlled staging operations without
 ## Test and security evidence
 
 - `git diff --check` passed.
-- `pnpm test:release` passed `121/121`.
+- `pnpm test:release` passed `127/127`.
 - `pnpm test:e2e` passed `58/58` across desktop and mobile Chromium projects.
 - Programme contract, path-safety, import-plan, readiness, acceptance-report, and preview-only browser checks passed.
 - `pnpm test:release:full` passed.
 - `pnpm staging:static-preflight` passed.
 - `pnpm staging:migration-preflight` passed.
+- `pnpm staging:migration-rehearsal` passed in static mode.
+- `pnpm staging:migration-rehearsal:evidence` produced deterministic repository-only Markdown evidence.
+- `pnpm staging:provider-simulation` passed `10/10`.
 - `pnpm staging:smoke-plan` passed.
+- `pnpm staging:smoke-simulated` passed `5/5`.
 - `pnpm release:evidence:dry-run` produced a deterministic repository-only summary.
 - root TypeScript passed.
 - production build passed.

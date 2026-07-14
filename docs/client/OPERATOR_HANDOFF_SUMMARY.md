@@ -26,6 +26,10 @@
 - Programme content acceptance report: `pnpm content:programme:acceptance -- <repository-relative-json-path>`
 - Programme content import plan: `pnpm content:programme:import-plan -- <repository-relative-json-path>`
 - Static preflight: `pnpm staging:static-preflight`
+- Migration rehearsal: `pnpm staging:migration-rehearsal`
+- Migration rehearsal evidence: `pnpm staging:migration-rehearsal:evidence`
+- Provider simulation: `pnpm staging:provider-simulation`
+- Local simulated smoke: `pnpm staging:smoke-simulated`
 - Evidence artifact generator: `pnpm evidence:create`
 - Evidence artifact validator: `pnpm evidence:validate`
 - Draft evidence `.md` files under `docs/client/evidence/` are local operator artifacts and must not be committed unless explicitly approved.
@@ -40,15 +44,24 @@
 - Pro-only checkout hardening with monthly and annual billing options
 - Support/pay-it-forward controlled Free semantics and durable support intake
 - Canonical `/portal` member portal ownership
-- Deterministic non-browser release gate: `pnpm test:release` (`121/121`)
+- Deterministic non-browser release gate: `pnpm test:release` (`127/127`)
 - Launch browser E2E: `pnpm test:e2e` (`58/58`, desktop and mobile Chromium)
 - Combined release/browser gate: `pnpm test:release:full`
 - Static preflight, root TypeScript, production build, both Prisma validations, and production high-severity audit gate
 - Repository-owned staging operations contract
 - Migration preflight command: `pnpm staging:migration-preflight`
+- Migration rehearsal command: `pnpm staging:migration-rehearsal`
+- Migration rehearsal evidence command: `pnpm staging:migration-rehearsal:evidence`
+- Provider simulation command: `pnpm staging:provider-simulation`
 - Staging smoke plan command: `pnpm staging:smoke-plan`
+- Local simulated smoke command: `pnpm staging:smoke-simulated`
+- Static migration rehearsal passed in repository-only mode
+- Migration rehearsal evidence generation passed
+- Provider simulation passed `10/10`
+- Local simulated smoke passed `5/5`
 - Release evidence dry run: `pnpm release:evidence:dry-run`
 - Support-request migration runbook
+- Rollback-evidence checklist
 - Provider verification runbook
 - Go / no-go checklist
 - Migration approval packet
@@ -73,6 +86,7 @@
 - Table-plan-to-Free target-environment approval
 - Account-column rename approval
 - Approved migration path confirmation
+- Disposable localhost-only migration rehearsal has not been executed in this branch work beyond the static repository rehearsal unless separately evidenced
 - Rollback/recovery review and execution ownership
 - Provider/email live verification remains pending
 - Staging smoke execution remains pending
@@ -83,17 +97,25 @@
 
 - Status: `REPOSITORY READY FOR CONTROLLED STAGING OPERATIONS`
 - Migration runbook: `docs/release/SUPPORT_REQUESTS_MIGRATION_RUNBOOK.md`
+- Rollback evidence checklist: `docs/release/ROLLBACK_EVIDENCE_CHECKLIST.md`
 - Provider verification runbook: `docs/release/PROVIDER_VERIFICATION_RUNBOOK.md`
 - Go / no-go checklist: `docs/release/GO_NO_GO_CHECKLIST.md`
 - Read-only migration preflight: `pnpm staging:migration-preflight`
+- Static-first migration rehearsal: `pnpm staging:migration-rehearsal`
+- Migration rehearsal evidence builder: `pnpm staging:migration-rehearsal:evidence`
+- Mocked provider simulation: `pnpm staging:provider-simulation`
 - Plan-only staging smoke command: `pnpm staging:smoke-plan`
+- Local simulated staging smoke: `pnpm staging:smoke-simulated`
 - Repository-only release evidence summary: `pnpm release:evidence:dry-run`
-- This contract does not mark migration applied, provider verified, staging passed, or go-live approved.
+- Static rehearsal status: `Passed`
+- Provider simulation status: `Passed`
+- Local simulated smoke status: `Passed`
+- This contract does not mark migration applied, provider verified, staging passed, rollback proven in staging, or go-live approved.
 
 ## Exact next operator sequence
 
 1. Review `docs/PREVIEW_RELEASE_READINESS.md` as the current repository-owned readiness source of truth.
-2. Confirm the exact branch tip with `git log --oneline -1`, then rerun `pnpm toolchain:check`, `pnpm staging:migration-preflight`, `pnpm staging:smoke-plan`, `pnpm release:evidence:dry-run`, `pnpm staging:static-preflight`, `pnpm test:release`, and `pnpm test:e2e` at that tip before any operator execution.
+2. Confirm the exact branch tip with `git log --oneline -1`, then rerun `pnpm toolchain:check`, `pnpm staging:migration-preflight`, `pnpm staging:migration-rehearsal`, `pnpm staging:migration-rehearsal:evidence`, `pnpm staging:provider-simulation`, `pnpm staging:smoke-plan`, `pnpm staging:smoke-simulated`, `pnpm release:evidence:dry-run`, `pnpm staging:static-preflight`, `pnpm test:release`, and `pnpm test:e2e` at that tip before any operator execution.
 3. Collect and record client content decisions by 15 July using the content request and status tracker; programme remains preview-only until approved content exists.
 4. Convert the approved representative programme package into the canonical repository JSON format and run `pnpm content:programme:validate`, `pnpm content:programme:acceptance`, and `pnpm content:programme:import-plan`.
 5. Confirm migration approval, rehearsal ownership, rollback ownership, and exact apply path before any migration action.

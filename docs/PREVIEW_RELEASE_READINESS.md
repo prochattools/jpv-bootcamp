@@ -44,12 +44,16 @@ Current validated readiness baseline: `d55229f test: enforce programme content r
 
 ### Deterministic local validation baseline
 
-- `pnpm test:release` passed `121/121`
+- `pnpm test:release` passed `127/127`
 - `pnpm test:e2e` passed `58/58` across desktop and mobile Chromium projects
 - `pnpm test:release:full` passed
 - `pnpm staging:static-preflight` passed
 - `pnpm staging:migration-preflight` passed
+- `pnpm staging:migration-rehearsal` passed in static mode; localhost-only disposable execution remains optional and unexecuted
+- `pnpm staging:migration-rehearsal:evidence` passed and produced deterministic repository-only Markdown evidence
+- `pnpm staging:provider-simulation` passed `10/10` with local mocked EMAIL, STRIPE, and PAYLOAD verification only
 - `pnpm staging:smoke-plan` passed
+- `pnpm staging:smoke-simulated` passed `5/5`; it is local simulated evidence only and not staging acceptance
 - `pnpm release:evidence:dry-run` produced a deterministic repository-only summary
 - `pnpm exec tsc --noEmit --pretty false --incremental false` passed
 - `pnpm build` passed
@@ -64,12 +68,12 @@ Current validated readiness baseline: `d55229f test: enforce programme content r
 | Gate | Current status | Evidence owner | Notes |
 | --- | --- | --- | --- |
 | Migration approval and apply path | Blocked | `docs/client/MIGRATION_APPROVAL_PACKET.md`, `docs/client/MIGRATION_APPROVAL_STATUS.md` | Migrations remain unapplied and require explicit target-environment approval. |
-| Migration rehearsal and rollback ownership | Ready but not executed | `docs/client/MIGRATION_REHEARSAL_RUNBOOK.md` | Static rehearsal evidence exists; live rehearsal is still gated. |
+| Migration rehearsal and rollback ownership | Static rehearsal passed; disposable execution not yet run | `docs/client/MIGRATION_REHEARSAL_RUNBOOK.md`, `docs/release/ROLLBACK_EVIDENCE_CHECKLIST.md` | Repository-owned static rehearsal and evidence are complete; localhost-only disposable execution stays opt-in and target-environment rehearsal remains gated. |
 | Support-request migration application | Blocked | `prisma/migrations/20260712_151700_add_support_requests/migration.sql` | Additive migration exists but remains unapplied. |
-| Provider/email verification | Ready but not executed | `docs/client/PROVIDER_EMAIL_READINESS.md`, `docs/client/PROVIDER_EMAIL_EVIDENCE_TEMPLATE.md` | Requires credentials and operator evidence. |
-| Stripe checkout/webhook/billing portal live verification | Ready but not executed | `docs/client/PROVIDER_EMAIL_READINESS.md` | Local validation passed; live verification is separate. |
+| Provider/email verification | Repository simulation passed; live verification not executed | `docs/client/PROVIDER_EMAIL_READINESS.md`, `docs/client/PROVIDER_EMAIL_EVIDENCE_TEMPLATE.md` | Mocked/local provider simulation is repository-owned and complete; live verification still requires credentials and operator evidence. |
+| Stripe checkout/webhook/billing portal live verification | Repository simulation passed; live verification not executed | `docs/client/PROVIDER_EMAIL_READINESS.md` | Local validation and provider simulation passed safely; live verification is separate. |
 | Representative programme and public-copy approval | Blocked | `docs/client/FRONTEND_CONTENT_INTAKE_CHECKLIST.md`, `docs/client/FRONTEND_COPY_APPROVAL_PACKET.md` | Programme remains preview-only until approved content exists. |
-| Staging smoke | Ready but not executed | `docs/client/STAGING_SMOKE_CHECKLIST.md`, `docs/client/STAGING_SMOKE_EVIDENCE_TEMPLATE.md` | Requires approved deployment target and operator evidence. |
+| Staging smoke | Local simulated smoke passed; actual staging smoke not executed | `docs/client/STAGING_SMOKE_CHECKLIST.md`, `docs/client/STAGING_SMOKE_EVIDENCE_TEMPLATE.md` | Local simulated smoke is repository-only evidence; actual staging smoke still requires the approved deployment target and operator evidence. |
 | Formal go/no-go | Not executed | operator review process | Must follow staging, provider, content, and migration evidence review. |
 | Production operation | Blocked | this runbook plus client evidence docs | Production is blocked until every independent gate is complete. |
 
@@ -78,6 +82,7 @@ Current validated readiness baseline: `d55229f test: enforce programme content r
 The repository-owned preparation contract is complete and validated locally. Operators now have:
 
 - migration runbook: `docs/release/SUPPORT_REQUESTS_MIGRATION_RUNBOOK.md`
+- rollback evidence checklist: `docs/release/ROLLBACK_EVIDENCE_CHECKLIST.md`
 - provider verification runbook: `docs/release/PROVIDER_VERIFICATION_RUNBOOK.md`
 - go / no-go checklist: `docs/release/GO_NO_GO_CHECKLIST.md`
 - programme content intake template: `docs/client/PROGRAMME_CONTENT_INTAKE_TEMPLATE.md`
@@ -86,7 +91,11 @@ The repository-owned preparation contract is complete and validated locally. Ope
 - programme content acceptance report: `pnpm content:programme:acceptance -- <repository-relative-json-path>`
 - programme content import plan: `pnpm content:programme:import-plan -- <repository-relative-json-path>`
 - migration preflight command: `pnpm staging:migration-preflight`
+- migration rehearsal command: `pnpm staging:migration-rehearsal`
+- migration rehearsal evidence: `pnpm staging:migration-rehearsal:evidence`
+- provider simulation command: `pnpm staging:provider-simulation`
 - staging smoke plan command: `pnpm staging:smoke-plan`
+- local simulated smoke command: `pnpm staging:smoke-simulated`
 - release evidence dry run: `pnpm release:evidence:dry-run`
 
 These assets are repository-ready only. They do not mark migration applied, provider verified, staging passed, or go-live approved.
@@ -95,12 +104,13 @@ These assets are repository-ready only. They do not mark migration applied, prov
 
 1. confirm the exact approved branch tip with `git log --oneline -1`;
 2. run `pnpm staging:migration-preflight`, `pnpm staging:smoke-plan`, and `pnpm release:evidence:dry-run` at that exact tip;
-3. convert the approved representative programme package into the canonical JSON contract and run `pnpm content:programme:validate`, `pnpm content:programme:acceptance`, and `pnpm content:programme:import-plan`;
-4. confirm client content/public-copy decisions, especially representative programme content;
-5. confirm migration approval, rollback owner, and exact apply path;
-6. execute the manual staging smoke checklist and capture evidence;
-7. execute provider/email verification and capture evidence;
-8. review the evidence packet and hold the formal go/no-go.
+3. run `pnpm staging:migration-rehearsal`, `pnpm staging:migration-rehearsal:evidence`, `pnpm staging:provider-simulation`, and `pnpm staging:smoke-simulated` at that exact tip;
+4. convert the approved representative programme package into the canonical JSON contract and run `pnpm content:programme:validate`, `pnpm content:programme:acceptance`, and `pnpm content:programme:import-plan`;
+5. confirm client content/public-copy decisions, especially representative programme content;
+6. confirm migration approval, rollback owner, and exact apply path;
+7. execute the manual staging smoke checklist and capture evidence;
+8. execute provider/email verification and capture evidence;
+9. review the evidence packet and hold the formal go/no-go.
 
 ### Production blockers
 
