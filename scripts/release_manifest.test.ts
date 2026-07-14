@@ -90,6 +90,7 @@ function testMilestoneCoverage(): void {
     'pnpm exec tsx prisma/migrations/20260712_151700_add_support_requests.test.ts',
     'pnpm exec tsx scripts/public_request_guard.test.ts',
     'pnpm exec tsx scripts/public_write_route_guard_adoption.test.ts',
+    'pnpm staging:provider-simulation',
   ]) {
     assert.equal(commands.includes(expected), true, `missing release command: ${expected}`)
   }
