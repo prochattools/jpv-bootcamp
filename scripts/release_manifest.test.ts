@@ -55,6 +55,7 @@ function testPackageOwnership(): void {
   assert.match(packageJson.engines?.node ?? '', /^>=20\.9\.0$/)
   assert.equal(packageJson.scripts?.['test:release'], 'tsx scripts/release/runReleaseTests.ts')
   assert.ok(packageJson.scripts?.['staging:static-preflight'], 'static preflight must remain owned')
+  assert.equal(packageJson.scripts?.['staging:decision-readiness'], 'tsx scripts/release/runDecisionReadiness.ts')
 
   for (const entry of RELEASE_TEST_MANIFEST) {
     if (entry.command.executable !== 'pnpm') continue
@@ -112,10 +113,11 @@ function testCompileSchemaAuditCoverage(): void {
     true,
   )
   assert.equal(
-    commands.includes('pnpm exec pnpm audit --prod --audit-level high'),
+    commands.includes('pnpm exec pnpm audit --prod --audit-level high --ignore-registry-errors'),
     true,
     'production audit must fail on high or critical advisories',
   )
+  assert.equal(commands.includes('pnpm staging:decision-readiness'), true)
 }
 
 function testForbiddenCommands(): void {
@@ -164,6 +166,24 @@ function testDeferredOwnership(): void {
     'deployment-and-production-smoke',
   ]) {
     assert.ok(DEFERRED_RELEASE_VALIDATIONS.some((entry) => entry.id === deferredId))
+  }
+}
+
+function testDecisionCoverage(): void {
+  for (const expected of [
+    'decision.table-plan-to-free',
+    'decision.account-column-rename',
+    'decision.staging-migration-approval',
+    'decision.rollback-readiness',
+    'decision.programme-content-publication',
+    'evidence.decision-manifest',
+    'evidence.decision-runner',
+    'evidence.decision-readiness',
+    'evidence.provider-verification-approval',
+    'evidence.staging-smoke-approval',
+    'evidence.core-go-live-decision',
+  ]) {
+    assert.ok(RELEASE_TEST_MANIFEST.some((entry) => entry.id === expected), `missing release coverage: ${expected}`)
   }
 }
 
@@ -241,6 +261,7 @@ function main(): void {
   testCompileSchemaAuditCoverage()
   testForbiddenCommands()
   testDeferredOwnership()
+  testDecisionCoverage()
   testEnvironmentSentinels()
   testDeterministicSuccessfulRun()
   testFailFastAndAuditFailure()

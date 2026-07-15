@@ -35,6 +35,7 @@
     "staging:migration-preflight": "tsx scripts/release/stagingMigrationPreflight.ts",
     "staging:migration-rehearsal": "tsx scripts/release/migrationRehearsal.ts",
     "staging:migration-rehearsal:evidence": "tsx scripts/release/buildMigrationRehearsalEvidence.ts",
+    "staging:decision-readiness": "tsx scripts/release/runDecisionReadiness.ts",
     "staging:provider-simulation": "tsx scripts/release/providerSimulation.ts",
     "staging:smoke-plan": "tsx scripts/release/printStagingSmokePlan.ts",
     "staging:smoke-simulated": "tsx scripts/release/simulatedStagingSmoke.ts",
