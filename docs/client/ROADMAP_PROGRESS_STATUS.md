@@ -8,9 +8,9 @@ Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`.
 
 ## Current position
 
-**Position:** Core go-live implementation and deterministic local validation are complete. The repository is ready to accept programme content and is now **repository-ready for controlled staging operations** through validated static rehearsal, provider simulation, and local simulated smoke. The branch is still **not ready for the controlled staging release process** because representative 8-week programme content remains unapproved, the support-request migration remains unapplied, live provider/email verification and actual staging smoke remain unexecuted, and the formal go/no-go decision has not happened.
+**Position:** Core go-live implementation and deterministic local validation are complete. The repository is ready to accept programme content and is now **decision-ready for controlled staging approval** through validated static rehearsal, decision packets, provider simulation, and local simulated smoke. The branch is still **not ready for the controlled staging release process** because representative 8-week programme content remains unapproved, the support-request migration remains unapplied, live provider/email verification and actual staging smoke remain unexecuted, and the formal go/no-go decision has not happened.
 
-**Next task:** Execute the controlled staging release process prerequisites using the repository-owned contracts: content approval, migration approval and rehearsal confirmation, provider/email verification, staging smoke evidence, and formal go/no-go review. `M2-01` remains deferred post-core unless explicitly promoted.
+**Next task:** Execute the controlled staging release process prerequisites using the repository-owned contracts: content approval, decision approval, migration approval and rehearsal confirmation, provider/email verification, staging smoke evidence, and formal go/no-go review. `M2-01` remains deferred post-core unless explicitly promoted.
 
 **Front-end schedule:** The 22 July front-end milestone is achievable only if immediate public blockers and the billing decision close by 13 July, all launch-scoped P0 implementation closes by 17 July, and client content, pricing/commitment language, legal wording, and course input arrive or placeholders are explicitly approved by 15 July. The 23 July handover buffer and 24 July client finished-by date remain.
 
@@ -30,6 +30,7 @@ Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`.
 | PR / review | `https://github.com/prochattools/jpv-bootcamp/pull/2` |
 | Migrations applied | None |
 | Migration approval | Blocked pending table-plan-to-Free, account-column rename, path, backup, rollback, and owner approval |
+| Decision readiness | `DECISION-READY, EXTERNAL APPROVALS PENDING` |
 | Provider/email acceptance | Pending operator verification |
 | Complete staging/browser smoke | Local browser validation passed; staging smoke pending |
 
@@ -91,6 +92,8 @@ Repository-owned staging preparation is now complete and validated through:
 - `docs/release/SUPPORT_REQUESTS_MIGRATION_RUNBOOK.md`
 - `docs/release/PROVIDER_VERIFICATION_RUNBOOK.md`
 - `docs/release/GO_NO_GO_CHECKLIST.md`
+- `docs/decisions/`
+- `pnpm staging:decision-readiness`
 - `pnpm staging:migration-preflight`
 - `pnpm staging:smoke-plan`
 - `pnpm release:evidence:dry-run`
@@ -118,8 +121,9 @@ These assets make the repository ready for controlled staging operations without
 ## Test and security evidence
 
 - `git diff --check` passed.
-- `pnpm test:release` passed `127/127`.
+- `pnpm test:release` passed `138/138`.
 - `pnpm test:e2e` passed `58/58` across desktop and mobile Chromium projects.
+- `pnpm staging:decision-readiness` passed with `DECISION-READY, EXTERNAL APPROVALS PENDING`.
 - Programme contract, path-safety, import-plan, readiness, acceptance-report, and preview-only browser checks passed.
 - `pnpm test:release:full` passed.
 - `pnpm staging:static-preflight` passed.
@@ -138,7 +142,7 @@ These assets make the repository ready for controlled staging operations without
 - Feature-branch CI type-checks and builds the application and Docker image without publishing from the validation job.
 - Repository inventory now includes deterministic release-manifest coverage and Playwright launch browser E2E.
 - Graph analysis found an import cycle between `communityFiles.ts` and `communityModeration.ts`.
-- `pnpm audit --prod --audit-level high` now passes the release gate.
+- `pnpm audit --prod --audit-level high --ignore-registry-errors` now passes the release gate.
 - Global application security headers are not defined in `next.config.js`.
 
 ## Migration warning

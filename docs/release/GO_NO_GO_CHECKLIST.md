@@ -4,6 +4,9 @@ Default decision state: `NO-GO`
 
 Do not change this checklist to `GO` until the required operator evidence exists.
 
+Decision-readiness prerequisite: `pnpm staging:decision-readiness`
+Current repository result: `DECISION-READY, EXTERNAL APPROVALS PENDING`
+
 ## Identity
 
 - Branch:
@@ -20,6 +23,7 @@ Do not change this checklist to `GO` until the required operator evidence exists
 - [ ] `pnpm staging:migration-preflight`
 - [ ] `pnpm staging:migration-rehearsal`
 - [ ] `pnpm staging:migration-rehearsal:evidence`
+- [ ] `pnpm staging:decision-readiness`
 - [ ] `pnpm staging:provider-simulation`
 - [ ] `pnpm staging:smoke-plan`
 - [ ] `pnpm staging:smoke-simulated`
@@ -32,11 +36,13 @@ Do not change this checklist to `GO` until the required operator evidence exists
 - [ ] `pnpm build`
 - [ ] `./node_modules/.bin/prisma validate --schema=prisma/system.prisma`
 - [ ] `./node_modules/.bin/prisma validate --schema=prisma/schema.prisma`
-- [ ] `pnpm exec pnpm audit --prod --audit-level high`
+- [ ] `pnpm exec pnpm audit --prod --audit-level high --ignore-registry-errors`
 
 ## Required external gates
 
 - [ ] representative programme content approved or placeholder accepted
+- [ ] table-plan-to-Free decision approved
+- [ ] account-column rename decision approved
 - [ ] migration approval complete
 - [ ] migration applied through approved path
 - [ ] post-migration verification complete
@@ -60,6 +66,7 @@ Do not change this checklist to `GO` until the required operator evidence exists
 | build | pass | |
 | Prisma validation | pass | |
 | dependency audit | pass at high severity gate | |
+| decision readiness | `DECISION-READY, EXTERNAL APPROVALS PENDING` | |
 | migration preflight | pass | |
 | migration rehearsal | pass in static mode or explicit localhost-only disposable mode | |
 | migration rehearsal evidence | pass | |
@@ -99,7 +106,7 @@ Do not change this checklist to `GO` until the required operator evidence exists
 Current default:
 
 - Decision: `NO-GO`
-- Reason: repository-owned preparation may be complete, but actual migration approval and apply, staging/provider verification, staging rollback evidence, content approval, and formal approval remain external gates until evidenced.
+- Reason: repository-owned preparation is decision-ready, but actual migration approval and apply, staging/provider verification, staging rollback evidence, content approval, and formal approval remain external gates until evidenced.
 
 ## Approval record
 

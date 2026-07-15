@@ -22,6 +22,7 @@ async function main(): Promise<void> {
   assert.match(approvalStatusSource, /Current status:\s*`BLOCKED`/)
   assert.match(approvalStatusSource, /Migrations applied:\s*`No`/)
   assert.match(approvalStatusSource, /Target-environment table-plan-to-Free approval:\s*`Pending`/)
+  assert.match(approvalPacketSource, /Approve table-plan-to-Free mapping for the target environment\./)
   assert.match(
     roadmapSource,
     /No migrations applied|Migrations applied \| None|migrations unapplied/i,

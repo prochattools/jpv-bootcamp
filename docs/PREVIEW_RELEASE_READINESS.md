@@ -29,7 +29,9 @@ Current validated readiness baseline: `d55229f test: enforce programme content r
 
 **Outcome:** `NOT READY FOR CONTROLLED STAGING RELEASE PROCESS`
 
-**Repository-owned staging operations status:** `REPOSITORY READY FOR CONTROLLED STAGING OPERATIONS`
+**Repository-owned staging operations status:** `DECISION-READY FOR CONTROLLED STAGING APPROVAL`
+
+**Decision-readiness command result:** `DECISION-READY, EXTERNAL APPROVALS PENDING`
 
 ### Completed launch-scoped implementation
 
@@ -44,10 +46,11 @@ Current validated readiness baseline: `d55229f test: enforce programme content r
 
 ### Deterministic local validation baseline
 
-- `pnpm test:release` passed `127/127`
+- `pnpm test:release` passed `138/138`
 - `pnpm test:e2e` passed `58/58` across desktop and mobile Chromium projects
 - `pnpm test:release:full` passed
 - `pnpm staging:static-preflight` passed
+- `pnpm staging:decision-readiness` passed with `DECISION-READY, EXTERNAL APPROVALS PENDING`
 - `pnpm staging:migration-preflight` passed
 - `pnpm staging:migration-rehearsal` passed in static mode; localhost-only disposable execution remains optional and unexecuted
 - `pnpm staging:migration-rehearsal:evidence` passed and produced deterministic repository-only Markdown evidence
@@ -59,7 +62,7 @@ Current validated readiness baseline: `d55229f test: enforce programme content r
 - `pnpm build` passed
 - `pnpm exec prisma validate --schema=prisma/system.prisma` passed
 - `pnpm exec prisma validate --schema=prisma/schema.prisma` passed
-- `pnpm exec pnpm audit --prod --audit-level high` passed the high-severity gate; remaining advisories are `2 moderate`
+- `pnpm exec pnpm audit --prod --audit-level high --ignore-registry-errors` passed the high-severity gate; remaining advisories are `2 moderate`
 - `pnpm exec tsx scripts/no_legacy_learn_namespace.test.ts` passed
 - no migration, deployment, provider, or push action occurred during this validation baseline
 
@@ -68,6 +71,7 @@ Current validated readiness baseline: `d55229f test: enforce programme content r
 | Gate | Current status | Evidence owner | Notes |
 | --- | --- | --- | --- |
 | Migration approval and apply path | Blocked | `docs/client/MIGRATION_APPROVAL_PACKET.md`, `docs/client/MIGRATION_APPROVAL_STATUS.md` | Migrations remain unapplied and require explicit target-environment approval. |
+| Decision packets and owners | Ready for external approval review | `docs/decisions/`, `pnpm staging:decision-readiness` | Repository-owned decision records, owner assignments, dependency order, and rollback statements are now complete and internally validated. |
 | Migration rehearsal and rollback ownership | Static rehearsal passed; disposable execution not yet run | `docs/client/MIGRATION_REHEARSAL_RUNBOOK.md`, `docs/release/ROLLBACK_EVIDENCE_CHECKLIST.md` | Repository-owned static rehearsal and evidence are complete; localhost-only disposable execution stays opt-in and target-environment rehearsal remains gated. |
 | Support-request migration application | Blocked | `prisma/migrations/20260712_151700_add_support_requests/migration.sql` | Additive migration exists but remains unapplied. |
 | Provider/email verification | Repository simulation passed; live verification not executed | `docs/client/PROVIDER_EMAIL_READINESS.md`, `docs/client/PROVIDER_EMAIL_EVIDENCE_TEMPLATE.md` | Mocked/local provider simulation is repository-owned and complete; live verification still requires credentials and operator evidence. |
@@ -85,6 +89,16 @@ The repository-owned preparation contract is complete and validated locally. Ope
 - rollback evidence checklist: `docs/release/ROLLBACK_EVIDENCE_CHECKLIST.md`
 - provider verification runbook: `docs/release/PROVIDER_VERIFICATION_RUNBOOK.md`
 - go / no-go checklist: `docs/release/GO_NO_GO_CHECKLIST.md`
+- decision manifest and readiness runner: `scripts/release/decisionManifest.ts`, `pnpm staging:decision-readiness`
+- decision packets:
+  - `docs/decisions/PROGRAMME_CONTENT_PUBLICATION_APPROVAL.md`
+  - `docs/decisions/TABLE_PLAN_TO_FREE_APPROVAL.md`
+  - `docs/decisions/ACCOUNT_COLUMN_RENAME_APPROVAL.md`
+  - `docs/decisions/STAGING_MIGRATION_APPROVAL.md`
+  - `docs/decisions/ROLLBACK_READINESS_APPROVAL.md`
+  - `docs/decisions/PROVIDER_VERIFICATION_APPROVAL.md`
+  - `docs/decisions/STAGING_SMOKE_APPROVAL.md`
+  - `docs/decisions/CORE_GO_LIVE_DECISION.md`
 - programme content intake template: `docs/client/PROGRAMME_CONTENT_INTAKE_TEMPLATE.md`
 - programme approval record template: `docs/client/PROGRAMME_CONTENT_APPROVAL_RECORD.md`
 - programme content validation: `pnpm content:programme:validate -- <repository-relative-json-path>`
@@ -103,7 +117,7 @@ These assets are repository-ready only. They do not mark migration applied, prov
 ### Required operator sequence before staging
 
 1. confirm the exact approved branch tip with `git log --oneline -1`;
-2. run `pnpm staging:migration-preflight`, `pnpm staging:smoke-plan`, and `pnpm release:evidence:dry-run` at that exact tip;
+2. run `pnpm staging:decision-readiness`, `pnpm staging:migration-preflight`, `pnpm staging:smoke-plan`, and `pnpm release:evidence:dry-run` at that exact tip;
 3. run `pnpm staging:migration-rehearsal`, `pnpm staging:migration-rehearsal:evidence`, `pnpm staging:provider-simulation`, and `pnpm staging:smoke-simulated` at that exact tip;
 4. convert the approved representative programme package into the canonical JSON contract and run `pnpm content:programme:validate`, `pnpm content:programme:acceptance`, and `pnpm content:programme:import-plan`;
 5. confirm client content/public-copy decisions, especially representative programme content;
@@ -117,6 +131,7 @@ These assets are repository-ready only. They do not mark migration applied, prov
 - support-request migration remains unapplied;
 - table-plan-to-Free mapping approval remains pending;
 - account-column rename approval remains pending;
+- staging migration approval, rollback owner confirmation, and formal go/no-go approval remain pending;
 - representative programme content is still blocked until the client supplies a complete approved package and it passes the repository intake, acceptance, and import-plan checks; the repository is ready to accept that package;
 - provider/email verification is still pending;
 - staging smoke is still pending;

@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
+import { RELEASE_TEST_MANIFEST } from './release/releaseTestManifest'
 
 async function main(): Promise<void> {
+  const releaseCount = RELEASE_TEST_MANIFEST.length
   const files = {
     approvalPacket: 'docs/client/MIGRATION_APPROVAL_PACKET.md',
     approvalStatus: 'docs/client/MIGRATION_APPROVAL_STATUS.md',
@@ -76,6 +78,7 @@ async function main(): Promise<void> {
   assert.match(docs.roadmap, /Current client truth: `docs\/client\/JPV_Bootcamp_Platform_Expansion_Go_Live_Plan_v3_6\.docx`/)
   assert.match(docs.roadmap, /Version 3\.4 is the prior progress baseline/)
   assert.match(docs.roadmap, /Migration approval \| Blocked pending table-plan-to-Free/)
+  assert.match(docs.roadmap, /Decision readiness \| `DECISION-READY, EXTERNAL APPROVALS PENDING`/)
   assert.match(docs.roadmap, /22 July front-end milestone/i)
   assert.match(docs.roadmap, /client content.*by 15 July/i)
   assert.match(docs.roadmap, /Provider\/email acceptance \| Pending operator verification \|/)
@@ -86,8 +89,9 @@ async function main(): Promise<void> {
   assert.match(docs.roadmap, /not ready for the controlled staging release process/i)
   assert.match(docs.roadmap, /M0-01 through M0-09/)
   assert.match(docs.roadmap, /M1-01 through M1-06/)
-  assert.match(docs.roadmap, /`pnpm test:release` passed `127\/127`/)
+  assert.match(docs.roadmap, new RegExp(String.raw`\`pnpm test:release\` passed \`${releaseCount}\/${releaseCount}\``))
   assert.match(docs.roadmap, /`pnpm test:e2e` passed `58\/58`/)
+  assert.match(docs.roadmap, /`pnpm staging:decision-readiness` passed with `DECISION-READY, EXTERNAL APPROVALS PENDING`\./)
   assert.match(docs.roadmap, /`pnpm staging:migration-preflight`/)
   assert.match(docs.roadmap, /`pnpm staging:smoke-plan`/)
   assert.match(docs.roadmap, /Repository inventory now includes deterministic release-manifest coverage and Playwright launch browser E2E\./)
@@ -98,13 +102,15 @@ async function main(): Promise<void> {
   assert.match(docs.operatorHandoff, /Branch tip verification: verify the current tip with `git log --oneline -1` before operator action/)
   assert.match(docs.operatorHandoff, /Status update procedure: `docs\/client\/STATUS_UPDATE_PROCEDURE\.md`/)
   assert.match(docs.operatorHandoff, /Toolchain check: `pnpm toolchain:check`/)
+  assert.match(docs.operatorHandoff, /Decision-readiness check: `pnpm staging:decision-readiness`/)
   assert.match(docs.operatorHandoff, /Static preflight: `pnpm staging:static-preflight`/)
   assert.match(docs.operatorHandoff, /Migration rehearsal: `pnpm staging:migration-rehearsal`/)
   assert.match(docs.operatorHandoff, /Provider simulation: `pnpm staging:provider-simulation`/)
   assert.match(docs.operatorHandoff, /Local simulated smoke: `pnpm staging:smoke-simulated`/)
   assert.match(docs.operatorHandoff, /Migrations applied: `No`/)
-  assert.match(docs.operatorHandoff, /Deterministic non-browser release gate: `pnpm test:release` \(`127\/127`\)/)
+  assert.match(docs.operatorHandoff, new RegExp(String.raw`Deterministic non-browser release gate: \`pnpm test:release\` \(\`${releaseCount}\/${releaseCount}\`\)`))
   assert.match(docs.operatorHandoff, /Launch browser E2E: `pnpm test:e2e` \(`58\/58`, desktop and mobile Chromium\)/)
+  assert.match(docs.operatorHandoff, /Decision-readiness summary: `DECISION-READY, EXTERNAL APPROVALS PENDING`/)
   assert.match(docs.operatorHandoff, /Repository-owned staging operations contract/)
   assert.match(docs.operatorHandoff, /Rollback evidence checklist: `docs\/release\/ROLLBACK_EVIDENCE_CHECKLIST\.md`/)
   assert.match(docs.operatorHandoff, /pnpm staging:migration-preflight/)
@@ -192,9 +198,11 @@ async function main(): Promise<void> {
   assert.match(docs.previewReadiness, /Status update procedure: `docs\/client\/STATUS_UPDATE_PROCEDURE\.md`/)
   assert.match(docs.previewReadiness, /`pnpm staging:static-preflight`/)
   assert.match(docs.previewReadiness, /NOT READY FOR CONTROLLED STAGING RELEASE PROCESS/)
-  assert.match(docs.previewReadiness, /REPOSITORY READY FOR CONTROLLED STAGING OPERATIONS/)
-  assert.match(docs.previewReadiness, /`pnpm test:release` passed `127\/127`/)
+  assert.match(docs.previewReadiness, /DECISION-READY FOR CONTROLLED STAGING APPROVAL/)
+  assert.match(docs.previewReadiness, /DECISION-READY, EXTERNAL APPROVALS PENDING/)
+  assert.match(docs.previewReadiness, new RegExp(String.raw`\`pnpm test:release\` passed \`${releaseCount}\/${releaseCount}\``))
   assert.match(docs.previewReadiness, /`pnpm test:e2e` passed `58\/58`/)
+  assert.match(docs.previewReadiness, /`pnpm staging:decision-readiness` passed with `DECISION-READY, EXTERNAL APPROVALS PENDING`/)
   assert.match(docs.previewReadiness, /`pnpm staging:migration-preflight`/)
   assert.match(docs.previewReadiness, /`pnpm staging:migration-rehearsal`/)
   assert.match(docs.previewReadiness, /`pnpm staging:provider-simulation`/)
