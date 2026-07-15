@@ -6,7 +6,7 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 
 - Repository: `prochattools-jpv-bootcamp`
 - Branch: `feature/course-branding-and-preview`
-- Current HEAD: `973a651 docs: align go-no-go decision flow`
+- Current HEAD: `288ed30 docs: add current work handoff`
 - Pull request: `https://github.com/prochattools/jpv-bootcamp/pull/2`
 - Migrations applied: `No`
 - Deployment performed: `No`
