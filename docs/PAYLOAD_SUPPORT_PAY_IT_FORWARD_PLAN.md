@@ -1,84 +1,128 @@
-# Payload Support and Pay-it-forward Access Plan
+# Payload Support, Voucher, and Pay-it-forward Access Plan
 
-This specification defines the Version 3.3 first-release support and pay-it-forward model for JPV Bootcamp. It is subordinate to `docs/PAYLOAD_INTEGRATION_PLAN.md`.
+This specification defines the JPV Bootcamp support, voucher, and pay-it-forward model. It is subordinate to `docs/PAYLOAD_INTEGRATION_PLAN.md` and `docs/JPV_MEMBERSHIP_BILLING_AND_VOUCHER_ARCHITECTURE.md`.
 
 ## Product boundary
 
-JPV Bootcamp has two clear access labels:
+JPV Bootcamp has one public membership: **JPV Bootcamp Membership**. Support, vouchers, and pay-it-forward funding do not create separate public plans or tiers.
 
-- **Free** — non-paid access created or approved through support, pay-it-forward, staff/test, migration, or administrator action.
-- **Pro** — the single paid subscription, available through monthly and annual payment options.
+Every recipient uses one onboarding path: Stripe Checkout for the normal monthly or annual JPV Bootcamp Membership subscription. Paying users pay immediately. Voucher and pay-it-forward recipients use a customer-restricted 100% promotion code for one month or one year. A valid payment method is always required, and the same subscription automatically renews at the normal recurring Price after the funded period unless cancelled.
 
-Support and pay-it-forward access must not create another public tier. It is an administrator-controlled way to grant Free access with clear terms, dates, audit, and communication.
+## Unified administrator workflow
 
-## First-release workflow
+Payload must provide one Membership Support area for voucher and pay-it-forward operations. Administrators should not have to use separate interfaces for equivalent recipient outcomes.
 
-1. A visitor applies for support or a sponsor pays forward one or more memberships/support credits.
-2. The system records the application, sponsor action, receipt state, and safe public-facing details.
-3. An administrator reviews the application or assigns the sponsored access.
-4. The recipient receives Free access with a clear start date, end date, and terms.
-5. The system records who approved or assigned the access and which communication was sent.
-6. The recipient can sign in and use the allowed course/community surfaces during the approved access window.
-7. Expiry, renewal, revocation, or upgrade to Pro is handled explicitly and audited.
+The workflow must support:
 
-## Roles
+- search and select an existing member or create a pending recipient profile;
+- view Stripe customer, subscription, Price, renewal, discount, and reconciliation state;
+- issue a personal one-month or one-year voucher;
+- allocate approved pay-it-forward funding;
+- generate a secure Checkout link;
+- deactivate an unused promotion code;
+- replace or extend access through supported Stripe operations;
+- allocate, revoke, or replace approved pay-it-forward funding through the same Stripe voucher-backed subscription flow;
+- record the operator, approver, reason, dates, and evidence reference;
+- review webhook, payment, and reconciliation failures.
 
-| Role | Responsibility |
-|---|---|
-| Sponsor | Pays forward one or more support credits and receives a receipt/thank-you email. |
-| Applicant/recipient | Applies for support or receives approved Free access with clear terms and duration. |
-| Administrator | Reviews applications, assigns access, sets dates, revokes access, and sees expiry/renewal state. |
-| System | Tracks source, status, approval, dates, communication, audit, and member access outcome. |
+All Stripe changes must run server-side through access-controlled Payload endpoints or jobs. Payload must use Stripe’s Coupon, Promotion Code, Checkout, Subscription, Customer Portal, and webhook capabilities rather than implement a separate discount engine.
+
+## Voucher rules
+
+- Personal vouchers use unique Stripe Promotion Codes restricted to the intended Stripe Customer.
+- Each code has one permitted redemption unless an explicit exception is approved.
+- One-month vouchers apply a 100% discount to one monthly billing cycle.
+- One-year vouchers apply a 100% discount to one annual billing cycle.
+- Voucher Checkout must disclose the normal future renewal amount and renewal date.
+- Voucher access is not active until verified Stripe state confirms the subscription.
+- Unused codes may be deactivated. Historical redemption records must remain immutable.
+- Extension should create a new supported Stripe discount or schedule change and must not rewrite historical voucher evidence.
+
+## Pay-it-forward rules
+
+Pay-it-forward is a funding source and approval workflow. It is not a membership tier.
+
+The system must record:
+
+- sponsor or funding source;
+- payment/receipt or approved credit source;
+- available and allocated value or duration;
+- recipient;
+- approved duration;
+- voucher or sponsored-grant outcome;
+- Stripe and Payload identifiers;
+- approval, assignment, redemption, expiry, revocation, and communication events.
+
+All pay-it-forward recipients receive a voucher-backed Stripe subscription. The funded period is one month or one year, a valid payment method is required, and the subscription automatically renews at the normal recurring Price unless cancelled.
 
 ## Required records
 
-At minimum the system needs records for:
+At minimum, Payload needs records for:
 
 - support applications;
-- sponsor/pay-it-forward transactions or credits;
+- pay-it-forward funding or credits;
+- voucher issuance and redemption projections;
 - sponsored-access assignments;
-- recipient member relationship;
+- recipient/member relationship;
+- Stripe customer, subscription, coupon, promotion-code, Product, and Price identifiers;
 - approval status and reviewer;
-- start date, end date, and revocation date;
+- start, expiry, renewal, and revocation dates;
 - communication events;
-- audit and migration source.
+- webhook/reconciliation status;
+- immutable operator audit and migration source.
+
+Secrets and API keys must never be stored in member-readable fields.
 
 ## Access rules
 
-- Free access is granted only by verified support/pay-it-forward logic, migration mapping, or administrator action.
-- Browser input must never choose trusted recipient identity, access state, sponsor balance, start date, or expiry date.
-- Free access may permit selected course/community access but must not imply a paid Pro subscription.
-- Pro checkout, billing portal, and payment recovery remain separate from Free access assignment.
-- Expired or revoked Free access must fail closed for protected content while preserving account login where recovery or support is needed.
+- Browser input must never choose trusted recipient identity, sponsorship balance, entitlement state, start date, or expiry date.
+- Stripe remains authoritative for voucher-backed subscription state.
+- Payload remains authoritative for sponsorship approval, audit, and application entitlement projection.
+- Expired, unpaid, suspended, revoked, or unreconciled access must fail closed for protected content.
+- Public free registration is unavailable.
+- A support application does not itself create active membership access.
 
 ## Communication rules
 
-- Sponsors receive a receipt or thank-you email with sponsor-safe wording.
-- Applicants receive a confirmation that the request is pending review.
-- Recipients receive approval, terms, start/end date, and next-step instructions.
-- Administrators see pending applications, assigned access, expiry, renewal, and revocation state.
-- No email should expose private sponsor, recipient, payment, or internal Payload data.
+Recipients must receive clear language covering:
+
+- whether access is directly paid, voucher-funded, or pay-it-forward funded within the same Stripe subscription lifecycle;
+- the access start and end or renewal date;
+- the future recurring price, where applicable;
+- cancellation instructions;
+- payment-method requirement;
+- what happens after the free period;
+- support contact and privacy information.
+
+Sponsors receive receipt or acknowledgement wording that does not expose recipient-private information. No message may expose internal Payload fields, Stripe secrets, or unrelated payment data.
 
 ## Migration rules
 
-Historical Free, Pro, manual, sponsor, support, expired, revoked, and suspended states must be mapped into the new access model before cutover:
+Historical states require explicit mapping before cutover:
 
-- paid active legacy access maps to **Pro** where billing confirms an active paid subscription;
-- approved non-paid access maps to **Free** with an explicit source and duration where known;
-- expired, revoked, suspended, deleted, or disputed states remain non-access states until reviewed;
-- ambiguous states require administrator review before production cutover.
+- verified active paid monthly access -> JPV Bootcamp Membership monthly Price;
+- verified active paid annual access -> JPV Bootcamp Membership annual Price;
+- legacy Free, Table Plan, support, manual, or sponsored access -> no automatic paid conversion;
+- approved non-paid recipients -> explicit voucher-backed Stripe subscription using the standard Checkout flow;
+- expired, revoked, suspended, deleted, disputed, or ambiguous states -> no access until reviewed.
+
+Migration must preserve existing Stripe Customers where possible, preview proration and invoice effects, and avoid duplicate customer creation.
 
 ## Core acceptance
 
-The first release is acceptable when:
+The revised implementation is acceptable when:
 
-- an administrator can review and assign Free support/pay-it-forward access;
-- dates, source, and approval state are visible to administrators;
-- the recipient can sign in and access only the allowed surfaces;
-- expiry or revocation removes protected access without deleting the account;
-- sponsor/applicant/recipient communications are queued with safe content;
-- migration mapping from old tier labels is rehearsed and reconciled.
+- public free registration is technically unavailable;
+- one Product and two recurring Prices are configured through an approved Stripe packet;
+- an administrator can issue personal one-month and one-year vouchers from Payload;
+- pay-it-forward funding can be allocated through the same workflow;
+- Stripe mutations are idempotent, audited, and reconciled by verified webhooks;
+- voucher recipients see future renewal terms before confirming Checkout;
+- every paying, voucher, and pay-it-forward recipient uses the same Stripe subscription lifecycle;
+- expiry, payment failure, cancellation, or revocation changes protected access predictably;
+- migration mappings are rehearsed and reconciled;
+- browser, billing, privacy, and security acceptance tests pass.
 
-## Post-core enhancements
+## Deferred enhancements
 
-Later releases may add sponsor dashboards, visible credit counters, automated matching, renewal campaigns, richer applicant scoring, direct sponsor-recipient updates, and advanced reports. These are not first core go-live requirements unless explicitly approved.
+Sponsor dashboards, recipient matching, public credit counters, bulk voucher campaigns, advanced scoring, and richer reports remain post-core unless explicitly approved.

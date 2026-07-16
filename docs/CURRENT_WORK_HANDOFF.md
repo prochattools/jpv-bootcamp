@@ -47,20 +47,20 @@ The application currently uses:
 
 - `/portal/**` for member and user functionality
 - `/admin/**` for administrator functionality
-- Free and Pro as the active product model in the new application
+- an implemented Free/Pro product model that is now superseded and must be refactored before release
 - one canonical portal billing surface at `/portal/billing`
 - an explicit preview-only programme surface until approved representative content is supplied
 - persisted read-only community views for the launch scope
 
-The repository is ready to accept a representative eight-week programme package but must not publish one until the content contract, validation, approval evidence, and publication authorization all pass.
+The authorized target is one paid **JPV Bootcamp Membership**, one Stripe Product, GBP 80 monthly and GBP 800 annual recurring Prices, no public free registration, personal one-month/year vouchers, unified pay-it-forward administration, email and telephone onboarding, and Bunny-only protected video. The binding architecture is `docs/JPV_MEMBERSHIP_BILLING_AND_VOUCHER_ARCHITECTURE.md`.
 
 ## Current release state
 
 ### Repository state
 
-`DECISION-READY, EXTERNAL APPROVALS PENDING`
+`ARCHITECTURE REVISION ACTIVE — P0-A AUTHORIZED`
 
-The repository-owned implementation, validation, rehearsal planning, simulation, rollback planning, and decision preparation are complete.
+The former Free/Pro implementation is superseded. Documentation alignment is in progress and P0-A single-membership billing and entitlement implementation is authorized. Repository-only implementation and test-mode tooling may proceed, but live operations remain prohibited.
 
 ### Overall release state
 
@@ -89,9 +89,11 @@ Re-run the smallest relevant checks after focused changes and the complete relea
 
 ## Decision status
 
-- Table-plan-to-Free: `AWAITING_APPROVAL`
-- Account-column rename: `AWAITING_APPROVAL`
-- Staging migration approval: `NOT_APPROVED`
+- Membership architecture: `APPROVED_FOR_IMPLEMENTATION_PLANNING`
+- P0-A repository implementation: `AUTHORIZED`
+- Live Stripe catalogue changes: `NOT_AUTHORIZED`
+- Live prorated subscription migration: `NOT_AUTHORIZED`
+- Database migration approval: `NOT_APPROVED`
 - Programme content: `AWAITING_CLIENT_CONTENT`
 - Provider verification: `UNEXECUTED`
 - Staging smoke: `UNEXECUTED`
@@ -107,17 +109,18 @@ Do not infer approval from readiness, implementation, simulation, silence, or ro
 
 ## External blockers
 
-The following require explicit client, business, database, provider, operator, or release approval:
+The following still require explicit client, legal, database, provider, operator, or release approval:
 
-1. Representative eight-week programme content package and publication approval
-2. Table-plan-to-Free business decision
-3. Account-column rename/database decision
-4. Staging migration approval with exact path, owners, backup, and rollback authorization
-5. Live provider and email verification evidence
-6. Actual staging smoke evidence
-7. Formal go/no-go approval
+1. Exact legacy-state mapping and customer communication wording for the prorated migration
+2. Legal/privacy copy for automatic renewal, cancellation, vouchers, telephone collection, plan changes, and migration notices
+3. Live Stripe Product/Price creation approval and operator ownership
+4. Live prorated subscription migration approval with invoice-preview, batch, backup, rollback, and exception procedures
+5. Representative eight-week programme content and Bunny video package
+6. Live Stripe, email, Bunny, and Payload provider verification evidence
+7. Actual staging smoke evidence
+8. Formal go/no-go approval
 
-The support-request migration remains unapplied.
+No live provider, database, migration, deployment, staging, or production operation is authorized.
 
 ## Important repository commands
 
@@ -171,13 +174,20 @@ Do not:
 
 ## Current feature
 
-There is no active uncommitted feature packet at this handoff point.
+**Active packet:** P0-A — Single-membership billing and entitlement foundation.
 
-The core M0/M1 implementation is complete. Work is currently paused at the external-approval boundary. The next task depends on what is explicitly authorized:
+Priority order:
 
-1. If new approval evidence is supplied, ingest and validate that evidence, then prepare or execute only the approved packet.
-2. If M2-01 is explicitly promoted, implement the durable partner-referral persistence and review workflow as a post-core packet.
-3. If controlled staging operations are explicitly authorized, follow the repository runbooks and decision records exactly; do not combine migration, provider verification, staging smoke, deployment, or go/no-go into one implicit approval.
+1. audit and refactor plan/entitlement lifecycle semantics;
+2. verified Stripe subscription, invoice, payment, cancellation, and reconciliation projection;
+3. safe prorated-migration inventory and invoice-preview modelling;
+4. removal of public Free registration;
+5. Checkout/onboarding fields and monthly/annual configuration;
+6. Payload administrator foundations and focused tests.
+
+Fixed dates remain 22 July 2026 for the front-end milestone, 23 July for handover buffer, and 24 July for the client finished-by date. These dates do not authorize live operations or reduce validation requirements.
+
+The next implementation task is the exact code audit and smallest safe domain refactor for membership entitlement, billing cadence, Stripe projection, and migration preview. M2 remains unstarted and unauthorized.
 
 ## Ready-to-copy resume prompt
 
