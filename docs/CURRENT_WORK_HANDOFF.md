@@ -6,7 +6,7 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 
 - Repository: `prochattools-jpv-bootcamp`
 - Branch: `feature/course-branding-and-preview`
-- Current HEAD: `288ed30 docs: add current work handoff`
+- Current HEAD: `9449b5c docs: revise membership and billing architecture`
 - Pull request: `https://github.com/prochattools/jpv-bootcamp/pull/2`
 - Migrations applied: `No`
 - Deployment performed: `No`
@@ -176,18 +176,28 @@ Do not:
 
 **Active packet:** P0-A — Single-membership billing and entitlement foundation.
 
-Priority order:
+Completed P0-A checkpoint:
+
+- member Checkout accepts only the `membership` plan;
+- monthly billing is GBP 80 with no minimum commitment;
+- annual billing is GBP 800 with automatic renewal disclosure;
+- both cadences require recurring-payment consent;
+- Checkout enables promotion codes, always collects a payment method, and collects telephone number;
+- Checkout metadata records membership and billing cadence;
+- the obsolete monthly commitment gate and UI were removed;
+- focused Checkout test and root TypeScript validation pass.
+
+Remaining priority order:
 
 1. audit and refactor plan/entitlement lifecycle semantics;
 2. verified Stripe subscription, invoice, payment, cancellation, and reconciliation projection;
 3. safe prorated-migration inventory and invoice-preview modelling;
 4. removal of public Free registration;
-5. Checkout/onboarding fields and monthly/annual configuration;
-6. Payload administrator foundations and focused tests.
+5. Payload administrator foundations and focused tests.
 
 Fixed dates remain 22 July 2026 for the front-end milestone, 23 July for handover buffer, and 24 July for the client finished-by date. These dates do not authorize live operations or reduce validation requirements.
 
-The next implementation task is the exact code audit and smallest safe domain refactor for membership entitlement, billing cadence, Stripe projection, and migration preview. M2 remains unstarted and unauthorized.
+The next implementation task is the smallest safe domain refactor for membership entitlement lifecycle and Stripe subscription projection. M2 remains unstarted and unauthorized.
 
 ## Ready-to-copy resume prompt
 

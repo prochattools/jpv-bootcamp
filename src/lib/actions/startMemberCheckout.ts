@@ -7,13 +7,11 @@ import { requirePortalMember } from '@/lib/auth/requirePortalMember'
 import { getStripeConfig } from '@/lib/config'
 import { normalizeEmail } from '@/lib/normalize-email'
 import { getStripe } from '@/lib/stripe'
-import { buildCheckoutContractMetadata } from '@/lib/stripe-commitment'
 
-export type MemberCheckoutPlan = 'pro'
+export type MemberCheckoutPlan = 'membership'
 export type MemberCheckoutBilling = 'monthly' | 'annual'
 export type MemberCheckoutConsent = {
-  contractAccepted: boolean
-  immediateAccessRequested: boolean
+  recurringPaymentAccepted: boolean
 }
 
 export type StartMemberCheckoutResult =
@@ -29,21 +27,15 @@ export type StartMemberCheckoutResult =
     }
 
 const ACTIVE_SUBSCRIPTION_STATUSES = new Set(['active', 'trialing', 'past_due', 'unpaid'])
-const ACTIVE_COMMITMENT_STATUSES = new Set(['pending', 'active', 'cancellation_requested'])
 
 export async function startMemberCheckout(
   plan: string,
   billing: MemberCheckoutBilling = 'monthly',
   consent?: MemberCheckoutConsent,
 ): Promise<StartMemberCheckoutResult> {
-  if (plan !== 'pro') return { ok: false, error: 'invalid_plan' }
+  if (plan !== 'membership') return { ok: false, error: 'invalid_plan' }
   if (billing !== 'monthly' && billing !== 'annual') return { ok: false, error: 'invalid_plan' }
-  if (
-    billing === 'monthly' &&
-    (!consent?.contractAccepted || !consent.immediateAccessRequested)
-  ) {
-    return { ok: false, error: 'consent_required' }
-  }
+  if (!consent?.recurringPaymentAccepted) return { ok: false, error: 'consent_required' }
 
   let memberEmail: string
   try {
@@ -62,14 +54,10 @@ export async function startMemberCheckout(
       select: {
         stripeCustomerId: true,
         subscriptionStatus: true,
-        commitmentStatus: true,
       },
     })
 
-    if (
-      (record?.subscriptionStatus && ACTIVE_SUBSCRIPTION_STATUSES.has(record.subscriptionStatus)) ||
-      (record?.commitmentStatus && ACTIVE_COMMITMENT_STATUSES.has(record.commitmentStatus))
-    ) {
+    if (record?.subscriptionStatus && ACTIVE_SUBSCRIPTION_STATUSES.has(record.subscriptionStatus)) {
       return { ok: false, error: 'existing_subscription' }
     }
 
@@ -77,25 +65,22 @@ export async function startMemberCheckout(
     const priceId = billing === 'annual' ? config.stripe.priceProAnnual : config.stripe.pricePro
     const successUrl = new URL('/portal/billing?checkout=success', config.app.url).toString()
     const cancelUrl = new URL('/portal/billing?checkout=cancelled', config.app.url).toString()
-    const metadata = buildCheckoutContractMetadata({
-      billing,
+    const metadata = {
+      membership: 'jpv_bootcamp_membership',
+      billingCadence: billing,
       source: 'member_portal',
-      consent:
-        billing === 'monthly'
-          ? {
-              contractAccepted: true,
-              immediateAccessRequested: true,
-              acceptedAt: new Date(),
-            }
-          : null,
-    })
+      recurringPaymentAccepted: 'true',
+      acceptedAt: new Date().toISOString(),
+    }
 
     const session = await getStripe().checkout.sessions.create({
       mode: 'subscription',
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: successUrl,
       cancel_url: cancelUrl,
-      allow_promotion_codes: billing === 'annual',
+      allow_promotion_codes: true,
+      payment_method_collection: 'always',
+      phone_number_collection: { enabled: true },
       ...(record?.stripeCustomerId
         ? { customer: record.stripeCustomerId }
         : { customer_email: memberEmail }),
