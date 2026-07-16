@@ -17,10 +17,8 @@ import { shouldSendMembershipEmailForEvent } from '@/lib/stripe-membership-email
 import { shadowSyncStripeEventToPayload } from '@/lib/payloadCourse/stripeShadowSync'
 import {
 	projectAsyncCheckoutFailure,
-	projectCheckoutCommitment,
 	projectSubscriptionSchedule,
 } from '@/lib/billing/commitmentProjection'
-import { ensureMonthlyCommitmentSchedule } from '@/lib/stripe-commitment'
 
 const PROVISIONING_EVENT_TYPES = new Set([
 	'checkout.session.completed',
@@ -328,9 +326,8 @@ export async function handleStripeWebhook(req: Request) {
 	let firstError: Error | null = null
 
 	for (let i = 0; i < webhookSecrets.length; i += 1) {
-		const secret = webhookSecrets[i]
 		try {
-			event = stripe.webhooks.constructEvent(rawBuffer, signature, secret)
+			event = stripe.webhooks.constructEvent(rawBuffer, signature, webhookSecrets[i])
 			matchedSecretIndex = i
 			break
 		} catch (error) {
@@ -471,13 +468,6 @@ export async function handleStripeWebhook(req: Request) {
 					allowEmail: allowMembershipEmail,
 					eventLivemode: event.livemode,
 				})
-				const schedule = await ensureMonthlyCommitmentSchedule({
-					stripe: getStripe(),
-					session,
-				})
-				if (schedule) {
-					await projectCheckoutCommitment({ session, schedule, eventId: event.id })
-				}
 				break
 			}
 			case 'checkout.session.async_payment_failed': {

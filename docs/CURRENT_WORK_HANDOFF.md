@@ -190,18 +190,25 @@ Completed P0-A checkpoints:
 - active access derives from verified lifecycle state and fails closed when unreconciled;
 - past-due access respects the configured payment-grace window;
 - the obsolete commitment-specific portal restriction and undefined resolver were removed;
-- focused Checkout, lifecycle helper, billing parity, and root TypeScript validation pass.
+- focused Checkout, lifecycle helper, billing parity, and root TypeScript validation pass;
+- public landing and upgrade surfaces now present only JPV Bootcamp Membership monthly and annual billing;
+- public Checkout requires explicit recurring-payment acknowledgment before session creation;
+- both public and portal Checkout collect a payment method and telephone number and enable promotion codes;
+- Stripe metadata uses `membership` while the compatibility bridge temporarily maps it to the legacy paid-plan storage enum until an approved schema migration;
+- the standard Stripe Customer Portal is used for all members;
+- obsolete monthly commitment schedule creation was removed from Checkout webhook handling;
+- subscription, invoice, payment, cancellation, and legacy schedule events continue through the existing synchronization and reconciliation paths;
+- focused Checkout, billing contract, portal refinement, front-end milestone, and root TypeScript validations pass.
 
 Remaining priority order:
 
-1. verified Stripe subscription, invoice, payment, cancellation, and reconciliation projection;
-2. safe prorated-migration inventory and invoice-preview modelling;
-3. removal of public Free registration;
-4. Payload administrator foundations and focused tests.
+1. safe prorated-migration inventory and invoice-preview modelling;
+2. removal of public Free registration and remaining Free/Pro policy semantics;
+3. Payload administrator voucher/pay-it-forward foundations and focused tests.
 
 Fixed dates remain 22 July 2026 for the front-end milestone, 23 July for handover buffer, and 24 July for the client finished-by date. These dates do not authorize live operations or reduce validation requirements.
 
-The next implementation task is the smallest safe Stripe subscription and webhook projection packet, followed by migration-preview modelling where the same exact projection fields can be reused. M2 remains unstarted and unauthorized.
+The next implementation task is the largest safe prorated-migration inventory and invoice-preview packet, reusing the established membership, cadence, subscription, invoice, payment, and reconciliation fields. M2 remains unstarted and unauthorized.
 
 ## Ready-to-copy resume prompt
 

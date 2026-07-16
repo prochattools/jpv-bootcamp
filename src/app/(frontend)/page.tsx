@@ -36,9 +36,9 @@ export default function HomePage() {
         "Card payments are processed through Stripe. The available monthly and annual options are shown in the pricing section.",
     },
     {
-      question: "What does Pro include?",
+      question: "What does the JPV Bootcamp Membership include?",
       answer:
-        "Pro provides access to the current programme, protected resources, and community features available in the member portal.",
+        "The JPV Bootcamp Membership provides access to the current programme, protected resources, and community features available in the member portal.",
     },
     {
       question: "Where can I ask a question?",
@@ -47,30 +47,35 @@ export default function HomePage() {
   ];
   const pricingPlans = [
     {
-      name: "Free",
-      price: "Support access",
-      description: "Approved non-paid access",
-      features: ["Support and pay-it-forward access", "Administrator approval", "Clear access dates", "Upgrade path to Pro"],
-      ctaLabel: "Apply for support",
-      ctaHref: signUpHref,
+      name: "JPV Bootcamp Membership — Monthly",
+      price: "£80/month",
+      description: "No minimum commitment",
+      features: [
+        "Renews monthly until cancelled",
+        "Cancellation takes effect at the end of the paid month",
+        "Personal voucher and pay-it-forward codes supported",
+        "Programme, resources, and community access",
+      ],
+      ctaLabel: "Choose monthly billing",
+      ctaHref: "/upgrade",
       highlight: false,
-      subcopy: "Free access is reviewed and assigned safely.",
+      subcopy: "Email, telephone number, payment method, and recurring-payment acknowledgment are required.",
     },
     {
-      name: "Pro",
-      price: "£80/month",
-      description: "Initial 12-month commitment · £960 total",
+      name: "JPV Bootcamp Membership — Annual",
+      price: "£800/year",
+      description: "Paid upfront for 12 months",
       features: [
-        "Continues at £80 month-to-month after the initial term",
-        "£880 annual option paid upfront",
+        "Automatically renews annually unless cancelled",
+        "Personal voucher and pay-it-forward codes supported",
         "Programme access",
         "Protected resources and community access",
       ],
-      ctaLabel: "Review Pro checkout",
-      ctaHref: "/portal/billing",
+      ctaLabel: "Choose annual billing",
+      ctaHref: "/upgrade",
       highlight: true,
-      badge: "Single paid membership",
-      subcopy: "Monthly commitment terms and both required acknowledgments are shown before payment.",
+      badge: "Save £160 per year",
+      subcopy: "Plan changes take effect at the end of the current billing period.",
     },
   ];
   const onboardingSteps = [

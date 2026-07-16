@@ -10,8 +10,9 @@ async function main() {
 
   assert.match(billingAction, /requirePortalMember\('\/portal\/billing'\)/)
   assert.match(billingAction, /BILLING_PORTAL_DEFAULT_RETURN_URL/)
+  assert.match(billingAction, /stripeConfig\.portalConfigurationId/)
+  assert.doesNotMatch(billingAction, /commitmentPortalConfigurationId|restrictedPortalRequired|monthly_commitment/)
   assert.doesNotMatch(billingAction, /openBillingPortal\([^)]*(memberId|memberEmail|stripeCustomerId|returnUrl)/)
-  assert.doesNotMatch(billingAction, /openBillingPortal\([^)]*customer:/)
 
   assert.match(billingPage, /MemberCheckoutButtons/)
   assert.match(billingPage, /BillingPortalButton/)
@@ -21,14 +22,13 @@ async function main() {
   assert.doesNotMatch(billingPage, /openMemberPaidUpgradeAction/)
   assert.doesNotMatch(billingPage, /getStripe\(\)|stripe\.checkout|stripe\.billingPortal/)
 
-  assert.match(checkoutButtons, /Start Pro — pay £80 now/)
-  assert.match(checkoutButtons, /Start Pro annual — pay £880 now/)
-  assert.match(checkoutButtons, /Contract acknowledgment/)
-  assert.match(checkoutButtons, /Immediate access request/)
-  assert.match(checkoutButtons, /startMemberCheckout\(/)
-  assert.match(checkoutButtons, /contractAccepted, immediateAccessRequested/)
+  assert.match(checkoutButtons, /Start monthly membership — pay £80 now/)
+  assert.match(checkoutButtons, /Start annual membership — pay £800 now/)
+  assert.match(checkoutButtons, /Recurring-payment acknowledgment/)
+  assert.match(checkoutButtons, /startMemberCheckout\(PLAN, billing, \{ recurringPaymentAccepted \}\)/)
   assert.match(checkoutButtons, /existing_subscription/)
   assert.match(checkoutButtons, /Use Manage billing instead\./)
+  assert.doesNotMatch(checkoutButtons, /Contract acknowledgment|Immediate access request|Start Pro|£880/)
 
   console.log('billing portal refinement tests passed')
 }

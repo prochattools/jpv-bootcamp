@@ -10,91 +10,65 @@ import { BILLING_PORTAL_DEFAULT_RETURN_URL } from '@/lib/billing-portal-return'
 import { requirePortalMember } from '@/lib/auth/requirePortalMember'
 
 export type OpenBillingPortalResult =
-	| { ok: true; portalUrl: string }
-	| {
-			ok: false
-			error:
-				| 'unauthenticated'
-				| 'no_stripe_customer'
-				| 'restricted_portal_unavailable'
-				| 'stripe_error'
-				| 'unexpected_error'
-	  }
+  | { ok: true; portalUrl: string }
+  | {
+      ok: false
+      error:
+        | 'unauthenticated'
+        | 'no_stripe_customer'
+        | 'stripe_error'
+        | 'unexpected_error'
+    }
 
 export async function openBillingPortal(): Promise<OpenBillingPortalResult> {
-	let memberEmail: string
+  let memberEmail: string
 
-	try {
-		const portalMember = await requirePortalMember('/portal/billing')
-		memberEmail = portalMember.memberEmail
-	} catch {
-		return { ok: false, error: 'unauthenticated' }
-	}
+  try {
+    const portalMember = await requirePortalMember('/portal/billing')
+    memberEmail = portalMember.memberEmail
+  } catch {
+    return { ok: false, error: 'unauthenticated' }
+  }
 
-	const normalizedEmail = normalizeEmail(memberEmail)
-	if (!normalizedEmail) {
-		return { ok: false, error: 'unauthenticated' }
-	}
+  const normalizedEmail = normalizeEmail(memberEmail)
+  if (!normalizedEmail) return { ok: false, error: 'unauthenticated' }
 
-	try {
-		const customerRecord = await prisma.customerProvisioning.findUnique({
-			where: { normalizedEmail },
-			select: {
-				stripeCustomerId: true,
-				billingCadence: true,
-				commitmentStatus: true,
-			},
-		})
+  try {
+    const customerRecord = await prisma.customerProvisioning.findUnique({
+      where: { normalizedEmail },
+      select: { stripeCustomerId: true },
+    })
 
-		if (!customerRecord?.stripeCustomerId) {
-			console.warn('No Stripe customer found')
-			return { ok: false, error: 'no_stripe_customer' }
-		}
+    if (!customerRecord?.stripeCustomerId) {
+      console.warn('No Stripe customer found')
+      return { ok: false, error: 'no_stripe_customer' }
+    }
 
-		const stripeConfig = getStripeConfig()
-		const restrictedPortalRequired =
-			customerRecord.billingCadence === 'monthly_commitment' &&
-			(customerRecord.commitmentStatus === 'pending' ||
-				customerRecord.commitmentStatus === 'active' ||
-				customerRecord.commitmentStatus === 'cancellation_requested')
-		const portalConfigurationId = restrictedPortalRequired
-			? stripeConfig.commitmentPortalConfigurationId
-			: stripeConfig.portalConfigurationId
-		if (!portalConfigurationId) {
-			console.error('Restricted billing portal configuration is unavailable')
-			return { ok: false, error: 'restricted_portal_unavailable' }
-		}
-		const stripe = getStripe()
+    const stripeConfig = getStripeConfig()
+    const session = await getStripe().billingPortal.sessions.create({
+      customer: customerRecord.stripeCustomerId,
+      return_url: BILLING_PORTAL_DEFAULT_RETURN_URL,
+      configuration: stripeConfig.portalConfigurationId,
+    })
 
-		const session = await stripe.billingPortal.sessions.create({
-			customer: customerRecord.stripeCustomerId,
-			return_url: BILLING_PORTAL_DEFAULT_RETURN_URL,
-			configuration: portalConfigurationId,
-		})
+    if (!session.url) {
+      console.error('Billing portal session created but no URL returned')
+      return { ok: false, error: 'stripe_error' }
+    }
 
-		if (!session.url) {
-			console.error('Billing portal session created but no URL returned')
-			return { ok: false, error: 'stripe_error' }
-		}
+    return { ok: true, portalUrl: session.url }
+  } catch (error) {
+    const errorMessage = (error as Error).message || 'Unknown error'
+    console.error('Failed to open billing portal: internal server error')
 
-		console.info('Billing portal session opened successfully')
+    if (
+      errorMessage.includes('No such customer') ||
+      errorMessage.includes('Invalid customer ID')
+    ) {
+      return { ok: false, error: 'no_stripe_customer' }
+    }
 
-		return { ok: true, portalUrl: session.url }
-	} catch (error) {
-		const errorMessage = (error as Error).message || 'Unknown error'
-		console.error('Failed to open billing portal: internal server error')
-
-		if (
-			errorMessage.includes('No such customer') ||
-			errorMessage.includes('Invalid customer ID')
-		) {
-			return { ok: false, error: 'no_stripe_customer' }
-		}
-
-		if (errorMessage.includes('Stripe')) {
-			return { ok: false, error: 'stripe_error' }
-		}
-
-		return { ok: false, error: 'unexpected_error' }
-	}
+    if (errorMessage.includes('Stripe')) return { ok: false, error: 'stripe_error' }
+    return { ok: false, error: 'unexpected_error' }
+  }
 }
