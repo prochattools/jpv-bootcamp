@@ -23,7 +23,7 @@ export default async function SponsoredThankYouPage({ searchParams }: PageProps)
 	}
 
 	const heading = confirmed
-		? 'Thanks for sponsoring Free access.'
+		? 'Thanks for funding JPV Bootcamp Membership.'
 		: 'Thanks for your support.'
 
 	return (

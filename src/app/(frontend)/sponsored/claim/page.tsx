@@ -17,9 +17,9 @@ type ClaimOutcome =
 function messageForOutcome(outcome: ClaimOutcome) {
 	switch (outcome) {
 		case 'claimed':
-			return "You're in. Your sponsored Free access is active."
+			return "You're in. Your pay-it-forward-funded JPV Bootcamp Membership is active."
 		case 'already_claimed':
-			return 'Your sponsored Free access is already active.'
+			return 'Your pay-it-forward-funded JPV Bootcamp Membership is already active.'
 		case 'expired':
 			return 'This claim link has expired.'
 		case 'activation_failed':

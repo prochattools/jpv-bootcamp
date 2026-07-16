@@ -1,51 +1,33 @@
 import Link from 'next/link'
-import { redirect } from 'next/navigation'
-
-import { MemberRegistrationForm } from '@/components/auth/MemberRegistrationForm'
-import { getCurrentPayloadMember } from '@/lib/members/currentMember'
 
 export const metadata = {
-  title: 'Create Free Account | JPV Bootcamp',
-  description: 'Create a free JPV Bootcamp account and verify your email before sign in.',
+  title: 'Choose Membership | JPV Bootcamp',
+  description: 'JPV Bootcamp registration is completed through the paid membership Checkout flow.',
 }
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-export default async function RegisterPage() {
-  const { member } = await getCurrentPayloadMember()
-  if (member) redirect('/portal')
-
+export default function RegisterPage() {
   return (
-    <main className='mx-auto grid min-h-screen max-w-7xl items-center px-6 py-12 lg:grid-cols-[1fr_0.9fr] lg:px-10'>
-      <section>
-        <p className='text-xs font-bold uppercase tracking-[0.2em] text-[#8a7450]'>
-          JPV Bootcamp free access
-        </p>
-        <h1 className='mt-4 max-w-2xl text-4xl font-bold leading-tight tracking-tight text-[#153f2e] sm:text-5xl'>
-          Create a free account. Verify email. Start learning.
+    <main className='mx-auto flex min-h-screen max-w-4xl items-center px-6 py-12 lg:px-10'>
+      <section className='w-full rounded-[24px] border border-[#153f2e]/10 bg-white p-8 text-center shadow-[0_16px_45px_rgba(31,52,43,0.08)] sm:p-12'>
+        <p className='text-xs font-bold uppercase tracking-[0.2em] text-[#8a7450]'>JPV Bootcamp Membership</p>
+        <h1 className='mt-4 text-4xl font-bold tracking-tight text-[#153f2e] sm:text-5xl'>
+          Registration starts with membership Checkout.
         </h1>
-        <p className='mt-5 max-w-xl text-base leading-7 text-[#64736c]'>
-          Free is controlled support or pay-it-forward access. Pro is the only paid membership and is managed inside the new JPV Bootcamp platform.
+        <p className='mx-auto mt-5 max-w-2xl text-base leading-7 text-[#64736c]'>
+          Public free account creation is unavailable. Choose monthly or annual membership billing, or apply a
+          personal voucher or pay-it-forward promotion code during the same Stripe Checkout flow.
         </p>
-      </section>
-
-      <section className='rounded-[24px] border border-[#153f2e]/10 bg-white p-6 shadow-[0_16px_45px_rgba(31,52,43,0.08)] sm:p-8'>
-        <div className='mb-6'>
-          <h2 className='text-2xl font-bold text-[#153f2e]'>Create free account</h2>
-          <p className='mt-2 text-sm leading-6 text-[#68766f]'>
-            Email verification is required before you can sign in. No payment is required.
-          </p>
-        </div>
-
-        <MemberRegistrationForm />
-
-        <p className='mt-6 text-sm text-[#68766f]'>
-          Already verified?{' '}
-          <Link className='font-semibold text-[#153f2e] underline underline-offset-4' href='/portal?mode=login'>
-            Sign in
+        <div className='mt-8 flex flex-col justify-center gap-3 sm:flex-row'>
+          <Link className='rounded-lg bg-[#153f2e] px-5 py-3 font-semibold text-white' href='/upgrade'>
+            Choose membership
           </Link>
-        </p>
+          <Link className='rounded-lg border border-[#153f2e]/20 px-5 py-3 font-semibold text-[#153f2e]' href='/portal?mode=login'>
+            Existing member sign in
+          </Link>
+        </div>
       </section>
     </main>
   )

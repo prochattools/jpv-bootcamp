@@ -6,7 +6,6 @@ import SponsoredPayItForward from "@/components/sponsored-pay-it-forward";
 
 export default function HomePage() {
   const signInHref = "/portal?mode=login";
-  const signUpHref = "/register";
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [isSupportOpen, setIsSupportOpen] = useState(false);
   const [isHowItWorksOpen, setIsHowItWorksOpen] = useState(false);
@@ -396,7 +395,7 @@ export default function HomePage() {
                   ? "border-jpv-green/60 bg-jpv-bg-light/80"
                   : "border-jpv-gray-700/50 bg-jpv-bg-dark/60"
                   }`}
-                id={plan.name === "Pro" ? "pricing-pro" : plan.name === "Free" ? "pricing-free" : undefined}
+                id={plan.name.includes("Monthly") ? "pricing-monthly" : "pricing-annual"}
               >
                 <div className="space-y-6">
                   <div className="space-y-3 text-left">
@@ -435,14 +434,6 @@ export default function HomePage() {
                     {plan.ctaLabel}
                   </a>
                   {plan.subcopy ? <p className="text-xs text-jpv-green/80">{plan.subcopy}</p> : null}
-                  {plan.name === "Free" ? (
-                    <p className="text-xs text-jpv-gray-400">
-                      Need help accessing Pro?{" "}
-                      <a href="/sponsored" className="text-jpv-green hover:underline">
-                        Apply for support or pay-it-forward access.
-                      </a>
-                    </p>
-                  ) : null}
                 </div>
               </div>
             ))}

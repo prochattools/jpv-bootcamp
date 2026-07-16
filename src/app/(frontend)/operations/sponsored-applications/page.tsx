@@ -37,7 +37,7 @@ export default async function SponsoredApplicationsAdminPage() {
 		<main className="mx-auto max-w-5xl px-6 py-12">
 			<h1 className="text-2xl font-semibold">Sponsored Applications</h1>
 			<p className="mt-2 text-sm text-muted-foreground">
-				Available sponsored Free access seats: {counts.available}
+				Available pay-it-forward-funded membership places: {counts.available}
 			</p>
 
 			<div className="mt-8 space-y-6">
@@ -64,7 +64,7 @@ export default async function SponsoredApplicationsAdminPage() {
 										Linked account ID: {application.accountId ?? 'N/A'}
 									</p>
 									<p className="text-xs text-muted-foreground">
-										Requested access: Controlled Free access
+										Requested access: Pay-it-forward-funded JPV Bootcamp Membership
 									</p>
 									<p className="text-xs text-muted-foreground">
 										Submitted: {application.createdAt.toISOString()}

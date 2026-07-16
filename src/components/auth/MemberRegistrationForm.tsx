@@ -96,7 +96,7 @@ export function MemberRegistrationForm() {
       </label>
 
       <p className='text-sm leading-6 text-neutral-600'>
-        Free accounts are verified by email before sign in. Pro access is handled through checkout.
+        Administrator-created pending accounts are verified by email before sign in. Public membership onboarding is handled through Checkout.
       </p>
 
       {message ? (
@@ -106,7 +106,7 @@ export function MemberRegistrationForm() {
       ) : null}
 
       <button className='rounded-lg bg-neutral-950 px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60' disabled={submitting} type='submit'>
-        {submitting ? 'Creating account…' : 'Create free account'}
+        {submitting ? 'Creating account…' : 'Create pending account'}
       </button>
     </form>
   )

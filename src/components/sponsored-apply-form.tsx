@@ -63,7 +63,7 @@ export default function SponsoredApplyForm({ initialCounts }: Props) {
 	return (
 		<div className="space-y-6">
 			<div className="rounded-lg border border-neutral-200 bg-white p-4 text-sm text-neutral-700">
-				Available right now: {counts.available} sponsored Free access seats
+				Available right now: {counts.available} pay-it-forward-funded membership places
 			</div>
 			<form onSubmit={handleSubmit} className="space-y-4">
 				<div>

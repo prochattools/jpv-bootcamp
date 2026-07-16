@@ -25,7 +25,7 @@ export default function TermsPage() {
             <div className="rounded-2xl border border-jpv-gray-700/60 bg-jpv-bg-dark/70 p-6 shadow-jpv-card">
               <h2 className="text-lg font-semibold text-white">Membership and payments</h2>
               <p className="mt-3 text-sm text-jpv-gray-300">
-                JPV Bootcamp offers controlled non-paid access and Pro membership. Current
+                JPV Bootcamp offers one paid JPV Bootcamp Membership. Voucher-funded and pay-it-forward-funded access use the same Stripe subscription flow. Current
                 prices and checkout options are shown on the website. Card payments are
                 processed through Stripe.
               </p>

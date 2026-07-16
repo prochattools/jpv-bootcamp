@@ -65,7 +65,7 @@ export default async function PortalProgrammePage() {
         <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
           Preview only — programme content is placeholder until a complete approved content package
           passes repository validation, acceptance, and approval evidence review. Full access
-          requires Pro membership or approved Free access. Client input due 15 July 2026.
+          requires an active JPV Bootcamp Membership, including voucher-funded or pay-it-forward-funded membership. Client input due 15 July 2026.
         </div>
       </section>
 
@@ -80,14 +80,14 @@ export default async function PortalProgrammePage() {
       <section className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
         <h2 className="text-xl font-semibold text-neutral-950">Membership</h2>
         <p className="mt-2 text-sm text-neutral-600">
-          Full programme access including mentorship and community requires Pro membership.
+          Full programme access including mentorship and community requires an active JPV Bootcamp Membership.
         </p>
         <div className="mt-4 flex flex-wrap gap-3">
           <Link
             href="/portal/billing"
             className="rounded-lg bg-neutral-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-neutral-800"
           >
-            View Pro membership
+            View JPV Bootcamp Membership
           </Link>
           <Link
             href="/portal"

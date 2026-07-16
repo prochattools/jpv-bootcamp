@@ -181,19 +181,27 @@ async function main(): Promise<void> {
 
   const portalPage = readFileSync('src/app/(frontend)/portal/page.tsx', 'utf8')
   assert.match(portalPage, /params\?\.mode\) === 'login'/)
-  assert.match(portalPage, /Create free account/)
+  assert.match(portalPage, /Choose membership/)
+  assert.match(portalPage, /redirect\('\/upgrade'\)/)
   assert.match(portalPage, /Forgot password/)
   assert.match(portalPage, /resend verification/i)
+  assert.doesNotMatch(portalPage, /Create free account|New Free accounts/)
 
   const loginPage = readFileSync('src/app/(frontend)/login/page.tsx', 'utf8')
   assert.match(loginPage, /redirect\(`\/portal\?\$\{target\.toString\(\)\}`\)/)
   assert.doesNotMatch(loginPage, /MemberLoginForm/)
 
   const registerPage = readFileSync('src/app/(frontend)/register/page.tsx', 'utf8')
-  assert.match(registerPage, /Create free account/)
-  assert.match(registerPage, /Free is controlled support or pay-it-forward access/)
+  assert.match(registerPage, /Registration starts with membership Checkout/)
+  assert.match(registerPage, /Public free account creation is unavailable/)
+  assert.match(registerPage, /href='\/upgrade'/)
+  assert.doesNotMatch(registerPage, /MemberRegistrationForm|Create free account/)
+
   const registrationRoute = readFileSync('src/app/api/member-registration/route.ts', 'utf8')
-  assert.doesNotMatch(registrationRoute, /eligible account exists/)
+  assert.match(registrationRoute, /registration_disabled/)
+  assert.match(registrationRoute, /status = 200|410/)
+  assert.match(registrationRoute, /checkoutPath: '\/upgrade'/)
+  assert.doesNotMatch(registrationRoute, /registerFreeMember|getPayloadMemberEmailVerificationService/)
 
   const serialized = JSON.stringify({ names, support, result })
   for (const forbidden of ['token=', 'password=', 'postgres://', 'cookie', '@example.com']) {

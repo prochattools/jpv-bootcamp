@@ -191,7 +191,7 @@ export default async function AdminReviewPage() {
               href="/upgrade"
               className="rounded-lg bg-neutral-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-neutral-800"
             >
-              View Pro membership
+              View JPV Bootcamp Membership
             </Link>
             <Link
               href="/portal"

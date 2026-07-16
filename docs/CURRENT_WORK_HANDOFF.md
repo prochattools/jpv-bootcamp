@@ -204,17 +204,23 @@ Completed P0-A checkpoints:
 - eligible records produce deterministic Stripe invoice-preview request models with `create_prorations` and the target monthly or annual Price;
 - the migration preview command reads repository JSON only, performs no database or Stripe mutation, and emits a deterministic Markdown report;
 - representative fixture coverage proves eligible, manual-review, and ineligible outcomes;
-- migration preview unit tests, report execution, root TypeScript, whitespace, and security scans pass.
+- migration preview unit tests, report execution, root TypeScript, whitespace, and security scans pass;
+- public Free registration is technically disabled at `/register`, portal `mode=register`, and `POST /api/member-registration`;
+- public onboarding now routes only to the single JPV Bootcamp Membership Checkout flow;
+- the registration API returns `410 registration_disabled` and points to `/upgrade`;
+- internal pending-member utilities remain only for approved administrator-created or migration-review accounts;
+- launch-critical runtime copy no longer presents Free/Pro tiers and instead uses voucher-funded or pay-it-forward-funded membership language;
+- registration, authentication architecture, front-end milestone, root TypeScript, and whitespace validations pass.
 
 Remaining priority order:
 
-1. removal of public Free registration and remaining Free/Pro policy semantics;
-2. Payload administrator voucher/pay-it-forward foundations and focused tests;
+1. Payload administrator voucher/pay-it-forward foundations and focused tests;
+2. test-mode Stripe coupon and promotion-code adapter with deterministic mocks;
 3. deeper migration reconciliation and operator evidence only after the domain model is stable.
 
 Fixed dates remain 22 July 2026 for the front-end milestone, 23 July for handover buffer, and 24 July for the client finished-by date. These dates do not authorize live operations or reduce validation requirements.
 
-The next implementation task is the largest safe removal of public Free registration and remaining Free/Pro policy semantics, followed immediately by Payload administrator voucher/pay-it-forward foundations where the same membership lifecycle can be reused. M2 remains unstarted and unauthorized.
+The next implementation task is the largest safe Payload Membership Support administrator foundation, followed immediately by a dependency-injected test-mode Stripe voucher adapter if validation remains green. M2 remains unstarted and unauthorized.
 
 ## Ready-to-copy resume prompt
 

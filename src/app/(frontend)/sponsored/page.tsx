@@ -15,7 +15,7 @@ export default async function SponsoredApplyPage() {
 		<main className="mx-auto max-w-3xl px-6 py-12">
 			<h1 className="text-3xl font-semibold">Apply for a sponsored membership</h1>
 			<p className="mt-3 text-sm text-neutral-600">
-				Sponsored Free access is limited. Apply and we&apos;ll email you if
+				Pay-it-forward-funded JPV Bootcamp Membership places are limited. Apply and we&apos;ll email you if
 				approved.
 			</p>
 			<div className="mt-8">

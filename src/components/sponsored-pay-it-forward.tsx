@@ -66,7 +66,7 @@ export default function SponsoredPayItForward() {
 			<div className="space-y-3">
 				<h3 className="text-xl font-semibold text-white">Pay it forward</h3>
 				<p className="text-sm text-jpv-gray-300">
-					Some members choose to fund controlled Free access for someone who
+					Some members choose to fund JPV Bootcamp Membership for someone who
 					can&apos;t pay yet.
 				</p>
 				<p className="text-xs text-jpv-gray-400">
@@ -80,7 +80,7 @@ export default function SponsoredPayItForward() {
 					disabled={loading || !counts.enabled}
 					className="rounded-full border border-jpv-gray-600 px-4 py-2 text-sm font-semibold text-jpv-gray-100 hover:border-jpv-green hover:text-white"
 				>
-					Sponsor Free access
+					Fund JPV Bootcamp Membership
 				</button>
 			</div>
 			{error ? <p className="mt-3 text-xs text-red-400">{error}</p> : null}

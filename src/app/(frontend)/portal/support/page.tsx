@@ -36,13 +36,13 @@ export default function PortalSupportPage() {
         </p>
         <h1 className="mt-3 text-3xl font-semibold tracking-tight">Support &amp; Pay It Forward</h1>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-600">
-          Preview the planned sponsorship and controlled Free access application flows.
+          Preview the planned voucher-funded and pay-it-forward-funded JPV Bootcamp Membership application flows.
         </p>
         <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          Preview only — these forms do not submit, create records, send notifications, or generate references. Controlled Free access is not a third public tier.
+          Preview only — these forms do not submit, create records, send notifications, or generate references. Voucher-funded and pay-it-forward-funded access use the same membership lifecycle.
         </div>
         <Link className="mt-4 inline-flex text-sm font-medium text-neutral-600 hover:text-neutral-950" href="/#pricing">
-          View Pro membership
+          View JPV Bootcamp Membership
         </Link>
       </section>
 
@@ -78,11 +78,11 @@ export default function PortalSupportPage() {
         </section>
 
         <section className="rounded-2xl border border-neutral-200 bg-white p-8 shadow-sm">
-          <h2 className="text-2xl font-semibold text-neutral-950">Apply for Free access</h2>
+          <h2 className="text-2xl font-semibold text-neutral-950">Apply for funded membership</h2>
           <p className="mt-2 text-sm leading-6 text-neutral-600">
             Durable application and manual review processing is not active yet.
           </p>
-          <form className="mt-6 space-y-5" aria-label="Free access application preview">
+          <form className="mt-6 space-y-5" aria-label="Funded membership application preview">
             <DisabledField label="Full name" name="recipientName" />
             <DisabledField label="Email address" name="recipientEmail" type="email" />
             <div>
