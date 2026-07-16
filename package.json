@@ -32,6 +32,7 @@
     "content:programme:validate": "tsx scripts/content/validateProgrammeContent.ts",
     "content:programme:acceptance": "tsx scripts/content/buildProgrammeAcceptanceReport.ts",
     "content:programme:import-plan": "tsx scripts/content/buildProgrammeImportPlan.ts",
+    "migration:membership:preview": "tsx scripts/release/buildMembershipMigrationPreview.ts",
     "staging:migration-preflight": "tsx scripts/release/stagingMigrationPreflight.ts",
     "staging:migration-rehearsal": "tsx scripts/release/migrationRehearsal.ts",
     "staging:migration-rehearsal:evidence": "tsx scripts/release/buildMigrationRehearsalEvidence.ts",

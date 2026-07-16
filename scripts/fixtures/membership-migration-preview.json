@@ -1,0 +1,47 @@
+[
+  {
+    "normalizedEmail": "eligible-monthly@example.com",
+    "stripeCustomerId": "cus_preview_monthly",
+    "stripeSubscriptionId": "sub_preview_monthly",
+    "stripePriceId": "price_legacy_monthly",
+    "subscriptionStatus": "active",
+    "subscriptionCurrentPeriodEnd": "2026-08-01T00:00:00.000Z",
+    "subscriptionCancelAtPeriodEnd": false,
+    "billingCadence": "monthly",
+    "paymentStatus": "paid",
+    "paymentDisputeStatus": null,
+    "stripeScheduleId": null,
+    "subscriptionItemCount": 1,
+    "isMetered": false
+  },
+  {
+    "normalizedEmail": "manual-review@example.com",
+    "stripeCustomerId": "cus_preview_review",
+    "stripeSubscriptionId": "sub_preview_review",
+    "stripePriceId": "price_legacy_annual",
+    "subscriptionStatus": "past_due",
+    "subscriptionCurrentPeriodEnd": "2027-01-15T00:00:00.000Z",
+    "subscriptionCancelAtPeriodEnd": false,
+    "billingCadence": "annual",
+    "paymentStatus": "failed",
+    "paymentDisputeStatus": null,
+    "stripeScheduleId": null,
+    "subscriptionItemCount": 1,
+    "isMetered": false
+  },
+  {
+    "normalizedEmail": "ineligible@example.com",
+    "stripeCustomerId": null,
+    "stripeSubscriptionId": null,
+    "stripePriceId": null,
+    "subscriptionStatus": null,
+    "subscriptionCurrentPeriodEnd": null,
+    "subscriptionCancelAtPeriodEnd": false,
+    "billingCadence": null,
+    "paymentStatus": null,
+    "paymentDisputeStatus": null,
+    "stripeScheduleId": null,
+    "subscriptionItemCount": null,
+    "isMetered": null
+  }
+]

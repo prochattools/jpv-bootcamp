@@ -6,7 +6,7 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 
 - Repository: `prochattools-jpv-bootcamp`
 - Branch: `feature/course-branding-and-preview`
-- Current HEAD: `9449b5c docs: revise membership and billing architecture`
+- Current HEAD: `42774ee feat: align membership checkout and stripe projection`
 - Pull request: `https://github.com/prochattools/jpv-bootcamp/pull/2`
 - Migrations applied: `No`
 - Deployment performed: `No`
@@ -198,17 +198,23 @@ Completed P0-A checkpoints:
 - the standard Stripe Customer Portal is used for all members;
 - obsolete monthly commitment schedule creation was removed from Checkout webhook handling;
 - subscription, invoice, payment, cancellation, and legacy schedule events continue through the existing synchronization and reconciliation paths;
-- focused Checkout, billing contract, portal refinement, front-end milestone, and root TypeScript validations pass.
+- focused Checkout, billing contract, portal refinement, front-end milestone, and root TypeScript validations pass;
+- repository-only migration inventory classifies eligible, manual-review, and ineligible subscriptions;
+- eligibility fails closed for missing Stripe identity, unsupported cadence, unpaid/past-due state, disputes, cancellation-at-period-end, schedules, multi-item, metered, or ambiguous records;
+- eligible records produce deterministic Stripe invoice-preview request models with `create_prorations` and the target monthly or annual Price;
+- the migration preview command reads repository JSON only, performs no database or Stripe mutation, and emits a deterministic Markdown report;
+- representative fixture coverage proves eligible, manual-review, and ineligible outcomes;
+- migration preview unit tests, report execution, root TypeScript, whitespace, and security scans pass.
 
 Remaining priority order:
 
-1. safe prorated-migration inventory and invoice-preview modelling;
-2. removal of public Free registration and remaining Free/Pro policy semantics;
-3. Payload administrator voucher/pay-it-forward foundations and focused tests.
+1. removal of public Free registration and remaining Free/Pro policy semantics;
+2. Payload administrator voucher/pay-it-forward foundations and focused tests;
+3. deeper migration reconciliation and operator evidence only after the domain model is stable.
 
 Fixed dates remain 22 July 2026 for the front-end milestone, 23 July for handover buffer, and 24 July for the client finished-by date. These dates do not authorize live operations or reduce validation requirements.
 
-The next implementation task is the largest safe prorated-migration inventory and invoice-preview packet, reusing the established membership, cadence, subscription, invoice, payment, and reconciliation fields. M2 remains unstarted and unauthorized.
+The next implementation task is the largest safe removal of public Free registration and remaining Free/Pro policy semantics, followed immediately by Payload administrator voucher/pay-it-forward foundations where the same membership lifecycle can be reused. M2 remains unstarted and unauthorized.
 
 ## Ready-to-copy resume prompt
 
