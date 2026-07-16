@@ -8,6 +8,9 @@ async function main() {
   assert.match(source, /import 'server-only'/)
   assert.match(source, /customerProvisioning\.findUnique/)
   assert.match(source, /normalizeEmail\(memberEmail\)/)
+  assert.match(source, /resolveMembershipLifecycle/)
+  assert.match(source, /billingAccessStateForLifecycle/)
+  assert.doesNotMatch(source, /resolveBillingAccessState/)
   assert.doesNotMatch(source, /getStripe|stripe\./)
 
   for (const field of [
@@ -15,6 +18,7 @@ async function main() {
     'hasActiveSubscription',
     'planLabel',
     'subscriptionStatus',
+    'membershipStatus',
     'billingAccessState',
     'periodEndDate',
     'cancelAtPeriodEnd',
@@ -42,14 +46,14 @@ async function main() {
     assert.doesNotMatch(typeBlock, new RegExp(sensitiveField))
   }
 
-  assert.match(source, /ACTIVE_SUBSCRIPTION_STATUSES/)
-  assert.match(source, /BILLING_HOLD_SUBSCRIPTION_STATUSES/)
-  assert.match(source, /return 'billing_hold'/)
-  assert.match(source, /return 'available'/)
-  assert.match(source, /return 'inactive'/)
-  assert.match(source, /return 'unknown'/)
-  assert.match(source, /record\.subscriptionStatus/)
-  assert.match(source, /record\.currentPlan/)
+  assert.match(source, /planLabel: 'JPV Bootcamp Membership'/)
+  assert.match(source, /membershipStatus: lifecycle\.state/)
+  assert.match(source, /hasActiveSubscription: lifecycle\.accessAllowed/)
+  assert.match(source, /params\.state === 'past_due'/)
+  assert.match(source, /params\.state === 'unreconciled'/)
+  assert.match(source, /restrictedPortalRequired: false/)
+  assert.doesNotMatch(source, /record\.currentPlan/)
+  assert.doesNotMatch(source, /monthly_commitment/)
 
   console.log('billing status helper tests passed')
 }

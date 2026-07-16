@@ -176,7 +176,7 @@ Do not:
 
 **Active packet:** P0-A — Single-membership billing and entitlement foundation.
 
-Completed P0-A checkpoint:
+Completed P0-A checkpoints:
 
 - member Checkout accepts only the `membership` plan;
 - monthly billing is GBP 80 with no minimum commitment;
@@ -185,19 +185,23 @@ Completed P0-A checkpoint:
 - Checkout enables promotion codes, always collects a payment method, and collects telephone number;
 - Checkout metadata records membership and billing cadence;
 - the obsolete monthly commitment gate and UI were removed;
-- focused Checkout test and root TypeScript validation pass.
+- billing status derives from one membership lifecycle resolver;
+- lifecycle states are pending, active, past_due, cancelled, expired, suspended, revoked, and unreconciled;
+- active access derives from verified lifecycle state and fails closed when unreconciled;
+- past-due access respects the configured payment-grace window;
+- the obsolete commitment-specific portal restriction and undefined resolver were removed;
+- focused Checkout, lifecycle helper, billing parity, and root TypeScript validation pass.
 
 Remaining priority order:
 
-1. audit and refactor plan/entitlement lifecycle semantics;
-2. verified Stripe subscription, invoice, payment, cancellation, and reconciliation projection;
-3. safe prorated-migration inventory and invoice-preview modelling;
-4. removal of public Free registration;
-5. Payload administrator foundations and focused tests.
+1. verified Stripe subscription, invoice, payment, cancellation, and reconciliation projection;
+2. safe prorated-migration inventory and invoice-preview modelling;
+3. removal of public Free registration;
+4. Payload administrator foundations and focused tests.
 
 Fixed dates remain 22 July 2026 for the front-end milestone, 23 July for handover buffer, and 24 July for the client finished-by date. These dates do not authorize live operations or reduce validation requirements.
 
-The next implementation task is the smallest safe domain refactor for membership entitlement lifecycle and Stripe subscription projection. M2 remains unstarted and unauthorized.
+The next implementation task is the smallest safe Stripe subscription and webhook projection packet, followed by migration-preview modelling where the same exact projection fields can be reused. M2 remains unstarted and unauthorized.
 
 ## Ready-to-copy resume prompt
 

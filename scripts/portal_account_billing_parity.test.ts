@@ -14,6 +14,7 @@ function billingStatus(overrides: Partial<BillingStatus> = {}): BillingStatus {
     hasActiveSubscription: false,
     planLabel: null,
     subscriptionStatus: null,
+    membershipStatus: 'unreconciled',
     billingAccessState: 'unknown',
     periodEndDate: null,
     cancelAtPeriodEnd: false,
