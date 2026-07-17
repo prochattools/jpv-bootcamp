@@ -210,17 +210,23 @@ Completed P0-A checkpoints:
 - the registration API returns `410 registration_disabled` and points to `/upgrade`;
 - internal pending-member utilities remain only for approved administrator-created or migration-review accounts;
 - launch-critical runtime copy no longer presents Free/Pro tiers and instead uses voucher-funded or pay-it-forward-funded membership language;
-- registration, authentication architecture, front-end milestone, root TypeScript, and whitespace validations pass.
+- registration, authentication architecture, front-end milestone, root TypeScript, and whitespace validations pass;
+- the additive Membership Support domain now models direct payment, voucher, and pay-it-forward funding sources;
+- voucher durations, issuance states, reconciliation states, operator/approver identity, Stripe object references, audit timestamps, and approval references are represented without changing persistence enums;
+- validation fails closed for missing recipient, reason, approval, duration, Stripe identity, redemption, or deactivation evidence;
+- pure one-month and one-year 100% coupon templates and customer-restricted one-redemption promotion-code request models are available;
+- deterministic idempotency keys and a safe administrator read model cover subscription, cadence, renewal, discount, funding, and reconciliation status without exposing secrets;
+- focused Membership Support tests, root TypeScript, whitespace, and security scans pass.
 
 Remaining priority order:
 
-1. Payload administrator voucher/pay-it-forward foundations and focused tests;
-2. test-mode Stripe coupon and promotion-code adapter with deterministic mocks;
+1. test-mode Stripe coupon and promotion-code adapter with deterministic mocks;
+2. administrator persistence/schema packet after explicit migration approval;
 3. deeper migration reconciliation and operator evidence only after the domain model is stable.
 
 Fixed dates remain 22 July 2026 for the front-end milestone, 23 July for handover buffer, and 24 July for the client finished-by date. These dates do not authorize live operations or reduce validation requirements.
 
-The next implementation task is the largest safe Payload Membership Support administrator foundation, followed immediately by a dependency-injected test-mode Stripe voucher adapter if validation remains green. M2 remains unstarted and unauthorized.
+The next implementation task is the dependency-injected test-mode Stripe voucher adapter covering create/reuse, deactivation, lookup, preview, and reconciliation without live calls. M2 remains unstarted and unauthorized.
 
 ## Ready-to-copy resume prompt
 
