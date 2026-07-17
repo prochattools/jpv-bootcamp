@@ -248,6 +248,16 @@ Completed P0-A checkpoints:
     - `pnpm exec tsx scripts/membership_support_workflows.test.ts`
     - `pnpm exec tsc --noEmit --pretty false --incremental false`
     - `git diff --check`
+- Membership Support admin cockpit has now been added as an additive, repository-only checkpoint:
+  - `src/lib/membership-support/cockpit.ts`
+  - `src/components/payload/JPVAdminDashboard.tsx`
+  - `scripts/membership_support_cockpit.test.ts`
+  - updated dashboard coverage for operational views, status lexicon, action availability, and administrator-only collection links
+  - repository-only validation passed:
+    - `pnpm exec tsx scripts/membership_support_cockpit.test.ts`
+    - `pnpm exec tsx scripts/payload_admin_dashboard.test.ts`
+    - `pnpm exec tsc --noEmit --pretty false --incremental false`
+    - `git diff --check`
   - `src/collections/membership-support/AuditHistory.ts`
   - `src/collections/membership-support/index.ts`
   - `src/payload.config.ts`

@@ -22,6 +22,10 @@ for (const label of [
   'Community moderation / recent posts',
   'Deployment / schema health',
   'Upcoming course / live call',
+  'Membership Support cockpit',
+  'Operational views',
+  'Displayed fields',
+  'Statuses and actions',
 ]) {
   assert.match(dashboard, new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
 }

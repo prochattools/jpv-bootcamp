@@ -1,6 +1,13 @@
 import config from '@payload-config'
 import { getPayload } from 'payload'
 
+import {
+  membershipSupportCockpitActionLabels,
+  membershipSupportCockpitFields,
+  membershipSupportCockpitStatusLabels,
+  membershipSupportCockpitViews,
+} from '@/lib/membership-support/cockpit'
+
 type CountPayload = {
   count(args: {
     collection: string
@@ -166,6 +173,11 @@ export async function JPVAdminDashboard() {
     },
   ]
 
+  const cockpitViews = membershipSupportCockpitViews.map((view) => ({
+    ...view,
+    href: view.href,
+  }))
+
   return (
     <main style={{ display: 'grid', gap: 24, padding: '24px 0' }}>
       <section>
@@ -201,6 +213,69 @@ export async function JPVAdminDashboard() {
             ) : null}
           </article>
         ))}
+      </section>
+      <section
+        style={{
+          background: 'linear-gradient(180deg, rgba(255,255,255,0.96), rgba(244,249,246,0.96))',
+          border: '1px solid #d7e1db',
+          borderRadius: 24,
+          boxShadow: '0 18px 42px rgba(21, 63, 46, 0.08)',
+          display: 'grid',
+          gap: 18,
+          padding: 24,
+        }}
+      >
+        <div>
+          <p style={{ color: '#64736c', fontSize: 12, fontWeight: 700, letterSpacing: '0.18em', margin: 0, textTransform: 'uppercase' }}>
+            Membership Support cockpit
+          </p>
+          <h2 style={{ color: '#153f2e', fontSize: 24, lineHeight: 1.2, margin: '8px 0 0' }}>
+            Administrator views, statuses, and actions
+          </h2>
+          <p style={{ color: '#64736c', fontSize: 15, lineHeight: 1.6, margin: '10px 0 0', maxWidth: 820 }}>
+            This cockpit keeps the operational surface bounded to the membership-support collections. It highlights the fields and actions that matter for voucher issuance, reconciliation, and manual review.
+          </p>
+        </div>
+        <div style={{ display: 'grid', gap: 16, gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}>
+          <article style={{ background: '#fff', border: '1px solid #dde7e1', borderRadius: 18, padding: 18 }}>
+            <p style={{ color: '#153f2e', fontSize: 15, fontWeight: 800, margin: 0 }}>Operational views</p>
+            <ul style={{ color: '#49655a', display: 'grid', gap: 8, fontSize: 13, lineHeight: 1.5, margin: '14px 0 0', paddingLeft: 18 }}>
+              {cockpitViews.map((view) => (
+                <li key={view.label}>
+                  <a href={view.href} style={{ color: '#153f2e', fontWeight: 700 }}>
+                    {view.label}
+                  </a>
+                  <div>{view.description}</div>
+                </li>
+              ))}
+            </ul>
+          </article>
+          <article style={{ background: '#fff', border: '1px solid #dde7e1', borderRadius: 18, padding: 18 }}>
+            <p style={{ color: '#153f2e', fontSize: 15, fontWeight: 800, margin: 0 }}>Displayed fields</p>
+            <div style={{ color: '#49655a', display: 'grid', gap: 8, fontSize: 13, lineHeight: 1.5, marginTop: 14 }}>
+              {membershipSupportCockpitFields.map((field) => (
+                <div key={field}>{field}</div>
+              ))}
+            </div>
+          </article>
+          <article style={{ background: '#fff', border: '1px solid #dde7e1', borderRadius: 18, padding: 18 }}>
+            <p style={{ color: '#153f2e', fontSize: 15, fontWeight: 800, margin: 0 }}>Statuses and actions</p>
+            <div style={{ color: '#49655a', display: 'grid', gap: 14, fontSize: 13, lineHeight: 1.5, marginTop: 14 }}>
+              <div>
+                <div style={{ color: '#64736c', fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', marginBottom: 6, textTransform: 'uppercase' }}>
+                  Statuses
+                </div>
+                <div>{membershipSupportCockpitStatusLabels.join(' · ')}</div>
+              </div>
+              <div>
+                <div style={{ color: '#64736c', fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', marginBottom: 6, textTransform: 'uppercase' }}>
+                  Actions
+                </div>
+                <div>{membershipSupportCockpitActionLabels.join(' · ')}</div>
+              </div>
+            </div>
+          </article>
+        </div>
       </section>
     </main>
   )
