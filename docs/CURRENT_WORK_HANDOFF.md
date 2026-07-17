@@ -6,7 +6,7 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 
 - Repository: `prochattools-jpv-bootcamp`
 - Branch: `feature/course-branding-and-preview`
-- Current HEAD: `3cca73a feat: build membership support admin cockpit`
+- Current HEAD: `49691b6 feat: integrate membership support workflows`
 - Pull request: `https://github.com/prochattools/jpv-bootcamp/pull/2`
 - Migrations applied: `No`
 - Deployment performed: `No`
@@ -51,7 +51,7 @@ The application currently uses:
 - one canonical portal billing surface at `/portal/billing`
 - an explicit preview-only programme surface until approved representative content is supplied
 - persisted read-only community views for the launch scope
-- packet 3 membership-support command orchestration above the workflow layer is under validation in the current worktree
+- packet 4 membership-support webhook reconciliation above the workflow layer is complete in the current worktree
 
 The authorized target is one paid **JPV Bootcamp Membership**, one Stripe Product, GBP 80 monthly and GBP 800 annual recurring Prices, no public free registration, personal one-month/year vouchers, unified pay-it-forward administration, email and telephone onboarding, and Bunny-only protected video. The binding architecture is `docs/JPV_MEMBERSHIP_BILLING_AND_VOUCHER_ARCHITECTURE.md`.
 
@@ -223,6 +223,13 @@ Completed P0-A checkpoints:
 - the orchestration service validates records, derives idempotency keys, creates or reuses coupon templates, creates customer-restricted promotion codes, and fails closed on reconciliation mismatch;
 - deterministic tests cover voucher and pay-it-forward issuance, coupon reuse, one-redemption customer restriction, deactivation, provider failure, mismatch detection, and idempotent retry;
 - Batch 3 focused tests, root TypeScript, whitespace, secret, and runtime-execution validations pass.
+- Packet 4 webhook reconciliation is complete and validated:
+  - changed paths: `src/lib/membership-support/webhookReconciliation.ts`, `src/lib/payloadCourse/stripeShadowSync.ts`, `scripts/payload_course_stripe_shadow_sync.test.ts`, `docs/CURRENT_WORK_HANDOFF.md`
+  - supported events: checkout completion, subscription create/update/delete, invoice paid, invoice payment failure, customer update
+  - mismatch and recovery behavior: duplicate, stale, out-of-order, customer mismatch, price mismatch, missing promotion code, inactive promotion code, payment-failure routing, and review-queue closure on recovery
+  - validation evidence: `pnpm exec tsx scripts/payload_course_stripe_shadow_sync.test.ts`, `pnpm exec tsc --noEmit --pretty false --incremental false`, `git diff --check`
+  - no live Stripe access was used
+- Next task: Packet 5 migration review and proration evidence expansion
 - Membership Support persistence foundation has now been added as an additive, repository-only checkpoint:
   - `src/collections/membership-support/`
   - `src/collections/membership-support/options.ts`

@@ -11,13 +11,14 @@ import type {
 } from '@/lib/payloadCourse/accessService'
 import { createAuditEvent, queueEmailEvent } from '@/lib/payloadCourse/events'
 import {
-  BILLING_PAYMENT_DISPUTED_TEMPLATE_KEY,
-  BILLING_PAYMENT_FAILED_TEMPLATE_KEY,
-  BILLING_PAYMENT_RECOVERED_TEMPLATE_KEY,
-  BILLING_PAYMENT_REFUNDED_TEMPLATE_KEY,
+	BILLING_PAYMENT_DISPUTED_TEMPLATE_KEY,
+	BILLING_PAYMENT_FAILED_TEMPLATE_KEY,
+	BILLING_PAYMENT_RECOVERED_TEMPLATE_KEY,
+	BILLING_PAYMENT_REFUNDED_TEMPLATE_KEY,
 } from '@/lib/payloadCourse/systemEmailTemplates'
 import { redactEmail } from '@/lib/log-redact'
 import { paymentGraceEnd } from '@/lib/billing/commitmentPolicy'
+import { mirrorMembershipSupportWebhookToPayload } from '@/lib/membership-support/webhookReconciliation'
 
 type Plan = 'pro'
 
@@ -1584,6 +1585,9 @@ export async function mirrorStripeEventToPayload(
       case 'refund.failed':
         actions = ['refund_lifecycle_observed']
         break
+      case 'customer.updated':
+        actions = ['customer_updated_observed']
+        break
       case 'charge.refunded':
         actions = await syncRefundOrDispute(payload, event, 'refunded')
         break
@@ -1604,6 +1608,11 @@ export async function mirrorStripeEventToPayload(
           eventType: event.type,
           actions: ['unsupported_event_skipped'],
         }
+    }
+
+    const membershipActions = await mirrorMembershipSupportWebhookToPayload(payload, event, stripe)
+    if (membershipActions.length > 0) {
+      actions.push(...membershipActions)
     }
 
     await markStripeEvent(payload, event, 'processed')

@@ -104,6 +104,10 @@ function buildPayload(overrides: Partial<CollectionMap> = {}) {
     payload_billing_actions: [],
     payload_audit_events: [],
     payload_email_events: [],
+    payload_membership_support_records: [],
+    payload_membership_reconciliations: [],
+    payload_membership_review_queue_items: [],
+    payload_stripe_shadow_projections: [],
     ...overrides,
   })
 }
@@ -184,18 +188,140 @@ function dispute(overrides: Partial<Stripe.Dispute> = {}): Stripe.Dispute {
   } as Stripe.Dispute
 }
 
-function event(type: string, object: unknown, id = `evt_${type.replace(/\W+/g, '_')}`): Stripe.Event {
+function event(type: string, object: unknown, id = `evt_${type.replace(/\W+/g, '_')}`, created = 1782000000): Stripe.Event {
   return {
     id,
     object: 'event',
     api_version: '2024-06-20',
-    created: 1782000000,
+    created,
     data: { object },
     livemode: true,
     pending_webhooks: 1,
     request: { id: null, idempotency_key: null },
     type,
   } as Stripe.Event
+}
+
+function membershipSubscription(overrides: Partial<Stripe.Subscription> = {}): Stripe.Subscription {
+  return {
+    id: 'sub_membership_1',
+    object: 'subscription',
+    status: 'active',
+    customer: {
+      id: 'cus_membership_1',
+      object: 'customer',
+      email: 'support@example.com',
+      deleted: false,
+    } as unknown as Stripe.Customer,
+    metadata: {
+      fundingSource: 'voucher',
+      voucherDuration: 'one_month',
+      billingCadence: 'monthly',
+    },
+    discount: {
+      coupon: { id: 'coupon_membership_1' },
+      promotion_code: {
+        id: 'promo_membership_1',
+        active: true,
+      },
+    } as unknown as Stripe.Discount,
+    items: {
+      object: 'list',
+      data: [
+        {
+          id: 'si_membership_1',
+          object: 'subscription_item',
+          price: {
+            id: 'price_membership_monthly',
+            object: 'price',
+            active: true,
+            currency: 'gbp',
+            recurring: { interval: 'month', interval_count: 1, usage_type: 'licensed' } as Stripe.Price.Recurring,
+            product: {
+              id: 'prod_membership',
+              object: 'product',
+              active: true,
+              name: 'JPV Bootcamp Membership',
+            } as Stripe.Product,
+          } as Stripe.Price,
+        } as Stripe.SubscriptionItem,
+      ],
+      has_more: false,
+      url: '',
+    },
+    cancel_at: null,
+    cancel_at_period_end: false,
+    canceled_at: null,
+    current_period_start: 1782000000,
+    current_period_end: 1784600000,
+    trial_end: null,
+    default_payment_method: null,
+    ...overrides,
+  } as Stripe.Subscription
+}
+
+function membershipCheckoutSession(overrides: Partial<Stripe.Checkout.Session> = {}): Stripe.Checkout.Session {
+  return {
+    id: 'cs_membership_1',
+    object: 'checkout.session',
+    mode: 'subscription',
+    customer: 'cus_membership_1',
+    customer_email: 'support@example.com',
+    subscription: 'sub_membership_1',
+    discount: {
+      coupon: { id: 'coupon_membership_1' },
+      promotion_code: {
+        id: 'promo_membership_1',
+        active: true,
+      },
+    } as unknown as Stripe.Discount,
+    metadata: {
+      fundingSource: 'voucher',
+      voucherDuration: 'one_month',
+      billingCadence: 'monthly',
+    },
+    ...overrides,
+  } as Stripe.Checkout.Session
+}
+
+function membershipInvoice(overrides: Partial<Stripe.Invoice> = {}): Stripe.Invoice {
+  return {
+    id: 'in_membership_1',
+    object: 'invoice',
+    customer: 'cus_membership_1',
+    customer_email: 'support@example.com',
+    subscription: 'sub_membership_1',
+    amount_paid: 8000,
+    amount_due: 8000,
+    amount_remaining: 0,
+    currency: 'gbp',
+    hosted_invoice_url: 'https://stripe.example/invoice',
+    discount: {
+      coupon: { id: 'coupon_membership_1' },
+      promotion_code: {
+        id: 'promo_membership_1',
+        active: true,
+      },
+    },
+    status_transitions: { paid_at: 1782000100 } as Stripe.Invoice.StatusTransitions,
+    ...overrides,
+  } as Stripe.Invoice
+}
+
+function membershipCustomer(overrides: Partial<Stripe.Customer> = {}): Stripe.Customer {
+  return {
+    id: 'cus_membership_1',
+    object: 'customer',
+    email: 'support@example.com',
+    discount: {
+      coupon: { id: 'coupon_membership_1' },
+      promotion_code: {
+        id: 'promo_membership_1',
+        active: true,
+      },
+    } as unknown as Stripe.Discount,
+    ...overrides,
+  } as Stripe.Customer
 }
 
 function fakeStripe(subscriptionRecord = subscription()): Pick<Stripe, 'subscriptions' | 'customers'> {
@@ -600,6 +726,597 @@ async function run() {
       payload.docs('payload_billing_actions').some((action) => action.actionType === 'access_restored'),
       false,
     )
+  }
+
+  {
+    const supportMember: {
+      id: string
+      email: string
+      accountStatus: string
+      billingHoldReason: string | null
+    } = {
+      id: 'member_support_1',
+      email: 'support@example.com',
+      accountStatus: 'active',
+      billingHoldReason: null,
+    }
+    const supportBillingAccount = {
+      id: 'billing_support_1',
+      member: 'member_support_1',
+      stripeCustomerId: 'cus_membership_1',
+      billingStatus: 'active',
+    }
+    const supportRecord = {
+      id: 'support_1',
+      displayName: 'Membership support seed',
+      member: 'member_support_1',
+      memberEmail: 'support@example.com',
+      fundingSource: 'voucher',
+      voucherDuration: 'one_month',
+      issuanceState: 'issued',
+      billingCadence: 'monthly',
+      stripeCustomerId: 'cus_membership_1',
+      stripeSubscriptionId: 'sub_membership_1',
+      stripePriceId: 'price_membership_monthly',
+      stripeCouponId: 'coupon_membership_1',
+      stripePromotionCodeId: 'promo_membership_1',
+      approvalReference: 'webhook:seed',
+      reconciliationState: 'matched',
+      lastWebhookAt: '2026-06-20T00:00:00.000Z',
+      notes: 'seed',
+      metadata: {
+        lastWebhookEventId: 'evt_seed',
+        lastWebhookCreatedAt: '2026-06-20T00:00:00.000Z',
+        lastReconciledAt: '2026-06-20T00:00:00.000Z',
+      },
+    }
+
+    const payload = buildPayload({
+      payload_members: [supportMember],
+      payload_billing_accounts: [supportBillingAccount],
+      payload_membership_support_records: [supportRecord],
+    })
+    const stripe = fakeStripe(membershipSubscription())
+
+    const checkoutCompleted = event(
+      'checkout.session.completed',
+      membershipCheckoutSession(),
+      'evt_membership_checkout_completed',
+      1782001000,
+    )
+    const checkoutResult = await mirrorStripeEventToPayload(payload, checkoutCompleted, {
+      stripe,
+      adminEmail: 'admin@example.com',
+    })
+    assert.equal(checkoutResult.processed, true)
+    assert.equal(payload.docs('payload_membership_support_records')[0]?.reconciliationState, 'matched')
+    assert.equal(payload.docs('payload_membership_review_queue_items').length, 0)
+    assert.equal(payload.docs('payload_stripe_shadow_projections')[0]?.shadowState, 'matched')
+
+    const duplicateCheckout = await mirrorStripeEventToPayload(payload, checkoutCompleted, {
+      stripe,
+      adminEmail: 'admin@example.com',
+    })
+    assert.equal(duplicateCheckout.deduped, true)
+
+    const staleCheckout = event(
+      'checkout.session.completed',
+      membershipCheckoutSession(),
+      'evt_membership_checkout_stale',
+      1782000000,
+    )
+    await mirrorStripeEventToPayload(payload, staleCheckout, {
+      stripe,
+      adminEmail: 'admin@example.com',
+    })
+    assert.equal(payload.docs('payload_membership_reconciliations')[0]?.reconciliationState, 'matched')
+
+    const annualSubscription = membershipSubscription({
+      id: 'sub_membership_2',
+      customer: {
+        id: 'cus_membership_2',
+        object: 'customer',
+        email: 'annual@example.com',
+        deleted: false,
+      } as unknown as Stripe.Customer,
+      metadata: {
+        fundingSource: 'pay_it_forward',
+        voucherDuration: 'one_year',
+        billingCadence: 'annual',
+      },
+      items: {
+        object: 'list',
+        data: [
+          {
+            id: 'si_membership_2',
+            object: 'subscription_item',
+            price: {
+              id: 'price_membership_annual',
+              object: 'price',
+              active: true,
+              currency: 'gbp',
+              recurring: { interval: 'year', interval_count: 1, usage_type: 'licensed' } as Stripe.Price.Recurring,
+              product: {
+                id: 'prod_membership',
+                object: 'product',
+                active: true,
+                name: 'JPV Bootcamp Membership',
+              } as Stripe.Product,
+            } as Stripe.Price,
+          } as Stripe.SubscriptionItem,
+        ],
+        has_more: false,
+        url: '',
+      },
+    })
+    const payItForwardPayload = buildPayload({
+      payload_members: [
+        {
+          id: 'member_support_2',
+          email: 'annual@example.com',
+          accountStatus: 'active',
+          billingHoldReason: null,
+        },
+      ],
+      payload_billing_accounts: [
+        {
+          id: 'billing_support_2',
+          member: 'member_support_2',
+          stripeCustomerId: 'cus_membership_2',
+          billingStatus: 'active',
+        },
+      ],
+      payload_membership_support_records: [
+        {
+          id: 'support_2',
+          displayName: 'Membership support seed 2',
+          member: 'member_support_2',
+          memberEmail: 'annual@example.com',
+          fundingSource: 'pay_it_forward',
+          voucherDuration: 'one_year',
+          issuanceState: 'issued',
+          billingCadence: 'annual',
+          stripeCustomerId: 'cus_membership_2',
+          stripeSubscriptionId: 'sub_membership_2',
+          stripePriceId: 'price_membership_annual',
+          stripeCouponId: 'coupon_membership_2',
+          stripePromotionCodeId: 'promo_membership_2',
+          approvalReference: 'webhook:seed-2',
+          reconciliationState: 'matched',
+          lastWebhookAt: '2026-06-20T00:00:00.000Z',
+          notes: 'seed',
+          metadata: {
+            lastWebhookEventId: 'evt_seed_2',
+            lastWebhookCreatedAt: '2026-06-20T00:00:00.000Z',
+            lastReconciledAt: '2026-06-20T00:00:00.000Z',
+          },
+        },
+      ],
+    })
+    const payItForwardResult = await mirrorStripeEventToPayload(
+      payItForwardPayload,
+      event('customer.subscription.created', annualSubscription, 'evt_membership_subscription_created', 1782002000),
+      { stripe: fakeStripe(annualSubscription), adminEmail: 'admin@example.com' },
+    )
+    assert.equal(payItForwardResult.processed, true)
+    assert.equal(payItForwardPayload.docs('payload_membership_support_records')[0]?.fundingSource, 'pay_it_forward')
+    assert.equal(payItForwardPayload.docs('payload_membership_support_records')[0]?.voucherDuration, 'one_year')
+    assert.equal(payItForwardPayload.docs('payload_membership_reconciliations')[0]?.reconciliationState, 'matched')
+
+    const paymentFailedResult = await mirrorStripeEventToPayload(
+      payload,
+      event('invoice.payment_failed', membershipInvoice(), 'evt_membership_payment_failed', 1782003000),
+      { stripe, adminEmail: 'admin@example.com' },
+    )
+    assert.equal(paymentFailedResult.processed, true)
+    assert.equal(payload.docs('payload_membership_reconciliations')[0]?.reconciliationState, 'failed')
+    assert.equal(payload.docs('payload_membership_reconciliations')[0]?.failureCode, 'payment_failure')
+
+    const paymentRecoveredResult = await mirrorStripeEventToPayload(
+      payload,
+      event('invoice.paid', membershipInvoice(), 'evt_membership_payment_recovered', 1782004000),
+      { stripe, adminEmail: 'admin@example.com' },
+    )
+    assert.equal(paymentRecoveredResult.processed, true)
+    assert.equal(payload.docs('payload_membership_review_queue_items')[0]?.queueState, 'closed')
+
+    const customerMismatchPayload = buildPayload({
+      payload_members: [
+        {
+          id: 'member_support_3',
+          email: 'mismatch@example.com',
+          accountStatus: 'active',
+          billingHoldReason: null,
+        },
+      ],
+      payload_billing_accounts: [
+        {
+          id: 'billing_support_3',
+          member: 'member_support_3',
+          stripeCustomerId: 'cus_membership_3',
+          billingStatus: 'active',
+        },
+      ],
+      payload_membership_support_records: [
+        {
+          id: 'support_3',
+          displayName: 'Membership support seed 3',
+          member: 'member_support_3',
+          memberEmail: 'mismatch@example.com',
+          fundingSource: 'voucher',
+          voucherDuration: 'one_month',
+          issuanceState: 'issued',
+          billingCadence: 'monthly',
+          stripeCustomerId: 'cus_membership_3',
+          stripeSubscriptionId: 'sub_membership_3',
+          stripePriceId: 'price_membership_monthly',
+          stripeCouponId: 'coupon_membership_3',
+          stripePromotionCodeId: 'promo_membership_3',
+          approvalReference: 'webhook:seed-3',
+          reconciliationState: 'matched',
+          lastWebhookAt: '2026-06-20T00:00:00.000Z',
+          notes: 'seed',
+          metadata: {
+            lastWebhookEventId: 'evt_seed_3',
+            lastWebhookCreatedAt: '2026-06-20T00:00:00.000Z',
+            lastReconciledAt: '2026-06-20T00:00:00.000Z',
+          },
+        },
+      ],
+    })
+    const mismatchSubscription = membershipSubscription({
+      id: 'sub_membership_3',
+      customer: {
+        id: 'cus_membership_mismatch',
+        object: 'customer',
+        email: 'mismatch@example.com',
+        deleted: false,
+      } as unknown as Stripe.Customer,
+    })
+    const mismatchResult = await mirrorStripeEventToPayload(
+      customerMismatchPayload,
+      event('customer.subscription.updated', mismatchSubscription, 'evt_membership_customer_mismatch', 1782005000),
+      { stripe: fakeStripe(mismatchSubscription), adminEmail: 'admin@example.com' },
+    )
+    assert.equal(mismatchResult.processed, true)
+    assert.equal(customerMismatchPayload.docs('payload_membership_reconciliations')[0]?.reconciliationState, 'mismatch')
+    assert.equal(customerMismatchPayload.docs('payload_membership_review_queue_items')[0]?.queueReason, 'webhook_mismatch')
+
+    const priceMismatchSubscription = membershipSubscription({
+      id: 'sub_membership_3',
+      customer: {
+        id: 'cus_membership_3',
+        object: 'customer',
+        email: 'mismatch@example.com',
+        deleted: false,
+      } as unknown as Stripe.Customer,
+      items: {
+        object: 'list',
+        data: [
+          {
+            id: 'si_membership_price_mismatch',
+            object: 'subscription_item',
+            price: {
+              id: 'price_membership_other',
+              object: 'price',
+              active: true,
+              currency: 'gbp',
+              recurring: { interval: 'month', interval_count: 1, usage_type: 'licensed' } as Stripe.Price.Recurring,
+              product: {
+                id: 'prod_membership',
+                object: 'product',
+                active: true,
+                name: 'JPV Bootcamp Membership',
+              } as Stripe.Product,
+            } as Stripe.Price,
+          } as Stripe.SubscriptionItem,
+        ],
+        has_more: false,
+        url: '',
+      },
+    })
+    const priceMismatchPayload = buildPayload({
+      payload_members: [
+        {
+          id: 'member_support_3',
+          email: 'mismatch@example.com',
+          accountStatus: 'active',
+          billingHoldReason: null,
+        },
+      ],
+      payload_billing_accounts: [
+        {
+          id: 'billing_support_3',
+          member: 'member_support_3',
+          stripeCustomerId: 'cus_membership_3',
+          billingStatus: 'active',
+        },
+      ],
+      payload_membership_support_records: [
+        {
+          id: 'support_3',
+          displayName: 'Membership support seed 3',
+          member: 'member_support_3',
+          memberEmail: 'mismatch@example.com',
+          fundingSource: 'voucher',
+          voucherDuration: 'one_month',
+          issuanceState: 'issued',
+          billingCadence: 'monthly',
+          stripeCustomerId: 'cus_membership_3',
+          stripeSubscriptionId: 'sub_membership_3',
+          stripePriceId: 'price_membership_monthly',
+          stripeCouponId: 'coupon_membership_3',
+          stripePromotionCodeId: 'promo_membership_3',
+          approvalReference: 'webhook:seed-3',
+          reconciliationState: 'matched',
+          lastWebhookAt: '2026-06-20T00:00:00.000Z',
+          notes: 'seed',
+          metadata: {
+            lastWebhookEventId: 'evt_seed_3',
+            lastWebhookCreatedAt: '2026-06-20T00:00:00.000Z',
+            lastReconciledAt: '2026-06-20T00:00:00.000Z',
+          },
+        },
+      ],
+    })
+    const priceMismatchResult = await mirrorStripeEventToPayload(
+      priceMismatchPayload,
+      event('customer.subscription.updated', priceMismatchSubscription, 'evt_membership_price_mismatch', 1782006000),
+      { stripe: fakeStripe(priceMismatchSubscription), adminEmail: 'admin@example.com' },
+    )
+    assert.equal(priceMismatchResult.processed, true)
+    assert.equal(
+      priceMismatchPayload.docs('payload_membership_reconciliations').find((item) => item.stripeEventId === 'evt_membership_price_mismatch')
+        ?.reconciliationState,
+      'mismatch',
+    )
+
+    const missingPromoPayload = buildPayload({
+      payload_members: [
+        {
+          id: 'member_support_4',
+          email: 'promo@example.com',
+          accountStatus: 'active',
+          billingHoldReason: null,
+        },
+      ],
+      payload_billing_accounts: [
+        {
+          id: 'billing_support_4',
+          member: 'member_support_4',
+          stripeCustomerId: 'cus_membership_4',
+          billingStatus: 'active',
+        },
+      ],
+      payload_membership_support_records: [
+        {
+          id: 'support_4',
+          displayName: 'Membership support seed 4',
+          member: 'member_support_4',
+          memberEmail: 'promo@example.com',
+          fundingSource: 'voucher',
+          voucherDuration: 'one_month',
+          issuanceState: 'issued',
+          billingCadence: 'monthly',
+          stripeCustomerId: 'cus_membership_4',
+          stripeSubscriptionId: 'sub_membership_4',
+          stripePriceId: 'price_membership_monthly',
+          stripeCouponId: 'coupon_membership_4',
+          stripePromotionCodeId: 'promo_membership_4',
+          approvalReference: 'webhook:seed-4',
+          reconciliationState: 'matched',
+          lastWebhookAt: '2026-06-20T00:00:00.000Z',
+          notes: 'seed',
+          metadata: {
+            lastWebhookEventId: 'evt_seed_4',
+            lastWebhookCreatedAt: '2026-06-20T00:00:00.000Z',
+            lastReconciledAt: '2026-06-20T00:00:00.000Z',
+          },
+        },
+      ],
+    })
+    const missingPromoEvent = event(
+      'customer.updated',
+      membershipCustomer({
+        id: 'cus_membership_4',
+        email: 'promo@example.com',
+        discount: {
+          coupon: { id: 'coupon_membership_4' },
+        } as unknown as Stripe.Discount,
+      }),
+      'evt_membership_missing_promo',
+      1782007000,
+    )
+    await mirrorStripeEventToPayload(missingPromoPayload, missingPromoEvent, {
+      stripe: fakeStripe(membershipSubscription({ id: 'sub_membership_4', customer: { id: 'cus_membership_4', object: 'customer', email: 'promo@example.com', deleted: false } as unknown as Stripe.Customer })),
+      adminEmail: 'admin@example.com',
+    })
+    assert.equal(missingPromoPayload.countDocs('payload_membership_reconciliations'), 1)
+    assert.equal(missingPromoPayload.countDocs('payload_membership_review_queue_items'), 1)
+
+    const inactivePromoPayload = buildPayload({
+      payload_members: [
+        {
+          id: 'member_support_5',
+          email: 'inactive@example.com',
+          accountStatus: 'active',
+          billingHoldReason: null,
+        },
+      ],
+      payload_billing_accounts: [
+        {
+          id: 'billing_support_5',
+          member: 'member_support_5',
+          stripeCustomerId: 'cus_membership_5',
+          billingStatus: 'active',
+        },
+      ],
+      payload_membership_support_records: [
+        {
+          id: 'support_5',
+          displayName: 'Membership support seed 5',
+          member: 'member_support_5',
+          memberEmail: 'inactive@example.com',
+          fundingSource: 'voucher',
+          voucherDuration: 'one_month',
+          issuanceState: 'issued',
+          billingCadence: 'monthly',
+          stripeCustomerId: 'cus_membership_5',
+          stripeSubscriptionId: 'sub_membership_5',
+          stripePriceId: 'price_membership_monthly',
+          stripeCouponId: 'coupon_membership_5',
+          stripePromotionCodeId: 'promo_membership_5',
+          approvalReference: 'webhook:seed-5',
+          reconciliationState: 'matched',
+          lastWebhookAt: '2026-06-20T00:00:00.000Z',
+          notes: 'seed',
+          metadata: {
+            lastWebhookEventId: 'evt_seed_5',
+            lastWebhookCreatedAt: '2026-06-20T00:00:00.000Z',
+            lastReconciledAt: '2026-06-20T00:00:00.000Z',
+          },
+        },
+      ],
+    })
+    const inactivePromoEvent = event(
+      'customer.updated',
+      membershipCustomer({
+        id: 'cus_membership_5',
+        email: 'inactive@example.com',
+        discount: {
+          coupon: { id: 'coupon_membership_5' },
+          promotion_code: {
+            id: 'promo_membership_5',
+            active: false,
+          },
+        } as unknown as Stripe.Discount,
+      }),
+      'evt_membership_inactive_promo',
+      1782008000,
+    )
+    await mirrorStripeEventToPayload(inactivePromoPayload, inactivePromoEvent, {
+      stripe: fakeStripe(membershipSubscription({ id: 'sub_membership_5', customer: { id: 'cus_membership_5', object: 'customer', email: 'inactive@example.com', deleted: false } as unknown as Stripe.Customer })),
+      adminEmail: 'admin@example.com',
+    })
+    assert.equal(inactivePromoPayload.docs('payload_membership_reconciliations')[0]?.failureCode, 'inactive_promotion_code')
+
+    const outOfOrderPayload = buildPayload({
+      payload_members: [
+        {
+          id: 'member_support_6',
+          email: 'late@example.com',
+          accountStatus: 'pending',
+          billingHoldReason: null,
+        },
+      ],
+      payload_billing_accounts: [
+        {
+          id: 'billing_support_6',
+          member: 'member_support_6',
+          stripeCustomerId: 'cus_membership_6',
+          billingStatus: 'active',
+        },
+      ],
+    })
+    await mirrorStripeEventToPayload(
+      outOfOrderPayload,
+      event('invoice.paid', membershipInvoice({
+        customer: 'cus_membership_6',
+        customer_email: 'late@example.com',
+        subscription: 'sub_membership_6',
+      }), 'evt_membership_out_of_order', 1782009000),
+      {
+        stripe: fakeStripe(membershipSubscription({
+          id: 'sub_membership_6',
+          customer: {
+            id: 'cus_membership_6',
+            object: 'customer',
+            email: 'late@example.com',
+            deleted: false,
+          } as unknown as Stripe.Customer,
+        })),
+        adminEmail: 'admin@example.com',
+      },
+    )
+    assert.equal(outOfOrderPayload.docs('payload_membership_reconciliations')[0]?.reconciliationState, 'pending')
+    assert.equal(outOfOrderPayload.docs('payload_membership_reconciliations')[0]?.failureCode, 'out_of_order_event')
+
+    const recoveryPayload = buildPayload({
+      payload_members: [
+        {
+          id: 'member_support_7',
+          email: 'recovery@example.com',
+          accountStatus: 'active',
+          billingHoldReason: null,
+        },
+      ],
+      payload_billing_accounts: [
+        {
+          id: 'billing_support_7',
+          member: 'member_support_7',
+          stripeCustomerId: 'cus_membership_7',
+          billingStatus: 'active',
+        },
+      ],
+      payload_membership_support_records: [
+        {
+          id: 'support_7',
+          displayName: 'Membership support seed 7',
+          member: 'member_support_7',
+          memberEmail: 'recovery@example.com',
+          fundingSource: 'voucher',
+          voucherDuration: 'one_month',
+          issuanceState: 'issued',
+          billingCadence: 'monthly',
+          stripeCustomerId: 'cus_membership_7',
+          stripeSubscriptionId: 'sub_membership_7',
+          stripePriceId: 'price_membership_monthly',
+          stripeCouponId: 'coupon_membership_7',
+          stripePromotionCodeId: 'promo_membership_7',
+          approvalReference: 'webhook:seed-7',
+          reconciliationState: 'matched',
+          lastWebhookAt: '2026-06-20T00:00:00.000Z',
+          notes: 'seed',
+          metadata: {
+            lastWebhookEventId: 'evt_seed_7',
+            lastWebhookCreatedAt: '2026-06-20T00:00:00.000Z',
+            lastReconciledAt: '2026-06-20T00:00:00.000Z',
+          },
+        },
+      ],
+      payload_membership_review_queue_items: [
+        {
+          id: 'review_7',
+          displayName: 'Review queue membership-support:sub_membership_7:recovery@example.com',
+          membershipSupport: 'support_7',
+          reconciliation: 'support_7',
+          member: 'member_support_7',
+          queueState: 'needs_review',
+          queueReason: 'webhook_mismatch',
+          priority: 50,
+          notes: 'seed',
+          metadata: {
+            lastWebhookEventId: 'evt_seed_7',
+          },
+        },
+      ],
+    })
+    const recoveryMatchSubscription = membershipSubscription({
+      id: 'sub_membership_7',
+      customer: {
+        id: 'cus_membership_7',
+        object: 'customer',
+        email: 'recovery@example.com',
+        deleted: false,
+      } as unknown as Stripe.Customer,
+    })
+    await mirrorStripeEventToPayload(
+      recoveryPayload,
+      event('customer.subscription.updated', recoveryMatchSubscription, 'evt_membership_recovery_good', 1782011000),
+      { stripe: fakeStripe(recoveryMatchSubscription), adminEmail: 'admin@example.com' },
+    )
+    assert.equal(recoveryPayload.docs('payload_membership_reconciliations')[0]?.reconciliationState, 'matched')
+    assert.equal(recoveryPayload.docs('payload_membership_review_queue_items')[0]?.queueState, 'closed')
   }
 }
 
