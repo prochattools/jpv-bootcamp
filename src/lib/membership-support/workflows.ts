@@ -44,6 +44,8 @@ export type MembershipSupportWorkflowReviewQueueItem = Readonly<{
   notes: string
   metadata: Record<string, unknown>
   createdAt: string
+  updatedAt: string
+  projection: MembershipSupportReviewQueueProjection
 }>
 
 export type MembershipSupportVoucherRecord = Readonly<{
@@ -252,6 +254,44 @@ export type WorkflowSuccess<T> = Readonly<{
 
 export type WorkflowResult<T> = WorkflowSuccess<T> | WorkflowFailure
 
+export type MembershipSupportReviewQueueType =
+  | 'voucher_approval'
+  | 'pay_it_forward_approval'
+  | 'voucher_issuance_failure'
+  | 'provider_failure'
+  | 'missing_promotion_code'
+  | 'inactive_promotion_code'
+  | 'customer_mismatch'
+  | 'subscription_mismatch'
+  | 'price_mismatch'
+  | 'cadence_mismatch'
+  | 'webhook_reconciliation_mismatch'
+  | 'payment_failure'
+  | 'subscription_deletion'
+  | 'stale_event_conflict'
+  | 'migration_manual_review'
+  | 'migration_preview_mismatch'
+  | 'illegal_workflow_transition'
+
+export type MembershipSupportReviewQueueProjection = Readonly<{
+  dedupeKey: string
+  queueType: MembershipSupportReviewQueueType
+  priority: number
+  membershipSupportReference: string
+  memberReference: string | null
+  migrationCandidateReference: string | null
+  reasonCode: string
+  evidenceSummary: string
+  requiredAction: string
+  status: 'open' | 'closed'
+  createdAt: string
+  updatedAt: string
+  assignedOperator: string | null
+  resolutionNote: string | null
+  resolvedAt: string | null
+  sourceEventId: string | null
+}>
+
 type VoucherAction = {
   voucher: MembershipSupportVoucherRecord
   projection: MembershipSupportProjectionRecord
@@ -276,6 +316,175 @@ function requireApprovalReference(approvalReference: string | null | undefined):
 
 function normalizeText(value: string | null | undefined): string {
   return typeof value === 'string' ? value.trim() : ''
+}
+
+function sanitizeReviewQueueText(value: string): string {
+  return value
+    .replace(/\b(sk_live|sk_test|whsec|cus|sub|price|pm|pi|evt|promo)_[A-Za-z0-9_-]+\b/gi, '[redacted]')
+    .replace(/\b[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}\b/gi, '[email-redacted]')
+}
+
+function queueReasonForAction(action: string, reason: string): MembershipSupportWorkflowReviewQueueItem['queueReason'] {
+  if (reason.includes('approval')) return 'approval_required'
+  if (reason.includes('customer')) return 'customer_restriction'
+  if (reason.includes('idempotency')) return 'idempotency_conflict'
+  if (reason.includes('webhook') || reason.includes('reconcile') || reason.includes('price') || reason.includes('cadence')) return 'webhook_mismatch'
+  if (reason.includes('expiry')) return 'expiry_check'
+  if (reason.includes('payment') || reason.includes('provider') || reason.includes('manual')) return 'manual_override'
+  if (action.includes('transition')) return 'manual_override'
+  return 'manual_override'
+}
+
+function reviewQueueTypeForAction(action: string, reason: string, metadata?: Record<string, unknown>): MembershipSupportReviewQueueType {
+  const normalizedAction = action.toLowerCase()
+  const normalizedReason = reason.toLowerCase()
+  if (normalizedAction.includes('submit_for_approval') && normalizedAction.includes('pay_it_forward')) return 'pay_it_forward_approval'
+  if (normalizedAction.includes('submit_for_approval')) return 'voucher_approval'
+  if (normalizedReason.includes('idempotency')) return 'stale_event_conflict'
+  if (normalizedReason.includes('approval') && normalizedAction.includes('pay_it_forward')) return 'pay_it_forward_approval'
+  if (normalizedReason.includes('approval')) return 'voucher_approval'
+  if (normalizedReason.includes('expiry')) return 'voucher_issuance_failure'
+  if (normalizedReason.includes('customer')) return 'customer_mismatch'
+  if (normalizedReason.includes('price')) return 'price_mismatch'
+  if (normalizedReason.includes('cadence')) return 'cadence_mismatch'
+  if (normalizedReason.includes('subscription')) return 'subscription_mismatch'
+  if (normalizedReason.includes('payment')) return 'payment_failure'
+  if (normalizedReason.includes('provider')) return 'provider_failure'
+  if (normalizedReason.includes('manual') && normalizedAction.includes('projection')) return 'migration_manual_review'
+  if (normalizedReason.includes('webhook') && normalizedAction.includes('review_routed')) return 'migration_preview_mismatch'
+  if (normalizedReason.includes('webhook')) return 'webhook_reconciliation_mismatch'
+  if (normalizedReason.includes('transition')) return 'illegal_workflow_transition'
+  if (metadata && (metadata.migrationCandidateId || metadata.migrationCandidateReference)) return 'migration_manual_review'
+  return 'migration_manual_review'
+}
+
+function reviewQueuePriorityForType(queueType: MembershipSupportReviewQueueType): number {
+  switch (queueType) {
+    case 'stale_event_conflict':
+      return 10
+    case 'webhook_reconciliation_mismatch':
+    case 'migration_preview_mismatch':
+      return 20
+    case 'payment_failure':
+      return 25
+    case 'customer_mismatch':
+    case 'subscription_mismatch':
+    case 'price_mismatch':
+    case 'cadence_mismatch':
+    case 'missing_promotion_code':
+    case 'inactive_promotion_code':
+      return 30
+    case 'migration_manual_review':
+      return 40
+    case 'voucher_approval':
+    case 'pay_it_forward_approval':
+    case 'voucher_issuance_failure':
+      return 50
+    case 'provider_failure':
+      return 60
+    case 'subscription_deletion':
+      return 65
+    case 'illegal_workflow_transition':
+      return 70
+  }
+}
+
+function requiredActionForQueueType(queueType: MembershipSupportReviewQueueType): string {
+  switch (queueType) {
+    case 'voucher_approval':
+      return 'review voucher approval request'
+    case 'pay_it_forward_approval':
+      return 'review pay-it-forward approval request'
+    case 'voucher_issuance_failure':
+      return 'review voucher issuance failure'
+    case 'provider_failure':
+      return 'review provider failure'
+    case 'missing_promotion_code':
+      return 'restore promotion code'
+    case 'inactive_promotion_code':
+      return 'reactivate promotion code'
+    case 'customer_mismatch':
+      return 'verify customer ownership'
+    case 'subscription_mismatch':
+      return 'verify subscription ownership'
+    case 'price_mismatch':
+      return 'verify price mapping'
+    case 'cadence_mismatch':
+      return 'verify billing cadence'
+    case 'webhook_reconciliation_mismatch':
+      return 'reconcile webhook mismatch'
+    case 'payment_failure':
+      return 'review payment failure'
+    case 'subscription_deletion':
+      return 'review subscription deletion'
+    case 'stale_event_conflict':
+      return 'resolve stale event conflict'
+    case 'migration_manual_review':
+      return 'review migration manually'
+    case 'migration_preview_mismatch':
+      return 'review migration preview mismatch'
+    case 'illegal_workflow_transition':
+      return 'fix workflow transition'
+  }
+}
+
+export function buildMembershipSupportReviewQueueProjection(params: {
+  action: string
+  targetId: string
+  reason: string
+  notes: string
+  approvalReference: string
+  now: Date
+  metadata?: Record<string, unknown>
+  memberReference?: string | null
+  migrationCandidateReference?: string | null
+  assignedOperator?: string | null
+  resolvedAt?: Date | null
+}): MembershipSupportReviewQueueProjection {
+  const queueType = reviewQueueTypeForAction(params.action, params.reason, params.metadata)
+  const noteSummary = sanitizeReviewQueueText(params.notes).slice(0, 240)
+  const sourceEventId = normalizeText(typeof params.metadata?.sourceEventId === 'string' ? params.metadata.sourceEventId : null) || null
+  const membershipSupportReference =
+    normalizeText(typeof params.metadata?.membershipSupportReference === 'string' ? params.metadata.membershipSupportReference : null) ||
+    params.targetId
+  const memberReference =
+    normalizeText(typeof params.metadata?.memberId === 'string' ? params.metadata.memberId : null) ||
+    params.memberReference ||
+    null
+  const migrationCandidateReference =
+    normalizeText(typeof params.metadata?.migrationCandidateReference === 'string' ? params.metadata.migrationCandidateReference : null) ||
+    params.migrationCandidateReference ||
+    null
+  const dedupeKey = createHash('sha256')
+    .update([
+      queueType,
+      membershipSupportReference,
+      memberReference ?? '_',
+      migrationCandidateReference ?? '_',
+      params.approvalReference,
+      sourceEventId ?? '_',
+      params.reason,
+    ].join(':'))
+    .digest('hex')
+
+  return freezeDeep({
+    dedupeKey: `review_${dedupeKey}`,
+    queueType,
+    priority: reviewQueuePriorityForType(queueType),
+    membershipSupportReference,
+    memberReference,
+    migrationCandidateReference,
+    reasonCode: params.reason,
+    evidenceSummary: noteSummary,
+    requiredAction: requiredActionForQueueType(queueType),
+    status: params.resolvedAt ? 'closed' as const : 'open' as const,
+    createdAt: params.now.toISOString(),
+    updatedAt: (params.resolvedAt ?? params.now).toISOString(),
+    assignedOperator: params.assignedOperator ?? null,
+    resolutionNote: params.resolvedAt ? noteSummary || null : null,
+    resolvedAt: params.resolvedAt?.toISOString() ?? null,
+    sourceEventId,
+  })
 }
 
 function normalizeEmailOrThrow(value: string | null | undefined): string {
@@ -352,25 +561,38 @@ function createReviewQueueItem(params: {
   now: Date
   metadata?: Record<string, unknown>
 }): MembershipSupportWorkflowReviewQueueItem {
-  const queueReason =
-    params.reason.includes('approval') ? 'approval_required' :
-    params.reason.includes('customer') ? 'customer_restriction' :
-    params.reason.includes('idempotency') ? 'idempotency_conflict' :
-    params.reason.includes('webhook') || params.reason.includes('reconcile') ? 'webhook_mismatch' :
-    params.reason.includes('expiry') ? 'expiry_check' :
-    'manual_override'
+  const queueReason = queueReasonForAction(params.action, params.reason)
+  const projection = buildMembershipSupportReviewQueueProjection({
+    action: params.action,
+    targetId: params.targetId,
+    reason: params.reason,
+    notes: params.notes,
+    approvalReference: params.approvalReference,
+    now: params.now,
+    metadata: params.metadata,
+  })
   return freezeDeep({
     id: deriveStableId('review', [params.action, params.targetId, params.approvalReference, params.reason]),
     displayName: `${params.action} review - ${params.targetId}`,
     queueState: 'needs_review',
     queueReason,
-    priority: queueReason === 'webhook_mismatch' ? 10 : 50,
+    priority: projection.priority,
     assignedTo: null,
     dueAt: null,
     resolvedAt: null,
     notes: params.notes,
-    metadata: params.metadata ?? {},
+    metadata: {
+      ...(params.metadata ?? {}),
+      queueType: projection.queueType,
+      dedupeKey: projection.dedupeKey,
+      requiredAction: projection.requiredAction,
+      reasonCode: projection.reasonCode,
+      evidenceSummary: projection.evidenceSummary,
+      sourceEventId: projection.sourceEventId,
+    },
     createdAt: params.now.toISOString(),
+    updatedAt: params.now.toISOString(),
+    projection,
   })
 }
 

@@ -3,7 +3,7 @@ import type Stripe from 'stripe'
 import { normalizeEmail } from '@/lib/normalize-email'
 import type { PayloadCourseWriteAPI, PayloadDocument } from '@/lib/payloadCourse/accessService'
 import type { MembershipFundingSource, MembershipSupportReconciliationState, MembershipVoucherDuration } from '@/lib/membership-support/domain'
-import { buildMembershipSupportProjectionRecord, type MembershipSupportProjectionRecord } from '@/lib/membership-support/workflows'
+import { buildMembershipSupportProjectionRecord, buildMembershipSupportReviewQueueProjection, type MembershipSupportProjectionRecord } from '@/lib/membership-support/workflows'
 
 export type MembershipSupportWebhookClassifier =
   | 'matched'
@@ -641,6 +641,22 @@ async function persistProjection(
 
   const reviewQueueReason = result.reviewQueueReason
   if (reviewQueueReason) {
+    const reviewProjection = buildMembershipSupportReviewQueueProjection({
+      action: `webhook_${event.type.replace(/\./g, '_')}`,
+      targetId: projection.resourceKey,
+      reason: reviewQueueReason,
+      notes: projection.notes,
+      approvalReference: `webhook:${event.id}`,
+      now: new Date(projection.lastReconciledAt),
+      metadata: {
+        sourceEventId: event.id,
+        membershipSupportReference: supportResult.doc.id,
+        memberId: projection.memberId,
+        migrationCandidateReference: projection.resourceKey,
+      },
+      memberReference: projection.memberId,
+      migrationCandidateReference: projection.resourceKey,
+    })
     const reviewResult = await upsertByWhere(
       payload,
       'payload_membership_review_queue_items',
@@ -652,12 +668,20 @@ async function persistProjection(
         member: projection.memberId,
         queueState: projection.reconciliationState === 'matched' ? 'closed' : 'needs_review',
         queueReason: reviewQueueReason,
-        priority: reviewQueueReason === 'idempotency_conflict' ? 10 : reviewQueueReason === 'manual_override' ? 25 : 50,
+        priority: reviewProjection.priority,
         assignedTo: undefined,
         dueAt: undefined,
         resolvedAt: projection.reconciliationState === 'matched' ? new Date(projection.lastReconciledAt) : undefined,
         notes: projection.notes,
-        metadata: projection.metadata,
+        metadata: {
+          ...projection.metadata,
+          queueType: reviewProjection.queueType,
+          dedupeKey: reviewProjection.dedupeKey,
+          requiredAction: reviewProjection.requiredAction,
+          reasonCode: reviewProjection.reasonCode,
+          evidenceSummary: reviewProjection.evidenceSummary,
+          sourceEventId: reviewProjection.sourceEventId,
+        },
       },
     )
     actions.push(reviewResult.created ? 'membership_review_created' : 'membership_review_updated')

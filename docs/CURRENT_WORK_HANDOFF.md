@@ -265,7 +265,24 @@ Completed P0-A checkpoints:
     - `git diff --check`
     - focused secret and forbidden-runtime scans on the touched entitlement files
   - no live provider, database, or migration mutation was used
-- Next task: Packet 7 unified review queues
+- Packet 7 review-queue projection unification is complete:
+  - changed paths:
+    - `src/lib/membership-support/workflows.ts`
+    - `src/lib/membership-support/service.ts`
+    - `src/lib/membership-support/webhookReconciliation.ts`
+    - `scripts/membership_support_review_queue_projection.test.ts`
+  - added a shared review-queue projection helper with deterministic queue types, dedupe keys, priorities, required actions, and sanitized evidence summaries
+  - wired the helper into workflow failures, command-service queue writes, and webhook reconciliation queue writes without touching the protected unrelated paths
+  - validation evidence:
+    - `pnpm exec tsx scripts/membership_support_review_queue_projection.test.ts`
+    - `pnpm exec tsx scripts/membership_support_commands.test.ts`
+    - `pnpm exec tsx scripts/membership_support_cockpit.test.ts`
+    - `pnpm exec tsx scripts/payload_course_stripe_shadow_sync.test.ts`
+    - `pnpm exec tsx scripts/payload_shadow_reconciliation.test.ts`
+    - `pnpm exec tsc --noEmit --pretty false --incremental false`
+    - `git diff --check`
+  - no live provider, database, or migration mutation was used
+- Next task: Packet 8 onboarding audit
 - Membership Support persistence foundation has now been added as an additive, repository-only checkpoint:
   - `src/collections/membership-support/`
   - `src/collections/membership-support/options.ts`

@@ -5,6 +5,7 @@ import { validateMembershipSupportRecord } from '@/lib/membership-support/domain
 import { normalizeEmail } from '@/lib/normalize-email'
 import {
   buildMembershipSupportProjectionRecord,
+  buildMembershipSupportReviewQueueProjection,
   InMemoryMembershipSupportWorkflowJournal,
   type DraftVoucherInput,
   type MembershipSupportAuditSeverity,
@@ -246,18 +247,37 @@ function commandBuildReviewQueueItem(params: {
     params.reason.includes('webhook') || params.reason.includes('reconcile') ? 'webhook_mismatch' :
     params.reason.includes('expiry') ? 'expiry_check' :
     'manual_override'
+  const projection = buildMembershipSupportReviewQueueProjection({
+    action: params.action,
+    targetId: params.targetId,
+    reason: params.reason,
+    notes: params.notes,
+    approvalReference: params.approvalReference,
+    now: params.now,
+    metadata: params.metadata,
+  })
   return commandFreeze({
     id: commandDeriveStableId('review', [params.action, params.targetId, params.approvalReference, params.reason]),
     displayName: `${params.action} review - ${params.targetId}`,
     queueState: 'needs_review' as const,
     queueReason,
-    priority: queueReason === 'webhook_mismatch' ? 10 : 50,
+    priority: projection.priority,
     assignedTo: null,
     dueAt: null,
     resolvedAt: null,
     notes: params.notes,
-    metadata: params.metadata ?? {},
+    metadata: {
+      ...(params.metadata ?? {}),
+      queueType: projection.queueType,
+      dedupeKey: projection.dedupeKey,
+      requiredAction: projection.requiredAction,
+      reasonCode: projection.reasonCode,
+      evidenceSummary: projection.evidenceSummary,
+      sourceEventId: projection.sourceEventId,
+    },
     createdAt: params.now.toISOString(),
+    updatedAt: params.now.toISOString(),
+    projection,
   })
 }
 
@@ -1226,9 +1246,18 @@ export class MembershipSupportCommandService {
         }
         const resolvedReviewQueueItem = commandFreeze({
           ...command.reviewQueueItem,
-    queueState: 'closed' as const,
+          queueState: 'closed' as const,
           resolvedAt: command.context.now.toISOString(),
           notes: `${command.reviewQueueItem.notes}${command.reviewQueueItem.notes ? '\n' : ''}Resolved by administrator.`,
+          updatedAt: command.context.now.toISOString(),
+          projection: {
+            ...command.reviewQueueItem.projection,
+            status: 'closed' as const,
+            updatedAt: command.context.now.toISOString(),
+            resolutionNote: `${command.reviewQueueItem.notes}${command.reviewQueueItem.notes ? '\n' : ''}Resolved by administrator.`,
+            resolvedAt: command.context.now.toISOString(),
+            assignedOperator: operator.operatorId,
+          },
         })
         this.deps.journal.enqueueReviewItem(resolvedReviewQueueItem)
         const auditEvent = this.deps.journal.appendAuditEvent(
@@ -1943,6 +1972,15 @@ export class MembershipSupportCommandService {
           queueState: 'closed' as const,
           resolvedAt: command.context.now.toISOString(),
           notes: `${command.reviewQueueItem.notes}${command.reviewQueueItem.notes ? '\n' : ''}Resolved by administrator.`,
+          updatedAt: command.context.now.toISOString(),
+          projection: {
+            ...command.reviewQueueItem.projection,
+            status: 'closed' as const,
+            updatedAt: command.context.now.toISOString(),
+            resolutionNote: `${command.reviewQueueItem.notes}${command.reviewQueueItem.notes ? '\n' : ''}Resolved by administrator.`,
+            resolvedAt: command.context.now.toISOString(),
+            assignedOperator: operator.operatorId,
+          },
         })
         this.deps.journal.enqueueReviewItem(resolvedReviewQueueItem)
         const auditEvent = this.deps.journal.appendAuditEvent(
