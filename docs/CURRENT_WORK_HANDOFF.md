@@ -6,12 +6,15 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 
 - Repository: `prochattools-jpv-bootcamp`
 - Branch: `feature/course-branding-and-preview`
-- Current HEAD: `ad5deae feat: expand membership migration review`
+- Packet 9 starting HEAD: `2d8cef7 fix: align public membership copy`
+- Current HEAD after Packet 9: set by commit `docs: checkpoint membership implementation readiness`
 - Pull request: `https://github.com/prochattools/jpv-bootcamp/pull/2`
 - Migrations applied: `No`
 - Deployment performed: `No`
 - Push performed by the recent execution packets: `No`
-- Known unrelated dirty path: `src/payload-types.ts`
+- Protected unrelated dirty paths:
+  - `src/payload-types.ts`
+  - `docs/client/fixtures/`
 
 Before doing any work, verify the branch, HEAD, worktree, and migration state. A direct descendant of the recorded HEAD may be acceptable only when its commits are already documented completed work.
 
@@ -47,7 +50,7 @@ The application currently uses:
 
 - `/portal/**` for member and user functionality
 - `/admin/**` for administrator functionality
-- an implemented Free/Pro product model that is now superseded and must be refactored before release
+- one implemented JPV Bootcamp Membership model with monthly and annual billing; temporary legacy persistence compatibility remains until the approved schema migration packet
 - one canonical portal billing surface at `/portal/billing`
 - an explicit preview-only programme surface until approved representative content is supplied
 - persisted read-only community views for the launch scope
@@ -346,6 +349,64 @@ Remaining priority order:
 Fixed dates remain 22 July 2026 for the front-end milestone, 23 July for handover buffer, and 24 July for the client finished-by date. These dates do not authorize live operations or reduce validation requirements.
 
 The next implementation task is the administrator persistence/schema design and Payload UI integration plan, without applying migrations or changing generated types. M2 remains unstarted and unauthorized.
+
+## Packet 9 — Membership implementation readiness checkpoint
+
+### Repository state
+
+- Branch: `feature/course-branding-and-preview`
+- Packet 9 starting HEAD: `2d8cef7 fix: align public membership copy`
+- Final HEAD: established by commit `docs: checkpoint membership implementation readiness`
+- Protected unrelated dirty paths:
+  - `src/payload-types.ts`
+  - `docs/client/fixtures/`
+- Push performed: `No`
+- Migrations applied: `No`
+- Live provider calls performed: `No`
+- Deployment performed: `No`
+
+### Canonical evidence
+
+- `docs/MEMBERSHIP_IMPLEMENTATION_READINESS_EVIDENCE.md`
+
+### Final implementation packets
+
+- `ad5deae feat: expand membership migration review`
+- `4df04d8 feat: align membership course entitlements`
+- `250f7fc feat: unify membership support review queues`
+- `2d8cef7 fix: align public membership copy`
+- Earlier Checkout, lifecycle, Membership Support domain, persistence-shell, workflow, cockpit, test-mode adapter, and webhook reconciliation packets are recorded in the canonical evidence document.
+
+### Packet 9 validation evidence
+
+Packet 9 passed the launch-critical registration, Checkout, lifecycle, entitlement, Membership Support command, review-queue, webhook reconciliation, migration-preview, report-generation, Membership Support foundation, test-mode adapter, workflow, cockpit, collection-registration, Payload administrator dashboard, public-copy, billing-readiness, browser/static acceptance, portal billing, single-membership billing contract, root TypeScript, whitespace, and documentation consistency checks.
+
+Focused runtime security scanning passed with no findings. Focused secret scanning produced one reviewed lexical false positive in `src/lib/payloadCourse/stripeShadowSync.ts`: the flagged assignment invokes a random-password generator for a Payload member created from verified Stripe shadow synchronization. No literal credential or committed secret was present.
+
+### Readiness state
+
+`REPOSITORY IMPLEMENTATION READY FOR CONTROLLED SCHEMA, TEST-MODE PROVIDER, AND STAGING APPROVAL PACKETS — FORMAL RELEASE REMAINS NO-GO`
+
+Formal release state remains `NO-GO`. This checkpoint does not authorize migrations, generated-type regeneration, provider calls, staging smoke, deployment, push, or go-live.
+
+### Remaining blockers
+
+- Payload schema migration is not approved and has not been applied.
+- Generated `src/payload-types.ts` remains protected and untouched by this packet.
+- An isolation strategy is required because `src/payload-types.ts` already contains unrelated changes.
+- Live Stripe Product, Price, Coupon, Promotion Code, Customer, Subscription, invoice-preview, and mutation operations remain unauthorized.
+- Bunny provider verification remains unauthorized and unexecuted.
+- Email provider verification remains unauthorized and unexecuted.
+- Controlled staging smoke remains unexecuted.
+- Deployment and push remain unauthorized.
+- Main remains untouched.
+- M2 remains unstarted and unauthorized.
+
+### Exact next controlled task
+
+Prepare the administrator persistence/schema migration packet and generated Payload type regeneration plan without applying the migration.
+
+The packet must identify exact schema additions, migration paths, type-generation commands, isolation of the existing unrelated generated-type change, rollback approach, validation commands, and required explicit approvals. It must not apply migrations or regenerate types.
 
 ## Ready-to-copy resume prompt
 
