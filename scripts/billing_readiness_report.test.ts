@@ -102,7 +102,7 @@ async function main() {
   assert.match(checkoutSource, /billingParam/)
   assert.match(checkoutSource, /billing=monthly\|annual/)
   assert.match(checkoutHelperSource, /priceProAnnual/)
-  assert.match(checkoutHelperSource, /normalized === 'pro'/)
+  assert.match(checkoutHelperSource, /normalized === 'membership'/)
   assert.match(checkoutHelperSource, /resolved\.origin !== appOrigin/)
   assert.match(portalSource, /billingPortal\.sessions\.create/)
   for (const eventName of [

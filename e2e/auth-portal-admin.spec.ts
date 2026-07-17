@@ -83,8 +83,8 @@ test.describe('authentication, portal, and administrator denial', () => {
     await page.goto('/portal/billing')
     await expect(page.getByRole('heading', { name: 'Billing', exact: true })).toBeVisible()
     await expect(page.getByRole('button', { name: '£80/month' })).toBeVisible()
-    await expect(page.getByRole('button', { name: '£880 annual option paid upfront' })).toBeVisible()
-    await expect(page.getByText('Initial 12-month commitment.')).toBeVisible()
+    await expect(page.getByRole('button', { name: '£800/year' })).toBeVisible()
+    await expect(page.getByText('No minimum commitment.')).toBeVisible()
 
     await page.goto('/portal/account')
     await expect(page.getByRole('heading', { name: 'Account' })).toBeVisible()

@@ -193,6 +193,7 @@ Completed P0-A checkpoints:
 - the obsolete commitment-specific portal restriction and undefined resolver were removed;
 - focused Checkout, lifecycle helper, billing parity, and root TypeScript validation pass;
 - public landing and upgrade surfaces now present only JPV Bootcamp Membership monthly and annual billing;
+- public launch fixtures, E2E browser assertions, and the front-end acceptance evidence template now align to the no minimum commitment / GBP 800 annual copy;
 - public Checkout requires explicit recurring-payment acknowledgment before session creation;
 - both public and portal Checkout collect a payment method and telephone number and enable promotion codes;
 - Stripe metadata uses `membership` while the compatibility bridge temporarily maps it to the legacy paid-plan storage enum until an approved schema migration;

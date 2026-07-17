@@ -33,8 +33,8 @@ No acceptance is claimed by this template. It is an evidence capture template on
 - [ ] Landing page loads on desktop.
 - [ ] Landing page loads on mobile.
 - [ ] Hero headline/subheading matches approved copy or approved placeholder.
-- [ ] Pricing shows £80/month with 12-month commitment.
-- [ ] Pricing shows £880 upfront annual option.
+- [ ] Pricing shows £80/month with no minimum commitment.
+- [ ] Pricing shows £800/year annual option.
 - [ ] Monthly Pro checkout CTA is visible and routes correctly.
 - [ ] Annual Pro checkout CTA is visible or intentionally documented.
 - [ ] Support/pay-it-forward path is visible.

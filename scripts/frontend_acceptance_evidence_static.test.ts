@@ -33,7 +33,7 @@ function main(): void {
     'Migrations applied',
     'No',
     '£80',
-    '£880',
+    '£800',
     'support/pay-it-forward',
     'manual front-end website acceptance evidence',
     'does **not** approve migrations',
@@ -44,8 +44,8 @@ function main(): void {
 
   assert.match(template, /- \[ \] Landing page loads on desktop\./)
   assert.match(template, /- \[ \] Landing page loads on mobile\./)
-  assert.match(template, /- \[ \] Pricing shows £80\/month with 12-month commitment\./)
-  assert.match(template, /- \[ \] Pricing shows £880 upfront annual option\./)
+  assert.match(template, /- \[ \] Pricing shows £80\/month with no minimum commitment\./)
+  assert.match(template, /- \[ \] Pricing shows £800\/year annual option\./)
   assert.match(template, /- \[ \] Support\/pay-it-forward path is visible\./)
 
   mustInclude(readme, 'FRONTEND_ACCEPTANCE_EVIDENCE_TEMPLATE.md', readmePath)

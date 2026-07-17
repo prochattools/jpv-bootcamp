@@ -59,7 +59,7 @@ function testRequiredJourneyCoverage(): void {
 
   const requiredEvidence = [
     '£80/month',
-    'Initial 12-month commitment',
+    'No minimum commitment',
     '/portal/billing',
     '/privacy-policy',
     '/sitemap.xml',

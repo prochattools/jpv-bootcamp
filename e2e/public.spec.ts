@@ -18,8 +18,8 @@ test.describe('public launch routes', () => {
 
     await expect(page).toHaveTitle(/JPV|Jesus Property Venture/i)
     await expect(page.getByText('£80/month', { exact: false })).toBeVisible()
-    await expect(page.getByText('Initial 12-month commitment', { exact: false })).toBeVisible()
-    await expect(page.getByText('£880 annual option paid upfront', { exact: false })).toBeVisible()
+    await expect(page.getByText('No minimum commitment', { exact: false })).toBeVisible()
+    await expect(page.getByText('£800/year', { exact: false })).toBeVisible()
 
     const proBillingLinks = page.locator('a[href="/portal/billing"]')
     await expect(proBillingLinks.first()).toBeVisible()

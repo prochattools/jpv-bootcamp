@@ -46,11 +46,11 @@ function testLandingClaimsAreApprovalSafe(): void {
   )
 
   assert.ok(landing.includes('£80/month'), 'approved monthly price must remain visible')
-  assert.ok(landing.includes('Initial 12-month commitment'), 'approved commitment wording must remain visible')
-  assert.ok(landing.includes('£880 annual option paid upfront'), 'approved annual price must remain visible')
+  assert.ok(landing.includes('No minimum commitment'), 'approved no-commitment wording must remain visible')
+  assert.ok(landing.includes('£800/year'), 'approved annual price must remain visible')
   assert.ok(
-    landing.includes('ctaHref: "/portal/billing"'),
-    'the authenticated Pro billing entry point must remain available',
+    landing.includes('ctaHref: "/upgrade"'),
+    'the public upgrade entry point must remain available',
   )
   assert.ok(landing.includes('href="/terms"'), 'landing page must link to canonical terms')
   assert.ok(landing.includes('href="/privacy"'), 'landing page must link to canonical privacy')
