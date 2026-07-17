@@ -22,6 +22,7 @@ import { communityCollections } from './collections/community'
 import { courseRuntimeCollections } from './collections/courses'
 import { crmCollections } from './collections/crm'
 import { memberCollections } from './collections/members'
+import { membershipSupportCollections } from './collections/membership-support'
 import { partnerCollections } from './collections/partners'
 import { shouldRegisterPayloadProdMigrations } from './lib/payloadMigrations'
 import { migrations } from './migrations'
@@ -104,6 +105,7 @@ export default buildConfig({
     ...affiliateCollections,
     ...partnerCollections,
     ...billingCollections,
+    ...membershipSupportCollections,
     ...crmCollections,
     ...communityCollections,
     ...auditCollections,

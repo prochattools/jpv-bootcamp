@@ -6,7 +6,7 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 
 - Repository: `prochattools-jpv-bootcamp`
 - Branch: `feature/course-branding-and-preview`
-- Current HEAD: `42774ee feat: align membership checkout and stripe projection`
+- Current HEAD: `68accef feat: add test mode voucher stripe adapter`
 - Pull request: `https://github.com/prochattools/jpv-bootcamp/pull/2`
 - Migrations applied: `No`
 - Deployment performed: `No`
@@ -222,6 +222,38 @@ Completed P0-A checkpoints:
 - the orchestration service validates records, derives idempotency keys, creates or reuses coupon templates, creates customer-restricted promotion codes, and fails closed on reconciliation mismatch;
 - deterministic tests cover voucher and pay-it-forward issuance, coupon reuse, one-redemption customer restriction, deactivation, provider failure, mismatch detection, and idempotent retry;
 - Batch 3 focused tests, root TypeScript, whitespace, secret, and runtime-execution validations pass.
+- Membership Support persistence foundation has now been added as an additive, repository-only checkpoint:
+  - `src/collections/membership-support/`
+  - `src/collections/membership-support/options.ts`
+  - `src/collections/membership-support/access.ts`
+  - `src/collections/membership-support/relationships.ts`
+  - `src/collections/membership-support/hooks.ts`
+  - `src/collections/membership-support/validation.ts`
+  - `src/collections/membership-support/MembershipSupport.ts`
+  - `src/collections/membership-support/Voucher.ts`
+  - `src/collections/membership-support/PayItForward.ts`
+  - `src/collections/membership-support/FundingSource.ts`
+  - `src/collections/membership-support/Reconciliation.ts`
+  - `src/collections/membership-support/Administration.ts`
+  - `src/collections/membership-support/ReviewQueue.ts`
+  - `src/collections/membership-support/OperatorNotes.ts`
+  - `src/collections/membership-support/StripeShadow.ts`
+  - `src/collections/membership-support/AuditHistory.ts`
+  - `src/collections/membership-support/index.ts`
+  - `src/payload.config.ts`
+  - `src/components/payload/JPVAdminDashboard.tsx`
+  - `scripts/membership_support_collections.test.ts`
+- Validation evidence for the checkpoint:
+  - `pnpm exec tsx scripts/membership_support_collections.test.ts`
+  - `pnpm exec tsx src/lib/membership-support/membershipSupport.test.ts`
+  - `pnpm exec tsc --noEmit --pretty false --incremental false`
+  - `git diff --check`
+- Remaining restrictions for the checkpoint:
+  - do not modify or regenerate `src/payload-types.ts`;
+  - do not apply migrations;
+  - do not cross the live provider boundary;
+  - keep all repository-only mutations additive.
+- Next packet: voucher and pay-it-forward workflow actions with repository-only idempotent operator mutations, audit events, and review-queue handling.
 
 Remaining priority order:
 
