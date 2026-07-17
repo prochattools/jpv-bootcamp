@@ -1,3 +1,5 @@
+import { evaluateMembershipEntitlement } from './membershipEntitlement'
+
 export type MemberAccountStatus = 'pending' | 'active' | 'blocked' | 'suspended' | 'deleted'
 
 export type BillingStatus =
@@ -55,6 +57,15 @@ export type MemberAccessContext = {
 export type BillingAccessContext = {
   status: BillingStatus
   plan?: SubscriptionPlan | null
+  lifecycleState?: 'pending' | 'active' | 'past_due' | 'cancelled' | 'expired' | 'suspended' | 'revoked' | 'unreconciled' | null
+  subscriptionStatus?: string | null
+  periodEnd?: Date | string | null
+  cancelAtPeriodEnd?: boolean | null
+  paymentStatus?: string | null
+  graceEndsAt?: Date | string | null
+  reconciliationState?: 'matched' | 'mismatch' | 'pending' | 'failed' | null
+  fundingSource?: 'direct_payment' | 'voucher' | 'pay_it_forward' | null
+  legacyStoredPlan?: SubscriptionPlan | null
 }
 
 export type ResourceAccessContext = {
@@ -109,19 +120,6 @@ const blockedAccountStatuses = new Set<MemberAccountStatus>([
   'deleted',
 ])
 
-const billingDeniedStatuses = new Set<BillingStatus>([
-  'none',
-  'billing_hold',
-  'past_due',
-  'unpaid',
-  'canceled',
-  'incomplete',
-  'incomplete_expired',
-  'paused',
-])
-
-const billingAllowedStatuses = new Set<BillingStatus>(['active', 'trialing'])
-
 function normalizeDate(value: Date | string | null | undefined): Date | null {
   if (!value) return null
   const date = value instanceof Date ? value : new Date(value)
@@ -164,6 +162,10 @@ function deny(reason: AccessDecisionReason, evidence?: Record<string, unknown>):
 
 function allow(reason: AccessDecisionReason, evidence?: Record<string, unknown>): AccessDecision {
   return { allowed: true, reason, evidence }
+}
+
+function entitlementAllowsAccess(decision: ReturnType<typeof evaluateMembershipEntitlement>): boolean {
+  return decision.decision === 'allowed' || decision.decision === 'billing_hold'
 }
 
 export function evaluateAccess(input: EvaluateAccessInput): AccessDecision {
@@ -219,12 +221,25 @@ export function evaluateAccess(input: EvaluateAccessInput): AccessDecision {
   const requireActiveBilling =
     policy?.requireActiveBilling ?? (privacy === 'private' || privacy === 'secret')
 
-  if (requireActiveBilling && !billingAllowedStatuses.has(billingStatus)) {
-    return deny('billing_not_active', { billingStatus })
-  }
+  const entitlement = evaluateMembershipEntitlement({
+    lifecycleState: input.billing?.lifecycleState ?? null,
+    subscriptionStatus: input.billing?.subscriptionStatus ?? billingStatus,
+    periodEnd: input.billing?.periodEnd ?? null,
+    cancelAtPeriodEnd: input.billing?.cancelAtPeriodEnd ?? null,
+    paymentStatus: input.billing?.paymentStatus ?? null,
+    graceEndsAt: input.billing?.graceEndsAt ?? null,
+    reconciliationState: input.billing?.reconciliationState ?? null,
+    fundingSource: input.billing?.fundingSource ?? null,
+    legacyStoredPlan: input.billing?.legacyStoredPlan ?? input.billing?.plan ?? null,
+    now,
+  })
 
-  if (billingDeniedStatuses.has(billingStatus) && requireActiveBilling) {
-    return deny('billing_not_active', { billingStatus })
+  if (requireActiveBilling && !entitlementAllowsAccess(entitlement)) {
+    return deny('billing_not_active', {
+      billingStatus,
+      entitlementDecision: entitlement.decision,
+      entitlementReason: entitlement.reason,
+    })
   }
 
   const grants = (input.grants ?? []).filter((grant) => {
@@ -254,9 +269,14 @@ export function evaluateAccess(input: EvaluateAccessInput): AccessDecision {
   if (
     billingPlan &&
     allowedPlans.includes(billingPlan) &&
-    billingAllowedStatuses.has(billingStatus)
+    entitlementAllowsAccess(entitlement)
   ) {
-    return allow('subscription_plan', { plan: billingPlan, billingStatus })
+    return allow('subscription_plan', {
+      plan: billingPlan,
+      billingStatus,
+      entitlementDecision: entitlement.decision,
+      entitlementReason: entitlement.reason,
+    })
   }
 
   if (privacy === 'members' && !requireActiveBilling) {

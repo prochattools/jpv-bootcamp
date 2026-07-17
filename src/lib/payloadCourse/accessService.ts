@@ -12,6 +12,7 @@ import {
   type ResourceType,
   type SubscriptionPlan,
 } from '@/lib/entitlements/evaluateAccess'
+import { resolveMembershipLifecycle } from '@/lib/billing/membershipLifecycle'
 
 export type PayloadId = string | number
 
@@ -141,8 +142,6 @@ export type EvaluatePayloadLessonAccessArgs = EvaluatePayloadCourseAccessArgs & 
   requiresPreviousCompletion?: boolean
   previousLessonId?: PayloadId | null
 }
-
-const billingAllowedStatuses = new Set<BillingStatus>(['active', 'trialing'])
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== 'object') return null
@@ -396,7 +395,7 @@ async function getBillingContext(
   })
 
   const subscription =
-    subscriptions.docs.find((doc) => billingAllowedStatuses.has(normalizeBillingStatus(doc.status))) ??
+    subscriptions.docs.find((doc) => normalizeBillingStatus(doc.status) === 'active' || normalizeBillingStatus(doc.status) === 'trialing') ??
     subscriptions.docs[0]
 
   if (subscription) {
@@ -416,10 +415,34 @@ async function getBillingContext(
       : withinPaymentGrace
         ? 'active'
         : rawStatus
+    const lifecycle = resolveMembershipLifecycle({
+      hasBillingAccount: true,
+      subscriptionStatus,
+      paymentStatus: subscription.paymentStatus ?? null,
+      withinPaymentGrace,
+      cancelAtPeriodEnd: Boolean(subscription.cancelAtPeriodEnd),
+    })
 
     return {
       status: subscriptionStatus,
       plan: normalizePlan(subscription.plan),
+      lifecycleState: lifecycle.state,
+      subscriptionStatus,
+      periodEnd: subscription.currentPeriodEnd ? new Date(String(subscription.currentPeriodEnd)) : null,
+      cancelAtPeriodEnd: Boolean(subscription.cancelAtPeriodEnd),
+      paymentStatus: subscription.paymentStatus ?? null,
+      graceEndsAt: paymentGraceEndsAt,
+      reconciliationState:
+        subscription.reconciliationState === 'matched' ||
+        subscription.reconciliationState === 'mismatch' ||
+        subscription.reconciliationState === 'pending' ||
+        subscription.reconciliationState === 'failed'
+          ? subscription.reconciliationState
+          : null,
+      fundingSource: subscription.fundingSource === 'voucher' || subscription.fundingSource === 'pay_it_forward' || subscription.fundingSource === 'direct_payment'
+        ? subscription.fundingSource
+        : null,
+      legacyStoredPlan: normalizePlan(subscription.plan),
     }
   }
 
@@ -435,6 +458,15 @@ async function getBillingContext(
   return {
     status: normalizeBillingStatus(billingAccount.billingStatus),
     plan: null,
+    lifecycleState: billingAccount.billingStatus === 'past_due' ? 'past_due' : billingAccount.billingStatus === 'paused' ? 'suspended' : billingAccount.billingStatus === 'canceled' ? 'cancelled' : billingAccount.billingStatus === 'unpaid' || billingAccount.billingStatus === 'incomplete_expired' ? 'expired' : billingAccount.billingStatus === 'none' ? 'unreconciled' : 'active',
+    subscriptionStatus: normalizeBillingStatus(billingAccount.billingStatus),
+    periodEnd: null,
+    cancelAtPeriodEnd: false,
+    paymentStatus: null,
+    graceEndsAt: null,
+    reconciliationState: null,
+    fundingSource: null,
+    legacyStoredPlan: null,
   }
 }
 

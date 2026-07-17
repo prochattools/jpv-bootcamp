@@ -6,7 +6,7 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 
 - Repository: `prochattools-jpv-bootcamp`
 - Branch: `feature/course-branding-and-preview`
-- Current HEAD: `49691b6 feat: integrate membership support workflows`
+- Current HEAD: `ad5deae feat: expand membership migration review`
 - Pull request: `https://github.com/prochattools/jpv-bootcamp/pull/2`
 - Migrations applied: `No`
 - Deployment performed: `No`
@@ -246,7 +246,26 @@ Completed P0-A checkpoints:
     - `git diff --check`
     - focused secret and forbidden-runtime scans on the touched preview files
   - no Stripe or database mutation was used
-- Next task: Packet 6 entitlement alignment
+- Packet 6 entitlement alignment is complete:
+  - changed paths:
+    - `src/lib/entitlements/membershipEntitlement.ts`
+    - `src/lib/entitlements/evaluateAccess.ts`
+    - `src/lib/payloadCourse/accessService.ts`
+    - `scripts/membership_entitlement_policy.test.ts`
+    - `scripts/payload_entitlement_evaluator.test.ts`
+    - `scripts/payload_course_access_service.test.ts`
+    - `docs/CURRENT_WORK_HANDOFF.md`
+  - added one deterministic entitlement evaluator that distinguishes allowed, denied, billing_hold, and manual_review outcomes across lifecycle, payment, reconciliation, cancellation, and legacy compatibility inputs
+  - wired the evaluator into course and protected-resource access checks so the public free/pro compatibility bridge no longer makes the final authorization decision
+  - validation evidence:
+    - `pnpm exec tsx scripts/membership_entitlement_policy.test.ts`
+    - `pnpm exec tsx scripts/payload_entitlement_evaluator.test.ts`
+    - `pnpm exec tsx scripts/payload_course_access_service.test.ts`
+    - `pnpm exec tsc --noEmit --pretty false --incremental false`
+    - `git diff --check`
+    - focused secret and forbidden-runtime scans on the touched entitlement files
+  - no live provider, database, or migration mutation was used
+- Next task: Packet 7 unified review queues
 - Membership Support persistence foundation has now been added as an additive, repository-only checkpoint:
   - `src/collections/membership-support/`
   - `src/collections/membership-support/options.ts`

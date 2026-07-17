@@ -70,10 +70,6 @@ run('denies blocked members even when they have a direct grant', () => {
       ...activeMember,
       accountStatus: 'blocked',
     },
-    billing: {
-      status: 'active',
-      plan: 'pro',
-    },
     resource: publishedCourse,
     grants: [
       {
@@ -96,6 +92,8 @@ run('denies failed billing before allowing subscription plans', () => {
     billing: {
       status: 'past_due',
       plan: 'pro',
+      lifecycleState: 'past_due',
+      subscriptionStatus: 'past_due',
     },
     resource: publishedCourse,
     policy: {
@@ -107,6 +105,30 @@ run('denies failed billing before allowing subscription plans', () => {
 
   assert.equal(decision.allowed, false)
   assert.equal(decision.reason, 'billing_not_active')
+})
+
+run('allows billing hold subscriptions during grace', () => {
+  const decision = evaluateAccess({
+    member: activeMember,
+    billing: {
+      status: 'past_due',
+      plan: 'pro',
+      lifecycleState: 'past_due',
+      subscriptionStatus: 'past_due',
+      graceEndsAt: '2026-06-30T00:00:00.000Z',
+      paymentStatus: 'failed',
+    },
+    resource: publishedCourse,
+    policy: {
+      status: 'active',
+      allowedPlans: ['pro'],
+      requireActiveBilling: true,
+    },
+    now: '2026-06-21T00:00:00.000Z',
+  })
+
+  assert.equal(decision.allowed, true)
+  assert.equal(decision.reason, 'subscription_plan')
 })
 
 run('denies canceled subscriptions before allowing direct grants when billing is required', () => {
@@ -169,6 +191,8 @@ run('allows required group membership when billing is active', () => {
     billing: {
       status: 'active',
       plan: 'pro',
+      lifecycleState: 'active',
+      subscriptionStatus: 'active',
     },
     resource: publishedCourse,
     policy: {
@@ -276,4 +300,3 @@ run('requires verified email when policy demands it', () => {
   assert.equal(decision.allowed, false)
   assert.equal(decision.reason, 'email_not_verified')
 })
-
