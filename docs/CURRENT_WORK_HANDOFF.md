@@ -216,17 +216,22 @@ Completed P0-A checkpoints:
 - validation fails closed for missing recipient, reason, approval, duration, Stripe identity, redemption, or deactivation evidence;
 - pure one-month and one-year 100% coupon templates and customer-restricted one-redemption promotion-code request models are available;
 - deterministic idempotency keys and a safe administrator read model cover subscription, cadence, renewal, discount, funding, and reconciliation status without exposing secrets;
-- focused Membership Support tests, root TypeScript, whitespace, and security scans pass.
+- focused Membership Support tests, root TypeScript, whitespace, and security scans pass;
+- a dependency-injected Membership Support Stripe adapter contract now covers coupon create/reuse, personal promotion-code creation, deactivation, subscription lookup, invoice preview, and reconciliation retrieval;
+- the deterministic in-memory adapter provides repeatable mock behavior with no live Stripe access;
+- the orchestration service validates records, derives idempotency keys, creates or reuses coupon templates, creates customer-restricted promotion codes, and fails closed on reconciliation mismatch;
+- deterministic tests cover voucher and pay-it-forward issuance, coupon reuse, one-redemption customer restriction, deactivation, provider failure, mismatch detection, and idempotent retry;
+- Batch 3 focused tests, root TypeScript, whitespace, secret, and runtime-execution validations pass.
 
 Remaining priority order:
 
-1. test-mode Stripe coupon and promotion-code adapter with deterministic mocks;
-2. administrator persistence/schema packet after explicit migration approval;
+1. administrator persistence/schema design and Payload UI integration plan;
+2. real Stripe adapter implementation only after explicit test/staging provider authorization;
 3. deeper migration reconciliation and operator evidence only after the domain model is stable.
 
 Fixed dates remain 22 July 2026 for the front-end milestone, 23 July for handover buffer, and 24 July for the client finished-by date. These dates do not authorize live operations or reduce validation requirements.
 
-The next implementation task is the dependency-injected test-mode Stripe voucher adapter covering create/reuse, deactivation, lookup, preview, and reconciliation without live calls. M2 remains unstarted and unauthorized.
+The next implementation task is the administrator persistence/schema design and Payload UI integration plan, without applying migrations or changing generated types. M2 remains unstarted and unauthorized.
 
 ## Ready-to-copy resume prompt
 
