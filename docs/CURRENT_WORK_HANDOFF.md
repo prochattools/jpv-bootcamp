@@ -6,7 +6,7 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 
 - Repository: `prochattools-jpv-bootcamp`
 - Branch: `feature/course-branding-and-preview`
-- Current HEAD: `68accef feat: add test mode voucher stripe adapter`
+- Current HEAD: `8458bdf feat: prepare membership support persistence`
 - Pull request: `https://github.com/prochattools/jpv-bootcamp/pull/2`
 - Migrations applied: `No`
 - Deployment performed: `No`
@@ -238,6 +238,16 @@ Completed P0-A checkpoints:
   - `src/collections/membership-support/ReviewQueue.ts`
   - `src/collections/membership-support/OperatorNotes.ts`
   - `src/collections/membership-support/StripeShadow.ts`
+  - `src/collections/membership-support/AuditHistory.ts`
+  - `src/collections/membership-support/index.ts`
+- Membership Support workflow orchestration has now been added as an additive, repository-only checkpoint:
+  - `src/lib/membership-support/workflows.ts`
+  - `scripts/membership_support_workflows.test.ts`
+  - deterministic workflow journal coverage for draft, approval, issuance, expiry, deactivation, pay-it-forward issuance, approval-reference validation, and mismatch review routing
+  - repository-only validation passed:
+    - `pnpm exec tsx scripts/membership_support_workflows.test.ts`
+    - `pnpm exec tsc --noEmit --pretty false --incremental false`
+    - `git diff --check`
   - `src/collections/membership-support/AuditHistory.ts`
   - `src/collections/membership-support/index.ts`
   - `src/payload.config.ts`
