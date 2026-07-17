@@ -36,10 +36,10 @@ export default function PortalSupportPage() {
         </p>
         <h1 className="mt-3 text-3xl font-semibold tracking-tight">Support &amp; Pay It Forward</h1>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-600">
-          Preview the planned voucher-funded and pay-it-forward-funded JPV Bootcamp Membership application flows.
+          Preview the planned voucher-funded and pay-it-forward-funded JPV Bootcamp Membership application flows for controlled Free access.
         </p>
         <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          Preview only — these forms do not submit, create records, send notifications, or generate references. Voucher-funded and pay-it-forward-funded access use the same membership lifecycle.
+          Preview only — these forms do not submit, create records, send notifications, or generate references. Voucher-funded and pay-it-forward-funded access use the same membership lifecycle and route through controlled Free access.
         </div>
         <Link className="mt-4 inline-flex text-sm font-medium text-neutral-600 hover:text-neutral-950" href="/#pricing">
           View JPV Bootcamp Membership

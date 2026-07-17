@@ -14,7 +14,7 @@ test.describe('checkout start and guarded submission safety', () => {
 
     await page.getByRole('button', { name: '£80/month' }).click()
     await expect(page.locator('body')).toHaveAttribute('data-checkout-status', '200')
-    await page.getByRole('button', { name: '£880 annual option paid upfront' }).click()
+    await page.getByRole('button', { name: '£800/year' }).click()
     await expect.poll(() => checkoutRequests.length).toBe(2)
 
     expect(checkoutRequests).toHaveLength(2)

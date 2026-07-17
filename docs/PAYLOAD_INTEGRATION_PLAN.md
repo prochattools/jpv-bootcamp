@@ -12,7 +12,7 @@ This is the single canonical product, architecture, security, roadmap, and execu
    - `docs/PAYLOAD_PARTNER_AFFILIATE_PLAN.md` — detailed Partner Affiliates specification for Phase 9.
    - `docs/LIVEKIT_PAYLOADCMS_GROUP_CALLS_PLAN.md` — future group-call use cases, LiveKit runtime architecture, PayloadCMS collections and authorization boundary, security, privacy, and acceptance gates for Phase 11.
 3. **Visual reference.** `docs/PAYLOAD_COURSE_VISUAL_IMPLEMENTATION_PLAN.md` illustrates screens and workflows but does not replace this plan.
-4. **Client truth document.** `docs/client/JPV_Bootcamp_Platform_Expansion_Go_Live_Plan_v3_6.docx` is the current client go-live plan. Version 3.4 is the prior progress baseline. It supersedes older progress framing and must stay aligned with this internal plan.
+4. **Client truth document.** `docs/client/JPV_Bootcamp_Platform_Expansion_Go_Live_Plan_v3_7.docx` is the current client go-live plan. Version 3.4 is the prior progress baseline. It supersedes older progress framing and must stay aligned with this internal plan.
 5. **Client document inventory.** `docs/client/README.md` records which client-facing document is current and which older documents are historical.
 6. **Platform invariants and operations.** `docs/PROKIT_OVERVIEW.md`, `docs/PROKIT_INVARIANTS.md`, and infrastructure documents define stable operational contracts.
 
@@ -38,17 +38,17 @@ Do not create another general Payload roadmap. New work must first be added here
 - Treat historical data only as reviewed import material that maps into neutral account, Free access, Pro subscription, expired, revoked, suspended, or administrator-review states.
 - Keep the public offer simple: Free for approved non-paid access and Pro for the single paid subscription.
 
-## Version 3.6 platform direction and terminology
+## Version 3.7 platform direction and terminology
 
-Version 3.4 remains the prior progress baseline, but the current client plan is Version 3.6. The finish line is a phased commercial platform launch with public offer clarity, billing automation, support/pay-it-forward access, public landing-page readiness, representative 8-week course content, partner tracking, community previews, migration rehearsal, and go-live controls.
+Version 3.4 remains the prior progress baseline, but the current client plan is Version 3.7. The finish line is a phased commercial platform launch with public offer clarity, billing automation, support/pay-it-forward access, public landing-page readiness, representative 8-week course content, partner tracking, community previews, migration rehearsal, schema-migration packaging, generated-type isolation, and go-live controls.
 
 Canonical product terminology:
 
 - **Free** — non-paid access state for approved support, pay-it-forward recipients, staff/test access, or other administrator-created access. Free may exist in the system and in administrator reporting, but it is not the main public sales offer.
-- **Pro** — the single paid JPV Bootcamp subscription. Public copy should describe Pro with two payment options: monthly with a 12-month commitment, and annual upfront with the approved annual discount.
+- **Pro** — the single paid JPV Bootcamp subscription. Public copy should describe Pro with two payment options: monthly with no minimum commitment, and annual upfront with the approved annual discount.
 - **Historical tiers** — old paid and non-paid labels are migration inputs only. They must be mapped into Free, Pro, expired, revoked, suspended, or administrator-approved access states before cutover.
 
-The 10 July Version 3.5 codebase audit rebaselines current readiness after separating source presence, static prototypes, operational workflows, and accepted runtime evidence: expanded platform ~68%, core staging/code ~82%, build foundation ~86%, testing/release ~76%, migration ~55%, and live cutover ~20%. The lower figures are a measurement correction, not a code regression. See `docs/client/ROADMAP_PROGRESS_STATUS.md` and `docs/V3_5_CODEBASE_ALIGNMENT_ASSESSMENT.md` for evidence.
+The 10 July Version 3.5 codebase audit rebaselines current readiness after separating source presence, static prototypes, operational workflows, and accepted runtime evidence. The current implementation and documentation sync add launch-scoped completion, schema-migration planning, and protected generated-type handling without changing the historical audit itself. See `docs/client/ROADMAP_PROGRESS_STATUS.md` and `docs/V3_5_CODEBASE_ALIGNMENT_ASSESSMENT.md` for evidence.
 
 ## Final architecture
 
@@ -129,7 +129,7 @@ The findings below are the historical audit snapshot at `236227c`. Later M0/M1 p
 
 - `/admin/review/**` is a static operator prototype without an administrator-authentication check and must be protected or removed before public release.
 - `/tos` and `/privacy-policy` still contain unrelated starter-product content and are indexed by the sitemap; canonical JPV `/terms` and `/privacy` pages already exist.
-- The landing page says subscriptions can be canceled at any time, while the client truth is a monthly 12-month commitment; repository Stripe setup does not yet prove enforcement of that commitment.
+- The landing page says subscriptions can be canceled at any time, while the client truth is a monthly option with no minimum commitment; repository Stripe setup does not yet prove enforcement of the full billing projection.
 - Support/pay-it-forward and partner-referral MVP forms validate in the browser and generate temporary references but do not persist or notify. They must not claim durable submission until wired to existing services.
 - `/portal` is the only approved member route tree. Keep the removed legacy member namespace blocked by route ownership tests, browser coverage, and the repository invariant.
 - All eight programme weeks and community-preview threads are placeholder data. The static admin review model is not operational evidence.
@@ -148,7 +148,7 @@ No new feature phase starts until the applicable hardening gate passes. Execute 
 | --- | --- | --- | --- |
 | P0 | H0-01 | Protect or remove the unauthenticated `/admin/review` prototype | Anonymous/member denial and administrator acceptance tests |
 | P0 | H0-02 | Remove starter legal/template routes and fix sitemap/public copy | No reachable non-JPV copy; route/sitemap regression tests |
-| P0 | H0-03 | Enforce the monthly 12-month commitment and align public/legal copy | Written billing decision, automated tests, controlled Stripe smoke |
+| P0 | H0-03 | Align public/legal copy with the monthly no-minimum-commitment option | Written billing decision, automated tests, controlled Stripe smoke |
 | P0 | H0-04 | Disable false-success prototype forms, then connect them to durable services | Persist-before-success, idempotency, queue, and failure tests |
 | P0 | H0-05 | Harden public write/email endpoints | Bounded input, abuse control, safe origin/redirects, redacted logs |
 | P0 | H0-06 | Resolve high production dependency advisories | Clean/accepted audit plus build and Payload-admin smoke |
@@ -349,7 +349,7 @@ Completed in this slice:
   - Manage billing when a billing account exists.
 
 **Member Checkout (Phase 5):**
-- Authenticated members can start Pro Stripe Checkout from `/portal/billing`, choosing either the monthly 12-month commitment option or the annual upfront option;
+- Authenticated members can start Pro Stripe Checkout from `/portal/billing`, choosing either the monthly no-minimum-commitment option or the annual upfront option;
 - Member identity, email, customer ownership, success URL, and cancel URL are derived server-side;
 - Existing active, trialing, past-due, or unpaid subscriptions cannot create a duplicate checkout;
 - Existing Stripe customers are reused; otherwise the authenticated member email is passed to Stripe;
@@ -495,7 +495,7 @@ The roadmap retains the eleven product phases but places the historical Version 
 
 ## Current milestone verification — 14 July 2026
 
-The current validated repository baseline is `d55229f test: enforce programme content readiness`. M0-01 through M0-09 and M1-01 through M1-06 are implemented; M1-06 remains in state B, with `/portal/programme` explicitly preview-only and community interaction still deferred. The follow-up programme-content acceptance and release-candidate packet is complete at repository level.
+The current validated repository baseline is `d55229f test: enforce programme content readiness`. The current branch-tip checkpoint is `8927df9 docs: checkpoint membership implementation readiness`. M0-01 through M0-09 and M1-01 through M1-06 are implemented; M1-06 remains in state B, with `/portal/programme` explicitly preview-only and community interaction still deferred. The follow-up programme-content acceptance and release-candidate packet is complete at repository level, and the membership-support schema-migration plan plus generated-type isolation strategy are now documented separately.
 
 The repository is **READY TO ACCEPT PROGRAMME CONTENT**, not ready to publish it. The canonical contract, client intake template, non-publishable example fixture, validation command, acceptance report, import plan, approval record, release-manifest coverage, focused tests, and preview-only browser guard are present. No client programme content was invented or approved.
 
@@ -507,7 +507,7 @@ Verified local evidence at this baseline:
 - TypeScript, production build, both Prisma schema validations, and the production high-severity audit gate passed;
 - no migration, deployment, provider, or push action occurred.
 
-The next controlled work is to collect the client package, run `content:programme:validate`, `content:programme:acceptance`, and `content:programme:import-plan`, record approval evidence, then complete the independent migration, provider/email, staging-smoke, rollback, and go/no-go gates. M2-01 remains post-core unless explicitly promoted.
+The next controlled work is to keep the client truth, roadmap, implementation plan, and schema-migration plan synchronized, then execute the approved administrator persistence/schema migration packet and generated-type regeneration only after explicit authorization. M2-01 remains post-core unless explicitly promoted.
 
 ## Communication scope summary
 
@@ -544,9 +544,9 @@ A phase is complete only when:
 
 ## Immediate milestone
 
-The M0/M1 hardening, canonical portal alignment, release/browser matrix, and programme-content acceptance packet are complete at repository level. The next milestone is to collect the client package due by 15 July 2026, run the canonical validation, acceptance-report, and import-plan commands, record approval evidence, and complete the independent staging, provider/email, migration, rehearsal, rollback, and go/no-go gates. The front-end website milestone is 22 July 2026, the handover buffer is 23 July 2026, and the client-requested finished-by date is 24 July 2026. Those dates do not authorize migration execution. Full platform cutover remains conditional on migration approval, rehearsal, rollback evidence, provider/email verification, staging smoke, and explicit go-live approval.
+The M0/M1 hardening, canonical portal alignment, release/browser matrix, and programme-content acceptance packet are complete at repository level. The current repository documentation sync adds the schema-migration plan and generated-type isolation strategy. The next milestone is to keep the client content, roadmap, and implementation plan aligned with current evidence, then complete the independent staging, provider/email, migration, rehearsal, rollback, and go/no-go gates. The front-end website milestone is 22 July 2026, the handover buffer is 23 July 2026, and the client-requested finished-by date is 24 July 2026. Those dates do not authorize migration execution. Full platform cutover remains conditional on migration approval, rehearsal, rollback evidence, provider/email verification, staging smoke, and explicit go-live approval.
 
-The next controlled task is the approved programme-content intake and release-candidate evidence sequence described above. No live operation or migration is authorized by this plan.
+The next controlled task is the approved administrator persistence/schema migration packet and generated-type regeneration isolation sequence, after explicit authorization. No live operation or migration is authorized by this plan.
 
 ## Definition of done
 

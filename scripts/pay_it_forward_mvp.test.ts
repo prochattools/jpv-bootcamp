@@ -116,10 +116,10 @@ function testSupportRedirectExists(): void {
 
 function testPortalSupportPageCopyIsCorrect(): void {
   const content = readFileSync('src/app/(frontend)/portal/support/page.tsx', 'utf8')
-  assert.match(content, /controlled Free access/i)
+  assert.match(content, /same membership lifecycle/i)
   assert.match(content, /manual follow-up|manual review/i)
-  assert.match(content, /third public tier/i)
-  assert.match(content, /View Pro membership/i)
+  assert.match(content, /funded membership/i)
+  assert.match(content, /View JPV Bootcamp Membership/i)
 }
 
 function testLegacyTermsNotPresent(): void {

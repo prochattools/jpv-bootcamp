@@ -3,8 +3,8 @@
 ## Current state
 
 - Branch: `feature/course-branding-and-preview`
-- Version 3.6 current client go-live plan; Version 3.4 is the prior progress baseline
-- Version 3.6 client plan: `docs/client/JPV_Bootcamp_Platform_Expansion_Go_Live_Plan_v3_6.docx`
+- Version 3.7 current client go-live plan; Version 3.4 is the prior progress baseline
+- Version 3.7 client plan: `docs/client/JPV_Bootcamp_Platform_Expansion_Go_Live_Plan_v3_7.docx`
 - Codebase alignment assessment: `docs/V3_5_CODEBASE_ALIGNMENT_ASSESSMENT.md`
 - Current validated readiness baseline: `d55229f test: enforce programme content readiness`
 - Branch tip verification: verify the current tip with `git log --oneline -1` before operator action
@@ -14,7 +14,7 @@
 - Front-end website go-live milestone: 22 July 2026
 - Internal delivery / handover buffer: 23 July 2026
 - Client-requested finished-by date: 24 July 2026
-- Client content/input due: Wednesday 15 July 2026
+- Client content/input due: Wednesday 15 July 2026, now past due as of Friday 17 July 2026
 - Client content request: `docs/client/CLIENT_CONTENT_REQUEST_15_JULY.md`
 - Front-end content status tracker: `docs/client/FRONTEND_CONTENT_STATUS_TRACKER.md`
 - Front-end acceptance evidence template: `docs/client/FRONTEND_ACCEPTANCE_EVIDENCE_TEMPLATE.md`

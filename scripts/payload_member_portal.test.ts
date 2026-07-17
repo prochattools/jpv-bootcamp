@@ -377,7 +377,7 @@ async function run() {
     assert.equal(privateCourse?.allowed, false)
     assert.equal(privateCourse?.modules.length, 0)
     assert.equal(privateCourse?.lessonCount, null)
-    assert.match(privateCourse?.lockReason ?? '', /does not currently include/)
+    assert.match(privateCourse?.lockReason ?? '', /Your account does not currently include this course\./)
 
     const privateLessonFetch = payload.findCalls.find((call) => {
       return (

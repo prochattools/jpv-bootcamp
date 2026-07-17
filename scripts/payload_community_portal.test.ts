@@ -306,7 +306,7 @@ async function run() {
 
     assert.equal(pro?.allowed, false)
     assert.equal(pro?.postCount, null)
-    assert.match(pro?.lockReason ?? '', /does not currently include/)
+    assert.match(pro?.lockReason ?? '', /Billing must be active before this space unlocks\./)
 
     const proPostFetch = payload.findCalls.find((call) => {
       return (

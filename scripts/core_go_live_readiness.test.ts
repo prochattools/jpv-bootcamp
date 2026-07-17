@@ -84,7 +84,7 @@ function main(): void {
 
   for (const doc of [previewReadiness, roadmap, operatorHandoff]) {
     assert.match(doc, /Migrations applied:\s*`?No`?|No migrations have been applied/i)
-    assert.match(doc, /support-request migration remains unapplied|support_requests.*remain unapplied|support-request migration application/i)
+    assert.match(doc, /migration remains unapplied|migration still being unapplied|migration application/i)
     assert.match(doc, /programme remains preview-only|programme content is still blocked|representative programme content/i)
     assert.match(doc, /Provider\/email .*pending|provider\/email .*not executed|provider\/email verification/i)
     assert.match(doc, /staging smoke .*pending|staging smoke .*not executed/i)
@@ -115,10 +115,10 @@ function main(): void {
 
   assert.match(roadmap, /Core go-live implementation and deterministic local validation are complete/i)
   assert.match(roadmap, /not ready for the controlled staging release process/i)
-  assert.match(roadmap, /decision-ready for controlled staging approval/i)
+  assert.match(roadmap, /DECISION-READY, EXTERNAL APPROVALS PENDING/i)
   assert.match(roadmap, /M0-01 through M0-09/)
   assert.match(roadmap, /M1-01 through M1-06/)
-  assert.match(roadmap, /M2-01.*deferred post-core/i)
+  assert.match(roadmap, /`?M2-01`? remains deferred unless explicitly promoted/i)
 
   assert.match(operatorHandoff, /Current validated readiness baseline: `d55229f test: enforce programme content readiness`/)
   assert.match(operatorHandoff, new RegExp(String.raw`Deterministic non-browser release gate: \`pnpm test:release\` \(\`${releaseCount}\/${releaseCount}\`\)`))

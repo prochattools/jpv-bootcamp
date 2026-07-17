@@ -21,9 +21,9 @@ test.describe('public launch routes', () => {
     await expect(page.getByText('No minimum commitment', { exact: false })).toBeVisible()
     await expect(page.getByText('£800/year', { exact: false })).toBeVisible()
 
-    const proBillingLinks = page.locator('a[href="/portal/billing"]')
+    const proBillingLinks = page.locator('a[href="/upgrade"]')
     await expect(proBillingLinks.first()).toBeVisible()
-    await expect(proBillingLinks.first()).toHaveAttribute('href', '/portal/billing')
+    await expect(proBillingLinks.first()).toHaveAttribute('href', '/upgrade')
 
     await assertNoHorizontalOverflow(page)
     await assertNoSeriousAccessibilityViolations(page)

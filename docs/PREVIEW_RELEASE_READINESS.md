@@ -11,10 +11,10 @@ Verify the exact branch tip with `git log --oneline -1` before operator action.
 No migrations have been applied.
 Do not touch `main`.
 
-Version 3.6 client plan: `docs/client/JPV_Bootcamp_Platform_Expansion_Go_Live_Plan_v3_6.docx`
+Version 3.7 client plan: `docs/client/JPV_Bootcamp_Platform_Expansion_Go_Live_Plan_v3_7.docx`
 Version 3.5 codebase audit: `docs/V3_5_CODEBASE_ALIGNMENT_ASSESSMENT.md`
 Front-end website go-live milestone: 22 July 2026
-Client content/input due: Wednesday 15 July 2026
+Client content/input due: Wednesday 15 July 2026, now past due as of Friday 17 July 2026
 The front-end milestone is a delivery marker only and does not authorize migration execution.
 
 Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`

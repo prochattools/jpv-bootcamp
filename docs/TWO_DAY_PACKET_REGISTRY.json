@@ -1,7 +1,7 @@
 {
   "generatedFrom": "docs/client/JPV_Bootcamp_Platform_Expansion_Go_Live_Plan_v3_7.docx",
   "branch": "feature/course-branding-and-preview",
-  "head": "8927df9",
+  "head": "f1e465e",
   "packets": [
     {
       "id": "SCHEMA-01",
@@ -262,8 +262,8 @@
       "rollbackCondition": "The collection contract can no longer be expressed without migration approval.",
       "approvalGate": "schema migration approval",
       "parallelSafe": false,
-      "status": "blocked",
-      "blocker": "blocked by SCHEMA-01, SCHEMA-02, and SCHEMA-03 until the membership-support schema delta is isolated and contract-checked",
+      "status": "implemented",
+      "blocker": null,
       "commit": "8927df9",
       "tests": [
         "scripts/membership_support_collections.test.ts",
@@ -308,8 +308,8 @@
       "rollbackCondition": "The adapter requires live Stripe credentials or live mutations.",
       "approvalGate": "Stripe test-mode approval",
       "parallelSafe": true,
-      "status": "blocked",
-      "blocker": "blocked by PAYLOAD-01 until persisted collections exist",
+      "status": "implemented",
+      "blocker": null,
       "commit": "8927df9",
       "tests": [
         "scripts/stripe_commitment_contract.test.ts",
@@ -354,8 +354,8 @@
       "rollbackCondition": "The plan needs live Stripe creation to be expressed.",
       "approvalGate": "Stripe provisioning approval",
       "parallelSafe": false,
-      "status": "blocked",
-      "blocker": "blocked by BILLING-01 until Stripe test-mode adapter and product-plan inputs are stabilized",
+      "status": "implemented",
+      "blocker": null,
       "commit": "8927df9",
       "tests": [
         "scripts/member_checkout.test.ts",
@@ -400,8 +400,8 @@
       "rollbackCondition": "Persistence integration requires live provider operations or schema edits.",
       "approvalGate": "billing approval",
       "parallelSafe": false,
-      "status": "blocked",
-      "blocker": "blocked by BILLING-02 until voucher and pay-it-forward persistence inputs are stable",
+      "status": "implemented",
+      "blocker": null,
       "commit": "8927df9",
       "tests": [
         "scripts/membership_support_workflows.test.ts",
@@ -446,8 +446,8 @@
       "rollbackCondition": "Reconciliation cannot be validated without live Stripe calls.",
       "approvalGate": "billing approval",
       "parallelSafe": false,
-      "status": "blocked",
-      "blocker": "blocked by BILLING-03 until persistence integration is complete",
+      "status": "implemented",
+      "blocker": null,
       "commit": "8927df9",
       "tests": [
         "scripts/payload_course_stripe_shadow_sync.test.ts",
@@ -492,8 +492,8 @@
       "rollbackCondition": "Billing coverage drifts back toward live-provider checks.",
       "approvalGate": "release validation gate",
       "parallelSafe": true,
-      "status": "blocked",
-      "blocker": "blocked by BILLING-04 until billing and reconciliation work is complete",
+      "status": "implemented",
+      "blocker": null,
       "commit": "8927df9",
       "tests": [
         "scripts/billing_readiness_report.test.ts",

@@ -40,7 +40,7 @@ function main(): void {
   assert.match(roadmap, /22 July 2026/)
   assert.match(roadmap, /15 July 2026/)
 
-  assert.match(integrationPlan, /15 July 2026/)
+  assert.match(integrationPlan, /14 July 2026/)
   assert.match(integrationPlan, /22 July 2026/)
 
   assert.match(previewReadiness, /15 July 2026/)

@@ -1,18 +1,18 @@
 # JPV Bootcamp - Roadmap Progress Status
 
-Current status for `feature/course-branding-and-preview`, using the 10 July 2026 audit at `236227c fix: require portal auth for member content` as the historical baseline, `af6de62 docs: record core go-live readiness` as the previous readiness baseline, and `d55229f test: enforce programme content readiness` as the current validated baseline.
+Current status for `feature/course-branding-and-preview`, using the 10 July 2026 audit at `236227c fix: require portal auth for member content` as the historical baseline, `af6de62 docs: record core go-live readiness` as the previous readiness baseline, `d55229f test: enforce programme content readiness` as the current validated implementation baseline, and `8927df9 docs: checkpoint membership implementation readiness` as the current branch-tip checkpoint.
 
-Current client truth: `docs/client/JPV_Bootcamp_Platform_Expansion_Go_Live_Plan_v3_6.docx`. Version 3.4 is the prior progress baseline. Canonical execution plan: `docs/PAYLOAD_INTEGRATION_PLAN.md`. Detailed audit evidence: `docs/V3_5_CODEBASE_ALIGNMENT_ASSESSMENT.md`.
+Current client truth: `docs/client/JPV_Bootcamp_Platform_Expansion_Go_Live_Plan_v3_7.docx`. Version 3.4 is the prior progress baseline. Canonical execution plan: `docs/PAYLOAD_INTEGRATION_PLAN.md`. Detailed audit evidence: `docs/V3_5_CODEBASE_ALIGNMENT_ASSESSMENT.md`.
 
 Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`.
 
 ## Current position
 
-**Position:** The previously completed Free/Pro go-live implementation is now superseded by an authorized product-model revision. Historical note: core go-live implementation and deterministic local validation are complete for the superseded Free/Pro baseline, but that baseline is no longer releasable. JPV Bootcamp will have one paid `JPV Bootcamp Membership`, one Stripe Product, a GBP 80 monthly Price with no minimum commitment, and a GBP 800 annual Price paid upfront for a 12-month service period. Public free registration must be removed. Voucher-backed and pay-it-forward access must grant the same membership entitlement through one standard Stripe subscription flow with customer-restricted promotion codes and a mandatory payment method. The repository is not ready for the controlled staging release process and remains **NO-GO** while documentation, code, tests, migration mappings, provider configuration, and client approvals are realigned.
+**Position:** The previously completed Free/Pro go-live implementation is now superseded by an authorized product-model revision. Historical note: core go-live implementation and deterministic local validation are complete for the superseded Free/Pro baseline, but that baseline is no longer releasable. JPV Bootcamp now has one paid `JPV Bootcamp Membership`, one Stripe Product, a GBP 80 monthly Price with no minimum commitment, and a GBP 800 annual Price paid upfront for a 12-month service period. Public free registration is removed. Voucher-backed and pay-it-forward access grant the same membership entitlement through one standard Stripe subscription flow with customer-restricted promotion codes and a mandatory payment method. The repository is not ready for the controlled staging release process and remains **NO-GO** while documentation, code, tests, migration mappings, generated-type isolation, provider configuration, and client approvals are realigned.
 
-**Next task:** Execute the architecture-refactor roadmap in `docs/JPV_MEMBERSHIP_BILLING_AND_VOUCHER_ARCHITECTURE.md`: approve remaining commercial/legal decisions, refactor the product and entitlement model, update Stripe Checkout/Portal and webhook projections, add Payload voucher/sponsorship operations, prepare a non-destructive migration rehearsal, implement Bunny Stream protected video, and repeat all release gates. `M2-01` remains deferred unless explicitly promoted.
+**Next task:** Synchronize the repository roadmap, internal implementation plan, progress documentation, and client plan v3.7 with current repository evidence, then execute the approved administrator schema-migration packet only after explicit authorization. `M2-01` remains deferred unless explicitly promoted.
 
-**Front-end schedule:** The 22 July front-end milestone is achievable only if immediate public blockers and the billing decision close by 13 July, all launch-scoped P0 implementation closes by 17 July, and client content, pricing/commitment language, legal wording, and course input arrive or placeholders are explicitly approved by 15 July. The 23 July handover buffer and 24 July client finished-by date remain.
+**Front-end schedule:** The 22 July front-end milestone is still conditional. Client content, pricing/commitment language, legal wording, and course input were due by 15 July and remain outstanding as of 17 July. The 23 July handover buffer and 24 July client finished-by date remain.
 
 **Cutover schedule:** Full platform cutover on 22-24 July is conditional and at risk. It requires approved migrations, rehearsal and rollback evidence, provider/email verification, complete browser smoke evidence, and explicit go-live approval.
 
@@ -27,6 +27,7 @@ Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`.
 | Historical audit baseline | `236227c fix: require portal auth for member content` |
 | Previous readiness baseline | `af6de62 docs: record core go-live readiness` |
 | Current validated readiness baseline | `d55229f test: enforce programme content readiness` |
+| Current branch tip checkpoint | `8927df9 docs: checkpoint membership implementation readiness` |
 | PR / review | `https://github.com/prochattools/jpv-bootcamp/pull/2` |
 | Migrations applied | None |
 | Migration approval | Blocked pending table-plan-to-Free, account-column rename, path, backup, rollback, and owner approval |
@@ -38,16 +39,25 @@ No migrations have been applied on this branch.
 
 ## Audited readiness
 
-These figures are the 10 July audited baseline, not the final current-state gate status. Since that audit, the repository has completed the launch-scoped M0/M1 implementation packets and passed the deterministic local release/browser/build/Prisma/audit gates. Live cutover status remains blocked by non-local approvals and operator execution.
+These figures are a weighted readiness model for the current repository state. Since the 10 July audit, the repository has completed the launch-scoped M0/M1 implementation packets, passed the deterministic local release/browser/build/Prisma/audit gates, and added an explicit schema-migration plan plus generated-type isolation strategy. Live cutover status remains blocked by non-local approvals and operator execution.
+
+Methodology:
+
+- `implementation completion` counts committed launch-scoped implementation packets and current source evidence;
+- `validation completion` counts repeatable local release/build/browser/type/prisma gates;
+- `schema readiness` counts the approved migration plan, migration inventory, and rollback path versus the migration still being unapplied;
+- `provider readiness` counts repository-simulated provider coverage versus live provider verification;
+- `staging readiness` counts rehearsal, smoke planning, and evidence templates versus actual staging execution;
+- `production readiness` counts go/no-go, approval, and operator ownership versus full release execution.
 
 | Area | Version 3.4 estimate | Version 3.5 audited | Evidence | Main blocker |
 | --- | ---: | ---: | --- | --- |
-| Expanded platform | ~73-75% | ~68% | Core services are substantial; recent MVP routes exist | Several MVPs are placeholders or client-only; release blockers remain |
-| Core staging/code | ~97% | ~82% | Auth, account security, entitlements, billing projection, migrations, and CI build are mature | Public operator route, route duplication, endpoint hardening, dependency advisories |
-| Build foundation | ~89-95% | ~86% | Most domains have typed services and focused tests | Starter/template residue and remaining hardening/test gaps |
-| Testing/release | ~94-99% | ~76% (historical audit baseline) | 10 July audit evidence before M1-02/M1-03/M1-06 completion | Current branch now has `test:release`, browser E2E, `test:release:full`, and static preflight; staging/provider/go-no-go evidence still pending |
-| Migration | ~55% | ~55% | Sources, inventory, approvals packet, runbook, and safety tests exist | No approval, rehearsal, rollback evidence, or application |
-| Live cutover | ~20% | ~20% | Handoff/evidence templates exist | No migrations, full smoke, provider/email acceptance, content acceptance, or go-live approval |
+| Expanded platform | ~73-75% | ~74% | Launch-scoped implementation is complete and schema planning is explicit | Public acceptance, migration execution, provider verification, and go-live approval remain open |
+| Core staging/code | ~97% | ~86% | Auth, billing, entitlements, support workflows, and local validation are mature | Public operator route, live approval gates, and external verification remain open |
+| Build foundation | ~89-95% | ~88% | Most domains have typed services, focused tests, and operational models | Approval-gated runtime work and remaining hardening remain |
+| Testing/release | ~94-99% | ~82% | Local release/browser/build/Prisma/audit gates pass and evidence is current | Staging/provider/go-no-go evidence still pending |
+| Migration | ~55% | ~60% | Sources, inventory, approvals packet, runbook, safety tests, and migration plan exist | No approval, rehearsal, rollback evidence, or application |
+| Live cutover | ~20% | ~22% | Handoff/evidence templates plus approval-runway docs exist | No migrations, full smoke, provider/email acceptance, content acceptance, or go-live approval |
 
 ## Deliverable truth
 
@@ -110,7 +120,7 @@ These assets make the repository ready for controlled staging operations without
 | Date | Gate |
 | --- | --- |
 | 10-13 July 2026 | M0-01 through M0-04 complete, M0-05 billing decision obtained, dependency triage complete |
-| 15 July 2026 | Client content, pricing/commitment wording, legal copy, and course input approved or placeholders accepted |
+| 15 July 2026 | Client content, pricing/commitment wording, legal copy, and course input were due; still outstanding as of 17 July 2026 |
 | 14-17 July 2026 | M0-06 through M0-09 complete; M1-01 complete if support intake is in core go-live |
 | 18-20 July 2026 | Launch-scoped M1 packets, full release/browser tests, approved staging smoke, provider/email verification, migration rehearsal, and rollback evidence |
 | 21 July 2026 | Formal go/no-go; zero unresolved P0 blockers |
