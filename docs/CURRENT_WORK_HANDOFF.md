@@ -7,7 +7,7 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 - Repository: `prochattools-jpv-bootcamp`
 - Branch: `feature/course-branding-and-preview`
 - Packet 9 starting HEAD: `2d8cef7 fix: align public membership copy`
-- Current HEAD after Packet 9: set by commit `docs: checkpoint membership implementation readiness`
+- Current HEAD after Packet 9: `8927df9 docs: checkpoint membership implementation readiness`
 - Pull request: `https://github.com/prochattools/jpv-bootcamp/pull/2`
 - Migrations applied: `No`
 - Deployment performed: `No`
@@ -348,7 +348,7 @@ Remaining priority order:
 
 Fixed dates remain 22 July 2026 for the front-end milestone, 23 July for handover buffer, and 24 July for the client finished-by date. These dates do not authorize live operations or reduce validation requirements.
 
-The next implementation task is the administrator persistence/schema design and Payload UI integration plan, without applying migrations or changing generated types. M2 remains unstarted and unauthorized.
+The next implementation task is the administrator persistence/schema migration packet, generated-type regeneration isolation, and repository documentation synchronization for the v3.7 client plan, without applying migrations or changing generated types. M2 remains unstarted and unauthorized.
 
 ## Packet 9 — Membership implementation readiness checkpoint
 
@@ -466,3 +466,18 @@ Update this file whenever any of these change:
 - next authorized task
 
 Do not let this file become a second roadmap. It is a concise resumption index that points to the canonical planning and evidence documents.
+
+## 2026-07-17 Wave 1 packet update
+
+- Added `docs/TWO_DAY_EXECUTION_QUEUE.md` and `docs/TWO_DAY_PACKET_REGISTRY.json` to turn the remaining launch roadmap into an executable queue.
+- Implemented and validated the Wave 1 repository tooling for `SCHEMA-01`, `SCHEMA-02`, `SCHEMA-03`, `QA-01`, and `RELEASE-01`.
+- Added `scripts/membership_support_schema_contract.test.ts`, `scripts/release/launchCriticalTestManifest.ts`, `scripts/release/launchCriticalTestManifest.test.ts`, `scripts/release/twoDayPacketRegistry.ts`, `scripts/release/twoDayPacketRegistry.test.ts`, `scripts/release/membershipSupportSchemaIsolation.ts`, and `scripts/release/membershipSupportSchemaIsolation.test.ts`.
+- Added package scripts for the new manifest, registry, schema-isolation, and schema-contract validations.
+- Validation passed:
+  - `pnpm exec tsx scripts/membership_support_schema_contract.test.ts`
+  - `pnpm exec tsx scripts/release/launchCriticalTestManifest.test.ts`
+  - `pnpm exec tsx scripts/release/twoDayPacketRegistry.test.ts`
+  - `pnpm exec tsx scripts/release/membershipSupportSchemaIsolation.test.ts`
+  - `pnpm exec tsc --noEmit --pretty false --incremental false`
+  - `git diff --check`
+- Wave 2 and later packets remain blocked by the dependencies and external approvals encoded in the queue.
