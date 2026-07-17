@@ -229,7 +229,24 @@ Completed P0-A checkpoints:
   - mismatch and recovery behavior: duplicate, stale, out-of-order, customer mismatch, price mismatch, missing promotion code, inactive promotion code, payment-failure routing, and review-queue closure on recovery
   - validation evidence: `pnpm exec tsx scripts/payload_course_stripe_shadow_sync.test.ts`, `pnpm exec tsc --noEmit --pretty false --incremental false`, `git diff --check`
   - no live Stripe access was used
-- Next task: Packet 5 migration review and proration evidence expansion
+- Packet 5 migration review and proration evidence expansion is complete:
+  - changed paths:
+    - `src/lib/billing/membershipMigrationPreview.ts`
+    - `src/lib/billing/membershipMigrationPreview.test.ts`
+    - `scripts/release/buildMembershipMigrationPreview.ts`
+    - `scripts/release/buildMembershipMigrationPreview.test.ts`
+    - `scripts/fixtures/membership-migration-preview.json`
+    - `docs/CURRENT_WORK_HANDOFF.md`
+  - added stable candidate IDs, member IDs, Stripe customer/subscription projections, current and target product/price/cadence fields, period anchors, cancellation, status, payment/dispute, schedule, item-count, metered, discount, tax, amount, and reconciliation fields
+  - added deterministic eligibility classification, blocking reasons, warning codes, preview evidence, currency-grouped totals, and JSON/Markdown report builders
+  - validation evidence:
+    - `pnpm exec tsx src/lib/billing/membershipMigrationPreview.test.ts`
+    - `pnpm exec tsx scripts/release/buildMembershipMigrationPreview.test.ts`
+    - `pnpm exec tsc --noEmit --pretty false --incremental false`
+    - `git diff --check`
+    - focused secret and forbidden-runtime scans on the touched preview files
+  - no Stripe or database mutation was used
+- Next task: Packet 6 entitlement alignment
 - Membership Support persistence foundation has now been added as an additive, repository-only checkpoint:
   - `src/collections/membership-support/`
   - `src/collections/membership-support/options.ts`
