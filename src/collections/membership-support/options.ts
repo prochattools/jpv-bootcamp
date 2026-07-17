@@ -35,6 +35,7 @@ export const approvalStateOptions = [
   { label: 'Rejected', value: 'rejected' },
   { label: 'Issued', value: 'issued' },
   { label: 'Revoked', value: 'revoked' },
+  { label: 'Failed', value: 'failed' },
 ]
 
 export const queueStateOptions = [
@@ -102,4 +103,3 @@ export const auditSeverityOptions = [
   { label: 'Warning', value: 'warning' },
   { label: 'Critical', value: 'critical' },
 ]
-

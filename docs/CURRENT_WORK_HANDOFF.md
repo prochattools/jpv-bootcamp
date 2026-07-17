@@ -6,7 +6,7 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 
 - Repository: `prochattools-jpv-bootcamp`
 - Branch: `feature/course-branding-and-preview`
-- Current HEAD: `8458bdf feat: prepare membership support persistence`
+- Current HEAD: `3cca73a feat: build membership support admin cockpit`
 - Pull request: `https://github.com/prochattools/jpv-bootcamp/pull/2`
 - Migrations applied: `No`
 - Deployment performed: `No`
@@ -51,6 +51,7 @@ The application currently uses:
 - one canonical portal billing surface at `/portal/billing`
 - an explicit preview-only programme surface until approved representative content is supplied
 - persisted read-only community views for the launch scope
+- packet 3 membership-support command orchestration above the workflow layer is under validation in the current worktree
 
 The authorized target is one paid **JPV Bootcamp Membership**, one Stripe Product, GBP 80 monthly and GBP 800 annual recurring Prices, no public free registration, personal one-month/year vouchers, unified pay-it-forward administration, email and telephone onboarding, and Bunny-only protected video. The binding architecture is `docs/JPV_MEMBERSHIP_BILLING_AND_VOUCHER_ARCHITECTURE.md`.
 

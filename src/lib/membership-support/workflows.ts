@@ -53,7 +53,7 @@ export type MembershipSupportVoucherRecord = Readonly<{
   memberEmail: string
   fundingSource: Exclude<MembershipFundingSource, 'direct_payment'>
   voucherDuration: MembershipVoucherDuration
-  approvalState: 'draft' | 'pending_approval' | 'approved' | 'rejected' | 'issued' | 'revoked'
+  approvalState: 'draft' | 'pending_approval' | 'approved' | 'rejected' | 'issued' | 'revoked' | 'failed'
   redemptionState: 'not_redeemed' | 'redeemed' | 'expired' | 'deactivated'
   billingCadence: 'monthly' | 'annual'
   stripeCustomerId: string | null
@@ -80,7 +80,7 @@ export type MembershipSupportPayItForwardAllocationRecord = Readonly<{
   memberId: string
   memberEmail: string
   donorName: string
-  approvalState: 'draft' | 'pending_approval' | 'approved' | 'rejected' | 'issued' | 'revoked'
+  approvalState: 'draft' | 'pending_approval' | 'approved' | 'rejected' | 'issued' | 'revoked' | 'failed'
   billingCadence: 'monthly' | 'annual'
   allocatedAmountMinor: number
   currency: string
@@ -1356,6 +1356,7 @@ export function buildMembershipSupportProjectionRecord(
     operatorId: string
     reason: string
     now: Date
+    reconciliationState?: 'matched' | 'mismatch'
   },
 ): MembershipSupportProjectionRecord {
   return buildIssueRecord({
@@ -1373,7 +1374,7 @@ export function buildMembershipSupportProjectionRecord(
     operatorId: params.operatorId,
     reason: params.reason,
     now: params.now,
-    reconciliationState: 'matched',
+    reconciliationState: params.reconciliationState ?? 'matched',
   })
 }
 
