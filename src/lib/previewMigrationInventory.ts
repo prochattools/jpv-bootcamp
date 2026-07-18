@@ -140,6 +140,26 @@ export const PREVIEW_MIGRATION_INVENTORY = [
     verificationChecks: ['registry-match', 'ordered-exactly', 'membership-support-schema'],
     authorizationCategory: 'payloadMigration',
   },
+  {
+    name: '20260718_000000_live_sessions',
+    system: 'payload',
+    order: 13,
+    purpose: 'Create live_sessions table for real-time video sessions with course, host, and audit tracking.',
+    requiredForPreview: true,
+    rollbackRisk: 'irreversible',
+    verificationChecks: ['registry-match', 'ordered-exactly', 'live-sessions'],
+    authorizationCategory: 'payloadMigration',
+  },
+  {
+    name: '20260718_110000_bunny_videos',
+    system: 'payload',
+    order: 14,
+    purpose: 'Create bunny_videos table for video metadata, processing status, and webhook event logs with unique (libraryId, videoId) constraint.',
+    requiredForPreview: true,
+    rollbackRisk: 'irreversible',
+    verificationChecks: ['registry-match', 'ordered-exactly', 'bunny-videos'],
+    authorizationCategory: 'payloadMigration',
+  },
 ] as const satisfies readonly PreviewMigrationInventoryEntry[]
 
 export const PREVIEW_MIGRATION_INVENTORY_VERSION = 1
