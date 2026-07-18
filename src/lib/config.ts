@@ -183,8 +183,8 @@ export function getServerConfig(): ServerConfig {
 
 	const appUrl = requireUrlEnvAny(['APP_PUBLIC_URL', 'NEXT_PUBLIC_APP_URL'], 'APP_PUBLIC_URL')
 	const stripeConfig = getStripeModeConfig()
-	const portalUrl = getEnvAny(['PORTAL_URL', 'PORTAL_LOGIN_URL'])
-		? requireUrlEnvAny(['PORTAL_URL', 'PORTAL_LOGIN_URL'], 'PORTAL_URL')
+	const portalUrl = getEnvAny(['PORTAL_URL'])
+		? requireUrlEnvAny(['PORTAL_URL'], 'PORTAL_URL')
 		: `${appUrl}/portal`
 	const resendFrom = getEnv('RESEND_FROM')
 

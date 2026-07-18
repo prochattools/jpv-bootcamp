@@ -87,7 +87,8 @@
     "payload:email:send": "tsx scripts/payload/send-queued-emails.mts",
     "stripe:check-products": "tsx scripts/stripe/check_price_products.ts",
     "mcp:discover": "tsx scripts/mcp-discover.ts",
-    "mcp:provision": "tsx scripts/mcp-provision-tenant.ts"
+    "mcp:provision": "tsx scripts/mcp-provision-tenant.ts",
+    "test:env-legacy-cleanup": "tsx scripts/env_legacy_cleanup_contract.test.ts"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.10",

@@ -37,7 +37,7 @@ Removed paid-tier price variables are not required target config and must not re
 - `EMAIL_FROM`
 - `EMAIL_REPLY_TO`
 - `SUPPORT_TO_EMAIL`
-- `PORTAL_URL` (or `PORTAL_LOGIN_URL`)
+- `PORTAL_URL`
 
 Note: In development, missing email env vars should not prevent Stripe signature or idempotency verification.
 

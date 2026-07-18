@@ -15,7 +15,7 @@ Repository-only checklist for provider/email readiness before any approved live 
 ## Environment variables to verify by name only
 
 - `APP_PUBLIC_URL` or `NEXT_PUBLIC_APP_URL`
-- `PORTAL_URL` or `PORTAL_LOGIN_URL`
+- `PORTAL_URL`
 - `STRIPE_ENV`
 - `STRIPE_SECRET_KEY_TEST` or `STRIPE_SECRET_KEY_LIVE`
 - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_TEST` or `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_LIVE`
