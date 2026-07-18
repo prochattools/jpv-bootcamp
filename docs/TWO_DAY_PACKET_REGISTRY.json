@@ -1,7 +1,7 @@
 {
   "generatedFrom": "docs/client/JPV_Bootcamp_Platform_Expansion_Go_Live_Plan_v3_7.docx",
   "branch": "feature/course-branding-and-preview",
-  "head": "fc031ff",
+  "head": "57711f9",
   "packets": [
     {
       "id": "SCHEMA-01",
@@ -566,7 +566,7 @@
       "parallelSafe": true,
       "status": "implemented",
       "blocker": null,
-      "commit": "fc031ff",
+      "commit": "57711f9",
       "tests": [
         "scripts/payload_course_access_service.test.ts",
         "scripts/payload_entitlement_evaluator.test.ts"
@@ -618,7 +618,7 @@
       "parallelSafe": false,
       "status": "implemented",
       "blocker": null,
-      "commit": "fc031ff",
+      "commit": "57711f9",
       "tests": [
         "scripts/bunny_protected_media.test.ts",
         "scripts/payload_lesson_resource_delivery.test.ts"
@@ -665,7 +665,7 @@
       "parallelSafe": true,
       "status": "deferred",
       "blocker": null,
-      "commit": "fc031ff",
+      "commit": "57711f9",
       "tests": [
         "scripts/release/twoDayPacketRegistry.test.ts"
       ]
@@ -708,7 +708,7 @@
       "parallelSafe": true,
       "status": "deferred",
       "blocker": null,
-      "commit": "fc031ff",
+      "commit": "57711f9",
       "tests": [
         "scripts/release/twoDayPacketRegistry.test.ts"
       ]
@@ -751,7 +751,7 @@
       "parallelSafe": true,
       "status": "deferred",
       "blocker": null,
-      "commit": "fc031ff",
+      "commit": "57711f9",
       "tests": [
         "scripts/release/twoDayPacketRegistry.test.ts"
       ]
@@ -798,7 +798,7 @@
       "parallelSafe": true,
       "status": "implemented",
       "blocker": null,
-      "commit": "fc031ff",
+      "commit": "57711f9",
       "tests": [
         "scripts/bunny_protected_media.test.ts",
         "scripts/payload_lesson_resource_delivery.test.ts",
@@ -852,7 +852,7 @@
       "parallelSafe": true,
       "status": "implemented",
       "blocker": null,
-      "commit": "fc031ff",
+      "commit": "57711f9",
       "tests": [
         "scripts/member_checkout.test.ts",
         "scripts/stripe_checkout_validation.test.ts",
@@ -902,7 +902,7 @@
       "parallelSafe": true,
       "status": "implemented",
       "blocker": null,
-      "commit": "fc031ff",
+      "commit": "57711f9",
       "tests": [
         "scripts/portal_account_billing_parity.test.ts",
         "scripts/payload_member_billing_portal.test.ts",
@@ -952,7 +952,7 @@
       "parallelSafe": true,
       "status": "implemented",
       "blocker": null,
-      "commit": "fc031ff",
+      "commit": "57711f9",
       "tests": [
         "scripts/course_programme_mvp.test.ts",
         "scripts/payload_lesson_resource_delivery.test.ts",
@@ -1047,7 +1047,7 @@
       "parallelSafe": true,
       "status": "implemented",
       "blocker": null,
-      "commit": "fc031ff",
+      "commit": "57711f9",
       "tests": [
         "e2e/public.spec.ts",
         "e2e/checkout-and-submissions.spec.ts",

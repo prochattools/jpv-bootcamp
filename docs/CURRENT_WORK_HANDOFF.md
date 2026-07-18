@@ -182,7 +182,7 @@ Do not:
 
 ## Wave 3 course platform checkpoint
 
-Wave 3 is recorded as a repository-only implementation checkpoint on branch `feature/course-branding-and-preview` from starting HEAD `f267b61` and committed as `fc031ff`.
+Wave 3 is recorded as a repository-only implementation checkpoint on branch `feature/course-branding-and-preview` from starting HEAD `f267b61` and committed as `57711f9`.
 
 - `COURSE-01`: implemented. Course persistence, ordering, enrolment, progress, completion, next-lesson, administrator visibility, and safe member projections are covered by `src/collections/courses/CourseRuntime.ts`, `src/lib/payloadCourse/accessService.ts`, `src/lib/entitlements/membershipEntitlement.ts`, `src/lib/entitlements/evaluateAccess.ts`, `scripts/payload_course_access_service.test.ts`, and `scripts/payload_entitlement_evaluator.test.ts`.
 - `COURSE-02`: implemented. Bunny Stream protected-course-media domain and deterministic in-memory adapter live in `src/lib/payloadCourse/bunnyProtectedMedia.ts`, with protected file/resource delivery still handled by `src/lib/payloadCourse/lessonResources.ts` and `src/lib/payloadCourse/lessonResourceDelivery.ts`.
