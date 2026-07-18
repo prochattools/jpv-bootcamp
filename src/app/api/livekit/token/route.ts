@@ -83,15 +83,21 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 			)
 		}
 
+		// TODO: Verify LiveSession exists and is active (scheduled/live status)
+		// TODO: Verify member has membership entitlement (course enrollment)
+		// This requires Payload access: fetch live_sessions collection and check entitlement
+		// For now, rely on membership account status check above
+
 		// Generate deterministic room name
 		const roomName = generateLiveKitRoomName(courseId, moduleId, lessonId)
 
 		// Get LiveKit config
 		const config = getLiveKitConfig()
 
-		// Create short-lived access token (15 minutes)
+		// Create short-lived access token with explicit 15-minute TTL
 		const at = new AccessToken(config.apiKey, config.apiSecret)
 		at.identity = String(session.member.id)
+		at.ttl = 15 * 60 // 900 seconds = 15 minutes
 
 		// Set grants based on role
 		if (role === 'host') {
