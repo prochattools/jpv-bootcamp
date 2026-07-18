@@ -167,7 +167,7 @@ function hasStops(value: unknown): value is string[] {
 
 function result(authorized: boolean | undefined, errors: string[]): CategoryResult {
   const isAuthorized = authorized === true
-  return { authorized: isAuthorized, ok: isAuthorized && errors.length === 0, errors: isAuthorized ? errors : [] }
+  return { authorized: isAuthorized, ok: !isAuthorized || errors.length === 0, errors: isAuthorized ? errors : [] }
 }
 
 export function validatePreviewReleasePreflight(
