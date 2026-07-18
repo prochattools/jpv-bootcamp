@@ -18,6 +18,8 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 # Prisma PrismaClient() reads DATABASE_URL at module-eval during page data collection.
 ENV DATABASE_URL=postgresql://build:build@localhost:5432/build
+# NODE_ENV must be production for Payload importmap generation to work correctly
+ENV NODE_ENV=production
 # NEXT_PUBLIC_* vars are baked into the client bundle at build time — must use real production value.
 ARG NEXT_PUBLIC_APP_URL=https://jpvbootcamp.com
 ARG APP_BASE_URL=https://jpvbootcamp.com
@@ -27,7 +29,6 @@ ENV APP_BASE_URL=${APP_BASE_URL}
 ENV NEXT_PUBLIC_SERVER_URL=${NEXT_PUBLIC_SERVER_URL}
 RUN --mount=type=cache,target=/app/.next/cache \
     node_modules/.bin/prisma generate --schema=prisma/system.prisma && \
-    pnpm generate:importmap && \
     pnpm run build
 
 # ---- Script deps (kept separate to avoid conflicting with standalone's pnpm symlinks) ----
