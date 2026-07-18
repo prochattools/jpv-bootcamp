@@ -87,6 +87,8 @@ async function main(): Promise<void> {
         '20260704_090000_partner_schema_reconciliation',
         '20260707_130000_remove_table_plan_from_payload_enums',
         '20260718_103726_membership_support_schema',
+        '20260718_000000_live_sessions',
+        '20260718_110000_bunny_videos',
       ],
       operator: 'migration-op',
       approvalReference: 'approval-1',
