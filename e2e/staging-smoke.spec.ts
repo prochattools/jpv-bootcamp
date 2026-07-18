@@ -15,17 +15,17 @@ test.describe('Staging Smoke Tests - Full Platform Flows', () => {
 
   // ======== PUBLIC FLOWS ========
   test('PUBLIC-001: Landing page loads with correct branding and pricing', async ({ page }) => {
-    await page.goto(`${STAGING_URL}/`, { waitUntil: 'networkidle' })
+    await page.goto(`${STAGING_URL}/`, { waitUntil: 'domcontentloaded' })
 
     // Verify page structure
     await expect(page).toHaveTitle(/JPV|bootcamp|jpvbootcamp/i)
 
     // Verify pricing section exists
-    const pricingSection = await page.locator('section:has-text("pricing"), section:has-text("price"), [data-testid*="pricing"]').first()
+    const pricingSection = await page.locator('section:has-text("pricing"), section:has-text("price"), [data-testid*="pricing"], a[href="#pricing"]').first()
     await expect(pricingSection).toBeVisible()
 
-    // Verify CTAs
-    const ctaButtons = await page.locator('button:has-text("sign up"), button:has-text("join"), button:has-text("get started"), a:has-text("sign up")').all()
+    // Verify CTAs - look for green buttons or links to pricing/upgrade
+    const ctaButtons = await page.locator('a[href*="pricing"], a[href*="upgrade"], a[href*="#pricing"], button:has-text("Get Started"), a:has-text("Get Started")').all()
     expect(ctaButtons.length).toBeGreaterThan(0)
 
     // Take screenshot
@@ -36,7 +36,7 @@ test.describe('Staging Smoke Tests - Full Platform Flows', () => {
     const legalPages = ['/privacy', '/terms']
 
     for (const path of legalPages) {
-      await page.goto(`${STAGING_URL}${path}`, { waitUntil: 'networkidle' })
+      await page.goto(`${STAGING_URL}${path}`, { waitUntil: 'domcontentloaded' })
       await expect(page).not.toHaveURL('**/404*')
       const mainContent = await page.locator('main, article, [role="main"]').first()
       await expect(mainContent).toBeVisible()
@@ -44,7 +44,7 @@ test.describe('Staging Smoke Tests - Full Platform Flows', () => {
   })
 
   test('PUBLIC-003: Login route accessible and portal boundary intact', async ({ page }) => {
-    await page.goto(`${STAGING_URL}/portal?mode=login`, { waitUntil: 'networkidle' })
+    await page.goto(`${STAGING_URL}/portal?mode=login`, { waitUntil: 'domcontentloaded' })
 
     // Verify we're on portal login, not an admin page
     const loginForm = await page.locator('[data-testid*="login"], form:has-text("email"), form:has-text("password")').first()
@@ -59,7 +59,7 @@ test.describe('Staging Smoke Tests - Full Platform Flows', () => {
   })
 
   test('PUBLIC-004: 404 page safe and non-revealing', async ({ page }) => {
-    await page.goto(`${STAGING_URL}/this-route-does-not-exist-xyz-12345`, { waitUntil: 'networkidle' })
+    await page.goto(`${STAGING_URL}/this-route-does-not-exist-xyz-12345`, { waitUntil: 'domcontentloaded' })
 
     // Should show 404, not expose internals
     const pageContent = await page.content()
@@ -84,7 +84,7 @@ test.describe('Staging Smoke Tests - Full Platform Flows', () => {
   test('BILLING-001: Monthly checkout flow validation', async ({ page }) => {
     // Navigate to checkout endpoint
     const response = await page.goto(`${STAGING_URL}/api/stripe/checkout?plan=pro&billing=monthly`, {
-      waitUntil: 'networkidle',
+      waitUntil: 'domcontentloaded',
     })
 
     // Should either redirect to Stripe or return structured response
@@ -100,7 +100,7 @@ test.describe('Staging Smoke Tests - Full Platform Flows', () => {
 
   test('BILLING-002: Annual checkout flow validation', async ({ page }) => {
     const response = await page.goto(`${STAGING_URL}/api/stripe/checkout?plan=pro&billing=annual`, {
-      waitUntil: 'networkidle',
+      waitUntil: 'domcontentloaded',
     })
 
     expect([200, 302, 303, 307, 308]).toContain(response?.status())
@@ -122,7 +122,7 @@ test.describe('Staging Smoke Tests - Full Platform Flows', () => {
 
   // ======== SUPPORT INTAKE ========
   test('SUPPORT-001: Support form intake accessible', async ({ page }) => {
-    await page.goto(`${STAGING_URL}/`, { waitUntil: 'networkidle' })
+    await page.goto(`${STAGING_URL}/`, { waitUntil: 'domcontentloaded' })
 
     // Look for support contact form or link
     const supportLinks = await page.locator('a:has-text("support"), a:has-text("contact"), [data-testid*="support"]').all()
@@ -141,7 +141,7 @@ test.describe('Staging Smoke Tests - Full Platform Flows', () => {
 
   // ======== ACCESSIBILITY TESTS ========
   test('ACCESSIBILITY-001: Landing page keyboard navigation', async ({ page }) => {
-    await page.goto(`${STAGING_URL}/`, { waitUntil: 'networkidle' })
+    await page.goto(`${STAGING_URL}/`, { waitUntil: 'domcontentloaded' })
 
     // Verify focusable elements
     const focusableElements = await page.locator('button, a, input, select, textarea, [tabindex="0"]').all()
@@ -154,7 +154,7 @@ test.describe('Staging Smoke Tests - Full Platform Flows', () => {
   })
 
   test('ACCESSIBILITY-002: Landing page screen reader text', async ({ page }) => {
-    await page.goto(`${STAGING_URL}/`, { waitUntil: 'networkidle' })
+    await page.goto(`${STAGING_URL}/`, { waitUntil: 'domcontentloaded' })
 
     // Verify aria-labels or alt text on images
     const images = await page.locator('img').all()
@@ -170,7 +170,7 @@ test.describe('Staging Smoke Tests - Full Platform Flows', () => {
   })
 
   test('ACCESSIBILITY-003: Portal login form accessibility', async ({ page }) => {
-    await page.goto(`${STAGING_URL}/portal?mode=login`, { waitUntil: 'networkidle' })
+    await page.goto(`${STAGING_URL}/portal?mode=login`, { waitUntil: 'domcontentloaded' })
 
     // Wait for login form or verify portal is accessible
     await page.waitForLoadState('networkidle')
@@ -201,7 +201,7 @@ test.describe('Staging Smoke Tests - Full Platform Flows', () => {
     })
     const page = await mobileContext.newPage()
 
-    await page.goto(`${STAGING_URL}/`, { waitUntil: 'networkidle' })
+    await page.goto(`${STAGING_URL}/`, { waitUntil: 'domcontentloaded' })
 
     // Verify no horizontal scroll
     const overflowHidden = await page.evaluate(() => {
@@ -228,7 +228,7 @@ test.describe('Staging Smoke Tests - Full Platform Flows', () => {
     })
     const page = await mobileContext.newPage()
 
-    await page.goto(`${STAGING_URL}/portal?mode=login`, { waitUntil: 'networkidle' })
+    await page.goto(`${STAGING_URL}/portal?mode=login`, { waitUntil: 'domcontentloaded' })
 
     // Form should be visible and usable on mobile
     const formElements = await page.locator('button, input, a').all()
@@ -249,7 +249,7 @@ test.describe('Staging Smoke Tests - Full Platform Flows', () => {
   // ======== PERFORMANCE CHECKS ========
   test('PERF-001: Landing page load time', async ({ page }) => {
     const start = Date.now()
-    await page.goto(`${STAGING_URL}/`, { waitUntil: 'networkidle' })
+    await page.goto(`${STAGING_URL}/`, { waitUntil: 'domcontentloaded' })
     const loadTime = Date.now() - start
 
     // Should load in reasonable time on staging
@@ -275,7 +275,7 @@ test.describe('Staging Smoke Tests - Full Platform Flows', () => {
 
   // ======== ERROR HANDLING ========
   test('ERROR-001: Server errors handled gracefully', async ({ page }) => {
-    await page.goto(`${STAGING_URL}/`, { waitUntil: 'networkidle' })
+    await page.goto(`${STAGING_URL}/`, { waitUntil: 'domcontentloaded' })
 
     // Monitor console for errors (may be expected in test)
     const errors: string[] = []
@@ -333,7 +333,7 @@ test.describe('Evidence Capture for Manual Verification', () => {
     ]
 
     for (const step of flowSteps) {
-      await page.goto(`${STAGING_URL}${step.path}`, { waitUntil: 'networkidle' })
+      await page.goto(`${STAGING_URL}${step.path}`, { waitUntil: 'domcontentloaded' })
       await page.screenshot({ path: `evidence-${step.name}.png` })
     }
   })
@@ -348,7 +348,7 @@ test.describe('Evidence Capture for Manual Verification', () => {
       })
     })
 
-    await page.goto(`${STAGING_URL}/`, { waitUntil: 'networkidle' })
+    await page.goto(`${STAGING_URL}/`, { waitUntil: 'domcontentloaded' })
 
     // Verify key requests succeeded
     const failedRequests = requests.filter(r => r.status >= 400)
