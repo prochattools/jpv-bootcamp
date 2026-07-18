@@ -4,6 +4,18 @@ const { withPayload } = require('@payloadcms/next/withPayload')
 const nextConfig = {
 	output: 'standalone',
 	reactStrictMode: true,
+	async redirects() {
+		return [
+			{
+				// Bare /admin root redirects to the Payload login page so that
+				// smoke tests and uptime monitors see a 308 rather than 200.
+				// Payload renders its own login inside the admin SPA at /admin/login.
+				source: '/admin',
+				destination: '/admin/login',
+				permanent: true,
+			},
+		]
+	},
 	images: {
 		remotePatterns: [
 			// NextJS <Image> component needs to whitelist domains for src={}

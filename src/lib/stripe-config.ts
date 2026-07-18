@@ -80,6 +80,10 @@ export function getStripeConfig(): StripeConfig {
 	const suffix = env === 'test' ? 'TEST' : 'LIVE'
 	const priceProKey = `STRIPE_PRICE_PRO_${suffix}`
 	const priceProAnnualKey = `STRIPE_PRICE_PRO_ANNUAL_${suffix}`
+	// Legacy fallback: early deployments used STRIPE_PRICE_VIP_* for the annual price.
+	// Accept it when STRIPE_PRICE_PRO_ANNUAL_* is absent so existing Dokploy envs
+	// do not need an immediate variable rename to restore checkout.
+	const priceProAnnualLegacyKey = `STRIPE_PRICE_VIP_${suffix}`
 	const productProKey = `STRIPE_PRODUCT_JPV_BOOTCAMP_PRO_MEMBERSHIP_${suffix}`
 	const portalConfigKey = `STRIPE_PORTAL_CONFIGURATION_ID_${suffix}`
 	const commitmentPortalConfigKey = `STRIPE_PORTAL_COMMITMENT_CONFIGURATION_ID_${suffix}`
@@ -88,7 +92,21 @@ export function getStripeConfig(): StripeConfig {
 	const webhookSecretRaw = requireEnv(`STRIPE_WEBHOOK_SECRET_${suffix}`)
 	const publishableKey = requireEnv(`NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_${suffix}`)
 	const pricePro = requireEnv(priceProKey)
-	const priceProAnnual = requireEnv(priceProAnnualKey)
+
+	// Resolve annual price: prefer STRIPE_PRICE_PRO_ANNUAL_*, fall back to legacy STRIPE_PRICE_VIP_*.
+	const priceProAnnualRaw = getEnv(priceProAnnualKey) ?? getEnv(priceProAnnualLegacyKey)
+	if (!priceProAnnualRaw || priceProAnnualRaw.trim().length === 0) {
+		throw new Error(
+			`Missing required env var: ${priceProAnnualKey} (or legacy fallback ${priceProAnnualLegacyKey})`,
+		)
+	}
+	if (!hasLoggedEnv && getEnv(priceProAnnualKey) == null && getEnv(priceProAnnualLegacyKey) != null) {
+		console.warn(
+			`[stripe-config] Using legacy env var ${priceProAnnualLegacyKey} for annual price. ` +
+			`Rename it to ${priceProAnnualKey} to remove this warning.`,
+		)
+	}
+	const priceProAnnual = priceProAnnualRaw.trim()
 	const productPro = requireEnv(productProKey)
 	const portalConfigurationId = requireEnv(portalConfigKey)
 	const commitmentPortalConfigurationId = getEnv(commitmentPortalConfigKey)?.trim() || null
