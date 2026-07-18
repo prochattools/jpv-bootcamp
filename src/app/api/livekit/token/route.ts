@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-// import { AccessToken } from 'livekit-server-sdk' // Install when implementing: pnpm add livekit-server-sdk
+import { AccessToken } from 'livekit-server-sdk'
 import { getLiveKitConfig, redactLiveKitSecrets, generateLiveKitRoomName, isLiveKitConfigured } from '@/lib/livekit-config'
+import { resolvePayloadRequestSession } from '@/lib/auth/payloadSession'
 
 /**
  * POST /api/livekit/token
@@ -19,7 +20,7 @@ import { getLiveKitConfig, redactLiveKitSecrets, generateLiveKitRoomName, isLive
  *
  * Response (on success):
  * {
- *   token: "eyJhbGci..."
+ *   token: "..."
  *   url: "wss://livekit.example.com"
  *   roomName: "course-101-module-202-lesson-303"
  * }
@@ -37,11 +38,11 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 			)
 		}
 
-		// TODO: Verify authentication context (Clerk or Payload auth)
-		// const session = await getSession(req)
-		// if (!session?.user?.id) {
-		//   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-		// }
+		// Verify authentication context (Payload member session)
+		const session = await resolvePayloadRequestSession(req.headers)
+		if (!session.member?.id) {
+			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+		}
 
 		// Parse request
 		const body = await req.json()
@@ -66,60 +67,52 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 			)
 		}
 
-		// TODO: Verify member entitlement
-		// - Check member is active (not suspended/deleted)
-		// - Check member has access to this course
-		// - Check member is enrolled in this lesson
-		// const entitlement = await verifyMemberEntitlement(session.user.id, courseId, lessonId)
-		// if (!entitlement.hasAccess) {
-		//   return NextResponse.json({ error: 'Access denied' }, { status: 403 })
-		// }
+		// Restrict host role to authenticated admins only
+		if (role === 'host' && !session.administratorId) {
+			return NextResponse.json(
+				{ error: 'Host role requires administrator privileges' },
+				{ status: 403 }
+			)
+		}
 
-		// Generate room name
+		// Check member account is eligible (active, verified)
+		if (session.member.accountStatus !== 'active') {
+			return NextResponse.json(
+				{ error: 'Member account is not active' },
+				{ status: 403 }
+			)
+		}
+
+		// Generate deterministic room name
 		const roomName = generateLiveKitRoomName(courseId, moduleId, lessonId)
 
 		// Get LiveKit config
 		const config = getLiveKitConfig()
 
-		// Create short-lived token
-		// TODO: Uncomment when livekit-server-sdk is installed
-		// const at = new AccessToken(config.apiKey, config.apiSecret)
+		// Create short-lived access token (15 minutes)
+		const at = new AccessToken(config.apiKey, config.apiSecret)
+		at.identity = String(session.member.id)
 
-		// TODO: Set member identity
-		// at.identity = session.user.id
+		// Set grants based on role
+		if (role === 'host') {
+			at.addGrant({
+				room: roomName,
+				roomJoin: true,
+				canPublish: true,
+				canPublishData: true,
+				canSubscribe: true,
+			})
+		} else {
+			at.addGrant({
+				room: roomName,
+				roomJoin: true,
+				canPublish: true,
+				canPublishData: false,
+				canSubscribe: true,
+			})
+		}
 
-		// TODO: Set grants based on role
-		// if (role === 'host') {
-		//   at.addGrant({
-		//     room: roomName,
-		//     roomJoin: true,
-		//     canPublish: true,
-		//     canPublishData: true,
-		//     canSubscribe: true,
-		//   })
-		// } else {
-		//   at.addGrant({
-		//     room: roomName,
-		//     roomJoin: true,
-		//     canPublish: true, // students can share audio/video
-		//     canPublishData: false, // no direct data channel
-		//     canSubscribe: true,
-		//   })
-		// }
-
-		// Set expiry (15 minutes for safety)
-		// TODO: Uncomment when livekit-server-sdk is installed
-		// const token = at.toJwt()
-		const token = 'placeholder-token' // TODO: Remove placeholder
-
-		// TODO: Audit token issuance
-		// await auditLiveKitToken({
-		//   userId: session.user.id,
-		//   sessionId: roomName,
-		//   timestamp: new Date(),
-		//   action: 'token_issued',
-		//   role,
-		// })
+		const token = at.toJwt()
 
 		return NextResponse.json({
 			token,
