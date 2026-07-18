@@ -11,7 +11,7 @@ import { resolvePayloadRequestSession } from '@/lib/auth/payloadSession'
  */
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
   try {
     const session = await resolvePayloadRequestSession(req.headers)
@@ -32,11 +32,12 @@ export async function PATCH(
     }
 
     const payload = await getPayload({ config })
+    const { id } = await params
 
     // Update session
     const updated = await payload.update({
       collection: 'live_sessions' as any,
-      id: params.id,
+      id,
       data: {
         status,
         audit: {

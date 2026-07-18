@@ -54,11 +54,9 @@ jobs:
 
       - name: Install pinned Chromium browser
         run: pnpm exec playwright install --with-deps chromium
-        continue-on-error: true
 
       - name: Run launch browser E2E
         run: pnpm test:e2e
-        continue-on-error: true
 
       - name: Upload browser failure evidence
         if: failure()

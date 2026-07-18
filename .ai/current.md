@@ -1,137 +1,43 @@
-# Session Handoff — LiveKit, Bunny, and Collections Implementation
+# Current Handoff
 
-**Date:** 2026-07-18  
-**Branch:** `feature/course-branding-and-preview` (HEAD: `c6c26aa`)  
-**Status:** Code complete, awaiting staging deployment verification
+## Repo
+jpv-bootcamp (feature/course-branding-and-preview)
 
-## Completed Work
+## Tool
+Claude Code
 
-### LiveKit Token Route (Task #1: ✅ Complete)
-**File:** `src/app/api/livekit/token/route.ts`
+## Goal
+See transcript for context
 
-- ✅ Replaced TODO session/entitlement checks with full implementation
-- ✅ Load LiveSession by sessionId from Payload collection
-- ✅ Validate session status (scheduled/live)
-- ✅ Enforce time window (scheduled to +15min) for session joins
-- ✅ Verify member entitlement using `evaluateMembershipEntitlement`
-- ✅ Restrict host role to administrators only
-- ✅ Generate 15-minute least-privilege JWTs per role
-- ✅ Return deterministic room names
+## Status
+auto-saved at 2026-07-18 18:59 — run /handoff resume to reconstruct full context
 
-**API Change:** Signature changed from `{courseId, moduleId, lessonId, role}` to `{sessionId, role}`
+## Files touched
+- .github/workflows/deploy-preview.yml
+- tsconfig.json
+- scripts/preview_migration_inventory.test.ts
+- src/lib/previewMigrationInventory.ts
+- scripts/migration_readiness_static.test.ts
+- scripts/payload_shadow_validation.test.ts
 
-### LiveSession Collection (Task #2: ✅ Complete)
-**File:** `src/collections/PayloadLiveSession.ts`
+## Recent commands
+- `find scripts -name "*payload_shadow*" 2>/dev/null`
+- `git add scripts/payload_shadow_validation.test.ts && git commit -m "fix: add new migrations to shadow validation test  I`
+- `git push origin feature/course-branding-and-preview && sleep 5 && gh run list --repo prochattools/jpv-bootcamp --branch `
+- `for attempt in {1..12}; do sleep 60; result=$(gh run view 29656592024 --repo prochattools/jpv-bootcamp --json status,con`
+- `git log --oneline feature/course-branding-and-preview -12 && echo "---" && git diff main..feature/course-branding-and-pr`
 
-- ✅ Added async access control: admins can read all, members can read sessions
-- ✅ Auto-generate roomName via beforeValidate hook (deterministic from course/module/lesson)
-- ✅ Prevent roomName changes via beforeChange hook
-- ✅ Log status transitions in audit field
-- ✅ Migration exists: `20260718_000000_live_sessions.ts` (live_sessions table with indexes and FKs)
+## Last response summary
+## **FINAL SUMMARY — JPV Bootcamp Feature Branch: feature/course-branding-and-preview** **Goal Status:** NO-GO → Initial fixes complete, workflow deployment in progress ### **✅ DELIVERED FIXES & IMPLEMENTATIONS** **1. LiveKit Integration (Complete)** - ✅ `PayloadLiveSession` collection with durable schema (room_name UNIQUE, status ENUM, course/host FKs, audit JSON, indexes) - ✅ `POST /api/livek
 
-**Access Control:** Members restricted to sessions for their enrolled courses (TODO: add entitlement check in ACL if course enrollment collection available)
+## Decisions made
+None recorded automatically — run /handoff pause to capture decisions explicitly
 
-### Bunny Video Collection (Task #3: ✅ Complete)
-**Files:** `src/collections/PayloadBunnyVideo.ts`, `src/migrations/20260718_110000_bunny_videos.ts`
+## Next steps
+Run /handoff resume to reconstruct context from this auto-save
 
-- ✅ New collection for durable video metadata persistence
-- ✅ Schema: videoId, libraryId, lessonId, status (processing/ready/failed), duration, codecs, bitrate, thumbnail, audit
-- ✅ Unique constraint on (libraryId, videoId) for idempotency
-- ✅ Admin-only access (members cannot query directly)
-- ✅ Migration creates bunny_videos table with indexes
+## Blockers
+Unknown — auto-save only
 
-### Bunny Webhook (Task #3: ✅ Complete)
-**File:** `src/app/api/webhook/bunny/route.ts`
-
-- ✅ Replaced in-memory idempotency with durable Payload collection
-- ✅ Query existing video by (libraryId, videoId)
-- ✅ Upsert video record with status, metadata, event log
-- ✅ Return 500 on persistence failure (allows Bunny retry)
-- ✅ Maintain HMAC-SHA256 signature verification with timing-safe comparison
-- ✅ Log webhook events chronologically in webhookEvents field
-
-**Idempotency:** Database unique constraint on (libraryId, videoId) ensures no duplicates
-
-### Tests (Task #4: ✅ Complete)
-**File:** `src/__tests__/livekit-token.test.ts`
-
-- ✅ Updated test cases for new sessionId API
-- ✅ Added test: session not found (404)
-- ✅ Added test: session status validation (not scheduled/live)
-- ✅ Added test: membership entitlement validation (entitled/not entitled)
-- ✅ Mocked Payload API and entitlement service for realistic scenarios
-
-## Deployment Status
-
-**Current Issue:** GitHub Actions preview pipeline failing due to missing `pnpm` in runner environment (infrastructure issue, not code issue).
-
-- Local build: ✅ Passes (`npm run build`)
-- TypeScript: ✅ No errors
-- Migrations: 2 new migrations registered in `src/migrations/index.ts`
-  - `20260718_000000_live_sessions.ts`
-  - `20260718_110000_bunny_videos.ts`
-- Collections: 2 new collections registered in `src/payload.config.ts`
-  - `PayloadLiveSession`
-  - `PayloadBunnyVideo`
-
-**Next Steps for Deployment:**
-1. Fix GitHub Actions runner environment (install pnpm or update cache config)
-2. Deploy to jpvbootcamp_staging
-3. Run migrations on staging database (backup first)
-4. Verify schema: check live_sessions and bunny_videos tables exist
-5. Test LiveKit token endpoint: `POST /api/livekit/token { sessionId, role }`
-6. Create test LiveSession record in Payload admin
-7. Test Bunny webhook with valid HMAC signature
-8. Run E2E staging tests (auth, LiveKit join, Bunny playback)
-
-## Known Gaps (For Future Sessions)
-
-- LiveSession read ACL does not yet check member entitlement to enrolled course
-  - Currently allows all authenticated members to read all sessions
-  - Requires course enrollment collection linking if available
-  
-- Module/lesson fields in LiveSession are text, not relationships
-  - Waiting for course structure to provide relationship targets
-  
-- Bunny video lookup/import/upload adapter not implemented
-  - Webhook persists events; playback adapter TBD
-  
-- No UI for member LiveKit join or Bunny playback
-  - API routes implemented; frontend TBD
-  
-- No admin UI in Payload for scheduling/editing/canceling sessions
-  - Collection fields exist; admin controls TBD
-
-## Commits
-
-```
-c6c26aa test: update LiveKit token tests for sessionId-based API
-023e1f2 feat: add LiveSession and Bunny video collections with durable persistence
-```
-
-## Files Modified
-
-**New:**
-- `src/collections/PayloadBunnyVideo.ts`
-- `src/migrations/20260718_110000_bunny_videos.ts`
-
-**Modified:**
-- `src/app/api/livekit/token/route.ts`
-- `src/app/api/webhook/bunny/route.ts`
-- `src/collections/PayloadLiveSession.ts`
-- `src/payload.config.ts`
-- `src/migrations/index.ts`
-- `src/__tests__/livekit-token.test.ts`
-
-## Environment
-
-- **Branch:** feature/course-branding-and-preview
-- **Repo:** prochattools/jpv-bootcamp
-- **DB:** jpvbootcamp_staging
-- **Staging URL:** https://preview.jpvbootcamp.com
-- **Built with:** Node 20, Next.js 16, Payload CMS, Postgres
-- **Model:** Claude Haiku 4.5
-
----
-
-**Session Summary:** All code implementation work (Tasks 1-4) completed and committed. LiveKit token route now validates sessions and entitlements. Bunny webhook persists to database. Collections registered and migrations prepared. Awaiting infrastructure fix for GitHub Actions to deploy and verify on staging.
+## Resume prompt
+Resume from last session in jpv-bootcamp (feature/course-branding-and-preview). Review .ai/current.md and recent git log for full context.
