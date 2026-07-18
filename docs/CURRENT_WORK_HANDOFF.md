@@ -788,20 +788,45 @@ Final state: READY FOR REVIEW — formal release remains NO-GO until staging evi
 3. Operator sign-off from database owner and rollback owner
 4. External stakeholder approval for go-live
 
-### Next Task
+### Staging App Deployment Status
 
-**Deploy Staging App** (requires manual authorization):
-1. Go to GitHub Actions: https://github.com/prochattools/jpv-bootcamp/actions/workflows/publish-preview-image.yml
-2. Click "Run workflow" and fill in:
-   - Commit SHA: `ffb0d11` (current HEAD)
-   - Target environment: `staging`
-   - Release label: `wave-6-complete`
-3. Wait for deployment completion
-4. Verify app at https://preview.jpvbootcamp.com
-5. Run final smoke tests against deployed staging URL
-6. Verify database schema is jpvbootcamp_staging (not production)
-7. Obtain operator sign-offs
-8. Proceed to formal go/no-go evaluation
+**Deployment Triggered** ✅
+- Workflow run: #29643278482
+- URL: https://github.com/prochattools/jpv-bootcamp/actions/runs/29643278482
+- Status: QUEUED (awaiting runner availability)
+- Commit: 32c02a5 (Wave 6 completion)
+- Target environment: staging
+- Release label: wave-6-staging-deployed
+- Triggered: 2026-07-18T11:51:25Z
+
+**Deployment Progress:**
+- Build execution: PENDING (in queue)
+- Expected duration: 5-10 minutes once started
+- Destination: jpvbootcamp-preview app
+- URL: https://preview.jpvbootcamp.com
+- Schema: jpvbootcamp_staging (isolated from production)
+
+**Post-Deployment Verification Checklist:**
+- [ ] Workflow completes successfully
+- [ ] Docker image tags created in GHCR
+- [ ] App deployed to https://preview.jpvbootcamp.com
+- [ ] Database connected to jpvbootcamp_staging schema
+- [ ] Staging smoke tests pass against deployed URL
+- [ ] Member login/checkout flows working
+- [ ] Billing portal accessible
+- [ ] Course content accessible
+- [ ] Admin cockpit accessible
+- [ ] Email queue functional
+- [ ] Stripe webhooks receiving events
+
+**Next Actions (After Deployment Completes):**
+1. Monitor workflow run completion
+2. Verify app availability at https://preview.jpvbootcamp.com
+3. Run final integration smoke tests
+4. Confirm schema isolation (jpvbootcamp_staging, not jpvbootcamp)
+5. Obtain operator sign-offs (database owner, rollback owner)
+6. Document deployment ID and URL in handoff
+7. Proceed to formal go/no-go evaluation
 
 ## 2026-07-17 Wave 1 packet update (archived)
 
