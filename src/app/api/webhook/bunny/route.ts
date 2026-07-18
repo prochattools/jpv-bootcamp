@@ -39,13 +39,31 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 		// Verify HMAC-SHA256 signature with timing-safe comparison
 		const expectedSignature = createHmac('sha256', secret).update(rawBody).digest('hex')
 
-		// Timing-safe comparison prevents signature-timing attacks
-		const signatureBuffer = Buffer.from(signature)
-		const expectedBuffer = Buffer.from(expectedSignature)
+		// Normalize both signatures to hex strings (same encoding) before comparison
+		const signatureNorm = String(signature).toLowerCase()
+		const expectedNorm = String(expectedSignature).toLowerCase()
 
-		if (!timingSafeEqual(signatureBuffer, expectedBuffer)) {
-			console.warn('Bunny webhook signature verification failed')
+		// Reject if lengths differ (prevents timing-safe comparison crash)
+		if (signatureNorm.length !== expectedNorm.length) {
+			console.warn('Bunny webhook signature length mismatch', {
+				received: signatureNorm.length,
+				expected: expectedNorm.length,
+			})
 			return NextResponse.json({ error: 'Signature verification failed' }, { status: 403 })
+		}
+
+		// Timing-safe comparison prevents signature-timing attacks
+		try {
+			const signatureBuffer = Buffer.from(signatureNorm, 'utf8')
+			const expectedBuffer = Buffer.from(expectedNorm, 'utf8')
+
+			if (!timingSafeEqual(signatureBuffer, expectedBuffer)) {
+				console.warn('Bunny webhook signature verification failed')
+				return NextResponse.json({ error: 'Signature verification failed' }, { status: 403 })
+			}
+		} catch (err) {
+			console.error('HMAC comparison error:', err)
+			return NextResponse.json({ error: 'Signature verification error' }, { status: 400 })
 		}
 
 		// Parse webhook payload
@@ -119,8 +137,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 	} catch (error) {
 		console.error('Bunny webhook error:', error)
 
-		// Always return 200 to prevent webhook retries
-		// Actual errors should be logged and alerted separately
-		return NextResponse.json({ ok: false }, { status: 200 })
+		// Return 500 for internal errors (allows Bunny to retry)
+		// Parse errors, auth failures return 400/403 (no retry)
+		const isRetryable = !(error instanceof SyntaxError)
+		const status = isRetryable ? 500 : 400
+
+		return NextResponse.json(
+			{ ok: false, error: String(error) },
+			{ status }
+		)
 	}
 }
