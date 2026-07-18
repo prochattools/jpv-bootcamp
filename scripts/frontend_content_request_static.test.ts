@@ -26,7 +26,7 @@ function main(): void {
   mustInclude(request, '23 July 2026', requestPath)
   mustInclude(request, '24 July 2026', requestPath)
   mustInclude(request, '£80', requestPath)
-  mustInclude(request, '£880', requestPath)
+  mustInclude(request, '£800', requestPath)
   mustInclude(request, 'support/pay-it-forward', requestPath)
   mustInclude(request, 'Front-end approval does **not** approve migrations', requestPath)
 
@@ -38,7 +38,7 @@ function main(): void {
   mustInclude(tracker, 'Hero subheading', trackerPath)
   mustInclude(tracker, 'Membership short description', trackerPath)
   mustInclude(tracker, '£80/month wording', trackerPath)
-  mustInclude(tracker, '£880 annual wording', trackerPath)
+  mustInclude(tracker, '£800 annual wording', trackerPath)
   mustInclude(tracker, 'Support/pay-it-forward wording', trackerPath)
   mustInclude(tracker, 'Sponsor/pay-it-forward CTA', trackerPath)
   mustInclude(tracker, 'FAQ answers', trackerPath)

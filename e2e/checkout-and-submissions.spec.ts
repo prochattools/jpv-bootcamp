@@ -7,7 +7,7 @@ import {
 } from './fixtures/launchFixtures'
 
 test.describe('checkout start and guarded submission safety', () => {
-  test('authenticated Pro billing start uses only supported monthly and annual options', async ({ page }) => {
+  test('authenticated membership billing start uses only supported monthly and annual options', async ({ page }) => {
     const checkoutRequests = await mockCheckoutProvider(page)
     await mockAuthenticatedPortal(page)
     await page.goto('/portal/billing')
@@ -94,11 +94,11 @@ test.describe('checkout start and guarded submission safety', () => {
     await assertNoHorizontalOverflow(page)
   })
 
-  test('Free-access submission surface stays preview-only and never grants access automatically', async ({ page }) => {
+  test('pay-it-forward submission surface stays preview-only and never grants access automatically', async ({ page }) => {
     await mockAuthenticatedPortal(page)
     await page.goto('/portal/support')
 
-    await expect(page.getByRole('heading', { name: 'Support and Free access' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Support and pay-it-forward access' })).toBeVisible()
     await expect(page.getByText(/do not submit, create records, send notifications, generate references, or grant access/i)).toBeVisible()
     await expect(page.getByRole('button', { name: 'Application unavailable in preview' })).toBeDisabled()
     await expect(page.locator('body')).not.toContainText(/membership active|access granted|approved automatically/i)

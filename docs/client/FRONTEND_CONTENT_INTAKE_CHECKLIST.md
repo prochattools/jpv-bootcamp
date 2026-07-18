@@ -34,7 +34,7 @@ Client must provide final approval or explicit placeholder approval for:
 - [ ] **Hero headline** — Final text or approval to use placeholder ("Train for Property Success with JPV")
 - [ ] **Short membership description** — Final text (e.g., "One paid membership")
 - [ ] **£80 monthly wording** — Final text or approval (current: "Monthly payments with a 12-month commitment")
-- [ ] **£880 annual wording** — Final text or approval (current: "Annual upfront payment" with discount)
+- [ ] **£800 annual wording** — Final text or approval (current: "Annual upfront payment" with discount)
 - [ ] **Support/pay-it-forward wording** — Final text for Free tier and support page
 - [ ] **Testimonials / proof / trust items** — Client assets, if any (optional)
 - [ ] **FAQ answers** — Final client copy or approval of placeholder FAQ
@@ -55,7 +55,7 @@ Confirm the current branch source matches v3.4 requirements:
 - [ ] Pricing section displays:
   - [ ] Free tier (controlled non-paid access for approved support / pay-it-forward)
   - [ ] Pro tier (single paid membership)
-  - [ ] Price labels: "£80/mo or £880/yr" are accurate
+  - [ ] Price labels: "£80/mo or £800/yr" are accurate
 - [ ] Membership description is clear and updated with client copy (if provided)
 - [ ] Monthly checkout CTA visible and active
 - [ ] Annual checkout CTA linked or accessible (if payment option is offered)

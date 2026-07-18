@@ -97,7 +97,7 @@ function testProgrammeRedirectExists(): void {
 function testPortalProgrammeRouteContainsProCta(): void {
   const content = readFileSync('src/app/(frontend)/portal/programme/page.tsx', 'utf8')
   assert.match(content, /href="\/portal\/billing"/, 'portal programme page must link to /portal/billing')
-  assert.match(content, /Pro membership/i, 'portal programme page must mention Pro membership')
+  assert.match(content, /JPV Bootcamp Membership/i, 'portal programme page must mention JPV Bootcamp Membership')
   assert.doesNotMatch(content, /href="\/upgrade"/, 'portal programme page must not link members to /upgrade')
   const removedRoot = `/${'learn'}`
   assert.equal(content.includes(removedRoot), false, 'portal programme page must not mention the removed member namespace')

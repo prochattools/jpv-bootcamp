@@ -29,10 +29,10 @@ Related collection documents:
 The JPV Bootcamp platform launches with one public paid offering:
 
 - **Product:** JPV Bootcamp Pro membership
-- **Pricing:** £80/month with a 12-month commitment, or £880 upfront annually
+- **Pricing:** £80/month with a monthly billing, or £800 upfront annually
 - **Payment options:** Monthly (commitment-based) or annual (upfront discount)
-- **Free tier:** Controlled non-paid access for approved support/pay-it-forward recipients, staff/test access, or administrator-created access. Free is controlled non-paid access only, not a public free tier.
-- **Support/pay-it-forward:** Separate offering allowing members to fund controlled Free access for others
+- **Free tier:** Controlled non-paid access for approved support/pay-it-forward recipients, staff/test access, or administrator-created access. Voucher and pay-it-forward use the same membership access only, not a public free tier.
+- **Support/pay-it-forward:** Separate offering allowing members to fund voucher-funded or pay-it-forward-funded membership for others
 
 ---
 
@@ -49,7 +49,7 @@ The table below lists all public-facing copy that requires client approval or re
 | **Primary membership CTA (annual)** | `src/components/portal/MemberCheckoutButtons.tsx` lines 15–17 | "Start Pro annual" (label); "Annual upfront payment." (description) | **REVIEW for approval** — matches current spec | Yes / No | Confirm annual discount and copy is final. Example: "Annual upfront payment — save £80" if discount applies. |
 | **Membership tier label** | Page titles, sections | "Pro" | **REVIEW** — single paid tier | Yes / No | Confirm final term for paid tier is "Pro" or if client prefers "Premium," "Plus," "Membership," etc. |
 | **Free tier label** | Section headings, feature gates | "Free" (controlled non-paid access only) | **REVIEW** — not a public free tier | Yes / No | Confirm language is clear that Free is controlled access only, not a public signup tier. |
-| **Support / pay-it-forward explanation** | `src/components/sponsored-pay-it-forward.tsx` lines 67–74 | "Some members choose to fund controlled Free access for someone who can't pay yet." | **REVIEW for approval** | Yes / No | Finalize pay-it-forward member value proposition. Example: "Sponsor Free access for someone who wants to join but can't afford membership yet." |
+| **Support / pay-it-forward explanation** | `src/components/sponsored-pay-it-forward.tsx` lines 67–74 | "Some members choose to fund voucher-funded or pay-it-forward-funded membership for someone who can't pay yet." | **REVIEW for approval** | Yes / No | Finalize pay-it-forward member value proposition. Example: "Sponsor Free access for someone who wants to join but can't afford membership yet." |
 | **Support / pay-it-forward CTA** | `src/components/sponsored-pay-it-forward.tsx` line 83 | "Sponsor Free access" (button label) | **REVIEW for approval** | Yes / No | Confirm CTA copy. Alternatives: "Sponsor a member," "Pay it forward," "Fund Free access," etc. |
 | **Programme overview headline** | `src/components/Comparison.tsx` line 110 | "Ship SaaS Fast" (placeholder — unrelated to client content) | **REPLACE** with JPV Bootcamp course/programme headline | — | Client must provide course overview headline. Example: "Complete 8-week Property Investment Course" or equivalent. |
 | **Programme overview description** | `src/components/Comparison.tsx` lines 111–112 | "No need to write the SaaS wrapper code anymore..." (placeholder SaaS language) | **REPLACE** with JPV Bootcamp course value proposition | — | Remove SaaS template language; replace with course learning outcomes and member benefits. |
@@ -83,7 +83,7 @@ Client must provide the following by **Wednesday, 15 July 2026** for front-end i
 3. **Membership tier terminology & pricing**
    - [ ] Confirm "Pro" is the final paid tier label, or provide alternative
    - [ ] Confirm "Free" terminology for controlled non-paid access
-   - [ ] Confirm £80/month and £880/year pricing or provide updated figures
+   - [ ] Confirm £80/month and £800/year pricing or provide updated figures
    - [ ] Confirm monthly commitment language or provide alternative
 
 4. **Support / pay-it-forward member value proposition**
@@ -156,7 +156,7 @@ Once client content is provided and copy is approved:
 - [ ] Landing page loads without errors in browser (desktop)
 - [ ] Landing page loads without errors in browser (mobile / tablet)
 - [ ] Hero headline matches approved copy
-- [ ] Membership pricing is displayed correctly (£80/mo or £880/yr)
+- [ ] Membership pricing is displayed correctly (£80/mo or £800/yr)
 - [ ] All CTAs route to correct destinations
 - [ ] Support / pay-it-forward link is visible and functional
 - [ ] FAQ section displays approved answers (or placeholder if approved)

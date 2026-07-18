@@ -37,7 +37,7 @@ A concise reply is enough. You do not need to rewrite anything that you are happ
 - Hero subheading.
 - Short membership description.
 - Exact **£80/month** wording, including the 12-month commitment wording.
-- Exact **£880 annual** wording for the upfront 12-month payment.
+- Exact **£800 annual** wording for the upfront 12-month payment.
 - Support/pay-it-forward explanation.
 - Sponsor/pay-it-forward call-to-action wording.
 - FAQ answers.

@@ -60,8 +60,8 @@ export default async function PortalProgrammePage() {
         <h1 className="mt-3 text-3xl font-semibold tracking-tight">8-Week Programme</h1>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-600">
           Weekly modules covering strategy, analysis, funding, deals, and portfolio growth for
-          JPV Bootcamp Pro membership holders. Content is representative and does not reflect
-          final client-approved copy.
+          active JPV Bootcamp Membership holders. Content is representative and does not
+          reflect final client-approved copy.
         </p>
         <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
           Preview only — programme content is placeholder until a complete approved content package

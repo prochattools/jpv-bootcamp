@@ -15,7 +15,7 @@ function testPortalHomeRouteExists(): void {
 
 function testModelReturnsExpectedCardCount(): void {
   const cards = getDashboardCards()
-  assert.equal(cards.length, 5, 'model must have exactly 5 cards (pro-membership, programme, community, support, partner-referral)')
+  assert.equal(cards.length, 5, 'model must have exactly 5 cards (membership, programme, community, support, partner-referral)')
 }
 
 function testAllCardsHaveRequiredFields(): void {
@@ -27,18 +27,18 @@ function testAllCardsHaveRequiredFields(): void {
     assert.ok(typeof card.href === 'string' && card.href.length > 0, `card ${card.id} must have href`)
     assert.ok(typeof card.ctaLabel === 'string' && card.ctaLabel.length > 0, `card ${card.id} must have ctaLabel`)
     assert.ok(
-      card.badge === undefined || ['pro', 'free', 'support', 'info'].includes(card.badge),
+      card.badge === undefined || ['membership', 'support', 'info'].includes(card.badge),
       `card ${card.id} must have valid badge`,
     )
   }
 }
 
-function testModelHasProMembershipCard(): void {
+function testModelHasMembershipCard(): void {
   const cards = getDashboardCards()
-  const proCard = cards.find((card) => card.id === 'pro-membership')
-  assert.ok(proCard, 'model must have pro-membership card')
-  assert.equal(proCard?.href, '/portal/billing')
-  assert.equal(proCard?.badge, 'pro')
+  const membershipCard = cards.find((card) => card.id === 'jpv-membership')
+  assert.ok(membershipCard, 'model must have jpv-membership card')
+  assert.equal(membershipCard?.href, '/portal/billing')
+  assert.equal(membershipCard?.badge, 'membership')
 }
 
 function testModelHasProgrammeCard(): void {
@@ -64,13 +64,13 @@ function testModelHasPartnerReferralCard(): void {
 
 function testAccessSummaryHasCorrectLabels(): void {
   const model = getDashboardModel()
-  assert.match(model.accessSummary.proDescription, /single paid.*JPV Bootcamp membership|Pro.*full course access/i)
+  assert.match(model.accessSummary.proDescription, /JPV Bootcamp Membership.*single access model/i)
   assert.equal(model.accessSummary.isPlaceholder, true)
 }
 
 function testAccessSummaryFreeDescriptionIsCorrect(): void {
   const model = getDashboardModel()
-  assert.match(model.accessSummary.freeDescription, /controlled non-paid access/i)
+  assert.match(model.accessSummary.freeDescription, /Voucher and pay-it-forward seats use the same membership access model/i)
 }
 
 function testAllCardIdsAreUnique(): void {
@@ -137,7 +137,7 @@ try {
   testPortalHomeRouteExists()
   testModelReturnsExpectedCardCount()
   testAllCardsHaveRequiredFields()
-  testModelHasProMembershipCard()
+  testModelHasMembershipCard()
   testModelHasProgrammeCard()
   testModelHasSupportCard()
   testModelHasPartnerReferralCard()

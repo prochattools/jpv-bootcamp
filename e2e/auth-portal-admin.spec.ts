@@ -91,7 +91,7 @@ test.describe('authentication, portal, and administrator denial', () => {
     await expect(page.getByText('Manage your member profile.')).toBeVisible()
     await expect(page.getByRole('heading', { name: 'Security' })).toBeVisible()
     await expect(page.getByRole('heading', { name: 'Change email address' })).toBeVisible()
-    await expect(page.getByRole('heading', { name: 'Access plans' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Membership' })).toBeVisible()
     await expect(page.getByRole('heading', { name: 'Access groups' })).toBeVisible()
     await page.getByRole('textbox', { name: 'Display name' }).focus()
     await expect(page.getByRole('textbox', { name: 'Display name' })).toBeFocused()

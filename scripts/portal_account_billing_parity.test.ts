@@ -117,7 +117,7 @@ function testBillingPrecedenceRules(): void {
   const activePresentation = resolvePortalBillingPresentation(activeStatus, mirrorOverview)
   assert.equal(activePresentation.displayPlanLabel, 'Pro')
   assert.equal(activePresentation.displaySubscriptionStatus, 'active')
-  assert.equal(activePresentation.billingCadenceLabel, 'Monthly commitment')
+  assert.equal(activePresentation.billingCadenceLabel, 'Monthly')
   assert.equal(activePresentation.commitmentStatusLabel, 'Active')
   assert.equal(activePresentation.allowCheckout, false)
   assert.equal(activePresentation.projectionSyncState, null)
@@ -134,7 +134,7 @@ function testBillingPrecedenceRules(): void {
       currentPeriodEnd: '2026-09-01T00:00:00.000Z',
     }),
   )
-  assert.equal(fallbackPresentation.displayPlanLabel, 'Pro')
+  assert.equal(fallbackPresentation.displayPlanLabel, 'JPV Bootcamp Membership')
   assert.equal(fallbackPresentation.displaySubscriptionStatus, 'active')
   assert.equal(fallbackPresentation.allowCheckout, false)
   assert.equal(fallbackPresentation.projectionSyncState, 'status_missing')

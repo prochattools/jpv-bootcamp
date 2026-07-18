@@ -180,6 +180,20 @@ Do not:
 
 **Active packet:** P0-A — Single-membership billing and entitlement foundation.
 
+## Wave 3 course platform checkpoint
+
+Wave 3 is recorded as a repository-only implementation checkpoint on branch `feature/course-branding-and-preview` from starting HEAD `f267b61` and committed as `fc031ff`.
+
+- `COURSE-01`: implemented. Course persistence, ordering, enrolment, progress, completion, next-lesson, administrator visibility, and safe member projections are covered by `src/collections/courses/CourseRuntime.ts`, `src/lib/payloadCourse/accessService.ts`, `src/lib/entitlements/membershipEntitlement.ts`, `src/lib/entitlements/evaluateAccess.ts`, `scripts/payload_course_access_service.test.ts`, and `scripts/payload_entitlement_evaluator.test.ts`.
+- `COURSE-02`: implemented. Bunny Stream protected-course-media domain and deterministic in-memory adapter live in `src/lib/payloadCourse/bunnyProtectedMedia.ts`, with protected file/resource delivery still handled by `src/lib/payloadCourse/lessonResources.ts` and `src/lib/payloadCourse/lessonResourceDelivery.ts`.
+- `LIVEKIT-01`: deferred as `LIVEKIT_SCOPE_CLARIFICATION_REQUIRED`. Repository evidence places LiveKit in `docs/LIVEKIT_PAYLOADCMS_GROUP_CALLS_PLAN.md` and `docs/PAYLOAD_INTEGRATION_PLAN.md` as future Phase 11 / controlled follow-up scope, not current core launch scope.
+- `LIVEKIT-02` and `LIVEKIT-03`: not applicable until LIVEKIT-01 establishes a current launch realtime requirement.
+- `FRONTEND-01`, `FRONTEND-02`, `FRONTEND-03`, `QA-03`, and `QA-04`: implemented through existing portal, checkout, account/billing, course, and browser surfaces, with stale Pro/Free launch fixture copy corrected to single JPV Bootcamp Membership, voucher-funded, and pay-it-forward language.
+- New validation command: `pnpm course:integration`.
+- Focused validation evidence: `pnpm course:integration`, `pnpm exec tsx scripts/portal_account_billing_parity.test.ts`, `pnpm exec tsx scripts/browser_e2e_integrity.test.ts`, `pnpm exec tsc --noEmit --pretty false --incremental false`, and `git diff --check`.
+- No migrations, generated Payload type regeneration, live Stripe, live Bunny, live LiveKit, live email, deployment, push, or main-branch work were performed.
+- Protected paths remain excluded: `src/payload-types.ts`, `docs/client/JPV_Bootcamp_Platform_Expansion_Go_Live_Plan_v3_7.docx`, and `docs/client/fixtures/`.
+
 Completed P0-A checkpoints:
 
 - member Checkout accepts only the `membership` plan;

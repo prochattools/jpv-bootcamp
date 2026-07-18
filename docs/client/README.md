@@ -78,7 +78,7 @@ Before a client or internal roadmap update is considered clean:
 
 - public offer uses Free and Pro only;
 - Pro is the only paid subscription;
-- support/pay-it-forward is controlled Free access, not a third tier;
+- support/pay-it-forward is voucher-funded or pay-it-forward-funded membership, not a third tier;
 - removed paid-tier and external-integration language does not appear in active docs, source, scripts, schema, or public copy, except where a data-preserving rename migration must reference old database column names;
 - public launch page, billing automation, representative 8-week course, partner tracking, community previews, data reconciliation, and go-live approval are represented;
 - static prototypes are not counted as operational deliverables until persistence, authorization, error handling, and tests pass;

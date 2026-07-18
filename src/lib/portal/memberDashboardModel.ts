@@ -4,7 +4,7 @@ export type DashboardCard = {
   summary: string
   href: string
   ctaLabel: string
-  badge?: 'pro' | 'free' | 'support' | 'info'
+  badge?: 'membership' | 'support' | 'info'
 }
 
 export type DashboardAccessSummary = {
@@ -20,12 +20,12 @@ export type DashboardModel = {
 
 const CARDS: DashboardCard[] = [
   {
-    id: 'pro-membership',
-    title: 'Pro Membership',
-    summary: 'Full course access, mentorship sessions, protected resources, and community. £80/month or £880/year.',
+    id: 'jpv-membership',
+    title: 'JPV Bootcamp Membership',
+    summary: 'Full course access, mentorship sessions, protected resources, and community. £80/month or £800/year.',
     href: '/portal/billing',
-    ctaLabel: 'View Pro',
-    badge: 'pro',
+    ctaLabel: 'View membership',
+    badge: 'membership',
   },
   {
     id: 'programme',
@@ -38,7 +38,7 @@ const CARDS: DashboardCard[] = [
   {
     id: 'community',
     title: 'Community',
-    summary: 'Preview of community spaces, forums, and private rooms. Full access requires Pro membership.',
+    summary: 'Preview of community spaces, forums, and private rooms. Full access requires active JPV Bootcamp Membership.',
     href: '/portal/community',
     ctaLabel: 'View community preview',
     badge: 'info',
@@ -46,7 +46,7 @@ const CARDS: DashboardCard[] = [
   {
     id: 'support',
     title: 'Support & Pay It Forward',
-    summary: 'Sponsor a Free access seat or apply for controlled Free access after review.',
+    summary: 'Sponsor a voucher-funded membership seat or request pay-it-forward support after review.',
     href: '/portal/support',
     ctaLabel: 'Learn more',
     badge: 'support',
@@ -69,8 +69,8 @@ export function getDashboardModel(): DashboardModel {
   return {
     cards: CARDS,
     accessSummary: {
-      proDescription: 'Pro is the single paid JPV Bootcamp membership with full course access, mentorship, community, and billing self-service.',
-      freeDescription: 'Free is controlled non-paid access only. Approved applicants receive Free access after manual review through support, pay-it-forward, or administrator action.',
+      proDescription: 'JPV Bootcamp Membership is the single access model with full course access, mentorship, community, and billing self-service.',
+      freeDescription: 'Voucher and pay-it-forward seats use the same membership access model after approval and webhook reconciliation.',
       isPlaceholder: true,
     },
   }

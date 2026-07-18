@@ -27,7 +27,7 @@ Allowed status values: **Pending / Approved / Replacement received**.
 | Hero subheading | Current landing-page/front-end placeholder or existing subheading | Approve current wording or provide final subheading | Pending | Client | 15 July 2026 | Should explain the revised JPV Bootcamp offer clearly. |
 | Membership short description | Current membership/Pro description | Approve current wording or provide replacement | Pending | Client | 15 July 2026 | Must describe one public paid membership. |
 | £80/month wording | Current monthly pricing wording | Approve exact £80/month and 12-month commitment wording | Pending | Client | 15 July 2026 | Must match public pricing and billing terms. |
-| £880 annual wording | Current annual pricing wording | Approve exact £880 annual upfront wording | Pending | Client | 15 July 2026 | Must match public pricing and billing terms. |
+| £800 annual wording | Current annual pricing wording | Approve exact £800 annual upfront wording | Pending | Client | 15 July 2026 | Must match public pricing and billing terms. |
 | Support/pay-it-forward wording | Current support/pay-it-forward explanation | Approve current wording or provide replacement | Pending | Client | 15 July 2026 | Must keep Free as controlled non-paid access. |
 | Sponsor/pay-it-forward CTA | Current sponsor/support CTA wording | Approve current CTA or provide replacement | Pending | Client | 15 July 2026 | Should not imply a public free tier. |
 | FAQ answers | Current FAQ placeholders or draft answers | Approve current FAQ or provide final answers | Pending | Client | 15 July 2026 | Include pricing, access, support, and contact answers. |

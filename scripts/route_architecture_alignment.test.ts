@@ -193,7 +193,7 @@ function testSupportAndPartnerReferralRemainPublicIntake(): void {
   const supportPage = readFileSync('src/app/(frontend)/portal/support/page.tsx', 'utf8')
   assert.ok(!supportPage.includes('requirePortalMember'), '/portal/support must remain public intake')
   assert.ok(supportPage.includes('Support') || supportPage.includes('support'), '/portal/support must mention support')
-  assert.ok(supportPage.includes('Free access'), '/portal/support must mention Free access')
+  assert.ok(supportPage.includes('pay-it-forward-funded'), '/portal/support must mention pay-it-forward-funded membership')
 
   // Partner referral page should be public and clearly marked as intake form
   const partnerPage = readFileSync('src/app/(frontend)/portal/partner-referral/page.tsx', 'utf8')

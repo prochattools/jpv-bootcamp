@@ -35,9 +35,9 @@ function parseDate(value: string | null | undefined): Date | null {
 function billingCadenceLabel(value: string | null): string | null {
   switch (value) {
     case 'monthly_commitment':
-      return 'Monthly commitment'
+      return 'Monthly'
     case 'annual':
-      return 'Annual upfront'
+      return 'Annual'
     case 'monthly':
       return 'Monthly'
     default:
@@ -70,8 +70,8 @@ export function resolvePortalBillingPresentation(
 
   const overviewPlanLabel =
     overview.hasPaidSubscription && overview.plan !== 'free'
-      ? titleCase(overview.plan) ?? 'Paid subscription'
-      : 'Free'
+      ? 'JPV Bootcamp Membership'
+      : 'No active membership'
 
   const projectionSyncState =
     !billingStatus.hasBillingAccount && (overview.billingAccount || overview.hasPaidSubscription)

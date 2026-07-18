@@ -25,9 +25,9 @@ async function validateCopyApprovalPacket() {
 		{ text: '23 July 2026', desc: 'Handover buffer date' },
 		{ text: '24 July 2026', desc: 'Client finished-by date' },
 		{ text: '£80', desc: 'Monthly pricing' },
-		{ text: '£880', desc: 'Annual pricing' },
+		{ text: '£800', desc: 'Annual pricing' },
 		{ text: 'support/pay-it-forward', desc: 'Pay-it-forward terminology' },
-		{ text: 'Free is controlled non-paid access', desc: 'Free tier description' },
+		{ text: 'Voucher and pay-it-forward use the same membership access', desc: 'Voucher and pay-it-forward access description' },
 		{ text: 'Migrations applied: No', desc: 'Migrations not applied' },
 		{ text: 'does not authorize migration execution', desc: 'Migration authorization statement' },
 	]

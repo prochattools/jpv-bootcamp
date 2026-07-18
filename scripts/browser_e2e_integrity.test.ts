@@ -59,8 +59,12 @@ function testRequiredJourneyCoverage(): void {
 
   const requiredEvidence = [
     '£80/month',
+    '£800/year',
     'No minimum commitment',
+    'JPV Bootcamp Membership',
+    'No active membership',
     '/portal/billing',
+    '/portal/courses',
     '/privacy-policy',
     '/sitemap.xml',
     'definitely-not-a-launch-route',
@@ -84,6 +88,7 @@ function testRequiredJourneyCoverage(): void {
     'Submission unavailable in preview',
     'Application unavailable in preview',
     'invalid_checkout_request',
+    'Pay-it-forward membership application preview',
   ]
   for (const evidence of requiredEvidence) {
     assert.ok(browserSource.includes(evidence), `missing browser coverage evidence: ${evidence}`)

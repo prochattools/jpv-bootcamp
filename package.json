@@ -45,6 +45,7 @@
     "test:launch-critical-test-manifest": "tsx scripts/release/launchCriticalTestManifest.test.ts",
     "release:two-day-packet-registry": "tsx scripts/release/twoDayPacketRegistry.ts",
     "test:two-day-packet-registry": "tsx scripts/release/twoDayPacketRegistry.test.ts",
+    "course:integration": "tsx scripts/payload_entitlement_evaluator.test.ts && tsx scripts/payload_course_access_service.test.ts && tsx scripts/payload_lesson_resource_delivery.test.ts && tsx scripts/bunny_protected_media.test.ts && tsx scripts/course_programme_mvp.test.ts",
     "schema:membership-support:isolation": "tsx scripts/release/membershipSupportSchemaIsolation.ts",
     "test:membership-support-schema-isolation": "tsx scripts/release/membershipSupportSchemaIsolation.test.ts",
     "test:membership-support-schema-contract": "tsx scripts/membership_support_schema_contract.test.ts",
