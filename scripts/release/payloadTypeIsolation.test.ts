@@ -8,7 +8,7 @@ interface TestResult {
   errors: string[]
 }
 
-function assert(condition: boolean, message: string) {
+function assert(condition: boolean, message: string): void {
   if (!condition) {
     throw new Error(`Assertion failed: ${message}`)
   }
@@ -159,7 +159,7 @@ function testCleanupAndAbort(): void {
 }
 
 function testEvidenceJSON(): void {
-  const state = {
+  const state: { protectedFilePath: string; baselineChecksum: string; canAutoMerge: boolean; unrelatedDeltaFound: boolean; blockerReason: string | null; timestamp: string } = {
     protectedFilePath: 'src/payload-types.ts',
     baselineChecksum: 'abc123',
     canAutoMerge: false,
@@ -219,7 +219,7 @@ function testMembershipPatternMatching(): void {
 }
 
 // Test runner
-async function runTests(): Promise<TestResult> {
+export async function runTests(): Promise<TestResult> {
   const result: TestResult = { passed: 0, failed: 0, errors: [] }
 
   const tests = [

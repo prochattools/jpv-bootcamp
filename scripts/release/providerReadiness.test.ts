@@ -1,33 +1,33 @@
-function assert(c: boolean, m: string) { if (!c) throw new Error(m) }
+function assert(c: boolean, m: string): void { if (!c) throw new Error(m) }
 
-function testStripeTestModeDetection(): void {
+export function testStripeTestModeDetection(): void {
   assert('sk_test_abc'.startsWith('sk_test_'), 'Should detect test mode')
 }
-function testBunnyTestModeDetection(): void {
+export function testBunnyTestModeDetection(): void {
   const key = 'test_key'
   assert(!key.includes('prod'), 'Should detect test mode')
 }
-function testPlaceholderDetection(): void {
+export function testPlaceholderDetection(): void {
   assert('sk_test_placeholder' === 'sk_test_placeholder', 'Should detect placeholder')
 }
-function testMissingSettingsDetection(): void {
-  const missing = '' ? [] : ['STRIPE_SECRET_KEY']
+export function testMissingSettingsDetection(): void {
+  const missing = process.env.STRIPE_SECRET_KEY ? [] : ['STRIPE_SECRET_KEY']
   assert(missing.length === 1, 'Should detect missing setting')
 }
-function testRedactionOfSecrets(): void {
+export function testRedactionOfSecrets(): void {
   const redacted = { apiVersion: '2024-04-10', mode: 'test' }
   assert(!JSON.stringify(redacted).includes('sk_'), 'Should redact secrets')
 }
-function testOverallReadinessCalc(): void {
+export function testOverallReadinessCalc(): void {
   const ready = [
     { isConfigured: true, hasPlaceholders: false },
     { isConfigured: false, hasPlaceholders: true }
   ]
-  const overall = ready.every(p => p.isConfigured && !p.hasPlaceholders)
+  const overall = ready.every((p: any) => p.isConfigured && !p.hasPlaceholders)
   assert(!overall, 'Should calculate false when any provider unready')
 }
 
-async function run() {
+export async function run() {
   const tests = [
     testStripeTestModeDetection, testBunnyTestModeDetection, testPlaceholderDetection,
     testMissingSettingsDetection, testRedactionOfSecrets, testOverallReadinessCalc

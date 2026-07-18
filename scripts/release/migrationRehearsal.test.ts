@@ -2,7 +2,7 @@
  * Tests for migration rehearsal engine
  */
 
-function assert(condition: boolean, message: string) {
+export function assert(condition: boolean, message: string): void {
   if (!condition) throw new Error(`Assertion failed: ${message}`)
 }
 
@@ -51,7 +51,7 @@ function testIdempotencyOnRetry(): void {
 }
 
 function testRehearsalReportStructure(): void {
-  const report = {
+  const report: { timestamp: string; cohortSize: number; simulations: unknown[]; failures: number } = {
     timestamp: new Date().toISOString(),
     cohortSize: 50,
     simulations: [],
@@ -64,8 +64,8 @@ function testRehearsalReportStructure(): void {
   assert(report.failures >= 0, 'Should have failure count')
 }
 
-async function runTests() {
-  const tests = [
+export async function runTests() {
+  const tests: Array<{ name: string; fn: () => void }> = [
     { name: 'invoice preview calculation', fn: testInvoicePreviewChargeCalculation },
     { name: 'credit or charge classification', fn: testCreditOrChargeClassification },
     { name: 'cohort limit enforcement', fn: testCohortLimitEnforcement },

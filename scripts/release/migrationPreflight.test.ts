@@ -8,7 +8,7 @@ interface TestResult {
   errors: string[]
 }
 
-function assert(condition: boolean, message: string) {
+function assert(condition: boolean, message: string): void {
   if (!condition) {
     throw new Error(`Assertion failed: ${message}`)
   }
@@ -193,7 +193,7 @@ function testErrorHandlingUnexpectedHead(): void {
 }
 
 // Test runner
-async function runTests(): Promise<TestResult> {
+export async function runTests(): Promise<TestResult> {
   const result: TestResult = { passed: 0, failed: 0, errors: [] }
 
   const tests = [

@@ -92,7 +92,7 @@ function planIsolatedWorktree(): string {
   return tmpDir
 }
 
-async function runPreflight(): Promise<PreflightState> {
+export async function runPreflight(): Promise<PreflightState> {
   const branch = getCurrentBranch()
   const currentHead = getCurrentHead()
   const timestamp = new Date().toISOString()

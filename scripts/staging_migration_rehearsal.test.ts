@@ -43,7 +43,7 @@ async function main(): Promise<void> {
     mode: 'static',
     now: new Date('2026-07-14T20:00:00.000Z'),
     preflightRunner() {},
-    log(message) {
+    log(message: string) {
       logs.push(message)
     },
   })
@@ -51,8 +51,8 @@ async function main(): Promise<void> {
   assert.equal(result.supportRequestsMigrationExecuted, false)
   assert.equal(result.finalStatus, 'STATIC REHEARSAL READY')
   assert.equal(result.commandsExecuted.includes('pnpm staging:migration-preflight'), true)
-  assert.equal(result.steps.map((step) => step.id).join(','), 'preflight,checksum,baseline-inventory,apply,post-apply,rollback,teardown')
-  assert.equal(result.steps.filter((step) => step.status === 'planned').map((step) => step.id).join(','), 'baseline-inventory,apply,post-apply,rollback,teardown')
+  assert.equal(result.steps.map((step: any) => step.id).join(','), 'preflight,checksum,baseline-inventory,apply,post-apply,rollback,teardown')
+  assert.equal(result.steps.filter((step: any) => step.status === 'planned').map((step: any) => step.id).join(','), 'baseline-inventory,apply,post-apply,rollback,teardown')
   assert.match(logs[0] ?? '', /STAGING MIGRATION REHEARSAL/)
   assert.match(logs[0] ?? '', /Final status: STATIC REHEARSAL READY/)
   assert.doesNotMatch(logs[0] ?? '', /postgresql:\/\//i)

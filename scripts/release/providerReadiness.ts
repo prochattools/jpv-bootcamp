@@ -59,14 +59,14 @@ function diagnoseEmail(): ProviderDiagnostic {
   }
 }
 
-async function main() {
+export async function main() {
   const report: ReadinessReport = {
     timestamp: new Date().toISOString(),
     providers: [diagnoseStripe(), diagnoseBunny(), diagnoseEmail()],
     overallReady: false
   }
 
-  report.overallReady = report.providers.every(p => p.isConfigured && !p.hasPlaceholders)
+  report.overallReady = report.providers.every((p: ProviderDiagnostic) => p.isConfigured && !p.hasPlaceholders)
 
   console.log(JSON.stringify(report, null, 2))
 }

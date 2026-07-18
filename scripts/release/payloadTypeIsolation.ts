@@ -118,7 +118,7 @@ function detectUnrelatedChanges(before: string, after: string): { unrelated: boo
   return { unrelated: unrelatedChanges.length > 0, changes: unrelatedChanges }
 }
 
-async function runTypeGenerationPreflight(): Promise<TypeGenerationState> {
+export async function runTypeGenerationPreflight(): Promise<TypeGenerationState> {
   const currentHead = getCurrentHead()
   const timestamp = new Date().toISOString()
 
