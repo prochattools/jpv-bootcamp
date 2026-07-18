@@ -73,11 +73,12 @@ test.describe('Staging Smoke Tests - Full Platform Flows', () => {
     await page.screenshot({ path: '404-page.png' })
   })
 
-  test('PUBLIC-005: Sitemap accessible and valid', async ({ page }) => {
-    const response = await page.goto(`${STAGING_URL}/sitemap.xml`)
-    expect(response?.status()).toBe(200)
+  test('PUBLIC-005: Sitemap accessible and valid', async ({ page, context }) => {
+    // Use context.request to fetch XML directly, avoiding browser XML viewer
+    const response = await context.request.get(`${STAGING_URL}/sitemap.xml`)
+    expect(response.status()).toBe(200)
 
-    const content = await page.content()
+    const content = await response.text()
     expect(content).toContain('<?xml')
     expect(content).toContain('<url>')
     expect(content).not.toContain('/admin')
