@@ -9,6 +9,7 @@ import * as migration_20260702_001500_member_account_action_purposes from './202
 import * as migration_20260703_000000_partner_affiliate_operations from './20260703_000000_partner_affiliate_operations';
 import * as migration_20260704_090000_partner_schema_reconciliation from './20260704_090000_partner_schema_reconciliation';
 import * as migration_20260707_130000_remove_table_plan_from_payload_enums from './20260707_130000_remove_table_plan_from_payload_enums';
+import * as migration_20260718_103726_membership_support_schema from './20260718_103726_membership_support_schema';
 
 export const migrations = [
   {
@@ -65,5 +66,10 @@ export const migrations = [
     up: migration_20260707_130000_remove_table_plan_from_payload_enums.up,
     down: migration_20260707_130000_remove_table_plan_from_payload_enums.down,
     name: '20260707_130000_remove_table_plan_from_payload_enums',
+  },
+  {
+    up: migration_20260718_103726_membership_support_schema.up,
+    down: migration_20260718_103726_membership_support_schema.down,
+    name: '20260718_103726_membership_support_schema',
   },
 ];

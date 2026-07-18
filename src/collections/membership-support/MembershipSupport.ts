@@ -41,7 +41,7 @@ export const PayloadMembershipSupportRecords: CollectionConfig = {
   admin: {
     group: membershipSupportGroup,
     useAsTitle: 'displayName',
-    defaultColumns: ['displayName', 'member', 'fundingSource', 'issuanceState', 'reconciliationState', 'updatedAt'],
+    defaultColumns: ['displayName', 'member', 'fundingSourceType', 'issuanceState', 'reconciliationState', 'updatedAt'],
     description: 'Unified support record for vouchers, pay-it-forward, and membership reconciliation.',
   },
   access: membershipSupportAccess,
@@ -51,7 +51,7 @@ export const PayloadMembershipSupportRecords: CollectionConfig = {
       type: 'text',
       required: true,
       hooks: {
-        beforeValidate: [displayNameHookFromFields({ prefix: 'Membership support', fields: [{ name: 'memberEmail' }, { name: 'fundingSource' }] })],
+        beforeValidate: [displayNameHookFromFields({ prefix: 'Membership support', fields: [{ name: 'memberEmail' }, { name: 'fundingSourceType' }] })],
       },
     },
     memberRelationship({ required: true }),
@@ -65,7 +65,7 @@ export const PayloadMembershipSupportRecords: CollectionConfig = {
       },
     },
     {
-      name: 'fundingSource',
+      name: 'fundingSourceType',
       type: 'select',
       required: true,
       defaultValue: 'direct_payment',
