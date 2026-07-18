@@ -203,15 +203,11 @@ class JPVStripeSetup {
     console.log('⚙️ Creating portal configuration...')
     const config = await this.stripe.billingPortal.configurations.create({
       features: {
-        subscription_pause: {
-          enabled: true,
-        },
         subscription_update: {
           enabled: true,
           proration_behavior: 'create_prorations',
-        },
-        issue_credit_memo: {
-          enabled: true,
+          default_allowed_updates: ['price'],
+          products: undefined,
         },
         customer_update: {
           enabled: true,

@@ -339,4 +339,4 @@ if (require.main === module) {
   main()
 }
 
-export { StripeConfigStore }
+export type { StripeConfigStore }

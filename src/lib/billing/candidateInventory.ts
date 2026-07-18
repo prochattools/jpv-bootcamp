@@ -3,6 +3,7 @@ import type {
   StripeSubscriptionProjection,
   MigrationCandidateInput,
   MigrationCadence,
+  MigrationPreviewEvidence,
 } from '@/lib/billing/membershipMigrationPreview'
 
 export type CandidateInventoryBuilder = {
@@ -133,7 +134,7 @@ export const candidateInventory: CandidateInventoryBuilder = {
 
       return {
         stableCandidateId: `fixture_${email.split('@')[0]}`,
-        memberId: null,
+        memberId: null as string | null,
         normalizedEmail: email,
         stripeCustomerProjection: buildCustomerProjection({
           customerId: record.stripeCustomerId ?? null,
@@ -153,7 +154,7 @@ export const candidateInventory: CandidateInventoryBuilder = {
           paymentStatus: record.paymentStatus ?? null,
           disputeStatus: record.paymentDisputeStatus ?? null,
         }),
-        preview: null,
+        preview: null as MigrationPreviewEvidence | null,
       }
     })
   },

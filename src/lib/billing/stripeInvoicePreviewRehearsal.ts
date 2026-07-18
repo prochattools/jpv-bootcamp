@@ -123,7 +123,7 @@ export async function rehearseStripeInvoicePreviewsForCohort(
       // Call Stripe invoice preview (test mode)
       let invoice: Stripe.Invoice
       try {
-        invoice = await config.stripe.invoices.preview(previewRequest as Parameters<typeof config.stripe.invoices.preview>[0])
+        invoice = await (config.stripe.invoices as any).preview(previewRequest)
       } catch (e) {
         result.errors.push(`Stripe preview failed: ${e instanceof Error ? e.message : String(e)}`)
         errors.push({
