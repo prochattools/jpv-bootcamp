@@ -32,7 +32,6 @@ import { migrations } from './migrations'
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
 
-
 function getDbSchema(url: string | undefined): string {
   if (!url) return 'jpvbootcamp'
   try {
