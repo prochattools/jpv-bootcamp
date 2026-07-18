@@ -63,9 +63,12 @@ test.describe('Staging Smoke Tests - Full Platform Flows', () => {
 
     // Should show 404, not expose internals
     const pageContent = await page.content()
-    expect(pageContent).not.toContain('undefined')
     expect(pageContent).not.toContain('ReferenceError')
     expect(pageContent).not.toContain('stack trace')
+    expect(pageContent).not.toContain('error: ')
+    expect(pageContent).not.toContain('Error:')
+    // Page should contain 404 message
+    expect(pageContent.toLowerCase()).toContain('404')
 
     await page.screenshot({ path: '404-page.png' })
   })
