@@ -1,10 +1,6 @@
 name: Publish Preview Image
 
 on:
-  push:
-    branches:
-      - 'feature/**'
-      - 'pr/**'
   workflow_dispatch:
     inputs:
       commit_sha:
