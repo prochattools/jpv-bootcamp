@@ -1,4 +1,9 @@
-import type { CollectionConfig } from 'payload'
+import 'server-only'
+
+import type { CollectionConfig, Where } from 'payload'
+import { getPayload } from 'payload'
+import config from '@payload-config'
+import { generateLiveKitRoomName } from '@/lib/livekit-config'
 
 export const PayloadLiveSession: CollectionConfig = {
 	slug: 'live_sessions',
@@ -12,9 +17,17 @@ export const PayloadLiveSession: CollectionConfig = {
 		defaultColumns: ['title', 'status', 'scheduledAt', 'course', 'createdAt'],
 	},
 	access: {
-		read: ({ req }) => {
-			// Authenticated users can read sessions for their enrolled courses
-			return !!req.user
+		read: async ({ req }) => {
+			// Admins: can read all
+			if (req.user?.collection === 'payload_users') {
+				return true
+			}
+			// Members: can read sessions for courses they have active membership to
+			// For now, return true for authenticated members; in production, add entitlement check
+			if (req.user?.collection === 'payload_members') {
+				return true
+			}
+			return false
 		},
 		create: ({ req }) => {
 			// Only admins can create
@@ -28,6 +41,46 @@ export const PayloadLiveSession: CollectionConfig = {
 			// Only admins can delete
 			return req.user?.collection === 'payload_users'
 		},
+	},
+	hooks: {
+		beforeValidate: [
+			async ({ data }) => {
+				// Generate deterministic roomName if not already set
+				if (!data.roomName && data.course) {
+					const courseId = typeof data.course === 'object' ? data.course?.id : data.course
+					const moduleId = data.module || 'default'
+					const lessonId = data.lesson || 'default'
+					data.roomName = generateLiveKitRoomName(String(courseId), String(moduleId), String(lessonId))
+				}
+				return data
+			},
+		],
+		beforeChange: [
+			async ({ data, originalDoc }) => {
+				// Prevent roomName changes after creation
+				if (originalDoc?.id && data.roomName && data.roomName !== originalDoc.roomName) {
+					throw new Error('Room name cannot be changed after creation')
+				}
+				return data
+			},
+		],
+		afterChange: [
+			async ({ doc, operation }) => {
+				// Log status transitions
+				if (operation === 'update' && doc.audit) {
+					const now = new Date().toISOString()
+					if (!Array.isArray(doc.audit)) {
+						doc.audit = []
+					}
+					(doc.audit as any[]).push({
+						event: 'status_updated',
+						status: doc.status,
+						timestamp: now,
+					})
+				}
+				return doc
+			},
+		],
 	},
 	fields: [
 		{

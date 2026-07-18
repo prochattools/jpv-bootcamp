@@ -1,16 +1,17 @@
+import 'server-only'
+
 import { NextRequest, NextResponse } from 'next/server'
 import { createHmac, timingSafeEqual } from 'crypto'
-
-// Simple in-memory idempotency cache (in production, use Redis or database)
-const processedWebhookIds = new Set<string>()
-const WEBHOOK_RETENTION_MS = 24 * 60 * 60 * 1000 // 24 hours
+import { getPayload } from 'payload'
+import config from '@payload-config'
 
 /**
  * POST /api/webhook/bunny
  *
  * Bunny Stream webhook endpoint for video status updates.
  * Verifies HMAC signature on raw body.
- * Updates Payload video collection with status and thumbnail information.
+ * Persists video status, metadata, and event logs to Payload bunny_videos collection.
+ * Uses unique (libraryId, videoId) constraint for idempotency.
  *
  * Webhook types handled:
  * - VideoFinishedProcessing
@@ -86,51 +87,96 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 			ErrorMessage?: string
 		}
 
-		// Implement idempotency: use VideoId + Type as unique key
-		const webhookId = `${payload.VideoLibraryId}:${payload.VideoId}:${payload.Type}`
+		const payload_inst = await getPayload({ config })
 
-		// Check if webhook was already processed
-		if (processedWebhookIds.has(webhookId)) {
-			console.log(`Bunny webhook already processed: ${webhookId}`)
-			return NextResponse.json({ ok: true })
+		// Build thumbnail URL if available
+		const thumbnailUrl = payload.ThumbnailFileName
+			? `https://cdn.bunnycdn.com/video/${payload.VideoLibraryId}/${payload.VideoId}/thumbnail.jpg`
+			: null
+
+		// Map webhook event type to internal status
+		let videoStatus = 'processing'
+		let errorMessage: string | null = null
+
+		if (payload.Type === 'VideoFinishedProcessing') {
+			videoStatus = 'ready'
+		} else if (payload.Type === 'VideoFailedProcessing' || payload.Type === 'VideoTranscodeFailed') {
+			videoStatus = 'failed'
+			errorMessage = payload.ErrorMessage || `${payload.Type} occurred`
 		}
 
-		// Mark webhook as processed
-		processedWebhookIds.add(webhookId)
-
-		// Clean up old entries after retention period (simple approach)
-		// In production, implement proper cleanup or use a database
-		if (processedWebhookIds.size > 10000) {
-			processedWebhookIds.clear()
+		// Try to find existing video record by (libraryId, videoId)
+		let existingVideo: any = null
+		try {
+			const result = await payload_inst.find({
+				collection: 'bunny_videos' as any,
+				where: {
+					and: [
+						{ libraryId: { equals: payload.VideoLibraryId } },
+						{ videoId: { equals: payload.VideoId } },
+					],
+				},
+				limit: 1,
+				overrideAccess: true,
+			})
+			existingVideo = result.docs?.[0]
+		} catch (err) {
+			console.warn('Failed to query existing bunny_videos', { error: err })
 		}
 
-		// Process based on event type
-		switch (payload.Type) {
-			case 'VideoFinishedProcessing':
-				// Update Payload video collection
-				// - Mark as 'ready'
-				// - Store thumbnail URL
-				// - Update duration, codec, bitrate
-				// - Clear any processing errors
-				console.log(`Video ${payload.VideoId} finished processing`, {
-					title: payload.VideoTitle,
-					duration: payload.Duration,
-					codec: payload.VideoCodec,
+		// Build webhook event record
+		const webhookEvent = {
+			type: payload.Type,
+			timestamp: new Date().toISOString(),
+			status: videoStatus,
+			...(errorMessage && { error: errorMessage }),
+		}
+
+		// Prepare data for upsert
+		const videoData: any = {
+			title: payload.VideoTitle || `Video ${payload.VideoId}`,
+			libraryId: payload.VideoLibraryId,
+			videoId: payload.VideoId,
+			status: videoStatus,
+			duration: payload.Duration || null,
+			frameRate: payload.FrameRate || null,
+			width: payload.Width || null,
+			height: payload.Height || null,
+			videoCodec: payload.VideoCodec || null,
+			audioCodec: payload.AudioCodec || null,
+			bitrate: payload.Bitrate || null,
+			thumbnailUrl: thumbnailUrl || null,
+			errorMessage: errorMessage || null,
+			webhookEvents: existingVideo?.webhookEvents
+				? [...(Array.isArray(existingVideo.webhookEvents) ? existingVideo.webhookEvents : []), webhookEvent]
+				: [webhookEvent],
+		}
+
+		// Upsert: update if exists, create if not
+		try {
+			if (existingVideo?.id) {
+				await payload_inst.update({
+					collection: 'bunny_videos' as any,
+					id: existingVideo.id,
+					data: videoData,
+					overrideAccess: true,
 				})
-				break
-
-			case 'VideoFailedProcessing':
-			case 'VideoTranscodeFailed':
-				// Update Payload video collection
-				// - Mark as 'failed'
-				// - Store error message
-				// - Alert admin if configured
-				console.log(`Video ${payload.VideoId} processing failed: ${payload.ErrorMessage}`)
-				break
-
-			default:
-				// Ignore unknown webhook types
-				console.log(`Unknown webhook type: ${payload.Type}`)
+				console.log(`Updated bunny_videos record ${existingVideo.id} for video ${payload.VideoId}`)
+			} else {
+				await payload_inst.create({
+					collection: 'bunny_videos' as any,
+					data: videoData,
+					overrideAccess: true,
+				})
+				console.log(`Created bunny_videos record for video ${payload.VideoId}`)
+			}
+		} catch (err) {
+			console.error('Failed to persist bunny_videos', { error: err, payload })
+			// Return 500 so Bunny retries later
+			return NextResponse.json(
+				{ ok: false, error: 'Failed to persist video metadata' },
+				{ status: 500 }
+			)
 		}
 
 		return NextResponse.json({ ok: true })

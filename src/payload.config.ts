@@ -9,6 +9,7 @@ import { PayloadPages } from './collections/PayloadPages'
 import { PayloadPosts } from './collections/PayloadPosts'
 import { PayloadCategories } from './collections/PayloadCategories'
 import { PayloadLiveSession } from './collections/PayloadLiveSession'
+import { PayloadBunnyVideo } from './collections/PayloadBunnyVideo'
 import {
   PayloadCourseAccessPreview,
   PayloadCourseModules,
@@ -97,6 +98,7 @@ export default buildConfig({
     PayloadPosts,
     PayloadCategories,
     PayloadLiveSession,
+    PayloadBunnyVideo,
     PayloadCourses,
     PayloadCourseModules,
     PayloadLessons,

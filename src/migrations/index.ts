@@ -11,6 +11,7 @@ import * as migration_20260704_090000_partner_schema_reconciliation from './2026
 import * as migration_20260707_130000_remove_table_plan_from_payload_enums from './20260707_130000_remove_table_plan_from_payload_enums';
 import * as migration_20260718_103726_membership_support_schema from './20260718_103726_membership_support_schema';
 import * as migration_20260718_000000_live_sessions from './20260718_000000_live_sessions';
+import * as migration_20260718_110000_bunny_videos from './20260718_110000_bunny_videos';
 
 export const migrations = [
   {
@@ -77,5 +78,10 @@ export const migrations = [
     up: migration_20260718_000000_live_sessions.up,
     down: migration_20260718_000000_live_sessions.down,
     name: '20260718_000000_live_sessions',
+  },
+  {
+    up: migration_20260718_110000_bunny_videos.up,
+    down: migration_20260718_110000_bunny_videos.down,
+    name: '20260718_110000_bunny_videos',
   },
 ];
