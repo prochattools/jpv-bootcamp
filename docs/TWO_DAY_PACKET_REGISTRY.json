@@ -998,8 +998,8 @@
       "rollbackCondition": "Support operations can be accessed or exposed publicly.",
       "approvalGate": "admin acceptance approval",
       "parallelSafe": false,
-      "status": "blocked",
-      "blocker": "blocked by FRONTEND-01 until onboarding is complete",
+      "status": "implemented",
+      "blocker": null,
       "commit": "8927df9",
       "tests": [
         "scripts/membership_support_cockpit.test.ts",
