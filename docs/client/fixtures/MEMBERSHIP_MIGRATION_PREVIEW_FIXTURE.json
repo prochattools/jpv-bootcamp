@@ -1,0 +1,38 @@
+[
+  {
+    "normalizedEmail": "eligible-monthly@example.invalid",
+    "stripeCustomerId": "cus_fixture_monthly",
+    "stripeSubscriptionId": "sub_fixture_monthly",
+    "stripePriceId": "price_fixture_old_monthly",
+    "subscriptionStatus": "active",
+    "subscriptionCurrentPeriodEnd": "2026-08-01T00:00:00.000Z",
+    "subscriptionCancelAtPeriodEnd": false,
+    "billingCadence": "monthly",
+    "paymentStatus": "paid",
+    "paymentDisputeStatus": null
+  },
+  {
+    "normalizedEmail": "manual-review@example.invalid",
+    "stripeCustomerId": "cus_fixture_review",
+    "stripeSubscriptionId": "sub_fixture_review",
+    "stripePriceId": "price_fixture_old_annual",
+    "subscriptionStatus": "past_due",
+    "subscriptionCurrentPeriodEnd": "2026-12-01T00:00:00.000Z",
+    "subscriptionCancelAtPeriodEnd": false,
+    "billingCadence": "annual",
+    "paymentStatus": "failed",
+    "paymentDisputeStatus": null
+  },
+  {
+    "normalizedEmail": "ineligible@example.invalid",
+    "stripeCustomerId": null,
+    "stripeSubscriptionId": "sub_fixture_missing_customer",
+    "stripePriceId": "price_fixture_old_monthly",
+    "subscriptionStatus": "active",
+    "subscriptionCurrentPeriodEnd": "2026-08-15T00:00:00.000Z",
+    "subscriptionCancelAtPeriodEnd": false,
+    "billingCadence": "monthly",
+    "paymentStatus": "paid",
+    "paymentDisputeStatus": null
+  }
+]

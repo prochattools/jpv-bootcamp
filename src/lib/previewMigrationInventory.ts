@@ -130,6 +130,16 @@ export const PREVIEW_MIGRATION_INVENTORY = [
     verificationChecks: ['registry-match', 'ordered-exactly', 'table-plan-removal'],
     authorizationCategory: 'payloadMigration',
   },
+  {
+    name: '20260718_103726_membership_support_schema',
+    system: 'payload',
+    order: 12,
+    purpose: 'Create membership support schema: 9 core tables, 18 enums, 40 FK constraints, 68 indexes with audit and funding source tracking.',
+    requiredForPreview: true,
+    rollbackRisk: 'irreversible',
+    verificationChecks: ['registry-match', 'ordered-exactly', 'membership-support-schema'],
+    authorizationCategory: 'payloadMigration',
+  },
 ] as const satisfies readonly PreviewMigrationInventoryEntry[]
 
 export const PREVIEW_MIGRATION_INVENTORY_VERSION = 1
