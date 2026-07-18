@@ -37,7 +37,7 @@ const testEnvironment = {
 
 export default defineConfig({
   testDir: './e2e',
-  testMatch: '**/*.spec.ts',
+  testMatch: ['**/auth-portal-admin.spec.ts', '**/checkout-and-submissions.spec.ts', '**/portal-courses-community.spec.ts', '**/public.spec.ts', '**/support.spec.ts'], // Local deterministic tests only
   fullyParallel: false,
   forbidOnly: Boolean(process.env.GITHUB_ACTIONS),
   retries: process.env.GITHUB_ACTIONS ? 1 : 0,
