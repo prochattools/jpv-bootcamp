@@ -10,6 +10,7 @@ import * as migration_20260703_000000_partner_affiliate_operations from './20260
 import * as migration_20260704_090000_partner_schema_reconciliation from './20260704_090000_partner_schema_reconciliation';
 import * as migration_20260707_130000_remove_table_plan_from_payload_enums from './20260707_130000_remove_table_plan_from_payload_enums';
 import * as migration_20260718_103726_membership_support_schema from './20260718_103726_membership_support_schema';
+import * as migration_20260718_000000_live_sessions from './20260718_000000_live_sessions';
 
 export const migrations = [
   {
@@ -71,5 +72,10 @@ export const migrations = [
     up: migration_20260718_103726_membership_support_schema.up,
     down: migration_20260718_103726_membership_support_schema.down,
     name: '20260718_103726_membership_support_schema',
+  },
+  {
+    up: migration_20260718_000000_live_sessions.up,
+    down: migration_20260718_000000_live_sessions.down,
+    name: '20260718_000000_live_sessions',
   },
 ];

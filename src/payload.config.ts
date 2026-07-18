@@ -8,6 +8,7 @@ import { PayloadMedia } from './collections/PayloadMedia'
 import { PayloadPages } from './collections/PayloadPages'
 import { PayloadPosts } from './collections/PayloadPosts'
 import { PayloadCategories } from './collections/PayloadCategories'
+import { PayloadLiveSession } from './collections/PayloadLiveSession'
 import {
   PayloadCourseAccessPreview,
   PayloadCourseModules,
@@ -95,6 +96,7 @@ export default buildConfig({
     PayloadPages,
     PayloadPosts,
     PayloadCategories,
+    PayloadLiveSession,
     PayloadCourses,
     PayloadCourseModules,
     PayloadLessons,
