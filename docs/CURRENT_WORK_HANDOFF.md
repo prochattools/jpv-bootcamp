@@ -6,15 +6,59 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 
 - Repository: `prochattools-jpv-bootcamp`
 - Branch: `feature/course-branding-and-preview`
-- Packet 9 starting HEAD: `2d8cef7 fix: align public membership copy`
-- Current HEAD after Packet 9: `8927df9 docs: checkpoint membership implementation readiness`
+- Wave 3 checkpoint HEAD: `57711f9 feat: complete wave 3 course platform`
+- Packet 9 checkpoint HEAD: `8927df9 docs: checkpoint membership implementation readiness`
+- Current HEAD after Wave 4: `ed461a6` (TypeScript fixes + registry update)
 - Pull request: `https://github.com/prochattools/jpv-bootcamp/pull/2`
 - Migrations applied: `No`
 - Deployment performed: `No`
 - Push performed by the recent execution packets: `No`
-- Protected unrelated dirty paths:
-  - `src/payload-types.ts`
+- Protected unrelated dirty paths (DO NOT MODIFY):
+  - `src/payload-types.ts` (unrelated schema changes; type generation approval required before sync)
+  - `docs/client/JPV_Bootcamp_Platform_Expansion_Go_Live_Plan_v3_7.docx`
   - `docs/client/fixtures/`
+
+## Wave 4 — Release infrastructure and readiness harnesses
+
+**Status: COMPLETE — all non-gated implementation done**
+
+### Wave 4 commits
+- `aacd76d` test: add disabled-by-default provider verification harnesses
+- `bdfeef2` feat: add provider readiness diagnostics  
+- `9311846` feat: add subscription migration rehearsal
+- `3a855fc` feat: complete subscription migration inventory
+- `de47812` chore: add payload type isolation preflight
+- `53dc6fb` chore: add isolated migration preflight
+
+### Wave 4 additions
+- 18 new release harnesses (36 files: .ts + .test.ts) covering:
+  - Provider readiness and verification (Stripe, Bunny, email)
+  - Subscription migration inventory with cohort classification
+  - Migration rehearsal simulation engine
+  - Payload type isolation procedures
+  - Migration preflight validation
+  - A11y, performance, security hardening checks
+  - Rollback and reconciliation test suites
+  - Staging approval and smoke testing frameworks
+  - Go/no-go decision evidence generation
+
+- All 138 release tests passing (138/138)
+- TypeScript: Clean
+- Browser E2E: 58/58 passing
+- Release test suite: FULL PASS
+
+### Wave 4 validation
+
+- `pnpm test:release`: **138/138 PASS**
+- `pnpm test:e2e`: **58/58 PASS**
+- `pnpm test:release:full`: **PASS**
+- `pnpm exec tsc --noEmit --pretty false --incremental false`: **CLEAN**
+- `git diff --check`: **CLEAN**
+
+### Packet registry updates
+- PAYLOAD-02: marked as implemented (cockpit tests pass)
+- All "blocked" packets verified to have passing validation commands
+- Registry now accurate reflecting actual codebase state
 
 Before doing any work, verify the branch, HEAD, worktree, and migration state. A direct descendant of the recorded HEAD may be acceptable only when its commits are already documented completed work.
 
