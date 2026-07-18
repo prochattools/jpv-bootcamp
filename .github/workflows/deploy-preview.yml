@@ -103,6 +103,10 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: ${{ steps.image-tags.outputs.tags }}
+          build-args: |
+            NEXT_PUBLIC_APP_URL=https://preview.jpvbootcamp.com
+            APP_BASE_URL=https://preview.jpvbootcamp.com
+            NEXT_PUBLIC_SERVER_URL=https://preview.jpvbootcamp.com
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}

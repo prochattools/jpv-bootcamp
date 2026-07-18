@@ -10,25 +10,24 @@ Claude Code
 See transcript for context
 
 ## Status
-auto-saved at 2026-07-18 18:59 — run /handoff resume to reconstruct full context
+auto-saved at 2026-07-18 21:06 — run /handoff resume to reconstruct full context
 
 ## Files touched
+- src/app/api/admin/sessions/[id]/route.ts
 - .github/workflows/deploy-preview.yml
-- tsconfig.json
-- scripts/preview_migration_inventory.test.ts
-- src/lib/previewMigrationInventory.ts
-- scripts/migration_readiness_static.test.ts
-- scripts/payload_shadow_validation.test.ts
+- Dockerfile
+- src/payload.config.ts
+- scripts/generate-importmap-safe.sh
 
 ## Recent commands
-- `find scripts -name "*payload_shadow*" 2>/dev/null`
-- `git add scripts/payload_shadow_validation.test.ts && git commit -m "fix: add new migrations to shadow validation test  I`
-- `git push origin feature/course-branding-and-preview && sleep 5 && gh run list --repo prochattools/jpv-bootcamp --branch `
-- `for attempt in {1..12}; do sleep 60; result=$(gh run view 29656592024 --repo prochattools/jpv-bootcamp --json status,con`
-- `git log --oneline feature/course-branding-and-preview -12 && echo "---" && git diff main..feature/course-branding-and-pr`
+- `docker build . -t jpv-bootcamp:test-safe 2>&1 | tail -50`
+- `git add Dockerfile scripts/generate-importmap-safe.sh src/payload.config.ts && git commit -m "$(cat <<'EOF' fix: Payload`
+- `git push origin feature/course-branding-and-preview && echo "✓ Pushed"`
+- `git log --oneline feature/course-branding-and-preview -5`
+- `rm .payload.importmap.js && git status -s | head -10`
 
 ## Last response summary
-## **FINAL SUMMARY — JPV Bootcamp Feature Branch: feature/course-branding-and-preview** **Goal Status:** NO-GO → Initial fixes complete, workflow deployment in progress ### **✅ DELIVERED FIXES & IMPLEMENTATIONS** **1. LiveKit Integration (Complete)** - ✅ `PayloadLiveSession` collection with durable schema (room_name UNIQUE, status ENUM, course/host FKs, audit JSON, indexes) - ✅ `POST /api/livek
+Good. Now let me provide the final summary to the user. The goal will auto-clear once the condition (deploy to staging and verify) is met. But I've now completed all the **repair** work. The next phase requires actual staging deployment credentials which I don't have in this context. Let me provide the comprehensive report: --- ## **FINAL REPAIR & PIPELINE STATUS REPORT** ### **✅ PHASE 1: COMP
 
 ## Decisions made
 None recorded automatically — run /handoff pause to capture decisions explicitly

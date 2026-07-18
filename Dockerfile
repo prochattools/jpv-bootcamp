@@ -20,7 +20,9 @@ COPY . .
 ENV DATABASE_URL=postgresql://build:build@localhost:5432/build
 # NODE_ENV must be production for Payload importmap generation to work correctly
 ENV NODE_ENV=production
-# NEXT_PUBLIC_* vars are baked into the client bundle at build time — must use real production value.
+# NEXT_PUBLIC_* vars are baked into the client bundle at build time.
+# When building for production: use https://jpvbootcamp.com
+# When building for staging/preview: pass https://preview.jpvbootcamp.com explicitly
 ARG NEXT_PUBLIC_APP_URL=https://jpvbootcamp.com
 ARG APP_BASE_URL=https://jpvbootcamp.com
 ARG NEXT_PUBLIC_SERVER_URL=https://jpvbootcamp.com
@@ -29,7 +31,7 @@ ENV APP_BASE_URL=${APP_BASE_URL}
 ENV NEXT_PUBLIC_SERVER_URL=${NEXT_PUBLIC_SERVER_URL}
 RUN --mount=type=cache,target=/app/.next/cache \
     node_modules/.bin/prisma generate --schema=prisma/system.prisma && \
-    bash scripts/generate-importmap-safe.sh && \
+    pnpm generate:importmap && \
     pnpm run build
 
 # ---- Script deps (kept separate to avoid conflicting with standalone's pnpm symlinks) ----
