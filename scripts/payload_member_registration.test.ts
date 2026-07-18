@@ -191,11 +191,11 @@ async function main(): Promise<void> {
   assert.match(loginPage, /redirect\(`\/portal\?\$\{target\.toString\(\)\}`\)/)
   assert.doesNotMatch(loginPage, /MemberLoginForm/)
 
-  const registerPage = readFileSync('src/app/(frontend)/register/page.tsx', 'utf8')
-  assert.match(registerPage, /Registration starts with membership Checkout/)
-  assert.match(registerPage, /Public free account creation is unavailable/)
-  assert.match(registerPage, /href='\/upgrade'/)
-  assert.doesNotMatch(registerPage, /MemberRegistrationForm|Create free account/)
+  const registerRoute = readFileSync('src/app/(frontend)/register/route.ts', 'utf8')
+  assert.match(registerRoute, /410|Gone/)
+  assert.match(registerRoute, /Registration is permanently disabled/)
+  assert.match(registerRoute, /exclusive.*Checkout/)
+  assert.doesNotMatch(registerRoute, /MemberRegistrationForm|Create free account/)
 
   const registrationRoute = readFileSync('src/app/api/member-registration/route.ts', 'utf8')
   assert.match(registrationRoute, /registration_disabled/)
