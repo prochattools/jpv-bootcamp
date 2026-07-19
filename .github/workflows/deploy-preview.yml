@@ -1,10 +1,19 @@
 name: Preview Build and Deploy
 
 on:
-  push:
-    branches:
-      - 'feature/**'
-      - 'pr/**'
+  workflow_dispatch:
+    inputs:
+      branch_or_ref:
+        description: Branch or commit SHA to deploy
+        required: true
+        type: string
+        default: 'feature/course-branding-and-preview'
+  # TEMPORARILY DISABLED: push triggers on feature/** commented out to conserve GitHub Actions minutes during launch-critical implementation
+  # Re-enable after launch: uncomment the push block below
+  # push:
+  #   branches:
+  #     - 'feature/**'
+  #     - 'pr/**'
 
 permissions:
   contents: read
@@ -28,6 +37,8 @@ jobs:
     steps:
       - name: Check out commit
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.branch_or_ref || github.ref }}
 
       - name: Set up pnpm
         uses: pnpm/action-setup@v2
