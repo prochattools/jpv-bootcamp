@@ -1,244 +1,115 @@
 # Dokploy Deployment Guide — JPV Bootcamp Staging
 
-**Target**: clients-jpv-bootcamp-app-tp9xrk (staging application)  
-**Environment**: Dokploy  
-**Deployment type**: Docker image SHA  
+**Target**: clients-jpv-bootcamp-app-tp9xrk  
+**Dokploy app ID**: `I_2Vukga3cc3ZhaG-mUzU`  
+**Domain**: `preview.jpvbootcamp.com`  
+**Dokploy URL**: `https://dokploy.prochat.tools/api`  
+**Credentials**: `/Users/Office/.config/dokploy/.env`
 
 ---
 
-## Quick Deploy (API-Based)
+## Key Facts
 
-### Prerequisites
+- **Two JPV apps exist** in Dokploy. Only `I_2Vukga3cc3ZhaG-mUzU` (appName: `clients-jpv-bootcamp-app-tp9xrk`) serves `preview.jpvbootcamp.com`. The other (`aPR9SvYn_JvGdMTk3CzeI`, appName: `web-public-jpv-bootcamp-l66egq`) is a separate environment.
+- **Build platform**: The Dokploy host runs `linux/amd64`. Always build with `--platform linux/amd64` when building locally on Apple Silicon. ARM64 images cause `exec format error` and silent rollback.
+- **Deployment method**: Docker Swarm service update via SSH. The Dokploy REST API `application.deploy` updates config but does NOT force image re-pull. Use SSH + `docker service update --with-registry-auth`.
 
-1. **Dokploy API key** (x-api-key header)
-   - Scope: application.deploy or application.redeploy
-   - Format: Usually a long alphanumeric string
+---
 
-2. **Application ID** (not display name)
-   - Display name: "clients-jpv-bootcamp-app-tp9xrk"
-   - Internal ID: (discovered via API, not the display name)
+## Correct Deployment Procedure
 
-### Discovery: Get Internal Application ID
+### 1. Build AMD64 image
 
 ```bash
-DOKPLOY_URL="https://dokploy.yourdomain.com"
-API_KEY="your-dokploy-api-key"
-
-# Query application by display name
-curl -s -X POST "${DOKPLOY_URL}/api/trpc/application.search" \
-  -H "Content-Type: application/json" \
-  -H "x-api-key: ${API_KEY}" \
-  -d '{"query":{"filter":"clients-jpv-bootcamp"}}' | jq '.result.data'
-
-# Alternative: list all applications
-curl -s -X POST "${DOKPLOY_URL}/api/trpc/project.all" \
-  -H "Content-Type: application/json" \
-  -H "x-api-key: ${API_KEY}" | jq '.result.data[].applications[] | {id, displayName}'
-
-# Store internal ID
-INTERNAL_APP_ID="<from response above>"
+HEAD=$(git rev-parse HEAD)
+docker buildx build \
+  --platform linux/amd64 \
+  --build-arg NEXT_PUBLIC_APP_URL=https://preview.jpvbootcamp.com \
+  --build-arg APP_BASE_URL=https://preview.jpvbootcamp.com \
+  --build-arg NEXT_PUBLIC_SERVER_URL=https://preview.jpvbootcamp.com \
+  -t "ghcr.io/prochattools/jpv-bootcamp:${HEAD}" \
+  -t "ghcr.io/prochattools/jpv-bootcamp:feature-course-branding-and-preview" \
+  --push \
+  .
 ```
 
-### Deploy Using Internal ID
+### 2. Verify AMD64 manifest
 
 ```bash
-# Build image SHA
-IMAGE_SHA=$(git rev-parse HEAD)
-IMAGE_TAG="ghcr.io/prochattools/jpv-bootcamp:${IMAGE_SHA}"
+docker pull --platform linux/amd64 "ghcr.io/prochattools/jpv-bootcamp:${HEAD}"
+docker inspect "ghcr.io/prochattools/jpv-bootcamp:${HEAD}" | python3 -c \
+  "import sys,json; d=json.load(sys.stdin); print(d[0]['Architecture'], d[0]['Os'])"
+# Expected: amd64 linux
+```
 
-# Option 1: Deploy with SHA tag
-curl -s -X POST "${DOKPLOY_URL}/api/trpc/application.deploy" \
+### 3. Update Dokploy provider config (REST API)
+
+```bash
+source /Users/Office/.config/dokploy/.env
+curl -s -X POST "${DOKPLOY_URL}/application.saveDockerProvider" \
   -H "Content-Type: application/json" \
-  -H "x-api-key: ${API_KEY}" \
+  -H "${DOKPLOY_API_HEADER}: ${DOKPLOY_API_KEY}" \
   -d "{
-    \"query\": {
-      \"id\": \"${INTERNAL_APP_ID}\",
-      \"tag\": \"${IMAGE_SHA}\",
-      \"service\": \"${IMAGE_TAG}\"
-    }
-  }" | jq '.result.data'
+    \"applicationId\": \"I_2Vukga3cc3ZhaG-mUzU\",
+    \"dockerImage\": \"ghcr.io/prochattools/jpv-bootcamp:${HEAD}\",
+    \"registryUrl\": \"ghcr.io\",
+    \"username\": \"stevewesthoek\",
+    \"password\": \"${GHCR_DOKPLOY_PULL_PAT}\"
+  }"
+```
 
-# Option 2: Deploy with exact digest
-curl -s -X POST "${DOKPLOY_URL}/api/trpc/application.redeploy" \
+### 4. Deploy via SSH (required — REST deploy doesn't force pull)
+
+```bash
+ssh dokploy \
+  "docker service update \
+    --image ghcr.io/prochattools/jpv-bootcamp:feature-course-branding-and-preview \
+    --with-registry-auth \
+    clients-jpv-bootcamp-app-tp9xrk"
+```
+
+The `--with-registry-auth` flag passes GHCR credentials to the Swarm node.
+
+### 5. Verify deployment
+
+```bash
+# Health
+curl https://preview.jpvbootcamp.com/api/health
+# Expected: {"ok":true,"status":"live",...}  HTTP 200
+
+# Bunny video route — must return 401 (not 404)
+curl "https://preview.jpvbootcamp.com/api/bunny/video?lessonId=test"
+# Expected: {"error":"Unauthorized"}  HTTP 401
+
+# Webhook route — must return 403 with invalid sig
+curl -X POST https://preview.jpvbootcamp.com/api/webhook/bunny \
   -H "Content-Type: application/json" \
-  -H "x-api-key: ${API_KEY}" \
-  -d "{
-    \"query\": {
-      \"id\": \"${INTERNAL_APP_ID}\",
-      \"digest\": \"sha256:${DOCKER_DIGEST}\"
-    }
-  }" | jq '.result.data'
+  -H "x-bunnystream-signature-version: v1" \
+  -H "x-bunnystream-signature-algorithm: hmac-sha256" \
+  -H "x-bunnystream-signature: invalidsig" \
+  -d '{}'
+# Expected: {"error":"Signature verification failed"}  HTTP 403
 ```
 
 ---
 
-## Manual Deploy (UI-Based)
+## REST API Reference (Correct Endpoints)
 
-### Steps
+All endpoints under `https://dokploy.prochat.tools/api/` (NOT `/api/trpc`).
 
-1. **Log into Dokploy**
-   - URL: https://dokploy.yourdomain.com
-   - Navigate: Projects → jpv-bootcamp → Applications
-
-2. **Locate application**
-   - Display name: clients-jpv-bootcamp-app-tp9xrk
-   - Note the internal ID from URL or dashboard
-
-3. **Select image and deploy**
-   - Image: `ghcr.io/prochattools/jpv-bootcamp:f4c150a` (or exact SHA)
-   - Ensure registry authentication is configured (GHCR credentials)
-   - Click "Deploy" or "Redeploy"
-
-4. **Monitor deployment**
-   - Wait for pod startup (usually ~2-3 min)
-   - Verify health check passes
-   - Check logs for startup errors
+| Operation | Method | Endpoint | Body |
+|-----------|--------|----------|------|
+| Read app config | GET | `/application.one?applicationId=<id>` | — |
+| Update docker provider | POST | `/application.saveDockerProvider` | `{applicationId, dockerImage, registryUrl, username, password}` |
+| Trigger deploy (config only) | POST | `/application.deploy` | `{"applicationId":"<id>"}` |
+| List deployments | GET | `/deployment.all?applicationId=<id>` | — |
+| Reload container | POST | `/application.reload` | `{applicationId, appName, type}` |
 
 ---
 
-## Post-Deployment Verification
+## Current State (2026-07-20)
 
-### Immediate Checks (5 min)
-
-```bash
-STAGING_URL="https://preview.jpvbootcamp.com"
-
-# 1. Health check
-curl -s "${STAGING_URL}/api/health" | jq .
-
-# Expected: HTTP 200 + {"status":"ok",...}
-
-# 2. Verify new image is running
-curl -s "${STAGING_URL}/api/health" | jq '.deployed_at, .git_sha'
-
-# Should match deployment SHA: f4c150a
-
-# 3. Verify Bunny endpoint exists
-curl -s -X GET "${STAGING_URL}/api/bunny/video?lessonId=test" | jq .
-
-# Expected: HTTP 401 (unauthorized) or 400 (missing entitlement)
-# NOT: HTTP 404 (route not found)
-```
-
-### Full Integration Test (30 min)
-
-See `docs/BUNNY_INTEGRATION_TEST_PLAN.md` for end-to-end testing.
-
----
-
-## Troubleshooting
-
-### Deployment Fails / 401 Unauthorized
-
-**Cause**: Missing or invalid API key.
-
-**Steps**:
-1. Check header name: must be exactly `x-api-key` (lowercase)
-2. Verify key is not expired or revoked
-3. Check key has application.deploy or application.redeploy permission
-4. If using environment variable, check for whitespace/newlines: `echo "$API_KEY" | od -c | head`
-5. Try read-only query first: `application.search` with same key to isolate auth issue
-
-**Diagnosis**:
-```bash
-# Test key with read-only query first
-curl -s -X POST "${DOKPLOY_URL}/api/trpc/project.all" \
-  -H "x-api-key: ${API_KEY}" \
-  -H "Content-Type: application/json" | jq '.error'
-
-# If 401 here, key is invalid or missing
-# If 200 here but deploy fails, check deploy permission specifically
-```
-
-### Application ID Not Found
-
-**Cause**: Internal ID format error or application doesn't exist.
-
-**Steps**:
-1. Verify application display name: `clients-jpv-bootcamp-app-tp9xrk`
-2. Use `project.all` to list all applications and confirm it exists
-3. Copy exact internal ID from response, not the display name
-4. Ensure ID is UUID or alphanumeric format (not a human-readable name)
-
-### Image Not Found / Registry Auth Error
-
-**Cause**: GHCR registry credentials not configured in Dokploy.
-
-**Steps**:
-1. Log into Dokploy UI
-2. Navigate: Admin → Registries (or Settings)
-3. Add GitHub Container Registry (GHCR)
-   - Registry: `ghcr.io`
-   - Username: `<github-username>`
-   - Password: `<github-token>`
-   - Email: `<github-email>`
-4. Test: Try pulling image via Dokploy UI
-5. Retry deployment
-
-### Deployment Success but App Unreachable
-
-**Cause**: Networking, port binding, or startup error.
-
-**Steps**:
-1. Check pod logs in Dokploy UI
-   - Should see "Server running on 0.0.0.0:3000"
-2. Verify port mapping: 3000 (internal) → 443 (external HTTPS)
-3. Check reverse proxy / ingress configuration
-4. Verify environment variables (DATABASE_URL, etc.) are set
-5. If migrations needed: `pnpm db:migrate:prod` (run in pod or pre-deployment hook)
-
----
-
-## Rollback
-
-If deployment is bad:
-
-1. **Get previous image SHA**
-   ```bash
-   git log --oneline -2 | tail -1 | awk '{print $1}'
-   ```
-
-2. **Redeploy previous**
-   ```bash
-   curl -s -X POST "${DOKPLOY_URL}/api/trpc/application.redeploy" \
-     -H "x-api-key: ${API_KEY}" \
-     -H "Content-Type: application/json" \
-     -d "{
-       \"query\": {
-         \"id\": \"${INTERNAL_APP_ID}\",
-         \"tag\": \"${PREVIOUS_SHA}\"
-       }
-     }"
-   ```
-
-3. **Verify**
-   ```bash
-   curl -s https://preview.jpvbootcamp.com/api/health | jq '.git_sha'
-   ```
-
----
-
-## Environment Variables Reference
-
-**Staging-only Bunny config**:
-```
-BUNNY_API_KEY=<staging-stream-api-key>
-BUNNY_STREAM_LIBRARY_ID=<staging-library-id>
-BUNNY_STREAM_HOSTNAME=<staging-cdn-hostname>
-BUNNY_STREAM_SIGNING_KEY=<staging-signing-key>
-BUNNY_STREAM_WEBHOOK_SECRET=<staging-read-only-api-key>
-BUNNY_STREAM_TOKEN_TTL_SECONDS=900
-```
-
-**Database**:
-```
-DATABASE_URL=postgresql://<user>:<pass>@<host>:5432/jpvbootcamp_staging
-```
-
-**NextAuth (if needed)**:
-```
-NEXTAUTH_URL=https://preview.jpvbootcamp.com
-NEXTAUTH_SECRET=<staging-secret>
-```
-
-Ensure all are set in Dokploy environment before deployment.
+- **HEAD**: `0662c9e1bf0448a6bbf563cbf2e92e8977fdb4fe`
+- **GHCR digest (AMD64)**: `sha256:ce47b0cbb54dd6d461e7238cf1e72e05d13950837d3ce0895a10dc7182247a71`
+- **Running service**: `clients-jpv-bootcamp-app-tp9xrk` (replicated 1/1, healthy)
+- **Verified routes**: `/api/bunny/video` → 401, `/api/webhook/bunny` → 403, `/api/health` → 200
