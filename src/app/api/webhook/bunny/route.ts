@@ -121,7 +121,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 			})
 			existingVideo = result.docs?.[0]
 		} catch (err) {
-			console.warn('Failed to query existing bunny_videos', { error: err })
+			console.error('Failed to query existing bunny_videos', { error: String(err) })
+			// existingVideo stays null — conflict-retry path below handles this
 		}
 
 		// Build webhook event record
@@ -132,8 +133,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 			...(errorMessage && { error: errorMessage }),
 		}
 
-		// Prepare data for upsert
-		const videoData: any = {
+		// Build video data, appending new event to prior event log
+		const buildVideoData = (prior: any) => ({
 			title: payload.VideoTitle || `Video ${payload.VideoId}`,
 			libraryId: payload.VideoLibraryId,
 			videoId: payload.VideoId,
@@ -147,31 +148,69 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 			bitrate: payload.Bitrate || null,
 			thumbnailUrl: thumbnailUrl || null,
 			errorMessage: errorMessage || null,
-			webhookEvents: existingVideo?.webhookEvents
-				? [...(Array.isArray(existingVideo.webhookEvents) ? existingVideo.webhookEvents : []), webhookEvent]
+			webhookEvents: prior?.webhookEvents
+				? [...(Array.isArray(prior.webhookEvents) ? prior.webhookEvents : []), webhookEvent]
 				: [webhookEvent],
-		}
+		})
 
-		// Upsert: update if exists, create if not
+		// Upsert: update if exists, create if not; retry on unique conflict
 		try {
 			if (existingVideo?.id) {
 				await payload_inst.update({
 					collection: 'bunny_videos' as any,
 					id: existingVideo.id,
-					data: videoData,
+					data: buildVideoData(existingVideo),
 					overrideAccess: true,
 				})
 				console.log(`Updated bunny_videos record ${existingVideo.id} for video ${payload.VideoId}`)
 			} else {
-				await payload_inst.create({
-					collection: 'bunny_videos' as any,
-					data: videoData,
-					overrideAccess: true,
-				})
-				console.log(`Created bunny_videos record for video ${payload.VideoId}`)
+				try {
+					await payload_inst.create({
+						collection: 'bunny_videos' as any,
+						data: buildVideoData(null),
+						overrideAccess: true,
+					})
+					console.log(`Created bunny_videos record for video ${payload.VideoId}`)
+				} catch (createErr: any) {
+					// Unique constraint violation — find failed silently, record already exists
+					const msg = String(createErr?.message ?? createErr ?? '')
+					const isConflict =
+						createErr?.code === '23505' ||
+						msg.toLowerCase().includes('unique') ||
+						msg.toLowerCase().includes('duplicate')
+
+					if (!isConflict) throw createErr
+
+					console.warn('bunny_videos create hit unique conflict; retrying as update', {
+						libraryId: payload.VideoLibraryId,
+						videoId: payload.VideoId,
+					})
+
+					const retry = await payload_inst.find({
+						collection: 'bunny_videos' as any,
+						where: {
+							and: [
+								{ libraryId: { equals: payload.VideoLibraryId } },
+								{ videoId: { equals: payload.VideoId } },
+							],
+						},
+						limit: 1,
+						overrideAccess: true,
+					})
+					const found = retry.docs?.[0]
+					if (!found?.id) throw createErr
+
+					await payload_inst.update({
+						collection: 'bunny_videos' as any,
+						id: found.id,
+						data: buildVideoData(found),
+						overrideAccess: true,
+					})
+					console.log(`Conflict-resolved update for bunny_videos record ${found.id}, video ${payload.VideoId}`)
+				}
 			}
 		} catch (err) {
-			console.error('Failed to persist bunny_videos', { error: err, payload })
+			console.error('Failed to persist bunny_videos', { error: String(err) })
 			// Return 500 so Bunny retries later
 			return NextResponse.json(
 				{ ok: false, error: 'Failed to persist video metadata' },
