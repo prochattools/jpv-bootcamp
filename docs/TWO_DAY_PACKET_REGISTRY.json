@@ -1,7 +1,7 @@
 {
   "generatedFrom": "docs/client/JPV_Bootcamp_Platform_Expansion_Go_Live_Plan_v3_7.docx",
   "branch": "feature/course-branding-and-preview",
-  "head": "57711f9",
+  "head": "35e4bd8",
   "packets": [
     {
       "id": "SCHEMA-01",
@@ -585,22 +585,27 @@
         "src/lib/payloadCourse/bunnyProtectedMedia.ts",
         "src/lib/payloadCourse/lessonResourceDelivery.ts",
         "src/lib/payloadCourse/lessonResources.ts",
+        "src/app/api/bunny/video/route.ts",
         "scripts/bunny_protected_media.test.ts",
         "scripts/payload_lesson_resource_delivery.test.ts"
       ],
       "acceptanceCriteria": [
         "Bunny Stream is the only protected course-video provider; protected playback request models are server-derived and require verified membership entitlement.",
-        "Ready, processing, failed, missing-config, expired, unauthorized, wrong-lesson, deterministic signing, secret-redaction, and no Amazon/S3 fallback cases are covered offline."
+        "Ready, processing, failed, missing-config, expired, unauthorized, wrong-lesson, deterministic signing, secret-redaction, and no Amazon/S3 fallback cases are covered offline.",
+        "Signed playback endpoint (/api/bunny/video) implemented with server-only token generation and membership entitlement checks."
       ],
       "validationCommands": [
         "pnpm course:integration",
         "pnpm exec tsx scripts/bunny_protected_media.test.ts",
-        "pnpm exec tsx scripts/payload_lesson_resource_delivery.test.ts"
+        "pnpm exec tsx scripts/payload_lesson_resource_delivery.test.ts",
+        "pnpm test:e2e",
+        "BASE_URL=https://preview.jpvbootcamp.com pnpm test:e2e:staging"
       ],
       "allowedOperations": [
         "repository-only Bunny adapter and in-memory test double",
         "configuration diagnostics",
-        "static protected lesson rendering integration"
+        "static protected lesson rendering integration",
+        "signed playback endpoint implementation"
       ],
       "prohibitedOperations": [
         "live Bunny verification",
@@ -609,19 +614,22 @@
         "Amazon S3 fallback"
       ],
       "expectedChangedPaths": [
+        "src/app/api/bunny/video/route.ts",
         "docs/TWO_DAY_EXECUTION_QUEUE.md",
         "docs/TWO_DAY_PACKET_REGISTRY.json"
       ],
-      "expectedCommitMessage": "feat: add protected Bunny course media",
+      "expectedCommitMessage": "feat: add Bunny signed playback endpoint (/api/bunny/video)",
       "rollbackCondition": "Protected media work requires live provider evidence or public credential exposure.",
       "approvalGate": "course approval",
       "parallelSafe": false,
       "status": "implemented",
       "blocker": null,
-      "commit": "57711f9",
+      "commit": "35e4bd8",
       "tests": [
         "scripts/bunny_protected_media.test.ts",
-        "scripts/payload_lesson_resource_delivery.test.ts"
+        "scripts/payload_lesson_resource_delivery.test.ts",
+        "e2e/checkout-and-submissions.spec.ts",
+        "e2e/portal-courses-community.spec.ts"
       ]
     },
     {
