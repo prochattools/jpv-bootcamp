@@ -89,6 +89,7 @@ async function main(): Promise<void> {
         '20260718_103726_membership_support_schema',
         '20260718_000000_live_sessions',
         '20260718_110000_bunny_videos',
+        '20260719_150000_subscription_schema_cols',
       ],
       operator: 'migration-op',
       approvalReference: 'approval-1',
