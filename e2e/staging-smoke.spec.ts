@@ -275,7 +275,7 @@ test.describe('Staging Smoke Tests - Full Platform Flows', () => {
     const linkLocators = page.locator('a[href^="/"]')
     const linkCount = await linkLocators.count()
     for (let i = 0; i < Math.min(linkCount, 3); i++) {
-      const href = await linkLocators.nth(i).getAttribute('href').catch(() => null)
+      const href = await linkLocators.nth(i).getAttribute('href').catch((): null => null)
       if (href && !href.includes('#')) hrefs.push(href)
     }
     for (const href of hrefs) {
