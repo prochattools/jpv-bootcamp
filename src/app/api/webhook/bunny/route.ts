@@ -20,13 +20,30 @@ import config from '@payload-config'
  */
 export async function POST(req: NextRequest): Promise<NextResponse> {
 	try {
-		// Verify Bunny webhook signature
-		const signature = req.headers.get('bunny-signature') || req.headers.get('x-bunny-signature')
-		const secret = process.env.BUNNY_WEBHOOK_SECRET || process.env.BUNNY_STREAM_WEBHOOK_SECRET
+		// Verify Bunny webhook signature using official protocol
+		const signatureVersion = req.headers.get('x-bunnystream-signature-version')
+		const signatureAlgorithm = req.headers.get('x-bunnystream-signature-algorithm')
+		const signature = req.headers.get('x-bunnystream-signature')
+		const secret = process.env.BUNNY_STREAM_WEBHOOK_SECRET
 
-		if (!signature) {
-			console.warn('Bunny webhook missing signature header')
-			return NextResponse.json({ error: 'Missing signature' }, { status: 403 })
+		// Validate all three signature headers required by Bunny
+		if (!signature || !signatureVersion || !signatureAlgorithm) {
+			console.warn('Bunny webhook missing required signature headers', {
+				hasVersion: !!signatureVersion,
+				hasAlgorithm: !!signatureAlgorithm,
+				hasSignature: !!signature,
+			})
+			return NextResponse.json({ error: 'Missing signature headers' }, { status: 403 })
+		}
+
+		if (signatureVersion !== 'v1') {
+			console.warn('Bunny webhook unsupported signature version', { version: signatureVersion })
+			return NextResponse.json({ error: 'Unsupported signature version' }, { status: 403 })
+		}
+
+		if (signatureAlgorithm !== 'hmac-sha256') {
+			console.warn('Bunny webhook unsupported signature algorithm', { algorithm: signatureAlgorithm })
+			return NextResponse.json({ error: 'Unsupported signature algorithm' }, { status: 403 })
 		}
 
 		if (!secret) {
@@ -34,13 +51,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 			return NextResponse.json({ error: 'Webhook not configured' }, { status: 503 })
 		}
 
-		// Read raw body for signature verification
+		// Read raw body for signature verification (exact bytes matter)
 		const rawBody = await req.text()
 
-		// Verify HMAC-SHA256 signature with timing-safe comparison
+		// Verify HMAC-SHA256 signature using Read-Only API key with timing-safe comparison
 		const expectedSignature = createHmac('sha256', secret).update(rawBody).digest('hex')
 
-		// Normalize both signatures to hex strings (same encoding) before comparison
+		// Normalize both signatures to lowercase hex for comparison
 		const signatureNorm = String(signature).toLowerCase()
 		const expectedNorm = String(expectedSignature).toLowerCase()
 
@@ -89,9 +106,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
 		const payload_inst = await getPayload({ config })
 
-		// Build thumbnail URL if available
+		// Build thumbnail URL using configured CDN hostname if available
+		const cdnHostname = process.env.BUNNY_STREAM_HOSTNAME || 'cdn.bunnycdn.com'
 		const thumbnailUrl = payload.ThumbnailFileName
-			? `https://cdn.bunnycdn.com/video/${payload.VideoLibraryId}/${payload.VideoId}/thumbnail.jpg`
+			? `https://${cdnHostname}/video/${payload.VideoLibraryId}/${payload.VideoId}/thumbnail.jpg`
 			: null
 
 		// Map webhook event type to internal status
@@ -134,7 +152,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 		}
 
 		// Build video data, appending new event to prior event log
-		const buildVideoData = (prior: any) => ({
+		const buildVideoData = (prior: any): Record<string, unknown> => ({
 			title: payload.VideoTitle || `Video ${payload.VideoId}`,
 			libraryId: payload.VideoLibraryId,
 			videoId: payload.VideoId,
@@ -147,6 +165,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 			audioCodec: payload.AudioCodec || null,
 			bitrate: payload.Bitrate || null,
 			thumbnailUrl: thumbnailUrl || null,
+			playbackUrl: null as string | null,
 			errorMessage: errorMessage || null,
 			webhookEvents: prior?.webhookEvents
 				? [...(Array.isArray(prior.webhookEvents) ? prior.webhookEvents : []), webhookEvent]

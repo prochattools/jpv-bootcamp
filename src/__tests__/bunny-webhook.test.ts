@@ -9,13 +9,27 @@ function createSignature(body: string, secret: string): string {
 	return createHmac('sha256', secret).update(body).digest('hex')
 }
 
+function createBunnyRequest(payload: unknown, signature: string) {
+	const body = JSON.stringify(payload)
+	return new NextRequest('http://localhost:3000/api/webhook/bunny', {
+		method: 'POST',
+		headers: {
+			'content-type': 'application/json',
+			'x-bunnystream-signature-version': 'v1',
+			'x-bunnystream-signature-algorithm': 'hmac-sha256',
+			'x-bunnystream-signature': signature,
+		},
+		body,
+	})
+}
+
 describe('POST /api/webhook/bunny', () => {
 	beforeEach(() => {
 		vi.clearAllMocks()
-		process.env.BUNNY_WEBHOOK_SECRET = WEBHOOK_SECRET
+		process.env.BUNNY_STREAM_WEBHOOK_SECRET = WEBHOOK_SECRET
 	})
 
-	it('rejects missing signature header', async () => {
+	it('rejects missing signature headers', async () => {
 		const body = JSON.stringify({ Type: 'VideoFinishedProcessing', VideoId: 123 })
 
 		const req = new NextRequest('http://localhost:3000/api/webhook/bunny', {
@@ -30,21 +44,60 @@ describe('POST /api/webhook/bunny', () => {
 		const data = await res.json()
 
 		expect(res.status).toBe(403)
-		expect(data.error).toContain('Missing signature')
+		expect(data.error).toContain('Missing signature headers')
 	})
 
-	it('rejects invalid signature', async () => {
-		const body = JSON.stringify({ Type: 'VideoFinishedProcessing', VideoId: 123 })
-		const invalidSignature = 'invalid-signature-hash'
+	it('rejects wrong signature version', async () => {
+		const payload = { Type: 'VideoFinishedProcessing', VideoId: 123 }
+		const body = JSON.stringify(payload)
+		const signature = createSignature(body, WEBHOOK_SECRET)
 
 		const req = new NextRequest('http://localhost:3000/api/webhook/bunny', {
 			method: 'POST',
 			headers: {
 				'content-type': 'application/json',
-				'bunny-signature': invalidSignature,
+				'x-bunnystream-signature-version': 'v2',
+				'x-bunnystream-signature-algorithm': 'hmac-sha256',
+				'x-bunnystream-signature': signature,
 			},
 			body,
 		})
+
+		const res = await postBunnyWebhook(req)
+		const data = await res.json()
+
+		expect(res.status).toBe(403)
+		expect(data.error).toContain('Unsupported signature version')
+	})
+
+	it('rejects wrong signature algorithm', async () => {
+		const payload = { Type: 'VideoFinishedProcessing', VideoId: 123 }
+		const body = JSON.stringify(payload)
+		const signature = createSignature(body, WEBHOOK_SECRET)
+
+		const req = new NextRequest('http://localhost:3000/api/webhook/bunny', {
+			method: 'POST',
+			headers: {
+				'content-type': 'application/json',
+				'x-bunnystream-signature-version': 'v1',
+				'x-bunnystream-signature-algorithm': 'hmac-sha512',
+				'x-bunnystream-signature': signature,
+			},
+			body,
+		})
+
+		const res = await postBunnyWebhook(req)
+		const data = await res.json()
+
+		expect(res.status).toBe(403)
+		expect(data.error).toContain('Unsupported signature algorithm')
+	})
+
+	it('rejects invalid signature', async () => {
+		const payload = { Type: 'VideoFinishedProcessing', VideoId: 123 }
+		const invalidSignature = 'invalid-signature-hash'
+
+		const req = createBunnyRequest(payload, invalidSignature)
 
 		const res = await postBunnyWebhook(req)
 		const data = await res.json()
@@ -66,14 +119,7 @@ describe('POST /api/webhook/bunny', () => {
 		const body = JSON.stringify(payload)
 		const signature = createSignature(body, WEBHOOK_SECRET)
 
-		const req = new NextRequest('http://localhost:3000/api/webhook/bunny', {
-			method: 'POST',
-			headers: {
-				'content-type': 'application/json',
-				'bunny-signature': signature,
-			},
-			body,
-		})
+		const req = createBunnyRequest(payload, signature)
 
 		const res = await postBunnyWebhook(req)
 		const data = await res.json()
@@ -92,14 +138,7 @@ describe('POST /api/webhook/bunny', () => {
 		const body = JSON.stringify(payload)
 		const signature = createSignature(body, WEBHOOK_SECRET)
 
-		const req = new NextRequest('http://localhost:3000/api/webhook/bunny', {
-			method: 'POST',
-			headers: {
-				'content-type': 'application/json',
-				'bunny-signature': signature,
-			},
-			body,
-		})
+		const req = createBunnyRequest(payload, signature)
 
 		const res = await postBunnyWebhook(req)
 		const data = await res.json()
@@ -118,14 +157,7 @@ describe('POST /api/webhook/bunny', () => {
 		const body = JSON.stringify(payload)
 		const signature = createSignature(body, WEBHOOK_SECRET)
 
-		const req = new NextRequest('http://localhost:3000/api/webhook/bunny', {
-			method: 'POST',
-			headers: {
-				'content-type': 'application/json',
-				'bunny-signature': signature,
-			},
-			body,
-		})
+		const req = createBunnyRequest(payload, signature)
 
 		const res = await postBunnyWebhook(req)
 		const data = await res.json()
@@ -143,14 +175,7 @@ describe('POST /api/webhook/bunny', () => {
 		const body = JSON.stringify(payload)
 		const signature = createSignature(body, WEBHOOK_SECRET)
 
-		const req = new NextRequest('http://localhost:3000/api/webhook/bunny', {
-			method: 'POST',
-			headers: {
-				'content-type': 'application/json',
-				'bunny-signature': signature,
-			},
-			body,
-		})
+		const req = createBunnyRequest(payload, signature)
 
 		const res = await postBunnyWebhook(req)
 		const data = await res.json()
@@ -167,46 +192,20 @@ describe('POST /api/webhook/bunny', () => {
 			method: 'POST',
 			headers: {
 				'content-type': 'application/json',
-				'bunny-signature': signature,
+				'x-bunnystream-signature-version': 'v1',
+				'x-bunnystream-signature-algorithm': 'hmac-sha256',
+				'x-bunnystream-signature': signature,
 			},
 			body,
 		})
 
 		const res = await postBunnyWebhook(req)
 
-		// Should return 200 even on error to prevent webhook retries
-		expect(res.status).toBe(200)
+		// Should return 400 for malformed JSON since signature was valid
+		expect(res.status).toBe(400)
 	})
 
-	it('supports x-bunny-signature header as alternative', async () => {
-		const payload = {
-			Type: 'VideoFinishedProcessing',
-			VideoLibraryId: 1,
-			VideoId: 12349,
-		}
-		const body = JSON.stringify(payload)
-		const signature = createSignature(body, WEBHOOK_SECRET)
-
-		const req = new NextRequest('http://localhost:3000/api/webhook/bunny', {
-			method: 'POST',
-			headers: {
-				'content-type': 'application/json',
-				'x-bunny-signature': signature,
-			},
-			body,
-		})
-
-		const res = await postBunnyWebhook(req)
-		const data = await res.json()
-
-		expect(res.status).toBe(200)
-		expect(data.ok).toBe(true)
-	})
-
-	it('supports BUNNY_STREAM_WEBHOOK_SECRET env var as fallback', async () => {
-		process.env.BUNNY_WEBHOOK_SECRET = undefined
-		process.env.BUNNY_STREAM_WEBHOOK_SECRET = WEBHOOK_SECRET
-
+	it('rejects duplicate webhooks idempotently', async () => {
 		const payload = {
 			Type: 'VideoFinishedProcessing',
 			VideoLibraryId: 1,
@@ -215,37 +214,31 @@ describe('POST /api/webhook/bunny', () => {
 		const body = JSON.stringify(payload)
 		const signature = createSignature(body, WEBHOOK_SECRET)
 
-		const req = new NextRequest('http://localhost:3000/api/webhook/bunny', {
-			method: 'POST',
-			headers: {
-				'content-type': 'application/json',
-				'bunny-signature': signature,
-			},
-			body,
-		})
+		const req = createBunnyRequest(payload, signature)
 
-		const res = await postBunnyWebhook(req)
-		const data = await res.json()
+		const res1 = await postBunnyWebhook(req)
+		const data1 = await res1.json()
 
-		expect(res.status).toBe(200)
-		expect(data.ok).toBe(true)
+		expect(res1.status).toBe(200)
+		expect(data1.ok).toBe(true)
+
+		// Second identical webhook should also succeed (idempotent)
+		const req2 = createBunnyRequest(payload, signature)
+		const res2 = await postBunnyWebhook(req2)
+		const data2 = await res2.json()
+
+		expect(res2.status).toBe(200)
+		expect(data2.ok).toBe(true)
 	})
 
 	it('returns 503 when webhook secret not configured', async () => {
-		process.env.BUNNY_WEBHOOK_SECRET = undefined
 		process.env.BUNNY_STREAM_WEBHOOK_SECRET = undefined
 
-		const body = JSON.stringify({ Type: 'VideoFinishedProcessing', VideoId: 123 })
+		const payload = { Type: 'VideoFinishedProcessing', VideoId: 123 }
+		const body = JSON.stringify(payload)
 		const signature = 'any-signature'
 
-		const req = new NextRequest('http://localhost:3000/api/webhook/bunny', {
-			method: 'POST',
-			headers: {
-				'content-type': 'application/json',
-				'bunny-signature': signature,
-			},
-			body,
-		})
+		const req = createBunnyRequest(payload, signature)
 
 		const res = await postBunnyWebhook(req)
 		const data = await res.json()

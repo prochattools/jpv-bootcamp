@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto'
+import { createHmac } from 'node:crypto'
 
 import { evaluateMembershipEntitlement, type MembershipEntitlementInput } from '@/lib/entitlements/membershipEntitlement'
 
@@ -107,14 +107,11 @@ export class InMemoryBunnyProtectedMediaAdapter implements BunnyProtectedMediaAd
     now: Date
     expiresAt: Date
   }): Promise<BunnyProtectedPlaybackRequest> {
-    const payload = [
-      input.video.libraryId,
-      input.video.videoId,
-      input.video.lessonId,
-      input.memberId,
-      input.expiresAt.toISOString(),
-    ].join(':')
-    const token = createHash('sha256').update(`${payload}:${this.signingKey}`).digest('hex')
+    // Bunny token-auth format: libraryId:videoId:expiresUnixTimestamp:hmacHash
+    const expiresUnix = Math.floor(input.expiresAt.getTime() / 1000)
+    const payload = `${input.video.libraryId}:${input.video.videoId}:${expiresUnix}`
+    const hmacHash = createHmac('sha256', this.signingKey).update(payload).digest('hex')
+    const token = `${payload}:${hmacHash}`
 
     return {
       provider: 'bunny_stream',
