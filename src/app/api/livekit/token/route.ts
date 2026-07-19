@@ -207,8 +207,18 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 					)
 				}
 
+				const status = sub.status ?? null
+				const lifecycleState: 'active' | 'past_due' | 'cancelled' | null =
+					status === 'active' || status === 'trialing'
+						? 'active'
+						: status === 'past_due'
+							? 'past_due'
+							: status === 'canceled'
+								? 'cancelled'
+								: null
 				const entitlementResult = evaluateMembershipEntitlement({
-					subscriptionStatus: sub.status || null,
+					subscriptionStatus: status,
+					lifecycleState,
 					periodEnd: sub.currentPeriodEnd || null,
 					cancelAtPeriodEnd: sub.cancelAtPeriodEnd ?? null,
 					fundingSource: (sub.fundingSource as any) || 'direct_payment',
