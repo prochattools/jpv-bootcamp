@@ -1,9 +1,8 @@
-import 'server-only'
+import type { CollectionConfig } from 'payload'
 
-import type { CollectionConfig, Where } from 'payload'
-import { getPayload } from 'payload'
-import config from '@payload-config'
-import { generateLiveKitRoomName } from '@/lib/livekit-config'
+function generateLiveKitRoomName(courseId: string, moduleId: string, lessonId: string): string {
+	return `course-${courseId}-module-${moduleId}-lesson-${lessonId}`.toLowerCase().replace(/[^a-z0-9-]/g, '')
+}
 
 export const PayloadLiveSession: CollectionConfig = {
 	slug: 'live_sessions',
