@@ -85,30 +85,57 @@ test.describe('Staging Smoke Tests - Full Platform Flows', () => {
   })
 
   // ======== MEMBER CHECKOUT FLOWS ========
-  test('BILLING-001: Monthly checkout flow validation', async ({ page, context }) => {
-    // Checkout requires recurring_payment_accepted=true parameter
-    const response = await context.request.get(`${STAGING_URL}/api/stripe/checkout?plan=pro&billing=monthly&recurring_payment_accepted=true`)
-    // Should redirect to Stripe checkout or return valid response
-    expect([200, 302, 303, 307, 308]).toContain(response.status())
+  test('BILLING-001: Monthly checkout flow validation', async ({ context }) => {
+    // The runtime accepts plan=membership (or jpv_bootcamp_membership) with billing=monthly
+    const response = await context.request.get(
+      `${STAGING_URL}/api/stripe/checkout?plan=membership&billing=monthly&recurring_payment_accepted=true`,
+      { maxRedirects: 0 },
+    )
+    // A correctly configured environment redirects 303 to a Stripe TEST checkout URL.
+    // A misconfigured environment (missing Stripe env vars) returns 500.
+    expect(response.status()).toBe(303)
+    const location = response.headers()['location'] ?? ''
+    expect(location).toMatch(/^https:\/\/checkout\.stripe\.com\//)
   })
 
-  test('BILLING-002: Annual checkout flow validation', async ({ page, context }) => {
-    const response = await context.request.get(`${STAGING_URL}/api/stripe/checkout?plan=pro&billing=annual&recurring_payment_accepted=true`)
-    expect([200, 302, 303, 307, 308]).toContain(response.status())
+  test('BILLING-002: Annual checkout flow validation', async ({ context }) => {
+    const response = await context.request.get(
+      `${STAGING_URL}/api/stripe/checkout?plan=membership&billing=annual&recurring_payment_accepted=true`,
+      { maxRedirects: 0 },
+    )
+    expect(response.status()).toBe(303)
+    const location = response.headers()['location'] ?? ''
+    expect(location).toMatch(/^https:\/\/checkout\.stripe\.com\//)
   })
 
-  test('BILLING-003: Invalid checkout parameters rejected', async ({ page }) => {
-    const invalidParams = [
-      '/api/stripe/checkout?plan=invalid&billing=monthly',
-      '/api/stripe/checkout?plan=pro&billing=invalid',
-      '/api/stripe/checkout?plan=&billing=monthly',
-    ]
+  test('BILLING-003: Invalid and legacy checkout parameters rejected', async ({ context }) => {
+    // plan=pro is the legacy slug — must be rejected with 400
+    const legacyPro = await context.request.get(
+      `${STAGING_URL}/api/stripe/checkout?plan=pro&billing=monthly&recurring_payment_accepted=true`,
+      { maxRedirects: 0 },
+    )
+    expect(legacyPro.status()).toBe(400)
 
-    for (const path of invalidParams) {
-      const response = await page.goto(`${STAGING_URL}${path}`)
-      // Should fail or redirect safely, not succeed with invalid params
-      expect(response?.status()).not.toBe(200)
-    }
+    // plan=invalid must be rejected with 400
+    const invalidPlan = await context.request.get(
+      `${STAGING_URL}/api/stripe/checkout?plan=invalid&billing=monthly&recurring_payment_accepted=true`,
+      { maxRedirects: 0 },
+    )
+    expect(invalidPlan.status()).toBe(400)
+
+    // missing recurring_payment_accepted must be rejected with 400
+    const missingAck = await context.request.get(
+      `${STAGING_URL}/api/stripe/checkout?plan=membership&billing=monthly`,
+      { maxRedirects: 0 },
+    )
+    expect(missingAck.status()).toBe(400)
+
+    // empty plan must be rejected with 400
+    const emptyPlan = await context.request.get(
+      `${STAGING_URL}/api/stripe/checkout?plan=&billing=monthly&recurring_payment_accepted=true`,
+      { maxRedirects: 0 },
+    )
+    expect(emptyPlan.status()).toBe(400)
   })
 
   // ======== SUPPORT INTAKE ========
