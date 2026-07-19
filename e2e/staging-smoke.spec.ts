@@ -166,20 +166,14 @@ test.describe('Staging Smoke Tests - Full Platform Flows', () => {
     // Wait for login form or verify portal is accessible
     await page.waitForLoadState('networkidle')
 
-    // Verify form fields have associated labels
+    // Verify form fields have associated labels and are focusable
     const formFields = await page.locator('input[type="email"], input[type="password"], input[type="text"]').all()
     for (const field of formFields.slice(0, 2)) {
       const fieldId = await field.getAttribute('id')
       if (fieldId) {
-        const label = await page.locator(`label[for="${fieldId}"]`).count()
-        // Label may or may not exist (could be aria-label instead), but form should be accessible
-        try {
-          expect(field).toBeFocused()
-        } catch {
-          // Tab to field
-          await field.focus()
-          expect(field).toBeFocused()
-        }
+        // Focus the field and verify it accepts focus (keyboard accessibility)
+        await field.focus()
+        await expect(field).toBeFocused()
       }
     }
   })
@@ -276,16 +270,17 @@ test.describe('Staging Smoke Tests - Full Platform Flows', () => {
       }
     })
 
-    // Navigate around the site
-    const links = await page.locator('a[href^="/"]').all()
-    for (const link of links.slice(0, 3)) {
-      const href = await link.getAttribute('href')
-      if (href && !href.includes('#')) {
-        await link.click({ timeout: 3000 }).catch(() => {
-          // Navigation may fail, that's ok for smoke test
-        })
-        await page.waitForLoadState('networkidle').catch(() => {})
-      }
+    // Navigate around the site using hrefs to avoid stale locators after navigation
+    const hrefs: string[] = []
+    const linkLocators = page.locator('a[href^="/"]')
+    const linkCount = await linkLocators.count()
+    for (let i = 0; i < Math.min(linkCount, 3); i++) {
+      const href = await linkLocators.nth(i).getAttribute('href').catch(() => null)
+      if (href && !href.includes('#')) hrefs.push(href)
+    }
+    for (const href of hrefs) {
+      await page.goto(`${STAGING_URL}${href}`, { waitUntil: 'domcontentloaded', timeout: 10000 }).catch(() => {})
+      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {})
     }
 
     // No unhandled runtime errors
