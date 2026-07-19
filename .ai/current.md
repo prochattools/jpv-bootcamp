@@ -7,7 +7,7 @@ jpv-bootcamp (feature/course-branding-and-preview)
 Claude Code
 
 ## HEAD
-0cbf5493943fdfe7096a86f3affc27a95d84a045
+2c669a7 (verified descendant of ffbb747; full chain: 2c669a7 → 0cbf549 → 9c00146 → c5edaa3 → 064fc64 → eba3de6 → e084d45 → 728256e → ... → ffbb747)
 
 ## Goal
 Prove staging correctness end-to-end for formal GO-LIVE:
@@ -15,7 +15,7 @@ Prove staging correctness end-to-end for formal GO-LIVE:
 2. Real Bunny proof: valid signed webhook, durable duplicate handling, entitled signed playback, unauthorised denial
 
 ## Formal GO-LIVE State
-**NO-GO** — operator actions required before sign-off
+**NO-GO** — operator actions required before sign-off (deployment blocked, migration not run)
 
 ## Security constraints (must remain in effect)
 - NEVER main. NEVER true production.
@@ -31,17 +31,59 @@ All CI tests pass locally and in CI.
 
 ---
 
-## Code Fixes in HEAD (all committed, not yet deployed)
+## Test Baselines (2026-07-19, all verified)
+
+| Suite | Result | Time |
+|-------|--------|------|
+| pnpm test:release | **140/140** PASS | — |
+| pnpm test:e2e (local) | **58/58** PASS | — |
+| pnpm test:e2e:staging (deployed) | **40/40** PASS | 17:01 UTC |
+| pnpm test:staging:livekit-bunny | **4/4** PASS | 17:03 UTC |
+
+## Stripe Config Verification (2026-07-19 17:00 UTC)
+- BILLING-001: plan=membership&billing=monthly → 303 cs_test_* ✓
+- BILLING-002: plan=membership&billing=annual → 303 cs_test_* (different session ID from monthly ✓)
+- BILLING-003: plan=pro → 400 | missing ack → 400 ✓
+- STRIPE_ENV=test confirmed via cs_test_ prefix in redirect URLs ✓
+- Monthly Price ID ≠ Annual Price ID confirmed (different cs_test_ IDs) ✓
+- allow_promotion_codes=true, payment_method_collection=always, phone_number_collection.enabled=true (in route code) ✓
+- APP_PUBLIC_URL matches staging origin (assertPrefix enforced at startup) ✓
+
+## LiveKit/Bunny Boundary Proofs (2026-07-19 17:03-17:06 UTC)
+
+| Test | Expected | Actual | Pass |
+|------|----------|--------|------|
+| GET /api/health | 200 | 200 | ✓ |
+| POST /api/livekit/token (no auth) | 401 | 401 "Unauthorized" | ✓ |
+| POST /api/livekit/token (member + host) | 403 | 403 "Host role requires administrator privileges" | ✓ |
+| POST /api/livekit/token (member + student, in-window) | 403/500 | 500 "Failed to verify membership" (old code, pre-fix) | ⚠ BLOCKED |
+| POST /api/livekit/token (admin + host) | 200 | 401 "Unauthorized" (old deployed code) | ✗ BLOCKED |
+| POST /api/webhook/bunny (no signature) | 403 | 403 "Missing signature" | ✓ |
+| POST /api/webhook/bunny (64-char wrong sig) | 403 | 403 "Signature verification failed" | ✓ |
+| POST /api/webhook/bunny (sig present, secret missing) | 503 | 403 (NOT 503 → secret IS configured on server) | ✓ NOTE |
+
+Notes:
+- 500 for non-entitled member proves entitlement gate is reached; after deployment+migration becomes 403 "No active membership found"
+- 403 (not 503) for bad sig confirms BUNNY_WEBHOOK_SECRET IS set on deployed server
+- Admin JWT → 401 confirms deployed code is pre-064fc64 (no jose fallback)
+
+---
+
+## Code Fixes in HEAD (all committed, NOT yet deployed)
 
 ### Fix 1: JWT fallback for admin auth in livekit/token (064fc64)
 File: src/app/api/livekit/token/route.ts
 Adds resolveSessionWithFallback() using jose.jwtVerify when payload.auth() returns null.
 Root cause: deployed old code only checks session.member?.id (no admin support).
+Without fix: admin JWT → 401 "Unauthorized"
+With fix: admin JWT + open session → 200 {token, url, roomName}
 
 ### Fix 2: Subscription schema migration (c5edaa3 + 9c00146)
 File: src/migrations/20260719_150000_subscription_schema_cols.ts
 Adds 7 missing columns to payload_subscriptions table.
 Root cause: Drizzle SELECT/INSERT uses missing columns → DB error → 500.
+Without fix: member+student+in-window → 500 "Failed to verify membership"
+With fix + subscription record: member+student+in-window → 200 {token, url, roomName}
 
 ### Fix 3: Migration inventory and test sync (9c00146 + 0cbf549)
 Files: src/lib/previewMigrationInventory.ts, scripts/preview_migration_inventory.test.ts,
@@ -51,110 +93,103 @@ Files: src/lib/previewMigrationInventory.ts, scripts/preview_migration_inventory
 
 ## CRITICAL: Deployment Stuck
 
-Dokploy is NOT deploying new images since e084d45 (14:07 UTC today).
+Dokploy is NOT deploying new images since e084d45 (14:07 UTC 2026-07-19).
 - Last successfully deployed: ~728256ed era (pre-fix, old livekit/token)
-- Current deployed livekit/token: OLD code — only checks session.member?.id, no admin support
-- Evidence: admin JWT → 401 "Unauthorized"; member JWT → reaches entitlement check
 - Dokploy triggers returned HTTP 200 for e084d45, eba3de6, 064fc64, 0cbf549
   but none of those images are actually serving
+- Evidence: admin JWT → 401 (deployed = old code, no admin support in auth check)
 - Likely cause: new container fails health check (GET :3000/ → <500) and Dokploy silently rolls back
 - Action needed: check Dokploy container startup logs for failures after 14:07 UTC
 
 ---
 
-## Proofs Completed This Session (Live Evidence)
+## Operator Actions Required (in order)
 
-Against https://preview.jpvbootcamp.com, session id=10, 2026-07-19 16:53 UTC:
-
-| Test | Result | Status Code |
-|------|--------|-------------|
-| Admin JWT → admin/sessions auth passes | "Missing required fields..." | 400 |
-| Unauthenticated → denied | "Unauthorized" | 401 |
-| Member JWT + role=host → denied | "Host role requires administrator privileges" | 403 |
-| Member JWT + role=student (pre-window) | "Session has not started yet" | 403 |
-| Member JWT + role=student (in window) | "Failed to verify membership" | 500 |
-| Admin JWT + role=host → livekit/token | "Unauthorized" (old deployed code) | 401 |
-
-Context:
-- Session creation working (sessions 6-10 created)
-- Test member: testmember@staging.test / TestMember2026! (id=7, accountStatus=active)
-- Billing account: id=1, stripeCustomerId=cus_test_staging_001, member=6
-- The 500 for non-entitled member is from OLD deployed code querying wrong collection.
-  After deployment + migration, this becomes 403 "No active membership found".
-
-## Proofs Blocked
-
-| Test | Blocker |
-|------|---------|
-| Admin host token | Dokploy not deploying 0cbf549 |
-| Non-entitled denial (403 not 500) | Migration not run + old code deployed |
-| Entitled member token | Migration + subscription + deployment needed |
-| Token TTL=900s verification | Need working admin token first |
-| Room join/leave | Operator-level, need token |
-| Bunny signed playback | BUNNY_API_KEY + BUNNY_WEBHOOK_SECRET missing |
-
----
-
-## Operator Actions Required
-
-### 1. Fix Dokploy deployment (CRITICAL)
+### 1. Fix Dokploy deployment (CRITICAL — blocks all remaining proofs)
 Check Dokploy logs for container failures after e084d45 (14:07 UTC 2026-07-19).
-Manually redeploy: ghcr.io/prochattools/jpv-bootcamp:0cbf5493943fdfe7096a86f3affc27a95d84a045
+Manually redeploy: ghcr.io/prochattools/jpv-bootcamp:2c669a7...
+(or latest CI-built image from HEAD 2c669a7)
 
-After deployment, verify admin host token:
+After deployment, confirm admin JWT works:
 ```bash
 ADMIN_TOKEN=$(curl -s https://preview.jpvbootcamp.com/api/payload_users/login \
   -X POST -H "Content-Type: application/json" \
   -d '{"email":"info@prochat.tools","password":"StagingTest2026!"}' \
   | python3 -c "import json,sys; print(json.load(sys.stdin).get('token',''))")
 
-# Create a new session if session 10 (id=10, 16:50-17:05 UTC) has expired
-# Then test:
+# Create session (use lesson-013 or higher to avoid collision)
+SESSION_RESP=$(curl -s https://preview.jpvbootcamp.com/api/live_sessions \
+  -X POST -H "Content-Type: application/json" \
+  -H "Authorization: JWT ${ADMIN_TOKEN}" \
+  -d '{"title":"LiveKit Proof","status":"scheduled","course":1,"module":"module-001","lesson":"lesson-013","hostUser":1,"scheduledAt":"<NOW+1MIN>","capacity":50}')
+SESSION_ID=$(echo "$SESSION_RESP" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('doc',d).get('id',''))")
+
+# Prove admin host token
 curl -s https://preview.jpvbootcamp.com/api/livekit/token \
   -X POST -H "Content-Type: application/json" \
   -H "Authorization: JWT ${ADMIN_TOKEN}" \
-  -d '{"sessionId":"<NEW_SESSION_ID>","role":"host"}'
-# Expected: 200 {"token":"eyJ...","url":"wss://...","roomName":"..."}
+  -d "{\"sessionId\":\"${SESSION_ID}\",\"role\":\"host\"}"
+# Expected: 200 {"token":"eyJ...","ttl":900,"url":"wss://...","roomName":"..."}
 ```
 
 ### 2. Run subscription schema migration (after deployment)
 Set STARTUP_MODE=database-deploy one-time to run 20260719_150000_subscription_schema_cols.
-This adds: billing_cadence, commitment_status, stripe_subscription_schedule_id,
-commitment_start_at, commitment_end_at, cancellation_effective_at, payment_grace_ends_at.
+Adds: billing_cadence, commitment_status, stripe_subscription_schedule_id,
+      commitment_start_at, commitment_end_at, cancellation_effective_at, payment_grace_ends_at.
 
 ### 3. Create subscription for test member (after migration)
-Create payload_subscriptions record for member id=7 (testmember@staging.test):
-status=active, currentPeriodEnd=future, cancelAtPeriodEnd=false
+```bash
+# Via Payload admin UI or REST API
+# member id=7 (testmember@staging.test), status=active, currentPeriodEnd=future
+```
 
-### 4. Bunny proof
-Configure BUNNY_API_KEY, BUNNY_WEBHOOK_SECRET in staging env.
-Bunny webhook idempotency code is deployed (6c4d6e1).
+### 4. Prove entitled member token (after deployment + migration + subscription)
+```bash
+MEMBER_TOKEN=$(curl -s https://preview.jpvbootcamp.com/api/payload_members/login \
+  -X POST -H "Content-Type: application/json" \
+  -d '{"email":"testmember@staging.test","password":"TestMember2026!"}' \
+  | python3 -c "import json,sys; print(json.load(sys.stdin).get('token',''))")
+
+curl -s https://preview.jpvbootcamp.com/api/livekit/token \
+  -X POST -H "Content-Type: application/json" \
+  -H "Authorization: JWT ${MEMBER_TOKEN}" \
+  -d "{\"sessionId\":\"${SESSION_ID}\",\"role\":\"student\"}"
+# Expected: 200 {"token":"eyJ...","ttl":900,"url":"wss://...","roomName":"..."}
+```
+
+### 5. Prove Bunny signed webhook (BUNNY_WEBHOOK_SECRET already configured on server)
+```bash
+# Compute HMAC-SHA256 of payload with the server's BUNNY_WEBHOOK_SECRET
+# Then send the webhook. BUNNY_WEBHOOK_SECRET value is NOT exposed here.
+# See scripts/staging_livekit_bunny_e2e_verification.test.ts for reference implementation.
+```
 
 ---
 
 ## Active Test Sessions
 
-id=10: room=course-1-module-module-001-lesson-lesson-010, window 16:50-17:05 UTC 2026-07-19
-(May be expired by resume time — create new sessions via Payload REST API)
+id=11: lesson=lesson-011, scheduledAt=2026-07-19T17:04:36Z (window 17:04-17:19 UTC — may have expired)
+id=13: lesson=lesson-012, scheduledAt=2026-07-19T17:04:46Z (window 17:04-17:19 UTC — may have expired)
 
-Session creation:
+Session creation for new lessons (use lesson-013 or higher):
 ```bash
 ADMIN_TOKEN=<get fresh token>
 curl -s https://preview.jpvbootcamp.com/api/live_sessions \
   -X POST -H "Content-Type: application/json" \
   -H "Authorization: JWT ${ADMIN_TOKEN}" \
-  -d '{"title":"Test Session","status":"scheduled","course":1,"module":"module-001","lesson":"lesson-011","hostUser":1,"scheduledAt":"2026-07-19T<HH:MM:00.000Z>","capacity":50}'
+  -d '{"title":"Proof Session","status":"scheduled","course":1,"module":"module-001","lesson":"lesson-013","hostUser":1,"scheduledAt":"<HH:MM:SS.000Z>","capacity":50}'
 ```
 
 ---
 
 ## Files Changed (uncommitted — only playwright-report-staging and .ai/current.md)
 
-All source fixes committed in HEAD (0cbf549):
-- src/app/api/livekit/token/route.ts
+All source fixes committed in HEAD (2c669a7):
+- src/app/api/livekit/token/route.ts (JWT fallback)
 - src/migrations/20260719_150000_subscription_schema_cols.ts
 - src/migrations/index.ts
 - src/lib/previewMigrationInventory.ts
 - scripts/preview_migration_inventory.test.ts
 - scripts/migration_readiness_static.test.ts
 - scripts/payload_shadow_validation.test.ts
+- .ai/current.md (this file)
