@@ -1,4 +1,4 @@
-import { createHmac } from 'node:crypto'
+import { createHash } from 'node:crypto'
 
 import { evaluateMembershipEntitlement, type MembershipEntitlementInput } from '@/lib/entitlements/membershipEntitlement'
 
@@ -22,7 +22,11 @@ export type BunnyProtectedPlaybackRequest = {
   videoId: string
   lessonId: string
   expiresAt: string
+  /** Bunny iframe embed URL with signed token and expires params */
+  iframeUrl: string
+  /** Signed hex token — SHA256(signingKey + videoId + expiresUnix) */
   token: string
+  expiresUnix: number
 }
 
 export type BunnyProtectedMediaConfig = {
@@ -52,6 +56,10 @@ export type BunnyPublicVideoProjection =
       playbackAssetId: string
       thumbnailUrl: string | null
       expiresAt: string
+      expiresUnix: number
+      /** Bunny iframe embed URL — ready to drop into an <iframe src=…> */
+      iframeUrl: string
+      /** Raw hex token — SHA256(signingKey + videoId + expiresUnix) */
       token: string
     }
   | {
@@ -107,11 +115,14 @@ export class InMemoryBunnyProtectedMediaAdapter implements BunnyProtectedMediaAd
     now: Date
     expiresAt: Date
   }): Promise<BunnyProtectedPlaybackRequest> {
-    // Bunny token-auth format: libraryId:videoId:expiresUnixTimestamp:hmacHash
     const expiresUnix = Math.floor(input.expiresAt.getTime() / 1000)
-    const payload = `${input.video.libraryId}:${input.video.videoId}:${expiresUnix}`
-    const hmacHash = createHmac('sha256', this.signingKey).update(payload).digest('hex')
-    const token = `${payload}:${hmacHash}`
+    // Bunny iframe embed token: SHA256(signingKey + videoId + expiresUnix)
+    const token = createHash('sha256')
+      .update(this.signingKey + input.video.videoId + String(expiresUnix))
+      .digest('hex')
+    const iframeUrl =
+      `https://iframe.mediadelivery.net/embed/${input.video.libraryId}/${input.video.videoId}` +
+      `?token=${token}&expires=${expiresUnix}`
 
     return {
       provider: 'bunny_stream',
@@ -119,7 +130,9 @@ export class InMemoryBunnyProtectedMediaAdapter implements BunnyProtectedMediaAd
       videoId: input.video.videoId,
       lessonId: input.video.lessonId,
       expiresAt: input.expiresAt.toISOString(),
+      iframeUrl,
       token,
+      expiresUnix,
     }
   }
 }
@@ -186,6 +199,8 @@ export async function resolveBunnyProtectedPlayback(input: {
     playbackAssetId: video.playbackAssetId,
     thumbnailUrl: video.thumbnailUrl,
     expiresAt: request.expiresAt,
+    expiresUnix: request.expiresUnix,
+    iframeUrl: request.iframeUrl,
     token: request.token,
   }
 }

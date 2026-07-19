@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { createHash } from 'node:crypto'
 
 import {
   InMemoryBunnyProtectedMediaAdapter,
@@ -53,6 +54,19 @@ async function testReadyAsset() {
   assert.equal(projection.playbackAssetId, 'asset_1')
   assert.equal(projection.expiresAt, '2026-07-18T10:10:00.000Z')
   assert.match(projection.token, /^[a-f0-9]{64}$/)
+
+  // Verify Bunny iframe embed token algorithm: SHA256(signingKey + videoId + expiresUnix)
+  const expiresUnix = Math.floor(new Date('2026-07-18T10:10:00.000Z').getTime() / 1000)
+  const expectedToken = createHash('sha256')
+    .update('test_signing_key' + '123e4567-e89b-12d3-a456-426614174000' + String(expiresUnix))
+    .digest('hex')
+  assert.equal(projection.token, expectedToken, 'token must be SHA256(signingKey+videoId+expiresUnix)')
+  assert.equal(projection.expiresUnix, expiresUnix, 'expiresUnix must match')
+  // Verify iframeUrl follows official Bunny embed format
+  const expectedIframeUrl = `https://iframe.mediadelivery.net/embed/987654/123e4567-e89b-12d3-a456-426614174000?token=${expectedToken}&expires=${expiresUnix}`
+  assert.equal(projection.iframeUrl, expectedIframeUrl, 'iframeUrl must use official Bunny embed format')
+  // Token must be plain hex — no colons (old colon-delimited format is wrong)
+  assert.doesNotMatch(projection.token, /:/, 'token must not contain colons')
 }
 
 async function testProcessingAndFailedAssetsFailClosed() {
