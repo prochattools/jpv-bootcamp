@@ -160,6 +160,16 @@ export const PREVIEW_MIGRATION_INVENTORY = [
     verificationChecks: ['registry-match', 'ordered-exactly', 'bunny-videos'],
     authorizationCategory: 'payloadMigration',
   },
+  {
+    name: '20260719_150000_subscription_schema_cols',
+    system: 'payload',
+    order: 15,
+    purpose: 'Add missing columns to payload_subscriptions: billing_cadence, commitment_status, stripe_subscription_schedule_id, and related commitment/grace period timestamps.',
+    requiredForPreview: true,
+    rollbackRisk: 'reversible',
+    verificationChecks: ['registry-match', 'ordered-exactly'],
+    authorizationCategory: 'payloadMigration',
+  },
 ] as const satisfies readonly PreviewMigrationInventoryEntry[]
 
 export const PREVIEW_MIGRATION_INVENTORY_VERSION = 1
