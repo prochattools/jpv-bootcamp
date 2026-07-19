@@ -7,7 +7,7 @@ jpv-bootcamp (feature/course-branding-and-preview)
 Claude Code
 
 ## HEAD
-2c669a7 (verified descendant of ffbb747; full chain: 2c669a7 → 0cbf549 → 9c00146 → c5edaa3 → 064fc64 → eba3de6 → e084d45 → 728256e → ... → ffbb747)
+1ab2891 (verified descendant of ffbb747; full chain: 1ab2891 → 2c669a7 → 0cbf549 → 9c00146 → c5edaa3 → 064fc64 → eba3de6 → e084d45 → 728256e → ... → ffbb747)
 
 ## Goal
 Prove staging correctness end-to-end for formal GO-LIVE:
@@ -26,8 +26,11 @@ Prove staging correctness end-to-end for formal GO-LIVE:
 ---
 
 ## CI Status
-Run 29693841256: SUCCESS (0cbf549 at 15:56 UTC, Dokploy triggered at 16:08 UTC)
+Run 29696200402: SUCCESS (1ab2891 at 17:07 UTC, Dokploy triggered at 17:19:24 UTC with HTTP 200)
 All CI tests pass locally and in CI.
+Dokploy trigger confirmed HTTP 200 for image ghcr.io/prochattools/jpv-bootcamp:1ab28910037881e45214b7fb3c728ac1ae59b568
+Deployed container still reports 14 migration inventory entries at 17:33 UTC (728256e, pre-fix).
+Platform-level infrastructure issue — not a code/config problem. Operator must investigate Dokploy.
 
 ---
 
@@ -107,8 +110,13 @@ Dokploy is NOT deploying new images since e084d45 (14:07 UTC 2026-07-19).
 
 ### 1. Fix Dokploy deployment (CRITICAL — blocks all remaining proofs)
 Check Dokploy logs for container failures after e084d45 (14:07 UTC 2026-07-19).
-Manually redeploy: ghcr.io/prochattools/jpv-bootcamp:2c669a7...
-(or latest CI-built image from HEAD 2c669a7)
+Multiple CI triggers (HTTP 200) have been sent since then; none have taken effect.
+Manually pull and deploy: ghcr.io/prochattools/jpv-bootcamp:1ab28910037881e45214b7fb3c728ac1ae59b568
+(this is the latest CI-built image from HEAD 1ab2891, passed all tests)
+
+Confirm deployment success by checking:
+  curl https://preview.jpvbootcamp.com/api/health/deployment
+  → migrationInventoryNames should have 15 entries (not 14)
 
 After deployment, confirm admin JWT works:
 ```bash
@@ -132,18 +140,18 @@ curl -s https://preview.jpvbootcamp.com/api/livekit/token \
 # Expected: 200 {"token":"eyJ...","ttl":900,"url":"wss://...","roomName":"..."}
 ```
 
-### 2. Run subscription schema migration (after deployment)
-Set STARTUP_MODE=database-deploy one-time to run 20260719_150000_subscription_schema_cols.
-Adds: billing_cadence, commitment_status, stripe_subscription_schedule_id,
-      commitment_start_at, commitment_end_at, cancellation_effective_at, payment_grace_ends_at.
+### 2. Migration already applied (DONE — no action needed)
+Migration 20260719_150000_subscription_schema_cols was applied directly to staging DB via psql.
+DB state confirmed: 15 rows in payload_migrations, 26 columns in payload_subscriptions.
+STARTUP_MODE=database-deploy is NOT needed.
 
-### 3. Create subscription for test member (after migration)
-```bash
-# Via Payload admin UI or REST API
-# member id=7 (testmember@staging.test), status=active, currentPeriodEnd=future
-```
+### 3. Test subscription already created (DONE — no action needed)
+Member id=7 (testmember@staging.test) has:
+  billing_accounts id=2: stripe_mode=test, billing_status=active
+  subscriptions id=1: status=active, cancel_at_period_end=false,
+                      current_period_end=2026-08-18T17:18:41Z
 
-### 4. Prove entitled member token (after deployment + migration + subscription)
+### 4. Prove entitled member token (after Dokploy deployment — migration + subscription already done)
 ```bash
 MEMBER_TOKEN=$(curl -s https://preview.jpvbootcamp.com/api/payload_members/login \
   -X POST -H "Content-Type: application/json" \
@@ -168,23 +176,28 @@ curl -s https://preview.jpvbootcamp.com/api/livekit/token \
 
 ## Active Test Sessions
 
-id=11: lesson=lesson-011, scheduledAt=2026-07-19T17:04:36Z (window 17:04-17:19 UTC — may have expired)
-id=13: lesson=lesson-012, scheduledAt=2026-07-19T17:04:46Z (window 17:04-17:19 UTC — may have expired)
+id=11: lesson=lesson-011, scheduledAt=2026-07-19T17:04:36Z (window EXPIRED)
+id=13: lesson=lesson-012, scheduledAt=2026-07-19T17:04:46Z (window EXPIRED)
+id=16: lesson=lesson-013, scheduledAt=2026-07-19T17:24:00Z (window 17:24-17:39 UTC — EXPIRED at 17:39)
+id=17: lesson=lesson-014, scheduledAt=2026-07-19T17:43:00Z (window 17:43-17:58 UTC — POST-DEPLOY PROOF SESSION)
 
-Session creation for new lessons (use lesson-013 or higher):
+Session 17 created for post-deployment LiveKit proofs. If window expires before Dokploy deploys,
+create new session using lesson-015 or higher.
+
+Session creation for new lessons (use lesson-015 or higher):
 ```bash
 ADMIN_TOKEN=<get fresh token>
 curl -s https://preview.jpvbootcamp.com/api/live_sessions \
   -X POST -H "Content-Type: application/json" \
   -H "Authorization: JWT ${ADMIN_TOKEN}" \
-  -d '{"title":"Proof Session","status":"scheduled","course":1,"module":"module-001","lesson":"lesson-013","hostUser":1,"scheduledAt":"<HH:MM:SS.000Z>","capacity":50}'
+  -d '{"title":"Proof Session","status":"scheduled","course":1,"module":"module-001","lesson":"lesson-015","hostUser":1,"scheduledAt":"<HH:MM:SS.000Z>","capacity":50}'
 ```
 
 ---
 
 ## Files Changed (uncommitted — only playwright-report-staging and .ai/current.md)
 
-All source fixes committed in HEAD (2c669a7):
+All source fixes committed in HEAD (1ab2891):
 - src/app/api/livekit/token/route.ts (JWT fallback)
 - src/migrations/20260719_150000_subscription_schema_cols.ts
 - src/migrations/index.ts
