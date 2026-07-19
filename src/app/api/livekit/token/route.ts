@@ -261,7 +261,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 			})
 		}
 
-		const token = at.toJwt()
+		const token = await at.toJwt()
 
 		return NextResponse.json({
 			token,
