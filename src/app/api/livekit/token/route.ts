@@ -43,15 +43,20 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 		}
 
 		const session = await resolvePayloadRequestSession(req.headers)
-		if (!session.member?.id) {
+
+		// Require authenticated member OR authenticated admin (admin can host)
+		if (!session.member?.id && !session.administratorId) {
 			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 		}
 
-		if (session.member.accountStatus !== 'active') {
-			return NextResponse.json(
-				{ error: 'Member account is not active' },
-				{ status: 403 }
-			)
+		// Member-only: check account is active (admins skip this)
+		if (session.member?.id && !session.administratorId) {
+			if (session.member.accountStatus !== 'active') {
+				return NextResponse.json(
+					{ error: 'Member account is not active' },
+					{ status: 403 }
+				)
+			}
 		}
 
 		const body = await req.json()
@@ -138,47 +143,37 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 			)
 		}
 
-		// For students: verify course entitlement
-		if (role === 'student') {
-			// Query member entitlements to verify access to this course
-			type MemberDoc = {
+		// For students: verify course entitlement via payload_subscriptions
+		if (role === 'student' && session.member?.id) {
+			type SubscriptionDoc = {
 				id: string | number
-				membership?: {
-					lifecycleState?: string
-					subscriptionStatus?: string
-					periodEnd?: Date | string
-					cancelAtPeriodEnd?: boolean
-					paymentStatus?: string
-					graceEndsAt?: Date | string
-					reconciliationState?: string
-					fundingSource?: string
-				}
+				status?: string
+				currentPeriodEnd?: Date | string
+				cancelAtPeriodEnd?: boolean
+				fundingSource?: string
 			}
 
 			try {
-				const member = (await payload.findByID({
-					collection: 'members' as any,
-					id: session.member.id,
+				const subResult = await payload.find({
+					collection: 'payload_subscriptions' as any,
+					where: { member: { equals: session.member.id } },
+					limit: 1,
 					overrideAccess: true,
-				})) as MemberDoc
+				})
+				const sub = subResult.docs?.[0] as SubscriptionDoc | undefined
 
-				if (!member?.membership) {
+				if (!sub) {
 					return NextResponse.json(
 						{ error: 'No active membership found' },
 						{ status: 403 }
 					)
 				}
 
-				// Evaluate membership entitlement
 				const entitlementResult = evaluateMembershipEntitlement({
-					lifecycleState: (member.membership.lifecycleState as any) || null,
-					subscriptionStatus: member.membership.subscriptionStatus || null,
-					periodEnd: member.membership.periodEnd || null,
-					cancelAtPeriodEnd: member.membership.cancelAtPeriodEnd ?? null,
-					paymentStatus: member.membership.paymentStatus || null,
-					graceEndsAt: member.membership.graceEndsAt || null,
-					reconciliationState: (member.membership.reconciliationState as any) || null,
-					fundingSource: (member.membership.fundingSource as any) || null,
+					subscriptionStatus: sub.status || null,
+					periodEnd: sub.currentPeriodEnd || null,
+					cancelAtPeriodEnd: sub.cancelAtPeriodEnd ?? null,
+					fundingSource: (sub.fundingSource as any) || 'direct_payment',
 					now,
 				})
 
@@ -206,7 +201,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
 		const liveKitConfig = getLiveKitConfig()
 		const at = new AccessToken(liveKitConfig.apiKey, liveKitConfig.apiSecret)
-		at.identity = String(session.member.id)
+		// Admin host: identity is "admin:<id>"; member student: identity is member id
+		at.identity = session.administratorId ? `admin:${session.administratorId}` : String(session.member!.id)
 		at.ttl = 15 * 60
 
 		if (role === 'host') {
