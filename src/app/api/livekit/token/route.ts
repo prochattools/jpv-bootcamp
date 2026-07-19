@@ -46,7 +46,19 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
 		// Require authenticated member OR authenticated admin (admin can host)
 		if (!session.member?.id && !session.administratorId) {
-			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+			// DEBUG: return session debug info to diagnose staging auth issue
+			const authHeader = req.headers.get('Authorization')
+			return NextResponse.json({
+				error: 'Unauthorized',
+				_debug: {
+					hasAuthHeader: !!authHeader,
+					authHeaderPrefix: authHeader ? authHeader.substring(0, 10) : null,
+					authenticatedCollection: session.authenticatedCollection,
+					unresolvedCollection: session.unresolvedCollection,
+					hasMember: !!session.member,
+					hasAdminId: !!session.administratorId,
+				}
+			}, { status: 401 })
 		}
 
 		// Member-only: check account is active (admins skip this)
