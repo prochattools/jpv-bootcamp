@@ -26,11 +26,11 @@ export async function up({ db }: MigrateUpArgs): Promise<void> {
       "created_at" timestamp(3) with time zone DEFAULT now() NOT NULL
     );
 
-    CREATE INDEX ${schema}."live_sessions_room_name_idx" on ${schema}."live_sessions" ("room_name");
-    CREATE INDEX ${schema}."live_sessions_course_id_idx" on ${schema}."live_sessions" ("course_id");
-    CREATE INDEX ${schema}."live_sessions_host_user_id_idx" on ${schema}."live_sessions" ("host_user_id");
-    CREATE INDEX ${schema}."live_sessions_status_idx" on ${schema}."live_sessions" ("status");
-    CREATE INDEX ${schema}."live_sessions_scheduled_at_idx" on ${schema}."live_sessions" ("scheduled_at");
+    CREATE INDEX "live_sessions_room_name_idx" on ${schema}."live_sessions" ("room_name");
+    CREATE INDEX "live_sessions_course_id_idx" on ${schema}."live_sessions" ("course_id");
+    CREATE INDEX "live_sessions_host_user_id_idx" on ${schema}."live_sessions" ("host_user_id");
+    CREATE INDEX "live_sessions_status_idx" on ${schema}."live_sessions" ("status");
+    CREATE INDEX "live_sessions_scheduled_at_idx" on ${schema}."live_sessions" ("scheduled_at");
 
     ALTER TABLE ${schema}."live_sessions"
       ADD CONSTRAINT "live_sessions_course_id_fk"

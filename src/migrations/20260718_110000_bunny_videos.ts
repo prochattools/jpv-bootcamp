@@ -30,11 +30,11 @@ export async function up({ db }: MigrateUpArgs): Promise<void> {
       "created_at" timestamp(3) with time zone DEFAULT now() NOT NULL
     );
 
-    CREATE INDEX ${schema}."bunny_videos_library_video_idx" on ${schema}."bunny_videos" ("library_id", "video_id");
-    CREATE INDEX ${schema}."bunny_videos_status_idx" on ${schema}."bunny_videos" ("status");
-    CREATE INDEX ${schema}."bunny_videos_lesson_id_idx" on ${schema}."bunny_videos" ("lesson_id");
+    CREATE INDEX "bunny_videos_library_video_idx" on ${schema}."bunny_videos" ("library_id", "video_id");
+    CREATE INDEX "bunny_videos_status_idx" on ${schema}."bunny_videos" ("status");
+    CREATE INDEX "bunny_videos_lesson_id_idx" on ${schema}."bunny_videos" ("lesson_id");
 
-    CREATE UNIQUE INDEX ${schema}."bunny_videos_library_video_unique_idx" on ${schema}."bunny_videos" ("library_id", "video_id");
+    CREATE UNIQUE INDEX "bunny_videos_library_video_unique_idx" on ${schema}."bunny_videos" ("library_id", "video_id");
   `))
 }
 

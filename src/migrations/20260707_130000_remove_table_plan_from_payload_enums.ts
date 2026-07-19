@@ -1,9 +1,9 @@
 import type { MigrateDownArgs, MigrateUpArgs } from '@payloadcms/db-postgres'
 import { sql } from '@payloadcms/db-postgres'
-
-const schema = 'jpvbootcamp'
+import { getPayloadMigrationSchema } from '../lib/payloadMigrationSchema'
 
 export async function up({ db }: MigrateUpArgs): Promise<void> {
+  const schema = getPayloadMigrationSchema()
   await db.execute(sql.raw(`
 DO $$
 DECLARE
@@ -12,12 +12,20 @@ BEGIN
   IF to_regclass('${schema}.payload_access_policies_allowed_plans') IS NOT NULL THEN
     DELETE FROM ${schema}.payload_access_policies_allowed_plans
     WHERE value::text = legacy_plan;
+    -- remap vip → pro before enum recreation
+    UPDATE ${schema}.payload_access_policies_allowed_plans
+    SET value = 'pro'::${schema}.enum_payload_access_policies_allowed_plans
+    WHERE value::text = 'vip';
   END IF;
 
   IF to_regclass('${schema}.payload_subscriptions') IS NOT NULL THEN
     UPDATE ${schema}.payload_subscriptions
     SET plan = 'free'::${schema}.enum_payload_subscriptions_plan
     WHERE plan::text = legacy_plan;
+    -- remap vip → pro before enum recreation
+    UPDATE ${schema}.payload_subscriptions
+    SET plan = 'pro'::${schema}.enum_payload_subscriptions_plan
+    WHERE plan::text = 'vip';
   END IF;
 
   IF EXISTS (
@@ -56,6 +64,7 @@ END $$;
 }
 
 export async function down({ db }: MigrateDownArgs): Promise<void> {
+  const schema = getPayloadMigrationSchema()
   await db.execute(sql.raw(`
 DO $$
 DECLARE

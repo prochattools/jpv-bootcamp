@@ -42,8 +42,11 @@ export function buildMembershipSupportMigrationUpSql(databaseUrl = process.env.D
 
   CREATE TYPE ${schema}."enum_payload_membership_vouchers_approval_state" AS ENUM ('draft', 'submitted', 'approved', 'issued', 'rejected');
   CREATE TYPE ${schema}."enum_payload_membership_vouchers_redemption_state" AS ENUM ('not_redeemed', 'redeemed', 'expired', 'deactivated');
+  CREATE TYPE ${schema}."enum_payload_membership_vouchers_voucher_duration" AS ENUM ('one_month', 'one_year');
+  CREATE TYPE ${schema}."enum_payload_membership_vouchers_billing_cadence" AS ENUM ('monthly', 'annual');
 
   CREATE TYPE ${schema}."enum_payload_pay_it_forward_funding_approval_state" AS ENUM ('draft', 'submitted', 'approved', 'issued', 'rejected');
+  CREATE TYPE ${schema}."enum_payload_pay_it_forward_funding_billing_cadence" AS ENUM ('monthly', 'annual');
 
   CREATE TYPE ${schema}."enum_payload_membership_funding_sources_source_type" AS ENUM ('direct_payment', 'voucher', 'pay_it_forward');
   CREATE TYPE ${schema}."enum_payload_membership_funding_sources_source_state" AS ENUM ('planned', 'approved', 'allocated', 'depleted', 'revoked');
@@ -564,7 +567,10 @@ export function buildMembershipSupportMigrationDownSql(databaseUrl = process.env
   DROP TYPE IF EXISTS ${schema}."enum_payload_membership_support_records_reconciliation_state" CASCADE;
   DROP TYPE IF EXISTS ${schema}."enum_payload_membership_vouchers_approval_state" CASCADE;
   DROP TYPE IF EXISTS ${schema}."enum_payload_membership_vouchers_redemption_state" CASCADE;
+  DROP TYPE IF EXISTS ${schema}."enum_payload_membership_vouchers_voucher_duration" CASCADE;
+  DROP TYPE IF EXISTS ${schema}."enum_payload_membership_vouchers_billing_cadence" CASCADE;
   DROP TYPE IF EXISTS ${schema}."enum_payload_pay_it_forward_funding_approval_state" CASCADE;
+  DROP TYPE IF EXISTS ${schema}."enum_payload_pay_it_forward_funding_billing_cadence" CASCADE;
   DROP TYPE IF EXISTS ${schema}."enum_payload_membership_funding_sources_source_type" CASCADE;
   DROP TYPE IF EXISTS ${schema}."enum_payload_membership_funding_sources_source_state" CASCADE;
   DROP TYPE IF EXISTS ${schema}."enum_payload_membership_reconciliations_reconciliation_state" CASCADE;
