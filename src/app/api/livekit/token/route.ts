@@ -3,12 +3,50 @@ import 'server-only'
 import { NextRequest, NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 import config from '@payload-config'
+import { jwtVerify } from 'jose'
 import { AccessToken } from 'livekit-server-sdk'
 import { getLiveKitConfig, redactLiveKitSecrets, generateLiveKitRoomName, isLiveKitConfigured } from '@/lib/livekit-config'
 import { resolvePayloadRequestSession } from '@/lib/auth/payloadSession'
 import { evaluateMembershipEntitlement } from '@/lib/entitlements/membershipEntitlement'
+import type { PayloadRequestSession } from '@/lib/auth/payloadSessionMapping'
 
 const LIVE_SESSION_TIME_WINDOW_MINUTES = 15
+
+async function resolveSessionWithFallback(req: NextRequest): Promise<PayloadRequestSession> {
+	const session = await resolvePayloadRequestSession(req.headers)
+	if (session.member?.id || session.administratorId) return session
+
+	const authHeader = req.headers.get('Authorization')
+	if (!authHeader) return session
+
+	// Strip JWT/Bearer prefix, normalize whitespace
+	const token = authHeader.replace(/^(JWT|Bearer)\s+/i, '').trim()
+	if (!token) return session
+
+	const secret = process.env.PAYLOAD_SECRET
+	if (!secret) return session
+
+	try {
+		const { payload: claims } = await jwtVerify(token, new TextEncoder().encode(secret))
+		const col = (claims as any).collection as string | undefined
+		const id = (claims as any).id as string | number | undefined
+		if (!id) return session
+
+		if (col === 'payload_users') {
+			return { ...session, administratorId: id, authenticatedCollection: 'payload_users' }
+		}
+		if (col === 'payload_members') {
+			return {
+				...session,
+				member: { id, accountStatus: null, emailVerifiedAt: null },
+				authenticatedCollection: 'payload_members',
+			}
+		}
+	} catch {
+		// Invalid or expired JWT — fall through to unauthenticated
+	}
+	return session
+}
 
 /**
  * POST /api/livekit/token
@@ -42,23 +80,11 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 			)
 		}
 
-		const session = await resolvePayloadRequestSession(req.headers)
+		const session = await resolveSessionWithFallback(req)
 
 		// Require authenticated member OR authenticated admin (admin can host)
 		if (!session.member?.id && !session.administratorId) {
-			// DEBUG: return session debug info to diagnose staging auth issue
-			const authHeader = req.headers.get('Authorization')
-			return NextResponse.json({
-				error: 'Unauthorized',
-				_debug: {
-					hasAuthHeader: !!authHeader,
-					authHeaderPrefix: authHeader ? authHeader.substring(0, 10) : null,
-					authenticatedCollection: session.authenticatedCollection,
-					unresolvedCollection: session.unresolvedCollection,
-					hasMember: !!session.member,
-					hasAdminId: !!session.administratorId,
-				}
-			}, { status: 401 })
+			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 		}
 
 		// Member-only: check account is active (admins skip this)
