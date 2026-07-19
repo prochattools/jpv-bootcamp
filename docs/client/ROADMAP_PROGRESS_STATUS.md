@@ -131,7 +131,7 @@ These assets make the repository ready for controlled staging operations without
 ## Test and security evidence
 
 - `git diff --check` passed.
-- `pnpm test:release` passed `139/139`.
+- `pnpm test:release` passed `140/140`.
 - `pnpm test:e2e` passed `58/58` across desktop and mobile Chromium projects.
 - `pnpm staging:decision-readiness` passed with `DECISION-READY, EXTERNAL APPROVALS PENDING`.
 - Programme contract, path-safety, import-plan, readiness, acceptance-report, and preview-only browser checks passed.
