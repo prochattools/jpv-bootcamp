@@ -113,11 +113,18 @@ function cleanDir(dir: string): void {
 // ─── test runner ──────────────────────────────────────────────────────────────
 
 async function main(): Promise<void> {
-  // 1. staging guard — wrong host
+  // 1. staging guard — wrong host (not 100.71.31.88 or 10.0.2.4)
   {
     assert.throws(
       () => assertStagingGuard('postgresql://u:p@10.0.0.1/db?schema=jpvbootcamp_staging'),
       /database_host_rejected/,
+    )
+  }
+
+  // 1b. staging guard — Docker overlay host (10.0.2.4) is allowed
+  {
+    assert.doesNotThrow(() =>
+      assertStagingGuard('postgresql://u:p@10.0.2.4:5433/db?schema=jpvbootcamp_staging')
     )
   }
 
@@ -286,7 +293,7 @@ async function main(): Promise<void> {
         async () => runMigration(
           {
             mode: 'extract',
-            databaseUrl: 'postgresql://u:p@wrong.host/db?schema=jpvbootcamp_staging',
+            databaseUrl: 'postgresql://u:p@192.168.99.1/db?schema=jpvbootcamp_staging',
             runId: 'test_extract',
             checkpointDir: dir,
           },
@@ -308,7 +315,7 @@ async function main(): Promise<void> {
         async () => runMigration(
           {
             mode: 'apply',
-            databaseUrl: 'postgresql://u:p@10.0.0.1/db?schema=jpvbootcamp_staging',
+            databaseUrl: 'postgresql://u:p@192.168.1.1/db?schema=jpvbootcamp_staging',
             runId: 'bad_host',
             checkpointDir: dir,
           },
@@ -427,7 +434,8 @@ async function main(): Promise<void> {
   {
     const { readFileSync } = await import('node:fs')
     const src = readFileSync('scripts/migration/legacyMigration.ts', 'utf8')
-    assert.match(src, /100\.71\.31\.88/, 'must hard-code staging host guard')
+    assert.match(src, /100\.71\.31\.88/, 'must hard-code Tailscale staging host guard')
+    assert.match(src, /10\.0\.2\.4/, 'must hard-code Docker overlay staging host guard')
     assert.match(src, /jpvbootcamp_staging/, 'must hard-code staging schema guard')
     assert.match(src, /ON CONFLICT/, 'must use idempotent upserts')
     assert.match(src, /BEGIN/, 'must use transactions')

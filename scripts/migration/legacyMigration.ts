@@ -110,6 +110,22 @@ export interface MigrationCheckpoint {
   completedAt: string | null
 }
 
+export type MutationOutcome = 'inserted' | 'updated' | 'unchanged' | 'not_applicable'
+
+export interface TableMutationMetrics {
+  inserted: number
+  updated: number
+  unchanged: number
+  notApplicable: number
+}
+
+export interface MigrationMetrics {
+  members: TableMutationMetrics
+  billingAccounts: TableMutationMetrics
+  subscriptions: TableMutationMetrics
+  accessGrants: TableMutationMetrics
+}
+
 export interface MigrationResult {
   runId: string
   mode: MigrationMode
@@ -119,7 +135,26 @@ export interface MigrationResult {
   errorCount: number
   errors: MigrationError[]
   checkpoint: MigrationCheckpoint
+  metrics?: MigrationMetrics
   dryRunSummary?: string[]
+}
+
+function emptyTableMetrics(): TableMutationMetrics {
+  return { inserted: 0, updated: 0, unchanged: 0, notApplicable: 0 }
+}
+
+function emptyMigrationMetrics(): MigrationMetrics {
+  return {
+    members: emptyTableMetrics(),
+    billingAccounts: emptyTableMetrics(),
+    subscriptions: emptyTableMetrics(),
+    accessGrants: emptyTableMetrics(),
+  }
+}
+
+function incrementMetric(metrics: TableMutationMetrics, outcome: MutationOutcome): void {
+  if (outcome === 'not_applicable') metrics.notApplicable++
+  else metrics[outcome]++
 }
 
 // ─── guard ────────────────────────────────────────────────────────────────────
@@ -359,21 +394,59 @@ export async function extractSourceRows(client: Client): Promise<SourceRow[]> {
 
 // ─── apply single record (idempotent upsert) ─────────────────────────────────
 
+interface ApplyRecordResult {
+  memberId: number
+  billingAccountId: number | null
+  subscriptionId: number | null
+  outcomes: {
+    member: MutationOutcome
+    billingAccount: MutationOutcome
+    subscription: MutationOutcome
+    accessGrant: MutationOutcome
+  }
+}
+
 async function applyRecord(
   client: Client,
   record: TransformedRecord,
   runId: string,
-): Promise<{ memberId: number; billingAccountId: number | null; subscriptionId: number | null }> {
-  // Step 1: upsert member
+): Promise<ApplyRecordResult> {
+  // Step 1: classify then upsert member
+  const existingMember = await client.query<{
+    id: number
+    account_status: string
+    source: string | null
+    notes: string | null
+  }>(`
+    SELECT id, account_status, source, notes
+    FROM jpvbootcamp_staging.payload_members
+    WHERE email = $1
+    LIMIT 1
+  `, [record.member.email])
+
+  const currentMember = existingMember.rows[0]
+  const memberOutcome: MutationOutcome = !currentMember
+    ? 'inserted'
+    : currentMember.account_status === record.member.accountStatus
+      && currentMember.notes === record.member.notes
+      && currentMember.source === record.member.source
+      ? 'unchanged'
+      : 'updated'
+
   const memberResult = await client.query<{ id: number }>(`
     INSERT INTO jpvbootcamp_staging.payload_members
       (email, account_status, source, notes, updated_at, created_at)
     VALUES ($1, $2, $3, $4, now(), now())
     ON CONFLICT (email) DO UPDATE
       SET account_status = EXCLUDED.account_status,
-          source         = CASE WHEN payload_members.source = 'migration' THEN 'migration' ELSE EXCLUDED.source END,
+          source         = CASE WHEN payload_members.source = 'migration' THEN 'migration' ELSE payload_members.source END,
           notes          = EXCLUDED.notes,
-          updated_at     = now()
+          updated_at     = CASE
+            WHEN payload_members.account_status IS DISTINCT FROM EXCLUDED.account_status
+              OR payload_members.notes IS DISTINCT FROM EXCLUDED.notes
+            THEN now()
+            ELSE payload_members.updated_at
+          END
     RETURNING id
   `, [
     record.member.email,
@@ -383,9 +456,31 @@ async function applyRecord(
   ])
   const memberId = memberResult.rows[0]!.id
 
-  // Step 2: upsert billing account (if available)
+  // Step 2: classify then upsert billing account (if available)
   let billingAccountId: number | null = null
+  let billingAccountOutcome: MutationOutcome = 'not_applicable'
   if (record.billingAccount) {
+    const existingBilling = await client.query<{
+      id: number
+      member_id: number
+      billing_status: string
+      stripe_mode: string
+    }>(`
+      SELECT id, member_id, billing_status, stripe_mode
+      FROM jpvbootcamp_staging.payload_billing_accounts
+      WHERE stripe_customer_id = $1
+      LIMIT 1
+    `, [record.billingAccount.stripeCustomerId])
+
+    const currentBilling = existingBilling.rows[0]
+    billingAccountOutcome = !currentBilling
+      ? 'inserted'
+      : currentBilling.member_id === memberId
+        && currentBilling.billing_status === record.billingAccount.billingStatus
+        && currentBilling.stripe_mode === record.billingAccount.stripeMode
+        ? 'unchanged'
+        : 'updated'
+
     const baResult = await client.query<{ id: number }>(`
       INSERT INTO jpvbootcamp_staging.payload_billing_accounts
         (display_name, member_id, stripe_customer_id, stripe_mode, billing_status, updated_at, created_at)
@@ -393,7 +488,14 @@ async function applyRecord(
       ON CONFLICT (stripe_customer_id) DO UPDATE
         SET billing_status = EXCLUDED.billing_status,
             member_id      = EXCLUDED.member_id,
-            updated_at     = now()
+            stripe_mode    = EXCLUDED.stripe_mode,
+            updated_at     = CASE
+              WHEN payload_billing_accounts.billing_status IS DISTINCT FROM EXCLUDED.billing_status
+                OR payload_billing_accounts.member_id IS DISTINCT FROM EXCLUDED.member_id
+                OR payload_billing_accounts.stripe_mode IS DISTINCT FROM EXCLUDED.stripe_mode
+              THEN now()
+              ELSE payload_billing_accounts.updated_at
+            END
       RETURNING id
     `, [
       record.billingAccount.displayName,
@@ -405,20 +507,61 @@ async function applyRecord(
     billingAccountId = baResult.rows[0]!.id
   }
 
-  // Step 3: upsert subscription (if available)
+  // Step 3: classify then upsert subscription (if available)
   let subscriptionId: number | null = null
+  let subscriptionOutcome: MutationOutcome = 'not_applicable'
   if (record.subscription && billingAccountId !== null) {
+    const existingSubscription = await client.query<{
+      id: number
+      member_id: number
+      billing_account_id: number
+      plan: string
+      status: string
+      billing_cadence: string | null
+      current_period_end: Date | null
+    }>(`
+      SELECT id, member_id, billing_account_id, plan, status, billing_cadence, current_period_end
+      FROM jpvbootcamp_staging.payload_subscriptions
+      WHERE stripe_subscription_id = $1
+      LIMIT 1
+    `, [record.subscription.stripeSubscriptionId])
+
+    const currentSubscription = existingSubscription.rows[0]
+    const currentPeriodEnd = currentSubscription?.current_period_end?.toISOString() ?? null
+    const desiredPeriodEnd = record.subscription.currentPeriodEnd?.toISOString() ?? null
+    subscriptionOutcome = !currentSubscription
+      ? 'inserted'
+      : currentSubscription.member_id === memberId
+        && currentSubscription.billing_account_id === billingAccountId
+        && currentSubscription.plan === record.subscription.plan
+        && currentSubscription.status === record.subscription.status
+        && currentSubscription.billing_cadence === record.subscription.billingCadence
+        && currentPeriodEnd === desiredPeriodEnd
+        ? 'unchanged'
+        : 'updated'
+
     const subResult = await client.query<{ id: number }>(`
       INSERT INTO jpvbootcamp_staging.payload_subscriptions
         (display_name, member_id, billing_account_id, stripe_subscription_id, stripe_price_id,
          plan, status, billing_cadence, current_period_end, updated_at, created_at)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, now(), now())
       ON CONFLICT (stripe_subscription_id) DO UPDATE
-        SET plan               = EXCLUDED.plan,
+        SET member_id          = EXCLUDED.member_id,
+            billing_account_id = EXCLUDED.billing_account_id,
+            plan               = EXCLUDED.plan,
             status             = EXCLUDED.status,
             billing_cadence    = EXCLUDED.billing_cadence,
             current_period_end = EXCLUDED.current_period_end,
-            updated_at         = now()
+            updated_at         = CASE
+              WHEN payload_subscriptions.member_id IS DISTINCT FROM EXCLUDED.member_id
+                OR payload_subscriptions.billing_account_id IS DISTINCT FROM EXCLUDED.billing_account_id
+                OR payload_subscriptions.plan IS DISTINCT FROM EXCLUDED.plan
+                OR payload_subscriptions.status IS DISTINCT FROM EXCLUDED.status
+                OR payload_subscriptions.billing_cadence IS DISTINCT FROM EXCLUDED.billing_cadence
+                OR payload_subscriptions.current_period_end IS DISTINCT FROM EXCLUDED.current_period_end
+              THEN now()
+              ELSE payload_subscriptions.updated_at
+            END
       RETURNING id
     `, [
       record.subscription.displayName,
@@ -434,16 +577,57 @@ async function applyRecord(
     subscriptionId = subResult.rows[0]!.id
   }
 
-  // Step 4: upsert access grant (if eligible)
-  // No unique constraint on source_id — use UPDATE ... WHERE EXISTS, then INSERT if not found.
+  // Step 4: classify then upsert access grant (if eligible).
+  let accessGrantOutcome: MutationOutcome = 'not_applicable'
   if (record.accessGrant) {
-    const updateResult = await client.query(
-      `UPDATE jpvbootcamp_staging.payload_access_grants
-          SET status = $1, updated_at = now()
-        WHERE source_id = $2`,
-      [record.accessGrant.status, record.accessGrant.sourceId],
-    )
-    if ((updateResult.rowCount ?? 0) === 0) {
+    const existingGrant = await client.query<{
+      id: number
+      member_id: number
+      status: string
+      resource_type: string
+      resource_id: string
+    }>(`
+      SELECT id, member_id, status, resource_type, resource_id
+      FROM jpvbootcamp_staging.payload_access_grants
+      WHERE source_id = $1
+      LIMIT 1
+    `, [record.accessGrant.sourceId])
+
+    const currentGrant = existingGrant.rows[0]
+    accessGrantOutcome = !currentGrant
+      ? 'inserted'
+      : currentGrant.member_id === memberId
+        && currentGrant.status === record.accessGrant.status
+        && currentGrant.resource_type === record.accessGrant.resourceType
+        && currentGrant.resource_id === record.accessGrant.resourceId
+        ? 'unchanged'
+        : 'updated'
+
+    if (currentGrant) {
+      await client.query(
+        `UPDATE jpvbootcamp_staging.payload_access_grants
+            SET member_id = $1,
+                status = $2,
+                resource_type = $3,
+                resource_id = $4,
+                updated_at = CASE
+                  WHEN member_id IS DISTINCT FROM $1
+                    OR status IS DISTINCT FROM $2
+                    OR resource_type IS DISTINCT FROM $3
+                    OR resource_id IS DISTINCT FROM $4
+                  THEN now()
+                  ELSE updated_at
+                END
+          WHERE id = $5`,
+        [
+          memberId,
+          record.accessGrant.status,
+          record.accessGrant.resourceType,
+          record.accessGrant.resourceId,
+          currentGrant.id,
+        ],
+      )
+    } else {
       await client.query(
         `INSERT INTO jpvbootcamp_staging.payload_access_grants
           (display_name, member_id, resource_type, resource_id, status, source, source_id, updated_at, created_at)
@@ -461,61 +645,110 @@ async function applyRecord(
     }
   }
 
+  const outcomes = {
+    member: memberOutcome,
+    billingAccount: billingAccountOutcome,
+    subscription: subscriptionOutcome,
+    accessGrant: accessGrantOutcome,
+  }
+
   await writeAuditEvent(client, runId, 'record_applied', {
     sourceId: record.sourceId,
     emailHash: record.normalizedEmailHash,
     memberId,
     billingAccountId,
     subscriptionId,
-    hasGrant: !!record.accessGrant,
+    outcomes,
   })
 
-  return { memberId, billingAccountId, subscriptionId }
+  return { memberId, billingAccountId, subscriptionId, outcomes }
 }
 
 // ─── rollback ────────────────────────────────────────────────────────────────
 
 async function rollbackRun(client: Client, rollbackRunId: string, log: (m: string) => void): Promise<void> {
-  log(`ROLLBACK: removing migration-source records for run_id prefix migration_v1_`)
+  log(`ROLLBACK: loading run-scoped audit records for ${rollbackRunId}`)
 
-  // Delete access grants by source = 'migration'
-  const grantResult = await client.query(
-    `DELETE FROM jpvbootcamp_staging.payload_access_grants WHERE source = 'migration'`,
-  )
-  log(`ROLLBACK: deleted ${grantResult.rowCount} access grants`)
+  const auditResult = await client.query<{ detail: Record<string, unknown> }>(`
+    SELECT detail
+    FROM jpvbootcamp_staging.payload_migration_audit
+    WHERE run_id = $1 AND event = 'record_applied'
+    ORDER BY id DESC
+  `, [rollbackRunId])
 
-  // Delete subscriptions for members sourced from migration
-  const subResult = await client.query(`
-    DELETE FROM jpvbootcamp_staging.payload_subscriptions
-    WHERE member_id IN (
-      SELECT id FROM jpvbootcamp_staging.payload_members WHERE source = 'migration'
-    )
-  `)
-  log(`ROLLBACK: deleted ${subResult.rowCount} subscriptions`)
+  if (auditResult.rows.length === 0) {
+    throw new Error(`rollback_refused: no record_applied audit events for run ${rollbackRunId}`)
+  }
 
-  // Delete billing accounts for members sourced from migration
-  const baResult = await client.query(`
-    DELETE FROM jpvbootcamp_staging.payload_billing_accounts
-    WHERE member_id IN (
-      SELECT id FROM jpvbootcamp_staging.payload_members WHERE source = 'migration'
-    )
-  `)
-  log(`ROLLBACK: deleted ${baResult.rowCount} billing accounts`)
+  const memberIds = new Set<number>()
+  const billingAccountIds = new Set<number>()
+  const subscriptionIds = new Set<number>()
+  const grantSourceIds = new Set<string>()
 
-  // Delete members sourced from migration
-  const memberResult = await client.query(
-    `DELETE FROM jpvbootcamp_staging.payload_members WHERE source = 'migration'`,
-  )
-  log(`ROLLBACK: deleted ${memberResult.rowCount} members`)
+  for (const row of auditResult.rows) {
+    const detail = row.detail
+    const outcomes = detail['outcomes'] as Record<string, MutationOutcome> | undefined
+    if (!outcomes) {
+      throw new Error('rollback_refused: run predates reversible outcome metadata; use a restored rehearsal copy')
+    }
+    if (Object.values(outcomes).includes('updated')) {
+      throw new Error('rollback_refused: run updated preexisting rows and no before-image is available')
+    }
 
-  await writeAuditEvent(client, rollbackRunId, 'rollback_completed', {
-    grantsDeleted: grantResult.rowCount,
-    subscriptionsDeleted: subResult.rowCount,
-    billingAccountsDeleted: baResult.rowCount,
-    membersDeleted: memberResult.rowCount,
-  })
+    if (outcomes['member'] === 'inserted' && typeof detail['memberId'] === 'number') {
+      memberIds.add(detail['memberId'])
+    }
+    if (outcomes['billingAccount'] === 'inserted' && typeof detail['billingAccountId'] === 'number') {
+      billingAccountIds.add(detail['billingAccountId'])
+    }
+    if (outcomes['subscription'] === 'inserted' && typeof detail['subscriptionId'] === 'number') {
+      subscriptionIds.add(detail['subscriptionId'])
+    }
+    if (outcomes['accessGrant'] === 'inserted' && typeof detail['sourceId'] === 'string') {
+      grantSourceIds.add(detail['sourceId'])
+    }
+  }
 
-  log(`ROLLBACK COMPLETE`)
+  await client.query('BEGIN')
+  try {
+    const grantResult = grantSourceIds.size === 0
+      ? { rowCount: 0 }
+      : await client.query(
+          `DELETE FROM jpvbootcamp_staging.payload_access_grants WHERE source_id = ANY($1::text[])`,
+          [[...grantSourceIds]],
+        )
+    const subResult = subscriptionIds.size === 0
+      ? { rowCount: 0 }
+      : await client.query(
+          `DELETE FROM jpvbootcamp_staging.payload_subscriptions WHERE id = ANY($1::int[])`,
+          [[...subscriptionIds]],
+        )
+    const billingResult = billingAccountIds.size === 0
+      ? { rowCount: 0 }
+      : await client.query(
+          `DELETE FROM jpvbootcamp_staging.payload_billing_accounts WHERE id = ANY($1::int[])`,
+          [[...billingAccountIds]],
+        )
+    const memberResult = memberIds.size === 0
+      ? { rowCount: 0 }
+      : await client.query(
+          `DELETE FROM jpvbootcamp_staging.payload_members WHERE id = ANY($1::int[]) AND source = 'migration'`,
+          [[...memberIds]],
+        )
+
+    await writeAuditEvent(client, rollbackRunId, 'rollback_completed', {
+      grantsDeleted: grantResult.rowCount ?? 0,
+      subscriptionsDeleted: subResult.rowCount ?? 0,
+      billingAccountsDeleted: billingResult.rowCount ?? 0,
+      membersDeleted: memberResult.rowCount ?? 0,
+    })
+    await client.query('COMMIT')
+
+    log(`ROLLBACK COMPLETE: grants=${grantResult.rowCount ?? 0} subscriptions=${subResult.rowCount ?? 0} billing=${billingResult.rowCount ?? 0} members=${memberResult.rowCount ?? 0}`)
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => {})
+    throw error
+  }
 }
 
 // ─── main migration runner ────────────────────────────────────────────────────
