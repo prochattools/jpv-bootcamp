@@ -18,6 +18,7 @@ export async function GET() {
       ok: true,
       status: 'live',
       timestamp: new Date().toISOString(),
+      imageTag: process.env.IMAGE_TAG ?? null,
     },
     { status: 200 },
   )

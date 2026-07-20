@@ -26,9 +26,11 @@ ENV NODE_ENV=production
 ARG NEXT_PUBLIC_APP_URL=https://jpvbootcamp.com
 ARG APP_BASE_URL=https://jpvbootcamp.com
 ARG NEXT_PUBLIC_SERVER_URL=https://jpvbootcamp.com
+ARG IMAGE_TAG=unknown
 ENV NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
 ENV APP_BASE_URL=${APP_BASE_URL}
 ENV NEXT_PUBLIC_SERVER_URL=${NEXT_PUBLIC_SERVER_URL}
+ENV IMAGE_TAG=${IMAGE_TAG}
 RUN --mount=type=cache,target=/app/.next/cache \
     node_modules/.bin/prisma generate --schema=prisma/system.prisma && \
     pnpm generate:importmap && \
@@ -55,6 +57,8 @@ ENV HOSTNAME=0.0.0.0
 ENV PORT=3000
 ENV STARTUP_MODE=application-only
 ENV DEPLOYMENT_RUNTIME=docker
+ARG IMAGE_TAG=unknown
+ENV IMAGE_TAG=${IMAGE_TAG}
 
 # Install postgresql-client-15
 RUN apt-get update && apt-get install -y \
