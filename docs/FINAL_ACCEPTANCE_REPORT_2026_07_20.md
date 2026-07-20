@@ -351,6 +351,9 @@ The source implementation is code-complete; the checklist below proves execution
    - [ ] Session cookies: secure, session-bound, CSRF-protected
    - [ ] Logout: complete session clearing
 
+**Execution Guide**: `docs/STAGING_EMAIL_AUTH_PROOF_PROCEDURE.md` (8-phase operator procedure)  
+**Verification Harness**: `scripts/staging_email_auth_verification.ts` (checklist + initialization)
+
 ### Pre-Cutover (For Operator Signoff)
 
 4. **Rollback Plan Signoff**
@@ -407,26 +410,38 @@ The source implementation is code-complete; the checklist below proves execution
 ## Final HEAD
 
 ```
-commit 9780f31
+commit 5d6f1af
 Author: Claude Haiku 4.5
 Date:   2026-07-20
 
-    fix(registry): update migration inventory for staging deployment
+    docs: record final staging acceptance and email/auth hardening checklist
     
-    Reconcile migration registry with deployed staging state. The staging
-    deployment applied 20260720_000000_locked_docs_rels_new_collections to
-    jpvbootcamp_staging schema, adding missing foreign-key columns to
-    payload_locked_documents_rels for new Membership Support collections
-    and creating payload_membership_administration_actions table.
+    Reconcile documentation to current deployment state (HEAD 5d6f1af).
+    Correct false completion claims: email/auth source is 100% complete;
+    live proof on staging is 0% (unexecuted, operator-supervised).
     
-    Updated migration inventory list (15 → 16), validation counts, and
-    preflight tests to match actual deployed migration state. All 140
-    release tests pass; all 58 E2E tests pass.
+    Add staging email/auth verification harness and procedure:
+    - scripts/staging_email_auth_verification.ts: live verification checklist
+    - docs/STAGING_EMAIL_AUTH_PROOF_PROCEDURE.md: operator execution steps
+    
+    Distinguish repository-complete from operator-required work:
+    - Repository: 140/140 release tests, 58/58 E2E, source implementation complete
+    - Operator: Live email/auth testing with approved staging accounts
+    
+    Registry reconciliation (9780f31): migration inventory updated to 16/16.
+    All local validations pass; staging deployment active.
 ```
 
 **Branch**: `feature/course-branding-and-preview`  
-**Commits Ahead of Main**: 77  
-**Protected Paths Status**: ✓ All preserved (payload-types.ts, docx, fixtures/)  
+**Commits Ahead of Main**: 77+  
+**Protected Paths Status**: ✓ All preserved (payload-types.ts, docx, fixtures/)
+
+### Previous Key Commits
+
+- `9780f31`: Registry reconciliation (16/16 migrations tracked)
+- `9630791`: Deployed proof results
+- `a77ecc9`: Bunny HMAC headers
+- `6d8b98e`: Locked docs FK relations  
 
 ---
 
