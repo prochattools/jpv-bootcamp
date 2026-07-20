@@ -170,6 +170,16 @@ export const PREVIEW_MIGRATION_INVENTORY = [
     verificationChecks: ['registry-match', 'ordered-exactly'],
     authorizationCategory: 'payloadMigration',
   },
+  {
+    name: '20260720_000000_locked_docs_rels_new_collections',
+    system: 'payload',
+    order: 16,
+    purpose: 'Add missing foreign-key columns to payload_locked_documents_rels for new Membership Support collections and create payload_membership_administration_actions table.',
+    requiredForPreview: true,
+    rollbackRisk: 'reversible',
+    verificationChecks: ['registry-match', 'ordered-exactly', 'locked-docs-rels'],
+    authorizationCategory: 'payloadMigration',
+  },
 ] as const satisfies readonly PreviewMigrationInventoryEntry[]
 
 export const PREVIEW_MIGRATION_INVENTORY_VERSION = 1
