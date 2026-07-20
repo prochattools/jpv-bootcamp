@@ -9,15 +9,15 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 - Wave 3 checkpoint HEAD: `57711f9 feat: complete wave 3 course platform`
 - Packet 9 checkpoint HEAD: `8927df9 docs: checkpoint membership implementation readiness`
 - Registry reconciliation HEAD: `9780f31 fix(registry): update migration inventory for staging deployment`
-- **Current HEAD (Security cleanup & truth reconciliation)**: `dc7edf9 security: remove plaintext staging credentials from docs`
+- **Current HEAD**: `e82d4ba migration: add reconciliation metrics and scoped rollback`
 - Pull request: `https://github.com/prochattools/jpv-bootcamp/pull/2`
-- Staging URL: `https://preview.jpvbootcamp.com` (deployed, I_2Vukga3cc3ZhaG-mUzU)
-- Staging DB: `jpvbootcamp_staging` (schema, 16/16 migrations applied)
-- Migrations applied on staging: `Yes (all 16 migrations applied by deployment)`
-- Staging deployment performed: `Yes`
-- Registry reconciliation: `Complete (9780f31, tracked in current HEAD 5d6f1af)`
-- Push performed by the recent execution packets: `Yes (branch pushed for staging deployment)`
-- **Live Email/Auth Verification**: `Backend (B) verified 70% (7/10 steps); Mailbox (D) and Browser (E) testing pending via OPERATOR_MAILBOX_BROWSER_CHECKLIST`
+- Staging URL: `https://preview.jpvbootcamp.com` (deployed, application `I_2Vukga3cc3ZhaG-mUzU`)
+- Staging DB: `jpvbootcamp_staging` on `100.71.31.88`; all 16 schema migrations applied
+- Staging deployment performed: `Yes`; GitHub Actions are manual-only to conserve minutes
+- Credential remediation: `COMPLETE` — old email/password rejected, renamed account with old password rejected, new credential accepted, old JWT rejected, sessions cleared
+- Provider verification: Stripe test Checkout, LiveKit, Bunny webhook/playback, and staging smoke are verified
+- Legacy migration: first staging apply completed for 21 source rows; second apply completed with zero errors and logical idempotency; detailed inserted/updated/unchanged reconciliation and rehearsal rollback remain active work
+- **Live Email/Auth Verification**: backend/API/database proof complete for the reset flow; mailbox rendering and full browser-session acceptance remain operator evidence unless separately recorded
 - Protected unrelated dirty paths (DO NOT MODIFY):
   - `src/payload-types.ts` (unrelated schema changes; type generation approval required before sync)
   - `docs/client/JPV_Bootcamp_Platform_Expansion_Go_Live_Plan_v3_7.docx`
@@ -65,6 +65,16 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 - All "blocked" packets verified to have passing validation commands
 - Registry now accurate reflecting actual codebase state
 
+### Migration reconciliation checkpoint (`e82d4ba`)
+- Added per-table `inserted` / `updated` / `unchanged` / `notApplicable` metrics.
+- Preserved pre-existing member ownership instead of overwriting its source marker.
+- Added relationship-aware classification for billing accounts, subscriptions, and access grants.
+- Replaced global migration rollback with run-scoped rollback based on audit outcomes.
+- Rollback refuses legacy runs without outcome metadata and refuses updated pre-existing rows without before-images.
+- Validation: migration tests **28/28 PASS**, TypeScript **CLEAN**, changed-path security scan **0 findings**.
+- The full release suite exceeded the synchronous Workbench deadline; its previously verified baseline remains 140/140 and must be rerun as a persisted or operator validation before formal release.
+- Exact next task: produce staging reconciliation metrics from a no-change rerun, then rehearse rollback/reapply on a disposable restored copy; never rollback live staging without explicit approval.
+
 Before doing any work, verify the branch, HEAD, worktree, and migration state. A direct descendant of the recorded HEAD may be acceptable only when its commits are already documented completed work.
 
 ## Roadmap position
@@ -86,12 +96,17 @@ Before doing any work, verify the branch, HEAD, worktree, and migration state. A
 - Rollback-readiness, operator-handoff, release-evidence, and go/no-go documentation
 - Decision packets and deterministic decision-readiness validation
 
-### Not started
+### In progress
 
-- M2-01 durable partner-referral persistence and review workflow
-- All later M2 work
+- Legacy member/billing/access migration reconciliation: per-table inserted/updated/unchanged metrics, relationship checks, and run-scoped rollback hardening
+- Rehearsal on a disposable restored staging copy, including rollback/reapply timing and idempotency proof
+- Migrated-user invitation/reset onboarding and duplicate/conflict handling
+- Remaining source-domain inventory: sponsored support, subscribers, support requests, partner attribution, and any verified course/progress source
 
-M2-01 remains post-core unless it is explicitly promoted in the task that implements it.
+### Deferred
+
+- M2-01 durable partner-referral persistence and review workflow beyond migration preservation
+- Later M2 enhancements that are not required for migration or launch acceptance
 
 ## Current implementation state
 
