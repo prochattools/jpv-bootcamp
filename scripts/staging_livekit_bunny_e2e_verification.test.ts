@@ -74,12 +74,18 @@ async function main(): Promise<void> {
 
       const payloadJson = JSON.stringify(webhookPayload)
       const signature = createHmac('sha256', BUNNY_SECRET).update(payloadJson).digest('hex')
+      // Official Bunny v1 HMAC protocol: three headers required
+      const bunnyHeaders = {
+        'x-bunnystream-signature-version': 'v1',
+        'x-bunnystream-signature-algorithm': 'hmac-sha256',
+        'x-bunnystream-signature': signature,
+      }
 
       const webhookRes = await fetch(`${STAGING_URL}/api/webhook/bunny`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'bunny-signature': signature,
+          ...bunnyHeaders,
         },
         body: payloadJson,
       })
@@ -94,7 +100,9 @@ async function main(): Promise<void> {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'bunny-signature': 'invalid-signature-hash',
+          'x-bunnystream-signature-version': 'v1',
+          'x-bunnystream-signature-algorithm': 'hmac-sha256',
+          'x-bunnystream-signature': 'aaaa'.repeat(16),
         },
         body: payloadJson,
       })
