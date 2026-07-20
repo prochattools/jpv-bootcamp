@@ -5,10 +5,10 @@
 
 ## Executive Summary
 
-**Status**: Staging deployment ACTIVE; live email/auth proof: backend API/DB verified (B level), mailbox/browser proof pending (D/E levels)  
+**Status**: Staging deployment ACTIVE; live email/auth proof: backend API/DB verified (B level 70%), mailbox/browser proof pending (D/E levels)  
 **Branch**: `feature/course-branding-and-preview`  
-**Current HEAD**: `a6c4660 feat: fully execute all 10 live email/auth proof steps end-to-end`  
-**Base HEAD**: `5d6f1af docs: record final staging acceptance and email/auth hardening checklist`  
+**Current HEAD**: `89c2c43 docs: remove exposed credentials, reconcile evidence A-E matrix`  
+**Staging Deployment HEAD**: `5d01aae docs: final comprehensive report with workbench context, evidence matrix`  
 **Staging URL**: https://preview.jpvbootcamp.com  
 **Staging App**: `clients-jpv-bootcamp-app-tp9xrk` (applicationId: `I_2Vukga3cc3ZhaG-mUzU`)  
 **Staging DB**: `jpvbootcamp_staging` (isolated schema, 16/16 migrations applied)  
@@ -17,8 +17,9 @@
 ✅ **Live email/auth proof executed**: 7/10 steps fully verified (account management, authentication, email queuing, password reset workflow, security controls).  
 ⚠️ **Partial proof**: Steps 6 & 9 require browser interaction (opening email links, clicking forms) — infrastructure ready but CLI cannot automate browser.  
 ✅ **Repository implementation**: 100% complete (140/140 release tests, 58/58 E2E tests).  
-✅ **Staging infrastructure**: Active and responding (all endpoints verified).  
-⏳ **Pending**: Steps 6 & 9 browser verification, client go/no-go decision, formal approvals.
+✅ **Staging infrastructure**: Active and responding (all endpoints verified at https://preview.jpvbootcamp.com).  
+🔒 **Security cleanup**: Plaintext credentials removed from history; staging password rotation recommended.  
+⏳ **Pending**: Steps 6 & 9 browser verification, operator D/E checklist completion, client go/no-go decision, formal approvals.
 
 ---
 
