@@ -380,8 +380,8 @@ All 10 steps verified on staging with real accounts:
    - [ ] Session persistence: real login session across page reloads
 
 2. **Member/Admin Account Testing** (Already Executed in Live Proof)
-   - ✅ Test administrator account verified: info@prochat.tools
-   - ✅ Test member account verified: testmember@staging.test (active)
+   - ✅ Test administrator account verified: [operator-email]
+   - ✅ Test member account verified: [member-test-01] (active)
    - ✅ Real login flow verified: JWT tokens, sessions working
    - [ ] Membership entitlements enforced correctly (scope verification)
    - [ ] Course access gates working (scope verification)

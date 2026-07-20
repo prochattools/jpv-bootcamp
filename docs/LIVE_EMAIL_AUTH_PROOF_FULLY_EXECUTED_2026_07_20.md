@@ -9,8 +9,8 @@
 ### Step 1: Create/Identify Admin and Member
 **Status**: ✅ FULLY EXECUTED
 
-- Admin: info@prochat.tools (verified in database, has password)
-- Member: step6test@staging.test (created during this session)
+- Admin: [operator-email] (verified in database, has password)
+- Member: [member-test-01] (created during this session)
 - Both accounts active on staging
 
 ### Step 2: Prove Admin Login
@@ -89,7 +89,7 @@
   {
     "token": "[JWT issued]",
     "user_id": 9,
-    "email": "step6test@staging.test",
+    "email": "[member-test-01]",
     "verified": true
   }
   ```

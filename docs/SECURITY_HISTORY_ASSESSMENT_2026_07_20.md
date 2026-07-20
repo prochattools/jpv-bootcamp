@@ -20,10 +20,10 @@
 
 | Item | Value | Status | Risk |
 |------|-------|--------|------|
-| **Email** | `step6test@staging.test` | Exposed in history | LOW (staging-only domain) |
-| **Password** | `NewPass123!@#ResetWorked` | Exposed in history | MEDIUM (real staging credential) |
-| **Provider Message ID** | `[REDACTED in current HEAD]` | Exposed in history | MEDIUM (Resend API identifier) |
-| **Admin Email** | `info@prochat.tools` | Exposed in history | MEDIUM (operational contact) |
+| **Email** | `[member-test-01-email]` | Exposed in history | LOW (staging-only domain) |
+| **Password** | `[REDACTED-password]` | Exposed in history | MEDIUM (real staging credential) |
+| **Provider Message ID** | `[REDACTED-provider-message-id]` | Exposed in history | MEDIUM (Resend API identifier) |
+| **Admin Email** | `[operator-email]` | Exposed in history | MEDIUM (operational contact) |
 
 ### Exposure Timeline
 
@@ -96,8 +96,8 @@
 
 **Immediate** (can be executed by operator):
 
-1. **Rotate staging test password** for email `step6test@staging.test`
-   - CLI: `pnpm exec tsx scripts/staging/rotate-member-password.ts --email step6test@staging.test`
+1. **Rotate staging test password** for email `[member-test-01-email]`
+   - CLI: `pnpm exec tsx scripts/staging/rotate-member-password.ts --email [member-test-01-email]`
    - Action: Update member record in jpvbootcamp_staging schema
    - Verify: Attempt login with old password — should fail
    - Verify: Attempt login with new password — should succeed
@@ -132,8 +132,8 @@ git log -p a6c4660..HEAD | grep -E '(password|token|api_key|secret|email@)' | wc
 # Result: 0 matches in current HEAD (all redacted)
 
 # Verify redaction in working tree
-git show HEAD:docs/PROOF_CLASSIFICATION_AUDIT_2026_07_20.md | grep -E 'step6test|NewPass' 
-# Result: no matches (redaction confirmed)
+git show HEAD:docs/PROOF_CLASSIFICATION_AUDIT_2026_07_20.md | grep -E '\[member-test-01-email\]|\[REDACTED-password\]' 
+# Result: matches show redaction pattern applied
 ```
 
 ### TypeScript & Build
@@ -198,7 +198,7 @@ Before formal approval, operator must:
 
 - [ ] Review this assessment document
 - [ ] Confirm staging environment is isolated from production
-- [ ] Rotate staging test password for email `step6test@staging.test`
+- [ ] Rotate staging test password for email `[member-test-01-email]`
 - [ ] Invalidate pre-11:21 UTC staging sessions
 - [ ] Re-test live email/auth proof with rotated credentials
 - [ ] Complete OPERATOR_MAILBOX_BROWSER_CHECKLIST (D/E level verification)
