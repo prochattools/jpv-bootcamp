@@ -109,7 +109,26 @@ All endpoints under `https://dokploy.prochat.tools/api/` (NOT `/api/trpc`).
 
 ## Current State (2026-07-20)
 
-- **HEAD**: `0662c9e1bf0448a6bbf563cbf2e92e8977fdb4fe`
+- **HEAD**: `a77ecc9` (feature/course-branding-and-preview)
+- **Deployed image HEAD**: `de1e9c68ba18bc6d1b08894145f69d4ff555c75b`
 - **GHCR digest (AMD64)**: `sha256:ce47b0cbb54dd6d461e7238cf1e72e05d13950837d3ce0895a10dc7182247a71`
 - **Running service**: `clients-jpv-bootcamp-app-tp9xrk` (replicated 1/1, healthy)
-- **Verified routes**: `/api/bunny/video` → 401, `/api/webhook/bunny` → 403, `/api/health` → 200
+- **Verified routes**: `/api/bunny/video` → 401, `/api/webhook/bunny` → 403, `/api/health` → 200 `{imageTag: "de1e9c68..."}`
+
+## Deployed Proof Results (2026-07-20)
+
+All 7 DEPLOYED PROOF items verified:
+
+1. **Health returns imageTag** ✓ — `{"imageTag":"de1e9c68ba18bc6d1b08894145f69d4ff555c75b"}`
+2. **Staging video record created** ✓ — webhook wrote `bunny_videos` row id=4, status=ready
+3. **Valid signed webhook received** ✓ — `VideoFinishedProcessing` with HMAC-SHA256 → 200 `{ok:true}`
+4. **Ready state persisted** ✓ — DB confirms `status=ready, duration=300`
+5. **Duplicate idempotency** ✓ — second identical webhook call → 200 `{ok:true}`
+6. **Invalid sig → 403** ✓ | **Unauthenticated video → 401** ✓
+7. **40/40 smoke tests** ✓ | **Focused E2E verification** ✓
+
+## Migration Note
+
+`payload_locked_documents_rels` was missing FK columns for new collections added
+after initial schema setup. Migration `20260720_000000_locked_docs_rels_new_collections`
+adds all missing columns. Apply it before next production deployment.
