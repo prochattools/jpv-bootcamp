@@ -3,20 +3,21 @@
 #
 # Modes:
 #   --preflight   Read-only checks. Safe to run any time.
-#   --execute     Mutate staging. Requires all preflight checks to pass.
+#   --execute     Mutate staging. All preflight checks must pass first.
 #
-# Required environment variables (never pass as CLI args):
-#   OLD_CREDENTIAL_PASSWORD   The currently-exposed staging password.
-#   NEW_CREDENTIAL_PASSWORD   The desired replacement (min 12 chars).
+# Secrets — never inline on the command line (shell history exposure).
+#   Option A (interactive, recommended):
+#     bash scripts/run-remediation.sh --preflight
+#     The script prompts with read -s (no echo) when a terminal is available.
+#   Option B (secret-manager injection via subshell, not env assignment):
+#     Inject via your secret manager; do not pass inline on the command line.
+#     Example pattern: export each variable from a secret-manager read command
+#     in a separate step before invoking this script.
 #
 # Allowed target only:
 #   DB host:   100.71.31.88
 #   DB schema: jpvbootcamp_staging
 #   Member ID: 9
-#
-# Usage inside Dokploy container terminal (/app):
-#   OLD_CREDENTIAL_PASSWORD=... NEW_CREDENTIAL_PASSWORD=... bash scripts/run-remediation.sh --preflight
-#   OLD_CREDENTIAL_PASSWORD=... NEW_CREDENTIAL_PASSWORD=... bash scripts/run-remediation.sh --execute
 
 set -euo pipefail
 
@@ -51,6 +52,18 @@ if [[ "$DB_SCHEMA" != "jpvbootcamp_staging" ]]; then
   echo "ABORT: wrong schema $DB_SCHEMA (expected jpvbootcamp_staging)" >&2; exit 1
 fi
 echo "SCHEMA_GUARD PASSED"
+
+# ─── interactive secret prompt (if not already set and tty available) ────────
+# Prompts are on stderr, no echo. Falls back to ABORT if no tty and env not set.
+if [[ -z "${OLD_CREDENTIAL_PASSWORD:-}" ]] && [[ -t 0 ]]; then
+  read -rs -p "Enter OLD_CREDENTIAL_PASSWORD (current staging password): " OLD_CREDENTIAL_PASSWORD
+  echo "" >&2
+fi
+if [[ -z "${NEW_CREDENTIAL_PASSWORD:-}" ]] && [[ -t 0 ]]; then
+  read -rs -p "Enter NEW_CREDENTIAL_PASSWORD (replacement, min 12 chars): " NEW_CREDENTIAL_PASSWORD
+  echo "" >&2
+fi
+export OLD_CREDENTIAL_PASSWORD NEW_CREDENTIAL_PASSWORD
 
 # ─── env secret guard ─────────────────────────────────────────────────────────
 echo "=== SECRET_GUARD ==="
@@ -117,11 +130,12 @@ if [[ "$CONFLICT" != "0" ]]; then
 fi
 echo "EMAIL_CONFLICT_CHECK PASSED"
 
-# ─── pre-mutation auth proof ──────────────────────────────────────────────────
+# ─── pre-mutation auth proof + old JWT capture ───────────────────────────────
 echo "=== PRE_MUTATION_AUTH_PROOF ==="
 echo "testing login with current email (redacted) and OLD_CREDENTIAL_PASSWORD (not printed)"
-PRE_AUTH_STATUS=$(node -e "
+PRE_AUTH_RESULT=$(node -e "
 const https = require('https');
+const crypto = require('crypto');
 const body = JSON.stringify({ email: process.env._PM_EMAIL, password: process.env.OLD_CREDENTIAL_PASSWORD });
 const url = new URL('https://preview.jpvbootcamp.com/api/payload_members/login');
 const req = https.request({
@@ -129,17 +143,85 @@ const req = https.request({
   path: url.pathname,
   method: 'POST',
   headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
-}, (res) => { process.stdout.write(String(res.statusCode)); });
-req.on('error', () => process.stdout.write('net_error'));
+}, (res) => {
+  let data = '';
+  res.on('data', c => data += c);
+  res.on('end', () => {
+    let token = '';
+    try { token = JSON.parse(data).token || ''; } catch {}
+    // Emit status + SHA-256 fingerprint of JWT (never the token itself)
+    const fingerprint = token ? crypto.createHash('sha256').update(token).digest('hex').substring(0,16) : '';
+    process.stdout.write(res.statusCode + ' ' + fingerprint);
+  });
+});
+req.on('error', e => { process.stdout.write('net_error 0'); });
 req.write(body); req.end();
 " _PM_EMAIL="$CURRENT_EMAIL")
+
+PRE_AUTH_STATUS=$(echo "$PRE_AUTH_RESULT" | cut -d' ' -f1)
+PRE_AUTH_JWT_FINGERPRINT=$(echo "$PRE_AUTH_RESULT" | cut -d' ' -f2)
+
 echo "pre_mutation_auth_status=$PRE_AUTH_STATUS"
+if [[ "$PRE_AUTH_STATUS" == "net_error" ]]; then
+  echo "ABORT: network error contacting login endpoint" >&2; exit 1
+fi
 if [[ "$PRE_AUTH_STATUS" == "200" ]]; then
+  echo "pre_mutation_jwt_sha256_prefix=$PRE_AUTH_JWT_FINGERPRINT (first 16 hex chars of SHA-256)"
   echo "PRE_MUTATION_AUTH_PROOF PASSED (old credential valid)"
 elif [[ "$PRE_AUTH_STATUS" == "401" ]]; then
-  echo "PRE_MUTATION_AUTH_PROOF: credential already invalid — may have been partially rotated"
+  echo "PRE_MUTATION_AUTH_PROOF: credential already invalid (may have been partially rotated)"
+  PRE_AUTH_JWT_FINGERPRINT=""
 else
-  echo "WARNING: pre_auth_status=$PRE_AUTH_STATUS (network/unexpected)"
+  echo "ABORT: unexpected pre_auth_status=$PRE_AUTH_STATUS" >&2; exit 1
+fi
+
+# ─── pre-mutation protected endpoint check (captures old JWT behaviour) ──────
+OLD_JWT_PROTECTED_STATUS=""
+if [[ -n "$PRE_AUTH_JWT_FINGERPRINT" ]]; then
+  echo "=== PRE_MUTATION_PROTECTED_ENDPOINT ==="
+  # Obtain old JWT again (same request, same node inline) for use in protected endpoint test.
+  # We capture the full token into a shell variable — never echo to stdout.
+  OLD_JWT=$(node -e "
+const https = require('https');
+const body = JSON.stringify({ email: process.env._PM_EMAIL, password: process.env.OLD_CREDENTIAL_PASSWORD });
+const url = new URL('https://preview.jpvbootcamp.com/api/payload_members/login');
+const req = https.request({
+  hostname: url.hostname, path: url.pathname, method: 'POST',
+  headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
+}, (res) => {
+  let data = '';
+  res.on('data', c => data += c);
+  res.on('end', () => {
+    try { process.stdout.write(JSON.parse(data).token || ''); } catch {}
+  });
+});
+req.on('error', () => {});
+req.write(body); req.end();
+" _PM_EMAIL="$CURRENT_EMAIL")
+
+  if [[ -z "$OLD_JWT" ]]; then
+    echo "ABORT: could not obtain old JWT for protected endpoint test" >&2; exit 1
+  fi
+
+  OLD_JWT_PROTECTED_STATUS=$(node -e "
+const https = require('https');
+const url = new URL('https://preview.jpvbootcamp.com/api/member-session');
+const req = https.request({
+  hostname: url.hostname, path: url.pathname, method: 'GET',
+  headers: { Authorization: 'JWT ' + process.env._OLD_JWT }
+}, (res) => { process.stdout.write(String(res.statusCode)); });
+req.on('error', () => process.stdout.write('net_error'));
+req.end();
+" _OLD_JWT="$OLD_JWT")
+
+  if [[ "$OLD_JWT_PROTECTED_STATUS" == "net_error" ]]; then
+    echo "ABORT: network error on protected endpoint pre-check" >&2; exit 1
+  fi
+  echo "pre_mutation_protected_status=$OLD_JWT_PROTECTED_STATUS (expected 200 or 403 — proves endpoint reachable)"
+  if [[ "$OLD_JWT_PROTECTED_STATUS" != "200" && "$OLD_JWT_PROTECTED_STATUS" != "403" ]]; then
+    echo "ABORT: unexpected protected endpoint status $OLD_JWT_PROTECTED_STATUS" >&2; exit 1
+  fi
+  echo "PRE_MUTATION_PROTECTED_ENDPOINT DONE"
 fi
 
 # ─── preflight complete ───────────────────────────────────────────────────────
@@ -148,12 +230,11 @@ if [[ "$MODE" == "--preflight" ]]; then
   exit 0
 fi
 
-# ─── EXECUTE MODE ─────────────────────────────────────────────────────────────
+# ─── EXECUTE MODE STARTING ────────────────────────────────────────────────────
 echo "=== EXECUTE MODE STARTING ==="
 
 # ─── Step 1: email update + token invalidation in a single transaction ────────
 echo "=== STEP1_EMAIL_UPDATE ==="
-# Use a DO block to assert exactly 1 row was updated; abort transaction otherwise.
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "
 BEGIN;
 UPDATE jpvbootcamp_staging.payload_members
@@ -210,14 +291,19 @@ ACTION_URL=$(psql "$DATABASE_URL" -t -A -c \
    ORDER BY created_at DESC LIMIT 1;")
 if [[ -z "$ACTION_URL" ]]; then
   echo "ABORT: no reset email event found in payload_email_events" >&2
-  echo "ROLLBACK_GUIDANCE: re-run Step 2 (trigger forgot-password) then retry this step" >&2
+  echo "ROLLBACK_GUIDANCE: re-run Step 2 then retry" >&2
   exit 1
 fi
 RESET_TOKEN=$(echo "$ACTION_URL" | sed 's/.*[?&]token=//; s/&.*//')
 if [[ "${#RESET_TOKEN}" -lt 20 ]]; then
   echo "ABORT: extracted token is too short (${#RESET_TOKEN} chars)" >&2; exit 1
 fi
-echo "TOKEN_PREFIX=${RESET_TOKEN:0:8}... (full token not shown)"
+# Emit SHA-256 fingerprint only — never the raw token
+TOKEN_FINGERPRINT=$(node -e "
+const crypto = require('crypto');
+process.stdout.write(crypto.createHash('sha256').update(process.env._TOKEN).digest('hex').substring(0,16));
+" _TOKEN="$RESET_TOKEN")
+echo "TOKEN_SHA256_PREFIX=$TOKEN_FINGERPRINT (first 16 hex chars of SHA-256 of token)"
 echo "ACTION_URL_ORIGIN=$(echo "$ACTION_URL" | cut -d/ -f1-3)"
 echo "STEP3_TOKEN_EXTRACT DONE"
 
@@ -241,7 +327,7 @@ const req = https.request({
   res.on('data', c => data += c);
   res.on('end', () => process.stdout.write(res.statusCode + '\n' + data));
 });
-req.on('error', e => { process.stderr.write(e.message + '\n'); process.exit(1); });
+req.on('error', e => { process.stderr.write('NETWORK_ERROR: ' + e.message + '\n'); process.exit(1); });
 req.write(body); req.end();
 " _RESET_TOKEN="$RESET_TOKEN")
 RESET_STATUS=$(echo "$RESET_RESULT" | head -1)
@@ -270,12 +356,11 @@ SESSIONS_AFTER=$(psql "$DATABASE_URL" -t -A -c \
   "SELECT count(*) FROM jpvbootcamp_staging.payload_members_sessions WHERE _parent_id=9;")
 echo "sessions_after=$SESSIONS_AFTER"
 if [[ "$SESSIONS_AFTER" != "0" ]]; then
-  echo "WARNING: sessions_after=$SESSIONS_AFTER (expected 0)" >&2
+  echo "ABORT: sessions_after=$SESSIONS_AFTER — expected 0 after DELETE" >&2; exit 1
 fi
 echo "STEP5_REVOKE_SESSIONS DONE"
-echo "JWT_REVOCATION_NOTE: Payload uses stateless JWTs. Sessions deleted. Old JWTs will be rejected at the password-hash verification layer on the next authenticated request. This is the supported revocation mechanism — no separate revocation API exists."
 
-# ─── Step 6: prove old email + old password => 401 ───────────────────────────
+# ─── Step 6: prove old email + old password => 401 (FATAL) ───────────────────
 echo "=== STEP6_OLD_EMAIL_REJECTED ==="
 OLD_EMAIL_STATUS=$(node -e "
 const https = require('https');
@@ -289,11 +374,15 @@ req.on('error', () => process.stdout.write('net_error'));
 req.write(body); req.end();
 " _OLD_EMAIL="$CURRENT_EMAIL")
 echo "old_email_old_pass_status=$OLD_EMAIL_STATUS (expected 401)"
-if [[ "$OLD_EMAIL_STATUS" != "401" ]]; then
-  echo "WARNING: old_email_old_pass_status=$OLD_EMAIL_STATUS — expected 401" >&2
+if [[ "$OLD_EMAIL_STATUS" == "net_error" ]]; then
+  echo "ABORT: network error testing old email rejection" >&2; exit 1
 fi
+if [[ "$OLD_EMAIL_STATUS" != "401" ]]; then
+  echo "ABORT: old_email_old_pass_status=$OLD_EMAIL_STATUS — expected 401, old credential NOT rejected" >&2; exit 1
+fi
+echo "STEP6_OLD_EMAIL_REJECTED DONE"
 
-# ─── Step 7: prove new email + old password => 401 ───────────────────────────
+# ─── Step 7: prove new email + old password => 401 (FATAL) ───────────────────
 echo "=== STEP7_NEW_EMAIL_OLD_PASS_REJECTED ==="
 NEW_EMAIL_OLD_PASS=$(node -e "
 const https = require('https');
@@ -307,9 +396,13 @@ req.on('error', () => process.stdout.write('net_error'));
 req.write(body); req.end();
 ")
 echo "new_email_old_pass_status=$NEW_EMAIL_OLD_PASS (expected 401)"
-if [[ "$NEW_EMAIL_OLD_PASS" != "401" ]]; then
-  echo "WARNING: new_email_old_pass_status=$NEW_EMAIL_OLD_PASS — expected 401" >&2
+if [[ "$NEW_EMAIL_OLD_PASS" == "net_error" ]]; then
+  echo "ABORT: network error testing new email + old password rejection" >&2; exit 1
 fi
+if [[ "$NEW_EMAIL_OLD_PASS" != "401" ]]; then
+  echo "ABORT: new_email_old_pass_status=$NEW_EMAIL_OLD_PASS — expected 401, old password NOT rejected on new email" >&2; exit 1
+fi
+echo "STEP7_NEW_EMAIL_OLD_PASS_REJECTED DONE"
 
 # ─── Step 8: prove new email + new password => 200 ───────────────────────────
 echo "=== STEP8_NEW_CREDENTIAL_ACCEPTED ==="
@@ -325,7 +418,7 @@ const req = https.request({
   res.on('data', c => data += c);
   res.on('end', () => process.stdout.write(res.statusCode + '\n' + data));
 });
-req.on('error', e => { process.stderr.write(e.message + '\n'); process.exit(1); });
+req.on('error', e => { process.stderr.write('NETWORK_ERROR: ' + e.message + '\n'); process.exit(1); });
 req.write(body); req.end();
 ")
 NEW_CRED_STATUS=$(echo "$NEW_CRED_RESULT" | head -1)
@@ -338,17 +431,52 @@ echo "$NEW_CRED_BODY_REDACTED"
 if [[ "$NEW_CRED_STATUS" != "200" ]]; then
   echo "ABORT: new credential test failed — status $NEW_CRED_STATUS" >&2; exit 1
 fi
-# Emit first 20 chars of JWT as fingerprint
-JWT_FINGERPRINT=$(echo "$NEW_CRED_RESULT" | tail -n +2 \
+# Emit SHA-256 fingerprint only — never the raw JWT
+NEW_JWT_FINGERPRINT=$(echo "$NEW_CRED_RESULT" | tail -n +2 \
   | node -e "
+const crypto = require('crypto');
 let d='';
 process.stdin.on('data',c=>d+=c);
 process.stdin.on('end',()=>{
-  try{ const t=(JSON.parse(d).token||''); process.stdout.write(t.substring(0,20)+'...(truncated)'); }
-  catch{ process.stdout.write('(parse_error)'); }
+  try{
+    const t=(JSON.parse(d).token||'');
+    if(t) process.stdout.write(crypto.createHash('sha256').update(t).digest('hex').substring(0,16));
+    else process.stdout.write('(no_token)');
+  } catch{ process.stdout.write('(parse_error)'); }
 })")
-echo "new_jwt_fingerprint=$JWT_FINGERPRINT"
+echo "new_jwt_sha256_prefix=$NEW_JWT_FINGERPRINT (first 16 hex chars of SHA-256)"
 echo "STEP8_NEW_CREDENTIAL_ACCEPTED DONE"
+
+# ─── Step 8b: prove old JWT rejected on protected endpoint ───────────────────
+echo "=== STEP8B_OLD_JWT_REJECTED ==="
+if [[ -n "${OLD_JWT:-}" ]]; then
+  POST_ROTATION_STATUS=$(node -e "
+const https = require('https');
+const url = new URL('https://preview.jpvbootcamp.com/api/member-session');
+const req = https.request({
+  hostname: url.hostname, path: url.pathname, method: 'GET',
+  headers: { Authorization: 'JWT ' + process.env._OLD_JWT }
+}, (res) => { process.stdout.write(String(res.statusCode)); });
+req.on('error', () => process.stdout.write('net_error'));
+req.end();
+" _OLD_JWT="$OLD_JWT")
+
+  echo "post_rotation_old_jwt_status=$POST_ROTATION_STATUS"
+  if [[ "$POST_ROTATION_STATUS" == "net_error" ]]; then
+    echo "ABORT: network error testing old JWT rejection" >&2; exit 1
+  fi
+  # After password reset + session deletion, old JWT must be rejected (401 or 403)
+  if [[ "$POST_ROTATION_STATUS" == "200" ]]; then
+    echo "ABORT: old JWT still accepted by protected endpoint after rotation — JWT revocation failed" >&2
+    echo "JWT_REVOCATION_NOTE: Payload stateless JWT not properly invalidated. Investigate auth middleware." >&2
+    exit 1
+  fi
+  echo "JWT_REVOCATION_PROOF: old JWT rejected (status=$POST_ROTATION_STATUS) after password reset and session deletion"
+  echo "JWT_REVOCATION_MECHANISM: password-hash change invalidates any JWT encoding the old password hash"
+  echo "STEP8B_OLD_JWT_REJECTED DONE"
+else
+  echo "STEP8B_SKIPPED: no pre-mutation old JWT was captured (credential was already invalid at preflight)"
+fi
 
 # ─── Step 9: member count ─────────────────────────────────────────────────────
 echo "=== STEP9_MEMBER_COUNT ==="
@@ -356,4 +484,4 @@ psql "$DATABASE_URL" -t -A -c \
   "SELECT 'total_members=' || count(*) FROM jpvbootcamp_staging.payload_members;"
 
 echo "=== REMEDIATION EXECUTE COMPLETE $STAMP ==="
-echo "OPERATOR: new password was supplied via NEW_CREDENTIAL_PASSWORD env var — save to your secret manager now, then unset the variable"
+echo "OPERATOR: new password was supplied via NEW_CREDENTIAL_PASSWORD env var — save to your secret manager now, then run: unset OLD_CREDENTIAL_PASSWORD NEW_CREDENTIAL_PASSWORD OLD_JWT"

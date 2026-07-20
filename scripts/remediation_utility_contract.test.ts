@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { execSync, spawnSync } from 'node:child_process'
+import { spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
@@ -8,27 +8,17 @@ import { fileURLToPath } from 'node:url'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const SCRIPT = path.join(__dirname, 'run-remediation.sh')
 
-// Stub directory: fake psql/curl/node that satisfy dep-check but fail fast
-// for structural tests. We only inject these to get past DEP_CHECK so we can
-// test the schema/secret/option guards in isolation.
+// ─── stub directory ───────────────────────────────────────────────────────────
+// Provides fake psql/curl that pass DEP_CHECK, then fail on actual calls,
+// so structural/guard tests can exercise schema/secret checks in isolation.
 let STUB_DIR: string | null = null
 
 function getStubDir(): string {
   if (STUB_DIR) return STUB_DIR
   STUB_DIR = path.join(os.tmpdir(), `remediation-stubs-${process.pid}`)
   mkdirSync(STUB_DIR, { recursive: true })
-  // psql: exits 1 on first real call (after dep-check passes)
-  writeFileSync(
-    path.join(STUB_DIR, 'psql'),
-    '#!/bin/bash\nexit 1\n',
-    { mode: 0o755 },
-  )
-  // curl: exits 1
-  writeFileSync(
-    path.join(STUB_DIR, 'curl'),
-    '#!/bin/bash\necho "curl_stub"\nexit 1\n',
-    { mode: 0o755 },
-  )
+  writeFileSync(path.join(STUB_DIR, 'psql'), '#!/bin/bash\nexit 1\n', { mode: 0o755 })
+  writeFileSync(path.join(STUB_DIR, 'curl'), '#!/bin/bash\necho "curl_stub"\nexit 1\n', { mode: 0o755 })
   return STUB_DIR
 }
 
@@ -45,6 +35,8 @@ function runScript(
       ...env,
     },
     encoding: 'utf-8',
+    // stdin: pipe so read -s doesn't hang waiting for a terminal
+    input: '\n\n',
   })
   return {
     code: result.status ?? 1,
@@ -54,9 +46,10 @@ function runScript(
 }
 
 function main(): void {
-  // ── utility file exists with correct shebang ─────────────────────────────
-  assert.ok(existsSync(SCRIPT), `run-remediation.sh must exist at ${SCRIPT}`)
   const scriptText = readFileSync(SCRIPT, 'utf-8')
+
+  // ── utility file exists with bash shebang ────────────────────────────────
+  assert.ok(existsSync(SCRIPT), `run-remediation.sh must exist at ${SCRIPT}`)
   assert.ok(scriptText.startsWith('#!/bin/bash'), 'must have bash shebang')
 
   // ── usage guard: no args ──────────────────────────────────────────────────
@@ -70,12 +63,11 @@ function main(): void {
   {
     const { code, stderr } = runScript(['--run'])
     assert.equal(code, 2, 'exit 2 for unknown mode --run')
-    assert.ok(stderr.includes('USAGE:'), `usage message on stderr for unknown mode, got: ${stderr}`)
+    assert.ok(stderr.includes('USAGE:'), `usage on stderr for unknown mode, got: ${stderr}`)
   }
 
-  // ── static: dependency check block exists ────────────────────────────────
+  // ── static: DEP_CHECK block verifies all three deps ──────────────────────
   {
-    // Verify all three required commands are checked in the DEP_CHECK block
     const depSection = scriptText.split('DEP_CHECK')[1]?.split('SCHEMA_GUARD')[0] ?? ''
     assert.ok(depSection.includes('psql'), 'DEP_CHECK must check for psql')
     assert.ok(depSection.includes('node'), 'DEP_CHECK must check for node')
@@ -83,99 +75,75 @@ function main(): void {
     assert.ok(depSection.includes('ABORT'), 'DEP_CHECK must abort on missing dep')
   }
 
-  // ── wrong host aborts (uses stubs to pass dep-check) ─────────────────────
+  // ── wrong host aborts ─────────────────────────────────────────────────────
   {
     const { code, stderr } = runScript(
       ['--preflight'],
-      {
-        DATABASE_URL: 'postgresql://u:p@10.0.0.1/db?schema=jpvbootcamp_staging',
-        OLD_CREDENTIAL_PASSWORD: 'old',
-        NEW_CREDENTIAL_PASSWORD: 'new12345678',
-      },
+      { DATABASE_URL: 'postgresql://u:p@10.0.0.1/db?schema=jpvbootcamp_staging',
+        OLD_CREDENTIAL_PASSWORD: 'old12345678',
+        NEW_CREDENTIAL_PASSWORD: 'new12345678!' },
       true,
     )
     assert.equal(code, 1, 'exit 1 for wrong DB host')
-    assert.ok(
-      stderr.includes('ABORT: wrong host'),
-      `stderr must mention wrong host, got: ${stderr}`,
-    )
+    assert.ok(stderr.includes('ABORT: wrong host'), `wrong host abort, got: ${stderr}`)
   }
 
   // ── wrong schema aborts ───────────────────────────────────────────────────
   {
     const { code, stderr } = runScript(
       ['--preflight'],
-      {
-        DATABASE_URL: 'postgresql://u:p@100.71.31.88/db?schema=jpvbootcamp_production',
-        OLD_CREDENTIAL_PASSWORD: 'old',
-        NEW_CREDENTIAL_PASSWORD: 'new12345678',
-      },
+      { DATABASE_URL: 'postgresql://u:p@100.71.31.88/db?schema=jpvbootcamp_production',
+        OLD_CREDENTIAL_PASSWORD: 'old12345678',
+        NEW_CREDENTIAL_PASSWORD: 'new12345678!' },
       true,
     )
     assert.equal(code, 1, 'exit 1 for wrong DB schema')
-    assert.ok(
-      stderr.includes('ABORT: wrong schema'),
-      `stderr must mention wrong schema, got: ${stderr}`,
-    )
+    assert.ok(stderr.includes('ABORT: wrong schema'), `wrong schema abort, got: ${stderr}`)
   }
 
   // ── missing OLD_CREDENTIAL_PASSWORD aborts ────────────────────────────────
   {
     const { code, stderr } = runScript(
       ['--preflight'],
-      { NEW_CREDENTIAL_PASSWORD: 'new12345678' },
+      { NEW_CREDENTIAL_PASSWORD: 'new12345678!' },
       true,
     )
     assert.equal(code, 1, 'exit 1 when OLD_CREDENTIAL_PASSWORD missing')
-    assert.ok(
-      stderr.includes('OLD_CREDENTIAL_PASSWORD'),
-      `stderr must mention OLD_CREDENTIAL_PASSWORD, got: ${stderr}`,
-    )
+    assert.ok(stderr.includes('OLD_CREDENTIAL_PASSWORD'), `got: ${stderr}`)
   }
 
   // ── missing NEW_CREDENTIAL_PASSWORD aborts ────────────────────────────────
   {
     const { code, stderr } = runScript(
       ['--preflight'],
-      { OLD_CREDENTIAL_PASSWORD: 'old' },
+      { OLD_CREDENTIAL_PASSWORD: 'old12345678' },
       true,
     )
     assert.equal(code, 1, 'exit 1 when NEW_CREDENTIAL_PASSWORD missing')
-    assert.ok(
-      stderr.includes('NEW_CREDENTIAL_PASSWORD'),
-      `stderr must mention NEW_CREDENTIAL_PASSWORD, got: ${stderr}`,
-    )
+    assert.ok(stderr.includes('NEW_CREDENTIAL_PASSWORD'), `got: ${stderr}`)
   }
 
   // ── short new password aborts ─────────────────────────────────────────────
   {
     const { code, stderr } = runScript(
       ['--preflight'],
-      {
-        OLD_CREDENTIAL_PASSWORD: 'old',
-        NEW_CREDENTIAL_PASSWORD: 'short',
-      },
+      { OLD_CREDENTIAL_PASSWORD: 'old12345678',
+        NEW_CREDENTIAL_PASSWORD: 'short' },
       true,
     )
-    assert.equal(code, 1, 'exit 1 when NEW_CREDENTIAL_PASSWORD is too short')
-    assert.ok(
-      stderr.includes('at least 12'),
-      `stderr must mention 12-char minimum, got: ${stderr}`,
-    )
+    assert.equal(code, 1, 'exit 1 for short new password')
+    assert.ok(stderr.includes('at least 12'), `got: ${stderr}`)
   }
 
-  // ── secrets never appear in output (tested pre-schema-guard) ─────────────
+  // ── secrets never appear in stdout or stderr ─────────────────────────────
   {
-    const oldPass = 'SuperSecretOldPass_Unique_999'
-    const newPass = 'SuperSecretNewPass_Unique_999!'
-    // Wrong host causes fast abort — but arg processing runs first
+    const oldPass = 'SuperSecretOldPass_Unique_x999'
+    const newPass = 'SuperSecretNewPass_Unique_x999!'
     const { stdout, stderr } = runScript(
       ['--preflight'],
-      {
-        DATABASE_URL: 'postgresql://u:p@1.2.3.4/db?schema=bad',
+      { DATABASE_URL: 'postgresql://u:p@1.2.3.4/db?schema=bad',
         OLD_CREDENTIAL_PASSWORD: oldPass,
-        NEW_CREDENTIAL_PASSWORD: newPass,
-      },
+        NEW_CREDENTIAL_PASSWORD: newPass },
       true,
     )
     const combined = stdout + stderr
@@ -183,31 +151,44 @@ function main(): void {
     assert.ok(!combined.includes(newPass), 'NEW_CREDENTIAL_PASSWORD must never appear in output')
   }
 
-  // ── static: --preflight path must not contain mutation SQL ───────────────
+  // ── static: interactive read -s prompt present ────────────────────────────
   {
-    const preflightSection = scriptText.split('EXECUTE MODE STARTING')[0] ?? ''
+    assert.ok(
+      scriptText.includes('read -rs') || scriptText.includes('read -s'),
+      'script must offer interactive read -s prompt for secrets',
+    )
+  }
+
+  // ── static: no shell-history exposure in usage comment ────────────────────
+  {
+    const usageComment = scriptText.split('set -euo pipefail')[0] ?? ''
+    // Usage must NOT show inline assignment (OLD_CREDENTIAL_PASSWORD=... bash ...)
+    // which would land in shell history
+    assert.ok(
+      !usageComment.match(/OLD_CREDENTIAL_PASSWORD=\S+/),
+      'usage comment must not show inline password assignment (shell history exposure)',
+    )
+  }
+
+  // ── static: --preflight path contains no mutation SQL ────────────────────
+  {
+    const preflightSection = scriptText.split('=== EXECUTE MODE STARTING ===')[0] ?? ''
     const forbiddenLines = preflightSection
       .split('\n')
       .filter((line) => {
-        const trimmed = line.trim()
-        if (trimmed.startsWith('#')) return false
-        // psql or node lines that contain unquoted UPDATE/DELETE/INSERT
-        return (
-          /^\s*(psql|node)\s/.test(line) &&
-          /\b(UPDATE|DELETE|INSERT)\b/i.test(line)
-        )
+        if (line.trim().startsWith('#')) return false
+        return /^\s*(psql|node)\s/.test(line) && /\b(UPDATE|DELETE|INSERT)\b/i.test(line)
       })
     assert.deepEqual(
-      forbiddenLines,
-      [],
-      `preflight section must not contain mutation SQL invocations:\n${forbiddenLines.join('\n')}`,
+      forbiddenLines, [],
+      `preflight section must not contain mutation SQL:\n${forbiddenLines.join('\n')}`,
     )
   }
 
   // ── static: execute section contains all required step markers ───────────
   {
-    const executeSection = scriptText.split('EXECUTE MODE STARTING')[1] ?? ''
-    const requiredSteps = [
+    const executeSection = scriptText.split('=== EXECUTE MODE STARTING ===')[1] ?? ''
+    for (const step of [
       'STEP1_EMAIL_UPDATE',
       'STEP2_FORGOT_PASSWORD',
       'STEP3_TOKEN_EXTRACT',
@@ -216,11 +197,35 @@ function main(): void {
       'STEP6_OLD_EMAIL_REJECTED',
       'STEP7_NEW_EMAIL_OLD_PASS_REJECTED',
       'STEP8_NEW_CREDENTIAL_ACCEPTED',
+      'STEP8B_OLD_JWT_REJECTED',
       'STEP9_MEMBER_COUNT',
-    ]
-    for (const step of requiredSteps) {
+    ]) {
       assert.ok(executeSection.includes(step), `execute section must contain step marker ${step}`)
     }
+  }
+
+  // ── static: Steps 6 and 7 are fatal (ABORT, not WARNING) ─────────────────
+  {
+    const step6 = scriptText.split('STEP6_OLD_EMAIL_REJECTED')[1]?.split('STEP7')[0] ?? ''
+    assert.ok(
+      step6.includes('ABORT') && !step6.match(/^\s*echo "WARNING/m),
+      'Step 6 must ABORT on non-401, must not just warn',
+    )
+    const step7 = scriptText.split('STEP7_NEW_EMAIL_OLD_PASS_REJECTED')[1]?.split('STEP8')[0] ?? ''
+    assert.ok(
+      step7.includes('ABORT') && !step7.match(/^\s*echo "WARNING/m),
+      'Step 7 must ABORT on non-401, must not just warn',
+    )
+  }
+
+  // ── static: network errors abort (net_error check present) ───────────────
+  {
+    const executeSection = scriptText.split('=== EXECUTE MODE STARTING ===')[1] ?? ''
+    const netErrorAborts = (executeSection.match(/net_error/g) || []).length
+    assert.ok(
+      netErrorAborts >= 2,
+      `execute section must check for net_error in at least 2 places, found ${netErrorAborts}`,
+    )
   }
 
   // ── static: row-count assertion in Step 1 ────────────────────────────────
@@ -231,48 +236,83 @@ function main(): void {
     )
   }
 
-  // ── static: JWT revocation documented honestly ────────────────────────────
+  // ── static: session deletion row-count abort (not just warning) ──────────
   {
+    const step5 = scriptText.split('STEP5_REVOKE_SESSIONS')[1]?.split('STEP6')[0] ?? ''
     assert.ok(
-      scriptText.includes('JWT_REVOCATION_NOTE') && scriptText.includes('stateless'),
-      'script must document JWT revocation capability honestly',
+      step5.includes('ABORT') && step5.includes('sessions_after'),
+      'Step 5 must ABORT if sessions_after != 0 (not just warn)',
     )
     assert.ok(
-      !scriptText.includes('full JWT revocation'),
-      'script must not claim unsupported full JWT revocation',
+      !step5.match(/^\s*echo "WARNING.*sessions_after/m),
+      'Step 5 must not demote session-count mismatch to a warning',
     )
   }
 
-  // ── static: no temp file written with new password ────────────────────────
+  // ── static: old JWT protected endpoint test present ───────────────────────
+  {
+    assert.ok(
+      scriptText.includes('STEP8B_OLD_JWT_REJECTED'),
+      'script must include STEP8B to prove old JWT rejected on protected endpoint',
+    )
+    assert.ok(
+      scriptText.includes('/api/member-session'),
+      'script must call /api/member-session as the protected endpoint for JWT proof',
+    )
+    assert.ok(
+      scriptText.includes('JWT_REVOCATION_PROOF') || scriptText.includes('JWT_REVOCATION_MECHANISM'),
+      'script must emit JWT revocation proof line (not just a note)',
+    )
+  }
+
+  // ── static: old JWT accepted → ABORT (not silently ignored) ──────────────
+  {
+    const step8b = scriptText.split('STEP8B_OLD_JWT_REJECTED')[1]?.split('STEP9')[0] ?? ''
+    assert.ok(
+      step8b.includes('ABORT') && step8b.includes('still accepted'),
+      'Step 8b must ABORT if old JWT is still accepted post-rotation',
+    )
+  }
+
+  // ── static: JWT fingerprint uses SHA-256 (no raw prefix emission) ─────────
+  {
+    // Must use sha256 fingerprint, never substring(0,20) pattern
+    assert.ok(
+      scriptText.includes('sha256') || scriptText.includes('SHA-256'),
+      'JWT fingerprints must use SHA-256 hash, not raw prefix',
+    )
+    assert.ok(
+      !scriptText.includes('substring(0,20)'),
+      'script must not emit raw JWT prefix — use SHA-256 fingerprint only',
+    )
+  }
+
+  // ── static: no temp file written with password ────────────────────────────
   {
     assert.ok(
       !scriptText.includes('/tmp/stg_new_pass'),
-      'script must not write new password to /tmp file (secrets via env only)',
+      'script must not write password to /tmp file',
     )
   }
 
-  // ── static: no inline password generation via Math.random or randomBytes ──
+  // ── static: no inline password generation ────────────────────────────────
   {
-    assert.ok(
-      !scriptText.includes('Math.random()'),
-      'script must not use Math.random() for password generation',
-    )
-    // Must not assign NEW_PASS= inline (old pattern) — password comes from env
+    assert.ok(!scriptText.includes('Math.random()'), 'no Math.random() for password generation')
     assert.ok(
       !scriptText.match(/^\s*NEW_PASS=/m),
-      'new password must come from NEW_CREDENTIAL_PASSWORD env, not generated inline',
+      'new password must come from env, not generated inline',
     )
   }
 
-  // ── static: old email test uses real old email, not a placeholder ─────────
+  // ── static: old email test uses captured variable, not placeholder ────────
   {
-    const step6Section = scriptText.split('STEP6_OLD_EMAIL_REJECTED')[1]?.split('STEP7')[0] ?? ''
+    const step6 = scriptText.split('STEP6_OLD_EMAIL_REJECTED')[1]?.split('STEP7')[0] ?? ''
     assert.ok(
-      !step6Section.includes('step6test@staging.test'),
-      'Step 6 must not use a placeholder email — must use the actual old email via variable',
+      !step6.includes('step6test@staging.test'),
+      'Step 6 must not use placeholder email',
     )
     assert.ok(
-      step6Section.includes('_OLD_EMAIL') || step6Section.includes('CURRENT_EMAIL'),
+      step6.includes('_OLD_EMAIL') || step6.includes('CURRENT_EMAIL'),
       'Step 6 must reference the captured old email variable',
     )
   }
@@ -280,10 +320,7 @@ function main(): void {
   // ── deprecated .mts duplicate must not exist ──────────────────────────────
   {
     const deprecated = path.join(__dirname, 'remediate-staging-credential.mts')
-    assert.ok(
-      !existsSync(deprecated),
-      'deprecated duplicate remediate-staging-credential.mts must be removed',
-    )
+    assert.ok(!existsSync(deprecated), 'deprecated remediate-staging-credential.mts must be removed')
   }
 
   console.log('remediation_utility_contract.test.ts passed')
