@@ -37,6 +37,8 @@
     "content:programme:acceptance": "tsx scripts/content/buildProgrammeAcceptanceReport.ts",
     "content:programme:import-plan": "tsx scripts/content/buildProgrammeImportPlan.ts",
     "migration:membership:preview": "tsx scripts/release/buildMembershipMigrationPreview.ts",
+    "migration:legacy": "tsx scripts/migration/runLegacyMigration.ts",
+    "test:migration:legacy": "tsx scripts/migration/legacyMigration.test.ts",
     "staging:migration-preflight": "tsx scripts/release/stagingMigrationPreflight.ts",
     "staging:migration-rehearsal": "tsx scripts/release/migrationRehearsal.ts",
     "staging:migration-rehearsal:evidence": "tsx scripts/release/buildMigrationRehearsalEvidence.ts",
