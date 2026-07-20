@@ -1,6 +1,6 @@
 # JPV Bootcamp - Roadmap Progress Status
 
-Current status for `feature/course-branding-and-preview`, using the 10 July 2026 audit at `236227c fix: require portal auth for member content` as the historical baseline, `af6de62 docs: record core go-live readiness` as the previous readiness baseline, `d55229f test: enforce programme content readiness` as the current validated implementation baseline, and `8927df9 docs: checkpoint membership implementation readiness` as the prior checkpoint baseline. **Current branch HEAD: `5c7bc24 docs: operator immediate actions for credential rotation completion`** (2026-07-20 post-security-cleanup and rotation attempt).
+Current status for `feature/course-branding-and-preview`, using the 10 July 2026 audit at `236227c fix: require portal auth for member content` as the historical baseline, `af6de62 docs: record core go-live readiness` as the previous readiness baseline, `d55229f test: enforce programme content readiness` as the current validated implementation baseline, and `8927df9 docs: checkpoint membership implementation readiness` as the prior checkpoint baseline. **Current branch HEAD: `1990ffd docs: final security & acceptance packet — validation complete, credential disable pending`** (2026-07-20 post-security-cleanup and credential remediation verification).
 
 Current client truth: `docs/client/JPV_Bootcamp_Platform_Expansion_Go_Live_Plan_v3_7.docx`. Version 3.4 is the prior progress baseline. Canonical execution plan: `docs/PAYLOAD_INTEGRATION_PLAN.md`. Detailed audit evidence: `docs/V3_5_CODEBASE_ALIGNMENT_ASSESSMENT.md`.
 
@@ -24,10 +24,10 @@ Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`.
 | --- | --- |
 | Branch | `feature/course-branding-and-preview` |
 | Staging target | This feature branch is the staging / production-staged deployment branch |
-| **Current CODE HEAD** | `5c7bc24 docs: operator immediate actions for credential rotation completion` (2026-07-20) |
+| **Current CODE HEAD** | `1990ffd docs: final security & acceptance packet — validation complete, credential disable pending` (2026-07-20) |
 | **Current DEPLOYMENT HEAD** | `5d01aae docs: final comprehensive report...` (frozen — no new deploys authorized) |
-| **Security Status** | Exposed credential confirmed valid; rotation reset email sent; account disable/revocation pending operator action |
-| Release State | **NO-GO** — awaiting operator D/E verification and client go/no-go approval |
+| **Security Status** | Exposed credential CONFIRMED VALID (HTTP 200 login); account disable/revocation PENDING operator immediate action (no Workbench admin/DB access available) |
+| Release State | **FORMAL NO-GO** — Exposed staging credential remains active; operator must disable via admin UI, database, or email reset before remediation complete |
 | Historical audit baseline | `236227c fix: require portal auth for member content` |
 | Previous readiness baseline | `af6de62 docs: record core go-live readiness` |
 | Prior validated baseline | `d55229f test: enforce programme content readiness` |
