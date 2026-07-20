@@ -1,8 +1,8 @@
 {
   "generatedFrom": "docs/client/JPV_Bootcamp_Platform_Expansion_Go_Live_Plan_v3_7.docx",
   "branch": "feature/course-branding-and-preview",
-  "head": "89c2c43",
-  "note": "Updated 2026-07-20 post-security-cleanup; deployment head 5d01aae; live email/auth B-level verified 70%",
+  "head": "dc7edf9",
+  "note": "Updated 2026-07-20 post-security-cleanup (dc7edf9: plaintext credentials removed from docs); deployment head 5d01aae (frozen); live email/auth B-level verified 70%",
   "packets": [
     {
       "id": "SCHEMA-01",

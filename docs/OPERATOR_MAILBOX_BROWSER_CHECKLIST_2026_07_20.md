@@ -85,9 +85,9 @@
 **Evidence to Record**: For the Set-Cookie header, verify presence of:
 - [ ] `Secure` flag present (ensures HTTPS-only)
 - [ ] `HttpOnly` flag present (prevents JS access)
-- [ ] `SameSite=Strict` present (CSRF protection)
+- [ ] `SameSite` flag present (CSRF protection) — record actual value: `Strict`, `Lax`, or `None`
 
-**Redaction**: You may record "Secure ✓, HttpOnly ✓, SameSite=Strict ✓" without recording the full cookie value.
+**Redaction**: You may record "Secure ✓, HttpOnly ✓, SameSite=[value] ✓" without recording the full cookie value. If SameSite is not present or differs from Strict, note the actual value observed.
 
 ---
 

@@ -147,12 +147,12 @@
 | Property | Evidence | Classification | Status |
 |----------|----------|-----------------|--------|
 | **Endpoint/Action** | Source code review of auth implementation | A | ✓ |
-| **Evidence** | Middleware implements Secure, HttpOnly, SameSite=Strict in cookies | A | ✓ |
-| **CSRF Protection** | Source code confirms CSRF token validation implemented | A | ✓ |
+| **Evidence** | CSRF token validation implemented; explicit cookie config NOT found in src/payload.config.ts | A | ✓ |
+| **Cookie Defaults** | Payload CMS defaults or runtime env config (not inspected) | PENDING | — |
 | **APP_BASE_URL** | Configured: https://preview.jpvbootcamp.com | B | ✓ |
 | **Actual Browser Headers** | HTTP response headers NOT inspected from real browser (would show Set-Cookie flags) | E | ✗ |
-| **Classification** | Source code verified; configuration correct; headers NOT inspected from browser | **A+B** | **PARTIAL** |
-| **Remaining** | Need: Real browser HTTP response to show Set-Cookie: Secure, HttpOnly, SameSite headers | E | — |
+| **Classification** | Source code CSRF protection verified; explicit SameSite config NOT found in code; headers NOT inspected from browser | **A+B** | **PARTIAL** |
+| **Remaining** | Need: (1) Real browser HTTP response to inspect Set-Cookie header; (2) Verification of Payload default or env-based SameSite setting | D/E | — |
 
 ---
 

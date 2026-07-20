@@ -9,7 +9,7 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 - Wave 3 checkpoint HEAD: `57711f9 feat: complete wave 3 course platform`
 - Packet 9 checkpoint HEAD: `8927df9 docs: checkpoint membership implementation readiness`
 - Registry reconciliation HEAD: `9780f31 fix(registry): update migration inventory for staging deployment`
-- **Current HEAD (Security cleanup & truth reconciliation)**: `89c2c43 docs: remove exposed credentials, reconcile evidence A-E matrix`
+- **Current HEAD (Security cleanup & truth reconciliation)**: `dc7edf9 security: remove plaintext staging credentials from docs`
 - Pull request: `https://github.com/prochattools/jpv-bootcamp/pull/2`
 - Staging URL: `https://preview.jpvbootcamp.com` (deployed, I_2Vukga3cc3ZhaG-mUzU)
 - Staging DB: `jpvbootcamp_staging` (schema, 16/16 migrations applied)
@@ -54,7 +54,7 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 
 ### Wave 4 validation
 
-- `pnpm test:release`: **138/138 PASS**
+- `pnpm test:release`: **140/140 PASS**
 - `pnpm test:e2e`: **58/58 PASS**
 - `pnpm test:release:full`: **PASS**
 - `pnpm exec tsc --noEmit --pretty false --incremental false`: **CLEAN**

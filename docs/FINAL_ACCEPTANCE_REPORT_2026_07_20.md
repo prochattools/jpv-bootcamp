@@ -7,8 +7,8 @@
 
 **Status**: Staging deployment ACTIVE; live email/auth proof: backend API/DB verified (B level 70%), mailbox/browser proof pending (D/E levels)  
 **Branch**: `feature/course-branding-and-preview`  
-**Current HEAD**: `89c2c43 docs: remove exposed credentials, reconcile evidence A-E matrix`  
-**Staging Deployment HEAD**: `5d01aae docs: final comprehensive report with workbench context, evidence matrix`  
+**Current HEAD**: `dc7edf9 security: remove plaintext staging credentials from docs` (security patch applied)  
+**Staging Deployment HEAD**: `5d01aae docs: final comprehensive report with workbench context, evidence matrix` (deployment frozen, no new deploys authorized)  
 **Staging URL**: https://preview.jpvbootcamp.com  
 **Staging App**: `clients-jpv-bootcamp-app-tp9xrk` (applicationId: `I_2Vukga3cc3ZhaG-mUzU`)  
 **Staging DB**: `jpvbootcamp_staging` (isolated schema, 16/16 migrations applied)  
@@ -18,7 +18,7 @@
 ⚠️ **Partial proof**: Steps 6 & 9 require browser interaction (opening email links, clicking forms) — infrastructure ready but CLI cannot automate browser.  
 ✅ **Repository implementation**: 100% complete (140/140 release tests, 58/58 E2E tests).  
 ✅ **Staging infrastructure**: Active and responding (all endpoints verified at https://preview.jpvbootcamp.com).  
-🔒 **Security cleanup**: Plaintext credentials removed from history; staging password rotation recommended.  
+🔒 **Security cleanup**: Plaintext credentials removed from docs (dc7edf9); history still contains staging-only exposure in a6c4660..5d01aae (private feature branch). Staging password rotation recommended and should be executed before any operator testing.  
 ⏳ **Pending**: Steps 6 & 9 browser verification, operator D/E checklist completion, client go/no-go decision, formal approvals.
 
 ---
