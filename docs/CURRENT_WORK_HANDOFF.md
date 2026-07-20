@@ -8,14 +8,16 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 - Branch: `feature/course-branding-and-preview`
 - Wave 3 checkpoint HEAD: `57711f9 feat: complete wave 3 course platform`
 - Packet 9 checkpoint HEAD: `8927df9 docs: checkpoint membership implementation readiness`
-- Current HEAD (Wave 6 + registry reconciliation): `9780f31 fix(registry): update migration inventory for staging deployment`
+- Registry reconciliation HEAD: `9780f31 fix(registry): update migration inventory for staging deployment`
+- **Current HEAD (Stage 6 + Email/Auth hardening checklist)**: `5d6f1af docs: record final staging acceptance and email/auth hardening checklist`
 - Pull request: `https://github.com/prochattools/jpv-bootcamp/pull/2`
 - Staging URL: `https://preview.jpvbootcamp.com` (deployed, I_2Vukga3cc3ZhaG-mUzU)
 - Staging DB: `jpvbootcamp_staging` (schema, 16/16 migrations applied)
 - Migrations applied on staging: `Yes (all 16 migrations applied by deployment)`
 - Staging deployment performed: `Yes`
-- Registry reconciliation: `Complete (9780f31)`
+- Registry reconciliation: `Complete (9780f31, tracked in current HEAD 5d6f1af)`
 - Push performed by the recent execution packets: `Yes (branch pushed for staging deployment)`
+- **Live Email/Auth Verification**: `Unexecuted (checklist defined, awaiting operator testing)`
 - Protected unrelated dirty paths (DO NOT MODIFY):
   - `src/payload-types.ts` (unrelated schema changes; type generation approval required before sync)
   - `docs/client/JPV_Bootcamp_Platform_Expansion_Go_Live_Plan_v3_7.docx`
@@ -121,20 +123,21 @@ Do not describe the application as deployed, staging-accepted, migrated, provide
 
 ### Current deterministic validation baseline
 
-- `pnpm test:release`: `138/138`
+- `pnpm test:release`: `140/140` (2026-07-20 execution)
 - `pnpm test:e2e`: `58/58`
 - `pnpm test:release:full`: passed
 - `pnpm staging:static-preflight`: passed
 - `pnpm staging:decision-readiness`: `DECISION-READY, EXTERNAL APPROVALS PENDING`
 - `pnpm staging:migration-preflight`: passed
 - `pnpm staging:migration-rehearsal`: passed in static mode
-- `pnpm staging:provider-simulation`: passed `10/10`
+- `pnpm staging:provider-simulation`: passed `10/10` (local test mode)
 - `pnpm staging:smoke-plan`: passed
-- `pnpm staging:smoke-simulated`: passed `5/5`
+- `pnpm staging:smoke-simulated`: passed (local simulation)
 - TypeScript: passed
 - production build: passed
 - both Prisma schema validations: passed
 - production high-severity audit gate: passed; two moderate advisories remain
+- **Live Email/Auth on Staging**: unexecuted (source complete, operator testing pending)
 
 Re-run the smallest relevant checks after focused changes and the complete release gates before committing a launch-critical packet.
 

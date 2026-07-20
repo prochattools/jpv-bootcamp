@@ -5,15 +5,16 @@
 
 ## Executive Summary
 
-**Status**: Staging deployment COMPLETE and VERIFIED  
+**Status**: Staging deployment ACTIVE; real email/auth verification PENDING  
 **Branch**: `feature/course-branding-and-preview`  
-**Current HEAD**: `9780f31 fix(registry): update migration inventory for staging deployment`  
+**Current HEAD**: `5d6f1af docs: record final staging acceptance and email/auth hardening checklist`  
+**Previous HEAD (registry reconciliation)**: `9780f31 fix(registry): update migration inventory for staging deployment`  
 **Staging URL**: https://preview.jpvbootcamp.com  
 **Staging App**: `clients-jpv-bootcamp-app-tp9xrk` (applicationId: `I_2Vukga3cc3ZhaG-mUzU`)  
-**Staging DB**: `jpvbootcamp_staging` (isolated schema)  
+**Staging DB**: `jpvbootcamp_staging` (isolated schema, 16/16 migrations applied)  
 **Release State**: **NO-GO** (as per client requirements)  
 
-All repository-owned validations complete. External operator approvals and real staging provider verification remain pending.
+Local validations complete. External email/auth live testing, operator approvals, and provider verification remain unexecuted.
 
 ---
 
@@ -22,13 +23,14 @@ All repository-owned validations complete. External operator approvals and real 
 ### Branch and Commits
 
 ```
-HEAD: 9780f31 fix(registry): update migration inventory for staging deployment
+HEAD: 5d6f1af docs: record final staging acceptance and email/auth hardening checklist
+9780f31 fix(registry): update migration inventory for staging deployment
 9630791 docs(deploy): record deployed proof results and migration note
 a77ecc9 fix(tests): use official Bunny v1 HMAC headers in staging E2E verification
 6d8b98e fix(migrations): add missing payload_locked_documents_rels columns for new collections
 ```
 
-**77 commits ahead of main** | **Push to remote**: SUCCESSFUL | **Remote tracking**: active
+**77+ commits ahead of main** | **Push to remote**: SUCCESSFUL | **Remote tracking**: active
 
 ### Deployed Migration State
 
@@ -250,7 +252,8 @@ Time: 12.4s
 
 ## Email/Auth Final Verification Checklist
 
-This is the definitive checklist for real staging testing with approved accounts.
+**STATUS: UNEXECUTED** — This checklist defines live staging verification with approved operator and test accounts.
+The source implementation is code-complete; the checklist below proves execution.
 
 ### Email Verification (To be tested on staging)
 
@@ -307,7 +310,7 @@ This is the definitive checklist for real staging testing with approved accounts
 - [ ] Session store: Database-backed, no in-memory session store
 - [ ] Logs: Real logging provider, no console-only collector
 
-**Personal Data Redaction**
+**Personal Data Redaction Policy**
 - [ ] No real member emails logged in test output
 - [ ] No real member names logged in test output
 - [ ] No Stripe API keys exposed in logs
@@ -320,9 +323,18 @@ This is the definitive checklist for real staging testing with approved accounts
 
 ### Immediate (For Real Staging Smoke)
 
+**Repository: COMPLETE**
+- ✅ Email/Auth source routes, handlers, and templates implemented
+- ✅ Payload member collection with email verification schema
+- ✅ Session management, CSRF protection, secure cookies
+- ✅ Resend email provider integration and queue persistence
+- ✅ Local validation: 140/140 release tests, 58/58 E2E tests
+
+**Operator: PENDING**
+
 1. **Provider Verification on Staging**
    - [ ] Stripe webhook delivery: real event receipt from test Stripe account
-   - [ ] Email delivery: real message arrival in test inbox
+   - [ ] Email delivery: real message arrival in test inbox (Resend provider)
    - [ ] Bunny playback: real video playback in browser (test video in staging)
    - [ ] Session persistence: real login session across page reloads
 
@@ -334,8 +346,8 @@ This is the definitive checklist for real staging testing with approved accounts
    - [ ] Course access gates working
 
 3. **Email/Auth Flow Testing**
-   - [ ] Email verification: real delivery and link completion
-   - [ ] Password reset: real delivery and reset completion
+   - [ ] Email verification: real delivery and link completion (Resend provider)
+   - [ ] Password reset: real delivery and reset completion (Resend provider)
    - [ ] Session cookies: secure, session-bound, CSRF-protected
    - [ ] Logout: complete session clearing
 
@@ -380,13 +392,15 @@ This is the definitive checklist for real staging testing with approved accounts
 | Membership Model | COMPLETE | 100% |
 | Stripe Integration (test mode) | COMPLETE | 100% |
 | Bunny Protected Media | COMPLETE | 100% |
-| Email/Auth | COMPLETE | 100% |
+| Email/Auth Source Implementation | COMPLETE | 100% |
+| Email/Auth Live Staging Proof | **PENDING** | 0% (unexecuted live test) |
 | Course Platform | COMPLETE | 100% |
 | Admin Operations | COMPLETE | 100% |
 | Schema Migration | APPLIED TO STAGING | 100% |
 | Local Validation | COMPLETE | 100% |
-| Staging Deployment | COMPLETE | 100% |
-| Repository Release State | **NO-GO** | 0% (awaiting external approvals) |
+| Staging Deployment | ACTIVE | 100% |
+| Provider Live Verification | **PENDING** | 0% (Resend, Stripe, Bunny unverified live) |
+| Repository Release State | **NO-GO** | 0% (awaiting external approvals and live email/auth proof) |
 
 ---
 
@@ -418,13 +432,28 @@ Date:   2026-07-20
 
 ## Conclusion
 
-Repository work is **COMPLETE and VERIFIED**. Staging deployment is **ACTIVE and READY** for real provider/auth testing with operator supervision. 
+**Repository Implementation: 100% COMPLETE AND VERIFIED**
+- ✅ Email/Auth source: fully implemented, tested locally
+- ✅ Payload member collection: schema applied to staging (16/16 migrations)
+- ✅ Resend email provider: integrated, queue persisted
+- ✅ Session management: secure cookies, CSRF protection in place
+- ✅ Local validations: 140/140 release tests, 58/58 E2E tests, TypeScript clean
 
-**Release state remains NO-GO** per explicit client direction — external approvals, real provider verification, and operator signoff are required before any production or further deployment actions.
+**Staging Deployment: ACTIVE AND ACCESSIBLE**
+- ✅ App deployed to https://preview.jpvbootcamp.com (I_2Vukga3cc3ZhaG-mUzU)
+- ✅ Database isolated to jpvbootcamp_staging schema
+- ✅ All providers configured for test mode
+- ✅ Migration registry reconciled with current deployment
 
-All local validations (140 release tests, 58 E2E tests, TypeScript, git checks) are passing. Migration registry is reconciled with deployed staging state. Protected paths are preserved. Zero breaking changes to existing functionality.
+**Live Email/Auth Verification: 0% (UNEXECUTED)**
+- ❌ Real Resend email delivery not tested
+- ❌ Real member login/logout not tested on staging
+- ❌ Real email verification flow not tested end-to-end
+- ❌ Real password reset flow not tested end-to-end
 
-**Next gate**: Real staging smoke testing with approved test accounts and real provider backends.
+**Release state remains NO-GO** per explicit client direction. External approvals, operator sign-off, and real provider verification (Resend, Stripe, Bunny) are required before any production or further deployment actions.
+
+**Next gate**: Operator-supervised real staging email/auth testing with approved test accounts and live provider backend verification.
 
 ---
 
