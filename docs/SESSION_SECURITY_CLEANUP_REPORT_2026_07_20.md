@@ -41,9 +41,9 @@ Prior "security cleanup" commit `89c2c43` claimed redaction complete, but the ne
 **Commit `dc7edf9 security: remove plaintext staging credentials from docs`**
 
 Replaced all plaintext references with redaction labels:
-- `step6test@staging.test` → `[member-test-01]`
-- `NewPass123!@#ResetWorked` → `[REDACTED-password]`
-- `info@prochat.tools` → `[operator-email]`
+- Test member email → `[member-test-01]`
+- Test member password → `[REDACTED-password]`
+- Operator contact email → `[operator-email]`
 - Resend provider IDs → `[REDACTED-provider-message-id]`
 
 **Scope**: Documentation only (no code changes)
