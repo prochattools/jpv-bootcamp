@@ -4,39 +4,57 @@
 jpv-bootcamp (feature/course-branding-and-preview)
 
 ## Tool
-Claude Code
+Claude Code (Sonnet 4.6)
 
-## Goal
-See transcript for context
+## Branch / HEAD
+feature/course-branding-and-preview @ 49ece37
 
-## Status
-auto-saved at 2026-07-20 10:52 — run /handoff resume to reconstruct full context
+## Bounded Packet Status: COMPLETE
 
-## Files touched
-- docs/FINAL_ACCEPTANCE_REPORT_2026_07_20.md
-- docs/CURRENT_WORK_HANDOFF.md
-- docs/TWO_DAY_PACKET_REGISTRY.json
-- docs/SECURITY_HISTORY_ASSESSMENT_2026_07_20.md
-- .ai/SESSION_REPORT_SECURITY_RECONCILIATION_2026_07_20.md
+### Remediation — DONE
+All 5 contract proof lines collected from --execute run at 2026-07-20T17:13:41Z:
+- `old_email_old_pass_status=401` ✓
+- `new_email_old_pass_status=401` ✓
+- `new_credential_status=200` ✓
+- `JWT_REVOCATION_PROOF: old JWT rejected (status=403) after password reset and session deletion` ✓
+- `sessions_after=0` ✓
 
-## Recent commands
-- `pnpm exec tsc --noEmit --pretty false --incremental false 2>&1 | head -5`
-- `git log --oneline 89c2c43..HEAD && echo "---" && git rev-parse HEAD`
-- `ls -la docs/*ASSESSMENT* docs/*HANDOFF* docs/*FINAL* docs/*REGISTRY* 2>/dev/null | awk '{print $9, "(" $5, "bytes)"}'`
-- `find docs -name "*ASSESSMENT*" -o -name "*HANDOFF*" -o -name "*REGISTRY*" -o -name "*ACCEPTANCE*" 2>/dev/null | sort`
-- `git log --oneline -3`
+Target: jpvbootcamp@prochat.tools / member id=9
+Method: email rotation (STEP1) → forgot-password (STEP2) → token extract (STEP3) → reset (STEP4) → session delete (STEP5) → 3 auth proof tests (STEP6-8) → JWT revocation proof (STEP8B)
 
-## Last response summary
-Perfect. Now let me output the final completion report: --- ## 🎯 **SECURITY CLEANUP & STATUS RECONCILIATION — COMPLETE** ### Session Duration **2026-07-20 10:22 – 11:51 UTC** (89 minutes) ### Workbench Proof - **Repo**: prochattools-jpv-bootcamp - **Branch**: feature/course-branding-and-preview (77+ commits ahead of main) - **Starting HEAD**: 89c2c43 (security cleanup from prior session) - **
+Script fixes committed at 967bbff:
+- COALESCE(account_status,'null') → COALESCE(account_status::text,'null') (enum cast)
+- node -e "..." VAR="$x" → VAR="$x" node -e "..." (env prefix not positional arg, 5 occurrences)
+- Added res.resume() to 4 status-only response handlers (prevented socket hang)
+- Removed broken DO $$ GET DIAGNOSTICS $$ block (ROW_COUNT unavailable cross-statement)
 
-## Decisions made
-None recorded automatically — run /handoff pause to capture decisions explicitly
+Temp files cleaned up on dokploy server (/tmp/.remcreds, /tmp/run-remediation.sh, etc.)
 
-## Next steps
-Run /handoff resume to reconstruct context from this auto-save
+### Migration Phase 1+2 — DONE
+Script: scripts/migration/legacyMigration.ts (committed d22d06b, fixed 49ece37)
+Tests: 28/28 passing
 
-## Blockers
-Unknown — auto-save only
+Extract run against staging (2026-07-20):
+- source_rows=21, null_emails=0, duplicate_emails=0
 
-## Resume prompt
-Resume from last session in jpv-bootcamp (feature/course-branding-and-preview). Review .ai/current.md and recent git log for full context.
+Dry-run against staging (2026-07-20):
+- total=21, with_billing=21, with_subscription=21, with_grant=16
+- No writes performed, no PII in output
+
+Schema fix (49ece37): customer_provisioning has fewer columns than Prisma model. Extract query
+adapted: null-fill stripe_price_id / billing_cadence / payment_status / commitment_status /
+subscription_current_period_end; map wp_user_id → accountId, status → subscriptionStatus.
+
+## Formal State
+Still **NO-GO** for production. Staging remediation complete. Migration extract+dry-run complete.
+Apply mode not yet run (requires explicit approval).
+
+## Next Steps (if resuming)
+1. Run test:release (140/140) and test:e2e (58/58) to verify no regressions
+2. TypeScript check: pnpm type-check:payload
+3. Decide whether to run migration --mode apply (requires explicit approval)
+4. Create PR when ready
+
+## Commits This Session
+- 967bbff scripts: fix remediation script — enum cast, env prefix, res.resume()
+- 49ece37 migration: adapt extract query to actual customer_provisioning schema
