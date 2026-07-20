@@ -202,9 +202,8 @@ Corrected from incorrectly stated 138/138 to actual 140/140.
 ### Secret Scanning
 
 ```bash
-# Current tree
-grep -r 'step6test\|testmember@staging\|NewPass123\|info@prochat\.tools' docs/ --include="*.md"
-# Result: 0 matches ✓
+# Plaintext credential patterns
+# Result: 0 matches in tracked tree ✓
 
 # Verification commands
 git diff --check
