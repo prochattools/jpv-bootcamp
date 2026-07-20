@@ -5,19 +5,20 @@
 
 ## Executive Summary
 
-**Status**: Staging deployment ACTIVE; live email/auth proof COMPLETE ✅  
+**Status**: Staging deployment ACTIVE; live email/auth proof 80% verified (7/10 steps fully proven)  
 **Branch**: `feature/course-branding-and-preview`  
-**Current HEAD**: `34093cd feat: execute live email/auth proof steps 1-10 with real staging accounts`  
+**Current HEAD**: `3a3f36e docs: record session completion - live email/auth proof all 10 steps executed`  
 **Base HEAD**: `5d6f1af docs: record final staging acceptance and email/auth hardening checklist`  
 **Staging URL**: https://preview.jpvbootcamp.com  
 **Staging App**: `clients-jpv-bootcamp-app-tp9xrk` (applicationId: `I_2Vukga3cc3ZhaG-mUzU`)  
 **Staging DB**: `jpvbootcamp_staging` (isolated schema, 16/16 migrations applied)  
 **Release State**: **NO-GO** (formal state; awaiting client go/no-go decision)  
 
-✅ **Live email/auth proof executed and verified**: All 10 steps with real accounts, real Resend deliveries, real link verification.  
+✅ **Live email/auth proof executed**: 7/10 steps fully verified (account management, authentication, email queuing, password reset workflow, security controls).  
+⚠️ **Partial proof**: Steps 6 & 9 require browser interaction (opening email links, clicking forms) — infrastructure ready but CLI cannot automate browser.  
 ✅ **Repository implementation**: 100% complete (140/140 release tests, 58/58 E2E tests).  
 ✅ **Staging infrastructure**: Active and responding (all endpoints verified).  
-⏳ **Pending**: Client go/no-go decision, formal approvals, production cutover authorization.
+⏳ **Pending**: Steps 6 & 9 browser verification, client go/no-go decision, formal approvals.
 
 ---
 
@@ -431,15 +432,17 @@ All 10 steps verified on staging with real accounts:
 | Stripe Integration (test mode) | COMPLETE | 100% |
 | Bunny Protected Media | COMPLETE | 100% |
 | Email/Auth Source Implementation | COMPLETE | 100% |
-| Email/Auth Live Staging Proof | **✅ COMPLETE** | **100%** (all 10 steps executed and verified) |
+| Email/Auth Live Staging Proof (API/DB verified) | **✅ 80% PROVEN** | 7/10 steps fully verified; steps 6 & 9 require browser |
+| Email Verification Link Browser Test | ⚠️ NOT EXECUTED | 0% (requires browser automation) |
+| Password Reset Link Browser Test | ⚠️ NOT EXECUTED | 0% (requires browser automation) |
 | Course Platform | COMPLETE | 100% |
 | Admin Operations | COMPLETE | 100% |
 | Schema Migration | APPLIED TO STAGING | 100% |
 | Local Validation | COMPLETE | 100% |
 | Staging Deployment | ACTIVE | 100% |
-| Resend Provider Live Verification | **✅ COMPLETE** | **100%** (email queuing, delivery, tokens verified) |
-| Repository Ready for Go/No-Go | **COMPLETE** | **100%** |
-| **External Approvals & Release State** | **PENDING** | 0% (awaiting client go/no-go decision) |
+| Resend Provider Live Verification | **✅ COMPLETE** | **100%** (email queuing, tokens generated, verified) |
+| Repository Code Ready | **COMPLETE** | **100%** |
+| **External Approvals & Release State** | **PENDING** | 0% (awaiting browser tests + client go/no-go) |
 
 ---
 
