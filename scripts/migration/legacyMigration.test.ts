@@ -21,6 +21,7 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 
 import {
+  assertRehearsalGuard,
   assertStagingGuard,
   extractSourceRows,
   runMigration,
@@ -443,7 +444,55 @@ async function main(): Promise<void> {
     assert.doesNotMatch(src, /console\.log.*@.*\.(com|invalid)/, 'must not log email addresses')
   }
 
-  console.log('legacyMigration.test.ts passed (28 tests)')
+  // 29. assertRehearsalGuard — valid localhost + rehearsal schema
+  {
+    assert.doesNotThrow(() =>
+      assertRehearsalGuard('postgresql://u:p@127.0.0.1:5444/db?schema=jpvbootcamp_rehearsal', 'jpvbootcamp_rehearsal')
+    )
+    assert.doesNotThrow(() =>
+      assertRehearsalGuard('postgresql://u:p@localhost:5444/db', 'rehearsal_copy')
+    )
+  }
+
+  // 30. assertRehearsalGuard — non-local host rejected
+  {
+    assert.throws(
+      () => assertRehearsalGuard('postgresql://u:p@100.71.31.88/db', 'jpvbootcamp_rehearsal'),
+      /rehearsal_host_rejected/,
+    )
+  }
+
+  // 31. assertRehearsalGuard — schema without 'rehearsal' rejected
+  {
+    assert.throws(
+      () => assertRehearsalGuard('postgresql://u:p@127.0.0.1/db', 'jpvbootcamp_staging'),
+      /rehearsal_schema_rejected/,
+    )
+  }
+
+  // 32. schemaName override — staging guard skipped for rehearsal schema
+  {
+    const dir = tempDir()
+    try {
+      await assert.rejects(
+        async () => runMigration(
+          {
+            mode: 'apply',
+            databaseUrl: 'postgresql://u:p@192.168.1.1/db?schema=jpvbootcamp_rehearsal',
+            runId: 'bad_host_rehearsal',
+            checkpointDir: dir,
+            schemaName: 'jpvbootcamp_rehearsal',
+          },
+          () => {},
+        ),
+        /rehearsal_host_rejected/,
+      )
+    } finally {
+      cleanDir(dir)
+    }
+  }
+
+  console.log('legacyMigration.test.ts passed (32 tests)')
 }
 
 main().catch((err) => {

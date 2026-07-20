@@ -39,6 +39,12 @@ export interface MigrationConfig {
   checkpointDir: string
   batchSize?: number
   rollbackRunId?: string
+  /**
+   * Override the Postgres schema used for all queries. Defaults to 'jpvbootcamp_staging'.
+   * Only accepted when the guard allows it — i.e., staging guard passes, OR rehearsal guard
+   * passes (localhost host + schema name contains 'rehearsal').
+   */
+  schemaName?: string
 }
 
 export interface SourceRow {
@@ -165,6 +171,9 @@ function incrementMetric(metrics: TableMutationMetrics, outcome: MutationOutcome
 // Both resolve to the same Supabase staging instance. Schema is the hard invariant.
 const ALLOWED_DB_HOSTS = ['100.71.31.88', '10.0.2.4']
 
+// Allowed localhost hosts for rehearsal only.
+const ALLOWED_REHEARSAL_HOSTS = ['127.0.0.1', 'localhost', '::1']
+
 export function assertStagingGuard(databaseUrl: string): void {
   let parsed: URL
   try {
@@ -179,6 +188,27 @@ export function assertStagingGuard(databaseUrl: string): void {
   }
   if (schema !== 'jpvbootcamp_staging') {
     throw new Error(`database_schema_rejected: got ${schema}, expected jpvbootcamp_staging`)
+  }
+}
+
+/**
+ * Guard for local rehearsal runs only.
+ * Allows localhost hosts; requires that the schemaName contains 'rehearsal' to prevent
+ * accidental use of staging or production schema names.
+ */
+export function assertRehearsalGuard(databaseUrl: string, schemaName: string): void {
+  let parsed: URL
+  try {
+    parsed = new URL(databaseUrl)
+  } catch {
+    throw new Error('database_url_malformed')
+  }
+  const host = parsed.hostname
+  if (!ALLOWED_REHEARSAL_HOSTS.includes(host)) {
+    throw new Error(`rehearsal_host_rejected: got ${host}, expected localhost or 127.0.0.1`)
+  }
+  if (!schemaName.includes('rehearsal')) {
+    throw new Error(`rehearsal_schema_rejected: schemaName "${schemaName}" must contain "rehearsal"`)
   }
 }
 
@@ -332,9 +362,10 @@ async function writeAuditEvent(
   runId: string,
   event: string,
   detail: Record<string, unknown>,
+  schemaName: string,
 ): Promise<void> {
   await client.query(
-    `INSERT INTO jpvbootcamp_staging.payload_migration_audit
+    `INSERT INTO ${schemaName}.payload_migration_audit
        (run_id, event, detail, created_at)
      VALUES ($1, $2, $3, now())
      ON CONFLICT DO NOTHING`,
@@ -344,9 +375,9 @@ async function writeAuditEvent(
   })
 }
 
-async function ensureAuditTable(client: Client): Promise<void> {
+async function ensureAuditTable(client: Client, schemaName: string): Promise<void> {
   await client.query(`
-    CREATE TABLE IF NOT EXISTS jpvbootcamp_staging.payload_migration_audit (
+    CREATE TABLE IF NOT EXISTS ${schemaName}.payload_migration_audit (
       id          bigserial PRIMARY KEY,
       run_id      text NOT NULL,
       event       text NOT NULL,
@@ -354,13 +385,13 @@ async function ensureAuditTable(client: Client): Promise<void> {
       created_at  timestamptz NOT NULL DEFAULT now()
     );
     CREATE INDEX IF NOT EXISTS migration_audit_run_id_idx
-      ON jpvbootcamp_staging.payload_migration_audit (run_id);
+      ON ${schemaName}.payload_migration_audit (run_id);
   `)
 }
 
 // ─── extract source rows ──────────────────────────────────────────────────────
 
-export async function extractSourceRows(client: Client): Promise<SourceRow[]> {
+export async function extractSourceRows(client: Client, schemaName: string): Promise<SourceRow[]> {
   // Actual customer_provisioning schema: id, stripe_customer_id, stripe_subscription_id,
   // wp_user_id, email, plan, status, last_event_id, created_at, updated_at, current_plan,
   // last_notified_plan, last_notified_event_id, last_notified_at, normalized_email.
@@ -384,7 +415,7 @@ export async function extractSourceRows(client: Client): Promise<SourceRow[]> {
       NULL::text             AS "commitmentStatus",
       created_at             AS "createdAt",
       updated_at             AS "updatedAt"
-    FROM jpvbootcamp_staging.customer_provisioning
+    FROM ${schemaName}.customer_provisioning
     WHERE normalized_email IS NOT NULL
       AND normalized_email != ''
     ORDER BY created_at ASC
@@ -410,6 +441,7 @@ async function applyRecord(
   client: Client,
   record: TransformedRecord,
   runId: string,
+  schemaName: string,
 ): Promise<ApplyRecordResult> {
   // Step 1: classify then upsert member
   const existingMember = await client.query<{
@@ -419,7 +451,7 @@ async function applyRecord(
     notes: string | null
   }>(`
     SELECT id, account_status, source, notes
-    FROM jpvbootcamp_staging.payload_members
+    FROM ${schemaName}.payload_members
     WHERE email = $1
     LIMIT 1
   `, [record.member.email])
@@ -434,7 +466,7 @@ async function applyRecord(
       : 'updated'
 
   const memberResult = await client.query<{ id: number }>(`
-    INSERT INTO jpvbootcamp_staging.payload_members
+    INSERT INTO ${schemaName}.payload_members
       (email, account_status, source, notes, updated_at, created_at)
     VALUES ($1, $2, $3, $4, now(), now())
     ON CONFLICT (email) DO UPDATE
@@ -467,7 +499,7 @@ async function applyRecord(
       stripe_mode: string
     }>(`
       SELECT id, member_id, billing_status, stripe_mode
-      FROM jpvbootcamp_staging.payload_billing_accounts
+      FROM ${schemaName}.payload_billing_accounts
       WHERE stripe_customer_id = $1
       LIMIT 1
     `, [record.billingAccount.stripeCustomerId])
@@ -482,7 +514,7 @@ async function applyRecord(
         : 'updated'
 
     const baResult = await client.query<{ id: number }>(`
-      INSERT INTO jpvbootcamp_staging.payload_billing_accounts
+      INSERT INTO ${schemaName}.payload_billing_accounts
         (display_name, member_id, stripe_customer_id, stripe_mode, billing_status, updated_at, created_at)
       VALUES ($1, $2, $3, $4, $5, now(), now())
       ON CONFLICT (stripe_customer_id) DO UPDATE
@@ -521,7 +553,7 @@ async function applyRecord(
       current_period_end: Date | null
     }>(`
       SELECT id, member_id, billing_account_id, plan, status, billing_cadence, current_period_end
-      FROM jpvbootcamp_staging.payload_subscriptions
+      FROM ${schemaName}.payload_subscriptions
       WHERE stripe_subscription_id = $1
       LIMIT 1
     `, [record.subscription.stripeSubscriptionId])
@@ -541,7 +573,7 @@ async function applyRecord(
         : 'updated'
 
     const subResult = await client.query<{ id: number }>(`
-      INSERT INTO jpvbootcamp_staging.payload_subscriptions
+      INSERT INTO ${schemaName}.payload_subscriptions
         (display_name, member_id, billing_account_id, stripe_subscription_id, stripe_price_id,
          plan, status, billing_cadence, current_period_end, updated_at, created_at)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, now(), now())
@@ -588,7 +620,7 @@ async function applyRecord(
       resource_id: string
     }>(`
       SELECT id, member_id, status, resource_type, resource_id
-      FROM jpvbootcamp_staging.payload_access_grants
+      FROM ${schemaName}.payload_access_grants
       WHERE source_id = $1
       LIMIT 1
     `, [record.accessGrant.sourceId])
@@ -605,7 +637,7 @@ async function applyRecord(
 
     if (currentGrant) {
       await client.query(
-        `UPDATE jpvbootcamp_staging.payload_access_grants
+        `UPDATE ${schemaName}.payload_access_grants
             SET member_id = $1,
                 status = $2,
                 resource_type = $3,
@@ -629,7 +661,7 @@ async function applyRecord(
       )
     } else {
       await client.query(
-        `INSERT INTO jpvbootcamp_staging.payload_access_grants
+        `INSERT INTO ${schemaName}.payload_access_grants
           (display_name, member_id, resource_type, resource_id, status, source, source_id, updated_at, created_at)
          VALUES ($1, $2, $3, $4, $5, $6, $7, now(), now())`,
         [
@@ -659,19 +691,24 @@ async function applyRecord(
     billingAccountId,
     subscriptionId,
     outcomes,
-  })
+  }, schemaName)
 
   return { memberId, billingAccountId, subscriptionId, outcomes }
 }
 
 // ─── rollback ────────────────────────────────────────────────────────────────
 
-async function rollbackRun(client: Client, rollbackRunId: string, log: (m: string) => void): Promise<void> {
+async function rollbackRun(
+  client: Client,
+  rollbackRunId: string,
+  log: (m: string) => void,
+  schemaName: string,
+): Promise<void> {
   log(`ROLLBACK: loading run-scoped audit records for ${rollbackRunId}`)
 
   const auditResult = await client.query<{ detail: Record<string, unknown> }>(`
     SELECT detail
-    FROM jpvbootcamp_staging.payload_migration_audit
+    FROM ${schemaName}.payload_migration_audit
     WHERE run_id = $1 AND event = 'record_applied'
     ORDER BY id DESC
   `, [rollbackRunId])
@@ -714,25 +751,25 @@ async function rollbackRun(client: Client, rollbackRunId: string, log: (m: strin
     const grantResult = grantSourceIds.size === 0
       ? { rowCount: 0 }
       : await client.query(
-          `DELETE FROM jpvbootcamp_staging.payload_access_grants WHERE source_id = ANY($1::text[])`,
+          `DELETE FROM ${schemaName}.payload_access_grants WHERE source_id = ANY($1::text[])`,
           [[...grantSourceIds]],
         )
     const subResult = subscriptionIds.size === 0
       ? { rowCount: 0 }
       : await client.query(
-          `DELETE FROM jpvbootcamp_staging.payload_subscriptions WHERE id = ANY($1::int[])`,
+          `DELETE FROM ${schemaName}.payload_subscriptions WHERE id = ANY($1::int[])`,
           [[...subscriptionIds]],
         )
     const billingResult = billingAccountIds.size === 0
       ? { rowCount: 0 }
       : await client.query(
-          `DELETE FROM jpvbootcamp_staging.payload_billing_accounts WHERE id = ANY($1::int[])`,
+          `DELETE FROM ${schemaName}.payload_billing_accounts WHERE id = ANY($1::int[])`,
           [[...billingAccountIds]],
         )
     const memberResult = memberIds.size === 0
       ? { rowCount: 0 }
       : await client.query(
-          `DELETE FROM jpvbootcamp_staging.payload_members WHERE id = ANY($1::int[]) AND source = 'migration'`,
+          `DELETE FROM ${schemaName}.payload_members WHERE id = ANY($1::int[]) AND source = 'migration'`,
           [[...memberIds]],
         )
 
@@ -741,7 +778,7 @@ async function rollbackRun(client: Client, rollbackRunId: string, log: (m: strin
       subscriptionsDeleted: subResult.rowCount ?? 0,
       billingAccountsDeleted: billingResult.rowCount ?? 0,
       membersDeleted: memberResult.rowCount ?? 0,
-    })
+    }, schemaName)
     await client.query('COMMIT')
 
     log(`ROLLBACK COMPLETE: grants=${grantResult.rowCount ?? 0} subscriptions=${subResult.rowCount ?? 0} billing=${billingResult.rowCount ?? 0} members=${memberResult.rowCount ?? 0}`)
@@ -757,7 +794,14 @@ export async function runMigration(
   config: MigrationConfig,
   log: (message: string) => void,
 ): Promise<MigrationResult> {
-  assertStagingGuard(config.databaseUrl)
+  const schemaName = config.schemaName ?? 'jpvbootcamp_staging'
+
+  // Allow either the staging guard (production-like hosts) or the rehearsal guard (localhost only).
+  if (config.schemaName && config.schemaName !== 'jpvbootcamp_staging') {
+    assertRehearsalGuard(config.databaseUrl, schemaName)
+  } else {
+    assertStagingGuard(config.databaseUrl)
+  }
 
   const errors: MigrationError[] = []
   const dryRunSummary: string[] = []
@@ -774,19 +818,19 @@ export async function runMigration(
   }
 
   log(`=== MIGRATION mode=${config.mode} runId=${config.runId} ===`)
-  log(`GUARD: host=100.71.31.88 schema=jpvbootcamp_staging`)
+  log(`GUARD: schema=${schemaName}`)
 
   const client = new Client({ connectionString: config.databaseUrl })
   await client.connect()
 
   try {
     if (config.mode === 'apply') {
-      await ensureAuditTable(client)
+      await ensureAuditTable(client, schemaName)
     }
 
     if (config.mode === 'rollback') {
-      await ensureAuditTable(client)
-      await rollbackRun(client, config.rollbackRunId!, log)
+      await ensureAuditTable(client, schemaName)
+      await rollbackRun(client, config.rollbackRunId!, log, schemaName)
       return {
         runId: config.runId,
         mode: 'rollback',
@@ -801,7 +845,7 @@ export async function runMigration(
 
     // Extract
     log('=== EXTRACT ===')
-    const rows = await extractSourceRows(client)
+    const rows = await extractSourceRows(client, schemaName)
     log(`source_rows=${rows.length}`)
 
     if (config.mode === 'extract') {
@@ -897,7 +941,7 @@ export async function runMigration(
 
       try {
         await client.query('BEGIN')
-        await applyRecord(client, record, config.runId)
+        await applyRecord(client, record, config.runId, schemaName)
         await client.query('COMMIT')
         processedCount++
         checkpoint = {
@@ -930,7 +974,7 @@ export async function runMigration(
       processedCount,
       errorCount: errors.length,
       skippedCount,
-    })
+    }, schemaName)
 
     log(`APPLY COMPLETE: processed=${processedCount} errors=${errors.length} skipped=${skippedCount}`)
     log(`=== MIGRATION COMPLETE ===`)

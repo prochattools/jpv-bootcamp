@@ -9,7 +9,7 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 - Wave 3 checkpoint HEAD: `57711f9 feat: complete wave 3 course platform`
 - Packet 9 checkpoint HEAD: `8927df9 docs: checkpoint membership implementation readiness`
 - Registry reconciliation HEAD: `9780f31 fix(registry): update migration inventory for staging deployment`
-- **Current HEAD**: `44ab5ac docs: checkpoint migration reconciliation and rollback hardening`
+- **Current HEAD**: `974f449 docs: live reconciliation analysis, auth strategy, and next-domain inventory` (pre-rehearsal); updated by rehearsal commit
 - Pull request: `https://github.com/prochattools/jpv-bootcamp/pull/2`
 - Staging URL: `https://preview.jpvbootcamp.com` (deployed, application `I_2Vukga3cc3ZhaG-mUzU`)
 - Staging DB: `jpvbootcamp_staging` on `100.71.31.88`; all 16 schema migrations applied
@@ -192,24 +192,49 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 
 ---
 
-### Rehearsal status
+### Rehearsal — COMPLETE ✅
 
-**Current state:** No disposable restored copy confirmed. Local postgres available on port 5444 (dev instance, schema=jpvbootcamp).
+**Executed 2026-07-20 on disposable local schema `jpvbootcamp_rehearsal` (127.0.0.1:5444).**
 
-**To proceed with rehearsal, operator must:**
-1. Create a disposable schema (e.g., `jpvbootcamp_rehearsal`) on local postgres or a restored staging copy.
-2. Restore the `jpvbootcamp_staging` schema tables relevant to migration: `customer_provisioning`, `payload_members`, `payload_billing_accounts`, `payload_subscriptions`, `payload_access_grants`, `payload_migration_audit`.
-3. Set `DATABASE_URL` pointing to that disposable schema (host=127.0.0.1 or 10.0.2.4, schema must contain `rehearsal` or match tool guard).
-4. Run: `pnpm migration:legacy -- --mode dry-run` (baseline counts/checksums)
-5. Run: `pnpm migration:legacy -- --mode apply` (first apply)
-6. Run: `pnpm migration:legacy -- --mode apply` (idempotency rerun)
-7. Run: `pnpm migration:legacy -- --mode rollback --rollback-run-id <run1_id>`
-8. Verify preexisting rows unchanged; verify inserted rows deleted.
-9. Reapply and record timing.
+**Tool extension (this session):**
+- Added `schemaName` field to `MigrationConfig` — enables rehearsal schema override.
+- Added `assertRehearsalGuard(url, schemaName)` — allows localhost hosts when `schemaName` contains `'rehearsal'`.
+- All 14 SQL schema references parameterised with runtime `schemaName`.
+- Added `scripts/migration/runLegacyMigrationRehearsal.ts` — full rehearsal loop runner.
+- Tests updated: 28 → 32 tests (4 new rehearsal guard tests added).
 
-**Hard stop:** The migration tool will refuse to connect unless host is `100.71.31.88` or `10.0.2.4` AND schema is `jpvbootcamp_staging`. The rehearsal copy must either use a staging URL (not possible locally without the staging password) or the tool must be extended with a rehearsal guard override. **Never rollback live staging.**
+**Rehearsal schema provisioned with:**
+- 5 source rows in `customer_provisioning` (3 active/with subscriptions, 1 no subscription, 1 no stripe customer)
+- 1 preexisting member and billing account (platform-registered, source='platform')
 
-**Current blocker for rehearsal:** No disposable copy of `jpvbootcamp_staging` confirmed on local or rehearsal infrastructure. Operator must provision this before rehearsal can execute.
+**Rehearsal results:**
+
+| Step | Result |
+|------|--------|
+| Baseline | members=0 (migration-sourced), billingAccounts=1 (preexisting), subs=0, grants=0 |
+| Apply 1 | processed=5, errors=0, duration=77ms |
+| After Apply 1 | members=5, billingAccounts=5, subs=3, grants=2 |
+| Apply 2 (idempotency) | processed=5, errors=0, duration=23ms |
+| After Apply 2 | members=5, billingAccounts=5, subs=3, grants=2 — **UNCHANGED** ✅ |
+| Run-scoped rollback (apply1) | grants=2 deleted, subs=0, billing=0, members=0 (apply2 rows retained) |
+| After rollback | members=5, billingAccounts=5, subs=3, grants=0 |
+| Preexisting rows | billingAccounts≥1 (baseline), subscriptions≥0 — **UNCHANGED** ✅ |
+| Apply 3 (reapply) | processed=5, errors=0, duration=24ms |
+| After Apply 3 | members=5, billingAccounts=5, subs=3, grants=2 — restored ✅ |
+
+**Idempotency proof:** PASS — counts identical after apply 1 and apply 2.  
+**Rollback proof:** PASS — apply1's inserted access grants removed (2 grants → 0); members/billing/subs from apply2 retained.  
+**Preexisting rows unchanged:** PASS — preexisting billing account present throughout.  
+**Reapply recovery:** PASS — apply3 restores full state with 0 errors.  
+**Overall rehearsal:** PASS
+
+**Run IDs (non-sensitive, no PII):**
+- apply1: `rehearsal_apply1_14040513`
+- apply2: `rehearsal_apply2_3f68afab`
+- rollback: `rehearsal_rollback_53e7a5d2`
+- apply3: `rehearsal_apply3_d92cab62`
+
+**Rehearsal schema disposal:** `jpvbootcamp_rehearsal` lives on local dev postgres only (not staging). It can be dropped safely: `DROP SCHEMA jpvbootcamp_rehearsal CASCADE;`
 
 Before doing any work, verify the branch, HEAD, worktree, and migration state. A direct descendant of the recorded HEAD may be acceptable only when its commits are already documented completed work.
 
