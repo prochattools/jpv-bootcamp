@@ -13,6 +13,7 @@ import * as migration_20260718_103726_membership_support_schema from './20260718
 import * as migration_20260718_000000_live_sessions from './20260718_000000_live_sessions';
 import * as migration_20260718_110000_bunny_videos from './20260718_110000_bunny_videos';
 import * as migration_20260719_150000_subscription_schema_cols from './20260719_150000_subscription_schema_cols';
+import * as migration_20260720_000000_locked_docs_rels_new_collections from './20260720_000000_locked_docs_rels_new_collections';
 
 export const migrations = [
   {
@@ -89,5 +90,10 @@ export const migrations = [
     up: migration_20260719_150000_subscription_schema_cols.up,
     down: migration_20260719_150000_subscription_schema_cols.down,
     name: '20260719_150000_subscription_schema_cols',
+  },
+  {
+    up: migration_20260720_000000_locked_docs_rels_new_collections.up,
+    down: migration_20260720_000000_locked_docs_rels_new_collections.down,
+    name: '20260720_000000_locked_docs_rels_new_collections',
   },
 ];
