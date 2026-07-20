@@ -1,5 +1,3 @@
-import assert from 'node:assert'
-
 /**
  * Staging Email/Auth Live Verification Script
  *
@@ -25,19 +23,21 @@ const STAGING_DB = 'jpvbootcamp_staging'
 const STAGING_APP_ID = 'I_2Vukga3cc3ZhaG-mUzU'
 const RESEND_SENDER = 'enquiries@jpvbootcamp.com'
 
+type TestResult = { status: 'pending' | 'passed' | 'failed'; note: string; redactedProviderMessageId?: string }
+
 type StagingEmailAuthVerificationResult = {
   timestamp: string
   baseUrl: string
   database: string
   tests: {
-    adminLoginAccess: { status: 'pending' | 'passed' | 'failed'; note: string }
-    memberLoginAccess: { status: 'pending' | 'passed' | 'failed'; note: string }
-    emailVerificationRequest: { status: 'pending' | 'passed' | 'failed'; redactedProviderMessageId?: string }
-    emailVerificationCompletion: { status: 'pending' | 'passed' | 'failed'; note: string }
-    passwordResetRequest: { status: 'pending' | 'passed' | 'failed'; redactedProviderMessageId?: string }
-    passwordResetCompletion: { status: 'pending' | 'passed' | 'failed'; note: string }
-    sessionSecurityCookies: { status: 'pending' | 'passed' | 'failed'; note: string }
-    logoutClearance: { status: 'pending' | 'passed' | 'failed'; note: string }
+    adminLoginAccess: TestResult
+    memberLoginAccess: TestResult
+    emailVerificationRequest: TestResult
+    emailVerificationCompletion: TestResult
+    passwordResetRequest: TestResult
+    passwordResetCompletion: TestResult
+    sessionSecurityCookies: TestResult
+    logoutClearance: TestResult
   }
   evidenceUrls: {
     stagingApp: string
@@ -123,9 +123,8 @@ export async function runStagingEmailAuthVerification(): Promise<void> {
   console.log('Results will be captured and documented separately.')
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
-  runStagingEmailAuthVerification().catch((err) => {
-    console.error('Fatal error:', err)
-    process.exit(1)
-  })
-}
+// CLI entry point
+void runStagingEmailAuthVerification().catch((err) => {
+  console.error('Fatal error:', err)
+  process.exit(1)
+})
