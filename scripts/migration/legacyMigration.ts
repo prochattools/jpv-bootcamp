@@ -191,8 +191,16 @@ function mapBillingStatus(row: SourceRow): string {
 
 // ─── subscription status mapping ─────────────────────────────────────────────
 
+const VALID_SUBSCRIPTION_STATUSES = new Set([
+  'incomplete', 'incomplete_expired', 'trialing', 'active', 'past_due', 'canceled', 'unpaid', 'paused',
+])
+
 function mapSubscriptionStatus(row: SourceRow): string {
-  return row.subscriptionStatus ?? 'incomplete'
+  const s = (row.subscriptionStatus ?? '').toLowerCase()
+  if (VALID_SUBSCRIPTION_STATUSES.has(s)) return s
+  // Legacy source uses 'inactive' for churned/cancelled accounts
+  if (s === 'inactive') return 'canceled'
+  return 'incomplete'
 }
 
 // ─── billing cadence mapping ──────────────────────────────────────────────────
@@ -427,23 +435,30 @@ async function applyRecord(
   }
 
   // Step 4: upsert access grant (if eligible)
+  // No unique constraint on source_id — use UPDATE ... WHERE EXISTS, then INSERT if not found.
   if (record.accessGrant) {
-    await client.query(`
-      INSERT INTO jpvbootcamp_staging.payload_access_grants
-        (display_name, member_id, resource_type, resource_id, status, source, source_id, updated_at, created_at)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, now(), now())
-      ON CONFLICT (source_id) DO UPDATE
-        SET status     = EXCLUDED.status,
-            updated_at = now()
-    `, [
-      record.accessGrant.displayName,
-      memberId,
-      record.accessGrant.resourceType,
-      record.accessGrant.resourceId,
-      record.accessGrant.status,
-      record.accessGrant.source,
-      record.accessGrant.sourceId,
-    ])
+    const updateResult = await client.query(
+      `UPDATE jpvbootcamp_staging.payload_access_grants
+          SET status = $1, updated_at = now()
+        WHERE source_id = $2`,
+      [record.accessGrant.status, record.accessGrant.sourceId],
+    )
+    if ((updateResult.rowCount ?? 0) === 0) {
+      await client.query(
+        `INSERT INTO jpvbootcamp_staging.payload_access_grants
+          (display_name, member_id, resource_type, resource_id, status, source, source_id, updated_at, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, now(), now())`,
+        [
+          record.accessGrant.displayName,
+          memberId,
+          record.accessGrant.resourceType,
+          record.accessGrant.resourceId,
+          record.accessGrant.status,
+          record.accessGrant.source,
+          record.accessGrant.sourceId,
+        ],
+      )
+    }
   }
 
   await writeAuditEvent(client, runId, 'record_applied', {
