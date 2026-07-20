@@ -252,8 +252,20 @@ Time: 12.4s
 
 ## Email/Auth Final Verification Checklist
 
-**STATUS: UNEXECUTED** — This checklist defines live staging verification with approved operator and test accounts.
-The source implementation is code-complete; the checklist below proves execution.
+**STATUS: BLOCKED** — Live staging verification requires approved test account credentials (not provided in session).
+
+**Infrastructure Verified Ready**:
+- ✅ Staging app reachable: HTTP 200 `/api/health`
+- ✅ Email verification endpoint: HTTP 200 POST `/api/member-email-verification/resend`
+- ✅ Member portal: HTTP 307 redirect (expected unauthenticated)
+- ✅ All source routes implemented
+
+**Blocker**: No approved staging-only test account credentials provided to agent.
+Operator must either:
+1. Provide test account email/password to agent, OR
+2. Execute `docs/STAGING_EMAIL_AUTH_PROOF_PROCEDURE.md` directly with own test accounts
+
+The source implementation is code-complete; the checklist below can be executed upon providing approved test credentials.
 
 ### Email Verification (To be tested on staging)
 
