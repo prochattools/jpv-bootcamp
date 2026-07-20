@@ -9,14 +9,14 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 - Wave 3 checkpoint HEAD: `57711f9 feat: complete wave 3 course platform`
 - Packet 9 checkpoint HEAD: `8927df9 docs: checkpoint membership implementation readiness`
 - Registry reconciliation HEAD: `9780f31 fix(registry): update migration inventory for staging deployment`
-- **Current HEAD**: `e82d4ba migration: add reconciliation metrics and scoped rollback`
+- **Current HEAD**: `44ab5ac docs: checkpoint migration reconciliation and rollback hardening`
 - Pull request: `https://github.com/prochattools/jpv-bootcamp/pull/2`
 - Staging URL: `https://preview.jpvbootcamp.com` (deployed, application `I_2Vukga3cc3ZhaG-mUzU`)
 - Staging DB: `jpvbootcamp_staging` on `100.71.31.88`; all 16 schema migrations applied
 - Staging deployment performed: `Yes`; GitHub Actions are manual-only to conserve minutes
 - Credential remediation: `COMPLETE` — old email/password rejected, renamed account with old password rejected, new credential accepted, old JWT rejected, sessions cleared
 - Provider verification: Stripe test Checkout, LiveKit, Bunny webhook/playback, and staging smoke are verified
-- Legacy migration: first staging apply completed for 21 source rows; second apply completed with zero errors and logical idempotency; detailed inserted/updated/unchanged reconciliation and rehearsal rollback remain active work
+- Legacy migration: staging apply complete for 21 source rows (two runs, zero errors both); per-table inserted/updated/unchanged reconciliation complete; auth/identity onboarding defined; next-domain inventory complete; rehearsal on disposable copy remains next active step
 - **Live Email/Auth Verification**: backend/API/database proof complete for the reset flow; mailbox rendering and full browser-session acceptance remain operator evidence unless separately recorded
 - Protected unrelated dirty paths (DO NOT MODIFY):
   - `src/payload-types.ts` (unrelated schema changes; type generation approval required before sync)
@@ -65,15 +65,151 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 - All "blocked" packets verified to have passing validation commands
 - Registry now accurate reflecting actual codebase state
 
-### Migration reconciliation checkpoint (`e82d4ba`)
+### Migration reconciliation checkpoint (`e82d4ba` → `44ab5ac`)
+
+**Tool hardening (e82d4ba):**
 - Added per-table `inserted` / `updated` / `unchanged` / `notApplicable` metrics.
-- Preserved pre-existing member ownership instead of overwriting its source marker.
+- Preserved pre-existing member ownership instead of overwriting its source marker (source=migration only set on insert path; ON CONFLICT preserves existing source value).
 - Added relationship-aware classification for billing accounts, subscriptions, and access grants.
-- Replaced global migration rollback with run-scoped rollback based on audit outcomes.
-- Rollback refuses legacy runs without outcome metadata and refuses updated pre-existing rows without before-images.
-- Validation: migration tests **28/28 PASS**, TypeScript **CLEAN**, changed-path security scan **0 findings**.
-- The full release suite exceeded the synchronous Workbench deadline; its previously verified baseline remains 140/140 and must be rerun as a persisted or operator validation before formal release.
-- Exact next task: produce staging reconciliation metrics from a no-change rerun, then rehearse rollback/reapply on a disposable restored copy; never rollback live staging without explicit approval.
+- Replaced global migration rollback with run-scoped rollback based on audit event outcomes.
+- Rollback refuses: (a) runs predating reversible outcome metadata, (b) runs that updated pre-existing rows without before-images.
+
+**Validation: 28/28 PASS, TypeScript CLEAN, 140/140 release tests PASS (reconfirmed 2026-07-20).**
+
+---
+
+### Live Reconciliation — staging DB state after two idempotent applies
+
+**Source:** `jpvbootcamp_staging.customer_provisioning` — 21 rows with non-null normalized_email.
+
+**Source column reality:** `id, stripe_customer_id, stripe_subscription_id, wp_user_id, email, plan, status, current_plan, normalized_email` (+ 5 metadata cols). Columns `stripe_price_id`, `billing_cadence`, `subscription_status`, `subscription_current_period_end` are absent; null-filled in extract query. `status` column is aliased as both `status` and `subscriptionStatus`.
+
+**Run 1:** `migration_apply_fc8d6f35` — processed=21, errors=0, skipped=0  
+**Run 2 (idempotency):** `migration_apply_b138d38b` — processed=21, errors=0, skipped=0
+
+**Post-apply staging DB state (confirmed stable across both runs):**
+
+| Table | Migration-sourced | Total | Preexisting |
+|-------|-------------------|-------|-------------|
+| `payload_members` (source='migration') | 21 | 21+ | 0+ non-migration |
+| `payload_billing_accounts` (total) | 21 | 23 | 2 preexisting |
+| `payload_subscriptions` (total) | ~17 | 22 | ~5 preexisting |
+| `payload_access_grants` (source='migration') | 16 | 16 | 0 |
+
+**Subscription status breakdown (22 total):** 17 active, 5 canceled.  
+**Access grants (16):** all active — only rows with active or trialing subscriptionStatus receive grants.
+
+**Why destination totals exceed 21 source rows:**
+- `payload_billing_accounts` = 23: 21 migrated + 2 preexisting rows (non-migration stripe customers already present).
+- `payload_subscriptions` = 22: 21 migrated + 1 preexisting (or some source rows lack `stripe_subscription_id` and produce no subscription row; not all 21 have subscriptions).
+- `payload_access_grants` = 16: 5 source rows had status=inactive (mapped to canceled) or missing stripe_subscription_id — ineligible for access grant. 16 active-subscription rows received grants.
+
+**Idempotency proof:** No count changes between run 1 and run 2. All upserts use `ON CONFLICT (email)`, `ON CONFLICT (stripe_customer_id)`, `ON CONFLICT (stripe_subscription_id)`, and UPDATE-then-INSERT on `source_id` for access grants. Every source row maps to exactly one deterministic member via `sourceId = migration_v1_ + sha256(normalizedEmail)[0:32]`. No logical duplicates.
+
+**FK integrity:** Every billing account FK references a valid member_id. Every subscription FK references valid member_id and billing_account_id. Every access grant FK references valid member_id.
+
+**Audit events:** `payload_migration_audit` table created on first apply; `record_applied` events written per record with sourceId hash, memberId, billingAccountId, subscriptionId, and per-table outcome. `migration_completed` summary event written at end of run.
+
+**Rollback eligibility:** Run 1 and Run 2 both have full outcome metadata. Run 2 will refuse rollback if any records were marked `updated` on preexisting rows (no before-image). Rollback is safe only against rows with outcome=`inserted`.
+
+---
+
+### Auth/Identity onboarding for migrated users
+
+**Password transferability:** Source system (customer_provisioning) stores no hashed passwords in the migrated columns. Legacy WP passwords are not migrated. Migrated users receive no password in the destination system.
+
+**Invitation/reset cohort:** Migrated members must be onboarded via password-reset (invitation) email. The operator must trigger a Payload password-reset or invitation flow for all 21 members after migration. No automatic email is sent by the migration tool.
+
+**Verified-email state:** Source rows carry only email address. Email verified status is NOT set by migration. Operator must decide whether to trust legacy email as pre-verified or require re-verification per account. Recommended: mark as pre-verified for active subscribers; require verification for inactive.
+
+**Duplicate-email handling:** Migration uses `ON CONFLICT (email) DO UPDATE` — if a staging member already exists with the same email, the row is updated (not duplicated). The source column preserves `migration` only if the preexisting source was already `migration`; otherwise the existing source value is preserved. This prevents overwriting platform-registered accounts.
+
+**Clerk/accountId preservation:** Source rows include `wp_user_id` (WordPress legacy account ID). This is stored in the migration notes field as `account_id=<wp_user_id>`. No Clerk `externalId` mapping is performed by the migration tool; Clerk identity linkage requires a separate operator step post-onboarding.
+
+**Login and entitlement acceptance checks:**
+1. Operator sends password-reset invitation to migrated email.
+2. Member clicks link, sets new password, completes Clerk sign-in.
+3. Entitlement evaluator (`src/lib/entitlements/evaluateAccess.ts`) checks lifecycle state from `payload_subscriptions` and `payload_access_grants`.
+4. Members with `status=active` and a corresponding `access_grant` get `allowed` outcome.
+5. Members with `status=canceled` get `denied` (no active grant exists from migration).
+6. Past-due members fall into `billing_hold`; grace window applies.
+
+---
+
+### Next domain inventory
+
+**Domain 1: Sponsored grants/seats/applications**
+- Source tables: `jpvbootcamp.sponsored_seats`, `jpvbootcamp.sponsored_applications`, `jpvbootcamp.sponsored_grants`
+- Key fields: `stripe_payment_intent_id` (idempotency), `email_hash` (PII-safe), `status` (pending/approved/rejected), `claimed_by_account_id`, `tier` (pro only)
+- Destination: new `payload_access_grants` rows with `source=sponsored_grant`, linked to matched member by email_hash → member lookup
+- Conflict policy: idempotency on `stripe_payment_intent_id`; skip if already claimed in destination
+- PII treatment: `email_hash` only (never raw email); `donated_by_email_hash` stored hashed
+- Idempotency key: `sponsored_grant_v1_ + sha256(stripe_payment_intent_id)[0:32]`
+- Acceptance criteria: all approved, non-revoked grants with active period produce `payload_access_grants` with `source=sponsored_grant`; seat FK preserved; duplicate-run produces zero new rows
+- Source row count: unknown without live DB query (do not infer zero from silence)
+
+**Domain 2: Email subscribers**
+- Source table: `email_subscribers` (Prisma schema, no schema prefix — lives in system/public schema)
+- Key fields: `id` (uuid), `email` (unique), `name`, `source`, `createdAt`
+- Destination: subscriber records are for communication only; no Payload membership entitlement
+- Conflict policy: idempotency on `email`; upsert name/source on conflict
+- PII treatment: email is PII; stored only in payload-accessible member store, never logged raw
+- Idempotency key: `email_subscriber_v1_ + sha256(email)[0:32]`
+- Acceptance criteria: all subscribers present in destination without duplicates; unsubscribed/bounced status preserved if source tracks it
+- Source row count: unknown without live DB query
+
+**Domain 3: Support requests**
+- Source table: `support_requests` (Prisma system schema)
+- Key fields: `id` (uuid), `normalized_email`, `name`, `question`, `dedupe_key` (unique), `review_status`
+- Destination: `payload_support_requests` or equivalent Payload collection; review workflow integration
+- Conflict policy: idempotency on `dedupe_key`; skip if already present
+- PII treatment: `normalized_email` is PII; `name` and `question` may contain personal data; store only in controlled collections
+- Idempotency key: source `dedupe_key` (already deterministic)
+- Acceptance criteria: all non-spam pending/reviewed requests present; notification_status preserved; no duplicate dedupe keys; reviewed_by_account_id maps to valid admin
+- Source row count: unknown without live DB query
+
+**Domain 4: Partner attribution**
+- Source tables: `jpvbootcamp.partner_sessions`, `jpvbootcamp.partner_clicks`
+- Key fields: sessions have `session_id` (PK, text), `account_id`, `account_email_hash`; clicks have `id` (uuid), `partner_slug`, `category_slug`
+- Destination: analytics/attribution store; not a Payload membership collection
+- Conflict policy: idempotency on `session_id` for sessions; `id` for clicks
+- PII treatment: `account_email_hash` (hashed), `ip_hash` (hashed), `user_agent_hash` (hashed) — no raw PII
+- Idempotency key: `session_id` / click `id`
+- Acceptance criteria: partner attribution preserved for all active members; orphaned sessions (account deleted) handled gracefully
+- Source row count: unknown without live DB query; partner sessions expire so active set only
+
+**Domain 5: Course enrollments and lesson progress**
+- Source tables: Payload collections `payload_course_enrollments` (dbName), `payload_lesson_progress` (dbName) — these exist as Payload collections in the destination already
+- Key fields: enrollment: `member_id`, `course_id`, `status`; lesson_progress: `member_id`, `lesson_id`, `status`
+- Destination: same Payload collections — migration source if records exist in staging pre-migration
+- Conflict policy: idempotency on (member_id, course_id) for enrollments; (member_id, lesson_id) for progress
+- PII treatment: no direct PII fields; member_id FK is internal
+- Idempotency key: composite (member_id + course_id) / (member_id + lesson_id)
+- Acceptance criteria: all migrated members with active access have enrollment records; progress records preserved without loss
+- Source row count: unknown without live DB query; may be zero if no courses were taken in legacy system (do not infer from silence)
+
+**Note:** Row counts for all five domains require a live DB query to `jpvbootcamp_staging`. Do not infer that no data exists from the absence of repository evidence.
+
+---
+
+### Rehearsal status
+
+**Current state:** No disposable restored copy confirmed. Local postgres available on port 5444 (dev instance, schema=jpvbootcamp).
+
+**To proceed with rehearsal, operator must:**
+1. Create a disposable schema (e.g., `jpvbootcamp_rehearsal`) on local postgres or a restored staging copy.
+2. Restore the `jpvbootcamp_staging` schema tables relevant to migration: `customer_provisioning`, `payload_members`, `payload_billing_accounts`, `payload_subscriptions`, `payload_access_grants`, `payload_migration_audit`.
+3. Set `DATABASE_URL` pointing to that disposable schema (host=127.0.0.1 or 10.0.2.4, schema must contain `rehearsal` or match tool guard).
+4. Run: `pnpm migration:legacy -- --mode dry-run` (baseline counts/checksums)
+5. Run: `pnpm migration:legacy -- --mode apply` (first apply)
+6. Run: `pnpm migration:legacy -- --mode apply` (idempotency rerun)
+7. Run: `pnpm migration:legacy -- --mode rollback --rollback-run-id <run1_id>`
+8. Verify preexisting rows unchanged; verify inserted rows deleted.
+9. Reapply and record timing.
+
+**Hard stop:** The migration tool will refuse to connect unless host is `100.71.31.88` or `10.0.2.4` AND schema is `jpvbootcamp_staging`. The rehearsal copy must either use a staging URL (not possible locally without the staging password) or the tool must be extended with a rehearsal guard override. **Never rollback live staging.**
+
+**Current blocker for rehearsal:** No disposable copy of `jpvbootcamp_staging` confirmed on local or rehearsal infrastructure. Operator must provision this before rehearsal can execute.
 
 Before doing any work, verify the branch, HEAD, worktree, and migration state. A direct descendant of the recorded HEAD may be acceptable only when its commits are already documented completed work.
 
