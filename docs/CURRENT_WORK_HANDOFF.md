@@ -9,7 +9,7 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 - Wave 3 checkpoint HEAD: `57711f9 feat: complete wave 3 course platform`
 - Packet 9 checkpoint HEAD: `8927df9 docs: checkpoint membership implementation readiness`
 - Registry reconciliation HEAD: `9780f31 fix(registry): update migration inventory for staging deployment`
-- **Current HEAD (Stage 6 + Email/Auth hardening checklist)**: `5d6f1af docs: record final staging acceptance and email/auth hardening checklist`
+- **Current HEAD (Security cleanup & truth reconciliation)**: `5d01aae docs: final comprehensive report with workbench context, evidence matrix`
 - Pull request: `https://github.com/prochattools/jpv-bootcamp/pull/2`
 - Staging URL: `https://preview.jpvbootcamp.com` (deployed, I_2Vukga3cc3ZhaG-mUzU)
 - Staging DB: `jpvbootcamp_staging` (schema, 16/16 migrations applied)
@@ -127,7 +127,7 @@ Do not describe the application as deployed, staging-accepted, migrated, provide
 - `pnpm test:e2e`: `58/58`
 - `pnpm test:release:full`: passed
 - `pnpm staging:static-preflight`: passed
-- `pnpm staging:decision-readiness`: `DECISION-READY, EXTERNAL APPROVALS PENDING`
+- `pnpm staging:decision-readiness`: `DECISION-READY, EXTERNAL APPROVALS PENDING (Operator D/E checks, client go/no-go)`
 - `pnpm staging:migration-preflight`: passed
 - `pnpm staging:migration-rehearsal`: passed in static mode
 - `pnpm staging:provider-simulation`: passed `10/10` (local test mode)
@@ -137,7 +137,7 @@ Do not describe the application as deployed, staging-accepted, migrated, provide
 - production build: passed
 - both Prisma schema validations: passed
 - production high-severity audit gate: passed; two moderate advisories remain
-- **Live Email/Auth on Staging**: unexecuted (source complete, operator testing pending)
+- **Live Email/Auth on Staging**: Backend (B) verified 70%; Mailbox (D) and Browser (E) testing pending
 
 Re-run the smallest relevant checks after focused changes and the complete release gates before committing a launch-critical packet.
 

@@ -23,7 +23,7 @@
 | Property | Evidence | Classification | Status |
 |----------|----------|-----------------|--------|
 | **Endpoint/Action** | Database query to jpvbootcamp_staging | B | ✓ |
-| **Evidence** | Admin: info@prochat.tools found; Member: step6test@staging.test created | B | ✓ |
+| **Evidence** | Admin: [REDACTED-admin-staging] found; Member: [member-test-01] created | B | ✓ |
 | **DB State** | Both rows exist with password hashes, account_status active/pending | B | ✓ |
 | **Classification** | Database verification of account existence | **B** | **PASS** |
 
@@ -46,7 +46,7 @@
 | Property | Evidence | Classification | Status |
 |----------|----------|-----------------|--------|
 | **Endpoint/Action** | POST `/api/payload_members/login` with email+password | B | ✓ |
-| **Request** | `{"email":"step6test@staging.test","password":"NewPass123!@#ResetWorked"}` | — | — |
+| **Request** | `{"email":"[member-test-01]","password":"[REDACTED-password]"}` | — | — |
 | **Response** | HTTP 200, JWT token, user object with `emailVerifiedAt` set, `id: 9` | B | ✓ |
 | **DB State** | Session created in `payload_members_sessions` with `expiresAt` TTL | B | ✓ |
 | **Classification** | Real API call, JWT issued, database session persisted | **B** | **PASS** |
@@ -59,7 +59,7 @@
 | Property | Evidence | Classification | Status |
 |----------|----------|-----------------|--------|
 | **Endpoint/Action** | POST `/api/member-email-verification/resend` | B | ✓ |
-| **Request** | `{"email":"step6test@staging.test"}` | — | — |
+| **Request** | `{"email":"[member-test-01]"}` | — | — |
 | **Response** | HTTP 200, `{"accepted":true,"message":"If an eligible..."}` | B | ✓ |
 | **DB State** | Token created in `payload_member_verification_tokens` with `expires_at` | B | ✓ |
 | **Classification** | Backend endpoint working, token generation confirmed | **B** | **PASS** |
@@ -72,7 +72,7 @@
 |----------|----------|-----------------|--------|
 | **Endpoint/Action** | Query `payload_email_events` table | B | ✓ |
 | **Evidence** | Email row: template=member-email-verification, delivery_status=queued, metadata includes actionUrl | C | ✓ |
-| **Resend Provider ID** | Recorded in metadata (redacted) | C | ✓ |
+| **Resend Provider ID** | [REDACTED-provider-message-id] | C | ✓ |
 | **DB State** | Email event persisted with full template context | B | ✓ |
 | **Classification** | Resend API accepted and queued; database confirms | **B+C** | **PASS** |
 | **Remaining** | Need: Confirm real inbox received email, message rendered correctly | D | — |
@@ -102,7 +102,7 @@
 | Property | Evidence | Classification | Status |
 |----------|----------|-----------------|--------|
 | **Endpoint/Action** | POST `/api/member-password/forgot` | B | ✓ |
-| **Request** | `{"email":"step6test@staging.test"}` | — | — |
+| **Request** | `{"email":"[member-test-01]"}` | — | — |
 | **Response** | HTTP 200, `{"ok":true,"message":"If an eligible..."}` | B | ✓ |
 | **DB State** | Token created in `payload_member_verification_tokens` with `purpose: password_reset` | B | ✓ |
 | **Classification** | Backend endpoint working, token generated | **B** | **PASS** |
@@ -115,7 +115,7 @@
 |----------|----------|-----------------|--------|
 | **Endpoint/Action** | Query `payload_email_events` table | B | ✓ |
 | **Evidence** | Email row: template=member-password-reset, delivery_status=queued, metadata includes actionUrl with token | C | ✓ |
-| **Resend Provider ID** | Recorded in metadata (redacted) | C | ✓ |
+| **Resend Provider ID** | [REDACTED-provider-message-id] | C | ✓ |
 | **DB State** | Email event persisted | B | ✓ |
 | **Classification** | Resend API accepted and queued password reset email | **B+C** | **PASS** |
 | **Remaining** | Need: Confirm real inbox received email | D | — |

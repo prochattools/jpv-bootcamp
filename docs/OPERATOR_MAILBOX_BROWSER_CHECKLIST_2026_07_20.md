@@ -2,7 +2,9 @@
 
 **Purpose**: Verify remaining evidence levels D (mailbox delivery) and E (browser interaction) for steps 2, 6, 9, and 10.
 
-**Status**: Backend API/DB verified (B level) ✓. Mailbox and browser remain operator-verified.
+**Status**: Backend API/DB verified (B level) ✓ — see `docs/PROOF_CLASSIFICATION_AUDIT_2026_07_20.md`. Mailbox and browser remain operator-verified.
+
+**IMPORTANT SECURITY NOTICE**: This checklist uses redacted member identifiers (`[member-test-01]`, etc.) and does not reference plaintext credentials. Actual test account addresses and passwords are in your staging administration credentials, NOT in this document.
 
 ---
 
@@ -19,16 +21,16 @@
 
 **Action**: Log into your email inbox and check for messages from `enquiries@jpvbootcamp.com` (the configured sender).
 
-**Look for**: Subject containing "verify" or "verification" sent around 2026-07-20 09:47 UTC.
+**Look for**: Subject containing "verify" or "verification" — check your approved test-account inbox.
 
-**Evidence to Record**:
+**Evidence to Record** (DO NOT expose actual token/link):
 - [ ] Email received from enquiries@jpvbootcamp.com
-- [ ] Subject line visible
-- [ ] Message contains a link with `/api/member-email-verification/complete?token=...`
+- [ ] Subject line visible (e.g., "Verify your email address")
+- [ ] Message contains a clickable link with `/api/member-email-verification/complete?token=[token]` pattern
 - [ ] Link is clickable (not mangled)
 - [ ] Email renders correctly (no broken images, proper formatting)
 
-**Redaction**: You may record "Email received ✓" without exposing the full link or token.
+**Redaction**: Record only "Email received ✓, link works ✓" — do NOT copy/paste the actual verification URL or token.
 
 ---
 
@@ -36,16 +38,16 @@
 
 **Action**: Continue checking the same inbox.
 
-**Look for**: Subject containing "reset" or "password" sent around 2026-07-20 09:48 UTC (later than verification email).
+**Look for**: Subject containing "reset" or "password" — check your approved test-account inbox.
 
-**Evidence to Record**:
+**Evidence to Record** (DO NOT expose actual token/link):
 - [ ] Email received from enquiries@jpvbootcamp.com
-- [ ] Subject line visible
-- [ ] Message contains a link with `/reset-password?token=...`
+- [ ] Subject line visible (e.g., "Reset your password")
+- [ ] Message contains a clickable link with `/reset-password?token=[token]` pattern
 - [ ] Link is clickable
 - [ ] Email renders correctly
 
-**Redaction**: Record "Email received ✓" without exposing the full link or token.
+**Redaction**: Record only "Email received ✓, link works ✓" — do NOT copy/paste the actual reset URL or token.
 
 ---
 
@@ -56,16 +58,16 @@
 **Action**: Open browser to https://preview.jpvbootcamp.com/admin
 
 **Steps**:
-1. Enter admin username and password (staging credentials)
+1. Enter admin username and password from your staging administrator credentials (NOT recorded here)
 2. Submit login form
 3. Verify: Redirected to admin dashboard (HTTP 200, not 401)
 
 **Evidence to Record**:
 - [ ] Login form appears at `/admin`
-- [ ] After submit: Dashboard displays (not error page)
+- [ ] After submit: Dashboard displays (not error page, not 401 Unauthorized)
 - [ ] URL changes to `/admin/...` or similar (indicates session active)
 
-**Redaction**: Do not record credentials; only record success/failure.
+**Redaction**: Do not record or expose admin credentials in any report. Record only "Admin login successful ✓".
 
 ---
 
