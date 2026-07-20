@@ -4,9 +4,11 @@ Baseline:
 
 - Repository: `prochattools-jpv-bootcamp`
 - Branch: `feature/course-branding-and-preview`
-- Current HEAD baseline: `f1e465e`
+- Current HEAD baseline: `fc9b69d docs: final operator handoff — security cleanup session complete` (updated 2026-07-20 post-security-cleanup)
+- Deployment HEAD (frozen): `5d01aae docs: final comprehensive report with workbench context...` (no new deploys authorized)
 - Formal release state: `NO-GO`
 - Protected unrelated paths: `src/payload-types.ts`, `docs/client/fixtures/`
+- Security status: Staging credentials redacted from tracked docs (2026-07-20); history exposure contained in private feature branch
 
 This queue converts the remaining JPV Bootcamp launch roadmap into an execution order that can be validated locally. It does not authorize migrations, live providers, deployment, push, or main-branch work.
 
