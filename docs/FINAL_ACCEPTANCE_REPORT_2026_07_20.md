@@ -5,9 +5,9 @@
 
 ## Executive Summary
 
-**Status**: Staging deployment ACTIVE; live email/auth proof 80% verified (7/10 steps fully proven)  
+**Status**: Staging deployment ACTIVE; live email/auth proof: backend API/DB verified (B level), mailbox/browser proof pending (D/E levels)  
 **Branch**: `feature/course-branding-and-preview`  
-**Current HEAD**: `3a3f36e docs: record session completion - live email/auth proof all 10 steps executed`  
+**Current HEAD**: `a6c4660 feat: fully execute all 10 live email/auth proof steps end-to-end`  
 **Base HEAD**: `5d6f1af docs: record final staging acceptance and email/auth hardening checklist`  
 **Staging URL**: https://preview.jpvbootcamp.com  
 **Staging App**: `clients-jpv-bootcamp-app-tp9xrk` (applicationId: `I_2Vukga3cc3ZhaG-mUzU`)  
@@ -431,18 +431,19 @@ All 10 steps verified on staging with real accounts:
 | Membership Model | COMPLETE | 100% |
 | Stripe Integration (test mode) | COMPLETE | 100% |
 | Bunny Protected Media | COMPLETE | 100% |
-| Email/Auth Source Implementation | COMPLETE | 100% |
-| Email/Auth Live Staging Proof (API/DB verified) | **✅ 80% PROVEN** | 7/10 steps fully verified; steps 6 & 9 require browser |
-| Email Verification Link Browser Test | ⚠️ NOT EXECUTED | 0% (requires browser automation) |
-| Password Reset Link Browser Test | ⚠️ NOT EXECUTED | 0% (requires browser automation) |
-| Course Platform | COMPLETE | 100% |
-| Admin Operations | COMPLETE | 100% |
-| Schema Migration | APPLIED TO STAGING | 100% |
-| Local Validation | COMPLETE | 100% |
-| Staging Deployment | ACTIVE | 100% |
-| Resend Provider Live Verification | **✅ COMPLETE** | **100%** (email queuing, tokens generated, verified) |
-| Repository Code Ready | **COMPLETE** | **100%** |
-| **External Approvals & Release State** | **PENDING** | 0% (awaiting browser tests + client go/no-go) |
+| Email/Auth Source Implementation | COMPLETE | 100% (A level — code/tests) |
+| Email/Auth Backend API/DB Proof | **✅ 70% PROVEN** | Steps 1,3,4,5,7,8,9,10 verified (B level); steps 2,6,9,10 browser not tested (E) |
+| Email Delivery (Mailbox) | ⚠️ NOT VERIFIED | 0% (D level — mailbox access required) |
+| Browser UX & Cookies | ⚠️ NOT VERIFIED | 0% (E level — browser session required) |
+| Course Platform | COMPLETE | 100% (A level) |
+| Admin Operations | COMPLETE | 100% (A level) |
+| Schema Migration | APPLIED TO STAGING | 100% (B level) |
+| Local Validation | COMPLETE | 100% (A level: 140/140 release, 58/58 E2E) |
+| Staging Deployment | ACTIVE | 100% (B level: app running, migrations applied) |
+| Resend Provider Acceptance | **✅ COMPLETE** | **100%** (C level: email queued, provider IDs recorded) |
+| Repository Code Ready | **COMPLETE** | **100%** (A level) |
+| **Honest Readiness** | **PARTIAL** | **70% backend proven; 30% mailbox/browser pending** |
+| **Release State** | **NO-GO** | Formal state unchanged (awaiting mailbox/browser proof + client approval) |
 
 ---
 

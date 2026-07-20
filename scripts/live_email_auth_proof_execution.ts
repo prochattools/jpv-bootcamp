@@ -9,8 +9,6 @@
  * REDACTION POLICY: No real passwords, tokens, or email addresses exposed in output.
  */
 
-import type { CookieSerializeOptions } from 'cookie'
-
 // Test accounts (redacted in output)
 const ADMIN_EMAIL = 'info@prochat.tools'
 const TEST_MEMBER_EMAIL = 'testmember@staging.test'
