@@ -124,6 +124,12 @@ export interface MigrationResult {
 
 // ─── guard ────────────────────────────────────────────────────────────────────
 
+// Allowed DB hosts:
+//   100.71.31.88  — Tailscale address (outside container / local)
+//   10.0.2.4      — Docker overlay address (inside Dokploy container)
+// Both resolve to the same Supabase staging instance. Schema is the hard invariant.
+const ALLOWED_DB_HOSTS = ['100.71.31.88', '10.0.2.4']
+
 export function assertStagingGuard(databaseUrl: string): void {
   let parsed: URL
   try {
@@ -133,8 +139,8 @@ export function assertStagingGuard(databaseUrl: string): void {
   }
   const host = parsed.hostname
   const schema = parsed.searchParams.get('schema') ?? ''
-  if (host !== '100.71.31.88') {
-    throw new Error(`database_host_rejected: got ${host}, expected 100.71.31.88`)
+  if (!ALLOWED_DB_HOSTS.includes(host)) {
+    throw new Error(`database_host_rejected: got ${host}, expected one of ${ALLOWED_DB_HOSTS.join(',')}`)
   }
   if (schema !== 'jpvbootcamp_staging') {
     throw new Error(`database_schema_rejected: got ${schema}, expected jpvbootcamp_staging`)
@@ -312,25 +318,29 @@ async function ensureAuditTable(client: Client): Promise<void> {
 // ─── extract source rows ──────────────────────────────────────────────────────
 
 export async function extractSourceRows(client: Client): Promise<SourceRow[]> {
+  // Actual customer_provisioning schema: id, stripe_customer_id, stripe_subscription_id,
+  // wp_user_id, email, plan, status, last_event_id, created_at, updated_at, current_plan,
+  // last_notified_plan, last_notified_event_id, last_notified_at, normalized_email.
+  // Columns absent in this table are null-filled; status is used as subscriptionStatus.
   const result = await client.query<SourceRow>(`
     SELECT
-      normalized_email      AS "normalizedEmail",
-      stripe_customer_id    AS "stripeCustomerId",
+      normalized_email       AS "normalizedEmail",
+      stripe_customer_id     AS "stripeCustomerId",
       stripe_subscription_id AS "stripeSubscriptionId",
-      stripe_price_id       AS "stripePriceId",
-      account_id            AS "accountId",
+      NULL::text             AS "stripePriceId",
+      wp_user_id             AS "accountId",
       plan,
-      current_plan          AS "currentPlan",
+      current_plan           AS "currentPlan",
       status,
-      subscription_status   AS "subscriptionStatus",
-      subscription_current_period_end AS "subscriptionCurrentPeriodEnd",
-      subscription_cancel_at_period_end AS "subscriptionCancelAtPeriodEnd",
-      billing_cadence       AS "billingCadence",
-      payment_status        AS "paymentStatus",
-      payment_dispute_status AS "paymentDisputeStatus",
-      commitment_status     AS "commitmentStatus",
-      created_at            AS "createdAt",
-      updated_at            AS "updatedAt"
+      status                 AS "subscriptionStatus",
+      NULL::timestamptz      AS "subscriptionCurrentPeriodEnd",
+      NULL::boolean          AS "subscriptionCancelAtPeriodEnd",
+      NULL::text             AS "billingCadence",
+      NULL::text             AS "paymentStatus",
+      NULL::text             AS "paymentDisputeStatus",
+      NULL::text             AS "commitmentStatus",
+      created_at             AS "createdAt",
+      updated_at             AS "updatedAt"
     FROM jpvbootcamp_staging.customer_provisioning
     WHERE normalized_email IS NOT NULL
       AND normalized_email != ''
