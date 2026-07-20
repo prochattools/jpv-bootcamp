@@ -1,11 +1,15 @@
 # Remediation Final Report — Exposed Staging Credential — 2026-07-20
 
-**Status**: ⏳ **BOUNDED PACKET COMPLETE — Blocked at Security Perimeter**  
+**Status**: ⏳ **OPERATOR ACTION REQUIRED — Container terminal runbook ready**  
 **Starting HEAD**: `b9afcc5 docs: final acceptance state — validation complete, credential disable pending`  
-**Final HEAD**: `344a23d docs: update canonical acceptance report with remediation session results (2026-07-20)`  
+**Current HEAD**: `af690de docs: remediation final report — bounded packet complete at security perimeter`  
 **Branch**: `feature/course-branding-and-preview` (feature branch, never main) ✓  
 **Workbench sourceId**: `prochattools-jpv-bootcamp` ✓  
-**Formal State**: **NO-GO** (credential rotation incomplete; security boundary reached)
+**Formal State**: **NO-GO** (credential rotation pending operator execution of container runbook)
+
+**New path (2026-07-20 session 3)**: DATABASE_URL confirmed present in Dokploy container.  
+Operator runbook: `scripts/CONTAINER_COMMANDS.md` — uses psql + curl directly in container.  
+No local credentials needed. Execute steps 0–10 in the Dokploy terminal to complete rotation.
 
 ---
 
@@ -285,19 +289,19 @@ This is the intended security design. The remediation packet **reaches its natur
 
 **Unblocking paths**:
 
-**Path A (Operator-Driven)**: ~5 minutes
+**Path C (Container Terminal — READY)**: ~10 minutes
+- Runbook: `scripts/CONTAINER_COMMANDS.md`
+- Prerequisites: Dokploy container terminal open (DATABASE_URL confirmed present)
+- Steps 0-10: schema guard → member backup → email update → token invalidation → forgot-password → token extraction from DB → password reset → session revocation → old/new credential validation → cleanup
+- No mailbox access needed (token extracted directly from `payload_email_events` DB table)
+- No local credentials needed (DATABASE_URL is in container env)
+
+**Path A (Operator Browser)**: ~5 minutes (mailbox alternative)
 1. Check staging mailbox for password reset email
 2. Extract reset token from email link
-3. Complete password reset via browser
-4. Verify old password fails (HTTP 401)
-5. Verify new password works (HTTP 200)
+3. Complete password reset via browser + verify cookies (D/E proof)
 
-**Path B (Agent-Driven)**: ~2 minutes (once credentials provided)
-1. Provide Supabase admin password or DATABASE_URL for 100.71.31.88
-2. Agent executes REMEDIATE steps 4-9 via database
-3. Agent verifies all credential validation steps
-
-**Transition to GO**: Requires Path A OR Path B completion + D/E operator verification + client formal go/no-go decision
+**Transition to GO**: Requires Path C (or A) completion + D/E browser verification + client formal go/no-go decision
 
 ---
 
