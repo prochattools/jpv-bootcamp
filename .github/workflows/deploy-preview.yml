@@ -185,11 +185,32 @@ jobs:
           fi
           echo "Deploy guard passed: DOKPLOY_PREVIEW_APP_ID is not on deny-list"
 
+          NEW_IMAGE="${{ steps.image-tags.outputs.sha_tag }}"
           COMMIT_MSG=$(git log -1 --pretty=format:"%s" ${{ github.sha }})
           COMMIT_AUTHOR=$(git log -1 --pretty=format:"%an" ${{ github.sha }})
           COMMIT_DATE=$(git log -1 --pretty=format:"%ci" ${{ github.sha }})
           DESCRIPTION="${COMMIT_AUTHOR} · ${COMMIT_DATE}"$'\n\n'"${{ github.sha }}"
 
+          # Step 1: Update the application's Docker image to the new SHA
+          # This ensures Dokploy pulls the new image rather than the cached SHA
+          UPDATE_RESPONSE=$(curl -s -o /tmp/dokploy_update_response.json -w "%{http_code}" \
+            -X POST "https://dokploy.prochat.tools/api/application.update" \
+            -H "x-api-key: ${{ secrets.DOKPLOY_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"applicationId\": \"$DOKPLOY_PREVIEW_APP_ID\",
+              \"dockerImage\": \"$NEW_IMAGE\"
+            }")
+
+          echo "Image update HTTP status: $UPDATE_RESPONSE"
+          if [ "$UPDATE_RESPONSE" != "200" ]; then
+            echo "Warning: image update returned $UPDATE_RESPONSE — continuing with deploy (may use previously configured image)"
+            cat /tmp/dokploy_update_response.json || true
+          else
+            echo "Image updated to: $NEW_IMAGE"
+          fi
+
+          # Step 2: Trigger the deployment
           RESPONSE=$(curl -s -o /tmp/dokploy_response.json -w "%{http_code}" \
             -X POST "https://dokploy.prochat.tools/api/application.deploy" \
             -H "x-api-key: ${{ secrets.DOKPLOY_API_KEY }}" \
@@ -208,5 +229,5 @@ jobs:
             exit 1
           fi
 
-          echo "Deployment triggered successfully for: ${{ steps.image-tags.outputs.sha_tag }}"
+          echo "Deployment triggered successfully for: $NEW_IMAGE"
           echo "Provenance: deployed from $(git rev-parse HEAD)"
