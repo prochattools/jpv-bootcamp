@@ -8,8 +8,11 @@ function isStagingEnv(): boolean {
 }
 
 export async function stagingAutoProvision(payload: Payload): Promise<void> {
-  if (!isStagingEnv()) return
-
+  if (!isStagingEnv()) {
+    console.info('staging-auto-provision: skipped (DEPLOYMENT_ENV=%s)', process.env.DEPLOYMENT_ENV ?? 'unset')
+    return
+  }
+  console.info('staging-auto-provision: running for DEPLOYMENT_ENV=%s', process.env.DEPLOYMENT_ENV)
   await provisionAdmin(payload)
   await provisionMember(payload)
 }
@@ -17,7 +20,10 @@ export async function stagingAutoProvision(payload: Payload): Promise<void> {
 async function provisionAdmin(payload: Payload): Promise<void> {
   const email = process.env.STAGING_ADMIN_EMAIL?.trim()
   const password = process.env.STAGING_ADMIN_PASSWORD?.trim()
-  if (!email || !password) return
+  if (!email || !password) {
+    console.info('staging-auto-provision: admin skipped (STAGING_ADMIN_EMAIL=%s, password=%s)', email ? 'set' : 'unset', password ? 'set' : 'unset')
+    return
+  }
 
   const existing = await payload.find({
     collection: 'payload_users',
@@ -48,7 +54,10 @@ async function provisionAdmin(payload: Payload): Promise<void> {
 async function provisionMember(payload: Payload): Promise<void> {
   const email = process.env.STAGING_MEMBER_EMAIL?.trim()
   const password = process.env.STAGING_MEMBER_PASSWORD?.trim()
-  if (!email || !password) return
+  if (!email || !password) {
+    console.info('staging-auto-provision: member skipped (STAGING_MEMBER_EMAIL=%s, password=%s)', email ? 'set' : 'unset', password ? 'set' : 'unset')
+    return
+  }
 
   const existing = await payload.find({
     collection: 'payload_members',
@@ -63,8 +72,8 @@ async function provisionMember(payload: Payload): Promise<void> {
       id: existing.docs[0].id,
       data: {
         password,
-        account_status: 'active',
-        emailVerified: true,
+        accountStatus: 'active',
+        emailVerifiedAt: new Date().toISOString(),
         loginAttempts: 0,
         lockUntil: null,
       } as never,
@@ -79,10 +88,9 @@ async function provisionMember(payload: Payload): Promise<void> {
     data: {
       email,
       password,
-      account_status: 'active',
-      emailVerified: true,
-      source: 'staging_provision',
-      name: 'Staging QA',
+      accountStatus: 'active',
+      emailVerifiedAt: new Date().toISOString(),
+      source: 'admin_created',
     } as never,
     overrideAccess: true,
   })
