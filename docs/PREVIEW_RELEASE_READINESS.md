@@ -46,7 +46,7 @@ Current validated readiness baseline: `d55229f test: enforce programme content r
 
 ### Deterministic local validation baseline
 
-- `pnpm test:release` passed `144/144`
+- `pnpm test:release` passed `145/145`
 - `pnpm test:e2e` passed `58/58` across desktop and mobile Chromium projects
 - `pnpm test:release:full` passed
 - `pnpm staging:static-preflight` passed
