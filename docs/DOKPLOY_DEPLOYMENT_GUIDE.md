@@ -16,6 +16,55 @@
 
 ---
 
+## ABSOLUTE DENY-LIST
+
+`web-public-jpv-bootcamp-l66egq` is the **production application** and is deny-listed.
+
+No automated, scripted, or manual operation in this repository may:
+- Call, query, inspect, or read logs from `web-public-jpv-bootcamp-l66egq`
+- Deploy, restart, or reconfigure `web-public-jpv-bootcamp-l66egq`
+- Use its webhook, change its env/secrets, or perform any operation against it
+
+The `deploy-preview.yml` and `deploy.yml` workflows both contain runtime guards that
+reject `web-public-jpv-bootcamp-l66egq` as an app ID. See `scripts/staging-gates/stagingPolicy.ts`.
+
+**If the production webhook was visible in any screenshot or log, only an authorized
+production owner may rotate it. Do not record webhooks, tokens, or secrets in this repo.**
+
+---
+
+## GitHub Secret Naming (Required)
+
+The staging workflow uses **`DOKPLOY_PREVIEW_APP_ID`** (not the generic `DOKPLOY_APP_ID`).
+The production workflow uses **`DOKPLOY_PROD_APP_ID`** (not the generic `DOKPLOY_APP_ID`).
+
+Operator action required: rename or add secrets in GitHub repository settings:
+1. `DOKPLOY_PREVIEW_APP_ID` → value: `clients-jpv-bootcamp-app-tp9xrk`
+2. `DOKPLOY_PROD_APP_ID` → value: the production app ID (authorized production owner only)
+
+The generic `DOKPLOY_APP_ID` secret is no longer used and should be removed to
+prevent accidental cross-environment targeting.
+
+---
+
+## GitHub Main Branch Protection (Operator Action Required)
+
+To prevent direct pushes and force-pushes to `main`, a repository owner must:
+
+1. Go to GitHub repository → Settings → Branches → Add branch ruleset
+2. Create ruleset for `main`:
+   - Require pull request before merging: **enabled**
+   - Require status checks to pass: **enabled** (add `validate-and-publish` and TypeScript check)
+   - Restrict deletions: **enabled**
+   - Block force pushes: **enabled**
+   - Restrict creations: **disabled** (allows branch creation)
+3. Optionally: require approvals (1 reviewer minimum)
+
+Without this ruleset, direct pushes to `main` are possible and could trigger the
+production `deploy.yml` workflow.
+
+---
+
 ## Correct Deployment Procedure
 
 ### 1. Build AMD64 image

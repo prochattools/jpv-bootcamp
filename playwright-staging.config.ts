@@ -1,4 +1,5 @@
 import { defineConfig, devices } from '@playwright/test'
+import { assertStagingOrigin } from './scripts/staging-gates/stagingPolicy'
 
 /**
  * Staging Smoke Test Configuration
@@ -8,9 +9,8 @@ import { defineConfig, devices } from '@playwright/test'
 
 const STAGING_BASE_URL = process.env.STAGING_URL ?? 'https://preview.jpvbootcamp.com'
 
-if (STAGING_BASE_URL.includes('jpvbootcamp.com') && !STAGING_BASE_URL.includes('preview.')) {
-  throw new Error(`STAGING_URL must be the staging/preview domain, not production. Got: ${STAGING_BASE_URL.replace(/\/\/.*@/, '//[redacted]@')}`)
-}
+// Exact origin validation — rejects production, suffix domains, userinfo, HTTP, non-default ports
+assertStagingOrigin(STAGING_BASE_URL.endsWith('/') ? STAGING_BASE_URL : STAGING_BASE_URL)
 
 export default defineConfig({
   testDir: './e2e',

@@ -19,11 +19,16 @@ import {
 
 import {
   executeSubscriptionMigration,
+  loadJournalFromFile,
   rollbackEvidence,
   type AuditEntry,
   type ExecutorConfig,
   type StripeUpdateClient,
 } from './stripeSubscriptionExecutor'
+
+import { mkdtempSync, writeFileSync, readFileSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 
 // ─── Shared fakes ──────────────────────────────────────────────────────────
 
@@ -263,6 +268,8 @@ async function testDryRunProducesNoCalls() {
   assert.equal(result.dryRun, 1, 'Should record dry-run')
   assert.equal(result.applied, 0, 'Should not apply')
   assert.ok(!calls.some((c) => c.startsWith('update:')), 'Must not call update in dry-run')
+  // retrieve is called even in dry-run to get item ID for invoice preview
+  assert.ok(calls.some((c) => c.startsWith('retrieve:')), 'Should call retrieve to get item ID for preview')
 }
 
 async function testDryRunJournalEntry() {
@@ -287,6 +294,7 @@ async function testApplyRequiresConfirmationToken() {
 }
 
 async function testApplyBlockedInLiveEnv() {
+  // Caller passes allowedEnvs: ['test'] — env check blocks live
   const config = makeExecutorConfig({
     mode: 'apply',
     stripeEnv: 'live',
@@ -294,7 +302,20 @@ async function testApplyBlockedInLiveEnv() {
   })
   const result = await executeSubscriptionMigration([makeRecord()], config)
   assert.ok(result.stoppedEarly)
-  assert.ok(result.stopReason?.includes('not in allowedEnvs'))
+  assert.ok(result.stopReason?.includes('not in hard-coded allowlist'))
+}
+
+async function testHardCodedEnvGuardBlocksLiveEvenWithPermissiveConfig() {
+  // Even if caller passes allowedEnvs: ['live'], the hard-coded internal allowlist blocks it
+  const config = makeExecutorConfig({
+    mode: 'apply',
+    stripeEnv: 'live',
+    allowedEnvs: ['live', 'test'],  // caller tries to allow live — hard guard overrides
+  })
+  const result = await executeSubscriptionMigration([makeRecord()], config)
+  assert.ok(result.stoppedEarly, 'Hard-coded env guard must block live even with permissive allowedEnvs')
+  assert.ok(result.stopReason?.includes('hard-coded allowlist'), 'Stop reason must reference hard-coded allowlist')
+  assert.equal(result.applied, 0, 'No mutations in live mode')
 }
 
 async function testApplySuccess() {
@@ -442,6 +463,125 @@ function testRollbackEvidence() {
   assert.ok(evidence.includes('operator must confirm'), 'Has safety warning')
 }
 
+async function testInvoicePreviewUsesTargetPrice() {
+  // Verify that the preview call includes subscription_items with the target price ID
+  const previewCalls: Array<{ params: unknown }> = []
+  const client = makeUpdateClient({
+    invoices: {
+      retrieveUpcoming: async (params) => {
+        previewCalls.push({ params })
+        return { amount_due: 8000, currency: 'gbp', lines: { data: [] } }
+      },
+    },
+  })
+  const config = makeExecutorConfig({ client, mode: 'dry-run' })
+  const result = await executeSubscriptionMigration([makeRecord()], config)
+  assert.equal(result.dryRun, 1, 'Should complete dry run')
+  assert.equal(previewCalls.length, 1, 'Should call retrieveUpcoming once')
+  const previewParams = previewCalls[0].params as Record<string, unknown>
+  // Must include subscription_items with target price to show actual post-update charge
+  assert.ok(
+    Array.isArray(previewParams['subscription_items']),
+    'Preview must include subscription_items for target-price preview',
+  )
+  const items = previewParams['subscription_items'] as Array<{ price: string }>
+  assert.ok(
+    items.some((i) => i.price === TARGET_PRICES.monthly),
+    'Preview subscription_items must include target price ID',
+  )
+}
+
+async function testDurableJournalAppendsToFile() {
+  const dir = mkdtempSync(join(tmpdir(), 'executor-test-'))
+  const journalPath = join(dir, 'journal.ndjson')
+  try {
+    const config = makeExecutorConfig({ mode: 'dry-run', journalPath })
+    const result = await executeSubscriptionMigration([makeRecord()], config)
+    assert.equal(result.dryRun, 1, 'dry run recorded in memory')
+
+    // Check file was written
+    const content = readFileSync(journalPath, 'utf8')
+    const lines = content.split('\n').filter(Boolean)
+    assert.equal(lines.length, 1, 'One line in journal file')
+    const entry = JSON.parse(lines[0]) as AuditEntry
+    assert.equal(entry.outcome, 'dry_run')
+    assert.equal(entry.subscriptionId, 'sub_001')
+  } finally {
+    rmSync(dir, { recursive: true })
+  }
+}
+
+async function testLoadJournalFromFileReturnsEmptyWhenMissing() {
+  const entries = loadJournalFromFile('/tmp/__nonexistent_journal_file_xyz__.ndjson')
+  assert.equal(entries.length, 0, 'Should return empty array for missing file')
+}
+
+async function testLoadJournalFromFileRoundtrips() {
+  const dir = mkdtempSync(join(tmpdir(), 'executor-test-'))
+  const journalPath = join(dir, 'journal.ndjson')
+  try {
+    const entry: AuditEntry = {
+      runId: 'run_001',
+      subscriptionId: 'sub_001',
+      customerId: 'cus_001',
+      outcome: 'applied',
+      targetPriceId: TARGET_PRICES.monthly,
+      previousPriceId: 'price_old',
+      invoicePreviewAmountDue: 8000,
+      invoicePreviewCurrency: 'gbp',
+      timestamp: new Date().toISOString(),
+    }
+    writeFileSync(journalPath, JSON.stringify(entry) + '\n', 'utf8')
+    const loaded = loadJournalFromFile(journalPath)
+    assert.equal(loaded.length, 1)
+    assert.equal(loaded[0].subscriptionId, 'sub_001')
+    assert.equal(loaded[0].outcome, 'applied')
+  } finally {
+    rmSync(dir, { recursive: true })
+  }
+}
+
+async function testResumeFromDurableJournalSkipsAlreadyApplied() {
+  const dir = mkdtempSync(join(tmpdir(), 'executor-test-'))
+  const journalPath = join(dir, 'journal.ndjson')
+  try {
+    // Pre-populate journal with sub_001 already applied
+    const prior: AuditEntry = {
+      runId: 'prior_run',
+      subscriptionId: 'sub_001',
+      customerId: 'cus_001',
+      outcome: 'applied',
+      targetPriceId: TARGET_PRICES.monthly,
+      previousPriceId: 'price_old',
+      invoicePreviewAmountDue: 8000,
+      invoicePreviewCurrency: 'gbp',
+      timestamp: new Date().toISOString(),
+    }
+    writeFileSync(journalPath, JSON.stringify(prior) + '\n', 'utf8')
+
+    const loadedJournal = loadJournalFromFile(journalPath)
+    const config = makeExecutorConfig({
+      mode: 'apply',
+      journal: loadedJournal,
+      journalPath,
+    })
+    const records = [
+      makeRecord({ subscriptionId: 'sub_001' }),
+      makeRecord({ subscriptionId: 'sub_002', customerId: 'cus_002' }),
+    ]
+    const result = await executeSubscriptionMigration(records, config)
+    assert.equal(result.applied, 1, 'Should apply only sub_002')
+    // Journal file should have 2 entries: prior + sub_002
+    const content = readFileSync(journalPath, 'utf8')
+    const lines = content.split('\n').filter(Boolean)
+    assert.equal(lines.length, 2, 'Journal file should have prior + new entry')
+    const newEntry = JSON.parse(lines[1]) as AuditEntry
+    assert.equal(newEntry.subscriptionId, 'sub_002')
+  } finally {
+    rmSync(dir, { recursive: true })
+  }
+}
+
 // ─── Runner ─────────────────────────────────────────────────────────────────
 
 const tests = [
@@ -460,6 +600,12 @@ const tests = [
   { name: 'executor: dry-run journal entry', fn: testDryRunJournalEntry },
   { name: 'executor: apply requires confirmation token', fn: testApplyRequiresConfirmationToken },
   { name: 'executor: apply blocked in live env', fn: testApplyBlockedInLiveEnv },
+  { name: 'executor: hard-coded env guard blocks live even with permissive config', fn: testHardCodedEnvGuardBlocksLiveEvenWithPermissiveConfig },
+  { name: 'executor: invoice preview uses target price in subscription_items', fn: testInvoicePreviewUsesTargetPrice },
+  { name: 'executor: durable journal appends to file', fn: testDurableJournalAppendsToFile },
+  { name: 'executor: loadJournalFromFile returns empty for missing file', fn: testLoadJournalFromFileReturnsEmptyWhenMissing },
+  { name: 'executor: loadJournalFromFile roundtrips entries', fn: testLoadJournalFromFileRoundtrips },
+  { name: 'executor: resume from durable journal skips already-applied', fn: testResumeFromDurableJournalSkipsAlreadyApplied },
   { name: 'executor: apply success with reconciliation', fn: testApplySuccess },
   { name: 'executor: idempotency skips already-applied', fn: testIdempotency },
   { name: 'executor: batch limit enforced', fn: testBatchLimit },

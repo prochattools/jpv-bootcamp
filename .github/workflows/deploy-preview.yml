@@ -35,10 +35,43 @@ jobs:
       E2E_BASE_URL: http://127.0.0.1:3107
 
     steps:
+      - name: Validate deployment boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Reject main branch deployments from this workflow
+          if [ "${{ github.ref_name }}" = "main" ]; then
+            echo "DEPLOY-DENIED: this workflow must not run on main. Only feature/course-branding-and-preview is allowed." >&2
+            exit 1
+          fi
+          # Reject generic workflow_dispatch input pointing at main
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            INPUT_REF="${{ inputs.branch_or_ref }}"
+            if [ "$INPUT_REF" = "main" ] || [ "$INPUT_REF" = "refs/heads/main" ]; then
+              echo "DEPLOY-DENIED: branch_or_ref 'main' is not allowed. Use feature/course-branding-and-preview." >&2
+              exit 1
+            fi
+          fi
+
       - name: Check out commit
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && inputs.branch_or_ref || github.ref }}
+          fetch-depth: 0
+
+      - name: Verify SHA ancestry under feature branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          ALLOWED_BRANCH="origin/feature/course-branding-and-preview"
+          CURRENT_SHA="$(git rev-parse HEAD)"
+          # Confirm HEAD is reachable from the allowed branch
+          if ! git merge-base --is-ancestor "$CURRENT_SHA" "$ALLOWED_BRANCH" 2>/dev/null; then
+            echo "DEPLOY-DENIED: SHA $CURRENT_SHA is not an ancestor of $ALLOWED_BRANCH" >&2
+            echo "Only commits reachable from feature/course-branding-and-preview may be deployed here." >&2
+            exit 1
+          fi
+          echo "SHA ancestry confirmed: $CURRENT_SHA is under $ALLOWED_BRANCH"
 
       - name: Set up pnpm
         uses: pnpm/action-setup@v2
@@ -128,8 +161,28 @@ jobs:
       - name: Trigger Dokploy redeploy
         if: success()
         shell: bash
+        env:
+          DOKPLOY_PREVIEW_APP_ID: ${{ secrets.DOKPLOY_PREVIEW_APP_ID }}
         run: |
           set -euo pipefail
+
+          # Hard deployment boundary guard — fail closed before any API call
+          ALLOWED_APP_ID="clients-jpv-bootcamp-app-tp9xrk"
+          DENIED_APP_ID="web-public-jpv-bootcamp-l66egq"
+
+          if [ -z "$DOKPLOY_PREVIEW_APP_ID" ]; then
+            echo "DEPLOY-DENIED: DOKPLOY_PREVIEW_APP_ID secret is unset or empty" >&2
+            exit 1
+          fi
+          if [ "$DOKPLOY_PREVIEW_APP_ID" = "$DENIED_APP_ID" ]; then
+            echo "DEPLOY-DENIED: DOKPLOY_PREVIEW_APP_ID is on the production deny-list: $DENIED_APP_ID" >&2
+            exit 1
+          fi
+          if [ "$DOKPLOY_PREVIEW_APP_ID" != "$ALLOWED_APP_ID" ]; then
+            echo "DEPLOY-DENIED: DOKPLOY_PREVIEW_APP_ID '$DOKPLOY_PREVIEW_APP_ID' is not the allowed staging app ID '$ALLOWED_APP_ID'" >&2
+            exit 1
+          fi
+
           COMMIT_MSG=$(git log -1 --pretty=format:"%s" ${{ github.sha }})
           COMMIT_AUTHOR=$(git log -1 --pretty=format:"%an" ${{ github.sha }})
           COMMIT_DATE=$(git log -1 --pretty=format:"%ci" ${{ github.sha }})
@@ -140,7 +193,7 @@ jobs:
             -H "x-api-key: ${{ secrets.DOKPLOY_API_KEY }}" \
             -H "Content-Type: application/json" \
             -d "{
-              \"applicationId\": \"${{ secrets.DOKPLOY_APP_ID }}\",
+              \"applicationId\": \"$DOKPLOY_PREVIEW_APP_ID\",
               \"title\": $(echo \"$COMMIT_MSG\" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read().strip()))'),
               \"description\": $(echo \"$DESCRIPTION\" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read().strip()))')
             }")

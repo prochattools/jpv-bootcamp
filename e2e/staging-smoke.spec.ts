@@ -1,11 +1,10 @@
 import { test, expect, Page } from '@playwright/test'
+import { assertStagingOrigin } from '../scripts/staging-gates/stagingPolicy'
 
 const STAGING_URL = process.env.STAGING_URL ?? 'https://preview.jpvbootcamp.com'
 
-// Verify staging smoke must not run against production
-if (!STAGING_URL.includes('preview.') && STAGING_URL.includes('jpvbootcamp.com')) {
-  throw new Error(`Staging smoke must not run against production. STAGING_URL=${STAGING_URL}`)
-}
+// Exact origin validation — rejects production, suffix domains, userinfo, HTTP, non-default ports
+assertStagingOrigin(STAGING_URL)
 
 /**
  * Staging Smoke Test

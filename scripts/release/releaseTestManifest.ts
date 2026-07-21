@@ -15,6 +15,7 @@ export const RELEASE_TEST_CATEGORIES = [
   'route architecture and MVP integration',
   'dependency audit disposition',
   'release evidence and operator handoff checks',
+  'deployment boundary and staging safety',
 ] as const
 
 export type ReleaseTestCategory = (typeof RELEASE_TEST_CATEGORIES)[number]
@@ -249,6 +250,9 @@ export const RELEASE_TEST_MANIFEST: ReleaseTestEntry[] = [
   test('evidence.release-evidence-generator', 'release evidence and operator handoff checks', 'scripts/release_evidence_generator.test.ts', 'Protects deterministic release-evidence dry-run output and false-claim boundaries.', 'Release evidence can become nondeterministic or overstate live readiness.', 'readiness'),
   test('evidence.core-go-live-readiness', 'release evidence and operator handoff checks', 'scripts/core_go_live_readiness.test.ts', 'Protects the repository-owned core go-live readiness snapshot and prevents false staging or production claims.', 'Readiness docs can drift away from the validated implementation and remaining blockers.', 'readiness'),
   command('evidence.validate-local', 'release evidence and operator handoff checks', 'pnpm', ['evidence:validate'], 'Validates approved local evidence structure without generating or publishing it.', 'Existing release evidence is malformed or unsafe.', 'M1-02'),
+
+  test('staging.boundary-policy', 'deployment boundary and staging safety', 'scripts/staging-gates/stagingPolicy.test.ts', 'Proves staging boundary policy rejects deny-listed app IDs, non-staging origins, suffix domains, userinfo, non-HTTPS, wrong ports, and main branch — fail-closed.', 'Staging policy can be bypassed, allowing production or non-staging target.', 'readiness'),
+  test('staging.workflow-boundary', 'deployment boundary and staging safety', 'scripts/staging-gates/workflowStagingBoundary.test.ts', 'Statically verifies GitHub workflows use staging-specific secrets, contain deny-list guards, SHA ancestry validation, and reject main branch.', 'Workflow step can accidentally target production app ID.', 'readiness'),
 ]
 
 export const DEFERRED_RELEASE_VALIDATIONS: DeferredReleaseValidation[] = [
