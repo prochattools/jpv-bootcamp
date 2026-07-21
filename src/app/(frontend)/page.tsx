@@ -565,7 +565,7 @@ export default function HomePage() {
                   key={plan.name}
                 >
                   {plan.featured ? <span className='absolute right-6 top-0 -translate-y-1/2 rounded-full bg-jpv-sunshine px-4 py-1.5 text-xs font-bold text-jpv-ink'>Best value</span> : null}
-                  <p className={`text-sm font-bold uppercase tracking-[0.12em] ${plan.featured ? 'text-jpv-green' : 'text-jpv-green-deep'}`}>{plan.name}</p>
+                  <p className={`text-sm font-bold uppercase tracking-[0.12em] ${plan.featured ? 'text-jpv-canvas/80' : 'text-jpv-green-deep'}`}>{plan.name}</p>
                   <div className='mt-4 flex items-end gap-3'><span className='text-5xl font-bold tracking-tight'>{plan.price}</span><span className={`pb-1 text-sm ${plan.featured ? 'text-jpv-canvas/65' : 'text-jpv-muted'}`}>{plan.suffix}</span></div>
                   <p className={`mt-3 text-sm font-semibold ${plan.featured ? 'text-jpv-sunshine' : 'text-jpv-green-deep'}`}>{plan.description}</p>
                   <ul className='mt-7 flex-1 space-y-4'>
