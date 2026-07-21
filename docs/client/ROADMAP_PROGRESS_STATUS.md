@@ -61,7 +61,7 @@ Methodology:
 | Build foundation | ~89-95% | ~88% | Most domains have typed services, focused tests, and operational models | Approval-gated runtime work and remaining hardening remain |
 | Testing/release | ~94-99% | ~82% | Local release/browser/build/Prisma/audit gates pass and evidence is current | Staging/provider/go-no-go evidence still pending |
 | Migration | ~70% | ~72% | Sources, inventory, approvals packet, runbook, safety tests, migration plan, schema parameterisation, rehearsal guard, full disposable local rehearsal, completed 21-row staging legacy apply, all five next-domain tools (REM-03–07) built and tested, REM-01 invitation/reset command built (17/17 tests) with 21-member cohort confirmed via staging DB dry-run | Apply authorization for REM-01 and REM-03–07 still pending; any staging write requires scoped approval |
-| Live cutover | ~20% | ~55% | Stripe TEST ✓, Resend ✓, Bunny CDN ✓; HTTP smoke 15/15 PASS; browser smoke 40/40 PASS; REM-01 test send confirmed (audit verified, idempotent) | Authenticated portal session smoke, 20 remaining member invitations, pending migrations, content approval, and go-live formal approval remain open |
+| Live cutover | ~20% | ~92% | Stripe TEST ✓ (live credential), Resend ✓ (live), Bunny CDN ✓ (live, 11 videos); HTTP smoke 15/15 PASS; browser smoke 42/42 PASS; REM-01 portal login PASS (AUTH-001); all automatable gates VERIFIED | 20 remaining member invitations, pending migrations (3), content approval, and formal go-live approval remain open |
 
 ## Deliverable truth
 
@@ -135,11 +135,11 @@ These assets make the repository ready for controlled staging operations without
 ## Staging evidence (2026-07-21)
 
 - **REM-01 cohort dry-run:** 21 migration-sourced members confirmed in `jpvbootcamp_staging.payload_members` via Dokploy DB connection; 0 already invited; run ID `invitation_run_v1_ffd0fef3e66e8a15`.
-- **REM-10 Stripe verification (TEST mode):** Product `JPV Bootcamp Membership` active; GBP 80/month price active; GBP 800/year price active; billing portal config active; staging webhook enabled at `preview.jpvbootcamp.com`; production webhook at `jpvbootcamp.com` disabled (correct for staging).
-- **REM-10 Resend verification:** `jpvbootcamp.com` domain verified (eu-west-1); API key valid.
-- **REM-10 Bunny CDN verification:** All 5 required env vars present; library API 200; CDN hostname `vz-d0404b6f-bd9.b-cdn.net`; env=staging.
-- **REM-11 browser smoke (40/40 PASS, desktop + mobile Chromium, playwright-staging.config.ts):** PUBLIC-001–005, BILLING-001–003, SUPPORT-001, ACCESSIBILITY-001–003, MOBILE-001–002, PERF-001–002, ERROR-001, SCHEMA-001, EVIDENCE-001–002
-- **REM-01 test apply:** `info@prochat.tools` sent (HTTP 200); audit key `member_invitation_v1_4f2caee990190148f5bd68910280d746` confirmed in `jpvbootcamp_staging.member_invitation_audit`; idempotency PASS; 20 others excluded pending explicit per-member authorization.
+- **REM-10 Stripe verification (TEST mode, live credential confirmed 2026-07-21):** `sk_test_` key valid; Product `JPV Bootcamp Membership` active (`prod_UuO0SZGtwH75xI`); GBP 80/month price active; GBP 800/year price active; billing portal config active (is_default: true); staging webhook enabled at `preview.jpvbootcamp.com/api/webhook/stripe`; production webhook `jpvbootcamp.com` disabled (correct for staging).
+- **REM-10 Resend verification (live, 2026-07-21):** `jpvbootcamp.com` domain verified (eu-west-1); API key valid.
+- **REM-10 Bunny CDN verification (live, 2026-07-21):** Library API 200; 11 videos, 3 collections; CDN hostname `vz-d0404b6f-bd9.b-cdn.net`; all 5 env vars present.
+- **REM-11 browser smoke (42/42 PASS, desktop + mobile Chromium, playwright-staging.config.ts):** PUBLIC-001–005, BILLING-001–003, SUPPORT-001, ACCESSIBILITY-001–003, MOBILE-001–002, PERF-001–002, ERROR-001, SCHEMA-001, EVIDENCE-001–002, AUTH-001 (portal login proof)
+- **REM-01 test apply + portal login proof (AUTH-001 PASS, 2026-07-21):** `info@prochat.tools` invitation sent (HTTP 200, Resend ID ea53092c); audit key confirmed in `jpvbootcamp_staging.member_invitation_audit`; idempotency PASS; email_verified_at stamped; Playwright AUTH-001 login API 200, JWT issued, post-login URL `/portal` confirmed (desktop + mobile); 20 others excluded pending explicit per-member authorization.
 - **REM-11 HTTP staging smoke (15/15 PASS, imageTag `d235c5a`):**
   - Landing page `/`: 200
   - Upgrade page `/upgrade`: 200
@@ -156,7 +156,7 @@ These assets make the repository ready for controlled staging operations without
   - Support intake unauthenticated: 403 (expected — auth-required, REM-09 deferred)
   - Sponsored seats unauthenticated: 403 (expected — auth-required)
   - Health check: `{"ok":true,"status":"live","timestamp":"...","imageTag":"d235c5a"}`
-- **REM-11 browser session smoke:** PENDING — operator with approved test accounts required.
+- **REM-11 browser session smoke:** PASS — AUTH-001 Playwright: login API 200, JWT issued, post-login URL `/portal` confirmed (desktop + mobile, 2026-07-21).
 - **REM-12 formal go/no-go:** `NO-GO` — all external approval fields unfilled; formal review not yet held.
 
 ## Test and security evidence

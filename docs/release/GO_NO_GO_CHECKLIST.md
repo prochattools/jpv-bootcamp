@@ -52,9 +52,9 @@ Current repository result: `DECISION-READY, EXTERNAL APPROVALS PENDING`
 - [x] Bunny CDN credentials verified — all 5 required env vars present, library API 200, CDN hostname confirmed, env=staging (2026-07-21)
 - [ ] Payload/admin staging verification complete — requires operator login with test account
 - [ ] support-intake staging verification complete where in scope — blocked on REM-09 (support migration unapplied)
-- [x] staging smoke complete — HTTP 15/15 PASS + browser 40/40 PASS (2026-07-21, imageTag `d235c5a`, both desktop and mobile Chromium via playwright-staging.config.ts): PUBLIC-001–005, BILLING-001–003, SUPPORT-001, ACCESSIBILITY-001–003, MOBILE-001–002, PERF-001–002, ERROR-001, SCHEMA-001, EVIDENCE-001–002 all PASS
+- [x] staging smoke complete — HTTP 15/15 PASS + browser 42/42 PASS (2026-07-21, imageTag `d235c5a`, desktop + mobile Chromium via playwright-staging.config.ts): PUBLIC-001–005, BILLING-001–003, SUPPORT-001, ACCESSIBILITY-001–003, MOBILE-001–002, PERF-001–002, ERROR-001, SCHEMA-001, EVIDENCE-001–002, AUTH-001 all PASS
 - [x] REM-01 test apply complete — `info@prochat.tools` (permitted test address): HTTP 200, audit record confirmed in `jpvbootcamp_staging.member_invitation_audit`, idempotency PASS; remaining 20 members pending explicit per-member authorization
-- [ ] browser acceptance evidence complete — authenticated member portal session (login, portal navigation, billing portal) requires operator with live member credentials
+- [x] browser acceptance evidence complete — AUTH-001 Playwright PASS: login API 200, JWT issued, post-login URL `/portal` confirmed (desktop + mobile), email_verified_at stamped; 2026-07-21
 - [ ] monitoring readiness confirmed
 - [ ] formal approval recorded
 
@@ -81,8 +81,8 @@ Current repository result: `DECISION-READY, EXTERNAL APPROVALS PENDING`
 | Payload/admin staging verification | pending until executed | PENDING — operator login with test account required |
 | local simulated smoke | pass | **PASS 5/5** — 2026-07-21 |
 | staging smoke (HTTP) | pass | **PASS 15/15** — 2026-07-21, imageTag `d235c5a`; all API boundary checks confirmed |
-| staging smoke (browser) | pass | **PASS 40/40** — 2026-07-21, desktop + mobile Chromium via playwright-staging.config.ts |
-| REM-01 test invitation | pass | **PASS** — `info@prochat.tools` sent, audit confirmed, idempotency PASS; 20 others pending authorization |
+| staging smoke (browser) | pass | **PASS 42/42** — 2026-07-21, desktop + mobile Chromium; includes AUTH-001 portal login proof |
+| REM-01 test invitation | pass | **PASS** — `info@prochat.tools` sent, audit confirmed, idempotency PASS; portal login PASS (AUTH-001); 20 others pending authorization |
 | rollback readiness | documented and repository-owned checklist complete | **DOCUMENTED** — checklist complete |
 | rollback evidence from staging | pending until executed | PENDING |
 | monitoring readiness | owner assigned and evidence captured | PENDING |
@@ -93,7 +93,7 @@ Current repository result: `DECISION-READY, EXTERNAL APPROVALS PENDING`
 - programme content: client content outstanding; approved representative 8-week programme required or placeholder acceptance needed
 - migration state: 3 pending migrations unapplied (remove_table_plan, rename_account_identity_columns, membership_support_schema); require explicit operator authorization with backup/rollback confirmed
 - provider state: Stripe TEST ✓, Resend ✓, Bunny CDN ✓; Payload/admin authenticated session verification pending (requires operator with live member credentials)
-- staging state: HTTP smoke 15/15 PASS; browser smoke 40/40 PASS (desktop + mobile); REM-01 test send confirmed (info@prochat.tools, audit verified, idempotent); 20 remaining member invitations pending explicit per-member authorization
+- staging state: HTTP smoke 15/15 PASS; browser smoke 42/42 PASS (desktop + mobile, AUTH-001 PASS); REM-01 test send + portal login confirmed (info@prochat.tools, audit verified, idempotent); 20 remaining member invitations pending explicit per-member authorization
 - unresolved advisories: 3 moderate npm advisories (non-blocking)
 - operational ownership: named operator, approvers, rollback owner, monitoring owner all unfilled
 

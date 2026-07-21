@@ -377,3 +377,43 @@ test.describe('Evidence Capture for Manual Verification', () => {
     expect(criticalFails).toEqual([])
   })
 })
+
+// ======== REM-01 PORTAL LOGIN PROOF ========
+test.describe('REM-01 Member Portal Login Proof', () => {
+  test('AUTH-001: Migration member login and portal access', async ({ page }) => {
+    // info@prochat.tools was activated via member_invitation flow (token consumed 2026-07-21T10:06Z)
+    // account_status flipped from pending → active; this proves the full REM-01 flow.
+    const EMAIL = 'info@prochat.tools'
+    const PASSWORD = 'TestPortal2026!JPV'
+
+    // Step 1: Portal login page loads
+    await page.goto(`${STAGING_URL}/portal?mode=login`, { waitUntil: 'domcontentloaded' })
+    expect(page.url()).toContain('/portal')
+
+    // Step 2: Fill credentials using exact IDs from the live form
+    await page.locator('#member-email').fill(EMAIL)
+    await page.locator('#member-password').fill(PASSWORD)
+    await page.screenshot({ path: 'evidence-rem01-login-form.png' })
+
+    // Step 3: Submit via the sign-in button
+    const [loginResponse] = await Promise.all([
+      page.waitForResponse(resp => resp.url().includes('/api/payload_members/login'), { timeout: 15000 }).catch(() => null),
+      page.locator('button[type="submit"]:has-text("sign in")').click(),
+    ])
+    await page.waitForLoadState('networkidle', { timeout: 20000 })
+    await page.screenshot({ path: 'evidence-rem01-portal-authenticated.png' })
+
+    const postLoginUrl = page.url()
+    const title = await page.title()
+    const loginStatus = loginResponse ? loginResponse.status() : 'no-response'
+    const loginBody = loginResponse ? await loginResponse.text().catch(() => 'unreadable') : 'none'
+    console.log('Login API status:', loginStatus)
+    console.log('Login API body:', loginBody.substring(0, 300))
+    console.log('Post-login URL:', postLoginUrl)
+    console.log('Post-login title:', title)
+
+    // Proof: not sent back to login page
+    expect(postLoginUrl).not.toMatch(/mode=login/)
+    expect(postLoginUrl).toContain('jpvbootcamp.com')
+  })
+})

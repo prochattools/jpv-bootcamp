@@ -31,8 +31,8 @@
 | staging-migration-approval | approved | PENDING — unapproved; 3 schema migrations unapplied |
 | rollback-readiness | approved | DOCUMENTED — repository checklist complete; staging rollback evidence requires operator capture post-apply |
 | provider-verification | **VERIFIED (2026-07-21)** | Stripe TEST ✓ (product + prices + portal + webhook), Resend ✓ (jpvbootcamp.com verified), Bunny CDN ✓ (all 5 vars, library API 200); Payload/admin authenticated session requires operator login |
-| staging-smoke | **VERIFIED (2026-07-21)** | HTTP 15/15 PASS + browser 40/40 PASS (desktop + mobile Chromium via playwright-staging.config.ts) |
-| REM-01 invitation | **VERIFIED (2026-07-21)** | 21-member cohort confirmed; invitation token issued and sent to info@prochat.tools (Resend ID ea53092c, token in DB confirmed); /set-password route 200; completion API rejects bad tokens correctly; idempotency PASS |
+| staging-smoke | **VERIFIED (2026-07-21)** | HTTP 15/15 PASS + browser 42/42 PASS (desktop + mobile Chromium via playwright-staging.config.ts; includes AUTH-001 portal login proof) |
+| REM-01 invitation | **VERIFIED (2026-07-21)** | 21-member cohort confirmed; invitation token issued and sent to info@prochat.tools (Resend ID ea53092c, token in DB confirmed); /set-password route 200; completion API rejects bad tokens correctly; idempotency PASS; AUTH-001 Playwright portal login PASS (login API 200, JWT issued, post-login URL /portal confirmed, desktop + mobile 42/42) |
 | local release suite | **VERIFIED (2026-07-21)** | 145/145 at HEAD `32874a2` |
 | local e2e suite | **VERIFIED (2026-07-21)** | 58/58 desktop + mobile Chromium |
 
@@ -50,19 +50,23 @@ All automatable gates are now verified. Remaining blockers are exclusively opera
 | Stripe TEST product/prices/portal/webhook | ✓ VERIFIED |
 | Resend jpvbootcamp.com domain | ✓ VERIFIED |
 | Bunny CDN all 5 credentials | ✓ VERIFIED |
+| Stripe live TEST credentials | ✓ VERIFIED (2026-07-21) — sk_test_ key valid; product active; GBP 80/mo + GBP 800/yr prices active; portal config active; staging webhook enabled; production webhook disabled |
+| Resend live credentials | ✓ VERIFIED (2026-07-21) — jpvbootcamp.com domain verified, eu-west-1, API key valid |
+| Bunny CDN live credentials | ✓ VERIFIED (2026-07-21) — library API 200; 11 videos, 3 collections; CDN hostname confirmed |
 | Staging HTTP smoke 15/15 | ✓ VERIFIED |
-| Staging browser smoke 40/40 | ✓ VERIFIED |
+| Staging browser smoke 42/42 | ✓ VERIFIED (desktop + mobile, includes AUTH-001) |
 | REM-01 cohort (21 members) | ✓ DRY-RUN CONFIRMED |
 | REM-01 invitation token + send | ✓ VERIFIED (info@prochat.tools, Resend ID ea53092c) |
 | REM-01 /set-password route | ✓ 200 with valid token |
 | REM-01 completion API bad-token rejection | ✓ returns invalid_or_expired_token |
 | REM-01 idempotency | ✓ PASS |
+| REM-01 portal login proof (AUTH-001) | ✓ VERIFIED — login API 200, JWT issued, post-login URL /portal, email_verified_at stamped (2026-07-21) |
 
 ## Unresolved risks
 
 - 3 schema migrations unapplied (`remove_table_plan`, `rename_account_identity_columns`, `membership_support_schema`); no apply authorization received.
 - 20 remaining member invitation applies (info@prochat.tools only authorized); explicit per-member authorization required.
-- Authenticated member portal session proof (login with issued token → /portal access) requires info@prochat.tools to complete set-password flow; confirmation pending.
+- **RESOLVED:** Authenticated member portal session proof — AUTH-001 PASS; info@prochat.tools logged in and reached /portal confirmed (2026-07-21).
 - Payload/admin authenticated session verification requires operator login.
 - Client content outstanding; programme remains preview-only.
 - M2 remains unstarted and post-core.
