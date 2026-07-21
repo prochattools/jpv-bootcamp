@@ -135,7 +135,7 @@ These assets make the repository ready for controlled staging operations without
 ## Test and security evidence
 
 - `git diff --check` passed.
-- `pnpm test:release` passed `140/140`.
+- `pnpm test:release` passed `143/143`.
 - `pnpm test:migration:legacy` passed `32/32` (2026-07-21 at HEAD `76237ea`; includes 4 rehearsal guard tests).
 - `pnpm test:e2e` passed `58/58` across desktop and mobile Chromium projects (2026-07-21 at HEAD `76237ea` — REM-02 complete).
 - Disposable local rehearsal on `jpvbootcamp_rehearsal` (2026-07-20): apply/idempotency/rollback/reapply all PASS; preexisting rows unchanged.

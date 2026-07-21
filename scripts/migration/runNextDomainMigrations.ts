@@ -95,9 +95,9 @@ async function runAllDomains(mode: MigrationMode, config: Partial<DomainMigratio
 
       if (result.metrics) {
         for (const [table, metrics] of Object.entries(result.metrics)) {
-          const total = metrics.inserted + metrics.updated + metrics.unchanged + metrics.notApplicable
+          const total = metrics.inserted + metrics.updated + metrics.unchanged + metrics.preserved + metrics.notApplicable
           if (total > 0) {
-            console.log(`  ${table}: +${metrics.inserted} ~${metrics.updated} =${metrics.unchanged} -${metrics.notApplicable}`)
+            console.log(`  ${table}: +${metrics.inserted} ~${metrics.updated} =${metrics.unchanged} P${metrics.preserved} -${metrics.notApplicable}`)
           }
         }
       }
@@ -158,6 +158,7 @@ const mode = (process.argv[2] || 'validate') as MigrationMode
 const args = process.argv.slice(3)
 
 const configOverrides: Partial<DomainMigrationConfig> = {}
+const validFlags = new Set(['--run-id', '--schema', '--rollback-run-id'])
 
 for (let i = 0; i < args.length; i++) {
   if (args[i] === '--run-id' && i + 1 < args.length) {
@@ -169,6 +170,10 @@ for (let i = 0; i < args.length; i++) {
   } else if (args[i] === '--rollback-run-id' && i + 1 < args.length) {
     configOverrides.rollbackRunId = args[i + 1]
     i++
+  } else if (args[i].startsWith('--')) {
+    console.error(`Unknown flag: ${args[i]}`)
+    console.error(`Valid flags: ${Array.from(validFlags).join(', ')}`)
+    process.exit(1)
   }
 }
 
@@ -176,6 +181,16 @@ for (let i = 0; i < args.length; i++) {
 if (!['extract', 'validate', 'dry-run', 'apply', 'rollback'].includes(mode)) {
   console.error(`Invalid mode: ${mode}`)
   console.error(`Valid modes: extract, validate, dry-run, apply, rollback`)
+  process.exit(1)
+}
+
+// Validate required flags for modes
+if ((mode === 'apply' || mode === 'rollback') && !configOverrides.runId && mode === 'apply') {
+  console.error(`Mode '${mode}' requires --run-id flag`)
+  process.exit(1)
+}
+if (mode === 'rollback' && !configOverrides.rollbackRunId) {
+  console.error(`Mode 'rollback' requires --rollback-run-id flag`)
   process.exit(1)
 }
 

@@ -42,6 +42,7 @@
     "migration:next-domains": "tsx scripts/migration/runNextDomainMigrations.ts",
     "test:migration:next-domains": "tsx scripts/migration/legacyMigrationDomains.test.ts",
     "test:migration:next-domains:sql": "tsx scripts/migration/legacyMigrationSQLContract.test.ts",
+    "test:migration:next-domains:behavior": "tsx scripts/migration/legacyMigrationBehavior.test.ts",
     "staging:migration-preflight": "tsx scripts/release/stagingMigrationPreflight.ts",
     "staging:migration-rehearsal": "tsx scripts/release/migrationRehearsal.ts",
     "staging:migration-rehearsal:evidence": "tsx scripts/release/buildMigrationRehearsalEvidence.ts",

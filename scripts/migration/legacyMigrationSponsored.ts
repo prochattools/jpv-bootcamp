@@ -210,6 +210,7 @@ export class SponsoredGrantsAdapter implements DomainMigrationAdapter {
         inserted: result.rows[0].count,
         updated: 0,
         unchanged: 0,
+        preserved: 0,
         notApplicable: 0,
       },
     }

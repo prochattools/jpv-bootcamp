@@ -199,7 +199,7 @@ export async function recordAuditEvent(
   runId: string,
   idempotencyKey: string,
   destinationTable: string,
-  outcome: 'inserted' | 'updated' | 'unchanged' | 'not_applicable',
+  outcome: 'inserted' | 'updated' | 'unchanged' | 'preserved' | 'not_applicable',
 ): Promise<void> {
   const table = `"${schemaName}"."${domain}_migration_audit"`
   await client.query(
@@ -282,7 +282,6 @@ export async function executeDomainMigration(
       }
 
       case 'dry-run': {
-        await ensureMigrationAuditTable(client, schemaName, adapter.domainName)
         const rows = await adapter.extractSourceRows(client, schemaName)
         const errors: DomainMigrationError[] = []
         const summary: string[] = []
