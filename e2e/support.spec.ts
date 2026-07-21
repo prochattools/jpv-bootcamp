@@ -36,7 +36,7 @@ test.describe('durable support intake browser behavior', () => {
     })
     await openSupportForm(page)
 
-    await page.getByRole('button', { name: 'Submit' }).click()
+    await page.getByRole('button', { name: 'Send question' }).click()
     await expect(page.getByLabel('Name')).toBeFocused()
     expect(await page.getByLabel('Name').evaluate((input: HTMLInputElement) => input.validity.valueMissing)).toBe(true)
     expect(requestCount).toBe(0)
@@ -62,11 +62,11 @@ test.describe('durable support intake browser behavior', () => {
 
     await openSupportForm(page)
     await fillSupportForm(page)
-    await page.getByRole('button', { name: 'Submit' }).click()
+    await page.getByRole('button', { name: 'Send question' }).click()
 
-    await expect(page.getByRole('button', { name: 'Sending...' })).toBeDisabled()
-    await expect(page.getByRole('status')).toContainText('Saving your request...')
-    await page.getByRole('button', { name: 'Sending...' }).click({ force: true })
+    await expect(page.getByRole('button', { name: 'Sending question…' })).toBeDisabled()
+    await expect(page.getByRole('status')).toContainText('Saving your request…')
+    await page.getByRole('button', { name: 'Sending question…' }).click({ force: true })
     expect(requestCount).toBe(1)
 
     releaseResponse?.()
@@ -105,7 +105,7 @@ test.describe('durable support intake browser behavior', () => {
 
     await openSupportForm(page)
     await fillSupportForm(page)
-    await page.getByRole('button', { name: 'Submit' }).click()
+    await page.getByRole('button', { name: 'Send question' }).click()
     await expect(page.getByRole('status')).toContainText('Thanks. Your request has been saved for review.')
     await expect(page.getByRole('status')).not.toContainText(/reference|email delivered/i)
   })
@@ -125,7 +125,7 @@ test.describe('durable support intake browser behavior', () => {
 
     await openSupportForm(page)
     await fillSupportForm(page)
-    await page.getByRole('button', { name: 'Submit' }).click()
+    await page.getByRole('button', { name: 'Send question' }).click()
     await expect(page.getByRole('status')).toContainText(
       'We could not save your request. Please try again shortly.',
     )
@@ -152,7 +152,7 @@ test.describe('durable support intake browser behavior', () => {
     await expect(page.getByLabel('Question')).toBeFocused()
 
     await fillSupportForm(page)
-    await page.getByRole('button', { name: 'Submit' }).click()
+    await page.getByRole('button', { name: 'Send question' }).click()
     const status = page.getByRole('status')
     await expect(status).toHaveAttribute('aria-live', 'polite')
     await expect(status).toHaveAttribute('aria-atomic', 'true')
