@@ -169,12 +169,12 @@ Fail criteria:
 5. Record evidence in the approved templates.
 6. Update the go/no-go checklist only after manual evidence exists.
 
-## Current repository status
+## Current repository status (updated 2026-07-21)
 
-- Provider simulation is available locally and must remain mocked-only.
-- Local simulated staging smoke is available and must remain repository-only evidence.
-- Provider verification is documented but unexecuted.
-- Email verification is documented but unexecuted.
-- Stripe verification is documented but unexecuted.
-- Payload/admin verification is documented but unexecuted.
-- Support-intake live verification remains blocked until the support migration is applied.
+- Provider simulation: PASS 10/10 (2026-07-21, HEAD `32874a2`)
+- Local simulated staging smoke: PASS 5/5 (2026-07-21)
+- Stripe verification: **PASS** — Product `JPV Bootcamp Membership` active; GBP 80/month (price_1TuZE1...) active; GBP 800/year (price_1TuZEP...) active; billing portal config active; staging webhook enabled at `preview.jpvbootcamp.com/api/webhook/stripe`; TEST mode confirmed; 2026-07-21
+- Email/Resend verification: **PASS** — `jpvbootcamp.com` domain verified, eu-west-1, API key valid; 2026-07-21
+- Bunny CDN verification: **PASS** — all 5 required env vars present (`BUNNY_STREAM_LIBRARY_ID`, `BUNNY_STREAM_API_KEY`, `BUNNY_STREAM_WEBHOOK_SECRET`, `BUNNY_STREAM_CDN_HOSTNAME`, `BUNNY_STREAM_SIGNING_KEY`); library API 200; CDN hostname `vz-d0404b6f-bd9.b-cdn.net`; env=staging; 2026-07-21
+- Payload/admin staging verification: PENDING — requires named operator login with controlled test account
+- Support-intake live verification: BLOCKED — REM-09 support migration unapplied (expected; not a regression)

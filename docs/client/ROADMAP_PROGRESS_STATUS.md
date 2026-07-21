@@ -1,6 +1,6 @@
 # JPV Bootcamp - Roadmap Progress Status
 
-Current status for `feature/course-branding-and-preview`, using the 10 July 2026 audit at `236227c fix: require portal auth for member content` as the historical baseline, `af6de62 docs: record core go-live readiness` as the previous readiness baseline, `d55229f test: enforce programme content readiness` as the current validated implementation baseline, and `8927df9 docs: checkpoint membership implementation readiness` as the prior checkpoint baseline. **Current branch HEAD: `804c444 fix(REM-03–07): restore truthful green baseline with write-free modes and comprehensive tests`** (2026-07-21 — REM-03–07 next-domain migration tools built, tested, and write-free modes verified).
+Current status for `feature/course-branding-and-preview`, using the 10 July 2026 audit at `236227c fix: require portal auth for member content` as the historical baseline, `af6de62 docs: record core go-live readiness` as the previous readiness baseline, `d55229f test: enforce programme content readiness` as the current validated implementation baseline, and `8927df9 docs: checkpoint membership implementation readiness` as the prior checkpoint baseline. **Current branch HEAD: `32874a2 feat(REM-01): implement invitation/reset command with 17/17 tests; release gate 145/145`** (2026-07-21 — REM-01 invitation/reset command built and tested; REM-10 providers verified; REM-11 HTTP staging smoke 15/15 PASS).
 
 Current client truth: `docs/client/JPV_Bootcamp_Platform_Expansion_Go_Live_Plan_v3_7.docx`. Version 3.4 is the prior progress baseline. Canonical execution plan: `docs/PAYLOAD_INTEGRATION_PLAN.md`. Detailed audit evidence: `docs/V3_5_CODEBASE_ALIGNMENT_ASSESSMENT.md`.
 
@@ -24,8 +24,8 @@ Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`.
 | --- | --- |
 | Branch | `feature/course-branding-and-preview` |
 | Staging target | This feature branch is the staging / production-staged deployment branch |
-| **Current CODE HEAD** | `76237ea fix: upgrade js-yaml to 4.3.0 via pnpm override` (2026-07-21 — local PR-readiness complete) |
-| **Current DEPLOYMENT HEAD** | `5d01aae docs: final comprehensive report...` (frozen — no new deploys authorized) |
+| **Current CODE HEAD** | `32874a2 feat(REM-01): implement invitation/reset command with 17/17 tests; release gate 145/145` (2026-07-21) |
+| **Current DEPLOYMENT HEAD** | `d235c5a scripts: harden remediation utility — fatal 401 checks, JWT proof, SHA-256 fingerprints` (staging imageTag confirmed 2026-07-21) |
 | **Security Status** | Staging credential exposure is accepted as non-blocking by the project owner (2026-07-21): staging contains no production data. Historical credential evidence remains in dated reports only. |
 | Release State | **FORMAL NO-GO** — credential exposure is not a blocker; remaining gates are feature completion, approved pending migrations, provider verification, staging acceptance, and go-live approval |
 | Historical audit baseline | `236227c fix: require portal auth for member content` |
@@ -60,8 +60,8 @@ Methodology:
 | Core staging/code | ~97% | ~86% | Auth, billing, entitlements, support workflows, and local validation are mature | Public operator route, live approval gates, and external verification remain open |
 | Build foundation | ~89-95% | ~88% | Most domains have typed services, focused tests, and operational models | Approval-gated runtime work and remaining hardening remain |
 | Testing/release | ~94-99% | ~82% | Local release/browser/build/Prisma/audit gates pass and evidence is current | Staging/provider/go-no-go evidence still pending |
-| Migration | ~70% | ~70% | Sources, inventory, approvals packet, runbook, safety tests, migration plan, schema parameterisation, rehearsal guard, full disposable local rehearsal, completed 21-row staging legacy apply, and all five next-domain tools (REM-03–07) built and tested with write-free mode guarantees verified | Apply authorization for REM-03–07 still pending; any staging write requires scoped approval |
-| Live cutover | ~20% | ~22% | Handoff/evidence templates plus staging migration evidence exist | Full smoke, provider/email acceptance, content acceptance, remaining approved migrations, and go-live approval remain open |
+| Migration | ~70% | ~72% | Sources, inventory, approvals packet, runbook, safety tests, migration plan, schema parameterisation, rehearsal guard, full disposable local rehearsal, completed 21-row staging legacy apply, all five next-domain tools (REM-03–07) built and tested, REM-01 invitation/reset command built (17/17 tests) with 21-member cohort confirmed via staging DB dry-run | Apply authorization for REM-01 and REM-03–07 still pending; any staging write requires scoped approval |
+| Live cutover | ~20% | ~40% | Stripe TEST ✓, Resend ✓, Bunny CDN ✓ (all verified 2026-07-21); HTTP staging smoke 15/15 PASS; REM-01 cohort 21 members confirmed | Browser session smoke (login/portal/billing), Payload/admin verification, content acceptance, remaining approved migrations, and go-live formal approval remain open |
 
 ## Deliverable truth
 
@@ -132,12 +132,37 @@ These assets make the repository ready for controlled staging operations without
 | 23 July 2026 | Handover buffer and non-migration corrections |
 | 24 July 2026 | Client finished-by date; full cutover only if every independent gate passes |
 
+## Staging evidence (2026-07-21)
+
+- **REM-01 cohort dry-run:** 21 migration-sourced members confirmed in `jpvbootcamp_staging.payload_members` via Dokploy DB connection; 0 already invited; run ID `invitation_run_v1_ffd0fef3e66e8a15`.
+- **REM-10 Stripe verification (TEST mode):** Product `JPV Bootcamp Membership` active; GBP 80/month price active; GBP 800/year price active; billing portal config active; staging webhook enabled at `preview.jpvbootcamp.com`; production webhook at `jpvbootcamp.com` disabled (correct for staging).
+- **REM-10 Resend verification:** `jpvbootcamp.com` domain verified (eu-west-1); API key valid.
+- **REM-10 Bunny CDN verification:** All 5 required env vars present; library API 200; CDN hostname `vz-d0404b6f-bd9.b-cdn.net`; env=staging.
+- **REM-11 HTTP staging smoke (15/15 PASS, imageTag `d235c5a`):**
+  - Landing page `/`: 200
+  - Upgrade page `/upgrade`: 200
+  - Pro monthly checkout → 303 to `checkout.stripe.com` (TEST `cs_test_*`)
+  - Pro annual checkout → 303 to `checkout.stripe.com` (TEST `cs_test_*`)
+  - Invalid plan `free` → 400 with safe error message
+  - Missing `recurring_payment_accepted` → 400 with safe error message
+  - Portal unauthenticated → 307 to `/portal?mode=login&next=%2Fportal`
+  - Portal login page: 200
+  - Admin login page: 200
+  - Stripe webhook unsigned: 400
+  - Billing portal unauthenticated: 302 redirect
+  - Forgot password API: 200
+  - Support intake unauthenticated: 403 (expected — auth-required, REM-09 deferred)
+  - Sponsored seats unauthenticated: 403 (expected — auth-required)
+  - Health check: `{"ok":true,"status":"live","timestamp":"...","imageTag":"d235c5a"}`
+- **REM-11 browser session smoke:** PENDING — operator with approved test accounts required.
+- **REM-12 formal go/no-go:** `NO-GO` — all external approval fields unfilled; formal review not yet held.
+
 ## Test and security evidence
 
 - `git diff --check` passed.
-- `pnpm test:release` passed `145/145`.
-- `pnpm test:migration:legacy` passed `32/32` (2026-07-21 at HEAD `76237ea`; includes 4 rehearsal guard tests).
-- `pnpm test:e2e` passed `58/58` across desktop and mobile Chromium projects (2026-07-21 at HEAD `76237ea` — REM-02 complete).
+- `pnpm test:release` passed `145/145` (2026-07-21 at HEAD `32874a2`).
+- `pnpm test:migration:legacy` passed `32/32` (includes 4 rehearsal guard tests).
+- `pnpm test:e2e` passed `58/58` across desktop and mobile Chromium projects (2026-07-21 — REM-02 complete).
 - Disposable local rehearsal on `jpvbootcamp_rehearsal` (2026-07-20): apply/idempotency/rollback/reapply all PASS; preexisting rows unchanged.
 - `pnpm staging:decision-readiness` passed with `DECISION-READY, EXTERNAL APPROVALS PENDING`.
 - Programme contract, path-safety, import-plan, readiness, acceptance-report, and preview-only browser checks passed.
