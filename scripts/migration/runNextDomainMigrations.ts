@@ -161,18 +161,34 @@ const configOverrides: Partial<DomainMigrationConfig> = {}
 const validFlags = new Set(['--run-id', '--schema', '--rollback-run-id'])
 
 for (let i = 0; i < args.length; i++) {
-  if (args[i] === '--run-id' && i + 1 < args.length) {
+  if (args[i] === '--run-id') {
+    if (i + 1 >= args.length || args[i + 1].startsWith('--')) {
+      console.error(`Flag --run-id requires a value`)
+      process.exit(1)
+    }
     configOverrides.runId = args[i + 1]
     i++
-  } else if (args[i] === '--schema' && i + 1 < args.length) {
+  } else if (args[i] === '--schema') {
+    if (i + 1 >= args.length || args[i + 1].startsWith('--')) {
+      console.error(`Flag --schema requires a value`)
+      process.exit(1)
+    }
     configOverrides.schemaName = args[i + 1]
     i++
-  } else if (args[i] === '--rollback-run-id' && i + 1 < args.length) {
+  } else if (args[i] === '--rollback-run-id') {
+    if (i + 1 >= args.length || args[i + 1].startsWith('--')) {
+      console.error(`Flag --rollback-run-id requires a value`)
+      process.exit(1)
+    }
     configOverrides.rollbackRunId = args[i + 1]
     i++
   } else if (args[i].startsWith('--')) {
     console.error(`Unknown flag: ${args[i]}`)
     console.error(`Valid flags: ${Array.from(validFlags).join(', ')}`)
+    process.exit(1)
+  } else {
+    console.error(`Unexpected positional argument: ${args[i]}`)
+    console.error(`Usage: migration:next-domains <mode> [--run-id <id>] [--schema <name>] [--rollback-run-id <id>]`)
     process.exit(1)
   }
 }
@@ -185,8 +201,8 @@ if (!['extract', 'validate', 'dry-run', 'apply', 'rollback'].includes(mode)) {
 }
 
 // Validate required flags for modes
-if ((mode === 'apply' || mode === 'rollback') && !configOverrides.runId && mode === 'apply') {
-  console.error(`Mode '${mode}' requires --run-id flag`)
+if (mode === 'apply' && !configOverrides.runId) {
+  console.error(`Mode 'apply' requires --run-id flag`)
   process.exit(1)
 }
 if (mode === 'rollback' && !configOverrides.rollbackRunId) {

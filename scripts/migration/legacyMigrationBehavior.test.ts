@@ -50,6 +50,9 @@ function makeMockClient(sqlLog: SQLLog = []): Client {
       if (sql.includes('EXISTS')) {
         return Promise.resolve({ rows: [{ exists: false }] })
       }
+      if (sql.trim().toUpperCase().startsWith('INSERT')) {
+        return Promise.resolve({ rows: [{ was_inserted: true }] })
+      }
       if (sql.includes('SELECT')) {
         return Promise.resolve({ rows: [] })
       }
@@ -98,10 +101,11 @@ describe('Behavioral: Extract Mode is Read-Only', () => {
     const mockClient = makeMockClient(sqlLog)
     const adapter = new SponsoredGrantsAdapter()
 
-    try {
-      await adapter.extractSourceRows(mockClient, 'public')
-    } catch (e) {
-      // Mock may throw, but we captured queries
+    await adapter.extractSourceRows(mockClient, 'public')
+
+    // Verify at least one query was issued (extract must attempt a SELECT)
+    if (sqlLog.length === 0) {
+      throw new Error('extract mode issued no queries at all — expected at least one SELECT')
     }
 
     // Verify no writes
@@ -120,10 +124,11 @@ describe('Behavioral: Validate Mode is Read-Only', () => {
     const mockClient = makeMockClient(sqlLog)
     const adapter = new SponsoredGrantsAdapter()
 
-    try {
-      await adapter.validate(mockClient, 'public')
-    } catch (e) {
-      // Mock may throw, but we captured queries
+    await adapter.validate(mockClient, 'public')
+
+    // Verify at least one query was issued (validate must attempt at least one EXISTS check)
+    if (sqlLog.length === 0) {
+      throw new Error('validate mode issued no queries at all — expected at least one SELECT/EXISTS check')
     }
 
     // Verify no writes or table creation
@@ -149,14 +154,17 @@ describe('Behavioral: Dry-Run Mode is Read-Only', () => {
     const mockClient = makeMockClient(sqlLog)
     const adapter = new SponsoredGrantsAdapter()
 
-    try {
-      // Simulate dry-run by calling detectConflict and transformRecord (extract equivalent)
-      await adapter.extractSourceRows(mockClient, 'public')
-      const rows = sqlLog
-      sqlLog.length = 0 // Reset for next phase
-    } catch (e) {
-      // Mock may throw
+    // Simulate dry-run execution path: extract + transform + conflict detect, no apply
+    const sourceRows = await adapter.extractSourceRows(mockClient, 'public')
+
+    // For each returned row, run transform + detectConflict (no applyRecord call)
+    for (const row of sourceRows) {
+      const transformed = adapter.transformRecord(row as any)
+      for (const t of transformed) {
+        await adapter.detectConflict(mockClient, 'public', t)
+      }
     }
+    // applyRecord is deliberately NOT called — that's the dry-run contract
 
     // Verify no CREATE TABLE, no INSERT, no UPDATE, no DELETE
     const writes = sqlLog.filter((s) => s.isWrite)
@@ -185,33 +193,21 @@ describe('Behavioral: Preservation Adapter Apply is Read-Only', () => {
     const mockClient = makeMockClient(sqlLog)
     const adapter = new EmailSubscribersAdapter()
 
-    // Extract
-    try {
-      await adapter.extractSourceRows(mockClient, 'public')
-    } catch (e) {
-      // Mock may throw
-    }
-    sqlLog.length = 0 // Reset
+    // Apply (should be no-op / preserved)
+    const outcome = await adapter.applyRecord(
+      mockClient,
+      'public',
+      'test_run_id',
+      {
+        idempotencyKey: 'test_key',
+        destinationTable: 'email_subscribers',
+        destinationRow: { email: 'test@example.com' },
+      },
+    )
 
-    // Apply (should be no-op)
-    try {
-      const outcome = await adapter.applyRecord(
-        mockClient,
-        'public',
-        'test_run_id',
-        {
-          idempotencyKey: 'test_key',
-          destinationTable: 'email_subscribers',
-          destinationRow: { email: 'test@example.com' },
-        },
-      )
-
-      // Verify outcome is 'preserved'
-      if (outcome !== 'preserved') {
-        throw new Error(`Expected outcome 'preserved' but got '${outcome}'`)
-      }
-    } catch (e) {
-      // Mock may throw
+    // Verify outcome is 'preserved' — must not be silently swallowed
+    if (outcome !== 'preserved') {
+      throw new Error(`Expected outcome 'preserved' but got '${outcome}'`)
     }
 
     // Verify no writes during apply
@@ -260,28 +256,34 @@ describe('Behavioral: REM-03 Apply Audit Writes Only', () => {
     const mockClient = makeMockClient(sqlLog)
     const adapter = new SponsoredGrantsAdapter()
 
-    // Verify reconcile (allowed write for REM-03 only)
-    try {
-      const metrics = await adapter.reconcile(mockClient, 'public', 'test_run_id')
+    // Call applyRecord directly — this is the REM-03 apply path
+    const outcome = await adapter.applyRecord(mockClient, 'public', 'test_run_id', {
+      idempotencyKey: 'sponsored_grant_v1_test',
+      destinationTable: 'payload_access_grants',
+      destinationRow: {
+        email: 'hash_abc',
+        resourceType: 'course',
+        resourceId: 'all',
+        status: 'active',
+        source: 'sponsored_grant',
+        sourceId: 'sponsored_grant_v1_test',
+        notes: 'test',
+        tier: 'standard',
+        donatedBy: null,
+      },
+    })
 
-      // Verify metrics structure includes preserved
-      if (!('payload_access_grants' in metrics)) {
-        throw new Error('Expected payload_access_grants in metrics')
-      }
-
-      const m = metrics.payload_access_grants
-      if (m.preserved === undefined) {
-        throw new Error('Expected preserved field in metrics')
-      }
-    } catch (e) {
-      // Mock may throw
+    // REM-03 apply must produce a real write outcome — never 'preserved' or 'not_applicable'
+    if (outcome === 'preserved' || outcome === 'not_applicable') {
+      throw new Error(`Expected REM-03 apply to produce 'inserted' or 'updated', got '${outcome}'`)
     }
 
-    // For REM-03, reconcile may issue a SELECT COUNT
-    const queries = sqlLog
-    const selects = queries.filter((q) => q.type === 'SELECT')
-    if (selects.length === 0 && queries.length === 0) {
-      // OK—mock doesn't require any queries
+    // Verify at least one INSERT was issued (destination write happened)
+    const inserts = sqlLog.filter((s) => s.type === 'INSERT')
+    if (inserts.length === 0) {
+      throw new Error(
+        `REM-03 apply issued no INSERT statements — expected at least one destination write\nFull log:\n${sqlLog.map((s) => `  ${s.type}: ${s.sql}`).join('\n')}`,
+      )
     }
   })
 })

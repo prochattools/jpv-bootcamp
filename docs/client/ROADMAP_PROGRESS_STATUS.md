@@ -1,6 +1,6 @@
 # JPV Bootcamp - Roadmap Progress Status
 
-Current status for `feature/course-branding-and-preview`, using the 10 July 2026 audit at `236227c fix: require portal auth for member content` as the historical baseline, `af6de62 docs: record core go-live readiness` as the previous readiness baseline, `d55229f test: enforce programme content readiness` as the current validated implementation baseline, and `8927df9 docs: checkpoint membership implementation readiness` as the prior checkpoint baseline. **Current branch HEAD: `76237ea fix: upgrade js-yaml to 4.3.0 via pnpm override (GHSA-52cp-r559-cp3m)`** (2026-07-21 — local PR-readiness gate complete).
+Current status for `feature/course-branding-and-preview`, using the 10 July 2026 audit at `236227c fix: require portal auth for member content` as the historical baseline, `af6de62 docs: record core go-live readiness` as the previous readiness baseline, `d55229f test: enforce programme content readiness` as the current validated implementation baseline, and `8927df9 docs: checkpoint membership implementation readiness` as the prior checkpoint baseline. **Current branch HEAD: `804c444 fix(REM-03–07): restore truthful green baseline with write-free modes and comprehensive tests`** (2026-07-21 — REM-03–07 next-domain migration tools built, tested, and write-free modes verified).
 
 Current client truth: `docs/client/JPV_Bootcamp_Platform_Expansion_Go_Live_Plan_v3_7.docx`. Version 3.4 is the prior progress baseline. Canonical execution plan: `docs/PAYLOAD_INTEGRATION_PLAN.md`. Detailed audit evidence: `docs/V3_5_CODEBASE_ALIGNMENT_ASSESSMENT.md`.
 
@@ -60,7 +60,7 @@ Methodology:
 | Core staging/code | ~97% | ~86% | Auth, billing, entitlements, support workflows, and local validation are mature | Public operator route, live approval gates, and external verification remain open |
 | Build foundation | ~89-95% | ~88% | Most domains have typed services, focused tests, and operational models | Approval-gated runtime work and remaining hardening remain |
 | Testing/release | ~94-99% | ~82% | Local release/browser/build/Prisma/audit gates pass and evidence is current | Staging/provider/go-no-go evidence still pending |
-| Migration | ~55% | ~65% | Sources, inventory, approvals packet, runbook, safety tests, migration plan, schema parameterisation, rehearsal guard, full disposable local rehearsal, and completed 21-row staging legacy apply | Five next-domain tools are not yet built; any further staging write requires scoped approval |
+| Migration | ~70% | ~70% | Sources, inventory, approvals packet, runbook, safety tests, migration plan, schema parameterisation, rehearsal guard, full disposable local rehearsal, completed 21-row staging legacy apply, and all five next-domain tools (REM-03–07) built and tested with write-free mode guarantees verified | Apply authorization for REM-03–07 still pending; any staging write requires scoped approval |
 | Live cutover | ~20% | ~22% | Handoff/evidence templates plus staging migration evidence exist | Full smoke, provider/email acceptance, content acceptance, remaining approved migrations, and go-live approval remain open |
 
 ## Deliverable truth
@@ -135,7 +135,7 @@ These assets make the repository ready for controlled staging operations without
 ## Test and security evidence
 
 - `git diff --check` passed.
-- `pnpm test:release` passed `143/143`.
+- `pnpm test:release` passed `144/144`.
 - `pnpm test:migration:legacy` passed `32/32` (2026-07-21 at HEAD `76237ea`; includes 4 rehearsal guard tests).
 - `pnpm test:e2e` passed `58/58` across desktop and mobile Chromium projects (2026-07-21 at HEAD `76237ea` — REM-02 complete).
 - Disposable local rehearsal on `jpvbootcamp_rehearsal` (2026-07-20): apply/idempotency/rollback/reapply all PASS; preexisting rows unchanged.
