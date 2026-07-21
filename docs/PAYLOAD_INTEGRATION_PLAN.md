@@ -447,7 +447,7 @@ Validation:
 
 ### Phase 10 — Shadow validation and cutover
 
-**Status:** Read-only Payload snapshot reconciliation, the offline rehearsal matrix, and safe evidence validation/export are implemented; live migration, deployment, provider, reconciliation, preview acceptance, rollback rehearsal, and cutover approvals remain pending. Phase 10 is still incomplete until live staging evidence exists.
+**Status:** Read-only Payload snapshot reconciliation, the offline rehearsal matrix, and safe evidence validation/export are implemented. Legacy member/billing/access migration tooling (`scripts/migration/legacyMigration.ts`) is complete with full schema parameterisation and a rehearsal guard; a disposable local rehearsal on `jpvbootcamp_rehearsal` (2026-07-20, `b526b19`) passed all steps: apply, idempotency, rollback, and reapply with preexisting rows unchanged. Auth/identity onboarding strategy for the 21-member migrated cohort is defined. Five next-domain sources are inventoried (sponsored grants, email subscribers, support requests, partner attribution, course progress) with source tables, conflict policy, PII treatment, and acceptance criteria documented; row counts and tooling implementation remain pending a live DB query and scope decision. Live staging migration apply, deployment, provider, reconciliation, preview acceptance, and cutover approvals remain pending. Phase 10 is still incomplete until live staging evidence exists.
 
 Before replacing any existing production flow:
 
@@ -544,9 +544,9 @@ A phase is complete only when:
 
 ## Immediate milestone
 
-The M0/M1 hardening, canonical portal alignment, release/browser matrix, and programme-content acceptance packet are complete at repository level. The current repository documentation sync adds the schema-migration plan and generated-type isolation strategy. The next milestone is to keep the client content, roadmap, and implementation plan aligned with current evidence, then complete the independent staging, provider/email, migration, rehearsal, rollback, and go/no-go gates. The front-end website milestone is 22 July 2026, the handover buffer is 23 July 2026, and the client-requested finished-by date is 24 July 2026. Those dates do not authorize migration execution. Full platform cutover remains conditional on migration approval, rehearsal, rollback evidence, provider/email verification, staging smoke, and explicit go-live approval.
+The M0/M1 hardening, canonical portal alignment, release/browser matrix, programme-content acceptance packet, schema-migration plan, generated-type isolation strategy, legacy migration reconciliation, and disposable local rehearsal are complete at repository level. All repository implementation for the launch scope is complete. The roadmap is now reconciled in `docs/CURRENT_WORK_HANDOFF.md` with a task-by-task implementation plan for every remaining gate. The front-end website milestone is 22 July 2026, the handover buffer is 23 July 2026, and the client-requested finished-by date is 24 July 2026.
 
-The next controlled task is the approved administrator persistence/schema migration packet and generated-type regeneration isolation sequence, after explicit authorization. No live operation or migration is authorized by this plan.
+The next controlled tasks are (in order): (1) re-run `pnpm test:e2e` at current HEAD to re-confirm 58/58 before PR; (2) operator authorizes and applies staging migrations with backup and rollback confirmation; (3) operator executes migrated-user invitation/reset for the 21-member cohort; (4) live provider verification; (5) staging smoke acceptance; (6) scope-decision queries for the five next-domain migration sources; (7) formal go/no-go. Full platform cutover remains conditional on all those gates. No live operation or migration is authorized by this plan.
 
 ## Definition of done
 

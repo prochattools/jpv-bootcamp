@@ -7,33 +7,54 @@ jpv-bootcamp (feature/course-branding-and-preview)
 Claude Code
 
 ## Goal
-See transcript for context
+Finalize canonical roadmap and implementation plan from available repository evidence.
 
 ## Status
-auto-saved at 2026-07-20 19:02 — run /handoff resume to reconstruct full context
+Roadmap reconciliation complete — 2026-07-21
 
-## Files touched
-- docs/CURRENT_WORK_HANDOFF.md
-- .ai/current.md
+## HEAD
+b526b19 migration: rehearsal guard, schema parameterisation, and full rehearsal proof
+
+## Files touched (this session)
+- docs/CURRENT_WORK_HANDOFF.md — HEAD updated; "In progress" items moved to "Complete"; implementation plan and closeout sequence added
+- docs/client/ROADMAP_PROGRESS_STATUS.md — HEAD updated; migration readiness %, test evidence, rehearsal result updated
+- docs/PAYLOAD_INTEGRATION_PLAN.md — Phase 10 status updated with rehearsal proof; Immediate milestone rewritten to current state
+- .ai/current.md — this file
+
+## Validation
+- git diff --check: CLEAN
+- pnpm test:migration:legacy: 32/32 PASS
+- No code changed — documentation only
 
 ## Recent commands
-- `grep -E "sk_live_|sk_test_|pk_live_|pk_test_|whsec_|BEGIN PRIVATE KEY|BEGIN RSA|password=|api_key=" scripts/migration/le`
-- `git status --short`
-- `git add .ai/current.md docs/CURRENT_WORK_HANDOFF.md && git status --short`
-- `git commit -m "$(cat <<'EOF' docs: live reconciliation analysis, auth strategy, and next-domain inventory  Complete reco`
-- `git log --oneline -5`
-
-## Last response summary
-HEAD is `974f449`. Here is the final session report: --- ## Final Report **Workbench:** sourceId `prochattools-jpv-bootcamp` | run `agent-22bad6ea-f6b6-4d5f-98ca-4c8d3d54ba4d`   **Final HEAD:** `974f449`   **Branch:** `feature/course-branding-and-preview` | **Formal state:** NO-GO --- ### Validation - Migration tests: **28/28 PASS** - Release tests: **140/140 PASS** (reconfirmed) - TypeScript
+- pnpm test:migration:legacy
 
 ## Decisions made
-None recorded automatically — run /handoff pause to capture decisions explicitly
+- Roadmap fully reconciled: all repository implementation complete; remaining work is operator-execution or external-approval gates
+- Five next-domain migration tools are NOT in-scope until row counts confirmed via live DB query and scope decision recorded
+- Formal state remains NO-GO
 
 ## Next steps
-Run /handoff resume to reconstruct context from this auto-save
+1. Re-run `pnpm test:e2e` at HEAD b526b19 (or direct descendant) — last recorded run was pre-b526b19
+2. Operator authorizes and applies staging migrations (REM-08, REM-09)
+3. Operator executes migrated-user invitation/reset (REM-01)
+4. Live provider verification (REM-10)
+5. Staging smoke acceptance (REM-11)
+6. Scope-decision live DB queries for 5 next-domain sources
+7. Formal go/no-go (REM-12)
 
 ## Blockers
-Unknown — auto-save only
+All remaining work is gated by external approvals or requires live operator execution.
+See docs/CURRENT_WORK_HANDOFF.md for full task packet table.
+
+## Protected paths (DO NOT MODIFY)
+- src/payload-types.ts
+- docs/client/JPV_Bootcamp_Platform_Expansion_Go_Live_Plan_v3_7.docx
+- docs/client/fixtures/
+- playwright-report-staging/ (dirty deletions — preexisting, preserve as-is)
 
 ## Resume prompt
-Resume from last session in jpv-bootcamp (feature/course-branding-and-preview). Review .ai/current.md and recent git log for full context.
+Resume in jpv-bootcamp (feature/course-branding-and-preview) at HEAD b526b19.
+Read docs/CURRENT_WORK_HANDOFF.md for full context.
+All repository implementation is complete. Remaining work is operator-gated.
+Formal state: NO-GO.

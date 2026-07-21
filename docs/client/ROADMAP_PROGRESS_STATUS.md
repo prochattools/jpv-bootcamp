@@ -1,6 +1,6 @@
 # JPV Bootcamp - Roadmap Progress Status
 
-Current status for `feature/course-branding-and-preview`, using the 10 July 2026 audit at `236227c fix: require portal auth for member content` as the historical baseline, `af6de62 docs: record core go-live readiness` as the previous readiness baseline, `d55229f test: enforce programme content readiness` as the current validated implementation baseline, and `8927df9 docs: checkpoint membership implementation readiness` as the prior checkpoint baseline. **Current branch HEAD: `1990ffd docs: final security & acceptance packet — validation complete, credential disable pending`** (2026-07-20 post-security-cleanup and credential remediation verification).
+Current status for `feature/course-branding-and-preview`, using the 10 July 2026 audit at `236227c fix: require portal auth for member content` as the historical baseline, `af6de62 docs: record core go-live readiness` as the previous readiness baseline, `d55229f test: enforce programme content readiness` as the current validated implementation baseline, and `8927df9 docs: checkpoint membership implementation readiness` as the prior checkpoint baseline. **Current branch HEAD: `b526b19 migration: rehearsal guard, schema parameterisation, and full rehearsal proof`** (2026-07-20 — legacy migration rehearsal complete).
 
 Current client truth: `docs/client/JPV_Bootcamp_Platform_Expansion_Go_Live_Plan_v3_7.docx`. Version 3.4 is the prior progress baseline. Canonical execution plan: `docs/PAYLOAD_INTEGRATION_PLAN.md`. Detailed audit evidence: `docs/V3_5_CODEBASE_ALIGNMENT_ASSESSMENT.md`.
 
@@ -24,7 +24,7 @@ Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`.
 | --- | --- |
 | Branch | `feature/course-branding-and-preview` |
 | Staging target | This feature branch is the staging / production-staged deployment branch |
-| **Current CODE HEAD** | `1990ffd docs: final security & acceptance packet — validation complete, credential disable pending` (2026-07-20) |
+| **Current CODE HEAD** | `b526b19 migration: rehearsal guard, schema parameterisation, and full rehearsal proof` (2026-07-20) |
 | **Current DEPLOYMENT HEAD** | `5d01aae docs: final comprehensive report...` (frozen — no new deploys authorized) |
 | **Security Status** | Exposed credential CONFIRMED VALID (HTTP 200 login); account disable/revocation PENDING operator immediate action (no Workbench admin/DB access available) |
 | Release State | **FORMAL NO-GO** — Exposed staging credential remains active; operator must disable via admin UI, database, or email reset before remediation complete |
@@ -60,7 +60,7 @@ Methodology:
 | Core staging/code | ~97% | ~86% | Auth, billing, entitlements, support workflows, and local validation are mature | Public operator route, live approval gates, and external verification remain open |
 | Build foundation | ~89-95% | ~88% | Most domains have typed services, focused tests, and operational models | Approval-gated runtime work and remaining hardening remain |
 | Testing/release | ~94-99% | ~82% | Local release/browser/build/Prisma/audit gates pass and evidence is current | Staging/provider/go-no-go evidence still pending |
-| Migration | ~55% | ~60% | Sources, inventory, approvals packet, runbook, safety tests, and migration plan exist | No approval, rehearsal, rollback evidence, or application |
+| Migration | ~55% | ~65% | Sources, inventory, approvals packet, runbook, safety tests, migration plan, schema parameterisation, rehearsal guard, and full disposable local rehearsal (PASS — apply/idempotency/rollback/reapply) | No operator approval, no staging migration apply, and five next-domain tools not yet built |
 | Live cutover | ~20% | ~22% | Handoff/evidence templates plus approval-runway docs exist | No migrations, full smoke, provider/email acceptance, content acceptance, or go-live approval |
 
 ## Deliverable truth
@@ -136,7 +136,9 @@ These assets make the repository ready for controlled staging operations without
 
 - `git diff --check` passed.
 - `pnpm test:release` passed `140/140`.
-- `pnpm test:e2e` passed `58/58` across desktop and mobile Chromium projects.
+- `pnpm test:migration:legacy` passed `32/32` (post-b526b19; includes 4 new rehearsal guard tests).
+- `pnpm test:e2e` passed `58/58` across desktop and mobile Chromium projects (last run pre-b526b19; re-run required before PR).
+- Disposable local rehearsal on `jpvbootcamp_rehearsal` (2026-07-20): apply/idempotency/rollback/reapply all PASS; preexisting rows unchanged.
 - `pnpm staging:decision-readiness` passed with `DECISION-READY, EXTERNAL APPROVALS PENDING`.
 - Programme contract, path-safety, import-plan, readiness, acceptance-report, and preview-only browser checks passed.
 - `pnpm test:release:full` passed.

@@ -9,7 +9,7 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 - Wave 3 checkpoint HEAD: `57711f9 feat: complete wave 3 course platform`
 - Packet 9 checkpoint HEAD: `8927df9 docs: checkpoint membership implementation readiness`
 - Registry reconciliation HEAD: `9780f31 fix(registry): update migration inventory for staging deployment`
-- **Current HEAD**: `974f449 docs: live reconciliation analysis, auth strategy, and next-domain inventory` (pre-rehearsal); updated by rehearsal commit
+- **Current HEAD**: `b526b19 migration: rehearsal guard, schema parameterisation, and full rehearsal proof` (2026-07-20)
 - Pull request: `https://github.com/prochattools/jpv-bootcamp/pull/2`
 - Staging URL: `https://preview.jpvbootcamp.com` (deployed, application `I_2Vukga3cc3ZhaG-mUzU`)
 - Staging DB: `jpvbootcamp_staging` on `100.71.31.88`; all 16 schema migrations applied
@@ -257,12 +257,16 @@ Before doing any work, verify the branch, HEAD, worktree, and migration state. A
 - Rollback-readiness, operator-handoff, release-evidence, and go/no-go documentation
 - Decision packets and deterministic decision-readiness validation
 
+### Complete (added at b526b19)
+
+- Legacy member/billing/access migration reconciliation: per-table inserted/updated/unchanged metrics, relationship checks, and run-scoped rollback hardening — staging apply two runs, zero errors, stable counts
+- Disposable local rehearsal on `jpvbootcamp_rehearsal` (127.0.0.1:5444): apply, idempotency, rollback, reapply — all PASS; preexisting rows unchanged throughout
+- Auth/identity onboarding strategy for migrated users: invitation/reset cohort defined, duplicate/conflict policy defined, entitlement evaluation path documented
+- Remaining source-domain inventory: five domains documented with source tables, key fields, conflict policy, PII treatment, idempotency keys, and acceptance criteria
+
 ### In progress
 
-- Legacy member/billing/access migration reconciliation: per-table inserted/updated/unchanged metrics, relationship checks, and run-scoped rollback hardening
-- Rehearsal on a disposable restored staging copy, including rollback/reapply timing and idempotency proof
-- Migrated-user invitation/reset onboarding and duplicate/conflict handling
-- Remaining source-domain inventory: sponsored support, subscribers, support requests, partner attribution, and any verified course/progress source
+- None — all repository implementation complete; all remaining work is gated by external approvals or requires live operator execution
 
 ### Deferred
 
@@ -300,6 +304,7 @@ Do not describe the application as deployed, staging-accepted, migrated, provide
 ### Current deterministic validation baseline
 
 - `pnpm test:release`: `140/140` (2026-07-20 execution)
+- `pnpm test:migration:legacy`: `32/32` (2026-07-20 execution, post-b526b19)
 - `pnpm test:e2e`: `58/58`
 - `pnpm test:release:full`: passed
 - `pnpm staging:static-preflight`: passed
@@ -351,6 +356,71 @@ The following still require explicit client, legal, database, provider, operator
 8. Formal go/no-go approval
 
 No live provider, database, migration, deployment, staging, or production operation is authorized.
+
+## Remaining implementation plan
+
+All repository implementation is complete. Every remaining task is either a live operator execution, an external approval gate, or a classification decision. Row counts for the five next-domain migration sources require a live staging DB query before tool implementation begins.
+
+### Task packet table
+
+| ID | Task | Launch-critical | Blocker / owner | Source files | Acceptance criteria | Needs |
+|---|---|---|---|---|---|---|
+| **REM-01** | Migrated-user invitation/reset execution | YES — cutover cannot proceed without onboarded users | Operator executes after staging migration applied; 21-member cohort confirmed in staging DB | `scripts/migration/legacyMigration.ts`, `src/lib/auth/` | All 21 migrated staging members have received password-reset invitation; at least one full login+portal acceptance recorded with approved test account | Operator, staging DB, email provider |
+| **REM-02** | Browser E2E re-run on current HEAD before PR | YES — last recorded run was at a pre-b526b19 state | No external block; requires developer workstation with staging connectivity if against staging, or local dev otherwise | `scripts/e2e/`, `playwright.config.ts` | `pnpm test:e2e` passes 58/58 at exact HEAD b526b19 or a direct descendant; report preserved under `playwright-report-staging/` | Developer workstation |
+| **REM-03** | Sponsored grants/seats migration tooling | CONDITIONAL — required only if approved grants exist in staging source | Row count unknown; operator queries `jpvbootcamp.sponsored_seats`, `sponsored_applications`, `sponsored_grants` before work begins | `scripts/migration/legacyMigration.ts` (extend), new `scripts/migration/legacyMigrationSponsored.ts` | All approved non-revoked grants produce `payload_access_grants` with `source=sponsored_grant`; duplicate run produces zero new rows; 32+ migration tests remain green | Live DB query to establish source count; operator scope decision |
+| **REM-04** | Email subscriber migration tooling | CONDITIONAL — communication-only; not a membership entitlement blocker | Row count unknown; operator queries `email_subscribers` before work begins | New `scripts/migration/legacyMigrationSubscribers.ts` | All subscribers upserted to destination without duplicates; unsubscribed/bounced status preserved; idempotent | Live DB query; operator scope decision |
+| **REM-05** | Support-request preservation/migration | CONDITIONAL — required if historical review queue must transfer | Row count unknown; operator queries `support_requests` before work begins | New `scripts/migration/legacyMigrationSupportRequests.ts` | All non-spam pending/reviewed requests present in `payload_support_requests` with dedupe key; no duplicates | Live DB query; operator scope decision |
+| **REM-06** | Partner-attribution preservation | DEFERRED — analytics/attribution only; not a membership entitlement blocker | Orphaned sessions (deleted accounts) require defined handling; `partner_sessions` expire | New `scripts/migration/legacyMigrationPartnerAttribution.ts` | Active sessions and clicks preserved for active members; orphaned sessions handled gracefully | Scope decision (launch vs. post-launch); live DB query |
+| **REM-07** | Course enrollment/progress reconciliation | CONDITIONAL — only if legacy records exist in staging pre-migration | `payload_course_enrollments`, `payload_lesson_progress` already exist as Payload collections; source count may be zero | Extend existing collections or new `scripts/migration/legacyMigrationCourseProgress.ts` | All migrated members with active access have enrollment records; progress records preserved without loss | Live DB query to confirm source count; may be zero |
+| **REM-08** | Staging migration apply (legacy domain 1) | YES — must precede REM-01; 21 source rows confirmed via two staging applies | Operator must authorize with backup, maintenance window, and rollback procedure per `docs/decisions/STAGING_MIGRATION_APPROVAL.md` | `scripts/migration/legacyMigration.ts`, `docs/release/SUPPORT_REQUESTS_MIGRATION_RUNBOOK.md` | `migration_apply_*` runs with processed=21, errors=0 on staging; audit events written; rollback tested | Database owner, backup, maintenance window, operator |
+| **REM-09** | Payload schema migrations apply (Membership Support) | YES — Membership Support schema required for operational collections | `src/migrations/20260718_103726_membership_support_schema.ts` exists and is validated; requires staging authorization | `src/migrations/index.ts`, staging DB | All 9 membership-support tables and constraints applied without error; collection access confirmed | Database owner, backup, staging authorization |
+| **REM-10** | Live provider verification (Stripe, email, Bunny) | YES — required for go/no-go | `docs/decisions/PROVIDER_VERIFICATION_APPROVAL.md`, `docs/release/PROVIDER_VERIFICATION_RUNBOOK.md` | Test harnesses in `scripts/stripe/`, `scripts/e2e/` | Real Stripe webhook delivery confirmed; email delivery and link completion on staging with approved test accounts; Bunny playback signing confirmed | Operator, approved test accounts, staging environment |
+| **REM-11** | Staging smoke acceptance (browser, admin, portal) | YES — required for go/no-go | `docs/release/GO_NO_GO_CHECKLIST.md`, `docs/decisions/STAGING_SMOKE_APPROVAL.md` | `scripts/e2e/`, staging URL `https://preview.jpvbootcamp.com` | Full login/portal/admin/billing smoke on staging with approved accounts; evidence recorded | Operator, staging, approved test accounts |
+| **REM-12** | Formal go/no-go review and approval | YES — production cutover gate | All of REM-01 through REM-11 complete; all P0 blockers resolved | `docs/release/GO_NO_GO_CHECKLIST.md`, `docs/client/OPERATOR_HANDOFF_SUMMARY.md` | Zero unresolved P0 blockers; all gates documented; explicit client and operator approval recorded | Client, operator, legal |
+| **REM-13** | Production cutover | YES — final | REM-12 approved | All of the above | Production DB migrated; old flows disabled/redirected; monitoring confirmed; rollback path tested | Production database owner, operator, maintenance window |
+
+### Scope decisions required before REM-03 through REM-07
+
+The five next-domain sources (sponsored grants, email subscribers, support requests, partner attribution, course progress) have defined inventory entries but unknown row counts. Before building tooling:
+
+1. Operator runs a live DB query against `jpvbootcamp_staging` to establish row counts for each domain.
+2. Project owner classifies each domain as launch-critical, conditional (include if non-zero), or deferred (post-launch).
+3. Repository implementation of each tool begins only after that classification is recorded.
+
+Do not build tooling for a domain that is confirmed empty or deferred to post-launch.
+
+### Closeout sequence
+
+#### Can execute now (no external block)
+
+1. **REM-02** — Re-run `pnpm test:e2e` at current HEAD on developer workstation; preserve report; record in `docs/client/ROADMAP_PROGRESS_STATUS.md`.
+2. Verify `pnpm test:release` still passes 140/140 at HEAD b526b19 — confirm nothing has drifted.
+
+#### Blocked on approval/evidence (exact unblock conditions)
+
+| Task | Unblock condition | Owner type |
+|---|---|---|
+| REM-08 | Database owner authorizes; backup taken; maintenance window agreed | Operator / database owner |
+| REM-09 | Same as REM-08; membership-support migration explicitly approved | Operator / database owner |
+| REM-01 | REM-08 complete; staging migration applied; operator has email provider access | Operator |
+| REM-03 – REM-07 | Live DB query establishes row counts; scope decision recorded | Project owner / operator |
+| REM-10 | Staging deployed + operational; approved test accounts available; operator has provider credentials | Operator |
+| REM-11 | REM-10 complete; approved accounts available | Operator |
+| REM-12 | All of the above; client and legal sign-off | Client / operator |
+| REM-13 | REM-12 formal GO | Production owner / operator |
+
+#### Deferred
+
+- REM-06 (partner attribution) — classify as post-launch unless project owner explicitly promotes
+- M2-01 durable partner-referral persistence — explicitly post-launch
+- Phase 11 LiveKit group calls — future scope
+
+### Definitions
+
+- **PR-ready**: `pnpm test:release` 140/140, `pnpm test:migration:legacy` 32/32, `pnpm test:e2e` 58/58, `git diff --check` clean, TypeScript clean, production build passes, all documentation is internally consistent, no unresolved P0 blockers in documentation.
+- **Staging-accepted**: Real browser smoke on `https://preview.jpvbootcamp.com` with approved test accounts; login, portal, billing, admin, and course journeys recorded; provider deliveries confirmed.
+- **GO**: All REM-01 through REM-12 gates documented with evidence; zero unresolved P0 blockers; explicit client and operator approval recorded in `docs/release/GO_NO_GO_CHECKLIST.md`.
+- **Production-complete**: REM-13 executed; production DB migrated; old flows disabled; monitoring live; rollback evidence present; no live P0 incident within the agreed observation window.
 
 ## Important repository commands
 
