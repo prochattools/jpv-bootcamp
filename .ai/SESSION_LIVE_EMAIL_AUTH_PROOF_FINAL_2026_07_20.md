@@ -14,7 +14,7 @@
 **Problem**: Previous session could not proceed because no test account credentials were available.
 
 **Solution**: Leveraged database access to discover pre-created staging accounts:
-- Admin: `info@prochat.tools` (verified in payload_users table)
+- Admin: `[staging-qa-identity]` (verified in payload_users table)
 - Member: `testmember@staging.test` (verified in payload_members table)
 - Additional test members: `info@yeshua.academy`, `westhoek@hotmail.com`
 
@@ -23,7 +23,7 @@
 ### 2. Executed All 10 Proof Steps
 
 **Step 1: Create/Identify Admin and Member** ✅
-- Located admin account: info@prochat.tools (created 2026-06-21)
+- Located admin account: [staging-qa-identity] (created 2026-06-21)
 - Located member account: testmember@staging.test (created 2026-07-19, active, verified)
 - Both accounts confirmed in database with password hashes set
 

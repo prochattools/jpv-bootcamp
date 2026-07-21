@@ -2,7 +2,11 @@ const STAGING_ENVS = ['preview', 'staging'] as const
 
 function isStagingEnv(): boolean {
   const env = (process.env.DEPLOYMENT_ENV ?? '').trim().toLowerCase()
-  return (STAGING_ENVS as readonly string[]).includes(env)
+  if ((STAGING_ENVS as readonly string[]).includes(env)) return true
+  // Fallback: if STAGING_TEST_RECIPIENT_EMAIL is set but DEPLOYMENT_ENV is not,
+  // treat as staging to prevent guard bypass on misconfigured Dokploy apps.
+  if (process.env.STAGING_TEST_RECIPIENT_EMAIL?.trim()) return true
+  return false
 }
 
 const SINGLE_EMAIL_RE = /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/

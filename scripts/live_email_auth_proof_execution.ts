@@ -9,11 +9,11 @@
  * REDACTION POLICY: No real passwords, tokens, or email addresses exposed in output.
  */
 
-// Test accounts (redacted in output)
-const ADMIN_EMAIL = 'info@prochat.tools'
-const TEST_MEMBER_EMAIL = 'testmember@staging.test'
-const TEST_PASSWORD = 'TestPass123!@#'
-const APP_URL = 'https://preview.jpvbootcamp.com'
+// Test accounts — read from env vars set in Dokploy. No real addresses committed.
+const ADMIN_EMAIL = process.env.STAGING_ADMIN_EMAIL ?? ''
+const TEST_MEMBER_EMAIL = process.env.STAGING_MEMBER_EMAIL ?? ''
+const TEST_PASSWORD = process.env.STAGING_MEMBER_PASSWORD ?? ''
+const APP_URL = process.env.STAGING_URL ?? 'https://preview.jpvbootcamp.com'
 
 interface StepResult {
   step: number
@@ -54,7 +54,7 @@ async function runSteps(): Promise<void> {
         memberEmailDomain: 'staging.test',
         memberStatus: 'active',
       },
-      notes: ['Admin: info@prochat.tools', 'Member: testmember@staging.test (active)', 'Both have passwords set'],
+      notes: ['Admin: [from STAGING_ADMIN_EMAIL env]', 'Member: [from STAGING_MEMBER_EMAIL env]', 'Both have passwords set'],
     })
 
     // Step 2: Prove admin login

@@ -12,11 +12,38 @@ Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`.
 
 **Next task:** Synchronize the repository roadmap, internal implementation plan, progress documentation, and client plan v3.7 with current repository evidence, then execute the approved administrator schema-migration packet only after explicit authorization. `M2-01` remains deferred unless explicitly promoted.
 
-**Front-end schedule:** The 22 July front-end milestone is still conditional. Client content, pricing/commitment language, legal wording, and course input were due by 15 July and remain outstanding as of 17 July. The 23 July handover buffer and 24 July client finished-by date remain.
+**Front-end schedule:** The 22 July front-end milestone is still conditional. Client content was due by 15 July; a landing-page content brief was supplied on 21 July and is mapped in UI-01, while testimonials, teacher/guest-speaker detail, final legal wording, and representative course input remain outstanding. The 23 July handover buffer and 24 July client finished-by date remain.
 
 **Cutover schedule:** Full platform cutover on 22-24 July is conditional and at risk. It requires approved migrations, rehearsal and rollback evidence, provider/email verification, complete browser smoke evidence, and explicit go-live approval.
 
 **Hard stops:** Do not apply migrations. Do not touch `main`. Do not describe static prototypes as operational workflows.
+
+## Launch-critical visual coherence packet (UI-01)
+
+**Status:** `LOCALLY IMPLEMENTED / STAGING ACCEPTANCE PENDING` on 21 July 2026. The shared design tokens, Outfit typography, public landing page, member authentication and password screens, supported Payload-admin theme, branded transactional email shell, and global toast presentation are implemented in the local feature-branch worktree without changing their business, authorization, recipient, provider, migration, or deployment boundaries. The complete release manifest passes 150/150, including TypeScript and the production build. The landing page is browser-verified without horizontal overflow at 390px and 1440px, including the mobile menu. Authenticated member/admin browser acceptance, the 768px visual checkpoint, staging deployment, and staging acceptance remain pending. No external message was sent and no deployment, migration, provider call, or production operation was performed.
+
+**Purpose:** make the public landing page, member authentication, member/student portal, and JPV Bootcamp administrator surface feel like one product without changing their working business logic. The visual direction takes the supplied Kairos page's light editorial rhythm, generous whitespace, slim navigation, proof strip, alternating content blocks, restrained pricing, and compact FAQ as structural reference. It must not copy Kairos branding, photography, testimonials, course artwork, proprietary copy, or other assets.
+
+**Authoritative inputs, in order:**
+
+1. `New Content for JPV Bootcamp 15072026.docx.pdf` for changed navigation, copy, sections, and pricing;
+2. existing working JPV routes and content for anything the brief does not change;
+3. the supplied Kairos screenshot/PDF plus external `DESIGN.md` and `SKILL.md` for composition and rhythm only;
+4. `docs/PAYLOAD_INTEGRATION_PLAN.md` for the implementation boundary and acceptance gates.
+
+**Content boundary:** implement Home, Community, Resources, Success Stories, Partners, and About navigation; Join, Support, and Sign In actions; the supplied hero and moving-strip copy; Who Is JPV Bootcamp For; Learn / Apply / Build; the community section; monthly GBP 80 and annual GBP 800 pricing; the existing FAQ; and the existing How It Works interaction. Keep current content where the brief is silent. Do not invent testimonials, teacher biographies, guest-speaker details, results, claims, or replacement legal/billing language. Athina Amadi, Koprinka Aksaray, Guest Speakers, and Success Stories remain content-pending until approved material is supplied.
+
+**Shared-system boundary:** one semantic token source must drive marketing, auth, portal, and supported Payload-admin overrides. Retain the current JPV logo green as the primary action color; add sunshine and red only as named supporting roles; use one font family, one spacing scale, consistent gutters, radii, focus treatment, form states, and shell widths. Preserve all existing server authorization, checkout, support, portal, admin, and form behavior.
+
+**Execution order:**
+
+1. approve the UI-01 shape brief and freeze the shared token contract;
+2. apply tokens and shell primitives without route or business-logic changes;
+3. rebuild only the landing-page composition and approved content;
+4. align login/password, portal, and administrator presentation;
+5. run functional, responsive, accessibility, visual, release, and staging-browser regression gates.
+
+**Done when:** the four surfaces are visibly coherent at mobile/tablet/desktop widths; every existing button, link, form, loading/error/empty state, checkout handoff, auth flow, portal route, and admin route still works; WCAG AA contrast, keyboard focus, reduced motion, and no-horizontal-scroll checks pass; the supplied copy is represented without invention; and staging evidence is accepted. UI-01 does not alter the migration or go/no-go boundary.
 
 ## Branch and deployment state
 
@@ -139,7 +166,7 @@ These assets make the repository ready for controlled staging operations without
 - **REM-10 Resend verification (live, 2026-07-21):** `jpvbootcamp.com` domain verified (eu-west-1); API key valid.
 - **REM-10 Bunny CDN verification (live, 2026-07-21):** Library API 200; 11 videos, 3 collections; CDN hostname `vz-d0404b6f-bd9.b-cdn.net`; all 5 env vars present.
 - **REM-11 browser smoke (42/42 PASS, desktop + mobile Chromium, playwright-staging.config.ts):** PUBLIC-001–005, BILLING-001–003, SUPPORT-001, ACCESSIBILITY-001–003, MOBILE-001–002, PERF-001–002, ERROR-001, SCHEMA-001, EVIDENCE-001–002, AUTH-001 (portal login proof)
-- **REM-01 test apply + portal login proof (AUTH-001 PASS, 2026-07-21):** `info@prochat.tools` invitation sent (HTTP 200, Resend ID ea53092c); audit key confirmed in `jpvbootcamp_staging.member_invitation_audit`; idempotency PASS; email_verified_at stamped; Playwright AUTH-001 login API 200, JWT issued, post-login URL `/portal` confirmed (desktop + mobile); 20 others excluded pending explicit per-member authorization.
+- **REM-01 test apply + portal login proof (AUTH-001 PASS, 2026-07-21):** `[staging-qa-identity]` invitation sent (HTTP 200, Resend ID ea53092c); audit key confirmed in `jpvbootcamp_staging.member_invitation_audit`; idempotency PASS; email_verified_at stamped; Playwright AUTH-001 login API 200, JWT issued, post-login URL `/portal` confirmed (desktop + mobile); 20 others excluded pending explicit per-member authorization.
 - **REM-11 HTTP staging smoke (15/15 PASS, imageTag `d235c5a`):**
   - Landing page `/`: 200
   - Upgrade page `/upgrade`: 200

@@ -12,8 +12,9 @@
  */
 
 // Set env vars before module imports (allowlist reads from env)
-process.env.STAGING_TEST_RECIPIENT_EMAIL = 'info@prochat.tools'
-process.env.STAGING_TEST_MEMBER_EMAIL = 'info@prochat.tools'
+// Use a non-deliverable .invalid domain — no real address in committed code.
+process.env.STAGING_TEST_RECIPIENT_EMAIL = 'qa@example.invalid'
+process.env.STAGING_TEST_MEMBER_EMAIL = 'qa@example.invalid'
 
 import assert from 'node:assert/strict'
 import { mkdtempSync, writeFileSync, readFileSync, rmSync } from 'node:fs'
@@ -44,7 +45,7 @@ import {
 
 function makeContact(overrides: Partial<FluentCrmContact> = {}): FluentCrmContact {
   return {
-    email: 'info@prochat.tools',
+    email: 'qa@example.invalid',
     firstName: 'Test',
     lastName: 'User',
     status: 'subscribed',
@@ -479,7 +480,7 @@ async function testDryRunJournalRecordsOutcome() {
 
   assert.equal(result.journal.length, 1)
   assert.equal(result.journal[0].outcome, 'created')
-  assert.equal(result.journal[0].email, 'info@prochat.tools')
+  assert.equal(result.journal[0].email, 'qa@example.invalid')
 }
 
 // ─── Apply mode tests ─────────────────────────────────────────────────────────
@@ -529,7 +530,7 @@ async function testApplyCreatesContact() {
 async function testApplyUpdatesExistingContact() {
   const { client, state } = makeFakeClient()
   // Pre-seed an existing contact
-  state.contacts.set('info@prochat.tools', { id: 'existing-001', emailStatus: 'subscribed' })
+  state.contacts.set('qa@example.invalid', { id: 'existing-001', emailStatus: 'subscribed' })
 
   const config = makeConfig({ mode: 'apply' })
 
@@ -553,7 +554,7 @@ async function testApplyUpdatesExistingContact() {
 
 async function testApplyNeverDowngradesUnsubscribed() {
   const { client, state } = makeFakeClient()
-  state.contacts.set('info@prochat.tools', { id: 'contact-001', emailStatus: 'unsubscribed' })
+  state.contacts.set('qa@example.invalid', { id: 'contact-001', emailStatus: 'unsubscribed' })
 
   const config = makeConfig({ mode: 'apply' })
 
@@ -578,7 +579,7 @@ async function testApplyNeverDowngradesUnsubscribed() {
 
 async function testApplyNeverDowngradesBounced() {
   const { client, state } = makeFakeClient()
-  state.contacts.set('info@prochat.tools', { id: 'contact-bounced', emailStatus: 'bounced' })
+  state.contacts.set('qa@example.invalid', { id: 'contact-bounced', emailStatus: 'bounced' })
 
   const config = makeConfig({ mode: 'apply' })
 
@@ -597,7 +598,7 @@ async function testApplyNeverDowngradesBounced() {
 
 async function testApplyNeverDowngradesComplained() {
   const { client, state } = makeFakeClient()
-  state.contacts.set('info@prochat.tools', { id: 'contact-complained', emailStatus: 'complained' })
+  state.contacts.set('qa@example.invalid', { id: 'contact-complained', emailStatus: 'complained' })
 
   const config = makeConfig({ mode: 'apply' })
 
@@ -682,7 +683,7 @@ async function testSameTagSharedAcrossContactsNotDuplicated() {
 async function testContactTagNotDuplicatedWhenLinkExists() {
   const { client, state } = makeFakeClient()
   // Pre-seed contact and tag
-  state.contacts.set('info@prochat.tools', { id: 'contact-001', emailStatus: 'subscribed' })
+  state.contacts.set('qa@example.invalid', { id: 'contact-001', emailStatus: 'subscribed' })
   state.tags.set('bootcamp-2024', { id: 'tag-001' })
   // Pre-seed the contact-tag link
   state.contactTags.set('contact-001:tag-001', { id: 'ct-existing' })
@@ -808,8 +809,8 @@ async function testResumeCaseInsensitive() {
   const priorJournal: ImportJournalEntry[] = [
     {
       runId: 'prior-run',
-      email: 'info@prochat.tools',
-      idempotencyKey: buildIdempotencyKey('info@prochat.tools'),
+      email: 'qa@example.invalid',
+      idempotencyKey: buildIdempotencyKey('qa@example.invalid'),
       outcome: 'created',
       timestamp: new Date().toISOString(),
     },
@@ -817,7 +818,7 @@ async function testResumeCaseInsensitive() {
 
   const config = makeConfig({ mode: 'apply' })
   // Same email but different case — must still match via normalisation
-  const contacts = [makeContact({ email: 'INFO@PROCHAT.TOOLS' })]
+  const contacts = [makeContact({ email: 'QA@EXAMPLE.INVALID' })]
 
   const result = await runImport({
     runId: 'run-resume-002',
@@ -854,7 +855,7 @@ async function testDurableJournalAppendsToFile() {
     const lines = content.split('\n').filter(Boolean)
     assert.equal(lines.length, 1, 'One journal entry written to file')
     const entry = JSON.parse(lines[0]) as ImportJournalEntry
-    assert.equal(entry.email, 'info@prochat.tools')
+    assert.equal(entry.email, 'qa@example.invalid')
     assert.equal(entry.outcome, 'created')
   } finally {
     rmSync(dir, { recursive: true })
@@ -872,8 +873,8 @@ async function testLoadJournalRoundtrips() {
   try {
     const entry: ImportJournalEntry = {
       runId: 'run-001',
-      email: 'info@prochat.tools',
-      idempotencyKey: buildIdempotencyKey('info@prochat.tools'),
+      email: 'qa@example.invalid',
+      idempotencyKey: buildIdempotencyKey('qa@example.invalid'),
       outcome: 'created',
       payloadContactId: 'contact-001',
       timestamp: new Date().toISOString(),
@@ -881,7 +882,7 @@ async function testLoadJournalRoundtrips() {
     writeFileSync(journalPath, JSON.stringify(entry) + '\n', 'utf8')
     const loaded = loadJournalFromFile(journalPath)
     assert.equal(loaded.length, 1)
-    assert.equal(loaded[0].email, 'info@prochat.tools')
+    assert.equal(loaded[0].email, 'qa@example.invalid')
     assert.equal(loaded[0].outcome, 'created')
   } finally {
     rmSync(dir, { recursive: true })
@@ -895,8 +896,8 @@ async function testResumeFromDurableJournalFile() {
     // Write prior journal entry for the allowed email
     const priorEntry: ImportJournalEntry = {
       runId: 'prior-run',
-      email: 'info@prochat.tools',
-      idempotencyKey: buildIdempotencyKey('info@prochat.tools'),
+      email: 'qa@example.invalid',
+      idempotencyKey: buildIdempotencyKey('qa@example.invalid'),
       outcome: 'created',
       payloadContactId: 'contact-prior',
       timestamp: new Date().toISOString(),
@@ -909,7 +910,7 @@ async function testResumeFromDurableJournalFile() {
     const loadedJournal = loadJournalFromFile(journalPath)
     const result = await runImport({
       runId: 'run-resume-durable-001',
-      contacts: [makeContact()], // info@prochat.tools — already in journal
+      contacts: [makeContact()], // qa@example.invalid — already in journal
       config,
       client,
       initialJournal: loadedJournal,

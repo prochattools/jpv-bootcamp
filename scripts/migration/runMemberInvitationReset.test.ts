@@ -12,8 +12,8 @@
  */
 
 // Set env vars before module imports (allowlist reads from env)
-process.env.STAGING_TEST_RECIPIENT_EMAIL = 'info@prochat.tools'
-process.env.STAGING_TEST_MEMBER_EMAIL = 'info@prochat.tools'
+process.env.STAGING_TEST_RECIPIENT_EMAIL = 'qa@example.invalid'
+process.env.STAGING_TEST_MEMBER_EMAIL = 'qa@example.invalid'
 
 import { Client } from 'pg'
 import {
@@ -190,19 +190,19 @@ describe('REM-01: apply guard — DATABASE_URL missing', () => {
   })
 
   test('checkApplyGuards blocks apply without authorization-token', () => {
-    const result = checkApplyGuards('apply', undefined, 'https://preview.jpvbootcamp.com', 'staging', 'info@prochat.tools')
+    const result = checkApplyGuards('apply', undefined, 'https://preview.jpvbootcamp.com', 'staging', 'qa@example.invalid')
 
     expect(result.ok).toBe(false)
   })
 
   test('checkApplyGuards blocks apply without staging-url', () => {
-    const result = checkApplyGuards('apply', 'some-token', undefined, 'staging', 'info@prochat.tools')
+    const result = checkApplyGuards('apply', 'some-token', undefined, 'staging', 'qa@example.invalid')
 
     expect(result.ok).toBe(false)
   })
 
   test('checkApplyGuards blocks apply when NODE_ENV=production', () => {
-    const result = checkApplyGuards('apply', 'some-token', 'https://preview.jpvbootcamp.com', 'production', 'info@prochat.tools')
+    const result = checkApplyGuards('apply', 'some-token', 'https://preview.jpvbootcamp.com', 'production', 'qa@example.invalid')
 
     expect(result.ok).toBe(false)
   })
@@ -214,7 +214,7 @@ describe('REM-01: apply guard — DATABASE_URL missing', () => {
   })
 
   test('checkApplyGuards allows apply with all required flags and non-production env', () => {
-    const result = checkApplyGuards('apply', 'token-123', 'https://preview.jpvbootcamp.com', 'staging', 'info@prochat.tools')
+    const result = checkApplyGuards('apply', 'token-123', 'https://preview.jpvbootcamp.com', 'staging', 'qa@example.invalid')
 
     expect(result.ok).toBe(true)
   })

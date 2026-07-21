@@ -32,7 +32,7 @@
 | rollback-readiness | approved | DOCUMENTED — repository checklist complete; staging rollback evidence requires operator capture post-apply |
 | provider-verification | **VERIFIED (2026-07-21)** | Stripe TEST ✓ (product + prices + portal + webhook), Resend ✓ (jpvbootcamp.com verified), Bunny CDN ✓ (all 5 vars, library API 200); Payload/admin authenticated session requires operator login |
 | staging-smoke | **VERIFIED (2026-07-21)** | HTTP 15/15 PASS + browser 42/42 PASS (desktop + mobile Chromium via playwright-staging.config.ts; includes AUTH-001 portal login proof) |
-| REM-01 invitation | **VERIFIED (2026-07-21)** | 21-member cohort confirmed; invitation token issued and sent to info@prochat.tools (Resend ID ea53092c, token in DB confirmed); /set-password route 200; completion API rejects bad tokens correctly; idempotency PASS; AUTH-001 Playwright portal login PASS (login API 200, JWT issued, post-login URL /portal confirmed, desktop + mobile 42/42) |
+| REM-01 invitation | **VERIFIED (2026-07-21)** | 21-member cohort confirmed; invitation token issued and sent to [staging-qa-identity] (Resend ID ea53092c, token in DB confirmed); /set-password route 200; completion API rejects bad tokens correctly; idempotency PASS; AUTH-001 Playwright portal login PASS (login API 200, JWT issued, post-login URL /portal confirmed, desktop + mobile 42/42) |
 | local release suite | **VERIFIED (2026-07-21)** | 145/145 at HEAD `32874a2` |
 | local e2e suite | **VERIFIED (2026-07-21)** | 58/58 desktop + mobile Chromium |
 
@@ -56,7 +56,7 @@ All automatable gates are now verified. Remaining blockers are exclusively opera
 | Staging HTTP smoke 15/15 | ✓ VERIFIED |
 | Staging browser smoke 42/42 | ✓ VERIFIED (desktop + mobile, includes AUTH-001) |
 | REM-01 cohort (21 members) | ✓ DRY-RUN CONFIRMED |
-| REM-01 invitation token + send | ✓ VERIFIED (info@prochat.tools, Resend ID ea53092c) |
+| REM-01 invitation token + send | ✓ VERIFIED ([staging-qa-identity], Resend ID ea53092c) |
 | REM-01 /set-password route | ✓ 200 with valid token |
 | REM-01 completion API bad-token rejection | ✓ returns invalid_or_expired_token |
 | REM-01 idempotency | ✓ PASS |
@@ -66,8 +66,8 @@ All automatable gates are now verified. Remaining blockers are exclusively opera
 
 - Repository simulation alone cannot produce GO.
 - 3 schema migrations unapplied (`remove_table_plan`, `rename_account_identity_columns`, `membership_support_schema`); no apply authorization received.
-- 20 remaining member invitation applies (info@prochat.tools only authorized); explicit per-member authorization required.
-- **RESOLVED:** Authenticated member portal session proof — AUTH-001 PASS; info@prochat.tools logged in and reached /portal confirmed (2026-07-21).
+- 20 remaining member invitation applies ([staging-qa-identity] only authorized); explicit per-member authorization required.
+- **RESOLVED:** Authenticated member portal session proof — AUTH-001 PASS; [staging-qa-identity] logged in and reached /portal confirmed (2026-07-21).
 - Payload/admin authenticated session verification requires operator login.
 - Client content outstanding; programme remains preview-only.
 - M2 remains unstarted and post-core.
