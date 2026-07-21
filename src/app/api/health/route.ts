@@ -19,6 +19,8 @@ export async function GET() {
       status: 'live',
       timestamp: new Date().toISOString(),
       imageTag: process.env.IMAGE_TAG ?? null,
+      deploymentEnv: process.env.DEPLOYMENT_ENV ?? null,
+      stagingProvisionReady: !!(process.env.STAGING_MEMBER_EMAIL && process.env.STAGING_MEMBER_PASSWORD),
     },
     { status: 200 },
   )

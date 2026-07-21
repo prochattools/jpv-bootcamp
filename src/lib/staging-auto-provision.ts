@@ -4,7 +4,17 @@ const STAGING_ENVS = ['preview', 'staging'] as const
 
 function isStagingEnv(): boolean {
   const env = (process.env.DEPLOYMENT_ENV ?? '').trim().toLowerCase()
-  return (STAGING_ENVS as readonly string[]).includes(env)
+  if ((STAGING_ENVS as readonly string[]).includes(env)) return true
+  // Fallback: treat as staging if staging credentials are provided but DEPLOYMENT_ENV is unset
+  // Covers misconfigured Dokploy apps where DEPLOYMENT_ENV was not set
+  const hasCredentials =
+    !!(process.env.STAGING_MEMBER_EMAIL && process.env.STAGING_MEMBER_PASSWORD) ||
+    !!(process.env.STAGING_ADMIN_EMAIL && process.env.STAGING_ADMIN_PASSWORD)
+  if (hasCredentials) {
+    console.warn('staging-auto-provision: DEPLOYMENT_ENV not set to preview/staging but staging credentials are present — treating as staging')
+    return true
+  }
+  return false
 }
 
 export async function stagingAutoProvision(payload: Payload): Promise<void> {
