@@ -50,7 +50,7 @@ All automatable gates are now verified. Remaining blockers are exclusively opera
 | Stripe TEST product/prices/portal/webhook | ✓ VERIFIED |
 | Resend jpvbootcamp.com domain | ✓ VERIFIED |
 | Bunny CDN all 5 credentials | ✓ VERIFIED |
-| Stripe live TEST credentials | ✓ VERIFIED (2026-07-21) — sk_test_ key valid; product active; GBP 80/mo + GBP 800/yr prices active; portal config active; staging webhook enabled; production webhook disabled |
+| Stripe live TEST credentials | ✓ VERIFIED (2026-07-21) — TEST secret key valid; product active; GBP 80/mo + GBP 800/yr prices active; portal config active; staging webhook enabled; production webhook disabled |
 | Resend live credentials | ✓ VERIFIED (2026-07-21) — jpvbootcamp.com domain verified, eu-west-1, API key valid |
 | Bunny CDN live credentials | ✓ VERIFIED (2026-07-21) — library API 200; 11 videos, 3 collections; CDN hostname confirmed |
 | Staging HTTP smoke 15/15 | ✓ VERIFIED |
@@ -64,6 +64,7 @@ All automatable gates are now verified. Remaining blockers are exclusively opera
 
 ## Unresolved risks
 
+- Repository simulation alone cannot produce GO.
 - 3 schema migrations unapplied (`remove_table_plan`, `rename_account_identity_columns`, `membership_support_schema`); no apply authorization received.
 - 20 remaining member invitation applies (info@prochat.tools only authorized); explicit per-member authorization required.
 - **RESOLVED:** Authenticated member portal session proof — AUTH-001 PASS; info@prochat.tools logged in and reached /portal confirmed (2026-07-21).

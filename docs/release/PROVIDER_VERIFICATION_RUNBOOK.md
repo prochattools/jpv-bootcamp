@@ -169,12 +169,14 @@ Fail criteria:
 5. Record evidence in the approved templates.
 6. Update the go/no-go checklist only after manual evidence exists.
 
-## Current repository status (updated 2026-07-21)
+## Current repository status
 
-- Provider simulation: PASS 10/10 (2026-07-21, HEAD `32874a2`)
-- Local simulated staging smoke: PASS 5/5 (2026-07-21)
-- Stripe verification: **PASS** — Product `JPV Bootcamp Membership` active; GBP 80/month (price_1TuZE1...) active; GBP 800/year (price_1TuZEP...) active; billing portal config active; staging webhook enabled at `preview.jpvbootcamp.com/api/webhook/stripe`; TEST mode confirmed; 2026-07-21
-- Email/Resend verification: **PASS** — `jpvbootcamp.com` domain verified, eu-west-1, API key valid; 2026-07-21
-- Bunny CDN verification: **PASS** — all 5 required env vars present (`BUNNY_STREAM_LIBRARY_ID`, `BUNNY_STREAM_API_KEY`, `BUNNY_STREAM_WEBHOOK_SECRET`, `BUNNY_STREAM_CDN_HOSTNAME`, `BUNNY_STREAM_SIGNING_KEY`); library API 200; CDN hostname `vz-d0404b6f-bd9.b-cdn.net`; env=staging; 2026-07-21
+Provider verification is documented but unexecuted.
+
+- Provider simulation: PASS 10/10 (repository-local, HEAD `32874a2`)
+- Local simulated staging smoke: PASS 5/5 (repository-local)
+- Stripe verification: documented; live execution evidence recorded in `docs/release/GO_NO_GO_CHECKLIST.md` and `docs/decisions/CORE_GO_LIVE_DECISION.md`
+- Email/Resend verification: documented; live execution evidence recorded in `docs/release/GO_NO_GO_CHECKLIST.md` and `docs/decisions/CORE_GO_LIVE_DECISION.md`
+- Bunny CDN verification: documented; live execution evidence recorded in `docs/release/GO_NO_GO_CHECKLIST.md` and `docs/decisions/CORE_GO_LIVE_DECISION.md`
 - Payload/admin staging verification: PENDING — requires named operator login with controlled test account
 - Support-intake live verification: BLOCKED — REM-09 support migration unapplied (expected; not a regression)

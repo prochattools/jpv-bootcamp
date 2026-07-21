@@ -397,7 +397,7 @@ test.describe('REM-01 Member Portal Login Proof', () => {
 
     // Step 3: Submit via the sign-in button
     const [loginResponse] = await Promise.all([
-      page.waitForResponse(resp => resp.url().includes('/api/payload_members/login'), { timeout: 15000 }).catch(() => null),
+      page.waitForResponse((resp) => resp.url().includes('/api/payload_members/login'), { timeout: 15000 }).catch((): null => null),
       page.locator('button[type="submit"]:has-text("sign in")').click(),
     ])
     await page.waitForLoadState('networkidle', { timeout: 20000 })

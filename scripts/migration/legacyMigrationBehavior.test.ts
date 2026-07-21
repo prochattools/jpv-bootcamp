@@ -12,10 +12,12 @@
  *
  * Run: pnpm test:migration:next-domains:behavior
  */
-
 import { Client } from 'pg'
 import { SponsoredGrantsAdapter } from './legacyMigrationSponsored'
 import { EmailSubscribersAdapter } from './legacyMigrationSubscribers'
+import { SupportRequestsAdapter } from './legacyMigrationSupportRequests'
+import { PartnerAttributionAdapter } from './legacyMigrationPartnerAttribution'
+import { CourseProgressAdapter } from './legacyMigrationCourseProgress'
 import { executeDomainMigration } from './legacyMigrationFramework'
 
 interface SQLStatement {
@@ -274,6 +276,7 @@ describe('Behavioral: REM-03 Apply Audit Writes Only', () => {
     })
 
     // REM-03 apply must produce a real write outcome — never 'preserved' or 'not_applicable'
+    // @ts-expect-error — this branch should never execute for REM-03
     if (outcome === 'preserved' || outcome === 'not_applicable') {
       throw new Error(`Expected REM-03 apply to produce 'inserted' or 'updated', got '${outcome}'`)
     }
@@ -287,6 +290,234 @@ describe('Behavioral: REM-03 Apply Audit Writes Only', () => {
     }
   })
 })
+
+
+describe('Behavioral: REM-03 Rollback Deletes Audit Records', () => {
+  test('SponsoredGrants (REM-03) rollback issues DELETE for run-scoped cleanup', async () => {
+    const sqlLog: SQLLog = []
+    const mockClient = makeMockClient(sqlLog)
+    const adapter = new SponsoredGrantsAdapter()
+
+    // Trigger rollback for a hypothetical migration run
+    const result = await adapter.rollback(mockClient, 'public', 'test_run_id_xyz')
+
+    // REM-03 rollback must issue at least one DELETE statement
+    const deletes = sqlLog.filter((s) => s.type === 'DELETE')
+    if (deletes.length === 0) {
+      throw new Error(
+        `REM-03 rollback issued no DELETE statements — expected run-scoped cleanup\nFull log:\n${sqlLog.map((s) => `  ${s.type}: ${s.sql}`).join('\n')}`,
+      )
+    }
+
+    // Verify rowsDeleted count is returned (even if 0 rows matched)
+    if (typeof result.rowsDeleted !== 'number') {
+      throw new Error(`Expected rowsDeleted to be a number, got ${typeof result.rowsDeleted}`)
+    }
+  })
+})
+
+describe('Behavioral: REM-05 (SupportRequests) Apply is Preserved', () => {
+  test('SupportRequests (REM-05) apply returns preserved with no writes', async () => {
+    const sqlLog: SQLLog = []
+    const mockClient = makeMockClient(sqlLog)
+    const adapter = new SupportRequestsAdapter()
+
+    const outcome = await adapter.applyRecord(
+      mockClient,
+      'public',
+      'test_run_id',
+      {
+        idempotencyKey: 'support_request_v1_test_key',
+        destinationTable: 'support_requests',
+        destinationRow: {
+          id: 'sr_123',
+          normalized_email: 'test@example.com',
+          name: 'Test User',
+          question: 'How do I do X?',
+          dedupe_key: 'unique_key_123',
+          review_status: 'pending',
+          notification_status: 'pending',
+        },
+      },
+    )
+
+    // REM-05 must return 'preserved'
+    if (outcome !== 'preserved') {
+      throw new Error(`Expected outcome 'preserved' but got '${outcome}'`)
+    }
+
+    // Verify no writes
+    const writes = sqlLog.filter((s) => s.isWrite)
+    if (writes.length > 0) {
+      throw new Error(
+        `REM-05 apply executed ${writes.length} writes:\n${writes.map((w) => `  ${w.type}: ${w.sql}`).join('\n')}`,
+      )
+    }
+  })
+})
+
+describe('Behavioral: REM-05 (SupportRequests) Rollback is No-Op', () => {
+  test('SupportRequests (REM-05) rollback issues zero DELETEs', async () => {
+    const sqlLog: SQLLog = []
+    const mockClient = makeMockClient(sqlLog)
+    const adapter = new SupportRequestsAdapter()
+
+    const result = await adapter.rollback(mockClient, 'public', 'test_run_id')
+
+    // REM-05 rollback must be a no-op: zero rows deleted
+    if (result.rowsDeleted !== 0) {
+      throw new Error(`Expected 0 rows deleted but got ${result.rowsDeleted}`)
+    }
+
+    // Verify reason includes 'no_op'
+    if (!result.reason || !result.reason.includes('no_op')) {
+      throw new Error(`Expected no-op reason but got: ${result.reason}`)
+    }
+
+    // Verify no DELETE statements
+    const deletes = sqlLog.filter((s) => s.type === 'DELETE')
+    if (deletes.length > 0) {
+      throw new Error(`Expected no DELETE statements but got ${deletes.length}`)
+    }
+  })
+})
+
+describe('Behavioral: REM-06 (PartnerAttribution) Apply is Preserved', () => {
+  test('PartnerAttribution (REM-06) apply returns preserved with no writes', async () => {
+    const sqlLog: SQLLog = []
+    const mockClient = makeMockClient(sqlLog)
+    const adapter = new PartnerAttributionAdapter()
+
+    const outcome = await adapter.applyRecord(
+      mockClient,
+      'public',
+      'test_run_id',
+      {
+        idempotencyKey: 'partner_attribution_v1_session_test',
+        destinationTable: 'partner_sessions',
+        destinationRow: {
+          session_id: 'sess_abc123',
+          account_id: 'acc_123',
+          account_email_hash: 'hash_email_abc',
+          account_name: 'Partner User',
+          created_at: '2025-01-01T00:00:00Z',
+          expires_at: '2025-02-01T00:00:00Z',
+        },
+      },
+    )
+
+    // REM-06 must return 'preserved'
+    if (outcome !== 'preserved') {
+      throw new Error(`Expected outcome 'preserved' but got '${outcome}'`)
+    }
+
+    // Verify no writes
+    const writes = sqlLog.filter((s) => s.isWrite)
+    if (writes.length > 0) {
+      throw new Error(
+        `REM-06 apply executed ${writes.length} writes:\n${writes.map((w) => `  ${w.type}: ${w.sql}`).join('\n')}`,
+      )
+    }
+  })
+})
+
+describe('Behavioral: REM-06 (PartnerAttribution) Rollback is No-Op', () => {
+  test('PartnerAttribution (REM-06) rollback issues zero DELETEs', async () => {
+    const sqlLog: SQLLog = []
+    const mockClient = makeMockClient(sqlLog)
+    const adapter = new PartnerAttributionAdapter()
+
+    const result = await adapter.rollback(mockClient, 'public', 'test_run_id')
+
+    // REM-06 rollback must be a no-op: zero rows deleted
+    if (result.rowsDeleted !== 0) {
+      throw new Error(`Expected 0 rows deleted but got ${result.rowsDeleted}`)
+    }
+
+    // Verify reason includes 'no_op'
+    if (!result.reason || !result.reason.includes('no_op')) {
+      throw new Error(`Expected no-op reason but got: ${result.reason}`)
+    }
+
+    // Verify no DELETE statements
+    const deletes = sqlLog.filter((s) => s.type === 'DELETE')
+    if (deletes.length > 0) {
+      throw new Error(`Expected no DELETE statements but got ${deletes.length}`)
+    }
+  })
+})
+
+describe('Behavioral: REM-07 (CourseProgress) Apply is Preserved', () => {
+  test('CourseProgress (REM-07) apply returns preserved with no writes', async () => {
+    const sqlLog: SQLLog = []
+    const mockClient = makeMockClient(sqlLog)
+    const adapter = new CourseProgressAdapter()
+
+    const outcome = await adapter.applyRecord(
+      mockClient,
+      'public',
+      'test_run_id',
+      {
+        idempotencyKey: 'course_progress_v1_enroll_test',
+        destinationTable: 'payload_course_enrollments',
+        destinationRow: {
+          id: 'enr_123',
+          display_name: 'Course Enrollment Test',
+          member: 'mem_456',
+          course: 'course_789',
+          status: 'active',
+          source: 'test_migration',
+          starts_at: '2025-01-01T00:00:00Z',
+          expires_at: '2025-12-31T23:59:59Z',
+          completed_at: null,
+          revoked_at: null,
+          revoked_reason: null,
+          metadata: {},
+        },
+      },
+    )
+
+    // REM-07 must return 'preserved'
+    if (outcome !== 'preserved') {
+      throw new Error(`Expected outcome 'preserved' but got '${outcome}'`)
+    }
+
+    // Verify no writes
+    const writes = sqlLog.filter((s) => s.isWrite)
+    if (writes.length > 0) {
+      throw new Error(
+        `REM-07 apply executed ${writes.length} writes:\n${writes.map((w) => `  ${w.type}: ${w.sql}`).join('\n')}`,
+      )
+    }
+  })
+})
+
+describe('Behavioral: REM-07 (CourseProgress) Rollback is No-Op', () => {
+  test('CourseProgress (REM-07) rollback issues zero DELETEs', async () => {
+    const sqlLog: SQLLog = []
+    const mockClient = makeMockClient(sqlLog)
+    const adapter = new CourseProgressAdapter()
+
+    const result = await adapter.rollback(mockClient, 'public', 'test_run_id')
+
+    // REM-07 rollback must be a no-op: zero rows deleted
+    if (result.rowsDeleted !== 0) {
+      throw new Error(`Expected 0 rows deleted but got ${result.rowsDeleted}`)
+    }
+
+    // Verify reason includes 'no_op'
+    if (!result.reason || !result.reason.includes('no_op')) {
+      throw new Error(`Expected no-op reason but got: ${result.reason}`)
+    }
+
+    // Verify no DELETE statements
+    const deletes = sqlLog.filter((s) => s.type === 'DELETE')
+    if (deletes.length > 0) {
+      throw new Error(`Expected no DELETE statements but got ${deletes.length}`)
+    }
+  })
+})
+
 
 // ─── Run tests ────────────────────────────────────────────────────────────────
 

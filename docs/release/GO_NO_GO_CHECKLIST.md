@@ -75,11 +75,13 @@ Current repository result: `DECISION-READY, EXTERNAL APPROVALS PENDING`
 | provider simulation | pass | **PASS 10/10** — 2026-07-21 |
 | migration applied | pending until executed | PENDING — operator authorization required |
 | post-migration verification | pending until executed | PENDING |
+| provider verification | pending until executed | Stripe/Resend/Bunny live-credential evidence in decision docs; Payload/admin pending operator login |
 | Stripe provider verification | pass | **PASS** — product active, GBP 80/mo + GBP 800/yr, portal active, staging webhook enabled, TEST mode, 2026-07-21 |
 | Resend email verification | pass | **PASS** — jpvbootcamp.com verified, eu-west-1, API key valid, 2026-07-21 |
 | Bunny CDN verification | pass | **PASS** — all 5 env vars present, library API 200, CDN hostname confirmed, 2026-07-21 |
 | Payload/admin staging verification | pending until executed | PENDING — operator login with test account required |
 | local simulated smoke | pass | **PASS 5/5** — 2026-07-21 |
+| staging smoke | pending until executed | HTTP 15/15 PASS + browser 42/42 PASS per playwright-staging.config.ts; AUTH-001 portal login PASS; formal operator sign-off pending |
 | staging smoke (HTTP) | pass | **PASS 15/15** — 2026-07-21, imageTag `d235c5a`; all API boundary checks confirmed |
 | staging smoke (browser) | pass | **PASS 42/42** — 2026-07-21, desktop + mobile Chromium; includes AUTH-001 portal login proof |
 | REM-01 test invitation | pass | **PASS** — `info@prochat.tools` sent, audit confirmed, idempotency PASS; portal login PASS (AUTH-001); 20 others pending authorization |

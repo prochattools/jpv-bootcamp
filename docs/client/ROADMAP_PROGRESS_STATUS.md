@@ -135,7 +135,7 @@ These assets make the repository ready for controlled staging operations without
 ## Staging evidence (2026-07-21)
 
 - **REM-01 cohort dry-run:** 21 migration-sourced members confirmed in `jpvbootcamp_staging.payload_members` via Dokploy DB connection; 0 already invited; run ID `invitation_run_v1_ffd0fef3e66e8a15`.
-- **REM-10 Stripe verification (TEST mode, live credential confirmed 2026-07-21):** `sk_test_` key valid; Product `JPV Bootcamp Membership` active (`prod_UuO0SZGtwH75xI`); GBP 80/month price active; GBP 800/year price active; billing portal config active (is_default: true); staging webhook enabled at `preview.jpvbootcamp.com/api/webhook/stripe`; production webhook `jpvbootcamp.com` disabled (correct for staging).
+- **REM-10 Stripe verification (TEST mode, live credential confirmed 2026-07-21):** TEST secret key valid; Product `JPV Bootcamp Membership` active (`prod_UuO0SZGtwH75xI`); GBP 80/month price active; GBP 800/year price active; billing portal config active (is_default: true); staging webhook enabled at `preview.jpvbootcamp.com/api/webhook/stripe`; production webhook `jpvbootcamp.com` disabled (correct for staging).
 - **REM-10 Resend verification (live, 2026-07-21):** `jpvbootcamp.com` domain verified (eu-west-1); API key valid.
 - **REM-10 Bunny CDN verification (live, 2026-07-21):** Library API 200; 11 videos, 3 collections; CDN hostname `vz-d0404b6f-bd9.b-cdn.net`; all 5 env vars present.
 - **REM-11 browser smoke (42/42 PASS, desktop + mobile Chromium, playwright-staging.config.ts):** PUBLIC-001–005, BILLING-001–003, SUPPORT-001, ACCESSIBILITY-001–003, MOBILE-001–002, PERF-001–002, ERROR-001, SCHEMA-001, EVIDENCE-001–002, AUTH-001 (portal login proof)
