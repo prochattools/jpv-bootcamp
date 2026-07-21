@@ -30,7 +30,7 @@ authorize production deployment.
 
 | Gate | Evidence |
 | --- | --- |
-| Local code HEAD | `c7ef9de` (current) |
+| Local code HEAD | `f79a296` (current — pushed to origin/feature/course-branding-and-preview) |
 | Staging deployed imageTag | `d235c5a` (4 commits behind local HEAD — **not verified against current HEAD**) |
 | HTTP smoke (at d235c5a) | 15/15 PASS |
 | Browser smoke (at d235c5a) | 42/42 PASS (AUTH-001 included) |

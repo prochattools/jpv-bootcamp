@@ -1,6 +1,6 @@
 # JPV Bootcamp - Roadmap Progress Status
 
-Current status for `feature/course-branding-and-preview`, using the 10 July 2026 audit at `236227c fix: require portal auth for member content` as the historical baseline, `af6de62 docs: record core go-live readiness` as the previous readiness baseline, `d55229f test: enforce programme content readiness` as the current validated implementation baseline, and `8927df9 docs: checkpoint membership implementation readiness` as the prior checkpoint baseline. **Current branch HEAD: pending commit** (2026-07-21 — deployment boundary policy, hardened URL guards, Stripe executor hardening, durable journal, 148/148 release gate).
+Current status for `feature/course-branding-and-preview`, using the 10 July 2026 audit at `236227c fix: require portal auth for member content` as the historical baseline, `af6de62 docs: record core go-live readiness` as the previous readiness baseline, `d55229f test: enforce programme content readiness` as the current validated implementation baseline, and `8927df9 docs: checkpoint membership implementation readiness` as the prior checkpoint baseline. **Current branch HEAD: `f79a296 feat(P0-staging): staging boundary policy, hardened guards, executor fixes — 148/148`** (2026-07-21 — staging boundary policy, hardened URL guards, workflow deny-list guards, Stripe executor hardening, durable journal, 148/148 release gate).
 
 Current client truth: `docs/client/JPV_Bootcamp_Platform_Expansion_Go_Live_Plan_v3_7.docx`. Version 3.4 is the prior progress baseline. Canonical execution plan: `docs/PAYLOAD_INTEGRATION_PLAN.md`. Detailed audit evidence: `docs/V3_5_CODEBASE_ALIGNMENT_ASSESSMENT.md`.
 
@@ -24,7 +24,7 @@ Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`.
 | --- | --- |
 | Branch | `feature/course-branding-and-preview` |
 | Staging target | This feature branch is the staging / production-staged deployment branch |
-| **Current CODE HEAD** | `c7ef9de fix(REM-03–07): restore truthful green baseline with write-free modes and comprehensive tests` (2026-07-21) |
+| **Current CODE HEAD** | `f79a296 feat(P0-staging): staging boundary policy, hardened guards, executor fixes — 148/148` (2026-07-21) |
 | **Current DEPLOYMENT HEAD** | `d235c5a scripts: harden remediation utility — fatal 401 checks, JWT proof, SHA-256 fingerprints` (staging imageTag confirmed 2026-07-21) |
 | **Security Status** | Staging credential exposure is accepted as non-blocking by the project owner (2026-07-21): staging contains no production data. Historical credential evidence remains in dated reports only. |
 | Release State | **FORMAL NO-GO** — credential exposure is not a blocker; remaining gates are feature completion, approved pending migrations, provider verification, staging acceptance, and go-live approval |
