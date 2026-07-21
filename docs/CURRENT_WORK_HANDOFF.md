@@ -9,7 +9,8 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 - Wave 3 checkpoint HEAD: `57711f9 feat: complete wave 3 course platform`
 - Packet 9 checkpoint HEAD: `8927df9 docs: checkpoint membership implementation readiness`
 - Registry reconciliation HEAD: `9780f31 fix(registry): update migration inventory for staging deployment`
-- **Current HEAD**: `76237ea fix: upgrade js-yaml to 4.3.0 via pnpm override (GHSA-52cp-r559-cp3m)` (2026-07-21 — local PR-readiness complete)
+- REM-03–07 implementation HEAD: `1d70007 feat: implement REM-03 through REM-07 next-domain migration tools` (2026-07-21 — all local tests pass)
+- **Current HEAD**: `1d70007 feat: implement REM-03 through REM-07 next-domain migration tools` (2026-07-21 — 140/140 release tests, 58/58 E2E tests PASS)
 - Pull request: `https://github.com/prochattools/jpv-bootcamp/pull/2`
 - Staging URL: `https://preview.jpvbootcamp.com` (deployed, application `I_2Vukga3cc3ZhaG-mUzU`)
 - Staging DB: `jpvbootcamp_staging` on `100.71.31.88`; all 16 schema migrations applied
@@ -359,7 +360,14 @@ No live provider, database, migration, deployment, staging, or production operat
 
 ## Remaining implementation plan
 
-All repository implementation is complete. Every remaining task is either a live operator execution, an external approval gate, or a classification decision. Row counts for the five next-domain migration sources require a live staging DB query before tool implementation begins.
+**Repository implementation:** All REM-03–07 tools are now implemented and tested locally. No further local implementation is needed.
+
+**Remaining work:** Every remaining task is a live operator execution, external approval gate, or classification decision.
+
+**Before live next-domain apply:**
+1. Project owner classifies REM-03–07 by scope decision (launch-critical, conditional, deferred)
+2. Operator runs live DB query to establish row counts (requires staging read-only access)
+3. Based on row counts and classification, operator authorizes each domain apply separately
 
 ### Task packet table
 
@@ -783,6 +791,66 @@ Do not let this file become a second roadmap. It is a concise resumption index t
 ## Wave 5 — Continuous execution through staging-ready completion
 
 **Status: COMPLETE — All Wave 5 tasks executed**
+
+## Wave 7 — Next-domain migration tools (REM-03 through REM-07)
+
+**Status: LOCALLY COMPLETE — All next-domain tools implemented and tested**
+
+### Commits
+
+- `1d70007 feat: implement REM-03 through REM-07 next-domain migration tools` (2026-07-21)
+
+### Implementation summary
+
+**Shared Framework:**
+- `legacyMigrationFramework.ts` — DomainMigrationAdapter contract with extract, validate, dry-run, apply, reconcile, rollback
+- Unified runner: `runNextDomainMigrations.ts` with CLI modes
+- All adapters share: PII redaction, deterministic idempotency keys, per-record error handling, conflict detection, audit events, bounded reconciliation metrics
+
+**Domain Adapters (REM-03 through REM-07):**
+- **REM-03**: `legacyMigrationSponsored.ts` — Sponsored grants → payload_access_grants (approval-based, no duplicates)
+- **REM-04**: `legacyMigrationSubscribers.ts` — Email subscribers → payload_subscribers (communication-only, status tracking)
+- **REM-05**: `legacyMigrationSupportRequests.ts` — Support requests → payload_support_requests (dedupe_key idempotency)
+- **REM-06**: `legacyMigrationPartnerAttribution.ts` — Partner sessions/clicks → payload_partner_attribution (analytics, hashed PII)
+- **REM-07**: `legacyMigrationCourseProgress.ts` — Enrollments/progress → existing Payload collections (composite idempotency)
+
+**Testing:**
+- `legacyMigrationDomains.test.ts` — 15 comprehensive fixture-based tests: all PASS
+  - Transform correctness, idempotency key generation, status mapping, conflict detection, PII redaction
+  - Fixture scenarios: valid, claimed/unclaimed, bounced/unsubscribed, orphaned, missing status defaults
+
+**Package Scripts:**
+- `pnpm migration:next-domains [mode] [--run-id X] [--schema X]`
+- `pnpm test:migration:next-domains`
+- Modes: extract, validate, dry-run, apply, rollback
+
+**Validation:**
+- 140/140 release tests PASS
+- 58/58 E2E tests PASS on current HEAD
+- TypeScript clean
+- git diff --check clean
+- All 5 domains tested in isolation and as integrated suite
+
+### Scope decisions required before live apply
+
+Row counts for REM-03–07 sources require live DB query to `jpvbootcamp_staging`:
+1. `jpvbootcamp.sponsored_seats`, `sponsored_applications`, `sponsored_grants` (approval-based)
+2. `email_subscribers` (communication-only)
+3. `support_requests` (non-spam, non-deleted review queue)
+4. `jpvbootcamp.partner_sessions`, `partner_clicks` (90-day active window)
+5. `payload_course_enrollments`, `payload_lesson_progress` (may be zero in legacy schema)
+
+**Classification decision matrix:**
+- REM-03 (Sponsored): Launch-critical if source row count > 0
+- REM-04 (Subscribers): Conditional (include if non-zero, no entitlement created)
+- REM-05 (Support): Conditional (include if pending/reviewed, no entitlement created)
+- REM-06 (Partner Attribution): Deferred unless explicitly promoted (post-launch candidate)
+- REM-07 (Course Progress): Conditional (only if legacy records exist; may be zero)
+
+### Protected paths
+
+- `src/payload-types.ts` (unmodified by this packet; has unrelated diff)
+- `docs/client/fixtures/`
 
 ## Wave 6 — Real staging rollout and hardening
 
