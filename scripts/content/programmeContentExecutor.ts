@@ -22,6 +22,7 @@
 
 import { appendFileSync, readFileSync } from 'node:fs'
 import { randomUUID } from 'node:crypto'
+import { assertStagingOrigin } from '../safety/stagingCommunicationAllowlist'
 
 import type {
   ProgrammeContentPackage,
@@ -78,6 +79,8 @@ export interface ContentOperationResult {
 export interface PayloadContentClient {
   /** Find a document by its slug (or other stable identifier). Returns null if not found. */
   findBySlug(collection: string, slug: string): Promise<{ id: string } | null>
+  /** Read a full document by ID. Used to capture before-image for reversible updates. */
+  findById(collection: string, id: string): Promise<Record<string, unknown> | null>
   /** Create a document; returns the new document's Payload ID. */
   create(collection: string, data: Record<string, unknown>): Promise<{ id: string }>
   /** Update an existing document by its Payload ID. */
@@ -98,6 +101,7 @@ export interface JournalEntry {
   collection: string
   outcome: 'dry_run' | 'applied' | 'skipped' | 'failed'
   payloadDocId?: string
+  beforeImage?: Record<string, unknown>
   error?: string
   timestamp: string
 }
@@ -680,6 +684,14 @@ export async function executeProgrammeContent(
         continue
       }
 
+      // Capture before-image for reversible updates
+      let beforeImage: Record<string, unknown> | null = null
+      try {
+        beforeImage = await client.findById(collection, existingId)
+      } catch {
+        // Non-fatal: proceed without before-image but log a warning
+      }
+
       // Update the existing document
       try {
         const updated = await client.update(collection, existingId, documentData)
@@ -692,6 +704,7 @@ export async function executeProgrammeContent(
           collection,
           outcome: 'applied',
           payloadDocId: updated.id,
+          ...(beforeImage ? { beforeImage } : {}),
           timestamp,
         }
         recordEntry(entry, result.operations, config.journalPath)
@@ -803,6 +816,8 @@ export function buildRollbackEvidence(result: ContentExecutorResult): string {
 // ---------------------------------------------------------------------------
 
 export function makeRestPayloadClient(baseUrl: string, apiKey: string): PayloadContentClient {
+  assertStagingOrigin(baseUrl)
+
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     Authorization: `users API-Key ${apiKey}`,
@@ -832,6 +847,15 @@ export function makeRestPayloadClient(baseUrl: string, apiKey: string): PayloadC
       const url = `${baseUrl}/api/${collection}?where[slug][equals]=${encodeURIComponent(slug)}&limit=1&depth=0`
       const data = (await apiFetch('GET', url)) as { docs?: Array<{ id: string }> }
       return data.docs?.[0] ?? null
+    },
+
+    async findById(collection: string, id: string): Promise<Record<string, unknown> | null> {
+      const url = `${baseUrl}/api/${collection}/${encodeURIComponent(id)}?depth=0`
+      try {
+        return (await apiFetch('GET', url)) as Record<string, unknown>
+      } catch {
+        return null
+      }
     },
 
     async create(collection: string, data: Record<string, unknown>): Promise<{ id: string }> {
