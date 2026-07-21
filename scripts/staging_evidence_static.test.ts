@@ -61,7 +61,7 @@ async function main(): Promise<void> {
   assert.match(rehearsalRunbook, /This runbook does not authorize migration execution\./)
   assert.match(stagingChecklist, /Staging Smoke Checklist/)
   assert.match(providerReadiness, /Provider and Email Readiness/)
-  assert.match(roadmap, /No migrations have been applied on this branch\./)
+  assert.match(roadmap, /does not authorize further staging writes or any production migration\./)
   assert.match(reviewPacket, /Migration approval status/)
 
   console.log('staging_evidence_static.test.ts passed')

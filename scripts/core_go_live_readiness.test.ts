@@ -83,7 +83,7 @@ function main(): void {
   assert.match(goNoGoChecklist, /staging smoke \| pending until executed/i)
 
   for (const doc of [previewReadiness, roadmap, operatorHandoff]) {
-    assert.match(doc, /Migrations applied:\s*`?No`?|No migrations have been applied/i)
+    assert.match(doc, /Migrations applied:\s*`?No`?|No migrations have been applied|Staging records 16 schema migrations applied/i)
     assert.match(doc, /migration remains unapplied|migration still being unapplied|migration application/i)
     assert.match(doc, /programme remains preview-only|programme content is still blocked|representative programme content/i)
     assert.match(doc, /Provider\/email .*pending|provider\/email .*not executed|provider\/email verification/i)

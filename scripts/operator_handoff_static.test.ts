@@ -34,7 +34,7 @@ async function main(): Promise<void> {
   assert.match(evidenceChecklist, /No secrets were pasted/)
   assert.match(evidenceChecklist, /Staging smoke evidence is complete/)
   assert.match(evidenceChecklist, /Provider\/email evidence is complete/)
-  assert.match(roadmap, /No migrations have been applied on this branch\./)
+  assert.match(roadmap, /does not authorize further staging writes or any production migration\./)
   assert.match(approvalPacket, /Migration Approval Packet/)
   assert.match(approvalStatus, /Migration Approval Status/)
   assert.match(rehearsalRunbook, /Migration Rehearsal Runbook/)

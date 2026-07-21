@@ -25,8 +25,9 @@ async function main(): Promise<void> {
   assert.match(approvalPacketSource, /Approve table-plan-to-Free mapping for the target environment\./)
   assert.match(
     roadmapSource,
-    /No migrations applied|Migrations applied \| None|migrations unapplied/i,
+    /Staging records 16 schema migrations applied plus the completed 21-row legacy member\/billing\/access migration/i,
   )
+  assert.match(roadmapSource, /does not authorize further staging writes or any production migration/i)
   assert.match(stagingSmokeSource, /# Staging Smoke Checklist/)
   assert.match(providerReadinessSource, /# Provider and Email Readiness/)
   assert.match(approvalPacketSource, /# Migration Approval Packet/)

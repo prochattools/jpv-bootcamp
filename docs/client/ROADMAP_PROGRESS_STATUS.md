@@ -26,20 +26,20 @@ Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`.
 | Staging target | This feature branch is the staging / production-staged deployment branch |
 | **Current CODE HEAD** | `76237ea fix: upgrade js-yaml to 4.3.0 via pnpm override` (2026-07-21 — local PR-readiness complete) |
 | **Current DEPLOYMENT HEAD** | `5d01aae docs: final comprehensive report...` (frozen — no new deploys authorized) |
-| **Security Status** | Exposed credential CONFIRMED VALID (HTTP 200 login); account disable/revocation PENDING operator immediate action (no Workbench admin/DB access available) |
-| Release State | **FORMAL NO-GO** — Exposed staging credential remains active; operator must disable via admin UI, database, or email reset before remediation complete |
+| **Security Status** | Staging credential exposure is accepted as non-blocking by the project owner (2026-07-21): staging contains no production data. Historical credential evidence remains in dated reports only. |
+| Release State | **FORMAL NO-GO** — credential exposure is not a blocker; remaining gates are feature completion, approved pending migrations, provider verification, staging acceptance, and go-live approval |
 | Historical audit baseline | `236227c fix: require portal auth for member content` |
 | Previous readiness baseline | `af6de62 docs: record core go-live readiness` |
 | Prior validated baseline | `d55229f test: enforce programme content readiness` |
 | Prior branch tip | `8927df9 docs: checkpoint membership implementation readiness` |
 | PR / review | `https://github.com/prochattools/jpv-bootcamp/pull/2` |
-| Migrations applied | None |
-| Migration approval | Blocked pending table-plan-to-Free, account-column rename, path, backup, rollback, and owner approval |
+| Migrations applied | Staging records 16 schema migrations applied plus the completed 21-row legacy member/billing/access migration; production remains untouched |
+| Migration approval | Required only for any genuinely pending staging schema or next-domain migration write, with exact target, backup, rollback, and owner approval |
 | Decision readiness | `DECISION-READY, EXTERNAL APPROVALS PENDING` |
 | Provider/email acceptance | Pending operator verification |
 | Complete staging/browser smoke | Local browser validation passed; staging smoke pending |
 
-No migrations have been applied on this branch.
+Staging migration evidence is recorded in `docs/CURRENT_WORK_HANDOFF.md`. This branch does not authorize further staging writes or any production migration.
 
 ## Audited readiness
 
@@ -60,8 +60,8 @@ Methodology:
 | Core staging/code | ~97% | ~86% | Auth, billing, entitlements, support workflows, and local validation are mature | Public operator route, live approval gates, and external verification remain open |
 | Build foundation | ~89-95% | ~88% | Most domains have typed services, focused tests, and operational models | Approval-gated runtime work and remaining hardening remain |
 | Testing/release | ~94-99% | ~82% | Local release/browser/build/Prisma/audit gates pass and evidence is current | Staging/provider/go-no-go evidence still pending |
-| Migration | ~55% | ~65% | Sources, inventory, approvals packet, runbook, safety tests, migration plan, schema parameterisation, rehearsal guard, and full disposable local rehearsal (PASS — apply/idempotency/rollback/reapply) | No operator approval, no staging migration apply, and five next-domain tools not yet built |
-| Live cutover | ~20% | ~22% | Handoff/evidence templates plus approval-runway docs exist | No migrations, full smoke, provider/email acceptance, content acceptance, or go-live approval |
+| Migration | ~55% | ~65% | Sources, inventory, approvals packet, runbook, safety tests, migration plan, schema parameterisation, rehearsal guard, full disposable local rehearsal, and completed 21-row staging legacy apply | Five next-domain tools are not yet built; any further staging write requires scoped approval |
+| Live cutover | ~20% | ~22% | Handoff/evidence templates plus staging migration evidence exist | Full smoke, provider/email acceptance, content acceptance, remaining approved migrations, and go-live approval remain open |
 
 ## Deliverable truth
 

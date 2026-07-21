@@ -82,7 +82,7 @@ function main(): void {
   assert.match(roadmap, /22 July 2026/)
   assert.match(roadmap, /23 July 2026/)
   assert.match(roadmap, /24 July 2026/)
-  assert.match(roadmap, /No migrations have been applied|No migrations applied/i)
+  assert.match(roadmap, /does not authorize further staging writes or any production migration/i)
   assert.match(goLiveSummary, /22 July 2026/)
   assert.match(goLiveSummary, /15 July 2026/)
 
