@@ -61,7 +61,7 @@ Methodology:
 | Build foundation | ~89-95% | ~88% | Most domains have typed services, focused tests, and operational models | Approval-gated runtime work and remaining hardening remain |
 | Testing/release | ~94-99% | ~82% | Local release/browser/build/Prisma/audit gates pass and evidence is current | Staging/provider/go-no-go evidence still pending |
 | Migration | ~70% | ~72% | Sources, inventory, approvals packet, runbook, safety tests, migration plan, schema parameterisation, rehearsal guard, full disposable local rehearsal, completed 21-row staging legacy apply, all five next-domain tools (REM-03–07) built and tested, REM-01 invitation/reset command built (17/17 tests) with 21-member cohort confirmed via staging DB dry-run | Apply authorization for REM-01 and REM-03–07 still pending; any staging write requires scoped approval |
-| Live cutover | ~20% | ~40% | Stripe TEST ✓, Resend ✓, Bunny CDN ✓ (all verified 2026-07-21); HTTP staging smoke 15/15 PASS; REM-01 cohort 21 members confirmed | Browser session smoke (login/portal/billing), Payload/admin verification, content acceptance, remaining approved migrations, and go-live formal approval remain open |
+| Live cutover | ~20% | ~55% | Stripe TEST ✓, Resend ✓, Bunny CDN ✓; HTTP smoke 15/15 PASS; browser smoke 40/40 PASS; REM-01 test send confirmed (audit verified, idempotent) | Authenticated portal session smoke, 20 remaining member invitations, pending migrations, content approval, and go-live formal approval remain open |
 
 ## Deliverable truth
 
@@ -138,6 +138,8 @@ These assets make the repository ready for controlled staging operations without
 - **REM-10 Stripe verification (TEST mode):** Product `JPV Bootcamp Membership` active; GBP 80/month price active; GBP 800/year price active; billing portal config active; staging webhook enabled at `preview.jpvbootcamp.com`; production webhook at `jpvbootcamp.com` disabled (correct for staging).
 - **REM-10 Resend verification:** `jpvbootcamp.com` domain verified (eu-west-1); API key valid.
 - **REM-10 Bunny CDN verification:** All 5 required env vars present; library API 200; CDN hostname `vz-d0404b6f-bd9.b-cdn.net`; env=staging.
+- **REM-11 browser smoke (40/40 PASS, desktop + mobile Chromium, playwright-staging.config.ts):** PUBLIC-001–005, BILLING-001–003, SUPPORT-001, ACCESSIBILITY-001–003, MOBILE-001–002, PERF-001–002, ERROR-001, SCHEMA-001, EVIDENCE-001–002
+- **REM-01 test apply:** `info@prochat.tools` sent (HTTP 200); audit key `member_invitation_v1_4f2caee990190148f5bd68910280d746` confirmed in `jpvbootcamp_staging.member_invitation_audit`; idempotency PASS; 20 others excluded pending explicit per-member authorization.
 - **REM-11 HTTP staging smoke (15/15 PASS, imageTag `d235c5a`):**
   - Landing page `/`: 200
   - Upgrade page `/upgrade`: 200
