@@ -22,6 +22,7 @@
 
 import { createHash } from 'node:crypto'
 import { appendFileSync, readFileSync } from 'node:fs'
+import { assertCrmApplyAllowlisted } from '../safety/stagingCommunicationAllowlist'
 
 // ─── Public types ─────────────────────────────────────────────────────────────
 
@@ -501,6 +502,12 @@ export async function runImport(options: RunImportOptions): Promise<ImportResult
     warnings: [...initialWarnings],
     journal: [...initialJournal],
   }
+
+  // Staging communication allowlist: enforce BEFORE any client calls
+  assertCrmApplyAllowlisted(
+    config.mode,
+    contacts.map((c) => c.email),
+  )
 
   // Validate mode: parse only, no client calls
   if (config.mode === 'validate') {

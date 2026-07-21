@@ -254,6 +254,7 @@ export const RELEASE_TEST_MANIFEST: ReleaseTestEntry[] = [
 
   test('staging.boundary-policy', 'deployment boundary and staging safety', 'scripts/staging-gates/stagingPolicy.test.ts', 'Proves staging boundary policy rejects deny-listed app IDs, non-staging origins, suffix domains, userinfo, non-HTTPS, wrong ports, and main branch — fail-closed.', 'Staging policy can be bypassed, allowing production or non-staging target.', 'readiness'),
   test('staging.workflow-boundary', 'deployment boundary and staging safety', 'scripts/staging-gates/workflowStagingBoundary.test.ts', 'Statically verifies GitHub workflows use staging-specific secrets, contain deny-list guards, SHA ancestry validation, and reject main branch.', 'Workflow step can accidentally target production app ID.', 'readiness'),
+  test('staging.communication-allowlist', 'deployment boundary and staging safety', 'scripts/safety/stagingCommunicationAllowlist.test.ts', 'Proves fail-closed staging communication allowlist rejects non-permitted recipients, multi-member batches, forbidden app IDs, and non-staging origins.', 'Outbound communication or account mutation targets an unintended recipient.', 'readiness'),
 ]
 
 export const DEFERRED_RELEASE_VALIDATIONS: DeferredReleaseValidation[] = [

@@ -26,6 +26,10 @@ import { createHash } from 'node:crypto'
 import { fileURLToPath } from 'node:url'
 import { Client } from 'pg'
 import { redactForLog } from './legacyMigrationFramework'
+import {
+  assertInvitationApplyAllowlisted,
+  assertStagingOrigin,
+} from '../safety/stagingCommunicationAllowlist'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -38,6 +42,7 @@ export interface InvitationConfig {
   runId: string
   stagingUrl?: string
   authorizationToken?: string
+  memberEmail?: string
 }
 
 export interface MemberRow {
@@ -102,6 +107,7 @@ export function checkApplyGuards(
   authorizationToken: string | undefined,
   stagingUrl: string | undefined,
   nodeEnv: string | undefined,
+  memberEmail: string | undefined,
 ): GuardCheckResult {
   if (mode !== 'apply') return { ok: true }
   if (nodeEnv === 'production') {
@@ -113,6 +119,11 @@ export function checkApplyGuards(
   if (!stagingUrl) {
     return { ok: false, reason: 'apply mode requires --staging-url <url>' }
   }
+  if (!memberEmail) {
+    return { ok: false, reason: 'apply mode requires --member-email info@prochat.tools (single-member enforcement)' }
+  }
+  // Staging origin guard
+  assertStagingOrigin(stagingUrl)
   return { ok: true }
 }
 
@@ -201,7 +212,7 @@ export async function runInvitationReset(config: InvitationConfig): Promise<Invi
   await client.connect()
 
   try {
-    const members = await queryCohort(client, config.schemaName)
+    let members = await queryCohort(client, config.schemaName)
     const cohortTotal = members.length
 
     if (cohortTotal === 0) {
@@ -216,6 +227,20 @@ export async function runInvitationReset(config: InvitationConfig): Promise<Invi
         skipped: 0,
         failed: 0,
       }
+    }
+
+    // Apply mode: enforce single-member allowlist BEFORE any iteration
+    if (config.mode === 'apply') {
+      const targetEmail = config.memberEmail!.trim().toLowerCase()
+      const filtered = members.filter(
+        (m) => m.email.trim().toLowerCase() === targetEmail,
+      )
+      // Allowlist guard: validates flag, cohort size=1, and allowlist membership
+      assertInvitationApplyAllowlisted(
+        config.memberEmail,
+        filtered.map((m) => m.email),
+      )
+      members = filtered
     }
 
     // Dry-run: count already invited vs pending without writing
@@ -342,6 +367,7 @@ function parseCliArgs(): {
   schemaName: string
   stagingUrl?: string
   authorizationToken?: string
+  memberEmail?: string
 } {
   const args = process.argv.slice(2)
 
@@ -362,6 +388,7 @@ function parseCliArgs(): {
   let schemaName = 'jpvbootcamp_staging'
   let stagingUrl: string | undefined
   let authorizationToken: string | undefined
+  let memberEmail: string | undefined
 
   const flagArgs = modeArg?.startsWith('--') ? args : args.slice(1)
 
@@ -392,17 +419,24 @@ function parseCliArgs(): {
       }
       authorizationToken = next
       i++
+    } else if (flag === '--member-email') {
+      if (!next || next.startsWith('--')) {
+        console.error('Flag --member-email requires a value')
+        process.exit(1)
+      }
+      memberEmail = next
+      i++
     } else if (flag.startsWith('--')) {
       console.error(`Unknown flag: ${flag}`)
       process.exit(1)
     }
   }
 
-  return { mode, schemaName, stagingUrl, authorizationToken }
+  return { mode, schemaName, stagingUrl, authorizationToken, memberEmail }
 }
 
 async function main() {
-  const { mode, schemaName, stagingUrl, authorizationToken } = parseCliArgs()
+  const { mode, schemaName, stagingUrl, authorizationToken, memberEmail } = parseCliArgs()
 
   // Guard: DATABASE_URL
   const databaseUrlCheck = checkDatabaseUrl(process.env.DATABASE_URL)
@@ -411,8 +445,8 @@ async function main() {
     process.exit(1)
   }
 
-  // Guard: apply prerequisites
-  const applyCheck = checkApplyGuards(mode, authorizationToken, stagingUrl, process.env.NODE_ENV)
+  // Guard: apply prerequisites (includes allowlist enforcement)
+  const applyCheck = checkApplyGuards(mode, authorizationToken, stagingUrl, process.env.NODE_ENV, memberEmail)
   if (!applyCheck.ok) {
     console.error(`REM-01 error: ${applyCheck.reason}`)
     process.exit(1)
@@ -426,6 +460,7 @@ async function main() {
   console.log(`Schema: ${schemaName}`)
   console.log(`Run ID: ${runId}`)
   console.log(`Database: ${databaseUrl.replace(/\/\/[^:]*:[^@]*@/, '//<REDACTED>@')}`)
+  if (memberEmail) console.log(`Target member: ${memberEmail}`)
   console.log(``)
 
   const result = await runInvitationReset({
@@ -435,6 +470,7 @@ async function main() {
     runId,
     stagingUrl,
     authorizationToken,
+    memberEmail,
   })
 
   if (result.cohortTotal === 0) {

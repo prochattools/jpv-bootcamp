@@ -186,33 +186,40 @@ describe('REM-01: apply guard — DATABASE_URL missing', () => {
   })
 
   test('checkApplyGuards blocks apply without authorization-token', () => {
-    const result = checkApplyGuards('apply', undefined, 'https://preview.example.com', 'staging')
+    const result = checkApplyGuards('apply', undefined, 'https://preview.jpvbootcamp.com', 'staging', 'info@prochat.tools')
 
     expect(result.ok).toBe(false)
   })
 
   test('checkApplyGuards blocks apply without staging-url', () => {
-    const result = checkApplyGuards('apply', 'some-token', undefined, 'staging')
+    const result = checkApplyGuards('apply', 'some-token', undefined, 'staging', 'info@prochat.tools')
 
     expect(result.ok).toBe(false)
   })
 
   test('checkApplyGuards blocks apply when NODE_ENV=production', () => {
-    const result = checkApplyGuards('apply', 'some-token', 'https://preview.example.com', 'production')
+    const result = checkApplyGuards('apply', 'some-token', 'https://preview.jpvbootcamp.com', 'production', 'info@prochat.tools')
 
     expect(result.ok).toBe(false)
   })
 
   test('checkApplyGuards allows dry-run without token or url', () => {
-    const result = checkApplyGuards('dry-run', undefined, undefined, 'production')
+    const result = checkApplyGuards('dry-run', undefined, undefined, 'production', undefined)
 
     expect(result.ok).toBe(true)
   })
 
   test('checkApplyGuards allows apply with all required flags and non-production env', () => {
-    const result = checkApplyGuards('apply', 'token-123', 'https://preview.example.com', 'staging')
+    const result = checkApplyGuards('apply', 'token-123', 'https://preview.jpvbootcamp.com', 'staging', 'info@prochat.tools')
 
     expect(result.ok).toBe(true)
+  })
+
+  test('checkApplyGuards rejects apply without --member-email', () => {
+    const result = checkApplyGuards('apply', 'token-123', 'https://preview.jpvbootcamp.com', 'staging', undefined)
+
+    expect(result.ok).toBe(false)
+    expect(result.reason).toContain('--member-email')
   })
 })
 
