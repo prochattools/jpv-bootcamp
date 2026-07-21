@@ -15,7 +15,7 @@ test.beforeEach(async ({ page }) => {
 
 async function openSupportForm(page: Page): Promise<void> {
   await page.goto('/')
-  const trigger = page.getByRole('button', { name: 'Support' })
+  const trigger = page.getByRole('button', { name: 'Support', exact: true })
   await trigger.scrollIntoViewIfNeeded()
   await trigger.click()
   await expect(page.getByRole('dialog', { name: 'Support' })).toBeVisible()

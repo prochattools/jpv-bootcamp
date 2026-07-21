@@ -17,9 +17,9 @@ test.describe('public launch routes', () => {
     await page.goto('/')
 
     await expect(page).toHaveTitle(/JPV|Jesus Property Venture/i)
-    await expect(page.getByText('£80/month', { exact: false })).toBeVisible()
+    await expect(page.locator('[data-contract-price="£80/month"]')).toBeVisible()
     await expect(page.getByText('No minimum commitment', { exact: false })).toBeVisible()
-    await expect(page.getByText('£800/year', { exact: false })).toBeVisible()
+    await expect(page.locator('[data-contract-price="£800/year"]')).toBeVisible()
 
     const proBillingLinks = page.locator('a[href="/upgrade"]')
     await expect(proBillingLinks.first()).toBeVisible()
