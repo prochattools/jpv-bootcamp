@@ -21,6 +21,7 @@
 import { Client } from 'pg'
 
 export type MigrationMode = 'extract' | 'validate' | 'dry-run' | 'apply' | 'rollback'
+export type MigrationOutcome = 'inserted' | 'updated' | 'unchanged' | 'preserved' | 'not_applicable'
 
 export interface DomainMigrationConfig {
   mode: MigrationMode
@@ -56,6 +57,7 @@ export interface DomainReconciliationMetrics {
   inserted: number
   updated: number
   unchanged: number
+  preserved: number
   notApplicable: number
 }
 
@@ -119,14 +121,14 @@ export interface DomainMigrationAdapter {
   /**
    * Apply a single transformed record to the destination.
    * Idempotent: if the record already exists (same idempotencyKey), upsert or skip.
-   * Return the outcome: 'inserted', 'updated', 'unchanged', 'not_applicable'.
+   * Return the outcome: 'inserted', 'updated', 'unchanged', 'preserved' (same-table), or 'not_applicable'.
    */
   applyRecord(
     client: Client,
     schemaName: string,
     runId: string,
     transformed: TransformedDomainRecord,
-  ): Promise<'inserted' | 'updated' | 'unchanged' | 'not_applicable'>
+  ): Promise<MigrationOutcome>
 
   /**
    * Reconcile source and destination after apply.
@@ -139,6 +141,7 @@ export interface DomainMigrationAdapter {
    * Delete all rows created by this migration run.
    * Safe only if complete before-images exist in audit events.
    * Must refuse to rollback if no audit evidence.
+   * For preserved rows (same-table migrations), return rowsDeleted=0 and reason='no_op_same_table'.
    */
   rollback(client: Client, schemaName: string, runId: string): Promise<{ rowsDeleted: number; reason?: string }>
 }
@@ -178,7 +181,7 @@ export async function ensureMigrationAuditTable(client: Client, schemaName: stri
       migration_run_id TEXT NOT NULL,
       idempotency_key TEXT NOT NULL,
       destination_table TEXT NOT NULL,
-      outcome TEXT NOT NULL CHECK (outcome IN ('inserted', 'updated', 'unchanged', 'not_applicable')),
+      outcome TEXT NOT NULL CHECK (outcome IN ('inserted', 'updated', 'unchanged', 'preserved', 'not_applicable')),
       applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       UNIQUE(migration_run_id, idempotency_key, destination_table)
     )
@@ -203,7 +206,7 @@ export async function recordAuditEvent(
     `INSERT INTO ${table} (migration_run_id, idempotency_key, destination_table, outcome)
      VALUES ($1, $2, $3, $4)
      ON CONFLICT (migration_run_id, idempotency_key, destination_table) DO NOTHING`,
-    [runId, idempotencyKey, destinationTable, outcome],
+    [runId, idempotencyKey, destinationTable, outcome as string],
   )
 }
 
@@ -354,7 +357,7 @@ export async function executeDomainMigration(
                 )
 
                 if (!metricsMap[record.destinationTable]) {
-                  metricsMap[record.destinationTable] = { inserted: 0, updated: 0, unchanged: 0, notApplicable: 0 }
+                  metricsMap[record.destinationTable] = { inserted: 0, updated: 0, unchanged: 0, preserved: 0, notApplicable: 0 }
                 }
                 const key = outcome === 'not_applicable' ? 'notApplicable' : outcome
                 metricsMap[record.destinationTable][key as keyof DomainReconciliationMetrics]++

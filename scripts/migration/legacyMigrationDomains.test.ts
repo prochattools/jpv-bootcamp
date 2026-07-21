@@ -186,48 +186,32 @@ describe('Adapter availability and status', () => {
     if (!adapter.domainName) throw new Error('REM-03 adapter not available')
   })
 
-  test('REM-04 (Email Subscribers) throws on extract (BLOCKED)', async () => {
+  test('REM-04 (Email Subscribers) is PRESERVED (no migration)', async () => {
     const adapter = new EmailSubscribersAdapter()
-    const client: any = {}
-    try {
-      await adapter.extractSourceRows(client, 'test_schema')
-      throw new Error('Expected REM-04 to be blocked')
-    } catch (e: any) {
-      if (!String(e).includes('rem_04_blocked')) throw e
-    }
+    if (adapter.domainName !== 'email_subscribers') throw new Error('Wrong domain name')
+    const result = await adapter.validate({} as any, 'test_schema')
+    if (result.passed) throw new Error('Expected validation to fail (no DB in test)')
   })
 
-  test('REM-05 (Support Requests) throws on extract (BLOCKED)', async () => {
+  test('REM-05 (Support Requests) is PRESERVED (no migration)', async () => {
     const adapter = new SupportRequestsAdapter()
-    const client: any = {}
-    try {
-      await adapter.extractSourceRows(client, 'test_schema')
-      throw new Error('Expected REM-05 to be blocked')
-    } catch (e: any) {
-      if (!String(e).includes('rem_05_blocked')) throw e
-    }
+    if (adapter.domainName !== 'support_requests') throw new Error('Wrong domain name')
+    const result = await adapter.validate({} as any, 'test_schema')
+    if (result.passed) throw new Error('Expected validation to fail (no DB in test)')
   })
 
-  test('REM-06 (Partner Attribution) throws on extract (BLOCKED)', async () => {
+  test('REM-06 (Partner Attribution) is PRESERVED (no migration)', async () => {
     const adapter = new PartnerAttributionAdapter()
-    const client: any = {}
-    try {
-      await adapter.extractSourceRows(client, 'test_schema')
-      throw new Error('Expected REM-06 to be blocked')
-    } catch (e: any) {
-      if (!String(e).includes('rem_06_blocked')) throw e
-    }
+    if (adapter.domainName !== 'partner_attribution') throw new Error('Wrong domain name')
+    const result = await adapter.validate({} as any, 'test_schema')
+    if (result.passed) throw new Error('Expected validation to fail (no DB in test)')
   })
 
-  test('REM-07 (Course Progress) throws on extract (BLOCKED)', async () => {
+  test('REM-07 (Course Progress) is PRESERVED (no migration)', async () => {
     const adapter = new CourseProgressAdapter()
-    const client: any = {}
-    try {
-      await adapter.extractSourceRows(client, 'test_schema')
-      throw new Error('Expected REM-07 to be blocked')
-    } catch (e: any) {
-      if (!String(e).includes('rem_07_blocked')) throw e
-    }
+    if (adapter.domainName !== 'course_progress') throw new Error('Wrong domain name')
+    const result = await adapter.validate({} as any, 'test_schema')
+    if (result.passed) throw new Error('Expected validation to fail (no DB in test)')
   })
 })
 
@@ -252,11 +236,11 @@ async function runTests() {
   console.log(`Tests: ${passed.length} passed, ${failed.length} failed`)
   console.log(`─────────────────────────────────────────`)
   console.log(`Adapter Status Summary:`)
-  console.log(`  REM-03 Sponsored Grants: AVAILABLE`)
-  console.log(`  REM-04 Email Subscribers: BLOCKED (no destination collection)`)
-  console.log(`  REM-05 Support Requests: BLOCKED (no destination collection)`)
-  console.log(`  REM-06 Partner Attribution: BLOCKED (no destination collections)`)
-  console.log(`  REM-07 Course Progress: BLOCKED (unsafe same-table migration)\n`)
+  console.log(`  REM-03 Sponsored Grants: AVAILABLE (copy migration)`)
+  console.log(`  REM-04 Email Subscribers: PRESERVED (canonical Prisma store)`)
+  console.log(`  REM-05 Support Requests: PRESERVED (canonical Prisma store)`)
+  console.log(`  REM-06 Partner Attribution: PRESERVED (canonical Prisma store, hashed data only)`)
+  console.log(`  REM-07 Course Progress: PRESERVED (canonical Payload store)\n`)
 
   if (failed.length > 0) {
     process.exit(1)
