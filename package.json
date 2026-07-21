@@ -39,6 +39,8 @@
     "migration:membership:preview": "tsx scripts/release/buildMembershipMigrationPreview.ts",
     "migration:legacy": "tsx scripts/migration/runLegacyMigration.ts",
     "test:migration:legacy": "tsx scripts/migration/legacyMigration.test.ts",
+    "migration:next-domains": "tsx scripts/migration/runNextDomainMigrations.ts",
+    "test:migration:next-domains": "tsx scripts/migration/legacyMigrationDomains.test.ts",
     "staging:migration-preflight": "tsx scripts/release/stagingMigrationPreflight.ts",
     "staging:migration-rehearsal": "tsx scripts/release/migrationRehearsal.ts",
     "staging:migration-rehearsal:evidence": "tsx scripts/release/buildMigrationRehearsalEvidence.ts",
