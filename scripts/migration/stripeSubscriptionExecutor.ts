@@ -35,8 +35,13 @@ export interface StripeUpdateClient {
         proration_behavior: string
         metadata: Record<string, string>
       },
+      options?: { idempotencyKey?: string },
     ): Promise<{ id: string; items: { data: Array<{ id: string; price: { id: string } }> } }>
-    retrieve(id: string): Promise<{ id: string; items: { data: Array<{ id: string; price: { id: string } }> } }>
+    retrieve(id: string): Promise<{
+      id: string
+      status: string
+      items: { data: Array<{ id: string; price: { id: string; product: string } }> }
+    }>
   }
   invoices: {
     retrieveUpcoming(params: {
@@ -214,6 +219,28 @@ export async function executeSubscriptionMigration(
       if (!currentItemId) {
         throw new Error('subscription_has_no_items')
       }
+
+      // Allowed-product enforcement
+      const currentProduct = current.items.data[0]?.price.product
+      if (currentProduct && !config.targetPrices.allowedProducts.includes(currentProduct)) {
+        const entry: AuditEntry = {
+          runId: config.runId,
+          subscriptionId: rec.subscriptionId,
+          customerId: rec.customerId,
+          outcome: 'failed',
+          targetPriceId: targetPriceId ?? 'unknown',
+          previousPriceId: rec.currentPriceId,
+          invoicePreviewAmountDue: -1,
+          invoicePreviewCurrency: 'unknown',
+          error: `product_not_in_allowlist: ${currentProduct}`,
+          timestamp: new Date().toISOString(),
+        }
+        recordEntry(entry, result, config.journalPath)
+        result.failed++
+        result.stoppedEarly = true
+        result.stopReason = `invariant: product ${currentProduct} not in allowedProducts for sub ${rec.subscriptionId}`
+        return result
+      }
     } catch (e) {
       const entry: AuditEntry = {
         runId: config.runId,
@@ -266,6 +293,50 @@ export async function executeSubscriptionMigration(
       return result
     }
 
+    // Re-read safety fields immediately before apply decision
+    if (config.mode === 'apply') {
+      try {
+        const fresh = await config.client.subscriptions.retrieve(rec.subscriptionId)
+        if (fresh.status !== 'active' && fresh.status !== 'trialing') {
+          const entry: AuditEntry = {
+            runId: config.runId,
+            subscriptionId: rec.subscriptionId,
+            customerId: rec.customerId,
+            outcome: 'failed',
+            targetPriceId,
+            previousPriceId: rec.currentPriceId,
+            invoicePreviewAmountDue: previewAmountDue,
+            invoicePreviewCurrency: previewCurrency,
+            error: `safety_recheck_failed: status changed to ${fresh.status}`,
+            timestamp: new Date().toISOString(),
+          }
+          recordEntry(entry, result, config.journalPath)
+          result.failed++
+          result.stoppedEarly = true
+          result.stopReason = `invariant: subscription ${rec.subscriptionId} status changed to ${fresh.status} before apply`
+          return result
+        }
+      } catch (e) {
+        const entry: AuditEntry = {
+          runId: config.runId,
+          subscriptionId: rec.subscriptionId,
+          customerId: rec.customerId,
+          outcome: 'failed',
+          targetPriceId,
+          previousPriceId: rec.currentPriceId,
+          invoicePreviewAmountDue: previewAmountDue,
+          invoicePreviewCurrency: previewCurrency,
+          error: `safety_recheck_retrieve_failed: ${e instanceof Error ? e.message : String(e)}`,
+          timestamp: new Date().toISOString(),
+        }
+        recordEntry(entry, result, config.journalPath)
+        result.failed++
+        result.stoppedEarly = true
+        result.stopReason = `invariant: safety recheck failed for sub ${rec.subscriptionId}`
+        return result
+      }
+    }
+
     if (config.mode === 'dry-run') {
       const entry: AuditEntry = {
         runId: config.runId,
@@ -291,7 +362,7 @@ export async function executeSubscriptionMigration(
         // to billing cycle boundaries. No mid-cycle prorations issued.
         proration_behavior: 'none',
         metadata: { migrationRunId: config.runId, migratedAt: new Date().toISOString() },
-      })
+      }, { idempotencyKey: `${config.runId}_${rec.subscriptionId}` })
 
       // Post-update retrieval reconciliation
       const updated = await config.client.subscriptions.retrieve(rec.subscriptionId)

@@ -86,13 +86,14 @@ function makeRecord(overrides: Partial<SubscriptionRecord> = {}): SubscriptionRe
 function makeUpdateClient(overrides: Partial<StripeUpdateClient> = {}): StripeUpdateClient {
   return {
     subscriptions: {
-      update: async (_id, _params) => ({
+      update: async (_id, _params, _options) => ({
         id: _id,
         items: { data: [{ id: 'si_001', price: { id: _params.items[0].price } }] },
       }),
       retrieve: async (id) => ({
         id,
-        items: { data: [{ id: 'si_001', price: { id: TARGET_PRICES.monthly } }] },
+        status: 'active',
+        items: { data: [{ id: 'si_001', price: { id: TARGET_PRICES.monthly, product: 'prod_jpv' } }] },
       }),
     },
     invoices: {
@@ -259,8 +260,8 @@ async function testDryRunProducesNoCalls() {
   const calls: string[] = []
   const client = makeUpdateClient({
     subscriptions: {
-      update: async (id) => { calls.push('update:' + id); return { id, items: { data: [] } } },
-      retrieve: async (id) => { calls.push('retrieve:' + id); return { id, items: { data: [{ id: 'si_001', price: { id: TARGET_PRICES.monthly } }] } } },
+      update: async (id, _params, _options) => { calls.push('update:' + id); return { id, items: { data: [] } } },
+      retrieve: async (id) => { calls.push('retrieve:' + id); return { id, status: 'active', items: { data: [{ id: 'si_001', price: { id: TARGET_PRICES.monthly, product: 'prod_jpv' } }] } } },
     },
   })
   const config = makeExecutorConfig({ client, mode: 'dry-run' })
@@ -370,17 +371,22 @@ async function testInvoicePreviewFailureStops() {
 }
 
 async function testReconciliationMismatchStops() {
+  let retrieveCount = 0
   const client = makeUpdateClient({
     subscriptions: {
-      update: async (id, params) => ({
+      update: async (id, params, _options) => ({
         id,
         items: { data: [{ id: 'si_001', price: { id: params.items[0].price } }] },
       }),
-      retrieve: async (id) => ({
-        id,
-        // Simulate wrong price returned after update
-        items: { data: [{ id: 'si_001', price: { id: 'price_unexpected' } }] },
-      }),
+      retrieve: async (id) => {
+        retrieveCount++
+        if (retrieveCount <= 2) {
+          // First two retrieves: initial item ID fetch + safety recheck (active, correct product)
+          return { id, status: 'active', items: { data: [{ id: 'si_001', price: { id: TARGET_PRICES.monthly, product: 'prod_jpv' } }] } }
+        }
+        // Third retrieve: post-update reconciliation — simulate wrong price
+        return { id, status: 'active', items: { data: [{ id: 'si_001', price: { id: 'price_unexpected', product: 'prod_jpv' } }] } }
+      },
     },
   })
   const config = makeExecutorConfig({ client, mode: 'apply' })
@@ -582,6 +588,108 @@ async function testResumeFromDurableJournalSkipsAlreadyApplied() {
   }
 }
 
+// ─── Adversarial safety tests (R3) ──────────────────────────────────────────
+
+async function testProductNotInAllowlistBlocksApply() {
+  const client = makeUpdateClient({
+    subscriptions: {
+      update: async (id, _params, _options) => ({ id, items: { data: [] } }),
+      retrieve: async (id) => ({
+        id,
+        status: 'active',
+        items: { data: [{ id: 'si_001', price: { id: 'price_legacy_monthly', product: 'prod_WRONG' } }] },
+      }),
+    },
+  })
+  const config = makeExecutorConfig({ client, mode: 'apply' })
+  const result = await executeSubscriptionMigration([makeRecord()], config)
+  assert.ok(result.stoppedEarly, 'Must stop when product is not in allowlist')
+  assert.equal(result.failed, 1)
+  assert.ok(result.journal[0].error?.includes('product_not_in_allowlist'))
+  assert.ok(result.stopReason?.includes('prod_WRONG'))
+  assert.equal(result.applied, 0, 'Must not apply when product is disallowed')
+}
+
+async function testIdempotencyKeyPassedToUpdate() {
+  let capturedOptions: { idempotencyKey?: string } | undefined
+  const client = makeUpdateClient({
+    subscriptions: {
+      update: async (id, params, options) => {
+        capturedOptions = options
+        return { id, items: { data: [{ id: 'si_001', price: { id: params.items[0].price } }] } }
+      },
+      retrieve: async (id) => ({
+        id,
+        status: 'active',
+        items: { data: [{ id: 'si_001', price: { id: TARGET_PRICES.monthly, product: 'prod_jpv' } }] },
+      }),
+    },
+  })
+  const config = makeExecutorConfig({ client, mode: 'apply', runId: 'run_idem_001' })
+  await executeSubscriptionMigration([makeRecord()], config)
+  assert.ok(capturedOptions, 'Options must be passed to update')
+  assert.equal(
+    capturedOptions.idempotencyKey,
+    'run_idem_001_sub_001',
+    'Idempotency key must be runId_subscriptionId',
+  )
+}
+
+async function testSafetyRecheckBlocksChangedStatus() {
+  let retrieveCount = 0
+  const client = makeUpdateClient({
+    subscriptions: {
+      update: async (id, _params, _options) => ({ id, items: { data: [] } }),
+      retrieve: async (id) => {
+        retrieveCount++
+        if (retrieveCount === 1) {
+          // First retrieve: normal (item ID fetch)
+          return { id, status: 'active', items: { data: [{ id: 'si_001', price: { id: TARGET_PRICES.monthly, product: 'prod_jpv' } }] } }
+        }
+        // Second retrieve: safety recheck — status has changed to canceled
+        return { id, status: 'canceled', items: { data: [{ id: 'si_001', price: { id: TARGET_PRICES.monthly, product: 'prod_jpv' } }] } }
+      },
+    },
+  })
+  const config = makeExecutorConfig({ client, mode: 'apply' })
+  const result = await executeSubscriptionMigration([makeRecord()], config)
+  assert.ok(result.stoppedEarly, 'Must stop when status changes before apply')
+  assert.equal(result.failed, 1)
+  assert.ok(result.journal[0].error?.includes('safety_recheck_failed'))
+  assert.ok(result.stopReason?.includes('status changed to canceled'))
+  assert.equal(result.applied, 0, 'Must not apply when status changed')
+}
+
+async function testSafetyRecheckRetrieveFailureBlocksApply() {
+  let retrieveCount = 0
+  const client = makeUpdateClient({
+    subscriptions: {
+      update: async (id, _params, _options) => ({ id, items: { data: [] } }),
+      retrieve: async (id) => {
+        retrieveCount++
+        if (retrieveCount === 1) {
+          return { id, status: 'active', items: { data: [{ id: 'si_001', price: { id: TARGET_PRICES.monthly, product: 'prod_jpv' } }] } }
+        }
+        throw new Error('network_timeout_during_recheck')
+      },
+    },
+  })
+  const config = makeExecutorConfig({ client, mode: 'apply' })
+  const result = await executeSubscriptionMigration([makeRecord()], config)
+  assert.ok(result.stoppedEarly, 'Must stop when safety recheck retrieve fails')
+  assert.equal(result.failed, 1)
+  assert.ok(result.journal[0].error?.includes('safety_recheck_retrieve_failed'))
+  assert.equal(result.applied, 0)
+}
+
+async function testProductAllowlistPassesForValidProduct() {
+  const config = makeExecutorConfig({ mode: 'dry-run' })
+  const result = await executeSubscriptionMigration([makeRecord()], config)
+  assert.equal(result.dryRun, 1, 'Should pass when product is in allowlist')
+  assert.equal(result.failed, 0)
+  assert.ok(!result.stoppedEarly)
+}
+
 // ─── Runner ─────────────────────────────────────────────────────────────────
 
 const tests = [
@@ -615,6 +723,11 @@ const tests = [
   { name: 'executor: skips already-migrated subscriptions', fn: testSkipsAlreadyMigrated },
   { name: 'executor: resume skips journaled entries', fn: testResumeFromJournal },
   { name: 'executor: rollback evidence document', fn: testRollbackEvidence },
+  { name: 'adversarial: product not in allowlist blocks apply', fn: testProductNotInAllowlistBlocksApply },
+  { name: 'adversarial: idempotency key passed to Stripe update', fn: testIdempotencyKeyPassedToUpdate },
+  { name: 'adversarial: safety recheck blocks changed status', fn: testSafetyRecheckBlocksChangedStatus },
+  { name: 'adversarial: safety recheck retrieve failure blocks apply', fn: testSafetyRecheckRetrieveFailureBlocksApply },
+  { name: 'adversarial: product allowlist passes for valid product', fn: testProductAllowlistPassesForValidProduct },
 ]
 
 async function runTests() {

@@ -199,7 +199,7 @@ jobs:
             }")
 
           echo "HTTP status: $RESPONSE"
-          cat /tmp/dokploy_response.json
+          echo "Deploy API response status recorded (body suppressed from logs)"
 
           if [ "$RESPONSE" != "200" ]; then
             echo "Dokploy trigger failed with status $RESPONSE"
@@ -207,3 +207,4 @@ jobs:
           fi
 
           echo "Deployment triggered successfully for: ${{ steps.image-tags.outputs.sha_tag }}"
+          echo "Provenance: deployed from $(git rev-parse HEAD)"

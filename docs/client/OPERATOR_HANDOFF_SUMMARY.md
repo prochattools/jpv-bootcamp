@@ -45,7 +45,7 @@
 - Pro-only checkout hardening with monthly and annual billing options
 - Support/pay-it-forward controlled Free semantics and durable support intake
 - Canonical `/portal` member portal ownership
-- Deterministic non-browser release gate: `pnpm test:release` (`148/148`)
+- Deterministic non-browser release gate: `pnpm test:release` (`149/149`)
 - Launch browser E2E: `pnpm test:e2e` (`58/58`, desktop and mobile Chromium)
 - Combined release/browser gate: `pnpm test:release:full`
 - Decision-readiness summary: `DECISION-READY, EXTERNAL APPROVALS PENDING`

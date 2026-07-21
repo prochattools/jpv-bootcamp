@@ -8,6 +8,8 @@
  * 4. Neither workflow may reference web-public-jpv-bootcamp-l66egq without a DENY guard
  * 5. deploy-preview.yml must contain SHA ancestry check
  * 6. deploy-preview.yml must reject main branch
+ * 9. Neither workflow must print full API response body to logs
+ * 10. Both deploy workflows must include provenance SHA echo
  */
 
 import assert from 'node:assert/strict'
@@ -87,7 +89,27 @@ async function main(): Promise<void> {
     'publish-preview-image.yml must not reference DOKPLOY_APP_ID (it only publishes, not deploys)',
   )
 
-  console.log('workflowDeploymentBoundary.test.ts passed — 13 assertions')
+  // Rule 9: Neither deploy workflow must print full API response body to logs
+  assert.ok(
+    !deployYml.includes('cat /tmp/dokploy_response.json'),
+    'deploy.yml must not print full Dokploy response body to workflow logs',
+  )
+  assert.ok(
+    !previewYml.includes('cat /tmp/dokploy_response.json'),
+    'deploy-preview.yml must not print full Dokploy response body to workflow logs',
+  )
+
+  // Rule 10: Both deploy workflows must include provenance echo
+  assert.ok(
+    deployYml.includes('Provenance: deployed from'),
+    'deploy.yml must echo deployment provenance SHA',
+  )
+  assert.ok(
+    previewYml.includes('Provenance: deployed from'),
+    'deploy-preview.yml must echo deployment provenance SHA',
+  )
+
+  console.log('workflowDeploymentBoundary.test.ts passed — 17 assertions')
 }
 
 main().catch((e) => {
