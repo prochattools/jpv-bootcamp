@@ -418,6 +418,7 @@ async function loginMember(page: Page): Promise<void> {
 
 test.describe('REM-01 Member Portal Login Proof', () => {
   test('AUTH-001: Migration member login and portal access', async ({ page }) => {
+    await page.context().clearCookies()
     await page.goto(`${STAGING_URL}/portal?mode=login`, { waitUntil: 'domcontentloaded' })
     expect(page.url()).toContain('/portal')
 
