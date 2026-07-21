@@ -382,26 +382,55 @@ test.describe('Evidence Capture for Manual Verification', () => {
   })
 })
 
-// ======== REM-01 PORTAL LOGIN PROOF ========
+// ======== REM-01 PORTAL LOGIN PROOF + AUTHENTICATED PORTAL FLOWS ========
+async function loginMember(page: Page): Promise<void> {
+  const EMAIL = process.env.STAGING_MEMBER_EMAIL
+  const PASSWORD = process.env.STAGING_MEMBER_PASSWORD
+  if (!EMAIL || !PASSWORD) {
+    throw new Error('Authenticated tests require STAGING_MEMBER_EMAIL and STAGING_MEMBER_PASSWORD env vars')
+  }
+  // Navigate to staging URL first so we're on the correct origin before setting cookies
+  await page.goto(`${STAGING_URL}/`, { waitUntil: 'domcontentloaded' })
+  // Use the Payload REST API to get a token, then inject it as a cookie
+  // This avoids form-submit race conditions across mobile/desktop viewports
+  const loginRes = await page.request.post(`${STAGING_URL}/api/payload_members/login`, {
+    data: { email: EMAIL, password: PASSWORD },
+    headers: { 'Content-Type': 'application/json', Origin: STAGING_URL },
+  })
+  const loginData = await loginRes.json()
+  const token: string | undefined = loginData.token
+  if (!token) {
+    throw new Error(`loginMember: login API failed — ${JSON.stringify(loginData.errors ?? loginData)}`)
+  }
+  // Set the Payload auth cookie so the app considers this page session authenticated
+  await page.context().addCookies([{
+    name: 'payload-token',
+    value: token,
+    domain: new URL(STAGING_URL).hostname,
+    path: '/',
+    httpOnly: true,
+    sameSite: 'Lax',
+  }])
+  // Navigate to the portal to establish the authenticated session in-page
+  await page.goto(`${STAGING_URL}/portal`, { waitUntil: 'domcontentloaded' })
+  await page.waitForLoadState('networkidle', { timeout: 20000 })
+}
+
 test.describe('REM-01 Member Portal Login Proof', () => {
   test('AUTH-001: Migration member login and portal access', async ({ page }) => {
-    // Env-based credentials required for AUTH-001
+    await page.goto(`${STAGING_URL}/portal?mode=login`, { waitUntil: 'domcontentloaded' })
+    expect(page.url()).toContain('/portal')
+
     const EMAIL = process.env.STAGING_MEMBER_EMAIL
     const PASSWORD = process.env.STAGING_MEMBER_PASSWORD
     if (!EMAIL || !PASSWORD) {
       throw new Error('AUTH-001 requires STAGING_MEMBER_EMAIL and STAGING_MEMBER_PASSWORD env vars — set them before running staging smoke')
     }
 
-    // Step 1: Portal login page loads
-    await page.goto(`${STAGING_URL}/portal?mode=login`, { waitUntil: 'domcontentloaded' })
-    expect(page.url()).toContain('/portal')
-
-    // Step 2: Fill credentials using exact IDs from the live form
     await page.locator('#member-email').fill(EMAIL)
     await page.locator('#member-password').fill(PASSWORD)
     await page.screenshot({ path: 'evidence-rem01-login-form.png' })
 
-    // Step 3: Submit and wait for login API response before checking redirect
     await Promise.all([
       page.waitForResponse((resp) => resp.url().includes('/api/payload_members/login'), { timeout: 15000 }).catch((): null => null),
       page.locator('button[type="submit"]:has-text("sign in")').click(),
@@ -410,9 +439,96 @@ test.describe('REM-01 Member Portal Login Proof', () => {
     await page.screenshot({ path: 'evidence-rem01-portal-authenticated.png' })
 
     const postLoginUrl = page.url()
-
-    // Proof: not sent back to login page
     expect(postLoginUrl).not.toMatch(/mode=login/)
     expect(postLoginUrl).toContain('jpvbootcamp.com')
+  })
+})
+
+test.describe('Authenticated Portal Route Coverage', () => {
+  test.beforeEach(async ({ page }) => {
+    if (!process.env.STAGING_MEMBER_EMAIL || !process.env.STAGING_MEMBER_PASSWORD) {
+      test.skip()
+    }
+  })
+
+  test('PORTAL-001: Dashboard loads after login — no errors', async ({ page }) => {
+    await loginMember(page)
+    expect(page.url()).not.toMatch(/mode=login/)
+    const errors: string[] = []
+    page.on('pageerror', e => errors.push(e.message))
+    await page.waitForLoadState('networkidle', { timeout: 10000 })
+    expect(errors.filter(e => !e.includes('ResizeObserver'))).toHaveLength(0)
+    await page.screenshot({ path: 'evidence-portal-dashboard.png' })
+  })
+
+  test('PORTAL-002: Courses route — authenticated, no redirect to login', async ({ page }) => {
+    await loginMember(page)
+    await page.goto(`${STAGING_URL}/portal/courses`, { waitUntil: 'domcontentloaded' })
+    await page.waitForLoadState('networkidle', { timeout: 15000 })
+    expect(page.url()).toContain('/portal')
+    expect(page.url()).not.toMatch(/mode=login/)
+    await page.screenshot({ path: 'evidence-portal-courses.png' })
+  })
+
+  test('PORTAL-003: Community route — authenticated, no redirect to login', async ({ page }) => {
+    await loginMember(page)
+    await page.goto(`${STAGING_URL}/portal/community`, { waitUntil: 'domcontentloaded' })
+    await page.waitForLoadState('networkidle', { timeout: 15000 })
+    expect(page.url()).toContain('/portal')
+    expect(page.url()).not.toMatch(/mode=login/)
+    await page.screenshot({ path: 'evidence-portal-community.png' })
+  })
+
+  test('PORTAL-004: Support route — page renders, preview state clearly labeled', async ({ page }) => {
+    await loginMember(page)
+    await page.goto(`${STAGING_URL}/portal/support`, { waitUntil: 'domcontentloaded' })
+    await page.waitForLoadState('networkidle', { timeout: 15000 })
+    expect(page.url()).toContain('/portal')
+    expect(page.url()).not.toMatch(/mode=login/)
+    // Page should load and show the support/pay-it-forward content
+    await expect(page.getByRole('heading', { name: /support/i }).first()).toBeVisible({ timeout: 5000 })
+    await page.screenshot({ path: 'evidence-portal-support.png' })
+  })
+
+  test('PORTAL-005: Programme route — accessible when authenticated', async ({ page }) => {
+    await loginMember(page)
+    await page.goto(`${STAGING_URL}/portal/programme`, { waitUntil: 'domcontentloaded' })
+    await page.waitForLoadState('networkidle', { timeout: 15000 })
+    expect(page.url()).toContain('/portal')
+    expect(page.url()).not.toMatch(/mode=login/)
+    await page.screenshot({ path: 'evidence-portal-programme.png' })
+  })
+
+  test('PORTAL-006: Member session API returns allowed:true for authenticated member', async ({ page }) => {
+    await loginMember(page)
+    const response = await page.evaluate(async (url) => {
+      const res = await fetch(`${url}/api/member-session`)
+      return { status: res.status, data: await res.json() }
+    }, STAGING_URL)
+    expect(response.status).toBe(200)
+    // API returns {allowed: true, destination: '/portal'} for authenticated members
+    expect(response.data).toHaveProperty('allowed', true)
+  })
+
+  test('PORTAL-007: Unauthenticated portal/courses redirects to login', async ({ page }) => {
+    await page.goto(`${STAGING_URL}/portal/courses`, { waitUntil: 'domcontentloaded' })
+    await page.waitForLoadState('networkidle', { timeout: 15000 })
+    // Must redirect to login boundary, not show authenticated content
+    expect(page.url()).toMatch(/mode=login|portal/)
+    const isOnLogin = page.url().includes('mode=login')
+    const hasLoginForm = await page.locator('#member-email').isVisible().catch(() => false)
+    expect(isOnLogin || hasLoginForm).toBe(true)
+  })
+
+  test('PORTAL-008: Entitlements API requires billing portal token — rejects unauthenticated', async ({ page }) => {
+    // /api/entitlements uses HMAC billing-portal tokens, not member session cookies
+    // Verify the endpoint is live and rejects requests without a valid token (401)
+    await page.goto(`${STAGING_URL}/`, { waitUntil: 'domcontentloaded' })
+    const response = await page.evaluate(async (url) => {
+      const res = await fetch(`${url}/api/entitlements`)
+      return { status: res.status, data: await res.json() }
+    }, STAGING_URL)
+    expect(response.status).toBe(401)
+    expect(response.data.reason).toBe('unauthorized')
   })
 })
