@@ -12,7 +12,6 @@ import Image from 'next/image'
 import { useState, type FormEvent } from 'react'
 
 import SponsoredPayItForward from '@/components/sponsored-pay-it-forward'
-import { JpvBrandLockup } from '@/components/brand/JpvBrandLockup'
 import { AccessibleDialog } from '@/components/ui/AccessibleDialog'
 import { landingSans, landingSerif } from '@/fonts'
 
@@ -252,7 +251,20 @@ export default function HomePage() {
 
       <header className='fixed inset-x-0 top-0 z-50 border-b border-jpv-border/80 bg-jpv-canvas/95'>
         <div className='mx-auto flex min-h-20 max-w-[80rem] items-center justify-between gap-6 px-5 py-3 md:px-8'>
-          <JpvBrandLockup href='#home' priority />
+          <a className='flex items-center gap-3' href='#home' aria-label='JPV Bootcamp home'>
+            <Image
+              alt='JPV Jesus Property Venture'
+              className='h-12 w-12 rounded-xl object-cover'
+              height={48}
+              priority
+              src='/images/jpv-logo.jpg'
+              width={48}
+            />
+            <span className='hidden leading-tight sm:block'>
+              <span className='block text-base font-bold tracking-tight'>JPV Bootcamp</span>
+              <span className='block text-xs font-medium text-jpv-muted'>Our passion is people</span>
+            </span>
+          </a>
 
           <nav aria-label='Main navigation' className='hidden items-center gap-6 xl:flex'>
             {navLinks.map((item) => (
@@ -610,9 +622,9 @@ export default function HomePage() {
 
       <footer className='border-t border-jpv-border bg-jpv-canvas px-5 py-10 md:px-8'>
         <div className='mx-auto flex max-w-[80rem] flex-col gap-8 sm:flex-row sm:items-center sm:justify-between'>
-          <div>
-            <JpvBrandLockup href='/' size='compact' />
-            <p className='mt-2 text-xs text-jpv-muted'>© {new Date().getFullYear()} JPV. All rights reserved.</p>
+          <div className='flex items-center gap-3'>
+            <Image alt='JPV Jesus Property Venture' className='h-11 w-11 rounded-xl object-cover' height={44} src='/images/jpv-logo.jpg' width={44} />
+            <div><p className='text-sm font-bold'>JPV Bootcamp</p><p className='text-xs text-jpv-muted'>© {new Date().getFullYear()} JPV. All rights reserved.</p></div>
           </div>
           <div className='flex flex-wrap items-center gap-x-5 gap-y-3 text-sm font-medium text-jpv-muted'>
             <a className='hover:text-jpv-ink' href="/terms">Terms</a>
