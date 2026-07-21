@@ -11,6 +11,10 @@
  *   npx tsx scripts/crm/fluentCrmImporter.test.ts
  */
 
+// Set env vars before module imports (allowlist reads from env)
+process.env.STAGING_TEST_RECIPIENT_EMAIL = 'info@prochat.tools'
+process.env.STAGING_TEST_MEMBER_EMAIL = 'info@prochat.tools'
+
 import assert from 'node:assert/strict'
 import { mkdtempSync, writeFileSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'

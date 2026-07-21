@@ -120,7 +120,7 @@ export function checkApplyGuards(
     return { ok: false, reason: 'apply mode requires --staging-url <url>' }
   }
   if (!memberEmail) {
-    return { ok: false, reason: 'apply mode requires --member-email info@prochat.tools (single-member enforcement)' }
+    return { ok: false, reason: 'apply mode requires --member-email matching STAGING_TEST_MEMBER_EMAIL (single-member enforcement)' }
   }
   // Staging origin guard
   assertStagingOrigin(stagingUrl)

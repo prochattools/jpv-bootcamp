@@ -1,6 +1,7 @@
 import 'server-only'
 import { Resend } from 'resend'
 import { getServerConfig } from '@/lib/config'
+import { assertStagingRecipientAllowed } from '@/lib/staging-email-guard'
 import type { Plan } from '@/lib/plans'
 import {
 	getMembershipEmailIntro,
@@ -117,6 +118,8 @@ export async function sendWelcomeEmail({
 		<p><a href="${resetUrl}">Set or reset your password</a></p>
 		<p>If you need help, reply to this email: ${emailConfig.replyTo}</p>
 	`
+
+	assertStagingRecipientAllowed([to], 'lib/email:sendWelcomeEmail')
 
 	const resend = getResendClient()
 	const { error } = await resend.emails.send({
@@ -243,6 +246,8 @@ export async function sendSupportEmail({
 		console.log('[support] emailTo', supportTo)
 		console.log('[support] emailReplyTo', email)
 	}
+
+	assertStagingRecipientAllowed([supportTo], 'lib/email:sendSupportEmail')
 
 	const resend = getResendClient()
 	const { error } = await resend.emails.send({

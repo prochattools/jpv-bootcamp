@@ -343,6 +343,8 @@ export async function executeProgrammeContent(
 
   // ------------------------------------------------------------------
   // rollback mode: undo applied entries from journal in reverse order
+  // - 'create' actions: delete the created document
+  // - 'update' actions: restore from mandatory before-image
   // ------------------------------------------------------------------
   if (config.mode === 'rollback') {
     if (!config.journalPath) {
@@ -356,32 +358,77 @@ export async function executeProgrammeContent(
 
     for (const entry of applied) {
       if (!entry.payloadDocId) continue
-      try {
-        await client.delete(entry.collection, entry.payloadDocId)
-        const opResult: ContentOperationResult = {
-          operationId: entry.operationId,
-          kind: entry.kind,
-          action: 'rollback',
-          outcome: 'applied',
-          payloadDocId: entry.payloadDocId,
-          timestamp: new Date().toISOString(),
+
+      if (entry.action === 'update') {
+        if (!entry.beforeImage) {
+          result.operations.push({
+            operationId: entry.operationId,
+            kind: entry.kind,
+            action: 'rollback',
+            outcome: 'failed',
+            payloadDocId: entry.payloadDocId,
+            error: 'rollback_blocked: before-image missing for update — cannot restore safely',
+            timestamp: new Date().toISOString(),
+          })
+          result.failed++
+          result.stoppedEarly = true
+          result.stopReason = `rollback_blocked: missing before-image for operation ${entry.operationId}`
+          return result
         }
-        result.operations.push(opResult)
-        result.created++ // reusing created as "rollback deletions applied"
-      } catch (e) {
-        result.operations.push({
-          operationId: entry.operationId,
-          kind: entry.kind,
-          action: 'rollback',
-          outcome: 'failed',
-          payloadDocId: entry.payloadDocId,
-          error: `rollback_delete_failed: ${e instanceof Error ? e.message : String(e)}`,
-          timestamp: new Date().toISOString(),
-        })
-        result.failed++
-        result.stoppedEarly = true
-        result.stopReason = `rollback_failed_on_operation: ${entry.operationId}`
-        return result
+
+        try {
+          await client.update(entry.collection, entry.payloadDocId, entry.beforeImage)
+          result.operations.push({
+            operationId: entry.operationId,
+            kind: entry.kind,
+            action: 'rollback',
+            outcome: 'applied',
+            payloadDocId: entry.payloadDocId,
+            timestamp: new Date().toISOString(),
+          })
+          result.updated++
+        } catch (e) {
+          result.operations.push({
+            operationId: entry.operationId,
+            kind: entry.kind,
+            action: 'rollback',
+            outcome: 'failed',
+            payloadDocId: entry.payloadDocId,
+            error: `rollback_restore_failed: ${e instanceof Error ? e.message : String(e)}`,
+            timestamp: new Date().toISOString(),
+          })
+          result.failed++
+          result.stoppedEarly = true
+          result.stopReason = `rollback_failed_on_operation: ${entry.operationId}`
+          return result
+        }
+      } else {
+        try {
+          await client.delete(entry.collection, entry.payloadDocId)
+          result.operations.push({
+            operationId: entry.operationId,
+            kind: entry.kind,
+            action: 'rollback',
+            outcome: 'applied',
+            payloadDocId: entry.payloadDocId,
+            timestamp: new Date().toISOString(),
+          })
+          result.created++
+        } catch (e) {
+          result.operations.push({
+            operationId: entry.operationId,
+            kind: entry.kind,
+            action: 'rollback',
+            outcome: 'failed',
+            payloadDocId: entry.payloadDocId,
+            error: `rollback_delete_failed: ${e instanceof Error ? e.message : String(e)}`,
+            timestamp: new Date().toISOString(),
+          })
+          result.failed++
+          result.stoppedEarly = true
+          result.stopReason = `rollback_failed_on_operation: ${entry.operationId}`
+          return result
+        }
       }
     }
 
@@ -684,12 +731,43 @@ export async function executeProgrammeContent(
         continue
       }
 
-      // Capture before-image for reversible updates
+      // Capture before-image for reversible updates — mandatory for safe rollback
       let beforeImage: Record<string, unknown> | null = null
       try {
         beforeImage = await client.findById(collection, existingId)
-      } catch {
-        // Non-fatal: proceed without before-image but log a warning
+      } catch (e) {
+        const entry: JournalEntry = {
+          runId,
+          operationId: op.id,
+          kind: op.kind,
+          action: op.action,
+          collection,
+          outcome: 'failed',
+          error: `before_image_capture_failed: ${e instanceof Error ? e.message : String(e)}`,
+          timestamp,
+        }
+        recordEntry(entry, result.operations, config.journalPath)
+        result.failed++
+        result.stoppedEarly = true
+        result.stopReason = `invariant: before-image capture failed for operation ${op.id} — blocked before mutation`
+        return result
+      }
+      if (!beforeImage) {
+        const entry: JournalEntry = {
+          runId,
+          operationId: op.id,
+          kind: op.kind,
+          action: op.action,
+          collection,
+          outcome: 'failed',
+          error: 'before_image_null: document exists but findById returned null',
+          timestamp,
+        }
+        recordEntry(entry, result.operations, config.journalPath)
+        result.failed++
+        result.stoppedEarly = true
+        result.stopReason = `invariant: before-image null for operation ${op.id} — blocked before mutation`
+        return result
       }
 
       // Update the existing document

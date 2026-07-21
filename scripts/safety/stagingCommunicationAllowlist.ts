@@ -6,13 +6,57 @@
  * that sends email, invokes a provider, or mutates a member account
  * MUST call assertAllowlistedRecipient() before proceeding.
  *
- * The allowlist is fixed to exactly one identity: info@prochat.tools.
- * It cannot be extended without code change + test update.
+ * The allowlist is driven by environment variables:
+ *   STAGING_TEST_RECIPIENT_EMAIL — sole outbound email recipient
+ *   STAGING_TEST_MEMBER_EMAIL — sole authenticated QA identity
+ *   STAGING_MIGRATION_MEMBER_EMAIL — future one-record selector (documented only)
+ *
+ * All three must be a single valid email address. Empty, list, or missing
+ * values are rejected at load time. Operators set real values in Dokploy staging.
  */
 
-// ─── Allowlist (immutable) ──────────────────────────────────────────────────
+// ─── Email validation ───────────────────────────────────────────────────────
 
-const ALLOWED_STAGING_RECIPIENTS = Object.freeze(['info@prochat.tools'] as const)
+const SINGLE_EMAIL_RE = /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/
+
+function validateSingleEmail(raw: string | undefined, varName: string): string {
+  if (!raw || !raw.trim()) {
+    throw new Error(
+      `STAGING_SAFETY: ${varName} is required but not set. ` +
+      `Set it to a single email address in the environment.`
+    )
+  }
+  const normalised = raw.trim().toLowerCase()
+  if (normalised.includes(',') || normalised.includes(';') || normalised.includes(' ')) {
+    throw new Error(
+      `STAGING_SAFETY: ${varName} must be a single email address, not a list. Got: [REDACTED]`
+    )
+  }
+  if (!SINGLE_EMAIL_RE.test(normalised)) {
+    throw new Error(
+      `STAGING_SAFETY: ${varName} is not a valid email address. Got: [REDACTED]`
+    )
+  }
+  return normalised
+}
+
+// ─── Environment-driven allowlist (fail-closed) ─────────────────────────────
+
+function loadAllowedRecipient(): string {
+  return validateSingleEmail(process.env.STAGING_TEST_RECIPIENT_EMAIL, 'STAGING_TEST_RECIPIENT_EMAIL')
+}
+
+function loadAllowedMember(): string {
+  return validateSingleEmail(process.env.STAGING_TEST_MEMBER_EMAIL, 'STAGING_TEST_MEMBER_EMAIL')
+}
+
+export function getStagingTestRecipientEmail(): string {
+  return loadAllowedRecipient()
+}
+
+export function getStagingTestMemberEmail(): string {
+  return loadAllowedMember()
+}
 
 const MAX_BATCH_SIZE = 1
 
@@ -39,10 +83,11 @@ export class StagingAllowlistViolation extends Error {
  * Throws StagingAllowlistViolation on any mismatch.
  */
 export function assertAllowlistedRecipient(email: string): void {
+  const allowed = loadAllowedRecipient()
   const normalised = normaliseEmail(email)
-  if (!ALLOWED_STAGING_RECIPIENTS.includes(normalised as typeof ALLOWED_STAGING_RECIPIENTS[number])) {
+  if (normalised !== allowed) {
     throw new StagingAllowlistViolation(
-      `recipient '${normalised}' is not in the staging allowlist [${ALLOWED_STAGING_RECIPIENTS.join(', ')}]`,
+      `recipient '${normalised}' is not the staging-allowed recipient`,
       [normalised],
     )
   }
@@ -77,10 +122,11 @@ export function assertAllowlistedBatch(emails: string[]): void {
     )
   }
 
+  const allowed = loadAllowedRecipient()
   for (const email of normalised) {
-    if (!ALLOWED_STAGING_RECIPIENTS.includes(email as typeof ALLOWED_STAGING_RECIPIENTS[number])) {
+    if (email !== allowed) {
       throw new StagingAllowlistViolation(
-        `recipient '${email}' is not in the staging allowlist [${ALLOWED_STAGING_RECIPIENTS.join(', ')}]`,
+        `recipient '${email}' is not the staging-allowed recipient`,
         [email],
       )
     }
@@ -114,14 +160,13 @@ export function assertCrmApplyAllowlisted(
     )
   }
 
+  const allowed = loadAllowedRecipient()
   const normalised = emails.map(normaliseEmail)
-  const disallowed = normalised.filter(
-    (e) => !ALLOWED_STAGING_RECIPIENTS.includes(e as typeof ALLOWED_STAGING_RECIPIENTS[number]),
-  )
+  const disallowed = normalised.filter((e) => e !== allowed)
 
   if (disallowed.length > 0) {
     throw new StagingAllowlistViolation(
-      `apply mode contains ${disallowed.length} contact(s) not in allowlist — all contacts must be info@prochat.tools`,
+      `apply mode contains ${disallowed.length} contact(s) not in allowlist — all contacts must match STAGING_TEST_RECIPIENT_EMAIL`,
       disallowed,
     )
   }
@@ -138,12 +183,19 @@ export function assertInvitationApplyAllowlisted(
 ): void {
   if (!memberEmailFlag) {
     throw new StagingAllowlistViolation(
-      'apply mode requires explicit --member-email info@prochat.tools flag',
+      'apply mode requires explicit --member-email flag matching STAGING_TEST_MEMBER_EMAIL',
       [],
     )
   }
 
-  assertAllowlistedRecipient(memberEmailFlag)
+  const allowedMember = loadAllowedMember()
+  const flagNormalised = normaliseEmail(memberEmailFlag)
+  if (flagNormalised !== allowedMember) {
+    throw new StagingAllowlistViolation(
+      `--member-email '${flagNormalised}' does not match STAGING_TEST_MEMBER_EMAIL`,
+      [flagNormalised],
+    )
+  }
 
   if (cohortEmails.length === 0) {
     throw new StagingAllowlistViolation(

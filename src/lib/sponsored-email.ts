@@ -3,6 +3,7 @@ import { Resend } from 'resend'
 import { redactEmail } from '@/lib/log-redact'
 import { getPublicBaseUrl } from '@/lib/public-base-url'
 import { formatPhoneForDisplay } from '@/lib/normalize-phone'
+import { assertStagingRecipientAllowed } from '@/lib/staging-email-guard'
 
 type SponsoredCounts = {
 	available: number
@@ -162,6 +163,8 @@ export async function sendSponsoredApplicationAdminEmail(params: {
 		.filter(Boolean)
 		.join('\n')
 
+	assertStagingRecipientAllowed(to, 'sponsored-email:sendSponsoredApplicationAdminEmail')
+
 	const { error } = await resend.emails.send({
 		from,
 		to,
@@ -202,6 +205,8 @@ export async function sendSponsoredClaimEmail(params: {
 		'This link expires in 7 days.',
 	].join('\n')
 
+	assertStagingRecipientAllowed([params.to], 'sponsored-email:sendSponsoredClaimEmail')
+
 	const { error } = await resend.emails.send({
 		from,
 		to: [params.to],
@@ -237,6 +242,8 @@ export async function sendSponsoredApplicantApprovedEmail(params: {
 		`Visit the JPV Bootcamp portal: ${portalUrl}`,
 	].join('\n')
 
+	assertStagingRecipientAllowed([params.to], 'sponsored-email:sendSponsoredApplicantApprovedEmail')
+
 	const { error } = await resend.emails.send({
 		from,
 		to: [params.to],
@@ -267,6 +274,8 @@ export async function sendSponsoredApplicantRejectedEmail(params: {
 	const text =
 		'Thanks for applying. You did not qualify or no seats are available right now.'
 
+	assertStagingRecipientAllowed([params.to], 'sponsored-email:sendSponsoredApplicantRejectedEmail')
+
 	const { error } = await resend.emails.send({
 		from,
 		to: [params.to],
@@ -296,6 +305,8 @@ export async function sendSponsoredDonorEmail(params: {
 		<p>Your purchase has added one sponsored access seat. You won&apos;t receive access yourself.</p>
 	`
 	const text = `Thanks for sponsoring Free access.\nYour purchase has added one sponsored access seat. You won't receive access yourself.`
+
+	assertStagingRecipientAllowed([params.to], 'sponsored-email:sendSponsoredDonorEmail')
 
 	const { error } = await resend.emails.send({
 		from,
@@ -336,6 +347,8 @@ export async function sendSponsoredSeatAdminEmail(params: {
 		`Donor email: ${params.donorEmail ?? 'unknown'}`,
 		`Timestamp: ${timestamp}`,
 	].join('\n')
+
+	assertStagingRecipientAllowed(to, 'sponsored-email:sendSponsoredSeatAdminEmail')
 
 	const { error } = await resend.emails.send({
 		from,

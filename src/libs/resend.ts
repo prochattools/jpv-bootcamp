@@ -1,5 +1,6 @@
 import config from '@/config'
 import { Resend } from 'resend'
+import { assertStagingRecipientAllowed } from '@/lib/staging-email-guard'
 
 class ResendService {
 	private resend = new Resend(process.env.RESEND_API_KEY)
@@ -32,6 +33,8 @@ class ResendService {
 			})
 			return null
 		}
+
+		assertStagingRecipientAllowed([toMail], 'libs/resend:sendWelcomeEmail')
 
 		const { data, error } = await this.resend.emails.send({
 			from: config.resend.fromAdmin,

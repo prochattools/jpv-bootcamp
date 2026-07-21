@@ -11,6 +11,10 @@
  * Run: pnpm exec tsx scripts/migration/runMemberInvitationReset.test.ts
  */
 
+// Set env vars before module imports (allowlist reads from env)
+process.env.STAGING_TEST_RECIPIENT_EMAIL = 'info@prochat.tools'
+process.env.STAGING_TEST_MEMBER_EMAIL = 'info@prochat.tools'
+
 import { Client } from 'pg'
 import {
   buildIdempotencyKey,

@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto'
 
 import { normalizeEmail } from '@/lib/normalize-email'
+import { assertStagingRecipientAllowed } from '@/lib/staging-email-guard'
 import { getSystemEmailTemplate } from '@/lib/payloadCourse/systemEmailTemplates'
 import { redactDeliveredResetLink } from '@/lib/members/redactDeliveredResetLink'
 import type {
@@ -349,6 +350,8 @@ export async function sendQueuedPayloadEmail(
       idempotencyKey,
     }
   }
+
+  assertStagingRecipientAllowed(sendPayload.to, 'payloadCourse/emailSender:sendQueuedPayloadEmail')
 
   let sendResult: SendEmailResponse
   try {

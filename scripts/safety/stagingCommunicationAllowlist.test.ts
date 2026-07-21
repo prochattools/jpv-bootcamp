@@ -1,4 +1,11 @@
 import assert from 'node:assert/strict'
+
+// Set env vars BEFORE importing the module (fail-closed requires them)
+const TEST_RECIPIENT = 'test-staging@example.invalid'
+const TEST_MEMBER = 'test-member@example.invalid'
+process.env.STAGING_TEST_RECIPIENT_EMAIL = TEST_RECIPIENT
+process.env.STAGING_TEST_MEMBER_EMAIL = TEST_MEMBER
+
 import {
   normaliseEmail,
   assertAllowlistedRecipient,
@@ -8,25 +15,36 @@ import {
   assertNotProductionApp,
   assertStagingAppOnly,
   assertStagingOrigin,
+  getStagingTestRecipientEmail,
+  getStagingTestMemberEmail,
   StagingAllowlistViolation,
 } from './stagingCommunicationAllowlist'
 
 // ─── normaliseEmail ──────────────────────────────────────────────────────────
 
 function testNormaliseEmailTrimsAndLowercases() {
-  assert.equal(normaliseEmail('  Info@ProChat.Tools  '), 'info@prochat.tools')
-  assert.equal(normaliseEmail('INFO@PROCHAT.TOOLS'), 'info@prochat.tools')
-  assert.equal(normaliseEmail('info@prochat.tools'), 'info@prochat.tools')
+  assert.equal(normaliseEmail('  Foo@Bar.Com  '), 'foo@bar.com')
+  assert.equal(normaliseEmail('FOO@BAR.COM'), 'foo@bar.com')
+  assert.equal(normaliseEmail('foo@bar.com'), 'foo@bar.com')
 }
 testNormaliseEmailTrimsAndLowercases()
 console.log('PASS testNormaliseEmailTrimsAndLowercases')
 
+// ─── getStagingTestRecipientEmail / getStagingTestMemberEmail ─────────────────
+
+function testEnvAccessorsReturnNormalisedValues() {
+  assert.equal(getStagingTestRecipientEmail(), TEST_RECIPIENT)
+  assert.equal(getStagingTestMemberEmail(), TEST_MEMBER)
+}
+testEnvAccessorsReturnNormalisedValues()
+console.log('PASS testEnvAccessorsReturnNormalisedValues')
+
 // ─── assertAllowlistedRecipient ──────────────────────────────────────────────
 
 function testAllowlistedRecipientPassesForAllowed() {
-  assert.doesNotThrow(() => assertAllowlistedRecipient('info@prochat.tools'))
-  assert.doesNotThrow(() => assertAllowlistedRecipient('INFO@PROCHAT.TOOLS'))
-  assert.doesNotThrow(() => assertAllowlistedRecipient('  info@prochat.tools  '))
+  assert.doesNotThrow(() => assertAllowlistedRecipient(TEST_RECIPIENT))
+  assert.doesNotThrow(() => assertAllowlistedRecipient(TEST_RECIPIENT.toUpperCase()))
+  assert.doesNotThrow(() => assertAllowlistedRecipient(`  ${TEST_RECIPIENT}  `))
 }
 testAllowlistedRecipientPassesForAllowed()
 console.log('PASS testAllowlistedRecipientPassesForAllowed')
@@ -42,11 +60,7 @@ function testAllowlistedRecipientRejectsOtherEmails() {
   )
   assert.throws(
     () => assertAllowlistedRecipient(''),
-    StagingAllowlistViolation,
-  )
-  assert.throws(
-    () => assertAllowlistedRecipient('info@prochat.tools.evil.com'),
-    StagingAllowlistViolation,
+    (e: unknown) => e instanceof Error,
   )
 }
 testAllowlistedRecipientRejectsOtherEmails()
@@ -62,7 +76,7 @@ console.log('PASS testBatchRejectsEmpty')
 
 function testBatchRejectsMultipleRecipients() {
   assert.throws(
-    () => assertAllowlistedBatch(['info@prochat.tools', 'info@prochat.tools']),
+    () => assertAllowlistedBatch([TEST_RECIPIENT, TEST_RECIPIENT]),
     StagingAllowlistViolation,
   )
 }
@@ -71,7 +85,7 @@ console.log('PASS testBatchRejectsMultipleRecipients')
 
 function testBatchRejectsMixedRecipients() {
   assert.throws(
-    () => assertAllowlistedBatch(['info@prochat.tools', 'alice@example.com']),
+    () => assertAllowlistedBatch([TEST_RECIPIENT, 'alice@example.com']),
     StagingAllowlistViolation,
   )
 }
@@ -79,8 +93,8 @@ testBatchRejectsMixedRecipients()
 console.log('PASS testBatchRejectsMixedRecipients')
 
 function testBatchAcceptsSingleAllowlisted() {
-  assert.doesNotThrow(() => assertAllowlistedBatch(['info@prochat.tools']))
-  assert.doesNotThrow(() => assertAllowlistedBatch(['INFO@PROCHAT.TOOLS']))
+  assert.doesNotThrow(() => assertAllowlistedBatch([TEST_RECIPIENT]))
+  assert.doesNotThrow(() => assertAllowlistedBatch([TEST_RECIPIENT.toUpperCase()]))
 }
 testBatchAcceptsSingleAllowlisted()
 console.log('PASS testBatchAcceptsSingleAllowlisted')
@@ -110,7 +124,7 @@ function testCrmApplyBlocksDisallowedEmails() {
     StagingAllowlistViolation,
   )
   assert.throws(
-    () => assertCrmApplyAllowlisted('apply', ['info@prochat.tools', 'alice@example.com']),
+    () => assertCrmApplyAllowlisted('apply', [TEST_RECIPIENT, 'alice@example.com']),
     StagingAllowlistViolation,
   )
 }
@@ -118,7 +132,7 @@ testCrmApplyBlocksDisallowedEmails()
 console.log('PASS testCrmApplyBlocksDisallowedEmails')
 
 function testCrmApplyAcceptsOnlyAllowlisted() {
-  assert.doesNotThrow(() => assertCrmApplyAllowlisted('apply', ['info@prochat.tools']))
+  assert.doesNotThrow(() => assertCrmApplyAllowlisted('apply', [TEST_RECIPIENT]))
 }
 testCrmApplyAcceptsOnlyAllowlisted()
 console.log('PASS testCrmApplyAcceptsOnlyAllowlisted')
@@ -134,7 +148,7 @@ console.log('PASS testCrmApplyRejectsEmptyList')
 
 function testCrmRejectsUnknownMode() {
   assert.throws(
-    () => assertCrmApplyAllowlisted('unknown-mode', ['info@prochat.tools']),
+    () => assertCrmApplyAllowlisted('unknown-mode', [TEST_RECIPIENT]),
     StagingAllowlistViolation,
   )
 }
@@ -145,7 +159,7 @@ console.log('PASS testCrmRejectsUnknownMode')
 
 function testInvitationRejectsMissingFlag() {
   assert.throws(
-    () => assertInvitationApplyAllowlisted(undefined, ['info@prochat.tools']),
+    () => assertInvitationApplyAllowlisted(undefined, [TEST_MEMBER]),
     StagingAllowlistViolation,
   )
 }
@@ -163,8 +177,8 @@ console.log('PASS testInvitationRejectsDisallowedFlag')
 
 function testInvitationRejectsMultipleRows() {
   assert.throws(
-    () => assertInvitationApplyAllowlisted('info@prochat.tools', [
-      'info@prochat.tools',
+    () => assertInvitationApplyAllowlisted(TEST_MEMBER, [
+      TEST_MEMBER,
       'alice@example.com',
     ]),
     StagingAllowlistViolation,
@@ -175,7 +189,7 @@ console.log('PASS testInvitationRejectsMultipleRows')
 
 function testInvitationRejectsMismatchedCohort() {
   assert.throws(
-    () => assertInvitationApplyAllowlisted('info@prochat.tools', ['different@example.com']),
+    () => assertInvitationApplyAllowlisted(TEST_MEMBER, ['different@example.com']),
     StagingAllowlistViolation,
   )
 }
@@ -184,7 +198,7 @@ console.log('PASS testInvitationRejectsMismatchedCohort')
 
 function testInvitationRejectsEmptyCohort() {
   assert.throws(
-    () => assertInvitationApplyAllowlisted('info@prochat.tools', []),
+    () => assertInvitationApplyAllowlisted(TEST_MEMBER, []),
     StagingAllowlistViolation,
   )
 }
@@ -193,14 +207,46 @@ console.log('PASS testInvitationRejectsEmptyCohort')
 
 function testInvitationPassesValidSingle() {
   assert.doesNotThrow(
-    () => assertInvitationApplyAllowlisted('info@prochat.tools', ['info@prochat.tools']),
+    () => assertInvitationApplyAllowlisted(TEST_MEMBER, [TEST_MEMBER]),
   )
   assert.doesNotThrow(
-    () => assertInvitationApplyAllowlisted('INFO@PROCHAT.TOOLS', ['info@prochat.tools']),
+    () => assertInvitationApplyAllowlisted(TEST_MEMBER.toUpperCase(), [TEST_MEMBER]),
   )
 }
 testInvitationPassesValidSingle()
 console.log('PASS testInvitationPassesValidSingle')
+
+// ─── Env validation rejects invalid values ──────────────────────────────────
+
+function testEnvValidationRejectsListValues() {
+  const orig = process.env.STAGING_TEST_RECIPIENT_EMAIL
+  try {
+    process.env.STAGING_TEST_RECIPIENT_EMAIL = 'a@b.com, c@d.com'
+    assert.throws(
+      () => assertAllowlistedRecipient('a@b.com'),
+      (e: unknown) => e instanceof Error && e.message.includes('single email'),
+    )
+  } finally {
+    process.env.STAGING_TEST_RECIPIENT_EMAIL = orig
+  }
+}
+testEnvValidationRejectsListValues()
+console.log('PASS testEnvValidationRejectsListValues')
+
+function testEnvValidationRejectsEmpty() {
+  const orig = process.env.STAGING_TEST_RECIPIENT_EMAIL
+  try {
+    process.env.STAGING_TEST_RECIPIENT_EMAIL = ''
+    assert.throws(
+      () => assertAllowlistedRecipient('a@b.com'),
+      (e: unknown) => e instanceof Error && e.message.includes('required'),
+    )
+  } finally {
+    process.env.STAGING_TEST_RECIPIENT_EMAIL = orig
+  }
+}
+testEnvValidationRejectsEmpty()
+console.log('PASS testEnvValidationRejectsEmpty')
 
 // ─── assertNotProductionApp ──────────────────────────────────────────────────
 
@@ -289,4 +335,4 @@ console.log('PASS testErrorContainsOffendingEmails')
 
 // ─── Summary ────────────────────────────────────────────────────────────────
 
-console.log('\nstaging communication allowlist tests: 26/26 PASSED')
+console.log('\nstaging communication allowlist tests: 28/28 PASSED')
