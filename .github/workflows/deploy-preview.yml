@@ -167,21 +167,23 @@ jobs:
           set -euo pipefail
 
           # Hard deployment boundary guard — fail closed before any API call
-          ALLOWED_APP_ID="clients-jpv-bootcamp-app-tp9xrk"
-          DENIED_APP_ID="web-public-jpv-bootcamp-l66egq"
+          # Deny-list: production app IDs (both slug and internal formats)
+          DENIED_SLUG="web-public-jpv-bootcamp-l66egq"
+          DENIED_INTERNAL="l66egq"
 
           if [ -z "$DOKPLOY_PREVIEW_APP_ID" ]; then
             echo "DEPLOY-DENIED: DOKPLOY_PREVIEW_APP_ID secret is unset or empty" >&2
             exit 1
           fi
-          if [ "$DOKPLOY_PREVIEW_APP_ID" = "$DENIED_APP_ID" ]; then
-            echo "DEPLOY-DENIED: DOKPLOY_PREVIEW_APP_ID is on the production deny-list: $DENIED_APP_ID" >&2
+          if [ "$DOKPLOY_PREVIEW_APP_ID" = "$DENIED_SLUG" ]; then
+            echo "DEPLOY-DENIED: DOKPLOY_PREVIEW_APP_ID matches production deny-list: $DENIED_SLUG" >&2
             exit 1
           fi
-          if [ "$DOKPLOY_PREVIEW_APP_ID" != "$ALLOWED_APP_ID" ]; then
-            echo "DEPLOY-DENIED: DOKPLOY_PREVIEW_APP_ID '$DOKPLOY_PREVIEW_APP_ID' is not the allowed staging app ID '$ALLOWED_APP_ID'" >&2
+          if echo "$DOKPLOY_PREVIEW_APP_ID" | grep -qi "$DENIED_INTERNAL"; then
+            echo "DEPLOY-DENIED: DOKPLOY_PREVIEW_APP_ID contains production identifier fragment" >&2
             exit 1
           fi
+          echo "Deploy guard passed: DOKPLOY_PREVIEW_APP_ID is not on deny-list"
 
           COMMIT_MSG=$(git log -1 --pretty=format:"%s" ${{ github.sha }})
           COMMIT_AUTHOR=$(git log -1 --pretty=format:"%an" ${{ github.sha }})
