@@ -10,8 +10,8 @@ Current repository result: `DECISION-READY, EXTERNAL APPROVALS PENDING`
 ## Identity
 
 - Branch: `feature/course-branding-and-preview`
-- Commit: `32874a2` (local HEAD); staging deployed at `d235c5a`
-- Release candidate label: `feature/course-branding-and-preview @ 32874a2`
+- Commit: `e1c0d4a` (local HEAD); staging deployed at `93799c6`
+- Release candidate label: `feature/course-branding-and-preview @ e1c0d4a`
 - Date: 2026-07-21
 - Operator: [TO BE FILLED — named operator required]
 - Approvers: [TO BE FILLED — client + technical approver required]
@@ -29,7 +29,7 @@ Current repository result: `DECISION-READY, EXTERNAL APPROVALS PENDING`
 - [x] `pnpm staging:smoke-simulated` — PASS 5/5 (2026-07-21)
 - [x] `pnpm release:evidence:dry-run` — PASS (2026-07-21)
 - [x] `pnpm test:release` — PASS 145/145 (2026-07-21, HEAD `32874a2`)
-- [x] `pnpm test:e2e` — PASS 58/58 (2026-07-21, HEAD `c4581ff`)
+- [x] `pnpm test:e2e` — PASS 58/58 (2026-07-21, HEAD `e1c0d4a`)
 - [x] `pnpm test:release:full` — PASS (2026-07-21)
 - [x] `pnpm staging:static-preflight` — PASS (2026-07-21)
 - [x] `./node_modules/.bin/tsc --noEmit --pretty false --incremental false` — PASS (2026-07-21)
@@ -52,7 +52,7 @@ Current repository result: `DECISION-READY, EXTERNAL APPROVALS PENDING`
 - [x] Bunny CDN credentials verified — all 5 required env vars present, library API 200, CDN hostname confirmed, env=staging (2026-07-21)
 - [ ] Payload/admin staging verification complete — requires operator login with test account
 - [ ] support-intake staging verification complete where in scope — blocked on REM-09 (support migration unapplied)
-- [x] staging smoke complete — HTTP 15/15 PASS + browser 42/42 PASS (2026-07-21, imageTag `d235c5a`, desktop + mobile Chromium via playwright-staging.config.ts): PUBLIC-001–005, BILLING-001–003, SUPPORT-001, ACCESSIBILITY-001–003, MOBILE-001–002, PERF-001–002, ERROR-001, SCHEMA-001, EVIDENCE-001–002, AUTH-001 all PASS
+- [x] staging smoke complete — 58/58 PASS (2026-07-21, imageTag `93799c6`, desktop + mobile Chromium via playwright-staging.config.ts): PUBLIC-001–005, BILLING-001–003, SUPPORT-001, ACCESSIBILITY-001–003, MOBILE-001–002, PERF-001–002, ERROR-001, SCHEMA-001, EVIDENCE-001–002, AUTH-001, PORTAL-001–008 all PASS
 - [x] REM-01 test apply complete — `[staging-qa-identity]` (permitted test address): HTTP 200, audit record confirmed in `jpvbootcamp_staging.member_invitation_audit`, idempotency PASS; remaining 20 members pending explicit per-member authorization
 - [x] browser acceptance evidence complete — AUTH-001 Playwright PASS: login API 200, JWT issued, post-login URL `/portal` confirmed (desktop + mobile), email_verified_at stamped; 2026-07-21
 - [ ] monitoring readiness confirmed
@@ -63,7 +63,7 @@ Current repository result: `DECISION-READY, EXTERNAL APPROVALS PENDING`
 | Gate | Required state | Evidence |
 | --- | --- | --- |
 | release suite | pass | **PASS 145/145** — 2026-07-21, HEAD `32874a2` |
-| browser suite | pass | **PASS 58/58** — 2026-07-21, HEAD `c4581ff` |
+| browser suite | pass | **PASS 58/58** — 2026-07-21, HEAD `e1c0d4a` |
 | static preflight | pass | **PASS** — 2026-07-21 |
 | build | pass | **PASS** — 2026-07-21 |
 | Prisma validation | pass | **PASS** — both schemas, 2026-07-21 |
@@ -81,9 +81,9 @@ Current repository result: `DECISION-READY, EXTERNAL APPROVALS PENDING`
 | Bunny CDN verification | pass | **PASS** — all 5 env vars present, library API 200, CDN hostname confirmed, 2026-07-21 |
 | Payload/admin staging verification | pending until executed | PENDING — operator login with test account required |
 | local simulated smoke | pass | **PASS 5/5** — 2026-07-21 |
-| staging smoke | pending until executed | HTTP 15/15 PASS + browser 42/42 PASS per playwright-staging.config.ts; AUTH-001 portal login PASS; formal operator sign-off pending |
-| staging smoke (HTTP) | pass | **PASS 15/15** — 2026-07-21, imageTag `d235c5a`; all API boundary checks confirmed |
-| staging smoke (browser) | pass | **PASS 42/42** — 2026-07-21, desktop + mobile Chromium; includes AUTH-001 portal login proof |
+| staging smoke | pending until executed | **58/58 PASS** per playwright-staging.config.ts; AUTH-001 + PORTAL-001–008 all PASS; formal operator sign-off pending |
+| staging smoke (HTTP) | pass | **PASS 15/15** — 2026-07-21, imageTag `93799c6`; all API boundary checks confirmed |
+| staging smoke (browser) | pass | **PASS 58/58** — 2026-07-21, desktop + mobile Chromium; includes AUTH-001 + PORTAL-001–008 |
 | REM-01 test invitation | pass | **PASS** — `[staging-qa-identity]` sent, audit confirmed, idempotency PASS; portal login PASS (AUTH-001); 20 others pending authorization |
 | rollback readiness | documented and repository-owned checklist complete | **DOCUMENTED** — checklist complete |
 | rollback evidence from staging | pending until executed | PENDING |
@@ -95,7 +95,7 @@ Current repository result: `DECISION-READY, EXTERNAL APPROVALS PENDING`
 - programme content: client content outstanding; approved representative 8-week programme required or placeholder acceptance needed
 - migration state: 3 pending migrations unapplied (remove_table_plan, rename_account_identity_columns, membership_support_schema); require explicit operator authorization with backup/rollback confirmed
 - provider state: Stripe TEST ✓, Resend ✓, Bunny CDN ✓; Payload/admin authenticated session verification pending (requires operator with live member credentials)
-- staging state: HTTP smoke 15/15 PASS; browser smoke 42/42 PASS (desktop + mobile, AUTH-001 PASS); REM-01 test send + portal login confirmed ([staging-qa-identity], audit verified, idempotent); 20 remaining member invitations pending explicit per-member authorization
+- staging state: 58/58 PASS (desktop + mobile, AUTH-001 + PORTAL-001–008 all PASS, imageTag `93799c6`); REM-01 test send + portal login confirmed ([staging-qa-identity], audit verified, idempotent); 20 remaining member invitations pending explicit per-member authorization
 - unresolved advisories: 3 moderate npm advisories (non-blocking)
 - operational ownership: named operator, approvers, rollback owner, monitoring owner all unfilled
 
