@@ -13,7 +13,7 @@ function SubmitButton() {
 
   return (
     <button
-      className='rounded-full bg-[#153f2e] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#0f3425] disabled:cursor-not-allowed disabled:opacity-60'
+      className='jpv-button-primary'
       disabled={pending}
       type='submit'
     >
@@ -34,12 +34,12 @@ export function PasswordChangeForm() {
   return (
     <form action={formAction} className='space-y-5' ref={formRef}>
       <div>
-        <label className='text-sm font-semibold text-[#153f2e]' htmlFor='currentPassword'>
+        <label className='text-sm font-semibold text-jpv-ink' htmlFor='currentPassword'>
           Current password
         </label>
         <input
           autoComplete='current-password'
-          className='mt-2 w-full rounded-xl border border-[#153f2e]/15 bg-white px-4 py-3 text-sm text-[#14261d] outline-none transition focus:border-[#9d864b] focus:ring-2 focus:ring-[#d9c897]/45'
+          className='mt-2 w-full rounded-lg border border-jpv-border bg-jpv-canvas px-4 py-3 text-sm text-jpv-ink outline-none transition focus:border-jpv-green-deep focus:ring-2 focus:ring-jpv-green/25'
           id='currentPassword'
           name='currentPassword'
           required
@@ -49,12 +49,12 @@ export function PasswordChangeForm() {
 
       <div className='grid gap-4 sm:grid-cols-2'>
         <div>
-          <label className='text-sm font-semibold text-[#153f2e]' htmlFor='newPassword'>
+          <label className='text-sm font-semibold text-jpv-ink' htmlFor='newPassword'>
             New password
           </label>
           <input
             autoComplete='new-password'
-            className='mt-2 w-full rounded-xl border border-[#153f2e]/15 bg-white px-4 py-3 text-sm text-[#14261d] outline-none transition focus:border-[#9d864b] focus:ring-2 focus:ring-[#d9c897]/45'
+            className='mt-2 w-full rounded-lg border border-jpv-border bg-jpv-canvas px-4 py-3 text-sm text-jpv-ink outline-none transition focus:border-jpv-green-deep focus:ring-2 focus:ring-jpv-green/25'
             id='newPassword'
             minLength={12}
             name='newPassword'
@@ -64,12 +64,12 @@ export function PasswordChangeForm() {
         </div>
 
         <div>
-          <label className='text-sm font-semibold text-[#153f2e]' htmlFor='newPasswordConfirmation'>
+          <label className='text-sm font-semibold text-jpv-ink' htmlFor='newPasswordConfirmation'>
             Confirm new password
           </label>
           <input
             autoComplete='new-password'
-            className='mt-2 w-full rounded-xl border border-[#153f2e]/15 bg-white px-4 py-3 text-sm text-[#14261d] outline-none transition focus:border-[#9d864b] focus:ring-2 focus:ring-[#d9c897]/45'
+            className='mt-2 w-full rounded-lg border border-jpv-border bg-jpv-canvas px-4 py-3 text-sm text-jpv-ink outline-none transition focus:border-jpv-green-deep focus:ring-2 focus:ring-jpv-green/25'
             id='newPasswordConfirmation'
             minLength={12}
             name='newPasswordConfirmation'
@@ -79,7 +79,7 @@ export function PasswordChangeForm() {
         </div>
       </div>
 
-      <p className='text-xs leading-5 text-[#68766f]'>Use at least 12 characters.</p>
+      <p className='text-xs leading-5 text-jpv-muted'>Use at least 12 characters.</p>
 
       {state.error && (
         <p className='rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700'>

@@ -114,13 +114,13 @@ function groupItems(items: PendingCommunityModerationItem[]) {
 
 function DecisionForms({ item }: { item: PendingCommunityModerationItem }) {
   return (
-    <div className='mt-6 grid gap-4 border-t border-[#153f2e]/10 pt-5 lg:grid-cols-2'>
+    <div className='mt-6 grid gap-4 border-t border-[var(--jpv-brand-deep)]/10 pt-5 lg:grid-cols-2'>
       <form action={submitModerationDecision}>
         <input name='kind' type='hidden' value={item.kind} />
         <input name='id' type='hidden' value={item.id} />
         <input name='decision' type='hidden' value='approve' />
         <button
-          className='w-full rounded-full bg-[#153f2e] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#0f3023]'
+          className='w-full rounded-full bg-[var(--jpv-brand-deep)] px-5 py-3 text-sm font-bold text-white transition hover:bg-[var(--jpv-brand-hover)]'
           type='submit'
         >
           Approve
@@ -132,18 +132,18 @@ function DecisionForms({ item }: { item: PendingCommunityModerationItem }) {
         <input name='id' type='hidden' value={item.id} />
         <input name='decision' type='hidden' value='reject' />
         <label className='block'>
-          <span className='text-xs font-bold uppercase tracking-[0.12em] text-[#8a7450]'>
+          <span className='text-xs font-bold uppercase tracking-[0.12em] text-[var(--jpv-sunshine-ink)]'>
             Rejection reason
           </span>
           <textarea
-            className='mt-2 min-h-24 w-full rounded-[14px] border border-[#153f2e]/15 px-4 py-3 text-sm text-[#24372f] outline-none transition focus:border-[#8a7450]'
+            className='mt-2 min-h-24 w-full rounded-jpv-panel border border-[var(--jpv-brand-deep)]/15 px-4 py-3 text-sm text-[var(--jpv-ink)] outline-none transition focus:border-[var(--jpv-sunshine-ink)]'
             maxLength={500}
             name='reason'
             required
           />
         </label>
         <button
-          className='w-full rounded-full border border-[#9c5c4f]/30 bg-[#f8ece8] px-5 py-3 text-sm font-bold text-[#78463d] transition hover:border-[#9c5c4f]/60'
+          className='w-full rounded-full border border-[var(--jpv-danger)]/30 bg-[var(--jpv-danger-surface)] px-5 py-3 text-sm font-bold text-[var(--jpv-danger-ink)] transition hover:border-[var(--jpv-danger)]/60'
           type='submit'
         >
           Reject
@@ -156,15 +156,15 @@ function DecisionForms({ item }: { item: PendingCommunityModerationItem }) {
 function ModerationItemCard({ item }: { item: PendingCommunityModerationItem }) {
   if (item.kind === 'post') {
     return (
-      <article className='rounded-[22px] border border-[#153f2e]/10 bg-white p-6 shadow-[0_14px_35px_rgba(31,52,43,0.07)]'>
-        <div className='flex flex-wrap gap-3 text-xs font-bold uppercase tracking-[0.12em] text-[#8a7450]'>
+      <article className='rounded-jpv-card border border-[var(--jpv-brand-deep)]/10 bg-white p-6 shadow-jpv-card'>
+        <div className='flex flex-wrap gap-3 text-xs font-bold uppercase tracking-[0.12em] text-[var(--jpv-sunshine-ink)]'>
           <span>Post</span>
           <span>{item.postType}</span>
           <span>{formatDate(item.createdAt)}</span>
         </div>
-        <h3 className='mt-3 text-xl font-bold text-[#153f2e]'>{item.title}</h3>
-        <p className='mt-2 text-sm text-[#68766f]'>Submitted by {item.authorName}</p>
-        <div className='mt-5 rounded-[16px] bg-[#f7f4ec] px-5 py-3'>
+        <h3 className='mt-3 text-xl font-bold text-[var(--jpv-brand-deep)]'>{item.title}</h3>
+        <p className='mt-2 text-sm text-[var(--jpv-muted)]'>Submitted by {item.authorName}</p>
+        <div className='mt-5 rounded-jpv-card bg-[var(--jpv-surface)] px-5 py-3'>
           <CommunityRichText value={item.preview} />
         </div>
         <DecisionForms item={item} />
@@ -174,14 +174,14 @@ function ModerationItemCard({ item }: { item: PendingCommunityModerationItem }) 
 
   if (item.kind === 'comment') {
     return (
-      <article className='rounded-[22px] border border-[#153f2e]/10 bg-white p-6 shadow-[0_14px_35px_rgba(31,52,43,0.07)]'>
-        <div className='flex flex-wrap gap-3 text-xs font-bold uppercase tracking-[0.12em] text-[#8a7450]'>
+      <article className='rounded-jpv-card border border-[var(--jpv-brand-deep)]/10 bg-white p-6 shadow-jpv-card'>
+        <div className='flex flex-wrap gap-3 text-xs font-bold uppercase tracking-[0.12em] text-[var(--jpv-sunshine-ink)]'>
           <span>Comment</span>
           <span>{formatDate(item.createdAt)}</span>
         </div>
-        <h3 className='mt-3 text-xl font-bold text-[#153f2e]'>Reply to {item.postTitle}</h3>
-        <p className='mt-2 text-sm text-[#68766f]'>Submitted by {item.authorName}</p>
-        <div className='mt-5 rounded-[16px] bg-[#f7f4ec] px-5 py-3'>
+        <h3 className='mt-3 text-xl font-bold text-[var(--jpv-brand-deep)]'>Reply to {item.postTitle}</h3>
+        <p className='mt-2 text-sm text-[var(--jpv-muted)]'>Submitted by {item.authorName}</p>
+        <div className='mt-5 rounded-jpv-card bg-[var(--jpv-surface)] px-5 py-3'>
           <CommunityRichText value={item.preview} />
         </div>
         <DecisionForms item={item} />
@@ -190,19 +190,19 @@ function ModerationItemCard({ item }: { item: PendingCommunityModerationItem }) 
   }
 
   return (
-    <article className='rounded-[22px] border border-[#153f2e]/10 bg-white p-6 shadow-[0_14px_35px_rgba(31,52,43,0.07)]'>
-      <div className='flex flex-wrap gap-3 text-xs font-bold uppercase tracking-[0.12em] text-[#8a7450]'>
+    <article className='rounded-jpv-card border border-[var(--jpv-brand-deep)]/10 bg-white p-6 shadow-jpv-card'>
+      <div className='flex flex-wrap gap-3 text-xs font-bold uppercase tracking-[0.12em] text-[var(--jpv-sunshine-ink)]'>
         <span>File</span>
         <span>{item.mimeType}</span>
         <span>{formatByteSize(item.byteSize)}</span>
         <span>{formatDate(item.createdAt)}</span>
       </div>
-      <h3 className='mt-3 text-xl font-bold text-[#153f2e]'>{item.title}</h3>
-      <p className='mt-2 text-sm text-[#68766f]'>
+      <h3 className='mt-3 text-xl font-bold text-[var(--jpv-brand-deep)]'>{item.title}</h3>
+      <p className='mt-2 text-sm text-[var(--jpv-muted)]'>
         {item.filename} · Submitted by {item.uploaderName}
       </p>
       <Link
-        className='mt-5 inline-flex rounded-full border border-[#153f2e]/20 px-5 py-2.5 text-sm font-bold text-[#153f2e] hover:border-[#8a7450]'
+        className='mt-5 inline-flex rounded-full border border-[var(--jpv-brand-deep)]/20 px-5 py-2.5 text-sm font-bold text-[var(--jpv-brand-deep)] hover:border-[var(--jpv-sunshine-ink)]'
         href={`${item.downloadUrl}?moderation=preview`}
       >
         Review protected file
@@ -226,28 +226,28 @@ export default async function CommunityModerationPage({ searchParams }: PageProp
 
   return (
     <div className='mx-auto max-w-6xl space-y-10'>
-      <Link className='text-sm font-bold text-[#6c5a36] hover:text-[#153f2e]' href='/portal/community'>
+      <Link className='text-sm font-bold text-[var(--jpv-sunshine-ink)] hover:text-[var(--jpv-brand-deep)]' href='/portal/community'>
         Back to community
       </Link>
 
-      <section className='rounded-[28px] bg-[#153f2e] p-8 text-white shadow-[0_24px_70px_rgba(20,55,40,0.18)] sm:p-10 lg:p-14'>
+      <section className='rounded-jpv-panel bg-[var(--jpv-brand-deep)] p-8 text-white shadow-jpv-card sm:p-10 lg:p-14'>
         <StatusPill tone='neutral'>Moderation inbox</StatusPill>
         <h1 className='mt-7 text-4xl font-bold leading-tight tracking-tight sm:text-5xl'>
           Review pending community submissions.
         </h1>
-        <p className='mt-5 max-w-2xl text-base leading-7 text-[#d5e0da] sm:text-lg'>
+        <p className='mt-5 max-w-2xl text-base leading-7 text-[var(--jpv-inverse-muted)] sm:text-lg'>
           This view is available only to approved community moderators and space administrators.
         </p>
-        <p className='mt-4 text-sm text-[#d5e0da]'>{memberEmail}</p>
+        <p className='mt-4 text-sm text-[var(--jpv-inverse-muted)]'>{memberEmail}</p>
       </section>
 
       {query.decision === 'success' ? (
-        <div className='rounded-[18px] border border-[#2f7355]/20 bg-[#eaf4ee] px-5 py-4 text-sm font-semibold text-[#24543f]'>
+        <div className='rounded-jpv-card border border-[var(--jpv-brand)]/20 bg-[var(--jpv-surface-strong)] px-5 py-4 text-sm font-semibold text-[var(--jpv-brand-deep)]'>
           Moderation decision recorded.
         </div>
       ) : null}
       {query.decision === 'error' ? (
-        <div className='rounded-[18px] border border-[#9c5c4f]/20 bg-[#f8ece8] px-5 py-4 text-sm font-semibold text-[#78463d]'>
+        <div className='rounded-jpv-card border border-[var(--jpv-danger)]/20 bg-[var(--jpv-danger-surface)] px-5 py-4 text-sm font-semibold text-[var(--jpv-danger-ink)]'>
           The moderation decision could not be recorded.
         </div>
       ) : null}
@@ -256,9 +256,9 @@ export default async function CommunityModerationPage({ searchParams }: PageProp
         groups.map((group) => (
           <section key={group.name} className='space-y-5'>
             <div>
-              <h2 className='text-2xl font-bold tracking-tight text-[#153f2e]'>{group.name}</h2>
+              <h2 className='text-2xl font-bold tracking-tight text-[var(--jpv-brand-deep)]'>{group.name}</h2>
               {group.slug ? (
-                <Link className='mt-2 inline-flex text-sm font-bold text-[#6c5a36] hover:text-[#153f2e]' href={`/portal/community/${group.slug}`}>
+                <Link className='mt-2 inline-flex text-sm font-bold text-[var(--jpv-sunshine-ink)] hover:text-[var(--jpv-brand-deep)]' href={`/portal/community/${group.slug}`}>
                   Open space
                 </Link>
               ) : null}
@@ -271,7 +271,7 @@ export default async function CommunityModerationPage({ searchParams }: PageProp
           </section>
         ))
       ) : (
-        <section className='rounded-[24px] border border-dashed border-[#153f2e]/20 bg-[#f4f1e9] p-8 text-[#64736c]'>
+        <section className='rounded-jpv-panel border border-dashed border-[var(--jpv-brand-deep)]/20 bg-[var(--jpv-surface)] p-8 text-[var(--jpv-muted)]'>
           No pending community moderation items are waiting for review.
         </section>
       )}

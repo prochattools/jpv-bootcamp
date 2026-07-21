@@ -1,5 +1,6 @@
 import config from '@/config'
 import { Resend } from 'resend'
+import { escapeEmailHtml, renderBrandedEmail } from '@/lib/communications/brandedEmail'
 import { assertStagingRecipientAllowed } from '@/lib/staging-email-guard'
 
 class ResendService {
@@ -41,12 +42,11 @@ class ResendService {
 			to: [toMail],
 			replyTo: config.resend.forwardRepliesTo,
 			subject: config.resend.subjects.welcomeEmail,
-			html: `
-				<h1>Welcome to ${config.appName}!</h1>
-				<p>Hi ${name || 'there'},</p>
-				<p>Thank you for subscribing to our updates. We'll keep you posted on our latest news and features.</p>
-				<p>Best regards,<br>The ${config.appName} Team</p>
-			`,
+			html: renderBrandedEmail({
+				preheader: `Welcome to ${config.appName}.`,
+				heading: `Welcome to ${config.appName}`,
+				bodyHtml: `<p style="margin:0 0 16px">Hi ${escapeEmailHtml(name || 'there')},</p><p style="margin:0 0 16px">Thank you for subscribing to our updates. We&apos;ll keep you posted on our latest news and features.</p><p style="margin:0">Best regards,<br />The ${escapeEmailHtml(config.appName)} Team</p>`,
+			}),
 		})
 
 		if (error) {

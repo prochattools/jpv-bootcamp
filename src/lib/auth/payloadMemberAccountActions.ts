@@ -1,6 +1,7 @@
 import type { PayloadCourseWriteAPI, PayloadDocument } from '@/lib/payloadCourse/accessService'
 import { createAuditEvent } from '@/lib/payloadCourse/events'
 import { quotePgIdentifier } from '@/lib/payloadMigrationSchema'
+import { resolveJpvLogoUrl } from '@/lib/brand/jpvDesignSystem'
 
 import {
   createMemberAccountActionService,
@@ -240,7 +241,7 @@ export function createQueuedMemberAccountActionTransport(
         attempt: delivery.attempt,
         displayName: delivery.displayName,
         actionUrl: actionUrl.toString(),
-        logoUrl: `${actionUrl.origin}/images/jpv-logo.png`,
+        logoUrl: resolveJpvLogoUrl(actionUrl),
       }
 
       const existingResult = await client.query(

@@ -1,6 +1,7 @@
 import type { PayloadCourseWriteAPI, PayloadId } from '@/lib/payloadCourse/accessService'
 import { createAuditEvent, queueEmailEvent } from '@/lib/payloadCourse/events'
 import { isEligibleCurrentMember } from '@/lib/members/currentMember'
+import { resolveJpvLogoUrl } from '@/lib/brand/jpvDesignSystem'
 
 export type UpdateMemberProfileInput = {
   displayName: string
@@ -127,7 +128,7 @@ export async function updateMemberProfile(
           memberId: String(memberId),
           purpose: 'profile_change_confirmation',
           displayName,
-          logoUrl: `${baseUrl.origin}/images/jpv-logo.png`,
+          logoUrl: resolveJpvLogoUrl(baseUrl),
         },
       })
       confirmationQueued = queued.created

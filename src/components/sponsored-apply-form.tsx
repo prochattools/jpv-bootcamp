@@ -61,74 +61,84 @@ export default function SponsoredApplyForm({ initialCounts }: Props) {
 	}
 
 	return (
-		<div className="space-y-6">
-			<div className="rounded-lg border border-neutral-200 bg-white p-4 text-sm text-neutral-700">
-				Available right now: {counts.available} pay-it-forward-funded membership places
+		<div className="space-y-7">
+			<div className="rounded-jpv-card border border-jpv-border bg-jpv-surface px-4 py-3 text-sm leading-6 text-jpv-ink">
+				<span className="font-semibold text-jpv-green-deep">Available right now:</span>{' '}
+				{counts.available} pay-it-forward-funded membership places
 			</div>
-			<form onSubmit={handleSubmit} className="space-y-4">
+			<form onSubmit={handleSubmit} className="space-y-5">
 				<div>
-					<label className="text-sm font-medium text-neutral-900">Name</label>
+					<label className="text-sm font-semibold text-jpv-ink" htmlFor="sponsored-name">Name</label>
 					<input
+						id="sponsored-name"
 						value={name}
 						onChange={(event) => setName(event.target.value)}
 						required
-						className="mt-2 w-full rounded border border-neutral-300 px-3 py-2 text-sm"
+						autoComplete="name"
+						className="mt-2 min-h-12 w-full rounded-jpv-action border border-jpv-border bg-jpv-canvas px-4 py-3 text-base text-jpv-ink shadow-sm outline-none placeholder:text-jpv-muted/75 focus:border-jpv-green focus:ring-2 focus:ring-jpv-green/20"
 						placeholder="Your name"
 					/>
 				</div>
 				<div>
-					<label className="text-sm font-medium text-neutral-900">Email</label>
+					<label className="text-sm font-semibold text-jpv-ink" htmlFor="sponsored-email">Email</label>
 					<input
+						id="sponsored-email"
 						type="email"
 						value={email}
 						onChange={(event) => setEmail(event.target.value)}
 						required
-						className="mt-2 w-full rounded border border-neutral-300 px-3 py-2 text-sm"
+						autoComplete="email"
+						className="mt-2 min-h-12 w-full rounded-jpv-action border border-jpv-border bg-jpv-canvas px-4 py-3 text-base text-jpv-ink shadow-sm outline-none placeholder:text-jpv-muted/75 focus:border-jpv-green focus:ring-2 focus:ring-jpv-green/20"
 						placeholder="you@example.com"
 					/>
 				</div>
 				<div>
-					<label className="text-sm font-medium text-neutral-900">
+					<label className="text-sm font-semibold text-jpv-ink" htmlFor="sponsored-phone">
 						Phone number
 					</label>
 					<input
+						id="sponsored-phone"
 						type="tel"
 						value={phone}
 						onChange={(event) => setPhone(event.target.value)}
 						required
 						autoComplete="tel"
 						inputMode="tel"
-						className="mt-2 w-full rounded border border-neutral-300 px-3 py-2 text-sm"
+						className="mt-2 min-h-12 w-full rounded-jpv-action border border-jpv-border bg-jpv-canvas px-4 py-3 text-base text-jpv-ink shadow-sm outline-none placeholder:text-jpv-muted/75 focus:border-jpv-green focus:ring-2 focus:ring-jpv-green/20"
 						placeholder="+44 20 7946 0958"
 					/>
-					<p className="mt-1 text-xs text-neutral-500">
+					<p className="mt-2 text-xs leading-5 text-jpv-muted">
 						Include the country code. Any international format is fine.
 					</p>
 				</div>
 				<div>
-					<label className="text-sm font-medium text-neutral-900">
+					<label className="text-sm font-semibold text-jpv-ink" htmlFor="sponsored-message">
 						Message (optional)
 					</label>
 					<textarea
+						id="sponsored-message"
 						value={message}
 						onChange={(event) => setMessage(event.target.value)}
 						rows={4}
-						className="mt-2 w-full rounded border border-neutral-300 px-3 py-2 text-sm"
+						className="mt-2 w-full resize-y rounded-jpv-action border border-jpv-border bg-jpv-canvas px-4 py-3 text-base text-jpv-ink shadow-sm outline-none placeholder:text-jpv-muted/75 focus:border-jpv-green focus:ring-2 focus:ring-jpv-green/20"
 						placeholder="Share a bit about your situation"
 					/>
 				</div>
 				<button
 					type="submit"
 					disabled={status === 'submitting'}
-					className="inline-flex items-center rounded bg-neutral-900 px-4 py-2 text-sm font-semibold text-white"
+					className="jpv-button-primary min-h-12 px-6"
 				>
 					{status === 'submitting' ? 'Submitting...' : 'Submit application'}
 				</button>
 			</form>
 			{note ? (
 				<p
-					className={`text-sm ${
-						status === 'error' ? 'text-red-600' : 'text-emerald-600'
+					aria-live="polite"
+					className={`rounded-jpv-card border px-4 py-3 text-sm ${
+						status === 'error'
+							? 'border-jpv-danger/30 bg-jpv-danger/5 text-jpv-danger'
+							: 'border-jpv-green/25 bg-jpv-green/5 text-jpv-green-deep'
 					}`}
 				>
 					{note}

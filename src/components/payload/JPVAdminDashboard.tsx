@@ -181,13 +181,13 @@ export async function JPVAdminDashboard() {
   return (
     <main style={{ display: 'grid', gap: 24, padding: '24px 0' }}>
       <section>
-        <p style={{ color: '#64736c', fontSize: 12, fontWeight: 700, letterSpacing: '0.18em', margin: 0, textTransform: 'uppercase' }}>
+        <p style={{ color: 'var(--jpv-muted)', fontSize: 12, fontWeight: 700, letterSpacing: '0.18em', margin: 0, textTransform: 'uppercase' }}>
           JPV Bootcamp operations
         </p>
-        <h1 style={{ color: '#153f2e', fontSize: 34, lineHeight: 1.1, margin: '10px 0 0' }}>
+        <h1 style={{ color: 'var(--jpv-brand-deep)', fontSize: 34, lineHeight: 1.1, margin: '10px 0 0' }}>
           Operational dashboard
         </h1>
-        <p style={{ color: '#64736c', fontSize: 15, lineHeight: 1.6, margin: '12px 0 0', maxWidth: 760 }}>
+        <p style={{ color: 'var(--jpv-muted)', fontSize: 15, lineHeight: 1.6, margin: '12px 0 0', maxWidth: 760 }}>
           Sidebar collections remain available for detail work. This dashboard surfaces the operational signals that need administrator attention first.
         </p>
       </section>
@@ -196,18 +196,18 @@ export async function JPVAdminDashboard() {
           <article
             key={card.label}
             style={{
-              background: card.warning ? '#fff7ed' : '#ffffff',
-              border: `1px solid ${card.warning ? '#fed7aa' : '#dfe7e2'}`,
-              borderRadius: 18,
-              boxShadow: '0 14px 36px rgba(21, 63, 46, 0.07)',
+              background: card.warning ? 'color-mix(in srgb, var(--jpv-sunshine) 14%, var(--jpv-canvas))' : 'var(--jpv-canvas)',
+              border: `1px solid ${card.warning ? 'color-mix(in srgb, var(--jpv-sunshine) 46%, var(--jpv-border))' : 'var(--jpv-border)'}`,
+              borderRadius: 'var(--jpv-radius-panel)',
+              boxShadow: 'var(--jpv-shadow)',
               padding: 20,
             }}
           >
-            <p style={{ color: '#64736c', fontSize: 13, fontWeight: 700, margin: 0 }}>{card.label}</p>
-            <p style={{ color: '#153f2e', fontSize: 32, fontWeight: 800, margin: '10px 0 0' }}>{card.value}</p>
-            <p style={{ color: '#64736c', fontSize: 13, lineHeight: 1.5, margin: '8px 0 0' }}>{card.detail}</p>
+            <p style={{ color: 'var(--jpv-muted)', fontSize: 13, fontWeight: 700, margin: 0 }}>{card.label}</p>
+            <p style={{ color: 'var(--jpv-brand-deep)', fontSize: 32, fontWeight: 800, margin: '10px 0 0' }}>{card.value}</p>
+            <p style={{ color: 'var(--jpv-muted)', fontSize: 13, lineHeight: 1.5, margin: '8px 0 0' }}>{card.detail}</p>
             {card.href ? (
-              <a href={card.href} style={{ color: '#153f2e', display: 'inline-flex', fontSize: 13, fontWeight: 700, marginTop: 14 }}>
+              <a href={card.href} style={{ color: 'var(--jpv-brand-deep)', display: 'inline-flex', fontSize: 13, fontWeight: 700, marginTop: 14 }}>
                 Open
               </a>
             ) : null}
@@ -216,33 +216,33 @@ export async function JPVAdminDashboard() {
       </section>
       <section
         style={{
-          background: 'linear-gradient(180deg, rgba(255,255,255,0.96), rgba(244,249,246,0.96))',
-          border: '1px solid #d7e1db',
-          borderRadius: 24,
-          boxShadow: '0 18px 42px rgba(21, 63, 46, 0.08)',
+          background: 'var(--jpv-surface)',
+          border: '1px solid var(--jpv-border)',
+          borderRadius: 'var(--jpv-radius-panel)',
+          boxShadow: 'var(--jpv-shadow)',
           display: 'grid',
           gap: 18,
           padding: 24,
         }}
       >
         <div>
-          <p style={{ color: '#64736c', fontSize: 12, fontWeight: 700, letterSpacing: '0.18em', margin: 0, textTransform: 'uppercase' }}>
+          <p style={{ color: 'var(--jpv-muted)', fontSize: 12, fontWeight: 700, letterSpacing: '0.18em', margin: 0, textTransform: 'uppercase' }}>
             Membership Support cockpit
           </p>
-          <h2 style={{ color: '#153f2e', fontSize: 24, lineHeight: 1.2, margin: '8px 0 0' }}>
+          <h2 style={{ color: 'var(--jpv-brand-deep)', fontSize: 24, lineHeight: 1.2, margin: '8px 0 0' }}>
             Administrator views, statuses, and actions
           </h2>
-          <p style={{ color: '#64736c', fontSize: 15, lineHeight: 1.6, margin: '10px 0 0', maxWidth: 820 }}>
+          <p style={{ color: 'var(--jpv-muted)', fontSize: 15, lineHeight: 1.6, margin: '10px 0 0', maxWidth: 820 }}>
             This cockpit keeps the operational surface bounded to the membership-support collections. It highlights the fields and actions that matter for voucher issuance, reconciliation, and manual review.
           </p>
         </div>
         <div style={{ display: 'grid', gap: 16, gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}>
-          <article style={{ background: '#fff', border: '1px solid #dde7e1', borderRadius: 18, padding: 18 }}>
-            <p style={{ color: '#153f2e', fontSize: 15, fontWeight: 800, margin: 0 }}>Operational views</p>
-            <ul style={{ color: '#49655a', display: 'grid', gap: 8, fontSize: 13, lineHeight: 1.5, margin: '14px 0 0', paddingLeft: 18 }}>
+          <article style={{ background: 'var(--jpv-canvas)', border: '1px solid var(--jpv-border)', borderRadius: 'var(--jpv-radius-card)', padding: 18 }}>
+            <p style={{ color: 'var(--jpv-brand-deep)', fontSize: 15, fontWeight: 800, margin: 0 }}>Operational views</p>
+            <ul style={{ color: 'var(--jpv-muted)', display: 'grid', gap: 8, fontSize: 13, lineHeight: 1.5, margin: '14px 0 0', paddingLeft: 18 }}>
               {cockpitViews.map((view) => (
                 <li key={view.label}>
-                  <a href={view.href} style={{ color: '#153f2e', fontWeight: 700 }}>
+                  <a href={view.href} style={{ color: 'var(--jpv-brand-deep)', fontWeight: 700 }}>
                     {view.label}
                   </a>
                   <div>{view.description}</div>
@@ -250,25 +250,25 @@ export async function JPVAdminDashboard() {
               ))}
             </ul>
           </article>
-          <article style={{ background: '#fff', border: '1px solid #dde7e1', borderRadius: 18, padding: 18 }}>
-            <p style={{ color: '#153f2e', fontSize: 15, fontWeight: 800, margin: 0 }}>Displayed fields</p>
-            <div style={{ color: '#49655a', display: 'grid', gap: 8, fontSize: 13, lineHeight: 1.5, marginTop: 14 }}>
+          <article style={{ background: 'var(--jpv-canvas)', border: '1px solid var(--jpv-border)', borderRadius: 'var(--jpv-radius-card)', padding: 18 }}>
+            <p style={{ color: 'var(--jpv-brand-deep)', fontSize: 15, fontWeight: 800, margin: 0 }}>Displayed fields</p>
+            <div style={{ color: 'var(--jpv-muted)', display: 'grid', gap: 8, fontSize: 13, lineHeight: 1.5, marginTop: 14 }}>
               {membershipSupportCockpitFields.map((field) => (
                 <div key={field}>{field}</div>
               ))}
             </div>
           </article>
-          <article style={{ background: '#fff', border: '1px solid #dde7e1', borderRadius: 18, padding: 18 }}>
-            <p style={{ color: '#153f2e', fontSize: 15, fontWeight: 800, margin: 0 }}>Statuses and actions</p>
-            <div style={{ color: '#49655a', display: 'grid', gap: 14, fontSize: 13, lineHeight: 1.5, marginTop: 14 }}>
+          <article style={{ background: 'var(--jpv-canvas)', border: '1px solid var(--jpv-border)', borderRadius: 'var(--jpv-radius-card)', padding: 18 }}>
+            <p style={{ color: 'var(--jpv-brand-deep)', fontSize: 15, fontWeight: 800, margin: 0 }}>Statuses and actions</p>
+            <div style={{ color: 'var(--jpv-muted)', display: 'grid', gap: 14, fontSize: 13, lineHeight: 1.5, marginTop: 14 }}>
               <div>
-                <div style={{ color: '#64736c', fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', marginBottom: 6, textTransform: 'uppercase' }}>
+                <div style={{ color: 'var(--jpv-muted)', fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', marginBottom: 6, textTransform: 'uppercase' }}>
                   Statuses
                 </div>
                 <div>{membershipSupportCockpitStatusLabels.join(' · ')}</div>
               </div>
               <div>
-                <div style={{ color: '#64736c', fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', marginBottom: 6, textTransform: 'uppercase' }}>
+                <div style={{ color: 'var(--jpv-muted)', fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', marginBottom: 6, textTransform: 'uppercase' }}>
                   Actions
                 </div>
                 <div>{membershipSupportCockpitActionLabels.join(' · ')}</div>

@@ -4,6 +4,7 @@ import type {
   PayloadId,
 } from '@/lib/payloadCourse/accessService'
 import { createAuditEvent, queueEmailEvent } from '@/lib/payloadCourse/events'
+import { resolveJpvLogoUrl } from '@/lib/brand/jpvDesignSystem'
 
 type ActorInput = {
   type: 'admin' | 'system' | 'stripe' | 'migration'
@@ -88,7 +89,7 @@ function displayName(member: PayloadDocument): string {
 function logoUrl(baseUrl: string | null | undefined): string | undefined {
   if (!baseUrl) return undefined
   try {
-    return `${new URL(baseUrl).origin}/images/jpv-logo.png`
+    return resolveJpvLogoUrl(baseUrl)
   } catch {
     return undefined
   }

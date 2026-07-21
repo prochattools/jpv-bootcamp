@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict'
 
+import { jpvBrand } from '../src/lib/brand/jpvDesignSystem'
+
 import {
   createPayloadMemberEmailVerificationService,
   createPostgresAtomicVerificationStore,
@@ -236,7 +238,7 @@ async function run() {
   assert.equal(sends.length, 1)
   assert.match(String(sends[0]?.payload.subject), /Verify your JPV Bootcamp email/)
   assert.match(String(sends[0]?.payload.text), /expires in one hour/)
-  assert.match(String(sends[0]?.payload.html), /jpv-logo\.png/)
+  assert.ok(String(sends[0]?.payload.html).includes(jpvBrand.logoPath), 'queued verification email must use the canonical JPV logo')
   assert.equal(sends[0]?.idempotencyKey, queuedEvent.dedupeKey)
   assert.equal(queuedEvent.deliveryStatus, 'sent')
   assert.equal(queuedEvent.resendEmailId, 'fake-provider-message-1')

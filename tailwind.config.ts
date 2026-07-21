@@ -1,6 +1,7 @@
 // tailwind.config.ts
 
 import type { Config } from "tailwindcss";
+import { jpvDesignTokens } from "./src/lib/brand/jpvDesignSystem";
 
 const config = {
   darkMode: ["class"],
@@ -23,28 +24,76 @@ const config = {
     extend: {
       colors: {
         // Existing colors
-        primary: "#006FEE",
-        black1: "#010610",
-        secondary: "#D6D6DE",
+        primary: "var(--jpv-brand)",
+        black: "var(--jpv-ink)",
+        white: "var(--jpv-canvas)",
+        black1: "var(--jpv-ink)",
+        secondary: "var(--jpv-border)",
+        neutral: {
+          50: "var(--jpv-canvas)",
+          100: "var(--jpv-surface)",
+          200: "var(--jpv-border)",
+          300: "color-mix(in srgb, var(--jpv-border) 75%, var(--jpv-muted))",
+          400: "color-mix(in srgb, var(--jpv-border) 42%, var(--jpv-muted))",
+          500: "var(--jpv-muted)",
+          600: "color-mix(in srgb, var(--jpv-muted) 76%, var(--jpv-ink))",
+          700: "color-mix(in srgb, var(--jpv-muted) 45%, var(--jpv-ink))",
+          800: "var(--jpv-brand-deep)",
+          900: "var(--jpv-ink)",
+          950: "var(--jpv-ink)",
+        },
+        emerald: {
+          50: "color-mix(in srgb, var(--jpv-brand) 8%, var(--jpv-canvas))",
+          100: "color-mix(in srgb, var(--jpv-brand) 14%, var(--jpv-canvas))",
+          200: "color-mix(in srgb, var(--jpv-brand) 30%, var(--jpv-border))",
+          700: "var(--jpv-brand-deep)",
+          800: "var(--jpv-brand-deep)",
+        },
+        red: {
+          50: "color-mix(in srgb, var(--jpv-danger) 8%, var(--jpv-canvas))",
+          100: "color-mix(in srgb, var(--jpv-danger) 14%, var(--jpv-canvas))",
+          200: "color-mix(in srgb, var(--jpv-danger) 32%, var(--jpv-border))",
+          700: "color-mix(in srgb, var(--jpv-danger) 82%, var(--jpv-ink))",
+          800: "color-mix(in srgb, var(--jpv-danger) 72%, var(--jpv-ink))",
+        },
+        orange: {
+          50: "color-mix(in srgb, var(--jpv-sunshine) 14%, var(--jpv-canvas))",
+          200: "color-mix(in srgb, var(--jpv-sunshine) 42%, var(--jpv-border))",
+          300: "color-mix(in srgb, var(--jpv-sunshine) 64%, var(--jpv-border))",
+          950: "var(--jpv-ink)",
+        },
 
         // JPV colors
         jpv: {
+          canvas: "var(--jpv-canvas)",
+          surface: "var(--jpv-surface)",
+          "surface-strong": "var(--jpv-surface-strong)",
+          ink: "var(--jpv-ink)",
+          muted: "var(--jpv-muted)",
+          border: "var(--jpv-border)",
+          sunshine: "var(--jpv-sunshine)",
+          "sunshine-ink": "var(--jpv-sunshine-ink)",
+          danger: "var(--jpv-danger)",
+          "danger-surface": "var(--jpv-danger-surface)",
+          "danger-ink": "var(--jpv-danger-ink)",
+          "inverse-muted": "var(--jpv-inverse-muted)",
           bg: {
-            DEFAULT: "#0C0F0D",
-            dark: "#131613",
-            light: "#1A1C1A",
+            DEFAULT: "var(--jpv-brand-deep)",
+            dark: "var(--jpv-ink)",
+            light: "var(--jpv-surface-strong)",
           },
           green: {
-            DEFAULT: "#2DD56E",
-            hover: "#3EE37D",
-            soft: "rgba(45,213,110,0.25)",
+            DEFAULT: "var(--jpv-brand)",
+            hover: "var(--jpv-brand-hover)",
+            deep: "var(--jpv-brand-deep)",
+            soft: "color-mix(in srgb, var(--jpv-brand-bright) 25%, transparent)",
           },
           gray: {
-            50: "#F9FAFB",
-            200: "#E4E4E7",
-            400: "#A1A1AA",
-            700: "#3B4D3F",
-            900: "#131613",
+            50: "var(--jpv-canvas)",
+            200: "var(--jpv-border)",
+            400: "var(--jpv-muted)",
+            700: "var(--jpv-brand-deep)",
+            900: "var(--jpv-ink)",
           },
         },
       },
@@ -53,7 +102,7 @@ const config = {
         banner: "url('/assets/banner.svg')",
 
         // JPV background
-        "jpv-gradient": "linear-gradient(to bottom, #0C0F0D, #1A1C1A)",
+        "jpv-gradient": "linear-gradient(to bottom, var(--jpv-brand-deep), var(--jpv-ink))",
       },
       keyframes: {
         "accordion-down": {
@@ -72,15 +121,24 @@ const config = {
 
       // JPV extras
       boxShadow: {
-        "jpv-glow": "0 0 15px rgba(45, 213, 110, 0.25)",
-        "jpv-card": "0 2px 10px rgba(0,0,0,0.2)",
+        "jpv-glow": "var(--jpv-shadow)",
+        "jpv-card": "var(--jpv-shadow)",
       },
       fontFamily: {
-        // Extends default sans family. Ensure Inter is loaded via CSS or next/font
-        sans: ["Inter", "system-ui", "sans-serif"],
+        sans: ["var(--font-jpv)", "system-ui", "sans-serif"],
       },
       borderRadius: {
-        "2xl": "1rem",
+        sm: jpvDesignTokens.radius.detail,
+        DEFAULT: jpvDesignTokens.radius.control,
+        md: jpvDesignTokens.radius.control,
+        lg: jpvDesignTokens.radius.control,
+        xl: jpvDesignTokens.radius.card,
+        "2xl": jpvDesignTokens.radius.panel,
+        "3xl": jpvDesignTokens.radius.panel,
+        full: jpvDesignTokens.radius.pill,
+        "jpv-action": jpvDesignTokens.radius.action,
+        "jpv-card": jpvDesignTokens.radius.card,
+        "jpv-panel": jpvDesignTokens.radius.panel,
       },
     },
   },

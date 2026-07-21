@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 
 import { MemberLogoutButton } from '@/components/auth/MemberLogoutButton'
 import { resolvePayloadRequestSession } from '@/lib/auth/payloadSession'
+import { jpvBrand } from '@/lib/brand/jpvDesignSystem'
 import { headers } from 'next/headers'
 
 const portalLinks = [
@@ -21,12 +22,15 @@ export default async function PortalLayout({ children }: { children: ReactNode }
   const showLogout = Boolean(session.member?.id || session.administratorId)
 
   return (
-    <div className='min-h-screen bg-neutral-50 text-neutral-950'>
-      <header className='border-b border-neutral-200 bg-white'>
+    <div className='jpv-product-shell min-h-screen bg-jpv-canvas text-jpv-ink'>
+      <header className='border-b border-jpv-border bg-jpv-canvas'>
         <div className='mx-auto flex max-w-6xl flex-col gap-4 px-6 py-5 md:flex-row md:items-center md:justify-between'>
           <Link className='flex items-center gap-3' href='/portal'>
-            <img alt='JPV Bootcamp' className='h-10 w-10 object-contain' src='/images/jpv-logo.png' />
-            <span className='text-lg font-semibold'>Member Portal</span>
+            <img alt={jpvBrand.logoAlt} className='h-10 w-10 rounded-jpv-card object-contain' src={jpvBrand.logoPath} />
+            <span>
+              <span className='block text-base font-semibold'>{jpvBrand.name}</span>
+              <span className='block text-xs text-jpv-muted'>Member portal</span>
+            </span>
           </Link>
 
           <div className='flex flex-col gap-3 md:items-end'>

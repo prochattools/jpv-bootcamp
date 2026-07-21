@@ -81,6 +81,96 @@ Affiliates are the internal referral and commission programme: referral codes, r
 
 The `jpvbootcamp_staging` schema may be repaired, reconciled, or reset for staging validation when explicitly authorized. The true production database, `public` schema, and any non-staging schema remain outside this boundary. Partner schema drift must be corrected by reviewed Payload migrations that derive the active schema from `DATABASE_URL`/runtime configuration and do not hardcode production schema names.
 
+## UI-01 — Launch-critical global design and landing-page refresh
+
+**State:** `IMPLEMENTED / LOCAL RELEASE CANDIDATE GREEN` on 21 July 2026. UI-01A-D are implemented in the feature-branch worktree. The approved landing-page design is locked as an iteration-only system. One typed authority now owns brand identity, semantic colors, typography roles, radii, shadows, and web/email variables; the public site, authentication, member/student portal, course preview, community, supported Payload-admin surfaces, notifications, and transactional email shell consume that authority directly or through its Tailwind aliases. Existing checkout, support, authentication, recipient, provider, migration, and deployment behavior is preserved. The exact cohesive candidate passes 151/151 deterministic release gates and 58/58 isolated local desktop/mobile Chromium journeys, including accessibility and horizontal-overflow checks. A new staging deployment and staging visual acceptance are still required before this candidate replaces the prior deployed baseline. No message, deployment, migration, provider call, or production operation is authorized by UI-01.
+
+### Direction and source hierarchy
+
+Use the supplied Kairos landing page as a structural reference: light editorial presentation, compact top navigation, generous vertical rhythm, a concise hero, horizontal benefit strip, alternating editorial sections, one dark call-to-action band, restrained teacher/testimonial/pricing blocks, and a compact accordion FAQ. Translate those principles into JPV Bootcamp rather than cloning the source. Do not reuse Kairos logos, photographs, course artwork, testimonials, member identities, proprietary copy, or code.
+
+Content precedence is binding:
+
+1. the client-supplied `New Content for JPV Bootcamp 15072026.docx.pdf` overrides the named sections;
+2. existing JPV Bootcamp content and working behavior remain where that brief is silent;
+3. supplied screenshots/PDF and external reference `DESIGN.md` / `SKILL.md` guide composition only;
+4. this plan controls technical boundaries, accessibility, validation, and rollout.
+
+No testimonial, teacher biography, guest-speaker detail, outcome, statistic, or legal/billing claim may be invented. Success Stories, Athina Amadi, Koprinka Aksaray, and Guest Speakers may have structurally reserved sections only when the design remains honest about content being pending; otherwise omit them until approved content exists.
+
+### Layout map and approved content
+
+The public page order is:
+
+1. sticky, compact header with JPV identity; Home, Community, Resources, Success Stories, Partners, and About; Join, Support, and Sign In actions;
+2. hero using the supplied purpose/stewardship headline and description, one primary Become a Member action, and the factual GBP 80 monthly / GBP 800 annual choice;
+3. horizontally scrollable benefit strip: monthly and annual plans, instant access when joining, live training, hands-on approach, private live events, cancel-anytime wording only where it remains contractually accurate, video curriculum, faith-driven community, and guided support;
+4. Who Is JPV Bootcamp For, using the supplied copy in a readable editorial split rather than a generic card grid;
+5. How JPV Bootcamp Works as three distinct steps: Learn, Apply at the live event, and Build, retaining the supplied detail and existing How It Works interaction;
+6. Community: You Don't Have To Build Alone, using only capabilities that the current application truly supports; aspirational private calls, private messaging, JV video calls, and live prayer must not be presented as operational unless source and staging evidence prove them;
+7. simple membership pricing with GBP 80 monthly and GBP 800 annual paid upfront for 12 months, routed through the existing checkout path;
+8. About / teachers with approved names only, plus Success Stories only after client content arrives;
+9. the existing JPV Bootcamp FAQ unchanged unless separately approved;
+10. existing footer, support, legal, and partner destinations preserved unless the brief explicitly changes them.
+
+Join routes to the existing monthly/annual purchase choice. Sign In routes to `/portal?mode=login`. Support reuses the existing approved support/pay-it-forward path and must not introduce a second submission system.
+
+### Shared visual tokens
+
+Create one canonical semantic token layer consumed by public, auth, portal, and supported Payload-admin styling. Prefer CSS variables in `src/assets/styles/globals.scss`, mapped into Tailwind where useful, plus one narrowly scoped Payload admin stylesheet. Do not scatter new literal colors or duplicate component-specific token sets.
+
+| Role | Launch token |
+| --- | --- |
+| Primary action / brand | JPV green `#2F805B` |
+| Brand deep | `#123D2D` |
+| Warm highlight | sunshine `#E8C65A` |
+| Destructive / urgent only | red `#C94F4F` |
+| Canvas | warm off-white `#FFFEFA` |
+| Raised surface | soft warm neutral `#F5F3EC` |
+| Ink | green-tinted charcoal `#24332B` |
+| Muted text | `#687068` |
+| Border | `#DEDBD1` |
+
+Green is the default interactive accent. Sunshine is for limited highlights, badges, and section atmosphere. Red is reserved for destructive actions, errors, and genuine urgency, never routine decoration. Validate final contrast in both text and interactive states. Avoid pure black/white, neon glow, gradient text, decorative glass, excessive cards, and generic blue/purple defaults.
+
+Use **Poppins** as the interface family across navigation, forms, portal, administrator, notification, and email body copy. Use **Libre Baskerville** only for approved editorial headings on marketing, authentication, and email surfaces. Both are loaded once through the existing Next font mechanism where supported; email clients use the documented system fallbacks. Body copy is 16px minimum with 1.55-1.7 line height and a 65-75 character measure. Use one spacing scale (`4, 8, 12, 16, 24, 32, 48, 64, 96`), mobile gutters of 20px, desktop gutters of 32px, content shells of 72rem for product surfaces and 80rem for marketing, 8px control/action radii, 10px card radii, 14px panel radii, and subtle tinted shadows only when elevation communicates hierarchy.
+
+### Components and file ownership
+
+Implement in collision-safe slices. Re-open each file before editing and stage only the slice's explicit files.
+
+- **Foundation:** `src/assets/styles/globals.scss`, `tailwind.config.ts`, `src/app/(frontend)/layout.tsx`, and a new narrowly scoped admin theme stylesheet imported by `src/app/(payload)/layout.tsx`.
+- **Marketing:** `src/app/(frontend)/page.tsx` plus extracted landing-only components only when extraction makes the page easier to verify. Reuse current checkout, support, modal, and navigation behavior.
+- **Authentication:** `src/app/(frontend)/portal/page.tsx`, `src/components/auth/MemberLoginForm.tsx`, and existing password workflow presentation. Do not change authentication decisions, endpoints, redirects, or error semantics.
+- **Member portal:** `src/app/(frontend)/portal/layout.tsx` and shared portal presentation primitives, followed by route-level visual alignment. Do not change authorization or data-loading behavior.
+- **Administrator:** supported Payload CSS overrides, `src/components/payload/JPVAdminBranding.tsx`, and `src/components/payload/JPVAdminDashboard.tsx`. Keep Payload's functional layout and accessibility intact; do not broadly override internal selectors without browser proof.
+
+Use existing `lucide-react`; add no icon or motion dependency. Motion is limited to purposeful opacity/transform transitions and existing accordion/modal behavior, with `prefers-reduced-motion` fallback. Server components stay server components unless an existing interaction requires a client leaf.
+
+### Fast execution waves
+
+| Wave | Scope | Exit evidence | Estimated focused implementation |
+| --- | --- | --- | ---: |
+| UI-01A | approve shape brief; freeze tokens, type, spacing, shells, and route/content map | one reviewed token contract; no unresolved content invention | 30-45 min |
+| UI-01B | shared token layer, frontend shell, admin theme hook | type check; public, portal, and admin still render | 60-90 min |
+| UI-01C | landing composition and supplied content | mobile/desktop screenshots; every CTA and retained interaction works | 2-3 h |
+| UI-01D | login/password, portal shell/routes, and admin alignment | authenticated member/admin browser journeys pass | 2-3 h |
+| UI-01E | accessibility, responsive, visual, build, and staging regression | all gates below pass at one deployed staging SHA | 1.5-2 h |
+
+These estimates assume no new business logic and no concurrent edits to the owned files. Functionality defects discovered during UI-01 are repaired only when they are regressions caused by this packet; unrelated feature work returns to the existing roadmap owner.
+
+### UI-01 acceptance gates
+
+- No product behavior, authorization, checkout, email, migration, or provider boundary changes.
+- Landing content assertions cover the approved navigation, hero, Learn / Apply / Build, community, pricing, and unchanged FAQ.
+- Every header/footer link, Join, Support, Sign In, pricing action, modal, form, and accordion is keyboard reachable and functionally verified.
+- Login, verification, forgot/reset/set-password, member portal, course/resource/community, billing, logout, admin login, admin dashboard, and representative collection routes retain their success, loading, empty, error, and denied states.
+- Responsive browser proof at approximately 390px, 768px, and 1440px shows no clipping or horizontal overflow.
+- WCAG AA text/control contrast, visible focus, semantic headings/landmarks, labels, target sizes, reduced motion, and meaningful image alternatives pass.
+- Root TypeScript, production build, the release manifest, existing browser E2E, and focused content/design regression tests pass.
+- The feature branch is deployed only to staging application `clients-jpv-bootcamp-app-tp9xrk`; the production application remains forbidden and untouched.
+- Final acceptance is recorded against one exact branch SHA. UI-01 completion does not authorize data migration or production launch.
+
 ## Binding security rules
 
 1. Authorization is enforced server-side and fails closed.

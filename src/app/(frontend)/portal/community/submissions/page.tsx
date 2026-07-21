@@ -36,20 +36,20 @@ function kindLabel(kind: MemberCommunitySubmission['kind']): string {
 
 function SubmissionCard({ item }: { item: MemberCommunitySubmission }) {
   return (
-    <article className='rounded-[22px] border border-[#153f2e]/10 bg-white p-6 shadow-[0_14px_35px_rgba(31,52,43,0.07)]'>
+    <article className='rounded-jpv-card border border-[var(--jpv-brand-deep)]/10 bg-white p-6 shadow-jpv-card'>
       <div className='flex flex-wrap items-center justify-between gap-3'>
-        <p className='text-xs font-bold uppercase tracking-[0.16em] text-[#8a7450]'>{kindLabel(item.kind)}</p>
+        <p className='text-xs font-bold uppercase tracking-[0.16em] text-[var(--jpv-sunshine-ink)]'>{kindLabel(item.kind)}</p>
         <StatusPill tone={statusTone(item.status)}>{item.status}</StatusPill>
       </div>
 
-      <h2 className='mt-4 text-xl font-bold text-[#153f2e]'>{item.title}</h2>
-      <p className='mt-2 text-sm text-[#68766f]'>
+      <h2 className='mt-4 text-xl font-bold text-[var(--jpv-brand-deep)]'>{item.title}</h2>
+      <p className='mt-2 text-sm text-[var(--jpv-muted)]'>
         {item.spaceName} · {formatDate(item.createdAt)}
       </p>
 
       {item.downloadUrl && (
         <Link
-          className='mt-5 inline-flex rounded-full border border-[#153f2e]/20 px-5 py-2.5 text-sm font-bold text-[#153f2e] transition hover:border-[#8a7450]'
+          className='mt-5 inline-flex rounded-full border border-[var(--jpv-brand-deep)]/20 px-5 py-2.5 text-sm font-bold text-[var(--jpv-brand-deep)] transition hover:border-[var(--jpv-sunshine-ink)]'
           href={item.downloadUrl}
         >
           Download published file
@@ -65,19 +65,19 @@ export default async function CommunitySubmissionsPage() {
 
   return (
     <div className='mx-auto max-w-6xl space-y-10'>
-      <Link className='text-sm font-bold text-[#6c5a36] hover:text-[#153f2e]' href='/portal/community'>
+      <Link className='text-sm font-bold text-[var(--jpv-sunshine-ink)] hover:text-[var(--jpv-brand-deep)]' href='/portal/community'>
         Back to community
       </Link>
 
-      <section className='rounded-[28px] bg-[#153f2e] p-8 text-white shadow-[0_24px_70px_rgba(20,55,40,0.18)] sm:p-10 lg:p-14'>
+      <section className='rounded-jpv-panel bg-[var(--jpv-brand-deep)] p-8 text-white shadow-jpv-card sm:p-10 lg:p-14'>
         <StatusPill tone='neutral'>My submissions</StatusPill>
         <h1 className='mt-7 text-4xl font-bold leading-tight tracking-tight sm:text-5xl'>
           Track your community submissions.
         </h1>
-        <p className='mt-5 max-w-2xl text-base leading-7 text-[#d5e0da] sm:text-lg'>
+        <p className='mt-5 max-w-2xl text-base leading-7 text-[var(--jpv-inverse-muted)] sm:text-lg'>
           Review whether your posts, comments, and files are pending review, published, or no longer published.
         </p>
-        <p className='mt-4 text-sm text-[#d5e0da]'>{memberEmail}</p>
+        <p className='mt-4 text-sm text-[var(--jpv-inverse-muted)]'>{memberEmail}</p>
       </section>
 
       {submissions.length > 0 ? (
@@ -87,7 +87,7 @@ export default async function CommunitySubmissionsPage() {
           ))}
         </section>
       ) : (
-        <section className='rounded-[24px] border border-dashed border-[#153f2e]/20 bg-[#f4f1e9] p-8 text-[#64736c]'>
+        <section className='rounded-jpv-panel border border-dashed border-[var(--jpv-brand-deep)]/20 bg-[var(--jpv-surface)] p-8 text-[var(--jpv-muted)]'>
           You have not submitted any community posts, comments, or files yet.
         </section>
       )}

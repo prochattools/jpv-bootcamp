@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict'
 
+import { jpvBrand } from '../src/lib/brand/jpvDesignSystem'
+
 import {
   buildVerificationEmail,
   createMemberEmailVerificationService,
@@ -215,7 +217,7 @@ async function run() {
     memberId: 'member-2',
     attempt: 1,
   })
-  assert.match(template.html, /jpv-logo\.png/)
+  assert.ok(template.html.includes(jpvBrand.logoPath), 'verification email must use the canonical JPV logo')
   assert.match(template.text, /Member/)
   assert.equal(template.metadata.templateKey, 'member_email_verification')
 

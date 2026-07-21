@@ -3,6 +3,7 @@ import { access } from 'node:fs/promises'
 import { NextResponse } from 'next/server'
 
 import { previewMigrationInventoryNames } from '@/lib/previewMigrationInventory'
+import { jpvBrand } from '@/lib/brand/jpvDesignSystem'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -50,7 +51,7 @@ async function readImportMapStatus() {
 export async function GET() {
   const [importMap, publicLogoExists] = await Promise.all([
     readImportMapStatus(),
-    fileExists('public/images/jpv-logo.png'),
+    fileExists(`public${jpvBrand.logoPath}`),
   ])
 
   const resendApiKeyPresent = Boolean(readEnv('RESEND_API_KEY'))

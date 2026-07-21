@@ -1,5 +1,6 @@
 import 'server-only'
 import { Resend } from 'resend'
+import { renderBrandedEmail } from '@/lib/communications/brandedEmail'
 import { redactEmail } from '@/lib/log-redact'
 import { getPublicBaseUrl } from '@/lib/public-base-url'
 import { formatPhoneForDisplay } from '@/lib/normalize-phone'
@@ -127,26 +128,23 @@ export async function sendSponsoredApplicationAdminEmail(params: {
 		params.rejectToken
 	)}`
 
-	const html = `
-		<h2>New sponsored membership application</h2>
-		<p><strong>Requested access:</strong> Controlled Free access</p>
-		<p><strong>Name:</strong> ${safeName}</p>
-		<p><strong>Email:</strong> ${safeEmail}</p>
-		<p><strong>Phone:</strong> ${safePhone}</p>
-		${safeMessage ? `<p><strong>Message:</strong><br/>${safeMessage}</p>` : ''}
-		${countsLine ? `<p>${escapeHtml(countsLine)}</p>` : ''}
-		<p>
-			<a href="${approveUrl}" style="display:inline-block;padding:10px 16px;background:#0f172a;color:#ffffff;text-decoration:none;border-radius:6px;margin-right:8px;">
-				Approve
-			</a>
-			<a href="${rejectUrl}" style="display:inline-block;padding:10px 16px;background:#ef4444;color:#ffffff;text-decoration:none;border-radius:6px;">
-				Reject
-			</a>
-		</p>
-		<p style="font-size:12px;color:#6b7280;">Application ID: ${escapeHtml(
-			params.applicationId
-		)}</p>
-	`
+	const html = renderBrandedEmail({
+		preheader: `New sponsored membership application from ${params.applicantName}.`,
+		heading: 'New sponsored application',
+		bodyHtml: `
+			<p style="margin:0 0 12px"><strong>Requested access:</strong> Controlled Free access</p>
+			<p style="margin:0 0 12px"><strong>Name:</strong> ${safeName}</p>
+			<p style="margin:0 0 12px"><strong>Email:</strong> ${safeEmail}</p>
+			<p style="margin:0 0 12px"><strong>Phone:</strong> ${safePhone}</p>
+			${safeMessage ? `<p style="margin:0 0 12px"><strong>Message:</strong><br />${safeMessage}</p>` : ''}
+			${countsLine ? `<p style="margin:0 0 12px">${escapeHtml(countsLine)}</p>` : ''}
+			<p style="margin:0;font-size:12px">Application ID: ${escapeHtml(params.applicationId)}</p>
+		`,
+		actions: [
+			{ label: 'Approve', url: approveUrl },
+			{ label: 'Reject', url: rejectUrl, tone: 'danger' },
+		],
+	})
 
 	const text = [
 		'New sponsored membership application',
@@ -194,11 +192,12 @@ export async function sendSponsoredClaimEmail(params: {
 		params.claimToken
 	)}`
 
-	const html = `
-		<p>Your sponsored Free access is ready.</p>
-		<p><a href="${claimUrl}">Claim your sponsored access</a></p>
-		<p>This link expires in 7 days.</p>
-	`
+	const html = renderBrandedEmail({
+		preheader: 'Your sponsored access is ready to claim.',
+		heading: 'Your sponsored access is ready',
+		bodyHtml: '<p style="margin:0 0 16px">A sponsored JPV Bootcamp place is ready for you.</p><p style="margin:0">This secure link expires in 7 days.</p>',
+		actions: [{ label: 'Claim your sponsored access', url: claimUrl }],
+	})
 	const text = [
 		'Your sponsored Free access is ready.',
 		`Claim your sponsored access: ${claimUrl}`,
@@ -232,10 +231,12 @@ export async function sendSponsoredApplicantApprovedEmail(params: {
 	const from = getMailFrom()
 	const portalUrl = params.portalUrl
 
-	const html = `
-		<p>Your sponsored Free access is now active.</p>
-		<p><a href="${portalUrl}">Visit the JPV Bootcamp portal</a></p>
-	`
+	const html = renderBrandedEmail({
+		preheader: 'Your sponsored JPV Bootcamp access is now active.',
+		heading: 'Your access is active',
+		bodyHtml: '<p style="margin:0">Your sponsored JPV Bootcamp access is now active. Continue to the portal when you are ready.</p>',
+		actions: [{ label: 'Visit the member portal', url: portalUrl }],
+	})
 
 	const text = [
 		'Your sponsored Free access is now active.',
@@ -268,9 +269,11 @@ export async function sendSponsoredApplicantRejectedEmail(params: {
 	const resend = getResendClient()
 	const from = getMailFrom()
 
-	const html = `
-		<p>Thanks for applying. You did not qualify or no seats are available right now.</p>
-	`
+	const html = renderBrandedEmail({
+		preheader: 'An update about your sponsored membership application.',
+		heading: 'Sponsored membership update',
+		bodyHtml: '<p style="margin:0">Thanks for applying. You did not qualify or no seats are available right now.</p>',
+	})
 	const text =
 		'Thanks for applying. You did not qualify or no seats are available right now.'
 
@@ -300,10 +303,11 @@ export async function sendSponsoredDonorEmail(params: {
 	const resend = getResendClient()
 	const from = getMailFrom()
 
-	const html = `
-		<p>Thanks for sponsoring Free access.</p>
-		<p>Your purchase has added one sponsored access seat. You won&apos;t receive access yourself.</p>
-	`
+	const html = renderBrandedEmail({
+		preheader: 'Thank you for helping make JPV Bootcamp access possible.',
+		heading: 'Thank you for sponsoring access',
+		bodyHtml: '<p style="margin:0 0 16px">Your purchase has added one sponsored access seat.</p><p style="margin:0">This contribution supports another person and does not create access for the purchaser.</p>',
+	})
 	const text = `Thanks for sponsoring Free access.\nYour purchase has added one sponsored access seat. You won't receive access yourself.`
 
 	assertStagingRecipientAllowed([params.to], 'sponsored-email:sendSponsoredDonorEmail')
@@ -335,12 +339,16 @@ export async function sendSponsoredSeatAdminEmail(params: {
 	const donor = params.donorEmail ? escapeHtml(params.donorEmail) : 'unknown'
 	const timestamp = params.occurredAt.toISOString()
 
-	const html = `
-		<p>A sponsored seat purchase was completed.</p>
-		<p><strong>Access:</strong> Controlled Free access</p>
-		<p><strong>Donor email:</strong> ${donor}</p>
-		<p><strong>Timestamp:</strong> ${escapeHtml(timestamp)}</p>
-	`
+	const html = renderBrandedEmail({
+		preheader: 'A sponsored access seat purchase was completed.',
+		heading: 'Sponsored seat purchased',
+		bodyHtml: `
+			<p style="margin:0 0 12px">A sponsored seat purchase was completed.</p>
+			<p style="margin:0 0 12px"><strong>Access:</strong> Controlled Free access</p>
+			<p style="margin:0 0 12px"><strong>Donor email:</strong> ${donor}</p>
+			<p style="margin:0"><strong>Timestamp:</strong> ${escapeHtml(timestamp)}</p>
+		`,
+	})
 	const text = [
 		'A sponsored seat purchase was completed.',
 		'Access: Controlled Free access',

@@ -51,25 +51,25 @@ export default function CoursePreviewPage() {
   }
 
   return (
-    <div className='min-h-screen bg-[#f4f1e9] text-[#14261d]'>
-      <div className='border-b border-[#193f2f]/10 bg-[#10281f] px-5 py-2 text-center text-xs font-semibold uppercase tracking-[0.2em] text-[#d7c99c]'>
+    <div className='min-h-screen bg-[var(--jpv-surface)] text-[var(--jpv-ink)]'>
+      <div className='border-b border-[var(--jpv-brand-deep)]/10 bg-[var(--jpv-brand-deep)] px-5 py-2 text-center text-xs font-semibold uppercase tracking-[0.2em] text-[var(--jpv-sunshine)]'>
         {PAYLOAD_COURSE_PROTOTYPE_BANNER}
       </div>
 
-      <header className='border-b border-[#193f2f]/10 bg-white/90 backdrop-blur'>
+      <header className='border-b border-[var(--jpv-brand-deep)]/10 bg-white/90 backdrop-blur'>
         <div className='mx-auto flex max-w-7xl items-center justify-between px-6 py-5 lg:px-10'>
           <div className='flex items-center gap-3'>
-            <div className='flex h-11 w-11 items-center justify-center rounded-full bg-[#153f2e] text-sm font-bold tracking-wide text-[#f4eac6]'>
+            <div className='flex h-11 w-11 items-center justify-center rounded-full bg-[var(--jpv-brand-deep)] text-sm font-bold tracking-wide text-[var(--jpv-sunshine)]'>
               JPV
             </div>
             <div>
-              <p className='text-lg font-bold tracking-tight text-[#153f2e]'>JPV Bootcamp</p>
-              <p className='text-xs font-medium uppercase tracking-[0.16em] text-[#8a7450]'>Learning Portal</p>
+              <p className='text-lg font-bold tracking-tight text-[var(--jpv-brand-deep)]'>JPV Bootcamp</p>
+              <p className='text-xs font-medium uppercase tracking-[0.16em] text-[var(--jpv-sunshine-ink)]'>Learning Portal</p>
             </div>
           </div>
 
-          <nav className='hidden items-center gap-8 text-sm font-semibold text-[#355246] md:flex'>
-            <a className='text-[#153f2e]' href='#courses'>My courses</a>
+          <nav className='hidden items-center gap-8 text-sm font-semibold text-[var(--jpv-brand-deep)] md:flex'>
+            <a className='text-[var(--jpv-brand-deep)]' href='#courses'>My courses</a>
             <a href='#curriculum'>Curriculum</a>
             <a href='#resources'>Resources</a>
           </nav>
@@ -77,28 +77,28 @@ export default function CoursePreviewPage() {
           <div className='flex items-center gap-3'>
             <div className='hidden text-right sm:block'>
               <p className='text-sm font-semibold'>Demo Member</p>
-              <p className='text-xs text-[#6f7f77]'>Pro access preview</p>
+              <p className='text-xs text-[var(--jpv-muted)]'>Pro access preview</p>
             </div>
-            <div className='flex h-10 w-10 items-center justify-center rounded-full bg-[#d9c897] text-sm font-bold text-[#153f2e]'>DM</div>
+            <div className='flex h-10 w-10 items-center justify-center rounded-full bg-[var(--jpv-sunshine)] text-sm font-bold text-[var(--jpv-brand-deep)]'>DM</div>
           </div>
         </div>
       </header>
 
       <main className='mx-auto max-w-7xl px-6 py-10 lg:px-10 lg:py-14'>
-        <section className='overflow-hidden rounded-[28px] bg-[#153f2e] text-white shadow-[0_24px_70px_rgba(20,55,40,0.18)]'>
+        <section className='overflow-hidden rounded-jpv-panel bg-[var(--jpv-brand-deep)] text-white shadow-jpv-card'>
           <div className='grid lg:grid-cols-[1.3fr_0.7fr]'>
             <div className='p-8 sm:p-10 lg:p-14'>
-              <span className='inline-flex rounded-full border border-[#e2d5aa]/30 bg-white/5 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-[#e6d9b1]'>
+              <span className='inline-flex rounded-full border border-[var(--jpv-sunshine)]/30 bg-white/5 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-[var(--jpv-sunshine)]'>
                 Continue learning
               </span>
               <h1 className='mt-7 max-w-3xl text-4xl font-bold leading-tight tracking-tight sm:text-5xl'>
                 Build with clarity. Learn at your own pace.
               </h1>
-              <p className='mt-5 max-w-2xl text-base leading-7 text-[#d5e0da] sm:text-lg'>
+              <p className='mt-5 max-w-2xl text-base leading-7 text-[var(--jpv-inverse-muted)] sm:text-lg'>
                 A focused course experience for JPV members, with simple modules, clear progress and practical next steps.
               </p>
               <div className='mt-9 flex flex-wrap gap-4'>
-                <button className='rounded-full bg-[#d9c897] px-6 py-3 text-sm font-bold text-[#153f2e] shadow-sm'>
+                <button className='rounded-full bg-[var(--jpv-sunshine)] px-6 py-3 text-sm font-bold text-[var(--jpv-brand-deep)] shadow-sm'>
                   Continue JPV Foundations
                 </button>
                 <button className='rounded-full border border-white/25 px-6 py-3 text-sm font-bold text-white'>
@@ -107,17 +107,17 @@ export default function CoursePreviewPage() {
               </div>
             </div>
 
-            <div className='border-t border-white/10 bg-[#0f3425] p-8 lg:border-l lg:border-t-0 lg:p-10'>
-              <p className='text-xs font-bold uppercase tracking-[0.18em] text-[#d9c897]'>Your current path</p>
+            <div className='border-t border-white/10 bg-[var(--jpv-brand-hover)] p-8 lg:border-l lg:border-t-0 lg:p-10'>
+              <p className='text-xs font-bold uppercase tracking-[0.18em] text-[var(--jpv-sunshine)]'>Your current path</p>
               <div className='mt-6 space-y-4'>
                 {modulePreview.map((module) => (
-                  <div key={module.label} className={`rounded-2xl border p-4 ${module.active ? 'border-[#d9c897] bg-white/8' : 'border-white/10 bg-white/[0.03]'}`}>
+                  <div key={module.label} className={`rounded-2xl border p-4 ${module.active ? 'border-[var(--jpv-sunshine)] bg-white/8' : 'border-white/10 bg-white/[0.03]'}`}>
                     <div className='flex items-center justify-between gap-4'>
                       <div>
-                        <p className='text-xs uppercase tracking-[0.14em] text-[#aabdb3]'>{module.label}</p>
+                        <p className='text-xs uppercase tracking-[0.14em] text-[var(--jpv-inverse-muted)]'>{module.label}</p>
                         <p className='mt-1 font-semibold'>{module.title}</p>
                       </div>
-                      <span className={`flex h-8 w-8 items-center justify-center rounded-full text-sm ${module.complete ? 'bg-[#d9c897] text-[#153f2e]' : module.active ? 'border border-[#d9c897] text-[#d9c897]' : 'border border-white/15 text-white/45'}`}>
+                      <span className={`flex h-8 w-8 items-center justify-center rounded-full text-sm ${module.complete ? 'bg-[var(--jpv-sunshine)] text-[var(--jpv-brand-deep)]' : module.active ? 'border border-[var(--jpv-sunshine)] text-[var(--jpv-sunshine)]' : 'border border-white/15 text-white/45'}`}>
                         {module.complete ? '✓' : module.active ? '2' : '3'}
                       </span>
                     </div>
@@ -131,21 +131,21 @@ export default function CoursePreviewPage() {
         <section id='courses' className='mt-14'>
           <div className='flex flex-col justify-between gap-4 sm:flex-row sm:items-end'>
             <div>
-              <p className='text-xs font-bold uppercase tracking-[0.2em] text-[#8a7450]'>Course library</p>
-              <h2 className='mt-2 text-3xl font-bold tracking-tight text-[#153f2e]'>My courses</h2>
-              <p className='mt-2 text-[#64736c]'>A visual preview of how available and restricted courses could appear.</p>
+              <p className='text-xs font-bold uppercase tracking-[0.2em] text-[var(--jpv-sunshine-ink)]'>Course library</p>
+              <h2 className='mt-2 text-3xl font-bold tracking-tight text-[var(--jpv-brand-deep)]'>My courses</h2>
+              <p className='mt-2 text-[var(--jpv-muted)]'>A visual preview of how available and restricted courses could appear.</p>
             </div>
-            <div className='rounded-full border border-[#153f2e]/10 bg-white px-4 py-2 text-sm font-semibold text-[#51645b]'>
+            <div className='rounded-full border border-[var(--jpv-brand-deep)]/10 bg-white px-4 py-2 text-sm font-semibold text-[var(--jpv-muted)]'>
               3 courses shown
             </div>
           </div>
 
           <div className='mt-8 grid gap-6 lg:grid-cols-3'>
             {courses.map((course) => (
-              <article key={course.title} className={`group overflow-hidden rounded-[24px] border bg-white shadow-[0_16px_45px_rgba(31,52,43,0.08)] transition-transform duration-200 hover:-translate-y-1 ${course.featured ? 'border-[#b7a56f]' : 'border-[#153f2e]/10'}`}>
-                <div className={`relative h-44 overflow-hidden ${course.locked ? 'bg-[#4d514d]' : course.featured ? 'bg-[#214e3a]' : 'bg-[#cfbf90]'}`}>
+              <article key={course.title} className={`group overflow-hidden rounded-jpv-panel border bg-white shadow-jpv-card transition-transform duration-200 hover:-translate-y-1 ${course.featured ? 'border-[var(--jpv-sunshine)]' : 'border-[var(--jpv-brand-deep)]/10'}`}>
+                <div className={`relative h-44 overflow-hidden ${course.locked ? 'bg-[var(--jpv-muted)]' : course.featured ? 'bg-[var(--jpv-brand-hover)]' : 'bg-[var(--jpv-sunshine)]'}`}>
                   <div className='absolute inset-0 opacity-30 [background-image:radial-gradient(circle_at_20%_20%,white_0,transparent_32%),radial-gradient(circle_at_80%_70%,white_0,transparent_28%)]' />
-                  <div className='absolute left-5 top-5 rounded-full bg-white/90 px-3 py-1 text-xs font-extrabold tracking-[0.16em] text-[#153f2e]'>
+                  <div className='absolute left-5 top-5 rounded-full bg-white/90 px-3 py-1 text-xs font-extrabold tracking-[0.16em] text-[var(--jpv-brand-deep)]'>
                     {course.badge}
                   </div>
                   {course.locked && (
@@ -157,28 +157,28 @@ export default function CoursePreviewPage() {
 
                 <div className='p-6'>
                   <div className='flex items-start justify-between gap-4'>
-                    <h3 className='text-xl font-bold tracking-tight text-[#153f2e]'>{course.title}</h3>
-                    {course.featured && <span className='text-lg text-[#a58d4e]'>★</span>}
+                    <h3 className='text-xl font-bold tracking-tight text-[var(--jpv-brand-deep)]'>{course.title}</h3>
+                    {course.featured && <span className='text-lg text-[var(--jpv-sunshine-ink)]'>★</span>}
                   </div>
-                  <p className='mt-3 min-h-[72px] text-sm leading-6 text-[#68766f]'>{course.description}</p>
+                  <p className='mt-3 min-h-[72px] text-sm leading-6 text-[var(--jpv-muted)]'>{course.description}</p>
 
-                  <div className='mt-5 flex items-center gap-4 text-xs font-semibold text-[#66766e]'>
+                  <div className='mt-5 flex items-center gap-4 text-xs font-semibold text-[var(--jpv-muted)]'>
                     <span>{course.lessons} lessons</span>
-                    <span className='h-1 w-1 rounded-full bg-[#9cab9f]' />
+                    <span className='h-1 w-1 rounded-full bg-[var(--jpv-border)]' />
                     <span>{course.duration}</span>
                   </div>
 
                   <div className='mt-6'>
                     <div className='flex items-center justify-between text-xs font-semibold'>
-                      <span className='text-[#53675d]'>Progress</span>
-                      <span className='text-[#153f2e]'>{course.progress}%</span>
+                      <span className='text-[var(--jpv-muted)]'>Progress</span>
+                      <span className='text-[var(--jpv-brand-deep)]'>{course.progress}%</span>
                     </div>
-                    <div className='mt-2 h-2 overflow-hidden rounded-full bg-[#e9e7df]'>
-                      <div className='h-full rounded-full bg-[#9d864b]' style={{ width: `${course.progress}%` }} />
+                    <div className='mt-2 h-2 overflow-hidden rounded-full bg-[var(--jpv-surface-strong)]'>
+                      <div className='h-full rounded-full bg-[var(--jpv-sunshine-ink)]' style={{ width: `${course.progress}%` }} />
                     </div>
                   </div>
 
-                  <button className={`mt-6 w-full rounded-full px-5 py-3 text-sm font-bold ${course.locked ? 'border border-[#153f2e]/15 bg-[#f4f1e9] text-[#59665f]' : 'bg-[#153f2e] text-white'}`}>
+                  <button className={`mt-6 w-full rounded-full px-5 py-3 text-sm font-bold ${course.locked ? 'border border-[var(--jpv-brand-deep)]/15 bg-[var(--jpv-surface)] text-[var(--jpv-muted)]' : 'bg-[var(--jpv-brand-deep)] text-white'}`}>
                     {course.state}
                   </button>
                 </div>
@@ -188,30 +188,30 @@ export default function CoursePreviewPage() {
         </section>
 
         <section id='curriculum' className='mt-14 grid gap-6 lg:grid-cols-[1.25fr_0.75fr]'>
-          <div className='rounded-[24px] border border-[#153f2e]/10 bg-white p-7 shadow-[0_14px_40px_rgba(31,52,43,0.06)] sm:p-8'>
-            <p className='text-xs font-bold uppercase tracking-[0.2em] text-[#8a7450]'>Next lesson</p>
+          <div className='rounded-jpv-panel border border-[var(--jpv-brand-deep)]/10 bg-white p-7 shadow-jpv-card sm:p-8'>
+            <p className='text-xs font-bold uppercase tracking-[0.2em] text-[var(--jpv-sunshine-ink)]'>Next lesson</p>
             <div className='mt-5 flex flex-col justify-between gap-6 sm:flex-row sm:items-center'>
               <div>
-                <p className='text-sm font-semibold text-[#708078]'>Module 2 · Lesson 1</p>
-                <h3 className='mt-2 text-2xl font-bold text-[#153f2e]'>Understand Your Audience</h3>
-                <p className='mt-2 max-w-xl text-sm leading-6 text-[#68766f]'>Clarify who you serve, what they need and how your experience creates value.</p>
+                <p className='text-sm font-semibold text-[var(--jpv-muted)]'>Module 2 · Lesson 1</p>
+                <h3 className='mt-2 text-2xl font-bold text-[var(--jpv-brand-deep)]'>Understand Your Audience</h3>
+                <p className='mt-2 max-w-xl text-sm leading-6 text-[var(--jpv-muted)]'>Clarify who you serve, what they need and how your experience creates value.</p>
               </div>
-              <button className='shrink-0 rounded-full bg-[#d9c897] px-6 py-3 text-sm font-bold text-[#153f2e]'>Open lesson</button>
+              <button className='shrink-0 rounded-full bg-[var(--jpv-sunshine)] px-6 py-3 text-sm font-bold text-[var(--jpv-brand-deep)]'>Open lesson</button>
             </div>
           </div>
 
-          <div id='resources' className='rounded-[24px] bg-[#d8c999] p-7 text-[#153f2e] sm:p-8'>
+          <div id='resources' className='rounded-jpv-panel bg-[var(--jpv-sunshine)] p-7 text-[var(--jpv-brand-deep)] sm:p-8'>
             <p className='text-xs font-bold uppercase tracking-[0.2em]'>Resources</p>
             <h3 className='mt-3 text-2xl font-bold'>Your course toolkit</h3>
-            <p className='mt-3 text-sm leading-6 text-[#43594f]'>Worksheets, practical templates and lesson downloads will live together in one clear place.</p>
-            <button className='mt-6 rounded-full border border-[#153f2e]/20 bg-white/40 px-5 py-3 text-sm font-bold'>View example resources</button>
+            <p className='mt-3 text-sm leading-6 text-[var(--jpv-muted)]'>Worksheets, practical templates and lesson downloads will live together in one clear place.</p>
+            <button className='mt-6 rounded-full border border-[var(--jpv-brand-deep)]/20 bg-white/40 px-5 py-3 text-sm font-bold'>View example resources</button>
           </div>
         </section>
       </main>
 
-      <footer className='mt-16 border-t border-[#153f2e]/10 bg-white px-6 py-8'>
-        <div className='mx-auto flex max-w-7xl flex-col justify-between gap-3 text-sm text-[#68766f] sm:flex-row'>
-          <p className='font-semibold text-[#153f2e]'>JPV Bootcamp Course Prototype</p>
+      <footer className='mt-16 border-t border-[var(--jpv-brand-deep)]/10 bg-white px-6 py-8'>
+        <div className='mx-auto flex max-w-7xl flex-col justify-between gap-3 text-sm text-[var(--jpv-muted)] sm:flex-row'>
+          <p className='font-semibold text-[var(--jpv-brand-deep)]'>JPV Bootcamp Course Prototype</p>
           <p>Static demonstration — no live account, course or payment data</p>
         </div>
       </footer>

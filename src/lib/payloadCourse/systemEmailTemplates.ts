@@ -1,4 +1,5 @@
 import type { PayloadDocument } from '@/lib/payloadCourse/accessService'
+import { renderBrandedEmail } from '@/lib/communications/brandedEmail'
 
 export const MEMBER_EMAIL_VERIFICATION_TEMPLATE_KEY = 'member-email-verification'
 export const MEMBER_INVITATION_TEMPLATE_KEY = 'member-invitation'
@@ -36,10 +37,9 @@ function brandedTemplate(input: {
   if (input.actionUrlVariable) textLines.push(input.actionUrlVariable, '')
   textLines.push('JPV Bootcamp')
 
-  const paragraphs = input.paragraphs.map((paragraph) => `<p>${paragraph}</p>`).join('')
-  const action = input.actionUrlVariable
-    ? `<p><a href="${input.actionUrlVariable}" style="display:inline-block;background:#153f2e;color:#fff;padding:12px 18px;text-decoration:none;border-radius:6px">${input.actionLabel ?? 'Continue'}</a></p>`
-    : ''
+  const paragraphs = input.paragraphs
+    .map((paragraph) => `<p style="margin:0 0 16px">${paragraph}</p>`)
+    .join('')
 
   return {
     id: `system-${input.key}`,
@@ -50,7 +50,15 @@ function brandedTemplate(input: {
     subject: input.subject,
     preheader: input.preheader,
     textBody: textLines.join('\n'),
-    htmlBody: `<!doctype html><html><body style="font-family:Arial,sans-serif;color:#17202a"><div style="max-width:560px;margin:auto;padding:24px"><img src="{{logoUrl}}" alt="JPV" style="max-width:180px;height:auto"/><h1>${input.heading}</h1><p>Hi {{displayName}},</p>${paragraphs}${action}<p>JPV Bootcamp</p></div></body></html>`,
+    htmlBody: renderBrandedEmail({
+      preheader: input.preheader,
+      heading: input.heading,
+      logoUrl: '{{logoUrl}}',
+      bodyHtml: `<p style="margin:0 0 16px">Hi {{displayName}},</p>${paragraphs}`,
+      actions: input.actionUrlVariable
+        ? [{ label: input.actionLabel ?? 'Continue', url: input.actionUrlVariable }]
+        : [],
+    }),
     adminCopyRequired: false,
   }
 }

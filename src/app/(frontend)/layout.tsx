@@ -1,15 +1,14 @@
 import { Providers } from '@/components/providers'
+import { jpvFont, landingSerif } from '@/fonts'
+import { jpvCssVariables, jpvDesignTokens } from '@/lib/brand/jpvDesignSystem'
 import { getSEOTags, renderSchemaTags } from '@/libs/seo'
 import { Viewport } from 'next'
-import { Inter } from 'next/font/google'
 import { ReactNode } from 'react'
 
 import '@/assets/styles/globals.scss'
 
-const font = Inter({ subsets: ['latin'] })
-
 export const viewport: Viewport = {
-  themeColor: '#000000',
+  themeColor: jpvDesignTokens.colors.canvas,
   width: 'device-width',
   initialScale: 1,
 }
@@ -18,12 +17,15 @@ export const metadata = getSEOTags({ canonicalUrlRelative: '/' })
 
 export default function FrontendLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang='en' suppressHydrationWarning>
-      <body className={font.className}>
+    <html
+      className={`${jpvFont.variable} ${landingSerif.variable}`}
+      lang='en'
+      style={jpvCssVariables}
+      suppressHydrationWarning
+    >
+      <body className={jpvFont.className}>
         {renderSchemaTags()}
-        <Providers>
-          <main className='min-h-screen bg-background'>{children}</main>
-        </Providers>
+        <Providers>{children}</Providers>
       </body>
     </html>
   )

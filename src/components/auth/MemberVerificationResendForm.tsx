@@ -35,17 +35,17 @@ export function MemberVerificationResendForm() {
   }
 
   return (
-    <form className='mt-6 border-t border-neutral-200 pt-6' onSubmit={submit}>
-      <h2 className='text-sm font-semibold text-neutral-950'>Didn&apos;t receive a verification email?</h2>
-      <p className='mt-2 text-sm leading-6 text-neutral-600'>
+    <form className='mt-7 border-t border-jpv-border pt-7' onSubmit={submit}>
+      <h2 className='text-sm font-bold text-jpv-ink'>Didn&apos;t receive a verification email?</h2>
+      <p className='mt-2 text-sm leading-6 text-jpv-muted'>
         Enter your member email address. For privacy, the response is the same for every account.
       </p>
-      <label className='mt-4 block text-sm font-medium text-neutral-800' htmlFor='verification-email'>
+      <label className='mt-4 block text-sm font-semibold text-jpv-ink' htmlFor='verification-email'>
         Member email
       </label>
       <input
         autoComplete='email'
-        className='mt-2 w-full rounded-lg border border-neutral-300 px-4 py-3 text-sm text-neutral-950'
+        className='mt-2 w-full rounded-lg border border-jpv-border bg-jpv-canvas px-4 py-3 text-sm text-jpv-ink outline-none transition focus:border-jpv-green-deep focus:ring-2 focus:ring-jpv-green/25'
         id='verification-email'
         maxLength={320}
         onChange={(event) => setEmail(event.target.value)}
@@ -54,14 +54,14 @@ export function MemberVerificationResendForm() {
         value={email}
       />
       <button
-        className='mt-3 w-full rounded-lg bg-neutral-950 px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60'
+        className='jpv-button-secondary mt-3 w-full'
         disabled={submitting}
         type='submit'
       >
         {submitting ? 'Requesting…' : 'Resend verification email'}
       </button>
       {message ? (
-        <p aria-live='polite' className='mt-3 text-sm leading-6 text-neutral-600'>
+        <p aria-live='polite' className='jpv-notice mt-3 text-sm leading-6 text-jpv-muted'>
           {message}
         </p>
       ) : null}

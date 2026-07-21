@@ -1,10 +1,10 @@
-const logoSrc = '/images/jpv-logo.png'
+import { jpvBrand } from '@/lib/brand/jpvDesignSystem'
 
 export function JPVAdminLogo() {
   return (
     <img
-      alt='JPV Bootcamp Portal'
-      src={logoSrc}
+      alt={jpvBrand.logoAlt}
+      src={jpvBrand.logoPath}
       style={{
         display: 'block',
         height: 'auto',
@@ -20,8 +20,8 @@ export function JPVAdminLogo() {
 export function JPVAdminIcon() {
   return (
     <img
-      alt='JPV Bootcamp Portal'
-      src={logoSrc}
+      alt={jpvBrand.logoAlt}
+      src={jpvBrand.logoPath}
       style={{
         display: 'block',
         height: 32,

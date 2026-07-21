@@ -5,6 +5,7 @@ import { normalizeEmail } from '@/lib/normalize-email'
 import type { PayloadId, PayloadMemberAuthAPI } from '@/lib/payloadCourse/accessService'
 import { createAuditEvent, queueEmailEvent } from '@/lib/payloadCourse/events'
 import { isEligibleCurrentMember } from '@/lib/members/currentMember'
+import { resolveJpvLogoUrl } from '@/lib/brand/jpvDesignSystem'
 
 export type RequestMemberEmailChangeInput = {
   memberId: PayloadId
@@ -117,7 +118,7 @@ export async function requestMemberEmailChange(
         memberId: String(input.memberId),
         purpose: 'email_change_request_notice',
         displayName: input.displayName?.trim() || currentEmail.split('@')[0] || 'there',
-        logoUrl: `${baseUrl.origin}/images/jpv-logo.png`,
+        logoUrl: resolveJpvLogoUrl(baseUrl),
       },
     })
     noticeQueued = queued.created
@@ -212,7 +213,7 @@ export async function completeMemberEmailChange(
           memberId: String(member.id),
           purpose: 'email_change_confirmation_notice',
           displayName,
-          logoUrl: `${base.origin}/images/jpv-logo.png`,
+          logoUrl: resolveJpvLogoUrl(base),
         },
       })
     } catch {

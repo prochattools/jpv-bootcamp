@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { jpvBrand } from "@/lib/brand/jpvDesignSystem";
 
 export const metadata = {
   title: "Inheritance Builders Bootcamp | JPV Bootcamp",
@@ -97,8 +98,8 @@ export default function BuildersBootcampPage() {
           <div className="flex items-center gap-4">
             <div className="h-14 w-14 overflow-hidden rounded-xl border border-jpv-gray-700/50">
               <Image
-                src="/images/jpv-logo.jpg"
-                alt="JPV - Jesus Property Venture logo"
+                src={jpvBrand.logoPath}
+                alt={jpvBrand.logoAlt}
                 width={56}
                 height={56}
                 className="h-full w-full object-cover"

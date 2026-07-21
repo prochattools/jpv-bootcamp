@@ -5,6 +5,7 @@ import type {
 } from '@/lib/payloadCourse/accessService'
 import { createAuditEvent, queueEmailEvent } from '@/lib/payloadCourse/events'
 import { isEligibleCurrentMember } from '@/lib/members/currentMember'
+import { resolveJpvLogoUrl } from '@/lib/brand/jpvDesignSystem'
 
 export type ChangeMemberPasswordInput = {
   memberId: PayloadId
@@ -118,7 +119,7 @@ export async function changeMemberPassword(
         memberId: String(input.memberId),
         purpose: 'member_password_change_confirmation',
         displayName: email.split('@')[0] || 'there',
-        logoUrl: `${baseUrl.origin}/images/jpv-logo.png`,
+        logoUrl: resolveJpvLogoUrl(baseUrl),
       },
     })
     confirmationQueued = queued.created

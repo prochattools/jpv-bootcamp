@@ -1,9 +1,10 @@
-import { Libre_Baskerville, Outfit, Poppins } from "next/font/google";
+import { Libre_Baskerville, Poppins } from "next/font/google";
 
-export const jpvFont = Outfit({
+export const jpvFont = Poppins({
   subsets: ["latin"],
   display: "swap",
   variable: "--font-jpv",
+  weight: ["400", "500", "600"],
 });
 
 export const landingSerif = Libre_Baskerville({
@@ -13,9 +14,4 @@ export const landingSerif = Libre_Baskerville({
   weight: ["400", "700"],
 });
 
-export const landingSans = Poppins({
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--font-jpv-landing-sans",
-  weight: ["400", "500", "600"],
-});
+export const landingSans = jpvFont;

@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
+import { AuthShell } from '@/components/auth/AuthShell'
 import { MemberLoginForm } from '@/components/auth/MemberLoginForm'
 import { MemberVerificationResendForm } from '@/components/auth/MemberVerificationResendForm'
 import { requirePortalMember } from '@/lib/auth/requirePortalMember'
@@ -48,41 +49,38 @@ function PortalLoginMode({ params }: { params: PortalSearchParams | undefined })
   const notice = portalNotice(params)
 
   return (
-    <main className='mx-auto grid min-h-[calc(100vh-84px)] max-w-6xl items-center gap-10 px-6 py-12 lg:grid-cols-[1fr_0.9fr]'>
-      <section>
-        <p className='text-sm font-semibold uppercase tracking-[0.2em] text-neutral-500'>JPV Bootcamp member portal</p>
-        <h1 className='mt-4 max-w-2xl text-4xl font-semibold tracking-tight text-neutral-950'>Sign in or start JPV Bootcamp Membership.</h1>
-        <p className='mt-4 max-w-xl text-sm leading-6 text-neutral-600'>
-          `/portal` is the member and student entry point for courses, community, billing, password help, and verification. New users onboard through the single Stripe membership Checkout flow.
+    <AuthShell
+      description='Use your verified member account to open courses, community, billing, password help, and verification tools.'
+      eyebrow='JPV Bootcamp member portal'
+      footer={(
+        <p className='text-sm text-jpv-muted'>
+          Administrator account? Use{' '}
+          <Link className='font-semibold text-jpv-ink underline decoration-jpv-green underline-offset-4' href='/admin/login'>
+            the administrator sign-in
+          </Link>
+          .
         </p>
-        <div className='mt-6 grid gap-3 sm:grid-cols-2'>
-          <Link className='rounded-lg bg-neutral-950 px-4 py-3 text-center text-sm font-semibold text-white' href='/upgrade'>
-            Choose membership
-          </Link>
-          <Link className='rounded-lg border border-neutral-300 px-4 py-3 text-center text-sm font-semibold text-neutral-950' href='/forgot-password'>
-            Forgot password
-          </Link>
+      )}
+      introActions={(
+        <div className='flex flex-col gap-3 sm:flex-row'>
+          <Link className='jpv-button-primary' href='/upgrade'>Choose membership</Link>
+          <Link className='jpv-button-secondary' href='/forgot-password'>Forgot password</Link>
         </div>
-      </section>
-
-      <section className='rounded-2xl border border-neutral-200 bg-white p-8 shadow-sm'>
-        <img alt='JPV Bootcamp' className='mx-auto h-auto w-full max-w-48' src='/images/jpv-logo.png' />
-        <h2 className='mt-8 text-center text-2xl font-semibold text-neutral-950'>Member sign in</h2>
-        <p className='mt-3 text-center text-sm leading-6 text-neutral-600'>
-          Use your verified JPV Bootcamp member account. Checkout-created and administrator-created accounts must verify email before sign-in. Resend verification below if needed.
+      )}
+      title='Welcome back.'
+    >
+      <h2 className='text-xl font-bold'>Member sign in</h2>
+      <p className='mt-2 text-sm leading-6 text-jpv-muted'>
+        Checkout-created and administrator-created accounts must verify their email address before signing in. Resend verification below if needed.
+      </p>
+      {notice ? (
+        <p className='jpv-notice mt-5 text-sm leading-6' role='status'>
+          {notice}
         </p>
-        {notice ? (
-          <p className='mt-4 rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm leading-6 text-neutral-700' role='status'>
-            {notice}
-          </p>
-        ) : null}
-        <MemberLoginForm requestedDestination={requestedDestination} />
-        <MemberVerificationResendForm />
-        <p className='mt-6 border-t border-neutral-200 pt-6 text-center text-sm text-neutral-600'>
-          Administrator account? Use <Link className='font-semibold text-neutral-950 underline-offset-4 hover:underline' href='/admin/login'>/admin</Link>.
-        </p>
-      </section>
-    </main>
+      ) : null}
+      <MemberLoginForm requestedDestination={requestedDestination} />
+      <MemberVerificationResendForm />
+    </AuthShell>
   )
 }
 

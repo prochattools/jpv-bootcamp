@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict'
 import { existsSync, readFileSync } from 'node:fs'
 
+import { jpvBrand } from '../src/lib/brand/jpvDesignSystem'
+
 const payloadConfig = readFileSync('src/payload.config.ts', 'utf8')
 const brandingSource = readFileSync('src/components/payload/JPVAdminBranding.tsx', 'utf8')
 const importMap = readFileSync('src/app/(payload)/admin/importMap.js', 'utf8')
@@ -24,8 +26,8 @@ assert.doesNotMatch(
   /JPVAdminLoginBranding/,
   'extra admin login branding must not duplicate the configured logo',
 )
-assert.ok(brandingSource.includes('/images/jpv-logo.png'), 'branding must use the existing JPV logo asset')
-assert.ok(existsSync('public/images/jpv-logo.png'), 'public/images/jpv-logo.png must exist')
+assert.ok(brandingSource.includes('jpvBrand.logoPath'), 'branding must use the canonical JPV brand asset')
+assert.ok(existsSync(`public${jpvBrand.logoPath}`), `public${jpvBrand.logoPath} must exist`)
 assert.match(importMap, /import \{ JPVAdminLogo as /, 'import map must import JPVAdminLogo')
 assert.match(importMap, /import \{ JPVAdminIcon as /, 'import map must import JPVAdminIcon')
 assert.ok(importMap.includes(`"${logoKey}"`), 'import map object must contain the JPVAdminLogo key')

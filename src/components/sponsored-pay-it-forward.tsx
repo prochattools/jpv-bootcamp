@@ -10,7 +10,7 @@ type SponsoredCounts = {
 export default function SponsoredPayItForward() {
 	const [counts, setCounts] = useState<SponsoredCounts>({
 		available: 0,
-		enabled: true,
+		enabled: false,
 	})
 	const [loading, setLoading] = useState(false)
 	const [error, setError] = useState('')
@@ -62,14 +62,14 @@ export default function SponsoredPayItForward() {
 	}
 
 	return (
-		<div className="jpv-surface-inverse rounded-jpv-panel border border-jpv-canvas/20 p-6 shadow-jpv-card">
+		<div className="rounded-3xl border border-jpv-canvas/20 bg-jpv-ink p-6 shadow-jpv-card">
 			<div className="space-y-3">
-				<h3 className="text-xl font-semibold">Pay it forward</h3>
-				<p className="jpv-surface-inverse-muted text-sm">
+				<h3 className="text-xl font-semibold text-jpv-canvas">Pay it forward</h3>
+				<p className="text-sm text-jpv-canvas">
 					Some members choose to fund JPV Bootcamp Membership for someone who
 					can&apos;t pay yet.
 				</p>
-				<p className="jpv-surface-inverse-muted text-xs">
+				<p className="text-xs text-jpv-canvas">
 					{counts.available} sponsored access seats currently available
 				</p>
 			</div>
@@ -78,11 +78,16 @@ export default function SponsoredPayItForward() {
 					type="button"
 					onClick={() => handleCheckout()}
 					disabled={loading || !counts.enabled}
-					className="jpv-button-accent"
+					className="min-h-11 rounded-jpv-action border border-jpv-canvas/40 px-4 py-2 text-sm font-semibold text-jpv-canvas transition-colors hover:border-jpv-canvas hover:bg-jpv-canvas hover:text-jpv-green-deep disabled:cursor-not-allowed disabled:border-jpv-canvas/20 disabled:text-jpv-canvas disabled:opacity-60 disabled:hover:bg-transparent"
 				>
-					Fund JPV Bootcamp Membership
+					{loading ? 'Opening secure checkout…' : 'Fund JPV Bootcamp Membership'}
 				</button>
 			</div>
+			{!counts.enabled ? (
+				<p className="mt-3 text-xs leading-5 text-jpv-canvas">
+					Funding checkout is temporarily unavailable while the sponsored-support price is configured.
+				</p>
+			) : null}
 			{error ? <p className="mt-3 text-xs text-red-400">{error}</p> : null}
 		</div>
 	)

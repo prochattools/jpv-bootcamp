@@ -1,4 +1,5 @@
 import type { ConfigProps } from '@/types/config'
+import { jpvBrand } from '@/lib/brand/jpvDesignSystem'
 import themes from 'daisyui/src/theming/themes'
 
 const domainName =
@@ -9,7 +10,7 @@ const domainName =
 
 const config: ConfigProps = {
 	// REQUIRED
-	appName: 'JPV • Jesus Property Venture',
+	appName: jpvBrand.name,
 	author: 'JPV • Jesus Property Venture',
 	siteTitle: 'JPV • Jesus Property Venture — Property Training and Community',
 	// REQUIRED: a short description of your app for SEO tags (can be overwritten)
@@ -21,7 +22,7 @@ const config: ConfigProps = {
 	twitterDescription: 'Explore JPV Bootcamp programmes, resources, and membership options.',
 	canonicalPath: '/',
 	socialPreviewImage: '/assets/jpv-social-preview.jpg',
-	organizationLogo: '/assets/jpv-logo.png',
+	organizationLogo: jpvBrand.logoPath,
 	organizationSameAs: [
 		'https://www.facebook.com/jpvbootcamp',
 		'https://www.instagram.com/jpvbootcamp',

@@ -12,7 +12,7 @@ function SubmitButton() {
   const { pending } = useFormStatus()
   return (
     <button
-      className='rounded-full bg-[#153f2e] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#0f3425] disabled:cursor-not-allowed disabled:opacity-60'
+      className='jpv-button-primary'
       disabled={pending}
       type='submit'
     >
@@ -30,12 +30,12 @@ export function EmailChangeForm() {
   return (
     <form action={formAction} className='space-y-5'>
       <div>
-        <label className='text-sm font-semibold text-[#153f2e]' htmlFor='newEmail'>
+        <label className='text-sm font-semibold text-jpv-ink' htmlFor='newEmail'>
           New email address
         </label>
         <input
           autoComplete='email'
-          className='mt-2 w-full rounded-xl border border-[#153f2e]/15 bg-white px-4 py-3 text-sm text-[#14261d] outline-none transition focus:border-[#9d864b] focus:ring-2 focus:ring-[#d9c897]/45'
+          className='mt-2 w-full rounded-lg border border-jpv-border bg-jpv-canvas px-4 py-3 text-sm text-jpv-ink outline-none transition focus:border-jpv-green-deep focus:ring-2 focus:ring-jpv-green/25'
           id='newEmail'
           maxLength={320}
           name='newEmail'
@@ -43,7 +43,7 @@ export function EmailChangeForm() {
           type='email'
         />
       </div>
-      <p className='text-xs leading-5 text-[#68766f]'>
+      <p className='text-xs leading-5 text-jpv-muted'>
         Your current sign-in email remains active until the new address is confirmed through a secure, single-use link.
       </p>
       {state.error ? (

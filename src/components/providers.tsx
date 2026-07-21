@@ -22,7 +22,28 @@ export function Providers({ children }: { children: ReactNode }) {
         position="bottom-center"
         toastOptions={{
           duration: 3000,
-          className: "text-sm dark:bg-black dark:text-white",
+          style: {
+            background: 'var(--jpv-ink)',
+            border: '1px solid var(--jpv-border)',
+            borderRadius: 'var(--jpv-radius-card)',
+            boxShadow: 'var(--jpv-shadow-floating)',
+            color: 'var(--jpv-canvas)',
+            fontSize: '14px',
+            lineHeight: '1.5',
+            padding: '12px 16px',
+          },
+          success: {
+            iconTheme: {
+              primary: 'var(--jpv-brand)',
+              secondary: 'var(--jpv-ink)',
+            },
+          },
+          error: {
+            iconTheme: {
+              primary: 'var(--jpv-danger)',
+              secondary: 'var(--jpv-canvas)',
+            },
+          },
         }}
       />
     </>

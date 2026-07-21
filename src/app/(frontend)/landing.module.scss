@@ -225,7 +225,8 @@
 .buttonOnDark:hover,
 .buttonOnDark:focus-visible {
   border-color: var(--jpv-canvas);
-  background: color-mix(in srgb, var(--jpv-canvas) 8%, transparent);
+  background: var(--jpv-canvas);
+  color: var(--jpv-brand-deep);
 }
 
 .plainLink {

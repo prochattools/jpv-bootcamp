@@ -99,14 +99,14 @@ export function MemberLoginForm({ requestedDestination }: MemberLoginFormProps) 
   }
 
   return (
-    <form className='mt-8 grid gap-5' onSubmit={handleSubmit}>
+    <form className='mt-7 grid gap-5' onSubmit={handleSubmit}>
       <div>
-        <label className='block text-sm font-medium text-neutral-800' htmlFor='member-email'>
-          Email
+        <label className='block text-sm font-semibold text-jpv-ink' htmlFor='member-email'>
+          Email address
         </label>
         <input
           autoComplete='email'
-          className='mt-2 w-full rounded-lg border border-neutral-300 px-4 py-3 text-neutral-950 outline-none focus:border-neutral-950'
+          className='mt-2 w-full rounded-lg border border-jpv-border bg-jpv-canvas px-4 py-3 text-jpv-ink outline-none transition focus:border-jpv-green-deep focus:ring-2 focus:ring-jpv-green/25'
           id='member-email'
           name='email'
           onChange={(event) => setEmail(event.target.value)}
@@ -117,12 +117,12 @@ export function MemberLoginForm({ requestedDestination }: MemberLoginFormProps) 
       </div>
 
       <div>
-        <label className='block text-sm font-medium text-neutral-800' htmlFor='member-password'>
+        <label className='block text-sm font-semibold text-jpv-ink' htmlFor='member-password'>
           Password
         </label>
         <input
           autoComplete='current-password'
-          className='mt-2 w-full rounded-lg border border-neutral-300 px-4 py-3 text-neutral-950 outline-none focus:border-neutral-950'
+          className='mt-2 w-full rounded-lg border border-jpv-border bg-jpv-canvas px-4 py-3 text-jpv-ink outline-none transition focus:border-jpv-green-deep focus:ring-2 focus:ring-jpv-green/25'
           id='member-password'
           name='password'
           onChange={(event) => setPassword(event.target.value)}
@@ -133,13 +133,13 @@ export function MemberLoginForm({ requestedDestination }: MemberLoginFormProps) 
       </div>
 
       {error ? (
-        <p aria-live='polite' className='rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800'>
+        <p aria-live='polite' className='jpv-notice jpv-notice-danger text-sm'>
           {error}
         </p>
       ) : null}
 
       <button
-        className='rounded-lg bg-neutral-950 px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60'
+        className='jpv-button-primary w-full'
         disabled={submitting}
         type='submit'
       >

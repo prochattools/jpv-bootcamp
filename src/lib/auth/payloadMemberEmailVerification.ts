@@ -4,6 +4,7 @@ import type { PayloadCourseWriteAPI, PayloadDocument } from '@/lib/payloadCourse
 import { createAuditEvent } from '@/lib/payloadCourse/events'
 import { quotePgIdentifier } from '@/lib/payloadMigrationSchema'
 import { MEMBER_EMAIL_VERIFICATION_TEMPLATE_KEY } from '@/lib/payloadCourse/systemEmailTemplates'
+import { resolveJpvLogoUrl } from '@/lib/brand/jpvDesignSystem'
 
 import {
   createMemberEmailVerificationService,
@@ -332,7 +333,7 @@ export function createQueuedVerificationEmailTransport(
         attempt: delivery.metadata.attempt,
         displayName: delivery.templateData.displayName,
         verificationUrl: verificationUrl.toString(),
-        logoUrl: `${verificationUrl.origin}/images/jpv-logo.png`,
+        logoUrl: resolveJpvLogoUrl(verificationUrl),
       }
 
       const existingResult = await client.query(

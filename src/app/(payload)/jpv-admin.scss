@@ -1,0 +1,58 @@
+html[data-theme='light'] {
+  --theme-bg: var(--jpv-canvas);
+  --theme-input-bg: var(--jpv-canvas);
+  --theme-text: var(--jpv-ink);
+  --theme-elevation-0: var(--jpv-canvas);
+  --theme-elevation-50: var(--jpv-surface);
+  --theme-elevation-100: var(--jpv-surface-strong);
+  --theme-elevation-150: var(--jpv-border);
+  --theme-elevation-200: color-mix(in srgb, var(--jpv-border) 78%, var(--jpv-muted));
+  --theme-elevation-250: color-mix(in srgb, var(--jpv-border) 58%, var(--jpv-muted));
+  --theme-elevation-300: color-mix(in srgb, var(--jpv-border) 38%, var(--jpv-muted));
+  --theme-elevation-400: color-mix(in srgb, var(--jpv-muted) 82%, var(--jpv-ink));
+  --theme-elevation-500: var(--jpv-muted);
+  --theme-elevation-600: color-mix(in srgb, var(--jpv-muted) 72%, var(--jpv-ink));
+  --theme-elevation-700: color-mix(in srgb, var(--jpv-muted) 45%, var(--jpv-ink));
+  --theme-elevation-800: color-mix(in srgb, var(--jpv-muted) 20%, var(--jpv-ink));
+  --theme-elevation-900: var(--jpv-ink);
+  --theme-elevation-950: color-mix(in srgb, var(--jpv-ink) 92%, black);
+  --theme-elevation-1000: color-mix(in srgb, var(--jpv-ink) 84%, black);
+  --theme-success-500: var(--jpv-brand);
+  --theme-success-600: var(--jpv-brand-deep);
+}
+
+body {
+  background: var(--theme-bg);
+  color: var(--theme-text);
+  font-family: var(--font-jpv), Poppins, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.btn--style-primary {
+  --bg-color: var(--jpv-brand);
+  --color: var(--jpv-canvas);
+  --hover-bg: var(--jpv-brand-hover);
+  --hover-color: var(--jpv-canvas);
+  border-radius: var(--jpv-radius-action);
+  font-weight: 600;
+}
+
+.btn--style-secondary {
+  border-radius: var(--jpv-radius-action);
+  font-weight: 600;
+}
+
+input:not([type='checkbox']):not([type='radio']),
+textarea,
+select {
+  border-radius: var(--jpv-radius-control);
+}
+
+:where(a, button, input, textarea, select):focus-visible {
+  outline: 3px solid var(--jpv-focus);
+  outline-offset: 3px;
+}
+
+::selection {
+  background: var(--jpv-sunshine);
+  color: var(--jpv-ink);
+}

@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Toaster, toast } from "react-hot-toast";
+import { toast } from "react-hot-toast";
 
 const Form = () => {
   const [email, setEmail] = useState("");
@@ -59,7 +59,6 @@ const Form = () => {
 
   return (
     <form onSubmit={handleSubmit}>
-      <Toaster position="top-center" reverseOrder={false} />
       <Input
         placeholder="Email"
         className="mt-8 mb-2"

@@ -6,7 +6,7 @@ import toolsImageLight from '@/assets/images/tools2.png'
 import IconButton from '@/components/icon-button'
 import Image from 'next/image'
 import { useState } from 'react'
-import { Toaster, toast } from 'react-hot-toast'
+import { toast } from 'react-hot-toast'
 
 const avatars: {
 	alt: string
@@ -177,7 +177,6 @@ const WaitingListHero = () => {
 						</p>
 						<form onSubmit={handleSubmit}>
 							<div className='w-full flex flex-col sm:flex-row gap-y-4 gap-x-2'>
-								<Toaster position='top-center' reverseOrder={false} />
 								<input
 									type='email'
 									placeholder='Your Email'

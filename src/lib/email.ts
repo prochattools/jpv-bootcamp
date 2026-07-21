@@ -1,6 +1,7 @@
 import 'server-only'
 import { Resend } from 'resend'
 import { getServerConfig } from '@/lib/config'
+import { escapeEmailHtml, renderBrandedEmail } from '@/lib/communications/brandedEmail'
 import { assertStagingRecipientAllowed } from '@/lib/staging-email-guard'
 import type { Plan } from '@/lib/plans'
 import {
@@ -112,12 +113,15 @@ export async function sendWelcomeEmail({
 		`If you need help, reply to this email: ${emailConfig.replyTo}`,
 	].join('\n')
 
-	const html = `
-		<p>${getMembershipEmailIntroHtml({ plan, variant })}</p>
-		<p><a href="${emailConfig.portalUrl}">Log in to the portal</a></p>
-		<p><a href="${resetUrl}">Set or reset your password</a></p>
-		<p>If you need help, reply to this email: ${emailConfig.replyTo}</p>
-	`
+	const html = renderBrandedEmail({
+		preheader: `${planLabel} access is ready.`,
+		heading: 'Your access is ready',
+		bodyHtml: `<p style="margin:0 0 16px">${getMembershipEmailIntroHtml({ plan, variant })}</p><p style="margin:0">If you need help, reply to this email: ${escapeEmailHtml(emailConfig.replyTo)}</p>`,
+		actions: [
+			{ label: 'Log in to the portal', url: emailConfig.portalUrl },
+			{ label: 'Set or reset your password', url: resetUrl, tone: 'secondary' },
+		],
+	})
 
 	assertStagingRecipientAllowed([to], 'lib/email:sendWelcomeEmail')
 
@@ -134,25 +138,6 @@ export async function sendWelcomeEmail({
 	if (error) {
 		throw error
 	}
-}
-
-function escapeHtml(value: string): string {
-	return value.replace(/[&<>"']/g, (char) => {
-		switch (char) {
-			case '&':
-				return '&amp;'
-			case '<':
-				return '&lt;'
-			case '>':
-				return '&gt;'
-			case '"':
-				return '&quot;'
-			case "'":
-				return '&#39;'
-			default:
-				return char
-		}
-	})
 }
 
 function extractEmailAddress(value: string): string {
@@ -211,12 +196,12 @@ export async function sendSupportEmail({
 		)
 	}
 
-	const safeName = escapeHtml(name)
-	const safeEmail = escapeHtml(email)
-	const safeQuestion = escapeHtml(question)
-	const safeSource = escapeHtml(source)
-	const safePage = escapeHtml(page)
-	const safeSubmittedAt = escapeHtml(submittedAt)
+	const safeName = escapeEmailHtml(name)
+	const safeEmail = escapeEmailHtml(email)
+	const safeQuestion = escapeEmailHtml(question)
+	const safeSource = escapeEmailHtml(source)
+	const safePage = escapeEmailHtml(page)
+	const safeSubmittedAt = escapeEmailHtml(submittedAt)
 
 	const text = [
 		'New support request received.',
@@ -230,16 +215,19 @@ export async function sendSupportEmail({
 		`Page: ${page}`,
 	].join('\n')
 
-	const html = `
-		<h2>New support request received</h2>
-		<p><strong>Name:</strong> ${safeName}</p>
-		<p><strong>Email:</strong> ${safeEmail}</p>
-		<p><strong>Question:</strong></p>
-		<p>${safeQuestion}</p>
-		<p><strong>Submitted:</strong> ${safeSubmittedAt}</p>
-		<p><strong>Source:</strong> ${safeSource}</p>
-		<p><strong>Page:</strong> ${safePage}</p>
-	`
+	const html = renderBrandedEmail({
+		preheader: `Support request from ${name}`,
+		heading: 'New support request',
+		bodyHtml: `
+			<p style="margin:0 0 12px"><strong>Name:</strong> ${safeName}</p>
+			<p style="margin:0 0 12px"><strong>Email:</strong> ${safeEmail}</p>
+			<p style="margin:0 0 6px"><strong>Question:</strong></p>
+			<p style="margin:0 0 18px;white-space:pre-wrap">${safeQuestion}</p>
+			<p style="margin:0 0 8px"><strong>Submitted:</strong> ${safeSubmittedAt}</p>
+			<p style="margin:0 0 8px"><strong>Source:</strong> ${safeSource}</p>
+			<p style="margin:0"><strong>Page:</strong> ${safePage}</p>
+		`,
+	})
 
 	if (process.env.NODE_ENV !== 'production') {
 		console.log('[support] emailFrom', supportFrom)

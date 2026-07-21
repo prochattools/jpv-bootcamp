@@ -1,5 +1,8 @@
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto'
 
+import { escapeEmailHtml, renderBrandedEmail } from '@/lib/communications/brandedEmail'
+import { resolveJpvLogoUrl } from '@/lib/brand/jpvDesignSystem'
+
 const DEFAULT_TOKEN_TTL_MS = 60 * 60 * 1000
 const DEFAULT_SEND_COOLDOWN_MS = 5 * 60 * 1000
 const DEFAULT_MAX_ATTEMPTS = 3
@@ -104,16 +107,6 @@ export function createVerificationIdempotencyKey(memberId: string, tokenDigest: 
     .digest('hex')
 }
 
-function escapeHtml(value: string): string {
-  return value.replace(/[&<>"']/g, (character) => {
-    if (character === '&') return '&amp;'
-    if (character === '<') return '&lt;'
-    if (character === '>') return '&gt;'
-    if (character === '"') return '&quot;'
-    return '&#39;'
-  })
-}
-
 export function buildVerificationEmail(input: {
   email: string
   displayName?: string
@@ -125,9 +118,7 @@ export function buildVerificationEmail(input: {
   const name = input.displayName?.trim() || 'there'
   const subject = 'Verify your JPV Bootcamp email address'
   const verificationUrl = new URL(input.verificationUrl)
-  const safeName = escapeHtml(name)
-  const safeVerificationUrl = escapeHtml(verificationUrl.toString())
-  const logoUrl = `${verificationUrl.origin}/images/jpv-logo.png`
+  const logoUrl = resolveJpvLogoUrl(verificationUrl)
   const text = [
     `Hi ${name},`,
     '',
@@ -137,7 +128,13 @@ export function buildVerificationEmail(input: {
     'This link expires in one hour and can only be used once.',
     'If you did not request this, you can ignore this message.',
   ].join('\n')
-  const html = `<!doctype html><html><body style="font-family:Arial,sans-serif;color:#17202a"><div style="max-width:560px;margin:auto;padding:24px"><img src="${escapeHtml(logoUrl)}" alt="JPV" style="max-width:180px;height:auto"/><h1>Verify your email</h1><p>Hi ${safeName},</p><p>Please verify your email address to finish securing your JPV Bootcamp member account.</p><p><a href="${safeVerificationUrl}" style="display:inline-block;background:#111;color:#fff;padding:12px 18px;text-decoration:none;border-radius:6px">Verify email address</a></p><p>This link expires in one hour and can only be used once.</p><p>If you did not request this, you can ignore this message.</p></div></body></html>`
+  const html = renderBrandedEmail({
+    preheader: 'Verify your email address to secure your JPV Bootcamp account.',
+    heading: 'Verify your email',
+    logoUrl,
+    bodyHtml: `<p style="margin:0 0 16px">Hi ${escapeEmailHtml(name)},</p><p style="margin:0 0 16px">Please verify your email address to finish securing your JPV Bootcamp member account.</p><p style="margin:0 0 16px">This link expires in one hour and can only be used once.</p><p style="margin:0">If you did not request this, you can ignore this message.</p>`,
+    actions: [{ label: 'Verify email address', url: verificationUrl.toString() }],
+  })
 
   return {
     to: input.email,

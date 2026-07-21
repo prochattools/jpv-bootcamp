@@ -29,6 +29,7 @@ import { partnerCollections } from './collections/partners'
 import { shouldRegisterPayloadProdMigrations } from './lib/payloadMigrations'
 import { stagingAutoProvision } from './lib/staging-auto-provision'
 import { migrations } from './migrations'
+import { jpvBrand } from './lib/brand/jpvDesignSystem'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -78,12 +79,12 @@ export default buildConfig({
         {
           rel: 'icon',
           type: 'image/jpeg',
-          url: '/images/jpv-logo.jpg',
+          url: jpvBrand.logoPath,
         },
         {
           rel: 'apple-touch-icon',
           type: 'image/jpeg',
-          url: '/images/jpv-logo.jpg',
+          url: jpvBrand.logoPath,
         },
       ],
     },

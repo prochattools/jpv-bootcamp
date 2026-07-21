@@ -38,11 +38,11 @@ export default async function PortalCommunitySpacePage({ params, searchParams }:
 
   return (
     <div className='mx-auto max-w-5xl space-y-10'>
-      <Link className='text-sm font-bold text-[#6c5a36] hover:text-[#153f2e]' href='/portal/community'>
+      <Link className='text-sm font-bold text-[var(--jpv-sunshine-ink)] hover:text-[var(--jpv-brand-deep)]' href='/portal/community'>
         Back to community
       </Link>
 
-      <section className='rounded-[28px] bg-[#153f2e] p-8 text-white shadow-[0_24px_70px_rgba(20,55,40,0.18)] sm:p-10 lg:p-14'>
+      <section className='rounded-jpv-panel bg-[var(--jpv-brand-deep)] p-8 text-white shadow-jpv-card sm:p-10 lg:p-14'>
         <div className='flex flex-wrap gap-3'>
           <StatusPill tone={detail.allowed ? 'good' : 'warn'}>{detail.allowed ? 'Unlocked' : 'Locked'}</StatusPill>
           <StatusPill tone='neutral'>{detail.visibility}</StatusPill>
@@ -50,29 +50,29 @@ export default async function PortalCommunitySpacePage({ params, searchParams }:
         </div>
 
         <h1 className='mt-7 text-4xl font-bold leading-tight tracking-tight sm:text-5xl'>{detail.name}</h1>
-        <p className='mt-5 max-w-2xl text-base leading-7 text-[#d5e0da] sm:text-lg'>
+        <p className='mt-5 max-w-2xl text-base leading-7 text-[var(--jpv-inverse-muted)] sm:text-lg'>
           {detail.description ?? 'Space description pending.'}
         </p>
-        <p className='mt-4 text-sm text-[#d5e0da]'>{memberEmail}</p>
+        <p className='mt-4 text-sm text-[var(--jpv-inverse-muted)]'>{memberEmail}</p>
       </section>
 
       {query.submission === 'pending' && (
-        <div className='rounded-[18px] border border-[#2f7355]/20 bg-[#eaf4ee] px-5 py-4 text-sm font-semibold text-[#24543f]'>
+        <div className='rounded-jpv-card border border-[var(--jpv-brand)]/20 bg-[var(--jpv-surface-strong)] px-5 py-4 text-sm font-semibold text-[var(--jpv-brand-deep)]'>
           Community posting is not enabled in this launch preview.
         </div>
       )}
       {query.submission === 'error' && (
-        <div className='rounded-[18px] border border-[#9c5c4f]/20 bg-[#f8ece8] px-5 py-4 text-sm font-semibold text-[#78463d]'>
+        <div className='rounded-jpv-card border border-[var(--jpv-danger)]/20 bg-[var(--jpv-danger-surface)] px-5 py-4 text-sm font-semibold text-[var(--jpv-danger-ink)]'>
           Community posting is not enabled in this launch preview.
         </div>
       )}
 
       {detail.allowed ? (
         <>
-          <section className='rounded-[24px] border border-[#153f2e]/10 bg-white p-7 shadow-[0_14px_35px_rgba(31,52,43,0.07)] sm:p-8'>
-            <p className='text-xs font-bold uppercase tracking-[0.2em] text-[#8a7450]'>Launch preview</p>
-            <h2 className='mt-2 text-2xl font-bold text-[#153f2e]'>Read-only member view</h2>
-            <p className='mt-3 max-w-2xl text-sm leading-6 text-[#68766f]'>
+          <section className='rounded-jpv-panel border border-[var(--jpv-brand-deep)]/10 bg-white p-7 shadow-jpv-card sm:p-8'>
+            <p className='text-xs font-bold uppercase tracking-[0.2em] text-[var(--jpv-sunshine-ink)]'>Launch preview</p>
+            <h2 className='mt-2 text-2xl font-bold text-[var(--jpv-brand-deep)]'>Read-only member view</h2>
+            <p className='mt-3 max-w-2xl text-sm leading-6 text-[var(--jpv-muted)]'>
               Visible spaces and approved discussions are shown from persisted Payload data. Member posting,
               replies, uploads, and moderation actions remain deferred outside this launch preview.
             </p>
@@ -81,10 +81,10 @@ export default async function PortalCommunitySpacePage({ params, searchParams }:
           <section>
             <div className='flex flex-col justify-between gap-4 sm:flex-row sm:items-end'>
               <div>
-                <p className='text-xs font-bold uppercase tracking-[0.2em] text-[#8a7450]'>Discussions</p>
-                <h2 className='mt-2 text-3xl font-bold tracking-tight text-[#153f2e]'>Visible posts</h2>
+                <p className='text-xs font-bold uppercase tracking-[0.2em] text-[var(--jpv-sunshine-ink)]'>Discussions</p>
+                <h2 className='mt-2 text-3xl font-bold tracking-tight text-[var(--jpv-brand-deep)]'>Visible posts</h2>
               </div>
-              <p className='max-w-sm text-sm leading-6 text-[#68766f]'>
+              <p className='max-w-sm text-sm leading-6 text-[var(--jpv-muted)]'>
                 Open a discussion to read its approved rich-text content and visible replies. Moderator submissions enter review first.
               </p>
             </div>
@@ -93,23 +93,23 @@ export default async function PortalCommunitySpacePage({ params, searchParams }:
               {detail.posts.length > 0 ? (
                 detail.posts.map((post) => (
                   <Link
-                    className='block rounded-[22px] border border-[#153f2e]/10 bg-white p-6 shadow-[0_14px_35px_rgba(31,52,43,0.07)] transition hover:-translate-y-0.5 hover:border-[#8a7450]/40'
+                    className='block rounded-jpv-card border border-[var(--jpv-brand-deep)]/10 bg-white p-6 shadow-jpv-card transition hover:-translate-y-0.5 hover:border-[var(--jpv-sunshine-ink)]/40'
                     href={`/portal/community/${encodedSpaceSlug}/posts/${encodeURIComponent(post.id)}`}
                     key={post.id}
                   >
                     <article>
-                      <div className='flex flex-wrap items-center gap-3 text-xs font-bold uppercase tracking-[0.14em] text-[#8a7450]'>
+                      <div className='flex flex-wrap items-center gap-3 text-xs font-bold uppercase tracking-[0.14em] text-[var(--jpv-sunshine-ink)]'>
                         {post.pinned && <span>Pinned</span>}
                         <span>{post.postType ?? 'discussion'}</span>
                         <span>{formatDate(post.createdAt)}</span>
                       </div>
-                      <h3 className='mt-3 text-xl font-bold text-[#153f2e]'>{post.title}</h3>
-                      <p className='mt-3 text-sm text-[#68766f]'>{post.commentCount} visible comments</p>
+                      <h3 className='mt-3 text-xl font-bold text-[var(--jpv-brand-deep)]'>{post.title}</h3>
+                      <p className='mt-3 text-sm text-[var(--jpv-muted)]'>{post.commentCount} visible comments</p>
                     </article>
                   </Link>
                 ))
               ) : (
-                <div className='rounded-[22px] border border-[#153f2e]/10 bg-white p-8 text-[#68766f]'>
+                <div className='rounded-jpv-card border border-[var(--jpv-brand-deep)]/10 bg-white p-8 text-[var(--jpv-muted)]'>
                   No visible posts are published in this space yet.
                 </div>
               )}
@@ -117,11 +117,11 @@ export default async function PortalCommunitySpacePage({ params, searchParams }:
           </section>
         </>
       ) : (
-        <section className='rounded-[24px] border border-[#153f2e]/10 bg-white p-8 shadow-[0_14px_35px_rgba(31,52,43,0.07)]'>
-          <h2 className='text-2xl font-bold text-[#153f2e]'>This space is locked</h2>
-          <p className='mt-3 max-w-2xl text-sm leading-6 text-[#68766f]'>{detail.lockReason}</p>
+        <section className='rounded-jpv-panel border border-[var(--jpv-brand-deep)]/10 bg-white p-8 shadow-jpv-card'>
+          <h2 className='text-2xl font-bold text-[var(--jpv-brand-deep)]'>This space is locked</h2>
+          <p className='mt-3 max-w-2xl text-sm leading-6 text-[var(--jpv-muted)]'>{detail.lockReason}</p>
           {detail.canRequestAccess && (
-            <p className='mt-5 text-xs font-bold uppercase tracking-[0.14em] text-[#8a7450]'>
+            <p className='mt-5 text-xs font-bold uppercase tracking-[0.14em] text-[var(--jpv-sunshine-ink)]'>
               Request flow pending admin approval
             </p>
           )}

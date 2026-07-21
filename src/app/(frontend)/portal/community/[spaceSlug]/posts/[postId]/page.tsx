@@ -35,19 +35,19 @@ function AttachmentCard({ attachment }: { attachment: MemberCommunityAttachmentR
   if (!('downloadUrl' in attachment) || !attachment.downloadUrl) return null
 
   return (
-    <article className='rounded-[22px] border border-[#153f2e]/10 bg-white p-6 shadow-[0_12px_30px_rgba(31,52,43,0.06)]'>
-      <p className='text-xs font-bold uppercase tracking-[0.14em] text-[#8a7450]'>{attachment.spaceName}</p>
-      <h3 className='mt-2 text-lg font-bold text-[#153f2e]'>{attachment.title}</h3>
+    <article className='rounded-jpv-card border border-[var(--jpv-brand-deep)]/10 bg-white p-6 shadow-jpv-card'>
+      <p className='text-xs font-bold uppercase tracking-[0.14em] text-[var(--jpv-sunshine-ink)]'>{attachment.spaceName}</p>
+      <h3 className='mt-2 text-lg font-bold text-[var(--jpv-brand-deep)]'>{attachment.title}</h3>
       {'filename' in attachment && attachment.filename ? (
-        <p className='mt-2 text-sm text-[#68766f]'>{attachment.filename}</p>
+        <p className='mt-2 text-sm text-[var(--jpv-muted)]'>{attachment.filename}</p>
       ) : null}
       {'mimeType' in attachment && 'byteSize' in attachment ? (
-        <p className='mt-2 text-xs font-semibold uppercase tracking-[0.12em] text-[#8a7450]'>
+        <p className='mt-2 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--jpv-sunshine-ink)]'>
           {attachment.mimeType} · {attachment.byteSize} bytes
         </p>
       ) : null}
       <a
-        className='mt-4 inline-flex rounded-full bg-[#153f2e] px-4 py-2.5 text-sm font-bold text-white transition hover:bg-[#0f3023]'
+        className='mt-4 inline-flex rounded-full bg-[var(--jpv-brand-deep)] px-4 py-2.5 text-sm font-bold text-white transition hover:bg-[var(--jpv-brand-hover)]'
         href={attachment.downloadUrl}
       >
         Download
@@ -70,24 +70,24 @@ export default async function PortalCommunityPostPage({ params, searchParams }: 
   return (
     <div className='mx-auto max-w-4xl space-y-10'>
       <Link
-        className='text-sm font-bold text-[#6c5a36] hover:text-[#153f2e]'
+        className='text-sm font-bold text-[var(--jpv-sunshine-ink)] hover:text-[var(--jpv-brand-deep)]'
         href={`/portal/community/${encodeURIComponent(post.space.slug)}`}
       >
         Back to {post.space.name}
       </Link>
 
-      <article className='overflow-hidden rounded-[28px] border border-[#153f2e]/10 bg-white shadow-[0_24px_70px_rgba(31,52,43,0.1)]'>
-        <header className='bg-[#153f2e] p-8 text-white sm:p-10'>
+      <article className='overflow-hidden rounded-jpv-panel border border-[var(--jpv-brand-deep)]/10 bg-white shadow-jpv-card'>
+        <header className='bg-[var(--jpv-brand-deep)] p-8 text-white sm:p-10'>
           <div className='flex flex-wrap gap-3'>
             <StatusPill tone='neutral'>{post.postType}</StatusPill>
             {post.pinned && <StatusPill tone='neutral'>Pinned</StatusPill>}
             {post.locked && <StatusPill tone='warn'>Comments locked</StatusPill>}
           </div>
           <h1 className='mt-6 text-4xl font-bold leading-tight tracking-tight sm:text-5xl'>{post.title}</h1>
-          <p className='mt-4 text-sm text-[#d5e0da]'>
+          <p className='mt-4 text-sm text-[var(--jpv-inverse-muted)]'>
             Posted by {post.authorName} · {formatDate(post.createdAt)}
           </p>
-          <p className='mt-2 text-xs text-[#d5e0da]'>{memberEmail}</p>
+          <p className='mt-2 text-xs text-[var(--jpv-inverse-muted)]'>{memberEmail}</p>
         </header>
 
         <div className='p-8 sm:p-10'>
@@ -99,8 +99,8 @@ export default async function PortalCommunityPostPage({ params, searchParams }: 
         <section>
           <div className='flex flex-wrap items-end justify-between gap-4'>
             <div>
-              <p className='text-xs font-bold uppercase tracking-[0.2em] text-[#8a7450]'>Attachments</p>
-              <h2 className='mt-2 text-3xl font-bold tracking-tight text-[#153f2e]'>Visible attachments</h2>
+              <p className='text-xs font-bold uppercase tracking-[0.2em] text-[var(--jpv-sunshine-ink)]'>Attachments</p>
+              <h2 className='mt-2 text-3xl font-bold tracking-tight text-[var(--jpv-brand-deep)]'>Visible attachments</h2>
             </div>
           </div>
 
@@ -116,20 +116,20 @@ export default async function PortalCommunityPostPage({ params, searchParams }: 
       )}
 
       {query.submission === 'pending' && (
-        <div className='rounded-[18px] border border-[#2f7355]/20 bg-[#eaf4ee] px-5 py-4 text-sm font-semibold text-[#24543f]'>
+        <div className='rounded-jpv-card border border-[var(--jpv-brand)]/20 bg-[var(--jpv-surface-strong)] px-5 py-4 text-sm font-semibold text-[var(--jpv-brand-deep)]'>
           Community replies are not enabled in this launch preview.
         </div>
       )}
       {query.submission === 'error' && (
-        <div className='rounded-[18px] border border-[#9c5c4f]/20 bg-[#f8ece8] px-5 py-4 text-sm font-semibold text-[#78463d]'>
+        <div className='rounded-jpv-card border border-[var(--jpv-danger)]/20 bg-[var(--jpv-danger-surface)] px-5 py-4 text-sm font-semibold text-[var(--jpv-danger-ink)]'>
           Community replies are not enabled in this launch preview.
         </div>
       )}
 
-      <section className='rounded-[24px] border border-[#153f2e]/10 bg-white p-7 shadow-[0_14px_35px_rgba(31,52,43,0.07)] sm:p-8'>
-        <p className='text-xs font-bold uppercase tracking-[0.2em] text-[#8a7450]'>Launch preview</p>
-        <h2 className='mt-2 text-2xl font-bold text-[#153f2e]'>Read-only discussion view</h2>
-        <p className='mt-3 max-w-2xl text-sm leading-6 text-[#68766f]'>
+      <section className='rounded-jpv-panel border border-[var(--jpv-brand-deep)]/10 bg-white p-7 shadow-jpv-card sm:p-8'>
+        <p className='text-xs font-bold uppercase tracking-[0.2em] text-[var(--jpv-sunshine-ink)]'>Launch preview</p>
+        <h2 className='mt-2 text-2xl font-bold text-[var(--jpv-brand-deep)]'>Read-only discussion view</h2>
+        <p className='mt-3 max-w-2xl text-sm leading-6 text-[var(--jpv-muted)]'>
           Visible discussions and published comments appear here from persisted Payload data. Member replies,
           uploads, and moderation actions remain deferred outside this launch preview.
         </p>
@@ -138,8 +138,8 @@ export default async function PortalCommunityPostPage({ params, searchParams }: 
       <section>
         <div className='flex flex-wrap items-end justify-between gap-4'>
           <div>
-            <p className='text-xs font-bold uppercase tracking-[0.2em] text-[#8a7450]'>Discussion</p>
-            <h2 className='mt-2 text-3xl font-bold tracking-tight text-[#153f2e]'>Visible comments</h2>
+            <p className='text-xs font-bold uppercase tracking-[0.2em] text-[var(--jpv-sunshine-ink)]'>Discussion</p>
+            <h2 className='mt-2 text-3xl font-bold tracking-tight text-[var(--jpv-brand-deep)]'>Visible comments</h2>
           </div>
           <StatusPill tone='neutral'>Read only</StatusPill>
         </div>
@@ -148,12 +148,12 @@ export default async function PortalCommunityPostPage({ params, searchParams }: 
           {post.comments.length > 0 ? (
             post.comments.map((comment) => (
               <article
-                className='rounded-[22px] border border-[#153f2e]/10 bg-white p-6 shadow-[0_12px_30px_rgba(31,52,43,0.06)]'
+                className='rounded-jpv-card border border-[var(--jpv-brand-deep)]/10 bg-white p-6 shadow-jpv-card'
                 key={comment.id}
               >
                 <div className='flex flex-wrap items-center justify-between gap-3'>
-                  <h3 className='font-bold text-[#153f2e]'>{comment.authorName}</h3>
-                  <time className='text-xs font-semibold uppercase tracking-[0.1em] text-[#8a7450]'>
+                  <h3 className='font-bold text-[var(--jpv-brand-deep)]'>{comment.authorName}</h3>
+                  <time className='text-xs font-semibold uppercase tracking-[0.1em] text-[var(--jpv-sunshine-ink)]'>
                     {formatDate(comment.createdAt)}
                   </time>
                 </div>
@@ -163,7 +163,7 @@ export default async function PortalCommunityPostPage({ params, searchParams }: 
               </article>
             ))
           ) : (
-            <div className='rounded-[22px] border border-dashed border-[#153f2e]/20 bg-[#f4f1e9] p-6 text-sm leading-6 text-[#64736c]'>
+            <div className='rounded-jpv-card border border-dashed border-[var(--jpv-brand-deep)]/20 bg-[var(--jpv-surface)] p-6 text-sm leading-6 text-[var(--jpv-muted)]'>
               No visible comments have been published for this discussion.
             </div>
           )}
