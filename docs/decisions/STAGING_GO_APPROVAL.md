@@ -30,10 +30,10 @@ authorize production deployment.
 
 | Gate | Evidence |
 | --- | --- |
-| Local code HEAD | `f79a296` (current — pushed to origin/feature/course-branding-and-preview) |
-| Staging deployed imageTag | `d235c5a` (4 commits behind local HEAD — **not verified against current HEAD**) |
-| HTTP smoke (at d235c5a) | 15/15 PASS |
-| Browser smoke (at d235c5a) | 42/42 PASS (AUTH-001 included) |
+| Local code HEAD | `80fa3a6` (current — pushed; both staging commits deployed) |
+| Staging deployed imageTag | `80fa3a6` (redeployed 2026-07-21; /api/health ok, video→401, landing→200) |
+| HTTP smoke (at d235c5a) | 15/15 PASS (prior deployment) |
+| Browser smoke (at d235c5a) | 42/42 PASS (prior deployment; re-run pending at new SHA) |
 | Stripe TEST credentials | VERIFIED (product, prices, portal, staging webhook) |
 | Resend domain | VERIFIED (eu-west-1) |
 | Bunny CDN | VERIFIED (library API 200) |
@@ -52,12 +52,10 @@ before STAGING_GO can be recorded:
 | `20260707_130000_remove_table_plan_from_payload_enums` (Payload) | REQUIRED_FOR_LEGACY_STRIPE | Maps legacy table_plan values; needed for Stripe cutover only |
 | `20260707_120000_rename_account_identity_columns` (Prisma) | REQUIRED_FOR_LEGACY_STRIPE | Column rename; needed for Stripe cutover only |
 
-## Redeploy requirement
+## Redeploy status
 
-Local HEAD `c7ef9de` is 4 commits ahead of staging `d235c5a`. A redeployment
-of the current feature branch is required to verify the current candidate on
-staging. After redeploy, re-run HTTP and 42/42 browser smoke to confirm no
-regressions.
+Staging redeployed to `80fa3a6` on 2026-07-21. Health endpoint returns ok/live.
+Browser smoke re-run (42/42) is the next required operator action before STAGING_GO.
 
 ## STAGING_GO decision
 
