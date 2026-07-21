@@ -158,7 +158,8 @@
   "pnpm": {
     "overrides": {
       "monaco-editor>dompurify": "3.4.12",
-      "next>postcss": "8.5.15"
+      "next>postcss": "8.5.15",
+      "js-yaml": "4.3.0"
     }
   }
 }
