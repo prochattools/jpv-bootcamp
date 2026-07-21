@@ -27,6 +27,7 @@ import { memberCollections } from './collections/members'
 import { membershipSupportCollections } from './collections/membership-support'
 import { partnerCollections } from './collections/partners'
 import { shouldRegisterPayloadProdMigrations } from './lib/payloadMigrations'
+import { stagingAutoProvision } from './lib/staging-auto-provision'
 import { migrations } from './migrations'
 
 const filename = fileURLToPath(import.meta.url)
@@ -127,4 +128,7 @@ export default buildConfig({
     prodMigrations: shouldRegisterPayloadProdMigrations() ? migrations : undefined,
   }),
   serverURL: process.env.PAYLOAD_SERVER_URL || process.env.NEXT_PUBLIC_SERVER_URL,
+  onInit: async (payload) => {
+    await stagingAutoProvision(payload)
+  },
 })
