@@ -22,6 +22,7 @@
  */
 
 import path from 'node:path'
+import { createHash } from 'node:crypto'
 import { SponsoredGrantsAdapter } from './legacyMigrationSponsored'
 import { EmailSubscribersAdapter } from './legacyMigrationSubscribers'
 import { SupportRequestsAdapter } from './legacyMigrationSupportRequests'
@@ -30,6 +31,20 @@ import { CourseProgressAdapter } from './legacyMigrationCourseProgress'
 import { executeDomainMigration, DomainMigrationConfig, MigrationMode } from './legacyMigrationFramework'
 
 const CHECKPOINT_DIR = path.join(process.cwd(), '.migration-rehearsal-checkpoints')
+
+/**
+ * Generate a deterministic migration run ID.
+ * Uses the current time rounded to hour granularity + a fixed prefix.
+ * This ensures idempotency for reruns within the same hour.
+ */
+function generateDeterministicRunId(): string {
+  const hoursSinceEpoch = Math.floor(Date.now() / 3600000)
+  const hash = createHash('sha256')
+    .update(`migration_run_${hoursSinceEpoch}`)
+    .digest('hex')
+    .substring(0, 12)
+  return `migration_${hoursSinceEpoch}_${hash}`
+}
 
 async function runAllDomains(mode: MigrationMode, config: Partial<DomainMigrationConfig> = {}) {
   const databaseUrl = process.env.DATABASE_URL
@@ -45,7 +60,7 @@ async function runAllDomains(mode: MigrationMode, config: Partial<DomainMigratio
     new CourseProgressAdapter(),
   ]
 
-  const runId = config.runId || `migration_${Date.now()}_${Math.random().toString(36).substring(7)}`
+  const runId = config.runId || generateDeterministicRunId()
 
   console.log(`\n════════════════════════════════════════════════════`)
   console.log(`Next-Domain Migration Runner (REM-03 through REM-07)`)
@@ -150,6 +165,9 @@ for (let i = 0; i < args.length; i++) {
     i++
   } else if (args[i] === '--schema' && i + 1 < args.length) {
     configOverrides.schemaName = args[i + 1]
+    i++
+  } else if (args[i] === '--rollback-run-id' && i + 1 < args.length) {
+    configOverrides.rollbackRunId = args[i + 1]
     i++
   }
 }

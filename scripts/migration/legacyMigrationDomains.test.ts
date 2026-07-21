@@ -130,159 +130,17 @@ describe('REM-03: Sponsored Grants Migration', () => {
   })
 })
 
-// ─── REM-04: Email Subscribers ───────────────────────────────────────────────
+// ─── REM-04: Email Subscribers (BLOCKED) ─────────────────────────────────────
+// Tests removed - adapter is blocked. See REM-04 status in availability tests above.
 
-describe('REM-04: Email Subscribers Migration', () => {
-  const adapter = new EmailSubscribersAdapter()
+// ─── REM-05: Support Requests (BLOCKED) ──────────────────────────────────────
+// Tests removed - adapter is blocked. See REM-05 status in availability tests above.
 
-  test('transforms subscriber records', () => {
-    const source = {
-      idempotencyKey: 'sub_key_123',
-      id: 'sub_123',
-      email: 'test@example.com',
-      name: 'Test User',
-      source: 'landing_page',
-      createdAt: '2026-07-21T00:00:00Z',
-      unsubscribed: false,
-      bounced: false,
-    }
+// ─── REM-06: Partner Attribution (BLOCKED) ──────────────────────────────────
+// Tests removed - adapter is blocked. See REM-06 status in availability tests above.
 
-    const transformed = adapter.transformRecord(source)
-    expect(transformed).toHaveLength(1)
-  })
-
-  test('marks bounced/unsubscribed status correctly', () => {
-    const bounced = {
-      idempotencyKey: 'sub_key_bounced',
-      id: 'sub_456',
-      email: 'bounced@example.com',
-      name: 'Bounced User',
-      source: 'email_campaign',
-      createdAt: '2026-07-21T00:00:00Z',
-      bounced: true,
-      unsubscribed: false,
-    }
-
-    const transformed = adapter.transformRecord(bounced)
-    const row = transformed[0].destinationRow as any
-    if (row.status !== 'bounced') throw new Error(`Expected status=bounced, got ${row.status}`)
-  })
-})
-
-// ─── REM-05: Support Requests ────────────────────────────────────────────────
-
-describe('REM-05: Support Requests Migration', () => {
-  const adapter = new SupportRequestsAdapter()
-
-  test('transforms support request records', () => {
-    const source = {
-      idempotencyKey: 'support_key_123',
-      id: 'req_123',
-      normalized_email: 'support@example.com',
-      name: 'Support User',
-      question: 'How do I reset my password?',
-      dedupe_key: 'unique_dedupe_123',
-      review_status: 'pending',
-      notification_status: 'not_notified',
-      reviewed_by_account_id: null,
-      created_at: '2026-07-21T00:00:00Z',
-    }
-
-    const transformed = adapter.transformRecord(source)
-    expect(transformed).toHaveLength(1)
-  })
-})
-
-// ─── REM-06: Partner Attribution ─────────────────────────────────────────────
-
-describe('REM-06: Partner Attribution Migration', () => {
-  const adapter = new PartnerAttributionAdapter()
-
-  test('transforms session records', () => {
-    const source = {
-      idempotencyKey: 'sess_123',
-      recordType: 'session',
-      session_id: 'sess_123',
-      account_id: 'acc_456',
-      account_email_hash: 'hash_abc',
-      ip_hash: 'ip_hash_xyz',
-      user_agent_hash: 'ua_hash_123',
-      partner_slug: 'partner_a',
-      created_at: '2026-07-21T00:00:00Z',
-      expires_at: '2026-10-21T00:00:00Z',
-    }
-
-    const transformed = adapter.transformRecord(source)
-    expect(transformed).toHaveLength(1)
-  })
-
-  test('transforms click records', () => {
-    const source = {
-      idempotencyKey: 'click_789',
-      recordType: 'click',
-      id: 'click_789',
-      session_id: 'sess_123',
-      partner_slug: 'partner_a',
-      category_slug: 'category_1',
-      created_at: '2026-07-21T00:00:00Z',
-    }
-
-    const transformed = adapter.transformRecord(source)
-    expect(transformed).toHaveLength(1)
-  })
-})
-
-// ─── REM-07: Course Progress ─────────────────────────────────────────────────
-
-describe('REM-07: Course Progress Migration', () => {
-  const adapter = new CourseProgressAdapter()
-
-  test('transforms enrollment records', () => {
-    const source = {
-      idempotencyKey: 'mem_123:course_456',
-      recordType: 'enrollment',
-      member_id: 'mem_123',
-      course_id: 'course_456',
-      status: 'in_progress',
-      enrolled_at: '2026-07-21T00:00:00Z',
-      completed_at: null,
-    }
-
-    const transformed = adapter.transformRecord(source)
-    expect(transformed).toHaveLength(1)
-  })
-
-  test('transforms lesson progress records', () => {
-    const source = {
-      idempotencyKey: 'mem_123:lesson_789',
-      recordType: 'progress',
-      member_id: 'mem_123',
-      lesson_id: 'lesson_789',
-      status: 'completed',
-      started_at: '2026-07-21T00:00:00Z',
-      completed_at: '2026-07-22T00:00:00Z',
-    }
-
-    const transformed = adapter.transformRecord(source)
-    expect(transformed).toHaveLength(1)
-  })
-
-  test('defaults missing status to not_started', () => {
-    const source = {
-      idempotencyKey: 'mem_123:course_456',
-      recordType: 'enrollment',
-      member_id: 'mem_123',
-      course_id: 'course_456',
-      status: null,
-      enrolled_at: '2026-07-21T00:00:00Z',
-      completed_at: null,
-    }
-
-    const transformed = adapter.transformRecord(source)
-    const row = transformed[0].destinationRow as any
-    if (row.status !== 'not_started') throw new Error(`Expected status=not_started, got ${row.status}`)
-  })
-})
+// ─── REM-07: Course Progress (BLOCKED) ────────────────────────────────────────
+// Tests removed - adapter is blocked. See REM-07 status in availability tests above.
 
 // ─── PII Redaction ───────────────────────────────────────────────────────────
 
@@ -320,6 +178,59 @@ describe('Domain names and contract', () => {
   })
 })
 
+// ─── Adapter Availability ───────────────────────────────────────────────────
+
+describe('Adapter availability and status', () => {
+  test('REM-03 (Sponsored Grants) is available', () => {
+    const adapter = new SponsoredGrantsAdapter()
+    if (!adapter.domainName) throw new Error('REM-03 adapter not available')
+  })
+
+  test('REM-04 (Email Subscribers) throws on extract (BLOCKED)', async () => {
+    const adapter = new EmailSubscribersAdapter()
+    const client: any = {}
+    try {
+      await adapter.extractSourceRows(client, 'test_schema')
+      throw new Error('Expected REM-04 to be blocked')
+    } catch (e: any) {
+      if (!String(e).includes('rem_04_blocked')) throw e
+    }
+  })
+
+  test('REM-05 (Support Requests) throws on extract (BLOCKED)', async () => {
+    const adapter = new SupportRequestsAdapter()
+    const client: any = {}
+    try {
+      await adapter.extractSourceRows(client, 'test_schema')
+      throw new Error('Expected REM-05 to be blocked')
+    } catch (e: any) {
+      if (!String(e).includes('rem_05_blocked')) throw e
+    }
+  })
+
+  test('REM-06 (Partner Attribution) throws on extract (BLOCKED)', async () => {
+    const adapter = new PartnerAttributionAdapter()
+    const client: any = {}
+    try {
+      await adapter.extractSourceRows(client, 'test_schema')
+      throw new Error('Expected REM-06 to be blocked')
+    } catch (e: any) {
+      if (!String(e).includes('rem_06_blocked')) throw e
+    }
+  })
+
+  test('REM-07 (Course Progress) throws on extract (BLOCKED)', async () => {
+    const adapter = new CourseProgressAdapter()
+    const client: any = {}
+    try {
+      await adapter.extractSourceRows(client, 'test_schema')
+      throw new Error('Expected REM-07 to be blocked')
+    } catch (e: any) {
+      if (!String(e).includes('rem_07_blocked')) throw e
+    }
+  })
+})
+
 // ─── Run tests ────────────────────────────────────────────────────────────────
 
 async function runTests() {
@@ -339,7 +250,13 @@ async function runTests() {
 
   console.log(`\n─────────────────────────────────────────`)
   console.log(`Tests: ${passed.length} passed, ${failed.length} failed`)
-  console.log(`─────────────────────────────────────────\n`)
+  console.log(`─────────────────────────────────────────`)
+  console.log(`Adapter Status Summary:`)
+  console.log(`  REM-03 Sponsored Grants: AVAILABLE`)
+  console.log(`  REM-04 Email Subscribers: BLOCKED (no destination collection)`)
+  console.log(`  REM-05 Support Requests: BLOCKED (no destination collection)`)
+  console.log(`  REM-06 Partner Attribution: BLOCKED (no destination collections)`)
+  console.log(`  REM-07 Course Progress: BLOCKED (unsafe same-table migration)\n`)
 
   if (failed.length > 0) {
     process.exit(1)

@@ -1,18 +1,27 @@
 /**
- * REM-07: Course enrollment/progress reconciliation.
+ * REM-07: Course enrollment/progress reconciliation (UNSAFE - NEEDS DESIGN).
  *
- * Source: payload_course_enrollments, payload_lesson_progress (may exist in legacy schema)
- * Destination: payload_course_enrollments, payload_lesson_progress (Payload collections)
+ * Status: BLOCKED - Same-table migration design required
  *
- * Idempotency keys:
- *   - enrollments: (member_id, course_id)
- *   - progress: (member_id, lesson_id)
+ * This adapter is a stub that refuses to run.
+ * The core issue: source and destination are the same tables
+ *   - Source: payload_course_enrollments, payload_lesson_progress (in legacy schema)
+ *   - Destination: payload_course_enrollments, payload_lesson_progress (Payload schema)
  *
- * Safety:
- *   - No PII in these collections (FK to member_id, internal IDs only)
- *   - Preservation of preexisting enrollment records
- *   - Status mapping (completed, in_progress, not_started)
- *   - FK integrity checks
+ * If these are truly the same tables in different schemas, this is safe.
+ * If they're the same table, the migration must prove:
+ *   1. Read-only snapshot taken before any writes
+ *   2. No concurrent writes to the table during migration
+ *   3. Exact idempotency guarantees for re-run safety
+ *   4. Safe rollback (preserve preexisting rows, only delete what we inserted)
+ *
+ * Before implementation, define:
+ *   1. Source schema (legacy schema name, or same as destination?)
+ *   2. Transformation strategy (if any - status mapping, etc.)
+ *   3. Conflict resolution (update vs. skip preexisting)
+ *   4. Rollback strategy (audit table with before-images)
+ *
+ * See docs/MIGRATION_ROADMAP.md for design discussion.
  */
 
 import { Client } from 'pg'
@@ -23,145 +32,29 @@ import {
   TransformedDomainRecord,
 } from './legacyMigrationFramework'
 
-export interface CourseEnrollmentRow extends DomainRecord {
-  member_id: string
-  course_id: string
-  status: string
-  enrolled_at: string
-  completed_at: string | null
-}
-
-export interface LessonProgressRow extends DomainRecord {
-  member_id: string
-  lesson_id: string
-  status: string
-  started_at: string | null
-  completed_at: string | null
-}
-
 export class CourseProgressAdapter implements DomainMigrationAdapter {
   domainName = 'course_progress'
 
   async extractSourceRows(client: Client, schemaName: string): Promise<DomainRecord[]> {
-    const enrollmentQuery = `
-      SELECT
-        CONCAT(member_id, ':', course_id) as idempotencyKey,
-        'enrollment' as recordType,
-        member_id,
-        course_id,
-        status,
-        enrolled_at,
-        completed_at
-      FROM ${schemaName}.payload_course_enrollments
-      WHERE member_id IS NOT NULL
-        AND course_id IS NOT NULL
-      ORDER BY enrolled_at
-    `
-
-    const progressQuery = `
-      SELECT
-        CONCAT(member_id, ':', lesson_id) as idempotencyKey,
-        'progress' as recordType,
-        member_id,
-        lesson_id,
-        status,
-        started_at,
-        completed_at
-      FROM ${schemaName}.payload_lesson_progress
-      WHERE member_id IS NOT NULL
-        AND lesson_id IS NOT NULL
-      ORDER BY started_at
-    `
-
-    try {
-      const [enrollments, progress] = await Promise.all([
-        client.query(enrollmentQuery),
-        client.query(progressQuery).catch((): { rows: DomainRecord[] } => ({ rows: [] })), // Progress table may not exist yet
-      ])
-
-      return [
-        ...enrollments.rows.map((row) => ({
-          idempotencyKey: row.idempotencyKey,
-          recordType: 'enrollment',
-          ...row,
-        })),
-        ...progress.rows.map((row) => ({
-          idempotencyKey: row.idempotencyKey,
-          recordType: 'progress',
-          ...row,
-        })),
-      ]
-    } catch (e) {
-      throw new Error(`course_progress_extract_failed: ${String(e)}`)
-    }
+    throw new Error(
+      'rem_07_blocked: course progress adapter unsafe. ' +
+        'Same-table migration (source=destination) must prove safe isolation. ' +
+        'See docs/MIGRATION_ROADMAP.md for design requirements.',
+    )
   }
 
   async validate(client: Client, schemaName: string): Promise<{ passed: boolean; reasons: string[] }> {
-    const reasons: string[] = []
-
-    // Check enrollment table
-    const enrollmentCheck = await client.query(
-      `SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema = $1 AND table_name = 'payload_course_enrollments')`,
-      [schemaName],
-    )
-    if (!enrollmentCheck.rows[0].exists) {
-      reasons.push('source_table_not_found: payload_course_enrollments')
-    }
-
-    // Progress table is optional
-    const progressCheck = await client.query(
-      `SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema = $1 AND table_name = 'payload_lesson_progress')`,
-      [schemaName],
-    )
-    if (!progressCheck.rows[0].exists) {
-      // Not an error; progress may not exist in legacy schema
-    }
-
-    // Check destination tables
-    const destEnrollmentCheck = await client.query(
-      `SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'payload_course_enrollments')`,
-    )
-    if (!destEnrollmentCheck.rows[0].exists) {
-      reasons.push('destination_table_not_found: payload_course_enrollments')
-    }
-
     return {
-      passed: reasons.length === 0,
-      reasons,
+      passed: false,
+      reasons: [
+        'rem_07_blocked: course progress adapter unsafe',
+        'source_destination_same_table_requires_design',
+      ],
     }
   }
 
   transformRecord(source: any): TransformedDomainRecord[] {
-    if (source.recordType === 'enrollment') {
-      return [
-        {
-          idempotencyKey: source.idempotencyKey,
-          destinationTable: 'payload_course_enrollments',
-          destinationRow: {
-            memberId: source.member_id,
-            courseId: source.course_id,
-            status: source.status || 'not_started',
-            enrolledAt: source.enrolled_at,
-            completedAt: source.completed_at,
-          },
-        },
-      ]
-    } else if (source.recordType === 'progress') {
-      return [
-        {
-          idempotencyKey: source.idempotencyKey,
-          destinationTable: 'payload_lesson_progress',
-          destinationRow: {
-            memberId: source.member_id,
-            lessonId: source.lesson_id,
-            status: source.status || 'not_started',
-            startedAt: source.started_at,
-            completedAt: source.completed_at,
-          },
-        },
-      ]
-    }
-    return []
+    throw new Error('rem_07_blocked: course progress adapter unsafe')
   }
 
   async detectConflict(
@@ -169,31 +62,7 @@ export class CourseProgressAdapter implements DomainMigrationAdapter {
     schemaName: string,
     transformed: TransformedDomainRecord,
   ): Promise<{ conflict: boolean; reason?: string }> {
-    const { destinationTable, destinationRow } = transformed
-
-    if (destinationTable === 'payload_course_enrollments') {
-      const existing = await client.query(
-        `SELECT * FROM public.${destinationTable}
-         WHERE memberId = $1 AND courseId = $2`,
-        [(destinationRow as any).memberId, (destinationRow as any).courseId],
-      )
-
-      if (existing.rows.length > 0) {
-        return { conflict: false } // Already exists, will upsert
-      }
-    } else {
-      const existing = await client.query(
-        `SELECT * FROM public.${destinationTable}
-         WHERE memberId = $1 AND lessonId = $2`,
-        [(destinationRow as any).memberId, (destinationRow as any).lessonId],
-      )
-
-      if (existing.rows.length > 0) {
-        return { conflict: false }
-      }
-    }
-
-    return { conflict: false }
+    throw new Error('rem_07_blocked: course progress adapter unsafe')
   }
 
   async applyRecord(
@@ -202,84 +71,14 @@ export class CourseProgressAdapter implements DomainMigrationAdapter {
     runId: string,
     transformed: TransformedDomainRecord,
   ): Promise<'inserted' | 'updated' | 'unchanged' | 'not_applicable'> {
-    const { destinationTable, destinationRow } = transformed
-
-    if (destinationTable === 'payload_course_enrollments') {
-      const insertQuery = `
-        INSERT INTO public.${destinationTable} (memberId, courseId, status, enrolledAt, completedAt)
-        VALUES ($1, $2, $3, $4, $5)
-        ON CONFLICT (memberId, courseId) DO UPDATE SET status = EXCLUDED.status, updatedAt = NOW()
-        RETURNING (xmax::TEXT::INT > 0) as was_updated
-      `
-
-      const result = await client.query(insertQuery, [
-        destinationRow.memberId,
-        destinationRow.courseId,
-        destinationRow.status,
-        destinationRow.enrolledAt,
-        destinationRow.completedAt,
-      ])
-
-      return result.rows[0]?.was_updated ? 'updated' : 'inserted'
-    } else {
-      const insertQuery = `
-        INSERT INTO public.${destinationTable} (memberId, lessonId, status, startedAt, completedAt)
-        VALUES ($1, $2, $3, $4, $5)
-        ON CONFLICT (memberId, lessonId) DO UPDATE SET status = EXCLUDED.status, updatedAt = NOW()
-        RETURNING (xmax::TEXT::INT > 0) as was_updated
-      `
-
-      const result = await client.query(insertQuery, [
-        destinationRow.memberId,
-        destinationRow.lessonId,
-        destinationRow.status,
-        destinationRow.startedAt,
-        destinationRow.completedAt,
-      ])
-
-      return result.rows[0]?.was_updated ? 'updated' : 'inserted'
-    }
+    throw new Error('rem_07_blocked: course progress adapter unsafe')
   }
 
   async reconcile(client: Client, schemaName: string, runId: string): Promise<Record<string, DomainReconciliationMetrics>> {
-    const enrollmentResult = await client.query(`SELECT COUNT(*) as count FROM public.payload_course_enrollments`)
-
-    const progressResult = await client.query(`SELECT COUNT(*) as count FROM public.payload_lesson_progress`).catch(() => ({
-      rows: [{ count: 0 }],
-    }))
-
-    return {
-      payload_course_enrollments: {
-        inserted: enrollmentResult.rows[0].count,
-        updated: 0,
-        unchanged: 0,
-        notApplicable: 0,
-      },
-      payload_lesson_progress: {
-        inserted: progressResult.rows[0].count,
-        updated: 0,
-        unchanged: 0,
-        notApplicable: 0,
-      },
-    }
+    throw new Error('rem_07_blocked: course progress adapter unsafe')
   }
 
   async rollback(client: Client, schemaName: string, runId: string): Promise<{ rowsDeleted: number }> {
-    // Rollback would delete migrated enrollment/progress records
-    // This is safe only if this migration recorded before-images in audit
-    const enrollmentResult = await client
-      .query(`DELETE FROM public.payload_course_enrollments RETURNING id`)
-      .catch((): { rows: Record<string, string>[] } => ({
-        rows: [],
-      }))
-    const progressResult = await client
-      .query(`DELETE FROM public.payload_lesson_progress RETURNING id`)
-      .catch((): { rows: Record<string, string>[] } => ({
-        rows: [],
-      }))
-
-    return {
-      rowsDeleted: enrollmentResult.rows.length + progressResult.rows.length,
-    }
+    throw new Error('rem_07_blocked: course progress adapter unsafe')
   }
 }

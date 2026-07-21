@@ -168,24 +168,26 @@ export async function ensureSchemaExists(client: Client, schemaName: string): Pr
 /**
  * Ensure a migration audit table exists in the target schema.
  * Used for recording applied records with idempotency keys and outcomes.
+ * This table tracks migration_run_id for exact rollback of inserted rows.
  */
 export async function ensureMigrationAuditTable(client: Client, schemaName: string, domain: string): Promise<void> {
-  const table = `${schemaName}.${domain}_migration_audit`
+  const table = `"${schemaName}"."${domain}_migration_audit"`
   await client.query(`
     CREATE TABLE IF NOT EXISTS ${table} (
       id SERIAL PRIMARY KEY,
-      runId TEXT NOT NULL,
-      idempotencyKey TEXT NOT NULL,
-      destinationTable TEXT NOT NULL,
+      migration_run_id TEXT NOT NULL,
+      idempotency_key TEXT NOT NULL,
+      destination_table TEXT NOT NULL,
       outcome TEXT NOT NULL CHECK (outcome IN ('inserted', 'updated', 'unchanged', 'not_applicable')),
-      appliedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      UNIQUE(runId, idempotencyKey, destinationTable)
+      applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(migration_run_id, idempotency_key, destination_table)
     )
   `)
 }
 
 /**
  * Record an audit event for a migrated record.
+ * Uses parameterized schema/table names to prevent SQL injection.
  */
 export async function recordAuditEvent(
   client: Client,
@@ -196,18 +198,18 @@ export async function recordAuditEvent(
   destinationTable: string,
   outcome: 'inserted' | 'updated' | 'unchanged' | 'not_applicable',
 ): Promise<void> {
-  const table = `${schemaName}.${domain}_migration_audit`
+  const table = `"${schemaName}"."${domain}_migration_audit"`
   await client.query(
-    `INSERT INTO ${table} (runId, idempotencyKey, destinationTable, outcome)
+    `INSERT INTO ${table} (migration_run_id, idempotency_key, destination_table, outcome)
      VALUES ($1, $2, $3, $4)
-     ON CONFLICT (runId, idempotencyKey, destinationTable) DO NOTHING`,
+     ON CONFLICT (migration_run_id, idempotency_key, destination_table) DO NOTHING`,
     [runId, idempotencyKey, destinationTable, outcome],
   )
 }
 
 /**
  * Load audit events for a given migration run.
- * Used to verify what was already applied.
+ * Used to verify what was already applied and for exact rollback predicates.
  */
 export async function loadAuditEvents(
   client: Client,
@@ -215,12 +217,12 @@ export async function loadAuditEvents(
   domain: string,
   runId: string,
 ): Promise<Map<string, string>> {
-  const table = `${schemaName}.${domain}_migration_audit`
+  const table = `"${schemaName}"."${domain}_migration_audit"`
   const result = await client.query(
-    `SELECT idempotencyKey, outcome FROM ${table} WHERE runId = $1 ORDER BY appliedAt`,
+    `SELECT idempotency_key, outcome FROM ${table} WHERE migration_run_id = $1 ORDER BY applied_at`,
     [runId],
   )
-  return new Map(result.rows.map((row: { idempotencyKey: string; outcome: string }) => [row.idempotencyKey, row.outcome]))
+  return new Map(result.rows.map((row: { idempotency_key: string; outcome: string }) => [row.idempotency_key, row.outcome]))
 }
 
 /**
