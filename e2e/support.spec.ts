@@ -24,7 +24,7 @@ async function openSupportForm(page: Page): Promise<void> {
 async function fillSupportForm(page: Page): Promise<void> {
   await page.getByLabel('Name').fill('Support Tester')
   await page.getByLabel('Email address').fill(TEST_SUPPORT_EMAIL)
-  await page.getByLabel('Question').fill(TEST_SUPPORT_QUESTION)
+  await page.getByLabel('How can we help?').fill(TEST_SUPPORT_QUESTION)
 }
 
 test.describe('durable support intake browser behavior', () => {
@@ -72,7 +72,7 @@ test.describe('durable support intake browser behavior', () => {
     releaseResponse?.()
     await expect(page.getByRole('status')).toContainText('Thanks. Your request has been saved for review.')
     await expect(page.getByLabel('Email address')).toHaveValue('')
-    await expect(page.getByLabel('Question')).toHaveValue('')
+    await expect(page.getByLabel('How can we help?')).toHaveValue('')
 
     const visibleText = await page.locator('body').innerText()
     const currentUrl = page.url()
@@ -130,7 +130,7 @@ test.describe('durable support intake browser behavior', () => {
       'We could not save your request. Please try again shortly.',
     )
     await expect(page.getByLabel('Email address')).toHaveValue(TEST_SUPPORT_EMAIL)
-    await expect(page.getByLabel('Question')).toHaveValue(TEST_SUPPORT_QUESTION)
+    await expect(page.getByLabel('How can we help?')).toHaveValue(TEST_SUPPORT_QUESTION)
     await expect(page.getByRole('status')).not.toContainText(/provider|database|dedupe|reference/i)
   })
 
@@ -149,7 +149,7 @@ test.describe('durable support intake browser behavior', () => {
     await page.keyboard.press('Tab')
     await expect(page.getByLabel('Email address')).toBeFocused()
     await page.keyboard.press('Tab')
-    await expect(page.getByLabel('Question')).toBeFocused()
+    await expect(page.getByLabel('How can we help?')).toBeFocused()
 
     await fillSupportForm(page)
     await page.getByRole('button', { name: 'Send question' }).click()

@@ -430,7 +430,7 @@ export default function HomePage() {
         <section className='scroll-mt-24 bg-jpv-ink px-5 py-20 text-jpv-canvas sm:py-28 md:px-8' id='how-it-works'>
           <div className='mx-auto max-w-[80rem]'>
             <div className='max-w-3xl'>
-              <p className='jpv-eyebrow text-jpv-green'>How JPV Bootcamp works</p>
+              <p className='jpv-eyebrow text-jpv-canvas/80'>How JPV Bootcamp works</p>
               <h2 className='mt-4 text-balance text-4xl font-bold leading-tight tracking-tight sm:text-5xl'>
                 Everything you need to understand property investment, in one place.
               </h2>
@@ -444,7 +444,7 @@ export default function HomePage() {
 
             <div className='mt-14 grid gap-px overflow-hidden rounded-[2rem] bg-jpv-canvas/15 lg:grid-cols-3'>
               <article className='bg-jpv-ink p-7 sm:p-9'>
-                <span className='text-sm font-bold text-jpv-green'>01</span>
+                <span className='text-sm font-bold text-jpv-canvas/60'>01</span>
                 <h3 className='mt-5 text-3xl font-bold'>Learn</h3>
                 <p className='mt-4 leading-7 text-jpv-canvas/70'>Access structured video lessons, practical templates, and seven weekly Friday Zoom sessions.</p>
                 <ul className='mt-6 space-y-3 text-sm leading-6 text-jpv-canvas/85'>
@@ -587,7 +587,7 @@ export default function HomePage() {
             <div className='rounded-[2rem] bg-jpv-ink p-7 text-jpv-canvas sm:p-10'>
               <div className='grid items-center gap-8 lg:grid-cols-[0.7fr_1.3fr]'>
                 <div>
-                  <p className='jpv-eyebrow text-jpv-green'>Support and pay it forward</p>
+                  <p className='jpv-eyebrow text-jpv-canvas/80'>Support and pay it forward</p>
                   <h2 className='mt-4 text-3xl font-bold tracking-tight sm:text-4xl'>Help make access possible.</h2>
                   <p className='mt-4 leading-7 text-jpv-canvas/70'>Use the existing JPV support and pay-it-forward path. Questions about your account can be sent through the support form.</p>
                   <div className='mt-6 flex flex-wrap gap-3'>
