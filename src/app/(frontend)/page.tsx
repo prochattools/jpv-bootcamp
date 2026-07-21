@@ -12,6 +12,7 @@ import Image from 'next/image'
 import { useState, type FormEvent } from 'react'
 
 import SponsoredPayItForward from '@/components/sponsored-pay-it-forward'
+import { JpvBrandLockup } from '@/components/brand/JpvBrandLockup'
 import { AccessibleDialog } from '@/components/ui/AccessibleDialog'
 import { landingSans, landingSerif } from '@/fonts'
 
@@ -251,20 +252,7 @@ export default function HomePage() {
 
       <header className='fixed inset-x-0 top-0 z-50 border-b border-jpv-border/80 bg-jpv-canvas/95'>
         <div className='mx-auto flex min-h-20 max-w-[80rem] items-center justify-between gap-6 px-5 py-3 md:px-8'>
-          <a className='flex items-center gap-3' href='#home' aria-label='JPV Bootcamp home'>
-            <Image
-              alt='JPV Jesus Property Venture'
-              className='h-12 w-12 rounded-xl object-cover'
-              height={48}
-              priority
-              src='/images/jpv-logo.jpg'
-              width={48}
-            />
-            <span className='hidden leading-tight sm:block'>
-              <span className='block text-base font-bold tracking-tight'>JPV Bootcamp</span>
-              <span className='block text-xs font-medium text-jpv-muted'>Our passion is people</span>
-            </span>
-          </a>
+          <JpvBrandLockup href='#home' priority />
 
           <nav aria-label='Main navigation' className='hidden items-center gap-6 xl:flex'>
             {navLinks.map((item) => (
@@ -279,7 +267,7 @@ export default function HomePage() {
           </nav>
 
           <div className='hidden items-center gap-2 md:flex'>
-            <a className='jpv-button-secondary' href='#support'>
+            <a className='jpv-button-accent' href='#support'>
               Support
             </a>
             <a className='jpv-button-secondary' href={signInHref}>
@@ -316,7 +304,7 @@ export default function HomePage() {
                 </a>
               ))}
               <div className='mt-3 grid grid-cols-3 gap-2 border-t border-jpv-border pt-4'>
-                <a className='jpv-button-secondary px-3' href='#support' onClick={() => setIsMobileNavOpen(false)}>
+                <a className='jpv-button-accent px-3' href='#support' onClick={() => setIsMobileNavOpen(false)}>
                   Support
                 </a>
                 <a className='jpv-button-secondary px-3' href={signInHref} onClick={() => setIsMobileNavOpen(false)}>
@@ -392,7 +380,7 @@ export default function HomePage() {
         </section>
 
         <section aria-label='Membership benefits' className='border-y border-jpv-border bg-jpv-surface py-4'>
-          <div className='mx-auto flex max-w-[80rem] snap-x gap-7 overflow-x-auto px-5 md:px-8'>
+          <div className='mx-auto flex max-w-[80rem] snap-x gap-7 overflow-x-auto px-5 md:px-8' tabIndex={0}>
             {benefitItems.map((item) => {
               const Icon = item.icon
               return (
@@ -595,7 +583,7 @@ export default function HomePage() {
                     <a className='jpv-button-secondary border-jpv-canvas/30 text-jpv-canvas hover:bg-jpv-canvas/10' href='/sponsored'>Sponsored access</a>
                   </div>
                 </div>
-                <div className='rounded-3xl bg-jpv-canvas p-4 text-jpv-ink sm:p-6'><SponsoredPayItForward /></div>
+                <div className='rounded-jpv-panel bg-jpv-canvas p-4 text-jpv-ink sm:p-6'><SponsoredPayItForward /></div>
               </div>
             </div>
           </div>
@@ -622,9 +610,9 @@ export default function HomePage() {
 
       <footer className='border-t border-jpv-border bg-jpv-canvas px-5 py-10 md:px-8'>
         <div className='mx-auto flex max-w-[80rem] flex-col gap-8 sm:flex-row sm:items-center sm:justify-between'>
-          <div className='flex items-center gap-3'>
-            <Image alt='JPV Jesus Property Venture' className='h-11 w-11 rounded-xl object-cover' height={44} src='/images/jpv-logo.jpg' width={44} />
-            <div><p className='text-sm font-bold'>JPV Bootcamp</p><p className='text-xs text-jpv-muted'>© {new Date().getFullYear()} JPV. All rights reserved.</p></div>
+          <div>
+            <JpvBrandLockup href='/' size='compact' />
+            <p className='mt-2 text-xs text-jpv-muted'>© {new Date().getFullYear()} JPV. All rights reserved.</p>
           </div>
           <div className='flex flex-wrap items-center gap-x-5 gap-y-3 text-sm font-medium text-jpv-muted'>
             <a className='hover:text-jpv-ink' href="/terms">Terms</a>

@@ -62,14 +62,14 @@ export default function SponsoredPayItForward() {
 	}
 
 	return (
-		<div className="rounded-3xl border border-jpv-canvas/20 bg-jpv-ink p-6 shadow-jpv-card">
+		<div className="jpv-surface-inverse rounded-jpv-panel border border-jpv-canvas/20 p-6 shadow-jpv-card">
 			<div className="space-y-3">
-				<h3 className="text-xl font-semibold text-jpv-canvas">Pay it forward</h3>
-				<p className="text-sm text-jpv-canvas/70">
+				<h3 className="text-xl font-semibold">Pay it forward</h3>
+				<p className="jpv-surface-inverse-muted text-sm">
 					Some members choose to fund JPV Bootcamp Membership for someone who
 					can&apos;t pay yet.
 				</p>
-				<p className="text-xs text-jpv-canvas/55">
+				<p className="jpv-surface-inverse-muted text-xs">
 					{counts.available} sponsored access seats currently available
 				</p>
 			</div>
@@ -78,7 +78,7 @@ export default function SponsoredPayItForward() {
 					type="button"
 					onClick={() => handleCheckout()}
 					disabled={loading || !counts.enabled}
-					className="rounded-full border border-jpv-canvas/30 px-4 py-2 text-sm font-semibold text-jpv-canvas hover:border-jpv-canvas/60 hover:text-white"
+					className="jpv-button-accent"
 				>
 					Fund JPV Bootcamp Membership
 				</button>
