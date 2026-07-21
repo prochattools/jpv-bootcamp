@@ -9,7 +9,7 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 - Wave 3 checkpoint HEAD: `57711f9 feat: complete wave 3 course platform`
 - Packet 9 checkpoint HEAD: `8927df9 docs: checkpoint membership implementation readiness`
 - Registry reconciliation HEAD: `9780f31 fix(registry): update migration inventory for staging deployment`
-- **Current HEAD**: `b526b19 migration: rehearsal guard, schema parameterisation, and full rehearsal proof` (2026-07-20)
+- **Current HEAD**: `76237ea fix: upgrade js-yaml to 4.3.0 via pnpm override (GHSA-52cp-r559-cp3m)` (2026-07-21 — local PR-readiness complete)
 - Pull request: `https://github.com/prochattools/jpv-bootcamp/pull/2`
 - Staging URL: `https://preview.jpvbootcamp.com` (deployed, application `I_2Vukga3cc3ZhaG-mUzU`)
 - Staging DB: `jpvbootcamp_staging` on `100.71.31.88`; all 16 schema migrations applied
@@ -303,9 +303,9 @@ Do not describe the application as deployed, staging-accepted, migrated, provide
 
 ### Current deterministic validation baseline
 
-- `pnpm test:release`: `140/140` (2026-07-20 execution)
-- `pnpm test:migration:legacy`: `32/32` (2026-07-20 execution, post-b526b19)
-- `pnpm test:e2e`: `58/58`
+- `pnpm test:release`: `140/140` (2026-07-21 at HEAD `76237ea`)
+- `pnpm test:migration:legacy`: `32/32` (2026-07-21 at HEAD `76237ea`)
+- `pnpm test:e2e`: `58/58` (2026-07-21 at HEAD `76237ea` — REM-02 complete)
 - `pnpm test:release:full`: passed
 - `pnpm staging:static-preflight`: passed
 - `pnpm staging:decision-readiness`: `DECISION-READY, EXTERNAL APPROVALS PENDING (Operator D/E checks, client go/no-go)`
@@ -393,8 +393,11 @@ Do not build tooling for a domain that is confirmed empty or deferred to post-la
 
 #### Can execute now (no external block)
 
-1. **REM-02** — Re-run `pnpm test:e2e` at current HEAD on developer workstation; preserve report; record in `docs/client/ROADMAP_PROGRESS_STATUS.md`.
-2. Verify `pnpm test:release` still passes 140/140 at HEAD b526b19 — confirm nothing has drifted.
+All local repository gates are complete. No further executable-now tasks remain.
+
+- REM-02 complete: `pnpm test:e2e` passed 58/58 at HEAD `76237ea` (2026-07-21).
+- `pnpm test:release` confirmed 140/140 at HEAD `76237ea` (2026-07-21).
+- js-yaml high advisory (GHSA-52cp-r559-cp3m) resolved via pnpm override; audit gate passes.
 
 #### Blocked on approval/evidence (exact unblock conditions)
 
@@ -417,7 +420,7 @@ Do not build tooling for a domain that is confirmed empty or deferred to post-la
 
 ### Definitions
 
-- **PR-ready**: `pnpm test:release` 140/140, `pnpm test:migration:legacy` 32/32, `pnpm test:e2e` 58/58, `git diff --check` clean, TypeScript clean, production build passes, all documentation is internally consistent, no unresolved P0 blockers in documentation.
+- **PR-ready**: `pnpm test:release` 140/140, `pnpm test:migration:legacy` 32/32, `pnpm test:e2e` 58/58, `git diff --check` clean, TypeScript clean, production build passes, production audit `--audit-level high` passes, all documentation is internally consistent, no unresolved P0 blockers in documentation. **ACHIEVED at HEAD `76237ea` (2026-07-21).**
 - **Staging-accepted**: Real browser smoke on `https://preview.jpvbootcamp.com` with approved test accounts; login, portal, billing, admin, and course journeys recorded; provider deliveries confirmed.
 - **GO**: All REM-01 through REM-12 gates documented with evidence; zero unresolved P0 blockers; explicit client and operator approval recorded in `docs/release/GO_NO_GO_CHECKLIST.md`.
 - **Production-complete**: REM-13 executed; production DB migrated; old flows disabled; monitoring live; rollback evidence present; no live P0 incident within the agreed observation window.

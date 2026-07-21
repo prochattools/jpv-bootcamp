@@ -1,6 +1,6 @@
 # JPV Bootcamp - Roadmap Progress Status
 
-Current status for `feature/course-branding-and-preview`, using the 10 July 2026 audit at `236227c fix: require portal auth for member content` as the historical baseline, `af6de62 docs: record core go-live readiness` as the previous readiness baseline, `d55229f test: enforce programme content readiness` as the current validated implementation baseline, and `8927df9 docs: checkpoint membership implementation readiness` as the prior checkpoint baseline. **Current branch HEAD: `b526b19 migration: rehearsal guard, schema parameterisation, and full rehearsal proof`** (2026-07-20 — legacy migration rehearsal complete).
+Current status for `feature/course-branding-and-preview`, using the 10 July 2026 audit at `236227c fix: require portal auth for member content` as the historical baseline, `af6de62 docs: record core go-live readiness` as the previous readiness baseline, `d55229f test: enforce programme content readiness` as the current validated implementation baseline, and `8927df9 docs: checkpoint membership implementation readiness` as the prior checkpoint baseline. **Current branch HEAD: `76237ea fix: upgrade js-yaml to 4.3.0 via pnpm override (GHSA-52cp-r559-cp3m)`** (2026-07-21 — local PR-readiness gate complete).
 
 Current client truth: `docs/client/JPV_Bootcamp_Platform_Expansion_Go_Live_Plan_v3_7.docx`. Version 3.4 is the prior progress baseline. Canonical execution plan: `docs/PAYLOAD_INTEGRATION_PLAN.md`. Detailed audit evidence: `docs/V3_5_CODEBASE_ALIGNMENT_ASSESSMENT.md`.
 
@@ -24,7 +24,7 @@ Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`.
 | --- | --- |
 | Branch | `feature/course-branding-and-preview` |
 | Staging target | This feature branch is the staging / production-staged deployment branch |
-| **Current CODE HEAD** | `b526b19 migration: rehearsal guard, schema parameterisation, and full rehearsal proof` (2026-07-20) |
+| **Current CODE HEAD** | `76237ea fix: upgrade js-yaml to 4.3.0 via pnpm override` (2026-07-21 — local PR-readiness complete) |
 | **Current DEPLOYMENT HEAD** | `5d01aae docs: final comprehensive report...` (frozen — no new deploys authorized) |
 | **Security Status** | Exposed credential CONFIRMED VALID (HTTP 200 login); account disable/revocation PENDING operator immediate action (no Workbench admin/DB access available) |
 | Release State | **FORMAL NO-GO** — Exposed staging credential remains active; operator must disable via admin UI, database, or email reset before remediation complete |
@@ -136,8 +136,8 @@ These assets make the repository ready for controlled staging operations without
 
 - `git diff --check` passed.
 - `pnpm test:release` passed `140/140`.
-- `pnpm test:migration:legacy` passed `32/32` (post-b526b19; includes 4 new rehearsal guard tests).
-- `pnpm test:e2e` passed `58/58` across desktop and mobile Chromium projects (last run pre-b526b19; re-run required before PR).
+- `pnpm test:migration:legacy` passed `32/32` (2026-07-21 at HEAD `76237ea`; includes 4 rehearsal guard tests).
+- `pnpm test:e2e` passed `58/58` across desktop and mobile Chromium projects (2026-07-21 at HEAD `76237ea` — REM-02 complete).
 - Disposable local rehearsal on `jpvbootcamp_rehearsal` (2026-07-20): apply/idempotency/rollback/reapply all PASS; preexisting rows unchanged.
 - `pnpm staging:decision-readiness` passed with `DECISION-READY, EXTERNAL APPROVALS PENDING`.
 - Programme contract, path-safety, import-plan, readiness, acceptance-report, and preview-only browser checks passed.
@@ -153,7 +153,7 @@ These assets make the repository ready for controlled staging operations without
 - root TypeScript passed.
 - production build passed.
 - both Prisma schema validations passed.
-- production audit high-severity gate passed; remaining advisories are `2 moderate`.
+- production audit high-severity gate passed; remaining advisories are `3 moderate` (js-yaml high advisory resolved by pnpm override to 4.3.0 — GHSA-52cp-r559-cp3m).
 - `scripts/no_legacy_learn_namespace.test.ts` passed.
 - Feature-branch CI type-checks and builds the application and Docker image without publishing from the validation job.
 - Repository inventory now includes deterministic release-manifest coverage and Playwright launch browser E2E.
@@ -161,8 +161,15 @@ These assets make the repository ready for controlled staging operations without
 - `pnpm audit --prod --audit-level high --ignore-registry-errors` now passes the release gate.
 - Global application security headers are not defined in `next.config.js`.
 
-## Migration warning
+## Migration status
 
-The Payload migration `20260707_130000_remove_table_plan_from_payload_enums` maps legacy table-plan subscription values to `free`. The Prisma migration `20260707_120000_rename_account_identity_columns` renames old account-reference columns/indexes to neutral names. Neither migration has been applied.
+**Already applied to staging (`jpvbootcamp_staging`):**
+- The legacy member/billing/access migration (`scripts/migration/legacyMigration.ts`) ran successfully in two idempotent applies on the staging database (21 source rows, zero errors both runs). Run IDs and per-table counts are recorded in `docs/CURRENT_WORK_HANDOFF.md`.
+- All 16 Payload/Prisma schema migrations through `20260720_000000_locked_docs_rels_new_collections` are applied to `jpvbootcamp_staging`.
 
-Do not apply migrations until the target-environment owner approves the business mapping, exact database/schema, backup, operator, maintenance window, apply path, verification, and rollback procedure.
+**Not yet applied anywhere:**
+- The Payload migration `20260707_130000_remove_table_plan_from_payload_enums` maps legacy table-plan subscription values to `free`.
+- The Prisma migration `20260707_120000_rename_account_identity_columns` renames old account-reference columns/indexes to neutral names.
+- The Membership Support schema migration `src/migrations/20260718_103726_membership_support_schema.ts` adds 9 tables for the membership-support domain.
+
+Do not apply the pending migrations until the target-environment owner approves the business mapping, exact database/schema, backup, operator, maintenance window, apply path, verification, and rollback procedure. Production remains unaffected; only staging has received any migration.

@@ -7,54 +7,52 @@ jpv-bootcamp (feature/course-branding-and-preview)
 Claude Code
 
 ## Goal
-Finalize canonical roadmap and implementation plan from available repository evidence.
+Local PR-readiness gate — COMPLETE
 
 ## Status
-Roadmap reconciliation complete — 2026-07-21
+All local gates pass at HEAD 76237ea (2026-07-21). Formal release remains NO-GO.
 
 ## HEAD
-b526b19 migration: rehearsal guard, schema parameterisation, and full rehearsal proof
+76237ea fix: upgrade js-yaml to 4.3.0 via pnpm override (GHSA-52cp-r559-cp3m)
 
 ## Files touched (this session)
-- docs/CURRENT_WORK_HANDOFF.md — HEAD updated; "In progress" items moved to "Complete"; implementation plan and closeout sequence added
-- docs/client/ROADMAP_PROGRESS_STATUS.md — HEAD updated; migration readiness %, test evidence, rehearsal result updated
-- docs/PAYLOAD_INTEGRATION_PLAN.md — Phase 10 status updated with rehearsal proof; Immediate milestone rewritten to current state
+- package.json + pnpm-lock.yaml — js-yaml 4.2.0→4.3.0 override (high advisory fix)
+- docs/CURRENT_WORK_HANDOFF.md — HEAD updated; REM-02 marked complete; PR-ready definition updated
+- docs/client/ROADMAP_PROGRESS_STATUS.md — HEAD updated; test evidence updated; migration section clarified
+- docs/PAYLOAD_INTEGRATION_PLAN.md — already updated in prior commit
 - .ai/current.md — this file
 
-## Validation
+## Validation at HEAD 76237ea (2026-07-21)
 - git diff --check: CLEAN
 - pnpm test:migration:legacy: 32/32 PASS
-- No code changed — documentation only
+- pnpm test:release: 140/140 PASS
+- pnpm test:e2e: 58/58 PASS
+- pnpm exec tsc --noEmit: CLEAN (no errors)
+- Prisma validate schema.prisma: PASS
+- Prisma validate system.prisma: PASS
+- pnpm build: compiled successfully
+- pnpm audit --prod --audit-level high: PASS (3 moderate only; high resolved)
 
-## Recent commands
-- pnpm test:migration:legacy
+## Local PR-ready
+YES — all local gates pass
 
-## Decisions made
-- Roadmap fully reconciled: all repository implementation complete; remaining work is operator-execution or external-approval gates
-- Five next-domain migration tools are NOT in-scope until row counts confirmed via live DB query and scope decision recorded
-- Formal state remains NO-GO
+## Formal release state
+NO-GO — external gates remain
 
-## Next steps
-1. Re-run `pnpm test:e2e` at HEAD b526b19 (or direct descendant) — last recorded run was pre-b526b19
-2. Operator authorizes and applies staging migrations (REM-08, REM-09)
-3. Operator executes migrated-user invitation/reset (REM-01)
-4. Live provider verification (REM-10)
-5. Staging smoke acceptance (REM-11)
-6. Scope-decision live DB queries for 5 next-domain sources
-7. Formal go/no-go (REM-12)
-
-## Blockers
-All remaining work is gated by external approvals or requires live operator execution.
-See docs/CURRENT_WORK_HANDOFF.md for full task packet table.
+## Remaining external gates (in order)
+1. REM-08/REM-09: Operator authorizes staging migrations (database owner, backup, maintenance window)
+2. REM-01: Migrated-user invitation/reset for 21-member cohort (after REM-08)
+3. REM-03–REM-07: Five next-domain tools — pending live DB row-count query and scope decision
+4. REM-10: Live provider verification (Stripe, email, Bunny)
+5. REM-11: Staging smoke acceptance
+6. REM-12: Formal go/no-go (client + operator)
+7. REM-13: Production cutover
 
 ## Protected paths (DO NOT MODIFY)
-- src/payload-types.ts
+- src/payload-types.ts (preexisting unrelated changes)
 - docs/client/JPV_Bootcamp_Platform_Expansion_Go_Live_Plan_v3_7.docx
 - docs/client/fixtures/
-- playwright-report-staging/ (dirty deletions — preexisting, preserve as-is)
+- playwright-report-staging/ (preexisting deletions — preserve)
 
-## Resume prompt
-Resume in jpv-bootcamp (feature/course-branding-and-preview) at HEAD b526b19.
-Read docs/CURRENT_WORK_HANDOFF.md for full context.
-All repository implementation is complete. Remaining work is operator-gated.
-Formal state: NO-GO.
+## Next single action requiring operator/user authorization
+REM-08: Database owner must authorize staging migration apply with backup confirmation, maintenance window, and rollback procedure per docs/decisions/STAGING_MIGRATION_APPROVAL.md.
