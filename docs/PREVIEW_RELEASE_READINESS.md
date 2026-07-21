@@ -46,7 +46,7 @@ Current validated readiness baseline: `d55229f test: enforce programme content r
 
 ### Deterministic local validation baseline
 
-- `pnpm test:release` passed `145/145`
+- `pnpm test:release` passed `146/146`
 - `pnpm test:e2e` passed `58/58` across desktop and mobile Chromium projects
 - `pnpm test:release:full` passed
 - `pnpm staging:static-preflight` passed
@@ -340,6 +340,30 @@ Migration 8 adds account-action purposes and security-event enum values. Rolling
 Migrations 9 and 10 extend partner and affiliate schema. Migration 11 removes the `table_plan` value from the Payload enum and requires the column to be absent from existing rows before running.
 
 Payload migrations are separate from Prisma migration/startup behavior and are not applied by `scripts/db/deploy-prod.sh`.
+
+## Environment lane isolation
+
+**Build-time vs. runtime split:** `NEXT_PUBLIC_*` variables are embedded into the
+Docker image during build and propagate to the browser; changing them requires
+a new image build. All other variables (`DATABASE_URL`, `PAYLOAD_SECRET`,
+`STRIPE_SECRET_KEY_*`, `RESEND_API_KEY`, `BUNNY_*`, etc.) are runtime-only and
+injected from the Dokploy deployment platform at container start.
+
+**Production lane (`main` branch):** deploys with production `NEXT_PUBLIC_*`
+build args (canonical domain `jpvbootcamp.com`), production database
+(`jpvbootcamp` schema), Stripe LIVE keys, and production secrets.
+`STRIPE_ENV=live`. Production webhook: `jpvbootcamp.com/api/webhook/stripe`.
+
+**Staging lane (`feature/course-branding-and-preview` branch):** deploys with
+staging `NEXT_PUBLIC_*` build args (preview domain `preview.jpvbootcamp.com`),
+isolated staging database (`jpvbootcamp_staging` schema), Stripe TEST keys,
+staging Resend domain, and staging-only secrets. `STRIPE_ENV=test`. Staging
+webhook: `preview.jpvbootcamp.com/api/webhook/stripe`. Production webhook must
+be disabled while staging is active.
+
+The two lanes must never share a database schema or exchange secrets.
+`DEPLOYMENT_ENV` and `STARTUP_MODE` control Prisma migration execution at
+startup; `DEPLOYMENT_ENV=staging` restricts migrations to the staging schema.
 
 ## Required non-secret configuration names
 

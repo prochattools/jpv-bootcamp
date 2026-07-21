@@ -8,6 +8,10 @@ import { defineConfig, devices } from '@playwright/test'
 
 const STAGING_BASE_URL = process.env.STAGING_URL ?? 'https://preview.jpvbootcamp.com'
 
+if (STAGING_BASE_URL.includes('jpvbootcamp.com') && !STAGING_BASE_URL.includes('preview.')) {
+  throw new Error(`STAGING_URL must be the staging/preview domain, not production. Got: ${STAGING_BASE_URL.replace(/\/\/.*@/, '//[redacted]@')}`)
+}
+
 export default defineConfig({
   testDir: './e2e',
   testMatch: '**/staging-smoke.spec.ts',

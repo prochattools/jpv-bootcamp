@@ -1,6 +1,11 @@
 import { test, expect, Page } from '@playwright/test'
 
-const STAGING_URL = 'https://preview.jpvbootcamp.com'
+const STAGING_URL = process.env.STAGING_URL ?? 'https://preview.jpvbootcamp.com'
+
+// Verify staging smoke must not run against production
+if (!STAGING_URL.includes('preview.') && STAGING_URL.includes('jpvbootcamp.com')) {
+  throw new Error(`Staging smoke must not run against production. STAGING_URL=${STAGING_URL}`)
+}
 
 /**
  * Staging Smoke Test
@@ -381,10 +386,12 @@ test.describe('Evidence Capture for Manual Verification', () => {
 // ======== REM-01 PORTAL LOGIN PROOF ========
 test.describe('REM-01 Member Portal Login Proof', () => {
   test('AUTH-001: Migration member login and portal access', async ({ page }) => {
-    // info@prochat.tools was activated via member_invitation flow (token consumed 2026-07-21T10:06Z)
-    // account_status flipped from pending → active; this proves the full REM-01 flow.
-    const EMAIL = 'info@prochat.tools'
-    const PASSWORD = 'TestPortal2026!JPV'
+    // Env-based credentials required for AUTH-001
+    const EMAIL = process.env.STAGING_MEMBER_EMAIL
+    const PASSWORD = process.env.STAGING_MEMBER_PASSWORD
+    if (!EMAIL || !PASSWORD) {
+      throw new Error('AUTH-001 requires STAGING_MEMBER_EMAIL and STAGING_MEMBER_PASSWORD env vars — set them before running staging smoke')
+    }
 
     // Step 1: Portal login page loads
     await page.goto(`${STAGING_URL}/portal?mode=login`, { waitUntil: 'domcontentloaded' })
@@ -395,8 +402,8 @@ test.describe('REM-01 Member Portal Login Proof', () => {
     await page.locator('#member-password').fill(PASSWORD)
     await page.screenshot({ path: 'evidence-rem01-login-form.png' })
 
-    // Step 3: Submit via the sign-in button
-    const [loginResponse] = await Promise.all([
+    // Step 3: Submit and wait for login API response before checking redirect
+    await Promise.all([
       page.waitForResponse((resp) => resp.url().includes('/api/payload_members/login'), { timeout: 15000 }).catch((): null => null),
       page.locator('button[type="submit"]:has-text("sign in")').click(),
     ])
@@ -404,13 +411,6 @@ test.describe('REM-01 Member Portal Login Proof', () => {
     await page.screenshot({ path: 'evidence-rem01-portal-authenticated.png' })
 
     const postLoginUrl = page.url()
-    const title = await page.title()
-    const loginStatus = loginResponse ? loginResponse.status() : 'no-response'
-    const loginBody = loginResponse ? await loginResponse.text().catch(() => 'unreadable') : 'none'
-    console.log('Login API status:', loginStatus)
-    console.log('Login API body:', loginBody.substring(0, 300))
-    console.log('Post-login URL:', postLoginUrl)
-    console.log('Post-login title:', title)
 
     // Proof: not sent back to login page
     expect(postLoginUrl).not.toMatch(/mode=login/)

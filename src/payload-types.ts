@@ -73,6 +73,8 @@ export interface Config {
     payload_pages: PayloadPage;
     payload_posts: PayloadPost;
     payload_categories: PayloadCategory;
+    live_sessions: LiveSession;
+    bunny_videos: BunnyVideo;
     payload_courses: PayloadCourse;
     payload_course_modules: PayloadCourseModule;
     payload_lessons: PayloadLesson;
@@ -100,6 +102,16 @@ export interface Config {
     payload_payments: PayloadPayment;
     payload_stripe_events: PayloadStripeEvent;
     payload_billing_actions: PayloadBillingAction;
+    payload_membership_support_records: PayloadMembershipSupportRecord;
+    payload_membership_vouchers: PayloadMembershipVoucher;
+    payload_pay_it_forward_funding: PayloadPayItForwardFunding;
+    payload_membership_funding_sources: PayloadMembershipFundingSource;
+    payload_membership_reconciliations: PayloadMembershipReconciliation;
+    payload_membership_administration_actions: PayloadMembershipAdministrationAction;
+    payload_membership_review_queue_items: PayloadMembershipReviewQueueItem;
+    payload_operator_notes: PayloadOperatorNote;
+    payload_stripe_shadow_projections: PayloadStripeShadowProjection;
+    payload_membership_audit_history: PayloadMembershipAuditHistory;
     payload_contacts: PayloadContact;
     payload_crm_tags: PayloadCrmTag;
     payload_contact_tags: PayloadContactTag;
@@ -128,6 +140,8 @@ export interface Config {
     payload_pages: PayloadPagesSelect<false> | PayloadPagesSelect<true>;
     payload_posts: PayloadPostsSelect<false> | PayloadPostsSelect<true>;
     payload_categories: PayloadCategoriesSelect<false> | PayloadCategoriesSelect<true>;
+    live_sessions: LiveSessionsSelect<false> | LiveSessionsSelect<true>;
+    bunny_videos: BunnyVideosSelect<false> | BunnyVideosSelect<true>;
     payload_courses: PayloadCoursesSelect<false> | PayloadCoursesSelect<true>;
     payload_course_modules: PayloadCourseModulesSelect<false> | PayloadCourseModulesSelect<true>;
     payload_lessons: PayloadLessonsSelect<false> | PayloadLessonsSelect<true>;
@@ -155,6 +169,16 @@ export interface Config {
     payload_payments: PayloadPaymentsSelect<false> | PayloadPaymentsSelect<true>;
     payload_stripe_events: PayloadStripeEventsSelect<false> | PayloadStripeEventsSelect<true>;
     payload_billing_actions: PayloadBillingActionsSelect<false> | PayloadBillingActionsSelect<true>;
+    payload_membership_support_records: PayloadMembershipSupportRecordsSelect<false> | PayloadMembershipSupportRecordsSelect<true>;
+    payload_membership_vouchers: PayloadMembershipVouchersSelect<false> | PayloadMembershipVouchersSelect<true>;
+    payload_pay_it_forward_funding: PayloadPayItForwardFundingSelect<false> | PayloadPayItForwardFundingSelect<true>;
+    payload_membership_funding_sources: PayloadMembershipFundingSourcesSelect<false> | PayloadMembershipFundingSourcesSelect<true>;
+    payload_membership_reconciliations: PayloadMembershipReconciliationsSelect<false> | PayloadMembershipReconciliationsSelect<true>;
+    payload_membership_administration_actions: PayloadMembershipAdministrationActionsSelect<false> | PayloadMembershipAdministrationActionsSelect<true>;
+    payload_membership_review_queue_items: PayloadMembershipReviewQueueItemsSelect<false> | PayloadMembershipReviewQueueItemsSelect<true>;
+    payload_operator_notes: PayloadOperatorNotesSelect<false> | PayloadOperatorNotesSelect<true>;
+    payload_stripe_shadow_projections: PayloadStripeShadowProjectionsSelect<false> | PayloadStripeShadowProjectionsSelect<true>;
+    payload_membership_audit_history: PayloadMembershipAuditHistorySelect<false> | PayloadMembershipAuditHistorySelect<true>;
     payload_contacts: PayloadContactsSelect<false> | PayloadContactsSelect<true>;
     payload_crm_tags: PayloadCrmTagsSelect<false> | PayloadCrmTagsSelect<true>;
     payload_contact_tags: PayloadContactTagsSelect<false> | PayloadContactTagsSelect<true>;
@@ -337,6 +361,58 @@ export interface PayloadCategory {
   createdAt: string;
 }
 /**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "live_sessions".
+ */
+export interface LiveSession {
+  id: number;
+  title: string;
+  status: 'scheduled' | 'live' | 'completed' | 'cancelled';
+  course: number | PayloadCourse;
+  module: string;
+  lesson: string;
+  /**
+   * Auto-generated from course/module/lesson
+   */
+  roomName: string;
+  hostUser: number | PayloadUser;
+  scheduledAt: string;
+  capacity?: number | null;
+  description?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  /**
+   * Set after recording is available
+   */
+  recordingUrl?: string | null;
+  /**
+   * Automatic timestamps of key events
+   */
+  audit?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * Visual prototype only. Not connected to billing or entitlement enforcement.
  *
  * This interface was referenced by `Config`'s JSON-Schema
@@ -386,6 +462,45 @@ export interface PayloadCourse {
    */
   mockProgress?: number | null;
   prototypeNote?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "bunny_videos".
+ */
+export interface BunnyVideo {
+  id: number;
+  title: string;
+  libraryId: number;
+  videoId: number;
+  lessonId?: string | null;
+  status: 'processing' | 'ready' | 'failed';
+  duration?: number | null;
+  frameRate?: number | null;
+  width?: number | null;
+  height?: number | null;
+  videoCodec?: string | null;
+  audioCodec?: string | null;
+  bitrate?: number | null;
+  thumbnailUrl?: string | null;
+  /**
+   * Signed URL for playback (regenerated on demand)
+   */
+  playbackUrl?: string | null;
+  errorMessage?: string | null;
+  /**
+   * Chronological log of Bunny webhook events
+   */
+  webhookEvents?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -1056,10 +1171,17 @@ export interface PayloadSubscription {
   member: number | PayloadMember;
   billingAccount: number | PayloadBillingAccount;
   stripeSubscriptionId: string;
+  stripeSubscriptionScheduleId?: string | null;
   stripePriceId?: string | null;
   stripeProductId?: string | null;
   plan: 'free' | 'pro';
   status: 'incomplete' | 'incomplete_expired' | 'trialing' | 'active' | 'past_due' | 'canceled' | 'unpaid' | 'paused';
+  billingCadence?: ('monthly_commitment' | 'annual') | null;
+  commitmentStatus?: ('pending' | 'active' | 'cancellation_requested' | 'completed' | 'terminated') | null;
+  commitmentStartAt?: string | null;
+  commitmentEndAt?: string | null;
+  cancellationEffectiveAt?: string | null;
+  paymentGraceEndsAt?: string | null;
   cancelAtPeriodEnd?: boolean | null;
   currentPeriodStart?: string | null;
   currentPeriodEnd?: string | null;
@@ -1094,7 +1216,7 @@ export interface PayloadPayment {
   stripePaymentIntentId?: string | null;
   amount: number;
   currency: string;
-  status: 'pending' | 'paid' | 'failed' | 'refunded' | 'disputed' | 'dispute_resolved' | 'voided';
+  status: 'pending' | 'paid' | 'failed' | 'action_required' | 'refunded' | 'disputed' | 'dispute_resolved' | 'voided';
   paidAt?: string | null;
   failedAt?: string | null;
   failureReason?: string | null;
@@ -1158,6 +1280,417 @@ export interface PayloadBillingAction {
   status: 'pending' | 'completed' | 'failed' | 'skipped';
   sourceEventId?: string | null;
   notes?: string | null;
+  metadata?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Unified support record for vouchers, pay-it-forward, and membership reconciliation.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_membership_support_records".
+ */
+export interface PayloadMembershipSupportRecord {
+  id: number;
+  displayName: string;
+  member: number | PayloadMember;
+  memberEmail: string;
+  fundingSourceType: 'direct_payment' | 'voucher' | 'pay_it_forward';
+  voucherDuration?: ('one_month' | 'one_year') | null;
+  issuanceState: 'draft' | 'approved' | 'issued' | 'redeemed' | 'deactivated' | 'expired' | 'failed';
+  billingCadence: 'monthly' | 'annual';
+  stripeCustomerId?: string | null;
+  stripeSubscriptionId?: string | null;
+  stripePriceId?: string | null;
+  stripeCouponId?: string | null;
+  stripePromotionCodeId?: string | null;
+  approvalReference?: string | null;
+  issuedBy?: (number | null) | PayloadUser;
+  approvedBy?: (number | null) | PayloadUser;
+  issuedAt?: string | null;
+  expiresAt?: string | null;
+  redeemedAt?: string | null;
+  deactivatedAt?: string | null;
+  reconciliationState: 'pending' | 'matched' | 'mismatch' | 'failed';
+  lastWebhookAt?: string | null;
+  membershipSupport?: (number | PayloadMembershipSupportRecord)[] | null;
+  reviewQueueItem?: (number | PayloadMembershipReviewQueueItem)[] | null;
+  operatorNotes?: (number | PayloadOperatorNote)[] | null;
+  auditHistory?: (number | PayloadMembershipAuditHistory)[] | null;
+  stripeShadow?: (number | PayloadStripeShadowProjection)[] | null;
+  fundingSource?: (number | PayloadMembershipFundingSource)[] | null;
+  notes?: string | null;
+  metadata?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Review queue for approvals, mismatches, and manual operator follow-up.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_membership_review_queue_items".
+ */
+export interface PayloadMembershipReviewQueueItem {
+  id: number;
+  displayName: string;
+  membershipSupport?: (number | null) | PayloadMembershipSupportRecord;
+  voucher?: (number | null) | PayloadMembershipVoucher;
+  fundingSource?: (number | null) | PayloadMembershipFundingSource;
+  reconciliation?: (number | null) | PayloadMembershipReconciliation;
+  member?: (number | null) | PayloadMember;
+  queueState: 'needs_review' | 'in_review' | 'approved' | 'rejected' | 'closed';
+  queueReason:
+    | 'approval_required'
+    | 'customer_restriction'
+    | 'expiry_check'
+    | 'idempotency_conflict'
+    | 'webhook_mismatch'
+    | 'manual_override';
+  priority: number;
+  assignedTo?: (number | null) | PayloadUser;
+  dueAt?: string | null;
+  resolvedAt?: string | null;
+  notes?: string | null;
+  metadata?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Voucher templates, issuance, redemption, and deactivation state.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_membership_vouchers".
+ */
+export interface PayloadMembershipVoucher {
+  id: number;
+  displayName: string;
+  membershipSupport: number | PayloadMembershipSupportRecord;
+  member: number | PayloadMember;
+  memberEmail: string;
+  voucherDuration: 'one_month' | 'one_year';
+  approvalState: 'draft' | 'pending_approval' | 'approved' | 'rejected' | 'issued' | 'revoked' | 'failed';
+  redemptionState: 'not_redeemed' | 'redeemed' | 'expired' | 'deactivated';
+  billingCadence: 'monthly' | 'annual';
+  stripeCustomerId?: string | null;
+  stripeCouponId?: string | null;
+  stripePromotionCodeId?: string | null;
+  approvalReference?: string | null;
+  issuedBy?: (number | null) | PayloadUser;
+  approvedBy?: (number | null) | PayloadUser;
+  issuedAt?: string | null;
+  expiresAt?: string | null;
+  redeemedAt?: string | null;
+  deactivatedAt?: string | null;
+  reason: string;
+  operatorNotes?: (number | PayloadOperatorNote)[] | null;
+  metadata?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Internal operator notes for support, voucher, and reconciliation workflows.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_operator_notes".
+ */
+export interface PayloadOperatorNote {
+  id: number;
+  displayName: string;
+  targetType:
+    | 'membership_support'
+    | 'voucher'
+    | 'funding_source'
+    | 'reconciliation'
+    | 'review_queue'
+    | 'administration_action'
+    | 'stripe_shadow'
+    | 'audit_history';
+  targetId: string;
+  visibility: 'private' | 'internal';
+  author: number | PayloadUser;
+  membershipSupport?: (number | null) | PayloadMembershipSupportRecord;
+  voucher?: (number | null) | PayloadMembershipVoucher;
+  fundingSource?: (number | null) | PayloadMembershipFundingSource;
+  reconciliation?: (number | null) | PayloadMembershipReconciliation;
+  auditHistory?: (number | null) | PayloadMembershipAuditHistory;
+  note: string;
+  pinned?: boolean | null;
+  metadata?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Canonical funding source records for membership support and sponsorship.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_membership_funding_sources".
+ */
+export interface PayloadMembershipFundingSource {
+  id: number;
+  displayName: string;
+  membershipSupport?: (number | null) | PayloadMembershipSupportRecord;
+  voucher?: (number | null) | PayloadMembershipVoucher;
+  member?: (number | null) | PayloadMember;
+  sourceType: 'direct_payment' | 'voucher' | 'pay_it_forward';
+  sourceState: 'planned' | 'approved' | 'allocated' | 'depleted' | 'revoked';
+  committedAmountMinor: number;
+  availableAmountMinor: number;
+  currency: string;
+  donorName?: string | null;
+  approvalReference?: string | null;
+  issuedBy?: (number | null) | PayloadUser;
+  approvedBy?: (number | null) | PayloadUser;
+  issuedAt?: string | null;
+  depletedAt?: string | null;
+  notes?: string | null;
+  metadata?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Stripe and membership reconciliation results and webhook projection state.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_membership_reconciliations".
+ */
+export interface PayloadMembershipReconciliation {
+  id: number;
+  displayName: string;
+  membershipSupport?: (number | null) | PayloadMembershipSupportRecord;
+  voucher?: (number | null) | PayloadMembershipVoucher;
+  fundingSource?: (number | null) | PayloadMembershipFundingSource;
+  member?: (number | null) | PayloadMember;
+  stripeEventId?: string | null;
+  stripeEventType: string;
+  reconciliationState: 'pending' | 'matched' | 'mismatch' | 'failed';
+  failureCode?: string | null;
+  lastWebhookAt?: string | null;
+  resolvedAt?: string | null;
+  notes?: string | null;
+  metadata?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Append-only audit history for membership support operations.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_membership_audit_history".
+ */
+export interface PayloadMembershipAuditHistory {
+  id: number;
+  displayName: string;
+  actorType: 'admin' | 'member' | 'stripe' | 'system' | 'migration';
+  actorId?: string | null;
+  action: string;
+  targetCollection: string;
+  targetId?: string | null;
+  severity: 'info' | 'warning' | 'critical';
+  approvalReference?: string | null;
+  membershipSupport?: (number | null) | PayloadMembershipSupportRecord;
+  voucher?: (number | null) | PayloadMembershipVoucher;
+  fundingSource?: (number | null) | PayloadMembershipFundingSource;
+  reconciliation?: (number | null) | PayloadMembershipReconciliation;
+  before?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  after?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  notes?: string | null;
+  metadata?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Repository-only shadow of Stripe membership state for reconciliation and audit.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_stripe_shadow_projections".
+ */
+export interface PayloadStripeShadowProjection {
+  id: number;
+  displayName: string;
+  membershipSupport?: (number | null) | PayloadMembershipSupportRecord;
+  voucher?: (number | null) | PayloadMembershipVoucher;
+  fundingSource?: (number | null) | PayloadMembershipFundingSource;
+  member?: (number | null) | PayloadMember;
+  stripeCustomerId?: string | null;
+  stripeSubscriptionId?: string | null;
+  stripePriceId?: string | null;
+  stripeCouponId?: string | null;
+  stripePromotionCodeId?: string | null;
+  stripeInvoiceId?: string | null;
+  stripeEventId?: string | null;
+  shadowState: 'pending' | 'matched' | 'mismatch' | 'failed';
+  lastWebhookAt?: string | null;
+  shadowedAt?: string | null;
+  observedStatus?: string | null;
+  notes?: string | null;
+  metadata?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Funding allocations for pay-it-forward sponsored membership.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_pay_it_forward_funding".
+ */
+export interface PayloadPayItForwardFunding {
+  id: number;
+  displayName: string;
+  membershipSupport: number | PayloadMembershipSupportRecord;
+  member: number | PayloadMember;
+  memberEmail: string;
+  donorName: string;
+  approvalState: 'draft' | 'pending_approval' | 'approved' | 'rejected' | 'issued' | 'revoked' | 'failed';
+  billingCadence: 'monthly' | 'annual';
+  allocatedAmountMinor: number;
+  currency: string;
+  stripeCustomerId?: string | null;
+  stripeCouponId?: string | null;
+  stripePromotionCodeId?: string | null;
+  stripeSubscriptionId?: string | null;
+  approvalReference: string;
+  issuedBy?: (number | null) | PayloadUser;
+  approvedBy?: (number | null) | PayloadUser;
+  issuedAt?: string | null;
+  expiresAt?: string | null;
+  redeemedAt?: string | null;
+  revokedAt?: string | null;
+  reason: string;
+  operatorNotes?: (number | PayloadOperatorNote)[] | null;
+  metadata?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Operator actions for membership support, approvals, issuance, and reconciliation.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_membership_administration_actions".
+ */
+export interface PayloadMembershipAdministrationAction {
+  id: number;
+  displayName: string;
+  operator: number | PayloadUser;
+  member?: (number | null) | PayloadMember;
+  membershipSupport?: (number | null) | PayloadMembershipSupportRecord;
+  voucher?: (number | null) | PayloadMembershipVoucher;
+  fundingSource?: (number | null) | PayloadMembershipFundingSource;
+  reconciliation?: (number | null) | PayloadMembershipReconciliation;
+  reviewQueueItem?: (number | null) | PayloadMembershipReviewQueueItem;
+  actionType:
+    | 'create_voucher'
+    | 'approve_voucher'
+    | 'issue_voucher'
+    | 'deactivate_voucher'
+    | 'expire_voucher'
+    | 'assign_funding'
+    | 'approve_funding'
+    | 'reconcile_shadow'
+    | 'review_failure'
+    | 'record_note';
+  actionState: 'pending' | 'completed' | 'failed' | 'skipped';
+  approvalReference?: string | null;
+  executedAt?: string | null;
+  completedAt?: string | null;
+  failureReason?: string | null;
+  notes?: string | null;
+  operatorNotes?: (number | PayloadOperatorNote)[] | null;
   metadata?:
     | {
         [k: string]: unknown;
@@ -1676,6 +2209,14 @@ export interface PayloadLockedDocument {
         value: number | PayloadCategory;
       } | null)
     | ({
+        relationTo: 'live_sessions';
+        value: number | LiveSession;
+      } | null)
+    | ({
+        relationTo: 'bunny_videos';
+        value: number | BunnyVideo;
+      } | null)
+    | ({
         relationTo: 'payload_courses';
         value: number | PayloadCourse;
       } | null)
@@ -1702,10 +2243,6 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'payload_member_security_events';
         value: number | PayloadMemberSecurityEvent;
-      } | null)
-    | ({
-        relationTo: 'payload_member_verification_tokens';
-        value: number | PayloadMemberVerificationToken;
       } | null)
     | ({
         relationTo: 'payload_private_media';
@@ -1784,6 +2321,46 @@ export interface PayloadLockedDocument {
         value: number | PayloadBillingAction;
       } | null)
     | ({
+        relationTo: 'payload_membership_support_records';
+        value: number | PayloadMembershipSupportRecord;
+      } | null)
+    | ({
+        relationTo: 'payload_membership_vouchers';
+        value: number | PayloadMembershipVoucher;
+      } | null)
+    | ({
+        relationTo: 'payload_pay_it_forward_funding';
+        value: number | PayloadPayItForwardFunding;
+      } | null)
+    | ({
+        relationTo: 'payload_membership_funding_sources';
+        value: number | PayloadMembershipFundingSource;
+      } | null)
+    | ({
+        relationTo: 'payload_membership_reconciliations';
+        value: number | PayloadMembershipReconciliation;
+      } | null)
+    | ({
+        relationTo: 'payload_membership_administration_actions';
+        value: number | PayloadMembershipAdministrationAction;
+      } | null)
+    | ({
+        relationTo: 'payload_membership_review_queue_items';
+        value: number | PayloadMembershipReviewQueueItem;
+      } | null)
+    | ({
+        relationTo: 'payload_operator_notes';
+        value: number | PayloadOperatorNote;
+      } | null)
+    | ({
+        relationTo: 'payload_stripe_shadow_projections';
+        value: number | PayloadStripeShadowProjection;
+      } | null)
+    | ({
+        relationTo: 'payload_membership_audit_history';
+        value: number | PayloadMembershipAuditHistory;
+      } | null)
+    | ({
         relationTo: 'payload_contacts';
         value: number | PayloadContact;
       } | null)
@@ -1802,10 +2379,6 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'payload_email_templates';
         value: number | PayloadEmailTemplate;
-      } | null)
-    | ({
-        relationTo: 'payload_email_events';
-        value: number | PayloadEmailEvent;
       } | null)
     | ({
         relationTo: 'payload_admin_notifications';
@@ -1969,6 +2542,50 @@ export interface PayloadPostsSelect<T extends boolean = true> {
  */
 export interface PayloadCategoriesSelect<T extends boolean = true> {
   title?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "live_sessions_select".
+ */
+export interface LiveSessionsSelect<T extends boolean = true> {
+  title?: T;
+  status?: T;
+  course?: T;
+  module?: T;
+  lesson?: T;
+  roomName?: T;
+  hostUser?: T;
+  scheduledAt?: T;
+  capacity?: T;
+  description?: T;
+  recordingUrl?: T;
+  audit?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "bunny_videos_select".
+ */
+export interface BunnyVideosSelect<T extends boolean = true> {
+  title?: T;
+  libraryId?: T;
+  videoId?: T;
+  lessonId?: T;
+  status?: T;
+  duration?: T;
+  frameRate?: T;
+  width?: T;
+  height?: T;
+  videoCodec?: T;
+  audioCodec?: T;
+  bitrate?: T;
+  thumbnailUrl?: T;
+  playbackUrl?: T;
+  errorMessage?: T;
+  webhookEvents?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -2416,10 +3033,17 @@ export interface PayloadSubscriptionsSelect<T extends boolean = true> {
   member?: T;
   billingAccount?: T;
   stripeSubscriptionId?: T;
+  stripeSubscriptionScheduleId?: T;
   stripePriceId?: T;
   stripeProductId?: T;
   plan?: T;
   status?: T;
+  billingCadence?: T;
+  commitmentStatus?: T;
+  commitmentStartAt?: T;
+  commitmentEndAt?: T;
+  cancellationEffectiveAt?: T;
+  paymentGraceEndsAt?: T;
   cancelAtPeriodEnd?: T;
   currentPeriodStart?: T;
   currentPeriodEnd?: T;
@@ -2477,6 +3101,267 @@ export interface PayloadBillingActionsSelect<T extends boolean = true> {
   actionType?: T;
   status?: T;
   sourceEventId?: T;
+  notes?: T;
+  metadata?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_membership_support_records_select".
+ */
+export interface PayloadMembershipSupportRecordsSelect<T extends boolean = true> {
+  displayName?: T;
+  member?: T;
+  memberEmail?: T;
+  fundingSourceType?: T;
+  voucherDuration?: T;
+  issuanceState?: T;
+  billingCadence?: T;
+  stripeCustomerId?: T;
+  stripeSubscriptionId?: T;
+  stripePriceId?: T;
+  stripeCouponId?: T;
+  stripePromotionCodeId?: T;
+  approvalReference?: T;
+  issuedBy?: T;
+  approvedBy?: T;
+  issuedAt?: T;
+  expiresAt?: T;
+  redeemedAt?: T;
+  deactivatedAt?: T;
+  reconciliationState?: T;
+  lastWebhookAt?: T;
+  membershipSupport?: T;
+  reviewQueueItem?: T;
+  operatorNotes?: T;
+  auditHistory?: T;
+  stripeShadow?: T;
+  fundingSource?: T;
+  notes?: T;
+  metadata?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_membership_vouchers_select".
+ */
+export interface PayloadMembershipVouchersSelect<T extends boolean = true> {
+  displayName?: T;
+  membershipSupport?: T;
+  member?: T;
+  memberEmail?: T;
+  voucherDuration?: T;
+  approvalState?: T;
+  redemptionState?: T;
+  billingCadence?: T;
+  stripeCustomerId?: T;
+  stripeCouponId?: T;
+  stripePromotionCodeId?: T;
+  approvalReference?: T;
+  issuedBy?: T;
+  approvedBy?: T;
+  issuedAt?: T;
+  expiresAt?: T;
+  redeemedAt?: T;
+  deactivatedAt?: T;
+  reason?: T;
+  operatorNotes?: T;
+  metadata?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_pay_it_forward_funding_select".
+ */
+export interface PayloadPayItForwardFundingSelect<T extends boolean = true> {
+  displayName?: T;
+  membershipSupport?: T;
+  member?: T;
+  memberEmail?: T;
+  donorName?: T;
+  approvalState?: T;
+  billingCadence?: T;
+  allocatedAmountMinor?: T;
+  currency?: T;
+  stripeCustomerId?: T;
+  stripeCouponId?: T;
+  stripePromotionCodeId?: T;
+  stripeSubscriptionId?: T;
+  approvalReference?: T;
+  issuedBy?: T;
+  approvedBy?: T;
+  issuedAt?: T;
+  expiresAt?: T;
+  redeemedAt?: T;
+  revokedAt?: T;
+  reason?: T;
+  operatorNotes?: T;
+  metadata?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_membership_funding_sources_select".
+ */
+export interface PayloadMembershipFundingSourcesSelect<T extends boolean = true> {
+  displayName?: T;
+  membershipSupport?: T;
+  voucher?: T;
+  member?: T;
+  sourceType?: T;
+  sourceState?: T;
+  committedAmountMinor?: T;
+  availableAmountMinor?: T;
+  currency?: T;
+  donorName?: T;
+  approvalReference?: T;
+  issuedBy?: T;
+  approvedBy?: T;
+  issuedAt?: T;
+  depletedAt?: T;
+  notes?: T;
+  metadata?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_membership_reconciliations_select".
+ */
+export interface PayloadMembershipReconciliationsSelect<T extends boolean = true> {
+  displayName?: T;
+  membershipSupport?: T;
+  voucher?: T;
+  fundingSource?: T;
+  member?: T;
+  stripeEventId?: T;
+  stripeEventType?: T;
+  reconciliationState?: T;
+  failureCode?: T;
+  lastWebhookAt?: T;
+  resolvedAt?: T;
+  notes?: T;
+  metadata?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_membership_administration_actions_select".
+ */
+export interface PayloadMembershipAdministrationActionsSelect<T extends boolean = true> {
+  displayName?: T;
+  operator?: T;
+  member?: T;
+  membershipSupport?: T;
+  voucher?: T;
+  fundingSource?: T;
+  reconciliation?: T;
+  reviewQueueItem?: T;
+  actionType?: T;
+  actionState?: T;
+  approvalReference?: T;
+  executedAt?: T;
+  completedAt?: T;
+  failureReason?: T;
+  notes?: T;
+  operatorNotes?: T;
+  metadata?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_membership_review_queue_items_select".
+ */
+export interface PayloadMembershipReviewQueueItemsSelect<T extends boolean = true> {
+  displayName?: T;
+  membershipSupport?: T;
+  voucher?: T;
+  fundingSource?: T;
+  reconciliation?: T;
+  member?: T;
+  queueState?: T;
+  queueReason?: T;
+  priority?: T;
+  assignedTo?: T;
+  dueAt?: T;
+  resolvedAt?: T;
+  notes?: T;
+  metadata?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_operator_notes_select".
+ */
+export interface PayloadOperatorNotesSelect<T extends boolean = true> {
+  displayName?: T;
+  targetType?: T;
+  targetId?: T;
+  visibility?: T;
+  author?: T;
+  membershipSupport?: T;
+  voucher?: T;
+  fundingSource?: T;
+  reconciliation?: T;
+  auditHistory?: T;
+  note?: T;
+  pinned?: T;
+  metadata?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_stripe_shadow_projections_select".
+ */
+export interface PayloadStripeShadowProjectionsSelect<T extends boolean = true> {
+  displayName?: T;
+  membershipSupport?: T;
+  voucher?: T;
+  fundingSource?: T;
+  member?: T;
+  stripeCustomerId?: T;
+  stripeSubscriptionId?: T;
+  stripePriceId?: T;
+  stripeCouponId?: T;
+  stripePromotionCodeId?: T;
+  stripeInvoiceId?: T;
+  stripeEventId?: T;
+  shadowState?: T;
+  lastWebhookAt?: T;
+  shadowedAt?: T;
+  observedStatus?: T;
+  notes?: T;
+  metadata?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_membership_audit_history_select".
+ */
+export interface PayloadMembershipAuditHistorySelect<T extends boolean = true> {
+  displayName?: T;
+  actorType?: T;
+  actorId?: T;
+  action?: T;
+  targetCollection?: T;
+  targetId?: T;
+  severity?: T;
+  approvalReference?: T;
+  membershipSupport?: T;
+  voucher?: T;
+  fundingSource?: T;
+  reconciliation?: T;
+  before?: T;
+  after?: T;
   notes?: T;
   metadata?: T;
   updatedAt?: T;
