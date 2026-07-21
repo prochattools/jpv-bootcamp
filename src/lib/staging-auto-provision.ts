@@ -26,7 +26,16 @@ async function provisionAdmin(payload: Payload): Promise<void> {
     overrideAccess: true,
   })
 
-  if (existing.docs.length > 0) return
+  if (existing.docs.length > 0) {
+    await payload.update({
+      collection: 'payload_users',
+      id: existing.docs[0].id,
+      data: { password, loginAttempts: 0, lockUntil: null } as never,
+      overrideAccess: true,
+    })
+    console.info('staging-auto-provision: admin password updated and lock cleared')
+    return
+  }
 
   await payload.create({
     collection: 'payload_users',
@@ -52,10 +61,16 @@ async function provisionMember(payload: Payload): Promise<void> {
     await payload.update({
       collection: 'payload_members',
       id: existing.docs[0].id,
-      data: { password, account_status: 'active', emailVerified: true } as never,
+      data: {
+        password,
+        account_status: 'active',
+        emailVerified: true,
+        loginAttempts: 0,
+        lockUntil: null,
+      } as never,
       overrideAccess: true,
     })
-    console.info('staging-auto-provision: member password updated')
+    console.info('staging-auto-provision: member password updated and lock cleared')
     return
   }
 
