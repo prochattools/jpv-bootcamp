@@ -99,7 +99,7 @@ export async function GET(req: NextRequest) {
   // --- Entitlement check ---
   // The caller must provide their billing portal token so we can verify
   // an active pro/vip subscription before issuing a LiveKit token.
-  const billingToken = extractBearerToken(req) ?? req.nextUrl.searchParams.get('token')?.trim()
+  const billingToken = extractBearerToken(req)
   if (!billingToken) {
     return NextResponse.json(
       { ok: false, reason: 'unauthorized' } satisfies TokenErrorResponse,
@@ -297,13 +297,14 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  // Look up session by ID
+  // Look up session by ID (respects collection access control — member must be enrolled)
   const sessionResult = await payloadLib
     .findByID({
       collection: 'live_sessions',
       id: sessionId,
       depth: 1,
-      overrideAccess: true,
+      overrideAccess: false,
+      user: { id: user.id, collection: user.collection } as any,
     })
     .catch((): null => null)
 

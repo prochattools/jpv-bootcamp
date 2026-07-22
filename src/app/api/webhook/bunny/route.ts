@@ -21,27 +21,22 @@ import config from '@payload-config'
 export async function POST(req: NextRequest): Promise<NextResponse> {
 	try {
 		// Verify Bunny webhook signature using official protocol
-		const signatureVersion = req.headers.get('x-bunnystream-signature-version')
-		const signatureAlgorithm = req.headers.get('x-bunnystream-signature-algorithm')
-		const signature = req.headers.get('x-bunnystream-signature')
+		const signatureVersion = req.headers.get('x-bunnystream-signature-version') ?? req.headers.get('bunny-signature-version')
+		const signatureAlgorithm = req.headers.get('x-bunnystream-signature-algorithm') ?? req.headers.get('bunny-signature-algorithm')
+		const signature = req.headers.get('x-bunnystream-signature') ?? req.headers.get('bunny-signature')
 		const secret = process.env.BUNNY_STREAM_WEBHOOK_SECRET
 
-		// Validate all three signature headers required by Bunny
-		if (!signature || !signatureVersion || !signatureAlgorithm) {
-			console.warn('Bunny webhook missing required signature headers', {
-				hasVersion: !!signatureVersion,
-				hasAlgorithm: !!signatureAlgorithm,
-				hasSignature: !!signature,
-			})
-			return NextResponse.json({ error: 'Missing signature headers' }, { status: 403 })
+		if (!signature) {
+			console.warn('Bunny webhook missing signature header')
+			return NextResponse.json({ error: 'Missing signature header' }, { status: 403 })
 		}
 
-		if (signatureVersion !== 'v1') {
+		if (signatureVersion && signatureVersion !== 'v1') {
 			console.warn('Bunny webhook unsupported signature version', { version: signatureVersion })
 			return NextResponse.json({ error: 'Unsupported signature version' }, { status: 403 })
 		}
 
-		if (signatureAlgorithm !== 'hmac-sha256') {
+		if (signatureAlgorithm && signatureAlgorithm !== 'hmac-sha256') {
 			console.warn('Bunny webhook unsupported signature algorithm', { algorithm: signatureAlgorithm })
 			return NextResponse.json({ error: 'Unsupported signature algorithm' }, { status: 403 })
 		}
@@ -254,7 +249,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 		const status = isRetryable ? 500 : 400
 
 		return NextResponse.json(
-			{ ok: false, error: String(error) },
+			{ ok: false, error: 'internal_error' },
 			{ status }
 		)
 	}

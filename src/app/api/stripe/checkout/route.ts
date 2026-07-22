@@ -59,27 +59,30 @@ export async function GET(req: NextRequest) {
       stripeConfig.app.url,
       'STRIPE_CANCEL_URL',
     )
-    let customerEmail: string | null = null
-
-    if (tokenParam) {
-      const tokenSecret = (process.env.BILLING_PORTAL_HMAC_SECRET || '').trim()
-      if (!tokenSecret) {
-        return NextResponse.json(
-          { error: 'Billing token verification is not configured.' },
-          { status: 500 },
-        )
-      }
-
-      const verification = verifyBillingPortalToken(tokenParam, tokenSecret)
-      if (!verification.ok) {
-        return NextResponse.json(
-          { error: 'Invalid or expired billing token.' },
-          { status: 401 },
-        )
-      }
-
-      customerEmail = verification.payload.email
+    if (!tokenParam) {
+      return NextResponse.json(
+        { error: 'Authentication required. Provide a billing portal token.' },
+        { status: 401 },
+      )
     }
+
+    const tokenSecret = (process.env.BILLING_PORTAL_HMAC_SECRET || '').trim()
+    if (!tokenSecret) {
+      return NextResponse.json(
+        { error: 'Billing token verification is not configured.' },
+        { status: 500 },
+      )
+    }
+
+    const verification = verifyBillingPortalToken(tokenParam, tokenSecret)
+    if (!verification.ok) {
+      return NextResponse.json(
+        { error: 'Invalid or expired billing token.' },
+        { status: 401 },
+      )
+    }
+
+    const customerEmail: string = verification.payload.email
 
     const metadata = {
       membership: 'jpv_bootcamp_membership',

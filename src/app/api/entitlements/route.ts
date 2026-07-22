@@ -70,9 +70,7 @@ async function searchStripeCustomerIdByEmail(email: string): Promise<string | nu
 }
 
 export async function GET(req: NextRequest) {
-	const headerToken = extractBearerToken(req)
-	const queryToken = req.nextUrl.searchParams.get('token')
-	const token = headerToken || (queryToken ? queryToken.trim() : null)
+	const token = extractBearerToken(req)
 	const tokenSecret = (process.env.BILLING_PORTAL_HMAC_SECRET || '').trim()
 
 	if (!token) {

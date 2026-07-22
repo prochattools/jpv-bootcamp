@@ -32,7 +32,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   } catch (err) {
     console.error('GET /api/admin/sessions error', err)
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Internal server error' },
+      { error: 'Internal server error' },
       { status: 500 }
     )
   }
@@ -95,7 +95,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   } catch (err) {
     console.error('POST /api/admin/sessions error', err)
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Internal server error' },
+      { error: 'Internal server error' },
       { status: 500 }
     )
   }

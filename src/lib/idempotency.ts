@@ -40,7 +40,7 @@ type PrismaClientLike = {
 		}) => Promise<{ eventId: string }>
 		update: (args: {
 			where: { eventId: string }
-			data: { processedAt?: Date; payload?: unknown }
+			data: { processedAt?: Date; payload?: unknown; receivedAt?: Date }
 		}) => Promise<{ eventId: string }>
 		delete: (args: { where: { eventId: string } }) => Promise<{ eventId: string }>
 		deleteMany: (args: { where: { receivedAt: { lt: Date } } }) => Promise<{ count: number }>
@@ -158,23 +158,19 @@ export async function atomicClaimProcessing(params: {
 					const isStale = Date.now() - receivedAt.getTime() > STALE_LEASE_MS
 
 					if (isStale) {
-						// The prior worker crashed without cleaning up. Delete the stale row and
-						// re-insert so we become the new owner.
+						// The prior worker crashed without cleaning up. Reclaim by
+						// updating the row's receivedAt. The stale check above already
+						// confirmed processedAt is null and receivedAt is old enough.
+						// If a concurrent worker also reclaims, only one update will
+						// observe the stale receivedAt — the loser will re-read a fresh
+						// timestamp on its next attempt and back off.
 						try {
-							await prismaClient.stripeWebhookEvent.delete({ where: { eventId } })
-							await prismaClient.stripeWebhookEvent.create({
-								data: {
-									eventId,
-									type: eventType,
-									livemode,
-									receivedAt: new Date(),
-									processedAt: null,
-									payload: mergedPayload,
-								},
+							await prismaClient.stripeWebhookEvent.update({
+								where: { eventId },
+								data: { receivedAt: new Date(), payload: mergedPayload },
 							})
 							return { claimed: true, alreadyProcessed: false, ownerToken }
 						} catch {
-							// Another worker raced us on the stale claim — be conservative.
 							return { claimed: false, alreadyProcessed: false }
 						}
 					}

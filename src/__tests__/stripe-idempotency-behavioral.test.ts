@@ -105,16 +105,12 @@ describe('atomicClaimProcessing', () => {
 		expect(result.alreadyProcessed).toBe(true)
 	})
 
-	it('stale claim recovery: stale row is deleted and reclaimed', async () => {
+	it('stale claim recovery: stale row is reclaimed via atomic update', async () => {
 		const { atomicClaimProcessing } = await getIdempotency()
 
 		const p2002 = Object.assign(new Error('Unique constraint failed'), { code: 'P2002' })
 
-		mockStripeWebhookEvent.create
-			// First call: conflict with stale row
-			.mockRejectedValueOnce(p2002)
-			// Second call (re-insert after deleting stale row): success
-			.mockResolvedValueOnce({ eventId: 'evt_stale' })
+		mockStripeWebhookEvent.create.mockRejectedValueOnce(p2002)
 
 		// The existing row is stale: processedAt=null, receivedAt > 10 min ago.
 		const staleReceivedAt = new Date(Date.now() - 15 * 60 * 1000) // 15 min ago
@@ -125,7 +121,7 @@ describe('atomicClaimProcessing', () => {
 			payload: { _ownerToken: 'dead-worker-token' },
 		})
 
-		mockStripeWebhookEvent.delete.mockResolvedValue({ eventId: 'evt_stale' })
+		mockStripeWebhookEvent.update.mockResolvedValue({ eventId: 'evt_stale' })
 
 		const result = await atomicClaimProcessing({
 			eventId: 'evt_stale',
@@ -136,10 +132,12 @@ describe('atomicClaimProcessing', () => {
 		expect(result.claimed).toBe(true)
 		expect(result.alreadyProcessed).toBe(false)
 		expect(result.ownerToken).toBeTruthy()
-		// Verify delete was called (stale row cleanup).
-		expect(mockStripeWebhookEvent.delete).toHaveBeenCalledWith({ where: { eventId: 'evt_stale' } })
-		// Verify re-insert was called.
-		expect(mockStripeWebhookEvent.create).toHaveBeenCalledTimes(2)
+		// Verify update was called to reclaim the stale row (not delete + re-create).
+		expect(mockStripeWebhookEvent.update).toHaveBeenCalledWith({
+			where: { eventId: 'evt_stale' },
+			data: expect.objectContaining({ receivedAt: expect.any(Date) }),
+		})
+		expect(mockStripeWebhookEvent.delete).not.toHaveBeenCalled()
 	})
 
 	it('production DB outage: throws instead of falling back to memory', async () => {
