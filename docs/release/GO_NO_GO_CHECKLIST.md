@@ -10,8 +10,8 @@ Current repository result: `DECISION-READY, EXTERNAL APPROVALS PENDING`
 ## Identity
 
 - Branch: `feature/course-branding-and-preview`
-- Commit: `e1c0d4a` (local HEAD); staging deployed at `93799c6`
-- Release candidate label: `feature/course-branding-and-preview @ e1c0d4a`
+- Commit: `eb03a08` (local HEAD); staging confirmed running `eb03a08` design tokens (imageTag env var not set in Dokploy — cosmetic only; design confirmed in deployed HTML, 2026-07-21)
+- Release candidate label: `feature/course-branding-and-preview @ eb03a08`
 - Date: 2026-07-21
 - Operator: [TO BE FILLED — named operator required]
 - Approvers: [TO BE FILLED — client + technical approver required]
@@ -20,23 +20,23 @@ Current repository result: `DECISION-READY, EXTERNAL APPROVALS PENDING`
 
 ## Repository-owned green gates
 
-- [x] `pnpm staging:migration-preflight` — PASS (2026-07-21, HEAD `32874a2`)
-- [x] `pnpm staging:migration-rehearsal` — PASS static mode (2026-07-21)
-- [x] `pnpm staging:migration-rehearsal:evidence` — PASS (2026-07-21)
-- [x] `pnpm staging:decision-readiness` — PASS: `DECISION-READY, EXTERNAL APPROVALS PENDING` (2026-07-21)
+- [x] `pnpm staging:migration-preflight` — PASS 12/12 (2026-07-21, HEAD `eb03a08`)
+- [x] `pnpm staging:migration-rehearsal` — PASS disposable localhost rehearsal (2026-07-21, code baseline `eb03a08`): Apply 1 processed=21 errors=0, Apply 2 idempotent processed=21 errors=0, rollback grants=16 subs=21 billing=21 members=21 removed, Apply 3 reapply processed=21 errors=0. Idempotency, scoped deletion, and reapply passed; preservation of preexisting rows was not proven because the baseline was empty.
+- [x] `pnpm staging:migration-rehearsal:evidence` — PASS (2026-07-21, HEAD `eb03a08`); evidence at `docs/LEGACY_MIGRATION_REHEARSAL_EVIDENCE.md`
+- [x] `pnpm staging:decision-readiness` — PASS: `DECISION-READY, EXTERNAL APPROVALS PENDING` (2026-07-21, HEAD `eb03a08`)
 - [x] `pnpm staging:provider-simulation` — PASS 10/10 (2026-07-21)
 - [x] `pnpm staging:smoke-plan` — PASS (2026-07-21)
 - [x] `pnpm staging:smoke-simulated` — PASS 5/5 (2026-07-21)
 - [x] `pnpm release:evidence:dry-run` — PASS (2026-07-21)
-- [x] `pnpm test:release` — PASS 145/145 (2026-07-21, HEAD `32874a2`)
-- [x] `pnpm test:e2e` — PASS 58/58 (2026-07-21, HEAD `e1c0d4a`)
+- [x] `pnpm test:release` — PASS 151/151 (2026-07-21, HEAD `eb03a08`)
+- [x] `pnpm test:e2e` — PASS 58/58 (2026-07-21, HEAD `eb03a08`)
 - [x] `pnpm test:release:full` — PASS (2026-07-21)
 - [x] `pnpm staging:static-preflight` — PASS (2026-07-21)
 - [x] `./node_modules/.bin/tsc --noEmit --pretty false --incremental false` — PASS (2026-07-21)
 - [x] `pnpm build` — PASS production build (2026-07-21)
 - [x] `./node_modules/.bin/prisma validate --schema=prisma/system.prisma` — PASS (2026-07-21)
 - [x] `./node_modules/.bin/prisma validate --schema=prisma/schema.prisma` — PASS (2026-07-21)
-- [x] `pnpm exec pnpm audit --prod --audit-level high --ignore-registry-errors` — PASS high-severity gate (3 moderate advisories, js-yaml resolved) (2026-07-21)
+- [x] `pnpm exec pnpm audit --prod --audit-level high --ignore-registry-errors` — PASS high-severity gate (3 moderate advisories; fast-uri→3.1.4, sharp→^0.35.0 overrides applied 2026-07-22) (2026-07-22, HEAD `eb03a08`+)
 
 ## Required external gates
 
@@ -62,16 +62,16 @@ Current repository result: `DECISION-READY, EXTERNAL APPROVALS PENDING`
 
 | Gate | Required state | Evidence |
 | --- | --- | --- |
-| release suite | pass | **PASS 145/145** — 2026-07-21, HEAD `32874a2` |
-| browser suite | pass | **PASS 58/58** — 2026-07-21, HEAD `e1c0d4a` |
+| release suite | pass | **PASS 151/151** — 2026-07-21, HEAD `eb03a08` |
+| browser suite | pass | **PASS 58/58** — 2026-07-21, HEAD `eb03a08` |
 | static preflight | pass | **PASS** — 2026-07-21 |
 | build | pass | **PASS** — 2026-07-21 |
 | Prisma validation | pass | **PASS** — both schemas, 2026-07-21 |
-| dependency audit | pass at high severity gate | **PASS** — 3 moderate, js-yaml high resolved, 2026-07-21 |
+| dependency audit | pass at high severity gate | **PASS** — 3 moderate, fast-uri+sharp high resolved via overrides, 2026-07-22 |
 | decision readiness | `DECISION-READY, EXTERNAL APPROVALS PENDING` | **PASS** — 2026-07-21 |
 | migration preflight | pass | **PASS** — 2026-07-21 |
-| migration rehearsal | pass in static mode | **PASS** static mode — 2026-07-21 |
-| migration rehearsal evidence | pass | **PASS** — 2026-07-21 |
+| migration rehearsal | pass | **PARTIAL PASS** disposable localhost rehearsal — apply, idempotent rerun, scoped rollback, and reapply passed; preexisting-row preservation remains unproven because the baseline was empty; 2026-07-21, code baseline `eb03a08` |
+| migration rehearsal evidence | pass | **PASS** — `docs/LEGACY_MIGRATION_REHEARSAL_EVIDENCE.md`; 2026-07-21, HEAD `eb03a08` |
 | provider simulation | pass | **PASS 10/10** — 2026-07-21 |
 | migration applied | pending until executed | PENDING — operator authorization required |
 | post-migration verification | pending until executed | PENDING |
@@ -93,10 +93,10 @@ Current repository result: `DECISION-READY, EXTERNAL APPROVALS PENDING`
 ## Blockers
 
 - programme content: client content outstanding; approved representative 8-week programme required or placeholder acceptance needed
-- migration state: 3 pending migrations unapplied (remove_table_plan, rename_account_identity_columns, membership_support_schema); require explicit operator authorization with backup/rollback confirmed
+- migration state: Payload migrations 7–16 include 5 from original inventory (remove_table_plan, member_email_verification, member_account_action_purposes, partner_affiliate_operations, partner_schema_reconciliation) plus 5 newer (membership_support_schema, live_sessions, bunny_videos, subscription_schema_cols, locked_docs_rels_new_collections) and the Prisma rename_account_identity_columns. CURRENT_WORK_HANDOFF states 16 schema migrations applied on staging. Formal operator authorization required for any remaining unapplied migrations.
 - provider state: Stripe TEST ✓, Resend ✓, Bunny CDN ✓; Payload/admin authenticated session verification pending (requires operator with live member credentials)
-- staging state: 58/58 PASS (desktop + mobile, AUTH-001 + PORTAL-001–008 all PASS, imageTag `93799c6`); REM-01 test send + portal login confirmed ([staging-qa-identity], audit verified, idempotent); 20 remaining member invitations pending explicit per-member authorization
-- unresolved advisories: 3 moderate npm advisories (non-blocking)
+- staging state: 58/58 PASS (desktop + mobile, AUTH-001 + PORTAL-001–008 all PASS); deployed image confirmed running `eb03a08` design tokens (imageTag env var not set — cosmetic); REM-01 test send + portal login confirmed ([staging-qa-identity], audit verified, idempotent); 20 remaining member invitations pending explicit per-member authorization
+- unresolved advisories: 3 moderate npm advisories (non-blocking); 2 high-severity advisories (fast-uri, sharp) resolved via pnpm overrides 2026-07-22
 - operational ownership: named operator, approvers, rollback owner, monitoring owner all unfilled
 
 ## Rollback trigger review

@@ -51,8 +51,8 @@ Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`.
 | --- | --- |
 | Branch | `feature/course-branding-and-preview` |
 | Staging target | This feature branch is the staging / production-staged deployment branch |
-| **Current CODE HEAD** | Cohesive candidate includes synchronized Claude baseline `690c5f4`; verify the exact tip with `git log --oneline -1` before operator action |
-| **Current DEPLOYMENT HEAD** | `d235c5a scripts: harden remediation utility — fatal 401 checks, JWT proof, SHA-256 fingerprints` (staging imageTag confirmed 2026-07-21) |
+| **Current CODE HEAD** | `eb03a08 feat(design): unify JPV release experience` (2026-07-21 — 151/151 release tests, 58/58 E2E PASS); verify with `git log --oneline -1` before any operator action |
+| **Current DEPLOYMENT HEAD** | `eb03a08` design tokens confirmed in staging HTML (2026-07-21); imageTag env var not set in Dokploy (cosmetic — app functions correctly) |
 | **Security Status** | Staging credential exposure is accepted as non-blocking by the project owner (2026-07-21): staging contains no production data. Historical credential evidence remains in dated reports only. |
 | Release State | **FORMAL NO-GO** — credential exposure is not a blocker; remaining gates are feature completion, approved pending migrations, provider verification, staging acceptance, and go-live approval |
 | Historical audit baseline | `236227c fix: require portal auth for member content` |
@@ -64,7 +64,7 @@ Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`.
 | Migration approval | Required only for any genuinely pending staging schema or next-domain migration write, with exact target, backup, rollback, and owner approval |
 | Decision readiness | `DECISION-READY, EXTERNAL APPROVALS PENDING` |
 | Provider/email acceptance | Pending operator verification |
-| Complete staging/browser smoke | Local browser validation passed; staging smoke pending |
+| Complete staging/browser smoke | **58/58 PASS** — desktop + mobile Chromium (2026-07-21, `eb03a08` design confirmed on staging); formal operator sign-off pending |
 
 Staging migration evidence is recorded in `docs/CURRENT_WORK_HANDOFF.md`. This branch does not authorize further staging writes or any production migration.
 

@@ -10,7 +10,8 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 - Packet 9 checkpoint HEAD: `8927df9 docs: checkpoint membership implementation readiness`
 - Registry reconciliation HEAD: `9780f31 fix(registry): update migration inventory for staging deployment`
 - REM-03–07 implementation HEAD: `1d70007 feat: implement REM-03 through REM-07 next-domain migration tools` (2026-07-21 — all local tests pass)
-- **Current HEAD**: `1d70007 feat: implement REM-03 through REM-07 next-domain migration tools` (2026-07-21 — 140/140 release tests, 58/58 E2E tests PASS)
+- UI-01 cohesive design HEAD: `eb03a08 feat(design): unify JPV release experience` (2026-07-21 — 151/151 release tests, 58/58 E2E tests PASS)
+- **Current HEAD**: `eb03a08 feat(design): unify JPV release experience` (2026-07-21 — 151/151 release tests, 58/58 E2E tests PASS)
 - Pull request: `https://github.com/prochattools/jpv-bootcamp/pull/2`
 - Staging URL: `https://preview.jpvbootcamp.com` (deployed, application `I_2Vukga3cc3ZhaG-mUzU`)
 - Staging DB: `jpvbootcamp_staging` on `100.71.31.88`; all 16 schema migrations applied

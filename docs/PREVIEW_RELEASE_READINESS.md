@@ -8,7 +8,9 @@ The preview release path must use the reviewed feature branch and an exact commi
 
 Current operator branch: `feature/course-branding-and-preview`.
 Verify the exact branch tip with `git log --oneline -1` before operator action.
-No migrations have been applied.
+
+**No migrations have been applied.** Payload schema migrations are prepared, migration rehearsal is complete and validated, and legacy member/billing migration has been tested locally on a disposable copy. Zero schema changes have been applied to any live database. Any schema or legacy-domain write to staging or production requires explicit operator authorization, target verification, backup, and rollback ownership.
+
 Do not touch `main`.
 
 Version 3.7 client plan: `docs/client/JPV_Bootcamp_Platform_Expansion_Go_Live_Plan_v3_7.docx`
@@ -25,9 +27,9 @@ Static preflight automation is available via `pnpm staging:static-preflight`; it
 
 ## Current repository-owned readiness snapshot
 
-Current validated readiness baseline: `d55229f test: enforce programme content readiness`
+Current validated readiness baseline: `eb03a08 feat(design): unify JPV release experience` (2026-07-21)
 
-**Outcome:** `NOT READY FOR CONTROLLED STAGING RELEASE PROCESS`
+**Outcome:** `NOT READY FOR CONTROLLED STAGING RELEASE PROCESS` (formal NO-GO pending external approvals)
 
 **Repository-owned staging operations status:** `DECISION-READY FOR CONTROLLED STAGING APPROVAL`
 
@@ -52,7 +54,7 @@ Current validated readiness baseline: `d55229f test: enforce programme content r
 - `pnpm staging:static-preflight` passed
 - `pnpm staging:decision-readiness` passed with `DECISION-READY, EXTERNAL APPROVALS PENDING`
 - `pnpm staging:migration-preflight` passed
-- `pnpm staging:migration-rehearsal` passed in static mode; localhost-only disposable execution remains optional and unexecuted
+- `pnpm staging:migration-rehearsal` passed on a disposable localhost rehearsal schema: apply, idempotent rerun, scoped rollback, and reapply succeeded; preservation of unrelated or updated preexisting rows remains unproven because the rehearsal baseline was empty
 - `pnpm staging:migration-rehearsal:evidence` passed and produced deterministic repository-only Markdown evidence
 - `pnpm staging:provider-simulation` passed `10/10` with local mocked EMAIL, STRIPE, and PAYLOAD verification only
 - `pnpm staging:smoke-plan` passed
@@ -314,9 +316,9 @@ The checklist only gates operations. It does not claim live success or imply tha
 
 ## Pending Payload migration order
 
-The eleven reviewed Payload migrations span the full canonical inventory. The first six are already applied to the staging database. Migrations 7 through 11 are pending and must be applied only after an explicit migration authorization naming the environment, database, schema, operator, backup, and maintenance window.
+The codebase at `eb03a08` registers **16 Payload migrations** in `src/migrations/index.ts`. Per `docs/CURRENT_WORK_HANDOFF.md`, the staging database (`jpvbootcamp_staging`) has 16 schema migrations applied. The `/api/health/deployment` endpoint returns all 16 in `migrationInventoryNames`. Any remaining unapplied migrations require explicit operator authorization.
 
-**Applied (do not re-run):**
+**Registered migration order (src/migrations/index.ts at eb03a08):**
 
 1. `20260620_213328`
 2. `20260621_194424_course_system_phase1`
@@ -324,22 +326,18 @@ The eleven reviewed Payload migrations span the full canonical inventory. The fi
 4. `20260627_010700_structured_community_attachments`
 5. `20260630_100730_affiliate_reporting`
 6. `20260630_190000_payload_preferences_id_constraint`
-
-**Pending (apply in order, one authorization per run):**
-
 7. `20260701_201500_member_email_verification`
 8. `20260702_001500_member_account_action_purposes`
 9. `20260703_000000_partner_affiliate_operations`
 10. `20260704_090000_partner_schema_reconciliation`
 11. `20260707_130000_remove_table_plan_from_payload_enums`
+12. `20260718_103726_membership_support_schema`
+13. `20260718_000000_live_sessions`
+14. `20260718_110000_bunny_videos`
+15. `20260719_150000_subscription_schema_cols`
+16. `20260720_000000_locked_docs_rels_new_collections`
 
-Migration 7 creates the digest-only member action table, constraints, indexes, and original purpose enum. Its down migration drops the table and loses action records.
-
-Migration 8 adds account-action purposes and security-event enum values. Rolling back that migration alone intentionally retains the added PostgreSQL enum values.
-
-Migrations 9 and 10 extend partner and affiliate schema. Migration 11 removes the `table_plan` value from the Payload enum and requires the column to be absent from existing rows before running.
-
-Payload migrations are separate from Prisma migration/startup behavior and are not applied by `scripts/db/deploy-prod.sh`.
+Note: migrations 12–16 were added after the prior "11 reviewed migrations" inventory was written. Verify exact applied count against staging DB before any apply operation. Payload migrations are separate from Prisma migration/startup behavior and are not applied by `scripts/db/deploy-prod.sh`.
 
 ## Environment lane isolation
 
