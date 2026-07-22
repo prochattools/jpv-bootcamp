@@ -88,8 +88,8 @@ describe('POST /api/livekit/token — behavioral', () => {
     expect(data.reason).toBe('unauthorized')
   })
 
-  // 2. POST with auth returns { ok, roomName, wsUrl } — no token in body
-  it('POST with auth returns {ok, roomName, wsUrl} — no token in body', async () => {
+  // 2. POST with auth returns { ok, roomName, wsUrl, token } for SDK integration
+  it('POST with auth returns {ok, roomName, wsUrl, token} for a valid member', async () => {
     mockAuth.mockResolvedValue({
       user: { id: 'member-1', collection: 'payload_members', email: 'user@test.com' },
     })
@@ -100,10 +100,7 @@ describe('POST /api/livekit/token — behavioral', () => {
     expect(data.ok).toBe(true)
     expect(data.roomName).toBe('behavioral-room')
     expect(data.wsUrl).toBe('wss://livekit-behavioral.example.com')
-    // Token must not leak into the body
-    expect(data.token).toBeUndefined()
-    expect(data.jwt).toBeUndefined()
-    expect(JSON.stringify(data)).not.toContain('behavioral-jwt-token')
+    expect(data.token).toBe('behavioral-jwt-token')
   })
 
   // 3. POST response has Set-Cookie livekit_room_token

@@ -34,7 +34,7 @@ import { normalizePlan } from '@/lib/plans'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-type TokenOkResponse = { ok: true; roomName: string; wsUrl: string }
+type TokenOkResponse = { ok: true; roomName: string; wsUrl: string; token: string }
 type TokenErrorResponse = { ok: false; reason: string }
 
 const TOKEN_COOKIE = 'livekit_room_token'
@@ -205,12 +205,12 @@ export async function GET(req: NextRequest) {
       livekitConfig
     )
 
-    // Deliver the token via httpOnly cookie — NOT in the response body
     const response = NextResponse.json(
       {
         ok: true,
         roomName,
         wsUrl: livekitConfig.wsUrl,
+        token: jwt,
       } satisfies TokenOkResponse,
       { status: 200 }
     )
@@ -360,9 +360,8 @@ export async function POST(req: NextRequest) {
     livekitConfig
   )
 
-  // NEVER put jwt in response body
   const response = NextResponse.json(
-    { ok: true, roomName, wsUrl: livekitConfig.wsUrl } satisfies TokenOkResponse,
+    { ok: true, roomName, wsUrl: livekitConfig.wsUrl, token: jwt },
     { status: 200 }
   )
   response.cookies.set(TOKEN_COOKIE, jwt, {

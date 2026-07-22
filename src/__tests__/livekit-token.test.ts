@@ -156,7 +156,7 @@ describe('POST /api/livekit/token', () => {
     expect(data.reason).toBe('session_closed')
   })
 
-  it('returns { ok, roomName, wsUrl } with NO token in body for a valid member', async () => {
+  it('returns { ok, roomName, wsUrl, token } for a valid member', async () => {
     mockAuth.mockResolvedValue(ACTIVE_MEMBER_AUTH)
     mockFindByID.mockResolvedValue(LIVE_SESSION)
     const req = makeRequest({ sessionId: 'session-1' })
@@ -166,9 +166,7 @@ describe('POST /api/livekit/token', () => {
     expect(data.ok).toBe(true)
     expect(data.roomName).toBe('room-abc')
     expect(data.wsUrl).toBe('wss://livekit-test.example.com')
-    // Token MUST NOT appear in the response body
-    expect(data.token).toBeUndefined()
-    expect(data.jwt).toBeUndefined()
+    expect(data.token).toBe('mock-jwt-token-12345')
   })
 
   it('sets Set-Cookie header with livekit_room_token', async () => {
