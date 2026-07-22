@@ -82,22 +82,11 @@ export async function GET(req: NextRequest) {
     )
   }
 
-  // Check Bunny credentials before querying the database
-  const signingKey = getBunnySigningKey()
-  const pullZone = getBunnyPullZone()
-
-  if (!signingKey || !pullZone) {
-    console.error('bunny_video: missing BUNNY_CDN_KEY or BUNNY_PULL_ZONE env vars')
-    return NextResponse.json(
-      { ok: false, reason: 'server_misconfigured' } satisfies VideoError,
-      { status: 500 }
-    )
-  }
-
   try {
     const payload = await getPayload({ config })
 
-    // ── Authentication ────────────────────────────────────────────────────────
+    // ── Authentication ─────────────────────────────────────────────────────────
+    // Auth check BEFORE credential check — don't reveal server config state to
     // Check Payload session — works for both payload_users (admins) and
     // payload_members (course members).
     const reqHeaders = await headers()
@@ -174,6 +163,18 @@ export async function GET(req: NextRequest) {
       }
       // courseId === null means the lesson is not linked to a course module —
       // treat as free/preview content and fall through to video lookup.
+    }
+
+    // ── Bunny credentials (checked after auth so anon gets 401, not 500) ──────
+    const signingKey = getBunnySigningKey()
+    const pullZone = getBunnyPullZone()
+
+    if (!signingKey || !pullZone) {
+      console.error('bunny_video: missing BUNNY_CDN_KEY or BUNNY_PULL_ZONE env vars')
+      return NextResponse.json(
+        { ok: false, reason: 'server_misconfigured' } satisfies VideoError,
+        { status: 500 }
+      )
     }
 
     // ── Lesson lookup (for admins, or after entitlement passed for members) ──
