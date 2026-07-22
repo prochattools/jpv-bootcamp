@@ -180,6 +180,16 @@ export const PREVIEW_MIGRATION_INVENTORY = [
     verificationChecks: ['registry-match', 'ordered-exactly', 'locked-docs-rels'],
     authorizationCategory: 'payloadMigration',
   },
+  {
+    name: '20260722_100000_reconcile_lockstate_vip_progress',
+    system: 'payload',
+    order: 17,
+    purpose: 'Reconcile visual_lock_state → lock_state column rename, add vip to enum_payload_courses_access_badge, add unique constraint on (member_id, lesson_id) in payload_lesson_progress.',
+    requiredForPreview: true,
+    rollbackRisk: 'reversible',
+    verificationChecks: ['registry-match', 'ordered-exactly'],
+    authorizationCategory: 'payloadMigration',
+  },
 ] as const satisfies readonly PreviewMigrationInventoryEntry[]
 
 export const PREVIEW_MIGRATION_INVENTORY_VERSION = 1
