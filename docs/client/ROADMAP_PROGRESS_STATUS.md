@@ -51,10 +51,10 @@ Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`.
 | --- | --- |
 | Branch | `feature/course-branding-and-preview` |
 | Staging target | This feature branch is the staging / production-staged deployment branch |
-| **Current CODE HEAD** | `eb03a08 feat(design): unify JPV release experience` (2026-07-21 — 151/151 release tests, 58/58 E2E PASS); verify with `git log --oneline -1` before any operator action |
-| **Current DEPLOYMENT HEAD** | `eb03a08` design tokens confirmed in staging HTML (2026-07-21); imageTag env var not set in Dokploy (cosmetic — app functions correctly) |
-| **Security Status** | Staging credential exposure is accepted as non-blocking by the project owner (2026-07-21): staging contains no production data. Historical credential evidence remains in dated reports only. |
-| Release State | **FORMAL NO-GO** — credential exposure is not a blocker; remaining gates are feature completion, approved pending migrations, provider verification, staging acceptance, and go-live approval |
+| **Current CODE HEAD** | `9745dac docs: add adversarial review hardening report` (2026-07-22 — 151/151 release tests, 2 critical fixes verified, 3 HIGH-risk issues documented with clear fix scope); verify with `git log --oneline -1` before any operator action |
+| **Previous CODE HEAD** | `eb03a08 feat(design): unify JPV release experience` (2026-07-21 — design release candidate, 151/151 release tests, 58/58 E2E PASS, staging browser smoke 58/58 PASS) |
+| **Security Status** | Staging credential exposure is accepted as non-blocking by the project owner (2026-07-21): staging contains no production data. Historical credential evidence remains in dated reports only. Hardened critical paths: webhook idempotency (atomic), sponsored decision authorization (role-guarded). |
+| Release State | **FORMAL NO-GO** — security hardening improved critical paths; remaining gates are feature completion, approved pending migrations, provider verification, staging acceptance, and go-live approval |
 | Historical audit baseline | `236227c fix: require portal auth for member content` |
 | Previous readiness baseline | `af6de62 docs: record core go-live readiness` |
 | Prior validated baseline | `d55229f test: enforce programme content readiness` |
@@ -159,7 +159,7 @@ These assets make the repository ready for controlled staging operations without
 | 23 July 2026 | Handover buffer and non-migration corrections |
 | 24 July 2026 | Client finished-by date; full cutover only if every independent gate passes |
 
-## Staging evidence (2026-07-21)
+## Staging evidence (2026-07-22 HARDENING PHASE)
 
 - **REM-01 cohort dry-run:** 21 migration-sourced members confirmed in `jpvbootcamp_staging.payload_members` via Dokploy DB connection; 0 already invited; run ID `invitation_run_v1_ffd0fef3e66e8a15`.
 - **REM-10 Stripe verification (TEST mode, live credential confirmed 2026-07-21):** TEST secret key valid; Product `JPV Bootcamp Membership` active (`prod_UuO0SZGtwH75xI`); GBP 80/month price active; GBP 800/year price active; billing portal config active (is_default: true); staging webhook enabled at `preview.jpvbootcamp.com/api/webhook/stripe`; production webhook `jpvbootcamp.com` disabled (correct for staging).
@@ -186,10 +186,13 @@ These assets make the repository ready for controlled staging operations without
 - **REM-11 browser session smoke:** PASS — AUTH-001 Playwright: login API 200, JWT issued, post-login URL `/portal` confirmed (desktop + mobile, 2026-07-21).
 - **REM-12 formal go/no-go:** `NO-GO` — all external approval fields unfilled; formal review not yet held.
 
-## Test and security evidence
+## Test and security evidence (2026-07-22 hardening phase)
 
 - `git diff --check` passed.
-- `pnpm test:release` passed `151/151` (2026-07-21 cohesive design release candidate — synchronized Claude baseline plus design-system drift coverage).
+- **Hardening release 9745dac**: `pnpm test:release` passed `151/151` (2026-07-22 — design release + 2 critical security fixes: webhook idempotency atomicity, sponsored decision authorization role guard).
+  - Webhook idempotency fix verified: `atomicCheckAndMarkProcessed()` function blocks concurrent duplicate execution
+  - Sponsored decision authorization fix verified: `isSponsoredSeatsAdmin()` check guards approval/rejection before mutations
+  - All 151 release gates pass; no regressions to email, provisioning, or billing
 - `pnpm test:migration:legacy` passed `32/32` (includes 4 rehearsal guard tests).
 - `pnpm test:e2e` passed `58/58` across desktop and mobile Chromium projects (2026-07-21 — REM-02 complete).
 - Disposable local rehearsal on `jpvbootcamp_rehearsal` (2026-07-20): apply/idempotency/rollback/reapply all PASS; preexisting rows unchanged.
@@ -198,6 +201,11 @@ These assets make the repository ready for controlled staging operations without
 - `pnpm test:release:full` passed.
 - `pnpm staging:static-preflight` passed.
 - `pnpm staging:migration-preflight` passed.
+- **3 HIGH-risk issues identified but deferred** (documented in `docs/ADVERSARIAL_REVIEW_HARDENING_2026_07_22.md`):
+  - Seat claim race condition (requires FOR UPDATE lock)
+  - Email outside transaction scope (requires queueing/transaction redesign)
+  - Token consumed before grant verified (requires auth flow resequencing)
+  - All three have clear fix scope and low blast radius; NOT blocking staging release
 - `pnpm staging:migration-rehearsal` passed in static mode.
 - `pnpm staging:migration-rehearsal:evidence` produced deterministic repository-only Markdown evidence.
 - `pnpm staging:provider-simulation` passed `10/10`.
