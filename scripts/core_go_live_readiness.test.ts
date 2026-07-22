@@ -110,7 +110,7 @@ function main(): void {
   assert.match(previewReadiness, /content:programme:validate/)
   assert.match(previewReadiness, /content:programme:acceptance/)
   assert.match(previewReadiness, /content:programme:import-plan/)
-  assert.match(previewReadiness, /2 moderate/)
+  assert.match(previewReadiness, /3 moderate/)
   assert.doesNotMatch(previewReadiness, /READY FOR PRODUCTION|production-ready|go-live complete/i)
 
   assert.match(roadmap, /Core go-live implementation and deterministic local validation are complete/i)

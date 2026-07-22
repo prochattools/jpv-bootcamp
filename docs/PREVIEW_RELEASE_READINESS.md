@@ -64,7 +64,7 @@ Current validated readiness baseline: `c2c6333 fix: reconcile dependencies for N
 - `pnpm build` passed
 - `pnpm exec prisma validate --schema=prisma/system.prisma` passed
 - `pnpm exec prisma validate --schema=prisma/schema.prisma` passed
-- `pnpm exec pnpm audit --prod --audit-level high --ignore-registry-errors` passed the high-severity gate; remaining advisories are `3 moderate`
+- `pnpm exec pnpm audit --prod --audit-level high --ignore-registry-errors` passed the high-severity gate; remaining advisories are `3 moderate` (no high-severity issues)
 - `pnpm exec tsx scripts/no_legacy_learn_namespace.test.ts` passed
 - no migration, deployment, provider, or push action occurred during this validation baseline
 
