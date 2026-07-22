@@ -227,11 +227,6 @@ export async function completePasswordReset(
     overrideAccess: true,
   })
 
-  const consumeResult = await actions.completeAction(token, 'password_reset')
-  if (consumeResult.consumed === false) {
-    return { ok: false, error: 'invalid_or_expired_token' }
-  }
-
   let updated = member
   try {
     updated = await payload.update({
@@ -295,6 +290,11 @@ export async function completePasswordReset(
         // Confirmation delivery failures must never roll back a completed password reset.
       }
     }
+  }
+
+  const consumeResult = await actions.completeAction(token, 'password_reset')
+  if (consumeResult.consumed === false) {
+    return { ok: false, error: 'invalid_or_expired_token' }
   }
 
   return { ok: true, member: updated }

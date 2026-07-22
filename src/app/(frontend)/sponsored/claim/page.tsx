@@ -170,23 +170,27 @@ export default async function SponsoredClaimPage({ searchParams }: PageProps) {
 	const endsAt = new Date(now.getTime() + 1000 * 60 * 60 * 24 * 30)
 	try {
 		await prisma.$transaction(async (tx) => {
-			const seatUpdate = await tx.sponsoredSeat.updateMany({
-				where: {
-					id: application.seatId!,
-					reservedByApplicationId: applicationId,
-					claimedByAccountId: null,
-				},
-				data: {
-					claimedByAccountId: accountId!,
-					claimedAt: now,
-					reservedByApplicationId: null,
-					reservedAt: null,
-				},
-			})
+			const locked = await tx.$queryRaw<Array<{id: string}>>`
+			SELECT id FROM sponsored_seat
+			WHERE id = ${application.seatId!}::uuid
+			  AND reserved_by_application_id = ${applicationId}::uuid
+			  AND claimed_by_account_id IS NULL
+			FOR UPDATE
+		`
 
-			if (seatUpdate.count === 0) {
-				throw new Error('seat_unavailable')
-			}
+		if (locked.length === 0) {
+			throw new Error('seat_unavailable')
+		}
+
+		await tx.sponsoredSeat.update({
+			where: { id: application.seatId! },
+			data: {
+				claimedByAccountId: accountId!,
+				claimedAt: now,
+				reservedByApplicationId: null,
+				reservedAt: null,
+			},
+		})
 
 			await tx.sponsoredGrant.create({
 				data: {

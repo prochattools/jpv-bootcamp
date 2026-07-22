@@ -1253,49 +1253,76 @@ export async function provisionFromCheckoutSession(
 				dedupeReason: emailReason,
 			})
 		} else {
-			try {
-				const dedupeKey = `${email}|${subscriptionId ?? 'none'}|${incomingPlan}`
-				const portalUrl = getServerConfig().email.portalUrl.replace(/\/$/, '')
-				await sendWelcomeEmail({
-					to: email,
-					plan,
-					resetUrl: `${portalUrl}/forgot-password`,
-					meta: {
+			let emailAttempts = 0
+			const maxAttempts = 3
+			let lastEmailError: Error | null = null
+
+			while (emailAttempts < maxAttempts && !emailSent) {
+				try {
+					const dedupeKey = `${email}|${subscriptionId ?? 'none'}|${incomingPlan}`
+					const portalUrl = getServerConfig().email.portalUrl.replace(/\/$/, '')
+					await sendWelcomeEmail({
+						to: email,
+						plan,
+						resetUrl: `${portalUrl}/forgot-password`,
+						meta: {
+							templateKey: MEMBERSHIP_EMAIL_TEMPLATE_KEY,
+							variant: emailVariant,
+							eventId: eventId ?? null,
+							eventType: eventType ?? null,
+							subscriptionId: subscriptionId ?? null,
+							customerId,
+							source: emailSource,
+							dedupeKey,
+							stackHint: 'lib/provisioning:provisionFromCheckoutSession',
+						},
+					})
+					emailSent = true
+					await markProvisioningNotified({
+						stripeCustomerId: customerId,
+						email,
+						plan,
+						sendKey: emailSendKey ?? null,
+					})
+					console.info('Membership email sent', {
+						email: redactEmail(email),
 						templateKey: MEMBERSHIP_EMAIL_TEMPLATE_KEY,
-						variant: emailVariant,
+						plan: incomingPlan,
 						eventId: eventId ?? null,
-						eventType: eventType ?? null,
-						subscriptionId: subscriptionId ?? null,
-						customerId,
 						source: emailSource,
-						dedupeKey,
-						stackHint: 'lib/provisioning:provisionFromCheckoutSession',
-					},
-				})
-				emailSent = true
-				await markProvisioningNotified({
-					stripeCustomerId: customerId,
-					email,
-					plan,
-					sendKey: emailSendKey ?? null,
-				})
-				console.info('Membership email sent', {
-					email: redactEmail(email),
-					templateKey: MEMBERSHIP_EMAIL_TEMPLATE_KEY,
-					plan: incomingPlan,
-					eventId: eventId ?? null,
-					source: emailSource,
-					dedupeReason: emailReason,
-				})
-			} catch (error) {
-				emailSent = false
-				emailReason = 'send_failed'
-				console.error('Membership email failed', {
-					emailDomain: getEmailDomain(email),
-					plan,
-					eventId: eventId ?? null,
-					message: (error as Error).message ?? 'unknown_error',
-				})
+						dedupeReason: emailReason,
+					})
+				} catch (error) {
+					emailAttempts++
+					lastEmailError = error as Error
+					const errorMsg = (error as Error).message ?? 'unknown_error'
+					const isTransient = errorMsg.includes('timeout') ||
+						errorMsg.includes('ECONNREFUSED') ||
+						errorMsg.includes('ECONNRESET') ||
+						errorMsg.includes('ETIMEDOUT')
+
+					if (emailAttempts < maxAttempts && isTransient) {
+						const backoffMs = Math.min(1000 * Math.pow(2, emailAttempts - 1), 4000)
+						console.warn('Membership email transient error, retrying', {
+							email: redactEmail(email),
+							attempt: emailAttempts,
+							backoffMs,
+							message: errorMsg,
+						})
+						await new Promise(resolve => setTimeout(resolve, backoffMs))
+					} else {
+						emailSent = false
+						emailReason = isTransient ? 'send_timeout' : 'send_failed'
+						console.error('Membership email failed (terminal)', {
+							emailDomain: getEmailDomain(email),
+							plan,
+							eventId: eventId ?? null,
+							attempts: emailAttempts,
+							message: lastEmailError?.message ?? 'unknown_error',
+						})
+						break
+					}
+				}
 			}
 		}
 	}
