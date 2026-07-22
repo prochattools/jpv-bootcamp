@@ -7,6 +7,8 @@ const memoryStore = new Map<string, number>()
 // Separate set tracking event IDs that are currently being processed (in-memory dev fallback).
 const memoryProcessing = new Set<string>()
 const shouldUsePrisma = Boolean(process.env.DATABASE_URL)
+const STALE_LEASE_MS = 10 * 60 * 1000 // 10 minutes
+
 let cachedTtlMs: number | null = null
 
 function getTtlMs(): number {
@@ -17,11 +19,15 @@ function getTtlMs(): number {
 	return cachedTtlMs
 }
 
+function generateOwnerToken(): string {
+	return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+}
+
 type PrismaClientLike = {
 	stripeWebhookEvent?: {
 		findUnique: (args: {
 			where: { eventId: string }
-		}) => Promise<{ eventId: string; processedAt: Date | null } | null>
+		}) => Promise<{ eventId: string; processedAt: Date | null; receivedAt: Date; payload?: unknown } | null>
 		create: (args: {
 			data: {
 				eventId: string
@@ -34,7 +40,7 @@ type PrismaClientLike = {
 		}) => Promise<{ eventId: string }>
 		update: (args: {
 			where: { eventId: string }
-			data: { processedAt: Date }
+			data: { processedAt?: Date; payload?: unknown }
 		}) => Promise<{ eventId: string }>
 		delete: (args: { where: { eventId: string } }) => Promise<{ eventId: string }>
 		deleteMany: (args: { where: { receivedAt: { lt: Date } } }) => Promise<{ count: number }>
@@ -43,15 +49,16 @@ type PrismaClientLike = {
 
 const prismaClient = prisma as unknown as PrismaClientLike
 
+export type ClaimResult = {
+	claimed: boolean
+	alreadyProcessed: boolean
+	ownerToken?: string
+}
+
 export type MarkProcessedResult = {
 	dbAttempted: boolean
 	dbSuccess: boolean
 	error?: string
-}
-
-export type ClaimResult = {
-	claimed: boolean
-	alreadyProcessed: boolean
 }
 
 function pruneMemoryStore(now: number, ttlMs: number) {
@@ -72,6 +79,17 @@ function isPrismaUniqueError(error: unknown): boolean {
 	)
 }
 
+function extractOwnerToken(payload: unknown): string | null {
+	if (!payload || typeof payload !== 'object') return null
+	const token = (payload as Record<string, unknown>)._ownerToken
+	return typeof token === 'string' ? token : null
+}
+
+function mergeOwnerToken(payload: unknown, ownerToken: string): unknown {
+	const base = payload && typeof payload === 'object' ? payload : {}
+	return { ...(base as Record<string, unknown>), _ownerToken: ownerToken }
+}
+
 /**
  * Atomically claim an event for processing by inserting a row with processedAt=null.
  *
@@ -79,6 +97,13 @@ function isPrismaUniqueError(error: unknown): boolean {
  *   - No row                     → insert succeeds → we own the claim ({ claimed: true })
  *   - Row, processedAt IS NULL   → another worker is processing right now ({ claimed: false, alreadyProcessed: false })
  *   - Row, processedAt NOT NULL  → fully done ({ claimed: false, alreadyProcessed: true })
+ *
+ * Stale claim recovery: if a row with processedAt=null has been sitting for > STALE_LEASE_MS,
+ * the prior worker is presumed dead. The stale row is deleted and a fresh claim is inserted.
+ *
+ * Production safety: if the DB returns a non-P2002 error in production, this function throws
+ * with a 500-context error instead of falling back to the process-local memory store, which
+ * would allow two workers on different instances to both claim the same event.
  *
  * The caller MUST call finalizeProcessed() on success or releaseProcessingClaim() on failure.
  */
@@ -89,6 +114,8 @@ export async function atomicClaimProcessing(params: {
 	payload?: unknown
 }): Promise<ClaimResult> {
 	const { eventId, eventType, livemode, payload } = params
+	const ownerToken = generateOwnerToken()
+	const mergedPayload = mergeOwnerToken(payload, ownerToken)
 
 	if (shouldUsePrisma && prismaClient.stripeWebhookEvent) {
 		try {
@@ -100,11 +127,11 @@ export async function atomicClaimProcessing(params: {
 					livemode,
 					receivedAt: new Date(),
 					processedAt: null,
-					payload,
+					payload: mergedPayload,
 				},
 			})
 			// Insert succeeded — we own the processing slot.
-			return { claimed: true, alreadyProcessed: false }
+			return { claimed: true, alreadyProcessed: false, ownerToken }
 		} catch (error) {
 			if (isPrismaUniqueError(error)) {
 				// Row already exists — inspect its state.
@@ -112,8 +139,48 @@ export async function atomicClaimProcessing(params: {
 					const existing = await prismaClient.stripeWebhookEvent.findUnique({
 						where: { eventId },
 					})
-					const alreadyProcessed = Boolean(existing?.processedAt)
-					return { claimed: false, alreadyProcessed }
+
+					if (!existing) {
+						// Row disappeared between the conflict and the lookup — treat conservatively.
+						return { claimed: false, alreadyProcessed: false }
+					}
+
+					// Already fully processed by a prior delivery.
+					if (existing.processedAt) {
+						return { claimed: false, alreadyProcessed: true }
+					}
+
+					// Check whether the in-flight claim is stale.
+					const receivedAt =
+						existing.receivedAt instanceof Date
+							? existing.receivedAt
+							: new Date(existing.receivedAt)
+					const isStale = Date.now() - receivedAt.getTime() > STALE_LEASE_MS
+
+					if (isStale) {
+						// The prior worker crashed without cleaning up. Delete the stale row and
+						// re-insert so we become the new owner.
+						try {
+							await prismaClient.stripeWebhookEvent.delete({ where: { eventId } })
+							await prismaClient.stripeWebhookEvent.create({
+								data: {
+									eventId,
+									type: eventType,
+									livemode,
+									receivedAt: new Date(),
+									processedAt: null,
+									payload: mergedPayload,
+								},
+							})
+							return { claimed: true, alreadyProcessed: false, ownerToken }
+						} catch {
+							// Another worker raced us on the stale claim — be conservative.
+							return { claimed: false, alreadyProcessed: false }
+						}
+					}
+
+					// Active concurrent claim from another worker.
+					return { claimed: false, alreadyProcessed: false }
 				} catch (lookupError) {
 					console.debug('Prisma idempotency lookup after conflict failed', {
 						message: (lookupError as Error).message,
@@ -122,9 +189,20 @@ export async function atomicClaimProcessing(params: {
 					return { claimed: false, alreadyProcessed: false }
 				}
 			}
-			console.debug('Prisma atomicClaimProcessing failed, falling back to memory.', {
-				message: (error as Error).message,
-			})
+
+			// Non-P2002 DB error (connectivity, timeout, schema mismatch, …).
+			if (process.env.NODE_ENV === 'production') {
+				// In production, falling back to the process-local memory store is unsafe:
+				// two workers on different instances could both claim the same event.
+				throw new Error(
+					`idempotency_db_unavailable: ${(error as Error).message}`
+				)
+			}
+
+			console.debug(
+				'Prisma atomicClaimProcessing failed, falling back to memory.',
+				{ message: (error as Error).message }
+			)
 		}
 	}
 
@@ -139,27 +217,45 @@ export async function atomicClaimProcessing(params: {
 	}
 	memoryStore.set(eventId, now)
 	memoryProcessing.add(eventId)
-	return { claimed: true, alreadyProcessed: false }
+	return { claimed: true, alreadyProcessed: false, ownerToken }
 }
 
 /**
  * Finalize a previously claimed event: set processedAt to now and prune old rows.
  * Only call this after all effects have succeeded.
+ *
+ * Throws on DB failure — callers must convert this to a 500 response so Stripe retries.
+ * If ownerToken is provided, verifies the stored token before updating.
  */
-export async function finalizeProcessed(eventId: string): Promise<void> {
+export async function finalizeProcessed(eventId: string, ownerToken?: string): Promise<void> {
 	if (shouldUsePrisma && prismaClient.stripeWebhookEvent) {
-		try {
-			await prismaClient.stripeWebhookEvent.update({
+		if (ownerToken !== undefined) {
+			const existing = await prismaClient.stripeWebhookEvent.findUnique({
 				where: { eventId },
-				data: { processedAt: new Date() },
 			})
-			const ttlMs = getTtlMs()
+			if (existing) {
+				const storedToken = extractOwnerToken(existing.payload)
+				if (storedToken !== ownerToken) {
+					throw new Error(`idempotency_owner_mismatch: eventId=${eventId}`)
+				}
+			}
+		}
+
+		// Will throw if DB fails — caller handles as 500.
+		await prismaClient.stripeWebhookEvent.update({
+			where: { eventId },
+			data: { processedAt: new Date() },
+		})
+
+		const ttlMs = getTtlMs()
+		try {
 			await prismaClient.stripeWebhookEvent.deleteMany({
 				where: { receivedAt: { lt: new Date(Date.now() - ttlMs) } },
 			})
-		} catch (error) {
-			console.warn('Prisma finalizeProcessed failed', {
-				message: (error as Error).message,
+		} catch (pruneError) {
+			// Pruning old rows is best-effort; a failure here does not affect correctness.
+			console.warn('Prisma finalizeProcessed pruning failed', {
+				message: (pruneError as Error).message,
 			})
 		}
 		return
@@ -171,18 +267,28 @@ export async function finalizeProcessed(eventId: string): Promise<void> {
 /**
  * Release a processing claim after an effect failure so Stripe can retry.
  * Deletes the row so a subsequent delivery starts fresh and can reclaim.
+ *
+ * Throws on DB failure — callers must log and continue returning 500.
+ * If ownerToken is provided, verifies the stored token before deleting.
  */
-export async function releaseProcessingClaim(eventId: string): Promise<void> {
+export async function releaseProcessingClaim(eventId: string, ownerToken?: string): Promise<void> {
 	if (shouldUsePrisma && prismaClient.stripeWebhookEvent) {
-		try {
-			await prismaClient.stripeWebhookEvent.delete({
+		if (ownerToken !== undefined) {
+			const existing = await prismaClient.stripeWebhookEvent.findUnique({
 				where: { eventId },
 			})
-		} catch (error) {
-			console.warn('Prisma releaseProcessingClaim failed', {
-				message: (error as Error).message,
-			})
+			if (existing) {
+				const storedToken = extractOwnerToken(existing.payload)
+				if (storedToken !== ownerToken) {
+					throw new Error(`idempotency_owner_mismatch: eventId=${eventId}`)
+				}
+			}
 		}
+
+		// Will throw if DB fails — caller must log and still return 500.
+		await prismaClient.stripeWebhookEvent.delete({
+			where: { eventId },
+		})
 		return
 	}
 	// Memory: remove entirely so the next Stripe retry can reclaim.

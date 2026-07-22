@@ -202,6 +202,8 @@ function buildWelcomeEmailContent(params: {
 // Email queue processor
 // ---------------------------------------------------------------------------
 
+const MAX_EMAIL_RETRIES = 5
+
 type ProcessResult = {
 	processed: number
 	sent: number
@@ -217,10 +219,11 @@ type ProcessResult = {
  * - Staging guard fires before every Resend call.
  *
  * Error handling:
- *   - Resend success → status = 'sent', resend_id stored
+ *   - Resend success (data.id present) → status = 'sent', resend_id stored
  *   - Transient error (5xx / network) → retry_count++, status stays 'pending'
  *   - Permanent error (4xx) → status = 'failed', error stored
- *   - Ambiguous (no error, no id) → status = 'sent' with warning note
+ *   - Ambiguous (no error, no id) → retry_count++, status stays 'pending'
+ *   - Max retries exceeded → status = 'dead_letter'
  */
 export async function processEmailQueue(eventId?: string): Promise<ProcessResult> {
 	const result: ProcessResult = { processed: 0, sent: 0, failed: 0, skipped: 0 }
@@ -228,15 +231,35 @@ export async function processEmailQueue(eventId?: string): Promise<ProcessResult
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	const prismaAny = prisma as any
 
-	// Fetch pending events
+	// Fetch pending events (dead_letter rows are excluded)
 	const where = eventId
-		? { id: eventId, status: 'pending' }
-		: { status: 'pending' }
+		? { id: eventId, status: { in: ['pending'] } }
+		: { status: { in: ['pending'] } }
 
 	const events = await prismaAny.emailEvent.findMany({ where })
 
 	for (const event of events) {
 		result.processed++
+
+		// Dead-letter check: if the event has already hit the retry cap, mark it
+		// and skip rather than attempting another send.
+		if ((event.retryCount ?? 0) >= MAX_EMAIL_RETRIES) {
+			await prismaAny.emailEvent.update({
+				where: { id: event.id },
+				data: {
+					status: 'dead_letter',
+					errorMessage: `max_retries_exceeded: ${event.retryCount} attempts`,
+				},
+			})
+			result.failed++
+			console.error('email_queue_dead_letter', {
+				eventId: event.id,
+				type: event.type,
+				retryCount: event.retryCount,
+			})
+			continue
+		}
+
 		try {
 			assertStagingRecipientAllowed(event.recipient)
 		} catch (guardError) {
@@ -348,23 +371,33 @@ export async function processEmailQueue(eventId?: string): Promise<ProcessResult
 			continue
 		}
 
-		// Success path
+		// Success path — only mark 'sent' when Resend returns a concrete id.
 		const resendId = data?.id ?? null
 		if (!resendId) {
-			// Ambiguous: no error, no id
+			// Ambiguous: no error but also no confirmation id — treat as transient
+			// and leave the event pending for a retry rather than silently losing it.
 			console.warn('email_queue_ambiguous_response', {
 				eventId: event.id,
 				type: event.type,
 			})
+			await prismaAny.emailEvent.update({
+				where: { id: event.id },
+				data: {
+					retryCount: { increment: 1 },
+					errorMessage: 'ambiguous_response: no resend id returned',
+				},
+			})
+			result.skipped++
+			continue
 		}
 
 		await prismaAny.emailEvent.update({
 			where: { id: event.id },
 			data: {
 				status: 'sent',
-				resendId: resendId ?? 'ambiguous_no_id',
+				resendId,
 				sentAt: new Date(),
-				errorMessage: resendId ? null : 'ambiguous: no resend id in response',
+				errorMessage: null,
 			},
 		})
 		result.sent++
@@ -399,6 +432,43 @@ function buildSendParams(params: {
 			subject: content.subject,
 			text: content.text,
 			html: content.html,
+		}
+	}
+
+	if (type === 'billing_failed') {
+		// payload: { portalUrl?: string, planLabel?: string }
+		const portalUrl = (payload.portalUrl as string | undefined) ?? emailConfig.portalUrl
+		return {
+			from: emailConfig.from,
+			to: [recipient],
+			replyTo: emailConfig.replyTo,
+			subject: 'Action needed: Your JPV Bootcamp payment failed',
+			text: [
+				'Your recent payment did not go through.',
+				'',
+				`Update your payment method here: ${portalUrl}`,
+				'',
+				`If you need help, reply to this email: ${emailConfig.replyTo}`,
+			].join('\n'),
+			html: `<p>Your recent payment did not go through.</p><p><a href="${portalUrl}">Update your payment method</a></p><p>If you need help, reply to this email: ${emailConfig.replyTo}</p>`,
+		}
+	}
+
+	if (type === 'account_action') {
+		// payload: { subject: string, bodyText: string, bodyHtml?: string }
+		const subject =
+			(payload.subject as string | undefined) ??
+			'Action required on your JPV Bootcamp account'
+		const bodyText = (payload.bodyText as string | undefined) ?? ''
+		const bodyHtml =
+			(payload.bodyHtml as string | undefined) ?? `<p>${bodyText}</p>`
+		return {
+			from: emailConfig.from,
+			to: [recipient],
+			replyTo: emailConfig.replyTo,
+			subject,
+			text: bodyText,
+			html: bodyHtml,
 		}
 	}
 
@@ -602,11 +672,11 @@ export async function sendSupportEmail({
 		<p><strong>Page:</strong> ${safePage}</p>
 	`
 
-	if (process.env.NODE_ENV !== 'production') {
-		console.log('[support] emailFrom', supportFrom)
-		console.log('[support] emailTo', supportTo)
-		console.log('[support] emailReplyTo', email)
-	}
+	console.info('support_email_sending', {
+		fromDomain: supportFrom.split('@').pop() ?? 'redacted',
+		hasSupportTo: Boolean(supportTo),
+		hasReplyTo: Boolean(email),
+	})
 
 	const resend = getResendClient()
 	const { error } = await resend.emails.send({

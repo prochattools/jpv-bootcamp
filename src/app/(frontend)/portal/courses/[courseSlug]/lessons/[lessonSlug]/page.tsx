@@ -9,6 +9,7 @@ import {
   getMemberLessonDetail,
   markMemberLessonComplete,
 } from '@/lib/payloadCourse/memberPortal'
+import { LessonVideoPlayer } from './LessonVideoPlayer'
 
 type LessonPageProps = {
   params: Promise<{ courseSlug: string; lessonSlug: string }>
@@ -17,17 +18,6 @@ type LessonPageProps = {
 
 function getLessonPath(courseSlug: string, lessonSlug: string): string {
   return `/portal/courses/${encodeURIComponent(courseSlug)}/lessons/${encodeURIComponent(lessonSlug)}`
-}
-
-function asExternalUrl(value: string | null): string | null {
-  if (!value) return null
-
-  try {
-    const parsed = new URL(value)
-    return parsed.protocol === 'https:' ? parsed.toString() : null
-  } catch {
-    return null
-  }
 }
 
 function formatFileSize(value: number | null): string | null {
@@ -88,8 +78,6 @@ export default async function PortalLessonPage({ params, searchParams }: LessonP
 
   if (!detail) notFound()
 
-  const videoUrl = asExternalUrl(detail.lesson?.videoIdOrPreviewUrl ?? null)
-
   return (
     <div className='space-y-8'>
       <Link
@@ -148,22 +136,7 @@ export default async function PortalLessonPage({ params, searchParams }: LessonP
 
           <section className='rounded-2xl border border-neutral-200 bg-white p-8 shadow-sm'>
             <h2 className='text-xl font-semibold'>Lesson content</h2>
-            {videoUrl ? (
-              <a
-                className='mt-5 inline-flex rounded-lg bg-neutral-950 px-4 py-2 text-sm font-semibold text-white'
-                href={videoUrl}
-                rel='noreferrer'
-                target='_blank'
-              >
-                Open {detail.lesson.videoProviderLabel ?? 'lesson video'}
-              </a>
-            ) : detail.lesson.videoProviderLabel || detail.lesson.videoIdOrPreviewUrl ? (
-              <p className='mt-4 text-sm text-neutral-600'>
-                Video content is configured through {detail.lesson.videoProviderLabel ?? 'the course provider'}.
-              </p>
-            ) : (
-              <p className='mt-4 text-sm text-neutral-600'>Lesson content will appear here when published.</p>
-            )}
+            <LessonVideoPlayer lessonSlug={lessonSlug} />
 
             {detail.lesson.resources.length > 0 ? (
               <div className='mt-8 space-y-4'>

@@ -193,7 +193,8 @@ These assets make the repository ready for controlled staging operations without
   - Webhook idempotency fix verified: `atomicCheckAndMarkProcessed()` function blocks concurrent duplicate execution
   - Sponsored decision authorization fix verified: `isSponsoredSeatsAdmin()` check guards approval/rejection before mutations
   - All 151 release gates pass; no regressions to email, provisioning, or billing
-- **TOCTOU hardening release**: `pnpm test:release` passed `152/152` (2026-07-22 — atomic processing claim state machine with `atomicClaimProcessing`/`finalizeProcessed`/`releaseProcessingClaim`; Stripe webhook never returns 202; failure path returns 500 for retry; concurrent duplicate returns 503).
+- **TOCTOU hardening release**: `pnpm test:release` passed `152/152` (2026-07-22 — see entry above)
+- **Health build-info fix**: `pnpm test:release` passed `153/153` (2026-07-22 — atomic processing claim state machine with `atomicClaimProcessing`/`finalizeProcessed`/`releaseProcessingClaim`; Stripe webhook never returns 202; failure path returns 500 for retry; concurrent duplicate returns 503).
   - `stripe.webhook-toctou` test added: proves `handleStripeWebhook()` deduplicates concurrent identical events, releases claim on failure, allows retry
 - `pnpm test:migration:legacy` passed `32/32` (includes 4 rehearsal guard tests).
 - `pnpm test:e2e` passed `58/58` across desktop and mobile Chromium projects (2026-07-21 — REM-02 complete).

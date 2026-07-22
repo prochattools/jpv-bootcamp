@@ -1,383 +1,236 @@
+/**
+ * Tests for POST /api/livekit/token
+ *
+ * Contract:
+ *  - Body: { sessionId: string }
+ *  - Auth: Payload session cookie (not billing token)
+ *  - Role derived from session.hostUser — NOT from client
+ *  - Response body: { ok: true, roomName, wsUrl } — NO token
+ *  - Token delivered via httpOnly Set-Cookie livekit_room_token
+ */
+
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 import { POST as postLiveKitToken } from '@/app/api/livekit/token/route'
 
-// Mock dependencies
+// ---- Mocks ----------------------------------------------------------------
+
+vi.mock('server-only', () => ({}))
+
+vi.mock('@payload-config', () => ({ default: {} }))
+
+vi.mock('next/headers', () => ({
+  headers: vi.fn(async () => new Headers()),
+}))
+
 vi.mock('@/lib/livekit-config', () => ({
-	getLiveKitConfig: vi.fn(() => ({
-		url: 'wss://livekit-staging.example.com',
-		apiKey: 'test-api-key',
-		apiSecret: 'test-api-secret',
-	})),
-	redactLiveKitSecrets: vi.fn((text: string) => text.replace(/secret/gi, '***')),
-	generateLiveKitRoomName: vi.fn((courseId, moduleId, lessonId) => `course-${courseId}-module-${moduleId}-lesson-${lessonId}`),
-	isLiveKitConfigured: vi.fn(() => true),
+  getLiveKitConfig: vi.fn(() => ({
+    apiKey: 'test-api-key',
+    apiSecret: 'test-api-secret',
+    wsUrl: 'wss://livekit-test.example.com',
+  })),
+  buildLiveKitToken: vi.fn(() => 'mock-jwt-token-12345'),
 }))
 
-vi.mock('@/lib/auth/payloadSession', () => ({
-	resolvePayloadRequestSession: vi.fn(),
+// Mock billing helpers that GET still uses but POST does not touch
+vi.mock('@/lib/billing-portal-token', () => ({
+  verifyBillingPortalToken: vi.fn(),
 }))
 
-vi.mock('@/lib/entitlements/membershipEntitlement', () => ({
-	evaluateMembershipEntitlement: vi.fn(),
+vi.mock('@/lib/plans', () => ({
+  normalizePlan: vi.fn((p: string) => p),
 }))
+
+const mockFindByID = vi.fn()
+const mockAuth = vi.fn()
 
 vi.mock('payload', () => ({
-	getPayload: vi.fn(),
+  getPayload: vi.fn(async () => ({
+    auth: mockAuth,
+    findByID: mockFindByID,
+  })),
 }))
 
-vi.mock('livekit-server-sdk', () => ({
-	AccessToken: class MockAccessToken {
-		identity: string = ''
-		grants: any = {}
+// ---- Helpers ---------------------------------------------------------------
 
-		constructor(apiKey: string, apiSecret: string) {}
+function makeRequest(body: Record<string, unknown>) {
+  return new NextRequest('http://localhost:3000/api/livekit/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+}
 
-		addGrant(grant: any) {
-			this.grants = grant
-		}
+const ACTIVE_MEMBER_AUTH = {
+  user: { id: 'member-123', collection: 'payload_members', email: 'student@example.com' },
+}
 
-		toJwt() {
-			return 'mock-jwt-token-12345'
-		}
-	},
-}))
+const HOST_MEMBER_AUTH = {
+  user: { id: 'host-999', collection: 'payload_members', email: 'host@example.com' },
+}
 
-const { resolvePayloadRequestSession } = require('@/lib/auth/payloadSession')
-const { evaluateMembershipEntitlement } = require('@/lib/entitlements/membershipEntitlement')
-const { getPayload } = require('payload')
+const LIVE_SESSION = {
+  id: 'session-1',
+  status: 'live',
+  roomName: 'room-abc',
+  hostUser: { id: 'host-999' },
+}
+
+// ---------------------------------------------------------------------------
 
 describe('POST /api/livekit/token', () => {
-	const mockHeaders = new Headers({
-		'content-type': 'application/json',
-	})
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
 
-	beforeEach(() => {
-		vi.clearAllMocks()
-	})
+  it('returns 400 for invalid JSON body', async () => {
+    const req = new NextRequest('http://localhost:3000/api/livekit/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: 'not-json',
+    })
+    const res = await postLiveKitToken(req)
+    const data = await res.json()
+    expect(res.status).toBe(400)
+    expect(data.reason).toBe('invalid_json')
+  })
 
-	it('returns 401 when member not authenticated', async () => {
-		resolvePayloadRequestSession.mockResolvedValue({
-			member: null,
-			administratorId: null,
-		})
+  it('returns 400 when sessionId is missing', async () => {
+    mockAuth.mockResolvedValue(ACTIVE_MEMBER_AUTH)
+    // Even without auth we get 400 before auth check when sessionId absent
+    mockAuth.mockResolvedValue({ user: null })
+    const req = makeRequest({})
+    const res = await postLiveKitToken(req)
+    const data = await res.json()
+    expect(res.status).toBe(400)
+    expect(data.reason).toBe('missing_session_id')
+  })
 
-		const req = new NextRequest('http://localhost:3000/api/livekit/token', {
-			method: 'POST',
-			headers: mockHeaders,
-			body: JSON.stringify({
-				sessionId: '1',
-				role: 'student',
-			}),
-		})
+  it('returns 401 when user is not authenticated', async () => {
+    mockAuth.mockResolvedValue({ user: null })
+    const req = makeRequest({ sessionId: 'session-1' })
+    const res = await postLiveKitToken(req)
+    const data = await res.json()
+    expect(res.status).toBe(401)
+    expect(data.reason).toBe('unauthorized')
+  })
 
-		const res = await postLiveKitToken(req)
-		const data = await res.json()
+  it('returns 401 when user collection is not payload_members or payload_users', async () => {
+    mockAuth.mockResolvedValue({
+      user: { id: 'x', collection: 'unknown_collection', email: 'x@example.com' },
+    })
+    const req = makeRequest({ sessionId: 'session-1' })
+    const res = await postLiveKitToken(req)
+    const data = await res.json()
+    expect(res.status).toBe(401)
+    expect(data.reason).toBe('unauthorized')
+  })
 
-		expect(res.status).toBe(401)
-		expect(data.error).toBe('Unauthorized')
-	})
+  it('returns 404 when session does not exist', async () => {
+    mockAuth.mockResolvedValue(ACTIVE_MEMBER_AUTH)
+    mockFindByID.mockRejectedValue(new Error('Not found'))
+    const req = makeRequest({ sessionId: 'no-such-session' })
+    const res = await postLiveKitToken(req)
+    const data = await res.json()
+    expect(res.status).toBe(404)
+    expect(data.reason).toBe('session_not_found')
+  })
 
-	it('returns 400 when missing required fields', async () => {
-		resolvePayloadRequestSession.mockResolvedValue({
-			member: { id: '123', accountStatus: 'active' },
-			administratorId: null,
-		})
+  it('returns 403 when session status is ended', async () => {
+    mockAuth.mockResolvedValue(ACTIVE_MEMBER_AUTH)
+    mockFindByID.mockResolvedValue({ ...LIVE_SESSION, status: 'ended' })
+    const req = makeRequest({ sessionId: 'session-1' })
+    const res = await postLiveKitToken(req)
+    const data = await res.json()
+    expect(res.status).toBe(403)
+    expect(data.reason).toBe('session_closed')
+  })
 
-		const req = new NextRequest('http://localhost:3000/api/livekit/token', {
-			method: 'POST',
-			headers: mockHeaders,
-			body: JSON.stringify({
-				sessionId: '1',
-				// missing role
-			}),
-		})
+  it('returns 403 when session status is cancelled', async () => {
+    mockAuth.mockResolvedValue(ACTIVE_MEMBER_AUTH)
+    mockFindByID.mockResolvedValue({ ...LIVE_SESSION, status: 'cancelled' })
+    const req = makeRequest({ sessionId: 'session-1' })
+    const res = await postLiveKitToken(req)
+    const data = await res.json()
+    expect(res.status).toBe(403)
+    expect(data.reason).toBe('session_closed')
+  })
 
-		const res = await postLiveKitToken(req)
-		const data = await res.json()
+  it('returns { ok, roomName, wsUrl } with NO token in body for a valid member', async () => {
+    mockAuth.mockResolvedValue(ACTIVE_MEMBER_AUTH)
+    mockFindByID.mockResolvedValue(LIVE_SESSION)
+    const req = makeRequest({ sessionId: 'session-1' })
+    const res = await postLiveKitToken(req)
+    const data = await res.json()
+    expect(res.status).toBe(200)
+    expect(data.ok).toBe(true)
+    expect(data.roomName).toBe('room-abc')
+    expect(data.wsUrl).toBe('wss://livekit-test.example.com')
+    // Token MUST NOT appear in the response body
+    expect(data.token).toBeUndefined()
+    expect(data.jwt).toBeUndefined()
+  })
 
-		expect(res.status).toBe(400)
-		expect(data.error).toContain('Missing required fields')
-	})
+  it('sets Set-Cookie header with livekit_room_token', async () => {
+    mockAuth.mockResolvedValue(ACTIVE_MEMBER_AUTH)
+    mockFindByID.mockResolvedValue(LIVE_SESSION)
+    const req = makeRequest({ sessionId: 'session-1' })
+    const res = await postLiveKitToken(req)
+    expect(res.status).toBe(200)
+    const setCookie = res.headers.get('set-cookie') ?? ''
+    expect(setCookie).toContain('livekit_room_token=')
+    expect(setCookie).toContain('HttpOnly')
+  })
 
-	it('returns 400 when role is invalid', async () => {
-		resolvePayloadRequestSession.mockResolvedValue({
-			member: { id: '123', accountStatus: 'active' },
-			administratorId: null,
-		})
+  it('sets canPublish=false for a non-host member', async () => {
+    const { buildLiveKitToken } = await import('@/lib/livekit-config')
+    const spy = vi.mocked(buildLiveKitToken)
+    mockAuth.mockResolvedValue(ACTIVE_MEMBER_AUTH) // id='member-123', NOT the hostUser
+    mockFindByID.mockResolvedValue(LIVE_SESSION)   // hostUser.id='host-999'
+    const req = makeRequest({ sessionId: 'session-1' })
+    await postLiveKitToken(req)
+    expect(spy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        grant: expect.objectContaining({ canPublish: false }),
+      }),
+      expect.anything()
+    )
+  })
 
-		const req = new NextRequest('http://localhost:3000/api/livekit/token', {
-			method: 'POST',
-			headers: mockHeaders,
-			body: JSON.stringify({
-				sessionId: '1',
-				role: 'invalid-role',
-			}),
-		})
+  it('sets canPublish=true when user is the session hostUser', async () => {
+    const { buildLiveKitToken } = await import('@/lib/livekit-config')
+    const spy = vi.mocked(buildLiveKitToken)
+    mockAuth.mockResolvedValue(HOST_MEMBER_AUTH)   // id='host-999'
+    mockFindByID.mockResolvedValue(LIVE_SESSION)   // hostUser.id='host-999'
+    const req = makeRequest({ sessionId: 'session-1' })
+    await postLiveKitToken(req)
+    expect(spy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        grant: expect.objectContaining({ canPublish: true }),
+      }),
+      expect.anything()
+    )
+  })
 
-		const res = await postLiveKitToken(req)
-		const data = await res.json()
+  it('falls back to session-{id} roomName when session has no roomName', async () => {
+    mockAuth.mockResolvedValue(ACTIVE_MEMBER_AUTH)
+    mockFindByID.mockResolvedValue({ id: 'session-1', status: 'live', hostUser: null })
+    const req = makeRequest({ sessionId: 'session-1' })
+    const res = await postLiveKitToken(req)
+    const data = await res.json()
+    expect(res.status).toBe(200)
+    expect(data.roomName).toBe('session-session-1')
+  })
 
-		expect(res.status).toBe(400)
-		expect(data.error).toContain('Invalid role')
-	})
-
-	it('returns 403 when member tries to request host role', async () => {
-		resolvePayloadRequestSession.mockResolvedValue({
-			member: { id: '123', accountStatus: 'active' },
-			administratorId: null, // not an admin
-		})
-
-		const req = new NextRequest('http://localhost:3000/api/livekit/token', {
-			method: 'POST',
-			headers: mockHeaders,
-			body: JSON.stringify({
-				sessionId: '1',
-				role: 'host',
-			}),
-		})
-
-		const res = await postLiveKitToken(req)
-		const data = await res.json()
-
-		expect(res.status).toBe(403)
-		expect(data.error).toContain('Host role requires administrator privileges')
-	})
-
-	it('returns 403 when member account is not active', async () => {
-		resolvePayloadRequestSession.mockResolvedValue({
-			member: { id: '123', accountStatus: 'suspended' },
-			administratorId: null,
-		})
-
-		const req = new NextRequest('http://localhost:3000/api/livekit/token', {
-			method: 'POST',
-			headers: mockHeaders,
-			body: JSON.stringify({
-				sessionId: '1',
-				role: 'student',
-			}),
-		})
-
-		const res = await postLiveKitToken(req)
-		const data = await res.json()
-
-		expect(res.status).toBe(403)
-		expect(data.error).toContain('Member account is not active')
-	})
-
-	it('returns 404 when live session not found', async () => {
-		resolvePayloadRequestSession.mockResolvedValue({
-			member: { id: '123', accountStatus: 'active' },
-			administratorId: null,
-		})
-
-		const mockPayload = {
-			findByID: vi.fn().mockRejectedValue(new Error('Not found')),
-		}
-		getPayload.mockResolvedValue(mockPayload)
-
-		const req = new NextRequest('http://localhost:3000/api/livekit/token', {
-			method: 'POST',
-			headers: mockHeaders,
-			body: JSON.stringify({
-				sessionId: '999',
-				role: 'student',
-			}),
-		})
-
-		const res = await postLiveKitToken(req)
-		const data = await res.json()
-
-		expect(res.status).toBe(404)
-		expect(data.error).toContain('Live session not found')
-	})
-
-	it('returns 403 when session is not scheduled/live', async () => {
-		resolvePayloadRequestSession.mockResolvedValue({
-			member: { id: '123', accountStatus: 'active' },
-			administratorId: null,
-		})
-
-		const mockPayload = {
-			findByID: vi.fn().mockResolvedValue({
-				id: '1',
-				status: 'completed',
-				course: '101',
-				scheduledAt: new Date().toISOString(),
-			}),
-		}
-		getPayload.mockResolvedValue(mockPayload)
-
-		const req = new NextRequest('http://localhost:3000/api/livekit/token', {
-			method: 'POST',
-			headers: mockHeaders,
-			body: JSON.stringify({
-				sessionId: '1',
-				role: 'student',
-			}),
-		})
-
-		const res = await postLiveKitToken(req)
-		const data = await res.json()
-
-		expect(res.status).toBe(403)
-		expect(data.error).toContain('not available for joining')
-	})
-
-	it('returns token with student permissions when member is entitled', async () => {
-		const now = new Date()
-		resolvePayloadRequestSession.mockResolvedValue({
-			member: { id: '123', accountStatus: 'active' },
-			administratorId: null,
-		})
-
-		const mockPayload = {
-			findByID: vi.fn()
-				.mockResolvedValueOnce({
-					id: '1',
-					status: 'live',
-					course: '101',
-					roomName: 'course-101-module-202-lesson-303',
-					scheduledAt: new Date(now.getTime() - 5 * 60000).toISOString(),
-				})
-				.mockResolvedValueOnce({
-					id: '123',
-					membership: {
-						lifecycleState: 'active',
-						subscriptionStatus: 'active',
-					},
-				}),
-		}
-		getPayload.mockResolvedValue(mockPayload)
-
-		evaluateMembershipEntitlement.mockReturnValue({
-			decision: 'allowed',
-			reason: 'active_direct_membership',
-		})
-
-		const req = new NextRequest('http://localhost:3000/api/livekit/token', {
-			method: 'POST',
-			headers: mockHeaders,
-			body: JSON.stringify({
-				sessionId: '1',
-				role: 'student',
-			}),
-		})
-
-		const res = await postLiveKitToken(req)
-		const data = await res.json()
-
-		expect(res.status).toBe(200)
-		expect(data.token).toBe('mock-jwt-token-12345')
-		expect(data.url).toBe('wss://livekit-staging.example.com')
-		expect(data.roomName).toBe('course-101-module-202-lesson-303')
-	})
-
-	it('returns token with host permissions for admin', async () => {
-		const now = new Date()
-		resolvePayloadRequestSession.mockResolvedValue({
-			member: { id: '999', accountStatus: 'active' },
-			administratorId: 'admin-123',
-		})
-
-		const mockPayload = {
-			findByID: vi.fn().mockResolvedValue({
-				id: '1',
-				status: 'scheduled',
-				course: '101',
-				roomName: 'course-101-module-202-lesson-303',
-				scheduledAt: new Date(now.getTime() + 2 * 60000).toISOString(),
-			}),
-		}
-		getPayload.mockResolvedValue(mockPayload)
-
-		const req = new NextRequest('http://localhost:3000/api/livekit/token', {
-			method: 'POST',
-			headers: mockHeaders,
-			body: JSON.stringify({
-				sessionId: '1',
-				role: 'host',
-			}),
-		})
-
-		const res = await postLiveKitToken(req)
-		const data = await res.json()
-
-		expect(res.status).toBe(200)
-		expect(data.token).toBe('mock-jwt-token-12345')
-		expect(data.roomName).toBe('course-101-module-202-lesson-303')
-	})
-
-	it('returns 503 when LiveKit not configured', async () => {
-		const { isLiveKitConfigured } = require('@/lib/livekit-config')
-		isLiveKitConfigured.mockReturnValueOnce(false)
-
-		resolvePayloadRequestSession.mockResolvedValue({
-			member: { id: '123', accountStatus: 'active' },
-			administratorId: null,
-		})
-
-		const req = new NextRequest('http://localhost:3000/api/livekit/token', {
-			method: 'POST',
-			headers: mockHeaders,
-			body: JSON.stringify({
-				sessionId: '1',
-				role: 'student',
-			}),
-		})
-
-		const res = await postLiveKitToken(req)
-		const data = await res.json()
-
-		expect(res.status).toBe(503)
-		expect(data.error).toContain('not configured')
-	})
-
-	it('returns 403 when member has no entitlement', async () => {
-		const now = new Date()
-		resolvePayloadRequestSession.mockResolvedValue({
-			member: { id: '123', accountStatus: 'active' },
-			administratorId: null,
-		})
-
-		const mockPayload = {
-			findByID: vi.fn()
-				.mockResolvedValueOnce({
-					id: '1',
-					status: 'live',
-					course: '101',
-					roomName: 'course-101-module-202-lesson-303',
-					scheduledAt: new Date(now.getTime() - 5 * 60000).toISOString(),
-				})
-				.mockResolvedValueOnce({
-					id: '123',
-					membership: {
-						lifecycleState: 'cancelled',
-						subscriptionStatus: 'cancelled',
-					},
-				}),
-		}
-		getPayload.mockResolvedValue(mockPayload)
-
-		evaluateMembershipEntitlement.mockReturnValue({
-			decision: 'denied',
-			reason: 'cancelled_after_period_end',
-		})
-
-		const req = new NextRequest('http://localhost:3000/api/livekit/token', {
-			method: 'POST',
-			headers: mockHeaders,
-			body: JSON.stringify({
-				sessionId: '1',
-				role: 'student',
-			}),
-		})
-
-		const res = await postLiveKitToken(req)
-		const data = await res.json()
-
-		expect(res.status).toBe(403)
-		expect(data.error).toContain('Not entitled')
-	})
+  it('accepts payload_users (admin) collection', async () => {
+    mockAuth.mockResolvedValue({
+      user: { id: 'admin-1', collection: 'payload_users', email: 'admin@example.com' },
+    })
+    mockFindByID.mockResolvedValue(LIVE_SESSION)
+    const req = makeRequest({ sessionId: 'session-1' })
+    const res = await postLiveKitToken(req)
+    const data = await res.json()
+    expect(res.status).toBe(200)
+    expect(data.ok).toBe(true)
+  })
 })

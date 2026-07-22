@@ -6,12 +6,11 @@ import { useParams } from 'next/navigation'
 export default function LiveKitJoinPage() {
   const params = useParams()
   const sessionId = params.sessionId as string
-  const [role, setRole] = useState<'student' | 'host'>('student')
-  const [token, setToken] = useState<string | null>(null)
-  const [url, setUrl] = useState<string | null>(null)
   const [roomName, setRoomName] = useState<string | null>(null)
+  const [wsUrl, setWsUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [joined, setJoined] = useState(false)
 
   async function requestToken() {
     setLoading(true)
@@ -20,16 +19,17 @@ export default function LiveKitJoinPage() {
       const res = await fetch('/api/livekit/token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId, role }),
+        // Role is NOT sent — it is derived server-side from session.hostUser
+        body: JSON.stringify({ sessionId }),
       })
       const data = await res.json()
       if (!res.ok) {
-        setError(data.error || `HTTP ${res.status}`)
+        setError(data.reason || `HTTP ${res.status}`)
         return
       }
-      setToken(data.token)
-      setUrl(data.url)
+      // Token is in the httpOnly cookie — do NOT store or display it here
       setRoomName(data.roomName)
+      setWsUrl(data.wsUrl)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error')
     } finally {
@@ -37,26 +37,19 @@ export default function LiveKitJoinPage() {
     }
   }
 
+  function joinRoom() {
+    // LiveKit client connection would be initiated here using the cookie-based token.
+    // @livekit/components-react is not yet installed; show a confirmation message.
+    setJoined(true)
+  }
+
   return (
     <div className="p-8 max-w-2xl mx-auto">
       <h1 className="text-3xl font-bold mb-4">Join Live Session</h1>
       <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium mb-2">Role</label>
-          <select
-            value={role}
-            onChange={(e) => setRole(e.target.value as 'student' | 'host')}
-            disabled={loading || token !== null}
-            className="block w-full p-2 border rounded"
-          >
-            <option value="student">Student</option>
-            <option value="host">Host</option>
-          </select>
-        </div>
-
         <button
           onClick={requestToken}
-          disabled={loading || token !== null}
+          disabled={loading || roomName !== null}
           className="px-4 py-2 bg-blue-600 text-white rounded disabled:opacity-50"
         >
           {loading ? 'Requesting...' : 'Request Token'}
@@ -64,7 +57,7 @@ export default function LiveKitJoinPage() {
 
         {error && <div className="p-4 bg-red-100 text-red-800 rounded">{error}</div>}
 
-        {token && (
+        {roomName && !joined && (
           <div className="space-y-2 p-4 bg-gray-50 rounded">
             <div>
               <p className="text-sm font-medium">Room Name</p>
@@ -72,13 +65,26 @@ export default function LiveKitJoinPage() {
             </div>
             <div>
               <p className="text-sm font-medium">LiveKit URL</p>
-              <p className="font-mono text-sm break-all">{url}</p>
+              <p className="font-mono text-sm break-all">{wsUrl}</p>
             </div>
-            <div>
-              <p className="text-sm font-medium">Token (first 50 chars)</p>
-              <p className="font-mono text-xs break-all">{token.substring(0, 50)}...</p>
-            </div>
-            <p className="text-xs text-gray-600">Token TTL: 15 minutes from request</p>
+            <p className="text-xs text-gray-600">
+              Token has been set in your session cookie (httpOnly).
+            </p>
+            <button
+              onClick={joinRoom}
+              className="px-4 py-2 bg-green-600 text-white rounded"
+            >
+              Join Room
+            </button>
+          </div>
+        )}
+
+        {joined && (
+          <div className="p-4 bg-green-50 border border-green-200 rounded">
+            <p className="text-green-800">
+              LiveKit client connection ready &mdash; room <span className="font-mono">{roomName}</span> at{' '}
+              <span className="font-mono">{wsUrl}</span>. Token set in session cookie.
+            </p>
           </div>
         )}
       </div>

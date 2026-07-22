@@ -151,6 +151,8 @@ jobs:
             NEXT_PUBLIC_APP_URL=https://preview.jpvbootcamp.com
             APP_BASE_URL=https://preview.jpvbootcamp.com
             NEXT_PUBLIC_SERVER_URL=https://preview.jpvbootcamp.com
+            IMAGE_TAG=${{ github.sha }}
+            COMMIT_SHA=${{ github.sha }}
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}

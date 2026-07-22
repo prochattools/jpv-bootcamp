@@ -1,13 +1,22 @@
-import type { CollectionConfig } from 'payload'
+import type { CollectionConfig, PayloadRequest } from 'payload'
+import { isPayloadAdminRequest } from '@/lib/access/payloadAccess'
 
 const courseAdminGroup = 'Courses'
 
-// Access helpers: only authenticated admins may mutate; published courses are
-// readable by anyone (entitlement enforcement happens at the application layer).
-const adminOnly = () => false // deny unauthenticated; Payload grants access to logged-in users by default
-const adminOrPublished = ({ req }: { req: { user?: unknown } }) => {
-  if (req.user) return true
+// Access helpers: only Payload admin users (payload_users collection) may
+// mutate course content; members cannot create, update, or delete.
+const adminOnlyWrite = ({ req }: { req: PayloadRequest }) => isPayloadAdminRequest(req)
+
+// Read: admins see everything; members and anonymous users get published-only.
+const adminOrPublishedRead = ({ req }: { req: PayloadRequest }) => {
+  if (isPayloadAdminRequest(req)) return true
   return { status: { equals: 'published' } }
+}
+
+// Lessons have no status field — admins see all; non-admins get preview-only.
+const lessonRead = ({ req }: { req: PayloadRequest }) => {
+  if (isPayloadAdminRequest(req)) return true
+  return { previewLesson: { equals: true } }
 }
 
 export const PayloadCourses: CollectionConfig = {
@@ -20,10 +29,10 @@ export const PayloadCourses: CollectionConfig = {
     description: 'Course catalogue. Create, edit and publish courses from here.',
   },
   access: {
-    read: adminOrPublished,
-    create: ({ req }) => Boolean(req.user),
-    update: ({ req }) => Boolean(req.user),
-    delete: ({ req }) => Boolean(req.user),
+    read: adminOrPublishedRead,
+    create: adminOnlyWrite,
+    update: adminOnlyWrite,
+    delete: adminOnlyWrite,
   },
   fields: [
     { name: 'title', type: 'text', required: true },
@@ -89,10 +98,10 @@ export const PayloadCourseModules: CollectionConfig = {
     description: 'Ordered sections within a course.',
   },
   access: {
-    read: adminOrPublished,
-    create: ({ req }) => Boolean(req.user),
-    update: ({ req }) => Boolean(req.user),
-    delete: ({ req }) => Boolean(req.user),
+    read: adminOrPublishedRead,
+    create: adminOnlyWrite,
+    update: adminOnlyWrite,
+    delete: adminOnlyWrite,
   },
   fields: [
     {
@@ -120,10 +129,10 @@ export const PayloadLessons: CollectionConfig = {
     description: 'Lesson content. Progress tracking is handled at the application layer.',
   },
   access: {
-    read: adminOrPublished,
-    create: ({ req }) => Boolean(req.user),
-    update: ({ req }) => Boolean(req.user),
-    delete: ({ req }) => Boolean(req.user),
+    read: lessonRead,
+    create: adminOnlyWrite,
+    update: adminOnlyWrite,
+    delete: adminOnlyWrite,
   },
   fields: [
     {
@@ -186,10 +195,10 @@ export const PayloadCourseAccessPreview: CollectionConfig = {
     description: 'Access tier examples shown in the portal. Not linked to billing or entitlement enforcement.',
   },
   access: {
-    read: adminOrPublished,
-    create: ({ req }) => Boolean(req.user),
-    update: ({ req }) => Boolean(req.user),
-    delete: ({ req }) => Boolean(req.user),
+    read: adminOrPublishedRead,
+    create: adminOnlyWrite,
+    update: adminOnlyWrite,
+    delete: adminOnlyWrite,
   },
   fields: [
     { name: 'displayLabel', type: 'text', required: true },

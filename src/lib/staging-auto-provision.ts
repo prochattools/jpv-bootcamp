@@ -43,13 +43,19 @@ async function provisionAdmin(payload: Payload): Promise<void> {
   })
 
   if (existing.docs.length > 0) {
-    await payload.update({
-      collection: 'payload_users',
-      id: existing.docs[0].id,
-      data: { password, loginAttempts: 0, lockUntil: null } as never,
-      overrideAccess: true,
-    })
-    console.info('staging-auto-provision: admin password updated and lock cleared')
+    const doc = existing.docs[0] as { id: string | number; loginAttempts?: number; lockUntil?: string | null }
+    // Only unlock if locked — never reset password on startup (create-if-missing only)
+    if (doc.loginAttempts || doc.lockUntil) {
+      await payload.update({
+        collection: 'payload_users',
+        id: doc.id,
+        data: { loginAttempts: 0, lockUntil: null } as never,
+        overrideAccess: true,
+      })
+      console.info('staging-auto-provision: admin account unlocked (was locked)')
+    } else {
+      console.info('staging-auto-provision: admin already exists, no changes (create-if-missing only)')
+    }
     return
   }
 
@@ -77,19 +83,19 @@ async function provisionMember(payload: Payload): Promise<void> {
   })
 
   if (existing.docs.length > 0) {
-    await payload.update({
-      collection: 'payload_members',
-      id: existing.docs[0].id,
-      data: {
-        password,
-        accountStatus: 'active',
-        emailVerifiedAt: new Date().toISOString(),
-        loginAttempts: 0,
-        lockUntil: null,
-      } as never,
-      overrideAccess: true,
-    })
-    console.info('staging-auto-provision: member password updated and lock cleared')
+    const doc = existing.docs[0] as { id: string | number; loginAttempts?: number; lockUntil?: string | null }
+    // Only unlock if locked — never reset password on startup (create-if-missing only)
+    if (doc.loginAttempts || doc.lockUntil) {
+      await payload.update({
+        collection: 'payload_members',
+        id: doc.id,
+        data: { loginAttempts: 0, lockUntil: null } as never,
+        overrideAccess: true,
+      })
+      console.info('staging-auto-provision: member account unlocked (was locked)')
+    } else {
+      console.info('staging-auto-provision: member already exists, no changes (create-if-missing only)')
+    }
     return
   }
 

@@ -24,6 +24,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { headers } from 'next/headers'
 import { getPayload } from 'payload'
 import config from '@payload-config'
 import { getLiveKitConfig, buildLiveKitToken } from '@/lib/livekit-config'
@@ -235,4 +236,140 @@ export async function GET(req: NextRequest) {
       { status: 500 }
     )
   }
+}
+
+/**
+ * POST /api/livekit/token
+ *
+ * Issues a LiveKit room token for an authenticated Payload session user.
+ *
+ * Body: { sessionId: string }
+ *
+ * Role is NOT taken from the client — it is derived from whether the
+ * authenticated user is the session's `hostUser`.
+ *
+ * Security:
+ *  - Auth is via Payload session cookie, not a billing token.
+ *  - The token is NEVER returned in the JSON response body.
+ *  - It is set as an httpOnly cookie named `livekit_room_token`.
+ *  - Response body only contains { ok: true, roomName, wsUrl }.
+ */
+export async function POST(req: NextRequest) {
+  // Parse body
+  let body: { sessionId?: string }
+  try {
+    body = await req.json()
+  } catch {
+    return NextResponse.json(
+      { ok: false, reason: 'invalid_json' } satisfies TokenErrorResponse,
+      { status: 400 }
+    )
+  }
+
+  const sessionId = body.sessionId?.trim()
+  if (!sessionId) {
+    return NextResponse.json(
+      { ok: false, reason: 'missing_session_id' } satisfies TokenErrorResponse,
+      { status: 400 }
+    )
+  }
+
+  // Auth via Payload session (cookie-based), not billing token
+  const payloadLib = await getPayload({ config })
+  const reqHeaders = await headers()
+  const auth = await payloadLib.auth({ headers: reqHeaders })
+  const user = auth.user as { id?: string | number; collection?: string; email?: string } | null
+
+  if (!user?.id) {
+    return NextResponse.json(
+      { ok: false, reason: 'unauthorized' } satisfies TokenErrorResponse,
+      { status: 401 }
+    )
+  }
+
+  // Only payload_members and payload_users (admins) may join
+  const isAdmin = user.collection === 'payload_users'
+  const isMember = user.collection === 'payload_members'
+  if (!isAdmin && !isMember) {
+    return NextResponse.json(
+      { ok: false, reason: 'unauthorized' } satisfies TokenErrorResponse,
+      { status: 401 }
+    )
+  }
+
+  // Look up session by ID
+  const sessionResult = await payloadLib
+    .findByID({
+      collection: 'live_sessions',
+      id: sessionId,
+      depth: 1,
+      overrideAccess: true,
+    })
+    .catch((): null => null)
+
+  if (!sessionResult) {
+    return NextResponse.json(
+      { ok: false, reason: 'session_not_found' } satisfies TokenErrorResponse,
+      { status: 404 }
+    )
+  }
+
+  const session = sessionResult as {
+    status?: string
+    hostUser?: { id?: string } | string | null
+    roomName?: string
+  }
+
+  if (session.status === 'ended' || session.status === 'cancelled') {
+    return NextResponse.json(
+      { ok: false, reason: 'session_closed' } satisfies TokenErrorResponse,
+      { status: 403 }
+    )
+  }
+
+  const roomName = session.roomName ?? `session-${sessionId}`
+
+  // Determine host from persisted hostUser — NOT from any client-supplied value
+  const hostUserId =
+    session.hostUser != null
+      ? typeof session.hostUser === 'string'
+        ? session.hostUser
+        : session.hostUser?.id
+      : null
+  const isHost = hostUserId != null && String(user.id) === String(hostUserId)
+
+  const userIdentity = user.email ?? String(user.id)
+
+  let livekitConfig
+  try {
+    livekitConfig = getLiveKitConfig()
+  } catch {
+    return NextResponse.json(
+      { ok: false, reason: 'server_misconfigured' } satisfies TokenErrorResponse,
+      { status: 500 }
+    )
+  }
+
+  const jwt = buildLiveKitToken(
+    {
+      identity: userIdentity,
+      name: userIdentity,
+      grant: { room: roomName, roomJoin: true, canPublish: isHost, canSubscribe: true },
+    },
+    livekitConfig
+  )
+
+  // NEVER put jwt in response body
+  const response = NextResponse.json(
+    { ok: true, roomName, wsUrl: livekitConfig.wsUrl } satisfies TokenOkResponse,
+    { status: 200 }
+  )
+  response.cookies.set(TOKEN_COOKIE, jwt, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 3600,
+  })
+  return response
 }

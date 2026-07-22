@@ -5,9 +5,10 @@
  * Creates or verifies a staging admin user in payload_users.
  *
  * Usage:
- *   tsx scripts/staging-admin-bootstrap.ts            # dry-run (default)
- *   tsx scripts/staging-admin-bootstrap.ts --apply    # actually create/verify
- *   tsx scripts/staging-admin-bootstrap.ts --verify-only  # check password only
+ *   tsx scripts/staging-admin-bootstrap.ts                  # dry-run (default)
+ *   tsx scripts/staging-admin-bootstrap.ts --apply          # actually create/verify
+ *   tsx scripts/staging-admin-bootstrap.ts --verify-only    # check password only
+ *   tsx scripts/staging-admin-bootstrap.ts --check-columns  # print payload_users columns and exit
  *
  * Required env:
  *   DATABASE_URL          - must contain "staging" OR STAGING_DB_GUARD=1
@@ -15,9 +16,10 @@
  *   STAGING_ADMIN_PASSWORD - admin password to set or verify
  *
  * Optional flags:
- *   --dry-run     (default true; pass --apply to disable)
- *   --apply       disable dry-run, actually mutate the DB
- *   --verify-only check whether the user already exists; do not create
+ *   --dry-run        (default true; pass --apply to disable)
+ *   --apply          disable dry-run, actually mutate the DB
+ *   --verify-only    check whether the user already exists; do not create
+ *   --check-columns  print actual column names from information_schema and exit
  *
  * Exit codes:
  *   0  success or successful dry-run
@@ -34,6 +36,7 @@ const hasFlag = (flag: string) => argv.includes(flag)
 
 const isDryRun = !hasFlag('--apply')
 const verifyOnly = hasFlag('--verify-only')
+const checkColumns = hasFlag('--check-columns')
 
 // ── Environment ─────────────────────────────────────────────────────────────
 
@@ -132,14 +135,35 @@ async function checkUserExists(client: Client, email: string): Promise<boolean> 
   return parseInt(result.rows[0]?.count ?? '0', 10) > 0
 }
 
+async function checkPayloadUsersColumns(client: Client): Promise<string[]> {
+  const result = await client.query<{ column_name: string }>(
+    `SELECT column_name
+     FROM information_schema.columns
+     WHERE table_schema = 'jpvbootcamp'
+       AND table_name = 'payload_users'
+     ORDER BY ordinal_position`,
+  )
+  return result.rows.map((r) => r.column_name)
+}
+
 async function createUser(client: Client, email: string, password: string): Promise<void> {
   const hash = await hashPassword(password)
   const id = crypto.randomUUID()
-  await client.query(
-    `INSERT INTO jpvbootcamp.payload_users (id, email, password, "updatedAt", "createdAt")
-     VALUES ($1, $2, $3, NOW(), NOW())`,
-    [id, email, hash],
-  )
+  try {
+    await client.query(
+      `INSERT INTO jpvbootcamp.payload_users (id, email, password, "updatedAt", "createdAt")
+       VALUES ($1, $2, $3, NOW(), NOW())`,
+      [id, email, hash],
+    )
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err)
+    if (message.toLowerCase().includes('column')) {
+      console.error('[bootstrap] INSERT failed — possible column name mismatch.')
+      console.error('[bootstrap] Run with --check-columns to see actual column names:')
+      console.error('[bootstrap]   tsx scripts/staging-admin-bootstrap.ts --check-columns')
+    }
+    throw err
+  }
 }
 
 // ── Main ─────────────────────────────────────────────────────────────────────
@@ -156,7 +180,7 @@ async function run(): Promise<void> {
   console.log(`[bootstrap] password: ${redactPassword()}`)
   console.log(`[bootstrap] db:       ${dbUrl.replace(/:[^:@]+@/, ':***@')}`)
 
-  if (isDryRun && !verifyOnly) {
+  if (isDryRun && !verifyOnly && !checkColumns) {
     console.log('[bootstrap] DRY-RUN: no changes made. Pass --apply to execute.')
     process.exit(0)
   }
@@ -164,6 +188,19 @@ async function run(): Promise<void> {
   const client = new Client({ connectionString: dbUrl })
   try {
     await client.connect()
+
+    if (checkColumns) {
+      const columns = await checkPayloadUsersColumns(client)
+      if (columns.length === 0) {
+        console.log('[bootstrap] No columns found — table may not exist or schema may differ.')
+      } else {
+        console.log(`[bootstrap] payload_users columns (${columns.length}):`)
+        for (const col of columns) {
+          console.log(`  - ${col}`)
+        }
+      }
+      process.exit(0)
+    }
 
     const exists = await checkUserExists(client, STAGING_ADMIN_EMAIL)
 

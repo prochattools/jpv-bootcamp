@@ -414,12 +414,35 @@ export async function handleStripeWebhook(req: Request) {
 
 	// Atomically claim this event for processing before running any effects.
 	// Uses DB unique constraint on eventId as the concurrency mutex.
-	const claimResult = await atomicClaimProcessing({
-		eventId: event.id,
-		eventType: event.type,
-		livemode: event.livemode,
-		payload: event as unknown as Record<string, unknown>,
-	})
+	let claimResult
+	try {
+		claimResult = await atomicClaimProcessing({
+			eventId: event.id,
+			eventType: event.type,
+			livemode: event.livemode,
+			payload: event as unknown as Record<string, unknown>,
+		})
+	} catch (claimError) {
+		// Production DB outage — propagate 500 so Stripe retries.
+		logWebhookEvent({
+			eventId: event.id,
+			type: event.type,
+			verified: true,
+			outcome: 'error',
+			reason: 'idempotency_db_unavailable',
+			meta: {
+				path: debugInfo.path,
+				buildId,
+				message: (claimError as Error).message,
+			},
+			debugInfo,
+		})
+		return NextResponse.json(
+			{ error: 'Internal error. Stripe should retry.' },
+			{ status: 500 }
+		)
+	}
+	const { ownerToken } = claimResult
 
 	if (!claimResult.claimed) {
 		if (claimResult.alreadyProcessed) {
@@ -699,7 +722,7 @@ export async function handleStripeWebhook(req: Request) {
 		}
 
 		// All effects succeeded — mark the event fully processed.
-		await finalizeProcessed(event.id)
+		await finalizeProcessed(event.id, ownerToken)
 
 		logWebhookEvent({
 			eventId: event.id,
@@ -717,7 +740,15 @@ export async function handleStripeWebhook(req: Request) {
 		return NextResponse.json({ received: true })
 	} catch (error) {
 		// Release the processing claim so Stripe can retry this delivery.
-		await releaseProcessingClaim(event.id)
+		// A release failure must not mask the original error — log and continue to 500.
+		try {
+			await releaseProcessingClaim(event.id, ownerToken)
+		} catch (releaseError) {
+			console.error('releaseProcessingClaim failed — stale claim may remain', {
+				eventId: event.id,
+				message: (releaseError as Error).message,
+			})
+		}
 		logWebhookEvent({
 			eventId: event.id,
 			type: event.type,
