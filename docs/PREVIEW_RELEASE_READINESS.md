@@ -27,7 +27,7 @@ Static preflight automation is available via `pnpm staging:static-preflight`; it
 
 ## Current repository-owned readiness snapshot
 
-Current validated readiness baseline: `eb03a08 feat(design): unify JPV release experience` (2026-07-21)
+Current validated readiness baseline: `c2c6333 fix: reconcile dependencies for Node 20 runtime` (2026-07-22)
 
 **Outcome:** `NOT READY FOR CONTROLLED STAGING RELEASE PROCESS` (formal NO-GO pending external approvals)
 
@@ -64,7 +64,7 @@ Current validated readiness baseline: `eb03a08 feat(design): unify JPV release e
 - `pnpm build` passed
 - `pnpm exec prisma validate --schema=prisma/system.prisma` passed
 - `pnpm exec prisma validate --schema=prisma/schema.prisma` passed
-- `pnpm exec pnpm audit --prod --audit-level high --ignore-registry-errors` passed the high-severity gate; remaining advisories are `2 moderate`
+- `pnpm exec pnpm audit --prod --audit-level high --ignore-registry-errors` passed the high-severity gate; remaining advisories are `3 moderate`
 - `pnpm exec tsx scripts/no_legacy_learn_namespace.test.ts` passed
 - no migration, deployment, provider, or push action occurred during this validation baseline
 
