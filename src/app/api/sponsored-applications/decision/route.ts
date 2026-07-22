@@ -10,6 +10,8 @@ import {
 } from '@/lib/sponsored-email'
 import { signSponsoredClaimToken } from '@/lib/sponsored-claim-token'
 import { getPublicBaseUrl } from '@/lib/public-base-url'
+import { isSponsoredSeatsAdmin } from '@/lib/sponsored-admin'
+import { getPartnerSession, sanitizeSessionId, PARTNERS_SESSION_COOKIE } from '@/lib/partners-session'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -72,6 +74,29 @@ export async function GET(req: NextRequest) {
 	}
 
 	const { applicationId, action } = verification.payload
+
+	const sessionCookie = req.cookies.get(PARTNERS_SESSION_COOKIE)?.value
+	const sessionId = sanitizeSessionId(sessionCookie)
+	if (!sessionId) {
+		console.warn('sponsored_decision_unauthorized', {
+			applicationId,
+			action,
+			reason: 'missing_session',
+		})
+		return buildRedirect(req, 'invalid')
+	}
+
+	const session = await getPartnerSession(sessionId)
+	if (!session || !isSponsoredSeatsAdmin(session.accountId)) {
+		console.warn('sponsored_decision_unauthorized', {
+			applicationId,
+			action,
+			reason: 'not_admin',
+			accountId: session?.accountId ?? null,
+		})
+		return buildRedirect(req, 'invalid')
+	}
+
 	{
 		const baseUrl = getPublicBaseUrl()
 		const host = (() => {

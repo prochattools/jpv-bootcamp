@@ -3,7 +3,7 @@ import 'server-only'
 import { NextResponse } from 'next/server'
 import type Stripe from 'stripe'
 import { getStripeConfig, getStripeWebhookSecrets } from '@/lib/stripe-config'
-import { hasProcessed, markProcessed } from '@/lib/idempotency'
+import { atomicCheckAndMarkProcessed, markProcessed } from '@/lib/idempotency'
 import {
 	logProvisioningDecision,
 	projectInvoicePaymentState,
@@ -412,7 +412,14 @@ export async function handleStripeWebhook(req: Request) {
 		return NextResponse.json({ received: true, skipped: 'db' })
 	}
 
-	if (await hasProcessed(event.id)) {
+	const checkMarkResult = await atomicCheckAndMarkProcessed({
+		eventId: event.id,
+		eventType: event.type,
+		livemode: event.livemode,
+		payload: event as unknown as Record<string, unknown>,
+	})
+
+	if (!checkMarkResult.isNew) {
 		logWebhookEvent({
 			message: 'webhook_duplicate_ignored',
 			eventId: event.id,

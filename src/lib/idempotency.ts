@@ -78,6 +78,66 @@ export async function hasProcessed(eventId: string): Promise<boolean> {
 	return typeof seenAt === 'number' && now - seenAt <= ttlMs
 }
 
+export type AtomicCheckAndMarkResult = {
+	isNew: boolean
+	dbAttempted: boolean
+	dbSuccess: boolean
+	error?: string
+}
+
+export async function atomicCheckAndMarkProcessed(params: {
+	eventId: string
+	eventType: string
+	livemode: boolean
+	payload?: unknown
+}): Promise<AtomicCheckAndMarkResult> {
+	const ttlMs = getTtlMs()
+	const { eventId, eventType, livemode, payload } = params
+	if (shouldUsePrisma && prismaClient.stripeWebhookEvent) {
+		try {
+			const existing = await prismaClient.stripeWebhookEvent.findUnique({
+				where: { eventId },
+			})
+			if (existing) {
+				return { isNew: false, dbAttempted: true, dbSuccess: true }
+			}
+			await prismaClient.stripeWebhookEvent.create({
+				data: {
+					eventId,
+					type: eventType,
+					livemode,
+					receivedAt: new Date(),
+					processedAt: new Date(),
+					payload,
+				},
+			})
+			await prismaClient.stripeWebhookEvent.deleteMany({
+				where: { receivedAt: { lt: new Date(Date.now() - ttlMs) } },
+			})
+			return { isNew: true, dbAttempted: true, dbSuccess: true }
+		} catch (error) {
+			if (isPrismaUniqueError(error)) {
+				return { isNew: false, dbAttempted: true, dbSuccess: true }
+			}
+			console.debug('Prisma idempotency check-and-mark failed, falling back to memory.', {
+				message: (error as Error).message,
+			})
+			const seenBefore = memoryStore.has(eventId)
+			memoryStore.set(eventId, Date.now())
+			return {
+				isNew: !seenBefore,
+				dbAttempted: true,
+				dbSuccess: false,
+				error: (error as Error).message,
+			}
+		}
+	}
+
+	const seenBefore = memoryStore.has(eventId)
+	memoryStore.set(eventId, Date.now())
+	return { isNew: !seenBefore, dbAttempted: false, dbSuccess: false }
+}
+
 export async function markProcessed(params: {
 	eventId: string
 	eventType: string

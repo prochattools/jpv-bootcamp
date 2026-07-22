@@ -29,7 +29,7 @@ async function main() {
   assert.match(provisioning, /status: nextStatus/)
   assert.match(provisioning, /lastEventId: eventId \?\? null/)
   assert.match(webhook, /constructEvent/)
-  assert.match(webhook, /hasProcessed/)
+  assert.match(webhook, /atomicCheckAndMarkProcessed/)
   assert.match(webhook, /markProcessed/)
   assert.doesNotMatch(webhook, /sendWelcomeEmail/)
 
