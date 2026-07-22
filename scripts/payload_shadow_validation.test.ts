@@ -91,6 +91,7 @@ async function main(): Promise<void> {
         '20260718_110000_bunny_videos',
         '20260719_150000_subscription_schema_cols',
         '20260720_000000_locked_docs_rels_new_collections',
+        '20260722_100000_reconcile_lockstate_vip_progress',
       ],
       operator: 'migration-op',
       approvalReference: 'approval-1',
