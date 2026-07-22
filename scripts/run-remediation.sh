@@ -247,24 +247,39 @@ echo "=== EXECUTE MODE STARTING ==="
 
 # ─── Step 1: email update + token invalidation in a single transaction ────────
 echo "=== STEP1_EMAIL_UPDATE ==="
-psql "$PSQL_URL" -v ON_ERROR_STOP=1 -c "
+STEP1_RESULT=$(psql "$PSQL_URL" -v ON_ERROR_STOP=1 -qAt -F '|' -c "
 BEGIN;
-UPDATE jpvbootcamp_staging.payload_members
-  SET email = '$TARGET_EMAIL', updated_at = now()
-  WHERE id = 9;
-UPDATE jpvbootcamp_staging.payload_member_verification_tokens
-  SET invalidated_at = now(), updated_at = now()
-  WHERE member_id = 9
-    AND purpose = 'password_reset'
-    AND consumed_at IS NULL
-    AND invalidated_at IS NULL;
+WITH updated_member AS (
+  UPDATE jpvbootcamp_staging.payload_members
+    SET email = '$TARGET_EMAIL', updated_at = now()
+    WHERE id = 9
+    RETURNING 1
+), invalidated_tokens AS (
+  UPDATE jpvbootcamp_staging.payload_member_verification_tokens
+    SET invalidated_at = now(), updated_at = now()
+    WHERE member_id = 9
+      AND purpose = 'password_reset'
+      AND consumed_at IS NULL
+      AND invalidated_at IS NULL
+    RETURNING 1
+)
+SELECT
+  (SELECT count(*) FROM updated_member),
+  (SELECT count(*) FROM invalidated_tokens);
 COMMIT;
-"
+")
+MEMBER_UPDATE_COUNT=$(printf '%s\n' "$STEP1_RESULT" | tail -n 1 | cut -d'|' -f1)
+TOKENS_INVALIDATED_COUNT=$(printf '%s\n' "$STEP1_RESULT" | tail -n 1 | cut -d'|' -f2)
+if [[ "$MEMBER_UPDATE_COUNT" != "1" ]]; then
+  echo "ABORT: member email UPDATE affected $MEMBER_UPDATE_COUNT rows; expected 1" >&2; exit 1
+fi
 UPDATED_EMAIL=$(psql "$PSQL_URL" -t -A -c \
   "SELECT email FROM jpvbootcamp_staging.payload_members WHERE id=9;")
 if [[ "$UPDATED_EMAIL" != "$TARGET_EMAIL" ]]; then
   echo "ABORT: email post-update verification failed — got '$UPDATED_EMAIL'" >&2; exit 1
 fi
+echo "member_update_count=$MEMBER_UPDATE_COUNT expected=1"
+echo "tokens_invalidated_count=$TOKENS_INVALIDATED_COUNT"
 echo "email_verified=$UPDATED_EMAIL"
 echo "STEP1_EMAIL_UPDATE DONE"
 

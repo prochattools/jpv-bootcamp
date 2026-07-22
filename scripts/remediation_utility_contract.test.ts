@@ -228,11 +228,14 @@ function main(): void {
     )
   }
 
-  // ── static: row-count assertion in Step 1 ────────────────────────────────
+  // ── static: transactional row-count assertion in Step 1 ─────────────────
   {
     assert.ok(
-      scriptText.includes('ROW_COUNT') && scriptText.includes('expected 1'),
-      'Step 1 must assert row count via ROW_COUNT / expected 1',
+      scriptText.includes('WITH updated_member AS') &&
+        scriptText.includes('MEMBER_UPDATE_COUNT') &&
+        scriptText.includes('expected 1') &&
+        scriptText.includes('if [[ "$MEMBER_UPDATE_COUNT" != "1" ]]'),
+      'Step 1 must return the transactional member update count and abort unless exactly 1',
     )
   }
 
