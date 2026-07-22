@@ -51,8 +51,12 @@ export const PayloadBunnyVideo: CollectionConfig = {
 		},
 		{
 			name: 'lessonId',
-			type: 'text',
-			label: 'Associated Lesson ID',
+			type: 'relationship',
+			relationTo: 'payload_lessons',
+			label: 'Associated Lesson',
+			admin: {
+				description: 'Lesson this video belongs to. One video per lesson.',
+			},
 		},
 		{
 			name: 'status',

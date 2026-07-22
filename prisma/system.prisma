@@ -249,3 +249,22 @@ enum SubscriptionStatus {
   active
   inactive
 }
+
+model EmailEvent {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid @map("id")
+  type           String    @map("type")
+  recipient      String    @map("recipient")
+  payload        Json      @map("payload")
+  idempotencyKey String    @unique @map("idempotency_key")
+  status         String    @default("pending") @map("status")
+  retryCount     Int       @default(0) @map("retry_count")
+  resendId       String?   @map("resend_id")
+  errorMessage   String?   @map("error_message")
+  sentAt         DateTime? @map("sent_at") @db.Timestamptz(3)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime  @default(now()) @map("updated_at") @db.Timestamptz(3)
+
+  @@index([status], name: "email_events_status_idx")
+  @@index([createdAt], name: "email_events_created_at_idx")
+  @@map("email_events")
+}

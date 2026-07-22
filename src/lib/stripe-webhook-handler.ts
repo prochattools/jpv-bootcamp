@@ -3,7 +3,7 @@ import 'server-only'
 import { NextResponse } from 'next/server'
 import type Stripe from 'stripe'
 import { getStripeConfig, getStripeWebhookSecrets } from '@/lib/stripe-config'
-import { atomicCheckAndMarkProcessed, hasProcessed, markProcessed } from '@/lib/idempotency'
+import { atomicCheckAndMarkProcessed, atomicClaimProcessing, finalizeProcessed, hasProcessed, markProcessed, releaseProcessingClaim } from '@/lib/idempotency'
 import {
 	logProvisioningDecision,
 	projectInvoicePaymentState,
@@ -412,23 +412,51 @@ export async function handleStripeWebhook(req: Request) {
 		return NextResponse.json({ received: true, skipped: 'db' })
 	}
 
-	// Check if already processed (idempotent dedup) — do NOT mark yet
-	const checkResult = await hasProcessed(event.id)
-	if (checkResult) {
+	// Atomically claim this event for processing before running any effects.
+	// Uses DB unique constraint on eventId as the concurrency mutex.
+	const claimResult = await atomicClaimProcessing({
+		eventId: event.id,
+		eventType: event.type,
+		livemode: event.livemode,
+		payload: event as unknown as Record<string, unknown>,
+	})
+
+	if (!claimResult.claimed) {
+		if (claimResult.alreadyProcessed) {
+			// Already fully processed by a prior delivery — idempotent success.
+			logWebhookEvent({
+				message: 'webhook_duplicate_ignored',
+				eventId: event.id,
+				type: event.type,
+				verified: true,
+				outcome: 'deduped',
+				reason: 'already_processed',
+				meta: {
+					path: debugInfo.path,
+					buildId,
+				},
+				debugInfo,
+			})
+			return NextResponse.json({ received: true })
+		}
+		// Another worker is currently processing this event — tell Stripe to retry later.
 		logWebhookEvent({
-			message: 'webhook_duplicate_ignored',
+			message: 'webhook_processing_conflict',
 			eventId: event.id,
 			type: event.type,
 			verified: true,
-			outcome: 'deduped',
-			reason: 'already_processed',
+			outcome: 'error',
+			reason: 'concurrent_processing',
 			meta: {
 				path: debugInfo.path,
 				buildId,
 			},
 			debugInfo,
 		})
-		return NextResponse.json({ received: true })
+		return NextResponse.json(
+			{ error: 'Event is currently being processed. Retry later.' },
+			{ status: 503 }
+		)
 	}
 
 	const requiresProvisioning = PROVISIONING_EVENT_TYPES.has(event.type)
@@ -670,20 +698,8 @@ export async function handleStripeWebhook(req: Request) {
 			})
 		}
 
-		const idempotencyResult = await markProcessed({
-			eventId: event.id,
-			eventType: event.type,
-			livemode: event.livemode,
-			payload: event as unknown as Record<string, unknown>,
-		})
-
-		if (idempotencyResult.dbAttempted && !idempotencyResult.dbSuccess) {
-			console.warn('Stripe webhook idempotency write failed', {
-				table: 'jpvbootcamp.stripe_webhook_events',
-				keys: { eventId: event.id, type: event.type },
-				message: idempotencyResult.error,
-			})
-		}
+		// All effects succeeded — mark the event fully processed.
+		await finalizeProcessed(event.id)
 
 		logWebhookEvent({
 			eventId: event.id,
@@ -700,6 +716,8 @@ export async function handleStripeWebhook(req: Request) {
 		})
 		return NextResponse.json({ received: true })
 	} catch (error) {
+		// Release the processing claim so Stripe can retry this delivery.
+		await releaseProcessingClaim(event.id)
 		logWebhookEvent({
 			eventId: event.id,
 			type: event.type,
@@ -714,8 +732,8 @@ export async function handleStripeWebhook(req: Request) {
 			debugInfo,
 		})
 		return NextResponse.json(
-			{ received: false, error: 'handler_failed' },
-			{ status: 202 }
+			{ error: 'Internal error. Stripe should retry.' },
+			{ status: 500 }
 		)
 	}
 }

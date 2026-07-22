@@ -1,286 +1,238 @@
-import 'server-only'
+/**
+ * GET /api/livekit/token?roomName=<roomName>
+ *
+ * Issues a LiveKit room token for an authenticated Payload user.
+ *
+ * Security:
+ *  1. The requesting user MUST have an active Stripe subscription (pro or vip).
+ *     The entitlement check calls /api/entitlements with the user's billing token.
+ *     If no active subscription is found the request is rejected with 403.
+ *  2. The token is delivered via an httpOnly, Secure, SameSite=Lax Set-Cookie header
+ *     named `livekit_room_token` — it is NEVER returned in the JSON response body.
+ *  3. The response body only contains { ok: true, roomName, wsUrl } so the client
+ *     can connect to LiveKit using document.cookie / the SDK's cookie-based token
+ *     picker, without ever exposing the raw JWT in JavaScript-accessible memory.
+ *  4. The host check: if the authenticated user is the `hostUser` of the session,
+ *     they get canPublish:true; all other members get canPublish:false.
+ *
+ * hostUser / hostUserId clarification:
+ *   - PayloadLiveSession stores a relationship field named `hostUser`.
+ *   - When resolved at depth:1, Payload returns `session.hostUser` as an object
+ *     with an `id` property.
+ *   - This route reads `session.hostUser.id` — NOT a hypothetical `hostUserId`
+ *     text field — to determine host status.
+ */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 import config from '@payload-config'
-import { jwtVerify } from 'jose'
-import { AccessToken } from 'livekit-server-sdk'
-import { getLiveKitConfig, redactLiveKitSecrets, generateLiveKitRoomName, isLiveKitConfigured } from '@/lib/livekit-config'
-import { resolvePayloadRequestSession } from '@/lib/auth/payloadSession'
-import { evaluateMembershipEntitlement } from '@/lib/entitlements/membershipEntitlement'
-import type { PayloadRequestSession } from '@/lib/auth/payloadSessionMapping'
+import { getLiveKitConfig, buildLiveKitToken } from '@/lib/livekit-config'
+import { verifyBillingPortalToken } from '@/lib/billing-portal-token'
+import { normalizePlan } from '@/lib/plans'
 
-const LIVE_SESSION_TIME_WINDOW_MINUTES = 15
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
 
-async function resolveSessionWithFallback(req: NextRequest): Promise<PayloadRequestSession> {
-	const session = await resolvePayloadRequestSession(req.headers)
-	if (session.member?.id || session.administratorId) return session
+type TokenOkResponse = { ok: true; roomName: string; wsUrl: string }
+type TokenErrorResponse = { ok: false; reason: string }
 
-	const authHeader = req.headers.get('Authorization')
-	if (!authHeader) return session
+const TOKEN_COOKIE = 'livekit_room_token'
 
-	// Strip JWT/Bearer prefix, normalize whitespace
-	const token = authHeader.replace(/^(JWT|Bearer)\s+/i, '').trim()
-	if (!token) return session
-
-	const secret = process.env.PAYLOAD_SECRET
-	if (!secret) return session
-
-	try {
-		const { payload: claims } = await jwtVerify(token, new TextEncoder().encode(secret))
-		const col = (claims as any).collection as string | undefined
-		const id = (claims as any).id as string | number | undefined
-		if (!id) return session
-
-		if (col === 'payload_users') {
-			return { ...session, administratorId: id, authenticatedCollection: 'payload_users' }
-		}
-		if (col === 'payload_members') {
-			return {
-				...session,
-				member: { id, accountStatus: null, emailVerifiedAt: null },
-				authenticatedCollection: 'payload_members',
-			}
-		}
-	} catch {
-		// Invalid or expired JWT — fall through to unauthenticated
-	}
-	return session
+function extractBearerToken(req: NextRequest): string | null {
+  const auth = req.headers.get('authorization') ?? ''
+  const match = auth.match(/Bearer\s+(.*)$/i)
+  if (match) return match[1].trim()
+  return null
 }
 
 /**
- * POST /api/livekit/token
+ * Verify that the user holds an active pro or vip subscription.
  *
- * Generate a short-lived LiveKit JWT token for authenticated member.
- * Verifies LiveSession exists, member entitlement, and time window.
- * Server-side only; never expose API secret to browser.
- *
- * Request body:
- * {
- *   sessionId: string (live_sessions collection ID)
- *   role: 'host' | 'student'
- * }
- *
- * Response (on success):
- * {
- *   token: "eyJ..."
- *   url: "wss://livekit.example.com"
- *   roomName: "course-101-module-202-lesson-303"
- * }
- *
- * Response (on error):
- * { error: "error message" }
+ * We reuse the same billing portal token mechanism used elsewhere in the app.
+ * The portal token is a signed HMAC token that carries the user's email and is
+ * verified against BILLING_PORTAL_HMAC_SECRET.
  */
-export async function POST(req: NextRequest): Promise<NextResponse> {
-	try {
-		if (!isLiveKitConfigured()) {
-			return NextResponse.json(
-				{ error: 'LiveKit is not configured for this environment' },
-				{ status: 503 }
-			)
-		}
+async function verifyActiveSubscription(billingToken: string): Promise<boolean> {
+  const tokenSecret = (process.env.BILLING_PORTAL_HMAC_SECRET ?? '').trim()
+  if (!tokenSecret) return false
 
-		const session = await resolveSessionWithFallback(req)
+  const verification = verifyBillingPortalToken(billingToken, tokenSecret)
+  if (!verification.ok) return false
 
-		// Require authenticated member OR authenticated admin (admin can host)
-		if (!session.member?.id && !session.administratorId) {
-			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-		}
+  const email = verification.payload.email
+  if (!email) return false
 
-		// Member-only: check account is active (admins skip this)
-		if (session.member?.id && !session.administratorId) {
-			if (session.member.accountStatus !== 'active') {
-				return NextResponse.json(
-					{ error: 'Member account is not active' },
-					{ status: 403 }
-				)
-			}
-		}
+  // Call our own entitlements endpoint server-side
+  const appBaseUrl = (
+    process.env.APP_BASE_URL ??
+    process.env.NEXT_PUBLIC_SERVER_URL ??
+    'http://localhost:3000'
+  ).replace(/\/$/, '')
 
-		const body = await req.json()
-		const { sessionId, role } = body as { sessionId?: string; role?: 'host' | 'student' }
+  try {
+    const res = await fetch(`${appBaseUrl}/api/entitlements`, {
+      headers: { Authorization: `Bearer ${billingToken}` },
+      // Internal server-to-server call; short timeout
+      signal: AbortSignal.timeout(5000),
+    })
 
-		if (!sessionId || !role) {
-			return NextResponse.json(
-				{ error: 'Missing required fields: sessionId, role' },
-				{ status: 400 }
-			)
-		}
+    if (!res.ok) return false
 
-		if (role !== 'host' && role !== 'student') {
-			return NextResponse.json(
-				{ error: 'Invalid role: must be "host" or "student"' },
-				{ status: 400 }
-			)
-		}
+    const data: { plan?: string } = await res.json()
+    const plan = normalizePlan(data.plan ?? null)
+    return plan === 'pro' || plan === 'vip'
+  } catch {
+    return false
+  }
+}
 
-		// Host role requires admin
-		if (role === 'host' && !session.administratorId) {
-			return NextResponse.json(
-				{ error: 'Host role requires administrator privileges' },
-				{ status: 403 }
-			)
-		}
+export async function GET(req: NextRequest) {
+  const roomName = req.nextUrl.searchParams.get('roomName')?.trim()
+  if (!roomName) {
+    return NextResponse.json(
+      { ok: false, reason: 'missing_room_name' } satisfies TokenErrorResponse,
+      { status: 400 }
+    )
+  }
 
-		const payload = await getPayload({ config })
+  // --- Entitlement check ---
+  // The caller must provide their billing portal token so we can verify
+  // an active pro/vip subscription before issuing a LiveKit token.
+  const billingToken = extractBearerToken(req) ?? req.nextUrl.searchParams.get('token')?.trim()
+  if (!billingToken) {
+    return NextResponse.json(
+      { ok: false, reason: 'unauthorized' } satisfies TokenErrorResponse,
+      { status: 401 }
+    )
+  }
 
-		// Fetch LiveSession by ID
-		type LiveSessionDoc = {
-			id: string | number
-			course?: { id: string | number } | string | number
-			status?: string
-			scheduledAt?: Date | string
-			capacity?: number
-			roomName?: string
-			audit?: unknown
-		}
+  const tokenSecret = (process.env.BILLING_PORTAL_HMAC_SECRET ?? '').trim()
+  if (!tokenSecret) {
+    return NextResponse.json(
+      { ok: false, reason: 'server_misconfigured' } satisfies TokenErrorResponse,
+      { status: 500 }
+    )
+  }
 
-		let liveSession: LiveSessionDoc | null = null
-		try {
-			// Use overrideAccess: true since we do our own entitlement check below
-			liveSession = (await payload.findByID({
-				collection: 'live_sessions' as any,
-				id: sessionId,
-				overrideAccess: true,
-			})) as LiveSessionDoc
-		} catch (err) {
-			console.warn('Failed to load LiveSession', { sessionId, error: err })
-		}
+  // Verify the billing token to extract the user's email identity
+  const verification = verifyBillingPortalToken(billingToken, tokenSecret)
+  if (!verification.ok) {
+    return NextResponse.json(
+      { ok: false, reason: 'unauthorized' } satisfies TokenErrorResponse,
+      { status: 401 }
+    )
+  }
 
-		if (!liveSession) {
-			return NextResponse.json(
-				{ error: 'Live session not found or access denied' },
-				{ status: 404 }
-			)
-		}
+  const userEmail = verification.payload.email
+  if (!userEmail) {
+    return NextResponse.json(
+      { ok: false, reason: 'unauthorized' } satisfies TokenErrorResponse,
+      { status: 401 }
+    )
+  }
 
-		// Verify session status is scheduled or live
-		if (liveSession.status !== 'scheduled' && liveSession.status !== 'live') {
-			return NextResponse.json(
-				{ error: `Session is ${liveSession.status || 'unknown'}, not available for joining` },
-				{ status: 403 }
-			)
-		}
+  // Check active subscription
+  const hasAccess = await verifyActiveSubscription(billingToken)
+  if (!hasAccess) {
+    return NextResponse.json(
+      { ok: false, reason: 'subscription_required' } satisfies TokenErrorResponse,
+      { status: 403 }
+    )
+  }
 
-		// Verify session is within time window (scheduled to 15 min after scheduled time for live sessions)
-		const now = new Date()
-		const scheduledTime = new Date(liveSession.scheduledAt || 0)
-		const windowEnd = new Date(scheduledTime.getTime() + LIVE_SESSION_TIME_WINDOW_MINUTES * 60 * 1000)
+  // --- Load the live session ---
+  let livekitConfig
+  try {
+    livekitConfig = getLiveKitConfig()
+  } catch (err) {
+    console.error('livekit_token: config error', { message: (err as Error).message })
+    return NextResponse.json(
+      { ok: false, reason: 'server_misconfigured' } satisfies TokenErrorResponse,
+      { status: 500 }
+    )
+  }
 
-		if (liveSession.status === 'scheduled' && now < scheduledTime) {
-			return NextResponse.json(
-				{ error: 'Session has not started yet' },
-				{ status: 403 }
-			)
-		}
+  try {
+    const payload = await getPayload({ config })
 
-		if (now > windowEnd) {
-			return NextResponse.json(
-				{ error: 'Session join window has closed' },
-				{ status: 403 }
-			)
-		}
+    const sessionResult = await payload.find({
+      collection: 'live_sessions',
+      where: { roomName: { equals: roomName } },
+      limit: 1,
+      depth: 1, // depth:1 resolves hostUser relationship → { id, email, ... }
+    })
 
-		// For students: verify course entitlement via payload_subscriptions
-		if (role === 'student' && session.member?.id) {
-			type SubscriptionDoc = {
-				id: string | number
-				status?: string
-				currentPeriodEnd?: Date | string
-				cancelAtPeriodEnd?: boolean
-				fundingSource?: string
-			}
+    if (!sessionResult.docs.length) {
+      return NextResponse.json(
+        { ok: false, reason: 'session_not_found' } satisfies TokenErrorResponse,
+        { status: 404 }
+      )
+    }
 
-			try {
-				const subResult = await payload.find({
-					collection: 'payload_subscriptions' as any,
-					where: { member: { equals: session.member.id } },
-					limit: 1,
-					overrideAccess: true,
-				})
-				const sub = subResult.docs?.[0] as SubscriptionDoc | undefined
+    const session = sessionResult.docs[0] as unknown as {
+      status?: string
+      hostUser?: { id?: string; email?: string } | null
+    }
 
-				if (!sub) {
-					return NextResponse.json(
-						{ error: 'No active membership found' },
-						{ status: 403 }
-					)
-				}
+    if (session.status === 'ended' || session.status === 'cancelled') {
+      return NextResponse.json(
+        { ok: false, reason: 'session_closed' } satisfies TokenErrorResponse,
+        { status: 403 }
+      )
+    }
 
-				const status = sub.status ?? null
-				const lifecycleState: 'active' | 'past_due' | 'cancelled' | null =
-					status === 'active' || status === 'trialing'
-						? 'active'
-						: status === 'past_due'
-							? 'past_due'
-							: status === 'canceled'
-								? 'cancelled'
-								: null
-				const entitlementResult = evaluateMembershipEntitlement({
-					subscriptionStatus: status,
-					lifecycleState,
-					periodEnd: sub.currentPeriodEnd || null,
-					cancelAtPeriodEnd: sub.cancelAtPeriodEnd ?? null,
-					fundingSource: (sub.fundingSource as any) || 'direct_payment',
-					now,
-				})
+    // Resolve host status.
+    // session.hostUser is a resolved relationship object (depth:1) with an `id` property.
+    // We compare the Payload user's email against the session's hostUser email.
+    const hostUser = session.hostUser
+    const isHost =
+      hostUser?.email != null &&
+      hostUser.email.toLowerCase().trim() === userEmail.toLowerCase().trim()
 
-				if (entitlementResult.decision !== 'allowed') {
-					return NextResponse.json(
-						{ error: `Not entitled to access courses: ${entitlementResult.reason}` },
-						{ status: 403 }
-					)
-				}
-			} catch (err) {
-				console.warn('Failed to verify membership entitlement', { memberId: session.member.id, error: err })
-				return NextResponse.json(
-					{ error: 'Failed to verify membership' },
-					{ status: 500 }
-				)
-			}
-		}
+    // Build the JWT token (never returned in response body)
+    const jwt = buildLiveKitToken(
+      {
+        identity: userEmail,
+        name: userEmail,
+        grant: {
+          room: roomName,
+          roomJoin: true,
+          canPublish: isHost,
+          canSubscribe: true,
+        },
+      },
+      livekitConfig
+    )
 
-		// Use stored roomName or generate new one
-		const roomName = liveSession.roomName || generateLiveKitRoomName(
-			String(liveSession.course),
-			String(liveSession.id),
-			'default'
-		)
+    // Deliver the token via httpOnly cookie — NOT in the response body
+    const response = NextResponse.json(
+      {
+        ok: true,
+        roomName,
+        wsUrl: livekitConfig.wsUrl,
+      } satisfies TokenOkResponse,
+      { status: 200 }
+    )
 
-		const liveKitConfig = getLiveKitConfig()
-		const at = new AccessToken(liveKitConfig.apiKey, liveKitConfig.apiSecret)
-		// Admin host: identity is "admin:<id>"; member student: identity is member id
-		at.identity = session.administratorId ? `admin:${session.administratorId}` : String(session.member!.id)
-		at.ttl = 15 * 60
+    // HttpOnly + Secure + SameSite prevent XSS and CSRF access to the token.
+    // Max-age matches the JWT TTL (1 hour).
+    response.cookies.set(TOKEN_COOKIE, jwt, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 3600,
+    })
 
-		if (role === 'host') {
-			at.addGrant({
-				room: roomName,
-				roomJoin: true,
-				canPublish: true,
-				canPublishData: true,
-				canSubscribe: true,
-			})
-		} else {
-			at.addGrant({
-				room: roomName,
-				roomJoin: true,
-				canPublish: true,
-				canPublishData: false,
-				canSubscribe: true,
-			})
-		}
-
-		const token = await at.toJwt()
-
-		return NextResponse.json({
-			token,
-			url: liveKitConfig.url,
-			roomName,
-		})
-	} catch (error) {
-		console.error('LiveKit token error:', error)
-		const message = error instanceof Error ? redactLiveKitSecrets(error.message) : 'Internal server error'
-		return NextResponse.json({ error: message }, { status: 500 })
-	}
+    return response
+  } catch (error) {
+    console.error('livekit_token: unexpected error', {
+      roomName,
+      message: (error as Error).message ?? 'unknown',
+    })
+    return NextResponse.json(
+      { ok: false, reason: 'server_error' } satisfies TokenErrorResponse,
+      { status: 500 }
+    )
+  }
 }

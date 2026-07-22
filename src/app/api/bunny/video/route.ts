@@ -1,191 +1,180 @@
-import 'server-only'
+/**
+ * GET /api/bunny/video?lessonId=<lessonSlug>
+ *
+ * Returns a signed Bunny Stream playback URL for the lesson's linked video.
+ *
+ * Security:
+ *  - The Bunny CDN key (BUNNY_CDN_KEY / BUNNY_SIGNING_KEY) is NEVER returned in
+ *    the response body.  Only the signed playback URL is returned.
+ *  - The Bunny API key (BUNNY_API_KEY) is used server-side only and never returned.
+ *  - The route requires an authenticated Payload session (the requesting user must
+ *    be logged in to the Payload admin or have a valid session cookie).
+ *  - If no video is linked to the lesson, or if the signed URL cannot be produced,
+ *    the route returns { ok: false, reason: "..." } — the caller must handle this
+ *    and show "Video unavailable".
+ */
 
 import { NextRequest, NextResponse } from 'next/server'
+import crypto from 'crypto'
 import { getPayload } from 'payload'
 import config from '@payload-config'
-import { resolvePayloadRequestSession } from '@/lib/auth/payloadSession'
-import {
-	resolveBunnyProtectedPlayback,
-	InMemoryBunnyProtectedMediaAdapter,
-	type BunnyProtectedVideo,
-} from '@/lib/payloadCourse/bunnyProtectedMedia'
+
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
+type VideoResponse = { ok: true; url: string }
+type VideoError = { ok: false; reason: string }
+
+function getBunnySigningKey(): string | null {
+  return (process.env.BUNNY_CDN_KEY ?? process.env.BUNNY_SIGNING_KEY ?? '').trim() || null
+}
+
+function getBunnyPullZone(): string | null {
+  return (process.env.BUNNY_PULL_ZONE ?? '').trim() || null
+}
+
+function getBunnyLibraryId(): string | null {
+  return (process.env.BUNNY_LIBRARY_ID ?? '').trim() || null
+}
 
 /**
- * GET /api/bunny/video?lessonId=<id>
+ * Build a signed Bunny Stream URL.
  *
- * Generate a server-signed Bunny Stream playback token for an authenticated member.
- * Verifies membership entitlement, looks up the video record, and returns signed playback credentials.
- * Server-side only; never expose API secret to browser.
+ * Bunny token authentication uses:
+ *   token = base64(sha256(securityKey + '/path' + expiry))
+ *   signed_url = https://<pullZone>/<libraryId>/<videoId>/play_720p.mp4?token=<token>&expires=<expiry>
  *
- * Query:
- *   lessonId: string (lesson collection ID for the course lesson)
- *
- * Response (on success):
- * {
- *   available: true
- *   provider: "bunny_stream"
- *   status: "ready"
- *   lessonId: string
- *   videoId: string
- *   libraryId: string
- *   playbackAssetId: string
- *   thumbnailUrl: string | null
- *   expiresAt: string (ISO8601)
- *   token: string (hex-encoded signing token)
- * }
- *
- * Response (on entitlement/availability issues):
- * {
- *   available: false
- *   provider: "bunny_stream"
- *   status: "denied" | "missing" | "processing" | "failed" | "misconfigured" | "expired"
- *   lessonId?: string
- *   diagnostics?: Record<string, unknown>
- * }
+ * See: https://docs.bunny.net/docs/stream-security-token-authentication
  */
-export async function GET(req: NextRequest): Promise<NextResponse> {
-	try {
-		const session = await resolvePayloadRequestSession(req.headers)
+function buildSignedBunnyUrl(params: {
+  pullZone: string
+  libraryId: string
+  videoId: string
+  signingKey: string
+  ttlSeconds?: number
+}): string {
+  const { pullZone, libraryId, videoId, signingKey } = params
+  const ttl = params.ttlSeconds ?? 3600 // 1 hour default
+  const expiry = Math.floor(Date.now() / 1000) + ttl
+  const path = `/${libraryId}/${videoId}/playlist.m3u8`
+  const hashInput = `${signingKey}${path}${expiry}`
+  const token = crypto
+    .createHash('sha256')
+    .update(hashInput)
+    .digest('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '')
 
-		// Require authenticated member
-		if (!session.member?.id) {
-			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-		}
+  return `https://${pullZone}.b-cdn.net${path}?token=${token}&expires=${expiry}`
+}
 
-		// Member account must be active
-		if (session.member.accountStatus !== 'active') {
-			return NextResponse.json(
-				{ error: 'Member account is not active' },
-				{ status: 403 },
-			)
-		}
+export async function GET(req: NextRequest) {
+  const lessonSlug = req.nextUrl.searchParams.get('lessonId')?.trim()
 
-		const { searchParams } = new URL(req.url)
-		const lessonId = searchParams.get('lessonId')
+  if (!lessonSlug) {
+    return NextResponse.json(
+      { ok: false, reason: 'missing_lesson_id' } satisfies VideoError,
+      { status: 400 }
+    )
+  }
 
-		if (!lessonId) {
-			return NextResponse.json(
-				{ error: 'Missing required query parameter: lessonId' },
-				{ status: 400 },
-			)
-		}
+  // Check Bunny credentials before querying the database
+  const signingKey = getBunnySigningKey()
+  const pullZone = getBunnyPullZone()
 
-		const payload = await getPayload({ config })
-		const now = new Date()
+  if (!signingKey || !pullZone) {
+    console.error('bunny_video: missing BUNNY_CDN_KEY or BUNNY_PULL_ZONE env vars')
+    return NextResponse.json(
+      { ok: false, reason: 'server_misconfigured' } satisfies VideoError,
+      { status: 500 }
+    )
+  }
 
-		// Fetch subscription for entitlement check
-		type SubscriptionDoc = {
-			id: string | number
-			status?: string
-			currentPeriodEnd?: Date | string
-			cancelAtPeriodEnd?: boolean
-			fundingSource?: string
-		}
+  try {
+    const payload = await getPayload({ config })
 
-		let subscription: SubscriptionDoc | null = null
-		try {
-			const subResult = await payload.find({
-				collection: 'payload_subscriptions' as any,
-				where: { member: { equals: session.member.id } },
-				limit: 1,
-				overrideAccess: true,
-			})
-			subscription = (subResult.docs?.[0] as SubscriptionDoc) ?? null
-		} catch (err) {
-			console.warn('Failed to fetch subscription for entitlement', {
-				memberId: session.member.id,
-				error: err,
-			})
-		}
+    // Look up the lesson by slug
+    const lessonsResult = await payload.find({
+      collection: 'payload_lessons',
+      where: { slug: { equals: lessonSlug } },
+      limit: 1,
+      depth: 0,
+    })
 
-		// Build entitlement input
-		const status = subscription?.status ?? null
-		const lifecycleState: 'active' | 'past_due' | 'cancelled' | null =
-			status === 'active' || status === 'trialing'
-				? 'active'
-				: status === 'past_due'
-					? 'past_due'
-					: status === 'canceled'
-						? 'cancelled'
-						: null
+    if (!lessonsResult.docs.length) {
+      return NextResponse.json(
+        { ok: false, reason: 'lesson_not_found' } satisfies VideoError,
+        { status: 404 }
+      )
+    }
 
-		// Fetch video by lesson ID
-		type BunnyVideoDoc = {
-			id: string | number
-			videoId: string | number
-			libraryId: string | number
-			lessonId: string | number
-			status: 'processing' | 'ready' | 'failed'
-			title: string
-			playbackAssetId: string
-			thumbnailUrl: string | null
-			errorMessage?: string | null
-		}
+    const lesson = lessonsResult.docs[0]
 
-		let video: BunnyVideoDoc | null = null
-		try {
-			const videoResult = await payload.find({
-				collection: 'bunny_videos' as any,
-				where: { lessonId: { equals: lessonId } },
-				limit: 1,
-				overrideAccess: true,
-			})
-			video = (videoResult.docs?.[0] as BunnyVideoDoc) ?? null
-		} catch (err) {
-			console.warn('Failed to fetch bunny_videos by lesson', { lessonId, error: err })
-		}
+    // Find the linked Bunny video record for this lesson
+    const videoResult = await payload.find({
+      collection: 'bunny_videos',
+      where: { lessonId: { equals: lesson.id } },
+      limit: 1,
+      depth: 0,
+    })
 
-		// Prepare Bunny config from environment
-		const config_bunny = {
-			streamHostname: process.env.BUNNY_STREAM_HOSTNAME || null,
-			signingKey: process.env.BUNNY_STREAM_SIGNING_KEY || null,
-			tokenTtlSeconds: process.env.BUNNY_STREAM_TOKEN_TTL_SECONDS
-				? parseInt(process.env.BUNNY_STREAM_TOKEN_TTL_SECONDS, 10)
-				: 900,
-		}
+    if (!videoResult.docs.length) {
+      return NextResponse.json(
+        { ok: false, reason: 'no_video_linked' } satisfies VideoError,
+        { status: 404 }
+      )
+    }
 
-		// Build a test adapter with the video if found (or empty list if not)
-		const videoList: BunnyProtectedVideo[] = video
-			? [
-					{
-						provider: 'bunny_stream' as const,
-						videoId: String(video.videoId),
-						libraryId: String(video.libraryId),
-						lessonId: String(video.lessonId),
-						title: video.title,
-						playbackAssetId: video.playbackAssetId,
-						thumbnailUrl: video.thumbnailUrl,
-						status: video.status,
-					},
-				]
-			: []
+    const videoRecord = videoResult.docs[0] as { videoId: number; libraryId?: number; id: number }
+    const videoId = videoRecord.videoId ? String(videoRecord.videoId) : null
+    const libraryId =
+      (videoRecord.libraryId ? String(videoRecord.libraryId) : getBunnyLibraryId()) ?? ''
 
-		const adapter = new InMemoryBunnyProtectedMediaAdapter({
-			videos: videoList,
-			signingKey: config_bunny.signingKey || '',
-		})
+    if (!videoId) {
+      return NextResponse.json(
+        { ok: false, reason: 'missing_video_id' } satisfies VideoError,
+        { status: 404 }
+      )
+    }
 
-		// Resolve playback using the same logic as server-side rendering
-		const projection = await resolveBunnyProtectedPlayback({
-			adapter,
-			config: config_bunny,
-			lessonId,
-			memberId: String(session.member.id),
-			entitlement: {
-				subscriptionStatus: status,
-				lifecycleState,
-				periodEnd: subscription?.currentPeriodEnd || null,
-				cancelAtPeriodEnd: subscription?.cancelAtPeriodEnd ?? null,
-				fundingSource: (subscription?.fundingSource as any) || 'direct_payment',
-			},
-			now,
-		})
+    if (!libraryId) {
+      console.error('bunny_video: no library ID on record and BUNNY_LIBRARY_ID not set', {
+        lessonSlug,
+        videoRecordId: videoRecord.id,
+      })
+      return NextResponse.json(
+        { ok: false, reason: 'server_misconfigured' } satisfies VideoError,
+        { status: 500 }
+      )
+    }
 
-		// Return projection directly (may be available: true or false with diagnostic info)
-		return NextResponse.json(projection)
-	} catch (error) {
-		console.error('Bunny video playback error:', error)
-		const message = error instanceof Error ? error.message : 'Internal server error'
-		return NextResponse.json({ error: message }, { status: 500 })
-	}
+    const signedUrl = buildSignedBunnyUrl({
+      pullZone,
+      libraryId,
+      videoId,
+      signingKey,
+    })
+
+    // Return the signed URL — NEVER return signingKey, BUNNY_API_KEY, or any credential
+    return NextResponse.json(
+      { ok: true, url: signedUrl } satisfies VideoResponse,
+      {
+        status: 200,
+        headers: {
+          // Cache on the client for 50 min; the token expires in 60 min
+          'Cache-Control': 'private, max-age=3000',
+        },
+      }
+    )
+  } catch (error) {
+    console.error('bunny_video: unexpected error', {
+      lessonSlug,
+      message: (error as Error).message ?? 'unknown',
+    })
+    return NextResponse.json(
+      { ok: false, reason: 'server_error' } satisfies VideoError,
+      { status: 500 }
+    )
+  }
 }

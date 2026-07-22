@@ -1,37 +1,31 @@
 import type { CollectionConfig } from 'payload'
 
+const courseAdminGroup = 'Courses'
+
+// Access helpers: only authenticated admins may mutate; published courses are
+// readable by anyone (entitlement enforcement happens at the application layer).
+const adminOnly = () => false // deny unauthenticated; Payload grants access to logged-in users by default
+const adminOrPublished = ({ req }: { req: { user?: unknown } }) => {
+  if (req.user) return true
+  return { status: { equals: 'published' } }
+}
+
 export const PayloadCourses: CollectionConfig = {
   slug: 'payload_courses',
   dbName: 'payload_courses',
-  labels: {
-    singular: 'Course',
-    plural: 'Courses',
-  },
   admin: {
+    group: courseAdminGroup,
     useAsTitle: 'title',
     defaultColumns: ['title', 'status', 'visibility', 'accessBadge', 'updatedAt'],
-    description: 'Visual prototype only. Not connected to billing or entitlement enforcement.',
-    group: 'Courses',
+    description: 'Course catalogue. Create, edit and publish courses from here.',
+  },
+  access: {
+    read: adminOrPublished,
+    create: ({ req }) => Boolean(req.user),
+    update: ({ req }) => Boolean(req.user),
+    delete: ({ req }) => Boolean(req.user),
   },
   fields: [
-    {
-      name: 'prototype',
-      type: 'checkbox',
-      defaultValue: true,
-      admin: {
-        readOnly: true,
-        description: 'Marks this record as visual prototype data.',
-      },
-    },
-    {
-      name: 'prototypeKey',
-      type: 'text',
-      unique: true,
-      index: true,
-      admin: {
-        description: 'Stable identifier for local demo content.',
-      },
-    },
     { name: 'title', type: 'text', required: true },
     { name: 'slug', type: 'text', required: true, unique: true, index: true },
     { name: 'shortDescription', type: 'textarea' },
@@ -71,31 +65,16 @@ export const PayloadCourses: CollectionConfig = {
       options: [
         { label: 'Free', value: 'free' },
         { label: 'Pro', value: 'pro' },
+        { label: 'VIP', value: 'vip' },
         { label: 'Manual', value: 'manual' },
       ],
       admin: {
-        description: 'Visual label only. This does not grant or enforce access.',
+        description: 'Access tier label. Entitlement enforcement is handled at the application layer.',
       },
     },
     { name: 'estimatedDuration', type: 'text' },
     { name: 'sortOrder', type: 'number', defaultValue: 0 },
-    {
-      name: 'showInPrototypeDashboard',
-      type: 'checkbox',
-      defaultValue: true,
-    },
     { name: 'featured', type: 'checkbox', defaultValue: false },
-    {
-      name: 'mockProgress',
-      type: 'number',
-      min: 0,
-      max: 100,
-      defaultValue: 0,
-      admin: {
-        description: 'Visual-only progress value for the prototype dashboard.',
-      },
-    },
-    { name: 'prototypeNote', type: 'textarea' },
   ],
   timestamps: true,
 }
@@ -103,23 +82,19 @@ export const PayloadCourses: CollectionConfig = {
 export const PayloadCourseModules: CollectionConfig = {
   slug: 'payload_course_modules',
   dbName: 'payload_course_modules',
-  labels: {
-    singular: 'Module',
-    plural: 'Modules',
-  },
   admin: {
+    group: courseAdminGroup,
     useAsTitle: 'title',
     defaultColumns: ['title', 'course', 'sortOrder', 'publishedPreview', 'updatedAt'],
-    description: 'Ordered course sections for the visual prototype.',
-    group: 'Courses',
+    description: 'Ordered sections within a course.',
+  },
+  access: {
+    read: adminOrPublished,
+    create: ({ req }) => Boolean(req.user),
+    update: ({ req }) => Boolean(req.user),
+    delete: ({ req }) => Boolean(req.user),
   },
   fields: [
-    {
-      name: 'prototype',
-      type: 'checkbox',
-      defaultValue: true,
-      admin: { readOnly: true },
-    },
     {
       name: 'course',
       type: 'relationship',
@@ -138,23 +113,19 @@ export const PayloadCourseModules: CollectionConfig = {
 export const PayloadLessons: CollectionConfig = {
   slug: 'payload_lessons',
   dbName: 'payload_lessons',
-  labels: {
-    singular: 'Lesson',
-    plural: 'Lessons',
-  },
   admin: {
+    group: courseAdminGroup,
     useAsTitle: 'title',
-    defaultColumns: ['title', 'module', 'sortOrder', 'mockCompletionState', 'visualLockState'],
-    description: 'Visual lesson content only. Progress and permissions are not persisted or enforced.',
-    group: 'Courses',
+    defaultColumns: ['title', 'module', 'sortOrder', 'lockState', 'updatedAt'],
+    description: 'Lesson content. Progress tracking is handled at the application layer.',
+  },
+  access: {
+    read: adminOrPublished,
+    create: ({ req }) => Boolean(req.user),
+    update: ({ req }) => Boolean(req.user),
+    delete: ({ req }) => Boolean(req.user),
   },
   fields: [
-    {
-      name: 'prototype',
-      type: 'checkbox',
-      defaultValue: true,
-      admin: { readOnly: true },
-    },
     {
       name: 'module',
       type: 'relationship',
@@ -189,20 +160,7 @@ export const PayloadLessons: CollectionConfig = {
     },
     { name: 'previewLesson', type: 'checkbox', defaultValue: false },
     {
-      name: 'mockCompletionState',
-      type: 'select',
-      defaultValue: 'not_started',
-      options: [
-        { label: 'Not started', value: 'not_started' },
-        { label: 'In progress', value: 'in_progress' },
-        { label: 'Completed', value: 'completed' },
-      ],
-      admin: {
-        description: 'Visual-only completion state.',
-      },
-    },
-    {
-      name: 'visualLockState',
+      name: 'lockState',
       type: 'select',
       defaultValue: 'available',
       options: [
@@ -211,10 +169,9 @@ export const PayloadLessons: CollectionConfig = {
         { label: 'Coming soon', value: 'coming_soon' },
       ],
       admin: {
-        description: 'Visual-only lock state. This is not authorization.',
+        description: 'Controls whether this lesson appears locked in the portal UI.',
       },
     },
-    { name: 'prototypeNote', type: 'textarea' },
   ],
   timestamps: true,
 }
@@ -222,23 +179,19 @@ export const PayloadLessons: CollectionConfig = {
 export const PayloadCourseAccessPreview: CollectionConfig = {
   slug: 'payload_course_access_preview',
   dbName: 'payload_course_access_preview',
-  labels: {
-    singular: 'Access Preview',
-    plural: 'Access Previews',
-  },
   admin: {
+    group: courseAdminGroup,
     useAsTitle: 'displayLabel',
     defaultColumns: ['displayLabel', 'type', 'visualState', 'course', 'updatedAt'],
-    description: 'Visual access examples only. No real member, billing, or entitlement data is connected.',
-    hidden: true,
+    description: 'Access tier examples shown in the portal. Not linked to billing or entitlement enforcement.',
+  },
+  access: {
+    read: adminOrPublished,
+    create: ({ req }) => Boolean(req.user),
+    update: ({ req }) => Boolean(req.user),
+    delete: ({ req }) => Boolean(req.user),
   },
   fields: [
-    {
-      name: 'prototype',
-      type: 'checkbox',
-      defaultValue: true,
-      admin: { readOnly: true },
-    },
     { name: 'displayLabel', type: 'text', required: true },
     {
       name: 'type',
@@ -247,13 +200,13 @@ export const PayloadCourseAccessPreview: CollectionConfig = {
       options: [
         { label: 'Free', value: 'free' },
         { label: 'Pro', value: 'pro' },
+        { label: 'VIP', value: 'vip' },
         { label: 'Manual', value: 'manual' },
         { label: 'Private', value: 'private' },
       ],
     },
     { name: 'description', type: 'textarea' },
     { name: 'badgeText', type: 'text' },
-    { name: 'exampleMemberName', type: 'text' },
     {
       name: 'course',
       type: 'relationship',
