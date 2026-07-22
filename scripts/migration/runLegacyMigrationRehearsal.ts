@@ -35,6 +35,13 @@ interface RehearsalCounts {
   accessGrants: number
 }
 
+interface FixtureSnapshot {
+  member: Record<string, unknown>
+  billingAccount: Record<string, unknown>
+  subscription: Record<string, unknown>
+  accessGrant: Record<string, unknown>
+}
+
 interface RehearsalEvidence {
   schemaName: string
   baseline: RehearsalCounts
@@ -53,6 +60,8 @@ interface RehearsalEvidence {
   rollbackProof: boolean
   reapplyProof: boolean
   preexistingRowsUnchanged: boolean
+  fixtureBefore: FixtureSnapshot
+  fixtureAfterRollback: FixtureSnapshot
   sourceCount: number
   errors1: number
   errors2: number
@@ -71,6 +80,69 @@ async function queryCounts(client: Client, schemaName: string): Promise<Rehearsa
     billingAccounts: parseInt(ba.rows[0]!.count, 10),
     subscriptions: parseInt(sub.rows[0]!.count, 10),
     accessGrants: parseInt(ag.rows[0]!.count, 10),
+  }
+}
+
+const FIXTURE_IDS = {
+  member: 900000001,
+  billingAccount: 900000002,
+  subscription: 900000003,
+  accessGrant: 900000004,
+} as const
+
+async function seedPreexistingFixtures(client: Client, schemaName: string): Promise<void> {
+  await client.query('BEGIN')
+  try {
+    await client.query(`DELETE FROM ${schemaName}.payload_access_grants WHERE id = $1`, [FIXTURE_IDS.accessGrant])
+    await client.query(`DELETE FROM ${schemaName}.payload_subscriptions WHERE id = $1`, [FIXTURE_IDS.subscription])
+    await client.query(`DELETE FROM ${schemaName}.payload_billing_accounts WHERE id = $1`, [FIXTURE_IDS.billingAccount])
+    await client.query(`DELETE FROM ${schemaName}.payload_members WHERE id = $1`, [FIXTURE_IDS.member])
+    await client.query(
+      `INSERT INTO ${schemaName}.payload_members
+        (id, account_status, source, email, notes)
+       VALUES ($1, 'active', 'admin_created', 'fixture-unrelated@invalid.test', 'rehearsal-preexisting-fixture')`,
+      [FIXTURE_IDS.member],
+    )
+    await client.query(
+      `INSERT INTO ${schemaName}.payload_billing_accounts
+        (id, display_name, member_id, stripe_customer_id, stripe_mode, billing_status, metadata)
+       VALUES ($1, 'Rehearsal fixture billing', $2, 'cus_rehearsal_fixture', 'test', 'active', '{"fixture":true}'::jsonb)`,
+      [FIXTURE_IDS.billingAccount, FIXTURE_IDS.member],
+    )
+    await client.query(
+      `INSERT INTO ${schemaName}.payload_subscriptions
+        (id, display_name, member_id, billing_account_id, stripe_subscription_id, plan, status, metadata)
+       VALUES ($1, 'Rehearsal fixture subscription', $2, $3, 'sub_rehearsal_fixture', 'pro', 'active', '{"fixture":true}'::jsonb)`,
+      [FIXTURE_IDS.subscription, FIXTURE_IDS.member, FIXTURE_IDS.billingAccount],
+    )
+    await client.query(
+      `INSERT INTO ${schemaName}.payload_access_grants
+        (id, display_name, member_id, resource_type, resource_id, status, source, source_id, metadata)
+       VALUES ($1, 'Rehearsal fixture grant', $2, 'course', 'fixture-course', 'active', 'manual', 'rehearsal_fixture_grant', '{"fixture":true}'::jsonb)`,
+      [FIXTURE_IDS.accessGrant, FIXTURE_IDS.member],
+    )
+    await client.query('COMMIT')
+  } catch (error) {
+    await client.query('ROLLBACK')
+    throw error
+  }
+}
+
+async function snapshotPreexistingFixtures(client: Client, schemaName: string): Promise<FixtureSnapshot> {
+  const [member, billingAccount, subscription, accessGrant] = await Promise.all([
+    client.query(`SELECT id, account_status::text, source::text, email, notes FROM ${schemaName}.payload_members WHERE id = $1`, [FIXTURE_IDS.member]),
+    client.query(`SELECT id, display_name, member_id, stripe_customer_id, stripe_mode::text, billing_status::text, metadata FROM ${schemaName}.payload_billing_accounts WHERE id = $1`, [FIXTURE_IDS.billingAccount]),
+    client.query(`SELECT id, display_name, member_id, billing_account_id, stripe_subscription_id, plan::text, status::text, metadata FROM ${schemaName}.payload_subscriptions WHERE id = $1`, [FIXTURE_IDS.subscription]),
+    client.query(`SELECT id, display_name, member_id, resource_type::text, resource_id, status::text, source::text, source_id, metadata FROM ${schemaName}.payload_access_grants WHERE id = $1`, [FIXTURE_IDS.accessGrant]),
+  ])
+  if (member.rows.length !== 1 || billingAccount.rows.length !== 1 || subscription.rows.length !== 1 || accessGrant.rows.length !== 1) {
+    throw new Error('rehearsal_fixture_snapshot_incomplete')
+  }
+  return {
+    member: member.rows[0] as Record<string, unknown>,
+    billingAccount: billingAccount.rows[0] as Record<string, unknown>,
+    subscription: subscription.rows[0] as Record<string, unknown>,
+    accessGrant: accessGrant.rows[0] as Record<string, unknown>,
   }
 }
 
@@ -111,9 +183,13 @@ async function main(): Promise<void> {
   const client = new Client({ connectionString: databaseUrl })
   await client.connect()
   let baseline: RehearsalCounts
+  let fixtureBefore: FixtureSnapshot
   try {
+    await seedPreexistingFixtures(client, schemaName)
+    fixtureBefore = await snapshotPreexistingFixtures(client, schemaName)
     baseline = await queryCounts(client, schemaName)
     log(`BASELINE: members=${baseline.members} billing=${baseline.billingAccounts} subs=${baseline.subscriptions} grants=${baseline.accessGrants}`)
+    log('PREEXISTING FIXTURE SNAPSHOT CAPTURED')
   } finally {
     await client.end()
   }
@@ -199,19 +275,18 @@ async function main(): Promise<void> {
   const client4 = new Client({ connectionString: databaseUrl })
   await client4.connect()
   let afterRollback: RehearsalCounts
+  let fixtureAfterRollback: FixtureSnapshot
   try {
     afterRollback = await queryCounts(client4, schemaName)
+    fixtureAfterRollback = await snapshotPreexistingFixtures(client4, schemaName)
     log(`AFTER ROLLBACK (apply1): members=${afterRollback.members} billing=${afterRollback.billingAccounts} subs=${afterRollback.subscriptions} grants=${afterRollback.accessGrants}`)
   } finally {
     await client4.end()
   }
 
-  // After rolling back apply1's inserted rows, apply2's rows should remain (apply2 ran after apply1 and
-  // inserted its own rows on top). The baseline preexisting rows must also still be present.
   const preexistingRowsUnchanged =
-    afterRollback.billingAccounts >= baseline.billingAccounts &&
-    afterRollback.subscriptions >= baseline.subscriptions
-  log(`PREEXISTING ROWS UNCHANGED: ${preexistingRowsUnchanged ? 'PASS' : 'FAIL'}`)
+    JSON.stringify(fixtureAfterRollback) === JSON.stringify(fixtureBefore)
+  log(`PREEXISTING FIXTURE UNCHANGED: ${preexistingRowsUnchanged ? 'PASS — exact snapshot match' : 'FAIL — fixture changed'}`)
 
   // ── Step 4: reapply after rollback ───────────────────────────────────────────
   const apply3RunId = makeRunId('apply3')
@@ -234,8 +309,17 @@ async function main(): Promise<void> {
     await client5.end()
   }
 
-  const rollbackProof = afterRollback.members < afterApply2.members || afterRollback.accessGrants < afterApply2.accessGrants
-  const reapplyProof = result3.errorCount === 0 && afterApply3.members >= afterApply1.members
+  const rollbackProof =
+    afterRollback.members === baseline.members &&
+    afterRollback.billingAccounts === baseline.billingAccounts &&
+    afterRollback.subscriptions === baseline.subscriptions &&
+    afterRollback.accessGrants === baseline.accessGrants
+  const reapplyProof =
+    result3.errorCount === 0 &&
+    afterApply3.members === afterApply1.members &&
+    afterApply3.billingAccounts === afterApply1.billingAccounts &&
+    afterApply3.subscriptions === afterApply1.subscriptions &&
+    afterApply3.accessGrants === afterApply1.accessGrants
 
   // ── Summary ──────────────────────────────────────────────────────────────────
   const evidence: RehearsalEvidence = {
@@ -256,6 +340,8 @@ async function main(): Promise<void> {
     rollbackProof,
     reapplyProof,
     preexistingRowsUnchanged,
+    fixtureBefore,
+    fixtureAfterRollback,
     sourceCount: result1.sourceCount,
     errors1: result1.errorCount,
     errors2: result2.errorCount,
@@ -265,7 +351,7 @@ async function main(): Promise<void> {
   log(`\n=== REHEARSAL SUMMARY ===`)
   log(JSON.stringify(evidence, null, 2))
 
-  const allPass = idempotencyProof && preexistingRowsUnchanged && reapplyProof
+  const allPass = idempotencyProof && rollbackProof && preexistingRowsUnchanged && reapplyProof
   log(`\nREHEARSAL RESULT: ${allPass ? 'PASS' : 'FAIL'}`)
   log(`  idempotency:     ${idempotencyProof ? 'PASS' : 'FAIL'}`)
   log(`  rollbackProof:   ${rollbackProof ? 'PASS' : 'FAIL (no rows changed — may be expected if apply2 inserted rows still present)'}`)

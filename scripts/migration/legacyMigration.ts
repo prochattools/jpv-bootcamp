@@ -210,6 +210,16 @@ export function assertRehearsalGuard(databaseUrl: string, schemaName: string): v
   if (!schemaName.includes('rehearsal')) {
     throw new Error(`rehearsal_schema_rejected: schemaName "${schemaName}" must contain "rehearsal"`)
   }
+  if (!/^[a-z_][a-z0-9_]*$/.test(schemaName)) {
+    throw new Error('rehearsal_schema_identifier_rejected: use lowercase letters, digits, and underscores only')
+  }
+}
+
+function quotePgIdentifier(identifier: string): string {
+  if (!/^[a-z_][a-z0-9_]*$/.test(identifier)) {
+    throw new Error('database_schema_identifier_rejected')
+  }
+  return `"${identifier}"`
 }
 
 // ─── deterministic source ID ──────────────────────────────────────────────────
@@ -641,12 +651,12 @@ async function applyRecord(
             SET member_id = $1,
                 status = $2,
                 resource_type = $3,
-                resource_id = $4,
+                resource_id = $4::varchar,
                 updated_at = CASE
                   WHEN member_id IS DISTINCT FROM $1
                     OR status IS DISTINCT FROM $2
                     OR resource_type IS DISTINCT FROM $3
-                    OR resource_id IS DISTINCT FROM $4
+                    OR resource_id IS DISTINCT FROM $4::varchar
                   THEN now()
                   ELSE updated_at
                 END
@@ -698,7 +708,7 @@ async function applyRecord(
 
 // ─── rollback ────────────────────────────────────────────────────────────────
 
-async function rollbackRun(
+export async function rollbackRun(
   client: Client,
   rollbackRunId: string,
   log: (m: string) => void,
@@ -822,6 +832,9 @@ export async function runMigration(
 
   const client = new Client({ connectionString: config.databaseUrl })
   await client.connect()
+  // Set search_path so PostgreSQL resolves schema-qualified enum type OIDs
+  // in parameterized ON CONFLICT UPDATE SET clauses (PG can't infer non-public enums otherwise).
+  await client.query(`SET search_path TO ${quotePgIdentifier(schemaName)}, public`)
 
   try {
     if (config.mode === 'apply') {

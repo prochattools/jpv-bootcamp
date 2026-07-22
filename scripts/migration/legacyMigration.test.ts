@@ -24,6 +24,7 @@ import {
   assertRehearsalGuard,
   assertStagingGuard,
   extractSourceRows,
+  rollbackRun,
   runMigration,
   sourceId,
   transformRow,
@@ -470,7 +471,19 @@ async function main(): Promise<void> {
     )
   }
 
-  // 32. schemaName override — staging guard skipped for rehearsal schema
+  // 32. assertRehearsalGuard — unsafe SQL identifiers rejected
+  {
+    assert.throws(
+      () => assertRehearsalGuard('postgresql://u:p@127.0.0.1/db', 'rehearsal;drop_schema'),
+      /rehearsal_schema_identifier_rejected/,
+    )
+    assert.throws(
+      () => assertRehearsalGuard('postgresql://u:p@127.0.0.1/db', 'RehearsalCopy'),
+      /rehearsal_schema_rejected|rehearsal_schema_identifier_rejected/,
+    )
+  }
+
+  // 33. schemaName override — staging guard skipped for rehearsal schema
   {
     const dir = tempDir()
     try {
@@ -492,7 +505,31 @@ async function main(): Promise<void> {
     }
   }
 
-  console.log('legacyMigration.test.ts passed (32 tests)')
+  // 34. rollbackRun — updated preexisting rows refuse before mutation
+  {
+    const queries: string[] = []
+    const client = {
+      async query(sql: string) {
+        queries.push(sql.trim())
+        if (sql.includes('payload_migration_audit')) {
+          return {
+            rows: [{ detail: { outcomes: { member: 'updated' } } }],
+            rowCount: 1,
+          }
+        }
+        throw new Error(`unexpected mutation query: ${sql}`)
+      },
+    }
+
+    await assert.rejects(
+      async () => rollbackRun(client as never, 'run-updated-row', () => {}, 'jpvbootcamp_rehearsal'),
+      /rollback_refused: run updated preexisting rows and no before-image is available/,
+    )
+    assert.equal(queries.length, 1, 'rollback refusal must stop after the audit query')
+    assert.ok(!queries.some((sql) => sql === 'BEGIN' || sql.includes('DELETE FROM')))
+  }
+
+  console.log('legacyMigration.test.ts passed (34 tests)')
 }
 
 main().catch((err) => {
