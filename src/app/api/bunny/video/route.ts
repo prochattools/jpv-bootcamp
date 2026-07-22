@@ -8,12 +8,19 @@
  *    Unauthenticated requests are rejected with 401.
  *  - Members must have an active enrollment in the course that contains the
  *    requested lesson.  Admin users (payload_users) bypass the enrollment check.
- *  - The Bunny CDN key (BUNNY_CDN_KEY / BUNNY_SIGNING_KEY) is NEVER returned in
- *    the response body.  Only the signed playback URL is returned.
- *  - The Bunny API key (BUNNY_API_KEY) is used server-side only and never returned.
+ *  - The Bunny CDN key (BUNNY_STREAM_TOKEN_AUTH_KEY / BUNNY_STREAM_SIGNING_KEY /
+ *    BUNNY_CDN_KEY / BUNNY_SIGNING_KEY) is NEVER returned in the response body.
+ *    Only the signed playback URL is returned.
+ *  - The Bunny API key (BUNNY_STREAM_API_KEY / BUNNY_API_KEY) is used server-side
+ *    only and never returned.
  *  - If no video is linked to the lesson, or if the signed URL cannot be produced,
  *    the route returns { ok: false, reason: "..." } — the caller must handle this
  *    and show "Video unavailable".
+ *
+ * Env var canonical precedence (most-specific first):
+ *   Signing key : BUNNY_STREAM_TOKEN_AUTH_KEY > BUNNY_STREAM_SIGNING_KEY > BUNNY_CDN_KEY > BUNNY_SIGNING_KEY
+ *   CDN hostname: BUNNY_STREAM_CDN_HOSTNAME > BUNNY_STREAM_HOSTNAME > (derived from BUNNY_PULL_ZONE)
+ *   Library ID  : BUNNY_STREAM_LIBRARY_ID > BUNNY_LIBRARY_ID
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -28,38 +35,72 @@ export const dynamic = 'force-dynamic'
 type VideoResponse = { ok: true; url: string }
 type VideoError = { ok: false; reason: string }
 
+/**
+ * Signing key — canonical Bunny Stream token auth key.
+ * Priority: BUNNY_STREAM_TOKEN_AUTH_KEY > BUNNY_STREAM_SIGNING_KEY > BUNNY_CDN_KEY > BUNNY_SIGNING_KEY
+ */
 function getBunnySigningKey(): string | null {
-  return (process.env.BUNNY_CDN_KEY ?? process.env.BUNNY_SIGNING_KEY ?? '').trim() || null
-}
-
-function getBunnyPullZone(): string | null {
-  return (process.env.BUNNY_PULL_ZONE ?? '').trim() || null
-}
-
-function getBunnyLibraryId(): string | null {
-  return (process.env.BUNNY_LIBRARY_ID ?? '').trim() || null
+  return (
+    (
+      process.env.BUNNY_STREAM_TOKEN_AUTH_KEY ??
+      process.env.BUNNY_STREAM_SIGNING_KEY ??
+      process.env.BUNNY_CDN_KEY ??
+      process.env.BUNNY_SIGNING_KEY ??
+      ''
+    ).trim() || null
+  )
 }
 
 /**
- * Build a signed Bunny Stream URL.
+ * CDN delivery hostname (the *.b-cdn.net pull zone host).
+ * Priority: BUNNY_STREAM_CDN_HOSTNAME > BUNNY_STREAM_HOSTNAME > BUNNY_PULL_ZONE (appended with .b-cdn.net)
+ */
+function getBunnyCdnHostname(): string | null {
+  const explicit = (
+    process.env.BUNNY_STREAM_CDN_HOSTNAME ??
+    process.env.BUNNY_STREAM_HOSTNAME ??
+    ''
+  ).trim()
+  if (explicit) return explicit
+
+  // Legacy: BUNNY_PULL_ZONE is just the subdomain, not the full hostname
+  const pullZone = (process.env.BUNNY_PULL_ZONE ?? '').trim()
+  if (pullZone) {
+    return pullZone.includes('.') ? pullZone : `${pullZone}.b-cdn.net`
+  }
+
+  return null
+}
+
+function getBunnyLibraryId(): string | null {
+  return (
+    (process.env.BUNNY_STREAM_LIBRARY_ID ?? process.env.BUNNY_LIBRARY_ID ?? '').trim() || null
+  )
+}
+
+/**
+ * Build a signed Bunny Stream HLS playlist URL.
  *
- * Bunny token authentication uses:
- *   token = base64(sha256(securityKey + '/path' + expiry))
- *   signed_url = https://<pullZone>/<libraryId>/<videoId>/play_720p.mp4?token=<token>&expires=<expiry>
+ * Official Bunny Stream token authentication spec:
+ *   token    = base64url( sha256( signingKey + path + expiryTimestamp ) )
+ *   path     = /{videoGuid}/playlist.m3u8
+ *   url      = https://<cdnHostname>{path}?token={token}&expires={expiryTimestamp}
+ *
+ * Note: Bunny Stream CDN paths use the VIDEO GUID (UUID), NOT the numeric videoId
+ * or libraryId. The numeric ids are management-API identifiers only.
  *
  * See: https://docs.bunny.net/docs/stream-security-token-authentication
  */
 function buildSignedBunnyUrl(params: {
-  pullZone: string
-  libraryId: string
-  videoId: string
+  cdnHostname: string
+  videoGuid: string
   signingKey: string
   ttlSeconds?: number
 }): string {
-  const { pullZone, libraryId, videoId, signingKey } = params
+  const { cdnHostname, videoGuid, signingKey } = params
   const ttl = params.ttlSeconds ?? 3600 // 1 hour default
   const expiry = Math.floor(Date.now() / 1000) + ttl
-  const path = `/${libraryId}/${videoId}/playlist.m3u8`
+  const path = `/${videoGuid}/playlist.m3u8`
   const hashInput = `${signingKey}${path}${expiry}`
   const token = crypto
     .createHash('sha256')
@@ -69,7 +110,7 @@ function buildSignedBunnyUrl(params: {
     .replace(/\//g, '_')
     .replace(/=+$/, '')
 
-  return `https://${pullZone}.b-cdn.net${path}?token=${token}&expires=${expiry}`
+  return `https://${cdnHostname}${path}?token=${token}&expires=${expiry}`
 }
 
 export async function GET(req: NextRequest) {
@@ -167,10 +208,13 @@ export async function GET(req: NextRequest) {
 
     // ── Bunny credentials (checked after auth so anon gets 401, not 500) ──────
     const signingKey = getBunnySigningKey()
-    const pullZone = getBunnyPullZone()
+    const cdnHostname = getBunnyCdnHostname()
 
-    if (!signingKey || !pullZone) {
-      console.error('bunny_video: missing BUNNY_CDN_KEY or BUNNY_PULL_ZONE env vars')
+    if (!signingKey || !cdnHostname) {
+      console.error(
+        'bunny_video: missing signing key or CDN hostname. ' +
+          'Set BUNNY_STREAM_TOKEN_AUTH_KEY and BUNNY_STREAM_CDN_HOSTNAME env vars.'
+      )
       return NextResponse.json(
         { ok: false, reason: 'server_misconfigured' } satisfies VideoError,
         { status: 500 }
@@ -209,37 +253,36 @@ export async function GET(req: NextRequest) {
       )
     }
 
-    const videoRecord = videoResult.docs[0] as { videoId: number; libraryId?: number; id: number }
-    const videoId = videoRecord.videoId ? String(videoRecord.videoId) : null
-    const libraryId =
-      (videoRecord.libraryId ? String(videoRecord.libraryId) : getBunnyLibraryId()) ?? ''
+    const videoRecord = videoResult.docs[0] as {
+      videoId?: number | null
+      videoGuid?: string | null
+      libraryId?: number | null
+      id: number
+    }
 
-    if (!videoId) {
+    // Bunny Stream CDN delivery requires the GUID (UUID), not the numeric videoId.
+    // videoGuid is populated by the Bunny webhook handler from the VideoGuid field.
+    const videoGuid = videoRecord.videoGuid?.trim() || null
+
+    if (!videoGuid) {
+      console.error('bunny_video: video record has no videoGuid (UUID)', {
+        lessonSlug,
+        videoRecordId: videoRecord.id,
+        videoId: videoRecord.videoId,
+      })
       return NextResponse.json(
-        { ok: false, reason: 'missing_video_id' } satisfies VideoError,
+        { ok: false, reason: 'video_not_ready' } satisfies VideoError,
         { status: 404 }
       )
     }
 
-    if (!libraryId) {
-      console.error('bunny_video: no library ID on record and BUNNY_LIBRARY_ID not set', {
-        lessonSlug,
-        videoRecordId: videoRecord.id,
-      })
-      return NextResponse.json(
-        { ok: false, reason: 'server_misconfigured' } satisfies VideoError,
-        { status: 500 }
-      )
-    }
-
     const signedUrl = buildSignedBunnyUrl({
-      pullZone,
-      libraryId,
-      videoId,
+      cdnHostname,
+      videoGuid,
       signingKey,
     })
 
-    // Return the signed URL — NEVER return signingKey, BUNNY_API_KEY, or any credential
+    // Return the signed URL — NEVER return signingKey, BUNNY_STREAM_API_KEY, or any credential
     return NextResponse.json(
       { ok: true, url: signedUrl } satisfies VideoResponse,
       {

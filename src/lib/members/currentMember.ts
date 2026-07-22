@@ -13,7 +13,11 @@ export type CurrentPayloadMember = PayloadDocument & {
 type SignInEligibleMember = Pick<CurrentPayloadMember, 'accountStatus' | 'source' | 'emailVerifiedAt'>
 
 export function isEligibleCurrentMember(member: SignInEligibleMember | null | undefined): boolean {
-  if (member?.accountStatus === 'active') return true
+  // Active members must also have emailVerifiedAt set. This matches the gate
+  // in identityDestination.resolveMember so that portal eligibility is
+  // consistent with the login decision. Admin-invited members receive
+  // emailVerifiedAt at the moment they complete their invitation setup.
+  if (member?.accountStatus === 'active') return Boolean(member.emailVerifiedAt)
   return (
     member?.accountStatus === 'pending' &&
     member.source === 'self_signup' &&

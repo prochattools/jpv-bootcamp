@@ -136,7 +136,25 @@ export default async function PortalLessonPage({ params, searchParams }: LessonP
 
           <section className='rounded-2xl border border-neutral-200 bg-white p-8 shadow-sm'>
             <h2 className='text-xl font-semibold'>Lesson content</h2>
+            {detail.lesson.lockState === 'locked' ? (
+              <div className='mt-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3'>
+                <p className='text-sm font-semibold text-amber-800'>Lesson locked</p>
+                <p className='mt-1 text-sm text-amber-700'>This lesson is not yet available.</p>
+              </div>
+            ) : detail.lesson.lockState === 'coming_soon' ? (
+              <div className='mt-5 rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3'>
+                <p className='text-sm font-semibold text-neutral-700'>Coming soon</p>
+                <p className='mt-1 text-sm text-neutral-600'>This lesson will be available shortly.</p>
+              </div>
+            ) : null}
             <LessonVideoPlayer lessonSlug={lessonSlug} />
+            {detail.lesson.contentHtml ? (
+              <div
+                className='lesson-body mt-8 max-w-none text-sm leading-7 text-neutral-800 [&_h2]:mb-2 [&_h2]:mt-6 [&_h2]:text-xl [&_h2]:font-semibold [&_h3]:mb-2 [&_h3]:mt-4 [&_h3]:text-lg [&_h3]:font-semibold [&_a]:text-neutral-950 [&_a]:underline [&_a]:underline-offset-4 [&_blockquote]:border-l-4 [&_blockquote]:border-neutral-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_li]:ml-4 [&_li]:list-disc [&_ol_li]:list-decimal [&_p]:mb-3'
+                // eslint-disable-next-line react/no-danger
+                dangerouslySetInnerHTML={{ __html: detail.lesson.contentHtml }}
+              />
+            ) : null}
 
             {detail.lesson.resources.length > 0 ? (
               <div className='mt-8 space-y-4'>

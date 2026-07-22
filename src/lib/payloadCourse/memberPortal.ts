@@ -1,3 +1,5 @@
+import { convertLexicalToHTML } from '@payloadcms/richtext-lexical/html'
+
 import {
   evaluatePayloadCourseAccess,
   evaluatePayloadLessonAccess,
@@ -11,6 +13,8 @@ import {
   type MemberLessonResource,
 } from '@/lib/payloadCourse/lessonResources'
 
+export type LessonLockState = 'available' | 'locked' | 'coming_soon'
+
 export type MemberPortalLesson = {
   id: string
   title: string
@@ -18,6 +22,7 @@ export type MemberPortalLesson = {
   summary: string | null
   estimatedDuration: string | null
   previewLesson: boolean
+  lockState: LessonLockState
   completed: boolean
 }
 
@@ -75,8 +80,10 @@ export type MemberPortalLessonDetail = {
     summary: string | null
     estimatedDuration: string | null
     previewLesson: boolean
+    lockState: LessonLockState
     videoProviderLabel: string | null
     videoIdOrPreviewUrl: string | null
+    contentHtml: string | null
     resources: MemberLessonResource[]
     completed: boolean
   } | null
@@ -134,6 +141,26 @@ function asString(value: unknown): string | null {
 
 function asBoolean(value: unknown): boolean {
   return value === true
+}
+
+function asLockState(value: unknown): LessonLockState {
+  if (value === 'locked' || value === 'coming_soon') return value
+  return 'available'
+}
+
+function asContentHtml(value: unknown): string | null {
+  if (!value || typeof value !== 'object') return null
+  try {
+    const html = convertLexicalToHTML({
+      data: value as Parameters<typeof convertLexicalToHTML>[0]['data'],
+    })
+    // Return null rather than an empty container div
+    const trimmed = html.trim()
+    if (!trimmed || trimmed === '<div></div>' || trimmed === '<div> </div>') return null
+    return trimmed
+  } catch {
+    return null
+  }
 }
 
 function asDateString(value: unknown): string | null {
@@ -254,7 +281,10 @@ async function getAllowedCourseModules(
 ): Promise<MemberPortalModule[]> {
   const modules = await findAll(payload, 'payload_course_modules', {
     where: {
-      course: { equals: String(courseId) },
+      and: [
+        { course: { equals: String(courseId) } },
+        { publishedPreview: { equals: true } },
+      ],
     },
     sort: 'sortOrder',
     limit: 100,
@@ -281,6 +311,7 @@ async function getAllowedCourseModules(
         summary: asString(lesson.summary),
         estimatedDuration: asString(lesson.estimatedDuration),
         previewLesson: asBoolean(lesson.previewLesson),
+        lockState: asLockState(lesson.lockState),
         completed: completedLessonIds.has(String(lesson.id)),
       })),
     })
@@ -514,8 +545,10 @@ export async function getMemberLessonDetail(
           summary: asString(lesson.summary),
           estimatedDuration: asString(lesson.estimatedDuration),
           previewLesson: asBoolean(lesson.previewLesson),
+          lockState: asLockState(lesson.lockState),
           videoProviderLabel: asString(lesson.videoProviderLabel),
           videoIdOrPreviewUrl: asString(lesson.videoIdOrPreviewUrl),
+          contentHtml: asContentHtml(lesson.content),
           resources,
           completed: completedLessonIds.has(String(lesson.id)),
         }
@@ -526,8 +559,10 @@ export async function getMemberLessonDetail(
           summary: null,
           estimatedDuration: null,
           previewLesson: false,
+          lockState: 'available' as LessonLockState,
           videoProviderLabel: null,
           videoIdOrPreviewUrl: null,
+          contentHtml: null,
           resources: [],
           completed: false,
         },
@@ -558,13 +593,17 @@ export async function markMemberLessonComplete(
 ): Promise<PayloadDocument> {
   const normalizedMemberId = String(memberId)
   const normalizedLessonId = String(lessonId)
-  const existing = await findOne(payload, 'payload_lesson_progress', {
+  const completedAt = new Date().toISOString()
+  const progressWhere = {
     and: [
       { member: { equals: normalizedMemberId } },
       { lesson: { equals: normalizedLessonId } },
     ],
-  })
-  const completedAt = new Date().toISOString()
+  }
+
+  // Read existing record first (optimistic path — no DB write if already complete).
+  const existing = await findOne(payload, 'payload_lesson_progress', progressWhere)
+
   const data = {
     displayName: `${normalizedMemberId}:${lessonTitle}`,
     member: normalizedMemberId,
@@ -584,11 +623,36 @@ export async function markMemberLessonComplete(
     })
   }
 
-  return payload.create({
-    collection: 'payload_lesson_progress',
-    data,
-    overrideAccess: true,
-  })
+  // Attempt to create. The unique constraint on (member_id, lesson_id) prevents
+  // duplicates if a concurrent request wins the race. On that collision, fall
+  // back to a re-read and update instead of propagating a DB error.
+  try {
+    return await payload.create({
+      collection: 'payload_lesson_progress',
+      data,
+      overrideAccess: true,
+    })
+  } catch (createErr: unknown) {
+    const message =
+      createErr instanceof Error ? createErr.message : String(createErr)
+    const isUniqueViolation =
+      message.includes('unique') ||
+      message.includes('duplicate') ||
+      message.includes('payload_lesson_progress_member_lesson_unique')
+
+    if (!isUniqueViolation) throw createErr
+
+    // Another request created the row concurrently — update it.
+    const raceWinner = await findOne(payload, 'payload_lesson_progress', progressWhere)
+    if (!raceWinner) throw createErr
+
+    return payload.update({
+      collection: 'payload_lesson_progress',
+      id: raceWinner.id,
+      data,
+      overrideAccess: true,
+    })
+  }
 }
 
 export type MemberBillingOverview = {

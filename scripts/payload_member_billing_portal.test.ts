@@ -193,7 +193,13 @@ async function testMissingSessionUrlFailsSafely(): Promise<void> {
 }
 
 function testBlockedMemberEligibility(): void {
-  assert.equal(isEligibleCurrentMember({ accountStatus: 'active' }), true)
+  // active + emailVerifiedAt → eligible (mirrors identityDestination gate)
+  assert.equal(
+    isEligibleCurrentMember({ accountStatus: 'active', emailVerifiedAt: '2026-01-01T00:00:00.000Z' }),
+    true,
+  )
+  // active without emailVerifiedAt → not eligible
+  assert.equal(isEligibleCurrentMember({ accountStatus: 'active' }), false)
   assert.equal(isEligibleCurrentMember({ accountStatus: 'blocked' }), false)
   assert.equal(isEligibleCurrentMember({ accountStatus: 'pending' }), false)
   assert.equal(isEligibleCurrentMember(null), false)

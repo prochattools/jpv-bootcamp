@@ -23,6 +23,8 @@ const mockEmailEventCreate = vi.fn()
 const mockEmailEventFindMany = vi.fn()
 const mockEmailEventFindUnique = vi.fn()
 const mockEmailEventUpdate = vi.fn()
+// updateMany is used for the atomic claim/lease step in processEmailQueue
+const mockEmailEventUpdateMany = vi.fn()
 
 vi.mock('@/libs/prisma', () => ({
 	default: {
@@ -31,6 +33,7 @@ vi.mock('@/libs/prisma', () => ({
 			findMany: (...args: unknown[]) => mockEmailEventFindMany(...args),
 			findUnique: (...args: unknown[]) => mockEmailEventFindUnique(...args),
 			update: (...args: unknown[]) => mockEmailEventUpdate(...args),
+			updateMany: (...args: unknown[]) => mockEmailEventUpdateMany(...args),
 		},
 	},
 }))
@@ -101,6 +104,8 @@ describe('email outbox behavioral tests', () => {
 		delete process.env.STAGING_EMAIL_GUARD
 		delete process.env.STAGING_TEST_RECIPIENT_EMAIL
 		delete process.env.DISABLE_NON_WEBHOOK_EMAILS
+		// Default: atomic claim succeeds (count=1 means this worker won the row)
+		mockEmailEventUpdateMany.mockResolvedValue({ count: 1 })
 	})
 
 	// ── Test 1: Ambiguous response stays pending ──────────────────────────────
@@ -120,9 +125,9 @@ describe('email outbox behavioral tests', () => {
 			expect(result.sent).toBe(0)
 			expect(result.skipped).toBe(1)
 
-			// Should have incremented retryCount, NOT set status='sent'
+			// Should have released the claim back to 'pending', incremented retryCount, NOT set status='sent'
 			const updateCall = mockEmailEventUpdate.mock.calls[0][0]
-			expect(updateCall.data.status).toBeUndefined()
+			expect(updateCall.data.status).toBe('pending')
 			expect(updateCall.data.retryCount).toEqual({ increment: 1 })
 			expect(updateCall.data.errorMessage).toMatch(/ambiguous_response/)
 		})
@@ -238,10 +243,13 @@ describe('email outbox behavioral tests', () => {
 	})
 
 	// ── Test 5: Staging guard blocks wrong recipient ──────────────────────────
+	//
+	// The canonical staging guard (staging-email-guard.ts) activates automatically
+	// when STAGING_TEST_RECIPIENT_EMAIL is set — no STAGING_EMAIL_GUARD flag needed.
 
 	describe('staging guard blocks wrong recipient', () => {
 		it('marks event as failed when recipient is not the allowed staging address', async () => {
-			process.env.STAGING_EMAIL_GUARD = '1'
+			// Setting STAGING_TEST_RECIPIENT_EMAIL alone activates the guard
 			process.env.STAGING_TEST_RECIPIENT_EMAIL = 'allowed@test.com'
 
 			const event = makePendingEvent({ recipient: 'other@other.com' })
@@ -255,20 +263,19 @@ describe('email outbox behavioral tests', () => {
 
 			const updateCall = mockEmailEventUpdate.mock.calls[0][0]
 			expect(updateCall.data.status).toBe('failed')
-			expect(updateCall.data.errorMessage).toMatch(/Staging guard blocked/)
+			// Canonical guard message pattern
+			expect(updateCall.data.errorMessage).toMatch(/STAGING_EMAIL_GUARD/)
 		})
 
 		it('assertStagingRecipientAllowed throws for wrong recipient', () => {
-			process.env.STAGING_EMAIL_GUARD = '1'
 			process.env.STAGING_TEST_RECIPIENT_EMAIL = 'allowed@test.com'
 
 			expect(() => assertStagingRecipientAllowed('other@other.com')).toThrow(
-				/Staging guard blocked/
+				/STAGING_EMAIL_GUARD/
 			)
 		})
 
 		it('assertStagingRecipientAllowed passes for the correct recipient', () => {
-			process.env.STAGING_EMAIL_GUARD = '1'
 			process.env.STAGING_TEST_RECIPIENT_EMAIL = 'allowed@test.com'
 
 			expect(() => assertStagingRecipientAllowed('allowed@test.com')).not.toThrow()

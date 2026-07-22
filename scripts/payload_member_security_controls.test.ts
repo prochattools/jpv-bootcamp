@@ -213,7 +213,15 @@ async function testPasswordChangeControls() {
 }
 
 function testCurrentMemberEligibility() {
-  assert.equal(isEligibleCurrentMember({ accountStatus: 'active' }), true)
+  // active + emailVerifiedAt → eligible (normal login path)
+  assert.equal(
+    isEligibleCurrentMember({ accountStatus: 'active', emailVerifiedAt: '2026-07-04T00:00:00.000Z' }),
+    true,
+  )
+  // active but no emailVerifiedAt → not eligible (mirrors identityDestination gate)
+  assert.equal(isEligibleCurrentMember({ accountStatus: 'active' }), false)
+  assert.equal(isEligibleCurrentMember({ accountStatus: 'active', emailVerifiedAt: null }), false)
+  // pending self-signup with verified email → eligible
   assert.equal(
     isEligibleCurrentMember({
       accountStatus: 'pending',
@@ -226,6 +234,14 @@ function testCurrentMemberEligibility() {
     resolveEligibleMemberAccountStatus({
       accountStatus: 'pending',
       source: 'self_signup',
+      emailVerifiedAt: '2026-07-04T00:00:00.000Z',
+    }),
+    'active',
+  )
+  // resolveEligibleMemberAccountStatus normalises active+verified to 'active'
+  assert.equal(
+    resolveEligibleMemberAccountStatus({
+      accountStatus: 'active',
       emailVerifiedAt: '2026-07-04T00:00:00.000Z',
     }),
     'active',

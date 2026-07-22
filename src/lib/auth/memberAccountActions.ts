@@ -89,11 +89,11 @@ export type IssueMemberAccountActionResult = {
 
 export type CompleteMemberAccountActionResult =
   | { consumed: true; memberId: string; email: string }
-  | { consumed: false; reason: 'invalid_or_expired' | 'already_used' }
+  | { consumed: false; reason: 'invalid_or_expired' | 'already_used'; memberId?: string }
 
 export type CompletableMemberAccountActionResult =
   | { valid: true; memberId: string; email: string }
-  | { valid: false; reason: 'invalid_or_expired' | 'already_used' }
+  | { valid: false; reason: 'invalid_or_expired' | 'already_used'; memberId?: string }
 
 const DEFAULT_SEND_COOLDOWN_MS = 5 * 60 * 1000
 const DEFAULT_MAX_SEND_ATTEMPTS = 3
@@ -240,7 +240,9 @@ export function createMemberAccountActionService(options: MemberAccountActionSer
       const tokenDigest = digestMemberAccountAction(token)
       const record = await options.repository.findActionByDigest(tokenDigest, purpose)
       if (!record) return { valid: false, reason: 'invalid_or_expired' }
-      if (record.consumedAt) return { valid: false, reason: 'already_used' }
+      // Return memberId on already_used so callers can perform an idempotency
+      // check (e.g. the member was already activated on a prior attempt).
+      if (record.consumedAt) return { valid: false, reason: 'already_used', memberId: record.memberId }
       if (record.invalidatedAt || new Date(record.expiresAt).getTime() <= now().getTime()) {
         return { valid: false, reason: 'invalid_or_expired' }
       }
@@ -255,14 +257,25 @@ export function createMemberAccountActionService(options: MemberAccountActionSer
       token: string,
       purpose: MemberAccountActionPurpose,
     ): Promise<CompleteMemberAccountActionResult> {
-      const completable = await this.findCompletableAction(token, purpose)
-      if (completable.valid === false) {
-        return { consumed: false, reason: completable.reason }
-      }
-
       const tokenDigest = digestMemberAccountAction(token)
       const record = await options.repository.findActionByDigest(tokenDigest, purpose)
+
+      // If there is no record at all the token is simply invalid.
       if (!record) return { consumed: false, reason: 'invalid_or_expired' }
+
+      // If the token was already consumed include the memberId so callers can
+      // perform an idempotency check without a separate lookup.
+      if (record.consumedAt) {
+        return { consumed: false, reason: 'already_used', memberId: record.memberId }
+      }
+
+      if (record.invalidatedAt || new Date(record.expiresAt).getTime() <= now().getTime()) {
+        return { consumed: false, reason: 'invalid_or_expired' }
+      }
+
+      if (!memberAccountActionDigestMatches(token, record.tokenDigest)) {
+        return { consumed: false, reason: 'invalid_or_expired' }
+      }
 
       const consumedAt = now().toISOString()
       const consumedMemberId = await options.repository.consumeAction(
@@ -270,7 +283,12 @@ export function createMemberAccountActionService(options: MemberAccountActionSer
         purpose,
         consumedAt,
       )
-      if (!consumedMemberId) return { consumed: false, reason: 'already_used' }
+      // consumeAction returns null when another concurrent request consumed
+      // the token first (race condition). Return already_used with the memberId
+      // so callers can still handle the idempotent case.
+      if (!consumedMemberId) {
+        return { consumed: false, reason: 'already_used', memberId: record.memberId }
+      }
       if (consumedMemberId !== record.memberId) {
         return { consumed: false, reason: 'invalid_or_expired' }
       }

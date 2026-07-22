@@ -217,6 +217,11 @@ async function run() {
   assert.deepEqual(setup, { ok: true, activated: true })
   assert.equal(payload.docs('payload_members')[0]?.accountStatus, 'active')
   assert.equal(payload.docs('payload_members')[0]?.passwordHash, 'payload-managed-hash')
+  // emailVerifiedAt must be set so the member can log in immediately
+  assert.ok(
+    payload.docs('payload_members')[0]?.emailVerifiedAt,
+    'emailVerifiedAt must be set after invitation setup',
+  )
   assert.equal(
     payload.docs('payload_member_security_events').some(
       (event) => event.eventType === 'invitation_consumed',
@@ -228,8 +233,20 @@ async function run() {
     'member-account-ready',
   )
 
-  const reused = await completeMemberSetup(payload, service, {
+  // Idempotent retry: resubmitting the same token against an already-active
+  // member returns ok:true with activated:false instead of an error.
+  const idempotentRetry = await completeMemberSetup(payload, service, {
     token,
+    password: 'another-strong-password',
+    passwordConfirmation: 'another-strong-password',
+  })
+  assert.deepEqual(idempotentRetry, { ok: true, activated: false })
+
+  // A completely unknown/new token (the token was already consumed) returns an
+  // error so a different token can't be replayed against an active account.
+  const differentToken = 'different-token-value-that-is-long-enough'
+  const reused = await completeMemberSetup(payload, service, {
+    token: differentToken,
     password: 'another-strong-password',
     passwordConfirmation: 'another-strong-password',
   })

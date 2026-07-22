@@ -99,7 +99,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 			VideoCodec?: string
 			AudioCodec?: string
 			Bitrate?: number
-			VideoGuid?: string
+			VideoGuid?: string // UUID used in CDN delivery URLs — must be stored
 			TimeCreated?: string
 			ErrorMessage?: string
 		}
@@ -156,6 +156,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 			title: payload.VideoTitle || `Video ${payload.VideoId}`,
 			libraryId: payload.VideoLibraryId,
 			videoId: payload.VideoId,
+			// VideoGuid is the UUID Bunny uses in CDN delivery paths — store whenever present.
+			// Existing value is kept if the event does not carry it (partial update events).
+			...(payload.VideoGuid
+				? { videoGuid: payload.VideoGuid }
+				: prior?.videoGuid
+					? { videoGuid: prior.videoGuid }
+					: {}),
 			status: videoStatus,
 			duration: payload.Duration || null,
 			frameRate: payload.FrameRate || null,

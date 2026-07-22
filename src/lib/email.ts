@@ -10,6 +10,8 @@ import {
 } from '@/lib/membership-email-copy'
 import prisma from '@/libs/prisma'
 import crypto from 'crypto'
+import { redactEmail } from '@/lib/log-redact'
+import { assertStagingRecipientAllowed as canonicalStagingGuard } from '@/lib/staging-email-guard'
 
 // Canonical Resend helpers live in this module; server routes call these functions to send email.
 let resendClient: Resend | null = null
@@ -61,7 +63,7 @@ function logEmailAttempt(params: {
 	console.info('email_attempt', {
 		at: 'email_attempt',
 		templateKey: params.templateKey,
-		email: params.email,
+		email: redactEmail(params.email),
 		plan: params.plan ?? null,
 		eventId: params.eventId ?? null,
 		eventType: params.eventType ?? null,
@@ -75,29 +77,19 @@ function logEmailAttempt(params: {
 
 /**
  * Staging recipient guard.
- * When STAGING_EMAIL_GUARD=1 is set, all outgoing emails must go to
- * STAGING_TEST_RECIPIENT_EMAIL. Throws if the recipient is not the allowed address.
+ * Delegates to the canonical guard in staging-email-guard.ts which auto-activates
+ * when DEPLOYMENT_ENV=staging/preview OR when STAGING_TEST_RECIPIENT_EMAIL is set.
+ * Exported for backwards compatibility with existing callers and tests.
  */
 export function assertStagingRecipientAllowed(recipient: string): void {
-	if (!isEnvEnabled(process.env.STAGING_EMAIL_GUARD)) return
-	const allowed = (process.env.STAGING_TEST_RECIPIENT_EMAIL ?? '').trim().toLowerCase()
-	if (!allowed) {
-		throw new Error(
-			'STAGING_EMAIL_GUARD=1 but STAGING_TEST_RECIPIENT_EMAIL is not set'
-		)
-	}
-	if (recipient.trim().toLowerCase() !== allowed) {
-		throw new Error(
-			`Staging guard blocked email to ${recipient}; only ${allowed} is allowed when STAGING_EMAIL_GUARD=1`
-		)
-	}
+	canonicalStagingGuard([recipient], 'lib/email:assertStagingRecipientAllowed')
 }
 
 // ---------------------------------------------------------------------------
 // Prisma-backed email outbox types
 // ---------------------------------------------------------------------------
 
-export type EmailEventType = 'welcome' | 'billing_failed' | 'account_action' | 'support'
+export type EmailEventType = 'welcome' | 'billing_failed' | 'cancellation' | 'account_action' | 'support'
 
 export type QueueEmailParams = {
 	type: EmailEventType
@@ -218,11 +210,16 @@ type ProcessResult = {
  * - Idempotency key is forwarded to Resend's idempotency header.
  * - Staging guard fires before every Resend call.
  *
+ * Atomicity: each row is claimed via a conditional UPDATE that sets
+ * status='processing' only while status='pending'. If the UPDATE touches
+ * 0 rows another worker has already claimed it — we skip silently.
+ * This prevents double-send under concurrent invocations.
+ *
  * Error handling:
  *   - Resend success (data.id present) → status = 'sent', resend_id stored
- *   - Transient error (5xx / network) → retry_count++, status stays 'pending'
+ *   - Transient error (5xx / network) → retry_count++, status back to 'pending'
  *   - Permanent error (4xx) → status = 'failed', error stored
- *   - Ambiguous (no error, no id) → retry_count++, status stays 'pending'
+ *   - Ambiguous (no error, no id) → retry_count++, status back to 'pending'
  *   - Max retries exceeded → status = 'dead_letter'
  */
 export async function processEmailQueue(eventId?: string): Promise<ProcessResult> {
@@ -231,7 +228,8 @@ export async function processEmailQueue(eventId?: string): Promise<ProcessResult
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	const prismaAny = prisma as any
 
-	// Fetch pending events (dead_letter rows are excluded)
+	// Fetch candidates — may include rows another worker will also see.
+	// The atomic claim below resolves the race.
 	const where = eventId
 		? { id: eventId, status: { in: ['pending'] } }
 		: { status: { in: ['pending'] } }
@@ -239,6 +237,19 @@ export async function processEmailQueue(eventId?: string): Promise<ProcessResult
 	const events = await prismaAny.emailEvent.findMany({ where })
 
 	for (const event of events) {
+		// ── Atomic claim via conditional UPDATE ──────────────────────────────
+		// Set status='processing' only when it is still 'pending'. If another
+		// worker already claimed this row, updateMany returns count=0 and we skip.
+		const claimResult = await prismaAny.emailEvent.updateMany({
+			where: { id: event.id, status: 'pending' },
+			data: { status: 'processing' },
+		})
+		if ((claimResult?.count ?? 0) === 0) {
+			// Already claimed or processed by another worker — skip silently.
+			result.skipped++
+			continue
+		}
+
 		result.processed++
 
 		// Dead-letter check: if the event has already hit the retry cap, mark it
@@ -275,6 +286,7 @@ export async function processEmailQueue(eventId?: string): Promise<ProcessResult
 			console.warn('email_queue_staging_guard_blocked', {
 				eventId: event.id,
 				type: event.type,
+				recipient: redactEmail(event.recipient),
 				error: (guardError as Error).message,
 			})
 			continue
@@ -318,10 +330,11 @@ export async function processEmailQueue(eventId?: string): Promise<ProcessResult
 				},
 			})
 		} catch (networkError) {
-			// Network / transient error — keep pending, increment retry
+			// Network / transient error — release claim back to 'pending', increment retry
 			await prismaAny.emailEvent.update({
 				where: { id: event.id },
 				data: {
+					status: 'pending',
 					retryCount: { increment: 1 },
 					errorMessage: `transient: ${(networkError as Error).message}`,
 				},
@@ -358,10 +371,11 @@ export async function processEmailQueue(eventId?: string): Promise<ProcessResult
 					error: error.message,
 				})
 			} else {
-				// Transient — keep pending, increment retry
+				// Transient — release claim back to 'pending', increment retry
 				await prismaAny.emailEvent.update({
 					where: { id: event.id },
 					data: {
+						status: 'pending',
 						retryCount: { increment: 1 },
 						errorMessage: `transient_${statusCode}: ${error.message}`,
 					},
@@ -375,7 +389,7 @@ export async function processEmailQueue(eventId?: string): Promise<ProcessResult
 		const resendId = data?.id ?? null
 		if (!resendId) {
 			// Ambiguous: no error but also no confirmation id — treat as transient
-			// and leave the event pending for a retry rather than silently losing it.
+			// and release the claim back to 'pending' for a retry.
 			console.warn('email_queue_ambiguous_response', {
 				eventId: event.id,
 				type: event.type,
@@ -383,6 +397,7 @@ export async function processEmailQueue(eventId?: string): Promise<ProcessResult
 			await prismaAny.emailEvent.update({
 				where: { id: event.id },
 				data: {
+					status: 'pending',
 					retryCount: { increment: 1 },
 					errorMessage: 'ambiguous_response: no resend id returned',
 				},
@@ -469,6 +484,29 @@ function buildSendParams(params: {
 			subject,
 			text: bodyText,
 			html: bodyHtml,
+		}
+	}
+
+	if (type === 'cancellation') {
+		// payload: { portalUrl?: string, effectiveAt?: string }
+		const portalUrl = (payload.portalUrl as string | undefined) ?? emailConfig.portalUrl
+		const effectiveAt = (payload.effectiveAt as string | undefined) ?? null
+		const effectiveLine = effectiveAt
+			? `Your membership access will end on ${effectiveAt}.`
+			: 'Your membership has been cancelled.'
+		return {
+			from: emailConfig.from,
+			to: [recipient],
+			replyTo: emailConfig.replyTo,
+			subject: 'Your JPV Bootcamp membership has been cancelled',
+			text: [
+				effectiveLine,
+				'',
+				`You can manage your account here: ${portalUrl}`,
+				'',
+				`If you need help, reply to this email: ${emailConfig.replyTo}`,
+			].join('\n'),
+			html: `<p>${effectiveLine}</p><p><a href="${portalUrl}">Manage your account</a></p><p>If you need help, reply to this email: ${emailConfig.replyTo}</p>`,
 		}
 	}
 
@@ -613,7 +651,7 @@ export async function sendSupportEmail({
 
 	if (isNonWebhookEmailDisabled()) {
 		console.info('Non-webhook email skipped', {
-			email,
+			email: redactEmail(email),
 			templateKey: 'support_request',
 			source: 'support',
 		})

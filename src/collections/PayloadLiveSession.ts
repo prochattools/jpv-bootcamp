@@ -21,10 +21,41 @@ export const PayloadLiveSession: CollectionConfig = {
 			if (req.user?.collection === 'payload_users') {
 				return true
 			}
-			// Members: can read sessions for courses they have active membership to
-			// For now, return true for authenticated members; in production, add entitlement check
+			// Members: can read sessions only for courses they have an active enrollment in.
+			// We query enrollments here and build a Where clause so Payload scopes the result set.
 			if (req.user?.collection === 'payload_members') {
-				return true
+				// Circular-require guard: import getPayload lazily to avoid startup issues
+				const { getPayload: getPayloadLib } = await import('payload')
+				const { default: payloadConfig } = await import('@payload-config')
+				const payloadInst = await getPayloadLib({ config: payloadConfig })
+
+				const enrollments = await payloadInst.find({
+					collection: 'payload_course_enrollments',
+					where: {
+						and: [
+							{ member: { equals: req.user.id } },
+							{ status: { equals: 'active' } },
+						],
+					},
+					limit: 200,
+					depth: 0,
+					overrideAccess: true,
+				})
+
+				const courseIds = enrollments.docs
+					.map((e: any) => {
+						const c = e.course
+						return typeof c === 'object' && c !== null ? c.id : c
+					})
+					.filter(Boolean)
+
+				if (courseIds.length === 0) {
+					// Member has no active enrollments — deny all session reads
+					return false
+				}
+
+				// Return a Where clause that restricts to only sessions for enrolled courses
+				return { course: { in: courseIds } }
 			}
 			return false
 		},

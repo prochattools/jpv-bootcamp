@@ -47,7 +47,18 @@ export const PayloadBunnyVideo: CollectionConfig = {
 			name: 'videoId',
 			type: 'number',
 			required: true,
-			label: 'Bunny Video ID',
+			label: 'Bunny Video ID (numeric)',
+		},
+		{
+			name: 'videoGuid',
+			type: 'text',
+			label: 'Bunny Video GUID (UUID)',
+			admin: {
+				description:
+					'UUID string from Bunny Stream API (VideoGuid field). Used in CDN delivery URLs. ' +
+					'Required for signed playback. Populated automatically from Bunny webhooks.',
+				readOnly: true,
+			},
 		},
 		{
 			name: 'lessonId',

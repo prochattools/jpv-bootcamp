@@ -92,6 +92,14 @@ export default async function PortalCoursePage({ params }: CoursePageProps) {
                         <span className='rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700'>
                           Complete
                         </span>
+                      ) : lesson.lockState === 'locked' ? (
+                        <span className='rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700'>
+                          Locked
+                        </span>
+                      ) : lesson.lockState === 'coming_soon' ? (
+                        <span className='rounded-full bg-neutral-100 px-3 py-1 text-xs font-semibold text-neutral-600'>
+                          Coming soon
+                        </span>
                       ) : lesson.previewLesson ? (
                         <span className='rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700'>
                           Preview

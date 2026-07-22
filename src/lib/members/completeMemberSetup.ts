@@ -33,33 +33,72 @@ export async function completeMemberSetup(
     return { ok: false, error: 'password_mismatch' }
   }
 
-  const completion = await actions.completeAction(token, 'member_invitation')
-  if (completion.consumed === false) {
+  // Validate the token without consuming it. This allows a safe retry if the
+  // member update below fails — the token stays unconsumed so the user can
+  // resubmit without getting an "invalid or expired token" error.
+  const validation = await actions.findCompletableAction(token, 'member_invitation')
+
+  // Idempotent retry path: the token was already consumed (because this exact
+  // setup request succeeded on a prior attempt but the response was lost).
+  // If the member is now active we return success rather than an error.
+  if (validation.valid !== true) {
+    if (validation.reason === 'already_used' && validation.memberId) {
+      const priorMember = await payload
+        .findByID({
+          collection: 'payload_members',
+          id: validation.memberId,
+          depth: 0,
+          overrideAccess: true,
+        })
+        .catch((): null => null)
+      if (priorMember?.accountStatus === 'active') {
+        return { ok: true, activated: false }
+      }
+    }
     return { ok: false, error: 'invalid_or_expired_token' }
   }
 
   const member = await payload.findByID({
     collection: 'payload_members',
-    id: completion.memberId,
+    id: validation.memberId,
     depth: 0,
     overrideAccess: true,
   })
   if (!member) return { ok: false, error: 'member_unavailable' }
+
+  // Concurrent-request idempotency: another in-flight request may have
+  // activated this member between our validation and this point.
+  if (member.accountStatus === 'active') {
+    await actions.completeAction(token, 'member_invitation').catch(() => {})
+    return { ok: true, activated: false }
+  }
+
   if (member.accountStatus !== 'pending') {
     return { ok: false, error: 'account_ineligible' }
   }
 
+  const activatedAt = new Date().toISOString()
   const updated = await payload.update({
     collection: 'payload_members',
     id: member.id,
     data: {
       password: input.password,
       accountStatus: 'active',
+      // Admin-invited members have their email address implicitly verified by
+      // the administrator. Set emailVerifiedAt so that identityDestination
+      // allows them to log in immediately after setup.
+      emailVerifiedAt: activatedAt,
       loginAttempts: 0,
       lockUntil: null,
     },
     overrideAccess: true,
   })
+
+  // Atomically consume the token after the member record is already active.
+  // If a concurrent request consumed it first (already_used) or the token
+  // expired in the instant between validation and now (invalid_or_expired),
+  // both are safe to ignore because the member is already activated.
+  const completion = await actions.completeAction(token, 'member_invitation')
 
   try {
     const invitationEvent = await payload.create({
@@ -104,7 +143,12 @@ export async function completeMemberSetup(
       },
     })
 
-    const email = typeof updated.email === 'string' ? updated.email : completion.email
+    const email =
+      typeof updated.email === 'string'
+        ? updated.email
+        : completion.consumed
+          ? completion.email
+          : validation.email
     await queueEmailEvent(payload, {
       toEmail: email,
       templateKey: 'member-account-ready',

@@ -6,9 +6,11 @@ import { resolvePayloadRequestSession } from '@/lib/auth/payloadSession'
 import { jpvBrand } from '@/lib/brand/jpvDesignSystem'
 import { headers } from 'next/headers'
 
+// 'Programme preview' is omitted from the nav: it serves placeholder/draft
+// content only and is not part of the live member experience. The route
+// /portal/programme remains accessible for internal review.
 const portalLinks = [
   { href: '/portal', label: 'Dashboard' },
-  { href: '/portal/programme', label: 'Programme preview' },
   { href: '/portal/courses', label: 'Courses' },
   { href: '/portal/community', label: 'Community' },
   { href: '/portal/partners', label: 'Partners' },

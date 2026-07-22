@@ -76,8 +76,9 @@ function makeMockPayload(opts: {
   // Lesson doc returned by depth:0 query (flat)
   const lessonDocFlat = { id: 'lesson-id-1', slug: 'intro-to-course' }
 
-  // Video record
-  const videoDoc = { id: 1, videoId: 42, libraryId: 999 }
+  // Video record — videoGuid (UUID) is required by the signed URL builder;
+  // videoId and libraryId are kept for backwards-compatibility assertions.
+  const videoDoc = { id: 1, videoId: 42, libraryId: 999, videoGuid: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee' }
 
   // Enrollment record
   const enrollmentDoc = { id: 'enrollment-1', member: String(opts.user?.id ?? ''), course: 'course-101', status: 'active' }
