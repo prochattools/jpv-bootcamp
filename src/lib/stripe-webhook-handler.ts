@@ -247,8 +247,8 @@ export async function handleStripeWebhook(req: Request) {
 			message: (error as Error).message,
 		})
 		return NextResponse.json(
-			{ received: true, skipped: 'config_missing' },
-			{ status: 200 }
+			{ error: 'Stripe config unavailable. Retry later.' },
+			{ status: 503 }
 		)
 	}
 
@@ -314,8 +314,8 @@ export async function handleStripeWebhook(req: Request) {
 			debugInfo,
 		})
 		return NextResponse.json(
-			{ received: true, skipped: 'missing_webhook_secret' },
-			{ status: 200 }
+			{ error: 'Webhook secret unavailable. Retry later.' },
+			{ status: 503 }
 		)
 	}
 

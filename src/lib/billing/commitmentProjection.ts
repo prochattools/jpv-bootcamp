@@ -203,8 +203,8 @@ export async function projectAsyncCheckoutFailure(params: {
 }
 
 export type CancellationRequestResult =
-  | { ok: true; effectiveAt: Date; duringCommitment: boolean }
-  | { ok: false; error: 'invalid_email' | 'billing_record_missing' | 'effective_date_missing' }
+  | { ok: true; effectiveAt: Date; duringCommitment: boolean; stripeScheduled: boolean }
+  | { ok: false; error: 'invalid_email' | 'billing_record_missing' | 'effective_date_missing' | 'stripe_env_live' }
 
 export async function recordCancellationRequest(params: {
   memberEmail: string
@@ -221,6 +221,7 @@ export async function recordCancellationRequest(params: {
       commitmentStatus: true,
       commitmentEndAt: true,
       subscriptionCurrentPeriodEnd: true,
+      stripeSubscriptionId: true,
     },
   })
   if (!record) return { ok: false, error: 'billing_record_missing' }
@@ -242,9 +243,41 @@ export async function recordCancellationRequest(params: {
     data: {
       cancellationRequestedAt: requestedAt,
       cancellationEffectiveAt: effectiveAt,
+      subscriptionCancelAtPeriodEnd: true,
       commitmentStatus: duringCommitment ? 'cancellation_requested' : record.commitmentStatus,
     },
   })
 
-  return { ok: true, effectiveAt, duringCommitment }
+  let stripeScheduled = false
+  if (record.stripeSubscriptionId) {
+    try {
+      const { getStripeConfig } = await import('@/lib/stripe-config')
+      const cfg = getStripeConfig()
+      if (cfg.env === 'live') {
+        console.error('cancellation_blocked: STRIPE_ENV=live — refusing to cancel live subscription', {
+          subscriptionId: record.stripeSubscriptionId,
+        })
+        return { ok: false, error: 'stripe_env_live' }
+      }
+      const { getStripe } = await import('@/lib/stripe')
+      const stripe = getStripe()
+      if (duringCommitment && record.commitmentEndAt) {
+        await stripe.subscriptions.update(record.stripeSubscriptionId, {
+          cancel_at: Math.floor(record.commitmentEndAt.getTime() / 1000),
+        })
+      } else {
+        await stripe.subscriptions.update(record.stripeSubscriptionId, {
+          cancel_at_period_end: true,
+        })
+      }
+      stripeScheduled = true
+    } catch (stripeError) {
+      console.error('cancellation_stripe_api_failed', {
+        subscriptionId: record.stripeSubscriptionId,
+        message: (stripeError as Error).message,
+      })
+    }
+  }
+
+  return { ok: true, effectiveAt, duringCommitment, stripeScheduled }
 }

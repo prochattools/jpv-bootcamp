@@ -127,12 +127,11 @@ export async function submitCommunityPost(spaceSlug: string, formData: FormData)
 
   try {
     const detail = await getMemberCommunitySpaceDetail(payload, memberId, spaceSlug)
-    const canPublish =
+    const canSubmit =
       detail?.allowed === true &&
-      detail.membership?.status === 'active' &&
-      (detail.membership.role === 'moderator' || detail.membership.role === 'admin')
+      detail.membership?.status === 'active'
 
-    if (!detail || !canPublish) throw new Error('Submission unavailable.')
+    if (!detail || !canSubmit) throw new Error('Submission unavailable.')
 
     const title = boundedText(formText(formData, 'title'), 'Title', 160)
     const bodyText = boundedText(formText(formData, 'body'), 'Body', 10_000)

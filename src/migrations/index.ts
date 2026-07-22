@@ -14,6 +14,7 @@ import * as migration_20260718_000000_live_sessions from './20260718_000000_live
 import * as migration_20260718_110000_bunny_videos from './20260718_110000_bunny_videos';
 import * as migration_20260719_150000_subscription_schema_cols from './20260719_150000_subscription_schema_cols';
 import * as migration_20260720_000000_locked_docs_rels_new_collections from './20260720_000000_locked_docs_rels_new_collections';
+import * as migration_20260722_100000_reconcile_lockstate_vip_progress from './20260722_100000_reconcile_lockstate_vip_progress';
 
 export const migrations = [
   {
@@ -95,5 +96,10 @@ export const migrations = [
     up: migration_20260720_000000_locked_docs_rels_new_collections.up,
     down: migration_20260720_000000_locked_docs_rels_new_collections.down,
     name: '20260720_000000_locked_docs_rels_new_collections',
+  },
+  {
+    up: migration_20260722_100000_reconcile_lockstate_vip_progress.up,
+    down: migration_20260722_100000_reconcile_lockstate_vip_progress.down,
+    name: '20260722_100000_reconcile_lockstate_vip_progress',
   },
 ];

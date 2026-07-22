@@ -12,7 +12,7 @@ export async function requestMembershipCancellation(_formData: FormData): Promis
   const member = await requirePortalMember('/portal/billing')
   const result = await recordCancellationRequest({ memberEmail: member.memberEmail })
 
-  if ('error' in result) {
+  if (result.ok === false) {
     redirect(`/portal/billing?cancellation_error=${result.error}`)
   }
 

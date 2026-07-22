@@ -141,7 +141,7 @@ describe('PayloadCourseModules — access control', () => {
   })
 
   it('anonymous user gets published-only read filter', () => {
-    expect(callRead(PayloadCourseModules, makeAnonReq())).toEqual({ status: { equals: 'published' } })
+    expect(callRead(PayloadCourseModules, makeAnonReq())).toEqual({ publishedPreview: { equals: true } })
   })
 
   it('admin gets unrestricted read', () => {

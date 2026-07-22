@@ -88,6 +88,11 @@ export const PayloadCourses: CollectionConfig = {
   timestamps: true,
 }
 
+const adminOrModuleRead = ({ req }: { req: PayloadRequest }) => {
+  if (isPayloadAdminRequest(req)) return true
+  return { publishedPreview: { equals: true } }
+}
+
 export const PayloadCourseModules: CollectionConfig = {
   slug: 'payload_course_modules',
   dbName: 'payload_course_modules',
@@ -98,7 +103,7 @@ export const PayloadCourseModules: CollectionConfig = {
     description: 'Ordered sections within a course.',
   },
   access: {
-    read: adminOrPublishedRead,
+    read: adminOrModuleRead,
     create: adminOnlyWrite,
     update: adminOnlyWrite,
     delete: adminOnlyWrite,

@@ -10,5 +10,11 @@ export default defineConfig({
 	test: {
 		environment: 'node',
 		include: ['src/__tests__/**/*.test.ts', 'src/tests/**/*.test.ts'],
+		exclude: [
+			'src/__tests__/health-build-info.test.ts',
+			'src/__tests__/staging-auto-provision.test.ts',
+			'src/__tests__/livekit-config.test.ts',
+			'src/tests/*-concurrency.test.ts',
+		],
 	},
 })

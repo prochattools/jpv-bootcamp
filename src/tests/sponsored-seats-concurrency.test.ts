@@ -94,8 +94,8 @@ describe('Sponsored Seats Concurrency', () => {
 			const seat = await prisma.sponsoredSeat.create({
 				data: {
 					tier: TIER,
-					status: 'available',
-					// claimed_by_account_id and reserved_by_application_id null
+					stripePaymentIntentId: `pi_test_scenario1_${Date.now()}`,
+					stripeCheckoutSessionId: `cs_test_scenario1_${Date.now()}`,
 				},
 			})
 
@@ -103,7 +103,9 @@ describe('Sponsored Seats Concurrency', () => {
 			const app = await prisma.sponsoredApplication.create({
 				data: {
 					email: 'test@example.com',
+					emailHash: 'test_hash_scenario1',
 					name: 'Test User',
+					phone: '+1234567890',
 					status: 'pending',
 					tier: TIER,
 					decision: 'pending',
@@ -263,9 +265,8 @@ describe('Sponsored Seats Concurrency', () => {
 			const updatedSeat = await prisma.sponsoredSeat.findUnique({
 				where: { id: seatId },
 			})
-			expect(updatedSeat?.reserved_by_application_id).toBe(appId)
-			expect(updatedSeat?.reserved_at).toBeDefined()
-			expect(updatedSeat?.status).toBe('available') // status unchanged, only reserve fields updated
+			expect(updatedSeat?.reservedByApplicationId).toBe(appId)
+			expect(updatedSeat?.reservedAt).toBeDefined()
 		})
 	})
 
@@ -289,14 +290,17 @@ describe('Sponsored Seats Concurrency', () => {
 			const seat = await prisma.sponsoredSeat.create({
 				data: {
 					tier: TIER,
-					status: 'available',
+					stripePaymentIntentId: `pi_test_scenario2_${Date.now()}`,
+					stripeCheckoutSessionId: `cs_test_scenario2_${Date.now()}`,
 				},
 			})
 
 			const app1 = await prisma.sponsoredApplication.create({
 				data: {
 					email: 'user1@example.com',
+					emailHash: 'test_hash_user1',
 					name: 'User 1',
+					phone: '+1234567891',
 					status: 'pending',
 					tier: TIER,
 					decision: 'pending',
@@ -306,7 +310,9 @@ describe('Sponsored Seats Concurrency', () => {
 			const app2 = await prisma.sponsoredApplication.create({
 				data: {
 					email: 'user2@example.com',
+					emailHash: 'test_hash_user2',
 					name: 'User 2',
+					phone: '+1234567892',
 					status: 'pending',
 					tier: TIER,
 					decision: 'pending',
@@ -456,10 +462,10 @@ describe('Sponsored Seats Concurrency', () => {
 			const updatedSeat = await prisma.sponsoredSeat.findUnique({
 				where: { id: seat.id },
 			})
-			expect(updatedSeat?.reserved_by_application_id).not.toBeNull()
+			expect(updatedSeat?.reservedByApplicationId).not.toBeNull()
 			// Verify no other seat was claimed
 			const claimedSeats = await prisma.sponsoredSeat.count({
-				where: { reserved_by_application_id: { not: null } },
+				where: { reservedByApplicationId: { not: null } },
 			})
 			expect(claimedSeats).toBe(1)
 		})
@@ -488,7 +494,8 @@ describe('Sponsored Seats Concurrency', () => {
 			const seat = await prisma.sponsoredSeat.create({
 				data: {
 					tier: TIER,
-					status: 'available',
+					stripePaymentIntentId: `pi_test_scenario3_${Date.now()}`,
+					stripeCheckoutSessionId: `cs_test_scenario3_${Date.now()}`,
 				},
 			})
 
@@ -496,7 +503,9 @@ describe('Sponsored Seats Concurrency', () => {
 			const app1 = await prisma.sponsoredApplication.create({
 				data: {
 					email: 'concurrent1@example.com',
+					emailHash: 'test_hash_concurrent1',
 					name: 'Concurrent 1',
+					phone: '+1234567893',
 					status: 'pending',
 					tier: TIER,
 					decision: 'pending',
@@ -506,7 +515,9 @@ describe('Sponsored Seats Concurrency', () => {
 			const app2 = await prisma.sponsoredApplication.create({
 				data: {
 					email: 'concurrent2@example.com',
+					emailHash: 'test_hash_concurrent2',
 					name: 'Concurrent 2',
+					phone: '+1234567894',
 					status: 'pending',
 					tier: TIER,
 					decision: 'pending',
@@ -545,12 +556,12 @@ describe('Sponsored Seats Concurrency', () => {
 			const finalSeat = await prisma.sponsoredSeat.findUnique({
 				where: { id: seat.id },
 			})
-			expect(finalSeat?.reserved_by_application_id).not.toBeNull()
+			expect(finalSeat?.reservedByApplicationId).not.toBeNull()
 
 			// ASSERTION 3: Only ONE application holds the reservation
 			// (Proves no double-allocation even under 10-way race condition)
 			const claimedByApps = await prisma.sponsoredSeat.count({
-				where: { reserved_by_application_id: { not: null } },
+				where: { reservedByApplicationId: { not: null } },
 			})
 			expect(claimedByApps).toBe(1)
 		})
