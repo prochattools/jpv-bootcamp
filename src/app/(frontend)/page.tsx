@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
 import Image from "next/image";
 import SponsoredPayItForward from "@/components/sponsored-pay-it-forward";
 
@@ -24,7 +24,14 @@ export default function HomePage() {
     { label: "FAQ", href: "#faq" },
     { label: "Events", href: "https://ibbootcamp.co.uk/" },
   ];
-  const heroNotices = [
+  const heroNotices: Array<{
+    title: string;
+    meta: string | ReactNode;
+    description: string | ReactNode;
+    href?: string;
+    target?: string;
+    rel?: string;
+  }> = [
     {
       title: "Next Live Online Bootcamp",
       meta: "Friday, 11 September | 7:00 PM (BST)",
