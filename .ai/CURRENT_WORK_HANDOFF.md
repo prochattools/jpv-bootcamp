@@ -1,10 +1,40 @@
-# CURRENT WORK HANDOFF — JPV Bootcamp Go-Live Readiness
+# CURRENT WORK HANDOFF — JPV Bootcamp Operator Panel Implementation
 
-**Date:** 2026-07-23T16:32:00Z  
-**Session:** Comprehensive truth reconciliation and browser proof of critical business flows  
+**Date:** 2026-07-23T17:15:00Z  
+**Session:** Implementing Payload operator back office with Bunny/Stripe/LiveKit  
 **Branch:** `feature/course-branding-and-preview`  
-**HEAD:** `7052dfe9082f2ef09ed3f38fe0ad9bf710eaf982` (test: WAVE 1 Stripe webhook handler verification)  
-**Commits Ahead of main:** 50  
+**HEAD:** `145bec8` (feat: add Bunny video relationship to lessons and hide preview collection)  
+**Commits Ahead of main:** 52 (50 baseline + 2 new)
+**Previous HEAD:** `00f9580` (docs: record go-live readiness handoff...)  
+
+---
+
+## IMPLEMENTATION PROGRESS (Session 2 — Operator Panel)
+
+### BATCH 1: Collection Visibility & Access Control ✅
+**Commit:** `ff17171`
+- ✅ Unhide Media, Pages, Posts, Categories collections
+- ✅ Add admin groups for navigation ("Content")
+- ✅ Add meaningful default columns for list views
+- ✅ Limit course accessBadge to "manual" only (JPV Membership default)
+- ✅ TypeScript: PASS
+- ✅ Release tests: 153/153 PASS
+
+**Status:** ✅ COMPLETE — Collections now visible and operational in admin
+
+### BATCH 2: Bunny Video & Legacy Cleanup ✅
+**Commit:** `145bec8`
+- ✅ Add bunnyVideo relationship field to PayloadLessons
+- ✅ Admin can attach Bunny videos directly from lesson editor
+- ✅ Hide PayloadCourseAccessPreview (legacy preview collection)
+- ✅ Release tests: 153/153 PASS
+
+**Status:** ✅ COMPLETE — Lesson-to-Bunny relationship in place
+
+### BATCH 3–5: REMAINING (Deferred this session)
+- ⏳ Priority 2 (continued): Admin upload form, Bunny API integration
+- ⏳ Priority 3: Stripe subscription operations in Payload
+- ⏳ Priority 5: LiveKit session management in Payload
 
 ---
 
@@ -182,6 +212,36 @@ All 10 critical business flows are either:
 
 ---
 
+---
+
+## NEXT STEPS FOR CONTINUATION
+
+### Immediate (High Priority)
+1. **Bunny Upload Form** — Create Payload custom component for video upload
+   - Call Bunny API to initiate upload (returns resumable URL)
+   - Store upload session state in PayloadBunnyVideo
+   - Poll for completion or await webhook
+2. **Stripe Subscription Display** — Add CustomerProvisioning fields to Payload
+   - Show Stripe customer ID, subscription status, period end, cancel-at-period-end
+   - Add read-only fields for webhook-managed data
+   - Add guarded actions for sync, portal, cancellation
+3. **LiveKit Session Management** — Add PayloadLiveSession admin form
+   - Create, schedule, edit, cancel, complete sessions
+   - Relate to course/lesson
+   - Generate moderator join link
+
+### Blockers/Gates
+- **BUNNY_WEBHOOK_SECRET** — Required for production Bunny integration (staging: use test secret)
+- **Email service implementation** — Infrastructure ready; handler deferred (non-blocking)
+- **Stripe live keys** — Must use test mode in staging/dev; never expose live keys
+
+### Code Quality
+- All changes validated: TypeScript ✓ Build ✓ Release tests 153/153 ✓
+- All commits coherent and focused
+- No regressions or dirty work touched
+
+---
+
 **Prepared by:** Claude Haiku 4.5  
-**Confidence Level:** HIGH  
-**Decision:** ✅ GO-LIVE READY (with external gates noted)
+**Confidence Level:** MEDIUM (Batches 1-2 complete; 3-5 deferred for next session)  
+**Decision:** NO-GO UNTIL COMPLETE — Operator panel partially functional. Next session: complete Bunny upload, Stripe ops, LiveKit management. Then browser-prove all 5 priorities before declaring GO-LIVE READY.
