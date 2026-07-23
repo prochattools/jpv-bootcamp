@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import { StatusPill } from '@/components/portal/StatusPill'
 import { requirePortalMember } from '@/lib/auth/requirePortalMember'
 import { getMemberCommunitySpaceDetail } from '@/lib/payloadCourse/communityPortal'
+import { submitCommunityPost } from '../actions'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -58,25 +59,61 @@ export default async function PortalCommunitySpacePage({ params, searchParams }:
 
       {query.submission === 'pending' && (
         <div className='rounded-jpv-card border border-[var(--jpv-brand)]/20 bg-[var(--jpv-surface-strong)] px-5 py-4 text-sm font-semibold text-[var(--jpv-brand-deep)]'>
-          Community posting is not enabled in this launch preview.
+          Your post has been submitted for review.
         </div>
       )}
       {query.submission === 'error' && (
         <div className='rounded-jpv-card border border-[var(--jpv-danger)]/20 bg-[var(--jpv-danger-surface)] px-5 py-4 text-sm font-semibold text-[var(--jpv-danger-ink)]'>
-          Community posting is not enabled in this launch preview.
+          Something went wrong. Please try again.
         </div>
       )}
 
       {detail.allowed ? (
         <>
-          <section className='rounded-jpv-panel border border-[var(--jpv-brand-deep)]/10 bg-white p-7 shadow-jpv-card sm:p-8'>
-            <p className='text-xs font-bold uppercase tracking-[0.2em] text-[var(--jpv-sunshine-ink)]'>Launch preview</p>
-            <h2 className='mt-2 text-2xl font-bold text-[var(--jpv-brand-deep)]'>Read-only member view</h2>
-            <p className='mt-3 max-w-2xl text-sm leading-6 text-[var(--jpv-muted)]'>
-              Visible spaces and approved discussions are shown from persisted Payload data. Member posting,
-              replies, uploads, and moderation actions remain deferred outside this launch preview.
-            </p>
-          </section>
+          {detail.membership?.status === 'active' && (
+            <section className='rounded-jpv-panel border border-[var(--jpv-brand-deep)]/10 bg-white p-7 shadow-jpv-card sm:p-8'>
+              <h2 className='text-2xl font-bold text-[var(--jpv-brand-deep)]'>Start a discussion</h2>
+              <form
+                action={submitCommunityPost.bind(null, spaceSlug)}
+                className='mt-5 space-y-4'
+              >
+                <div>
+                  <label className='block text-sm font-bold text-[var(--jpv-brand-deep)]' htmlFor='post-title'>
+                    Title
+                  </label>
+                  <input
+                    className='mt-1.5 w-full rounded-jpv-input border border-[var(--jpv-brand-deep)]/20 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--jpv-brand)]'
+                    id='post-title'
+                    maxLength={160}
+                    name='title'
+                    placeholder='What would you like to discuss?'
+                    required
+                    type='text'
+                  />
+                </div>
+                <div>
+                  <label className='block text-sm font-bold text-[var(--jpv-brand-deep)]' htmlFor='post-body'>
+                    Body
+                  </label>
+                  <textarea
+                    className='mt-1.5 w-full rounded-jpv-input border border-[var(--jpv-brand-deep)]/20 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--jpv-brand)]'
+                    id='post-body'
+                    maxLength={10000}
+                    name='body'
+                    placeholder='Share your thoughts, questions, or insights…'
+                    required
+                    rows={5}
+                  />
+                </div>
+                <button
+                  className='rounded-full bg-[var(--jpv-brand-deep)] px-6 py-3 text-sm font-bold text-white transition hover:bg-[var(--jpv-brand-hover)]'
+                  type='submit'
+                >
+                  Post discussion
+                </button>
+              </form>
+            </section>
+          )}
 
           <section>
             <div className='flex flex-col justify-between gap-4 sm:flex-row sm:items-end'>

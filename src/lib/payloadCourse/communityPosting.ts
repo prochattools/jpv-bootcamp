@@ -186,7 +186,7 @@ function membershipRole(membership: PayloadDocument | null): SpaceRole | null {
   return null
 }
 
-const approvedPublishingRoles: readonly SpaceRole[] = ['moderator', 'admin']
+const approvedPublishingRoles: readonly SpaceRole[] = ['member', 'moderator', 'admin']
 
 function membershipAllowsWrite(membership: PayloadDocument | null) {
   const role = membershipRole(membership)

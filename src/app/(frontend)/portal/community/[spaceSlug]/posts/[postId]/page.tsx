@@ -6,6 +6,7 @@ import { StatusPill } from '@/components/portal/StatusPill'
 import { requirePortalMember } from '@/lib/auth/requirePortalMember'
 import { getMemberCommunityPostDetail } from '@/lib/payloadCourse/communityDiscussion'
 import type { MemberCommunityAttachmentResolution } from '@/lib/payloadCourse/communityFiles'
+import { submitCommunityComment } from '../../../actions'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -117,31 +118,21 @@ export default async function PortalCommunityPostPage({ params, searchParams }: 
 
       {query.submission === 'pending' && (
         <div className='rounded-jpv-card border border-[var(--jpv-brand)]/20 bg-[var(--jpv-surface-strong)] px-5 py-4 text-sm font-semibold text-[var(--jpv-brand-deep)]'>
-          Community replies are not enabled in this launch preview.
+          Your reply has been submitted for review.
         </div>
       )}
       {query.submission === 'error' && (
         <div className='rounded-jpv-card border border-[var(--jpv-danger)]/20 bg-[var(--jpv-danger-surface)] px-5 py-4 text-sm font-semibold text-[var(--jpv-danger-ink)]'>
-          Community replies are not enabled in this launch preview.
+          Something went wrong. Please try again.
         </div>
       )}
-
-      <section className='rounded-jpv-panel border border-[var(--jpv-brand-deep)]/10 bg-white p-7 shadow-jpv-card sm:p-8'>
-        <p className='text-xs font-bold uppercase tracking-[0.2em] text-[var(--jpv-sunshine-ink)]'>Launch preview</p>
-        <h2 className='mt-2 text-2xl font-bold text-[var(--jpv-brand-deep)]'>Read-only discussion view</h2>
-        <p className='mt-3 max-w-2xl text-sm leading-6 text-[var(--jpv-muted)]'>
-          Visible discussions and published comments appear here from persisted Payload data. Member replies,
-          uploads, and moderation actions remain deferred outside this launch preview.
-        </p>
-      </section>
 
       <section>
         <div className='flex flex-wrap items-end justify-between gap-4'>
           <div>
             <p className='text-xs font-bold uppercase tracking-[0.2em] text-[var(--jpv-sunshine-ink)]'>Discussion</p>
-            <h2 className='mt-2 text-3xl font-bold tracking-tight text-[var(--jpv-brand-deep)]'>Visible comments</h2>
+            <h2 className='mt-2 text-3xl font-bold tracking-tight text-[var(--jpv-brand-deep)]'>Comments</h2>
           </div>
-          <StatusPill tone='neutral'>Read only</StatusPill>
         </div>
 
         <div className='mt-7 space-y-5'>
@@ -169,6 +160,37 @@ export default async function PortalCommunityPostPage({ params, searchParams }: 
           )}
         </div>
       </section>
+
+      {post.canComment && (
+        <section className='rounded-jpv-panel border border-[var(--jpv-brand-deep)]/10 bg-white p-7 shadow-jpv-card sm:p-8'>
+          <h2 className='text-2xl font-bold text-[var(--jpv-brand-deep)]'>Leave a reply</h2>
+          <form
+            action={submitCommunityComment.bind(null, spaceSlug, postId)}
+            className='mt-5 space-y-4'
+          >
+            <div>
+              <label className='block text-sm font-bold text-[var(--jpv-brand-deep)]' htmlFor='comment-body'>
+                Your reply
+              </label>
+              <textarea
+                className='mt-1.5 w-full rounded-jpv-input border border-[var(--jpv-brand-deep)]/20 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--jpv-brand)]'
+                id='comment-body'
+                maxLength={10000}
+                name='body'
+                placeholder='Share your reply…'
+                required
+                rows={4}
+              />
+            </div>
+            <button
+              className='rounded-full bg-[var(--jpv-brand-deep)] px-6 py-3 text-sm font-bold text-white transition hover:bg-[var(--jpv-brand-hover)]'
+              type='submit'
+            >
+              Submit reply
+            </button>
+          </form>
+        </section>
+      )}
     </div>
   )
 }
