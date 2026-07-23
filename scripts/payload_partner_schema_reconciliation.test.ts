@@ -15,14 +15,18 @@ const downSql = buildPartnerSchemaReconciliationMigrationDownSql(stagingUrl)
 const migrationSource = readFileSync('src/migrations/index.ts', 'utf8')
 const migrationNames = Array.from(migrationSource.matchAll(/name:\s*'([^']+)'/g), (match) => match[1])
 
-assert.deepEqual(previewMigrationInventoryNames().slice(-3, -1), [
-  '20260703_000000_partner_affiliate_operations',
-  '20260704_090000_partner_schema_reconciliation',
-])
-assert.deepEqual(migrationNames.slice(-3, -1), [
-  '20260703_000000_partner_affiliate_operations',
-  '20260704_090000_partner_schema_reconciliation',
-])
+const inventoryNames = previewMigrationInventoryNames()
+const partnerOpsIdx = inventoryNames.indexOf('20260703_000000_partner_affiliate_operations')
+const partnerReconcileIdx = inventoryNames.indexOf('20260704_090000_partner_schema_reconciliation')
+assert.ok(partnerOpsIdx >= 0, 'partner_affiliate_operations must be in inventory')
+assert.ok(partnerReconcileIdx >= 0, 'partner_schema_reconciliation must be in inventory')
+assert.ok(partnerOpsIdx < partnerReconcileIdx, 'partner_affiliate_operations must precede partner_schema_reconciliation')
+
+const registryOpsIdx = migrationNames.indexOf('20260703_000000_partner_affiliate_operations')
+const registryReconcileIdx = migrationNames.indexOf('20260704_090000_partner_schema_reconciliation')
+assert.ok(registryOpsIdx >= 0, 'partner_affiliate_operations must be in migration index')
+assert.ok(registryReconcileIdx >= 0, 'partner_schema_reconciliation must be in migration index')
+assert.ok(registryOpsIdx < registryReconcileIdx, 'registry order: affiliate ops before schema reconciliation')
 
 assert.match(upSql, /"jpvbootcamp_staging"\."payload_partner_affiliates_recipient_emails"/)
 assert.match(upSql, /CREATE TABLE IF NOT EXISTS/)

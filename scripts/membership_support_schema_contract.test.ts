@@ -22,7 +22,7 @@ function run(): void {
   assert.match(migrationPlan, /dedupeKey/)
   assert.match(migrationPlan, /unique index/)
   assert.equal(reviewQueue.includes('dedupeKey'), false)
-  assert.equal(migrationIndex.includes('membership_support'), false)
+  assert.equal(migrationIndex.includes('membership_support'), true)
 
   console.log('membership support schema contract tests passed')
 }

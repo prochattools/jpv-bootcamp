@@ -8,12 +8,10 @@ on:
         required: true
         type: string
         default: 'feature/course-branding-and-preview'
-  # TEMPORARILY DISABLED: push triggers on feature/** commented out to conserve GitHub Actions minutes during launch-critical implementation
-  # Re-enable after launch: uncomment the push block below
-  # push:
-  #   branches:
-  #     - 'feature/**'
-  #     - 'pr/**'
+  push:
+    branches:
+      - 'feature/**'
+      - 'pr/**'
 
 permissions:
   contents: read
@@ -77,6 +75,7 @@ jobs:
         uses: pnpm/action-setup@v2
         with:
           version: 10.33.0
+          # Pinned: pnpm@10.33.0
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -121,7 +120,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ github.token }}
 
       - name: Determine image tags
         id: image-tags
@@ -138,6 +137,21 @@ jobs:
             echo "EOF"
             echo "sha_tag=$sha_tag"
           } >> "$GITHUB_OUTPUT"
+
+      - name: Verify Docker build (dry run)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile
+          platforms: linux/amd64
+          push: false
+          build-args: |
+            NEXT_PUBLIC_APP_URL=https://preview.jpvbootcamp.com
+            APP_BASE_URL=https://preview.jpvbootcamp.com
+            NEXT_PUBLIC_SERVER_URL=https://preview.jpvbootcamp.com
+            IMAGE_TAG=${{ github.sha }}
+            COMMIT_SHA=${{ github.sha }}
+          cache-from: type=gha,scope=preview-deploy
 
       - name: Build and publish immutable image
         uses: docker/build-push-action@v5
@@ -165,6 +179,8 @@ jobs:
         shell: bash
         env:
           DOKPLOY_PREVIEW_APP_ID: ${{ secrets.DOKPLOY_PREVIEW_APP_ID }}
+          DOKPLOY_API_KEY: ${{ secrets.DOKPLOY_API_KEY }}
+          GITHUB_TOKEN_LOGIN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
 
@@ -197,7 +213,7 @@ jobs:
           # This ensures Dokploy pulls the new image rather than the cached SHA
           UPDATE_RESPONSE=$(curl -s -o /tmp/dokploy_update_response.json -w "%{http_code}" \
             -X POST "https://dokploy.prochat.tools/api/application.update" \
-            -H "x-api-key: ${{ secrets.DOKPLOY_API_KEY }}" \
+            -H "x-api-key: $DOKPLOY_API_KEY" \
             -H "Content-Type: application/json" \
             -d "{
               \"applicationId\": \"$DOKPLOY_PREVIEW_APP_ID\",
@@ -215,7 +231,7 @@ jobs:
           # Step 2: Trigger the deployment
           RESPONSE=$(curl -s -o /tmp/dokploy_response.json -w "%{http_code}" \
             -X POST "https://dokploy.prochat.tools/api/application.deploy" \
-            -H "x-api-key: ${{ secrets.DOKPLOY_API_KEY }}" \
+            -H "x-api-key: $DOKPLOY_API_KEY" \
             -H "Content-Type: application/json" \
             -d "{
               \"applicationId\": \"$DOKPLOY_PREVIEW_APP_ID\",

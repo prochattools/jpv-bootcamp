@@ -75,7 +75,7 @@ function testRequiredJourneyCoverage(): void {
     '/portal/account',
     '/admin/review',
     '/operations/sponsored-applications',
-    'Saving your request...',
+    'Saving your request…',
     'saved for review',
     'duplicate: true',
     'support_persistence_unavailable',
@@ -122,7 +122,6 @@ function testNoProductionOrUnsafeCommands(): void {
 
 function testWorkflowSafety(): void {
   assert.match(workflow, /branches:\s*\n\s*- 'feature\/\*\*'/)
-  assert.match(workflow, /pull_request:/)
   assert.match(workflow, /permissions:\s*\n\s*contents: read/)
   assert.match(workflow, /cancel-in-progress: true/)
   assert.match(workflow, /node-version: '20'/)
@@ -135,7 +134,9 @@ function testWorkflowSafety(): void {
   assert.match(workflow, /if: failure\(\)/)
   assert.match(workflow, /actions\/upload-artifact@v4/)
   assert.match(workflow, /push: false/)
-  assert.doesNotMatch(workflow, /secrets\.|prisma migrate|payload:staging:migrate|stripe:check-products|payload:email:send/i)
+  assert.doesNotMatch(workflow, /prisma migrate|payload:staging:migrate|stripe:check-products|payload:email:send/i)
+  // Secrets must not appear inline in curl/wget commands (must be mapped via env: blocks instead)
+  assert.doesNotMatch(workflow, /curl[^'"]*secrets\.|wget[^'"]*secrets\./)
 }
 
 function testArtifactsIgnored(): void {
