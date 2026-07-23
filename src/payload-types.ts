@@ -413,21 +413,13 @@ export interface LiveSession {
   createdAt: string;
 }
 /**
- * Visual prototype only. Not connected to billing or entitlement enforcement.
+ * Course catalogue. Create, edit and publish courses from here.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload_courses".
  */
 export interface PayloadCourse {
   id: number;
-  /**
-   * Marks this record as visual prototype data.
-   */
-  prototype?: boolean | null;
-  /**
-   * Stable identifier for local demo content.
-   */
-  prototypeKey?: string | null;
   title: string;
   slug: string;
   shortDescription?: string | null;
@@ -450,18 +442,12 @@ export interface PayloadCourse {
   status: 'draft' | 'published' | 'archived';
   visibility: 'public' | 'members' | 'restricted';
   /**
-   * Visual label only. This does not grant or enforce access.
+   * Access tier label. Entitlement enforcement is handled at the application layer.
    */
-  accessBadge: 'free' | 'pro' | 'manual';
+  accessBadge: 'free' | 'pro' | 'vip' | 'manual';
   estimatedDuration?: string | null;
   sortOrder?: number | null;
-  showInPrototypeDashboard?: boolean | null;
   featured?: boolean | null;
-  /**
-   * Visual-only progress value for the prototype dashboard.
-   */
-  mockProgress?: number | null;
-  prototypeNote?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -474,7 +460,14 @@ export interface BunnyVideo {
   title: string;
   libraryId: number;
   videoId: number;
-  lessonId?: string | null;
+  /**
+   * UUID string from Bunny Stream API (VideoGuid field). Used in CDN delivery URLs. Required for signed playback. Populated automatically from Bunny webhooks.
+   */
+  videoGuid?: string | null;
+  /**
+   * Lesson this video belongs to. One video per lesson.
+   */
+  lesson?: (number | null) | PayloadLesson;
   status: 'processing' | 'ready' | 'failed';
   duration?: number | null;
   frameRate?: number | null;
@@ -505,31 +498,13 @@ export interface BunnyVideo {
   createdAt: string;
 }
 /**
- * Ordered course sections for the visual prototype.
- *
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload_course_modules".
- */
-export interface PayloadCourseModule {
-  id: number;
-  prototype?: boolean | null;
-  course: number | PayloadCourse;
-  title: string;
-  description?: string | null;
-  sortOrder: number;
-  publishedPreview?: boolean | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * Visual lesson content only. Progress and permissions are not persisted or enforced.
+ * Lesson content. Progress tracking is handled at the application layer.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload_lessons".
  */
 export interface PayloadLesson {
   id: number;
-  prototype?: boolean | null;
   module: number | PayloadCourseModule;
   title: string;
   slug: string;
@@ -556,31 +531,40 @@ export interface PayloadLesson {
   downloads?: (number | PayloadMedia)[] | null;
   previewLesson?: boolean | null;
   /**
-   * Visual-only completion state.
+   * Controls whether this lesson appears locked in the portal UI.
    */
-  mockCompletionState?: ('not_started' | 'in_progress' | 'completed') | null;
-  /**
-   * Visual-only lock state. This is not authorization.
-   */
-  visualLockState?: ('available' | 'locked' | 'coming_soon') | null;
-  prototypeNote?: string | null;
+  lockState?: ('available' | 'locked' | 'coming_soon') | null;
   updatedAt: string;
   createdAt: string;
 }
 /**
- * Visual access examples only. No real member, billing, or entitlement data is connected.
+ * Ordered sections within a course.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_course_modules".
+ */
+export interface PayloadCourseModule {
+  id: number;
+  course: number | PayloadCourse;
+  title: string;
+  description?: string | null;
+  sortOrder: number;
+  publishedPreview?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Access tier examples shown in the portal. Not linked to billing or entitlement enforcement.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload_course_access_preview".
  */
 export interface PayloadCourseAccessPreview {
   id: number;
-  prototype?: boolean | null;
   displayLabel: string;
-  type: 'free' | 'pro' | 'manual' | 'private';
+  type: 'free' | 'pro' | 'vip' | 'manual' | 'private';
   description?: string | null;
   badgeText?: string | null;
-  exampleMemberName?: string | null;
   course?: (number | null) | PayloadCourse;
   visualState: 'available' | 'locked' | 'coming_soon';
   updatedAt: string;
@@ -1173,7 +1157,10 @@ export interface PayloadSubscription {
   stripeSubscriptionScheduleId?: string | null;
   stripePriceId?: string | null;
   stripeProductId?: string | null;
-  plan: 'free' | 'pro' | 'jpv_bootcamp_membership';
+  /**
+   * Entitlement key. New subscriptions use jpv_bootcamp_membership only.
+   */
+  plan: 'jpv_bootcamp_membership' | 'pro' | 'free';
   status: 'incomplete' | 'incomplete_expired' | 'trialing' | 'active' | 'past_due' | 'canceled' | 'unpaid' | 'paused';
   billingCadence?: ('monthly_commitment' | 'annual') | null;
   commitmentStatus?: ('pending' | 'active' | 'cancellation_requested' | 'completed' | 'terminated') | null;
@@ -2572,7 +2559,8 @@ export interface BunnyVideosSelect<T extends boolean = true> {
   title?: T;
   libraryId?: T;
   videoId?: T;
-  lessonId?: T;
+  videoGuid?: T;
+  lesson?: T;
   status?: T;
   duration?: T;
   frameRate?: T;
@@ -2593,8 +2581,6 @@ export interface BunnyVideosSelect<T extends boolean = true> {
  * via the `definition` "payload_courses_select".
  */
 export interface PayloadCoursesSelect<T extends boolean = true> {
-  prototype?: T;
-  prototypeKey?: T;
   title?: T;
   slug?: T;
   shortDescription?: T;
@@ -2605,10 +2591,7 @@ export interface PayloadCoursesSelect<T extends boolean = true> {
   accessBadge?: T;
   estimatedDuration?: T;
   sortOrder?: T;
-  showInPrototypeDashboard?: T;
   featured?: T;
-  mockProgress?: T;
-  prototypeNote?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -2617,7 +2600,6 @@ export interface PayloadCoursesSelect<T extends boolean = true> {
  * via the `definition` "payload_course_modules_select".
  */
 export interface PayloadCourseModulesSelect<T extends boolean = true> {
-  prototype?: T;
   course?: T;
   title?: T;
   description?: T;
@@ -2631,7 +2613,6 @@ export interface PayloadCourseModulesSelect<T extends boolean = true> {
  * via the `definition` "payload_lessons_select".
  */
 export interface PayloadLessonsSelect<T extends boolean = true> {
-  prototype?: T;
   module?: T;
   title?: T;
   slug?: T;
@@ -2643,9 +2624,7 @@ export interface PayloadLessonsSelect<T extends boolean = true> {
   videoIdOrPreviewUrl?: T;
   downloads?: T;
   previewLesson?: T;
-  mockCompletionState?: T;
-  visualLockState?: T;
-  prototypeNote?: T;
+  lockState?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -2654,12 +2633,10 @@ export interface PayloadLessonsSelect<T extends boolean = true> {
  * via the `definition` "payload_course_access_preview_select".
  */
 export interface PayloadCourseAccessPreviewSelect<T extends boolean = true> {
-  prototype?: T;
   displayLabel?: T;
   type?: T;
   description?: T;
   badgeText?: T;
-  exampleMemberName?: T;
   course?: T;
   visualState?: T;
   updatedAt?: T;

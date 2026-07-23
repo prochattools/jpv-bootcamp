@@ -145,7 +145,10 @@ export async function submitCommunityPost(spaceSlug: string, formData: FormData)
       title,
       body: plainTextRichText(bodyText),
     })
-  } catch {
+  } catch (err) {
+    // Log for operator visibility in staging/production container logs.
+    // No PII — only internal service error messages.
+    console.error('[submitCommunityPost] submission error:', err instanceof Error ? err.message : String(err))
     submissionFailed = true
   }
 
@@ -181,7 +184,8 @@ export async function submitCommunityComment(
       displayName: memberDisplayName(member),
       body: plainTextRichText(bodyText),
     })
-  } catch {
+  } catch (err) {
+    console.error('[submitCommunityComment] submission error:', err instanceof Error ? err.message : String(err))
     submissionFailed = true
   }
 
