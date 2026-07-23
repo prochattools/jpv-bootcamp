@@ -870,7 +870,6 @@ export interface PayloadAccessPolicy {
    */
   resourceId: string;
   privacy: 'public' | 'members' | 'private' | 'secret';
-  allowedPlans?: ('free' | 'pro')[] | null;
   requiredGroups?: (number | PayloadAccessGroup)[] | null;
   /**
    * Fail-closed for private paid resources when billing status is not active or trialing.
@@ -1174,7 +1173,7 @@ export interface PayloadSubscription {
   stripeSubscriptionScheduleId?: string | null;
   stripePriceId?: string | null;
   stripeProductId?: string | null;
-  plan: 'free' | 'pro';
+  plan: 'free' | 'pro' | 'jpv_bootcamp_membership';
   status: 'incomplete' | 'incomplete_expired' | 'trialing' | 'active' | 'past_due' | 'canceled' | 'unpaid' | 'paused';
   billingCadence?: ('monthly_commitment' | 'annual') | null;
   commitmentStatus?: ('pending' | 'active' | 'cancellation_requested' | 'completed' | 'terminated') | null;
@@ -2838,7 +2837,6 @@ export interface PayloadAccessPoliciesSelect<T extends boolean = true> {
   resourceType?: T;
   resourceId?: T;
   privacy?: T;
-  allowedPlans?: T;
   requiredGroups?: T;
   requireActiveBilling?: T;
   allowPreviewLessons?: T;

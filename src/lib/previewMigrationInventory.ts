@@ -190,6 +190,16 @@ export const PREVIEW_MIGRATION_INVENTORY = [
     verificationChecks: ['registry-match', 'ordered-exactly'],
     authorizationCategory: 'payloadMigration',
   },
+  {
+    name: '20260723_000000_singular_membership_plan',
+    system: 'payload',
+    order: 18,
+    purpose: 'Add jpv_bootcamp_membership to enum_payload_subscriptions_plan; migrate pro rows to new value; drop payload_access_policies_allowed_plans table and enum.',
+    requiredForPreview: true,
+    rollbackRisk: 'reversible',
+    verificationChecks: ['registry-match', 'ordered-exactly'],
+    authorizationCategory: 'payloadMigration',
+  },
 ] as const satisfies readonly PreviewMigrationInventoryEntry[]
 
 export const PREVIEW_MIGRATION_INVENTORY_VERSION = 1

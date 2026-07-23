@@ -8,8 +8,8 @@ async function main(): Promise<void> {
   const legacyUserColumn = 'wp' + '_user_id'
   const legacyClaimedByColumn = 'claimed_by_' + legacyUserColumn
   const legacyPartnerIndex = ['partner_sessions', legacyUserColumn, 'idx'].join('_')
-  assert.equal(PREVIEW_MIGRATION_INVENTORY.length, 17)
-  assert.equal(inventoryNames.at(-1), '20260722_100000_reconcile_lockstate_vip_progress')
+  assert.equal(PREVIEW_MIGRATION_INVENTORY.length, 18)
+  assert.equal(inventoryNames.at(-1), '20260723_000000_singular_membership_plan')
 
   const [
     migrationIndexSource,
