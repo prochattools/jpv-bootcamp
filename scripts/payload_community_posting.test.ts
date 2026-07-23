@@ -338,15 +338,40 @@ async function run() {
   }
 
   {
+    // member role can now post — verify it succeeds
     const payload = buildPayload()
+    const result = await createSpacePost(payload, {
+      memberId: 'member_active',
+      spaceId: 'space_private',
+      title: 'Member role post',
+      body: richTextBody,
+    })
+    assert.equal(result.document.author, 'member_active')
+    assert.equal(result.document.moderationStatus, 'pending_review')
+  }
+
+  {
+    // inactive membership cannot post regardless of role
+    const payload = buildPayload({
+      payload_space_memberships: [
+        {
+          id: 'membership_inactive',
+          displayName: 'member_active:private:inactive',
+          member: 'member_active',
+          space: 'space_private',
+          role: 'member',
+          status: 'pending',
+        },
+      ],
+    })
     await assert.rejects(
       () => createSpacePost(payload, {
         memberId: 'member_active',
         spaceId: 'space_private',
-        title: 'Member role post',
+        title: 'Inactive member post',
         body: richTextBody,
       }),
-      /Active space membership is required/
+      /Active space membership is required|Space access denied/
     )
   }
 
