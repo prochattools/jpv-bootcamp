@@ -106,6 +106,8 @@ export default function HomePage() {
       features: ["All Pro features", "Weekly group coaching", "1:1 deal review (when needed)", "Live Event"],
       ctaLabel: "Available Zoom",
       ctaHref: "#",
+      ctaTarget: undefined,
+      ctaRel: undefined,
       highlight: false,
       disabled: true,
     },
