@@ -136,6 +136,13 @@ export async function submitCommunityPost(spaceSlug: string, formData: FormData)
 
     if (!detail || !canSubmit) throw new Error('Submission unavailable.')
 
+    // Defensive re-check: membership role must be in approved list for write access.
+    // The page only checked status, but the action also enforces role validation.
+    const membershipRole = detail.membership?.role
+    if (membershipRole !== 'member' && membershipRole !== 'moderator' && membershipRole !== 'admin') {
+      throw new Error('Submission unavailable: member role invalid or missing.')
+    }
+
     const title = boundedText(formText(formData, 'title'), 'Title', 160)
     const bodyText = boundedText(formText(formData, 'body'), 'Body', 10_000)
 
