@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createBunnyVideo, isBunnyConfigured } from '@/lib/bunny-api'
+import { getPayload } from 'payload'
+import config from '@/payload.config'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -19,7 +21,7 @@ export async function POST(req: NextRequest) {
 	}
 
 	try {
-		const { title } = await req.json()
+		const { title, lessonId } = await req.json()
 
 		if (!title) {
 			return NextResponse.json({ error: 'Missing title' }, { status: 400 })
@@ -28,8 +30,36 @@ export async function POST(req: NextRequest) {
 		// Create video in Bunny Stream
 		const bunnyVideo = await createBunnyVideo({ title })
 
+		// Optionally create Payload record if lessonId provided
+		let payloadVideoId: string | number | null = null
+		if (lessonId) {
+			try {
+				const payload = await getPayload({ config })
+				const created = await payload.create({
+					collection: 'bunny_videos',
+					data: {
+						title: bunnyVideo.title,
+						libraryId: bunnyVideo.videoLibraryId,
+						videoId: bunnyVideo.videoId,
+						videoGuid: bunnyVideo.videoGuid,
+						lesson: lessonId,
+						status: 'processing',
+						webhookEvents: [
+							{
+								timestamp: new Date().toISOString(),
+								type: 'video_created',
+								event: 'Admin video creation',
+							},
+						],
+					},
+				})
+				payloadVideoId = String(created.id)
+			} catch (err) {
+				console.warn('[admin/bunny/create-video] Payload record creation failed (video still created in Bunny)', err)
+			}
+		}
+
 		// Return upload initialization response
-		// Admin can then create Payload record from Payload admin UI with returned data
 		return NextResponse.json({
 			ok: true,
 			video: {
@@ -39,6 +69,7 @@ export async function POST(req: NextRequest) {
 				title: bunnyVideo.title,
 				status: 'processing',
 				uploadToken: bunnyVideo.token,
+				payloadId: payloadVideoId,
 			},
 		})
 	} catch (err) {
