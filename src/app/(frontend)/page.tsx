@@ -28,6 +28,7 @@ export default function HomePage() {
     title: string;
     meta: string | ReactNode;
     description: string | ReactNode;
+    bullets?: string[];
     href?: string;
     target?: string;
     rel?: string;
@@ -35,32 +36,24 @@ export default function HomePage() {
     {
       title: "Next Live Online Bootcamp",
       meta: "Friday, 11 September | 7:00 PM (BST)",
-      description: (
-        <>
-          <p className="mb-3">Join our 7-week live online property investment programme, followed by an exclusive full-day, in-person intensive designed to help you build wealth through property with confidence and Kingdom purpose.</p>
-          <ul className="space-y-1 text-xs">
-            <li>✓ 7 Weekly Live Online Training Sessions</li>
-            <li>✓ 1 Full-Day In-Person Intensive</li>
-            <li>✓ Available with All Membership Plans</li>
-          </ul>
-        </>
-      ),
+      description: "Join our 7-week live online property investment programme, followed by an exclusive full-day, in-person intensive designed to help you build wealth through property with confidence and Kingdom purpose.",
+      bullets: [
+        "7 Weekly Live Online Training Sessions",
+        "1 Full-Day In-Person Intensive",
+        "Available with All Membership Plans",
+      ],
     },
     {
       title: "JV & Networking Summit",
       meta: "Saturday, 24 October | All Day | London",
-      description: (
-        <>
-          <p className="mb-3">Take your property journey to the next level at our exclusive in-person summit. Building on the knowledge gained during the 7-week online Bootcamp, this immersive event is designed to connect aspiring investors, form strategic Joint Venture (JV) partnerships, and equip you with the confidence and practical steps to secure your first—or next—property investment.</p>
-          <ul className="space-y-1 text-xs">
-            <li>✓ Exclusive Full-Day Live Event</li>
-            <li>✓ Build Strategic JV Partnerships</li>
-            <li>✓ Network with Like-Minded Investors</li>
-            <li>✓ Develop Your Property Acquisition Strategy</li>
-            <li>✓ Action Planning with Expert Guidance</li>
-          </ul>
-        </>
-      ),
+      description: "Take your property journey to the next level at our exclusive in-person summit. Building on the knowledge gained during the 7-week online Bootcamp, this immersive event is designed to connect aspiring investors, form strategic JV partnerships, and equip you with the confidence to secure your first—or next—property investment.",
+      bullets: [
+        "Exclusive Full-Day Live Event",
+        "Build Strategic JV Partnerships",
+        "Network with Like-Minded Investors",
+        "Develop Your Property Acquisition Strategy",
+        "Action Planning with Expert Guidance",
+      ],
     },
   ];
   const learnSections = [
@@ -350,21 +343,31 @@ export default function HomePage() {
             </a>
           </div>
           <p className="text-sm text-jpv-gray-400 sm:text-base">14-day money-back guarantee · Cancel anytime</p>
-          <div className="w-full max-w-4xl">
+          <div className="w-full">
             <div className="grid gap-4 text-left sm:grid-cols-2">
               {heroNotices.map((notice) => {
                 const content = (
                   <>
-                    <div className="text-lg font-bold text-white uppercase tracking-wide">{notice.title}</div>
+                    <div className="text-base font-bold text-white uppercase tracking-wide">{notice.title}</div>
                     <div className="mt-1 text-xs uppercase tracking-[0.2rem] text-jpv-green/80">
                       {notice.meta}
                     </div>
-                    <p className="mt-2 text-sm text-jpv-gray-400">{notice.description}</p>
+                    <p className="mt-2 text-xs text-jpv-gray-300 leading-relaxed">{notice.description}</p>
+                    {notice.bullets && (
+                      <ul className="mt-3 space-y-1 text-sm font-semibold text-jpv-gray-200">
+                        {notice.bullets.map((bullet, idx) => (
+                          <li key={idx} className="flex items-start gap-2">
+                            <span className="text-jpv-green">✓</span>
+                            <span>{bullet}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </>
                 );
 
                 const cardClassName =
-                  "relative flex h-full flex-col rounded-2xl border border-jpv-green/60 bg-jpv-bg-dark/40 p-4 text-sm text-jpv-gray-300 shadow-jpv-card backdrop-blur before:pointer-events-none before:absolute before:inset-0 before:rounded-2xl before:border before:border-jpv-green/90 before:opacity-100 before:animate-pulse";
+                  "relative flex h-full flex-col rounded-2xl border border-jpv-green/60 bg-jpv-bg-dark/40 p-5 text-sm text-jpv-gray-300 shadow-jpv-card backdrop-blur before:pointer-events-none before:absolute before:inset-0 before:rounded-2xl before:border before:border-jpv-green/90 before:opacity-100 before:animate-pulse";
 
                 if (notice.href) {
                   return (
