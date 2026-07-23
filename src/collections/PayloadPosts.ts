@@ -8,9 +8,9 @@ export const PayloadPosts: CollectionConfig = {
     plural: 'Posts',
   },
   admin: {
+    group: 'Content',
     useAsTitle: 'title',
     defaultColumns: ['title', 'status', 'createdAt'],
-    hidden: true,
   },
   fields: [
     { name: 'title', type: 'text', required: true },

@@ -8,9 +8,9 @@ export const PayloadPages: CollectionConfig = {
     plural: 'Pages',
   },
   admin: {
+    group: 'Content',
     useAsTitle: 'title',
     defaultColumns: ['title', 'slug', 'createdAt'],
-    hidden: true,
   },
   fields: [
     { name: 'title', type: 'text', required: true },

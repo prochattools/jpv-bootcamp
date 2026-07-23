@@ -8,8 +8,8 @@ export const PayloadCategories: CollectionConfig = {
     plural: 'Categories',
   },
   admin: {
+    group: 'Content',
     useAsTitle: 'title',
-    hidden: true,
   },
   fields: [
     { name: 'title', type: 'text', required: true },
