@@ -106,8 +106,6 @@ export default function HomePage() {
       features: ["All Pro features", "Weekly group coaching", "1:1 deal review (when needed)", "Live Event"],
       ctaLabel: "Available Zoom",
       ctaHref: "#",
-      ctaTarget: undefined,
-      ctaRel: undefined,
       highlight: false,
       disabled: true,
     },
@@ -538,8 +536,8 @@ export default function HomePage() {
                   ) : (
                     <a
                       href={plan.ctaHref}
-                      target={plan.ctaTarget}
-                      rel={plan.ctaRel}
+                      target={plan.ctaTarget || undefined}
+                      rel={plan.ctaRel || undefined}
                       className={`inline-flex w-full items-center justify-center rounded-full px-6 py-3 text-sm font-semibold transition ${plan.highlight
                         ? "bg-jpv-green text-black shadow-jpv-glow hover:bg-jpv-green-hover"
                         : "border border-jpv-gray-600 text-jpv-gray-200 hover:border-jpv-green hover:text-white"
