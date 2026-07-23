@@ -29,12 +29,12 @@ export default function HomePage() {
       title: "Next Online Training",
       meta: (
         <>
-          Friday, 24 April, 7 pm · <a href="#pricing-pro" className="hover:text-white transition-colors underline decoration-jpv-green/40 underline-offset-4">Pro</a> and <a href="#pricing-vip" className="hover:text-white transition-colors underline decoration-jpv-green/40 underline-offset-4">VIP</a>
+          Friday, 24 April, 7 pm · <a href="#pricing-pro" className="hover:text-white transition-colors underline decoration-jpv-green/40 underline-offset-4">Monthly</a> and <a href="#pricing-vip" className="hover:text-white transition-colors underline decoration-jpv-green/40 underline-offset-4">Annually</a>
         </>
       ),
       description: (
         <>
-          Weekly online training for 5 weeks for <a href="#pricing-pro" className="hover:text-white hover:underline transition-colors">Pro</a> and 1 additional in-person live session for <a href="#pricing-vip" className="hover:text-white hover:underline transition-colors">VIPs</a>.
+          Weekly online training for 5 weeks for <a href="#pricing-pro" className="hover:text-white hover:underline transition-colors">Monthly</a> and 1 additional in-person live session for <a href="#pricing-vip" className="hover:text-white hover:underline transition-colors">Annually</a>.
         </>
       ),
     },
@@ -89,35 +89,25 @@ export default function HomePage() {
   ];
   const pricingPlans = [
     {
-      name: "Starter",
-      price: "Free",
-      description: "Get a feel for it",
-      features: ["2 intro lessons", "Quarterly newsletter", "Community read-only", "Basic calculators"],
-      ctaLabel: "Create free account",
-      ctaHref: signUpHref,
-      ctaTarget: "_blank",
-      ctaRel: "nofollow noopener noreferrer",
-      highlight: false,
-    },
-    {
-      name: "Pro",
+      name: "Monthly",
       price: "£49/mo",
       description: "Everything to get profitable",
       features: ["Full course library", "Live Zoom training", "Deal analysis templates", "Active community access"],
-      ctaLabel: "Start Pro",
+      ctaLabel: "Start Membership",
       ctaHref: "/api/stripe/checkout?plan=pro",
       highlight: true,
       badge: "Most popular",
       subcopy: "14-day money-back guarantee",
     },
     {
-      name: "VIP",
-      price: "£149/mo",
+      name: "Annually",
+      price: "£800 annually",
       description: "Hands-on support",
       features: ["All Pro features", "Weekly group coaching", "1:1 deal review (when needed)", "Live Event"],
-      ctaLabel: "Apply for VIP",
-      ctaHref: "/api/stripe/checkout?plan=vip",
+      ctaLabel: "Available Zoom",
+      ctaHref: "#",
       highlight: false,
+      disabled: true,
     },
   ];
   const onboardingSteps = [
@@ -499,7 +489,7 @@ export default function HomePage() {
               Choose a plan, cancel anytime.
             </p>
           </div>
-          <div className="grid gap-6 md:grid-cols-3">
+          <div className="grid gap-6 md:grid-cols-2 max-w-3xl mx-auto">
             {pricingPlans.map((plan) => (
               <div
                 key={plan.name}
@@ -507,7 +497,7 @@ export default function HomePage() {
                   ? "border-jpv-green/60 bg-jpv-bg-light/80"
                   : "border-jpv-gray-700/50 bg-jpv-bg-dark/60"
                   }`}
-                id={plan.name === "Pro" ? "pricing-pro" : plan.name === "VIP" ? "pricing-vip" : undefined}
+                id={plan.name === "Monthly" ? "pricing-pro" : plan.name === "Annually" ? "pricing-vip" : undefined}
               >
                 <div className="space-y-6">
                   <div className="space-y-3 text-left">
@@ -536,27 +526,28 @@ export default function HomePage() {
                   </ul>
                 </div>
                 <div className="mt-8 space-y-3 text-left">
-                  <a
-                    href={plan.ctaHref}
-                    target={plan.ctaTarget}
-                    rel={plan.ctaRel}
-                    className={`inline-flex w-full items-center justify-center rounded-full px-6 py-3 text-sm font-semibold transition ${plan.highlight
-                      ? "bg-jpv-green text-black shadow-jpv-glow hover:bg-jpv-green-hover"
-                      : "border border-jpv-gray-600 text-jpv-gray-200 hover:border-jpv-green hover:text-white"
-                      }`}
-                  >
-                    {plan.ctaLabel}
-                  </a>
+                  {plan.disabled ? (
+                    <button
+                      disabled
+                      className="inline-flex w-full items-center justify-center rounded-full border border-jpv-gray-600 px-6 py-3 text-sm font-semibold text-jpv-gray-400 bg-jpv-gray-800/30 cursor-not-allowed opacity-50"
+                    >
+                      {plan.ctaLabel}
+                    </button>
+                  ) : (
+                    <a
+                      href={plan.ctaHref}
+                      target={plan.ctaTarget}
+                      rel={plan.ctaRel}
+                      className={`inline-flex w-full items-center justify-center rounded-full px-6 py-3 text-sm font-semibold transition ${plan.highlight
+                        ? "bg-jpv-green text-black shadow-jpv-glow hover:bg-jpv-green-hover"
+                        : "border border-jpv-gray-600 text-jpv-gray-200 hover:border-jpv-green hover:text-white"
+                        }`}
+                    >
+                      {plan.ctaLabel}
+                    </a>
+                  )}
                   {plan.subcopy ? <p className="text-xs text-jpv-green/80">{plan.subcopy}</p> : null}
-                  {plan.name === "Starter" ? (
-                    <p className="text-xs text-jpv-gray-400">
-                      Can&apos;t afford Pro?{" "}
-                      <a href="/sponsored" className="text-jpv-green hover:underline">
-                        You may be eligible for a sponsored month.
-                      </a>
-                    </p>
-                  ) : null}
-                  {plan.name === "VIP" && portalUpgradeUrl ? (
+                  {plan.name === "Annually" && portalUpgradeUrl ? (
                     <a
                       href={portalUpgradeUrl}
                       target="_blank"
