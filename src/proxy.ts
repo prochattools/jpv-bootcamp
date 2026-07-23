@@ -9,16 +9,20 @@ export function proxy(request: NextRequest) {
 	const isApiRoute = pathname.startsWith('/api')
 	const isNextRoute = pathname.startsWith('/_next')
 	const isPayloadAdminRoute = pathname === '/admin' || pathname.startsWith('/admin/')
+	const isPortalRoute = pathname === '/portal' || pathname.startsWith('/portal/')
 	const isPartnersRoute =
 		pathname === '/partners' ||
 		pathname.startsWith('/partners/') ||
 		pathname.startsWith('/out/')
 	const isPartnersSession = pathname === '/partners/session'
-	if (request.headers.has('next-action') && !isPayloadAdminRoute) {
+
+	// Block server actions on public routes only — portal and admin handle their own auth.
+	// Portal server actions (community posts etc.) must pass through.
+	if (request.headers.has('next-action') && !isPayloadAdminRoute && !isPortalRoute) {
 		return new Response(null, { status: 204 })
 	}
 
-	if (request.method === 'POST' && !isApiRoute && !isNextRoute && !isPayloadAdminRoute) {
+	if (request.method === 'POST' && !isApiRoute && !isNextRoute && !isPayloadAdminRoute && !isPortalRoute) {
 		return new Response(null, { status: 204 })
 	}
 
