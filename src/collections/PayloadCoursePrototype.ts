@@ -165,6 +165,14 @@ export const PayloadLessons: CollectionConfig = {
     },
     { name: 'videoIdOrPreviewUrl', type: 'text' },
     {
+      name: 'bunnyVideo',
+      type: 'relationship',
+      relationTo: 'bunny_videos',
+      admin: {
+        description: 'Managed Bunny Stream video. Takes precedence over legacy videoProvider if set.',
+      },
+    },
+    {
       name: 'downloads',
       type: 'relationship',
       relationTo: 'payload_media',
@@ -196,6 +204,7 @@ export const PayloadCourseAccessPreview: CollectionConfig = {
     useAsTitle: 'displayLabel',
     defaultColumns: ['displayLabel', 'type', 'visualState', 'course', 'updatedAt'],
     description: 'Access tier examples shown in the portal. Not linked to billing or entitlement enforcement.',
+    hidden: true,
   },
   access: {
     read: adminOrPublishedRead,
