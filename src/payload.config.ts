@@ -3,6 +3,7 @@ import { fileURLToPath } from 'url'
 import { buildConfig } from 'payload'
 import { postgresAdapter } from '@payloadcms/db-postgres'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
+import { s3Storage } from '@payloadcms/storage-s3'
 import { PayloadUsers } from './collections/PayloadUsers'
 import { PayloadMedia } from './collections/PayloadMedia'
 import { PayloadPages } from './collections/PayloadPages'
@@ -27,12 +28,34 @@ import { memberCollections } from './collections/members'
 import { membershipSupportCollections } from './collections/membership-support'
 import { partnerCollections } from './collections/partners'
 import { shouldRegisterPayloadProdMigrations } from './lib/payloadMigrations'
+import { resolvePayloadMediaStorageConfig } from './lib/payload-media-storage'
 import { stagingAutoProvision } from './lib/staging-auto-provision'
 import { migrations } from './migrations'
 import { jpvBrand } from './lib/brand/jpvDesignSystem'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
+const mediaStorage = resolvePayloadMediaStorageConfig()
+const mediaStoragePlugins =
+  mediaStorage.mode === 's3'
+    ? [
+        s3Storage({
+          bucket: mediaStorage.bucket,
+          collections: {
+            payload_media: mediaStorage.prefix ? { prefix: mediaStorage.prefix } : true,
+          },
+          config: {
+            credentials: {
+              accessKeyId: mediaStorage.accessKeyId,
+              secretAccessKey: mediaStorage.secretAccessKey,
+            },
+            region: mediaStorage.region,
+            forcePathStyle: mediaStorage.forcePathStyle,
+            ...(mediaStorage.endpoint ? { endpoint: mediaStorage.endpoint } : {}),
+          },
+        }),
+      ]
+    : []
 
 function getDbSchema(url: string | undefined): string {
   if (!url) return 'jpvbootcamp'
@@ -116,6 +139,7 @@ export default buildConfig({
     ...auditCollections,
   ],
   editor: lexicalEditor(),
+  plugins: mediaStoragePlugins,
   secret: process.env.PAYLOAD_SECRET || '',
   typescript: {
     outputFile: path.resolve(dirname, 'payload-types.ts'),

@@ -1202,3 +1202,88 @@ Complete the Payload uplink schema first: add publishable image/video/download r
 
 **Exact next repository-local task**
 Implement durable Payload media storage configuration with fail-closed environment validation and local tests, without adding secrets or changing staging/production. If the required adapter dependency is not installed, prepare the dependency/config patch and lockfile update in an isolated clean worktree.
+
+
+
+### 2026-07-23 Durable Payload media-storage checkpoint
+
+**Completed repository-local work**
+- Added the official `@payloadcms/storage-s3` adapter pinned to Payload `3.86.0`.
+- Added `src/lib/payload-media-storage.ts` with explicit `local` and `s3` modes.
+- Local storage remains the default for development unless durable storage is explicitly required.
+- `PAYLOAD_MEDIA_REQUIRE_DURABLE=true` now fails closed unless `PAYLOAD_MEDIA_STORAGE_MODE=s3`.
+- S3 mode requires `PAYLOAD_MEDIA_S3_BUCKET`, `PAYLOAD_MEDIA_S3_REGION`, `PAYLOAD_MEDIA_S3_ACCESS_KEY_ID`, and `PAYLOAD_MEDIA_S3_SECRET_ACCESS_KEY`.
+- Optional S3-compatible settings: `PAYLOAD_MEDIA_S3_ENDPOINT`, `PAYLOAD_MEDIA_S3_PREFIX`, and `PAYLOAD_MEDIA_S3_FORCE_PATH_STYLE`.
+- Payload registers `s3Storage` only after successful configuration validation and maps it only to `payload_media`; local storage is preserved when mode is `local`.
+- No secrets or `.env` files were added or changed.
+- No database migration or generated Payload types were created or applied; this slice changes storage configuration, not the existing upload collection schema.
+
+**Validation evidence**
+- Focused media-storage tests: **5/5 passed**.
+- Payload TypeScript validation: **passed**.
+- Production build: **passed**.
+- Prisma system and secondary schema validation: **passed** through the canonical release suite.
+- Frozen-lockfile install and production dependency audit: **passed** through the canonical release suite.
+- Canonical release suite: **153/153 passed**.
+- New configuration module, focused test, and package manifest security scan: **clean**.
+- The broad path scan reported dependency-name keywords in `pnpm-lock.yaml` and the pre-existing Payload secret assignment in `src/payload.config.ts`; exact diff review confirmed no new secret material or arbitrary network execution.
+
+**Updated phase position**
+- Payload operator uplink: **76%** (`IMPLEMENTED` and `LOCAL PASS`; durable storage configuration is complete but not `STAGING PROVEN`).
+- Controlled launch decision remains **NO-GO** pending environment configuration and browser/provider evidence.
+
+**Remaining durable-storage gates**
+1. Configure the documented S3-compatible variables in the approved staging environment without committing secrets.
+2. Confirm the bucket policy/CORS and public or signed delivery model match the portal’s media access requirements.
+3. Browser-prove Payload image upload, update, deletion, page/post/course/lesson attachment, publication, and member delivery against staging.
+4. Prove fail-closed startup with `PAYLOAD_MEDIA_REQUIRE_DURABLE=true` and incomplete settings in an isolated staging rehearsal.
+5. Define storage rollback: disable new writes, preserve object keys, restore the previous deployment, and avoid deleting remote objects during rollback.
+
+**Exact next task**
+Implement member-facing rendering for Payload Page/Post image galleries, attachments, and managed Bunny video relationships, then add focused local tests. External staging credentials are not required for that repository-local slice.
+
+
+
+### 2026-07-23 Durable Payload media storage checkpoint
+
+**Completed repository-local work**
+- Added the official `@payloadcms/storage-s3` adapter pinned to Payload `3.86.0`.
+- Added `resolvePayloadMediaStorageConfig` with explicit `local` and `s3` modes.
+- `PAYLOAD_MEDIA_REQUIRE_DURABLE=true` now fails closed unless `PAYLOAD_MEDIA_STORAGE_MODE=s3`.
+- S3 mode requires bucket, region, access-key ID, and secret access key.
+- Optional S3-compatible endpoint, object prefix, and `forcePathStyle` are supported.
+- Payload registers S3 storage only for `payload_media`; local development remains unchanged when storage mode is omitted or `local`.
+- No secrets or `.env` files were added or changed.
+- No migration was generated or applied, and protected generated types were not modified by this batch.
+
+**Environment contract**
+- `PAYLOAD_MEDIA_STORAGE_MODE=local|s3`
+- `PAYLOAD_MEDIA_REQUIRE_DURABLE=true|false`
+- `PAYLOAD_MEDIA_S3_BUCKET`
+- `PAYLOAD_MEDIA_S3_REGION`
+- `PAYLOAD_MEDIA_S3_ACCESS_KEY_ID`
+- `PAYLOAD_MEDIA_S3_SECRET_ACCESS_KEY`
+- Optional: `PAYLOAD_MEDIA_S3_ENDPOINT`, `PAYLOAD_MEDIA_S3_PREFIX`, `PAYLOAD_MEDIA_S3_FORCE_PATH_STYLE`
+
+**Validation evidence**
+- Focused media-storage Vitest: **6/6 passed**.
+- Payload TypeScript: **passed**.
+- Production build: **passed**.
+- Canonical release suite: **153/153 passed**.
+- `package.json` validation: **passed**.
+- Security scan on the new configuration module and tests: **clean**.
+- A broad scan of `pnpm-lock.yaml` reported package names containing `fetch`/`upload`, and `src/payload.config.ts` reported its pre-existing Payload secret assignment. The exact reviewed diff contains only the official S3 adapter registration and environment-derived credentials; no secret literals were introduced.
+
+**Updated phase position**
+- Payload operator uplink: **76%** (`IMPLEMENTED` and `LOCAL PASS`; durable storage configuration complete, provider delivery not yet `STAGING PROVEN`).
+- Controlled launch decision remains **NO-GO**.
+
+**Remaining durable-storage gates**
+1. Provision an approved staging S3-compatible bucket and inject the environment contract through the deployment platform.
+2. Deploy to staging with `PAYLOAD_MEDIA_REQUIRE_DURABLE=true` and prove startup fails closed when configuration is incomplete.
+3. Browser-prove image upload, public delivery, replacement, deletion, Page/Post/Course/Lesson relationships, and persistence across redeploy.
+4. Confirm bucket CORS, object visibility or signed-delivery policy, retention, lifecycle, and rollback ownership.
+5. Review whether existing local media needs migration into durable storage; no media migration was performed here.
+
+**Exact next repository-local task**
+Render the new Page/Post/Lesson managed media relationships in member-facing routes and add local component/route tests. Keep staging upload and persistence proof as a separate external browser/provider gate.
