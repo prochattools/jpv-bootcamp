@@ -3,7 +3,6 @@ import type {
   PayloadDocument,
   PayloadId,
 } from '@/lib/payloadCourse/accessService'
-import { evaluatePayloadSpaceAccess } from '@/lib/payloadCourse/accessService'
 import {
   createAuditEvent,
   queueEmailEvent,
@@ -207,21 +206,13 @@ async function assertSpaceWriteAccess(
   memberId: PayloadId,
   spaceId: PayloadId
 ) {
-  const [space, access, membership] = await Promise.all([
+  const [space, membership] = await Promise.all([
     findSpace(payload, spaceId),
-    evaluatePayloadSpaceAccess(payload, {
-      memberId,
-      spaceId,
-    }),
     findMembership(payload, memberId, spaceId),
   ])
 
   if (!space || space.status !== 'published') {
     throw new Error('Space is not published.')
-  }
-
-  if (!access.decision.allowed) {
-    throw new Error(`Space access denied: ${access.decision.reason}`)
   }
 
   if (!membershipAllowsWrite(membership)) {
