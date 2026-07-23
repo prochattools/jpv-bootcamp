@@ -219,9 +219,9 @@ function buildPayload() {
       },
     ],
     payload_course_modules: [
-      { id: 'module_foundations', course: 'course_foundations', title: 'Start Here', sortOrder: 10 },
-      { id: 'module_pro', course: 'course_pro', title: 'Systems', sortOrder: 10 },
-      { id: 'module_private', course: 'course_private', title: 'Private Track', sortOrder: 10 },
+      { id: 'module_foundations', course: 'course_foundations', title: 'Start Here', sortOrder: 10, publishedPreview: true },
+      { id: 'module_pro', course: 'course_pro', title: 'Systems', sortOrder: 10, publishedPreview: true },
+      { id: 'module_private', course: 'course_private', title: 'Private Track', sortOrder: 10, publishedPreview: true },
     ],
     payload_lessons: [
       {
