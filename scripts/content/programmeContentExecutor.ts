@@ -161,7 +161,7 @@ function buildCourseDocument(pkg: ProgrammeContentPackage): Record<string, unkno
     shortDescription: pkg.programme.shortSummary,
     status: 'draft',
     visibility: 'members',
-    accessBadge: 'pro',
+    accessBadge: 'manual',
     sortOrder: 0,
     showInPrototypeDashboard: false,
     featured: false,

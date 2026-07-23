@@ -25,7 +25,7 @@ export const PayloadCourses: CollectionConfig = {
   admin: {
     group: courseAdminGroup,
     useAsTitle: 'title',
-    defaultColumns: ['title', 'status', 'visibility', 'accessBadge', 'updatedAt'],
+    defaultColumns: ['title', 'status', 'visibility', 'coverImage', 'updatedAt'],
     description: 'Course catalogue. Create, edit and publish courses from here.',
   },
   access: {
@@ -75,8 +75,8 @@ export const PayloadCourses: CollectionConfig = {
         { label: 'Manual (JPV Membership Required)', value: 'manual' },
       ],
       admin: {
-        description: 'Access is controlled by membership status and Stripe subscription. Admins set manual for JPV Bootcamp Membership only.',
-        hidden: false,
+        description: 'Legacy compatibility value. Runtime access is controlled by JPV Bootcamp Membership and verified Stripe subscription state.',
+        hidden: true,
       },
     },
     { name: 'estimatedDuration', type: 'text' },
@@ -148,9 +148,25 @@ export const PayloadLessons: CollectionConfig = {
     { name: 'title', type: 'text', required: true },
     { name: 'slug', type: 'text', required: true, unique: true, index: true },
     { name: 'summary', type: 'textarea' },
+    {
+      name: 'coverImage',
+      type: 'upload',
+      relationTo: 'payload_media',
+      admin: {
+        description: 'Optional lesson artwork shown in the member portal.',
+      },
+    },
     { name: 'sortOrder', type: 'number', required: true, defaultValue: 0 },
     { name: 'estimatedDuration', type: 'text' },
     { name: 'content', type: 'richText' },
+    {
+      name: 'bunnyVideo',
+      type: 'relationship',
+      relationTo: 'bunny_videos',
+      admin: {
+        description: 'Managed Bunny Stream video attached to this lesson.',
+      },
+    },
     {
       name: 'videoProviderLabel',
       type: 'select',
@@ -162,14 +178,17 @@ export const PayloadLessons: CollectionConfig = {
         { label: 'Other', value: 'other' },
       ],
       defaultValue: 'none',
-    },
-    { name: 'videoIdOrPreviewUrl', type: 'text' },
-    {
-      name: 'bunnyVideo',
-      type: 'relationship',
-      relationTo: 'bunny_videos',
       admin: {
-        description: 'Managed Bunny Stream video. Takes precedence over legacy videoProvider if set.',
+        hidden: true,
+        description: 'Legacy import compatibility only. New lesson video must use Bunny Video.',
+      },
+    },
+    {
+      name: 'videoIdOrPreviewUrl',
+      type: 'text',
+      admin: {
+        hidden: true,
+        description: 'Legacy import compatibility only.',
       },
     },
     {
@@ -218,11 +237,10 @@ export const PayloadCourseAccessPreview: CollectionConfig = {
       name: 'type',
       type: 'select',
       required: true,
+      defaultValue: 'jpv_bootcamp_membership',
       options: [
-        { label: 'Free', value: 'free' },
-        { label: 'Pro', value: 'pro' },
-        { label: 'VIP', value: 'vip' },
-        { label: 'Manual', value: 'manual' },
+        { label: 'Public', value: 'public' },
+        { label: 'JPV Bootcamp Membership', value: 'jpv_bootcamp_membership' },
         { label: 'Private', value: 'private' },
       ],
     },

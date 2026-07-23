@@ -10,12 +10,46 @@ export const PayloadPages: CollectionConfig = {
   admin: {
     group: 'Content',
     useAsTitle: 'title',
-    defaultColumns: ['title', 'slug', 'createdAt'],
+    defaultColumns: ['title', 'status', 'featuredImage', 'updatedAt'],
+    description: 'Publish rich pages with managed images and Bunny video.',
   },
   fields: [
     { name: 'title', type: 'text', required: true },
-    { name: 'slug', type: 'text', unique: true, index: true },
+    { name: 'slug', type: 'text', required: true, unique: true, index: true },
+    { name: 'summary', type: 'textarea' },
     { name: 'content', type: 'richText' },
+    {
+      name: 'featuredImage',
+      type: 'upload',
+      relationTo: 'payload_media',
+    },
+    {
+      name: 'gallery',
+      type: 'upload',
+      relationTo: 'payload_media',
+      hasMany: true,
+    },
+    {
+      name: 'featuredVideo',
+      type: 'relationship',
+      relationTo: 'bunny_videos',
+      admin: {
+        description: 'Managed Bunny Stream video displayed with this page.',
+      },
+    },
+    {
+      name: 'status',
+      type: 'select',
+      required: true,
+      defaultValue: 'draft',
+      options: [
+        { label: 'Draft', value: 'draft' },
+        { label: 'Published', value: 'published' },
+        { label: 'Archived', value: 'archived' },
+      ],
+    },
+    { name: 'publishedAt', type: 'date' },
+    { name: 'sortOrder', type: 'number', defaultValue: 0 },
   ],
   timestamps: true,
 }

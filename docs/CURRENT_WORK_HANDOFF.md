@@ -1134,3 +1134,71 @@ Final state: READY FOR REVIEW — formal release remains NO-GO until staging evi
 
 - Added `docs/TWO_DAY_EXECUTION_QUEUE.md` and `docs/TWO_DAY_PACKET_REGISTRY.json` to turn the remaining launch roadmap into an executable queue.
 - Wave 2 and later packets remain blocked by the dependencies and external approvals encoded in the queue.
+
+
+
+## 2026-07-23 Workbench roadmap reconciliation
+
+**Authoritative repository state**
+- Locked source: `prochattools-jpv-bootcamp`
+- Branch: `feature/course-branding-and-preview`
+- Verified HEAD: `333eb69e19a0729fcaef32745141e4be91019dcf`
+- Decision: **NO-GO** until the operator-to-member workflows below have direct staging/provider/browser proof.
+- Preserved unrelated dirty paths: `.ai/current.md`, `.claude/worktrees/**`, `newrelic_agent.log`, and `src/payload-types.ts`.
+
+**Requirements and phased roadmap**
+1. **Payload operator uplink — 55%**: collections are visible, but Pages and Posts do not yet model featured images, galleries, attachments, managed Bunny video, or complete publish/archive controls. `PayloadMedia` still writes to local `public/media`; durable staging storage is unresolved. Course `accessBadge` and lesson legacy video-provider controls remain operator-facing compatibility fields.
+2. **Stripe lifecycle — 65%**: checkout and webhook infrastructure exist, but complete test-mode provider delivery, Payload projection, cancellation/reactivation, paid-through access, failed-payment handling, and member entitlement still require direct proof.
+3. **Bunny lifecycle — 55%**: API client, create endpoint, webhook and lesson relationship exist. Secure upload, provider webhook delivery, processing-state reconciliation, thumbnail/duration persistence, lesson attachment, signed entitled playback, and denial require direct staging proof and approved credentials.
+4. **LiveKit delivery — 65%**: collection and token authorization exist. Payload scheduling, moderator join, entitled-member join, unauthorized denial, and cancelled/completed portal states require browser/provider proof.
+5. **Launch operations — 60%**: email delivery/link completion, migrated-member acceptance, monitoring, rollback ownership, content readiness, operator training, and formal production approval remain gates.
+
+**Highest-priority repository-local task**
+Complete the Payload uplink schema first: add publishable image/video/download relationships to Pages and Posts, hide legacy access controls from operators, add focused regression tests, then generate and review the required Payload migration without applying it to staging or production.
+
+**Validation strategy**
+- Focused schema/regression tests after each patch.
+- TypeScript and production build after coherent implementation batches.
+- Payload migration/schema review before any database action.
+- Canonical release suite and security scan before commit.
+- Browser/provider evidence is classified separately as `STAGING PROVEN`; local tests never upgrade an external gate.
+
+**Risks and fail-closed rules**
+- No production deployment, live Stripe mode, production data mutation, secret exposure, main-branch changes, broad staging, or automatic push.
+- Missing provider credentials must return explicit configuration failures; they are not successful proofs.
+- Schema changes require a reviewed migration and rollback path before staging application.
+- Existing Claude worktrees and generated `src/payload-types.ts` remain untouched unless explicitly reconciled.
+
+
+
+### 2026-07-23 Payload uplink implementation checkpoint
+
+**Completed repository-local work**
+- Pages now support required slugs, summaries, draft/published/archived status, featured images, image galleries, managed Bunny video, publish dates, and ordering.
+- Posts now support required slugs, excerpts, featured images, galleries, attachments, managed Bunny video, publish dates, and archive state.
+- Lessons now expose managed Bunny video and optional cover artwork while hiding legacy provider and URL fields from operators.
+- Course `accessBadge` is hidden and removed from operator list columns.
+- Hidden access-preview choices now use only `public`, `jpv_bootcamp_membership`, and `private`.
+- Active course seeds and the programme importer no longer write Free or Pro access values.
+- Added focused uplink and singular-membership regression coverage.
+
+**Validation evidence**
+- Focused Vitest: **9/9 passed** across `payload-uplink-schema` and `singular-membership-regression`.
+- Payload TypeScript: **passed**.
+- Production build: **passed**.
+- Canonical release suite: **153/153 passed**.
+- Security scan: all newly introduced code paths clean. The importer file scan reports its pre-existing authenticated REST client and `fetch`; the reviewed diff changes only `accessBadge: 'pro'` to `accessBadge: 'manual'`.
+
+**Updated phase position**
+- Payload operator uplink: **68%** (`IMPLEMENTED` and `LOCAL PASS`, not yet `STAGING PROVEN`).
+- Singular membership cleanup: **85%** for active operator/import surfaces; broader legacy compatibility audit remains.
+- Overall decision remains **NO-GO**.
+
+**Remaining Phase 1 gates**
+1. Generate and review the Payload migration in a clean worktree because protected `src/payload-types.ts` already contains unrelated generated drift. Do not apply it yet.
+2. Configure durable object storage for `payload_media`; local `public/media` is not sufficient for staging/production durability.
+3. Render and browser-prove the new Page/Post/Lesson image and Bunny relationships in the member-facing surfaces.
+4. Prove admin upload, publish, archive, reorder, and member delivery against staging.
+
+**Exact next repository-local task**
+Implement durable Payload media storage configuration with fail-closed environment validation and local tests, without adding secrets or changing staging/production. If the required adapter dependency is not installed, prepare the dependency/config patch and lockfile update in an isolated clean worktree.

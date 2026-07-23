@@ -4,7 +4,7 @@ export type CourseSeed = {
   title: string
   shortDescription: string
   visibility: 'public' | 'members' | 'restricted'
-  accessBadge: 'free' | 'pro' | 'manual'
+  accessBadge: 'manual'
   estimatedDuration: string
   sortOrder: number
   featured?: boolean
@@ -96,7 +96,7 @@ export const courseSeeds: CourseSeed[] = [
     title: 'JPV Bootcamp Foundations',
     shortDescription: 'Foundational learning path for getting started with JPV Bootcamp.',
     visibility: 'members',
-    accessBadge: 'free',
+    accessBadge: 'manual',
     estimatedDuration: '2 hours',
     sortOrder: 10,
     featured: true,
@@ -131,7 +131,7 @@ export const courseSeeds: CourseSeed[] = [
     title: 'Pro Operator Lab',
     shortDescription: 'Paid Pro course area used to validate entitlements and lock states.',
     visibility: 'restricted',
-    accessBadge: 'pro',
+    accessBadge: 'manual',
     estimatedDuration: '5 hours',
     sortOrder: 20,
     modules: [
