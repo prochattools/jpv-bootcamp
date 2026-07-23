@@ -87,7 +87,20 @@ export default function HomePage() {
       answer: "Upgrades pro-rate instantly; your remaining balance is credited automatically.",
     },
   ];
-  const pricingPlans = [
+  const pricingPlans: Array<{
+    name: string;
+    price: string;
+    description: string;
+    features: string[];
+    ctaLabel: string;
+    ctaHref: string;
+    ctaTarget?: string;
+    ctaRel?: string;
+    highlight: boolean;
+    badge?: string;
+    subcopy?: string;
+    disabled?: boolean;
+  }> = [
     {
       name: "Monthly",
       price: "£49/mo",
@@ -536,8 +549,8 @@ export default function HomePage() {
                   ) : (
                     <a
                       href={plan.ctaHref}
-                      target={plan.ctaTarget || undefined}
-                      rel={plan.ctaRel || undefined}
+                      {...(plan.ctaTarget && { target: plan.ctaTarget })}
+                      {...(plan.ctaRel && { rel: plan.ctaRel })}
                       className={`inline-flex w-full items-center justify-center rounded-full px-6 py-3 text-sm font-semibold transition ${plan.highlight
                         ? "bg-jpv-green text-black shadow-jpv-glow hover:bg-jpv-green-hover"
                         : "border border-jpv-gray-600 text-jpv-gray-200 hover:border-jpv-green hover:text-white"
