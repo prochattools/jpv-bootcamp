@@ -85,7 +85,7 @@ type SubscriptionProjection = {
   email: string | null
   status: PayloadSubscriptionStatus
   billingStatus: PayloadBillingStatus
-  plan: Plan | 'free'
+  plan: Plan | null
   priceId: string | null
   productId: string | null
   cancelAtPeriodEnd: boolean
@@ -291,7 +291,7 @@ function subscriptionProjection(subscription: Stripe.Subscription): Subscription
   const email = getCustomerEmail(subscription.customer)
   const { priceId, productId } = findPrimaryPrice(subscription)
   const resolvedPlan = resolveSubscriptionPlan(subscription)
-  const plan = resolvedPlan ?? 'free'
+  const plan = resolvedPlan ?? null
   const billingStatus = billingStatusFromProjection(subscription, resolvedPlan)
 
   if (!customerId) {
@@ -880,18 +880,20 @@ async function syncSubscription(
     return ['subscription_skipped_missing_email']
   }
 
+  const resolvedPlanForSync = projection.plan ?? 'jpv_bootcamp_membership'
+
   const { doc: subscriptionDoc } = await upsertByWhere(
     payload,
     'payload_subscriptions',
     { stripeSubscriptionId: { equals: projection.stripeSubscriptionId } },
     {
-      displayName: `${projection.plan} / ${projection.stripeSubscriptionId}`,
+      displayName: `${resolvedPlanForSync} / ${projection.stripeSubscriptionId}`,
       member: subject.member.id,
       billingAccount: subject.billingAccount.id,
       stripeSubscriptionId: projection.stripeSubscriptionId,
       stripePriceId: projection.priceId ?? undefined,
       stripeProductId: projection.productId ?? undefined,
-      plan: projection.plan,
+      plan: resolvedPlanForSync,
       status: projection.status,
       cancelAtPeriodEnd: projection.cancelAtPeriodEnd,
       currentPeriodStart: projection.currentPeriodStart ?? undefined,

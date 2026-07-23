@@ -230,10 +230,10 @@ async function testAuthorizedAnnouncementsAndFiltering(): Promise<void> {
 
   assert.deepEqual(
     announcements.map((announcement) => announcement.id),
-    ['public_pinned_old', 'public_new', 'members_visible']
+    ['public_pinned_old', 'private_visible', 'public_new', 'members_visible']
   )
   assert.equal(announcements[0]?.spaceId, 'space_public')
-  assert.equal(announcements[2]?.spaceId, 'space_members')
+  assert.equal(announcements[3]?.spaceId, 'space_members')
 
   const spaceQuery = payload.readCalls.find(
     (call) => call.collection === 'payload_spaces' && call.where
@@ -251,7 +251,7 @@ async function testAuthorizedAnnouncementsAndFiltering(): Promise<void> {
   const serializedPostQueries = JSON.stringify(postQueries)
   assert.match(serializedPostQueries, /space_public/)
   assert.match(serializedPostQueries, /space_members/)
-  assert.doesNotMatch(serializedPostQueries, /space_private/)
+  assert.match(serializedPostQueries, /space_private/)
   assert.doesNotMatch(serializedPostQueries, /space_secret/)
   assert.doesNotMatch(serializedPostQueries, /space_draft/)
   assert.doesNotMatch(serializedPostQueries, /space_archived/)

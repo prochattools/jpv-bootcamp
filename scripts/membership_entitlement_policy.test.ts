@@ -123,35 +123,22 @@ run('fails closed for unreconciled state', () => {
   assert.equal(result.reason, 'unreconciled_failed_closed')
 })
 
-run('routes legacy pro without verified subscription to manual review', () => {
+run('fails closed for missing lifecycle and status regardless of legacy stored plan', () => {
   const result = evaluateMembershipEntitlement({
     ...base,
     lifecycleState: null,
     subscriptionStatus: null,
-    legacyStoredPlan: 'pro',
   })
-  assert.equal(result.decision, 'manual_review')
-  assert.equal(result.reason, 'legacy_pro_requires_verified_subscription')
+  assert.equal(result.decision, 'denied')
+  assert.equal(result.reason, 'missing_or_unknown_state')
 })
 
-run('allows legacy pro when verified subscription state is active', () => {
+run('allows when subscription state is active', () => {
   const result = evaluateMembershipEntitlement({
     ...base,
-    legacyStoredPlan: 'pro',
   })
   assert.equal(result.decision, 'allowed')
   assert.equal(result.reason, 'active_direct_membership')
-})
-
-run('denies legacy free', () => {
-  const result = evaluateMembershipEntitlement({
-    ...base,
-    lifecycleState: null,
-    subscriptionStatus: null,
-    legacyStoredPlan: 'free',
-  })
-  assert.equal(result.decision, 'denied')
-  assert.equal(result.reason, 'legacy_free_denied')
 })
 
 run('returns billing hold on the exact grace-end boundary', () => {

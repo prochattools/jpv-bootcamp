@@ -53,7 +53,7 @@ function main(): void {
 
   assertContains(
     plans,
-    ["normalized === 'membership'", "normalized === 'jpv_bootcamp_membership'", "? 'pro'"],
+    ["normalized === 'membership'", "normalized === 'jpv_bootcamp_membership'", "normalized === 'pro'"],
     'membership compatibility bridge',
   )
 

@@ -130,15 +130,6 @@ export const PayloadAccessPolicies: CollectionConfig = {
       ],
     },
     {
-      name: 'allowedPlans',
-      type: 'select',
-      hasMany: true,
-      options: [
-        { label: 'Free', value: 'free' },
-        { label: 'Pro', value: 'pro' },
-      ],
-    },
-    {
       name: 'requiredGroups',
       type: 'relationship',
       relationTo: 'payload_access_groups',

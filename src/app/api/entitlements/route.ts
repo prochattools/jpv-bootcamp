@@ -19,7 +19,7 @@ const ALLOWED_STATUSES = new Set<Stripe.Subscription.Status>([
 // curl -i -H "Authorization: Bearer <token>" https://jpvbootcamp.com/api/entitlements
 
 type EntitlementsResponse = {
-	plan: Plan | 'free'
+	plan: Plan | null
 }
 
 type EntitlementsError = {
@@ -54,7 +54,7 @@ function resolvePlanFromSubscriptions(subscriptions: Stripe.Subscription[]): Pla
 					? price.product
 					: price?.product?.id ?? null
 			const plan = resolvePlanFromStripe({ metadataPlan, priceId, productId })
-			if (plan === 'pro') found = 'pro'
+			if (plan === 'jpv_bootcamp_membership') found = 'jpv_bootcamp_membership'
 		}
 	}
 	return found
@@ -126,28 +126,28 @@ export async function GET(req: NextRequest) {
 	const monthlyPaymentVerified = !monthlyCommitment || Boolean(record?.lastPaidInvoiceId)
 
 	if (subscriptionStatus === 'unpaid' || subscriptionStatus === 'canceled') {
-		return NextResponse.json({ plan: 'free' } satisfies EntitlementsResponse, { status: 200 })
+		return NextResponse.json({ plan: null } satisfies EntitlementsResponse, { status: 200 })
 	}
 	if (subscriptionStatus === 'past_due') {
 		return NextResponse.json(
-			{ plan: graceActive && storedPlan ? storedPlan : 'free' } satisfies EntitlementsResponse,
+			{ plan: graceActive && storedPlan ? storedPlan : null } satisfies EntitlementsResponse,
 			{ status: 200 },
 		)
 	}
 	if (subscriptionStatus === 'active' || subscriptionStatus === 'trialing') {
 		return NextResponse.json(
-			{ plan: monthlyPaymentVerified && storedPlan ? storedPlan : 'free' } satisfies EntitlementsResponse,
+			{ plan: monthlyPaymentVerified && storedPlan ? storedPlan : null } satisfies EntitlementsResponse,
 			{ status: 200 },
 		)
 	}
 	if (record?.paymentStatus === 'failed' || record?.paymentStatus === 'action_required') {
 		return NextResponse.json(
-			{ plan: graceActive && storedPlan ? storedPlan : 'free' } satisfies EntitlementsResponse,
+			{ plan: graceActive && storedPlan ? storedPlan : null } satisfies EntitlementsResponse,
 			{ status: 200 },
 		)
 	}
 	if (subscriptionStatus) {
-		return NextResponse.json({ plan: 'free' } satisfies EntitlementsResponse, { status: 200 })
+		return NextResponse.json({ plan: null } satisfies EntitlementsResponse, { status: 200 })
 	}
 	if (storedPlan) {
 		return NextResponse.json({ plan: storedPlan } satisfies EntitlementsResponse, { status: 200 })
@@ -179,5 +179,5 @@ export async function GET(req: NextRequest) {
 		}
 	}
 
-	return NextResponse.json({ plan: 'free' } satisfies EntitlementsResponse, { status: 200 })
+	return NextResponse.json({ plan: null } satisfies EntitlementsResponse, { status: 200 })
 }

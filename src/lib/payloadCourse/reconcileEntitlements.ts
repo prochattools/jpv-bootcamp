@@ -2,7 +2,6 @@ import { evaluatePayloadCourseAccess } from '@/lib/payloadCourse/accessService'
 import type {
   AccessDecision,
   BillingStatus,
-  SubscriptionPlan,
 } from '@/lib/entitlements/evaluateAccess'
 import type {
   PayloadCourseAccessAPI,
@@ -78,19 +77,6 @@ function isActiveSubscription(subscription: PayloadDocument) {
   return allowedBillingStatuses.has(String(subscription.status) as BillingStatus)
 }
 
-function planOf(subscription: PayloadDocument): SubscriptionPlan | null {
-  const plan = subscription.plan
-  if (plan === 'free' || plan === 'pro') return plan
-  return null
-}
-
-function allowedPlans(policy: PayloadDocument): SubscriptionPlan[] {
-  if (!Array.isArray(policy.allowedPlans)) return []
-  return policy.allowedPlans.filter((plan): plan is SubscriptionPlan => {
-    return plan === 'free' || plan === 'pro'
-  })
-}
-
 async function findAll(
   payload: PayloadCourseAccessAPI,
   collection: string,
@@ -141,11 +127,9 @@ function policyAllowsSubscription(
 ) {
   if (policy.status !== 'active') return false
   if (policy.resourceType !== 'course' || String(policy.resourceId) !== courseId) return false
-
-  const plan = planOf(subscription)
-  if (!plan) return false
-
-  return allowedPlans(policy).includes(plan)
+  // requireActiveBilling is the singular entitlement gate — if true, an active subscription satisfies it
+  if (policy.requireActiveBilling === false) return false
+  return isActiveSubscription(subscription)
 }
 
 function courseRequiresProtectedResources(course: PayloadDocument, policies: PayloadDocument[]) {

@@ -209,7 +209,7 @@ async function testNoSubscriptionState(): Promise<void> {
 
   assert.equal(overview.hasPaidSubscription, false)
   assert.equal(overview.subscription, null)
-  assert.equal(overview.plan, 'free')
+  assert.equal(overview.plan, null)
   assert.equal(overview.billingStatus, 'none')
   assert.equal(overview.subscriptionStatus, null)
   assert.equal(overview.cancelAtPeriodEnd, false)

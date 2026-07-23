@@ -112,7 +112,6 @@ run('allows billing hold subscriptions during grace', () => {
     member: activeMember,
     billing: {
       status: 'past_due',
-      plan: 'pro',
       lifecycleState: 'past_due',
       subscriptionStatus: 'past_due',
       graceEndsAt: '2026-06-30T00:00:00.000Z',
@@ -121,14 +120,13 @@ run('allows billing hold subscriptions during grace', () => {
     resource: publishedCourse,
     policy: {
       status: 'active',
-      allowedPlans: ['pro'],
       requireActiveBilling: true,
     },
     now: '2026-06-21T00:00:00.000Z',
   })
 
   assert.equal(decision.allowed, true)
-  assert.equal(decision.reason, 'subscription_plan')
+  assert.equal(decision.reason, 'active_member_resource')
 })
 
 run('denies canceled subscriptions before allowing direct grants when billing is required', () => {

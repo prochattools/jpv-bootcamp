@@ -14,8 +14,6 @@ export type BillingStatus =
   | 'incomplete_expired'
   | 'paused'
 
-export type SubscriptionPlan = 'free' | 'pro'
-
 export type ResourceType = 'course' | 'lesson' | 'space' | 'access_group'
 
 export type ResourcePrivacy = 'public' | 'members' | 'private' | 'secret'
@@ -31,7 +29,6 @@ export type AccessDecisionReason =
   | 'direct_grant'
   | 'group_grant'
   | 'required_group'
-  | 'subscription_plan'
   | 'account_not_active'
   | 'authentication_required'
   | 'billing_not_active'
@@ -56,7 +53,6 @@ export type MemberAccessContext = {
 
 export type BillingAccessContext = {
   status: BillingStatus
-  plan?: SubscriptionPlan | null
   lifecycleState?: 'pending' | 'active' | 'past_due' | 'cancelled' | 'expired' | 'suspended' | 'revoked' | 'unreconciled' | null
   subscriptionStatus?: string | null
   periodEnd?: Date | string | null
@@ -65,7 +61,6 @@ export type BillingAccessContext = {
   graceEndsAt?: Date | string | null
   reconciliationState?: 'matched' | 'mismatch' | 'pending' | 'failed' | null
   fundingSource?: 'direct_payment' | 'voucher' | 'pay_it_forward' | null
-  legacyStoredPlan?: SubscriptionPlan | null
 }
 
 export type ResourceAccessContext = {
@@ -79,7 +74,6 @@ export type ResourceAccessContext = {
 export type PolicyAccessContext = {
   status?: 'draft' | 'active' | 'paused' | 'archived'
   privacy?: ResourcePrivacy
-  allowedPlans?: SubscriptionPlan[]
   requiredGroupIds?: string[]
   requireActiveBilling?: boolean
   requireVerifiedEmail?: boolean
@@ -230,7 +224,6 @@ export function evaluateAccess(input: EvaluateAccessInput): AccessDecision {
     graceEndsAt: input.billing?.graceEndsAt ?? null,
     reconciliationState: input.billing?.reconciliationState ?? null,
     fundingSource: input.billing?.fundingSource ?? null,
-    legacyStoredPlan: input.billing?.legacyStoredPlan ?? input.billing?.plan ?? null,
     now,
   })
 
@@ -260,23 +253,22 @@ export function evaluateAccess(input: EvaluateAccessInput): AccessDecision {
   }
 
   const requiredGroupIds = policy?.requiredGroupIds ?? []
-  if (requiredGroupIds.length > 0 && hasEveryRequiredGroup(requiredGroupIds, memberGroupIds)) {
-    return allow('required_group', { requiredGroupIds })
+  if (requiredGroupIds.length > 0) {
+    if (hasEveryRequiredGroup(requiredGroupIds, memberGroupIds)) {
+      return allow('required_group', { requiredGroupIds })
+    }
+    // Required groups specified but member doesn't satisfy them — deny even if billing is active
+    return deny('no_matching_entitlement', { privacy, requiredGroupIds })
   }
 
-  const allowedPlans = policy?.allowedPlans ?? []
-  const billingPlan = input.billing?.plan ?? null
-  if (
-    billingPlan &&
-    allowedPlans.includes(billingPlan) &&
-    entitlementAllowsAccess(entitlement)
-  ) {
-    return allow('subscription_plan', {
-      plan: billingPlan,
-      billingStatus,
-      entitlementDecision: entitlement.decision,
-      entitlementReason: entitlement.reason,
-    })
+  // Secret resources always require an explicit grant or group — billing alone is insufficient
+  if (privacy === 'secret') {
+    return deny('no_matching_entitlement', { privacy })
+  }
+
+  // Active billing without additional group requirements satisfies access to private resources
+  if (requireActiveBilling && entitlementAllowsAccess(entitlement)) {
+    return allow('active_member_resource', { memberId: member.id })
   }
 
   if (privacy === 'members' && !requireActiveBilling) {

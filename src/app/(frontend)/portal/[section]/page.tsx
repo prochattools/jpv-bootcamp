@@ -85,11 +85,8 @@ function accountStatusTone(status: string | null | undefined): 'good' | 'warn' |
 
 function currentTier(overview: Awaited<ReturnType<typeof getMemberAccountOverview>>): string {
   const subscription = overview.subscriptions.find((item) => item.status === 'active' || item.status === 'trialing')
-  const plan = typeof subscription?.plan === 'string' ? subscription.plan : null
-  if (plan === 'pro' || plan === 'free') {
-    return plan.slice(0, 1).toUpperCase() + plan.slice(1)
-  }
-  return 'Free'
+  if (subscription?.plan === 'jpv_bootcamp_membership') return 'Member'
+  return 'No active membership'
 }
 
 function billingNotice(query: {
@@ -371,7 +368,7 @@ export default async function PortalSectionPage({ params, searchParams }: Portal
                 account.subscriptions.map((subscription) => (
                   <div className='rounded-2xl border border-neutral-200 bg-neutral-50 p-4' key={subscription.id}>
                     <div className='flex items-center justify-between gap-3'>
-                      <p className='text-sm font-semibold text-neutral-950'>{titleCase(subscription.plan)}</p>
+                      <p className='text-sm font-semibold text-neutral-950'>{subscription.plan === 'jpv_bootcamp_membership' ? 'JPV Bootcamp Membership' : titleCase(subscription.plan)}</p>
                       <span className='rounded-full bg-neutral-200 px-3 py-1 text-xs font-semibold text-neutral-800'>
                         {titleCase(subscription.status)}
                       </span>

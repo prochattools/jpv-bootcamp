@@ -62,7 +62,6 @@ export type AccessPolicySeed = {
   resourceType: 'course' | 'space'
   resourceSlug: string
   privacy: 'public' | 'members' | 'private' | 'secret'
-  allowedPlans?: ('free' | 'pro')[]
   requiredAccessGroupSlugs?: string[]
   requireActiveBilling: boolean
   allowPreviewLessons?: boolean
@@ -285,7 +284,6 @@ export const accessPolicySeeds: AccessPolicySeed[] = [
     resourceType: 'course',
     resourceSlug: 'jpv-bootcamp-foundations',
     privacy: 'members',
-    allowedPlans: ['free', 'pro'],
     requireActiveBilling: false,
     allowPreviewLessons: true,
     priority: 10,
@@ -295,7 +293,6 @@ export const accessPolicySeeds: AccessPolicySeed[] = [
     resourceType: 'course',
     resourceSlug: 'pro-operator-lab',
     privacy: 'private',
-    allowedPlans: ['pro'],
     requiredAccessGroupSlugs: ['pro-courses'],
     requireActiveBilling: true,
     allowPreviewLessons: true,
@@ -323,7 +320,6 @@ export const accessPolicySeeds: AccessPolicySeed[] = [
     resourceType: 'space',
     resourceSlug: 'pro-community',
     privacy: 'private',
-    allowedPlans: ['pro'],
     requiredAccessGroupSlugs: ['pro-courses'],
     requireActiveBilling: true,
     priority: 20,

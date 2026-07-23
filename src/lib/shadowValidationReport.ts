@@ -100,7 +100,7 @@ export type ShadowValidationSnapshot = {
   }>
   progress: Array<{ id: string; memberId: string | null; lessonId: string | null }>
   billingAccounts: Array<{ id: string; memberId: string | null; stripeCustomerId: string | null; billingStatus: string }>
-  subscriptions: Array<{ id: string; memberId: string | null; billingAccountId: string | null; stripeSubscriptionId: string | null; status: string; plan: string }>
+  subscriptions: Array<{ id: string; memberId: string | null; billingAccountId: string | null; stripeSubscriptionId: string | null; status: string; plan: string | null }>
   payments: Array<{ id: string; memberId: string | null; subscriptionId: string | null; stripeInvoiceId: string | null; stripePaymentIntentId: string | null; status: string }>
   spaces: Array<{ id: string; slug: string; visibility: 'public' | 'members' | 'private' | 'secret'; status: 'draft' | 'published' | 'archived' }>
   memberships: Array<{ id: string; memberId: string | null; spaceId: string | null; status: 'pending' | 'active' | 'muted' | 'blocked' | 'removed'; role: 'member' | 'moderator' | 'admin' }>
@@ -412,7 +412,7 @@ export function createShadowValidationAdapter(payload: PayloadCourseAccessAPI): 
       snapshot.resources = await mapSimple('payload_lesson_resources', (doc) => ({ id: String(doc.id), lessonId: safeId(doc.lesson), fileId: safeId(doc.file), protectedFileId: safeId(doc.protectedFile), publicVisibility: normalizeVisibility(doc.publicVisibility, ['public', 'members', 'private'], 'private') as ShadowValidationSnapshot['resources'][number]['publicVisibility'], status: normalizeStatus(doc.status, ['draft', 'published', 'hidden'], 'draft') as ShadowValidationSnapshot['resources'][number]['status'] }))
       snapshot.progress = await mapSimple('payload_lesson_progress', (doc) => ({ id: String(doc.id), memberId: safeId(doc.member), lessonId: safeId(doc.lesson) }))
       snapshot.billingAccounts = await mapSimple('payload_billing_accounts', (doc) => ({ id: String(doc.id), memberId: safeId(doc.member), stripeCustomerId: safeText(doc.stripeCustomerId), billingStatus: safeText(doc.billingStatus) ?? 'none' }))
-      snapshot.subscriptions = await mapSimple('payload_subscriptions', (doc) => ({ id: String(doc.id), memberId: safeId(doc.member), billingAccountId: safeId(doc.billingAccount), stripeSubscriptionId: safeText(doc.stripeSubscriptionId), status: safeText(doc.status) ?? 'incomplete', plan: safeText(doc.plan) ?? 'free' }))
+      snapshot.subscriptions = await mapSimple('payload_subscriptions', (doc) => ({ id: String(doc.id), memberId: safeId(doc.member), billingAccountId: safeId(doc.billingAccount), stripeSubscriptionId: safeText(doc.stripeSubscriptionId), status: safeText(doc.status) ?? 'incomplete', plan: safeText(doc.plan) ?? null}))
       snapshot.payments = await mapSimple('payload_payments', (doc) => ({ id: String(doc.id), memberId: safeId(doc.member), subscriptionId: safeId(doc.subscription), stripeInvoiceId: safeText(doc.stripeInvoiceId), stripePaymentIntentId: safeText(doc.stripePaymentIntentId), status: safeText(doc.status) ?? 'pending' }))
       snapshot.spaces = await mapSimple('payload_spaces', (doc) => ({ id: String(doc.id), slug: safeText(doc.slug) ?? `space-${doc.id}`, visibility: normalizeVisibility(doc.visibility, ['public', 'members', 'private', 'secret'], 'private') as ShadowValidationSnapshot['spaces'][number]['visibility'], status: normalizeStatus(doc.status, ['draft', 'published', 'archived'], 'draft') as ShadowValidationSnapshot['spaces'][number]['status'] }))
       snapshot.memberships = await mapSimple('payload_space_memberships', (doc) => ({ id: String(doc.id), memberId: safeId(doc.member), spaceId: safeId(doc.space), status: normalizeStatus(doc.status, ['pending', 'active', 'muted', 'blocked', 'removed'], 'pending') as ShadowValidationSnapshot['memberships'][number]['status'], role: normalizeStatus(doc.role, ['member', 'moderator', 'admin'], 'member') as ShadowValidationSnapshot['memberships'][number]['role'] }))
@@ -449,7 +449,7 @@ export function buildDefaultSnapshot(): ReconciliationSnapshot {
     resources: [{ id: 'resource_1', lessonId: 'lesson_1', fileId: 'file_1', protectedFileId: 'file_2', publicVisibility: 'private', status: 'published' }],
     progress: [{ id: 'progress_1', memberId: 'member_active', lessonId: 'lesson_1' }],
     billingAccounts: [{ id: 'billing_1', memberId: 'member_active', stripeCustomerId: 'cus_1', billingStatus: 'active' }],
-    subscriptions: [{ id: 'sub_1', memberId: 'member_active', billingAccountId: 'billing_1', stripeSubscriptionId: 'sub_stripe_1', status: 'active', plan: 'pro' }],
+    subscriptions: [{ id: 'sub_1', memberId: 'member_active', billingAccountId: 'billing_1', stripeSubscriptionId: 'sub_stripe_1', status: 'active', plan: 'jpv_bootcamp_membership' }],
     payments: [{ id: 'payment_1', memberId: 'member_active', subscriptionId: 'sub_1', stripeInvoiceId: 'in_1', stripePaymentIntentId: 'pi_1', status: 'paid' }],
     spaces: [{ id: 'space_1', slug: 'announcements', visibility: 'members', status: 'published' }],
     memberships: [{ id: 'space_member_1', memberId: 'member_active', spaceId: 'space_1', status: 'active', role: 'member' }],

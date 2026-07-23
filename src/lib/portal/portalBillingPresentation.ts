@@ -69,7 +69,7 @@ export function resolvePortalBillingPresentation(
   const hasProjectionData = Boolean(overview.billingAccount || overview.subscription)
 
   const overviewPlanLabel =
-    overview.hasPaidSubscription && overview.plan !== 'free'
+    overview.hasPaidSubscription && overview.plan != null
       ? 'JPV Bootcamp Membership'
       : 'No active membership'
 

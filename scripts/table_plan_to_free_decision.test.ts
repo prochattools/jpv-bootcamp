@@ -18,7 +18,7 @@ function main(): void {
   assert.match(decision, /## Approval record/)
   assert.match(readiness, /table-plan-to-Free/i)
   assert.match(readiness, /pending/i)
-  assert.match(plans, /export type Plan = 'pro'/)
+  assert.match(plans, /export type Plan = 'jpv_bootcamp_membership'/)
   assert.match(checkoutConfig, /normalized === 'membership' \|\| normalized === 'jpv_bootcamp_membership'/)
   assert.match(migration, /plan = 'free'/)
   assert.doesNotMatch(decision, /Current status: `APPROVED`/)

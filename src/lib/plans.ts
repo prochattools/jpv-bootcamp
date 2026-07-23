@@ -1,19 +1,20 @@
 import 'server-only'
 import { getStripeConfig } from '@/lib/stripe-config'
 
-/**
- * Legacy persistence currently stores the paid membership as `pro`.
- * Public and Stripe metadata may use `membership`; both normalize to the
- * same temporary storage value until the approved schema migration runs.
- */
-export type Plan = 'pro'
+export type Plan = 'jpv_bootcamp_membership'
 
 export function normalizePlan(value: string | null | undefined): Plan | null {
 	if (!value) return null
 	const normalized = value.trim().toLowerCase()
-	return normalized === 'pro' || normalized === 'membership' || normalized === 'jpv_bootcamp_membership'
-		? 'pro'
-		: null
+	// Accept the canonical key and legacy aliases for import compatibility
+	if (
+		normalized === 'jpv_bootcamp_membership' ||
+		normalized === 'membership' ||
+		normalized === 'pro'
+	) {
+		return 'jpv_bootcamp_membership'
+	}
+	return null
 }
 
 let cachedPlanByPriceId: Record<string, Plan> | null = null
@@ -23,8 +24,8 @@ function getPlanByPriceId(): Record<string, Plan> {
 	if (cachedPlanByPriceId) return cachedPlanByPriceId
 	const { pricePro, priceProAnnual } = getStripeConfig()
 	cachedPlanByPriceId = {
-		[pricePro]: 'pro',
-		[priceProAnnual]: 'pro',
+		[pricePro]: 'jpv_bootcamp_membership',
+		[priceProAnnual]: 'jpv_bootcamp_membership',
 	}
 	return cachedPlanByPriceId
 }
@@ -33,7 +34,7 @@ function getPlanByProductId(): Record<string, Plan> {
 	if (cachedPlanByProductId) return cachedPlanByProductId
 	const { productPro } = getStripeConfig()
 	cachedPlanByProductId = {
-		[productPro]: 'pro',
+		[productPro]: 'jpv_bootcamp_membership',
 	}
 	return cachedPlanByProductId
 }

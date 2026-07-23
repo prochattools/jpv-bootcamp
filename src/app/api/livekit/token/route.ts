@@ -4,7 +4,7 @@
  * Issues a LiveKit room token for an authenticated Payload user.
  *
  * Security:
- *  1. The requesting user MUST have an active Stripe subscription (pro or vip).
+ *  1. The requesting user MUST have an active jpv_bootcamp_membership subscription.
  *     The entitlement check calls /api/entitlements with the user's billing token.
  *     If no active subscription is found the request is rejected with 403.
  *  2. The token is delivered via an httpOnly, Secure, SameSite=Lax Set-Cookie header
@@ -47,7 +47,7 @@ function extractBearerToken(req: NextRequest): string | null {
 }
 
 /**
- * Verify that the user holds an active pro or vip subscription.
+ * Verify that the user holds an active jpv_bootcamp_membership subscription.
  *
  * We reuse the same billing portal token mechanism used elsewhere in the app.
  * The portal token is a signed HMAC token that carries the user's email and is
@@ -81,7 +81,7 @@ async function verifyActiveSubscription(billingToken: string): Promise<boolean> 
 
     const data: { plan?: string } = await res.json()
     const plan = normalizePlan(data.plan ?? null)
-    return plan === 'pro' || plan === 'vip'
+    return plan === 'jpv_bootcamp_membership'
   } catch {
     return false
   }

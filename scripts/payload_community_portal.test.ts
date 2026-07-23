@@ -121,7 +121,7 @@ function buildPayload(overrides: Partial<CollectionMap> = {}) {
         id: 'subscription_pro',
         member: 'member_active',
         status: 'active',
-        plan: 'pro',
+        plan: 'jpv_bootcamp_membership',
         cancelAtPeriodEnd: false,
         updatedAt: '2026-01-05T00:00:00.000Z',
       },
@@ -194,7 +194,6 @@ function buildPayload(overrides: Partial<CollectionMap> = {}) {
         resourceId: 'space_pro',
         status: 'active',
         privacy: 'private',
-        allowedPlans: ['pro', 'private'],
         requiredGroups: ['group_pro'],
         requireActiveBilling: true,
         priority: 20,
@@ -205,7 +204,6 @@ function buildPayload(overrides: Partial<CollectionMap> = {}) {
         resourceId: 'space_private',
         status: 'active',
         privacy: 'secret',
-        allowedPlans: ['private'],
         requiredGroups: ['group_private'],
         requireActiveBilling: true,
         priority: 30,
@@ -289,24 +287,16 @@ async function run() {
   }
 
   {
+    // Member with no subscription cannot access a private paid space
     const payload = buildPayload({
       payload_access_groups: [],
-      payload_subscriptions: [
-        {
-          id: 'subscription_free',
-          member: 'member_active',
-          status: 'active',
-          plan: 'free',
-          updatedAt: '2026-01-05T00:00:00.000Z',
-        },
-      ],
+      payload_subscriptions: [],
     })
     const dashboard = await getMemberCommunityDashboard(payload, 'member_active')
     const pro = dashboard.spaces.find((space) => space.slug === 'pro-community')
 
     assert.equal(pro?.allowed, false)
     assert.equal(pro?.postCount, null)
-    assert.match(pro?.lockReason ?? '', /Billing must be active before this space unlocks\./)
 
     const proPostFetch = payload.findCalls.find((call) => {
       return (

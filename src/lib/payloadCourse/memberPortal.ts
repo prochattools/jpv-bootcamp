@@ -669,7 +669,7 @@ export type MemberBillingOverview = {
     currentPeriodEnd: string | null
   } | null
   hasPaidSubscription: boolean
-  plan: string
+  plan: string | null
   billingStatus: string | null
   subscriptionStatus: string | null
   cancelAtPeriodEnd: boolean
@@ -706,10 +706,10 @@ export async function getMemberBillingOverview(
   }))
   const subscription =
     normalizedSubscriptions.find(
-      (candidate) => candidate.plan !== null && candidate.plan !== 'free' && candidate.status !== 'incomplete_expired'
+      (candidate) => candidate.plan !== null && candidate.status !== 'incomplete_expired'
     ) ??
     normalizedSubscriptions.find(
-      (candidate) => candidate.plan !== null && candidate.plan !== 'free'
+      (candidate) => candidate.plan !== null
     ) ??
     null
   const hasPaidSubscription = Boolean(subscription)
@@ -724,7 +724,7 @@ export async function getMemberBillingOverview(
       : null,
     subscription,
     hasPaidSubscription,
-    plan: subscription?.plan ?? 'free',
+    plan: subscription?.plan ?? null,
     billingStatus: asString(billingAccount?.billingStatus),
     subscriptionStatus: subscription?.status ?? null,
     cancelAtPeriodEnd: subscription?.cancelAtPeriodEnd ?? false,

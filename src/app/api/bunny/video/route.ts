@@ -241,7 +241,7 @@ export async function GET(req: NextRequest) {
     // Find the linked Bunny video record for this lesson
     const videoResult = await payload.find({
       collection: 'bunny_videos',
-      where: { lessonId: { equals: lesson.id } },
+      where: { lesson: { equals: lesson.id } },
       limit: 1,
       depth: 0,
     })

@@ -102,9 +102,14 @@ export const PayloadSubscriptions: CollectionConfig = {
       type: 'select',
       required: true,
       options: [
-        { label: 'Free', value: 'free' },
-        { label: 'Pro', value: 'pro' },
+        { label: 'JPV Bootcamp Membership', value: 'jpv_bootcamp_membership' },
+        // narrow-allowlist: migration-import compatibility only — do not add new values
+        { label: 'Legacy Pro (migration only)', value: 'pro' },
+        { label: 'Legacy Free (migration only)', value: 'free' },
       ],
+      admin: {
+        description: 'Entitlement key. New subscriptions use jpv_bootcamp_membership only.',
+      },
     },
     {
       name: 'status',

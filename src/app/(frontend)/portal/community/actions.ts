@@ -125,6 +125,9 @@ export async function submitCommunityPost(spaceSlug: string, formData: FormData)
   const destination = spacePath(spaceSlug)
   const { memberId, payload } = await requirePortalMember(destination)
 
+  // redirect() throws NEXT_REDIRECT internally — never call it inside try/catch or it
+  // propagates as an unhandled error response instead of a navigation signal.
+  let submissionFailed = false
   try {
     const detail = await getMemberCommunitySpaceDetail(payload, memberId, spaceSlug)
     const canSubmit =
@@ -143,6 +146,10 @@ export async function submitCommunityPost(spaceSlug: string, formData: FormData)
       body: plainTextRichText(bodyText),
     })
   } catch {
+    submissionFailed = true
+  }
+
+  if (submissionFailed) {
     redirect(`${destination}?submission=error`)
   }
 
@@ -158,6 +165,7 @@ export async function submitCommunityComment(
   const destination = postPath(spaceSlug, postId)
   const { memberId, payload } = await requirePortalMember(destination)
 
+  let submissionFailed = false
   try {
     const detail = await getMemberCommunityPostDetail(payload, memberId, spaceSlug, postId)
     if (!detail.allowed || !detail.post.canComment) {
@@ -174,6 +182,10 @@ export async function submitCommunityComment(
       body: plainTextRichText(bodyText),
     })
   } catch {
+    submissionFailed = true
+  }
+
+  if (submissionFailed) {
     redirect(`${destination}?submission=error`)
   }
 

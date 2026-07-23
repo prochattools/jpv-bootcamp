@@ -10,7 +10,6 @@ import {
   type ResourceAccessContext,
   type ResourcePrivacy,
   type ResourceType,
-  type SubscriptionPlan,
 } from '@/lib/entitlements/evaluateAccess'
 import { resolveMembershipLifecycle } from '@/lib/billing/membershipLifecycle'
 
@@ -218,19 +217,6 @@ function normalizeBillingStatus(value: unknown): BillingStatus {
   return 'none'
 }
 
-function normalizePlan(value: unknown): SubscriptionPlan | null {
-  if (value === 'free' || value === 'pro') {
-    return value
-  }
-
-  return null
-}
-
-function normalizeAllowedPlans(value: unknown): SubscriptionPlan[] {
-  if (!Array.isArray(value)) return []
-  return value.map(normalizePlan).filter((plan): plan is SubscriptionPlan => Boolean(plan))
-}
-
 function failClosed(reason: AccessDecision['reason'], evidence?: Record<string, unknown>) {
   return { decision: { allowed: false, reason, evidence } satisfies AccessDecision }
 }
@@ -425,7 +411,6 @@ async function getBillingContext(
 
     return {
       status: subscriptionStatus,
-      plan: normalizePlan(subscription.plan),
       lifecycleState: lifecycle.state,
       subscriptionStatus,
       periodEnd: subscription.currentPeriodEnd ? new Date(String(subscription.currentPeriodEnd)) : null,
@@ -442,7 +427,6 @@ async function getBillingContext(
       fundingSource: subscription.fundingSource === 'voucher' || subscription.fundingSource === 'pay_it_forward' || subscription.fundingSource === 'direct_payment'
         ? subscription.fundingSource
         : null,
-      legacyStoredPlan: normalizePlan(subscription.plan),
     }
   }
 
@@ -453,11 +437,10 @@ async function getBillingContext(
     '-updatedAt'
   )
 
-  if (!billingAccount) return { status: 'none', plan: null }
+  if (!billingAccount) return { status: 'none' }
 
   return {
     status: normalizeBillingStatus(billingAccount.billingStatus),
-    plan: null,
     lifecycleState: billingAccount.billingStatus === 'past_due' ? 'past_due' : billingAccount.billingStatus === 'paused' ? 'suspended' : billingAccount.billingStatus === 'canceled' ? 'cancelled' : billingAccount.billingStatus === 'unpaid' || billingAccount.billingStatus === 'incomplete_expired' ? 'expired' : billingAccount.billingStatus === 'none' ? 'unreconciled' : 'active',
     subscriptionStatus: normalizeBillingStatus(billingAccount.billingStatus),
     periodEnd: null,
@@ -466,7 +449,6 @@ async function getBillingContext(
     graceEndsAt: null,
     reconciliationState: null,
     fundingSource: null,
-    legacyStoredPlan: null,
   }
 }
 
@@ -496,7 +478,6 @@ async function getPolicyContext(
     policy: {
       status: doc.status === 'active' ? 'active' : String(doc.status ?? 'draft') as PolicyAccessContext['status'],
       privacy: normalizePolicyPrivacy(doc.privacy),
-      allowedPlans: normalizeAllowedPlans(doc.allowedPlans),
       requiredGroupIds: getRelationshipIds(doc.requiredGroups),
       requireActiveBilling: Boolean(doc.requireActiveBilling),
       allowPreviewLessons: Boolean(doc.allowPreviewLessons),

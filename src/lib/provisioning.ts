@@ -953,8 +953,8 @@ export async function projectInvoicePaymentState(params: {
 				: paid
 					? null
 					: undefined,
-			plan: activateMonthlyAccess ? 'pro' : undefined,
-			currentPlan: activateMonthlyAccess ? 'pro' : undefined,
+			plan: activateMonthlyAccess ? 'jpv_bootcamp_membership' : undefined,
+			currentPlan: activateMonthlyAccess ? 'jpv_bootcamp_membership' : undefined,
 			status: activateMonthlyAccess ? 'active' : undefined,
 			commitmentStatus:
 				activateMonthlyAccess && existing.commitmentStatus === 'pending'

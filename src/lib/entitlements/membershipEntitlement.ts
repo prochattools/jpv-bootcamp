@@ -1,6 +1,5 @@
 export type MembershipFundingSource = 'direct_payment' | 'voucher' | 'pay_it_forward'
-export type MembershipLegacyPlan = 'free' | 'pro'
-export type MembershipEntitlementDecision = 'allowed' | 'denied' | 'billing_hold' | 'manual_review'
+export type MembershipEntitlementDecision = 'allowed' | 'denied' | 'billing_hold'
 export type MembershipEntitlementReason =
   | 'active_direct_membership'
   | 'active_voucher_membership'
@@ -18,8 +17,6 @@ export type MembershipEntitlementReason =
   | 'cancelled_after_period_end'
   | 'past_due_outside_grace'
   | 'payment_failure_outside_grace'
-  | 'legacy_pro_requires_verified_subscription'
-  | 'legacy_free_denied'
   | 'missing_or_unknown_state'
 
 export type MembershipEntitlementInput = {
@@ -31,7 +28,6 @@ export type MembershipEntitlementInput = {
   graceEndsAt?: Date | string | null
   reconciliationState?: 'matched' | 'mismatch' | 'pending' | 'failed' | null
   fundingSource?: MembershipFundingSource | null
-  legacyStoredPlan?: MembershipLegacyPlan | null
   now?: Date | string | null
 }
 
@@ -72,7 +68,6 @@ export function evaluateMembershipEntitlement(input: MembershipEntitlementInput)
     graceEndsAt: graceEndsAt?.toISOString() ?? null,
     reconciliationState: input.reconciliationState ?? null,
     fundingSource,
-    legacyStoredPlan: input.legacyStoredPlan ?? null,
   }
 
   if (input.reconciliationState === 'mismatch') {
@@ -132,12 +127,6 @@ export function evaluateMembershipEntitlement(input: MembershipEntitlementInput)
   }
 
   if (!status || !lifecycle) {
-    if (input.legacyStoredPlan === 'free') {
-      return { decision: 'denied', reason: 'legacy_free_denied', evidence }
-    }
-    if (input.legacyStoredPlan === 'pro') {
-      return { decision: 'manual_review', reason: 'legacy_pro_requires_verified_subscription', evidence }
-    }
     return { decision: 'denied', reason: 'missing_or_unknown_state', evidence }
   }
 
@@ -149,16 +138,5 @@ export function evaluateMembershipEntitlement(input: MembershipEntitlementInput)
     return { decision: 'allowed', reason: 'active_pay_it_forward_membership', evidence }
   }
 
-  if (fundingSource === 'direct_payment') {
-    if (input.legacyStoredPlan === 'free') {
-      return { decision: 'denied', reason: 'legacy_free_denied', evidence }
-    }
-    return { decision: 'allowed', reason: 'active_direct_membership', evidence }
-  }
-
-  if (input.legacyStoredPlan === 'pro') {
-    return { decision: 'allowed', reason: 'active_direct_membership', evidence }
-  }
-
-  return { decision: 'denied', reason: 'missing_or_unknown_state', evidence }
+  return { decision: 'allowed', reason: 'active_direct_membership', evidence }
 }

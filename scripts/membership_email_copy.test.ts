@@ -17,21 +17,21 @@ function run(name: string, fn: () => void) {
 
 run('renders the pro upgrade confirmation copy', () => {
 	assert.equal(
-		getMembershipEmailIntro({ plan: 'pro', variant: 'upgrade' }),
+		getMembershipEmailIntro({ plan: 'jpv_bootcamp_membership', variant: 'upgrade' }),
 		"You've been upgraded to Pro."
 	)
 })
 
 run('keeps welcome copy separate from upgrade copy', () => {
 	assert.equal(
-		getMembershipEmailIntro({ plan: 'pro', variant: 'welcome' }),
+		getMembershipEmailIntro({ plan: 'jpv_bootcamp_membership', variant: 'welcome' }),
 		'Your Pro plan is active.'
 	)
 })
 
 run('renders bold html for the upgrade copy', () => {
 	assert.equal(
-		getMembershipEmailIntroHtml({ plan: 'pro', variant: 'upgrade' }),
+		getMembershipEmailIntroHtml({ plan: 'jpv_bootcamp_membership', variant: 'upgrade' }),
 		"You've been upgraded to <strong>Pro</strong>."
 	)
 })

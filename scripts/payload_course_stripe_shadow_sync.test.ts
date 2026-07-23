@@ -437,7 +437,7 @@ async function run() {
     assert.equal(payload.docs('payload_members')[0]?.accountStatus, 'blocked')
     assert.equal(payload.docs('payload_members')[0]?.billingHoldReason, 'billing_hold')
     assert.equal(payload.docs('payload_billing_accounts')[0]?.billingStatus, 'billing_hold')
-    assert.equal(payload.docs('payload_subscriptions')[0]?.plan, 'free')
+    assert.equal(payload.docs('payload_subscriptions')[0]?.plan, 'jpv_bootcamp_membership')
     assert.equal(
       payload.docs('payload_email_events').some((emailEvent) => emailEvent.templateKey === 'subscription-started'),
       false

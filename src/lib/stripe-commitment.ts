@@ -32,7 +32,7 @@ export function buildCheckoutContractMetadata(params: {
   consent?: MonthlyCheckoutConsent | null
 }): Record<string, string> {
   const base = {
-    plan: 'pro',
+    plan: 'jpv_bootcamp_membership',
     billing: params.billing,
     billing_cadence: params.billing === 'monthly' ? 'monthly_commitment' : 'annual',
     source: params.source,
