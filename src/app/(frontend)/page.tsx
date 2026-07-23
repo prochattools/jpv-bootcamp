@@ -103,11 +103,11 @@ export default function HomePage() {
   }> = [
     {
       name: "Monthly",
-      price: "£49/mo",
+      price: "£80/mo",
       description: "Everything to get profitable",
       features: ["Full course library", "Live Zoom training", "Deal analysis templates", "Active community access"],
       ctaLabel: "Start Membership",
-      ctaHref: "/api/stripe/checkout?plan=pro",
+      ctaHref: "/api/stripe/checkout?priceId=price_1TwKXkLQNsjxBhGBB48pVZa6",
       highlight: true,
       badge: "Most popular",
       subcopy: "14-day money-back guarantee",
