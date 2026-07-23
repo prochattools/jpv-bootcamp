@@ -625,11 +625,11 @@ function testPageActionAndPostingSources(): void {
     spacePage,
     /href=\{`\/portal\/community\/\$\{encodedSpaceSlug\}\/posts\/\$\{encodeURIComponent\(post\.id\)\}`\}/
   )
-  assert.match(spacePage, /Read-only member view/)
-  assert.match(spacePage, /persisted Payload data/)
-  assert.doesNotMatch(spacePage, /submitCommunityPost/)
+  assert.match(spacePage, /submitCommunityPost/)
+  assert.match(spacePage, /Start a discussion/)
+  assert.doesNotMatch(spacePage, /Read-only member view/)
   assert.doesNotMatch(spacePage, /Create a post/)
-  assert.doesNotMatch(spacePage, /name=['"](?:title|body|memberId|author|role|status|visibility|moderationStatus|rateLimit|audit)/)
+  assert.doesNotMatch(spacePage, /name=['"](?:memberId|author|role|status|visibility|moderationStatus|rateLimit|audit)/)
 
   const postPage = fs.readFileSync(
     path.resolve(
@@ -638,11 +638,11 @@ function testPageActionAndPostingSources(): void {
     ),
     'utf8'
   )
-  assert.match(postPage, /Read-only discussion view/)
-  assert.match(postPage, /StatusPill tone='neutral'>Read only/)
-  assert.doesNotMatch(postPage, /submitCommunityComment/)
+  assert.match(postPage, /submitCommunityComment/)
+  assert.match(postPage, /Leave a reply/)
+  assert.doesNotMatch(postPage, /Read-only discussion view/)
   assert.doesNotMatch(postPage, /Add a comment/)
-  assert.doesNotMatch(postPage, /name=['"](?:body|memberId|author|role|status|visibility|moderationStatus|rateLimit|audit)/)
+  assert.doesNotMatch(postPage, /name=['"](?:memberId|author|role|status|visibility|moderationStatus|rateLimit|audit)/)
 
   const actions = fs.readFileSync(
     path.resolve(process.cwd(), 'src/app/(frontend)/portal/community/actions.ts'),
