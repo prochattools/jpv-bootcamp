@@ -76,24 +76,24 @@ test.describe('canonical portal courses and community routes', () => {
 
     await page.goto('/portal/community/private-space')
     await expect(page.getByRole('heading', { name: 'Private Space' })).toBeVisible()
-    await expect(page.getByRole('heading', { name: 'Read-only member view' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Read-only member view' })).toHaveCount(0)
+    await expect(page.getByRole('heading', { name: 'Start a discussion' })).toBeVisible()
     await expect(page.getByRole('link', { name: 'Open discussion' })).toHaveAttribute(
       'href',
       '/portal/community/private-space/posts/post_visible',
     )
-    await expect(page.getByRole('heading', { name: 'Create a post' })).toHaveCount(0)
-    await expect(page.getByRole('button', { name: 'Submit for review' })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Post discussion' })).toBeVisible()
     await expect(page.locator(removedHrefSelector)).toHaveCount(0)
 
     await page.goto('/portal/community/private-space/posts/post_visible')
     await expect(page.getByRole('heading', { name: 'Visible discussion' })).toBeVisible()
-    await expect(page.getByRole('heading', { name: 'Read-only discussion view' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Read-only discussion view' })).toHaveCount(0)
+    await expect(page.getByRole('heading', { name: 'Leave a reply' })).toBeVisible()
     await expect(page.getByRole('link', { name: 'Download' })).toHaveAttribute(
       'href',
       '/portal/community/files/file_document_visible',
     )
-    await expect(page.getByRole('heading', { name: 'Add a comment' })).toHaveCount(0)
-    await expect(page.getByRole('button', { name: 'Submit reply for review' })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Submit reply' })).toBeVisible()
     await expect(page.locator(removedHrefSelector)).toHaveCount(0)
 
     await page.goto('/portal/community/moderation')

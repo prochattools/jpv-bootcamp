@@ -152,8 +152,15 @@ function portalCoursesHtml(section: 'index' | 'detail' | 'lesson' | 'community' 
       <main>
         <a href="/portal/community">Back to community</a>
         <h1>Private Space</h1>
-        <section><h2>Read-only member view</h2><p>Visible spaces and approved discussions are shown from persisted Payload data. Member posting, replies, uploads, and moderation actions remain deferred outside this launch preview.</p></section>
         <section><h2>Visible posts</h2><a href="/portal/community/private-space/posts/post_visible">Open discussion</a></section>
+        <section>
+          <h2>Start a discussion</h2>
+          <form>
+            <input name="title" type="text" />
+            <textarea name="body"></textarea>
+            <button type="submit">Post discussion</button>
+          </form>
+        </section>
       </main>`,
     post: `
       <header><nav aria-label="Member navigation"><a href="/portal/community">Community</a></nav></header>
@@ -161,8 +168,14 @@ function portalCoursesHtml(section: 'index' | 'detail' | 'lesson' | 'community' 
         <a href="/portal/community/private-space">Back to Private Space</a>
         <h1>Visible discussion</h1>
         <section><h2>Visible attachments</h2><a href="/portal/community/files/file_document_visible">Download</a></section>
-        <section><h2>Read-only discussion view</h2><p>Visible discussions and published comments appear here from persisted Payload data. Member replies, uploads, and moderation actions remain deferred outside this launch preview.</p></section>
-        <section><h2>Visible comments</h2><p>First comment</p></section>
+        <section><h2>Comments</h2><p>First comment</p></section>
+        <section>
+          <h2>Leave a reply</h2>
+          <form>
+            <textarea name="body"></textarea>
+            <button type="submit">Submit reply</button>
+          </form>
+        </section>
       </main>`,
     moderation: `
       <header><nav aria-label="Member navigation"><a href="/portal/community">Community</a></nav></header>

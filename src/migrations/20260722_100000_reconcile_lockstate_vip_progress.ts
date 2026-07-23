@@ -63,8 +63,12 @@ BEGIN
     JOIN pg_namespace n ON n.oid = t.typnamespace
     WHERE n.nspname = '${schema}' AND t.typname = 'enum_payload_courses_access_badge'
   ) AND NOT EXISTS (
-    SELECT unnest(enum_range(NULL::${schema}."enum_payload_courses_access_badge")) AS val
-    HAVING 'vip' = ANY(array_agg(unnest::text))
+    SELECT 1 FROM pg_enum e
+    JOIN pg_type t ON t.oid = e.enumtypid
+    JOIN pg_namespace n ON n.oid = t.typnamespace
+    WHERE n.nspname = '${schema}'
+      AND t.typname = 'enum_payload_courses_access_badge'
+      AND e.enumlabel = 'vip'
   ) THEN
     ALTER TYPE ${schema}."enum_payload_courses_access_badge" ADD VALUE IF NOT EXISTS 'vip';
   END IF;
