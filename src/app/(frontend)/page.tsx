@@ -107,7 +107,7 @@ export default function HomePage() {
       description: "Everything to get profitable",
       features: ["Full course library", "Live Zoom training", "Deal analysis templates", "Active community access"],
       ctaLabel: "Start Membership",
-      ctaHref: "/api/stripe/checkout?priceId=price_1TwKXkLQNsjxBhGBB48pVZa6",
+      ctaHref: "/api/stripe/checkout?plan=vip",
       highlight: true,
       badge: "Most popular",
       subcopy: "14-day money-back guarantee",
