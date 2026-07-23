@@ -82,22 +82,12 @@ export default function SponsoredPayItForward() {
 			<div className="mt-6 flex flex-wrap gap-3">
 				<button
 					type="button"
-					onClick={() => handleCheckout('pro')}
+					onClick={() => handleCheckout('vip')}
 					disabled={loading}
 					className="rounded-full border border-jpv-gray-600 px-4 py-2 text-sm font-semibold text-jpv-gray-100 hover:border-jpv-green hover:text-white"
 				>
-					Sponsor a Pro month
+					Sponsor a VIP month
 				</button>
-				{counts.vipEnabled ? (
-					<button
-						type="button"
-						onClick={() => handleCheckout('vip')}
-						disabled={loading}
-						className="rounded-full border border-jpv-gray-600 px-4 py-2 text-sm font-semibold text-jpv-gray-100 hover:border-jpv-green hover:text-white"
-					>
-						Sponsor a VIP month
-					</button>
-				) : null}
 			</div>
 			{error ? <p className="mt-3 text-xs text-red-400">{error}</p> : null}
 		</div>

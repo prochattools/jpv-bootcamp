@@ -26,26 +26,34 @@ export default function HomePage() {
   ];
   const heroNotices = [
     {
-      title: "Next Online Training",
-      meta: (
-        <>
-          Friday, 24 April, 7 pm · <a href="#pricing-pro" className="hover:text-white transition-colors underline decoration-jpv-green/40 underline-offset-4">Monthly</a> and <a href="#pricing-vip" className="hover:text-white transition-colors underline decoration-jpv-green/40 underline-offset-4">Annually</a>
-        </>
-      ),
+      title: "Next Live Online Bootcamp",
+      meta: "Friday, 11 September | 7:00 PM (BST)",
       description: (
         <>
-          Weekly online training for 5 weeks for <a href="#pricing-pro" className="hover:text-white hover:underline transition-colors">Monthly</a> and 1 additional in-person live session for <a href="#pricing-vip" className="hover:text-white hover:underline transition-colors">Annually</a>.
+          <p className="mb-3">Join our 7-week live online property investment programme, followed by an exclusive full-day, in-person intensive designed to help you build wealth through property with confidence and Kingdom purpose.</p>
+          <ul className="space-y-1 text-xs">
+            <li>✓ 7 Weekly Live Online Training Sessions</li>
+            <li>✓ 1 Full-Day In-Person Intensive</li>
+            <li>✓ Available with All Membership Plans</li>
+          </ul>
         </>
       ),
     },
     {
-      title: "Inheritance Builders Bootcamp Conference",
-      meta: "27 March 2026 · London",
-      description:
-        "A flagship Christian business event for believers growing in biblical stewardship and Kingdom impact through wise investment.",
-      href: "https://ibbootcamp.co.uk",
-      target: "_blank",
-      rel: "nofollow noopener noreferrer",
+      title: "JV & Networking Summit",
+      meta: "Saturday, 24 October | All Day | London",
+      description: (
+        <>
+          <p className="mb-3">Take your property journey to the next level at our exclusive in-person summit. Building on the knowledge gained during the 7-week online Bootcamp, this immersive event is designed to connect aspiring investors, form strategic Joint Venture (JV) partnerships, and equip you with the confidence and practical steps to secure your first—or next—property investment.</p>
+          <ul className="space-y-1 text-xs">
+            <li>✓ Exclusive Full-Day Live Event</li>
+            <li>✓ Build Strategic JV Partnerships</li>
+            <li>✓ Network with Like-Minded Investors</li>
+            <li>✓ Develop Your Property Acquisition Strategy</li>
+            <li>✓ Action Planning with Expert Guidance</li>
+          </ul>
+        </>
+      ),
     },
   ];
   const learnSections = [
@@ -116,8 +124,8 @@ export default function HomePage() {
       name: "Annually",
       price: "£800 annually",
       description: "Hands-on support",
-      features: ["All Pro features", "Weekly group coaching", "1:1 deal review (when needed)", "Live Event"],
-      ctaLabel: "Available Zoom",
+      features: ["Same features", "Paid upfront for 12 months", "2 months at no extra cost", "1 clear annual payment"],
+      ctaLabel: "Available Soon",
       ctaHref: "#",
       highlight: false,
       disabled: true,
