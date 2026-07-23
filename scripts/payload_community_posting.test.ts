@@ -430,7 +430,7 @@ async function run() {
         title: 'Unauthorized post',
         body: richTextBody,
       }),
-      /Space access denied/
+      /Active space membership is required/
     )
   }
 
