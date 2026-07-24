@@ -1345,3 +1345,57 @@ Render the new Page/Post/Lesson managed media relationships in member-facing rou
 
 **Exact next repository-local task**
 Complete the Stripe operator-management slice in Payload: audit current subscription projections and admin controls, then implement the highest-priority missing guarded test-mode action with focused tests. Keep provider-delivery and browser proof as separate external gates.
+
+
+
+### 2026-07-24 Stripe operator-management checkpoint
+
+**Completed repository-local work**
+- Billing Accounts, Subscriptions, Payments, and Stripe Events are now immutable admin-readable webhook projections. Administrators cannot create, update, or delete those records through ordinary Payload access.
+- Billing Actions is now visible in Payload CMS as the auditable operator surface.
+- Administrators can create only three guarded subscription actions:
+  - `sync_subscription`
+  - `cancel_at_period_end`
+  - `resume_subscription`
+- The operator selects a Payload subscription record. Stripe customer or subscription IDs are never accepted from the client; the server derives the Stripe subscription ID and billing account from Payload relationships.
+- Operator actions require a real `payload_users` administrator identity and create immutable audit records with requester, completion state, source event, result, and metadata.
+- The service fails before any Stripe API call unless both `STRIPE_ENV` and the selected Payload billing account are test mode.
+- Retrieved live Stripe subscriptions are rejected even when local configuration claims test mode.
+- Cancel-at-period-end and cancellation reversal use state comparison before mutation. Repeating an already-satisfied action is recorded as `skipped` without another Stripe update.
+- Stripe mutations use stable idempotency keys derived from the immutable Payload Billing Action record ID.
+- Canceled and incomplete-expired subscriptions fail closed and cannot be resumed.
+- Every successful or skipped action mirrors the current Stripe subscription through the existing Stripe-to-Payload projection pipeline. Webhooks remain the canonical ongoing source of truth; manual sync is an explicit operator reconciliation event.
+- Existing webhook-generated Billing Action values remain supported and continue to dedupe by source event and action type.
+
+**Validation evidence**
+- Focused Stripe operator Vitest: **8/8 passed**.
+- Existing Stripe shadow-sync contract: **passed**.
+- Existing singular membership commitment contract: **passed**.
+- Payload TypeScript: **passed**.
+- Security scan for the collection, operator service, and tests: **clean**.
+- Production build job `validation-c73a694e-a151-4585-9a39-6a821b4d5051`: **passed**.
+- Initial release job `validation-2683f250-61a1-47af-9ff6-a90f396084d1` failed only because an existing static test required the phrase `Billing account projections`. The description was repaired without weakening read-only guidance.
+- The failed verification script then passed directly.
+- Repaired canonical release job `validation-9ba17724-e4d0-4071-855e-56033bb29f8c`: **153/153 passed**.
+
+**Updated phase position**
+- Stripe operator management: **82%** (`IMPLEMENTED` and `LOCAL PASS`; provider and browser execution remain external gates).
+- Overall Stripe lifecycle: **76%**.
+- Controlled launch decision remains **NO-GO**.
+
+**Required schema gate**
+- This slice adds Billing Action enum values and fields (`subscription`, `requestedBy`, `completedAt`, and `result`).
+- A reviewed Payload migration is required before the operator collection can execute against staging data.
+- No migration was generated or applied because `src/payload-types.ts` contains protected unrelated drift and this task prohibited type generation and migration application.
+
+**Remaining staging/provider gates**
+1. Generate and review the Payload schema migration in an approved clean worktree, then apply it through the controlled staging migration process.
+2. Browser-prove an authenticated Payload administrator can create Sync, Cancel at period end, and Reverse scheduled cancellation actions.
+3. Use only controlled Stripe test subscriptions and verify the derived Stripe ID matches the selected Payload subscription.
+4. Prove action status, requester, source event, result, and webhook projection are visible in Payload.
+5. Prove repeated cancellation/reversal actions are skipped idempotently.
+6. Prove live Stripe configuration, live billing accounts, and live subscription objects fail before mutation.
+7. Complete provider delivery proof: checkout completion, webhook receipt, projection, paid-through access, final cancellation, failed-payment handling, and reactivation behavior.
+
+**Exact next repository-local task**
+Complete the LiveKit operator-to-member delivery slice: audit Payload session scheduling and portal state, implement the highest-priority missing local workflow, add focused tests, and keep real room joins as a separate browser/provider gate.

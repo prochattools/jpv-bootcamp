@@ -1,8 +1,20 @@
 import type { CollectionConfig } from 'payload'
 
-import { adminOnlyCollectionAccess } from '@/lib/access/payloadAccess'
+import { isPayloadAdminRequest } from '@/lib/access/payloadAccess'
+import {
+  isStripeOperatorAction,
+  processPayloadBillingAction,
+} from '@/lib/billing/stripeOperatorActions'
 
 const billingGroup = 'Billing'
+
+const webhookProjectionCollectionAccess = {
+  admin: ({ req }: { req: Parameters<typeof isPayloadAdminRequest>[0] }) => isPayloadAdminRequest(req),
+  create: () => false,
+  read: ({ req }: { req: Parameters<typeof isPayloadAdminRequest>[0] }) => isPayloadAdminRequest(req),
+  update: () => false,
+  delete: () => false,
+}
 
 const stripeModeOptions = [
   { label: 'Test', value: 'test' },
@@ -20,9 +32,9 @@ export const PayloadBillingAccounts: CollectionConfig = {
     group: billingGroup,
     useAsTitle: 'displayName',
     defaultColumns: ['displayName', 'member', 'stripeCustomerId', 'billingStatus', 'updatedAt'],
-    description: 'Billing account projections mirrored from Stripe and member actions.',
+    description: 'Billing account projections are read-only. Use Billing Actions for guarded Stripe test-mode operations.',
   },
-  access: adminOnlyCollectionAccess,
+  access: webhookProjectionCollectionAccess,
   fields: [
     { name: 'displayName', type: 'text', required: true },
     {
@@ -74,9 +86,9 @@ export const PayloadSubscriptions: CollectionConfig = {
     group: billingGroup,
     useAsTitle: 'displayName',
     defaultColumns: ['displayName', 'member', 'plan', 'status', 'currentPeriodEnd', 'updatedAt'],
-    description: 'Subscription projections and current access tier.',
+    description: 'Read-only Stripe subscription projection. Create a Billing Action to sync, schedule cancellation, or reverse it.',
   },
-  access: adminOnlyCollectionAccess,
+  access: webhookProjectionCollectionAccess,
   fields: [
     { name: 'displayName', type: 'text', required: true },
     {
@@ -173,9 +185,9 @@ export const PayloadPayments: CollectionConfig = {
     group: billingGroup,
     useAsTitle: 'displayName',
     defaultColumns: ['displayName', 'member', 'amount', 'currency', 'status', 'paidAt'],
-    description: 'Payment history and refund/dispute projections.',
+    description: 'Read-only payment, refund, and dispute history projected from Stripe webhooks.',
   },
-  access: adminOnlyCollectionAccess,
+  access: webhookProjectionCollectionAccess,
   fields: [
     { name: 'displayName', type: 'text', required: true },
     {
@@ -231,7 +243,7 @@ export const PayloadStripeEvents: CollectionConfig = {
     defaultColumns: ['eventId', 'eventType', 'livemode', 'processingStatus', 'processedAt'],
     hidden: true,
   },
-  access: adminOnlyCollectionAccess,
+  access: webhookProjectionCollectionAccess,
   fields: [
     { name: 'eventId', type: 'text', required: true, unique: true, index: true },
     { name: 'eventType', type: 'text', required: true, index: true },
@@ -267,23 +279,89 @@ export const PayloadBillingActions: CollectionConfig = {
   admin: {
     group: billingGroup,
     useAsTitle: 'displayName',
-    defaultColumns: ['displayName', 'member', 'actionType', 'status', 'createdAt'],
-    hidden: true,
+    defaultColumns: ['displayName', 'subscription', 'actionType', 'status', 'requestedBy', 'createdAt'],
+    description: 'Create a guarded test-mode subscription action. Results are immutable audit records.',
   },
-  access: adminOnlyCollectionAccess,
+  access: {
+    admin: ({ req }) => isPayloadAdminRequest(req),
+    create: ({ req }) => isPayloadAdminRequest(req),
+    read: ({ req }) => isPayloadAdminRequest(req),
+    update: () => false,
+    delete: () => false,
+  },
+  hooks: {
+    beforeValidate: [
+      ({ data, operation, req }) => {
+        if (operation !== 'create' || req.user?.collection !== 'payload_users') return data
+        if (!isStripeOperatorAction(data?.actionType)) {
+          throw new Error('Administrators may create only sync, cancel-at-period-end, or resume actions.')
+        }
+        const subscription = data?.subscription
+        const subscriptionId = typeof subscription === 'object' ? subscription?.id : subscription
+        if (subscriptionId === undefined || subscriptionId === null || String(subscriptionId).trim() === '') {
+          throw new Error('A Payload subscription record is required.')
+        }
+        return {
+          ...data,
+          displayName: `${data.actionType} subscription ${String(subscriptionId)}`,
+          requestedBy: req.user.id,
+          status: 'pending',
+          sourceEventId: undefined,
+          completedAt: undefined,
+          result: undefined,
+          metadata: undefined,
+        }
+      },
+    ],
+    afterChange: [
+      async ({ doc, operation, req }) => processPayloadBillingAction({
+        doc,
+        operation,
+        req: {
+          payload: req.payload,
+          user: req.user as { id?: string | number; collection?: string; email?: string } | null,
+        },
+      }),
+    ],
+  },
   fields: [
-    { name: 'displayName', type: 'text', required: true },
+    {
+      name: 'displayName',
+      type: 'text',
+      required: true,
+      admin: { readOnly: true },
+    },
+    {
+      name: 'subscription',
+      type: 'relationship',
+      relationTo: 'payload_subscriptions',
+      index: true,
+      admin: {
+        description: 'Select the Payload subscription. Stripe IDs are derived server-side.',
+      },
+    },
     {
       name: 'member',
       type: 'relationship',
       relationTo: 'payload_members',
       index: true,
+      admin: { readOnly: true },
+    },
+    {
+      name: 'requestedBy',
+      type: 'relationship',
+      relationTo: 'payload_users',
+      index: true,
+      admin: { readOnly: true },
     },
     {
       name: 'actionType',
       type: 'select',
       required: true,
       options: [
+        { label: 'Sync from Stripe test mode', value: 'sync_subscription' },
+        { label: 'Cancel at period end', value: 'cancel_at_period_end' },
+        { label: 'Reverse scheduled cancellation', value: 'resume_subscription' },
         { label: 'Checkout Completed', value: 'checkout_completed' },
         { label: 'Subscription Created', value: 'subscription_created' },
         { label: 'Subscription Updated', value: 'subscription_updated' },
@@ -296,6 +374,9 @@ export const PayloadBillingActions: CollectionConfig = {
         { label: 'Access Blocked', value: 'access_blocked' },
         { label: 'Access Restored', value: 'access_restored' },
       ],
+      admin: {
+        description: 'Administrators can create only the first three operator actions. Other values are webhook audit history.',
+      },
     },
     {
       name: 'status',
@@ -308,10 +389,17 @@ export const PayloadBillingActions: CollectionConfig = {
         { label: 'Failed', value: 'failed' },
         { label: 'Skipped', value: 'skipped' },
       ],
+      admin: { readOnly: true },
     },
-    { name: 'sourceEventId', type: 'text', index: true },
-    { name: 'notes', type: 'textarea' },
-    { name: 'metadata', type: 'json' },
+    { name: 'sourceEventId', type: 'text', index: true, admin: { readOnly: true } },
+    { name: 'completedAt', type: 'date', admin: { readOnly: true } },
+    {
+      name: 'notes',
+      type: 'textarea',
+      admin: { description: 'Optional operator reason or change-ticket reference.' },
+    },
+    { name: 'result', type: 'json', admin: { readOnly: true } },
+    { name: 'metadata', type: 'json', admin: { readOnly: true } },
   ],
   timestamps: true,
 }
