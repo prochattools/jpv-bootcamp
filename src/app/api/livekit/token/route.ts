@@ -30,6 +30,10 @@ import config from '@payload-config'
 import { getLiveKitConfig, buildLiveKitToken } from '@/lib/livekit-config'
 import { verifyBillingPortalToken } from '@/lib/billing-portal-token'
 import { normalizePlan } from '@/lib/plans'
+import {
+  isValidLiveSessionRoomName,
+  liveSessionRelationshipId,
+} from '@/lib/liveSessions/sessionLifecycle'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -317,27 +321,72 @@ export async function POST(req: NextRequest) {
 
   const session = sessionResult as {
     status?: string
-    hostUser?: { id?: string } | string | null
+    hostUser?: { id?: string | number } | string | number | null
+    course?: { id?: string | number } | string | number | null
     roomName?: string
   }
 
-  if (session.status === 'ended' || session.status === 'cancelled') {
+  if (session.status === 'completed' || session.status === 'cancelled' || session.status === 'ended') {
     return NextResponse.json(
       { ok: false, reason: 'session_closed' } satisfies TokenErrorResponse,
-      { status: 403 }
+      { status: 403 },
     )
   }
 
-  const roomName = session.roomName ?? `session-${sessionId}`
+  const roomName = session.roomName
+  if (!isValidLiveSessionRoomName(roomName)) {
+    return NextResponse.json(
+      { ok: false, reason: 'invalid_room_name' } satisfies TokenErrorResponse,
+      { status: 403 },
+    )
+  }
 
-  // Determine host from persisted hostUser — NOT from any client-supplied value
-  const hostUserId =
-    session.hostUser != null
-      ? typeof session.hostUser === 'string'
-        ? session.hostUser
-        : session.hostUser?.id
-      : null
-  const isHost = hostUserId != null && String(user.id) === String(hostUserId)
+  const courseId = liveSessionRelationshipId(session.course)
+  if (!courseId) {
+    return NextResponse.json(
+      { ok: false, reason: 'session_course_missing' } satisfies TokenErrorResponse,
+      { status: 403 },
+    )
+  }
+
+  const hostUserId = liveSessionRelationshipId(session.hostUser)
+  const isHost = hostUserId !== null && String(user.id) === hostUserId
+
+  if (isAdmin && !isHost) {
+    return NextResponse.json(
+      { ok: false, reason: 'host_required' } satisfies TokenErrorResponse,
+      { status: 403 },
+    )
+  }
+
+  if (isMember) {
+    if (session.status !== 'live') {
+      return NextResponse.json(
+        { ok: false, reason: 'session_not_live' } satisfies TokenErrorResponse,
+        { status: 403 },
+      )
+    }
+
+    const enrollment = await payloadLib.find({
+      collection: 'payload_course_enrollments',
+      where: {
+        and: [
+          { member: { equals: String(user.id) } },
+          { course: { equals: courseId } },
+          { status: { equals: 'active' } },
+        ],
+      },
+      limit: 1,
+      depth: 0,
+      overrideAccess: true,
+    })
+    if (!enrollment.docs.length) {
+      return NextResponse.json(
+        { ok: false, reason: 'not_entitled' } satisfies TokenErrorResponse,
+        { status: 403 },
+      )
+    }
+  }
 
   const userIdentity = user.email ?? String(user.id)
 

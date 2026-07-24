@@ -3,100 +3,99 @@ import 'server-only'
 import { NextRequest, NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 import config from '@payload-config'
+
 import { resolvePayloadRequestSession } from '@/lib/auth/payloadSession'
 
-/**
- * GET /api/admin/sessions
- * List all live sessions (admin only).
- * Returns up to 200 sessions ordered by scheduledAt descending.
- */
+function adminActor(administratorId: string | number) {
+  return { id: administratorId, collection: 'payload_users' as const }
+}
+
+function asOptionalRelationship(value: unknown): string | number | undefined {
+  if (typeof value === 'string' || typeof value === 'number') {
+    const normalized = String(value).trim()
+    return normalized ? value : undefined
+  }
+  return undefined
+}
+
 export async function GET(req: NextRequest): Promise<NextResponse> {
   try {
     const session = await resolvePayloadRequestSession(req.headers)
-
     if (!session.administratorId) {
       return NextResponse.json({ error: 'Unauthorized: admin required' }, { status: 403 })
     }
 
     const payload = await getPayload({ config })
-
     const result = await payload.find({
-      collection: 'live_sessions' as any,
+      collection: 'live_sessions',
       limit: 200,
       sort: '-scheduledAt',
-      depth: 1,
+      depth: 2,
       overrideAccess: true,
     })
 
     return NextResponse.json({ sessions: result.docs, total: result.totalDocs })
-  } catch (err) {
-    console.error('GET /api/admin/sessions error', err)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+  } catch (error) {
+    console.error('GET /api/admin/sessions error', {
+      message: error instanceof Error ? error.message : String(error),
+    })
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
-/**
- * POST /api/admin/sessions
- * Create a new live session (admin only)
- */
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
     const session = await resolvePayloadRequestSession(req.headers)
-
-    // Admin-only access
     if (!session.administratorId) {
       return NextResponse.json({ error: 'Unauthorized: admin required' }, { status: 403 })
     }
 
-    const body = await req.json()
-    // hostUser is the relationship field name in the live_sessions collection.
-    // Accept both 'hostUser' and legacy 'hostUserId' from callers.
-    const { title, course, module, lesson, scheduledAt, capacity } = body
-    const hostUser: string | undefined = body.hostUser ?? body.hostUserId
+    const body = await req.json() as Record<string, unknown>
+    const title = typeof body.title === 'string' ? body.title.trim() : ''
+    const course = asOptionalRelationship(body.course)
+    const module = asOptionalRelationship(body.module)
+    const lesson = asOptionalRelationship(body.lesson)
+    const scheduledDate = new Date(String(body.scheduledAt ?? ''))
+    const capacity = Number(body.capacity ?? 50)
 
-    if (!title || !course || !hostUser || !scheduledAt) {
+    if (!title || course === undefined || Number.isNaN(scheduledDate.getTime())) {
       return NextResponse.json(
-        { error: 'Missing required fields: title, course, hostUser (admin user ID), scheduledAt' },
-        { status: 400 }
+        { error: 'Valid title, course, and scheduledAt are required.' },
+        { status: 400 },
+      )
+    }
+    if (!Number.isInteger(capacity) || capacity < 1 || capacity > 500) {
+      return NextResponse.json(
+        { error: 'Capacity must be an integer between 1 and 500.' },
+        { status: 400 },
       )
     }
 
     const payload = await getPayload({ config })
-
-    // Create live session
     const liveSession = await payload.create({
-      collection: 'live_sessions' as any,
+      collection: 'live_sessions',
       data: {
         title,
         course,
-        module: module || 'default',
-        lesson: lesson || 'default',
-        // hostUser is a relationship field pointing to payload_users — must be the user ID
-        hostUser,
-        scheduledAt: new Date(scheduledAt).toISOString(),
-        capacity: capacity || 50,
+        module,
+        lesson,
+        hostUser: session.administratorId,
+        scheduledAt: scheduledDate.toISOString(),
+        capacity,
         status: 'scheduled',
-        audit: [
-          {
-            event: 'created',
-            timestamp: new Date().toISOString(),
-            operator: session.administratorId,
-          },
-        ],
-      },
+      } as any,
       overrideAccess: true,
-      user: session as any,
+      user: adminActor(session.administratorId),
     })
 
-    return NextResponse.json(liveSession)
-  } catch (err) {
-    console.error('POST /api/admin/sessions error', err)
+    return NextResponse.json(liveSession, { status: 201 })
+  } catch (error) {
+    console.error('POST /api/admin/sessions error', {
+      message: error instanceof Error ? error.message : String(error),
+    })
     return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
+      { error: error instanceof Error ? error.message : 'Internal server error' },
+      { status: 400 },
     )
   }
 }

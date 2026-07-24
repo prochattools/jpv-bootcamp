@@ -10,6 +10,8 @@ type LiveSession = {
   capacity: number
   roomName: string
   course?: string | { id: string; title?: string } | null
+  module?: string | { id: string; title?: string } | null
+  lesson?: string | { id: string; title?: string } | null
   hostUser?: string | { id: string; email?: string } | null
 }
 
@@ -19,7 +21,8 @@ export default function AdminSessionsPage() {
   const [showForm, setShowForm] = useState(false)
   const [title, setTitle] = useState('')
   const [course, setCourse] = useState('')
-  const [hostUser, setHostUser] = useState('')
+  const [module, setModule] = useState('')
+  const [lesson, setLesson] = useState('')
   const [scheduledAt, setScheduledAt] = useState('')
   const [capacity, setCapacity] = useState(50)
   const [submitting, setSubmitting] = useState(false)
@@ -49,8 +52,8 @@ export default function AdminSessionsPage() {
         body: JSON.stringify({
           title,
           course,
-          // hostUser is the relationship field in live_sessions (payload_users ID)
-          hostUser,
+          module: module || undefined,
+          lesson: lesson || undefined,
           scheduledAt,
           capacity,
         }),
@@ -61,7 +64,8 @@ export default function AdminSessionsPage() {
       }
       setTitle('')
       setCourse('')
-      setHostUser('')
+      setModule('')
+      setLesson('')
       setScheduledAt('')
       setCapacity(50)
       setShowForm(false)
@@ -73,12 +77,15 @@ export default function AdminSessionsPage() {
     }
   }
 
-  async function cancelSession(id: string) {
+  async function updateSessionStatus(
+    id: string,
+    status: 'live' | 'completed' | 'cancelled',
+  ) {
     try {
       const res = await fetch(`/api/admin/sessions/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'cancelled' }),
+        body: JSON.stringify({ status }),
       })
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
@@ -132,14 +139,23 @@ export default function AdminSessionsPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Host User ID</label>
+            <label className="block text-sm font-medium mb-1">Module ID (optional)</label>
             <input
               type="text"
-              value={hostUser}
-              onChange={(e) => setHostUser(e.target.value)}
-              required
+              value={module}
+              onChange={(e) => setModule(e.target.value)}
               className="w-full p-2 border rounded"
-              placeholder="Payload admin user document ID"
+              placeholder="Payload module document ID"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Lesson ID (optional)</label>
+            <input
+              type="text"
+              value={lesson}
+              onChange={(e) => setLesson(e.target.value)}
+              className="w-full p-2 border rounded"
+              placeholder="Requires the related module ID"
             />
           </div>
           <div>
@@ -189,12 +205,16 @@ export default function AdminSessionsPage() {
               session.hostUser && typeof session.hostUser === 'object'
                 ? session.hostUser.email
                 : null
-            const courseTitle: string =
-              session.course == null
-                ? '—'
-                : typeof session.course === 'object'
-                  ? (session.course.title ?? String(session.course.id))
-                  : String(session.course)
+            const courseId = session.course == null
+              ? null
+              : typeof session.course === 'object'
+                ? String(session.course.id)
+                : String(session.course)
+            const courseTitle: string = session.course == null
+              ? '—'
+              : typeof session.course === 'object'
+                ? (session.course.title ?? String(session.course.id))
+                : String(session.course)
 
             return (
               <div
@@ -226,14 +246,46 @@ export default function AdminSessionsPage() {
                     </span>
                   </p>
                 </div>
-                {(session.status === 'scheduled' || session.status === 'live') && (
-                  <button
-                    onClick={() => cancelSession(session.id)}
-                    className="px-4 py-2 bg-red-600 text-white rounded text-sm"
+                <div className="flex flex-wrap justify-end gap-2">
+                  <a
+                    className="px-3 py-2 border border-gray-300 rounded text-sm"
+                    href={`/admin/collections/live_sessions/${session.id}`}
                   >
-                    Cancel
-                  </button>
-                )}
+                    Edit
+                  </a>
+                  {session.status === 'scheduled' ? (
+                    <button
+                      onClick={() => updateSessionStatus(session.id, 'live')}
+                      className="px-3 py-2 bg-green-600 text-white rounded text-sm"
+                    >
+                      Start
+                    </button>
+                  ) : null}
+                  {session.status === 'live' && courseId ? (
+                    <a
+                      className="px-3 py-2 bg-blue-600 text-white rounded text-sm"
+                      href={`/courses/${courseId}/sessions/${session.id}/join`}
+                    >
+                      Join as host
+                    </a>
+                  ) : null}
+                  {session.status === 'live' ? (
+                    <button
+                      onClick={() => updateSessionStatus(session.id, 'completed')}
+                      className="px-3 py-2 bg-gray-800 text-white rounded text-sm"
+                    >
+                      Complete
+                    </button>
+                  ) : null}
+                  {(session.status === 'scheduled' || session.status === 'live') ? (
+                    <button
+                      onClick={() => updateSessionStatus(session.id, 'cancelled')}
+                      className="px-3 py-2 bg-red-600 text-white rounded text-sm"
+                    >
+                      Cancel
+                    </button>
+                  ) : null}
+                </div>
               </div>
             )
           })

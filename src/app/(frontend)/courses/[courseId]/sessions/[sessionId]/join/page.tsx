@@ -21,9 +21,14 @@ async function acquireToken(sessionId: string): Promise<TokenResponse> {
 
 const ERROR_MESSAGES: Record<string, string> = {
   unauthorized: 'You are not logged in. Please sign in and try again.',
-  subscription_required: 'A pro or VIP subscription is required to join live sessions.',
-  session_not_found: 'This session does not exist.',
-  session_closed: 'This session has ended.',
+  subscription_required: 'An active JPV Bootcamp Membership is required to join live sessions.',
+  not_entitled: 'You are not actively enrolled in the course for this session.',
+  host_required: 'Only the assigned session host can join through the administrator path.',
+  session_not_found: 'This session does not exist or is unavailable to your account.',
+  session_not_live: 'This session has not started yet.',
+  session_closed: 'This session has ended or was cancelled.',
+  session_course_missing: 'This session is not linked to a valid course.',
+  invalid_room_name: 'This session room is not configured correctly.',
   server_misconfigured: 'Server configuration error. Contact support.',
 }
 

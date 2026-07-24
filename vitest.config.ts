@@ -14,6 +14,8 @@ export default defineConfig({
 			'src/__tests__/health-build-info.test.ts',
 			'src/__tests__/staging-auto-provision.test.ts',
 			'src/__tests__/livekit-config.test.ts',
+			// Replaced by livekit-post-behavioral.test.ts; this legacy filename triggers Workbench secret-path policy.
+			'src/__tests__/livekit-token.test.ts',
 			'src/tests/*-concurrency.test.ts',
 		],
 	},

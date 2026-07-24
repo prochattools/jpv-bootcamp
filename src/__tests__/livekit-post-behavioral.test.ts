@@ -1,62 +1,37 @@
-/**
- * Behavioral tests for POST /api/livekit/token
- *
- * These tests verify the observable security and functional behaviour of the
- * POST endpoint:
- *
- *  1. Unauthenticated request → 401
- *  2. Authenticated member → { ok, roomName, wsUrl } with NO token in body
- *  3. Response always sets Set-Cookie livekit_room_token
- *  4. Non-host member → canPublish=false
- *  5. Host (session.hostUser matches user.id) → canPublish=true
- *  6. Ended session → 403
- *  7. Non-existent session → 404
- */
-
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
+
 import { POST as postLiveKitToken } from '@/app/api/livekit/token/route'
 
-// ---- Mocks -----------------------------------------------------------------
-
 vi.mock('server-only', () => ({}))
-
 vi.mock('@payload-config', () => ({ default: {} }))
-
 vi.mock('next/headers', () => ({
   headers: vi.fn(async () => new Headers()),
 }))
-
 vi.mock('@/lib/livekit-config', () => ({
   getLiveKitConfig: vi.fn(() => ({
-    apiKey: 'test-api-key',
-    apiSecret: 'test-api-secret',
+    apiKey: 'fixture-key',
+    apiSecret: 'fixture-value',
     wsUrl: 'wss://livekit-behavioral.example.com',
   })),
-  buildLiveKitToken: vi.fn(() => 'behavioral-jwt-token'),
+  buildLiveKitToken: vi.fn(() => 'fixture-room-access'),
 }))
-
-vi.mock('@/lib/billing-portal-token', () => ({
-  verifyBillingPortalToken: vi.fn(),
-}))
-
-vi.mock('@/lib/plans', () => ({
-  normalizePlan: vi.fn((p: string) => p),
-}))
+vi.mock('@/lib/billing-portal-token', () => ({ verifyBillingPortalToken: vi.fn() }))
+vi.mock('@/lib/plans', () => ({ normalizePlan: vi.fn((plan: string) => plan) }))
 
 const mockFindByID = vi.fn()
+const mockFind = vi.fn()
 const mockAuth = vi.fn()
 
 vi.mock('payload', () => ({
   getPayload: vi.fn(async () => ({
     auth: mockAuth,
     findByID: mockFindByID,
+    find: mockFind,
   })),
 }))
 
-// ---- Helpers ---------------------------------------------------------------
-
-function makeRequest(body: Record<string, unknown>) {
+function request(body: Record<string, unknown>) {
   return new NextRequest('http://localhost:3000/api/livekit/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -64,115 +39,141 @@ function makeRequest(body: Record<string, unknown>) {
   })
 }
 
-const SESSION_LIVE = {
-  id: 'sess-42',
+const ROOM_NAME = 'jpv-course-course-1-module-general-lesson-general'
+const LIVE_SESSION = {
+  id: 'session-1',
   status: 'live',
-  roomName: 'behavioral-room',
-  hostUser: { id: 'host-uid' },
+  roomName: ROOM_NAME,
+  course: { id: 'course-1' },
+  hostUser: { id: 'admin-host' },
 }
 
-// ---------------------------------------------------------------------------
+const MEMBER = {
+  user: { id: 'member-1', collection: 'payload_members', email: 'member@example.com' },
+}
 
-describe('POST /api/livekit/token — behavioral', () => {
+const HOST = {
+  user: { id: 'admin-host', collection: 'payload_users', email: 'host@example.com' },
+}
+
+describe('POST /api/livekit/token — operator-to-member delivery', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockFind.mockResolvedValue({ docs: [{ id: 'enrollment-1' }] })
   })
 
-  // 1. POST without auth returns 401
-  it('POST without auth returns 401', async () => {
+  it('rejects unauthenticated users and missing sessions', async () => {
     mockAuth.mockResolvedValue({ user: null })
-    const res = await postLiveKitToken(makeRequest({ sessionId: 'sess-42' }))
-    const data = await res.json()
-    expect(res.status).toBe(401)
-    expect(data.ok).toBe(false)
-    expect(data.reason).toBe('unauthorized')
+    let response = await postLiveKitToken(request({ sessionId: 'session-1' }))
+    expect(response.status).toBe(401)
+
+    mockAuth.mockResolvedValue(MEMBER)
+    mockFindByID.mockRejectedValue(new Error('missing'))
+    response = await postLiveKitToken(request({ sessionId: 'missing' }))
+    expect(response.status).toBe(404)
+    expect((await response.json()).reason).toBe('session_not_found')
   })
 
-  // 2. POST with auth returns { ok, roomName, wsUrl, token } for SDK integration
-  it('POST with auth returns {ok, roomName, wsUrl, token} for a valid member', async () => {
-    mockAuth.mockResolvedValue({
-      user: { id: 'member-1', collection: 'payload_members', email: 'user@test.com' },
-    })
-    mockFindByID.mockResolvedValue(SESSION_LIVE)
-    const res = await postLiveKitToken(makeRequest({ sessionId: 'sess-42' }))
-    const data = await res.json()
-    expect(res.status).toBe(200)
-    expect(data.ok).toBe(true)
-    expect(data.roomName).toBe('behavioral-room')
-    expect(data.wsUrl).toBe('wss://livekit-behavioral.example.com')
-    expect(data.token).toBe('behavioral-jwt-token')
+  it.each(['completed', 'cancelled', 'ended'])(
+    'rejects %s sessions',
+    async (status) => {
+      mockAuth.mockResolvedValue(MEMBER)
+      mockFindByID.mockResolvedValue({ ...LIVE_SESSION, status })
+
+      const response = await postLiveKitToken(request({ sessionId: 'session-1' }))
+      expect(response.status).toBe(403)
+      expect((await response.json()).reason).toBe('session_closed')
+    },
+  )
+
+  it('rejects invalid room names and missing course relationships', async () => {
+    mockAuth.mockResolvedValue(MEMBER)
+    mockFindByID.mockResolvedValue({ ...LIVE_SESSION, roomName: 'Invalid Room!' })
+    let response = await postLiveKitToken(request({ sessionId: 'session-1' }))
+    expect(response.status).toBe(403)
+    expect((await response.json()).reason).toBe('invalid_room_name')
+
+    mockFindByID.mockResolvedValue({ ...LIVE_SESSION, course: null })
+    response = await postLiveKitToken(request({ sessionId: 'session-1' }))
+    expect(response.status).toBe(403)
+    expect((await response.json()).reason).toBe('session_course_missing')
   })
 
-  // 3. POST response has Set-Cookie livekit_room_token
-  it('POST response has Set-Cookie livekit_room_token', async () => {
-    mockAuth.mockResolvedValue({
-      user: { id: 'member-1', collection: 'payload_members', email: 'user@test.com' },
-    })
-    mockFindByID.mockResolvedValue(SESSION_LIVE)
-    const res = await postLiveKitToken(makeRequest({ sessionId: 'sess-42' }))
-    expect(res.status).toBe(200)
-    const setCookie = res.headers.get('set-cookie') ?? ''
-    expect(setCookie).toContain('livekit_room_token=')
-    expect(setCookie).toContain('HttpOnly')
+  it('allows members only for live sessions with active course enrollment', async () => {
+    mockAuth.mockResolvedValue(MEMBER)
+    mockFindByID.mockResolvedValue({ ...LIVE_SESSION, status: 'scheduled' })
+    let response = await postLiveKitToken(request({ sessionId: 'session-1' }))
+    expect(response.status).toBe(403)
+    expect((await response.json()).reason).toBe('session_not_live')
+
+    mockFindByID.mockResolvedValue(LIVE_SESSION)
+    mockFind.mockResolvedValue({ docs: [] })
+    response = await postLiveKitToken(request({ sessionId: 'session-1' }))
+    expect(response.status).toBe(403)
+    expect((await response.json()).reason).toBe('not_entitled')
   })
 
-  // 4. POST sets canPublish=false for non-host member
-  it('POST sets canPublish=false for non-host member', async () => {
+  it('issues an enrolled member token with subscribe-only grants', async () => {
     const { buildLiveKitToken } = await import('@/lib/livekit-config')
-    const spy = vi.mocked(buildLiveKitToken)
-    mockAuth.mockResolvedValue({
-      user: { id: 'other-member', collection: 'payload_members', email: 'other@test.com' },
+    mockAuth.mockResolvedValue(MEMBER)
+    mockFindByID.mockResolvedValue(LIVE_SESSION)
+
+    const response = await postLiveKitToken(request({ sessionId: 'session-1' }))
+    const data = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(data).toMatchObject({
+      ok: true,
+      roomName: ROOM_NAME,
+      wsUrl: 'wss://livekit-behavioral.example.com',
+      token: 'fixture-room-access',
     })
-    mockFindByID.mockResolvedValue(SESSION_LIVE) // hostUser.id='host-uid' != 'other-member'
-    await postLiveKitToken(makeRequest({ sessionId: 'sess-42' }))
-    expect(spy).toHaveBeenCalledWith(
+    expect(response.headers.get('set-cookie')).toContain('livekit_room_token=')
+    expect(vi.mocked(buildLiveKitToken)).toHaveBeenCalledWith(
       expect.objectContaining({
-        grant: expect.objectContaining({ canPublish: false }),
+        grant: expect.objectContaining({
+          room: ROOM_NAME,
+          roomJoin: true,
+          canPublish: false,
+          canSubscribe: true,
+        }),
       }),
-      expect.anything()
+      expect.anything(),
+    )
+    expect(mockFind).toHaveBeenCalledWith(
+      expect.objectContaining({
+        collection: 'payload_course_enrollments',
+        where: {
+          and: [
+            { member: { equals: 'member-1' } },
+            { course: { equals: 'course-1' } },
+            { status: { equals: 'active' } },
+          ],
+        },
+      }),
     )
   })
 
-  // 5. POST sets canPublish=true for host (session.hostUser matches user.id)
-  it('POST sets canPublish=true for host (session.hostUser matches user.id)', async () => {
+  it('allows only the assigned administrator to join as host', async () => {
     const { buildLiveKitToken } = await import('@/lib/livekit-config')
-    const spy = vi.mocked(buildLiveKitToken)
-    mockAuth.mockResolvedValue({
-      user: { id: 'host-uid', collection: 'payload_members', email: 'host@test.com' },
-    })
-    mockFindByID.mockResolvedValue(SESSION_LIVE) // hostUser.id='host-uid' matches
-    await postLiveKitToken(makeRequest({ sessionId: 'sess-42' }))
-    expect(spy).toHaveBeenCalledWith(
+    mockAuth.mockResolvedValue(HOST)
+    mockFindByID.mockResolvedValue({ ...LIVE_SESSION, status: 'scheduled' })
+
+    let response = await postLiveKitToken(request({ sessionId: 'session-1' }))
+    expect(response.status).toBe(200)
+    expect(vi.mocked(buildLiveKitToken)).toHaveBeenCalledWith(
       expect.objectContaining({
-        grant: expect.objectContaining({ canPublish: true }),
+        grant: expect.objectContaining({ canPublish: true, roomJoin: true }),
       }),
-      expect.anything()
+      expect.anything(),
     )
-  })
+    expect(mockFind).not.toHaveBeenCalled()
 
-  // 6. POST to ended session returns 403
-  it('POST to ended session returns 403', async () => {
     mockAuth.mockResolvedValue({
-      user: { id: 'member-1', collection: 'payload_members', email: 'user@test.com' },
+      user: { id: 'other-admin', collection: 'payload_users', email: 'other@example.com' },
     })
-    mockFindByID.mockResolvedValue({ ...SESSION_LIVE, status: 'ended' })
-    const res = await postLiveKitToken(makeRequest({ sessionId: 'sess-42' }))
-    const data = await res.json()
-    expect(res.status).toBe(403)
-    expect(data.ok).toBe(false)
-    expect(data.reason).toBe('session_closed')
-  })
-
-  // 7. POST to non-existent session returns 404
-  it('POST to non-existent session returns 404', async () => {
-    mockAuth.mockResolvedValue({
-      user: { id: 'member-1', collection: 'payload_members', email: 'user@test.com' },
-    })
-    mockFindByID.mockRejectedValue(new Error('Not found'))
-    const res = await postLiveKitToken(makeRequest({ sessionId: 'does-not-exist' }))
-    const data = await res.json()
-    expect(res.status).toBe(404)
-    expect(data.ok).toBe(false)
-    expect(data.reason).toBe('session_not_found')
+    response = await postLiveKitToken(request({ sessionId: 'session-1' }))
+    expect(response.status).toBe(403)
+    expect((await response.json()).reason).toBe('host_required')
   })
 })

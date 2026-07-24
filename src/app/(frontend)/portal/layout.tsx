@@ -12,6 +12,7 @@ import { headers } from 'next/headers'
 const portalLinks = [
   { href: '/portal', label: 'Dashboard' },
   { href: '/portal/courses', label: 'Courses' },
+  { href: '/portal/live-sessions', label: 'Live' },
   { href: '/portal/content', label: 'Updates' },
   { href: '/portal/community', label: 'Community' },
   { href: '/portal/partners', label: 'Partners' },

@@ -1399,3 +1399,67 @@ Complete the Stripe operator-management slice in Payload: audit current subscrip
 
 **Exact next repository-local task**
 Complete the LiveKit operator-to-member delivery slice: audit Payload session scheduling and portal state, implement the highest-priority missing local workflow, add focused tests, and keep real room joins as a separate browser/provider gate.
+
+
+
+### 2026-07-24 LiveKit operator-to-member delivery checkpoint
+
+**Completed repository-local work**
+- Reworked `live_sessions` into a relationship-safe Payload collection using real Course, Course Module, Lesson, and Payload User relationships.
+- Added deterministic LiveKit room-name generation from immutable relationship IDs, strict room validation, and a 128-character bound.
+- Added persisted audit history for create, edit, start, complete, and cancel operations, retaining the latest 100 entries.
+- Added idempotent update handling: no-op status updates do not duplicate audit entries or timestamps.
+- Enforced valid lifecycle transitions: scheduled → live/cancelled; live → completed/cancelled; completed/cancelled sessions are immutable.
+- Added `startedAt`, `completedAt`, and `cancelledAt` projections.
+- Added course/module/lesson relationship-integrity validation; lessons require their module and all relationships must belong to the selected hierarchy.
+- Hardened admin create/edit APIs:
+  - authenticated Payload administrator required;
+  - host is derived server-side from the authenticated administrator;
+  - title, schedule, capacity, relationships, and status transitions are validated;
+  - no client-supplied room name or host ID is accepted.
+- Expanded the admin session interface to create, edit, start, join as assigned host, complete, and cancel sessions.
+- Hardened `/api/livekit/token`:
+  - missing course relationships fail closed;
+  - invalid persisted room names fail closed;
+  - completed/cancelled sessions fail closed;
+  - members may join only while status is `live` and only with active enrollment in the linked course;
+  - only the assigned Payload administrator receives moderator publish grants;
+  - non-host administrators fail closed;
+  - LiveKit credentials remain server-only.
+- Added `/portal/live-sessions` plus a `Live` navigation entry. Members see only sessions for active course enrollments, and join links appear only for valid live rooms.
+- Updated join-page copy to singular `JPV Bootcamp Membership` language and explicit authorization outcomes.
+- Replaced stale LiveKit route behavior coverage with explicit member-enrollment, moderator, room-validation, and terminal-state tests. The legacy `livekit-token.test.ts` file is excluded from Vitest because Workbench policy falsely classifies its filename as a secret path; equivalent and stronger coverage now lives in `livekit-post-behavioral.test.ts`.
+
+**Validation evidence**
+- Focused LiveKit Vitest: **16/16 passed** across lifecycle, member discovery, and delivery-route suites.
+- Payload TypeScript: **passed**.
+- Production build job `validation-b018303e-4042-43f0-96c6-07e30815719d`: **passed**; `/portal/live-sessions`, admin session APIs, and LiveKit token route were included in the production route manifest.
+- Canonical release job `validation-cacee354-1c3c-40c6-9256-ca08f6324777`: **153/153 passed**.
+- Security disposition:
+  - lifecycle service, relationship validators, Payload collection, admin APIs, portal schedule, navigation, and focused tests passed the full high-risk scan;
+  - broad scanning of the existing LiveKit token/join flow reports expected credential-field names and same-origin server/client requests; reviewed changes introduce no secret literals and keep all LiveKit credentials server-side.
+
+**Reviewed batch scope**
+- `PayloadLiveSession` collection and lifecycle/audit service.
+- Admin session create/update APIs and session operations UI.
+- LiveKit token authorization and member join messaging.
+- Member session projection, portal route, and navigation.
+- Focused lifecycle, delivery-route, and member-discovery tests.
+- Vitest exclusion for the stale uneditable duplicate route test.
+- Protected unrelated paths remain excluded: `.ai/current.md`, `.claude/worktrees/**`, `newrelic_agent.log`, and `src/payload-types.ts`.
+
+**Updated phase position**
+- LiveKit operator-to-member delivery: **88%** (`IMPLEMENTED` and `LOCAL PASS`; real provider/browser join remains external).
+- Payload operator platform: **88%**.
+- Controlled launch decision remains **NO-GO**.
+
+**Remaining staging/browser/provider gates**
+1. Apply the approved Payload schema migration for Live Session relationships and audit fields; no migration was generated or applied in this batch.
+2. Browser-prove Payload administrator create, edit, start, assigned-host join, complete, and cancel operations.
+3. With approved LiveKit staging credentials, prove real moderator and entitled-member joins in the same room.
+4. Prove non-host admin, unenrolled member, scheduled member, cancelled session, completed session, missing course, invalid room, and expired membership denial against staging sessions.
+5. Decide whether scheduled sessions should become joinable to members before the host marks them live; current behavior intentionally fails closed until `live`.
+6. Confirm operator ownership for stale or orphaned legacy sessions whose room names or relationships do not satisfy the new contract.
+
+**Exact next repository-local task**
+Complete the email operator-delivery slice: audit onboarding, verification, reset, subscription, cancellation, resend, queue persistence, retry, and failed-delivery handling; implement the highest-priority missing repository-local workflow with focused tests while keeping real provider delivery as an external gate.
