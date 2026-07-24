@@ -118,6 +118,7 @@ export interface Config {
     payload_contact_notes: PayloadContactNote;
     payload_email_templates: PayloadEmailTemplate;
     payload_email_events: PayloadEmailEvent;
+    payload_email_actions: PayloadEmailAction;
     payload_admin_notifications: PayloadAdminNotification;
     payload_member_groups: PayloadMemberGroup;
     payload_spaces: PayloadSpace;
@@ -185,6 +186,7 @@ export interface Config {
     payload_contact_notes: PayloadContactNotesSelect<false> | PayloadContactNotesSelect<true>;
     payload_email_templates: PayloadEmailTemplatesSelect<false> | PayloadEmailTemplatesSelect<true>;
     payload_email_events: PayloadEmailEventsSelect<false> | PayloadEmailEventsSelect<true>;
+    payload_email_actions: PayloadEmailActionsSelect<false> | PayloadEmailActionsSelect<true>;
     payload_admin_notifications: PayloadAdminNotificationsSelect<false> | PayloadAdminNotificationsSelect<true>;
     payload_member_groups: PayloadMemberGroupsSelect<false> | PayloadMemberGroupsSelect<true>;
     payload_spaces: PayloadSpacesSelect<false> | PayloadSpacesSelect<true>;
@@ -297,133 +299,17 @@ export interface PayloadMedia {
   focalY?: number | null;
 }
 /**
+ * Publish rich pages with managed images and Bunny video.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload_pages".
  */
 export interface PayloadPage {
   id: number;
   title: string;
-  slug?: string | null;
-  content?: {
-    root: {
-      type: string;
-      children: {
-        type: any;
-        version: number;
-        [k: string]: unknown;
-      }[];
-      direction: ('ltr' | 'rtl') | null;
-      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
-      indent: number;
-      version: number;
-    };
-    [k: string]: unknown;
-  } | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload_posts".
- */
-export interface PayloadPost {
-  id: number;
-  title: string;
-  slug?: string | null;
-  content?: {
-    root: {
-      type: string;
-      children: {
-        type: any;
-        version: number;
-        [k: string]: unknown;
-      }[];
-      direction: ('ltr' | 'rtl') | null;
-      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
-      indent: number;
-      version: number;
-    };
-    [k: string]: unknown;
-  } | null;
-  status?: ('draft' | 'published') | null;
-  categories?: (number | PayloadCategory)[] | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload_categories".
- */
-export interface PayloadCategory {
-  id: number;
-  title: string;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "live_sessions".
- */
-export interface LiveSession {
-  id: number;
-  title: string;
-  status: 'scheduled' | 'live' | 'completed' | 'cancelled';
-  course: number | PayloadCourse;
-  module: string;
-  lesson: string;
-  /**
-   * Auto-generated from course/module/lesson
-   */
-  roomName: string;
-  hostUser: number | PayloadUser;
-  scheduledAt: string;
-  capacity?: number | null;
-  description?: {
-    root: {
-      type: string;
-      children: {
-        type: any;
-        version: number;
-        [k: string]: unknown;
-      }[];
-      direction: ('ltr' | 'rtl') | null;
-      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
-      indent: number;
-      version: number;
-    };
-    [k: string]: unknown;
-  } | null;
-  /**
-   * Set after recording is available
-   */
-  recordingUrl?: string | null;
-  /**
-   * Automatic timestamps of key events
-   */
-  audit?:
-    | {
-        [k: string]: unknown;
-      }
-    | unknown[]
-    | string
-    | number
-    | boolean
-    | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * Course catalogue. Create, edit and publish courses from here.
- *
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload_courses".
- */
-export interface PayloadCourse {
-  id: number;
-  title: string;
   slug: string;
-  shortDescription?: string | null;
-  description?: {
+  summary?: string | null;
+  content?: {
     root: {
       type: string;
       children: {
@@ -438,16 +324,15 @@ export interface PayloadCourse {
     };
     [k: string]: unknown;
   } | null;
-  coverImage?: (number | null) | PayloadMedia;
-  status: 'draft' | 'published' | 'archived';
-  visibility: 'public' | 'members' | 'restricted';
+  featuredImage?: (number | null) | PayloadMedia;
+  gallery?: (number | PayloadMedia)[] | null;
   /**
-   * Access tier label. Entitlement enforcement is handled at the application layer.
+   * Managed Bunny Stream video displayed with this page.
    */
-  accessBadge: 'free' | 'pro' | 'vip' | 'manual';
-  estimatedDuration?: string | null;
+  featuredVideo?: (number | null) | BunnyVideo;
+  status: 'draft' | 'published' | 'archived';
+  publishedAt?: string | null;
   sortOrder?: number | null;
-  featured?: boolean | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -509,6 +394,10 @@ export interface PayloadLesson {
   title: string;
   slug: string;
   summary?: string | null;
+  /**
+   * Optional lesson artwork shown in the member portal.
+   */
+  coverImage?: (number | null) | PayloadMedia;
   sortOrder: number;
   estimatedDuration?: string | null;
   content?: {
@@ -526,7 +415,17 @@ export interface PayloadLesson {
     };
     [k: string]: unknown;
   } | null;
+  /**
+   * Managed Bunny Stream video attached to this lesson.
+   */
+  bunnyVideo?: (number | null) | BunnyVideo;
+  /**
+   * Legacy import compatibility only. New lesson video must use Bunny Video.
+   */
   videoProviderLabel?: ('none' | 'youtube' | 'vimeo' | 'mux' | 'other') | null;
+  /**
+   * Legacy import compatibility only.
+   */
   videoIdOrPreviewUrl?: string | null;
   downloads?: (number | PayloadMedia)[] | null;
   previewLesson?: boolean | null;
@@ -554,6 +453,157 @@ export interface PayloadCourseModule {
   createdAt: string;
 }
 /**
+ * Course catalogue. Create, edit and publish courses from here.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_courses".
+ */
+export interface PayloadCourse {
+  id: number;
+  title: string;
+  slug: string;
+  shortDescription?: string | null;
+  description?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  coverImage?: (number | null) | PayloadMedia;
+  status: 'draft' | 'published' | 'archived';
+  visibility: 'public' | 'members' | 'restricted';
+  /**
+   * Legacy compatibility value. Runtime access is controlled by JPV Bootcamp Membership and verified Stripe subscription state.
+   */
+  accessBadge: 'manual';
+  estimatedDuration?: string | null;
+  sortOrder?: number | null;
+  featured?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Publish announcements and articles with pictures, downloads and managed video.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_posts".
+ */
+export interface PayloadPost {
+  id: number;
+  title: string;
+  slug: string;
+  excerpt?: string | null;
+  content?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  featuredImage?: (number | null) | PayloadMedia;
+  gallery?: (number | PayloadMedia)[] | null;
+  /**
+   * Managed Bunny Stream video displayed with this post.
+   */
+  featuredVideo?: (number | null) | BunnyVideo;
+  attachments?: (number | PayloadMedia)[] | null;
+  status: 'draft' | 'published' | 'archived';
+  publishedAt?: string | null;
+  categories?: (number | PayloadCategory)[] | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_categories".
+ */
+export interface PayloadCategory {
+  id: number;
+  title: string;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Schedule and operate LiveKit sessions. Room names and audit history are generated automatically.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "live_sessions".
+ */
+export interface LiveSession {
+  id: number;
+  title: string;
+  status: 'scheduled' | 'live' | 'completed' | 'cancelled';
+  course: number | PayloadCourse;
+  /**
+   * Optional. Must belong to the selected course.
+   */
+  module?: (number | null) | PayloadCourseModule;
+  /**
+   * Optional. Requires a module and must belong to it.
+   */
+  lesson?: (number | null) | PayloadLesson;
+  /**
+   * Generated from the immutable course/module/lesson relationship path.
+   */
+  roomName: string;
+  hostUser: number | PayloadUser;
+  scheduledAt: string;
+  capacity: number;
+  description?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  startedAt?: string | null;
+  completedAt?: string | null;
+  cancelledAt?: string | null;
+  /**
+   * Set after an approved recording workflow completes.
+   */
+  recordingUrl?: string | null;
+  /**
+   * Persisted create, edit, and status-transition history.
+   */
+  audit?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * Access tier examples shown in the portal. Not linked to billing or entitlement enforcement.
  *
  * This interface was referenced by `Config`'s JSON-Schema
@@ -562,7 +612,7 @@ export interface PayloadCourseModule {
 export interface PayloadCourseAccessPreview {
   id: number;
   displayLabel: string;
-  type: 'free' | 'pro' | 'vip' | 'manual' | 'private';
+  type: 'public' | 'jpv_bootcamp_membership' | 'private';
   description?: string | null;
   badgeText?: string | null;
   course?: (number | null) | PayloadCourse;
@@ -1115,7 +1165,7 @@ export interface PayloadPartnerEvent {
   createdAt: string;
 }
 /**
- * Billing account projections mirrored from Stripe and member actions.
+ * Billing account projections are read-only. Use Billing Actions for guarded Stripe test-mode operations.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload_billing_accounts".
@@ -1143,7 +1193,7 @@ export interface PayloadBillingAccount {
   createdAt: string;
 }
 /**
- * Subscription projections and current access tier.
+ * Read-only Stripe subscription projection. Create a Billing Action to sync, schedule cancellation, or reverse it.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload_subscriptions".
@@ -1188,7 +1238,7 @@ export interface PayloadSubscription {
   createdAt: string;
 }
 /**
- * Payment history and refund/dispute projections.
+ * Read-only payment, refund, and dispute history projected from Stripe webhooks.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload_payments".
@@ -1244,14 +1294,27 @@ export interface PayloadStripeEvent {
   createdAt: string;
 }
 /**
+ * Create a guarded test-mode subscription action. Results are immutable audit records.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload_billing_actions".
  */
 export interface PayloadBillingAction {
   id: number;
   displayName: string;
+  /**
+   * Select the Payload subscription. Stripe IDs are derived server-side.
+   */
+  subscription?: (number | null) | PayloadSubscription;
   member?: (number | null) | PayloadMember;
+  requestedBy?: (number | null) | PayloadUser;
+  /**
+   * Administrators can create only the first three operator actions. Other values are webhook audit history.
+   */
   actionType:
+    | 'sync_subscription'
+    | 'cancel_at_period_end'
+    | 'resume_subscription'
     | 'checkout_completed'
     | 'subscription_created'
     | 'subscription_updated'
@@ -1265,7 +1328,20 @@ export interface PayloadBillingAction {
     | 'access_restored';
   status: 'pending' | 'completed' | 'failed' | 'skipped';
   sourceEventId?: string | null;
+  completedAt?: string | null;
+  /**
+   * Optional operator reason or change-ticket reference.
+   */
   notes?: string | null;
+  result?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
   metadata?:
     | {
         [k: string]: unknown;
@@ -1795,6 +1871,8 @@ export interface PayloadEmailTemplate {
   createdAt: string;
 }
 /**
+ * Read-only delivery queue and provider status. Use Email Actions to retry failed events.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload_email_events".
  */
@@ -1819,7 +1897,43 @@ export interface PayloadEmailEvent {
   sentAt?: string | null;
   deliveredAt?: string | null;
   failureReason?: string | null;
+  retryCount: number;
+  lastRetryRequestedAt?: string | null;
+  lastRetryRequestedBy?: (number | null) | PayloadUser;
   metadata?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Create a retry request for a failed email event. The action only requeues the event; provider sending remains queue-controlled.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_email_actions".
+ */
+export interface PayloadEmailAction {
+  id: number;
+  displayName: string;
+  /**
+   * Only failed events are eligible. The selected event ID is resolved server-side.
+   */
+  emailEvent: number | PayloadEmailEvent;
+  actionType: 'retry_delivery';
+  requestedBy?: (number | null) | PayloadUser;
+  status: 'pending' | 'completed' | 'failed' | 'skipped';
+  /**
+   * Optional operator reason or support ticket reference.
+   */
+  note?: string | null;
+  completedAt?: string | null;
+  result?:
     | {
         [k: string]: unknown;
       }
@@ -2367,6 +2481,10 @@ export interface PayloadLockedDocument {
         value: number | PayloadEmailTemplate;
       } | null)
     | ({
+        relationTo: 'payload_email_actions';
+        value: number | PayloadEmailAction;
+      } | null)
+    | ({
         relationTo: 'payload_admin_notifications';
         value: number | PayloadAdminNotification;
       } | null)
@@ -2505,7 +2623,14 @@ export interface PayloadMediaSelect<T extends boolean = true> {
 export interface PayloadPagesSelect<T extends boolean = true> {
   title?: T;
   slug?: T;
+  summary?: T;
   content?: T;
+  featuredImage?: T;
+  gallery?: T;
+  featuredVideo?: T;
+  status?: T;
+  publishedAt?: T;
+  sortOrder?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -2516,8 +2641,14 @@ export interface PayloadPagesSelect<T extends boolean = true> {
 export interface PayloadPostsSelect<T extends boolean = true> {
   title?: T;
   slug?: T;
+  excerpt?: T;
   content?: T;
+  featuredImage?: T;
+  gallery?: T;
+  featuredVideo?: T;
+  attachments?: T;
   status?: T;
+  publishedAt?: T;
   categories?: T;
   updatedAt?: T;
   createdAt?: T;
@@ -2546,6 +2677,9 @@ export interface LiveSessionsSelect<T extends boolean = true> {
   scheduledAt?: T;
   capacity?: T;
   description?: T;
+  startedAt?: T;
+  completedAt?: T;
+  cancelledAt?: T;
   recordingUrl?: T;
   audit?: T;
   updatedAt?: T;
@@ -2617,9 +2751,11 @@ export interface PayloadLessonsSelect<T extends boolean = true> {
   title?: T;
   slug?: T;
   summary?: T;
+  coverImage?: T;
   sortOrder?: T;
   estimatedDuration?: T;
   content?: T;
+  bunnyVideo?: T;
   videoProviderLabel?: T;
   videoIdOrPreviewUrl?: T;
   downloads?: T;
@@ -3072,11 +3208,15 @@ export interface PayloadStripeEventsSelect<T extends boolean = true> {
  */
 export interface PayloadBillingActionsSelect<T extends boolean = true> {
   displayName?: T;
+  subscription?: T;
   member?: T;
+  requestedBy?: T;
   actionType?: T;
   status?: T;
   sourceEventId?: T;
+  completedAt?: T;
   notes?: T;
+  result?: T;
   metadata?: T;
   updatedAt?: T;
   createdAt?: T;
@@ -3431,7 +3571,26 @@ export interface PayloadEmailEventsSelect<T extends boolean = true> {
   sentAt?: T;
   deliveredAt?: T;
   failureReason?: T;
+  retryCount?: T;
+  lastRetryRequestedAt?: T;
+  lastRetryRequestedBy?: T;
   metadata?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_email_actions_select".
+ */
+export interface PayloadEmailActionsSelect<T extends boolean = true> {
+  displayName?: T;
+  emailEvent?: T;
+  actionType?: T;
+  requestedBy?: T;
+  status?: T;
+  note?: T;
+  completedAt?: T;
+  result?: T;
   updatedAt?: T;
   createdAt?: T;
 }

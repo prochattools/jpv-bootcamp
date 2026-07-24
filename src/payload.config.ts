@@ -58,6 +58,8 @@ const mediaStoragePlugins =
     : []
 
 function getDbSchema(url: string | undefined): string {
+  const generationOverride = process.env.PAYLOAD_MIGRATION_SCHEMA?.trim()
+  if (generationOverride) return generationOverride
   if (!url) return 'jpvbootcamp'
   try {
     return new URL(url).searchParams.get('schema') || 'jpvbootcamp'

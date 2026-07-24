@@ -1533,3 +1533,109 @@ Complete the email operator-delivery slice: audit onboarding, verification, rese
 
 **Exact next repository-local task**
 Prepare the consolidated Payload schema-migration package for the locally completed operator slices (uplink media, durable storage fields if required, Stripe actions, Live Sessions, and Email Actions) in an isolated clean worktree. Generate and review migrations and types only; do not apply staging or production migrations without explicit approval.
+
+
+
+### 2026-07-24 Consolidated Payload operator-schema migration checkpoint
+
+**Package completed**
+- Regenerated `src/payload-types.ts` from the actual current Payload collection schemas. The regenerated file preserves the earlier generated drift as a strict superset and now includes all completed operator slices.
+- Removed a Payload CLI schema-loading blocker by replacing top-level imports of server-only Stripe and Email operator processors with runtime dynamic imports inside collection hooks. Collection-level action validation remains local and deterministic.
+- Added `PAYLOAD_MIGRATION_SCHEMA` as a generation-only schema-name override. It changes no database credentials and does not apply migrations.
+- Payload's interactive migration generator was attempted twice in non-applying mode. It stopped at schema/enum rename prompts and produced no migration files. The final package therefore uses reviewed deterministic migrations derived from the generated type delta, current collection definitions, and existing database migration inventory.
+- No migration was applied and no database data was manually altered.
+
+**Migration files and exact execution order**
+1. `20260724_120000_operator_content_media`
+   - Adds Page status, summary, publish date, sorting, featured image, gallery, and featured Bunny video.
+   - Adds Post excerpt, featured image, gallery/attachments, featured Bunny video, publish date, required status/slug behavior, and `archived` status.
+   - Adds Lesson cover-image and Bunny-video relationships.
+   - Creates Page and Post relationship indexes and foreign keys.
+   - Durable S3 media storage and hidden legacy controls have no schema columns and are intentionally absent.
+2. `20260724_121000_billing_operator_actions`
+   - Adds Billing Action subscription/requested-by relationships, completion timestamp, and result JSON.
+   - Adds operator values `sync_subscription`, `cancel_at_period_end`, and `resume_subscription`.
+   - Adds webhook audit values `payment_refunded`, `payment_disputed`, and `dispute_resolved`.
+3. `20260724_122000_live_session_relationships`
+   - Preserves existing text module/lesson values as `module_legacy` and `lesson_legacy`.
+   - Adds real optional Course Module and Lesson relationships.
+   - Adds `startedAt`, `completedAt`, and `cancelledAt`.
+   - Does not automatically backfill ambiguous legacy relationships; unresolved sessions remain fail-closed until operator reconciliation.
+4. `20260724_123000_email_operator_actions`
+   - Creates `payload_email_actions` with retry action/status enums, audit fields, and administrator/Event relationships.
+   - Adds Email Event retry count, retry timestamp, and requesting-administrator relationship.
+   - Registers Email Actions in Payload locked-document relationships.
+
+**SQL and rollback review**
+- Every SQL statement and every migration-registry entry was reviewed against the existing table, enum, foreign-key, index, and locked-document conventions.
+- All four files have deterministic `up()` and `down()` functions.
+- Static contracts prohibit manual `DELETE`, `TRUNCATE`, and data-rewrite `UPDATE` statements.
+- Content rollback refuses enum contraction while archived Posts exist.
+- Billing rollback refuses enum contraction while any record uses an added action value.
+- Live Session rollback refuses when post-migration sessions cannot be represented by the legacy required text columns.
+- Email rollback removes the locked-document relation, Email Actions table/enums, foreign keys/indexes, and Email Event retry fields.
+- The four migrations are marked `rollbackRisk: 'data_loss'` in the preview inventory because successful use of new fields can make rollback destructive or intentionally blocked.
+
+**Canonical inventory and approval policy**
+- Preview migration inventory now contains **22** migrations.
+- Orders 19–22 are marked:
+  - `system: 'payload'`
+  - `requiredForPreview: true`
+  - `authorizationCategory: 'payloadMigration'`
+  - `rollbackRisk: 'data_loss'`
+- Approved cutover fixtures and shadow-validation migration order were advanced to all 22 migrations.
+- Migration execution remains unauthorized by default and requires the existing explicit Payload migration approval, operator identity, approval reference, and stop conditions.
+
+**Validation evidence**
+- Operator schema migration Vitest: **8/8 passed**.
+- Preview migration inventory: **passed**.
+- Migration readiness static test: **passed**.
+- Payload staging migration boundary: **passed**.
+- Stripe shadow-validation fixture after canonical order update: **passed**.
+- Payload TypeScript against regenerated types: **passed**.
+- New migration, registry, inventory, collection-loading, and static-test code high-risk scan: **clean**.
+- A broad scan reported only known lexical false positives in pre-existing tests that assert forbidden process APIs and Payload's existing configured secret field; no new secret or runtime-execution finding was introduced.
+- Production build job `validation-bb5c9705-8ae1-4385-b6c1-8ce2a6a9a4d6`: **passed**.
+- Canonical release job `validation-aa839dce-4331-4193-80c4-9697d99f8dff`: **153/153 passed**.
+- The first release attempt failed only because `payload_shadow_validation.test.ts` still supplied the former 18-migration approval list. The fixture was advanced to the canonical 22-item order and the exact test plus full release suite then passed.
+
+**Exact staging execution sequence — not executed in this batch**
+1. Obtain explicit Payload migration approval and record operator, approval reference, target commit, backup reference, and stop conditions.
+2. Confirm staging is on the exact reviewed commit and no unreviewed migration files exist.
+3. Capture a database backup and verify restore ownership before migration execution.
+4. Run migration inventory/readiness/preflight against the staging environment without applying changes.
+5. Apply migrations strictly in registered order 19 → 22:
+   - `20260724_120000_operator_content_media`
+   - `20260724_121000_billing_operator_actions`
+   - `20260724_122000_live_session_relationships`
+   - `20260724_123000_email_operator_actions`
+6. Stop immediately on any precondition exception, enum conflict, foreign-key conflict, missing table, or unexpected schema drift. Do not skip or reorder a migration.
+7. Verify Payload boots with the regenerated types and collection registry.
+8. Reconcile legacy Live Session module/lesson text into real relationships before marking affected sessions live.
+9. Browser-prove Page/Post/Lesson media, Stripe Billing Actions, Live Session lifecycle, and Email Actions against staging.
+10. Capture migration inventory, schema verification, browser evidence, and rollback disposition before any production approval.
+
+**Rollback approval requirements**
+- Rollback is not automatic. It requires explicit approval and data-domain review.
+- Before rolling back content migration, verify no archived Posts and export all managed media relationships/publishing fields that would be dropped.
+- Before rolling back Billing Actions, verify no record uses added action values and export operator audit data.
+- Before rolling back Live Sessions, verify every row has complete legacy module/lesson text and export all real relationships/timestamps.
+- Before rolling back Email Actions, export Email Action audit records and retry metadata.
+- Prefer backup restore over destructive down migrations when new operator data has already been created.
+
+**Reviewed batch scope**
+- Four new Payload migrations and `src/migrations/index.ts`.
+- Regenerated `src/payload-types.ts`.
+- Payload CLI-safe Billing/CRM collection imports and schema override.
+- Preview migration inventory, readiness, and shadow-validation fixtures.
+- Static operator-schema migration tests.
+- This handoff checkpoint.
+- Preserved unrelated paths remain excluded: `.ai/current.md`, `.claude/worktrees/**`, and `newrelic_agent.log`.
+
+**Updated phase position**
+- Repository-local Payload schema package: **100% prepared and locally validated**.
+- Payload operator platform: **93%**.
+- Controlled launch decision remains **NO-GO** until explicit migration approval, staging apply, reconciliation, and browser/provider proof are complete.
+
+**Exact next task**
+Run the controlled staging migration and operator-workflow proof only after explicit approval. Use Claude Code/browser automation for the staging apply evidence, Payload administrator workflows, Bunny provider flow, LiveKit room joins, Stripe checkout lifecycle, and real email delivery. Do not apply these migrations from an unapproved local session.

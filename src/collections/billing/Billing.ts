@@ -1,12 +1,17 @@
 import type { CollectionConfig } from 'payload'
 
 import { isPayloadAdminRequest } from '@/lib/access/payloadAccess'
-import {
-  isStripeOperatorAction,
-  processPayloadBillingAction,
-} from '@/lib/billing/stripeOperatorActions'
 
 const billingGroup = 'Billing'
+const stripeOperatorActions = new Set([
+  'sync_subscription',
+  'cancel_at_period_end',
+  'resume_subscription',
+])
+
+function isStripeOperatorAction(value: unknown): boolean {
+  return typeof value === 'string' && stripeOperatorActions.has(value)
+}
 
 const webhookProjectionCollectionAccess = {
   admin: ({ req }: { req: Parameters<typeof isPayloadAdminRequest>[0] }) => isPayloadAdminRequest(req),
@@ -314,14 +319,17 @@ export const PayloadBillingActions: CollectionConfig = {
       },
     ],
     afterChange: [
-      async ({ doc, operation, req }) => processPayloadBillingAction({
-        doc,
-        operation,
-        req: {
-          payload: req.payload,
-          user: req.user as { id?: string | number; collection?: string; email?: string } | null,
-        },
-      }),
+      async ({ doc, operation, req }) => {
+        const { processPayloadBillingAction } = await import('@/lib/billing/stripeOperatorActions')
+        return processPayloadBillingAction({
+          doc,
+          operation,
+          req: {
+            payload: req.payload,
+            user: req.user as { id?: string | number; collection?: string; email?: string } | null,
+          },
+        })
+      },
     ],
   },
   fields: [

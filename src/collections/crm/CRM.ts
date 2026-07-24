@@ -1,12 +1,12 @@
 import type { CollectionConfig } from 'payload'
 
 import { adminOnlyCollectionAccess, isPayloadAdminRequest } from '@/lib/access/payloadAccess'
-import {
-  isEmailOperatorAction,
-  processPayloadEmailAction,
-} from '@/lib/email/emailOperatorActions'
 
 const crmGroup = 'Administration'
+
+function isEmailOperatorAction(value: unknown): boolean {
+  return value === 'retry_delivery'
+}
 
 export const PayloadContacts: CollectionConfig = {
   slug: 'payload_contacts',
@@ -363,14 +363,17 @@ export const PayloadEmailActions: CollectionConfig = {
       },
     ],
     afterChange: [
-      async ({ doc, operation, req }) => processPayloadEmailAction({
-        doc,
-        operation,
-        req: {
-          payload: req.payload,
-          user: req.user as { id?: string | number; collection?: string } | null,
-        },
-      }),
+      async ({ doc, operation, req }) => {
+        const { processPayloadEmailAction } = await import('@/lib/email/emailOperatorActions')
+        return processPayloadEmailAction({
+          doc,
+          operation,
+          req: {
+            payload: req.payload,
+            user: req.user as { id?: string | number; collection?: string } | null,
+          },
+        })
+      },
     ],
   },
   fields: [
