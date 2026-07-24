@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
+import { MemberFeaturedImage } from '@/components/portal/MemberContentMedia'
 import { requirePortalMember } from '@/lib/auth/requirePortalMember'
 import { getMemberCourseOverview } from '@/lib/payloadCourse/memberPortal'
 
@@ -25,6 +26,8 @@ export default async function PortalCoursePage({ params }: CoursePageProps) {
         ← Back to courses
       </Link>
 
+      <MemberFeaturedImage asset={course.coverImage} />
+
       <section className='rounded-2xl border border-neutral-200 bg-white p-8 shadow-sm'>
         <div className='flex flex-col gap-6 md:flex-row md:items-start md:justify-between'>
           <div className='max-w-3xl'>
@@ -36,9 +39,6 @@ export default async function PortalCoursePage({ params }: CoursePageProps) {
           </div>
 
           <div className='flex flex-wrap gap-2 text-xs font-semibold'>
-            {course.accessBadge ? (
-              <span className='rounded-full bg-neutral-100 px-3 py-1 text-neutral-700'>{course.accessBadge}</span>
-            ) : null}
             {course.estimatedDuration ? (
               <span className='rounded-full bg-neutral-100 px-3 py-1 text-neutral-700'>{course.estimatedDuration}</span>
             ) : null}

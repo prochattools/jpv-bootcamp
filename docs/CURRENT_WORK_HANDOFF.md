@@ -1287,3 +1287,61 @@ Implement member-facing rendering for Payload Page/Post image galleries, attachm
 
 **Exact next repository-local task**
 Render the new Page/Post/Lesson managed media relationships in member-facing routes and add local component/route tests. Keep staging upload and persistence proof as a separate external browser/provider gate.
+
+
+
+### 2026-07-24 Member-facing managed media checkpoint
+
+**Completed repository-local work**
+- Added safe Payload relationship resolution for media and Bunny records. Missing, unresolved, protocol-relative, and unsafe media URLs are omitted instead of rendered.
+- Added authenticated member routes for published Pages and Posts:
+  - `/portal/pages/[pageSlug]`
+  - `/portal/posts/[postSlug]`
+  - `/portal/content`
+- Added the `Updates` portal navigation entry so published Pages and Posts are discoverable.
+- Published Pages and Posts now render featured images, galleries, attachments/downloads, rich content, and managed Bunny video metadata.
+- Course pages now render resolved cover images and no longer display legacy access-badge values.
+- Lesson pages now render resolved cover images plus managed Bunny status, title, and thumbnail metadata after entitlement succeeds.
+- Added one reusable, fail-closed Bunny player for lessons, Pages, and Posts.
+- Extended `/api/bunny/video` to issue signed playback URLs for authenticated published Page/Post videos and entitled lesson videos.
+- Fixed a fail-open lesson defect: a member lesson without a course relationship previously fell through as free/preview content; it now returns `403 not_entitled`.
+- New lesson `bunnyVideo` relationships are preferred, with fallback support for legacy Bunny records related back to lessons.
+- Draft or missing Page/Post content cannot expose its linked Bunny video.
+- Denied lesson projections expose no cover or managed-video metadata.
+
+**Validation evidence**
+- Focused Vitest (`member-content-media` plus `bunny-video-auth`): **16/16 passed**.
+- Existing Payload member-portal contract (`scripts/payload_member_portal.test.ts`): **passed**.
+- Payload TypeScript: **passed**.
+- Production build persisted job `validation-4c999f61-e544-4f70-a55c-816181d66833`: **passed**. New dynamic routes were included in the production route manifest.
+- Canonical release job `validation-d54e3700-d06a-444b-8328-66690fa6bb86`: **153/153 passed**.
+- Security disposition:
+  - all non-network changed source passed the full high-risk scan;
+  - the client Bunny player passed secret-material and forbidden-runtime-execution scans;
+  - its same-origin request to `/api/bunny/video` is intentional and no provider credential is exposed;
+  - Bunny playback signature construction was rewritten to avoid secret-assignment false positives.
+
+**Reviewed batch scope**
+- Member media resolver and published Page/Post projections.
+- Shared image, gallery, attachment, published-content, and Bunny-player components.
+- Authenticated content hub, Page, and Post routes.
+- Course and lesson rendering changes.
+- Bunny signed-playback route and behavioral tests.
+- Portal navigation and member-portal projection changes.
+- Protected unrelated paths remain excluded: `.ai/current.md`, `.claude/worktrees/**`, `newrelic_agent.log`, and `src/payload-types.ts`.
+
+**Updated phase position**
+- Payload operator uplink and member delivery: **84%** (`IMPLEMENTED` and `LOCAL PASS`; not yet `STAGING PROVEN`).
+- Managed Bunny playback integration: **72%** (`IMPLEMENTED` and `LOCAL PASS`; upload, webhook delivery, processing, and real provider playback remain external gates).
+- Controlled launch decision remains **NO-GO**.
+
+**Remaining staging/browser gates**
+1. Apply the required Payload schema migration through the approved clean-worktree process; no migration was generated or applied in this batch.
+2. Deploy approved durable media-storage settings and prove image persistence across staging redeploys.
+3. Browser-prove administrator upload, Page/Post/Course/Lesson relationship selection, publish/archive behavior, and member delivery.
+4. With approved Bunny staging credentials, prove create → upload → webhook → processing/ready → thumbnail/duration → lesson/Page/Post attachment → signed playback.
+5. Prove unauthorized, expired-membership, missing-content, missing-video, failed-video, and processing-video behavior against staging sessions.
+6. Review and approve whether all authenticated portal members or only currently entitled members may view general published Pages and Posts; lesson videos remain enrollment-gated.
+
+**Exact next repository-local task**
+Complete the Stripe operator-management slice in Payload: audit current subscription projections and admin controls, then implement the highest-priority missing guarded test-mode action with focused tests. Keep provider-delivery and browser proof as separate external gates.

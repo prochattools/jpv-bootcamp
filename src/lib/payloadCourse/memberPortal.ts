@@ -12,6 +12,12 @@ import {
   listPublishedLessonResources,
   type MemberLessonResource,
 } from '@/lib/payloadCourse/lessonResources'
+import {
+  resolveMemberLessonManagedVideo,
+  resolveMemberMediaAsset,
+  type MemberManagedVideo,
+  type MemberMediaAsset,
+} from '@/lib/payloadContent/memberMedia'
 
 export type LessonLockState = 'available' | 'locked' | 'coming_soon'
 
@@ -20,6 +26,7 @@ export type MemberPortalLesson = {
   title: string
   slug: string | null
   summary: string | null
+  coverImage: MemberMediaAsset | null
   estimatedDuration: string | null
   previewLesson: boolean
   lockState: LessonLockState
@@ -38,6 +45,7 @@ export type MemberPortalCourse = {
   title: string
   slug: string | null
   shortDescription: string | null
+  coverImage: MemberMediaAsset | null
   accessBadge: string | null
   estimatedDuration: string | null
   allowed: boolean
@@ -78,6 +86,8 @@ export type MemberPortalLessonDetail = {
     title: string | null
     slug: string | null
     summary: string | null
+    coverImage: MemberMediaAsset | null
+    managedVideo: MemberManagedVideo | null
     estimatedDuration: string | null
     previewLesson: boolean
     lockState: LessonLockState
@@ -300,20 +310,26 @@ async function getAllowedCourseModules(
       limit: 200,
     })
 
-    outlines.push({
-      id: String(module.id),
-      title: asString(module.title) ?? 'Untitled module',
-      description: asString(module.description),
-      lessons: lessons.sort(bySortOrder).map((lesson) => ({
+    const lessonProjections: MemberPortalLesson[] = []
+    for (const lesson of lessons.sort(bySortOrder)) {
+      lessonProjections.push({
         id: String(lesson.id),
         title: asString(lesson.title) ?? 'Untitled lesson',
         slug: asString(lesson.slug),
         summary: asString(lesson.summary),
+        coverImage: await resolveMemberMediaAsset(payload, lesson.coverImage),
         estimatedDuration: asString(lesson.estimatedDuration),
         previewLesson: asBoolean(lesson.previewLesson),
         lockState: asLockState(lesson.lockState),
         completed: completedLessonIds.has(String(lesson.id)),
-      })),
+      })
+    }
+
+    outlines.push({
+      id: String(module.id),
+      title: asString(module.title) ?? 'Untitled module',
+      description: asString(module.description),
+      lessons: lessonProjections,
     })
   }
 
@@ -350,12 +366,15 @@ async function getCourseSequence(
   return sequence
 }
 
-function buildCourseProjection(args: {
-  course: PayloadDocument
-  allowed: boolean
-  decisionReason: string
-  modules: MemberPortalModule[]
-}): MemberPortalCourse {
+async function buildCourseProjection(
+  payload: PayloadCourseAccessAPI,
+  args: {
+    course: PayloadDocument
+    allowed: boolean
+    decisionReason: string
+    modules: MemberPortalModule[]
+  },
+): Promise<MemberPortalCourse> {
   const lessonCount = args.allowed
     ? args.modules.reduce((count, module) => count + module.lessons.length, 0)
     : null
@@ -372,9 +391,11 @@ function buildCourseProjection(args: {
         ? 0
         : null
   const metadata = courseMetadata(args.course)
+  const coverImage = await resolveMemberMediaAsset(payload, args.course.coverImage)
 
   return {
     ...metadata,
+    coverImage,
     allowed: args.allowed,
     decisionReason: args.decisionReason,
     lockReason: args.allowed ? null : lockReason(args.decisionReason),
@@ -433,7 +454,7 @@ export async function getMemberCourseDashboard(
       ? await getAllowedCourseModules(payload, course.id, completedLessonIds)
       : []
 
-    dashboardCourses.push(buildCourseProjection({
+    dashboardCourses.push(await buildCourseProjection(payload, {
       course,
       allowed,
       decisionReason: access.decision.reason,
@@ -475,7 +496,7 @@ export async function getMemberCourseOverview(
     ? await getAllowedCourseModules(payload, course.id, completedLessonIds)
     : []
 
-  return buildCourseProjection({
+  return buildCourseProjection(payload, {
     course,
     allowed,
     decisionReason: access.decision.reason,
@@ -526,6 +547,12 @@ export async function getMemberLessonDetail(
   const resources = allowed
     ? await listPublishedLessonResources(payload, lesson.id)
     : []
+  const coverImage = allowed
+    ? await resolveMemberMediaAsset(payload, lesson.coverImage)
+    : null
+  const managedVideo = allowed
+    ? await resolveMemberLessonManagedVideo(payload, lesson)
+    : null
 
   return {
     course: {
@@ -543,6 +570,8 @@ export async function getMemberLessonDetail(
           title: lessonTitle,
           slug: asString(lesson.slug),
           summary: asString(lesson.summary),
+          coverImage,
+          managedVideo,
           estimatedDuration: asString(lesson.estimatedDuration),
           previewLesson: asBoolean(lesson.previewLesson),
           lockState: asLockState(lesson.lockState),
@@ -557,6 +586,8 @@ export async function getMemberLessonDetail(
           title: null,
           slug: asString(lesson.slug),
           summary: null,
+          coverImage: null,
+          managedVideo: null,
           estimatedDuration: null,
           previewLesson: false,
           lockState: 'available' as LessonLockState,

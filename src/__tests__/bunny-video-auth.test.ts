@@ -48,6 +48,37 @@ function makeRequest(lessonId: string) {
   return new NextRequest(`http://localhost:3000/api/bunny/video?lessonId=${encodeURIComponent(lessonId)}`)
 }
 
+function makeContentRequest(kind: 'page' | 'post', slug: string) {
+  const key = kind === 'page' ? 'pageSlug' : 'postSlug'
+  return new NextRequest(`http://localhost:3000/api/bunny/video?${key}=${encodeURIComponent(slug)}`)
+}
+
+function makeContentPayload(kind: 'page' | 'post', found = true) {
+  const collection = kind === 'page' ? 'payload_pages' : 'payload_posts'
+  const videoDoc = {
+    id: 'video-1',
+    status: 'ready',
+    videoGuid: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+  }
+
+  return {
+    auth: vi.fn().mockResolvedValue({
+      user: { id: 'member-42', collection: 'payload_members' },
+    }),
+    find: vi.fn(async (args: { collection: string }) => {
+      if (args.collection === collection) {
+        return {
+          docs: found
+            ? [{ id: `${kind}-1`, slug: `published-${kind}`, status: 'published', featuredVideo: 'video-1' }]
+            : [],
+        }
+      }
+      return { docs: [] }
+    }),
+    findByID: vi.fn(async () => videoDoc),
+  }
+}
+
 /** Build a minimal mock payload instance for the given auth scenario */
 function makeMockPayload(opts: {
   user: { id: string | number; collection: string } | null
@@ -242,5 +273,52 @@ describe('GET /api/bunny/video — authentication and entitlement', () => {
     expect(res.status).toBe(404)
     expect(data.ok).toBe(false)
     expect(data.reason).toBe('lesson_not_found')
+  })
+
+  it('member lesson without a course link fails closed', async () => {
+    const mockPayload = makeMockPayload({
+      user: { id: 'member-42', collection: 'payload_members' },
+      moduleCourseId: null,
+      videoFound: true,
+    })
+    vi.mocked(getPayload).mockResolvedValue(mockPayload as never)
+
+    const res = await GET(makeRequest('intro-to-course'))
+    const data = await res.json()
+
+    expect(res.status).toBe(403)
+    expect(data.reason).toBe('not_entitled')
+  })
+
+  it('authenticated member can play a video linked to a published page', async () => {
+    vi.mocked(getPayload).mockResolvedValue(makeContentPayload('page') as never)
+
+    const res = await GET(makeContentRequest('page', 'published-page'))
+    const data = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(data.ok).toBe(true)
+    expect(data.url).toContain('playlist.m3u8')
+  })
+
+  it('authenticated member can play a video linked to a published post', async () => {
+    vi.mocked(getPayload).mockResolvedValue(makeContentPayload('post') as never)
+
+    const res = await GET(makeContentRequest('post', 'published-post'))
+    const data = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(data.ok).toBe(true)
+    expect(data.url).toContain('playlist.m3u8')
+  })
+
+  it('missing or unpublished content does not expose linked video', async () => {
+    vi.mocked(getPayload).mockResolvedValue(makeContentPayload('page', false) as never)
+
+    const res = await GET(makeContentRequest('page', 'draft-page'))
+    const data = await res.json()
+
+    expect(res.status).toBe(404)
+    expect(data.reason).toBe('content_not_found')
   })
 })

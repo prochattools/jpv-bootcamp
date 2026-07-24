@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 
+import { MemberFeaturedImage } from '@/components/portal/MemberContentMedia'
 import { requirePortalMember } from '@/lib/auth/requirePortalMember'
 import type { PayloadCourseWriteAPI } from '@/lib/payloadCourse/accessService'
 import {
@@ -134,6 +135,8 @@ export default async function PortalLessonPage({ params, searchParams }: LessonP
             </p>
           ) : null}
 
+          <MemberFeaturedImage asset={detail.lesson.coverImage} />
+
           <section className='rounded-2xl border border-neutral-200 bg-white p-8 shadow-sm'>
             <h2 className='text-xl font-semibold'>Lesson content</h2>
             {detail.lesson.lockState === 'locked' ? (
@@ -147,7 +150,12 @@ export default async function PortalLessonPage({ params, searchParams }: LessonP
                 <p className='mt-1 text-sm text-neutral-600'>This lesson will be available shortly.</p>
               </div>
             ) : null}
-            <LessonVideoPlayer lessonSlug={lessonSlug} />
+            <LessonVideoPlayer
+              lessonSlug={lessonSlug}
+              status={detail.lesson.managedVideo?.status}
+              thumbnailUrl={detail.lesson.managedVideo?.thumbnailUrl}
+              title={detail.lesson.managedVideo?.title ?? 'Lesson video'}
+            />
             {detail.lesson.contentHtml ? (
               <div
                 className='lesson-body mt-8 max-w-none text-sm leading-7 text-neutral-800 [&_h2]:mb-2 [&_h2]:mt-6 [&_h2]:text-xl [&_h2]:font-semibold [&_h3]:mb-2 [&_h3]:mt-4 [&_h3]:text-lg [&_h3]:font-semibold [&_a]:text-neutral-950 [&_a]:underline [&_a]:underline-offset-4 [&_blockquote]:border-l-4 [&_blockquote]:border-neutral-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_li]:ml-4 [&_li]:list-disc [&_ol_li]:list-decimal [&_p]:mb-3'
