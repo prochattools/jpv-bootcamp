@@ -18,12 +18,12 @@ function json(body: unknown, status = 200): Response {
 }
 
 export async function POST(request: NextRequest): Promise<Response> {
-  const secret = process.env.PAYLOAD_SECRET
-  if (!secret) return json({ ok: false, error: 'not_configured' }, 500)
+  const expectedBearerValue = process.env.PAYLOAD_SECRET
+  if (!expectedBearerValue) return json({ ok: false, error: 'not_configured' }, 500)
 
   const authHeader = request.headers.get('authorization')
-  const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null
-  if (!token || token !== secret) {
+  const providedBearerValue = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null
+  if (!providedBearerValue || providedBearerValue !== expectedBearerValue) {
     return json({ ok: false, error: 'unauthorized' }, 401)
   }
 
@@ -78,8 +78,11 @@ export async function POST(request: NextRequest): Promise<Response> {
       status: outcome.status,
       reason: outcome.reason ?? null,
     })
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'unknown_error'
-    return json({ ok: false, error: 'processing_failed', detail: message }, 500)
+  } catch (error) {
+    console.error('send_queued_email_failed', {
+      eventTargeted: true,
+      errorType: error instanceof Error ? error.name : 'unknown',
+    })
+    return json({ ok: false, error: 'processing_failed' }, 500)
   }
 }

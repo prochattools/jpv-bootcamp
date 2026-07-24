@@ -4,6 +4,7 @@ import {
   PayloadContactTags,
   PayloadContacts,
   PayloadCrmTags,
+  PayloadEmailActions,
   PayloadEmailEvents,
   PayloadEmailTemplates,
 } from './CRM'
@@ -14,6 +15,7 @@ export {
   PayloadContactTags,
   PayloadContacts,
   PayloadCrmTags,
+  PayloadEmailActions,
   PayloadEmailEvents,
   PayloadEmailTemplates,
 } from './CRM'
@@ -25,6 +27,6 @@ export const crmCollections = [
   PayloadContactNotes,
   PayloadEmailTemplates,
   PayloadEmailEvents,
+  PayloadEmailActions,
   PayloadAdminNotifications,
 ]
-

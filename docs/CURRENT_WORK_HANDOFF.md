@@ -1463,3 +1463,73 @@ Complete the LiveKit operator-to-member delivery slice: audit Payload session sc
 
 **Exact next repository-local task**
 Complete the email operator-delivery slice: audit onboarding, verification, reset, subscription, cancellation, resend, queue persistence, retry, and failed-delivery handling; implement the highest-priority missing repository-local workflow with focused tests while keeping real provider delivery as an external gate.
+
+
+
+### 2026-07-24 Email operator-delivery checkpoint
+
+**Completed repository-local work**
+- Audited the existing onboarding, member verification, password reset, Stripe subscription/cancellation communications, queue sender, staging recipient allowlist, and provider-boundary routes.
+- Confirmed the existing architecture is queue-first: workflows persist `payload_email_events` before approved provider processing.
+- Exposed `payload_email_events` in Payload CMS as an immutable administrator-readable delivery queue with status, failure reason, retry count, and retry-request audit fields.
+- Added a create-only `payload_email_actions` operator collection.
+- Administrators can create only `retry_delivery` actions against failed email events.
+- The operator selects a Payload Email Event; recipient, template, dedupe key, and provider identifiers are derived server-side and cannot be supplied by the client.
+- A retry action does not call Resend or any provider directly. It safely requeues the failed event for the existing bounded queue processor.
+- Retry actions are idempotent by immutable Email Action record ID. Replaying the same action returns `skipped` without incrementing the retry counter or mutating the event again.
+- Queued, sent, delivered, opened, clicked, bounced, complained, skipped, and missing events fail closed and cannot be retried through the failed-event action.
+- Requeueing clears stale provider-message, sent, delivered, and failure fields while preserving the original dedupe key and metadata.
+- Retry count, request timestamp, requesting administrator, optional operator note, action status, completion time, and sanitized result are persisted for audit.
+- Email Events and Email Actions cannot be updated or deleted through ordinary Payload administrator access.
+- The existing sender remains fail-closed when Resend, sender identity, or staging-recipient allowlist configuration is unavailable.
+- The existing queue CLI continues to refuse bulk provider apply without one explicit event target.
+- Hardened `/api/admin/send-queued-email` so raw provider/configuration error messages never cross the authenticated response boundary. Only a generic `processing_failed` result is returned; logs contain only bounded error type metadata.
+- No email-provider credentials, recipient secrets, reset values, or verification values were added or exposed.
+
+**Local workflow evidence**
+- Existing sender contract, including queued delivery, provider idempotency replay, failed state, sensitive-link redaction, and staging allowlist behavior: **passed**.
+- Member email-verification request, suppression, template, and completed-link construction contract: **passed**.
+- Member invitation/onboarding and idempotent activation contract: **passed**.
+- Password-reset completion and security side-effect contract: **passed**.
+- Stripe subscription-started, payment-failed/recovered, refund, dispute, and membership-email gate coverage remains part of the canonical release suite and passed.
+- Real Resend delivery, mailbox receipt, clicked verification/reset links, and provider webhook state remain external staging evidence and are not claimed complete.
+
+**Validation evidence**
+- Focused Email Action Vitest: **4/4 passed**.
+- Payload TypeScript: **passed**.
+- Final high-risk security scan for the action service, CRM collections, queue-processing route, and tests: **clean**.
+- Production build job `validation-bf907ae8-fedc-4a34-be7c-b593bfebd451`: **passed**.
+- Canonical release job `validation-798abe28-a4e5-4c0d-a45a-950f860ddc42`: **153/153 passed**.
+- Earlier pre-final build/release jobs were superseded after provider-error redaction and are not the evidence of record.
+
+**Reviewed batch scope**
+- `src/lib/email/emailOperatorActions.ts`
+- `src/collections/crm/CRM.ts`
+- `src/collections/crm/index.ts`
+- `src/app/api/admin/send-queued-email/route.ts`
+- `src/__tests__/email-operator-actions.test.ts`
+- This handoff checkpoint.
+- Protected unrelated paths remain excluded: `.ai/current.md`, `.claude/worktrees/**`, `newrelic_agent.log`, and `src/payload-types.ts`.
+
+**Updated phase position**
+- Email queue and operator delivery: **88%** (`IMPLEMENTED` and `LOCAL PASS`; real provider/mailbox/link proof remains external).
+- Payload operator platform: **91%**.
+- Controlled launch decision remains **NO-GO**.
+
+**Required schema gate**
+- This slice adds the `payload_email_actions` collection and Email Event retry fields (`retryCount`, `lastRetryRequestedAt`, and `lastRetryRequestedBy`).
+- A reviewed Payload migration is required before these controls can operate against staging data.
+- No migration was generated or applied because `src/payload-types.ts` contains protected unrelated drift and this task prohibited type generation and migration application.
+
+**Remaining staging/provider/browser gates**
+1. Generate and review the Payload schema migration in an approved clean worktree, then apply it through the controlled staging migration process.
+2. Browser-prove an authenticated Payload administrator can inspect failed events and create one Email Action retry.
+3. Prove the retried event returns to `queued`, preserves its dedupe key, increments retry count once, and records the requesting administrator.
+4. With approved Resend staging credentials and allowlisted recipients, process exactly the targeted event and capture the redacted provider identifier.
+5. Prove onboarding, member verification, password reset, subscription started, cancellation/payment communications, and resend mailbox delivery.
+6. Click real verification and password-reset links and prove successful completion against the deployed staging origin.
+7. Prove missing provider configuration, missing sender identity, disallowed recipients, duplicate action replay, and provider failure all fail closed without exposing raw provider details.
+8. Decide and document bounded retry policy ownership: maximum operator attempts, escalation threshold, and bounce/complaint suppression rules.
+
+**Exact next repository-local task**
+Prepare the consolidated Payload schema-migration package for the locally completed operator slices (uplink media, durable storage fields if required, Stripe actions, Live Sessions, and Email Actions) in an isolated clean worktree. Generate and review migrations and types only; do not apply staging or production migrations without explicit approval.

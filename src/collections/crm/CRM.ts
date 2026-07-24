@@ -1,6 +1,10 @@
 import type { CollectionConfig } from 'payload'
 
-import { adminOnlyCollectionAccess } from '@/lib/access/payloadAccess'
+import { adminOnlyCollectionAccess, isPayloadAdminRequest } from '@/lib/access/payloadAccess'
+import {
+  isEmailOperatorAction,
+  processPayloadEmailAction,
+} from '@/lib/email/emailOperatorActions'
 
 const crmGroup = 'Administration'
 
@@ -253,11 +257,17 @@ export const PayloadEmailEvents: CollectionConfig = {
   },
   admin: {
     group: crmGroup,
-    hidden: true,
     useAsTitle: 'displayName',
-    defaultColumns: ['displayName', 'toEmail', 'templateKey', 'deliveryStatus', 'createdAt'],
+    defaultColumns: ['displayName', 'toEmail', 'templateKey', 'deliveryStatus', 'retryCount', 'failureReason', 'createdAt'],
+    description: 'Read-only delivery queue and provider status. Use Email Actions to retry failed events.',
   },
-  access: adminOnlyCollectionAccess,
+  access: {
+    admin: ({ req }) => isPayloadAdminRequest(req),
+    create: () => false,
+    read: ({ req }) => isPayloadAdminRequest(req),
+    update: () => false,
+    delete: () => false,
+  },
   fields: [
     { name: 'displayName', type: 'text', required: true },
     { name: 'toEmail', type: 'email', required: true, index: true },
@@ -289,8 +299,134 @@ export const PayloadEmailEvents: CollectionConfig = {
     { name: 'dedupeKey', type: 'text', index: true },
     { name: 'sentAt', type: 'date' },
     { name: 'deliveredAt', type: 'date' },
-    { name: 'failureReason', type: 'textarea' },
-    { name: 'metadata', type: 'json' },
+    { name: 'failureReason', type: 'textarea', admin: { readOnly: true } },
+    {
+      name: 'retryCount',
+      type: 'number',
+      required: true,
+      defaultValue: 0,
+      min: 0,
+      admin: { readOnly: true },
+    },
+    { name: 'lastRetryRequestedAt', type: 'date', admin: { readOnly: true } },
+    {
+      name: 'lastRetryRequestedBy',
+      type: 'relationship',
+      relationTo: 'payload_users',
+      admin: { readOnly: true },
+    },
+    { name: 'metadata', type: 'json', admin: { readOnly: true } },
+  ],
+  timestamps: true,
+}
+
+export const PayloadEmailActions: CollectionConfig = {
+  slug: 'payload_email_actions',
+  dbName: 'payload_email_actions',
+  labels: {
+    singular: 'Email Action',
+    plural: 'Email Actions',
+  },
+  admin: {
+    group: crmGroup,
+    useAsTitle: 'displayName',
+    defaultColumns: ['displayName', 'emailEvent', 'actionType', 'status', 'requestedBy', 'createdAt'],
+    description: 'Create a retry request for a failed email event. The action only requeues the event; provider sending remains queue-controlled.',
+  },
+  access: {
+    admin: ({ req }) => isPayloadAdminRequest(req),
+    create: ({ req }) => isPayloadAdminRequest(req),
+    read: ({ req }) => isPayloadAdminRequest(req),
+    update: () => false,
+    delete: () => false,
+  },
+  hooks: {
+    beforeValidate: [
+      ({ data, operation, req }) => {
+        if (operation !== 'create' || req.user?.collection !== 'payload_users') return data
+        if (!isEmailOperatorAction(data?.actionType)) {
+          throw new Error('Administrators may create only retry delivery actions.')
+        }
+        const event = data?.emailEvent
+        const eventId = typeof event === 'object' ? event?.id : event
+        if (eventId === undefined || eventId === null || String(eventId).trim() === '') {
+          throw new Error('A failed Payload Email Event is required.')
+        }
+        return {
+          ...data,
+          displayName: `Retry email event ${String(eventId)}`,
+          requestedBy: req.user.id,
+          status: 'pending',
+          completedAt: undefined,
+          result: undefined,
+        }
+      },
+    ],
+    afterChange: [
+      async ({ doc, operation, req }) => processPayloadEmailAction({
+        doc,
+        operation,
+        req: {
+          payload: req.payload,
+          user: req.user as { id?: string | number; collection?: string } | null,
+        },
+      }),
+    ],
+  },
+  fields: [
+    {
+      name: 'displayName',
+      type: 'text',
+      required: true,
+      admin: { readOnly: true },
+    },
+    {
+      name: 'emailEvent',
+      type: 'relationship',
+      relationTo: 'payload_email_events',
+      required: true,
+      index: true,
+      filterOptions: {
+        deliveryStatus: { equals: 'failed' },
+      },
+      admin: {
+        description: 'Only failed events are eligible. The selected event ID is resolved server-side.',
+      },
+    },
+    {
+      name: 'actionType',
+      type: 'select',
+      required: true,
+      defaultValue: 'retry_delivery',
+      options: [{ label: 'Retry failed delivery', value: 'retry_delivery' }],
+    },
+    {
+      name: 'requestedBy',
+      type: 'relationship',
+      relationTo: 'payload_users',
+      index: true,
+      admin: { readOnly: true },
+    },
+    {
+      name: 'status',
+      type: 'select',
+      required: true,
+      defaultValue: 'pending',
+      options: [
+        { label: 'Pending', value: 'pending' },
+        { label: 'Completed', value: 'completed' },
+        { label: 'Failed', value: 'failed' },
+        { label: 'Skipped', value: 'skipped' },
+      ],
+      admin: { readOnly: true },
+    },
+    {
+      name: 'note',
+      type: 'textarea',
+      admin: { description: 'Optional operator reason or support ticket reference.' },
+    },
+    { name: 'completedAt', type: 'date', admin: { readOnly: true } },
+    { name: 'result', type: 'json', admin: { readOnly: true } },
   ],
   timestamps: true,
 }
