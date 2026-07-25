@@ -217,7 +217,7 @@ function safeResolvePlanFromStripe(
 }
 
 function isProvisioningPlan(value: string | null | undefined): value is Plan {
-	return value === 'pro'
+	return value === 'jpv_bootcamp_membership'
 }
 
 function evaluateEmailNotification(params: {

@@ -194,7 +194,12 @@ export async function processPayloadEmailAction(params: {
       note: text(params.doc.note),
     })
 
-    return await params.req.payload.update({
+    // Use db.updateOne to bypass relationship filterOptions re-validation on update.
+    // The emailEvent relationship is already set on the record; we only need to
+    // write status/result fields. payload.update() re-validates all fields including
+    // the filterOptions constraint, which fails once the event moves to 'queued'.
+    const payloadDb = (params.req.payload as unknown as { db: { updateOne(args: { collection: string; id: unknown; data: unknown }): Promise<void> } }).db
+    await payloadDb.updateOne({
       collection: 'payload_email_actions',
       id: params.doc.id,
       data: {
@@ -204,9 +209,8 @@ export async function processPayloadEmailAction(params: {
         completedAt: result.queuedAt,
         result,
       },
-      overrideAccess: true,
-      overrideLock: true,
     })
+    return { ...params.doc, status: result.status, completedAt: result.queuedAt, result }
   } catch (error) {
     const failure = safeFailure(error)
     console.error('email_operator_action_failed', {
@@ -214,7 +218,8 @@ export async function processPayloadEmailAction(params: {
       code: failure.code,
     })
 
-    return await params.req.payload.update({
+    const payloadDb = (params.req.payload as unknown as { db: { updateOne(args: { collection: string; id: unknown; data: unknown }): Promise<void> } }).db
+    await payloadDb.updateOne({
       collection: 'payload_email_actions',
       id: params.doc.id,
       data: {
@@ -223,8 +228,7 @@ export async function processPayloadEmailAction(params: {
         completedAt: new Date().toISOString(),
         result: failure,
       },
-      overrideAccess: true,
-      overrideLock: true,
     })
+    return { ...params.doc, status: 'failed', result: failure }
   }
 }
