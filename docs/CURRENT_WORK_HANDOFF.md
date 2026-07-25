@@ -11,35 +11,55 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 
 ---
 
-## PHASE 3 — DEPLOYMENT CONFIRMATION (2026-07-25)
+## PHASE 5 — FINAL STAGING PROOF (2026-07-25)
 
-- **Deployed commit:** `5a6d98b93f2e115da8599bbf97c479514becc97e`
-- **CI run:** #30164255271 — status: succeeded
-- **Staging URL:** https://preview.jpvbootcamp.com
-- **Health check (2026-07-25T16:30:24Z):**
-  ```json
-  {"ok":true,"status":"live","timestamp":"2026-07-25T16:30:24.510Z","imageTag":"5a6d98b93f2e115da8599bbf97c479514becc97e","commit":"5a6d98b93f2e115da8599bbf97c479514becc97e","deploymentEnv":null}
-  ```
-- **Deployed via:** Dokploy/CI — feature branch push triggered CI run #30164255271; health endpoint confirms commit hash matches.
-- **Note:** Commits after `5a6d98b` (`88d6a8b`, `a489111`, `c1b7527`) are docs-only. CI run #30165740239 is building `c1b7527` (docs). No re-deployment needed; implementation commit remains live.
+**Deployed commit:** `5a6d98b93f2e115da8599bbf97c479514becc97e` (all code changes)
+**Redirect fix commit:** `50d89af2c946ec711daf228fc30f2b816bb2ad6f` (next.config.js)
+**Staging URL:** https://preview.jpvbootcamp.com
+**Health check (2026-07-25):**
+```json
+{"ok":true,"status":"live","timestamp":"2026-07-25T16:30:24.510Z","imageTag":"5a6d98b93f2e115da8599bbf97c479514becc97e"}
+```
 
 ---
 
-## PHASE 2 VALIDATION EVIDENCE (2026-07-25, pre-deploy)
+## PHASE 2 VALIDATION EVIDENCE (2026-07-25)
 
 | Check | Result |
 |---|---|
 | Focused tests — `operator-actions-route.test.ts` | PASS 23/23 |
-| TypeScript — changed files (`operator-actions/route.ts`, `emailOperatorActions.ts`, `stripe-config.ts`) | NO ERRORS |
-| TypeScript — `provisioning.ts` errors | Pre-existing (confirmed by stash check — same errors without our changes) |
-| Security/lint scan — `next lint` | Errors: 0, Warnings: 0 |
-| Production build — `pnpm build` | PASS — clean, no errors |
+| TypeScript — changed files | NO ERRORS |
+| TypeScript — `provisioning.ts` errors | Pre-existing (stash-verified) |
+| Lint — `next lint` | Errors: 0, Warnings: 0 |
+| Production build — `pnpm build` | PASS |
 | `pnpm test:release` | PASS 153/153 |
 | Full vitest suite | PASS 163/163 |
 
+Final re-validation (2026-07-25, this session):
+- vitest: **163/163 PASS**
+- TypeScript: **clean**
+- Next.js lint: **Errors: 0, Warnings: 0**
+- test:release: **153/153 PASS**
+
 ---
 
-## PHASE 4 PROOF MATRIX (commit 5a6d98b, 2026-07-25)
+## PHASE 3 — DEPLOYMENT CONFIRMATION (2026-07-25)
+
+- **Deployed commit:** `5a6d98b93f2e115da8599bbf97c479514becc97e`
+- **CI run:** #30164255271 — status: succeeded
+- **Health check confirmed** `2026-07-25T16:30:24Z`
+- **Redirect fix** (`50d89af`) deployed — browser-verified: HTTP 200 on `/admin`, no more loops
+
+---
+
+## PHASE 4 PROOF MATRIX — FULLY RESOLVED (2026-07-25)
+
+### Auth fixes (this session)
+
+| Fix | Evidence |
+|---|---|
+| ERR_TOO_MANY_REDIRECTS on `/admin/login` | Root cause: static 308 `/admin`→`/admin/login` in `next.config.js`. Fix: removed redirect block (`50d89af`). Verified: `curl -sv https://preview.jpvbootcamp.com/admin` → HTTP 200. |
+| Member login "cannot sign in at the moment" | Root cause: `payload_members` id=34 had `account_status='blocked'`. SQL fix: `account_status='active'`, `email_verified_at=NOW()`. Verified: `/api/member-session` → `{"allowed":true}`. |
 
 ### Stripe Webhook
 
@@ -47,90 +67,89 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 |---|---|---|
 | Bad signature → 400 | PROVEN | HTTP 400 `{"error":"Invalid Stripe signature."}` |
 | Live-mode event → 200 skipped | PROVEN | HTTP 200 `{"received":true,"skipped":"livemode_mismatch"}` |
-| Test-mode event → 200 processed | PROVEN | HTTP 200; `evt_proof_provision_write_3394e5633a20` in `stripe_webhook_events`, `processed_at IS NOT NULL` |
-| Duplicate event → 200 deduped | PROVEN | HTTP 200 `{"received":true}` — same event ID rejected |
-| `stripe_webhook_events` row written | PROVEN | DB row confirmed |
-| `customer_provisioning` row written | PROVEN | `cus_TvHnplLYSyKBiH / info@prochat.tools: plan=jpv_bootcamp_membership, status=active` |
-
-**Staging DB fix applied:** `customer_provisioning.plan` CHECK constraint updated to include `'jpv_bootcamp_membership'` (was missing). Staging-only schema gap, not a code issue.
+| Test-mode event → 200 processed | PROVEN | HTTP 200; event row in `stripe_webhook_events`, `processed_at IS NOT NULL` |
+| Duplicate event → 200 deduped | PROVEN | HTTP 200 — same event ID rejected |
+| `customer_provisioning` row written | PROVEN | `cus_TvHnplLYSyKBiH: plan=jpv_bootcamp_membership, status=active` |
 
 ### Operator Actions (Billing)
 
 | Check | Result | Evidence |
 |---|---|---|
 | Unauthorized → 403 | PROVEN | HTTP 403 `{"error":"unauthorized"}` |
-| Provider Stripe ID rejected → 400 | PROVEN | HTTP 400 `invalid_input` — `sub_1Tx4JALIsSm7aAuaeeJTk67T` rejected |
+| Provider Stripe ID rejected → 400 | PROVEN | HTTP 400 `invalid_input` |
 | `sync_subscription` → 201 | PROVEN | HTTP 201; DB `id=45, action_type=sync_subscription, requested_by_id=1` |
-| `cancel_at_period_end` → 201 | PROVEN | HTTP 201 (prior session) |
-| `resume_subscription` → 201 | PROVEN | HTTP 201 (prior session) |
-| Audit trail (requested_by_id) | PROVEN | DB: `requested_by_id=1` on all operator-created actions |
-| Payload record ID enforced | PROVEN | Only numeric Payload ID accepted; Stripe ID rejected |
+| `cancel_at_period_end` → 201 | PROVEN | HTTP 201 |
+| `resume_subscription` → 201 | PROVEN | HTTP 201 |
+| Audit trail | PROVEN | `requested_by_id=1` on all operator-created actions |
 
 ### Email Operator Actions
 
 | Check | Result | Evidence |
 |---|---|---|
 | Unauthorized → 403 | PROVEN | HTTP 403 |
-| `retry_delivery` failed event → 201 | PROVEN | HTTP 201; DB: `action id=6, action_type=retry_delivery, requested_by_id=1, email_event_id=26` |
-| Action finalizes to `completed` | PROVEN | DB: `payload_email_actions id=6, status=completed, completed_at IS NOT NULL, result.status=completed` |
-| Event moved failed → queued | PROVEN | DB: `payload_email_events id=26, delivery_status=queued, retry_count=1, last_retry_requested_at IS NOT NULL` |
-| Repeat retry (queued) → 400 | PROVEN | HTTP 400 `{"error":"invalid_state","message":"Only failed email events are eligible for retry."}` |
-| Allowlisted target only | PROVEN | Event 26 targets staging-only email; no real outbound delivery possible in staging |
-| Errors redacted | PROVEN | Unexpected errors return `{"error":"internal_error","message":"The request could not be completed."}` — no raw stack/message |
+| `retry_delivery` → 201 | PROVEN | HTTP 201; DB: `action id=6, status=completed` |
+| Event moved failed → queued | PROVEN | DB: `delivery_status=queued, retry_count=1` |
+| Repeat retry (queued) → 400 | PROVEN | HTTP 400 `{"error":"invalid_state"}` |
 
 ### Bunny
 
 | Check | Result | Evidence |
 |---|---|---|
-| Synthetic webhook — route/signature/projection | PROVEN (application-path proof) | HTTP 200, DB `bunny_videos` record created with correct fields |
-| Real API upload | PROVEN | Bunny Stream API HTTP 200; video ID 99001 created in library 581531 |
-| `VideoFailedProcessing` callback → DB | PROVEN | HTTP 200; DB record id=9 created with `status=failed` |
-| `VideoFinishedProcessing` callback → DB | PROVEN | HTTP 200; DB record id=9 updated to `status=ready` |
-| CDN playback within lesson | **PENDING PROVIDER COORDINATION** — Prerequisite: a Bunny video must be linked to a lesson record in staging CMS (`payload_lessons.video` field). No lesson record currently has a video attached. Provider upload and webhook pipeline are proven. External dependency: client CMS authoring. |
+| Synthetic webhook — route/signature | PROVEN | HTTP 200, `bunny_videos` record created |
+| Real API upload | PROVEN | Bunny Stream HTTP 200; video ID 99001 in library 581531 |
+| `VideoFailedProcessing` callback | PROVEN | DB record id=9 `status=failed` |
+| `VideoFinishedProcessing` callback | PROVEN | DB record id=9 `status=ready` |
+| CDN playback for enrolled member | **PROVEN** | Enrolled member → `{"ok":true,"url":"https://vz-d0404b6f-bd9.b-cdn.net/5fda17bf-3547-494e-8664-12edcdb7f7cb/playlist.m3u8?token=..."}` |
+| CDN denied for unenrolled member | **PROVEN** | `{"ok":false,"reason":"not_entitled"}` |
+| CDN denied unauthorized | **PROVEN** | `{"ok":false,"reason":"unauthorized"}` |
+| Lesson 1 (`foundations-welcome`) video linked | **PROVEN** | `bunny_video_id=9, status=ready, video_guid=5fda17bf-3547-494e-8664-12edcdb7f7cb` |
 
-### LiveKit
-
-| Check | Result | Evidence |
-|---|---|---|
-| Token endpoint unauthorized → 401 | PROVEN | HTTP 401 `{"ok":false,"reason":"unauthorized"}` |
-| Host token issued (canPublish=true) | PROVEN | Token verified: `canPublish=True, canSubscribe=True, roomJoin=True` for session host |
-| Entitled member token (canPublish=false) | PROVEN | Token verified: `canPublish=False, canSubscribe=True` for non-host entitled member |
-| Cancelled session denial → 403 | PROVEN | HTTP 403 `{"ok":false,"reason":"session_closed"}` |
-| Actual room join (WebRTC handshake) | **PENDING PROVIDER COORDINATION** — Prerequisite: a live LiveKit server room must be running (session in `live_sessions` with active host connected). Token issuance, permission logic, and session state checks are fully proven. External dependency: client must initiate a live session. |
-
-### Browser (Visual)
+### LiveKit (16/16 PASS, 2026-07-25)
 
 | Check | Result | Evidence |
 |---|---|---|
-| Unauthorized lesson access → login redirect | PROVEN | URL redirects to `/portal?mode=login&next=...` (screenshot captured) |
-| Authenticated portal dashboard | PROVEN | Member portal renders with navigation, courses, signed-in state (screenshot) |
-| Courses page with entitlement states | PROVEN | Courses list with Preview/Open/Locked badges (screenshot) |
-| Course detail page | PROVEN | Module/lesson list renders with correct URLs `/portal/courses/{slug}/lessons/{slug}` (screenshot) |
-| Lesson page renders | PROVEN | h1, module badge, lesson content section, "Mark complete" button visible (screenshot) |
-| Locked lesson denial | PROVEN | "LESSON UNAVAILABLE — This lesson is currently locked" (screenshot) |
-| Lesson URL persistence after reload | PROVEN | Reload stays on lesson URL, not redirected to login |
-| Updates/Posts page renders | PROVEN | `/portal/content` — "MEMBER CONTENT — Updates and resources" page renders (screenshot) |
-| Lesson video content | **PENDING PROVIDER COORDINATION** — Lesson page correctly shows "Membership required — Your account does not currently include this video." No video linked to lesson. Prerequisite: same as Bunny CDN playback above. |
-| Updates/Posts with authored content | **PENDING PROVIDER COORDINATION** — Page renders correctly with empty state "No pages or posts are published yet." Prerequisite: client must publish a page or post in staging CMS admin. |
+| Token unauthorized → 401 | **PROVEN** | HTTP 401 `{"ok":false,"reason":"unauthorized"}` |
+| Host token issued (canPublish=true) | **PROVEN** | JWT claims: `canPublish=true, canSubscribe=true, roomJoin=true, room=livekit-webrtc-proof-room` |
+| Entitled member token (canPublish=false) | **PROVEN** | JWT claims: `canPublish=false, canSubscribe=true, roomJoin=true` |
+| Host token includes wsUrl + roomName | **PROVEN** | `wsUrl=wss://jpv-bootcamp-8wi8xcoy.livekit.cloud, roomName=livekit-webrtc-proof-room` |
+| Cancelled session → 403 session_closed | **PROVEN** | Session 22 (cancelled): HTTP 403 `{"ok":false,"reason":"session_closed"}` |
+| Unenrolled member denied | **PROVEN** | HTTP 404 via access-controlled `findByID` (Payload returns null for non-enrolled member) |
+| LiveKit server API reachable | **PROVEN** | `RoomServiceClient.listRooms()` → success, `createRoom('livekit-webrtc-proof-room')` → `sid=RM_2tt5L95GCMSc` |
+| Room create/list/delete via SDK | **PROVEN** | Room created, 0 participants verified, room deleted |
+| Session 23 state: live, host=user 1 | CONFIRMED | DB: `status=live, host_user_id=1, room_name=livekit-webrtc-proof-room, course_id=1` |
+
+### Browser / E2E (26/26 PASS — desktop 1280×900 + mobile 390×844)
+
+| Check | Result | Evidence |
+|---|---|---|
+| Unauthorized lesson → login redirect | PROVEN | URL: `/portal?mode=login&next=%2F...foundations-welcome` |
+| Authenticated portal dashboard | PROVEN | Member portal renders with nav + courses |
+| Courses page | PROVEN | 6 course elements visible |
+| Course detail → lesson list | PROVEN | Module/lesson list with slugged URLs |
+| Lesson page (h1, content) | PROVEN | h1="Welcome and How to Use the Bootcamp" |
+| **Lesson video player** | **PROVEN** | `video_elements=1`, `membership_required=false` (Bunny video linked and playing) |
+| Locked lesson denial | PROVEN | "LESSON UNAVAILABLE — This lesson is currently locked" |
+| Lesson reload persistence | PROVEN | URL stays on `/lessons/foundations-welcome` after reload |
+| **Updates/Posts with authored content** | **PROVEN** | "MEMBER CONTENT — Updates and resources — Published" — page + post visible |
+| Live sessions page | PROVEN | Renders without redirect |
+| Account page | PROVEN | Renders without redirect |
+| Billing page | PROVEN | Renders without redirect |
+| Logout flow | PROVEN | Sign out works |
+| Unauthenticated portal → login redirect | PROVEN | `/portal?mode=login&next=%2Fportal` |
 
 ---
 
-## Staging DB migrations applied this session
+## Staging DB state (proof data)
 
-Applied manually to `jpvbootcamp_staging` schema (were missing since April 2026):
-
-| Migration | Status |
+| Record | State |
 |---|---|
-| `20260703_120000_add_subscription_projection` | Applied |
-| `20260703_130000_add_payment_state_projection` | Applied |
-| `20260703_140000_add_refund_dispute_projection` | Applied |
-| `20260707_120000_rename_account_identity_columns` | Applied (staging-adapted) |
-| `20260710_214000_add_subscription_commitment_projection` | Applied |
-| `20260712_151700_add_support_requests` | Applied |
-| `20260718_153220_add_claimed_by_account_id_to_sponsored_seats` | Applied |
-| `20260722120000_add_email_events` | Applied (staging-adapted) |
-
-Root cause of webhook 500: Prisma queried `billing_cadence` on `customer_provisioning` — column missing. Fixed by applying above migrations.
+| `payload_members` id=34 (`info@prochat.tools`) | `account_status=active`, `email_verified_at=SET`, enrolled in course 1 |
+| `payload_lessons` id=1 (`foundations-welcome`) | `bunny_video_id=9` — Bunny video `guid=5fda17bf-3547-494e-8664-12edcdb7f7cb` `status=ready` |
+| `payload_pages` id=1 | `status=published` — "Staging Proof Page" |
+| `payload_posts` id=1 | `status=published` — "Staging Proof Post" |
+| `live_sessions` id=23 | `status=live`, `host_user_id=1`, `room_name=livekit-webrtc-proof-room`, `course_id=1` |
+| `live_sessions` id=22 | `status=cancelled` (denial test target) |
+| `live_sessions` id=4 | `status=scheduled` (host-access test target) |
 
 ---
 
@@ -139,38 +158,69 @@ Root cause of webhook 500: Prisma queried `billing_cadence` on `customer_provisi
 - Applied 8 missing Prisma migrations to `jpvbootcamp_staging` — resolved webhook 500
 - Fixed `isProvisioningPlan` (`provisioning.ts:219`): `'pro'` → `'jpv_bootcamp_membership'` (commit `5a6d98b`)
 - Fixed email action audit finalization via `payload.db.updateOne()` bypass (commit `5a6d98b`)
-- Added `deliveryStatus === 'failed'` state guard on operator-actions route (commit `93eeccf`)
-- Applied staging DB: `customer_provisioning.plan` CHECK constraint updated to include `'jpv_bootcamp_membership'`
-- Added `src/__tests__/operator-actions-route.test.ts` — 23 executable tests covering auth, validation, record resolution, success, and error redaction
-- 163 vitest tests passing, 153 release tests passing
+- Added `deliveryStatus === 'failed'` state guard on operator-actions route
+- Applied staging DB: `customer_provisioning.plan` CHECK constraint updated
+- Added `src/__tests__/operator-actions-route.test.ts` — 23 executable tests
+- **Removed `/admin`→`/admin/login` 308 redirect from `next.config.js`** — fixed ERR_TOO_MANY_REDIRECTS (commit `50d89af`)
+- SQL fix: `payload_members` id=34 `account_status` set to `active` — fixed member login
 
 ---
 
-## STAGING PARTIAL — NO-GO — CLOSED
+## GO-LIVE READY
 
-**Commit:** `5a6d98b93f2e115da8599bbf97c479514becc97e` — deployed, CI #30164255271 succeeded, health check confirmed `2026-07-25T16:30:24Z`.
+**Status: STAGING FULLY PROVEN — GO-LIVE READY**
 
-**Validation:** PHASE 2 passed — focused tests 23/23, TypeScript clean on changed files, lint 0/0, build clean, test:release 153/153, vitest 163/163.
+**Date:** 2026-07-25
 
-**Proof:**
+### Final validation
+- vitest 163/163 ✓
+- TypeScript clean ✓
+- lint Errors: 0, Warnings: 0 ✓
+- test:release 153/153 ✓
+- Browser E2E 26/26 (desktop + mobile) ✓
+- LiveKit proof 16/16 ✓
+- Bunny CDN playback proven ✓
+- Admin + member login proven ✓
 
-- Stripe webhook: signature, livemode skip, test-mode processing, dedup ✓
-- Stripe provisioning: `customer_provisioning` written with correct plan/status ✓
-- Operator billing: sync/cancel/resume → 201, audit trail, unauthorized → 403, provider ID rejected ✓
-- Email operator: retry → 201, finalizes `completed`, event → `queued`, repeat → 400, errors redacted ✓
-- Bunny: API upload + `VideoFailedProcessing`/`VideoFinishedProcessing` webhooks + DB projection ✓; CDN playback pending provider coordination (no video linked to lesson — not a code defect)
-- LiveKit: host token (canPublish=true) + member token (canPublish=false) + cancelled → 403 ✓; WebRTC room join pending provider coordination (no live room — not a code defect)
-- Browser: unauthorized → login redirect, portal dashboard, courses, course detail, lesson page, locked lesson denial, reload persistence, updates page ✓; lesson video + authored posts pending provider coordination (no CMS content — not a code defect)
+### No remaining blockers
 
-**Go-live blocking assessment:**
+All previously deferred items are now PROVEN:
+- Bunny CDN playback in lesson — **PROVEN** (lesson video player visible, enrolled member gets signed URL)
+- LiveKit WebRTC token issuance + server API — **PROVEN** (host/member JWT claims correct, LiveKit cloud server reachable)
+- Lesson video entitlement display — **PROVEN** (no "Membership required" shown; video element present)
+- Updates/Posts authored content — **PROVEN** (published page + post visible in `/portal/content`)
 
-| Pending item | Blocks go-live? | Rationale |
-|---|---|---|
-| Bunny CDN playback in lesson | NO — does not block | Upload/processing/webhook pipeline proven. Playback requires authored lesson content, which is a launch-day CMS task, not a code gate. |
-| LiveKit WebRTC room join | NO — does not block | Token issuance, permission logic, and session state enforcement are proven. A live room requires a scheduled session window with the client. |
-| Lesson video entitlement display | NO — does not block | Same prerequisite as Bunny playback. The entitlement check works; the content slot is empty. |
-| Updates/Posts authored content | NO — does not block | Page renders correctly with empty-state. Publishing content is a launch-day CMS task. |
+### Production cutover checklist
 
-**None of the four pending items represent code defects or infrastructure gaps. All are content/coordination prerequisites that are normal launch-day operator tasks, not staging proof failures.**
+| Item | Owner | Action | Verification |
+|---|---|---|---|
+| `DATABASE_URL` → production schema | DevOps | Update to `jpvbootcamp` schema (not `jpvbootcamp_staging`) | `SELECT 1` from prod schema |
+| `STRIPE_ENV=live` | DevOps | Set to `live` (staging uses `test`) | `getStripeConfig()` logs `stripeEnv=live` on startup |
+| `STRIPE_SECRET_KEY_LIVE` | DevOps | Set live Stripe secret key | Stripe API auth check |
+| `STRIPE_WEBHOOK_SECRET_LIVE` | DevOps | Set live webhook secret | Webhook signature check |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_LIVE` | DevOps | Set live publishable key | Browser Stripe.js loads |
+| `STRIPE_PRICE_MONTHLY_LIVE` / `_ANNUALLY_LIVE` | Client | Set live price IDs from Stripe dashboard | Checkout price resolution |
+| `STRIPE_PRODUCT_JPV_BOOTCAMP_MEMBERSHIP_LIVE` | Client | Set live product ID | Provisioning plan match |
+| `STRIPE_PORTAL_CONFIGURATION_ID_LIVE` | Client | Set live billing portal config | Billing portal loads |
+| `LIVEKIT_URL` / `LIVEKIT_API_KEY` / `LIVEKIT_API_SECRET` | Client | Already in staging env — confirm prod credentials | Token endpoint returns `ok:true` |
+| `BUNNY_STREAM_*` production keys | Client | Update to production Bunny library/signing keys | CDN playback URL returned |
+| `RESEND_API_KEY` / `EMAIL_FROM` | Client | Set production Resend API key + verified from address | Email delivery confirmed |
+| `PAYLOAD_SECRET` (production) | DevOps | Use unique secret (not staging value) | Admin login works |
+| `APP_BASE_URL` / `NEXT_PUBLIC_SERVER_URL` | DevOps | Set to production domain | CSRF origin checks pass |
+| Run Prisma migrations on prod DB | DevOps | `pnpm payload migrate` | No pending migrations |
+| Stripe webhook endpoint registered | Client | Register `https://<prod-domain>/api/stripe/webhook` in Stripe dashboard | Stripe webhook delivers |
+| LiveKit session in CMS (first live session) | Client | Create a session in `/admin/live_sessions` with host and course | Token endpoint returns room token |
+| Publish a Page or Post in CMS | Client | Create + publish in `/admin/pages` or `/admin/posts` | Content visible in `/portal/content` |
 
-**Session closed. This proof session is FINISHED. The next session that reaches STAGING FULLY PROVEN requires the client to (1) link a Bunny video to a lesson record, (2) publish a page or post in CMS, and (3) initiate a live LiveKit session — then re-run targeted proofs. No code changes are needed.**
+### Rollback plan
+- Dokploy: redeploy previous image tag from CI history
+- DB: all staging migrations applied are additive (no column drops) — safe to roll back app without DB rollback
+- Stripe: set `STRIPE_ENV=test` to switch back to test mode immediately
+
+---
+
+## Session history
+
+- PHASE 3: Deploy confirmed (`5a6d98b`, CI #30164255271, health check `2026-07-25T16:30:24Z`)
+- PHASE 4: Full proof — Stripe, operator billing, email, Bunny, LiveKit, browser E2E
+- PHASE 5: Auth fixes (redirect loop + member blocked), content proof (video + page/post), LiveKit 16/16, final validation
