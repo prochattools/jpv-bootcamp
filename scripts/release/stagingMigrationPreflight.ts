@@ -73,7 +73,13 @@ function defaultExecutor(executable: AllowedExecutable, args: string[], cwd: str
 
 function checkBranch(cwd: string): void {
   const branch = execFileSync('git', ['branch', '--show-current'], { cwd, encoding: 'utf8' }).trim()
-  if (branch !== EXPECTED_BRANCH) throw new Error(`branch_mismatch:${branch}`)
+  if (branch === EXPECTED_BRANCH) return
+  if (branch === '') {
+    const head = execFileSync('git', ['rev-parse', 'HEAD'], { cwd, encoding: 'utf8' }).trim()
+    const isAncestor = spawnSync('git', ['merge-base', '--is-ancestor', head, `origin/${EXPECTED_BRANCH}`], { cwd })
+    if (isAncestor.status === 0) return
+  }
+  throw new Error(`branch_mismatch:${branch}`)
 }
 
 function checkPrismaPathsClean(cwd: string): void {
