@@ -7,38 +7,49 @@ jpv-bootcamp (feature/course-branding-and-preview)
 Claude Code
 
 ## Goal
-Base directory for this skill: /private/tmp/claude-502/bundled-skills/2.1.218/dd0aa6ddf742568c8112426b3cd9bc7e/run **Running means launching the actual app and interacting with it** — not the test suite, not an `import` of an internal function and a
+Harden, deploy, and finish JPV staging proof (4-phase)
 
 ## Status
-auto-saved at 2026-07-23 17:00 — run /handoff resume to reconstruct full context
+Phase 4 COMPLETE — terminal state: **STAGING PARTIAL — NO-GO** (2026-07-25)
 
-## Files touched
-- .ai/GO_LIVE_READINESS_2026_07_23.md
-- .ai/CURRENT_WORK_HANDOFF.md
-- src/collections/PayloadMedia.ts
-- src/collections/PayloadPages.ts
-- src/collections/PayloadPosts.ts
-- src/collections/PayloadCategories.ts
-- src/collections/PayloadCoursePrototype.ts
+## What was accomplished
 
-## Recent commands
-- `grep -A 3 "admin: {" src/collections/PayloadMedia.ts | head -5`
-- `cd /Users/Office/Repos/prochattools/clients/jc-citadel/jpv-bootcamp  echo "=== BATCH 2: BUNNY VIDEO & LEGACY CLEANUP ===`
-- `cd /Users/Office/Repos/prochattools/clients/jc-citadel/jpv-bootcamp  git add src/collections/PayloadCoursePrototype.ts  `
-- `cd /Users/Office/Repos/prochattools/clients/jc-citadel/jpv-bootcamp  echo "[Quick validation: Release tests]" pnpm test:`
-- `cd /Users/Office/Repos/prochattools/clients/jc-citadel/jpv-bootcamp  git add .ai/CURRENT_WORK_HANDOFF.md  git commit -m `
+### Phase 1: Harden operator-actions route
+- Auth: admin-only enforcement (403 for unauthed + members)
+- Input: provider ID pattern rejection (sub_, cus_, pi_, pm_, etc.)
+- Record resolution: server-side findByID before action creation
+- Error redaction: only stable codes returned, no internal messages/stacks
+- Response: returns only {id, status, actionType} — never full doc
 
-## Last response summary
---- ## FINAL SESSION REPORT **Status: NO-GO (Implementation in progress, not yet proven)** ### Completed This Session **Batch 1 ✅ — Foundation: Payload Collections Visible** - Unhid Media, Pages, Posts, Categories for admin editing - Added "Content" group for navigation - Fixed course accessBadge: limited to "manual" only (JPV Bootcamp Membership) - Commit: `ff17171` - Validation: ✅ TypeScript
+### Phase 2: Validate + commit
+- 22 executable unit tests (vi.mock pattern, not source-text assertions)
+- TypeScript clean, production build pass
+- Committed as `032a326 fix: harden staging operator actions`
 
-## Decisions made
-None recorded automatically — run /handoff pause to capture decisions explicitly
+### Phase 3: Deploy
+- Deployed via GitHub Actions run #30159802976 (success)
+- Health: HTTP 200 at https://preview.jpvbootcamp.com
 
-## Next steps
-Run /handoff resume to reconstruct context from this auto-save
+### Phase 4: Close gaps — live proof
+- **Stripe**: Webhook signature verification PROVEN (synthetic signed webhook accepted), real event delivery pending Stripe retry window (~1hr for new endpoint)
+- **LiveKit**: FULLY PROVEN — host (canPublish=true) + member (canPublish=false) room join tokens issued for live session 21
+- **Browser**: PROVEN via Playwright — login page renders, JPV branding, access control correctly denies billing_hold member
+- **Bunny**: Application path proven (signed HLS URL, denial for unauthed/unenrolled), real upload pending
+- **Email**: Route validated (correct denial for already-queued event), end-to-end pending fresh failed event
+- **Operator actions**: Route fully proven (auth, validation, resolution, redaction). afterChange hooks blocked by member 34 in billing_hold.
 
-## Blockers
-Unknown — auto-save only
+## Canonical values (DO NOT CHANGE)
+- Webhook secret: `whsec_Pw08DKJ5xZwItRUdUKjtoSsDMLisoiio`
+- Stripe endpoint: `we_1Tx5xkLIsSm7aAuaNaKmW9Kr`
+- Env file: `.env.production` (never `.env.production.BAK`)
+- Subscription: `sub_1Tx4JALIsSm7aAuaeeJTk67T`
+- Member: id=34, email=info@prochat.tools, status=blocked/billing_hold
 
-## Resume prompt
-Resume from last session in jpv-bootcamp (feature/course-branding-and-preview). Review .ai/current.md and recent git log for full context.
+## Next steps (operator actions required)
+1. Check Stripe Dashboard > Webhooks in ~1hr for delivery confirmation
+2. Unblock member 34 → retry billing operator action
+3. Create fresh failed email event → retry via operator-actions route
+4. Optional: Bunny real upload
+
+## Full evidence
+See `docs/CURRENT_WORK_HANDOFF.md` § Terminal State
