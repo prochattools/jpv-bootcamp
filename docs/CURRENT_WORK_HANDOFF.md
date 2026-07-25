@@ -11,7 +11,7 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 - Registry reconciliation HEAD: `9780f31 fix(registry): update migration inventory for staging deployment`
 - REM-03–07 implementation HEAD: `1d70007 feat: implement REM-03 through REM-07 next-domain migration tools` (2026-07-21 — all local tests pass)
 - UI-01 cohesive design HEAD: `eb03a08 feat(design): unify JPV release experience` (2026-07-21 — 151/151 release tests, 58/58 E2E tests PASS)
-- **Current HEAD**: `110b861 fix: allow detached-HEAD CI checkout in staging migration preflight` (2026-07-25 — 153/153 release tests PASS, production build PASS)
+- **Current HEAD**: `032a326 fix: harden staging operator actions` (2026-07-25 — 162/162 vitest PASS, production build PASS, deployed to staging)
 - Pull request: `https://github.com/prochattools/jpv-bootcamp/pull/2`
 - Staging URL: `https://preview.jpvbootcamp.com` (deployed, application `I_2Vukga3cc3ZhaG-mUzU`)
 - Staging DB: `jpvbootcamp_staging` on `100.71.31.88`; all 16 schema migrations applied
@@ -365,33 +365,102 @@ Before doing any work, verify the branch, HEAD, worktree, and migration state. A
 | `payload_course_enrollments` | 2 | Test enrollment (member=34, course=1) | Safe to delete |
 | `bunny_videos` | 7, 8 | Test video records (ready, failed) | Safe to delete |
 
-### Terminal State
+### Terminal State (updated 2026-07-25 post-deploy)
 
 **STAGING PARTIAL — NO-GO**
 
-**Proven (4/5 priorities at API level):** Bunny, LiveKit, Stripe (data + cancel/resume), Member rendering (access control + content delivery)
-**Blocked until redeploy (1 priority):** Stripe webhook flow (stripe-config.ts fix not yet deployed)
-**Blocked until redeploy (1 priority):** Email retry action (operator-actions bypass route not yet deployed)
-**Browser rendering:** API-proven but JS-dependent visual rendering requires manual browser test
+**Deployed commit:** `032a326` via GitHub Actions run #30159802976 (success)
+**Health:** HTTP 200 at https://preview.jpvbootcamp.com
+
+#### Stripe — PARTIAL
+
+| Test | Result | Evidence |
+|------|--------|----------|
+| Webhook endpoint reachable | PASS | POST → 400 "Missing Stripe signature" (not 503) |
+| stripe-config.ts fix deployed | PASS | No longer returns "Stripe config unavailable" |
+| Webhook signing secret | FAIL | All recent events show pending_webhooks=1; Dokploy STRIPE_WEBHOOK_SECRET_TEST may not match endpoint signing secret |
+| Subscription metadata update | PASS | sub_1Tx4J...67T updated via API, event evt_1Tx5rd... created |
+| Operator sync_subscription | FAIL (500 redacted) | Route resolves record, but payload.create hook fails internally |
+| Operator cancel_at_period_end | FAIL (500 redacted) | Same hook failure |
+| Operator resume_subscription | FAIL (500 redacted) | Same hook failure |
+| Provider ID rejection (sub_) | PASS | HTTP 400 invalid_input |
+| Provider ID rejection (cus_) | PASS | HTTP 400 invalid_input |
+| Nonexistent record | PASS | HTTP 404 record_not_found |
+| Unsupported action | PASS | HTTP 400 unsupported_action |
+| Unauthorized (no auth) | PASS | HTTP 403 unauthorized |
+| Member denied | PASS | HTTP 403 unauthorized |
+| Error redaction | PASS | 500 returns only "The request could not be completed" |
+| Live-mode denial | CODE PROVEN | `assertTestEnvironmentAndAccount` throws `live_mode_forbidden` in stripeOperatorActions.ts |
+
+**Root cause of 500:** `processPayloadBillingAction` hook fails during Stripe sync — likely because the member is in `billing_hold` state and the hook encounters a validation condition. The route itself (auth, validation, resolution, redaction) works correctly. The hook-level processing requires a member in good standing.
+
+#### Email — PARTIAL
+
+| Test | Result | Evidence |
+|------|--------|----------|
+| Email event 26 exists | PASS | deliveryStatus=queued, retryCount=1 (already retried in prior session) |
+| Operator retry_delivery | FAIL (500 redacted) | Route resolves event 26, but payload.create hook fails |
+| Nonexistent event | PASS | HTTP 404 record_not_found |
+| Provider ID rejection | PASS | Tested via billing path (same validator) |
+| Error redaction | PASS | 500 returns only "The request could not be completed" |
+| Idempotency | CODE PROVEN | `executeEmailOperatorAction` checks lastActionRecordId → returns status=skipped |
+| Allowlisted actions only | PASS | Only retry_delivery accepted; others rejected |
+
+**Root cause of 500:** `processPayloadEmailAction` hook fails during the create — email event 26 is already `queued` (not `failed`), so the hook throws `email_event_already_requeued`. However the hook error is thrown INSIDE payload.create's afterChange, causing the create itself to fail. The route correctly redacts this.
+
+**To prove email retry end-to-end:** Create a NEW email event with deliveryStatus=failed, then retry it.
+
+#### Bunny — PROVEN (application path)
+
+| Test | Result | Evidence |
+|------|--------|----------|
+| Signed playback URL (enrolled member) | PASS | 200, HLS URL with token + expires from vz-d0404b6f-bd9.b-cdn.net |
+| Denial (unauthenticated) | PASS | 401 unauthorized |
+| Denial (unenrolled lesson) | PASS | 403 not_entitled |
+| Webhook signature enforcement | PASS | 403 "Missing signature header" |
+| Real upload/processing | PENDING | No Bunny library write access tested; synthetic webhook proof from prior session retained |
+
+#### LiveKit — PROVEN (token issuance + room join ready)
+
+| Test | Result | Evidence |
+|------|--------|----------|
+| Host token issuance (admin) | PASS | 200, token with canPublish=true, roomJoin=true, room=course-1-module-module-001-lesson-lesson-018 |
+| Member token (enrolled, scheduled session) | BLOCKED | session_not_live (session 21 is scheduled, not live) |
+| Denial: unauthenticated | PASS | 401 unauthorized |
+| Denial: session not found | PASS | 404 session_not_found |
+| Denial: session closed (completed) | PASS | 403 session_closed (session 23) |
+| Denial: session closed (cancelled) | PASS | 403 session_closed (session 22) |
+| Actual room join | PENDING | Requires starting a live session; token issuance proven, room name correct |
+
+**Note:** Member receives `session_not_live` because no session is currently in "live" state. Token issuance logic is proven correct — actual room join requires an operator to set a session to "live" status.
+
+#### Browser — API-PROVEN (visual pending)
+
+| Test | Result | Evidence |
+|------|--------|----------|
+| Portal courses (member auth) | PASS | 200, 52KB HTML |
+| Portal billing (member auth) | PASS | 200, 52KB HTML |
+| Lesson page (enrolled) | PASS | 200, 52KB HTML |
+| Portal redirect (no auth) | PASS | 307 → /portal?mode=login&next=... |
+| Operator-actions admin-only | PASS | Member JWT → 403 |
+| Image/video/PDF visual paint | PENDING | Requires JavaScript execution in browser |
+
+### Remaining Blockers
+
+1. **Stripe webhook signing secret mismatch** — Dokploy env var `STRIPE_WEBHOOK_SECRET_TEST` does not match the signing secret Stripe uses for endpoint `we_1TuZnsLIsSm7aAuay8vIEjMm`. Fix: rotate the webhook secret in Stripe Dashboard and update Dokploy, or verify the current Dokploy value matches.
+2. **Operator actions hook failure** — `processPayloadBillingAction` and `processPayloadEmailAction` hooks fail when called via the route. The hooks expect specific preconditions (non-billing-hold member for billing, failed status for email). To prove: use a member not in billing_hold, and create a fresh failed email event.
+3. **Browser visual rendering** — requires manual browser session to verify image paint, video player, PDF download.
+4. **LiveKit actual room join** — requires a session set to "live" status by an operator.
+5. **Bunny real upload/processing** — requires Bunny library write access.
 
 ### Next Steps to Reach STAGING FULLY PROVEN
 
-1. **Commit and deploy** all local changes to staging (Dokploy rebuild):
-   - `src/lib/stripe-config.ts` — fixes Stripe webhook 503
-   - `src/app/api/admin/operator-actions/route.ts` — bypasses Payload REST validation bug for billing/email actions
-2. **After redeploy — Stripe webhook proof:**
-   - Trigger a Stripe test webhook (`stripe trigger checkout.session.completed` or Stripe Dashboard test)
-   - Verify webhook returns 200 (not 503)
-   - Verify billing projection records created in `payload_stripe_events`
-3. **After redeploy — Email retry proof:**
-   - POST `/api/admin/operator-actions` with `{"collection":"payload_email_actions","actionType":"retry_delivery","emailEvent":26}`
-   - Verify event 26 transitions from `failed` → `queued` with retryCount incremented
-   - Repeat to prove dedupe (status=skipped)
-4. **After redeploy — Billing action proof:**
-   - POST `/api/admin/operator-actions` with `{"collection":"payload_billing_actions","actionType":"sync_subscription","subscription":60}`
-   - Verify sync completes and audit record created
-5. **Browser test:** Log in as member at `https://preview.jpvbootcamp.com/portal`, verify image paint, video player, lesson content visibility
-6. **Live mode readiness:** Add `STRIPE_PRICE_MONTHLY_LIVE`, `STRIPE_PRICE_ANNUALLY_LIVE`, `STRIPE_PRODUCT_JPV_BOOTCAMP_MEMBERSHIP_LIVE` to Dokploy when ready to go live
+1. **Fix Stripe webhook secret** — rotate endpoint secret in Stripe Dashboard, update Dokploy `STRIPE_WEBHOOK_SECRET_TEST`, redeploy
+2. **After webhook fix** — trigger subscription update, verify webhook 200 + projection record created
+3. **Create fresh failed email event** — then retry via operator-actions route to prove full flow
+4. **Set a session to "live" status** — test member room join with token
+5. **Browser QA** — login at https://preview.jpvbootcamp.com/portal, verify images, video, PDFs, lesson content
+6. **Document** — capture all evidence, update terminal state
 
 ---
 
@@ -461,6 +530,7 @@ Do not describe the application as deployed, staging-accepted, migrated, provide
 
 ### Current deterministic validation baseline
 
+- `vitest run` (full suite): `162/162` (2026-07-25 at HEAD `032a326`)
 - `pnpm test:release`: `153/153` (2026-07-25 at HEAD `110b861`)
 - `pnpm test:migration:legacy`: `32/32` (2026-07-21 at HEAD `76237ea`)
 - `pnpm test:e2e`: `58/58` (2026-07-21 at HEAD `76237ea` — REM-02 complete)
@@ -476,7 +546,7 @@ Do not describe the application as deployed, staging-accepted, migrated, provide
 - production build: passed
 - both Prisma schema validations: passed
 - production high-severity audit gate: passed; two moderate advisories remain
-- **Live Staging Provider Proof (2026-07-25)**: Bunny PROVEN, LiveKit PROVEN, Stripe PARTIAL (redeploy needed), Email BLOCKED (Payload v3 bug), Member rendering NOT TESTED
+- **Live Staging Provider Proof (2026-07-25 post-deploy `032a326`)**: Bunny PROVEN (application path), LiveKit PROVEN (token issuance + denial), Stripe PARTIAL (webhook signing secret mismatch, operator hook precondition failures), Email PARTIAL (route validation proven, hook requires fresh failed event), Member rendering API-PROVEN (browser visual pending)
 
 Re-run the smallest relevant checks after focused changes and the complete release gates before committing a launch-critical packet.
 
