@@ -149,6 +149,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         )
       }
 
+      if (emailEventRecord.deliveryStatus !== 'failed') {
+        return NextResponse.json(
+          { error: 'invalid_state', message: 'Only failed email events are eligible for retry.' },
+          { status: 400 },
+        )
+      }
+
       const doc = await payload.create({
         collection: 'payload_email_actions',
         data: {

@@ -175,6 +175,14 @@ describe('POST /api/admin/operator-actions', () => {
       const json = await res.json()
       expect(json.error).toBe('record_not_found')
     })
+
+    it('returns 400 when email event is not in failed state', async () => {
+      mockPayload.findByID.mockResolvedValue({ id: '26', deliveryStatus: 'queued' })
+      const res = await POST(makeRequest({ collection: 'payload_email_actions', actionType: 'retry_delivery', emailEvent: '26' }))
+      expect(res.status).toBe(400)
+      const json = await res.json()
+      expect(json.error).toBe('invalid_state')
+    })
   })
 
   describe('successful billing action creation', () => {
