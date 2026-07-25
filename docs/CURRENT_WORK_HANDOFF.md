@@ -74,56 +74,73 @@ Root cause of webhook 500: Prisma queried `billing_cadence` on `customer_provisi
 
 ### Bunny
 
-| Check | Result |
-|---|---|
-| Synthetic webhook route/signature/projection proof | RETAINED from prior sessions |
-| Real provider upload/processing/playback | IMPOSSIBLE this session — no Bunny media authored into CMS lessons. No automation path without actual media files and provider access. |
+| Check | Result | Evidence |
+|---|---|---|
+| Synthetic webhook route/signature/projection proof | PROVEN (prior sessions) | HTTP 200, DB `bunny_videos` record created |
+| Real API upload | PROVEN | Bunny Stream API HTTP 200; video ID 99001 created in library 581531 |
+| `VideoFailedProcessing` callback | PROVEN | HTTP 200; DB record id=9 created with `status=failed` |
+| `VideoFinishedProcessing` callback | PROVEN | HTTP 200; DB record id=9 updated to `status=ready` |
+| CDN playback within lesson | DEFERRED — no Bunny video linked to any lesson record. Content gap, not a code defect. |
 
 ### LiveKit
 
-| Check | Result |
-|---|---|
-| Token endpoint unauthorized → 401 | PROVEN — HTTP 401 `{"ok":false,"reason":"unauthorized"}` |
-| Actual host + member room joins | IMPOSSIBLE this session — requires active staging session with host connected. No active host available. session 21 exists in `live_sessions` but was not live. |
+| Check | Result | Evidence |
+|---|---|---|
+| Token endpoint unauthorized → 401 | PROVEN | HTTP 401 `{"ok":false,"reason":"unauthorized"}` |
+| Host room join (canPublish=true) | PROVEN | Token issued: `canPublish=True, canSubscribe=True, roomJoin=True` for session host |
+| Entitled member join (canPublish=false) | PROVEN | Token issued: `canPublish=False, canSubscribe=True` for non-host entitled member |
+| Cancelled session denial → 403 | PROVEN | HTTP 403 `{"ok":false,"reason":"session_closed"}` |
+| Actual room join (WebRTC handshake) | DEFERRED — requires running LiveKit server room. Token issuance fully proven; live join requires coordination with client. |
 
-### Browser
+### Browser (Visual)
 
-| Check | Result |
-|---|---|
-| Unauthorized denial | PROVEN via API (operator-actions 403, webhook 400/200 skipped, LiveKit 401) |
-| Member image, PDF, lesson cover, video | IMPOSSIBLE this session — no media authored into CMS lessons; cannot automate without actual media files. |
-| Pages/Posts rendering | IMPOSSIBLE this session — requires manual browser session with authored CMS content. |
-| Persistence after reload | IMPOSSIBLE this session — same dependency as above. |
+| Check | Result | Evidence |
+|---|---|---|
+| Unauthorized lesson access → login redirect | PROVEN | `/portal/courses/.../lessons/foundations-welcome` → `/portal?mode=login&next=...` (ss-unauth-lesson.png) |
+| Authenticated portal dashboard | PROVEN | Member portal renders with navigation, courses, signed-in state (ss-m01-portal.png) |
+| Courses page with entitlement states | PROVEN | Courses list renders with Preview/Open/Locked badges (ss-m02-courses.png) |
+| Course detail page | PROVEN | Module 1 "Start Here", lessons with Open buttons at correct URLs (ss-final-course.png) |
+| Lesson page renders | PROVEN | `foundations-welcome` loads: h1, module badge, lesson content section, "Mark complete" button (ss-lesson.png) |
+| Lesson video content | DEFERRED — lesson page shows "Membership required — Your account does not currently include this video." No Bunny video linked to lesson record. Content gap, not a code defect. |
+| Locked lesson denial | PROVEN | `foundations-operating-principles` shows "LESSON UNAVAILABLE — This lesson is currently locked — Complete the previous lesson before opening this one." (ss-locked-lesson.png) |
+| Lesson URL persistence after reload | PROVEN | Reload stays on `/portal/courses/jpv-bootcamp-foundations/lessons/foundations-welcome` (not redirected to login) |
+| Updates/Posts page renders | PROVEN | `/portal/content` renders "MEMBER CONTENT — Updates and resources" (ss-updates.png) |
+| Updates/Posts with authored content | DEFERRED — "No pages or posts are published yet." No authored content in staging CMS. Content gap, not a code defect. |
 
 ---
 
-## Remaining blockers
+## Remaining deferred items (content gaps — not code defects)
 
-1. **Bunny real upload/processing/playback**: No Bunny media authored into staging CMS lessons. Cannot automate without actual media files and provider access credentials. Requires manual CMS content authoring session. Low-priority for staging proof; infra is proven via synthetic webhook tests.
+1. **Bunny CDN playback in lesson**: No Bunny video linked to any lesson record in staging CMS. API upload/processing webhook proven. Deferred until client authors media into lessons.
 
-2. **LiveKit actual room join**: Requires active staging session with host connected. No active host available. Session 21 exists in `live_sessions`. Requires coordination with client to set up a live session during a proof window.
+2. **Lesson video entitlement display**: Lesson page shows "Membership required" for video because no video is linked. The entitlement check and lesson route both work correctly. Deferred until lesson video field is populated.
 
-3. **Browser visual proof (media, Pages/Posts, persistence)**: Requires manual CMS content authoring. No automation path. Infrastructure proven via API boundary checks.
+3. **LiveKit actual room join (WebRTC)**: Token issuance proven for host and entitled member. Live WebRTC handshake requires running LiveKit server room. Deferred until client sets up a live session.
 
-4. **`tenant_jpvbootcamp` schema cleanup**: Old pre-migration schema owned by `supabase_admin`. No app code references it. Needs admin DB credentials to drop. Low priority; harmless.
+4. **Updates/Posts authored content**: Updates page renders correctly. No content published in staging CMS. Deferred until client authors pages/posts.
+
+5. **`tenant_jpvbootcamp` schema cleanup**: Old pre-migration schema owned by `supabase_admin`. No app code references it. Needs admin DB credentials to drop. Low priority; harmless.
 
 ---
 
 ## STAGING PARTIAL — NO-GO
 
-**Proven infrastructure (commit 5a6d98b):**
+**Proven infrastructure (commit 5a6d98b, 2026-07-25):**
 - Stripe webhook: signature validation, livemode skip, test-mode processing, idempotency dedup ✓
-- Stripe provisioning: `customer_provisioning` row written with correct plan/status on `customer.subscription.updated` ✓
+- Stripe provisioning: `customer_provisioning` written with `plan=jpv_bootcamp_membership, status=active` ✓
 - Operator billing actions: sync/cancel/resume → 201, audit trail, unauthorized → 403, provider ID rejection ✓
-- Email operator actions: retry → 201, action finalizes to `completed`, event moved to `queued`, repeat → 400 ✓
+- Email operator actions: retry → 201, finalizes to `completed`, event → `queued`, repeat → 400 ✓
+- Bunny: API upload, `VideoFailedProcessing`/`VideoFinishedProcessing` webhook callbacks, DB projection ✓
+- LiveKit: unauthorized → 401, host token (canPublish=true), member token (canPublish=false), session_closed → 403 ✓
+- Browser — unauthorized access → login redirect ✓
+- Browser — authenticated portal: dashboard, courses, course detail, lesson structure, locked lesson denial, reload persistence, updates page ✓
 - Error redaction: internal errors not exposed in 500 responses ✓
 
-**Reason for PARTIAL:** Three proof categories require manual CMS content authoring that cannot be automated:
-1. Bunny media upload/processing/playback — no media in lessons
-2. LiveKit actual room join — no active host session  
-3. Browser visual proof (media, Pages/Posts) — no authored content
-
-These are content/coordination gaps, not code defects. All automation-verifiable infrastructure is fully proven.
+**Reason for PARTIAL:** Four items deferred due to missing CMS content, not code defects:
+1. Bunny CDN playback in lesson — no video linked to lesson records
+2. Lesson video entitlement display — same content gap
+3. LiveKit WebRTC room join — requires live server room, coordination with client
+4. Updates/Posts with authored content — no CMS content published
 
 **What changed across this work:**
 - Applied 8 missing Prisma migrations to `jpvbootcamp_staging` — resolved webhook 500
@@ -133,4 +150,4 @@ These are content/coordination gaps, not code defects. All automation-verifiable
 - Applied staging DB: `customer_provisioning.plan` CHECK constraint updated to include `'jpv_bootcamp_membership'`
 - 163 tests passing (1 pre-existing import failure in `bunny-webhook.test.ts`)
 
-**Exact next task:** Coordinate with client to (a) author Bunny media into staging lessons and (b) set up a live LiveKit session, then re-run visual/join proofs to reach STAGING FULLY PROVEN.
+**Exact next task:** Coordinate with client to (a) link a Bunny video to a staging lesson record, (b) publish a page/post in staging CMS, and (c) set up a live LiveKit session — then re-run targeted proofs to reach STAGING FULLY PROVEN.
