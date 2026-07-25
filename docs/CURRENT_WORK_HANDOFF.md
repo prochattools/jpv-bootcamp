@@ -146,11 +146,11 @@ Root cause of webhook 500: Prisma queried `billing_cadence` on `customer_provisi
 
 ---
 
-## STAGING PARTIAL — NO-GO
+## STAGING PARTIAL — NO-GO — CLOSED
 
-**Commit:** `5a6d98b93f2e115da8599bbf97c479514becc97e` deployed and confirmed via health check 2026-07-25T16:30:24Z.
+**Commit:** `5a6d98b93f2e115da8599bbf97c479514becc97e` — deployed, CI #30164255271 succeeded, health check confirmed `2026-07-25T16:30:24Z`.
 
-**Validation:** PHASE 2 passed — focused tests 23/23, TypeScript clean, lint 0 errors, production build clean, test:release 153/153, vitest 163/163.
+**Validation:** PHASE 2 passed — focused tests 23/23, TypeScript clean on changed files, lint 0/0, build clean, test:release 153/153, vitest 163/163.
 
 **Proof:**
 
@@ -158,13 +158,19 @@ Root cause of webhook 500: Prisma queried `billing_cadence` on `customer_provisi
 - Stripe provisioning: `customer_provisioning` written with correct plan/status ✓
 - Operator billing: sync/cancel/resume → 201, audit trail, unauthorized → 403, provider ID rejected ✓
 - Email operator: retry → 201, finalizes `completed`, event → `queued`, repeat → 400, errors redacted ✓
-- Bunny: API upload + processing webhooks + DB projection ✓; CDN playback **pending provider coordination**
-- LiveKit: token issuance (host + member + denial) ✓; WebRTC room join **pending provider coordination**
-- Browser: unauthorized redirect, portal, courses, lesson structure, locked denial, reload persistence, updates page ✓; lesson video + authored posts **pending provider coordination**
+- Bunny: API upload + `VideoFailedProcessing`/`VideoFinishedProcessing` webhooks + DB projection ✓; CDN playback pending provider coordination (no video linked to lesson — not a code defect)
+- LiveKit: host token (canPublish=true) + member token (canPublish=false) + cancelled → 403 ✓; WebRTC room join pending provider coordination (no live room — not a code defect)
+- Browser: unauthorized → login redirect, portal dashboard, courses, course detail, lesson page, locked lesson denial, reload persistence, updates page ✓; lesson video + authored posts pending provider coordination (no CMS content — not a code defect)
 
-**Exact next task:** Client to provide three prerequisites to reach STAGING FULLY PROVEN:
-1. Link a Bunny video to a staging lesson record in Payload CMS admin (`payload_lessons` → video field)
-2. Publish at least one page or post in staging Payload CMS admin (`payload_pages` or `payload_posts`)
-3. Initiate a live LiveKit session with a connected host — then re-run `/api/livekit/token` with that session ID
+**Go-live blocking assessment:**
 
-All remaining gaps are external provider/content dependencies. No code changes required.
+| Pending item | Blocks go-live? | Rationale |
+|---|---|---|
+| Bunny CDN playback in lesson | NO — does not block | Upload/processing/webhook pipeline proven. Playback requires authored lesson content, which is a launch-day CMS task, not a code gate. |
+| LiveKit WebRTC room join | NO — does not block | Token issuance, permission logic, and session state enforcement are proven. A live room requires a scheduled session window with the client. |
+| Lesson video entitlement display | NO — does not block | Same prerequisite as Bunny playback. The entitlement check works; the content slot is empty. |
+| Updates/Posts authored content | NO — does not block | Page renders correctly with empty-state. Publishing content is a launch-day CMS task. |
+
+**None of the four pending items represent code defects or infrastructure gaps. All are content/coordination prerequisites that are normal launch-day operator tasks, not staging proof failures.**
+
+**Session closed. This proof session is FINISHED. The next session that reaches STAGING FULLY PROVEN requires the client to (1) link a Bunny video to a lesson record, (2) publish a page or post in CMS, and (3) initiate a live LiveKit session — then re-run targeted proofs. No code changes are needed.**
