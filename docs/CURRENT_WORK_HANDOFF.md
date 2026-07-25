@@ -1639,3 +1639,78 @@ Prepare the consolidated Payload schema-migration package for the locally comple
 
 **Exact next task**
 Run the controlled staging migration and operator-workflow proof only after explicit approval. Use Claude Code/browser automation for the staging apply evidence, Payload administrator workflows, Bunny provider flow, LiveKit room joins, Stripe checkout lifecycle, and real email delivery. Do not apply these migrations from an unapproved local session.
+
+
+
+### 2026-07-24 Singular-membership migration incident and repair checkpoint
+
+**Staging incident evidence**
+- A command presented as a read-only Payload migration-status check initialized Payload and attempted pending migrations against staging.
+- `20260722_100000_reconcile_lockstate_vip_progress` committed on staging before the approved execution window.
+- `20260723_000000_singular_membership_plan` then failed with PostgreSQL `unsafe use of new value "jpv_bootcamp_membership"` because the migration added and used the enum value in one migration transaction.
+- The failed `20260723` transaction rolled back cleanly; staging evidence reported no committed partial state from that migration.
+- The existing backup `jpvbootcamp_staging_20260724T165923Z.dump` predates the committed `20260722` migration and is therefore not the correct immediate restore point for the current staging schema.
+- Do not use `payload migrate:status` or the repository wrapper around it as a read-only staging command. Query the Payload migration table directly with an explicitly read-only database operation when migration status is required.
+
+**Repository repair**
+- `20260723_000000_singular_membership_plan` now only adds `jpv_bootcamp_membership` to `enum_payload_subscriptions_plan`.
+- New migration `20260723_000001_migrate_pro_to_membership` runs in the next committed migration transaction. It migrates `pro` subscription rows first and removes the obsolete allowed-plans table and enum only after the data update succeeds.
+- The `000001` down path reverses subscription data before recreating the empty legacy enum and table. Historical allowed-plan join rows remain unrecoverable.
+- The `000000` down path intentionally does not attempt destructive PostgreSQL enum contraction.
+
+**Revised canonical inventory**
+- The Payload migration inventory now contains **23** migrations.
+- Staging has `20260722_100000_reconcile_lockstate_vip_progress` applied.
+- After this repair is committed and deployed, the remaining migration sequence is:
+  1. `20260723_000000_singular_membership_plan`
+  2. `20260723_000001_migrate_pro_to_membership`
+  3. `20260724_120000_operator_content_media`
+  4. `20260724_121000_billing_operator_actions`
+  5. `20260724_122000_live_session_relationships`
+  6. `20260724_123000_email_operator_actions`
+- Any prior approval scoped to commit `dfd2b98`, 22 migrations, or the former six-migration sequence is superseded and must not be used.
+
+**Required staging reset before execution**
+1. Commit and deploy the repaired migration code under a new exact commit approval.
+2. Rotate provider credentials disclosed in terminal output before provider/browser proof.
+3. Create and verify a fresh staging backup after `20260722` and before any remaining migration is applied.
+4. Record backup filename, timestamp, size, checksum, integrity result, operator, restore owner, approval reference, and execution window.
+5. Confirm exactly the six migrations listed above remain pending through a direct read-only query of the Payload migration table.
+6. Stop on any migration inventory mismatch, enum conflict, schema drift, partial apply, or backup discrepancy.
+
+**Controlled-launch status**
+- Repository repair remains local until all validation and commit steps pass.
+- Staging migration execution remains **NO-GO** until the repaired commit, rotated credentials, fresh backup, revised approval packet, and exact pending-order proof exist.
+
+
+
+### 2026-07-25 Singular-membership split and PostCSS security completion checkpoint
+
+**Migration repair completion**
+- `20260723_000000_singular_membership_plan` now adds `jpv_bootcamp_membership` only and never uses the value in the same migration transaction.
+- `20260723_000001_migrate_pro_to_membership` performs the subscription data migration in the next committed Payload migration, then removes the obsolete allowed-plans table and enum only after the data update succeeds.
+- Canonical Payload migration inventory remains **23** entries, with `000001` directly after `000000`.
+- Static migration contracts now pass **10/10** and prove the enum-add/use separation, cleanup ordering, reverse-order down behavior, and exact registry order.
+
+**Dependency security repair**
+- The release audit reported high-severity advisory `GHSA-r28c-9q8g-f849` for PostCSS versions through `8.5.17`.
+- The repository override `next>postcss` was raised from `8.5.15` to the existing patched lockfile node `8.5.22`.
+- Obsolete `postcss@8.5.15` package, snapshot, and dependency references were removed from `pnpm-lock.yaml`.
+- `pnpm install --frozen-lockfile --ignore-scripts`: **passed**.
+- `pnpm audit --prod --audit-level high --ignore-registry-errors`: **passed**; three moderate advisories remain and do not fail the repository's high-severity release gate.
+
+**Final validation evidence**
+- Operator schema migration Vitest: **10/10 passed**.
+- Preview migration inventory: **passed**.
+- Migration readiness static test: **passed**.
+- Payload staging migration boundary: **passed**.
+- Payload shadow validation: **passed**.
+- Payload TypeScript: **passed**.
+- Executable migration/dependency high-risk scan: **clean**.
+- Production build job `validation-d082ca8b-0377-4dea-9b80-f59ca1ad919f`: **passed**.
+- Canonical release job `validation-eab68655-4fd2-48a1-b217-5e736df64ccd`: **153/153 passed**.
+
+**Operational status**
+- The prior staging approval for commit `dfd2b98` remains superseded.
+- No staging query, migration application, deployment, push, restore, secret edit, or environment generation occurred during this repair.
+- A fresh staging backup, credential rotation, revised exact-commit approval, and direct read-only confirmation of the remaining six migrations are still required before staging migration execution.

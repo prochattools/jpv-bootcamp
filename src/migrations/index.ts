@@ -16,6 +16,7 @@ import * as migration_20260719_150000_subscription_schema_cols from './20260719_
 import * as migration_20260720_000000_locked_docs_rels_new_collections from './20260720_000000_locked_docs_rels_new_collections';
 import * as migration_20260722_100000_reconcile_lockstate_vip_progress from './20260722_100000_reconcile_lockstate_vip_progress';
 import * as migration_20260723_000000_singular_membership_plan from './20260723_000000_singular_membership_plan';
+import * as migration_20260723_000001_migrate_pro_to_membership from './20260723_000001_migrate_pro_to_membership';
 import * as migration_20260724_120000_operator_content_media from './20260724_120000_operator_content_media';
 import * as migration_20260724_121000_billing_operator_actions from './20260724_121000_billing_operator_actions';
 import * as migration_20260724_122000_live_session_relationships from './20260724_122000_live_session_relationships';
@@ -40,6 +41,7 @@ export const migrations = [
   { up: migration_20260720_000000_locked_docs_rels_new_collections.up, down: migration_20260720_000000_locked_docs_rels_new_collections.down, name: '20260720_000000_locked_docs_rels_new_collections' },
   { up: migration_20260722_100000_reconcile_lockstate_vip_progress.up, down: migration_20260722_100000_reconcile_lockstate_vip_progress.down, name: '20260722_100000_reconcile_lockstate_vip_progress' },
   { up: migration_20260723_000000_singular_membership_plan.up, down: migration_20260723_000000_singular_membership_plan.down, name: '20260723_000000_singular_membership_plan' },
+  { up: migration_20260723_000001_migrate_pro_to_membership.up, down: migration_20260723_000001_migrate_pro_to_membership.down, name: '20260723_000001_migrate_pro_to_membership' },
   { up: migration_20260724_120000_operator_content_media.up, down: migration_20260724_120000_operator_content_media.down, name: '20260724_120000_operator_content_media' },
   { up: migration_20260724_121000_billing_operator_actions.up, down: migration_20260724_121000_billing_operator_actions.down, name: '20260724_121000_billing_operator_actions' },
   { up: migration_20260724_122000_live_session_relationships.up, down: migration_20260724_122000_live_session_relationships.down, name: '20260724_122000_live_session_relationships' },

@@ -14,7 +14,7 @@ import { buildPreviewReleaseManifest, validatePreviewReleaseManifestInput } from
 async function main(): Promise<void> {
   const legacyUserColumn = 'wp' + '_user_id'
   const names = previewMigrationInventoryNames()
-  assert.equal(PREVIEW_MIGRATION_INVENTORY.length, 22)
+  assert.equal(PREVIEW_MIGRATION_INVENTORY.length, 23)
   assert.deepEqual(names, [
     '20260620_213328',
     '20260621_194424_course_system_phase1',
@@ -34,6 +34,7 @@ async function main(): Promise<void> {
     '20260720_000000_locked_docs_rels_new_collections',
     '20260722_100000_reconcile_lockstate_vip_progress',
     '20260723_000000_singular_membership_plan',
+    '20260723_000001_migrate_pro_to_membership',
     '20260724_120000_operator_content_media',
     '20260724_121000_billing_operator_actions',
     '20260724_122000_live_session_relationships',

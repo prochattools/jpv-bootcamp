@@ -4,16 +4,21 @@ import { describe, expect, it } from 'vitest'
 
 const read = (path: string) => readFileSync(resolve(path), 'utf8')
 
+const singularEnumMigration = read('src/migrations/20260723_000000_singular_membership_plan.ts')
+const singularDataMigration = read('src/migrations/20260723_000001_migrate_pro_to_membership.ts')
 const contentMigration = read('src/migrations/20260724_120000_operator_content_media.ts')
 const billingMigration = read('src/migrations/20260724_121000_billing_operator_actions.ts')
 const liveMigration = read('src/migrations/20260724_122000_live_session_relationships.ts')
 const emailMigration = read('src/migrations/20260724_123000_email_operator_actions.ts')
 const migrationIndex = read('src/migrations/index.ts')
+const previewInventory = read('src/lib/previewMigrationInventory.ts')
 const generatedTypes = read('src/payload-types.ts')
 
 describe('consolidated Payload operator migrations', () => {
   it('registers all migrations in deterministic execution order', () => {
     const names = [
+      '20260723_000000_singular_membership_plan',
+      '20260723_000001_migrate_pro_to_membership',
       '20260724_120000_operator_content_media',
       '20260724_121000_billing_operator_actions',
       '20260724_122000_live_session_relationships',
@@ -27,6 +32,36 @@ describe('consolidated Payload operator migrations', () => {
       expect(position).toBeGreaterThan(previous)
       previous = position
     }
+  })
+
+  it('splits singular membership enum creation from later data use', () => {
+    expect(singularEnumMigration).toContain("ADD VALUE 'jpv_bootcamp_membership'")
+    expect(singularEnumMigration).not.toContain("SET plan = 'jpv_bootcamp_membership'")
+    expect(singularEnumMigration).not.toContain('payload_access_policies_allowed_plans')
+    expect(singularEnumMigration).not.toContain('DROP TYPE')
+
+    expect(singularDataMigration).toContain("SET plan = 'jpv_bootcamp_membership'")
+    expect(singularDataMigration).toContain('DROP TABLE ${schema}.payload_access_policies_allowed_plans CASCADE')
+    expect(singularDataMigration).toContain('DROP TYPE ${schema}.enum_payload_access_policies_allowed_plans')
+
+    const updatePosition = singularDataMigration.indexOf("SET plan = 'jpv_bootcamp_membership'")
+    const dropTablePosition = singularDataMigration.indexOf('DROP TABLE ${schema}.payload_access_policies_allowed_plans CASCADE')
+    const downPosition = singularDataMigration.indexOf('export async function down')
+    const reverseDataPosition = singularDataMigration.indexOf("SET plan = 'pro'", downPosition)
+    const recreateEnumPosition = singularDataMigration.indexOf('CREATE TYPE ${schema}.enum_payload_access_policies_allowed_plans', downPosition)
+    const recreateTablePosition = singularDataMigration.indexOf('CREATE TABLE ${schema}.payload_access_policies_allowed_plans', downPosition)
+
+    expect(updatePosition).toBeGreaterThan(-1)
+    expect(dropTablePosition).toBeGreaterThan(updatePosition)
+    expect(reverseDataPosition).toBeGreaterThan(downPosition)
+    expect(recreateEnumPosition).toBeGreaterThan(reverseDataPosition)
+    expect(recreateTablePosition).toBeGreaterThan(recreateEnumPosition)
+  })
+
+  it('records exactly 23 canonical migrations', () => {
+    expect(previewInventory).toContain("name: '20260723_000001_migrate_pro_to_membership'")
+    expect(previewInventory).toContain('order: 23')
+    expect((migrationIndex.match(/name: '/g) ?? [])).toHaveLength(23)
   })
 
   it('adds managed Page, Post, and Lesson media with guarded rollback', () => {
