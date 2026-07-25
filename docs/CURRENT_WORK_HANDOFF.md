@@ -11,13 +11,13 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 - Registry reconciliation HEAD: `9780f31 fix(registry): update migration inventory for staging deployment`
 - REM-03–07 implementation HEAD: `1d70007 feat: implement REM-03 through REM-07 next-domain migration tools` (2026-07-21 — all local tests pass)
 - UI-01 cohesive design HEAD: `eb03a08 feat(design): unify JPV release experience` (2026-07-21 — 151/151 release tests, 58/58 E2E tests PASS)
-- **Current HEAD**: `eb03a08 feat(design): unify JPV release experience` (2026-07-21 — 151/151 release tests, 58/58 E2E tests PASS)
+- **Current HEAD**: `110b861 fix: allow detached-HEAD CI checkout in staging migration preflight` (2026-07-25 — 153/153 release tests PASS, production build PASS)
 - Pull request: `https://github.com/prochattools/jpv-bootcamp/pull/2`
 - Staging URL: `https://preview.jpvbootcamp.com` (deployed, application `I_2Vukga3cc3ZhaG-mUzU`)
 - Staging DB: `jpvbootcamp_staging` on `100.71.31.88`; all 16 schema migrations applied
 - Staging deployment performed: `Yes`; GitHub Actions are manual-only to conserve minutes
 - Credential remediation: `COMPLETE` — old email/password rejected, renamed account with old password rejected, new credential accepted, old JWT rejected, sessions cleared
-- Provider verification: Stripe test Checkout, LiveKit, Bunny webhook/playback, and staging smoke are verified
+- Provider verification: Bunny webhook/playback PROVEN; LiveKit token issuance PROVEN; Stripe webhook blocked until redeploy (stripe-config.ts fix pending deploy)
 - Legacy migration: staging apply complete for 21 source rows (two runs, zero errors both); per-table inserted/updated/unchanged reconciliation complete; auth/identity onboarding defined; next-domain inventory complete; rehearsal on disposable copy remains next active step
 - **Live Email/Auth Verification**: backend/API/database proof complete for the reset flow; mailbox rendering and full browser-session acceptance remain operator evidence unless separately recorded
 - Protected unrelated dirty paths (DO NOT MODIFY):
@@ -240,6 +240,161 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 
 Before doing any work, verify the branch, HEAD, worktree, and migration state. A direct descendant of the recorded HEAD may be acceptable only when its commits are already documented completed work.
 
+---
+
+## Staging Provider Proof Report (2026-07-25)
+
+**Branch:** `feature/course-branding-and-preview`
+**HEAD:** `110b861`
+**Staging URL:** `https://preview.jpvbootcamp.com`
+**Database:** `jpvbootcamp_staging` on `10.0.2.4:5433`
+
+### Priority 1: Bunny — PROVEN
+
+| Case | Result | Evidence |
+|------|--------|----------|
+| Webhook signature verification | PASS | HMAC-SHA256 on raw body; route at `/api/webhook/bunny` (singular) |
+| Signed webhook acceptance | PASS | POST with valid signature → 200, bunny_videos id=7 created (videoId=99901, status=ready) |
+| Video processing failure handling | PASS | VideoFailedProcessing event → bunny_videos id=8 (videoId=99902, status=failed) |
+| Signed playback URL generation | PASS | GET `/api/bunny/video?lessonId=<slug>` returns signed HLS URL with token + expires |
+| Denial: unauthenticated | PASS | Returns `unauthorized` |
+| Denial: not enrolled | PASS | Returns `not_entitled` |
+| Denial: bad lesson | PASS | Returns `lesson_not_found` |
+| Denial: no video attached | PASS | Returns `video_not_ready` |
+
+**Fix applied:** `.env.production` webhook URL corrected from `/api/webhooks/bunny` (plural, 404) to `/api/webhook/bunny` (singular, matches route).
+
+### Priority 2: Stripe — PARTIAL (blocked on redeploy)
+
+| Case | Result | Evidence |
+|------|--------|----------|
+| Test subscription creation | PASS | `sub_1Tx4JALIsSm7aAuaeeJTk67T` (active, monthly, cus_TvHnplLYSyKBiH) |
+| Cancel at period end (direct API) | PASS | Stripe API confirmed cancel_at_period_end=true |
+| Resume subscription (direct API) | PASS | Stripe API confirmed cancel_at_period_end=false |
+| Webhook → projection → entitlement | BLOCKED | Requires redeploy with stripe-config.ts fix |
+| Billing actions via REST API | BLOCKED | Payload v3.86.0 relationship validation bug (returns 404 for admin-restricted related collections on REST create) |
+
+**Fix applied:** `src/lib/stripe-config.ts` simplified — removed dead `STRIPE_PRICE_PRO_*`, `STRIPE_PRICE_PRO_ANNUAL_*`, `STRIPE_PRODUCT_JPV_BOOTCAMP_PRO_MEMBERSHIP_*` lookups. Now uses canonical `STRIPE_PRICE_MONTHLY_*`, `STRIPE_PRICE_ANNUALLY_*`, `STRIPE_PRODUCT_JPV_BOOTCAMP_MEMBERSHIP_*` which match the Dokploy env vars. This fix eliminates the 503 "Stripe config unavailable" error on webhook delivery.
+
+**Known blocker:** Payload v3.86.0 bug — REST API `POST /api/payload_billing_actions` returns 404 because relationship validation fails when the related collection (`payload_subscriptions`) has admin-restricted access. The same operation works internally via `overrideAccess: true` (webhook paths). This is NOT fixable without a Payload version upgrade.
+
+### Priority 3: Email — BLOCKED (workaround ready)
+
+| Case | Result | Evidence |
+|------|--------|----------|
+| Failed event created | PASS | `payload_email_events` id=26 (deliveryStatus=failed, template=staging-test-failed) |
+| Retry action via Payload REST API | BLOCKED | Payload v3.86.0 relationship validation bug → 404 on REST create |
+| Retry action via operator-actions route | READY | `/api/admin/operator-actions` route created with `overrideAccess:true` bypass; requires deploy |
+| Dedupe behavior | CODE PROVEN | `executeEmailOperatorAction` checks `lastActionRecordId === actionRecordId && deliveryStatus === 'queued'` → returns status=skipped |
+| Fail-closed behavior | CODE PROVEN | Non-retryable status → `email_event_not_retryable`; already queued → `email_event_already_requeued`; unknown errors → redacted `email_operator_action_failed` |
+
+**Root cause:** `payload_email_actions` has a relationship to `payload_email_events` with `filterOptions: { deliveryStatus: { equals: 'failed' } }`. Payload v3.86.0 REST API validation cannot resolve admin-restricted related collections during create.
+
+**Workaround:** Created `/api/admin/operator-actions` (POST) which uses `payload.create()` with `overrideAccess: true`, bypassing the REST validation layer. After deploy, email retry will be testable end-to-end via this route.
+
+### Priority 4: LiveKit — PROVEN
+
+| Case | Result | Evidence |
+|------|--------|----------|
+| Host token issuance | PASS | POST `/api/livekit/token` with `Authorization: JWT <admin>` → token with canPublish=true, roomJoin=true, identity=info@prochat.tools |
+| Member token issuance | PASS | Enrolled member (id=34, course=1) → token with canPublish=false |
+| Denial: unauthenticated | PASS | Returns `{"ok":false,"reason":"unauthorized"}` (HTTP 401) |
+| Denial: session not found | PASS | Invalid sessionId=9999 → `session_not_found` (HTTP 404) |
+| Denial: session not live (scheduled) | PASS | Session 21 (scheduled) → `session_not_live` (HTTP 403) |
+| Denial: session closed (completed) | PASS | Session 23 (completed) → `session_closed` (HTTP 403) |
+| Denial: session closed (cancelled) | PASS | Session 22 (cancelled) → `session_closed` (HTTP 403) |
+| Denial: non-host admin | CODE PROVEN | All staging sessions have host=admin_1; `isAdmin && !isHost → host_required` path verified in source (line 355-359) but cannot trigger with single-admin data |
+
+**Auth note:** Cookie-based auth via curl returns `unauthorized`; `Authorization: JWT <token>` header is required for programmatic testing. Browser sessions use cookies natively through Next.js `headers()` → `payload.auth()`.
+
+### Priority 5: Member Rendering — API PROVEN (browser pending)
+
+| Case | Result | Evidence |
+|------|--------|----------|
+| Media image access (enrolled member) | PASS | GET `/api/payload_media/file/proof-image-c3a1995.png` with member JWT → HTTP 200 (image/png) |
+| Media image denial (no auth) | PASS | Same URL without auth → HTTP 403 |
+| Signed video playback (enrolled lesson) | PASS | GET `/api/bunny/video?lessonId=smoke-test-lesson` → signed HLS URL with token + expires |
+| Video denial (unenrolled lesson) | PASS | `?lessonId=pro-lab-preview` → `not_entitled` |
+| Video denial (no auth) | PASS | Same → `unauthorized` |
+| Video denial (no video linked) | PASS | `?lessonId=foundations-welcome` → `no_video_linked` (correct — no bunny_video attached) |
+| Portal page rendering (authenticated) | PASS | GET `/portal/courses` with cookie → HTTP 200, 52KB HTML, contains "JPV Bootcamp" |
+| Portal page rendering (no auth) | PASS | GET `/portal/courses` → HTTP 307 redirect to `/portal?mode=login&next=...` |
+| Lesson page rendering (enrolled) | PASS | GET `/portal/courses/1/lessons/6` with cookie → HTTP 200, 39KB |
+| Lesson page persistence | PASS | Second identical request → HTTP 200, identical 39KB (no cache drift) |
+| Portal billing (subscription holder) | PASS | GET `/portal/billing` with cookie → HTTP 200, 52KB |
+
+**Browser limitation:** Full visual rendering (img paint, video player, PDF download) requires JavaScript execution which cannot be proven via curl. API-level access control and content delivery are fully proven. Browser acceptance testing must be performed manually after deploy.
+
+### Code Quality Verification
+
+| Check | Result |
+|-------|--------|
+| TypeScript compilation | CLEAN (zero errors) |
+| Production build | SUCCESS |
+| Full test suite (vitest) | 162/162 PASS |
+| Operator-actions unit tests | 22/22 PASS |
+
+### Uncommitted Fixes (require deploy)
+
+**`src/lib/stripe-config.ts`** — Removes legacy PRO env var lookups. After this is deployed:
+- Stripe webhook handler will successfully load config (no more 503)
+- Webhook → billing projection → entitlement flow becomes testable
+
+**`src/app/api/admin/operator-actions/route.ts`** — Hardened operator actions route:
+- Requires administrator authorization (rejects members and unauthenticated)
+- Accepts only Payload record IDs; rejects Stripe/provider IDs (sub_, cus_, pi_, etc.)
+- Resolves and validates referenced records server-side before action creation
+- Returns only stable public fields (id, status, actionType) — never full doc
+- Error responses use stable codes (unauthorized, unsupported_action, invalid_input, record_not_found, internal_error) — never raw error.message
+- Preserves idempotency, audit fields, and overrideAccess bypass for Payload REST bug
+
+**`src/__tests__/operator-actions-route.test.ts`** — Executable unit tests (22 cases):
+- Authorization: unauthenticated and member denial
+- Input validation: unsupported actions, missing IDs, empty strings, provider ID rejection
+- Record resolution: 404 for nonexistent subscription/email event
+- Successful creation: billing and email actions with correct payload calls
+- Error redaction: no internal messages, no stack traces in responses
+
+### Test Data Created During Proof
+
+| Table | ID | Purpose | Cleanup |
+|-------|-----|---------|---------|
+| `payload_billing_accounts` | 67 | Test billing account (cus_TvHnplLYSyKBiH, member=34, mode=test) | Safe to delete |
+| `payload_subscriptions` | 60 | Test subscription (sub_1Tx4JALIsSm7aAuaeeJTk67T, active) | Safe to delete |
+| `payload_email_events` | 26 | Test failed email event | Safe to delete |
+| `payload_course_enrollments` | 2 | Test enrollment (member=34, course=1) | Safe to delete |
+| `bunny_videos` | 7, 8 | Test video records (ready, failed) | Safe to delete |
+
+### Terminal State
+
+**STAGING PARTIAL — NO-GO**
+
+**Proven (4/5 priorities at API level):** Bunny, LiveKit, Stripe (data + cancel/resume), Member rendering (access control + content delivery)
+**Blocked until redeploy (1 priority):** Stripe webhook flow (stripe-config.ts fix not yet deployed)
+**Blocked until redeploy (1 priority):** Email retry action (operator-actions bypass route not yet deployed)
+**Browser rendering:** API-proven but JS-dependent visual rendering requires manual browser test
+
+### Next Steps to Reach STAGING FULLY PROVEN
+
+1. **Commit and deploy** all local changes to staging (Dokploy rebuild):
+   - `src/lib/stripe-config.ts` — fixes Stripe webhook 503
+   - `src/app/api/admin/operator-actions/route.ts` — bypasses Payload REST validation bug for billing/email actions
+2. **After redeploy — Stripe webhook proof:**
+   - Trigger a Stripe test webhook (`stripe trigger checkout.session.completed` or Stripe Dashboard test)
+   - Verify webhook returns 200 (not 503)
+   - Verify billing projection records created in `payload_stripe_events`
+3. **After redeploy — Email retry proof:**
+   - POST `/api/admin/operator-actions` with `{"collection":"payload_email_actions","actionType":"retry_delivery","emailEvent":26}`
+   - Verify event 26 transitions from `failed` → `queued` with retryCount incremented
+   - Repeat to prove dedupe (status=skipped)
+4. **After redeploy — Billing action proof:**
+   - POST `/api/admin/operator-actions` with `{"collection":"payload_billing_actions","actionType":"sync_subscription","subscription":60}`
+   - Verify sync completes and audit record created
+5. **Browser test:** Log in as member at `https://preview.jpvbootcamp.com/portal`, verify image paint, video player, lesson content visibility
+6. **Live mode readiness:** Add `STRIPE_PRICE_MONTHLY_LIVE`, `STRIPE_PRICE_ANNUALLY_LIVE`, `STRIPE_PRODUCT_JPV_BOOTCAMP_MEMBERSHIP_LIVE` to Dokploy when ready to go live
+
+---
+
 ## Roadmap position
 
 ### Complete
@@ -268,7 +423,8 @@ Before doing any work, verify the branch, HEAD, worktree, and migration state. A
 
 ### In progress
 
-- None — all repository implementation complete; all remaining work is gated by external approvals or requires live operator execution
+- Stripe config fix (`src/lib/stripe-config.ts`) — uncommitted, awaiting deploy to staging to unblock Stripe webhook proof
+- Staging provider proof completion — blocked on redeploy and Payload v3.86.0 upgrade
 
 ### Deferred
 
@@ -305,7 +461,7 @@ Do not describe the application as deployed, staging-accepted, migrated, provide
 
 ### Current deterministic validation baseline
 
-- `pnpm test:release`: `140/140` (2026-07-21 at HEAD `76237ea`)
+- `pnpm test:release`: `153/153` (2026-07-25 at HEAD `110b861`)
 - `pnpm test:migration:legacy`: `32/32` (2026-07-21 at HEAD `76237ea`)
 - `pnpm test:e2e`: `58/58` (2026-07-21 at HEAD `76237ea` — REM-02 complete)
 - `pnpm test:release:full`: passed
@@ -320,7 +476,7 @@ Do not describe the application as deployed, staging-accepted, migrated, provide
 - production build: passed
 - both Prisma schema validations: passed
 - production high-severity audit gate: passed; two moderate advisories remain
-- **Live Email/Auth on Staging**: Backend (B) verified 70%; Mailbox (D) and Browser (E) testing pending
+- **Live Staging Provider Proof (2026-07-25)**: Bunny PROVEN, LiveKit PROVEN, Stripe PARTIAL (redeploy needed), Email BLOCKED (Payload v3 bug), Member rendering NOT TESTED
 
 Re-run the smallest relevant checks after focused changes and the complete release gates before committing a launch-critical packet.
 
@@ -332,8 +488,8 @@ Re-run the smallest relevant checks after focused changes and the complete relea
 - Live prorated subscription migration: `NOT_AUTHORIZED`
 - Database migration approval: `NOT_APPROVED`
 - Programme content: `AWAITING_CLIENT_CONTENT`
-- Provider verification: `UNEXECUTED`
-- Staging smoke: `UNEXECUTED`
+- Provider verification: `PARTIAL` — Bunny + LiveKit proven; Stripe pending redeploy; Email blocked by Payload v3 bug
+- Staging smoke: `PARTIAL` — API-level proofs complete; browser rendering not tested
 - Formal go/no-go: `NO-GO`
 
 Decision records live under `docs/decisions/` and are validated by:
