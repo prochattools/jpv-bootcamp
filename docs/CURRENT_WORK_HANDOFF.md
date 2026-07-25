@@ -142,12 +142,26 @@ Root cause of webhook 500: Prisma queried `billing_cadence` on `customer_provisi
 3. LiveKit WebRTC room join — requires live server room, coordination with client
 4. Updates/Posts with authored content — no CMS content published
 
+## PHASE 2 VALIDATION EVIDENCE (2026-07-25, branch HEAD a489111)
+
+| Check | Result |
+|---|---|
+| Focused tests — `operator-actions-route.test.ts` | PASS 23/23 |
+| TypeScript — our files (`operator-actions/route.ts`, `emailOperatorActions.ts`, `stripe-config.ts`, `operator-actions-route.test.ts`) | NO ERRORS |
+| TypeScript — pre-existing errors in `provisioning.ts` (payment projection columns) | Pre-existing, not introduced by this work (confirmed by stash check) |
+| Security/lint scan — `next lint` | Errors: 0, Warnings: 0 |
+| Production build — `pnpm build` | PASS — clean, no errors |
+| test:release — `pnpm test:release` | PASS 153/153 |
+| Full vitest suite | PASS 163/163 |
+
+---
+
 **What changed across this work:**
 - Applied 8 missing Prisma migrations to `jpvbootcamp_staging` — resolved webhook 500
 - Fixed `isProvisioningPlan` (`provisioning.ts:219`): `'pro'` → `'jpv_bootcamp_membership'` (commit `5a6d98b`)
 - Fixed email action audit finalization via `payload.db.updateOne()` bypass (commit `5a6d98b`)
 - Added `deliveryStatus === 'failed'` state guard on operator-actions route (commit `93eeccf`)
 - Applied staging DB: `customer_provisioning.plan` CHECK constraint updated to include `'jpv_bootcamp_membership'`
-- 163 tests passing (1 pre-existing import failure in `bunny-webhook.test.ts`)
+- 163 tests passing, 153 release tests passing
 
 **Exact next task:** Coordinate with client to (a) link a Bunny video to a staging lesson record, (b) publish a page/post in staging CMS, and (c) set up a live LiveKit session — then re-run targeted proofs to reach STAGING FULLY PROVEN.
