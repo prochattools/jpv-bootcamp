@@ -363,16 +363,21 @@ export const PayloadEmailActions: CollectionConfig = {
       },
     ],
     afterChange: [
-      async ({ doc, operation, req }) => {
-        const { processPayloadEmailAction } = await import('@/lib/email/emailOperatorActions')
-        return processPayloadEmailAction({
-          doc,
-          operation,
-          req: {
-            payload: req.payload,
-            user: req.user as { id?: string | number; collection?: string } | null,
-          },
-        })
+      ({ doc, operation, req }) => {
+        if (operation !== 'create') return doc
+        void import('@/lib/email/emailOperatorActions').then(({ processPayloadEmailAction }) =>
+          processPayloadEmailAction({
+            doc,
+            operation,
+            req: {
+              payload: req.payload,
+              user: req.user as { id?: string | number; collection?: string } | null,
+            },
+          }).catch((err) => {
+            console.error('email_action_afterChange_background', { id: doc.id, error: err?.message })
+          }),
+        )
+        return doc
       },
     ],
   },

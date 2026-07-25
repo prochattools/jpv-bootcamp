@@ -319,16 +319,21 @@ export const PayloadBillingActions: CollectionConfig = {
       },
     ],
     afterChange: [
-      async ({ doc, operation, req }) => {
-        const { processPayloadBillingAction } = await import('@/lib/billing/stripeOperatorActions')
-        return processPayloadBillingAction({
-          doc,
-          operation,
-          req: {
-            payload: req.payload,
-            user: req.user as { id?: string | number; collection?: string; email?: string } | null,
-          },
-        })
+      ({ doc, operation, req }) => {
+        if (operation !== 'create') return doc
+        void import('@/lib/billing/stripeOperatorActions').then(({ processPayloadBillingAction }) =>
+          processPayloadBillingAction({
+            doc,
+            operation,
+            req: {
+              payload: req.payload,
+              user: req.user as { id?: string | number; collection?: string; email?: string } | null,
+            },
+          }).catch((err) => {
+            console.error('billing_action_afterChange_background', { id: doc.id, error: err?.message })
+          }),
+        )
+        return doc
       },
     ],
   },

@@ -151,8 +151,8 @@ describe('consolidated Payload operator migrations', () => {
 
     expect(billingImportPrelude).not.toContain('stripeOperatorActions')
     expect(crmImportPrelude).not.toContain('emailOperatorActions')
-    expect(billingCollection).toContain("await import('@/lib/billing/stripeOperatorActions')")
-    expect(crmCollection).toContain("await import('@/lib/email/emailOperatorActions')")
+    expect(billingCollection).toContain("import('@/lib/billing/stripeOperatorActions')")
+    expect(crmCollection).toContain("import('@/lib/email/emailOperatorActions')")
     expect(payloadConfig).toContain('process.env.PAYLOAD_MIGRATION_SCHEMA?.trim()')
   })
 })
