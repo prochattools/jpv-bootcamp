@@ -100,7 +100,7 @@ export default async function PortalDashboardPage({ searchParams }: PortalDashbo
   return (
     <div className='space-y-10'>
       <section>
-        <p className='text-sm font-semibold uppercase tracking-[0.2em] text-neutral-500'>JPV Bootcamp</p>
+        <p className='jpv-eyebrow'>JPV Bootcamp</p>
         <h1 className='mt-3 text-3xl font-semibold tracking-tight'>Welcome back</h1>
         <p className='mt-3 max-w-2xl text-sm leading-6 text-neutral-600'>
           Continue your learning, review your available courses, and manage your member account.
@@ -109,12 +109,12 @@ export default async function PortalDashboardPage({ searchParams }: PortalDashbo
 
       {dashboard.continueLesson ? (
         <section className='rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm'>
-          <p className='text-xs font-semibold uppercase tracking-[0.18em] text-neutral-500'>Continue learning</p>
+          <p className='jpv-eyebrow'>Continue learning</p>
           <h2 className='mt-3 text-xl font-semibold'>{dashboard.continueLesson.lessonTitle}</h2>
           <p className='mt-2 text-sm text-neutral-600'>{dashboard.continueLesson.courseTitle}</p>
           {dashboard.continueLesson.courseSlug && dashboard.continueLesson.lessonSlug ? (
             <Link
-              className='mt-5 inline-flex rounded-lg bg-neutral-950 px-4 py-2 text-sm font-semibold text-white'
+              className='jpv-button-primary mt-5 inline-flex'
               href={`/portal/courses/${dashboard.continueLesson.courseSlug}/lessons/${dashboard.continueLesson.lessonSlug}`}
             >
               Continue lesson

@@ -37,7 +37,7 @@ export function BillingPortalButton() {
 				type='button'
 				onClick={handleClick}
 				disabled={isLoading}
-				className='inline-flex items-center rounded-lg bg-neutral-950 px-4 py-2.5 text-sm font-semibold text-white transition disabled:opacity-50 hover:enabled:bg-neutral-800'
+				className='jpv-button-primary'
 			>
 				{isLoading ? 'Opening...' : 'Manage billing'}
 			</button>

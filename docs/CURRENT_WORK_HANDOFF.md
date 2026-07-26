@@ -2,6 +2,109 @@
 
 Use this document as the canonical starting point for a new Codex or Workbench conversation.
 
+---
+
+## PHASE A — PORTAL DESIGN TOKEN HARDENING (2026-07-26)
+
+**Branch:** `feature/course-branding-and-preview`
+**Status: PHASE A COMPLETE**
+
+### Mission
+
+Remove high-visibility off-token styling from the member portal and standardize primary actions and eyebrows using existing JPV design tokens. Public frontend design is LOCKED — only portal internals changed.
+
+### Token violations removed
+
+| File | Violations removed |
+|---|---|
+| `portal/courses/[courseSlug]/lessons/[lessonSlug]/page.tsx` | `bg-amber-50`, `border-amber-200`, `text-amber-800/950/900` (×2 sections), `bg-blue-50`, `text-blue-700` (preview badge), `bg-neutral-950` (2× buttons) |
+| `portal/courses/[courseSlug]/page.tsx` | `bg-amber-50`, `border-amber-200`, `text-amber-950/900` (locked section), `bg-amber-50`/`text-amber-700` (lesson badge), `bg-blue-50`/`text-blue-700` (preview badge), `bg-neutral-950` (Open button + progress badge) |
+| `portal/page.tsx` | `bg-neutral-950` (Continue lesson CTA) |
+| `portal/courses/page.tsx` | `bg-neutral-950` (Open course CTA) |
+| `src/components/portal/BillingPortalButton.tsx` | `bg-neutral-950` + custom hover classes |
+| `src/components/portal/MemberCheckoutButtons.tsx` | `bg-neutral-950` (monthly), ad-hoc secondary button classes (annual) |
+
+### Token replacements applied
+
+| Old pattern | Replacement |
+|---|---|
+| `border-amber-200 bg-amber-50 text-amber-*` (locked/error) | `jpv-notice jpv-notice-danger` |
+| `border-neutral-200 bg-neutral-50 text-neutral-*` (coming-soon) | `jpv-notice` |
+| `bg-blue-50 text-blue-700` (preview badge) | `bg-emerald-50 text-emerald-700` |
+| `bg-neutral-950 text-white` (primary CTA) | `jpv-button-primary` |
+| Ad-hoc secondary button classes | `jpv-button-secondary` |
+| `text-sm font-semibold uppercase tracking-[0.2em] text-neutral-500` | `jpv-eyebrow` |
+| `text-xs font-semibold uppercase tracking-[0.18em] text-neutral-500` | `jpv-eyebrow` |
+| `bg-neutral-950 text-white` (progress badge) | `bg-[var(--jpv-brand-deep)] text-[var(--jpv-canvas)]` |
+
+### Static enforcement test added
+
+`src/__tests__/portal-design-tokens.test.ts` — 45 tests:
+- No `bg-amber-*`, `border-amber-*`, `text-amber-*` in scoped lesson/course files
+- No `bg-blue-*`, `text-blue-*` in scoped files
+- All 6 CTA files use `jpv-button-primary`
+- No raw `bg-neutral-950` primary action in 5 CTA files
+- All 4 portal pages use `jpv-eyebrow`
+- No ad-hoc `tracking-[0.2em]` or `tracking-[0.18em]` patterns
+- Business logic preserved: `detail.allowed`, `lockState`, `completeLesson`, `requirePortalMember`, `openBillingPortal`, `startMemberCheckout`, `recurringPaymentAccepted`
+
+### Validation
+
+| Check | Result |
+|---|---|
+| Portal design token tests — 45/45 | PASS |
+| TypeScript (`pnpm type-check:payload`) | CLEAN |
+| Production build (`pnpm build`) | PASS |
+| Security scan | NO FINDINGS — pure CSS class substitution |
+| `pnpm test:release` | PASS 153/153 |
+
+### Browser proof — 390×844 (mobile) and 1280×900 (desktop)
+
+Screenshots captured to `docs/phase-a-screenshots/` via `scripts/phase-a-browser-proof.ts`.
+
+| Scenario | Mobile | Desktop | Result |
+|---|---|---|---|
+| Lesson locked/unavailable state (`jpv-notice-danger`) | ✓ | ✓ | Red-tinted surface, danger ink, no amber |
+| Lesson coming-soon state (`jpv-notice` neutral) | ✓ | ✓ | Neutral surface, no amber |
+| Lesson preview badge (`bg-emerald-50 text-emerald-700`) | ✓ | ✓ | Green badge, no blue |
+| Mark complete button + Download button (`jpv-button-primary`) | ✓ | ✓ | Brand-deep (#123d2d) buttons |
+| Dashboard Continue lesson CTA + eyebrow | ✓ | ✓ | Brand-deep button, uppercase eyebrow |
+| Courses page Open course CTA + eyebrow | ✓ | ✓ | Brand-deep button |
+| Course detail: locked/coming-soon/preview/complete lesson badges + Open button | ✓ | ✓ | Correct badge hierarchy, no amber/blue |
+| BillingPortalButton normal + disabled | ✓ | ✓ | Brand-deep, 55% opacity on disabled |
+| MemberCheckoutButtons monthly (primary) vs annual (secondary) + disabled | ✓ | ✓ | Clear hierarchy preserved |
+
+No overflow detected at either viewport. Focus ring (`outline: 3px solid var(--jpv-focus)`) and disabled opacity (0.55) verified in rendered output.
+
+### Files changed
+
+```
+src/app/(frontend)/portal/courses/[courseSlug]/lessons/[lessonSlug]/page.tsx
+src/app/(frontend)/portal/courses/[courseSlug]/page.tsx
+src/app/(frontend)/portal/courses/page.tsx
+src/app/(frontend)/portal/page.tsx
+src/components/portal/BillingPortalButton.tsx
+src/components/portal/MemberCheckoutButtons.tsx
+src/__tests__/portal-design-tokens.test.ts          (new — static enforcement)
+scripts/phase-a-browser-proof.ts                    (new — screenshot harness)
+docs/phase-a-screenshots/                           (new — 18 screenshots + manifest)
+```
+
+### What was NOT changed
+
+- No business logic, conditions, or entitlement checks
+- No auth, billing behavior, Payload schemas, or API contracts
+- No landing page or auth shell
+- Public frontend design untouched
+
+### Remaining design phases (not yet scoped)
+
+- **Phase B:** Portal navigation and layout token cleanup (if any off-token patterns remain in nav/header/shell)
+- **Phase C:** Admin branding alignment (if applicable)
+- **Phase D:** Email template token consistency (email uses `emailInterface`/`emailEditorial` fonts)
+
+---
+
 ## Repository identity
 
 - Repository: `prochattools-jpv-bootcamp`

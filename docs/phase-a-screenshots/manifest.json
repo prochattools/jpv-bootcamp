@@ -1,0 +1,65 @@
+{
+  "captured": "2026-07-26T10:39:39.246Z",
+  "viewports": [
+    "390x844 (mobile)",
+    "1280x900 (desktop)"
+  ],
+  "scenarios": [
+    "1-lesson-locked-state",
+    "2-lesson-coming-soon",
+    "3-lesson-preview-badge",
+    "4-lesson-mark-complete-button",
+    "5-dashboard-continue-lesson-cta",
+    "6-courses-page-open-course-cta",
+    "7-course-detail-locked-lesson-open-button",
+    "8-billing-portal-button",
+    "9-checkout-buttons-monthly-annual"
+  ],
+  "files": [
+    {
+      "scenario": "1-lesson-locked-state",
+      "mobile": "/Users/Office/Repos/prochattools/clients/jc-citadel/jpv-bootcamp/docs/phase-a-screenshots/1-lesson-locked-state-mobile.png",
+      "desktop": "/Users/Office/Repos/prochattools/clients/jc-citadel/jpv-bootcamp/docs/phase-a-screenshots/1-lesson-locked-state-desktop.png"
+    },
+    {
+      "scenario": "2-lesson-coming-soon",
+      "mobile": "/Users/Office/Repos/prochattools/clients/jc-citadel/jpv-bootcamp/docs/phase-a-screenshots/2-lesson-coming-soon-mobile.png",
+      "desktop": "/Users/Office/Repos/prochattools/clients/jc-citadel/jpv-bootcamp/docs/phase-a-screenshots/2-lesson-coming-soon-desktop.png"
+    },
+    {
+      "scenario": "3-lesson-preview-badge",
+      "mobile": "/Users/Office/Repos/prochattools/clients/jc-citadel/jpv-bootcamp/docs/phase-a-screenshots/3-lesson-preview-badge-mobile.png",
+      "desktop": "/Users/Office/Repos/prochattools/clients/jc-citadel/jpv-bootcamp/docs/phase-a-screenshots/3-lesson-preview-badge-desktop.png"
+    },
+    {
+      "scenario": "4-lesson-mark-complete-button",
+      "mobile": "/Users/Office/Repos/prochattools/clients/jc-citadel/jpv-bootcamp/docs/phase-a-screenshots/4-lesson-mark-complete-button-mobile.png",
+      "desktop": "/Users/Office/Repos/prochattools/clients/jc-citadel/jpv-bootcamp/docs/phase-a-screenshots/4-lesson-mark-complete-button-desktop.png"
+    },
+    {
+      "scenario": "5-dashboard-continue-lesson-cta",
+      "mobile": "/Users/Office/Repos/prochattools/clients/jc-citadel/jpv-bootcamp/docs/phase-a-screenshots/5-dashboard-continue-lesson-cta-mobile.png",
+      "desktop": "/Users/Office/Repos/prochattools/clients/jc-citadel/jpv-bootcamp/docs/phase-a-screenshots/5-dashboard-continue-lesson-cta-desktop.png"
+    },
+    {
+      "scenario": "6-courses-page-open-course-cta",
+      "mobile": "/Users/Office/Repos/prochattools/clients/jc-citadel/jpv-bootcamp/docs/phase-a-screenshots/6-courses-page-open-course-cta-mobile.png",
+      "desktop": "/Users/Office/Repos/prochattools/clients/jc-citadel/jpv-bootcamp/docs/phase-a-screenshots/6-courses-page-open-course-cta-desktop.png"
+    },
+    {
+      "scenario": "7-course-detail-locked-lesson-open-button",
+      "mobile": "/Users/Office/Repos/prochattools/clients/jc-citadel/jpv-bootcamp/docs/phase-a-screenshots/7-course-detail-locked-lesson-open-button-mobile.png",
+      "desktop": "/Users/Office/Repos/prochattools/clients/jc-citadel/jpv-bootcamp/docs/phase-a-screenshots/7-course-detail-locked-lesson-open-button-desktop.png"
+    },
+    {
+      "scenario": "8-billing-portal-button",
+      "mobile": "/Users/Office/Repos/prochattools/clients/jc-citadel/jpv-bootcamp/docs/phase-a-screenshots/8-billing-portal-button-mobile.png",
+      "desktop": "/Users/Office/Repos/prochattools/clients/jc-citadel/jpv-bootcamp/docs/phase-a-screenshots/8-billing-portal-button-desktop.png"
+    },
+    {
+      "scenario": "9-checkout-buttons-monthly-annual",
+      "mobile": "/Users/Office/Repos/prochattools/clients/jc-citadel/jpv-bootcamp/docs/phase-a-screenshots/9-checkout-buttons-monthly-annual-mobile.png",
+      "desktop": "/Users/Office/Repos/prochattools/clients/jc-citadel/jpv-bootcamp/docs/phase-a-screenshots/9-checkout-buttons-monthly-annual-desktop.png"
+    }
+  ]
+}

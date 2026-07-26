@@ -10,7 +10,7 @@ export default async function PortalCoursesPage() {
   return (
     <div className='space-y-8'>
       <section>
-        <p className='text-sm font-semibold uppercase tracking-[0.2em] text-neutral-500'>Learning</p>
+        <p className='jpv-eyebrow'>Learning</p>
         <h1 className='mt-3 text-3xl font-semibold tracking-tight'>Courses</h1>
         <p className='mt-3 max-w-2xl text-sm leading-6 text-neutral-600'>
           Review your available courses, progress, and access status.
@@ -54,7 +54,7 @@ export default async function PortalCoursesPage() {
 
               {course.allowed && course.slug ? (
                 <Link
-                  className='mt-6 inline-flex rounded-lg bg-neutral-950 px-4 py-2 text-sm font-semibold text-white'
+                  className='jpv-button-primary mt-6 inline-flex'
                   href={`/portal/courses/${course.slug}`}
                 >
                   Open course

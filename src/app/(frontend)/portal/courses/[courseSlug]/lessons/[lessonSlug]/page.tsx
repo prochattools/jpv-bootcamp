@@ -89,14 +89,14 @@ export default async function PortalLessonPage({ params, searchParams }: LessonP
       </Link>
 
       {!detail.allowed || !detail.lesson ? (
-        <section className='rounded-2xl border border-amber-200 bg-amber-50 p-8'>
-          <p className='text-sm font-semibold uppercase tracking-[0.2em] text-amber-800'>Lesson unavailable</p>
-          <h1 className='mt-3 text-2xl font-semibold text-amber-950'>This lesson is currently locked</h1>
-          <p className='mt-3 text-sm leading-6 text-amber-900'>
+        <section className='jpv-notice jpv-notice-danger rounded-2xl p-8'>
+          <p className='jpv-eyebrow'>Lesson unavailable</p>
+          <h1 className='mt-3 text-2xl font-semibold'>This lesson is currently locked</h1>
+          <p className='mt-3 text-sm leading-6'>
             {detail.lockReason ?? 'Your account does not currently have access to this lesson.'}
           </p>
           {detail.previousLesson && !detail.previousLesson.completed ? (
-            <p className='mt-4 rounded-xl border border-amber-200 bg-white px-4 py-3 text-sm font-medium text-amber-800'>
+            <p className='jpv-notice mt-4 rounded-xl px-4 py-3 text-sm font-medium'>
               Complete the previous lesson before opening this one.
             </p>
           ) : null}
@@ -104,7 +104,7 @@ export default async function PortalLessonPage({ params, searchParams }: LessonP
       ) : (
         <>
           <section className='rounded-2xl border border-neutral-200 bg-white p-8 shadow-sm'>
-            <p className='text-sm font-semibold uppercase tracking-[0.2em] text-neutral-500'>{detail.module.title}</p>
+            <p className='jpv-eyebrow'>{detail.module.title}</p>
             <div className='mt-3 flex flex-col gap-5 md:flex-row md:items-start md:justify-between'>
               <div className='max-w-3xl'>
                 <h1 className='text-3xl font-semibold tracking-tight'>{detail.lesson.title}</h1>
@@ -120,7 +120,7 @@ export default async function PortalLessonPage({ params, searchParams }: LessonP
                   </span>
                 ) : null}
                 {detail.lesson.previewLesson ? (
-                  <span className='rounded-full bg-blue-50 px-3 py-1 text-blue-700'>Preview</span>
+                  <span className='rounded-full bg-emerald-50 px-3 py-1 text-emerald-700'>Preview</span>
                 ) : null}
                 {detail.lesson.completed ? (
                   <span className='rounded-full bg-emerald-50 px-3 py-1 text-emerald-700'>Complete</span>
@@ -140,14 +140,14 @@ export default async function PortalLessonPage({ params, searchParams }: LessonP
           <section className='rounded-2xl border border-neutral-200 bg-white p-8 shadow-sm'>
             <h2 className='text-xl font-semibold'>Lesson content</h2>
             {detail.lesson.lockState === 'locked' ? (
-              <div className='mt-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3'>
-                <p className='text-sm font-semibold text-amber-800'>Lesson locked</p>
-                <p className='mt-1 text-sm text-amber-700'>This lesson is not yet available.</p>
+              <div className='jpv-notice jpv-notice-danger mt-5 rounded-xl px-4 py-3'>
+                <p className='text-sm font-semibold'>Lesson locked</p>
+                <p className='mt-1 text-sm'>This lesson is not yet available.</p>
               </div>
             ) : detail.lesson.lockState === 'coming_soon' ? (
-              <div className='mt-5 rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3'>
-                <p className='text-sm font-semibold text-neutral-700'>Coming soon</p>
-                <p className='mt-1 text-sm text-neutral-600'>This lesson will be available shortly.</p>
+              <div className='jpv-notice mt-5 rounded-xl px-4 py-3'>
+                <p className='text-sm font-semibold'>Coming soon</p>
+                <p className='mt-1 text-sm'>This lesson will be available shortly.</p>
               </div>
             ) : null}
             <LessonVideoPlayer
@@ -187,7 +187,7 @@ export default async function PortalLessonPage({ params, searchParams }: LessonP
                           </div>
 
                           <a
-                            className='inline-flex shrink-0 rounded-lg bg-neutral-950 px-4 py-2 text-sm font-semibold text-white'
+                            className='jpv-button-primary inline-flex shrink-0'
                             href={resource.downloadUrl}
                           >
                             Download
@@ -215,7 +215,7 @@ export default async function PortalLessonPage({ params, searchParams }: LessonP
               <form action={completeLesson}>
                 <input name='courseSlug' type='hidden' value={courseSlug} />
                 <input name='lessonSlug' type='hidden' value={lessonSlug} />
-                <button className='rounded-lg bg-neutral-950 px-4 py-2 text-sm font-semibold text-white' type='submit'>
+                <button className='jpv-button-primary' type='submit'>
                   Mark complete
                 </button>
               </form>

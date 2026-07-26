@@ -31,7 +31,7 @@ export default async function PortalCoursePage({ params }: CoursePageProps) {
       <section className='rounded-2xl border border-neutral-200 bg-white p-8 shadow-sm'>
         <div className='flex flex-col gap-6 md:flex-row md:items-start md:justify-between'>
           <div className='max-w-3xl'>
-            <p className='text-sm font-semibold uppercase tracking-[0.2em] text-neutral-500'>Course</p>
+            <p className='jpv-eyebrow'>Course</p>
             <h1 className='mt-3 text-3xl font-semibold tracking-tight'>{course.title}</h1>
             {course.shortDescription ? (
               <p className='mt-4 text-sm leading-6 text-neutral-600'>{course.shortDescription}</p>
@@ -48,16 +48,16 @@ export default async function PortalCoursePage({ params }: CoursePageProps) {
               </span>
             ) : null}
             {course.progressPercent !== null ? (
-              <span className='rounded-full bg-neutral-950 px-3 py-1 text-white'>{course.progressPercent}% complete</span>
+              <span className='rounded-full bg-[var(--jpv-brand-deep)] px-3 py-1 text-[var(--jpv-canvas)]'>{course.progressPercent}% complete</span>
             ) : null}
           </div>
         </div>
       </section>
 
       {!course.allowed ? (
-        <section className='rounded-2xl border border-amber-200 bg-amber-50 p-6'>
-          <h2 className='font-semibold text-amber-950'>This course is currently locked</h2>
-          <p className='mt-2 text-sm text-amber-900'>
+        <section className='jpv-notice jpv-notice-danger rounded-2xl p-6'>
+          <h2 className='font-semibold'>This course is currently locked</h2>
+          <p className='mt-2 text-sm'>
             {course.lockReason ?? 'Your account does not currently have access to this course.'}
           </p>
         </section>
@@ -66,7 +66,7 @@ export default async function PortalCoursePage({ params }: CoursePageProps) {
           {course.modules.map((module, moduleIndex) => (
             <article className='rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm' key={module.id}>
               <div>
-                <p className='text-xs font-semibold uppercase tracking-[0.18em] text-neutral-500'>
+                <p className='jpv-eyebrow'>
                   Module {moduleIndex + 1}
                 </p>
                 <h2 className='mt-2 text-xl font-semibold'>{module.title}</h2>
@@ -93,22 +93,22 @@ export default async function PortalCoursePage({ params }: CoursePageProps) {
                           Complete
                         </span>
                       ) : lesson.lockState === 'locked' ? (
-                        <span className='rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700'>
+                        <span className='jpv-notice jpv-notice-danger rounded-full px-3 py-1 text-xs font-semibold'>
                           Locked
                         </span>
                       ) : lesson.lockState === 'coming_soon' ? (
-                        <span className='rounded-full bg-neutral-100 px-3 py-1 text-xs font-semibold text-neutral-600'>
+                        <span className='jpv-notice rounded-full px-3 py-1 text-xs font-semibold'>
                           Coming soon
                         </span>
                       ) : lesson.previewLesson ? (
-                        <span className='rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700'>
+                        <span className='rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700'>
                           Preview
                         </span>
                       ) : null}
 
                       {lesson.slug ? (
                         <Link
-                          className='rounded-lg bg-neutral-950 px-4 py-2 text-sm font-semibold text-white'
+                          className='jpv-button-primary'
                           href={`/portal/courses/${courseSlug}/lessons/${lesson.slug}`}
                         >
                           Open

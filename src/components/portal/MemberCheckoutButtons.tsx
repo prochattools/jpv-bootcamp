@@ -50,12 +50,12 @@ export function MemberCheckoutButtons() {
           type='button'
           disabled={checkoutDisabled}
           onClick={() => handleCheckout('monthly')}
-          className='mt-5 w-full rounded-lg bg-neutral-950 px-4 py-3 text-left text-sm text-white transition hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-50'
+          className='jpv-button-primary mt-5 w-full text-left'
         >
           <span className='block font-semibold'>
             {loading === 'monthly' ? 'Opening checkout...' : 'Start monthly membership — pay £80 now'}
           </span>
-          <span className='mt-1 block text-xs text-neutral-300'>Monthly recurring subscription</span>
+          <span className='mt-1 block text-xs opacity-75'>Monthly recurring subscription</span>
         </button>
       </section>
 
@@ -69,12 +69,12 @@ export function MemberCheckoutButtons() {
           type='button'
           disabled={checkoutDisabled}
           onClick={() => handleCheckout('annual')}
-          className='mt-5 w-full rounded-lg border border-neutral-300 px-4 py-3 text-left text-sm text-neutral-950 transition hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50'
+          className='jpv-button-secondary mt-5 w-full text-left'
         >
           <span className='block font-semibold'>
             {loading === 'annual' ? 'Opening checkout...' : 'Start annual membership — pay £800 now'}
           </span>
-          <span className='mt-1 block text-xs text-neutral-600'>Annual recurring subscription</span>
+          <span className='mt-1 block text-xs opacity-60'>Annual recurring subscription</span>
         </button>
       </section>
 
