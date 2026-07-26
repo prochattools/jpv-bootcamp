@@ -1,10 +1,14 @@
 import { revalidatePath } from 'next/cache'
+import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 
 import { requirePortalMember } from '@/lib/auth/requirePortalMember'
-import { submitPartnerApplication, getPartnerApplicationDetail } from '@/lib/payloadCourse/partnerApplications'
+import { getPartnerApplicationDetail, submitPartnerApplication } from '@/lib/payloadCourse/partnerApplications'
 
 export const dynamic = 'force-dynamic'
+
+const fieldClass =
+  'mt-2 w-full rounded-jpv-control border border-jpv-border bg-jpv-canvas px-4 py-3 text-sm text-jpv-ink outline-none transition focus:border-jpv-green-deep focus:ring-2 focus:ring-jpv-green/25'
 
 function field(value: FormDataEntryValue | null): string {
   return typeof value === 'string' ? value.trim() : ''
@@ -29,7 +33,13 @@ async function submitAction(formData: FormData) {
   redirect(`/portal/partners/${partnerSlug}?submitted=${encodeURIComponent(result.outcome)}`)
 }
 
-export default async function PartnerApplicationPage({ params, searchParams }: { params: Promise<{ partnerSlug: string }>; searchParams?: Promise<{ submitted?: string }> }): Promise<JSX.Element> {
+export default async function PartnerApplicationPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ partnerSlug: string }>
+  searchParams?: Promise<{ submitted?: string }>
+}): Promise<JSX.Element> {
   const { partnerSlug } = await params
   const { memberId, payload } = await requirePortalMember(`/portal/partners/${partnerSlug}`)
   let partner: Awaited<ReturnType<typeof getPartnerApplicationDetail>>
@@ -41,52 +51,57 @@ export default async function PartnerApplicationPage({ params, searchParams }: {
   const query = (await (searchParams ?? Promise.resolve({}))) as { submitted?: string }
 
   return (
-    <div className='space-y-8'>
-      <section className='space-y-3'>
-        <p className='text-sm font-semibold uppercase tracking-[0.2em] text-neutral-500'>Partner</p>
-        <h1 className='text-3xl font-semibold tracking-tight'>{partner.name}</h1>
-        <p className='max-w-3xl text-sm leading-6 text-neutral-600'>{partner.summary ?? 'Partner details are limited to approved member-safe fields.'}</p>
-      </section>
+    <div className='space-y-6'>
+      <Link className='inline-flex min-h-11 items-center text-sm font-semibold text-jpv-brand-deep hover:underline' href='/portal/partners'>
+        Back to partners
+      </Link>
+
+      <header className='rounded-jpv-panel border border-jpv-border bg-jpv-canvas p-6 shadow-jpv-card sm:p-8'>
+        <p className='jpv-eyebrow'>Partner application</p>
+        <h1 className='mt-2 text-3xl font-semibold tracking-tight text-jpv-ink'>{partner.name}</h1>
+        <p className='mt-3 max-w-3xl text-sm leading-6 text-jpv-muted'>
+          {partner.summary ?? 'Partner details are limited to approved member-safe fields.'}
+        </p>
+      </header>
 
       {query.submitted ? (
-        <p className='rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800'>
-          Application status: {query.submitted}
-        </p>
+        <p className='jpv-notice'>Application status: {query.submitted}</p>
       ) : null}
 
-      <section className='rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm'>
-        <h2 className='text-xl font-semibold text-neutral-950'>Privacy and consent</h2>
-        <p className='mt-2 text-sm text-neutral-600'>
-          Your application is sent using server-owned member identity and the partner&apos;s configured delivery mode. Browser input does not control recipient destinations.
-        </p>
-        {partner.privacyNotice ? (
-          <p className='mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900'>{partner.privacyNotice}</p>
-        ) : null}
+      <section className='rounded-jpv-panel border border-jpv-border bg-jpv-canvas p-5 shadow-jpv-card sm:p-6'>
+        <div className='max-w-3xl'>
+          <p className='jpv-eyebrow'>Application details</p>
+          <h2 className='mt-2 text-xl font-semibold text-jpv-ink'>Privacy and consent</h2>
+          <p className='mt-2 text-sm leading-6 text-jpv-muted'>
+            Your application uses your authenticated member identity and the partner&apos;s configured delivery mode. Browser input cannot control recipient destinations.
+          </p>
+          {partner.privacyNotice ? <p className='jpv-notice mt-4'>{partner.privacyNotice}</p> : null}
+        </div>
 
-        <form action={submitAction} className='mt-6 grid gap-4 sm:grid-cols-2'>
-          <input type='hidden' name='partnerSlug' value={partnerSlug} />
-          <label className='text-sm font-medium text-neutral-800'>
+        <form action={submitAction} className='mt-6 grid gap-5 sm:grid-cols-2'>
+          <input name='partnerSlug' type='hidden' value={partnerSlug} />
+          <label className='text-sm font-medium text-jpv-ink'>
             Company
-            <input className='mt-2 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm' name='company' maxLength={120} />
+            <input className={fieldClass} maxLength={120} name='company' />
           </label>
-          <label className='text-sm font-medium text-neutral-800'>
+          <label className='text-sm font-medium text-jpv-ink'>
             Country
-            <input className='mt-2 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm' name='country' maxLength={80} />
+            <input className={fieldClass} maxLength={80} name='country' />
           </label>
-          <label className='sm:col-span-2 text-sm font-medium text-neutral-800'>
+          <label className='text-sm font-medium text-jpv-ink sm:col-span-2'>
             Experience
-            <input className='mt-2 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm' name='experience' maxLength={160} />
+            <input className={fieldClass} maxLength={160} name='experience' />
           </label>
-          <label className='sm:col-span-2 text-sm font-medium text-neutral-800'>
+          <label className='text-sm font-medium text-jpv-ink sm:col-span-2'>
             Message
-            <textarea className='mt-2 min-h-32 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm' name='message' maxLength={1200} />
+            <textarea className={`${fieldClass} min-h-32`} maxLength={1200} name='message' />
           </label>
-          <label className='sm:col-span-2 flex items-start gap-3 text-sm text-neutral-700'>
-            <input type='checkbox' name='consentAccepted' required className='mt-1' />
+          <label className='flex min-h-11 items-start gap-3 rounded-jpv-card border border-jpv-border bg-jpv-surface p-4 text-sm text-jpv-ink sm:col-span-2'>
+            <input className='mt-1 h-5 w-5 accent-jpv-brand' name='consentAccepted' required type='checkbox' />
             <span>I agree to share the submitted application details with this partner under the published privacy notice.</span>
           </label>
           <div className='sm:col-span-2'>
-            <button type='submit' className='rounded-lg bg-neutral-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-neutral-800'>
+            <button className='jpv-button-primary min-h-11' type='submit'>
               Submit application
             </button>
           </div>

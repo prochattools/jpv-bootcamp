@@ -17,11 +17,11 @@ export default async function PortalContentPage() {
   const content = await listPublishedMemberContent(payload)
 
   return (
-    <div className='space-y-8'>
-      <header className='rounded-2xl border border-neutral-200 bg-white p-8 shadow-sm'>
-        <p className='text-sm font-semibold uppercase tracking-[0.2em] text-neutral-500'>Member content</p>
-        <h1 className='mt-3 text-3xl font-semibold tracking-tight'>Updates and resources</h1>
-        <p className='mt-4 max-w-3xl text-sm leading-6 text-neutral-600'>
+    <div className='space-y-6'>
+      <header className='rounded-jpv-panel border border-jpv-border bg-jpv-canvas p-6 shadow-jpv-card sm:p-8'>
+        <p className='jpv-eyebrow'>Member content</p>
+        <h1 className='mt-2 text-3xl font-semibold tracking-tight text-jpv-ink'>Updates and resources</h1>
+        <p className='mt-3 max-w-3xl text-sm leading-6 text-jpv-muted'>
           Published programme pages, announcements, pictures, videos, and downloads appear here.
         </p>
       </header>
@@ -35,7 +35,7 @@ export default async function PortalContentPage() {
             const publishedDate = formatDate(item.publishedAt)
 
             return (
-              <article className='overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm' key={`${item.kind}:${item.id}`}>
+              <article className='overflow-hidden rounded-jpv-card border border-jpv-border bg-jpv-canvas shadow-jpv-card' key={`${item.kind}:${item.id}`}>
                 {item.featuredImage ? (
                   <img
                     alt={item.featuredImage.alt}
@@ -46,14 +46,12 @@ export default async function PortalContentPage() {
                     width={item.featuredImage.width ?? undefined}
                   />
                 ) : null}
-                <div className='p-6'>
-                  <p className='text-xs font-semibold uppercase tracking-[0.18em] text-neutral-500'>
-                    {item.kind === 'post' ? 'Post' : 'Page'}
-                  </p>
-                  <h2 className='mt-2 text-xl font-semibold'>{item.title}</h2>
-                  {item.summary ? <p className='mt-3 text-sm leading-6 text-neutral-600'>{item.summary}</p> : null}
-                  {publishedDate ? <p className='mt-3 text-xs text-neutral-500'>{publishedDate}</p> : null}
-                  <Link className='mt-5 inline-flex rounded-lg bg-neutral-950 px-4 py-2 text-sm font-semibold text-white' href={href}>
+                <div className='p-5 sm:p-6'>
+                  <p className='jpv-eyebrow'>{item.kind === 'post' ? 'Post' : 'Page'}</p>
+                  <h2 className='mt-2 text-xl font-semibold text-jpv-ink'>{item.title}</h2>
+                  {item.summary ? <p className='mt-3 text-sm leading-6 text-jpv-muted'>{item.summary}</p> : null}
+                  {publishedDate ? <p className='mt-3 text-xs text-jpv-muted'>{publishedDate}</p> : null}
+                  <Link className='jpv-button-primary mt-5 min-h-11' href={href}>
                     Open
                   </Link>
                 </div>
@@ -62,7 +60,7 @@ export default async function PortalContentPage() {
           })}
         </section>
       ) : (
-        <section className='rounded-2xl border border-dashed border-neutral-300 bg-white p-8 text-sm text-neutral-600'>
+        <section className='rounded-jpv-card border border-dashed border-jpv-border bg-jpv-canvas p-6 text-sm text-jpv-muted sm:p-8'>
           No pages or posts are published yet.
         </section>
       )}

@@ -401,3 +401,36 @@ All previously deferred items are now PROVEN:
 - Phase F: operator and Payload admin branding/responsiveness.
 - Phase G: email and outbound communication polish.
 - Phase H: live browser/mobile visual regression and accessibility proof.
+
+
+
+### 2026-07-26 Design-System Phase D — remaining portal surface coherence
+
+**Implementation**
+- Aligned the member content hub, published Page/Post renderer, Live Sessions, Support, Community index/detail, Partner index, and Partner application detail with the canonical JPV design system.
+- Removed conflicting inner width constraints and normalized portal-shell spacing, headings, cards, notices, buttons, fields, badges, links, empty states, and 44px touch targets.
+- Replaced all scoped off-token amber, blue, gray, slate, sky, orange, raw `bg-neutral-950`, `max-w-7xl`, and arbitrary `var(--jpv-*)` utility classes with mapped JPV tokens.
+- Community post submission remains bound to the existing server action and membership checks.
+- Partner application submission, authenticated member identity, privacy consent, server-owned destinations, affiliate queries, and application history remain unchanged.
+- Partner commission totals now format using the stored currency through `Intl.NumberFormat`; no currency is invented when none is stored.
+- Support remains preview-only and non-submitting.
+
+**Validation**
+- Phase D design tests: **6/6 passed**.
+- Combined Phase A-D design tests: **62/62 passed**.
+- Portal route ownership: **passed**.
+- Payload TypeScript: **passed**.
+- Changed-path high-risk security scan: **clean**.
+- Prohibited-style scan across the Phase D scope: **zero matches**.
+- Production build job `validation-033ed60f-bf6a-44bf-969e-5095bc0e49ef`: **passed**.
+- Canonical release job `validation-0ff60f34-35e5-4516-a6fb-4ec473b583fd`: **153/153 passed**.
+
+**Responsive proof boundary**
+- Repository behavior is validated for mobile, tablet, and desktop through responsive grid/container contracts, focused tests, TypeScript, and production build.
+- Live authenticated screenshots and keyboard/browser interaction remain deferred to the final visual-regression phase.
+
+**Remaining design-system roadmap**
+- Phase E: public, auth-adjacent, legal, error, empty, and system-state surfaces.
+- Phase F: Payload admin and operator page branding/responsiveness.
+- Phase G: email and outbound communication polish.
+- Phase H: live browser/mobile visual regression and accessibility proof.

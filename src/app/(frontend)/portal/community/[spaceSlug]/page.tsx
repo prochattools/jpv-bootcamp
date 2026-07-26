@@ -38,12 +38,12 @@ export default async function PortalCommunitySpacePage({ params, searchParams }:
   if (!detail) notFound()
 
   return (
-    <div className='mx-auto max-w-5xl space-y-10'>
-      <Link className='text-sm font-bold text-[var(--jpv-sunshine-ink)] hover:text-[var(--jpv-brand-deep)]' href='/portal/community'>
+    <div className='space-y-8'>
+      <Link className='text-sm font-bold text-jpv-sunshine-ink hover:text-jpv-brand-deep' href='/portal/community'>
         Back to community
       </Link>
 
-      <section className='rounded-jpv-panel bg-[var(--jpv-brand-deep)] p-8 text-white shadow-jpv-card sm:p-10 lg:p-14'>
+      <section className='rounded-jpv-panel bg-jpv-brand-deep p-8 text-jpv-canvas shadow-jpv-card sm:p-10 lg:p-12'>
         <div className='flex flex-wrap gap-3'>
           <StatusPill tone={detail.allowed ? 'good' : 'warn'}>{detail.allowed ? 'Unlocked' : 'Locked'}</StatusPill>
           <StatusPill tone='neutral'>{detail.visibility}</StatusPill>
@@ -51,19 +51,19 @@ export default async function PortalCommunitySpacePage({ params, searchParams }:
         </div>
 
         <h1 className='mt-7 text-4xl font-bold leading-tight tracking-tight sm:text-5xl'>{detail.name}</h1>
-        <p className='mt-5 max-w-2xl text-base leading-7 text-[var(--jpv-inverse-muted)] sm:text-lg'>
+        <p className='mt-5 max-w-2xl text-base leading-7 text-jpv-inverse-muted sm:text-lg'>
           {detail.description ?? 'Space description pending.'}
         </p>
-        <p className='mt-4 text-sm text-[var(--jpv-inverse-muted)]'>{memberEmail}</p>
+        <p className='mt-4 text-sm text-jpv-inverse-muted'>{memberEmail}</p>
       </section>
 
       {query.submission === 'pending' && (
-        <div className='rounded-jpv-card border border-[var(--jpv-brand)]/20 bg-[var(--jpv-surface-strong)] px-5 py-4 text-sm font-semibold text-[var(--jpv-brand-deep)]'>
+        <div className='jpv-notice'>
           Your post has been submitted for review.
         </div>
       )}
       {query.submission === 'error' && (
-        <div className='rounded-jpv-card border border-[var(--jpv-danger)]/20 bg-[var(--jpv-danger-surface)] px-5 py-4 text-sm font-semibold text-[var(--jpv-danger-ink)]'>
+        <div className='jpv-notice jpv-notice-danger'>
           Something went wrong. Please try again.
         </div>
       )}
@@ -71,18 +71,18 @@ export default async function PortalCommunitySpacePage({ params, searchParams }:
       {detail.allowed ? (
         <>
           {detail.membership?.status === 'active' && (
-            <section className='rounded-jpv-panel border border-[var(--jpv-brand-deep)]/10 bg-white p-7 shadow-jpv-card sm:p-8'>
-              <h2 className='text-2xl font-bold text-[var(--jpv-brand-deep)]'>Start a discussion</h2>
+            <section className='rounded-jpv-panel border border-jpv-border bg-jpv-canvas p-7 shadow-jpv-card sm:p-8'>
+              <h2 className='text-2xl font-bold text-jpv-brand-deep'>Start a discussion</h2>
               <form
                 action={submitCommunityPost.bind(null, spaceSlug)}
                 className='mt-5 space-y-4'
               >
                 <div>
-                  <label className='block text-sm font-bold text-[var(--jpv-brand-deep)]' htmlFor='post-title'>
+                  <label className='block text-sm font-bold text-jpv-brand-deep' htmlFor='post-title'>
                     Title
                   </label>
                   <input
-                    className='mt-1.5 w-full rounded-jpv-input border border-[var(--jpv-brand-deep)]/20 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--jpv-brand)]'
+                    className='mt-2 w-full rounded-jpv-control border border-jpv-border bg-jpv-canvas px-4 py-3 text-sm text-jpv-ink outline-none transition focus:border-jpv-green-deep focus:ring-2 focus:ring-jpv-green/25'
                     id='post-title'
                     maxLength={160}
                     name='title'
@@ -92,11 +92,11 @@ export default async function PortalCommunitySpacePage({ params, searchParams }:
                   />
                 </div>
                 <div>
-                  <label className='block text-sm font-bold text-[var(--jpv-brand-deep)]' htmlFor='post-body'>
+                  <label className='block text-sm font-bold text-jpv-brand-deep' htmlFor='post-body'>
                     Body
                   </label>
                   <textarea
-                    className='mt-1.5 w-full rounded-jpv-input border border-[var(--jpv-brand-deep)]/20 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--jpv-brand)]'
+                    className='mt-2 w-full rounded-jpv-control border border-jpv-border bg-jpv-canvas px-4 py-3 text-sm text-jpv-ink outline-none transition focus:border-jpv-green-deep focus:ring-2 focus:ring-jpv-green/25'
                     id='post-body'
                     maxLength={10000}
                     name='body'
@@ -106,7 +106,7 @@ export default async function PortalCommunitySpacePage({ params, searchParams }:
                   />
                 </div>
                 <button
-                  className='rounded-full bg-[var(--jpv-brand-deep)] px-6 py-3 text-sm font-bold text-white transition hover:bg-[var(--jpv-brand-hover)]'
+                  className='jpv-button-primary min-h-11'
                   type='submit'
                 >
                   Post discussion
@@ -118,10 +118,10 @@ export default async function PortalCommunitySpacePage({ params, searchParams }:
           <section>
             <div className='flex flex-col justify-between gap-4 sm:flex-row sm:items-end'>
               <div>
-                <p className='text-xs font-bold uppercase tracking-[0.2em] text-[var(--jpv-sunshine-ink)]'>Discussions</p>
-                <h2 className='mt-2 text-3xl font-bold tracking-tight text-[var(--jpv-brand-deep)]'>Visible posts</h2>
+                <p className='text-xs font-bold uppercase tracking-[0.2em] text-jpv-sunshine-ink'>Discussions</p>
+                <h2 className='mt-2 text-3xl font-bold tracking-tight text-jpv-brand-deep'>Visible posts</h2>
               </div>
-              <p className='max-w-sm text-sm leading-6 text-[var(--jpv-muted)]'>
+              <p className='max-w-sm text-sm leading-6 text-jpv-muted'>
                 Open a discussion to read its approved rich-text content and visible replies. Moderator submissions enter review first.
               </p>
             </div>
@@ -130,23 +130,23 @@ export default async function PortalCommunitySpacePage({ params, searchParams }:
               {detail.posts.length > 0 ? (
                 detail.posts.map((post) => (
                   <Link
-                    className='block rounded-jpv-card border border-[var(--jpv-brand-deep)]/10 bg-white p-6 shadow-jpv-card transition hover:-translate-y-0.5 hover:border-[var(--jpv-sunshine-ink)]/40'
+                    className='block rounded-jpv-card border border-jpv-border bg-jpv-canvas p-6 shadow-jpv-card transition hover:-translate-y-0.5 hover:border-jpv-sunshine-ink/40'
                     href={`/portal/community/${encodedSpaceSlug}/posts/${encodeURIComponent(post.id)}`}
                     key={post.id}
                   >
                     <article>
-                      <div className='flex flex-wrap items-center gap-3 text-xs font-bold uppercase tracking-[0.14em] text-[var(--jpv-sunshine-ink)]'>
+                      <div className='flex flex-wrap items-center gap-3 text-xs font-bold uppercase tracking-[0.14em] text-jpv-sunshine-ink'>
                         {post.pinned && <span>Pinned</span>}
                         <span>{post.postType ?? 'discussion'}</span>
                         <span>{formatDate(post.createdAt)}</span>
                       </div>
-                      <h3 className='mt-3 text-xl font-bold text-[var(--jpv-brand-deep)]'>{post.title}</h3>
-                      <p className='mt-3 text-sm text-[var(--jpv-muted)]'>{post.commentCount} visible comments</p>
+                      <h3 className='mt-3 text-xl font-bold text-jpv-brand-deep'>{post.title}</h3>
+                      <p className='mt-3 text-sm text-jpv-muted'>{post.commentCount} visible comments</p>
                     </article>
                   </Link>
                 ))
               ) : (
-                <div className='rounded-jpv-card border border-[var(--jpv-brand-deep)]/10 bg-white p-8 text-[var(--jpv-muted)]'>
+                <div className='rounded-jpv-card border border-jpv-border bg-jpv-canvas p-8 text-jpv-muted'>
                   No visible posts are published in this space yet.
                 </div>
               )}
@@ -154,11 +154,11 @@ export default async function PortalCommunitySpacePage({ params, searchParams }:
           </section>
         </>
       ) : (
-        <section className='rounded-jpv-panel border border-[var(--jpv-brand-deep)]/10 bg-white p-8 shadow-jpv-card'>
-          <h2 className='text-2xl font-bold text-[var(--jpv-brand-deep)]'>This space is locked</h2>
-          <p className='mt-3 max-w-2xl text-sm leading-6 text-[var(--jpv-muted)]'>{detail.lockReason}</p>
+        <section className='rounded-jpv-panel border border-jpv-border bg-jpv-canvas p-8 shadow-jpv-card'>
+          <h2 className='text-2xl font-bold text-jpv-brand-deep'>This space is locked</h2>
+          <p className='mt-3 max-w-2xl text-sm leading-6 text-jpv-muted'>{detail.lockReason}</p>
           {detail.canRequestAccess && (
-            <p className='mt-5 text-xs font-bold uppercase tracking-[0.14em] text-[var(--jpv-sunshine-ink)]'>
+            <p className='mt-5 text-xs font-bold uppercase tracking-[0.14em] text-jpv-sunshine-ink'>
               Request flow pending admin approval
             </p>
           )}

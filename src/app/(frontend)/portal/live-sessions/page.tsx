@@ -22,16 +22,24 @@ function statusLabel(status: string): string {
         : 'Cancelled'
 }
 
+function statusClass(status: string): string {
+  return status === 'live'
+    ? 'bg-emerald-50 text-emerald-700'
+    : status === 'scheduled'
+      ? 'bg-jpv-surface text-jpv-ink'
+      : 'bg-jpv-surface-strong text-jpv-muted'
+}
+
 export default async function PortalLiveSessionsPage() {
   const { memberId, payload } = await requirePortalMember('/portal/live-sessions')
   const sessions = await listMemberLiveSessions(payload, memberId)
 
   return (
-    <div className='space-y-8'>
-      <header className='rounded-2xl border border-neutral-200 bg-white p-8 shadow-sm'>
-        <p className='text-sm font-semibold uppercase tracking-[0.2em] text-neutral-500'>Live learning</p>
-        <h1 className='mt-3 text-3xl font-semibold tracking-tight'>Live sessions</h1>
-        <p className='mt-4 max-w-3xl text-sm leading-6 text-neutral-600'>
+    <div className='space-y-6'>
+      <header className='rounded-jpv-panel border border-jpv-border bg-jpv-canvas p-6 shadow-jpv-card sm:p-8'>
+        <p className='jpv-eyebrow'>Live learning</p>
+        <h1 className='mt-2 text-3xl font-semibold tracking-tight text-jpv-ink'>Live sessions</h1>
+        <p className='mt-3 max-w-3xl text-sm leading-6 text-jpv-muted'>
           Sessions appear only for courses in which you have an active enrollment. Join becomes available when the host starts the session.
         </p>
       </header>
@@ -39,25 +47,25 @@ export default async function PortalLiveSessionsPage() {
       {sessions.length > 0 ? (
         <section className='grid gap-4'>
           {sessions.map((session) => (
-            <article className='rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm' key={session.id}>
+            <article className='rounded-jpv-card border border-jpv-border bg-jpv-canvas p-5 shadow-jpv-card sm:p-6' key={session.id}>
               <div className='flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between'>
-                <div>
-                  <p className='text-xs font-semibold uppercase tracking-[0.18em] text-neutral-500'>{session.courseTitle}</p>
-                  <h2 className='mt-2 text-xl font-semibold'>{session.title}</h2>
-                  <p className='mt-2 text-sm text-neutral-600'>{formatDate(session.scheduledAt)}</p>
-                  <p className='mt-3 inline-flex rounded-full bg-neutral-100 px-3 py-1 text-xs font-semibold text-neutral-700'>
+                <div className='min-w-0'>
+                  <p className='jpv-eyebrow'>{session.courseTitle}</p>
+                  <h2 className='mt-2 text-xl font-semibold text-jpv-ink'>{session.title}</h2>
+                  <p className='mt-2 text-sm text-jpv-muted'>{formatDate(session.scheduledAt)}</p>
+                  <p className={`mt-3 inline-flex rounded-jpv-pill px-3 py-1 text-xs font-semibold ${statusClass(session.status)}`}>
                     {statusLabel(session.status)}
                   </p>
                 </div>
                 {session.canJoin ? (
                   <Link
-                    className='inline-flex rounded-lg bg-neutral-950 px-4 py-2 text-sm font-semibold text-white'
+                    className='jpv-button-primary min-h-11 shrink-0'
                     href={`/courses/${session.courseId}/sessions/${session.id}/join`}
                   >
                     Join session
                   </Link>
                 ) : (
-                  <span className='text-sm text-neutral-500'>
+                  <span className='text-sm text-jpv-muted'>
                     {session.status === 'scheduled'
                       ? 'Waiting for host'
                       : session.status === 'live' && !session.roomReady
@@ -70,7 +78,7 @@ export default async function PortalLiveSessionsPage() {
           ))}
         </section>
       ) : (
-        <section className='rounded-2xl border border-dashed border-neutral-300 bg-white p-8 text-sm text-neutral-600'>
+        <section className='rounded-jpv-card border border-dashed border-jpv-border bg-jpv-canvas p-6 text-sm text-jpv-muted sm:p-8'>
           No live sessions are available for your enrolled courses.
         </section>
       )}
