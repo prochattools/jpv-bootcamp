@@ -366,3 +366,38 @@ All previously deferred items are now PROVEN:
 - Runtime navigation behavior was not changed by this repair.
 - Route ownership contract: **passed**.
 - Final canonical release job `validation-6d66b417-64e2-483d-af6d-6ce02ecab49b`: **153/153 passed**.
+
+
+
+### 2026-07-26 Design-System Phase C — account and billing UX coherence
+
+**Implementation**
+- `/portal/account` now focuses only on profile, password, sign-in email, and account security; billing and group projection panels were removed from the account route because those concerns have dedicated routes.
+- Added compact horizontal section navigation for Profile, Password, and Email, with mobile-safe overflow and 44px touch targets.
+- Added an above-the-fold membership summary using the member-facing label `JPV Bootcamp Membership`.
+- Standardized profile fields, cards, notices, focus rings, primary actions, spacing, borders, and radii to the existing JPV/auth-shell primitives.
+- `/portal/billing` now uses compact Status, Manage, and Details navigation; billing status, renewal/cancellation state, checkout, billing-portal, and cancellation actions remain connected to the existing server actions and Stripe projections.
+- Replaced legacy `Pro Monthly` wording and technical projection headings with member-facing membership and billing language.
+- Removed scoped off-token amber, blue, sky, orange, gray, slate, and raw `bg-neutral-950` styling from the combined account/billing route.
+- Stripe webhooks remain the source of truth; no authorization, entitlement, checkout, cancellation, profile, password, or email-change behavior changed.
+
+**Validation**
+- Phase C account/billing design tests: **5/5 passed**.
+- Combined Phase A-C design tests: **56/56 passed**.
+- Portal route ownership: **passed**.
+- Account/billing parity contract: **passed** after updating stale expectations to the new route separation and `Billing details` heading.
+- Payload TypeScript: **passed**.
+- Changed-path high-risk security scan: **clean**.
+- Production build job `validation-436ee1a3-2824-4315-8b8b-d402857b61ca`: **passed**.
+- Canonical release job `validation-7e8746f1-17d1-4b68-89dd-71aa20c7a30b`: **153/153 passed**.
+
+**Responsive proof boundary**
+- Repository behavior and responsive contracts are verified for mobile, tablet, and desktop layouts through section-navigation classes, focused tests, TypeScript, and production build.
+- Live authenticated browser screenshots and keyboard interaction proof remain deferred to the final visual-regression phase after the remaining design-system phases are complete.
+
+**Remaining design-system phases**
+- Phase D: community, content, live-session, partner, and support surface coherence.
+- Phase E: public, auth-adjacent, legal, error, empty, and system-state surfaces.
+- Phase F: operator and Payload admin branding/responsiveness.
+- Phase G: email and outbound communication polish.
+- Phase H: live browser/mobile visual regression and accessibility proof.

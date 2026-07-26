@@ -62,9 +62,6 @@ function testCanonicalAccountParity(): void {
     'Edit profile',
     'Change password',
     'Change email address',
-    'Access plans',
-    'Access groups',
-    'Billing projection',
     'Account status',
     'Member tier',
     'Email verified',
@@ -83,7 +80,7 @@ function testCanonicalBillingParity(): void {
   assert.match(portalSectionsSource, /getBillingStatus\(memberEmail\)/)
   assert.match(portalSectionsSource, /getMemberBillingOverview\(payload, memberId\)/)
   assert.match(portalSectionsSource, /resolvePortalBillingPresentation\(/)
-  assert.match(portalSectionsSource, /Billing projection summary/)
+  assert.match(portalSectionsSource, /Billing details/)
   assert.match(portalSectionsSource, /Manage subscription/)
   assert.match(portalSectionsSource, /MemberCheckoutButtons/)
   assert.match(portalSectionsSource, /BillingPortalButton/)
