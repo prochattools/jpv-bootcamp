@@ -4,6 +4,8 @@ import { existsSync, readFileSync } from 'node:fs'
 const FILES = {
   portalPage: 'src/app/(frontend)/portal/page.tsx',
   portalLayout: 'src/app/(frontend)/portal/layout.tsx',
+  portalNavigation: 'src/components/portal/PortalNavigation.tsx',
+  programmePreview: 'src/app/(frontend)/portal/programme/page.tsx',
   accountBilling: 'src/app/(frontend)/portal/[section]/page.tsx',
   courseIndex: 'src/app/(frontend)/portal/courses/page.tsx',
   courseDetail: 'src/app/(frontend)/portal/courses/[courseSlug]/page.tsx',
@@ -78,13 +80,16 @@ function testProtectedFileRoutesAreCanonical(): void {
 
 function testPortalLayoutOwnsMemberNavigation(): void {
   const layout = source(FILES.portalLayout)
-  assert.match(layout, /\/portal\/programme/)
-  assert.match(layout, /\/portal\/courses/)
-  assert.match(layout, /\/portal\/community/)
-  assert.match(layout, /\/portal\/account/)
-  assert.match(layout, /\/portal\/billing/)
-  assert.doesNotMatch(layout, /\/portal\/groups/)
-  assert.doesNotMatch(layout, removedNamespacePattern)
+  const navigation = source(FILES.portalNavigation)
+
+  assert.match(layout, /PortalNavigation/)
+  assert.match(navigation, /\/portal\/courses/)
+  assert.match(navigation, /\/portal\/community/)
+  assert.match(navigation, /\/portal\/account/)
+  assert.match(navigation, /\/portal\/billing/)
+  assert.doesNotMatch(navigation, /\/portal\/groups/)
+  assert.doesNotMatch(navigation, removedNamespacePattern)
+  assert.ok(existsSync(FILES.programmePreview), 'expected internal Programme preview route to remain available')
 }
 
 try {

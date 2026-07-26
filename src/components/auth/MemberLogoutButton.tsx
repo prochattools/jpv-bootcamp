@@ -32,7 +32,7 @@ export function MemberLogoutButton() {
   return (
     <div className='flex flex-col items-end gap-2'>
       <button
-        className='rounded-lg border border-neutral-300 px-3 py-2 text-sm font-medium text-neutral-700 transition hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-60'
+        className='jpv-button-secondary min-h-11 disabled:cursor-not-allowed disabled:opacity-60'
         disabled={submitting}
         onClick={handleLogout}
         type='button'

@@ -327,3 +327,42 @@ All previously deferred items are now PROVEN:
 - PHASE 3: Deploy confirmed (`5a6d98b`, CI #30164255271, health check `2026-07-25T16:30:24Z`)
 - PHASE 4: Full proof — Stripe, operator billing, email, Bunny, LiveKit, browser E2E
 - PHASE 5: Auth fixes (redirect loop + member blocked), content proof (video + page/post), LiveKit 16/16, final validation
+
+
+
+### 2026-07-26 Design-System Phase B — responsive portal navigation
+
+**Implementation**
+- Added `src/components/portal/PortalNavigation.tsx` as the client-side navigation boundary while preserving server-side session resolution in the portal layout.
+- Replaced the always-expanded eight-link wrapped navigation below the `lg` breakpoint with a compact JPV secondary menu trigger.
+- Reused `AccessibleDialog`, which provides modal background isolation, Escape handling, initial focus movement, close behavior, and focus restoration to the trigger.
+- All eight member routes remain available. Mobile links close the menu after selection, and active routes use `aria-current="page"`.
+- Desktop navigation remains compact and visible at `lg` and above; tablet widths use the mobile disclosure to prevent wrapping.
+- Header and main content now share the same `max-w-6xl` container and responsive `px-4 sm:px-6` margins.
+- Portal identity truncates safely for long names and the navigation/control touch targets use at least 44px height.
+- Updated `MemberLogoutButton` to use the JPV secondary action utility and preserve existing logout behavior.
+
+**Validation**
+- Phase B navigation tests: **6/6 passed**.
+- Existing Phase A portal token tests: **45/45 passed**.
+- Combined focused validation: **51/51 passed**.
+- Payload TypeScript: **passed**.
+- New navigation/layout/test security scan: **clean**.
+- The broad scan additionally identifies the pre-existing same-origin logout `fetch()` call; this is required behavior and was not introduced by Phase B.
+- Production build job `validation-c21b3a2a-2098-4216-a7cf-165ba6b63544`: **passed**.
+
+**Responsive proof boundary**
+- Repository and build behavior are verified for `390x844`, `768x1024`, and `1280x900` through responsive class contracts and focused tests.
+- Live authenticated browser screenshots and keyboard interaction proof remain deferred to the final visual-regression phase after the design-system implementation phases are complete.
+
+**Next design-system task**
+- Phase C: consolidate account and billing UX with compact section navigation, standardized form controls, reduced scrolling, and human-readable membership details.
+
+
+
+**Phase B release completion**
+- The first `test:release` run exposed a stale static ownership check that still expected navigation links inside `portal/layout.tsx` after Phase B moved them into `PortalNavigation.tsx`.
+- The contract was repaired to inspect the client navigation component while separately preserving the internal `/portal/programme` preview route.
+- Runtime navigation behavior was not changed by this repair.
+- Route ownership contract: **passed**.
+- Final canonical release job `validation-6d66b417-64e2-483d-af6d-6ce02ecab49b`: **153/153 passed**.
