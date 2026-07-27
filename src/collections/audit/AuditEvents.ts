@@ -10,7 +10,7 @@ export const PayloadAuditEvents: CollectionConfig = {
     plural: 'Audit Events',
   },
   admin: {
-    group: 'Administration',
+    group: 'System',
     useAsTitle: 'displayName',
     defaultColumns: ['displayName', 'actorType', 'action', 'severity', 'targetCollection', 'createdAt'],
     hidden: false,

@@ -11,23 +11,35 @@ assert.match(payloadConfig, /dashboard:\s*\{/)
 assert.match(payloadConfig, /JPVAdminDashboard#JPVAdminDashboard/)
 assert.doesNotMatch(payloadConfig, /beforeLogin:\s*\[/)
 
+// KPI labels present in new focused dashboard
 for (const label of [
   'Active members',
-  'Pending / unverified members',
+  'Pending members',
   'Active subscriptions',
-  'Recent billing / webhook issues',
-  'Recent system errors / security events',
+  'Billing issues',
+  'Community moderation',
   'Pending partner applications',
-  'Pending affiliate / commission items',
-  'Community moderation / recent posts',
+  'Pending affiliate commissions',
+  'Voucher approvals',
+  'Pay-it-forward approvals',
+  'Operations',
+  'Needs attention',
+  'Quick actions',
+]) {
+  assert.match(dashboard, new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
+}
+
+// Removed developer-centric content must not appear
+for (const removed of [
   'Deployment / schema health',
   'Upcoming course / live call',
   'Membership Support cockpit',
-  'Operational views',
   'Displayed fields',
   'Statuses and actions',
+  'Reconciliation mismatches',
+  'Recent system errors',
 ]) {
-  assert.match(dashboard, new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
+  assert.doesNotMatch(dashboard, new RegExp(removed.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
 }
 
 for (const forbidden of [
