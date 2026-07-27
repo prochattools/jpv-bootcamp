@@ -286,6 +286,7 @@ export const PayloadEmailEvents: CollectionConfig = {
       defaultValue: 'queued',
       options: [
         { label: 'Queued', value: 'queued' },
+        { label: 'Processing', value: 'processing' },
         { label: 'Sent', value: 'sent' },
         { label: 'Delivered', value: 'delivered' },
         { label: 'Opened', value: 'opened' },
@@ -316,6 +317,10 @@ export const PayloadEmailEvents: CollectionConfig = {
       relationTo: 'payload_users',
       admin: { readOnly: true },
     },
+    // Atomic lease fields — set when a worker claims the row for delivery.
+    // claimedAt is used for stale-lease recovery (>5 min in processing → requeued).
+    { name: 'claimedAt', type: 'date', admin: { readOnly: true, hidden: true } },
+    { name: 'workerClaimId', type: 'text', admin: { readOnly: true, hidden: true } },
     { name: 'metadata', type: 'json', admin: { hidden: true } },
   ],
   timestamps: true,

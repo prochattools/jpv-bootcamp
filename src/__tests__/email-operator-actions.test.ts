@@ -183,6 +183,7 @@ describe('email operator delivery actions', () => {
     const sender = readFileSync(resolve('src/lib/payloadCourse/emailSender.ts'), 'utf8')
     const cli = readFileSync(resolve('scripts/payload/send-queued-emails.mts'), 'utf8')
     const sendRoute = readFileSync(resolve('src/app/api/admin/send-queued-email/route.ts'), 'utf8')
+    const batchRoute = readFileSync(resolve('src/app/api/admin/process-payload-email-queue/route.ts'), 'utf8')
     const actionService = readFileSync(resolve('src/lib/email/emailOperatorActions.ts'), 'utf8')
 
     expect(collection).toContain("slug: 'payload_email_actions'")
@@ -192,8 +193,21 @@ describe('email operator delivery actions', () => {
     expect(collection).toContain('delete: () => false')
     expect(collection).toContain("name: 'retryCount'")
     expect(collection).toContain("name: 'lastRetryRequestedBy'")
+    // Lease fields
+    expect(collection).toContain("name: 'claimedAt'")
+    expect(collection).toContain("name: 'workerClaimId'")
+    expect(collection).toContain("value: 'processing'")
+    // Dedicated worker secret — never PAYLOAD_SECRET
+    expect(sendRoute).toContain('EMAIL_QUEUE_WORKER_SECRET')
+    expect(sendRoute).not.toContain('PAYLOAD_SECRET')
+    expect(batchRoute).toContain('EMAIL_QUEUE_WORKER_SECRET')
+    expect(batchRoute).not.toContain('PAYLOAD_SECRET')
+    // Sender correctness
     expect(sender).toContain("failureReason: 'resend_client_missing'")
     expect(sender).toContain('assertStagingRecipientAllowed')
+    expect(sender).toContain('claimEventForDelivery')
+    expect(sender).toContain('recoverStaleEmailLeases')
+    expect(sender).toContain('attemptImmediateEmailDelivery')
     expect(cli).toContain('Refusing bulk apply without explicit targeting')
     expect(sendRoute).toContain("return json({ ok: false, error: 'processing_failed' }, 500)")
     expect(sendRoute).not.toContain('detail: message')

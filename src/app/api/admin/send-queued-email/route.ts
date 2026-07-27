@@ -18,7 +18,8 @@ function json(body: unknown, status = 200): Response {
 }
 
 export async function POST(request: NextRequest): Promise<Response> {
-  const expectedBearerValue = process.env.PAYLOAD_SECRET
+  // Dedicated queue-worker credential — never PAYLOAD_SECRET.
+  const expectedBearerValue = process.env.EMAIL_QUEUE_WORKER_SECRET
   if (!expectedBearerValue) return json({ ok: false, error: 'not_configured' }, 500)
 
   const authHeader = request.headers.get('authorization')

@@ -48,7 +48,7 @@ Current validated readiness baseline: `c2c6333 fix: reconcile dependencies for N
 
 ### Deterministic local validation baseline
 
-- `pnpm test:release` passed `154/154`
+- `pnpm test:release` passed `155/155`
 - `pnpm test:e2e` passed `58/58` across desktop and mobile Chromium projects
 - `pnpm test:release:full` passed
 - `pnpm staging:static-preflight` passed

@@ -509,7 +509,8 @@ async function run() {
 
     assert.equal(result.status, 'failed')
     assert.equal(result.reason, 'provider_unavailable')
-    assert.equal(payload.doc('payload_email_events', 'event_1')?.deliveryStatus, 'failed')
+    // Provider network errors release the claim — event stays queued for retry.
+    assert.equal(payload.doc('payload_email_events', 'event_1')?.deliveryStatus, 'queued')
     assert.equal(payload.doc('payload_email_events', 'event_1')?.failureReason, 'provider_unavailable')
   }
 
@@ -731,6 +732,7 @@ async function testEmailSenderBypassesDocumentLocks() {
   })
 
   assert.equal(result.status, 'sent')
-  assert.equal(payload.updates.length, 2)
+  // 3 updates: (1) claim → processing, (2) mark sent, (3) redact reset link
+  assert.equal(payload.updates.length, 3)
   assert.equal(payload.updates.every((update) => update.overrideAccess === true), true)
 }

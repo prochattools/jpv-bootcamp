@@ -22,6 +22,7 @@ import * as migration_20260724_121000_billing_operator_actions from './20260724_
 import * as migration_20260724_122000_live_session_relationships from './20260724_122000_live_session_relationships';
 import * as migration_20260724_123000_email_operator_actions from './20260724_123000_email_operator_actions';
 import * as migration_20260727_000000_partner_applications_source_member_id from './20260727_000000_partner_applications_source_member_id';
+import * as migration_20260727_100000_email_events_lease_columns from './20260727_100000_email_events_lease_columns';
 
 export const migrations = [
   { up: migration_20260620_213328.up, down: migration_20260620_213328.down, name: '20260620_213328' },
@@ -48,4 +49,5 @@ export const migrations = [
   { up: migration_20260724_122000_live_session_relationships.up, down: migration_20260724_122000_live_session_relationships.down, name: '20260724_122000_live_session_relationships' },
   { up: migration_20260724_123000_email_operator_actions.up, down: migration_20260724_123000_email_operator_actions.down, name: '20260724_123000_email_operator_actions' },
   { up: migration_20260727_000000_partner_applications_source_member_id.up, down: migration_20260727_000000_partner_applications_source_member_id.down, name: '20260727_000000_partner_applications_source_member_id' },
+  { up: migration_20260727_100000_email_events_lease_columns.up, down: migration_20260727_100000_email_events_lease_columns.down, name: '20260727_100000_email_events_lease_columns' },
 ];

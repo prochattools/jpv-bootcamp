@@ -260,6 +260,16 @@ export const PREVIEW_MIGRATION_INVENTORY = [
     verificationChecks: ['registry-match', 'ordered-exactly'],
     authorizationCategory: 'payloadMigration',
   },
+  {
+    name: '20260727_100000_email_events_lease_columns',
+    system: 'payload',
+    order: 25,
+    purpose: 'Add claimed_at and worker_claim_id lease columns to payload_email_events for atomic claim/stale-lease recovery, and a delivery_status index for efficient queue polling.',
+    requiredForPreview: true,
+    rollbackRisk: 'reversible',
+    verificationChecks: ['registry-match', 'ordered-exactly'],
+    authorizationCategory: 'payloadMigration',
+  },
 ] as const satisfies readonly PreviewMigrationInventoryEntry[]
 
 export const PREVIEW_MIGRATION_INVENTORY_VERSION = 1

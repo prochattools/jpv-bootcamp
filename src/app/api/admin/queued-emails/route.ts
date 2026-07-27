@@ -13,7 +13,8 @@ function json(body: unknown, status = 200): Response {
 }
 
 export async function GET(request: NextRequest): Promise<Response> {
-  const secret = process.env.PAYLOAD_SECRET
+  // Accepts both EMAIL_QUEUE_WORKER_SECRET and PAYLOAD_SECRET for operator convenience.
+  const secret = process.env.EMAIL_QUEUE_WORKER_SECRET ?? process.env.PAYLOAD_SECRET
   if (!secret) return json({ ok: false, error: 'not_configured' }, 500)
 
   const authHeader = request.headers.get('authorization')
@@ -29,22 +30,76 @@ export async function GET(request: NextRequest): Promise<Response> {
     ? {}
     : { deliveryStatus: { equals: statusFilter } }
 
-  const result = await payload.find({
-    collection: 'payload_email_events',
-    where,
-    limit: 10,
-    depth: 0,
-    sort: '-createdAt',
-    overrideAccess: true,
-  })
+  const [eventResult, lastSentResult, oldestQueuedResult, processingResult] = await Promise.all([
+    payload.find({
+      collection: 'payload_email_events',
+      where,
+      limit: 10,
+      depth: 0,
+      sort: '-createdAt',
+      overrideAccess: true,
+    }),
+    payload.find({
+      collection: 'payload_email_events',
+      where: { deliveryStatus: { equals: 'sent' } },
+      limit: 1,
+      depth: 0,
+      sort: '-sentAt',
+      overrideAccess: true,
+    }),
+    payload.find({
+      collection: 'payload_email_events',
+      where: { deliveryStatus: { in: ['queued', 'processing'] } },
+      limit: 1,
+      depth: 0,
+      sort: 'createdAt',
+      overrideAccess: true,
+    }),
+    payload.find({
+      collection: 'payload_email_events',
+      where: { deliveryStatus: { equals: 'processing' } },
+      limit: 10,
+      depth: 0,
+      sort: 'claimedAt',
+      overrideAccess: true,
+    }),
+  ])
 
-  const events = result.docs.map((doc) => ({
+  const events = eventResult.docs.map((doc) => ({
     id: doc.id,
     templateKey: doc.templateKey ?? null,
     deliveryStatus: doc.deliveryStatus ?? null,
     createdAt: doc.createdAt ?? null,
     displayName: doc.displayName ?? null,
+    // Redact failureReason for safety — strip any token-like substrings
+    failureReason: typeof doc.failureReason === 'string'
+      ? doc.failureReason.replace(/Bearer\s+\S+/gi, '[redacted]').slice(0, 200)
+      : null,
   }))
 
-  return json({ ok: true, total: result.totalDocs, events })
+  const lastSent = lastSentResult.docs[0] ?? null
+  const oldest = oldestQueuedResult.docs[0] ?? null
+  const now = new Date()
+  const oldestQueuedAgeMs = oldest?.createdAt
+    ? now.getTime() - new Date(oldest.createdAt as string).getTime()
+    : null
+
+  const staleProcessingCount = processingResult.docs.filter((doc) => {
+    const claimedAt = (doc as unknown as Record<string, unknown>).claimedAt
+    if (!claimedAt) return false
+    return now.getTime() - new Date(claimedAt as string).getTime() > 5 * 60 * 1000
+  }).length
+
+  return json({
+    ok: true,
+    total: eventResult.totalDocs,
+    events,
+    diagnostics: {
+      lastSentAt: lastSent?.sentAt ?? null,
+      oldestQueuedCreatedAt: oldest?.createdAt ?? null,
+      oldestQueuedAgeMs,
+      processingCount: processingResult.totalDocs,
+      staleProcessingCount,
+    },
+  })
 }

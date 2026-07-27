@@ -10,16 +10,17 @@ export const dynamic = 'force-dynamic'
 /**
  * POST /api/admin/process-payload-email-queue
  *
- * Flush the payload_email_events outbox: find all rows with delivery_status = 'queued'
- * and send them via Resend. Designed to be called by a periodic cron job.
+ * Flush the payload_email_events outbox: recover stale leases, find all rows
+ * with delivery_status = 'queued' and send them via Resend. Designed to be
+ * called by a periodic cron job (Dokploy scheduled task).
  *
- * Authentication: Bearer PAYLOAD_SECRET
+ * Authentication: Bearer EMAIL_QUEUE_WORKER_SECRET (never PAYLOAD_SECRET)
  *
  * Body (JSON, optional):
  *   { limit?: number }   — max events to process per call (default 25)
  *
  * Response:
- *   { ok: true, processed, sent, failed, skipped }
+ *   { ok: true, processed, sent, failed, skipped, staleRecovered }
  */
 function json(body: unknown, status = 200): Response {
   return Response.json(body, {
@@ -29,7 +30,8 @@ function json(body: unknown, status = 200): Response {
 }
 
 export async function POST(request: NextRequest): Promise<Response> {
-  const secret = process.env.PAYLOAD_SECRET
+  // Dedicated queue-worker credential — never PAYLOAD_SECRET.
+  const secret = process.env.EMAIL_QUEUE_WORKER_SECRET
   if (!secret) return json({ ok: false, error: 'not_configured' }, 500)
 
   const authHeader = request.headers.get('authorization')
@@ -82,6 +84,6 @@ export async function POST(request: NextRequest): Promise<Response> {
   } catch (err) {
     const message = err instanceof Error ? err.message : 'unknown_error'
     console.error('process_payload_email_queue_failed', { error: message })
-    return json({ ok: false, error: 'processing_failed', detail: message }, 500)
+    return json({ ok: false, error: 'processing_failed' }, 500)
   }
 }

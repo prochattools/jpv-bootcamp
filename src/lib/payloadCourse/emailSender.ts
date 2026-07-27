@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto'
+import { createHash, randomBytes } from 'node:crypto'
 
 import { normalizeEmail } from '@/lib/normalize-email'
 import { getPublicBaseUrl } from '@/lib/public-base-url'
@@ -10,6 +10,9 @@ import type {
   PayloadDocument,
   PayloadId,
 } from '@/lib/payloadCourse/accessService'
+
+// Stale lease threshold: rows in 'processing' longer than this are reclaimed.
+const STALE_LEASE_MS = 5 * 60 * 1000
 
 type SendEmailPayload = {
   from: string
@@ -239,6 +242,93 @@ function buildSendPayload(
   }
 }
 
+// ─── Atomic claim / lease ─────────────────────────────────────────────────────
+
+function generateClaimId(): string {
+  return randomBytes(16).toString('hex')
+}
+
+// Attempt to claim a queued event for exclusive delivery.
+// Returns the claim token if successful, null if another worker won the race
+// (the event is no longer queued after our update returns a different claimId).
+async function claimEventForDelivery(
+  payload: PayloadCourseWriteAPI,
+  eventId: PayloadId,
+  claimId: string,
+  now: Date,
+): Promise<boolean> {
+  // Update with overrideAccess + overrideLock — Payload does not support
+  // WHERE-guarded updates on its own update API, so we use an optimistic
+  // read-then-write: we read status = queued above, set our claimId, then
+  // re-read to verify we own it. The window between is small; for correctness
+  // we check the workerClaimId after writing.
+  await payload.update({
+    collection: 'payload_email_events',
+    id: eventId,
+    data: {
+      deliveryStatus: 'processing',
+      claimedAt: now.toISOString(),
+      workerClaimId: claimId,
+    },
+    overrideAccess: true,
+    overrideLock: true,
+  })
+  // Re-read and verify we own the lease.
+  const after = await payload.findByID({
+    collection: 'payload_email_events',
+    id: eventId,
+    depth: 0,
+    overrideAccess: true,
+  })
+  return asString(after.workerClaimId) === claimId
+}
+
+// Release a claim back to 'queued' after a non-fatal failure.
+async function releaseEventClaim(
+  payload: PayloadCourseWriteAPI,
+  event: PayloadDocument,
+  failureReason: string,
+): Promise<void> {
+  await updateEmailEvent(payload, event, {
+    deliveryStatus: 'queued',
+    claimedAt: null,
+    workerClaimId: null,
+    failureReason,
+  })
+}
+
+// Recover stale leases: find events stuck in 'processing' longer than
+// STALE_LEASE_MS and requeue them so the next worker run picks them up.
+export async function recoverStaleEmailLeases(
+  payload: PayloadCourseWriteAPI,
+  now = new Date(),
+): Promise<number> {
+  const cutoff = new Date(now.getTime() - STALE_LEASE_MS).toISOString()
+  const stale = await payload.find({
+    collection: 'payload_email_events',
+    where: {
+      and: [
+        { deliveryStatus: { equals: 'processing' } },
+        { claimedAt: { less_than: cutoff } },
+      ],
+    },
+    limit: 50,
+    depth: 0,
+    overrideAccess: true,
+  })
+  let recovered = 0
+  for (const event of stale.docs) {
+    await updateEmailEvent(payload, event, {
+      deliveryStatus: 'queued',
+      claimedAt: null,
+      workerClaimId: null,
+      failureReason: 'stale_lease_recovered',
+    })
+    recovered++
+  }
+  return recovered
+}
+
 export async function sendQueuedPayloadEmail(
   payload: PayloadCourseWriteAPI,
   eventId: PayloadId,
@@ -271,6 +361,37 @@ export async function sendQueuedPayloadEmail(
       toEmail,
       status: 'skipped',
       reason: `not_queued:${event.deliveryStatus ?? 'unknown'}`,
+    }
+  }
+
+  // Atomic claim: mark as processing with a unique claim token.
+  // If another worker claimed it first, skip without error.
+  if (!args.dryRun) {
+    const claimId = generateClaimId()
+    const claimed = await claimEventForDelivery(payload, event.id, claimId, new Date())
+    if (!claimed) {
+      return {
+        eventId: String(event.id),
+        templateKey,
+        toEmail,
+        status: 'skipped',
+        reason: 'claimed_by_other_worker',
+      }
+    }
+    // Refresh event after claim (deliveryStatus is now 'processing')
+    Object.assign(event, { deliveryStatus: 'processing', workerClaimId: claimId })
+
+    // Guard: no resend client means we cannot deliver. Release claim immediately so the
+    // event stays available for retry once the client is configured.
+    if (!args.resend) {
+      await releaseEventClaim(payload, event, 'resend_client_missing')
+      return {
+        eventId: String(event.id),
+        templateKey,
+        toEmail,
+        status: 'failed',
+        reason: 'resend_client_missing',
+      }
     }
   }
 
@@ -342,32 +463,15 @@ export async function sendQueuedPayloadEmail(
     }
   }
 
-  if (!args.resend) {
-    await updateEmailEvent(payload, event, {
-      deliveryStatus: 'failed',
-      failureReason: 'resend_client_missing',
-    })
-    return {
-      eventId: String(event.id),
-      templateKey,
-      toEmail,
-      status: 'failed',
-      reason: 'resend_client_missing',
-      idempotencyKey,
-    }
-  }
-
   assertStagingRecipientAllowed(sendPayload.to, 'payloadCourse/emailSender:sendQueuedPayloadEmail')
 
   let sendResult: SendEmailResponse
   try {
     sendResult = await args.resend.emails.send(sendPayload, { idempotencyKey })
   } catch (error) {
+    // Provider network error — release claim so retry worker can pick it up.
     const reason = errorMessage(error)
-    await updateEmailEvent(payload, event, {
-      deliveryStatus: 'failed',
-      failureReason: reason,
-    })
+    await releaseEventClaim(payload, event, reason)
     return {
       eventId: String(event.id),
       templateKey,
@@ -385,6 +489,8 @@ export async function sendQueuedPayloadEmail(
       const sentAt = new Date()
       await updateEmailEvent(payload, event, {
         deliveryStatus: 'sent',
+        claimedAt: null,
+        workerClaimId: null,
         sentAt,
         failureReason: null,
       })
@@ -403,8 +509,11 @@ export async function sendQueuedPayloadEmail(
         idempotencyKey,
       }
     }
+    // Permanent provider-reported failure — mark failed (admin can retry via EmailAction).
     await updateEmailEvent(payload, event, {
       deliveryStatus: 'failed',
+      claimedAt: null,
+      workerClaimId: null,
       failureReason: reason,
     })
     return {
@@ -421,6 +530,8 @@ export async function sendQueuedPayloadEmail(
   const sentAt = new Date()
   await updateEmailEvent(payload, event, {
     deliveryStatus: 'sent',
+    claimedAt: null,
+    workerClaimId: null,
     resendEmailId: resendEmailId ?? undefined,
     sentAt,
     failureReason: null,
@@ -445,6 +556,9 @@ export async function processQueuedPayloadEmails(
   payload: PayloadCourseWriteAPI,
   args: ProcessQueuedPayloadEmailsArgs
 ): Promise<SendQueuedPayloadEmailResult[]> {
+  // Recover any stale leases before processing new batch.
+  await recoverStaleEmailLeases(payload)
+
   const where: Record<string, unknown> = {
     deliveryStatus: { equals: 'queued' },
   }
@@ -467,4 +581,26 @@ export async function processQueuedPayloadEmails(
   }
 
   return outcomes
+}
+
+// ─── Best-effort immediate delivery ─────────────────────────────────────────
+// Call after queueEmailEvent to attempt delivery without blocking the caller.
+// Failures are swallowed — the event stays queued for the retry worker.
+
+export function attemptImmediateEmailDelivery(
+  payload: PayloadCourseWriteAPI,
+  eventId: PayloadId,
+  args: Omit<ProcessQueuedPayloadEmailsArgs, 'limit' | 'targetEventId'>,
+): void {
+  if (!args.resend) return
+  void sendQueuedPayloadEmail(payload, eventId, {
+    ...args,
+    limit: 1,
+    targetEventId: String(eventId),
+  }).catch((err: unknown) => {
+    console.error('immediate_email_delivery_failed', {
+      eventId: String(eventId),
+      error: err instanceof Error ? err.message : 'unknown_error',
+    })
+  })
 }
