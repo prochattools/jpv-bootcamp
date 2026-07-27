@@ -196,6 +196,7 @@ These assets make the repository ready for controlled staging operations without
 - **TOCTOU hardening release**: `pnpm test:release` passed `152/152` (2026-07-22 — see entry above)
 - **Health build-info fix**: `pnpm test:release` passed `153/153` (2026-07-22 — atomic processing claim state machine with `atomicClaimProcessing`/`finalizeProcessed`/`releaseProcessingClaim`; Stripe webhook never returns 202; failure path returns 500 for retry; concurrent duplicate returns 503).
   - `stripe.webhook-toctou` test added: proves `handleStripeWebhook()` deduplicates concurrent identical events, releases claim on failure, allows retry
+- **Public checkout fix**: `pnpm test:release` passed `154/154` (2026-07-27 — public Stripe membership checkout no longer requires a billing portal token; anonymous visitors reach Stripe Checkout; token-authenticated visitors get email prefilled; invalid/expired tokens still fail closed).
 - `pnpm test:migration:legacy` passed `32/32` (includes 4 rehearsal guard tests).
 - `pnpm test:e2e` passed `58/58` across desktop and mobile Chromium projects (2026-07-21 — REM-02 complete).
 - Disposable local rehearsal on `jpvbootcamp_rehearsal` (2026-07-20): apply/idempotency/rollback/reapply all PASS; preexisting rows unchanged.

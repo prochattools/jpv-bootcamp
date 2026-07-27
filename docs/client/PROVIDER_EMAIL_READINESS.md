@@ -37,7 +37,7 @@ Repository-only checklist for provider/email readiness before any approved live 
 
 1. Confirm `STRIPE_ENV` matches the intended staging verification mode.
 2. Confirm the selected publishable key, secret key, webhook secret, Pro monthly price, Pro annual price, product id, and billing portal configuration id all align with that mode.
-3. Confirm checkout accepts only `plan=pro` and optional `billing=monthly|annual`.
+3. Confirm checkout accepts only `plan=membership` and optional `billing=monthly|annual`.
 4. Confirm `STRIPE_SUCCESS_URL` and `STRIPE_CANCEL_URL` remain same-origin with the approved public app URL.
 
 ## Email provider and live delivery checks

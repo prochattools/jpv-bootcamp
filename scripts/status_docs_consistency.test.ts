@@ -170,7 +170,7 @@ async function main(): Promise<void> {
   assert.match(docs.stagingEvidence, /No migrations were applied\./)
   assert.match(docs.stagingEvidence, /main was not touched/)
 
-  assert.match(docs.providerReadiness, /checkout accepts only `plan=pro` and optional `billing=monthly\|annual`/)
+  assert.match(docs.providerReadiness, /checkout accepts only `plan=membership` and optional `billing=monthly\|annual`/)
   assert.match(docs.providerReadiness, /Do not apply migrations from this checklist\./)
   assert.match(docs.providerReadiness, /Migrations applied: `No`/)
 

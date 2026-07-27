@@ -61,7 +61,7 @@ function main(): void {
   assert.match(handoff, /content:programme:import-plan/)
 
   assert.match(portalProgramme, /Preview only/)
-  assert.match(portalProgramme, /href="\/portal\/billing"/)
+  assert.match(portalProgramme, /href=['"]\/portal\/billing['"]/)
   assert.match(portalProgramme, /approved content package/i)
   assert.doesNotMatch(portalProgramme, /scripts\/content\//)
   assert.doesNotMatch(portalProgramme, /programme-content\.example\.json/)
