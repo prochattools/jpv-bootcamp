@@ -32,6 +32,27 @@ export const PayloadMembers: CollectionConfig = {
     update: requirePayloadAdminOrMemberSelf,
     delete: requirePayloadAdmin,
   },
+  hooks: {
+    beforeValidate: [
+      async ({ data, operation, req }) => {
+        if (operation !== 'create' || !data?.email) return data
+        const email = String(data.email).trim().toLowerCase()
+        const existing = await req.payload.find({
+          collection: 'payload_members',
+          where: { email: { equals: email } },
+          limit: 1,
+          depth: 0,
+          overrideAccess: true,
+        })
+        if (existing.totalDocs > 0) {
+          throw new Error(
+            `A member with the email address "${email}" already exists. Use a different email or find the existing member in the Members list.`,
+          )
+        }
+        return data
+      },
+    ],
+  },
   fields: [
     {
       name: 'accountStatus',

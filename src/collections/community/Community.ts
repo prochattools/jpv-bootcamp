@@ -80,6 +80,21 @@ export const PayloadSpaces: CollectionConfig = {
     description: 'Community spaces and their visibility rules.',
   },
   access: adminOnlyCollectionAccess,
+  hooks: {
+    beforeValidate: [
+      ({ data, operation }) => {
+        if (!data) return data
+        if ((operation === 'create' || !data.slug) && data.name) {
+          data.slug = data.name
+            .trim()
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '')
+        }
+        return data
+      },
+    ],
+  },
   fields: [
     { name: 'name', type: 'text', required: true },
     { name: 'slug', type: 'text', required: true, unique: true, index: true },
