@@ -250,6 +250,16 @@ export const PREVIEW_MIGRATION_INVENTORY = [
     verificationChecks: ['registry-match', 'ordered-exactly', 'email-operator-actions', 'rollback-guard'],
     authorizationCategory: 'payloadMigration',
   },
+  {
+    name: '20260727_000000_partner_applications_source_member_id',
+    system: 'payload',
+    order: 24,
+    purpose: 'Add missing source_member_id column to payload_partner_applications — column was defined in the collection but absent from staging after application-only deployment.',
+    requiredForPreview: true,
+    rollbackRisk: 'reversible',
+    verificationChecks: ['registry-match', 'ordered-exactly'],
+    authorizationCategory: 'payloadMigration',
+  },
 ] as const satisfies readonly PreviewMigrationInventoryEntry[]
 
 export const PREVIEW_MIGRATION_INVENTORY_VERSION = 1

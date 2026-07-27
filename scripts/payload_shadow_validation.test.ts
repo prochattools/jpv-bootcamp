@@ -98,6 +98,7 @@ async function main(): Promise<void> {
         '20260724_121000_billing_operator_actions',
         '20260724_122000_live_session_relationships',
         '20260724_123000_email_operator_actions',
+        '20260727_000000_partner_applications_source_member_id',
       ],
       operator: 'migration-op',
       approvalReference: 'approval-1',

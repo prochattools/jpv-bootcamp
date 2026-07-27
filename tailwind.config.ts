@@ -77,6 +77,13 @@ const config = {
           "danger-surface": "var(--jpv-danger-surface)",
           "danger-ink": "var(--jpv-danger-ink)",
           "inverse-muted": "var(--jpv-inverse-muted)",
+          // Canonical brand aliases — jpv-brand, jpv-brand-deep, jpv-brand-hover, jpv-brand-bright
+          brand: {
+            DEFAULT: "var(--jpv-brand)",
+            deep: "var(--jpv-brand-deep)",
+            hover: "var(--jpv-brand-hover)",
+            bright: "var(--jpv-brand-bright)",
+          },
           bg: {
             DEFAULT: "var(--jpv-brand-deep)",
             dark: "var(--jpv-ink)",
