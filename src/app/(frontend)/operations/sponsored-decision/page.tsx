@@ -7,23 +7,23 @@ type DecisionResult =
 	| 'already_processed'
 	| 'account_failed'
 
-function getMessage(result: DecisionResult) {
+function getMessage(result: DecisionResult): { text: string; tone: 'success' | 'danger' | 'neutral' } {
 	switch (result) {
 		case 'approved':
-			return 'Application approved. The sponsored month is now active.'
+			return { text: 'Application approved. The sponsored month is now active.', tone: 'success' }
 		case 'rejected':
-			return 'Application rejected.'
+			return { text: 'Application rejected.', tone: 'neutral' }
 		case 'no_seats':
-			return 'No sponsored seats are available right now.'
+			return { text: 'No sponsored seats are available right now.', tone: 'danger' }
 		case 'account_failed':
-			return 'Approved, but membership sync failed. Please check logs.'
+			return { text: 'Approved, but membership sync failed. Please check logs.', tone: 'danger' }
 		case 'already_processed':
-			return 'This decision link has already been used.'
+			return { text: 'This decision link has already been used.', tone: 'neutral' }
 		case 'invalid':
-			return 'This decision link is invalid.'
+			return { text: 'This decision link is invalid.', tone: 'danger' }
 		case 'expired':
 		default:
-			return 'This decision link is expired or invalid.'
+			return { text: 'This decision link is expired or invalid.', tone: 'danger' }
 	}
 }
 
@@ -44,10 +44,20 @@ export default async function SponsoredDecisionPage({
 			? (raw as DecisionResult)
 			: 'expired'
 
+	const message = getMessage(result)
+
+	const noticeClass =
+		message.tone === 'success'
+			? 'jpv-notice border-jpv-green/20 bg-emerald-50 text-emerald-800'
+			: message.tone === 'danger'
+				? 'jpv-notice jpv-notice-danger'
+				: 'jpv-notice'
+
 	return (
-		<main className="mx-auto max-w-xl px-6 py-16 text-center">
-			<h1 className="text-2xl font-semibold">Sponsored decision</h1>
-			<p className="mt-4 text-sm text-neutral-600">{getMessage(result)}</p>
+		<main className='mx-auto max-w-xl px-4 py-16 text-center sm:px-6'>
+			<p className='jpv-eyebrow'>Sponsored seats</p>
+			<h1 className='mt-3 text-2xl font-semibold tracking-tight text-jpv-ink'>Sponsored decision</h1>
+			<p className={`mt-6 ${noticeClass}`}>{message.text}</p>
 		</main>
 	)
 }

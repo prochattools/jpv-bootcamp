@@ -1,11 +1,11 @@
 # CURRENT WORK HANDOFF — JPV Bootcamp Operator Panel Implementation
 
-**Date:** 2026-07-23T17:15:00Z  
-**Session:** Implementing Payload operator back office with Bunny/Stripe/LiveKit  
-**Branch:** `feature/course-branding-and-preview`  
-**HEAD:** `145bec8` (feat: add Bunny video relationship to lessons and hide preview collection)  
+**Date:** 2026-07-23T17:15:00Z
+**Session:** Implementing Payload operator back office with Bunny/Stripe/LiveKit
+**Branch:** `feature/course-branding-and-preview`
+**HEAD:** `145bec8` (feat: add Bunny video relationship to lessons and hide preview collection)
 **Commits Ahead of main:** 52 (50 baseline + 2 new)
-**Previous HEAD:** `00f9580` (docs: record go-live readiness handoff...)  
+**Previous HEAD:** `00f9580` (docs: record go-live readiness handoff...)
 
 ---
 
@@ -235,6 +235,42 @@ All 10 critical business flows are either:
 
 ---
 
+## PHASE 1 — RESPONSIVE HARDENING (2026-07-27) ✅
+
+**Commit:** `951cc38`
+**Branch:** `feature/course-branding-and-preview`
+
+### Changed Surfaces
+| File | Fix |
+|------|-----|
+| `portal/courses/[courseSlug]/page.tsx` | Add `min-w-0` to lesson text container — prevents title overflow in narrow viewports |
+| `portal/courses/[courseSlug]/lessons/[lessonSlug]/page.tsx` | Add `min-w-0 truncate` to prev/next lesson nav links — long titles no longer overflow |
+| `admin/review/page.tsx` | Add `min-h-11 inline-flex items-center` to all quick-link anchors and section action links |
+| `admin/review/[sectionSlug]/page.tsx` | Add `min-h-11 inline-flex items-center` to section action links |
+| `operations/partner-applications/page.tsx` | Add `min-h-11` to Export CSV link and Retry button |
+| `operations/sponsored-applications/page.tsx` | Add `min-h-11` to Approve and Reject buttons |
+| `admin/sessions/page.tsx` | Full responsive restyle: flex-col→sm:flex-row stacking, JPV design system classes, `jpv-button-primary/secondary` with `min-h-11`, danger Cancel, `break-all` on room name, `min-w-0` on info, semantic form labels |
+| `course-preview/[courseSlug]/page.tsx` | Add `min-h-11 inline-flex items-center` to header back-to-courses link |
+
+### Responsive Evidence (390×844 / 768×1024 / 1280×900)
+- All interactive controls meet 44px touch target (min-h-11)
+- Session cards stack vertically on mobile, horizontal on sm+
+- Long lesson titles truncate cleanly in lesson navigation
+- Admin sessions form has proper label associations (htmlFor)
+
+### Preserved Behaviour
+- Auth, Stripe, Payload, LiveKit, Bunny, community, permissions, server actions — untouched
+- Presentation only
+
+### Validation
+- TypeScript: PASS
+- 154/154 release tests: PASS
+- Production build: PASS
+- Security scan: CLEAN
+
+### Next Phase
+**PHASE 2 — OPERATOR TOOLS** — align `/admin/sessions`, `/admin/review`, `/operations/*` with full JPV design system (compact density, JPV buttons/forms/notices, premium appearance). Start here.
+
 ## NEXT STEPS FOR CONTINUATION
 
 ### Immediate (High Priority)
@@ -299,3 +335,50 @@ All 10 critical business flows are either:
 **Prepared by:** Claude Haiku 4.5
 **Confidence Level:** VERY HIGH (100% infrastructure complete, tests 153/153 pass)
 **Decision:** GO-LIVE INFRASTRUCTURE READY — All 5 priorities implemented and tested. Requires browser proof before GO-LIVE DECLARATION (25 min: admin login → verify collections, Bunny endpoint, Stripe billing, LiveKit sessions, lesson-to-Bunny relationship)
+
+---
+
+## PHASE 2 — OPERATOR TOOLS (2026-07-27) ✅
+
+**Commit:** (pending — see below)
+**Branch:** `feature/course-branding-and-preview`
+
+### Changed Surfaces
+| File | Change |
+|------|--------|
+| `operations/shadow-validation/page.tsx` | Replace neutral/amber colors with JPV tokens; `ReadinessCell` helper; danger-surface issues; `jpv-button-secondary` download; empty + error states |
+| `operations/partners-clicks/page.tsx` | JPV table headers (`bg-jpv-surface`, `text-jpv-muted`); `font-mono` timestamps; `max-w truncate` ref paths; `divide-jpv-border` summary lists; empty state |
+| `operations/partner-applications/page.tsx` | 4 stat cards with `rounded-jpv-card border border-jpv-border bg-jpv-canvas`; `jpv-button-secondary` export/retry; overflow-x-auto table with `bg-jpv-surface` thead; empty state |
+| `operations/sponsored-applications/page.tsx` | Responsive `flex-col sm:flex-row` layout; `jpv-button-primary` Approve; destructive Reject with `border-jpv-danger text-jpv-danger hover:bg-jpv-danger-surface`; `rounded-jpv-control` input; empty state |
+| `operations/sponsored-decision/page.tsx` | `getMessage` returns `tone` field; `jpv-notice jpv-notice-danger` for danger, `bg-emerald-50 text-emerald-800` for success, `jpv-notice` for neutral; `jpv-eyebrow` + h1 structure |
+| `admin/review/page.tsx` | Full JPV token replacement: `statusBadge` helper; `bg-jpv-surface` main; `jpv-notice` for preview warning; per-status summary cards with semantic border colors; `jpv-button-primary` CTA, `jpv-button-secondary` links; `text-jpv-muted` table headers; danger/action badge pills |
+| `admin/review/[sectionSlug]/page.tsx` | Full JPV token replacement: same `statusBadge` helper; `rounded-jpv-panel border border-jpv-border bg-jpv-canvas` section card; `rounded-jpv-card border border-jpv-border bg-jpv-surface` stat cards; `jpv-notice` preview warning; `jpv-button-primary` + `jpv-button-secondary` actions; `overflow-x-auto` export table |
+
+### Token Mapping Applied
+- `bg-neutral-50` → `bg-jpv-surface`
+- `bg-white` → `bg-jpv-canvas`
+- `border-neutral-200`, `border-neutral-100` → `border-jpv-border`
+- `text-neutral-950`, `text-neutral-700` → `text-jpv-ink`
+- `text-neutral-500`, `text-neutral-600` → `text-jpv-muted`
+- `bg-neutral-950 text-white` (primary button) → `jpv-button-primary`
+- `border-neutral-300 text-neutral-700` (secondary button) → `jpv-button-secondary`
+- `border-amber-100 bg-amber-50/50 text-amber-800` (notice) → `jpv-notice`
+- Blue status → `bg-jpv-surface text-jpv-brand-deep`
+- Amber status → `bg-jpv-sunshine/20 text-jpv-sunshine-ink`
+- Red/danger status → `bg-jpv-danger-surface text-jpv-danger-ink`
+- Destructive action → `border-jpv-danger text-jpv-danger hover:bg-jpv-danger-surface` (never jpv-button-primary)
+
+### Preserved Behaviour
+- Authorization (partner session, `isSponsoredSeatsAdmin`, `requireCurrentPayloadAdmin`) — untouched
+- Audit logging, idempotency, fail-closed behavior — untouched
+- Server actions (approve/reject/retry form POSTs) — untouched
+- Exports (CSV links), approval/rejection workflows — untouched
+
+### Validation
+- TypeScript: PASS
+- 154/154 release tests: PASS
+- Production build: PASS (✓ Compiled successfully in 6.8s)
+- Security scan (dangerouslySetInnerHTML / eval / innerHTML): CLEAN
+
+### Next Phase
+**PHASE 3 — PAYLOAD ADMIN BRANDING** — align Payload admin login, dashboard, navigation, collection views, buttons, badges, errors, and empty states with JPV design system using supported extension points only (no forking). Start here.

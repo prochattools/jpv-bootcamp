@@ -35,28 +35,20 @@ function normalizeSlug(value: string | undefined): string | undefined {
 	return trimmed
 }
 
-export default async function PartnersClicksAdminPage({
-	searchParams,
-}: PageProps) {
+export default async function PartnersClicksAdminPage({ searchParams }: PageProps) {
 	const [cookieStore, resolvedSearchParams] = await Promise.all([
 		cookies(),
 		searchParams,
 	])
 	const sessionCookie = cookieStore.get(PARTNERS_SESSION_COOKIE)?.value
 	const sessionId = sanitizeSessionId(sessionCookie)
-	if (!sessionId) {
-		notFound()
-	}
+	if (!sessionId) notFound()
 
 	const session = await getPartnerSession(sessionId)
-	if (!session) {
-		notFound()
-	}
+	if (!session) notFound()
 
 	const adminIds = parseAdminIds(process.env.PARTNERS_ADMIN_ACCOUNT_IDS)
-	if (!adminIds.has(session.accountId)) {
-		notFound()
-	}
+	if (!adminIds.has(session.accountId)) notFound()
 
 	const accountIdFilter = Number(resolvedSearchParams?.account_id)
 	const partnerSlugFilter = normalizeSlug(resolvedSearchParams?.partner_slug)
@@ -109,65 +101,80 @@ export default async function PartnersClicksAdminPage({
 	)
 
 	return (
-		<main className="mx-auto max-w-5xl px-6 py-12">
-			<h1 className="text-2xl font-semibold">Partners Clicks</h1>
-			<p className="mt-2 text-sm text-muted-foreground">
-				Showing {recentClicks.length} recent clicks.
-			</p>
+		<main className='mx-auto max-w-5xl space-y-8 px-4 py-10 sm:px-6'>
+			<section className='space-y-2'>
+				<p className='jpv-eyebrow'>Partners · Operator</p>
+				<h1 className='text-2xl font-semibold tracking-tight text-jpv-ink'>Partner clicks</h1>
+				<p className='text-sm text-jpv-muted'>
+					Showing {recentClicks.length} most recent click{recentClicks.length !== 1 ? 's' : ''}.
+				</p>
+			</section>
 
-			<section className="mt-8 grid gap-8 md:grid-cols-2">
-				<div>
-					<h2 className="text-lg font-semibold">Clicks by partner</h2>
-					<ul className="mt-3 space-y-2 text-sm">
-						{partnerTotals.map((item) => (
-							<li key={item.partner_slug} className="flex justify-between">
-								<span>{item.partner_slug}</span>
-								<span>{item.count}</span>
-							</li>
-						))}
-					</ul>
+			<section className='grid gap-6 md:grid-cols-2'>
+				<div className='rounded-jpv-panel border border-jpv-border bg-jpv-canvas p-5 sm:p-6'>
+					<h2 className='font-semibold text-jpv-ink'>Clicks by partner</h2>
+					{partnerTotals.length > 0 ? (
+						<ul className='mt-4 divide-y divide-jpv-border text-sm'>
+							{partnerTotals.map((item) => (
+								<li key={item.partner_slug} className='flex justify-between py-2'>
+									<span className='text-jpv-ink'>{item.partner_slug}</span>
+									<span className='font-semibold tabular-nums text-jpv-ink'>{item.count}</span>
+								</li>
+							))}
+						</ul>
+					) : (
+						<p className='mt-3 text-sm text-jpv-muted'>No data.</p>
+					)}
 				</div>
-				<div>
-					<h2 className="text-lg font-semibold">Clicks by category</h2>
-					<ul className="mt-3 space-y-2 text-sm">
-						{categoryTotals.map((item) => (
-							<li key={item.category_slug} className="flex justify-between">
-								<span>
-									{categoryNameBySlug.get(item.category_slug) ??
-										item.category_slug}
-								</span>
-								<span>{item.count}</span>
-							</li>
-						))}
-					</ul>
+
+				<div className='rounded-jpv-panel border border-jpv-border bg-jpv-canvas p-5 sm:p-6'>
+					<h2 className='font-semibold text-jpv-ink'>Clicks by category</h2>
+					{categoryTotals.length > 0 ? (
+						<ul className='mt-4 divide-y divide-jpv-border text-sm'>
+							{categoryTotals.map((item) => (
+								<li key={item.category_slug} className='flex justify-between py-2'>
+									<span className='text-jpv-ink'>
+										{categoryNameBySlug.get(item.category_slug) ?? item.category_slug}
+									</span>
+									<span className='font-semibold tabular-nums text-jpv-ink'>{item.count}</span>
+								</li>
+							))}
+						</ul>
+					) : (
+						<p className='mt-3 text-sm text-jpv-muted'>No data.</p>
+					)}
 				</div>
 			</section>
 
-			<section className="mt-10">
-				<h2 className="text-lg font-semibold">Recent clicks</h2>
-				<div className="mt-4 overflow-x-auto rounded-lg border border-neutral-200">
-					<table className="w-full text-sm">
-						<thead className="bg-neutral-50 text-left">
+			<section>
+				<h2 className='font-semibold text-jpv-ink'>Recent clicks</h2>
+				<div className='mt-4 overflow-x-auto rounded-jpv-panel border border-jpv-border bg-jpv-canvas'>
+					<table className='w-full text-sm'>
+						<thead className='bg-jpv-surface text-left'>
 							<tr>
-								<th className="px-3 py-2">Time</th>
-								<th className="px-3 py-2">Account</th>
-								<th className="px-3 py-2">Partner</th>
-								<th className="px-3 py-2">Category</th>
-								<th className="px-3 py-2">Ref path</th>
+								<th className='px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-jpv-muted'>Time</th>
+								<th className='px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-jpv-muted'>Account</th>
+								<th className='px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-jpv-muted'>Partner</th>
+								<th className='px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-jpv-muted'>Category</th>
+								<th className='px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-jpv-muted'>Ref path</th>
 							</tr>
 						</thead>
 						<tbody>
-							{recentClicks.map((click) => (
-								<tr key={click.id} className="border-t">
-									<td className="px-3 py-2">
-										{click.createdAt.toISOString()}
-									</td>
-									<td className="px-3 py-2">{click.accountId}</td>
-									<td className="px-3 py-2">{click.partnerSlug}</td>
-									<td className="px-3 py-2">{click.categorySlug}</td>
-									<td className="px-3 py-2">{click.refPath ?? '-'}</td>
+							{recentClicks.length > 0 ? (
+								recentClicks.map((click) => (
+									<tr key={click.id} className='border-t border-jpv-border'>
+										<td className='px-4 py-2.5 font-mono text-xs text-jpv-muted'>{click.createdAt.toISOString()}</td>
+										<td className='px-4 py-2.5 tabular-nums text-jpv-ink'>{click.accountId}</td>
+										<td className='px-4 py-2.5 text-jpv-ink'>{click.partnerSlug}</td>
+										<td className='px-4 py-2.5 text-jpv-ink'>{click.categorySlug}</td>
+										<td className='max-w-[14rem] truncate px-4 py-2.5 text-jpv-muted'>{click.refPath ?? '—'}</td>
+									</tr>
+								))
+							) : (
+								<tr>
+									<td className='px-4 py-6 text-center text-sm text-jpv-muted' colSpan={5}>No recent clicks.</td>
 								</tr>
-							))}
+							)}
 						</tbody>
 					</table>
 				</div>
