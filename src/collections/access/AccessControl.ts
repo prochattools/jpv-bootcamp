@@ -68,7 +68,7 @@ export const PayloadAccessGroups: CollectionConfig = {
       },
     },
     { name: 'description', type: 'textarea' },
-    { name: 'metadata', type: 'json' },
+    { name: 'metadata', type: 'json', admin: { hidden: true } },
   ],
   timestamps: true,
 }
@@ -106,6 +106,7 @@ export const PayloadAccessPolicies: CollectionConfig = {
       name: 'resourceType',
       type: 'select',
       required: true,
+      defaultValue: 'course',
       options: resourceTypeOptions,
     },
     {
@@ -152,7 +153,7 @@ export const PayloadAccessPolicies: CollectionConfig = {
     { name: 'startsAt', type: 'date' },
     { name: 'endsAt', type: 'date' },
     { name: 'notes', type: 'textarea' },
-    { name: 'metadata', type: 'json' },
+    { name: 'metadata', type: 'json', admin: { hidden: true } },
   ],
   timestamps: true,
 }
@@ -196,6 +197,7 @@ export const PayloadAccessGrants: CollectionConfig = {
       name: 'resourceType',
       type: 'select',
       required: true,
+      defaultValue: 'course',
       options: resourceTypeOptions,
     },
     { name: 'resourceId', type: 'text', required: true, index: true },
@@ -229,7 +231,7 @@ export const PayloadAccessGrants: CollectionConfig = {
     { name: 'expiresAt', type: 'date' },
     { name: 'revokedAt', type: 'date' },
     { name: 'revokedReason', type: 'textarea' },
-    { name: 'metadata', type: 'json' },
+    { name: 'metadata', type: 'json', admin: { hidden: true } },
   ],
   timestamps: true,
 }
@@ -290,7 +292,7 @@ export const PayloadEntitlementEvents: CollectionConfig = {
       ],
     },
     { name: 'reason', type: 'text' },
-    { name: 'metadata', type: 'json' },
+    { name: 'metadata', type: 'json', admin: { hidden: true } },
   ],
   timestamps: true,
 }

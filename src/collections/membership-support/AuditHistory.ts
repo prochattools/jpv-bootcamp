@@ -32,6 +32,7 @@ export const PayloadMembershipAuditHistory: CollectionConfig = {
       name: 'actorType',
       type: 'select',
       required: true,
+      defaultValue: 'admin',
       options: [
         { label: 'Admin', value: 'admin' },
         { label: 'Member', value: 'member' },
@@ -84,7 +85,7 @@ export const PayloadMembershipAuditHistory: CollectionConfig = {
     { name: 'before', type: 'json' },
     { name: 'after', type: 'json' },
     { name: 'notes', type: 'textarea' },
-    { name: 'metadata', type: 'json' },
+    { name: 'metadata', type: 'json', admin: { hidden: true } },
   ],
   timestamps: true,
 }

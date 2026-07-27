@@ -209,7 +209,7 @@ export const PayloadMemberSecurityEvents: CollectionConfig = {
     { name: 'source', type: 'text' },
     { name: 'ipAddress', type: 'text' },
     { name: 'userAgent', type: 'text' },
-    { name: 'metadata', type: 'json' },
+    { name: 'metadata', type: 'json', admin: { hidden: true } },
   ],
   timestamps: true,
 }

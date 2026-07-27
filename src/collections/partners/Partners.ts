@@ -63,7 +63,7 @@ export const PayloadPartnerAffiliates: CollectionConfig = {
     { name: 'privacyNotice', type: 'textarea' },
     { name: 'sortOrder', type: 'number', defaultValue: 0 },
     { name: 'externalReference', type: 'text', index: true },
-    { name: 'metadata', type: 'json' },
+    { name: 'metadata', type: 'json', admin: { hidden: true } },
   ],
   timestamps: true,
 }
@@ -107,6 +107,7 @@ export const PayloadPartnerApplications: CollectionConfig = {
       name: 'deliveryMethod',
       type: 'select',
       required: true,
+      defaultValue: 'redirect',
       options: applicationModeOptions,
     },
     { name: 'deliveryAttempts', type: 'number', required: true, defaultValue: 0, min: 0 },
@@ -116,7 +117,7 @@ export const PayloadPartnerApplications: CollectionConfig = {
     { name: 'sourceMemberId', type: 'number' },
     { name: 'legacyReference', type: 'text' },
     { name: 'internalNotes', type: 'textarea' },
-    { name: 'metadata', type: 'json' },
+    { name: 'metadata', type: 'json', admin: { hidden: true } },
   ],
   timestamps: true,
 }
@@ -143,7 +144,7 @@ export const PayloadPartnerEvents: CollectionConfig = {
     { name: 'deliveryMethod', type: 'select', options: applicationModeOptions },
     { name: 'attempt', type: 'number', min: 0 },
     { name: 'deliveryError', type: 'textarea' },
-    { name: 'metadata', type: 'json' },
+    { name: 'metadata', type: 'json', admin: { hidden: true } },
   ],
   timestamps: true,
 }

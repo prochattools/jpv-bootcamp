@@ -106,7 +106,7 @@ export const PayloadPayItForwardFunding: CollectionConfig = {
       required: true,
     },
     { name: 'operatorNotes', type: 'relationship', relationTo: 'payload_operator_notes', hasMany: true, index: true },
-    { name: 'metadata', type: 'json' },
+    { name: 'metadata', type: 'json', admin: { hidden: true } },
   ],
   timestamps: true,
 }

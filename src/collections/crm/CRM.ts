@@ -62,7 +62,7 @@ export const PayloadContacts: CollectionConfig = {
     { name: 'marketingConsentAt', type: 'date' },
     { name: 'lastActivityAt', type: 'date' },
     { name: 'source', type: 'text' },
-    { name: 'metadata', type: 'json' },
+    { name: 'metadata', type: 'json', admin: { hidden: true } },
   ],
   timestamps: true,
 }
@@ -184,7 +184,7 @@ export const PayloadContactNotes: CollectionConfig = {
       ],
     },
     { name: 'body', type: 'textarea', required: true },
-    { name: 'metadata', type: 'json' },
+    { name: 'metadata', type: 'json', admin: { hidden: true } },
   ],
   timestamps: true,
 }
@@ -221,6 +221,7 @@ export const PayloadEmailTemplates: CollectionConfig = {
       name: 'purpose',
       type: 'select',
       required: true,
+      defaultValue: 'admin_notification',
       options: [
         { label: 'Account Created', value: 'account_created' },
         { label: 'Password Changed', value: 'password_changed' },
@@ -315,7 +316,7 @@ export const PayloadEmailEvents: CollectionConfig = {
       relationTo: 'payload_users',
       admin: { readOnly: true },
     },
-    { name: 'metadata', type: 'json', admin: { readOnly: true } },
+    { name: 'metadata', type: 'json', admin: { hidden: true } },
   ],
   timestamps: true,
 }
@@ -459,6 +460,7 @@ export const PayloadAdminNotifications: CollectionConfig = {
       name: 'notificationType',
       type: 'select',
       required: true,
+      defaultValue: 'system',
       options: [
         { label: 'Account', value: 'account' },
         { label: 'Billing', value: 'billing' },
@@ -493,7 +495,7 @@ export const PayloadAdminNotifications: CollectionConfig = {
     { name: 'body', type: 'textarea', required: true },
     { name: 'relatedCollection', type: 'text' },
     { name: 'relatedDocumentId', type: 'text' },
-    { name: 'metadata', type: 'json' },
+    { name: 'metadata', type: 'json', admin: { hidden: true } },
   ],
   timestamps: true,
 }

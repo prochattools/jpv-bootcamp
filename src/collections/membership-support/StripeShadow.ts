@@ -87,7 +87,7 @@ export const PayloadStripeShadowProjections: CollectionConfig = {
         beforeValidate: [({ value }) => normalizeMembershipSupportText(value)],
       },
     },
-    { name: 'metadata', type: 'json' },
+    { name: 'metadata', type: 'json', admin: { hidden: true } },
   ],
   timestamps: true,
 }

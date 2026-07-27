@@ -102,7 +102,7 @@ export const PayloadMembershipFundingSources: CollectionConfig = {
     { name: 'issuedAt', type: 'date' },
     { name: 'depletedAt', type: 'date' },
     { name: 'notes', type: 'textarea' },
-    { name: 'metadata', type: 'json' },
+    { name: 'metadata', type: 'json', admin: { hidden: true } },
   ],
   timestamps: true,
 }

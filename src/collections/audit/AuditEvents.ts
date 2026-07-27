@@ -50,7 +50,7 @@ export const PayloadAuditEvents: CollectionConfig = {
     { name: 'userAgent', type: 'text' },
     { name: 'before', type: 'json' },
     { name: 'after', type: 'json' },
-    { name: 'metadata', type: 'json' },
+    { name: 'metadata', type: 'json', admin: { hidden: true } },
   ],
   timestamps: true,
 }

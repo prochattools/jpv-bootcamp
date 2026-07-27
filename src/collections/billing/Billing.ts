@@ -75,7 +75,7 @@ export const PayloadBillingAccounts: CollectionConfig = {
     { name: 'defaultPaymentMethodId', type: 'text' },
     { name: 'billingEmail', type: 'email' },
     { name: 'lastSyncedAt', type: 'date' },
-    { name: 'metadata', type: 'json' },
+    { name: 'metadata', type: 'json', admin: { hidden: true } },
   ],
   timestamps: true,
 }
@@ -118,6 +118,7 @@ export const PayloadSubscriptions: CollectionConfig = {
       name: 'plan',
       type: 'select',
       required: true,
+      defaultValue: 'jpv_bootcamp_membership',
       options: [
         { label: 'JPV Bootcamp Membership', value: 'jpv_bootcamp_membership' },
         // narrow-allowlist: migration-import compatibility only — do not add new values
@@ -174,7 +175,7 @@ export const PayloadSubscriptions: CollectionConfig = {
     { name: 'canceledAt', type: 'date' },
     { name: 'lastStripeEventId', type: 'text', index: true },
     { name: 'lastSyncedAt', type: 'date' },
-    { name: 'metadata', type: 'json' },
+    { name: 'metadata', type: 'json', admin: { hidden: true } },
   ],
   timestamps: true,
 }
@@ -230,7 +231,7 @@ export const PayloadPayments: CollectionConfig = {
     { name: 'paidAt', type: 'date' },
     { name: 'failedAt', type: 'date' },
     { name: 'failureReason', type: 'textarea' },
-    { name: 'metadata', type: 'json' },
+    { name: 'metadata', type: 'json', admin: { hidden: true } },
   ],
   timestamps: true,
 }
@@ -412,7 +413,7 @@ export const PayloadBillingActions: CollectionConfig = {
       admin: { description: 'Optional operator reason or change-ticket reference.' },
     },
     { name: 'result', type: 'json', admin: { readOnly: true } },
-    { name: 'metadata', type: 'json', admin: { readOnly: true } },
+    { name: 'metadata', type: 'json', admin: { hidden: true } },
   ],
   timestamps: true,
 }

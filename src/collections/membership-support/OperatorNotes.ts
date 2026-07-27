@@ -32,6 +32,7 @@ export const PayloadOperatorNotes: CollectionConfig = {
       name: 'targetType',
       type: 'select',
       required: true,
+      defaultValue: 'membership_support',
       options: noteTargetTypeOptions,
     },
     {
@@ -68,7 +69,7 @@ export const PayloadOperatorNotes: CollectionConfig = {
       },
     },
     { name: 'pinned', type: 'checkbox', defaultValue: false },
-    { name: 'metadata', type: 'json' },
+    { name: 'metadata', type: 'json', admin: { hidden: true } },
   ],
   timestamps: true,
 }

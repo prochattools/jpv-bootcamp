@@ -59,7 +59,7 @@ export const PayloadMembershipReconciliations: CollectionConfig = {
     { name: 'lastWebhookAt', type: 'date' },
     { name: 'resolvedAt', type: 'date' },
     { name: 'notes', type: 'textarea' },
-    { name: 'metadata', type: 'json' },
+    { name: 'metadata', type: 'json', admin: { hidden: true } },
   ],
   timestamps: true,
 }

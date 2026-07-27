@@ -143,7 +143,7 @@ export const PayloadMembershipSupportRecords: CollectionConfig = {
     stripeShadowRelationship({ hasMany: true }),
     fundingSourceRelationship({ hasMany: true }),
     { name: 'notes', type: 'textarea' },
-    { name: 'metadata', type: 'json' },
+    { name: 'metadata', type: 'json', admin: { hidden: true } },
   ],
   timestamps: true,
 }

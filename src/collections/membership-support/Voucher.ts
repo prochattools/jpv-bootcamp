@@ -49,6 +49,7 @@ export const PayloadMembershipVouchers: CollectionConfig = {
       name: 'voucherDuration',
       type: 'select',
       required: true,
+      defaultValue: 'one_month',
       options: voucherDurationOptions,
       validate: (value: unknown) => (isAllowedVoucherDuration(value) ? true : 'Select one month or one year.'),
     },
@@ -127,7 +128,7 @@ export const PayloadMembershipVouchers: CollectionConfig = {
       required: true,
     },
     { name: 'operatorNotes', type: 'relationship', relationTo: 'payload_operator_notes', hasMany: true, index: true },
-    { name: 'metadata', type: 'json' },
+    { name: 'metadata', type: 'json', admin: { hidden: true } },
   ],
   timestamps: true,
 }

@@ -61,7 +61,7 @@ export const PayloadMemberGroups: CollectionConfig = {
       hasMany: true,
     },
     { name: 'description', type: 'textarea' },
-    { name: 'metadata', type: 'json' },
+    { name: 'metadata', type: 'json', admin: { hidden: true } },
   ],
   timestamps: true,
 }
@@ -146,7 +146,7 @@ export const PayloadSpaces: CollectionConfig = {
     },
     { name: 'description', type: 'textarea' },
     { name: 'sortOrder', type: 'number', defaultValue: 0 },
-    { name: 'metadata', type: 'json' },
+    { name: 'metadata', type: 'json', admin: { hidden: true } },
   ],
   timestamps: true,
 }
@@ -214,7 +214,7 @@ export const PayloadSpaceMemberships: CollectionConfig = {
     },
     { name: 'joinedAt', type: 'date' },
     { name: 'expiresAt', type: 'date' },
-    { name: 'metadata', type: 'json' },
+    { name: 'metadata', type: 'json', admin: { hidden: true } },
   ],
   timestamps: true,
 }
@@ -280,7 +280,7 @@ export const PayloadSpacePosts: CollectionConfig = {
     },
     { name: 'pinned', type: 'checkbox', defaultValue: false },
     { name: 'locked', type: 'checkbox', defaultValue: false },
-    { name: 'metadata', type: 'json' },
+    { name: 'metadata', type: 'json', admin: { hidden: true } },
   ],
   timestamps: true,
 }
@@ -333,7 +333,7 @@ export const PayloadSpaceComments: CollectionConfig = {
       defaultValue: 'visible',
       options: moderationStatusOptions,
     },
-    { name: 'metadata', type: 'json' },
+    { name: 'metadata', type: 'json', admin: { hidden: true } },
   ],
   timestamps: true,
 }
@@ -441,7 +441,7 @@ export const PayloadSpaceFiles: CollectionConfig = {
       defaultValue: 'visible',
       options: moderationStatusOptions,
     },
-    { name: 'metadata', type: 'json' },
+    { name: 'metadata', type: 'json', admin: { hidden: true } },
   ],
   timestamps: true,
 }
@@ -486,7 +486,7 @@ export const PayloadChatThreads: CollectionConfig = {
       ],
     },
     { name: 'lastMessageAt', type: 'date' },
-    { name: 'metadata', type: 'json' },
+    { name: 'metadata', type: 'json', admin: { hidden: true } },
   ],
   timestamps: true,
 }
@@ -535,7 +535,7 @@ export const PayloadChatMessages: CollectionConfig = {
       defaultValue: 'visible',
       options: moderationStatusOptions,
     },
-    { name: 'metadata', type: 'json' },
+    { name: 'metadata', type: 'json', admin: { hidden: true } },
   ],
   timestamps: true,
 }

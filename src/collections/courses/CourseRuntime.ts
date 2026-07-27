@@ -192,7 +192,7 @@ export const PayloadCourseEnrollments: CollectionConfig = {
     { name: 'completedAt', type: 'date' },
     { name: 'revokedAt', type: 'date' },
     { name: 'revokedReason', type: 'textarea' },
-    { name: 'metadata', type: 'json' },
+    { name: 'metadata', type: 'json', admin: { hidden: true } },
   ],
   timestamps: true,
 }
@@ -255,7 +255,7 @@ export const PayloadLessonProgress: CollectionConfig = {
       defaultValue: 0,
     },
     { name: 'lastPositionSeconds', type: 'number', min: 0, defaultValue: 0 },
-    { name: 'metadata', type: 'json' },
+    { name: 'metadata', type: 'json', admin: { hidden: true } },
   ],
   timestamps: true,
 }
