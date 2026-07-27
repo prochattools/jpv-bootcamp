@@ -229,6 +229,7 @@ function evaluateEmailNotification(params: {
 	lastNotifiedAt: Date | null
 	lastNotifiedEventId: string | null
 	sendKey?: string | null
+	isNewCustomer?: boolean
 }): { shouldSend: boolean; reason: string } {
 	if (!params.allowEmail) {
 		return { shouldSend: false, reason: params.disabledReason ?? 'disabled' }
@@ -238,6 +239,9 @@ function evaluateEmailNotification(params: {
 	}
 	if (params.sendKey && params.lastNotifiedEventId === params.sendKey) {
 		return { shouldSend: false, reason: 'send_key_already_notified' }
+	}
+	if (params.isNewCustomer) {
+		return { shouldSend: true, reason: 'new_customer_for_email' }
 	}
 	if (params.lastNotifiedPlan === params.newPlan) {
 		if (
@@ -1193,11 +1197,12 @@ export async function provisionFromCheckoutSession(
 	})
 
 	const planChanged = storedPlanName !== incomingPlan
+	const isNewCustomerCheckout = Boolean(existing && existing.stripeCustomerId && existing.stripeCustomerId !== customerId)
 	const decision: ProvisioningDecision = existing
-		? planChanged ? 'update_plan' : 'skip'
+		? planChanged ? 'update_plan' : isNewCustomerCheckout ? 'update_plan' : 'skip'
 		: 'provision'
 	const reason = existing
-		? planChanged ? 'plan_changed' : 'plan_unchanged'
+		? planChanged ? 'plan_changed' : isNewCustomerCheckout ? 'new_customer_same_plan' : 'plan_unchanged'
 		: 'no_projection_record'
 	oldPlan = storedPlanName
 	newPlan = incomingPlan
@@ -1214,6 +1219,7 @@ export async function provisionFromCheckoutSession(
 		lastNotifiedAt,
 		lastNotifiedEventId,
 		sendKey: emailSendKey,
+		isNewCustomer: isNewCustomerCheckout,
 	})
 	emailReason = emailEval.reason
 
@@ -1554,6 +1560,7 @@ export async function syncFromSubscription(
 	oldPlan = storedPlanName
 	newPlan = incomingPlan
 	const isCanonicalEmailEvent = eventType === 'customer.subscription.updated' || eventType === 'manual_sync'
+	const isNewCustomer = Boolean(existing && existing.stripeCustomerId && existing.stripeCustomerId !== customerId)
 	const emailEval = evaluateEmailNotification({
 		allowEmail: allowEmail && isCanonicalEmailEvent,
 		disabledReason: !isCanonicalEmailEvent ? 'event_not_canonical' : undefined,
@@ -1563,6 +1570,7 @@ export async function syncFromSubscription(
 		lastNotifiedAt,
 		lastNotifiedEventId,
 		sendKey: emailSendKey,
+		isNewCustomer,
 	})
 	emailReason = emailEval.reason
 
@@ -1574,6 +1582,9 @@ export async function syncFromSubscription(
 		if (planChanged) {
 			decision = 'update_plan'
 			reason = 'plan_changed'
+		} else if (isNewCustomer) {
+			decision = 'update_plan'
+			reason = 'new_customer_same_plan'
 		} else {
 			decision = 'skip'
 			reason = 'plan_unchanged'
