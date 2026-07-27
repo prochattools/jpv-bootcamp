@@ -59,11 +59,14 @@ const Form = () => {
 
   return (
     <form onSubmit={handleSubmit}>
+      <label htmlFor="waiting-list-email" className="sr-only">Email address</label>
       <Input
+        id="waiting-list-email"
         placeholder="Email"
         className="mt-8 mb-2"
         value={email}
         onChange={handleChange}
+        aria-label="Email address"
       />
       {error && <p className="text-red-500 mt-2 text-start">{error}</p>}
       <Button

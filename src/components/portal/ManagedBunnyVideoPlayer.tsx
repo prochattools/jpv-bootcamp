@@ -85,7 +85,7 @@ export function ManagedBunnyVideoPlayer({
   }, [knownStatus, slug, target])
 
   if (state.status === 'loading') {
-    return <p className='mt-4 text-sm text-jpv-muted'>Loading video…</p>
+    return <p className='mt-4 text-sm text-jpv-muted' role='status' aria-live='polite'>Loading video…</p>
   }
 
   if (state.status === 'no_video') return null

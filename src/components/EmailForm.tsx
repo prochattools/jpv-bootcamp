@@ -62,22 +62,31 @@ export default function EmailForm({
 		}
 	}
 
+	const nameId = `email-form-name-${source}`
+	const emailId = `email-form-email-${source}`
+
 	return (
 		<form onSubmit={handleSubmit} className={`w-full max-w-md ${className}`}>
 			<div className="flex flex-col gap-3">
 				{showNameField && (
-					<input
-						type="text"
-						placeholder="Your name (optional)"
-						value={name}
-						onChange={(e) => setName(e.target.value)}
-						className="input input-bordered w-full"
-						disabled={isLoading}
-					/>
+					<>
+						<label htmlFor={nameId} className="sr-only">Your name (optional)</label>
+						<input
+							id={nameId}
+							type="text"
+							placeholder="Your name (optional)"
+							value={name}
+							onChange={(e) => setName(e.target.value)}
+							className="input input-bordered w-full"
+							disabled={isLoading}
+						/>
+					</>
 				)}
-				
+
 				<div className="flex flex-col sm:flex-row gap-2">
+					<label htmlFor={emailId} className="sr-only">Email address</label>
 					<input
+						id={emailId}
 						type="email"
 						placeholder={placeholder}
 						value={email}

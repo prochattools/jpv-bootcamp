@@ -37,7 +37,7 @@ export default function BunnyVideoPage() {
     loadVideo()
   }, [videoId])
 
-  if (loading) return <div className="p-8">Loading video...</div>
+  if (loading) return <div className="p-8" role="status" aria-live="polite">Loading video...</div>
   if (error) return <div className="p-8 text-red-600">Error: {error}</div>
   if (!metadata) return <div className="p-8">No video found</div>
 

@@ -71,7 +71,10 @@ export default async function SponsoredApplicationsAdminPage() {
 										method='post'
 									>
 										<input name='tier' type='hidden' value='pro' />
+										<label htmlFor={`note-approve-${application.id}`} className='sr-only'>Decision note</label>
 										<input
+											id={`note-approve-${application.id}`}
+											aria-label='Decision note (optional)'
 											className='min-h-11 w-full rounded-jpv-control border border-jpv-border px-3 py-2 text-sm text-jpv-ink placeholder:text-jpv-muted'
 											name='note'
 											placeholder='Decision note (optional)'
