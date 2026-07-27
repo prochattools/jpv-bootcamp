@@ -179,7 +179,8 @@ async function updatePortalMemberProfileAction(formData: FormData) {
     })
 
     if (!result.ok) {
-      errorParam = result.error === 'display_name_required' ? 'display-name' : 'ineligible'
+      const failedResult = result as { ok: false; error: string }
+      errorParam = failedResult.error === 'display_name_required' ? 'display-name' : 'ineligible'
       redirect(`/portal/account?error=${errorParam}`)
     }
 
