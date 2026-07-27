@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto'
 
 import { normalizeEmail } from '@/lib/normalize-email'
+import { getPublicBaseUrl } from '@/lib/public-base-url'
 import { assertStagingRecipientAllowed } from '@/lib/staging-email-guard'
 import { getSystemEmailTemplate } from '@/lib/payloadCourse/systemEmailTemplates'
 import { redactDeliveredResetLink } from '@/lib/members/redactDeliveredResetLink'
@@ -116,7 +117,12 @@ function flattenRecord(
 }
 
 function templateData(event: PayloadDocument): Record<string, string> {
+  const baseUrl = getPublicBaseUrl().replace(/\/$/, '')
+
   return {
+    portalUrl: `${baseUrl}/portal`,
+    billingUrl: `${baseUrl}/portal/billing`,
+    supportUrl: `${baseUrl}/#support`,
     ...flattenRecord(asRecord(event.metadata)),
     eventId: String(event.id),
     toEmail: asString(event.toEmail) ?? '',

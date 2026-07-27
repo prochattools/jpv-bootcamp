@@ -28,13 +28,20 @@ function brandedTemplate(input: {
   paragraphs: string[]
   actionLabel?: string
   actionUrlVariable?: string
+  secondaryActionLabel?: string
+  secondaryActionUrlVariable?: string
 }): PayloadDocument {
   const textLines = [
     'Hi {{displayName}},',
     '',
     ...input.paragraphs.flatMap((paragraph) => [paragraph, '']),
   ]
-  if (input.actionUrlVariable) textLines.push(input.actionUrlVariable, '')
+  if (input.actionUrlVariable) {
+    textLines.push(`${input.actionLabel ?? 'Continue'}: ${input.actionUrlVariable}`, '')
+  }
+  if (input.secondaryActionUrlVariable) {
+    textLines.push(`${input.secondaryActionLabel ?? 'More information'}: ${input.secondaryActionUrlVariable}`, '')
+  }
   textLines.push('JPV Bootcamp')
 
   const paragraphs = input.paragraphs
@@ -53,11 +60,19 @@ function brandedTemplate(input: {
     htmlBody: renderBrandedEmail({
       preheader: input.preheader,
       heading: input.heading,
-      logoUrl: '{{logoUrl}}',
       bodyHtml: `<p style="margin:0 0 16px">Hi {{displayName}},</p>${paragraphs}`,
-      actions: input.actionUrlVariable
-        ? [{ label: input.actionLabel ?? 'Continue', url: input.actionUrlVariable }]
-        : [],
+      actions: [
+        ...(input.actionUrlVariable
+          ? [{ label: input.actionLabel ?? 'Continue', url: input.actionUrlVariable }]
+          : []),
+        ...(input.secondaryActionUrlVariable
+          ? [{
+              label: input.secondaryActionLabel ?? 'More information',
+              url: input.secondaryActionUrlVariable,
+              tone: 'secondary' as const,
+            }]
+          : []),
+      ],
     }),
     adminCopyRequired: false,
   }
@@ -188,6 +203,10 @@ const templates: Record<string, PayloadDocument> = {
       'Your account access has not been changed by this notice. Review your billing details in the member portal.',
       'If you recently updated your payment method, no further action may be needed.',
     ],
+    actionLabel: 'Review billing',
+    actionUrlVariable: '{{billingUrl}}',
+    secondaryActionLabel: 'Contact support',
+    secondaryActionUrlVariable: '{{supportUrl}}',
   }),
   [BILLING_PAYMENT_RECOVERED_TEMPLATE_KEY]: brandedTemplate({
     key: BILLING_PAYMENT_RECOVERED_TEMPLATE_KEY,
@@ -211,6 +230,10 @@ const templates: Record<string, PayloadDocument> = {
       'This notice does not change your account access by itself. Your subscription status remains the source of truth for membership access.',
       'Review your billing history in the member portal if you need more detail.',
     ],
+    actionLabel: 'Review billing history',
+    actionUrlVariable: '{{billingUrl}}',
+    secondaryActionLabel: 'Contact support',
+    secondaryActionUrlVariable: '{{supportUrl}}',
   }),
   [BILLING_PAYMENT_DISPUTED_TEMPLATE_KEY]: brandedTemplate({
     key: BILLING_PAYMENT_DISPUTED_TEMPLATE_KEY,
@@ -223,6 +246,8 @@ const templates: Record<string, PayloadDocument> = {
       'This notice does not change your account access by itself. Subscription status remains authoritative.',
       'Contact support if you do not recognize this billing activity.',
     ],
+    actionLabel: 'Contact support',
+    actionUrlVariable: '{{supportUrl}}',
   }),
   [ACCESS_BLOCKED_TEMPLATE_KEY]: brandedTemplate({
     key: ACCESS_BLOCKED_TEMPLATE_KEY,
@@ -234,6 +259,8 @@ const templates: Record<string, PayloadDocument> = {
       'Your JPV Bootcamp member account is currently blocked and cannot sign in.',
       'Contact support if you believe this is unexpected.',
     ],
+    actionLabel: 'Contact support',
+    actionUrlVariable: '{{supportUrl}}',
   }),
   [ACCESS_SUSPENDED_TEMPLATE_KEY]: brandedTemplate({
     key: ACCESS_SUSPENDED_TEMPLATE_KEY,
@@ -245,6 +272,8 @@ const templates: Record<string, PayloadDocument> = {
       'Your JPV Bootcamp member account is temporarily suspended and cannot sign in.',
       'Contact support for assistance.',
     ],
+    actionLabel: 'Contact support',
+    actionUrlVariable: '{{supportUrl}}',
   }),
   [ACCESS_RESTORED_TEMPLATE_KEY]: brandedTemplate({
     key: ACCESS_RESTORED_TEMPLATE_KEY,
@@ -256,6 +285,8 @@ const templates: Record<string, PayloadDocument> = {
       'Access to your JPV Bootcamp member account was restored.',
       'This did not sign you in automatically or change your email verification status.',
     ],
+    actionLabel: 'Open member portal',
+    actionUrlVariable: '{{portalUrl}}',
   }),
   [ACCESS_DELETED_TEMPLATE_KEY]: brandedTemplate({
     key: ACCESS_DELETED_TEMPLATE_KEY,
@@ -267,6 +298,8 @@ const templates: Record<string, PayloadDocument> = {
       'Your JPV Bootcamp member account was closed and can no longer sign in.',
       'Contact support if you believe this is unexpected.',
     ],
+    actionLabel: 'Contact support',
+    actionUrlVariable: '{{supportUrl}}',
   }),
 }
 

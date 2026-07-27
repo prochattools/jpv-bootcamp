@@ -553,3 +553,35 @@ All previously deferred items are now PROVEN:
 3. Confirm logs contain the onboarding send success or a specific Resend failure reason.
 4. Confirm Resend shows a delivered email from `enquiries@jpvbootcamp.com` to `info@prochat.tools`.
 5. Confirm a repeated webhook does not send a duplicate onboarding email.
+
+
+
+### 2026-07-27 Email design coherence
+
+**Implementation**
+- Updated the canonical branded email renderer with responsive mobile shell classes, compact content spacing, responsive heading/footer behavior, and canonical JPV logo fallback through `jpvBrand.logoPath`.
+- Added visible fallback URLs beneath branded action buttons while preserving escaped HTML and plain-text rendering.
+- Expanded queued email variables with absolute `portalUrl`, `billingUrl`, and `supportUrl` values derived from the configured application URL.
+- Added clear billing and support actions across payment-failed, refund, dispute, suspended, blocked, restored, deleted, and access-related system emails.
+- Preserved sponsored, invitation, verification, password, transactional, billing, queue, retry, redaction, dedupe, Resend provider, and compliance behavior.
+- Kept the canonical logo asset contract aligned with `src/lib/brand/jpvDesignSystem.ts`: `/images/jpv-logo.jpg`.
+
+**Validation**
+- Focused email design tests: **8/8 passed**.
+- Branded email template contract: **passed**.
+- Billing payment communications contract: **passed**.
+- Payload member verification integration: **passed** after restoring the canonical logo fallback.
+- Payload queue-sender contract: **passed** after updating the stale PNG fixture/assertion to the canonical JPG asset.
+- Payload TypeScript: **passed**.
+- Changed-path security scan: **clean**.
+- Production build job `validation-a30de978-6bfc-420f-a2f5-fd250d61aad6`: **passed**.
+- Canonical release job `validation-992aeab9-77d4-49cb-89de-91580cc931b6`: **154/154 passed**.
+
+**Responsive and provider proof boundary**
+- Repository-level responsive proof covers mobile email shell width, content spacing, headings, footer behavior, canonical actions, and fallback URLs.
+- Live email-client screenshots, provider inbox rendering, dark-mode client behavior, and final accessibility review remain deferred to the external email/client visual-proof phase.
+
+**Next owner-priority design work**
+1. Responsive and accessibility hardening across frontend, member portal, emails-as-rendered, operator tools, and Payload branding.
+2. Operator-tool design coherence.
+3. Payload admin branding and responsiveness.

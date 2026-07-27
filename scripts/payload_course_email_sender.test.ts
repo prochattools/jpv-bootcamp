@@ -217,7 +217,7 @@ async function testAccountSecuritySystemTemplates() {
           dedupeKey: `${templateKey}:member_1:event_1`,
           metadata: {
             displayName: '<Member & Admin>',
-            logoUrl: 'https://preview.jpvbootcamp.test/images/jpv-logo.png',
+            logoUrl: 'https://preview.jpvbootcamp.test/images/jpv-logo.jpg',
             actionUrl: 'https://preview.jpvbootcamp.test/account-action?token=fake-sensitive-value',
             verificationUrl: 'https://preview.jpvbootcamp.test/verify?token=fake-sensitive-value',
             moderationReason: 'private-moderation-detail',
@@ -246,7 +246,7 @@ async function testAccountSecuritySystemTemplates() {
     assert.ok(message.text?.trim(), templateKey)
     assert.ok(message.html?.trim(), templateKey)
     assert.match(message.html ?? '', /JPV/)
-    assert.match(message.html ?? '', /jpv-logo\.png/)
+    assert.match(message.html ?? '', /jpv-logo\.jpg/)
     assert.match(message.html ?? '', /&lt;Member &amp; Admin&gt;/)
     assert.equal((message.html ?? '').includes('<Member & Admin>'), false)
 
@@ -277,7 +277,7 @@ async function testSensitiveAccountLinkRedaction() {
           metadata: {
             purpose: templateKey,
             displayName: 'Member',
-            logoUrl: 'https://preview.jpvbootcamp.test/images/jpv-logo.png',
+            logoUrl: 'https://preview.jpvbootcamp.test/images/jpv-logo.jpg',
             actionUrl: 'https://preview.jpvbootcamp.test/action?token=fake-sensitive-value',
             verificationUrl: 'https://preview.jpvbootcamp.test/verify?token=fake-sensitive-value',
           },
