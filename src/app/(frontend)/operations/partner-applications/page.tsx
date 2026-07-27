@@ -56,7 +56,7 @@ export default async function PartnerApplicationsAdminPage({ searchParams }: Pag
       </section>
 
       <section className='flex gap-3'>
-        <Link className='rounded border border-neutral-300 px-3 py-2 text-sm' href='/api/admin/partner-applications/export'>
+        <Link className='inline-flex min-h-11 items-center rounded border border-neutral-300 px-3 py-2 text-sm' href='/api/admin/partner-applications/export'>
           Export CSV
         </Link>
       </section>
@@ -81,7 +81,7 @@ export default async function PartnerApplicationsAdminPage({ searchParams }: Pag
                 <td className='px-3 py-2'>{row.deliveryMethod}</td>
                 <td className='px-3 py-2'>
                   <form action={`/api/admin/partner-applications/${row.application}/retry`} method='post'>
-                    <button className='underline' type='submit'>
+                    <button className='inline-flex min-h-11 items-center underline' type='submit'>
                       Retry
                     </button>
                   </form>

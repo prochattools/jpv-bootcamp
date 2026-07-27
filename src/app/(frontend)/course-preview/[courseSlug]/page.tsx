@@ -82,7 +82,7 @@ export default async function CourseOverviewPage({
               <p className='text-xs font-medium uppercase tracking-[0.16em] text-jpv-sunshine-ink'>Learning Portal</p>
             </div>
           </Link>
-          <Link href='/course-preview' className='rounded-full border border-jpv-border px-4 py-2 text-sm font-bold text-jpv-brand-deep no-underline'>
+          <Link href='/course-preview' className='inline-flex min-h-11 items-center rounded-full border border-jpv-border px-4 py-2 text-sm font-bold text-jpv-brand-deep no-underline'>
             Back to courses
           </Link>
         </div>

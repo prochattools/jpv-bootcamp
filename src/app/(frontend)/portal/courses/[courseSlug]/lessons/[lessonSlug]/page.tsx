@@ -225,7 +225,7 @@ export default async function PortalLessonPage({ params, searchParams }: LessonP
           <nav aria-label='Lesson navigation' className='flex items-center justify-between gap-4'>
             {detail.previousLesson?.slug ? (
               <Link
-                className='text-sm font-semibold text-neutral-700 underline-offset-4 hover:text-neutral-950 hover:underline'
+                className='min-w-0 truncate text-sm font-semibold text-neutral-700 underline-offset-4 hover:text-neutral-950 hover:underline'
                 href={`/portal/courses/${courseSlug}/lessons/${detail.previousLesson.slug}`}
               >
                 ← {detail.previousLesson.title}
@@ -236,7 +236,7 @@ export default async function PortalLessonPage({ params, searchParams }: LessonP
 
             {detail.nextLesson?.slug ? (
               <Link
-                className='text-right text-sm font-semibold text-neutral-700 underline-offset-4 hover:text-neutral-950 hover:underline'
+                className='min-w-0 truncate text-right text-sm font-semibold text-neutral-700 underline-offset-4 hover:text-neutral-950 hover:underline'
                 href={`/portal/courses/${courseSlug}/lessons/${detail.nextLesson.slug}`}
               >
                 {detail.nextLesson.title} →

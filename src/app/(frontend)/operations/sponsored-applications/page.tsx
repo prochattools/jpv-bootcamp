@@ -90,7 +90,7 @@ export default async function SponsoredApplicationsAdminPage() {
 										/>
 										<button
 											type="submit"
-											className="rounded bg-neutral-900 px-3 py-2 text-sm font-semibold text-white"
+											className="min-h-11 rounded bg-neutral-900 px-3 py-2 text-sm font-semibold text-white"
 										>
 											Approve
 										</button>
@@ -102,7 +102,7 @@ export default async function SponsoredApplicationsAdminPage() {
 										<input type="hidden" name="note" value="Not approved" />
 										<button
 											type="submit"
-											className="rounded border border-neutral-300 px-3 py-2 text-sm font-semibold text-neutral-700"
+											className="min-h-11 rounded border border-neutral-300 px-3 py-2 text-sm font-semibold text-neutral-700"
 										>
 											Reject
 										</button>

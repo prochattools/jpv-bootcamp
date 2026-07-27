@@ -94,13 +94,13 @@ export default async function AdminReviewDetailPage({ params }: AdminReviewDetai
         <section className="mt-6 flex flex-wrap gap-3">
           <Link
             href={section.href}
-            className="rounded-lg bg-neutral-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-neutral-800"
+            className="inline-flex min-h-11 items-center rounded-lg bg-neutral-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-neutral-800"
           >
             View implementation
           </Link>
           <Link
             href="/admin/review"
-            className="rounded-lg border border-neutral-300 px-4 py-2.5 text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
+            className="inline-flex min-h-11 items-center rounded-lg border border-neutral-300 px-4 py-2.5 text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
           >
             All review sections
           </Link>

@@ -78,7 +78,7 @@ export default async function PortalCoursePage({ params }: CoursePageProps) {
               <ol className='mt-6 divide-y divide-neutral-200'>
                 {module.lessons.map((lesson, lessonIndex) => (
                   <li className='flex items-center justify-between gap-4 py-4' key={lesson.id}>
-                    <div>
+                    <div className='min-w-0'>
                       <p className='text-xs font-medium text-neutral-500'>Lesson {lessonIndex + 1}</p>
                       <h3 className='mt-1 font-semibold text-neutral-950'>{lesson.title}</h3>
                       {lesson.summary ? <p className='mt-1 text-sm text-neutral-600'>{lesson.summary}</p> : null}
