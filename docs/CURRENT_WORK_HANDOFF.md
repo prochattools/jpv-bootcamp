@@ -513,3 +513,43 @@ All previously deferred items are now PROVEN:
 - Staging branch remains `feature/course-branding-and-preview`; never deploy `main`.
 - `.github/workflows/deploy-preview.yml` currently triggers on pushes to `feature/**`, so pushing the reviewed branch triggers the preview deployment workflow.
 - No migrations, secret edits, or production operations are authorized by this batch.
+
+
+
+### 2026-07-27 Stripe onboarding email delivery incident
+
+**Root cause**
+- The staging recipient domain (`prochat.tools`) and verified sender domain (`jpvbootcamp.com`) are not contradictory. Resend requires the **From** domain to be verified; recipients may use any deliverable domain.
+- `checkout.session.completed` was allowed by the Stripe membership-email gate, but checkout provisioning treated only `customer.subscription.updated` and `manual_sync` as canonical email events. The successful checkout therefore suppressed onboarding with `event_not_canonical`; the later subscription event could then be deduplicated after the membership projection already existed.
+- The Payload startup warning (`No email adapter provided`) is separate from this custom membership onboarding path. Membership onboarding uses the repository's Resend-backed transactional sender directly.
+
+**Fix**
+- Checkout provisioning now treats `checkout.session.completed` as a canonical first-onboarding email event while preserving existing plan-change checks, event-id/plan dedupe, staging recipient restrictions, and later subscription-update behavior.
+- Added `scripts/stripe_onboarding_email_delivery.test.ts` to prove webhook allow-email propagation, checkout canonicality, Resend-backed welcome delivery, dedupe retention, and staging recipient safety.
+
+**Required staging environment contract**
+- `RESEND_API_KEY=<valid Resend API key>`
+- `RESEND_BASE_URL=https://api.resend.com`
+- `RESEND_FROM=enquiries@jpvbootcamp.com`
+- `EMAIL_FROM=enquiries@jpvbootcamp.com`
+- `SUPPORT_TO_EMAIL=enquiries@jpvbootcamp.com`
+- `STAGING_TEST_RECIPIENT_EMAIL=info@prochat.tools`
+- `STAGING_TEST_MEMBER_EMAIL=info@prochat.tools`
+- `STAGING_MEMBER_EMAIL=info@prochat.tools`
+- The `jpvbootcamp.com` sender/domain must be verified in the same Resend account as `RESEND_API_KEY`.
+- Stripe Checkout must collect or provide the actual subscriber email; Stripe itself does not send the application's onboarding email.
+
+**Validation**
+- Focused onboarding-email contract: **passed**.
+- Existing webhook/outbox behavioral tests: **24/24 passed**.
+- Payload TypeScript: **passed**.
+- Changed-path security scan: **clean**.
+- Production build job `validation-ed543f3d-6bc0-47d8-bdc6-a533039fc0f4`: **passed**.
+- `test:release` job `validation-6aedbcb7-0cde-4297-b8cc-031886bf1f7d` was blocked by an unrelated concurrent TypeScript error in `src/app/(frontend)/portal/[section]/page.tsx`; no email-fix file failed validation.
+
+**Staging verification after deployment**
+1. Complete a fresh Stripe test checkout using `info@prochat.tools`.
+2. Confirm `checkout.session.completed` reaches `/api/webhook/stripe` with HTTP 200.
+3. Confirm logs contain the onboarding send success or a specific Resend failure reason.
+4. Confirm Resend shows a delivered email from `enquiries@jpvbootcamp.com` to `info@prochat.tools`.
+5. Confirm a repeated webhook does not send a duplicate onboarding email.
