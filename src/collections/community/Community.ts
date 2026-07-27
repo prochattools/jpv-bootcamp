@@ -24,7 +24,7 @@ export const PayloadMemberGroups: CollectionConfig = {
     plural: 'Member Groups',
   },
   admin: {
-    group: 'Members & Access',
+    group: 'Community',
     useAsTitle: 'name',
     defaultColumns: ['name', 'slug', 'status', 'visibility', 'updatedAt'],
     description: 'Member group records used by access and moderation workflows.',

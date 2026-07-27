@@ -2,7 +2,7 @@ import type { CollectionConfig } from 'payload'
 
 import { adminOnlyCollectionAccess, isPayloadAdminRequest } from '@/lib/access/payloadAccess'
 
-const crmGroup = 'Administration'
+const crmGroup = 'Emails'
 
 function isEmailOperatorAction(value: unknown): boolean {
   return value === 'retry_delivery'

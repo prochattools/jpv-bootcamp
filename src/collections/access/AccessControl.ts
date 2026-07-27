@@ -2,7 +2,7 @@ import type { CollectionConfig } from 'payload'
 
 import { adminOnlyCollectionAccess, requirePayloadAdmin } from '@/lib/access/payloadAccess'
 
-const accessControlGroup = 'Members & Access'
+const accessControlGroup = 'Members'
 
 const resourceTypeOptions = [
   { label: 'Course', value: 'course' },

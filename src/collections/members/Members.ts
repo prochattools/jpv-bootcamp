@@ -22,7 +22,7 @@ export const PayloadMembers: CollectionConfig = {
   admin: {
     useAsTitle: 'email',
     defaultColumns: ['email', 'accountStatus', 'source', 'billingHoldReason', 'updatedAt'],
-    group: 'Members & Access',
+    group: 'Members',
     description: 'Student and client accounts. This is separate from Payload administrator users.',
   },
   access: {
@@ -122,7 +122,7 @@ export const PayloadMemberProfiles: CollectionConfig = {
   admin: {
     useAsTitle: 'displayName',
     defaultColumns: ['displayName', 'member', 'company', 'updatedAt'],
-    group: 'Members & Access',
+    group: 'Members',
     hidden: true,
     description: 'Member profile details and communication preferences.',
   },
@@ -167,8 +167,8 @@ export const PayloadMemberSecurityEvents: CollectionConfig = {
   admin: {
     useAsTitle: 'eventType',
     defaultColumns: ['eventType', 'member', 'source', 'createdAt'],
-    group: 'Members & Access',
-    hidden: false,
+    group: 'Members',
+    hidden: true,
     description: 'Member authentication and account-security events for administrator review.',
   },
   access: adminOnlyCollectionAccess,

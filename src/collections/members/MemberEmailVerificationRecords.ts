@@ -10,7 +10,7 @@ export const PayloadMemberVerificationRecords: CollectionConfig = {
     plural: 'Member Verification Records',
   },
   admin: {
-    group: 'Members & Access',
+    group: 'Members',
     hidden: true,
     useAsTitle: 'idempotencyKey',
     defaultColumns: ['member', 'purpose', 'expiresAt', 'consumedAt', 'invalidatedAt'],
