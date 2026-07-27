@@ -14,11 +14,11 @@ const WEEK_NUMBERS: Record<string, number> = {
 function accessBadge(access: WeekEntry['access']): { label: string; className: string } {
   switch (access) {
     case 'free_and_pro':
-      return { label: 'Free + Pro', className: 'bg-blue-50 text-blue-700' }
+      return { label: 'Free + Pro', className: 'border-jpv-brand/20 bg-emerald-50 text-emerald-700' }
     case 'pro':
-      return { label: 'Pro', className: 'bg-amber-50 text-amber-700' }
+      return { label: 'Pro', className: 'border-jpv-sunshine bg-jpv-surface text-jpv-sunshine-ink' }
     case 'free':
-      return { label: 'Free', className: 'bg-green-50 text-green-700' }
+      return { label: 'Free', className: 'border-jpv-border bg-jpv-canvas text-jpv-muted' }
   }
 }
 
@@ -27,19 +27,17 @@ function WeekCard({ week, index }: { week: WeekEntry; index: number }) {
   const access = accessBadge(week.access)
 
   return (
-    <article className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
-      <div className="flex items-start justify-between gap-4">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-neutral-500">
-          Week {weekNumber}
-        </p>
-        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${access.className}`}>
+    <article className='rounded-jpv-card border border-jpv-border bg-jpv-canvas p-5 shadow-jpv-card sm:p-6'>
+      <div className='flex items-start justify-between gap-4'>
+        <p className='jpv-eyebrow'>Week {weekNumber}</p>
+        <span className={`rounded-jpv-pill border px-3 py-1 text-xs font-semibold ${access.className}`}>
           {access.label}
         </span>
       </div>
-      <h3 className="mt-2 text-xl font-semibold text-neutral-950">{week.title}</h3>
-      <p className="mt-3 text-sm leading-6 text-neutral-600">{week.summary}</p>
+      <h3 className='mt-2 text-xl font-semibold text-jpv-ink'>{week.title}</h3>
+      <p className='mt-3 text-sm leading-6 text-jpv-muted'>{week.summary}</p>
       {week.hasMentorship ? (
-        <p className="mt-4 text-xs font-semibold text-neutral-500">Includes mentorship session</p>
+        <p className='mt-4 text-xs font-semibold text-jpv-muted'>Includes mentorship session</p>
       ) : null}
     </article>
   )
@@ -52,48 +50,36 @@ export default async function PortalProgrammePage() {
   const summary = getProgrammeSummary()
 
   return (
-    <div className="space-y-8">
-      <section>
-        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-neutral-500">
-          JPV Bootcamp
+    <div className='space-y-6'>
+      <header className='rounded-jpv-panel border border-jpv-border bg-jpv-canvas p-6 shadow-jpv-card sm:p-8'>
+        <p className='jpv-eyebrow'>JPV Bootcamp</p>
+        <h1 className='mt-2 text-3xl font-semibold tracking-tight text-jpv-ink'>8-Week Programme</h1>
+        <p className='mt-3 max-w-2xl text-sm leading-6 text-jpv-muted'>
+          Weekly modules covering strategy, analysis, funding, deals, and portfolio growth for active JPV Bootcamp Membership holders. Content is representative and does not reflect final client-approved copy.
         </p>
-        <h1 className="mt-3 text-3xl font-semibold tracking-tight">8-Week Programme</h1>
-        <p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-600">
-          Weekly modules covering strategy, analysis, funding, deals, and portfolio growth for
-          active JPV Bootcamp Membership holders. Content is representative and does not
-          reflect final client-approved copy.
+        <p className='jpv-notice mt-4'>
+          Preview only — programme content is placeholder until a complete approved content package passes repository validation, acceptance, and approval evidence review. Full access requires an active JPV Bootcamp Membership, including voucher-funded or pay-it-forward-funded membership. Client input due 15 July 2026.
         </p>
-        <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          Preview only — programme content is placeholder until a complete approved content package
-          passes repository validation, acceptance, and approval evidence review. Full access
-          requires an active JPV Bootcamp Membership, including voucher-funded or pay-it-forward-funded membership. Client input due 15 July 2026.
-        </div>
-      </section>
+      </header>
 
-      <section>
-        <div className="grid gap-5 md:grid-cols-2">
+      <section aria-label={`${summary.totalWeeks} programme weeks`}>
+        <div className='grid gap-5 md:grid-cols-2'>
           {weeks.map((week, index) => (
             <WeekCard key={week.id} week={week} index={index} />
           ))}
         </div>
       </section>
 
-      <section className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
-        <h2 className="text-xl font-semibold text-neutral-950">Membership</h2>
-        <p className="mt-2 text-sm text-neutral-600">
+      <section className='rounded-jpv-panel border border-jpv-border bg-jpv-canvas p-5 shadow-jpv-card sm:p-6'>
+        <h2 className='text-xl font-semibold text-jpv-ink'>Membership</h2>
+        <p className='mt-2 text-sm leading-6 text-jpv-muted'>
           Full programme access including mentorship and community requires an active JPV Bootcamp Membership.
         </p>
-        <div className="mt-4 flex flex-wrap gap-3">
-          <Link
-            href="/portal/billing"
-            className="rounded-lg bg-neutral-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-neutral-800"
-          >
+        <div className='mt-4 flex flex-wrap gap-3'>
+          <Link className='jpv-button-primary min-h-11' href='/portal/billing'>
             View JPV Bootcamp Membership
           </Link>
-          <Link
-            href="/portal"
-            className="rounded-lg border border-neutral-300 px-4 py-2.5 text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
-          >
+          <Link className='jpv-button-secondary min-h-11' href='/portal'>
             Dashboard
           </Link>
         </div>

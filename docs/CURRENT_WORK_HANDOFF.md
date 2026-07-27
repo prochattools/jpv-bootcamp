@@ -481,3 +481,35 @@ All previously deferred items are now PROVEN:
 3. Responsive and accessibility hardening with live visual proof.
 4. Operator tool branding and density.
 5. Payload admin branding and responsiveness.
+
+
+
+### 2026-07-27 Secondary member-portal state hardening
+
+**Implementation**
+- Aligned shared `StatusPill` tones with canonical JPV status tokens.
+- Aligned Bunny video loading, processing, entitlement, unauthorized, failed, and playback states with canonical notices, cards, and accessible status semantics.
+- Aligned `/portal/programme`, `/portal/partner-referral`, Community Submissions, Community Moderation, and Community Post/Reply surfaces with canonical JPV spacing, fields, status pills, actions, notices, and responsive layouts.
+- Preserved all Bunny fetch and entitlement behavior, member authorization, programme catalog data, preview-only referral behavior, submission queries/downloads, moderation actions/audit actor/redirects, discussion `notFound()` behavior, attachments, locked comments, and `submitCommunityComment.bind(null, spaceSlug, postId)`.
+- Standardized scoped date formatting to `en-US`.
+- Updated the Programme static route contract to accept either valid JSX quote style around `/portal/billing`.
+
+**Validation**
+- Focused secondary portal tests: **7/7 passed**.
+- Combined design tests: **76/76 passed**.
+- Portal route ownership: **passed**.
+- Payload TypeScript: **passed** after one bounded stale-property repair (`summary.weekCount` to `summary.totalWeeks`).
+- Scoped prohibited-style scan: **zero matches**.
+- Changed-path security scan: clean except for the unchanged same-origin Bunny fetch; separate secret-material and runtime-execution scans are clean.
+- Production build job `validation-eb238b1a-1da9-4029-9a92-aac4935ccfaa`: **passed**.
+- Targeted Programme contract: **passed**.
+- Release job `validation-6e0f3f7c-14c6-4d64-91b3-7f5372c291c6`: all **154/154 checks passed**; the wrapper exited 1 only because concurrent Stripe/release work changed repository paths during validation.
+
+**Concurrent Stripe checkout fix**
+- Public Stripe membership checkout was fixed separately and committed as `06866d4 fix: allow public Stripe membership checkout`.
+- The checkout and portal-design changes remain separate commits.
+
+**Deployment boundary**
+- Staging branch remains `feature/course-branding-and-preview`; never deploy `main`.
+- `.github/workflows/deploy-preview.yml` currently triggers on pushes to `feature/**`, so pushing the reviewed branch triggers the preview deployment workflow.
+- No migrations, secret edits, or production operations are authorized by this batch.

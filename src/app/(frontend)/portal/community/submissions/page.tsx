@@ -15,7 +15,7 @@ function formatDate(value: string | null): string {
   if (!value) return 'Date unavailable'
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return 'Date unavailable'
-  return new Intl.DateTimeFormat('en', {
+  return new Intl.DateTimeFormat('en-US', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
@@ -36,25 +36,22 @@ function kindLabel(kind: MemberCommunitySubmission['kind']): string {
 
 function SubmissionCard({ item }: { item: MemberCommunitySubmission }) {
   return (
-    <article className='rounded-jpv-card border border-[var(--jpv-brand-deep)]/10 bg-white p-6 shadow-jpv-card'>
+    <article className='rounded-jpv-card border border-jpv-border bg-jpv-canvas p-5 shadow-jpv-card sm:p-6'>
       <div className='flex flex-wrap items-center justify-between gap-3'>
-        <p className='text-xs font-bold uppercase tracking-[0.16em] text-[var(--jpv-sunshine-ink)]'>{kindLabel(item.kind)}</p>
+        <p className='jpv-eyebrow'>{kindLabel(item.kind)}</p>
         <StatusPill tone={statusTone(item.status)}>{item.status}</StatusPill>
       </div>
 
-      <h2 className='mt-4 text-xl font-bold text-[var(--jpv-brand-deep)]'>{item.title}</h2>
-      <p className='mt-2 text-sm text-[var(--jpv-muted)]'>
+      <h2 className='mt-4 text-xl font-semibold text-jpv-ink'>{item.title}</h2>
+      <p className='mt-2 text-sm text-jpv-muted'>
         {item.spaceName} · {formatDate(item.createdAt)}
       </p>
 
-      {item.downloadUrl && (
-        <Link
-          className='mt-5 inline-flex rounded-full border border-[var(--jpv-brand-deep)]/20 px-5 py-2.5 text-sm font-bold text-[var(--jpv-brand-deep)] transition hover:border-[var(--jpv-sunshine-ink)]'
-          href={item.downloadUrl}
-        >
+      {item.downloadUrl ? (
+        <Link className='jpv-button-secondary mt-5 min-h-11' href={item.downloadUrl}>
           Download published file
         </Link>
-      )}
+      ) : null}
     </article>
   )
 }
@@ -64,30 +61,28 @@ export default async function CommunitySubmissionsPage() {
   const submissions = await getMemberCommunitySubmissions(payload, memberId)
 
   return (
-    <div className='mx-auto max-w-6xl space-y-10'>
-      <Link className='text-sm font-bold text-[var(--jpv-sunshine-ink)] hover:text-[var(--jpv-brand-deep)]' href='/portal/community'>
+    <div className='space-y-6'>
+      <Link className='inline-flex min-h-11 items-center text-sm font-semibold text-jpv-brand-deep hover:underline' href='/portal/community'>
         Back to community
       </Link>
 
-      <section className='rounded-jpv-panel bg-[var(--jpv-brand-deep)] p-8 text-white shadow-jpv-card sm:p-10 lg:p-14'>
+      <header className='rounded-jpv-panel bg-jpv-brand-deep p-6 text-jpv-canvas shadow-jpv-card sm:p-8'>
         <StatusPill tone='neutral'>My submissions</StatusPill>
-        <h1 className='mt-7 text-4xl font-bold leading-tight tracking-tight sm:text-5xl'>
-          Track your community submissions.
-        </h1>
-        <p className='mt-5 max-w-2xl text-base leading-7 text-[var(--jpv-inverse-muted)] sm:text-lg'>
+        <h1 className='mt-5 text-3xl font-semibold leading-tight tracking-tight sm:text-4xl'>Track your community submissions.</h1>
+        <p className='mt-3 max-w-2xl text-sm leading-6 text-jpv-inverse-muted sm:text-base'>
           Review whether your posts, comments, and files are pending review, published, or no longer published.
         </p>
-        <p className='mt-4 text-sm text-[var(--jpv-inverse-muted)]'>{memberEmail}</p>
-      </section>
+        <p className='mt-3 break-all text-sm text-jpv-inverse-muted'>{memberEmail}</p>
+      </header>
 
       {submissions.length > 0 ? (
-        <section className='grid gap-6 lg:grid-cols-2'>
+        <section className='grid gap-5 lg:grid-cols-2'>
           {submissions.map((item, index) => (
             <SubmissionCard item={item} key={`${item.kind}:${item.title}:${item.createdAt ?? 'unknown'}:${index}`} />
           ))}
         </section>
       ) : (
-        <section className='rounded-jpv-panel border border-dashed border-[var(--jpv-brand-deep)]/20 bg-[var(--jpv-surface)] p-8 text-[var(--jpv-muted)]'>
+        <section className='rounded-jpv-panel border border-dashed border-jpv-border bg-jpv-surface p-6 text-sm text-jpv-muted'>
           You have not submitted any community posts, comments, or files yet.
         </section>
       )}

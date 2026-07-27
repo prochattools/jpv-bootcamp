@@ -85,39 +85,39 @@ export function ManagedBunnyVideoPlayer({
   }, [knownStatus, slug, target])
 
   if (state.status === 'loading') {
-    return <p className='mt-4 text-sm text-neutral-500'>Loading video…</p>
+    return <p className='mt-4 text-sm text-jpv-muted'>Loading video…</p>
   }
 
   if (state.status === 'no_video') return null
 
   if (state.status === 'processing') {
     return (
-      <div className='mt-5 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3'>
-        <p className='text-sm font-semibold text-blue-900'>Video processing</p>
-        <p className='mt-1 text-sm text-blue-800'>This video will appear when Bunny finishes processing it.</p>
+      <div className='jpv-notice mt-5' role='status'>
+        <p className='text-sm font-semibold text-jpv-ink'>Video processing</p>
+        <p className='mt-1 text-sm text-jpv-muted'>This video will appear when processing is complete.</p>
       </div>
     )
   }
 
   if (state.status === 'not_entitled') {
     return (
-      <div className='mt-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3'>
-        <p className='text-sm font-semibold text-amber-900'>Membership required</p>
-        <p className='mt-1 text-sm text-amber-800'>Your account does not currently include this video.</p>
+      <div className='jpv-notice mt-5'>
+        <p className='text-sm font-semibold text-jpv-ink'>Membership required</p>
+        <p className='mt-1 text-sm text-jpv-muted'>Your account does not currently include this video.</p>
       </div>
     )
   }
 
   if (state.status === 'unauthorized') {
-    return <p className='mt-4 text-sm text-neutral-600'>Sign in to watch this video.</p>
+    return <p className='jpv-notice mt-4'>Sign in to watch this video.</p>
   }
 
   if (state.status === 'error') {
-    return <p className='mt-4 text-sm text-neutral-600'>Video unavailable. Please try again later.</p>
+    return <p className='jpv-notice jpv-notice-danger mt-4'>Video unavailable. Please try again later.</p>
   }
 
   return (
-    <div className='mt-5 overflow-hidden rounded-xl bg-black'>
+    <div className='mt-5 overflow-hidden rounded-jpv-card bg-jpv-ink shadow-jpv-card'>
       <video
         aria-label={title}
         className='w-full'
