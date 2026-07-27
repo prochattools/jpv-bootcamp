@@ -8,6 +8,7 @@ export const PayloadBunnyVideo: CollectionConfig = {
 		plural: 'Bunny Videos',
 	},
 	admin: {
+		group: 'Content',
 		useAsTitle: 'title',
 		defaultColumns: ['title', 'status', 'duration', 'libraryId', 'videoId', 'createdAt'],
 	},

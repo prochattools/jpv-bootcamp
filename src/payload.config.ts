@@ -118,27 +118,35 @@ export default buildConfig({
     admin: '/admin',
   },
   collections: [
-    PayloadUsers,
-    PayloadMedia,
-    PayloadPages,
-    PayloadPosts,
-    PayloadCategories,
+    // Community
+    ...communityCollections,
+    // Courses
     PayloadLiveSession,
-    PayloadBunnyVideo,
     PayloadCourses,
     PayloadCourseModules,
     PayloadLessons,
     PayloadCourseAccessPreview,
-    ...memberCollections,
     ...courseRuntimeCollections,
+    // Content (including Bunny Videos)
+    PayloadMedia,
+    PayloadPages,
+    PayloadPosts,
+    PayloadCategories,
+    PayloadBunnyVideo,
+    // Members & Access
+    ...memberCollections,
     ...accessControlCollections,
+    // Partners & Affiliates
     ...affiliateCollections,
     ...partnerCollections,
+    // Billing
     ...billingCollections,
-    ...membershipSupportCollections,
-    ...crmCollections,
-    ...communityCollections,
+    // Administration
+    PayloadUsers,
     ...auditCollections,
+    ...crmCollections,
+    // Membership Support
+    ...membershipSupportCollections,
   ],
   editor: lexicalEditor(),
   plugins: mediaStoragePlugins,

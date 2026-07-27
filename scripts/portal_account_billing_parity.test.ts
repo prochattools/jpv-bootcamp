@@ -72,7 +72,7 @@ function testCanonicalAccountParity(): void {
   assert.match(portalSectionsSource, /getMemberAccountOverview\(payload, memberId\)/)
   assert.match(portalSectionsSource, /collection: 'payload_members'/)
   assert.match(portalSectionsSource, /redirect\('\/portal\/account\?updated=1'\)/)
-  assert.match(portalSectionsSource, /redirect\('\/portal\/account\?error=display-name'\)/)
+  assert.match(portalSectionsSource, /redirect\(`\/portal\/account\?error=\$\{errorParam\}`\)/)
   assert.doesNotMatch(portalSectionsSource, removedImportPattern)
 }
 
