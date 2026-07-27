@@ -3,7 +3,7 @@ import type {
   PayloadDocument,
   PayloadId,
 } from '@/lib/payloadCourse/accessService'
-import { queueEmailEvent } from '@/lib/payloadCourse/events'
+import { queueAndAttemptEmailEvent } from '@/lib/payloadCourse/events'
 
 export type CommunityModerationRecordKind = 'post' | 'comment' | 'file'
 export type CommunityModerationOutcome = 'visible' | 'hidden'
@@ -111,7 +111,7 @@ export async function queuePendingCommunityModerationNotifications(
     let skipped = 0
 
     for (const recipient of recipients) {
-      const result = await queueEmailEvent(payload, {
+      const result = await queueAndAttemptEmailEvent(payload, {
         toEmail: recipient,
         templateKey: 'admin-notification',
         dedupeKey: `community-moderation:pending:${input.kind}:${String(input.recordId)}:${recipient}`,
@@ -141,7 +141,7 @@ export async function queueCommunityModerationOutcomeNotification(
     const recipient = normalizeEmail(author?.email)
     if (!recipient) return { queued: 0, skipped: 1 }
 
-    const result = await queueEmailEvent(payload, {
+    const result = await queueAndAttemptEmailEvent(payload, {
       toEmail: recipient,
       contact: author?.id ?? null,
       templateKey: 'community-moderation-outcome',

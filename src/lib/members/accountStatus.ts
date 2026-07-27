@@ -3,7 +3,7 @@ import type {
   PayloadDocument,
   PayloadId,
 } from '@/lib/payloadCourse/accessService'
-import { createAuditEvent, queueEmailEvent } from '@/lib/payloadCourse/events'
+import { createAuditEvent, queueAndAttemptEmailEvent } from '@/lib/payloadCourse/events'
 import { resolveJpvLogoUrl } from '@/lib/brand/jpvDesignSystem'
 
 type ActorInput = {
@@ -131,7 +131,7 @@ async function queueAccountEmails(
 
   if (email) {
     try {
-      const { event } = await queueEmailEvent(payload, {
+      const { event } = await queueAndAttemptEmailEvent(payload, {
         toEmail: email,
         templateKey: `access-${action}`,
         dedupeKey: `access-${action}:${member.id}:${sourceEventId}`,
@@ -151,7 +151,7 @@ async function queueAccountEmails(
 
   if (input.adminEmail) {
     try {
-      const { event } = await queueEmailEvent(payload, {
+      const { event } = await queueAndAttemptEmailEvent(payload, {
         toEmail: input.adminEmail,
         templateKey: 'admin-notification',
         dedupeKey: `admin-notification:account-${action}:${member.id}:${sourceEventId}`,

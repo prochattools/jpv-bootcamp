@@ -3,7 +3,7 @@ import type {
   PayloadId,
   PayloadMemberAuthAPI,
 } from '@/lib/payloadCourse/accessService'
-import { createAuditEvent, queueEmailEvent } from '@/lib/payloadCourse/events'
+import { createAuditEvent, queueAndAttemptEmailEvent } from '@/lib/payloadCourse/events'
 import { isEligibleCurrentMember } from '@/lib/members/currentMember'
 import { resolveJpvLogoUrl } from '@/lib/brand/jpvDesignSystem'
 
@@ -111,7 +111,7 @@ export async function changeMemberPassword(
   let confirmationQueued = false
   try {
     const baseUrl = new URL(input.baseUrl)
-    const queued = await queueEmailEvent(payload, {
+    const queued = await queueAndAttemptEmailEvent(payload, {
       toEmail: email,
       templateKey: 'member-password-changed',
       dedupeKey: `member-password-changed:${input.memberId}:${securityEvent.id}`,

@@ -6,7 +6,7 @@ import type {
 import {
   createAuditEvent,
   createEntitlementEvent,
-  queueEmailEvent,
+  queueAndAttemptEmailEvent,
 } from '@/lib/payloadCourse/events'
 
 type ActorInput = {
@@ -177,7 +177,7 @@ async function queueMembershipEmails(
   const toEmail = memberEmail(member)
 
   if (toEmail && args.action !== 'requested') {
-    const { event } = await queueEmailEvent(payload, {
+    const { event } = await queueAndAttemptEmailEvent(payload, {
       toEmail,
       templateKey: `space-access-${args.action}`,
       dedupeKey: `space-access-${args.action}:${args.memberId}:${args.spaceId}:${args.membership.id}`,
@@ -191,7 +191,7 @@ async function queueMembershipEmails(
   }
 
   if (args.adminEmail) {
-    const { event } = await queueEmailEvent(payload, {
+    const { event } = await queueAndAttemptEmailEvent(payload, {
       toEmail: args.adminEmail,
       templateKey: 'admin-notification',
       dedupeKey: `admin-notification:space-access-${args.action}:${args.membership.id}`,

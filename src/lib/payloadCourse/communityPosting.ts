@@ -5,7 +5,7 @@ import type {
 } from '@/lib/payloadCourse/accessService'
 import {
   createAuditEvent,
-  queueEmailEvent,
+  queueAndAttemptEmailEvent,
 } from '@/lib/payloadCourse/events'
 
 type ActorInput = {
@@ -300,7 +300,7 @@ async function queueModerationEmail(
 
   if (!args.adminEmail) return []
 
-  const { event } = await queueEmailEvent(payload, {
+  const { event } = await queueAndAttemptEmailEvent(payload, {
     toEmail: args.adminEmail,
     templateKey: 'admin-notification',
     dedupeKey: `admin-notification:${args.action}:${args.document.id}`,

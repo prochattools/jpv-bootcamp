@@ -94,7 +94,7 @@ function testSupport(): void {
       'const service = createSupportIntakeService',
       'prisma.supportRequest.create',
       'prisma.supportRequest.update',
-      'queueEmailEvent',
+      'queueAndAttemptEmailEvent',
       "templateKey: 'admin-notification'",
       "purpose: 'support_request_pending_review'",
       'accepted: true',

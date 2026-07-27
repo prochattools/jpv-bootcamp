@@ -1,3 +1,7 @@
+import { Resend } from 'resend'
+
+import { attemptImmediateEmailDelivery } from '@/lib/payloadCourse/emailSender'
+import type { PayloadEmailSenderConfig } from '@/lib/payloadCourse/emailSender'
 import type {
   PayloadCourseWriteAPI,
   PayloadDocument,
@@ -105,6 +109,25 @@ export async function queueEmailEvent(
   })
 
   return { event, created: true }
+}
+
+export async function queueAndAttemptEmailEvent(
+  payload: PayloadCourseWriteAPI,
+  input: EmailEventInput
+): Promise<{ event: PayloadDocument; created: boolean }> {
+  const result = await queueEmailEvent(payload, input)
+
+  if (result.created) {
+    const resendApiKey = process.env.RESEND_API_KEY
+    const resend = resendApiKey ? new Resend(resendApiKey) : undefined
+    const emailConfig: PayloadEmailSenderConfig = {
+      from: process.env.RESEND_FROM ?? process.env.EMAIL_FROM ?? '',
+      replyTo: process.env.EMAIL_REPLY_TO ?? null,
+    }
+    attemptImmediateEmailDelivery(payload, result.event.id, { resend, emailConfig })
+  }
+
+  return result
 }
 
 export async function createEntitlementEvent(

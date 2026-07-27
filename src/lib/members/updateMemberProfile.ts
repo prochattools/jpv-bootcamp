@@ -1,5 +1,5 @@
 import type { PayloadCourseWriteAPI, PayloadId } from '@/lib/payloadCourse/accessService'
-import { createAuditEvent, queueEmailEvent } from '@/lib/payloadCourse/events'
+import { createAuditEvent, queueAndAttemptEmailEvent } from '@/lib/payloadCourse/events'
 import { isEligibleCurrentMember } from '@/lib/members/currentMember'
 import { resolveJpvLogoUrl } from '@/lib/brand/jpvDesignSystem'
 
@@ -120,7 +120,7 @@ export async function updateMemberProfile(
   if (email) {
     try {
       const baseUrl = new URL(input.baseUrl)
-      const queued = await queueEmailEvent(payload, {
+      const queued = await queueAndAttemptEmailEvent(payload, {
         toEmail: email,
         templateKey: 'member-profile-changed',
         dedupeKey: `member-profile-changed:${memberId}:${securityEvent.id}`,

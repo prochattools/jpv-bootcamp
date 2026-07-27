@@ -4,7 +4,7 @@ import type {
   PayloadMemberAuthAPI,
 } from '@/lib/payloadCourse/accessService'
 import { getMemberEmailVerificationSchema } from '@/lib/auth/memberEmailVerificationSql'
-import { createAuditEvent, queueEmailEvent } from '@/lib/payloadCourse/events'
+import { createAuditEvent, queueAndAttemptEmailEvent } from '@/lib/payloadCourse/events'
 import { quotePgIdentifier } from '@/lib/payloadMigrationSchema'
 import { isEligibleCurrentMember } from '@/lib/members/currentMember'
 
@@ -142,7 +142,7 @@ async function queuePasswordChangedConfirmation(
   }
 
   try {
-    await queueEmailEvent(payload, {
+    await queueAndAttemptEmailEvent(payload, {
       toEmail: input.email,
       templateKey: 'member-password-changed',
       dedupeKey,

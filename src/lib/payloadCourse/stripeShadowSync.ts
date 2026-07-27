@@ -9,7 +9,7 @@ import type {
   PayloadDocument,
   PayloadId,
 } from '@/lib/payloadCourse/accessService'
-import { createAuditEvent, queueEmailEvent } from '@/lib/payloadCourse/events'
+import { createAuditEvent, queueAndAttemptEmailEvent } from '@/lib/payloadCourse/events'
 import {
 	BILLING_PAYMENT_DISPUTED_TEMPLATE_KEY,
 	BILLING_PAYMENT_FAILED_TEMPLATE_KEY,
@@ -775,7 +775,7 @@ async function queueBillingEmails(
     metadata?: Record<string, unknown>
   }
 ) {
-  await queueEmailEvent(payload, {
+  await queueAndAttemptEmailEvent(payload, {
     toEmail: params.email,
     contact: params.contactId,
     templateKey: params.templateKey,
@@ -789,7 +789,7 @@ async function queueBillingEmails(
 
   if (!params.adminEmail) return
 
-  await queueEmailEvent(payload, {
+  await queueAndAttemptEmailEvent(payload, {
     toEmail: params.adminEmail,
     templateKey: 'admin-notification',
     dedupeKey: params.adminDedupeKey,
@@ -1143,7 +1143,7 @@ async function syncInvoice(
       ? `billing-payment-${paymentStatus}:${stripeInvoiceId}`
       : `billing-payment-recovered:${stripeInvoiceId}`
 
-    const queuedNotice = await queueEmailEvent(payload, {
+    const queuedNotice = await queueAndAttemptEmailEvent(payload, {
       toEmail: subject.email,
       contact: subject.contact.id,
       templateKey,
@@ -1322,7 +1322,7 @@ async function syncRefundOrDispute(
       kind === 'refunded'
         ? `billing-payment-refunded:${charge.stripeChargeId ?? event.id}`
         : `billing-payment-disputed:${dispute?.id ?? event.id}`
-    const queuedNotice = await queueEmailEvent(payload, {
+    const queuedNotice = await queueAndAttemptEmailEvent(payload, {
       toEmail: subject.email,
       contact: subject.contact.id,
       templateKey,

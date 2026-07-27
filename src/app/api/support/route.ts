@@ -11,7 +11,7 @@ import {
   publicRequestRateLimiter,
   trustPublicRequestProxyHeaders,
 } from '@/lib/publicRequestRoute'
-import { queueEmailEvent } from '@/lib/payloadCourse/events'
+import { queueAndAttemptEmailEvent } from '@/lib/payloadCourse/events'
 import type { PayloadCourseWriteAPI } from '@/lib/payloadCourse/accessService'
 import {
   createSupportIntakeService,
@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
     async queueNotification(input) {
       const payload = await getPayload({ config: payloadConfig })
       const { supportTo } = getServerConfig().email
-      await queueEmailEvent(payload as unknown as PayloadCourseWriteAPI, {
+      await queueAndAttemptEmailEvent(payload as unknown as PayloadCourseWriteAPI, {
         toEmail: supportTo,
         templateKey: 'admin-notification',
         dedupeKey: input.dedupeKey,

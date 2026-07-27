@@ -1,5 +1,5 @@
 import type { PayloadCourseWriteAPI, PayloadDocument, PayloadId } from '@/lib/payloadCourse/accessService'
-import { createAuditEvent, queueEmailEvent } from '@/lib/payloadCourse/events'
+import { createAuditEvent, queueAndAttemptEmailEvent } from '@/lib/payloadCourse/events'
 import { recordPartnerEvent } from '@/lib/payloadCourse/partnerDelivery'
 
 export type PartnerApplicationMode = 'redirect' | 'email' | 'webhook' | 'manual_export'
@@ -274,7 +274,7 @@ export async function submitPartnerApplication(
   })
 
   if (partner.applicationMode === 'email') {
-    await queueEmailEvent(payload, {
+    await queueAndAttemptEmailEvent(payload, {
       toEmail: asNonEmptyString(member.email)!,
       templateKey: 'partner-application-received',
       dedupeKey: `partner-application:email:${String(created.id)}`,

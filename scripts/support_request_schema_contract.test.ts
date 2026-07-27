@@ -57,7 +57,7 @@ for (const forbidden of [
 
 assert.match(supportRoute, /guardPublicRequest\(req/)
 assert.match(supportRoute, /prisma\.supportRequest\.create/)
-assert.match(supportRoute, /queueEmailEvent/)
+assert.match(supportRoute, /queueAndAttemptEmailEvent/)
 assert.match(supportRoute, /accepted:\s*true/)
 assert.match(supportRoute, /duplicate:\s*result\.duplicate/)
 assert.match(supportRoute, /status:\s*503/)

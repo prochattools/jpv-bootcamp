@@ -339,6 +339,42 @@ describe('email delivery reliability', () => {
     })
   })
 
+  // ── queueAndAttemptEmailEvent wiring (static source check) ───────────────────
+
+  describe('queueAndAttemptEmailEvent wiring (static source check)', () => {
+    const producerFiles = [
+      'src/lib/members/accountStatus.ts',
+      'src/lib/members/changeMemberEmail.ts',
+      'src/lib/members/changeMemberPassword.ts',
+      'src/lib/members/completeMemberSetup.ts',
+      'src/lib/members/completePasswordReset.ts',
+      'src/lib/members/updateMemberProfile.ts',
+      'src/lib/payloadCourse/adminGrants.ts',
+      'src/lib/payloadCourse/communityModerationNotifications.ts',
+      'src/lib/payloadCourse/communityPosting.ts',
+      'src/lib/payloadCourse/partnerApplications.ts',
+      'src/lib/payloadCourse/spaceMemberships.ts',
+      'src/lib/payloadCourse/stripeShadowSync.ts',
+      'src/app/api/support/route.ts',
+    ]
+
+    it('every active producer imports queueAndAttemptEmailEvent', () => {
+      for (const filePath of producerFiles) {
+        const source = readFileSync(resolve(filePath), 'utf8')
+        expect(source, `${filePath} should import queueAndAttemptEmailEvent`).toContain('queueAndAttemptEmailEvent')
+        // Ensure queueEmailEvent is not called in these files (definitions in events.ts are OK — these are call sites)
+        const callMatches = source.match(/\bqueueEmailEvent\s*\(/g) ?? []
+        expect(callMatches, `${filePath} should not call queueEmailEvent directly`).toHaveLength(0)
+      }
+    })
+
+    it('diagnostics in queued-emails/route.ts contains retryableCount and lastFailureReason', () => {
+      const source = readFileSync(resolve('src/app/api/admin/queued-emails/route.ts'), 'utf8')
+      expect(source).toContain('retryableCount')
+      expect(source).toContain('lastFailureReason')
+    })
+  })
+
   // ── Migration and collection structural checks ────────────────────────────────
 
   describe('migration and collection structure', () => {

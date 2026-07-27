@@ -1,6 +1,6 @@
 import type { MemberAccountActionService } from '@/lib/auth/memberAccountActions'
 import type { PayloadMemberAuthAPI } from '@/lib/payloadCourse/accessService'
-import { createAuditEvent, queueEmailEvent } from '@/lib/payloadCourse/events'
+import { createAuditEvent, queueAndAttemptEmailEvent } from '@/lib/payloadCourse/events'
 import type { CompletePasswordResetInput } from '@/lib/members/completePasswordReset'
 
 export type CompleteMemberSetupResult =
@@ -149,7 +149,7 @@ export async function completeMemberSetup(
         : completion.consumed
           ? completion.email
           : validation.email
-    await queueEmailEvent(payload, {
+    await queueAndAttemptEmailEvent(payload, {
       toEmail: email,
       templateKey: 'member-account-ready',
       dedupeKey: `member-account-ready:${member.id}:${invitationEvent.id}`,

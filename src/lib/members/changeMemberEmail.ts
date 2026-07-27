@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto'
 import type { MemberAccountActionService } from '@/lib/auth/memberAccountActions'
 import { normalizeEmail } from '@/lib/normalize-email'
 import type { PayloadId, PayloadMemberAuthAPI } from '@/lib/payloadCourse/accessService'
-import { createAuditEvent, queueEmailEvent } from '@/lib/payloadCourse/events'
+import { createAuditEvent, queueAndAttemptEmailEvent } from '@/lib/payloadCourse/events'
 import { isEligibleCurrentMember } from '@/lib/members/currentMember'
 import { resolveJpvLogoUrl } from '@/lib/brand/jpvDesignSystem'
 
@@ -110,7 +110,7 @@ export async function requestMemberEmailChange(
   let noticeQueued = false
   try {
     const baseUrl = new URL(input.baseUrl)
-    const queued = await queueEmailEvent(payload, {
+    const queued = await queueAndAttemptEmailEvent(payload, {
       toEmail: currentEmail,
       templateKey: 'member-email-change-requested',
       dedupeKey: `member-email-change-requested:${input.memberId}:${securityEvent.id}`,
@@ -205,7 +205,7 @@ export async function completeMemberEmailChange(
   const displayName = oldEmail.split('@')[0] || 'there'
   for (const [recipient, suffix] of [[oldEmail, 'old'], [completion.email, 'new']] as const) {
     try {
-      await queueEmailEvent(payload, {
+      await queueAndAttemptEmailEvent(payload, {
         toEmail: recipient,
         templateKey: 'member-email-changed',
         dedupeKey: `member-email-changed:${member.id}:${securityEvent.id}:${suffix}`,

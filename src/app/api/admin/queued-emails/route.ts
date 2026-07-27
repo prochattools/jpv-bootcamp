@@ -30,7 +30,7 @@ export async function GET(request: NextRequest): Promise<Response> {
     ? {}
     : { deliveryStatus: { equals: statusFilter } }
 
-  const [eventResult, lastSentResult, oldestQueuedResult, processingResult] = await Promise.all([
+  const [eventResult, lastSentResult, oldestQueuedResult, processingResult, lastFailedResult] = await Promise.all([
     payload.find({
       collection: 'payload_email_events',
       where,
@@ -61,6 +61,14 @@ export async function GET(request: NextRequest): Promise<Response> {
       limit: 10,
       depth: 0,
       sort: 'claimedAt',
+      overrideAccess: true,
+    }),
+    payload.find({
+      collection: 'payload_email_events',
+      where: { deliveryStatus: { equals: 'failed' } },
+      limit: 1,
+      depth: 0,
+      sort: '-updatedAt',
       overrideAccess: true,
     }),
   ])
@@ -100,6 +108,10 @@ export async function GET(request: NextRequest): Promise<Response> {
       oldestQueuedAgeMs,
       processingCount: processingResult.totalDocs,
       staleProcessingCount,
+      retryableCount: lastFailedResult.totalDocs,
+      lastFailureReason: typeof lastFailedResult.docs[0]?.failureReason === 'string'
+        ? lastFailedResult.docs[0].failureReason.replace(/Bearer\s+\S+/gi, '[redacted]').slice(0, 200)
+        : null,
     },
   })
 }

@@ -46,7 +46,7 @@ async function main() {
   )
   assert.match(invoiceSync, /billing-payment-\$\{paymentStatus\}:/)
   assert.match(invoiceSync, /billing-payment-recovered:/)
-  assert.match(invoiceSync, /queueEmailEvent/)
+  assert.match(invoiceSync, /queueAndAttemptEmailEvent/)
   assert.match(invoiceSync, /billing_payment_failed/)
   assert.match(invoiceSync, /billing_payment_recovered/)
   assert.match(invoiceSync, /syncMemberBillingHold/)

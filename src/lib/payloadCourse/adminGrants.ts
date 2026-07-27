@@ -7,7 +7,7 @@ import type { ResourceType } from '@/lib/entitlements/evaluateAccess'
 import {
   createAuditEvent,
   createEntitlementEvent,
-  queueEmailEvent,
+  queueAndAttemptEmailEvent,
 } from '@/lib/payloadCourse/events'
 
 type ActorInput = {
@@ -117,7 +117,7 @@ async function queueGrantEmails(
   const toEmail = memberEmail(member)
 
   if (toEmail && input.memberId) {
-    const { event } = await queueEmailEvent(payload, {
+    const { event } = await queueAndAttemptEmailEvent(payload, {
       toEmail,
       templateKey: `manual-access-${action}`,
       dedupeKey: `manual-access-${action}:${input.memberId}:${input.resourceType}:${input.resourceId}:${grant.id}`,
@@ -132,7 +132,7 @@ async function queueGrantEmails(
   }
 
   if (input.adminEmail) {
-    const { event } = await queueEmailEvent(payload, {
+    const { event } = await queueAndAttemptEmailEvent(payload, {
       toEmail: input.adminEmail,
       templateKey: 'admin-notification',
       dedupeKey: `admin-notification:manual-access-${action}:${grant.id}`,
