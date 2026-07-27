@@ -1201,7 +1201,10 @@ export async function provisionFromCheckoutSession(
 		: 'no_projection_record'
 	oldPlan = storedPlanName
 	newPlan = incomingPlan
-	const isCanonicalEmailEvent = eventType === 'customer.subscription.updated' || eventType === 'manual_sync'
+	const isCanonicalEmailEvent =
+		eventType === 'checkout.session.completed' ||
+		eventType === 'customer.subscription.updated' ||
+		eventType === 'manual_sync'
 	const emailEval = evaluateEmailNotification({
 		allowEmail: allowEmail && isCanonicalEmailEvent,
 		disabledReason: !isCanonicalEmailEvent ? 'event_not_canonical' : undefined,
