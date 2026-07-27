@@ -270,6 +270,16 @@ export const PREVIEW_MIGRATION_INVENTORY = [
     verificationChecks: ['registry-match', 'ordered-exactly'],
     authorizationCategory: 'payloadMigration',
   },
+  {
+    name: '20260727_200000_email_events_processing_status',
+    system: 'payload',
+    order: 26,
+    purpose: "Add 'processing' value to enum_payload_email_events_delivery_status so the atomic claim/lease pattern can mark rows in-flight without risking double-sends.",
+    requiredForPreview: true,
+    rollbackRisk: 'reversible',
+    verificationChecks: ['registry-match', 'ordered-exactly'],
+    authorizationCategory: 'payloadMigration',
+  },
 ] as const satisfies readonly PreviewMigrationInventoryEntry[]
 
 export const PREVIEW_MIGRATION_INVENTORY_VERSION = 1

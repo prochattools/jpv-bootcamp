@@ -100,6 +100,7 @@ async function main(): Promise<void> {
         '20260724_123000_email_operator_actions',
         '20260727_000000_partner_applications_source_member_id',
         '20260727_100000_email_events_lease_columns',
+        '20260727_200000_email_events_processing_status',
       ],
       operator: 'migration-op',
       approvalReference: 'approval-1',
