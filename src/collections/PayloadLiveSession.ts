@@ -1,4 +1,4 @@
-import type { CollectionConfig } from 'payload'
+import type { CollectionConfig, FilterOptionsProps } from 'payload'
 
 import {
   assertLiveSessionRelationships,
@@ -6,6 +6,18 @@ import {
   prepareLiveSessionMutation,
   type LiveSessionDocument,
 } from '@/lib/liveSessions/sessionLifecycle'
+
+function filterModulesByCourse({ siblingData }: FilterOptionsProps) {
+  const courseId = liveSessionRelationshipId((siblingData as Record<string, unknown>)?.course)
+  if (!courseId) return false
+  return { course: { equals: courseId } }
+}
+
+function filterLessonsByModule({ siblingData }: FilterOptionsProps) {
+  const moduleId = liveSessionRelationshipId((siblingData as Record<string, unknown>)?.module)
+  if (!moduleId) return false
+  return { module: { equals: moduleId } }
+}
 
 export const PayloadLiveSession: CollectionConfig = {
   slug: 'live_sessions',
@@ -101,8 +113,9 @@ export const PayloadLiveSession: CollectionConfig = {
       type: 'relationship',
       relationTo: 'payload_course_modules',
       label: 'Module',
+      filterOptions: filterModulesByCourse,
       admin: {
-        description: 'Optional. Must belong to the selected course.',
+        description: 'Optional. Select a course first — only modules from that course appear.',
       },
     },
     {
@@ -110,20 +123,27 @@ export const PayloadLiveSession: CollectionConfig = {
       type: 'relationship',
       relationTo: 'payload_lessons',
       label: 'Lesson',
+      filterOptions: filterLessonsByModule,
       admin: {
-        description: 'Optional. Requires a module and must belong to it.',
+        description: 'Optional. Select a module first — only lessons from that module appear.',
       },
     },
     {
       name: 'roomName',
       type: 'text',
-      required: true,
       unique: true,
       index: true,
       label: 'LiveKit Room Name',
+      validate: (value: string | string[] | null | undefined, options: { operation?: string }) => {
+        if (options?.operation === 'create') return true
+        if (!value || (typeof value === 'string' && value.trim().length === 0)) {
+          return 'Room name is required after creation.'
+        }
+        return true
+      },
       admin: {
         readOnly: true,
-        description: 'Generated from the immutable course/module/lesson relationship path.',
+        description: 'Auto-generated on creation from course/module/lesson. Cannot be changed.',
       },
     },
     {

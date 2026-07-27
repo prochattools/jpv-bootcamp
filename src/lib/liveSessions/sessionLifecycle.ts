@@ -223,37 +223,59 @@ export async function assertLiveSessionRelationships(params: {
   const courseId = liveSessionRelationshipId(params.course)
   const moduleId = liveSessionRelationshipId(params.module)
   const lessonId = liveSessionRelationshipId(params.lesson)
-  if (!courseId) throw new Error('Live session course is required.')
-  if (lessonId && !moduleId) throw new Error('A lesson relationship requires its module relationship.')
+  if (!courseId) throw new Error('Live session course is required. Select a course before saving.')
+  if (lessonId && !moduleId) {
+    throw new Error(
+      'A lesson was selected without a module. Select the module this lesson belongs to, or clear the lesson field.',
+    )
+  }
 
-  await params.payload.findByID({
-    collection: 'payload_courses',
-    id: courseId,
-    depth: 0,
-    overrideAccess: true,
-  })
-
-  if (moduleId) {
-    const module = await params.payload.findByID({
-      collection: 'payload_course_modules',
-      id: moduleId,
+  try {
+    await params.payload.findByID({
+      collection: 'payload_courses',
+      id: courseId,
       depth: 0,
       overrideAccess: true,
-    }) as Record<string, unknown>
+    })
+  } catch {
+    throw new Error(`Course "${courseId}" was not found. It may have been deleted.`)
+  }
+
+  if (moduleId) {
+    let module: Record<string, unknown>
+    try {
+      module = await params.payload.findByID({
+        collection: 'payload_course_modules',
+        id: moduleId,
+        depth: 0,
+        overrideAccess: true,
+      }) as Record<string, unknown>
+    } catch {
+      throw new Error(`Module "${moduleId}" was not found. It may have been deleted.`)
+    }
     if (liveSessionRelationshipId(module.course) !== courseId) {
-      throw new Error('Live session module does not belong to the selected course.')
+      throw new Error(
+        `The selected module does not belong to the selected course. Clear the module field and re-select from the filtered list.`,
+      )
     }
   }
 
   if (lessonId) {
-    const lesson = await params.payload.findByID({
-      collection: 'payload_lessons',
-      id: lessonId,
-      depth: 0,
-      overrideAccess: true,
-    }) as Record<string, unknown>
+    let lesson: Record<string, unknown>
+    try {
+      lesson = await params.payload.findByID({
+        collection: 'payload_lessons',
+        id: lessonId,
+        depth: 0,
+        overrideAccess: true,
+      }) as Record<string, unknown>
+    } catch {
+      throw new Error(`Lesson "${lessonId}" was not found. It may have been deleted.`)
+    }
     if (liveSessionRelationshipId(lesson.module) !== moduleId) {
-      throw new Error('Live session lesson does not belong to the selected module.')
+      throw new Error(
+        `The selected lesson does not belong to the selected module. Clear the lesson field and re-select from the filtered list.`,
+      )
     }
   }
 }

@@ -144,7 +144,7 @@ describe('Live Session lifecycle', () => {
         course: 'course-1',
         lesson: 'lesson-1',
       }),
-    ).rejects.toThrow('requires its module')
+    ).rejects.toThrow('without a module')
 
     await expect(
       assertLiveSessionRelationships({
@@ -161,6 +161,35 @@ describe('Live Session lifecycle', () => {
         module: 'module-1',
       }),
     ).rejects.toThrow('does not belong to the selected course')
+
+    await expect(
+      assertLiveSessionRelationships({
+        payload: {
+          ...payload,
+          async findByID(args) {
+            if (args.collection === 'payload_lessons') {
+              return { id: args.id, module: 'other-module' }
+            }
+            return payload.findByID(args)
+          },
+        },
+        course: 'course-1',
+        module: 'module-1',
+        lesson: 'lesson-1',
+      }),
+    ).rejects.toThrow('does not belong to the selected module')
+
+    await expect(
+      assertLiveSessionRelationships({
+        payload: {
+          async findByID(args) {
+            if (args.collection === 'payload_courses') throw new Error('Not Found')
+            return payload.findByID(args)
+          },
+        },
+        course: 'deleted-course',
+      }),
+    ).rejects.toThrow('was not found')
   })
 
   it('wires Payload relationships, audit hooks, and complete admin controls', () => {
