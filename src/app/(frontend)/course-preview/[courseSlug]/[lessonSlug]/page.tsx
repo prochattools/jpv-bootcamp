@@ -105,10 +105,10 @@ const lessonContent: Record<string, { title: string; summary: string; content: s
 }
 
 const stateStyles: Record<string, string> = {
-  completed: 'bg-[var(--jpv-sunshine)] text-[var(--jpv-brand-deep)]',
-  current: 'border border-[var(--jpv-sunshine)] bg-[var(--jpv-canvas)] text-[var(--jpv-brand-deep)]',
-  available: 'border border-[var(--jpv-brand-deep)]/10 bg-white text-[var(--jpv-muted)]',
-  locked: 'border border-[var(--jpv-brand-deep)]/10 bg-[var(--jpv-surface)] text-[var(--jpv-muted)]',
+  completed: 'bg-jpv-sunshine text-jpv-brand-deep',
+  current: 'border border-jpv-sunshine bg-jpv-canvas text-jpv-brand-deep',
+  available: 'border border-jpv-border bg-jpv-canvas text-jpv-muted',
+  locked: 'border border-jpv-border bg-jpv-surface text-jpv-muted',
 }
 
 const stateLabel: Record<string, string> = {
@@ -150,13 +150,13 @@ export default async function LessonPage({
   const nextLesson = currentLessonGlobalIndex < allLessons.length - 1 ? allLessons[currentLessonGlobalIndex + 1] : null
 
   return (
-    <div className='min-h-screen bg-[var(--jpv-surface)] text-[var(--jpv-ink)]'>
-      <div className='border-b border-[var(--jpv-brand-deep)]/10 bg-[var(--jpv-brand-deep)] px-5 py-2 text-center text-xs font-semibold uppercase tracking-[0.2em] text-[var(--jpv-sunshine)]'>
+    <div className='min-h-screen bg-jpv-surface text-jpv-ink'>
+      <div className='border-b border-jpv-border bg-jpv-brand-deep px-5 py-2 text-center text-xs font-semibold uppercase tracking-[0.2em] text-jpv-sunshine'>
         {PAYLOAD_COURSE_PROTOTYPE_BANNER}
       </div>
 
-      <header className='border-b border-[var(--jpv-brand-deep)]/10 bg-white/90 backdrop-blur'>
-        <div className='mx-auto flex max-w-7xl items-center justify-between px-6 py-5 lg:px-10'>
+      <header className='border-b border-jpv-border bg-jpv-canvas/90 backdrop-blur'>
+        <div className='mx-auto flex max-w-6xl items-center justify-between px-6 py-5 lg:px-10'>
           <Link href='/course-preview' className='flex items-center gap-3 text-inherit no-underline'>
             <img
               src={jpvBrand.logoPath}
@@ -164,28 +164,28 @@ export default async function LessonPage({
               className='h-11 w-11 rounded-xl object-cover'
             />
             <div>
-              <p className='text-lg font-bold tracking-tight text-[var(--jpv-brand-deep)]'>JPV Bootcamp</p>
-              <p className='text-xs font-medium uppercase tracking-[0.16em] text-[var(--jpv-sunshine-ink)]'>Learning Portal</p>
+              <p className='text-lg font-bold tracking-tight text-jpv-brand-deep'>JPV Bootcamp</p>
+              <p className='text-xs font-medium uppercase tracking-[0.16em] text-jpv-sunshine-ink'>Learning Portal</p>
             </div>
           </Link>
-          <Link href='/course-preview' className='rounded-full border border-[var(--jpv-brand-deep)]/15 px-4 py-2 text-sm font-bold text-[var(--jpv-brand-deep)] no-underline'>
+          <Link href='/course-preview' className='rounded-full border border-jpv-border px-4 py-2 text-sm font-bold text-jpv-brand-deep no-underline'>
             Back to courses
           </Link>
         </div>
       </header>
 
-      <div className='mx-auto grid max-w-7xl grid-cols-1 gap-8 px-6 py-10 lg:grid-cols-[1fr_320px] lg:px-10'>
+      <div className='mx-auto grid max-w-6xl grid-cols-1 gap-8 px-6 py-10 lg:grid-cols-[1fr_320px] lg:px-10'>
         <main className='min-h-screen'>
           <div className='mb-8'>
-            <Link href={`/course-preview/${courseSlug}`} className='text-sm font-semibold text-[var(--jpv-sunshine-ink)] no-underline hover:text-[var(--jpv-brand-deep)]'>
+            <Link href={`/course-preview/${courseSlug}`} className='text-sm font-semibold text-jpv-sunshine-ink no-underline hover:text-jpv-brand-deep'>
               ← Back to course
             </Link>
           </div>
 
-          <section className='mb-12 rounded-2xl bg-[var(--jpv-brand-deep)] p-8 text-white sm:p-10'>
-            <p className='text-xs font-bold uppercase tracking-[0.2em] text-[var(--jpv-sunshine)]'>{currentModule.module}</p>
+          <section className='mb-12 rounded-2xl bg-jpv-brand-deep p-8 text-jpv-canvas sm:p-10'>
+            <p className='text-xs font-bold uppercase tracking-[0.2em] text-jpv-sunshine'>{currentModule.module}</p>
             <h1 className='mt-3 text-4xl font-bold leading-tight tracking-tight sm:text-5xl'>{lesson.title}</h1>
-            <p className='mt-5 text-base leading-7 text-[var(--jpv-inverse-muted)] sm:text-lg'>{lesson.summary}</p>
+            <p className='mt-5 text-base leading-7 text-jpv-inverse-muted sm:text-lg'>{lesson.summary}</p>
           </section>
 
           {lesson.video && (
@@ -201,50 +201,50 @@ export default async function LessonPage({
             </section>
           )}
 
-          <section className='prose prose-sm max-w-none text-[var(--jpv-ink)]'>
+          <section className='prose prose-sm max-w-none text-jpv-ink'>
             <div dangerouslySetInnerHTML={{ __html: lesson.content }} className='space-y-4 leading-7 [&_p]:mb-4' />
           </section>
 
-          <div className='mt-16 flex flex-col gap-6 border-t border-[var(--jpv-brand-deep)]/10 pt-8 sm:flex-row'>
+          <div className='mt-16 flex flex-col gap-6 border-t border-jpv-border pt-8 sm:flex-row'>
             {prevLesson ? (
-              <Link href={`/course-preview/${courseSlug}/${prevLesson.slug}`} className='flex-1 rounded-2xl border border-[var(--jpv-brand-deep)]/15 px-6 py-4 text-left no-underline hover:bg-white/50'>
-                <p className='text-xs font-bold uppercase tracking-[0.1em] text-[var(--jpv-sunshine-ink)]'>← Previous lesson</p>
-                <p className='mt-2 font-bold text-[var(--jpv-brand-deep)]'>{prevLesson.title}</p>
+              <Link href={`/course-preview/${courseSlug}/${prevLesson.slug}`} className='flex-1 rounded-2xl border border-jpv-border px-6 py-4 text-left no-underline hover:bg-jpv-canvas/50'>
+                <p className='text-xs font-bold uppercase tracking-[0.1em] text-jpv-sunshine-ink'>← Previous lesson</p>
+                <p className='mt-2 font-bold text-jpv-brand-deep'>{prevLesson.title}</p>
               </Link>
             ) : (
               <div />
             )}
             {nextLesson ? (
-              <Link href={`/course-preview/${courseSlug}/${nextLesson.slug}`} className='flex-1 rounded-2xl border border-[var(--jpv-brand-deep)]/15 px-6 py-4 text-right no-underline hover:bg-white/50'>
-                <p className='text-xs font-bold uppercase tracking-[0.1em] text-[var(--jpv-sunshine-ink)]'>Next lesson →</p>
-                <p className='mt-2 font-bold text-[var(--jpv-brand-deep)]'>{nextLesson.title}</p>
+              <Link href={`/course-preview/${courseSlug}/${nextLesson.slug}`} className='flex-1 rounded-2xl border border-jpv-border px-6 py-4 text-right no-underline hover:bg-jpv-canvas/50'>
+                <p className='text-xs font-bold uppercase tracking-[0.1em] text-jpv-sunshine-ink'>Next lesson →</p>
+                <p className='mt-2 font-bold text-jpv-brand-deep'>{nextLesson.title}</p>
               </Link>
             ) : (
               <div />
             )}
           </div>
 
-          <div className='mt-12 rounded-2xl bg-[var(--jpv-canvas)] p-6 text-center sm:p-8'>
-            <p className='text-sm text-[var(--jpv-sunshine-ink)]'>Course complete? Return to the dashboard or explore other courses.</p>
-            <Link href='/course-preview' className='mt-4 inline-block rounded-full bg-[var(--jpv-brand-deep)] px-6 py-3 font-bold text-white no-underline'>
+          <div className='mt-12 rounded-2xl bg-jpv-canvas p-6 text-center sm:p-8'>
+            <p className='text-sm text-jpv-sunshine-ink'>Course complete? Return to the dashboard or explore other courses.</p>
+            <Link href='/course-preview' className='jpv-button-primary mt-4 min-h-11'>
               Explore all courses
             </Link>
           </div>
         </main>
 
-        <aside className='rounded-2xl bg-white p-6 shadow-sm lg:sticky lg:top-6 lg:h-fit'>
-          <p className='text-xs font-bold uppercase tracking-[0.1em] text-[var(--jpv-sunshine-ink)]'>Course curriculum</p>
+        <aside className='rounded-2xl bg-jpv-canvas p-6 shadow-sm lg:sticky lg:top-6 lg:h-fit'>
+          <p className='text-xs font-bold uppercase tracking-[0.1em] text-jpv-sunshine-ink'>Course curriculum</p>
           <div className='mt-6 space-y-6'>
             {courseLessons.map((module, moduleIdx) => (
               <div key={module.module}>
-                <p className='text-xs font-bold uppercase tracking-[0.1em] text-[var(--jpv-sunshine-ink)]'>{module.module}</p>
+                <p className='text-xs font-bold uppercase tracking-[0.1em] text-jpv-sunshine-ink'>{module.module}</p>
                 <div className='mt-3 space-y-2'>
                   {module.lessons.map((l) => (
                     <Link
                       key={l.slug}
                       href={`/course-preview/${courseSlug}/${l.slug}`}
                       className={`block rounded-lg px-3 py-2 text-sm font-medium no-underline ${
-                        l.slug === lessonSlug ? 'bg-[var(--jpv-brand-deep)] text-white' : stateStyles[l.state]
+                        l.slug === lessonSlug ? 'bg-jpv-brand-deep text-jpv-canvas' : stateStyles[l.state]
                       }`}
                     >
                       <div className='flex items-start justify-between gap-2'>
@@ -260,20 +260,20 @@ export default async function LessonPage({
             ))}
           </div>
 
-          <div className='mt-8 border-t border-[var(--jpv-brand-deep)]/10 pt-6'>
-            <p className='text-xs font-bold uppercase tracking-[0.1em] text-[var(--jpv-sunshine-ink)]'>Lesson progress</p>
-            <div className='mt-3 h-2 overflow-hidden rounded-full bg-[var(--jpv-border)]'>
+          <div className='mt-8 border-t border-jpv-border pt-6'>
+            <p className='text-xs font-bold uppercase tracking-[0.1em] text-jpv-sunshine-ink'>Lesson progress</p>
+            <div className='mt-3 h-2 overflow-hidden rounded-full bg-jpv-border'>
               <div
-                className='h-full bg-[var(--jpv-sunshine)]'
+                className='h-full bg-jpv-sunshine'
                 style={{ width: `${((currentLessonGlobalIndex + 1) / allLessons.length) * 100}%` }}
               />
             </div>
-            <p className='mt-2 text-xs text-[var(--jpv-sunshine-ink)]'>
+            <p className='mt-2 text-xs text-jpv-sunshine-ink'>
               {currentLessonGlobalIndex + 1} of {allLessons.length} lessons
             </p>
           </div>
 
-          <button className='mt-6 w-full rounded-jpv-action border border-[var(--jpv-brand-deep)] px-4 py-3 text-sm font-bold text-[var(--jpv-brand-deep)] hover:bg-[var(--jpv-surface)]'>
+          <button className='jpv-button-secondary mt-6 min-h-11 w-full justify-center'>
             Mark as complete
           </button>
         </aside>

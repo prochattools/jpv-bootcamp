@@ -434,3 +434,50 @@ All previously deferred items are now PROVEN:
 - Phase F: Payload admin and operator page branding/responsiveness.
 - Phase G: email and outbound communication polish.
 - Phase H: live browser/mobile visual regression and accessibility proof.
+
+
+
+### 2026-07-27 Design-System Phase E — public, legal, system-state, and Course Preview coherence
+
+**Implementation**
+- Added `PublicInformationShell` and `PublicInformationCard` as reusable token-compliant public-surface primitives derived from the locked frontend design.
+- Aligned Privacy, Terms, Cookies, Upgrade, Thank-you, Blog, frontend not-found, frontend error, and frontend loading surfaces with canonical JPV typography, spacing, cards, notices, actions, focus styles, and container widths.
+- Removed legacy template Header/Footer usage from Blog while preserving its out-of-launch-scope status.
+- Preserved Upgrade monthly and annual checkout URLs, recurring-payment consent gating, disabled-link behavior, and all Stripe query parameters.
+- Preserved the Thank-you seven-second redirect, Stripe session confirmation, frontend error `reset()` behavior, and accessible loading semantics.
+- Normalized all three active Course Preview routes to mapped JPV tokens, `max-w-6xl` shells, canonical primary/secondary actions, and 44px targets.
+- Course Preview feature gates, prototype banner, route parameters, static demo content, progress state, lesson state, and navigation behavior remain unchanged.
+- Prohibited Course Preview patterns now have zero matches: arbitrary `var(--jpv-*)` color utilities, raw white/black inverse utilities, `max-w-7xl`, and `bg-neutral-950`.
+- Forgot-password, reset-password, set-password, and Sponsored were inspected and already complied with the shared auth/public design system, so no changes were made.
+
+**Validation**
+- Phase E frontend design tests: **7/7 passed**.
+- Combined Phase A-E design tests: **69/69 passed**.
+- Portal route ownership: **passed**.
+- Payload TypeScript: **passed**.
+- Changed-path high-risk security scan: **clean**.
+- Course Preview prohibited-style scan: **zero matches**.
+- Production build job `validation-1475d762-3630-4f81-be83-b09df95a4b17`: **passed**.
+- Canonical release job `validation-72f7ea49-4412-404f-883c-f5a290355ca9`: **153/153 passed**.
+
+**Responsive and browser proof boundary**
+- Repository behavior is validated for mobile, tablet, and desktop through responsive shell widths, canonical action targets, accessible state semantics, focused tests, TypeScript, and production build.
+- Live browser proof remains deferred to the final visual-regression phase, including keyboard interaction, authenticated states, mobile viewport screenshots, and visual overflow inspection.
+
+**Secondary portal re-audit findings — next member-facing priority**
+- Remaining active portal token debt is concentrated in secondary surfaces rather than the core dashboard/course/account flows:
+  - Bunny processing, failed, and entitlement state components;
+  - shared `StatusPill` presentation;
+  - `/portal/programme`;
+  - `/portal/partner-referral`;
+  - Community moderation;
+  - Community submissions;
+  - Community post detail and reply surfaces.
+- These findings should be completed as one bounded member-portal hardening batch before email coherence, preserving all Bunny, entitlement, referral, moderation, submission, and reply behavior.
+
+**Remaining design-system roadmap in owner priority order**
+1. Member portal secondary-state hardening.
+2. Email and outbound communication coherence.
+3. Responsive and accessibility hardening with live visual proof.
+4. Operator tool branding and density.
+5. Payload admin branding and responsiveness.
