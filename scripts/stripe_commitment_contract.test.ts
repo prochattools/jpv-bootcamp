@@ -46,7 +46,7 @@ function main(): void {
 
   assertContains(
     portalAction,
-    ['stripeConfig.portalConfigurationId', 'BILLING_PORTAL_DEFAULT_RETURN_URL'],
+    ['stripeConfig.portalConfigurationId', 'resolveReturnUrl()'],
     'billing portal action',
   )
   assert.doesNotMatch(portalAction, /commitmentPortalConfigurationId|restrictedPortalRequired|monthly_commitment/)

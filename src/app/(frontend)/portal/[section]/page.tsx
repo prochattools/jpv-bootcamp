@@ -167,19 +167,29 @@ function billingNotice(query: {
 async function updatePortalMemberProfileAction(formData: FormData) {
   'use server'
 
-  const { memberId, payload } = await requirePortalMember('/portal/account')
-  const result = await updateMemberProfile(payload as unknown as PayloadCourseWriteAPI, memberId, {
-    displayName: formText(formData.get('displayName')),
-    company: formText(formData.get('company')),
-    phone: formText(formData.get('phone')),
-    timezone: formText(formData.get('timezone')),
-    baseUrl: resolveMemberVerificationPublicBaseUrl(),
-  })
+  let errorParam = 'unexpected'
+  try {
+    const { memberId, payload } = await requirePortalMember('/portal/account')
+    const result = await updateMemberProfile(payload as unknown as PayloadCourseWriteAPI, memberId, {
+      displayName: formText(formData.get('displayName')),
+      company: formText(formData.get('company')),
+      phone: formText(formData.get('phone')),
+      timezone: formText(formData.get('timezone')),
+      baseUrl: resolveMemberVerificationPublicBaseUrl(),
+    })
 
-  if (!result.ok) redirect('/portal/account?error=display-name')
+    if (!result.ok) {
+      errorParam = result.error === 'display_name_required' ? 'display-name' : 'ineligible'
+      redirect(`/portal/account?error=${errorParam}`)
+    }
 
-  revalidatePath('/portal/account')
-  redirect('/portal/account?updated=1')
+    revalidatePath('/portal/account')
+    redirect('/portal/account?updated=1')
+  } catch (thrown) {
+    if (thrown && typeof thrown === 'object' && 'digest' in thrown) throw thrown
+    console.error('[updatePortalMemberProfileAction] error:', thrown instanceof Error ? thrown.message : String(thrown))
+    redirect(`/portal/account?error=${errorParam}`)
+  }
 }
 
 export default async function PortalSectionPage({ params, searchParams }: PortalSectionPageProps) {
@@ -288,6 +298,14 @@ export default async function PortalSectionPage({ params, searchParams }: Portal
             {query.error === 'display-name' ? (
               <p className='jpv-notice jpv-notice-danger'>
                 Enter a display name before saving your profile.
+              </p>
+            ) : query.error === 'ineligible' ? (
+              <p className='jpv-notice jpv-notice-danger'>
+                Your account is not eligible to update profile settings right now. Contact support if this persists.
+              </p>
+            ) : query.error === 'unexpected' ? (
+              <p className='jpv-notice jpv-notice-danger'>
+                An unexpected error occurred while saving your profile. Please try again.
               </p>
             ) : null}
           </div>

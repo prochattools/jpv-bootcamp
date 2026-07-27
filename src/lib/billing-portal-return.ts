@@ -1,7 +1,8 @@
-const DEFAULT_RETURN_URL = 'https://jpvbootcamp.com/portal'
+const DEFAULT_RETURN_URL = 'https://jpvbootcamp.com/portal/billing'
 const ALLOWED_RETURN_ORIGINS = new Set([
 	'https://jpvbootcamp.com',
 	'https://www.jpvbootcamp.com',
+	'https://preview.jpvbootcamp.com',
 ])
 const MAX_RETURN_URL_LENGTH = 2048
 

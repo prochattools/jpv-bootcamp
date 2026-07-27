@@ -9,7 +9,8 @@ async function main() {
   ])
 
   assert.match(billingAction, /requirePortalMember\('\/portal\/billing'\)/)
-  assert.match(billingAction, /BILLING_PORTAL_DEFAULT_RETURN_URL/)
+  assert.match(billingAction, /resolveReturnUrl\(\)/)
+  assert.match(billingAction, /\/portal\/billing/)
   assert.match(billingAction, /stripeConfig\.portalConfigurationId/)
   assert.doesNotMatch(billingAction, /commitmentPortalConfigurationId|restrictedPortalRequired|monthly_commitment/)
   assert.doesNotMatch(billingAction, /openBillingPortal\([^)]*(memberId|memberEmail|stripeCustomerId|returnUrl)/)

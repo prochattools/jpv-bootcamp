@@ -6,7 +6,6 @@ import prisma from '@/libs/prisma'
 import { getStripe } from '@/lib/stripe'
 import { getStripeConfig } from '@/lib/stripe-config'
 import { normalizeEmail } from '@/lib/normalize-email'
-import { BILLING_PORTAL_DEFAULT_RETURN_URL } from '@/lib/billing-portal-return'
 import { requirePortalMember } from '@/lib/auth/requirePortalMember'
 
 export type OpenBillingPortalResult =
@@ -19,6 +18,20 @@ export type OpenBillingPortalResult =
         | 'stripe_error'
         | 'unexpected_error'
     }
+
+function resolveReturnUrl(): string {
+  const base =
+    process.env.NEXT_PUBLIC_APP_URL ||
+    process.env.APP_PUBLIC_URL ||
+    process.env.NEXT_PUBLIC_SERVER_URL ||
+    'https://jpvbootcamp.com'
+  try {
+    const url = new URL('/portal/billing', base)
+    return url.toString()
+  } catch {
+    return 'https://jpvbootcamp.com/portal/billing'
+  }
+}
 
 export async function openBillingPortal(): Promise<OpenBillingPortalResult> {
   let memberEmail: string
@@ -47,7 +60,7 @@ export async function openBillingPortal(): Promise<OpenBillingPortalResult> {
     const stripeConfig = getStripeConfig()
     const session = await getStripe().billingPortal.sessions.create({
       customer: customerRecord.stripeCustomerId,
-      return_url: BILLING_PORTAL_DEFAULT_RETURN_URL,
+      return_url: resolveReturnUrl(),
       configuration: stripeConfig.portalConfigurationId,
     })
 

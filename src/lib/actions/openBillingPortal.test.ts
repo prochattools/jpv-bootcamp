@@ -10,7 +10,8 @@ async function main() {
   assert.match(action, /export async function openBillingPortal\(\)/)
   assert.match(action, /requirePortalMember\('\/portal\/billing'\)/)
   assert.match(action, /where: \{ normalizedEmail \}/)
-  assert.match(action, /BILLING_PORTAL_DEFAULT_RETURN_URL/)
+  assert.match(action, /resolveReturnUrl\(\)/)
+  assert.match(action, /\/portal\/billing/)
   assert.doesNotMatch(action, /openBillingPortal\([^)]*(memberId|memberEmail|returnUrl)/)
   assert.doesNotMatch(action, /console\.(info|warn|error)\([^\n]*(customerId|sessionId|memberId)/)
 
