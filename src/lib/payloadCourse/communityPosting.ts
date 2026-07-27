@@ -71,6 +71,14 @@ function asString(value: unknown): string | null {
   return null
 }
 
+function asRelationshipId(value: PayloadId): number | string {
+  if (typeof value === 'number') return value
+  const trimmed = String(value).trim()
+  if (!trimmed) throw new Error('Relationship ID is required but was empty.')
+  const num = Number(trimmed)
+  return Number.isFinite(num) ? num : trimmed
+}
+
 function asRecord(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== 'object') return null
   return value as Record<string, unknown>
@@ -325,8 +333,8 @@ export async function createSpacePost(
     collection: 'payload_space_posts',
     data: {
       title,
-      space: String(input.spaceId),
-      author: String(input.memberId),
+      space: asRelationshipId(input.spaceId),
+      author: asRelationshipId(input.memberId),
       postType: normalizePostType(input.postType),
       body: input.body,
       moderationStatus: 'pending_review',
@@ -396,8 +404,8 @@ export async function createSpaceComment(
     collection: 'payload_space_comments',
     data: {
       displayName: input.displayName ?? `member:${input.memberId} -> post:${input.postId}`,
-      post: String(input.postId),
-      author: String(input.memberId),
+      post: asRelationshipId(input.postId),
+      author: asRelationshipId(input.memberId),
       body: input.body,
       moderationStatus: 'pending_review',
       metadata: {

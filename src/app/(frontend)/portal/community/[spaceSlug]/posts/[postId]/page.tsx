@@ -18,6 +18,7 @@ type PageProps = {
   }>
   searchParams: Promise<{
     submission?: string
+    reason?: string
   }>
 }
 
@@ -123,7 +124,13 @@ export default async function PortalCommunityPostPage({ params, searchParams }: 
       )}
       {query.submission === 'error' && (
         <div className='jpv-notice jpv-notice-danger'>
-          Something went wrong. Please try again.
+          {query.reason === 'rate_limit'
+            ? 'You are replying too quickly. Please wait a moment before trying again.'
+            : query.reason === 'not_allowed'
+              ? 'You do not have permission to reply in this discussion. Check your membership status.'
+              : query.reason === 'validation'
+                ? 'Your reply could not be saved. Please check that the body is filled in correctly.'
+                : 'An unexpected error occurred while submitting your reply. Please try again or contact support if this persists.'}
         </div>
       )}
 
@@ -173,13 +180,25 @@ export default async function PortalCommunityPostPage({ params, searchParams }: 
                 Your reply
               </label>
               <textarea
-                className='mt-1.5 w-full rounded-jpv-input border border-jpv-border px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-jpv-brand/25'
+                className='mt-1.5 w-full rounded-jpv-control border border-jpv-border bg-jpv-canvas px-4 py-3 text-sm text-jpv-ink outline-none transition focus:border-jpv-green-deep focus:ring-2 focus:ring-jpv-green/25'
                 id='comment-body'
                 maxLength={10000}
                 name='body'
                 placeholder='Share your reply…'
                 required
                 rows={4}
+              />
+            </div>
+            <div>
+              <label className='block text-sm font-bold text-jpv-brand-deep' htmlFor='comment-video'>
+                Video link <span className='font-normal text-jpv-muted'>(optional)</span>
+              </label>
+              <input
+                className='mt-1.5 w-full rounded-jpv-control border border-jpv-border bg-jpv-canvas px-4 py-3 text-sm text-jpv-ink outline-none transition focus:border-jpv-green-deep focus:ring-2 focus:ring-jpv-green/25'
+                id='comment-video'
+                name='videoUrl'
+                placeholder='YouTube, Vimeo, or Bunny Stream URL'
+                type='url'
               />
             </div>
             <button

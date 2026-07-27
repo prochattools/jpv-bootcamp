@@ -12,6 +12,20 @@ import {
   createSpacePost,
 } from '@/lib/payloadCourse/communityPosting'
 
+type SubmissionErrorCode =
+  | 'rate_limit'
+  | 'not_allowed'
+  | 'validation'
+  | 'server'
+
+function classifyError(err: unknown): SubmissionErrorCode {
+  const msg = err instanceof Error ? err.message : String(err)
+  if (msg.includes('rate limit')) return 'rate_limit'
+  if (msg.includes('unavailable') || msg.includes('membership') || msg.includes('Active space')) return 'not_allowed'
+  if (msg.includes('required') || msg.includes('too long') || msg.includes('rich text')) return 'validation'
+  return 'server'
+}
+
 function formText(formData: FormData, name: string): string {
   const value = formData.get(name)
   return typeof value === 'string' ? value.trim() : ''
@@ -89,6 +103,35 @@ function plainTextRichText(value: string): PlainTextRichTextDocument {
   }
 }
 
+function buildRichTextBody(text: string, videoUrl: string | null): PlainTextRichTextDocument {
+  const doc = plainTextRichText(text)
+
+  if (videoUrl) {
+    const linkNode: PlainTextRichTextParagraphNode = {
+      type: 'paragraph',
+      format: '',
+      indent: 0,
+      version: 1,
+      textFormat: 0,
+      textStyle: '',
+      children: [
+        {
+          type: 'text',
+          detail: 0,
+          format: 0,
+          mode: 'normal',
+          style: '',
+          text: `Video: ${videoUrl}`,
+          version: 1,
+        },
+      ],
+    }
+    doc.root.children.push(linkNode)
+  }
+
+  return doc
+}
+
 function memberDisplayName(member: Record<string, unknown>): string {
   for (const key of ['displayName', 'fullName', 'name']) {
     const value = member[key]
@@ -125,9 +168,7 @@ export async function submitCommunityPost(spaceSlug: string, formData: FormData)
   const destination = spacePath(spaceSlug)
   const { memberId, payload } = await requirePortalMember(destination)
 
-  // redirect() throws NEXT_REDIRECT internally — never call it inside try/catch or it
-  // propagates as an unhandled error response instead of a navigation signal.
-  let submissionFailed = false
+  let errorCode: SubmissionErrorCode | null = null
   try {
     const detail = await getMemberCommunitySpaceDetail(payload, memberId, spaceSlug)
     const canSubmit =
@@ -136,8 +177,6 @@ export async function submitCommunityPost(spaceSlug: string, formData: FormData)
 
     if (!detail || !canSubmit) throw new Error('Submission unavailable.')
 
-    // Defensive re-check: membership role must be in approved list for write access.
-    // The page only checked status, but the action also enforces role validation.
     const membershipRole = detail.membership?.role
     if (membershipRole !== 'member' && membershipRole !== 'moderator' && membershipRole !== 'admin') {
       throw new Error('Submission unavailable: member role invalid or missing.')
@@ -146,21 +185,21 @@ export async function submitCommunityPost(spaceSlug: string, formData: FormData)
     const title = boundedText(formText(formData, 'title'), 'Title', 160)
     const bodyText = boundedText(formText(formData, 'body'), 'Body', 10_000)
 
+    const videoUrl = formText(formData, 'videoUrl')
+
     await createSpacePost(payload as unknown as PayloadCourseWriteAPI, {
       memberId,
       spaceId: detail.id,
       title,
-      body: plainTextRichText(bodyText),
+      body: buildRichTextBody(bodyText, videoUrl || null),
     })
   } catch (err) {
-    // Log for operator visibility in staging/production container logs.
-    // No PII — only internal service error messages.
     console.error('[submitCommunityPost] submission error:', err instanceof Error ? err.message : String(err))
-    submissionFailed = true
+    errorCode = classifyError(err)
   }
 
-  if (submissionFailed) {
-    redirect(`${destination}?submission=error`)
+  if (errorCode) {
+    redirect(`${destination}?submission=error&reason=${errorCode}`)
   }
 
   revalidatePath(destination)
@@ -175,7 +214,7 @@ export async function submitCommunityComment(
   const destination = postPath(spaceSlug, postId)
   const { memberId, payload } = await requirePortalMember(destination)
 
-  let submissionFailed = false
+  let errorCode: SubmissionErrorCode | null = null
   try {
     const detail = await getMemberCommunityPostDetail(payload, memberId, spaceSlug, postId)
     if (!detail.allowed || !detail.post.canComment) {
@@ -185,19 +224,21 @@ export async function submitCommunityComment(
     const member = await loadMemberRecord(payload as unknown as PayloadCourseWriteAPI, memberId)
     const bodyText = boundedText(formText(formData, 'body'), 'Body', 10_000)
 
+    const videoUrl = formText(formData, 'videoUrl')
+
     await createSpaceComment(payload as unknown as PayloadCourseWriteAPI, {
       memberId,
       postId: detail.post.id,
       displayName: memberDisplayName(member),
-      body: plainTextRichText(bodyText),
+      body: buildRichTextBody(bodyText, videoUrl || null),
     })
   } catch (err) {
     console.error('[submitCommunityComment] submission error:', err instanceof Error ? err.message : String(err))
-    submissionFailed = true
+    errorCode = classifyError(err)
   }
 
-  if (submissionFailed) {
-    redirect(`${destination}?submission=error`)
+  if (errorCode) {
+    redirect(`${destination}?submission=error&reason=${errorCode}`)
   }
 
   revalidatePath(destination)

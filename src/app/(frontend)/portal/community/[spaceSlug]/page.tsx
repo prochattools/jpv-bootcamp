@@ -15,6 +15,7 @@ type PageProps = {
   }>
   searchParams: Promise<{
     submission?: string
+    reason?: string
   }>
 }
 
@@ -64,7 +65,13 @@ export default async function PortalCommunitySpacePage({ params, searchParams }:
       )}
       {query.submission === 'error' && (
         <div className='jpv-notice jpv-notice-danger'>
-          Something went wrong. Please try again.
+          {query.reason === 'rate_limit'
+            ? 'You are posting too quickly. Please wait a moment before trying again.'
+            : query.reason === 'not_allowed'
+              ? 'You do not have permission to post in this space. Check your membership status.'
+              : query.reason === 'validation'
+                ? 'Your post could not be saved. Please check that the title and body are filled in correctly.'
+                : 'An unexpected error occurred while submitting your post. Please try again or contact support if this persists.'}
         </div>
       )}
 
@@ -104,6 +111,21 @@ export default async function PortalCommunitySpacePage({ params, searchParams }:
                     required
                     rows={5}
                   />
+                </div>
+                <div>
+                  <label className='block text-sm font-bold text-jpv-brand-deep' htmlFor='post-video'>
+                    Video link <span className='font-normal text-jpv-muted'>(optional)</span>
+                  </label>
+                  <input
+                    className='mt-2 w-full rounded-jpv-control border border-jpv-border bg-jpv-canvas px-4 py-3 text-sm text-jpv-ink outline-none transition focus:border-jpv-green-deep focus:ring-2 focus:ring-jpv-green/25'
+                    id='post-video'
+                    name='videoUrl'
+                    placeholder='YouTube, Vimeo, or Bunny Stream URL'
+                    type='url'
+                  />
+                  <p className='mt-1.5 text-xs text-jpv-muted'>
+                    Paste a video link to include it in your post.
+                  </p>
                 </div>
                 <button
                   className='jpv-button-primary min-h-11'

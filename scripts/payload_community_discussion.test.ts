@@ -650,7 +650,7 @@ function testPageActionAndPostingSources(): void {
   )
   assert.match(actions, /requirePortalMember\(destination\)/)
   assert.match(actions, /memberId,/)
-  assert.match(actions, /plainTextRichText\(bodyText\)/)
+  assert.match(actions, /buildRichTextBody\(bodyText/)
   assert.doesNotMatch(
     actions,
     /formData\.get\(['"](?:memberId|author|role|status|visibility|moderationStatus|rateLimit|audit)/
