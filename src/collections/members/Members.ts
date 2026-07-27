@@ -52,6 +52,24 @@ export const PayloadMembers: CollectionConfig = {
         return data
       },
     ],
+    beforeDelete: [
+      async ({ id, req }) => {
+        try {
+          await req.payload.delete({
+            collection: 'payload-preferences' as any,
+            where: {
+              and: [
+                { 'user.relationTo': { equals: 'payload_members' } },
+                { 'user.value': { equals: id } },
+              ],
+            },
+            overrideAccess: true,
+          })
+        } catch {
+          // Preferences cleanup is best-effort; the member delete should proceed
+        }
+      },
+    ],
   },
   fields: [
     {
