@@ -22,6 +22,7 @@ const lessonRead = ({ req }: { req: PayloadRequest }) => {
 export const PayloadCourses: CollectionConfig = {
   slug: 'payload_courses',
   dbName: 'payload_courses',
+  labels: { singular: 'Course', plural: 'Courses' },
   admin: {
     group: courseAdminGroup,
     useAsTitle: 'title',
@@ -94,6 +95,7 @@ const adminOrModuleRead = ({ req }: { req: PayloadRequest }) => {
 export const PayloadCourseModules: CollectionConfig = {
   slug: 'payload_course_modules',
   dbName: 'payload_course_modules',
+  labels: { singular: 'Course Module', plural: 'Course Modules' },
   admin: {
     group: courseAdminGroup,
     useAsTitle: 'title',
@@ -125,6 +127,7 @@ export const PayloadCourseModules: CollectionConfig = {
 export const PayloadLessons: CollectionConfig = {
   slug: 'payload_lessons',
   dbName: 'payload_lessons',
+  labels: { singular: 'Lesson', plural: 'Lessons' },
   admin: {
     group: courseAdminGroup,
     useAsTitle: 'title',
