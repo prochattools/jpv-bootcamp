@@ -489,7 +489,7 @@ export async function registerCommunityFileMetadata(
       ...(externalMediaId ? { externalMediaId } : {}),
       ...(bunnyVideoId ? { bunnyVideoId } : {}),
       ...(bunnyLibraryId ? { bunnyLibraryId } : {}),
-      moderationStatus: 'pending_review',
+      moderationStatus: 'visible',
       metadata: {
         ...(filename ? { filename } : {}),
         ...(mimeType ? { mimeType } : {}),

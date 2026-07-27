@@ -125,7 +125,7 @@ export const PayloadSpaces: CollectionConfig = {
       name: 'visibility',
       type: 'select',
       required: true,
-      defaultValue: 'private',
+      defaultValue: 'public',
       options: [
         { label: 'Public', value: 'public' },
         { label: 'Members', value: 'members' },

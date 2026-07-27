@@ -60,7 +60,7 @@ export default async function PortalCommunitySpacePage({ params, searchParams }:
 
       {query.submission === 'pending' && (
         <div className='jpv-notice'>
-          Your post has been submitted for review.
+          Your post has been published.
         </div>
       )}
       {query.submission === 'error' && (

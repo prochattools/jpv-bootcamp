@@ -664,7 +664,7 @@ function testPageActionAndPostingSources(): void {
   assert.match(posting, /assertCreateRateLimit/)
   assert.match(posting, /createAuditEvent/)
   assert.match(posting, /queueModerationEmail/)
-  assert.match(posting, /moderationStatus: 'pending_review'/)
+  assert.match(posting, /moderationStatus: 'visible'/)
   assert.match(posting, /space_post\.created/)
   assert.match(posting, /space_comment\.created/)
 }

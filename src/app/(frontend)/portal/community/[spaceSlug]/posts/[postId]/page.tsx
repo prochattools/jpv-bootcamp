@@ -119,7 +119,7 @@ export default async function PortalCommunityPostPage({ params, searchParams }: 
 
       {query.submission === 'pending' && (
         <div className='jpv-notice'>
-          Your reply has been submitted for review.
+          Your reply has been published.
         </div>
       )}
       {query.submission === 'error' && (

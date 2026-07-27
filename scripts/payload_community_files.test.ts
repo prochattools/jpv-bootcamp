@@ -311,7 +311,7 @@ async function testModeratorAndServerControlledFields(): Promise<void> {
   assert.equal(result.document.uploadedBy, 'member_moderator')
   assert.equal(result.document.protectedFile, 'media_pdf')
   assert.equal(result.document.file, undefined)
-  assert.equal(result.document.moderationStatus, 'pending_review')
+  assert.equal(result.document.moderationStatus, 'visible')
   assert.deepEqual(result.document.metadata, {
     filename: 'guide.pdf',
     mimeType: 'application/pdf',

@@ -337,7 +337,7 @@ export async function createSpacePost(
       author: asRelationshipId(input.memberId),
       postType: normalizePostType(input.postType),
       body: input.body,
-      moderationStatus: 'pending_review',
+      moderationStatus: 'visible',
       pinned: false,
       locked: false,
       metadata: {
@@ -356,7 +356,7 @@ export async function createSpacePost(
     after: post,
     metadata: {
       spaceId: String(input.spaceId),
-      moderationStatus: 'pending_review',
+      moderationStatus: 'visible',
     },
   })
 
@@ -407,7 +407,7 @@ export async function createSpaceComment(
       post: asRelationshipId(input.postId),
       author: asRelationshipId(input.memberId),
       body: input.body,
-      moderationStatus: 'pending_review',
+      moderationStatus: 'visible',
       metadata: {
         createdByService: 'communityPosting.createSpaceComment',
         spaceId,
@@ -426,7 +426,7 @@ export async function createSpaceComment(
     metadata: {
       postId: String(input.postId),
       spaceId,
-      moderationStatus: 'pending_review',
+      moderationStatus: 'visible',
     },
   })
 

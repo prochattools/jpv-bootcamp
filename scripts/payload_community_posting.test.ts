@@ -235,13 +235,13 @@ async function run() {
     } as Parameters<typeof createSpacePost>[1] & Record<string, unknown>)
 
     assert.equal(result.document.author, 'member_moderator')
-    assert.equal(result.document.moderationStatus, 'pending_review')
+    assert.equal(result.document.moderationStatus, 'visible')
     assert.equal(payload.countDocs('payload_space_posts'), 3)
     assert.equal(payload.countDocs('payload_audit_events'), 1)
     assert.equal(payload.countDocs('payload_email_events'), 1)
 
     const detail = await getMemberCommunitySpaceDetail(payload, 'member_moderator', 'private-space')
-    assert.equal(detail?.posts.some((post) => post.title === 'New private discussion'), false)
+    assert.equal(detail?.posts.some((post) => post.title === 'New private discussion'), true)
   }
 
   {
@@ -279,9 +279,9 @@ async function run() {
     })
 
     assert.equal(postResult.document.author, 'member_admin')
-    assert.equal(postResult.document.moderationStatus, 'pending_review')
+    assert.equal(postResult.document.moderationStatus, 'visible')
     assert.equal(commentResult.document.author, 'member_admin')
-    assert.equal(commentResult.document.moderationStatus, 'pending_review')
+    assert.equal(commentResult.document.moderationStatus, 'visible')
   }
 
   {
@@ -347,7 +347,7 @@ async function run() {
       body: richTextBody,
     })
     assert.equal(result.document.author, 'member_active')
-    assert.equal(result.document.moderationStatus, 'pending_review')
+    assert.equal(result.document.moderationStatus, 'visible')
   }
 
   {
@@ -449,7 +449,7 @@ async function run() {
     } as Parameters<typeof createSpaceComment>[1] & Record<string, unknown>)
 
     assert.equal(result.document.author, 'member_moderator')
-    assert.equal(result.document.moderationStatus, 'pending_review')
+    assert.equal(result.document.moderationStatus, 'visible')
     assert.equal(payload.countDocs('payload_space_comments'), 2)
     assert.equal(payload.countDocs('payload_audit_events'), 1)
     assert.equal(payload.countDocs('payload_email_events'), 1)
