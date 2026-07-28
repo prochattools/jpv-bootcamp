@@ -92,6 +92,10 @@ body {
 .nav {
   background: var(--jpv-canvas);
   border-right: 1px solid var(--jpv-border);
+
+  // Constrain nav content so links don't overflow on narrow viewports
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 // Nav group headers (collection groupings)
@@ -101,6 +105,9 @@ body {
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+  padding-block: 0.625rem;
+  padding-inline: 0.75rem;
+  width: 100%;
 }
 
 // Nav group indicator line
@@ -108,19 +115,31 @@ body {
   background: var(--jpv-border);
 }
 
-// Individual nav links — target Payload's <a> elements inside the nav
-// Payload renders nav links as anchors with data-active attribute
+// Individual nav links — Payload renders anchors with data-active OR aria-current.
+// display:block + padding are required for the background to render with visible height.
+.nav a {
+  display: block;
+  border-radius: var(--jpv-radius-action);
+  padding-block: 0.5rem;
+  padding-inline: 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  text-decoration: none;
+}
+
 .nav a[data-active='true'],
-.nav a[aria-current='page'] {
+.nav a[aria-current='page'],
+.nav a.active,
+.nav li[aria-current='page'] > a,
+.nav li.active > a {
   background: var(--jpv-brand-deep);
-  color: var(--jpv-canvas);
+  color: var(--jpv-canvas) !important;
   border-radius: var(--jpv-radius-action);
   font-weight: 600;
 }
 
-.nav a:not([data-active='true']):not([aria-current='page']) {
+.nav a:not([data-active='true']):not([aria-current='page']):not(.active) {
   color: var(--jpv-ink);
-  border-radius: var(--jpv-radius-action);
 
   &:hover {
     background: var(--jpv-surface);
@@ -179,11 +198,25 @@ body {
   border-radius: var(--jpv-radius-pill);
 }
 
+// ─── Main content area — gutters ─────────────────────────────────────────────
+// Prevent content from touching viewport edges at all breakpoints.
+
+.main-content,
+.payload-ui--dashboard,
+.template-default__content,
+.view--collection-list,
+.view--document {
+  padding-inline: clamp(1rem, 4vw, 2.5rem);
+  padding-block: 1.5rem;
+  max-width: 1280px;
+}
+
 // ─── Collection list header ───────────────────────────────────────────────────
 
 .list-header {
   border-bottom: 1px solid var(--jpv-border);
   padding-block: 1.25rem;
+  padding-inline: 0;
 
   h1,
   h2 {
@@ -198,6 +231,45 @@ body {
 .actions-bar {
   background: var(--jpv-canvas);
   border-bottom: 1px solid var(--jpv-border);
+  padding-inline: clamp(1rem, 4vw, 2.5rem);
+  padding-block: 0.75rem;
+}
+
+// ─── Edit form field spacing ──────────────────────────────────────────────────
+// Payload wraps each field in .field-type; add a consistent gap so
+// adjacent fields never touch each other or the panel border.
+
+.field-type {
+  margin-bottom: 1.5rem;
+}
+
+.render-fields {
+  padding-block: 0.5rem;
+
+  > .field-type:last-child {
+    margin-bottom: 0;
+  }
+}
+
+// ─── Sidebar/detail panel ────────────────────────────────────────────────────
+// Payload shows a right-side document sidebar on edit views.
+
+.doc-sidebar__panels,
+.document-controls__sidebar-fields {
+  padding: 1.25rem;
+  border-left: 1px solid var(--jpv-border);
+  background: var(--jpv-surface);
+}
+
+// ─── Collection/document view panels ────────────────────────────────────────
+
+.document-fields,
+.collection-list__wrap {
+  background: var(--jpv-canvas);
+  border-radius: var(--jpv-radius-panel);
+  border: 1px solid var(--jpv-border);
+  padding: 1.5rem;
+  margin-block: 1rem;
 }
 
 // ─── Table density and row styling ────────────────────────────────────────────
@@ -215,13 +287,19 @@ body {
     letter-spacing: 0.04em;
     text-transform: uppercase;
     padding-block: 0.625rem;
+    padding-inline: 1rem;
     border-bottom: 1px solid var(--jpv-border);
+    white-space: nowrap;
   }
 
   td {
     border-bottom: 1px solid color-mix(in srgb, var(--jpv-border) 60%, transparent);
     padding-block: 0.75rem;
+    padding-inline: 1rem;
     vertical-align: middle;
+    // Long values wrap rather than overflow
+    word-break: break-word;
+    overflow-wrap: anywhere;
   }
 
   tr:last-child td {
@@ -243,12 +321,19 @@ body {
     font-weight: 700;
     letter-spacing: 0.04em;
     text-transform: uppercase;
+    padding-block: 0.625rem;
+    padding-inline: 1rem;
     border-bottom: 1px solid var(--jpv-border);
+    white-space: nowrap;
   }
 
   .simple-table__td {
     border-bottom: 1px solid color-mix(in srgb, var(--jpv-border) 60%, transparent);
+    padding-block: 0.75rem;
+    padding-inline: 1rem;
     vertical-align: middle;
+    word-break: break-word;
+    overflow-wrap: anywhere;
   }
 }
 
@@ -324,6 +409,42 @@ body {
   }
 }
 
+.loading-overlay,
+.loading-overlay--top {
+  color: var(--jpv-muted);
+}
+
+// ─── Notice / banner ──────────────────────────────────────────────────────────
+// Payload renders admin notices inside .banner or .notice
+
+.banner,
+.notice {
+  border-radius: var(--jpv-radius-card);
+  padding: 0.875rem 1rem;
+  font-size: 0.875rem;
+}
+
+.banner--style-success,
+.notice--style-success {
+  background: color-mix(in srgb, var(--jpv-brand) 10%, var(--jpv-canvas));
+  border: 1px solid color-mix(in srgb, var(--jpv-brand) 28%, var(--jpv-border));
+  color: var(--jpv-brand-deep);
+}
+
+.banner--style-error,
+.notice--style-error {
+  background: var(--jpv-danger-surface);
+  border: 1px solid color-mix(in srgb, var(--jpv-danger) 28%, var(--jpv-border));
+  color: var(--jpv-danger-ink);
+}
+
+.banner--style-warning,
+.notice--style-warning {
+  background: color-mix(in srgb, var(--jpv-sunshine) 14%, var(--jpv-canvas));
+  border: 1px solid color-mix(in srgb, var(--jpv-sunshine) 42%, var(--jpv-border));
+  color: var(--jpv-sunshine-ink);
+}
+
 // ─── Form controls ────────────────────────────────────────────────────────────
 
 input:not([type='checkbox']):not([type='radio']),
@@ -350,26 +471,39 @@ select {
 
 @media (max-width: 768px) {
   .nav {
-    // On mobile Payload renders the nav as a slide-out drawer
     z-index: 100;
     box-shadow: var(--jpv-shadow-floating);
   }
 
   .app-header {
-    // Ensure the header stays full-width on mobile
     position: sticky;
     top: 0;
     z-index: 200;
   }
 
+  // Prevent horizontal overflow on narrow screens — tables scroll inside wrapper
   .table {
-    // Allow horizontal scroll for wide tables on small screens
     display: block;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
+    width: 100%;
   }
 
-  // Ensure action buttons meet minimum 44px touch target
+  // Compress gutters on mobile so content reaches a readable width
+  .main-content,
+  .payload-ui--dashboard,
+  .template-default__content,
+  .view--collection-list,
+  .view--document {
+    padding-inline: 1rem;
+  }
+
+  .doc-controls__content,
+  .actions-bar {
+    padding-inline: 1rem;
+  }
+
+  // 44px touch targets for all interactive elements
   .btn,
   .nav a,
   .app-header a,
@@ -379,13 +513,36 @@ select {
     display: inline-flex;
     align-items: center;
   }
+
+  // Prevent long labels or values from forcing a horizontal scroll on forms
+  .render-fields,
+  .document-fields {
+    overflow-x: hidden;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+
+  // Stack document + sidebar panels vertically on mobile
+  .doc-sidebar__panels,
+  .document-controls__sidebar-fields {
+    border-left: none;
+    border-top: 1px solid var(--jpv-border);
+    padding: 1rem;
+  }
 }
 
 // ─── Tablet nav ───────────────────────────────────────────────────────────────
 
 @media (max-width: 1024px) and (min-width: 769px) {
   .nav {
-    // Tablet: narrower sidebar
     width: clamp(200px, 22vw, 260px);
+  }
+
+  .main-content,
+  .payload-ui--dashboard,
+  .template-default__content,
+  .view--collection-list,
+  .view--document {
+    padding-inline: 1.5rem;
   }
 }
