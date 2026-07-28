@@ -2,7 +2,7 @@ import type { CollectionConfig } from 'payload'
 
 import { adminOnlyCollectionAccess } from '@/lib/access/payloadAccess'
 
-const partnerGroup = 'Partners & Affiliates'
+const partnerGroup = 'Partners'
 
 const partnerStatusOptions = [
   { label: 'Draft', value: 'draft' },

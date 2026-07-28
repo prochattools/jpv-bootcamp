@@ -1,4 +1,4 @@
-export const membershipSupportGroup = 'Membership Support'
+export const membershipSupportGroup = 'Support'
 
 export const fundingSourceOptions = [
   { label: 'Direct payment', value: 'direct_payment' },

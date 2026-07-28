@@ -2,7 +2,7 @@ import type { CollectionConfig } from 'payload'
 
 import { adminOnlyCollectionAccess } from '@/lib/access/payloadAccess'
 
-const affiliateGroup = 'Partners & Affiliates'
+const affiliateGroup = 'Partners'
 
 function normalizeCurrency(value: unknown): string | null | undefined {
   if (value == null || value === '') return value as null | undefined

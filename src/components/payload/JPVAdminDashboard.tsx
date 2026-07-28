@@ -23,11 +23,14 @@ async function safeCount(
 }
 
 function formatCount(value: number | null): string {
-  return value === null ? 'Check' : String(value)
+  return value === null ? 'Unavailable' : String(value)
 }
 
-function warning(value: number | null): boolean {
-  return value === null
+type KpiState = 'healthy' | 'attention' | 'unavailable'
+
+function kpiState(value: number | null, actionable = false): KpiState {
+  if (value === null) return 'unavailable'
+  return actionable && value > 0 ? 'attention' : 'healthy'
 }
 
 export async function JPVAdminDashboard() {
@@ -46,44 +49,42 @@ export async function JPVAdminDashboard() {
     safeCount(payload, 'payload_members', { accountStatus: { equals: 'active' } }),
     safeCount(payload, 'payload_members', { accountStatus: { equals: 'pending' } }),
     safeCount(payload, 'payload_subscriptions', { status: { equals: 'active' } }),
-    safeCount(payload, 'payload_payments', { status: { in: ['failed', 'refunded', 'disputed'] } }),
+    safeCount(payload, 'payload_payments', { status: { in: ['failed', 'action_required', 'disputed'] } }),
     safeCount(payload, 'payload_membership_vouchers', { approvalState: { in: ['draft', 'pending_approval'] } }),
     safeCount(payload, 'payload_pay_it_forward_funding', { approvalState: { in: ['draft', 'pending_approval'] } }),
     safeCount(payload, 'payload_partner_applications', { status: { in: ['submitted', 'delivery_pending', 'delivery_failed'] } }),
     safeCount(payload, 'payload_affiliate_commissions', { status: { equals: 'pending' } }),
-    safeCount(payload, 'payload_space_posts', { moderationStatus: { in: ['pending_review', 'hidden'] } }),
+    safeCount(payload, 'payload_space_posts', { moderationStatus: { equals: 'pending_review' } }),
   ])
 
-  // KPI warning states: amber tint for null (query failed) OR actionable non-zero counts
   const kpis = [
     {
       label: 'Active members',
       value: formatCount(activeMembers),
-      isWarning: warning(activeMembers),
+      state: kpiState(activeMembers),
     },
     {
       label: 'Pending members',
       value: formatCount(pendingMembers),
-      isWarning: pendingMembers === null || pendingMembers > 0,
+      state: kpiState(pendingMembers, true),
     },
     {
       label: 'Active subscriptions',
       value: formatCount(activeSubscriptions),
-      isWarning: warning(activeSubscriptions),
+      state: kpiState(activeSubscriptions),
     },
     {
       label: 'Billing issues',
       value: formatCount(billingIssues),
-      isWarning: billingIssues === null || billingIssues > 0,
+      state: kpiState(billingIssues, true),
     },
     {
       label: 'Community moderation',
       value: formatCount(communityModeration),
-      isWarning: communityModeration === null || communityModeration > 0,
+      state: kpiState(communityModeration, true),
     },
   ]
 
-  // "Needs attention" items: only shown when count > 0 or query failed
   type AttentionItem = { label: string; count: number | null; href: string }
   const allAttentionItems: AttentionItem[] = [
     {
@@ -94,44 +95,54 @@ export async function JPVAdminDashboard() {
     {
       label: 'Billing issues',
       count: billingIssues,
-      href: '/admin/collections/payload_payments',
+      href: '/admin/collections/payload_payments?where[or][0][status][equals]=failed&where[or][1][status][equals]=action_required&where[or][2][status][equals]=disputed',
     },
     {
       label: 'Voucher approvals',
       count: voucherReviewItems,
-      href: '/admin/collections/payload_membership_vouchers',
+      href: '/admin/collections/payload_membership_vouchers?where[or][0][approvalState][equals]=draft&where[or][1][approvalState][equals]=pending_approval',
     },
     {
       label: 'Pay-it-forward approvals',
       count: payItForwardItems,
-      href: '/admin/collections/payload_pay_it_forward_funding',
+      href: '/admin/collections/payload_pay_it_forward_funding?where[or][0][approvalState][equals]=draft&where[or][1][approvalState][equals]=pending_approval',
     },
     {
-      label: 'Pending partner applications',
+      label: 'Partner applications to review',
       count: pendingPartnerApplications,
-      href: '/admin/collections/payload_partner_applications',
+      href: '/admin/collections/payload_partner_applications?where[or][0][status][equals]=submitted&where[or][1][status][equals]=delivery_pending&where[or][2][status][equals]=delivery_failed',
     },
     {
-      label: 'Pending affiliate commissions',
+      label: 'Affiliate commissions to review',
       count: pendingAffiliateCommissions,
-      href: '/admin/collections/payload_affiliate_commissions',
+      href: '/admin/collections/payload_affiliate_commissions?where[status][equals]=pending',
     },
     {
-      label: 'Community moderation',
+      label: 'Community posts to review',
       count: communityModeration,
-      href: '/admin/collections/payload_space_posts',
+      href: '/admin/collections/payload_space_posts?where[moderationStatus][equals]=pending_review',
     },
   ]
   const attentionItems = allAttentionItems.filter(
-    (item) => item.count === null || item.count > 0,
+    (item): item is AttentionItem & { count: number } => item.count !== null && item.count > 0,
   )
+  const unavailableCount = [
+    activeMembers,
+    pendingMembers,
+    activeSubscriptions,
+    billingIssues,
+    voucherReviewItems,
+    payItForwardItems,
+    pendingPartnerApplications,
+    pendingAffiliateCommissions,
+    communityModeration,
+  ].filter((value) => value === null).length
   const allClear = attentionItems.length === 0
 
-  // Quick actions
   const quickActions = [
     { label: 'Members', href: '/admin/collections/payload_members' },
     { label: 'Billing', href: '/admin/collections/payload_billing_accounts' },
-    { label: 'Membership support', href: '/admin/collections/payload_membership_support_records' },
+    { label: 'Support', href: '/admin/collections/payload_membership_support_records' },
     { label: 'Partner applications', href: '/admin/collections/payload_partner_applications' },
     { label: 'Courses', href: '/admin/collections/payload_courses' },
   ]
@@ -191,11 +202,14 @@ export async function JPVAdminDashboard() {
             <div
               key={kpi.label}
               style={{
-                background: kpi.isWarning
-                  ? 'color-mix(in srgb, var(--jpv-sunshine) 10%, var(--jpv-canvas))'
-                  : 'var(--jpv-canvas)',
+                background:
+                  kpi.state === 'attention'
+                    ? 'color-mix(in srgb, var(--jpv-sunshine) 10%, var(--jpv-canvas))'
+                    : kpi.state === 'unavailable'
+                      ? 'var(--jpv-surface)'
+                      : 'var(--jpv-canvas)',
                 border: `1px solid ${
-                  kpi.isWarning
+                  kpi.state === 'attention'
                     ? 'color-mix(in srgb, var(--jpv-sunshine) 40%, var(--jpv-border))'
                     : 'var(--jpv-border)'
                 }`,
@@ -231,6 +245,23 @@ export async function JPVAdminDashboard() {
           ))}
         </div>
       </section>
+
+      {unavailableCount > 0 ? (
+        <p
+          role='status'
+          style={{
+            background: 'var(--jpv-surface)',
+            border: '1px solid var(--jpv-border)',
+            borderRadius: 'var(--jpv-radius-card)',
+            color: 'var(--jpv-muted)',
+            fontSize: 13,
+            margin: 0,
+            padding: '12px 16px',
+          }}
+        >
+          Some overview data is temporarily unavailable. Open the relevant section to review current records.
+        </p>
+      ) : null}
 
       {/* Needs attention */}
       <section>
@@ -294,6 +325,7 @@ export async function JPVAdminDashboard() {
                     fontSize: 12,
                     fontWeight: 700,
                     gap: 6,
+                    minHeight: 44,
                     textDecoration: 'none',
                   }}
                 >
@@ -302,16 +334,13 @@ export async function JPVAdminDashboard() {
                       background: 'color-mix(in srgb, var(--jpv-sunshine) 20%, var(--jpv-canvas))',
                       border: '1px solid color-mix(in srgb, var(--jpv-sunshine) 40%, var(--jpv-border))',
                       borderRadius: 9999,
-                      color:
-                        item.count === null
-                          ? 'var(--jpv-danger)'
-                          : 'var(--jpv-sunshine-ink)',
+                      color: 'var(--jpv-sunshine-ink)',
                       fontSize: 11,
                       fontWeight: 700,
                       padding: '1px 8px',
                     }}
                   >
-                    {item.count === null ? '!' : item.count}
+                    {item.count}
                   </span>
                   <span style={{ fontSize: 14 }}>→</span>
                 </a>
@@ -354,7 +383,10 @@ export async function JPVAdminDashboard() {
               style={{
                 color: 'var(--jpv-brand-deep)',
                 fontSize: 13,
+                alignItems: 'center',
+                display: 'inline-flex',
                 fontWeight: 700,
+                minHeight: 44,
                 textDecoration: 'none',
               }}
             >

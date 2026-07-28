@@ -35,19 +35,19 @@ function main(): void {
   )
 
   const first = PayloadMembershipSupportRecords
-  assert.equal(first.admin?.group, 'Membership Support')
+  assert.equal(first.admin?.group, 'Support')
   assert.equal(first.admin?.useAsTitle, 'displayName')
   assert.equal(first.labels?.singular, 'Membership Support Record')
 
-  assert.equal(PayloadMembershipVouchers.admin?.group, 'Membership Support')
-  assert.equal(PayloadPayItForwardFunding.admin?.group, 'Membership Support')
-  assert.equal(PayloadMembershipFundingSources.admin?.group, 'Membership Support')
-  assert.equal(PayloadMembershipReconciliations.admin?.group, 'Membership Support')
-  assert.equal(PayloadMembershipAdministrationActions.admin?.group, 'Membership Support')
-  assert.equal(PayloadMembershipReviewQueueItems.admin?.group, 'Membership Support')
-  assert.equal(PayloadOperatorNotes.admin?.group, 'Membership Support')
-  assert.equal(PayloadStripeShadowProjections.admin?.group, 'Membership Support')
-  assert.equal(PayloadMembershipAuditHistory.admin?.group, 'Membership Support')
+  assert.equal(PayloadMembershipVouchers.admin?.group, 'Support')
+  assert.equal(PayloadPayItForwardFunding.admin?.group, 'Support')
+  assert.equal(PayloadMembershipFundingSources.admin?.group, 'Support')
+  assert.equal(PayloadMembershipReconciliations.admin?.group, 'Support')
+  assert.equal(PayloadMembershipAdministrationActions.admin?.group, 'Support')
+  assert.equal(PayloadMembershipReviewQueueItems.admin?.group, 'Support')
+  assert.equal(PayloadOperatorNotes.admin?.group, 'Support')
+  assert.equal(PayloadStripeShadowProjections.admin?.group, 'Support')
+  assert.equal(PayloadMembershipAuditHistory.admin?.group, 'Support')
 
   console.log('membership support collection registry tests passed')
 }
