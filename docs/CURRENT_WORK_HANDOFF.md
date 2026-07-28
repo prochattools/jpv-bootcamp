@@ -585,3 +585,24 @@ All previously deferred items are now PROVEN:
 1. Responsive and accessibility hardening across frontend, member portal, emails-as-rendered, operator tools, and Payload branding.
 2. Operator-tool design coherence.
 3. Payload admin branding and responsiveness.
+
+
+
+### 2026-07-28 Final Payload admin static proof follow-up
+
+**Verified centralized fixes**
+- Constrained Payload admin views now use `width: 100%`, `max-width: 1280px`, and `margin-inline: auto`, preserving responsive gutters while preventing large-screen layouts from remaining left-heavy.
+- The operator dashboard all-clear state no longer references the undefined `--jpv-green` token; it uses the canonical `--jpv-brand-deep` token.
+- `scripts/payload_admin_dashboard.test.ts` now guards both contracts so undefined admin color tokens and uncentered constrained views cannot regress silently.
+
+**Validation**
+- Focused Payload admin dashboard contract: passed.
+- Dashboard route/link integrity contract: passed.
+- Payload TypeScript: passed.
+- Changed-path security scan: clean.
+- Production build job `validation-6d169f27-da41-4ede-93c6-95d89f69304f`: passed.
+- Canonical release job `validation-04020c87-9d42-4aeb-ba07-f9aa4d5a7567`: **156/156 passed**.
+
+**External proof boundary**
+- Authenticated browser evidence for `/admin` at 390x844, 768x1024, and 1280x900 remains external. Repository validation proves the centralized selector, token, route, TypeScript, build, and release contracts, but does not prove final rendered contrast, keyboard order, focus behavior, table density, or mobile navigation in the deployed Payload UI.
+- Any further visual changes should be based on captured staging evidence rather than additional static assumptions.

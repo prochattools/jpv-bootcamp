@@ -294,7 +294,7 @@ export async function JPVAdminDashboard() {
                 padding: '14px 20px',
               }}
             >
-              <span style={{ color: 'var(--jpv-green)', fontSize: 16, lineHeight: 1 }}>✓</span>
+              <span style={{ color: 'var(--jpv-brand-deep)', fontSize: 16, lineHeight: 1 }}>✓</span>
               <span style={{ color: 'var(--jpv-muted)', fontSize: 13 }}>
                 All clear — nothing requires immediate attention.
               </span>

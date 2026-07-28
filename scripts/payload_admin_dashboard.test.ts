@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 
 const payloadConfig = readFileSync('src/payload.config.ts', 'utf8')
 const dashboard = readFileSync('src/components/payload/JPVAdminDashboard.tsx', 'utf8')
+const adminStyles = readFileSync('src/app/(payload)/jpv-admin.scss', 'utf8')
 const partners = readFileSync('src/collections/partners/Partners.ts', 'utf8')
 const affiliates = readFileSync('src/collections/affiliates/Affiliates.ts', 'utf8')
 
@@ -54,6 +55,12 @@ for (const forbidden of [
 
 assert.match(dashboard, /safeCount/)
 assert.match(dashboard, /catch\s*\{/)
+assert.doesNotMatch(dashboard, /--jpv-green/, 'Dashboard must not reference undefined JPV color tokens')
+assert.match(
+  adminStyles,
+  /\.main-content,[\s\S]*max-width:\s*1280px;[\s\S]*margin-inline:\s*auto;/,
+  'Constrained Payload admin views must remain centered with responsive gutters',
+)
 assert.match(partners, /External partner organizations and destinations/)
 assert.match(partners, /recipient emails/)
 assert.match(partners, /webhook rules/)
