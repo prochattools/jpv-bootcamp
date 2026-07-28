@@ -100,8 +100,8 @@ export default function AdminSessionsPage() {
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
       <section className="space-y-2">
-        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-neutral-500">Operator</p>
-        <h1 className="text-2xl font-semibold text-neutral-950">Live Sessions</h1>
+        <p className="jpv-eyebrow">Operator</p>
+        <h1 className="text-2xl font-semibold text-jpv-ink">Live Sessions</h1>
       </section>
 
       <div className="mt-6">
@@ -120,68 +120,68 @@ export default function AdminSessionsPage() {
             e.preventDefault()
             createSession()
           }}
-          className="mt-6 space-y-4 rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm"
+          className="mt-6 space-y-4 rounded-jpv-panel border border-jpv-border bg-jpv-canvas p-6 shadow-sm"
         >
-          <h2 className="text-lg font-semibold text-neutral-950">New session</h2>
+          <h2 className="text-lg font-semibold text-jpv-ink">New session</h2>
           <div>
-            <label className="block text-sm font-medium text-neutral-900" htmlFor="session-title">Title</label>
+            <label className="block text-sm font-medium text-jpv-ink" htmlFor="session-title">Title</label>
             <input
               id="session-title"
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               required
-              className="mt-1 w-full min-h-11 rounded border border-neutral-300 px-3 py-2 text-sm"
+              className="mt-1 w-full min-h-11 rounded-jpv-control border border-jpv-border px-3 py-2 text-sm"
               placeholder="e.g., Weekly Q&A"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-neutral-900" htmlFor="session-course">Course ID</label>
+            <label className="block text-sm font-medium text-jpv-ink" htmlFor="session-course">Course ID</label>
             <input
               id="session-course"
               type="text"
               value={course}
               onChange={(e) => setCourse(e.target.value)}
               required
-              className="mt-1 w-full min-h-11 rounded border border-neutral-300 px-3 py-2 text-sm"
+              className="mt-1 w-full min-h-11 rounded-jpv-control border border-jpv-border px-3 py-2 text-sm"
               placeholder="Payload course document ID"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-neutral-900" htmlFor="session-module">Module ID <span className="font-normal text-neutral-500">(optional)</span></label>
+            <label className="block text-sm font-medium text-jpv-ink" htmlFor="session-module">Module ID <span className="font-normal text-jpv-muted">(optional)</span></label>
             <input
               id="session-module"
               type="text"
               value={module}
               onChange={(e) => setModule(e.target.value)}
-              className="mt-1 w-full min-h-11 rounded border border-neutral-300 px-3 py-2 text-sm"
+              className="mt-1 w-full min-h-11 rounded-jpv-control border border-jpv-border px-3 py-2 text-sm"
               placeholder="Payload module document ID"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-neutral-900" htmlFor="session-lesson">Lesson ID <span className="font-normal text-neutral-500">(optional)</span></label>
+            <label className="block text-sm font-medium text-jpv-ink" htmlFor="session-lesson">Lesson ID <span className="font-normal text-jpv-muted">(optional)</span></label>
             <input
               id="session-lesson"
               type="text"
               value={lesson}
               onChange={(e) => setLesson(e.target.value)}
-              className="mt-1 w-full min-h-11 rounded border border-neutral-300 px-3 py-2 text-sm"
+              className="mt-1 w-full min-h-11 rounded-jpv-control border border-jpv-border px-3 py-2 text-sm"
               placeholder="Requires the related module ID"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-neutral-900" htmlFor="session-scheduled-at">Scheduled Time</label>
+            <label className="block text-sm font-medium text-jpv-ink" htmlFor="session-scheduled-at">Scheduled Time</label>
             <input
               id="session-scheduled-at"
               type="datetime-local"
               value={scheduledAt}
               onChange={(e) => setScheduledAt(e.target.value)}
               required
-              className="mt-1 w-full min-h-11 rounded border border-neutral-300 px-3 py-2 text-sm"
+              className="mt-1 w-full min-h-11 rounded-jpv-control border border-jpv-border px-3 py-2 text-sm"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-neutral-900" htmlFor="session-capacity">Capacity</label>
+            <label className="block text-sm font-medium text-jpv-ink" htmlFor="session-capacity">Capacity</label>
             <input
               id="session-capacity"
               type="number"
@@ -190,7 +190,7 @@ export default function AdminSessionsPage() {
               min={1}
               max={500}
               required
-              className="mt-1 w-full min-h-11 rounded border border-neutral-300 px-3 py-2 text-sm"
+              className="mt-1 w-full min-h-11 rounded-jpv-control border border-jpv-border px-3 py-2 text-sm"
             />
           </div>
           <button
@@ -204,14 +204,14 @@ export default function AdminSessionsPage() {
       )}
 
       <div className="mt-8 space-y-4">
-        <h2 className="text-xl font-semibold text-neutral-950">Sessions</h2>
+        <h2 className="text-xl font-semibold text-jpv-ink">Sessions</h2>
 
         {loadError && (
-          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">{loadError}</div>
+          <div className="rounded-xl border border-jpv-danger/30 bg-jpv-danger-surface px-4 py-3 text-sm text-jpv-danger-ink" role="alert">{loadError}</div>
         )}
 
         {sessions.length === 0 && !loadError ? (
-          <p className="text-sm text-neutral-500">No sessions scheduled</p>
+          <p className="text-sm text-jpv-muted">No sessions scheduled</p>
         ) : (
           sessions.map((session) => {
             const hostEmail =
@@ -232,27 +232,29 @@ export default function AdminSessionsPage() {
             return (
               <div
                 key={session.id}
-                className="flex flex-col gap-4 rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm sm:flex-row sm:items-start sm:justify-between"
+                className="flex flex-col gap-4 rounded-jpv-panel border border-jpv-border bg-jpv-canvas p-5 shadow-sm sm:flex-row sm:items-start sm:justify-between"
               >
                 <div className="min-w-0">
-                  <h3 className="font-semibold text-neutral-950">{session.title}</h3>
-                  <p className="mt-1 text-sm text-neutral-600">
+                  <h3 className="font-semibold text-jpv-ink">{session.title}</h3>
+                  <p className="mt-1 text-sm text-jpv-muted">
                     {new Date(session.scheduledAt).toLocaleString()} · Cap: {session.capacity}
                   </p>
-                  <p className="mt-1 text-xs text-neutral-500">Course: {courseTitle}</p>
+                  <p className="mt-1 text-xs text-jpv-muted">Course: {courseTitle}</p>
                   {hostEmail ? (
-                    <p className="text-xs text-neutral-500">Host: {hostEmail}</p>
+                    <p className="text-xs text-jpv-muted">Host: {hostEmail}</p>
                   ) : null}
-                  <p className="mt-1 break-all text-xs font-mono text-neutral-400">{session.roomName}</p>
+                  <p className="mt-1 break-all text-xs font-mono text-jpv-muted opacity-60">{session.roomName}</p>
                   <p className="mt-3">
                     <span
-                      className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold text-white ${
-                        session.status === 'scheduled'
-                          ? 'bg-blue-600'
-                          : session.status === 'live'
-                            ? 'bg-emerald-600'
-                            : 'bg-neutral-500'
-                      }`}
+                      className="inline-flex rounded-full px-3 py-1 text-xs font-semibold text-white"
+                      style={{
+                        background:
+                          session.status === 'scheduled'
+                            ? 'var(--jpv-brand-deep)'
+                            : session.status === 'live'
+                              ? 'var(--jpv-green)'
+                              : 'var(--jpv-muted)',
+                      }}
                     >
                       {session.status.toUpperCase()}
                     </span>

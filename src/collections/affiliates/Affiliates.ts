@@ -22,6 +22,7 @@ export const PayloadAffiliates: CollectionConfig = {
     useAsTitle: 'displayName',
     defaultColumns: ['displayName', 'member', 'referralCode', 'status', 'updatedAt'],
     description: 'Internal referral programme records: affiliate members, referral codes, referral history, commission state, and payout review.',
+    hidden: true,
   },
   access: adminOnlyCollectionAccess,
   fields: [

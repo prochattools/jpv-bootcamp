@@ -32,11 +32,6 @@ export default async function AdminReviewPage() {
         <div className='space-y-3'>
           <p className='jpv-eyebrow'>JPV Bootcamp — Admin</p>
           <h1 className='text-3xl font-semibold tracking-tight text-jpv-ink'>Review dashboard</h1>
-          <p className='max-w-2xl text-sm leading-6 text-jpv-muted'>
-            Preview of operator review sections for implemented MVP flows. No live DB queue is
-            loaded — all data is representative preview. Manual review and migration approval
-            are still required before live operation.
-          </p>
           <div className='jpv-notice'>
             Read-only preview — no DB-backed review queues, no live application data, no
             migrations applied. Status reflects implementation completeness only.
@@ -125,8 +120,7 @@ export default async function AdminReviewPage() {
         <section className='rounded-jpv-panel border border-jpv-border bg-jpv-canvas p-5 sm:p-6'>
           <h2 className='text-lg font-semibold text-jpv-ink'>Export preview</h2>
           <p className='mt-2 text-sm text-jpv-muted'>
-            Static export rows for operator review preparation. No file is written — data is
-            representative preview only.
+            Export checklist for operator preparation.
           </p>
           <div className='mt-4 overflow-x-auto'>
             <table className='w-full text-left text-sm'>

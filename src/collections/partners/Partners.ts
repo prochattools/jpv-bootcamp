@@ -131,6 +131,7 @@ export const PayloadPartnerEvents: CollectionConfig = {
     useAsTitle: 'displayName',
     defaultColumns: ['displayName', 'eventType', 'partner', 'application', 'createdAt'],
     description: 'Partner delivery and application event history for external partner operations.',
+    hidden: true,
   },
   access: adminOnlyCollectionAccess,
   fields: [
