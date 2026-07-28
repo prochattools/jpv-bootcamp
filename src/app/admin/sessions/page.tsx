@@ -136,7 +136,7 @@ export default function AdminSessionsPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-jpv-ink" htmlFor="session-course">Course ID</label>
+            <label className="block text-sm font-medium text-jpv-ink" htmlFor="session-course">Course</label>
             <input
               id="session-course"
               type="text"
@@ -144,29 +144,29 @@ export default function AdminSessionsPage() {
               onChange={(e) => setCourse(e.target.value)}
               required
               className="mt-1 w-full min-h-11 rounded-jpv-control border border-jpv-border px-3 py-2 text-sm"
-              placeholder="Payload course document ID"
+              placeholder="Course record ID (from Courses list)"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-jpv-ink" htmlFor="session-module">Module ID <span className="font-normal text-jpv-muted">(optional)</span></label>
+            <label className="block text-sm font-medium text-jpv-ink" htmlFor="session-module">Module <span className="font-normal text-jpv-muted">(optional)</span></label>
             <input
               id="session-module"
               type="text"
               value={module}
               onChange={(e) => setModule(e.target.value)}
               className="mt-1 w-full min-h-11 rounded-jpv-control border border-jpv-border px-3 py-2 text-sm"
-              placeholder="Payload module document ID"
+              placeholder="Module record ID (optional)"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-jpv-ink" htmlFor="session-lesson">Lesson ID <span className="font-normal text-jpv-muted">(optional)</span></label>
+            <label className="block text-sm font-medium text-jpv-ink" htmlFor="session-lesson">Lesson <span className="font-normal text-jpv-muted">(optional)</span></label>
             <input
               id="session-lesson"
               type="text"
               value={lesson}
               onChange={(e) => setLesson(e.target.value)}
               className="mt-1 w-full min-h-11 rounded-jpv-control border border-jpv-border px-3 py-2 text-sm"
-              placeholder="Requires the related module ID"
+              placeholder="Lesson record ID (optional)"
             />
           </div>
           <div>

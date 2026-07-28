@@ -15,8 +15,8 @@ export const PayloadStripeShadowProjections: CollectionConfig = {
   admin: {
     group: membershipSupportGroup,
     useAsTitle: 'displayName',
-    defaultColumns: ['displayName', 'shadowState', 'stripeCustomerId', 'stripeSubscriptionId', 'updatedAt'],
-    description: 'Repository-only shadow of Stripe membership state for reconciliation and audit.',
+    defaultColumns: ['displayName', 'shadowState', 'member', 'lastWebhookAt', 'updatedAt'],
+    description: 'Billing state snapshot used for reconciliation and audit.',
   },
   access: membershipSupportAccess,
   fields: [

@@ -17,7 +17,7 @@ export const PayloadMembershipReconciliations: CollectionConfig = {
     group: membershipSupportGroup,
     useAsTitle: 'displayName',
     defaultColumns: ['displayName', 'reconciliationState', 'member', 'lastWebhookAt', 'updatedAt'],
-    description: 'Stripe and membership reconciliation results and webhook projection state.',
+    description: 'Membership billing reconciliation results and status history.',
   },
   access: membershipSupportAccess,
   fields: [

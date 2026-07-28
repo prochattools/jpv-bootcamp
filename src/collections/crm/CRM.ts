@@ -260,7 +260,7 @@ export const PayloadEmailEvents: CollectionConfig = {
     group: crmGroup,
     useAsTitle: 'displayName',
     defaultColumns: ['displayName', 'toEmail', 'templateKey', 'deliveryStatus', 'failureReason', 'sentAt', 'createdAt'],
-    description: 'Read-only delivery queue and provider status. Use Email Actions to retry failed events.',
+    description: 'Email delivery log. Use Email Actions to retry a failed delivery.',
   },
   access: {
     admin: ({ req }) => isPayloadAdminRequest(req),
@@ -404,7 +404,7 @@ export const PayloadEmailActions: CollectionConfig = {
         deliveryStatus: { equals: 'failed' },
       },
       admin: {
-        description: 'Only failed events are eligible. The selected event ID is resolved server-side.',
+        description: 'Only failed deliveries are eligible for retry.',
       },
     },
     {

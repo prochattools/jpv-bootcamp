@@ -36,8 +36,8 @@ export const PayloadBillingAccounts: CollectionConfig = {
   admin: {
     group: billingGroup,
     useAsTitle: 'displayName',
-    defaultColumns: ['displayName', 'member', 'stripeCustomerId', 'billingStatus', 'updatedAt'],
-    description: 'Billing account projections are read-only. Use Billing Actions for guarded Stripe test-mode operations.',
+    defaultColumns: ['displayName', 'member', 'billingStatus', 'billingEmail', 'updatedAt'],
+    description: 'Billing account projections are read-only. Use Billing Actions to sync, cancel, or resume a subscription.',
   },
   access: webhookProjectionCollectionAccess,
   fields: [
@@ -91,7 +91,7 @@ export const PayloadSubscriptions: CollectionConfig = {
     group: billingGroup,
     useAsTitle: 'displayName',
     defaultColumns: ['displayName', 'member', 'plan', 'status', 'currentPeriodEnd', 'updatedAt'],
-    description: 'Read-only Stripe subscription projection. Create a Billing Action to sync, schedule cancellation, or reverse it.',
+    description: 'Read-only subscription record. Create a Billing Action to sync, schedule cancellation, or reverse a cancellation.',
   },
   access: webhookProjectionCollectionAccess,
   fields: [
@@ -191,7 +191,7 @@ export const PayloadPayments: CollectionConfig = {
     group: billingGroup,
     useAsTitle: 'displayName',
     defaultColumns: ['displayName', 'member', 'amount', 'currency', 'status', 'paidAt'],
-    description: 'Read-only payment, refund, and dispute history projected from Stripe webhooks.',
+    description: 'Read-only payment, refund, and dispute history.',
   },
   access: webhookProjectionCollectionAccess,
   fields: [
@@ -286,7 +286,7 @@ export const PayloadBillingActions: CollectionConfig = {
     group: billingGroup,
     useAsTitle: 'displayName',
     defaultColumns: ['displayName', 'subscription', 'actionType', 'status', 'requestedBy', 'createdAt'],
-    description: 'Create a guarded test-mode subscription action. Results are immutable audit records.',
+    description: 'Create a subscription action. Select a subscription and choose an action — results are recorded and cannot be edited.',
   },
   access: {
     admin: ({ req }) => isPayloadAdminRequest(req),
@@ -351,7 +351,7 @@ export const PayloadBillingActions: CollectionConfig = {
       relationTo: 'payload_subscriptions',
       index: true,
       admin: {
-        description: 'Select the Payload subscription. Stripe IDs are derived server-side.',
+        description: 'Select the subscription to act on.',
       },
     },
     {
@@ -389,7 +389,7 @@ export const PayloadBillingActions: CollectionConfig = {
         { label: 'Access Restored', value: 'access_restored' },
       ],
       admin: {
-        description: 'Administrators can create only the first three operator actions. Other values are webhook audit history.',
+        description: 'Choose an operator action. Sync refreshes the record from Stripe. Cancel at period end marks the subscription to end at the next renewal. Reverse cancellation restores it.',
       },
     },
     {
