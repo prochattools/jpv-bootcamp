@@ -38,6 +38,8 @@ export type SupportIntakeDependencies = {
     requestId: string
     dedupeKey: string
     reviewStatus: 'pending'
+    requesterEmail: string
+    requesterName: string
   }): Promise<void>
   now(): Date
   log(event: {
@@ -130,6 +132,8 @@ export function createSupportIntakeService(dependencies: SupportIntakeDependenci
         requestId: request.id,
         dedupeKey: queueDedupeKey,
         reviewStatus: 'pending',
+        requesterEmail: input.normalizedEmail,
+        requesterName: input.name,
       })
       await dependencies.updateRequest(request.id, {
         notificationStatus: 'queued',

@@ -113,6 +113,8 @@ async function testPersistenceBeforeQueueAndSafeSuccess(): Promise<void> {
     requestId: 'request-1',
     dedupeKey: 'support-request-notification:request-1',
     reviewStatus: 'pending',
+    requesterEmail: input.normalizedEmail,
+    requesterName: input.name,
   })
   assert.equal(updated?.notificationStatus, 'queued')
   assert.equal(updated?.notificationAttemptCount, 1)

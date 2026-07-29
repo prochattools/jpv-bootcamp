@@ -34,7 +34,6 @@ function collectionExists(slug: string): boolean {
 const dashboardCollectionLinks = [
   'payload_members',
   'payload_billing_accounts',
-  'payload_membership_support_records',
   'payload_membership_vouchers',
   'payload_pay_it_forward_funding',
   'payload_partner_applications',
@@ -57,7 +56,7 @@ const dashboard = readFileSync(resolve(root, 'src/components/payload/JPVAdminDas
 const expectedHrefs = [
   '/admin/collections/payload_members',
   '/admin/collections/payload_billing_accounts',
-  '/admin/collections/payload_membership_support_records',
+  '/operations/support-requests',
   '/admin/collections/payload_partner_applications',
   '/admin/collections/payload_courses',
 ]
@@ -65,6 +64,11 @@ const expectedHrefs = [
 for (const href of expectedHrefs) {
   assert.ok(dashboard.includes(href), `Dashboard must include Quick action link: ${href}`)
 }
+
+assert.ok(
+  existsSync(resolve(root, 'src/app/(frontend)/operations/support-requests/page.tsx')),
+  'Dashboard support inbox route must exist',
+)
 
 // Needs-attention section must have filtered member link
 assert.ok(

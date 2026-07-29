@@ -1,6 +1,8 @@
 import config from '@payload-config'
 import { getPayload } from 'payload'
 
+import prisma from '@/libs/prisma'
+
 type CountPayload = {
   count(args: {
     collection: string
@@ -17,6 +19,16 @@ async function safeCount(
   try {
     const result = await payload.count({ collection, where, overrideAccess: true })
     return result.totalDocs
+  } catch {
+    return null
+  }
+}
+
+async function safeOpenSupportCount(): Promise<number | null> {
+  try {
+    return await prisma.supportRequest.count({
+      where: { reviewStatus: { in: ['pending', 'in_review'] } },
+    })
   } catch {
     return null
   }
@@ -45,6 +57,7 @@ export async function JPVAdminDashboard() {
     pendingPartnerApplications,
     pendingAffiliateCommissions,
     communityModeration,
+    openSupportRequests,
   ] = await Promise.all([
     safeCount(payload, 'payload_members', { accountStatus: { equals: 'active' } }),
     safeCount(payload, 'payload_members', { accountStatus: { equals: 'pending' } }),
@@ -55,6 +68,7 @@ export async function JPVAdminDashboard() {
     safeCount(payload, 'payload_partner_applications', { status: { in: ['submitted', 'delivery_pending', 'delivery_failed'] } }),
     safeCount(payload, 'payload_affiliate_commissions', { status: { equals: 'pending' } }),
     safeCount(payload, 'payload_space_posts', { moderationStatus: { equals: 'pending_review' } }),
+    safeOpenSupportCount(),
   ])
 
   const kpis = [
@@ -122,6 +136,11 @@ export async function JPVAdminDashboard() {
       count: communityModeration,
       href: '/admin/collections/payload_space_posts?where[moderationStatus][equals]=pending_review',
     },
+    {
+      label: 'Support requests to review',
+      count: openSupportRequests,
+      href: '/operations/support-requests',
+    },
   ]
   const attentionItems = allAttentionItems.filter(
     (item): item is AttentionItem & { count: number } => item.count !== null && item.count > 0,
@@ -136,13 +155,14 @@ export async function JPVAdminDashboard() {
     pendingPartnerApplications,
     pendingAffiliateCommissions,
     communityModeration,
+    openSupportRequests,
   ].filter((value) => value === null).length
   const allClear = attentionItems.length === 0
 
   const quickActions = [
     { label: 'Members', href: '/admin/collections/payload_members' },
     { label: 'Billing', href: '/admin/collections/payload_billing_accounts' },
-    { label: 'Support', href: '/admin/collections/payload_membership_support_records' },
+    { label: 'Support', href: '/operations/support-requests' },
     { label: 'Partner applications', href: '/admin/collections/payload_partner_applications' },
     { label: 'Courses', href: '/admin/collections/payload_courses' },
   ]

@@ -606,3 +606,74 @@ All previously deferred items are now PROVEN:
 **External proof boundary**
 - Authenticated browser evidence for `/admin` at 390x844, 768x1024, and 1280x900 remains external. Repository validation proves the centralized selector, token, route, TypeScript, build, and release contracts, but does not prove final rendered contrast, keyboard order, focus behavior, table density, or mobile navigation in the deployed Payload UI.
 - Any further visual changes should be based on captured staging evidence rather than additional static assumptions.
+
+
+
+### 2026-07-29 Public support request workflow completion
+
+**Assessment and architecture**
+- The public/member support form already persisted each request durably in the Prisma `support_requests` table and queued an administrator email to `SUPPORT_TO_EMAIL`.
+- The previous implementation was incomplete because it did not acknowledge the requester by email and did not expose the durable support queue in an administrator-facing workflow.
+- The completed design keeps `support_requests` as the single source of truth, avoids duplicating support records into a second Payload collection, and adds a protected operations inbox plus dashboard attention signal.
+
+**Implementation**
+- Added canonical branded requester acknowledgement template `support-request-received`.
+- A successful support submission now queues two independent, deduplicated outbox events:
+  1. administrator notification to `SUPPORT_TO_EMAIL`;
+  2. requester acknowledgement to the submitted email address.
+- Added protected `/operations/support-requests` inbox using existing administrator authorization and the existing `support_requests` table.
+- Operators can mark requests `pending`, `in_review`, `resolved`, or reopen them; reviewer identity and review time use existing schema fields.
+- Payload dashboard now counts unresolved support requests, surfaces them in `Needs attention`, includes fail-soft unavailable handling, and links the Support quick action to the real support inbox.
+- Removed the obsolete dashboard expectation that Support points to membership billing-support records.
+
+**Validation**
+- Support intake runtime contract: passed.
+- Public write-route adoption contract: passed.
+- Support schema contract: passed.
+- Dashboard route/link integrity contract: passed.
+- Focused support workflow contract: passed.
+- Existing email outbox/webhook behavioral tests: **24/24 passed**.
+- Payload TypeScript: passed after one bounded administrator-ID normalization repair.
+- Changed-path security scan: clean.
+- Production build job `validation-6214bcdd-54bd-4c4c-88ab-4d3fd291c6cd`: passed and includes `/operations/support-requests`.
+- Canonical release job `validation-e0160dec-47a5-421e-adbb-19ac29331ccf`: **156/156 passed**.
+
+**External proof boundary**
+- Staging must still prove one real support submission produces both Resend deliveries, creates one durable support row, appears in the operations inbox/dashboard attention state, and remains deduplicated on retries.
+- Authenticated browser proof for the support inbox and Payload dashboard remains external.
+
+
+
+### 2026-07-29 Support request workflow completion
+
+**Assessment**
+- The public support form already used a durable `support_requests` Prisma record as the source of truth, with validation, rate limiting, dedupe, and an administrator email notification to `SUPPORT_TO_EMAIL`.
+- The missing best-practice pieces were requester acknowledgement, an administrator-facing inbox, and a dashboard attention signal tied to the actual public-support source.
+- The completed architecture keeps one durable support record and does not duplicate support tickets into a second Payload collection.
+
+**Implementation**
+- Added the canonical branded `support-request-received` email template.
+- A successful support submission now queues two independent, deduplicated events through the reliable email outbox:
+  - administrator notification;
+  - requester acknowledgement.
+- Added protected `/operations/support-requests`, backed directly by `support_requests`, with pending, in-review, resolved, reopen, requester mail link, responsive cards, and 44px actions.
+- Added a fail-soft unresolved-support count to the Payload dashboard.
+- Added `Support requests to review` to the existing Needs attention section only when action is required.
+- Updated the Support quick action to open the real inbox instead of membership billing-support records.
+- Preserved request validation, rate limiting, dedupe, queue, retry, lease, staging-recipient, provider, audit, and business behavior.
+
+**Validation**
+- Support intake runtime contract: passed.
+- Public write-route guard contract: passed.
+- Support schema contract: passed.
+- Payload dashboard link-integrity contract: passed.
+- Focused support workflow contract: passed.
+- Existing email outbox/webhook behavioral tests: **24/24 passed**.
+- Payload TypeScript: passed after normalizing the authenticated administrator ID to the existing numeric schema type.
+- Changed-path security scan: clean.
+- Production build job `validation-6214bcdd-54bd-4c4c-88ab-4d3fd291c6cd`: passed.
+- Canonical release job `validation-e0160dec-47a5-421e-adbb-19ac29331ccf`: **156/156 passed**.
+
+**External proof boundary**
+- After staging deployment, submit a fresh public support request using the approved staging recipient, confirm the requester acknowledgement and administrator notification in Resend, verify the ticket appears at `/operations/support-requests`, and confirm pending/in-review/resolved dashboard behavior without duplicates.
+- Authenticated browser proof for `/admin` and the support inbox remains external to repository validation.

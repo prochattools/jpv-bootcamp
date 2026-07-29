@@ -18,6 +18,7 @@ export const ACCESS_BLOCKED_TEMPLATE_KEY = 'access-blocked'
 export const ACCESS_SUSPENDED_TEMPLATE_KEY = 'access-suspended'
 export const ACCESS_RESTORED_TEMPLATE_KEY = 'access-restored'
 export const ACCESS_DELETED_TEMPLATE_KEY = 'access-deleted'
+export const SUPPORT_REQUEST_RECEIVED_TEMPLATE_KEY = 'support-request-received'
 
 function brandedTemplate(input: {
   key: string
@@ -287,6 +288,20 @@ const templates: Record<string, PayloadDocument> = {
     ],
     actionLabel: 'Open member portal',
     actionUrlVariable: '{{portalUrl}}',
+  }),
+  [SUPPORT_REQUEST_RECEIVED_TEMPLATE_KEY]: brandedTemplate({
+    key: SUPPORT_REQUEST_RECEIVED_TEMPLATE_KEY,
+    name: 'Support request received',
+    subject: 'We received your JPV Bootcamp support request',
+    preheader: 'Your question is safely with the JPV Bootcamp team.',
+    heading: 'We received your question',
+    paragraphs: [
+      'Thank you for contacting JPV Bootcamp. Your support request has been received and saved for review.',
+      'A member of our team will respond as soon as possible using this email address.',
+      'You do not need to submit the same question again.',
+    ],
+    actionLabel: 'Return to JPV Bootcamp',
+    actionUrlVariable: '{{supportUrl}}',
   }),
   [ACCESS_DELETED_TEMPLATE_KEY]: brandedTemplate({
     key: ACCESS_DELETED_TEMPLATE_KEY,

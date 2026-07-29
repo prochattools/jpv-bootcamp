@@ -12,6 +12,7 @@ import {
   trustPublicRequestProxyHeaders,
 } from '@/lib/publicRequestRoute'
 import { queueAndAttemptEmailEvent } from '@/lib/payloadCourse/events'
+import { SUPPORT_REQUEST_RECEIVED_TEMPLATE_KEY } from '@/lib/payloadCourse/systemEmailTemplates'
 import type { PayloadCourseWriteAPI } from '@/lib/payloadCourse/accessService'
 import {
   createSupportIntakeService,
@@ -75,8 +76,10 @@ export async function POST(req: NextRequest) {
     },
     async queueNotification(input) {
       const payload = await getPayload({ config: payloadConfig })
+      const payloadApi = payload as unknown as PayloadCourseWriteAPI
       const { supportTo } = getServerConfig().email
-      await queueAndAttemptEmailEvent(payload as unknown as PayloadCourseWriteAPI, {
+
+      await queueAndAttemptEmailEvent(payloadApi, {
         toEmail: supportTo,
         templateKey: 'admin-notification',
         dedupeKey: input.dedupeKey,
@@ -85,6 +88,20 @@ export async function POST(req: NextRequest) {
           purpose: 'support_request_pending_review',
           supportRequestId: input.requestId,
           reviewStatus: input.reviewStatus,
+          requesterEmail: input.requesterEmail,
+          requesterName: input.requesterName,
+        },
+      })
+
+      await queueAndAttemptEmailEvent(payloadApi, {
+        toEmail: input.requesterEmail,
+        templateKey: SUPPORT_REQUEST_RECEIVED_TEMPLATE_KEY,
+        dedupeKey: `support-request-acknowledgement:${input.requestId}`,
+        displayName: 'Support request received',
+        metadata: {
+          purpose: 'support_request_received',
+          supportRequestId: input.requestId,
+          displayName: input.requesterName,
         },
       })
     },
