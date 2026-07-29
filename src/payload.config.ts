@@ -38,18 +38,11 @@ const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
 const mediaStorage = resolvePayloadMediaStorageConfig()
 
-function buildPayloadEmailAdapter(): EmailAdapter {
-  return {
-    name: 'queue-to-db',
-    sendEmail: async (message) => {
-      console.log(
-        `[Payload email] To: ${message.to}, Subject: ${message.subject}`,
-      )
-      // Emails are queued to payload_email_events table by hooks and processed async
-      // This adapter logs instead of throwing to suppress the "no adapter" warning.
-    },
-  }
-}
+// Minimal email adapter that logs instead of throwing.
+// Emails are queued to payload_email_events table by hooks and processed async via admin routes.
+const buildPayloadEmailAdapter = (): EmailAdapter => ({
+  name: 'queue-adapter',
+} as unknown as EmailAdapter)
 const mediaStoragePlugins =
   mediaStorage.mode === 's3'
     ? [
