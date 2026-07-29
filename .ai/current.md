@@ -7,40 +7,57 @@ jpv-bootcamp (feature/course-branding-and-preview)
 Claude Code
 
 ## Goal
-See transcript for context
+Complete hardening audit, reconcile release docs, and commit doc updates to staging.
 
 ## Status
-auto-saved at 2026-07-27 15:57 — run /handoff resume to reconstruct full context
+Phase 5 complete — release documentation updated; commit pending
 
-## Files touched
-- src/app/(frontend)/portal/courses/[courseSlug]/page.tsx
-- src/app/(frontend)/portal/courses/[courseSlug]/lessons/[lessonSlug]/page.tsx
-- src/app/(frontend)/admin/review/page.tsx
-- src/app/(frontend)/admin/review/[sectionSlug]/page.tsx
-- src/app/(frontend)/operations/partner-applications/page.tsx
-- src/app/(frontend)/operations/sponsored-applications/page.tsx
-- src/app/admin/sessions/page.tsx
-- src/app/(frontend)/course-preview/[courseSlug]/page.tsx
-- .ai/CURRENT_WORK_HANDOFF.md
+## HEAD
+`9e6af02 docs: record transactional email logo verification and live staging proof`
 
-## Recent commands
-- `git add \   "src/app/(frontend)/admin/review/[sectionSlug]/page.tsx" \   "src/app/(frontend)/admin/review/page.tsx" \   `
-- `git commit -m "$(cat <<'EOF' fix: responsive hardening — touch targets and mobile layout corrections  - Add min-h-11 (44`
-- `git log --oneline -5`
-- `ls *.md 2>/dev/null; ls .ai/ 2>/dev/null`
-- `find . -name "CURRENT_WORK_HANDOFF.md" -not -path "./.claude/*" | head -5`
+## Phase 4 validation (2026-07-29)
+- TypeScript: PASS (No errors found)
+- pnpm test:release: PASS (156/156)
+- pnpm build: PASS (Compiled successfully in 7.8s)
+- Security scan: CLEAN
+- dangerouslySetInnerHTML audit: all usages confirmed trusted-source (Lexical HTML conversion / hardcoded strings / static preview content — no user-submitted unescaped HTML)
 
-## Last response summary
-Phase 1 is done. Here's a summary of what was completed: --- **Phase 1 — Responsive Hardening: COMPLETE** (`951cc38`) **8 files fixed, all presentation-only:** | Surface | Fix | |---|---| | Portal lesson list | `min-w-0` on text container — no more flex overflow on mobile | | Portal lesson nav | `min-w-0 truncate` on prev/next links — long titles clip cleanly | | Admin review (both pages) | `m
+## Phase 3 hardening audit findings
+
+### PASS — no blockers or important defects found
+- href="#": none in active user-facing code (search returned no matches)
+- TODO/FIXME in user-facing code: none found (one internal-API comment about Bunny CDN integration — non-user-facing, non-blocking)
+- dangerouslySetInnerHTML: 4 usages, all trusted-source (see Phase 4 above)
+- Email logo: fixed at a64fca1, now uses absolute public URL via resolveJpvLogoUrl(getPublicBaseUrl())
+- Email template: single logo rendering confirmed, no duplicates, no relative URLs
+- alt="" on images: landing page has 2 Image components with alt="" — these are decorative card images in programmeCards and journeyCards sections; empty alt is correct for purely decorative images
+- Off-brand color utilities in operator pages: none found (Phases 2, 5, 6 completed full token replacement)
+
+### Intentional / accepted
+- alt="" on decorative card images (page.tsx:448, page.tsx:526) — purely decorative illustration images, empty alt is correct WCAG practice
+
+## Files changed this session
+- `docs/client/ROADMAP_PROGRESS_STATUS.md` — updated current CODE HEAD, added post-hardening phase evidence entries, updated validation baseline
+- `docs/client/OPERATOR_HANDOFF_SUMMARY.md` — updated current validated readiness baseline and what-is-complete list
+- `docs/PREVIEW_RELEASE_READINESS.md` — updated current validated readiness baseline
 
 ## Decisions made
-None recorded automatically — run /handoff pause to capture decisions explicitly
+- No code changes required — audit found no blocker or important defects
+- Release documentation reconciled to HEAD 9e6af02
 
-## Next steps
-Run /handoff resume to reconstruct context from this auto-save
+## Next step
+Commit doc updates: `docs/client/ROADMAP_PROGRESS_STATUS.md`, `docs/client/OPERATOR_HANDOFF_SUMMARY.md`, `docs/PREVIEW_RELEASE_READINESS.md`, `.ai/current.md`
+Then push to origin to trigger staging.
 
-## Blockers
-Unknown — auto-save only
+## Remaining production-only proof (authenticated browser required)
+- Payload admin dashboard KPI values from real DB queries
+- Needs attention filtered destination links in admin
+- Sidebar scroll and group rendering at 390×844 / 768×1024 / 1280×900
+- Keyboard navigation and focus rings throughout operator surface
+- Support form submission → operator dashboard count change → Pending → In Review → Resolved (full lifecycle walk-through)
+- Requester acknowledgement in desktop and mobile email client with visible JPV logo (staging evidence already recorded at 9e6af02, admin notification staging guard remains expected)
 
-## Resume prompt
-Resume from last session in jpv-bootcamp (feature/course-branding-and-preview). Review .ai/current.md and recent git log for full context.
+## Do not repeat
+- Do not rerun hardening audit if no code changes have occurred since this session
+- Do not add max-width without also wrapping it in a container that already controls layout
+- Do not use display:inline anchors in nav; must be display:block for background to render

@@ -27,9 +27,9 @@ Static preflight automation is available via `pnpm staging:static-preflight`; it
 
 ## Current repository-owned readiness snapshot
 
-Current validated readiness baseline: `c2c6333 fix: reconcile dependencies for Node 20 runtime` (2026-07-22)
+Current validated readiness baseline: `9e6af02 docs: record transactional email logo verification and live staging proof` (2026-07-29)
 
-**Outcome:** `NOT READY FOR CONTROLLED STAGING RELEASE PROCESS` (formal NO-GO pending external approvals)
+**Outcome:** `NOT READY FOR CONTROLLED STAGING RELEASE PROCESS` (formal NO-GO pending external approvals — implementation complete, all 156/156 release gates pass at HEAD `9e6af02`)
 
 **Repository-owned staging operations status:** `DECISION-READY FOR CONTROLLED STAGING APPROVAL`
 
@@ -48,7 +48,7 @@ Current validated readiness baseline: `c2c6333 fix: reconcile dependencies for N
 
 ### Deterministic local validation baseline
 
-- `pnpm test:release` passed `156/156`
+- `pnpm test:release` passed `156/156` (confirmed at HEAD `9e6af02`, 2026-07-29)
 - `pnpm test:e2e` passed `58/58` across desktop and mobile Chromium projects
 - `pnpm test:release:full` passed
 - `pnpm staging:static-preflight` passed

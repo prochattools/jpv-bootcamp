@@ -6,7 +6,7 @@
 - Version 3.7 current client go-live plan; Version 3.4 is the prior progress baseline
 - Version 3.7 client plan: `docs/client/JPV_Bootcamp_Platform_Expansion_Go_Live_Plan_v3_7.docx`
 - Codebase alignment assessment: `docs/V3_5_CODEBASE_ALIGNMENT_ASSESSMENT.md`
-- Current validated readiness baseline: `d55229f test: enforce programme content readiness`
+- Current validated readiness baseline: `9e6af02 docs: record transactional email logo verification and live staging proof`
 - Branch tip verification: verify the current tip with `git log --oneline -1` before operator action
 - PR / review URL: `https://github.com/prochattools/jpv-bootcamp/pull/2`
 - Migrations applied: `No`
@@ -44,9 +44,12 @@
 - Legacy WordPress, Fluent, VIP, exhibitor, and removed member namespace active path removal
 - Pro-only checkout hardening with monthly and annual billing options
 - Support/pay-it-forward controlled Free semantics and durable support intake
+- Support request full lifecycle: member submission → operator Pending/In Review/Resolved → requester acknowledgement email (live staging proof 2026-07-28)
+- Transactional email logo: all branded emails use absolute public URL for JPV logo (live staging proof 2026-07-29)
+- Operator surface phases 1–6: responsive hardening, operator tools JPV token alignment, Payload dashboard redesign, sidebar information architecture, dashboard hardening, operator experience hardening, and Payload admin usability — all purely presentational, no auth/billing/provider changes
 - Canonical `/portal` member portal ownership
-- Deterministic non-browser release gate: `pnpm test:release` (`156/156`)
-- Launch browser E2E: `pnpm test:e2e` (`58/58`, desktop and mobile Chromium)
+- Deterministic non-browser release gate: `pnpm test:release` (`156/156`, validated at HEAD `9e6af02` on 2026-07-29)
+- Launch browser E2E: `pnpm test:e2e` (`58/58`, desktop and mobile Chromium, at `eb03a08` design release)
 - Combined release/browser gate: `pnpm test:release:full`
 - Decision-readiness summary: `DECISION-READY, EXTERNAL APPROVALS PENDING`
 - Static preflight, root TypeScript, production build, both Prisma validations, and production high-severity audit gate
