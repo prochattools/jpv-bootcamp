@@ -25,7 +25,7 @@ In Dokploy:
 | **Name** | `jpv-email-queue` |
 | **Description** | `Process email queue every 5 minutes` |
 | **Schedule** | `*/5 * * * *` |
-| **Command** | `curl -s -X POST https://preview.jpvbootcamp.com/api/admin/process-payload-email-queue -H "Authorization: Bearer YOUR_PAYLOAD_ADMIN_TOKEN" >> /var/log/jpv-email-queue.log 2>&1` |
+| **Command** | `curl -s -X POST https://preview.jpvbootcamp.com/api/admin/process-payload-email-queue -H "Authorization: Bearer $EMAIL_QUEUE_WORKER_SECRET" >> /var/log/jpv-email-queue.log 2>&1` |
 | **Enabled** | ✅ Yes |
 
 ---
@@ -54,7 +54,7 @@ Meaning: Every 5 minutes
 
 ### Command (Exact)
 ```
-curl -s -X POST https://preview.jpvbootcamp.com/api/admin/process-payload-email-queue -H "Authorization: Bearer YOUR_PAYLOAD_ADMIN_TOKEN" >> /var/log/jpv-email-queue.log 2>&1
+curl -s -X POST https://preview.jpvbootcamp.com/api/admin/process-payload-email-queue -H "Authorization: Bearer $EMAIL_QUEUE_WORKER_SECRET" >> /var/log/jpv-email-queue.log 2>&1
 ```
 
 Breaking it down:
@@ -66,7 +66,7 @@ curl                                    HTTP client
 https://preview.jpvbootcamp.com/api/admin/process-payload-email-queue
                                         Email queue endpoint (exact URL)
 -H "Authorization: Bearer ..."          Auth header
-YOUR_PAYLOAD_ADMIN_TOKEN                Your admin token (replace this)
+$EMAIL_QUEUE_WORKER_SECRET                Your admin token (replace this)
 >> /var/log/jpv-email-queue.log         Log file
 2>&1                                    Capture errors too
 ```
@@ -75,7 +75,7 @@ YOUR_PAYLOAD_ADMIN_TOKEN                Your admin token (replace this)
 
 ## TOKEN VALUE
 
-Replace: **YOUR_PAYLOAD_ADMIN_TOKEN**
+Replace: **$EMAIL_QUEUE_WORKER_SECRET**
 
 Get from:
 1. Your Dokploy environment variables (look for `PAYLOAD_ADMIN_TOKEN`)
@@ -94,7 +94,7 @@ Example (fake): `Bearer a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6`
 ```
 Name: jpv-email-queue
 Schedule: */5 * * * *
-Command: curl -s -X POST https://preview.jpvbootcamp.com/api/admin/process-payload-email-queue -H "Authorization: Bearer abc123def456ghi789jkl012mno345pqr" >> /var/log/jpv-email-queue.log 2>&1
+Command: curl -s -X POST https://preview.jpvbootcamp.com/api/admin/process-payload-email-queue -H "Authorization: Bearer $EMAIL_QUEUE_WORKER_SECRET" >> /var/log/jpv-email-queue.log 2>&1
 Enabled: Yes
 ```
 
@@ -116,7 +116,7 @@ After adding the job:
 3. **Manual trigger (test immediately):**
    ```bash
    curl -s -X POST https://preview.jpvbootcamp.com/api/admin/process-payload-email-queue \
-     -H "Authorization: Bearer YOUR_PAYLOAD_ADMIN_TOKEN" \
+     -H "Authorization: Bearer $EMAIL_QUEUE_WORKER_SECRET" \
      -w "\nHTTP: %{http_code}\n"
    ```
    Expected: `HTTP: 200`
@@ -146,7 +146,7 @@ services:
       # ... existing env vars
       JPV_CRON_ENABLED: "true"
       JPV_CRON_SCHEDULE: "*/5 * * * *"
-      JPV_CRON_COMMAND: "curl -s -X POST https://preview.jpvbootcamp.com/api/admin/process-payload-email-queue -H 'Authorization: Bearer YOUR_PAYLOAD_ADMIN_TOKEN'"
+      JPV_CRON_COMMAND: "curl -s -X POST https://preview.jpvbootcamp.com/api/admin/process-payload-email-queue -H 'Authorization: Bearer $EMAIL_QUEUE_WORKER_SECRET'"
 ```
 
 (Exact format depends on your Dokploy version — check Dokploy docs)
@@ -184,9 +184,9 @@ If you see `HTTP: 401` in logs:
 **Exact values:**
 - **Name:** `jpv-email-queue`
 - **Schedule:** `*/5 * * * *`
-- **Command:** `curl -s -X POST https://preview.jpvbootcamp.com/api/admin/process-payload-email-queue -H "Authorization: Bearer YOUR_PAYLOAD_ADMIN_TOKEN" >> /var/log/jpv-email-queue.log 2>&1`
+- **Command:** `curl -s -X POST https://preview.jpvbootcamp.com/api/admin/process-payload-email-queue -H "Authorization: Bearer $EMAIL_QUEUE_WORKER_SECRET" >> /var/log/jpv-email-queue.log 2>&1`
 - **Enabled:** Yes
 
-**Replace:** `YOUR_PAYLOAD_ADMIN_TOKEN` with your actual token
+**Replace:** `$EMAIL_QUEUE_WORKER_SECRET` with your actual token
 
 **Result:** Emails process automatically every 5 minutes, manageable from Dokploy dashboard.
