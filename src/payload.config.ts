@@ -157,6 +157,13 @@ export default buildConfig({
   db: postgresAdapter({
     pool: {
       connectionString: cleanDbUrl(process.env.DATABASE_URL),
+      // TCP keepalive: prevents Docker NAT/firewall from silently dropping idle connections
+      keepAlive: true,
+      keepAliveInitialDelayMillis: 60_000,
+      // Recycle idle connections before the NAT idle timeout (~15-30 min on Docker networks)
+      idleTimeoutMillis: 600_000,
+      // Fail fast on new connection attempts instead of hanging for the OS TCP timeout (~75 s)
+      connectionTimeoutMillis: 10_000,
     },
     schemaName: getDbSchema(process.env.DATABASE_URL),
     // Only expose reviewed Payload migrations to explicit migrate commands.
