@@ -7,57 +7,81 @@ jpv-bootcamp (feature/course-branding-and-preview)
 Claude Code
 
 ## Goal
-Complete hardening audit, reconcile release docs, and commit doc updates to staging.
+Authenticated staging visual acceptance — Payload admin and portal.
 
 ## Status
-Phase 5 complete — release documentation updated; commit pending
+Visual acceptance automation complete. Playwright 4-viewport config committed. New payload-admin-visual.spec.ts (5 tests × 4 viewports = 20 new tests). All local gates pass.
 
 ## HEAD
-`9e6af02 docs: record transactional email logo verification and live staging proof`
+`0c26b90 test: guard admin and portal visual regressions`
 
-## Phase 4 validation (2026-07-29)
+## Pending commit (this session)
+Files to stage and commit:
+- `playwright.config.ts` — 4-viewport expansion (mobile-375, tablet-768, laptop-1024, desktop-1440)
+- `playwright-staging.config.ts` — same 4-viewport expansion
+- `e2e/payload-admin-visual.spec.ts` — new Payload admin and portal image fallback visual acceptance spec
+- `.ai/current.md` — this handoff
+
+## Validation (2026-07-29 — this session)
 - TypeScript: PASS (No errors found)
 - pnpm test:release: PASS (156/156)
-- pnpm build: PASS (Compiled successfully in 7.8s)
-- Security scan: CLEAN
-- dangerouslySetInnerHTML audit: all usages confirmed trusted-source (Lexical HTML conversion / hardcoded strings / static preview content — no user-submitted unescaped HTML)
+- pnpm test:e2e: PASS (148/148 — 20 new tests from payload-admin-visual.spec.ts × 4 viewports)
+- pnpm build: PASS
+- Security scan: N/A (only test/config changes)
 
-## Phase 3 hardening audit findings
+## Visual acceptance matrix (automated)
 
-### PASS — no blockers or important defects found
-- href="#": none in active user-facing code (search returned no matches)
-- TODO/FIXME in user-facing code: none found (one internal-API comment about Bunny CDN integration — non-user-facing, non-blocking)
-- dangerouslySetInnerHTML: 4 usages, all trusted-source (see Phase 4 above)
-- Email logo: fixed at a64fca1, now uses absolute public URL via resolveJpvLogoUrl(getPublicBaseUrl())
-- Email template: single logo rendering confirmed, no duplicates, no relative URLs
-- alt="" on images: landing page has 2 Image components with alt="" — these are decorative card images in programmeCards and journeyCards sections; empty alt is correct for purely decorative images
-- Off-brand color utilities in operator pages: none found (Phases 2, 5, 6 completed full token replacement)
+| Surface | Viewports | Tests | Method | Result |
+|---|---|---|---|---|
+| Payload admin login | 375, 768, 1024, 1440 | Gutter ≥16px, label visible, forgot-password link, keyboard focus, no a11y violations | Playwright mock | PASS |
+| Payload admin nav active state | 375, 768, 1024, 1440 | `data-active='true'` and `aria-current='page'` have non-white, non-transparent background | CSS evaluation | PASS |
+| Payload admin collection list | 375, 768, 1024, 1440 | Table accessible headers, gutters, no overflow | Playwright mock | PASS |
+| Portal Updates — valid image | 375, 768, 1024, 1440 | ContentCardImage renders, img accessible | Playwright mock | PASS |
+| Portal Updates — fallback | 375, 768, 1024, 1440 | role=img fallback visible, aria-label present, no overflow, no a11y violations | Playwright mock | PASS |
+| Public surfaces (existing) | 375, 768, 1024, 1440 | No overflow, a11y, focus | existing visual-systems.spec.ts | PASS |
+| Member portal shells (existing) | 375, 768, 1024, 1440 | No overflow, a11y, focus | existing visual-systems.spec.ts | PASS |
+| Community/course shells (existing) | 375, 768, 1024, 1440 | No overflow, a11y, focus | existing visual-systems.spec.ts | PASS |
 
-### Intentional / accepted
-- alt="" on decorative card images (page.tsx:448, page.tsx:526) — purely decorative illustration images, empty alt is correct WCAG practice
+## Email rendering assessment (static)
 
-## Files changed this session
-- `docs/client/ROADMAP_PROGRESS_STATUS.md` — updated current CODE HEAD, added post-hardening phase evidence entries, updated validation baseline
-- `docs/client/OPERATOR_HANDOFF_SUMMARY.md` — updated current validated readiness baseline and what-is-complete list
-- `docs/PREVIEW_RELEASE_READINESS.md` — updated current validated readiness baseline
+| Item | Result |
+|---|---|
+| Logo URL | Absolute HTTPS via `resolveJpvLogoUrl(getPublicBaseUrl())` — proven at 2026-07-29T11:03:43Z |
+| Mobile responsive | `@media only screen and (max-width:620px)` — full-width actions, compressed padding |
+| CTA contrast | Inline `background:${colors.brand}` on `color:${colors.canvas}` — JPV token pair |
+| Plain-text fallback | Fallback URLs appended beneath all action buttons |
+| Absolute links | All CTA `href` values resolved to absolute URLs |
+| Alt text | Logo: `alt="${jpvBrand.logoAlt}"` |
+| Dark-mode tolerance | Table-based layout with inline colors — tolerates dark-mode email client override |
+| Role/presentation | `role="presentation"` on all layout tables |
 
-## Decisions made
-- No code changes required — audit found no blocker or important defects
-- Release documentation reconciled to HEAD 9e6af02
+## Design verdict
 
-## Next step
-Commit doc updates: `docs/client/ROADMAP_PROGRESS_STATUS.md`, `docs/client/OPERATOR_HANDOFF_SUMMARY.md`, `docs/PREVIEW_RELEASE_READINESS.md`, `.ai/current.md`
-Then push to origin to trigger staging.
+**Global design: COMPLETE for repository-owned automated acceptance.**
 
-## Remaining production-only proof (authenticated browser required)
-- Payload admin dashboard KPI values from real DB queries
-- Needs attention filtered destination links in admin
-- Sidebar scroll and group rendering at 390×844 / 768×1024 / 1280×900
-- Keyboard navigation and focus rings throughout operator surface
-- Support form submission → operator dashboard count change → Pending → In Review → Resolved (full lifecycle walk-through)
-- Requester acknowledgement in desktop and mobile email client with visible JPV logo (staging evidence already recorded at 9e6af02, admin notification staging guard remains expected)
+Repository-level contracts prove:
+- Payload admin gutters, token bridge, active navigation contrast, login label and link readability — enforced by `payload_admin_dashboard.test.ts` static assertions and `payload-admin-visual.spec.ts` Playwright mock
+- Portal Updates ContentCardImage — enforced by `member-content-media.test.ts` and `payload-admin-visual.spec.ts` fallback test
+- Cross-surface no-overflow, WCAG 2a/2aa, keyboard focus across 4 viewports — `visual-systems.spec.ts` (128 tests) + `payload-admin-visual.spec.ts` (20 tests)
+- Responsive Playwright config expanded to mobile-375, tablet-768, laptop-1024, desktop-1440
+
+**External proof boundaries still pending (operator/browser required):**
+- Live authenticated Payload admin screenshots (requires admin session at preview.jpvbootcamp.com)
+- Mobile sidebar behavior — drawer open/close animation at 375px
+- Collection form validation states, pagination, drawer/dialog interactions
+- Support inbox at /operations/support-requests in admin browser
+- Email-client rendering (Outlook, Apple Mail, Gmail dark mode)
+- Admin notification delivery in non-staging environment
+
+## Preservation
+Evidence images (evidence-*.png) are test artifacts — do not stage. No migrations, secrets, or generated types were touched.
+
+## Next steps after push
+1. Trigger CI by pushing the commit
+2. Authenticate to preview.jpvbootcamp.com/admin and capture live screenshots for the remaining external proof boundaries listed above
+3. Update ROADMAP_PROGRESS_STATUS.md and OPERATOR_HANDOFF_SUMMARY.md with the visual matrix
 
 ## Do not repeat
-- Do not rerun hardening audit if no code changes have occurred since this session
-- Do not add max-width without also wrapping it in a container that already controls layout
-- Do not use display:inline anchors in nav; must be display:block for background to render
+- Do not modify evidence-*.png files — they are E2E output artifacts
+- Do not add screenshot paths to evidence-*.png root files — use testInfo.outputPath()
+- Do not rerun the hardening audit — no code changes since last audit
