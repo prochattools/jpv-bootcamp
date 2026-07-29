@@ -17,7 +17,7 @@ html[data-theme='light'] {
   --theme-elevation-350: color-mix(in srgb, var(--jpv-border) 20%, var(--jpv-muted));
   --theme-elevation-400: color-mix(in srgb, var(--jpv-muted) 82%, var(--jpv-ink));
   --theme-elevation-450: color-mix(in srgb, var(--jpv-muted) 77%, var(--jpv-ink));
-  --theme-elevation-500: var(--jpv-muted);
+  --theme-elevation-500: color-mix(in srgb, var(--jpv-muted) 88%, var(--jpv-ink));
   --theme-elevation-550: color-mix(in srgb, var(--jpv-muted) 76%, var(--jpv-ink));
   --theme-elevation-600: color-mix(in srgb, var(--jpv-muted) 72%, var(--jpv-ink));
   --theme-elevation-700: color-mix(in srgb, var(--jpv-muted) 45%, var(--jpv-ink));
@@ -57,6 +57,19 @@ html[data-theme='light'] {
   --theme-warning-150: color-mix(in srgb, var(--jpv-sunshine) 35%, white);
   --theme-warning-600: var(--jpv-sunshine-ink);
   --theme-warning-800: color-mix(in srgb, var(--jpv-sunshine-ink) 80%, black);
+}
+
+html[data-theme='dark'] {
+  --theme-bg: var(--jpv-brand-deep);
+  --theme-input-bg: color-mix(in srgb, var(--jpv-brand-deep) 85%, var(--jpv-canvas));
+  --theme-text: var(--jpv-canvas);
+  --theme-border-color: color-mix(in srgb, var(--jpv-brand-deep) 60%, var(--jpv-border));
+  --theme-elevation-0: var(--jpv-brand-deep);
+  --theme-elevation-50: color-mix(in srgb, var(--jpv-brand-deep) 90%, var(--jpv-canvas));
+  --theme-elevation-100: color-mix(in srgb, var(--jpv-brand-deep) 80%, var(--jpv-canvas));
+  --theme-elevation-500: var(--jpv-inverse-muted, color-mix(in srgb, var(--jpv-canvas) 70%, var(--jpv-brand-deep)));
+  --theme-elevation-900: var(--jpv-canvas);
+  --theme-elevation-1000: color-mix(in srgb, var(--jpv-canvas) 92%, black);
 }
 
 // ─── Base typography and background ──────────────────────────────────────────
@@ -147,6 +160,25 @@ body {
   }
 }
 
+// Payload v3 uses CSS modules with hashed class names — use attribute selectors
+// at a higher specificity level to ensure active nav state is always visible.
+// These selectors beat CSS module specificity without requiring exact class names.
+nav a[aria-current='page'],
+nav a[data-active='true'],
+[role='navigation'] a[aria-current='page'],
+[role='navigation'] a[data-active='true'] {
+  background: var(--jpv-brand-deep) !important;
+  color: var(--jpv-canvas) !important;
+  border-radius: var(--jpv-radius-action);
+  font-weight: 600;
+}
+
+nav a:not([aria-current='page']):not([data-active='true']):hover,
+[role='navigation'] a:not([aria-current='page']):not([data-active='true']):hover {
+  background: var(--jpv-surface) !important;
+  color: var(--jpv-brand-deep) !important;
+}
+
 // Nav toggler (mobile hamburger)
 .nav-toggler {
   color: var(--jpv-canvas);
@@ -176,6 +208,32 @@ body {
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
+}
+
+// Login page and all Payload forms — labels must be readable
+.login label,
+[data-payload-field] label,
+.field-type label,
+label {
+  color: var(--jpv-ink);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+// Payload "Forgot password?" and helper links in forms
+.login a,
+.login-fields a {
+  color: var(--jpv-brand-deep);
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+// Payload v3 dashboard — ensure the custom dashboard component gets gutters.
+// Targets both the Payload template class and a data attribute fallback.
+[data-payload-page='dashboard'],
+.template-dashboard,
+.payload-ui--dashboard {
+  padding-inline: clamp(1rem, 4vw, 2rem);
 }
 
 // ─── Buttons ──────────────────────────────────────────────────────────────────

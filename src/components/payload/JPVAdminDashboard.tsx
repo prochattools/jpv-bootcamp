@@ -168,12 +168,12 @@ export async function JPVAdminDashboard() {
   ]
 
   return (
-    <main style={{ display: 'grid', gap: 32, padding: '32px 0' }}>
+    <main style={{ display: 'grid', gap: 32, padding: '2rem clamp(1rem, 4vw, 2rem)' }}>
       {/* Hero */}
       <section>
         <p
           style={{
-            color: 'var(--jpv-muted)',
+            color: 'var(--jpv-ink)',
             fontSize: 11,
             fontWeight: 700,
             letterSpacing: '0.14em',
@@ -201,7 +201,7 @@ export async function JPVAdminDashboard() {
       <section>
         <p
           style={{
-            color: 'var(--jpv-muted)',
+            color: 'var(--jpv-ink)',
             fontSize: 11,
             fontWeight: 700,
             letterSpacing: '0.14em',
@@ -287,7 +287,7 @@ export async function JPVAdminDashboard() {
       <section>
         <p
           style={{
-            color: 'var(--jpv-muted)',
+            color: 'var(--jpv-ink)',
             fontSize: 11,
             fontWeight: 700,
             letterSpacing: '0.14em',
@@ -374,7 +374,7 @@ export async function JPVAdminDashboard() {
       <section>
         <p
           style={{
-            color: 'var(--jpv-muted)',
+            color: 'var(--jpv-ink)',
             fontSize: 11,
             fontWeight: 700,
             letterSpacing: '0.14em',

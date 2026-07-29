@@ -1,7 +1,6 @@
-/* eslint-disable @next/next/no-img-element */
-
 import Link from 'next/link'
 
+import { ContentCardImage } from '@/components/portal/ContentCardImage'
 import { requirePortalMember } from '@/lib/auth/requirePortalMember'
 import { listPublishedMemberContent } from '@/lib/payloadContent/memberContent'
 
@@ -37,13 +36,11 @@ export default async function PortalContentPage() {
             return (
               <article className='overflow-hidden rounded-jpv-card border border-jpv-border bg-jpv-canvas shadow-jpv-card' key={`${item.kind}:${item.id}`}>
                 {item.featuredImage ? (
-                  <img
+                  <ContentCardImage
                     alt={item.featuredImage.alt}
-                    className='h-52 w-full object-cover'
-                    height={item.featuredImage.height ?? undefined}
-                    loading='lazy'
+                    height={item.featuredImage.height}
                     src={item.featuredImage.url}
-                    width={item.featuredImage.width ?? undefined}
+                    width={item.featuredImage.width}
                   />
                 ) : null}
                 <div className='p-5 sm:p-6'>
