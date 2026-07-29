@@ -1,5 +1,11 @@
 import { test, expect, Page } from '@playwright/test'
 import { assertStagingOrigin } from '../scripts/staging-gates/stagingPolicy'
+import {
+  assertKeyboardFocusVisible,
+  assertMinimumHorizontalGutter,
+  assertNoHorizontalOverflow,
+  assertNoSeriousAccessibilityViolations,
+} from './fixtures/launchFixtures'
 
 const STAGING_URL = process.env.STAGING_URL ?? 'https://preview.jpvbootcamp.com'
 
@@ -17,10 +23,6 @@ test.describe.configure({ mode: 'serial' })
 
 test.describe('Staging Smoke Tests - Full Platform Flows', () => {
   test.skip(!process.env.STAGING_URL, 'Staging smoke tests require STAGING_URL to be explicitly set')
-
-  test.beforeEach(async ({ page }) => {
-    page.setViewportSize({ width: 1440, height: 900 })
-  })
 
   // ======== PUBLIC FLOWS ========
   test('PUBLIC-001: Landing page loads with correct branding and pricing', async ({ page }) => {
@@ -215,6 +217,23 @@ test.describe('Staging Smoke Tests - Full Platform Flows', () => {
     }
   })
 
+  test('ACCESSIBILITY-004: Payload login is readable and responsive', async ({ page }) => {
+    await page.goto(`${STAGING_URL}/admin/login`, { waitUntil: 'domcontentloaded' })
+    await page.waitForLoadState('networkidle')
+
+    const login = page.locator('.login').first()
+    const wrap = page.locator('.login__wrap').first()
+    await expect(login).toBeVisible()
+    await expect(wrap).toBeVisible()
+    await expect(page.locator('.login label').first()).toBeVisible()
+    await expect(page.locator('.login input').first()).toBeVisible()
+
+    await assertNoHorizontalOverflow(page)
+    await assertMinimumHorizontalGutter(page, '.login__wrap')
+    await assertKeyboardFocusVisible(page, '.login input')
+    await assertNoSeriousAccessibilityViolations(page)
+  })
+
   // ======== MOBILE RESPONSIVE TESTS ========
   test('MOBILE-001: Landing page responsive (mobile viewport)', async ({ browser }) => {
     const mobileContext = await browser.newContext({
@@ -325,6 +344,8 @@ test.describe('Staging Smoke Tests - Full Platform Flows', () => {
 
 // ======== SCHEMA VERIFICATION ========
 test.describe('Staging Database Schema Verification', () => {
+  test.skip(!process.env.STAGING_URL, 'Staging schema tests require STAGING_URL to be explicitly set')
+
   test('SCHEMA-001: Staging schema context verified', async ({ page }) => {
     // This test verifies the staging environment is configured correctly
     // In a real scenario, this would connect to the database directly
@@ -340,6 +361,8 @@ test.describe('Staging Database Schema Verification', () => {
 
 // ======== EVIDENCE CAPTURE ========
 test.describe('Evidence Capture for Manual Verification', () => {
+  test.skip(!process.env.STAGING_URL, 'Evidence capture tests require STAGING_URL to be explicitly set')
+
   test('EVIDENCE-001: Capture full flow screenshots', async ({ page }) => {
     const flowSteps = [
       { path: '/', name: 'landing' },
@@ -416,17 +439,19 @@ async function loginMember(page: Page): Promise<void> {
 }
 
 test.describe('REM-01 Member Portal Login Proof', () => {
-  test('AUTH-001: Migration member login and portal access', async ({ page }) => {
-    await page.context().clearCookies()
-    await page.goto(`${STAGING_URL}/portal?mode=login`, { waitUntil: 'domcontentloaded' })
-    expect(page.url()).toContain('/portal')
+  test.skip(!process.env.STAGING_URL, 'Staging login proof requires STAGING_URL to be explicitly set')
 
+  test('AUTH-001: Migration member login and portal access', async ({ page }) => {
     const EMAIL = process.env.STAGING_MEMBER_EMAIL
     const PASSWORD = process.env.STAGING_MEMBER_PASSWORD
     if (!EMAIL || !PASSWORD) {
       test.skip()
       return
     }
+
+    await page.context().clearCookies()
+    await page.goto(`${STAGING_URL}/portal?mode=login`, { waitUntil: 'domcontentloaded' })
+    expect(page.url()).toContain('/portal')
 
     await page.locator('#member-email').fill(EMAIL)
     await page.locator('#member-password').fill(PASSWORD)
@@ -446,6 +471,8 @@ test.describe('REM-01 Member Portal Login Proof', () => {
 })
 
 test.describe('Authenticated Portal Route Coverage', () => {
+  test.skip(!process.env.STAGING_URL, 'Authenticated portal tests require STAGING_URL to be explicitly set')
+
   test.beforeEach(async ({ page }) => {
     if (!process.env.STAGING_MEMBER_EMAIL || !process.env.STAGING_MEMBER_PASSWORD) {
       test.skip()

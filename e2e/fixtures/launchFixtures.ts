@@ -156,8 +156,10 @@ function portalCoursesHtml(section: 'index' | 'detail' | 'lesson' | 'community' 
         <section>
           <h2>Start a discussion</h2>
           <form>
-            <input name="title" type="text" />
-            <textarea name="body"></textarea>
+            <label for="space-title">Title</label>
+            <input id="space-title" name="title" type="text" />
+            <label for="space-body">Body</label>
+            <textarea id="space-body" name="body"></textarea>
             <button type="submit">Post discussion</button>
           </form>
         </section>
@@ -172,7 +174,8 @@ function portalCoursesHtml(section: 'index' | 'detail' | 'lesson' | 'community' 
         <section>
           <h2>Leave a reply</h2>
           <form>
-            <textarea name="body"></textarea>
+            <label for="post-reply-body">Your reply</label>
+            <textarea id="post-reply-body" name="body"></textarea>
             <button type="submit">Submit reply</button>
           </form>
         </section>
@@ -337,6 +340,39 @@ export async function assertNoSeriousAccessibilityViolations(page: Page): Promis
 export async function assertNoHorizontalOverflow(page: Page): Promise<void> {
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1)
   expect(overflow).toBe(false)
+}
+
+export async function assertMinimumHorizontalGutter(page: Page, selector = 'main'): Promise<void> {
+  const result = await page.locator(selector).first().evaluate((element) => {
+    const rect = element.getBoundingClientRect()
+    return {
+      left: rect.left,
+      right: window.innerWidth - rect.right,
+      viewport: window.innerWidth,
+    }
+  })
+  const minimum = result.viewport < 768 ? 12 : 16
+  expect(result.left).toBeGreaterThanOrEqual(minimum)
+  expect(result.right).toBeGreaterThanOrEqual(minimum)
+}
+
+export async function assertKeyboardFocusVisible(page: Page, selector: string): Promise<void> {
+  const target = page.locator(selector).first()
+  await target.focus()
+  const focus = await target.evaluate((element) => {
+    const style = window.getComputedStyle(element)
+    return {
+      active: document.activeElement === element,
+      outlineStyle: style.outlineStyle,
+      outlineWidth: Number.parseFloat(style.outlineWidth || '0'),
+      boxShadow: style.boxShadow,
+    }
+  })
+  expect(focus.active).toBe(true)
+  expect(
+    focus.outlineStyle !== 'none' && focus.outlineWidth >= 1 || focus.boxShadow !== 'none',
+    `Expected visible focus styling for ${selector}`,
+  ).toBe(true)
 }
 
 export function captureBrowserDiagnostics(page: Page): string[] {
