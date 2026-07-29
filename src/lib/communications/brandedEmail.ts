@@ -1,4 +1,5 @@
-import { jpvBrand, jpvDesignTokens } from '@/lib/brand/jpvDesignSystem'
+import { jpvBrand, jpvDesignTokens, resolveJpvLogoUrl } from '@/lib/brand/jpvDesignSystem'
+import { getPublicBaseUrl } from '@/lib/public-base-url'
 
 export type BrandedEmailAction = {
   label: string
@@ -59,8 +60,8 @@ function renderActions(actions: BrandedEmailAction[]): string {
 
 export function renderBrandedEmail(input: BrandedEmailInput): string {
   const { colors, radius, typography } = jpvDesignTokens
-  const resolvedLogoUrl = input.logoUrl ?? jpvBrand.logoPath
-  const logo = `<img src="${escapeEmailHtml(resolvedLogoUrl)}" width="64" height="64" alt="${escapeEmailHtml(jpvBrand.logoAlt)}" style="display:block;width:64px;height:64px;border:0;border-radius:${radius.card};object-fit:cover" />`
+  const resolvedLogoUrl = input.logoUrl ?? resolveJpvLogoUrl(getPublicBaseUrl())
+  const logo = `<img src="${escapeEmailHtml(resolvedLogoUrl)}" width="64" height="64" alt="${escapeEmailHtml(jpvBrand.logoAlt)}" style="display:block;width:64px;max-width:64px;height:64px;border:0;border-radius:${radius.card};object-fit:contain" />`
 
   return `<!doctype html>
 <html lang="en">

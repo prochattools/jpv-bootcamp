@@ -677,3 +677,27 @@ All previously deferred items are now PROVEN:
 **External proof boundary**
 - After staging deployment, submit a fresh public support request using the approved staging recipient, confirm the requester acknowledgement and administrator notification in Resend, verify the ticket appears at `/operations/support-requests`, and confirm pending/in-review/resolved dashboard behavior without duplicates.
 - Authenticated browser proof for `/admin` and the support inbox remains external to repository validation.
+
+
+
+### 2026-07-29 Transactional email logo delivery fix
+
+**Finding**
+- Branded transactional emails rendered the canonical JPV logo using the relative path `/images/jpv-logo.jpg`. Email clients cannot resolve relative website paths, so the image appeared broken even though the asset existed.
+
+**Implementation**
+- `renderBrandedEmail` now resolves the default logo through `getPublicBaseUrl()` and `resolveJpvLogoUrl(...)`, producing an absolute public HTTPS URL such as `https://preview.jpvbootcamp.com/images/jpv-logo.jpg`.
+- Custom explicit `logoUrl` values remain supported.
+- The logo keeps explicit email-safe `width` and `height` attributes, adds `max-width:64px`, uses `object-fit:contain`, and retains descriptive alt text.
+- The existing optimized JPEG remains the canonical email asset: approximately 156 KB versus approximately 767 KB for `public/images/jpv-logo.png` (about 80% smaller). The asset is referenced remotely and is not embedded as base64, so it does not inflate every email payload.
+
+**Validation**
+- Branded email template contract: passed; proves absolute HTTPS output and rejects relative logo URLs.
+- Payload TypeScript: passed.
+- Changed-path security scan: clean.
+- Production build job `validation-263fed12-e00c-4865-b76d-80cc02ca2285`: passed.
+- Canonical release job `validation-98ec1ce4-0bf1-4a05-9b4c-cd1f8932ce1a`: **156/156 passed**.
+
+**External proof boundary**
+- Staging must send at least one real transactional email and confirm the logo URL returns HTTP 200 without authentication and renders in representative email clients.
+- No remote image can be guaranteed to display when a recipient's email client or privacy setting blocks external images. The descriptive alt text remains the fallback.

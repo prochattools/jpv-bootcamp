@@ -37,6 +37,28 @@ assert.equal(html.includes('border-radius:999px'), false, 'email actions must us
 assert.ok(html.includes(jpvBrand.logoAlt))
 assert.ok(html.includes(jpvBrand.tagline))
 
+const previousAppBaseUrl = process.env.APP_BASE_URL
+process.env.APP_BASE_URL = 'https://preview.jpvbootcamp.test'
+const defaultLogoHtml = renderBrandedEmail({
+  preheader: 'Logo contract',
+  heading: 'Logo contract',
+  bodyHtml: '<p>Logo contract</p>',
+})
+if (previousAppBaseUrl === undefined) delete process.env.APP_BASE_URL
+else process.env.APP_BASE_URL = previousAppBaseUrl
+
+assert.ok(
+  defaultLogoHtml.includes('src="https://preview.jpvbootcamp.test/images/jpv-logo.jpg"'),
+  'default email logo must use an absolute public HTTPS URL',
+)
+assert.equal(
+  defaultLogoHtml.includes('src="/images/jpv-logo.jpg"'),
+  false,
+  'transactional emails must never emit a relative logo URL',
+)
+assert.ok(defaultLogoHtml.includes('width="64" height="64"'))
+assert.ok(defaultLogoHtml.includes('max-width:64px'))
+
 const globalStyles = readFileSync('src/assets/styles/globals.scss', 'utf8')
 const landingStyles = readFileSync('src/app/(frontend)/landing.module.scss', 'utf8')
 const adminStyles = readFileSync('src/app/(payload)/jpv-admin.scss', 'utf8')
