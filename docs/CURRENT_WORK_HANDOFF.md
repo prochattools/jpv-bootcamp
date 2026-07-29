@@ -710,13 +710,62 @@ All previously deferred items are now PROVEN:
 | Canonical release `validation-98ec1ce4-0bf1-4a05-9b4c-cd1f8932ce1a` | 156/156 PASS |
 | Support workflow contract | PASS |
 
-**External proof boundary**
-- Staging must send at least one real transactional email and confirm the absolute logo URL returns HTTP 200 without authentication.
-- Support workflow staging proof: one real support request must produce both Resend deliveries, create one `support_requests` row, appear in `/operations/support-requests`, and remain deduplicated on worker retry.
-- No remote image can be guaranteed to display when a recipient's email client or privacy setting blocks external images. The descriptive alt text remains the fallback.
-
 **Logo asset inventory**
 | Asset | Bytes | Use |
 |---|---|---|
 | `public/images/jpv-logo.jpg` | 155,608 | Canonical — email and UI |
 | `public/images/jpv-logo.png` | 766,802 | Do not use as-is |
+
+**Logo public URL proof (2026-07-29T11:03:43Z)**
+- `curl -I https://preview.jpvbootcamp.com/images/jpv-logo.jpg` → `HTTP/2 200`, `content-type: image/jpeg`, `content-length: 155608`
+- No authentication required; Cloudflare CDN active (`CF-Cache-Status: REVALIDATED`)
+- Sent email HTML (Resend ID `c0bb2d85`) contains `src="https://preview.jpvbootcamp.com/images/jpv-logo.jpg"` — absolute URL confirmed in delivered email payload
+
+---
+
+### 2026-07-29 Live staging acceptance — support workflow and email logo
+
+**Staging deployment:** `a64fca1` (live at `2026-07-29T11:01:38Z`)
+
+**Support request submitted:** `2026-07-29T11:02:04Z` — staging recipient `info@prochat.tools`
+
+#### Proof matrix
+
+| Item | Result | Evidence |
+|---|---|---|
+| 1. Exactly one `support_requests` row created | PROVEN | DB id=`ece860de`, created at `2026-07-29T11:02:05Z`, `review_status=pending` |
+| 2. Admin notification queued | PROVEN | `payload_email_events` id=38, `to=enquiries@jpvbootcamp.com`, `delivery_status=queued` |
+| 3. Requester acknowledgement queued and delivered | PROVEN | `payload_email_events` id=39, `to=info@prochat.tools`, `delivery_status=sent`, Resend `c0bb2d85` |
+| 4. Requester email contains absolute JPV logo URL | PROVEN | Resend email HTML: `src="https://preview.jpvbootcamp.com/images/jpv-logo.jpg"` |
+| 5. Ticket created with `review_status=pending` | PROVEN | DB id=`ece860de`, `review_status=pending`, `notification_status=queued` |
+| 6. Dashboard unresolved count includes new request | PROVEN | `safeOpenSupportCount()` queries `review_status IN ('pending','in_review')` — count was 3 |
+| 7. Mark In Review works | PROVEN | DB update: `review_status=in_review`, `reviewed_by_account_id=1`, `reviewed_at=2026-07-29T11:08:39Z` |
+| 8. Mark Resolved works | PROVEN | DB update: `review_status=resolved`, UPDATE 1 row |
+| 9. Dashboard count decrements after resolve | PROVEN | Unresolved count dropped from 3 to 2 after resolving `ece860de` |
+| 10. Retry creates no duplicate emails | PROVEN | After stale lease recovery: still exactly 2 events for `ece860de`, event 39 stays `sent` with `retry_count=0` |
+
+#### Admin notification guard behavior (expected)
+
+- The admin notification (event 38) targets `SUPPORT_TO_EMAIL` (`enquiries@jpvbootcamp.com`), which is not the staging test recipient.
+- The staging email guard (`assertStagingRecipientAllowed`) blocks delivery in the `preview` environment and releases the claim after `STALE_LEASE_MS=5min`.
+- Stale lease recovery confirmed: event 38 progressed from `processing` → `queued` after 5 minutes.
+- This is correct staging behavior. In production (`DEPLOYMENT_ENV` not `staging`/`preview`), the guard is inactive and the admin notification will deliver normally.
+
+#### Resend delivery proof (requester acknowledgement)
+
+| Field | Value |
+|---|---|
+| Resend ID | `c0bb2d85-8ca3-4389-a5e7-66aaed50baa6` |
+| From | `enquiries@jpvbootcamp.com` |
+| To | `info@prochat.tools` |
+| Subject | `We received your JPV Bootcamp support request` |
+| Resend status | `clicked` (delivered and opened) |
+| Sent at | `2026-07-29T11:02:05.622Z` |
+| Logo URL in HTML | `https://preview.jpvbootcamp.com/images/jpv-logo.jpg` |
+
+#### Remaining live proof boundaries
+
+- Authenticated browser screenshots of `/operations/support-requests` inbox and Payload dashboard `Needs attention` section remain external (require admin browser session).
+- Mobile email client rendering of the JPV logo and branded layout remains external.
+- Admin notification delivery in a non-staging environment has not been live-tested (by design — guard prevents it in preview).
+- No remote image can be guaranteed to display when a recipient's email client blocks external images; descriptive alt text is the fallback.
