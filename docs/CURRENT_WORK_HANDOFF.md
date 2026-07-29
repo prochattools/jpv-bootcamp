@@ -769,3 +769,40 @@ All previously deferred items are now PROVEN:
 - Mobile email client rendering of the JPV logo and branded layout remains external.
 - Admin notification delivery in a non-staging environment has not been live-tested (by design — guard prevents it in preview).
 - No remote image can be guaranteed to display when a recipient's email client blocks external images; descriptive alt text is the fallback.
+
+
+---
+
+### 2026-07-29 visual-system regression coverage checkpoint
+
+**Baseline:** `0468042` on `feature/course-branding-and-preview`
+
+**Scope completed in this bounded batch:**
+
+- Strengthened `scripts/payload_admin_dashboard.test.ts` to guard the exact user-reported regressions:
+  - responsive dashboard horizontal gutters (`2rem clamp(1rem, 4vw, 2rem)`),
+  - contrasting selected Payload navigation via `aria-current='page'`,
+  - readable Payload login/account labels,
+  - readable login links.
+- Strengthened `src/__tests__/member-content-media.test.ts` to require:
+  - the portal Updates route to use `ContentCardImage`,
+  - graceful `onError` fallback behavior,
+  - accessible fallback semantics,
+  - a stable image frame that prevents broken-image layout collapse,
+  - the Updates navigation link and `aria-current` active-state semantics in `PortalNavigation`.
+- Repaired one stale test assertion after portal navigation moved from the layout into `PortalNavigation`.
+
+**Validation evidence:**
+
+| Validation | Result |
+|---|---|
+| `pnpm exec tsx scripts/payload_admin_dashboard.test.ts` | PASS |
+| `pnpm exec vitest run src/__tests__/member-content-media.test.ts` | PASS — 8/8 |
+| Payload TypeScript | PASS |
+| Changed-path high-risk security scan | CLEAN |
+| Production build | PASS — persisted job `validation-469710e1-1828-4c96-928b-ba53c840627d` |
+| `test:release` | PASS — 156/156, persisted job `validation-982c9238-8ccd-4f9d-af27-1fe499555232` |
+
+**Isolation:** Existing concurrent changes in Playwright configs/specs, screenshots, `.ai/CURRENT_WORK_HANDOFF.md`, `.claude/worktrees/**`, `newrelic_agent.log`, and `.env.production.BAK` were not modified or staged by this batch.
+
+**Current design verdict:** Implementation and source-level regression coverage are materially stronger, but global design must remain **not fully signed off** until authenticated staging browser evidence confirms Payload active navigation, login/profile contrast, collection/form states, responsive gutters, portal media rendering, and the wider route/viewport matrix. Email-client rendering and production-only admin notification delivery remain external proof boundaries.

@@ -61,6 +61,26 @@ assert.match(
   /\.main-content,[\s\S]*max-width:\s*1280px;[\s\S]*margin-inline:\s*auto;/,
   'Constrained Payload admin views must remain centered with responsive gutters',
 )
+assert.match(
+  dashboard,
+  /padding:\s*'2rem clamp\(1rem, 4vw, 2rem\)'/,
+  'Dashboard must retain responsive horizontal gutters',
+)
+assert.match(
+  adminStyles,
+  /a\[aria-current='page'\][\s\S]*background:\s*var\(--jpv-brand-deep\)[\s\S]*color:\s*var\(--jpv-canvas\)/,
+  'Selected Payload navigation must retain a contrasting active state',
+)
+assert.match(
+  adminStyles,
+  /\.login label,[\s\S]*label\s*\{[\s\S]*color:\s*var\(--jpv-ink\)/,
+  'Payload login and account labels must remain readable',
+)
+assert.match(
+  adminStyles,
+  /\.login a,[\s\S]*color:\s*var\(--jpv-brand-deep\)/,
+  'Payload login links must retain readable contrast',
+)
 assert.match(partners, /External partner organizations and destinations/)
 assert.match(partners, /recipient emails/)
 assert.match(partners, /webhook rules/)
