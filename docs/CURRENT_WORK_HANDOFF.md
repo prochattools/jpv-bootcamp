@@ -689,7 +689,9 @@ All previously deferred items are now PROVEN:
 - `renderBrandedEmail` now resolves the default logo through `getPublicBaseUrl()` and `resolveJpvLogoUrl(...)`, producing an absolute public HTTPS URL such as `https://preview.jpvbootcamp.com/images/jpv-logo.jpg`.
 - Custom explicit `logoUrl` values remain supported.
 - The logo keeps explicit email-safe `width` and `height` attributes, adds `max-width:64px`, uses `object-fit:contain`, and retains descriptive alt text.
-- The existing optimized JPEG remains the canonical email asset: approximately 156 KB versus approximately 767 KB for `public/images/jpv-logo.png` (about 80% smaller). The asset is referenced remotely and is not embedded as base64, so it does not inflate every email payload.
+- Canonical logo asset: `public/images/jpv-logo.jpg` — exact size **155,608 bytes**. The PNG at `public/images/jpv-logo.png` is **766,802 bytes** and must not be used as-is in emails or substituted for the JPEG.
+- The asset is referenced by absolute public URL and is not embedded as base64, so it never inflates the HTML email payload regardless of logo file size.
+- A future optional improvement: a 128–240 px optimised logo variant under 25 KB would reduce remote-image load time in email clients; this is not a blocker for go-live.
 
 **Validation**
 - Branded email template contract: passed; proves absolute HTTPS output and rejects relative logo URLs.
@@ -698,6 +700,23 @@ All previously deferred items are now PROVEN:
 - Production build job `validation-263fed12-e00c-4865-b76d-80cc02ca2285`: passed.
 - Canonical release job `validation-98ec1ce4-0bf1-4a05-9b4c-cd1f8932ce1a`: **156/156 passed**.
 
+**Validation summary**
+| Check | Result |
+|---|---|
+| Branded email template contract — absolute HTTPS URL, no relative path | PASS |
+| Payload TypeScript | PASS |
+| Changed-path security scan | CLEAN |
+| Production build `validation-263fed12-e00c-4865-b76d-80cc02ca2285` | PASS |
+| Canonical release `validation-98ec1ce4-0bf1-4a05-9b4c-cd1f8932ce1a` | 156/156 PASS |
+| Support workflow contract | PASS |
+
 **External proof boundary**
-- Staging must send at least one real transactional email and confirm the logo URL returns HTTP 200 without authentication and renders in representative email clients.
+- Staging must send at least one real transactional email and confirm the absolute logo URL returns HTTP 200 without authentication.
+- Support workflow staging proof: one real support request must produce both Resend deliveries, create one `support_requests` row, appear in `/operations/support-requests`, and remain deduplicated on worker retry.
 - No remote image can be guaranteed to display when a recipient's email client or privacy setting blocks external images. The descriptive alt text remains the fallback.
+
+**Logo asset inventory**
+| Asset | Bytes | Use |
+|---|---|---|
+| `public/images/jpv-logo.jpg` | 155,608 | Canonical — email and UI |
+| `public/images/jpv-logo.png` | 766,802 | Do not use as-is |
