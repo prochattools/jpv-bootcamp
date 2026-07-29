@@ -1,6 +1,7 @@
 import path from 'path'
 import { fileURLToPath } from 'url'
 import { buildConfig } from 'payload'
+import type { EmailAdapter } from 'payload'
 import { postgresAdapter } from '@payloadcms/db-postgres'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
 import { s3Storage } from '@payloadcms/storage-s3'
@@ -36,6 +37,19 @@ import { jpvBrand } from './lib/brand/jpvDesignSystem'
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
 const mediaStorage = resolvePayloadMediaStorageConfig()
+
+function buildPayloadEmailAdapter(): EmailAdapter {
+  return {
+    name: 'queue-to-db',
+    sendEmail: async (message) => {
+      console.log(
+        `[Payload email] To: ${message.to}, Subject: ${message.subject}`,
+      )
+      // Emails are queued to payload_email_events table by hooks and processed async
+      // This adapter logs instead of throwing to suppress the "no adapter" warning.
+    },
+  }
+}
 const mediaStoragePlugins =
   mediaStorage.mode === 's3'
     ? [
@@ -151,6 +165,7 @@ export default buildConfig({
   editor: lexicalEditor(),
   plugins: mediaStoragePlugins,
   secret: process.env.PAYLOAD_SECRET || '',
+  email: buildPayloadEmailAdapter(),
   typescript: {
     outputFile: path.resolve(dirname, 'payload-types.ts'),
   },
