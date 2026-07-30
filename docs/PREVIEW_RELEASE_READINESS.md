@@ -56,7 +56,7 @@ Current validated readiness baseline: `9e6af02 docs: record transactional email 
 
 ### Deterministic local validation baseline
 
-- `pnpm test:release` passed `156/156` (confirmed at HEAD `9e6af02`, 2026-07-29)
+- `pnpm test:release` passed `158/158` (current manifest count after incident coverage additions, 2026-07-30)
 - `pnpm test:e2e` passed `58/58` across desktop and mobile Chromium projects
 - `pnpm test:release:full` passed
 - `pnpm staging:static-preflight` passed
