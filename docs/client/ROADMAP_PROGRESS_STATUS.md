@@ -1,5 +1,14 @@
 # JPV Bootcamp - Roadmap Progress Status
 
+## Current checkpoint — 2026-07-30
+
+- **IMPLEMENTED:** Payload admin premium-theme hardening and dashboard refinements on `feature/course-branding-and-preview` from baseline `524cff2`.
+- **LOCALLY VERIFIED:** focused design contract, Payload TypeScript, changed-path security scan, production build, and `pnpm test:release` (`156/156`).
+- **STAGING VERIFIED:** incomplete for the full authenticated real Payload DOM across all active admin surfaces and 375/768/1024/1440 px.
+- **DEFERRED:** post-core M2 work, including durable media-provider migration unless separately promoted.
+- **EXTERNAL:** client approval, migration execution authorization, and production release approval.
+- **Verdict:** `PAYLOAD DESIGN NOT YET VERIFIED`; local green status must not be described as full visual acceptance.
+
 Current status for `feature/course-branding-and-preview`, using the 10 July 2026 audit at `236227c fix: require portal auth for member content` as the historical baseline, `af6de62 docs: record core go-live readiness` as the previous readiness baseline, `d55229f test: enforce programme content readiness` as the current validated implementation baseline, and `8927df9 docs: checkpoint membership implementation readiness` as the prior checkpoint baseline. The synchronized Claude staging baseline is `690c5f4 docs(release): update GO/NO-GO checklist — staging smoke 58/58 confirmed`; verify the exact branch tip with `git log --oneline -1` before any operator action because the cohesive design integration and operator hardening phases follow that baseline.
 
 Current client truth: `docs/client/JPV_Bootcamp_Platform_Expansion_Go_Live_Plan_v3_7.docx`. Version 3.4 is the prior progress baseline. Canonical execution plan: `docs/PAYLOAD_INTEGRATION_PLAN.md`. Detailed audit evidence: `docs/V3_5_CODEBASE_ALIGNMENT_ASSESSMENT.md`.

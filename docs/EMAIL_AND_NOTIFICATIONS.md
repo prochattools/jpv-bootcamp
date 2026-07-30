@@ -63,7 +63,7 @@ Trigger the async queue manually to send pending emails:
 
 ```bash
 curl -X POST https://preview.jpvbootcamp.com/api/admin/process-payload-email-queue \
-  -H "Authorization: Bearer <admin-token>" \
+  -H "Authorization: Bearer $EMAIL_QUEUE_WORKER_SECRET" \
   -H "Content-Type: application/json" \
   -d '{}'
 ```
@@ -75,12 +75,12 @@ curl -X POST https://preview.jpvbootcamp.com/api/admin/process-payload-email-que
 ```bash
 # Every 5 minutes
 */5 * * * * curl -s -X POST https://preview.jpvbootcamp.com/api/admin/process-payload-email-queue \
-  -H "Authorization: Bearer $PAYLOAD_ADMIN_TOKEN" \
+  -H "Authorization: Bearer $EMAIL_QUEUE_WORKER_SECRET" \
   -H "Content-Type: application/json" \
   -d '{}' >> /var/log/jpv-email-queue.log 2>&1
 ```
 
-**Current state:** No cron job configured. Emails queue to DB but are NOT sent until manually triggered.
+**Current staging state:** The Dokploy scheduled job is documented as configured every five minutes. Repository evidence confirms the endpoint and worker-secret contract; staging delivery remains constrained by the recipient safety guard. Operator monitoring is still required and production readiness is not implied.
 
 ## Email Verification
 

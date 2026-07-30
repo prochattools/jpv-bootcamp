@@ -112,16 +112,6 @@ It's processing the email queue every 5 minutes, applying safety guards correctl
 
 ---
 
-## ⚠️ Security Notice
+## Security Notice
 
-**OLD SECRET ROTATED:** The email queue secret was exposed in git history and must be rotated. 
-
-**Action taken:**
-- Redacted from all documentation
-- Changed to use environment variable reference
-- New secret must be generated in Dokploy
-
-**Process:**
-1. Generate new EMAIL_QUEUE_WORKER_SECRET in Dokploy
-2. Redeploy application
-3. Cron job continues working (uses $EMAIL_QUEUE_WORKER_SECRET env var)
+The literal worker credential has been removed from repository documentation. The repository owner explicitly decided not to rotate `EMAIL_QUEUE_WORKER_SECRET` as part of this task. All documentation and scheduled commands must reference `$EMAIL_QUEUE_WORKER_SECRET` through the Dokploy application environment and must never include its literal value.

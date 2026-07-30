@@ -1,5 +1,14 @@
 # Operator Handoff Summary
 
+## Design-hardening checkpoint — 2026-07-30
+
+- **Branch / baseline:** `feature/course-branding-and-preview` from `524cff2`.
+- **IMPLEMENTED:** neutral Payload admin shell, readable semantic controls, premium sidebar hierarchy, responsive dashboard cards, safe KPI wrapping, and corrected email-worker documentation.
+- **LOCALLY VERIFIED:** focused Payload design contract, Payload TypeScript, changed-path security scan, production build, and `pnpm test:release` (`156/156`).
+- **STAGING VERIFIED:** not yet complete for the authenticated real Payload DOM across every active view and 375/768/1024/1440 px.
+- **Operator verdict:** `PAYLOAD DESIGN NOT YET VERIFIED`. Do not present local or mocked-browser coverage as final design acceptance.
+- **External gates:** client approval, migration authorization, and production release approval remain separate.
+
 ## Current state
 
 - Branch: `feature/course-branding-and-preview`

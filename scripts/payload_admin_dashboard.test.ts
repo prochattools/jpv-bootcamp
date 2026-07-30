@@ -63,8 +63,28 @@ assert.match(
 )
 assert.match(
   dashboard,
-  /padding:\s*'2rem clamp\(1rem, 4vw, 2rem\)'/,
-  'Dashboard must retain responsive horizontal gutters',
+  /maxWidth:\s*1360[\s\S]*padding:\s*'clamp\(1\.25rem, 3vw, 2\.5rem\)'[\s\S]*width:\s*'100%'/,
+  'Dashboard must retain a constrained responsive premium shell',
+)
+assert.match(
+  dashboard,
+  /gridTemplateColumns:\s*'repeat\(auto-fit, minmax\(min\(100%, 190px\), 1fr\)\)'/,
+  'KPI cards must retain a safe responsive minimum width',
+)
+assert.match(
+  dashboard,
+  /overflowWrap:\s*'anywhere'/,
+  'Long KPI values must wrap instead of clipping',
+)
+assert.match(
+  adminStyles,
+  /html\[data-theme='dark'\][\s\S]*--theme-bg:\s*var\(--jpv-surface\)[\s\S]*--theme-text:\s*var\(--jpv-ink\)/,
+  'Payload dark mode must retain the neutral readable application shell',
+)
+assert.doesNotMatch(
+  adminStyles,
+  /html\[data-theme='dark'\][\s\S]*--theme-bg:\s*var\(--jpv-brand-deep\)/,
+  'Payload dark mode must not turn the full application canvas brand green',
 )
 assert.match(
   adminStyles,

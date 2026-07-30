@@ -59,25 +59,85 @@ html[data-theme='light'] {
   --theme-warning-800: color-mix(in srgb, var(--jpv-sunshine-ink) 80%, black);
 }
 
+// Payload's built-in theme toggle must not turn the entire admin into a dark
+// green canvas. Both modes deliberately use the same neutral application shell;
+// brand green is reserved for the header, focus, links, and selected actions.
 html[data-theme='dark'] {
-  --theme-bg: var(--jpv-brand-deep);
-  --theme-input-bg: color-mix(in srgb, var(--jpv-brand-deep) 85%, var(--jpv-canvas));
-  --theme-text: var(--jpv-canvas);
-  --theme-border-color: color-mix(in srgb, var(--jpv-brand-deep) 60%, var(--jpv-border));
-  --theme-elevation-0: var(--jpv-brand-deep);
-  --theme-elevation-50: color-mix(in srgb, var(--jpv-brand-deep) 90%, var(--jpv-canvas));
-  --theme-elevation-100: color-mix(in srgb, var(--jpv-brand-deep) 80%, var(--jpv-canvas));
-  --theme-elevation-500: var(--jpv-inverse-muted, color-mix(in srgb, var(--jpv-canvas) 70%, var(--jpv-brand-deep)));
-  --theme-elevation-900: var(--jpv-canvas);
-  --theme-elevation-1000: color-mix(in srgb, var(--jpv-canvas) 92%, black);
+  --theme-bg: var(--jpv-surface);
+  --theme-input-bg: var(--jpv-canvas);
+  --theme-text: var(--jpv-ink);
+  --theme-border-color: var(--jpv-border);
+  --theme-elevation-0: var(--jpv-canvas);
+  --theme-elevation-50: var(--jpv-surface);
+  --theme-elevation-100: var(--jpv-surface-strong);
+  --theme-elevation-150: var(--jpv-border);
+  --theme-elevation-200: color-mix(in srgb, var(--jpv-border) 82%, var(--jpv-muted));
+  --theme-elevation-250: color-mix(in srgb, var(--jpv-border) 68%, var(--jpv-muted));
+  --theme-elevation-300: color-mix(in srgb, var(--jpv-border) 52%, var(--jpv-muted));
+  --theme-elevation-400: color-mix(in srgb, var(--jpv-muted) 86%, var(--jpv-ink));
+  --theme-elevation-500: color-mix(in srgb, var(--jpv-muted) 78%, var(--jpv-ink));
+  --theme-elevation-600: color-mix(in srgb, var(--jpv-muted) 64%, var(--jpv-ink));
+  --theme-elevation-700: color-mix(in srgb, var(--jpv-muted) 46%, var(--jpv-ink));
+  --theme-elevation-800: color-mix(in srgb, var(--jpv-muted) 25%, var(--jpv-ink));
+  --theme-elevation-900: var(--jpv-ink);
+  --theme-elevation-1000: color-mix(in srgb, var(--jpv-ink) 88%, black);
 }
 
 // ─── Base typography and background ──────────────────────────────────────────
 
 body {
-  background: var(--theme-bg);
-  color: var(--theme-text);
+  background: var(--jpv-surface);
+  color: var(--jpv-ink);
   font-family: var(--font-jpv), Poppins, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 0.9375rem;
+  line-height: 1.55;
+}
+
+// Premium application shell: content remains neutral and readable in every
+// Payload theme mode. These selectors target stable semantic elements rather
+// than generated CSS-module class names.
+:where(main, [role='main']) {
+  color: var(--jpv-ink);
+}
+
+:where(h1, h2, h3, h4, legend) {
+  color: var(--jpv-ink);
+  letter-spacing: -0.015em;
+}
+
+:where(p, small, .field-description, .description, .cell__description) {
+  color: color-mix(in srgb, var(--jpv-muted) 72%, var(--jpv-ink));
+}
+
+:where(input, textarea, select, [role='combobox']) {
+  background: var(--jpv-canvas);
+  border-color: var(--jpv-border);
+  color: var(--jpv-ink);
+  min-height: 44px;
+}
+
+:where(input, textarea)::placeholder {
+  color: color-mix(in srgb, var(--jpv-muted) 82%, var(--jpv-ink));
+  opacity: 1;
+}
+
+:where([role='dialog'], .drawer, .modal, .popup, .document-drawer) {
+  background: var(--jpv-canvas);
+  color: var(--jpv-ink);
+}
+
+:where([role='tablist'], .tabs-field__tabs) {
+  border-bottom: 1px solid var(--jpv-border);
+}
+
+:where([role='tab'], .tabs-field__tab-button) {
+  color: color-mix(in srgb, var(--jpv-muted) 58%, var(--jpv-ink));
+  min-height: 44px;
+}
+
+:where([role='tab'][aria-selected='true'], .tabs-field__tab-button--active) {
+  color: var(--jpv-brand-deep);
+  font-weight: 700;
 }
 
 // ─── App header ───────────────────────────────────────────────────────────────
@@ -105,21 +165,22 @@ body {
 .nav {
   background: var(--jpv-canvas);
   border-right: 1px solid var(--jpv-border);
-
-  // Constrain nav content so links don't overflow on narrow viewports
+  box-shadow: 8px 0 24px color-mix(in srgb, var(--jpv-ink) 4%, transparent);
+  min-width: 248px;
   overflow-x: hidden;
   overflow-y: auto;
+  padding: 0.75rem;
 }
 
 // Nav group headers (collection groupings)
 .nav-group__toggle {
-  color: var(--jpv-muted);
+  color: color-mix(in srgb, var(--jpv-muted) 62%, var(--jpv-ink));
   font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
+  font-weight: 800;
+  letter-spacing: 0.085em;
+  min-height: 44px;
+  padding: 0.75rem 0.625rem 0.5rem;
   text-transform: uppercase;
-  padding-block: 0.625rem;
-  padding-inline: 0.75rem;
   width: 100%;
 }
 
@@ -131,13 +192,17 @@ body {
 // Individual nav links — Payload renders anchors with data-active OR aria-current.
 // display:block + padding are required for the background to render with visible height.
 .nav a {
-  display: block;
-  border-radius: var(--jpv-radius-action);
-  padding-block: 0.5rem;
-  padding-inline: 0.75rem;
+  align-items: center;
+  border: 1px solid transparent;
+  border-radius: calc(var(--jpv-radius-action) + 2px);
+  display: flex;
   font-size: 0.875rem;
-  line-height: 1.4;
+  font-weight: 500;
+  line-height: 1.35;
+  min-height: 44px;
+  padding: 0.625rem 0.75rem;
   text-decoration: none;
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
 }
 
 .nav a[data-active='true'],

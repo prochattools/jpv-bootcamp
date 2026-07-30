@@ -8,7 +8,7 @@ Process pending emails from the queue every 5 minutes so transactional emails (p
 ### Copy This Exactly
 
 ```cron
-*/5 * * * * root curl -s -X POST https://preview.jpvbootcamp.com/api/admin/process-payload-email-queue -H "Authorization: Bearer YOUR_PAYLOAD_ADMIN_TOKEN" >> /var/log/jpv-email-queue.log 2>&1
+*/5 * * * * root curl -s -X POST https://preview.jpvbootcamp.com/api/admin/process-payload-email-queue -H "Authorization: Bearer $EMAIL_QUEUE_WORKER_SECRET" >> /var/log/jpv-email-queue.log 2>&1
 ```
 
 ### Fields Explained
@@ -37,7 +37,7 @@ Generate or retrieve a Payload admin token. You can find it in:
 
 **Token placeholder (replace with real value):**
 ```
-YOUR_PAYLOAD_ADMIN_TOKEN
+$EMAIL_QUEUE_WORKER_SECRET
 ```
 
 ### Step 2: SSH into Dokploy Server
@@ -60,10 +60,10 @@ sudo nano /etc/cron.d/jpv-email-queue
 # JPV Bootcamp Email Queue Processor
 # Sends pending transactional emails every 5 minutes
 
-*/5 * * * * root curl -s -X POST https://preview.jpvbootcamp.com/api/admin/process-payload-email-queue -H "Authorization: Bearer YOUR_PAYLOAD_ADMIN_TOKEN" >> /var/log/jpv-email-queue.log 2>&1
+*/5 * * * * root curl -s -X POST https://preview.jpvbootcamp.com/api/admin/process-payload-email-queue -H "Authorization: Bearer $EMAIL_QUEUE_WORKER_SECRET" >> /var/log/jpv-email-queue.log 2>&1
 ```
 
-**Important:** Replace `YOUR_PAYLOAD_ADMIN_TOKEN` with your actual admin token.
+**Important:** Replace `$EMAIL_QUEUE_WORKER_SECRET` with your actual admin token.
 
 ### Step 5: Save and Exit
 
@@ -90,7 +90,7 @@ tail -f /var/log/jpv-email-queue.log
 ```bash
 # Trigger the email queue processor now
 curl -s -X POST https://preview.jpvbootcamp.com/api/admin/process-payload-email-queue \
-  -H "Authorization: Bearer YOUR_PAYLOAD_ADMIN_TOKEN" \
+  -H "Authorization: Bearer $EMAIL_QUEUE_WORKER_SECRET" \
   -w "\nHTTP: %{http_code}\n"
 ```
 
@@ -133,7 +133,7 @@ If Dokploy has a cron job UI:
 3. **Command:**
 ```
 curl -s -X POST https://preview.jpvbootcamp.com/api/admin/process-payload-email-queue \
-  -H "Authorization: Bearer YOUR_PAYLOAD_ADMIN_TOKEN" \
+  -H "Authorization: Bearer $EMAIL_QUEUE_WORKER_SECRET" \
   >> /var/log/jpv-email-queue.log 2>&1
 ```
 4. **Enabled:** ✅ Yes
@@ -252,7 +252,7 @@ ls -la /var/log/jpv-email-queue.log
 
 **Exact Cron Line:**
 ```
-*/5 * * * * root curl -s -X POST https://preview.jpvbootcamp.com/api/admin/process-payload-email-queue -H "Authorization: Bearer YOUR_PAYLOAD_ADMIN_TOKEN" >> /var/log/jpv-email-queue.log 2>&1
+*/5 * * * * root curl -s -X POST https://preview.jpvbootcamp.com/api/admin/process-payload-email-queue -H "Authorization: Bearer $EMAIL_QUEUE_WORKER_SECRET" >> /var/log/jpv-email-queue.log 2>&1
 ```
 
 **Where:** `/etc/cron.d/jpv-email-queue` on Dokploy server (68.221.139.108)
@@ -261,4 +261,4 @@ ls -la /var/log/jpv-email-queue.log
 
 **Verification:** `tail -f /var/log/jpv-email-queue.log` → should see output every 5 min
 
-**Required:** Replace `YOUR_PAYLOAD_ADMIN_TOKEN` with actual token value
+**Required:** Replace `$EMAIL_QUEUE_WORKER_SECRET` with actual token value

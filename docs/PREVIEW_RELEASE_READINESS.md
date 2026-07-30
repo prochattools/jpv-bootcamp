@@ -1,5 +1,13 @@
 # JPV Bootcamp Preview Release Readiness
 
+## Current design-hardening checkpoint — 2026-07-30
+
+- **IMPLEMENTED / LOCALLY VERIFIED:** Payload admin neutral theme, readable semantic controls, premium navigation, responsive dashboard, focused design contract, Payload TypeScript, changed-path security scan, production build, and `pnpm test:release` (`156/156`).
+- **STAGING VERIFIED:** not yet established for the entire authenticated real Payload DOM across all active views and required viewport widths.
+- **BLOCKED:** final Payload visual sign-off remains blocked on real-DOM staging evidence.
+- **EXTERNAL:** client approval, migration authorization, and production release approval.
+- **Release verdict:** repository implementation is green, but `PAYLOAD DESIGN NOT YET VERIFIED`; this checkpoint does not authorize production deployment or migration execution.
+
 This runbook separates repository changes, image publication, Payload migrations, Prisma startup behavior, provider email delivery, preview deployment, and smoke verification into independent approval categories.
 
 ## Scope and safety boundary

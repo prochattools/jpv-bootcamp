@@ -1,5 +1,14 @@
 # Payload CMS Integration Plan
 
+## Current implementation checkpoint — 2026-07-30
+
+- **IMPLEMENTED:** Payload admin neutral theme bridge, semantic control styling, premium navigation hierarchy, responsive operations dashboard, safe KPI wrapping, and cron/email credential-documentation alignment.
+- **LOCALLY VERIFIED:** focused Payload design contract, Payload TypeScript, changed-path security scan, production build, and `pnpm test:release` (`156/156`).
+- **STAGING VERIFIED:** not yet complete for the full authenticated real Payload DOM across every active view and required viewport.
+- **DEFERRED:** post-core M2 capabilities and durable media-provider work remain outside this design-hardening packet unless separately promoted.
+- **EXTERNAL:** client sign-off, migration authorization, and production release approval.
+- **Current design verdict:** `PAYLOAD DESIGN NOT YET VERIFIED`.
+
 This is the single canonical product, architecture, security, roadmap, and execution plan for the JPV Bootcamp Payload programme. Code and operational changes must follow this plan in order. Update this document before changing architecture, security, product boundaries, rollout order, or production responsibilities.
 
 ## Documentation hierarchy

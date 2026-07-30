@@ -2,6 +2,16 @@
 
 Use this document as the canonical starting point for a new Codex or Workbench conversation.
 
+## Current checkpoint — Payload admin design hardening (2026-07-30)
+
+- **Branch / baseline:** `feature/course-branding-and-preview` from `524cff2`.
+- **IMPLEMENTED:** neutral Payload application canvas in both theme modes, readable semantic controls, stronger navigation hierarchy, responsive dashboard shell, safe KPI wrapping, and structured quick actions.
+- **LOCALLY VERIFIED:** focused Payload design contract, Payload TypeScript, changed-path security scan, production build, and `pnpm test:release` (`156/156`).
+- **STAGING VERIFIED:** not yet established for the complete real authenticated Payload DOM across all required views and four target widths.
+- **DEFERRED / EXTERNAL:** migration execution, production release, client approval, and any production-only provider proof.
+- **Current verdict:** `PAYLOAD DESIGN NOT YET VERIFIED`. Local implementation is green; final design completion requires authenticated real-DOM staging evidence.
+- **Security decision:** repository documentation uses `$EMAIL_QUEUE_WORKER_SECRET`; the owner explicitly chose not to rotate the current value in this task.
+
 ---
 
 ## PHASE A — PORTAL DESIGN TOKEN HARDENING (2026-07-26)
@@ -202,7 +212,7 @@ Final re-validation (2026-07-25, this session):
 | Real API upload | PROVEN | Bunny Stream HTTP 200; video ID 99001 in library 581531 |
 | `VideoFailedProcessing` callback | PROVEN | DB record id=9 `status=failed` |
 | `VideoFinishedProcessing` callback | PROVEN | DB record id=9 `status=ready` |
-| CDN playback for enrolled member | **PROVEN** | Enrolled member → `{"ok":true,"url":"https://vz-d0404b6f-bd9.b-cdn.net/5fda17bf-3547-494e-8664-12edcdb7f7cb/playlist.m3u8?token=..."}` |
+| CDN playback for enrolled member | **PROVEN** | Enrolled member received an authorized Bunny playback URL; credential-bearing query parameters are intentionally omitted. |
 | CDN denied for unenrolled member | **PROVEN** | `{"ok":false,"reason":"not_entitled"}` |
 | CDN denied unauthorized | **PROVEN** | `{"ok":false,"reason":"unauthorized"}` |
 | Lesson 1 (`foundations-welcome`) video linked | **PROVEN** | `bunny_video_id=9, status=ready, video_guid=5fda17bf-3547-494e-8664-12edcdb7f7cb` |

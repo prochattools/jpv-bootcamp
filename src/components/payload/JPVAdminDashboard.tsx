@@ -168,9 +168,26 @@ export async function JPVAdminDashboard() {
   ]
 
   return (
-    <main style={{ display: 'grid', gap: 32, padding: '2rem clamp(1rem, 4vw, 2rem)' }}>
+    <main
+      style={{
+        display: 'grid',
+        gap: 24,
+        marginInline: 'auto',
+        maxWidth: 1360,
+        padding: 'clamp(1.25rem, 3vw, 2.5rem)',
+        width: '100%',
+      }}
+    >
       {/* Hero */}
-      <section>
+      <section
+        style={{
+          background: 'var(--jpv-canvas)',
+          border: '1px solid var(--jpv-border)',
+          borderRadius: 'var(--jpv-radius-panel)',
+          boxShadow: 'var(--jpv-shadow)',
+          padding: 'clamp(1.25rem, 3vw, 2rem)',
+        }}
+      >
         <p
           style={{
             color: 'var(--jpv-ink)',
@@ -215,7 +232,7 @@ export async function JPVAdminDashboard() {
           style={{
             display: 'grid',
             gap: 12,
-            gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 190px), 1fr))',
           }}
         >
           {kpis.map((kpi) => (
@@ -240,11 +257,13 @@ export async function JPVAdminDashboard() {
             >
               <p
                 style={{
-                  color: 'var(--jpv-muted)',
+                  color: 'color-mix(in srgb, var(--jpv-muted) 68%, var(--jpv-ink))',
                   fontSize: 11,
-                  fontWeight: 600,
-                  letterSpacing: '0.1em',
+                  fontWeight: 700,
+                  letterSpacing: '0.08em',
+                  lineHeight: 1.45,
                   margin: 0,
+                  minHeight: '2.9em',
                   textTransform: 'uppercase',
                 }}
               >
@@ -254,9 +273,11 @@ export async function JPVAdminDashboard() {
                 style={{
                   color: 'var(--jpv-ink)',
                   fontFeatureSettings: '"tnum"',
-                  fontSize: 28,
+                  fontSize: 'clamp(1.5rem, 2.2vw, 1.875rem)',
                   fontWeight: 800,
-                  margin: '6px 0 0',
+                  lineHeight: 1.15,
+                  margin: '8px 0 0',
+                  overflowWrap: 'anywhere',
                 }}
               >
                 {kpi.value}
@@ -390,10 +411,10 @@ export async function JPVAdminDashboard() {
             border: '1px solid var(--jpv-border)',
             borderRadius: 'var(--jpv-radius-panel)',
             boxShadow: 'var(--jpv-shadow)',
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: '8px 24px',
-            padding: 20,
+            display: 'grid',
+            gap: 10,
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 180px), 1fr))',
+            padding: 16,
           }}
         >
           {quickActions.map((action) => (
@@ -401,12 +422,17 @@ export async function JPVAdminDashboard() {
               key={action.label}
               href={action.href}
               style={{
-                color: 'var(--jpv-brand-deep)',
-                fontSize: 13,
                 alignItems: 'center',
+                background: 'var(--jpv-surface)',
+                border: '1px solid var(--jpv-border)',
+                borderRadius: 'var(--jpv-radius-action)',
+                color: 'var(--jpv-brand-deep)',
                 display: 'inline-flex',
+                fontSize: 13,
                 fontWeight: 700,
+                justifyContent: 'space-between',
                 minHeight: 44,
+                padding: '0.75rem 0.875rem',
                 textDecoration: 'none',
               }}
             >

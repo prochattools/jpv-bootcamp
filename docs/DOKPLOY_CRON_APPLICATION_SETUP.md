@@ -66,7 +66,7 @@ curl                                    HTTP client
 https://preview.jpvbootcamp.com/api/admin/process-payload-email-queue
                                         Email queue endpoint (exact URL)
 -H "Authorization: Bearer ..."          Auth header
-$EMAIL_QUEUE_WORKER_SECRET                Your admin token (replace this)
+$EMAIL_QUEUE_WORKER_SECRET                Worker secret resolved from the Dokploy application environment
 >> /var/log/jpv-email-queue.log         Log file
 2>&1                                    Capture errors too
 ```
@@ -77,13 +77,9 @@ $EMAIL_QUEUE_WORKER_SECRET                Your admin token (replace this)
 
 Replace: **$EMAIL_QUEUE_WORKER_SECRET**
 
-Get from:
-1. Your Dokploy environment variables (look for `PAYLOAD_ADMIN_TOKEN`)
-2. Or check the application's `.env` in Dokploy
-3. Or generate via Payload admin dashboard (/admin)
-4. Or ask Steve
+Get from the Dokploy application environment variable named `EMAIL_QUEUE_WORKER_SECRET`. Do not copy its literal value into documentation, commands, screenshots, or logs. The scheduled job should resolve `$EMAIL_QUEUE_WORKER_SECRET` at runtime.
 
-Format: `Bearer` followed by 32+ character key
+Format: `Bearer` followed by the environment-resolved worker secret
 
 Example (fake): `Bearer a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6`
 
