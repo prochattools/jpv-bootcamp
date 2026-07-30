@@ -280,6 +280,14 @@ export const PREVIEW_MIGRATION_INVENTORY = [
     verificationChecks: ['registry-match', 'ordered-exactly'],
     authorizationCategory: 'payloadMigration',
   },
+  {
+    name: '20260730_090000_membership_audit_relationship_columns',
+    system: 'payload', order: 27,
+    purpose: 'Reconcile membership audit relationship columns with Payload-generated names and enforce their foreign keys.',
+    requiredForPreview: true, rollbackRisk: 'reversible',
+    verificationChecks: ['registry-match', 'ordered-exactly', 'audit-history-columns'],
+    authorizationCategory: 'payloadMigration',
+  },
 ] as const satisfies readonly PreviewMigrationInventoryEntry[]
 
 export const PREVIEW_MIGRATION_INVENTORY_VERSION = 1

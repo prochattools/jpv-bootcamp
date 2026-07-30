@@ -19,6 +19,12 @@ const lessonRead = ({ req }: { req: PayloadRequest }) => {
   return { previewLesson: { equals: true } }
 }
 
+const normalizeLegacyAccessBadge = ({ value }: { value?: unknown }) => {
+  if (value === 'manual' || value === undefined || value === null || value === '') return value
+  if (value === 'free' || value === 'pro' || value === 'vip' || value === 'private') return 'manual'
+  return value
+}
+
 export const PayloadCourses: CollectionConfig = {
   slug: 'payload_courses',
   dbName: 'payload_courses',
@@ -79,6 +85,7 @@ export const PayloadCourses: CollectionConfig = {
         description: 'Legacy compatibility value. Runtime access is controlled by JPV Bootcamp Membership and verified Stripe subscription state.',
         hidden: true,
       },
+      hooks: { beforeValidate: [normalizeLegacyAccessBadge] },
     },
     { name: 'estimatedDuration', type: 'text' },
     { name: 'sortOrder', type: 'number', defaultValue: 0 },

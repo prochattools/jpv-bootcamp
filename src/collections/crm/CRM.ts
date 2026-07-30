@@ -294,6 +294,7 @@ export const PayloadEmailEvents: CollectionConfig = {
         { label: 'Bounced', value: 'bounced' },
         { label: 'Complained', value: 'complained' },
         { label: 'Failed', value: 'failed' },
+        { label: 'Blocked by staging guard', value: 'blocked_by_staging_guard' },
         { label: 'Skipped', value: 'skipped' },
       ],
     },
@@ -504,4 +505,3 @@ export const PayloadAdminNotifications: CollectionConfig = {
   ],
   timestamps: true,
 }
-

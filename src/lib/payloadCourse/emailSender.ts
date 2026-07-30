@@ -2,7 +2,7 @@ import { createHash, randomBytes } from 'node:crypto'
 
 import { normalizeEmail } from '@/lib/normalize-email'
 import { getPublicBaseUrl } from '@/lib/public-base-url'
-import { assertStagingRecipientAllowed } from '@/lib/staging-email-guard'
+import { assertStagingRecipientAllowed, StagingEmailGuardViolation } from '@/lib/staging-email-guard'
 import { getSystemEmailTemplate } from '@/lib/payloadCourse/systemEmailTemplates'
 import { redactDeliveredResetLink } from '@/lib/members/redactDeliveredResetLink'
 import type {
@@ -463,7 +463,18 @@ export async function sendQueuedPayloadEmail(
     }
   }
 
-  assertStagingRecipientAllowed(sendPayload.to, 'payloadCourse/emailSender:sendQueuedPayloadEmail')
+  try {
+    assertStagingRecipientAllowed(sendPayload.to, 'payloadCourse/emailSender:sendQueuedPayloadEmail')
+  } catch (error) {
+    if (!(error instanceof StagingEmailGuardViolation)) throw error
+    await updateEmailEvent(payload, event, {
+      deliveryStatus: 'blocked_by_staging_guard',
+      claimedAt: null,
+      workerClaimId: null,
+      failureReason: 'blocked_by_staging_guard',
+    })
+    return { eventId: String(event.id), templateKey, toEmail, status: 'skipped', reason: 'blocked_by_staging_guard', idempotencyKey }
+  }
 
   let sendResult: SendEmailResponse
   try {

@@ -3,6 +3,7 @@ set -euo pipefail
 
 BACKUP_ROOT="/var/backups/pgdump"
 STARTUP_MODE="${STARTUP_MODE:-application-only}"
+PAYLOAD_SCHEMA_PREFLIGHT="${PAYLOAD_SCHEMA_PREFLIGHT:-true}"
 PORT="${PORT:-3000}"
 export PORT
 
@@ -67,6 +68,11 @@ echo "[start] startup mode: $STARTUP_MODE"
 case "$STARTUP_MODE" in
   application-only)
     echo "[start] application-only mode: schema initialization and migrations are skipped"
+    if [[ "$PAYLOAD_SCHEMA_PREFLIGHT" == "true" ]]; then
+      require_env DATABASE_URL
+      echo "[start] checking Payload migration state before application startup"
+      pnpm exec payload migrate:status >/tmp/payload-migrate-status.log 2>&1 || { cat /tmp/payload-migrate-status.log >&2; echo "[start] FATAL: Payload schema preflight failed; apply reviewed migrations before starting application-only mode" >&2; exit 1; }
+    fi
     ;;
   database-deploy)
     prepare_database_deploy
