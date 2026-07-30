@@ -1,7 +1,8 @@
 import path from 'path'
 import { fileURLToPath } from 'url'
 import { buildConfig } from 'payload'
-import type { EmailAdapter } from 'payload'
+import type { EmailAdapter, SendEmailOptions } from 'payload'
+import { Resend } from 'resend'
 import { postgresAdapter } from '@payloadcms/db-postgres'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
 import { s3Storage } from '@payloadcms/storage-s3'
@@ -38,11 +39,68 @@ const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
 const mediaStorage = resolvePayloadMediaStorageConfig()
 
-// Minimal email adapter that logs instead of throwing.
-// Emails are queued to payload_email_events table by hooks and processed async via admin routes.
-const buildPayloadEmailAdapter = (): EmailAdapter => ({
-  name: 'queue-adapter',
-} as unknown as EmailAdapter)
+function configuredFromAddress(): string {
+  const configured = process.env.RESEND_FROM?.trim() || process.env.EMAIL_FROM?.trim()
+  if (!configured) return 'notifications@jpvmindset.com'
+  const bracketed = configured.match(/<([^>]+)>/)
+  return (bracketed?.[1] || configured).trim()
+}
+
+function normalizeEmailRecipients(value: SendEmailOptions['to']): string[] {
+  if (!value) return []
+  const entries = Array.isArray(value) ? value : [value]
+  return entries.flatMap((entry) => {
+    if (typeof entry === 'string') return entry.split(',').map((item) => item.trim()).filter(Boolean)
+    if (entry && typeof entry === 'object' && 'address' in entry && typeof entry.address === 'string') {
+      return [entry.address]
+    }
+    return []
+  })
+}
+
+// Payload requires `email` to be an adapter factory, not an initialized object.
+// Authentication emails are sent immediately through Resend; application events
+// continue to use the durable payload_email_events outbox and queue worker.
+const buildPayloadEmailAdapter: EmailAdapter = () => {
+  const defaultFromAddress = configuredFromAddress()
+  const defaultFromName = process.env.EMAIL_FROM_NAME?.trim() || 'JPV Bootcamp'
+
+  return {
+    name: 'jpv-resend',
+    defaultFromAddress,
+    defaultFromName,
+    sendEmail: async (message) => {
+      const apiKey = process.env.RESEND_API_KEY?.trim()
+      if (!apiKey) throw new Error('RESEND_API_KEY is required for Payload authentication email')
+
+      const to = normalizeEmailRecipients(message.to)
+      if (to.length === 0) throw new Error('Payload authentication email requires at least one recipient')
+
+      const from = typeof message.from === 'string' && message.from.trim()
+        ? message.from
+        : `${defaultFromName} <${defaultFromAddress}>`
+      const replyTo = normalizeEmailRecipients(message.replyTo)
+      const html = typeof message.html === 'string' ? message.html : undefined
+      const text = typeof message.text === 'string' ? message.text : undefined
+
+      const resend = new Resend(apiKey)
+      const common = {
+        from,
+        to,
+        subject: String(message.subject || 'JPV Bootcamp notification'),
+        ...(replyTo.length > 0 ? { replyTo } : {}),
+      }
+      const result = html
+        ? await resend.emails.send({ ...common, html, ...(text ? { text } : {}) })
+        : await resend.emails.send({ ...common, text: text || 'JPV Bootcamp notification' })
+
+      if (result.error) {
+        throw new Error(`Payload authentication email failed: ${result.error.message}`)
+      }
+      return result.data
+    },
+  }
+}
 const mediaStoragePlugins =
   mediaStorage.mode === 's3'
     ? [
@@ -158,7 +216,7 @@ export default buildConfig({
   editor: lexicalEditor(),
   plugins: mediaStoragePlugins,
   secret: process.env.PAYLOAD_SECRET || '',
-  email: buildPayloadEmailAdapter(),
+  email: buildPayloadEmailAdapter,
   typescript: {
     outputFile: path.resolve(dirname, 'payload-types.ts'),
   },
