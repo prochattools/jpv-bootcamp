@@ -348,6 +348,72 @@ async function testStaleSensitiveAccountLinkCleanup() {
   )
 }
 
+async function testStagingRecipientGuardTerminalState() {
+  const savedEnvironment = {
+    deployment: process.env.DEPLOYMENT_ENV,
+    recipient: process.env.STAGING_TEST_RECIPIENT_EMAIL,
+  }
+  try {
+    process.env.DEPLOYMENT_ENV = 'staging'
+    process.env.STAGING_TEST_RECIPIENT_EMAIL = 'allowed@example.test'
+
+    const allowedPayload = buildPayload({
+      payload_email_events: [{
+        id: 'allowed_event', toEmail: 'allowed@example.test', templateKey: 'subscription-started',
+        deliveryStatus: 'queued', dedupeKey: 'allowed-event', createdAt: '2026-07-30T00:00:00.000Z',
+      }],
+    })
+    const allowedResend = fakeResend()
+    const allowedResult = await processQueuedPayloadEmails(allowedPayload, {
+      resend: allowedResend.client, emailConfig: { from: 'JPV Bootcamp <support@example.test>' },
+    })
+    assert.equal(allowedResult[0]?.status, 'sent')
+    assert.equal(allowedResend.sends.length, 1)
+
+    const blockedPayload = buildPayload({
+      payload_email_events: [{
+        id: 'blocked_event', toEmail: 'blocked@example.test', templateKey: 'subscription-started',
+        deliveryStatus: 'queued', dedupeKey: 'blocked-event', createdAt: '2026-07-30T00:00:00.000Z',
+      }],
+    })
+    const blockedResend = fakeResend()
+    const blockedResult = await processQueuedPayloadEmails(blockedPayload, {
+      resend: blockedResend.client, emailConfig: { from: 'JPV Bootcamp <support@example.test>' },
+    })
+    assert.equal(blockedResult[0]?.status, 'skipped')
+    assert.equal(blockedResult[0]?.reason, 'blocked_by_staging_guard')
+    assert.equal(blockedPayload.doc('payload_email_events', 'blocked_event')?.deliveryStatus, 'blocked_by_staging_guard')
+    assert.equal(blockedResend.sends.length, 0)
+    const rerun = await processQueuedPayloadEmails(blockedPayload, {
+      resend: blockedResend.client, emailConfig: { from: 'JPV Bootcamp <support@example.test>' },
+    })
+    assert.equal(rerun.length, 0)
+
+    process.env.DEPLOYMENT_ENV = 'production'
+    const productionPayload = buildPayload()
+    const productionResend = fakeResend()
+    const productionResult = await sendQueuedPayloadEmail(productionPayload, 'event_1', {
+      resend: productionResend.client, emailConfig: { from: 'JPV Bootcamp <support@example.test>' },
+    })
+    assert.equal(productionResult.status, 'sent')
+    assert.equal(productionResend.sends.length, 1)
+
+    process.env.DEPLOYMENT_ENV = 'preview'
+    delete process.env.STAGING_TEST_RECIPIENT_EMAIL
+    const unconfiguredPayload = buildPayload()
+    const unconfiguredResult = await sendQueuedPayloadEmail(unconfiguredPayload, 'event_1', {
+      resend: fakeResend().client, emailConfig: { from: 'JPV Bootcamp <support@example.test>' },
+    })
+    assert.equal(unconfiguredResult.reason, 'staging_test_recipient_unconfigured')
+    assert.equal(unconfiguredPayload.doc('payload_email_events', 'event_1')?.deliveryStatus, 'failed')
+  } finally {
+    if (savedEnvironment.deployment === undefined) delete process.env.DEPLOYMENT_ENV
+    else process.env.DEPLOYMENT_ENV = savedEnvironment.deployment
+    if (savedEnvironment.recipient === undefined) delete process.env.STAGING_TEST_RECIPIENT_EMAIL
+    else process.env.STAGING_TEST_RECIPIENT_EMAIL = savedEnvironment.recipient
+  }
+}
+
 async function run() {
   {
     const payload = buildPayload()
@@ -521,6 +587,7 @@ async function run() {
   await testResendIdempotencyReplayReconcilesAsSent()
   await testLowLevelSensitiveRedactionPreservesDeliveryState()
   await testEmailSenderBypassesDocumentLocks()
+  await testStagingRecipientGuardTerminalState()
 }
 
 run()

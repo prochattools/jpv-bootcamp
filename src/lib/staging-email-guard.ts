@@ -3,6 +3,7 @@ const STAGING_ENVS = ['preview', 'staging'] as const
 function isStagingEnv(): boolean {
   const env = (process.env.DEPLOYMENT_ENV ?? '').trim().toLowerCase()
   if ((STAGING_ENVS as readonly string[]).includes(env)) return true
+  if (env) return false
   // Fallback: if STAGING_TEST_RECIPIENT_EMAIL is set but DEPLOYMENT_ENV is not,
   // treat as staging to prevent guard bypass on misconfigured Dokploy apps.
   if (process.env.STAGING_TEST_RECIPIENT_EMAIL?.trim()) return true
@@ -11,16 +12,23 @@ function isStagingEnv(): boolean {
 
 const SINGLE_EMAIL_RE = /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/
 
+export class StagingEmailGuardConfigurationError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'StagingEmailGuardConfigurationError'
+  }
+}
+
 function loadAllowedRecipient(): string {
   const raw = process.env.STAGING_TEST_RECIPIENT_EMAIL
   if (!raw || !raw.trim()) {
-    throw new Error(
+    throw new StagingEmailGuardConfigurationError(
       'STAGING_EMAIL_GUARD: STAGING_TEST_RECIPIENT_EMAIL is required but not set.'
     )
   }
   const normalised = raw.trim().toLowerCase()
   if (!SINGLE_EMAIL_RE.test(normalised)) {
-    throw new Error(
+    throw new StagingEmailGuardConfigurationError(
       'STAGING_EMAIL_GUARD: STAGING_TEST_RECIPIENT_EMAIL is not a valid single email.'
     )
   }
