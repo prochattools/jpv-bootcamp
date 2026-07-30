@@ -20,7 +20,7 @@ They were introduced with the membership-support collection work in `15bac8e`. T
 
 `20260730_100000_email_events_staging_guard_status` adds the PostgreSQL enum value used by the email terminal state. Its down migration is intentionally a no-op because PostgreSQL enum values cannot be removed safely.
 
-Application-only mode does not initialize a schema or apply migrations. Before Next.js starts, it now reads the selected schema's `payload_migrations` table and refuses startup if any registered Payload migration is missing, the migration table is unavailable, or the database schema cannot be determined. This check is read-only and does not print the database URL or credentials.
+Application-only mode does not initialize a schema or apply migrations. Before Next.js starts, it now reads the selected schema's `payload_migrations` table and verifies all four audit-history relationship columns. It refuses startup if any registered Payload migration is missing, any required audit-history column is absent, the migration table is unavailable, or the database schema cannot be determined. This check is read-only and does not print the database URL or credentials.
 
 For the approved staging target only, operators use:
 

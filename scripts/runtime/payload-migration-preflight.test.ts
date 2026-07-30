@@ -5,11 +5,12 @@ import { readFileSync } from 'node:fs'
 const require = createRequire(import.meta.url)
 const preflight = require('./payload-migration-preflight.cjs') as {
   REQUIRED_PAYLOAD_MIGRATIONS: string[]
+  REQUIRED_AUDIT_HISTORY_COLUMNS: string[]
   missingMigrationNames(rows: Array<{ name: string }>): string[]
   resolveSchema(environment: Record<string, string | undefined>): string
   verifyPayloadMigrationState(options: {
     environment: Record<string, string | undefined>
-    clientFactory: () => { connect(): Promise<void>; query(sql: string): Promise<{ rows: Array<{ name: string }> }>; end(): Promise<void> }
+    clientFactory: () => { connect(): Promise<void>; query(sql: string, values?: string[]): Promise<{ rows: Array<{ name?: string; column_name?: string }> }>; end(): Promise<void> }
   }): Promise<string[]>
 }
 
@@ -32,15 +33,33 @@ async function main(): Promise<void> {
     environment: { DATABASE_URL: 'postgresql://user:password@db/app?schema=jpvbootcamp_staging' },
     clientFactory: () => ({
       async connect() {},
-      async query(sql: string) {
-        queries.push(sql)
+    async query(sql: string) {
+      queries.push(sql)
+      if (sql.includes('payload_migrations')) {
         return { rows: preflight.REQUIRED_PAYLOAD_MIGRATIONS.filter((name) => name !== lastMigration).map((name) => ({ name })) }
+      }
+      return { rows: preflight.REQUIRED_AUDIT_HISTORY_COLUMNS.map((column_name) => ({ column_name })) }
       },
       async end() {},
     }),
   })
   assert.deepEqual(missing, [lastMigration])
   assert.deepEqual(queries, ['SELECT "name" FROM "jpvbootcamp_staging"."payload_migrations" WHERE "batch" <> -1'])
+
+  await assert.rejects(
+    preflight.verifyPayloadMigrationState({
+      environment: { DATABASE_URL: 'postgresql://user:password@db/app?schema=jpvbootcamp_staging' },
+      clientFactory: () => ({
+        async connect() {},
+        async query(sql: string) {
+          if (sql.includes('payload_migrations')) return { rows: preflight.REQUIRED_PAYLOAD_MIGRATIONS.map((name) => ({ name })) }
+          return { rows: [{ column_name: 'membership_support_id' }] }
+        },
+        async end() {},
+      }),
+    }),
+    /audit_history_schema_incompatible/,
+  )
   console.log('payload-migration-preflight.test.ts passed')
 }
 
