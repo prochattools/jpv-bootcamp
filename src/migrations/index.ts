@@ -25,6 +25,7 @@ import * as migration_20260727_000000_partner_applications_source_member_id from
 import * as migration_20260727_100000_email_events_lease_columns from './20260727_100000_email_events_lease_columns';
 import * as migration_20260727_200000_email_events_processing_status from './20260727_200000_email_events_processing_status';
 import * as migration_20260730_090000_membership_audit_relationship_columns from './20260730_090000_membership_audit_relationship_columns';
+import * as migration_20260730_100000_email_events_staging_guard_status from './20260730_100000_email_events_staging_guard_status';
 
 export const migrations = [
   { up: migration_20260620_213328.up, down: migration_20260620_213328.down, name: '20260620_213328' },
@@ -54,4 +55,5 @@ export const migrations = [
   { up: migration_20260727_100000_email_events_lease_columns.up, down: migration_20260727_100000_email_events_lease_columns.down, name: '20260727_100000_email_events_lease_columns' },
   { up: migration_20260727_200000_email_events_processing_status.up, down: migration_20260727_200000_email_events_processing_status.down, name: '20260727_200000_email_events_processing_status' },
   { up: migration_20260730_090000_membership_audit_relationship_columns.up, down: migration_20260730_090000_membership_audit_relationship_columns.down, name: '20260730_090000_membership_audit_relationship_columns' },
+  { up: migration_20260730_100000_email_events_staging_guard_status.up, down: migration_20260730_100000_email_events_staging_guard_status.down, name: '20260730_100000_email_events_staging_guard_status' },
 ];

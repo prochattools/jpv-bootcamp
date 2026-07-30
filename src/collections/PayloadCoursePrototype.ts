@@ -19,9 +19,9 @@ const lessonRead = ({ req }: { req: PayloadRequest }) => {
   return { previewLesson: { equals: true } }
 }
 
-const normalizeLegacyAccessBadge = ({ value }: { value?: unknown }) => {
+export const normalizeLegacyAccessBadge = ({ value }: { value?: unknown }) => {
   if (value === 'manual' || value === undefined || value === null || value === '') return value
-  if (value === 'free' || value === 'pro' || value === 'vip' || value === 'private') return 'manual'
+  if (value === 'free' || value === 'pro' || value === 'vip') return 'manual'
   return value
 }
 

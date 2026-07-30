@@ -284,8 +284,16 @@ export const PREVIEW_MIGRATION_INVENTORY = [
     name: '20260730_090000_membership_audit_relationship_columns',
     system: 'payload', order: 27,
     purpose: 'Reconcile membership audit relationship columns with Payload-generated names and enforce their foreign keys.',
-    requiredForPreview: true, rollbackRisk: 'reversible',
+    requiredForPreview: true, rollbackRisk: 'irreversible',
     verificationChecks: ['registry-match', 'ordered-exactly', 'audit-history-columns'],
+    authorizationCategory: 'payloadMigration',
+  },
+  {
+    name: '20260730_100000_email_events_staging_guard_status',
+    system: 'payload', order: 28,
+    purpose: 'Add the terminal email-event enum state used when the staging recipient guard blocks delivery.',
+    requiredForPreview: true, rollbackRisk: 'irreversible',
+    verificationChecks: ['registry-match', 'ordered-exactly', 'staging-email-guard-status'],
     authorizationCategory: 'payloadMigration',
   },
 ] as const satisfies readonly PreviewMigrationInventoryEntry[]

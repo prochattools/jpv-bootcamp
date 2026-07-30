@@ -43,6 +43,7 @@ assert.match(previewWorkflow, /Trigger Dokploy redeploy/)
 assert.doesNotMatch(previewWorkflow, /nixpacks/i)
 
 assert.match(startup, /STARTUP_MODE="\$\{STARTUP_MODE:-application-only\}"/)
+assert.match(startup, /PAYLOAD_SCHEMA_PREFLIGHT="\$\{PAYLOAD_SCHEMA_PREFLIGHT:-true\}"/)
 assert.match(startup, /require_env DEPLOYMENT_ENV/)
 assert.match(startup, /preview\|staging\|production/)
 assert.match(startup, /invalid DEPLOYMENT_ENV/)
@@ -56,6 +57,8 @@ assert(applicationOnlyBranch)
 assert.doesNotMatch(applicationOnlyBranch, /deploy-prod\.sh/)
 assert.doesNotMatch(applicationOnlyBranch, /prepare_database_deploy/)
 assert.doesNotMatch(applicationOnlyBranch, /psql|pg_dump|pg_restore/)
+assert.match(applicationOnlyBranch, /node scripts\/runtime\/payload-migration-preflight\.cjs/)
+assert.doesNotMatch(applicationOnlyBranch, /payload migrate:status/)
 
 const databaseDeployBranch = startup.match(
   /database-deploy\)\s*([\s\S]*?)\s*;;/,

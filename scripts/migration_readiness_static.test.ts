@@ -8,8 +8,8 @@ async function main(): Promise<void> {
   const legacyUserColumn = 'wp' + '_user_id'
   const legacyClaimedByColumn = 'claimed_by_' + legacyUserColumn
   const legacyPartnerIndex = ['partner_sessions', legacyUserColumn, 'idx'].join('_')
-  assert.equal(PREVIEW_MIGRATION_INVENTORY.length, 27)
-  assert.equal(inventoryNames.at(-1), '20260730_090000_membership_audit_relationship_columns')
+  assert.equal(PREVIEW_MIGRATION_INVENTORY.length, 28)
+  assert.equal(inventoryNames.at(-1), '20260730_100000_email_events_staging_guard_status')
 
   const [
     migrationIndexSource,
@@ -17,12 +17,16 @@ async function main(): Promise<void> {
     prismaRenameSource,
     inventoryTestSource,
     staticTestSource,
+    auditRelationshipMigrationSource,
+    stagingGuardStatusMigrationSource,
   ] = await Promise.all([
     readFile('src/migrations/index.ts', 'utf8'),
     readFile('src/migrations/20260707_130000_remove_table_plan_from_payload_enums.ts', 'utf8'),
     readFile('prisma/migrations/20260707_120000_rename_account_identity_columns/migration.sql', 'utf8'),
     readFile('scripts/preview_migration_inventory.test.ts', 'utf8'),
     readFile('scripts/migration_readiness_static.test.ts', 'utf8'),
+    readFile('src/migrations/20260730_090000_membership_audit_relationship_columns.ts', 'utf8'),
+    readFile('src/migrations/20260730_100000_email_events_staging_guard_status.ts', 'utf8'),
   ])
 
   const reconciledIndex = migrationIndexSource.indexOf(
@@ -62,6 +66,11 @@ async function main(): Promise<void> {
     /IF EXISTS \(\s+SELECT 1 FROM information_schema\.columns[\s\S]+?column_name =/,
   )
   assert.doesNotMatch(prismaRenameSource, /\bDROP TABLE\b/i)
+
+  assert.match(auditRelationshipMigrationSource, /getPayloadMigrationSchemaSqlPrefix/)
+  assert.doesNotMatch(auditRelationshipMigrationSource, /PAYLOAD_MIGRATION_SCHEMA\?\.trim\(\) \|\| 'jpvbootcamp'/)
+  assert.doesNotMatch(auditRelationshipMigrationSource, /DROP COLUMN/)
+  assert.match(stagingGuardStatusMigrationSource, /ADD VALUE IF NOT EXISTS 'blocked_by_staging_guard'/)
 
   for (const source of [inventoryTestSource, staticTestSource]) {
     assert.doesNotMatch(source, /\bchild_process\b/)

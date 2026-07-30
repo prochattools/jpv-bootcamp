@@ -71,7 +71,7 @@ case "$STARTUP_MODE" in
     if [[ "$PAYLOAD_SCHEMA_PREFLIGHT" == "true" ]]; then
       require_env DATABASE_URL
       echo "[start] checking Payload migration state before application startup"
-      pnpm exec payload migrate:status >/tmp/payload-migrate-status.log 2>&1 || { cat /tmp/payload-migrate-status.log >&2; echo "[start] FATAL: Payload schema preflight failed; apply reviewed migrations before starting application-only mode" >&2; exit 1; }
+      node scripts/runtime/payload-migration-preflight.cjs
     fi
     ;;
   database-deploy)
