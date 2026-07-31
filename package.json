@@ -63,6 +63,7 @@
     "payload:branding:check": "pnpm generate:importmap && pnpm type-check:payload",
     "payload:staging:migrate:status": "tsx scripts/payload/run-staging-migrations.mts --status",
     "payload:staging:migrate": "tsx scripts/payload/run-staging-migrations.mts --apply",
+    "payload:staging:verify-email-guard": "tsx scripts/payload/verify-staging-email-guard.mts",
     "test:payload-member-auth": "tsx scripts/payload_member_auth_flow.test.ts",
     "test:payload-admin-branding": "tsx scripts/payload_admin_branding.test.ts",
     "test:payload-preferences-migration": "tsx scripts/payload_preferences_constraint_migration.test.ts",
