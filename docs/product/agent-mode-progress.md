@@ -69,7 +69,7 @@ Remove the workflow step and the three staging-gate files, then redeploy preview
 
 ## Current task
 
-Review and security-scan the exact changed paths, commit and push the feature branch, verify the workflow creates or confirms the volume, then perform the disposable media persistence test and cleanup.
+The staging-only durable-media workflow deployed successfully at `d256553`. A disposable authenticated Payload fixture was recovered without creating another upload: record `5`, `staging-media-durability-1785498577932.png`. After the next preview redeploy, verify authenticated asset retrieval for this exact fixture and delete it through the supported Payload API.
 
 
 
