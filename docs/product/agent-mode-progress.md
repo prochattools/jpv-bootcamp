@@ -69,7 +69,7 @@ Remove the workflow step and the three staging-gate files, then redeploy preview
 
 ## Current task
 
-The staging-only durable-media workflow deployed successfully at `d256553`. A disposable authenticated Payload fixture was recovered without creating another upload: record `5`, `staging-media-durability-1785498577932.png`. After the next preview redeploy, verify authenticated asset retrieval for this exact fixture and delete it through the supported Payload API.
+Workflow `30629327456` deployed `d1f4869` successfully: the durable-volume and Dokploy-redeploy steps both passed. Disposable fixture `5` (`staging-media-durability-1785498577932.png`) was retrieved with authenticated access both before and after redeployment (68 bytes), then deleted through the supported Payload API. The record now returns 404; the authenticated asset URL is unavailable (non-success 500). Historical missing-media records were untouched. **PERSISTENT STORAGE VERIFIED.** Rollback: remove only the preview durable-volume workflow step and redeploy; do not delete the named volume unless retained media is separately confirmed unnecessary. Remaining manual check: verify dashboard/sidebar, Membership Audit History, course 3 Access Badge `manual`, and desktop/mobile clipping, focus, readability, and contrast.
 
 
 
