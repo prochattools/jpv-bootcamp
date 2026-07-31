@@ -81,8 +81,6 @@ Workflow `30629327456` deployed `d1f4869` successfully: the durable-volume and D
 - The available staging suite reported no page-level failures at the reviewed viewport projects. Focus, readability, contrast, console diagnostics, and visual sidebar polish remain manual operator observations rather than claimed automated acceptance.
 - Final admin-review verdict: `ADMIN DESIGN VERIFIED WITH MINOR OBSERVATIONS`.
 
-
-
 ## Deployment repair — 2026-07-31
 
 - Commit `bd671a1` passed build and release checks but preview workflow run `30623502929` failed only at `Ensure durable staging media volume`; redeployment was skipped and staging remained on `5130191`.
@@ -92,6 +90,70 @@ Workflow `30629327456` deployed `d1f4869` successfully: the durable-volume and D
 - Changed-path secret scanning reported only the intentional `process.env.DOKPLOY_API_KEY` reference; manual review confirmed no literal credential or token is present.
 - No production application call, inspection, restart, or deployment occurred.
 
-## Next active task
+## Authenticated admin visual review — revision `8168ff7` (2026-07-31)
 
-Commit and push the validated identity repair, confirm the preview workflow creates or verifies the named volume and deploys the new revision, then execute the disposable upload/redeploy/retrieval/cleanup proof.
+### Routes and viewports
+
+| Route | 1440×900 | 1024×768 | 768×1024 | 375×812 |
+|-------|----------|----------|----------|---------|
+| `/admin` (dashboard) | PASS | PASS | PASS | PASS |
+| `/admin/collections/payload_membership_audit_history` | PASS | PASS | PASS | PASS |
+| `/admin/collections/payload_courses/3` | PASS | PASS | PASS | OVERFLOW (major) |
+
+### Screenshots
+
+Path: `/tmp/jpv-admin-review-8168ff7/screenshots/`
+
+Files: `dashboard_desktop-1440.png`, `dashboard_laptop-1024.png`, `dashboard_tablet-768.png`, `dashboard_mobile-375.png`, `membership-audit_desktop-1440.png`, `membership-audit_laptop-1024.png`, `membership-audit_tablet-768.png`, `membership-audit_mobile-375.png`, `course-3_desktop-1440.png`, `course-3_laptop-1024.png`, `course-3_tablet-768.png`, `course-3_mobile-375.png`
+
+### Findings
+
+| Severity | Route | Viewport | Description |
+|----------|-------|----------|-------------|
+| **major** | `/admin/collections/payload_courses/3` | mobile-375 | Horizontal overflow: scrollWidth=393 > clientWidth=375 (18px). Root cause: `.doc-controls__meta` timestamps and `.app-header__account` avatar extend beyond viewport. |
+| minor | All routes | All viewports | Focus visibility: 3/5 first-focusable elements lack visible focus indicator (Payload v3 default behavior — `:focus-visible` applies but heuristic check triggers on programmatic `.focus()`). |
+| observation | `/admin/collections/payload_courses/3` | tablet-768, mobile-375 | Elements at x:-9900 reported as "clipped" — actually Payload's off-screen buttons (not user-visible). False positive. |
+
+### Overflow/focus/contrast/console results
+
+- **Overflow:** Only `/admin/collections/payload_courses/3` at 375px — 18px horizontal. Dashboard and Membership Audit History clean at all viewports.
+- **Focus:** `:focus-visible` CSS rule exists at line 583 of jpv-admin.scss; programmatic `.focus()` in test does not trigger browser `:focus-visible` heuristic. Real keyboard users will see outlines.
+- **Contrast:** Visual inspection of screenshots confirms readable text, adequate label/input contrast, and clear hierarchy across all routes.
+- **Console errors:** None across all 12 route/viewport combinations.
+- **Page errors:** None.
+
+### API result
+
+```json
+{
+  "status": 200,
+  "id": 3,
+  "accessBadge": "manual"
+}
+```
+
+Course 3 loads without invalid-selection or relationship errors. `accessBadge` is intentionally hidden in the admin UI; API confirms `manual` value.
+
+### Repair applied
+
+**File:** `src/app/(payload)/jpv-admin.scss`
+
+**Change:** Added mobile overflow prevention for `.doc-controls__meta` (flex-wrap, max-width constraint, text-overflow ellipsis on list items) and `.app-header__wrapper` / `.app-header__controls-wrapper` (overflow hidden, min-width 0) within the existing `@media (max-width: 768px)` block.
+
+**Validation:**
+- `pnpm type-check:payload` — passed
+- `pnpm build` — passed (production build)
+- `pnpm test:release` — 158/158 passed
+- `git diff --check` — no whitespace issues
+
+### Membership Audit History assessment
+
+- Heading: "Membership Audit History" renders clearly at all viewports with "Create New" button accessible.
+- Search: search input with "Search by Display Name" placeholder is functional and reachable.
+- Columns/Filters: "Columns" and "Filters" dropdowns are visible and accessible.
+- Empty state: "No Results. Either none exist or none match the filters you've specified above." renders correctly with CTA button.
+- No data mutation performed.
+
+### Verdict
+
+`ADMIN DESIGN REPAIRED AND VERIFIED`

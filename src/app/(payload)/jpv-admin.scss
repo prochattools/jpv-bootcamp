@@ -647,6 +647,27 @@ select {
     overflow-wrap: anywhere;
   }
 
+  // Document meta timestamps must wrap instead of overflowing
+  .doc-controls__meta {
+    flex-wrap: wrap;
+    overflow: hidden;
+    max-width: 100%;
+  }
+
+  .doc-controls__meta li {
+    flex-shrink: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  // Header breadcrumb area must not push account avatar past viewport
+  .app-header__wrapper,
+  .app-header__controls-wrapper {
+    overflow: hidden;
+    min-width: 0;
+  }
+
   // Stack document + sidebar panels vertically on mobile
   .doc-sidebar__panels,
   .document-controls__sidebar-fields {
