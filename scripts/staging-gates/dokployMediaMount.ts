@@ -7,6 +7,11 @@ import {
 
 export const STAGING_MEDIA_MOUNT_PATH = '/app/public/media'
 export const STAGING_MEDIA_VOLUME_NAME = 'jpv-bootcamp-preview-media'
+export const STAGING_DOKPLOY_APPLICATION_ID = 'I_2Vukga3cc3ZhaG-mUzU'
+export const PRODUCTION_DOKPLOY_APPLICATION_IDS = [
+  'aPR9SvYn_JvGdMTk3CzeI',
+  'web-public-jpv-bootcamp-l66egq',
+] as const
 
 type UnknownRecord = Record<string, unknown>
 
@@ -68,18 +73,30 @@ export function assertSingleCompatibleStagingMediaMount(response: unknown): bool
   return true
 }
 
-export function buildStagingMediaMountPayload(appId: string): Record<string, string> {
+export function assertStagingDokployTarget(target: string): void {
+  if ((PRODUCTION_DOKPLOY_APPLICATION_IDS as readonly string[]).includes(target)) {
+    throw new Error('DEPLOY-DENIED: Dokploy target is on the production deny-list')
+  }
+
+  if (target !== STAGING_APP_ID && target !== STAGING_DOKPLOY_APPLICATION_ID) {
+    throw new Error('DEPLOY-DENIED: Dokploy target is not the documented staging application')
+  }
+
   assertStagingDeployment({
-    appId,
+    appId: STAGING_APP_ID,
     origin: STAGING_ORIGIN,
     branch: STAGING_BRANCH,
   })
+}
+
+export function buildStagingMediaMountPayload(target: string): Record<string, string> {
+  assertStagingDokployTarget(target)
 
   return {
     type: 'volume',
     volumeName: STAGING_MEDIA_VOLUME_NAME,
     mountPath: STAGING_MEDIA_MOUNT_PATH,
     serviceType: 'application',
-    serviceId: STAGING_APP_ID,
+    serviceId: STAGING_DOKPLOY_APPLICATION_ID,
   }
 }

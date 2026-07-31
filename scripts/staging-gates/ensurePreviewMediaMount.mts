@@ -1,6 +1,7 @@
 import {
   assertSingleCompatibleStagingMediaMount,
   buildStagingMediaMountPayload,
+  STAGING_DOKPLOY_APPLICATION_ID,
   STAGING_MEDIA_MOUNT_PATH,
   STAGING_MEDIA_VOLUME_NAME,
 } from './dokployMediaMount'
@@ -43,8 +44,11 @@ async function request(path: string, init?: RequestInit): Promise<unknown> {
 }
 
 async function readMounts(): Promise<unknown> {
-  const query = new URLSearchParams({ applicationId: appId })
-  return request(`/mounts.allNamedByApplicationId?${query.toString()}`)
+  const query = new URLSearchParams({
+    serviceType: 'application',
+    serviceId: STAGING_DOKPLOY_APPLICATION_ID,
+  })
+  return request(`/mounts.listByServiceId?${query.toString()}`)
 }
 
 const before = await readMounts()

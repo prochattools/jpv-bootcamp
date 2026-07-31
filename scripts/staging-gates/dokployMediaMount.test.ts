@@ -3,8 +3,10 @@ import assert from 'node:assert/strict'
 import {
   assertCompatibleStagingMediaMount,
   assertSingleCompatibleStagingMediaMount,
+  assertStagingDokployTarget,
   buildStagingMediaMountPayload,
   findStagingMediaMounts,
+  STAGING_DOKPLOY_APPLICATION_ID,
   STAGING_MEDIA_MOUNT_PATH,
   STAGING_MEDIA_VOLUME_NAME,
 } from './dokployMediaMount'
@@ -34,15 +36,28 @@ assert.throws(
   /expected one mount/,
 )
 
+assert.doesNotThrow(() => assertStagingDokployTarget(STAGING_APP_ID))
+assert.doesNotThrow(() => assertStagingDokployTarget(STAGING_DOKPLOY_APPLICATION_ID))
+assert.deepEqual(buildStagingMediaMountPayload(STAGING_DOKPLOY_APPLICATION_ID), {
+  type: 'volume',
+  volumeName: STAGING_MEDIA_VOLUME_NAME,
+  mountPath: STAGING_MEDIA_MOUNT_PATH,
+  serviceType: 'application',
+  serviceId: STAGING_DOKPLOY_APPLICATION_ID,
+})
 assert.deepEqual(buildStagingMediaMountPayload(STAGING_APP_ID), {
   type: 'volume',
   volumeName: STAGING_MEDIA_VOLUME_NAME,
   mountPath: STAGING_MEDIA_MOUNT_PATH,
   serviceType: 'application',
-  serviceId: STAGING_APP_ID,
+  serviceId: STAGING_DOKPLOY_APPLICATION_ID,
 })
 assert.throws(
   () => buildStagingMediaMountPayload('web-public-jpv-bootcamp-l66egq'),
+  /DEPLOY-DENIED/,
+)
+assert.throws(
+  () => buildStagingMediaMountPayload('aPR9SvYn_JvGdMTk3CzeI'),
   /DEPLOY-DENIED/,
 )
 assert.throws(

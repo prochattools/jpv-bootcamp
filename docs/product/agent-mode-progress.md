@@ -70,3 +70,18 @@ Remove the workflow step and the three staging-gate files, then redeploy preview
 ## Current task
 
 Review and security-scan the exact changed paths, commit and push the feature branch, verify the workflow creates or confirms the volume, then perform the disposable media persistence test and cleanup.
+
+
+
+## Deployment repair — 2026-07-31
+
+- Commit `bd671a1` passed build and release checks but preview workflow run `30623502929` failed only at `Ensure durable staging media volume`; redeployment was skipped and staging remained on `5130191`.
+- Root cause: the first implementation treated Docker service name `clients-jpv-bootcamp-app-tp9xrk` as Dokploy's internal `applicationId`. Repository infrastructure documentation identifies the internal staging ID as `I_2Vukga3cc3ZhaG-mUzU`.
+- The bounded repair accepts either documented staging identifier for validation, rejects both documented production identifiers, and always uses the internal staging ID for `mounts.listByServiceId` and `mounts.create`.
+- Repair validation passed: focused mount test, 18 staging-policy assertions, Payload type-check, production build, diff whitespace check, and full release suite 158/158.
+- Changed-path secret scanning reported only the intentional `process.env.DOKPLOY_API_KEY` reference; manual review confirmed no literal credential or token is present.
+- No production application call, inspection, restart, or deployment occurred.
+
+## Next active task
+
+Commit and push the validated identity repair, confirm the preview workflow creates or verifies the named volume and deploys the new revision, then execute the disposable upload/redeploy/retrieval/cleanup proof.
