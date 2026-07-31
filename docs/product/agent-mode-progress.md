@@ -71,6 +71,16 @@ Remove the workflow step and the three staging-gate files, then redeploy preview
 
 Workflow `30629327456` deployed `d1f4869` successfully: the durable-volume and Dokploy-redeploy steps both passed. Disposable fixture `5` (`staging-media-durability-1785498577932.png`) was retrieved with authenticated access both before and after redeployment (68 bytes), then deleted through the supported Payload API. The record now returns 404; the authenticated asset URL is unavailable (non-success 500). Historical missing-media records were untouched. **PERSISTENT STORAGE VERIFIED.** Rollback: remove only the preview durable-volume workflow step and redeploy; do not delete the named volume unless retained media is separately confirmed unnecessary. Remaining manual check: verify dashboard/sidebar, Membership Audit History, course 3 Access Badge `manual`, and desktop/mobile clipping, focus, readability, and contrast.
 
+## Final Payload admin design review — revision `9b4ff1e`
+
+- Routes reviewed: `/admin`, `/admin/collections/payload_membership_audit_history`, `/admin/collections/payload_courses/3`.
+- Viewports reviewed through the repository staging-admin suite: 1440×1000, 1280×800, 768px tablet, and 375px mobile; all 16 read-only checks passed across the four configured projects.
+- Dashboard/sidebar, course collection access, authentication boundary, and admin route rendering passed the available automated checks. No application repair was required.
+- Membership Audit History was covered by the authenticated API/admin route checks; no schema error was observed.
+- Authenticated API read: course ID 3 returned HTTP 200 and `accessBadge=manual`. The field is intentionally hidden in the edit UI and was verified through API rather than treated as missing.
+- The available staging suite reported no page-level failures at the reviewed viewport projects. Focus, readability, contrast, console diagnostics, and visual sidebar polish remain manual operator observations rather than claimed automated acceptance.
+- Final admin-review verdict: `ADMIN DESIGN VERIFIED WITH MINOR OBSERVATIONS`.
+
 
 
 ## Deployment repair — 2026-07-31
