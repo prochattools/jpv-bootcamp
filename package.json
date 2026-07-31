@@ -31,6 +31,7 @@
     "test:e2e:staging": "tsx scripts/e2e/stagingSmokeTest.ts",
     "test:e2e:staging:desktop": "tsx scripts/e2e/stagingSmokeTest.ts --desktop-only",
     "test:e2e:staging:mobile": "tsx scripts/e2e/stagingSmokeTest.ts --mobile-only",
+    "test:e2e:admin-responsive": "playwright test --config playwright-admin-staging.config.ts",
     "test:staging:livekit-bunny": "tsx scripts/staging-livekit-bunny-test.mts",
     "test:release:full": "pnpm test:release && pnpm test:e2e",
     "content:programme:validate": "tsx scripts/content/validateProgrammeContent.ts",

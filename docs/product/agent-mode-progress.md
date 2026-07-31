@@ -98,7 +98,9 @@ Workflow `30629327456` deployed `d1f4869` successfully: the durable-volume and D
 |-------|----------|----------|----------|---------|
 | `/admin` (dashboard) | PASS | PASS | PASS | PASS |
 | `/admin/collections/payload_membership_audit_history` | PASS | PASS | PASS | PASS |
-| `/admin/collections/payload_courses/3` | PASS | PASS | PASS | OVERFLOW (major) |
+| `/admin/collections/payload_courses/3` | PASS | PASS | PASS | PASS |
+
+Historical defect (repaired at `4750e77`): Course 3 at 375×812 previously showed scrollWidth=393 > clientWidth=375 (18px overflow from `.doc-controls__meta` timestamps and `.app-header__account`). Fix applied flex-wrap, overflow containment, and min-width:0 to those elements within the `@media (max-width: 768px)` block.
 
 ### Screenshots
 
@@ -153,6 +155,28 @@ Course 3 loads without invalid-selection or relationship errors. `accessBadge` i
 - Columns/Filters: "Columns" and "Filters" dropdowns are visible and accessible.
 - Empty state: "No Results. Either none exist or none match the filters you've specified above." renders correctly with CTA button.
 - No data mutation performed.
+
+### Committed regression test
+
+**File:** `e2e/admin-responsive-staging.spec.ts`
+**Config:** `playwright-admin-staging.config.ts`
+**Command:** `pnpm test:e2e:admin-responsive`
+
+15 assertions: 12 route/viewport overflow+controls+focus+errors, 1 doc-controls meta containment, 1 account/nav visibility+keyboard, 1 API course-3 check.
+
+### Post-repair measurements (deployed `4750e77`)
+
+| Route @ viewport | scrollWidth | clientWidth | overflow |
+|------------------|-------------|-------------|----------|
+| `/admin` @ 375×812 | 375 | 375 | none |
+| `/admin/collections/payload_membership_audit_history` @ 375×812 | 375 | 375 | none |
+| `/admin/collections/payload_courses/3` @ 375×812 | 375 | 375 | none |
+
+Account element at mobile: `.app-header__account` left=348, width=44 (partially clipped by `overflow:hidden` on ancestor but interactive and keyboard-reachable). Mobile hamburger `.app-header__mobile-nav-toggler` at left=16, 44×44, fully visible.
+
+Focus: keyboard Tab reaches visible interactive element within 5 presses on all routes/viewports.
+
+API: `GET /api/payload_courses/3` → HTTP 200, id=3, accessBadge=manual.
 
 ### Verdict
 
