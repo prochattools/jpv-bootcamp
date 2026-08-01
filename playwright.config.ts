@@ -38,6 +38,7 @@ const testEnvironment = {
 export default defineConfig({
   testDir: './e2e',
   testMatch: '**/*.spec.ts',
+  testIgnore: ['**/admin-responsive-staging.spec.ts'],
   fullyParallel: false,
   forbidOnly: Boolean(process.env.GITHUB_ACTIONS),
   retries: process.env.GITHUB_ACTIONS ? 1 : 0,

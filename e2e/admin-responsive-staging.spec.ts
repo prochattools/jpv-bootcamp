@@ -7,8 +7,6 @@
 import { expect, test, type BrowserContext, type Page, type Request } from '@playwright/test'
 import { assertStagingOrigin } from '../scripts/staging-gates/stagingPolicy'
 
-// Credentials are read lazily so local E2E runs that don't set STAGING_URL
-// skip this suite rather than crashing test discovery.
 const STAGING_URL = process.env.STAGING_URL?.trim() ?? ''
 const ADMIN_EMAIL = process.env.STAGING_ADMIN_EMAIL?.trim() ?? ''
 const ADMIN_PASSWORD = process.env.STAGING_ADMIN_PASSWORD ?? ''
@@ -90,14 +88,6 @@ async function tabToExactAccount(page: Page, maximumTabs = 40): Promise<boolean>
 
 test.describe('Admin responsive layout', () => {
   test.describe.configure({ mode: 'serial' })
-
-  // Skip the entire suite when staging credentials are absent so local E2E
-  // runs and CI jobs that do not have the secrets configured skip cleanly
-  // instead of failing with a confusing auth error.
-  test.skip(
-    !STAGING_URL || !ADMIN_EMAIL || !ADMIN_PASSWORD,
-    'ADMIN-RESPONSIVE-SKIPPED: STAGING_URL, STAGING_ADMIN_EMAIL, and STAGING_ADMIN_PASSWORD are all required',
-  )
 
   let context: BrowserContext
   let page: Page
