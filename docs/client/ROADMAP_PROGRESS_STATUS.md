@@ -3,7 +3,7 @@
 ## Current checkpoint — 2026-07-30
 
 - **IMPLEMENTED:** Payload admin premium-theme hardening and dashboard refinements on `feature/course-branding-and-preview` from baseline `524cff2`.
-- **LOCALLY VERIFIED:** focused design contract, Payload TypeScript, changed-path security scan, production build, and `pnpm test:release` (`156/156`).
+- **LOCALLY VERIFIED:** focused design contract, Payload TypeScript, changed-path security scan, production build, and `pnpm test:release` (`162/162`).
 - **STAGING VERIFIED:** incomplete for the full authenticated real Payload DOM across all active admin surfaces and 375/768/1024/1440 px.
 - **DEFERRED:** post-core M2 work, including durable media-provider migration unless separately promoted.
 - **EXTERNAL:** client approval, migration execution authorization, and production release approval.
@@ -210,6 +210,7 @@ These assets make the repository ready for controlled staging operations without
 - **Email delivery complete + enum fix**: `pnpm test:release` passed `155/155` (2026-07-27 — queueAndAttemptEmailEvent wired to all 13 active producers; processing enum value added to DB via migration 20260727_200000; staging confirmed: member-password-changed and subscription-canceled sent with Resend provider IDs, idempotency guard confirmed, claims released after send).
 - **Operator dashboard hardening**: `pnpm test:release` passed `158/158` (2026-07-30 — sidebar groups consolidated (Members, Emails, Community, System); member security events hidden from sidebar; CRM/admin collections grouped as Emails; route-integrity test added verifying all dashboard links target real collection slugs and no developer-only links remain; current release manifest count after incident coverage additions).
 - **Production workflow hardening**: `pnpm test:release` passed `160/160` (2026-08-01 — dormant deploy.yml hardened: concurrency cancel-in-progress:false, environment:production, full validation pipeline before Docker, immutable SHA image tag, Dokploy image-update-before-deploy, exact-SHA post-deploy wait, staging deny-list guard; productionPolicy.ts and waitForProductionDeployment.mts added; productionPolicy.test.ts (27 assertions) and productionWorkflowContract.test.ts (44 assertions) added and registered in release manifest).
+- **Production workflow boundary remediation**: `pnpm test:release` passed `162/162` (2026-08-01 — canonical app-ID enforcement via executable policy module (checkProductionDeploymentEnv.mts), SHA ancestry guard, response body discard to /dev/null, /tmp artifact removal, productionDeploymentWait.ts injectable module with 30 no-network assertions, checkProductionDeploymentEnv.test.ts (16 subprocess assertions), workflow contract test rewritten to 63 assertions proving executable policy invocation).
 
 ## Post-hardening operator surface phases (2026-07-27 to 2026-07-29)
 
@@ -228,7 +229,7 @@ The following phases were layered on the same branch after the `9745dac` hardeni
 ### Current HEAD validation (2026-08-01)
 
 - `pnpm exec tsc --noEmit` PASS — TypeScript: No errors found
-- `pnpm test:release` PASS — `160/160`
+- `pnpm test:release` PASS — `162/162`
 - `pnpm build` PASS — Compiled successfully in 7.8s
 - Security scan (`dangerouslySetInnerHTML`, `eval`, `innerHTML` outside approved surfaces): CLEAN
 - All `dangerouslySetInnerHTML` usages confirmed as trusted-source (Payload Lexical rich text → HTML conversion, hardcoded FAQ strings, hardcoded preview lesson content); none accept user-submitted input unescaped.

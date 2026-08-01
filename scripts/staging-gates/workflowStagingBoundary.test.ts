@@ -49,15 +49,15 @@ async function main(): Promise<void> {
     'deploy.yml must not use generic secrets.DOKPLOY_APP_ID for the redeploy step',
   )
 
-  // Rule 4: allowed staging app must not be used in prod workflow, and vice versa
+  // Rule 4: production workflow must invoke the canonical policy module that
+  // contains the staging deny-list (assertProductionDeployment rejects staging IDs)
   assert.ok(
-    deployYml.includes('clients-jpv-bootcamp-app-tp9xrk'),
-    'deploy.yml must reference staging app ID as the cross-contamination guard',
+    deployYml.includes('checkProductionDeploymentEnv.mts'),
+    'deploy.yml must invoke the canonical production policy validator that enforces the staging deny-list',
   )
-  // The staging guard in deploy.yml must check that prod ID != staging ID
   assert.ok(
-    deployYml.includes('must not equal the staging app ID'),
-    'deploy.yml must guard against staging app ID being used in production',
+    deployYml.includes('DEPLOY_BRANCH'),
+    'deploy.yml must pass DEPLOY_BRANCH to the production policy validator',
   )
 
   // Rule 5: deploy-preview.yml must verify SHA ancestry under feature branch
