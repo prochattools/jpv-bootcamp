@@ -172,7 +172,7 @@ Post-deploy step added to `deploy-preview.yml`:
 3. Run `pnpm test:e2e:admin-responsive` against `https://preview.jpvbootcamp.com`
 4. Upload failure evidence on failure
 
-Suite skips cleanly (test.skip) when credentials absent; fails closed when explicitly provided but auth fails.
+Missing credentials cause `ADMIN-RESPONSIVE-DENIED` at config-load time (exit non-zero before browser launch); the dedicated command never silently skips. The authenticated staging spec is excluded from the default local browser suite via `testIgnore` in `playwright.config.ts`.
 
 ### Post-repair measurements (deployed `4750e77` → hardened `cb523ef` → `65acd47` CSS+spec)
 
@@ -223,6 +223,19 @@ Close the remaining mobile-header and CI gaps after `65acd47`: keep `.app-header
 5. Run the authenticated suite, Payload type-check, build, release suite, whitespace check, and changed-path security scan.
 6. Commit explicit paths, push only the feature branch, follow the exact workflow, confirm deployed SHA, and rerun the authenticated suite.
 
-### Current task
+### Commit sequence
 
-Harden the authenticated spec and reproduce the account-containment failure against deployed `65acd47` before applying the CSS repair.
+- `cb523ef` — admin responsive hardening: mobile CSS fix, fail-closed spec, and post-deploy CI gate added to `deploy-preview.yml`
+- `a42c765` — staging-spec guard refinement: `beforeAll` hard-throw, updated docs, verified deployed revision
+- `155faf6` — isolation fix: authenticated staging spec excluded from default local browser suite via `testIgnore` in `playwright.config.ts`; `test.skip` removed; stale comments corrected
+
+### Closed failure modes
+
+- Missing `STAGING_URL`, `STAGING_ADMIN_EMAIL`, or `STAGING_ADMIN_PASSWORD` → `ADMIN-RESPONSIVE-DENIED` at config-load time; exit non-zero; no browser launched, no network access
+- Default `pnpm test:e2e` run → `admin-responsive-staging.spec.ts` not collected (excluded by `testIgnore`); no silent skip possible
+- `.env.production.BAK` present in working tree but not inspected, staged, or committed
+- Secret rotation not justified: no evidence of credential exposure
+
+### Local residue (outside committed release boundary)
+
+`.env.production.BAK`, `.ai/**`, `.claude/worktrees/**`, evidence screenshots (`*.png`), `playwright-report-staging/**`, `newrelic_agent.log` — all local-only, none staged or committed.

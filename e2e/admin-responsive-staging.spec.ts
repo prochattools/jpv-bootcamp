@@ -11,8 +11,9 @@ const STAGING_URL = process.env.STAGING_URL?.trim() ?? ''
 const ADMIN_EMAIL = process.env.STAGING_ADMIN_EMAIL?.trim() ?? ''
 const ADMIN_PASSWORD = process.env.STAGING_ADMIN_PASSWORD ?? ''
 
-// Validate the URL only when all three values are present; assertStagingOrigin
-// rejects production origins and non-HTTPS URLs with a hard throw.
+// assertStagingOrigin rejects production origins and non-HTTPS URLs with a hard
+// throw. Runs whenever STAGING_URL is set (the dedicated config guarantees all
+// three variables are present before this module loads).
 if (STAGING_URL) assertStagingOrigin(STAGING_URL)
 
 const VIEWPORTS = [
@@ -93,9 +94,8 @@ test.describe('Admin responsive layout', () => {
   let page: Page
 
   test.beforeAll(async ({ browser }) => {
-    // Hard fail inside beforeAll for CI: if the skip guard above did not fire
-    // but a variable is empty, surface a clear error rather than a confusing
-    // login failure.
+    // Defensive hard fail: the dedicated config enforces all three variables at
+    // load time, but guard again here in case the spec is loaded by another runner.
     if (!STAGING_URL || !ADMIN_EMAIL || !ADMIN_PASSWORD) {
       throw new Error('ADMIN-RESPONSIVE-DENIED: STAGING_URL, STAGING_ADMIN_EMAIL, and STAGING_ADMIN_PASSWORD are all required')
     }
