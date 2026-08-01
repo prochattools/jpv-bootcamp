@@ -130,6 +130,28 @@ void (async () => {
     'non-hex SHA rejected before fetch',
   )
 
+  // Uppercase SHA must fail before fetch or sleep.
+  {
+    const { fetch: mockFetch, calls } = makeFetch([])
+    const sleepCalls: number[] = []
+    await shouldReject(
+      () =>
+        waitForProductionDeployment({
+          productionUrl: PROD_URL,
+          expectedSha: 'A'.repeat(40),
+          fetch: mockFetch,
+          sleep: async (ms) => {
+            sleepCalls.push(ms)
+          },
+          signalFactory: noSignal,
+        }),
+      /lowercase/,
+      'uppercase SHA rejected before fetch or sleep',
+    )
+    assert.equal(calls.length, 0, 'uppercase SHA must not trigger fetch')
+    assert.equal(sleepCalls.length, 0, 'uppercase SHA must not trigger sleep')
+  }
+
   // Confirm no fetch occurred for URL failure
   {
     const { fetch: mockFetch, calls } = makeFetch([])
@@ -268,7 +290,7 @@ void (async () => {
     assert.equal(sleepCalls, 2, 'sleep called once between each attempt, not after final')
   }
 
-  console.log('productionDeploymentWait.test.ts passed — 30 assertions')
+  console.log('productionDeploymentWait.test.ts passed — 33 assertions')
 })().catch((e) => {
   console.error(e)
   process.exit(1)

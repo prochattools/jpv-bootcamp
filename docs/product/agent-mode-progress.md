@@ -251,3 +251,43 @@ Close the remaining mobile-header and CI gaps after `65acd47`: keep `.app-header
 - **Local forbidden residue:** `.env.production.BAK`, `.ai/**`, `.claude/worktrees/**`, evidence screenshots, `playwright-report-staging/**`, `newrelic_agent.log` — all outside the committed release boundary
 - **Credential inspection:** no credential or environment-file contents were inspected or printed
 - **Secret rotation:** not justified — no evidence of credential exposure found
+
+
+
+## Production deployment boundary hardening — 2026-08-01
+
+### Commit sequence
+
+- `d03a96c` — initial dormant production workflow hardening: pre-deploy validation, immutable image tags, Dokploy image update, production environment binding, and exact-SHA health polling
+- `563a662` — canonical production application policy enforcement, deterministic deployment-wait tests, Dokploy response-body removal, staging-only browser-spec isolation, and successful preview validation
+- `fix: verify production main boundary without leaking deployment identifiers` (this remediation packet) — exact remote `origin/main` tip verification, sanitized validator failures, strict lowercase SHA enforcement, stronger contract tests, and this canonical handoff update
+
+### Defects closed by this remediation
+
+- Replaced the tautological `git merge-base --is-ancestor "$PUSH_SHA" HEAD` check, which was guaranteed to pass after `HEAD == PUSH_SHA`, with explicit push-event/ref checks, checkout of `refs/heads/main`, a bounded fetch into `refs/remotes/origin/main`, and exact equality between the remote-main tip and `github.sha`.
+- Removed supplied application IDs, branches, and SHAs from production-policy error messages.
+- Added a sanitized validator boundary so failed subprocesses emit only approved `PRODUCTION-DEPLOY-DENIED` messages rather than runtime stack traces.
+- Enforced `^[0-9a-f]{40}$` consistently in production policy and deployment-wait validation; uppercase SHAs fail before fetch, sleep, image publication, or Dokploy operations.
+- Strengthened the workflow contract so a check that compares only the push SHA to `HEAD` cannot satisfy production main-boundary verification.
+
+### Verified state before the remediation commit
+
+- **Starting feature-branch SHA:** `563a6628073696df05f8fa4cee33d38cc39677eb`
+- **Preview CI for `563a662`:** workflow `30707192750` concluded `success`; preview deployment health reported the exact same SHA.
+- **Release suite before remediation:** `162/162` passed.
+- **Production execution:** no production workflow was triggered and no production system was accessed.
+- **Main branch:** nothing was merged, pushed, reset, rebased, or otherwise modified.
+- **Pull request:** PR #3 remains draft and must remain marked `DO NOT MERGE TO MAIN`.
+- **Production readiness:** blocked pending external controls and approvals.
+
+### External blockers that remain
+
+- GitHub branch protection or a ruleset for `main` is not configured and must require human review plus passing checks before merge.
+- The GitHub `production` Environment and at least one required human reviewer remain externally unconfigured.
+- Environment-scoped `DOKPLOY_PROD_APP_ID` and `DOKPLOY_API_KEY` remain an operator configuration task; their values were not inspected.
+- Client go-live approval, production release approval, migration/rollback ownership, provider verification, and other documented production cutover approvals remain unresolved.
+- The dormant production workflow must not be triggered until all external gates are independently verified.
+
+### Local forbidden residue
+
+Fresh `git status --short` showed only local residue outside the committed release boundary: `.env.production.BAK`, `.ai/**`, `.claude/worktrees/**`, evidence screenshots (`*.png`), `playwright-report-staging/**`, and `newrelic_agent.log`. The previously reported temporary staging diagnostic scripts were not present. No environment-file or credential contents were inspected, printed, staged, or committed.

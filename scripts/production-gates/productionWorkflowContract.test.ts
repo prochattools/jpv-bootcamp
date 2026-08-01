@@ -331,26 +331,59 @@ async function main(): Promise<void> {
   )
 
   // =========================================================================
-  // Section L: SHA ancestry guard
+  // Section L: Exact remote-main boundary guard
   // =========================================================================
 
   assert.ok(
-    deployYml.includes('merge-base --is-ancestor'),
-    'deploy.yml must include SHA ancestry check with git merge-base --is-ancestor',
+    deployYml.includes('${{ github.event_name }}') && deployYml.includes('event must be push'),
+    'deploy.yml must require the push event explicitly',
+  )
+  assert.ok(
+    deployYml.includes('${{ github.ref }}') && deployYml.includes('refs/heads/main'),
+    'deploy.yml must require the exact refs/heads/main ref',
+  )
+  assert.ok(
+    deployYml.includes('${{ github.ref_name }}') && deployYml.includes('ref_name must be main'),
+    'deploy.yml must require ref_name main explicitly',
+  )
+  assert.ok(
+    deployYml.includes('ref: refs/heads/main'),
+    'checkout must explicitly target refs/heads/main',
   )
   assert.ok(
     deployYml.includes('git rev-parse HEAD'),
-    'deploy.yml must verify HEAD SHA equals push SHA',
+    'deploy.yml must verify checked-out HEAD equals the push SHA',
+  )
+  assert.ok(
+    deployYml.includes('+refs/heads/main:refs/remotes/origin/main'),
+    'deploy.yml must fetch main into refs/remotes/origin/main',
+  )
+  assert.ok(
+    deployYml.includes('git show-ref --verify --quiet refs/remotes/origin/main'),
+    'deploy.yml must prove refs/remotes/origin/main exists after fetch',
+  )
+  assert.ok(
+    deployYml.includes('git rev-parse refs/remotes/origin/main'),
+    'deploy.yml must resolve the exact remote-main tip',
+  )
+  assert.ok(
+    deployYml.includes('if [ "$REMOTE_MAIN_SHA" != "$PUSH_SHA" ]'),
+    'deploy.yml must require the remote-main tip to equal the push SHA',
+  )
+  assert.ok(
+    !deployYml.includes('merge-base --is-ancestor "$PUSH_SHA" HEAD'),
+    'deploy.yml must not use the tautological push-SHA-to-HEAD ancestry check',
   )
 
-  const ancestryIdx = deployYml.indexOf('merge-base --is-ancestor')
+  const remoteMainIdx = deployYml.indexOf('git rev-parse refs/remotes/origin/main')
+  assert.ok(remoteMainIdx > 0, 'exact remote-main verification must be present')
   assert.ok(
-    ancestryIdx < dockerBuildIdx,
-    'SHA ancestry check must occur before Docker image publication',
+    remoteMainIdx < dockerBuildIdx,
+    'exact remote-main verification must occur before Docker image publication',
   )
   assert.ok(
-    ancestryIdx < policyEntrypointIdx,
-    'SHA ancestry check must occur before production policy entrypoint',
+    remoteMainIdx < policyEntrypointIdx,
+    'exact remote-main verification must occur before production policy entrypoint',
   )
 
   // =========================================================================
@@ -366,7 +399,7 @@ async function main(): Promise<void> {
     'deploy.yml must document that GitHub environment and branch protection are external requirements',
   )
 
-  console.log('productionWorkflowContract.test.ts passed — 63 assertions')
+  console.log('productionWorkflowContract.test.ts passed — 72 assertions')
 }
 
 main().catch((e) => {

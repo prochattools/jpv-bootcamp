@@ -1,9 +1,6 @@
 /**
- * Tests for checkProductionDeploymentEnv.mts.
- *
- * Verifies that the environment validator rejects incorrect configurations
- * before any Dokploy network call. Uses child_process spawn with tsx to
- * test the actual entrypoint with controlled env vars.
+ * Deterministic subprocess tests for checkProductionDeploymentEnv.mts.
+ * Uses only fake values, inherits no deployment credentials, and performs no network access.
  */
 
 import assert from 'node:assert/strict'
@@ -13,135 +10,125 @@ import { resolve } from 'node:path'
 const SCRIPT = resolve('scripts/production-gates/checkProductionDeploymentEnv.mts')
 const TSX = resolve('node_modules/.bin/tsx')
 const VALID_SHA = 'a'.repeat(40)
+const VALID_APP_ID = 'web-public-jpv-bootcamp-l66egq'
+const FAKE_API_KEY = 'FAKE_DOKPLOY_API_KEY_FOR_TESTS_ONLY'
 
-function run(env: Record<string, string>): { ok: boolean; stderr: string; stdout: string } {
+interface RunResult {
+  ok: boolean
+  stderr: string
+  stdout: string
+}
+
+function run(env: Record<string, string>): RunResult {
+  const isolatedEnv: NodeJS.ProcessEnv = {
+    PATH: process.env['PATH'] ?? '',
+    HOME: process.env['HOME'] ?? '',
+    TMPDIR: process.env['TMPDIR'] ?? '/tmp',
+    FORCE_COLOR: '0',
+    ...env,
+  }
+
   try {
     const stdout = execFileSync(TSX, [SCRIPT], {
-      env: { ...process.env, ...env, PATH: process.env['PATH'] ?? '' },
+      env: isolatedEnv,
       encoding: 'utf8',
       timeout: 10_000,
     })
     return { ok: true, stderr: '', stdout }
-  } catch (e) {
-    const err = e as { status: number; stderr: string; stdout: string }
-    return { ok: false, stderr: err.stderr ?? '', stdout: err.stdout ?? '' }
+  } catch (error) {
+    const failure = error as { stderr?: string; stdout?: string }
+    return { ok: false, stderr: failure.stderr ?? '', stdout: failure.stdout ?? '' }
   }
 }
 
-// --- Valid production context passes ---
-{
-  const result = run({
-    DOKPLOY_PROD_APP_ID: 'web-public-jpv-bootcamp-l66egq',
-    DOKPLOY_API_KEY: 'test-key-value',
-    DEPLOY_BRANCH: 'main',
-    DEPLOY_SHA: VALID_SHA,
-  })
-  assert.ok(result.ok, 'valid production context must pass')
-  assert.ok(result.stdout.includes('production deployment context validated'), 'success message')
+function combinedOutput(result: RunResult): string {
+  return `${result.stdout}\n${result.stderr}`
 }
 
-// --- Missing DOKPLOY_PROD_APP_ID ---
+function assertDeniedWithoutLeak(result: RunResult, sentinel: string, label: string): void {
+  const output = combinedOutput(result)
+  assert.ok(!result.ok, `${label}: validator must fail`)
+  assert.match(output, /PRODUCTION-DEPLOY-DENIED/, `${label}: denied error prefix`)
+  assert.ok(!output.includes(sentinel), `${label}: supplied sentinel must not appear in output`)
+}
+
+const validEnv = {
+  DOKPLOY_PROD_APP_ID: VALID_APP_ID,
+  DOKPLOY_API_KEY: FAKE_API_KEY,
+  DEPLOY_BRANCH: 'main',
+  DEPLOY_SHA: VALID_SHA,
+}
+
 {
-  const result = run({
-    DOKPLOY_PROD_APP_ID: '',
-    DOKPLOY_API_KEY: 'test-key',
-    DEPLOY_BRANCH: 'main',
-    DEPLOY_SHA: VALID_SHA,
-  })
-  assert.ok(!result.ok, 'empty DOKPLOY_PROD_APP_ID must fail')
-  assert.ok(
-    result.stderr.includes('PRODUCTION-DEPLOY-DENIED') || result.stdout.includes('PRODUCTION-DEPLOY-DENIED'),
-    'error must mention PRODUCTION-DEPLOY-DENIED for missing app ID',
+  const result = run(validEnv)
+  assert.ok(result.ok, 'valid fake production context must pass')
+  assert.match(result.stdout, /production deployment context validated/, 'success message')
+  assert.ok(!combinedOutput(result).includes(FAKE_API_KEY), 'success output must not print fake API key')
+  assert.ok(!combinedOutput(result).includes(VALID_APP_ID), 'success output must not print app ID')
+}
+
+{
+  const result = run({ ...validEnv, DOKPLOY_PROD_APP_ID: '' })
+  assert.ok(!result.ok, 'missing app ID must fail')
+  assert.match(combinedOutput(result), /PRODUCTION-DEPLOY-DENIED/, 'missing app ID denied')
+}
+
+{
+  const sentinel = 'SENTINEL_ARBITRARY_APP_ID_MUST_NOT_APPEAR'
+  assertDeniedWithoutLeak(
+    run({ ...validEnv, DOKPLOY_PROD_APP_ID: sentinel }),
+    sentinel,
+    'arbitrary app ID',
   )
 }
 
-// --- Missing DOKPLOY_API_KEY ---
 {
-  const result = run({
-    DOKPLOY_PROD_APP_ID: 'web-public-jpv-bootcamp-l66egq',
-    DOKPLOY_API_KEY: '',
-    DEPLOY_BRANCH: 'main',
-    DEPLOY_SHA: VALID_SHA,
-  })
-  assert.ok(!result.ok, 'empty DOKPLOY_API_KEY must fail')
-  assert.ok(
-    result.stderr.includes('PRODUCTION-DEPLOY-DENIED') || result.stdout.includes('PRODUCTION-DEPLOY-DENIED'),
-    'error must mention PRODUCTION-DEPLOY-DENIED for missing API key',
+  const stagingId = 'clients-jpv-bootcamp-app-tp9xrk'
+  const result = run({ ...validEnv, DOKPLOY_PROD_APP_ID: stagingId })
+  assertDeniedWithoutLeak(result, stagingId, 'staging app ID')
+  assert.match(combinedOutput(result), /denied staging identifier/, 'staging classification retained')
+}
+
+{
+  const result = run({ ...validEnv, DOKPLOY_API_KEY: '' })
+  assert.ok(!result.ok, 'missing API key must fail')
+  assert.match(combinedOutput(result), /PRODUCTION-DEPLOY-DENIED/, 'missing API key denied')
+}
+
+{
+  const sentinel = 'SENTINEL_INVALID_API_KEY_MUST_NOT_APPEAR'
+  assertDeniedWithoutLeak(
+    run({ ...validEnv, DOKPLOY_API_KEY: ` ${sentinel} ` }),
+    sentinel,
+    'whitespace-malformed API key',
   )
 }
 
-// --- Staging app ID rejected ---
 {
-  const result = run({
-    DOKPLOY_PROD_APP_ID: 'clients-jpv-bootcamp-app-tp9xrk',
-    DOKPLOY_API_KEY: 'test-key',
-    DEPLOY_BRANCH: 'main',
-    DEPLOY_SHA: VALID_SHA,
-  })
-  assert.ok(!result.ok, 'staging app ID must be rejected')
-  assert.ok(
-    result.stderr.includes('staging') || result.stdout.includes('staging'),
-    'error must mention staging when staging ID is provided',
+  const sentinel = 'SENTINEL_INVALID_BRANCH_MUST_NOT_APPEAR'
+  assertDeniedWithoutLeak(
+    run({ ...validEnv, DEPLOY_BRANCH: sentinel }),
+    sentinel,
+    'invalid branch',
   )
 }
 
-// --- Arbitrary non-staging app ID rejected ---
 {
-  const result = run({
-    DOKPLOY_PROD_APP_ID: 'some-random-app-id',
-    DOKPLOY_API_KEY: 'test-key',
-    DEPLOY_BRANCH: 'main',
-    DEPLOY_SHA: VALID_SHA,
-  })
-  assert.ok(!result.ok, 'arbitrary non-staging app ID must be rejected')
-  assert.ok(
-    result.stderr.includes('PRODUCTION-DEPLOY-DENIED') || result.stdout.includes('PRODUCTION-DEPLOY-DENIED'),
-    'error must say PRODUCTION-DEPLOY-DENIED for arbitrary app ID',
+  const sentinel = 'SENTINEL_INVALID_SHA_MUST_NOT_APPEAR'
+  assertDeniedWithoutLeak(
+    run({ ...validEnv, DEPLOY_SHA: sentinel }),
+    sentinel,
+    'invalid SHA',
   )
 }
 
-// --- Feature branch rejected ---
 {
-  const result = run({
-    DOKPLOY_PROD_APP_ID: 'web-public-jpv-bootcamp-l66egq',
-    DOKPLOY_API_KEY: 'test-key',
-    DEPLOY_BRANCH: 'feature/course-branding-and-preview',
-    DEPLOY_SHA: VALID_SHA,
-  })
-  assert.ok(!result.ok, 'feature branch must be rejected')
-  assert.ok(
-    result.stderr.includes('PRODUCTION-DEPLOY-DENIED') || result.stdout.includes('PRODUCTION-DEPLOY-DENIED'),
-    'error must say PRODUCTION-DEPLOY-DENIED for feature branch',
+  const uppercaseSha = 'A'.repeat(40)
+  assertDeniedWithoutLeak(
+    run({ ...validEnv, DEPLOY_SHA: uppercaseSha }),
+    uppercaseSha,
+    'uppercase SHA',
   )
 }
 
-// --- Short SHA rejected ---
-{
-  const result = run({
-    DOKPLOY_PROD_APP_ID: 'web-public-jpv-bootcamp-l66egq',
-    DOKPLOY_API_KEY: 'test-key',
-    DEPLOY_BRANCH: 'main',
-    DEPLOY_SHA: 'abc123',
-  })
-  assert.ok(!result.ok, 'short SHA must be rejected')
-}
-
-// --- Does not print the app ID value in error messages ---
-{
-  const result = run({
-    DOKPLOY_PROD_APP_ID: 'some-random-app-id',
-    DOKPLOY_API_KEY: 'super-secret-key-value',
-    DEPLOY_BRANCH: 'main',
-    DEPLOY_SHA: VALID_SHA,
-  })
-  assert.ok(!result.ok, 'should fail for wrong app ID')
-  assert.ok(
-    !result.stderr.includes('super-secret-key-value') && !result.stdout.includes('super-secret-key-value'),
-    'API key value must never appear in output',
-  )
-}
-
-// --- Performs no network access (structural: the script has no fetch/http import) ---
-// Verified by the fact that all above tests execute quickly with no network dependency
-
-console.log('checkProductionDeploymentEnv.test.ts passed — 16 assertions')
+console.log('checkProductionDeploymentEnv.test.ts passed')

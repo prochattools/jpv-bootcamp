@@ -9,17 +9,32 @@ import {
   STAGING_ORIGIN_DENY_LIST,
 } from './productionPolicy'
 
-function throws(fn: () => void, pattern: RegExp, label: string): void {
+function captureError(fn: () => void, label: string): string {
   try {
     fn()
     assert.fail(`${label}: expected throw but did not throw`)
-  } catch (e) {
-    if (e instanceof assert.AssertionError) throw e
-    assert.match((e as Error).message, pattern, `${label}: error message mismatch`)
+  } catch (error) {
+    if (error instanceof assert.AssertionError) throw error
+    return (error as Error).message
   }
 }
 
-// --- Constants ---
+function expectError(fn: () => void, pattern: RegExp, label: string): string {
+  const message = captureError(fn, label)
+  assert.match(message, pattern, `${label}: error message mismatch`)
+  return message
+}
+
+function expectRedacted(
+  fn: () => void,
+  pattern: RegExp,
+  sentinel: string,
+  label: string,
+): void {
+  const message = expectError(fn, pattern, label)
+  assert.ok(!message.includes(sentinel), `${label}: supplied sentinel must not appear in the error`)
+}
+
 assert.equal(PRODUCTION_APP_ID, 'web-public-jpv-bootcamp-l66egq', 'canonical production app ID')
 assert.equal(PRODUCTION_ORIGIN, 'https://jpvbootcamp.com', 'canonical production origin')
 assert.equal(PRODUCTION_BRANCH, 'main', 'canonical production branch')
@@ -28,216 +43,120 @@ assert.ok(STAGING_DENY_LIST.includes('I_2Vukga3cc3ZhaG-mUzU'), 'staging internal
 assert.ok(STAGING_ORIGIN_DENY_LIST.includes('https://preview.jpvbootcamp.com'), 'staging origin in deny list')
 
 const VALID_SHA = 'a'.repeat(40)
-
-// --- assertProductionOrigin: valid ---
-assertProductionOrigin('https://jpvbootcamp.com')
-assertProductionOrigin('https://jpvbootcamp.com/')
-
-// --- assertProductionOrigin: rejects non-HTTPS ---
-throws(
-  () => assertProductionOrigin('http://jpvbootcamp.com'),
-  /HTTPS/,
-  'reject HTTP',
-)
-
-// --- assertProductionOrigin: rejects non-default port ---
-throws(
-  () => assertProductionOrigin('https://jpvbootcamp.com:8443'),
-  /non-default port/,
-  'reject non-default port',
-)
-
-// --- assertProductionOrigin: rejects userinfo ---
-throws(
-  () => assertProductionOrigin('https://user:pass@jpvbootcamp.com'),
-  /userinfo/,
-  'reject userinfo credentials',
-)
-
-// --- assertProductionOrigin: rejects subdomain prefix ---
-throws(
-  () => assertProductionOrigin('https://www.jpvbootcamp.com'),
-  /hostname/,
-  'reject www subdomain',
-)
-
-// --- assertProductionOrigin: rejects staging origin ---
-throws(
-  () => assertProductionOrigin('https://preview.jpvbootcamp.com'),
-  /hostname/,
-  'reject staging origin',
-)
-
-// --- assertProductionOrigin: rejects suffix domain ---
-throws(
-  () => assertProductionOrigin('https://jpvbootcamp.com.evil.com'),
-  /hostname/,
-  'reject suffix domain attack',
-)
-
-// --- assertProductionOrigin: rejects path ---
-throws(
-  () => assertProductionOrigin('https://jpvbootcamp.com/admin'),
-  /path/,
-  'reject URL with path',
-)
-
-// --- assertProductionOrigin: rejects query ---
-throws(
-  () => assertProductionOrigin('https://jpvbootcamp.com?foo=bar'),
-  /path/,
-  'reject URL with query string',
-)
-
-// --- assertProductionOrigin: rejects hash ---
-throws(
-  () => assertProductionOrigin('https://jpvbootcamp.com#section'),
-  /path/,
-  'reject URL with hash',
-)
-
-// --- assertProductionOrigin: rejects unparseable ---
-throws(
-  () => assertProductionOrigin('not-a-url'),
-  /cannot parse/,
-  'reject unparseable URL',
-)
-
-// --- assertProductionDeployment: valid ---
-assertProductionDeployment({
+const validContext = {
   appId: PRODUCTION_APP_ID,
   origin: PRODUCTION_ORIGIN,
   branch: PRODUCTION_BRANCH,
   expectedSha: VALID_SHA,
-})
+}
 
-// --- assertProductionDeployment: rejects staging app IDs ---
-throws(
-  () =>
-    assertProductionDeployment({
-      appId: 'clients-jpv-bootcamp-app-tp9xrk',
-      origin: PRODUCTION_ORIGIN,
-      branch: PRODUCTION_BRANCH,
-      expectedSha: VALID_SHA,
-    }),
-  /PRODUCTION-DEPLOY-DENIED.*staging/,
-  'staging app ID rejected',
+assertProductionOrigin('https://jpvbootcamp.com')
+assertProductionOrigin('https://jpvbootcamp.com/')
+
+expectError(() => assertProductionOrigin('http://jpvbootcamp.com'), /HTTPS/, 'reject HTTP')
+expectError(
+  () => assertProductionOrigin('https://jpvbootcamp.com:8443'),
+  /non-default port/,
+  'reject non-default port',
+)
+expectError(
+  () => assertProductionOrigin('https://user:pass@jpvbootcamp.com'),
+  /userinfo/,
+  'reject userinfo credentials',
+)
+expectError(
+  () => assertProductionOrigin('https://www.jpvbootcamp.com'),
+  /hostname/,
+  'reject www subdomain',
+)
+expectError(
+  () => assertProductionOrigin('https://preview.jpvbootcamp.com'),
+  /hostname/,
+  'reject staging origin',
+)
+expectError(
+  () => assertProductionOrigin('https://jpvbootcamp.com.evil.com'),
+  /hostname/,
+  'reject suffix domain attack',
+)
+expectError(
+  () => assertProductionOrigin('https://jpvbootcamp.com/admin'),
+  /path/,
+  'reject URL with path',
+)
+expectError(
+  () => assertProductionOrigin('https://jpvbootcamp.com?foo=bar'),
+  /path/,
+  'reject URL with query string',
+)
+expectError(
+  () => assertProductionOrigin('https://jpvbootcamp.com#section'),
+  /path/,
+  'reject URL with hash',
+)
+expectError(() => assertProductionOrigin('not-a-url'), /cannot parse/, 'reject unparseable URL')
+
+assertProductionDeployment(validContext)
+
+const stagingSentinel = 'SENTINEL_STAGING_APP_ID_MUST_NOT_APPEAR'
+STAGING_DENY_LIST.push(stagingSentinel)
+try {
+  expectRedacted(
+    () => assertProductionDeployment({ ...validContext, appId: stagingSentinel }),
+    /PRODUCTION-DEPLOY-DENIED.*denied staging identifier/,
+    stagingSentinel,
+    'staging app identifier is redacted',
+  )
+} finally {
+  STAGING_DENY_LIST.pop()
+}
+
+const arbitraryAppSentinel = 'SENTINEL_ARBITRARY_APP_ID_MUST_NOT_APPEAR'
+expectRedacted(
+  () => assertProductionDeployment({ ...validContext, appId: arbitraryAppSentinel }),
+  /does not match the canonical production application/,
+  arbitraryAppSentinel,
+  'arbitrary app identifier is redacted',
 )
 
-throws(
-  () =>
-    assertProductionDeployment({
-      appId: 'I_2Vukga3cc3ZhaG-mUzU',
-      origin: PRODUCTION_ORIGIN,
-      branch: PRODUCTION_BRANCH,
-      expectedSha: VALID_SHA,
-    }),
-  /PRODUCTION-DEPLOY-DENIED.*staging/,
-  'staging internal ID rejected',
-)
-
-// --- assertProductionDeployment: rejects staging origin ---
-throws(
-  () =>
-    assertProductionDeployment({
-      appId: PRODUCTION_APP_ID,
-      origin: 'https://preview.jpvbootcamp.com',
-      branch: PRODUCTION_BRANCH,
-      expectedSha: VALID_SHA,
-    }),
-  /PRODUCTION-DEPLOY-DENIED.*staging origin/,
-  'staging origin rejected by deployment policy',
-)
-
-// --- assertProductionDeployment: rejects wrong app ID ---
-throws(
-  () =>
-    assertProductionDeployment({
-      appId: 'some-other-app',
-      origin: PRODUCTION_ORIGIN,
-      branch: PRODUCTION_BRANCH,
-      expectedSha: VALID_SHA,
-    }),
-  /not the canonical production app ID/,
-  'wrong app ID rejected',
-)
-
-// --- assertProductionDeployment: rejects empty app ID ---
-throws(
-  () =>
-    assertProductionDeployment({
-      appId: '',
-      origin: PRODUCTION_ORIGIN,
-      branch: PRODUCTION_BRANCH,
-      expectedSha: VALID_SHA,
-    }),
-  /nonempty/,
+expectError(
+  () => assertProductionDeployment({ ...validContext, appId: '' }),
+  /application ID is required/,
   'empty app ID rejected',
 )
 
-// --- assertProductionDeployment: rejects non-main branch ---
-throws(
-  () =>
-    assertProductionDeployment({
-      appId: PRODUCTION_APP_ID,
-      origin: PRODUCTION_ORIGIN,
-      branch: 'feature/course-branding-and-preview',
-      expectedSha: VALID_SHA,
-    }),
-  /not the allowed production branch/,
-  'feature branch rejected',
+const branchSentinel = 'SENTINEL_INVALID_BRANCH_MUST_NOT_APPEAR'
+expectRedacted(
+  () => assertProductionDeployment({ ...validContext, branch: branchSentinel }),
+  /supplied branch is not the production branch/,
+  branchSentinel,
+  'invalid branch is redacted',
 )
 
-// --- assertProductionDeployment: rejects develop branch ---
-throws(
-  () =>
-    assertProductionDeployment({
-      appId: PRODUCTION_APP_ID,
-      origin: PRODUCTION_ORIGIN,
-      branch: 'develop',
-      expectedSha: VALID_SHA,
-    }),
-  /not the allowed production branch/,
-  'develop branch rejected',
+const uppercaseShaSentinel = 'A'.repeat(40)
+expectRedacted(
+  () => assertProductionDeployment({ ...validContext, expectedSha: uppercaseShaSentinel }),
+  /full lowercase 40-character hexadecimal commit SHA/,
+  uppercaseShaSentinel,
+  'uppercase SHA rejected and redacted',
 )
 
-// --- assertProductionDeployment: rejects short SHA ---
-throws(
-  () =>
-    assertProductionDeployment({
-      appId: PRODUCTION_APP_ID,
-      origin: PRODUCTION_ORIGIN,
-      branch: PRODUCTION_BRANCH,
-      expectedSha: 'abc123',
-    }),
-  /40-character/,
-  'short SHA rejected',
+const invalidShaSentinel = 'SENTINEL_INVALID_SHA_MUST_NOT_APPEAR'
+expectRedacted(
+  () => assertProductionDeployment({ ...validContext, expectedSha: invalidShaSentinel }),
+  /full lowercase 40-character hexadecimal commit SHA/,
+  invalidShaSentinel,
+  'invalid SHA is redacted',
 )
 
-// --- assertProductionDeployment: rejects empty SHA ---
-throws(
+expectError(
   () =>
     assertProductionDeployment({
-      appId: PRODUCTION_APP_ID,
-      origin: PRODUCTION_ORIGIN,
-      branch: PRODUCTION_BRANCH,
-      expectedSha: '',
+      ...validContext,
+      origin: 'https://preview.jpvbootcamp.com',
     }),
-  /40-character/,
-  'empty SHA rejected',
+  /PRODUCTION-DEPLOY-DENIED.*denied staging origin/,
+  'staging origin rejected by deployment policy',
 )
 
-// --- deny-list cannot be bypassed by matching origin/branch/SHA ---
-throws(
-  () =>
-    assertProductionDeployment({
-      appId: 'clients-jpv-bootcamp-app-tp9xrk',
-      origin: PRODUCTION_ORIGIN,
-      branch: PRODUCTION_BRANCH,
-      expectedSha: VALID_SHA,
-    }),
-  /staging/,
-  'staging deny-list checked before any other condition',
-)
-
-console.log('productionPolicy.test.ts passed — 22 assertions')
+console.log('productionPolicy.test.ts passed')

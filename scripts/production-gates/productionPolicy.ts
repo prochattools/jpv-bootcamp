@@ -35,53 +35,41 @@ export interface ProductionDeploymentContext {
  * Throws a descriptive PRODUCTION-DEPLOY-DENIED error for any violation.
  */
 export function assertProductionDeployment(ctx: ProductionDeploymentContext): void {
-  // Deny staging app IDs first — fail closed before any other check
+  // Deny staging app IDs first — fail closed before any other check.
   for (const deniedId of STAGING_DENY_LIST) {
     if (ctx.appId === deniedId) {
       throw new Error(
-        `PRODUCTION-DEPLOY-DENIED: appId '${ctx.appId}' is a staging app ID and must never be ` +
-          `targeted by the production deployment policy. ` +
-          `Denied staging IDs: [${STAGING_DENY_LIST.join(', ')}].`,
+        'PRODUCTION-DEPLOY-DENIED: supplied application ID is a denied staging identifier.',
       )
     }
   }
 
-  // Deny staging origins
+  // Deny staging origins without echoing the supplied value.
   for (const deniedOrigin of STAGING_ORIGIN_DENY_LIST) {
     if (ctx.origin === deniedOrigin || ctx.origin.startsWith(deniedOrigin)) {
-      throw new Error(
-        `PRODUCTION-DEPLOY-DENIED: origin '${ctx.origin}' is a staging origin and must never be ` +
-          `targeted by the production deployment policy.`,
-      )
+      throw new Error('PRODUCTION-DEPLOY-DENIED: supplied origin is a denied staging origin.')
     }
   }
 
-  // Require nonempty appId
   if (!ctx.appId) {
-    throw new Error('PRODUCTION-DEPLOY-DENIED: appId must be nonempty')
+    throw new Error('PRODUCTION-DEPLOY-DENIED: application ID is required.')
   }
 
-  // Exact app ID check — must match canonical production app ID
   if (ctx.appId !== PRODUCTION_APP_ID) {
     throw new Error(
-      `PRODUCTION-DEPLOY-DENIED: appId '${ctx.appId}' is not the canonical production app ID '${PRODUCTION_APP_ID}'.`,
+      'PRODUCTION-DEPLOY-DENIED: supplied application ID does not match the canonical production application.',
     )
   }
 
-  // Validate production origin
   assertProductionOrigin(ctx.origin)
 
-  // Branch must be exactly main
   if (ctx.branch !== PRODUCTION_BRANCH) {
-    throw new Error(
-      `PRODUCTION-DEPLOY-DENIED: branch '${ctx.branch}' is not the allowed production branch '${PRODUCTION_BRANCH}'.`,
-    )
+    throw new Error('PRODUCTION-DEPLOY-DENIED: supplied branch is not the production branch.')
   }
 
-  // Validate SHA format
-  if (!/^[0-9a-f]{40}$/i.test(ctx.expectedSha)) {
+  if (!/^[0-9a-f]{40}$/.test(ctx.expectedSha)) {
     throw new Error(
-      `PRODUCTION-DEPLOY-DENIED: expectedSha '${ctx.expectedSha}' must be a full 40-character lowercase hex commit SHA.`,
+      'PRODUCTION-DEPLOY-DENIED: supplied SHA must be a full lowercase 40-character hexadecimal commit SHA.',
     )
   }
 }

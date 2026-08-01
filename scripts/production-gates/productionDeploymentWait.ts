@@ -49,9 +49,9 @@ export async function waitForProductionDeployment(opts: WaitOptions): Promise<vo
   assertProductionOrigin(normalizedUrl)
 
   // Validate SHA format before any network call
-  if (!/^[0-9a-f]{40}$/i.test(expectedSha)) {
+  if (!/^[0-9a-f]{40}$/.test(expectedSha)) {
     throw new Error(
-      'PRODUCTION-DEPLOYMENT-WAIT-DENIED: expectedSha must be a full 40-character commit SHA',
+      'PRODUCTION-DEPLOYMENT-WAIT-DENIED: expectedSha must be a full lowercase 40-character hexadecimal commit SHA',
     )
   }
 

@@ -5,8 +5,8 @@
  * from the environment and validates them through assertProductionDeployment()
  * before any Dokploy network call is made.
  *
- * Fails with PRODUCTION-DEPLOY-DENIED on any violation.
- * Never prints the app ID, API key, or any credential value.
+ * Fails with sanitized PRODUCTION-DEPLOY-DENIED output on any violation.
+ * Never prints the app ID, API key, branch, SHA, or any credential value.
  * Performs no network access.
  */
 
@@ -20,18 +20,38 @@ function requireEnv(name: string): string {
   return value
 }
 
-const appId = requireEnv('DOKPLOY_PROD_APP_ID')
-// Require the API key without printing it — just ensure it is present
-requireEnv('DOKPLOY_API_KEY')
+function requireSecretEnv(name: string): void {
+  const rawValue = process.env[name]
+  if (!rawValue || rawValue.trim() === '' || rawValue !== rawValue.trim()) {
+    throw new Error(`PRODUCTION-DEPLOY-DENIED: ${name} is missing or malformed`)
+  }
+}
 
-const branch = requireEnv('DEPLOY_BRANCH')
-const expectedSha = requireEnv('DEPLOY_SHA')
+function main(): void {
+  const appId = requireEnv('DOKPLOY_PROD_APP_ID')
+  requireSecretEnv('DOKPLOY_API_KEY')
 
-assertProductionDeployment({
-  appId,
-  origin: PRODUCTION_ORIGIN,
-  branch,
-  expectedSha,
-})
+  const branch = requireEnv('DEPLOY_BRANCH')
+  const expectedSha = requireEnv('DEPLOY_SHA')
 
-console.log('checkProductionDeploymentEnv: production deployment context validated')
+  assertProductionDeployment({
+    appId,
+    origin: PRODUCTION_ORIGIN,
+    branch,
+    expectedSha,
+  })
+
+  console.log('checkProductionDeploymentEnv: production deployment context validated')
+}
+
+try {
+  main()
+} catch (error) {
+  const message = error instanceof Error ? error.message : ''
+  console.error(
+    message.startsWith('PRODUCTION-DEPLOY-DENIED:')
+      ? message
+      : 'PRODUCTION-DEPLOY-DENIED: production deployment environment validation failed',
+  )
+  process.exit(1)
+}

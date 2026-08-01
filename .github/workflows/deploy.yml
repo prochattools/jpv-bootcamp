@@ -42,50 +42,58 @@ jobs:
       E2E_BASE_URL: http://127.0.0.1:3107
 
     steps:
-      - name: Validate deployment boundary
+      - name: Validate deployment event boundary
         shell: bash
         run: |
           set -euo pipefail
-          # Reject any branch other than main
-          if [ "${{ github.ref_name }}" != "main" ]; then
-            echo "PRODUCTION-DEPLOY-DENIED: this workflow must only run on main. Got: ${{ github.ref_name }}" >&2
+          if [ "${{ github.event_name }}" != "push" ]; then
+            echo "PRODUCTION-DEPLOY-DENIED: event must be push." >&2
             exit 1
           fi
-          # Require full 40-character SHA
+          if [ "${{ github.ref }}" != "refs/heads/main" ]; then
+            echo "PRODUCTION-DEPLOY-DENIED: ref must be refs/heads/main." >&2
+            exit 1
+          fi
+          if [ "${{ github.ref_name }}" != "main" ]; then
+            echo "PRODUCTION-DEPLOY-DENIED: ref_name must be main." >&2
+            exit 1
+          fi
           SHA="${{ github.sha }}"
           if ! echo "$SHA" | grep -qE '^[0-9a-f]{40}$'; then
-            echo "PRODUCTION-DEPLOY-DENIED: github.sha must be a full 40-character hex SHA." >&2
+            echo "PRODUCTION-DEPLOY-DENIED: github.sha must be a full lowercase 40-character hex SHA." >&2
             exit 1
           fi
-          echo "Deployment boundary validated: branch=main sha=$SHA"
+          echo "Deployment event boundary validated."
 
-      - name: Check out commit
+      - name: Check out remote main
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: refs/heads/main
 
-      - name: Verify SHA ancestry
+      - name: Verify exact remote main tip
         shell: bash
         run: |
           set -euo pipefail
-          # Confirm the checked-out HEAD is the exact push SHA
-          HEAD_SHA="$(git rev-parse HEAD)"
           PUSH_SHA="${{ github.sha }}"
+          HEAD_SHA="$(git rev-parse HEAD)"
           if [ "$HEAD_SHA" != "$PUSH_SHA" ]; then
-            echo "PRODUCTION-DEPLOY-DENIED: checked-out HEAD ($HEAD_SHA) does not match push SHA ($PUSH_SHA)" >&2
+            echo "PRODUCTION-DEPLOY-DENIED: checked-out HEAD does not match the push SHA." >&2
             exit 1
           fi
-          # Confirm branch context is main
-          if [ "${{ github.ref_name }}" != "main" ]; then
-            echo "PRODUCTION-DEPLOY-DENIED: ref_name must be main, got: ${{ github.ref_name }}" >&2
+
+          git fetch --no-tags --prune origin "+refs/heads/main:refs/remotes/origin/main"
+          if ! git show-ref --verify --quiet refs/remotes/origin/main; then
+            echo "PRODUCTION-DEPLOY-DENIED: origin/main is unavailable after fetch." >&2
             exit 1
           fi
-          # Confirm the SHA is reachable from local main (ancestry check)
-          if ! git merge-base --is-ancestor "$PUSH_SHA" HEAD; then
-            echo "PRODUCTION-DEPLOY-DENIED: push SHA is not an ancestor of current HEAD" >&2
+
+          REMOTE_MAIN_SHA="$(git rev-parse refs/remotes/origin/main)"
+          if [ "$REMOTE_MAIN_SHA" != "$PUSH_SHA" ]; then
+            echo "PRODUCTION-DEPLOY-DENIED: push SHA is not the current origin/main tip." >&2
             exit 1
           fi
-          echo "SHA ancestry verified: $HEAD_SHA is main"
+          echo "Exact remote main tip verified."
 
       - name: Set up pnpm
         uses: pnpm/action-setup@v2
@@ -175,10 +183,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-
           NEW_IMAGE="ghcr.io/${{ github.repository }}:${{ github.sha }}"
-
-          UPDATE_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+          UPDATE_STATUS=$(curl -sS -o /dev/null -w "%{http_code}" \
             -X POST "https://dokploy.prochat.tools/api/application.update" \
             -H "x-api-key: $DOKPLOY_API_KEY" \
             -H "Content-Type: application/json" \
@@ -192,7 +198,7 @@ jobs:
             echo "PRODUCTION-DEPLOY-DENIED: image update failed with HTTP $UPDATE_STATUS — deployment aborted." >&2
             exit 1
           fi
-          echo "Production image updated to immutable tag: $NEW_IMAGE"
+          echo "Production image updated to the immutable commit tag."
 
       - name: Trigger Dokploy production redeployment
         env:
@@ -201,13 +207,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-
-          COMMIT_MSG=$(git log -1 --pretty=format:"%s" ${{ github.sha }})
-          COMMIT_AUTHOR=$(git log -1 --pretty=format:"%an" ${{ github.sha }})
-          COMMIT_DATE=$(git log -1 --pretty=format:"%ci" ${{ github.sha }})
+          COMMIT_MSG=$(git log -1 --pretty=format:"%s" "${{ github.sha }}")
+          COMMIT_AUTHOR=$(git log -1 --pretty=format:"%an" "${{ github.sha }}")
+          COMMIT_DATE=$(git log -1 --pretty=format:"%ci" "${{ github.sha }}")
           DESCRIPTION="${COMMIT_AUTHOR} · ${COMMIT_DATE}"$'\n\n'"${{ github.sha }}"
 
-          DEPLOY_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+          DEPLOY_STATUS=$(curl -sS -o /dev/null -w "%{http_code}" \
             -X POST "https://dokploy.prochat.tools/api/application.deploy" \
             -H "x-api-key: $DOKPLOY_API_KEY" \
             -H "Content-Type: application/json" \
@@ -218,7 +223,6 @@ jobs:
             }")
 
           echo "HTTP status: $DEPLOY_STATUS"
-
           if [ "$DEPLOY_STATUS" != "200" ]; then
             echo "PRODUCTION-DEPLOY-DENIED: Dokploy deployment trigger failed with HTTP $DEPLOY_STATUS" >&2
             exit 1
