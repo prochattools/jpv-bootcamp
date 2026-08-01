@@ -162,9 +162,19 @@ Course 3 loads without invalid-selection or relationship errors. `accessBadge` i
 **Config:** `playwright-admin-staging.config.ts`
 **Command:** `pnpm test:e2e:admin-responsive`
 
-15 assertions: 12 route/viewport overflow+controls+focus+errors, 1 doc-controls meta containment, 1 account/nav visibility+keyboard, 1 API course-3 check.
+15 assertions: 12 route/viewport overflow+controls+focus+errors, 1 doc-controls meta containment, 1 account exact rect.right ≤ viewport, tabToExactAccount reachability, 1 API course-3 check.
 
-### Post-repair measurements (deployed `4750e77`)
+### CI gate
+
+Post-deploy step added to `deploy-preview.yml`:
+1. Verify staging admin secret names configured (fail-closed if absent)
+2. Poll `/api/health/deployment` for the deployed commit SHA
+3. Run `pnpm test:e2e:admin-responsive` against `https://preview.jpvbootcamp.com`
+4. Upload failure evidence on failure
+
+Suite skips cleanly (test.skip) when credentials absent; fails closed when explicitly provided but auth fails.
+
+### Post-repair measurements (deployed `4750e77` → hardened `cb523ef` → `65acd47` CSS+spec)
 
 | Route @ viewport | scrollWidth | clientWidth | overflow |
 |------------------|-------------|-------------|----------|
@@ -172,9 +182,9 @@ Course 3 loads without invalid-selection or relationship errors. `accessBadge` i
 | `/admin/collections/payload_membership_audit_history` @ 375×812 | 375 | 375 | none |
 | `/admin/collections/payload_courses/3` @ 375×812 | 375 | 375 | none |
 
-Account element at mobile: `.app-header__account` left=348, width=44 (partially clipped by `overflow:hidden` on ancestor but interactive and keyboard-reachable). Mobile hamburger `.app-header__mobile-nav-toggler` at left=16, 44×44, fully visible.
+Account element fix (`cb523ef`→next deploy): `.app-header__content { overflow: hidden; padding-right: 0 }` on mobile removes the 16px right padding that pushed the account avatar to left=348 (right=392 > 375). After fix: account fits within the 359px inner width (375 - 16px left padding), right edge ≤ 375.
 
-Focus: keyboard Tab reaches visible interactive element within 5 presses on all routes/viewports.
+Focus: keyboard Tab reaches `.app-header__account` exactly within 40 presses on mobile.
 
 API: `GET /api/payload_courses/3` → HTTP 200, id=3, accessBadge=manual.
 
