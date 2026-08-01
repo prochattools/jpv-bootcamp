@@ -264,6 +264,9 @@ export const RELEASE_TEST_MANIFEST: ReleaseTestEntry[] = [
   test('staging.communication-allowlist', 'deployment boundary and staging safety', 'scripts/safety/stagingCommunicationAllowlist.test.ts', 'Proves fail-closed staging communication allowlist rejects non-permitted recipients, multi-member batches, forbidden app IDs, and non-staging origins.', 'Outbound communication or account mutation targets an unintended recipient.', 'readiness'),
 
   test('health.build-info', 'deployment boundary and staging safety', 'src/__tests__/health-build-info.test.ts', 'Health endpoint exposes commit SHA and imageTag', 'Runtime without identifiable SHA/tag makes incident response impossible.', 'M0-06', ['M0-06']),
+
+  test('staging.production-policy', 'deployment boundary and staging safety', 'scripts/production-gates/productionPolicy.test.ts', 'Proves production boundary policy rejects staging app IDs, staging origins, non-HTTPS, suffix domains, userinfo, non-default ports, non-main branch, and short SHAs — fail-closed.', 'Production policy can be bypassed, allowing staging or non-production target.', 'readiness'),
+  test('staging.production-workflow-contract', 'deployment boundary and staging safety', 'scripts/production-gates/productionWorkflowContract.test.ts', 'Statically verifies deploy.yml has correct trigger, concurrency, environment:production, validation ordering, SHA build args, immutable image tag, Dokploy image-update-before-deploy sequence, exact-SHA wait, staging deny-list guards, and no response-body leaks.', 'Hardened production workflow contract drifted — deploy.yml could allow untested builds, skipped gates, or staging contamination.', 'readiness'),
 ]
 
 export const DEFERRED_RELEASE_VALIDATIONS: DeferredReleaseValidation[] = [
