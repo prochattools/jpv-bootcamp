@@ -2,6 +2,8 @@
 
 This document describes the target Payload-only Version 3.7 system. Current implementation status and hardening order are tracked in `docs/PAYLOAD_INTEGRATION_PLAN.md`; static preview routes do not count as operational architecture until their persistence, authorization, failure handling, and tests pass.
 
+> **Infrastructure & networking:** See `docs/INFRASTRUCTURE_NETWORKING.md` for the canonical reference on how the app container reaches the database, Tailscale subnet routing, firewall layers, and incident history.
+
 ## Canonical Access Model
 
 - Free is controlled non-paid access for support, pay-it-forward, staff, test, admin-created, or approved migration outcomes.

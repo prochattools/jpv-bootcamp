@@ -181,3 +181,38 @@ API: `GET /api/payload_courses/3` → HTTP 200, id=3, accessBadge=manual.
 ### Verdict
 
 `ADMIN DESIGN REPAIRED AND VERIFIED`
+
+
+
+## Admin regression hardening — 2026-07-31
+
+### Goal
+
+Close the remaining mobile-header and CI gaps after `65acd47`: keep `.app-header__account` fully inside a 375px viewport, make the authenticated suite fail closed, prove focus reaches that exact control, and run the suite as a bounded post-deploy preview gate when the required staging secret names are configured.
+
+### Verified starting defects
+
+- At 375px, `.app-header__account` measured left=348 and width=44, so right=392; ancestor `overflow:hidden` masked 17px rather than containing the control.
+- The existing test accepted a hamburger instead of the account control, checked only `rect.left`, and treated any focused header element as sufficient.
+- `STAGING_URL` defaulted silently, missing credentials skipped the suite successfully, Playwright artifacts stayed in the repository, and the preview workflow did not run the authenticated suite.
+
+### Safeguards
+
+- Preview staging only; production and unrelated dirty paths remain untouched.
+- No business-record mutation and no media/email/database proof repetition.
+- No credential, token, cookie, authorization header, database URL, or environment value may be printed.
+- Runtime artifacts belong under `/tmp/jpv-admin-regression-hardening/`.
+- GitHub workflow changes are limited to an authenticated post-deploy staging gate and bounded deployment-health polling.
+
+### Plan and validation
+
+1. Harden environment validation, exact account containment, and exact keyboard reachability assertions.
+2. Repair the mobile header without clipping the account control.
+3. Verify local authorized credential-key presence without exposing values and establish GitHub secret-name readiness safely.
+4. Add the bounded post-deploy workflow gate when readiness is proven.
+5. Run the authenticated suite, Payload type-check, build, release suite, whitespace check, and changed-path security scan.
+6. Commit explicit paths, push only the feature branch, follow the exact workflow, confirm deployed SHA, and rerun the authenticated suite.
+
+### Current task
+
+Harden the authenticated spec and reproduce the account-containment failure against deployed `65acd47` before applying the CSS repair.

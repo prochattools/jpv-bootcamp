@@ -256,3 +256,46 @@ jobs:
 
           echo "Deployment triggered successfully for: $NEW_IMAGE"
           echo "Provenance: deployed from $(git rev-parse HEAD)"
+
+
+      - name: Verify staging admin secret readiness
+        if: success()
+        shell: bash
+        env:
+          STAGING_ADMIN_EMAIL: ${{ secrets.STAGING_ADMIN_EMAIL }}
+          STAGING_ADMIN_PASSWORD: ${{ secrets.STAGING_ADMIN_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [ -z "$STAGING_ADMIN_EMAIL" ]; then
+            echo "ADMIN-RESPONSIVE-DENIED: repository or preview environment secret STAGING_ADMIN_EMAIL is missing" >&2
+            exit 1
+          fi
+          if [ -z "$STAGING_ADMIN_PASSWORD" ]; then
+            echo "ADMIN-RESPONSIVE-DENIED: repository or preview environment secret STAGING_ADMIN_PASSWORD is missing" >&2
+            exit 1
+          fi
+          echo "Required staging admin secret names are configured"
+
+      - name: Wait for deployed preview revision
+        if: success()
+        env:
+          STAGING_URL: https://preview.jpvbootcamp.com
+          EXPECTED_DEPLOYMENT_SHA: ${{ github.sha }}
+        run: pnpm exec tsx scripts/staging-gates/waitForPreviewDeployment.mts
+
+      - name: Run authenticated admin responsive gate
+        if: success()
+        env:
+          STAGING_URL: https://preview.jpvbootcamp.com
+          STAGING_ADMIN_EMAIL: ${{ secrets.STAGING_ADMIN_EMAIL }}
+          STAGING_ADMIN_PASSWORD: ${{ secrets.STAGING_ADMIN_PASSWORD }}
+        run: pnpm test:e2e:admin-responsive
+
+      - name: Upload authenticated admin failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-responsive-failure-${{ github.run_id }}
+          path: /tmp/jpv-admin-regression-hardening/
+          if-no-files-found: ignore
+          retention-days: 7

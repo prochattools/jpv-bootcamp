@@ -1,41 +1,99 @@
 /**
  * Authenticated Payload admin responsive layout regression tests.
  *
- * Validates that admin views render without horizontal overflow, critical
- * controls remain visible, keyboard focus reaches interactive elements,
- * and no page/console errors occur — across four viewports.
- *
- * Requires: STAGING_URL, STAGING_ADMIN_EMAIL, STAGING_ADMIN_PASSWORD.
- * Read-only: no data mutation occurs.
+ * Staging-only and read-only. The suite fails closed unless the explicit
+ * staging origin and administrator credentials are provided.
  */
-import { test, expect, Page, BrowserContext } from '@playwright/test'
+import { expect, test, type BrowserContext, type Page, type Request } from '@playwright/test'
 import { assertStagingOrigin } from '../scripts/staging-gates/stagingPolicy'
 
-const STAGING_URL = process.env.STAGING_URL ?? 'https://preview.jpvbootcamp.com'
+function requireEnvironment(name: 'STAGING_URL' | 'STAGING_ADMIN_EMAIL' | 'STAGING_ADMIN_PASSWORD'): string {
+  const value = process.env[name]
+  if (!value?.trim()) {
+    throw new Error(`ADMIN-RESPONSIVE-DENIED: ${name} is required and must be nonempty`)
+  }
+  return name === 'STAGING_ADMIN_PASSWORD' ? value : value.trim()
+}
+
+const STAGING_URL = requireEnvironment('STAGING_URL')
+const ADMIN_EMAIL = requireEnvironment('STAGING_ADMIN_EMAIL')
+const ADMIN_PASSWORD = requireEnvironment('STAGING_ADMIN_PASSWORD')
 
 assertStagingOrigin(STAGING_URL)
 
+const VIEWPORTS = [
+  { name: 'desktop-1440x900', width: 1440, height: 900 },
+  { name: 'laptop-1024x768', width: 1024, height: 768 },
+  { name: 'tablet-768x1024', width: 768, height: 1024 },
+  { name: 'mobile-375x812', width: 375, height: 812 },
+] as const
+
+const ROUTES = [
+  { path: '/admin', label: 'dashboard', heading: /operations|dashboard/i },
+  {
+    path: '/admin/collections/payload_membership_audit_history',
+    label: 'membership-audit',
+    heading: /membership audit/i,
+  },
+  {
+    path: '/admin/collections/payload_courses/3',
+    label: 'course-3',
+    heading: /client accelerator|course/i,
+  },
+] as const
+
+async function tabToVisibleFocus(page: Page, maximumTabs = 20): Promise<boolean> {
+  await page.evaluate(() => {
+    const active = document.activeElement as HTMLElement | null
+    active?.blur()
+  })
+
+  for (let index = 0; index < maximumTabs; index += 1) {
+    await page.keyboard.press('Tab')
+    const state = await page.evaluate(() => {
+      const element = document.activeElement as HTMLElement | null
+      if (!element || element === document.body) return { visible: false, indicated: false }
+      const rect = element.getBoundingClientRect()
+      const style = getComputedStyle(element)
+      const visible =
+        rect.width > 0 &&
+        rect.height > 0 &&
+        rect.left >= 0 &&
+        rect.right <= window.innerWidth &&
+        rect.top < window.innerHeight &&
+        style.display !== 'none' &&
+        style.visibility !== 'hidden' &&
+        Number(style.opacity) > 0
+      const outlineVisible = style.outlineStyle !== 'none' && Number.parseFloat(style.outlineWidth) > 0
+      const shadowVisible = style.boxShadow !== 'none'
+      return { visible, indicated: outlineVisible || shadowVisible }
+    })
+    if (state.visible && state.indicated) return true
+  }
+
+  return false
+}
+
+async function tabToExactAccount(page: Page, maximumTabs = 40): Promise<boolean> {
+  await page.evaluate(() => {
+    const active = document.activeElement as HTMLElement | null
+    active?.blur()
+  })
+
+  for (let index = 0; index < maximumTabs; index += 1) {
+    await page.keyboard.press('Tab')
+    const reached = await page.evaluate(() => {
+      const account = document.querySelector('.app-header__account')
+      return account !== null && document.activeElement === account
+    })
+    if (reached) return true
+  }
+
+  return false
+}
+
 test.describe('Admin responsive layout', () => {
-  test.skip(
-    !process.env.STAGING_ADMIN_EMAIL || !process.env.STAGING_ADMIN_PASSWORD,
-    'Requires STAGING_ADMIN_EMAIL and STAGING_ADMIN_PASSWORD'
-  )
-
-  const ADMIN_EMAIL = process.env.STAGING_ADMIN_EMAIL!
-  const ADMIN_PASSWORD = process.env.STAGING_ADMIN_PASSWORD!
-
-  const VIEWPORTS = [
-    { name: 'desktop-1440x900', width: 1440, height: 900 },
-    { name: 'laptop-1024x768', width: 1024, height: 768 },
-    { name: 'tablet-768x1024', width: 768, height: 1024 },
-    { name: 'mobile-375x812', width: 375, height: 812 },
-  ] as const
-
-  const ROUTES = [
-    { path: '/admin', label: 'dashboard', heading: /operations|dashboard/i },
-    { path: '/admin/collections/payload_membership_audit_history', label: 'membership-audit', heading: /membership audit/i },
-    { path: '/admin/collections/payload_courses/3', label: 'course-3', heading: /client accelerator|course/i },
-  ] as const
+  test.describe.configure({ mode: 'serial' })
 
   let context: BrowserContext
   let page: Page
@@ -59,154 +117,142 @@ test.describe('Admin responsive layout', () => {
   })
 
   for (const route of ROUTES) {
-    for (const vp of VIEWPORTS) {
-      test(`${route.label} @ ${vp.name}: no overflow, visible controls, focus, no errors`, async () => {
-        await page.setViewportSize({ width: vp.width, height: vp.height })
+    for (const viewport of VIEWPORTS) {
+      test(`${route.label} @ ${viewport.name}: contained, accessible, and error-free`, async () => {
+        await page.setViewportSize({ width: viewport.width, height: viewport.height })
 
         const pageErrors: string[] = []
         const consoleErrors: string[] = []
+        const mutationRequests: string[] = []
 
-        const onPageError = (err: Error) => pageErrors.push(err.message)
-        const onConsole = (msg: import('@playwright/test').ConsoleMessage) => {
-          if (msg.type() === 'error') consoleErrors.push(msg.text())
+        const onPageError = (error: Error) => pageErrors.push(error.message)
+        const onConsole = (message: import('@playwright/test').ConsoleMessage) => {
+          if (message.type() === 'error') consoleErrors.push(message.text())
+        }
+        const onRequest = (request: Request) => {
+          const url = new URL(request.url())
+          if (
+            url.origin === new URL(STAGING_URL).origin &&
+            url.pathname.startsWith('/api/') &&
+            ['POST', 'PUT', 'PATCH', 'DELETE'].includes(request.method())
+          ) {
+            mutationRequests.push(`${request.method()} ${url.pathname}`)
+          }
         }
 
         page.on('pageerror', onPageError)
         page.on('console', onConsole)
+        page.on('request', onRequest)
 
         try {
-          await page.goto(`${STAGING_URL}${route.path}`, { waitUntil: 'networkidle', timeout: 30000 })
-          await page.waitForTimeout(1500)
+          await page.goto(`${STAGING_URL}${route.path}`, {
+            waitUntil: 'networkidle',
+            timeout: 30000,
+          })
+          await page.waitForTimeout(1000)
 
-          // --- Overflow assertion ---
-          const dims = await page.evaluate(() => ({
+          const dimensions = await page.evaluate(() => ({
             scrollWidth: document.documentElement.scrollWidth,
             clientWidth: document.documentElement.clientWidth,
           }))
+          expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth)
 
-          expect(
-            dims.scrollWidth,
-            `scrollWidth (${dims.scrollWidth}) must be <= clientWidth (${dims.clientWidth}) at ${vp.name}`
-          ).toBeLessThanOrEqual(dims.clientWidth)
-
-          // --- Critical heading/controls visible ---
-          const heading = page.locator('h1, h2, [class*="header"]').first()
+          const heading = page.locator('h1, h2').filter({ hasText: route.heading }).first()
           await expect(heading).toBeVisible({ timeout: 5000 })
 
-          // --- Keyboard focus reaches visible element within 5 tabs ---
-          let focusedVisible = false
-          for (let i = 0; i < 5; i++) {
-            await page.keyboard.press('Tab')
-            focusedVisible = await page.evaluate(() => {
-              const el = document.activeElement as HTMLElement | null
-              if (!el || el === document.body) return false
-              const rect = el.getBoundingClientRect()
-              return rect.width > 0 && rect.height > 0
-            })
-            if (focusedVisible) break
-          }
-          expect(focusedVisible, 'Tab should reach a visible element within 5 presses').toBe(true)
-
-          // --- No page errors ---
+          expect(await tabToVisibleFocus(page), 'Tab must reach a visible focus indicator').toBe(true)
           expect(pageErrors, 'No uncaught page errors').toHaveLength(0)
 
-          // --- Console errors: allow known benign patterns ---
           const unexpectedConsole = consoleErrors.filter(
-            msg => !msg.includes('Failed to load resource') && !msg.includes('favicon')
+            (message) =>
+              !message.includes('Failed to load resource') &&
+              !message.toLowerCase().includes('favicon'),
           )
           expect(unexpectedConsole, 'No unexpected console errors').toHaveLength(0)
+          expect(mutationRequests, 'Responsive review must not mutate API records').toHaveLength(0)
+
+          console.log(
+            JSON.stringify({
+              type: 'admin-responsive-measurement',
+              route: route.path,
+              viewport: viewport.name,
+              scrollWidth: dimensions.scrollWidth,
+              clientWidth: dimensions.clientWidth,
+            }),
+          )
         } finally {
           page.removeListener('pageerror', onPageError)
           page.removeListener('console', onConsole)
+          page.removeListener('request', onRequest)
         }
       })
     }
   }
 
-  test('course-3 @ mobile-375x812: doc-controls meta within viewport', async () => {
+  test('course-3 @ mobile-375x812: metadata and exact account control are contained', async () => {
     await page.setViewportSize({ width: 375, height: 812 })
     await page.goto(`${STAGING_URL}/admin/collections/payload_courses/3`, {
       waitUntil: 'networkidle',
       timeout: 30000,
     })
-    await page.waitForTimeout(1500)
+    await page.waitForTimeout(1000)
 
-    const metaCheck = await page.evaluate(() => {
-      const meta = document.querySelector('.doc-controls__meta') as HTMLElement | null
-      if (!meta) return { exists: false, withinViewport: true, right: 0 }
-      const rect = meta.getBoundingClientRect()
+    const metadata = page.locator('.doc-controls__meta')
+    await expect(metadata).toBeVisible()
+    const metadataBox = await metadata.boundingBox()
+    expect(metadataBox, 'Document metadata must have geometry').not.toBeNull()
+    expect(metadataBox!.x).toBeGreaterThanOrEqual(0)
+    expect(metadataBox!.x + metadataBox!.width).toBeLessThanOrEqual(375)
+
+    const account = page.locator('.app-header__account')
+    await expect(account).toHaveCount(1)
+    await expect(account).toBeVisible()
+    const accountBox = await account.boundingBox()
+    expect(accountBox, 'Account control must have geometry').not.toBeNull()
+    expect(accountBox!.x).toBeGreaterThanOrEqual(0)
+    expect(accountBox!.x + accountBox!.width).toBeLessThanOrEqual(375)
+    expect(accountBox!.width).toBeGreaterThanOrEqual(44)
+    expect(accountBox!.height).toBeGreaterThanOrEqual(44)
+
+    const accountStyle = await account.evaluate((element) => {
+      const style = getComputedStyle(element)
       return {
-        exists: true,
-        withinViewport: rect.right <= window.innerWidth,
-        right: Math.round(rect.right),
+        display: style.display,
+        visibility: style.visibility,
+        opacity: Number(style.opacity),
       }
     })
+    expect(accountStyle.display).not.toBe('none')
+    expect(accountStyle.visibility).not.toBe('hidden')
+    expect(accountStyle.opacity).toBeGreaterThan(0)
+    expect(await tabToExactAccount(page), 'Tab must reach .app-header__account exactly').toBe(true)
 
-    if (metaCheck.exists) {
-      expect(
-        metaCheck.withinViewport,
-        `.doc-controls__meta right edge (${metaCheck.right}) must be <= 375`
-      ).toBe(true)
-    }
+    console.log(
+      JSON.stringify({
+        type: 'admin-account-measurement',
+        left: Math.round(accountBox!.x),
+        right: Math.round(accountBox!.x + accountBox!.width),
+        width: Math.round(accountBox!.width),
+        height: Math.round(accountBox!.height),
+      }),
+    )
   })
 
-  test('course-3 @ mobile-375x812: account or mobile nav control visible and keyboard reachable', async () => {
-    await page.setViewportSize({ width: 375, height: 812 })
-    await page.goto(`${STAGING_URL}/admin/collections/payload_courses/3`, {
-      waitUntil: 'networkidle',
-      timeout: 30000,
-    })
-    await page.waitForTimeout(1500)
-
-    // On mobile, Payload may show the account avatar or the hamburger nav toggle.
-    // Either satisfies the requirement for user access to navigation/settings.
-    const controlCheck = await page.evaluate(() => {
-      const candidates = [
-        document.querySelector('.app-header__account'),
-        document.querySelector('.app-header__mobile-nav-toggler'),
-        document.querySelector('.nav-toggler:not([style*="display: none"])'),
-      ].filter(Boolean) as HTMLElement[]
-
-      for (const el of candidates) {
-        const rect = el.getBoundingClientRect()
-        if (rect.width > 0 && rect.height > 0 && rect.left >= 0 && rect.left < window.innerWidth) {
-          return {
-            found: true,
-            visible: true,
-            reachable: true,
-            width: Math.round(rect.width),
-            height: Math.round(rect.height),
-            left: Math.round(rect.left),
-            selector: el.className,
-          }
-        }
-      }
-      return { found: candidates.length > 0, visible: false, reachable: false, width: 0, height: 0, left: 0, selector: '' }
-    })
-
-    expect(controlCheck.found, 'Account or mobile nav control must exist').toBe(true)
-    expect(controlCheck.visible, 'Control must have nonzero dimensions and left edge within viewport').toBe(true)
-
-    // Keyboard reachability: Tab until we reach an interactive header control
-    let reached = false
-    for (let i = 0; i < 20; i++) {
-      await page.keyboard.press('Tab')
-      const isHeaderControl = await page.evaluate(() => {
-        const el = document.activeElement
-        if (!el) return false
-        return el.closest('.app-header') !== null
-      })
-      if (isHeaderControl) { reached = true; break }
-    }
-    expect(reached, 'A header control must be keyboard reachable within 20 tabs').toBe(true)
-  })
-
-  test('course-3: authenticated API returns 200, id=3, accessBadge=manual', async () => {
+  test('course-3: authenticated API returns safe expected fields', async () => {
     const response = await page.request.get(`${STAGING_URL}/api/payload_courses/3`)
     expect(response.status()).toBe(200)
 
-    const body = await response.json()
+    const body = (await response.json()) as { id?: unknown; accessBadge?: unknown }
     expect(body.id).toBe(3)
     expect(body.accessBadge).toBe('manual')
+
+    console.log(
+      JSON.stringify({
+        type: 'admin-course-api-result',
+        status: response.status(),
+        id: body.id,
+        accessBadge: body.accessBadge,
+      }),
+    )
   })
 })
