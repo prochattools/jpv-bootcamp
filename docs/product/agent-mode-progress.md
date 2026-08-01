@@ -291,3 +291,46 @@ Close the remaining mobile-header and CI gaps after `65acd47`: keep `.app-header
 ### Local forbidden residue
 
 Fresh `git status --short` showed only local residue outside the committed release boundary: `.env.production.BAK`, `.ai/**`, `.claude/worktrees/**`, evidence screenshots (`*.png`), `playwright-report-staging/**`, and `newrelic_agent.log`. The previously reported temporary staging diagnostic scripts were not present. No environment-file or credential contents were inspected, printed, staged, or committed.
+
+## Authoritative staging closure — 2026-08-01
+
+### Deployed staging state
+
+- **Deployed SHA:** `3b853d27b974f28f67f4e7e7f8d6f45786c88624`
+- **Preview CI workflow:** `30716566297` concluded `success` for exact SHA
+- **Health endpoint:** HTTP 200, `imageTag` matches HEAD, `startupMode: application-only`, `deploymentRuntime: docker`
+- **Migration inventory:** 28 registered, 28 reported in health — synchronized
+- **Email readiness:** `resendApiKeyPresent: true`, `senderIdentityPresent: true`, `readyForApply: true`
+- **Media persistence:** verified via named volume, disposable fixture survival across redeployment
+- **Admin design:** verified across 4 viewports, overflow repaired, regression CI gate active
+
+### Staging validation summary
+
+| Gate | Result |
+|------|--------|
+| TypeScript | PASS |
+| Production build | PASS |
+| Release suite | 162/162 PASS |
+| Browser E2E | 148/148 PASS (40 skipped) |
+| Admin responsive (CI) | PASS (local requires staging credentials) |
+| Static preflight | PASS |
+| Decision readiness | DECISION-READY, EXTERNAL APPROVALS PENDING |
+| Migration preflight | 12/12 PASS |
+| `git diff --check` | PASS |
+| Landing page | HTTP 200 |
+| Login route | HTTP 200 |
+| Privacy route | HTTP 200 |
+| Terms route | HTTP 200 |
+| Portal programme | HTTP 200 |
+| Portal community | HTTP 200 |
+| Upgrade page | HTTP 200 |
+| Support page | HTTP 200 |
+| Admin route | HTTP 200 |
+| Not-found route | HTTP 404 |
+| Staging health | HTTP 200, exact SHA confirmed |
+
+### Staging closure verdict
+
+`STAGING IMPLEMENTATION AND ACCEPTANCE COMPLETE`
+
+All core staging scope items are verified. Remaining work is external-approval-gated (client content, migration authorization, provider live verification, formal go-live approval) or deferred by design (M2-01, production cutover). No implementation defect blocks staging closure.

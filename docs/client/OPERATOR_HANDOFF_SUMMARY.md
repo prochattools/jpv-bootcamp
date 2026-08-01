@@ -58,7 +58,7 @@
 - Operator surface phases 1–6: responsive hardening, operator tools JPV token alignment, Payload dashboard redesign, sidebar information architecture, dashboard hardening, operator experience hardening, and Payload admin usability — all purely presentational, no auth/billing/provider changes
 - Canonical `/portal` member portal ownership
 - Deterministic non-browser release gate: `pnpm test:release` (`162/162`) — production workflow boundary remediation (2026-08-01)
-- Launch browser E2E: `pnpm test:e2e` (`58/58`, desktop and mobile Chromium) — at `eb03a08` design release
+- Launch browser E2E: `pnpm test:e2e` (`148/148`, desktop and mobile Chromium) — at `3b853d2` staging closure
 - Combined release/browser gate: `pnpm test:release:full`
 - Decision-readiness summary: `DECISION-READY, EXTERNAL APPROVALS PENDING`
 - Static preflight, root TypeScript, production build, both Prisma validations, and production high-severity audit gate

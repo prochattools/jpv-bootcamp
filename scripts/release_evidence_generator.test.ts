@@ -9,7 +9,7 @@ function main(): void {
 
   assert.equal(first, second)
   assert.match(first, /# Release Evidence Summary/)
-  assert.match(first, /Repository readiness outcome: `NOT READY FOR CONTROLLED STAGING RELEASE PROCESS`/)
+  assert.match(first, /Repository readiness outcome: `STAGING IMPLEMENTATION AND ACCEPTANCE COMPLETE`/)
   assert.match(first, /Go\/No-Go checklist: present, default state remains `NO-GO`/)
   assert.match(first, /Support migration: unapplied/)
   assert.match(first, /Programme content approval: pending/)

@@ -1,12 +1,12 @@
 # JPV Bootcamp Preview Release Readiness
 
-## Current design-hardening checkpoint — 2026-07-30
+## Current staging-closure checkpoint — 2026-08-01
 
-- **IMPLEMENTED / LOCALLY VERIFIED:** Payload admin neutral theme, readable semantic controls, premium navigation, responsive dashboard, focused design contract, Payload TypeScript, changed-path security scan, production build, and `pnpm test:release` (`156/156`).
-- **STAGING VERIFIED:** not yet established for the entire authenticated real Payload DOM across all active views and required viewport widths.
-- **BLOCKED:** final Payload visual sign-off remains blocked on real-DOM staging evidence.
-- **EXTERNAL:** client approval, migration authorization, and production release approval.
-- **Release verdict:** repository implementation is green, but `PAYLOAD DESIGN NOT YET VERIFIED`; this checkpoint does not authorize production deployment or migration execution.
+- **IMPLEMENTED / LOCALLY VERIFIED:** Payload admin neutral theme, readable semantic controls, premium navigation, responsive dashboard, focused design contract, Payload TypeScript, changed-path security scan, production build, and `pnpm test:release` (`162/162`).
+- **STAGING VERIFIED:** authenticated real Payload DOM verified across dashboard, membership audit history, and course editing at 375/768/1024/1440px viewports; overflow repaired and regression suite passes in CI with exact-SHA deployment health confirmed.
+- **MEDIA PERSISTENCE:** verified via disposable fixture upload, redeployment survival, and Payload API deletion; Dokploy named volume `jpv-bootcamp-preview-media` active.
+- **EXTERNAL:** client content approval, pending migration approval for remaining items, and production release approval.
+- **Release verdict:** `PAYLOAD DESIGN VERIFIED — ADMIN DESIGN REPAIRED AND VERIFIED`; staging implementation and automated validation are complete; this checkpoint does not authorize production deployment or migration execution.
 
 This runbook separates repository changes, image publication, Payload migrations, Prisma startup behavior, provider email delivery, preview deployment, and smoke verification into independent approval categories.
 
@@ -35,9 +35,9 @@ Static preflight automation is available via `pnpm staging:static-preflight`; it
 
 ## Current repository-owned readiness snapshot
 
-Current validated readiness baseline: `9e6af02 docs: record transactional email logo verification and live staging proof` (2026-07-29)
+Current validated readiness baseline: `3b853d2 fix: verify production main boundary without leaking deployment identifiers` (2026-08-01)
 
-**Outcome:** `NOT READY FOR CONTROLLED STAGING RELEASE PROCESS` (formal NO-GO pending external approvals — implementation complete, all 156/156 release gates pass at HEAD `9e6af02`)
+**Outcome:** `STAGING IMPLEMENTATION AND ACCEPTANCE COMPLETE` (formal NO-GO pending external approvals — implementation complete, all 162/162 release gates pass, 148/148 browser E2E pass, admin design verified, staging deployed at exact HEAD)
 
 **Repository-owned staging operations status:** `DECISION-READY FOR CONTROLLED STAGING APPROVAL`
 
@@ -57,7 +57,7 @@ Current validated readiness baseline: `9e6af02 docs: record transactional email 
 ### Deterministic local validation baseline
 
 - `pnpm test:release` passed `162/162` (production workflow boundary remediation, 2026-08-01)
-- `pnpm test:e2e` passed `58/58` across desktop and mobile Chromium projects
+- `pnpm test:e2e` passed `148/148` across desktop and mobile Chromium projects (40 skipped)
 - `pnpm test:release:full` passed
 - `pnpm staging:static-preflight` passed
 - `pnpm staging:decision-readiness` passed with `DECISION-READY, EXTERNAL APPROVALS PENDING`

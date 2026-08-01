@@ -91,10 +91,10 @@ function main(): void {
     assert.match(doc, /go\/no-go/i)
   }
 
-  assert.match(previewReadiness, /NOT READY FOR CONTROLLED STAGING RELEASE PROCESS/)
+  assert.match(previewReadiness, /STAGING IMPLEMENTATION AND ACCEPTANCE COMPLETE/)
   assert.match(previewReadiness, /M2-01.*post-core/i)
   assert.match(previewReadiness, new RegExp(`pnpm test:release.*${releaseCount}\\/${releaseCount}`, 'i'))
-  assert.match(previewReadiness, /pnpm test:e2e.*58\/58/i)
+  assert.match(previewReadiness, /pnpm test:e2e.*148\/148/i)
   assert.match(previewReadiness, /pnpm staging:decision-readiness/i)
   assert.match(previewReadiness, /pnpm test:release:full/)
   assert.match(previewReadiness, /pnpm staging:static-preflight/)
@@ -122,7 +122,7 @@ function main(): void {
 
   assert.match(operatorHandoff, /Current validated readiness baseline: `d55229f test: enforce programme content readiness`/)
   assert.match(operatorHandoff, new RegExp(String.raw`Deterministic non-browser release gate: \`pnpm test:release\` \(\`${releaseCount}\/${releaseCount}\`\)`))
-  assert.match(operatorHandoff, /Launch browser E2E: `pnpm test:e2e` \(`58\/58`, desktop and mobile Chromium\)/)
+  assert.match(operatorHandoff, /Launch browser E2E: `pnpm test:e2e` \(`148\/148`, desktop and mobile Chromium\)/)
   assert.match(operatorHandoff, /pnpm staging:decision-readiness/)
   assert.match(operatorHandoff, /DECISION-READY, EXTERNAL APPROVALS PENDING/)
   assert.match(operatorHandoff, /M2-01.*deferred post-core/i)

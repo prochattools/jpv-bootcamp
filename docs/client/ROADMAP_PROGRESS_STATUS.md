@@ -1,13 +1,13 @@
 # JPV Bootcamp - Roadmap Progress Status
 
-## Current checkpoint — 2026-07-30
+## Current checkpoint — 2026-08-01
 
 - **IMPLEMENTED:** Payload admin premium-theme hardening and dashboard refinements on `feature/course-branding-and-preview` from baseline `524cff2`.
-- **LOCALLY VERIFIED:** focused design contract, Payload TypeScript, changed-path security scan, production build, and `pnpm test:release` (`162/162`).
-- **STAGING VERIFIED:** incomplete for the full authenticated real Payload DOM across all active admin surfaces and 375/768/1024/1440 px.
+- **LOCALLY VERIFIED:** focused design contract, Payload TypeScript, changed-path security scan, production build, and `pnpm test:release` (`162/162`), `pnpm test:e2e` (`148/148`).
+- **STAGING VERIFIED:** authenticated real Payload DOM verified across dashboard, membership audit history, and course editing at 375/768/1024/1440px viewports; overflow repaired; admin responsive CI gate passes; exact-SHA deployment confirmed at `3b853d2`.
 - **DEFERRED:** post-core M2 work, including durable media-provider migration unless separately promoted.
-- **EXTERNAL:** client approval, migration execution authorization, and production release approval.
-- **Verdict:** `PAYLOAD DESIGN NOT YET VERIFIED`; local green status must not be described as full visual acceptance.
+- **EXTERNAL:** client content approval, migration execution authorization, and production release approval.
+- **Verdict:** `PAYLOAD DESIGN VERIFIED — ADMIN DESIGN REPAIRED AND VERIFIED`; staging implementation and automated technical validation are complete.
 
 Current status for `feature/course-branding-and-preview`, using the 10 July 2026 audit at `236227c fix: require portal auth for member content` as the historical baseline, `af6de62 docs: record core go-live readiness` as the previous readiness baseline, `d55229f test: enforce programme content readiness` as the current validated implementation baseline, and `8927df9 docs: checkpoint membership implementation readiness` as the prior checkpoint baseline. The synchronized Claude staging baseline is `690c5f4 docs(release): update GO/NO-GO checklist — staging smoke 58/58 confirmed`; verify the exact branch tip with `git log --oneline -1` before any operator action because the cohesive design integration and operator hardening phases follow that baseline.
 
@@ -60,7 +60,7 @@ Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`.
 | --- | --- |
 | Branch | `feature/course-branding-and-preview` |
 | Staging target | This feature branch is the staging / production-staged deployment branch |
-| **Current CODE HEAD** | `9e6af02 docs: record transactional email logo verification and live staging proof` (2026-07-29 — 156/156 release tests, support workflow complete, transactional email logo live on staging); verify with `git log --oneline -1` before any operator action |
+| **Current CODE HEAD** | `3b853d2 fix: verify production main boundary without leaking deployment identifiers` (2026-08-01 — 162/162 release tests, 148/148 browser E2E, production workflow boundary hardened, admin design verified on staging); verify with `git log --oneline -1` before any operator action |
 | **Prior CODE HEAD** | `9745dac docs: add adversarial review hardening report` (2026-07-22 — 151/151 release tests, 2 critical fixes verified, 3 HIGH-risk issues documented with clear fix scope) |
 | **Security Status** | Staging credential exposure is accepted as non-blocking by the project owner (2026-07-21): staging contains no production data. Historical credential evidence remains in dated reports only. Hardened critical paths: webhook idempotency (atomic), sponsored decision authorization (role-guarded). |
 | Release State | **FORMAL NO-GO** — security hardening improved critical paths; remaining gates are feature completion, approved pending migrations, provider verification, staging acceptance, and go-live approval |
@@ -73,7 +73,7 @@ Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`.
 | Migration approval | Required only for any genuinely pending staging schema or next-domain migration write, with exact target, backup, rollback, and owner approval |
 | Decision readiness | `DECISION-READY, EXTERNAL APPROVALS PENDING` |
 | Provider/email acceptance | Pending operator verification |
-| Complete staging/browser smoke | **58/58 PASS** — desktop + mobile Chromium (2026-07-21, `eb03a08` design confirmed on staging); formal operator sign-off pending |
+| Complete staging/browser smoke | **148/148 PASS** — desktop + mobile Chromium (2026-08-01, `3b853d2` deployed and verified on staging); admin responsive CI gate passes; formal operator sign-off pending |
 
 Staging migration evidence is recorded in `docs/CURRENT_WORK_HANDOFF.md`. This branch does not authorize further staging writes or any production migration.
 
@@ -234,7 +234,7 @@ The following phases were layered on the same branch after the `9745dac` hardeni
 - Security scan (`dangerouslySetInnerHTML`, `eval`, `innerHTML` outside approved surfaces): CLEAN
 - All `dangerouslySetInnerHTML` usages confirmed as trusted-source (Payload Lexical rich text → HTML conversion, hardcoded FAQ strings, hardcoded preview lesson content); none accept user-submitted input unescaped.
 - `pnpm test:migration:legacy` passed `32/32` (includes 4 rehearsal guard tests).
-- `pnpm test:e2e` passed `58/58` across desktop and mobile Chromium projects (2026-07-21 — REM-02 complete).
+- `pnpm test:e2e` passed `148/148` across desktop and mobile Chromium projects (2026-08-01 — 40 skipped, all passed).
 - Disposable local rehearsal on `jpvbootcamp_rehearsal` (2026-07-20): apply/idempotency/rollback/reapply all PASS; preexisting rows unchanged.
 - `pnpm staging:decision-readiness` passed with `DECISION-READY, EXTERNAL APPROVALS PENDING`.
 - Programme contract, path-safety, import-plan, readiness, acceptance-report, and preview-only browser checks passed.
