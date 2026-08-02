@@ -1,12 +1,13 @@
 # JPV Bootcamp Preview Release Readiness
 
-## Current staging-closure checkpoint — 2026-08-01
+## Current staging-closure checkpoint — 2026-08-02
 
-- **IMPLEMENTED / LOCALLY VERIFIED:** Payload admin neutral theme, readable semantic controls, premium navigation, responsive dashboard, focused design contract, Payload TypeScript, changed-path security scan, production build, and `pnpm test:release` (`162/162`).
-- **STAGING VERIFIED:** authenticated real Payload DOM verified across dashboard, membership audit history, and course editing at 375/768/1024/1440px viewports; overflow repaired and regression suite passes in CI with exact-SHA deployment health confirmed.
-- **MEDIA PERSISTENCE:** verified via disposable fixture upload, redeployment survival, and Payload API deletion; Dokploy named volume `jpv-bootcamp-preview-media` active.
-- **EXTERNAL:** client content approval, pending migration approval for remaining items, and production release approval.
-- **Release verdict:** `PAYLOAD DESIGN VERIFIED — ADMIN DESIGN REPAIRED AND VERIFIED`; staging implementation and automated validation are complete; this checkpoint does not authorize production deployment or migration execution.
+- **IMPLEMENTED / LOCALLY VERIFIED:** core staging scope, Payload admin design, responsive behavior, focused design contract, Payload TypeScript, changed-path security scan, application build, and `pnpm test:release` (`163/163`).
+- **STAGING VERIFIED:** authenticated Payload DOM verified across dashboard, membership audit history, and course editing at 375/768/1024/1440px; overflow repaired; authenticated regression gate passed; preview workflow `30719336990` succeeded and staging health reported exact SHA `34c6e7550bd2103a05c4414a2f582787dc15bf08`.
+- **MEDIA PERSISTENCE:** verified via disposable fixture upload, redeployment survival, and Payload API deletion; named staging volume `jpv-bootcamp-preview-media` active.
+- **TECHNICAL STATUS:** `STAGING TECHNICAL IMPLEMENTATION COMPLETE — ACCEPTANCE PENDING EXTERNAL ACTION`.
+- **HARDENING STATUS:** `STAGING HARDENING REMEDIATION REQUIRED` for one-time account-action reservation/finalization; do not treat formal acceptance as complete while this repository-owned issue and external approvals remain open.
+- **EXTERNAL ACTION:** client content approval, approved provider evidence, approved migration execution, and formal staging sign-off remain separate.
 
 This runbook separates repository changes, image publication, Payload migrations, Prisma startup behavior, provider email delivery, preview deployment, and smoke verification into independent approval categories.
 
@@ -35,11 +36,13 @@ Static preflight automation is available via `pnpm staging:static-preflight`; it
 
 ## Current repository-owned readiness snapshot
 
-Current validated readiness baseline: `3b853d2 fix: verify production main boundary without leaking deployment identifiers` (2026-08-01)
+Current validated readiness baseline: `34c6e7550bd2103a05c4414a2f582787dc15bf08 docs: reconcile authoritative staging closure status` (2026-08-01), deployed by preview workflow `30719336990` with exact-SHA health confirmation.
 
-**Outcome:** `STAGING IMPLEMENTATION AND ACCEPTANCE COMPLETE` (formal NO-GO pending external approvals — implementation complete, all 162/162 release gates pass, 148/148 browser E2E pass, admin design verified, staging deployed at exact HEAD)
+**Outcome:** `STAGING HARDENING REMEDIATION REQUIRED` — core staging implementation and automated validation are complete, `163/163` release gates and `148/148` browser tests pass, but formal acceptance remains externally gated and one-time account-action completion still requires durable reservation/finalization.
 
-**Repository-owned staging operations status:** `DECISION-READY FOR CONTROLLED STAGING APPROVAL`
+**Technical staging status:** `STAGING TECHNICAL IMPLEMENTATION COMPLETE — ACCEPTANCE PENDING EXTERNAL ACTION`
+
+**Repository-owned staging operations status:** `DECISION-READY FOR CONTROLLED STAGING APPROVAL AFTER HARDENING`
 
 **Decision-readiness command result:** `DECISION-READY, EXTERNAL APPROVALS PENDING`
 
@@ -56,7 +59,7 @@ Current validated readiness baseline: `3b853d2 fix: verify production main bound
 
 ### Deterministic local validation baseline
 
-- `pnpm test:release` passed `162/162` (production workflow boundary remediation, 2026-08-01)
+- `pnpm test:release` passed `163/163`, including the account-action hardening-status guard (2026-08-02)
 - `pnpm test:e2e` passed `148/148` across desktop and mobile Chromium projects (40 skipped)
 - `pnpm test:release:full` passed
 - `pnpm staging:static-preflight` passed

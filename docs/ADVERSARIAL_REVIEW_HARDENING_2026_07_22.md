@@ -15,8 +15,20 @@ Aggressive adversarial code review identified **5 production safety issues**:
 - **CRITICAL (2)**: Authorization bypass, webhook idempotency race
 - **HIGH (3)**: Concurrent seat claim race, email outside transaction scope, token consumed before grant verified
 
-**Fixed**: 2 critical issues (authorization, webhook idempotency).  
-**Remaining**: 3 high-risk issues blocked on architectural changes (commit follows).
+**Fixed in the 22 July snapshot**: 2 critical issues (authorization, webhook idempotency).
+**Remaining in the 22 July snapshot**: 3 high-risk issues blocked on architectural changes.
+
+## Current reassessment — 2026-08-02
+
+This section supersedes the current-status labels in the historical findings below while preserving their original evidence.
+
+| Finding | Current status | Evidence and remaining requirement |
+|---|---|---|
+| Sponsored-seat concurrent claim | **RESOLVED** | `src/app/(frontend)/sponsored/claim/page.tsx` now locks the seat row with `SELECT ... FOR UPDATE` inside the same transaction that updates the seat and creates the grant. A second claimant cannot pass the locked-row availability check. |
+| Email outside transaction scope | **MITIGATED FOR DURABLE RECOVERY** | Email intent is persisted in `payload_email_events` before inline delivery and can be retried independently. Provider latency can still delay the request, but the original silent permanent-loss path is removed. Queue/idempotency tests remain required. |
+| One-time token completion sequencing | **OPEN — DURABLE RESERVATION/FINALIZATION REQUIRED** | Invitation and password-reset flows now validate before their downstream mutation and consume afterward. Email-change confirmation still consumes before member validation/update. None of the three flows has a durable cross-instance reservation state, so concurrent invitation/reset requests can both enter downstream mutation before one loses final consumption. A schema-backed reservation/finalization state with recovery semantics is required; moving consumption alone is not a safe fix. |
+
+Current deterministic evidence includes the account-action hardening-status guard in the release manifest. The guard must be replaced with behavioral reservation/finalization tests when the durable design is approved and implemented.
 
 ---
 
@@ -84,7 +96,7 @@ Aggressive adversarial code review identified **5 production safety issues**:
 
 ---
 
-## High-Risk Issues — NOT FIXED (Architectural Changes Required)
+## Historical High-Risk Findings — 22 July Snapshot
 
 ### 3. ⚠️ Sponsored Seat Claim Race Condition (DEFERRED)
 

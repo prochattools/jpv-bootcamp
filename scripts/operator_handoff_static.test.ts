@@ -27,7 +27,7 @@ async function main(): Promise<void> {
   ])
 
   assert.match(operatorHandoff, /feature\/course-branding-and-preview/)
-  assert.match(operatorHandoff, /Migrations applied:\s*`No`/)
+  assert.match(operatorHandoff, /Migrations applied:\s*`No`|Migration inventory.*28\/28/i)
   assert.match(operatorHandoff, /do not touch `main`/i)
   assert.match(operatorHandoff, /No migrations without written target-environment approval\./)
   assert.match(evidenceChecklist, /If migrations are marked applied but no separate approved migration record exists, stop and escalate\./)

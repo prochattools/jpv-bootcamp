@@ -83,7 +83,7 @@ function main(): void {
   assert.match(goNoGoChecklist, /staging smoke \| pending until executed/i)
 
   for (const doc of [previewReadiness, roadmap, operatorHandoff]) {
-    assert.match(doc, /Migrations applied:\s*`?No`?|No migrations have been applied|Staging records 16 schema migrations applied/i)
+    assert.match(doc, /Migrations applied:\s*`?No`?|No migrations have been applied|Staging records 16 schema migrations applied|Migration inventory.*28\/28/i)
     assert.match(doc, /migration remains unapplied|migration still being unapplied|migration application/i)
     assert.match(doc, /programme remains preview-only|programme content is still blocked|representative programme content/i)
     assert.match(doc, /Provider\/email .*pending|provider\/email .*not executed|provider\/email verification/i)
@@ -91,7 +91,11 @@ function main(): void {
     assert.match(doc, /go\/no-go/i)
   }
 
-  assert.match(previewReadiness, /STAGING IMPLEMENTATION AND ACCEPTANCE COMPLETE/)
+  assert.match(previewReadiness, /STAGING TECHNICAL IMPLEMENTATION COMPLETE — ACCEPTANCE PENDING EXTERNAL ACTION/)
+  assert.match(previewReadiness, /STAGING HARDENING REMEDIATION REQUIRED/)
+  assert.doesNotMatch(previewReadiness, /STAGING IMPLEMENTATION AND ACCEPTANCE COMPLETE/)
+  assert.match(previewReadiness, /34c6e7550bd2103a05c4414a2f582787dc15bf08/)
+  assert.match(previewReadiness, /30719336990/)
   assert.match(previewReadiness, /M2-01.*post-core/i)
   assert.match(previewReadiness, new RegExp(`pnpm test:release.*${releaseCount}\\/${releaseCount}`, 'i'))
   assert.match(previewReadiness, /pnpm test:e2e.*148\/148/i)
@@ -113,16 +117,16 @@ function main(): void {
   assert.match(previewReadiness, /3 moderate/)
   assert.doesNotMatch(previewReadiness, /READY FOR PRODUCTION|production-ready|go-live complete/i)
 
-  assert.match(roadmap, /Core go-live implementation and deterministic local validation are complete/i)
-  assert.match(roadmap, /not ready for the controlled staging release process/i)
+  assert.match(roadmap, /STAGING TECHNICAL IMPLEMENTATION COMPLETE — ACCEPTANCE PENDING EXTERNAL ACTION/)
+  assert.match(roadmap, /STAGING HARDENING REMEDIATION REQUIRED/)
   assert.match(roadmap, /DECISION-READY, EXTERNAL APPROVALS PENDING/i)
   assert.match(roadmap, /M0-01 through M0-09/)
   assert.match(roadmap, /M1-01 through M1-06/)
-  assert.match(roadmap, /`?M2-01`? remains deferred unless explicitly promoted/i)
+  assert.match(roadmap, /34c6e7550bd2103a05c4414a2f582787dc15bf08/)
 
-  assert.match(operatorHandoff, /Current validated readiness baseline: `d55229f test: enforce programme content readiness`/)
-  assert.match(operatorHandoff, new RegExp(String.raw`Deterministic non-browser release gate: \`pnpm test:release\` \(\`${releaseCount}\/${releaseCount}\`\)`))
-  assert.match(operatorHandoff, /Launch browser E2E: `pnpm test:e2e` \(`148\/148`, desktop and mobile Chromium\)/)
+  assert.match(operatorHandoff, /34c6e7550bd2103a05c4414a2f582787dc15bf08/)
+  assert.match(operatorHandoff, new RegExp(String.raw`Deterministic release gate: \`pnpm test:release\` \(\`${releaseCount}\/${releaseCount}\`\)`))
+  assert.match(operatorHandoff, /Launch browser E2E: `pnpm test:e2e` \(`148\/148`, desktop and mobile Chromium/)
   assert.match(operatorHandoff, /pnpm staging:decision-readiness/)
   assert.match(operatorHandoff, /DECISION-READY, EXTERNAL APPROVALS PENDING/)
   assert.match(operatorHandoff, /M2-01.*deferred post-core/i)

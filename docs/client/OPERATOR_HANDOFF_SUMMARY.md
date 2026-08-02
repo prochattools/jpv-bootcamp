@@ -1,13 +1,14 @@
 # Operator Handoff Summary
 
-## Design-hardening checkpoint — 2026-07-30
+## Current staging handoff — 2026-08-02
 
-- **Branch / baseline:** `feature/course-branding-and-preview` from `524cff2`.
-- **IMPLEMENTED:** neutral Payload admin shell, readable semantic controls, premium sidebar hierarchy, responsive dashboard cards, safe KPI wrapping, and corrected email-worker documentation.
-- **LOCALLY VERIFIED:** focused Payload design contract, Payload TypeScript, changed-path security scan, production build, and `pnpm test:release` (`156/156`).
-- **STAGING VERIFIED:** not yet complete for the authenticated real Payload DOM across every active view and 375/768/1024/1440 px.
-- **Operator verdict:** `PAYLOAD DESIGN NOT YET VERIFIED`. Do not present local or mocked-browser coverage as final design acceptance.
-- **External gates:** client approval, migration authorization, and production release approval remain separate.
+- **Branch / deployed baseline:** `feature/course-branding-and-preview` at `34c6e7550bd2103a05c4414a2f582787dc15bf08`; preview workflow `30719336990` concluded `success` and staging health reported the exact SHA.
+- **IMPLEMENTED:** agreed core staging scope, Payload admin design and responsive hardening, media persistence, migration inventory/preflight, email queue/guard, Stripe test-mode flows, and partner/sponsored staging boundaries.
+- **LOCALLY VERIFIED:** focused design contract, Payload TypeScript, changed-path security scan, application build, `pnpm test:release` (`163/163`), and `pnpm test:e2e` (`148/148`, 40 skipped or excluded).
+- **STAGING VERIFIED:** authenticated Payload admin and responsive regression coverage passed across 375/768/1024/1440px; exact-SHA deployment and media persistence are verified.
+- **Technical verdict:** `STAGING TECHNICAL IMPLEMENTATION COMPLETE — ACCEPTANCE PENDING EXTERNAL ACTION`.
+- **Hardening verdict:** `STAGING HARDENING REMEDIATION REQUIRED` until one-time account actions use a durable concurrency-safe reservation/finalization state.
+- **External gates:** approved content, provider evidence, approved migration execution, and formal staging sign-off remain separate.
 
 ## Current state
 
@@ -15,10 +16,11 @@
 - Version 3.7 current client go-live plan; Version 3.4 is the prior progress baseline
 - Version 3.7 client plan: `docs/client/JPV_Bootcamp_Platform_Expansion_Go_Live_Plan_v3_7.docx`
 - Codebase alignment assessment: `docs/V3_5_CODEBASE_ALIGNMENT_ASSESSMENT.md`
-- Current validated readiness baseline: `d55229f test: enforce programme content readiness`
+- Current validated staging baseline: `34c6e7550bd2103a05c4414a2f582787dc15bf08 docs: reconcile authoritative staging closure status`
+- Preview workflow: `30719336990` — `success`, exact-SHA health confirmed
 - Branch tip verification: verify the current tip with `git log --oneline -1` before operator action
-- PR / review URL: `https://github.com/prochattools/jpv-bootcamp/pull/2`
-- Migrations applied: `No`
+- PR / review URL: `https://github.com/prochattools/jpv-bootcamp/pull/3` (draft)
+- Migration inventory: `28/28` synchronized; any separately gated migration execution still requires authorization
 - Staging deployment target: this feature branch
 - Front-end website go-live milestone: 22 July 2026
 - Internal delivery / handover buffer: 23 July 2026
@@ -57,8 +59,8 @@
 - Transactional email logo: all branded emails use absolute public URL for JPV logo (live staging proof 2026-07-29)
 - Operator surface phases 1–6: responsive hardening, operator tools JPV token alignment, Payload dashboard redesign, sidebar information architecture, dashboard hardening, operator experience hardening, and Payload admin usability — all purely presentational, no auth/billing/provider changes
 - Canonical `/portal` member portal ownership
-- Deterministic non-browser release gate: `pnpm test:release` (`162/162`) — production workflow boundary remediation (2026-08-01)
-- Launch browser E2E: `pnpm test:e2e` (`148/148`, desktop and mobile Chromium) — at `3b853d2` staging closure
+- Deterministic release gate: `pnpm test:release` (`163/163`) — includes the account-action hardening-status guard
+- Launch browser E2E: `pnpm test:e2e` (`148/148`, desktop and mobile Chromium; 40 skipped or excluded) — exact deployed baseline `34c6e7550bd2103a05c4414a2f582787dc15bf08`
 - Combined release/browser gate: `pnpm test:release:full`
 - Decision-readiness summary: `DECISION-READY, EXTERNAL APPROVALS PENDING`
 - Static preflight, root TypeScript, production build, both Prisma validations, and production high-severity audit gate
