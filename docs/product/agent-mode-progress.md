@@ -296,8 +296,8 @@ Fresh `git status --short` showed only local residue outside the committed relea
 
 ### Deployed staging state
 
-- **Deployed SHA:** `5d66aca5e6544d715f55c0e834670a36f4a28401`
-- **Preview CI workflow:** `30754121080` concluded `success` for the exact SHA
+- **Deployed SHA:** `984d88c94a9971a180ad94efe1c42bc03022ad92`
+- **Preview CI workflow:** `30756215188` concluded `success` for the exact SHA
 - **Health endpoint:** HTTP 200 and `imageTag` matched the exact deployed SHA
 - **Migration inventory:** 28 registered, 28 reported in health — synchronized
 - **Email readiness:** queue and staging guard verified; approved provider evidence remains externally gated
