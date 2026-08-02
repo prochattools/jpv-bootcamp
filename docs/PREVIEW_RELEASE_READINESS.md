@@ -3,7 +3,7 @@
 ## Current staging-closure checkpoint — 2026-08-02
 
 - **IMPLEMENTED / LOCALLY VERIFIED:** core staging scope, Payload admin design, responsive behavior, focused design contract, Payload TypeScript, changed-path security scan, application build, and `pnpm test:release` (`163/163`).
-- **STAGING VERIFIED:** authenticated Payload DOM verified across dashboard, membership audit history, and course editing at 375/768/1024/1440px; overflow repaired; authenticated regression gate passed; preview workflow `30719336990` succeeded and staging health reported exact SHA `34c6e7550bd2103a05c4414a2f582787dc15bf08`.
+- **STAGING VERIFIED:** authenticated Payload DOM verified across dashboard, membership audit history, and course editing at 375/768/1024/1440px; overflow repaired; authenticated regression gate passed; preview workflow `30754121080` succeeded and staging health reported exact SHA `5d66aca5e6544d715f55c0e834670a36f4a28401`.
 - **MEDIA PERSISTENCE:** verified via disposable fixture upload, redeployment survival, and Payload API deletion; named staging volume `jpv-bootcamp-preview-media` active.
 - **TECHNICAL STATUS:** `STAGING TECHNICAL IMPLEMENTATION COMPLETE — ACCEPTANCE PENDING EXTERNAL ACTION`.
 - **HARDENING STATUS:** `STAGING HARDENING REMEDIATION REQUIRED` for one-time account-action reservation/finalization; do not treat formal acceptance as complete while this repository-owned issue and external approvals remain open.
@@ -36,7 +36,7 @@ Static preflight automation is available via `pnpm staging:static-preflight`; it
 
 ## Current repository-owned readiness snapshot
 
-Current validated readiness baseline: `34c6e7550bd2103a05c4414a2f582787dc15bf08 docs: reconcile authoritative staging closure status` (2026-08-01), deployed by preview workflow `30719336990` with exact-SHA health confirmation.
+Current validated readiness baseline: `5d66aca5e6544d715f55c0e834670a36f4a28401 docs: correct staging acceptance status and record token hardening gap` (2026-08-02), deployed by preview workflow `30754121080` with exact-SHA health confirmation.
 
 **Outcome:** `STAGING HARDENING REMEDIATION REQUIRED` — core staging implementation and automated validation are complete, `163/163` release gates and `148/148` browser tests pass, but formal acceptance remains externally gated and one-time account-action completion still requires durable reservation/finalization.
 

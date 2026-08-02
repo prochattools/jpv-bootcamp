@@ -4,7 +4,7 @@
 
 - **COMPLETE CORE STAGING WORK:** M0-01 through M0-09, M1-01 through M1-06 in their documented state, UI-01 design/admin hardening, release/browser automation, exact-SHA staging deployment, media persistence, migration inventory/preflight, email queue/guard, Stripe test-mode behavior, and partner/sponsored staging boundaries.
 - **LOCALLY VERIFIED:** focused design contract, Payload TypeScript, changed-path security scan, application build, `pnpm test:release` (`163/163`), and `pnpm test:e2e` (`148/148`, 40 skipped or excluded).
-- **STAGING VERIFIED:** authenticated Payload DOM and admin regression checks passed at 375/768/1024/1440px; preview workflow `30719336990` succeeded; staging health reported exact SHA `34c6e7550bd2103a05c4414a2f582787dc15bf08`.
+- **STAGING VERIFIED:** authenticated Payload DOM and admin regression checks passed at 375/768/1024/1440px; preview workflow `30754121080` succeeded; staging health reported exact SHA `5d66aca5e6544d715f55c0e834670a36f4a28401`.
 - **TECHNICAL STATUS:** `STAGING TECHNICAL IMPLEMENTATION COMPLETE — ACCEPTANCE PENDING EXTERNAL ACTION`.
 - **HARDENING STATUS:** `STAGING HARDENING REMEDIATION REQUIRED` because one-time account-action completion lacks a durable cross-instance reservation/finalization primitive.
 - **ACCEPTANCE PENDING EXTERNAL ACTION:** representative programme content, final copy/testimonials/biographies, approved provider evidence, approved migration execution, and formal staging sign-off.
@@ -18,7 +18,7 @@ Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`.
 
 ## Current position
 
-**Position:** The agreed core staging implementation is deployed and technically verified at exact SHA `34c6e7550bd2103a05c4414a2f582787dc15bf08`. The deterministic baseline is `163/163` release gates plus `148/148` local browser tests, with 40 staging-only or credential-gated tests skipped or excluded by contract. Formal staging acceptance is not complete because external approval records remain pending. Repository-owned hardening is also not complete: email-change confirmation still consumes its one-time action before the member update succeeds, and invitation/password-reset completion lacks a durable cross-instance reservation/finalization primitive.
+**Position:** The agreed core staging implementation is deployed and technically verified at exact SHA `5d66aca5e6544d715f55c0e834670a36f4a28401`. The deterministic baseline is `163/163` release gates plus `148/148` local browser tests, with 40 staging-only or credential-gated tests skipped or excluded by contract. Formal staging acceptance is not complete because external approval records remain pending. Repository-owned hardening is also not complete: email-change confirmation still consumes its one-time action before the member update succeeds, and invitation/password-reset completion lacks a durable cross-instance reservation/finalization primitive.
 
 **Next repository task:** design and approve a schema-backed reservation/finalization state for one-time account actions, then migrate invitation, password-reset, and email-change completion to that primitive with concurrency, retry, idempotency, expiry, and raw-token secrecy tests. Do not apply a schema change without the separately required staging authorization. `M2-01` and Phases 8–11 remain deferred unless explicitly promoted.
 
@@ -63,7 +63,7 @@ Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`.
 | --- | --- |
 | Branch | `feature/course-branding-and-preview` |
 | Staging target | This feature branch is the staging / production-staged deployment branch |
-| **Current CODE HEAD** | `34c6e7550bd2103a05c4414a2f582787dc15bf08 docs: reconcile authoritative staging closure status` (2026-08-01 — preview workflow `30719336990` succeeded, exact-SHA health confirmed); current remediation raises the release manifest to 163 tests |
+| **Current CODE HEAD** | `5d66aca5e6544d715f55c0e834670a36f4a28401 docs: correct staging acceptance status and record token hardening gap` (2026-08-02 — preview workflow `30754121080` succeeded, exact-SHA health confirmed); current remediation raises the release manifest to 163 tests |
 | **Prior CODE HEAD** | `3b853d27b974f28f67f4e7e7f8d6f45786c88624 fix: verify production main boundary without leaking deployment identifiers` (2026-08-01 — 162/162 release tests, 148/148 browser E2E) |
 | **Security Status** | Sponsored-seat concurrent claim is resolved with a row lock; durable email recovery is implemented; one-time account-action reservation/finalization remains open and blocks a clean hardening verdict. |
 | Release State | **STAGING HARDENING REMEDIATION REQUIRED** — technical implementation is complete, formal acceptance is externally gated, and account-action finalization requires a separately approved durable design |
@@ -76,7 +76,7 @@ Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`.
 | Migration approval | Required only for any genuinely pending staging schema or next-domain migration write, with exact target, backup, rollback, and owner approval |
 | Decision readiness | `DECISION-READY, EXTERNAL APPROVALS PENDING` |
 | Provider/email acceptance | Pending operator verification |
-| Complete staging/browser smoke | **148/148 PASS** — desktop + mobile Chromium; preview workflow `30719336990` deployed exact SHA `34c6e7550bd2103a05c4414a2f582787dc15bf08`; admin responsive CI gate passes; formal external sign-off pending |
+| Complete staging/browser smoke | **148/148 PASS** — desktop + mobile Chromium; preview workflow `30754121080` deployed exact SHA `5d66aca5e6544d715f55c0e834670a36f4a28401`; admin responsive CI gate passes; formal external sign-off pending |
 
 Staging migration evidence is recorded in `docs/CURRENT_WORK_HANDOFF.md`. This branch does not authorize further staging writes or any production migration.
 
