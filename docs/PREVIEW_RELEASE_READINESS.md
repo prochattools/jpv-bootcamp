@@ -3,7 +3,7 @@
 ## Current staging-closure checkpoint — 2026-08-02
 
 - **IMPLEMENTED / LOCALLY VERIFIED:** core staging scope, Payload admin design, responsive behavior, focused design contract, Payload TypeScript, changed-path security scan, application build, and `pnpm test:release` (`163/163`).
-- **STAGING VERIFIED:** authenticated Payload DOM verified across dashboard, membership audit history, and course editing at 375/768/1024/1440px; overflow repaired; authenticated regression gate passed; preview workflow `30756215188` succeeded and staging health reported exact SHA `984d88c94a9971a180ad94efe1c42bc03022ad92`.
+- **STAGING VERIFIED (latest completed verification snapshot):** authenticated Payload DOM verified across dashboard, membership audit history, and course editing at 375/768/1024/1440px; overflow repaired; authenticated regression gate passed. Snapshot: preview workflow `30756831212` concluded `success`; staging health reported exact SHA `3a6613498241c5dd71761c26c3b1e790764db1d5`. For current live state: `git rev-parse HEAD` and `https://preview.jpvbootcamp.com/api/health`.
 - **MEDIA PERSISTENCE:** verified via disposable fixture upload, redeployment survival, and Payload API deletion; named staging volume `jpv-bootcamp-preview-media` active.
 - **TECHNICAL STATUS:** `STAGING TECHNICAL IMPLEMENTATION COMPLETE — ACCEPTANCE PENDING EXTERNAL ACTION`.
 - **HARDENING STATUS:** `STAGING HARDENING REMEDIATION REQUIRED` for one-time account-action reservation/finalization; do not treat formal acceptance as complete while this repository-owned issue and external approvals remain open.
@@ -36,9 +36,9 @@ Static preflight automation is available via `pnpm staging:static-preflight`; it
 
 ## Current repository-owned readiness snapshot
 
-Current validated readiness baseline: `984d88c94a9971a180ad94efe1c42bc03022ad92 docs: advance staging baseline to 5d66aca / workflow 30754121080` (2026-08-02), deployed by preview workflow `30756215188` with exact-SHA health confirmation.
+**Latest completed staging verification snapshot (2026-08-02):** SHA `3a6613498241c5dd71761c26c3b1e790764db1d5`, preview workflow `30756831212`, conclusion `success`, exact-SHA staging health confirmed. This is the last verified snapshot before this documentation was updated. The authoritative current branch tip is determined by `git rev-parse HEAD`; do not treat any hardcoded SHA as the immutable current tip.
 
-**Outcome:** `STAGING HARDENING REMEDIATION REQUIRED` — core staging implementation and automated validation are complete, `163/163` release gates and `148/148` browser tests pass, but formal acceptance remains externally gated and one-time account-action completion still requires durable reservation/finalization.
+**Outcome:** `STAGING HARDENING REMEDIATION REQUIRED` — core staging implementation and automated validation are complete, `163/163` release gates and Playwright 188 collected / 148 passed / 40 skipped pass, but formal acceptance remains externally gated and one-time account-action completion still requires durable reservation/finalization.
 
 **Technical staging status:** `STAGING TECHNICAL IMPLEMENTATION COMPLETE — ACCEPTANCE PENDING EXTERNAL ACTION`
 
@@ -60,7 +60,7 @@ Current validated readiness baseline: `984d88c94a9971a180ad94efe1c42bc03022ad92 
 ### Deterministic local validation baseline
 
 - `pnpm test:release` passed `163/163`, including the account-action hardening-status guard (2026-08-02)
-- `pnpm test:e2e` passed `148/148` across desktop and mobile Chromium projects (40 skipped)
+- `pnpm test:e2e` Playwright execution: 188 collected, 148 passed, 40 skipped; four staging-only spec files not collected (admin-crud-staging, admin-responsive-staging, staging-smoke, stripe-webhook-staging)
 - `pnpm test:release:full` passed
 - `pnpm staging:static-preflight` passed
 - `pnpm staging:decision-readiness` passed with `DECISION-READY, EXTERNAL APPROVALS PENDING`

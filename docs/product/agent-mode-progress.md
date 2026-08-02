@@ -296,8 +296,9 @@ Fresh `git status --short` showed only local residue outside the committed relea
 
 ### Deployed staging state
 
-- **Deployed SHA:** `984d88c94a9971a180ad94efe1c42bc03022ad92`
-- **Preview CI workflow:** `30756215188` concluded `success` for the exact SHA
+- **Latest verification snapshot SHA:** `3a6613498241c5dd71761c26c3b1e790764db1d5` — label: last verified before this documentation snapshot
+- **Preview CI workflow:** `30756831212` concluded `success` for the snapshot SHA
+- **Current branch tip:** determine with `git rev-parse HEAD`; staging health: `https://preview.jpvbootcamp.com/api/health`
 - **Health endpoint:** HTTP 200 and `imageTag` matched the exact deployed SHA
 - **Migration inventory:** 28 registered, 28 reported in health — synchronized
 - **Email readiness:** queue and staging guard verified; approved provider evidence remains externally gated

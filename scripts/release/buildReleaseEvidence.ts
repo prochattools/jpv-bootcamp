@@ -8,7 +8,7 @@ function read(relativePath: string): string {
   return readFileSync(path.join(process.cwd(), relativePath), 'utf8')
 }
 
-function countPlaywrightTests(root: string): number {
+function countPlaywrightSourceDeclarations(root: string): number {
   const absolute = path.join(process.cwd(), root)
   const entries = readdirSync(absolute)
   let count = 0
@@ -16,7 +16,7 @@ function countPlaywrightTests(root: string): number {
     const entryPath = path.join(absolute, entry)
     const stats = statSync(entryPath)
     if (stats.isDirectory()) {
-      count += countPlaywrightTests(path.join(root, entry))
+      count += countPlaywrightSourceDeclarations(path.join(root, entry))
       continue
     }
     if (!entry.endsWith('.spec.ts')) continue
@@ -37,7 +37,7 @@ export function buildReleaseEvidenceMarkdown(): string {
   const head = execFileSync('git', ['rev-parse', '--short', 'HEAD'], { encoding: 'utf8' }).trim()
   const packageJson = JSON.parse(read('package.json')) as { packageManager?: string }
   const releaseCount = RELEASE_TEST_MANIFEST.length
-  const browserCount = countPlaywrightTests('e2e')
+  const browserSourceDeclarations = countPlaywrightSourceDeclarations('e2e')
   const readinessOutcome = extractStatus(
     previewReadiness,
     /\*\*Outcome:\*\*\s*`([^`]+)`/,
@@ -56,7 +56,8 @@ export function buildReleaseEvidenceMarkdown(): string {
     `- Node runtime: \`${process.versions.node}\``,
     `- Pinned package manager: \`${packageJson.packageManager ?? 'unknown'}\``,
     `- Release manifest count: \`${releaseCount}\``,
-    `- Browser test count: \`${browserCount}\``,
+    `- Browser source-level declarations (static): \`${browserSourceDeclarations}\` (not equivalent to Playwright project-expanded collected runs)`,
+    `- Last verified Playwright execution evidence: 188 collected; 148 passed; 40 skipped; four staging-only spec files not collected`,
     '',
     '## Repository-owned gates',
     '- Migration preflight: documented, read-only, pending operator execution',

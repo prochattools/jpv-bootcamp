@@ -2,9 +2,9 @@
 
 ## Current staging handoff — 2026-08-02
 
-- **Branch / deployed baseline:** `feature/course-branding-and-preview` at `984d88c94a9971a180ad94efe1c42bc03022ad92`; preview workflow `30756215188` concluded `success` and staging health reported the exact SHA.
+- **Branch / deployed baseline:** `feature/course-branding-and-preview`; latest completed verification snapshot: SHA `3a6613498241c5dd71761c26c3b1e790764db1d5`, preview workflow `30756831212` concluded `success`, exact-SHA health confirmed. Verify the current tip with `git rev-parse HEAD` and `https://preview.jpvbootcamp.com/api/health` before operator action.
 - **IMPLEMENTED:** agreed core staging scope, Payload admin design and responsive hardening, media persistence, migration inventory/preflight, email queue/guard, Stripe test-mode flows, and partner/sponsored staging boundaries.
-- **LOCALLY VERIFIED:** focused design contract, Payload TypeScript, changed-path security scan, application build, `pnpm test:release` (`163/163`), and `pnpm test:e2e` (`148/148`, 40 skipped or excluded).
+- **LOCALLY VERIFIED:** focused design contract, Payload TypeScript, changed-path security scan, application build, `pnpm test:release` (`163/163`), and `pnpm test:e2e` (Playwright: 188 collected, 148 passed, 40 skipped; four staging-only spec files not collected).
 - **STAGING VERIFIED:** authenticated Payload admin and responsive regression coverage passed across 375/768/1024/1440px; exact-SHA deployment and media persistence are verified.
 - **Technical verdict:** `STAGING TECHNICAL IMPLEMENTATION COMPLETE — ACCEPTANCE PENDING EXTERNAL ACTION`.
 - **Hardening verdict:** `STAGING HARDENING REMEDIATION REQUIRED` until one-time account actions use a durable concurrency-safe reservation/finalization state.
@@ -16,8 +16,8 @@
 - Version 3.7 current client go-live plan; Version 3.4 is the prior progress baseline
 - Version 3.7 client plan: `docs/client/JPV_Bootcamp_Platform_Expansion_Go_Live_Plan_v3_7.docx`
 - Codebase alignment assessment: `docs/V3_5_CODEBASE_ALIGNMENT_ASSESSMENT.md`
-- Current validated staging baseline: `984d88c94a9971a180ad94efe1c42bc03022ad92 docs: advance staging baseline to 5d66aca / workflow 30754121080`
-- Preview workflow: `30756215188` — `success`, exact-SHA health confirmed
+- Latest completed verification snapshot: SHA `3a6613498241c5dd71761c26c3b1e790764db1d5`, preview workflow `30756831212` — `success`, exact-SHA health confirmed
+- Current branch tip: run `git rev-parse HEAD` to confirm; staging health: `https://preview.jpvbootcamp.com/api/health`
 - Branch tip verification: verify the current tip with `git log --oneline -1` before operator action
 - PR / review URL: `https://github.com/prochattools/jpv-bootcamp/pull/3` (draft)
 - Migration inventory: `28/28` synchronized; any separately gated migration execution still requires authorization
@@ -60,7 +60,7 @@
 - Operator surface phases 1–6: responsive hardening, operator tools JPV token alignment, Payload dashboard redesign, sidebar information architecture, dashboard hardening, operator experience hardening, and Payload admin usability — all purely presentational, no auth/billing/provider changes
 - Canonical `/portal` member portal ownership
 - Deterministic release gate: `pnpm test:release` (`163/163`) — includes the account-action hardening-status guard
-- Launch browser E2E: `pnpm test:e2e` (`148/148`, desktop and mobile Chromium; 40 skipped or excluded) — exact deployed baseline `984d88c94a9971a180ad94efe1c42bc03022ad92`
+- Launch browser E2E: `pnpm test:e2e` (Playwright: 188 collected, 148 passed, 40 skipped; four staging-only spec files not collected; desktop and mobile Chromium)
 - Combined release/browser gate: `pnpm test:release:full`
 - Decision-readiness summary: `DECISION-READY, EXTERNAL APPROVALS PENDING`
 - Static preflight, root TypeScript, production build, both Prisma validations, and production high-severity audit gate

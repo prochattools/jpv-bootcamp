@@ -1,12 +1,14 @@
 # Payload CMS Integration Plan
 
-## Current implementation checkpoint — 2026-08-01
+## Current implementation checkpoint — 2026-08-02
 
-- **IMPLEMENTED:** Payload admin neutral theme bridge, semantic control styling, premium navigation hierarchy, responsive operations dashboard, safe KPI wrapping, and cron/email credential-documentation alignment.
-- **LOCALLY VERIFIED:** focused Payload design contract, Payload TypeScript, changed-path security scan, production build, and `pnpm test:release` (`162/162`).
-- **STAGING VERIFIED:** authenticated real Payload DOM verified across dashboard, membership audit history, and course editing at 375/768/1024/1440px viewports; overflow repaired; media persistence confirmed; exact-SHA deployment health confirmed at `3b853d2`.
-- **DEFERRED:** post-core M2 capabilities and durable media-provider work remain outside this design-hardening packet unless separately promoted.
-- **EXTERNAL:** client sign-off, migration authorization, and production release approval.
+- **IMPLEMENTED:** M0-01 through M0-09, M1-01 through M1-06 in their documented staging state, UI-01 design integration, Payload admin hardening, release/browser automation, media persistence, migration inventory/preflight, email queue/guard, Stripe test-mode behavior, and partner/sponsored staging boundaries.
+- **LOCALLY VERIFIED:** focused Payload design contract, Payload TypeScript, changed-path security scan, application build, and `pnpm test:release` (`163/163`).
+- **STAGING VERIFIED (latest completed verification snapshot):** authenticated Payload DOM verified across dashboard, membership audit history, and course editing at 375/768/1024/1440px; overflow repaired; media persistence confirmed; preview workflow `30756831212` concluded `success` and staging health reported exact SHA `3a6613498241c5dd71761c26c3b1e790764db1d5`. To verify the current live state, run: `git rev-parse HEAD`, then check the latest preview workflow run and `https://preview.jpvbootcamp.com/api/health`.
+- **TECHNICAL STATUS:** `STAGING TECHNICAL IMPLEMENTATION COMPLETE — ACCEPTANCE PENDING EXTERNAL ACTION`.
+- **HARDENING STATUS:** one-time account-action completion still lacks a durable cross-instance reservation/finalization primitive; email-change confirmation consumes its token before its member update succeeds. Design specified in `docs/security/MEMBER_ACCOUNT_ACTION_RESERVATION_FINALIZATION_DESIGN.md`. Implementation and schema application require separate staging authorization.
+- **DEFERRED BY DESIGN:** M2-01 and Phases 8–11 remain outside the agreed core staging scope unless separately promoted.
+- **EXTERNAL ACTION:** representative content/copy approval, approved provider evidence, approved migration execution, and formal staging sign-off remain pending.
 - **Current design verdict:** `PAYLOAD DESIGN VERIFIED — ADMIN DESIGN REPAIRED AND VERIFIED`.
 
 This is the single canonical product, architecture, security, roadmap, and execution plan for the JPV Bootcamp Payload programme. Code and operational changes must follow this plan in order. Update this document before changing architecture, security, product boundaries, rollout order, or production responsibilities.
