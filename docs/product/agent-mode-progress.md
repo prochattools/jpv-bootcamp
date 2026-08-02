@@ -306,6 +306,8 @@ Fresh `git status --short` showed only local residue outside the committed relea
 - **Admin design:** verified across 4 viewports; overflow repaired; authenticated regression gate active
 - **Tracked release boundary:** clean after the closure commit; only forbidden local residue remained outside the commit
 
+> **Audit note (2026-08-02):** as of this audit, current HEAD is `c15cd578a953cd6b1dc8a3d4705350a52f7d0812`, preview workflow `30761713446` concluded `success`. All prior snapshot history above is preserved.
+
 ### Staging validation summary
 
 | Gate | Result |

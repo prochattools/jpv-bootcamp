@@ -1,5 +1,7 @@
 # Staging GO Approval
 
+> **Reconciliation note (2026-08-02):** This document contains stale SHA references. The SHA `80fa3a6` recorded in the evidence table below was the local HEAD at the time of last update; the current repository HEAD is `c15cd578a953cd6b1dc8a3d4705350a52f7d0812`. Additionally, the "3 unapplied migrations" figure is outdated — the migration inventory has grown to 28 entries. Approval fields remain unfilled; this note does not constitute approval.
+
 - Decision ID: `staging-go`
 - Current status: `PENDING`
 - Depends on: `core-go-live`
@@ -30,14 +32,14 @@ authorize production deployment.
 
 | Gate | Evidence |
 | --- | --- |
-| Local code HEAD | `80fa3a6` (current — pushed; both staging commits deployed) |
-| Staging deployed imageTag | `80fa3a6` (redeployed 2026-07-21; /api/health ok, video→401, landing→200) |
+| Local code HEAD | `80fa3a6` (recorded at last update — **STALE**; current HEAD is `c15cd578a953cd6b1dc8a3d4705350a52f7d0812`) |
+| Staging deployed imageTag | `80fa3a6` (redeployed 2026-07-21; /api/health ok, video→401, landing→200) — **imageTag not yet updated to current HEAD** |
 | HTTP smoke (at d235c5a) | 15/15 PASS (prior deployment) |
 | Browser smoke (at d235c5a) | 42/42 PASS (prior deployment; re-run pending at new SHA) |
 | Stripe TEST credentials | VERIFIED (product, prices, portal, staging webhook) |
 | Resend domain | VERIFIED (eu-west-1) |
 | Bunny CDN | VERIFIED (library API 200) |
-| Required schema migrations | PENDING — 3 unapplied |
+| Required schema migrations | PENDING — 3 unapplied listed below (**STALE count**: migration inventory has grown to 28 entries as of 2026-08-02) |
 | Rollback owner | UNFILLED |
 | DB backup | UNFILLED |
 

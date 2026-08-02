@@ -1,5 +1,7 @@
 # JPV Bootcamp - Roadmap Progress Status
 
+<!-- Reconciliation note 2026-08-02: Previous checkpoint recorded SHA 3a6613498241c5dd71761c26c3b1e790764db1d5 as the latest verified snapshot. Current branch HEAD has advanced to c15cd578a953cd6b1dc8a3d4705350a52f7d0812 (workflow 30761713446, success). The 163/163 release count and Playwright 188 collected / 148 passed / 40 skipped remain correct. Hardening status: STAGING HARDENING REMEDIATION REQUIRED — account-action reservation/finalization (one-time actions lack a durable cross-instance concurrency-safe primitive) remains the open hardening gap. -->
+
 ## Current checkpoint — 2026-08-02
 
 - **COMPLETE CORE STAGING WORK:** M0-01 through M0-09, M1-01 through M1-06 in their documented state, UI-01 design/admin hardening, release/browser automation, exact-SHA staging deployment, media persistence, migration inventory/preflight, email queue/guard, Stripe test-mode behavior, and partner/sponsored staging boundaries.

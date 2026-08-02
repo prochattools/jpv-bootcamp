@@ -1,5 +1,7 @@
 # Provider and Email Readiness
 
+<!-- Reconciliation note 2026-08-02: This checklist remains pending. No live email delivery has been verified from current HEAD (c15cd578a953cd6b1dc8a3d4705350a52f7d0812, workflow 30761713446). All approval fields are unchanged and remain pending. -->
+
 Repository-only checklist for provider/email readiness before any approved live send.
 
 ## Rules

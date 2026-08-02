@@ -39,6 +39,7 @@
     "content:programme:import-plan": "tsx scripts/content/buildProgrammeImportPlan.ts",
     "migration:membership:preview": "tsx scripts/release/buildMembershipMigrationPreview.ts",
     "migration:legacy": "tsx scripts/migration/runLegacyMigration.ts",
+    "migration:legacy-source-inventory": "tsx scripts/migration/buildLegacySourceInventory.ts",
     "test:migration:legacy": "tsx scripts/migration/legacyMigration.test.ts",
     "migration:next-domains": "tsx scripts/migration/runNextDomainMigrations.ts",
     "test:migration:next-domains": "tsx scripts/migration/legacyMigrationDomains.test.ts",

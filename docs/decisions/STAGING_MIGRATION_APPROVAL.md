@@ -1,5 +1,7 @@
 # Staging Migration Approval
 
+> **Reconciliation note (2026-08-02):** Current repository HEAD is `c15cd578a953cd6b1dc8a3d4705350a52f7d0812`. Migration inventory has grown to 28 entries. Static rehearsal passed. Disposable migration execution against staging has not yet been run. This approval remains NOT_APPROVED; no approval fields have been filled.
+
 - Decision ID: `staging-migration-approval`
 - Current status: `NOT_APPROVED`
 - Decision owner role: `Release operator`

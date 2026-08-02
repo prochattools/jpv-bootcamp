@@ -1,5 +1,7 @@
 # Staging Smoke Approval
 
+> **Reconciliation note (2026-08-02):** As of this audit, formal operator staging smoke remains UNEXECUTED. The Playwright authenticated admin CI gate (workflow run 30761713446) is automated CI smoke — it is NOT equivalent to formal operator staging smoke. Formal operator staging smoke requires a human release operator to execute the checklist against the live staging environment with explicit identity, migration state, and rollback readiness confirmed. This document remains unfilled.
+
 - Decision ID: `staging-smoke`
 - Current status: `UNEXECUTED`
 - Decision owner role: `Release operator`

@@ -1,5 +1,7 @@
 # Programme Content Publication Approval
 
+> **Reconciliation note (2026-08-02):** Client content is still outstanding as of this audit. Status remains AWAITING_CLIENT_CONTENT. No approved representative programme package has been received; `/portal/programme` remains preview-only. Approval fields are not filled and approval status is unchanged.
+
 - Decision ID: `programme-content-publication`
 - Current status: `AWAITING_CLIENT_CONTENT`
 - Decision owner role: `Client content owner`

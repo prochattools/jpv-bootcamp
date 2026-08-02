@@ -1,5 +1,7 @@
 # Provider Verification Approval
 
+> **Reconciliation note (2026-08-02):** As of this audit, live provider verification remains UNEXECUTED. Distinction: (a) repository simulation (`pnpm staging:provider-simulation`) passed 10/10 at current HEAD — this proves only repository-owned mocked contracts; (b) live provider verification against the actual staging environment with real credentials has not been performed and this document remains unfilled. These two things must not be conflated.
+
 - Decision ID: `provider-verification`
 - Current status: `UNEXECUTED`
 - Decision owner role: `Credentials owner`

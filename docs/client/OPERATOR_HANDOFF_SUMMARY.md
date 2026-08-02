@@ -1,5 +1,7 @@
 # Operator Handoff Summary
 
+<!-- Reconciliation note 2026-08-02: Latest completed verification snapshot remains SHA 3a6613498241c5dd71761c26c3b1e790764db1d5 (workflow 30756831212). Current branch HEAD has advanced to c15cd578a953cd6b1dc8a3d4705350a52f7d0812 (workflow 30761713446, success). Verify live state with git rev-parse HEAD and https://preview.jpvbootcamp.com/api/health. -->
+
 ## Current staging handoff — 2026-08-02
 
 - **Branch / deployed baseline:** `feature/course-branding-and-preview`; latest completed verification snapshot: SHA `3a6613498241c5dd71761c26c3b1e790764db1d5`, preview workflow `30756831212` concluded `success`, exact-SHA health confirmed. Verify the current tip with `git rev-parse HEAD` and `https://preview.jpvbootcamp.com/api/health` before operator action.

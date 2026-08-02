@@ -1,5 +1,7 @@
 # Rollback Readiness Approval
 
+> **Reconciliation note (2026-08-02):** As of this audit, external backup/snapshot references and real rollback execution evidence are still absent. The rollback checklist and static rehearsal evidence exist in the repository, but no external evidence (actual staging backup path, snapshot ID, or real rollback execution record) has been captured. Status remains DOCUMENTED_BUT_INCOMPLETE.
+
 - Decision ID: `rollback-readiness`
 - Current status: `DOCUMENTED_BUT_INCOMPLETE`
 - Decision owner role: `Rollback owner`
