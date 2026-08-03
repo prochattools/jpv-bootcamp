@@ -25,7 +25,6 @@ export type SupportedFormat =
   | "fluentcrm-csv"
   | "fluentcrm-json"
   | "fluent-community"
-  | "json"
   | "unknown";
 
 export type FileStatus = "accepted" | "rejected" | "unknown";
@@ -135,21 +134,23 @@ async function sha256Stream(filePath: string): Promise<string> {
 async function countWxrItems(filePath: string): Promise<number> {
   return new Promise((resolve, reject) => {
     let count = 0;
-    let remainder = "";
+    let carry = "";
+    const TOKEN = "<item>";
     const stream = fs.createReadStream(filePath, { encoding: "utf8" });
     stream.on("error", reject);
     stream.on("data", (chunk: string) => {
-      const text = remainder + chunk;
-      // Count <item> occurrences — use a simple scan to avoid RegExp lastIndex state issues
+      const text = carry + chunk;
       let pos = 0;
       while (true) {
-        const idx = text.indexOf("<item>", pos);
+        const idx = text.indexOf(TOKEN, pos);
         if (idx === -1) break;
         count++;
-        pos = idx + 6;
+        pos = idx + TOKEN.length;
       }
-      // Keep last few chars to handle splits across chunk boundaries
-      remainder = text.slice(-6);
+      const remainder = text.slice(pos);
+      carry = remainder.length <= TOKEN.length - 1
+        ? remainder
+        : remainder.slice(remainder.length - (TOKEN.length - 1));
     });
     stream.on("end", () => resolve(count));
   });
@@ -159,50 +160,97 @@ async function countWxrItems(filePath: string): Promise<number> {
 // Streaming CSV row counter (handles quoted fields with embedded newlines)
 // ---------------------------------------------------------------------------
 
-async function countCsvRows(filePath: string): Promise<number> {
+interface CsvCountResult {
+  rows: number;
+  malformed: boolean;
+}
+
+async function countCsvRows(filePath: string): Promise<CsvCountResult> {
   return new Promise((resolve, reject) => {
     let dataRows = 0;
     let headerSeen = false;
-    let inQuotedField = false;
-    let remainder = "";
+    let inQuote = false;
+    let prevCharWasQuote = false;
+    let prevCharWasCR = false;
+    let currentRowHasContent = false;
+    let bomChecked = false;
 
     const stream = fs.createReadStream(filePath, { encoding: "utf8" });
     stream.on("error", reject);
     stream.on("data", (chunk: string) => {
-      const text = remainder + chunk;
-      let pos = 0;
-      let lineStart = 0;
+      let start = 0;
+      if (!bomChecked) {
+        bomChecked = true;
+        if (chunk.charCodeAt(0) === 0xFEFF) start = 1;
+      }
 
-      for (let i = 0; i < text.length; i++) {
-        const ch = text[i];
-        if (ch === '"') {
-          inQuotedField = !inQuotedField;
-        } else if (ch === "\n" && !inQuotedField) {
-          const line = text.slice(lineStart, i).trim();
-          if (line.length > 0) {
-            if (!headerSeen) {
-              headerSeen = true;
+      for (let i = start; i < chunk.length; i++) {
+        const ch = chunk[i];
+
+        if (inQuote) {
+          if (ch === '"') {
+            if (prevCharWasQuote) {
+              prevCharWasQuote = false;
             } else {
-              dataRows++;
+              prevCharWasQuote = true;
+            }
+          } else {
+            if (prevCharWasQuote) {
+              inQuote = false;
+              prevCharWasQuote = false;
+              // ch is outside quote — fall through to process it below
+            } else {
+              // inside quoted field — ignore all chars including newlines
+              continue;
             }
           }
-          lineStart = i + 1;
-          pos = lineStart;
+          if (inQuote) continue;
+        }
+
+        // Outside quote
+        if (ch === '"') {
+          inQuote = true;
+          prevCharWasQuote = false;
+          currentRowHasContent = true;
+          prevCharWasCR = false;
+        } else if (ch === '\n') {
+          if (prevCharWasCR) {
+            prevCharWasCR = false;
+            continue;
+          }
+          if (currentRowHasContent) {
+            if (!headerSeen) { headerSeen = true; }
+            else { dataRows++; }
+          }
+          currentRowHasContent = false;
+          prevCharWasCR = false;
+        } else if (ch === '\r') {
+          if (currentRowHasContent) {
+            if (!headerSeen) { headerSeen = true; }
+            else { dataRows++; }
+          }
+          currentRowHasContent = false;
+          prevCharWasCR = true;
+        } else {
+          currentRowHasContent = true;
+          prevCharWasCR = false;
         }
       }
-      remainder = text.slice(lineStart);
     });
     stream.on("end", () => {
-      // Handle last line without trailing newline
-      const last = remainder.trim();
-      if (last.length > 0) {
-        if (!headerSeen) {
-          // only header, no data rows
-        } else {
-          dataRows++;
-        }
+      if (prevCharWasQuote) {
+        inQuote = false;
+        prevCharWasQuote = false;
       }
-      resolve(dataRows);
+      if (inQuote) {
+        resolve({ rows: dataRows, malformed: true });
+        return;
+      }
+      if (currentRowHasContent) {
+        if (!headerSeen) { /* only header, no data */ }
+        else { dataRows++; }
+      }
+      resolve({ rows: dataRows, malformed: false });
     });
   });
 }
@@ -295,7 +343,11 @@ function detectFormat(
       return { format: "unsupported", warnings };
     }
     if (isFluentCrmJsonSniff(sniffStr)) return { format: "fluentcrm-json", warnings };
-    return { format: "json", warnings };
+    if (isWordPressJsonSniff(sniffStr)) return { format: "fluentcrm-json", warnings };
+    warnings.push(
+      `JSON file "${filename}" lacks recognized WordPress or FluentCRM schema markers; classified as unknown`
+    );
+    return { format: "unknown", warnings };
   }
 
   // Auto detection
@@ -326,7 +378,11 @@ function detectFormat(
       return { format: "unsupported", warnings };
     }
     if (isFluentCrmJsonSniff(sniffStr)) return { format: "fluentcrm-json", warnings };
-    return { format: "json", warnings };
+    if (isWordPressJsonSniff(sniffStr)) return { format: "fluentcrm-json", warnings };
+    warnings.push(
+      `JSON file "${filename}" lacks recognized WordPress or FluentCRM schema markers; classified as unknown`
+    );
+    return { format: "unknown", warnings };
   }
 
   return { format: "unsupported", warnings };
@@ -348,6 +404,10 @@ function hasWordPressCsvColumns(headerLine: string): boolean {
 
 function isFluentCrmJsonSniff(snippet: string): boolean {
   return /"contacts"\s*:/.test(snippet) || /"subscribers"\s*:/.test(snippet);
+}
+
+function isWordPressJsonSniff(snippet: string): boolean {
+  return /"wp_post"\s*:/.test(snippet) || /"post_type"\s*:/.test(snippet) && /"post_title"\s*:/.test(snippet);
 }
 
 // ---------------------------------------------------------------------------
@@ -372,14 +432,29 @@ async function countRecords(
 
     case "wordpress-csv":
     case "fluentcrm-csv": {
-      const count = await countCsvRows(filePath);
-      return { recordCount: count, countConfidence: "exact", warnings: [] };
+      const result = await countCsvRows(filePath);
+      if (result.malformed) {
+        return {
+          recordCount: null,
+          countConfidence: "unavailable",
+          warnings: ["Malformed CSV: unterminated quoted field at end of file"],
+        };
+      }
+      return { recordCount: result.rows, countConfidence: "exact", warnings: [] };
     }
 
     case "fluentcrm-json": {
-      // FluentCRM JSON is expected to be moderate size; parse minimally
-      // We only use the sniff buffer to check, but we need to parse for count.
-      // Safe: FluentCRM exports are typically not massive. We parse only to get array length.
+      const MAX_BOUNDED_JSON_SIZE = 50 * 1024 * 1024; // 50 MiB
+      const stat = fs.statSync(filePath);
+      if (stat.size > MAX_BOUNDED_JSON_SIZE) {
+        return {
+          recordCount: null,
+          countConfidence: "unavailable",
+          warnings: [
+            `FluentCRM JSON exceeds bounded parse limit (${stat.size} bytes): streaming parser required for exact count`,
+          ],
+        };
+      }
       try {
         const content = fs.readFileSync(filePath, "utf8");
         const parsed: unknown = JSON.parse(content);
@@ -403,36 +478,6 @@ async function countRecords(
       }
     }
 
-    case "json": {
-      // For plain JSON: if it's an array, we can count. If it's a large object, skip.
-      // Use sniff to decide whether to attempt parse.
-      const stat = fs.statSync(filePath);
-      const sniff = readSniffBuffer(filePath);
-      const sniffStr = sniff.toString("utf8").trimStart();
-
-      if (sniffStr.startsWith("[")) {
-        // Top-level array — parse to count
-        try {
-          const content = fs.readFileSync(filePath, "utf8");
-          const parsed = JSON.parse(content);
-          if (Array.isArray(parsed)) {
-            return { recordCount: (parsed as unknown[]).length, countConfidence: "exact", warnings: [] };
-          }
-        } catch {
-          return { recordCount: null, countConfidence: "unavailable", warnings: ["JSON parse error"] };
-        }
-      }
-
-      // Top-level object — do not parse into memory
-      return {
-        recordCount: null,
-        countConfidence: "unavailable",
-        warnings: [
-          `Large JSON object (${stat.size} bytes): record count unavailable to avoid loading entire file into memory`,
-        ],
-      };
-    }
-
     case "fluent-community":
       return { recordCount: null, countConfidence: "unavailable", warnings: [] };
 
@@ -445,10 +490,26 @@ async function countRecords(
 // Output path safety
 // ---------------------------------------------------------------------------
 
+function canonicalizePath(p: string): string {
+  const resolved = path.resolve(p);
+  try {
+    return fs.realpathSync(resolved);
+  } catch {
+    // Path doesn't exist yet — canonicalize the parent
+    const dir = path.dirname(resolved);
+    try {
+      return path.join(fs.realpathSync(dir), path.basename(resolved));
+    } catch {
+      return resolved;
+    }
+  }
+}
+
 function validateOutputPath(outPath: string, inputPaths: string[]): void {
-  const resolvedOut = path.resolve(outPath);
+  const canonicalOut = canonicalizePath(outPath);
   for (const ip of inputPaths) {
-    if (path.resolve(ip) === resolvedOut) {
+    const canonicalIn = canonicalizePath(ip);
+    if (canonicalIn === canonicalOut) {
       throw new Error(
         `Output path "${path.basename(outPath)}" overlaps with input path "${path.basename(ip)}"; aborting to prevent data loss`
       );
@@ -462,13 +523,38 @@ function validateOutputPath(outPath: string, inputPaths: string[]): void {
 }
 
 function atomicWrite(outPath: string, json: string): void {
-  const tmpPath = outPath + ".tmp";
+  const dir = path.dirname(path.resolve(outPath));
+  const uniqueSuffix = crypto.randomBytes(8).toString("hex");
+  const tmpPath = path.join(dir, `.inv-tmp-${uniqueSuffix}.json`);
+  let fd: number | null = null;
   try {
-    fs.writeFileSync(tmpPath, json, "utf8");
-    fs.renameSync(tmpPath, outPath);
+    fd = fs.openSync(tmpPath, fs.constants.O_CREAT | fs.constants.O_EXCL | fs.constants.O_WRONLY);
+    fs.writeSync(fd, json, 0, "utf8");
+    try { fs.fsyncSync(fd); } catch { /* best effort */ }
+    fs.closeSync(fd);
+    fd = null;
+    try {
+      fs.linkSync(tmpPath, outPath);
+    } catch (linkErr: unknown) {
+      const code = (linkErr as NodeJS.ErrnoException).code;
+      if (code === "EEXIST") {
+        throw new Error(
+          `Output file "${path.basename(outPath)}" already exists; refusing to overwrite`
+        );
+      }
+      if (code === "EXDEV") {
+        fs.renameSync(tmpPath, outPath);
+        return;
+      }
+      throw linkErr;
+    }
+    fs.unlinkSync(tmpPath);
   } catch (err) {
-    // Clean up temp file on failure
-    try { fs.unlinkSync(tmpPath); } catch { /* ignore */ }
+    if (fd !== null) { try { fs.closeSync(fd); } catch { /**/ } }
+    try { fs.unlinkSync(tmpPath); } catch { /**/ }
+    if (err instanceof Error && !err.message.includes(path.basename(outPath))) {
+      throw new Error(redactPaths(err.message, outPath));
+    }
     throw err;
   }
 }
@@ -484,11 +570,47 @@ async function processFile(
   const filename = path.basename(filePath);
   const warnings: string[] = [];
 
-  // Check file exists and get size
+  // Check file exists, verify it's a regular file, and get size
   let bytes = 0;
   try {
-    const stat = fs.statSync(filePath);
-    bytes = stat.size;
+    const lstat = fs.lstatSync(filePath);
+    if (lstat.isSymbolicLink()) {
+      return {
+        path: filename,
+        bytes: 0,
+        sha256: "",
+        detectedFormat: "unknown" as SupportedFormat,
+        recordCount: null,
+        countConfidence: "unavailable",
+        warnings: ["Symbolic link inputs are not accepted; canonicalize the path first"],
+        status: "rejected",
+      };
+    }
+    if (lstat.isDirectory()) {
+      return {
+        path: filename,
+        bytes: 0,
+        sha256: "",
+        detectedFormat: "unknown" as SupportedFormat,
+        recordCount: null,
+        countConfidence: "unavailable",
+        warnings: ["Input is a directory, not a regular file"],
+        status: "rejected",
+      };
+    }
+    if (!lstat.isFile()) {
+      return {
+        path: filename,
+        bytes: 0,
+        sha256: "",
+        detectedFormat: "unknown" as SupportedFormat,
+        recordCount: null,
+        countConfidence: "unavailable",
+        warnings: ["Input is not a regular file"],
+        status: "rejected",
+      };
+    }
+    bytes = lstat.size;
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Unknown error";
     return {
@@ -714,6 +836,9 @@ if (require.main === module) {
           `Inventory written to ${path.basename(outPath)} (${report.summary.totalFiles} file(s))\n`
         );
       }
+      // Exit 0 only when every input is accepted
+      const allAccepted = report.files.every((f) => f.status === "accepted");
+      process.exit(allAccepted ? 0 : 2);
     })
     .catch((err: unknown) => {
       const msg = err instanceof Error ? err.message : String(err);

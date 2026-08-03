@@ -288,14 +288,16 @@ async function runTests(): Promise<void> {
     );
   });
 
-  // 13. Plain JSON array count
-  await test("Plain JSON: counts array elements", async () => {
+  // 13. Plain JSON array — generic JSON is now classified as unknown (fail-closed)
+  await test("Plain JSON: generic array classified as unknown", async () => {
     const fp = writeTmp("data.json", PLAIN_JSON_FIXTURE);
     const config: InventoryConfig = { filePaths: [fp], formatHint: "auto" };
     const report = await buildLegacySourceInventory(config);
     const file = report.files[0];
-    assert.equal(file.detectedFormat, "json");
-    assert.equal(file.recordCount, 4);
+    assert.equal(file.detectedFormat, "unknown");
+    assert.equal(file.recordCount, null);
+    assert.equal(file.countConfidence, "unavailable");
+    assert.equal(file.status, "unknown");
   });
 
   // 14. inventoryVersion field is present and correct
@@ -358,8 +360,8 @@ async function runTests(): Promise<void> {
     assert.equal(file.recordCount, 2, "should count 2 data rows, not 3");
   });
 
-  // 19. Large JSON object: record count unavailable
-  await test("Large JSON object: recordCount=null, countConfidence=unavailable", async () => {
+  // 19. Large JSON object: generic JSON classified as unknown (fail-closed)
+  await test("Large JSON object: classified as unknown, recordCount=null", async () => {
     // Build a flat object (not an array)
     const obj: Record<string, string> = {};
     for (let i = 0; i < 100; i++) {
@@ -369,10 +371,10 @@ async function runTests(): Promise<void> {
     const fp = writeTmp("large-object.json", largeJson);
     const report = await buildLegacySourceInventory({ filePaths: [fp], formatHint: "auto" });
     const file = report.files[0];
-    assert.equal(file.detectedFormat, "json");
+    assert.equal(file.detectedFormat, "unknown");
     assert.equal(file.recordCount, null);
     assert.equal(file.countConfidence, "unavailable");
-    assert.ok(file.warnings.some((w) => w.toLowerCase().includes("record count unavailable") || w.toLowerCase().includes("large json")), "should have warning about unavailable count");
+    assert.equal(file.status, "unknown");
     // Ensure no data values appear in warnings (PII-safe)
     const warnStr = file.warnings.join(" ");
     assert.ok(!warnStr.includes("value_"), "warnings must not contain data values");
@@ -538,6 +540,109 @@ async function runTests(): Promise<void> {
     assert.ok(file.sha256.length === 64, "sha256 should be 64 hex chars");
     assert.equal(file.recordCount, null);
     assert.equal(file.countConfidence, "unavailable");
+  });
+
+  // ---------------------------------------------------------------------------
+  // Boundary tests
+  // ---------------------------------------------------------------------------
+
+  // 32. CSV CRLF line endings
+  await test("CSV CRLF: counts rows correctly with \\r\\n", async () => {
+    const crlfCsv = `post_id,post_title,post_type\r\n1,Title A,post\r\n2,Title B,post\r\n`;
+    const fp = writeTmp("crlf.csv", crlfCsv);
+    const report = await buildLegacySourceInventory({ filePaths: [fp], formatHint: "auto" });
+    const file = report.files[0];
+    assert.equal(file.detectedFormat, "wordpress-csv");
+    assert.equal(file.recordCount, 2, "should count 2 data rows");
+  });
+
+  // 33. CSV escaped quotes in quoted field
+  await test("CSV escaped quotes: \"\"-escaped quotes in quoted field", async () => {
+    const escapedQuoteCsv = `post_id,post_title,post_type\n1,"Title with ""quotes"" inside",post\n`;
+    const fp = writeTmp("escaped-quotes.csv", escapedQuoteCsv);
+    const report = await buildLegacySourceInventory({ filePaths: [fp], formatHint: "auto" });
+    const file = report.files[0];
+    assert.equal(file.detectedFormat, "wordpress-csv");
+    assert.equal(file.recordCount, 1, "should count 1 data row");
+  });
+
+  // 34. CSV malformed — unterminated quoted field
+  await test("CSV malformed: unterminated quoted field returns unavailable", async () => {
+    const malformedCsv = `post_id,post_title\n1,"Unterminated quote\n`;
+    const fp = writeTmp("malformed.csv", malformedCsv);
+    const report = await buildLegacySourceInventory({ filePaths: [fp], formatHint: "auto" });
+    const file = report.files[0];
+    assert.equal(file.recordCount, null);
+    assert.equal(file.countConfidence, "unavailable");
+    assert.ok(file.warnings.some((w) => w.toLowerCase().includes("malformed")), "should have malformed warning");
+  });
+
+  // 35. WXR empty file
+  await test("WXR empty: zero items counted", async () => {
+    const emptyWxr = `<?xml version="1.0"?>\n<rss><channel></channel></rss>`;
+    const fp = writeTmp("empty.xml", emptyWxr);
+    const report = await buildLegacySourceInventory({ filePaths: [fp], formatHint: "auto" });
+    const file = report.files[0];
+    assert.equal(file.recordCount, 0);
+  });
+
+  // 36. WXR single item
+  await test("WXR single: one item counted correctly", async () => {
+    const singleWxr = `<?xml version="1.0"?>\n<rss><channel><item><title>One</title></item></channel></rss>`;
+    const fp = writeTmp("single.xml", singleWxr);
+    const report = await buildLegacySourceInventory({ filePaths: [fp], formatHint: "auto" });
+    const file = report.files[0];
+    assert.equal(file.recordCount, 1);
+  });
+
+  // 37. Symbolic link rejection
+  await test("Symlink input: rejected with warning", async () => {
+    const targetPath = writeTmp("target.xml", WXR_FIXTURE);
+    const linkPath = path.join(tmpDir, "link.xml");
+    try {
+      fs.symlinkSync(targetPath, linkPath);
+      const report = await buildLegacySourceInventory({ filePaths: [linkPath], formatHint: "auto" });
+      const file = report.files[0];
+      assert.equal(file.status, "rejected");
+      assert.ok(file.warnings.some((w) => w.toLowerCase().includes("symlink") || w.toLowerCase().includes("symbolic link")), "warning should mention symlink");
+    } catch (err: unknown) {
+      const code = (err as NodeJS.ErrnoException).code;
+      if (code === "EPERM") {
+        console.log("  SKIP  Symlink input: rejected with warning (EPERM on this platform)");
+      } else {
+        throw err;
+      }
+    }
+  });
+
+  // 38. Generic object JSON rejected
+  await test("Generic JSON object: rejected as unknown", async () => {
+    const genericObj = JSON.stringify({ foo: "bar", baz: 42 });
+    const fp = writeTmp("generic-obj.json", genericObj);
+    const report = await buildLegacySourceInventory({ filePaths: [fp], formatHint: "auto" });
+    const file = report.files[0];
+    assert.equal(file.detectedFormat, "unknown");
+    assert.equal(file.status, "unknown");
+  });
+
+  // 39. Renamed binary: PDF in JSON file
+  await test("Renamed binary: PDF header in .json rejected", async () => {
+    const pdfHeader = Buffer.from("%PDF-1.4 fake pdf");
+    const fp = writeTmp("fake.json", pdfHeader);
+    const report = await buildLegacySourceInventory({ filePaths: [fp], formatHint: "auto" });
+    const file = report.files[0];
+    assert.equal(file.status, "rejected");
+    assert.equal(file.detectedFormat, "unsupported");
+  });
+
+  // 40. Valid FluentCRM JSON accepted
+  await test("FluentCRM JSON valid: accepted and counted", async () => {
+    const fp = writeTmp("fluentcrm.json", FLUENTCRM_JSON_FIXTURE);
+    const report = await buildLegacySourceInventory({ filePaths: [fp], formatHint: "auto" });
+    const file = report.files[0];
+    assert.equal(file.detectedFormat, "fluentcrm-json");
+    assert.equal(file.recordCount, 2);
+    assert.equal(file.status, "accepted");
   });
 
   // ---------------------------------------------------------------------------

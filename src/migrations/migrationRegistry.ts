@@ -1,0 +1,39 @@
+/**
+ * migrationRegistry.ts
+ *
+ * Canonical list of registered Payload migration names.
+ * Derived from src/migrations/index.ts — the authoritative source.
+ * This module has NO side effects and can be safely imported by scripts
+ * without triggering Payload initialization.
+ */
+
+export const PAYLOAD_MIGRATION_NAMES: readonly string[] = [
+  '20260620_213328',
+  '20260621_194424_course_system_phase1',
+  '20260622_093852_course_private_media',
+  '20260627_010700_structured_community_attachments',
+  '20260630_100730_affiliate_reporting',
+  '20260630_190000_payload_preferences_id_constraint',
+  '20260701_201500_member_email_verification',
+  '20260702_001500_member_account_action_purposes',
+  '20260703_000000_partner_affiliate_operations',
+  '20260704_090000_partner_schema_reconciliation',
+  '20260707_130000_remove_table_plan_from_payload_enums',
+  '20260718_103726_membership_support_schema',
+  '20260718_000000_live_sessions',
+  '20260718_110000_bunny_videos',
+  '20260719_150000_subscription_schema_cols',
+  '20260720_000000_locked_docs_rels_new_collections',
+  '20260722_100000_reconcile_lockstate_vip_progress',
+  '20260723_000000_singular_membership_plan',
+  '20260723_000001_migrate_pro_to_membership',
+  '20260724_120000_operator_content_media',
+  '20260724_121000_billing_operator_actions',
+  '20260724_122000_live_session_relationships',
+  '20260724_123000_email_operator_actions',
+  '20260727_000000_partner_applications_source_member_id',
+  '20260727_100000_email_events_lease_columns',
+  '20260727_200000_email_events_processing_status',
+  '20260730_090000_membership_audit_relationship_columns',
+  '20260730_100000_email_events_staging_guard_status',
+] as const

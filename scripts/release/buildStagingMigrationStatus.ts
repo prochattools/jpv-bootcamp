@@ -9,6 +9,7 @@
  * Safety design:
  *  - Requires --mode=staging-read-only flag (fail closed without it)
  *  - Requires --expected-schema flag with exact schema name
+ *  - Validates expectedSchema BEFORE opening any database connection
  *  - Verifies database schema identity before any data query
  *  - Never prints connection strings, credentials, or arbitrary DB rows
  *  - Never applies or repairs anything
@@ -22,40 +23,13 @@
  *    prisma/schema.prisma and prisma/system.prisma)
  */
 
+import { PAYLOAD_MIGRATION_NAMES } from '../../src/migrations/migrationRegistry'
+
 // ---------------------------------------------------------------------------
-// Registered migrations — sourced directly from src/migrations/index.ts
+// Registered migrations — derived from canonical migrationRegistry.ts
 // ---------------------------------------------------------------------------
 
-export const REGISTERED_PAYLOAD_MIGRATIONS: readonly string[] = [
-  '20260620_213328',
-  '20260621_194424_course_system_phase1',
-  '20260622_093852_course_private_media',
-  '20260627_010700_structured_community_attachments',
-  '20260630_100730_affiliate_reporting',
-  '20260630_190000_payload_preferences_id_constraint',
-  '20260701_201500_member_email_verification',
-  '20260702_001500_member_account_action_purposes',
-  '20260703_000000_partner_affiliate_operations',
-  '20260704_090000_partner_schema_reconciliation',
-  '20260707_130000_remove_table_plan_from_payload_enums',
-  '20260718_103726_membership_support_schema',
-  '20260718_000000_live_sessions',
-  '20260718_110000_bunny_videos',
-  '20260719_150000_subscription_schema_cols',
-  '20260720_000000_locked_docs_rels_new_collections',
-  '20260722_100000_reconcile_lockstate_vip_progress',
-  '20260723_000000_singular_membership_plan',
-  '20260723_000001_migrate_pro_to_membership',
-  '20260724_120000_operator_content_media',
-  '20260724_121000_billing_operator_actions',
-  '20260724_122000_live_session_relationships',
-  '20260724_123000_email_operator_actions',
-  '20260727_000000_partner_applications_source_member_id',
-  '20260727_100000_email_events_lease_columns',
-  '20260727_200000_email_events_processing_status',
-  '20260730_090000_membership_audit_relationship_columns',
-  '20260730_100000_email_events_staging_guard_status',
-] as const
+export const REGISTERED_PAYLOAD_MIGRATIONS: readonly string[] = PAYLOAD_MIGRATION_NAMES
 
 // ---------------------------------------------------------------------------
 // Types
@@ -63,7 +37,6 @@ export const REGISTERED_PAYLOAD_MIGRATIONS: readonly string[] = [
 
 export interface PayloadMigrationRow {
   name: string
-  applied: boolean
   batch: number
 }
 
@@ -71,6 +44,19 @@ export interface PrismaMigrationRow {
   migration_name: string
   finished_at: string | null
   logs: string | null
+  rolled_back_at: string | null
+  started_at: string
+  applied_steps_count: number
+}
+
+export type PrismaMigrationStatus = 'applied' | 'failed' | 'in-progress' | 'rolled-back' | 'unexpected'
+
+function classifyPrismaMigration(row: PrismaMigrationRow): PrismaMigrationStatus {
+  if (row.rolled_back_at !== null) return 'rolled-back'
+  if (row.finished_at !== null) return 'applied'
+  if (row.logs !== null) return 'failed'
+  // started but not finished, no logs, not rolled back => in-progress/unfinished
+  return 'in-progress'
 }
 
 /**
@@ -90,7 +76,7 @@ export interface StagingMigrationStatusReport {
   appliedPayloadMigrations: string[]
   missingPayloadMigrations: string[]
   unexpectedPayloadMigrations: string[]
-  prismaMigrations: Array<{ name: string; applied: boolean; failed: boolean }>
+  prismaMigrations: Array<{ name: string; status: PrismaMigrationStatus }>
   schemaIdentityMatch: boolean | null
   overallStatus: 'VERIFIED' | 'MISMATCHES_FOUND' | 'OPERATOR_EVIDENCE_REQUIRED'
   notes: string[]
@@ -106,7 +92,8 @@ export interface StagingMigrationStatusReport {
  * @param adapter  Live DB adapter. When null/undefined, returns an
  *                 OPERATOR_EVIDENCE_REQUIRED report without querying the DB.
  * @param expectedSchema  The exact schema name the DB must report. Required
- *                        for live mode; ignored for dry-run.
+ *                        for live mode; validated BEFORE any DB connection is
+ *                        opened.
  */
 export async function buildStagingMigrationStatus(
   adapter: MigrationQueryAdapter | null | undefined,
@@ -136,14 +123,15 @@ export async function buildStagingMigrationStatus(
     }
   }
 
-  // --- Schema identity guard: must match before any query ---
-  const reportedSchema = await adapter.getDatabaseSchemaIdentity()
-
+  // --- Validate expectedSchema BEFORE opening any DB connection ---
   if (!expectedSchema) {
     throw new Error(
       'schema_identity_check_required: --expected-schema must be provided for live mode',
     )
   }
+
+  // --- Schema identity guard: must match before any data query ---
+  const reportedSchema = await adapter.getDatabaseSchemaIdentity()
 
   if (reportedSchema !== expectedSchema) {
     notes.push(
@@ -168,7 +156,10 @@ export async function buildStagingMigrationStatus(
 
   // --- Payload migration comparison ---
   const payloadRows = await adapter.getPayloadMigrations()
-  const appliedPayloadNames = payloadRows.filter((r) => r.applied).map((r) => r.name)
+  // batch == -1 means dev push, not applied. batch > 0 means applied.
+  const appliedPayloadNames = payloadRows
+    .filter((r) => r.batch > 0)
+    .map((r) => r.name)
   const appliedSet = new Set(appliedPayloadNames)
   const registeredSet = new Set(registered)
 
@@ -181,17 +172,16 @@ export async function buildStagingMigrationStatus(
   const prismaRows = await adapter.getPrismaMigrations()
   const prismaMigrations = prismaRows.map((row) => ({
     name: row.migration_name,
-    applied: row.finished_at !== null,
-    failed: row.logs !== null && row.finished_at === null,
+    status: classifyPrismaMigration(row),
   }))
 
-  const hasFailed = prismaMigrations.some((m) => m.failed)
+  const hasNonApplied = prismaMigrations.some((m) => m.status !== 'applied')
 
   // --- Determine overall status ---
   const hasMismatches =
     missingPayloadMigrations.length > 0 ||
     unexpectedPayloadMigrations.length > 0 ||
-    hasFailed
+    hasNonApplied
 
   const overallStatus: StagingMigrationStatusReport['overallStatus'] = hasMismatches
     ? 'MISMATCHES_FOUND'
@@ -207,12 +197,15 @@ export async function buildStagingMigrationStatus(
       `${unexpectedPayloadMigrations.length} Payload migration record(s) in DB not found in the registered list.`,
     )
   }
-  if (hasFailed) {
-    notes.push('One or more Prisma migrations have a failed state (logs present, not finished).')
+  if (hasNonApplied) {
+    const nonApplied = prismaMigrations.filter((m) => m.status !== 'applied')
+    notes.push(
+      `${nonApplied.length} Prisma migration(s) in non-applied state: ${nonApplied.map((m) => `${m.name}(${m.status})`).join(', ')}`,
+    )
   }
   if (!hasMismatches) {
     notes.push(
-      `All ${registered.length} registered Payload migrations are applied. No Prisma failures detected.`,
+      `All ${registered.length} registered Payload migrations are applied. All Prisma migrations applied.`,
     )
   }
 
@@ -231,29 +224,147 @@ export async function buildStagingMigrationStatus(
 }
 
 // ---------------------------------------------------------------------------
+// PostgreSQL read-only adapter
+// ---------------------------------------------------------------------------
+
+export function createStagingReadOnlyAdapter(): MigrationQueryAdapter {
+  return {
+    async getDatabaseSchemaIdentity(): Promise<string> {
+      const { Client } = await import('pg')
+      const connectionString = process.env['DATABASE_URL']
+      if (!connectionString) {
+        throw new Error('DATABASE_URL is not set')
+      }
+      const client = new Client({
+        connectionString,
+        connectionTimeoutMillis: 5000,
+        // @ts-ignore — statement_timeout is valid but may not be typed in all @types/pg versions
+        statement_timeout: 5000,
+      })
+      await client.connect()
+      try {
+        await client.query('BEGIN READ ONLY')
+        const result = await client.query('SELECT current_schema() AS schema_name')
+        const schemaName: string = (result.rows[0] as { schema_name: string })?.schema_name ?? ''
+        await client.query('ROLLBACK')
+        return schemaName
+      } finally {
+        await client.end()
+      }
+    },
+
+    async getPayloadMigrations(): Promise<PayloadMigrationRow[]> {
+      const { Client } = await import('pg')
+      const connectionString = process.env['DATABASE_URL']
+      if (!connectionString) throw new Error('DATABASE_URL is not set')
+      const client = new Client({
+        connectionString,
+        connectionTimeoutMillis: 5000,
+      })
+      await client.connect()
+      try {
+        await client.query('BEGIN READ ONLY')
+        const result = await client.query(
+          'SELECT name, batch FROM payload_migrations ORDER BY id',
+        )
+        await client.query('ROLLBACK')
+        return (result.rows as Array<{ name: string; batch: number }>).map((row) => ({
+          name: row.name,
+          batch: Number(row.batch),
+        }))
+      } finally {
+        await client.end()
+      }
+    },
+
+    async getPrismaMigrations(): Promise<PrismaMigrationRow[]> {
+      const { Client } = await import('pg')
+      const connectionString = process.env['DATABASE_URL']
+      if (!connectionString) throw new Error('DATABASE_URL is not set')
+      const client = new Client({
+        connectionString,
+        connectionTimeoutMillis: 5000,
+      })
+      await client.connect()
+      try {
+        await client.query('BEGIN READ ONLY')
+        const result = await client.query(
+          'SELECT migration_name, finished_at, logs IS NOT NULL AS has_logs, rolled_back_at, started_at, applied_steps_count FROM _prisma_migrations ORDER BY started_at',
+        )
+        await client.query('ROLLBACK')
+        return (result.rows as Array<{
+          migration_name: string
+          finished_at: Date | null
+          has_logs: boolean
+          rolled_back_at: Date | null
+          started_at: Date
+          applied_steps_count: number
+        }>).map((row) => ({
+          migration_name: row.migration_name,
+          finished_at: row.finished_at ? row.finished_at.toISOString() : null,
+          logs: row.has_logs ? '<redacted>' : null,
+          rolled_back_at: row.rolled_back_at ? row.rolled_back_at.toISOString() : null,
+          started_at: row.started_at.toISOString(),
+          applied_steps_count: Number(row.applied_steps_count),
+        }))
+      } finally {
+        await client.end()
+      }
+    },
+  }
+}
+
+// ---------------------------------------------------------------------------
+// CLI argument parser
+// ---------------------------------------------------------------------------
+
+export function parseCliArgs(argv: string[]): {
+  mode: string | undefined
+  expectedSchema: string | undefined
+  errors: string[]
+} {
+  let mode: string | undefined
+  let expectedSchema: string | undefined
+  const errors: string[] = []
+  let modeCount = 0
+  let schemaCount = 0
+
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i]
+    if (arg.startsWith('--mode=')) {
+      modeCount++
+      mode = arg.slice('--mode='.length)
+    } else if (arg === '--mode') {
+      modeCount++
+      mode = argv[++i]
+    } else if (arg.startsWith('--expected-schema=')) {
+      schemaCount++
+      expectedSchema = arg.slice('--expected-schema='.length)
+    } else if (arg === '--expected-schema') {
+      schemaCount++
+      expectedSchema = argv[++i]
+    }
+  }
+
+  if (modeCount > 1) errors.push('--mode specified more than once')
+  if (schemaCount > 1) errors.push('--expected-schema specified more than once')
+
+  return { mode, expectedSchema, errors }
+}
+
+// ---------------------------------------------------------------------------
 // CLI entry point
 // ---------------------------------------------------------------------------
 
-function parseCliArgs(argv: string[]): {
-  mode: string | undefined
-  expectedSchema: string | undefined
-} {
-  const modeIndex = argv.indexOf('--mode')
-  const mode = modeIndex >= 0 ? argv[modeIndex + 1] : undefined
-
-  const schemaFlag = argv.find((a) => a.startsWith('--expected-schema='))
-  const schemaPositionalIndex = argv.indexOf('--expected-schema')
-  const expectedSchema = schemaFlag
-    ? schemaFlag.split('=')[1]
-    : schemaPositionalIndex >= 0
-      ? argv[schemaPositionalIndex + 1]
-      : undefined
-
-  return { mode, expectedSchema }
-}
-
 if (require.main === module) {
-  const { mode, expectedSchema } = parseCliArgs(process.argv.slice(2))
+  const { mode, expectedSchema, errors } = parseCliArgs(process.argv.slice(2))
+
+  if (errors.length > 0) {
+    for (const e of errors) {
+      process.stderr.write(`ERROR: ${e}\n`)
+    }
+    process.exit(1)
+  }
 
   if (mode !== 'staging-read-only') {
     process.stderr.write(
