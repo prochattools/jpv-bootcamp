@@ -1,11 +1,11 @@
 # JPV Bootcamp - Roadmap Progress Status
 
-<!-- Reconciliation note 2026-08-02: Previous checkpoint recorded SHA 3a6613498241c5dd71761c26c3b1e790764db1d5 as the latest verified snapshot. Current branch HEAD has advanced to c15cd578a953cd6b1dc8a3d4705350a52f7d0812 (workflow 30761713446, success). The 163/163 release count and Playwright 188 collected / 148 passed / 40 skipped remain correct. Hardening status: STAGING HARDENING REMEDIATION REQUIRED — account-action reservation/finalization (one-time actions lack a durable cross-instance concurrency-safe primitive) remains the open hardening gap. -->
+<!-- Reconciliation note 2026-08-02: Previous checkpoint recorded SHA 3a6613498241c5dd71761c26c3b1e790764db1d5 as the latest verified snapshot. Current branch HEAD has advanced to c15cd578a953cd6b1dc8a3d4705350a52f7d0812 (workflow 30761713446, success). The 165/165 release count and Playwright 188 collected / 148 passed / 40 skipped remain correct. Hardening status: STAGING HARDENING REMEDIATION REQUIRED — account-action reservation/finalization (one-time actions lack a durable cross-instance concurrency-safe primitive) remains the open hardening gap. -->
 
 ## Current checkpoint — 2026-08-02
 
 - **COMPLETE CORE STAGING WORK:** M0-01 through M0-09, M1-01 through M1-06 in their documented state, UI-01 design/admin hardening, release/browser automation, exact-SHA staging deployment, media persistence, migration inventory/preflight, email queue/guard, Stripe test-mode behavior, and partner/sponsored staging boundaries.
-- **LOCALLY VERIFIED:** focused design contract, Payload TypeScript, changed-path security scan, application build, `pnpm test:release` (`163/163`), and `pnpm test:e2e` (Playwright: 188 collected, 148 passed, 40 skipped; four staging-only spec files not collected).
+- **LOCALLY VERIFIED:** focused design contract, Payload TypeScript, changed-path security scan, application build, `pnpm test:release` (`165/165`), and `pnpm test:e2e` (Playwright: 188 collected, 148 passed, 40 skipped; four staging-only spec files not collected).
 - **STAGING VERIFIED (latest completed verification snapshot):** authenticated Payload DOM and admin regression checks passed at 375/768/1024/1440px; preview workflow `30756831212` concluded `success`; staging health reported exact SHA `3a6613498241c5dd71761c26c3b1e790764db1d5`. Verify current live state with `git rev-parse HEAD` and `https://preview.jpvbootcamp.com/api/health`.
 - **TECHNICAL STATUS:** `STAGING TECHNICAL IMPLEMENTATION COMPLETE — ACCEPTANCE PENDING EXTERNAL ACTION`.
 - **HARDENING STATUS:** `STAGING HARDENING REMEDIATION REQUIRED` because one-time account-action completion lacks a durable cross-instance reservation/finalization primitive.
@@ -20,7 +20,7 @@ Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`.
 
 ## Current position
 
-**Position:** The agreed core staging implementation is deployed and technically verified. Latest completed verification snapshot: SHA `3a6613498241c5dd71761c26c3b1e790764db1d5`, workflow `30756831212`. The deterministic baseline is `163/163` release gates plus Playwright 188 collected / 148 passed / 40 skipped, with four staging-only spec files excluded by contract. Formal staging acceptance is not complete because external approval records remain pending. Repository-owned hardening is also not complete: email-change confirmation still consumes its one-time action before the member update succeeds, and invitation/password-reset completion lacks a durable cross-instance reservation/finalization primitive.
+**Position:** The agreed core staging implementation is deployed and technically verified. Latest completed verification snapshot: SHA `3a6613498241c5dd71761c26c3b1e790764db1d5`, workflow `30756831212`. The deterministic baseline is `165/165` release gates plus Playwright 188 collected / 148 passed / 40 skipped, with four staging-only spec files excluded by contract. Formal staging acceptance is not complete because external approval records remain pending. Repository-owned hardening is also not complete: email-change confirmation still consumes its one-time action before the member update succeeds, and invitation/password-reset completion lacks a durable cross-instance reservation/finalization primitive.
 
 **Next repository task:** design and approve a schema-backed reservation/finalization state for one-time account actions, then migrate invitation, password-reset, and email-change completion to that primitive with concurrency, retry, idempotency, expiry, and raw-token secrecy tests. Do not apply a schema change without the separately required staging authorization. `M2-01` and Phases 8–11 remain deferred unless explicitly promoted.
 
@@ -65,7 +65,7 @@ Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`.
 | --- | --- |
 | Branch | `feature/course-branding-and-preview` |
 | Staging target | This feature branch is the staging / production-staged deployment branch |
-| **Latest verification snapshot** | SHA `3a6613498241c5dd71761c26c3b1e790764db1d5` (2026-08-02 — preview workflow `30756831212` succeeded, exact-SHA health confirmed); release manifest 163 tests. Current branch tip: `git rev-parse HEAD`. |
+| **Latest verification snapshot** | SHA `3a6613498241c5dd71761c26c3b1e790764db1d5` (2026-08-02 — preview workflow `30756831212` succeeded, exact-SHA health confirmed); release manifest 165 tests. Current branch tip: `git rev-parse HEAD`. |
 | **Prior CODE HEAD** | `3b853d27b974f28f67f4e7e7f8d6f45786c88624 fix: verify production main boundary without leaking deployment identifiers` (2026-08-01 — 162/162 release tests, 148/148 browser E2E) |
 | **Security Status** | Sponsored-seat concurrent claim is resolved with a row lock; durable email recovery is implemented; one-time account-action reservation/finalization remains open and blocks a clean hardening verdict. |
 | Release State | **STAGING HARDENING REMEDIATION REQUIRED** — technical implementation is complete, formal acceptance is externally gated, and account-action finalization requires a separately approved durable design |
@@ -234,7 +234,7 @@ The following phases were layered on the same branch after the `9745dac` hardeni
 ### Current HEAD validation (2026-08-02)
 
 - `pnpm exec tsc --noEmit` PASS — TypeScript: No errors found
-- `pnpm test:release` passed `163/163` — includes the account-action hardening-status guard (2026-08-02)
+- `pnpm test:release` passed `165/165` — includes the account-action hardening-status guard (2026-08-02)
 - `pnpm build` PASS — Compiled successfully in 7.8s
 - Security scan (`dangerouslySetInnerHTML`, `eval`, `innerHTML` outside approved surfaces): CLEAN
 - All `dangerouslySetInnerHTML` usages confirmed as trusted-source (Payload Lexical rich text → HTML conversion, hardcoded FAQ strings, hardcoded preview lesson content); none accept user-submitted input unescaped.

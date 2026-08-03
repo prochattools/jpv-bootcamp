@@ -2,7 +2,7 @@
 
 ## Current staging-closure checkpoint — 2026-08-02
 
-- **IMPLEMENTED / LOCALLY VERIFIED:** core staging scope, Payload admin design, responsive behavior, focused design contract, Payload TypeScript, changed-path security scan, application build, and `pnpm test:release` (`163/163`).
+- **IMPLEMENTED / LOCALLY VERIFIED:** core staging scope, Payload admin design, responsive behavior, focused design contract, Payload TypeScript, changed-path security scan, application build, and `pnpm test:release` (`165/165`).
 - **STAGING VERIFIED (latest completed verification snapshot):** authenticated Payload DOM verified across dashboard, membership audit history, and course editing at 375/768/1024/1440px; overflow repaired; authenticated regression gate passed. Current snapshot: preview workflow `30761713446` concluded `success`; staging health reported exact SHA `c15cd578a953cd6b1dc8a3d4705350a52f7d0812`. Prior snapshot: SHA `3a6613498241c5dd71761c26c3b1e790764db1d5`, workflow `30756831212` (retained as history). For current live state: `git rev-parse HEAD` and `https://preview.jpvbootcamp.com/api/health`.
 - **MEDIA PERSISTENCE:** verified via disposable fixture upload, redeployment survival, and Payload API deletion; named staging volume `jpv-bootcamp-preview-media` active.
 - **TECHNICAL STATUS:** `STAGING TECHNICAL IMPLEMENTATION COMPLETE — ACCEPTANCE PENDING EXTERNAL ACTION`.
@@ -38,7 +38,7 @@ Static preflight automation is available via `pnpm staging:static-preflight`; it
 
 **Latest completed staging verification snapshot (2026-08-02):** SHA `c15cd578a953cd6b1dc8a3d4705350a52f7d0812`, preview workflow `30761713446`, conclusion `success`, exact-SHA staging health confirmed. Prior verified snapshot: SHA `3a6613498241c5dd71761c26c3b1e790764db1d5`, workflow `30756831212`, conclusion `success` (retained as historical anchor). The authoritative current branch tip is determined by `git rev-parse HEAD`; do not treat any hardcoded SHA as the immutable current tip.
 
-**Outcome:** `STAGING HARDENING REMEDIATION REQUIRED` — core staging implementation and automated validation are complete, `163/163` release gates and Playwright 188 collected / 148 passed / 40 skipped pass, but formal acceptance remains externally gated and one-time account-action completion still requires durable reservation/finalization.
+**Outcome:** `STAGING HARDENING REMEDIATION REQUIRED` — core staging implementation and automated validation are complete, `165/165` release gates and Playwright 188 collected / 148 passed / 40 skipped pass, but formal acceptance remains externally gated and one-time account-action completion still requires durable reservation/finalization.
 
 **Technical staging status:** `STAGING TECHNICAL IMPLEMENTATION COMPLETE — ACCEPTANCE PENDING EXTERNAL ACTION`
 
@@ -59,7 +59,7 @@ Static preflight automation is available via `pnpm staging:static-preflight`; it
 
 ### Deterministic local validation baseline
 
-- `pnpm test:release` passed `163/163`, including the account-action hardening-status guard (2026-08-02)
+- `pnpm test:release` passed `165/165`, including the account-action hardening-status guard (2026-08-02)
 - `pnpm test:e2e` Playwright execution: 188 collected, 148 passed, 40 skipped; four staging-only spec files not collected (admin-crud-staging, admin-responsive-staging, staging-smoke, stripe-webhook-staging)
 - `pnpm test:release:full` passed
 - `pnpm staging:static-preflight` passed

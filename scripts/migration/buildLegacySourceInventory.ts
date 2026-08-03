@@ -13,6 +13,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as crypto from "crypto";
+import * as os from "os";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -29,6 +30,8 @@ export type SupportedFormat =
 
 export type FileStatus = "accepted" | "rejected" | "unknown";
 
+export type RecordCountConfidence = "exact" | "estimated" | "unavailable";
+
 export interface FileInventory {
   /** Filename only — no directory path */
   path: string;
@@ -37,6 +40,7 @@ export interface FileInventory {
   detectedFormat: SupportedFormat | "unsupported";
   /** null when not safely detectable */
   recordCount: number | null;
+  countConfidence: RecordCountConfidence;
   warnings: string[];
   status: FileStatus;
 }
@@ -70,74 +74,266 @@ export interface InventoryConfig {
 }
 
 // ---------------------------------------------------------------------------
-// Format detection helpers (structural markers only — no PII)
+// Constants
 // ---------------------------------------------------------------------------
 
+const SNIFF_BUFFER_SIZE = 8192;
 const WXR_STRUCTURAL_MARKER = /<rss[^>]*>/i;
-const WXR_ITEM_TAG = /<item>/gi;
+
+// WordPress CSV structural columns — at least one must be present
+const WP_CSV_COLUMNS = [
+  "post_id",
+  "post_title",
+  "post_type",
+  "post_status",
+  "post_name",
+  "post_date",
+  "menu_order",
+];
+
+// ---------------------------------------------------------------------------
+// Path redaction helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Strip directory paths from a message. Replaces any occurrence of a known
+ * full path with just its basename, and replaces home directory prefix with
+ * a generic placeholder.
+ */
+function redactPaths(msg: string, filePath: string): string {
+  let result = msg;
+  // Replace full path with basename
+  if (filePath) {
+    result = result.split(filePath).join(path.basename(filePath));
+  }
+  // Replace home directory prefix
+  const home = os.homedir();
+  if (home) {
+    result = result.split(home).join("<path>");
+  }
+  return result;
+}
+
+// ---------------------------------------------------------------------------
+// Streaming SHA-256
+// ---------------------------------------------------------------------------
+
+async function sha256Stream(filePath: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const hash = crypto.createHash("sha256");
+    const stream = fs.createReadStream(filePath);
+    stream.on("error", reject);
+    stream.on("data", (chunk) => hash.update(chunk));
+    stream.on("end", () => resolve(hash.digest("hex")));
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Streaming item counter for WXR
+// ---------------------------------------------------------------------------
+
+async function countWxrItems(filePath: string): Promise<number> {
+  return new Promise((resolve, reject) => {
+    let count = 0;
+    let remainder = "";
+    const stream = fs.createReadStream(filePath, { encoding: "utf8" });
+    stream.on("error", reject);
+    stream.on("data", (chunk: string) => {
+      const text = remainder + chunk;
+      // Count <item> occurrences — use a simple scan to avoid RegExp lastIndex state issues
+      let pos = 0;
+      while (true) {
+        const idx = text.indexOf("<item>", pos);
+        if (idx === -1) break;
+        count++;
+        pos = idx + 6;
+      }
+      // Keep last few chars to handle splits across chunk boundaries
+      remainder = text.slice(-6);
+    });
+    stream.on("end", () => resolve(count));
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Streaming CSV row counter (handles quoted fields with embedded newlines)
+// ---------------------------------------------------------------------------
+
+async function countCsvRows(filePath: string): Promise<number> {
+  return new Promise((resolve, reject) => {
+    let dataRows = 0;
+    let headerSeen = false;
+    let inQuotedField = false;
+    let remainder = "";
+
+    const stream = fs.createReadStream(filePath, { encoding: "utf8" });
+    stream.on("error", reject);
+    stream.on("data", (chunk: string) => {
+      const text = remainder + chunk;
+      let pos = 0;
+      let lineStart = 0;
+
+      for (let i = 0; i < text.length; i++) {
+        const ch = text[i];
+        if (ch === '"') {
+          inQuotedField = !inQuotedField;
+        } else if (ch === "\n" && !inQuotedField) {
+          const line = text.slice(lineStart, i).trim();
+          if (line.length > 0) {
+            if (!headerSeen) {
+              headerSeen = true;
+            } else {
+              dataRows++;
+            }
+          }
+          lineStart = i + 1;
+          pos = lineStart;
+        }
+      }
+      remainder = text.slice(lineStart);
+    });
+    stream.on("end", () => {
+      // Handle last line without trailing newline
+      const last = remainder.trim();
+      if (last.length > 0) {
+        if (!headerSeen) {
+          // only header, no data rows
+        } else {
+          dataRows++;
+        }
+      }
+      resolve(dataRows);
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Bounded sniff buffer reader
+// ---------------------------------------------------------------------------
+
+function readSniffBuffer(filePath: string): Buffer {
+  const fd = fs.openSync(filePath, "r");
+  try {
+    const buf = Buffer.alloc(SNIFF_BUFFER_SIZE);
+    const bytesRead = fs.readSync(fd, buf, 0, SNIFF_BUFFER_SIZE, 0);
+    return buf.slice(0, bytesRead);
+  } finally {
+    fs.closeSync(fd);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Format detection — fail-closed with structural validation
+// ---------------------------------------------------------------------------
+
+interface DetectResult {
+  format: SupportedFormat | "unsupported";
+  warnings: string[];
+}
 
 function detectFormat(
   hint: FormatHint,
   filename: string,
-  content: string
-): SupportedFormat | "unsupported" {
+  sniff: Buffer
+): DetectResult {
   const ext = path.extname(filename).toLowerCase();
+  const sniffStr = sniff.toString("utf8").replace(/^﻿/, "");
+  const warnings: string[] = [];
 
-  if (hint === "fluent-community") return "fluent-community";
+  // Check for binary PDF header regardless of hint or extension
+  if (sniff.length >= 4 && sniff.slice(0, 4).toString("ascii") === "%PDF") {
+    if (hint !== "auto" && (ext === ".csv" || ext === ".json" || ext === ".xml")) {
+      warnings.push("Renamed binary detected (PDF header in non-PDF file); rejected as unsupported");
+    }
+    return { format: "unsupported", warnings };
+  }
 
-  // Hint: wxr
+  // fluent-community: opaque, no structural validation needed
+  if (hint === "fluent-community") {
+    return { format: "fluent-community", warnings };
+  }
+
+  // hint=wxr
   if (hint === "wxr") {
-    if (ext === ".xml") return "wordpress-wxr";
-    return "wordpress-wxr"; // trust the hint
+    // Must have <rss> structural marker in sniff buffer or mismatch
+    if (!WXR_STRUCTURAL_MARKER.test(sniffStr)) {
+      // Check if it looks like CSV (has commas, no XML)
+      if (sniffStr.includes(",") && !sniffStr.includes("<")) {
+        warnings.push(
+          `Format hint mismatch: hint was "wxr" but file "${filename}" appears to be CSV`
+        );
+        return { format: "unsupported", warnings };
+      }
+      warnings.push(
+        `WXR hint applied but <rss> structural marker not found in "${filename}"; rejecting as unrecognized-wxr`
+      );
+      return { format: "unsupported", warnings };
+    }
+    return { format: "wordpress-wxr", warnings };
   }
 
-  // Hint: csv
+  // hint=csv
   if (hint === "csv") {
-    // Distinguish WordPress CSV vs FluentCRM CSV by header structure.
-    // We only look at the first line (header row) for structural column names —
-    // these are schema markers, not PII values.
-    const firstLine = content.slice(0, 2048).split("\n")[0] ?? "";
-    if (isFluentCrmCsvHeader(firstLine)) return "fluentcrm-csv";
-    return "wordpress-csv";
+    if (!sniffStr.includes(",")) {
+      warnings.push(`CSV hint applied but no comma found in "${filename}"; rejecting`);
+      return { format: "unsupported", warnings };
+    }
+    const firstLine = sniffStr.split("\n")[0] ?? "";
+    if (isFluentCrmCsvHeader(firstLine)) return { format: "fluentcrm-csv", warnings };
+    if (hasWordPressCsvColumns(firstLine)) return { format: "wordpress-csv", warnings };
+    warnings.push(
+      `CSV file "${filename}" lacks recognized WordPress or FluentCRM schema columns; classified as unknown`
+    );
+    return { format: "unknown", warnings };
   }
 
-  // Hint: json
+  // hint=json
   if (hint === "json") {
-    const firstLine = content.slice(0, 4096);
-    if (isFluentCrmJson(firstLine)) return "fluentcrm-json";
-    return "json";
+    const trimmed = sniffStr.trimStart();
+    if (!trimmed.startsWith("{") && !trimmed.startsWith("[")) {
+      warnings.push(`JSON hint applied but content does not start with { or [ in "${filename}"; rejecting`);
+      return { format: "unsupported", warnings };
+    }
+    if (isFluentCrmJsonSniff(sniffStr)) return { format: "fluentcrm-json", warnings };
+    return { format: "json", warnings };
   }
 
   // Auto detection
   if (ext === ".xml") {
-    if (WXR_STRUCTURAL_MARKER.test(content.slice(0, 4096))) {
-      return "wordpress-wxr";
+    if (WXR_STRUCTURAL_MARKER.test(sniffStr)) {
+      return { format: "wordpress-wxr", warnings };
     }
-    return "unsupported";
+    return { format: "unsupported", warnings };
   }
 
   if (ext === ".csv") {
-    const firstLine = content.slice(0, 2048).split("\n")[0] ?? "";
-    if (isFluentCrmCsvHeader(firstLine)) return "fluentcrm-csv";
-    return "wordpress-csv";
+    if (!sniffStr.includes(",")) {
+      warnings.push(`CSV file "${filename}" has no commas; classified as unknown`);
+      return { format: "unknown", warnings };
+    }
+    const firstLine = sniffStr.split("\n")[0] ?? "";
+    if (isFluentCrmCsvHeader(firstLine)) return { format: "fluentcrm-csv", warnings };
+    if (hasWordPressCsvColumns(firstLine)) return { format: "wordpress-csv", warnings };
+    warnings.push(
+      `CSV file "${filename}" lacks recognized WordPress or FluentCRM schema columns; classified as unknown`
+    );
+    return { format: "unknown", warnings };
   }
 
   if (ext === ".json") {
-    const firstLine = content.slice(0, 4096);
-    if (isFluentCrmJson(firstLine)) return "fluentcrm-json";
-    return "json";
+    const trimmed = sniffStr.trimStart();
+    if (!trimmed.startsWith("{") && !trimmed.startsWith("[")) {
+      return { format: "unsupported", warnings };
+    }
+    if (isFluentCrmJsonSniff(sniffStr)) return { format: "fluentcrm-json", warnings };
+    return { format: "json", warnings };
   }
 
-  return "unsupported";
+  return { format: "unsupported", warnings };
 }
 
-/**
- * Detect FluentCRM CSV by checking header column names. These are schema
- * identifiers, not PII. We only look at the header row, never at data rows.
- */
 function isFluentCrmCsvHeader(headerLine: string): boolean {
   const lower = headerLine.toLowerCase();
-  // FluentCRM exports typically carry these structural column names
   return (
     lower.includes("contact_status") ||
     lower.includes("subscriber_status") ||
@@ -145,129 +341,210 @@ function isFluentCrmCsvHeader(headerLine: string): boolean {
   );
 }
 
-/**
- * Detect FluentCRM JSON by structural shape: object with a "contacts" key or
- * a "subscribers" key at the top level. We only look at key names, not values.
- */
-function isFluentCrmJson(snippet: string): boolean {
+function hasWordPressCsvColumns(headerLine: string): boolean {
+  const lower = headerLine.toLowerCase();
+  return WP_CSV_COLUMNS.some((col) => lower.includes(col));
+}
+
+function isFluentCrmJsonSniff(snippet: string): boolean {
   return /"contacts"\s*:/.test(snippet) || /"subscribers"\s*:/.test(snippet);
 }
 
 // ---------------------------------------------------------------------------
-// Record count detection (PII-safe — counts only, no values read)
+// Record counting — async, streaming where possible
 // ---------------------------------------------------------------------------
 
-function countRecords(
+interface CountResult {
+  recordCount: number | null;
+  countConfidence: RecordCountConfidence;
+  warnings: string[];
+}
+
+async function countRecords(
   format: SupportedFormat | "unsupported",
-  content: string
-): number | null {
+  filePath: string
+): Promise<CountResult> {
   switch (format) {
     case "wordpress-wxr": {
-      // Count <item> elements by structural tag matching only
-      const matches = content.match(WXR_ITEM_TAG);
-      return matches ? matches.length : 0;
+      const count = await countWxrItems(filePath);
+      return { recordCount: count, countConfidence: "exact", warnings: [] };
     }
 
     case "wordpress-csv":
     case "fluentcrm-csv": {
-      // Count lines minus header; never read cell values
-      const lines = content.split("\n").filter((l) => l.trim().length > 0);
-      return Math.max(0, lines.length - 1);
+      const count = await countCsvRows(filePath);
+      return { recordCount: count, countConfidence: "exact", warnings: [] };
     }
 
     case "fluentcrm-json": {
-      // Top-level object with contacts/subscribers array — count array elements
-      // We parse minimally; if parse fails return null (safe fallback)
+      // FluentCRM JSON is expected to be moderate size; parse minimally
+      // We only use the sniff buffer to check, but we need to parse for count.
+      // Safe: FluentCRM exports are typically not massive. We parse only to get array length.
       try {
+        const content = fs.readFileSync(filePath, "utf8");
         const parsed: unknown = JSON.parse(content);
         if (parsed !== null && typeof parsed === "object" && !Array.isArray(parsed)) {
           const obj = parsed as Record<string, unknown>;
           const arr = obj["contacts"] ?? obj["subscribers"];
-          if (Array.isArray(arr)) return arr.length;
+          if (Array.isArray(arr)) {
+            return { recordCount: arr.length, countConfidence: "exact", warnings: [] };
+          }
         }
-        if (Array.isArray(parsed)) return parsed.length;
-        return null;
+        if (Array.isArray(parsed)) {
+          return { recordCount: (parsed as unknown[]).length, countConfidence: "exact", warnings: [] };
+        }
+        return {
+          recordCount: null,
+          countConfidence: "unavailable",
+          warnings: ["Could not locate contacts or subscribers array in JSON"],
+        };
       } catch {
-        return null;
+        return { recordCount: null, countConfidence: "unavailable", warnings: ["JSON parse error"] };
       }
     }
 
     case "json": {
-      // Count array elements if top-level is array
-      try {
-        const parsed: unknown = JSON.parse(content);
-        if (Array.isArray(parsed)) return parsed.length;
-        return null;
-      } catch {
-        return null;
+      // For plain JSON: if it's an array, we can count. If it's a large object, skip.
+      // Use sniff to decide whether to attempt parse.
+      const stat = fs.statSync(filePath);
+      const sniff = readSniffBuffer(filePath);
+      const sniffStr = sniff.toString("utf8").trimStart();
+
+      if (sniffStr.startsWith("[")) {
+        // Top-level array — parse to count
+        try {
+          const content = fs.readFileSync(filePath, "utf8");
+          const parsed = JSON.parse(content);
+          if (Array.isArray(parsed)) {
+            return { recordCount: (parsed as unknown[]).length, countConfidence: "exact", warnings: [] };
+          }
+        } catch {
+          return { recordCount: null, countConfidence: "unavailable", warnings: ["JSON parse error"] };
+        }
       }
+
+      // Top-level object — do not parse into memory
+      return {
+        recordCount: null,
+        countConfidence: "unavailable",
+        warnings: [
+          `Large JSON object (${stat.size} bytes): record count unavailable to avoid loading entire file into memory`,
+        ],
+      };
     }
 
     case "fluent-community":
-      // Opaque — do not parse
-      return null;
-
-    case "unsupported":
-      return null;
+      return { recordCount: null, countConfidence: "unavailable", warnings: [] };
 
     default:
-      return null;
+      return { recordCount: null, countConfidence: "unavailable", warnings: [] };
   }
 }
 
 // ---------------------------------------------------------------------------
-// SHA-256 checksum
+// Output path safety
 // ---------------------------------------------------------------------------
 
-function sha256Hex(buffer: Buffer): string {
-  return crypto.createHash("sha256").update(buffer).digest("hex");
+function validateOutputPath(outPath: string, inputPaths: string[]): void {
+  const resolvedOut = path.resolve(outPath);
+  for (const ip of inputPaths) {
+    if (path.resolve(ip) === resolvedOut) {
+      throw new Error(
+        `Output path "${path.basename(outPath)}" overlaps with input path "${path.basename(ip)}"; aborting to prevent data loss`
+      );
+    }
+  }
+  if (fs.existsSync(outPath)) {
+    throw new Error(
+      `Output file "${path.basename(outPath)}" already exists; refusing to overwrite`
+    );
+  }
+}
+
+function atomicWrite(outPath: string, json: string): void {
+  const tmpPath = outPath + ".tmp";
+  try {
+    fs.writeFileSync(tmpPath, json, "utf8");
+    fs.renameSync(tmpPath, outPath);
+  } catch (err) {
+    // Clean up temp file on failure
+    try { fs.unlinkSync(tmpPath); } catch { /* ignore */ }
+    throw err;
+  }
 }
 
 // ---------------------------------------------------------------------------
-// Single-file processing
+// Single-file processing (async)
 // ---------------------------------------------------------------------------
 
-function processFile(
+async function processFile(
   filePath: string,
   hint: FormatHint
-): FileInventory {
-  const filename = path.basename(filePath); // never log directory paths
+): Promise<FileInventory> {
+  const filename = path.basename(filePath);
   const warnings: string[] = [];
 
-  let buffer: Buffer;
+  // Check file exists and get size
+  let bytes = 0;
   try {
-    buffer = fs.readFileSync(filePath);
+    const stat = fs.statSync(filePath);
+    bytes = stat.size;
   } catch (err: unknown) {
-    const msg =
-      err instanceof Error ? err.message : "Unknown read error";
-    // Sanitize: do not include the full path in the error message
+    const msg = err instanceof Error ? err.message : "Unknown error";
     return {
       path: filename,
       bytes: 0,
       sha256: "",
       detectedFormat: "unknown" as SupportedFormat,
       recordCount: null,
-      warnings: [`Read error: ${sanitizeErrorMessage(msg, filePath)}`],
+      countConfidence: "unavailable",
+      warnings: [`Read error: ${redactPaths(msg, filePath)}`],
       status: "rejected",
     };
   }
-
-  const bytes = buffer.length;
-  const checksum = sha256Hex(buffer);
 
   if (bytes === 0) {
     warnings.push("File is empty");
   }
 
-  // Decode to string for format detection (UTF-8; ignore BOM)
-  let content = "";
+  // Streaming SHA-256
+  let checksum = "";
   try {
-    content = buffer.toString("utf8").replace(/^﻿/, "");
-  } catch {
-    warnings.push("Could not decode file as UTF-8");
+    checksum = await sha256Stream(filePath);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Unknown error";
+    return {
+      path: filename,
+      bytes,
+      sha256: "",
+      detectedFormat: "unknown" as SupportedFormat,
+      recordCount: null,
+      countConfidence: "unavailable",
+      warnings: [`Checksum error: ${redactPaths(msg, filePath)}`],
+      status: "rejected",
+    };
   }
 
-  const detectedFormat = detectFormat(hint, filename, content);
+  // Bounded sniff buffer for format detection
+  let sniff: Buffer;
+  try {
+    sniff = bytes > 0 ? readSniffBuffer(filePath) : Buffer.alloc(0);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Unknown error";
+    return {
+      path: filename,
+      bytes,
+      sha256: checksum,
+      detectedFormat: "unknown" as SupportedFormat,
+      recordCount: null,
+      countConfidence: "unavailable",
+      warnings: [`Sniff read error: ${redactPaths(msg, filePath)}`],
+      status: "rejected",
+    };
+  }
+
+  const { format: detectedFormat, warnings: detectWarnings } = detectFormat(hint, filename, sniff);
+  warnings.push(...detectWarnings);
 
   if (detectedFormat === "unsupported") {
     return {
@@ -276,12 +553,33 @@ function processFile(
       sha256: checksum,
       detectedFormat: "unsupported",
       recordCount: null,
-      warnings: [`Unsupported format: extension "${path.extname(filename)}" with hint "${hint}" is not a recognised input format`],
+      countConfidence: "unavailable",
+      warnings: warnings.length > 0
+        ? warnings
+        : [`Unsupported format: extension "${path.extname(filename)}" with hint "${hint}" is not a recognised input format`],
       status: "rejected",
     };
   }
 
-  const recordCount = countRecords(detectedFormat, content);
+  if (detectedFormat === "unknown") {
+    return {
+      path: filename,
+      bytes,
+      sha256: checksum,
+      detectedFormat: "unknown",
+      recordCount: null,
+      countConfidence: "unavailable",
+      warnings,
+      status: "unknown",
+    };
+  }
+
+  // Streaming record count
+  const { recordCount, countConfidence, warnings: countWarnings } = await countRecords(
+    detectedFormat,
+    filePath
+  );
+  warnings.push(...countWarnings);
 
   if (recordCount === 0) {
     warnings.push("No records detected");
@@ -293,32 +591,29 @@ function processFile(
     sha256: checksum,
     detectedFormat,
     recordCount,
+    countConfidence,
     warnings,
     status: warnings.length > 0 ? "unknown" : "accepted",
   };
 }
 
-/**
- * Strip directory path from error messages to avoid leaking filesystem layout.
- */
-function sanitizeErrorMessage(msg: string, filePath: string): string {
-  // Replace occurrences of the full path with the filename only
-  return msg.replace(filePath, path.basename(filePath));
-}
-
 // ---------------------------------------------------------------------------
-// Main exported function
+// Main exported function (async)
 // ---------------------------------------------------------------------------
 
-export function buildLegacySourceInventory(
+export async function buildLegacySourceInventory(
   config: InventoryConfig
-): InventoryReport {
+): Promise<InventoryReport> {
   if (config.filePaths.length === 0) {
     throw new Error("No file paths provided");
   }
 
-  const files: FileInventory[] = config.filePaths.map((fp) =>
-    processFile(fp, config.formatHint)
+  if (config.outPath) {
+    validateOutputPath(config.outPath, config.filePaths);
+  }
+
+  const files: FileInventory[] = await Promise.all(
+    config.filePaths.map((fp) => processFile(fp, config.formatHint))
   );
 
   const accepted = files.filter((f) => f.status === "accepted").length;
@@ -338,6 +633,11 @@ export function buildLegacySourceInventory(
       warnings: totalWarnings,
     },
   };
+
+  if (config.outPath) {
+    const json = JSON.stringify(report, null, 2);
+    atomicWrite(config.outPath, json);
+  }
 
   return report;
 }
@@ -405,29 +705,19 @@ if (require.main === module) {
     process.exit(1);
   }
 
-  let report: InventoryReport;
-  try {
-    report = buildLegacySourceInventory({ filePaths, formatHint, outPath });
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    process.stderr.write(`Error: ${msg}\n`);
-    process.exit(1);
-  }
-
-  const json = JSON.stringify(report, null, 2);
-
-  if (outPath) {
-    try {
-      fs.writeFileSync(outPath, json, "utf8");
-      process.stdout.write(
-        `Inventory written to ${path.basename(outPath)} (${report.summary.totalFiles} file(s))\n`
-      );
-    } catch (err: unknown) {
+  buildLegacySourceInventory({ filePaths, formatHint, outPath })
+    .then((report) => {
+      if (!outPath) {
+        process.stdout.write(JSON.stringify(report, null, 2) + "\n");
+      } else {
+        process.stdout.write(
+          `Inventory written to ${path.basename(outPath)} (${report.summary.totalFiles} file(s))\n`
+        );
+      }
+    })
+    .catch((err: unknown) => {
       const msg = err instanceof Error ? err.message : String(err);
-      process.stderr.write(`Error writing output file: ${msg}\n`);
+      process.stderr.write(`Error: ${msg}\n`);
       process.exit(1);
-    }
-  } else {
-    process.stdout.write(json + "\n");
-  }
+    });
 }

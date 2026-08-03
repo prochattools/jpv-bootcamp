@@ -1,8 +1,8 @@
 # Future Branch Cutover Plan
 
-**Status:** PLAN ONLY — no git operations have been executed  
-**Prepared:** 2026-08-02  
-**Branch under assessment:** `feature/course-branding-and-preview`  
+**Status:** PLAN ONLY — no git operations have been executed
+**Prepared:** 2026-08-02
+**Branch under assessment:** `feature/course-branding-and-preview`
 **Target outcome:** Advance `main` to the verified feature state without discarding any main-only work and without losing history
 
 ---
@@ -20,10 +20,11 @@
 
 | Direction | Count | Notes |
 |---|---|---|
-| Main-only commits (main ahead of feature) | 9 | Listed below |
-| Feature-only commits (feature ahead of main) | 629 | Approximate; verified at audit time |
+| Commits present on main but not on feature branch | 10 | Including 1 merge commit: 6f252a2 |
+| Non-merge content commits on main | 9 | Listed below |
+| Feature-only commits (non-merge, feature ahead of main) | 630 | Verified at audit time |
 
-### Main-only commits (9 commits, newest first)
+### Main-only commits (9 non-merge content commits, newest first; merge commit 6f252a2 not listed)
 
 ```
 4995dcc  refactor: optimize hero notice card styling
@@ -59,15 +60,14 @@ All prerequisites must be confirmed complete and recorded before any cutover ste
 
 ### 2.1 Business reconciliation document
 
-A document `docs/release/MAIN_STAGING_BUSINESS_RECONCILIATION.md` must exist and be approved.  
-It does not exist as of 2026-08-02 and must be authored before cutover begins.  
-It must contain a disposition decision for each of the 9 main-only commits.  
+`docs/release/MAIN_STAGING_BUSINESS_RECONCILIATION.md` exists in this commit. Its classifications are proposed decisions only. No future branch reconciliation may proceed until those decisions have received client and operator approval.
+It must contain a disposition decision for each of the 9 non-merge content commits present only on main.
 Each disposition must be one of: **adopt**, **supersede**, or **drop with rationale**.
 
 ### 2.2 Staging baseline locked
 
-The feature branch must be deployed to staging and have passed the full acceptance suite at a pinned SHA.  
-That SHA becomes the **cutover SHA** referenced throughout this plan.  
+The feature branch must be deployed to staging and have passed the full acceptance suite at a pinned SHA.
+That SHA becomes the **cutover SHA** referenced throughout this plan.
 No further changes to the feature branch are permitted after the cutover SHA is pinned unless the process restarts from this step.
 
 ### 2.3 Database migration rehearsal complete
@@ -92,8 +92,8 @@ List all integrations that reference `main` by name: Dokploy deployment pipeline
 
 ### Step 1: Freeze the preparation window
 
-Announce a change freeze on both `main` and `feature/course-branding-and-preview`.  
-No new commits are merged to either branch until the cutover is complete or explicitly aborted.  
+Announce a change freeze on both `main` and `feature/course-branding-and-preview`.
+No new commits are merged to either branch until the cutover is complete or explicitly aborted.
 Record the freeze start time and the frozen SHAs of both branch tips.
 
 ### Step 2: Preserve the old main tip
@@ -119,7 +119,7 @@ This step is irreversible insurance. It costs nothing and enables rollback at an
 
 ### Step 3: Create the cutover branch from the verified feature tip
 
-Create a dedicated integration branch from the pinned cutover SHA of the feature branch.  
+Create a dedicated integration branch from the pinned cutover SHA of the feature branch.
 Do not use the feature branch directly — the cutover branch is a controlled integration surface.
 
 ```bash
@@ -149,7 +149,7 @@ Do not auto-resolve. Each conflict is a reconciliation decision.
 
 For each of the 9 main-only commits, apply the disposition recorded in `docs/release/MAIN_STAGING_BUSINESS_RECONCILIATION.md`.
 
-**Default position (unless the reconciliation matrix says otherwise):**  
+**Default position (unless the reconciliation matrix says otherwise):**
 The singular membership, internal `/portal` routes, and `plan=membership&billing=monthly|annual` checkout architecture are authoritative. Main-only changes that contradict this architecture are superseded. Changes that are additive and compatible (copy updates, hero notices unrelated to checkout) may be adopted verbatim.
 
 Specific guidance by path:
@@ -184,12 +184,12 @@ pnpm exec playwright test --project=chromium
 # (follow PROVIDER_VERIFICATION_RUNBOOK.md)
 ```
 
-All gates must pass. No open failures are permitted to advance.  
+All gates must pass. No open failures are permitted to advance.
 Record the SHA of the last commit on `release/staging-cutover` after all fixes are applied — this becomes the **validated cutover SHA**.
 
 ### Step 7: Deploy the cutover branch to staging
 
-Deploy `release/staging-cutover` at the validated cutover SHA to the staging environment using the existing Dokploy pipeline (see `docs/DOKPLOY_DEPLOYMENT_GUIDE.md`).  
+Deploy `release/staging-cutover` at the validated cutover SHA to the staging environment using the existing Dokploy pipeline (see `docs/DOKPLOY_DEPLOYMENT_GUIDE.md`).
 Do not deploy `main`. Deploy only the cutover branch.
 
 Record:
@@ -211,7 +211,7 @@ Acceptance criteria:
 
 Only after all gates in Step 8 are approved:
 
-Open a pull request from `release/staging-cutover` into `main`.  
+Open a pull request from `release/staging-cutover` into `main`.
 The PR must:
 - Pass all required status checks
 - Receive the required number of approvals
@@ -233,7 +233,7 @@ Do not delete `release/staging-cutover` after merging. Retain it as a permanent 
 
 ## 4. Main-Only Change Disposition
 
-Full per-commit disposition decisions must be recorded in `docs/release/MAIN_STAGING_BUSINESS_RECONCILIATION.md` (that document does not exist as of 2026-08-02 and must be authored before cutover begins).
+Full per-commit disposition decisions must be recorded in `docs/release/MAIN_STAGING_BUSINESS_RECONCILIATION.md` (that document exists in this commit with proposed classifications only; no reconciliation step may proceed until client and operator approval is confirmed).
 
 This section provides the framework and default positions only.
 
@@ -356,7 +356,7 @@ After fixing the reconciliation, re-run the full validation suite (Step 6) again
 
 ### 7.5 Main is never rolled back
 
-If `main` has already been advanced (Step 9) and a regression is discovered after deployment, this is a production incident and must be handled via the standard rollback procedure in `docs/release/ROLLBACK_EVIDENCE_CHECKLIST.md`, not via this cutover plan.  
+If `main` has already been advanced (Step 9) and a regression is discovered after deployment, this is a production incident and must be handled via the standard rollback procedure in `docs/release/ROLLBACK_EVIDENCE_CHECKLIST.md`, not via this cutover plan.
 The pre-cutover tag `archive/main-pre-cutover-4995dcc` provides the revert target if a full revert to the pre-cutover main state is required.
 
 ---

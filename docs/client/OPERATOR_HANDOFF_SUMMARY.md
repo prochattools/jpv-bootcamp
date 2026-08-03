@@ -6,7 +6,7 @@
 
 - **Branch / deployed baseline:** `feature/course-branding-and-preview`; latest completed verification snapshot: SHA `3a6613498241c5dd71761c26c3b1e790764db1d5`, preview workflow `30756831212` concluded `success`, exact-SHA health confirmed. Verify the current tip with `git rev-parse HEAD` and `https://preview.jpvbootcamp.com/api/health` before operator action.
 - **IMPLEMENTED:** agreed core staging scope, Payload admin design and responsive hardening, media persistence, migration inventory/preflight, email queue/guard, Stripe test-mode flows, and partner/sponsored staging boundaries.
-- **LOCALLY VERIFIED:** focused design contract, Payload TypeScript, changed-path security scan, application build, `pnpm test:release` (`163/163`), and `pnpm test:e2e` (Playwright: 188 collected, 148 passed, 40 skipped; four staging-only spec files not collected).
+- **LOCALLY VERIFIED:** focused design contract, Payload TypeScript, changed-path security scan, application build, `pnpm test:release` (`165/165`), and `pnpm test:e2e` (Playwright: 188 collected, 148 passed, 40 skipped; four staging-only spec files not collected).
 - **STAGING VERIFIED:** authenticated Payload admin and responsive regression coverage passed across 375/768/1024/1440px; exact-SHA deployment and media persistence are verified.
 - **Technical verdict:** `STAGING TECHNICAL IMPLEMENTATION COMPLETE — ACCEPTANCE PENDING EXTERNAL ACTION`.
 - **Hardening verdict:** `STAGING HARDENING REMEDIATION REQUIRED` until one-time account actions use a durable concurrency-safe reservation/finalization state.
@@ -61,7 +61,7 @@
 - Transactional email logo: all branded emails use absolute public URL for JPV logo (live staging proof 2026-07-29)
 - Operator surface phases 1–6: responsive hardening, operator tools JPV token alignment, Payload dashboard redesign, sidebar information architecture, dashboard hardening, operator experience hardening, and Payload admin usability — all purely presentational, no auth/billing/provider changes
 - Canonical `/portal` member portal ownership
-- Deterministic release gate: `pnpm test:release` (`163/163`) — includes the account-action hardening-status guard
+- Deterministic release gate: `pnpm test:release` (`165/165`) — includes the account-action hardening-status guard
 - Launch browser E2E: `pnpm test:e2e` (Playwright: 188 collected, 148 passed, 40 skipped; four staging-only spec files not collected; desktop and mobile Chromium)
 - Combined release/browser gate: `pnpm test:release:full`
 - Decision-readiness summary: `DECISION-READY, EXTERNAL APPROVALS PENDING`
