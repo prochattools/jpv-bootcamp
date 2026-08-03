@@ -49,6 +49,8 @@ Required export artifacts before wave 1 begins:
 
 Checksum requirement: SHA-256 of each export file, recorded in `migration-inventory.json` before wave 1 closes.
 
+Repository source-intake classification is deliberately narrower than the full operator artifact list above. Reviewed WordPress JSON may use a root array or an `items`, `posts`, or `lessons` array, but a non-empty export is recognized only when its item objects combine a `post_type`/`type` marker, a title or content marker, and an identity marker. JSON at or below 5 MiB is structurally parsed for an exact count; larger recognized JSON retains streaming byte and SHA-256 evidence while reporting count confidence as unavailable. WordPress classification takes precedence over FluentCRM when reviewed markers overlap. Generic RSS is not WXR: the WordPress export namespace, `xmlns:wp`, WXR version, channel, balanced items, and complete channel/RSS closing structure are required. These are repository-only intake guarantees; no real WordPress export has been read or imported.
+
 ### 3.2 FluentCRM
 
 Required export artifacts:

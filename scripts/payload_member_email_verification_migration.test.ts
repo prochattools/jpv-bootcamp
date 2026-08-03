@@ -1,5 +1,4 @@
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
 
 import { PayloadMemberVerificationRecords } from '../src/collections/members/MemberEmailVerificationRecords'
 import {
@@ -11,6 +10,7 @@ import {
   buildReplaceActiveVerificationSql,
   getMemberEmailVerificationSchema,
 } from '../src/lib/auth/memberEmailVerificationSql'
+import { PAYLOAD_MIGRATION_NAMES } from '../src/migrations/migrationRegistry'
 
 const stagingUrl = 'postgresql://redacted.invalid/app?schema=jpvbootcamp_staging'
 const upSql = buildMemberEmailVerificationUpSql(stagingUrl)
@@ -79,21 +79,9 @@ assert(tokenDigestField && 'index' in tokenDigestField && tokenDigestField.index
 assert(tokenDigestField && 'admin' in tokenDigestField && tokenDigestField.admin?.hidden === true)
 assert(tokenDigestField && 'access' in tokenDigestField && tokenDigestField.access?.read instanceof Function)
 
-const migrationIndexSource = readFileSync(
-  new URL('../src/migrations/index.ts', import.meta.url),
-  'utf8',
-)
-const previousRegistration = migrationIndexSource.lastIndexOf(
-  "name: '20260630_190000_payload_preferences_id_constraint'",
-)
-const verificationRegistration = migrationIndexSource.lastIndexOf(
-  "name: '20260701_201500_member_email_verification'",
-)
+const previousRegistration = PAYLOAD_MIGRATION_NAMES.indexOf('20260630_190000_payload_preferences_id_constraint')
+const verificationRegistration = PAYLOAD_MIGRATION_NAMES.indexOf('20260701_201500_member_email_verification')
 assert(previousRegistration >= 0)
 assert(verificationRegistration > previousRegistration)
-assert.match(
-  migrationIndexSource,
-  /import \* as migration_20260701_201500_member_email_verification/,
-)
 
 console.log('member email verification migration checks passed')

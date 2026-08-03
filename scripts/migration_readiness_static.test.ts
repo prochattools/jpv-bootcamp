@@ -29,14 +29,11 @@ async function main(): Promise<void> {
     readFile('src/migrations/20260730_100000_email_events_staging_guard_status.ts', 'utf8'),
   ])
 
-  const reconciledIndex = migrationIndexSource.indexOf(
-    "name: '20260704_090000_partner_schema_reconciliation'",
-  )
-  const tablePlanIndex = migrationIndexSource.indexOf(
-    "name: '20260707_130000_remove_table_plan_from_payload_enums'",
-  )
+  const reconciledIndex = inventoryNames.indexOf('20260704_090000_partner_schema_reconciliation')
+  const tablePlanIndex = inventoryNames.indexOf('20260707_130000_remove_table_plan_from_payload_enums')
   assert(reconciledIndex >= 0)
   assert(tablePlanIndex > reconciledIndex)
+  assert.match(migrationIndexSource, /PAYLOAD_MIGRATION_NAMES\.map\(\(name\) =>/)
 
   assert.match(payloadMigrationSource, /IF to_regclass\('\$\{schema\}\.payload_access_policies_allowed_plans'\) IS NOT NULL/)
   assert.match(payloadMigrationSource, /IF to_regclass\('\$\{schema\}\.payload_subscriptions'\) IS NOT NULL/)

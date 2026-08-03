@@ -13,9 +13,13 @@ import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 import * as crypto from "crypto";
+import * as net from "net";
+import { spawnSync } from "child_process";
 
 import {
+  atomicWriteInventory,
   buildLegacySourceInventory,
+  type AtomicWriteOperations,
   type InventoryConfig,
   type InventoryReport,
 } from "./buildLegacySourceInventory";
@@ -80,6 +84,7 @@ const WXR_FIXTURE = `<?xml version="1.0" encoding="UTF-8"?>
   xmlns:wp="http://wordpress.org/export/1.2/">
 <channel>
   <title>Synthetic Site</title>
+  <wp:wxr_version>1.2</wp:wxr_version>
   <item>
     <title>Post One</title>
     <wp:post_type>post</wp:post_type>
@@ -327,7 +332,7 @@ async function runTests(): Promise<void> {
     const items = Array.from({ length: 500 }, (_, i) =>
       `  <item>\n    <title>Post ${i}</title>\n    <wp:post_type>post</wp:post_type>\n  </item>`
     ).join("\n");
-    const largeWxr = `<?xml version="1.0" encoding="UTF-8"?>\n<rss version="2.0">\n<channel>\n<title>Big Site</title>\n${items}\n</channel>\n</rss>`;
+    const largeWxr = `<?xml version="1.0" encoding="UTF-8"?>\n<rss version="2.0" xmlns:wp="http://wordpress.org/export/1.2/">\n<channel>\n<title>Big Site</title>\n<wp:wxr_version>1.2</wp:wxr_version>\n${items}\n</channel>\n</rss>`;
     const fp = writeTmp("large-export.xml", largeWxr);
     const report = await buildLegacySourceInventory({ filePaths: [fp], formatHint: "auto" });
     const file = report.files[0];
@@ -579,7 +584,7 @@ async function runTests(): Promise<void> {
 
   // 35. WXR empty file
   await test("WXR empty: zero items counted", async () => {
-    const emptyWxr = `<?xml version="1.0"?>\n<rss><channel></channel></rss>`;
+    const emptyWxr = `<?xml version="1.0"?>\n<rss xmlns:wp="http://wordpress.org/export/1.2/"><channel><wp:wxr_version>1.2</wp:wxr_version></channel></rss>`;
     const fp = writeTmp("empty.xml", emptyWxr);
     const report = await buildLegacySourceInventory({ filePaths: [fp], formatHint: "auto" });
     const file = report.files[0];
@@ -588,7 +593,7 @@ async function runTests(): Promise<void> {
 
   // 36. WXR single item
   await test("WXR single: one item counted correctly", async () => {
-    const singleWxr = `<?xml version="1.0"?>\n<rss><channel><item><title>One</title></item></channel></rss>`;
+    const singleWxr = `<?xml version="1.0"?>\n<rss xmlns:wp="http://wordpress.org/export/1.2/"><channel><wp:wxr_version>1.2</wp:wxr_version><item><title>One</title><wp:post_type>post</wp:post_type></item></channel></rss>`;
     const fp = writeTmp("single.xml", singleWxr);
     const report = await buildLegacySourceInventory({ filePaths: [fp], formatHint: "auto" });
     const file = report.files[0];
@@ -643,6 +648,429 @@ async function runTests(): Promise<void> {
     assert.equal(file.detectedFormat, "fluentcrm-json");
     assert.equal(file.recordCount, 2);
     assert.equal(file.status, "accepted");
+  });
+
+  // 41. WordPress JSON root array
+  await test("WordPress JSON: accepts reviewed root array shape", async () => {
+    const content = JSON.stringify([
+      { id: 1, post_type: "post", post_title: "Synthetic", post_content: "Body" },
+    ]);
+    const fp = writeTmp("wordpress-array.json", content);
+    const report = await buildLegacySourceInventory({ filePaths: [fp], formatHint: "auto" });
+    assert.equal(report.files[0].detectedFormat, "wordpress-json");
+    assert.equal(report.files[0].recordCount, 1);
+    assert.equal(report.files[0].status, "accepted");
+  });
+
+  // 42. WordPress JSON named root arrays
+  await test("WordPress JSON: accepts items, posts, and lessons root arrays", async () => {
+    for (const key of ["items", "posts", "lessons"] as const) {
+      const fp = writeTmp(`wordpress-${key}.json`, JSON.stringify({
+        [key]: [{ id: 1, type: "lesson", title: "Synthetic", body: "Body" }],
+      }));
+      const report = await buildLegacySourceInventory({ filePaths: [fp], formatHint: "auto" });
+      assert.equal(report.files[0].detectedFormat, "wordpress-json", key);
+      assert.equal(report.files[0].recordCount, 1, key);
+    }
+  });
+
+  // 43. WordPress JSON marker combination
+  await test("WordPress JSON: rejects coincidental single-key objects", async () => {
+    const fp = writeTmp("coincidental.json", JSON.stringify({ posts: [{ title: "Only title" }] }));
+    const report = await buildLegacySourceInventory({ filePaths: [fp], formatHint: "auto" });
+    assert.equal(report.files[0].detectedFormat, "unknown");
+    assert.equal(report.files[0].status, "unknown");
+  });
+
+  // 44. WordPress JSON must not be FluentCRM
+  await test("WordPress JSON: never classifies as FluentCRM", async () => {
+    const fp = writeTmp("wordpress-not-crm.json", JSON.stringify({
+      posts: [{ post_id: 1, post_type: "post", post_title: "Synthetic", post_content: "Body" }],
+    }));
+    const report = await buildLegacySourceInventory({ filePaths: [fp], formatHint: "json" });
+    assert.equal(report.files[0].detectedFormat, "wordpress-json");
+  });
+
+  // 45. Large recognized WordPress JSON remains bounded
+  await test("WordPress JSON: large recognized export returns unavailable count", async () => {
+    const fp = writeTmp("wordpress-large.json", JSON.stringify({
+      posts: [{ id: 1, post_type: "post", post_title: "Synthetic", post_content: "x".repeat(5 * 1024 * 1024) }],
+    }));
+    const report = await buildLegacySourceInventory({ filePaths: [fp], formatHint: "auto" });
+    assert.equal(report.files[0].detectedFormat, "wordpress-json");
+    assert.equal(report.files[0].recordCount, null);
+    assert.equal(report.files[0].countConfidence, "unavailable");
+  });
+
+  // 46. Generic RSS must not be WXR
+  await test("WXR: generic RSS is classified unknown", async () => {
+    const fp = writeTmp("generic-rss.xml", "<rss><channel><item><title>Synthetic</title></item></channel></rss>");
+    const report = await buildLegacySourceInventory({ filePaths: [fp], formatHint: "auto" });
+    assert.equal(report.files[0].detectedFormat, "unknown");
+    assert.equal(report.files[0].status, "unknown");
+  });
+
+  // 47. WXR namespace/version validation
+  await test("WXR: invalid namespace is rejected by structural detection", async () => {
+    const fp = writeTmp("invalid-namespace.xml", '<rss xmlns:wp="https://example.invalid/export"><channel><wp:wxr_version>1.2</wp:wxr_version></channel></rss>');
+    const report = await buildLegacySourceInventory({ filePaths: [fp], formatHint: "auto" });
+    assert.equal(report.files[0].detectedFormat, "unknown");
+  });
+
+  // 48. WXR closing structure validation
+  await test("WXR: missing closing structure never receives exact confidence", async () => {
+    const fp = writeTmp("unclosed-wxr.xml", '<?xml version="1.0"?><rss xmlns:wp="http://wordpress.org/export/1.2/"><channel><wp:wxr_version>1.2</wp:wxr_version><item><wp:post_type>post</wp:post_type></item>');
+    const report = await buildLegacySourceInventory({ filePaths: [fp], formatHint: "auto" });
+    assert.equal(report.files[0].detectedFormat, "wordpress-wxr");
+    assert.equal(report.files[0].recordCount, null);
+    assert.equal(report.files[0].countConfidence, "unavailable");
+  });
+
+  // 49. WXR item token at every 64 KiB split
+  await test("WXR: item token split across every 64 KiB boundary counts once", async () => {
+    const prefix = '<?xml version="1.0"?><rss xmlns:wp="http://wordpress.org/export/1.2/"><channel><wp:wxr_version>1.2</wp:wxr_version>';
+    const suffix = '<wp:post_type>post</wp:post_type></item></channel></rss>';
+    const token = '<item>';
+    for (let split = 1; split < token.length; split += 1) {
+      const fillerLength = 65_536 - prefix.length - split;
+      assert.ok(fillerLength > 0);
+      const fp = writeTmp(`wxr-boundary-${split}.xml`, `${prefix}${"x".repeat(fillerLength)}${token}${suffix}`);
+      const report = await buildLegacySourceInventory({ filePaths: [fp], formatHint: "auto" });
+      assert.equal(report.files[0].recordCount, 1, `split ${split}`);
+    }
+  });
+
+  // 50. WXR multiple boundary tokens
+  await test("WXR: multiple items across boundaries never re-enter carry", async () => {
+    const prefix = '<?xml version="1.0"?><rss xmlns:wp="http://wordpress.org/export/1.2/"><channel><wp:wxr_version>1.2</wp:wxr_version>';
+    const firstFill = "x".repeat(65_536 - prefix.length - 3);
+    const between = "y".repeat(65_536 - 20);
+    const fp = writeTmp("wxr-two-boundaries.xml", `${prefix}${firstFill}<item><wp:post_type>post</wp:post_type></item>${between}<item><wp:post_type>post</wp:post_type></item></channel></rss>`);
+    const report = await buildLegacySourceInventory({ filePaths: [fp], formatHint: "auto" });
+    assert.equal(report.files[0].recordCount, 2);
+  });
+
+  // 51. CSV multiline exact 64 KiB boundary
+  await test("CSV: multiline quoted field crossing 64 KiB counts one row", async () => {
+    const header = "post_id,post_title,post_type,post_status\n";
+    const rowPrefix = '1,"';
+    const filler = "x".repeat(65_536 - header.length - rowPrefix.length - 1);
+    const fp = writeTmp("csv-boundary.csv", `${header}${rowPrefix}${filler}\nvalue",post,publish`);
+    const report = await buildLegacySourceInventory({ filePaths: [fp], formatHint: "auto" });
+    assert.equal(report.files[0].recordCount, 1);
+  });
+
+  // 52. CSV escaped quote split at boundary
+  await test("CSV: escaped quote pair split across 64 KiB counts one row", async () => {
+    const header = "post_id,post_title,post_type\n";
+    const rowPrefix = '1,"';
+    const filler = "x".repeat(65_536 - header.length - rowPrefix.length - 1);
+    const fp = writeTmp("csv-quote-boundary.csv", `${header}${rowPrefix}${filler}""quoted",post`);
+    const report = await buildLegacySourceInventory({ filePaths: [fp], formatHint: "auto" });
+    assert.equal(report.files[0].recordCount, 1);
+  });
+
+  // 53. Atomic writer flush failure
+  await test("Atomic output: flush failure leaves no final or temporary report", () => {
+    const out = path.join(tmpDir, "flush-failure.json");
+    const operations: AtomicWriteOperations = {
+      openSync: fs.openSync,
+      writeSync: fs.writeSync,
+      fsyncSync: () => { throw Object.assign(new Error("synthetic flush path leak"), { code: "EIO" }); },
+      closeSync: fs.closeSync,
+      linkSync: fs.linkSync,
+      unlinkSync: fs.unlinkSync,
+    };
+    assert.throws(() => atomicWriteInventory(out, "{}", operations), /Inventory output write failed/);
+    assert.equal(fs.existsSync(out), false);
+    assert.equal(fs.readdirSync(tmpDir).some((entry) => entry.startsWith(".inventory-")), false);
+  });
+
+  // 54. Atomic writer publication failure
+  await test("Atomic output: publication failure is redacted and cleaned", () => {
+    const out = path.join(tmpDir, "publish-failure.json");
+    const operations: AtomicWriteOperations = {
+      openSync: fs.openSync,
+      writeSync: fs.writeSync,
+      fsyncSync: fs.fsyncSync,
+      closeSync: fs.closeSync,
+      linkSync: () => { throw Object.assign(new Error(`/private/path/${path.basename(out)}`), { code: "EIO" }); },
+      unlinkSync: fs.unlinkSync,
+    };
+    let message = "";
+    try { atomicWriteInventory(out, "{}", operations); } catch (error) { message = error instanceof Error ? error.message : String(error); }
+    assert.equal(message, "Inventory output write failed");
+    assert.equal(message.includes("/private/path"), false);
+    assert.equal(fs.existsSync(out), false);
+  });
+
+  // 55. Atomic writer directory sync failure
+  await test("Atomic output: directory sync failure removes published report", () => {
+    const out = path.join(tmpDir, "directory-sync-failure.json");
+    let fsyncCalls = 0;
+    const operations: AtomicWriteOperations = {
+      openSync: fs.openSync,
+      writeSync: fs.writeSync,
+      fsyncSync: (fd) => {
+        fsyncCalls += 1;
+        if (fsyncCalls === 1) return fs.fsyncSync(fd);
+        throw Object.assign(new Error("synthetic directory sync"), { code: "EIO" });
+      },
+      closeSync: fs.closeSync,
+      linkSync: fs.linkSync,
+      unlinkSync: fs.unlinkSync,
+    };
+    assert.throws(() => atomicWriteInventory(out, "{}", operations), /directory synchronization failed/);
+    assert.equal(fs.existsSync(out), false);
+  });
+
+  await test("WordPress JSON: malformed reviewed-looking JSON fails closed", async () => {
+    const fp = writeTmp(
+      "wordpress-malformed.json",
+      '{"posts":[{"id":1,"post_type":"post","post_title":"Synthetic"}]',
+    );
+    const report = await buildLegacySourceInventory({ filePaths: [fp], formatHint: "json" });
+    assert.equal(report.files[0].detectedFormat, "unknown");
+    assert.equal(report.files[0].recordCount, null);
+    assert.equal(report.files[0].countConfidence, "unavailable");
+    assert.ok(report.files[0].warnings.some((warning) => warning === "JSON parse error"));
+  });
+
+  await test("WordPress JSON: explicit JSON hint cannot override structural validation", async () => {
+    const fp = writeTmp("json-hint-arbitrary.json", JSON.stringify({ posts: [{ title: "Only title" }] }));
+    const report = await buildLegacySourceInventory({ filePaths: [fp], formatHint: "json" });
+    assert.equal(report.files[0].detectedFormat, "unknown");
+    assert.equal(report.files[0].status, "unknown");
+  });
+
+  await test("WordPress JSON: reviewed WordPress structure wins over contact-like content", async () => {
+    const fp = writeTmp("wordpress-ambiguous.json", JSON.stringify({
+      posts: [{ id: 1, post_type: "post", post_title: "Synthetic", post_content: "Body" }],
+      contacts: [{ id: 2, email: "synthetic@example.invalid", status: "subscribed" }],
+    }));
+    const report = await buildLegacySourceInventory({ filePaths: [fp], formatHint: "auto" });
+    assert.equal(report.files[0].detectedFormat, "wordpress-json");
+    assert.equal(report.files[0].recordCount, 1);
+  });
+
+  await test("WXR: missing channel is not recognized", async () => {
+    const fp = writeTmp(
+      "wxr-missing-channel.xml",
+      '<?xml version="1.0"?><rss xmlns:wp="http://wordpress.org/export/1.2/"><wp:wxr_version>1.2</wp:wxr_version></rss>',
+    );
+    const report = await buildLegacySourceInventory({ filePaths: [fp], formatHint: "auto" });
+    assert.equal(report.files[0].detectedFormat, "unknown");
+  });
+
+  await test("WXR: explicit hint cannot produce exact confidence for incomplete structure", async () => {
+    const fp = writeTmp(
+      "wxr-explicit-incomplete.xml",
+      '<?xml version="1.0"?><rss xmlns:wp="http://wordpress.org/export/1.2/"><channel><wp:wxr_version>1.2</wp:wxr_version><item></channel></rss>',
+    );
+    const report = await buildLegacySourceInventory({ filePaths: [fp], formatHint: "wxr" });
+    assert.equal(report.files[0].detectedFormat, "wordpress-wxr");
+    assert.equal(report.files[0].recordCount, null);
+    assert.equal(report.files[0].countConfidence, "unavailable");
+  });
+
+  await test("WXR: structural closing markers split across 64 KiB remain valid", async () => {
+    const prefix = '<?xml version="1.0"?><rss xmlns:wp="http://wordpress.org/export/1.2/"><channel><wp:wxr_version>1.2</wp:wxr_version>';
+    const close = "</channel></rss>";
+    const filler = "x".repeat(65_536 - prefix.length - 3);
+    const fp = writeTmp("wxr-structure-boundary.xml", `${prefix}${filler}${close}`);
+    const report = await buildLegacySourceInventory({ filePaths: [fp], formatHint: "auto" });
+    assert.equal(report.files[0].recordCount, 0);
+    assert.equal(report.files[0].countConfidence, "exact");
+  });
+
+  await test("WXR: misnested channel and RSS closing tags never receive exact confidence", async () => {
+    const fp = writeTmp(
+      "wxr-misnested-closing.xml",
+      '<?xml version="1.0"?><rss xmlns:wp="http://wordpress.org/export/1.2/"><channel><wp:wxr_version>1.2</wp:wxr_version><item></item></rss></channel>',
+    );
+    const report = await buildLegacySourceInventory({ filePaths: [fp], formatHint: "auto" });
+    assert.equal(report.files[0].detectedFormat, "wordpress-wxr");
+    assert.equal(report.files[0].recordCount, null);
+    assert.equal(report.files[0].countConfidence, "unavailable");
+  });
+
+  await test("WXR: misnested nested elements never receive exact confidence", async () => {
+    const fp = writeTmp(
+      "wxr-misnested-title.xml",
+      '<?xml version="1.0"?><rss xmlns:wp="http://wordpress.org/export/1.2/"><channel><wp:wxr_version>1.2</wp:wxr_version><item><title>Synthetic</item></title></channel></rss>',
+    );
+    const report = await buildLegacySourceInventory({ filePaths: [fp], formatHint: "auto" });
+    assert.equal(report.files[0].recordCount, null);
+    assert.equal(report.files[0].countConfidence, "unavailable");
+  });
+
+  await test("WXR: Unicode case expansion near a stream boundary cannot drift item counting", async () => {
+    const prefix = '<?xml version="1.0"?><rss xmlns:wp="http://wordpress.org/export/1.2/"><channel><wp:wxr_version>1.2</wp:wxr_version><title>';
+    const suffix = '</title><item></item></channel></rss>';
+    const filler = "İ".repeat(Math.max(1, 65_536 - prefix.length - 8));
+    const fp = writeTmp("wxr-unicode-boundary.xml", `${prefix}${filler}${suffix}`);
+    const report = await buildLegacySourceInventory({ filePaths: [fp], formatHint: "auto" });
+    assert.equal(report.files[0].recordCount, 1);
+    assert.equal(report.files[0].countConfidence, "exact");
+  });
+
+  await test("WXR: invalid entities and control characters never receive exact confidence", async () => {
+    const wrap = (title: string) => `<?xml version="1.0"?><rss xmlns:wp="http://wordpress.org/export/1.2/"><channel><wp:wxr_version>1.2</wp:wxr_version><item><title>${title}</title></item></channel></rss>`;
+    for (const [name, title] of [
+      ["wxr-invalid-entity.xml", "Synthetic &undefined; title"],
+      ["wxr-invalid-control.xml", "Synthetic \u0001 title"],
+    ] as const) {
+      const fp = writeTmp(name, wrap(title));
+      const report = await buildLegacySourceInventory({ filePaths: [fp], formatHint: "auto" });
+      assert.equal(report.files[0].recordCount, null, name);
+      assert.equal(report.files[0].countConfidence, "unavailable", name);
+    }
+    const valid = writeTmp("wxr-valid-entity.xml", wrap("Synthetic &amp; valid"));
+    const validReport = await buildLegacySourceInventory({ filePaths: [valid], formatHint: "auto" });
+    assert.equal(validReport.files[0].recordCount, 1);
+    assert.equal(validReport.files[0].countConfidence, "exact");
+  });
+
+  await test("CSV: substring-only schema names remain unknown", async () => {
+    for (const [name, csv] of [
+      ["not-wordpress.csv", "not_post_id,description\n1,Synthetic\n"],
+      ["not-fluent.csv", "id,crm_notes\n1,Synthetic\n"],
+    ] as const) {
+      const fp = writeTmp(name, csv);
+      const report = await buildLegacySourceInventory({ filePaths: [fp], formatHint: "auto" });
+      assert.equal(report.files[0].detectedFormat, "unknown", name);
+      assert.equal(report.files[0].countConfidence, "unavailable", name);
+    }
+  });
+
+  await test("CSV: BOM, quoted commas, embedded line endings, empty fields, and final row are exact", async () => {
+    const csv = '\uFEFFpost_id,post_title,post_type\r\n1,"quoted, comma",post\r\n2,"embedded\nLF",post\r\n3,"embedded\r\nCRLF and ""quotes""",post\r\n4,"",post';
+    const fp = writeTmp("csv-complete-boundaries.csv", csv);
+    const report = await buildLegacySourceInventory({ filePaths: [fp], formatHint: "auto" });
+    assert.equal(report.files[0].recordCount, 4);
+    assert.equal(report.files[0].countConfidence, "exact");
+  });
+
+  await test("CSV: closing quote at the 64 KiB boundary remains exact", async () => {
+    const header = "post_id,post_title,post_type\n";
+    const rowPrefix = '1,"';
+    const filler = "x".repeat(65_536 - header.length - rowPrefix.length - 1);
+    const fp = writeTmp("csv-closing-quote-boundary.csv", `${header}${rowPrefix}${filler}",post`);
+    const report = await buildLegacySourceInventory({ filePaths: [fp], formatHint: "auto" });
+    assert.equal(report.files[0].recordCount, 1);
+    assert.equal(report.files[0].countConfidence, "exact");
+  });
+
+  await test("CSV: CRLF split across the 64 KiB boundary counts each row once", async () => {
+    const header = "post_id,post_title,post_type\n";
+    const rowPrefix = "1,";
+    const filler = "x".repeat(65_536 - header.length - rowPrefix.length - 1);
+    const fp = writeTmp("csv-crlf-boundary.csv", `${header}${rowPrefix}${filler}\r\n2,Synthetic,post`);
+    const report = await buildLegacySourceInventory({ filePaths: [fp], formatHint: "auto" });
+    assert.equal(report.files[0].recordCount, 2);
+  });
+
+  await test("Atomic output: partial writes are retried until the complete report is durable", () => {
+    const out = path.join(tmpDir, "partial-write.json");
+    const operations: AtomicWriteOperations = {
+      openSync: fs.openSync,
+      writeSync: ((fd: number, buffer: Buffer, offset: number, length: number, position: number) =>
+        fs.writeSync(fd, buffer, offset, Math.min(length, 3), position)) as typeof fs.writeSync,
+      fsyncSync: fs.fsyncSync,
+      closeSync: fs.closeSync,
+      linkSync: fs.linkSync,
+      unlinkSync: fs.unlinkSync,
+    };
+    const content = JSON.stringify({ complete: "synthetic report" });
+    atomicWriteInventory(out, content, operations);
+    assert.equal(fs.readFileSync(out, "utf8"), content);
+  });
+
+  await test("Atomic output: zero-progress write is redacted and cleaned", () => {
+    const out = path.join(tmpDir, "zero-write.json");
+    const operations: AtomicWriteOperations = {
+      openSync: fs.openSync,
+      writeSync: (() => 0) as typeof fs.writeSync,
+      fsyncSync: fs.fsyncSync,
+      closeSync: fs.closeSync,
+      linkSync: fs.linkSync,
+      unlinkSync: fs.unlinkSync,
+    };
+    assert.throws(() => atomicWriteInventory(out, "{}", operations), /^Error: Inventory output write failed$/);
+    assert.equal(fs.existsSync(out), false);
+    assert.equal(fs.readdirSync(tmpDir).some((entry) => entry.startsWith(".inventory-")), false);
+  });
+
+  await test("Atomic output: concurrent target creation is preserved and temporary output is removed", () => {
+    const out = path.join(tmpDir, "concurrent-target.json");
+    const operations: AtomicWriteOperations = {
+      openSync: fs.openSync,
+      writeSync: fs.writeSync,
+      fsyncSync: fs.fsyncSync,
+      closeSync: fs.closeSync,
+      linkSync: () => {
+        fs.writeFileSync(out, "concurrent owner", { flag: "wx", mode: 0o600 });
+        throw Object.assign(new Error("synthetic concurrent publication"), { code: "EEXIST" });
+      },
+      unlinkSync: fs.unlinkSync,
+    };
+    assert.throws(() => atomicWriteInventory(out, "our report", operations), /already exists/);
+    assert.equal(fs.readFileSync(out, "utf8"), "concurrent owner");
+    assert.equal(fs.readdirSync(tmpDir).some((entry) => entry.startsWith(".inventory-")), false);
+  });
+
+  await test("Atomic output: temporary report uses exclusive creation and restrictive permissions", () => {
+    const out = path.join(tmpDir, "exclusive-mode.json");
+    let capturedFlags = 0;
+    let capturedMode = 0;
+    const operations: AtomicWriteOperations = {
+      openSync: ((target: fs.PathLike, flags: fs.OpenMode, mode?: fs.Mode) => {
+        if (typeof flags === "number" && (flags & fs.constants.O_CREAT) !== 0) {
+          capturedFlags = flags;
+          capturedMode = Number(mode);
+        }
+        return fs.openSync(target, flags, mode);
+      }) as typeof fs.openSync,
+      writeSync: fs.writeSync,
+      fsyncSync: fs.fsyncSync,
+      closeSync: fs.closeSync,
+      linkSync: fs.linkSync,
+      unlinkSync: fs.unlinkSync,
+    };
+    atomicWriteInventory(out, "{}", operations);
+    assert.notEqual(capturedFlags & fs.constants.O_EXCL, 0);
+    assert.equal(capturedMode, 0o600);
+  });
+
+  await test("Input identity: directories, devices, named pipes, and sockets are rejected", async () => {
+    const directoryReport = await buildLegacySourceInventory({ filePaths: [tmpDir], formatHint: "auto" });
+    assert.equal(directoryReport.files[0].status, "rejected");
+
+    if (fs.existsSync("/dev/null")) {
+      const deviceReport = await buildLegacySourceInventory({ filePaths: ["/dev/null"], formatHint: "auto" });
+      assert.equal(deviceReport.files[0].status, "rejected");
+    }
+
+    const fifoPath = path.join(tmpDir, "synthetic.fifo");
+    const fifo = spawnSync("mkfifo", [fifoPath]);
+    if (fifo.status === 0) {
+      const fifoReport = await buildLegacySourceInventory({ filePaths: [fifoPath], formatHint: "auto" });
+      assert.equal(fifoReport.files[0].status, "rejected");
+      fs.unlinkSync(fifoPath);
+    }
+
+    const socketPath = path.join(tmpDir, "synthetic.sock");
+    const server = net.createServer();
+    await new Promise<void>((resolve, reject) => {
+      server.once("error", reject);
+      server.listen(socketPath, resolve);
+    });
+    try {
+      const socketReport = await buildLegacySourceInventory({ filePaths: [socketPath], formatHint: "auto" });
+      assert.equal(socketReport.files[0].status, "rejected");
+    } finally {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
   });
 
   // ---------------------------------------------------------------------------

@@ -64,7 +64,7 @@ export function buildReleaseEvidenceMarkdown(): string {
     '- Automated staging validation: passed for the exact deployed feature SHA',
     '- Provider verification: documented, pending approved operator evidence',
     '- Formal staging sign-off: pending external action',
-    '- Support migration: unapplied',
+    '- Support migration target state: unverified; authorized read-only evidence required',
     '- Programme content approval: pending',
     '',
     '## False-claim guard',

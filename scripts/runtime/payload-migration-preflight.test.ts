@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { createRequire } from 'node:module'
-import { readFileSync } from 'node:fs'
+
+import { PAYLOAD_MIGRATION_NAMES } from '../../src/migrations/migrationRegistry'
 
 const require = createRequire(import.meta.url)
 const preflight = require('./payload-migration-preflight.cjs') as {
@@ -14,9 +15,7 @@ const preflight = require('./payload-migration-preflight.cjs') as {
   }): Promise<string[]>
 }
 
-const migrationIndex = readFileSync('src/migrations/index.ts', 'utf8')
-const registeredNames = [...migrationIndex.matchAll(/name: '([^']+)'/g)].map((match) => match[1])
-assert.deepEqual(preflight.REQUIRED_PAYLOAD_MIGRATIONS, registeredNames)
+assert.deepEqual(preflight.REQUIRED_PAYLOAD_MIGRATIONS, PAYLOAD_MIGRATION_NAMES)
 assert.equal(preflight.resolveSchema({ DATABASE_URL: 'postgresql://user:password@db/app?schema=jpvbootcamp_staging' }), 'jpvbootcamp_staging')
 assert.equal(preflight.resolveSchema({ DATABASE_URL: 'postgresql://user:password@db/app' }), 'jpvbootcamp')
 assert.equal(preflight.resolveSchema({ DATABASE_URL: 'postgresql://user:password@db/app?schema=ignored', PAYLOAD_MIGRATION_SCHEMA: 'reviewed_schema' }), 'reviewed_schema')

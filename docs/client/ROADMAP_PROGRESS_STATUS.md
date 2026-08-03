@@ -1,11 +1,11 @@
 # JPV Bootcamp - Roadmap Progress Status
 
-<!-- Reconciliation note 2026-08-02: Previous checkpoint recorded SHA 3a6613498241c5dd71761c26c3b1e790764db1d5 as the latest verified snapshot. Current branch HEAD has advanced to c15cd578a953cd6b1dc8a3d4705350a52f7d0812 (workflow 30761713446, success). The 165/165 release count and Playwright 188 collected / 148 passed / 40 skipped remain correct. Hardening status: STAGING HARDENING REMEDIATION REQUIRED — account-action reservation/finalization (one-time actions lack a durable cross-instance concurrency-safe primitive) remains the open hardening gap. -->
+<!-- Reconciliation note 2026-08-03: Previous checkpoint recorded SHA 3a6613498241c5dd71761c26c3b1e790764db1d5 as a verified snapshot. The current release manifest contains 166 required gates and four deferred validations. Hardening status: STAGING HARDENING REMEDIATION REQUIRED — account-action reservation/finalization (one-time actions lack a durable cross-instance concurrency-safe primitive) remains the open hardening gap. -->
 
 ## Current checkpoint — 2026-08-02
 
 - **COMPLETE CORE STAGING WORK:** M0-01 through M0-09, M1-01 through M1-06 in their documented state, UI-01 design/admin hardening, release/browser automation, exact-SHA staging deployment, media persistence, migration inventory/preflight, email queue/guard, Stripe test-mode behavior, and partner/sponsored staging boundaries.
-- **LOCALLY VERIFIED:** focused design contract, Payload TypeScript, changed-path security scan, application build, `pnpm test:release` (`165/165`), and `pnpm test:e2e` (Playwright: 188 collected, 148 passed, 40 skipped; four staging-only spec files not collected).
+- **LOCALLY VERIFIED:** focused design contract, Payload TypeScript, changed-path security scan, application build, `pnpm test:release` (`166/166`), and `pnpm test:e2e` (Playwright: 188 collected, 148 passed, 40 skipped; four staging-only spec files not collected).
 - **STAGING VERIFIED (latest completed verification snapshot):** authenticated Payload DOM and admin regression checks passed at 375/768/1024/1440px; preview workflow `30756831212` concluded `success`; staging health reported exact SHA `3a6613498241c5dd71761c26c3b1e790764db1d5`. Verify current live state with `git rev-parse HEAD` and `https://preview.jpvbootcamp.com/api/health`.
 - **TECHNICAL STATUS:** `STAGING TECHNICAL IMPLEMENTATION COMPLETE — ACCEPTANCE PENDING EXTERNAL ACTION`.
 - **HARDENING STATUS:** `STAGING HARDENING REMEDIATION REQUIRED` because one-time account-action completion lacks a durable cross-instance reservation/finalization primitive.
@@ -20,7 +20,7 @@ Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`.
 
 ## Current position
 
-**Position:** The agreed core staging implementation is deployed and technically verified. Latest completed verification snapshot: SHA `3a6613498241c5dd71761c26c3b1e790764db1d5`, workflow `30756831212`. The deterministic baseline is `165/165` release gates plus Playwright 188 collected / 148 passed / 40 skipped, with four staging-only spec files excluded by contract. Formal staging acceptance is not complete because external approval records remain pending. Repository-owned hardening is also not complete: email-change confirmation still consumes its one-time action before the member update succeeds, and invitation/password-reset completion lacks a durable cross-instance reservation/finalization primitive.
+**Position:** The agreed core staging implementation is deployed and technically verified. Latest completed verification snapshot: SHA `3a6613498241c5dd71761c26c3b1e790764db1d5`, workflow `30756831212`. The deterministic baseline is `166/166` release gates plus Playwright 188 collected / 148 passed / 40 skipped, with four staging-only spec files excluded by contract. Formal staging acceptance is not complete because external approval records remain pending. Repository-owned hardening is also not complete: email-change confirmation still consumes its one-time action before the member update succeeds, and invitation/password-reset completion lacks a durable cross-instance reservation/finalization primitive.
 
 **Next repository task:** design and approve a schema-backed reservation/finalization state for one-time account actions, then migrate invitation, password-reset, and email-change completion to that primitive with concurrency, retry, idempotency, expiry, and raw-token secrecy tests. Do not apply a schema change without the separately required staging authorization. `M2-01` and Phases 8–11 remain deferred unless explicitly promoted.
 
@@ -65,7 +65,7 @@ Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`.
 | --- | --- |
 | Branch | `feature/course-branding-and-preview` |
 | Staging target | This feature branch is the staging / production-staged deployment branch |
-| **Latest verification snapshot** | SHA `3a6613498241c5dd71761c26c3b1e790764db1d5` (2026-08-02 — preview workflow `30756831212` succeeded, exact-SHA health confirmed); release manifest 165 tests. Current branch tip: `git rev-parse HEAD`. |
+| **Latest verification snapshot** | SHA `3a6613498241c5dd71761c26c3b1e790764db1d5` (2026-08-02 — preview workflow `30756831212` succeeded, exact-SHA health confirmed); current release manifest 166 tests. Current branch tip: `git rev-parse HEAD`. |
 | **Prior CODE HEAD** | `3b853d27b974f28f67f4e7e7f8d6f45786c88624 fix: verify production main boundary without leaking deployment identifiers` (2026-08-01 — 162/162 release tests, 148/148 browser E2E) |
 | **Security Status** | Sponsored-seat concurrent claim is resolved with a row lock; durable email recovery is implemented; one-time account-action reservation/finalization remains open and blocks a clean hardening verdict. |
 | Release State | **STAGING HARDENING REMEDIATION REQUIRED** — technical implementation is complete, formal acceptance is externally gated, and account-action finalization requires a separately approved durable design |
@@ -74,8 +74,8 @@ Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`.
 | Prior validated baseline | `d55229f test: enforce programme content readiness` |
 | Prior branch tip | `8927df9 docs: checkpoint membership implementation readiness` |
 | PR / review | `https://github.com/prochattools/jpv-bootcamp/pull/2` |
-| Migrations applied | Staging records 16 schema migrations applied plus the completed 21-row legacy member/billing/access migration; production remains untouched |
-| Migration approval | Required only for any genuinely pending staging schema or next-domain migration write, with exact target, backup, rollback, and owner approval |
+| Applied migration state | Unverified in this checkpoint. The 28-name registry and health inventory prove application registration only; the guarded read-only status CLI is implemented but has not queried staging. |
+| Migration approval | Authorized read-only operator evidence is required first; any subsequent write requires exact target, backup, rollback, and owner approval. |
 | Decision readiness | `DECISION-READY, EXTERNAL APPROVALS PENDING` |
 | Provider/email acceptance | Pending operator verification |
 | Complete staging/browser smoke | Playwright: **188 collected, 148 passed, 40 skipped** — desktop + mobile Chromium; four staging-only spec files not collected; snapshot workflow `30756831212` at SHA `3a6613498241c5dd71761c26c3b1e790764db1d5`; admin responsive CI gate passes; formal external sign-off pending |
@@ -90,7 +90,7 @@ Methodology:
 
 - `implementation completion` counts committed launch-scoped implementation packets and current source evidence;
 - `validation completion` counts repeatable local release/build/browser/type/prisma gates;
-- `schema readiness` counts the approved migration plan, migration inventory, and rollback path versus the migration still being unapplied;
+- `schema readiness` counts the approved migration plan, migration inventory, and rollback path versus applied state that remains unverified;
 - `provider readiness` counts repository-simulated provider coverage versus live provider verification;
 - `staging readiness` counts rehearsal, smoke planning, and evidence templates versus actual staging execution;
 - `production readiness` counts go/no-go, approval, and operator ownership versus full release execution.
@@ -110,7 +110,7 @@ Methodology:
 | --- | --- | --- |
 | Public landing page | Implemented with local browser coverage; public/legal/client copy approval still pending | Client-approved copy, canonical legal routes, accurate billing terms, and staging acceptance |
 | Pro checkout | Monthly/annual checkout, projection, and local browser validation implemented | Provider smoke, staging verification, and go/no-go approval pass |
-| Controlled Free access | Durable support intake, review state, and notification queue behavior implemented; migration remains unapplied | Approved migration path is executed and staging/provider verification passes |
+| Controlled Free access | Durable support intake, review state, and notification queue behavior implemented; support migration target state remains unverified | Authorized read-only status is captured, any required migration path is approved and executed, and staging/provider verification passes |
 | Member portal | Canonical `/portal` routes, account/billing parity, auth protection, and removed-member blocking are implemented and locally validated | Staging acceptance confirms the portal journeys and no live blocker remains |
 | 8-week course | Portal programme remains explicit placeholder preview; Payload-backed courses and lessons exist; repository intake and acceptance tooling is ready | Representative approved programme content is supplied, accepted, imported through the approved path, and staging smoke confirms access behavior |
 | Community preview | Canonical portal uses persisted read-only member views; interactive posting/replies remain deferred | Private-room/community preview acceptance is recorded without promoting deferred interactions |
@@ -234,7 +234,7 @@ The following phases were layered on the same branch after the `9745dac` hardeni
 ### Current HEAD validation (2026-08-02)
 
 - `pnpm exec tsc --noEmit` PASS — TypeScript: No errors found
-- `pnpm test:release` passed `165/165` — includes the account-action hardening-status guard (2026-08-02)
+- `pnpm test:release` passed `166/166` — includes the account-action hardening-status guard (2026-08-03)
 - `pnpm build` PASS — Compiled successfully in 7.8s
 - Security scan (`dangerouslySetInnerHTML`, `eval`, `innerHTML` outside approved surfaces): CLEAN
 - All `dangerouslySetInnerHTML` usages confirmed as trusted-source (Payload Lexical rich text → HTML conversion, hardcoded FAQ strings, hardcoded preview lesson content); none accept user-submitted input unescaped.
@@ -270,13 +270,8 @@ The following phases were layered on the same branch after the `9745dac` hardeni
 
 ## Migration status
 
-**Already applied to staging (`jpvbootcamp_staging`):**
-- The legacy member/billing/access migration (`scripts/migration/legacyMigration.ts`) ran successfully in two idempotent applies on the staging database (21 source rows, zero errors both runs). Run IDs and per-table counts are recorded in `docs/CURRENT_WORK_HANDOFF.md`.
-- All 16 Payload/Prisma schema migrations through `20260720_000000_locked_docs_rels_new_collections` are applied to `jpvbootcamp_staging`.
+The repository contains 28 canonical Payload migration registrations. Registration and the deployment health inventory are not database-applied state. The real `pnpm staging:migration-status` adapter is implemented as one guarded PostgreSQL client and one read-only transaction, but it has not been run against staging in this work. Exact Payload and Prisma applied, failed, in-progress, rolled-back, and pending state therefore remains unverified until an authorized operator captures the read-only report.
 
-**Not yet applied anywhere:**
-- The Payload migration `20260707_130000_remove_table_plan_from_payload_enums` maps legacy table-plan subscription values to `free`.
-- The Prisma migration `20260707_120000_rename_account_identity_columns` renames old account-reference columns/indexes to neutral names.
-- The Membership Support schema migration `src/migrations/20260718_103726_membership_support_schema.ts` adds 9 tables for the membership-support domain.
+Repository documentation identifies the support schema, account-column rename, table-plan enum removal, and a future account-action reservation/finalization schema as migration candidates or open requirements. Their actual target state must not be inferred from repository names or health output. Do not execute any migration until the target owner approves the business mapping, exact database/schema, backup, operator, maintenance window, apply path, verification, and rollback procedure.
 
-Do not apply the pending migrations until the target-environment owner approves the business mapping, exact database/schema, backup, operator, maintenance window, apply path, verification, and rollback procedure. Production remains unaffected; only staging has received any migration.
+Legacy source-intake tooling supports reviewed bounded WordPress JSON root arrays and `items`, `posts`, or `lessons` arrays with meaningful type, title/content, and identity markers. Generic RSS is not accepted as WordPress WXR; namespace, version, channel, and complete closing structure are required. No real source export was inspected and no real source import was executed. Provider verification, formal staging smoke, rollback ownership, account-action reservation/finalization, and external acceptance remain open.

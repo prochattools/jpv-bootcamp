@@ -16,7 +16,7 @@ function main(): void {
   assert.match(first, /188 collected; 148 passed; 40 skipped; four staging-only spec files not collected/)
   assert.match(first, /Automated staging validation: passed for the exact deployed feature SHA/)
   assert.match(first, /Formal staging sign-off: pending external action/)
-  assert.match(first, /Support migration: unapplied/)
+  assert.match(first, /Support migration target state: unverified; authorized read-only evidence required/)
   assert.match(first, /Programme content approval: pending/)
   assert.match(first, /No provider verification is claimed as complete\./)
   assert.match(first, /No formal staging acceptance is claimed while external sign-off is pending\./)

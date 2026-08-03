@@ -1,396 +1,393 @@
-/**
- * buildStagingMigrationStatus.ts
- *
- * Read-only migration-state evidence command. When run with an authorized
- * staging connection, reports PII-safe migration metadata. When credentials
- * are absent or schema identity does not match, reports
- * OPERATOR_EVIDENCE_REQUIRED without executing any queries.
- *
- * Safety design:
- *  - Requires --mode=staging-read-only flag (fail closed without it)
- *  - Requires --expected-schema flag with exact schema name
- *  - Validates expectedSchema BEFORE opening any database connection
- *  - Verifies database schema identity before any data query
- *  - Never prints connection strings, credentials, or arbitrary DB rows
- *  - Never applies or repairs anything
- *
- * Payload migration tracking table: payload_migrations
- *   (default for @payloadcms/db-postgres — no custom migrationTableName
- *    is set in src/payload.config.ts)
- *
- * Prisma migration tracking: _prisma_migrations
- *   (standard Prisma shadow table; confirmed by absence of override in
- *    prisma/schema.prisma and prisma/system.prisma)
- */
+import { Client } from 'pg'
+import fs from 'node:fs'
+import path from 'node:path'
 
+import {
+  quoteDatabaseIdentifier,
+  resolveDatabaseConnectionConfig,
+  validateDatabaseSchemaIdentifier,
+} from '../../src/lib/databaseConnectionConfig'
 import { PAYLOAD_MIGRATION_NAMES } from '../../src/migrations/migrationRegistry'
 
-// ---------------------------------------------------------------------------
-// Registered migrations — derived from canonical migrationRegistry.ts
-// ---------------------------------------------------------------------------
-
-export const REGISTERED_PAYLOAD_MIGRATIONS: readonly string[] = PAYLOAD_MIGRATION_NAMES
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-export interface PayloadMigrationRow {
+export type PayloadMigrationRow = {
   name: string
   batch: number
 }
 
-export interface PrismaMigrationRow {
+export type PrismaMigrationRow = {
   migration_name: string
+  started_at: string | null
   finished_at: string | null
-  logs: string | null
   rolled_back_at: string | null
-  started_at: string
   applied_steps_count: number
+  has_logs: boolean
 }
 
-export type PrismaMigrationStatus = 'applied' | 'failed' | 'in-progress' | 'rolled-back' | 'unexpected'
+export type PrismaMigrationStatus =
+  | 'applied'
+  | 'failed'
+  | 'in-progress'
+  | 'rolled-back'
+  | 'unexpected'
 
-function classifyPrismaMigration(row: PrismaMigrationRow): PrismaMigrationStatus {
-  if (row.rolled_back_at !== null) return 'rolled-back'
-  if (row.finished_at !== null) return 'applied'
-  if (row.logs !== null) return 'failed'
-  // started but not finished, no logs, not rolled back => in-progress/unfinished
-  return 'in-progress'
+export type ClassifiedPrismaMigration = {
+  migrationName: string
+  status: PrismaMigrationStatus
+  appliedStepsCount: number
 }
 
-/**
- * Injected adapter interface. Implement with real DB queries for live use;
- * inject test doubles for unit tests.
- */
-export interface MigrationQueryAdapter {
-  getPayloadMigrations(): Promise<PayloadMigrationRow[]>
-  getPrismaMigrations(): Promise<PrismaMigrationRow[]>
-  getDatabaseSchemaIdentity(): Promise<string>
+export type MigrationEvidence = {
+  schemaIdentity: string | null
+  payloadMigrations: PayloadMigrationRow[]
+  prismaMigrations: PrismaMigrationRow[]
 }
 
-export interface StagingMigrationStatusReport {
-  reportVersion: '1.0'
-  mode: 'live' | 'dry-run'
-  registeredMigrations: string[]
+export interface MigrationEvidenceAdapter {
+  collectMigrationEvidence(expectedSchema: string): Promise<MigrationEvidence>
+}
+
+export type StagingMigrationStatusResult =
+  | 'VERIFIED'
+  | 'MISMATCH'
+  | 'OPERATOR_EVIDENCE_REQUIRED'
+
+export type StagingMigrationStatusReport = {
+  result: StagingMigrationStatusResult
+  schemaIdentity: string | null
+  registeredPayloadMigrations: string[]
   appliedPayloadMigrations: string[]
   missingPayloadMigrations: string[]
   unexpectedPayloadMigrations: string[]
-  prismaMigrations: Array<{ name: string; status: PrismaMigrationStatus }>
-  schemaIdentityMatch: boolean | null
-  overallStatus: 'VERIFIED' | 'MISMATCHES_FOUND' | 'OPERATOR_EVIDENCE_REQUIRED'
-  notes: string[]
+  registeredPrismaMigrations: string[]
+  missingPrismaMigrations: string[]
+  unexpectedPrismaMigrations: string[]
+  prismaMigrations: ClassifiedPrismaMigration[]
+  blockers: string[]
 }
 
-// ---------------------------------------------------------------------------
-// Core builder — accepts optional adapter
-// ---------------------------------------------------------------------------
+export const REGISTERED_PAYLOAD_MIGRATIONS = PAYLOAD_MIGRATION_NAMES
+export const REGISTERED_PRISMA_MIGRATIONS = fs.readdirSync(
+  path.resolve(import.meta.dirname, '../../prisma/migrations'),
+  { withFileTypes: true },
+).filter((entry) => entry.isDirectory()).map((entry) => entry.name).sort()
 
-/**
- * Build the migration status report.
- *
- * @param adapter  Live DB adapter. When null/undefined, returns an
- *                 OPERATOR_EVIDENCE_REQUIRED report without querying the DB.
- * @param expectedSchema  The exact schema name the DB must report. Required
- *                        for live mode; validated BEFORE any DB connection is
- *                        opened.
- */
+export function classifyPrismaMigration(row: PrismaMigrationRow): PrismaMigrationStatus {
+  if (row.rolled_back_at) return 'rolled-back'
+  if (row.has_logs) return 'failed'
+  if (!row.started_at) return 'unexpected'
+  if (!row.finished_at) return 'in-progress'
+  if (!Number.isInteger(row.applied_steps_count) || row.applied_steps_count < 0) return 'unexpected'
+  return 'applied'
+}
+
 export async function buildStagingMigrationStatus(
-  adapter: MigrationQueryAdapter | null | undefined,
-  expectedSchema?: string,
+  adapter: MigrationEvidenceAdapter | null,
+  expectedSchema: string,
 ): Promise<StagingMigrationStatusReport> {
-  const registered = Array.from(REGISTERED_PAYLOAD_MIGRATIONS)
-  const notes: string[] = []
+  const safeExpectedSchema = validateDatabaseSchemaIdentifier(expectedSchema)
+  const registered = [...REGISTERED_PAYLOAD_MIGRATIONS]
 
-  // --- No adapter: dry-run evidence required ---
   if (!adapter) {
-    notes.push(
-      'OPERATOR READ-ONLY MIGRATION EVIDENCE REQUIRED: no database adapter was provided. ' +
-        'Run with a valid staging connection using --mode=staging-read-only ' +
-        'and --expected-schema=<schema-name> to obtain live evidence.',
-    )
     return {
-      reportVersion: '1.0',
-      mode: 'dry-run',
-      registeredMigrations: registered,
+      result: 'OPERATOR_EVIDENCE_REQUIRED',
+      schemaIdentity: null,
+      registeredPayloadMigrations: registered,
       appliedPayloadMigrations: [],
-      missingPayloadMigrations: [],
+      missingPayloadMigrations: registered,
       unexpectedPayloadMigrations: [],
+      registeredPrismaMigrations: [...REGISTERED_PRISMA_MIGRATIONS],
+      missingPrismaMigrations: [...REGISTERED_PRISMA_MIGRATIONS],
+      unexpectedPrismaMigrations: [],
       prismaMigrations: [],
-      schemaIdentityMatch: null,
-      overallStatus: 'OPERATOR_EVIDENCE_REQUIRED',
-      notes,
+      blockers: ['Operator-authorized read-only staging database evidence is required'],
     }
   }
 
-  // --- Validate expectedSchema BEFORE opening any DB connection ---
-  if (!expectedSchema) {
-    throw new Error(
-      'schema_identity_check_required: --expected-schema must be provided for live mode',
-    )
-  }
-
-  // --- Schema identity guard: must match before any data query ---
-  const reportedSchema = await adapter.getDatabaseSchemaIdentity()
-
-  if (reportedSchema !== expectedSchema) {
-    notes.push(
-      `Schema identity mismatch: expected "${expectedSchema}" but database reported a different schema. ` +
-        'No queries were executed. Aborting.',
-    )
-    return {
-      reportVersion: '1.0',
-      mode: 'live',
-      registeredMigrations: registered,
-      appliedPayloadMigrations: [],
-      missingPayloadMigrations: [],
-      unexpectedPayloadMigrations: [],
-      prismaMigrations: [],
-      schemaIdentityMatch: false,
-      overallStatus: 'OPERATOR_EVIDENCE_REQUIRED',
-      notes,
-    }
-  }
-
-  notes.push('Schema identity: matches expected staging schema.')
-
-  // --- Payload migration comparison ---
-  const payloadRows = await adapter.getPayloadMigrations()
-  // batch == -1 means dev push, not applied. batch > 0 means applied.
-  const appliedPayloadNames = payloadRows
-    .filter((r) => r.batch > 0)
-    .map((r) => r.name)
-  const appliedSet = new Set(appliedPayloadNames)
-  const registeredSet = new Set(registered)
-
+  const evidence = await adapter.collectMigrationEvidence(safeExpectedSchema)
+  const appliedPayloadMigrations = evidence.payloadMigrations
+    .filter((row) => Number.isInteger(row.batch) && row.batch >= 0)
+    .map((row) => row.name)
+  const appliedSet = new Set(appliedPayloadMigrations)
+  const registeredSet = new Set<string>(registered)
   const missingPayloadMigrations = registered.filter((name) => !appliedSet.has(name))
-  const unexpectedPayloadMigrations = appliedPayloadNames.filter(
-    (name) => !registeredSet.has(name),
-  )
-
-  // --- Prisma migration status ---
-  const prismaRows = await adapter.getPrismaMigrations()
-  const prismaMigrations = prismaRows.map((row) => ({
-    name: row.migration_name,
+  const unexpectedPayloadMigrations = appliedPayloadMigrations.filter((name) => !registeredSet.has(name))
+  const prismaMigrations = evidence.prismaMigrations.map((row) => ({
+    migrationName: row.migration_name,
     status: classifyPrismaMigration(row),
+    appliedStepsCount: row.applied_steps_count,
   }))
+  const registeredPrismaSet = new Set(REGISTERED_PRISMA_MIGRATIONS)
+  const evidencedPrismaNames = prismaMigrations.map((row) => row.migrationName)
+  const evidencedPrismaSet = new Set(evidencedPrismaNames)
+  const missingPrismaMigrations = REGISTERED_PRISMA_MIGRATIONS.filter((name) => !evidencedPrismaSet.has(name))
+  const unexpectedPrismaMigrations = evidencedPrismaNames.filter((name) => !registeredPrismaSet.has(name))
 
-  const hasNonApplied = prismaMigrations.some((m) => m.status !== 'applied')
-
-  // --- Determine overall status ---
-  const hasMismatches =
-    missingPayloadMigrations.length > 0 ||
-    unexpectedPayloadMigrations.length > 0 ||
-    hasNonApplied
-
-  const overallStatus: StagingMigrationStatusReport['overallStatus'] = hasMismatches
-    ? 'MISMATCHES_FOUND'
-    : 'VERIFIED'
-
-  if (missingPayloadMigrations.length > 0) {
-    notes.push(
-      `${missingPayloadMigrations.length} Payload migration(s) registered but not recorded as applied in the DB.`,
-    )
-  }
-  if (unexpectedPayloadMigrations.length > 0) {
-    notes.push(
-      `${unexpectedPayloadMigrations.length} Payload migration record(s) in DB not found in the registered list.`,
-    )
-  }
-  if (hasNonApplied) {
-    const nonApplied = prismaMigrations.filter((m) => m.status !== 'applied')
-    notes.push(
-      `${nonApplied.length} Prisma migration(s) in non-applied state: ${nonApplied.map((m) => `${m.name}(${m.status})`).join(', ')}`,
-    )
-  }
-  if (!hasMismatches) {
-    notes.push(
-      `All ${registered.length} registered Payload migrations are applied. All Prisma migrations applied.`,
-    )
+  const blockers: string[] = []
+  if (evidence.schemaIdentity !== safeExpectedSchema) blockers.push('Database schema identity mismatch')
+  if (missingPayloadMigrations.length > 0) blockers.push('Registered Payload migrations are missing from applied-state evidence')
+  if (unexpectedPayloadMigrations.length > 0) blockers.push('Unexpected Payload migration records exist')
+  if (prismaMigrations.length === 0) blockers.push('Prisma migration evidence is empty')
+  if (missingPrismaMigrations.length > 0) blockers.push('Registered Prisma migrations are missing from applied-state evidence')
+  if (unexpectedPrismaMigrations.length > 0) blockers.push('Unexpected Prisma migration records exist')
+  if (evidencedPrismaSet.size !== evidencedPrismaNames.length) blockers.push('Duplicate Prisma migration records exist')
+  if (prismaMigrations.some((row) => row.status !== 'applied')) {
+    blockers.push('One or more Prisma migrations are failed, unfinished, rolled back, or malformed')
   }
 
   return {
-    reportVersion: '1.0',
-    mode: 'live',
-    registeredMigrations: registered,
-    appliedPayloadMigrations: appliedPayloadNames,
+    result: blockers.length === 0 ? 'VERIFIED' : 'MISMATCH',
+    schemaIdentity: evidence.schemaIdentity,
+    registeredPayloadMigrations: registered,
+    appliedPayloadMigrations,
     missingPayloadMigrations,
     unexpectedPayloadMigrations,
+    registeredPrismaMigrations: [...REGISTERED_PRISMA_MIGRATIONS],
+    missingPrismaMigrations,
+    unexpectedPrismaMigrations,
     prismaMigrations,
-    schemaIdentityMatch: true,
-    overallStatus,
-    notes,
+    blockers,
   }
 }
 
-// ---------------------------------------------------------------------------
-// PostgreSQL read-only adapter
-// ---------------------------------------------------------------------------
+export interface PgClientLike {
+  connect(): Promise<void>
+  query<Row extends Record<string, unknown> = Record<string, unknown>>(
+    text: string,
+    values?: unknown[],
+  ): Promise<{ rows: Row[] }>
+  end(): Promise<void>
+}
 
-export function createStagingReadOnlyAdapter(): MigrationQueryAdapter {
+export type PgClientFactory = (config: {
+  connectionString: string
+  connectionTimeoutMillis: number
+}) => PgClientLike
+
+function defaultPgClientFactory(config: {
+  connectionString: string
+  connectionTimeoutMillis: number
+}): PgClientLike {
+  return new Client(config) as unknown as PgClientLike
+}
+
+export type StagingReadOnlyAdapterOptions = {
+  databaseUrl: string
+  expectedSchema: string
+  schemaOverride?: string
+  connectionTimeoutMillis?: number
+  statementTimeoutMillis?: number
+  clientFactory?: PgClientFactory
+}
+
+function validateShortTimeout(value: number, label: string): number {
+  if (!Number.isInteger(value) || value < 1 || value > 30_000) {
+    throw new Error(`${label} must be a positive integer no greater than 30000ms`)
+  }
+  return value
+}
+
+export function createStagingReadOnlyAdapter(
+  options: StagingReadOnlyAdapterOptions,
+): MigrationEvidenceAdapter {
+  const expectedSchema = validateDatabaseSchemaIdentifier(options.expectedSchema)
+  const database = resolveDatabaseConnectionConfig(options.databaseUrl, options.schemaOverride)
+  if (!database.connectionString) throw new Error('Staging database connection is not configured')
+  if (database.metadata.protocol !== 'postgres:' && database.metadata.protocol !== 'postgresql:') {
+    throw new Error('Staging database connection must use PostgreSQL')
+  }
+  if (database.schema !== expectedSchema) throw new Error('Configured database schema does not match the expected staging schema')
+
+  const schemaIdentifier = quoteDatabaseIdentifier(expectedSchema)
+  const clientFactory = options.clientFactory ?? defaultPgClientFactory
+  const connectionTimeoutMillis = validateShortTimeout(options.connectionTimeoutMillis ?? 5_000, 'Connection timeout')
+  const statementTimeoutMillis = validateShortTimeout(options.statementTimeoutMillis ?? 5_000, 'Statement timeout')
+
   return {
-    async getDatabaseSchemaIdentity(): Promise<string> {
-      const { Client } = await import('pg')
-      const connectionString = process.env['DATABASE_URL']
-      if (!connectionString) {
-        throw new Error('DATABASE_URL is not set')
-      }
-      const client = new Client({
-        connectionString,
-        connectionTimeoutMillis: 5000,
-        // @ts-ignore — statement_timeout is valid but may not be typed in all @types/pg versions
-        statement_timeout: 5000,
-      })
-      await client.connect()
-      try {
-        await client.query('BEGIN READ ONLY')
-        const result = await client.query('SELECT current_schema() AS schema_name')
-        const schemaName: string = (result.rows[0] as { schema_name: string })?.schema_name ?? ''
-        await client.query('ROLLBACK')
-        return schemaName
-      } finally {
-        await client.end()
-      }
-    },
+    async collectMigrationEvidence(requestedSchema: string): Promise<MigrationEvidence> {
+      const safeRequestedSchema = validateDatabaseSchemaIdentifier(requestedSchema)
+      if (safeRequestedSchema !== expectedSchema) throw new Error('Requested schema does not match the guarded staging schema')
 
-    async getPayloadMigrations(): Promise<PayloadMigrationRow[]> {
-      const { Client } = await import('pg')
-      const connectionString = process.env['DATABASE_URL']
-      if (!connectionString) throw new Error('DATABASE_URL is not set')
-      const client = new Client({
-        connectionString,
-        connectionTimeoutMillis: 5000,
+      const client = clientFactory({
+        connectionString: database.connectionString,
+        connectionTimeoutMillis,
       })
-      await client.connect()
-      try {
-        await client.query('BEGIN READ ONLY')
-        const result = await client.query(
-          'SELECT name, batch FROM payload_migrations ORDER BY id',
-        )
-        await client.query('ROLLBACK')
-        return (result.rows as Array<{ name: string; batch: number }>).map((row) => ({
-          name: row.name,
-          batch: Number(row.batch),
-        }))
-      } finally {
-        await client.end()
-      }
-    },
+      let transactionStarted = false
+      let primaryError: unknown = null
 
-    async getPrismaMigrations(): Promise<PrismaMigrationRow[]> {
-      const { Client } = await import('pg')
-      const connectionString = process.env['DATABASE_URL']
-      if (!connectionString) throw new Error('DATABASE_URL is not set')
-      const client = new Client({
-        connectionString,
-        connectionTimeoutMillis: 5000,
-      })
-      await client.connect()
       try {
-        await client.query('BEGIN READ ONLY')
-        const result = await client.query(
-          'SELECT migration_name, finished_at, logs IS NOT NULL AS has_logs, rolled_back_at, started_at, applied_steps_count FROM _prisma_migrations ORDER BY started_at',
+        await client.connect()
+        await client.query('BEGIN TRANSACTION READ ONLY')
+        transactionStarted = true
+        await client.query(`SET LOCAL statement_timeout = '${statementTimeoutMillis}ms'`)
+        await client.query(`SET LOCAL search_path TO ${schemaIdentifier}`)
+
+        const schemaResult = await client.query<{ current_schema: string | null }>(
+          'SELECT current_schema() AS current_schema',
         )
-        await client.query('ROLLBACK')
-        return (result.rows as Array<{
-          migration_name: string
-          finished_at: Date | null
-          has_logs: boolean
-          rolled_back_at: Date | null
-          started_at: Date
-          applied_steps_count: number
-        }>).map((row) => ({
-          migration_name: row.migration_name,
-          finished_at: row.finished_at ? row.finished_at.toISOString() : null,
-          logs: row.has_logs ? '<redacted>' : null,
-          rolled_back_at: row.rolled_back_at ? row.rolled_back_at.toISOString() : null,
-          started_at: row.started_at.toISOString(),
-          applied_steps_count: Number(row.applied_steps_count),
-        }))
+        const schemaIdentity = schemaResult.rows[0]?.current_schema ?? null
+        if (schemaIdentity !== expectedSchema) {
+          throw new Error('Database-reported schema does not match the expected staging schema')
+        }
+
+        const payloadResult = await client.query<PayloadMigrationRow>(
+          `SELECT name, batch FROM ${schemaIdentifier}.payload_migrations ORDER BY id ASC`,
+        )
+        const prismaResult = await client.query<PrismaMigrationRow>(
+          `SELECT migration_name, started_at, finished_at, rolled_back_at, applied_steps_count, (logs IS NOT NULL) AS has_logs FROM ${schemaIdentifier}._prisma_migrations ORDER BY started_at ASC`,
+        )
+
+        return {
+          schemaIdentity,
+          payloadMigrations: payloadResult.rows.map((row) => ({ name: row.name, batch: row.batch })),
+          prismaMigrations: prismaResult.rows.map((row) => ({
+            migration_name: row.migration_name,
+            started_at: row.started_at,
+            finished_at: row.finished_at,
+            rolled_back_at: row.rolled_back_at,
+            applied_steps_count: row.applied_steps_count,
+            has_logs: Boolean(row.has_logs),
+          })),
+        }
+      } catch (error: unknown) {
+        primaryError = error
+        if (error instanceof Error && error.message === 'Database-reported schema does not match the expected staging schema') {
+          throw error
+        }
+        throw new Error('Read-only staging migration query failed')
       } finally {
-        await client.end()
+        let cleanupError: Error | null = null
+        if (transactionStarted) {
+          try {
+            await client.query('ROLLBACK')
+          } catch {
+            if (!primaryError) cleanupError = new Error('Read-only staging migration rollback failed')
+          }
+        }
+        try {
+          await client.end()
+        } catch {
+          if (!primaryError && !cleanupError) {
+            cleanupError = new Error('Read-only staging migration connection close failed')
+          }
+        }
+        if (cleanupError) throw cleanupError
       }
     },
   }
 }
 
-// ---------------------------------------------------------------------------
-// CLI argument parser
-// ---------------------------------------------------------------------------
+export type MigrationStatusCliArgs = {
+  help: boolean
+  mode: string | null
+  expectedSchema: string | null
+  acknowledgeReadOnly: boolean
+}
 
-export function parseCliArgs(argv: string[]): {
-  mode: string | undefined
-  expectedSchema: string | undefined
-  errors: string[]
-} {
-  let mode: string | undefined
-  let expectedSchema: string | undefined
-  const errors: string[] = []
-  let modeCount = 0
-  let schemaCount = 0
+export function parseCliArgs(args: string[]): MigrationStatusCliArgs {
+  const parsed: MigrationStatusCliArgs = {
+    help: false,
+    mode: null,
+    expectedSchema: null,
+    acknowledgeReadOnly: false,
+  }
+  const seen = new Set<string>()
 
-  for (let i = 0; i < argv.length; i++) {
-    const arg = argv[i]
-    if (arg.startsWith('--mode=')) {
-      modeCount++
-      mode = arg.slice('--mode='.length)
-    } else if (arg === '--mode') {
-      modeCount++
-      mode = argv[++i]
-    } else if (arg.startsWith('--expected-schema=')) {
-      schemaCount++
-      expectedSchema = arg.slice('--expected-schema='.length)
-    } else if (arg === '--expected-schema') {
-      schemaCount++
-      expectedSchema = argv[++i]
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index]
+    if (arg === '--help' || arg === '-h') {
+      if (seen.has('help')) throw new Error('Duplicate help flag')
+      seen.add('help')
+      parsed.help = true
+      continue
     }
+    if (arg === '--acknowledge-read-only') {
+      if (seen.has('acknowledge')) throw new Error('Duplicate read-only acknowledgement')
+      seen.add('acknowledge')
+      parsed.acknowledgeReadOnly = true
+      continue
+    }
+
+    const equalsIndex = arg.indexOf('=')
+    const [flag, equalsValue] = equalsIndex >= 0
+      ? [arg.slice(0, equalsIndex), arg.slice(equalsIndex + 1)]
+      : [arg, undefined]
+    if (flag !== '--mode' && flag !== '--expected-schema') {
+      throw new Error('Unknown or positional argument')
+    }
+    if (seen.has(flag)) throw new Error(`Duplicate ${flag} flag`)
+    seen.add(flag)
+    const value = equalsValue !== undefined ? equalsValue : args[++index]
+    if (!value || value.startsWith('--')) throw new Error(`Missing value for ${flag}`)
+    if (flag === '--mode') parsed.mode = value
+    if (flag === '--expected-schema') parsed.expectedSchema = value
   }
 
-  if (modeCount > 1) errors.push('--mode specified more than once')
-  if (schemaCount > 1) errors.push('--expected-schema specified more than once')
-
-  return { mode, expectedSchema, errors }
+  if (parsed.expectedSchema !== null) {
+    parsed.expectedSchema = validateDatabaseSchemaIdentifier(parsed.expectedSchema)
+  }
+  return parsed
 }
 
-// ---------------------------------------------------------------------------
-// CLI entry point
-// ---------------------------------------------------------------------------
+export const MIGRATION_STATUS_USAGE = [
+  'Usage: pnpm staging:migration-status -- --mode=staging-read-only --expected-schema=<schema> --acknowledge-read-only',
+  'This command performs read-only migration metadata queries only.',
+].join('\n')
+
+export type MigrationStatusCliDependencies = {
+  clientFactory?: PgClientFactory
+}
+
+export async function runMigrationStatusCli(
+  args: string[],
+  environment: NodeJS.ProcessEnv = process.env,
+  output: (value: string) => void = console.log,
+  dependencies: MigrationStatusCliDependencies = {},
+): Promise<number> {
+  let parsed: MigrationStatusCliArgs
+  try {
+    parsed = parseCliArgs(args)
+  } catch {
+    output(MIGRATION_STATUS_USAGE)
+    return 1
+  }
+
+  if (parsed.help) {
+    output(MIGRATION_STATUS_USAGE)
+    return 0
+  }
+  if (parsed.mode !== 'staging-read-only' || !parsed.expectedSchema || !parsed.acknowledgeReadOnly) {
+    output(MIGRATION_STATUS_USAGE)
+    return 1
+  }
+
+  const databaseUrl = environment.DATABASE_URL?.trim()
+  if (!databaseUrl) {
+    const report = await buildStagingMigrationStatus(null, parsed.expectedSchema)
+    output(JSON.stringify(report, null, 2))
+    return 3
+  }
+
+  try {
+    const adapter = createStagingReadOnlyAdapter({
+      databaseUrl,
+      expectedSchema: parsed.expectedSchema,
+      schemaOverride: environment.PAYLOAD_MIGRATION_SCHEMA,
+      clientFactory: dependencies.clientFactory,
+    })
+    const report = await buildStagingMigrationStatus(adapter, parsed.expectedSchema)
+    output(JSON.stringify(report, null, 2))
+    return report.result === 'VERIFIED' ? 0 : 2
+  } catch {
+    output(JSON.stringify({ result: 'ERROR', message: 'Staging migration status could not be collected' }))
+    return 1
+  }
+}
 
 if (require.main === module) {
-  const { mode, expectedSchema, errors } = parseCliArgs(process.argv.slice(2))
-
-  if (errors.length > 0) {
-    for (const e of errors) {
-      process.stderr.write(`ERROR: ${e}\n`)
-    }
-    process.exit(1)
-  }
-
-  if (mode !== 'staging-read-only') {
-    process.stderr.write(
-      'ERROR: --mode=staging-read-only is required. This command is read-only evidence only.\n',
-    )
-    process.exit(1)
-  }
-
-  if (!expectedSchema) {
-    process.stderr.write(
-      'ERROR: --expected-schema=<schema-name> is required for live mode.\n',
-    )
-    process.exit(1)
-  }
-
-  // In CLI mode, no real adapter is wired here by default.
-  // Operators must supply a real adapter via the programmatic API or
-  // extend this entry point with a live pg connection.
-  buildStagingMigrationStatus(null, expectedSchema)
-    .then((report) => {
-      process.stdout.write(JSON.stringify(report, null, 2))
-      process.stdout.write('\n')
-      process.exit(report.overallStatus === 'VERIFIED' ? 0 : 1)
-    })
-    .catch((err: unknown) => {
-      process.stderr.write(`ERROR: ${err instanceof Error ? err.message : String(err)}\n`)
-      process.exit(1)
-    })
+  runMigrationStatusCli(process.argv.slice(2)).then((exitCode) => {
+    process.exitCode = exitCode
+  }).catch(() => {
+    console.error(JSON.stringify({ result: 'ERROR', message: 'Staging migration status could not be collected' }))
+    process.exitCode = 1
+  })
 }

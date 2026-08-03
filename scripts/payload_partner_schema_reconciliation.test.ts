@@ -1,5 +1,4 @@
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
 
 import {
   previewMigrationInventoryNames,
@@ -8,13 +7,11 @@ import {
   buildPartnerSchemaReconciliationMigrationDownSql,
   buildPartnerSchemaReconciliationMigrationUpSql,
 } from '../src/lib/partnerSchemaReconciliationMigrationSql'
+import { PAYLOAD_MIGRATION_NAMES } from '../src/migrations/migrationRegistry'
 
 const stagingUrl = 'postgresql://user:password@db.internal:5432/app?schema=jpvbootcamp_staging'
 const upSql = buildPartnerSchemaReconciliationMigrationUpSql(stagingUrl)
 const downSql = buildPartnerSchemaReconciliationMigrationDownSql(stagingUrl)
-const migrationSource = readFileSync('src/migrations/index.ts', 'utf8')
-const migrationNames = Array.from(migrationSource.matchAll(/name:\s*'([^']+)'/g), (match) => match[1])
-
 const inventoryNames = previewMigrationInventoryNames()
 const partnerOpsIdx = inventoryNames.indexOf('20260703_000000_partner_affiliate_operations')
 const partnerReconcileIdx = inventoryNames.indexOf('20260704_090000_partner_schema_reconciliation')
@@ -22,8 +19,8 @@ assert.ok(partnerOpsIdx >= 0, 'partner_affiliate_operations must be in inventory
 assert.ok(partnerReconcileIdx >= 0, 'partner_schema_reconciliation must be in inventory')
 assert.ok(partnerOpsIdx < partnerReconcileIdx, 'partner_affiliate_operations must precede partner_schema_reconciliation')
 
-const registryOpsIdx = migrationNames.indexOf('20260703_000000_partner_affiliate_operations')
-const registryReconcileIdx = migrationNames.indexOf('20260704_090000_partner_schema_reconciliation')
+const registryOpsIdx = PAYLOAD_MIGRATION_NAMES.indexOf('20260703_000000_partner_affiliate_operations')
+const registryReconcileIdx = PAYLOAD_MIGRATION_NAMES.indexOf('20260704_090000_partner_schema_reconciliation')
 assert.ok(registryOpsIdx >= 0, 'partner_affiliate_operations must be in migration index')
 assert.ok(registryReconcileIdx >= 0, 'partner_schema_reconciliation must be in migration index')
 assert.ok(registryOpsIdx < registryReconcileIdx, 'registry order: affiliate ops before schema reconciliation')

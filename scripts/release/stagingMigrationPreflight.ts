@@ -113,13 +113,19 @@ function checkRunbookContent(cwd: string): void {
   }
 }
 
-function checkUnappliedEvidence(cwd: string): void {
+function checkMigrationEvidenceBoundary(cwd: string): void {
   const combined = [read(cwd, PREVIEW_READINESS_PATH), read(cwd, OPERATOR_HANDOFF_PATH)].join('\n')
-  if (!/No migrations have been applied|Migrations applied:\s*`No`/i.test(combined)) {
-    throw new Error('migration_state_not_unapplied')
+  if (!/registration inventory, not evidence|not applied database state/i.test(combined)) {
+    throw new Error('migration_registration_boundary_missing')
   }
-  if (!/support-request migration remains unapplied/i.test(combined)) {
-    throw new Error('support_migration_state_missing')
+  if (!/staging:migration-status[\s\S]+?not (?:been )?run against staging/i.test(combined)) {
+    throw new Error('migration_status_execution_boundary_missing')
+  }
+  if (!/authorized operator (?:must still capture read-only|evidence remains required)/i.test(combined)) {
+    throw new Error('operator_read_only_evidence_requirement_missing')
+  }
+  if (!/support-request migration target state remains unverified/i.test(combined)) {
+    throw new Error('support_migration_state_unverified_boundary_missing')
   }
 }
 
@@ -129,7 +135,7 @@ export function buildStagingMigrationPreflightSteps(): StagingMigrationPreflight
     { kind: 'check', id: 'prisma-clean', label: 'Verify prisma paths are clean', run: checkPrismaPathsClean },
     { kind: 'check', id: 'artifacts', label: 'Verify migration artifacts exist', run: checkMigrationArtifacts },
     { kind: 'check', id: 'runbook', label: 'Verify the migration runbook contract', run: checkRunbookContent },
-    { kind: 'check', id: 'evidence', label: 'Verify repository evidence still marks the migration unapplied', run: checkUnappliedEvidence },
+    { kind: 'check', id: 'evidence', label: 'Verify registration and applied-state evidence remain distinct', run: checkMigrationEvidenceBoundary },
     { kind: 'command', id: 'support-migration-safety', label: 'Run support migration safety test', executable: 'pnpm', args: ['exec', 'tsx', 'prisma/migrations/20260712_151700_add_support_requests.test.ts'] },
     { kind: 'command', id: 'support-schema-contract', label: 'Run support schema contract test', executable: 'pnpm', args: ['exec', 'tsx', 'scripts/support_request_schema_contract.test.ts'] },
     { kind: 'command', id: 'migration-inventory', label: 'Run migration inventory test', executable: 'pnpm', args: ['exec', 'tsx', 'scripts/preview_migration_inventory.test.ts'] },

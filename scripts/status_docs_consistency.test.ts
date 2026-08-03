@@ -30,6 +30,10 @@ async function main(): Promise<void> {
     Object.entries(files).map(async ([name, path]) => [name, await readFile(path, 'utf8')] as const),
   )
   const docs = Object.fromEntries(entries) as Record<keyof typeof files, string>
+  const [legacyImportPlan, stagingReadinessMatrix] = await Promise.all([
+    readFile('docs/migration/LEGACY_PLATFORM_IMPORT_MASTER_PLAN.md', 'utf8'),
+    readFile('docs/release/STAGING_OPERATIONAL_READINESS_MATRIX.md', 'utf8'),
+  ])
 
   const allDocs = Object.values(docs).join('\n')
 
@@ -74,10 +78,10 @@ async function main(): Promise<void> {
   assert.match(docs.roadmap, /feature\/course-branding-and-preview/)
   assert.match(docs.roadmap, /Do not apply migrations\./)
   assert.match(docs.roadmap, /Do not touch `main`/)
-  assert.match(docs.roadmap, /Migrations applied \| Staging records 16 schema migrations applied plus the completed 21-row legacy member\/billing\/access migration/)
+  assert.match(docs.roadmap, /Applied migration state \| Unverified in this checkpoint/)
   assert.match(docs.roadmap, /Current client truth: `docs\/client\/JPV_Bootcamp_Platform_Expansion_Go_Live_Plan_v3_7\.docx`/)
   assert.match(docs.roadmap, /Version 3\.4 is the prior progress baseline/)
-  assert.match(docs.roadmap, /Migration approval \| Required only for any genuinely pending staging schema or next-domain migration write/)
+  assert.match(docs.roadmap, /Migration approval \| Authorized read-only operator evidence is required first/)
   assert.match(docs.roadmap, /Decision readiness \| `DECISION-READY, EXTERNAL APPROVALS PENDING`/)
   assert.match(docs.roadmap, /22 July front-end milestone/i)
   assert.match(docs.roadmap, /client content.*by 15 July/i)
@@ -195,7 +199,7 @@ async function main(): Promise<void> {
 
   assert.match(docs.previewReadiness, /feature\/course-branding-and-preview/)
   assert.match(docs.previewReadiness, /Verify the exact branch tip with `git log --oneline -1` before operator action\./)
-  assert.match(docs.previewReadiness, /No migrations have been applied\./)
+  assert.match(docs.previewReadiness, /No applied-database-state claim is made by this checkpoint\./)
   assert.match(docs.previewReadiness, /Do not touch `main`/)
   assert.match(docs.previewReadiness, /Status update procedure: `docs\/client\/STATUS_UPDATE_PROCEDURE\.md`/)
   assert.match(docs.previewReadiness, /`pnpm staging:static-preflight`/)
@@ -215,8 +219,26 @@ async function main(): Promise<void> {
   assert.match(docs.previewReadiness, /`pnpm staging:smoke-plan`/)
   assert.match(docs.previewReadiness, /`pnpm staging:smoke-simulated`/)
   assert.match(docs.previewReadiness, /`pnpm release:evidence:dry-run`/)
-  assert.match(docs.previewReadiness, /support-request migration remains unapplied/i)
+  assert.match(docs.previewReadiness, /support-request migration target state remains unverified/i)
   assert.match(docs.previewReadiness, /M2-01 remains post-core/i)
+
+  for (const currentDoc of [docs.previewReadiness, docs.roadmap, docs.operatorHandoff]) {
+    assert.match(currentDoc, /registration.*not.*applied database state|registration inventory, not evidence|not database-applied state/i)
+    assert.match(currentDoc, /staging:migration-status/)
+    assert.match(currentDoc, /not (?:been )?run against staging|has not queried staging/i)
+    assert.match(currentDoc, /no real source (?:export|import)|no real source export.*no real source import/is)
+    assert.match(currentDoc, /account-action reservation\/finalization/i)
+    assert.match(currentDoc, /provider.*pending|provider verification.*open/is)
+    assert.match(currentDoc, /staging smoke.*pending|formal staging smoke.*open/is)
+  }
+
+  assert.match(legacyImportPlan, /Reviewed WordPress JSON may use a root array or an `items`, `posts`, or `lessons` array/)
+  assert.match(legacyImportPlan, /JSON at or below 5 MiB is structurally parsed/)
+  assert.match(legacyImportPlan, /Generic RSS is not WXR/)
+  assert.match(legacyImportPlan, /no real WordPress export has been read or imported/)
+  assert.match(stagingReadinessMatrix, /migration_lock\.toml` nor the health inventory proves database-applied state/)
+  assert.match(stagingReadinessMatrix, /staging:migration-status -- --mode=staging-read-only/)
+  assert.match(stagingReadinessMatrix, /No authorized read-only migration-status report has been captured/)
 
   for (const secretPattern of noSecrets) {
     assert.doesNotMatch(allDocs, secretPattern, `combined docs should not contain ${secretPattern}`)

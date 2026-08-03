@@ -6,10 +6,10 @@
 
 - **Branch / deployed baseline:** `feature/course-branding-and-preview`; latest completed verification snapshot: SHA `3a6613498241c5dd71761c26c3b1e790764db1d5`, preview workflow `30756831212` concluded `success`, exact-SHA health confirmed. Verify the current tip with `git rev-parse HEAD` and `https://preview.jpvbootcamp.com/api/health` before operator action.
 - **IMPLEMENTED:** agreed core staging scope, Payload admin design and responsive hardening, media persistence, migration inventory/preflight, email queue/guard, Stripe test-mode flows, and partner/sponsored staging boundaries.
-- **LOCALLY VERIFIED:** focused design contract, Payload TypeScript, changed-path security scan, application build, `pnpm test:release` (`165/165`), and `pnpm test:e2e` (Playwright: 188 collected, 148 passed, 40 skipped; four staging-only spec files not collected).
+- **LOCALLY VERIFIED:** focused design contract, Payload TypeScript, changed-path security scan, application build, `pnpm test:release` (`166/166`), and `pnpm test:e2e` (Playwright: 188 collected, 148 passed, 40 skipped; four staging-only spec files not collected).
 - **STAGING VERIFIED:** authenticated Payload admin and responsive regression coverage passed across 375/768/1024/1440px; exact-SHA deployment and media persistence are verified.
 - **Technical verdict:** `STAGING TECHNICAL IMPLEMENTATION COMPLETE — ACCEPTANCE PENDING EXTERNAL ACTION`.
-- **Hardening verdict:** `STAGING HARDENING REMEDIATION REQUIRED` until one-time account actions use a durable concurrency-safe reservation/finalization state.
+- **Hardening verdict:** `STAGING HARDENING REMEDIATION REQUIRED` until the open account-action reservation/finalization gap is closed with a durable concurrency-safe state.
 - **External gates:** approved content, provider evidence, approved migration execution, and formal staging sign-off remain separate.
 
 ## Current state
@@ -22,7 +22,7 @@
 - Current branch tip: run `git rev-parse HEAD` to confirm; staging health: `https://preview.jpvbootcamp.com/api/health`
 - Branch tip verification: verify the current tip with `git log --oneline -1` before operator action
 - PR / review URL: `https://github.com/prochattools/jpv-bootcamp/pull/3` (draft)
-- Migration inventory: `28/28` synchronized; any separately gated migration execution still requires authorization
+- Migration inventory: `28/28` application registrations synchronized; this is not applied database state. The guarded `pnpm staging:migration-status` read-only CLI is implemented but was not run against staging, so authorized operator evidence remains required before any separately gated migration execution.
 - Staging deployment target: this feature branch
 - Front-end website go-live milestone: 22 July 2026
 - Internal delivery / handover buffer: 23 July 2026
@@ -61,7 +61,7 @@
 - Transactional email logo: all branded emails use absolute public URL for JPV logo (live staging proof 2026-07-29)
 - Operator surface phases 1–6: responsive hardening, operator tools JPV token alignment, Payload dashboard redesign, sidebar information architecture, dashboard hardening, operator experience hardening, and Payload admin usability — all purely presentational, no auth/billing/provider changes
 - Canonical `/portal` member portal ownership
-- Deterministic release gate: `pnpm test:release` (`165/165`) — includes the account-action hardening-status guard
+- Deterministic release gate: `pnpm test:release` (`166/166`) — includes the account-action hardening-status guard
 - Launch browser E2E: `pnpm test:e2e` (Playwright: 188 collected, 148 passed, 40 skipped; four staging-only spec files not collected; desktop and mobile Chromium)
 - Combined release/browser gate: `pnpm test:release:full`
 - Decision-readiness summary: `DECISION-READY, EXTERNAL APPROVALS PENDING`
@@ -97,10 +97,11 @@
 
 ## What is blocked
 
+- Legacy intake is repository-tested only: reviewed bounded WordPress JSON is supported, generic RSS is rejected as non-WXR, and no real source export or import has been executed.
 - Representative 8-week programme content approval or explicit placeholder acceptance
 - The repository-owned programme content intake, validation, acceptance report, import plan, and approval record are complete; the client package and approval evidence are still required before the representative programme can leave preview-only state
 - Final public-copy and front-end content approval
-- Support-request migration remains unapplied pending the normal release migration process
+- Support-request migration target state remains unverified pending authorized read-only operator evidence; any write remains separately approval-gated
 - Table-plan-to-Free target-environment approval
 - Account-column rename approval
 - Approved migration path, owner, and rollback confirmation

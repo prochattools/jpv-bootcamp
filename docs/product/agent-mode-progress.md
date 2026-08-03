@@ -331,3 +331,14 @@ Fresh `git status --short` showed only local residue outside the committed relea
 - **Required durable design:** add an approved reservation/finalization state with lease/recovery semantics, migrate all three completion flows, and prove failure retry, concurrency exclusion, idempotency, expiry, purpose isolation, and raw-token secrecy.
 - **External acceptance:** representative content, approved provider evidence, approved migration execution, and formal staging sign-off remain pending.
 - **Deferred by design:** M2-01 and Phases 8–11 remain outside the agreed core staging scope.
+
+## Migration evidence and legacy intake hardening checkpoint — 2026-08-03
+
+- **Persistent run:** `agent-5cfaff9a-71e8-4334-ba28-300aa44ce2d8` on source `prochattools-jpv-bootcamp`; no duplicate run was created.
+- **Implementation:** reviewed bounded `wordpress-json`, strict non-generic WXR validation, permanent 64 KiB WXR/CSV boundary coverage, hardened no-clobber report publication, one canonical 28-name Payload registry, shared redacted database URL/schema handling, and one-client/one-read-only-transaction migration evidence adapter.
+- **Focused evidence:** source inventory `69/69`; migration status and injected adapter `21/21`; canonical inventory contract `28/28`. Tests opened no network connection and no real database query was run.
+- **Release inventory:** 166 required entries and four deferred validations. Current-state `165/165` prose was reconciled; clearly historical counts remain labelled as history.
+- **Evidence boundary:** migration registration and health inventory are not applied database state. The guarded `pnpm staging:migration-status` CLI is operational in code but was not run against staging; authorized operator read-only evidence remains required.
+- **Source boundary:** no environment file, credential, real export, or customer data was inspected; no real source import, provider action, billing side effect, or database mutation occurred.
+- **Open gates:** durable account-action reservation/finalization, rollback ownership, provider verification, formal staging smoke, legacy import execution, programme/copy approval, and external acceptance remain incomplete.
+- **Next:** finish documentation assertions, full validation, complete-diff adversarial review, exact-path commit, fast-forward push, and exact-SHA preview/staging verification.

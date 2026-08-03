@@ -1,5 +1,4 @@
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
 
 import { PayloadMemberVerificationRecords } from '../src/collections/members/MemberEmailVerificationRecords'
 import {
@@ -21,6 +20,7 @@ import {
   buildConsumeMemberAccountActionSql,
   buildReplaceActiveMemberAccountActionSql,
 } from '../src/lib/auth/memberAccountActionSql'
+import { PAYLOAD_MIGRATION_NAMES } from '../src/migrations/migrationRegistry'
 
 process.env.DATABASE_URL ??= 'postgresql://redacted.invalid/app?schema=jpvbootcamp_staging'
 
@@ -337,10 +337,9 @@ async function run() {
   )
   for (const purpose of MEMBER_ACCOUNT_ACTION_PURPOSES) assert(optionValues.has(purpose))
 
-  const migrationIndex = readFileSync(new URL('../src/migrations/index.ts', import.meta.url), 'utf8')
   assert(
-    migrationIndex.lastIndexOf("name: '20260702_001500_member_account_action_purposes'") >
-      migrationIndex.lastIndexOf("name: '20260701_201500_member_email_verification'"),
+    PAYLOAD_MIGRATION_NAMES.indexOf('20260702_001500_member_account_action_purposes') >
+      PAYLOAD_MIGRATION_NAMES.indexOf('20260701_201500_member_email_verification'),
   )
 
   const emailPayload = new FakePayload()

@@ -50,6 +50,7 @@ function main(): void {
   assert.ok(RELEASE_TEST_MANIFEST.some((entry) => entry.id === 'evidence.release-evidence-generator'))
 
   assert.equal(packageJson.scripts?.['staging:migration-preflight'], 'tsx scripts/release/stagingMigrationPreflight.ts')
+  assert.equal(packageJson.scripts?.['staging:migration-status'], 'tsx scripts/release/buildStagingMigrationStatus.ts')
   assert.equal(packageJson.scripts?.['staging:migration-rehearsal'], 'tsx scripts/release/migrationRehearsal.ts')
   assert.equal(packageJson.scripts?.['staging:migration-rehearsal:evidence'], 'tsx scripts/release/buildMigrationRehearsalEvidence.ts')
   assert.equal(packageJson.scripts?.['staging:decision-readiness'], 'tsx scripts/release/runDecisionReadiness.ts')
@@ -83,11 +84,15 @@ function main(): void {
   assert.match(goNoGoChecklist, /staging smoke \| pending until executed/i)
 
   for (const doc of [previewReadiness, roadmap, operatorHandoff]) {
-    assert.match(doc, /Migrations applied:\s*`?No`?|No migrations have been applied|Staging records 16 schema migrations applied|Migration inventory.*28\/28/i)
-    assert.match(doc, /migration remains unapplied|migration still being unapplied|migration application/i)
+    assert.match(doc, /28\/28.*registration|28 canonical Payload migration registrations|canonical 28-name Payload registry/i)
+    assert.match(doc, /not.*applied database state|not database-applied state|not evidence that those migrations were applied/i)
+    assert.match(doc, /staging:migration-status/)
+    assert.match(doc, /not (?:been )?run against staging|has not queried staging/i)
+    assert.match(doc, /no real source (?:export|import)|no real source export.*no real source import/is)
     assert.match(doc, /programme remains preview-only|programme content is still blocked|representative programme content/i)
     assert.match(doc, /Provider\/email .*pending|provider\/email .*not executed|provider\/email verification/i)
     assert.match(doc, /staging smoke .*pending|staging smoke .*not executed/i)
+    assert.match(doc, /account-action reservation\/finalization/i)
     assert.match(doc, /go\/no-go/i)
   }
 

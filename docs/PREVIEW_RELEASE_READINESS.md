@@ -2,7 +2,7 @@
 
 ## Current staging-closure checkpoint — 2026-08-02
 
-- **IMPLEMENTED / LOCALLY VERIFIED:** core staging scope, Payload admin design, responsive behavior, focused design contract, Payload TypeScript, changed-path security scan, application build, and `pnpm test:release` (`165/165`).
+- **IMPLEMENTED / LOCALLY VERIFIED:** core staging scope, Payload admin design, responsive behavior, focused design contract, Payload TypeScript, changed-path security scan, application build, and `pnpm test:release` (`166/166`).
 - **STAGING VERIFIED (latest completed verification snapshot):** authenticated Payload DOM verified across dashboard, membership audit history, and course editing at 375/768/1024/1440px; overflow repaired; authenticated regression gate passed. Current snapshot: preview workflow `30761713446` concluded `success`; staging health reported exact SHA `c15cd578a953cd6b1dc8a3d4705350a52f7d0812`. Prior snapshot: SHA `3a6613498241c5dd71761c26c3b1e790764db1d5`, workflow `30756831212` (retained as history). For current live state: `git rev-parse HEAD` and `https://preview.jpvbootcamp.com/api/health`.
 - **MEDIA PERSISTENCE:** verified via disposable fixture upload, redeployment survival, and Payload API deletion; named staging volume `jpv-bootcamp-preview-media` active.
 - **TECHNICAL STATUS:** `STAGING TECHNICAL IMPLEMENTATION COMPLETE — ACCEPTANCE PENDING EXTERNAL ACTION`.
@@ -18,7 +18,9 @@ The preview release path must use the reviewed feature branch and an exact commi
 Current operator branch: `feature/course-branding-and-preview`.
 Verify the exact branch tip with `git log --oneline -1` before operator action.
 
-**No migrations have been applied.** Payload schema migrations are prepared, migration rehearsal is complete and validated, and legacy member/billing migration has been tested locally on a disposable copy. Zero schema changes have been applied to any live database. Any schema or legacy-domain write to staging or production requires explicit operator authorization, target verification, backup, and rollback ownership.
+**No applied-database-state claim is made by this checkpoint.** The canonical 28-name Payload registry and the health endpoint expose application registration inventory, not evidence that those migrations were applied. The real `pnpm staging:migration-status` read-only CLI is implemented, guarded by explicit staging mode, expected-schema, and acknowledgement flags, but it was not run against staging during this work. An authorized operator must still capture read-only Payload and Prisma migration evidence before any apply decision. Any schema or legacy-domain write requires explicit target authorization, backup, and rollback ownership.
+
+Legacy source intake now recognizes reviewed WordPress JSON root arrays and `items`, `posts`, or `lessons` arrays only when each non-empty export has meaningful type, content/title, and identity markers; bounded files are structurally parsed, while larger files retain streaming byte and SHA-256 evidence with record count unavailable. Generic RSS is not WordPress WXR: the reviewed WXR namespace, version, channel, and complete closing structure are required. No real source export was read and no real source import was executed.
 
 Do not touch `main`.
 
@@ -38,7 +40,7 @@ Static preflight automation is available via `pnpm staging:static-preflight`; it
 
 **Latest completed staging verification snapshot (2026-08-02):** SHA `c15cd578a953cd6b1dc8a3d4705350a52f7d0812`, preview workflow `30761713446`, conclusion `success`, exact-SHA staging health confirmed. Prior verified snapshot: SHA `3a6613498241c5dd71761c26c3b1e790764db1d5`, workflow `30756831212`, conclusion `success` (retained as historical anchor). The authoritative current branch tip is determined by `git rev-parse HEAD`; do not treat any hardcoded SHA as the immutable current tip.
 
-**Outcome:** `STAGING HARDENING REMEDIATION REQUIRED` — core staging implementation and automated validation are complete, `165/165` release gates and Playwright 188 collected / 148 passed / 40 skipped pass, but formal acceptance remains externally gated and one-time account-action completion still requires durable reservation/finalization.
+**Outcome:** `STAGING HARDENING REMEDIATION REQUIRED` — core staging implementation and automated validation are complete, `166/166` release gates and Playwright 188 collected / 148 passed / 40 skipped pass, but formal acceptance remains externally gated and one-time account-action completion still requires durable reservation/finalization.
 
 **Technical staging status:** `STAGING TECHNICAL IMPLEMENTATION COMPLETE — ACCEPTANCE PENDING EXTERNAL ACTION`
 
@@ -59,7 +61,7 @@ Static preflight automation is available via `pnpm staging:static-preflight`; it
 
 ### Deterministic local validation baseline
 
-- `pnpm test:release` passed `165/165`, including the account-action hardening-status guard (2026-08-02)
+- `pnpm test:release` passed `166/166`, including the account-action hardening-status guard (2026-08-03)
 - `pnpm test:e2e` Playwright execution: 188 collected, 148 passed, 40 skipped; four staging-only spec files not collected (admin-crud-staging, admin-responsive-staging, staging-smoke, stripe-webhook-staging)
 - `pnpm test:release:full` passed
 - `pnpm staging:static-preflight` passed
@@ -83,10 +85,10 @@ Static preflight automation is available via `pnpm staging:static-preflight`; it
 
 | Gate | Current status | Evidence owner | Notes |
 | --- | --- | --- | --- |
-| Migration approval and apply path | Blocked | `docs/client/MIGRATION_APPROVAL_PACKET.md`, `docs/client/MIGRATION_APPROVAL_STATUS.md` | Migrations remain unapplied and require explicit target-environment approval. |
+| Migration evidence and apply path | Blocked | `docs/client/MIGRATION_APPROVAL_PACKET.md`, `docs/client/MIGRATION_APPROVAL_STATUS.md` | Applied state is unverified; authorized read-only evidence is required before any separately authorized write. |
 | Decision packets and owners | Ready for external approval review | `docs/decisions/`, `pnpm staging:decision-readiness` | Repository-owned decision records, owner assignments, dependency order, and rollback statements are now complete and internally validated. |
 | Migration rehearsal and rollback ownership | Static rehearsal passed; disposable execution not yet run | `docs/client/MIGRATION_REHEARSAL_RUNBOOK.md`, `docs/release/ROLLBACK_EVIDENCE_CHECKLIST.md` | Repository-owned static rehearsal and evidence are complete; localhost-only disposable execution stays opt-in and target-environment rehearsal remains gated. |
-| Support-request migration application | Blocked | `prisma/migrations/20260712_151700_add_support_requests/migration.sql` | Additive migration exists but remains unapplied. |
+| Support-request migration target state | Blocked / unverified | `prisma/migrations/20260712_151700_add_support_requests/migration.sql` | The additive migration exists in the repository, but its applied state is not established by repository or health evidence. |
 | Provider/email verification | Repository simulation passed; live verification not executed | `docs/client/PROVIDER_EMAIL_READINESS.md`, `docs/client/PROVIDER_EMAIL_EVIDENCE_TEMPLATE.md` | Mocked/local provider simulation is repository-owned and complete; live verification still requires credentials and operator evidence. |
 | Stripe checkout/webhook/billing portal live verification | Repository simulation passed; live verification not executed | `docs/client/PROVIDER_EMAIL_READINESS.md` | Local validation and provider simulation passed safely; live verification is separate. |
 | Representative programme and public-copy approval | Blocked | `docs/client/FRONTEND_CONTENT_INTAKE_CHECKLIST.md`, `docs/client/FRONTEND_COPY_APPROVAL_PACKET.md` | Programme remains preview-only until approved content exists. |
@@ -141,7 +143,7 @@ These assets are repository-ready only. They do not mark migration applied, prov
 
 ### Production blockers
 
-- support-request migration remains unapplied;
+- support-request migration target state remains unverified pending authorized read-only evidence;
 - table-plan-to-Free mapping approval remains pending;
 - account-column rename approval remains pending;
 - staging migration approval, rollback owner confirmation, and formal go/no-go approval remain pending;
@@ -327,7 +329,7 @@ The checklist only gates operations. It does not claim live success or imply tha
 
 ## Pending Payload migration order
 
-The codebase at `eb03a08` registers **16 Payload migrations** in `src/migrations/index.ts`. Per `docs/CURRENT_WORK_HANDOFF.md`, the staging database (`jpvbootcamp_staging`) has 16 schema migrations applied. The `/api/health/deployment` endpoint returns all 16 in `migrationInventoryNames`. Any remaining unapplied migrations require explicit operator authorization.
+**Historical snapshot claim (not independently reverified by this checkpoint):** the codebase at `eb03a08` registered 16 Payload migrations, and `docs/CURRENT_WORK_HANDOFF.md` recorded 16 as applied at that time. The health field was registration inventory, not independent database evidence. Current applied state must come from the authorized read-only status path before any write authorization.
 
 **Registered migration order (src/migrations/index.ts at eb03a08):**
 

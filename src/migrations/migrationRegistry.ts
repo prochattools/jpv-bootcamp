@@ -1,13 +1,4 @@
-/**
- * migrationRegistry.ts
- *
- * Canonical list of registered Payload migration names.
- * Derived from src/migrations/index.ts — the authoritative source.
- * This module has NO side effects and can be safely imported by scripts
- * without triggering Payload initialization.
- */
-
-export const PAYLOAD_MIGRATION_NAMES: readonly string[] = [
+export const PAYLOAD_MIGRATION_NAMES = [
   '20260620_213328',
   '20260621_194424_course_system_phase1',
   '20260622_093852_course_private_media',
@@ -37,3 +28,5 @@ export const PAYLOAD_MIGRATION_NAMES: readonly string[] = [
   '20260730_090000_membership_audit_relationship_columns',
   '20260730_100000_email_events_staging_guard_status',
 ] as const
+
+export type PayloadMigrationName = (typeof PAYLOAD_MIGRATION_NAMES)[number]

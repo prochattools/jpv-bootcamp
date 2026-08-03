@@ -34,6 +34,7 @@ import { resolvePayloadMediaStorageConfig } from './lib/payload-media-storage'
 import { stagingAutoProvision } from './lib/staging-auto-provision'
 import { migrations } from './migrations'
 import { jpvBrand } from './lib/brand/jpvDesignSystem'
+import { resolveDatabaseConnectionConfig } from './lib/databaseConnectionConfig'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -122,27 +123,10 @@ const mediaStoragePlugins =
       ]
     : []
 
-function getDbSchema(url: string | undefined): string {
-  const generationOverride = process.env.PAYLOAD_MIGRATION_SCHEMA?.trim()
-  if (generationOverride) return generationOverride
-  if (!url) return 'jpvbootcamp'
-  try {
-    return new URL(url).searchParams.get('schema') || 'jpvbootcamp'
-  } catch {
-    return 'jpvbootcamp'
-  }
-}
-
-function cleanDbUrl(url: string | undefined): string {
-  if (!url) return ''
-  try {
-    const u = new URL(url)
-    u.searchParams.delete('schema')
-    return u.toString()
-  } catch {
-    return url
-  }
-}
+const databaseConnection = resolveDatabaseConnectionConfig(
+  process.env.DATABASE_URL,
+  process.env.PAYLOAD_MIGRATION_SCHEMA,
+)
 
 export default buildConfig({
   admin: {
@@ -222,7 +206,7 @@ export default buildConfig({
   },
   db: postgresAdapter({
     pool: {
-      connectionString: cleanDbUrl(process.env.DATABASE_URL),
+      connectionString: databaseConnection.connectionString,
       // TCP keepalive: prevents Docker NAT/firewall from silently dropping idle connections
       keepAlive: true,
       keepAliveInitialDelayMillis: 60_000,
@@ -231,7 +215,7 @@ export default buildConfig({
       // Fail fast on new connection attempts instead of hanging for the OS TCP timeout (~75 s)
       connectionTimeoutMillis: 10_000,
     },
-    schemaName: getDbSchema(process.env.DATABASE_URL),
+    schemaName: databaseConnection.schema,
     // Only expose reviewed Payload migrations to explicit migrate commands.
     prodMigrations: shouldRegisterPayloadProdMigrations() ? migrations : undefined,
   }),
