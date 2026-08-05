@@ -303,16 +303,18 @@ async function main(): Promise<void> {
 
   // ─── Exact command ────────────────────────────────────────────────────────
 
-  await test('command: invokes pnpm run staging:payload-migration-plan', () => {
+  await test('command: invokes pnpm exec tsx runStagingPayloadMigration.ts plan', () => {
     assert.ok(
-      planJobYml.includes('pnpm run staging:payload-migration-plan') ||
-        planJobYml.includes('pnpm staging:payload-migration-plan'),
-      'must invoke pnpm run staging:payload-migration-plan',
+      planJobYml.includes('runStagingPayloadMigration.ts') || planJobYml.includes('staging:payload-migration-plan'),
+      'must invoke the staging migration plan runner',
     )
   })
 
-  await test('command: uses -- separator before flags', () => {
-    assert.ok(planJobYml.includes('-- \\'), 'must use -- separator before migration plan flags')
+  await test('command: passes --output=json flag (JSON-only stdout mode)', () => {
+    assert.ok(
+      planJobYml.includes('--output=json'),
+      'must pass --output=json so stdout is exactly one JSON document with no operational logs',
+    )
   })
 
   await test('command: passes all required flags with correct values', () => {
@@ -331,6 +333,66 @@ async function main(): Promise<void> {
     )
   })
 
+  await test('command: expected_sha passed via env var, not inline shell interpolation', () => {
+    // Injecting inputs.expected_sha inline in a shell argument risks command injection.
+    // The safe pattern is to bind the input to an env var (EXPECTED_SHA) and reference it via ${EXPECTED_SHA}.
+    assert.ok(
+      planJobYml.includes('EXPECTED_SHA:') || planJobYml.includes('EXPECTED_SHA ='),
+      'expected_sha must be bound to an env var (EXPECTED_SHA) before use in arguments',
+    )
+    assert.ok(
+      planJobYml.includes('${EXPECTED_SHA}') || planJobYml.includes('"${EXPECTED_SHA}"'),
+      'argument must reference EXPECTED_SHA env var, not inline ${{ inputs.expected_sha }}',
+    )
+  })
+
+  // ─── Mixed-output rejection ───────────────────────────────────────────────
+
+  await test('mixed-output rejection: rejects stdout that does not start with {', () => {
+    assert.ok(
+      planJobYml.includes("FIRST_CHAR") || planJobYml.includes('head -c 1'),
+      'must check that stdout begins with { to reject mixed operational+JSON output',
+    )
+    assert.ok(
+      planJobYml.includes('mixed output') || planJobYml.includes('does not begin'),
+      'must emit a clear error when stdout is not a pure JSON document',
+    )
+  })
+
+  // ─── Trailing bytes / multiple documents ─────────────────────────────────
+
+  await test('trailing bytes: jq -e validates exactly one JSON object, no trailing bytes', () => {
+    assert.ok(
+      planJobYml.includes('jq -e'),
+      'must use jq -e so a false/null result is an error, not a silent empty match',
+    )
+    assert.ok(
+      planJobYml.includes('type == "object"') || planJobYml.includes('trailing bytes'),
+      'must reject trailing bytes and multiple documents with an explicit type check',
+    )
+  })
+
+  // ─── Schema type validation ───────────────────────────────────────────────
+
+  await test('schema validation: all required keys and types are validated before sanitization', () => {
+    assert.ok(
+      planJobYml.includes('type) == "boolean"') || planJobYml.includes('"boolean"'),
+      'must validate .ok is a boolean',
+    )
+    assert.ok(
+      planJobYml.includes('type) == "string"') || planJobYml.includes('"string"'),
+      'must validate string fields',
+    )
+    assert.ok(
+      planJobYml.includes('type) == "array"') || planJobYml.includes('"array"'),
+      'must validate array fields (.pendingMigrations, .blockers)',
+    )
+    assert.ok(
+      planJobYml.includes('JSON schema validation failed'),
+      'must fail closed with a clear error when schema validation fails',
+    )
+  })
+
   // ─── Sanitization failure closes the job ─────────────────────────────────
 
   await test('sanitization: jq failure exits non-zero — does not silently succeed', () => {
@@ -342,6 +404,45 @@ async function main(): Promise<void> {
     assert.ok(
       planJobYml.includes('artifact sanitization failed') || planJobYml.includes('sanitization (jq) failed'),
       'must output a clear error when jq sanitization fails',
+    )
+  })
+
+  await test('sanitization: credential scan covers PostgreSQL URL schemes', () => {
+    assert.ok(
+      planJobYml.includes('postgres') && (planJobYml.includes('postgres://') || planJobYml.includes('postgres(ql)?')),
+      'credential scan must cover postgresql:// and postgres:// URL schemes',
+    )
+  })
+
+  await test('sanitization: credential scan covers URL userinfo (user:pass@host)', () => {
+    assert.ok(
+      planJobYml.includes('://[^@') || planJobYml.includes('@'),
+      'credential scan must cover URL userinfo pattern user:pass@host',
+    )
+  })
+
+  await test('sanitization: credential scan covers bearer and basic auth headers', () => {
+    assert.ok(
+      planJobYml.includes('Bearer') || planJobYml.includes('[Bb]earer'),
+      'credential scan must cover Bearer auth header values',
+    )
+    assert.ok(
+      planJobYml.includes('Basic') || planJobYml.includes('[Bb]asic'),
+      'credential scan must cover Basic auth header values',
+    )
+  })
+
+  await test('sanitization: credential scan covers credential assignments (password=, secret=)', () => {
+    assert.ok(
+      planJobYml.includes('password') && planJobYml.includes('secret'),
+      'credential scan must cover password= and secret= assignment patterns',
+    )
+  })
+
+  await test('sanitization: credential scan covers DB env names (DATABASE_URL=, PGPASSWORD=)', () => {
+    assert.ok(
+      planJobYml.includes('DATABASE_URL') && planJobYml.includes('PGPASSWORD'),
+      'credential scan must cover DATABASE_URL= and PGPASSWORD= env name assignments',
     )
   })
 

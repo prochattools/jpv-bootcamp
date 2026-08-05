@@ -1332,6 +1332,16 @@ export function parseRollbackPlanCliArgs(args: string[]): RollbackPlanAuthorizat
   return result as RollbackPlanAuthorizationPacket
 }
 
+// ─── JSON output mode ─────────────────────────────────────────────────────────
+// When --output=json is present: emit exactly one JSON document on stdout,
+// route all operational log lines to stderr. No trailing bytes.
+
+export function parseOutputFlag(args: string[]): { jsonMode: boolean; remaining: string[] } {
+  const idx = args.indexOf('--output=json')
+  if (idx === -1) return { jsonMode: false, remaining: args }
+  return { jsonMode: true, remaining: args.filter((_, i) => i !== idx) }
+}
+
 // ─── CLI entry point ──────────────────────────────────────────────────────────
 
 const PLAN_USAGE = [
@@ -1386,23 +1396,32 @@ const ROLLBACK_PLAN_USAGE = [
 ].join('\n')
 
 async function main(): Promise<void> {
-  const [subcommand, ...rest] = process.argv.slice(2)
+  const rawArgs = process.argv.slice(2)
+  const { jsonMode, remaining: args } = parseOutputFlag(rawArgs)
+  const [subcommand, ...rest] = args
+
+  // In JSON mode: stdout = exactly one JSON document; stderr = all operational logs.
+  const log = jsonMode
+    ? (line: string) => process.stderr.write(line + '\n')
+    : (line: string) => process.stdout.write(line + '\n')
 
   if (!subcommand || subcommand === 'plan') {
     let planInput: PlanCliInput
     try {
       planInput = parsePlanCliArgs(rest)
     } catch (error: unknown) {
-      console.error(PLAN_USAGE)
-      console.error(error instanceof Error ? error.message : 'Invalid arguments')
+      process.stderr.write(PLAN_USAGE + '\n')
+      process.stderr.write((error instanceof Error ? error.message : 'Invalid arguments') + '\n')
       process.exit(1)
     }
     const result = await runStagingMigrationPlan(
       process.env.DATABASE_URL,
       process.env.PAYLOAD_MIGRATION_SCHEMA,
       planInput,
+      {},
+      log,
     )
-    console.log(JSON.stringify(result, null, 2))
+    process.stdout.write(JSON.stringify(result) + '\n')
     process.exit(result.ok ? 0 : 1)
     return
   }
@@ -1412,8 +1431,8 @@ async function main(): Promise<void> {
     try {
       authorization = parseApplyCliArgs(rest)
     } catch (error: unknown) {
-      console.error(APPLY_USAGE)
-      console.error(error instanceof Error ? error.message : 'Invalid arguments')
+      process.stderr.write(APPLY_USAGE + '\n')
+      process.stderr.write((error instanceof Error ? error.message : 'Invalid arguments') + '\n')
       process.exit(1)
     }
     try {
@@ -1421,13 +1440,15 @@ async function main(): Promise<void> {
         process.env.DATABASE_URL,
         process.env.PAYLOAD_MIGRATION_SCHEMA,
         authorization,
+        {},
+        log,
       )
-      console.log(JSON.stringify(result, null, 2))
+      process.stdout.write(JSON.stringify(result) + '\n')
       process.exit(0)
     } catch (error: unknown) {
-      console.error(
-        '[staging-migration-apply] FAILED:',
-        error instanceof Error ? error.message : error,
+      process.stderr.write(
+        '[staging-migration-apply] FAILED: ' +
+          (error instanceof Error ? error.message : String(error)) + '\n',
       )
       process.exit(1)
     }
@@ -1439,8 +1460,8 @@ async function main(): Promise<void> {
     try {
       authorization = parseRollbackPlanCliArgs(rest)
     } catch (error: unknown) {
-      console.error(ROLLBACK_PLAN_USAGE)
-      console.error(error instanceof Error ? error.message : 'Invalid arguments')
+      process.stderr.write(ROLLBACK_PLAN_USAGE + '\n')
+      process.stderr.write((error instanceof Error ? error.message : 'Invalid arguments') + '\n')
       process.exit(1)
     }
     try {
@@ -1448,22 +1469,24 @@ async function main(): Promise<void> {
         process.env.DATABASE_URL,
         process.env.PAYLOAD_MIGRATION_SCHEMA,
         authorization,
+        {},
+        log,
       )
-      console.log(JSON.stringify(result, null, 2))
+      process.stdout.write(JSON.stringify(result) + '\n')
       process.exit(result.ok ? 0 : 1)
     } catch (error: unknown) {
-      console.error(
-        '[staging-migration-rollback-plan] FAILED:',
-        error instanceof Error ? error.message : error,
+      process.stderr.write(
+        '[staging-migration-rollback-plan] FAILED: ' +
+          (error instanceof Error ? error.message : String(error)) + '\n',
       )
       process.exit(1)
     }
     return
   }
 
-  console.error(PLAN_USAGE)
-  console.error(APPLY_USAGE)
-  console.error(ROLLBACK_PLAN_USAGE)
+  process.stderr.write(PLAN_USAGE + '\n')
+  process.stderr.write(APPLY_USAGE + '\n')
+  process.stderr.write(ROLLBACK_PLAN_USAGE + '\n')
   process.exit(1)
 }
 

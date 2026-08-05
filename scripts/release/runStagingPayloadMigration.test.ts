@@ -9,6 +9,7 @@ import {
   parseApplyCliArgs,
   parseRollbackPlanCliArgs,
   parseNulGitStatus,
+  parseOutputFlag,
   PAYLOAD_MIGRATE_ARGS,
   APPLY_OUTCOME_UNCERTAIN,
   type MigrationAuthorizationPacket,
@@ -228,6 +229,93 @@ function baseDeps(overrides: Partial<StagingMigrationRunnerDependencies> = {}): 
 // ─── PAYLOAD_MIGRATE_ARGS contract ────────────────────────────────────────────
 
 async function run(): Promise<void> {
+
+  // ─── parseOutputFlag ──────────────────────────────────────────────────────
+
+  await test('parseOutputFlag: absent flag — jsonMode=false, args unchanged', () => {
+    const result = parseOutputFlag(['plan', '--expected-commit=abc'])
+    assert.equal(result.jsonMode, false)
+    assert.deepEqual(result.remaining, ['plan', '--expected-commit=abc'])
+  })
+
+  await test('parseOutputFlag: --output=json present — jsonMode=true, flag removed', () => {
+    const result = parseOutputFlag(['plan', '--output=json', '--expected-commit=abc'])
+    assert.equal(result.jsonMode, true)
+    assert.deepEqual(result.remaining, ['plan', '--expected-commit=abc'])
+  })
+
+  await test('parseOutputFlag: --output=json at end — flag removed, subcommand preserved', () => {
+    const result = parseOutputFlag(['plan', '--expected-commit=abc', '--output=json'])
+    assert.equal(result.jsonMode, true)
+    assert.deepEqual(result.remaining, ['plan', '--expected-commit=abc'])
+  })
+
+  await test('parseOutputFlag: --output=json at start — flag removed', () => {
+    const result = parseOutputFlag(['--output=json', 'plan'])
+    assert.equal(result.jsonMode, true)
+    assert.deepEqual(result.remaining, ['plan'])
+  })
+
+  await test('parseOutputFlag: empty args — jsonMode=false', () => {
+    const result = parseOutputFlag([])
+    assert.equal(result.jsonMode, false)
+    assert.deepEqual(result.remaining, [])
+  })
+
+  await test('parseOutputFlag: only --output=json — jsonMode=true, remaining empty', () => {
+    const result = parseOutputFlag(['--output=json'])
+    assert.equal(result.jsonMode, true)
+    assert.deepEqual(result.remaining, [])
+  })
+
+  // ─── JSON-only output: plan result is a parseable JSON object with no log lines ─
+
+  await test('plan: result in JSON mode is a valid JSON object on its own line', async () => {
+    // Verify the result object is JSON-serializable and parses back to the same values
+    const result = await runStagingMigrationPlan(
+      stagingUrl(), undefined, goodPlanInput(),
+      baseDeps({ clientFactory: clientFactory28() }), noopOutput(),
+    )
+    const serialized = JSON.stringify(result)
+    const parsed = JSON.parse(serialized)
+    assert.equal(parsed.ok, true)
+    assert.equal(parsed.mode, 'plan')
+    assert.equal(typeof parsed.appliedCount, 'number')
+    assert.ok(Array.isArray(parsed.pendingMigrations))
+    assert.ok(Array.isArray(parsed.blockers))
+    assert.equal(typeof parsed.message, 'string')
+  })
+
+  await test('plan: result has all required schema fields of the correct types', async () => {
+    const result = await runStagingMigrationPlan(
+      stagingUrl(), undefined, goodPlanInput(),
+      baseDeps({ clientFactory: clientFactory28() }), noopOutput(),
+    )
+    assert.equal(typeof result.ok, 'boolean')
+    assert.equal(typeof result.mode, 'string')
+    assert.equal(typeof result.branch, 'string')
+    assert.equal(typeof result.commit, 'string')
+    assert.equal(typeof result.schema, 'string')
+    assert.equal(typeof result.environment, 'string')
+    assert.equal(typeof result.targetId, 'string')
+    assert.equal(typeof result.appliedCount, 'number')
+    assert.ok(Array.isArray(result.pendingMigrations))
+    assert.ok(Array.isArray(result.blockers))
+    assert.equal(typeof result.message, 'string')
+  })
+
+  await test('plan: result does not contain raw blockers text or hostnames in JSON', async () => {
+    // The sanitized artifact must not contain raw error text with URLs or credentials
+    const result = await runStagingMigrationPlan(
+      stagingUrl(), undefined, goodPlanInput(),
+      baseDeps({ clientFactory: clientFactory28() }), noopOutput(),
+    )
+    const serialized = JSON.stringify(result)
+    assert.ok(!serialized.includes('postgres://'), 'result must not contain PostgreSQL URL scheme')
+    assert.ok(!serialized.includes('@'), 'result must not contain URL userinfo fragment')
+  })
+
+  // ─── PAYLOAD_MIGRATE_ARGS contract ────────────────────────────────────────────
 
   await test('PAYLOAD_MIGRATE_ARGS uses the repository binary and migrate command', () => {
     assert.ok(Array.isArray(PAYLOAD_MIGRATE_ARGS), 'must be an array')

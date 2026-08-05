@@ -516,6 +516,7 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           PAYLOAD_MIGRATION_SCHEMA: jpvbootcamp_staging
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
         run: |
           set -euo pipefail
           RESULT_FILE=$(mktemp)
@@ -523,39 +524,85 @@ jobs:
           # Trap deletes raw file on any exit — credentials never persist
           trap 'rm -f "$RESULT_FILE"' EXIT
 
+          # Build argument array — no shell string interpolation of user-supplied input
+          PLAN_ARGS=(
+            "tsx"
+            "scripts/release/runStagingPayloadMigration.ts"
+            "plan"
+            "--output=json"
+            "--expected-commit=${EXPECTED_SHA}"
+            "--environment=staging"
+            "--target-id=jpvbootcamp-staging"
+            "--expected-schema=jpvbootcamp_staging"
+            "--expected-hostname=10.0.2.4"
+            "--expected-database=jpvbootcamp"
+          )
+
           set +e
-          pnpm run staging:payload-migration-plan -- \
-            --expected-commit="${{ inputs.expected_sha }}" \
-            --environment=staging \
-            --target-id=jpvbootcamp-staging \
-            --expected-schema=jpvbootcamp_staging \
-            --expected-hostname=10.0.2.4 \
-            --expected-database=jpvbootcamp \
+          # --output=json: stdout = exactly one JSON document; stderr = operational logs
+          pnpm exec "${PLAN_ARGS[@]}" \
             > "$RESULT_FILE" 2>&1
           PLAN_EXIT=$?
           set -e
 
-          # Sanitize: extract safe scalar fields only. Fail closed on jq error.
-          if ! jq '{
-            ok: (.ok // false),
-            mode: (.mode // "plan"),
-            branch: (.branch // "unknown"),
-            commit: (.commit // "unknown"),
-            schema: (.schema // "unknown"),
-            environment: (.environment // "unknown"),
-            targetId: (.targetId // "unknown"),
-            appliedCount: (.appliedCount // 0),
-            pendingMigrations: (.pendingMigrations // []),
-            blockers: (.blockers // []),
-            message: (.message // "")
+          # Reject mixed output: stdout must begin with '{' — no operational log lines before JSON
+          FIRST_CHAR="$(head -c 1 "$RESULT_FILE" 2>/dev/null || echo '')"
+          if [ "$FIRST_CHAR" != "{" ]; then
+            echo "PLAN-BLOCKED: stdout does not begin with '{' — mixed output detected, not a pure JSON document" >&2
+            echo '{"ok":false,"message":"mixed output rejected — stdout must be exactly one JSON document"}' > plan-result-sanitized.json
+            exit 1
+          fi
+
+          # Reject trailing bytes: must be exactly one JSON document, no trailing content
+          if ! jq -e 'type == "object"' "$RESULT_FILE" > /dev/null 2>&1; then
+            echo "PLAN-BLOCKED: stdout is not a valid JSON object (may contain trailing bytes or multiple documents)" >&2
+            echo '{"ok":false,"message":"invalid JSON object — trailing bytes or multiple documents"}' > plan-result-sanitized.json
+            exit 1
+          fi
+
+          # Schema validation: required keys must exist and be the correct types
+          if ! jq -e '
+            (.ok | type) == "boolean" and
+            (.mode | type) == "string" and
+            (.branch | type) == "string" and
+            (.commit | type) == "string" and
+            (.schema | type) == "string" and
+            (.environment | type) == "string" and
+            (.targetId | type) == "string" and
+            ((.appliedCount | type) == "number") and
+            (.pendingMigrations | type) == "array" and
+            (.blockers | type) == "array" and
+            (.message | type) == "string"
+          ' "$RESULT_FILE" > /dev/null 2>&1; then
+            echo "PLAN-BLOCKED: JSON schema validation failed — required keys or types missing" >&2
+            echo '{"ok":false,"message":"JSON schema validation failed"}' > plan-result-sanitized.json
+            exit 1
+          fi
+
+          # Sanitize: extract only the safe scalar fields. Fail closed on jq error.
+          if ! jq -e '{
+            ok: (.ok),
+            mode: (.mode),
+            branch: (.branch),
+            commit: (.commit),
+            schema: (.schema),
+            environment: (.environment),
+            targetId: (.targetId),
+            appliedCount: (.appliedCount),
+            pendingMigrations: (.pendingMigrations),
+            blockers: (.blockers),
+            message: (.message)
           }' "$RESULT_FILE" > plan-result-sanitized.json 2>/dev/null; then
             echo "PLAN-BLOCKED: artifact sanitization (jq) failed — raw output not retained" >&2
             echo '{"ok":false,"message":"artifact sanitization failed"}' > plan-result-sanitized.json
             exit 1
           fi
 
-          # Credential scan: any match is a hard failure — never upload sensitive data
-          if grep -qiE 'password|secret|token|key=|DATABASE_URL=|postgres://' plan-result-sanitized.json; then
+          # Credential scan: PostgreSQL URL schemes, URL userinfo, bearer/basic auth,
+          # credential assignments, and DB env names — any match is a hard failure.
+          if grep -qiE \
+            'postgres(ql)?://|://[^@/]+:[^@/]+@|[Bb]earer [A-Za-z0-9+/=_-]{8,}|[Bb]asic [A-Za-z0-9+/=]{8,}|password[[:space:]]*=|secret[[:space:]]*=|DATABASE_URL[[:space:]]*=|PGPASSWORD[[:space:]]*=' \
+            plan-result-sanitized.json; then
             echo "PLAN-BLOCKED: sanitization check failed — credential-like string detected in sanitized output" >&2
             echo '{"ok":false,"message":"sanitization credential check failed"}' > plan-result-sanitized.json
             exit 1

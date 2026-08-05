@@ -76,7 +76,7 @@ async function runPreflight(): Promise<PreflightResult> {
   // ── Environment existence ──────────────────────────────────────────────────
   const envData = ghApi(`repos/${repo}/environments/${ENV_NAME}`) as {
     name?: string
-    protection_rules?: Array<{ type: string; reviewers?: unknown[] }>
+    protection_rules?: Array<{ type: string; reviewers?: unknown[]; prevent_self_review?: boolean }>
     deployment_branch_policy?: { protected_branches: boolean; custom_branch_policies: boolean } | null
   } | null
 
@@ -88,9 +88,11 @@ async function runPreflight(): Promise<PreflightResult> {
   } else {
     result.info.push(`Environment '${ENV_NAME}': exists`)
 
-    // Required reviewers
+    // Required reviewers: at least one reviewer AND prevent_self_review must be enabled.
+    // Non-self approval cannot be proven without prevent_self_review; this is an owner control.
     const reviewerRules = (envData.protection_rules ?? []).filter((r) => r.type === 'required_reviewers')
     const reviewerCount = reviewerRules.length > 0 ? (reviewerRules[0].reviewers ?? []).length : 0
+    const preventSelfReview = reviewerRules.length > 0 ? reviewerRules[0].prevent_self_review === true : false
     if (reviewerCount < 1) {
       result.blockers.push(
         `Environment '${ENV_NAME}' has no required reviewers — add at least one to prevent self-approval: ` +
@@ -99,8 +101,18 @@ async function runPreflight(): Promise<PreflightResult> {
     } else {
       result.info.push(`Required reviewers: ${reviewerCount}`)
     }
+    if (!preventSelfReview) {
+      result.blockers.push(
+        `Environment '${ENV_NAME}' does not have 'prevent_self_review' enabled — ` +
+          `non-self approval cannot be proven without this control. ` +
+          `Enable it at: https://github.com/${repo}/settings/environments`,
+      )
+    } else {
+      result.info.push(`prevent_self_review: enabled`)
+    }
 
-    // Branch policy: must be limited to the reviewed feature branch
+    // Branch policy: must be custom, exactly naming the feature branch, with no wildcards or extra branches.
+    // protected_branches mode is rejected because it may include main or other protected branches.
     const branchPolicy = envData.deployment_branch_policy
     if (!branchPolicy) {
       result.blockers.push(
@@ -108,27 +120,43 @@ async function runPreflight(): Promise<PreflightResult> {
           `'${REQUIRED_FEATURE_BRANCH}' only via custom branch policies`,
       )
     } else if (branchPolicy.protected_branches && !branchPolicy.custom_branch_policies) {
-      // protected_branches = all protected branches; that may include main — not safe enough
-      result.warnings.push(
-        `Environment '${ENV_NAME}' branch policy is set to 'protected branches' which may include main — ` +
-          `prefer a custom policy limited to '${REQUIRED_FEATURE_BRANCH}'`,
+      // protected_branches = all protected branches — that includes main; not acceptable
+      result.blockers.push(
+        `Environment '${ENV_NAME}' branch policy is 'protected branches' mode which may include main — ` +
+          `switch to a custom policy limited exclusively to '${REQUIRED_FEATURE_BRANCH}'`,
       )
     } else if (branchPolicy.custom_branch_policies) {
-      // Verify custom policy actually names the feature branch
+      // Verify the custom policy contains exactly the feature branch — no wildcards, no extras
       const policies = ghApi(
         `repos/${repo}/environments/${ENV_NAME}/deployment-branch-policies`,
       ) as { branch_policies?: Array<{ name: string }> } | null
       const names = (policies?.branch_policies ?? []).map((p) => p.name)
-      if (!names.includes(REQUIRED_FEATURE_BRANCH)) {
+      const hasExact = names.includes(REQUIRED_FEATURE_BRANCH)
+      const hasWildcard = names.some((n) => n.includes('*') || n.includes('?') || n.includes('['))
+      const hasExtra = names.some((n) => n !== REQUIRED_FEATURE_BRANCH)
+      if (!hasExact) {
         result.blockers.push(
           `Environment '${ENV_NAME}' custom branch policy does not include '${REQUIRED_FEATURE_BRANCH}' — ` +
             `got: [${names.join(', ')}]`,
         )
+      } else if (hasWildcard) {
+        result.blockers.push(
+          `Environment '${ENV_NAME}' custom branch policy contains wildcards — ` +
+            `policy must name '${REQUIRED_FEATURE_BRANCH}' exactly with no glob patterns. Got: [${names.join(', ')}]`,
+        )
+      } else if (hasExtra) {
+        result.blockers.push(
+          `Environment '${ENV_NAME}' custom branch policy includes extra branches beyond '${REQUIRED_FEATURE_BRANCH}' — ` +
+            `only the exact feature branch is permitted. Got: [${names.join(', ')}]`,
+        )
       } else {
-        result.info.push(`Branch policy: custom, includes '${REQUIRED_FEATURE_BRANCH}'`)
+        result.info.push(`Branch policy: custom, exactly '${REQUIRED_FEATURE_BRANCH}' only`)
       }
     } else {
-      result.info.push(`Branch policy: ${JSON.stringify(branchPolicy)}`)
+      result.blockers.push(
+        `Environment '${ENV_NAME}' has an unrecognized branch policy: ${JSON.stringify(branchPolicy)} — ` +
+          `set a custom policy limited exclusively to '${REQUIRED_FEATURE_BRANCH}'`,
+      )
     }
   }
 
@@ -175,8 +203,8 @@ async function runPreflight(): Promise<PreflightResult> {
     result.info.push(`PLAN_READY_FOR_DISPATCH: true`)
   }
 
-  // ── Network reachability ───────────────────────────────────────────────────
-  // Only probe if Tailscale appears to be running locally
+  // ── Network reachability (fail closed) ────────────────────────────────────
+  // Absent Tailscale or unreachable host are blockers — not warnings.
   const tailscaleRunning = (() => {
     try {
       execSync('tailscale status', { stdio: 'pipe' })
@@ -186,20 +214,18 @@ async function runPreflight(): Promise<PreflightResult> {
     }
   })()
 
-  if (tailscaleRunning) {
-    if (tcpReachable(STAGING_HOST, STAGING_PORT)) {
-      result.info.push(`Network: ${STAGING_HOST}:${STAGING_PORT} reachable (Tailscale active)`)
-    } else {
-      result.warnings.push(
-        `${STAGING_HOST}:${STAGING_PORT} not reachable locally — confirm subnet route and ACL tag:ci-reader -> ${STAGING_HOST}:${STAGING_PORT}. ` +
-          'The CI runner will attempt its own Tailscale connection.',
-      )
-    }
-  } else {
-    result.info.push(
-      `Network: Tailscale not running locally — skipping TCP probe ${STAGING_HOST}:${STAGING_PORT}. ` +
-        'Connect to Tailscale and re-run to verify network path.',
+  if (!tailscaleRunning) {
+    result.blockers.push(
+      `Tailscale is not running locally — connect to Tailscale and re-run. ` +
+        `Network path to ${STAGING_HOST}:${STAGING_PORT} cannot be verified without Tailscale.`,
     )
+  } else if (!tcpReachable(STAGING_HOST, STAGING_PORT)) {
+    result.blockers.push(
+      `${STAGING_HOST}:${STAGING_PORT} is not reachable via Tailscale — ` +
+        'confirm subnet route 10.0.2.4/32 is exported and ACL allows tag:ci-reader -> 10.0.2.4:5433.',
+    )
+  } else {
+    result.info.push(`Network: ${STAGING_HOST}:${STAGING_PORT} reachable (Tailscale active)`)
   }
 
   result.ok = result.blockers.length === 0
