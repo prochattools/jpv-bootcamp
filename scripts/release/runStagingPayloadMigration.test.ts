@@ -1936,6 +1936,163 @@ async function run(): Promise<void> {
     assert.ok(allText.includes('migration_command_signal_or_indeterminate'))
   })
 
+  // ─── Sanitization: secret-bearing errors never reach output ─────────────────
+
+  await test('sanitize: plan status-query error with secret-bearing message is never echoed', async () => {
+    // Inject a factory whose PG client throws an error containing a DB URL with credentials
+    const secretUrl = `postgres://admin:supersecretpw@${STAGING_HOSTNAME}/${REQUIRED_DATABASE}`
+    const leakyFactory: PgClientFactory = () => ({
+      async connect() { throw new Error(`Connection failed: ${secretUrl}`) },
+      async query() { return { rows: [] } },
+      async end() {},
+    })
+    const lines: string[] = []
+    const result = await runStagingMigrationPlan(
+      stagingUrl(), undefined, goodPlanInput(),
+      baseDeps({ clientFactory: leakyFactory }),
+      (line) => lines.push(line),
+    )
+    const allText = lines.join('\n') + JSON.stringify(result)
+    assert.ok(result.ok === false)
+    assert.ok(!allText.includes('supersecretpw'), 'credential must not appear in plan output or result')
+    assert.ok(!allText.includes(secretUrl), 'raw URL must not appear in plan output or result')
+    // Must use a fixed category, not the raw error text
+    assert.ok(
+      result.blockers.some((b) => b === 'read-only-status-query-failed'),
+      'plan blocker must use fixed category',
+    )
+  })
+
+  await test('sanitize: apply pre-apply status-query error with secret-bearing message is not echoed', async () => {
+    const secretHostname = 'db.internal'
+    const leakyFactory: PgClientFactory = () => ({
+      async connect() { throw new Error(`PGPASSWORD=hunter99 host=${secretHostname}`) },
+      async query() { return { rows: [] } },
+      async end() {},
+    })
+    await assert.rejects(
+      () => runStagingMigrationApply(
+        stagingUrl(), undefined, goodAuthorization(),
+        baseDeps({ clientFactory: leakyFactory }), noopOutput(),
+      ),
+      (err: unknown) => {
+        const msg = err instanceof Error ? err.message : String(err)
+        assert.ok(!msg.includes('hunter99'), 'credential must not appear in apply thrown error')
+        assert.ok(msg.includes('pre-apply-status-query-failed'), 'must use fixed category')
+        return true
+      },
+    )
+  })
+
+  await test('sanitize: apply uncertain-outcome status-query error with secret is not echoed', async () => {
+    // Pre-apply succeeds (28 rows), command fails (non-zero), uncertain status query leaks secret
+    let call = 0
+    const leakyFactory: PgClientFactory = () => {
+      const idx = call++
+      if (idx === 0) return make28Client()
+      return {
+        async connect() { throw new Error('pg_hba.conf rejection: password=topsecretpwd host=10.0.2.4') },
+        async query() { return { rows: [] } },
+        async end() {},
+      }
+    }
+    const lines: string[] = []
+    const result = await runStagingMigrationApply(
+      stagingUrl(), undefined, goodAuthorization(),
+      {
+        ...baseDeps({ clientFactory: leakyFactory }),
+        commandExecutor: () => ({ status: 1 }),
+      },
+      (line) => lines.push(line),
+    )
+    const allText = lines.join('\n') + JSON.stringify(result)
+    assert.ok(!allText.includes('topsecretpwd'), 'credential must not appear in uncertain-outcome output')
+    assert.ok('outcome' in result && result.outcome === APPLY_OUTCOME_UNCERTAIN)
+    assert.equal('outcome' in result && result.statusQuerySucceeded, false)
+  })
+
+  await test('sanitize: apply post-apply status-query error with secret-bearing message is not echoed', async () => {
+    // Pre-apply succeeds, command succeeds (exit 0), post-apply query throws with a secret
+    let call = 0
+    const leakyFactory: PgClientFactory = () => {
+      const idx = call++
+      if (idx === 0) return make28Client()
+      return {
+        async connect() { throw new Error('DB_PASSWORD=postapplysecret123 connection refused') },
+        async query() { return { rows: [] } },
+        async end() {},
+      }
+    }
+    await assert.rejects(
+      () => runStagingMigrationApply(
+        stagingUrl(), undefined, goodAuthorization(),
+        {
+          ...baseDeps({ clientFactory: leakyFactory }),
+          commandExecutor: () => ({ status: 0 }),
+        },
+        noopOutput(),
+      ),
+      (err: unknown) => {
+        const msg = err instanceof Error ? err.message : String(err)
+        assert.ok(!msg.includes('postapplysecret123'), 'credential must not appear in post-apply thrown error')
+        assert.ok(msg.includes('post-apply-status-query-failed'), 'must use fixed category')
+        return true
+      },
+    )
+  })
+
+  await test('sanitize: rollback-plan status-query error with secret-bearing message is not echoed', async () => {
+    const leakyFactory: PgClientFactory = () => ({
+      async connect() { throw new Error('SSL SYSCALL error: PGPASSWORD=rollbacksecret EOF detected') },
+      async query() { return { rows: [] } },
+      async end() {},
+    })
+    await assert.rejects(
+      () => runStagingMigrationRollbackPlan(
+        stagingUrl(), undefined, goodRollbackAuthorization(),
+        baseDeps({ clientFactory: leakyFactory }), noopOutput(),
+      ),
+      (err: unknown) => {
+        const msg = err instanceof Error ? err.message : String(err)
+        assert.ok(!msg.includes('rollbacksecret'), 'credential must not appear in rollback-plan thrown error')
+        assert.ok(msg.includes('rollback-plan-status-query-failed'), 'must use fixed category')
+        return true
+      },
+    )
+  })
+
+  await test('sanitize: CLI apply catch never echoes raw error.message containing secret', async () => {
+    // Simulate an error thrown by runStagingMigrationApply that contains a secret
+    // The CLI catch logs error.message — verify the fixed-category errors we now throw
+    // do NOT contain the raw secret when the status-query path is involved.
+    // We verify this at the function level since the CLI catch is a thin wrapper.
+    let call = 0
+    const leakyFactory: PgClientFactory = () => {
+      const idx = call++
+      if (idx === 0) return make28Client()
+      return {
+        async connect() { throw new Error('FATAL: password authentication failed for "admin" pw=cliSecret777') },
+        async query() { return { rows: [] } },
+        async end() {},
+      }
+    }
+    let caughtMessage = ''
+    try {
+      await runStagingMigrationApply(
+        stagingUrl(), undefined, goodAuthorization(),
+        {
+          ...baseDeps({ clientFactory: leakyFactory }),
+          commandExecutor: () => ({ status: 0 }),
+        },
+        noopOutput(),
+      )
+    } catch (err: unknown) {
+      caughtMessage = err instanceof Error ? err.message : String(err)
+    }
+    assert.ok(!caughtMessage.includes('cliSecret777'), 'CLI catch must not propagate credential in thrown message')
+    assert.ok(caughtMessage.includes('post-apply-status-query-failed'), 'must use fixed category')
+  })
+
   // ─── Defect 7: current-checkout git resolver integration test ─────────────
 
   await test('git resolver: real HEAD passes guard; abbreviated or prior SHA fails', async () => {

@@ -763,8 +763,8 @@ export async function runStagingMigrationPlan(
   let status: FullMigrationStatus
   try {
     status = await collectFullMigrationStatus(databaseUrl, schemaOverride, dependencies)
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Failed to collect migration status'
+  } catch {
+    const message = 'read-only-status-query-failed'
     output(`[staging-migration-plan] BLOCKED: ${message}`)
     return {
       ok: false,
@@ -900,10 +900,8 @@ export async function runStagingMigrationApply(
   let preStatus: FullMigrationStatus
   try {
     preStatus = await collectFullMigrationStatus(databaseUrl, schemaOverride, dependencies)
-  } catch (error: unknown) {
-    const message =
-      error instanceof Error ? error.message : 'Failed to collect pre-apply migration status'
-    throw new Error(`Pre-apply status check failed: ${message}`)
+  } catch {
+    throw new Error('Pre-apply status check failed: pre-apply-status-query-failed')
   }
 
   const preBlockers = checkPreApplyPreconditions(preStatus)
@@ -973,10 +971,8 @@ export async function runStagingMigrationApply(
   let postStatus: FullMigrationStatus
   try {
     postStatus = await collectFullMigrationStatus(databaseUrl, schemaOverride, dependencies)
-  } catch (error: unknown) {
-    const message =
-      error instanceof Error ? error.message : 'Post-apply status query failed'
-    throw new Error(`Post-apply verification failed: ${message}`)
+  } catch {
+    throw new Error('Post-apply verification failed: post-apply-status-query-failed')
   }
 
   const postBlockers = checkPostApplyPreconditions(postStatus)
@@ -1092,9 +1088,8 @@ export async function runStagingMigrationRollbackPlan(
   let status: FullMigrationStatus
   try {
     status = await collectFullMigrationStatus(databaseUrl, schemaOverride, dependencies)
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Failed to collect migration status'
-    throw new Error(`Rollback plan status check failed: ${message}`)
+  } catch {
+    throw new Error('Rollback plan status check failed: rollback-plan-status-query-failed')
   }
 
   const blockers: string[] = []
