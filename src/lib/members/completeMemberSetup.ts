@@ -19,6 +19,20 @@ export type CompleteMemberSetupResult =
         | 'member_unavailable'
     }
 
+const INVITATION_RESULT_KEY = 'member-active'
+
+function normalizedEmail(value: unknown): string | null {
+  return typeof value === 'string' && value.trim() ? value.trim().toLowerCase() : null
+}
+
+async function releaseInvitation(
+  actions: MemberAccountActionService,
+  token: string,
+  reservationNonce: string,
+): Promise<void> {
+  await actions.releaseAction(token, 'member_invitation', reservationNonce).catch(() => {})
+}
+
 export async function completeMemberSetup(
   payload: PayloadMemberAuthAPI,
   actions: MemberAccountActionService,
@@ -33,72 +47,142 @@ export async function completeMemberSetup(
     return { ok: false, error: 'password_mismatch' }
   }
 
-  // Validate the token without consuming it. This allows a safe retry if the
-  // member update below fails — the token stays unconsumed so the user can
-  // resubmit without getting an "invalid or expired token" error.
-  const validation = await actions.findCompletableAction(token, 'member_invitation')
-
-  // Idempotent retry path: the token was already consumed (because this exact
-  // setup request succeeded on a prior attempt but the response was lost).
-  // If the member is now active we return success rather than an error.
-  if (validation.valid !== true) {
-    if (validation.reason === 'already_used' && validation.memberId) {
+  const reservation = await actions.reserveAction(token, 'member_invitation')
+  if (reservation.reserved === false) {
+    if (
+      reservation.reason === 'already_consumed' &&
+      reservation.memberId &&
+      actions.isCompletedResult(
+        token,
+        'member_invitation',
+        INVITATION_RESULT_KEY,
+        reservation.resultFingerprint,
+      )
+    ) {
       const priorMember = await payload
         .findByID({
           collection: 'payload_members',
-          id: validation.memberId,
+          id: reservation.memberId,
           depth: 0,
           overrideAccess: true,
         })
         .catch((): null => null)
-      if (priorMember?.accountStatus === 'active') {
+      if (
+        priorMember?.accountStatus === 'active' &&
+        (!reservation.email || normalizedEmail(priorMember.email) === normalizedEmail(reservation.email))
+      ) {
         return { ok: true, activated: false }
       }
     }
     return { ok: false, error: 'invalid_or_expired_token' }
   }
 
-  const member = await payload.findByID({
-    collection: 'payload_members',
-    id: validation.memberId,
-    depth: 0,
-    overrideAccess: true,
-  })
-  if (!member) return { ok: false, error: 'member_unavailable' }
-
-  // Concurrent-request idempotency: another in-flight request may have
-  // activated this member between our validation and this point.
-  if (member.accountStatus === 'active') {
-    await actions.completeAction(token, 'member_invitation').catch(() => {})
-    return { ok: true, activated: false }
+  let member
+  try {
+    member = await payload.findByID({
+      collection: 'payload_members',
+      id: reservation.memberId,
+      depth: 0,
+      overrideAccess: true,
+    })
+  } catch {
+    await releaseInvitation(actions, token, reservation.reservationNonce)
+    return { ok: false, error: 'member_unavailable' }
+  }
+  if (!member) {
+    await releaseInvitation(actions, token, reservation.reservationNonce)
+    return { ok: false, error: 'member_unavailable' }
   }
 
-  if (member.accountStatus !== 'pending') {
+  if (member.accountStatus === 'active') {
+    if (
+      reservation.reclaimed &&
+      actions.isCompletedResult(
+        token,
+        'member_invitation',
+        INVITATION_RESULT_KEY,
+        reservation.resultFingerprint,
+      ) &&
+      normalizedEmail(member.email) === normalizedEmail(reservation.email)
+    ) {
+      const recovery = await actions.finalizeAction(
+        token,
+        'member_invitation',
+        reservation.reservationNonce,
+        INVITATION_RESULT_KEY,
+      )
+      if (recovery.finalized) return { ok: true, activated: false }
+    }
+    await releaseInvitation(actions, token, reservation.reservationNonce)
     return { ok: false, error: 'account_ineligible' }
   }
 
-  const activatedAt = new Date().toISOString()
-  const updated = await payload.update({
-    collection: 'payload_members',
-    id: member.id,
-    data: {
-      password: input.password,
-      accountStatus: 'active',
-      // Admin-invited members have their email address implicitly verified by
-      // the administrator. Set emailVerifiedAt so that identityDestination
-      // allows them to log in immediately after setup.
-      emailVerifiedAt: activatedAt,
-      loginAttempts: 0,
-      lockUntil: null,
-    },
-    overrideAccess: true,
-  })
+  if (member.accountStatus !== 'pending') {
+    await releaseInvitation(actions, token, reservation.reservationNonce)
+    return { ok: false, error: 'account_ineligible' }
+  }
 
-  // Atomically consume the token after the member record is already active.
-  // If a concurrent request consumed it first (already_used) or the token
-  // expired in the instant between validation and now (invalid_or_expired),
-  // both are safe to ignore because the member is already activated.
-  const completion = await actions.completeAction(token, 'member_invitation')
+  const mutationMarker = await actions.markMutationStarted(
+    token,
+    'member_invitation',
+    reservation.reservationNonce,
+    INVITATION_RESULT_KEY,
+  )
+  if (!mutationMarker.marked) {
+    await releaseInvitation(actions, token, reservation.reservationNonce)
+    return { ok: false, error: 'invalid_or_expired_token' }
+  }
+
+  const activatedAt = new Date().toISOString()
+  let updated
+  try {
+    updated = await payload.update({
+      collection: 'payload_members',
+      id: member.id,
+      data: {
+        password: input.password,
+        accountStatus: 'active',
+        emailVerifiedAt: activatedAt,
+        loginAttempts: 0,
+        lockUntil: null,
+      },
+      overrideAccess: true,
+    })
+  } catch {
+    const recovered = await payload
+      .findByID({
+        collection: 'payload_members',
+        id: member.id,
+        depth: 0,
+        overrideAccess: true,
+      })
+      .catch((): null => null)
+    if (
+      recovered?.accountStatus === 'active' &&
+      normalizedEmail(recovered.email) === normalizedEmail(reservation.email)
+    ) {
+      const recovery = await actions.finalizeAction(
+        token,
+        'member_invitation',
+        reservation.reservationNonce,
+        INVITATION_RESULT_KEY,
+      )
+      if (recovery.finalized) return { ok: true, activated: true }
+      return { ok: false, error: 'invalid_or_expired_token' }
+    }
+    await releaseInvitation(actions, token, reservation.reservationNonce)
+    return { ok: false, error: 'member_unavailable' }
+  }
+
+  const completion = await actions.finalizeAction(
+    token,
+    'member_invitation',
+    reservation.reservationNonce,
+    INVITATION_RESULT_KEY,
+  )
+  if (!completion.finalized) {
+    return { ok: false, error: 'invalid_or_expired_token' }
+  }
 
   try {
     const invitationEvent = await payload.create({
@@ -143,12 +227,7 @@ export async function completeMemberSetup(
       },
     })
 
-    const email =
-      typeof updated.email === 'string'
-        ? updated.email
-        : completion.consumed
-          ? completion.email
-          : validation.email
+    const email = typeof updated.email === 'string' ? updated.email : completion.email
     await queueAndAttemptEmailEvent(payload, {
       toEmail: email,
       templateKey: 'member-account-ready',
@@ -159,7 +238,7 @@ export async function completeMemberSetup(
       },
     })
   } catch {
-    // Best effort: account is already activated; side effects must not break the flow
+    // Durable activation and action finalization already succeeded. Side effects are best effort.
   }
 
   return { ok: true, activated: true }

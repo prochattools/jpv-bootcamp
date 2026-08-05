@@ -55,6 +55,7 @@ const PREVIEW_MIGRATION_METADATA = [
   { purpose: 'Add the email-event processing delivery state for atomic claim handling.', rollbackRisk: 'reversible', verificationChecks: ['registry-match', 'ordered-exactly', 'email-processing-state'] },
   { purpose: 'Reconcile membership audit relationship columns and foreign keys.', rollbackRisk: 'irreversible', verificationChecks: ['registry-match', 'ordered-exactly', 'audit-history-columns'] },
   { purpose: 'Add the terminal email-event state used by the staging recipient guard.', rollbackRisk: 'irreversible', verificationChecks: ['registry-match', 'ordered-exactly', 'staging-email-guard-status'] },
+  { purpose: 'Add durable member account-action reservations, lease recovery, and completion fingerprints.', rollbackRisk: 'reversible', verificationChecks: ['registry-match', 'ordered-exactly', 'account-action-reservation', 'rollback-guard'] },
 ] as const satisfies readonly PreviewMigrationMetadata[]
 
 if (PREVIEW_MIGRATION_METADATA.length !== PAYLOAD_MIGRATION_NAMES.length) {

@@ -4,10 +4,8 @@ import {
   createMemberAccountActionService,
   digestMemberAccountAction,
   type MemberAccountActionDelivery,
-  type MemberAccountActionPurpose,
-  type MemberAccountActionRecord,
-  type MemberAccountActionRepository,
 } from '../src/lib/auth/memberAccountActions'
+import { MemoryMemberAccountActionRepository } from './helpers/memberAccountActionMemoryRepository'
 import {
   completeMemberEmailChange,
   requestMemberEmailChange,
@@ -142,70 +140,7 @@ class FakePayload implements PayloadMemberAuthAPI {
   }
 }
 
-class MemoryActionRepository implements MemberAccountActionRepository {
-  readonly records: MemberAccountActionRecord[] = []
-  readonly deliveries: Array<{
-    memberId: string
-    purpose: MemberAccountActionPurpose
-    idempotencyKey: string
-    status: 'sent' | 'suppressed' | 'failed'
-    attempt: number
-    occurredAt: string
-    reason?: 'cooldown' | 'max_attempts' | 'transport_error'
-  }> = []
-
-  async findActiveAction(memberId: string, purpose: MemberAccountActionPurpose) {
-    return this.records.find(
-      (record) =>
-        record.memberId === memberId &&
-        record.purpose === purpose &&
-        !record.consumedAt &&
-        !record.invalidatedAt,
-    ) ?? null
-  }
-
-  async replaceActiveAction(record: MemberAccountActionRecord) {
-    for (const existing of this.records) {
-      if (
-        existing.memberId === record.memberId &&
-        existing.purpose === record.purpose &&
-        !existing.consumedAt &&
-        !existing.invalidatedAt
-      ) {
-        existing.invalidatedAt = record.createdAt
-      }
-    }
-    this.records.push(structuredClone(record))
-  }
-
-  async findActionByDigest(tokenDigest: string, purpose: MemberAccountActionPurpose) {
-    return this.records.find(
-      (record) => record.tokenDigest === tokenDigest && record.purpose === purpose,
-    ) ?? null
-  }
-
-  async consumeAction(
-    tokenDigest: string,
-    purpose: MemberAccountActionPurpose,
-    consumedAt: string,
-  ) {
-    const record = this.records.find(
-      (candidate) =>
-        candidate.tokenDigest === tokenDigest &&
-        candidate.purpose === purpose &&
-        !candidate.consumedAt &&
-        !candidate.invalidatedAt &&
-        new Date(candidate.expiresAt).getTime() > new Date(consumedAt).getTime(),
-    )
-    if (!record) return null
-    record.consumedAt = consumedAt
-    return record.memberId
-  }
-
-  async recordDelivery(event: (typeof this.deliveries)[number]) {
-    this.deliveries.push(structuredClone(event))
-  }
-}
+class MemoryActionRepository extends MemoryMemberAccountActionRepository {}
 
 class FakeActionTransport {
   readonly deliveries: MemberAccountActionDelivery[] = []
@@ -237,9 +172,9 @@ function createFixture(input?: {
     payload_audit_events: [],
     payload_email_events: [],
   })
-  const repository = new MemoryActionRepository()
-  const transport = new FakeActionTransport()
   let currentTime = input?.now ?? new Date('2026-07-02T02:00:00.000Z')
+  const repository = new MemoryActionRepository(() => new Date(currentTime))
+  const transport = new FakeActionTransport()
   let actionValue = input?.actionValue ?? 'email-change-action-value-never-persisted'
   const service = createMemberAccountActionService({
     repository,
@@ -398,6 +333,10 @@ async function testRequestAndConcurrentCompletion() {
     1,
   )
   assert.equal(JSON.stringify(results).includes(actionValue), false)
+  assert.equal(
+    fixture.payload.calls.filter((call) => call === 'update:payload_members').length,
+    1,
+  )
 
   const member = fixture.payload.docs('payload_members')[0]
   assert.equal(member?.email, 'new@example.test')

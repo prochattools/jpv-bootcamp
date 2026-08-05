@@ -1,14 +1,15 @@
 # JPV Bootcamp - Roadmap Progress Status
 
-<!-- Reconciliation note 2026-08-03: Previous checkpoint recorded SHA 3a6613498241c5dd71761c26c3b1e790764db1d5 as a verified snapshot. The current release manifest contains 166 required gates and four deferred validations. Hardening status: STAGING HARDENING REMEDIATION REQUIRED — account-action reservation/finalization (one-time actions lack a durable cross-instance concurrency-safe primitive) remains the open hardening gap. -->
+<!-- Reconciliation note 2026-08-04: The deployed staging baseline remains SHA 9c045fa5a5c327014c20fe9377f7d5368b550573 with workflow 30853006495 successful and authenticated admin 14/14. The current release manifest contains 166 required gates and four deferred validations. Account-action reservation/finalization is implemented and behaviorally validated in source; staging migration authorization and exact-SHA operational verification remain pending. -->
 
-## Current checkpoint — 2026-08-02
+## Current checkpoint — 2026-08-04
 
 - **COMPLETE CORE STAGING WORK:** M0-01 through M0-09, M1-01 through M1-06 in their documented state, UI-01 design/admin hardening, release/browser automation, exact-SHA staging deployment, media persistence, migration inventory/preflight, email queue/guard, Stripe test-mode behavior, and partner/sponsored staging boundaries.
 - **LOCALLY VERIFIED:** focused design contract, Payload TypeScript, changed-path security scan, application build, `pnpm test:release` (`166/166`), and `pnpm test:e2e` (Playwright: 188 collected, 148 passed, 40 skipped; four staging-only spec files not collected).
-- **STAGING VERIFIED (latest completed verification snapshot):** authenticated Payload DOM and admin regression checks passed at 375/768/1024/1440px; preview workflow `30756831212` concluded `success`; staging health reported exact SHA `3a6613498241c5dd71761c26c3b1e790764db1d5`. Verify current live state with `git rev-parse HEAD` and `https://preview.jpvbootcamp.com/api/health`.
-- **TECHNICAL STATUS:** `STAGING TECHNICAL IMPLEMENTATION COMPLETE — ACCEPTANCE PENDING EXTERNAL ACTION`.
-- **HARDENING STATUS:** `STAGING HARDENING REMEDIATION REQUIRED` because one-time account-action completion lacks a durable cross-instance reservation/finalization primitive.
+- **STAGING VERIFIED (latest completed verification snapshot):** preview workflow `30853006495` concluded `success`; staging health reported exact SHA `9c045fa5a5c327014c20fe9377f7d5368b550573`; authenticated staging admin gate passed `14/14`. Verify current live state with `git rev-parse HEAD` and `https://preview.jpvbootcamp.com/api/health`.
+- **TECHNICAL STATUS:** `STAGING TECHNICAL IMPLEMENTATION COMPLETE — ACCEPTANCE PENDING EXTERNAL ACTION` for the deployed baseline.
+- **HARDENING STATUS:** `ACCOUNT-ACTION HARDENING IMPLEMENTED LOCALLY — STAGING MIGRATION AUTHORIZATION REQUIRED`; source implementation and behavioral tests are complete, but shared staging still uses the preceding schema.
+- **MIGRATION INVENTORY:** `29/29` application registrations are synchronized; this is registration inventory, not applied database state, and migration `20260804_050000_member_account_action_reservations` remains local only.
 - **ACCEPTANCE PENDING EXTERNAL ACTION:** representative programme content, final copy/testimonials/biographies, approved provider evidence, approved migration execution, and formal staging sign-off.
 - **DEFERRED BY DESIGN:** M2-01 and Phases 8–11 remain outside the agreed core staging scope unless separately promoted.
 
@@ -20,9 +21,9 @@ Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`.
 
 ## Current position
 
-**Position:** The agreed core staging implementation is deployed and technically verified. Latest completed verification snapshot: SHA `3a6613498241c5dd71761c26c3b1e790764db1d5`, workflow `30756831212`. The deterministic baseline is `166/166` release gates plus Playwright 188 collected / 148 passed / 40 skipped, with four staging-only spec files excluded by contract. Formal staging acceptance is not complete because external approval records remain pending. Repository-owned hardening is also not complete: email-change confirmation still consumes its one-time action before the member update succeeds, and invitation/password-reset completion lacks a durable cross-instance reservation/finalization primitive.
+**Position:** The agreed core staging implementation is deployed and technically verified at SHA `9c045fa5a5c327014c20fe9377f7d5368b550573`, workflow `30853006495`, with authenticated admin verification `14/14`. The deterministic deployed baseline remains `166/166` release gates plus Playwright 188 collected / 148 passed / 40 skipped. Durable account-action reservation/finalization is now implemented and behaviorally validated in local repository source, including the reversible 29th Payload migration; shared staging has not applied or verified that migration.
 
-**Next repository task:** design and approve a schema-backed reservation/finalization state for one-time account actions, then migrate invitation, password-reset, and email-change completion to that primitive with concurrency, retry, idempotency, expiry, and raw-token secrecy tests. Do not apply a schema change without the separately required staging authorization. `M2-01` and Phases 8–11 remain deferred unless explicitly promoted.
+**Next repository task:** complete local validation and commit preparation for account-action hardening, then stop for explicit authorization before any feature-branch push that could apply migration `20260804_050000_member_account_action_reservations` to shared staging. After authorization, require exact-SHA CI, migration evidence, health verification, and approved non-destructive staging verification. `M2-01` and Phases 8–11 remain deferred unless explicitly promoted.
 
 **Next external actions:** supply and approve representative content, complete approved provider evidence, authorize any required migration execution, and record formal staging sign-off.
 
@@ -65,16 +66,16 @@ Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`.
 | --- | --- |
 | Branch | `feature/course-branding-and-preview` |
 | Staging target | This feature branch is the staging / production-staged deployment branch |
-| **Latest verification snapshot** | SHA `3a6613498241c5dd71761c26c3b1e790764db1d5` (2026-08-02 — preview workflow `30756831212` succeeded, exact-SHA health confirmed); current release manifest 166 tests. Current branch tip: `git rev-parse HEAD`. |
-| **Prior CODE HEAD** | `3b853d27b974f28f67f4e7e7f8d6f45786c88624 fix: verify production main boundary without leaking deployment identifiers` (2026-08-01 — 162/162 release tests, 148/148 browser E2E) |
-| **Security Status** | Sponsored-seat concurrent claim is resolved with a row lock; durable email recovery is implemented; one-time account-action reservation/finalization remains open and blocks a clean hardening verdict. |
-| Release State | **STAGING HARDENING REMEDIATION REQUIRED** — technical implementation is complete, formal acceptance is externally gated, and account-action finalization requires a separately approved durable design |
+| **Latest verification snapshot** | SHA `9c045fa5a5c327014c20fe9377f7d5368b550573` (2026-08-04 — preview workflow `30853006495` succeeded, exact-SHA health confirmed, authenticated admin `14/14`); current release manifest 166 tests. Current branch tip: `git rev-parse HEAD`. |
+| **Prior CODE HEAD** | `3b853d27b974f28f67f4e7e7f8d6f45786c88624 fix: verify production main boundary without leaking deployment identifiers` (historical) |
+| **Security Status** | Sponsored-seat concurrent claim is resolved; durable email recovery is implemented; account-action reservation/finalization is implemented and behaviorally validated in source, with shared-staging migration authorization pending. |
+| Release State | **ACCOUNT-ACTION HARDENING IMPLEMENTED LOCALLY — STAGING MIGRATION AUTHORIZATION REQUIRED** |
 | Historical audit baseline | `236227c fix: require portal auth for member content` |
 | Previous readiness baseline | `af6de62 docs: record core go-live readiness` |
 | Prior validated baseline | `d55229f test: enforce programme content readiness` |
 | Prior branch tip | `8927df9 docs: checkpoint membership implementation readiness` |
-| PR / review | `https://github.com/prochattools/jpv-bootcamp/pull/2` |
-| Applied migration state | Unverified in this checkpoint. The 28-name registry and health inventory prove application registration only; the guarded read-only status CLI is implemented but has not queried staging. |
+| PR / review | `https://github.com/prochattools/jpv-bootcamp/pull/3` |
+| Applied migration state | Unverified in this checkpoint. The 29-name registry and health inventory prove application registration only; shared staging still runs the preceding schema, migration `20260804_050000_member_account_action_reservations` is not applied, and the guarded read-only status CLI has not queried staging. |
 | Migration approval | Authorized read-only operator evidence is required first; any subsequent write requires exact target, backup, rollback, and owner approval. |
 | Decision readiness | `DECISION-READY, EXTERNAL APPROVALS PENDING` |
 | Provider/email acceptance | Pending operator verification |

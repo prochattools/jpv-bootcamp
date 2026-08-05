@@ -248,3 +248,33 @@ Three deferred high-risk issues have clear fix scope and low blast radius. All t
 **Report prepared**: 2026-07-22 10:27 UTC  
 **Next review**: Post-staging-smoke or operator request  
 **Owner**: Repository  
+
+
+
+
+---
+
+## Current account-action reassessment — 2026-08-04
+
+This section supersedes the current-status language for the historical one-time token finding while preserving the original 22 July evidence.
+
+### One-time account-action completion
+
+**Status: IMPLEMENTED IN SOURCE — SHARED STAGING MIGRATION AUTHORIZATION PENDING.**
+
+The repository now implements a durable pending → reserved → consumed state machine for member invitations, password resets, and email-change confirmations:
+
+- `reservation_nonce`, `reserved_at`, `lease_expires_at`, and `result_fingerprint` are defined in the hidden Payload collection and reversible migration `20260804_050000_member_account_action_reservations`;
+- atomic schema-qualified SQL reserves one eligible action, finalizes only for the current nonce owner, releases only safe pre-mutation failures, and retrieves completed result fingerprints for replay;
+- active leases cannot be stolen, expired leases may be reclaimed, and stale nonces cannot finalize or release after reclaim;
+- invitation and password-reset flows reserve before their downstream mutation and finalize afterward;
+- email change no longer consumes before updating the member;
+- uncertain post-mutation failures retain the lease and use purpose-specific durable-state recovery rather than blindly releasing;
+- matching completed replays return idempotent success without repeating the mutation, while conflicting result fingerprints are rejected;
+- raw tokens, passwords, password-derived values, and raw email addresses are not persisted in result fingerprints.
+
+Behavioral concurrency evidence now replaces the former open-status source-order guard. Repository-local tests prove one invitation activation, one password-reset mutation, and one email update across concurrent attempts, plus lease expiry/reclaim, nonce ownership, safe release/retry, purpose isolation, completed replay, and secret non-disclosure.
+
+This implementation provides one active reservation plus idempotent recovery. It does not claim a globally transactional exactly-once guarantee across Payload mutations and external providers.
+
+The finding is resolved in repository source but is not yet operationally verified on the shared staging database. Staging migration authorization, exact-SHA preview deployment, migration evidence, exact-SHA health, and an approved non-destructive staging verification remain required. No shared database, real member record, provider email, billing system, or customer data was used during implementation.

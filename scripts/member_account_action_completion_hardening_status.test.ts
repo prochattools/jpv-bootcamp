@@ -1,13 +1,19 @@
 import assert from 'node:assert/strict'
 import { existsSync, readFileSync } from 'node:fs'
 
+const collection = readFileSync('src/collections/members/MemberEmailVerificationRecords.ts', 'utf8')
 const service = readFileSync('src/lib/auth/memberAccountActions.ts', 'utf8')
+const sql = readFileSync('src/lib/auth/memberAccountActionSql.ts', 'utf8')
 const invitation = readFileSync('src/lib/members/completeMemberSetup.ts', 'utf8')
 const passwordReset = readFileSync('src/lib/members/completePasswordReset.ts', 'utf8')
 const emailChange = readFileSync('src/lib/members/changeMemberEmail.ts', 'utf8')
+const registry = readFileSync('src/migrations/migrationRegistry.ts', 'utf8')
 const readiness = readFileSync('docs/PREVIEW_RELEASE_READINESS.md', 'utf8')
 const hardening = readFileSync('docs/ADVERSARIAL_REVIEW_HARDENING_2026_07_22.md', 'utf8')
-const DESIGN_DOC_PATH = 'docs/security/MEMBER_ACCOUNT_ACTION_RESERVATION_FINALIZATION_DESIGN.md'
+const design = readFileSync('docs/security/MEMBER_ACCOUNT_ACTION_RESERVATION_FINALIZATION_DESIGN.md', 'utf8')
+
+const migrationPath = 'src/migrations/20260804_050000_member_account_action_reservations.ts'
+const migrationSqlPath = 'src/lib/auth/memberAccountActionReservationMigrationSql.ts'
 
 function position(source: string, value: string): number {
   const index = source.indexOf(value)
@@ -15,72 +21,63 @@ function position(source: string, value: string): number {
   return index
 }
 
-function lastPosition(source: string, value: string): number {
-  const index = source.lastIndexOf(value)
-  assert(index >= 0, `expected source marker: ${value}`)
-  return index
+for (const field of ['reservationNonce', 'reservedAt', 'leaseExpiresAt', 'resultFingerprint']) {
+  assert.match(collection, new RegExp(`name: '${field}'`), `collection field ${field} must exist`)
+}
+assert.ok(existsSync(migrationPath), 'reservation/finalization migration must exist')
+assert.ok(existsSync(migrationSqlPath), 'reservation/finalization migration SQL contract must exist')
+assert.match(registry, /20260804_050000_member_account_action_reservations/)
+
+for (const api of ['reserveAction', 'markMutationStarted', 'finalizeAction', 'releaseAction', 'findCompletedAction']) {
+  assert.match(service, new RegExp(`${api}\\(`), `service API ${api} must exist`)
+}
+for (const builder of [
+  'buildReserveMemberAccountActionSql',
+  'buildMarkMemberAccountActionMutationStartedSql',
+  'buildFinalizeMemberAccountActionSql',
+  'buildReleaseMemberAccountActionSql',
+  'buildFindCompletedMemberAccountActionSql',
+]) {
+  assert.match(sql, new RegExp(`${builder}\\(`), `SQL builder ${builder} must exist`)
 }
 
-const invitationValidate = position(
-  invitation,
-  "actions.findCompletableAction(token, 'member_invitation')",
-)
-const invitationUpdate = position(invitation, 'const updated = await payload.update({')
-// Use lastIndexOf because there is also an early idempotency-return consume before the
-// activation path. The primary completion consume is the last occurrence, after the update.
-const invitationConsume = lastPosition(
-  invitation,
-  "actions.completeAction(token, 'member_invitation')",
-)
-assert(
-  invitationValidate < invitationUpdate && invitationUpdate < invitationConsume,
-  'invitation completion must validate before activation and consume only after activation succeeds',
-)
+const invitationReserve = position(invitation, "actions.reserveAction(token, 'member_invitation')")
+const invitationMutation = position(invitation, 'updated = await payload.update({')
+const invitationFinalize = position(invitation, "actions.finalizeAction(\n    token,\n    'member_invitation'")
+assert(invitationReserve < invitationMutation && invitationMutation < invitationFinalize)
 
-const resetValidate = position(
-  passwordReset,
-  "actions.findCompletableAction(token, 'password_reset')",
-)
+const resetReserve = position(passwordReset, "actions.reserveAction(token, 'password_reset')")
 const resetMutation = position(passwordReset, 'await payload.resetPassword({')
-const resetConsume = position(
-  passwordReset,
-  "actions.completeAction(token, 'password_reset')",
-)
-assert(
-  resetValidate < resetMutation && resetMutation < resetConsume,
-  'password reset must validate before reset and consume only after the reset succeeds',
-)
+const resetFinalize = position(passwordReset, "actions.finalizeAction(\n    token,\n    'password_reset'")
+assert(resetReserve < resetMutation && resetMutation < resetFinalize)
 
-const emailConsume = position(
-  emailChange,
-  "actions.completeAction(token, 'email_change_confirmation')",
-)
+const emailReserve = position(emailChange, "actions.reserveAction(normalizedToken, 'email_change_confirmation')")
 const emailMutation = position(emailChange, 'await payload.update({')
-assert(
-  emailConsume < emailMutation,
-  'open hardening status changed: update this guard only with a concurrency-safe reservation/finalization repair',
-)
+const emailFinalize = position(emailChange, "actions.finalizeAction(\n    normalizedToken,\n    'email_change_confirmation'")
+assert(emailReserve < emailMutation && emailMutation < emailFinalize)
 
-assert.doesNotMatch(
-  service,
-  /reserveAction|finalizeAction|completeActionWith|withLockedAction/,
-  'a reservation/finalization primitive now exists; replace this open-status guard with behavioral concurrency tests',
-)
-assert.match(
-  readiness,
-  /STAGING TECHNICAL IMPLEMENTATION COMPLETE — ACCEPTANCE PENDING EXTERNAL ACTION/,
-)
-assert.match(readiness, /STAGING HARDENING REMEDIATION REQUIRED/)
-assert.match(hardening, /OPEN — DURABLE RESERVATION\/FINALIZATION REQUIRED/)
+for (const source of [invitation, passwordReset, emailChange]) {
+  assert.doesNotMatch(source, /findCompletableAction\(/)
+  assert.doesNotMatch(source, /completeAction\(/)
+}
 
-assert.ok(
-  existsSync(DESIGN_DOC_PATH),
-  `design document must exist at ${DESIGN_DOC_PATH} before hardening is considered specified`,
-)
-const design = readFileSync(DESIGN_DOC_PATH, 'utf8')
-assert.match(design, /pending|reserved|consumed/i, 'design must specify the state machine')
-assert.match(design, /reserved-at|reservation.*timestamp|lease.*expiry/i, 'design must specify durable reservation fields')
-assert.match(design, /behavioral.*test|concurrency.*test|test.*required/i, 'design must specify required behavioral tests')
-assert.match(design, /migration.*authorization|staging.*authorization/i, 'design must require authorization before schema application')
+for (const behavioralTest of [
+  'scripts/payload_member_account_actions.test.ts',
+  'scripts/payload_member_invitation.test.ts',
+  'scripts/payload_member_password_reset_completion.test.ts',
+  'scripts/payload_member_email_change.test.ts',
+]) {
+  assert.ok(existsSync(behavioralTest), `behavioral test must exist: ${behavioralTest}`)
+}
+
+assert.match(design, /pending[\s\S]*reserved[\s\S]*consumed/i)
+assert.match(design, /reservation_nonce|reservation nonce/i)
+assert.match(design, /lease_expires_at|lease expires/i)
+assert.match(design, /behavioral.*concurrency|concurrency.*behavioral/i)
+assert.match(design, /migration.*authorization|staging.*authorization/i)
+assert.match(hardening, /IMPLEMENTED IN SOURCE|SOURCE IMPLEMENTATION COMPLETE/i)
+assert.match(hardening, /STAGING MIGRATION AUTHORIZATION REQUIRED|shared staging.*pending/i)
+assert.match(readiness, /ACCOUNT-ACTION HARDENING IMPLEMENTED LOCALLY|reservation\/finalization.*implemented in source/i)
+assert.match(readiness, /STAGING MIGRATION AUTHORIZATION REQUIRED|shared staging.*pending/i)
 
 console.log('member_account_action_completion_hardening_status.test.ts passed')

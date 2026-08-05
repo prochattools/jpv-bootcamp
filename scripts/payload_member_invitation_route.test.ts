@@ -3,10 +3,8 @@ import assert from 'node:assert/strict'
 import {
   createMemberAccountActionService,
   type MemberAccountActionDelivery,
-  type MemberAccountActionPurpose,
-  type MemberAccountActionRecord,
-  type MemberAccountActionRepository,
 } from '../src/lib/auth/memberAccountActions'
+import { MemoryMemberAccountActionRepository } from './helpers/memberAccountActionMemoryRepository'
 import { inviteMember } from '../src/lib/members/inviteMember'
 import { handleMemberInvitationRequest } from '../src/lib/members/memberInvitationHttp'
 import type {
@@ -119,62 +117,7 @@ class FakePayload implements PayloadMemberAuthAPI {
   }
 }
 
-class MemoryActionRepository implements MemberAccountActionRepository {
-  readonly records: MemberAccountActionRecord[] = []
-  readonly deliveries: Array<Record<string, unknown>> = []
-
-  async findActiveAction(memberId: string, purpose: MemberAccountActionPurpose) {
-    return this.records.find(
-      (record) =>
-        record.memberId === memberId &&
-        record.purpose === purpose &&
-        !record.consumedAt &&
-        !record.invalidatedAt,
-    ) ?? null
-  }
-
-  async replaceActiveAction(record: MemberAccountActionRecord) {
-    for (const existing of this.records) {
-      if (
-        existing.memberId === record.memberId &&
-        existing.purpose === record.purpose &&
-        !existing.consumedAt &&
-        !existing.invalidatedAt
-      ) {
-        existing.invalidatedAt = record.createdAt
-      }
-    }
-    this.records.push(structuredClone(record))
-  }
-
-  async findActionByDigest(tokenDigest: string, purpose: MemberAccountActionPurpose) {
-    return this.records.find(
-      (record) => record.tokenDigest === tokenDigest && record.purpose === purpose,
-    ) ?? null
-  }
-
-  async consumeAction(
-    tokenDigest: string,
-    purpose: MemberAccountActionPurpose,
-    consumedAt: string,
-  ) {
-    const record = this.records.find(
-      (candidate) =>
-        candidate.tokenDigest === tokenDigest &&
-        candidate.purpose === purpose &&
-        !candidate.consumedAt &&
-        !candidate.invalidatedAt &&
-        new Date(candidate.expiresAt).getTime() > new Date(consumedAt).getTime(),
-    )
-    if (!record) return null
-    record.consumedAt = consumedAt
-    return record.memberId
-  }
-
-  async recordDelivery(event: Record<string, unknown>) {
-    this.deliveries.push(structuredClone(event))
-  }
-}
+class MemoryActionRepository extends MemoryMemberAccountActionRepository {}
 
 class FakeTransport {
   readonly deliveries: MemberAccountActionDelivery[] = []
@@ -193,7 +136,7 @@ function createFixture(existingMember?: PayloadDocument) {
     payload_audit_events: [],
     payload_email_events: [],
   })
-  const repository = new MemoryActionRepository()
+  const repository = new MemoryActionRepository(() => new Date('2026-07-02T03:00:00.000Z'))
   const transport = new FakeTransport()
   const service = createMemberAccountActionService({
     repository,

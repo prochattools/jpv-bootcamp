@@ -27,6 +27,7 @@ export const PAYLOAD_MIGRATION_NAMES = [
   '20260727_200000_email_events_processing_status',
   '20260730_090000_membership_audit_relationship_columns',
   '20260730_100000_email_events_staging_guard_status',
+  '20260804_050000_member_account_action_reservations',
 ] as const
 
 export type PayloadMigrationName = (typeof PAYLOAD_MIGRATION_NAMES)[number]

@@ -12,8 +12,12 @@ import {
   type MemberAccountActionTransport,
 } from './memberAccountActions'
 import {
-  buildConsumeMemberAccountActionSql,
+  buildFinalizeMemberAccountActionSql,
+  buildFindCompletedMemberAccountActionSql,
+  buildMarkMemberAccountActionMutationStartedSql,
+  buildReleaseMemberAccountActionSql,
   buildReplaceActiveMemberAccountActionSql,
+  buildReserveMemberAccountActionSql,
 } from './memberAccountActionSql'
 import { getMemberEmailVerificationSchema } from './memberEmailVerificationSql'
 
@@ -29,6 +33,10 @@ function asString(value: unknown): string | null {
   if (typeof value === 'string' && value.trim()) return value
   if (typeof value === 'number') return String(value)
   return null
+}
+
+function asBoolean(value: unknown): boolean {
+  return value === true || value === 'true' || value === 1 || value === '1'
 }
 
 function toIso(value: unknown): string | undefined {
@@ -82,6 +90,10 @@ function actionRecordFromDocument(document: PayloadDocument): MemberAccountActio
     tokenDigest,
     expiresAt,
     createdAt,
+    reservationNonce: asString(document.reservationNonce) ?? undefined,
+    reservedAt: toIso(document.reservedAt),
+    leaseExpiresAt: toIso(document.leaseExpiresAt),
+    resultFingerprint: asString(document.resultFingerprint) ?? undefined,
     consumedAt: toIso(document.consumedAt),
     invalidatedAt: toIso(document.invalidatedAt),
     lastSentAt: toIso(document.lastSentAt),
@@ -92,11 +104,51 @@ function actionRecordFromDocument(document: PayloadDocument): MemberAccountActio
 
 export type AtomicMemberAccountActionStore = {
   replaceActive(record: MemberAccountActionRecord): Promise<void>
-  consume(
+  reserve(input: {
+    tokenDigest: string
+    purpose: MemberAccountActionPurpose
+    reservationNonce: string
+    leaseDurationMs: number
+  }): Promise<{
+    memberId: string
+    email: string
+    reservationNonce: string
+    reservedAt: string
+    leaseExpiresAt: string
+    resultFingerprint?: string
+    reclaimed: boolean
+  } | null>
+  markMutationStarted(input: {
+    tokenDigest: string
+    purpose: MemberAccountActionPurpose
+    reservationNonce: string
+    resultFingerprint: string
+  }): Promise<boolean>
+  finalize(input: {
+    tokenDigest: string
+    purpose: MemberAccountActionPurpose
+    reservationNonce: string
+    resultFingerprint: string
+  }): Promise<{
+    memberId: string
+    email: string
+    resultFingerprint: string
+    consumedAt: string
+  } | null>
+  release(input: {
+    tokenDigest: string
+    purpose: MemberAccountActionPurpose
+    reservationNonce: string
+  }): Promise<boolean>
+  findCompleted(
     tokenDigest: string,
     purpose: MemberAccountActionPurpose,
-    consumedAt: string,
-  ): Promise<string | null>
+  ): Promise<{
+    memberId: string
+    email: string
+    resultFingerprint: string
+    consumedAt: string
+  } | null>
 }
 
 type QueryResult = {
@@ -131,11 +183,15 @@ export function createPostgresAtomicMemberAccountActionStore(
   const client = resolveQueryClient(payload)
   const schemaName = getMemberEmailVerificationSchema(databaseUrl)
   const replaceSql = buildReplaceActiveMemberAccountActionSql(schemaName)
-  const consumeSql = buildConsumeMemberAccountActionSql(schemaName)
+  const reserveSql = buildReserveMemberAccountActionSql(schemaName)
+  const markMutationStartedSql = buildMarkMemberAccountActionMutationStartedSql(schemaName)
+  const finalizeSql = buildFinalizeMemberAccountActionSql(schemaName)
+  const releaseSql = buildReleaseMemberAccountActionSql(schemaName)
+  const findCompletedSql = buildFindCompletedMemberAccountActionSql(schemaName)
 
   return {
     async replaceActive(record) {
-      await client.query(replaceSql, [
+      const result = await client.query(replaceSql, [
         toMemberId(record.memberId),
         record.email,
         record.purpose,
@@ -146,11 +202,80 @@ export function createPostgresAtomicMemberAccountActionStore(
         record.createdAt,
         record.idempotencyKey,
       ])
+      if (!asString(result.rows?.[0]?.id)) {
+        throw new Error('Member account action cannot be replaced while it has an active reservation')
+      }
     },
 
-    async consume(tokenDigest, purpose, consumedAt) {
-      const result = await client.query(consumeSql, [tokenDigest, purpose, consumedAt])
-      return asString(result.rows?.[0]?.member_id)
+    async reserve(input) {
+      const result = await client.query(reserveSql, [
+        input.tokenDigest,
+        input.purpose,
+        input.reservationNonce,
+        input.leaseDurationMs,
+      ])
+      const row = result.rows?.[0]
+      const memberId = asString(row?.member_id)
+      const email = asString(row?.email)
+      const reservationNonce = asString(row?.reservation_nonce)
+      const reservedAt = toIso(row?.reserved_at)
+      const leaseExpiresAt = toIso(row?.lease_expires_at)
+      if (!memberId || !email || !reservationNonce || !reservedAt || !leaseExpiresAt) return null
+      return {
+        memberId,
+        email,
+        reservationNonce,
+        reservedAt,
+        leaseExpiresAt,
+        resultFingerprint: asString(row?.result_fingerprint) ?? undefined,
+        reclaimed: asBoolean(row?.reclaimed),
+      }
+    },
+
+    async markMutationStarted(input) {
+      const result = await client.query(markMutationStartedSql, [
+        input.tokenDigest,
+        input.purpose,
+        input.reservationNonce,
+        input.resultFingerprint,
+      ])
+      return Boolean(asString(result.rows?.[0]?.member_id))
+    },
+
+    async finalize(input) {
+      const result = await client.query(finalizeSql, [
+        input.tokenDigest,
+        input.purpose,
+        input.reservationNonce,
+        input.resultFingerprint,
+      ])
+      const row = result.rows?.[0]
+      const memberId = asString(row?.member_id)
+      const email = asString(row?.email)
+      const resultFingerprint = asString(row?.result_fingerprint)
+      const consumedAt = toIso(row?.consumed_at)
+      if (!memberId || !email || !resultFingerprint || !consumedAt) return null
+      return { memberId, email, resultFingerprint, consumedAt }
+    },
+
+    async release(input) {
+      const result = await client.query(releaseSql, [
+        input.tokenDigest,
+        input.purpose,
+        input.reservationNonce,
+      ])
+      return Boolean(asString(result.rows?.[0]?.member_id))
+    },
+
+    async findCompleted(tokenDigest, purpose) {
+      const result = await client.query(findCompletedSql, [tokenDigest, purpose])
+      const row = result.rows?.[0]
+      const memberId = asString(row?.member_id)
+      const email = asString(row?.email)
+      const resultFingerprint = asString(row?.result_fingerprint)
+      const consumedAt = toIso(row?.consumed_at)
+      if (!memberId || !email || !resultFingerprint || !consumedAt) return null
+      return { memberId, email, resultFingerprint, consumedAt }
     },
   }
 }
@@ -201,8 +326,24 @@ export function createPayloadMemberAccountActionRepository(
       return document ? actionRecordFromDocument(document) : null
     },
 
-    async consumeAction(tokenDigest, purpose, consumedAt) {
-      return atomicStore.consume(tokenDigest, purpose, consumedAt)
+    async reserveAction(input) {
+      return atomicStore.reserve(input)
+    },
+
+    async markMutationStarted(input) {
+      return atomicStore.markMutationStarted(input)
+    },
+
+    async finalizeAction(input) {
+      return atomicStore.finalize(input)
+    },
+
+    async releaseAction(input) {
+      return atomicStore.release(input)
+    },
+
+    async findCompletedAction(tokenDigest, purpose) {
+      return atomicStore.findCompleted(tokenDigest, purpose)
     },
 
     async recordDelivery(event) {

@@ -9,7 +9,7 @@ function main(): void {
 
   assert.equal(first, second)
   assert.match(first, /# Release Evidence Summary/)
-  assert.match(first, /Repository readiness outcome: `STAGING HARDENING REMEDIATION REQUIRED`/)
+  assert.match(first, /Repository readiness outcome: `ACCOUNT-ACTION HARDENING IMPLEMENTED LOCALLY — STAGING MIGRATION AUTHORIZATION REQUIRED`/)
   assert.match(first, /Browser source-level declarations \(static\):/)
   assert.doesNotMatch(first, /Browser test count:/)
   assert.match(first, /not equivalent to Playwright project-expanded collected runs/)
@@ -20,7 +20,7 @@ function main(): void {
   assert.match(first, /Programme content approval: pending/)
   assert.match(first, /No provider verification is claimed as complete\./)
   assert.match(first, /No formal staging acceptance is claimed while external sign-off is pending\./)
-  assert.match(first, /The open account-action hardening requirement is not hidden by green functional tests\./)
+  assert.match(first, /Account-action hardening is implemented locally, but shared-staging migration authorization and operational verification remain pending\./)
   assert.doesNotMatch(first, /Provider verification:\s*complete/i)
   assert.doesNotMatch(first, /Staging smoke:\s*passed/i)
   assert.doesNotMatch(first, /Repository readiness outcome: `READY FOR PRODUCTION`/i)

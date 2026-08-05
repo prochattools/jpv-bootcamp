@@ -42,14 +42,16 @@ const readinessMatrix = fs.readFileSync(READINESS_MATRIX, 'utf8')
 
 console.log('\nPayload Migration Inventory Contract\n')
 
-test('exactly 28 dated migration modules exist', () => {
-  assert.equal(datedModules.length, 28)
+test('exactly one dated module exists for every canonical migration', () => {
+  assert.equal(datedModules.length, PAYLOAD_MIGRATION_NAMES.length)
+  assert.equal(datedModules.length, 29)
 })
 
-test('canonical registry is ordered, unique, and has 28 names', () => {
+test('canonical registry is ordered, unique, and has the reviewed 29 names', () => {
   assert.match(registryModuleSource, /export const PAYLOAD_MIGRATION_NAMES\s*=\s*\[/)
-  assert.equal(PAYLOAD_MIGRATION_NAMES.length, 28)
+  assert.equal(PAYLOAD_MIGRATION_NAMES.length, 29)
   assert.equal(new Set(PAYLOAD_MIGRATION_NAMES).size, PAYLOAD_MIGRATION_NAMES.length)
+  assert.equal(PAYLOAD_MIGRATION_NAMES.at(-1), '20260804_050000_member_account_action_reservations')
 })
 
 test('every canonical name has one dated TypeScript module', () => {

@@ -5,10 +5,8 @@ import {
   createMemberAccountActionService,
   digestMemberAccountAction,
   type MemberAccountActionDelivery,
-  type MemberAccountActionPurpose,
-  type MemberAccountActionRecord,
-  type MemberAccountActionRepository,
 } from '../src/lib/auth/memberAccountActions'
+import { MemoryMemberAccountActionRepository } from './helpers/memberAccountActionMemoryRepository'
 import { createQueuedMemberAccountActionTransport } from '../src/lib/auth/payloadMemberAccountActions'
 import {
   MEMBER_ACCOUNT_ACTION_PURPOSES,
@@ -17,77 +15,22 @@ import {
   buildMemberAccountActionPurposeUpSql,
 } from '../src/lib/auth/memberAccountActionMigrationSql'
 import {
-  buildConsumeMemberAccountActionSql,
+  buildFinalizeMemberAccountActionSql,
+  buildFindCompletedMemberAccountActionSql,
+  buildMarkMemberAccountActionMutationStartedSql,
+  buildReleaseMemberAccountActionSql,
   buildReplaceActiveMemberAccountActionSql,
+  buildReserveMemberAccountActionSql,
 } from '../src/lib/auth/memberAccountActionSql'
+import {
+  buildMemberAccountActionReservationDownSql,
+  buildMemberAccountActionReservationUpSql,
+} from '../src/lib/auth/memberAccountActionReservationMigrationSql'
 import { PAYLOAD_MIGRATION_NAMES } from '../src/migrations/migrationRegistry'
 
 process.env.DATABASE_URL ??= 'postgresql://redacted.invalid/app?schema=jpvbootcamp_staging'
 
-class MemoryActionRepository implements MemberAccountActionRepository {
-  records: MemberAccountActionRecord[] = []
-  deliveries: Array<{
-    memberId: string
-    purpose: MemberAccountActionPurpose
-    idempotencyKey: string
-    status: 'sent' | 'suppressed' | 'failed'
-    attempt: number
-    occurredAt: string
-    reason?: 'cooldown' | 'max_attempts' | 'transport_error'
-  }> = []
-
-  async findActiveAction(memberId: string, purpose: MemberAccountActionPurpose) {
-    return this.records.find(
-      (record) =>
-        record.memberId === memberId &&
-        record.purpose === purpose &&
-        !record.consumedAt &&
-        !record.invalidatedAt,
-    ) ?? null
-  }
-
-  async replaceActiveAction(record: MemberAccountActionRecord) {
-    for (const current of this.records) {
-      if (
-        current.memberId === record.memberId &&
-        current.purpose === record.purpose &&
-        !current.consumedAt &&
-        !current.invalidatedAt
-      ) {
-        current.invalidatedAt = record.createdAt
-      }
-    }
-    this.records.push(structuredClone(record))
-  }
-
-  async findActionByDigest(tokenDigest: string, purpose: MemberAccountActionPurpose) {
-    return this.records.find(
-      (record) => record.tokenDigest === tokenDigest && record.purpose === purpose,
-    ) ?? null
-  }
-
-  async consumeAction(
-    tokenDigest: string,
-    purpose: MemberAccountActionPurpose,
-    consumedAt: string,
-  ) {
-    const record = this.records.find(
-      (candidate) =>
-        candidate.tokenDigest === tokenDigest &&
-        candidate.purpose === purpose &&
-        !candidate.consumedAt &&
-        !candidate.invalidatedAt &&
-        new Date(candidate.expiresAt).getTime() > new Date(consumedAt).getTime(),
-    )
-    if (!record) return null
-    record.consumedAt = consumedAt
-    return record.memberId
-  }
-
-  async recordDelivery(event: (typeof this.deliveries)[number]) {
-    this.deliveries.push(structuredClone(event))
-  }
-}
+class MemoryActionRepository extends MemoryMemberAccountActionRepository {}
 
 class FakeTransport {
   sent: MemberAccountActionDelivery[] = []
@@ -141,9 +84,9 @@ class FakePayload {
 }
 
 async function run() {
-  const repository = new MemoryActionRepository()
-  const transport = new FakeTransport()
   let now = new Date('2026-07-02T00:00:00.000Z')
+  const repository = new MemoryActionRepository(() => new Date(now))
+  const transport = new FakeTransport()
   let nextToken = 'member-invitation-token-value-that-is-never-stored'
   const service = createMemberAccountActionService({
     repository,
@@ -217,22 +160,158 @@ async function run() {
   assert.equal(transport.sent.length, 2)
 
   nextToken = secondInviteToken
-  const wrongPurpose = await service.completeAction(nextToken, 'password_reset')
-  assert.deepEqual(wrongPurpose, { consumed: false, reason: 'invalid_or_expired' })
+  const wrongPurpose = await service.reserveAction(nextToken, 'password_reset')
+  assert.deepEqual(wrongPurpose, { reserved: false, reason: 'invalid_or_expired' })
 
   const [winner, loser] = await Promise.all([
-    service.completeAction(nextToken, 'member_invitation'),
-    service.completeAction(nextToken, 'member_invitation'),
+    service.reserveAction(nextToken, 'member_invitation'),
+    service.reserveAction(nextToken, 'member_invitation'),
   ])
-  assert.equal([winner, loser].filter((result) => result.consumed).length, 1)
-  assert.equal(
-    [winner, loser].filter(
-      (result) => result.consumed === false && result.reason === 'already_used',
-    ).length,
-    1,
+  const reserved = [winner, loser].find((result) => result.reserved)
+  const blocked = [winner, loser].find((result) => !result.reserved)
+  assert(reserved?.reserved)
+  assert.equal(blocked?.reserved, false)
+  if (blocked?.reserved === false) assert.equal(blocked.reason, 'already_reserved')
+
+  const wrongFinalize = await service.finalizeAction(
+    nextToken,
+    'member_invitation',
+    'wrong-reservation-nonce',
+    'member-active',
+  )
+  assert.deepEqual(wrongFinalize, { finalized: false, reason: 'invalid_reservation' })
+  assert.deepEqual(
+    await service.releaseAction(nextToken, 'member_invitation', 'wrong-reservation-nonce'),
+    { released: false },
   )
 
+  const finalizedToken = nextToken
+  assert.deepEqual(
+    await service.markMutationStarted(
+      finalizedToken,
+      'member_invitation',
+      'wrong-reservation-nonce',
+      'member-active',
+    ),
+    { marked: false },
+  )
+  const mutationMarker = await service.markMutationStarted(
+    finalizedToken,
+    'member_invitation',
+    reserved.reservationNonce,
+    'member-active',
+  )
+  assert.equal(mutationMarker.marked, true)
+  assert.equal(mutationMarker.resultFingerprint?.includes(finalizedToken), false)
+
+  const finalized = await service.finalizeAction(
+    finalizedToken,
+    'member_invitation',
+    reserved.reservationNonce,
+    'member-active',
+  )
+  assert.equal(finalized.finalized, true)
+  const replay = await service.finalizeAction(
+    nextToken,
+    'member_invitation',
+    reserved.reservationNonce,
+    'member-active',
+  )
+  assert.equal(replay.finalized, true)
+  if (replay.finalized) assert.equal(replay.replayed, true)
+  assert.deepEqual(
+    await service.finalizeAction(
+      nextToken,
+      'member_invitation',
+      reserved.reservationNonce,
+      'different-result',
+    ),
+    { finalized: false, reason: 'result_conflict' },
+  )
+  assert.equal(JSON.stringify(repository.records).includes(nextToken), false)
+
   nextToken = 'password-reset-token-value-that-is-never-stored'
+  const consumedReservation = await service.reserveAction(finalizedToken, 'member_invitation')
+  assert.equal(consumedReservation.reserved, false)
+  if (!consumedReservation.reserved) assert.equal(consumedReservation.reason, 'already_consumed')
+
+  const leaseToken = 'lease-account-action-token-value'
+  nextToken = leaseToken
+  now = new Date(now.getTime() + 1)
+  await service.issueAction({
+    memberId: 'lease-member',
+    email: 'lease@example.test',
+    purpose: 'email_change_confirmation',
+    templateKey: 'member-email-change-confirmation',
+    actionPath: '/confirm-email-change',
+    ttlMs: 60 * 60 * 1000,
+  })
+  const firstLease = await service.reserveAction(leaseToken, 'email_change_confirmation')
+  assert(firstLease.reserved)
+  const leaseMarker = await service.markMutationStarted(
+    leaseToken,
+    'email_change_confirmation',
+    firstLease.reservationNonce,
+    'email:lease-result',
+  )
+  assert.equal(leaseMarker.marked, true)
+  const blockedLease = await service.reserveAction(leaseToken, 'email_change_confirmation')
+  assert.equal(blockedLease.reserved, false)
+  if (!blockedLease.reserved) assert.equal(blockedLease.reason, 'already_reserved')
+
+  now = new Date(now.getTime() + 30_001)
+  const reclaimedLease = await service.reserveAction(leaseToken, 'email_change_confirmation')
+  assert(reclaimedLease.reserved)
+  assert.equal(reclaimedLease.reclaimed, true)
+  assert.equal(reclaimedLease.resultFingerprint, leaseMarker.resultFingerprint)
+  assert.notEqual(reclaimedLease.reservationNonce, firstLease.reservationNonce)
+  assert.deepEqual(
+    await service.finalizeAction(
+      leaseToken,
+      'email_change_confirmation',
+      firstLease.reservationNonce,
+      'email:lease-result',
+    ),
+    { finalized: false, reason: 'invalid_reservation' },
+  )
+  assert.deepEqual(
+    await service.releaseAction(
+      leaseToken,
+      'email_change_confirmation',
+      firstLease.reservationNonce,
+    ),
+    { released: false },
+  )
+  assert.deepEqual(
+    await service.releaseAction(
+      leaseToken,
+      'email_change_confirmation',
+      reclaimedLease.reservationNonce,
+    ),
+    { released: true },
+  )
+  const afterRelease = await service.reserveAction(leaseToken, 'email_change_confirmation')
+  assert(afterRelease.reserved)
+  assert.equal(afterRelease.resultFingerprint, undefined)
+
+  const invalidatedRecord = repository.records.find(
+    (record) => record.tokenDigest === digestMemberAccountAction(leaseToken),
+  )
+  assert(invalidatedRecord)
+  invalidatedRecord.invalidatedAt = now.toISOString()
+  invalidatedRecord.reservationNonce = undefined
+  invalidatedRecord.reservedAt = undefined
+  invalidatedRecord.leaseExpiresAt = undefined
+  assert.deepEqual(await service.reserveAction(leaseToken, 'email_change_confirmation'), {
+    reserved: false,
+    reason: 'invalid_or_expired',
+  })
+  assert.deepEqual(await service.reserveAction('short', 'member_invitation'), {
+    reserved: false,
+    reason: 'invalid_or_expired',
+  })
+
+  nextToken = 'expired-password-reset-token-value'
   now = new Date(now.getTime() + 1)
   await service.issueAction({
     memberId: '1',
@@ -243,14 +322,14 @@ async function run() {
     ttlMs: 1,
   })
   now = new Date(now.getTime() + 2)
-  assert.deepEqual(await service.completeAction(nextToken, 'password_reset'), {
-    consumed: false,
+  assert.deepEqual(await service.reserveAction(nextToken, 'password_reset'), {
+    reserved: false,
     reason: 'invalid_or_expired',
   })
 
-  const resetRepository = new MemoryActionRepository()
-  const resetTransport = new FakeTransport()
   let resetNow = new Date('2026-07-02T02:00:00.000Z')
+  const resetRepository = new MemoryActionRepository(() => new Date(resetNow))
+  const resetTransport = new FakeTransport()
   let resetToken = 'first-password-reset-token-that-is-never-stored'
   const resetService = createMemberAccountActionService({
     repository: resetRepository,
@@ -316,17 +395,48 @@ async function run() {
   assert.match(buildMemberAccountActionPurposeDownSql(), /intentionally retained/)
 
   const replaceSql = buildReplaceActiveMemberAccountActionSql('jpvbootcamp_staging')
-  const consumeSql = buildConsumeMemberAccountActionSql('jpvbootcamp_staging')
-  assert.match(replaceSql, /\$3/)
-  assert.match(replaceSql, /\$9::varchar/)
+  const reserveSql = buildReserveMemberAccountActionSql('jpvbootcamp_staging')
+  const markMutationSql = buildMarkMemberAccountActionMutationStartedSql('jpvbootcamp_staging')
+  const finalizeSql = buildFinalizeMemberAccountActionSql('jpvbootcamp_staging')
+  const releaseSql = buildReleaseMemberAccountActionSql('jpvbootcamp_staging')
+  const completedSql = buildFindCompletedMemberAccountActionSql('jpvbootcamp_staging')
+  for (const sql of [replaceSql, reserveSql, markMutationSql, finalizeSql, releaseSql, completedSql]) {
+    assert.match(sql, /"jpvbootcamp_staging"\."payload_member_verification_tokens"/)
+    assert.doesNotMatch(sql, /SELECT \*/i)
+    assert.doesNotMatch(sql, /member-invitation-token-value/)
+  }
   assert.match(replaceSql, /ON CONFLICT \("member_id", "purpose"\)/)
-  assert.match(replaceSql, /WHERE "consumed_at" IS NULL AND "invalidated_at" IS NULL/)
-  assert.match(replaceSql, /"token_digest" = EXCLUDED\."token_digest"/)
-  assert.match(consumeSql, /"purpose" = \$2/)
-  assert.match(consumeSql, /"consumed_at" IS NULL/)
-  assert.match(consumeSql, /"invalidated_at" IS NULL/)
-  assert.match(consumeSql, /"expires_at" > \$3::timestamptz/)
-  assert.doesNotMatch(replaceSql, /member-invitation-token-value/)
+  assert.match(replaceSql, /"lease_expires_at" <= now\(\)/)
+  assert.match(replaceSql, /"result_fingerprint" IS NULL/)
+  assert.match(reserveSql, /FOR UPDATE SKIP LOCKED/)
+  assert.match(reserveSql, /"lease_expires_at" <= now\(\)/)
+  assert.match(reserveSql, /\$4::bigint \* interval '1 millisecond'/)
+  assert.match(markMutationSql, /"reservation_nonce" = \$3::varchar/)
+  assert.match(markMutationSql, /"result_fingerprint" = \$4::varchar/)
+  assert.match(markMutationSql, /"lease_expires_at" > now\(\)/)
+  assert.match(markMutationSql, /"result_fingerprint" IS NULL OR "result_fingerprint" = \$4::varchar/)
+  assert.match(finalizeSql, /"reservation_nonce" = \$3::varchar/)
+  assert.match(finalizeSql, /"result_fingerprint" = \$4::varchar/)
+  assert.match(finalizeSql, /"lease_expires_at" > now\(\)/)
+  assert.match(releaseSql, /"reservation_nonce" = \$3::varchar/)
+  assert.match(releaseSql, /"consumed_at" IS NULL/)
+  assert.match(completedSql, /"token_digest" = \$1::varchar/)
+  assert.match(completedSql, /"purpose" = \$2/)
+
+  const reservationUpSql = buildMemberAccountActionReservationUpSql(schemaUrl)
+  const reservationDownSql = buildMemberAccountActionReservationDownSql(schemaUrl)
+  for (const column of ['reservation_nonce', 'reserved_at', 'lease_expires_at', 'result_fingerprint']) {
+    assert.match(reservationUpSql, new RegExp(`ADD COLUMN IF NOT EXISTS "${column}"`))
+    assert.match(reservationDownSql, new RegExp(`DROP COLUMN IF EXISTS "${column}"`))
+  }
+  assert.match(reservationUpSql, /reservation_state_check/)
+  assert.match(reservationUpSql, /result_state_check/)
+  assert.match(reservationUpSql, /WHERE "consumed_at" IS NULL/)
+  assert.doesNotMatch(reservationUpSql, /raw_token|token_value|password/i)
+  assert.doesNotMatch(reservationUpSql, /UPDATE\s+".*payload_member_verification_tokens"/i)
+  for (const preserved of ['consumed_at', 'invalidated_at', 'expires_at', 'token_digest', 'purpose', 'member_id']) {
+    assert.doesNotMatch(reservationDownSql, new RegExp(`DROP COLUMN IF EXISTS "${preserved}"`))
+  }
 
   const purposeField = PayloadMemberVerificationRecords.fields.find(
     (field) => 'name' in field && field.name === 'purpose',

@@ -1,286 +1,176 @@
-# Member Account Action — Reservation/Finalization Design
+# Member Account Action — Reservation and Finalization
 
-**Status:** DESIGN SPECIFIED — IMPLEMENTATION NOT AUTHORIZED
-**Date:** 2026-08-02
-**Classification:** OPEN — DURABLE RESERVATION/FINALIZATION REQUIRED
+**Status:** IMPLEMENTED IN SOURCE — SHARED STAGING MIGRATION NOT YET AUTHORIZED
+**Implementation date:** 2026-08-04
+**Migration:** `20260804_050000_member_account_action_reservations`
+**Deployed staging baseline:** `9c045fa5a5c327014c20fe9377f7d5368b550573` still uses the preceding schema.
 
-This document specifies the durable reservation/finalization primitive for one-time
-member account actions (invitation, password reset, email-change confirmation). It does
-not authorize implementation, schema application, or migration execution. Both
-implementation and any schema change require explicit staging authorization through the
-normal release migration process.
+## Scope
 
-## Problem statement
+This design governs one-time member invitations, password resets, and email-change confirmations. The repository implementation is complete locally, including the schema migration source, atomic SQL, service APIs, caller integration, behavioral concurrency tests, and release guards. The migration has not been applied to the shared staging database, and no live member action was used during implementation or validation.
 
-The current `findCompletableAction` → mutation → `completeAction` sequence does not
-prevent two concurrent requests from both entering the downstream mutation window. For
-invitation and password reset this means two workers can attempt to activate the same
-account or set the same password independently. For email change the token is consumed
-before the member update, meaning update failures permanently consume the action without
-completing it. No durable cross-instance lock or lease exists.
+## State model
 
-Moving `completeAction` earlier or later within a single flow is not a safe concurrency
-fix; it only changes which race condition is exposed. A schema-backed reservation state
-is required.
+An account action is represented by one of three durable states:
 
-## State machine
+- **pending:** `consumed_at`, `reservation_nonce`, `reserved_at`, and `lease_expires_at` are null;
+- **reserved:** `reservation_nonce`, `reserved_at`, and `lease_expires_at` are all non-null while `consumed_at` and `invalidated_at` remain null;
+- **consumed:** `consumed_at` is non-null and the reservation fields are cleared. New completions persist a non-sensitive `result_fingerprint`.
 
-Each one-time action progresses through the following states:
+A safe pre-mutation failure releases the action by clearing the three reservation fields, returning it to `pending`. An expired lease may be atomically reclaimed with a new nonce. A consumed or invalidated action cannot be reopened.
 
-```
-pending → reserved → consumed
-                   ↘ released (safe downstream failure recovery)
-         ↓ (lease expired, no crash)
-       pending (recoverable) or expired (policy-based)
-```
+Existing columns remain authoritative:
 
-| State | Meaning |
-| --- | --- |
-| `pending` | Action is valid and can be claimed |
-| `reserved` | One worker holds an exclusive, time-bounded lease |
-| `consumed` | Downstream mutation succeeded; action is permanently closed |
-| `released` | Worker failed safely before mutation; action returns to claimable state |
-| `expired` | Lease elapsed without consumption; recovery policy applies |
+- `token_digest`
+- `purpose`
+- `member_id`
+- `email`
+- `expires_at`
+- `consumed_at`
+- `invalidated_at`
 
-**Invariants:**
-- At most one worker may hold an active (non-expired) reservation for a given action.
-- Consumption is irreversible.
-- A `released` action is observable as `pending` to the next claimant; the `released`
-  transition is internal bookkeeping.
+The migration adds:
 
-## Durable fields
+- `reservation_nonce varchar(64)`
+- `reserved_at timestamp(3) with time zone`
+- `lease_expires_at timestamp(3) with time zone`
+- `result_fingerprint varchar(64)`
 
-The following fields must be added to the account-action record. Raw tokens must never
-be stored.
+Raw tokens, passwords, password-derived material, and raw email addresses are never stored in the new fields.
 
-| Field | Type | Purpose |
-| --- | --- | --- |
-| `token_digest` | `text NOT NULL` | HMAC-SHA256 of raw token; existing field |
-| `purpose` | `text NOT NULL` | Action type (`member_invitation`, `password_reset`, `email_change_confirmation`); existing field |
-| `member_id` | reference | Owning member; existing field |
-| `token_expiry` | `timestamptz NOT NULL` | When the raw token becomes invalid; existing field |
-| `reservation_nonce` | `uuid` | Unique identifier for the current reservation; `NULL` when pending |
-| `reserved_at` | `timestamptz` | When the reservation was created; `NULL` when pending |
-| `lease_expiry` | `timestamptz` | When the reservation expires if not consumed or released; `NULL` when pending |
-| `consumed_at` | `timestamptz` | When consumption succeeded; `NULL` until consumed |
-| `result_fingerprint` | `text` | Optional idempotency key set after a successful downstream operation |
+## Invariants
 
-Raw token values must not appear in any of these fields, in application logs, or in
-error messages. The `token_digest` already satisfies token identity without storing
-the raw value.
-
-**Lease duration rationale:** A lease of 30 seconds is proposed. This is long enough
-to cover typical downstream mutation latency (email send, database write) and short
-enough that a crashed worker does not permanently strand a valid action for more than
-one standard retry interval.
+1. At most one unexpired reservation exists for an action.
+2. Reservation ownership is demonstrated by an unguessable nonce.
+3. Reservation, finalization, and release are purpose-scoped.
+4. Token expiry, invalidation, and consumption are checked before reservation.
+5. Only the current nonce owner can finalize or release.
+6. Finalization requires an active lease and clears reservation fields.
+7. A stale nonce cannot finalize or release after lease reclaim.
+8. Active reservations cannot be replaced by a newly issued action.
+9. A result fingerprint is permitted during a reserved mutation-intent state or after consumption; release clears it before returning the action to pending.
+10. Finalization must match the exact result fingerprint recorded by the current reservation owner.
+11. Result fingerprints are SHA-256 values derived from the token digest, purpose, and a non-sensitive purpose-specific result key.
 
 ## Atomic operations
 
-### validate-and-reserve
+### Reserve
 
-```
-BEGIN;
-SELECT * FROM account_actions
-  WHERE token_digest = $digest
-    AND purpose = $purpose
-    AND token_expiry > NOW()
-    AND consumed_at IS NULL
-    AND (lease_expiry IS NULL OR lease_expiry < NOW())  -- not actively reserved
-  FOR UPDATE;                                           -- cross-instance lock
+`buildReserveMemberAccountActionSql` uses one schema-qualified statement with positional parameters:
 
--- if no row: token invalid, expired, consumed, or actively reserved
--- if row found: update atomically
-UPDATE account_actions SET
-  reservation_nonce = gen_random_uuid(),
-  reserved_at       = NOW(),
-  lease_expiry      = NOW() + INTERVAL '30 seconds'
-WHERE id = $id;
-COMMIT;
--- return reservation_nonce to caller; caller must include it in finalize call
-```
+- select the eligible action by `token_digest` and `purpose`;
+- require `consumed_at IS NULL`, `invalidated_at IS NULL`, and `expires_at > now()`;
+- require no active lease, while permitting an expired lease;
+- acquire the candidate with `FOR UPDATE SKIP LOCKED`;
+- set `reservation_nonce`, `reserved_at = now()`, and `lease_expires_at` using database time;
+- return only member ID, target email, reservation metadata, optional prior fingerprint, and whether a lease was reclaimed.
 
-This operation is the only entry point. Two workers racing here will both obtain the
-FOR UPDATE lock in turn; the second will find `lease_expiry > NOW()` and fail.
+Two workers racing for the same action cannot both receive a reservation. The loser cannot enter the downstream mutation.
 
-### renew-or-recover-expired-reservation
+### Finalize
 
-If a caller holds a `reservation_nonce` but the lease has elapsed (e.g. slow network),
-the same atomic pattern may be re-entered with the existing nonce for verification. If
-the action is still pending or the prior reservation expired, a new lease is issued.
+`buildFinalizeMemberAccountActionSql` requires:
 
-### finalize-consumption
+- token digest;
+- purpose;
+- current reservation nonce;
+- an unexpired lease;
+- an unconsumed, non-invalidated action.
 
-```
-BEGIN;
-SELECT * FROM account_actions
-  WHERE token_digest        = $digest
-    AND reservation_nonce   = $nonce   -- only the reservation holder may consume
-    AND lease_expiry        > NOW()    -- lease must still be active
-    AND consumed_at         IS NULL
-  FOR UPDATE;
--- perform downstream mutation here (within same transaction or with
--- compensating idempotency guard for operations that cannot be transactional)
-UPDATE account_actions SET
-  consumed_at        = NOW(),
-  result_fingerprint = $fingerprint   -- optional; aids idempotent replay detection
-WHERE id = $id;
-COMMIT;
-```
+It sets `consumed_at`, persists the result fingerprint, clears reservation state, and returns only allow-listed completion data.
 
-For email sending, which cannot be transactionally atomic with the database write,
-the intent must be durably persisted (as in `payload_email_events`) before the delivery
-attempt, so that a retry can detect an already-sent event by the `result_fingerprint`.
+### Release
 
-### release-after-safe-failure
+`buildReleaseMemberAccountActionSql` clears reservation state only when token digest, purpose, and nonce match and the action is still unconsumed and non-invalidated. This operation is used only after a failure proven to have occurred before the downstream mutation.
 
-If the downstream mutation fails in a way that can be safely retried (network error,
-transient database failure), the worker must explicitly release the reservation:
+### Completed-result lookup
 
-```
-UPDATE account_actions SET
-  reservation_nonce = NULL,
-  reserved_at       = NULL,
-  lease_expiry      = NULL
-WHERE id = $id AND reservation_nonce = $nonce AND consumed_at IS NULL;
-```
-
-This returns the action to `pending` state. A failed worker that cannot reach the
-database will have its lease expire naturally; no manual intervention is needed.
-
-### idempotent replay detection
-
-If `finalize-consumption` is called with a nonce that has already been consumed
-(`consumed_at IS NOT NULL AND reservation_nonce = $nonce`), return the prior
-`result_fingerprint` to the caller without re-executing the downstream mutation.
-
-## Concurrency proof
-
-| Scenario | Outcome |
-| --- | --- |
-| Two workers call validate-and-reserve simultaneously | FOR UPDATE serializes both; the second sees `lease_expiry > NOW()` and fails with "action reserved" |
-| Two invitation attempts arrive | Only one can hold the reservation; the other receives an error before any activation |
-| Two password-reset attempts arrive | Same as above; only the reservation holder may call `resetPassword` |
-| Two email-change attempts arrive | Same as above; consume no longer precedes update in the new flow |
-| Worker crashes between reserve and finalize | Lease expires after 30 seconds; action returns to `pending` |
-| Worker fails downstream but releases | `release-after-safe-failure` returns action to `pending`; original token remains valid |
-| Already-consumed replay | `result_fingerprint` returned; downstream mutation not re-executed |
-| Purpose isolation | Token digest matches a specific purpose; a token for `password_reset` cannot be used for `email_change_confirmation` |
+`buildFindCompletedMemberAccountActionSql` retrieves the completed result by token digest and purpose. The service compares result fingerprints using timing-safe equality. A matching replay returns idempotent success without repeating the mutation; a conflicting result is rejected.
 
 ## Flow integration
 
-### Member invitation
+### Invitation
 
-1. `validate-and-reserve(digest, 'member_invitation')` → obtain `nonce`
-2. Activate member account in `payload.update`
-3. `finalize-consumption(digest, nonce, fingerprint)` within or immediately after the
-   activation transaction
-4. Return activation success to caller
+1. Reserve `member_invitation`.
+2. Load and validate the pending member.
+3. Activate the member once.
+4. Finalize with the `member-active` result key.
+5. Write audit, security, and email side effects after durable success.
 
-The early idempotency-return path (already-active branch) must check `consumed_at IS
-NOT NULL` before attempting reservation; if consumed, return the existing result without
-re-entering the state machine.
+Safe member-load or unchanged-state activation failures release the reservation. A thrown update whose durable member state is already active is recovered and finalized. An arbitrary pre-existing active member is not accepted as this action's completion.
 
 ### Password reset
 
-1. `validate-and-reserve(digest, 'password_reset')` → obtain `nonce`
-2. `payload.resetPassword(...)` — performs the actual password change
-3. `finalize-consumption(digest, nonce, fingerprint)` after successful reset
-4. On reset failure: `release-after-safe-failure(id, nonce)`
+1. Reserve `password_reset`.
+2. Validate the member.
+3. Prepare Payload's reset token.
+4. Call Payload `resetPassword` once.
+5. Classify a thrown call through read-only reset-token state:
+   - token still prepared: safe failure, release;
+   - token cleared: uncertain success, finalize;
+   - unknown state: retain the lease for later recovery.
+6. Finalize with `password-reset-completed`.
+7. Write audit and confirmation side effects after finalization.
 
-### Email-change confirmation
+No password or password-derived value is used in the result fingerprint.
 
-This flow currently consumes the token before the member update. The corrected sequence:
+### Email change
 
-1. `validate-and-reserve(digest, 'email_change_confirmation')` → obtain `nonce`
-2. Persist intent (new email address) durably if not already done
-3. `payload.update(...)` — update member email
-4. `finalize-consumption(digest, nonce, fingerprint)` after successful update
-5. On update failure: `release-after-safe-failure(id, nonce)`
+1. Reserve `email_change_confirmation`.
+2. Validate the member and target-email availability.
+3. Update the member email.
+4. Finalize using a key containing only the normalized email's SHA-256 fingerprint.
+5. Write security, audit, and notification side effects after finalization.
 
-This eliminates the current "consumed before update" gap.
+Duplicate-email and unchanged-state update failures release safely. A thrown update whose durable member state already contains the intended address is recovered and finalized. The previous consume-before-update defect is removed.
 
-## Migration and rollout
+## Failure guarantees
 
-### Proposed schema change
+- **Crash after reservation, before mutation:** the lease expires and can be reclaimed.
+- **Safe failure before mutation:** the nonce owner releases immediately and the original action can be retried.
+- **Crash or timeout after mutation, before finalization:** the action is not blindly released. After lease expiry, the next attempt verifies purpose-specific durable state and finalizes idempotently.
+- **Lease expires during a slow mutation:** a stale nonce cannot finalize after another worker reclaims the lease. Callers must use durable-state recovery rather than claiming exactly-once execution.
+- **Failure after finalization:** audit and notification side effects are best effort and do not reopen or revert the completed action.
 
-```sql
-ALTER TABLE account_actions
-  ADD COLUMN reservation_nonce    uuid,
-  ADD COLUMN reserved_at          timestamptz,
-  ADD COLUMN lease_expiry         timestamptz,
-  ADD COLUMN consumed_at          timestamptz,
-  ADD COLUMN result_fingerprint   text;
+The implementation provides one active reservation plus idempotent recovery. It does not claim a globally transactional exactly-once guarantee across Payload mutations and external providers.
 
-CREATE INDEX idx_account_actions_lease_expiry
-  ON account_actions (lease_expiry)
-  WHERE consumed_at IS NULL;
-```
+## Behavioral concurrency evidence
 
-The existing `token_digest`, `purpose`, `member_id`, and `token_expiry` columns are
-unchanged. No existing rows are invalidated.
+Repository-local behavioral tests cover:
 
-### Compatibility with existing pending actions
+- one reservation winner and one blocked concurrent attempt;
+- invitation activation called once;
+- password reset called once;
+- email update called once;
+- active lease rejection;
+- expired lease reclaim;
+- stale-nonce finalization and release rejection;
+- safe release and successful re-reservation;
+- consumed, expired, invalidated, malformed, and wrong-purpose rejection;
+- matching completed replay and conflicting-result rejection;
+- raw-token, password, and raw-email non-disclosure.
 
-Actions created before this migration will have all new columns `NULL`. The
-validate-and-reserve query treats a `NULL` `lease_expiry` as "not reserved", so
-existing pending actions remain claimable. The `consumed_at IS NULL` guard distinguishes
-legacy consumed actions (which previously used a separate completion flag) only if the
-existing completion mechanism is migrated; this must be verified during migration
-rehearsal.
+These tests use deterministic in-memory repositories, injected clocks, synthetic records, and deferred concurrent calls. They do not connect to the shared staging database.
 
-### Backfill behavior
+## Migration and rollback
 
-No backfill is required. Existing pending actions are compatible with the new flow.
-Existing completed actions should have `consumed_at` set to a reasonable timestamp
-during migration rehearsal if the completion flag being removed is the authoritative
-completion marker.
+The forward migration:
 
-### Rollback plan
+- adds four nullable columns;
+- adds all-or-none reservation-state and result-state checks;
+- validates those checks;
+- creates a partial active-lease index;
+- creates a partial result-fingerprint index;
+- performs no row update or data backfill.
 
-The new columns may be dropped without affecting existing behavior if the new code
-paths are not yet activated. Rollback must be coordinated with a code deployment
-reverting to the pre-reservation flow.
+The down migration drops only the two new indexes, two new constraints, and four new columns. It does not alter `token_digest`, `purpose`, `member_id`, `email`, `expires_at`, `consumed_at`, or `invalidated_at`.
 
-### Phased rollout
+`ALTER TABLE ... ADD COLUMN` and constraint installation take PostgreSQL table locks. The nullable columns require no table rewrite. Constraint validation scans the account-action table, and ordinary index creation takes a share lock while building. The table is expected to be small, but shared-staging execution still requires an explicit operator window, backup evidence, and rollback ownership.
 
-1. **Schema first:** apply the migration, deploy no code changes.
-2. **Code second (read-only):** deploy new `validate-and-reserve` logic alongside the
-   existing flow; both paths active; reservation columns written but old completion
-   still authoritative.
-3. **Switch:** activate new `finalize-consumption` path; old completion flag becomes
-   redundant.
-4. **Cleanup:** remove old completion columns and associated legacy code.
+## Deployment boundary
 
-Each phase requires a separate staging validation before promotion.
+Source implementation and local behavioral validation do not prove the shared staging schema. **Staging migration authorization remains pending.** Before pushing a commit whose normal preview deployment may apply this migration, an operator must explicitly authorize:
 
-### Required staging authorization before schema application
+`Apply the account-action reservation/finalization migration to the shared staging database through the normal feature-branch preview deployment.`
 
-The schema change described above must not be applied without:
-
-- a separate staging authorization record approved by the release operator
-- migration rehearsal evidence on a disposable copy of staging data
-- rollback ownership confirmed
-- the normal release migration process followed as documented in
-  `docs/release/SUPPORT_REQUESTS_MIGRATION_RUNBOOK.md`
-
-## Behavioral tests required before implementation may be called complete
-
-The following tests must exist and pass before the reservation/finalization
-implementation is considered complete. These tests replace the current status guard
-(`scripts/member_account_action_completion_hardening_status.test.ts`), which documents
-the open gap only.
-
-| Test | Scope | Description |
-| --- | --- | --- |
-| Success consumes exactly once | unit | Calling finalize twice with the same nonce returns the prior fingerprint; downstream mutation runs once |
-| Downstream failure permits safe retry | unit | Release + re-reserve returns a new nonce; mutation succeeds on retry |
-| Concurrent attempts produce one winner | integration | Two simultaneous validate-and-reserve calls on the same action; exactly one succeeds, one receives "reserved" error |
-| Expired reservation recovery | unit | Lease elapses; next validate-and-reserve succeeds |
-| Idempotent replay after downstream success | unit | Re-sending a consumed nonce returns prior fingerprint |
-| Purpose isolation | unit | Token for `password_reset` rejected by `email_change_confirmation` validate-and-reserve |
-| Expiry enforcement | unit | Token with `token_expiry` in the past is rejected even if not consumed |
-| No raw-token persistence or logging | static | Grep confirms no raw token value is written to columns, logs, or error strings |
-| Cross-process or cross-instance concurrency fixture | integration | Two process-level workers race validate-and-reserve; exactly one wins |
-
-The status guard remains in the release manifest until all behavioral tests exist and
-pass and the schema change has been authorized and applied.
+After authorization, acceptance requires exact-SHA CI success, migration evidence for the new columns and constraints, exact-SHA staging health, and an approved non-destructive staging verification. Until then, the finding is resolved in source but remains operationally unverified on shared staging.

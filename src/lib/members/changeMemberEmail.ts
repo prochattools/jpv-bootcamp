@@ -129,6 +129,14 @@ export async function requestMemberEmailChange(
   return { ok: true, delivery: issued.delivery, noticeQueued }
 }
 
+async function releaseEmailChange(
+  actions: MemberAccountActionService,
+  token: string,
+  reservationNonce: string,
+): Promise<void> {
+  await actions.releaseAction(token, 'email_change_confirmation', reservationNonce).catch(() => {})
+}
+
 export async function completeMemberEmailChange(
   payload: PayloadMemberAuthAPI,
   actions: MemberAccountActionService,
@@ -136,89 +144,203 @@ export async function completeMemberEmailChange(
   baseUrl: string,
   now: () => Date = () => new Date(),
 ): Promise<CompleteMemberEmailChangeResult> {
-  const completion = await actions.completeAction(token, 'email_change_confirmation')
-  if (completion.consumed === false) {
+  const normalizedToken = token.trim()
+  const reservation = await actions.reserveAction(normalizedToken, 'email_change_confirmation')
+  if (reservation.reserved === false) {
+    if (
+      reservation.reason === 'already_consumed' &&
+      reservation.memberId &&
+      reservation.email &&
+      actions.isCompletedResult(
+        normalizedToken,
+        'email_change_confirmation',
+        `email:${emailFingerprint(reservation.email)}`,
+        reservation.resultFingerprint,
+      )
+    ) {
+      const priorMember = await payload
+        .findByID({
+          collection: 'payload_members',
+          id: reservation.memberId,
+          depth: 0,
+          overrideAccess: true,
+        })
+        .catch((): null => null)
+      if (
+        isEligibleCurrentMember(priorMember) &&
+        typeof priorMember.email === 'string' &&
+        normalizeEmail(priorMember.email) === normalizeEmail(reservation.email)
+      ) {
+        return { ok: true, memberId: String(priorMember.id) }
+      }
+    }
     return { ok: false, error: 'invalid_or_expired_token' }
   }
 
-  const member = await payload.findByID({
-    collection: 'payload_members',
-    id: completion.memberId,
-    depth: 0,
-    overrideAccess: true,
-  })
+  let member
+  try {
+    member = await payload.findByID({
+      collection: 'payload_members',
+      id: reservation.memberId,
+      depth: 0,
+      overrideAccess: true,
+    })
+  } catch {
+    await releaseEmailChange(actions, normalizedToken, reservation.reservationNonce)
+    return { ok: false, error: 'account_ineligible' }
+  }
   if (!isEligibleCurrentMember(member) || typeof member.email !== 'string') {
+    await releaseEmailChange(actions, normalizedToken, reservation.reservationNonce)
+    return { ok: false, error: 'account_ineligible' }
+  }
+
+  const targetEmail = normalizeEmail(reservation.email)
+  const oldEmail = normalizeEmail(member.email)
+  const resultKey = `email:${emailFingerprint(targetEmail)}`
+
+  if (oldEmail === targetEmail) {
+    if (
+      reservation.reclaimed &&
+      actions.isCompletedResult(
+        normalizedToken,
+        'email_change_confirmation',
+        resultKey,
+        reservation.resultFingerprint,
+      )
+    ) {
+      const recovery = await actions.finalizeAction(
+        normalizedToken,
+        'email_change_confirmation',
+        reservation.reservationNonce,
+        resultKey,
+      )
+      if (recovery.finalized) return { ok: true, memberId: String(member.id) }
+    }
+    await releaseEmailChange(actions, normalizedToken, reservation.reservationNonce)
     return { ok: false, error: 'account_ineligible' }
   }
 
   const duplicate = await payload.find({
     collection: 'payload_members',
-    where: { email: { equals: completion.email } },
+    where: { email: { equals: targetEmail } },
     limit: 1,
     depth: 0,
     overrideAccess: true,
   })
   if (duplicate.docs[0] && !sameId(duplicate.docs[0].id, member.id)) {
+    await releaseEmailChange(actions, normalizedToken, reservation.reservationNonce)
     return { ok: false, error: 'email_unavailable' }
   }
 
-  const oldEmail = normalizeEmail(member.email)
-  const changedAt = now().toISOString()
-  await payload.update({
-    collection: 'payload_members',
-    id: member.id,
-    data: {
-      email: completion.email,
-      emailVerifiedAt: changedAt,
-    },
-    overrideAccess: true,
-  })
+  const mutationMarker = await actions.markMutationStarted(
+    normalizedToken,
+    'email_change_confirmation',
+    reservation.reservationNonce,
+    resultKey,
+  )
+  if (!mutationMarker.marked) {
+    await releaseEmailChange(actions, normalizedToken, reservation.reservationNonce)
+    return { ok: false, error: 'invalid_or_expired_token' }
+  }
 
-  const securityEvent = await payload.create({
-    collection: 'payload_member_security_events',
-    data: {
-      member: member.id,
-      eventType: 'email_changed',
-      source: 'member_email_confirmation',
+  const changedAt = now().toISOString()
+  try {
+    await payload.update({
+      collection: 'payload_members',
+      id: member.id,
+      data: {
+        email: targetEmail,
+        emailVerifiedAt: changedAt,
+      },
+      overrideAccess: true,
+    })
+  } catch {
+    const recovered = await payload
+      .findByID({
+        collection: 'payload_members',
+        id: member.id,
+        depth: 0,
+        overrideAccess: true,
+      })
+      .catch((): null => null)
+    if (
+      isEligibleCurrentMember(recovered) &&
+      typeof recovered.email === 'string' &&
+      normalizeEmail(recovered.email) === targetEmail
+    ) {
+      const recovery = await actions.finalizeAction(
+        normalizedToken,
+        'email_change_confirmation',
+        reservation.reservationNonce,
+        resultKey,
+      )
+      if (recovery.finalized) return { ok: true, memberId: String(member.id) }
+      return { ok: false, error: 'invalid_or_expired_token' }
+    }
+    await releaseEmailChange(actions, normalizedToken, reservation.reservationNonce)
+    return { ok: false, error: 'email_unavailable' }
+  }
+
+  const completion = await actions.finalizeAction(
+    normalizedToken,
+    'email_change_confirmation',
+    reservation.reservationNonce,
+    resultKey,
+  )
+  if (!completion.finalized) {
+    // The email mutation succeeded. Keep the reservation for idempotent recovery after lease expiry.
+    return { ok: false, error: 'invalid_or_expired_token' }
+  }
+
+  try {
+    const securityEvent = await payload.create({
+      collection: 'payload_member_security_events',
+      data: {
+        member: member.id,
+        eventType: 'email_changed',
+        source: 'member_email_confirmation',
+        metadata: {
+          previousFingerprint: emailFingerprint(oldEmail),
+          newFingerprint: emailFingerprint(targetEmail),
+          automaticLogin: false,
+        },
+      },
+      overrideAccess: true,
+    })
+
+    await createAuditEvent(payload, {
+      actorType: 'member',
+      actorId: member.id,
+      action: 'member.email.changed',
+      targetCollection: 'payload_members',
+      targetId: member.id,
       metadata: {
-        previousFingerprint: emailFingerprint(oldEmail),
-        newFingerprint: emailFingerprint(completion.email),
+        securityEventId: String(securityEvent.id),
         automaticLogin: false,
       },
-    },
-    overrideAccess: true,
-  })
+    })
 
-  await createAuditEvent(payload, {
-    actorType: 'member',
-    actorId: member.id,
-    action: 'member.email.changed',
-    targetCollection: 'payload_members',
-    targetId: member.id,
-    metadata: {
-      securityEventId: String(securityEvent.id),
-      automaticLogin: false,
-    },
-  })
-
-  const base = new URL(baseUrl)
-  const displayName = oldEmail.split('@')[0] || 'there'
-  for (const [recipient, suffix] of [[oldEmail, 'old'], [completion.email, 'new']] as const) {
-    try {
-      await queueAndAttemptEmailEvent(payload, {
-        toEmail: recipient,
-        templateKey: 'member-email-changed',
-        dedupeKey: `member-email-changed:${member.id}:${securityEvent.id}:${suffix}`,
-        metadata: {
-          memberId: String(member.id),
-          purpose: 'email_change_confirmation_notice',
-          displayName,
-          logoUrl: resolveJpvLogoUrl(base),
-        },
-      })
-    } catch {
-      // Confirmation delivery must not revert a completed, atomically confirmed email change.
+    const base = new URL(baseUrl)
+    const displayName = oldEmail.split('@')[0] || 'there'
+    for (const [recipient, suffix] of [[oldEmail, 'old'], [targetEmail, 'new']] as const) {
+      try {
+        await queueAndAttemptEmailEvent(payload, {
+          toEmail: recipient,
+          templateKey: 'member-email-changed',
+          dedupeKey: `member-email-changed:${member.id}:${securityEvent.id}:${suffix}`,
+          metadata: {
+            memberId: String(member.id),
+            purpose: 'email_change_confirmation_notice',
+            displayName,
+            logoUrl: resolveJpvLogoUrl(base),
+          },
+        })
+      } catch {
+        // Delivery failures do not roll back a finalized email change.
+      }
     }
+  } catch {
+    // Durable email update and action finalization already succeeded. Side effects are best effort.
   }
 
   return { ok: true, memberId: String(member.id) }

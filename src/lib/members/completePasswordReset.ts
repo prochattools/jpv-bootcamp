@@ -6,7 +6,7 @@ import type {
 import { getMemberEmailVerificationSchema } from '@/lib/auth/memberEmailVerificationSql'
 import { createAuditEvent, queueAndAttemptEmailEvent } from '@/lib/payloadCourse/events'
 import { quotePgIdentifier } from '@/lib/payloadMigrationSchema'
-import { isEligibleCurrentMember } from '@/lib/members/currentMember'
+import { isEligibleCurrentMember, type CurrentPayloadMember } from '@/lib/members/currentMember'
 
 export type CompletePasswordResetInput = {
   token: string
@@ -77,6 +77,27 @@ function resolveQueryClient(payload: PayloadMemberAuthAPI): QueryClient {
   }
 
   throw new Error('Payload PostgreSQL query client is unavailable')
+}
+
+async function readPreparedResetTokenState(
+  payload: PayloadMemberAuthAPI,
+  memberId: PayloadDocument['id'],
+  token: string,
+): Promise<'prepared' | 'cleared' | 'unknown'> {
+  try {
+    const schemaName = getMemberEmailVerificationSchema()
+    const table = `${quotePgIdentifier(schemaName)}.${quotePgIdentifier('payload_members')}`
+    const result = await resolveQueryClient(payload).query(
+      `SELECT "reset_password_token" FROM ${table} WHERE "id" = $1::integer LIMIT 1;`,
+      [memberId],
+    )
+    if (!result.rows?.[0]) return 'unknown'
+    const current = result.rows[0].reset_password_token
+    if (current === null || current === undefined || current === '') return 'cleared'
+    return typeof current === 'string' && current === token ? 'prepared' : 'unknown'
+  } catch {
+    return 'unknown'
+  }
 }
 
 async function createPasswordChangedSecurityEvent(
@@ -188,6 +209,16 @@ VALUES ($1::varchar, $2::varchar, 'member-password-changed', 'queued', $3::varch
   }
 }
 
+const PASSWORD_RESET_RESULT_KEY = 'password-reset-completed'
+
+async function releasePasswordReset(
+  actions: MemberAccountActionService,
+  token: string,
+  reservationNonce: string,
+): Promise<void> {
+  await actions.releaseAction(token, 'password_reset', reservationNonce).catch(() => {})
+}
+
 export async function completePasswordReset(
   payload: PayloadMemberAuthAPI,
   actions: MemberAccountActionService,
@@ -202,30 +233,131 @@ export async function completePasswordReset(
     return { ok: false, error: 'password_mismatch' }
   }
 
-  const action = await actions.findCompletableAction(token, 'password_reset')
-  if (action.valid === false) {
+  const reservation = await actions.reserveAction(token, 'password_reset')
+  if (reservation.reserved === false) {
+    if (
+      reservation.reason === 'already_consumed' &&
+      reservation.memberId &&
+      actions.isCompletedResult(
+        token,
+        'password_reset',
+        PASSWORD_RESET_RESULT_KEY,
+        reservation.resultFingerprint,
+      )
+    ) {
+      const priorMember = await payload
+        .findByID({
+          collection: 'payload_members',
+          id: reservation.memberId,
+          depth: 0,
+          overrideAccess: true,
+        })
+        .catch((): null => null)
+      if (isEligibleCurrentMember(priorMember)) {
+        return { ok: true, member: priorMember }
+      }
+    }
     return { ok: false, error: 'invalid_or_expired_token' }
   }
 
-  const member = await payload.findByID({
-    collection: 'payload_members',
-    id: action.memberId,
-    depth: 0,
-    overrideAccess: true,
-  })
+  let member: CurrentPayloadMember
+  try {
+    member = await payload.findByID({
+      collection: 'payload_members',
+      id: reservation.memberId,
+      depth: 0,
+      overrideAccess: true,
+    })
+  } catch {
+    await releasePasswordReset(actions, token, reservation.reservationNonce)
+    return { ok: false, error: 'account_ineligible' }
+  }
   if (!isEligibleCurrentMember(member)) {
+    await releasePasswordReset(actions, token, reservation.reservationNonce)
     return { ok: false, error: 'account_ineligible' }
   }
 
-  await preparePayloadPasswordResetToken(payload, member.id, token)
-  await payload.resetPassword({
-    collection: 'payload_members',
-    data: {
+  let resetCompleted = false
+  let resetTokenPrepared = false
+
+  if (reservation.reclaimed && reservation.resultFingerprint) {
+    if (!actions.isCompletedResult(
       token,
-      password: input.password,
-    },
-    overrideAccess: true,
-  })
+      'password_reset',
+      PASSWORD_RESET_RESULT_KEY,
+      reservation.resultFingerprint,
+    )) {
+      // A reclaimed reservation with a conflicting intended result is not safely recoverable.
+      return { ok: false, error: 'invalid_or_expired_token' }
+    }
+    const recoveredTokenState = await readPreparedResetTokenState(payload, member.id, token)
+    if (recoveredTokenState === 'cleared') {
+      resetCompleted = true
+    } else if (recoveredTokenState === 'prepared') {
+      resetTokenPrepared = true
+    } else {
+      // The previous worker's mutation outcome is unknown. Keep the lease for operator-visible retry.
+      return { ok: false, error: 'invalid_or_expired_token' }
+    }
+  }
+
+  if (!resetCompleted && !reservation.resultFingerprint) {
+    const mutationMarker = await actions.markMutationStarted(
+      token,
+      'password_reset',
+      reservation.reservationNonce,
+      PASSWORD_RESET_RESULT_KEY,
+    )
+    if (!mutationMarker.marked) {
+      await releasePasswordReset(actions, token, reservation.reservationNonce)
+      return { ok: false, error: 'invalid_or_expired_token' }
+    }
+  }
+
+  if (!resetCompleted && !resetTokenPrepared) {
+    try {
+      await preparePayloadPasswordResetToken(payload, member.id, token)
+      resetTokenPrepared = true
+    } catch {
+      const preparedState = await readPreparedResetTokenState(payload, member.id, token)
+      if (preparedState === 'prepared') {
+        resetTokenPrepared = true
+      } else if (preparedState === 'cleared') {
+        await releasePasswordReset(actions, token, reservation.reservationNonce)
+        return { ok: false, error: 'invalid_or_expired_token' }
+      } else {
+        // The preparation outcome is uncertain. Keep the reservation until lease expiry.
+        return { ok: false, error: 'invalid_or_expired_token' }
+      }
+    }
+  }
+
+  if (!resetCompleted) {
+    try {
+      await payload.resetPassword({
+        collection: 'payload_members',
+        data: {
+          token,
+          password: input.password,
+        },
+        overrideAccess: true,
+      })
+      resetCompleted = true
+    } catch {
+      const tokenState = await readPreparedResetTokenState(payload, member.id, token)
+      if (tokenState === 'prepared') {
+        await releasePasswordReset(actions, token, reservation.reservationNonce)
+        return { ok: false, error: 'invalid_or_expired_token' }
+      }
+      if (tokenState !== 'cleared') {
+        // The downstream outcome is uncertain. Keep the reservation until lease expiry.
+        return { ok: false, error: 'invalid_or_expired_token' }
+      }
+      resetCompleted = true
+    }
+  }
+
+  if (!resetCompleted) return { ok: false, error: 'invalid_or_expired_token' }
 
   let updated = member
   try {
@@ -240,14 +372,25 @@ export async function completePasswordReset(
       overrideLock: true,
     })
   } catch {
-    // Password reset has already succeeded; cleanup failures must not consume the link with an error.
+    // Password reset already succeeded. Lockout cleanup remains best effort.
+  }
+
+  const completion = await actions.finalizeAction(
+    token,
+    'password_reset',
+    reservation.reservationNonce,
+    PASSWORD_RESET_RESULT_KEY,
+  )
+  if (!completion.finalized) {
+    // Do not release after a successful password mutation. A retry can recover after lease expiry.
+    return { ok: false, error: 'invalid_or_expired_token' }
   }
 
   let securityEvent: PayloadDocument | null = null
   try {
     securityEvent = await createPasswordChangedSecurityEvent(payload, member.id)
   } catch {
-    // Best effort: password is already changed; event write failures must not break the flow.
+    // Durable password reset and action finalization already succeeded.
   }
 
   if (securityEvent) {
@@ -266,11 +409,9 @@ export async function completePasswordReset(
     } catch {
       // Audit metadata should not suppress the password-changed confirmation.
     }
-  }
 
-  if (securityEvent) {
     try {
-      const email = typeof updated.email === 'string' ? updated.email : action.email
+      const email = typeof updated.email === 'string' ? updated.email : completion.email
       await queuePasswordChangedConfirmation(payload, {
         memberId: member.id,
         email,
@@ -290,11 +431,6 @@ export async function completePasswordReset(
         // Confirmation delivery failures must never roll back a completed password reset.
       }
     }
-  }
-
-  const consumeResult = await actions.completeAction(token, 'password_reset')
-  if (consumeResult.consumed === false) {
-    return { ok: false, error: 'invalid_or_expired_token' }
   }
 
   return { ok: true, member: updated }

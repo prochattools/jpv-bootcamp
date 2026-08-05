@@ -13,6 +13,10 @@ export type MemberAccountActionRecord = {
   tokenDigest: string
   expiresAt: string
   createdAt: string
+  reservationNonce?: string
+  reservedAt?: string
+  leaseExpiresAt?: string
+  resultFingerprint?: string
   consumedAt?: string
   invalidatedAt?: string
   lastSentAt?: string
@@ -31,6 +35,25 @@ export type MemberAccountActionDelivery = {
   attempt: number
 }
 
+export type ReservedMemberAccountActionRecord = {
+  memberId: string
+  email: string
+  reservationNonce: string
+  reservedAt: string
+  leaseExpiresAt: string
+  resultFingerprint?: string
+  reclaimed: boolean
+}
+
+export type FinalizedMemberAccountActionRecord = {
+  memberId: string
+  email: string
+  resultFingerprint: string
+  consumedAt: string
+}
+
+export type CompletedMemberAccountActionRecord = FinalizedMemberAccountActionRecord
+
 export interface MemberAccountActionRepository {
   findActiveAction(
     memberId: string,
@@ -41,11 +64,33 @@ export interface MemberAccountActionRepository {
     tokenDigest: string,
     purpose: MemberAccountActionPurpose,
   ): Promise<MemberAccountActionRecord | null>
-  consumeAction(
+  reserveAction(input: {
+    tokenDigest: string
+    purpose: MemberAccountActionPurpose
+    reservationNonce: string
+    leaseDurationMs: number
+  }): Promise<ReservedMemberAccountActionRecord | null>
+  markMutationStarted(input: {
+    tokenDigest: string
+    purpose: MemberAccountActionPurpose
+    reservationNonce: string
+    resultFingerprint: string
+  }): Promise<boolean>
+  finalizeAction(input: {
+    tokenDigest: string
+    purpose: MemberAccountActionPurpose
+    reservationNonce: string
+    resultFingerprint: string
+  }): Promise<FinalizedMemberAccountActionRecord | null>
+  releaseAction(input: {
+    tokenDigest: string
+    purpose: MemberAccountActionPurpose
+    reservationNonce: string
+  }): Promise<boolean>
+  findCompletedAction(
     tokenDigest: string,
     purpose: MemberAccountActionPurpose,
-    consumedAt: string,
-  ): Promise<string | null>
+  ): Promise<CompletedMemberAccountActionRecord | null>
   recordDelivery(event: {
     memberId: string
     purpose: MemberAccountActionPurpose
@@ -53,7 +98,7 @@ export interface MemberAccountActionRepository {
     status: 'sent' | 'suppressed' | 'failed'
     attempt: number
     occurredAt: string
-    reason?: 'cooldown' | 'max_attempts' | 'transport_error'
+    reason?: 'cooldown' | 'max_attempts' | 'transport_error' | 'in_progress'
   }): Promise<void>
 }
 
@@ -67,7 +112,9 @@ export type MemberAccountActionServiceOptions = {
   publicBaseUrl: string
   now?: () => Date
   randomToken?: () => string
+  randomReservationNonce?: () => string
   tokenBytes?: number
+  reservationLeaseMs?: number
   sendCooldownMs?: number
   maxSendAttempts?: number
 }
@@ -87,19 +134,54 @@ export type IssueMemberAccountActionResult = {
   delivery: 'queued' | 'suppressed' | 'failed'
 }
 
-export type CompleteMemberAccountActionResult =
-  | { consumed: true; memberId: string; email: string }
-  | { consumed: false; reason: 'invalid_or_expired' | 'already_used'; memberId?: string }
+export type ReserveMemberAccountActionResult =
+  | {
+      reserved: true
+      memberId: string
+      email: string
+      reservationNonce: string
+      reservedAt: string
+      leaseExpiresAt: string
+      resultFingerprint?: string
+      reclaimed: boolean
+    }
+  | {
+      reserved: false
+      reason: 'invalid_or_expired' | 'already_reserved' | 'already_consumed'
+      memberId?: string
+      email?: string
+      resultFingerprint?: string
+      leaseExpiresAt?: string
+    }
 
-export type CompletableMemberAccountActionResult =
-  | { valid: true; memberId: string; email: string }
-  | { valid: false; reason: 'invalid_or_expired' | 'already_used'; memberId?: string }
+export type FinalizeMemberAccountActionResult =
+  | {
+      finalized: true
+      memberId: string
+      email: string
+      resultFingerprint: string
+      replayed: boolean
+    }
+  | {
+      finalized: false
+      reason: 'invalid_reservation' | 'result_conflict' | 'invalid_or_expired'
+    }
+
+export type ReleaseMemberAccountActionResult = {
+  released: boolean
+}
 
 const DEFAULT_SEND_COOLDOWN_MS = 5 * 60 * 1000
 const DEFAULT_MAX_SEND_ATTEMPTS = 3
+const DEFAULT_RESERVATION_LEASE_MS = 30 * 1000
+const SAFE_RESULT_KEY = /^[a-z0-9:_-]{1,128}$/
 
 function normalizeEmail(value: string): string {
   return value.trim().toLowerCase()
+}
+
+function validActionToken(token: string): boolean {
+  return token.length >= 20 && token.length <= 512
 }
 
 export function digestMemberAccountAction(token: string): string {
@@ -122,12 +204,34 @@ export function createMemberAccountActionIdempotencyKey(
     .digest('hex')
 }
 
+export function createMemberAccountActionResultFingerprint(
+  token: string,
+  purpose: MemberAccountActionPurpose,
+  resultKey: string,
+): string {
+  const normalizedResultKey = resultKey.trim().toLowerCase()
+  if (!SAFE_RESULT_KEY.test(normalizedResultKey)) {
+    throw new Error('Member account action result key must be non-sensitive and identifier-safe')
+  }
+  return createHash('sha256')
+    .update(
+      `member-account-action-result:v1:${digestMemberAccountAction(token)}:${purpose}:${normalizedResultKey}`,
+      'utf8',
+    )
+    .digest('hex')
+}
+
 export function createMemberAccountActionService(options: MemberAccountActionServiceOptions) {
   const now = options.now ?? (() => new Date())
-  const randomToken =
-    options.randomToken ?? (() => randomBytes(options.tokenBytes ?? 32).toString('base64url'))
+  const randomToken = options.randomToken ?? (() => randomBytes(options.tokenBytes ?? 32).toString('base64url'))
+  const randomReservationNonce = options.randomReservationNonce ?? (() => randomBytes(24).toString('base64url'))
+  const reservationLeaseMs = options.reservationLeaseMs ?? DEFAULT_RESERVATION_LEASE_MS
   const sendCooldownMs = options.sendCooldownMs ?? DEFAULT_SEND_COOLDOWN_MS
   const maxSendAttempts = options.maxSendAttempts ?? DEFAULT_MAX_SEND_ATTEMPTS
+
+  if (!Number.isSafeInteger(reservationLeaseMs) || reservationLeaseMs < 1_000 || reservationLeaseMs > 15 * 60 * 1000) {
+    throw new Error('Member account action reservation lease must be between 1 second and 15 minutes')
+  }
 
   return {
     async issueAction(
@@ -135,6 +239,26 @@ export function createMemberAccountActionService(options: MemberAccountActionSer
     ): Promise<IssueMemberAccountActionResult> {
       const currentTime = now()
       const existing = await options.repository.findActiveAction(input.memberId, input.purpose)
+
+      if (
+        existing?.resultFingerprint ||
+        (
+          existing?.reservationNonce &&
+          existing.leaseExpiresAt &&
+          new Date(existing.leaseExpiresAt).getTime() > currentTime.getTime()
+        )
+      ) {
+        await options.repository.recordDelivery({
+          memberId: input.memberId,
+          purpose: input.purpose,
+          idempotencyKey: existing.idempotencyKey,
+          status: 'suppressed',
+          attempt: existing.sendAttempts,
+          occurredAt: currentTime.toISOString(),
+          reason: 'in_progress',
+        })
+        return { accepted: true, delivery: 'suppressed' }
+      }
 
       if (
         existing &&
@@ -229,75 +353,165 @@ export function createMemberAccountActionService(options: MemberAccountActionSer
       }
     },
 
-    async findCompletableAction(
+    async reserveAction(
       token: string,
       purpose: MemberAccountActionPurpose,
-    ): Promise<CompletableMemberAccountActionResult> {
-      if (!token || token.length < 20 || token.length > 512) {
-        return { valid: false, reason: 'invalid_or_expired' }
+    ): Promise<ReserveMemberAccountActionResult> {
+      if (!validActionToken(token)) {
+        return { reserved: false, reason: 'invalid_or_expired' }
       }
 
       const tokenDigest = digestMemberAccountAction(token)
-      const record = await options.repository.findActionByDigest(tokenDigest, purpose)
-      if (!record) return { valid: false, reason: 'invalid_or_expired' }
-      // Return memberId on already_used so callers can perform an idempotency
-      // check (e.g. the member was already activated on a prior attempt).
-      if (record.consumedAt) return { valid: false, reason: 'already_used', memberId: record.memberId }
-      if (record.invalidatedAt || new Date(record.expiresAt).getTime() <= now().getTime()) {
-        return { valid: false, reason: 'invalid_or_expired' }
-      }
-      if (!memberAccountActionDigestMatches(token, record.tokenDigest)) {
-        return { valid: false, reason: 'invalid_or_expired' }
+      const reservationNonce = randomReservationNonce()
+      if (!reservationNonce || reservationNonce.length > 64) {
+        throw new Error('Member account action reservation nonce is invalid')
       }
 
-      return { valid: true, memberId: record.memberId, email: record.email }
-    },
-
-    async completeAction(
-      token: string,
-      purpose: MemberAccountActionPurpose,
-    ): Promise<CompleteMemberAccountActionResult> {
-      const tokenDigest = digestMemberAccountAction(token)
-      const record = await options.repository.findActionByDigest(tokenDigest, purpose)
-
-      // If there is no record at all the token is simply invalid.
-      if (!record) return { consumed: false, reason: 'invalid_or_expired' }
-
-      // If the token was already consumed include the memberId so callers can
-      // perform an idempotency check without a separate lookup.
-      if (record.consumedAt) {
-        return { consumed: false, reason: 'already_used', memberId: record.memberId }
-      }
-
-      if (record.invalidatedAt || new Date(record.expiresAt).getTime() <= now().getTime()) {
-        return { consumed: false, reason: 'invalid_or_expired' }
-      }
-
-      if (!memberAccountActionDigestMatches(token, record.tokenDigest)) {
-        return { consumed: false, reason: 'invalid_or_expired' }
-      }
-
-      const consumedAt = now().toISOString()
-      const consumedMemberId = await options.repository.consumeAction(
+      const reserved = await options.repository.reserveAction({
         tokenDigest,
         purpose,
-        consumedAt,
-      )
-      // consumeAction returns null when another concurrent request consumed
-      // the token first (race condition). Return already_used with the memberId
-      // so callers can still handle the idempotent case.
-      if (!consumedMemberId) {
-        return { consumed: false, reason: 'already_used', memberId: record.memberId }
-      }
-      if (consumedMemberId !== record.memberId) {
-        return { consumed: false, reason: 'invalid_or_expired' }
+        reservationNonce,
+        leaseDurationMs: reservationLeaseMs,
+      })
+      if (reserved) {
+        return {
+          reserved: true,
+          memberId: reserved.memberId,
+          email: reserved.email,
+          reservationNonce: reserved.reservationNonce,
+          reservedAt: reserved.reservedAt,
+          leaseExpiresAt: reserved.leaseExpiresAt,
+          resultFingerprint: reserved.resultFingerprint,
+          reclaimed: reserved.reclaimed,
+        }
       }
 
-      return {
-        consumed: true,
-        memberId: record.memberId,
-        email: record.email,
+      const completed = await options.repository.findCompletedAction(tokenDigest, purpose)
+      if (completed) {
+        return {
+          reserved: false,
+          reason: 'already_consumed',
+          memberId: completed.memberId,
+          email: completed.email,
+          resultFingerprint: completed.resultFingerprint,
+        }
       }
+
+      const record = await options.repository.findActionByDigest(tokenDigest, purpose)
+      if (!record || !memberAccountActionDigestMatches(token, record.tokenDigest)) {
+        return { reserved: false, reason: 'invalid_or_expired' }
+      }
+      if (record.invalidatedAt || new Date(record.expiresAt).getTime() <= now().getTime()) {
+        return { reserved: false, reason: 'invalid_or_expired' }
+      }
+      if (
+        record.reservationNonce &&
+        record.leaseExpiresAt &&
+        new Date(record.leaseExpiresAt).getTime() > now().getTime()
+      ) {
+        return {
+          reserved: false,
+          reason: 'already_reserved',
+          memberId: record.memberId,
+          leaseExpiresAt: record.leaseExpiresAt,
+        }
+      }
+      return { reserved: false, reason: 'already_reserved', memberId: record.memberId }
+    },
+
+    async markMutationStarted(
+      token: string,
+      purpose: MemberAccountActionPurpose,
+      reservationNonce: string,
+      resultKey: string,
+    ): Promise<{ marked: boolean; resultFingerprint?: string }> {
+      if (!validActionToken(token) || !reservationNonce) return { marked: false }
+      const resultFingerprint = createMemberAccountActionResultFingerprint(token, purpose, resultKey)
+      const marked = await options.repository.markMutationStarted({
+        tokenDigest: digestMemberAccountAction(token),
+        purpose,
+        reservationNonce,
+        resultFingerprint,
+      })
+      return marked ? { marked: true, resultFingerprint } : { marked: false }
+    },
+
+    async finalizeAction(
+      token: string,
+      purpose: MemberAccountActionPurpose,
+      reservationNonce: string,
+      resultKey: string,
+    ): Promise<FinalizeMemberAccountActionResult> {
+      if (!validActionToken(token) || !reservationNonce) {
+        return { finalized: false, reason: 'invalid_reservation' }
+      }
+      const tokenDigest = digestMemberAccountAction(token)
+      const resultFingerprint = createMemberAccountActionResultFingerprint(token, purpose, resultKey)
+      const finalized = await options.repository.finalizeAction({
+        tokenDigest,
+        purpose,
+        reservationNonce,
+        resultFingerprint,
+      })
+      if (finalized) {
+        return {
+          finalized: true,
+          memberId: finalized.memberId,
+          email: finalized.email,
+          resultFingerprint: finalized.resultFingerprint,
+          replayed: false,
+        }
+      }
+
+      const completed = await options.repository.findCompletedAction(tokenDigest, purpose)
+      if (completed) {
+        if (completed.resultFingerprint === resultFingerprint) {
+          return {
+            finalized: true,
+            memberId: completed.memberId,
+            email: completed.email,
+            resultFingerprint: completed.resultFingerprint,
+            replayed: true,
+          }
+        }
+        return { finalized: false, reason: 'result_conflict' }
+      }
+
+      const record = await options.repository.findActionByDigest(tokenDigest, purpose)
+      if (!record || record.invalidatedAt || new Date(record.expiresAt).getTime() <= now().getTime()) {
+        return { finalized: false, reason: 'invalid_or_expired' }
+      }
+      return { finalized: false, reason: 'invalid_reservation' }
+    },
+
+    async releaseAction(
+      token: string,
+      purpose: MemberAccountActionPurpose,
+      reservationNonce: string,
+    ): Promise<ReleaseMemberAccountActionResult> {
+      if (!validActionToken(token) || !reservationNonce) return { released: false }
+      return {
+        released: await options.repository.releaseAction({
+          tokenDigest: digestMemberAccountAction(token),
+          purpose,
+          reservationNonce,
+        }),
+      }
+    },
+
+    isCompletedResult(
+      token: string,
+      purpose: MemberAccountActionPurpose,
+      resultKey: string,
+      resultFingerprint: string | undefined,
+    ): boolean {
+      if (!validActionToken(token) || !resultFingerprint) return false
+      const candidate = Buffer.from(
+        createMemberAccountActionResultFingerprint(token, purpose, resultKey),
+        'hex',
+      )
+      const expected = Buffer.from(resultFingerprint, 'hex')
+      return candidate.length === expected.length && timingSafeEqual(candidate, expected)
     },
   }
 }

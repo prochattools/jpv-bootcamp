@@ -71,7 +71,7 @@ export function buildReleaseEvidenceMarkdown(): string {
     '- No migration execution is claimed without an approved record.',
     '- No provider verification is claimed as complete.',
     '- No formal staging acceptance is claimed while external sign-off is pending.',
-    '- The open account-action hardening requirement is not hidden by green functional tests.',
+    '- Account-action hardening is implemented locally, but shared-staging migration authorization and operational verification remain pending.',
     '',
     '## Next operator-owned evidence',
     '- approved migration window and backup reference',

@@ -3,10 +3,8 @@ import assert from 'node:assert/strict'
 import {
   createMemberAccountActionService,
   type MemberAccountActionDelivery,
-  type MemberAccountActionPurpose,
-  type MemberAccountActionRecord,
-  type MemberAccountActionRepository,
 } from '../src/lib/auth/memberAccountActions'
+import { MemoryMemberAccountActionRepository } from './helpers/memberAccountActionMemoryRepository'
 import { completeMemberSetup } from '../src/lib/members/completeMemberSetup'
 import { completePasswordReset } from '../src/lib/members/completePasswordReset'
 import { inviteMember } from '../src/lib/members/inviteMember'
@@ -83,6 +81,7 @@ class FakePayload implements PayloadMemberAuthAPI {
   }
 
   async resetPassword(args: { collection: string; data: { token: string; password: string }; overrideAccess?: boolean }) {
+    this.calls.push(`resetPassword:${args.collection}`)
     const documents = this.collections[args.collection] ?? []
     const document = documents.find(
       (entry) => String(entry.resetPasswordToken ?? '') === String(args.data.token),
@@ -109,58 +108,7 @@ class FakePayload implements PayloadMemberAuthAPI {
   }
 }
 
-class MemoryActions implements MemberAccountActionRepository {
-  records: MemberAccountActionRecord[] = []
-  deliveries: Array<Record<string, unknown>> = []
-
-  async findActiveAction(memberId: string, purpose: MemberAccountActionPurpose) {
-    return this.records.find(
-      (record) =>
-        record.memberId === memberId &&
-        record.purpose === purpose &&
-        !record.consumedAt &&
-        !record.invalidatedAt,
-    ) ?? null
-  }
-
-  async replaceActiveAction(record: MemberAccountActionRecord) {
-    for (const existing of this.records) {
-      if (
-        existing.memberId === record.memberId &&
-        existing.purpose === record.purpose &&
-        !existing.consumedAt &&
-        !existing.invalidatedAt
-      ) {
-        existing.invalidatedAt = record.createdAt
-      }
-    }
-    this.records.push(structuredClone(record))
-  }
-
-  async findActionByDigest(tokenDigest: string, purpose: MemberAccountActionPurpose) {
-    return this.records.find(
-      (record) => record.tokenDigest === tokenDigest && record.purpose === purpose,
-    ) ?? null
-  }
-
-  async consumeAction(tokenDigest: string, purpose: MemberAccountActionPurpose, consumedAt: string) {
-    const record = this.records.find(
-      (candidate) =>
-        candidate.tokenDigest === tokenDigest &&
-        candidate.purpose === purpose &&
-        !candidate.consumedAt &&
-        !candidate.invalidatedAt &&
-        new Date(candidate.expiresAt).getTime() > new Date(consumedAt).getTime(),
-    )
-    if (!record) return null
-    record.consumedAt = consumedAt
-    return record.memberId
-  }
-
-  async recordDelivery(event: Record<string, unknown>) {
-    this.deliveries.push(structuredClone(event))
-  }
-}
+class MemoryActions extends MemoryMemberAccountActionRepository {}
 
 class FakeTransport {
   deliveries: MemberAccountActionDelivery[] = []
@@ -178,7 +126,7 @@ async function run() {
     payload_audit_events: [],
     payload_email_events: [],
   })
-  const repository = new MemoryActions()
+  const repository = new MemoryActions(() => new Date('2026-07-02T00:00:00.000Z'))
   const transport = new FakeTransport()
   let token = 'invitation-action-value-that-is-never-stored'
   const service = createMemberAccountActionService({
@@ -252,6 +200,48 @@ async function run() {
   })
   assert.equal(reused.ok, false)
 
+  const concurrentPayload = new FakePayload({
+    payload_members: [],
+    payload_member_profiles: [],
+    payload_member_security_events: [],
+    payload_audit_events: [],
+    payload_email_events: [],
+  })
+  const concurrentRepository = new MemoryActions(() => new Date('2026-07-02T00:30:00.000Z'))
+  const concurrentTransport = new FakeTransport()
+  const concurrentToken = 'concurrent-invitation-action-value'
+  const concurrentService = createMemberAccountActionService({
+    repository: concurrentRepository,
+    transport: concurrentTransport,
+    publicBaseUrl: 'https://preview.jpvbootcamp.test',
+    now: () => new Date('2026-07-02T00:30:00.000Z'),
+    randomToken: () => concurrentToken,
+  })
+  const concurrentInvitation = await inviteMember(concurrentPayload, concurrentService, {
+    administratorId: 'admin-1',
+    email: 'concurrent@example.test',
+    displayName: 'Concurrent Student',
+  })
+  assert.equal(concurrentInvitation.ok, true)
+  const concurrentResults = await Promise.all([
+    completeMemberSetup(concurrentPayload, concurrentService, {
+      token: concurrentToken,
+      password: 'strong-password-value',
+      passwordConfirmation: 'strong-password-value',
+    }),
+    completeMemberSetup(concurrentPayload, concurrentService, {
+      token: concurrentToken,
+      password: 'strong-password-value',
+      passwordConfirmation: 'strong-password-value',
+    }),
+  ])
+  assert.equal(concurrentResults.filter((result) => result.ok && result.activated).length, 1)
+  assert.equal(
+    concurrentPayload.calls.filter((call) => call === 'update:payload_members').length,
+    1,
+  )
+  assert.equal(JSON.stringify(concurrentRepository.records).includes(concurrentToken), false)
+
   const unknownReset = await requestPasswordReset(payload, service, {
     email: 'unknown@example.test',
   })
@@ -301,7 +291,7 @@ async function run() {
   let resetToken = 'verified-self-signup-password-reset-value'
   const verifiedSignupTransport = new FakeTransport()
   const verifiedSignupService = createMemberAccountActionService({
-    repository: new MemoryActions(),
+    repository: new MemoryActions(() => new Date('2026-07-02T01:00:00.000Z')),
     transport: verifiedSignupTransport,
     publicBaseUrl: 'https://preview.jpvbootcamp.test',
     now: () => new Date('2026-07-02T01:00:00.000Z'),
@@ -324,6 +314,51 @@ async function run() {
   assert.equal(verifiedSignupCompleted.ok, true)
   assert.equal(verifiedSignupPayload.docs('payload_members')[0]?.accountStatus, 'pending')
   assert.equal(verifiedSignupPayload.docs('payload_email_events').some((event) => event.templateKey === 'member-password-changed'), true)
+
+  const concurrentResetPayload = new FakePayload({
+    payload_members: [{
+      id: 3,
+      email: 'reset-concurrent@example.test',
+      accountStatus: 'active',
+      source: 'self_signup',
+      emailVerifiedAt: '2026-07-02T00:00:00.000Z',
+    }],
+    payload_member_profiles: [{ id: 3, member: 3, displayName: 'Reset Student' }],
+    payload_member_security_events: [],
+    payload_audit_events: [],
+    payload_email_events: [],
+  })
+  const concurrentResetNow = () => new Date('2026-07-02T02:00:00.000Z')
+  const concurrentResetRepository = new MemoryActions(concurrentResetNow)
+  const concurrentResetToken = 'concurrent-password-reset-action-value'
+  const concurrentResetService = createMemberAccountActionService({
+    repository: concurrentResetRepository,
+    transport: new FakeTransport(),
+    publicBaseUrl: 'https://preview.jpvbootcamp.test',
+    now: concurrentResetNow,
+    randomToken: () => concurrentResetToken,
+  })
+  await requestPasswordReset(concurrentResetPayload, concurrentResetService, {
+    email: 'reset-concurrent@example.test',
+  })
+  const concurrentResetResults = await Promise.all([
+    completePasswordReset(concurrentResetPayload, concurrentResetService, {
+      token: concurrentResetToken,
+      password: 'replacement-password-value',
+      passwordConfirmation: 'replacement-password-value',
+    }),
+    completePasswordReset(concurrentResetPayload, concurrentResetService, {
+      token: concurrentResetToken,
+      password: 'replacement-password-value',
+      passwordConfirmation: 'replacement-password-value',
+    }),
+  ])
+  assert.equal(concurrentResetResults.filter((result) => result.ok).length >= 1, true)
+  assert.equal(
+    concurrentResetPayload.calls.filter((call) => call === 'resetPassword:payload_members').length,
+    1,
+  )
+  assert.equal(JSON.stringify(concurrentResetRepository.records).includes(concurrentResetToken), false)
 
   console.log('payload_member_invitation.test.ts passed')
 }

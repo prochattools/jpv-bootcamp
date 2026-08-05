@@ -342,3 +342,71 @@ Fresh `git status --short` showed only local residue outside the committed relea
 - **Source boundary:** no environment file, credential, real export, or customer data was inspected; no real source import, provider action, billing side effect, or database mutation occurred.
 - **Open gates:** durable account-action reservation/finalization, rollback ownership, provider verification, formal staging smoke, legacy import execution, programme/copy approval, and external acceptance remain incomplete.
 - **Next:** finish documentation assertions, full validation, complete-diff adversarial review, exact-path commit, fast-forward push, and exact-SHA preview/staging verification.
+
+
+
+
+---
+
+# Account-Action Reservation and Finalization Hardening — 2026-08-04
+
+## Goal
+
+Resolve the one-time member account-action race and failure-recovery defect on `feature/course-branding-and-preview` without querying or mutating the shared staging database. Implement and locally validate a durable pending → reserved → consumed state machine for member invitation, password reset, and email-change confirmation. Stop before any push or preview deployment that could apply the new migration.
+
+## Verified starting state
+
+- Starting repository HEAD: `9c045fa5a5c327014c20fe9377f7d5368b550573`.
+- Deployed staging SHA: `9c045fa5a5c327014c20fe9377f7d5368b550573`.
+- Invitation validates before activating and consumes afterward; no durable reservation exists.
+- Password reset validates before mutation and consumes afterward; no durable reservation exists.
+- Email change consumes before updating the member, so a downstream failure can permanently burn the action.
+- The PostgreSQL account-action store currently supports only replacement and consumption.
+- The current open-status release guard is not behavioral concurrency proof.
+
+## State model and invariants
+
+- `pending`: reservation fields are null, `consumed_at` is null, and the action may be reserved when it is unexpired and not invalidated.
+- `reserved`: `reservation_nonce`, `reserved_at`, and `lease_expires_at` are all non-null; exactly one active lease owner may perform downstream mutation.
+- `consumed`: `consumed_at` and `result_fingerprint` are non-null; reservation fields are cleared and the action cannot be reopened.
+- Releasing a safe pre-mutation failure clears reservation fields and returns the action to `pending`.
+- An expired lease may be reclaimed atomically.
+- Raw tokens, passwords, and email addresses are never stored in reservation or result fields.
+- Purpose, member identity, reservation nonce, and result fingerprint must all participate in idempotent recovery.
+
+## Implementation roadmap
+
+1. Extend the hidden verification-record collection with `reservationNonce`, `reservedAt`, `leaseExpiresAt`, and `resultFingerprint`.
+2. Add one reversible dated Payload migration with nullable columns, state check constraints, and a lease lookup index; no existing-row backfill.
+3. Update the canonical migration registry, explicit runtime map, and preview migration metadata.
+4. Replace validate/consume SQL with atomic reserve, finalize, release, and completed-result operations using positional parameters and schema-qualified identifiers.
+5. Extend the account-action repository and service APIs with typed reservation/finalization outcomes and a test-configurable lease duration.
+6. Update invitation, password reset, and email-change completion flows to reserve before mutation, finalize after success, release only on safe pre-mutation failure, and recover uncertain post-mutation outcomes idempotently.
+7. Replace the source-order hardening-status guard with deterministic behavioral concurrency, lease recovery, nonce ownership, purpose isolation, and replay tests.
+8. Update security and staging-readiness documentation to distinguish local repository completion from pending shared-staging migration authorization.
+9. Run focused tests, type-check, build, full release, browser E2E, staging preflights, production dependency audit, diff checks, and changed-path security scanning.
+10. Prepare one explicit-path local commit, then stop before push and request explicit authorization to deploy the migration to shared staging.
+
+## Risks and safeguards
+
+- Do not apply the migration to shared staging or push a commit that would auto-apply it without explicit authorization.
+- Use database timestamps and atomic SQL predicates for lease ownership.
+- Never release a reservation after an uncertain post-mutation failure; verify purpose-specific durable state and finalize idempotently.
+- Do not claim exactly-once execution when the guarantee is one active reservation plus idempotent recovery.
+- Keep protected local residue untouched and unstaged.
+- Run no real database, member, email-provider, billing, or customer-data operation.
+
+## Validation strategy
+
+- Static SQL contract tests for schema-qualified reserve/finalize/release/completed-result statements.
+- Deterministic repository tests for reservation ownership, lease expiry/reclaim, nonce mismatch, release, consumption, invalidation, expiry, and purpose isolation.
+- Deferred-promise concurrency tests proving one downstream mutation for each completion flow.
+- Failure-recovery and lost-response replay tests for invitation, password reset, and email change.
+- Migration forward/down SQL contract tests and canonical migration inventory checks.
+- Full repository release, browser, staging-preflight, audit, and security validation before commit preparation.
+
+## Current position
+
+`CURRENT: repository implementation and focused behavioral validation complete → full local validation, diff review, and explicit-path commit preparation`
+
+The collection, reversible migration source, canonical migration inventory, atomic SQL, repository/service APIs, three completion flows, deterministic concurrency fixtures, hardening guard, and security documentation are implemented locally. No shared-staging migration, real database query, real member mutation, provider action, billing action, push, or deployment has occurred for this goal.

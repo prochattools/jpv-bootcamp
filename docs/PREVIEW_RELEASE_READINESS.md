@@ -1,12 +1,12 @@
 # JPV Bootcamp Preview Release Readiness
 
-## Current staging-closure checkpoint — 2026-08-02
+## Current staging-closure checkpoint — 2026-08-04
 
 - **IMPLEMENTED / LOCALLY VERIFIED:** core staging scope, Payload admin design, responsive behavior, focused design contract, Payload TypeScript, changed-path security scan, application build, and `pnpm test:release` (`166/166`).
-- **STAGING VERIFIED (latest completed verification snapshot):** authenticated Payload DOM verified across dashboard, membership audit history, and course editing at 375/768/1024/1440px; overflow repaired; authenticated regression gate passed. Current snapshot: preview workflow `30761713446` concluded `success`; staging health reported exact SHA `c15cd578a953cd6b1dc8a3d4705350a52f7d0812`. Prior snapshot: SHA `3a6613498241c5dd71761c26c3b1e790764db1d5`, workflow `30756831212` (retained as history). For current live state: `git rev-parse HEAD` and `https://preview.jpvbootcamp.com/api/health`.
+- **STAGING VERIFIED (latest completed verification snapshot):** preview workflow `30853006495` concluded `success`; staging health reported exact SHA `9c045fa5a5c327014c20fe9377f7d5368b550573`; authenticated staging admin gate passed `14/14`. Earlier snapshots remain historical evidence only. For current live state: compare `git rev-parse HEAD` with `https://preview.jpvbootcamp.com/api/health`.
 - **MEDIA PERSISTENCE:** verified via disposable fixture upload, redeployment survival, and Payload API deletion; named staging volume `jpv-bootcamp-preview-media` active.
 - **TECHNICAL STATUS:** `STAGING TECHNICAL IMPLEMENTATION COMPLETE — ACCEPTANCE PENDING EXTERNAL ACTION`.
-- **HARDENING STATUS:** `STAGING HARDENING REMEDIATION REQUIRED` for one-time account-action reservation/finalization; do not treat formal acceptance as complete while this repository-owned issue and external approvals remain open.
+- **HARDENING STATUS:** `ACCOUNT-ACTION HARDENING IMPLEMENTED LOCALLY — STAGING MIGRATION AUTHORIZATION REQUIRED`; reservation/finalization is implemented in source and behaviorally tested, but the new schema is not applied or verified on shared staging.
 - **EXTERNAL ACTION:** client content approval, approved provider evidence, approved migration execution, and formal staging sign-off remain separate.
 
 This runbook separates repository changes, image publication, Payload migrations, Prisma startup behavior, provider email delivery, preview deployment, and smoke verification into independent approval categories.
@@ -18,7 +18,7 @@ The preview release path must use the reviewed feature branch and an exact commi
 Current operator branch: `feature/course-branding-and-preview`.
 Verify the exact branch tip with `git log --oneline -1` before operator action.
 
-**No applied-database-state claim is made by this checkpoint.** The canonical 28-name Payload registry and the health endpoint expose application registration inventory, not evidence that those migrations were applied. The real `pnpm staging:migration-status` read-only CLI is implemented, guarded by explicit staging mode, expected-schema, and acknowledgement flags, but it was not run against staging during this work. An authorized operator must still capture read-only Payload and Prisma migration evidence before any apply decision. Any schema or legacy-domain write requires explicit target authorization, backup, and rollback ownership.
+**No applied-database-state claim is made by this checkpoint.** The canonical 29-name Payload registry and the health endpoint expose application registration inventory, not evidence that those migrations were applied. The real `pnpm staging:migration-status` read-only CLI is implemented, guarded by explicit staging mode, expected-schema, and acknowledgement flags, but it was not run against staging during this work. An authorized operator must still capture read-only Payload and Prisma migration evidence before any apply decision. Any schema or legacy-domain write requires explicit target authorization, backup, and rollback ownership.
 
 Legacy source intake now recognizes reviewed WordPress JSON root arrays and `items`, `posts`, or `lessons` arrays only when each non-empty export has meaningful type, content/title, and identity markers; bounded files are structurally parsed, while larger files retain streaming byte and SHA-256 evidence with record count unavailable. Generic RSS is not WordPress WXR: the reviewed WXR namespace, version, channel, and complete closing structure are required. No real source export was read and no real source import was executed.
 
@@ -40,11 +40,11 @@ Static preflight automation is available via `pnpm staging:static-preflight`; it
 
 **Latest completed staging verification snapshot (2026-08-02):** SHA `c15cd578a953cd6b1dc8a3d4705350a52f7d0812`, preview workflow `30761713446`, conclusion `success`, exact-SHA staging health confirmed. Prior verified snapshot: SHA `3a6613498241c5dd71761c26c3b1e790764db1d5`, workflow `30756831212`, conclusion `success` (retained as historical anchor). The authoritative current branch tip is determined by `git rev-parse HEAD`; do not treat any hardcoded SHA as the immutable current tip.
 
-**Outcome:** `STAGING HARDENING REMEDIATION REQUIRED` — core staging implementation and automated validation are complete, `166/166` release gates and Playwright 188 collected / 148 passed / 40 skipped pass, but formal acceptance remains externally gated and one-time account-action completion still requires durable reservation/finalization.
+**Outcome:** `ACCOUNT-ACTION HARDENING IMPLEMENTED LOCALLY — STAGING MIGRATION AUTHORIZATION REQUIRED` — durable reservation/finalization is implemented in source with behavioral concurrency evidence, while formal acceptance and shared-staging schema verification remain separately gated.
 
 **Technical staging status:** `STAGING TECHNICAL IMPLEMENTATION COMPLETE — ACCEPTANCE PENDING EXTERNAL ACTION`
 
-**Repository-owned staging operations status:** `DECISION-READY FOR CONTROLLED STAGING APPROVAL AFTER HARDENING`
+**Repository-owned staging operations status:** `LOCAL HARDENING COMPLETE — CONTROLLED STAGING MIGRATION APPROVAL REQUIRED`
 
 **Decision-readiness command result:** `DECISION-READY, EXTERNAL APPROVALS PENDING`
 
