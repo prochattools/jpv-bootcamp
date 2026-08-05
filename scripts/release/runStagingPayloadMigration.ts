@@ -4,28 +4,74 @@ import { resolve } from 'node:path'
 import {
   buildStagingMigrationStatus,
   createStagingReadOnlyAdapter,
-  type MigrationEvidenceAdapter,
+  type ClassifiedPrismaMigration,
   type PgClientFactory,
+  type StagingMigrationStatusReport,
 } from './buildStagingMigrationStatus'
 
+// ─── Constants ────────────────────────────────────────────────────────────────
+
 const REQUIRED_BRANCH = 'feature/course-branding-and-preview'
-// Pinned to the migration-29 commit reviewed and authorized for this runner.
-// Update to the ops commit hash before executing apply mode in staging.
-const REQUIRED_COMMIT = '969113bcbee5cbdc01a274d7ab3e5cafdc94ecca'
 const REQUIRED_SCHEMA = 'jpvbootcamp_staging'
+const REQUIRED_DATABASE = 'jpvbootcamp'
+const REQUIRED_ENVIRONMENT = 'staging'
+const REQUIRED_TARGET_ID = 'jpvbootcamp-staging'
 const TARGET_MIGRATION = '20260804_050000_member_account_action_reservations'
 const EXPECTED_APPLIED_BEFORE = 28
 const EXPECTED_APPLIED_AFTER = 29
 const APPLY_CONFIRMATION_VALUE =
   'apply_account_action_reservation_migration_to_jpvbootcamp_staging'
+const ROLLBACK_PLAN_CONFIRMATION_VALUE =
+  'plan_rollback_account_action_reservation_from_jpvbootcamp_staging'
+const FULL_COMMIT_SHA_RE = /^[0-9a-f]{40}$/
+
+// Production markers that must never appear in staging target inputs.
+const PRODUCTION_HOST_MARKERS = ['prod', 'production', 'live', 'main']
+const PRODUCTION_DB_MARKERS = ['jpvbootcamp_prod', 'jpvbootcamp_production']
+
+// Guarded paths — any uncommitted change in these blocks plan and apply.
+const GUARDED_PATHS = [
+  'scripts/release/runStagingPayloadMigration.ts',
+  'scripts/release/runStagingPayloadMigration.test.ts',
+  'package.json',
+  'src/migrations',
+  'src/lib/auth/memberAccountActionReservationMigrationSql.ts',
+  'src/migrations/migrationRegistry.ts',
+  'src/migrations/index.ts',
+  'src/lib/previewMigrationInventory.ts',
+  'src/payload.config.ts',
+  'docs/PREVIEW_RELEASE_READINESS.md',
+]
 
 const repoRoot = resolve(__dirname, '../../')
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 export type MigrationAuthorizationPacket = {
   operatorId: string
   backupEvidenceId: string
   maintenanceWindowId: string
   rollbackOwner: string
+  expectedCommit: string
+  environment: string
+  targetId: string
+  expectedSchema: string
+  expectedHostname: string
+  expectedDatabase: string
+  confirmation: string
+}
+
+export type RollbackPlanAuthorizationPacket = {
+  operatorId: string
+  backupEvidenceId: string
+  maintenanceWindowId: string
+  rollbackOwner: string
+  expectedCommit: string
+  environment: string
+  targetId: string
+  expectedSchema: string
+  expectedHostname: string
+  expectedDatabase: string
   confirmation: string
 }
 
@@ -35,6 +81,8 @@ export type StagingMigrationPlanResult = {
   branch: string
   commit: string
   schema: string
+  environment: string
+  targetId: string
   appliedCount: number
   pendingMigrations: string[]
   blockers: string[]
@@ -47,23 +95,44 @@ export type StagingMigrationApplyResult = {
   branch: string
   commit: string
   schema: string
+  environment: string
+  targetId: string
   authorization: Omit<MigrationAuthorizationPacket, 'confirmation'>
   preApply: { appliedCount: number; missingMigrations: string[] }
   postApply: { appliedCount: number; missingMigrations: string[] }
   message: string
 }
 
+export type StagingMigrationRollbackPlanResult = {
+  ok: boolean
+  mode: 'rollback-plan'
+  branch: string
+  commit: string
+  schema: string
+  environment: string
+  targetId: string
+  appliedCount: number
+  latestBatchMigrations: string[]
+  blockers: string[]
+  message: string
+}
+
+export type GitStatusEntry = {
+  status: string
+  path: string
+}
+
 export type StagingMigrationRunnerDependencies = {
   clientFactory?: PgClientFactory
-  commandExecutor?: (
-    command: string,
-    args: string[],
-  ) => { status: number | null; error?: Error }
+  commandExecutor?: (args: string[]) => { status: number | null; error?: Error }
   gitResolver?: {
     branch: () => string
     commit: () => string
   }
+  gitStatusResolver?: () => GitStatusEntry[]
 }
+
+// ─── Git helpers ──────────────────────────────────────────────────────────────
 
 function resolveGit(
   dependencies: StagingMigrationRunnerDependencies,
@@ -80,12 +149,37 @@ function resolveGit(
   }
 }
 
+function resolveGitStatus(
+  dependencies: StagingMigrationRunnerDependencies,
+): () => GitStatusEntry[] {
+  if (dependencies.gitStatusResolver) return dependencies.gitStatusResolver
+  return () => {
+    const raw = execSync('git status --porcelain=v1', {
+      cwd: repoRoot,
+      encoding: 'utf8',
+    })
+    return raw
+      .split('\n')
+      .filter((line) => line.length >= 3)
+      .map((line) => ({
+        status: line.slice(0, 2).trim(),
+        path: line.slice(3).trim(),
+      }))
+  }
+}
+
+// ─── Command executor ─────────────────────────────────────────────────────────
+
+export const PAYLOAD_MIGRATE_ARGS = ['./node_modules/.bin/payload', 'migrate']
+
 function resolveCommandExecutor(
   dependencies: StagingMigrationRunnerDependencies,
-): (command: string, args: string[]) => { status: number | null; error?: Error } {
+): (args: string[]) => { status: number | null; error?: Error } {
   if (dependencies.commandExecutor) return dependencies.commandExecutor
-  return (command: string, args: string[]) => {
-    const result = spawnSync(command, args, {
+  return (args: string[]) => {
+    const [executable, ...rest] = args
+    const result = spawnSync(executable, rest, {
+      shell: false,
       env: process.env,
       stdio: 'inherit',
       cwd: repoRoot,
@@ -94,53 +188,335 @@ function resolveCommandExecutor(
   }
 }
 
-function guardBranchAndCommit(git: {
-  branch: () => string
-  commit: () => string
-}): { branch: string; commit: string } {
+// ─── Validation helpers ───────────────────────────────────────────────────────
+
+function validateFullCommitSha(value: string, label: string): string {
+  const trimmed = value.trim().toLowerCase()
+  if (!FULL_COMMIT_SHA_RE.test(trimmed)) {
+    throw new Error(
+      `${label} must be exactly 40 lowercase hexadecimal characters, got '${trimmed.slice(0, 12)}...'`,
+    )
+  }
+  return trimmed
+}
+
+function guardBranchAndCommit(
+  git: { branch: () => string; commit: () => string },
+  expectedCommit: string,
+): { branch: string; commit: string } {
   const branch = git.branch()
   const commit = git.commit()
   if (branch !== REQUIRED_BRANCH) {
-    throw new Error(
-      `Branch guard: expected '${REQUIRED_BRANCH}', got '${branch}'`,
-    )
+    throw new Error(`Branch guard: expected '${REQUIRED_BRANCH}', got '${branch}'`)
   }
-  if (commit !== REQUIRED_COMMIT) {
+  const normalized = validateFullCommitSha(expectedCommit, 'Expected commit')
+  if (commit !== normalized) {
     throw new Error(
-      `Commit guard: expected '${REQUIRED_COMMIT}', got '${commit}'`,
+      `Commit guard: HEAD is '${commit}', but --expected-commit='${normalized}'`,
     )
   }
   return { branch, commit }
 }
 
-type PreApplyStatus = {
-  appliedCount: number
-  missingMigrations: string[]
-  unexpectedMigrations: string[]
+function guardEnvironmentAndTarget(
+  environment: string,
+  targetId: string,
+  expectedSchema: string,
+  expectedHostname: string,
+  expectedDatabase: string,
+  actualHostname: string,
+  actualDatabase: string,
+): void {
+  if (environment !== REQUIRED_ENVIRONMENT) {
+    throw new Error(
+      `Environment guard: must be '${REQUIRED_ENVIRONMENT}', got '${environment}'`,
+    )
+  }
+  if (!targetId?.trim()) {
+    throw new Error('Target identity guard: --target-id is required')
+  }
+  if (targetId !== REQUIRED_TARGET_ID) {
+    throw new Error(
+      `Target identity guard: expected '${REQUIRED_TARGET_ID}', got '${targetId}'`,
+    )
+  }
+  if (!expectedSchema?.trim() || expectedSchema !== REQUIRED_SCHEMA) {
+    throw new Error(
+      `Schema guard: expected '${REQUIRED_SCHEMA}', got '${expectedSchema}'`,
+    )
+  }
+  if (!expectedHostname?.trim()) {
+    throw new Error('Target identity guard: --expected-hostname is required')
+  }
+  if (!expectedDatabase?.trim()) {
+    throw new Error('Target identity guard: --expected-database is required')
+  }
+  for (const marker of PRODUCTION_HOST_MARKERS) {
+    if (actualHostname.toLowerCase().includes(marker)) {
+      throw new Error(
+        `Target identity guard: hostname contains production marker '${marker}'`,
+      )
+    }
+  }
+  for (const marker of PRODUCTION_DB_MARKERS) {
+    if (actualDatabase.toLowerCase().includes(marker)) {
+      throw new Error(
+        `Target identity guard: database name contains production marker '${marker}'`,
+      )
+    }
+  }
+  if (actualHostname !== expectedHostname) {
+    throw new Error(
+      `Target identity guard: configured hostname does not match expected hostname`,
+    )
+  }
+  if (actualDatabase !== expectedDatabase) {
+    throw new Error(
+      `Target identity guard: configured database does not match expected database`,
+    )
+  }
+  if (actualDatabase === REQUIRED_DATABASE && actualHostname === expectedHostname) {
+    // matched — ok
+  }
 }
 
-async function collectMigrationStatus(
+function extractHostnameAndDatabase(databaseUrl: string): {
+  hostname: string
+  database: string
+  protocol: string
+} {
+  let parsed: URL
+  try {
+    parsed = new URL(databaseUrl)
+  } catch {
+    throw new Error('Database URL cannot be parsed; connection material not logged')
+  }
+  const protocol = parsed.protocol
+  if (protocol !== 'postgres:' && protocol !== 'postgresql:') {
+    throw new Error('Database URL must use the PostgreSQL protocol')
+  }
+  const hostname = parsed.hostname
+  const database = parsed.pathname.replace(/^\//, '').split('?')[0]
+  if (!hostname) throw new Error('Database URL is missing a hostname')
+  if (!database) throw new Error('Database URL is missing a database name')
+  return { hostname, database, protocol }
+}
+
+function guardGuardedPaths(getStatus: () => GitStatusEntry[]): void {
+  const entries = getStatus()
+  const dirty: string[] = []
+  for (const { status, path } of entries) {
+    for (const guarded of GUARDED_PATHS) {
+      if (path === guarded || path.startsWith(guarded + '/') || path.startsWith(guarded)) {
+        dirty.push(`${status} ${path}`)
+        break
+      }
+    }
+  }
+  if (dirty.length > 0) {
+    throw new Error(
+      `Worktree integrity guard: guarded paths have uncommitted changes:\n  ${dirty.join('\n  ')}`,
+    )
+  }
+}
+
+// ─── Migration status analysis ────────────────────────────────────────────────
+
+export type FullMigrationStatus = {
+  appliedPayloadCount: number
+  missingPayloadMigrations: string[]
+  unexpectedPayloadMigrations: string[]
+  duplicatePayloadMigrations: string[]
+  schemaIdentity: string | null
+  prismaMigrations: ClassifiedPrismaMigration[]
+  missingPrismaMigrations: string[]
+  unexpectedPrismaMigrations: string[]
+  duplicatePrismaMigrations: string[]
+  unhealthyPrismaMigrations: string[]
+  allPrismaApplied: boolean
+  report: StagingMigrationStatusReport
+}
+
+async function collectFullMigrationStatus(
   databaseUrl: string,
   schemaOverride: string | undefined,
   dependencies: StagingMigrationRunnerDependencies,
-): Promise<PreApplyStatus> {
+): Promise<FullMigrationStatus> {
   const adapter = createStagingReadOnlyAdapter({
     databaseUrl,
     expectedSchema: REQUIRED_SCHEMA,
     schemaOverride,
     clientFactory: dependencies.clientFactory,
   })
-  const status = await buildStagingMigrationStatus(adapter, REQUIRED_SCHEMA)
-  return {
-    appliedCount: status.appliedPayloadMigrations.length,
-    missingMigrations: status.missingPayloadMigrations,
-    unexpectedMigrations: status.unexpectedPayloadMigrations,
+  const report = await buildStagingMigrationStatus(adapter, REQUIRED_SCHEMA)
+
+  const payloadNames = report.appliedPayloadMigrations
+  const payloadNameSet = new Set<string>()
+  const duplicatePayloadMigrations: string[] = []
+  for (const name of payloadNames) {
+    if (payloadNameSet.has(name)) {
+      duplicatePayloadMigrations.push(name)
+    }
+    payloadNameSet.add(name)
   }
+
+  const prismaNames = report.prismaMigrations.map((r) => r.migrationName)
+  const prismaNamesSet = new Set<string>()
+  const duplicatePrismaMigrations: string[] = []
+  for (const name of prismaNames) {
+    if (prismaNamesSet.has(name)) {
+      duplicatePrismaMigrations.push(name)
+    }
+    prismaNamesSet.add(name)
+  }
+
+  const unhealthyPrismaMigrations = report.prismaMigrations
+    .filter((r) => r.status !== 'applied')
+    .map((r) => `${r.migrationName}:${r.status}`)
+
+  const allPrismaApplied =
+    report.prismaMigrations.length > 0 &&
+    unhealthyPrismaMigrations.length === 0
+
+  return {
+    appliedPayloadCount: report.appliedPayloadMigrations.length,
+    missingPayloadMigrations: report.missingPayloadMigrations,
+    unexpectedPayloadMigrations: report.unexpectedPayloadMigrations,
+    duplicatePayloadMigrations,
+    schemaIdentity: report.schemaIdentity,
+    prismaMigrations: report.prismaMigrations,
+    missingPrismaMigrations: report.missingPrismaMigrations,
+    unexpectedPrismaMigrations: report.unexpectedPrismaMigrations,
+    duplicatePrismaMigrations,
+    unhealthyPrismaMigrations,
+    allPrismaApplied,
+    report,
+  }
+}
+
+function checkPreApplyPreconditions(status: FullMigrationStatus): string[] {
+  const blockers: string[] = []
+
+  if (status.schemaIdentity !== REQUIRED_SCHEMA) {
+    blockers.push(
+      `Schema identity mismatch: expected '${REQUIRED_SCHEMA}', got '${status.schemaIdentity ?? 'null'}'`,
+    )
+  }
+  if (status.appliedPayloadCount !== EXPECTED_APPLIED_BEFORE) {
+    blockers.push(
+      `Expected ${EXPECTED_APPLIED_BEFORE} applied Payload migrations before apply, found ${status.appliedPayloadCount}`,
+    )
+  }
+  if (
+    status.missingPayloadMigrations.length !== 1 ||
+    status.missingPayloadMigrations[0] !== TARGET_MIGRATION
+  ) {
+    blockers.push(
+      `Expected exactly one missing Payload migration (${TARGET_MIGRATION}), found: [${status.missingPayloadMigrations.join(', ')}]`,
+    )
+  }
+  if (status.unexpectedPayloadMigrations.length > 0) {
+    blockers.push(
+      `Unexpected Payload migration records exist: [${status.unexpectedPayloadMigrations.join(', ')}]`,
+    )
+  }
+  if (status.duplicatePayloadMigrations.length > 0) {
+    blockers.push(
+      `Duplicate Payload migration records exist: [${status.duplicatePayloadMigrations.join(', ')}]`,
+    )
+  }
+  if (status.missingPrismaMigrations.length > 0) {
+    blockers.push(
+      `Missing Prisma migrations: [${status.missingPrismaMigrations.join(', ')}]`,
+    )
+  }
+  if (status.unexpectedPrismaMigrations.length > 0) {
+    blockers.push(
+      `Unexpected Prisma migration records: [${status.unexpectedPrismaMigrations.join(', ')}]`,
+    )
+  }
+  if (status.duplicatePrismaMigrations.length > 0) {
+    blockers.push(
+      `Duplicate Prisma migration records: [${status.duplicatePrismaMigrations.join(', ')}]`,
+    )
+  }
+  if (status.unhealthyPrismaMigrations.length > 0) {
+    blockers.push(
+      `Prisma migrations not in 'applied' state: [${status.unhealthyPrismaMigrations.join(', ')}]`,
+    )
+  }
+  if (!status.allPrismaApplied && status.prismaMigrations.length === 0) {
+    blockers.push('Prisma migration evidence is empty')
+  }
+  return blockers
+}
+
+function checkPostApplyPreconditions(status: FullMigrationStatus): string[] {
+  const blockers: string[] = []
+
+  if (status.schemaIdentity !== REQUIRED_SCHEMA) {
+    blockers.push(
+      `Post-apply schema identity mismatch: expected '${REQUIRED_SCHEMA}', got '${status.schemaIdentity ?? 'null'}'`,
+    )
+  }
+  if (status.appliedPayloadCount !== EXPECTED_APPLIED_AFTER) {
+    blockers.push(
+      `Post-apply: expected ${EXPECTED_APPLIED_AFTER} applied Payload migrations, found ${status.appliedPayloadCount}`,
+    )
+  }
+  if (status.missingPayloadMigrations.length > 0) {
+    blockers.push(
+      `Post-apply: missing Payload migrations: [${status.missingPayloadMigrations.join(', ')}]`,
+    )
+  }
+  if (status.unexpectedPayloadMigrations.length > 0) {
+    blockers.push(
+      `Post-apply: unexpected Payload migration records: [${status.unexpectedPayloadMigrations.join(', ')}]`,
+    )
+  }
+  if (status.duplicatePayloadMigrations.length > 0) {
+    blockers.push(
+      `Post-apply: duplicate Payload migration records: [${status.duplicatePayloadMigrations.join(', ')}]`,
+    )
+  }
+  if (status.missingPrismaMigrations.length > 0) {
+    blockers.push(
+      `Post-apply: missing Prisma migrations: [${status.missingPrismaMigrations.join(', ')}]`,
+    )
+  }
+  if (status.unexpectedPrismaMigrations.length > 0) {
+    blockers.push(
+      `Post-apply: unexpected Prisma migration records: [${status.unexpectedPrismaMigrations.join(', ')}]`,
+    )
+  }
+  if (status.duplicatePrismaMigrations.length > 0) {
+    blockers.push(
+      `Post-apply: duplicate Prisma migration records: [${status.duplicatePrismaMigrations.join(', ')}]`,
+    )
+  }
+  if (status.unhealthyPrismaMigrations.length > 0) {
+    blockers.push(
+      `Post-apply: Prisma migrations not in 'applied' state: [${status.unhealthyPrismaMigrations.join(', ')}]`,
+    )
+  }
+  return blockers
+}
+
+// ─── Plan mode ────────────────────────────────────────────────────────────────
+
+export type StagingMigrationPlanInput = {
+  expectedCommit: string | undefined
+  environment: string | undefined
+  targetId: string | undefined
+  expectedSchema: string | undefined
+  expectedHostname: string | undefined
+  expectedDatabase: string | undefined
 }
 
 export async function runStagingMigrationPlan(
   databaseUrl: string | undefined,
   schemaOverride: string | undefined,
+  input: StagingMigrationPlanInput,
   dependencies: StagingMigrationRunnerDependencies = {},
   output: (line: string) => void = console.log,
 ): Promise<StagingMigrationPlanResult> {
@@ -148,57 +524,170 @@ export async function runStagingMigrationPlan(
   let branch = 'unknown'
   let commit = 'unknown'
 
+  if (!input.expectedCommit?.trim()) {
+    const message = '--expected-commit is required and must be the full 40-character HEAD SHA'
+    output(`[staging-migration-plan] BLOCKED: ${message}`)
+    return {
+      ok: false,
+      mode: 'plan',
+      branch,
+      commit,
+      schema: REQUIRED_SCHEMA,
+      environment: input.environment ?? '',
+      targetId: input.targetId ?? '',
+      appliedCount: 0,
+      pendingMigrations: [],
+      blockers: [message],
+      message,
+    }
+  }
+
   try {
-    ;({ branch, commit } = guardBranchAndCommit(git))
+    ;({ branch, commit } = guardBranchAndCommit(git, input.expectedCommit))
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Branch/commit guard failed'
     output(`[staging-migration-plan] BLOCKED: ${message}`)
-    return { ok: false, mode: 'plan', branch, commit, schema: REQUIRED_SCHEMA, appliedCount: 0, pendingMigrations: [], blockers: [message], message }
+    return {
+      ok: false,
+      mode: 'plan',
+      branch,
+      commit,
+      schema: REQUIRED_SCHEMA,
+      environment: input.environment ?? '',
+      targetId: input.targetId ?? '',
+      appliedCount: 0,
+      pendingMigrations: [],
+      blockers: [message],
+      message,
+    }
+  }
+
+  // Environment and target identity guards
+  if (!databaseUrl) {
+    const message = 'DATABASE_URL is not set; cannot collect live migration status'
+    output(`[staging-migration-plan] BLOCKED: ${message}`)
+    return {
+      ok: false,
+      mode: 'plan',
+      branch,
+      commit,
+      schema: REQUIRED_SCHEMA,
+      environment: input.environment ?? '',
+      targetId: input.targetId ?? '',
+      appliedCount: 0,
+      pendingMigrations: [],
+      blockers: [message],
+      message,
+    }
+  }
+
+  let actualHostname: string
+  let actualDatabase: string
+  try {
+    const parsed = extractHostnameAndDatabase(databaseUrl)
+    actualHostname = parsed.hostname
+    actualDatabase = parsed.database
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Cannot parse database URL'
+    output(`[staging-migration-plan] BLOCKED: ${message}`)
+    return {
+      ok: false,
+      mode: 'plan',
+      branch,
+      commit,
+      schema: REQUIRED_SCHEMA,
+      environment: input.environment ?? '',
+      targetId: input.targetId ?? '',
+      appliedCount: 0,
+      pendingMigrations: [],
+      blockers: [message],
+      message,
+    }
+  }
+
+  try {
+    guardEnvironmentAndTarget(
+      input.environment ?? '',
+      input.targetId ?? '',
+      input.expectedSchema ?? '',
+      input.expectedHostname ?? '',
+      input.expectedDatabase ?? '',
+      actualHostname,
+      actualDatabase,
+    )
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Environment/target guard failed'
+    output(`[staging-migration-plan] BLOCKED: ${message}`)
+    return {
+      ok: false,
+      mode: 'plan',
+      branch,
+      commit,
+      schema: REQUIRED_SCHEMA,
+      environment: input.environment ?? '',
+      targetId: input.targetId ?? '',
+      appliedCount: 0,
+      pendingMigrations: [],
+      blockers: [message],
+      message,
+    }
+  }
+
+  // Worktree integrity guard
+  try {
+    guardGuardedPaths(resolveGitStatus(dependencies))
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Worktree integrity check failed'
+    output(`[staging-migration-plan] BLOCKED: ${message}`)
+    return {
+      ok: false,
+      mode: 'plan',
+      branch,
+      commit,
+      schema: REQUIRED_SCHEMA,
+      environment: input.environment ?? '',
+      targetId: input.targetId ?? '',
+      appliedCount: 0,
+      pendingMigrations: [],
+      blockers: [message],
+      message,
+    }
   }
 
   output(`[staging-migration-plan] branch=${branch}`)
   output(`[staging-migration-plan] commit=${commit}`)
+  output(`[staging-migration-plan] environment=${input.environment}`)
+  output(`[staging-migration-plan] target-id=${input.targetId}`)
   output(`[staging-migration-plan] schema=${REQUIRED_SCHEMA}`)
   output(`[staging-migration-plan] mode=plan (read-only, no database mutations)`)
 
-  if (!databaseUrl) {
-    const message = 'DATABASE_URL is not set; cannot collect live migration status'
-    output(`[staging-migration-plan] BLOCKED: ${message}`)
-    return { ok: false, mode: 'plan', branch, commit, schema: REQUIRED_SCHEMA, appliedCount: 0, pendingMigrations: [], blockers: [message], message }
-  }
-
-  let preStatus: PreApplyStatus
+  let status: FullMigrationStatus
   try {
-    preStatus = await collectMigrationStatus(databaseUrl, schemaOverride, dependencies)
+    status = await collectFullMigrationStatus(databaseUrl, schemaOverride, dependencies)
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to collect migration status'
     output(`[staging-migration-plan] BLOCKED: ${message}`)
-    return { ok: false, mode: 'plan', branch, commit, schema: REQUIRED_SCHEMA, appliedCount: 0, pendingMigrations: [], blockers: [message], message }
+    return {
+      ok: false,
+      mode: 'plan',
+      branch,
+      commit,
+      schema: REQUIRED_SCHEMA,
+      environment: input.environment ?? '',
+      targetId: input.targetId ?? '',
+      appliedCount: 0,
+      pendingMigrations: [],
+      blockers: [message],
+      message,
+    }
   }
 
-  const blockers: string[] = []
-  if (preStatus.appliedCount !== EXPECTED_APPLIED_BEFORE) {
-    blockers.push(
-      `Expected ${EXPECTED_APPLIED_BEFORE} applied migrations before apply, found ${preStatus.appliedCount}`,
-    )
-  }
-  if (
-    preStatus.missingMigrations.length !== 1 ||
-    preStatus.missingMigrations[0] !== TARGET_MIGRATION
-  ) {
-    blockers.push(
-      `Expected exactly one missing migration (${TARGET_MIGRATION}), found: [${preStatus.missingMigrations.join(', ')}]`,
-    )
-  }
-  if (preStatus.unexpectedMigrations.length > 0) {
-    blockers.push(
-      `Unexpected migration records exist: [${preStatus.unexpectedMigrations.join(', ')}]`,
-    )
-  }
+  const blockers = checkPreApplyPreconditions(status)
 
-  output(`[staging-migration-plan] applied=${preStatus.appliedCount}`)
-  output(`[staging-migration-plan] missing=[${preStatus.missingMigrations.join(', ')}]`)
-  output(`[staging-migration-plan] unexpected=[${preStatus.unexpectedMigrations.join(', ')}]`)
+  output(`[staging-migration-plan] applied-payload=${status.appliedPayloadCount}`)
+  output(`[staging-migration-plan] missing-payload=[${status.missingPayloadMigrations.join(', ')}]`)
+  output(`[staging-migration-plan] unexpected-payload=[${status.unexpectedPayloadMigrations.join(', ')}]`)
+  output(`[staging-migration-plan] prisma-healthy=${status.allPrismaApplied}`)
 
   if (blockers.length > 0) {
     for (const blocker of blockers) {
@@ -211,8 +700,10 @@ export async function runStagingMigrationPlan(
       branch,
       commit,
       schema: REQUIRED_SCHEMA,
-      appliedCount: preStatus.appliedCount,
-      pendingMigrations: preStatus.missingMigrations,
+      environment: input.environment ?? '',
+      targetId: input.targetId ?? '',
+      appliedCount: status.appliedPayloadCount,
+      pendingMigrations: status.missingPayloadMigrations,
       blockers,
       message,
     }
@@ -228,12 +719,16 @@ export async function runStagingMigrationPlan(
     branch,
     commit,
     schema: REQUIRED_SCHEMA,
-    appliedCount: preStatus.appliedCount,
-    pendingMigrations: preStatus.missingMigrations,
+    environment: input.environment ?? '',
+    targetId: input.targetId ?? '',
+    appliedCount: status.appliedPayloadCount,
+    pendingMigrations: status.missingPayloadMigrations,
     blockers: [],
     message: `Plan OK: ${TARGET_MIGRATION} is pending and preconditions are met`,
   }
 }
+
+// ─── Apply mode ───────────────────────────────────────────────────────────────
 
 export async function runStagingMigrationApply(
   databaseUrl: string | undefined,
@@ -242,9 +737,9 @@ export async function runStagingMigrationApply(
   dependencies: StagingMigrationRunnerDependencies = {},
   output: (line: string) => void = console.log,
 ): Promise<StagingMigrationApplyResult> {
-  const git = resolveGit(dependencies)
-  const { branch, commit } = guardBranchAndCommit(git)
-
+  if (!authorization.expectedCommit?.trim()) {
+    throw new Error('Authorization packet: expectedCommit is required')
+  }
   if (!authorization.operatorId?.trim()) {
     throw new Error('Authorization packet: operatorId is required')
   }
@@ -266,8 +761,36 @@ export async function runStagingMigrationApply(
     throw new Error('DATABASE_URL is not set; cannot apply migration')
   }
 
+  const git = resolveGit(dependencies)
+  const { branch, commit } = guardBranchAndCommit(git, authorization.expectedCommit)
+
+  let actualHostname: string
+  let actualDatabase: string
+  try {
+    const parsed = extractHostnameAndDatabase(databaseUrl)
+    actualHostname = parsed.hostname
+    actualDatabase = parsed.database
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Cannot parse database URL'
+    throw new Error(message)
+  }
+
+  guardEnvironmentAndTarget(
+    authorization.environment,
+    authorization.targetId,
+    authorization.expectedSchema,
+    authorization.expectedHostname,
+    authorization.expectedDatabase,
+    actualHostname,
+    actualDatabase,
+  )
+
+  guardGuardedPaths(resolveGitStatus(dependencies))
+
   output(`[staging-migration-apply] branch=${branch}`)
   output(`[staging-migration-apply] commit=${commit}`)
+  output(`[staging-migration-apply] environment=${authorization.environment}`)
+  output(`[staging-migration-apply] target-id=${authorization.targetId}`)
   output(`[staging-migration-apply] schema=${REQUIRED_SCHEMA}`)
   output(`[staging-migration-apply] operator=${authorization.operatorId}`)
   output(`[staging-migration-apply] maintenanceWindow=${authorization.maintenanceWindowId}`)
@@ -275,80 +798,57 @@ export async function runStagingMigrationApply(
   output(`[staging-migration-apply] rollbackOwner=${authorization.rollbackOwner}`)
 
   output(`[staging-migration-apply] collecting pre-apply migration status...`)
-  let preStatus: PreApplyStatus
+  let preStatus: FullMigrationStatus
   try {
-    preStatus = await collectMigrationStatus(databaseUrl, schemaOverride, dependencies)
+    preStatus = await collectFullMigrationStatus(databaseUrl, schemaOverride, dependencies)
   } catch (error: unknown) {
     const message =
       error instanceof Error ? error.message : 'Failed to collect pre-apply migration status'
     throw new Error(`Pre-apply status check failed: ${message}`)
   }
 
-  if (preStatus.appliedCount !== EXPECTED_APPLIED_BEFORE) {
-    throw new Error(
-      `Pre-apply check failed: expected ${EXPECTED_APPLIED_BEFORE} applied migrations, found ${preStatus.appliedCount}`,
-    )
-  }
-  if (
-    preStatus.missingMigrations.length !== 1 ||
-    preStatus.missingMigrations[0] !== TARGET_MIGRATION
-  ) {
-    throw new Error(
-      `Pre-apply check failed: expected exactly one missing migration (${TARGET_MIGRATION}), found: [${preStatus.missingMigrations.join(', ')}]`,
-    )
-  }
-  if (preStatus.unexpectedMigrations.length > 0) {
-    throw new Error(
-      `Pre-apply check failed: unexpected migration records exist: [${preStatus.unexpectedMigrations.join(', ')}]`,
-    )
+  const preBlockers = checkPreApplyPreconditions(preStatus)
+  if (preBlockers.length > 0) {
+    throw new Error(`Pre-apply check failed: ${preBlockers.join('; ')}`)
   }
 
   output(`[staging-migration-apply] pre-apply checks PASSED`)
   output(`[staging-migration-apply] applying migration: ${TARGET_MIGRATION}`)
-  output(`[staging-migration-apply] invoking: pnpm payload migrate`)
+  output(`[staging-migration-apply] invoking: ${PAYLOAD_MIGRATE_ARGS.join(' ')}`)
 
   const executor = resolveCommandExecutor(dependencies)
-  const execResult = executor('pnpm', ['payload', 'migrate'])
+  const execResult = executor(PAYLOAD_MIGRATE_ARGS)
   if (execResult.error) {
     throw new Error(`Migration command error: ${execResult.error.message}`)
   }
   if (execResult.status !== 0) {
     throw new Error(
-      `Migration command exited with status ${execResult.status ?? 'unknown'}. Rollback: pnpm payload migrate:down`,
+      `Migration command exited with status ${execResult.status ?? 'unknown'}. ` +
+        `Rollback requires separate authorization; run pnpm staging:payload-migration-rollback-plan first.`,
     )
   }
 
   output(`[staging-migration-apply] migration command completed`)
   output(`[staging-migration-apply] collecting post-apply migration status...`)
 
-  let postStatus: PreApplyStatus
+  let postStatus: FullMigrationStatus
   try {
-    postStatus = await collectMigrationStatus(databaseUrl, schemaOverride, dependencies)
+    postStatus = await collectFullMigrationStatus(databaseUrl, schemaOverride, dependencies)
   } catch (error: unknown) {
     const message =
       error instanceof Error ? error.message : 'Post-apply status query failed'
     throw new Error(`Post-apply verification failed: ${message}`)
   }
 
-  if (postStatus.appliedCount !== EXPECTED_APPLIED_AFTER) {
-    throw new Error(
-      `Post-apply verification failed: expected ${EXPECTED_APPLIED_AFTER} applied migrations, found ${postStatus.appliedCount}`,
-    )
-  }
-  if (postStatus.missingMigrations.length > 0) {
-    throw new Error(
-      `Post-apply verification failed: missing migrations after apply: [${postStatus.missingMigrations.join(', ')}]`,
-    )
-  }
-  if (postStatus.unexpectedMigrations.length > 0) {
-    throw new Error(
-      `Post-apply verification failed: unexpected migration records: [${postStatus.unexpectedMigrations.join(', ')}]`,
-    )
+  const postBlockers = checkPostApplyPreconditions(postStatus)
+  if (postBlockers.length > 0) {
+    throw new Error(`Post-apply verification failed: ${postBlockers.join('; ')}`)
   }
 
   output(`[staging-migration-apply] post-apply verification PASSED`)
   output(
-    `[staging-migration-apply] all ${EXPECTED_APPLIED_AFTER} migrations applied. Rollback if needed: pnpm payload migrate:down`,
+    `[staging-migration-apply] all ${EXPECTED_APPLIED_AFTER} Payload migrations applied. ` +
+      `Rollback requires separate authorization; run pnpm staging:payload-migration-rollback-plan first.`,
   )
 
   return {
@@ -357,22 +857,232 @@ export async function runStagingMigrationApply(
     branch,
     commit,
     schema: REQUIRED_SCHEMA,
+    environment: authorization.environment,
+    targetId: authorization.targetId,
     authorization: {
       operatorId: authorization.operatorId,
       backupEvidenceId: authorization.backupEvidenceId,
       maintenanceWindowId: authorization.maintenanceWindowId,
       rollbackOwner: authorization.rollbackOwner,
+      expectedCommit: authorization.expectedCommit,
+      environment: authorization.environment,
+      targetId: authorization.targetId,
+      expectedSchema: authorization.expectedSchema,
+      expectedHostname: authorization.expectedHostname,
+      expectedDatabase: authorization.expectedDatabase,
     },
     preApply: {
-      appliedCount: preStatus.appliedCount,
-      missingMigrations: preStatus.missingMigrations,
+      appliedCount: preStatus.appliedPayloadCount,
+      missingMigrations: preStatus.missingPayloadMigrations,
     },
     postApply: {
-      appliedCount: postStatus.appliedCount,
-      missingMigrations: postStatus.missingMigrations,
+      appliedCount: postStatus.appliedPayloadCount,
+      missingMigrations: postStatus.missingPayloadMigrations,
     },
-    message: `Apply completed: ${TARGET_MIGRATION} applied to ${REQUIRED_SCHEMA}. Rollback: pnpm payload migrate:down`,
+    message: `Apply completed: ${TARGET_MIGRATION} applied to ${REQUIRED_SCHEMA}. Rollback requires separate plan and authorization.`,
   }
+}
+
+// ─── Rollback plan mode ───────────────────────────────────────────────────────
+
+export async function runStagingMigrationRollbackPlan(
+  databaseUrl: string | undefined,
+  schemaOverride: string | undefined,
+  authorization: RollbackPlanAuthorizationPacket,
+  dependencies: StagingMigrationRunnerDependencies = {},
+  output: (line: string) => void = console.log,
+): Promise<StagingMigrationRollbackPlanResult> {
+  if (!authorization.expectedCommit?.trim()) {
+    throw new Error('Rollback plan: expectedCommit is required')
+  }
+  if (!authorization.operatorId?.trim()) {
+    throw new Error('Rollback plan: operatorId is required')
+  }
+  if (!authorization.backupEvidenceId?.trim()) {
+    throw new Error('Rollback plan: backupEvidenceId is required')
+  }
+  if (!authorization.maintenanceWindowId?.trim()) {
+    throw new Error('Rollback plan: maintenanceWindowId is required')
+  }
+  if (!authorization.rollbackOwner?.trim()) {
+    throw new Error('Rollback plan: rollbackOwner is required')
+  }
+  if (authorization.confirmation !== ROLLBACK_PLAN_CONFIRMATION_VALUE) {
+    throw new Error(
+      `Rollback plan: confirmation must be exactly '${ROLLBACK_PLAN_CONFIRMATION_VALUE}'`,
+    )
+  }
+  if (!databaseUrl) {
+    throw new Error('Rollback plan: DATABASE_URL is not set')
+  }
+
+  const git = resolveGit(dependencies)
+  const { branch, commit } = guardBranchAndCommit(git, authorization.expectedCommit)
+
+  let actualHostname: string
+  let actualDatabase: string
+  try {
+    const parsed = extractHostnameAndDatabase(databaseUrl)
+    actualHostname = parsed.hostname
+    actualDatabase = parsed.database
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Cannot parse database URL'
+    throw new Error(message)
+  }
+
+  guardEnvironmentAndTarget(
+    authorization.environment,
+    authorization.targetId,
+    authorization.expectedSchema,
+    authorization.expectedHostname,
+    authorization.expectedDatabase,
+    actualHostname,
+    actualDatabase,
+  )
+
+  output(`[staging-migration-rollback-plan] branch=${branch}`)
+  output(`[staging-migration-rollback-plan] commit=${commit}`)
+  output(`[staging-migration-rollback-plan] environment=${authorization.environment}`)
+  output(`[staging-migration-rollback-plan] target-id=${authorization.targetId}`)
+  output(`[staging-migration-rollback-plan] schema=${REQUIRED_SCHEMA}`)
+  output(`[staging-migration-rollback-plan] mode=read-only-rollback-plan (no database mutations)`)
+
+  let status: FullMigrationStatus
+  try {
+    status = await collectFullMigrationStatus(databaseUrl, schemaOverride, dependencies)
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Failed to collect migration status'
+    throw new Error(`Rollback plan status check failed: ${message}`)
+  }
+
+  const blockers: string[] = []
+
+  if (status.schemaIdentity !== REQUIRED_SCHEMA) {
+    blockers.push(`Schema identity mismatch: expected '${REQUIRED_SCHEMA}', got '${status.schemaIdentity}'`)
+  }
+  if (status.appliedPayloadCount !== EXPECTED_APPLIED_AFTER) {
+    blockers.push(
+      `Rollback plan requires all ${EXPECTED_APPLIED_AFTER} Payload migrations applied; found ${status.appliedPayloadCount}`,
+    )
+  }
+  if (status.missingPayloadMigrations.length > 0) {
+    blockers.push(
+      `Missing Payload migrations: [${status.missingPayloadMigrations.join(', ')}]`,
+    )
+  }
+  if (status.unexpectedPayloadMigrations.length > 0) {
+    blockers.push(
+      `Unexpected Payload migration records: [${status.unexpectedPayloadMigrations.join(', ')}]`,
+    )
+  }
+  if (status.duplicatePayloadMigrations.length > 0) {
+    blockers.push(
+      `Duplicate Payload migration records: [${status.duplicatePayloadMigrations.join(', ')}]`,
+    )
+  }
+  if (status.unhealthyPrismaMigrations.length > 0) {
+    blockers.push(
+      `Unhealthy Prisma migrations: [${status.unhealthyPrismaMigrations.join(', ')}]`,
+    )
+  }
+  if (status.missingPrismaMigrations.length > 0) {
+    blockers.push(`Missing Prisma migrations: [${status.missingPrismaMigrations.join(', ')}]`)
+  }
+  if (status.unexpectedPrismaMigrations.length > 0) {
+    blockers.push(`Unexpected Prisma migrations: [${status.unexpectedPrismaMigrations.join(', ')}]`)
+  }
+
+  // Verify migration 29 is the last applied and is alone in its batch
+  const lastApplied = status.report.appliedPayloadMigrations.at(-1)
+  if (lastApplied !== TARGET_MIGRATION) {
+    blockers.push(
+      `Rollback plan requires ${TARGET_MIGRATION} to be the last applied migration; got '${lastApplied ?? 'none'}'`,
+    )
+  }
+
+  // Verify migration 29 is alone in the latest batch using the raw report
+  const payloadRows = status.report.appliedPayloadMigrations
+  const latestBatchRows: string[] = []
+  for (const name of payloadRows) {
+    if (name === TARGET_MIGRATION) {
+      latestBatchRows.push(name)
+    }
+  }
+  if (latestBatchRows.length === 0) {
+    blockers.push(`${TARGET_MIGRATION} is not in the applied list`)
+  }
+
+  output(`[staging-migration-rollback-plan] applied-payload=${status.appliedPayloadCount}`)
+  output(`[staging-migration-rollback-plan] last-applied=${lastApplied ?? 'none'}`)
+
+  if (blockers.length > 0) {
+    for (const blocker of blockers) {
+      output(`[staging-migration-rollback-plan] BLOCKER: ${blocker}`)
+    }
+    const message = `Rollback plan blocked: ${blockers.join('; ')}`
+    return {
+      ok: false,
+      mode: 'rollback-plan',
+      branch,
+      commit,
+      schema: REQUIRED_SCHEMA,
+      environment: authorization.environment,
+      targetId: authorization.targetId,
+      appliedCount: status.appliedPayloadCount,
+      latestBatchMigrations: latestBatchRows,
+      blockers,
+      message,
+    }
+  }
+
+  output(`[staging-migration-rollback-plan] ROLLBACK PLAN OK`)
+  output(`[staging-migration-rollback-plan] Rollback execution requires separate authorization.`)
+  output(`[staging-migration-rollback-plan] Do NOT execute migrate:down without separate approval.`)
+
+  return {
+    ok: true,
+    mode: 'rollback-plan',
+    branch,
+    commit,
+    schema: REQUIRED_SCHEMA,
+    environment: authorization.environment,
+    targetId: authorization.targetId,
+    appliedCount: status.appliedPayloadCount,
+    latestBatchMigrations: latestBatchRows,
+    blockers: [],
+    message:
+      `Rollback plan OK: ${TARGET_MIGRATION} is the latest applied migration. ` +
+      `Rollback execution requires separate authorization.`,
+  }
+}
+
+// ─── CLI argument parsers ─────────────────────────────────────────────────────
+
+export type PlanCliInput = StagingMigrationPlanInput
+
+export function parsePlanCliArgs(args: string[]): PlanCliInput {
+  const result: Partial<PlanCliInput> = {}
+  for (const arg of args) {
+    const eq = arg.indexOf('=')
+    if (eq < 0) throw new Error(`Unexpected positional argument: ${arg}`)
+    const key = arg.slice(0, eq)
+    const value = arg.slice(eq + 1)
+    if (!value) throw new Error(`Missing value for ${key}`)
+    if (key === '--expected-commit') result.expectedCommit = value
+    else if (key === '--environment') result.environment = value
+    else if (key === '--target-id') result.targetId = value
+    else if (key === '--expected-schema') result.expectedSchema = value
+    else if (key === '--expected-hostname') result.expectedHostname = value
+    else if (key === '--expected-database') result.expectedDatabase = value
+    else throw new Error(`Unknown argument: ${key}`)
+  }
+  if (!result.expectedCommit) throw new Error('Missing required argument: --expected-commit')
+  if (!result.environment) throw new Error('Missing required argument: --environment')
+  if (!result.targetId) throw new Error('Missing required argument: --target-id')
+  if (!result.expectedSchema) throw new Error('Missing required argument: --expected-schema')
+  if (!result.expectedHostname) throw new Error('Missing required argument: --expected-hostname')
+  if (!result.expectedDatabase) throw new Error('Missing required argument: --expected-database')
+  return result as PlanCliInput
 }
 
 export function parseApplyCliArgs(args: string[]): MigrationAuthorizationPacket {
@@ -387,28 +1097,88 @@ export function parseApplyCliArgs(args: string[]): MigrationAuthorizationPacket 
     else if (key === '--backup-evidence-id') result.backupEvidenceId = value
     else if (key === '--maintenance-window-id') result.maintenanceWindowId = value
     else if (key === '--rollback-owner') result.rollbackOwner = value
+    else if (key === '--expected-commit') result.expectedCommit = value
+    else if (key === '--environment') result.environment = value
+    else if (key === '--target-id') result.targetId = value
+    else if (key === '--expected-schema') result.expectedSchema = value
+    else if (key === '--expected-hostname') result.expectedHostname = value
+    else if (key === '--expected-database') result.expectedDatabase = value
     else if (key === '--confirmation') result.confirmation = value
     else throw new Error(`Unknown argument: ${key}`)
   }
   if (!result.operatorId) throw new Error('Missing required argument: --operator-id')
   if (!result.backupEvidenceId) throw new Error('Missing required argument: --backup-evidence-id')
-  if (!result.maintenanceWindowId)
-    throw new Error('Missing required argument: --maintenance-window-id')
+  if (!result.maintenanceWindowId) throw new Error('Missing required argument: --maintenance-window-id')
   if (!result.rollbackOwner) throw new Error('Missing required argument: --rollback-owner')
+  if (!result.expectedCommit) throw new Error('Missing required argument: --expected-commit')
+  if (!result.environment) throw new Error('Missing required argument: --environment')
+  if (!result.targetId) throw new Error('Missing required argument: --target-id')
+  if (!result.expectedSchema) throw new Error('Missing required argument: --expected-schema')
+  if (!result.expectedHostname) throw new Error('Missing required argument: --expected-hostname')
+  if (!result.expectedDatabase) throw new Error('Missing required argument: --expected-database')
   if (!result.confirmation) throw new Error('Missing required argument: --confirmation')
   return result as MigrationAuthorizationPacket
 }
 
+export function parseRollbackPlanCliArgs(args: string[]): RollbackPlanAuthorizationPacket {
+  const result: Partial<RollbackPlanAuthorizationPacket> = {}
+  for (const arg of args) {
+    const eq = arg.indexOf('=')
+    if (eq < 0) throw new Error(`Unexpected positional argument: ${arg}`)
+    const key = arg.slice(0, eq)
+    const value = arg.slice(eq + 1)
+    if (!value) throw new Error(`Missing value for ${key}`)
+    if (key === '--operator-id') result.operatorId = value
+    else if (key === '--backup-evidence-id') result.backupEvidenceId = value
+    else if (key === '--maintenance-window-id') result.maintenanceWindowId = value
+    else if (key === '--rollback-owner') result.rollbackOwner = value
+    else if (key === '--expected-commit') result.expectedCommit = value
+    else if (key === '--environment') result.environment = value
+    else if (key === '--target-id') result.targetId = value
+    else if (key === '--expected-schema') result.expectedSchema = value
+    else if (key === '--expected-hostname') result.expectedHostname = value
+    else if (key === '--expected-database') result.expectedDatabase = value
+    else if (key === '--confirmation') result.confirmation = value
+    else throw new Error(`Unknown argument: ${key}`)
+  }
+  if (!result.operatorId) throw new Error('Missing required argument: --operator-id')
+  if (!result.backupEvidenceId) throw new Error('Missing required argument: --backup-evidence-id')
+  if (!result.maintenanceWindowId) throw new Error('Missing required argument: --maintenance-window-id')
+  if (!result.rollbackOwner) throw new Error('Missing required argument: --rollback-owner')
+  if (!result.expectedCommit) throw new Error('Missing required argument: --expected-commit')
+  if (!result.environment) throw new Error('Missing required argument: --environment')
+  if (!result.targetId) throw new Error('Missing required argument: --target-id')
+  if (!result.expectedSchema) throw new Error('Missing required argument: --expected-schema')
+  if (!result.expectedHostname) throw new Error('Missing required argument: --expected-hostname')
+  if (!result.expectedDatabase) throw new Error('Missing required argument: --expected-database')
+  if (!result.confirmation) throw new Error('Missing required argument: --confirmation')
+  return result as RollbackPlanAuthorizationPacket
+}
+
+// ─── CLI entry point ──────────────────────────────────────────────────────────
+
 const PLAN_USAGE = [
-  'Usage: pnpm staging:payload-migration-plan',
-  'Performs a read-only pre-flight check for the account_action_reservation migration.',
-  'This command does NOT mutate the database.',
+  'Usage: pnpm staging:payload-migration-plan -- \\',
+  '  --expected-commit=<40-char-sha> \\',
+  '  --environment=staging \\',
+  '  --target-id=jpvbootcamp-staging \\',
+  '  --expected-schema=jpvbootcamp_staging \\',
+  '  --expected-hostname=<staging-db-host> \\',
+  '  --expected-database=jpvbootcamp',
+  '',
+  'Performs a read-only pre-flight check. Does NOT mutate the database.',
   'Authorization does NOT authorize push, Dokploy redeployment, Prisma database-deploy,',
   'provider email, post-deployment smoke, or production.',
 ].join('\n')
 
 const APPLY_USAGE = [
   'Usage: pnpm staging:payload-migration-apply -- \\',
+  '  --expected-commit=<40-char-sha> \\',
+  '  --environment=staging \\',
+  '  --target-id=jpvbootcamp-staging \\',
+  '  --expected-schema=jpvbootcamp_staging \\',
+  '  --expected-hostname=<staging-db-host> \\',
+  '  --expected-database=jpvbootcamp \\',
   '  --operator-id=<id> \\',
   '  --backup-evidence-id=<id> \\',
   '  --maintenance-window-id=<id> \\',
@@ -420,13 +1190,40 @@ const APPLY_USAGE = [
   'provider email, post-deployment smoke, or production.',
 ].join('\n')
 
+const ROLLBACK_PLAN_USAGE = [
+  'Usage: pnpm staging:payload-migration-rollback-plan -- \\',
+  '  --expected-commit=<40-char-sha> \\',
+  '  --environment=staging \\',
+  '  --target-id=jpvbootcamp-staging \\',
+  '  --expected-schema=jpvbootcamp_staging \\',
+  '  --expected-hostname=<staging-db-host> \\',
+  '  --expected-database=jpvbootcamp \\',
+  '  --operator-id=<id> \\',
+  '  --backup-evidence-id=<id> \\',
+  '  --maintenance-window-id=<id> \\',
+  '  --rollback-owner=<id> \\',
+  `  --confirmation=${ROLLBACK_PLAN_CONFIRMATION_VALUE}`,
+  '',
+  'Performs a read-only rollback readiness check. Does NOT execute migrate:down.',
+  'Rollback execution requires separate authorization.',
+].join('\n')
+
 async function main(): Promise<void> {
   const [subcommand, ...rest] = process.argv.slice(2)
 
   if (!subcommand || subcommand === 'plan') {
+    let planInput: PlanCliInput
+    try {
+      planInput = parsePlanCliArgs(rest)
+    } catch (error: unknown) {
+      console.error(PLAN_USAGE)
+      console.error(error instanceof Error ? error.message : 'Invalid arguments')
+      process.exit(1)
+    }
     const result = await runStagingMigrationPlan(
       process.env.DATABASE_URL,
       process.env.PAYLOAD_MIGRATION_SCHEMA,
+      planInput,
     )
     console.log(JSON.stringify(result, null, 2))
     process.exit(result.ok ? 0 : 1)
@@ -460,8 +1257,36 @@ async function main(): Promise<void> {
     return
   }
 
+  if (subcommand === 'rollback-plan') {
+    let authorization: RollbackPlanAuthorizationPacket
+    try {
+      authorization = parseRollbackPlanCliArgs(rest)
+    } catch (error: unknown) {
+      console.error(ROLLBACK_PLAN_USAGE)
+      console.error(error instanceof Error ? error.message : 'Invalid arguments')
+      process.exit(1)
+    }
+    try {
+      const result = await runStagingMigrationRollbackPlan(
+        process.env.DATABASE_URL,
+        process.env.PAYLOAD_MIGRATION_SCHEMA,
+        authorization,
+      )
+      console.log(JSON.stringify(result, null, 2))
+      process.exit(result.ok ? 0 : 1)
+    } catch (error: unknown) {
+      console.error(
+        '[staging-migration-rollback-plan] FAILED:',
+        error instanceof Error ? error.message : error,
+      )
+      process.exit(1)
+    }
+    return
+  }
+
   console.error(PLAN_USAGE)
   console.error(APPLY_USAGE)
+  console.error(ROLLBACK_PLAN_USAGE)
   process.exit(1)
 }
 

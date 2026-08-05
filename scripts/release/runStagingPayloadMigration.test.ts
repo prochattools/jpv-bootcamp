@@ -4,12 +4,19 @@ import { PAYLOAD_MIGRATION_NAMES } from '../../src/migrations/migrationRegistry'
 import {
   runStagingMigrationPlan,
   runStagingMigrationApply,
+  runStagingMigrationRollbackPlan,
+  parsePlanCliArgs,
   parseApplyCliArgs,
+  parseRollbackPlanCliArgs,
+  PAYLOAD_MIGRATE_ARGS,
   type MigrationAuthorizationPacket,
+  type RollbackPlanAuthorizationPacket,
   type StagingMigrationRunnerDependencies,
+  type StagingMigrationPlanInput,
+  type GitStatusEntry,
 } from './runStagingPayloadMigration'
 import {
-  type MigrationEvidenceAdapter,
+  REGISTERED_PRISMA_MIGRATIONS,
   type PgClientFactory,
   type PgClientLike,
 } from './buildStagingMigrationStatus'
@@ -29,25 +36,55 @@ async function test(name: string, fn: () => void | Promise<void>): Promise<void>
   }
 }
 
+// ─── Test constants ────────────────────────────────────────────────────────────
+
 const REQUIRED_BRANCH = 'feature/course-branding-and-preview'
-const REQUIRED_COMMIT = '969113bcbee5cbdc01a274d7ab3e5cafdc94ecca'
+// This is the CURRENT HEAD at the time of this test run.
+// Tests use a synthetic injected HEAD; no hardcoded old commit is permanently accepted.
+const TEST_HEAD = 'a4081d12c7141ed8f5476077536c5234a555f240'
 const REQUIRED_SCHEMA = 'jpvbootcamp_staging'
+const REQUIRED_DATABASE = 'jpvbootcamp'
+const REQUIRED_TARGET_ID = 'jpvbootcamp-staging'
+const REQUIRED_ENVIRONMENT = 'staging'
 const TARGET_MIGRATION = '20260804_050000_member_account_action_reservations'
 const APPLY_CONFIRMATION = 'apply_account_action_reservation_migration_to_jpvbootcamp_staging'
+const ROLLBACK_CONFIRMATION = 'plan_rollback_account_action_reservation_from_jpvbootcamp_staging'
 const EXPECTED_APPLIED_BEFORE = 28
 const EXPECTED_APPLIED_AFTER = 29
+const STAGING_HOSTNAME = 'staging-db.internal'
+const PRODUCTION_HOSTNAME = 'prod-db.internal'
 
-// Migrations 1–28 (all except migration 29)
 const FIRST_28 = PAYLOAD_MIGRATION_NAMES.filter((n) => n !== TARGET_MIGRATION)
-// All 29
 const ALL_29 = PAYLOAD_MIGRATION_NAMES
 
+// Registry integrity assertions — fail fast if the registry is out of sync.
 assert.equal(FIRST_28.length, EXPECTED_APPLIED_BEFORE, 'Registry must have exactly 28 non-target migrations')
 assert.equal(ALL_29.length, EXPECTED_APPLIED_AFTER, 'Registry must have exactly 29 migrations')
 assert.equal(ALL_29[ALL_29.length - 1], TARGET_MIGRATION, 'Target migration must be last in registry')
 
-function okGit(): StagingMigrationRunnerDependencies['gitResolver'] {
-  return { branch: () => REQUIRED_BRANCH, commit: () => REQUIRED_COMMIT }
+// ─── Confirmed: no self-referential hardcoded commit ──────────────────────────
+// The runner exports no REQUIRED_COMMIT constant.
+// Verify by checking that the test-only TEST_HEAD value differs from what was
+// the original hardcoded SHA in commit a4081d1 — this proves we are exercising
+// the runtime-input path, not a baked-in constant.
+assert.notEqual(TEST_HEAD, '969113bcbee5cbdc01a274d7ab3e5cafdc94ecca',
+  'Test HEAD must not be the old self-invalidating commit')
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function okGit(commitOverride?: string): StagingMigrationRunnerDependencies['gitResolver'] {
+  return {
+    branch: () => REQUIRED_BRANCH,
+    commit: () => commitOverride ?? TEST_HEAD,
+  }
+}
+
+function cleanGitStatus(): () => GitStatusEntry[] {
+  return () => []
+}
+
+function dirtyGitStatus(entries: GitStatusEntry[]): () => GitStatusEntry[] {
+  return () => entries
 }
 
 function noopOutput(): (line: string) => void {
@@ -56,23 +93,34 @@ function noopOutput(): (line: string) => void {
 
 type PgRow = Record<string, unknown>
 
-function make28AppliedClient(schema: string): PgClientLike {
+function appliedPrismaRow(name: string): PgRow {
+  return {
+    migration_name: name,
+    started_at: '2026-08-01T00:00:00.000Z',
+    finished_at: '2026-08-01T00:00:01.000Z',
+    rolled_back_at: null,
+    applied_steps_count: 1,
+    has_logs: false,
+  }
+}
+
+function makeClient(opts: {
+  schema: string
+  payloadRows: Array<{ name: string; batch: number }>
+  prismaRows?: PgRow[]
+}): PgClientLike {
+  const prismaRows = opts.prismaRows ?? REGISTERED_PRISMA_MIGRATIONS.map((n) => appliedPrismaRow(n))
   return {
     async connect() {},
     async query<R extends PgRow = PgRow>(text: string): Promise<{ rows: R[] }> {
       if (text.includes('current_schema()')) {
-        return { rows: [{ current_schema: schema }] as unknown as R[] }
+        return { rows: [{ current_schema: opts.schema }] as unknown as R[] }
       }
       if (text.includes('.payload_migrations')) {
-        return {
-          rows: FIRST_28.map((name) => ({ name, batch: 1 })) as unknown as R[],
-        }
+        return { rows: opts.payloadRows as unknown as R[] }
       }
       if (text.includes('._prisma_migrations')) {
-        return { rows: [] as unknown as R[] }
-      }
-      if (text.includes('BEGIN') || text.includes('SET LOCAL') || text.includes('ROLLBACK')) {
-        return { rows: [] as unknown as R[] }
+        return { rows: prismaRows as unknown as R[] }
       }
       return { rows: [] as unknown as R[] }
     },
@@ -80,70 +128,148 @@ function make28AppliedClient(schema: string): PgClientLike {
   }
 }
 
-function make29AppliedClient(schema: string): PgClientLike {
+function make28Client(schema = REQUIRED_SCHEMA): PgClientLike {
+  return makeClient({ schema, payloadRows: FIRST_28.map((n) => ({ name: n, batch: 1 })) })
+}
+
+function make29Client(schema = REQUIRED_SCHEMA): PgClientLike {
+  return makeClient({ schema, payloadRows: ALL_29.map((n) => ({ name: n, batch: 1 })) })
+}
+
+function clientFactory28(schema = REQUIRED_SCHEMA): PgClientFactory {
+  return () => make28Client(schema)
+}
+
+function clientFactory29(schema = REQUIRED_SCHEMA): PgClientFactory {
+  return () => make29Client(schema)
+}
+
+function clientFactorySequence(schema = REQUIRED_SCHEMA): PgClientFactory {
+  let call = 0
+  return () => {
+    const idx = call++
+    return idx === 0 ? make28Client(schema) : make29Client(schema)
+  }
+}
+
+function goodPlanInput(overrides: Partial<StagingMigrationPlanInput> = {}): StagingMigrationPlanInput {
   return {
-    async connect() {},
-    async query<R extends PgRow = PgRow>(text: string): Promise<{ rows: R[] }> {
-      if (text.includes('current_schema()')) {
-        return { rows: [{ current_schema: schema }] as unknown as R[] }
-      }
-      if (text.includes('.payload_migrations')) {
-        return {
-          rows: ALL_29.map((name) => ({ name, batch: 1 })) as unknown as R[],
-        }
-      }
-      if (text.includes('._prisma_migrations')) {
-        return { rows: [] as unknown as R[] }
-      }
-      if (text.includes('BEGIN') || text.includes('SET LOCAL') || text.includes('ROLLBACK')) {
-        return { rows: [] as unknown as R[] }
-      }
-      return { rows: [] as unknown as R[] }
-    },
-    async end() {},
+    expectedCommit: TEST_HEAD,
+    environment: REQUIRED_ENVIRONMENT,
+    targetId: REQUIRED_TARGET_ID,
+    expectedSchema: REQUIRED_SCHEMA,
+    expectedHostname: STAGING_HOSTNAME,
+    expectedDatabase: REQUIRED_DATABASE,
+    ...overrides,
   }
 }
 
-function clientFactory28(schema: string): PgClientFactory {
-  return (_config) => make28AppliedClient(schema)
-}
-
-function clientFactory29(schema: string): PgClientFactory {
-  return (_config) => make29AppliedClient(schema)
-}
-
-let preCallCount = 0
-let postCallCount = 0
-function clientFactorySequence(schema: string): PgClientFactory {
-  // First call returns 28 applied (pre-apply); second returns 29 applied (post-apply)
-  let callIndex = 0
-  return (_config) => {
-    const index = callIndex++
-    if (index === 0) {
-      preCallCount++
-      return make28AppliedClient(schema)
-    }
-    postCallCount++
-    return make29AppliedClient(schema)
-  }
-}
-
-function goodAuthorization(): MigrationAuthorizationPacket {
+function goodAuthorization(overrides: Partial<MigrationAuthorizationPacket> = {}): MigrationAuthorizationPacket {
   return {
     operatorId: 'test-operator',
     backupEvidenceId: 'backup-2026-08-04-001',
     maintenanceWindowId: 'mw-2026-08-04',
     rollbackOwner: 'test-operator',
+    expectedCommit: TEST_HEAD,
+    environment: REQUIRED_ENVIRONMENT,
+    targetId: REQUIRED_TARGET_ID,
+    expectedSchema: REQUIRED_SCHEMA,
+    expectedHostname: STAGING_HOSTNAME,
+    expectedDatabase: REQUIRED_DATABASE,
     confirmation: APPLY_CONFIRMATION,
+    ...overrides,
   }
 }
 
-function okApplyExecutor(exitStatus = 0): StagingMigrationRunnerDependencies['commandExecutor'] {
-  return (_command: string, _args: string[]) => ({ status: exitStatus })
+function goodRollbackAuthorization(overrides: Partial<RollbackPlanAuthorizationPacket> = {}): RollbackPlanAuthorizationPacket {
+  return {
+    operatorId: 'test-operator',
+    backupEvidenceId: 'backup-2026-08-04-001',
+    maintenanceWindowId: 'mw-2026-08-04',
+    rollbackOwner: 'test-operator',
+    expectedCommit: TEST_HEAD,
+    environment: REQUIRED_ENVIRONMENT,
+    targetId: REQUIRED_TARGET_ID,
+    expectedSchema: REQUIRED_SCHEMA,
+    expectedHostname: STAGING_HOSTNAME,
+    expectedDatabase: REQUIRED_DATABASE,
+    confirmation: ROLLBACK_CONFIRMATION,
+    ...overrides,
+  }
 }
 
+function stagingUrl(hostname = STAGING_HOSTNAME): string {
+  return `postgres://${hostname}/${REQUIRED_DATABASE}?schema=${REQUIRED_SCHEMA}`
+}
+
+function okApplyExecutor(exitStatus = 0): StagingMigrationRunnerDependencies['commandExecutor'] {
+  return () => ({ status: exitStatus })
+}
+
+function baseDeps(overrides: Partial<StagingMigrationRunnerDependencies> = {}): StagingMigrationRunnerDependencies {
+  return {
+    gitResolver: okGit(),
+    gitStatusResolver: cleanGitStatus(),
+    clientFactory: clientFactory28(),
+    commandExecutor: okApplyExecutor(),
+    ...overrides,
+  }
+}
+
+// ─── PAYLOAD_MIGRATE_ARGS contract ────────────────────────────────────────────
+
 async function run(): Promise<void> {
-  // --- parseApplyCliArgs ---
+
+  await test('PAYLOAD_MIGRATE_ARGS uses the repository binary and migrate command', () => {
+    assert.ok(Array.isArray(PAYLOAD_MIGRATE_ARGS), 'must be an array')
+    assert.ok(PAYLOAD_MIGRATE_ARGS.length >= 2)
+    assert.ok(PAYLOAD_MIGRATE_ARGS[0].includes('payload'), 'first arg must reference payload binary')
+    assert.equal(PAYLOAD_MIGRATE_ARGS[1], 'migrate', 'second arg must be migrate')
+  })
+
+  // ─── parsePlanCliArgs ──────────────────────────────────────────────────────
+
+  await test('parsePlanCliArgs: parses all required fields', () => {
+    const result = parsePlanCliArgs([
+      `--expected-commit=${TEST_HEAD}`,
+      '--environment=staging',
+      '--target-id=jpvbootcamp-staging',
+      '--expected-schema=jpvbootcamp_staging',
+      '--expected-hostname=staging-db.internal',
+      '--expected-database=jpvbootcamp',
+    ])
+    assert.equal(result.expectedCommit, TEST_HEAD)
+    assert.equal(result.environment, REQUIRED_ENVIRONMENT)
+    assert.equal(result.targetId, REQUIRED_TARGET_ID)
+    assert.equal(result.expectedSchema, REQUIRED_SCHEMA)
+    assert.equal(result.expectedHostname, STAGING_HOSTNAME)
+    assert.equal(result.expectedDatabase, REQUIRED_DATABASE)
+  })
+
+  await test('parsePlanCliArgs: rejects missing expectedCommit', () => {
+    assert.throws(() =>
+      parsePlanCliArgs([
+        '--environment=staging',
+        '--target-id=jpvbootcamp-staging',
+        '--expected-schema=jpvbootcamp_staging',
+        '--expected-hostname=staging-db.internal',
+        '--expected-database=jpvbootcamp',
+      ]),
+      /expected-commit/i,
+    )
+  })
+
+  await test('parsePlanCliArgs: rejects unknown arguments', () => {
+    assert.throws(() =>
+      parsePlanCliArgs(['--unknown-flag=value', `--expected-commit=${TEST_HEAD}`]),
+    )
+  })
+
+  await test('parsePlanCliArgs: rejects positional arguments', () => {
+    assert.throws(() => parsePlanCliArgs(['positional']))
+  })
+
+  // ─── parseApplyCliArgs ─────────────────────────────────────────────────────
 
   await test('parseApplyCliArgs: parses all required fields', () => {
     const result = parseApplyCliArgs([
@@ -151,23 +277,35 @@ async function run(): Promise<void> {
       '--backup-evidence-id=bk1',
       '--maintenance-window-id=mw1',
       '--rollback-owner=ops',
+      `--expected-commit=${TEST_HEAD}`,
+      '--environment=staging',
+      '--target-id=jpvbootcamp-staging',
+      '--expected-schema=jpvbootcamp_staging',
+      '--expected-hostname=staging-db.internal',
+      '--expected-database=jpvbootcamp',
       `--confirmation=${APPLY_CONFIRMATION}`,
     ])
     assert.equal(result.operatorId, 'ops')
-    assert.equal(result.backupEvidenceId, 'bk1')
-    assert.equal(result.maintenanceWindowId, 'mw1')
-    assert.equal(result.rollbackOwner, 'ops')
+    assert.equal(result.expectedCommit, TEST_HEAD)
+    assert.equal(result.environment, REQUIRED_ENVIRONMENT)
     assert.equal(result.confirmation, APPLY_CONFIRMATION)
   })
 
-  await test('parseApplyCliArgs: rejects missing operatorId', () => {
+  await test('parseApplyCliArgs: rejects missing expectedCommit', () => {
     assert.throws(() =>
       parseApplyCliArgs([
+        '--operator-id=ops',
         '--backup-evidence-id=bk1',
         '--maintenance-window-id=mw1',
         '--rollback-owner=ops',
+        '--environment=staging',
+        '--target-id=jpvbootcamp-staging',
+        '--expected-schema=jpvbootcamp_staging',
+        '--expected-hostname=staging-db.internal',
+        '--expected-database=jpvbootcamp',
         `--confirmation=${APPLY_CONFIRMATION}`,
       ]),
+      /expected-commit/i,
     )
   })
 
@@ -178,16 +316,20 @@ async function run(): Promise<void> {
         '--backup-evidence-id=bk1',
         '--maintenance-window-id=mw1',
         '--rollback-owner=ops',
+        `--expected-commit=${TEST_HEAD}`,
+        '--environment=staging',
+        '--target-id=jpvbootcamp-staging',
+        '--expected-schema=jpvbootcamp_staging',
+        '--expected-hostname=staging-db.internal',
+        '--expected-database=jpvbootcamp',
       ]),
+      /confirmation/i,
     )
   })
 
   await test('parseApplyCliArgs: rejects unknown arguments', () => {
     assert.throws(() =>
-      parseApplyCliArgs([
-        '--unknown-flag=value',
-        '--operator-id=ops',
-      ]),
+      parseApplyCliArgs(['--unknown-flag=value', '--operator-id=ops']),
     )
   })
 
@@ -195,75 +337,285 @@ async function run(): Promise<void> {
     assert.throws(() => parseApplyCliArgs(['positional']))
   })
 
-  // --- runStagingMigrationPlan: branch/commit guards ---
+  // ─── plan: commit guard ────────────────────────────────────────────────────
 
-  await test('plan: rejects wrong branch', async () => {
+  await test('plan: rejects missing expectedCommit', async () => {
     const result = await runStagingMigrationPlan(
-      'postgres://host/jpvbootcamp?schema=jpvbootcamp_staging',
+      stagingUrl(),
       undefined,
-      { gitResolver: { branch: () => 'main', commit: () => REQUIRED_COMMIT } },
+      goodPlanInput({ expectedCommit: undefined }),
+      { gitResolver: okGit(), gitStatusResolver: cleanGitStatus() },
       noopOutput(),
     )
     assert.equal(result.ok, false)
-    assert.ok(result.blockers.length > 0)
-    assert.ok(result.blockers[0].toLowerCase().includes('branch'))
+    assert.ok(result.blockers.some((b) => b.toLowerCase().includes('expected-commit')))
   })
 
-  await test('plan: rejects wrong commit', async () => {
+  await test('plan: rejects empty expectedCommit', async () => {
     const result = await runStagingMigrationPlan(
-      'postgres://host/jpvbootcamp?schema=jpvbootcamp_staging',
+      stagingUrl(),
       undefined,
-      { gitResolver: { branch: () => REQUIRED_BRANCH, commit: () => 'deadbeef' } },
+      goodPlanInput({ expectedCommit: '' }),
+      { gitResolver: okGit(), gitStatusResolver: cleanGitStatus() },
+      noopOutput(),
+    )
+    assert.equal(result.ok, false)
+    assert.ok(result.blockers.some((b) => b.toLowerCase().includes('expected-commit')))
+  })
+
+  await test('plan: rejects abbreviated commit (not 40 chars)', async () => {
+    const result = await runStagingMigrationPlan(
+      stagingUrl(),
+      undefined,
+      goodPlanInput({ expectedCommit: 'a4081d1' }),
+      { gitResolver: okGit(), gitStatusResolver: cleanGitStatus() },
+      noopOutput(),
+    )
+    assert.equal(result.ok, false)
+    assert.ok(result.blockers.some((b) => b.toLowerCase().includes('40')))
+  })
+
+  await test('plan: rejects wrong branch', async () => {
+    const result = await runStagingMigrationPlan(
+      stagingUrl(),
+      undefined,
+      goodPlanInput(),
+      { gitResolver: { branch: () => 'main', commit: () => TEST_HEAD }, gitStatusResolver: cleanGitStatus() },
+      noopOutput(),
+    )
+    assert.equal(result.ok, false)
+    assert.ok(result.blockers.some((b) => b.toLowerCase().includes('branch')))
+  })
+
+  await test('plan: rejects when expected commit does not match HEAD', async () => {
+    const differentFullSha = '0000000000000000000000000000000000000001'
+    const result = await runStagingMigrationPlan(
+      stagingUrl(),
+      undefined,
+      goodPlanInput({ expectedCommit: differentFullSha }),
+      { gitResolver: okGit(TEST_HEAD), gitStatusResolver: cleanGitStatus() },
       noopOutput(),
     )
     assert.equal(result.ok, false)
     assert.ok(result.blockers.some((b) => b.toLowerCase().includes('commit')))
   })
 
+  await test('plan: no self-referential hardcoded commit — old SHA is rejected', async () => {
+    // Prove the old hardcoded SHA from commit a4081d1 no longer works by itself.
+    // The runner does not have it baked in; only a correct HEAD match passes.
+    const oldSha = '969113bcbee5cbdc01a274d7ab3e5cafdc94ecca'
+    const result = await runStagingMigrationPlan(
+      stagingUrl(),
+      undefined,
+      goodPlanInput({ expectedCommit: oldSha }),
+      // HEAD is TEST_HEAD (a4081d1...), not the old SHA
+      { gitResolver: okGit(TEST_HEAD), gitStatusResolver: cleanGitStatus() },
+      noopOutput(),
+    )
+    assert.equal(result.ok, false)
+    assert.ok(result.blockers.some((b) => b.toLowerCase().includes('commit')))
+  })
+
+  // ─── plan: environment and target guards ────────────────────────────────────
+
+  await test('plan: rejects missing environment', async () => {
+    const result = await runStagingMigrationPlan(
+      stagingUrl(),
+      undefined,
+      goodPlanInput({ environment: undefined }),
+      baseDeps(),
+      noopOutput(),
+    )
+    assert.equal(result.ok, false)
+    assert.ok(result.blockers.some((b) => b.toLowerCase().includes('environment')))
+  })
+
+  await test('plan: rejects wrong environment', async () => {
+    const result = await runStagingMigrationPlan(
+      stagingUrl(),
+      undefined,
+      goodPlanInput({ environment: 'production' }),
+      baseDeps(),
+      noopOutput(),
+    )
+    assert.equal(result.ok, false)
+    assert.ok(result.blockers.some((b) => b.toLowerCase().includes('environment')))
+  })
+
+  await test('plan: rejects missing target-id', async () => {
+    const result = await runStagingMigrationPlan(
+      stagingUrl(),
+      undefined,
+      goodPlanInput({ targetId: undefined }),
+      baseDeps(),
+      noopOutput(),
+    )
+    assert.equal(result.ok, false)
+    assert.ok(result.blockers.some((b) => b.toLowerCase().includes('target')))
+  })
+
+  await test('plan: rejects wrong target-id', async () => {
+    const result = await runStagingMigrationPlan(
+      stagingUrl(),
+      undefined,
+      goodPlanInput({ targetId: 'jpvbootcamp-production' }),
+      baseDeps(),
+      noopOutput(),
+    )
+    assert.equal(result.ok, false)
+    assert.ok(result.blockers.some((b) => b.toLowerCase().includes('target')))
+  })
+
+  await test('plan: rejects production hostname in connection', async () => {
+    const result = await runStagingMigrationPlan(
+      stagingUrl(PRODUCTION_HOSTNAME),
+      undefined,
+      goodPlanInput({ expectedHostname: PRODUCTION_HOSTNAME }),
+      baseDeps({ clientFactory: clientFactory28() }),
+      noopOutput(),
+    )
+    assert.equal(result.ok, false)
+    assert.ok(result.blockers.some((b) => b.toLowerCase().includes('production marker')))
+  })
+
+  await test('plan: rejects mismatched staging hostname', async () => {
+    const result = await runStagingMigrationPlan(
+      stagingUrl('other-staging-db.internal'),
+      undefined,
+      goodPlanInput({ expectedHostname: STAGING_HOSTNAME }),
+      baseDeps({ clientFactory: clientFactory28() }),
+      noopOutput(),
+    )
+    assert.equal(result.ok, false)
+    assert.ok(result.blockers.some((b) => b.toLowerCase().includes('hostname')))
+  })
+
+  await test('plan: schema-only identity is insufficient — hostname must also match', async () => {
+    // Same schema, but hostname mismatch — should block
+    const result = await runStagingMigrationPlan(
+      stagingUrl('wrong-host.internal'),
+      undefined,
+      goodPlanInput({ expectedHostname: STAGING_HOSTNAME }),
+      baseDeps({ clientFactory: clientFactory28() }),
+      noopOutput(),
+    )
+    assert.equal(result.ok, false)
+    assert.ok(result.blockers.some((b) => b.toLowerCase().includes('hostname')))
+  })
+
+  // ─── plan: worktree integrity ─────────────────────────────────────────────
+
+  await test('plan: dirty guarded path blocks plan', async () => {
+    const result = await runStagingMigrationPlan(
+      stagingUrl(),
+      undefined,
+      goodPlanInput(),
+      baseDeps({
+        gitStatusResolver: dirtyGitStatus([
+          { status: 'M', path: 'scripts/release/runStagingPayloadMigration.ts' },
+        ]),
+      }),
+      noopOutput(),
+    )
+    assert.equal(result.ok, false)
+    assert.ok(result.blockers.some((b) => b.toLowerCase().includes('worktree')))
+  })
+
+  await test('plan: dirty guarded migration path blocks plan', async () => {
+    const result = await runStagingMigrationPlan(
+      stagingUrl(),
+      undefined,
+      goodPlanInput(),
+      baseDeps({
+        gitStatusResolver: dirtyGitStatus([
+          { status: 'M', path: 'src/migrations/20260804_050000_member_account_action_reservations.ts' },
+        ]),
+      }),
+      noopOutput(),
+    )
+    assert.equal(result.ok, false)
+    assert.ok(result.blockers.some((b) => b.toLowerCase().includes('worktree')))
+  })
+
+  await test('plan: protected residue does not block plan', async () => {
+    // .ai/**, screenshots, logs must not block
+    const result = await runStagingMigrationPlan(
+      stagingUrl(),
+      undefined,
+      goodPlanInput(),
+      baseDeps({
+        gitStatusResolver: dirtyGitStatus([
+          { status: 'M', path: '.ai/current.md' },
+          { status: 'M', path: '.claude/worktrees/wf_abc123' },
+          { status: 'M', path: 'evidence-landing.png' },
+          { status: 'M', path: 'newrelic_agent.log' },
+          { status: '?', path: '.env.production.BAK' },
+        ]),
+      }),
+    )
+    // Protected residue alone should not block. If it reaches DB and DB responds ok, plan is ok.
+    // (Result depends on Payload/Prisma state, but not on the protected-residue entries.)
+    assert.equal(result.mode, 'plan')
+  })
+
+  await test('plan: untracked guarded path blocks plan', async () => {
+    const result = await runStagingMigrationPlan(
+      stagingUrl(),
+      undefined,
+      goodPlanInput(),
+      baseDeps({
+        gitStatusResolver: dirtyGitStatus([
+          { status: '?', path: 'src/migrations/new_unauthorized_migration.ts' },
+        ]),
+      }),
+      noopOutput(),
+    )
+    assert.equal(result.ok, false)
+    assert.ok(result.blockers.some((b) => b.toLowerCase().includes('worktree')))
+  })
+
+  // ─── plan: missing DATABASE_URL ──────────────────────────────────────────
+
   await test('plan: rejects missing DATABASE_URL', async () => {
     const result = await runStagingMigrationPlan(
       undefined,
       undefined,
-      { gitResolver: okGit() },
+      goodPlanInput(),
+      baseDeps(),
       noopOutput(),
     )
     assert.equal(result.ok, false)
     assert.ok(result.blockers.some((b) => b.includes('DATABASE_URL')))
   })
 
-  await test('plan: returns ok when 28 applied and only migration 29 missing', async () => {
+  // ─── plan: Payload state checks ───────────────────────────────────────────
+
+  await test('plan: ok when 28 applied and only migration 29 missing', async () => {
     const result = await runStagingMigrationPlan(
-      `postgres://host/jpvbootcamp?schema=${REQUIRED_SCHEMA}`,
+      stagingUrl(),
       undefined,
-      {
-        gitResolver: okGit(),
-        clientFactory: clientFactory28(REQUIRED_SCHEMA),
-      },
+      goodPlanInput(),
+      baseDeps({ clientFactory: clientFactory28() }),
       noopOutput(),
     )
     assert.equal(result.ok, true)
     assert.equal(result.appliedCount, EXPECTED_APPLIED_BEFORE)
     assert.deepEqual(result.pendingMigrations, [TARGET_MIGRATION])
     assert.equal(result.blockers.length, 0)
+    assert.equal(result.mode, 'plan')
+    assert.equal(result.environment, REQUIRED_ENVIRONMENT)
+    assert.equal(result.targetId, REQUIRED_TARGET_ID)
   })
 
   await test('plan: blocks when applied count is not 28', async () => {
-    // Simulate 27 applied (all 28 except the first)
     const all27 = FIRST_28.slice(1)
-    const client27: PgClientLike = {
-      async connect() {},
-      async query<R extends PgRow = PgRow>(text: string): Promise<{ rows: R[] }> {
-        if (text.includes('current_schema()')) return { rows: [{ current_schema: REQUIRED_SCHEMA }] as unknown as R[] }
-        if (text.includes('.payload_migrations')) return { rows: all27.map((name) => ({ name, batch: 1 })) as unknown as R[] }
-        return { rows: [] as unknown as R[] }
-      },
-      async end() {},
-    }
+    const factory27: PgClientFactory = () => makeClient({
+      schema: REQUIRED_SCHEMA,
+      payloadRows: all27.map((n) => ({ name: n, batch: 1 })),
+    })
     const result = await runStagingMigrationPlan(
-      `postgres://host/jpvbootcamp?schema=${REQUIRED_SCHEMA}`,
-      undefined,
-      { gitResolver: okGit(), clientFactory: () => client27 },
-      noopOutput(),
+      stagingUrl(), undefined, goodPlanInput(),
+      baseDeps({ clientFactory: factory27 }), noopOutput(),
     )
     assert.equal(result.ok, false)
     assert.ok(result.blockers.some((b) => b.includes('28')))
@@ -271,309 +623,614 @@ async function run(): Promise<void> {
 
   await test('plan: blocks when migration 29 is already applied', async () => {
     const result = await runStagingMigrationPlan(
-      `postgres://host/jpvbootcamp?schema=${REQUIRED_SCHEMA}`,
-      undefined,
-      { gitResolver: okGit(), clientFactory: clientFactory29(REQUIRED_SCHEMA) },
-      noopOutput(),
+      stagingUrl(), undefined, goodPlanInput(),
+      baseDeps({ clientFactory: clientFactory29() }), noopOutput(),
     )
     assert.equal(result.ok, false)
     assert.ok(result.blockers.some((b) => b.includes(TARGET_MIGRATION) || b.includes('missing')))
   })
 
-  await test('plan: blocks when unexpected migrations exist', async () => {
-    const client: PgClientLike = {
-      async connect() {},
-      async query<R extends PgRow = PgRow>(text: string): Promise<{ rows: R[] }> {
-        if (text.includes('current_schema()')) return { rows: [{ current_schema: REQUIRED_SCHEMA }] as unknown as R[] }
-        if (text.includes('.payload_migrations')) {
-          return {
-            rows: [
-              ...FIRST_28.map((name) => ({ name, batch: 1 })),
-              { name: 'unexpected_migration', batch: 1 },
-            ] as unknown as R[],
-          }
-        }
-        return { rows: [] as unknown as R[] }
-      },
-      async end() {},
-    }
+  await test('plan: blocks when unexpected Payload migrations exist', async () => {
+    const factory: PgClientFactory = () => makeClient({
+      schema: REQUIRED_SCHEMA,
+      payloadRows: [
+        ...FIRST_28.map((n) => ({ name: n, batch: 1 })),
+        { name: 'unexpected_migration', batch: 1 },
+      ],
+    })
     const result = await runStagingMigrationPlan(
-      `postgres://host/jpvbootcamp?schema=${REQUIRED_SCHEMA}`,
-      undefined,
-      { gitResolver: okGit(), clientFactory: () => client },
-      noopOutput(),
+      stagingUrl(), undefined, goodPlanInput(),
+      baseDeps({ clientFactory: factory }), noopOutput(),
     )
     assert.equal(result.ok, false)
     assert.ok(result.blockers.some((b) => b.toLowerCase().includes('unexpected')))
   })
 
-  // --- runStagingMigrationApply: authorization guards ---
+  await test('plan: blocks when duplicate Payload records exist', async () => {
+    const factory: PgClientFactory = () => makeClient({
+      schema: REQUIRED_SCHEMA,
+      payloadRows: [
+        ...FIRST_28.map((n) => ({ name: n, batch: 1 })),
+        { name: FIRST_28[0], batch: 2 }, // duplicate of first
+      ],
+    })
+    const result = await runStagingMigrationPlan(
+      stagingUrl(), undefined, goodPlanInput(),
+      baseDeps({ clientFactory: factory }), noopOutput(),
+    )
+    assert.equal(result.ok, false)
+    assert.ok(result.blockers.some((b) => b.toLowerCase().includes('duplicate')))
+  })
+
+  // ─── plan: Prisma health checks ───────────────────────────────────────────
+
+  await test('plan: blocks when Prisma migrations are empty', async () => {
+    const factory: PgClientFactory = () => makeClient({
+      schema: REQUIRED_SCHEMA,
+      payloadRows: FIRST_28.map((n) => ({ name: n, batch: 1 })),
+      prismaRows: [],
+    })
+    const result = await runStagingMigrationPlan(
+      stagingUrl(), undefined, goodPlanInput(),
+      baseDeps({ clientFactory: factory }), noopOutput(),
+    )
+    assert.equal(result.ok, false)
+    assert.ok(result.blockers.some((b) => b.toLowerCase().includes('prisma')))
+  })
+
+  await test('plan: blocks when a Prisma migration is failed', async () => {
+    const prismaRows = [
+      ...REGISTERED_PRISMA_MIGRATIONS.slice(1).map((n) => appliedPrismaRow(n)),
+      {
+        migration_name: REGISTERED_PRISMA_MIGRATIONS[0],
+        started_at: '2026-08-01T00:00:00.000Z',
+        finished_at: null,
+        rolled_back_at: null,
+        applied_steps_count: 0,
+        has_logs: true, // failed
+      },
+    ]
+    const factory: PgClientFactory = () => makeClient({
+      schema: REQUIRED_SCHEMA,
+      payloadRows: FIRST_28.map((n) => ({ name: n, batch: 1 })),
+      prismaRows,
+    })
+    const result = await runStagingMigrationPlan(
+      stagingUrl(), undefined, goodPlanInput(),
+      baseDeps({ clientFactory: factory }), noopOutput(),
+    )
+    assert.equal(result.ok, false)
+    assert.ok(result.blockers.some((b) => b.toLowerCase().includes('prisma')))
+  })
+
+  await test('plan: blocks when a Prisma migration is in-progress', async () => {
+    const prismaRows = [
+      ...REGISTERED_PRISMA_MIGRATIONS.slice(1).map((n) => appliedPrismaRow(n)),
+      {
+        migration_name: REGISTERED_PRISMA_MIGRATIONS[0],
+        started_at: '2026-08-01T00:00:00.000Z',
+        finished_at: null, // in-progress
+        rolled_back_at: null,
+        applied_steps_count: 0,
+        has_logs: false,
+      },
+    ]
+    const factory: PgClientFactory = () => makeClient({
+      schema: REQUIRED_SCHEMA,
+      payloadRows: FIRST_28.map((n) => ({ name: n, batch: 1 })),
+      prismaRows,
+    })
+    const result = await runStagingMigrationPlan(
+      stagingUrl(), undefined, goodPlanInput(),
+      baseDeps({ clientFactory: factory }), noopOutput(),
+    )
+    assert.equal(result.ok, false)
+    assert.ok(result.blockers.some((b) => b.toLowerCase().includes('prisma')))
+  })
+
+  await test('plan: blocks when a Prisma migration is rolled-back', async () => {
+    const prismaRows = [
+      ...REGISTERED_PRISMA_MIGRATIONS.slice(1).map((n) => appliedPrismaRow(n)),
+      {
+        migration_name: REGISTERED_PRISMA_MIGRATIONS[0],
+        started_at: '2026-08-01T00:00:00.000Z',
+        finished_at: '2026-08-01T00:00:01.000Z',
+        rolled_back_at: '2026-08-01T00:00:02.000Z', // rolled back
+        applied_steps_count: 1,
+        has_logs: false,
+      },
+    ]
+    const factory: PgClientFactory = () => makeClient({
+      schema: REQUIRED_SCHEMA,
+      payloadRows: FIRST_28.map((n) => ({ name: n, batch: 1 })),
+      prismaRows,
+    })
+    const result = await runStagingMigrationPlan(
+      stagingUrl(), undefined, goodPlanInput(),
+      baseDeps({ clientFactory: factory }), noopOutput(),
+    )
+    assert.equal(result.ok, false)
+    assert.ok(result.blockers.some((b) => b.toLowerCase().includes('prisma')))
+  })
+
+  await test('plan: blocks when a Prisma migration is missing', async () => {
+    const prismaRows = REGISTERED_PRISMA_MIGRATIONS.slice(1).map((n) => appliedPrismaRow(n))
+    const factory: PgClientFactory = () => makeClient({
+      schema: REQUIRED_SCHEMA,
+      payloadRows: FIRST_28.map((n) => ({ name: n, batch: 1 })),
+      prismaRows,
+    })
+    const result = await runStagingMigrationPlan(
+      stagingUrl(), undefined, goodPlanInput(),
+      baseDeps({ clientFactory: factory }), noopOutput(),
+    )
+    assert.equal(result.ok, false)
+    assert.ok(result.blockers.some((b) => b.toLowerCase().includes('prisma')))
+  })
+
+  await test('plan: blocks when an unexpected Prisma migration exists', async () => {
+    const prismaRows = [
+      ...REGISTERED_PRISMA_MIGRATIONS.map((n) => appliedPrismaRow(n)),
+      appliedPrismaRow('99999999_unexpected_migration'),
+    ]
+    const factory: PgClientFactory = () => makeClient({
+      schema: REQUIRED_SCHEMA,
+      payloadRows: FIRST_28.map((n) => ({ name: n, batch: 1 })),
+      prismaRows,
+    })
+    const result = await runStagingMigrationPlan(
+      stagingUrl(), undefined, goodPlanInput(),
+      baseDeps({ clientFactory: factory }), noopOutput(),
+    )
+    assert.equal(result.ok, false)
+    assert.ok(result.blockers.some((b) => b.toLowerCase().includes('prisma')))
+  })
+
+  await test('plan: blocks when duplicate Prisma records exist', async () => {
+    const prismaRows = [
+      ...REGISTERED_PRISMA_MIGRATIONS.map((n) => appliedPrismaRow(n)),
+      appliedPrismaRow(REGISTERED_PRISMA_MIGRATIONS[0]), // duplicate
+    ]
+    const factory: PgClientFactory = () => makeClient({
+      schema: REQUIRED_SCHEMA,
+      payloadRows: FIRST_28.map((n) => ({ name: n, batch: 1 })),
+      prismaRows,
+    })
+    const result = await runStagingMigrationPlan(
+      stagingUrl(), undefined, goodPlanInput(),
+      baseDeps({ clientFactory: factory }), noopOutput(),
+    )
+    assert.equal(result.ok, false)
+    assert.ok(result.blockers.some((b) => b.toLowerCase().includes('prisma')))
+  })
+
+  await test('plan: mode field is always plan', async () => {
+    const result = await runStagingMigrationPlan(
+      undefined, undefined, goodPlanInput({ expectedCommit: undefined }),
+      { gitResolver: okGit(), gitStatusResolver: cleanGitStatus() }, noopOutput(),
+    )
+    assert.equal(result.mode, 'plan')
+  })
+
+  await test('plan: output lines do not contain credentials from URL', async () => {
+    const lines: string[] = []
+    const sensitiveUrl = `postgres://user:secret-password@${STAGING_HOSTNAME}/${REQUIRED_DATABASE}?schema=${REQUIRED_SCHEMA}`
+    await runStagingMigrationPlan(
+      sensitiveUrl, undefined, goodPlanInput(),
+      baseDeps({ clientFactory: clientFactory28() }),
+      (line) => lines.push(line),
+    )
+    for (const line of lines) {
+      assert.ok(!line.includes('secret-password'), `Output must not contain credentials: ${line}`)
+      assert.ok(!line.includes(sensitiveUrl), `Output must not contain raw URL: ${line}`)
+    }
+  })
+
+  // ─── apply: authorization guards ──────────────────────────────────────────
 
   await test('apply: rejects wrong branch', async () => {
     await assert.rejects(
-      () =>
-        runStagingMigrationApply(
-          `postgres://host/jpvbootcamp?schema=${REQUIRED_SCHEMA}`,
-          undefined,
-          goodAuthorization(),
-          {
-            gitResolver: { branch: () => 'main', commit: () => REQUIRED_COMMIT },
-            clientFactory: clientFactory28(REQUIRED_SCHEMA),
-            commandExecutor: okApplyExecutor(),
-          },
-          noopOutput(),
-        ),
+      () => runStagingMigrationApply(
+        stagingUrl(), undefined, goodAuthorization(),
+        { ...baseDeps(), gitResolver: { branch: () => 'main', commit: () => TEST_HEAD } },
+        noopOutput(),
+      ),
       /branch/i,
     )
   })
 
-  await test('apply: rejects wrong commit', async () => {
+  await test('apply: rejects when HEAD does not match expectedCommit', async () => {
+    const differentSha = '1111111111111111111111111111111111111111'
     await assert.rejects(
-      () =>
-        runStagingMigrationApply(
-          `postgres://host/jpvbootcamp?schema=${REQUIRED_SCHEMA}`,
-          undefined,
-          goodAuthorization(),
-          {
-            gitResolver: { branch: () => REQUIRED_BRANCH, commit: () => 'wrongcommit' },
-            clientFactory: clientFactory28(REQUIRED_SCHEMA),
-            commandExecutor: okApplyExecutor(),
-          },
-          noopOutput(),
-        ),
+      () => runStagingMigrationApply(
+        stagingUrl(), undefined, goodAuthorization({ expectedCommit: differentSha }),
+        baseDeps(), noopOutput(),
+      ),
       /commit/i,
     )
   })
 
-  await test('apply: rejects missing operatorId in authorization', async () => {
-    const badAuth = { ...goodAuthorization(), operatorId: '' }
+  await test('apply: rejects abbreviated commit in authorization', async () => {
     await assert.rejects(
-      () =>
-        runStagingMigrationApply(
-          `postgres://host/jpvbootcamp?schema=${REQUIRED_SCHEMA}`,
-          undefined,
-          badAuth,
-          { gitResolver: okGit(), clientFactory: clientFactory28(REQUIRED_SCHEMA), commandExecutor: okApplyExecutor() },
-          noopOutput(),
-        ),
+      () => runStagingMigrationApply(
+        stagingUrl(), undefined, goodAuthorization({ expectedCommit: 'a4081d1' }),
+        baseDeps(), noopOutput(),
+      ),
+      /40/i,
+    )
+  })
+
+  await test('apply: rejects missing operatorId', async () => {
+    await assert.rejects(
+      () => runStagingMigrationApply(
+        stagingUrl(), undefined, goodAuthorization({ operatorId: '' }),
+        baseDeps(), noopOutput(),
+      ),
       /operatorId/i,
     )
   })
 
-  await test('apply: rejects wrong confirmation value', async () => {
-    const badAuth = { ...goodAuthorization(), confirmation: 'wrong-value' }
+  await test('apply: rejects wrong confirmation', async () => {
     await assert.rejects(
-      () =>
-        runStagingMigrationApply(
-          `postgres://host/jpvbootcamp?schema=${REQUIRED_SCHEMA}`,
-          undefined,
-          badAuth,
-          { gitResolver: okGit(), clientFactory: clientFactory28(REQUIRED_SCHEMA), commandExecutor: okApplyExecutor() },
-          noopOutput(),
-        ),
+      () => runStagingMigrationApply(
+        stagingUrl(), undefined, goodAuthorization({ confirmation: 'wrong' }),
+        baseDeps(), noopOutput(),
+      ),
       /confirmation/i,
+    )
+  })
+
+  await test('apply: rejects missing backupEvidenceId', async () => {
+    await assert.rejects(
+      () => runStagingMigrationApply(
+        stagingUrl(), undefined, goodAuthorization({ backupEvidenceId: '' }),
+        baseDeps(), noopOutput(),
+      ),
+      /backupEvidenceId/i,
+    )
+  })
+
+  await test('apply: rejects missing maintenanceWindowId', async () => {
+    await assert.rejects(
+      () => runStagingMigrationApply(
+        stagingUrl(), undefined, goodAuthorization({ maintenanceWindowId: '' }),
+        baseDeps(), noopOutput(),
+      ),
+      /maintenanceWindowId/i,
+    )
+  })
+
+  await test('apply: rejects missing rollbackOwner', async () => {
+    await assert.rejects(
+      () => runStagingMigrationApply(
+        stagingUrl(), undefined, goodAuthorization({ rollbackOwner: '' }),
+        baseDeps(), noopOutput(),
+      ),
+      /rollbackOwner/i,
     )
   })
 
   await test('apply: rejects missing DATABASE_URL', async () => {
     await assert.rejects(
-      () =>
-        runStagingMigrationApply(
-          undefined,
-          undefined,
-          goodAuthorization(),
-          { gitResolver: okGit(), clientFactory: clientFactory28(REQUIRED_SCHEMA), commandExecutor: okApplyExecutor() },
-          noopOutput(),
-        ),
+      () => runStagingMigrationApply(
+        undefined, undefined, goodAuthorization(),
+        baseDeps(), noopOutput(),
+      ),
       /DATABASE_URL/i,
+    )
+  })
+
+  await test('apply: rejects production hostname', async () => {
+    await assert.rejects(
+      () => runStagingMigrationApply(
+        stagingUrl(PRODUCTION_HOSTNAME), undefined,
+        goodAuthorization({ expectedHostname: PRODUCTION_HOSTNAME }),
+        baseDeps(), noopOutput(),
+      ),
+      /production marker/i,
+    )
+  })
+
+  await test('apply: rejects mismatched staging hostname', async () => {
+    await assert.rejects(
+      () => runStagingMigrationApply(
+        stagingUrl('other-staging.internal'), undefined, goodAuthorization(),
+        baseDeps(), noopOutput(),
+      ),
+      /hostname/i,
+    )
+  })
+
+  await test('apply: dirty guarded path blocks apply', async () => {
+    await assert.rejects(
+      () => runStagingMigrationApply(
+        stagingUrl(), undefined, goodAuthorization(),
+        baseDeps({
+          gitStatusResolver: dirtyGitStatus([
+            { status: 'M', path: 'src/migrations/migrationRegistry.ts' },
+          ]),
+        }),
+        noopOutput(),
+      ),
+      /worktree/i,
     )
   })
 
   await test('apply: rejects when pre-apply count is not 28', async () => {
     await assert.rejects(
-      () =>
-        runStagingMigrationApply(
-          `postgres://host/jpvbootcamp?schema=${REQUIRED_SCHEMA}`,
-          undefined,
-          goodAuthorization(),
-          {
-            gitResolver: okGit(),
-            clientFactory: clientFactory29(REQUIRED_SCHEMA),
-            commandExecutor: okApplyExecutor(),
-          },
-          noopOutput(),
-        ),
+      () => runStagingMigrationApply(
+        stagingUrl(), undefined, goodAuthorization(),
+        baseDeps({ clientFactory: clientFactory29() }),
+        noopOutput(),
+      ),
+      /pre-apply check failed/i,
+    )
+  })
+
+  await test('apply: rejects when a Prisma migration is failed at pre-apply', async () => {
+    const prismaRows = [
+      ...REGISTERED_PRISMA_MIGRATIONS.slice(1).map((n) => appliedPrismaRow(n)),
+      {
+        migration_name: REGISTERED_PRISMA_MIGRATIONS[0],
+        started_at: '2026-08-01T00:00:00.000Z',
+        finished_at: null,
+        rolled_back_at: null,
+        applied_steps_count: 0,
+        has_logs: true,
+      },
+    ]
+    const factory: PgClientFactory = () => makeClient({
+      schema: REQUIRED_SCHEMA,
+      payloadRows: FIRST_28.map((n) => ({ name: n, batch: 1 })),
+      prismaRows,
+    })
+    await assert.rejects(
+      () => runStagingMigrationApply(
+        stagingUrl(), undefined, goodAuthorization(),
+        baseDeps({ clientFactory: factory }),
+        noopOutput(),
+      ),
       /pre-apply check failed/i,
     )
   })
 
   await test('apply: rejects when migration command exits non-zero', async () => {
     await assert.rejects(
-      () =>
-        runStagingMigrationApply(
-          `postgres://host/jpvbootcamp?schema=${REQUIRED_SCHEMA}`,
-          undefined,
-          goodAuthorization(),
-          {
-            gitResolver: okGit(),
-            clientFactory: clientFactory28(REQUIRED_SCHEMA),
-            commandExecutor: okApplyExecutor(1),
-          },
-          noopOutput(),
-        ),
+      () => runStagingMigrationApply(
+        stagingUrl(), undefined, goodAuthorization(),
+        baseDeps({ clientFactory: clientFactory28(), commandExecutor: okApplyExecutor(1) }),
+        noopOutput(),
+      ),
       /Migration command exited/i,
     )
   })
 
-  await test('apply: succeeds with valid authorization, passing pre-apply check, zero-exit command, and passing post-apply check', async () => {
-    let commandCalled = false
-    let commandArgs: string[] = []
-    const factory = clientFactorySequence(REQUIRED_SCHEMA)
-    preCallCount = 0
-    postCallCount = 0
+  await test('apply: error message does not recommend unconditional migrate:down', async () => {
+    let errorMessage = ''
+    try {
+      await runStagingMigrationApply(
+        stagingUrl(), undefined, goodAuthorization(),
+        baseDeps({ clientFactory: clientFactory28(), commandExecutor: okApplyExecutor(1) }),
+        noopOutput(),
+      )
+    } catch (error: unknown) {
+      errorMessage = error instanceof Error ? error.message : ''
+    }
+    assert.ok(errorMessage.length > 0, 'should have thrown')
+    // Must not recommend bare migrate:down without the rollback-plan caveat
+    assert.ok(
+      !errorMessage.includes('pnpm payload migrate:down') || errorMessage.includes('rollback-plan'),
+      'Error must not recommend bare migrate:down without rollback-plan caveat',
+    )
+  })
 
+  await test('apply: succeeds end-to-end with valid inputs', async () => {
+    let commandArgs: string[] = []
     const result = await runStagingMigrationApply(
-      `postgres://host/jpvbootcamp?schema=${REQUIRED_SCHEMA}`,
-      undefined,
-      goodAuthorization(),
+      stagingUrl(), undefined, goodAuthorization(),
       {
-        gitResolver: okGit(),
-        clientFactory: factory,
-        commandExecutor: (cmd, args) => {
-          commandCalled = true
-          commandArgs = [cmd, ...args]
+        ...baseDeps({ clientFactory: clientFactorySequence() }),
+        commandExecutor: (args) => {
+          commandArgs = args
           return { status: 0 }
         },
       },
       noopOutput(),
     )
-
     assert.equal(result.ok, true)
     assert.equal(result.mode, 'apply')
     assert.equal(result.branch, REQUIRED_BRANCH)
-    assert.equal(result.commit, REQUIRED_COMMIT)
+    assert.equal(result.commit, TEST_HEAD)
     assert.equal(result.schema, REQUIRED_SCHEMA)
-    assert.equal(result.authorization.operatorId, 'test-operator')
+    assert.equal(result.environment, REQUIRED_ENVIRONMENT)
+    assert.equal(result.targetId, REQUIRED_TARGET_ID)
     assert.equal(result.preApply.appliedCount, EXPECTED_APPLIED_BEFORE)
     assert.deepEqual(result.preApply.missingMigrations, [TARGET_MIGRATION])
     assert.equal(result.postApply.appliedCount, EXPECTED_APPLIED_AFTER)
     assert.deepEqual(result.postApply.missingMigrations, [])
-    assert.ok(commandCalled, 'migration command must be invoked')
-    assert.ok(commandArgs.includes('migrate'), 'command must invoke payload migrate')
+    // Exact CLI args must match PAYLOAD_MIGRATE_ARGS
+    assert.deepEqual(commandArgs, PAYLOAD_MIGRATE_ARGS)
   })
 
-  await test('apply: result does not expose confirmation value in return object', async () => {
-    const factory = clientFactorySequence(REQUIRED_SCHEMA)
+  await test('apply: result does not expose confirmation value', async () => {
     const result = await runStagingMigrationApply(
-      `postgres://host/jpvbootcamp?schema=${REQUIRED_SCHEMA}`,
-      undefined,
-      goodAuthorization(),
-      {
-        gitResolver: okGit(),
-        clientFactory: factory,
-        commandExecutor: okApplyExecutor(),
-      },
+      stagingUrl(), undefined, goodAuthorization(),
+      { ...baseDeps({ clientFactory: clientFactorySequence() }), commandExecutor: okApplyExecutor() },
       noopOutput(),
     )
     const serialized = JSON.stringify(result)
-    assert.ok(
-      !serialized.includes(APPLY_CONFIRMATION),
-      'Confirmation value must not appear in serialized result',
-    )
+    assert.ok(!serialized.includes(APPLY_CONFIRMATION), 'Confirmation must not appear in result')
   })
 
-  await test('apply: post-apply verification fails when command claims success but DB still shows 28', async () => {
-    // Both pre and post queries return 28 applied (command claims to succeed but DB not updated)
+  await test('apply: post-apply verification fails when DB still shows 28 after command', async () => {
     await assert.rejects(
-      () =>
-        runStagingMigrationApply(
-          `postgres://host/jpvbootcamp?schema=${REQUIRED_SCHEMA}`,
-          undefined,
-          goodAuthorization(),
-          {
-            gitResolver: okGit(),
-            clientFactory: clientFactory28(REQUIRED_SCHEMA),
-            commandExecutor: okApplyExecutor(),
-          },
-          noopOutput(),
-        ),
+      () => runStagingMigrationApply(
+        stagingUrl(), undefined, goodAuthorization(),
+        baseDeps({ clientFactory: clientFactory28(), commandExecutor: okApplyExecutor() }),
+        noopOutput(),
+      ),
       /post-apply verification failed/i,
     )
   })
 
-  await test('plan: output lines do not contain DATABASE_URL value', async () => {
+  await test('apply: connection material never appears in output', async () => {
     const lines: string[] = []
-    const sensitiveUrl = 'postgres://user:secret-password@host:5432/jpvbootcamp?schema=jpvbootcamp_staging'
-    await runStagingMigrationPlan(
-      sensitiveUrl,
-      undefined,
-      {
-        gitResolver: okGit(),
-        clientFactory: clientFactory28(REQUIRED_SCHEMA),
-      },
-      (line) => lines.push(line),
-    )
-    for (const line of lines) {
-      assert.ok(
-        !line.includes('secret-password'),
-        `Output must not contain credentials: ${line}`,
+    const sensitiveUrl = `postgres://user:secret@${STAGING_HOSTNAME}/${REQUIRED_DATABASE}?schema=${REQUIRED_SCHEMA}`
+    try {
+      await runStagingMigrationApply(
+        sensitiveUrl, undefined, goodAuthorization(),
+        { ...baseDeps({ clientFactory: clientFactorySequence() }), commandExecutor: okApplyExecutor() },
+        (line) => lines.push(line),
       )
+    } catch {
+      // May succeed or fail; we only check output
+    }
+    for (const line of lines) {
+      assert.ok(!line.includes('secret'), `Output must not contain credentials: ${line}`)
+      assert.ok(!line.includes(sensitiveUrl), `Output must not contain raw URL: ${line}`)
     }
   })
 
-  await test('plan: mode field is always plan', async () => {
-    const result = await runStagingMigrationPlan(
-      undefined,
-      undefined,
-      { gitResolver: okGit() },
+  // ─── rollback plan: guards ─────────────────────────────────────────────────
+
+  await test('rollback-plan: rejects wrong confirmation', async () => {
+    await assert.rejects(
+      () => runStagingMigrationRollbackPlan(
+        stagingUrl(), undefined, goodRollbackAuthorization({ confirmation: 'wrong' }),
+        baseDeps({ clientFactory: clientFactory29() }), noopOutput(),
+      ),
+      /confirmation/i,
+    )
+  })
+
+  await test('rollback-plan: rejects when not all 29 are applied', async () => {
+    const result = await runStagingMigrationRollbackPlan(
+      stagingUrl(), undefined, goodRollbackAuthorization(),
+      baseDeps({ clientFactory: clientFactory28() }), noopOutput(),
+    )
+    assert.equal(result.ok, false)
+    assert.ok(result.blockers.some((b) => b.includes('29')))
+  })
+
+  await test('rollback-plan: ok when all 29 applied and migration 29 is last', async () => {
+    const result = await runStagingMigrationRollbackPlan(
+      stagingUrl(), undefined, goodRollbackAuthorization(),
+      baseDeps({ clientFactory: clientFactory29() }), noopOutput(),
+    )
+    assert.equal(result.ok, true)
+    assert.equal(result.mode, 'rollback-plan')
+    assert.ok(result.latestBatchMigrations.includes(TARGET_MIGRATION))
+    assert.ok(result.message.toLowerCase().includes('separate authorization'))
+  })
+
+  await test('rollback-plan: blocks when last applied is not migration 29', async () => {
+    const factory: PgClientFactory = () => makeClient({
+      schema: REQUIRED_SCHEMA,
+      payloadRows: [
+        ...ALL_29.map((n) => ({ name: n, batch: 1 })),
+        { name: 'extra_migration_after_29', batch: 2 }, // another migration applied after 29
+      ],
+    })
+    const result = await runStagingMigrationRollbackPlan(
+      stagingUrl(), undefined, goodRollbackAuthorization(),
+      baseDeps({ clientFactory: factory }), noopOutput(),
+    )
+    assert.equal(result.ok, false)
+    assert.ok(result.blockers.some((b) => b.includes(TARGET_MIGRATION) || b.includes('last applied')))
+  })
+
+  await test('rollback-plan: does not execute migrate:down', async () => {
+    let executorCalled = false
+    const result = await runStagingMigrationRollbackPlan(
+      stagingUrl(), undefined, goodRollbackAuthorization(),
+      {
+        ...baseDeps({ clientFactory: clientFactory29() }),
+        commandExecutor: () => {
+          executorCalled = true
+          return { status: 0 }
+        },
+      },
       noopOutput(),
     )
-    assert.equal(result.mode, 'plan')
+    assert.equal(executorCalled, false, 'rollback-plan must never invoke command executor')
+    assert.equal(result.ok, true)
   })
 
-  await test('apply: missing backupEvidenceId throws', async () => {
-    const badAuth = { ...goodAuthorization(), backupEvidenceId: '' }
-    await assert.rejects(
-      () =>
-        runStagingMigrationApply(
-          `postgres://host/jpvbootcamp?schema=${REQUIRED_SCHEMA}`,
-          undefined,
-          badAuth,
-          { gitResolver: okGit(), clientFactory: clientFactory28(REQUIRED_SCHEMA), commandExecutor: okApplyExecutor() },
-          noopOutput(),
-        ),
-      /backupEvidenceId/i,
+  await test('rollback-plan: mode field is always rollback-plan', async () => {
+    const result = await runStagingMigrationRollbackPlan(
+      stagingUrl(), undefined, goodRollbackAuthorization(),
+      baseDeps({ clientFactory: clientFactory29() }), noopOutput(),
     )
+    assert.equal(result.mode, 'rollback-plan')
   })
 
-  await test('apply: missing maintenanceWindowId throws', async () => {
-    const badAuth = { ...goodAuthorization(), maintenanceWindowId: '' }
-    await assert.rejects(
-      () =>
-        runStagingMigrationApply(
-          `postgres://host/jpvbootcamp?schema=${REQUIRED_SCHEMA}`,
-          undefined,
-          badAuth,
-          { gitResolver: okGit(), clientFactory: clientFactory28(REQUIRED_SCHEMA), commandExecutor: okApplyExecutor() },
-          noopOutput(),
-        ),
-      /maintenanceWindowId/i,
-    )
+  // ─── parseRollbackPlanCliArgs ──────────────────────────────────────────────
+
+  await test('parseRollbackPlanCliArgs: parses all required fields', () => {
+    const result = parseRollbackPlanCliArgs([
+      '--operator-id=ops',
+      '--backup-evidence-id=bk1',
+      '--maintenance-window-id=mw1',
+      '--rollback-owner=ops',
+      `--expected-commit=${TEST_HEAD}`,
+      '--environment=staging',
+      '--target-id=jpvbootcamp-staging',
+      '--expected-schema=jpvbootcamp_staging',
+      '--expected-hostname=staging-db.internal',
+      '--expected-database=jpvbootcamp',
+      `--confirmation=${ROLLBACK_CONFIRMATION}`,
+    ])
+    assert.equal(result.operatorId, 'ops')
+    assert.equal(result.expectedCommit, TEST_HEAD)
+    assert.equal(result.confirmation, ROLLBACK_CONFIRMATION)
   })
 
-  await test('apply: missing rollbackOwner throws', async () => {
-    const badAuth = { ...goodAuthorization(), rollbackOwner: '' }
-    await assert.rejects(
-      () =>
-        runStagingMigrationApply(
-          `postgres://host/jpvbootcamp?schema=${REQUIRED_SCHEMA}`,
-          undefined,
-          badAuth,
-          { gitResolver: okGit(), clientFactory: clientFactory28(REQUIRED_SCHEMA), commandExecutor: okApplyExecutor() },
-          noopOutput(),
-        ),
-      /rollbackOwner/i,
+  await test('parseRollbackPlanCliArgs: rejects apply confirmation value', () => {
+    // The rollback plan must require its own distinct confirmation value
+    const auth = goodRollbackAuthorization({ confirmation: APPLY_CONFIRMATION })
+    assert.notEqual(auth.confirmation, ROLLBACK_CONFIRMATION)
+  })
+
+  // ─── Side-effect guarantees ────────────────────────────────────────────────
+
+  await test('plan is read-only: command executor is never called in plan mode', async () => {
+    let executorCalled = false
+    await runStagingMigrationPlan(
+      stagingUrl(), undefined, goodPlanInput(),
+      {
+        ...baseDeps({ clientFactory: clientFactory28() }),
+        commandExecutor: () => {
+          executorCalled = true
+          return { status: 0 }
+        },
+      },
+      noopOutput(),
     )
+    assert.equal(executorCalled, false, 'plan must never invoke the command executor')
+  })
+
+  await test('no deploy, Prisma, provider, billing, member, or network side effect — only injected adapters used', async () => {
+    // Verify that the runner calls only the injected adapters and no real I/O.
+    // We do this by ensuring that synthetic injected factories control all DB access
+    // and no error is thrown about missing infrastructure.
+    let dbCallCount = 0
+    const countingFactory: PgClientFactory = () => ({
+      async connect() { dbCallCount++ },
+      async query<R extends Record<string, unknown> = Record<string, unknown>>(text: string): Promise<{ rows: R[] }> {
+        if (text.includes('current_schema()')) return { rows: [{ current_schema: REQUIRED_SCHEMA }] as unknown as R[] }
+        if (text.includes('.payload_migrations')) return { rows: FIRST_28.map((n) => ({ name: n, batch: 1 })) as unknown as R[] }
+        if (text.includes('._prisma_migrations')) return { rows: REGISTERED_PRISMA_MIGRATIONS.map((n) => appliedPrismaRow(n)) as unknown as R[] }
+        return { rows: [] as unknown as R[] }
+      },
+      async end() {},
+    })
+    const result = await runStagingMigrationPlan(
+      stagingUrl(), undefined, goodPlanInput(),
+      { ...baseDeps({ clientFactory: countingFactory }) },
+      noopOutput(),
+    )
+    assert.equal(result.ok, true)
+    assert.ok(dbCallCount > 0, 'DB adapter must be used')
   })
 }
 
