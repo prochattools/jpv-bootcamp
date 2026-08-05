@@ -14,11 +14,14 @@ import {
 const REQUIRED_BRANCH = 'feature/course-branding-and-preview'
 
 // Exact reviewed staging target — all identity checks derive from this one constant.
+// Hostname is the reviewed Supabase private NIC IP (10.0.2.4), documented in
+// docs/INFRASTRUCTURE_NETWORKING.md. Hostnames are not credentials.
 const STAGING_TARGET = {
   environment: 'staging',
   targetId: 'jpvbootcamp-staging',
   schema: 'jpvbootcamp_staging',
   database: 'jpvbootcamp',
+  hostname: '10.0.2.4',
 } as const
 
 // Aliases kept for readability in the rest of the file.
@@ -353,6 +356,14 @@ function guardEnvironmentAndTarget(
     )
   }
 
+  // Require actual hostname to match the reviewed repository value (root of trust).
+  // The operator-supplied --expected-hostname may serve as an additional cross-check,
+  // but the repository constant is the independent identity anchor.
+  if (actualHostname !== STAGING_TARGET.hostname) {
+    throw new Error(
+      `Target identity guard: configured hostname does not match reviewed staging hostname`,
+    )
+  }
   if (actualHostname !== expectedHostname) {
     throw new Error(
       `Target identity guard: configured hostname does not match expected hostname`,
@@ -407,6 +418,7 @@ export type FullMigrationStatus = {
   missingPayloadMigrations: string[]
   unexpectedPayloadMigrations: string[]
   duplicatePayloadMigrations: string[]
+  malformedPayloadMigrationCount: number
   schemaIdentity: string | null
   prismaMigrations: ClassifiedPrismaMigration[]
   missingPrismaMigrations: string[]
@@ -463,6 +475,7 @@ async function collectFullMigrationStatus(
     missingPayloadMigrations: report.missingPayloadMigrations,
     unexpectedPayloadMigrations: report.unexpectedPayloadMigrations,
     duplicatePayloadMigrations,
+    malformedPayloadMigrationCount: report.malformedPayloadMigrationRecords.length,
     schemaIdentity: report.schemaIdentity,
     prismaMigrations: report.prismaMigrations,
     missingPrismaMigrations: report.missingPrismaMigrations,
@@ -477,6 +490,9 @@ async function collectFullMigrationStatus(
 function checkPreApplyPreconditions(status: FullMigrationStatus): string[] {
   const blockers: string[] = []
 
+  if (status.malformedPayloadMigrationCount > 0) {
+    blockers.push('Malformed Payload migration evidence exists')
+  }
   if (status.schemaIdentity !== REQUIRED_SCHEMA) {
     blockers.push(
       `Schema identity mismatch: expected '${REQUIRED_SCHEMA}', got '${status.schemaIdentity ?? 'null'}'`,
@@ -534,6 +550,9 @@ function checkPreApplyPreconditions(status: FullMigrationStatus): string[] {
 function checkPostApplyPreconditions(status: FullMigrationStatus): string[] {
   const blockers: string[] = []
 
+  if (status.malformedPayloadMigrationCount > 0) {
+    blockers.push('Malformed Payload migration evidence exists')
+  }
   if (status.schemaIdentity !== REQUIRED_SCHEMA) {
     blockers.push(
       `Post-apply schema identity mismatch: expected '${REQUIRED_SCHEMA}', got '${status.schemaIdentity ?? 'null'}'`,
@@ -919,11 +938,15 @@ export async function runStagingMigrationApply(
       ? uncertainStatus.missingPayloadMigrations.every((m) => m !== TARGET_MIGRATION) &&
         uncertainStatus.appliedPayloadCount >= EXPECTED_APPLIED_AFTER
       : null
+    const safeStatus =
+      execResult.status !== null && Number.isSafeInteger(execResult.status)
+        ? execResult.status
+        : null
     const reason = execResult.error
-      ? `Migration command error: ${execResult.error.message}`
+      ? 'migration_command_execution_error'
       : execResult.status === null
-        ? 'Migration command exited with signal or indeterminate status'
-        : `Migration command exited with status ${execResult.status}`
+        ? 'migration_command_signal_or_indeterminate'
+        : `migration_command_nonzero_exit:${safeStatus}`
     output(`[staging-migration-apply] ${APPLY_OUTCOME_UNCERTAIN}: ${reason}`)
     output(`[staging-migration-apply] Require a fresh read-only plan and separate operator decision before any rollback.`)
     return {
@@ -1076,6 +1099,9 @@ export async function runStagingMigrationRollbackPlan(
 
   const blockers: string[] = []
 
+  if (status.malformedPayloadMigrationCount > 0) {
+    blockers.push('Malformed Payload migration evidence exists')
+  }
   if (status.schemaIdentity !== REQUIRED_SCHEMA) {
     blockers.push(`Schema identity mismatch: expected '${REQUIRED_SCHEMA}', got '${status.schemaIdentity}'`)
   }

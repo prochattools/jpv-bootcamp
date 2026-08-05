@@ -56,12 +56,18 @@ export type PayloadMigrationRecord = {
   batch: number
 }
 
+export type MalformedPayloadMigrationRecord = {
+  rowIndex: number
+  reason: 'invalid_name' | 'invalid_batch'
+}
+
 export type StagingMigrationStatusReport = {
   result: StagingMigrationStatusResult
   schemaIdentity: string | null
   registeredPayloadMigrations: string[]
   appliedPayloadMigrations: string[]
   payloadMigrationRecords: PayloadMigrationRecord[]
+  malformedPayloadMigrationRecords: MalformedPayloadMigrationRecord[]
   missingPayloadMigrations: string[]
   unexpectedPayloadMigrations: string[]
   registeredPrismaMigrations: string[]
@@ -100,6 +106,7 @@ export async function buildStagingMigrationStatus(
       registeredPayloadMigrations: registered,
       appliedPayloadMigrations: [],
       payloadMigrationRecords: [],
+      malformedPayloadMigrationRecords: [],
       missingPayloadMigrations: registered,
       unexpectedPayloadMigrations: [],
       registeredPrismaMigrations: [...REGISTERED_PRISMA_MIGRATIONS],
@@ -111,13 +118,40 @@ export async function buildStagingMigrationStatus(
   }
 
   const evidence = await adapter.collectMigrationEvidence(safeExpectedSchema)
-  const validPayloadMigrations = evidence.payloadMigrations
-    .filter((row) => Number.isInteger(row.batch) && row.batch >= 0)
-  const appliedPayloadMigrations = validPayloadMigrations.map((row) => row.name)
-  const payloadMigrationRecords: PayloadMigrationRecord[] = validPayloadMigrations.map((row) => ({
-    name: row.name,
-    batch: row.batch,
-  }))
+
+  // Classify every raw row — never silently discard.
+  const payloadMigrationRecords: PayloadMigrationRecord[] = []
+  const malformedPayloadMigrationRecords: MalformedPayloadMigrationRecord[] = []
+  const namesSeen = new Set<string>()
+
+  for (let rowIndex = 0; rowIndex < evidence.payloadMigrations.length; rowIndex += 1) {
+    const row = evidence.payloadMigrations[rowIndex]
+    const nameValid =
+      typeof row.name === 'string' &&
+      row.name.length > 0 &&
+      !/[\x00-\x1f\x7f]/.test(row.name)
+    const batchValid = Number.isSafeInteger(row.batch) && row.batch >= 1
+
+    if (!nameValid) {
+      malformedPayloadMigrationRecords.push({ rowIndex, reason: 'invalid_name' })
+      continue
+    }
+    // Track the name even when batch is invalid, so later rows with the same name
+    // are detected as duplicates regardless of which row was first malformed.
+    const isDuplicate = namesSeen.has(row.name)
+    namesSeen.add(row.name)
+    if (isDuplicate) {
+      malformedPayloadMigrationRecords.push({ rowIndex, reason: 'invalid_name' })
+      continue
+    }
+    if (!batchValid) {
+      malformedPayloadMigrationRecords.push({ rowIndex, reason: 'invalid_batch' })
+      continue
+    }
+    payloadMigrationRecords.push({ name: row.name, batch: row.batch })
+  }
+
+  const appliedPayloadMigrations = payloadMigrationRecords.map((row) => row.name)
   const appliedSet = new Set(appliedPayloadMigrations)
   const registeredSet = new Set<string>(registered)
   const missingPayloadMigrations = registered.filter((name) => !appliedSet.has(name))
@@ -134,6 +168,7 @@ export async function buildStagingMigrationStatus(
   const unexpectedPrismaMigrations = evidencedPrismaNames.filter((name) => !registeredPrismaSet.has(name))
 
   const blockers: string[] = []
+  if (malformedPayloadMigrationRecords.length > 0) blockers.push('Malformed Payload migration evidence exists')
   if (evidence.schemaIdentity !== safeExpectedSchema) blockers.push('Database schema identity mismatch')
   if (missingPayloadMigrations.length > 0) blockers.push('Registered Payload migrations are missing from applied-state evidence')
   if (unexpectedPayloadMigrations.length > 0) blockers.push('Unexpected Payload migration records exist')
@@ -151,6 +186,7 @@ export async function buildStagingMigrationStatus(
     registeredPayloadMigrations: registered,
     appliedPayloadMigrations,
     payloadMigrationRecords,
+    malformedPayloadMigrationRecords,
     missingPayloadMigrations,
     unexpectedPayloadMigrations,
     registeredPrismaMigrations: [...REGISTERED_PRISMA_MIGRATIONS],

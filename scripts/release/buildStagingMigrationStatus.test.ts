@@ -127,19 +127,131 @@ async function run(): Promise<void> {
     assert.equal(report.blockers.length, 0)
   })
 
-  await test('negative Payload batch is not treated as applied', async () => {
+  await test('negative Payload batch is classified malformed and blocks', async () => {
     const adapter: MigrationEvidenceAdapter = {
       async collectMigrationEvidence() {
         return {
           schemaIdentity: 'jpv_staging',
           payloadMigrations: PAYLOAD_MIGRATION_NAMES.map((name, index) => ({ name, batch: index === 0 ? -1 : 1 })),
-          prismaMigrations: [],
+          prismaMigrations: REGISTERED_PRISMA_MIGRATIONS.map((name) => appliedPrisma(name)),
         }
       },
     }
     const report = await buildStagingMigrationStatus(adapter, 'jpv_staging')
     assert.equal(report.result, 'MISMATCH')
-    assert.deepEqual(report.missingPayloadMigrations, [PAYLOAD_MIGRATION_NAMES[0]])
+    assert.ok(report.blockers.includes('Malformed Payload migration evidence exists'))
+    assert.equal(report.malformedPayloadMigrationRecords.length, 1)
+    assert.equal(report.malformedPayloadMigrationRecords[0].rowIndex, 0)
+    assert.equal(report.malformedPayloadMigrationRecords[0].reason, 'invalid_batch')
+    // The malformed row must not appear in payloadMigrationRecords
+    assert.equal(report.payloadMigrationRecords.some((r) => r.batch === -1), false)
+  })
+
+  // ─── Defect 1: malformed Payload evidence ─────────────────────────────────────
+
+  const TARGET_MIG = PAYLOAD_MIGRATION_NAMES[PAYLOAD_MIGRATION_NAMES.length - 1]
+  const NON_TARGET_MIG = PAYLOAD_MIGRATION_NAMES[0]
+  const allAppliedPrisma = REGISTERED_PRISMA_MIGRATIONS.map((name) => appliedPrisma(name))
+
+  function malformedAdapter(payloadMigrations: Array<{ name: unknown; batch: unknown }>): MigrationEvidenceAdapter {
+    return {
+      async collectMigrationEvidence() {
+        return {
+          schemaIdentity: 'jpv_staging',
+          payloadMigrations: payloadMigrations as Array<{ name: string; batch: number }>,
+          prismaMigrations: allAppliedPrisma,
+        }
+      },
+    }
+  }
+
+  await test('malformed: migration 29 row with null batch is classified malformed', async () => {
+    const rows = PAYLOAD_MIGRATION_NAMES.map((name) => ({ name, batch: 1 }))
+    rows[rows.length - 1] = { name: TARGET_MIG, batch: null as unknown as number }
+    const report = await buildStagingMigrationStatus(malformedAdapter(rows), 'jpv_staging')
+    assert.equal(report.result, 'MISMATCH')
+    assert.ok(report.blockers.includes('Malformed Payload migration evidence exists'))
+    assert.ok(report.malformedPayloadMigrationRecords.some((r) => r.reason === 'invalid_batch'))
+  })
+
+  await test('malformed: migration 29 row with negative batch is classified malformed', async () => {
+    const rows = PAYLOAD_MIGRATION_NAMES.map((name, i) => ({ name, batch: i === PAYLOAD_MIGRATION_NAMES.length - 1 ? -1 : 1 }))
+    const report = await buildStagingMigrationStatus(malformedAdapter(rows), 'jpv_staging')
+    assert.ok(report.blockers.includes('Malformed Payload migration evidence exists'))
+    assert.ok(report.malformedPayloadMigrationRecords.some((r) => r.reason === 'invalid_batch'))
+    assert.equal(report.payloadMigrationRecords.some((r) => r.name === TARGET_MIG), false)
+  })
+
+  await test('malformed: migration 29 row with fractional batch is classified malformed', async () => {
+    const rows = PAYLOAD_MIGRATION_NAMES.map((name, i) => ({ name, batch: i === PAYLOAD_MIGRATION_NAMES.length - 1 ? 1.5 : 1 }))
+    const report = await buildStagingMigrationStatus(malformedAdapter(rows), 'jpv_staging')
+    assert.ok(report.blockers.includes('Malformed Payload migration evidence exists'))
+  })
+
+  await test('malformed: migration 29 row with string batch is classified malformed', async () => {
+    const rows = PAYLOAD_MIGRATION_NAMES.map((name, i) => ({ name, batch: i === PAYLOAD_MIGRATION_NAMES.length - 1 ? '1' : 1 }))
+    const report = await buildStagingMigrationStatus(malformedAdapter(rows), 'jpv_staging')
+    assert.ok(report.blockers.includes('Malformed Payload migration evidence exists'))
+  })
+
+  await test('malformed: migration 29 row with empty name is classified malformed', async () => {
+    const rows = PAYLOAD_MIGRATION_NAMES.map((name, i) => ({ name: i === PAYLOAD_MIGRATION_NAMES.length - 1 ? '' : name, batch: 1 }))
+    const report = await buildStagingMigrationStatus(malformedAdapter(rows), 'jpv_staging')
+    assert.ok(report.blockers.includes('Malformed Payload migration evidence exists'))
+    assert.ok(report.malformedPayloadMigrationRecords.some((r) => r.reason === 'invalid_name'))
+  })
+
+  await test('malformed: migration 29 row with non-string name is classified malformed', async () => {
+    const rows = PAYLOAD_MIGRATION_NAMES.map((name, i) => ({ name: i === PAYLOAD_MIGRATION_NAMES.length - 1 ? null : name, batch: 1 }))
+    const report = await buildStagingMigrationStatus(malformedAdapter(rows), 'jpv_staging')
+    assert.ok(report.blockers.includes('Malformed Payload migration evidence exists'))
+    assert.ok(report.malformedPayloadMigrationRecords.some((r) => r.reason === 'invalid_name'))
+  })
+
+  await test('malformed: earlier migration with malformed batch blocks', async () => {
+    const rows = PAYLOAD_MIGRATION_NAMES.map((name, i) => ({ name, batch: i === 0 ? -5 : 1 }))
+    const report = await buildStagingMigrationStatus(malformedAdapter(rows), 'jpv_staging')
+    assert.ok(report.blockers.includes('Malformed Payload migration evidence exists'))
+    assert.ok(report.malformedPayloadMigrationRecords.some((r) => r.rowIndex === 0 && r.reason === 'invalid_batch'))
+  })
+
+  await test('malformed: malformed row plus a valid duplicate row — both classified', async () => {
+    // Row 0 has invalid batch, row n+1 duplicates NON_TARGET_MIG name → both malformed
+    const rows: Array<{ name: unknown; batch: unknown }> = [
+      { name: NON_TARGET_MIG, batch: 0 }, // batch=0 is invalid (must be >= 1)
+      ...PAYLOAD_MIGRATION_NAMES.slice(1).map((name) => ({ name, batch: 1 })),
+      { name: NON_TARGET_MIG, batch: 1 }, // duplicate name
+    ]
+    const report = await buildStagingMigrationStatus(malformedAdapter(rows), 'jpv_staging')
+    assert.ok(report.blockers.includes('Malformed Payload migration evidence exists'))
+    assert.ok(report.malformedPayloadMigrationRecords.length >= 2)
+  })
+
+  await test('malformed: a malformed row for migration 29 never masquerades as expected pending migration', async () => {
+    // 28 valid + migration 29 with null batch — 29 must not count as applied
+    const first28 = PAYLOAD_MIGRATION_NAMES.slice(0, -1)
+    const rows = [
+      ...first28.map((name) => ({ name, batch: 1 })),
+      { name: TARGET_MIG, batch: null as unknown as number },
+    ]
+    const report = await buildStagingMigrationStatus(malformedAdapter(rows), 'jpv_staging')
+    assert.ok(report.blockers.includes('Malformed Payload migration evidence exists'))
+    // The malformed row must not appear in applied list
+    assert.equal(report.appliedPayloadMigrations.includes(TARGET_MIG), false)
+    // missingPayloadMigrations must still list migration 29
+    assert.ok(report.missingPayloadMigrations.includes(TARGET_MIG))
+  })
+
+  await test('malformed: raw unknown values never appear in operator output', async () => {
+    const rows: Array<{ name: unknown; batch: unknown }> = [
+      { name: '\x00secret-control-char', batch: 1 },
+      ...PAYLOAD_MIGRATION_NAMES.map((name) => ({ name, batch: 1 })),
+    ]
+    const report = await buildStagingMigrationStatus(malformedAdapter(rows), 'jpv_staging')
+    const serialized = JSON.stringify(report)
+    assert.equal(serialized.includes('\x00'), false)
+    assert.equal(serialized.includes('secret-control-char'), false)
+    assert.ok(report.blockers.includes('Malformed Payload migration evidence exists'))
   })
 
   await test('empty Prisma evidence cannot produce a verified report', async () => {

@@ -41,9 +41,9 @@ async function test(name: string, fn: () => void | Promise<void>): Promise<void>
 // ─── Test constants ────────────────────────────────────────────────────────────
 
 const REQUIRED_BRANCH = 'feature/course-branding-and-preview'
-// This is the CURRENT HEAD at the time of this test run.
-// Tests use a synthetic injected HEAD; no hardcoded old commit is permanently accepted.
-const TEST_HEAD = 'a4081d12c7141ed8f5476077536c5234a555f240'
+// Deterministic synthetic SHA used only in injected gitResolver mocks.
+// This value is never the real HEAD and never requires updating after a commit.
+const SYNTHETIC_HEAD = 'a4081d12c7141ed8f5476077536c5234a555f240'
 const REQUIRED_SCHEMA = 'jpvbootcamp_staging'
 const REQUIRED_DATABASE = 'jpvbootcamp'
 const REQUIRED_TARGET_ID = 'jpvbootcamp-staging'
@@ -53,7 +53,8 @@ const APPLY_CONFIRMATION = 'apply_account_action_reservation_migration_to_jpvboo
 const ROLLBACK_CONFIRMATION = 'plan_rollback_account_action_reservation_from_jpvbootcamp_staging'
 const EXPECTED_APPLIED_BEFORE = 28
 const EXPECTED_APPLIED_AFTER = 29
-const STAGING_HOSTNAME = 'staging-db.internal'
+// Reviewed staging hostname — matches STAGING_TARGET.hostname in runStagingPayloadMigration.ts.
+const STAGING_HOSTNAME = '10.0.2.4'
 const PRODUCTION_HOSTNAME = 'prod-db.internal'
 
 const FIRST_28 = PAYLOAD_MIGRATION_NAMES.filter((n) => n !== TARGET_MIGRATION)
@@ -66,18 +67,18 @@ assert.equal(ALL_29[ALL_29.length - 1], TARGET_MIGRATION, 'Target migration must
 
 // ─── Confirmed: no self-referential hardcoded commit ──────────────────────────
 // The runner exports no REQUIRED_COMMIT constant.
-// Verify by checking that the test-only TEST_HEAD value differs from what was
-// the original hardcoded SHA in commit a4081d1 — this proves we are exercising
-// the runtime-input path, not a baked-in constant.
-assert.notEqual(TEST_HEAD, '969113bcbee5cbdc01a274d7ab3e5cafdc94ecca',
-  'Test HEAD must not be the old self-invalidating commit')
+// SYNTHETIC_HEAD is a fixed deterministic value used only in injected mocks.
+// It must never equal the old hardcoded commit SHA from a4081d1 (which is no
+// longer in source), proving we test the runtime-input path, not a baked constant.
+assert.notEqual(SYNTHETIC_HEAD, '969113bcbee5cbdc01a274d7ab3e5cafdc94ecca',
+  'Synthetic HEAD must not be the old self-invalidating commit')
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function okGit(commitOverride?: string): StagingMigrationRunnerDependencies['gitResolver'] {
   return {
     branch: () => REQUIRED_BRANCH,
-    commit: () => commitOverride ?? TEST_HEAD,
+    commit: () => commitOverride ?? SYNTHETIC_HEAD,
   }
 }
 
@@ -162,7 +163,7 @@ function clientFactorySequence(schema = REQUIRED_SCHEMA): PgClientFactory {
 
 function goodPlanInput(overrides: Partial<StagingMigrationPlanInput> = {}): StagingMigrationPlanInput {
   return {
-    expectedCommit: TEST_HEAD,
+    expectedCommit: SYNTHETIC_HEAD,
     environment: REQUIRED_ENVIRONMENT,
     targetId: REQUIRED_TARGET_ID,
     expectedSchema: REQUIRED_SCHEMA,
@@ -178,7 +179,7 @@ function goodAuthorization(overrides: Partial<MigrationAuthorizationPacket> = {}
     backupEvidenceId: 'backup-2026-08-04-001',
     maintenanceWindowId: 'mw-2026-08-04',
     rollbackOwner: 'test-operator',
-    expectedCommit: TEST_HEAD,
+    expectedCommit: SYNTHETIC_HEAD,
     environment: REQUIRED_ENVIRONMENT,
     targetId: REQUIRED_TARGET_ID,
     expectedSchema: REQUIRED_SCHEMA,
@@ -195,7 +196,7 @@ function goodRollbackAuthorization(overrides: Partial<RollbackPlanAuthorizationP
     backupEvidenceId: 'backup-2026-08-04-001',
     maintenanceWindowId: 'mw-2026-08-04',
     rollbackOwner: 'test-operator',
-    expectedCommit: TEST_HEAD,
+    expectedCommit: SYNTHETIC_HEAD,
     environment: REQUIRED_ENVIRONMENT,
     targetId: REQUIRED_TARGET_ID,
     expectedSchema: REQUIRED_SCHEMA,
@@ -239,14 +240,14 @@ async function run(): Promise<void> {
 
   await test('parsePlanCliArgs: parses all required fields', () => {
     const result = parsePlanCliArgs([
-      `--expected-commit=${TEST_HEAD}`,
+      `--expected-commit=${SYNTHETIC_HEAD}`,
       '--environment=staging',
       '--target-id=jpvbootcamp-staging',
       '--expected-schema=jpvbootcamp_staging',
-      '--expected-hostname=staging-db.internal',
+      `--expected-hostname=${STAGING_HOSTNAME}`,
       '--expected-database=jpvbootcamp',
     ])
-    assert.equal(result.expectedCommit, TEST_HEAD)
+    assert.equal(result.expectedCommit, SYNTHETIC_HEAD)
     assert.equal(result.environment, REQUIRED_ENVIRONMENT)
     assert.equal(result.targetId, REQUIRED_TARGET_ID)
     assert.equal(result.expectedSchema, REQUIRED_SCHEMA)
@@ -260,7 +261,7 @@ async function run(): Promise<void> {
         '--environment=staging',
         '--target-id=jpvbootcamp-staging',
         '--expected-schema=jpvbootcamp_staging',
-        '--expected-hostname=staging-db.internal',
+        `--expected-hostname=${STAGING_HOSTNAME}`,
         '--expected-database=jpvbootcamp',
       ]),
       /expected-commit/i,
@@ -269,7 +270,7 @@ async function run(): Promise<void> {
 
   await test('parsePlanCliArgs: rejects unknown arguments', () => {
     assert.throws(() =>
-      parsePlanCliArgs(['--unknown-flag=value', `--expected-commit=${TEST_HEAD}`]),
+      parsePlanCliArgs(['--unknown-flag=value', `--expected-commit=${SYNTHETIC_HEAD}`]),
     )
   })
 
@@ -285,16 +286,16 @@ async function run(): Promise<void> {
       '--backup-evidence-id=bk1',
       '--maintenance-window-id=mw1',
       '--rollback-owner=ops',
-      `--expected-commit=${TEST_HEAD}`,
+      `--expected-commit=${SYNTHETIC_HEAD}`,
       '--environment=staging',
       '--target-id=jpvbootcamp-staging',
       '--expected-schema=jpvbootcamp_staging',
-      '--expected-hostname=staging-db.internal',
+      `--expected-hostname=${STAGING_HOSTNAME}`,
       '--expected-database=jpvbootcamp',
       `--confirmation=${APPLY_CONFIRMATION}`,
     ])
     assert.equal(result.operatorId, 'ops')
-    assert.equal(result.expectedCommit, TEST_HEAD)
+    assert.equal(result.expectedCommit, SYNTHETIC_HEAD)
     assert.equal(result.environment, REQUIRED_ENVIRONMENT)
     assert.equal(result.confirmation, APPLY_CONFIRMATION)
   })
@@ -309,7 +310,7 @@ async function run(): Promise<void> {
         '--environment=staging',
         '--target-id=jpvbootcamp-staging',
         '--expected-schema=jpvbootcamp_staging',
-        '--expected-hostname=staging-db.internal',
+        `--expected-hostname=${STAGING_HOSTNAME}`,
         '--expected-database=jpvbootcamp',
         `--confirmation=${APPLY_CONFIRMATION}`,
       ]),
@@ -324,11 +325,11 @@ async function run(): Promise<void> {
         '--backup-evidence-id=bk1',
         '--maintenance-window-id=mw1',
         '--rollback-owner=ops',
-        `--expected-commit=${TEST_HEAD}`,
+        `--expected-commit=${SYNTHETIC_HEAD}`,
         '--environment=staging',
         '--target-id=jpvbootcamp-staging',
         '--expected-schema=jpvbootcamp_staging',
-        '--expected-hostname=staging-db.internal',
+        `--expected-hostname=${STAGING_HOSTNAME}`,
         '--expected-database=jpvbootcamp',
       ]),
       /confirmation/i,
@@ -388,7 +389,7 @@ async function run(): Promise<void> {
       stagingUrl(),
       undefined,
       goodPlanInput(),
-      { gitResolver: { branch: () => 'main', commit: () => TEST_HEAD }, gitStatusResolver: cleanGitStatus() },
+      { gitResolver: { branch: () => 'main', commit: () => SYNTHETIC_HEAD }, gitStatusResolver: cleanGitStatus() },
       noopOutput(),
     )
     assert.equal(result.ok, false)
@@ -401,7 +402,7 @@ async function run(): Promise<void> {
       stagingUrl(),
       undefined,
       goodPlanInput({ expectedCommit: differentFullSha }),
-      { gitResolver: okGit(TEST_HEAD), gitStatusResolver: cleanGitStatus() },
+      { gitResolver: okGit(SYNTHETIC_HEAD), gitStatusResolver: cleanGitStatus() },
       noopOutput(),
     )
     assert.equal(result.ok, false)
@@ -416,8 +417,8 @@ async function run(): Promise<void> {
       stagingUrl(),
       undefined,
       goodPlanInput({ expectedCommit: oldSha }),
-      // HEAD is TEST_HEAD (a4081d1...), not the old SHA
-      { gitResolver: okGit(TEST_HEAD), gitStatusResolver: cleanGitStatus() },
+      // HEAD is SYNTHETIC_HEAD (a4081d1...), not the old SHA
+      { gitResolver: okGit(SYNTHETIC_HEAD), gitStatusResolver: cleanGitStatus() },
       noopOutput(),
     )
     assert.equal(result.ok, false)
@@ -667,7 +668,10 @@ async function run(): Promise<void> {
       baseDeps({ clientFactory: factory }), noopOutput(),
     )
     assert.equal(result.ok, false)
-    assert.ok(result.blockers.some((b) => b.toLowerCase().includes('duplicate')))
+    // Duplicates are now classified as malformed evidence
+    assert.ok(
+      result.blockers.some((b) => b.toLowerCase().includes('duplicate') || b.toLowerCase().includes('malformed')),
+    )
   })
 
   // ─── plan: Prisma health checks ───────────────────────────────────────────
@@ -840,7 +844,7 @@ async function run(): Promise<void> {
     await assert.rejects(
       () => runStagingMigrationApply(
         stagingUrl(), undefined, goodAuthorization(),
-        { ...baseDeps(), gitResolver: { branch: () => 'main', commit: () => TEST_HEAD } },
+        { ...baseDeps(), gitResolver: { branch: () => 'main', commit: () => SYNTHETIC_HEAD } },
         noopOutput(),
       ),
       /branch/i,
@@ -1043,7 +1047,7 @@ async function run(): Promise<void> {
     assert.equal(result.ok, true)
     assert.equal(result.mode, 'apply')
     assert.equal(result.branch, REQUIRED_BRANCH)
-    assert.equal(result.commit, TEST_HEAD)
+    assert.equal(result.commit, SYNTHETIC_HEAD)
     assert.equal(result.schema, REQUIRED_SCHEMA)
     assert.equal(result.environment, REQUIRED_ENVIRONMENT)
     assert.equal(result.targetId, REQUIRED_TARGET_ID)
@@ -1175,16 +1179,16 @@ async function run(): Promise<void> {
       '--backup-evidence-id=bk1',
       '--maintenance-window-id=mw1',
       '--rollback-owner=ops',
-      `--expected-commit=${TEST_HEAD}`,
+      `--expected-commit=${SYNTHETIC_HEAD}`,
       '--environment=staging',
       '--target-id=jpvbootcamp-staging',
       '--expected-schema=jpvbootcamp_staging',
-      '--expected-hostname=staging-db.internal',
+      `--expected-hostname=${STAGING_HOSTNAME}`,
       '--expected-database=jpvbootcamp',
       `--confirmation=${ROLLBACK_CONFIRMATION}`,
     ])
     assert.equal(result.operatorId, 'ops')
-    assert.equal(result.expectedCommit, TEST_HEAD)
+    assert.equal(result.expectedCommit, SYNTHETIC_HEAD)
     assert.equal(result.confirmation, ROLLBACK_CONFIRMATION)
   })
 
@@ -1309,7 +1313,10 @@ async function run(): Promise<void> {
       baseDeps({ clientFactory: factory }), noopOutput(),
     )
     assert.equal(result.ok, false)
-    assert.ok(result.blockers.some((b) => b.toLowerCase().includes('duplicate')))
+    // Duplicates are classified as malformed evidence
+    assert.ok(
+      result.blockers.some((b) => b.toLowerCase().includes('duplicate') || b.toLowerCase().includes('malformed')),
+    )
   })
 
   // ─── Defect 2: exact database identity enforcement ────────────────────────
@@ -1406,16 +1413,17 @@ async function run(): Promise<void> {
     }
   })
 
-  await test('hostname guard: arbitrary matching expected/actual does not bypass reviewed target identity', async () => {
-    // Even if expectedHostname === actualHostname, the database must still be jpvbootcamp
+  await test('hostname guard: arbitrary non-production hostname with correct database and matching --expected-hostname fails reviewed hostname check', async () => {
+    // Even with expectedHostname === actualHostname and correct database,
+    // a hostname that differs from the reviewed repository constant must be rejected.
     const result = await runStagingMigrationPlan(
-      `postgres://arbitrary.host/wrong_db?schema=${REQUIRED_SCHEMA}`,
+      `postgres://arbitrary.host/${REQUIRED_DATABASE}?schema=${REQUIRED_SCHEMA}`,
       undefined,
-      goodPlanInput({ expectedHostname: 'arbitrary.host', expectedDatabase: 'wrong_db' }),
+      goodPlanInput({ expectedHostname: 'arbitrary.host', expectedDatabase: REQUIRED_DATABASE }),
       baseDeps({ clientFactory: clientFactory28() }), noopOutput(),
     )
     assert.equal(result.ok, false)
-    assert.ok(result.blockers.some((b) => b.toLowerCase().includes('database')))
+    assert.ok(result.blockers.some((b) => b.toLowerCase().includes('hostname')))
   })
 
   // ─── Defect 4: rollback-plan worktree integrity ───────────────────────────
@@ -1652,6 +1660,282 @@ async function run(): Promise<void> {
     assert.ok(!allText.includes(sensitiveUrl), 'must not expose full URL')
   })
 
+  // ─── Defect 1: malformed Payload evidence blocks all modes ───────────────────
+
+  function malformedClientFactory(payloadRows: Array<{ name: unknown; batch: unknown }>, schema = REQUIRED_SCHEMA): PgClientFactory {
+    return () => makeClient({ schema, payloadRows: payloadRows as Array<{ name: string; batch: number }> })
+  }
+
+  await test('malformed-payload: migration 29 row null batch blocks plan', async () => {
+    const rows = [...FIRST_28.map((n) => ({ name: n, batch: 1 })), { name: TARGET_MIGRATION, batch: null }]
+    const result = await runStagingMigrationPlan(
+      stagingUrl(), undefined, goodPlanInput(),
+      baseDeps({ clientFactory: malformedClientFactory(rows) }), noopOutput(),
+    )
+    assert.equal(result.ok, false)
+    assert.ok(result.blockers.some((b) => b.toLowerCase().includes('malformed')))
+  })
+
+  await test('malformed-payload: migration 29 row negative batch blocks plan', async () => {
+    const rows = [...FIRST_28.map((n) => ({ name: n, batch: 1 })), { name: TARGET_MIGRATION, batch: -1 }]
+    const result = await runStagingMigrationPlan(
+      stagingUrl(), undefined, goodPlanInput(),
+      baseDeps({ clientFactory: malformedClientFactory(rows) }), noopOutput(),
+    )
+    assert.equal(result.ok, false)
+    assert.ok(result.blockers.some((b) => b.toLowerCase().includes('malformed')))
+  })
+
+  await test('malformed-payload: migration 29 row fractional batch blocks plan', async () => {
+    const rows = [...FIRST_28.map((n) => ({ name: n, batch: 1 })), { name: TARGET_MIGRATION, batch: 1.5 }]
+    const result = await runStagingMigrationPlan(
+      stagingUrl(), undefined, goodPlanInput(),
+      baseDeps({ clientFactory: malformedClientFactory(rows) }), noopOutput(),
+    )
+    assert.equal(result.ok, false)
+    assert.ok(result.blockers.some((b) => b.toLowerCase().includes('malformed')))
+  })
+
+  await test('malformed-payload: migration 29 row string batch blocks plan', async () => {
+    const rows = [...FIRST_28.map((n) => ({ name: n, batch: 1 })), { name: TARGET_MIGRATION, batch: '1' }]
+    const result = await runStagingMigrationPlan(
+      stagingUrl(), undefined, goodPlanInput(),
+      baseDeps({ clientFactory: malformedClientFactory(rows) }), noopOutput(),
+    )
+    assert.equal(result.ok, false)
+    assert.ok(result.blockers.some((b) => b.toLowerCase().includes('malformed')))
+  })
+
+  await test('malformed-payload: migration 29 row empty name blocks plan', async () => {
+    const rows = [...FIRST_28.map((n) => ({ name: n, batch: 1 })), { name: '', batch: 1 }]
+    const result = await runStagingMigrationPlan(
+      stagingUrl(), undefined, goodPlanInput(),
+      baseDeps({ clientFactory: malformedClientFactory(rows) }), noopOutput(),
+    )
+    assert.equal(result.ok, false)
+    assert.ok(result.blockers.some((b) => b.toLowerCase().includes('malformed')))
+  })
+
+  await test('malformed-payload: migration 29 row non-string name blocks plan', async () => {
+    const rows = [...FIRST_28.map((n) => ({ name: n, batch: 1 })), { name: null, batch: 1 }]
+    const result = await runStagingMigrationPlan(
+      stagingUrl(), undefined, goodPlanInput(),
+      baseDeps({ clientFactory: malformedClientFactory(rows) }), noopOutput(),
+    )
+    assert.equal(result.ok, false)
+    assert.ok(result.blockers.some((b) => b.toLowerCase().includes('malformed')))
+  })
+
+  await test('malformed-payload: earlier migration malformed batch blocks plan', async () => {
+    const rows = FIRST_28.map((n, i) => ({ name: n, batch: i === 0 ? -99 : 1 }))
+    const result = await runStagingMigrationPlan(
+      stagingUrl(), undefined, goodPlanInput(),
+      baseDeps({ clientFactory: malformedClientFactory(rows) }), noopOutput(),
+    )
+    assert.equal(result.ok, false)
+    assert.ok(result.blockers.some((b) => b.toLowerCase().includes('malformed')))
+  })
+
+  await test('malformed-payload: malformed rows block apply pre-apply check', async () => {
+    const rows = [...FIRST_28.map((n) => ({ name: n, batch: 1 })), { name: TARGET_MIGRATION, batch: null }]
+    await assert.rejects(
+      () => runStagingMigrationApply(
+        stagingUrl(), undefined, goodAuthorization(),
+        baseDeps({ clientFactory: malformedClientFactory(rows) }), noopOutput(),
+      ),
+      /pre-apply check failed/i,
+    )
+  })
+
+  await test('malformed-payload: malformed rows block rollback-plan', async () => {
+    const rows = [
+      ...FIRST_28.map((n) => ({ name: n, batch: 1 })),
+      { name: TARGET_MIGRATION, batch: 2 },
+      { name: TARGET_MIGRATION, batch: null }, // duplicate + malformed
+    ]
+    const result = await runStagingMigrationRollbackPlan(
+      stagingUrl(), undefined, goodRollbackAuthorization(),
+      baseDeps({ clientFactory: malformedClientFactory(rows) }), noopOutput(),
+    )
+    assert.equal(result.ok, false)
+    assert.ok(result.blockers.some((b) => b.toLowerCase().includes('malformed')))
+  })
+
+  // ─── Defect 2: reviewed hostname root of trust ────────────────────────────────
+
+  await test('hostname guard: reviewed hostname passes identity check', async () => {
+    const result = await runStagingMigrationPlan(
+      stagingUrl(STAGING_HOSTNAME), undefined,
+      goodPlanInput({ expectedHostname: STAGING_HOSTNAME }),
+      baseDeps({ clientFactory: clientFactory28() }), noopOutput(),
+    )
+    assert.equal(result.ok, true)
+  })
+
+  await test('hostname guard: one-character reviewed hostname difference fails', async () => {
+    const oneOff = STAGING_HOSTNAME + 'x'
+    const result = await runStagingMigrationPlan(
+      `postgres://${oneOff}/${REQUIRED_DATABASE}?schema=${REQUIRED_SCHEMA}`,
+      undefined,
+      goodPlanInput({ expectedHostname: oneOff }),
+      baseDeps({ clientFactory: clientFactory28() }), noopOutput(),
+    )
+    assert.equal(result.ok, false)
+    assert.ok(result.blockers.some((b) => b.toLowerCase().includes('hostname')))
+  })
+
+  await test('hostname guard: case-normalized comparison — reviewed hostname is lowercase IP', async () => {
+    // URL.hostname lowercases hostnames — IP addresses are already lowercase; no mismatch on case
+    const result = await runStagingMigrationPlan(
+      stagingUrl(STAGING_HOSTNAME), undefined,
+      goodPlanInput({ expectedHostname: STAGING_HOSTNAME }),
+      baseDeps({ clientFactory: clientFactory28() }), noopOutput(),
+    )
+    assert.equal(result.ok, true)
+  })
+
+  await test('hostname guard: trailing-dot hostname is rejected (does not match reviewed constant)', async () => {
+    const trailingDot = STAGING_HOSTNAME + '.'
+    const result = await runStagingMigrationPlan(
+      `postgres://${trailingDot}/${REQUIRED_DATABASE}?schema=${REQUIRED_SCHEMA}`,
+      undefined,
+      goodPlanInput({ expectedHostname: STAGING_HOSTNAME }),
+      baseDeps({ clientFactory: clientFactory28() }), noopOutput(),
+    )
+    assert.equal(result.ok, false)
+    assert.ok(result.blockers.some((b) => b.toLowerCase().includes('hostname')))
+  })
+
+  await test('hostname guard: port numbers do not affect hostname comparison', async () => {
+    // postgres://10.0.2.4:5433/db — URL.hostname strips port from hostname
+    const result = await runStagingMigrationPlan(
+      `postgres://${STAGING_HOSTNAME}:5433/${REQUIRED_DATABASE}?schema=${REQUIRED_SCHEMA}`,
+      undefined,
+      goodPlanInput({ expectedHostname: STAGING_HOSTNAME }),
+      baseDeps({ clientFactory: clientFactory28() }), noopOutput(),
+    )
+    assert.equal(result.ok, true)
+  })
+
+  await test('hostname guard: credentials and URL material never appear in output', async () => {
+    const lines: string[] = []
+    const sensitiveUrl = `postgres://admin:secret123@${STAGING_HOSTNAME}/${REQUIRED_DATABASE}?schema=${REQUIRED_SCHEMA}`
+    const result = await runStagingMigrationPlan(
+      sensitiveUrl, undefined, goodPlanInput(),
+      baseDeps({ clientFactory: clientFactory28() }),
+      (line) => lines.push(line),
+    )
+    const allText = lines.join('\n') + JSON.stringify(result)
+    assert.ok(!allText.includes('secret123'), 'must not expose password')
+    assert.ok(!allText.includes(sensitiveUrl), 'must not expose full URL')
+  })
+
+  // ─── Defect 3: sanitized uncertain-outcome categories ────────────────────────
+
+  await test('uncertain-outcome: error message containing PostgreSQL URL is not echoed', async () => {
+    const pgUrl = `postgres://admin:secret@${STAGING_HOSTNAME}/${REQUIRED_DATABASE}?schema=${REQUIRED_SCHEMA}`
+    const lines: string[] = []
+    const result = await runStagingMigrationApply(
+      stagingUrl(), undefined, goodAuthorization(),
+      {
+        ...baseDeps({ clientFactory: clientFactory28() }),
+        commandExecutor: () => ({ status: null, error: new Error(`Failed to connect: ${pgUrl}`) }),
+      },
+      (line) => lines.push(line),
+    )
+    const allText = lines.join('\n') + JSON.stringify(result)
+    assert.ok(!allText.includes('secret'), 'error message with secret must not appear in output')
+    assert.ok(!allText.includes(pgUrl), 'raw PG URL must not appear in output')
+    assert.ok('outcome' in result && result.outcome === APPLY_OUTCOME_UNCERTAIN)
+  })
+
+  await test('uncertain-outcome: error message containing username and password is not echoed', async () => {
+    const lines: string[] = []
+    const result = await runStagingMigrationApply(
+      stagingUrl(), undefined, goodAuthorization(),
+      {
+        ...baseDeps({ clientFactory: clientFactory28() }),
+        commandExecutor: () => ({ status: null, error: new Error('auth failed: user=admin password=hunter2 host=db') }),
+      },
+      (line) => lines.push(line),
+    )
+    const allText = lines.join('\n') + JSON.stringify(result)
+    assert.ok(!allText.includes('hunter2'), 'password must not appear in output')
+    assert.ok(!allText.includes('auth failed: user=admin'), 'raw error detail must not appear in output')
+  })
+
+  await test('uncertain-outcome: error with authorization-like value is sanitized', async () => {
+    const lines: string[] = []
+    const result = await runStagingMigrationApply(
+      stagingUrl(), undefined, goodAuthorization(),
+      {
+        ...baseDeps({ clientFactory: clientFactory28() }),
+        commandExecutor: () => ({ status: null, error: new Error('Authorization: Bearer supersecret-token-abc123') }),
+      },
+      (line) => lines.push(line),
+    )
+    const allText = lines.join('\n') + JSON.stringify(result)
+    assert.ok(!allText.includes('supersecret-token-abc123'), 'auth header value must not appear in output')
+  })
+
+  await test('uncertain-outcome: environment-style secret value is sanitized', async () => {
+    const lines: string[] = []
+    const result = await runStagingMigrationApply(
+      stagingUrl(), undefined, goodAuthorization(),
+      {
+        ...baseDeps({ clientFactory: clientFactory28() }),
+        commandExecutor: () => ({ status: null, error: new Error('STRIPE_SECRET_KEY=sk_live_ABC123 not found') }),
+      },
+      (line) => lines.push(line),
+    )
+    const allText = lines.join('\n') + JSON.stringify(result)
+    assert.ok(!allText.includes('sk_live_ABC123'), 'env secret value must not appear in output')
+  })
+
+  await test('uncertain-outcome: message uses fixed category string, not raw error', async () => {
+    const lines: string[] = []
+    const result = await runStagingMigrationApply(
+      stagingUrl(), undefined, goodAuthorization(),
+      {
+        ...baseDeps({ clientFactory: clientFactory28() }),
+        commandExecutor: () => ({ status: null, error: new Error('do-not-include-this-in-output') }),
+      },
+      (line) => lines.push(line),
+    )
+    const allText = lines.join('\n') + ('message' in result ? result.message : '')
+    assert.ok(!allText.includes('do-not-include-this-in-output'))
+    assert.ok(allText.includes('migration_command_execution_error'))
+  })
+
+  await test('uncertain-outcome: nonzero exit uses fixed category with safe integer status', async () => {
+    const lines: string[] = []
+    const result = await runStagingMigrationApply(
+      stagingUrl(), undefined, goodAuthorization(),
+      {
+        ...baseDeps({ clientFactory: clientFactory28() }),
+        commandExecutor: () => ({ status: 42 }),
+      },
+      (line) => lines.push(line),
+    )
+    const allText = lines.join('\n') + ('message' in result ? result.message : '')
+    assert.ok(allText.includes('42'), 'exit status should appear')
+    assert.ok(allText.includes('migration_command_nonzero_exit'))
+  })
+
+  await test('uncertain-outcome: signal returns fixed category', async () => {
+    const lines: string[] = []
+    const result = await runStagingMigrationApply(
+      stagingUrl(), undefined, goodAuthorization(),
+      {
+        ...baseDeps({ clientFactory: clientFactory28() }),
+        commandExecutor: () => ({ status: null }),
+      },
+      (line) => lines.push(line),
+    )
+    const allText = lines.join('\n') + ('message' in result ? result.message : '')
+    assert.ok(allText.includes('migration_command_signal_or_indeterminate'))
+  })
+
   // ─── Defect 7: current-checkout git resolver integration test ─────────────
 
   await test('git resolver: real HEAD passes guard; abbreviated or prior SHA fails', async () => {
@@ -1691,11 +1975,11 @@ async function run(): Promise<void> {
     assert.equal(abbrevResult.ok, false)
     assert.ok(abbrevResult.blockers.some((b) => b.includes('40')))
 
-    // Previous SHA must fail (HEAD is not TEST_HEAD unless we are at that exact commit)
-    if (realHead !== TEST_HEAD) {
+    // Previous SHA must fail (HEAD is not SYNTHETIC_HEAD unless we are at that exact commit)
+    if (realHead !== SYNTHETIC_HEAD) {
       const prevResult = await runStagingMigrationPlan(
         stagingUrl(), undefined,
-        goodPlanInput({ expectedCommit: TEST_HEAD }),
+        goodPlanInput({ expectedCommit: SYNTHETIC_HEAD }),
         {
           gitStatusResolver: cleanGitStatus(),
           clientFactory: clientFactory28(),
