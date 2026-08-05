@@ -61,7 +61,7 @@ Static preflight automation is available via `pnpm staging:static-preflight`; it
 
 ### Deterministic local validation baseline
 
-- `pnpm test:release` passed `167/167`, including the account-action hardening-status guard (2026-08-03) and staging migration plan workflow contract (2026-08-05)
+- `pnpm test:release` passed `167/167`, including the account-action hardening-status guard (2026-08-03), staging migration plan workflow contract (2026-08-05), and unified dispatchable migration plan job (2026-08-05)
 - `pnpm test:e2e` Playwright execution: 188 collected, 148 passed, 40 skipped; four staging-only spec files not collected (admin-crud-staging, admin-responsive-staging, staging-smoke, stripe-webhook-staging)
 - `pnpm test:release:full` passed
 - `pnpm staging:static-preflight` passed
@@ -156,13 +156,17 @@ These assets are repository-ready only. They do not mark migration applied, prov
 
 The previous preview workflow published an image from ordinary feature-branch pushes. That behavior is intentionally replaced.
 
-### Preview Validation
+### Preview Build and Deploy (`deploy-preview.yml`)
 
-`.github/workflows/deploy-preview.yml` is now named `Preview Validation`. It runs on feature-branch pushes and pull requests with `contents: read` permission only.
+`.github/workflows/deploy-preview.yml` is the single unified dispatcher for two mutually exclusive operations.
 
-It may install dependencies, run preview/release safety tests, type-check, build the application, and build the Dockerfile with `push: false`.
+**Push path (`deploy-preview`):** Runs on `feature/**` and `pr/**` pushes when the head commit message does NOT contain `[migration-plan-only]`. Builds, tests, publishes to GHCR, deploys to Dokploy staging, and runs the authenticated admin responsive gate. Requires the `preview-deploy` environment and `packages: write` permission.
 
-It must not log in to GHCR, publish an image, call Dokploy, deploy, run Payload migrations, run Prisma migrations, execute `database-deploy` startup, initialize a database, run queued provider email, or perform live smoke checks unless the feature-branch publish workflow is the authorized path.
+**Manual dispatch path (`read-only-migration-plan`):** Triggered by `workflow_dispatch` with `operation=read-only-migration-plan`. Runs a read-only Payload migration plan against staging over Tailscale. Requires `operation`, `expected_sha` (40-char SHA), and `confirmation` inputs. The `read-only-plan` job uses the `staging-migration-plan` environment, job-level `contents: read` only, non-cancelling concurrency, infrastructure preflight (environment/reviewer/secret-name verification), SHA-pinned `tailscale/github-action`, port `5433`, mode-600 temp file with trap deletion, and sanitized artifact only. It must not execute Docker, GHCR, Dokploy, publication, Prisma, migration apply/down, provider, or smoke steps.
+
+Commits with `[migration-plan-only]` in the message suppress the push-triggered deploy job so a migration-plan dispatch can be the sole authorized action for that tip.
+
+The standalone `staging-payload-migration-plan.yml` has been removed; all capability is now in `deploy-preview.yml`.
 
 ### Publish Preview Image
 
