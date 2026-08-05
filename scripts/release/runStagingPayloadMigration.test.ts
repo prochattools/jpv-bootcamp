@@ -8,7 +8,9 @@ import {
   parsePlanCliArgs,
   parseApplyCliArgs,
   parseRollbackPlanCliArgs,
+  parseNulGitStatus,
   PAYLOAD_MIGRATE_ARGS,
+  APPLY_OUTCOME_UNCERTAIN,
   type MigrationAuthorizationPacket,
   type RollbackPlanAuthorizationPacket,
   type StagingMigrationRunnerDependencies,
@@ -133,7 +135,13 @@ function make28Client(schema = REQUIRED_SCHEMA): PgClientLike {
 }
 
 function make29Client(schema = REQUIRED_SCHEMA): PgClientLike {
-  return makeClient({ schema, payloadRows: ALL_29.map((n) => ({ name: n, batch: 1 })) })
+  return makeClient({
+    schema,
+    payloadRows: [
+      ...FIRST_28.map((n) => ({ name: n, batch: 1 })),
+      { name: TARGET_MIGRATION, batch: 2 }, // migration 29 alone in its own batch
+    ],
+  })
 }
 
 function clientFactory28(schema = REQUIRED_SCHEMA): PgClientFactory {
@@ -994,33 +1002,28 @@ async function run(): Promise<void> {
     )
   })
 
-  await test('apply: rejects when migration command exits non-zero', async () => {
-    await assert.rejects(
-      () => runStagingMigrationApply(
-        stagingUrl(), undefined, goodAuthorization(),
-        baseDeps({ clientFactory: clientFactory28(), commandExecutor: okApplyExecutor(1) }),
-        noopOutput(),
-      ),
-      /Migration command exited/i,
+  await test('apply: non-zero exit returns APPLY_OUTCOME_UNCERTAIN (does not throw)', async () => {
+    const result = await runStagingMigrationApply(
+      stagingUrl(), undefined, goodAuthorization(),
+      baseDeps({ clientFactory: clientFactory28(), commandExecutor: okApplyExecutor(1) }),
+      noopOutput(),
     )
+    assert.equal(result.ok, false)
+    assert.equal('outcome' in result && result.outcome, APPLY_OUTCOME_UNCERTAIN)
+    assert.equal(result.mode, 'apply')
   })
 
-  await test('apply: error message does not recommend unconditional migrate:down', async () => {
-    let errorMessage = ''
-    try {
-      await runStagingMigrationApply(
-        stagingUrl(), undefined, goodAuthorization(),
-        baseDeps({ clientFactory: clientFactory28(), commandExecutor: okApplyExecutor(1) }),
-        noopOutput(),
-      )
-    } catch (error: unknown) {
-      errorMessage = error instanceof Error ? error.message : ''
-    }
-    assert.ok(errorMessage.length > 0, 'should have thrown')
-    // Must not recommend bare migrate:down without the rollback-plan caveat
+  await test('apply: uncertain outcome message does not recommend unconditional migrate:down', async () => {
+    const result = await runStagingMigrationApply(
+      stagingUrl(), undefined, goodAuthorization(),
+      baseDeps({ clientFactory: clientFactory28(), commandExecutor: okApplyExecutor(1) }),
+      noopOutput(),
+    )
+    assert.ok('outcome' in result)
+    assert.ok(result.message.length > 0)
     assert.ok(
-      !errorMessage.includes('pnpm payload migrate:down') || errorMessage.includes('rollback-plan'),
-      'Error must not recommend bare migrate:down without rollback-plan caveat',
+      !result.message.includes('migrate:down') || result.message.includes('separate authorization'),
+      'Uncertain message must not recommend bare migrate:down without separate authorization caveat',
     )
   })
 
@@ -1232,6 +1235,479 @@ async function run(): Promise<void> {
     assert.equal(result.ok, true)
     assert.ok(dbCallCount > 0, 'DB adapter must be used')
   })
+
+  // ─── Defect 1: batch evidence preservation ────────────────────────────────
+
+  await test('rollback-plan: succeeds when migration 29 is alone in highest batch', async () => {
+    const result = await runStagingMigrationRollbackPlan(
+      stagingUrl(), undefined, goodRollbackAuthorization(),
+      baseDeps({ clientFactory: clientFactory29() }), noopOutput(),
+    )
+    assert.equal(result.ok, true)
+    assert.deepEqual(result.latestBatchMigrations, [TARGET_MIGRATION])
+  })
+
+  await test('rollback-plan: blocks when migration 29 shares its batch with another migration', async () => {
+    const factory: PgClientFactory = () => makeClient({
+      schema: REQUIRED_SCHEMA,
+      payloadRows: [
+        ...FIRST_28.map((n) => ({ name: n, batch: 1 })),
+        { name: TARGET_MIGRATION, batch: 2 },
+        { name: 'extra_in_same_batch', batch: 2 }, // shares batch with migration 29
+      ],
+    })
+    const result = await runStagingMigrationRollbackPlan(
+      stagingUrl(), undefined, goodRollbackAuthorization(),
+      baseDeps({ clientFactory: factory }), noopOutput(),
+    )
+    assert.equal(result.ok, false)
+    assert.ok(result.blockers.some((b) => b.toLowerCase().includes('batch') || b.includes('1 (')))
+  })
+
+  await test('rollback-plan: blocks when a later batch exists after migration 29', async () => {
+    const factory: PgClientFactory = () => makeClient({
+      schema: REQUIRED_SCHEMA,
+      payloadRows: [
+        ...FIRST_28.map((n) => ({ name: n, batch: 1 })),
+        { name: TARGET_MIGRATION, batch: 2 },
+        { name: 'later_migration', batch: 3 }, // later batch
+      ],
+    })
+    const result = await runStagingMigrationRollbackPlan(
+      stagingUrl(), undefined, goodRollbackAuthorization(),
+      baseDeps({ clientFactory: factory }), noopOutput(),
+    )
+    assert.equal(result.ok, false)
+    assert.ok(result.blockers.some((b) => b.toLowerCase().includes('batch') || b.toLowerCase().includes('last applied')))
+  })
+
+  await test('rollback-plan: blocks when batch metadata is missing (all batch=1 for all 29)', async () => {
+    // All 29 in batch 1 — migration 29 is not alone in highest batch
+    const factory: PgClientFactory = () => makeClient({
+      schema: REQUIRED_SCHEMA,
+      payloadRows: ALL_29.map((n) => ({ name: n, batch: 1 })),
+    })
+    const result = await runStagingMigrationRollbackPlan(
+      stagingUrl(), undefined, goodRollbackAuthorization(),
+      baseDeps({ clientFactory: factory }), noopOutput(),
+    )
+    assert.equal(result.ok, false)
+    assert.ok(result.blockers.length > 0)
+  })
+
+  await test('rollback-plan: blocks when batch evidence has duplicate records', async () => {
+    const factory: PgClientFactory = () => makeClient({
+      schema: REQUIRED_SCHEMA,
+      payloadRows: [
+        ...FIRST_28.map((n) => ({ name: n, batch: 1 })),
+        { name: TARGET_MIGRATION, batch: 2 },
+        { name: TARGET_MIGRATION, batch: 2 }, // duplicate
+      ],
+    })
+    const result = await runStagingMigrationRollbackPlan(
+      stagingUrl(), undefined, goodRollbackAuthorization(),
+      baseDeps({ clientFactory: factory }), noopOutput(),
+    )
+    assert.equal(result.ok, false)
+    assert.ok(result.blockers.some((b) => b.toLowerCase().includes('duplicate')))
+  })
+
+  // ─── Defect 2: exact database identity enforcement ────────────────────────
+
+  await test('database guard: jpvbootcamp accepted', async () => {
+    const result = await runStagingMigrationPlan(
+      stagingUrl(), undefined, goodPlanInput({ expectedDatabase: 'jpvbootcamp' }),
+      baseDeps({ clientFactory: clientFactory28() }), noopOutput(),
+    )
+    assert.equal(result.ok, true)
+  })
+
+  await test('database guard: arbitrary non-production database rejected', async () => {
+    const result = await runStagingMigrationPlan(
+      `postgres://${STAGING_HOSTNAME}/other_db?schema=${REQUIRED_SCHEMA}`,
+      undefined,
+      goodPlanInput({ expectedDatabase: 'other_db' }),
+      baseDeps({ clientFactory: clientFactory28() }), noopOutput(),
+    )
+    assert.equal(result.ok, false)
+    assert.ok(result.blockers.some((b) => b.toLowerCase().includes('database')))
+  })
+
+  await test('database guard: jpvbootcamp_staging rejected even if expected arg matches', async () => {
+    const result = await runStagingMigrationPlan(
+      `postgres://${STAGING_HOSTNAME}/jpvbootcamp_staging?schema=${REQUIRED_SCHEMA}`,
+      undefined,
+      goodPlanInput({ expectedDatabase: 'jpvbootcamp_staging' }),
+      baseDeps({ clientFactory: clientFactory28() }), noopOutput(),
+    )
+    assert.equal(result.ok, false)
+    assert.ok(result.blockers.some((b) => b.toLowerCase().includes('database')))
+  })
+
+  await test('database guard: production-named database rejected', async () => {
+    for (const name of ['jpvbootcamp_prod', 'jpvbootcamp_production']) {
+      const result = await runStagingMigrationPlan(
+        `postgres://${STAGING_HOSTNAME}/${name}?schema=${REQUIRED_SCHEMA}`,
+        undefined,
+        goodPlanInput({ expectedDatabase: name }),
+        baseDeps({ clientFactory: clientFactory28() }), noopOutput(),
+      )
+      assert.equal(result.ok, false, `${name} should be rejected`)
+    }
+  })
+
+  // ─── Defect 3: tokenized hostname and DB markers ──────────────────────────
+
+  await test('hostname guard: legitimate hostname containing "domain" is not falsely rejected', async () => {
+    const result = await runStagingMigrationPlan(
+      `postgres://staging-domain.internal/${REQUIRED_DATABASE}?schema=${REQUIRED_SCHEMA}`,
+      undefined,
+      goodPlanInput({ expectedHostname: 'staging-domain.internal' }),
+      baseDeps({ clientFactory: clientFactory28() }), noopOutput(),
+    )
+    // Should not be blocked by the "domain" substring — only whole-token markers are rejected
+    assert.ok(!result.blockers.some((b) => b.includes("production marker 'domain'")))
+  })
+
+  await test('hostname guard: exact approved staging hostname accepted', async () => {
+    const result = await runStagingMigrationPlan(
+      stagingUrl(STAGING_HOSTNAME), undefined,
+      goodPlanInput({ expectedHostname: STAGING_HOSTNAME }),
+      baseDeps({ clientFactory: clientFactory28() }), noopOutput(),
+    )
+    assert.equal(result.ok, true)
+  })
+
+  await test('hostname guard: one-character hostname difference is rejected', async () => {
+    const result = await runStagingMigrationPlan(
+      `postgres://${STAGING_HOSTNAME}x/${REQUIRED_DATABASE}?schema=${REQUIRED_SCHEMA}`,
+      undefined,
+      goodPlanInput({ expectedHostname: STAGING_HOSTNAME }),
+      baseDeps({ clientFactory: clientFactory28() }), noopOutput(),
+    )
+    assert.equal(result.ok, false)
+    assert.ok(result.blockers.some((b) => b.toLowerCase().includes('hostname')))
+  })
+
+  await test('hostname guard: prod/production/live/main token labels rejected', async () => {
+    for (const label of ['prod', 'production', 'live', 'main']) {
+      const hostname = `db.${label}.internal`
+      const result = await runStagingMigrationPlan(
+        `postgres://${hostname}/${REQUIRED_DATABASE}?schema=${REQUIRED_SCHEMA}`,
+        undefined,
+        goodPlanInput({ expectedHostname: hostname }),
+        baseDeps({ clientFactory: clientFactory28() }), noopOutput(),
+      )
+      assert.equal(result.ok, false, `hostname with '${label}' token should be rejected`)
+      assert.ok(
+        result.blockers.some((b) => b.includes(`production marker '${label}'`)),
+        `should mention '${label}' marker`,
+      )
+    }
+  })
+
+  await test('hostname guard: arbitrary matching expected/actual does not bypass reviewed target identity', async () => {
+    // Even if expectedHostname === actualHostname, the database must still be jpvbootcamp
+    const result = await runStagingMigrationPlan(
+      `postgres://arbitrary.host/wrong_db?schema=${REQUIRED_SCHEMA}`,
+      undefined,
+      goodPlanInput({ expectedHostname: 'arbitrary.host', expectedDatabase: 'wrong_db' }),
+      baseDeps({ clientFactory: clientFactory28() }), noopOutput(),
+    )
+    assert.equal(result.ok, false)
+    assert.ok(result.blockers.some((b) => b.toLowerCase().includes('database')))
+  })
+
+  // ─── Defect 4: rollback-plan worktree integrity ───────────────────────────
+
+  await test('rollback-plan: dirty guarded path blocks rollback-plan', async () => {
+    await assert.rejects(
+      () => runStagingMigrationRollbackPlan(
+        stagingUrl(), undefined, goodRollbackAuthorization(),
+        {
+          ...baseDeps({ clientFactory: clientFactory29() }),
+          gitStatusResolver: dirtyGitStatus([
+            { status: 'M', path: 'scripts/release/runStagingPayloadMigration.ts' },
+          ]),
+        },
+        noopOutput(),
+      ),
+      /worktree/i,
+    )
+  })
+
+  await test('rollback-plan: protected residue does not block rollback-plan', async () => {
+    const result = await runStagingMigrationRollbackPlan(
+      stagingUrl(), undefined, goodRollbackAuthorization(),
+      {
+        ...baseDeps({ clientFactory: clientFactory29() }),
+        gitStatusResolver: dirtyGitStatus([
+          { status: 'M', path: '.ai/current.md' },
+          { status: 'M', path: '.claude/worktrees/wf_abc123' },
+          { status: 'M', path: 'evidence-landing.png' },
+          { status: 'M', path: 'newrelic_agent.log' },
+          { status: '?', path: '.env.production.BAK' },
+        ]),
+      },
+      noopOutput(),
+    )
+    assert.equal(result.mode, 'rollback-plan')
+  })
+
+  // ─── Defect 5: NUL-delimited git status parsing ───────────────────────────
+
+  await test('parseNulGitStatus: modified guarded file parsed correctly', () => {
+    const entries = parseNulGitStatus(' M scripts/release/runStagingPayloadMigration.ts\0')
+    assert.equal(entries.length, 1)
+    assert.equal(entries[0].path, 'scripts/release/runStagingPayloadMigration.ts')
+  })
+
+  await test('parseNulGitStatus: staged file parsed correctly', () => {
+    const entries = parseNulGitStatus('M  src/migrations/migrationRegistry.ts\0')
+    assert.equal(entries.length, 1)
+    assert.equal(entries[0].path, 'src/migrations/migrationRegistry.ts')
+  })
+
+  await test('parseNulGitStatus: deleted file parsed correctly', () => {
+    const entries = parseNulGitStatus(' D some/deleted/file.ts\0')
+    assert.equal(entries.length, 1)
+    assert.equal(entries[0].path, 'some/deleted/file.ts')
+  })
+
+  await test('parseNulGitStatus: untracked file parsed correctly', () => {
+    const entries = parseNulGitStatus('?? some/new/file.ts\0')
+    assert.equal(entries.length, 1)
+    assert.equal(entries[0].path, 'some/new/file.ts')
+  })
+
+  await test('parseNulGitStatus: rename from guarded to unguarded emits both paths', () => {
+    const raw = 'R  new/path/file.ts\0scripts/release/runStagingPayloadMigration.ts\0'
+    const entries = parseNulGitStatus(raw)
+    assert.equal(entries.length, 2)
+    assert.ok(entries.some((e) => e.path === 'new/path/file.ts'))
+    assert.ok(entries.some((e) => e.path === 'scripts/release/runStagingPayloadMigration.ts'))
+  })
+
+  await test('parseNulGitStatus: rename from unguarded to guarded emits both paths', () => {
+    const raw = 'R  scripts/release/runStagingPayloadMigration.ts\0some/old/file.ts\0'
+    const entries = parseNulGitStatus(raw)
+    assert.equal(entries.length, 2)
+    assert.ok(entries.some((e) => e.path === 'scripts/release/runStagingPayloadMigration.ts'))
+    assert.ok(entries.some((e) => e.path === 'some/old/file.ts'))
+  })
+
+  await test('parseNulGitStatus: copy into guarded path emits both paths', () => {
+    const raw = 'C  scripts/release/runStagingPayloadMigration.ts\0some/source/file.ts\0'
+    const entries = parseNulGitStatus(raw)
+    assert.equal(entries.length, 2)
+    assert.ok(entries.some((e) => e.path === 'scripts/release/runStagingPayloadMigration.ts'))
+  })
+
+  await test('parseNulGitStatus: paths containing spaces parsed correctly', () => {
+    const entries = parseNulGitStatus(' M path with spaces/file name.ts\0')
+    assert.equal(entries.length, 1)
+    assert.equal(entries[0].path, 'path with spaces/file name.ts')
+  })
+
+  await test('parseNulGitStatus: empty input returns empty array', () => {
+    assert.deepEqual(parseNulGitStatus(''), [])
+  })
+
+  await test('parseNulGitStatus: malformed record (no space at index 2) throws', () => {
+    assert.throws(() => parseNulGitStatus('MXfile.ts\0'), /Malformed/)
+  })
+
+  await test('parseNulGitStatus: record shorter than 3 chars throws', () => {
+    assert.throws(() => parseNulGitStatus('M \0'), /Malformed/)
+  })
+
+  await test('guardGuardedPaths: rename of guarded file blocks via NUL parser', async () => {
+    const result = await runStagingMigrationPlan(
+      stagingUrl(), undefined, goodPlanInput(),
+      baseDeps({
+        gitStatusResolver: dirtyGitStatus([
+          { status: 'R', path: 'scripts/release/runStagingPayloadMigration.ts' },
+        ]),
+      }),
+      noopOutput(),
+    )
+    assert.equal(result.ok, false)
+    assert.ok(result.blockers.some((b) => b.toLowerCase().includes('worktree')))
+  })
+
+  // ─── Defect 6: uncertain apply outcome ────────────────────────────────────
+
+  await test('apply: execution error returns APPLY_OUTCOME_UNCERTAIN with status query evidence', async () => {
+    const result = await runStagingMigrationApply(
+      stagingUrl(), undefined, goodAuthorization(),
+      {
+        ...baseDeps({ clientFactory: clientFactory28() }),
+        commandExecutor: () => ({ status: null, error: new Error('spawn error') }),
+      },
+      noopOutput(),
+    )
+    assert.ok('outcome' in result)
+    assert.equal('outcome' in result && result.outcome, APPLY_OUTCOME_UNCERTAIN)
+    assert.equal(result.ok, false)
+    assert.equal('outcome' in result && result.statusQuerySucceeded, true)
+  })
+
+  await test('apply: signal/null status returns APPLY_OUTCOME_UNCERTAIN', async () => {
+    const result = await runStagingMigrationApply(
+      stagingUrl(), undefined, goodAuthorization(),
+      {
+        ...baseDeps({ clientFactory: clientFactory28() }),
+        commandExecutor: () => ({ status: null }),
+      },
+      noopOutput(),
+    )
+    assert.ok('outcome' in result)
+    assert.equal('outcome' in result && result.outcome, APPLY_OUTCOME_UNCERTAIN)
+  })
+
+  await test('apply: uncertain outcome reports schema identity', async () => {
+    const result = await runStagingMigrationApply(
+      stagingUrl(), undefined, goodAuthorization(),
+      {
+        ...baseDeps({ clientFactory: clientFactory28() }),
+        commandExecutor: () => ({ status: 1 }),
+      },
+      noopOutput(),
+    )
+    assert.ok('outcome' in result)
+    if ('outcome' in result) {
+      assert.equal(result.schemaIdentityConfirmed, true)
+      assert.equal(result.migration29Applied, false)
+      assert.equal(result.appliedCount, 28)
+    }
+  })
+
+  await test('apply: uncertain outcome when migration 29 appears applied despite failure', async () => {
+    // Pre-apply sees 28, command fails (status 1), uncertain status query sees 29 — uncertain-applied evidence
+    const factory: PgClientFactory = (() => {
+      let call = 0
+      return () => {
+        const idx = call++
+        // call 0 = pre-apply (28 applied), call 1 = uncertain status query (29 applied)
+        return idx === 0 ? make28Client() : make29Client()
+      }
+    })()
+    const result = await runStagingMigrationApply(
+      stagingUrl(), undefined, goodAuthorization(),
+      {
+        ...baseDeps({ clientFactory: factory }),
+        commandExecutor: () => ({ status: 1 }),
+      },
+      noopOutput(),
+    )
+    assert.ok('outcome' in result)
+    if ('outcome' in result) {
+      assert.equal(result.outcome, APPLY_OUTCOME_UNCERTAIN)
+      assert.equal(result.migration29Applied, true)
+    }
+  })
+
+  await test('apply: uncertain outcome when status query also fails', async () => {
+    // Pre-apply succeeds (28), command returns non-zero, then uncertain status query fails
+    let call = 0
+    const factory: PgClientFactory = () => {
+      const idx = call++
+      if (idx === 0) return make28Client() // pre-apply succeeds
+      // uncertain status query — fail at connect
+      return {
+        async connect() { throw new Error('cannot connect for uncertain check') },
+        async query() { return { rows: [] } },
+        async end() {},
+      }
+    }
+    const result = await runStagingMigrationApply(
+      stagingUrl(), undefined, goodAuthorization(),
+      {
+        ...baseDeps({ clientFactory: factory }),
+        commandExecutor: () => ({ status: 1 }),
+      },
+      noopOutput(),
+    )
+    assert.ok('outcome' in result)
+    if ('outcome' in result) {
+      assert.equal(result.statusQuerySucceeded, false)
+      assert.equal(result.appliedCount, null)
+    }
+  })
+
+  await test('apply: uncertain outcome message never contains database URL or credentials', async () => {
+    const sensitiveUrl = `postgres://user:secret@${STAGING_HOSTNAME}/${REQUIRED_DATABASE}?schema=${REQUIRED_SCHEMA}`
+    const lines: string[] = []
+    const result = await runStagingMigrationApply(
+      sensitiveUrl, undefined, goodAuthorization(),
+      {
+        ...baseDeps({ clientFactory: clientFactory28() }),
+        commandExecutor: () => ({ status: 1 }),
+      },
+      (line) => lines.push(line),
+    )
+    assert.ok('outcome' in result)
+    const allText = lines.join('\n') + result.message
+    assert.ok(!allText.includes('secret'), 'must not expose credentials')
+    assert.ok(!allText.includes(sensitiveUrl), 'must not expose full URL')
+  })
+
+  // ─── Defect 7: current-checkout git resolver integration test ─────────────
+
+  await test('git resolver: real HEAD passes guard; abbreviated or prior SHA fails', async () => {
+    const { execSync } = await import('node:child_process')
+    const realHead = execSync('git rev-parse HEAD', { encoding: 'utf8' }).trim()
+
+    // Real HEAD should pass the commit guard (no gitResolver override — uses real git)
+    const okResult = await runStagingMigrationPlan(
+      stagingUrl(), undefined,
+      goodPlanInput({ expectedCommit: realHead }),
+      {
+        // No gitResolver — uses real git resolver
+        gitStatusResolver: cleanGitStatus(),
+        clientFactory: clientFactory28(),
+        commandExecutor: okApplyExecutor(),
+      },
+      noopOutput(),
+    )
+    // Branch guard may fail (we may be on the right branch already), but commit guard must pass
+    assert.ok(
+      okResult.ok || !okResult.blockers.some((b) => b.toLowerCase().includes('commit')),
+      'Real HEAD should not fail commit guard',
+    )
+
+    // Abbreviated SHA must fail
+    const abbrev = realHead.slice(0, 8)
+    const abbrevResult = await runStagingMigrationPlan(
+      stagingUrl(), undefined,
+      goodPlanInput({ expectedCommit: abbrev }),
+      {
+        gitStatusResolver: cleanGitStatus(),
+        clientFactory: clientFactory28(),
+        commandExecutor: okApplyExecutor(),
+      },
+      noopOutput(),
+    )
+    assert.equal(abbrevResult.ok, false)
+    assert.ok(abbrevResult.blockers.some((b) => b.includes('40')))
+
+    // Previous SHA must fail (HEAD is not TEST_HEAD unless we are at that exact commit)
+    if (realHead !== TEST_HEAD) {
+      const prevResult = await runStagingMigrationPlan(
+        stagingUrl(), undefined,
+        goodPlanInput({ expectedCommit: TEST_HEAD }),
+        {
+          gitStatusResolver: cleanGitStatus(),
+          clientFactory: clientFactory28(),
+          commandExecutor: okApplyExecutor(),
+        },
+        noopOutput(),
+      )
+      assert.equal(prevResult.ok, false)
+      assert.ok(prevResult.blockers.some((b) => b.toLowerCase().includes('commit')))
+    }
+  })
+
 }
 
 async function main(): Promise<void> {

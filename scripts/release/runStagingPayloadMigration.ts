@@ -12,10 +12,20 @@ import {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const REQUIRED_BRANCH = 'feature/course-branding-and-preview'
-const REQUIRED_SCHEMA = 'jpvbootcamp_staging'
-const REQUIRED_DATABASE = 'jpvbootcamp'
-const REQUIRED_ENVIRONMENT = 'staging'
-const REQUIRED_TARGET_ID = 'jpvbootcamp-staging'
+
+// Exact reviewed staging target — all identity checks derive from this one constant.
+const STAGING_TARGET = {
+  environment: 'staging',
+  targetId: 'jpvbootcamp-staging',
+  schema: 'jpvbootcamp_staging',
+  database: 'jpvbootcamp',
+} as const
+
+// Aliases kept for readability in the rest of the file.
+const REQUIRED_SCHEMA = STAGING_TARGET.schema
+const REQUIRED_DATABASE = STAGING_TARGET.database
+const REQUIRED_ENVIRONMENT = STAGING_TARGET.environment
+const REQUIRED_TARGET_ID = STAGING_TARGET.targetId
 const TARGET_MIGRATION = '20260804_050000_member_account_action_reservations'
 const EXPECTED_APPLIED_BEFORE = 28
 const EXPECTED_APPLIED_AFTER = 29
@@ -25,9 +35,9 @@ const ROLLBACK_PLAN_CONFIRMATION_VALUE =
   'plan_rollback_account_action_reservation_from_jpvbootcamp_staging'
 const FULL_COMMIT_SHA_RE = /^[0-9a-f]{40}$/
 
-// Production markers that must never appear in staging target inputs.
-const PRODUCTION_HOST_MARKERS = ['prod', 'production', 'live', 'main']
-const PRODUCTION_DB_MARKERS = ['jpvbootcamp_prod', 'jpvbootcamp_production']
+// Production token labels rejected as whole tokens (exact match against hostname labels or db name components).
+const PRODUCTION_HOST_TOKEN_MARKERS = ['prod', 'production', 'live', 'main']
+const PRODUCTION_DB_TOKEN_MARKERS = ['prod', 'production', 'live', 'main']
 
 // Guarded paths — any uncommitted change in these blocks plan and apply.
 const GUARDED_PATHS = [
@@ -103,6 +113,23 @@ export type StagingMigrationApplyResult = {
   message: string
 }
 
+export const APPLY_OUTCOME_UNCERTAIN = 'APPLY_OUTCOME_UNCERTAIN' as const
+
+export type StagingMigrationUncertainOutcome = {
+  ok: false
+  mode: 'apply'
+  outcome: typeof APPLY_OUTCOME_UNCERTAIN
+  schema: string
+  appliedCount: number | null
+  missingMigrations: string[] | null
+  unexpectedMigrations: string[] | null
+  migration29Applied: boolean | null
+  schemaIdentityConfirmed: boolean | null
+  prismaHealthy: boolean | null
+  statusQuerySucceeded: boolean
+  message: string
+}
+
 export type StagingMigrationRollbackPlanResult = {
   ok: boolean
   mode: 'rollback-plan'
@@ -149,22 +176,51 @@ function resolveGit(
   }
 }
 
+export function parseNulGitStatus(raw: string): GitStatusEntry[] {
+  const entries: GitStatusEntry[] = []
+  if (!raw) return entries
+  // NUL-delimited: each record is XY<SP>path<NUL>, rename/copy adds src<NUL> after dest.
+  const records = raw.split('\0')
+  let i = 0
+  while (i < records.length) {
+    const record = records[i]
+    i += 1
+    if (!record) continue
+    if (record.length < 3) {
+      // Fail closed on malformed output — treat as guard blocker
+      throw new Error(`Malformed git status record: ${JSON.stringify(record)}`)
+    }
+    const xy = record.slice(0, 2)
+    if (record[2] !== ' ') {
+      throw new Error(`Malformed git status record: ${JSON.stringify(record)}`)
+    }
+    const path = record.slice(3)
+    const x = xy[0]
+    const y = xy[1]
+    // Rename (R) or copy (C) in either index or worktree: next NUL record is the original path
+    if (x === 'R' || x === 'C' || y === 'R' || y === 'C') {
+      const origPath = records[i] ?? ''
+      i += 1
+      // Guard both destination and source paths
+      entries.push({ status: xy.trim(), path })
+      if (origPath) entries.push({ status: xy.trim(), path: origPath })
+    } else {
+      entries.push({ status: xy.trim(), path })
+    }
+  }
+  return entries
+}
+
 function resolveGitStatus(
   dependencies: StagingMigrationRunnerDependencies,
 ): () => GitStatusEntry[] {
   if (dependencies.gitStatusResolver) return dependencies.gitStatusResolver
   return () => {
-    const raw = execSync('git status --porcelain=v1', {
+    const raw = execSync('git status --porcelain=v1 -z --untracked-files=all', {
       cwd: repoRoot,
       encoding: 'utf8',
     })
-    return raw
-      .split('\n')
-      .filter((line) => line.length >= 3)
-      .map((line) => ({
-        status: line.slice(0, 2).trim(),
-        path: line.slice(3).trim(),
-      }))
+    return parseNulGitStatus(raw)
   }
 }
 
@@ -218,6 +274,14 @@ function guardBranchAndCommit(
   return { branch, commit }
 }
 
+function hostnameTokens(hostname: string): string[] {
+  return hostname.toLowerCase().split(/[\s.:\-_/]+/).filter(Boolean)
+}
+
+function databaseNameTokens(dbName: string): string[] {
+  return dbName.toLowerCase().split(/[\s.\-_/]+/).filter(Boolean)
+}
+
 function guardEnvironmentAndTarget(
   environment: string,
   targetId: string,
@@ -227,22 +291,22 @@ function guardEnvironmentAndTarget(
   actualHostname: string,
   actualDatabase: string,
 ): void {
-  if (environment !== REQUIRED_ENVIRONMENT) {
+  if (environment !== STAGING_TARGET.environment) {
     throw new Error(
-      `Environment guard: must be '${REQUIRED_ENVIRONMENT}', got '${environment}'`,
+      `Environment guard: must be '${STAGING_TARGET.environment}', got '${environment}'`,
     )
   }
   if (!targetId?.trim()) {
     throw new Error('Target identity guard: --target-id is required')
   }
-  if (targetId !== REQUIRED_TARGET_ID) {
+  if (targetId !== STAGING_TARGET.targetId) {
     throw new Error(
-      `Target identity guard: expected '${REQUIRED_TARGET_ID}', got '${targetId}'`,
+      `Target identity guard: expected '${STAGING_TARGET.targetId}', got '${targetId}'`,
     )
   }
-  if (!expectedSchema?.trim() || expectedSchema !== REQUIRED_SCHEMA) {
+  if (!expectedSchema?.trim() || expectedSchema !== STAGING_TARGET.schema) {
     throw new Error(
-      `Schema guard: expected '${REQUIRED_SCHEMA}', got '${expectedSchema}'`,
+      `Schema guard: expected '${STAGING_TARGET.schema}', got '${expectedSchema}'`,
     )
   }
   if (!expectedHostname?.trim()) {
@@ -251,23 +315,36 @@ function guardEnvironmentAndTarget(
   if (!expectedDatabase?.trim()) {
     throw new Error('Target identity guard: --expected-database is required')
   }
-  for (const marker of PRODUCTION_HOST_MARKERS) {
-    if (actualHostname.toLowerCase().includes(marker)) {
+
+  // Tokenized hostname production-marker check (Defect 3)
+  const hostTokens = hostnameTokens(actualHostname)
+  for (const marker of PRODUCTION_HOST_TOKEN_MARKERS) {
+    if (hostTokens.includes(marker)) {
       throw new Error(
         `Target identity guard: hostname contains production marker '${marker}'`,
       )
     }
   }
-  for (const marker of PRODUCTION_DB_MARKERS) {
-    if (actualDatabase.toLowerCase().includes(marker)) {
+
+  // Tokenized database name production-marker check (Defect 3)
+  const dbTokens = databaseNameTokens(actualDatabase)
+  for (const marker of PRODUCTION_DB_TOKEN_MARKERS) {
+    if (dbTokens.includes(marker)) {
       throw new Error(
         `Target identity guard: database name contains production marker '${marker}'`,
       )
     }
   }
-  if (actualHostname !== expectedHostname) {
+
+  // Exact database enforcement — all three conditions required (Defect 2)
+  if (expectedDatabase !== STAGING_TARGET.database) {
     throw new Error(
-      `Target identity guard: configured hostname does not match expected hostname`,
+      `Target identity guard: --expected-database must be exactly '${STAGING_TARGET.database}', got '${expectedDatabase}'`,
+    )
+  }
+  if (actualDatabase !== STAGING_TARGET.database) {
+    throw new Error(
+      `Target identity guard: configured database must be exactly '${STAGING_TARGET.database}', got '${actualDatabase}'`,
     )
   }
   if (actualDatabase !== expectedDatabase) {
@@ -275,8 +352,11 @@ function guardEnvironmentAndTarget(
       `Target identity guard: configured database does not match expected database`,
     )
   }
-  if (actualDatabase === REQUIRED_DATABASE && actualHostname === expectedHostname) {
-    // matched — ok
+
+  if (actualHostname !== expectedHostname) {
+    throw new Error(
+      `Target identity guard: configured hostname does not match expected hostname`,
+    )
   }
 }
 
@@ -736,7 +816,7 @@ export async function runStagingMigrationApply(
   authorization: MigrationAuthorizationPacket,
   dependencies: StagingMigrationRunnerDependencies = {},
   output: (line: string) => void = console.log,
-): Promise<StagingMigrationApplyResult> {
+): Promise<StagingMigrationApplyResult | StagingMigrationUncertainOutcome> {
   if (!authorization.expectedCommit?.trim()) {
     throw new Error('Authorization packet: expectedCommit is required')
   }
@@ -818,14 +898,50 @@ export async function runStagingMigrationApply(
 
   const executor = resolveCommandExecutor(dependencies)
   const execResult = executor(PAYLOAD_MIGRATE_ARGS)
-  if (execResult.error) {
-    throw new Error(`Migration command error: ${execResult.error.message}`)
-  }
-  if (execResult.status !== 0) {
-    throw new Error(
-      `Migration command exited with status ${execResult.status ?? 'unknown'}. ` +
-        `Rollback requires separate authorization; run pnpm staging:payload-migration-rollback-plan first.`,
-    )
+
+  // Defect 6: uncertain apply outcome on any non-zero/error/signal result
+  const commandIndeterminate =
+    execResult.error !== undefined ||
+    execResult.status === null ||
+    execResult.status !== 0
+
+  if (commandIndeterminate) {
+    output(`[staging-migration-apply] UNCERTAIN: command did not complete cleanly — collecting read-only status`)
+    let uncertainStatus: FullMigrationStatus | null = null
+    let statusQuerySucceeded = false
+    try {
+      uncertainStatus = await collectFullMigrationStatus(databaseUrl, schemaOverride, dependencies)
+      statusQuerySucceeded = true
+    } catch {
+      // Status query failed — cannot determine outcome
+    }
+    const migration29Applied = uncertainStatus
+      ? uncertainStatus.missingPayloadMigrations.every((m) => m !== TARGET_MIGRATION) &&
+        uncertainStatus.appliedPayloadCount >= EXPECTED_APPLIED_AFTER
+      : null
+    const reason = execResult.error
+      ? `Migration command error: ${execResult.error.message}`
+      : execResult.status === null
+        ? 'Migration command exited with signal or indeterminate status'
+        : `Migration command exited with status ${execResult.status}`
+    output(`[staging-migration-apply] ${APPLY_OUTCOME_UNCERTAIN}: ${reason}`)
+    output(`[staging-migration-apply] Require a fresh read-only plan and separate operator decision before any rollback.`)
+    return {
+      ok: false,
+      mode: 'apply',
+      outcome: APPLY_OUTCOME_UNCERTAIN,
+      schema: REQUIRED_SCHEMA,
+      appliedCount: uncertainStatus?.appliedPayloadCount ?? null,
+      missingMigrations: uncertainStatus?.missingPayloadMigrations ?? null,
+      unexpectedMigrations: uncertainStatus?.unexpectedPayloadMigrations ?? null,
+      migration29Applied,
+      schemaIdentityConfirmed: uncertainStatus
+        ? uncertainStatus.schemaIdentity === REQUIRED_SCHEMA
+        : null,
+      prismaHealthy: uncertainStatus ? uncertainStatus.allPrismaApplied : null,
+      statusQuerySucceeded,
+      message: `${APPLY_OUTCOME_UNCERTAIN}: ${reason}. Run pnpm staging:payload-migration-plan for a fresh read-only plan. Do not retry automatically. Do not execute migrate:down without separate authorization.`,
+    }
   }
 
   output(`[staging-migration-apply] migration command completed`)
@@ -940,6 +1056,9 @@ export async function runStagingMigrationRollbackPlan(
     actualDatabase,
   )
 
+  // Defect 4: worktree integrity guard before any DB access
+  guardGuardedPaths(resolveGitStatus(dependencies))
+
   output(`[staging-migration-rollback-plan] branch=${branch}`)
   output(`[staging-migration-rollback-plan] commit=${commit}`)
   output(`[staging-migration-rollback-plan] environment=${authorization.environment}`)
@@ -992,6 +1111,31 @@ export async function runStagingMigrationRollbackPlan(
     blockers.push(`Unexpected Prisma migrations: [${status.unexpectedPrismaMigrations.join(', ')}]`)
   }
 
+  // Defect 1: validate batch evidence from payloadMigrationRecords
+  const records = status.report.payloadMigrationRecords
+
+  // Validate every record has a non-empty name and a non-negative safe-integer batch
+  const namesSeen = new Set<string>()
+  let batchEvidenceMalformed = false
+  for (const rec of records) {
+    if (!rec.name || typeof rec.name !== 'string') {
+      blockers.push('Payload migration record has an empty or invalid name')
+      batchEvidenceMalformed = true
+      break
+    }
+    if (!Number.isSafeInteger(rec.batch) || rec.batch < 0) {
+      blockers.push(`Payload migration record '${rec.name}' has malformed batch: ${rec.batch}`)
+      batchEvidenceMalformed = true
+      break
+    }
+    if (namesSeen.has(rec.name)) {
+      blockers.push(`Duplicate Payload migration record in batch evidence: '${rec.name}'`)
+      batchEvidenceMalformed = true
+      break
+    }
+    namesSeen.add(rec.name)
+  }
+
   // Verify migration 29 is the last applied and is alone in its batch
   const lastApplied = status.report.appliedPayloadMigrations.at(-1)
   if (lastApplied !== TARGET_MIGRATION) {
@@ -1000,16 +1144,28 @@ export async function runStagingMigrationRollbackPlan(
     )
   }
 
-  // Verify migration 29 is alone in the latest batch using the raw report
-  const payloadRows = status.report.appliedPayloadMigrations
+  // Determine latest batch and validate isolation
   const latestBatchRows: string[] = []
-  for (const name of payloadRows) {
-    if (name === TARGET_MIGRATION) {
-      latestBatchRows.push(name)
+  if (!batchEvidenceMalformed) {
+    const target29Record = records.find((r) => r.name === TARGET_MIGRATION)
+    if (!target29Record) {
+      blockers.push(`${TARGET_MIGRATION} is not in the batch evidence records`)
+    } else {
+      const highestBatch = Math.max(...records.map((r) => r.batch))
+      if (target29Record.batch !== highestBatch) {
+        blockers.push(
+          `${TARGET_MIGRATION} is in batch ${target29Record.batch} but the highest batch is ${highestBatch}`,
+        )
+      }
+      const highestBatchRecords = records.filter((r) => r.batch === highestBatch)
+      if (highestBatchRecords.length !== 1) {
+        blockers.push(
+          `Latest batch ${highestBatch} contains ${highestBatchRecords.length} migration(s); expected exactly 1 (${TARGET_MIGRATION})`,
+        )
+      } else {
+        latestBatchRows.push(highestBatchRecords[0].name)
+      }
     }
-  }
-  if (latestBatchRows.length === 0) {
-    blockers.push(`${TARGET_MIGRATION} is not in the applied list`)
   }
 
   output(`[staging-migration-rollback-plan] applied-payload=${status.appliedPayloadCount}`)

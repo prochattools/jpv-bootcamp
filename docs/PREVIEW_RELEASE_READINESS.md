@@ -671,7 +671,16 @@ Stop conditions: <conditions>
 This does not authorize Git push, Payload migrations, Prisma/database-deploy startup, provider dry-run, provider apply, preview deployment, production deployment, live smoke checks, merge, rebase, reset, or force-push.
 ```
 
-### Payload migration authorization
+### Payload migration authorization (historical — non-operative)
+
+> **Historical record only.** The generic template below authorized earlier migrations
+> (`20260701_201500_member_email_verification` and `20260702_001500_member_account_action_purposes`)
+> in a prior release cycle. It is **not** the current operative authorization packet.
+> The current operative packet is **§ Payload migration 29 authorization** below.
+> Do not use the template below to authorize any live operation.
+
+<details>
+<summary>Historical template (collapsed — non-operative)</summary>
 
 ```text
 Authorize Payload migrations only.
@@ -690,25 +699,29 @@ Rollback owner: <name>
 This does not authorize push, Prisma migrations, schema initialization, provider delivery, or deployment.
 ```
 
+</details>
+
 ### Payload migration 29 authorization (account_action_reservation columns)
 
 Migration 29 (`20260804_050000_member_account_action_reservations`) adds reservation/finalization columns and indexes to `payload_member_verification_tokens`.
 
 The guarded runner (`pnpm staging:payload-migration-plan` / `pnpm staging:payload-migration-apply` / `pnpm staging:payload-migration-rollback-plan`) enforces:
 - Branch must be `feature/course-branding-and-preview`
-- `--expected-commit` is supplied at runtime as the full 40-character HEAD SHA; no source-code constant is changed per deployment
+- `--expected-commit` is supplied at runtime as the full 40-character HEAD SHA; the database name is **fixed** to `jpvbootcamp` in source — it is not operator-supplied; no source-code constant is changed per deployment
 - `--expected-commit` must equal `git rev-parse HEAD` at execution time
-- `--environment=staging` is required
-- `--target-id=jpvbootcamp-staging` is required
-- `--expected-schema=jpvbootcamp_staging` is required
-- `--expected-hostname=<staging-db-host>` must match the configured hostname (production markers rejected; hostname alone is not proof of identity — schema and database name are also checked)
-- `--expected-database=jpvbootcamp` must match the configured database name
+- `--environment=staging` is required (fixed: `staging`)
+- `--target-id=jpvbootcamp-staging` is required (fixed: `jpvbootcamp-staging`)
+- `--expected-schema=jpvbootcamp_staging` is required (fixed: `jpvbootcamp_staging`)
+- `--expected-hostname=<staging-db-host>` must match the configured hostname exactly; production markers (`prod`, `production`, `live`, `main`) are rejected as whole hostname-label tokens, not arbitrary substrings — a hostname such as `staging-domain.internal` is never falsely rejected
+- `--expected-database=jpvbootcamp` — the runner enforces all three: `expectedDatabase === 'jpvbootcamp'`, `actualDatabase === 'jpvbootcamp'`, and `actualDatabase === expectedDatabase`; any other database name is rejected even if the operator-supplied argument matches it
 - Exactly 28 Payload migrations applied before apply; exactly 29 after apply
 - Only migration 29 may be missing at pre-apply; no unexpected records may exist
 - All Prisma migrations must be present, applied, and healthy (no failed, in-progress, rolled-back, unexpected, duplicate, or missing)
-- Any uncommitted change to a guarded operational path blocks plan and apply
+- Any uncommitted change to a guarded operational path blocks plan, apply, **and rollback-plan**
 - Protected residue (`.ai/**`, `.claude/**`, screenshots, logs, backups) does not block
 - Exact apply confirmation value `apply_account_action_reservation_migration_to_jpvbootcamp_staging` required
+- **Rollback-plan batch evidence:** the rollback-plan collects `payloadMigrationRecords` (name + batch for every applied row); it verifies that migration 29 is applied, that it is the sole entry in the highest-numbered batch, and that no later batch exists; a rollback-plan that cannot prove this evidence fails closed
+- **Uncertain apply outcome:** if the apply command returns a non-zero exit code, a signal, or an execution error, the runner does **not** throw and does not recommend retry or rollback; instead it performs one read-only status collection and returns `APPLY_OUTCOME_UNCERTAIN` with non-secret state (applied count, missing/unexpected migrations, schema identity, Prisma health, whether migration 29 appears applied, and whether the status query itself succeeded); the operator must run `pnpm staging:payload-migration-plan` for a fresh read-only plan before any further action
 - Rollback requires a separate read-only plan (`pnpm staging:payload-migration-rollback-plan`) with its own confirmation `plan_rollback_account_action_reservation_from_jpvbootcamp_staging`
 - Rollback execution requires separate authorization; the rollback plan is read-only and does not invoke `migrate:down`
 
@@ -764,18 +777,21 @@ Authorization template:
 Authorize Payload migration 29 only.
 Migration: 20260804_050000_member_account_action_reservations
 Expected commit: <full current authorized SHA — must equal git rev-parse HEAD at execution time>
-Environment: staging
-Target ID: jpvbootcamp-staging
-Schema: jpvbootcamp_staging
-Database: jpvbootcamp
-Expected hostname: <staging-db-host — non-secret identifier, no credentials>
+Environment: staging (fixed)
+Target ID: jpvbootcamp-staging (fixed)
+Schema: jpvbootcamp_staging (fixed)
+Database: jpvbootcamp (fixed — not operator-supplied; runner enforces expectedDatabase === actualDatabase === 'jpvbootcamp')
+Expected hostname: <staging-db-host — non-secret identifier; no credentials; must be exact approved hostname>
 Runner: pnpm staging:payload-migration-apply
 Precondition: 28 Payload migrations applied, migration 29 missing, all Prisma migrations applied and healthy, no unexpected/duplicate/failed records
+Worktree: all guarded paths must be clean; protected residue (.ai/**, .claude/**, screenshots, logs) is allowed
+Batch evidence: rollback-plan verifies migration 29 is alone in the highest batch via payloadMigrationRecords
+Uncertain apply outcome: if apply command exits non-zero/signal/error, runner returns APPLY_OUTCOME_UNCERTAIN and requires a fresh read-only plan; do not retry automatically; do not execute migrate:down without separate authorization
 Backup and restore point: <confirmed evidence identifier>
 Maintenance window: <time and duration>
 Operator: <name>
 Rollback owner: <name>
-Rollback procedure: requires separate rollback-plan authorization; run pnpm staging:payload-migration-rollback-plan first; rollback execution is separately authorized
+Rollback procedure: run pnpm staging:payload-migration-rollback-plan (read-only, verifies batch isolation, requires own confirmation); rollback execution is separately authorized
 
 This does not authorize push, Dokploy redeployment, STARTUP_MODE=database-deploy, Prisma migrations, provider email, post-deployment smoke, production, or main.
 ```

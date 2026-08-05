@@ -51,11 +51,17 @@ export type StagingMigrationStatusResult =
   | 'MISMATCH'
   | 'OPERATOR_EVIDENCE_REQUIRED'
 
+export type PayloadMigrationRecord = {
+  name: string
+  batch: number
+}
+
 export type StagingMigrationStatusReport = {
   result: StagingMigrationStatusResult
   schemaIdentity: string | null
   registeredPayloadMigrations: string[]
   appliedPayloadMigrations: string[]
+  payloadMigrationRecords: PayloadMigrationRecord[]
   missingPayloadMigrations: string[]
   unexpectedPayloadMigrations: string[]
   registeredPrismaMigrations: string[]
@@ -93,6 +99,7 @@ export async function buildStagingMigrationStatus(
       schemaIdentity: null,
       registeredPayloadMigrations: registered,
       appliedPayloadMigrations: [],
+      payloadMigrationRecords: [],
       missingPayloadMigrations: registered,
       unexpectedPayloadMigrations: [],
       registeredPrismaMigrations: [...REGISTERED_PRISMA_MIGRATIONS],
@@ -104,9 +111,13 @@ export async function buildStagingMigrationStatus(
   }
 
   const evidence = await adapter.collectMigrationEvidence(safeExpectedSchema)
-  const appliedPayloadMigrations = evidence.payloadMigrations
+  const validPayloadMigrations = evidence.payloadMigrations
     .filter((row) => Number.isInteger(row.batch) && row.batch >= 0)
-    .map((row) => row.name)
+  const appliedPayloadMigrations = validPayloadMigrations.map((row) => row.name)
+  const payloadMigrationRecords: PayloadMigrationRecord[] = validPayloadMigrations.map((row) => ({
+    name: row.name,
+    batch: row.batch,
+  }))
   const appliedSet = new Set(appliedPayloadMigrations)
   const registeredSet = new Set<string>(registered)
   const missingPayloadMigrations = registered.filter((name) => !appliedSet.has(name))
@@ -139,6 +150,7 @@ export async function buildStagingMigrationStatus(
     schemaIdentity: evidence.schemaIdentity,
     registeredPayloadMigrations: registered,
     appliedPayloadMigrations,
+    payloadMigrationRecords,
     missingPayloadMigrations,
     unexpectedPayloadMigrations,
     registeredPrismaMigrations: [...REGISTERED_PRISMA_MIGRATIONS],
