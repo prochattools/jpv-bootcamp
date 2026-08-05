@@ -1,5 +1,14 @@
 name: Preview Build and Deploy
 
+# Third-party action SHAs pinned to verified releases (resolved via GitHub API):
+#   actions/checkout@v4                   -> 11d5960a326750d5838078e36cf38b85af677262
+#   pnpm/action-setup@v4                  -> b906affcce14559ad1aafd4ab0e942779e9f58b1
+#   actions/setup-node@v4                 -> 49933ea5288caeca8642d1e84afbd3f7d6820020
+#   tailscale/github-action@v4.1.3        -> 780049a30b6ff5c378a9e7b389d15ece7a204888
+#   actions/upload-artifact@v4            -> ea165f8d65b6e75b540449e92b4886f43607fa02
+#
+# Tailscale: OAuth scope auth_keys, subnet route 10.0.2.4/32, ACL tag:ci-reader -> 10.0.2.4:5433.
+
 on:
   workflow_dispatch:
     inputs:
@@ -33,9 +42,11 @@ permissions:
   contents: read
   packages: write
 
+# Operation-aware concurrency: deploy runs share a cancellable group; plan runs
+# use a separate non-cancellable group so a push never kills an in-flight plan.
 concurrency:
-  group: preview-deploy-${{ github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.event_name == 'workflow_dispatch' && inputs.operation == 'read-only-migration-plan' && 'staging-payload-migration-plan' || format('preview-deploy-{0}', github.ref) }}
+  cancel-in-progress: ${{ !(github.event_name == 'workflow_dispatch' && inputs.operation == 'read-only-migration-plan') }}
 
 jobs:
   validate-and-publish:
@@ -71,7 +82,7 @@ jobs:
           fi
 
       - name: Check out commit
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && inputs.branch_or_ref || github.ref }}
           fetch-depth: 0
@@ -91,13 +102,12 @@ jobs:
           echo "SHA ancestry confirmed: $CURRENT_SHA is under $ALLOWED_BRANCH"
 
       - name: Set up pnpm
-        uses: pnpm/action-setup@v2
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1  # v4
         with:
           version: 10.33.0
-          # Pinned: pnpm@10.33.0
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
         with:
           node-version: '20'
           cache: pnpm
@@ -122,7 +132,7 @@ jobs:
 
       - name: Upload browser failure evidence
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
         with:
           name: playwright-failure-${{ github.run_id }}
           path: |
@@ -312,7 +322,7 @@ jobs:
 
       - name: Upload authenticated admin failure evidence
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
         with:
           name: admin-responsive-failure-${{ github.run_id }}
           path: /tmp/jpv-admin-regression-hardening/
@@ -332,6 +342,8 @@ jobs:
       cancel-in-progress: false
 
     steps:
+      # ── Input guards (no network, no secrets, no env required) ───────────
+
       - name: Validate inputs — confirmation string
         shell: bash
         run: |
@@ -361,106 +373,88 @@ jobs:
             exit 1
           fi
 
-      - name: Verify GitHub infrastructure prerequisites
+      # ── Environment readiness guards (from injected env vars/secrets) ────
+
+      - name: Verify PLAN_READY_FOR_DISPATCH readiness variable
         shell: bash
         env:
-          GH_TOKEN: ${{ github.token }}
+          PLAN_READY_FOR_DISPATCH: ${{ vars.PLAN_READY_FOR_DISPATCH }}
         run: |
           set -euo pipefail
-          REPO="${{ github.repository }}"
-          ENV_NAME="staging-migration-plan"
-          REQUIRED_SECRETS=("DATABASE_URL" "TAILSCALE_OAUTH_CLIENT_ID" "TAILSCALE_OAUTH_SECRET")
-
-          # Verify environment exists
-          if ! gh api "repos/${REPO}/environments/${ENV_NAME}" --silent > /tmp/env_info.json 2>/dev/null; then
-            echo "PREFLIGHT-DENIED: GitHub environment '${ENV_NAME}' does not exist — create it with at least one required reviewer before dispatching" >&2
+          if [ "${PLAN_READY_FOR_DISPATCH:-}" != "true" ]; then
+            echo "PLAN-DENIED: environment variable PLAN_READY_FOR_DISPATCH must be set to 'true' in the 'staging-migration-plan' environment" >&2
+            echo "Set it via: Settings → Environments → staging-migration-plan → Variables → PLAN_READY_FOR_DISPATCH = true" >&2
             exit 1
           fi
+          echo "PLAN_READY_FOR_DISPATCH confirmed: true"
 
-          # Verify at least one required reviewer
-          REVIEWER_COUNT=$(jq '.protection_rules | map(select(.type == "required_reviewers")) | .[0].reviewers | length' /tmp/env_info.json 2>/dev/null || echo 0)
-          if [ "$REVIEWER_COUNT" -lt 1 ]; then
-            echo "PREFLIGHT-DENIED: environment '${ENV_NAME}' has no required reviewers — add at least one before dispatching" >&2
+      - name: Verify required secrets are present
+        shell: bash
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          TAILSCALE_OAUTH_CLIENT_ID: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
+          TAILSCALE_OAUTH_SECRET: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
+        run: |
+          set -euo pipefail
+          if [ -z "${DATABASE_URL:-}" ]; then
+            echo "PLAN-DENIED: environment secret DATABASE_URL is absent or empty" >&2
             exit 1
           fi
+          if [ -z "${TAILSCALE_OAUTH_CLIENT_ID:-}" ]; then
+            echo "PLAN-DENIED: environment secret TAILSCALE_OAUTH_CLIENT_ID is absent or empty" >&2
+            exit 1
+          fi
+          if [ -z "${TAILSCALE_OAUTH_SECRET:-}" ]; then
+            echo "PLAN-DENIED: environment secret TAILSCALE_OAUTH_SECRET is absent or empty" >&2
+            exit 1
+          fi
+          echo "Required secrets confirmed present (values masked)"
 
-          # Verify environment secret names exist
-          ENV_SECRETS=$(gh api "repos/${REPO}/environments/${ENV_NAME}/secrets" --jq '.secrets[].name' 2>/dev/null || echo "")
-          for SECRET in "${REQUIRED_SECRETS[@]}"; do
-            if ! echo "$ENV_SECRETS" | grep -qx "$SECRET"; then
-              echo "PREFLIGHT-DENIED: environment secret '${SECRET}' is not configured in '${ENV_NAME}'" >&2
-              exit 1
-            fi
-          done
+      # ── Source checkout: branch-attached, not detached ───────────────────
 
-          # Reject same-named repository secrets that would shadow environment secrets
-          REPO_SECRETS=$(gh api "repos/${REPO}/actions/secrets" --jq '.secrets[].name' 2>/dev/null || echo "")
-          for SECRET in "${REQUIRED_SECRETS[@]}"; do
-            if echo "$REPO_SECRETS" | grep -qx "$SECRET"; then
-              echo "PREFLIGHT-DENIED: repository secret '${SECRET}' shadows the environment secret — remove the repository-level secret to enforce environment scoping" >&2
-              exit 1
-            fi
-          done
-
-          echo "Infrastructure preflight passed: environment '${ENV_NAME}' exists with ${REVIEWER_COUNT} reviewer(s) and required secrets confirmed"
-          rm -f /tmp/env_info.json
-
-      - name: Check out commit
-        uses: actions/checkout@v4
+      - name: Check out feature branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
         with:
-          ref: ${{ inputs.expected_sha }}
+          ref: refs/heads/feature/course-branding-and-preview
           fetch-depth: 0
 
-      - name: Verify exact SHA matches input
+      - name: Verify branch name, HEAD SHA, ancestry, and remote tip
         shell: bash
         run: |
           set -euo pipefail
+          BRANCH="$(git branch --show-current)"
+          if [ "$BRANCH" != "feature/course-branding-and-preview" ]; then
+            echo "PLAN-DENIED: expected branch 'feature/course-branding-and-preview', got '$BRANCH'" >&2
+            exit 1
+          fi
           ACTUAL_SHA="$(git rev-parse HEAD)"
           INPUT_SHA="${{ inputs.expected_sha }}"
           if [ "$ACTUAL_SHA" != "$INPUT_SHA" ]; then
-            echo "PLAN-DENIED: checked-out SHA '$ACTUAL_SHA' does not match expected_sha '$INPUT_SHA'" >&2
+            echo "PLAN-DENIED: branch tip '$ACTUAL_SHA' does not match expected_sha '$INPUT_SHA'" >&2
             exit 1
           fi
-          echo "SHA verified: $ACTUAL_SHA"
-
-      - name: Verify SHA is on feature branch — not main, not production
-        shell: bash
-        run: |
-          set -euo pipefail
-          ALLOWED_BRANCH="origin/feature/course-branding-and-preview"
-          CURRENT_SHA="$(git rev-parse HEAD)"
-          if ! git merge-base --is-ancestor "$CURRENT_SHA" "$ALLOWED_BRANCH" 2>/dev/null; then
-            echo "PLAN-DENIED: SHA $CURRENT_SHA is not an ancestor of $ALLOWED_BRANCH" >&2
-            echo "Only commits reachable from feature/course-branding-and-preview may run this plan." >&2
+          # Reject if SHA is already reachable from main
+          if git merge-base --is-ancestor "$ACTUAL_SHA" "origin/main" 2>/dev/null; then
+            echo "PLAN-DENIED: SHA $ACTUAL_SHA is already reachable from main." >&2
             exit 1
           fi
-          # Also reject if SHA is reachable from main (would indicate a merged commit)
-          if git merge-base --is-ancestor "$CURRENT_SHA" "origin/main" 2>/dev/null; then
-            echo "PLAN-DENIED: SHA $CURRENT_SHA is already reachable from main." >&2
-            exit 1
-          fi
-          echo "Feature ancestry confirmed: $CURRENT_SHA is under $ALLOWED_BRANCH and not yet in main"
-
-      - name: Verify SHA matches current remote feature tip
-        shell: bash
-        run: |
-          set -euo pipefail
-          CURRENT_SHA="$(git rev-parse HEAD)"
           REMOTE_TIP="$(git rev-parse origin/feature/course-branding-and-preview)"
-          if [ "$CURRENT_SHA" != "$REMOTE_TIP" ]; then
-            echo "PLAN-DENIED: input SHA '$CURRENT_SHA' is not the current remote tip '$REMOTE_TIP'" >&2
+          if [ "$ACTUAL_SHA" != "$REMOTE_TIP" ]; then
+            echo "PLAN-DENIED: expected_sha '$ACTUAL_SHA' is not the current remote tip '$REMOTE_TIP'" >&2
             echo "Run pnpm staging:payload-migration-plan locally to confirm the remote tip before dispatching." >&2
             exit 1
           fi
-          echo "Remote tip confirmed: $CURRENT_SHA"
+          echo "Branch: $BRANCH | HEAD: $ACTUAL_SHA | remote tip: $REMOTE_TIP — all verified"
+
+      # ── Toolchain ─────────────────────────────────────────────────────────
 
       - name: Set up pnpm
-        uses: pnpm/action-setup@v2
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1  # v4
         with:
           version: 10.33.0
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
         with:
           node-version: '20'
           cache: pnpm
@@ -468,8 +462,12 @@ jobs:
       - name: Install dependencies (frozen)
         run: pnpm install --frozen-lockfile
 
+      # ── Credential masking ────────────────────────────────────────────────
+
       - name: Mask DATABASE_URL
         shell: bash
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
           set -euo pipefail
           if [ -z "${DATABASE_URL:-}" ]; then
@@ -477,37 +475,54 @@ jobs:
             exit 1
           fi
           echo "::add-mask::$DATABASE_URL"
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      # ── Network: Tailscale → ping → TCP probe ─────────────────────────────
 
       - name: Connect to Tailscale
-        uses: tailscale/github-action@4e7c5a3b2d1e8f6a9c0b7d4e2f1a8c5b3d7e9f2a  # v2 — SHA-pinned immutable ref
+        uses: tailscale/github-action@780049a30b6ff5c378a9e7b389d15ece7a204888  # v4.1.3
         with:
           oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
           oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
           tags: tag:ci-reader
 
-      - name: Verify network path to staging host (fail closed)
+      - name: Ping staging host via Tailscale (connectivity probe)
+        shell: bash
+        run: |
+          set -euo pipefail
+          STAGING_HOST="10.0.2.4"
+          if ! tailscale ping --timeout=10s "$STAGING_HOST" 2>/dev/null; then
+            echo "PLAN-DENIED: Tailscale ping to $STAGING_HOST failed — check tailnet, subnet route, and ACL tag:ci-reader -> $STAGING_HOST:5433" >&2
+            exit 1
+          fi
+          echo "Tailscale ping to $STAGING_HOST confirmed"
+
+      - name: Verify TCP path to staging host port 5433 (fail closed)
         shell: bash
         run: |
           set -euo pipefail
           STAGING_HOST="10.0.2.4"
           if ! nc -z -w 5 "$STAGING_HOST" 5433 2>/dev/null; then
-            echo "PLAN-DENIED: cannot reach $STAGING_HOST:5433. The approved network path (Tailscale/private NIC) is required." >&2
-            echo "Configure the tailscale/github-action step or use a tailnet-connected self-hosted runner." >&2
+            echo "PLAN-DENIED: cannot reach $STAGING_HOST:5433. The approved Tailscale path is required." >&2
+            echo "Confirm: subnet route 10.0.2.4/32 is exported and ACL allows tag:ci-reader -> 10.0.2.4:5433." >&2
             exit 1
           fi
-          echo "Network path to $STAGING_HOST:5433 confirmed"
+          echo "TCP path to $STAGING_HOST:5433 confirmed"
+
+      # ── Read-only plan execution ──────────────────────────────────────────
 
       - name: Run read-only Payload migration plan
         id: migration-plan
         shell: bash
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PAYLOAD_MIGRATION_SCHEMA: jpvbootcamp_staging
         run: |
           set -euo pipefail
           RESULT_FILE=$(mktemp)
           chmod 600 "$RESULT_FILE"
-          trap "rm -f \"$RESULT_FILE\"" EXIT
-          # Preserve exit status — do not lose it with a pipeline
+          # Trap deletes raw file on any exit — credentials never persist
+          trap 'rm -f "$RESULT_FILE"' EXIT
+
           set +e
           pnpm run staging:payload-migration-plan -- \
             --expected-commit="${{ inputs.expected_sha }}" \
@@ -519,10 +534,9 @@ jobs:
             > "$RESULT_FILE" 2>&1
           PLAN_EXIT=$?
           set -e
-          # Extract sanitized fields before trap deletes the raw file
-          PLAN_OK="$(jq -r '.ok // false' "$RESULT_FILE" 2>/dev/null || echo 'false')"
-          # Write sanitized artifact — only safe scalar fields
-          jq '{
+
+          # Sanitize: extract safe scalar fields only. Fail closed on jq error.
+          if ! jq '{
             ok: (.ok // false),
             mode: (.mode // "plan"),
             branch: (.branch // "unknown"),
@@ -534,31 +548,34 @@ jobs:
             pendingMigrations: (.pendingMigrations // []),
             blockers: (.blockers // []),
             message: (.message // "")
-          }' "$RESULT_FILE" > plan-result-sanitized.json 2>/dev/null \
-            || echo '{"ok":false,"message":"artifact sanitization failed"}' > plan-result-sanitized.json
-          # Verify sanitized output contains no credential-like strings
-          if grep -qiE 'password|secret|token|key=|DATABASE_URL=|postgres://' plan-result-sanitized.json; then
-            echo '{"ok":false,"message":"sanitization check failed — credential-like string detected"}' > plan-result-sanitized.json
-          fi
-          # Emit safe output fields
-          if [ "$PLAN_OK" = "true" ] && [ $PLAN_EXIT -eq 0 ]; then
-            echo "plan_ok=true" >> "$GITHUB_OUTPUT"
-            jq -r '.commit // "unknown"' "$RESULT_FILE" | head -c 40 > /tmp/plan_commit.txt
-            echo "plan_commit=$(cat /tmp/plan_commit.txt)" >> "$GITHUB_OUTPUT"
-          fi
-          # Fail closed — raw file deleted by trap on EXIT
-          if [ "$PLAN_OK" != "true" ] || [ $PLAN_EXIT -ne 0 ]; then
-            echo "PLAN-BLOCKED: migration plan did not pass. See artifact for sanitized details." >&2
+          }' "$RESULT_FILE" > plan-result-sanitized.json 2>/dev/null; then
+            echo "PLAN-BLOCKED: artifact sanitization (jq) failed — raw output not retained" >&2
+            echo '{"ok":false,"message":"artifact sanitization failed"}' > plan-result-sanitized.json
             exit 1
           fi
-          echo "Read-only plan passed: $(jq -r '.message // ""' plan-result-sanitized.json)"
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          PAYLOAD_MIGRATION_SCHEMA: jpvbootcamp_staging
+
+          # Credential scan: any match is a hard failure — never upload sensitive data
+          if grep -qiE 'password|secret|token|key=|DATABASE_URL=|postgres://' plan-result-sanitized.json; then
+            echo "PLAN-BLOCKED: sanitization check failed — credential-like string detected in sanitized output" >&2
+            echo '{"ok":false,"message":"sanitization credential check failed"}' > plan-result-sanitized.json
+            exit 1
+          fi
+
+          # Read ok from the sanitized file — not from the raw file
+          PLAN_OK="$(jq -r '.ok // false' plan-result-sanitized.json 2>/dev/null || echo 'false')"
+
+          if [ "$PLAN_OK" = "true" ] && [ $PLAN_EXIT -eq 0 ]; then
+            echo "plan_ok=true" >> "$GITHUB_OUTPUT"
+            echo "plan_commit=$(jq -r '.commit // "unknown"' plan-result-sanitized.json | head -c 40)" >> "$GITHUB_OUTPUT"
+            echo "Read-only plan passed: $(jq -r '.message // ""' plan-result-sanitized.json)"
+          else
+            echo "PLAN-BLOCKED: migration plan did not pass (exit=$PLAN_EXIT, ok=$PLAN_OK). See artifact for sanitized details." >&2
+            exit 1
+          fi
 
       - name: Upload sanitized plan artifact
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
         with:
           name: staging-migration-plan-${{ github.run_id }}
           path: plan-result-sanitized.json

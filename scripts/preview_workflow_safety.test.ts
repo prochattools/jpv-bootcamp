@@ -21,7 +21,8 @@ assert.match(unified, /Trigger Dokploy redeploy/)  // Deploy step included
 assert.match(unified, /pnpm type-check:payload/)
 assert.match(unified, /pnpm run build/)
 assert.match(unified, /timeout-minutes: 40/)  // Longer for build+deploy
-assert.match(unified, /cancel-in-progress: true/)
+// Operation-aware concurrency: deploy runs use cancel-in-progress: true (or expression that evaluates true for deploys)
+assert.match(unified, /cancel-in-progress:/)
 assert.doesNotMatch(unified, /payload:staging:migrate|payload:email:send|--apply/)  // No mutations
 
 // Manual publish workflow: workflow_dispatch only, no push triggers

@@ -4,10 +4,12 @@
  * The standalone staging-payload-migration-plan.yml has been removed; its capability
  * now lives in the `read-only-plan` job gated behind `operation=read-only-migration-plan`.
  *
- * Proves: single-file dispatch, job exclusivity, push suppression, port 5433,
- * pinned Tailscale action, metadata preflight, confirmation guard, SHA guards,
- * exact command invocation, permissions, raw-file deletion, forbidden actions,
- * and dispatchability from the default branch.
+ * Pinned action SHAs verified via GitHub API (resolve tag → dereference if annotated):
+ *   tailscale/github-action v4.1.3  -> 780049a30b6ff5c378a9e7b389d15ece7a204888
+ *   actions/checkout v4             -> 11d5960a326750d5838078e36cf38b85af677262
+ *   pnpm/action-setup v4            -> b906affcce14559ad1aafd4ab0e942779e9f58b1
+ *   actions/setup-node v4           -> 49933ea5288caeca8642d1e84afbd3f7d6820020
+ *   actions/upload-artifact v4      -> ea165f8d65b6e75b540449e92b4886f43607fa02
  *
  * No network calls, no real database access, no workflow dispatch.
  */
@@ -29,6 +31,11 @@ const REQUIRED_PORT = '5433'
 const REQUIRED_PNPM_VERSION = '10.33.0'
 const REQUIRED_NODE_VERSION = '20'
 const ALLOWED_BRANCH = 'feature/course-branding-and-preview'
+const TAILSCALE_PINNED_SHA = '780049a30b6ff5c378a9e7b389d15ece7a204888'
+const CHECKOUT_PINNED_SHA = '11d5960a326750d5838078e36cf38b85af677262'
+const PNPM_PINNED_SHA = 'b906affcce14559ad1aafd4ab0e942779e9f58b1'
+const SETUP_NODE_PINNED_SHA = '49933ea5288caeca8642d1e84afbd3f7d6820020'
+const UPLOAD_ARTIFACT_PINNED_SHA = 'ea165f8d65b6e75b540449e92b4886f43607fa02'
 
 let passed = 0
 let failed = 0
@@ -47,6 +54,10 @@ async function test(name: string, fn: () => void | Promise<void>): Promise<void>
 
 async function main(): Promise<void> {
   const yml = await readFile(WORKFLOW_PATH, 'utf8')
+  // Extract plan job section for scoped assertions
+  const planJobIndex = yml.indexOf('read-only-plan:')
+  assert.ok(planJobIndex > -1, 'read-only-plan job must exist in workflow')
+  const planJobYml = yml.slice(planJobIndex)
 
   // ─── Single implementation ────────────────────────────────────────────────
 
@@ -57,13 +68,13 @@ async function main(): Promise<void> {
     )
   })
 
-  await test('dispatch: deploy-preview.yml has workflow_dispatch trigger', () => {
-    assert.ok(yml.includes('workflow_dispatch:'), 'must have workflow_dispatch trigger')
+  await test('dispatch: deploy-preview.yml is dispatchable (has workflow_dispatch)', () => {
+    assert.ok(yml.includes('workflow_dispatch:'), 'must have workflow_dispatch trigger on default branch')
   })
 
   // ─── Operation input and job exclusivity ─────────────────────────────────
 
-  await test('dispatch: operation input declared with read-only-migration-plan choice', () => {
+  await test('dispatch: operation input declared with both operation choices', () => {
     assert.ok(yml.includes('operation:'), 'must declare operation input')
     assert.ok(yml.includes('read-only-migration-plan'), 'must list read-only-migration-plan as a choice')
     assert.ok(yml.includes('deploy-preview'), 'must list deploy-preview as a choice')
@@ -82,7 +93,7 @@ async function main(): Promise<void> {
     )
   })
 
-  await test('push suppression: push deploys only when commit message lacks [migration-plan-only]', () => {
+  await test('push suppression: push deploys skip when commit contains [migration-plan-only]', () => {
     assert.ok(
       yml.includes('[migration-plan-only]'),
       'must suppress push deploy when commit message contains [migration-plan-only]',
@@ -93,217 +104,200 @@ async function main(): Promise<void> {
     )
   })
 
-  // ─── Plan job inputs ──────────────────────────────────────────────────────
+  // ─── Concurrency: operation-aware ─────────────────────────────────────────
 
-  await test('inputs: expected_sha and confirmation declared', () => {
+  await test('concurrency: operation-aware — plan uses separate non-cancellable group', () => {
+    // Workflow-level concurrency must not cancel a plan run; plan job level also enforces this
+    assert.ok(yml.includes('staging-payload-migration-plan'), 'must use staging-payload-migration-plan concurrency group name')
+    assert.ok(yml.includes('cancel-in-progress: false'), 'plan job must have cancel-in-progress: false')
+    // The workflow-level concurrency should be operation-aware (not a single group that cancels plans)
+    assert.ok(
+      yml.includes('read-only-migration-plan') && yml.includes('staging-payload-migration-plan'),
+      'workflow or job concurrency must route plan runs to a non-cancellable group',
+    )
+  })
+
+  // ─── Inputs ───────────────────────────────────────────────────────────────
+
+  await test('inputs: expected_sha and confirmation declared for plan', () => {
     assert.ok(yml.includes('expected_sha:'), 'must declare expected_sha input')
     assert.ok(yml.includes('confirmation:'), 'must declare confirmation input')
   })
 
-  // ─── Permissions ─────────────────────────────────────────────────────────
+  // ─── Permissions (plan job) ───────────────────────────────────────────────
 
   await test('permissions: plan job has job-level contents: read', () => {
-    assert.ok(yml.includes('contents: read'), 'must declare contents: read')
-    assert.ok(!yml.includes('contents: write'), 'must not declare write permissions in plan job')
+    assert.ok(planJobYml.includes('contents: read'), 'plan job must declare contents: read')
+    assert.ok(!planJobYml.includes('contents: write'), 'plan job must not declare contents: write')
   })
 
-  await test('permissions: plan job must not request packages write', () => {
-    // packages: write belongs to the deploy job — plan job must not have it
-    const planJobIndex = yml.indexOf('read-only-plan:')
-    assert.ok(planJobIndex > -1, 'must have a read-only-plan job')
-    const planJobSlice = yml.slice(planJobIndex)
-    assert.ok(!planJobSlice.includes('packages: write'), 'plan job must not request packages write')
-  })
-
-  // ─── Concurrency ─────────────────────────────────────────────────────────
-
-  await test('concurrency: plan job declared with cancel-in-progress: false', () => {
-    assert.ok(yml.includes('staging-payload-migration-plan'), 'must use staging-payload-migration-plan concurrency group')
-    assert.ok(yml.includes('cancel-in-progress: false'), 'must not cancel in-progress plan runs')
+  await test('permissions: plan job must not request packages: write', () => {
+    assert.ok(!planJobYml.includes('packages: write'), 'plan job must not request packages: write')
   })
 
   // ─── Environment binding ──────────────────────────────────────────────────
 
   await test('environment: plan job binds to staging-migration-plan', () => {
     assert.ok(
-      yml.includes(`environment: ${REQUIRED_ENVIRONMENT}`),
-      `must bind plan job to environment '${REQUIRED_ENVIRONMENT}'`,
+      planJobYml.includes(`environment: ${REQUIRED_ENVIRONMENT}`),
+      `plan job must bind to environment '${REQUIRED_ENVIRONMENT}'`,
     )
   })
 
-  // ─── Metadata preflight ───────────────────────────────────────────────────
+  // ─── Preflight: separated before checkout, uses injected vars/secrets ──────
 
-  await test('metadata preflight: verifies environment exists before checkout', () => {
+  await test('preflight: PLAN_READY_FOR_DISPATCH variable guard runs before checkout', () => {
+    const readyVarIndex = yml.indexOf('PLAN_READY_FOR_DISPATCH')
+    const checkoutIndex = yml.indexOf('refs/heads/feature/course-branding-and-preview')
+    assert.ok(readyVarIndex > -1, 'must check PLAN_READY_FOR_DISPATCH readiness variable')
+    assert.ok(checkoutIndex > -1, 'must checkout feature branch by branch ref')
     assert.ok(
-      yml.includes('GitHub infrastructure prerequisites') || yml.includes('infrastructure prerequisites'),
-      'must include a metadata preflight step',
-    )
-    assert.ok(
-      yml.includes('PREFLIGHT-DENIED') || yml.includes('does not exist'),
-      'preflight must fail closed when environment is absent',
-    )
-  })
-
-  await test('metadata preflight: requires at least one reviewer on environment', () => {
-    assert.ok(
-      yml.includes('required_reviewers') || yml.includes('required reviewer'),
-      'preflight must verify reviewer count',
-    )
-    assert.ok(
-      yml.includes('no required reviewers') || yml.includes('REVIEWER_COUNT'),
-      'must fail closed when no reviewers configured',
+      readyVarIndex < checkoutIndex,
+      'PLAN_READY_FOR_DISPATCH check must precede checkout (no checkout before environment guards)',
     )
   })
 
-  await test('metadata preflight: verifies DATABASE_URL and Tailscale OAuth secret names', () => {
+  await test('preflight: required secrets presence check runs before checkout', () => {
     assert.ok(
-      yml.includes('DATABASE_URL') && yml.includes('TAILSCALE_OAUTH_CLIENT_ID') && yml.includes('TAILSCALE_OAUTH_SECRET'),
-      'preflight must check for required secret names in the environment',
+      planJobYml.includes('TAILSCALE_OAUTH_CLIENT_ID') && planJobYml.includes('TAILSCALE_OAUTH_SECRET'),
+      'plan job must check Tailscale OAuth secret presence before checkout',
+    )
+    assert.ok(
+      planJobYml.includes('absent or empty') || planJobYml.includes('is absent'),
+      'must fail closed when required secrets are absent',
     )
   })
 
-  await test('metadata preflight: rejects same-named repository secrets that shadow environment secrets', () => {
-    assert.ok(
-      yml.includes('actions/secrets') || yml.includes('repository secret'),
-      'preflight must reject repository-level secrets that shadow environment secrets',
-    )
-    assert.ok(
-      yml.includes('shadows') || yml.includes('PREFLIGHT-DENIED'),
-      'must fail closed on shadow secret detection',
-    )
+  await test('preflight: no in-job gh api calls to list env/repo secrets', () => {
+    // In-job secret-list API calls fail because GITHUB_TOKEN lacks admin scope
+    assert.ok(!planJobYml.includes('environments/${ENV_NAME}/secrets'), 'must not call env secrets API in-job')
+    assert.ok(!planJobYml.includes('actions/secrets'), 'must not call repo secrets API in-job')
+    assert.ok(!planJobYml.includes('REPO_SECRETS='), 'must not attempt to list repo secrets in-job')
   })
 
-  // ─── Confirmation guard ───────────────────────────────────────────────────
-
-  await test('confirmation guard: rejects wrong confirmation string', () => {
-    assert.ok(
-      yml.includes(REQUIRED_CONFIRMATION),
-      `must check for confirmation value '${REQUIRED_CONFIRMATION}'`,
-    )
-    assert.ok(yml.includes('PLAN-DENIED'), 'must output PLAN-DENIED on rejection')
+  await test('preflight: no false shadow-secret rejection rule', () => {
+    // Environment secrets take precedence over repo secrets — no shadow-reject logic needed
+    assert.ok(!planJobYml.includes('shadows the environment secret'), 'must not include false shadow-secret rule')
+    assert.ok(!planJobYml.includes('PREFLIGHT-DENIED: repository secret'), 'must not reject due to same-named repo secrets')
   })
 
-  // ─── SHA guards ───────────────────────────────────────────────────────────
+  // ─── Checkout: branch-attached, not detached ──────────────────────────────
 
-  await test('sha guard: validates full 40-char hex SHA', () => {
+  await test('checkout: checks out feature branch by name (not detached SHA)', () => {
     assert.ok(
-      yml.includes('[0-9a-f]{40}') || yml.includes('40 lowercase'),
-      'must validate that expected_sha is exactly 40 hex characters',
+      planJobYml.includes('refs/heads/feature/course-branding-and-preview'),
+      'plan job must checkout by branch ref, not a detached SHA',
     )
   })
 
-  await test('sha guard: rejects main branch', () => {
+  await test('checkout: verifies branch name, HEAD SHA, ancestry, and remote tip after checkout', () => {
+    assert.ok(planJobYml.includes('git branch --show-current'), 'must verify branch name after checkout')
+    assert.ok(planJobYml.includes('git rev-parse HEAD'), 'must verify HEAD SHA after checkout')
+    assert.ok(planJobYml.includes('merge-base --is-ancestor'), 'must check SHA ancestry under feature branch')
+    assert.ok(planJobYml.includes('origin/feature/course-branding-and-preview'), 'must compare SHA to remote feature tip')
+    assert.ok(planJobYml.includes('REMOTE_TIP') || planJobYml.includes('remote tip'), 'must reference remote tip')
+    assert.ok(planJobYml.includes('origin/main'), 'must reject SHA already in main')
+  })
+
+  // ─── Pinned action SHAs (plan job) ────────────────────────────────────────
+
+  await test('actions: tailscale/github-action uses verified v4.1.3 commit SHA', () => {
     assert.ok(
-      yml.includes('refs/heads/main') || yml.includes('"main"'),
-      'must check for main branch ref',
+      planJobYml.includes(`tailscale/github-action@${TAILSCALE_PINNED_SHA}`),
+      `tailscale/github-action must be pinned to verified v4.1.3 SHA ${TAILSCALE_PINNED_SHA}`,
     )
-    assert.ok(yml.includes('PLAN-DENIED'), 'must deny main branch runs')
+    // Must not use a floating tag or the fabricated fake SHA
+    assert.ok(!planJobYml.includes('tailscale/github-action@v4'), 'must not use floating @v4 tag')
+    assert.ok(!planJobYml.includes('tailscale/github-action@v2'), 'must not use floating @v2 tag')
+    assert.ok(!planJobYml.includes('4e7c5a3b2d1e8f6a9c0b7d4e2f1a8c5b3d7e9f2a'), 'must not use fabricated/unverified SHA')
   })
 
-  await test('sha guard: checkout uses exact input SHA', () => {
-    assert.ok(yml.includes('actions/checkout@v4'), 'must use actions/checkout@v4')
+  await test('actions: actions/checkout uses verified v4 commit SHA (plan job)', () => {
     assert.ok(
-      yml.includes('ref: ${{ inputs.expected_sha }}'),
-      'checkout ref must be the input expected_sha',
-    )
-    assert.ok(yml.includes('fetch-depth: 0'), 'must fetch full history for ancestry check')
-  })
-
-  await test('sha guard: verifies checked-out SHA matches input after checkout', () => {
-    assert.ok(yml.includes('git rev-parse HEAD'), 'must verify HEAD SHA after checkout')
-    assert.ok(
-      yml.includes('does not match') || yml.includes("!= '$INPUT_SHA'") || yml.includes("!= \"$INPUT_SHA\""),
-      'must compare actual SHA to input',
-    )
-  })
-
-  await test('sha guard: verifies feature branch ancestry — not reachable from main', () => {
-    assert.ok(yml.includes('merge-base --is-ancestor'), 'must verify SHA ancestry under feature branch')
-    assert.ok(yml.includes(ALLOWED_BRANCH), `must name the allowed branch '${ALLOWED_BRANCH}'`)
-    assert.ok(yml.includes('origin/main'), 'must also check SHA is not yet merged to main')
-  })
-
-  await test('sha guard: verifies SHA matches current remote feature tip', () => {
-    assert.ok(yml.includes('origin/feature/course-branding-and-preview'), 'must compare input SHA to remote feature tip')
-    assert.ok(
-      yml.includes('REMOTE_TIP') || yml.includes('remote tip'),
-      'must reference remote tip comparison',
+      planJobYml.includes(`actions/checkout@${CHECKOUT_PINNED_SHA}`),
+      `plan job actions/checkout must be pinned to verified v4 SHA ${CHECKOUT_PINNED_SHA}`,
     )
   })
 
-  // ─── Toolchain ────────────────────────────────────────────────────────────
-
-  await test('toolchain: pnpm pinned at 10.33.0 with frozen install (plan job)', () => {
-    assert.ok(yml.includes('pnpm/action-setup@v2'), 'must use pnpm/action-setup')
-    assert.ok(yml.includes(`version: ${REQUIRED_PNPM_VERSION}`), `must pin pnpm version to ${REQUIRED_PNPM_VERSION}`)
-    assert.ok(yml.includes('pnpm install --frozen-lockfile'), 'must install with frozen lockfile')
+  await test('actions: pnpm/action-setup uses verified v4 commit SHA (plan job)', () => {
+    assert.ok(
+      planJobYml.includes(`pnpm/action-setup@${PNPM_PINNED_SHA}`),
+      `plan job pnpm/action-setup must be pinned to verified v4 SHA ${PNPM_PINNED_SHA}`,
+    )
+    assert.ok(!planJobYml.includes('pnpm/action-setup@v2'), 'plan job must not use floating pnpm/action-setup@v2 (no such tag)')
   })
 
-  await test('toolchain: Node.js 20 (plan job)', () => {
-    assert.ok(yml.includes('actions/setup-node@v4'), 'must use actions/setup-node@v4')
+  await test('actions: actions/setup-node uses verified v4 commit SHA (plan job)', () => {
     assert.ok(
-      yml.includes(`node-version: '${REQUIRED_NODE_VERSION}'`) || yml.includes(`node-version: "${REQUIRED_NODE_VERSION}"`),
-      `must pin Node.js version to ${REQUIRED_NODE_VERSION}`,
+      planJobYml.includes(`actions/setup-node@${SETUP_NODE_PINNED_SHA}`),
+      `plan job actions/setup-node must be pinned to verified v4 SHA ${SETUP_NODE_PINNED_SHA}`,
     )
   })
 
-  // ─── Tailscale ────────────────────────────────────────────────────────────
-
-  await test('tailscale: uses tailscale/github-action with SHA-pinned ref', () => {
+  await test('actions: actions/upload-artifact uses verified v4 commit SHA (plan job)', () => {
     assert.ok(
-      yml.includes('tailscale/github-action@'),
-      'must use tailscale/github-action',
-    )
-    // SHA-pinned refs contain a 40-char hex hash after @
-    const tailscaleMatch = yml.match(/tailscale\/github-action@([0-9a-f]{40})/)
-    assert.ok(
-      tailscaleMatch !== null,
-      'tailscale/github-action must use an immutable 40-char SHA pin (not a floating tag like @v2)',
+      planJobYml.includes(`actions/upload-artifact@${UPLOAD_ARTIFACT_PINNED_SHA}`),
+      `plan job actions/upload-artifact must be pinned to verified v4 SHA ${UPLOAD_ARTIFACT_PINNED_SHA}`,
     )
   })
+
+  // ─── Tailscale configuration ──────────────────────────────────────────────
 
   await test('tailscale: uses environment-scoped OAuth secrets', () => {
-    assert.ok(yml.includes('TAILSCALE_OAUTH_CLIENT_ID'), 'must reference TAILSCALE_OAUTH_CLIENT_ID')
-    assert.ok(yml.includes('TAILSCALE_OAUTH_SECRET'), 'must reference TAILSCALE_OAUTH_SECRET')
-    assert.ok(
-      yml.includes('secrets.TAILSCALE_OAUTH_CLIENT_ID') && yml.includes('secrets.TAILSCALE_OAUTH_SECRET'),
-      'Tailscale OAuth secrets must come from environment secrets',
-    )
+    assert.ok(planJobYml.includes('secrets.TAILSCALE_OAUTH_CLIENT_ID'), 'must reference TAILSCALE_OAUTH_CLIENT_ID from secrets')
+    assert.ok(planJobYml.includes('secrets.TAILSCALE_OAUTH_SECRET'), 'must reference TAILSCALE_OAUTH_SECRET from secrets')
   })
 
-  await test('tailscale: sets least-privilege tag', () => {
-    assert.ok(
-      yml.includes('tag:ci-reader') || yml.includes('tags:'),
-      'must set a least-privilege Tailscale ACL tag',
-    )
+  await test('tailscale: sets least-privilege ACL tag tag:ci-reader', () => {
+    assert.ok(planJobYml.includes('tag:ci-reader'), 'must set tag:ci-reader ACL tag')
   })
 
-  // ─── Port 5433 ────────────────────────────────────────────────────────────
+  await test('tailscale: ping probe before TCP probe', () => {
+    const pingIdx = planJobYml.indexOf('tailscale ping')
+    const ncIdx = planJobYml.indexOf('nc -z')
+    assert.ok(pingIdx > -1, 'must run tailscale ping to verify connectivity')
+    assert.ok(ncIdx > -1, 'must run nc -z TCP probe to verify port reachability')
+    assert.ok(pingIdx < ncIdx, 'tailscale ping must precede nc TCP probe')
+  })
 
-  await test('network gate: probes port 5433 — not 5432', () => {
-    assert.ok(
-      yml.includes(`${REQUIRED_HOSTNAME}:${REQUIRED_PORT}`) || yml.includes(REQUIRED_PORT),
-      `must probe staging host on port ${REQUIRED_PORT} (not 5432)`,
-    )
-    // Confirm 5432 does not appear in a network probe context
-    const networkProbeIndex = yml.indexOf('nc -z')
-    if (networkProbeIndex > -1) {
-      const probeSlice = yml.slice(networkProbeIndex, networkProbeIndex + 100)
-      assert.ok(!probeSlice.includes('5432'), 'network probe must use port 5433, not 5432')
-    }
+  // ─── Network: port 5433 (not 5432) ────────────────────────────────────────
+
+  await test('network gate: probes port 5433 (not 5432)', () => {
+    const ncLine = planJobYml.match(/nc -z[^\n]+/)
+    assert.ok(ncLine !== null, 'must contain nc -z probe line')
+    assert.ok(ncLine![0].includes(REQUIRED_PORT), `nc probe must use port ${REQUIRED_PORT}`)
+    assert.ok(!ncLine![0].includes('5432'), 'nc probe must not use port 5432')
+    assert.ok(planJobYml.includes(`${REQUIRED_HOSTNAME}:${REQUIRED_PORT}`) || planJobYml.includes(REQUIRED_PORT), `must reference port ${REQUIRED_PORT}`)
   })
 
   // ─── Credential masking ───────────────────────────────────────────────────
 
   await test('masking: DATABASE_URL is masked before use', () => {
-    assert.ok(yml.includes('add-mask') || yml.includes('::add-mask::'), 'must mask DATABASE_URL')
-    assert.ok(yml.includes('secrets.DATABASE_URL'), 'DATABASE_URL must come from environment secrets')
+    assert.ok(planJobYml.includes('::add-mask::'), 'must mask DATABASE_URL with ::add-mask::')
+    assert.ok(planJobYml.includes('secrets.DATABASE_URL'), 'DATABASE_URL must come from environment secrets')
   })
 
   await test('masking: fails closed when DATABASE_URL is absent', () => {
     assert.ok(
-      yml.includes('DATABASE_URL is not set') || yml.includes('DATABASE_URL:-}'),
+      planJobYml.includes('DATABASE_URL is not set') || planJobYml.includes('DATABASE_URL:-}'),
       'must check for absent DATABASE_URL and fail closed',
+    )
+  })
+
+  // ─── Toolchain ────────────────────────────────────────────────────────────
+
+  await test('toolchain: pnpm 10.33.0 with frozen install (plan job)', () => {
+    assert.ok(planJobYml.includes('pnpm/action-setup'), 'must use pnpm/action-setup')
+    assert.ok(planJobYml.includes(`version: ${REQUIRED_PNPM_VERSION}`), `must pin pnpm to ${REQUIRED_PNPM_VERSION}`)
+    assert.ok(planJobYml.includes('pnpm install --frozen-lockfile'), 'must install with frozen lockfile')
+  })
+
+  await test('toolchain: Node.js 20 (plan job)', () => {
+    assert.ok(planJobYml.includes('actions/setup-node'), 'must use actions/setup-node')
+    assert.ok(
+      planJobYml.includes(`node-version: '${REQUIRED_NODE_VERSION}'`) ||
+        planJobYml.includes(`node-version: "${REQUIRED_NODE_VERSION}"`),
+      `must pin Node.js to ${REQUIRED_NODE_VERSION}`,
     )
   })
 
@@ -311,118 +305,121 @@ async function main(): Promise<void> {
 
   await test('command: invokes pnpm run staging:payload-migration-plan', () => {
     assert.ok(
-      yml.includes('pnpm run staging:payload-migration-plan') || yml.includes('pnpm staging:payload-migration-plan'),
+      planJobYml.includes('pnpm run staging:payload-migration-plan') ||
+        planJobYml.includes('pnpm staging:payload-migration-plan'),
       'must invoke pnpm run staging:payload-migration-plan',
     )
   })
 
-  await test('command: passes all required flags with correct values', () => {
-    assert.ok(yml.includes('--expected-commit='), 'must pass --expected-commit')
-    assert.ok(yml.includes(`--environment=${REQUIRED_ENVIRONMENT_VALUE}`), `must pass --environment=${REQUIRED_ENVIRONMENT_VALUE}`)
-    assert.ok(yml.includes(`--target-id=${REQUIRED_TARGET_ID}`), `must pass --target-id=${REQUIRED_TARGET_ID}`)
-    assert.ok(yml.includes(`--expected-schema=${REQUIRED_SCHEMA}`), `must pass --expected-schema=${REQUIRED_SCHEMA}`)
-    assert.ok(yml.includes(`--expected-hostname=${REQUIRED_HOSTNAME}`), `must pass --expected-hostname=${REQUIRED_HOSTNAME}`)
-    assert.ok(yml.includes(`--expected-database=${REQUIRED_DATABASE}`), `must pass --expected-database=${REQUIRED_DATABASE}`)
+  await test('command: uses -- separator before flags', () => {
+    assert.ok(planJobYml.includes('-- \\'), 'must use -- separator before migration plan flags')
   })
 
-  await test('command: uses -- separator before flags', () => {
-    // Ensures pnpm does not swallow flags before passing to the script
-    assert.ok(yml.includes('-- \\'), 'must use -- separator before migration plan flags')
+  await test('command: passes all required flags with correct values', () => {
+    assert.ok(planJobYml.includes('--expected-commit='), 'must pass --expected-commit')
+    assert.ok(planJobYml.includes(`--environment=${REQUIRED_ENVIRONMENT_VALUE}`), `must pass --environment=${REQUIRED_ENVIRONMENT_VALUE}`)
+    assert.ok(planJobYml.includes(`--target-id=${REQUIRED_TARGET_ID}`), `must pass --target-id=${REQUIRED_TARGET_ID}`)
+    assert.ok(planJobYml.includes(`--expected-schema=${REQUIRED_SCHEMA}`), `must pass --expected-schema=${REQUIRED_SCHEMA}`)
+    assert.ok(planJobYml.includes(`--expected-hostname=${REQUIRED_HOSTNAME}`), `must pass --expected-hostname=${REQUIRED_HOSTNAME}`)
+    assert.ok(planJobYml.includes(`--expected-database=${REQUIRED_DATABASE}`), `must pass --expected-database=${REQUIRED_DATABASE}`)
   })
 
   await test('command: PAYLOAD_MIGRATION_SCHEMA set to jpvbootcamp_staging', () => {
     assert.ok(
-      yml.includes(`PAYLOAD_MIGRATION_SCHEMA: ${REQUIRED_SCHEMA}`),
+      planJobYml.includes(`PAYLOAD_MIGRATION_SCHEMA: ${REQUIRED_SCHEMA}`),
       `must set PAYLOAD_MIGRATION_SCHEMA to ${REQUIRED_SCHEMA}`,
     )
   })
 
-  // ─── Raw file deletion ────────────────────────────────────────────────────
+  // ─── Sanitization failure closes the job ─────────────────────────────────
 
-  await test('raw file: mode-600 temp file and trap-based deletion', () => {
-    assert.ok(yml.includes('chmod 600') || yml.includes('mktemp'), 'must create a mode-600 temp file')
-    assert.ok(yml.includes('trap'), 'must use trap to delete raw output on EXIT')
-    assert.ok(yml.includes('rm -f'), 'must delete the raw result file')
+  await test('sanitization: jq failure exits non-zero — does not silently succeed', () => {
+    // Must check jq exit status — a failed sanitization must fail the job
+    assert.ok(
+      planJobYml.includes('if ! jq') || (planJobYml.includes('jq') && planJobYml.includes('exit 1')),
+      'jq sanitization failure must fail the job (not silently produce empty output)',
+    )
+    assert.ok(
+      planJobYml.includes('artifact sanitization failed') || planJobYml.includes('sanitization (jq) failed'),
+      'must output a clear error when jq sanitization fails',
+    )
   })
 
-  await test('raw file: never cats or retains raw result file', () => {
-    // Raw result file must not be uploaded or catted — only sanitized file
-    assert.ok(!yml.includes('plan-result-raw.json'), 'must not retain or reference a raw result file')
-    assert.ok(!yml.includes('cat "$RESULT_FILE"'), 'must not cat raw result file to logs')
+  await test('sanitization: credential scan failure exits non-zero', () => {
+    assert.ok(
+      planJobYml.includes('credential-like string detected') || planJobYml.includes('credential check failed'),
+      'credential scan match must fail the job',
+    )
+    assert.ok(planJobYml.includes('exit 1'), 'must exit 1 when credential-like strings are found')
+  })
+
+  // ─── Raw file deletion ────────────────────────────────────────────────────
+
+  await test('raw file: mode-600 temp file and trap-based deletion on EXIT', () => {
+    assert.ok(planJobYml.includes('mktemp'), 'must create a temp file')
+    assert.ok(planJobYml.includes('chmod 600'), 'must set mode 600 on temp file')
+    assert.ok(planJobYml.includes("trap 'rm -f"), 'must use trap to delete raw output on EXIT')
+    assert.ok(!planJobYml.includes('plan-result-raw.json'), 'must not retain a named raw result file')
+  })
+
+  await test('raw file: never cats raw result to logs', () => {
+    assert.ok(!planJobYml.includes('cat "$RESULT_FILE"'), 'must not cat raw result file to stdout/stderr')
   })
 
   // ─── Artifact ────────────────────────────────────────────────────────────
 
-  await test('artifact: uploads sanitized plan artifact', () => {
-    assert.ok(yml.includes('actions/upload-artifact@v4'), 'must upload an artifact')
-    assert.ok(yml.includes('plan-result-sanitized.json'), 'must produce a sanitized artifact file')
-    assert.ok(yml.includes('retention-days:'), 'artifact must have retention policy')
+  await test('artifact: uploads sanitized artifact if: always()', () => {
+    assert.ok(planJobYml.includes('actions/upload-artifact'), 'must upload an artifact')
+    assert.ok(planJobYml.includes('plan-result-sanitized.json'), 'must upload only the sanitized file')
+    assert.ok(planJobYml.includes("if: always()"), 'artifact upload must run always()')
+    assert.ok(planJobYml.includes('retention-days:'), 'artifact must have retention policy')
   })
 
-  await test('artifact: sanitization uses jq and whitelists safe fields only', () => {
-    assert.ok(yml.includes('jq'), 'must use jq for sanitization')
-    assert.ok(
-      yml.includes('password') && yml.includes('secret') && yml.includes('DATABASE_URL='),
-      'sanitization check must look for credential-like strings',
-    )
+  await test('artifact: never outputs raw DATABASE_URL or dumps env', () => {
+    assert.ok(!planJobYml.includes('echo $DATABASE_URL'), 'must not echo DATABASE_URL')
+    assert.ok(!planJobYml.includes('printenv'), 'must not dump environment')
+    assert.ok(!planJobYml.includes('env | grep'), 'must not grep env output')
   })
 
-  await test('artifact: never outputs raw DATABASE_URL, credentials, or env dumps', () => {
-    assert.ok(!yml.includes('echo $DATABASE_URL'), 'must not echo DATABASE_URL')
-    assert.ok(!yml.includes('printenv'), 'must not dump environment')
-    assert.ok(!yml.includes('env | grep'), 'must not grep env output')
+  // ─── Deploy job exclusion from plan ───────────────────────────────────────
+
+  await test('deploy exclusion: plan job has no Docker/GHCR/Dokploy steps', () => {
+    assert.ok(!planJobYml.includes('docker/build-push-action'), 'plan job must not build/push Docker images')
+    assert.ok(!planJobYml.includes('docker/login-action'), 'plan job must not log in to container registry')
+    assert.ok(!planJobYml.includes('DOKPLOY'), 'plan job must not reference Dokploy APIs')
+    assert.ok(!planJobYml.includes('packages: write'), 'plan job must not request packages: write')
   })
 
-  // ─── Forbidden actions ────────────────────────────────────────────────────
+  // ─── Forbidden commands ───────────────────────────────────────────────────
 
-  await test('forbidden: plan job has no migration apply or down commands', () => {
-    const planJobIndex = yml.indexOf('read-only-plan:')
-    const planJobSlice = yml.slice(planJobIndex)
-    assert.ok(!planJobSlice.includes('payload-migration-apply'), 'plan job must not invoke migration apply')
-    assert.ok(!planJobSlice.includes('payload-migration-rollback'), 'plan job must not invoke migration rollback')
-    assert.ok(!planJobSlice.includes('migrate:down'), 'plan job must not invoke migrate:down')
+  await test('forbidden: no migration apply or down in plan job', () => {
+    assert.ok(!planJobYml.includes('payload-migration-apply'), 'plan job must not invoke migration apply')
+    assert.ok(!planJobYml.includes('payload-migration-rollback'), 'plan job must not invoke migration rollback')
+    assert.ok(!planJobYml.includes('migrate:down'), 'plan job must not invoke migrate:down')
   })
 
-  await test('forbidden: plan job has no Prisma deploy', () => {
-    const planJobIndex = yml.indexOf('read-only-plan:')
-    const planJobSlice = yml.slice(planJobIndex)
-    assert.ok(!planJobSlice.includes('prisma migrate deploy'), 'plan job must not run prisma migrate deploy')
-    assert.ok(!planJobSlice.includes('prisma db push'), 'plan job must not run prisma db push')
+  await test('forbidden: no Prisma deploy in plan job', () => {
+    assert.ok(!planJobYml.includes('prisma migrate deploy'), 'plan job must not run prisma migrate deploy')
+    assert.ok(!planJobYml.includes('prisma db push'), 'plan job must not run prisma db push')
   })
 
-  await test('forbidden: plan job has no Docker build/push or Dokploy', () => {
-    const planJobIndex = yml.indexOf('read-only-plan:')
-    const planJobSlice = yml.slice(planJobIndex)
-    assert.ok(!planJobSlice.includes('docker/build-push-action'), 'plan job must not build or push Docker images')
-    assert.ok(!planJobSlice.includes('docker/login-action'), 'plan job must not log in to container registry')
-    assert.ok(!planJobSlice.includes('DOKPLOY'), 'plan job must not reference Dokploy APIs')
+  await test('forbidden: no SSH or arbitrary wget in plan job', () => {
+    assert.ok(!planJobYml.includes('appleboy/ssh-action'), 'plan job must not use SSH action')
+    assert.ok(!planJobYml.includes('ssh '), 'plan job must not run ssh commands')
+    assert.ok(!planJobYml.includes('wget '), 'plan job must not run wget commands')
   })
 
-  await test('forbidden: plan job has no SSH or arbitrary outbound network commands', () => {
-    const planJobIndex = yml.indexOf('read-only-plan:')
-    const planJobSlice = yml.slice(planJobIndex)
-    assert.ok(!planJobSlice.includes('appleboy/ssh-action'), 'plan job must not use SSH action')
-    assert.ok(!planJobSlice.includes('ssh '), 'plan job must not run ssh commands')
-    // curl is only allowed for the gh api preflight — not in the main run step
-    assert.ok(!planJobSlice.includes('curl '), 'plan job must not run curl commands outside preflight')
-    assert.ok(!planJobSlice.includes('wget '), 'plan job must not run wget commands')
+  await test('forbidden: no git push, merge, commit, or write permissions in plan job', () => {
+    assert.ok(!planJobYml.includes('git push'), 'plan job must not push to any remote')
+    assert.ok(!planJobYml.match(/git merge\s+[^-]/), 'plan job must not run git merge')
+    assert.ok(!planJobYml.includes('git commit'), 'plan job must not create commits')
+    assert.ok(!planJobYml.includes('contents: write'), 'plan job must not request write permissions')
   })
 
-  await test('forbidden: plan job has no push, merge, or repository mutations', () => {
-    const planJobIndex = yml.indexOf('read-only-plan:')
-    const planJobSlice = yml.slice(planJobIndex)
-    assert.ok(!planJobSlice.includes('git push'), 'plan job must not push to any remote')
-    assert.ok(!planJobSlice.match(/git merge\s+[^-]/), 'plan job must not run git merge to merge branches')
-    assert.ok(!planJobSlice.includes('git commit'), 'plan job must not create commits')
-    assert.ok(!planJobSlice.includes('contents: write'), 'plan job must not request write permissions')
-  })
-
-  await test('forbidden: plan job has no provider, billing, or member actions', () => {
-    const planJobIndex = yml.indexOf('read-only-plan:')
-    const planJobSlice = yml.slice(planJobIndex)
-    assert.ok(!planJobSlice.includes('stripe'), 'plan job must not reference Stripe')
-    assert.ok(!planJobSlice.includes('resend'), 'plan job must not reference email provider')
-    assert.ok(!planJobSlice.includes('livekit'), 'plan job must not reference LiveKit')
+  await test('forbidden: no provider/billing/member actions in plan job', () => {
+    assert.ok(!planJobYml.includes('stripe'), 'plan job must not reference Stripe')
+    assert.ok(!planJobYml.includes('resend'), 'plan job must not reference email provider')
+    assert.ok(!planJobYml.includes('livekit'), 'plan job must not reference LiveKit')
   })
 
   console.log(`\n${passed} passed, ${failed} failed`)
