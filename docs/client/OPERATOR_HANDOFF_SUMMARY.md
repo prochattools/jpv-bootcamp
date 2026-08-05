@@ -60,7 +60,7 @@
 - Transactional email logo: all branded emails use absolute public URL for JPV logo (live staging proof 2026-07-29)
 - Operator surface phases 1–6: responsive hardening, operator tools JPV token alignment, Payload dashboard redesign, sidebar information architecture, dashboard hardening, operator experience hardening, and Payload admin usability — all purely presentational, no auth/billing/provider changes
 - Canonical `/portal` member portal ownership
-- Deterministic release gate: `pnpm test:release` (`166/166`) — includes the account-action hardening-status guard
+- Deterministic release gate: `pnpm test:release` (`167/167`) — includes the account-action hardening-status guard and staging migration plan workflow contract
 - Launch browser E2E: `pnpm test:e2e` (Playwright: 188 collected, 148 passed, 40 skipped; four staging-only spec files not collected; desktop and mobile Chromium)
 - Combined release/browser gate: `pnpm test:release:full`
 - Decision-readiness summary: `DECISION-READY, EXTERNAL APPROVALS PENDING`

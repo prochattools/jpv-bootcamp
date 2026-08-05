@@ -61,7 +61,7 @@ Static preflight automation is available via `pnpm staging:static-preflight`; it
 
 ### Deterministic local validation baseline
 
-- `pnpm test:release` passed `166/166`, including the account-action hardening-status guard (2026-08-03)
+- `pnpm test:release` passed `167/167`, including the account-action hardening-status guard (2026-08-03) and staging migration plan workflow contract (2026-08-05)
 - `pnpm test:e2e` Playwright execution: 188 collected, 148 passed, 40 skipped; four staging-only spec files not collected (admin-crud-staging, admin-responsive-staging, staging-smoke, stripe-webhook-staging)
 - `pnpm test:release:full` passed
 - `pnpm staging:static-preflight` passed

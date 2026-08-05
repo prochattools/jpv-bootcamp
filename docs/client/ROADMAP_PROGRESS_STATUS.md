@@ -5,7 +5,7 @@
 ## Current checkpoint — 2026-08-04
 
 - **COMPLETE CORE STAGING WORK:** M0-01 through M0-09, M1-01 through M1-06 in their documented state, UI-01 design/admin hardening, release/browser automation, exact-SHA staging deployment, media persistence, migration inventory/preflight, email queue/guard, Stripe test-mode behavior, and partner/sponsored staging boundaries.
-- **LOCALLY VERIFIED:** focused design contract, Payload TypeScript, changed-path security scan, application build, `pnpm test:release` (`166/166`), and `pnpm test:e2e` (Playwright: 188 collected, 148 passed, 40 skipped; four staging-only spec files not collected).
+- **LOCALLY VERIFIED:** focused design contract, Payload TypeScript, changed-path security scan, application build, `pnpm test:release` (`167/167`), and `pnpm test:e2e` (Playwright: 188 collected, 148 passed, 40 skipped; four staging-only spec files not collected).
 - **STAGING VERIFIED (latest completed verification snapshot):** preview workflow `30853006495` concluded `success`; staging health reported exact SHA `9c045fa5a5c327014c20fe9377f7d5368b550573`; authenticated staging admin gate passed `14/14`. Verify current live state with `git rev-parse HEAD` and `https://preview.jpvbootcamp.com/api/health`.
 - **TECHNICAL STATUS:** `STAGING TECHNICAL IMPLEMENTATION COMPLETE — ACCEPTANCE PENDING EXTERNAL ACTION` for the deployed baseline.
 - **HARDENING STATUS:** `ACCOUNT-ACTION HARDENING IMPLEMENTED LOCALLY — STAGING MIGRATION AUTHORIZATION REQUIRED`; source implementation and behavioral tests are complete, but shared staging still uses the preceding schema.
@@ -21,7 +21,7 @@ Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`.
 
 ## Current position
 
-**Position:** The agreed core staging implementation is deployed and technically verified at SHA `9c045fa5a5c327014c20fe9377f7d5368b550573`, workflow `30853006495`, with authenticated admin verification `14/14`. The deterministic deployed baseline remains `166/166` release gates plus Playwright 188 collected / 148 passed / 40 skipped. Durable account-action reservation/finalization is now implemented and behaviorally validated in local repository source, including the reversible 29th Payload migration; shared staging has not applied or verified that migration.
+**Position:** The agreed core staging implementation is deployed and technically verified at SHA `9c045fa5a5c327014c20fe9377f7d5368b550573`, workflow `30853006495`, with authenticated admin verification `14/14`. The deterministic deployed baseline remains `167/167` release gates plus Playwright 188 collected / 148 passed / 40 skipped. Durable account-action reservation/finalization is now implemented and behaviorally validated in local repository source, including the reversible 29th Payload migration; shared staging has not applied or verified that migration.
 
 **Next repository task:** complete local validation and commit preparation for account-action hardening, then stop for explicit authorization before any feature-branch push that could apply migration `20260804_050000_member_account_action_reservations` to shared staging. After authorization, require exact-SHA CI, migration evidence, health verification, and approved non-destructive staging verification. `M2-01` and Phases 8–11 remain deferred unless explicitly promoted.
 
@@ -235,7 +235,7 @@ The following phases were layered on the same branch after the `9745dac` hardeni
 ### Current HEAD validation (2026-08-02)
 
 - `pnpm exec tsc --noEmit` PASS — TypeScript: No errors found
-- `pnpm test:release` passed `166/166` — includes the account-action hardening-status guard (2026-08-03)
+- `pnpm test:release` passed `167/167` — includes the account-action hardening-status guard (2026-08-03) and staging migration plan workflow contract (2026-08-05)
 - `pnpm build` PASS — Compiled successfully in 7.8s
 - Security scan (`dangerouslySetInnerHTML`, `eval`, `innerHTML` outside approved surfaces): CLEAN
 - All `dangerouslySetInnerHTML` usages confirmed as trusted-source (Payload Lexical rich text → HTML conversion, hardcoded FAQ strings, hardcoded preview lesson content); none accept user-submitted input unescaped.

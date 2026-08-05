@@ -1,0 +1,248 @@
+# Read-only Payload migration plan for the jpvbootcamp_staging schema.
+#
+# TRIGGER: workflow_dispatch only — no push, no schedule.
+#
+# NETWORK REQUIREMENT: The staging database is on a private network (10.0.2.4)
+# that is only reachable via an approved Tailscale/private-network path.
+# This workflow will fail closed if the runner cannot reach 10.0.2.4.
+#
+# ENVIRONMENT REQUIREMENT: GitHub environment "staging-migration-plan" must exist
+# and contain the DATABASE_URL secret. The workflow will fail closed if the
+# environment or secret is absent.
+#
+# NOT AUTHORIZED:
+#   - Migration apply or rollback
+#   - Prisma database-deploy
+#   - Dokploy redeploy or image publication
+#   - Provider/member/billing actions
+#   - Production access
+#   - Push, merge, or any repository mutation
+#
+# EXTERNAL CONFIGURATION REQUIRED (not enforced by this file alone):
+#   GitHub Administrators must separately configure:
+#   - A "staging-migration-plan" GitHub Environment in Settings → Environments
+#   - Environment-scoped secret: DATABASE_URL (pointing to jpvbootcamp_staging)
+#   - A required reviewer on the environment to gate dispatch
+#   - A tailnet-connected runner OR the tailscale/github-action setup step
+#   The "environment: staging-migration-plan" declaration below binds the job
+#   to that environment but does NOT itself create the secret or reviewer gate.
+
+name: Read-only Staging Payload Migration Plan
+
+on:
+  workflow_dispatch:
+    inputs:
+      expected-commit:
+        description: 'Full 40-character SHA that must match HEAD at checkout'
+        required: true
+        type: string
+      confirmation:
+        description: 'Type exactly: run-read-only-staging-payload-migration-plan'
+        required: true
+        type: string
+
+concurrency:
+  group: staging-payload-migration-plan
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  read-only-plan:
+    name: Read-only staging Payload migration plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: staging-migration-plan
+
+    steps:
+      - name: Validate inputs — confirmation string
+        shell: bash
+        run: |
+          set -euo pipefail
+          EXPECTED_CONFIRMATION="run-read-only-staging-payload-migration-plan"
+          if [ "${{ inputs.confirmation }}" != "$EXPECTED_CONFIRMATION" ]; then
+            echo "PLAN-DENIED: confirmation must be exactly '${EXPECTED_CONFIRMATION}'" >&2
+            exit 1
+          fi
+
+      - name: Validate inputs — expected-commit is full 40-char SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          INPUT_SHA="${{ inputs.expected-commit }}"
+          if ! echo "$INPUT_SHA" | grep -qE '^[0-9a-f]{40}$'; then
+            echo "PLAN-DENIED: expected-commit must be exactly 40 lowercase hexadecimal characters, got '${INPUT_SHA:0:12}...'" >&2
+            exit 1
+          fi
+
+      - name: Validate trigger — reject main branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.ref }}" = "refs/heads/main" ] || [ "${{ github.ref_name }}" = "main" ]; then
+            echo "PLAN-DENIED: this workflow must not run on main." >&2
+            exit 1
+          fi
+
+      - name: Check out commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.expected-commit }}
+          fetch-depth: 0
+
+      - name: Verify exact SHA matches input
+        shell: bash
+        run: |
+          set -euo pipefail
+          ACTUAL_SHA="$(git rev-parse HEAD)"
+          INPUT_SHA="${{ inputs.expected-commit }}"
+          if [ "$ACTUAL_SHA" != "$INPUT_SHA" ]; then
+            echo "PLAN-DENIED: checked-out SHA '$ACTUAL_SHA' does not match --expected-commit '$INPUT_SHA'" >&2
+            exit 1
+          fi
+          echo "SHA verified: $ACTUAL_SHA"
+
+      - name: Verify SHA is on feature branch — not main, not production
+        shell: bash
+        run: |
+          set -euo pipefail
+          ALLOWED_BRANCH="origin/feature/course-branding-and-preview"
+          CURRENT_SHA="$(git rev-parse HEAD)"
+          if ! git merge-base --is-ancestor "$CURRENT_SHA" "$ALLOWED_BRANCH" 2>/dev/null; then
+            echo "PLAN-DENIED: SHA $CURRENT_SHA is not an ancestor of $ALLOWED_BRANCH" >&2
+            echo "Only commits reachable from feature/course-branding-and-preview may run this plan." >&2
+            exit 1
+          fi
+          # Also reject if SHA is reachable from main (would indicate a merged commit)
+          if git merge-base --is-ancestor "$CURRENT_SHA" "origin/main" 2>/dev/null; then
+            echo "PLAN-DENIED: SHA $CURRENT_SHA is already reachable from main." >&2
+            exit 1
+          fi
+          echo "Feature ancestry confirmed: $CURRENT_SHA is under $ALLOWED_BRANCH and not yet in main"
+
+      - name: Verify SHA matches current remote feature tip
+        shell: bash
+        run: |
+          set -euo pipefail
+          CURRENT_SHA="$(git rev-parse HEAD)"
+          REMOTE_TIP="$(git rev-parse origin/feature/course-branding-and-preview)"
+          if [ "$CURRENT_SHA" != "$REMOTE_TIP" ]; then
+            echo "PLAN-DENIED: input SHA '$CURRENT_SHA' is not the current remote tip '$REMOTE_TIP'" >&2
+            echo "Run pnpm staging:payload-migration-plan locally to confirm the remote tip before dispatching." >&2
+            exit 1
+          fi
+          echo "Remote tip confirmed: $CURRENT_SHA"
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 10.33.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: pnpm
+
+      - name: Install dependencies (frozen)
+        run: pnpm install --frozen-lockfile
+
+      - name: Mask DATABASE_URL
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${DATABASE_URL:-}" ]; then
+            echo "PLAN-DENIED: DATABASE_URL is not set. The staging-migration-plan environment must provide it." >&2
+            exit 1
+          fi
+          echo "::add-mask::$DATABASE_URL"
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      - name: Verify network path to staging host (fail closed)
+        shell: bash
+        run: |
+          set -euo pipefail
+          STAGING_HOST="10.0.2.4"
+          if ! nc -z -w 5 "$STAGING_HOST" 5432 2>/dev/null; then
+            echo "PLAN-DENIED: cannot reach $STAGING_HOST:5432. The approved network path (Tailscale/private NIC) is required." >&2
+            echo "Configure the tailscale/github-action step or use a tailnet-connected self-hosted runner." >&2
+            exit 1
+          fi
+          echo "Network path to $STAGING_HOST:5432 confirmed"
+
+      - name: Run read-only Payload migration plan
+        id: migration-plan
+        shell: bash
+        run: |
+          set -euo pipefail
+          RESULT_FILE="$(mktemp)"
+          pnpm staging:payload-migration-plan \
+            --expected-commit="${{ inputs.expected-commit }}" \
+            --environment=staging \
+            --target-id=jpvbootcamp-staging \
+            --expected-schema=jpvbootcamp_staging \
+            --expected-hostname=10.0.2.4 \
+            --expected-database=jpvbootcamp \
+            > "$RESULT_FILE" 2>&1 || true
+          # Capture plan result for artifact
+          cp "$RESULT_FILE" plan-result-raw.json
+          # Determine exit
+          PLAN_OK="$(jq -r '.ok // false' "$RESULT_FILE" 2>/dev/null || echo 'false')"
+          if [ "$PLAN_OK" != "true" ]; then
+            echo "PLAN-BLOCKED: migration plan did not pass. See artifact for sanitized details." >&2
+            cat "$RESULT_FILE" >&2
+            exit 1
+          fi
+          # Write sanitized summary outputs — only safe fields
+          echo "plan_ok=true" >> "$GITHUB_OUTPUT"
+          jq -r '.commit // "unknown"' "$RESULT_FILE" | head -c 40 > /tmp/plan_commit.txt
+          echo "plan_commit=$(cat /tmp/plan_commit.txt)" >> "$GITHUB_OUTPUT"
+          jq -r '.appliedCount // 0' "$RESULT_FILE" >> /tmp/plan_applied.txt
+          echo "plan_applied=$(cat /tmp/plan_applied.txt)" >> "$GITHUB_OUTPUT"
+          jq -r '(.pendingMigrations // []) | join(",")' "$RESULT_FILE" >> /tmp/plan_pending.txt
+          echo "plan_pending=$(cat /tmp/plan_pending.txt)" >> "$GITHUB_OUTPUT"
+          echo "Read-only plan passed: $(jq -r '.message // ""' "$RESULT_FILE")"
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PAYLOAD_MIGRATION_SCHEMA: jpvbootcamp_staging
+
+      - name: Produce sanitized plan artifact
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ ! -f plan-result-raw.json ]; then
+            echo '{"ok":false,"message":"plan step did not produce output"}' > plan-result-sanitized.json
+            exit 0
+          fi
+          # Extract only safe scalar fields — never URLs, credentials, env dumps, or raw exceptions
+          jq '{
+            ok: (.ok // false),
+            mode: (.mode // "plan"),
+            branch: (.branch // "unknown"),
+            commit: (.commit // "unknown"),
+            schema: (.schema // "unknown"),
+            environment: (.environment // "unknown"),
+            targetId: (.targetId // "unknown"),
+            appliedCount: (.appliedCount // 0),
+            pendingMigrations: (.pendingMigrations // []),
+            blockers: (.blockers // []),
+            message: (.message // "")
+          }' plan-result-raw.json > plan-result-sanitized.json 2>/dev/null \
+            || echo '{"ok":false,"message":"artifact sanitization failed"}' > plan-result-sanitized.json
+          # Verify sanitized output contains no credential-like strings
+          if grep -qiE 'password|secret|token|key=|DATABASE_URL=|postgres://' plan-result-sanitized.json; then
+            echo '{"ok":false,"message":"sanitization check failed — credential-like string detected"}' > plan-result-sanitized.json
+          fi
+          cat plan-result-sanitized.json
+
+      - name: Upload sanitized plan artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: staging-migration-plan-${{ github.run_id }}
+          path: plan-result-sanitized.json
+          retention-days: 30
+          if-no-files-found: warn
