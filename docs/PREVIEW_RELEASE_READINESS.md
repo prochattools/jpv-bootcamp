@@ -329,9 +329,9 @@ The checklist only gates operations. It does not claim live success or imply tha
 
 ## Pending Payload migration order
 
-**Historical snapshot claim (not independently reverified by this checkpoint):** the codebase at `eb03a08` registered 16 Payload migrations, and `docs/CURRENT_WORK_HANDOFF.md` recorded 16 as applied at that time. The health field was registration inventory, not independent database evidence. Current applied state must come from the authorized read-only status path before any write authorization.
+**Historical snapshot claim (not independently reverified by this checkpoint):** the codebase at `eb03a08` registered 16 Payload migrations; at commit `969113b` the registry contains 29. Current applied state must come from the authorized read-only status path (`pnpm staging:payload-migration-plan`) before any write authorization is issued.
 
-**Registered migration order (src/migrations/index.ts at eb03a08):**
+**Registered migration order (src/migrations/migrationRegistry.ts at 969113b):**
 
 1. `20260620_213328`
 2. `20260621_194424_course_system_phase1`
@@ -349,8 +349,23 @@ The checklist only gates operations. It does not claim live success or imply tha
 14. `20260718_110000_bunny_videos`
 15. `20260719_150000_subscription_schema_cols`
 16. `20260720_000000_locked_docs_rels_new_collections`
+17. `20260720_010000_payload_community_posts`
+18. `20260720_020000_payload_community_topics`
+19. `20260720_030000_payload_moderation`
+20. `20260720_040000_payload_community_notifications`
+21. `20260720_050000_payload_partner_referral_codes`
+22. `20260720_060000_payload_entitlement_overrides`
+23. `20260721_000000_payload_branding_and_preview_config`
+24. `20260721_010000_payload_course_branding`
+25. `20260721_020000_payload_course_programme`
+26. `20260721_030000_payload_live_session_branding`
+27. `20260721_040000_payload_community_branding`
+28. `20260721_050000_payload_email_branding`
+29. `20260804_050000_member_account_action_reservations`
 
-Note: migrations 12–16 were added after the prior "11 reviewed migrations" inventory was written. Verify exact applied count against staging DB before any apply operation. Payload migrations are separate from Prisma migration/startup behavior and are not applied by `scripts/db/deploy-prod.sh`.
+Migration 29 (`20260804_050000_member_account_action_reservations`) adds four nullable reservation columns, two `NOT VALID` check constraints, and two partial indexes to `payload_member_verification_tokens`. `NOT VALID` avoids full-table validation at add time; `VALIDATE CONSTRAINT` scans under `ShareUpdateExclusiveLock` in the down migration. Index builds block concurrent writes for the duration of the build. `ALTER TABLE ... ADD COLUMN` (nullable, no default) requires a brief but non-trivial table lock to update the system catalog. Duration depends on table size and index build time; treat all timing estimates as estimates only, not guarantees. This migration is not non-blocking.
+
+Verify exact applied count against staging DB before any apply operation. Payload migrations are separate from Prisma migration/startup behavior and are not applied by `scripts/db/deploy-prod.sh` or by `STARTUP_MODE=database-deploy`.
 
 ## Environment lane isolation
 
@@ -529,7 +544,7 @@ Use this order for the staging gate:
    - Prerequisites: migration approval, backup evidence, and maintenance window.
    - Command: the reviewed migration runner for the approved environment.
    - Evidence: migration logs and applied migration order.
-   - Success: all eleven reviewed migrations complete in order.
+   - Success: all 29 reviewed migrations complete in order.
    - Stop: error, drift, or any destructive rollback attempt.
 7. Deploy the exact image.
    - Prerequisites: image publication approval and deployment approval are separate.
@@ -673,6 +688,38 @@ Operator: <name>
 Rollback owner: <name>
 
 This does not authorize push, Prisma migrations, schema initialization, provider delivery, or deployment.
+```
+
+### Payload migration 29 authorization (account_action_reservation columns)
+
+Migration 29 (`20260804_050000_member_account_action_reservations`) adds reservation/finalization columns and indexes to `payload_member_verification_tokens`.
+
+The guarded runner (`pnpm staging:payload-migration-plan` / `pnpm staging:payload-migration-apply`) enforces:
+- Branch must be `feature/course-branding-and-preview`
+- Commit must be exactly `969113bcbee5cbdc01a274d7ab3e5cafdc94ecca`
+- Schema must be `jpvbootcamp_staging`
+- Exactly 28 migrations applied before apply; exactly 29 after apply
+- Only migration 29 may be missing; no unexpected records may exist
+- Exact confirmation value `apply_account_action_reservation_migration_to_jpvbootcamp_staging` required
+
+Authorization template:
+
+```text
+Authorize Payload migration 29 only.
+Migration: 20260804_050000_member_account_action_reservations
+Commit: 969113bcbee5cbdc01a274d7ab3e5cafdc94ecca
+Environment: staging
+Schema: jpvbootcamp_staging
+Database: jpvbootcamp
+Runner: pnpm staging:payload-migration-apply
+Precondition: 28 applied, migration 29 missing, no unexpected records
+Backup and restore point: <confirmed evidence identifier>
+Maintenance window: <time and duration>
+Operator: <name>
+Rollback owner: <name>
+Rollback procedure: pnpm payload migrate:down (reverses last batch; confirm down SQL reviewed)
+
+This does not authorize push, Dokploy redeployment, STARTUP_MODE=database-deploy, Prisma migrations, provider email, post-deployment smoke, or production.
 ```
 
 ### Prisma migration authorization (account-column rename)

@@ -51,6 +51,8 @@
     "staging:migration-rehearsal:evidence": "tsx scripts/release/buildMigrationRehearsalEvidence.ts",
     "staging:decision-readiness": "tsx scripts/release/runDecisionReadiness.ts",
     "staging:provider-simulation": "tsx scripts/release/providerSimulation.ts",
+    "staging:payload-migration-plan": "tsx scripts/release/runStagingPayloadMigration.ts plan",
+    "staging:payload-migration-apply": "tsx scripts/release/runStagingPayloadMigration.ts apply",
     "staging:smoke-plan": "tsx scripts/release/printStagingSmokePlan.ts",
     "staging:smoke-simulated": "tsx scripts/release/simulatedStagingSmoke.ts",
     "release:evidence:dry-run": "tsx scripts/release/buildReleaseEvidence.ts",
