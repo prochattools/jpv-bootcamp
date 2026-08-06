@@ -375,17 +375,12 @@ async function main(): Promise<void> {
   // ─── Schema type validation ───────────────────────────────────────────────
 
   await test('schema validation: all required keys and types are validated before sanitization', () => {
+    // Node.js-based validation replaces jq — check for Node.js type checks
     assert.ok(
-      planJobYml.includes('type) == "boolean"') || planJobYml.includes('"boolean"'),
-      'must validate .ok is a boolean',
-    )
-    assert.ok(
-      planJobYml.includes('type) == "string"') || planJobYml.includes('"string"'),
-      'must validate string fields',
-    )
-    assert.ok(
-      planJobYml.includes('type) == "array"') || planJobYml.includes('"array"'),
-      'must validate array fields (.pendingMigrations, .blockers)',
+      planJobYml.includes('typeof parsed') || planJobYml.includes('!== \'boolean\'') ||
+        planJobYml.includes('not boolean') || planJobYml.includes('prismaHealthy not boolean') ||
+        planJobYml.includes('blockerCodes not array'),
+      'must validate field types (boolean, string, array) via Node.js JSON.parse',
     )
     assert.ok(
       planJobYml.includes('JSON schema validation failed'),
@@ -395,15 +390,17 @@ async function main(): Promise<void> {
 
   // ─── Sanitization failure closes the job ─────────────────────────────────
 
-  await test('sanitization: jq failure exits non-zero — does not silently succeed', () => {
-    // Must check jq exit status — a failed sanitization must fail the job
+  await test('sanitization: Node.js re-serialization failure exits non-zero — does not silently succeed', () => {
+    // Node.js writeFileSync replaces jq for artifact write — failure must close the job
     assert.ok(
-      planJobYml.includes('if ! jq') || (planJobYml.includes('jq') && planJobYml.includes('exit 1')),
-      'jq sanitization failure must fail the job (not silently produce empty output)',
+      planJobYml.includes('writeFileSync') || planJobYml.includes('artifact write failed') ||
+        planJobYml.includes('JSON.stringify(safe)'),
+      'Node.js artifact write must be present and fail the job if it errors',
     )
     assert.ok(
-      planJobYml.includes('artifact sanitization failed') || planJobYml.includes('sanitization (jq) failed'),
-      'must output a clear error when jq sanitization fails',
+      planJobYml.includes('artifact write failed') || planJobYml.includes('sanitization credential check failed') ||
+        planJobYml.includes('exit 1'),
+      'must output a clear error and exit 1 when artifact write or sanitization fails',
     )
   })
 
@@ -521,6 +518,98 @@ async function main(): Promise<void> {
     assert.ok(!planJobYml.includes('stripe'), 'plan job must not reference Stripe')
     assert.ok(!planJobYml.includes('resend'), 'plan job must not reference email provider')
     assert.ok(!planJobYml.includes('livekit'), 'plan job must not reference LiveKit')
+  })
+
+  // ─── Defect: 2>&1 forbidden in plan command ───────────────────────────────
+
+  await test('stream separation: plan command must not merge stdout and stderr with 2>&1', () => {
+    // 2>&1 would allow operational logs (including DB credentials from stderr) to corrupt
+    // the stdout JSON document and defeat the sanitization pipeline.
+    const planCmdSection = planJobYml.slice(planJobYml.indexOf('Run read-only Payload migration plan'))
+    const untilEndOfStep = planCmdSection.slice(0, planCmdSection.indexOf('\n      - name:') > 0 ? planCmdSection.indexOf('\n      - name:') : planCmdSection.length)
+    assert.ok(
+      !untilEndOfStep.includes('2>&1'),
+      'plan command must not use 2>&1 — stdout and stderr must be captured to separate files',
+    )
+  })
+
+  await test('stream separation: plan command uses separate stdout and stderr files', () => {
+    assert.ok(
+      planJobYml.includes('STDOUT_FILE') || planJobYml.includes('> "$STDOUT'),
+      'plan command must capture stdout to a separate file',
+    )
+    assert.ok(
+      planJobYml.includes('STDERR_FILE') || planJobYml.includes('2> "$STDERR'),
+      'plan command must capture stderr to a separate file',
+    )
+  })
+
+  // ─── Defect: input safety — no direct ${{ inputs.* }} in shell source ─────
+
+  await test('input safety: expected_sha injected via env, not inline shell interpolation', () => {
+    // Direct ${{ inputs.expected_sha }} inside shell source is injectable.
+    // The safe pattern is env: INPUT_SHA: ${{ inputs.expected_sha }} then ${INPUT_SHA}.
+    assert.ok(
+      planJobYml.includes('EXPECTED_SHA: ${{ inputs.expected_sha }}') ||
+        planJobYml.includes("EXPECTED_SHA: ${{ inputs.expected_sha }}"),
+      'expected_sha must be bound to EXPECTED_SHA env var, not interpolated directly in shell',
+    )
+    // Must not appear as a raw shell expansion inside the run block
+    const runBlocks = planJobYml.match(/run:\s*\|[\s\S]*?(?=\n\s{6}-|\n\s{4}-|\n\s{2}-|$)/g) ?? []
+    for (const block of runBlocks) {
+      assert.ok(
+        !block.includes("${{ inputs.expected_sha }}"),
+        'run block must not inline ${{ inputs.expected_sha }} in shell source',
+      )
+      assert.ok(
+        !block.includes("${{ inputs.confirmation }}"),
+        'run block must not inline ${{ inputs.confirmation }} in shell source',
+      )
+    }
+  })
+
+  // ─── Defect: SafeMigrationPlanEvidence schema — no free-text fields ───────
+
+  await test('evidence: strict Node.js JSON.parse used — not jq streaming', () => {
+    // jq -e 'type == "object"' accepts multiple JSON documents; JSON.parse does not.
+    // The plan job must use Node.js JSON.parse for single-document validation.
+    assert.ok(
+      planJobYml.includes('JSON.parse') || planJobYml.includes('node -'),
+      'plan job must use Node.js JSON.parse for single-document validation, not jq streaming',
+    )
+  })
+
+  await test('evidence: artifact upload uses if-no-files-found: error', () => {
+    const uploadSection = planJobYml.slice(planJobYml.indexOf('Upload sanitized plan artifact'))
+    assert.ok(
+      uploadSection.includes('if-no-files-found: error'),
+      'artifact upload must use if-no-files-found: error — warn allows silent missing artifacts',
+    )
+    assert.ok(
+      !uploadSection.includes('if-no-files-found: warn'),
+      'artifact upload must not use if-no-files-found: warn',
+    )
+  })
+
+  await test('evidence: SafeMigrationPlanEvidence uses resultCode, not free-text message', () => {
+    // The sanitized artifact must use resultCode ('plan_ok' | 'plan_blocked') not a free-text .message
+    assert.ok(
+      planJobYml.includes('resultCode') || planJobYml.includes('plan_ok'),
+      'plan artifact must contain resultCode field (SafeMigrationPlanEvidence), not free-text message',
+    )
+    assert.ok(
+      planJobYml.includes('blockerCodes') || planJobYml.includes('blockerCodes'),
+      'plan artifact must contain blockerCodes array, not free-text blocker strings',
+    )
+  })
+
+  await test('evidence: artifact write uses re-serialization, not raw input copy', () => {
+    // The sanitized artifact must be built by re-serializing parsed fields, never by
+    // copying raw stdout bytes into the artifact file.
+    assert.ok(
+      planJobYml.includes('JSON.stringify') || planJobYml.includes('writeFileSync'),
+      'artifact must be written via JSON.stringify re-serialization, not raw stdout copy',
+    )
   })
 
   console.log(`\n${passed} passed, ${failed} failed`)

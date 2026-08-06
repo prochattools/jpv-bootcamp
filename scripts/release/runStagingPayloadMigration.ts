@@ -88,6 +88,79 @@ export type RollbackPlanAuthorizationPacket = {
   confirmation: string
 }
 
+export type SafeMigrationPlanEvidence = {
+  version: 1
+  resultCode: 'plan_ok' | 'plan_blocked'
+  blockerCodes: string[]
+  branch: string
+  commit: string
+  schema: string
+  environment: string
+  targetId: string
+  appliedPayloadCount: number
+  expectedPendingMigration: string
+  expectedPendingMigrationIsOnlyMissing: boolean
+  unexpectedPayloadCount: number
+  duplicatePayloadCount: number
+  malformedPayloadCount: number
+  prismaHealthy: boolean
+}
+
+export const ALLOWED_BLOCKER_CODES = new Set([
+  'expected_commit_required',
+  'branch_guard_failed',
+  'commit_guard_failed',
+  'database_url_missing',
+  'database_url_invalid',
+  'environment_guard_failed',
+  'target_identity_guard_failed',
+  'production_marker_rejected',
+  'hostname_mismatch',
+  'worktree_integrity_failed',
+  'status_query_failed',
+  'malformed_payload_evidence',
+  'schema_identity_mismatch',
+  'applied_count_mismatch',
+  'pending_migration_mismatch',
+  'unexpected_payload_migrations',
+  'duplicate_payload_migrations',
+  'missing_prisma_migrations',
+  'unexpected_prisma_migrations',
+  'duplicate_prisma_migrations',
+  'unhealthy_prisma_migrations',
+  'prisma_evidence_empty',
+  'plan_blocked_unknown',
+])
+
+export function blockerToCode(message: string): string {
+  if (message.includes('--expected-commit') || message.includes('expectedCommit') ||
+      message.includes('40 lowercase hexadecimal') || message.startsWith('Expected commit')) return 'expected_commit_required'
+  if (message.startsWith('Branch guard')) return 'branch_guard_failed'
+  if (message.startsWith('Commit guard')) return 'commit_guard_failed'
+  if (message === 'DATABASE_URL is not set; cannot collect live migration status') return 'database_url_missing'
+  if (message.includes('cannot be parsed') || message.includes('Cannot parse database URL') ||
+      message.includes('must use the PostgreSQL protocol') || message.includes('missing a hostname') ||
+      message.includes('missing a database')) return 'database_url_invalid'
+  if (message.includes('production marker')) return 'production_marker_rejected'
+  if (message.includes('configured hostname does not match')) return 'hostname_mismatch'
+  if (message.startsWith('Environment guard')) return 'environment_guard_failed'
+  if (message.startsWith('Target identity guard') || message.startsWith('Schema guard')) return 'target_identity_guard_failed'
+  if (message.startsWith('Worktree integrity guard')) return 'worktree_integrity_failed'
+  if (message === 'read-only-status-query-failed') return 'status_query_failed'
+  if (message.includes('Malformed Payload migration')) return 'malformed_payload_evidence'
+  if (message.includes('Schema identity mismatch') || message.includes('schema identity mismatch')) return 'schema_identity_mismatch'
+  if (message.includes('applied Payload migrations before apply') || message.includes('applied Payload migrations, found')) return 'applied_count_mismatch'
+  if (message.includes('Expected exactly one missing') || message.includes('missing Payload migration')) return 'pending_migration_mismatch'
+  if (message.includes('Unexpected Payload migration')) return 'unexpected_payload_migrations'
+  if (message.includes('Duplicate Payload migration')) return 'duplicate_payload_migrations'
+  if (message.includes('Missing Prisma')) return 'missing_prisma_migrations'
+  if (message.includes('Unexpected Prisma')) return 'unexpected_prisma_migrations'
+  if (message.includes('Duplicate Prisma')) return 'duplicate_prisma_migrations'
+  if (message.includes("not in 'applied' state")) return 'unhealthy_prisma_migrations'
+  if (message.includes('Prisma migration evidence is empty')) return 'prisma_evidence_empty'
+  return 'plan_blocked_unknown'
+}
+
 export type StagingMigrationPlanResult = {
   ok: boolean
   mode: 'plan'
@@ -100,6 +173,10 @@ export type StagingMigrationPlanResult = {
   pendingMigrations: string[]
   blockers: string[]
   message: string
+  unexpectedPayloadCount: number
+  duplicatePayloadCount: number
+  malformedPayloadCount: number
+  prismaHealthy: boolean
 }
 
 export type StagingMigrationApplyResult = {
@@ -623,9 +700,15 @@ export async function runStagingMigrationPlan(
   let branch = 'unknown'
   let commit = 'unknown'
 
-  if (!input.expectedCommit?.trim()) {
-    const message = '--expected-commit is required and must be the full 40-character HEAD SHA'
-    output(`[staging-migration-plan] BLOCKED: ${message}`)
+  function blockedResult(
+    blockerMessages: string[],
+    appliedCount = 0,
+    pendingMigrations: string[] = [],
+    unexpectedPayloadCount = 0,
+    duplicatePayloadCount = 0,
+    malformedPayloadCount = 0,
+    prismaHealthy = false,
+  ): StagingMigrationPlanResult {
     return {
       ok: false,
       mode: 'plan',
@@ -634,50 +717,35 @@ export async function runStagingMigrationPlan(
       schema: REQUIRED_SCHEMA,
       environment: input.environment ?? '',
       targetId: input.targetId ?? '',
-      appliedCount: 0,
-      pendingMigrations: [],
-      blockers: [message],
-      message,
+      appliedCount,
+      pendingMigrations,
+      blockers: blockerMessages,
+      message: `plan_blocked`,
+      unexpectedPayloadCount,
+      duplicatePayloadCount,
+      malformedPayloadCount,
+      prismaHealthy,
     }
+  }
+
+  if (!input.expectedCommit?.trim()) {
+    output(`[staging-migration-plan] BLOCKED: expected_commit_required`)
+    return blockedResult(['expected_commit_required'])
   }
 
   try {
     ;({ branch, commit } = guardBranchAndCommit(git, input.expectedCommit))
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Branch/commit guard failed'
-    output(`[staging-migration-plan] BLOCKED: ${message}`)
-    return {
-      ok: false,
-      mode: 'plan',
-      branch,
-      commit,
-      schema: REQUIRED_SCHEMA,
-      environment: input.environment ?? '',
-      targetId: input.targetId ?? '',
-      appliedCount: 0,
-      pendingMigrations: [],
-      blockers: [message],
-      message,
-    }
+    const raw = error instanceof Error ? error.message : 'Branch/commit guard failed'
+    const code = blockerToCode(raw)
+    output(`[staging-migration-plan] BLOCKED: ${code}`)
+    return blockedResult([code])
   }
 
   // Environment and target identity guards
   if (!databaseUrl) {
-    const message = 'DATABASE_URL is not set; cannot collect live migration status'
-    output(`[staging-migration-plan] BLOCKED: ${message}`)
-    return {
-      ok: false,
-      mode: 'plan',
-      branch,
-      commit,
-      schema: REQUIRED_SCHEMA,
-      environment: input.environment ?? '',
-      targetId: input.targetId ?? '',
-      appliedCount: 0,
-      pendingMigrations: [],
-      blockers: [message],
-      message,
-    }
+    output(`[staging-migration-plan] BLOCKED: database_url_missing`)
+    return blockedResult(['database_url_missing'])
   }
 
   let actualHostname: string
@@ -687,21 +755,10 @@ export async function runStagingMigrationPlan(
     actualHostname = parsed.hostname
     actualDatabase = parsed.database
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Cannot parse database URL'
-    output(`[staging-migration-plan] BLOCKED: ${message}`)
-    return {
-      ok: false,
-      mode: 'plan',
-      branch,
-      commit,
-      schema: REQUIRED_SCHEMA,
-      environment: input.environment ?? '',
-      targetId: input.targetId ?? '',
-      appliedCount: 0,
-      pendingMigrations: [],
-      blockers: [message],
-      message,
-    }
+    const raw = error instanceof Error ? error.message : 'Cannot parse database URL'
+    const code = blockerToCode(raw)
+    output(`[staging-migration-plan] BLOCKED: ${code}`)
+    return blockedResult([code])
   }
 
   try {
@@ -715,42 +772,20 @@ export async function runStagingMigrationPlan(
       actualDatabase,
     )
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Environment/target guard failed'
-    output(`[staging-migration-plan] BLOCKED: ${message}`)
-    return {
-      ok: false,
-      mode: 'plan',
-      branch,
-      commit,
-      schema: REQUIRED_SCHEMA,
-      environment: input.environment ?? '',
-      targetId: input.targetId ?? '',
-      appliedCount: 0,
-      pendingMigrations: [],
-      blockers: [message],
-      message,
-    }
+    const raw = error instanceof Error ? error.message : 'Environment/target guard failed'
+    const code = blockerToCode(raw)
+    output(`[staging-migration-plan] BLOCKED: ${code}`)
+    return blockedResult([code])
   }
 
   // Worktree integrity guard
   try {
     guardGuardedPaths(resolveGitStatus(dependencies))
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Worktree integrity check failed'
-    output(`[staging-migration-plan] BLOCKED: ${message}`)
-    return {
-      ok: false,
-      mode: 'plan',
-      branch,
-      commit,
-      schema: REQUIRED_SCHEMA,
-      environment: input.environment ?? '',
-      targetId: input.targetId ?? '',
-      appliedCount: 0,
-      pendingMigrations: [],
-      blockers: [message],
-      message,
-    }
+    const raw = error instanceof Error ? error.message : 'Worktree integrity check failed'
+    const code = blockerToCode(raw)
+    output(`[staging-migration-plan] BLOCKED: ${code}`)
+    return blockedResult([code])
   }
 
   output(`[staging-migration-plan] branch=${branch}`)
@@ -764,48 +799,35 @@ export async function runStagingMigrationPlan(
   try {
     status = await collectFullMigrationStatus(databaseUrl, schemaOverride, dependencies)
   } catch {
-    const message = 'read-only-status-query-failed'
-    output(`[staging-migration-plan] BLOCKED: ${message}`)
-    return {
-      ok: false,
-      mode: 'plan',
-      branch,
-      commit,
-      schema: REQUIRED_SCHEMA,
-      environment: input.environment ?? '',
-      targetId: input.targetId ?? '',
-      appliedCount: 0,
-      pendingMigrations: [],
-      blockers: [message],
-      message,
-    }
+    output(`[staging-migration-plan] BLOCKED: status_query_failed`)
+    return blockedResult(['status_query_failed'])
   }
 
-  const blockers = checkPreApplyPreconditions(status)
+  const rawBlockers = checkPreApplyPreconditions(status)
+  const blockerCodes = rawBlockers.map(blockerToCode)
 
   output(`[staging-migration-plan] applied-payload=${status.appliedPayloadCount}`)
-  output(`[staging-migration-plan] missing-payload=[${status.missingPayloadMigrations.join(', ')}]`)
-  output(`[staging-migration-plan] unexpected-payload=[${status.unexpectedPayloadMigrations.join(', ')}]`)
+  output(`[staging-migration-plan] missing-payload-count=${status.missingPayloadMigrations.length}`)
+  output(`[staging-migration-plan] unexpected-payload-count=${status.unexpectedPayloadMigrations.length}`)
   output(`[staging-migration-plan] prisma-healthy=${status.allPrismaApplied}`)
 
-  if (blockers.length > 0) {
-    for (const blocker of blockers) {
-      output(`[staging-migration-plan] BLOCKER: ${blocker}`)
+  const unexpectedPayloadCount = status.unexpectedPayloadMigrations.length
+  const duplicatePayloadCount = status.duplicatePayloadMigrations.length
+  const malformedPayloadCount = status.malformedPayloadMigrationCount
+
+  if (blockerCodes.length > 0) {
+    for (const code of blockerCodes) {
+      output(`[staging-migration-plan] BLOCKER: ${code}`)
     }
-    const message = `Plan blockers: ${blockers.join('; ')}`
-    return {
-      ok: false,
-      mode: 'plan',
-      branch,
-      commit,
-      schema: REQUIRED_SCHEMA,
-      environment: input.environment ?? '',
-      targetId: input.targetId ?? '',
-      appliedCount: status.appliedPayloadCount,
-      pendingMigrations: status.missingPayloadMigrations,
-      blockers,
-      message,
-    }
+    return blockedResult(
+      blockerCodes,
+      status.appliedPayloadCount,
+      [],
+      unexpectedPayloadCount,
+      duplicatePayloadCount,
+      malformedPayloadCount,
+      status.allPrismaApplied,
+    )
   }
 
   output(
@@ -821,9 +843,13 @@ export async function runStagingMigrationPlan(
     environment: input.environment ?? '',
     targetId: input.targetId ?? '',
     appliedCount: status.appliedPayloadCount,
-    pendingMigrations: status.missingPayloadMigrations,
+    pendingMigrations: [TARGET_MIGRATION],
     blockers: [],
-    message: `Plan OK: ${TARGET_MIGRATION} is pending and preconditions are met`,
+    message: `plan_ok`,
+    unexpectedPayloadCount,
+    duplicatePayloadCount,
+    malformedPayloadCount,
+    prismaHealthy: status.allPrismaApplied,
   }
 }
 
@@ -1410,8 +1436,30 @@ async function main(): Promise<void> {
     try {
       planInput = parsePlanCliArgs(rest)
     } catch (error: unknown) {
-      process.stderr.write(PLAN_USAGE + '\n')
-      process.stderr.write((error instanceof Error ? error.message : 'Invalid arguments') + '\n')
+      if (jsonMode) {
+        const evidence: SafeMigrationPlanEvidence = {
+          version: 1,
+          resultCode: 'plan_blocked',
+          blockerCodes: ['argument_parse_failed'],
+          branch: 'unknown',
+          commit: 'unknown',
+          schema: '',
+          environment: '',
+          targetId: '',
+          appliedPayloadCount: 0,
+          expectedPendingMigration: TARGET_MIGRATION,
+          expectedPendingMigrationIsOnlyMissing: false,
+          unexpectedPayloadCount: 0,
+          duplicatePayloadCount: 0,
+          malformedPayloadCount: 0,
+          prismaHealthy: false,
+        }
+        process.stdout.write(JSON.stringify(evidence) + '\n')
+        process.stderr.write((error instanceof Error ? error.message : 'Invalid arguments') + '\n')
+      } else {
+        process.stderr.write(PLAN_USAGE + '\n')
+        process.stderr.write((error instanceof Error ? error.message : 'Invalid arguments') + '\n')
+      }
       process.exit(1)
     }
     const result = await runStagingMigrationPlan(
@@ -1421,7 +1469,33 @@ async function main(): Promise<void> {
       {},
       log,
     )
-    process.stdout.write(JSON.stringify(result) + '\n')
+    if (jsonMode) {
+      // Emit SafeMigrationPlanEvidence — no free-text messages or raw migration names
+      const evidence: SafeMigrationPlanEvidence = {
+        version: 1,
+        resultCode: result.ok ? 'plan_ok' : 'plan_blocked',
+        blockerCodes: result.blockers,
+        branch: result.branch,
+        commit: result.commit,
+        schema: result.schema,
+        environment: result.environment,
+        targetId: result.targetId,
+        appliedPayloadCount: result.appliedCount,
+        expectedPendingMigration: TARGET_MIGRATION,
+        expectedPendingMigrationIsOnlyMissing:
+          result.ok ? true : (
+            result.pendingMigrations.length === 1 &&
+            result.pendingMigrations[0] === TARGET_MIGRATION
+          ),
+        unexpectedPayloadCount: result.unexpectedPayloadCount,
+        duplicatePayloadCount: result.duplicatePayloadCount,
+        malformedPayloadCount: result.malformedPayloadCount,
+        prismaHealthy: result.prismaHealthy,
+      }
+      process.stdout.write(JSON.stringify(evidence) + '\n')
+    } else {
+      process.stdout.write(JSON.stringify(result) + '\n')
+    }
     process.exit(result.ok ? 0 : 1)
     return
   }

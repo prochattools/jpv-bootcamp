@@ -12,30 +12,67 @@
  * Exit 1 = one or more blocking items are missing (report printed; do not push).
  */
 
-import { execSync } from 'node:child_process'
+import { spawnSync } from 'node:child_process'
 
 const ENV_NAME = 'staging-migration-plan'
 const REQUIRED_FEATURE_BRANCH = 'feature/course-branding-and-preview'
 const REQUIRED_ENV_SECRETS = ['DATABASE_URL', 'TAILSCALE_OAUTH_CLIENT_ID', 'TAILSCALE_OAUTH_SECRET']
 const STAGING_HOST = '10.0.2.4'
 const STAGING_PORT = 5433
+const GH_API_TIMEOUT_MS = 15_000
+const TCP_TIMEOUT_SECS = 5
 
-function ghApi(path: string): unknown {
+export type GhApiExecutor = (args: string[]) => unknown
+export type TcpProbeExecutor = (host: string, port: number, timeoutSecs: number) => boolean
+export type TailscaleStatusExecutor = () => boolean
+export type RepoNameExecutor = () => string | null
+
+function defaultGhApi(args: string[]): unknown {
+  const result = spawnSync('gh', args, {
+    shell: false,
+    encoding: 'utf8',
+    stdio: ['pipe', 'pipe', 'pipe'],
+    timeout: GH_API_TIMEOUT_MS,
+  })
+  if (result.status !== 0 || result.error) return null
   try {
-    const out = execSync(`gh api "${path}"`, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] })
-    return JSON.parse(out)
+    return JSON.parse(result.stdout)
   } catch {
     return null
   }
 }
 
-function tcpReachable(host: string, port: number, timeoutSecs = 5): boolean {
-  try {
-    execSync(`nc -z -w ${timeoutSecs} "${host}" ${port}`, { stdio: 'pipe' })
-    return true
-  } catch {
-    return false
-  }
+function defaultRepoName(): string | null {
+  const result = spawnSync('gh', ['repo', 'view', '--json', 'nameWithOwner', '--jq', '.nameWithOwner'], {
+    shell: false,
+    encoding: 'utf8',
+    stdio: ['pipe', 'pipe', 'pipe'],
+    timeout: GH_API_TIMEOUT_MS,
+  })
+  if (result.status !== 0 || result.error) return null
+  return result.stdout.trim() || null
+}
+
+function ghApi(path: string, executor: GhApiExecutor = defaultGhApi): unknown {
+  return executor(['api', '--', path])
+}
+
+function defaultTcpReachable(host: string, port: number, timeoutSecs: number): boolean {
+  const result = spawnSync('nc', ['-z', '-w', String(timeoutSecs), host, String(port)], {
+    shell: false,
+    stdio: 'pipe',
+    timeout: (timeoutSecs + 2) * 1000,
+  })
+  return result.status === 0 && !result.error
+}
+
+function tcpReachable(
+  host: string,
+  port: number,
+  timeoutSecs = TCP_TIMEOUT_SECS,
+  executor: TcpProbeExecutor = defaultTcpReachable,
+): boolean {
+  return executor(host, port, timeoutSecs)
 }
 
 interface PreflightResult {
@@ -45,17 +82,27 @@ interface PreflightResult {
   info: string[]
 }
 
-async function runPreflight(): Promise<PreflightResult> {
+export interface PreflightDependencies {
+  ghApi?: GhApiExecutor
+  repoName?: RepoNameExecutor
+  tcpReachable?: TcpProbeExecutor
+  tailscaleStatus?: TailscaleStatusExecutor
+}
+
+export async function runPreflight(deps: PreflightDependencies = {}): Promise<PreflightResult> {
+  const apiExec = deps.ghApi ?? defaultGhApi
+  const repoNameExec = deps.repoName ?? defaultRepoName
+  const tcpExec = deps.tcpReachable ?? defaultTcpReachable
+  const tailscaleExec = deps.tailscaleStatus ?? defaultTailscaleStatus
+
   const result: PreflightResult = { ok: false, blockers: [], warnings: [], info: [] }
 
   // ── Detect repo ────────────────────────────────────────────────────────────
   let repo: string
-  try {
-    repo = execSync('gh repo view --json nameWithOwner --jq .nameWithOwner', {
-      encoding: 'utf8',
-      stdio: ['pipe', 'pipe', 'pipe'],
-    }).trim()
-  } catch {
+  const detectedRepo = repoNameExec()
+  if (typeof detectedRepo === 'string' && detectedRepo.trim()) {
+    repo = detectedRepo.trim()
+  } else {
     result.blockers.push('Cannot detect repository — is gh CLI authenticated? Run: gh auth status')
     result.ok = false
     return result
@@ -63,7 +110,7 @@ async function runPreflight(): Promise<PreflightResult> {
   result.info.push(`Repository: ${repo}`)
 
   // ── Repository visibility ──────────────────────────────────────────────────
-  const repoData = ghApi(`repos/${repo}`) as { private?: boolean; visibility?: string } | null
+  const repoData = ghApi(`repos/${repo}`, apiExec) as { private?: boolean; visibility?: string } | null
   if (!repoData) {
     result.blockers.push('Cannot read repository metadata (gh API auth failure)')
   } else {
@@ -74,7 +121,7 @@ async function runPreflight(): Promise<PreflightResult> {
   }
 
   // ── Environment existence ──────────────────────────────────────────────────
-  const envData = ghApi(`repos/${repo}/environments/${ENV_NAME}`) as {
+  const envData = ghApi(`repos/${repo}/environments/${ENV_NAME}`, apiExec) as {
     name?: string
     protection_rules?: Array<{ type: string; reviewers?: unknown[]; prevent_self_review?: boolean }>
     deployment_branch_policy?: { protected_branches: boolean; custom_branch_policies: boolean } | null
@@ -129,6 +176,7 @@ async function runPreflight(): Promise<PreflightResult> {
       // Verify the custom policy contains exactly the feature branch — no wildcards, no extras
       const policies = ghApi(
         `repos/${repo}/environments/${ENV_NAME}/deployment-branch-policies`,
+        apiExec,
       ) as { branch_policies?: Array<{ name: string }> } | null
       const names = (policies?.branch_policies ?? []).map((p) => p.name)
       const hasExact = names.includes(REQUIRED_FEATURE_BRANCH)
@@ -161,7 +209,7 @@ async function runPreflight(): Promise<PreflightResult> {
   }
 
   // ── Environment secret NAMES ───────────────────────────────────────────────
-  const secretsData = ghApi(`repos/${repo}/environments/${ENV_NAME}/secrets`) as {
+  const secretsData = ghApi(`repos/${repo}/environments/${ENV_NAME}/secrets`, apiExec) as {
     secrets?: Array<{ name: string }>
   } | null
   const envSecretNames = (secretsData?.secrets ?? []).map((s) => s.name)
@@ -185,7 +233,7 @@ async function runPreflight(): Promise<PreflightResult> {
   }
 
   // ── Readiness variable ─────────────────────────────────────────────────────
-  const varsData = ghApi(`repos/${repo}/environments/${ENV_NAME}/variables`) as {
+  const varsData = ghApi(`repos/${repo}/environments/${ENV_NAME}/variables`, apiExec) as {
     variables?: Array<{ name: string; value: string }>
   } | null
   const readyVar = (varsData?.variables ?? []).find((v) => v.name === 'PLAN_READY_FOR_DISPATCH')
@@ -205,21 +253,14 @@ async function runPreflight(): Promise<PreflightResult> {
 
   // ── Network reachability (fail closed) ────────────────────────────────────
   // Absent Tailscale or unreachable host are blockers — not warnings.
-  const tailscaleRunning = (() => {
-    try {
-      execSync('tailscale status', { stdio: 'pipe' })
-      return true
-    } catch {
-      return false
-    }
-  })()
+  const tailscaleRunning = tailscaleExec()
 
   if (!tailscaleRunning) {
     result.blockers.push(
       `Tailscale is not running locally — connect to Tailscale and re-run. ` +
         `Network path to ${STAGING_HOST}:${STAGING_PORT} cannot be verified without Tailscale.`,
     )
-  } else if (!tcpReachable(STAGING_HOST, STAGING_PORT)) {
+  } else if (!tcpReachable(STAGING_HOST, STAGING_PORT, TCP_TIMEOUT_SECS, tcpExec)) {
     result.blockers.push(
       `${STAGING_HOST}:${STAGING_PORT} is not reachable via Tailscale — ` +
         'confirm subnet route 10.0.2.4/32 is exported and ACL allows tag:ci-reader -> 10.0.2.4:5433.',
@@ -232,7 +273,16 @@ async function runPreflight(): Promise<PreflightResult> {
   return result
 }
 
-const preflight = await runPreflight()
+function defaultTailscaleStatus(): boolean {
+  const result = spawnSync('tailscale', ['status'], {
+    shell: false,
+    stdio: 'pipe',
+    timeout: 10_000,
+  })
+  return result.status === 0 && !result.error
+}
+
+const preflight = await runPreflight({})
 
 console.log('\n=== Staging Migration Plan Infrastructure Preflight ===\n')
 

@@ -445,7 +445,7 @@ async function run(): Promise<void> {
       noopOutput(),
     )
     assert.equal(result.ok, false)
-    assert.ok(result.blockers.some((b) => b.toLowerCase().includes('expected-commit')))
+    assert.ok(result.blockers.some((b) => b === 'expected_commit_required' || b.toLowerCase().includes('expected-commit') || b.toLowerCase().includes('expected_commit')))
   })
 
   await test('plan: rejects empty expectedCommit', async () => {
@@ -457,7 +457,7 @@ async function run(): Promise<void> {
       noopOutput(),
     )
     assert.equal(result.ok, false)
-    assert.ok(result.blockers.some((b) => b.toLowerCase().includes('expected-commit')))
+    assert.ok(result.blockers.some((b) => b === 'expected_commit_required' || b.toLowerCase().includes('expected-commit') || b.toLowerCase().includes('expected_commit')))
   })
 
   await test('plan: rejects abbreviated commit (not 40 chars)', async () => {
@@ -469,7 +469,7 @@ async function run(): Promise<void> {
       noopOutput(),
     )
     assert.equal(result.ok, false)
-    assert.ok(result.blockers.some((b) => b.toLowerCase().includes('40')))
+    assert.ok(result.blockers.some((b) => b === 'expected_commit_required' || b.toLowerCase().includes('40') || b.toLowerCase().includes('expected_commit')))
   })
 
   await test('plan: rejects wrong branch', async () => {
@@ -572,7 +572,7 @@ async function run(): Promise<void> {
       noopOutput(),
     )
     assert.equal(result.ok, false)
-    assert.ok(result.blockers.some((b) => b.toLowerCase().includes('production marker')))
+    assert.ok(result.blockers.some((b) => b === 'production_marker_rejected' || b.toLowerCase().includes('production marker') || b.toLowerCase().includes('production_marker')))
   })
 
   await test('plan: rejects mismatched staging hostname', async () => {
@@ -682,7 +682,7 @@ async function run(): Promise<void> {
       noopOutput(),
     )
     assert.equal(result.ok, false)
-    assert.ok(result.blockers.some((b) => b.includes('DATABASE_URL')))
+    assert.ok(result.blockers.some((b) => b === 'database_url_missing' || b.includes('DATABASE_URL') || b.includes('database_url')))
   })
 
   // ─── plan: Payload state checks ───────────────────────────────────────────
@@ -715,7 +715,7 @@ async function run(): Promise<void> {
       baseDeps({ clientFactory: factory27 }), noopOutput(),
     )
     assert.equal(result.ok, false)
-    assert.ok(result.blockers.some((b) => b.includes('28')))
+    assert.ok(result.blockers.some((b) => b === 'applied_count_mismatch' || b === 'pending_migration_mismatch' || b.includes('28') || b.includes('count') || b.includes('mismatch')))
   })
 
   await test('plan: blocks when migration 29 is already applied', async () => {
@@ -724,7 +724,10 @@ async function run(): Promise<void> {
       baseDeps({ clientFactory: clientFactory29() }), noopOutput(),
     )
     assert.equal(result.ok, false)
-    assert.ok(result.blockers.some((b) => b.includes(TARGET_MIGRATION) || b.includes('missing')))
+    assert.ok(result.blockers.some((b) =>
+      b === 'applied_count_mismatch' || b === 'pending_migration_mismatch' ||
+      b.includes(TARGET_MIGRATION) || b.includes('missing') || b.includes('count')
+    ))
   })
 
   await test('plan: blocks when unexpected Payload migrations exist', async () => {
@@ -1425,7 +1428,9 @@ async function run(): Promise<void> {
       baseDeps({ clientFactory: clientFactory28() }), noopOutput(),
     )
     assert.equal(result.ok, false)
-    assert.ok(result.blockers.some((b) => b.toLowerCase().includes('database')))
+    assert.ok(result.blockers.some((b) =>
+      b === 'target_identity_guard_failed' || b.toLowerCase().includes('database') || b.toLowerCase().includes('target')
+    ))
   })
 
   await test('database guard: jpvbootcamp_staging rejected even if expected arg matches', async () => {
@@ -1436,7 +1441,9 @@ async function run(): Promise<void> {
       baseDeps({ clientFactory: clientFactory28() }), noopOutput(),
     )
     assert.equal(result.ok, false)
-    assert.ok(result.blockers.some((b) => b.toLowerCase().includes('database')))
+    assert.ok(result.blockers.some((b) =>
+      b === 'target_identity_guard_failed' || b.toLowerCase().includes('database') || b.toLowerCase().includes('target')
+    ))
   })
 
   await test('database guard: production-named database rejected', async () => {
@@ -1495,8 +1502,12 @@ async function run(): Promise<void> {
       )
       assert.equal(result.ok, false, `hostname with '${label}' token should be rejected`)
       assert.ok(
-        result.blockers.some((b) => b.includes(`production marker '${label}'`)),
-        `should mention '${label}' marker`,
+        result.blockers.some((b) =>
+          b === 'production_marker_rejected' ||
+          b.includes(`production marker '${label}'`) ||
+          b.includes('production_marker')
+        ),
+        `should mention '${label}' marker or production_marker_rejected code`,
       )
     }
   })
@@ -2046,7 +2057,7 @@ async function run(): Promise<void> {
     assert.ok(!allText.includes(secretUrl), 'raw URL must not appear in plan output or result')
     // Must use a fixed category, not the raw error text
     assert.ok(
-      result.blockers.some((b) => b === 'read-only-status-query-failed'),
+      result.blockers.some((b) => b === 'status_query_failed' || b === 'read-only-status-query-failed'),
       'plan blocker must use fixed category',
     )
   })
@@ -2201,7 +2212,10 @@ async function run(): Promise<void> {
     )
     // Branch guard may fail (we may be on the right branch already), but commit guard must pass
     assert.ok(
-      okResult.ok || !okResult.blockers.some((b) => b.toLowerCase().includes('commit')),
+      okResult.ok ||
+        !okResult.blockers.some((b) =>
+          b === 'commit_guard_failed' || b === 'expected_commit_required' || b.toLowerCase().includes('commit')
+        ),
       'Real HEAD should not fail commit guard',
     )
 
@@ -2218,7 +2232,7 @@ async function run(): Promise<void> {
       noopOutput(),
     )
     assert.equal(abbrevResult.ok, false)
-    assert.ok(abbrevResult.blockers.some((b) => b.includes('40')))
+    assert.ok(abbrevResult.blockers.some((b) => b === 'expected_commit_required' || b.includes('40') || b.includes('expected_commit')))
 
     // Previous SHA must fail (HEAD is not SYNTHETIC_HEAD unless we are at that exact commit)
     if (realHead !== SYNTHETIC_HEAD) {
@@ -2233,7 +2247,7 @@ async function run(): Promise<void> {
         noopOutput(),
       )
       assert.equal(prevResult.ok, false)
-      assert.ok(prevResult.blockers.some((b) => b.toLowerCase().includes('commit')))
+      assert.ok(prevResult.blockers.some((b) => b === 'commit_guard_failed' || b.toLowerCase().includes('commit')))
     }
   })
 

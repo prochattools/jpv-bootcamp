@@ -65,17 +65,20 @@ jobs:
     steps:
       - name: Validate deployment boundary
         shell: bash
+        env:
+          GH_REF_NAME: ${{ github.ref_name }}
+          GH_EVENT_NAME: ${{ github.event_name }}
+          INPUT_BRANCH_OR_REF: ${{ inputs.branch_or_ref }}
         run: |
           set -euo pipefail
           # Reject main branch deployments from this workflow
-          if [ "${{ github.ref_name }}" = "main" ]; then
+          if [ "${GH_REF_NAME}" = "main" ]; then
             echo "DEPLOY-DENIED: this workflow must not run on main. Only feature/course-branding-and-preview is allowed." >&2
             exit 1
           fi
           # Reject generic workflow_dispatch input pointing at main
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            INPUT_REF="${{ inputs.branch_or_ref }}"
-            if [ "$INPUT_REF" = "main" ] || [ "$INPUT_REF" = "refs/heads/main" ]; then
+          if [ "${GH_EVENT_NAME}" = "workflow_dispatch" ]; then
+            if [ "${INPUT_BRANCH_OR_REF}" = "main" ] || [ "${INPUT_BRANCH_OR_REF}" = "refs/heads/main" ]; then
               echo "DEPLOY-DENIED: branch_or_ref 'main' is not allowed. Use feature/course-branding-and-preview." >&2
               exit 1
             fi
@@ -346,29 +349,35 @@ jobs:
 
       - name: Validate inputs — confirmation string
         shell: bash
+        env:
+          INPUT_CONFIRMATION: ${{ inputs.confirmation }}
         run: |
           set -euo pipefail
           EXPECTED_CONFIRMATION="run-read-only-staging-payload-migration-plan"
-          if [ "${{ inputs.confirmation }}" != "$EXPECTED_CONFIRMATION" ]; then
+          if [ "${INPUT_CONFIRMATION}" != "${EXPECTED_CONFIRMATION}" ]; then
             echo "PLAN-DENIED: confirmation must be exactly '${EXPECTED_CONFIRMATION}'" >&2
             exit 1
           fi
 
       - name: Validate inputs — expected_sha is full 40-char SHA
         shell: bash
+        env:
+          INPUT_SHA: ${{ inputs.expected_sha }}
         run: |
           set -euo pipefail
-          INPUT_SHA="${{ inputs.expected_sha }}"
-          if ! echo "$INPUT_SHA" | grep -qE '^[0-9a-f]{40}$'; then
-            echo "PLAN-DENIED: expected_sha must be exactly 40 lowercase hexadecimal characters, got '${INPUT_SHA:0:12}...'" >&2
+          if ! printf '%s' "${INPUT_SHA}" | grep -qE '^[0-9a-f]{40}$'; then
+            echo "PLAN-DENIED: expected_sha must be exactly 40 lowercase hexadecimal characters" >&2
             exit 1
           fi
 
       - name: Validate trigger — reject main branch
         shell: bash
+        env:
+          GH_REF: ${{ github.ref }}
+          GH_REF_NAME: ${{ github.ref_name }}
         run: |
           set -euo pipefail
-          if [ "${{ github.ref }}" = "refs/heads/main" ] || [ "${{ github.ref_name }}" = "main" ]; then
+          if [ "${GH_REF}" = "refs/heads/main" ] || [ "${GH_REF_NAME}" = "main" ]; then
             echo "PLAN-DENIED: this workflow must not run on main." >&2
             exit 1
           fi
@@ -420,6 +429,8 @@ jobs:
 
       - name: Verify branch name, HEAD SHA, ancestry, and remote tip
         shell: bash
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
         run: |
           set -euo pipefail
           BRANCH="$(git branch --show-current)"
@@ -428,23 +439,22 @@ jobs:
             exit 1
           fi
           ACTUAL_SHA="$(git rev-parse HEAD)"
-          INPUT_SHA="${{ inputs.expected_sha }}"
-          if [ "$ACTUAL_SHA" != "$INPUT_SHA" ]; then
-            echo "PLAN-DENIED: branch tip '$ACTUAL_SHA' does not match expected_sha '$INPUT_SHA'" >&2
+          if [ "$ACTUAL_SHA" != "${EXPECTED_SHA}" ]; then
+            echo "PLAN-DENIED: branch tip does not match expected_sha" >&2
             exit 1
           fi
           # Reject if SHA is already reachable from main
           if git merge-base --is-ancestor "$ACTUAL_SHA" "origin/main" 2>/dev/null; then
-            echo "PLAN-DENIED: SHA $ACTUAL_SHA is already reachable from main." >&2
+            echo "PLAN-DENIED: SHA is already reachable from main." >&2
             exit 1
           fi
           REMOTE_TIP="$(git rev-parse origin/feature/course-branding-and-preview)"
           if [ "$ACTUAL_SHA" != "$REMOTE_TIP" ]; then
-            echo "PLAN-DENIED: expected_sha '$ACTUAL_SHA' is not the current remote tip '$REMOTE_TIP'" >&2
+            echo "PLAN-DENIED: expected_sha is not the current remote tip" >&2
             echo "Run pnpm staging:payload-migration-plan locally to confirm the remote tip before dispatching." >&2
             exit 1
           fi
-          echo "Branch: $BRANCH | HEAD: $ACTUAL_SHA | remote tip: $REMOTE_TIP — all verified"
+          echo "Branch: $BRANCH | HEAD verified | remote tip verified"
 
       # ── Toolchain ─────────────────────────────────────────────────────────
 
@@ -519,12 +529,13 @@ jobs:
           EXPECTED_SHA: ${{ inputs.expected_sha }}
         run: |
           set -euo pipefail
-          RESULT_FILE=$(mktemp)
-          chmod 600 "$RESULT_FILE"
-          # Trap deletes raw file on any exit — credentials never persist
-          trap 'rm -f "$RESULT_FILE"' EXIT
+          STDOUT_FILE=$(mktemp)
+          STDERR_FILE=$(mktemp)
+          chmod 600 "$STDOUT_FILE" "$STDERR_FILE"
+          # Trap deletes both raw files on any exit — credentials never persist
+          trap 'rm -f "$STDOUT_FILE" "$STDERR_FILE"' EXIT
 
-          # Build argument array — no shell string interpolation of user-supplied input
+          # Build argument array — EXPECTED_SHA injected via env, never interpolated in source
           PLAN_ARGS=(
             "tsx"
             "scripts/release/runStagingPayloadMigration.ts"
@@ -539,84 +550,116 @@ jobs:
           )
 
           set +e
-          # --output=json: stdout = exactly one JSON document; stderr = operational logs
+          # stdout = exactly one JSON document; stderr = operational logs (separated, never merged)
           pnpm exec "${PLAN_ARGS[@]}" \
-            > "$RESULT_FILE" 2>&1
+            > "$STDOUT_FILE" \
+            2> "$STDERR_FILE"
           PLAN_EXIT=$?
           set -e
 
           # Reject mixed output: stdout must begin with '{' — no operational log lines before JSON
-          FIRST_CHAR="$(head -c 1 "$RESULT_FILE" 2>/dev/null || echo '')"
+          FIRST_CHAR="$(head -c 1 "$STDOUT_FILE" 2>/dev/null || echo '')"
           if [ "$FIRST_CHAR" != "{" ]; then
-            echo "PLAN-BLOCKED: stdout does not begin with '{' — mixed output detected, not a pure JSON document" >&2
-            echo '{"ok":false,"message":"mixed output rejected — stdout must be exactly one JSON document"}' > plan-result-sanitized.json
+            echo "PLAN-BLOCKED: stdout does not begin with '{' — mixed output detected" >&2
+            node -e "process.stdout.write(JSON.stringify({version:1,resultCode:'plan_blocked',blockerCodes:['output_format_invalid']})+'\n')" > plan-result-sanitized.json
             exit 1
           fi
 
-          # Reject trailing bytes: must be exactly one JSON document, no trailing content
-          if ! jq -e 'type == "object"' "$RESULT_FILE" > /dev/null 2>&1; then
-            echo "PLAN-BLOCKED: stdout is not a valid JSON object (may contain trailing bytes or multiple documents)" >&2
-            echo '{"ok":false,"message":"invalid JSON object — trailing bytes or multiple documents"}' > plan-result-sanitized.json
+          # Reject trailing bytes: use strict Node.js JSON.parse (not jq streaming) for single-document validation
+          # jq -e 'type == "object"' accepts multiple documents; JSON.parse does not.
+          if ! node - <<'NODEEOF' "$STDOUT_FILE"
+            const fs = require('fs')
+            const path = process.argv[1]
+            const raw = fs.readFileSync(path, 'utf8')
+            // Only allow trailing whitespace — reject BOM, prefixes, multiple documents
+            const trimmed = raw.trimEnd()
+            if (trimmed !== trimmed.trimStart()) { process.stderr.write('PLAN-BLOCKED: leading whitespace or BOM\n'); process.exit(1) }
+            let parsed
+            try { parsed = JSON.parse(trimmed) } catch { process.stderr.write('PLAN-BLOCKED: invalid JSON\n'); process.exit(1) }
+            if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) { process.stderr.write('PLAN-BLOCKED: not a JSON object\n'); process.exit(1) }
+            // Validate SafeMigrationPlanEvidence schema
+            if (parsed.version !== 1) { process.stderr.write('PLAN-BLOCKED: wrong version\n'); process.exit(1) }
+            if (parsed.resultCode !== 'plan_ok' && parsed.resultCode !== 'plan_blocked') { process.stderr.write('PLAN-BLOCKED: invalid resultCode\n'); process.exit(1) }
+            if (!Array.isArray(parsed.blockerCodes)) { process.stderr.write('PLAN-BLOCKED: blockerCodes not array\n'); process.exit(1) }
+            if (typeof parsed.branch !== 'string') { process.stderr.write('PLAN-BLOCKED: branch not string\n'); process.exit(1) }
+            if (typeof parsed.commit !== 'string') { process.stderr.write('PLAN-BLOCKED: commit not string\n'); process.exit(1) }
+            if (typeof parsed.schema !== 'string') { process.stderr.write('PLAN-BLOCKED: schema not string\n'); process.exit(1) }
+            if (typeof parsed.environment !== 'string') { process.stderr.write('PLAN-BLOCKED: environment not string\n'); process.exit(1) }
+            if (typeof parsed.targetId !== 'string') { process.stderr.write('PLAN-BLOCKED: targetId not string\n'); process.exit(1) }
+            if (typeof parsed.appliedPayloadCount !== 'number') { process.stderr.write('PLAN-BLOCKED: appliedPayloadCount not number\n'); process.exit(1) }
+            if (typeof parsed.expectedPendingMigration !== 'string') { process.stderr.write('PLAN-BLOCKED: expectedPendingMigration not string\n'); process.exit(1) }
+            if (typeof parsed.expectedPendingMigrationIsOnlyMissing !== 'boolean') { process.stderr.write('PLAN-BLOCKED: expectedPendingMigrationIsOnlyMissing not boolean\n'); process.exit(1) }
+            if (typeof parsed.unexpectedPayloadCount !== 'number') { process.stderr.write('PLAN-BLOCKED: unexpectedPayloadCount not number\n'); process.exit(1) }
+            if (typeof parsed.duplicatePayloadCount !== 'number') { process.stderr.write('PLAN-BLOCKED: duplicatePayloadCount not number\n'); process.exit(1) }
+            if (typeof parsed.malformedPayloadCount !== 'number') { process.stderr.write('PLAN-BLOCKED: malformedPayloadCount not number\n'); process.exit(1) }
+            if (typeof parsed.prismaHealthy !== 'boolean') { process.stderr.write('PLAN-BLOCKED: prismaHealthy not boolean\n'); process.exit(1) }
+            // Reject unknown keys
+            const ALLOWED = new Set(['version','resultCode','blockerCodes','branch','commit','schema','environment','targetId','appliedPayloadCount','expectedPendingMigration','expectedPendingMigrationIsOnlyMissing','unexpectedPayloadCount','duplicatePayloadCount','malformedPayloadCount','prismaHealthy'])
+            for (const k of Object.keys(parsed)) { if (!ALLOWED.has(k)) { process.stderr.write('PLAN-BLOCKED: unknown key: '+k+'\n'); process.exit(1) } }
+            // Validate blockerCodes are strings
+            for (const c of parsed.blockerCodes) { if (typeof c !== 'string') { process.stderr.write('PLAN-BLOCKED: blockerCode not string\n'); process.exit(1) } }
+            // Validate commit is 40-char hex or 'unknown'
+            if (parsed.commit !== 'unknown' && !/^[0-9a-f]{40}$/.test(parsed.commit)) { process.stderr.write('PLAN-BLOCKED: commit format invalid\n'); process.exit(1) }
+            // Validate schema matches expected
+            if (parsed.schema !== 'jpvbootcamp_staging' && parsed.schema !== '') { process.stderr.write('PLAN-BLOCKED: unexpected schema value\n'); process.exit(1) }
+            process.exit(0)
+NODEEOF
+          then
+            echo "PLAN-BLOCKED: JSON schema validation failed — required keys, types, or values invalid" >&2
+            node -e "process.stdout.write(JSON.stringify({version:1,resultCode:'plan_blocked',blockerCodes:['schema_validation_failed']})+'\n')" > plan-result-sanitized.json
             exit 1
           fi
 
-          # Schema validation: required keys must exist and be the correct types
-          if ! jq -e '
-            (.ok | type) == "boolean" and
-            (.mode | type) == "string" and
-            (.branch | type) == "string" and
-            (.commit | type) == "string" and
-            (.schema | type) == "string" and
-            (.environment | type) == "string" and
-            (.targetId | type) == "string" and
-            ((.appliedCount | type) == "number") and
-            (.pendingMigrations | type) == "array" and
-            (.blockers | type) == "array" and
-            (.message | type) == "string"
-          ' "$RESULT_FILE" > /dev/null 2>&1; then
-            echo "PLAN-BLOCKED: JSON schema validation failed — required keys or types missing" >&2
-            echo '{"ok":false,"message":"JSON schema validation failed"}' > plan-result-sanitized.json
+          # Write the sanitized artifact by re-serializing only known-good fields via Node.js
+          # Never copy raw stdout or stderr into the artifact
+          if ! node - <<'NODEEOF' "$STDOUT_FILE" plan-result-sanitized.json
+            const fs = require('fs')
+            const raw = fs.readFileSync(process.argv[1], 'utf8').trimEnd()
+            const p = JSON.parse(raw)
+            const safe = {
+              version: p.version,
+              resultCode: p.resultCode,
+              blockerCodes: p.blockerCodes,
+              branch: p.branch,
+              commit: p.commit,
+              schema: p.schema,
+              environment: p.environment,
+              targetId: p.targetId,
+              appliedPayloadCount: p.appliedPayloadCount,
+              expectedPendingMigration: p.expectedPendingMigration,
+              expectedPendingMigrationIsOnlyMissing: p.expectedPendingMigrationIsOnlyMissing,
+              unexpectedPayloadCount: p.unexpectedPayloadCount,
+              duplicatePayloadCount: p.duplicatePayloadCount,
+              malformedPayloadCount: p.malformedPayloadCount,
+              prismaHealthy: p.prismaHealthy,
+            }
+            fs.writeFileSync(process.argv[2], JSON.stringify(safe) + '\n', { mode: 0o600 })
+NODEEOF
+          then
+            echo "PLAN-BLOCKED: artifact write failed" >&2
+            node -e "process.stdout.write(JSON.stringify({version:1,resultCode:'plan_blocked',blockerCodes:['artifact_write_failed']})+'\n')" > plan-result-sanitized.json
             exit 1
           fi
 
-          # Sanitize: extract only the safe scalar fields. Fail closed on jq error.
-          if ! jq -e '{
-            ok: (.ok),
-            mode: (.mode),
-            branch: (.branch),
-            commit: (.commit),
-            schema: (.schema),
-            environment: (.environment),
-            targetId: (.targetId),
-            appliedCount: (.appliedCount),
-            pendingMigrations: (.pendingMigrations),
-            blockers: (.blockers),
-            message: (.message)
-          }' "$RESULT_FILE" > plan-result-sanitized.json 2>/dev/null; then
-            echo "PLAN-BLOCKED: artifact sanitization (jq) failed — raw output not retained" >&2
-            echo '{"ok":false,"message":"artifact sanitization failed"}' > plan-result-sanitized.json
-            exit 1
-          fi
-
-          # Credential scan: PostgreSQL URL schemes, URL userinfo, bearer/basic auth,
-          # credential assignments, and DB env names — any match is a hard failure.
+          # Credential scan on the sanitized artifact — hard failure on any match
           if grep -qiE \
             'postgres(ql)?://|://[^@/]+:[^@/]+@|[Bb]earer [A-Za-z0-9+/=_-]{8,}|[Bb]asic [A-Za-z0-9+/=]{8,}|password[[:space:]]*=|secret[[:space:]]*=|DATABASE_URL[[:space:]]*=|PGPASSWORD[[:space:]]*=' \
             plan-result-sanitized.json; then
-            echo "PLAN-BLOCKED: sanitization check failed — credential-like string detected in sanitized output" >&2
-            echo '{"ok":false,"message":"sanitization credential check failed"}' > plan-result-sanitized.json
+            echo "PLAN-BLOCKED: credential-like string detected in sanitized output" >&2
+            node -e "process.stdout.write(JSON.stringify({version:1,resultCode:'plan_blocked',blockerCodes:['credential_scan_failed']})+'\n')" > plan-result-sanitized.json
             exit 1
           fi
 
-          # Read ok from the sanitized file — not from the raw file
-          PLAN_OK="$(jq -r '.ok // false' plan-result-sanitized.json 2>/dev/null || echo 'false')"
+          # Read resultCode from the sanitized file — not from the raw stdout file
+          RESULT_CODE="$(node -e "process.stdout.write(JSON.parse(require('fs').readFileSync('plan-result-sanitized.json','utf8')).resultCode)" 2>/dev/null || echo 'plan_blocked')"
 
-          if [ "$PLAN_OK" = "true" ] && [ $PLAN_EXIT -eq 0 ]; then
+          if [ "$RESULT_CODE" = "plan_ok" ] && [ $PLAN_EXIT -eq 0 ]; then
             echo "plan_ok=true" >> "$GITHUB_OUTPUT"
-            echo "plan_commit=$(jq -r '.commit // "unknown"' plan-result-sanitized.json | head -c 40)" >> "$GITHUB_OUTPUT"
-            echo "Read-only plan passed: $(jq -r '.message // ""' plan-result-sanitized.json)"
+            PLAN_COMMIT="$(node -e "process.stdout.write(JSON.parse(require('fs').readFileSync('plan-result-sanitized.json','utf8')).commit)" 2>/dev/null || echo 'unknown')"
+            echo "plan_commit=${PLAN_COMMIT:0:40}" >> "$GITHUB_OUTPUT"
+            echo "Read-only plan passed: resultCode=plan_ok"
           else
-            echo "PLAN-BLOCKED: migration plan did not pass (exit=$PLAN_EXIT, ok=$PLAN_OK). See artifact for sanitized details." >&2
+            echo "PLAN-BLOCKED: migration plan did not pass (exit=${PLAN_EXIT}, resultCode=${RESULT_CODE}). See artifact for sanitized details." >&2
             exit 1
           fi
 
@@ -627,4 +670,4 @@ jobs:
           name: staging-migration-plan-${{ github.run_id }}
           path: plan-result-sanitized.json
           retention-days: 30
-          if-no-files-found: warn
+          if-no-files-found: error
