@@ -361,14 +361,16 @@ async function main(): Promise<void> {
 
   // ─── Trailing bytes / multiple documents ─────────────────────────────────
 
-  await test('trailing bytes: jq -e validates exactly one JSON object, no trailing bytes', () => {
+  await test('trailing bytes: Node.js JSON.parse rejects multiple documents and trailing bytes', () => {
+    // jq -e 'type == "object"' accepts multiple JSON documents; JSON.parse does not.
+    // The plan job must use Node.js JSON.parse for strict single-document validation.
     assert.ok(
-      planJobYml.includes('jq -e'),
-      'must use jq -e so a false/null result is an error, not a silent empty match',
+      planJobYml.includes('JSON.parse') || planJobYml.includes('node -'),
+      'must use Node.js JSON.parse to reject multiple documents and trailing bytes — jq streaming is insufficient',
     )
     assert.ok(
-      planJobYml.includes('type == "object"') || planJobYml.includes('trailing bytes'),
-      'must reject trailing bytes and multiple documents with an explicit type check',
+      planJobYml.includes('trimEnd()') || planJobYml.includes('trimmed') || planJobYml.includes('trailing'),
+      'must handle trailing whitespace explicitly',
     )
   })
 
@@ -609,6 +611,141 @@ async function main(): Promise<void> {
     assert.ok(
       planJobYml.includes('JSON.stringify') || planJobYml.includes('writeFileSync'),
       'artifact must be written via JSON.stringify re-serialization, not raw stdout copy',
+    )
+  })
+
+  // ─── Semantic plan_ok verification ───────────────────────────────────────
+
+  await test('plan_ok semantics: workflow verifies blockerCodes is empty when plan_ok', () => {
+    assert.ok(
+      planJobYml.includes('blockerCodes.length') || planJobYml.includes('non-empty blockerCodes'),
+      'must verify blockerCodes.length === 0 before accepting plan_ok',
+    )
+  })
+
+  await test('plan_ok semantics: workflow verifies commit matches EXPECTED_SHA', () => {
+    assert.ok(
+      planJobYml.includes('commit mismatch') || planJobYml.includes('p.commit !== expectedSha'),
+      'must verify commit field equals EXPECTED_SHA',
+    )
+  })
+
+  await test('plan_ok semantics: workflow verifies branch is the exact feature branch', () => {
+    assert.ok(
+      planJobYml.includes('branch mismatch') || planJobYml.includes('p.branch !== requiredBranch'),
+      'must verify branch field equals feature/course-branding-and-preview',
+    )
+  })
+
+  await test('plan_ok semantics: workflow verifies schema, environment, targetId', () => {
+    assert.ok(
+      planJobYml.includes('schema mismatch') || planJobYml.includes('p.schema !== requiredSchema'),
+      'must verify schema field equals jpvbootcamp_staging',
+    )
+    assert.ok(
+      planJobYml.includes('environment mismatch') || planJobYml.includes('p.environment !== requiredEnv'),
+      'must verify environment field equals staging',
+    )
+    assert.ok(
+      planJobYml.includes('targetId mismatch') || planJobYml.includes('p.targetId !== requiredTarget'),
+      'must verify targetId field equals jpvbootcamp-staging',
+    )
+  })
+
+  await test('plan_ok semantics: workflow verifies appliedPayloadCount is exactly 28', () => {
+    assert.ok(
+      planJobYml.includes('appliedPayloadCount mismatch') || planJobYml.includes('p.appliedPayloadCount !== expectedCount'),
+      'must verify appliedPayloadCount === 28',
+    )
+  })
+
+  await test('plan_ok semantics: workflow verifies expectedPendingMigration and isOnlyMissing', () => {
+    assert.ok(
+      planJobYml.includes('expectedPendingMigration mismatch') || planJobYml.includes('p.expectedPendingMigration !== expectedPending'),
+      'must verify expectedPendingMigration field matches the exact migration name',
+    )
+    assert.ok(
+      planJobYml.includes('expectedPendingMigrationIsOnlyMissing must be true') || planJobYml.includes('!p.expectedPendingMigrationIsOnlyMissing'),
+      'must verify expectedPendingMigrationIsOnlyMissing is true',
+    )
+  })
+
+  await test('plan_ok semantics: workflow verifies anomaly counts are all zero', () => {
+    assert.ok(
+      planJobYml.includes('unexpectedPayloadCount must be 0') || planJobYml.includes('p.unexpectedPayloadCount !== 0'),
+      'must verify unexpectedPayloadCount === 0',
+    )
+    assert.ok(
+      planJobYml.includes('duplicatePayloadCount must be 0') || planJobYml.includes('p.duplicatePayloadCount !== 0'),
+      'must verify duplicatePayloadCount === 0',
+    )
+    assert.ok(
+      planJobYml.includes('malformedPayloadCount must be 0') || planJobYml.includes('p.malformedPayloadCount !== 0'),
+      'must verify malformedPayloadCount === 0',
+    )
+  })
+
+  await test('plan_ok semantics: workflow verifies prismaHealthy is true', () => {
+    assert.ok(
+      planJobYml.includes('prismaHealthy must be true') || planJobYml.includes('!p.prismaHealthy'),
+      'must verify prismaHealthy === true',
+    )
+  })
+
+  await test('plan_ok semantics: semantic failure exits non-zero with clear message', () => {
+    assert.ok(
+      planJobYml.includes('semantic verification failed'),
+      'must emit a clear error when semantic verification fails',
+    )
+  })
+
+  // ─── Blocker code allowlist ───────────────────────────────────────────────
+
+  await test('blocker codes: schema validation rejects unknown blocker codes', () => {
+    assert.ok(
+      planJobYml.includes('unknown blocker code') || planJobYml.includes('allowedCodes.has(c)') || planJobYml.includes('ALLOWED_BLOCKER_CODES'),
+      'must reject blockerCodes containing unknown values not in the allowlist',
+    )
+  })
+
+  // ─── Nonnegative safe-integer counts ─────────────────────────────────────
+
+  await test('count fields: schema validation rejects negative or non-integer counts', () => {
+    assert.ok(
+      planJobYml.includes('nonnegative safe integer') || planJobYml.includes('isSafeInteger'),
+      'must reject count fields (appliedPayloadCount, unexpectedPayloadCount, duplicatePayloadCount, malformedPayloadCount) that are negative or non-integers',
+    )
+  })
+
+  // ─── Control character rejection ─────────────────────────────────────────
+
+  await test('control characters: schema validation rejects control characters and BOMs', () => {
+    assert.ok(
+      planJobYml.includes('control characters') || planJobYml.includes('\\x00') || planJobYml.includes('\\x08'),
+      'must reject stdout containing control characters that could corrupt JSON parsing',
+    )
+  })
+
+  // ─── Fallback artifacts are schema-valid ─────────────────────────────────
+
+  await test('fallback artifacts: fallback plan_blocked artifact includes all required schema fields', () => {
+    // Fallback artifacts emitted on early guard failures must satisfy the schema that the
+    // validation section requires — they must not be minimal stubs with missing fields.
+    assert.ok(
+      planJobYml.includes('"branch":"unknown"') || planJobYml.includes("'branch':'unknown'"),
+      'fallback artifacts must include branch field',
+    )
+    assert.ok(
+      planJobYml.includes('"commit":"unknown"') || planJobYml.includes("'commit':'unknown'"),
+      'fallback artifacts must include commit field',
+    )
+    assert.ok(
+      planJobYml.includes('"prismaHealthy":false') || planJobYml.includes("'prismaHealthy':false"),
+      'fallback artifacts must include prismaHealthy field',
+    )
+    assert.ok(
+      planJobYml.includes('"appliedPayloadCount":0') || planJobYml.includes("'appliedPayloadCount':0"),
+      'fallback artifacts must include appliedPayloadCount field',
     )
   })
 

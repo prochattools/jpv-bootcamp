@@ -557,27 +557,33 @@ jobs:
           PLAN_EXIT=$?
           set -e
 
+          # Fallback schema-valid artifact — used when early guards abort before the runner writes output.
+          # Must satisfy all fields required by the schema validation below.
+          FALLBACK_ARTIFACT='{"version":1,"resultCode":"plan_blocked","blockerCodes":["output_format_invalid"],"branch":"unknown","commit":"unknown","schema":"","environment":"","targetId":"","appliedPayloadCount":0,"expectedPendingMigration":"","expectedPendingMigrationIsOnlyMissing":false,"unexpectedPayloadCount":0,"duplicatePayloadCount":0,"malformedPayloadCount":0,"prismaHealthy":false}'
+
           # Reject mixed output: stdout must begin with '{' — no operational log lines before JSON
           FIRST_CHAR="$(head -c 1 "$STDOUT_FILE" 2>/dev/null || echo '')"
           if [ "$FIRST_CHAR" != "{" ]; then
             echo "PLAN-BLOCKED: stdout does not begin with '{' — mixed output detected" >&2
-            node -e "process.stdout.write(JSON.stringify({version:1,resultCode:'plan_blocked',blockerCodes:['output_format_invalid']})+'\n')" > plan-result-sanitized.json
+            printf '%s\n' "${FALLBACK_ARTIFACT/output_format_invalid/output_format_invalid}" > plan-result-sanitized.json
             exit 1
           fi
 
           # Reject trailing bytes: use strict Node.js JSON.parse (not jq streaming) for single-document validation
           # jq -e 'type == "object"' accepts multiple documents; JSON.parse does not.
-          if ! node - <<'NODEEOF' "$STDOUT_FILE"
+          ALLOWED_BLOCKER_CODES='["expected_commit_required","branch_guard_failed","commit_guard_failed","database_url_missing","database_url_invalid","environment_guard_failed","target_identity_guard_failed","production_marker_rejected","hostname_mismatch","worktree_integrity_failed","status_query_failed","malformed_payload_evidence","schema_identity_mismatch","applied_count_mismatch","pending_migration_mismatch","unexpected_payload_migrations","duplicate_payload_migrations","missing_prisma_migrations","unexpected_prisma_migrations","duplicate_prisma_migrations","unhealthy_prisma_migrations","prisma_evidence_empty","plan_blocked_unknown","argument_parse_failed","output_format_invalid","schema_validation_failed","artifact_write_failed","credential_scan_failed"]'
+          if ! node - <<'NODEEOF' "$STDOUT_FILE" "$ALLOWED_BLOCKER_CODES"
             const fs = require('fs')
-            const path = process.argv[1]
-            const raw = fs.readFileSync(path, 'utf8')
-            // Only allow trailing whitespace — reject BOM, prefixes, multiple documents
+            const raw = fs.readFileSync(process.argv[1], 'utf8')
+            const allowedCodes = new Set(JSON.parse(process.argv[2]))
+            // Only allow trailing whitespace — reject BOM, prefixes, multiple documents, control chars
             const trimmed = raw.trimEnd()
             if (trimmed !== trimmed.trimStart()) { process.stderr.write('PLAN-BLOCKED: leading whitespace or BOM\n'); process.exit(1) }
+            if (/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/.test(trimmed)) { process.stderr.write('PLAN-BLOCKED: control characters detected\n'); process.exit(1) }
             let parsed
             try { parsed = JSON.parse(trimmed) } catch { process.stderr.write('PLAN-BLOCKED: invalid JSON\n'); process.exit(1) }
             if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) { process.stderr.write('PLAN-BLOCKED: not a JSON object\n'); process.exit(1) }
-            // Validate SafeMigrationPlanEvidence schema
+            // Validate SafeMigrationPlanEvidence schema — types and allowlisted values
             if (parsed.version !== 1) { process.stderr.write('PLAN-BLOCKED: wrong version\n'); process.exit(1) }
             if (parsed.resultCode !== 'plan_ok' && parsed.resultCode !== 'plan_blocked') { process.stderr.write('PLAN-BLOCKED: invalid resultCode\n'); process.exit(1) }
             if (!Array.isArray(parsed.blockerCodes)) { process.stderr.write('PLAN-BLOCKED: blockerCodes not array\n'); process.exit(1) }
@@ -587,17 +593,24 @@ jobs:
             if (typeof parsed.environment !== 'string') { process.stderr.write('PLAN-BLOCKED: environment not string\n'); process.exit(1) }
             if (typeof parsed.targetId !== 'string') { process.stderr.write('PLAN-BLOCKED: targetId not string\n'); process.exit(1) }
             if (typeof parsed.appliedPayloadCount !== 'number') { process.stderr.write('PLAN-BLOCKED: appliedPayloadCount not number\n'); process.exit(1) }
+            if (!Number.isSafeInteger(parsed.appliedPayloadCount) || parsed.appliedPayloadCount < 0) { process.stderr.write('PLAN-BLOCKED: appliedPayloadCount not nonnegative safe integer\n'); process.exit(1) }
             if (typeof parsed.expectedPendingMigration !== 'string') { process.stderr.write('PLAN-BLOCKED: expectedPendingMigration not string\n'); process.exit(1) }
             if (typeof parsed.expectedPendingMigrationIsOnlyMissing !== 'boolean') { process.stderr.write('PLAN-BLOCKED: expectedPendingMigrationIsOnlyMissing not boolean\n'); process.exit(1) }
             if (typeof parsed.unexpectedPayloadCount !== 'number') { process.stderr.write('PLAN-BLOCKED: unexpectedPayloadCount not number\n'); process.exit(1) }
+            if (!Number.isSafeInteger(parsed.unexpectedPayloadCount) || parsed.unexpectedPayloadCount < 0) { process.stderr.write('PLAN-BLOCKED: unexpectedPayloadCount not nonnegative safe integer\n'); process.exit(1) }
             if (typeof parsed.duplicatePayloadCount !== 'number') { process.stderr.write('PLAN-BLOCKED: duplicatePayloadCount not number\n'); process.exit(1) }
+            if (!Number.isSafeInteger(parsed.duplicatePayloadCount) || parsed.duplicatePayloadCount < 0) { process.stderr.write('PLAN-BLOCKED: duplicatePayloadCount not nonnegative safe integer\n'); process.exit(1) }
             if (typeof parsed.malformedPayloadCount !== 'number') { process.stderr.write('PLAN-BLOCKED: malformedPayloadCount not number\n'); process.exit(1) }
+            if (!Number.isSafeInteger(parsed.malformedPayloadCount) || parsed.malformedPayloadCount < 0) { process.stderr.write('PLAN-BLOCKED: malformedPayloadCount not nonnegative safe integer\n'); process.exit(1) }
             if (typeof parsed.prismaHealthy !== 'boolean') { process.stderr.write('PLAN-BLOCKED: prismaHealthy not boolean\n'); process.exit(1) }
             // Reject unknown keys
-            const ALLOWED = new Set(['version','resultCode','blockerCodes','branch','commit','schema','environment','targetId','appliedPayloadCount','expectedPendingMigration','expectedPendingMigrationIsOnlyMissing','unexpectedPayloadCount','duplicatePayloadCount','malformedPayloadCount','prismaHealthy'])
-            for (const k of Object.keys(parsed)) { if (!ALLOWED.has(k)) { process.stderr.write('PLAN-BLOCKED: unknown key: '+k+'\n'); process.exit(1) } }
-            // Validate blockerCodes are strings
-            for (const c of parsed.blockerCodes) { if (typeof c !== 'string') { process.stderr.write('PLAN-BLOCKED: blockerCode not string\n'); process.exit(1) } }
+            const ALLOWED_KEYS = new Set(['version','resultCode','blockerCodes','branch','commit','schema','environment','targetId','appliedPayloadCount','expectedPendingMigration','expectedPendingMigrationIsOnlyMissing','unexpectedPayloadCount','duplicatePayloadCount','malformedPayloadCount','prismaHealthy'])
+            for (const k of Object.keys(parsed)) { if (!ALLOWED_KEYS.has(k)) { process.stderr.write('PLAN-BLOCKED: unknown key: '+k+'\n'); process.exit(1) } }
+            // Validate blockerCodes: strings and from allowlist only
+            for (const c of parsed.blockerCodes) {
+              if (typeof c !== 'string') { process.stderr.write('PLAN-BLOCKED: blockerCode not string\n'); process.exit(1) }
+              if (!allowedCodes.has(c)) { process.stderr.write('PLAN-BLOCKED: unknown blocker code: '+c+'\n'); process.exit(1) }
+            }
             // Validate commit is 40-char hex or 'unknown'
             if (parsed.commit !== 'unknown' && !/^[0-9a-f]{40}$/.test(parsed.commit)) { process.stderr.write('PLAN-BLOCKED: commit format invalid\n'); process.exit(1) }
             // Validate schema matches expected
@@ -606,7 +619,7 @@ jobs:
 NODEEOF
           then
             echo "PLAN-BLOCKED: JSON schema validation failed — required keys, types, or values invalid" >&2
-            node -e "process.stdout.write(JSON.stringify({version:1,resultCode:'plan_blocked',blockerCodes:['schema_validation_failed']})+'\n')" > plan-result-sanitized.json
+            printf '%s\n' '{"version":1,"resultCode":"plan_blocked","blockerCodes":["schema_validation_failed"],"branch":"unknown","commit":"unknown","schema":"","environment":"","targetId":"","appliedPayloadCount":0,"expectedPendingMigration":"","expectedPendingMigrationIsOnlyMissing":false,"unexpectedPayloadCount":0,"duplicatePayloadCount":0,"malformedPayloadCount":0,"prismaHealthy":false}' > plan-result-sanitized.json
             exit 1
           fi
 
@@ -637,7 +650,7 @@ NODEEOF
 NODEEOF
           then
             echo "PLAN-BLOCKED: artifact write failed" >&2
-            node -e "process.stdout.write(JSON.stringify({version:1,resultCode:'plan_blocked',blockerCodes:['artifact_write_failed']})+'\n')" > plan-result-sanitized.json
+            printf '%s\n' '{"version":1,"resultCode":"plan_blocked","blockerCodes":["artifact_write_failed"],"branch":"unknown","commit":"unknown","schema":"","environment":"","targetId":"","appliedPayloadCount":0,"expectedPendingMigration":"","expectedPendingMigrationIsOnlyMissing":false,"unexpectedPayloadCount":0,"duplicatePayloadCount":0,"malformedPayloadCount":0,"prismaHealthy":false}' > plan-result-sanitized.json
             exit 1
           fi
 
@@ -646,18 +659,56 @@ NODEEOF
             'postgres(ql)?://|://[^@/]+:[^@/]+@|[Bb]earer [A-Za-z0-9+/=_-]{8,}|[Bb]asic [A-Za-z0-9+/=]{8,}|password[[:space:]]*=|secret[[:space:]]*=|DATABASE_URL[[:space:]]*=|PGPASSWORD[[:space:]]*=' \
             plan-result-sanitized.json; then
             echo "PLAN-BLOCKED: credential-like string detected in sanitized output" >&2
-            node -e "process.stdout.write(JSON.stringify({version:1,resultCode:'plan_blocked',blockerCodes:['credential_scan_failed']})+'\n')" > plan-result-sanitized.json
+            printf '%s\n' '{"version":1,"resultCode":"plan_blocked","blockerCodes":["credential_scan_failed"],"branch":"unknown","commit":"unknown","schema":"","environment":"","targetId":"","appliedPayloadCount":0,"expectedPendingMigration":"","expectedPendingMigrationIsOnlyMissing":false,"unexpectedPayloadCount":0,"duplicatePayloadCount":0,"malformedPayloadCount":0,"prismaHealthy":false}' > plan-result-sanitized.json
             exit 1
           fi
 
           # Read resultCode from the sanitized file — not from the raw stdout file
           RESULT_CODE="$(node -e "process.stdout.write(JSON.parse(require('fs').readFileSync('plan-result-sanitized.json','utf8')).resultCode)" 2>/dev/null || echo 'plan_blocked')"
 
+          # Semantic verification: plan_ok requires all evidence fields to match expected values exactly.
+          # Wrong-target, wrong-commit, wrong-schema, anomaly counts, or unhealthy Prisma must not pass.
           if [ "$RESULT_CODE" = "plan_ok" ] && [ $PLAN_EXIT -eq 0 ]; then
+            EXPECTED_PENDING_MIGRATION="20260804_050000_member_account_action_reservations"
+            REQUIRED_BRANCH="feature/course-branding-and-preview"
+            REQUIRED_SCHEMA="jpvbootcamp_staging"
+            REQUIRED_ENVIRONMENT="staging"
+            REQUIRED_TARGET_ID="jpvbootcamp-staging"
+            EXPECTED_APPLIED_COUNT=28
+            if ! node - <<'NODEEOF' plan-result-sanitized.json "$EXPECTED_SHA" "$EXPECTED_PENDING_MIGRATION" "$REQUIRED_BRANCH" "$REQUIRED_SCHEMA" "$REQUIRED_ENVIRONMENT" "$REQUIRED_TARGET_ID" "$EXPECTED_APPLIED_COUNT"
+              const fs = require('fs')
+              const p = JSON.parse(fs.readFileSync(process.argv[1], 'utf8'))
+              const [,, expectedSha, expectedPending, requiredBranch, requiredSchema, requiredEnv, requiredTarget, expectedCountStr] = process.argv
+              const expectedCount = parseInt(expectedCountStr, 10)
+              const fails = []
+              if (p.blockerCodes.length !== 0) fails.push('plan_ok with non-empty blockerCodes: ['+p.blockerCodes.join(',')+']')
+              if (p.branch !== requiredBranch) fails.push('branch mismatch: expected '+requiredBranch+', got '+p.branch)
+              if (p.commit !== expectedSha) fails.push('commit mismatch: expected '+expectedSha+', got '+p.commit)
+              if (p.schema !== requiredSchema) fails.push('schema mismatch: expected '+requiredSchema+', got '+p.schema)
+              if (p.environment !== requiredEnv) fails.push('environment mismatch: expected '+requiredEnv+', got '+p.environment)
+              if (p.targetId !== requiredTarget) fails.push('targetId mismatch: expected '+requiredTarget+', got '+p.targetId)
+              if (p.appliedPayloadCount !== expectedCount) fails.push('appliedPayloadCount mismatch: expected '+expectedCount+', got '+p.appliedPayloadCount)
+              if (p.expectedPendingMigration !== expectedPending) fails.push('expectedPendingMigration mismatch: expected '+expectedPending+', got '+p.expectedPendingMigration)
+              if (!p.expectedPendingMigrationIsOnlyMissing) fails.push('expectedPendingMigrationIsOnlyMissing must be true')
+              if (p.unexpectedPayloadCount !== 0) fails.push('unexpectedPayloadCount must be 0, got '+p.unexpectedPayloadCount)
+              if (p.duplicatePayloadCount !== 0) fails.push('duplicatePayloadCount must be 0, got '+p.duplicatePayloadCount)
+              if (p.malformedPayloadCount !== 0) fails.push('malformedPayloadCount must be 0, got '+p.malformedPayloadCount)
+              if (!p.prismaHealthy) fails.push('prismaHealthy must be true')
+              if (fails.length > 0) {
+                process.stderr.write('PLAN-BLOCKED: plan_ok semantic verification failed:\n')
+                for (const f of fails) process.stderr.write('  - '+f+'\n')
+                process.exit(1)
+              }
+              process.exit(0)
+NODEEOF
+            then
+              echo "PLAN-BLOCKED: plan_ok semantic verification failed — evidence does not match required values" >&2
+              exit 1
+            fi
             echo "plan_ok=true" >> "$GITHUB_OUTPUT"
             PLAN_COMMIT="$(node -e "process.stdout.write(JSON.parse(require('fs').readFileSync('plan-result-sanitized.json','utf8')).commit)" 2>/dev/null || echo 'unknown')"
             echo "plan_commit=${PLAN_COMMIT:0:40}" >> "$GITHUB_OUTPUT"
-            echo "Read-only plan passed: resultCode=plan_ok"
+            echo "Read-only plan passed: resultCode=plan_ok, all semantic checks verified"
           else
             echo "PLAN-BLOCKED: migration plan did not pass (exit=${PLAN_EXIT}, resultCode=${RESULT_CODE}). See artifact for sanitized details." >&2
             exit 1
