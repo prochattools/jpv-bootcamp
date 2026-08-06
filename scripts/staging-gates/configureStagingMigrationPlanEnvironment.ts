@@ -37,12 +37,15 @@ const GH_API_TIMEOUT_MS = 20_000
 const GUARDED_PATHS = [
   '.github/workflows/deploy-preview.yml',
   'prisma/migrations',
-  'scripts/staging-gates/configureStagingMigrationPlanEnvironment.mts',
-  'scripts/staging-gates/stagingPayloadMigrationInfraPreflight.mts',
+  'scripts/staging-gates/configureStagingMigrationPlanEnvironment.ts',
+  'scripts/staging-gates/configureStagingMigrationPlanEnvironmentCli.ts',
+  'scripts/staging-gates/configureStagingMigrationPlanEnvironment.test.ts',
   'scripts/staging-gates/stagingPayloadMigrationPlanWorkflowContract.test.ts',
   'scripts/release/runStagingPayloadMigration.ts',
   'scripts/release/runStagingPayloadMigration.test.ts',
+  'scripts/release/releaseTestManifest.ts',
   'package.json',
+  'operations/runbooks/staging-readiness.md',
 ]
 
 // ─── Injectable executor types ────────────────────────────────────────────────
@@ -165,8 +168,14 @@ async function checkCleanPaths(): Promise<string | null> {
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'pipe'],
     })
-    if (result.status === 0 && result.stdout.trim()) {
-      return `Path has uncommitted changes: ${path}`
+    if (result.status !== 0 || result.error) {
+      return `git status failed for path ${path}: ${result.error?.message ?? `exit code ${result.status}`}`
+    }
+    const output = result.stdout.trim()
+    if (output) {
+      const lines = output.split('\n').filter((l) => l.length > 0)
+      const statuses = lines.map((l) => l.slice(0, 2).trim()).join(', ')
+      return `Path has uncommitted changes (${statuses}): ${path}`
     }
   }
   return null
@@ -267,14 +276,15 @@ export async function configureStagingMigrationPlanEnvironment(
     args: ['api', `users/${reviewerLogin}`],
   }) as { id?: number; login?: string } | null
   const reviewerId = reviewerData?.id
-  if (!reviewerId) {
+  if (!Number.isSafeInteger(reviewerId) || typeof reviewerId !== 'number' || reviewerId <= 0) {
     result.blockers.push(
-      `Cannot resolve GitHub user '${reviewerLogin}'. Verify the login exists and gh CLI has sufficient scope.`,
+      `Cannot resolve GitHub user '${reviewerLogin}' to a positive numeric ID. ` +
+        'Verify the login exists and gh CLI has sufficient scope.',
     )
     return result
   }
 
-  // ── Caller identity and self-review guard ─────────────────────────────────
+  // ── Caller identity and self-review guard (numeric ID comparison) ──────────
   const callerLogin = callerLoginExec()
   if (!callerLogin) {
     result.blockers.push(
@@ -282,9 +292,21 @@ export async function configureStagingMigrationPlanEnvironment(
     )
     return result
   }
-  if (callerLogin === reviewerLogin) {
+
+  const callerData = apiRead({
+    args: ['api', 'user'],
+  }) as { id?: number; login?: string } | null
+  const callerId = callerData?.id
+  if (!Number.isSafeInteger(callerId) || typeof callerId !== 'number' || callerId <= 0) {
     result.blockers.push(
-      `Self-review rejected: caller '${callerLogin}' cannot be the reviewer. ` +
+      'Cannot resolve authenticated caller to a positive numeric ID. Verify gh CLI authentication.',
+    )
+    return result
+  }
+
+  if (callerId === reviewerId) {
+    result.blockers.push(
+      `Self-review rejected: caller ID ${callerId} cannot be the reviewer ID ${reviewerId}. ` +
         'A different operator must approve the configuration.',
     )
     return result
@@ -340,7 +362,16 @@ export async function configureStagingMigrationPlanEnvironment(
   })
 
   const createEnvResult = apiMutate({
-    args: ['api', '--method', 'PUT', `repos/${repo}/environments/${ENV_NAME}`, '--header', 'Accept: application/vnd.github+json'],
+    args: [
+      'api',
+      '--method',
+      'PUT',
+      `repos/${repo}/environments/${ENV_NAME}`,
+      '--header',
+      'Accept: application/vnd.github+json',
+      '--input',
+      '-',
+    ],
     stdin: envBody,
   })
 
@@ -358,11 +389,25 @@ export async function configureStagingMigrationPlanEnvironment(
     args: ['api', `repos/${repo}/environments/${ENV_NAME}/deployment-branch-policies`],
   }) as { branch_policies?: Array<{ id: number; name: string }> } | null
 
-  for (const policy of existingPolicies?.branch_policies ?? []) {
+  if (!existingPolicies) {
+    result.blockers.push(
+      `Failed to read existing branch policies for '${ENV_NAME}'. Verify repository permissions.`,
+    )
+    return result
+  }
+
+  for (const policy of existingPolicies.branch_policies ?? []) {
     if (policy.name !== REQUIRED_FEATURE_BRANCH) {
-      apiMutate({
+      const deleteResult = apiMutate({
         args: ['api', '--method', 'DELETE', `repos/${repo}/environments/${ENV_NAME}/deployment-branch-policies/${policy.id}`],
       })
+      if (!deleteResult.ok) {
+        result.blockers.push(
+          `Failed to delete branch policy '${policy.name}' (HTTP ${deleteResult.status}). ` +
+            'Partial configuration state: some policies remain.',
+        )
+        return result
+      }
     }
   }
 
@@ -370,7 +415,14 @@ export async function configureStagingMigrationPlanEnvironment(
   if (!hasExact) {
     const branchPolicyBody = JSON.stringify({ name: REQUIRED_FEATURE_BRANCH })
     const branchPolicyResult = apiMutate({
-      args: ['api', '--method', 'POST', `repos/${repo}/environments/${ENV_NAME}/deployment-branch-policies`],
+      args: [
+        'api',
+        '--method',
+        'POST',
+        `repos/${repo}/environments/${ENV_NAME}/deployment-branch-policies`,
+        '--input',
+        '-',
+      ],
       stdin: branchPolicyBody,
     })
     if (!branchPolicyResult.ok) {
@@ -388,7 +440,7 @@ export async function configureStagingMigrationPlanEnvironment(
     value: REQUIRED_PLAN_READY_VALUE,
   })
   const varResult = apiMutate({
-    args: ['api', '--method', 'POST', `repos/${repo}/environments/${ENV_NAME}/variables`],
+    args: ['api', '--method', 'POST', `repos/${repo}/environments/${ENV_NAME}/variables`, '--input', '-'],
     stdin: varBody,
   })
   if (!varResult.ok) {
@@ -397,7 +449,14 @@ export async function configureStagingMigrationPlanEnvironment(
       value: REQUIRED_PLAN_READY_VALUE,
     })
     const patchVarResult = apiMutate({
-      args: ['api', '--method', 'PATCH', `repos/${repo}/environments/${ENV_NAME}/variables/PLAN_READY_FOR_DISPATCH`],
+      args: [
+        'api',
+        '--method',
+        'PATCH',
+        `repos/${repo}/environments/${ENV_NAME}/variables/PLAN_READY_FOR_DISPATCH`,
+        '--input',
+        '-',
+      ],
       stdin: patchVarBody,
     })
     if (!patchVarResult.ok) {
