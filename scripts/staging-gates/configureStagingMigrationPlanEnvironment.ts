@@ -195,24 +195,34 @@ export class GitStatusParseError extends Error {
 
 export function parseGitStatusNul(output: string): Map<string, string> {
   const statusMap = new Map<string, string>()
+
+  // Empty output is valid (no changes)
   if (!output) return statusMap
 
+  // Nonempty output must end with NUL
+  if (!output.endsWith('\0')) {
+    throw new GitStatusParseError('missing_terminal_nul')
+  }
+
+  // Split on NUL; last element is always empty after the terminal NUL
   const parts = output.split('\0')
+
   let i = 0
-  while (i < parts.length) {
+  while (i < parts.length - 1) {
     const record = parts[i]
 
+    // Reject interior empty records (consecutive NULs)
     if (!record) {
-      i++
-      continue
+      throw new GitStatusParseError('interior_empty_record')
     }
 
-    // Minimum: "XY P\0" where P is at least 1 char path = 5 chars minimum
+    // Minimum: "XY P" where P is at least 1 char = 4 chars
     if (record.length < 4) {
       throw new GitStatusParseError('malformed_record')
     }
 
-    const status = record.slice(0, 2)
+    const X = record[0]
+    const Y = record[1]
     const space = record[2]
     if (space !== ' ') {
       throw new GitStatusParseError('malformed_separator')
@@ -223,19 +233,41 @@ export function parseGitStatusNul(output: string): Map<string, string> {
       throw new GitStatusParseError('empty_path')
     }
 
-    if (status[0] === 'R' || status[0] === 'C') {
-      if (i + 1 >= parts.length) {
+    // Validate status codes: must be valid porcelain state
+    // Valid codes: ' ' (unmodified), 'M' (modified), 'A' (added),
+    // 'D' (deleted), 'R' (renamed), 'C' (copied), 'T' (type change), 'U' (unmerged)
+    // '??' for untracked, '!!' for ignored
+    const isValidStatus = (x: string, y: string): boolean => {
+      const validCodes = new Set([' ', 'M', 'A', 'D', 'R', 'C', 'T', 'U', '?', '!'])
+      if (!validCodes.has(x) || !validCodes.has(y)) return false
+      // Reject blank/unknown states: both spaces
+      if (x === ' ' && y === ' ') return false
+      // ??, !! are only valid as pairs
+      if (x === '?' || x === '!') return y === x
+      if (y === '?' || y === '!') return x === y
+      return true
+    }
+
+    if (!isValidStatus(X, Y)) {
+      throw new GitStatusParseError('unsupported_status')
+    }
+
+    // Rename or Copy requires second path: X === 'R' or 'C' or Y === 'R' or 'C'
+    const isRenameOrCopy = X === 'R' || X === 'C' || Y === 'R' || Y === 'C'
+
+    if (isRenameOrCopy) {
+      if (i + 1 >= parts.length - 1) {
         throw new GitStatusParseError('truncated_rename_record')
       }
       const nextPath = parts[i + 1]
       if (nextPath.length === 0) {
         throw new GitStatusParseError('missing_second_path')
       }
-      statusMap.set(pathPart, status)
-      statusMap.set(nextPath, status)
+      statusMap.set(pathPart, `${X}${Y}`)
+      statusMap.set(nextPath, `${X}${Y}`)
       i += 2
     } else {
-      statusMap.set(pathPart, status)
+      statusMap.set(pathPart, `${X}${Y}`)
       i++
     }
   }
