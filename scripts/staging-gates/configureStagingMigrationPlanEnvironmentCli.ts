@@ -10,7 +10,6 @@ const APPLY_CONFIRMATION = 'configure_staging_migration_plan_environment'
 
 function parseArgs(argv: string[]) {
   let confirmation: string | undefined
-  let reviewerLogin: string | undefined
   let expectedCommit: string | undefined
   let dryRun = true
 
@@ -18,13 +17,11 @@ function parseArgs(argv: string[]) {
     if (arg.startsWith('--confirmation=')) {
       confirmation = arg.slice('--confirmation='.length)
       if (confirmation === APPLY_CONFIRMATION) dryRun = false
-    } else if (arg.startsWith('--reviewer-login=')) {
-      reviewerLogin = arg.slice('--reviewer-login='.length)
     } else if (arg.startsWith('--expected-commit=')) {
       expectedCommit = arg.slice('--expected-commit='.length)
     }
   }
-  return { confirmation, reviewerLogin, expectedCommit, dryRun }
+  return { confirmation, expectedCommit, dryRun }
 }
 
 async function main(): Promise<void> {
@@ -32,7 +29,7 @@ async function main(): Promise<void> {
     const input = parseArgs(process.argv.slice(2))
     const result = await configureStagingMigrationPlanEnvironment(input)
 
-    console.log('\n=== Staging Migration Plan Environment Configurator ===\n')
+    console.log('\n=== Staging Migration Plan Environment Configurator (Solo Operator) ===\n')
     console.log(`Mode: ${result.dryRun ? 'DRY-RUN (no mutations)' : 'APPLY'}`)
     console.log()
 
@@ -57,7 +54,7 @@ async function main(): Promise<void> {
       if (result.dryRun) {
         console.log(
           `RESULT: DRY-RUN COMPLETE — ${result.actions.length} planned action(s).\n` +
-            `To apply, re-run with: --confirmation=${APPLY_CONFIRMATION} --reviewer-login=<login> --expected-commit=<SHA>`,
+            `To apply, re-run with: --confirmation=${APPLY_CONFIRMATION} --expected-commit=<SHA>`,
         )
       } else {
         console.log('RESULT: ENVIRONMENT CONFIGURED AND VERIFIED')

@@ -382,3 +382,278 @@ All 10 critical business flows are either:
 
 ### Next Phase
 **PHASE 3 — PAYLOAD ADMIN BRANDING** — align Payload admin login, dashboard, navigation, collection views, buttons, badges, errors, and empty states with JPV design system using supported extension points only (no forking). Start here.
+
+---
+
+## PHASE 3 — OPERATOR DASHBOARD REDESIGN (2026-07-27) ✅
+
+**Commit:** `2627b70`
+**Branch:** `feature/course-branding-and-preview`
+
+### Changed Surfaces
+| File | Change |
+|------|--------|
+| `src/components/payload/JPVAdminDashboard.tsx` | Replace 14-card flat grid with focused operations console: hero (eyebrow + title), 5 KPI stat cards, needs-attention list, quick-action links |
+| `src/collections/audit/AuditEvents.ts` | Change admin group from `'Administration'` to `'System'` |
+| `src/collections/PayloadUsers.ts` | Change admin group from `'Administration'` to `'System'` |
+| `scripts/payload_admin_dashboard.test.ts` | Update contract test to assert new dashboard labels and assert removed developer-centric content is absent |
+
+### What Was Removed
+- 14-card flat grid replaced with focused 3-section layout
+- "Membership Support cockpit" section (raw metadata — fields list, status labels, action labels)
+- "Deployment / schema health" card (developer metric)
+- "Upcoming course / live call" card (was `value: 'Placeholder'`)
+- "Recent system errors / security events" card (security audit trail — belongs in sidebar directly)
+- "Reconciliation mismatches" card (developer metric)
+- "Membership support records" total count card (too broad, not actionable)
+- All imports from `@/lib/membership-support/cockpit` removed
+- `HealthCard` type and `cards` array removed
+
+### What Was Added
+- Hero section: eyebrow "JPV Bootcamp" + title "Operations" — compact, no description paragraph
+- 5 KPI stat cards (horizontal grid): Active members, Pending members, Active subscriptions, Billing issues, Community moderation — with amber warning state for non-zero actionable counts
+- "Needs attention" section: conditional list (pending members, billing issues, voucher approvals, pay-it-forward approvals, pending partner applications, pending affiliate commissions, community moderation) — shows "All clear" when all are zero
+- "Quick actions" section: compact link row to Members, Billing, Membership support, Partner applications, Courses
+
+### Design Contract
+- All colors via `var(--jpv-*)` CSS variables only — no hex literals or `rgba()`
+- `color-mix()` for tints — passes `#[0-9a-f]{3,8}` regex test
+- All inline styles use JPV CSS variable tokens
+
+### Sidebar Groups
+- `AuditEvents`: `'Administration'` → `'System'`
+- `PayloadUsers`: `'Administration'` → `'System'`
+- `PayloadCourseAccessPreview`: already `hidden: true` (confirmed, no change needed)
+- All other groups left as-is
+
+### Validation
+- TypeScript: PASS
+- 155/155 release tests: PASS
+- Production build: PASS
+- Design system contract (no hex literals in tokenized surfaces): PASS
+
+### Preserved (Untouched)
+- All auth, billing, Stripe, LiveKit, Bunny, Resend logic
+- All `safeCount` query logic (same queries, fewer displayed)
+- All collection configs except group renames
+- All API routes, server actions, audit logging
+- `src/payload-types.ts`
+
+### Next Phase
+**PHASE 4 — PAYLOAD ADMIN BRANDING** — align Payload admin login, navigation, collection views, buttons, badges, errors, and empty states with JPV design system using supported extension points only (no forking). Start here.
+
+---
+
+## PHASE 3 — SIDEBAR INFORMATION ARCHITECTURE (2026-07-27) ✅
+
+**Commit:** `71fcf02`
+**Branch:** `feature/course-branding-and-preview`
+
+### Changed Files
+| File | Change |
+|------|--------|
+| `src/collections/crm/CRM.ts` | `crmGroup` renamed `'Administration'` → `'Emails'` — operator-facing label for email queue/actions |
+| `src/collections/members/Members.ts` | Group `'Members & Access'` → `'Members'` for all 3 collections; `hidden: false` → `hidden: true` on security events |
+| `src/collections/members/MemberEmailVerificationRecords.ts` | Group `'Members & Access'` → `'Members'` |
+| `src/collections/community/Community.ts` | `PayloadMemberGroups` group `'Members & Access'` → `'Community'` |
+| `src/collections/access/AccessControl.ts` | `accessControlGroup` `'Members & Access'` → `'Members'` |
+| `scripts/payload_admin_dashboard_links.test.ts` | New route-integrity test: verifies all dashboard links target real collection slugs, no developer-only links remain, sidebar group renames are complete |
+| `scripts/release/releaseTestManifest.ts` | Registered `payload.admin-dashboard-links` (156th release test) |
+| `docs/client/ROADMAP_PROGRESS_STATUS.md` | Updated test count to 156/156 |
+| `docs/client/OPERATOR_HANDOFF_SUMMARY.md` | Updated test count to 156/156 |
+| `docs/PREVIEW_RELEASE_READINESS.md` | Updated test count to 156/156 |
+
+### Final Sidebar Groups
+- **Members** — members, profiles (hidden), security events (hidden), verification tokens (hidden), access groups, access policies (hidden), access grants (hidden), entitlement events (hidden)
+- **Courses** — courses, modules, lessons, live sessions, private media (hidden), lesson resources, enrollments, lesson progress
+- **Community** — member groups, spaces, memberships (hidden), posts, comments (hidden), files, chat threads (hidden), chat messages (hidden)
+- **Billing** — billing accounts, subscriptions, payments, stripe events (hidden), billing actions
+- **Emails** — email events, email actions (contacts/tags/templates/notifications all hidden)
+- **Partners & Affiliates** — partner affiliates, applications, events; affiliates, referrals, commissions
+- **Membership Support** — support records, vouchers, pay-it-forward, funding sources, reconciliation, review queue, operator notes, stripe shadow, administration actions, audit history
+- **Content** — media, pages, posts, categories, bunny videos
+- **System** — payload users, audit events
+
+### Removed from Sidebar (Hidden, Not Deleted)
+- Member security events — audit trail only, not an operator action surface
+- 'Members & Access' and 'Administration' sidebar groups no longer exist
+
+### Validation
+- TypeScript: PASS
+- 156/156 release tests: PASS (new test: `payload.admin-dashboard-links`)
+- Production build: PASS (✓ Compiled successfully in 8.6s)
+- Pushed to origin — staging deployment triggered
+
+---
+
+## PHASE 4 — DASHBOARD HARDENING (2026-07-28) ✅
+
+**Commit:** `b5aa00a`
+**Branch:** `feature/course-branding-and-preview`
+
+### Changed Files
+| File | Change |
+|------|--------|
+| `src/collections/affiliates/Affiliates.ts` | `affiliateGroup` renamed `'Partners & Affiliates'` → `'Partners'` |
+| `src/collections/membership-support/options.ts` | `membershipSupportGroup` renamed `'Membership Support'` → `'Support'` |
+| `src/collections/partners/Partners.ts` | `partnerGroup` renamed `'Partners & Affiliates'` → `'Partners'` |
+| `src/components/payload/JPVAdminDashboard.tsx` | KPI tristate (healthy/attention/unavailable); unavailable notice; filtered attention links with pre-applied where queries; plain-language labels; 44px touch targets on Quick actions |
+| `scripts/membership_support_collections.test.ts` | Updated group assertions from `'Membership Support'` → `'Support'` |
+| `scripts/payload_admin_dashboard.test.ts` | Updated attention labels to match renamed strings |
+
+### Final Sidebar Groups (Updated)
+- **Members** — members, profiles (hidden), security events (hidden), verification tokens (hidden), access groups, access policies (hidden), access grants (hidden), entitlement events (hidden)
+- **Courses** — courses, modules, lessons, live sessions, private media (hidden), lesson resources, enrollments, lesson progress
+- **Community** — member groups, spaces, memberships (hidden), posts, comments (hidden), files, chat threads (hidden), chat messages (hidden)
+- **Billing** — billing accounts, subscriptions, payments, stripe events (hidden), billing actions
+- **Emails** — email events, email actions (contacts/tags/templates/notifications all hidden)
+- **Partners** — partner affiliates, applications, events; affiliates, referrals, commissions
+- **Support** — support records, vouchers, pay-it-forward, funding sources, reconciliation, review queue, operator notes, stripe shadow, administration actions, audit history
+- **Content** — media, pages, posts, categories, bunny videos
+- **System** — payload users, audit events
+
+### Dashboard Improvements
+- **Tristate KPI cards:** `healthy` (normal) / `attention` (amber, actionable non-zero) / `unavailable` (query failed, distinct grey)
+- **Unavailable notice:** non-intrusive status bar when any safeCount fails
+- **Filtered links:** every Needs attention href pre-applies the exact matching where-clause filter
+- **All-clear state:** "All clear — nothing requires immediate attention." when nothing needs action
+- **44px touch targets:** Quick action links and attention links meet accessibility minimum
+- **Billing query fix:** `'refunded'` replaced with `'action_required'` in payment status filter
+
+### Link Integrity Audit
+All 10 dashboard hrefs verified against collection slug registry:
+- `/admin/collections/payload_members` ✓
+- `/admin/collections/payload_billing_accounts` ✓
+- `/admin/collections/payload_membership_support_records` ✓
+- `/admin/collections/payload_partner_applications` ✓
+- `/admin/collections/payload_courses` ✓
+- `/admin/collections/payload_payments` (with where filter) ✓
+- `/admin/collections/payload_membership_vouchers` (with where filter) ✓
+- `/admin/collections/payload_pay_it_forward_funding` (with where filter) ✓
+- `/admin/collections/payload_affiliate_commissions` (with where filter) ✓
+- `/admin/collections/payload_space_posts` (with where filter) ✓
+
+### Validation
+- TypeScript: PASS
+- 156/156 release tests: PASS
+- Production build: PASS (✓ Compiled successfully in 8.5s)
+- Security scan: CLEAN
+- Pushed to origin — staging deployment triggered
+
+### Current State
+- Phases 1–4 complete
+- Operator dashboard is functional, minimal, and real-data-backed
+- All sidebar groups use plain-language operator labels
+- No developer-centric language remains in operator-facing surfaces
+
+---
+
+## PHASE 5 — OPERATOR EXPERIENCE HARDENING (2026-07-28) ✅
+
+**Commit:** `a719113`
+**Branch:** `feature/course-branding-and-preview`
+
+### Changed Files
+| File | Change |
+|------|--------|
+| `src/collections/partners/Partners.ts` | `PayloadPartnerEvents.admin.hidden = true` — audit-only, not operator-actionable |
+| `src/collections/crm/CRM.ts` | Email Events: replace `retryCount` with `sentAt` in defaultColumns; Email Actions: simplified description (remove queue/technical language) |
+| `src/collections/affiliates/Affiliates.ts` | `PayloadAffiliates.admin.hidden = true` — config-only record, daily ops use referrals/commissions |
+| `src/app/admin/sessions/page.tsx` | Full JPV token alignment: all `neutral-*`, `blue-600`, `emerald-600`, `red-*` replaced with `jpv-*` tokens |
+| `src/app/(frontend)/admin/review/page.tsx` | Removed verbose technical description; simplified export section description |
+
+### Final Sidebar State (Cumulative)
+**Partners group — visible:**
+- `payload_partner_affiliates` (Partner Affiliates — config record)
+- `payload_partner_applications` (Partner Applications — operator-actionable)
+
+**Partners group — hidden:**
+- `payload_partner_events` (audit log only)
+
+**Partners group — hidden (Affiliates):**
+- `payload_affiliates` (affiliate profile — config, not daily ops)
+
+**Affiliates group — visible:**
+- `payload_affiliate_referrals` (referral tracking)
+- `payload_affiliate_commissions` (commission review — actionable)
+
+**Emails group — visible:**
+- `payload_email_events` (list shows: recipient, template, status, failure reason, sent time)
+- `payload_email_actions` (retry failed deliveries)
+
+**Emails group — hidden:**
+- `payload_contacts`, `payload_crm_tags`, `payload_contact_tags`, `payload_contact_notes`, `payload_email_templates`, `payload_admin_notifications`
+
+### Email Events UX
+- List view now shows: recipient email, template, delivery status, failure reason, sent time
+- Removed: retry count from list (still visible in record detail)
+- Provider internals (resendEmailId, dedupeKey, claimedAt, workerClaimId) hidden from all views
+
+### Validation
+- TypeScript: PASS
+- 156/156 release tests: PASS
+- Production build: PASS (✓ Compiled successfully in 8.5s)
+- Security scan: CLEAN
+- Pushed to origin — staging deployment triggered
+
+### External Proof Boundaries (Documented for Handoff)
+The following require authenticated browser access to staging and cannot be proven from code audit alone:
+
+| Check | Status |
+|-------|--------|
+| Dashboard KPI values from real DB queries | Requires staging login |
+| Needs attention filtered destinations | Requires staging login |
+| Sidebar scroll and group rendering | Requires staging login |
+| /admin/sessions page at 390×844 | Requires staging login |
+| Keyboard navigation and focus rings | Requires staging login |
+
+**Staging URL:** https://preview.jpvbootcamp.com/admin
+**Commit on staging:** `a719113` (after current push deploys)
+
+### Remaining (Future Roadmap)
+- Live viewport proof at staging (390×844 / 768×1024 / 1280×900) — requires authenticated staging access
+- Browser walkthrough of every Quick action and Needs attention link
+- Bunny upload form (BUNNY_WEBHOOK_SECRET gated)
+- Email service handler implementation (non-blocking for core flows)
+- PayloadBillingActions actionType: Payload select renders all options in the dropdown — webhook history values (Checkout Completed, Subscription Created, etc.) are not creatable by operators but appear in the list. Acceptance: restrict to first three operator values in UI only, keeping all values for stored record display. Requires Payload custom field component or separate operator-only action type field.
+
+---
+
+## PHASE 6 — PAYLOAD ADMIN USABILITY (2026-07-28) ✅
+
+**Commit:** `c82cf02`
+**Branch:** `feature/course-branding-and-preview`
+
+### Staged Evidence Boundaries
+- Staging confirmed on `a719113` before this phase (health check: `ok: True`)
+- Browser viewport proof deferred — requires authenticated session at `https://preview.jpvbootcamp.com/admin`
+- All changes validated through TypeScript, test suite, and build gate
+
+### Changed Files
+| File | Change |
+|------|--------|
+| `src/collections/billing/Billing.ts` | 6 description/column changes: remove "test-mode", "guarded", "projection", "Stripe webhooks", "immutable audit", "server-side" language; replace `stripeCustomerId` with `billingEmail` in Billing Accounts list view; plain-language action descriptions |
+| `src/collections/crm/CRM.ts` | 2 changes: Email Events description → "Email delivery log"; Email Actions emailEvent description → remove "server-side" language |
+| `src/collections/membership-support/Reconciliation.ts` | Description: remove "webhook projection state" |
+| `src/collections/membership-support/StripeShadow.ts` | Description: remove "repository-only shadow" / "webhook" language; defaultColumns: replace `stripeCustomerId`/`stripeSubscriptionId` with `member`/`lastWebhookAt` |
+| `src/app/admin/sessions/page.tsx` | Form labels: "Course ID" → "Course" with plain placeholder; "Module ID" → "Module"; "Lesson ID" → "Lesson" |
+
+### Cumulative Operator Language Audit — COMPLETE
+All operator-visible surfaces audited for technical language. Remaining technical terms (`stripeCustomerId`, `resendEmailId`, etc.) exist only in detail-view fields (not list columns) and are expected there for diagnostic purposes.
+
+### Billing Actions actionType Dropdown
+The create form still shows all 10 option values including webhook audit history types. The `beforeValidate` hook correctly rejects non-operator values with a user-readable error. The description now explains which three actions are operator-creatable. Full dropdown restriction requires a Payload custom field component (roadmap).
+
+### Validation
+- TypeScript: PASS
+- 156/156 release tests: PASS
+- Production build: PASS (✓ Compiled successfully in 8.1s)
+- Security scan: CLEAN
+- Pushed to origin — staging deployment triggered (`c82cf02`)
+
+### Final State Summary
+All operator-facing collections have:
+- Plain-language descriptions
+- List views showing task-relevant columns only
+- Provider IDs hidden from list views (visible in detail for diagnostics)
+- Technical implementation terms removed from all primary UI text

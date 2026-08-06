@@ -135,27 +135,17 @@ export async function runPreflight(deps: PreflightDependencies = {}): Promise<Pr
   } else {
     result.info.push(`Environment '${ENV_NAME}': exists`)
 
-    // Required reviewers: at least one reviewer AND prevent_self_review must be enabled.
-    // Non-self approval cannot be proven without prevent_self_review; this is an owner control.
+    // Solo-operator mode: verify zero reviewers. Any unexpected reviewer is a configuration error.
     const reviewerRules = (envData.protection_rules ?? []).filter((r) => r.type === 'required_reviewers')
     const reviewerCount = reviewerRules.length > 0 ? (reviewerRules[0].reviewers ?? []).length : 0
-    const preventSelfReview = reviewerRules.length > 0 ? reviewerRules[0].prevent_self_review === true : false
-    if (reviewerCount < 1) {
+    if (reviewerCount !== 0) {
       result.blockers.push(
-        `Environment '${ENV_NAME}' has no required reviewers — add at least one to prevent self-approval: ` +
+        `Environment '${ENV_NAME}' has ${reviewerCount} required reviewer(s) — solo-operator mode requires ` +
+          `exactly zero reviewers. Remove all reviewers at: ` +
           `https://github.com/${repo}/settings/environments`,
       )
     } else {
-      result.info.push(`Required reviewers: ${reviewerCount}`)
-    }
-    if (!preventSelfReview) {
-      result.blockers.push(
-        `Environment '${ENV_NAME}' does not have 'prevent_self_review' enabled — ` +
-          `non-self approval cannot be proven without this control. ` +
-          `Enable it at: https://github.com/${repo}/settings/environments`,
-      )
-    } else {
-      result.info.push(`prevent_self_review: enabled`)
+      result.info.push(`Required reviewers: 0 (solo-operator mode)`)
     }
 
     // Branch policy: must be custom, exactly naming the feature branch, with no wildcards or extra branches.
@@ -249,6 +239,21 @@ export async function runPreflight(deps: PreflightDependencies = {}): Promise<Pr
     )
   } else {
     result.info.push(`PLAN_READY_FOR_DISPATCH: true`)
+  }
+
+  const soloVar = (varsData?.variables ?? []).find((v) => v.name === 'SOLO_OPERATOR_MODE')
+  if (!soloVar) {
+    result.blockers.push(
+      `Environment variable 'SOLO_OPERATOR_MODE' is absent from '${ENV_NAME}' — ` +
+        "set it to 'true' via: Settings → Environments → staging-migration-plan → Variables",
+    )
+  } else if (soloVar.value !== 'true') {
+    result.blockers.push(
+      `Environment variable 'SOLO_OPERATOR_MODE' is '${soloVar.value}' in '${ENV_NAME}' — ` +
+        "must be 'true'",
+    )
+  } else {
+    result.info.push(`SOLO_OPERATOR_MODE: true`)
   }
 
   // ── Network reachability (fail closed) ────────────────────────────────────

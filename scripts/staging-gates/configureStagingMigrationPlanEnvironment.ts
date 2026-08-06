@@ -2,12 +2,15 @@
  * Dry-run-default GitHub environment configurator for staging-migration-plan.
  *
  * Configures (or verifies) the GitHub environment required by the read-only-plan
- * dispatch lane: reviewer guard, branch policy, PLAN_READY_FOR_DISPATCH variable,
- * and environment secrets (DATABASE_URL, TAILSCALE_OAUTH_CLIENT_ID, TAILSCALE_OAUTH_SECRET).
+ * dispatch lane: branch policy, PLAN_READY_FOR_DISPATCH variable, SOLO_OPERATOR_MODE
+ * variable, and environment secrets (DATABASE_URL, TAILSCALE_OAUTH_CLIENT_ID,
+ * TAILSCALE_OAUTH_SECRET).
+ *
+ * Solo-operator mode: zero reviewers, no wait timer, no prevent_self_review.
  *
  * DEFAULTS TO DRY-RUN. Apply only when called with:
  *   --confirmation=configure_staging_migration_plan_environment
- *   --reviewer-login=<GitHub login> --expected-commit=<40-char SHA>
+ *   --expected-commit=<40-char SHA>
  *
  * Required guards before apply:
  *   - Repository exactly: prochattools/jpv-bootcamp
@@ -19,7 +22,7 @@
  * Apply: requires secret values from process.env; never prints them.
  *
  * Exit 0 = dry-run complete (no mutations) OR apply verified.
- * Exit 1 = input error, self-reviewer, guard failure, or verified state differs.
+ * Exit 1 = input error, guard failure, or verified state differs.
  *
  * Invoked via: pnpm staging:configure-environment
  */
@@ -30,6 +33,7 @@ const ENV_NAME = 'staging-migration-plan'
 const REQUIRED_REPO = 'prochattools/jpv-bootcamp'
 const REQUIRED_FEATURE_BRANCH = 'feature/course-branding-and-preview'
 const REQUIRED_PLAN_READY_VALUE = 'true'
+const REQUIRED_SOLO_OPERATOR_VALUE = 'true'
 const REQUIRED_ENV_SECRETS = ['DATABASE_URL', 'TAILSCALE_OAUTH_CLIENT_ID', 'TAILSCALE_OAUTH_SECRET']
 const APPLY_CONFIRMATION = 'configure_staging_migration_plan_environment'
 const GH_API_TIMEOUT_MS = 20_000
@@ -62,14 +66,12 @@ export type GhApiReadExecutor = (call: GhApiCall) => unknown
 export type GhApiMutateExecutor = (call: GhApiCall) => { ok: boolean; exitCode: number | null }
 export type GitStatusExecutor = (paths: string[]) => Map<string, string> | null
 export type RepoNameExecutor = () => string | null
-export type CallerLoginExecutor = () => string | null
 export type CurrentHeadExecutor = () => string | null
 
 // ─── Inputs ───────────────────────────────────────────────────────────────────
 
 export type ConfigureInput = {
   confirmation: string | undefined
-  reviewerLogin: string | undefined
   expectedCommit: string | undefined
   dryRun: boolean
 }
@@ -79,7 +81,6 @@ export type ConfigureEnvDependencies = {
   ghApiMutate?: GhApiMutateExecutor
   gitStatus?: GitStatusExecutor
   repoName?: RepoNameExecutor
-  callerLogin?: CallerLoginExecutor
   currentHead?: CurrentHeadExecutor
 }
 
@@ -145,22 +146,6 @@ function defaultRepoName(): string | null {
   )
   if (result.status !== 0 || result.error) return null
   return result.stdout.trim() || null
-}
-
-function defaultCallerLogin(): string | null {
-  const result = spawnSync('gh', ['api', 'user'], {
-    shell: false,
-    encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'pipe'],
-    timeout: GH_API_TIMEOUT_MS,
-  })
-  if (result.status !== 0 || result.error) return null
-  try {
-    const data = JSON.parse(result.stdout)
-    return data.login?.trim() || null
-  } catch {
-    return null
-  }
 }
 
 function defaultCurrentHead(): string | null {
@@ -279,15 +264,6 @@ function isValidSha40(s: string | undefined): boolean {
   return /^[0-9a-f]{40}$/.test(s ?? '')
 }
 
-function isValidGithubLogin(s: string | undefined): boolean {
-  if (!s || !s.trim()) return false
-  const login = s.trim()
-  if (login.length < 1 || login.length > 39) return false
-  if (/[^a-z0-9-]/i.test(login)) return false
-  if (login.startsWith('-') || login.endsWith('-')) return false
-  return true
-}
-
 async function checkCleanPaths(gitStatusExec: GitStatusExecutor): Promise<string | null> {
   const statusMap = gitStatusExec(GUARDED_PATHS)
   if (!statusMap) return 'git_status_failed'
@@ -309,7 +285,6 @@ export async function configureStagingMigrationPlanEnvironment(
   const apiMutate = deps.ghApiMutate ?? defaultGhApiMutate
   const gitStatusExec = deps.gitStatus ?? defaultGitStatus
   const repoNameExec = deps.repoName ?? defaultRepoName
-  const callerLoginExec = deps.callerLogin ?? defaultCallerLogin
   const currentHeadExec = deps.currentHead ?? defaultCurrentHead
 
   const result: ConfigureResult = {
@@ -319,13 +294,6 @@ export async function configureStagingMigrationPlanEnvironment(
     blockers: [],
     verifiedState: [],
   }
-
-  // ── Reviewer login guard and validation ──────────────────────────────────
-  if (!isValidGithubLogin(input.reviewerLogin)) {
-    result.blockers.push('invalid_reviewer_login')
-    return result
-  }
-  const reviewerLoginInput = input.reviewerLogin!.trim()
 
   // ── Expected commit (both dry-run and apply) ─────────────────────────────
   if (!isValidSha40(input.expectedCommit)) {
@@ -379,53 +347,6 @@ export async function configureStagingMigrationPlanEnvironment(
     return result
   }
 
-  // ── Resolve reviewer login → numeric ID (required for both dry-run and apply) ──
-  const reviewerData = apiRead({
-    args: ['api', `users/${reviewerLoginInput}`],
-  }) as { id?: number; login?: string } | null
-  if (!reviewerData) {
-    result.blockers.push(`reviewer_lookup_failed`)
-    return result
-  }
-
-  const reviewerId = reviewerData.id
-  if (!Number.isSafeInteger(reviewerId) || typeof reviewerId !== 'number' || reviewerId <= 0) {
-    result.blockers.push(`reviewer_lookup_failed`)
-    return result
-  }
-
-  const reviewerCanonicalLogin = reviewerData.login?.trim()
-  if (!reviewerCanonicalLogin || reviewerCanonicalLogin.toLowerCase() !== reviewerLoginInput.toLowerCase()) {
-    result.blockers.push(`reviewer_lookup_failed`)
-    return result
-  }
-
-  // ── Caller identity and self-review guard (numeric ID comparison) ──────────
-  const callerLoginResult = callerLoginExec()
-  if (!callerLoginResult) {
-    result.blockers.push('caller_identity_failed')
-    return result
-  }
-
-  const callerData = apiRead({
-    args: ['api', 'user'],
-  }) as { id?: number; login?: string } | null
-  if (!callerData) {
-    result.blockers.push('caller_identity_failed')
-    return result
-  }
-
-  const callerId = callerData.id
-  if (!Number.isSafeInteger(callerId) || typeof callerId !== 'number' || callerId <= 0) {
-    result.blockers.push('caller_identity_failed')
-    return result
-  }
-
-  if (callerId === reviewerId) {
-    result.blockers.push('self_review_rejected')
-    return result
-  }
-
   // ── Secret presence checks (dry-run reports names only; apply requires values) ──
   const secretPresenceByName = new Map<string, boolean>()
   for (const name of REQUIRED_ENV_SECRETS) {
@@ -445,27 +366,28 @@ export async function configureStagingMigrationPlanEnvironment(
   // ── Dry-run plan ──────────────────────────────────────────────────────────
   if (input.dryRun) {
     result.actions.push(`[DRY-RUN] Would create/update environment '${ENV_NAME}'`)
-    result.actions.push(`[DRY-RUN] Would set required_reviewers: ${reviewerCanonicalLogin} (ID: ${reviewerId})`)
-    result.actions.push(`[DRY-RUN] Would enable prevent_self_review`)
+    result.actions.push(`[DRY-RUN] Would set zero reviewers (solo-operator mode)`)
+    result.actions.push(`[DRY-RUN] Would set zero wait timer`)
     result.actions.push(`[DRY-RUN] Would set branch policy: custom, exactly '${REQUIRED_FEATURE_BRANCH}'`)
     result.actions.push(`[DRY-RUN] Would set variable PLAN_READY_FOR_DISPATCH=${REQUIRED_PLAN_READY_VALUE}`)
+    result.actions.push(`[DRY-RUN] Would set variable SOLO_OPERATOR_MODE=${REQUIRED_SOLO_OPERATOR_VALUE}`)
     for (const [name, present] of secretPresenceByName) {
       result.actions.push(
         `[DRY-RUN] Would set environment secret ${name} (${present ? 'present' : 'ABSENT'} in process.env)`,
       )
     }
     result.actions.push(
-      `[DRY-RUN] To apply: re-run with --confirmation=${APPLY_CONFIRMATION} --reviewer-login=${reviewerCanonicalLogin} --expected-commit=<SHA>`,
+      `[DRY-RUN] To apply: re-run with --confirmation=${APPLY_CONFIRMATION} --expected-commit=<SHA>`,
     )
     result.ok = true
     return result
   }
 
-  // ── Apply: create/update environment with reviewer + branch policy ────────
+  // ── Apply: create/update environment with zero reviewers + branch policy ─
   const envBody = JSON.stringify({
     wait_timer: 0,
-    prevent_self_review: true,
-    reviewers: [{ type: 'User', id: reviewerId }],
+    prevent_self_review: false,
+    reviewers: [],
     deployment_branch_policy: {
       protected_branches: false,
       custom_branch_policies: true,
@@ -490,7 +412,7 @@ export async function configureStagingMigrationPlanEnvironment(
     result.blockers.push('github_api_call_failed')
     return result
   }
-  result.actions.push(`Created/updated environment '${ENV_NAME}' with reviewer and branch policy`)
+  result.actions.push(`Created/updated environment '${ENV_NAME}' with zero reviewers and branch policy`)
 
   // ── Apply: set custom branch policy ───────────────────────────────────────
   const existingPolicies = apiRead({
@@ -535,7 +457,7 @@ export async function configureStagingMigrationPlanEnvironment(
   }
   result.actions.push(`Branch policy set: custom, exactly '${REQUIRED_FEATURE_BRANCH}'`)
 
-  // ── Apply: set PLAN_READY_FOR_DISPATCH variable ───────────────────────────
+  // ── Apply: set PLAN_READY_FOR_DISPATCH and SOLO_OPERATOR_MODE variables ───
   const existingVars = apiRead({
     args: ['api', `repos/${repo}/environments/${ENV_NAME}/variables`],
   }) as { variables?: Array<{ name: string; value: string }> } | null
@@ -545,39 +467,41 @@ export async function configureStagingMigrationPlanEnvironment(
     return result
   }
 
-  const hasExistingVar = (existingVars.variables ?? []).some((v) => v.name === 'PLAN_READY_FOR_DISPATCH')
-  const varBody = JSON.stringify({
-    name: 'PLAN_READY_FOR_DISPATCH',
-    value: REQUIRED_PLAN_READY_VALUE,
-  })
+  for (const [varName, varValue] of [
+    ['PLAN_READY_FOR_DISPATCH', REQUIRED_PLAN_READY_VALUE],
+    ['SOLO_OPERATOR_MODE', REQUIRED_SOLO_OPERATOR_VALUE],
+  ] as const) {
+    const hasExistingVar = (existingVars.variables ?? []).some((v) => v.name === varName)
+    const varBody = JSON.stringify({ name: varName, value: varValue })
 
-  if (hasExistingVar) {
-    const patchVarResult = apiMutate({
-      args: [
-        'api',
-        '--method',
-        'PATCH',
-        `repos/${repo}/environments/${ENV_NAME}/variables/PLAN_READY_FOR_DISPATCH`,
-        '--input',
-        '-',
-      ],
-      stdin: varBody,
-    })
-    if (!patchVarResult.ok) {
-      result.blockers.push('github_api_call_failed')
-      return result
+    if (hasExistingVar) {
+      const patchResult = apiMutate({
+        args: [
+          'api',
+          '--method',
+          'PATCH',
+          `repos/${repo}/environments/${ENV_NAME}/variables/${varName}`,
+          '--input',
+          '-',
+        ],
+        stdin: varBody,
+      })
+      if (!patchResult.ok) {
+        result.blockers.push('github_api_call_failed')
+        return result
+      }
+    } else {
+      const postResult = apiMutate({
+        args: ['api', '--method', 'POST', `repos/${repo}/environments/${ENV_NAME}/variables`, '--input', '-'],
+        stdin: varBody,
+      })
+      if (!postResult.ok) {
+        result.blockers.push('github_api_call_failed')
+        return result
+      }
     }
-  } else {
-    const postVarResult = apiMutate({
-      args: ['api', '--method', 'POST', `repos/${repo}/environments/${ENV_NAME}/variables`, '--input', '-'],
-      stdin: varBody,
-    })
-    if (!postVarResult.ok) {
-      result.blockers.push('github_api_call_failed')
-      return result
-    }
+    result.actions.push(`Variable ${varName} set to '${varValue}'`)
   }
-  result.actions.push(`Variable PLAN_READY_FOR_DISPATCH set to '${REQUIRED_PLAN_READY_VALUE}'`)
 
   // ── Apply: set environment secrets (values from process.env only) ─────────
   for (const name of REQUIRED_ENV_SECRETS) {
@@ -617,30 +541,14 @@ export async function configureStagingMigrationPlanEnvironment(
   }
   result.verifiedState.push(`Environment: ${verifyEnv.name}`)
 
+  // Solo-operator mode: verify zero reviewers
   const reviewerRules = (verifyEnv.protection_rules ?? []).filter((r) => r.type === 'required_reviewers')
-  if (reviewerRules.length !== 1) {
+  const reviewerCount = reviewerRules.length > 0 ? (reviewerRules[0].reviewers ?? []).length : 0
+  if (reviewerCount !== 0) {
     result.blockers.push('environment_verification_failed')
     return result
   }
-
-  const reviewers = reviewerRules[0].reviewers ?? []
-  if (reviewers.length !== 1) {
-    result.blockers.push('environment_verification_failed')
-    return result
-  }
-
-  const reviewerVerify = reviewers[0]
-  if (reviewerVerify.type !== 'User' || reviewerVerify.id !== reviewerId) {
-    result.blockers.push('environment_verification_failed')
-    return result
-  }
-  result.verifiedState.push(`Required reviewer: ${reviewerCanonicalLogin} (ID: ${reviewerId})`)
-
-  if (reviewerRules[0].prevent_self_review !== true) {
-    result.blockers.push('environment_verification_failed')
-    return result
-  }
-  result.verifiedState.push(`prevent_self_review: enabled`)
+  result.verifiedState.push(`Required reviewers: 0 (solo-operator mode)`)
 
   if (verifyEnv.deployment_branch_policy?.protected_branches !== false) {
     result.blockers.push('environment_verification_failed')
@@ -672,12 +580,20 @@ export async function configureStagingMigrationPlanEnvironment(
     result.blockers.push('environment_verification_failed')
     return result
   }
+
   const readyVar = (verifyVars.variables ?? []).find((v) => v.name === 'PLAN_READY_FOR_DISPATCH')
   if (readyVar?.value !== REQUIRED_PLAN_READY_VALUE) {
     result.blockers.push('environment_verification_failed')
     return result
   }
   result.verifiedState.push(`PLAN_READY_FOR_DISPATCH: ${REQUIRED_PLAN_READY_VALUE}`)
+
+  const soloVar = (verifyVars.variables ?? []).find((v) => v.name === 'SOLO_OPERATOR_MODE')
+  if (soloVar?.value !== REQUIRED_SOLO_OPERATOR_VALUE) {
+    result.blockers.push('environment_verification_failed')
+    return result
+  }
+  result.verifiedState.push(`SOLO_OPERATOR_MODE: ${REQUIRED_SOLO_OPERATOR_VALUE}`)
 
   const verifySecrets = apiRead({
     args: ['api', `repos/${repo}/environments/${ENV_NAME}/secrets`],
