@@ -1,0 +1,21 @@
+const fs = require('fs')
+const raw = fs.readFileSync(process.argv[1], 'utf8').trimEnd()
+const p = JSON.parse(raw)
+const safe = {
+  version: p.version,
+  resultCode: p.resultCode,
+  blockerCodes: p.blockerCodes,
+  branch: p.branch,
+  commit: p.commit,
+  schema: p.schema,
+  environment: p.environment,
+  targetId: p.targetId,
+  appliedPayloadCount: p.appliedPayloadCount,
+  expectedPendingMigration: p.expectedPendingMigration,
+  expectedPendingMigrationIsOnlyMissing: p.expectedPendingMigrationIsOnlyMissing,
+  unexpectedPayloadCount: p.unexpectedPayloadCount,
+  duplicatePayloadCount: p.duplicatePayloadCount,
+  malformedPayloadCount: p.malformedPayloadCount,
+  prismaHealthy: p.prismaHealthy,
+}
+fs.writeFileSync(process.argv[2], JSON.stringify(safe) + '\n', { mode: 0o600 })

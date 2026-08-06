@@ -52,12 +52,23 @@ async function test(name: string, fn: () => void | Promise<void>): Promise<void>
   }
 }
 
+const VALIDATE_STEP1 = 'scripts/staging-gates/validate-plan-result-step1.js'
+const VALIDATE_STEP2 = 'scripts/staging-gates/validate-plan-result-step2.js'
+const VALIDATE_STEP3 = 'scripts/staging-gates/validate-plan-result-step3.js'
+
 async function main(): Promise<void> {
   const yml = await readFile(WORKFLOW_PATH, 'utf8')
   // Extract plan job section for scoped assertions
   const planJobIndex = yml.indexOf('read-only-plan:')
   assert.ok(planJobIndex > -1, 'read-only-plan job must exist in workflow')
-  const planJobYml = yml.slice(planJobIndex)
+  const planJobYmlBase = yml.slice(planJobIndex)
+
+  // Extend planJobYml with extracted validation scripts so contract assertions
+  // on inline logic (typeof, writeFileSync, etc.) still hold after heredoc extraction.
+  const step1 = existsSync(VALIDATE_STEP1) ? await readFile(VALIDATE_STEP1, 'utf8') : ''
+  const step2 = existsSync(VALIDATE_STEP2) ? await readFile(VALIDATE_STEP2, 'utf8') : ''
+  const step3 = existsSync(VALIDATE_STEP3) ? await readFile(VALIDATE_STEP3, 'utf8') : ''
+  const planJobYml = planJobYmlBase + '\n' + step1 + '\n' + step2 + '\n' + step3
 
   // ─── Single implementation ────────────────────────────────────────────────
 
