@@ -52,7 +52,7 @@
     "staging:decision-readiness": "tsx scripts/release/runDecisionReadiness.ts",
     "staging:provider-simulation": "tsx scripts/release/providerSimulation.ts",
     "staging:payload-migration-infra-preflight": "tsx scripts/staging-gates/stagingPayloadMigrationInfraPreflight.mts",
-    "staging:configure-environment": "tsx scripts/staging-gates/configureStagingMigrationPlanEnvironment.mts",
+    "staging:configure-environment": "tsx scripts/staging-gates/configureStagingMigrationPlanEnvironmentCli.ts",
     "staging:payload-migration-plan": "tsx scripts/release/runStagingPayloadMigration.ts plan",
     "staging:payload-migration-apply": "tsx scripts/release/runStagingPayloadMigration.ts apply",
     "staging:payload-migration-rollback-plan": "tsx scripts/release/runStagingPayloadMigration.ts rollback-plan",
