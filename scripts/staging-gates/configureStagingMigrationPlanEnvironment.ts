@@ -38,10 +38,15 @@ const GUARDED_PATHS = [
   '.github/workflows/deploy-preview.yml',
   'prisma/migrations',
   'src/migrations',
+  'src/lib/auth/memberAccountActionReservationMigrationSql.ts',
+  'src/lib/previewMigrationInventory.ts',
+  'src/payload.config.ts',
   'scripts/staging-gates/configureStagingMigrationPlanEnvironment.ts',
   'scripts/staging-gates/configureStagingMigrationPlanEnvironmentCli.ts',
   'scripts/staging-gates/configureStagingMigrationPlanEnvironment.test.ts',
   'scripts/staging-gates/stagingPayloadMigrationPlanWorkflowContract.test.ts',
+  'scripts/release/buildStagingMigrationStatus.ts',
+  'scripts/release/buildStagingMigrationStatus.test.ts',
   'scripts/release/runStagingPayloadMigration.ts',
   'scripts/release/runStagingPayloadMigration.test.ts',
   'scripts/release/releaseTestManifest.ts',
@@ -118,35 +123,14 @@ function defaultGhApiMutate(call: GhApiCall): { ok: boolean; exitCode: number | 
 }
 
 function defaultGitStatus(paths: string[]): Map<string, string> | null {
-  const result = spawnSync('git', ['status', '--porcelain=v1', '-z', '--untracked-files=all', ...paths], {
+  const result = spawnSync('git', ['status', '--porcelain=v1', '-z', '--untracked-files=all', '--', ...paths], {
     shell: false,
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
   })
   if (result.status !== 0 || result.error) return null
 
-  const output = result.stdout
-  if (!output) return new Map()
-
-  const statusMap = new Map<string, string>()
-  const records = output.split('\0').filter((r) => r.length > 0)
-
-  for (const record of records) {
-    if (record.length < 3) continue
-    const status = record.slice(0, 2)
-    const pathPart = record.slice(3)
-
-    if (status.startsWith('R') || status.startsWith('C')) {
-      const parts = pathPart.split('\0')
-      if (parts.length >= 2) {
-        statusMap.set(parts[0], `${status} -> ${parts[1]}`)
-      }
-    } else {
-      statusMap.set(pathPart, status)
-    }
-  }
-
-  return statusMap
+  return parseGitStatusNul(result.stdout)
 }
 
 function defaultRepoName(): string | null {
@@ -198,16 +182,58 @@ export type ConfigureResult = {
 
 // ─── Utilities ────────────────────────────────────────────────────────────────
 
+export function parseGitStatusNul(output: string): Map<string, string> {
+  const statusMap = new Map<string, string>()
+  if (!output) return statusMap
+
+  const parts = output.split('\0')
+  let i = 0
+  while (i < parts.length) {
+    const record = parts[i]
+    if (record.length < 3) {
+      i++
+      continue
+    }
+
+    const status = record.slice(0, 2)
+    const pathPart = record.slice(3)
+
+    if (status[0] === 'R' || status[0] === 'C') {
+      if (i + 1 < parts.length && parts[i + 1]) {
+        statusMap.set(pathPart, status)
+        statusMap.set(parts[i + 1], status)
+        i += 2
+      } else {
+        i++
+      }
+    } else {
+      statusMap.set(pathPart, status)
+      i++
+    }
+  }
+
+  return statusMap
+}
+
 function isValidSha40(s: string | undefined): boolean {
   return /^[0-9a-f]{40}$/.test(s ?? '')
+}
+
+function isValidGithubLogin(s: string | undefined): boolean {
+  if (!s || !s.trim()) return false
+  const login = s.trim()
+  if (login.length < 1 || login.length > 39) return false
+  if (/[^a-z0-9-]/i.test(login)) return false
+  if (login.startsWith('-') || login.endsWith('-')) return false
+  return true
 }
 
 async function checkCleanPaths(gitStatusExec: GitStatusExecutor): Promise<string | null> {
   const statusMap = gitStatusExec(GUARDED_PATHS)
   if (!statusMap) return 'git_status_failed'
 
-  for (const [path, status] of statusMap) {
-    return `Path has uncommitted changes (${status}): ${path}`
+  for (const path of statusMap.keys()) {
+    return 'guarded_path_dirty'
   }
 
   return null
@@ -235,40 +261,30 @@ export async function configureStagingMigrationPlanEnvironment(
   }
 
   // ── Reviewer login guard and validation ──────────────────────────────────
-  if (!input.reviewerLogin?.trim()) {
-    result.blockers.push('--reviewer-login is required (GitHub login, not numeric ID)')
+  if (!isValidGithubLogin(input.reviewerLogin)) {
+    result.blockers.push('invalid_reviewer_login')
     return result
   }
-  const reviewerLoginInput = input.reviewerLogin.trim()
-  if (!/^[a-zA-Z0-9\-_]+$/.test(reviewerLoginInput)) {
-    result.blockers.push('--reviewer-login must contain only alphanumeric characters, hyphens, and underscores')
-    return result
-  }
+  const reviewerLoginInput = input.reviewerLogin!.trim()
 
   // ── Apply-only guards ─────────────────────────────────────────────────────
   if (!input.dryRun) {
     // Confirmation
     if (input.confirmation !== APPLY_CONFIRMATION) {
-      result.blockers.push(
-        `Apply requires --confirmation=${APPLY_CONFIRMATION} (got '${input.confirmation ?? ''}')`,
-      )
+      result.blockers.push('missing_apply_confirmation')
       return result
     }
 
     // Expected commit
     if (!isValidSha40(input.expectedCommit)) {
-      result.blockers.push(
-        `Apply requires --expected-commit=<40-char hex SHA> (got '${input.expectedCommit ?? ''}')`,
-      )
+      result.blockers.push('missing_expected_commit')
       return result
     }
 
     // Current HEAD matches expected
     const currentHead = currentHeadExec()
     if (currentHead !== input.expectedCommit) {
-      result.blockers.push(
-        `HEAD mismatch: expected ${input.expectedCommit}, got ${currentHead ?? 'unknown'}`,
-      )
+      result.blockers.push('head_mismatch')
       return result
     }
 
@@ -283,14 +299,11 @@ export async function configureStagingMigrationPlanEnvironment(
   // ── Detect repo and verify exact repo ─────────────────────────────────────
   const repo = repoNameExec()
   if (!repo) {
-    result.blockers.push('Cannot detect repository — is gh CLI authenticated? Run: gh auth status')
+    result.blockers.push('repo_detection_failed')
     return result
   }
   if (repo !== REQUIRED_REPO) {
-    result.blockers.push(
-      `Repository mismatch: expected ${REQUIRED_REPO}, got ${repo}. ` +
-        'This configurator must run only in the exact required repository.',
-    )
+    result.blockers.push('repo_mismatch')
     return result
   }
 
@@ -302,9 +315,7 @@ export async function configureStagingMigrationPlanEnvironment(
   })
   const currentBranch = (branchResult.status === 0 && branchResult.stdout.trim()) || null
   if (currentBranch !== REQUIRED_FEATURE_BRANCH) {
-    result.blockers.push(
-      `Branch mismatch: expected ${REQUIRED_FEATURE_BRANCH}, got ${currentBranch || 'unknown'}`,
-    )
+    result.blockers.push('branch_mismatch')
     return result
   }
 
@@ -351,10 +362,7 @@ export async function configureStagingMigrationPlanEnvironment(
   }
 
   if (callerId === reviewerId) {
-    result.blockers.push(
-      `Self-review rejected: caller ID ${callerId} cannot be the reviewer ID ${reviewerId}. ` +
-        'A different operator must approve the configuration.',
-    )
+    result.blockers.push('self_review_rejected')
     return result
   }
 
@@ -369,10 +377,7 @@ export async function configureStagingMigrationPlanEnvironment(
       .filter(([, present]) => !present)
       .map(([name]) => name)
     if (missingSecrets.length > 0) {
-      result.blockers.push(
-        `Apply requires environment variables: ${missingSecrets.join(', ')}. ` +
-          'Set them in your process environment before retrying.',
-      )
+      result.blockers.push('missing_env_secrets')
       return result
     }
   }
