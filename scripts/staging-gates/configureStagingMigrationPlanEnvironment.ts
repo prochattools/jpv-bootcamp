@@ -130,7 +130,11 @@ function defaultGitStatus(paths: string[]): Map<string, string> | null {
   })
   if (result.status !== 0 || result.error) return null
 
-  return parseGitStatusNul(result.stdout)
+  try {
+    return parseGitStatusNul(result.stdout)
+  } catch {
+    return null
+  }
 }
 
 function defaultRepoName(): string | null {
@@ -182,6 +186,13 @@ export type ConfigureResult = {
 
 // ─── Utilities ────────────────────────────────────────────────────────────────
 
+export class GitStatusParseError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'GitStatusParseError'
+  }
+}
+
 export function parseGitStatusNul(output: string): Map<string, string> {
   const statusMap = new Map<string, string>()
   if (!output) return statusMap
@@ -190,22 +201,39 @@ export function parseGitStatusNul(output: string): Map<string, string> {
   let i = 0
   while (i < parts.length) {
     const record = parts[i]
-    if (record.length < 3) {
+
+    if (!record) {
       i++
       continue
     }
 
+    // Minimum: "XY P\0" where P is at least 1 char path = 5 chars minimum
+    if (record.length < 4) {
+      throw new GitStatusParseError('malformed_record')
+    }
+
     const status = record.slice(0, 2)
+    const space = record[2]
+    if (space !== ' ') {
+      throw new GitStatusParseError('malformed_separator')
+    }
+
     const pathPart = record.slice(3)
+    if (pathPart.length === 0) {
+      throw new GitStatusParseError('empty_path')
+    }
 
     if (status[0] === 'R' || status[0] === 'C') {
-      if (i + 1 < parts.length && parts[i + 1]) {
-        statusMap.set(pathPart, status)
-        statusMap.set(parts[i + 1], status)
-        i += 2
-      } else {
-        i++
+      if (i + 1 >= parts.length) {
+        throw new GitStatusParseError('truncated_rename_record')
       }
+      const nextPath = parts[i + 1]
+      if (nextPath.length === 0) {
+        throw new GitStatusParseError('missing_second_path')
+      }
+      statusMap.set(pathPart, status)
+      statusMap.set(nextPath, status)
+      i += 2
     } else {
       statusMap.set(pathPart, status)
       i++
@@ -267,31 +295,31 @@ export async function configureStagingMigrationPlanEnvironment(
   }
   const reviewerLoginInput = input.reviewerLogin!.trim()
 
+  // ── Expected commit (both dry-run and apply) ─────────────────────────────
+  if (!isValidSha40(input.expectedCommit)) {
+    result.blockers.push('missing_expected_commit')
+    return result
+  }
+
+  // ── Current HEAD matches expected (both dry-run and apply) ────────────────
+  const currentHead = currentHeadExec()
+  if (currentHead !== input.expectedCommit) {
+    result.blockers.push('head_mismatch')
+    return result
+  }
+
+  // ── Clean guarded paths (both dry-run and apply) ──────────────────────────
+  const cleanErr = await checkCleanPaths(gitStatusExec)
+  if (cleanErr) {
+    result.blockers.push(cleanErr)
+    return result
+  }
+
   // ── Apply-only guards ─────────────────────────────────────────────────────
   if (!input.dryRun) {
     // Confirmation
     if (input.confirmation !== APPLY_CONFIRMATION) {
       result.blockers.push('missing_apply_confirmation')
-      return result
-    }
-
-    // Expected commit
-    if (!isValidSha40(input.expectedCommit)) {
-      result.blockers.push('missing_expected_commit')
-      return result
-    }
-
-    // Current HEAD matches expected
-    const currentHead = currentHeadExec()
-    if (currentHead !== input.expectedCommit) {
-      result.blockers.push('head_mismatch')
-      return result
-    }
-
-    // Clean guarded paths
-    const cleanErr = await checkCleanPaths(gitStatusExec)
-    if (cleanErr) {
-      result.blockers.push(cleanErr)
       return result
     }
   }

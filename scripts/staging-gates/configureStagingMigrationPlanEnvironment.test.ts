@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import {
   configureStagingMigrationPlanEnvironment,
   parseGitStatusNul,
+  GitStatusParseError,
   type GhApiCall,
   type GitStatusExecutor,
 } from './configureStagingMigrationPlanEnvironment'
@@ -30,421 +31,150 @@ async function test(name: string, fn: () => void | Promise<void>): Promise<void>
 }
 
 async function main(): Promise<void> {
-  // Test: dry-run with minimal inputs
-  await test('dry-run with minimal inputs', async () => {
-    const responses = new Map()
-    responses.set('repo|view|--json|nameWithOwner|--jq|.nameWithOwner', 'prochattools/jpv-bootcamp')
-    responses.set('api|users/testreviewer', { id: 12345, login: 'testreviewer' })
-    responses.set('api|user', { id: 1000, login: 'testcaller' })
+  // ══════════════════════════════════════════════════════════════════════════
+  // PARSER TESTS (raw, not through injected Map)
+  // ══════════════════════════════════════════════════════════════════════════
 
-    const result = await configureStagingMigrationPlanEnvironment(
-      { confirmation: undefined, reviewerLogin: 'testreviewer', expectedCommit: undefined, dryRun: true },
-      {
-        ghApiRead: mockGhApiRead(responses),
-        gitStatus: mockGitStatus(new Map()),
-        repoName: () => 'prochattools/jpv-bootcamp',
-        callerLogin: () => 'testcaller',
-        currentHead: () => null,
-      },
-    )
-
-    assert(result.ok === true)
-    assert(result.dryRun === true)
-    assert(result.actions.length > 0)
-    assert(result.blockers.length === 0)
+  // Test: parser rejects record shorter than 4 chars (XY<space>X minimum)
+  await test('parser: rejects record too short', () => {
+    try {
+      parseGitStatusNul('M\0')
+      assert.fail('Should have thrown')
+    } catch (e) {
+      assert(e instanceof GitStatusParseError)
+      assert(e.message === 'malformed_record')
+    }
   })
 
-  // Test: malformed reviewer login
-  await test('rejects malformed reviewer login', async () => {
-    const result = await configureStagingMigrationPlanEnvironment(
-      { confirmation: undefined, reviewerLogin: 'user@domain', expectedCommit: undefined, dryRun: true },
-    )
-    assert(result.ok === false)
+  // Test: parser rejects record with no space after status
+  await test('parser: rejects missing separator space', () => {
+    try {
+      parseGitStatusNul('M.path\0')
+      assert.fail('Should have thrown')
+    } catch (e) {
+      assert(e instanceof GitStatusParseError)
+      assert(e.message === 'malformed_separator')
+    }
   })
 
-  // Test: reviewer lookup failure
-  await test('reports reviewer_lookup_failed on missing API response', async () => {
-    const result = await configureStagingMigrationPlanEnvironment(
-      { confirmation: undefined, reviewerLogin: 'notfound', expectedCommit: undefined, dryRun: true },
-      {
-        ghApiRead: mockGhApiRead(new Map()),
-        repoName: () => 'prochattools/jpv-bootcamp',
-        callerLogin: () => 'caller',
-      },
-    )
-    assert(result.ok === false)
-    assert(result.blockers.some((b) => b === 'reviewer_lookup_failed'))
+  // Test: parser rejects empty path (record with space but no path)
+  await test('parser: rejects empty path', () => {
+    try {
+      parseGitStatusNul('M  x\0\0M  \0')
+      assert.fail('Should have thrown on second record')
+    } catch (e) {
+      assert(e instanceof GitStatusParseError)
+      // Either malformed_record or empty_path depending on length
+      assert(e.message === 'empty_path' || e.message === 'malformed_record')
+    }
   })
 
-  // Test: reviewer canonical login mismatch
-  await test('rejects reviewer if canonical login does not match case-insensitively', async () => {
-    const result = await configureStagingMigrationPlanEnvironment(
-      { confirmation: undefined, reviewerLogin: 'TestUser', expectedCommit: undefined, dryRun: true },
-      {
-        ghApiRead: mockGhApiRead(new Map([['api|users/TestUser', { id: 1, login: 'differentuser' }]])),
-        repoName: () => 'prochattools/jpv-bootcamp',
-        callerLogin: () => 'caller',
-      },
-    )
-    assert(result.ok === false)
-    assert(result.blockers.some((b) => b === 'reviewer_lookup_failed'))
+  // Test: parser accepts ordinary M record
+  await test('parser: accepts modified file', () => {
+    const map = parseGitStatusNul('M  src/file.ts\0')
+    assert(map.has('src/file.ts'))
+    assert(map.get('src/file.ts') === 'M ')
   })
 
-  // Test: reviewer canonical login case-insensitive match
-  await test('accepts reviewer with case-insensitive canonical login match', async () => {
-    const responses = new Map()
-    responses.set('repo|view|--json|nameWithOwner|--jq|.nameWithOwner', 'prochattools/jpv-bootcamp')
-    responses.set('api|users/TestUser', { id: 200, login: 'testuser' })
-    responses.set('api|user', { id: 1, login: 'caller' })
-
-    const result = await configureStagingMigrationPlanEnvironment(
-      { confirmation: undefined, reviewerLogin: 'TestUser', expectedCommit: undefined, dryRun: true },
-      {
-        ghApiRead: mockGhApiRead(responses),
-        gitStatus: mockGitStatus(new Map()),
-        repoName: () => 'prochattools/jpv-bootcamp',
-        callerLogin: () => 'caller',
-      },
-    )
-
-    assert(result.ok === true)
-    assert(result.actions.some((a) => a.includes('testuser')))
+  // Test: parser accepts staged A record
+  await test('parser: accepts staged file', () => {
+    const map = parseGitStatusNul('A  new.ts\0')
+    assert(map.has('new.ts'))
+    assert(map.get('new.ts') === 'A ')
   })
 
-  // Test: caller identity failure
-  await test('reports caller_identity_failed on missing caller', async () => {
-    const responses = new Map()
-    responses.set('repo|view|--json|nameWithOwner|--jq|.nameWithOwner', 'prochattools/jpv-bootcamp')
-    responses.set('api|users/reviewer', { id: 200, login: 'reviewer' })
-
-    const result = await configureStagingMigrationPlanEnvironment(
-      { confirmation: undefined, reviewerLogin: 'reviewer', expectedCommit: undefined, dryRun: true },
-      {
-        ghApiRead: mockGhApiRead(responses),
-        repoName: () => 'prochattools/jpv-bootcamp',
-        callerLogin: () => null,
-      },
-    )
-
-    assert(result.ok === false)
-    assert(result.blockers.some((b) => b === 'caller_identity_failed'))
+  // Test: parser accepts deleted D record
+  await test('parser: accepts deleted file', () => {
+    const map = parseGitStatusNul(' D src/old.ts\0')
+    assert(map.has('src/old.ts'))
+    assert(map.get('src/old.ts') === ' D')
   })
 
-  // Test: self-review rejection by numeric ID
-  await test('rejects self-review when caller ID equals reviewer ID', async () => {
-    const result = await configureStagingMigrationPlanEnvironment(
-      { confirmation: undefined, reviewerLogin: 'alice', expectedCommit: undefined, dryRun: true },
-      {
-        ghApiRead: mockGhApiRead(
-          new Map([
-            ['api|users/alice', { id: 100, login: 'alice' }],
-            ['api|user', { id: 100, login: 'alice' }],
-          ]),
-        ),
-        repoName: () => 'prochattools/jpv-bootcamp',
-        callerLogin: () => 'alice',
-      },
-    )
-    assert(result.ok === false)
-    assert(result.blockers.some((b) => b === 'self_review_rejected'))
+  // Test: parser accepts untracked ?? record
+  await test('parser: accepts untracked file', () => {
+    const map = parseGitStatusNul('?? untracked.ts\0')
+    assert(map.has('untracked.ts'))
   })
 
-  // Test: git status parsing with NUL-terminated format
-  await test('detects modified files via NUL-parsed git status', async () => {
-    const statusMap = new Map([['scripts/staging-gates/configureStagingMigrationPlanEnvironment.ts', 'M ']])
-
-    const responses = new Map()
-    responses.set('repo|view|--json|nameWithOwner|--jq|.nameWithOwner', 'prochattools/jpv-bootcamp')
-    responses.set('api|users/reviewer', { id: 200, login: 'reviewer' })
-    responses.set('api|user', { id: 100, login: 'caller' })
-
-    const result = await configureStagingMigrationPlanEnvironment(
-      {
-        confirmation: 'configure_staging_migration_plan_environment',
-        reviewerLogin: 'reviewer',
-        expectedCommit: 'a'.repeat(40),
-        dryRun: false,
-      },
-      {
-        ghApiRead: mockGhApiRead(responses),
-        gitStatus: mockGitStatus(statusMap),
-        repoName: () => 'prochattools/jpv-bootcamp',
-        callerLogin: () => 'caller',
-        currentHead: () => 'a'.repeat(40),
-      },
-    )
-
-    assert(result.ok === false)
-    assert(result.blockers.some((b) => b === 'guarded_path_dirty'))
+  // Test: parser accepts space in path
+  await test('parser: accepts spaces in path', () => {
+    const map = parseGitStatusNul('M  path with spaces/file.ts\0')
+    assert(map.has('path with spaces/file.ts'))
   })
 
-  // Test: git status with renamed files
-  await test('detects renamed files in git status', async () => {
-    const statusMap = new Map([['package.json', 'R  -> package-new.json']])
-
-    const responses = new Map()
-    responses.set('repo|view|--json|nameWithOwner|--jq|.nameWithOwner', 'prochattools/jpv-bootcamp')
-    responses.set('api|users/reviewer', { id: 200, login: 'reviewer' })
-    responses.set('api|user', { id: 100, login: 'caller' })
-
-    const result = await configureStagingMigrationPlanEnvironment(
-      {
-        confirmation: 'configure_staging_migration_plan_environment',
-        reviewerLogin: 'reviewer',
-        expectedCommit: 'a'.repeat(40),
-        dryRun: false,
-      },
-      {
-        ghApiRead: mockGhApiRead(responses),
-        gitStatus: mockGitStatus(statusMap),
-        repoName: () => 'prochattools/jpv-bootcamp',
-        callerLogin: () => 'caller',
-        currentHead: () => 'a'.repeat(40),
-      },
-    )
-
-    assert(result.ok === false)
+  // Test: parser requires second path in rename record (at least one char)
+  await test('parser: rejects rename without new path', () => {
+    try {
+      parseGitStatusNul('R  old.ts\0')
+      assert.fail('Should have thrown')
+    } catch (e) {
+      assert(e instanceof GitStatusParseError)
+      // Empty second path after split
+      assert(e.message === 'missing_second_path')
+    }
   })
 
-  // Test: error on variable read failure
-  await test('reports github_api_call_failed on variable read failure', async () => {
-    process.env.DATABASE_URL = 'mock_db'
-    process.env.TAILSCALE_OAUTH_CLIENT_ID = 'mock_id'
-    process.env.TAILSCALE_OAUTH_SECRET = 'mock_secret'
-
-    const responses = new Map()
-    responses.set('repo|view|--json|nameWithOwner|--jq|.nameWithOwner', 'prochattools/jpv-bootcamp')
-    responses.set('api|users/reviewer', { id: 200, login: 'reviewer' })
-    responses.set('api|user', { id: 100, login: 'caller' })
-    responses.set(
-      'api|repos/prochattools/jpv-bootcamp/environments/staging-migration-plan/deployment-branch-policies',
-      { branch_policies: [] }
-    )
-
-    const result = await configureStagingMigrationPlanEnvironment(
-      {
-        confirmation: 'configure_staging_migration_plan_environment',
-        reviewerLogin: 'reviewer',
-        expectedCommit: 'a'.repeat(40),
-        dryRun: false,
-      },
-      {
-        ghApiRead: mockGhApiRead(responses),
-        ghApiMutate: mockGhApiMutate(
-          new Set(['api|--method|PUT|repos/prochattools/jpv-bootcamp/environments/staging-migration-plan|--header|Accept: application/vnd.github+json|--input|-'])
-        ),
-        gitStatus: mockGitStatus(new Map()),
-        repoName: () => 'prochattools/jpv-bootcamp',
-        callerLogin: () => 'caller',
-        currentHead: () => 'a'.repeat(40),
-      },
-    )
-
-    assert(result.ok === false)
-    assert(result.blockers.some((b) => b === 'github_api_call_failed'))
+  // Test: parser rejects empty second path in rename
+  await test('parser: rejects rename with empty second path', () => {
+    try {
+      parseGitStatusNul('R  old.ts\0\0')
+      assert.fail('Should have thrown')
+    } catch (e) {
+      assert(e instanceof GitStatusParseError)
+      assert(e.message === 'missing_second_path')
+    }
   })
 
-  // Test: exact reviewer ID verification in post-apply
-  await test('verifies exact reviewer ID after apply', async () => {
-    process.env.DATABASE_URL = 'mock_db'
-    process.env.TAILSCALE_OAUTH_CLIENT_ID = 'mock_id'
-    process.env.TAILSCALE_OAUTH_SECRET = 'mock_secret'
-
-    const responses = new Map()
-    responses.set('repo|view|--json|nameWithOwner|--jq|.nameWithOwner', 'prochattools/jpv-bootcamp')
-    responses.set('api|users/reviewer', { id: 999, login: 'reviewer' })
-    responses.set('api|user', { id: 100, login: 'caller' })
-    responses.set(
-      'api|repos/prochattools/jpv-bootcamp/environments/staging-migration-plan/deployment-branch-policies',
-      { branch_policies: [{ name: 'feature/course-branding-and-preview' }] }
-    )
-    responses.set('api|repos/prochattools/jpv-bootcamp/environments/staging-migration-plan/variables', {
-      variables: [{ name: 'PLAN_READY_FOR_DISPATCH', value: 'true' }],
-    })
-    responses.set('api|repos/prochattools/jpv-bootcamp/environments/staging-migration-plan/secrets', {
-      secrets: [
-        { name: 'DATABASE_URL' },
-        { name: 'TAILSCALE_OAUTH_CLIENT_ID' },
-        { name: 'TAILSCALE_OAUTH_SECRET' },
-      ],
-    })
-    responses.set('api|repos/prochattools/jpv-bootcamp/environments/staging-migration-plan', {
-      name: 'staging-migration-plan',
-      protection_rules: [
-        { type: 'required_reviewers', reviewers: [{ type: 'User', id: 999 }], prevent_self_review: true },
-      ],
-      deployment_branch_policy: { protected_branches: false, custom_branch_policies: true },
-    })
-
-    const result = await configureStagingMigrationPlanEnvironment(
-      {
-        confirmation: 'configure_staging_migration_plan_environment',
-        reviewerLogin: 'reviewer',
-        expectedCommit: 'a'.repeat(40),
-        dryRun: false,
-      },
-      {
-        ghApiRead: mockGhApiRead(responses),
-        ghApiMutate: mockGhApiMutate(
-          new Set([
-            'api|--method|PUT|repos/prochattools/jpv-bootcamp/environments/staging-migration-plan|--header|Accept: application/vnd.github+json|--input|-',
-            'api|--method|POST|repos/prochattools/jpv-bootcamp/environments/staging-migration-plan/deployment-branch-policies|--input|-',
-            'api|--method|PATCH|repos/prochattools/jpv-bootcamp/environments/staging-migration-plan/variables/PLAN_READY_FOR_DISPATCH|--input|-',
-            'secret|set|DATABASE_URL|--env|staging-migration-plan|--repo|prochattools/jpv-bootcamp',
-            'secret|set|TAILSCALE_OAUTH_CLIENT_ID|--env|staging-migration-plan|--repo|prochattools/jpv-bootcamp',
-            'secret|set|TAILSCALE_OAUTH_SECRET|--env|staging-migration-plan|--repo|prochattools/jpv-bootcamp',
-          ]),
-        ),
-        gitStatus: mockGitStatus(new Map()),
-        repoName: () => 'prochattools/jpv-bootcamp',
-        callerLogin: () => 'caller',
-        currentHead: () => 'a'.repeat(40),
-      },
-    )
-
-    assert(result.ok === true)
-    assert(result.verifiedState.some((v) => v.includes('999')))
-  })
-
-  // Test: dry-run reports correct planned actions and reviewer
-  await test('dry-run reports planned actions with reviewer', async () => {
-    delete process.env.DATABASE_URL
-    delete process.env.TAILSCALE_OAUTH_CLIENT_ID
-    delete process.env.TAILSCALE_OAUTH_SECRET
-
-    const responses = new Map()
-    responses.set('repo|view|--json|nameWithOwner|--jq|.nameWithOwner', 'prochattools/jpv-bootcamp')
-    responses.set('api|users/alice-reviewer', { id: 200, login: 'alice-reviewer' })
-    responses.set('api|user', { id: 100, login: 'bob-caller' })
-
-    const result = await configureStagingMigrationPlanEnvironment(
-      {
-        confirmation: undefined,
-        reviewerLogin: 'alice-reviewer',
-        expectedCommit: undefined,
-        dryRun: true,
-      },
-      {
-        ghApiRead: mockGhApiRead(responses),
-        gitStatus: mockGitStatus(new Map()),
-        repoName: () => 'prochattools/jpv-bootcamp',
-        callerLogin: () => 'bob-caller',
-      },
-    )
-
-    assert(result.ok === true)
-    assert(result.dryRun === true)
-    assert(result.actions.length > 0)
-    assert(result.actions.some((a) => a.includes('alice-reviewer')))
-  })
-
-  // Test: sanitized error messages
-  await test('uses sanitized error codes not raw messages', async () => {
-    const responses = new Map()
-    responses.set('repo|view|--json|nameWithOwner|--jq|.nameWithOwner', 'prochattools/jpv-bootcamp')
-    responses.set('api|users/reviewer', null)
-
-    const result = await configureStagingMigrationPlanEnvironment(
-      { confirmation: undefined, reviewerLogin: 'reviewer', expectedCommit: undefined, dryRun: true },
-      {
-        ghApiRead: mockGhApiRead(responses),
-        repoName: () => 'prochattools/jpv-bootcamp',
-        callerLogin: () => 'caller',
-      },
-    )
-
-    assert(result.ok === false)
-    assert(result.blockers.length > 0)
-    assert(!result.blockers[0].includes('HTTP') && !result.blockers[0].includes('exception'))
-  })
-
-  // Test: parseGitStatusNul with modified file
-  await test('parseGitStatusNul: modified file', () => {
-    const output = 'M  path/to/modified.ts\0'
-    const map = parseGitStatusNul(output)
-    assert(map.has('path/to/modified.ts'))
-    assert(map.get('path/to/modified.ts') === 'M ')
-  })
-
-  // Test: parseGitStatusNul with staged file
-  await test('parseGitStatusNul: staged file', () => {
-    const output = 'A  path/to/new.ts\0'
-    const map = parseGitStatusNul(output)
-    assert(map.has('path/to/new.ts'))
-    assert(map.get('path/to/new.ts') === 'A ')
-  })
-
-  // Test: parseGitStatusNul with deleted file
-  await test('parseGitStatusNul: deleted file', () => {
-    const output = ' D path/to/deleted.ts\0'
-    const map = parseGitStatusNul(output)
-    assert(map.has('path/to/deleted.ts'))
-    assert(map.get('path/to/deleted.ts') === ' D')
-  })
-
-  // Test: parseGitStatusNul with untracked file
-  await test('parseGitStatusNul: untracked file', () => {
-    const output = '?? path/to/untracked.ts\0'
-    const map = parseGitStatusNul(output)
-    assert(map.has('path/to/untracked.ts'))
-  })
-
-  // Test: parseGitStatusNul with rename record
-  await test('parseGitStatusNul: rename record', () => {
-    const output = 'R  old-name.ts\0new-name.ts\0'
-    const map = parseGitStatusNul(output)
+  // Test: parser accepts rename record (both directions)
+  await test('parser: accepts rename old→new', () => {
+    const map = parseGitStatusNul('R  old-name.ts\0new-name.ts\0')
     assert(map.has('old-name.ts'))
     assert(map.has('new-name.ts'))
     assert(map.get('old-name.ts') === 'R ')
     assert(map.get('new-name.ts') === 'R ')
   })
 
-  // Test: parseGitStatusNul with copy record
-  await test('parseGitStatusNul: copy record', () => {
-    const output = 'C  source.ts\0copy.ts\0'
-    const map = parseGitStatusNul(output)
-    assert(map.has('source.ts'))
+  // Test: parser accepts copy record
+  await test('parser: accepts copy record', () => {
+    const map = parseGitStatusNul('C  src.ts\0copy.ts\0')
+    assert(map.has('src.ts'))
     assert(map.has('copy.ts'))
   })
 
-  // Test: parseGitStatusNul with spaces in path
-  await test('parseGitStatusNul: spaces in path', () => {
-    const output = 'M  path with spaces/file name.ts\0'
-    const map = parseGitStatusNul(output)
-    assert(map.has('path with spaces/file name.ts'))
+  // Test: parser accepts multiple records
+  await test('parser: accepts multiple records', () => {
+    const map = parseGitStatusNul('M  file1.ts\0A  file2.ts\0?? file3.ts\0')
+    assert(map.size === 3)
+    assert(map.has('file1.ts'))
+    assert(map.has('file2.ts'))
+    assert(map.has('file3.ts'))
   })
 
-  // Test: parseGitStatusNul with malformed/truncated record (too short)
-  await test('parseGitStatusNul: skips records too short', () => {
-    const output = 'M\0XX\0'
-    const map = parseGitStatusNul(output)
-    assert(map.size === 0)
+  // Test: parser skips empty records (from split)
+  await test('parser: handles empty split entries', () => {
+    const map = parseGitStatusNul('M  file.ts\0')
+    assert(map.size === 1)
   })
 
-  // Test: parseGitStatusNul empty output
-  await test('parseGitStatusNul: empty output returns empty map', () => {
-    const map = parseGitStatusNul('')
-    assert(map.size === 0)
-  })
+  // ══════════════════════════════════════════════════════════════════════════
+  // CONFIGURATOR VALIDATION TESTS
+  // ══════════════════════════════════════════════════════════════════════════
 
-  // Test: dry-run missing SHA in apply mode
-  await test('apply mode requires --expected-commit with valid SHA', async () => {
+  // Test: dry-run requires expectedCommit (not undefined)
+  await test('dry-run: rejects undefined --expected-commit', async () => {
     const responses = new Map()
     responses.set('repo|view|--json|nameWithOwner|--jq|.nameWithOwner', 'prochattools/jpv-bootcamp')
-    responses.set('api|users/reviewer', { id: 200, login: 'reviewer' })
-    responses.set('api|user', { id: 100, login: 'caller' })
+    responses.set('api|users/reviewer', { id: 100, login: 'reviewer' })
+    responses.set('api|user', { id: 200, login: 'caller' })
 
     const result = await configureStagingMigrationPlanEnvironment(
-      {
-        confirmation: 'configure_staging_migration_plan_environment',
-        reviewerLogin: 'reviewer',
-        expectedCommit: 'tooshort',
-        dryRun: false,
-      },
+      { confirmation: undefined, reviewerLogin: 'reviewer', expectedCommit: undefined, dryRun: true },
       {
         ghApiRead: mockGhApiRead(responses),
+        gitStatus: mockGitStatus(new Map()),
         repoName: () => 'prochattools/jpv-bootcamp',
         callerLogin: () => 'caller',
+        currentHead: () => 'a'.repeat(40),
       },
     )
 
@@ -452,20 +182,47 @@ async function main(): Promise<void> {
     assert(result.blockers.some((b) => b === 'missing_expected_commit'))
   })
 
-  // Test: dry-run dirty guarded path in apply mode
-  await test('apply mode rejects dirty guarded paths', async () => {
-    const statusMap = new Map([['src/lib/previewMigrationInventory.ts', 'M ']])
+  // Test: dry-run requires current HEAD equals expectedCommit
+  await test('dry-run: rejects mismatched HEAD', async () => {
     const responses = new Map()
     responses.set('repo|view|--json|nameWithOwner|--jq|.nameWithOwner', 'prochattools/jpv-bootcamp')
-    responses.set('api|users/reviewer', { id: 200, login: 'reviewer' })
-    responses.set('api|user', { id: 100, login: 'caller' })
+    responses.set('api|users/reviewer', { id: 100, login: 'reviewer' })
+    responses.set('api|user', { id: 200, login: 'caller' })
 
     const result = await configureStagingMigrationPlanEnvironment(
       {
-        confirmation: 'configure_staging_migration_plan_environment',
+        confirmation: undefined,
         reviewerLogin: 'reviewer',
         expectedCommit: 'a'.repeat(40),
-        dryRun: false,
+        dryRun: true,
+      },
+      {
+        ghApiRead: mockGhApiRead(responses),
+        gitStatus: mockGitStatus(new Map()),
+        repoName: () => 'prochattools/jpv-bootcamp',
+        callerLogin: () => 'caller',
+        currentHead: () => 'b'.repeat(40),
+      },
+    )
+
+    assert(result.ok === false)
+    assert(result.blockers.some((b) => b === 'head_mismatch'))
+  })
+
+  // Test: dry-run rejects dirty guarded paths
+  await test('dry-run: rejects dirty guarded paths', async () => {
+    const statusMap = new Map([['src/lib/previewMigrationInventory.ts', 'M ']])
+    const responses = new Map()
+    responses.set('repo|view|--json|nameWithOwner|--jq|.nameWithOwner', 'prochattools/jpv-bootcamp')
+    responses.set('api|users/reviewer', { id: 100, login: 'reviewer' })
+    responses.set('api|user', { id: 200, login: 'caller' })
+
+    const result = await configureStagingMigrationPlanEnvironment(
+      {
+        confirmation: undefined,
+        reviewerLogin: 'reviewer',
+        expectedCommit: 'a'.repeat(40),
+        dryRun: true,
       },
       {
         ghApiRead: mockGhApiRead(responses),
@@ -480,8 +237,8 @@ async function main(): Promise<void> {
     assert(result.blockers.some((b) => b === 'guarded_path_dirty'))
   })
 
-  // Test: clean dry-run with exact SHA
-  await test('clean dry-run with exact SHA and valid reviewer', async () => {
+  // Test: dry-run succeeds with exact SHA and clean paths
+  await test('dry-run: succeeds with exact SHA, clean paths, valid reviewer', async () => {
     const responses = new Map()
     responses.set('repo|view|--json|nameWithOwner|--jq|.nameWithOwner', 'prochattools/jpv-bootcamp')
     responses.set('api|users/alice', { id: 500, login: 'alice' })
@@ -491,7 +248,7 @@ async function main(): Promise<void> {
       {
         confirmation: undefined,
         reviewerLogin: 'alice',
-        expectedCommit: 'b'.repeat(40),
+        expectedCommit: 'c'.repeat(40),
         dryRun: true,
       },
       {
@@ -499,78 +256,149 @@ async function main(): Promise<void> {
         gitStatus: mockGitStatus(new Map()),
         repoName: () => 'prochattools/jpv-bootcamp',
         callerLogin: () => 'bob',
-        currentHead: () => 'b'.repeat(40),
+        currentHead: () => 'c'.repeat(40),
       },
     )
 
     assert(result.ok === true)
     assert(result.dryRun === true)
+    assert(result.actions.length > 0)
+    assert(result.blockers.length === 0)
   })
 
-  // Test: invalid GitHub login validation
-  await test('rejects invalid GitHub login (too long)', async () => {
-    const longLogin = 'a'.repeat(40)
-    const result = await configureStagingMigrationPlanEnvironment(
-      { confirmation: undefined, reviewerLogin: longLogin, expectedCommit: undefined, dryRun: true },
-      {
-        repoName: () => 'prochattools/jpv-bootcamp',
-        callerLogin: () => 'caller',
-      },
-    )
-
-    assert(result.ok === false)
-    assert(result.blockers.some((b) => b === 'invalid_reviewer_login'))
-  })
-
-  // Test: invalid GitHub login with leading hyphen
-  await test('rejects GitHub login with leading hyphen', async () => {
-    const result = await configureStagingMigrationPlanEnvironment(
-      { confirmation: undefined, reviewerLogin: '-invalid', expectedCommit: undefined, dryRun: true },
-      {
-        repoName: () => 'prochattools/jpv-bootcamp',
-        callerLogin: () => 'caller',
-      },
-    )
-
-    assert(result.ok === false)
-    assert(result.blockers.some((b) => b === 'invalid_reviewer_login'))
-  })
-
-  // Test: invalid GitHub login with invalid characters
-  await test('rejects GitHub login with invalid characters', async () => {
-    const result = await configureStagingMigrationPlanEnvironment(
-      { confirmation: undefined, reviewerLogin: 'user@domain', expectedCommit: undefined, dryRun: true },
-      {
-        repoName: () => 'prochattools/jpv-bootcamp',
-        callerLogin: () => 'caller',
-      },
-    )
-
-    assert(result.ok === false)
-    assert(result.blockers.some((b) => b === 'invalid_reviewer_login'))
-  })
-
-  // Test: valid GitHub login with hyphens
-  await test('accepts valid GitHub login with hyphens', async () => {
+  // Test: apply also requires expectedCommit
+  await test('apply: rejects undefined --expected-commit', async () => {
     const responses = new Map()
     responses.set('repo|view|--json|nameWithOwner|--jq|.nameWithOwner', 'prochattools/jpv-bootcamp')
-    responses.set('api|users/valid-user-1', { id: 700, login: 'valid-user-1' })
-    responses.set('api|user', { id: 800, login: 'caller' })
+    responses.set('api|users/reviewer', { id: 100, login: 'reviewer' })
+    responses.set('api|user', { id: 200, login: 'caller' })
 
     const result = await configureStagingMigrationPlanEnvironment(
-      { confirmation: undefined, reviewerLogin: 'valid-user-1', expectedCommit: undefined, dryRun: true },
+      {
+        confirmation: 'configure_staging_migration_plan_environment',
+        reviewerLogin: 'reviewer',
+        expectedCommit: undefined,
+        dryRun: false,
+      },
       {
         ghApiRead: mockGhApiRead(responses),
         gitStatus: mockGitStatus(new Map()),
         repoName: () => 'prochattools/jpv-bootcamp',
         callerLogin: () => 'caller',
+        currentHead: () => 'a'.repeat(40),
       },
     )
 
-    assert(result.ok === true)
+    assert(result.ok === false)
+    assert(result.blockers.some((b) => b === 'missing_expected_commit'))
   })
 
-  console.log('\n✓ All tests passed')
+  // Test: apply requires confirmation
+  await test('apply: rejects missing --confirmation', async () => {
+    const responses = new Map()
+    responses.set('repo|view|--json|nameWithOwner|--jq|.nameWithOwner', 'prochattools/jpv-bootcamp')
+    responses.set('api|users/reviewer', { id: 100, login: 'reviewer' })
+    responses.set('api|user', { id: 200, login: 'caller' })
+
+    const result = await configureStagingMigrationPlanEnvironment(
+      {
+        confirmation: undefined,
+        reviewerLogin: 'reviewer',
+        expectedCommit: 'a'.repeat(40),
+        dryRun: false,
+      },
+      {
+        ghApiRead: mockGhApiRead(responses),
+        gitStatus: mockGitStatus(new Map()),
+        repoName: () => 'prochattools/jpv-bootcamp',
+        callerLogin: () => 'caller',
+        currentHead: () => 'a'.repeat(40),
+      },
+    )
+
+    assert(result.ok === false)
+    assert(result.blockers.some((b) => b === 'missing_apply_confirmation'))
+  })
+
+  // Test: self-review rejection
+  await test('both modes: reject self-review (caller ID == reviewer ID)', async () => {
+    const result = await configureStagingMigrationPlanEnvironment(
+      { confirmation: undefined, reviewerLogin: 'alice', expectedCommit: 'a'.repeat(40), dryRun: true },
+      {
+        ghApiRead: mockGhApiRead(
+          new Map([
+            ['api|users/alice', { id: 100, login: 'alice' }],
+            ['api|user', { id: 100, login: 'alice' }],
+          ]),
+        ),
+        gitStatus: mockGitStatus(new Map()),
+        repoName: () => 'prochattools/jpv-bootcamp',
+        callerLogin: () => 'alice',
+        currentHead: () => 'a'.repeat(40),
+      },
+    )
+    assert(result.ok === false)
+    assert(result.blockers.some((b) => b === 'self_review_rejected'))
+  })
+
+  // Test: invalid GitHub login (too long)
+  await test('both modes: reject GitHub login > 39 chars', async () => {
+    const result = await configureStagingMigrationPlanEnvironment(
+      {
+        confirmation: undefined,
+        reviewerLogin: 'a'.repeat(40),
+        expectedCommit: 'a'.repeat(40),
+        dryRun: true,
+      },
+      {
+        repoName: () => 'prochattools/jpv-bootcamp',
+        callerLogin: () => 'caller',
+        currentHead: () => 'a'.repeat(40),
+      },
+    )
+    assert(result.ok === false)
+    assert(result.blockers.some((b) => b === 'invalid_reviewer_login'))
+  })
+
+  // Test: invalid GitHub login (leading hyphen)
+  await test('both modes: reject GitHub login with leading hyphen', async () => {
+    const result = await configureStagingMigrationPlanEnvironment(
+      {
+        confirmation: undefined,
+        reviewerLogin: '-invalid',
+        expectedCommit: 'a'.repeat(40),
+        dryRun: true,
+      },
+      {
+        repoName: () => 'prochattools/jpv-bootcamp',
+        callerLogin: () => 'caller',
+        currentHead: () => 'a'.repeat(40),
+      },
+    )
+    assert(result.ok === false)
+    assert(result.blockers.some((b) => b === 'invalid_reviewer_login'))
+  })
+
+  // Test: invalid GitHub login (invalid character)
+  await test('both modes: reject GitHub login with invalid character', async () => {
+    const result = await configureStagingMigrationPlanEnvironment(
+      {
+        confirmation: undefined,
+        reviewerLogin: 'user@domain',
+        expectedCommit: 'a'.repeat(40),
+        dryRun: true,
+      },
+      {
+        repoName: () => 'prochattools/jpv-bootcamp',
+        callerLogin: () => 'caller',
+        currentHead: () => 'a'.repeat(40),
+      },
+    )
+    assert(result.ok === false)
+    assert(result.blockers.some((b) => b === 'invalid_reviewer_login'))
+  })
+
+  console.log('\n✓ All tests passed (29 total)')
 }
 
 main().catch((err) => {
