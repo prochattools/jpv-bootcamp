@@ -110,7 +110,7 @@ export const PayloadSubscriptions: CollectionConfig = {
       required: true,
       index: true,
     },
-    { name: 'stripeSubscriptionId', type: 'text', required: true, unique: true, index: true },
+    { name: 'stripeSubscriptionId', type: 'text', required: true, unique: true, index: true, admin: { description: 'Stripe IDs are derived server-side' } },
     { name: 'stripeSubscriptionScheduleId', type: 'text', unique: true, index: true },
     { name: 'stripePriceId', type: 'text', index: true },
     { name: 'stripeProductId', type: 'text', index: true },

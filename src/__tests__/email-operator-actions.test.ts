@@ -203,7 +203,7 @@ describe('email operator delivery actions', () => {
     expect(batchRoute).toContain('EMAIL_QUEUE_WORKER_SECRET')
     expect(batchRoute).not.toContain('PAYLOAD_SECRET')
     // Sender correctness
-    expect(sender).toContain("failureReason: 'resend_client_missing'")
+    expect(sender).toContain("reason: 'resend_client_missing'")
     expect(sender).toContain('assertStagingRecipientAllowed')
     expect(sender).toContain('claimEventForDelivery')
     expect(sender).toContain('recoverStaleEmailLeases')

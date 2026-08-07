@@ -11,4 +11,4 @@ cmds = [
 cmds = ["NODE_OPTIONS=--max-old-space-size=3072 pnpm run build"]
 
 [start]
-cmd = "bash scripts/runtime/start-prod.sh"
+cmd = "bash scripts/runtime/start-staging.sh"

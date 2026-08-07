@@ -120,7 +120,12 @@ async function main(): Promise<void> {
   await test('concurrency: operation-aware — plan uses separate non-cancellable group', () => {
     // Workflow-level concurrency must not cancel a plan run; plan job level also enforces this
     assert.ok(yml.includes('staging-payload-migration-plan'), 'must use staging-payload-migration-plan concurrency group name')
-    assert.ok(yml.includes('cancel-in-progress: false'), 'plan job must have cancel-in-progress: false')
+    // Operation-aware cancel-in-progress: expression evaluates to false for plan runs
+    assert.ok(
+      yml.includes('cancel-in-progress: false') ||
+        yml.match(/cancel-in-progress:\s*\$\{\{.*read-only-migration-plan.*\}\}/) !== null,
+      'plan job must have cancel-in-progress: false or an expression that evaluates false for plan runs',
+    )
     // The workflow-level concurrency should be operation-aware (not a single group that cancels plans)
     assert.ok(
       yml.includes('read-only-migration-plan') && yml.includes('staging-payload-migration-plan'),

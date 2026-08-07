@@ -64,14 +64,16 @@
 ### Option 2: Dokploy API Direct (if credentials available)
 
 ```bash
-COMMIT_SHA="4e2fd78e33cc190e80ecf07abed5bedf15da43cc"
-COMMIT_MSG="feat: add Bunny signed playback endpoint (/api/bunny/video)"
+# ONLY the staging app is permitted — no other target.
+DOKPLOY_STAGING_APP_ID="clients-jpv-bootcamp-app-tp9xrk"
+COMMIT_SHA="<current feature branch HEAD>"
+COMMIT_MSG="<commit message>"
 
 curl -X POST https://dokploy.prochat.tools/api/application.deploy \
   -H "x-api-key: $DOKPLOY_API_KEY" \
   -H "Content-Type: application/json" \
   -d "{
-    \"applicationId\": \"$DOKPLOY_APP_ID\",
+    \"applicationId\": \"$DOKPLOY_STAGING_APP_ID\",
     \"title\": \"$COMMIT_MSG\",
     \"description\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\\n\\n$COMMIT_SHA\"
   }"
@@ -230,21 +232,18 @@ Expected: 40/40 PASS (must include new Bunny endpoint tests if added)
 
 If deployment fails or needs rollback:
 
-1. **Revert workflow to auto-deploy** (if needed for faster recovery):
+1. **Redeploy previous commit** via Dokploy UI:
+   - Navigate to staging app `clients-jpv-bootcamp-app-tp9xrk`
+   - Select prior deployment
+   - Click "Redeploy"
+
+2. **Or revert on feature branch** (never main):
    ```bash
-   git checkout origin/main -- .github/workflows/deploy-preview.yml
+   git revert HEAD
    git push origin feature/course-branding-and-preview
    ```
 
-2. **Redeploy previous commit** via Dokploy:
-   - Use Dokploy UI to select prior deployment
-   - Click "Redeploy"
-
-3. **Or revert branch entirely**:
-   ```bash
-   git reset --hard <previous-good-commit>
-   git push --force origin feature/course-branding-and-preview
-   ```
+No other branch or target is permitted for rollback operations.
 
 ## Final State
 
@@ -255,7 +254,7 @@ After all verifications pass:
 - ✅ Email/Stripe/LiveKit post-deployment verified
 - ✅ Local tests: 140/140 release, 58/58 E2E, 40/40 staging smoke
 - ✅ Feature branch HEAD: 7992f0c
-- ✅ Formal state: **READY FOR GO-LIVE** (when all external operator proofs collected)
+- ✅ Formal state: **STAGING VERIFIED** (production launch requires separate approval)
 
 ## Notes
 

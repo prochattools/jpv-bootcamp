@@ -57,7 +57,6 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV HOSTNAME=0.0.0.0
 ENV PORT=3000
-ENV STARTUP_MODE=application-only
 ENV PAYLOAD_SCHEMA_PREFLIGHT=true
 ENV DEPLOYMENT_RUNTIME=docker
 ARG IMAGE_TAG=unknown
@@ -95,4 +94,4 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=3 \
   CMD node -e "require('http').get('http://127.0.0.1:3000/', res => process.exit(res.statusCode < 500 ? 0 : 1)).on('error', () => process.exit(1))"
 
-CMD ["bash", "scripts/runtime/start-prod.sh"]
+CMD ["bash", "scripts/runtime/start-staging.sh"]

@@ -36,32 +36,25 @@ production owner may rotate it. Do not record webhooks, tokens, or secrets in th
 ## GitHub Secret Naming (Required)
 
 The staging workflow uses **`DOKPLOY_PREVIEW_APP_ID`** (not the generic `DOKPLOY_APP_ID`).
-The production workflow uses **`DOKPLOY_PROD_APP_ID`** (not the generic `DOKPLOY_APP_ID`).
 
-Operator action required: rename or add secrets in GitHub repository settings:
+Operator action required: ensure this secret exists in GitHub repository settings:
 1. `DOKPLOY_PREVIEW_APP_ID` → value: `clients-jpv-bootcamp-app-tp9xrk`
-2. `DOKPLOY_PROD_APP_ID` → value: the production app ID (authorized production owner only)
 
 The generic `DOKPLOY_APP_ID` secret is no longer used and should be removed to
 prevent accidental cross-environment targeting.
 
+No production secret configuration is permitted from this operational lane.
+The production workflow (`deploy.yml`) has been disabled and deleted.
+
 ---
 
-## GitHub Main Branch Protection (Operator Action Required)
+## GitHub Main Branch Protection (Recommended)
 
-To prevent direct pushes and force-pushes to `main`, a repository owner must:
+The production `deploy.yml` workflow has been disabled and deleted from the feature
+branch. For additional safety, a repository owner may add branch protection to `main`
+via GitHub Settings → Branches → Add branch ruleset.
 
-1. Go to GitHub repository → Settings → Branches → Add branch ruleset
-2. Create ruleset for `main`:
-   - Require pull request before merging: **enabled**
-   - Require status checks to pass: **enabled** (add `validate-and-publish` and TypeScript check)
-   - Restrict deletions: **enabled**
-   - Block force pushes: **enabled**
-   - Restrict creations: **disabled** (allows branch creation)
-3. Optionally: require approvals (1 reviewer minimum)
-
-Without this ruleset, direct pushes to `main` are possible and could trigger the
-production `deploy.yml` workflow.
+No operational instructions for `main` are in scope for this staging lane.
 
 ---
 
@@ -180,4 +173,4 @@ All 7 DEPLOYED PROOF items verified:
 
 `payload_locked_documents_rels` was missing FK columns for new collections added
 after initial schema setup. Migration `20260720_000000_locked_docs_rels_new_collections`
-adds all missing columns. Apply it before next production deployment.
+adds all missing columns. This migration runs as part of the staging application startup.

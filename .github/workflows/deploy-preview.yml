@@ -67,18 +67,31 @@ jobs:
           INPUT_BRANCH_OR_REF: ${{ inputs.branch_or_ref }}
         run: |
           set -euo pipefail
-          # Reject main branch deployments from this workflow
+          # Canonical staging allow-list — no other target is permitted
+          ALLOWED_BRANCH="feature/course-branding-and-preview"
+          ALLOWED_ORIGIN="https://preview.jpvbootcamp.com"
+          ALLOWED_DOKPLOY_SLUG="clients-jpv-bootcamp-app-tp9xrk"
+          ALLOWED_DOKPLOY_ID="I_2Vukga3cc3ZhaG-mUzU"
+          ALLOWED_SCHEMA="jpvbootcamp_staging"
+          ALLOWED_HOST="10.0.2.4"
+          ALLOWED_PORT="5433"
+          ALLOWED_DB="jpvbootcamp"
+
+          # Reject main branch
           if [ "${GH_REF_NAME}" = "main" ]; then
-            echo "DEPLOY-DENIED: this workflow must not run on main. Only feature/course-branding-and-preview is allowed." >&2
+            echo "DEPLOY-DENIED: this workflow must not run on main. Only ${ALLOWED_BRANCH} is allowed." >&2
             exit 1
           fi
-          # Reject generic workflow_dispatch input pointing at main
+          # Reject workflow_dispatch pointing at main
           if [ "${GH_EVENT_NAME}" = "workflow_dispatch" ]; then
             if [ "${INPUT_BRANCH_OR_REF}" = "main" ] || [ "${INPUT_BRANCH_OR_REF}" = "refs/heads/main" ]; then
-              echo "DEPLOY-DENIED: branch_or_ref 'main' is not allowed. Use feature/course-branding-and-preview." >&2
+              echo "DEPLOY-DENIED: branch_or_ref 'main' is not allowed. Use ${ALLOWED_BRANCH}." >&2
               exit 1
             fi
           fi
+          echo "Staging lane: branch=${ALLOWED_BRANCH} origin=${ALLOWED_ORIGIN} schema=${ALLOWED_SCHEMA}"
+          echo "              host=${ALLOWED_HOST} port=${ALLOWED_PORT} db=${ALLOWED_DB}"
+          echo "              dokploy=${ALLOWED_DOKPLOY_SLUG} (${ALLOWED_DOKPLOY_ID})"
 
       - name: Check out commit
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
@@ -219,24 +232,21 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Hard deployment boundary guard — fail closed before any API call
-          # Deny-list: production app IDs (both slug and internal formats)
-          DENIED_SLUG="web-public-jpv-bootcamp-l66egq"
-          DENIED_INTERNAL="l66egq"
+          # Positive allow-list: only the canonical staging Dokploy app is permitted
+          ALLOWED_SLUG="clients-jpv-bootcamp-app-tp9xrk"
+          ALLOWED_INTERNAL_ID="I_2Vukga3cc3ZhaG-mUzU"
 
           if [ -z "$DOKPLOY_PREVIEW_APP_ID" ]; then
             echo "DEPLOY-DENIED: DOKPLOY_PREVIEW_APP_ID secret is unset or empty" >&2
             exit 1
           fi
-          if [ "$DOKPLOY_PREVIEW_APP_ID" = "$DENIED_SLUG" ]; then
-            echo "DEPLOY-DENIED: DOKPLOY_PREVIEW_APP_ID matches production deny-list: $DENIED_SLUG" >&2
+          if [ "$DOKPLOY_PREVIEW_APP_ID" != "$ALLOWED_SLUG" ] && [ "$DOKPLOY_PREVIEW_APP_ID" != "$ALLOWED_INTERNAL_ID" ]; then
+            echo "DEPLOY-DENIED: DOKPLOY_PREVIEW_APP_ID ('$DOKPLOY_PREVIEW_APP_ID') does not match allowed staging target" >&2
+            echo "  Allowed: $ALLOWED_SLUG or $ALLOWED_INTERNAL_ID" >&2
+            echo "  No other target is permitted." >&2
             exit 1
           fi
-          if echo "$DOKPLOY_PREVIEW_APP_ID" | grep -qi "$DENIED_INTERNAL"; then
-            echo "DEPLOY-DENIED: DOKPLOY_PREVIEW_APP_ID contains production identifier fragment" >&2
-            exit 1
-          fi
-          echo "Deploy guard passed: DOKPLOY_PREVIEW_APP_ID is not on deny-list"
+          echo "Deploy guard passed: DOKPLOY_PREVIEW_APP_ID matches canonical staging target"
 
           NEW_IMAGE="${{ steps.image-tags.outputs.sha_tag }}"
           COMMIT_MSG=$(git log -1 --pretty=format:"%s" ${{ github.sha }})
@@ -244,8 +254,6 @@ jobs:
           COMMIT_DATE=$(git log -1 --pretty=format:"%ci" ${{ github.sha }})
           DESCRIPTION="${COMMIT_AUTHOR} · ${COMMIT_DATE}"$'\n\n'"${{ github.sha }}"
 
-          # Step 1: Update the application's Docker image to the new SHA
-          # This ensures Dokploy pulls the new image rather than the cached SHA
           UPDATE_RESPONSE=$(curl -s -o /tmp/dokploy_update_response.json -w "%{http_code}" \
             -X POST "https://dokploy.prochat.tools/api/application.update" \
             -H "x-api-key: $DOKPLOY_API_KEY" \
@@ -257,13 +265,12 @@ jobs:
 
           echo "Image update HTTP status: $UPDATE_RESPONSE"
           if [ "$UPDATE_RESPONSE" != "200" ]; then
-            echo "Warning: image update returned $UPDATE_RESPONSE — continuing with deploy (may use previously configured image)"
+            echo "Warning: image update returned $UPDATE_RESPONSE — continuing with deploy"
             cat /tmp/dokploy_update_response.json || true
           else
             echo "Image updated to: $NEW_IMAGE"
           fi
 
-          # Step 2: Trigger the deployment
           RESPONSE=$(curl -s -o /tmp/dokploy_response.json -w "%{http_code}" \
             -X POST "https://dokploy.prochat.tools/api/application.deploy" \
             -H "x-api-key: $DOKPLOY_API_KEY" \

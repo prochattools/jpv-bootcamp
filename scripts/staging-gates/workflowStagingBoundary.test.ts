@@ -3,21 +3,23 @@
  *
  * Rules enforced:
  * 1. deploy-preview.yml must use DOKPLOY_PREVIEW_APP_ID (not generic DOKPLOY_APP_ID)
- * 2. deploy-preview.yml must contain the deny-list check for web-public-jpv-bootcamp-l66egq
- * 3. deploy.yml must use DOKPLOY_PROD_APP_ID (not generic DOKPLOY_APP_ID for the redeploy step)
- * 4. Neither workflow may reference web-public-jpv-bootcamp-l66egq without a DENY guard
+ * 2. deploy-preview.yml must use a positive allow-list (ALLOWED_SLUG) for the staging app
+ * 3. deploy.yml must not exist — production workflow is prohibited
+ * 4. deploy-preview.yml must not reference production app ID outside the allow-list guard
  * 5. deploy-preview.yml must contain SHA ancestry check
  * 6. deploy-preview.yml must reject main branch
- * 9. Neither workflow must print full API response body to logs
- * 10. Both deploy workflows must include provenance SHA echo
+ * 7. deploy-preview.yml must use staging-specific environment
+ * 8. publish-preview-image.yml must not reference DOKPLOY_APP_ID
+ * 9. deploy-preview.yml must not print full API response body to logs
+ * 10. deploy-preview.yml must include provenance SHA echo
  */
 
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
+import { existsSync } from 'node:fs'
 
 async function main(): Promise<void> {
   const previewYml = await readFile('.github/workflows/deploy-preview.yml', 'utf8')
-  const deployYml = await readFile('.github/workflows/deploy.yml', 'utf8')
 
   // Rule 1: deploy-preview.yml must use staging-specific secret name
   assert.ok(
@@ -29,35 +31,24 @@ async function main(): Promise<void> {
     'deploy-preview.yml must not use generic secrets.DOKPLOY_APP_ID',
   )
 
-  // Rule 2: deploy-preview.yml must deny-list production app ID explicitly
+  // Rule 2: deploy-preview.yml must use positive allow-list (not deny-list) for Dokploy app
   assert.ok(
-    previewYml.includes('web-public-jpv-bootcamp-l66egq'),
-    'deploy-preview.yml must reference production deny-list ID web-public-jpv-bootcamp-l66egq',
+    previewYml.includes('ALLOWED_SLUG'),
+    'deploy-preview.yml must declare ALLOWED_SLUG for positive allow-list',
+  )
+  assert.ok(
+    previewYml.includes('clients-jpv-bootcamp-app-tp9xrk'),
+    'deploy-preview.yml must name the canonical staging Dokploy slug',
   )
   assert.ok(
     previewYml.includes('DEPLOY-DENIED'),
     'deploy-preview.yml must contain DEPLOY-DENIED guard message',
   )
 
-  // Rule 3: deploy.yml must use prod-specific secret name for redeploy
+  // Rule 3: deploy.yml must not exist — production deployment workflow is prohibited
   assert.ok(
-    deployYml.includes('DOKPLOY_PROD_APP_ID'),
-    'deploy.yml must use DOKPLOY_PROD_APP_ID for production deploy',
-  )
-  assert.ok(
-    !deployYml.includes("secrets.DOKPLOY_APP_ID"),
-    'deploy.yml must not use generic secrets.DOKPLOY_APP_ID for the redeploy step',
-  )
-
-  // Rule 4: production workflow must invoke the canonical policy module that
-  // contains the staging deny-list (assertProductionDeployment rejects staging IDs)
-  assert.ok(
-    deployYml.includes('checkProductionDeploymentEnv.mts'),
-    'deploy.yml must invoke the canonical production policy validator that enforces the staging deny-list',
-  )
-  assert.ok(
-    deployYml.includes('DEPLOY_BRANCH'),
-    'deploy.yml must pass DEPLOY_BRANCH to the production policy validator',
+    !existsSync('.github/workflows/deploy.yml'),
+    'deploy.yml must not exist — production deployment workflow is not permitted',
   )
 
   // Rule 5: deploy-preview.yml must verify SHA ancestry under feature branch
@@ -89,27 +80,19 @@ async function main(): Promise<void> {
     'publish-preview-image.yml must not reference DOKPLOY_APP_ID (it only publishes, not deploys)',
   )
 
-  // Rule 9: Neither deploy workflow must print full API response body to logs
-  assert.ok(
-    !deployYml.includes('cat /tmp/dokploy_response.json'),
-    'deploy.yml must not print full Dokploy response body to workflow logs',
-  )
+  // Rule 9: deploy-preview.yml must not print full API response body to workflow logs
   assert.ok(
     !previewYml.includes('cat /tmp/dokploy_response.json'),
     'deploy-preview.yml must not print full Dokploy response body to workflow logs',
   )
 
-  // Rule 10: Both deploy workflows must include provenance echo
-  assert.ok(
-    deployYml.includes('Provenance: deployed from'),
-    'deploy.yml must echo deployment provenance SHA',
-  )
+  // Rule 10: deploy-preview.yml must include provenance echo
   assert.ok(
     previewYml.includes('Provenance: deployed from'),
     'deploy-preview.yml must echo deployment provenance SHA',
   )
 
-  console.log('workflowDeploymentBoundary.test.ts passed — 17 assertions')
+  console.log('workflowDeploymentBoundary.test.ts passed — 14 assertions')
 }
 
 main().catch((e) => {

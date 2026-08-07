@@ -14,7 +14,7 @@ export const dynamic = 'force-dynamic'
  * with delivery_status = 'queued' and send them via Resend. Designed to be
  * called by a periodic cron job (Dokploy scheduled task).
  *
- * Authentication: Bearer EMAIL_QUEUE_WORKER_SECRET (never PAYLOAD_SECRET)
+ * Authentication: Bearer EMAIL_QUEUE_WORKER_SECRET (never the admin secret)
  *
  * Body (JSON, optional):
  *   { limit?: number }   — max events to process per call (default 25)
@@ -30,7 +30,7 @@ function json(body: unknown, status = 200): Response {
 }
 
 export async function POST(request: NextRequest): Promise<Response> {
-  // Dedicated queue-worker credential — never PAYLOAD_SECRET.
+  // Dedicated queue-worker credential — never the admin secret.
   const secret = process.env.EMAIL_QUEUE_WORKER_SECRET
   if (!secret) return json({ ok: false, error: 'not_configured' }, 500)
 

@@ -39,10 +39,24 @@ assert.ok(
   'Dockerfile must not use unsafe fallback script (build must fail if importmap generation fails)'
 )
 
-// Verify production URLs are only defaults, not hardcoded
+// Verify staging URL is the default (staging-first model — not production)
 assert.ok(
-  dockerfile.includes('ARG NEXT_PUBLIC_APP_URL=https://jpvbootcamp.com'),
-  'Production URL is the default but must be overridable via build ARG'
+  dockerfile.includes('ARG NEXT_PUBLIC_APP_URL=https://preview.jpvbootcamp.com'),
+  'Staging URL must be the build ARG default — production URL must not be the default'
 )
 
-console.log('✓ docker-staging-urls.test.ts passed: Preview builds can override URLs for staging deployment')
+// Verify production URL is not baked in as a default for any URL ARG
+assert.ok(
+  !dockerfile.match(/ARG NEXT_PUBLIC_APP_URL=https:\/\/jpvbootcamp\.com[^/]/),
+  'Production URL must not be the ARG default for NEXT_PUBLIC_APP_URL'
+)
+assert.ok(
+  !dockerfile.match(/ARG APP_BASE_URL=https:\/\/jpvbootcamp\.com[^/]/),
+  'Production URL must not be the ARG default for APP_BASE_URL'
+)
+assert.ok(
+  !dockerfile.match(/ARG NEXT_PUBLIC_SERVER_URL=https:\/\/jpvbootcamp\.com[^/]/),
+  'Production URL must not be the ARG default for NEXT_PUBLIC_SERVER_URL'
+)
+
+console.log('✓ docker-staging-urls.test.ts passed: Preview builds default to staging URLs, production URLs excluded')

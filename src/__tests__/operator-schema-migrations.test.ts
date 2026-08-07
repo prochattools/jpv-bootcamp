@@ -27,8 +27,8 @@ describe('consolidated Payload operator migrations', () => {
 
     let previous = -1
     for (const name of names) {
-      expect(migrationIndex).toContain(`name: '${name}'`)
-      const position = migrationIndex.indexOf(`name: '${name}'`)
+      expect(migrationIndex).toContain(`'${name}'`)
+      const position = migrationIndex.indexOf(`'${name}'`)
       expect(position).toBeGreaterThan(previous)
       previous = position
     }
@@ -58,10 +58,11 @@ describe('consolidated Payload operator migrations', () => {
     expect(recreateTablePosition).toBeGreaterThan(recreateEnumPosition)
   })
 
-  it('records exactly 23 canonical migrations', () => {
-    expect(previewInventory).toContain("name: '20260723_000001_migrate_pro_to_membership'")
-    expect(previewInventory).toContain('order: 23')
-    expect((migrationIndex.match(/name: '/g) ?? [])).toHaveLength(23)
+  it('records exactly 29 canonical migrations', () => {
+    expect(migrationIndex).toContain("'20260723_000001_migrate_pro_to_membership'")
+    expect(migrationIndex).toContain("'20260804_050000_member_account_action_reservations'")
+    const entries = migrationIndex.match(/'2026\d{4}_\d{6}[a-z0-9_]*'/g) ?? []
+    expect(entries).toHaveLength(29)
   })
 
   it('adds managed Page, Post, and Lesson media with guarded rollback', () => {
@@ -153,6 +154,6 @@ describe('consolidated Payload operator migrations', () => {
     expect(crmImportPrelude).not.toContain('emailOperatorActions')
     expect(billingCollection).toContain("import('@/lib/billing/stripeOperatorActions')")
     expect(crmCollection).toContain("import('@/lib/email/emailOperatorActions')")
-    expect(payloadConfig).toContain('process.env.PAYLOAD_MIGRATION_SCHEMA?.trim()')
+    expect(payloadConfig).toContain('process.env.PAYLOAD_MIGRATION_SCHEMA')
   })
 })

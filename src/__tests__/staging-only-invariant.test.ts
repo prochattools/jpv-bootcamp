@@ -22,7 +22,18 @@ describe('Staging-only invariant', () => {
   const STAGING_HOST = '10.0.2.4'
   const STAGING_PORT = '5433'
   const STAGING_DB = 'jpvbootcamp'
-  const STAGING_DOKPLOY_APP = 'clients-jpv-bootcamp-app-tp9xrk'
+  const STAGING_DOKPLOY_SLUG = 'clients-jpv-bootcamp-app-tp9xrk'
+  const STAGING_DOKPLOY_ID = 'I_2Vukga3cc3ZhaG-mUzU'
+
+  const DENY_LIST_FILES = new Set([
+    '.github/workflows/deploy-preview.yml',
+    'scripts/safety/stagingCommunicationAllowlist.ts',
+    'scripts/staging-gates/dokployMediaMount.ts',
+    'scripts/staging-gates/stagingPolicy.ts',
+    'docs/DOKPLOY_DEPLOYMENT_GUIDE.md',
+    'docs/product/agent-mode-progress.md',
+    '.ai/DEPLOYMENT_AUTHORIZATION_2026_07_22.md',
+  ])
 
   describe('no active workflow triggers for main', () => {
     it('deploy-preview.yml push branches must not include main', () => {
@@ -34,19 +45,15 @@ describe('Staging-only invariant', () => {
     it('production deploy.yml must not exist', () => {
       expect(existsSync(join(ROOT, '.github/workflows/deploy.yml'))).toBe(false)
     })
+
+    it('publish-preview-image.yml must not have push trigger in on: section', () => {
+      const yml = readFile('.github/workflows/publish-preview-image.yml')
+      const onSection = yml.match(/^on:\s*\n([\s\S]*?)(?=\njobs:)/m)?.[1] ?? ''
+      expect(onSection).not.toContain('push:')
+    })
   })
 
   describe('no production Dokploy deployment calls', () => {
-    const DENY_LIST_FILES = new Set([
-      '.github/workflows/deploy-preview.yml',
-      'scripts/safety/stagingCommunicationAllowlist.ts',
-      'scripts/staging-gates/dokployMediaMount.ts',
-      'scripts/staging-gates/stagingPolicy.ts',
-      'docs/DOKPLOY_DEPLOYMENT_GUIDE.md',
-      'docs/product/agent-mode-progress.md',
-      '.ai/DEPLOYMENT_AUTHORIZATION_2026_07_22.md',
-    ])
-
     it('production app ID only appears in deny-list/safety files', () => {
       const files = trackedFiles()
       const violations: string[] = []
@@ -61,41 +68,115 @@ describe('Staging-only invariant', () => {
       expect(violations).toEqual([])
     })
 
-    it('deploy workflow uses production ID only in DENIED_ guard', () => {
+    it('deploy-preview uses positive allow-list for Dokploy app', () => {
       const yml = readFile('.github/workflows/deploy-preview.yml')
-      const lines = yml.split('\n')
-      for (const line of lines) {
-        if (line.includes('l66egq')) {
-          expect(line).toMatch(/DENIED/)
-        }
-      }
+      expect(yml).toContain(STAGING_DOKPLOY_SLUG)
+      expect(yml).toContain(STAGING_DOKPLOY_ID)
+      expect(yml).toContain('ALLOWED_SLUG')
+      expect(yml).not.toContain('DENIED_SLUG')
     })
   })
 
-  describe('no production database/schema defaults', () => {
-    it('Dockerfile must not default to production URL', () => {
+  describe('databaseConnectionConfig requires explicit staging schema', () => {
+    it('no DEFAULT_PAYLOAD_SCHEMA fallback exists', () => {
+      const src = readFile('src/lib/databaseConnectionConfig.ts')
+      expect(src).not.toContain('DEFAULT_PAYLOAD_SCHEMA')
+      expect(src).not.toMatch(/= 'jpvbootcamp'[^_]/)
+    })
+
+    it('exports REQUIRED_STAGING_SCHEMA constant', () => {
+      const src = readFile('src/lib/databaseConnectionConfig.ts')
+      expect(src).toContain("REQUIRED_STAGING_SCHEMA = 'jpvbootcamp_staging'")
+    })
+
+    it('exports assertStagingSchema enforcement function', () => {
+      const src = readFile('src/lib/databaseConnectionConfig.ts')
+      expect(src).toContain('assertStagingSchema')
+      expect(src).toContain('Schema')
+      expect(src).toContain('is not permitted')
+    })
+  })
+
+  describe('staging startup script', () => {
+    it('start-prod.sh must not exist', () => {
+      expect(existsSync(join(ROOT, 'scripts/runtime/start-prod.sh'))).toBe(false)
+    })
+
+    it('start-staging.sh exists and is executable', () => {
+      const path = join(ROOT, 'scripts/runtime/start-staging.sh')
+      expect(existsSync(path)).toBe(true)
+    })
+
+    it('start-staging.sh verifies exact host/port/db/schema', () => {
+      const sh = readFile('scripts/runtime/start-staging.sh')
+      expect(sh).toContain(`REQUIRED_HOST="${STAGING_HOST}"`)
+      expect(sh).toContain(`REQUIRED_PORT="${STAGING_PORT}"`)
+      expect(sh).toContain(`REQUIRED_DB="${STAGING_DB}"`)
+      expect(sh).toContain(`REQUIRED_SCHEMA="${STAGING_SCHEMA}"`)
+    })
+
+    it('start-staging.sh has no database-deploy mode', () => {
+      const sh = readFile('scripts/runtime/start-staging.sh')
+      expect(sh).not.toContain('database-deploy')
+      expect(sh).not.toContain('DEPLOYMENT_ENV')
+      expect(sh).not.toContain('SYSTEM_DATABASE_URL')
+      expect(sh).not.toContain('deploy-prod')
+    })
+  })
+
+  describe('Dockerfile CMD', () => {
+    it('CMD references start-staging.sh', () => {
       const df = readFile('Dockerfile')
-      expect(df).not.toMatch(/ARG.*=https:\/\/jpvbootcamp\.com[^/]/)
+      expect(df).toContain('start-staging.sh')
+      expect(df).not.toContain('start-prod.sh')
+    })
+
+    it('Dockerfile does not set STARTUP_MODE', () => {
+      const df = readFile('Dockerfile')
+      expect(df).not.toContain('STARTUP_MODE')
+    })
+
+    it('Dockerfile defaults to staging URLs only', () => {
+      const df = readFile('Dockerfile')
       expect(df).toContain(STAGING_ORIGIN)
+      expect(df).not.toMatch(/ARG.*=https:\/\/jpvbootcamp\.com[^/]/)
+    })
+  })
+
+  describe('publish-preview-image workflow', () => {
+    it('only allows feature branch SHA', () => {
+      const yml = readFile('.github/workflows/publish-preview-image.yml')
+      expect(yml).toContain('refs/heads/feature/course-branding-and-preview')
+      expect(yml).toContain('current tip')
     })
 
-    it('start-prod.sh rejects non-staging schema', () => {
-      const sh = readFile('scripts/runtime/start-prod.sh')
-      expect(sh).toContain('schema=jpvbootcamp_staging')
-      expect(sh).toContain('FATAL')
+    it('does not allow target_environment choice', () => {
+      const yml = readFile('.github/workflows/publish-preview-image.yml')
+      expect(yml).not.toContain('type: choice')
     })
 
-    it('no bare jpvbootcamp schema without _staging in configuration files', () => {
-      const configFiles = [
-        'Dockerfile',
-        'docker-compose.yml',
-        'scripts/runtime/start-prod.sh',
-      ]
-      for (const f of configFiles) {
-        const content = readFile(f)
-        const matches = content.match(/schema=jpvbootcamp(?!_staging)/g)
-        expect(matches ?? []).toEqual([])
-      }
+    it('pins staging origin in metadata', () => {
+      const yml = readFile('.github/workflows/publish-preview-image.yml')
+      expect(yml).toContain(STAGING_ORIGIN)
+      expect(yml).toContain('TARGET_ENVIRONMENT: staging')
+    })
+  })
+
+  describe('deploy-preview exact staging allow-list', () => {
+    it('workflow declares canonical staging coordinates', () => {
+      const yml = readFile('.github/workflows/deploy-preview.yml')
+      expect(yml).toContain(`ALLOWED_BRANCH="${STAGING_BRANCH}"`)
+      expect(yml).toContain(`ALLOWED_ORIGIN="${STAGING_ORIGIN}"`)
+      expect(yml).toContain(`ALLOWED_SCHEMA="${STAGING_SCHEMA}"`)
+      expect(yml).toContain(`ALLOWED_HOST="${STAGING_HOST}"`)
+      expect(yml).toContain(`ALLOWED_PORT="${STAGING_PORT}"`)
+      expect(yml).toContain(`ALLOWED_DB="${STAGING_DB}"`)
+    })
+
+    it('push trigger only allows feature branch', () => {
+      const yml = readFile('.github/workflows/deploy-preview.yml')
+      const pushBranches = yml.match(/push:\s*\n\s*branches:\s*\n((?:\s*-.*\n)*)/)?.[1] ?? ''
+      expect(pushBranches.trim()).toBe(`- '${STAGING_BRANCH}'`)
     })
   })
 
@@ -114,7 +195,7 @@ describe('Staging-only invariant', () => {
     })
   })
 
-  describe('no main-branch deployment instructions', () => {
+  describe('no main-branch deployment instructions in active docs', () => {
     it('operational docs targeting production must not exist', () => {
       const forbidden = [
         'PREVIEW_DEPLOYMENT_SETUP.md',
@@ -126,21 +207,20 @@ describe('Staging-only invariant', () => {
         expect(existsSync(join(ROOT, f))).toBe(false)
       }
     })
+
+    it('OPERATOR_DEPLOYMENT_AND_VERIFICATION does not use generic DOKPLOY_APP_ID', () => {
+      const doc = readFile('docs/OPERATOR_DEPLOYMENT_AND_VERIFICATION.md')
+      expect(doc).not.toContain('$DOKPLOY_APP_ID')
+    })
+
+    it('DOKPLOY_DEPLOYMENT_GUIDE does not instruct DOKPLOY_PROD_APP_ID creation', () => {
+      const doc = readFile('docs/DOKPLOY_DEPLOYMENT_GUIDE.md')
+      expect(doc).not.toContain('DOKPLOY_PROD_APP_ID')
+    })
   })
 
-  describe('approved staging configuration', () => {
-    it('deploy-preview.yml references correct staging URL', () => {
-      const yml = readFile('.github/workflows/deploy-preview.yml')
-      expect(yml).toContain(STAGING_ORIGIN)
-    })
-
-    it('deploy-preview.yml push trigger only allows feature branch', () => {
-      const yml = readFile('.github/workflows/deploy-preview.yml')
-      const pushBranches = yml.match(/push:\s*\n\s*branches:\s*\n((?:\s*-.*\n)*)/)?.[1] ?? ''
-      expect(pushBranches.trim()).toBe(`- '${STAGING_BRANCH}'`)
-    })
-
-    it('staging infra preflight uses correct host/port/schema', () => {
+  describe('staging infra preflight uses correct coordinates', () => {
+    it('uses correct host/port/schema', () => {
       const preflight = readFile('scripts/staging-gates/stagingPayloadMigrationInfraPreflight.mts')
       expect(preflight).toContain(STAGING_HOST)
       expect(preflight).toContain(String(STAGING_PORT))

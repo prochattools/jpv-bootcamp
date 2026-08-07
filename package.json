@@ -76,7 +76,7 @@
     "test:payload-admin-branding": "tsx scripts/payload_admin_branding.test.ts",
     "test:payload-preferences-migration": "tsx scripts/payload_preferences_constraint_migration.test.ts",
     "test:payload-staging-boundary": "tsx scripts/payload_staging_migration_boundary.test.ts",
-    "start": "scripts/runtime/start-prod.sh",
+    "start": "scripts/runtime/start-staging.sh",
     "start:app": "next start",
     "postinstall": "prisma generate --schema=prisma/system.prisma",
     "lint": "next lint",
@@ -182,7 +182,7 @@
       "immutable@>=5": "5.1.8",
       "monaco-editor>dompurify": "3.4.12",
       "next>postcss": "8.5.22",
-      "js-yaml": "4.3.0"
+      "js-yaml": "4.3.1"
     }
   }
 }

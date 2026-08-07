@@ -51,7 +51,7 @@ class RecordingClient implements PgClientLike {
   endCalls = 0
   connected = false
   ended = false
-  schema = 'jpv_staging'
+  schema = 'jpvbootcamp_staging'
   failOn: string | null = null
   failMessage = 'synthetic database secret=do-not-print'
   failConnect = false
@@ -95,7 +95,7 @@ async function run(): Promise<void> {
   })
 
   await test('operator evidence is required without an adapter', async () => {
-    const report = await buildStagingMigrationStatus(null, 'jpv_staging')
+    const report = await buildStagingMigrationStatus(null, 'jpvbootcamp_staging')
     assert.equal(report.result, 'OPERATOR_EVIDENCE_REQUIRED')
     assert.equal(report.missingPayloadMigrations.length, PAYLOAD_MIGRATION_NAMES.length)
   })
@@ -116,13 +116,13 @@ async function run(): Promise<void> {
     const adapter: MigrationEvidenceAdapter = {
       async collectMigrationEvidence() {
         return {
-          schemaIdentity: 'jpv_staging',
+          schemaIdentity: 'jpvbootcamp_staging',
           payloadMigrations: PAYLOAD_MIGRATION_NAMES.map((name) => ({ name, batch: 1 })),
           prismaMigrations: REGISTERED_PRISMA_MIGRATIONS.map((name) => appliedPrisma(name)),
         }
       },
     }
-    const report = await buildStagingMigrationStatus(adapter, 'jpv_staging')
+    const report = await buildStagingMigrationStatus(adapter, 'jpvbootcamp_staging')
     assert.equal(report.result, 'VERIFIED')
     assert.equal(report.blockers.length, 0)
   })
@@ -131,13 +131,13 @@ async function run(): Promise<void> {
     const adapter: MigrationEvidenceAdapter = {
       async collectMigrationEvidence() {
         return {
-          schemaIdentity: 'jpv_staging',
+          schemaIdentity: 'jpvbootcamp_staging',
           payloadMigrations: PAYLOAD_MIGRATION_NAMES.map((name, index) => ({ name, batch: index === 0 ? -1 : 1 })),
           prismaMigrations: REGISTERED_PRISMA_MIGRATIONS.map((name) => appliedPrisma(name)),
         }
       },
     }
-    const report = await buildStagingMigrationStatus(adapter, 'jpv_staging')
+    const report = await buildStagingMigrationStatus(adapter, 'jpvbootcamp_staging')
     assert.equal(report.result, 'MISMATCH')
     assert.ok(report.blockers.includes('Malformed Payload migration evidence exists'))
     assert.equal(report.malformedPayloadMigrationRecords.length, 1)
@@ -157,7 +157,7 @@ async function run(): Promise<void> {
     return {
       async collectMigrationEvidence() {
         return {
-          schemaIdentity: 'jpv_staging',
+          schemaIdentity: 'jpvbootcamp_staging',
           payloadMigrations: payloadMigrations as Array<{ name: string; batch: number }>,
           prismaMigrations: allAppliedPrisma,
         }
@@ -168,7 +168,7 @@ async function run(): Promise<void> {
   await test('malformed: migration 29 row with null batch is classified malformed', async () => {
     const rows = PAYLOAD_MIGRATION_NAMES.map((name) => ({ name, batch: 1 }))
     rows[rows.length - 1] = { name: TARGET_MIG, batch: null as unknown as number }
-    const report = await buildStagingMigrationStatus(malformedAdapter(rows), 'jpv_staging')
+    const report = await buildStagingMigrationStatus(malformedAdapter(rows), 'jpvbootcamp_staging')
     assert.equal(report.result, 'MISMATCH')
     assert.ok(report.blockers.includes('Malformed Payload migration evidence exists'))
     assert.ok(report.malformedPayloadMigrationRecords.some((r) => r.reason === 'invalid_batch'))
@@ -176,7 +176,7 @@ async function run(): Promise<void> {
 
   await test('malformed: migration 29 row with negative batch is classified malformed', async () => {
     const rows = PAYLOAD_MIGRATION_NAMES.map((name, i) => ({ name, batch: i === PAYLOAD_MIGRATION_NAMES.length - 1 ? -1 : 1 }))
-    const report = await buildStagingMigrationStatus(malformedAdapter(rows), 'jpv_staging')
+    const report = await buildStagingMigrationStatus(malformedAdapter(rows), 'jpvbootcamp_staging')
     assert.ok(report.blockers.includes('Malformed Payload migration evidence exists'))
     assert.ok(report.malformedPayloadMigrationRecords.some((r) => r.reason === 'invalid_batch'))
     assert.equal(report.payloadMigrationRecords.some((r) => r.name === TARGET_MIG), false)
@@ -184,33 +184,33 @@ async function run(): Promise<void> {
 
   await test('malformed: migration 29 row with fractional batch is classified malformed', async () => {
     const rows = PAYLOAD_MIGRATION_NAMES.map((name, i) => ({ name, batch: i === PAYLOAD_MIGRATION_NAMES.length - 1 ? 1.5 : 1 }))
-    const report = await buildStagingMigrationStatus(malformedAdapter(rows), 'jpv_staging')
+    const report = await buildStagingMigrationStatus(malformedAdapter(rows), 'jpvbootcamp_staging')
     assert.ok(report.blockers.includes('Malformed Payload migration evidence exists'))
   })
 
   await test('malformed: migration 29 row with string batch is classified malformed', async () => {
     const rows = PAYLOAD_MIGRATION_NAMES.map((name, i) => ({ name, batch: i === PAYLOAD_MIGRATION_NAMES.length - 1 ? '1' : 1 }))
-    const report = await buildStagingMigrationStatus(malformedAdapter(rows), 'jpv_staging')
+    const report = await buildStagingMigrationStatus(malformedAdapter(rows), 'jpvbootcamp_staging')
     assert.ok(report.blockers.includes('Malformed Payload migration evidence exists'))
   })
 
   await test('malformed: migration 29 row with empty name is classified malformed', async () => {
     const rows = PAYLOAD_MIGRATION_NAMES.map((name, i) => ({ name: i === PAYLOAD_MIGRATION_NAMES.length - 1 ? '' : name, batch: 1 }))
-    const report = await buildStagingMigrationStatus(malformedAdapter(rows), 'jpv_staging')
+    const report = await buildStagingMigrationStatus(malformedAdapter(rows), 'jpvbootcamp_staging')
     assert.ok(report.blockers.includes('Malformed Payload migration evidence exists'))
     assert.ok(report.malformedPayloadMigrationRecords.some((r) => r.reason === 'invalid_name'))
   })
 
   await test('malformed: migration 29 row with non-string name is classified malformed', async () => {
     const rows = PAYLOAD_MIGRATION_NAMES.map((name, i) => ({ name: i === PAYLOAD_MIGRATION_NAMES.length - 1 ? null : name, batch: 1 }))
-    const report = await buildStagingMigrationStatus(malformedAdapter(rows), 'jpv_staging')
+    const report = await buildStagingMigrationStatus(malformedAdapter(rows), 'jpvbootcamp_staging')
     assert.ok(report.blockers.includes('Malformed Payload migration evidence exists'))
     assert.ok(report.malformedPayloadMigrationRecords.some((r) => r.reason === 'invalid_name'))
   })
 
   await test('malformed: earlier migration with malformed batch blocks', async () => {
     const rows = PAYLOAD_MIGRATION_NAMES.map((name, i) => ({ name, batch: i === 0 ? -5 : 1 }))
-    const report = await buildStagingMigrationStatus(malformedAdapter(rows), 'jpv_staging')
+    const report = await buildStagingMigrationStatus(malformedAdapter(rows), 'jpvbootcamp_staging')
     assert.ok(report.blockers.includes('Malformed Payload migration evidence exists'))
     assert.ok(report.malformedPayloadMigrationRecords.some((r) => r.rowIndex === 0 && r.reason === 'invalid_batch'))
   })
@@ -222,7 +222,7 @@ async function run(): Promise<void> {
       ...PAYLOAD_MIGRATION_NAMES.slice(1).map((name) => ({ name, batch: 1 })),
       { name: NON_TARGET_MIG, batch: 1 }, // duplicate name
     ]
-    const report = await buildStagingMigrationStatus(malformedAdapter(rows), 'jpv_staging')
+    const report = await buildStagingMigrationStatus(malformedAdapter(rows), 'jpvbootcamp_staging')
     assert.ok(report.blockers.includes('Malformed Payload migration evidence exists'))
     assert.ok(report.malformedPayloadMigrationRecords.length >= 2)
   })
@@ -234,7 +234,7 @@ async function run(): Promise<void> {
       ...first28.map((name) => ({ name, batch: 1 })),
       { name: TARGET_MIG, batch: null as unknown as number },
     ]
-    const report = await buildStagingMigrationStatus(malformedAdapter(rows), 'jpv_staging')
+    const report = await buildStagingMigrationStatus(malformedAdapter(rows), 'jpvbootcamp_staging')
     assert.ok(report.blockers.includes('Malformed Payload migration evidence exists'))
     // The malformed row must not appear in applied list
     assert.equal(report.appliedPayloadMigrations.includes(TARGET_MIG), false)
@@ -247,7 +247,7 @@ async function run(): Promise<void> {
       { name: '\x00secret-control-char', batch: 1 },
       ...PAYLOAD_MIGRATION_NAMES.map((name) => ({ name, batch: 1 })),
     ]
-    const report = await buildStagingMigrationStatus(malformedAdapter(rows), 'jpv_staging')
+    const report = await buildStagingMigrationStatus(malformedAdapter(rows), 'jpvbootcamp_staging')
     const serialized = JSON.stringify(report)
     assert.equal(serialized.includes('\x00'), false)
     assert.equal(serialized.includes('secret-control-char'), false)
@@ -258,13 +258,13 @@ async function run(): Promise<void> {
     const adapter: MigrationEvidenceAdapter = {
       async collectMigrationEvidence() {
         return {
-          schemaIdentity: 'jpv_staging',
+          schemaIdentity: 'jpvbootcamp_staging',
           payloadMigrations: PAYLOAD_MIGRATION_NAMES.map((name) => ({ name, batch: 1 })),
           prismaMigrations: [],
         }
       },
     }
-    const report = await buildStagingMigrationStatus(adapter, 'jpv_staging')
+    const report = await buildStagingMigrationStatus(adapter, 'jpvbootcamp_staging')
     assert.equal(report.result, 'MISMATCH')
     assert.ok(report.blockers.includes('Prisma migration evidence is empty'))
     assert.deepEqual(report.missingPrismaMigrations, REGISTERED_PRISMA_MIGRATIONS)
@@ -274,13 +274,13 @@ async function run(): Promise<void> {
     const adapter: MigrationEvidenceAdapter = {
       async collectMigrationEvidence() {
         return {
-          schemaIdentity: 'jpv_staging',
+          schemaIdentity: 'jpvbootcamp_staging',
           payloadMigrations: PAYLOAD_MIGRATION_NAMES.map((name) => ({ name, batch: 1 })),
           prismaMigrations: [appliedPrisma('20990101_arbitrary')],
         }
       },
     }
-    const report = await buildStagingMigrationStatus(adapter, 'jpv_staging')
+    const report = await buildStagingMigrationStatus(adapter, 'jpvbootcamp_staging')
     assert.equal(report.result, 'MISMATCH')
     assert.deepEqual(report.missingPrismaMigrations, REGISTERED_PRISMA_MIGRATIONS)
     assert.deepEqual(report.unexpectedPrismaMigrations, ['20990101_arbitrary'])
@@ -296,27 +296,46 @@ async function run(): Promise<void> {
 
   await test('database helper strips schema and preserves redacted metadata only', () => {
     const config = resolveDatabaseConnectionConfig(
-      'postgres://user:secret@localhost/example?sslmode=require&schema=jpv_staging',
+      'postgres://user:secret@localhost/example?sslmode=require&schema=jpvbootcamp_staging',
       undefined,
     )
-    assert.equal(config.schema, 'jpv_staging')
+    assert.equal(config.schema, 'jpvbootcamp_staging')
     assert.equal(config.connectionString.includes('schema='), false)
     assert.equal(config.connectionString.includes('sslmode=require'), true)
     assert.equal(config.metadata.credentialsPresent, true)
     assert.equal(JSON.stringify(config.metadata).includes('secret'), false)
   })
 
-  await test('database helper supports override and safe default', () => {
-    assert.equal(resolveDatabaseConnectionConfig(undefined, undefined).schema, 'jpvbootcamp')
-    assert.equal(resolveDatabaseConnectionConfig('postgres://localhost/db?schema=first', 'second').schema, 'second')
-    assert.throws(() => validateDatabaseSchemaIdentifier('bad-schema'))
+  await test('database helper returns unconfigured when DATABASE_URL is absent', () => {
+    const config = resolveDatabaseConnectionConfig(undefined, undefined)
+    assert.equal(config.metadata.configured, false)
+    assert.equal(config.metadata.schemaSource, 'unconfigured')
+    assert.equal(config.connectionString, '')
   })
 
-  await test('database helper preserves malformed Payload URL behavior without leaking it into metadata', () => {
+  await test('database helper uses url schema when present', () => {
+    const config = resolveDatabaseConnectionConfig('postgres://localhost/db?schema=jpvbootcamp_staging', undefined)
+    assert.equal(config.schema, 'jpvbootcamp_staging')
+    assert.equal(config.metadata.schemaSource, 'url')
+    assert.equal(config.metadata.configured, true)
+  })
+
+  await test('database helper accepts override over url schema', () => {
+    const config = resolveDatabaseConnectionConfig('postgres://localhost/db?schema=jpvbootcamp_staging', 'jpvbootcamp_staging')
+    assert.equal(config.schema, 'jpvbootcamp_staging')
+    assert.equal(config.metadata.schemaSource, 'override')
+  })
+
+  await test('validateDatabaseSchemaIdentifier rejects unsafe values', () => {
+    assert.throws(() => validateDatabaseSchemaIdentifier('bad-schema'))
+    assert.throws(() => validateDatabaseSchemaIdentifier(''))
+  })
+
+  await test('database helper preserves malformed URL behavior without leaking it into metadata', () => {
     const malformed = 'not a valid database URL with user:synthetic-secret'
-    const config = resolveDatabaseConnectionConfig(malformed, 'safe_schema')
+    const config = resolveDatabaseConnectionConfig(malformed, 'jpvbootcamp_staging')
     assert.equal(config.connectionString, malformed)
-    assert.equal(config.schema, 'safe_schema')
+    assert.equal(config.schema, 'jpvbootcamp_staging')
     assert.equal(config.metadata.protocol, null)
     assert.equal(config.metadata.credentialsPresent, false)
     assert.equal(JSON.stringify(config.metadata).includes('synthetic-secret'), false)
@@ -327,19 +346,19 @@ async function run(): Promise<void> {
   await test('CLI parser supports equals and space forms with acknowledgement', () => {
     assert.deepEqual(parseCliArgs([
       '--mode=staging-read-only',
-      '--expected-schema=jpv_staging',
+      '--expected-schema=jpvbootcamp_staging',
       '--acknowledge-read-only',
     ]), {
       help: false,
       mode: 'staging-read-only',
-      expectedSchema: 'jpv_staging',
+      expectedSchema: 'jpvbootcamp_staging',
       acknowledgeReadOnly: true,
     })
     assert.equal(parseCliArgs([
       '--mode', 'staging-read-only',
-      '--expected-schema', 'jpv_staging',
+      '--expected-schema', 'jpvbootcamp_staging',
       '--acknowledge-read-only',
-    ]).expectedSchema, 'jpv_staging')
+    ]).expectedSchema, 'jpvbootcamp_staging')
   })
 
   await test('CLI parser rejects duplicates, unknown flags, positional args, and unsafe schema', () => {
@@ -356,10 +375,10 @@ async function run(): Promise<void> {
     let constructed = 0
     const exitCode = await runMigrationStatusCli([
       '--mode=unsupported',
-      '--expected-schema=jpv_staging',
+      '--expected-schema=jpvbootcamp_staging',
       '--acknowledge-read-only',
     ], {
-      DATABASE_URL: 'postgres://localhost/db?schema=jpv_staging',
+      DATABASE_URL: 'postgres://localhost/db?schema=jpvbootcamp_staging',
     }, () => undefined, {
       clientFactory: () => {
         constructed += 1
@@ -375,7 +394,7 @@ async function run(): Promise<void> {
     let constructed = 0
     const exitCode = await runMigrationStatusCli([
       '--mode=staging-read-only',
-      '--expected-schema=jpv_staging',
+      '--expected-schema=jpvbootcamp_staging',
       '--acknowledge-read-only',
     ], {}, (value) => output.push(value), {
       clientFactory: () => {
@@ -397,11 +416,11 @@ async function run(): Promise<void> {
       return client
     }
     const adapter = createStagingReadOnlyAdapter({
-      databaseUrl: 'postgres://user:secret@localhost/db?schema=jpv_staging',
-      expectedSchema: 'jpv_staging',
+      databaseUrl: 'postgres://user:secret@localhost/db?schema=jpvbootcamp_staging',
+      expectedSchema: 'jpvbootcamp_staging',
       clientFactory,
     })
-    const report = await buildStagingMigrationStatus(adapter, 'jpv_staging')
+    const report = await buildStagingMigrationStatus(adapter, 'jpvbootcamp_staging')
     assert.equal(report.result, 'VERIFIED')
     assert.equal(factoryCalls.length, 1)
     assert.equal(factoryCalls[0].connectionString.includes('schema='), false)
@@ -411,13 +430,13 @@ async function run(): Promise<void> {
     assert.equal(client.ended, true)
     assert.equal(client.queries.filter((query) => query === 'BEGIN TRANSACTION READ ONLY').length, 1)
     assert.equal(client.queries.filter((query) => query === "SET LOCAL statement_timeout = '5000ms'").length, 1)
-    assert.equal(client.queries.filter((query) => query === 'SET LOCAL search_path TO "jpv_staging"').length, 1)
+    assert.equal(client.queries.filter((query) => query === 'SET LOCAL search_path TO "jpvbootcamp_staging"').length, 1)
     assert.equal(client.queries.at(-1), 'ROLLBACK')
     const schemaIndex = client.queries.indexOf('SELECT current_schema() AS current_schema')
     const payloadIndex = client.queries.findIndex((query) => query.includes('.payload_migrations'))
     const prismaIndex = client.queries.findIndex((query) => query.includes('._prisma_migrations'))
     assert.ok(schemaIndex >= 0 && schemaIndex < payloadIndex && payloadIndex < prismaIndex)
-    assert.match(client.queries[payloadIndex], /^SELECT name, batch FROM "jpv_staging"\.payload_migrations ORDER BY id ASC$/)
+    assert.match(client.queries[payloadIndex], /^SELECT name, batch FROM "jpvbootcamp_staging"\.payload_migrations ORDER BY id ASC$/)
     assert.match(client.queries[prismaIndex], /\(logs IS NOT NULL\) AS has_logs/)
     assert.equal(client.queries[prismaIndex].includes('SELECT *'), false)
     assert.equal(client.queries[prismaIndex].includes('SELECT logs'), false)
@@ -427,11 +446,11 @@ async function run(): Promise<void> {
     const client = new RecordingClient()
     client.schema = 'wrong_schema'
     const adapter = createStagingReadOnlyAdapter({
-      databaseUrl: 'postgres://localhost/db?schema=jpv_staging',
-      expectedSchema: 'jpv_staging',
+      databaseUrl: 'postgres://localhost/db?schema=jpvbootcamp_staging',
+      expectedSchema: 'jpvbootcamp_staging',
       clientFactory: () => client,
     })
-    await assert.rejects(() => buildStagingMigrationStatus(adapter, 'jpv_staging'), /Database-reported schema/)
+    await assert.rejects(() => buildStagingMigrationStatus(adapter, 'jpvbootcamp_staging'), /Database-reported schema/)
     assert.equal(client.queries.some((query) => query.includes('.payload_migrations')), false)
     assert.equal(client.queries.at(-1), 'ROLLBACK')
     assert.equal(client.ended, true)
@@ -441,13 +460,13 @@ async function run(): Promise<void> {
     const client = new RecordingClient()
     client.failOn = '.payload_migrations'
     const adapter = createStagingReadOnlyAdapter({
-      databaseUrl: 'postgres://user:secret@localhost/db?schema=jpv_staging',
-      expectedSchema: 'jpv_staging',
+      databaseUrl: 'postgres://user:secret@localhost/db?schema=jpvbootcamp_staging',
+      expectedSchema: 'jpvbootcamp_staging',
       clientFactory: () => client,
     })
     let message = ''
     try {
-      await buildStagingMigrationStatus(adapter, 'jpv_staging')
+      await buildStagingMigrationStatus(adapter, 'jpvbootcamp_staging')
     } catch (error) {
       message = error instanceof Error ? error.message : String(error)
     }
@@ -462,12 +481,12 @@ async function run(): Promise<void> {
     client.failOn = '.payload_migrations'
     client.failMessage = 'permission denied for schema private_schema secret=do-not-print'
     const adapter = createStagingReadOnlyAdapter({
-      databaseUrl: 'postgres://localhost/db?schema=jpv_staging',
-      expectedSchema: 'jpv_staging',
+      databaseUrl: 'postgres://localhost/db?schema=jpvbootcamp_staging',
+      expectedSchema: 'jpvbootcamp_staging',
       clientFactory: () => client,
     })
     await assert.rejects(
-      () => buildStagingMigrationStatus(adapter, 'jpv_staging'),
+      () => buildStagingMigrationStatus(adapter, 'jpvbootcamp_staging'),
       /^Error: Read-only staging migration query failed$/,
     )
     assert.equal(client.queries.at(-1), 'ROLLBACK')
@@ -478,7 +497,7 @@ async function run(): Promise<void> {
     let constructed = false
     assert.throws(() => createStagingReadOnlyAdapter({
       databaseUrl: 'postgres://localhost/db?schema=other_schema',
-      expectedSchema: 'jpv_staging',
+      expectedSchema: 'jpvbootcamp_staging',
       clientFactory: () => {
         constructed = true
         return new RecordingClient()
@@ -494,19 +513,19 @@ async function run(): Promise<void> {
       return new RecordingClient()
     }
     assert.throws(() => createStagingReadOnlyAdapter({
-      databaseUrl: 'mysql://localhost/db?schema=jpv_staging',
-      expectedSchema: 'jpv_staging',
+      databaseUrl: 'mysql://localhost/db?schema=jpvbootcamp_staging',
+      expectedSchema: 'jpvbootcamp_staging',
       clientFactory,
     }), /must use PostgreSQL/)
     assert.throws(() => createStagingReadOnlyAdapter({
       databaseUrl: 'not-a-url',
-      expectedSchema: 'jpv_staging',
-      schemaOverride: 'jpv_staging',
+      expectedSchema: 'jpvbootcamp_staging',
+      schemaOverride: 'jpvbootcamp_staging',
       clientFactory,
     }), /must use PostgreSQL/)
     assert.throws(() => createStagingReadOnlyAdapter({
-      databaseUrl: 'postgres://localhost/db?schema=jpv_staging',
-      expectedSchema: 'jpv_staging',
+      databaseUrl: 'postgres://localhost/db?schema=jpvbootcamp_staging',
+      expectedSchema: 'jpvbootcamp_staging',
       statementTimeoutMillis: 0,
       clientFactory,
     }), /Statement timeout/)
@@ -517,13 +536,13 @@ async function run(): Promise<void> {
     const client = new RecordingClient()
     client.failConnect = true
     const adapter = createStagingReadOnlyAdapter({
-      databaseUrl: 'postgres://user:secret@localhost/db?schema=jpv_staging',
-      expectedSchema: 'jpv_staging',
+      databaseUrl: 'postgres://user:secret@localhost/db?schema=jpvbootcamp_staging',
+      expectedSchema: 'jpvbootcamp_staging',
       clientFactory: () => client,
     })
     let message = ''
     try {
-      await buildStagingMigrationStatus(adapter, 'jpv_staging')
+      await buildStagingMigrationStatus(adapter, 'jpvbootcamp_staging')
     } catch (error) {
       message = error instanceof Error ? error.message : String(error)
     }
@@ -537,12 +556,12 @@ async function run(): Promise<void> {
     const client = new RecordingClient()
     client.failOn = 'ROLLBACK'
     const adapter = createStagingReadOnlyAdapter({
-      databaseUrl: 'postgres://localhost/db?schema=jpv_staging',
-      expectedSchema: 'jpv_staging',
+      databaseUrl: 'postgres://localhost/db?schema=jpvbootcamp_staging',
+      expectedSchema: 'jpvbootcamp_staging',
       clientFactory: () => client,
     })
     await assert.rejects(
-      () => buildStagingMigrationStatus(adapter, 'jpv_staging'),
+      () => buildStagingMigrationStatus(adapter, 'jpvbootcamp_staging'),
       /^Error: Read-only staging migration rollback failed$/,
     )
     assert.equal(client.endCalls, 1)
@@ -553,13 +572,13 @@ async function run(): Promise<void> {
     const client = new RecordingClient()
     client.failEnd = true
     const adapter = createStagingReadOnlyAdapter({
-      databaseUrl: 'postgres://localhost/db?schema=jpv_staging',
-      expectedSchema: 'jpv_staging',
+      databaseUrl: 'postgres://localhost/db?schema=jpvbootcamp_staging',
+      expectedSchema: 'jpvbootcamp_staging',
       clientFactory: () => client,
     })
     let message = ''
     try {
-      await buildStagingMigrationStatus(adapter, 'jpv_staging')
+      await buildStagingMigrationStatus(adapter, 'jpvbootcamp_staging')
     } catch (error) {
       message = error instanceof Error ? error.message : String(error)
     }
