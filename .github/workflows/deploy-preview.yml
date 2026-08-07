@@ -46,6 +46,23 @@ concurrency:
   cancel-in-progress: ${{ !(github.event_name == 'workflow_dispatch' && inputs.operation == 'read-only-migration-plan') }}
 
 jobs:
+  debug-inputs:
+    name: Debug — print dispatched inputs
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Print inputs
+        shell: bash
+        env:
+          OP: ${{ inputs.operation }}
+          SHA: ${{ inputs.expected_sha }}
+          CONF: ${{ inputs.confirmation }}
+        run: |
+          echo "operation=[$OP]"
+          echo "expected_sha=[$SHA]"
+          echo "confirmation=[$CONF]"
+          echo "event=${{ github.event_name }}"
+
   validate-and-publish:
     name: Validate, build, publish, and deploy preview
     runs-on: ubuntu-latest
