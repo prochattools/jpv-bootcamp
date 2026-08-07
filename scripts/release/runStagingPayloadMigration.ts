@@ -1481,7 +1481,7 @@ async function main(): Promise<void> {
     )
     if (jsonMode) {
       // Emit SafeMigrationPlanEvidence — no free-text messages or raw migration names
-      const evidence: SafeMigrationPlanEvidence = {
+      const evidence: SafeMigrationPlanEvidence & { unhealthyPrismaMigrations?: string[] } = {
         version: 1,
         resultCode: result.ok ? 'plan_ok' : 'plan_blocked',
         blockerCodes: result.blockers,
@@ -1501,7 +1501,10 @@ async function main(): Promise<void> {
         duplicatePayloadCount: result.duplicatePayloadCount,
         malformedPayloadCount: result.malformedPayloadCount,
         prismaHealthy: result.prismaHealthy,
-        unhealthyPrismaMigrations: result.unhealthyPrismaMigrations,
+      }
+      // Include unhealthyPrismaMigrations when present for diagnostic use
+      if (result.unhealthyPrismaMigrations && result.unhealthyPrismaMigrations.length > 0) {
+        evidence.unhealthyPrismaMigrations = result.unhealthyPrismaMigrations
       }
       process.stdout.write(JSON.stringify(evidence) + '\n')
     } else {
