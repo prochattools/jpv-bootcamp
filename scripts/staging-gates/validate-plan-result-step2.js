@@ -18,4 +18,7 @@ const safe = {
   malformedPayloadCount: p.malformedPayloadCount,
   prismaHealthy: p.prismaHealthy,
 }
+if (p.unhealthyPrismaMigrations !== undefined) {
+  safe.unhealthyPrismaMigrations = p.unhealthyPrismaMigrations
+}
 fs.writeFileSync(process.argv[3], JSON.stringify(safe) + '\n', { mode: 0o600 })
