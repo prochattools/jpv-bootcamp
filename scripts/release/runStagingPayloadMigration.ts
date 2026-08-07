@@ -104,6 +104,7 @@ export type SafeMigrationPlanEvidence = {
   duplicatePayloadCount: number
   malformedPayloadCount: number
   prismaHealthy: boolean
+  unhealthyPrismaMigrations?: string[]
 }
 
 export const ALLOWED_BLOCKER_CODES = new Set([
@@ -177,6 +178,7 @@ export type StagingMigrationPlanResult = {
   duplicatePayloadCount: number
   malformedPayloadCount: number
   prismaHealthy: boolean
+  unhealthyPrismaMigrations?: string[]
 }
 
 export type StagingMigrationApplyResult = {
@@ -708,8 +710,9 @@ export async function runStagingMigrationPlan(
     duplicatePayloadCount = 0,
     malformedPayloadCount = 0,
     prismaHealthy = false,
+    unhealthyPrismaMigrations?: string[],
   ): StagingMigrationPlanResult {
-    return {
+    const result: StagingMigrationPlanResult = {
       ok: false,
       mode: 'plan',
       branch,
@@ -726,6 +729,10 @@ export async function runStagingMigrationPlan(
       malformedPayloadCount,
       prismaHealthy,
     }
+    if (unhealthyPrismaMigrations && unhealthyPrismaMigrations.length > 0) {
+      result.unhealthyPrismaMigrations = unhealthyPrismaMigrations
+    }
+    return result
   }
 
   if (!input.expectedCommit?.trim()) {
@@ -827,6 +834,9 @@ export async function runStagingMigrationPlan(
       duplicatePayloadCount,
       malformedPayloadCount,
       status.allPrismaApplied,
+      status.unhealthyPrismaMigrations && status.unhealthyPrismaMigrations.length > 0
+        ? status.unhealthyPrismaMigrations
+        : undefined,
     )
   }
 
@@ -1491,6 +1501,7 @@ async function main(): Promise<void> {
         duplicatePayloadCount: result.duplicatePayloadCount,
         malformedPayloadCount: result.malformedPayloadCount,
         prismaHealthy: result.prismaHealthy,
+        unhealthyPrismaMigrations: result.unhealthyPrismaMigrations,
       }
       process.stdout.write(JSON.stringify(evidence) + '\n')
     } else {
