@@ -95,7 +95,6 @@ function normalizePrismaAppliedStepsCount(value: number | string): number | null
 
 export function classifyPrismaMigration(row: PrismaMigrationRow): PrismaMigrationStatus {
   if (row.rolled_back_at) return 'rolled-back'
-  if (row.has_logs) return 'failed'
   if (!row.started_at) return 'unexpected'
   if (!row.finished_at) return 'in-progress'
 

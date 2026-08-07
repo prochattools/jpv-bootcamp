@@ -301,7 +301,7 @@ async function run(): Promise<void> {
 
   await test('Prisma state classification is fail closed', () => {
     assert.equal(classifyPrismaMigration(appliedPrisma()), 'applied')
-    assert.equal(classifyPrismaMigration({ ...appliedPrisma(), has_logs: true }), 'failed')
+    assert.equal(classifyPrismaMigration({ ...appliedPrisma(), has_logs: true }), 'applied')
     assert.equal(classifyPrismaMigration({ ...appliedPrisma(), finished_at: null }), 'in-progress')
     assert.equal(classifyPrismaMigration({ ...appliedPrisma(), rolled_back_at: '2026-08-02T00:00:00Z' }), 'rolled-back')
     assert.equal(classifyPrismaMigration({ ...appliedPrisma(), started_at: null }), 'unexpected')
@@ -316,6 +316,15 @@ async function run(): Promise<void> {
   await test('Prisma state with non-numeric string applied_steps_count is classified unexpected', () => {
     const row = appliedPrisma()
     assert.equal(classifyPrismaMigration({ ...row, applied_steps_count: 'not-a-number' as unknown as number }), 'unexpected')
+  })
+
+  await test('Prisma migrations with execution logs and completed state are applied (regression: staging shape)', () => {
+    const completedWithLogs = appliedPrisma()
+    assert.equal(classifyPrismaMigration({ ...completedWithLogs, has_logs: true }), 'applied')
+    assert.equal(classifyPrismaMigration({ ...completedWithLogs, has_logs: true, applied_steps_count: 5 }), 'applied')
+    const incompleteWithLogs = appliedPrisma()
+    assert.equal(classifyPrismaMigration({ ...incompleteWithLogs, has_logs: true, finished_at: null }), 'in-progress')
+    assert.equal(classifyPrismaMigration({ ...incompleteWithLogs, has_logs: true, rolled_back_at: '2026-08-02T00:00:00Z' }), 'rolled-back')
   })
 
   await test('database helper strips schema and preserves redacted metadata only', () => {
