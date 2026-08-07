@@ -1,15 +1,19 @@
 # Operator Handoff Summary
 
-<!-- Reconciliation note 2026-08-04: Latest completed verification snapshot is SHA 9c045fa5a5c327014c20fe9377f7d5368b550573 (workflow 30853006495, authenticated admin 14/14). The release manifest contains 166 required tests and four deferred validations. Account-action hardening is implemented locally; shared-staging migration authorization remains pending. -->
+<!-- Reconciliation note 2026-08-07: Current feature tip is `0cfde15 security: finalize staging-only execution truth [migration-plan-only]`. The release manifest contains 164 required gates. The live staging baseline remains `9c045fa5a5c327014c20fe9377f7d5368b550573`; migration 29 is implemented in source but its applied staging state must be established by the guarded read-only migration plan. -->
 
-## Current staging handoff — 2026-08-04
+## Current staging handoff — 2026-08-07
 
-- **Branch / deployed baseline:** `feature/course-branding-and-preview`; SHA `9c045fa5a5c327014c20fe9377f7d5368b550573`, preview workflow `30853006495` concluded `success`, exact-SHA health confirmed, authenticated staging admin gate passed `14/14`.
-- **IMPLEMENTED:** agreed core staging scope plus durable account-action reservation/finalization in local repository source, including behavioral concurrency coverage and reversible migration `20260804_050000_member_account_action_reservations`.
-- **LOCALLY VERIFIED:** focused account-action suites and Payload TypeScript currently pass; full release/build/browser/preflight validation must be completed before the local hardening commit.
-- **STAGING VERIFIED:** the deployed `9c045fa5` baseline is verified. Shared staging has not applied or exercised the new account-action reservation schema.
-- **Technical verdict:** `ACCOUNT-ACTION HARDENING IMPLEMENTED LOCALLY — STAGING MIGRATION AUTHORIZATION REQUIRED` after final local validation and commit.
-- **External gates:** explicit migration authorization, backup and rollback ownership, exact-SHA deployment evidence, provider verification, formal smoke, approved content, and stakeholder acceptance remain separate.
+**Status:** **ACCOUNT-ACTION HARDENING IMPLEMENTED LOCALLY — STAGING MIGRATION AUTHORIZATION REQUIRED**
+
+- **Only permitted branch:** `feature/course-branding-and-preview`.
+- **Only permitted staging target:** origin `https://preview.jpvbootcamp.com`, Dokploy slug `clients-jpv-bootcamp-app-tp9xrk`, app ID `I_2Vukga3cc3ZhaG-mUzU`, PostgreSQL `10.0.2.4:5433`, database `jpvbootcamp`, schema `jpvbootcamp_staging`.
+- **Current feature tip:** `0cfde15 security: finalize staging-only execution truth [migration-plan-only]`; pushes validate only and deployment requires explicit guarded dispatch.
+- **Deployed staging baseline:** `9c045fa5a5c327014c20fe9377f7d5368b550573`, preview workflow `30853006495`, authenticated staging admin `14/14`. No newer deployment is claimed.
+- **Implemented locally:** agreed core staging scope plus durable account-action reservation/finalization and reversible migration `20260804_050000_member_account_action_reservations`.
+- **Applied migration state:** not yet established by live evidence. Source registration does not prove database application.
+- **Next operator action:** run the guarded read-only staging migration plan; if it passes, prepare a separate apply-authorization packet. Do not apply migration 29 from this handoff.
+- **External gates:** explicit migration authorization, backup and rollback ownership, exact-SHA staging deployment evidence, provider verification, formal smoke, approved content, and stakeholder acceptance remain separate.
 
 ## Current state
 
@@ -21,7 +25,7 @@
 - Current branch tip: run `git rev-parse HEAD` to confirm; staging health: `https://preview.jpvbootcamp.com/api/health`
 - Branch tip verification: verify the current tip with `git log --oneline -1` before operator action
 - PR / review URL: `https://github.com/prochattools/jpv-bootcamp/pull/3` (draft)
-- Migration inventory: `29/29` application registrations synchronized; this is not applied database state. Migration `20260804_050000_member_account_action_reservations` exists only in local source until an explicit shared-staging migration authorization and deployment occur. The guarded read-only `pnpm staging:migration-status` CLI has not queried staging.
+- Migration inventory: 29/29 canonical Payload migration registrations synchronized; this is not applied database state. Migration `20260804_050000_member_account_action_reservations` exists only in local source until an explicit shared-staging migration authorization and deployment occur. The guarded read-only `pnpm staging:migration-status` CLI has not queried staging.
 - Staging deployment target: this feature branch
 - Front-end website go-live milestone: 22 July 2026
 - Internal delivery / handover buffer: 23 July 2026

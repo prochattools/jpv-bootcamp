@@ -1,15 +1,15 @@
 # JPV Bootcamp - Roadmap Progress Status
 
-<!-- Reconciliation note 2026-08-07: The deployed staging baseline remains SHA 9c045fa5a5c327014c20fe9377f7d5368b550573 with workflow 30853006495 successful and authenticated admin 14/14. The current release manifest contains 164 required gates. Account-action reservation/finalization is implemented and behaviorally validated in source; staging migration authorization and exact-SHA operational verification remain pending. Push to feature branch is now validation-only; deployment requires explicit workflow_dispatch. -->
+<!-- Reconciliation note 2026-08-07: Current feature tip is `0cfde15 security: finalize staging-only execution truth [migration-plan-only]`. Ordinary feature pushes validate only; staging deployment requires explicit guarded dispatch. The live staging baseline remains SHA `9c045fa5a5c327014c20fe9377f7d5368b550573`. Migration 29 is implemented in source, but its shared-staging applied state must be established by the guarded read-only migration plan before any apply authorization. -->
 
-## Current checkpoint — 2026-08-04
+## Current checkpoint — 2026-08-07
 
-- **COMPLETE CORE STAGING WORK:** M0-01 through M0-09, M1-01 through M1-06 in their documented state, UI-01 design/admin hardening, release/browser automation, exact-SHA staging deployment, media persistence, migration inventory/preflight, email queue/guard, Stripe test-mode behavior, and partner/sponsored staging boundaries.
-- **LOCALLY VERIFIED:** focused design contract, Payload TypeScript, changed-path security scan, application build, `pnpm test:release` (`164/164`), and `pnpm test:e2e` (Playwright: 188 collected, 148 passed, 40 skipped; four staging-only spec files not collected).
-- **STAGING VERIFIED (latest completed verification snapshot):** preview workflow `30853006495` concluded `success`; staging health reported exact SHA `9c045fa5a5c327014c20fe9377f7d5368b550573`; authenticated staging admin gate passed `14/14`. Verify current live state with `git rev-parse HEAD` and `https://preview.jpvbootcamp.com/api/health`.
-- **TECHNICAL STATUS:** `STAGING TECHNICAL IMPLEMENTATION COMPLETE — ACCEPTANCE PENDING EXTERNAL ACTION` for the deployed baseline.
-- **HARDENING STATUS:** `ACCOUNT-ACTION HARDENING IMPLEMENTED LOCALLY — STAGING MIGRATION AUTHORIZATION REQUIRED`; source implementation and behavioral tests are complete, but shared staging still uses the preceding schema.
-- **MIGRATION INVENTORY:** `29/29` application registrations are synchronized; this is registration inventory, not applied database state, and migration `20260804_050000_member_account_action_reservations` remains local only.
+- **ONLY PERMITTED OPERATIONAL LANE:** `feature/course-branding-and-preview` → `https://preview.jpvbootcamp.com` → Dokploy `clients-jpv-bootcamp-app-tp9xrk` / `I_2Vukga3cc3ZhaG-mUzU` → PostgreSQL `10.0.2.4:5433`, database `jpvbootcamp`, schema `jpvbootcamp_staging`.
+- **COMPLETE CORE STAGING WORK:** M0-01 through M0-09, M1-01 through M1-06 in their documented state, UI-01 design/admin hardening, release/browser automation, media persistence, migration inventory/preflight, email queue/guard, Stripe test-mode behavior, partner/sponsored staging boundaries, and durable account-action reservation/finalization source hardening.
+- **LOCALLY VERIFIED CURRENT CONTRACT:** the release manifest contains `164/164` required gates; staging-only invariant is `52/52`; full repository validation must be rerun before the next documentation commit.
+- **LIVE STAGING BASELINE:** preview workflow `30853006495` remains the latest established deployed baseline; staging health reported SHA `9c045fa5a5c327014c20fe9377f7d5368b550573` and authenticated staging admin gate `14/14`. No newer deployment is claimed here.
+- **MIGRATION 29:** `20260804_050000_member_account_action_reservations` is implemented and registered in the canonical 29-name registry source. Registration inventory is not applied database state; the guarded read-only staging migration plan is the next required evidence gate.
+- **NEXT CORE ACTION:** run the read-only staging migration plan against the canonical staging target and prepare a separate apply-authorization packet from sanitized live evidence. No schema write is authorized by this checkpoint.
 - **ACCEPTANCE PENDING EXTERNAL ACTION:** representative programme content, final copy/testimonials/biographies, approved provider evidence, approved migration execution, and formal staging sign-off.
 - **DEFERRED BY DESIGN:** M2-01 and Phases 8–11 remain outside the agreed core staging scope unless separately promoted.
 
@@ -21,7 +21,9 @@ Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`.
 
 ## Current position
 
-**Position:** The agreed core staging implementation is deployed and technically verified at SHA `9c045fa5a5c327014c20fe9377f7d5368b550573`, workflow `30853006495`, with authenticated admin verification `14/14`. The deterministic deployed baseline remains `164/164` release gates plus Playwright 188 collected / 148 passed / 40 skipped (adds environment configurator test). Durable account-action reservation/finalization is now implemented and behaviorally validated in local repository source, including the reversible 29th Payload migration; shared staging has not applied or verified that migration.
+**Position:** **STAGING TECHNICAL IMPLEMENTATION COMPLETE — ACCEPTANCE PENDING EXTERNAL ACTION**
+
+The agreed core staging implementation is deployed and technically verified at SHA `9c045fa5a5c327014c20fe9377f7d5368b550573`, workflow `30853006495`, with authenticated admin verification `14/14`. The deterministic deployed baseline remains `164/164` release gates plus Playwright 188 collected / 148 passed / 40 skipped (adds environment configurator test). Durable account-action reservation/finalization is now implemented and behaviorally validated in local repository source, including the reversible 29th Payload migration; shared staging has not applied or verified that migration.
 
 **Next repository task:** complete local validation and commit preparation for account-action hardening, then stop for explicit authorization before any feature-branch push that could apply migration `20260804_050000_member_account_action_reservations` to shared staging. After authorization, require exact-SHA CI, migration evidence, health verification, and approved non-destructive staging verification. `M2-01` and Phases 8–11 remain deferred unless explicitly promoted.
 
@@ -66,7 +68,7 @@ Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`.
 | --- | --- |
 | Branch | `feature/course-branding-and-preview` |
 | Staging target | This feature branch is the staging / production-staged deployment branch |
-| **Latest verification snapshot** | SHA `9c045fa5a5c327014c20fe9377f7d5368b550573` (2026-08-04 — preview workflow `30853006495` succeeded, exact-SHA health confirmed, authenticated admin `14/14`); current release manifest 168 tests. Current branch tip: `git rev-parse HEAD`. |
+| **Latest verification snapshot** | SHA `9c045fa5a5c327014c20fe9377f7d5368b550573` (2026-08-04 — preview workflow `30853006495` succeeded, exact-SHA health confirmed, authenticated admin `14/14`); current release manifest 164/164 tests. Current branch tip: `git rev-parse HEAD`. |
 | **Prior CODE HEAD** | `3b853d27b974f28f67f4e7e7f8d6f45786c88624 fix: verify production main boundary without leaking deployment identifiers` (historical) |
 | **Security Status** | Sponsored-seat concurrent claim is resolved; durable email recovery is implemented; account-action reservation/finalization is implemented and behaviorally validated in source, with shared-staging migration authorization pending. |
 | Release State | **ACCOUNT-ACTION HARDENING IMPLEMENTED LOCALLY — STAGING MIGRATION AUTHORIZATION REQUIRED** |
@@ -75,7 +77,7 @@ Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`.
 | Prior validated baseline | `d55229f test: enforce programme content readiness` |
 | Prior branch tip | `8927df9 docs: checkpoint membership implementation readiness` |
 | PR / review | `https://github.com/prochattools/jpv-bootcamp/pull/3` |
-| Applied migration state | Unverified in this checkpoint. The 29-name registry and health inventory prove application registration only; shared staging still runs the preceding schema, migration `20260804_050000_member_account_action_reservations` is not applied, and the guarded read-only status CLI has not queried staging. |
+| Applied migration state | Unverified in this checkpoint. The 29/29 canonical Payload migration registrations and health inventory prove application registration only; shared staging still runs the preceding schema, migration `20260804_050000_member_account_action_reservations` is not applied, and the guarded read-only `staging:migration-status` CLI has not queried staging. |
 | Migration approval | Authorized read-only operator evidence is required first; any subsequent write requires exact target, backup, rollback, and owner approval. |
 | Decision readiness | `DECISION-READY, EXTERNAL APPROVALS PENDING` |
 | Provider/email acceptance | Pending operator verification |
