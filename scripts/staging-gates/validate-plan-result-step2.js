@@ -1,5 +1,5 @@
 const fs = require('fs')
-const raw = fs.readFileSync(process.argv[1], 'utf8').trimEnd()
+const raw = fs.readFileSync(process.argv[2], 'utf8').trimEnd()
 const p = JSON.parse(raw)
 const safe = {
   version: p.version,
@@ -18,4 +18,4 @@ const safe = {
   malformedPayloadCount: p.malformedPayloadCount,
   prismaHealthy: p.prismaHealthy,
 }
-fs.writeFileSync(process.argv[2], JSON.stringify(safe) + '\n', { mode: 0o600 })
+fs.writeFileSync(process.argv[3], JSON.stringify(safe) + '\n', { mode: 0o600 })

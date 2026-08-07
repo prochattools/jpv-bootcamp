@@ -1,6 +1,6 @@
 const fs = require('fs')
-const p = JSON.parse(fs.readFileSync(process.argv[1], 'utf8'))
-const [,, expectedSha, expectedPending, requiredBranch, requiredSchema, requiredEnv, requiredTarget, expectedCountStr] = process.argv
+const p = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
+const [,,, expectedSha, expectedPending, requiredBranch, requiredSchema, requiredEnv, requiredTarget, expectedCountStr] = process.argv
 const expectedCount = parseInt(expectedCountStr, 10)
 const fails = []
 if (p.blockerCodes.length !== 0) fails.push('plan_ok with non-empty blockerCodes: ['+p.blockerCodes.join(',')+']')

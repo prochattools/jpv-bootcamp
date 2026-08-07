@@ -1,6 +1,6 @@
 const fs = require('fs')
-const raw = fs.readFileSync(process.argv[1], 'utf8')
-const allowedCodes = new Set(JSON.parse(process.argv[2]))
+const raw = fs.readFileSync(process.argv[2], 'utf8')
+const allowedCodes = new Set(JSON.parse(process.argv[3]))
 // Only allow trailing whitespace — reject BOM, prefixes, multiple documents, control chars
 const trimmed = raw.trimEnd()
 if (trimmed !== trimmed.trimStart()) { process.stderr.write('PLAN-BLOCKED: leading whitespace or BOM\n'); process.exit(1) }
