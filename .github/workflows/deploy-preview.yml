@@ -15,6 +15,29 @@ on:
     branches:
       - 'feature/**'
       - 'pr/**'
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: 'Operation: deploy-preview or read-only-migration-plan'
+        required: false
+        type: choice
+        options:
+          - deploy-preview
+          - read-only-migration-plan
+        default: 'deploy-preview'
+      branch_or_ref:
+        description: Branch or commit SHA to deploy (deploy-preview only)
+        required: false
+        type: string
+        default: 'feature/course-branding-and-preview'
+      expected_sha:
+        description: 'Full 40-character SHA required for read-only-migration-plan'
+        required: false
+        type: string
+      confirmation:
+        description: 'Confirmation phrase (read-only-migration-plan: run-read-only-staging-payload-migration-plan)'
+        required: false
+        type: string
 
 jobs:
   build-and-deploy-preview:
