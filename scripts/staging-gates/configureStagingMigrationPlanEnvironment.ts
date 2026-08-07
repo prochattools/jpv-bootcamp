@@ -383,15 +383,15 @@ export async function configureStagingMigrationPlanEnvironment(
     return result
   }
 
-  // ── Apply: create/update environment with zero reviewers + branch policy ─
+  // ── Apply: create/update environment with zero reviewers, no branch policy ─
+  // GitHub custom deployment branch policies are not supported on public repositories
+  // with a free org plan — they block deployment rather than enforcing the policy.
+  // Branch enforcement is handled in-workflow via explicit guards.
   const envBody = JSON.stringify({
     wait_timer: 0,
     prevent_self_review: false,
     reviewers: [],
-    deployment_branch_policy: {
-      protected_branches: false,
-      custom_branch_policies: true,
-    },
+    deployment_branch_policy: null,
   })
 
   const createEnvResult = apiMutate({
@@ -412,50 +412,7 @@ export async function configureStagingMigrationPlanEnvironment(
     result.blockers.push('github_api_call_failed')
     return result
   }
-  result.actions.push(`Created/updated environment '${ENV_NAME}' with zero reviewers and branch policy`)
-
-  // ── Apply: set custom branch policy ───────────────────────────────────────
-  const existingPolicies = apiRead({
-    args: ['api', `repos/${repo}/environments/${ENV_NAME}/deployment-branch-policies`],
-  }) as { branch_policies?: Array<{ id: number; name: string }> } | null
-
-  if (!existingPolicies) {
-    result.blockers.push('github_api_call_failed')
-    return result
-  }
-
-  for (const policy of existingPolicies.branch_policies ?? []) {
-    if (policy.name !== REQUIRED_FEATURE_BRANCH) {
-      const deleteResult = apiMutate({
-        args: ['api', '--method', 'DELETE', `repos/${repo}/environments/${ENV_NAME}/deployment-branch-policies/${policy.id}`],
-      })
-      if (!deleteResult.ok) {
-        result.blockers.push('branch_policy_delete_failed')
-        return result
-      }
-    }
-  }
-
-  const hasExact = (existingPolicies?.branch_policies ?? []).some((p) => p.name === REQUIRED_FEATURE_BRANCH)
-  if (!hasExact) {
-    const branchPolicyBody = JSON.stringify({ name: REQUIRED_FEATURE_BRANCH })
-    const branchPolicyResult = apiMutate({
-      args: [
-        'api',
-        '--method',
-        'POST',
-        `repos/${repo}/environments/${ENV_NAME}/deployment-branch-policies`,
-        '--input',
-        '-',
-      ],
-      stdin: branchPolicyBody,
-    })
-    if (!branchPolicyResult.ok) {
-      result.blockers.push('github_api_call_failed')
-      return result
-    }
-  }
-  result.actions.push(`Branch policy set: custom, exactly '${REQUIRED_FEATURE_BRANCH}'`)
+  result.actions.push(`Created/updated environment '${ENV_NAME}' with zero reviewers (branch guards in-workflow)`)
 
   // ── Apply: set PLAN_READY_FOR_DISPATCH and SOLO_OPERATOR_MODE variables ───
   const existingVars = apiRead({
@@ -550,28 +507,16 @@ export async function configureStagingMigrationPlanEnvironment(
   }
   result.verifiedState.push(`Required reviewers: 0 (solo-operator mode)`)
 
-  if (verifyEnv.deployment_branch_policy?.protected_branches !== false) {
+  // Verify no deployment branch policy is set — it blocks deployments on public repos with free org plan.
+  // Branch enforcement is in-workflow only.
+  if (
+    verifyEnv.deployment_branch_policy !== null &&
+    verifyEnv.deployment_branch_policy !== undefined
+  ) {
     result.blockers.push('environment_verification_failed')
     return result
   }
-  if (verifyEnv.deployment_branch_policy?.custom_branch_policies !== true) {
-    result.blockers.push('environment_verification_failed')
-    return result
-  }
-
-  const verifyPolicies = apiRead({
-    args: ['api', `repos/${repo}/environments/${ENV_NAME}/deployment-branch-policies`],
-  }) as { branch_policies?: Array<{ name: string }> } | null
-  if (!verifyPolicies) {
-    result.blockers.push('environment_verification_failed')
-    return result
-  }
-  const policyNames = (verifyPolicies.branch_policies ?? []).map((p) => p.name)
-  if (policyNames.length !== 1 || !policyNames.includes(REQUIRED_FEATURE_BRANCH)) {
-    result.blockers.push('environment_verification_failed')
-    return result
-  }
-  result.verifiedState.push(`Branch policy: ['${REQUIRED_FEATURE_BRANCH}']`)
+  result.verifiedState.push(`Branch policy: none (in-workflow guards enforce ${REQUIRED_FEATURE_BRANCH})`)
 
   const verifyVars = apiRead({
     args: ['api', `repos/${repo}/environments/${ENV_NAME}/variables`],

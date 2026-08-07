@@ -426,20 +426,17 @@ async function main(): Promise<void> {
   await test('apply: verify passes when environment has zero reviewers (solo-operator)', async () => {
     const responses = new Map<string, unknown>()
     // Pre-apply reads
-    responses.set('api|repos/prochattools/jpv-bootcamp/environments/staging-migration-plan/deployment-branch-policies', {
-      branch_policies: [{ id: 1, name: 'feature/course-branding-and-preview' }],
-    })
     responses.set('api|repos/prochattools/jpv-bootcamp/environments/staging-migration-plan/variables', {
       variables: [
         { name: 'PLAN_READY_FOR_DISPATCH', value: 'true' },
         { name: 'SOLO_OPERATOR_MODE', value: 'true' },
       ],
     })
-    // Verify reads: zero reviewers
+    // Verify reads: zero reviewers, no branch policy (free plan public repo)
     responses.set('api|repos/prochattools/jpv-bootcamp/environments/staging-migration-plan', {
       name: 'staging-migration-plan',
       protection_rules: [],
-      deployment_branch_policy: { protected_branches: false, custom_branch_policies: true },
+      deployment_branch_policy: null,
     })
     responses.set('api|repos/prochattools/jpv-bootcamp/environments/staging-migration-plan/secrets', {
       secrets: [

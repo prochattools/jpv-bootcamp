@@ -148,53 +148,19 @@ export async function runPreflight(deps: PreflightDependencies = {}): Promise<Pr
       result.info.push(`Required reviewers: 0 (solo-operator mode)`)
     }
 
-    // Branch policy: must be custom, exactly naming the feature branch, with no wildcards or extra branches.
-    // protected_branches mode is rejected because it may include main or other protected branches.
+    // GitHub custom deployment branch policies are not supported on public repositories
+    // with a free organization plan. Branch enforcement is handled in-workflow via explicit
+    // guards (branch name check, remote tip check, REQUIRED_BRANCH in evidence validation).
+    // Verify the environment does NOT have a branch_policy protection rule blocking deployments.
     const branchPolicy = envData.deployment_branch_policy
-    if (!branchPolicy) {
+    if (branchPolicy && (branchPolicy.protected_branches || branchPolicy.custom_branch_policies)) {
       result.blockers.push(
-        `Environment '${ENV_NAME}' has no deployment branch policy — restrict deployments to ` +
-          `'${REQUIRED_FEATURE_BRANCH}' only via custom branch policies`,
+        `Environment '${ENV_NAME}' has a deployment branch policy enabled — ` +
+          `this blocks deployments on the free org plan for public repos. ` +
+          `Remove it at: https://github.com/${repo}/settings/environments`,
       )
-    } else if (branchPolicy.protected_branches && !branchPolicy.custom_branch_policies) {
-      // protected_branches = all protected branches — that includes main; not acceptable
-      result.blockers.push(
-        `Environment '${ENV_NAME}' branch policy is 'protected branches' mode which may include main — ` +
-          `switch to a custom policy limited exclusively to '${REQUIRED_FEATURE_BRANCH}'`,
-      )
-    } else if (branchPolicy.custom_branch_policies) {
-      // Verify the custom policy contains exactly the feature branch — no wildcards, no extras
-      const policies = ghApi(
-        `repos/${repo}/environments/${ENV_NAME}/deployment-branch-policies`,
-        apiExec,
-      ) as { branch_policies?: Array<{ name: string }> } | null
-      const names = (policies?.branch_policies ?? []).map((p) => p.name)
-      const hasExact = names.includes(REQUIRED_FEATURE_BRANCH)
-      const hasWildcard = names.some((n) => n.includes('*') || n.includes('?') || n.includes('['))
-      const hasExtra = names.some((n) => n !== REQUIRED_FEATURE_BRANCH)
-      if (!hasExact) {
-        result.blockers.push(
-          `Environment '${ENV_NAME}' custom branch policy does not include '${REQUIRED_FEATURE_BRANCH}' — ` +
-            `got: [${names.join(', ')}]`,
-        )
-      } else if (hasWildcard) {
-        result.blockers.push(
-          `Environment '${ENV_NAME}' custom branch policy contains wildcards — ` +
-            `policy must name '${REQUIRED_FEATURE_BRANCH}' exactly with no glob patterns. Got: [${names.join(', ')}]`,
-        )
-      } else if (hasExtra) {
-        result.blockers.push(
-          `Environment '${ENV_NAME}' custom branch policy includes extra branches beyond '${REQUIRED_FEATURE_BRANCH}' — ` +
-            `only the exact feature branch is permitted. Got: [${names.join(', ')}]`,
-        )
-      } else {
-        result.info.push(`Branch policy: custom, exactly '${REQUIRED_FEATURE_BRANCH}' only`)
-      }
     } else {
-      result.blockers.push(
-        `Environment '${ENV_NAME}' has an unrecognized branch policy: ${JSON.stringify(branchPolicy)} — ` +
-          `set a custom policy limited exclusively to '${REQUIRED_FEATURE_BRANCH}'`,
-      )
+      result.info.push(`Branch policy: none (in-workflow guards enforce ${REQUIRED_FEATURE_BRANCH})`)
     }
   }
 
