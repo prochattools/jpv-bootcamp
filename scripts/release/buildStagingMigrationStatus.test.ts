@@ -70,8 +70,9 @@ class RecordingClient implements PgClientLike {
       return { rows: [{ current_schema: this.schema }] as unknown as Row[] }
     }
     if (text.includes('.payload_migrations')) {
+      // node-postgres returns numeric columns as strings to preserve precision
       return {
-        rows: PAYLOAD_MIGRATION_NAMES.map((name) => ({ name, batch: 1 })) as unknown as Row[],
+        rows: PAYLOAD_MIGRATION_NAMES.map((name) => ({ name, batch: '1' })) as unknown as Row[],
       }
     }
     if (text.includes('._prisma_migrations')) {
@@ -188,10 +189,22 @@ async function run(): Promise<void> {
     assert.ok(report.blockers.includes('Malformed Payload migration evidence exists'))
   })
 
-  await test('malformed: migration 29 row with string batch is classified malformed', async () => {
+  await test('valid: migration 29 row with numeric string batch (from node-postgres) is normalized and accepted', async () => {
     const rows = PAYLOAD_MIGRATION_NAMES.map((name, i) => ({ name, batch: i === PAYLOAD_MIGRATION_NAMES.length - 1 ? '1' : 1 }))
     const report = await buildStagingMigrationStatus(malformedAdapter(rows), 'jpvbootcamp_staging')
+    // When all Payload migrations have valid batches (including node-postgres string normalization) and all Prisma migrations are applied,
+    // the report should be VERIFIED with no blockers
+    assert.equal(report.result, 'VERIFIED')
+    assert.equal(report.blockers.length, 0)
+    assert.equal(report.appliedPayloadMigrations.includes(TARGET_MIG), true)
+    assert.equal(report.payloadMigrationRecords.some((r) => r.name === TARGET_MIG && r.batch === 1), true)
+  })
+
+  await test('malformed: migration 29 row with non-numeric string batch is classified malformed', async () => {
+    const rows = PAYLOAD_MIGRATION_NAMES.map((name, i) => ({ name, batch: i === PAYLOAD_MIGRATION_NAMES.length - 1 ? 'not-a-number' : 1 }))
+    const report = await buildStagingMigrationStatus(malformedAdapter(rows), 'jpvbootcamp_staging')
     assert.ok(report.blockers.includes('Malformed Payload migration evidence exists'))
+    assert.ok(report.malformedPayloadMigrationRecords.some((r) => r.reason === 'invalid_batch'))
   })
 
   await test('malformed: migration 29 row with empty name is classified malformed', async () => {
@@ -292,6 +305,17 @@ async function run(): Promise<void> {
     assert.equal(classifyPrismaMigration({ ...appliedPrisma(), finished_at: null }), 'in-progress')
     assert.equal(classifyPrismaMigration({ ...appliedPrisma(), rolled_back_at: '2026-08-02T00:00:00Z' }), 'rolled-back')
     assert.equal(classifyPrismaMigration({ ...appliedPrisma(), started_at: null }), 'unexpected')
+  })
+
+  await test('Prisma state with numeric string applied_steps_count (from node-postgres) is normalized and accepted', () => {
+    const row = appliedPrisma()
+    assert.equal(classifyPrismaMigration({ ...row, applied_steps_count: '1' as unknown as number }), 'applied')
+    assert.equal(classifyPrismaMigration({ ...row, applied_steps_count: '5' as unknown as number }), 'applied')
+  })
+
+  await test('Prisma state with non-numeric string applied_steps_count is classified unexpected', () => {
+    const row = appliedPrisma()
+    assert.equal(classifyPrismaMigration({ ...row, applied_steps_count: 'not-a-number' as unknown as number }), 'unexpected')
   })
 
   await test('database helper strips schema and preserves redacted metadata only', () => {

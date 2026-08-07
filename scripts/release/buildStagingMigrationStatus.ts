@@ -11,7 +11,7 @@ import { PAYLOAD_MIGRATION_NAMES } from '../../src/migrations/migrationRegistry'
 
 export type PayloadMigrationRow = {
   name: string
-  batch: number
+  batch: number | string
 }
 
 export type PrismaMigrationRow = {
@@ -19,7 +19,7 @@ export type PrismaMigrationRow = {
   started_at: string | null
   finished_at: string | null
   rolled_back_at: string | null
-  applied_steps_count: number
+  applied_steps_count: number | string
   has_logs: boolean
 }
 
@@ -83,12 +83,24 @@ export const REGISTERED_PRISMA_MIGRATIONS = fs.readdirSync(
   { withFileTypes: true },
 ).filter((entry) => entry.isDirectory()).map((entry) => entry.name).sort()
 
+function normalizePrismaAppliedStepsCount(value: number | string): number | null {
+  if (typeof value === 'number') {
+    return value
+  }
+  if (typeof value === 'string' && value.length > 0 && /^\d+$/.test(value)) {
+    return Number.parseInt(value, 10)
+  }
+  return null
+}
+
 export function classifyPrismaMigration(row: PrismaMigrationRow): PrismaMigrationStatus {
   if (row.rolled_back_at) return 'rolled-back'
   if (row.has_logs) return 'failed'
   if (!row.started_at) return 'unexpected'
   if (!row.finished_at) return 'in-progress'
-  if (!Number.isInteger(row.applied_steps_count) || row.applied_steps_count < 0) return 'unexpected'
+
+  const stepsCount = normalizePrismaAppliedStepsCount(row.applied_steps_count)
+  if (!Number.isInteger(stepsCount) || stepsCount < 0) return 'unexpected'
   return 'applied'
 }
 
@@ -130,7 +142,22 @@ export async function buildStagingMigrationStatus(
       typeof row.name === 'string' &&
       row.name.length > 0 &&
       !/[\x00-\x1f\x7f]/.test(row.name)
-    const batchValid = Number.isSafeInteger(row.batch) && row.batch >= 1
+
+    // Normalize numeric string (from node-postgres numeric column) to number.
+    // Reject null, undefined, empty strings, non-numeric strings, non-integers, or values < 1.
+    let batchNumber: number | null = null
+    let batchValid = false
+    if (typeof row.batch === 'number') {
+      batchNumber = row.batch
+      batchValid = Number.isSafeInteger(batchNumber) && batchNumber >= 1
+    } else if (typeof row.batch === 'string' && row.batch.length > 0) {
+      // Safely parse string batch from node-postgres numeric column.
+      // Reject leading zeros, whitespace, '+' prefix, or any non-numeric chars.
+      if (/^\d+$/.test(row.batch)) {
+        batchNumber = Number.parseInt(row.batch, 10)
+        batchValid = Number.isSafeInteger(batchNumber) && batchNumber >= 1
+      }
+    }
 
     if (!nameValid) {
       malformedPayloadMigrationRecords.push({ rowIndex, reason: 'invalid_name' })
@@ -148,7 +175,8 @@ export async function buildStagingMigrationStatus(
       malformedPayloadMigrationRecords.push({ rowIndex, reason: 'invalid_batch' })
       continue
     }
-    payloadMigrationRecords.push({ name: row.name, batch: row.batch })
+    // batchNumber is guaranteed to be a safe integer >= 1 by the above checks
+    payloadMigrationRecords.push({ name: row.name, batch: batchNumber! })
   }
 
   const appliedPayloadMigrations = payloadMigrationRecords.map((row) => row.name)
@@ -159,7 +187,7 @@ export async function buildStagingMigrationStatus(
   const prismaMigrations = evidence.prismaMigrations.map((row) => ({
     migrationName: row.migration_name,
     status: classifyPrismaMigration(row),
-    appliedStepsCount: row.applied_steps_count,
+    appliedStepsCount: normalizePrismaAppliedStepsCount(row.applied_steps_count) ?? 0,
   }))
   const registeredPrismaSet = new Set(REGISTERED_PRISMA_MIGRATIONS)
   const evidencedPrismaNames = prismaMigrations.map((row) => row.migrationName)
