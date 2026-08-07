@@ -1,6 +1,6 @@
 # JPV Bootcamp - Roadmap Progress Status
 
-<!-- Reconciliation note 2026-08-04: The deployed staging baseline remains SHA 9c045fa5a5c327014c20fe9377f7d5368b550573 with workflow 30853006495 successful and authenticated admin 14/14. The current release manifest contains 166 required gates and four deferred validations. Account-action reservation/finalization is implemented and behaviorally validated in source; staging migration authorization and exact-SHA operational verification remain pending. -->
+<!-- Reconciliation note 2026-08-07: The deployed staging baseline remains SHA 9c045fa5a5c327014c20fe9377f7d5368b550573 with workflow 30853006495 successful and authenticated admin 14/14. The current release manifest contains 164 required gates. Account-action reservation/finalization is implemented and behaviorally validated in source; staging migration authorization and exact-SHA operational verification remain pending. Push to feature branch is now validation-only; deployment requires explicit workflow_dispatch. -->
 
 ## Current checkpoint — 2026-08-04
 

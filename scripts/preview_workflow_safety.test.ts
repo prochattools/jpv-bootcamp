@@ -42,7 +42,9 @@ assert.match(manualPublish, /\$\{#REQUESTED_SHA\}" -ne 40/)
 assert.match(manualPublish, /\[ "\$CONFIRMATION" != "publish-preview-image" \]/)
 assert.match(manualPublish, /source_date is required/)
 assert.match(manualPublish, /git rev-parse HEAD/)
-assert.match(manualPublish, /docker\/login-action@v3/)
+// All docker actions SHA-pinned — no mutable @v3/@v5 tags
+assert.match(manualPublish, /docker\/login-action@[a-f0-9]{40}/)
+assert.match(manualPublish, /docker\/build-push-action@[a-f0-9]{40}/)
 assert.match(manualPublish, /push: true/)
 assert.match(manualPublish, /Determine publish tags/)
 // Hardened: branch tag is fixed to staging branch slug, not dynamically derived from github.ref_name

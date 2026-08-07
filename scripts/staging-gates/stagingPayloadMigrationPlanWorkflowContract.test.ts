@@ -163,8 +163,10 @@ async function main(): Promise<void> {
   // ─── Preflight: separated before checkout, uses injected vars/secrets ──────
 
   await test('preflight: PLAN_READY_FOR_DISPATCH variable guard runs before checkout', () => {
-    const readyVarIndex = yml.indexOf('PLAN_READY_FOR_DISPATCH')
-    const checkoutIndex = yml.indexOf('refs/heads/feature/course-branding-and-preview')
+    // Scope to planJobYml — other jobs (deploy-preview, validate-only) also checkout
+    // feature/course-branding-and-preview; the ordering invariant is within read-only-plan only.
+    const readyVarIndex = planJobYml.indexOf('PLAN_READY_FOR_DISPATCH')
+    const checkoutIndex = planJobYml.indexOf('refs/heads/feature/course-branding-and-preview')
     assert.ok(readyVarIndex > -1, 'must check PLAN_READY_FOR_DISPATCH readiness variable')
     assert.ok(checkoutIndex > -1, 'must checkout feature branch by branch ref')
     assert.ok(

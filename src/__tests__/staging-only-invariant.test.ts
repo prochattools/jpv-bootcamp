@@ -226,4 +226,177 @@ describe('Staging-only invariant', () => {
       expect(preflight).toContain(String(STAGING_PORT))
     })
   })
+
+  describe('databaseConnectionConfig structural URL validation', () => {
+    it('rejects configured URL with missing schema', () => {
+      const src = readFile('src/lib/databaseConnectionConfig.ts')
+      // Must throw when schema param is absent — substring search insufficient
+      expect(src).toContain('must include exactly one schema parameter')
+    })
+
+    it('rejects invalid/malformed URL (fail closed)', () => {
+      const src = readFile('src/lib/databaseConnectionConfig.ts')
+      expect(src).toContain('not a valid URL')
+    })
+
+    it('rejects wrong protocol (non-PostgreSQL)', () => {
+      const src = readFile('src/lib/databaseConnectionConfig.ts')
+      expect(src).toContain('must use PostgreSQL protocol')
+    })
+
+    it('rejects duplicate schema parameters', () => {
+      const src = readFile('src/lib/databaseConnectionConfig.ts')
+      expect(src).toContain('exactly one schema parameter')
+    })
+
+    it('uses structural URL parser, not substring grep', () => {
+      const src = readFile('src/lib/databaseConnectionConfig.ts')
+      // Must parse with URL constructor, not grep/includes
+      expect(src).toContain('new URL(')
+      expect(src).not.toMatch(/grep.*schema/)
+    })
+  })
+
+  describe('payload.config wires assertStagingSchema', () => {
+    it('imports assertStagingSchema', () => {
+      const cfg = readFile('src/payload.config.ts')
+      expect(cfg).toContain('assertStagingSchema')
+    })
+
+    it('calls assertStagingSchema when configured', () => {
+      const cfg = readFile('src/payload.config.ts')
+      // Must be called for configured URLs — not just exported
+      expect(cfg).toMatch(/assertStagingSchema\(databaseConnection\)/)
+    })
+
+    it('guards call behind DEPLOYMENT_RUNTIME check — does not throw at build time', () => {
+      const cfg = readFile('src/payload.config.ts')
+      // assertStagingSchema is gated on DEPLOYMENT_RUNTIME=docker (runner stage only, not builder)
+      // so it does not fire at Next.js build time when DATABASE_URL may be a placeholder
+      expect(cfg).toContain("DEPLOYMENT_RUNTIME === 'docker'")
+    })
+  })
+
+  describe('start-staging.sh uses structural Node.js URL validation', () => {
+    it('uses Node.js URL parser, not grep', () => {
+      const sh = readFile('scripts/runtime/start-staging.sh')
+      expect(sh).toContain('new URL(')
+      expect(sh).not.toMatch(/grep.*schema.*REQUIRED_SCHEMA/)
+    })
+
+    it('verifies hostname by field, not substring', () => {
+      const sh = readFile('scripts/runtime/start-staging.sh')
+      expect(sh).toContain('parsed.hostname')
+    })
+
+    it('verifies port by field, not substring', () => {
+      const sh = readFile('scripts/runtime/start-staging.sh')
+      expect(sh).toContain('parsed.port')
+    })
+
+    it('verifies database by pathname field, not substring', () => {
+      const sh = readFile('scripts/runtime/start-staging.sh')
+      expect(sh).toContain('parsed.pathname')
+    })
+
+    it('verifies exactly one schema parameter, not substring', () => {
+      const sh = readFile('scripts/runtime/start-staging.sh')
+      expect(sh).toContain('getAll(')
+      expect(sh).toContain('exactly one schema')
+    })
+  })
+
+  describe('push-triggered deploy path is eliminated', () => {
+    it('validate-only job contains no Docker push step', () => {
+      const yml = readFile('.github/workflows/deploy-preview.yml')
+      // Find the validate-only job section (before deploy-preview job)
+      const validateSection = yml.match(/validate-only:[\s\S]*?(?=\n  [a-z-]+:[\n ])/)?.[0] ?? yml
+      expect(validateSection).not.toContain('push: true')
+    })
+
+    it('validate-only job contains no Dokploy call', () => {
+      const yml = readFile('.github/workflows/deploy-preview.yml')
+      const validateSection = yml.match(/validate-only:[\s\S]*?(?=\n  deploy-preview:)/)?.[0] ?? ''
+      expect(validateSection).not.toContain('application.deploy')
+      expect(validateSection).not.toContain('application.update')
+    })
+
+    it('deploy-preview job only runs on workflow_dispatch', () => {
+      const yml = readFile('.github/workflows/deploy-preview.yml')
+      // deploy-preview job must have if condition requiring workflow_dispatch
+      const deployJob = yml.match(/  deploy-preview:[\s\S]*?(?=\n  read-only-plan:)/)?.[0] ?? ''
+      expect(deployJob).toContain('workflow_dispatch')
+      expect(deployJob).toContain("inputs.operation == 'deploy-preview'")
+    })
+
+    it('deploy-preview job requires exact SHA confirmation', () => {
+      const yml = readFile('.github/workflows/deploy-preview.yml')
+      const deployJob = yml.match(/  deploy-preview:[\s\S]*?(?=\n  read-only-plan:)/)?.[0] ?? ''
+      expect(deployJob).toContain('deploy-staging-feature-tip')
+      expect(deployJob).toContain('expected_sha')
+    })
+
+    it('deploy-preview job checks out fixed feature branch, not generic ref', () => {
+      const yml = readFile('.github/workflows/deploy-preview.yml')
+      const deployJob = yml.match(/  deploy-preview:[\s\S]*?(?=\n  read-only-plan:)/)?.[0] ?? ''
+      expect(deployJob).toContain('refs/heads/feature/course-branding-and-preview')
+    })
+
+    it('deploy-preview image tags use fixed branch slug, no dynamic branch_ref variable', () => {
+      const yml = readFile('.github/workflows/deploy-preview.yml')
+      const deployJob = yml.match(/  deploy-preview:[\s\S]*?(?=\n  read-only-plan:)/)?.[0] ?? ''
+      expect(deployJob).toContain('feature-course-branding-and-preview')
+      expect(deployJob).not.toContain('branch_ref=')
+    })
+
+    it('branch_or_ref input is removed', () => {
+      const yml = readFile('.github/workflows/deploy-preview.yml')
+      expect(yml).not.toContain('branch_or_ref:')
+    })
+  })
+
+  describe('publish-preview-image requires exact feature branch dispatch', () => {
+    it('rejects dispatch from branches other than the staging feature branch', () => {
+      const yml = readFile('.github/workflows/publish-preview-image.yml')
+      expect(yml).toContain('feature/course-branding-and-preview')
+      expect(yml).toContain('PUBLISH-DENIED')
+    })
+
+    it('all third-party actions are SHA-pinned', () => {
+      const yml = readFile('.github/workflows/publish-preview-image.yml')
+      // No action reference should use a mutable tag (@v3, @v4, @latest) without a SHA
+      const unpinned = [...yml.matchAll(/uses:\s+([\w/-]+)@(v\d+|latest)(?!\s*#|\s*$|\w)/g)]
+        .map(m => m[0])
+        .filter(ref => !ref.includes('#'))
+      expect(unpinned).toEqual([])
+    })
+  })
+
+  describe('active docs describe only staging operational lane', () => {
+    it('OPERATOR_DEPLOYMENT_AND_VERIFICATION does not reference branch_or_ref', () => {
+      const doc = readFile('docs/OPERATOR_DEPLOYMENT_AND_VERIFICATION.md')
+      expect(doc).not.toContain('branch_or_ref:')
+    })
+
+    it('active docs do not describe STARTUP_MODE as operational', () => {
+      // STARTUP_MODE is deleted; it should not appear as an active configuration instruction
+      // (historical safety incident summaries are permitted in collapsed/archived docs)
+      const activeRunbookDocs = [
+        'docs/OPERATOR_DEPLOYMENT_AND_VERIFICATION.md',
+        'docs/DOKPLOY_DEPLOYMENT_GUIDE.md',
+        'docs/client/OPERATOR_HANDOFF_SUMMARY.md',
+      ]
+      for (const doc of activeRunbookDocs) {
+        const content = readFile(doc)
+        expect(content).not.toContain('STARTUP_MODE=database-deploy')
+        expect(content).not.toContain('STARTUP_MODE=application-only')
+      }
+    })
+
+    it('PREVIEW_RELEASE_READINESS workflow architecture describes push as validation-only', () => {
+      const doc = readFile('docs/PREVIEW_RELEASE_READINESS.md')
+      expect(doc).toContain('validation-only')
+      expect(doc).not.toContain('Push path (`deploy-preview`)')
+    })
+  })
 })

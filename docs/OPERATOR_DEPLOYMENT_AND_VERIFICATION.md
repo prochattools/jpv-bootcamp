@@ -53,9 +53,11 @@
 1. Go to: https://github.com/prochattools/prochattools/actions
 2. Find workflow: **Preview Build and Deploy**
 3. Click **Run workflow**
-4. Enter input:
+4. Enter inputs:
    ```
-   branch_or_ref: feature/course-branding-and-preview
+   operation: deploy-preview
+   expected_sha: <current 40-char tip of feature/course-branding-and-preview>
+   confirmation: deploy-staging-feature-tip
    ```
 5. Click **Run workflow**
 6. Wait ~10-15 minutes for completion

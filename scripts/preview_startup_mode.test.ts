@@ -36,13 +36,18 @@ assert.match(nixpacks, /bash scripts\/runtime\/start-staging\.sh/)
 assert.doesNotMatch(nixpacks, /start-prod\.sh/)
 
 assert.match(previewWorkflow, /name: Preview Build and Deploy/)
-assert.match(previewWorkflow, /docker\/build-push-action@v5/)
+// Push path is validation-only; deployment is workflow_dispatch with deploy-preview operation
+assert.match(previewWorkflow, /validate-only/)
+assert.match(previewWorkflow, /deploy-preview/)
+// Docker push and Dokploy are in deploy-preview job, not validate-only
+assert.match(previewWorkflow, /docker\/build-push-action@[a-f0-9]{40}/)
 assert.match(previewWorkflow, /context: \./)
-// Unified pipeline includes image publication and deployment
 assert.match(previewWorkflow, /push: true/)
 assert.match(previewWorkflow, /packages: write/)
 assert.match(previewWorkflow, /Trigger Dokploy redeploy/)
 assert.doesNotMatch(previewWorkflow, /nixpacks/i)
+// branch_or_ref input removed — deploy uses fixed feature branch + expected_sha
+assert.doesNotMatch(previewWorkflow, /branch_or_ref:/)
 
 // start-staging.sh: staging-only contract — no STARTUP_MODE, no DEPLOYMENT_ENV, no database-deploy
 assert.match(startup, /REQUIRED_HOST="10\.0\.2\.4"/)

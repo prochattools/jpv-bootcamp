@@ -34,7 +34,7 @@ import { resolvePayloadMediaStorageConfig } from './lib/payload-media-storage'
 import { stagingAutoProvision } from './lib/staging-auto-provision'
 import { migrations } from './migrations'
 import { jpvBrand } from './lib/brand/jpvDesignSystem'
-import { resolveDatabaseConnectionConfig } from './lib/databaseConnectionConfig'
+import { resolveDatabaseConnectionConfig, assertStagingSchema } from './lib/databaseConnectionConfig'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -127,6 +127,12 @@ const databaseConnection = resolveDatabaseConnectionConfig(
   process.env.DATABASE_URL,
   process.env.PAYLOAD_MIGRATION_SCHEMA,
 )
+// Fail closed when running in the Docker runtime environment if the schema is wrong.
+// DEPLOYMENT_RUNTIME=docker is set in the runner stage (not the builder stage), so this guard
+// fires at server startup but not during Next.js page-data collection at build time.
+if (process.env.DEPLOYMENT_RUNTIME === 'docker') {
+  assertStagingSchema(databaseConnection)
+}
 
 export default buildConfig({
   admin: {

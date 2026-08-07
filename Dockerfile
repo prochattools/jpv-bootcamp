@@ -17,8 +17,11 @@ FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 # Prisma PrismaClient() reads DATABASE_URL at module-eval during page data collection.
-ENV DATABASE_URL=postgresql://build:build@localhost:5432/build
-# NODE_ENV must be production for Payload importmap generation to work correctly
+# Schema is required by the structural validator; the build never connects to this address.
+# At runtime, start-staging.sh validates the real DATABASE_URL before the server starts.
+ENV DATABASE_URL=postgresql://build:build@localhost:5432/build?schema=jpvbootcamp_staging
+# NODE_ENV=production is a Next.js/Payload build optimization mode, not the operational environment.
+# It controls bundling, tree-shaking, and importmap generation — not deployment target or staging lane.
 ENV NODE_ENV=production
 # NEXT_PUBLIC_* vars are baked into the client bundle at build time.
 # Staging-only: production defaults removed. Only preview.jpvbootcamp.com is permitted.
@@ -43,7 +46,7 @@ RUN --mount=type=cache,target=/app/.next/cache \
 # causes "cannot copy to non-directory" in buildkit. Separate path avoids the conflict.
 # newrelic: loaded via NODE_OPTIONS=--require newrelic (not traced by Next.js standalone)
 # pg: used by scripts/db/init-tenant.js at deploy time
-# prisma: CLI needed for db:migrate:prod (devDep, not included in standalone)
+# prisma: CLI for authorized migration commands only (devDep, not included in standalone)
 FROM node:20-bullseye-slim AS script-deps
 WORKDIR /script-deps
 RUN echo '{"dependencies":{"newrelic":"^13.18.0","pg":"^8","prisma":"6.15.0"}}' > package.json

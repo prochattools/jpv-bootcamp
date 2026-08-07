@@ -21,10 +21,98 @@ export function validateDatabaseSchemaIdentifier(value: string): string {
 }
 
 /**
+ * Validates that rawUrl is a structurally sound PostgreSQL connection URL.
+ * Rejects: wrong protocol, userinfo tricks (host in username), missing host,
+ * missing database path, duplicate or missing schema param.
+ */
+function parseAndValidatePostgresUrl(rawUrl: string): {
+  connectionString: string
+  schema: string | null
+  protocol: string
+  credentialsPresent: boolean
+  host: string
+  port: string
+  database: string
+} {
+  let parsed: URL
+  try {
+    parsed = new URL(rawUrl)
+  } catch {
+    throw new Error(`DATABASE_URL is not a valid URL: must use PostgreSQL protocol (postgresql:// or postgres://)`)
+  }
+
+  const protocol = parsed.protocol
+  if (protocol !== 'postgresql:' && protocol !== 'postgres:') {
+    throw new Error(
+      `DATABASE_URL must use PostgreSQL protocol (postgresql:// or postgres://), got: ${protocol}`,
+    )
+  }
+
+  const host = parsed.hostname
+  if (!host) {
+    throw new Error('DATABASE_URL must include a hostname')
+  }
+
+  // Guard against userinfo tricks: reject if username contains '@' or '/' that survive URL parsing
+  const username = parsed.username
+  if (username.includes('@') || username.includes('/')) {
+    throw new Error('DATABASE_URL contains malformed userinfo')
+  }
+
+  const database = parsed.pathname.replace(/^\//, '')
+  if (!database) {
+    throw new Error('DATABASE_URL must include a database name in the path (e.g. postgresql://host/dbname)')
+  }
+  if (database.includes('/')) {
+    throw new Error('DATABASE_URL database path must not contain additional path segments')
+  }
+
+  const port = parsed.port || (protocol === 'postgresql:' ? '5432' : '5432')
+  const credentialsPresent = Boolean(parsed.username || parsed.password)
+
+  // Require exactly one schema parameter — reject missing and reject duplicates
+  const allParams = [...parsed.searchParams.entries()]
+  const schemaParams = allParams.filter(([k]) => k === 'schema')
+  if (schemaParams.length === 0) {
+    throw new Error(
+      `DATABASE_URL must include exactly one schema parameter (e.g. ?schema=${REQUIRED_STAGING_SCHEMA})`,
+    )
+  }
+  if (schemaParams.length > 1) {
+    throw new Error('DATABASE_URL must include exactly one schema parameter — duplicates are not permitted')
+  }
+
+  const rawSchema = schemaParams[0][1].trim()
+  if (!rawSchema) {
+    throw new Error('DATABASE_URL schema parameter must not be empty')
+  }
+
+  // Remove schema from connection string (drivers resolve it separately)
+  const cleanUrl = new URL(rawUrl)
+  cleanUrl.searchParams.delete('schema')
+  const connectionString = cleanUrl.toString()
+
+  return {
+    connectionString,
+    schema: rawSchema,
+    protocol,
+    credentialsPresent,
+    host,
+    port,
+    database,
+  }
+}
+
+/**
  * Resolves and validates a database connection config from the given URL and
- * optional schema override. Requires an explicit schema — no default fallback.
- * At runtime, the operational staging boundary is enforced by start-staging.sh
- * which requires DATABASE_URL to contain schema=jpvbootcamp_staging exactly.
+ * optional schema override. For configured URLs: requires PostgreSQL protocol,
+ * hostname, database path, and exactly one schema parameter. Never silently
+ * substitutes a schema — missing schema rejects with an error. Schema override
+ * replaces the URL schema value and must also be an explicit identifier.
+ *
+ * When DATABASE_URL is absent (build-time / unconfigured), returns an
+ * unconfigured config so module evaluation does not throw at build time.
+ * Call assertStagingSchema() at server startup to enforce the boundary.
  */
 export function resolveDatabaseConnectionConfig(
   rawUrl: string | undefined,
@@ -45,43 +133,22 @@ export function resolveDatabaseConnectionConfig(
     }
   }
 
-  let schema = REQUIRED_STAGING_SCHEMA
-  let schemaSource: DatabaseConnectionConfig['metadata']['schemaSource'] = 'unconfigured'
-  let connectionString = rawUrl
-  let protocol: string | null = null
-  let credentialsPresent = false
-
-  try {
-    const parsed = new URL(rawUrl)
-    protocol = parsed.protocol || null
-    credentialsPresent = Boolean(parsed.username || parsed.password)
-    const urlSchema = parsed.searchParams.get('schema')?.trim()
-    if (urlSchema) {
-      schema = validateDatabaseSchemaIdentifier(urlSchema)
-      schemaSource = 'url'
-    }
-    parsed.searchParams.delete('schema')
-    connectionString = parsed.toString()
-  } catch {
-    connectionString = rawUrl
-  }
+  const parsed = parseAndValidatePostgresUrl(rawUrl)
+  let schema = validateDatabaseSchemaIdentifier(parsed.schema)
+  let schemaSource: DatabaseConnectionConfig['metadata']['schemaSource'] = 'url'
 
   if (override) {
     schema = validateDatabaseSchemaIdentifier(override)
     schemaSource = 'override'
   }
 
-  if (schemaSource === 'unconfigured') {
-    schema = REQUIRED_STAGING_SCHEMA
-  }
-
   return {
-    connectionString,
+    connectionString: parsed.connectionString,
     schema,
     metadata: {
       configured: true,
-      protocol,
-      credentialsPresent,
+      protocol: parsed.protocol,
+      credentialsPresent: parsed.credentialsPresent,
       schemaSource,
     },
   }
@@ -89,7 +156,7 @@ export function resolveDatabaseConnectionConfig(
 
 /**
  * Asserts the resolved config targets the required staging schema.
- * Call this at server startup (not at module evaluation) to enforce the boundary.
+ * Call at server startup — not at module evaluation — to enforce the runtime boundary.
  */
 export function assertStagingSchema(config: DatabaseConnectionConfig): void {
   if (!config.metadata.configured) {

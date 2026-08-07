@@ -9,7 +9,7 @@
 | Workflow conclusion | success |
 | Verify current live state | `git rev-parse HEAD` and https://preview.jpvbootcamp.com/api/health |
 | Staging health imageTag | 9c045fa5a5c327014c20fe9377f7d5368b550573 |
-| Release suite | 166/166 |
+| Release suite | 164/164 |
 | Playwright | 188 collected / 148 passed / 40 skipped |
 | Overall verdict | **STAGING OPERATIONAL READINESS REMEDIATION REQUIRED** |
 

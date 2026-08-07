@@ -2,7 +2,7 @@
 
 ## Current staging-closure checkpoint — 2026-08-04
 
-- **IMPLEMENTED / LOCALLY VERIFIED:** core staging scope, Payload admin design, responsive behavior, focused design contract, Payload TypeScript, changed-path security scan, application build, and `pnpm test:release` (`166/166`).
+- **IMPLEMENTED / LOCALLY VERIFIED:** core staging scope, Payload admin design, responsive behavior, focused design contract, Payload TypeScript, changed-path security scan, application build, and `pnpm test:release` (`164/164`).
 - **STAGING VERIFIED (latest completed verification snapshot):** preview workflow `30853006495` concluded `success`; staging health reported exact SHA `9c045fa5a5c327014c20fe9377f7d5368b550573`; authenticated staging admin gate passed `14/14`. Earlier snapshots remain historical evidence only. For current live state: compare `git rev-parse HEAD` with `https://preview.jpvbootcamp.com/api/health`.
 - **MEDIA PERSISTENCE:** verified via disposable fixture upload, redeployment survival, and Payload API deletion; named staging volume `jpv-bootcamp-preview-media` active.
 - **TECHNICAL STATUS:** `STAGING TECHNICAL IMPLEMENTATION COMPLETE — ACCEPTANCE PENDING EXTERNAL ACTION`.
@@ -158,13 +158,15 @@ The previous preview workflow published an image from ordinary feature-branch pu
 
 ### Preview Build and Deploy (`deploy-preview.yml`)
 
-`.github/workflows/deploy-preview.yml` is the single unified dispatcher for two mutually exclusive operations.
+`.github/workflows/deploy-preview.yml` is the single unified dispatcher for three mutually exclusive operations.
 
-**Push path (`deploy-preview`):** Runs on `feature/**` and `pr/**` pushes when the head commit message does NOT contain `[migration-plan-only]`. Builds, tests, publishes to GHCR, deploys to Dokploy staging, and runs the authenticated admin responsive gate. Requires the `preview-deploy` environment and `packages: write` permission.
+**Push path (`validate-only`):** Runs on `feature/course-branding-and-preview` pushes when the head commit message does NOT contain `[migration-plan-only]`. Validates, builds, and tests only. Does NOT publish an image, call GHCR, trigger Dokploy, deploy, or run migrations. This ensures ordinary development pushes are safe by construction — the only thing a push can do is fail validation.
 
-**Manual dispatch path (`read-only-migration-plan`):** Triggered by `workflow_dispatch` with `operation=read-only-migration-plan`. Runs a read-only Payload migration plan against staging over Tailscale. Requires `operation`, `expected_sha` (40-char SHA), and `confirmation` inputs. The `read-only-plan` job uses the `staging-migration-plan` environment, job-level `contents: read` only, non-cancelling concurrency, infrastructure preflight (zero-reviewer solo-operator environment, branch policy, variable, and secret-name verification), SHA-pinned `tailscale/github-action`, port `5433`, mode-600 temp file with trap deletion, and sanitized artifact only. It must not execute Docker, GHCR, Dokploy, publication, Prisma, migration apply/down, provider, or smoke steps. The `staging-migration-plan` environment operates in solo-operator mode: zero required reviewers, zero wait timer, custom branch policy for `feature/course-branding-and-preview` only, `PLAN_READY_FOR_DISPATCH=true`, and `SOLO_OPERATOR_MODE=true`.
+**Manual dispatch path (`deploy-preview`):** Triggered by `workflow_dispatch` with `operation=deploy-preview`. Requires `expected_sha` (full 40-char SHA matching the current remote feature tip) and `confirmation=deploy-staging-feature-tip`. Checks out the exact current remote tip, verifies the SHA matches, then builds, publishes to GHCR, deploys to Dokploy staging, and runs the authenticated admin responsive gate. All Docker actions are SHA-pinned. The canonical Dokploy allow-list (`clients-jpv-bootcamp-app-tp9xrk` / `I_2Vukga3cc3ZhaG-mUzU`) is enforced.
 
-Commits with `[migration-plan-only]` in the message suppress the push-triggered deploy job so a migration-plan dispatch can be the sole authorized action for that tip.
+**Manual dispatch path (`read-only-migration-plan`):** Triggered by `workflow_dispatch` with `operation=read-only-migration-plan`. Runs a read-only Payload migration plan against staging over Tailscale. Requires `operation`, `expected_sha` (40-char SHA), and `confirmation=run-read-only-staging-payload-migration-plan`. The `read-only-plan` job uses the `staging-migration-plan` environment, job-level `contents: read` only, non-cancelling concurrency, infrastructure preflight (zero-reviewer solo-operator environment, branch policy, variable, and secret-name verification), SHA-pinned `tailscale/github-action`, port `5433`, mode-600 temp file with trap deletion, and sanitized artifact only. It must not execute Docker, GHCR, Dokploy, publication, Prisma, migration apply/down, provider, or smoke steps. The `staging-migration-plan` environment operates in solo-operator mode: zero required reviewers, zero wait timer, custom branch policy for `feature/course-branding-and-preview` only, `PLAN_READY_FOR_DISPATCH=true`, and `SOLO_OPERATOR_MODE=true`.
+
+Commits with `[migration-plan-only]` in the message suppress the push-triggered validate job so a migration-plan dispatch can be the sole authorized action for that tip.
 
 The standalone `staging-payload-migration-plan.yml` has been removed; all capability is now in `deploy-preview.yml`.
 
@@ -176,9 +178,9 @@ The standalone `staging-payload-migration-plan.yml` has been removed; all capabi
 ghcr.io/<repository>:<full-commit-sha>
 ```
 
-Authorized feature/pr pushes may also publish the branch-tagged preview image plus the immutable SHA tag. The workflow uses the `preview-image-publish` GitHub environment, `contents: read`, and `packages: write`. It must not publish `latest`, deploy, call Dokploy, run migrations, start database-deploy behavior, call a provider, or perform live smoke checks.
+The workflow uses the `preview-image-publish` GitHub environment, `contents: read`, and `packages: write`. It must not publish `latest`, deploy, call Dokploy, run migrations, call a provider, or perform live smoke checks. All third-party actions are SHA-pinned. Dispatching from a branch other than `feature/course-branding-and-preview` is rejected.
 
-A Git push to an authorized feature branch can publish the branch-tagged preview image through workflow execution. Image publication does not authorize deployment. Image publication does not authorize Payload migrations, Prisma/database-deploy startup, provider dry-run, provider apply, or smoke verification.
+A Git push to the feature branch triggers validation-only (no image publication). Image publication requires a separate explicit `workflow_dispatch` via `publish-preview-image.yml`. Image publication does not authorize deployment. Image publication does not authorize Payload migrations, provider dry-run, provider apply, or smoke verification.
 
 ## Release manifest and offline preflight
 
@@ -198,13 +200,12 @@ pnpm preview:release:preflight --authorization-file=<local-json>
 
 Offline preflight validates each category independently:
 
-- Git push;
-- image publication;
+- Git push (validation-only, no image publication);
+- image publication (separate manual dispatch);
 - Payload migration;
-- Prisma/database-deploy startup;
 - provider dry-run;
 - provider apply;
-- preview deployment;
+- preview deployment (manual dispatch only);
 - post-deployment smoke verification.
 
 ## Rollback plan and staging packet
@@ -442,21 +443,13 @@ The checker prints no API keys, database URLs, connection strings, sender addres
 
 ## Startup modes
 
-### Application-only
+### Staging startup
 
-`STARTUP_MODE=application-only` is the Docker default.
+`scripts/runtime/start-staging.sh` is the Docker CMD. It starts the standalone Next.js server after validating `DATABASE_URL` structurally: exact PostgreSQL protocol, host (`10.0.2.4`), port (`5433`), database (`jpvbootcamp`), and schema (`jpvbootcamp_staging`) are all required. Substring matching is not used; the URL is parsed structurally by Node.js.
 
-It starts the standalone Next.js server and does not invoke `scripts/db/deploy-prod.sh`. It therefore does not initialize a schema or run Prisma or Payload migrations. Normal application runtime may still require configured database connectivity.
+It does not run Prisma or Payload migrations. It does not invoke database initialization or backup operations.
 
-### Database-deploy
-
-`STARTUP_MODE=database-deploy` is opt-in and additionally requires an explicit `DEPLOYMENT_ENV` of `preview`, `staging`, or `production`.
-
-This mode invokes `scripts/db/deploy-prod.sh`, which can inspect or initialize schemas, create backups, run Prisma production migrations, and perform database smoke checks. It does not apply Payload migrations.
-
-Database-deploy startup requires separate authorization from image push, Payload migrations, provider delivery, and preview deployment.
-
-Unknown startup or deployment environment values fail closed.
+**Historical safety incident:** An alternate `database-deploy` startup mode previously existed and has been removed. `scripts/runtime/start-prod.sh` and `scripts/db/deploy-prod.sh` are deleted. The `STARTUP_MODE` and `DEPLOYMENT_ENV` environment variables are no longer used. These alternate targets remain forbidden and their removal is enforced by invariant tests.
 
 ## Build and runtime paths
 
@@ -797,20 +790,18 @@ Operator: <name>
 Rollback owner: <name>
 Rollback procedure: run pnpm staging:payload-migration-rollback-plan (read-only, verifies batch isolation, requires own confirmation); rollback execution is separately authorized
 
-This does not authorize push, Dokploy redeployment, STARTUP_MODE=database-deploy, Prisma migrations, provider email, post-deployment smoke, production, or main.
+This does not authorize push, Dokploy redeployment, Prisma migrations, provider email, post-deployment smoke, production, or main.
 ```
 
 ### Prisma migration authorization (account-column rename)
 
-`prisma/migrations/20260707_120000_rename_account_identity_columns/migration.sql` renames identity columns in the account table. This migration runs inside `database-deploy` startup via `scripts/db/deploy-prod.sh`. It requires separate authorization from Payload migrations, image publication, provider delivery, and preview deployment.
+`prisma/migrations/20260707_120000_rename_account_identity_columns/migration.sql` renames identity columns in the account table. It requires separate authorization from Payload migrations, image publication, provider delivery, and preview deployment. **Historical safety incident:** This migration previously referenced `database-deploy` startup via the deleted `scripts/db/deploy-prod.sh`; that alternate target remains forbidden.
 
 ```text
 Authorize Prisma account-column rename migration only.
 Migration: prisma/migrations/20260707_120000_rename_account_identity_columns/migration.sql
 Commit/image: <exact value>
-Environment: <preview|staging|production>
-STARTUP_MODE: database-deploy
-DEPLOYMENT_ENV: <exact environment>
+Environment: staging
 Backup and restore point: <confirmed evidence>
 Column rename scope confirmed: <yes/no>
 Downstream query compatibility reviewed: <yes/no>
@@ -819,22 +810,6 @@ Operator: <name>
 Rollback owner: <name>
 
 This does not authorize Payload migrations, push, provider delivery, preview deployment, or any other Prisma migrations beyond this file.
-```
-
-### Prisma startup authorization
-
-```text
-Authorize database-deploy startup only.
-Commit/image: <exact value>
-Environment: <preview|staging|production>
-STARTUP_MODE: database-deploy
-DEPLOYMENT_ENV: <exact environment>
-Backup requirements confirmed: <yes/no>
-Prisma migration scope reviewed: <yes/no>
-Operator: <name>
-Rollback owner: <name>
-
-This does not authorize Payload migrations, push, provider delivery, or preview deployment.
 ```
 
 ### Provider email authorization
@@ -857,12 +832,10 @@ This does not authorize push, database access beyond the named queue operation, 
 
 ```text
 Authorize preview deployment only.
-Branch: <exact branch>
+Branch: feature/course-branding-and-preview
 Commit/image digest: <exact value>
-Target: <exact preview target>
-STARTUP_MODE: <application-only|database-deploy>
+Target: clients-jpv-bootcamp-app-tp9xrk (staging only)
 Payload migration prerequisite: <status>
-Prisma startup authorization: <separate approval reference or not authorized>
 Provider mode: <disabled|dry-run-only|apply with separate approval>
 Rollback image and owner: <exact values>
 Window: <time>
@@ -882,5 +855,5 @@ Provider email allowed: <yes/no>
 Operator: <name>
 Stop conditions: <conditions>
 
-This does not authorize push, image publication, Payload migrations, Prisma/database-deploy startup, provider apply, preview deployment, production deployment, or operations on main.
+This does not authorize push, image publication, Payload migrations, Prisma migrations, provider apply, preview deployment, production deployment, or operations on main.
 ```

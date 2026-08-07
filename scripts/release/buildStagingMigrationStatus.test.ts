@@ -331,16 +331,14 @@ async function run(): Promise<void> {
     assert.throws(() => validateDatabaseSchemaIdentifier(''))
   })
 
-  await test('database helper preserves malformed URL behavior without leaking it into metadata', () => {
+  await test('database helper fails closed on malformed URL — does not return partial config', () => {
+    // Malformed URL with potential credential material must fail closed, not silently return.
+    // The new structural validator throws on any URL that cannot be parsed as valid PostgreSQL.
     const malformed = 'not a valid database URL with user:synthetic-secret'
-    const config = resolveDatabaseConnectionConfig(malformed, 'jpvbootcamp_staging')
-    assert.equal(config.connectionString, malformed)
-    assert.equal(config.schema, 'jpvbootcamp_staging')
-    assert.equal(config.metadata.protocol, null)
-    assert.equal(config.metadata.credentialsPresent, false)
-    assert.equal(JSON.stringify(config.metadata).includes('synthetic-secret'), false)
-    assert.equal(Object.hasOwn(config.metadata, 'username'), false)
-    assert.equal(Object.hasOwn(config.metadata, 'password'), false)
+    assert.throws(
+      () => resolveDatabaseConnectionConfig(malformed, 'jpvbootcamp_staging'),
+      /not a valid URL|must use PostgreSQL/,
+    )
   })
 
   await test('CLI parser supports equals and space forms with acknowledgement', () => {

@@ -6,6 +6,9 @@ name: Preview Build and Deploy
 #   actions/setup-node@v4                 -> 49933ea5288caeca8642d1e84afbd3f7d6820020
 #   tailscale/github-action@v4.1.3        -> 780049a30b6ff5c378a9e7b389d15ece7a204888
 #   actions/upload-artifact@v4            -> ea165f8d65b6e75b540449e92b4886f43607fa02
+#   docker/setup-buildx-action@v3         -> 8d2750c68a42422c14e847fe6c8ac0403b4cbd6f
+#   docker/login-action@v3                -> c94ce9fb468520275223c153574b00df6fe4bcc9
+#   docker/build-push-action@v6           -> ca052bb54ab0790a636c9b5f226502c73d547a25
 #
 # Tailscale: OAuth scope auth_keys, subnet route 10.0.2.4/32, ACL tag:ci-reader -> 10.0.2.4:5433.
 
@@ -13,21 +16,16 @@ on:
   workflow_dispatch:
     inputs:
       operation:
-        description: 'Operation: deploy-preview or read-only-migration-plan'
+        description: 'Operation: validate-only | deploy-preview | read-only-migration-plan'
         required: false
         type: string
-        default: 'deploy-preview'
-      branch_or_ref:
-        description: Branch or commit SHA to deploy (deploy-preview only)
-        required: false
-        type: string
-        default: 'feature/course-branding-and-preview'
+        default: 'validate-only'
       expected_sha:
-        description: 'Full 40-character SHA required for read-only-migration-plan'
+        description: 'Full 40-character SHA (required for deploy-preview and read-only-migration-plan)'
         required: false
         type: string
       confirmation:
-        description: 'Confirmation phrase (read-only-migration-plan: run-read-only-staging-payload-migration-plan)'
+        description: 'Confirmation phrase (deploy-preview: deploy-staging-feature-tip; plan: run-read-only-staging-payload-migration-plan)'
         required: false
         type: string
   push:
@@ -45,14 +43,13 @@ concurrency:
   cancel-in-progress: ${{ !(github.event_name == 'workflow_dispatch' && inputs.operation == 'read-only-migration-plan') }}
 
 jobs:
-  validate-and-publish:
-    name: Validate, build, publish, and deploy preview
+  validate-only:
+    name: Validate, build, and test (push gate)
     runs-on: ubuntu-latest
     timeout-minutes: 40
-    environment: preview-deploy
     if: |
       (github.event_name == 'push' && !contains(github.event.head_commit.message, '[migration-plan-only]')) ||
-      (github.event_name == 'workflow_dispatch' && inputs.operation == 'deploy-preview')
+      (github.event_name == 'workflow_dispatch' && (inputs.operation == 'validate-only' || inputs.operation == ''))
     env:
       APP_PUBLIC_URL: http://127.0.0.1:3107
       NEXT_PUBLIC_APP_URL: http://127.0.0.1:3107
@@ -64,7 +61,6 @@ jobs:
         env:
           GH_REF_NAME: ${{ github.ref_name }}
           GH_EVENT_NAME: ${{ github.event_name }}
-          INPUT_BRANCH_OR_REF: ${{ inputs.branch_or_ref }}
         run: |
           set -euo pipefail
           # Canonical staging allow-list — no other target is permitted
@@ -82,13 +78,6 @@ jobs:
             echo "DEPLOY-DENIED: this workflow must not run on main. Only ${ALLOWED_BRANCH} is allowed." >&2
             exit 1
           fi
-          # Reject workflow_dispatch pointing at main
-          if [ "${GH_EVENT_NAME}" = "workflow_dispatch" ]; then
-            if [ "${INPUT_BRANCH_OR_REF}" = "main" ] || [ "${INPUT_BRANCH_OR_REF}" = "refs/heads/main" ]; then
-              echo "DEPLOY-DENIED: branch_or_ref 'main' is not allowed. Use ${ALLOWED_BRANCH}." >&2
-              exit 1
-            fi
-          fi
           echo "Staging lane: branch=${ALLOWED_BRANCH} origin=${ALLOWED_ORIGIN} schema=${ALLOWED_SCHEMA}"
           echo "              host=${ALLOWED_HOST} port=${ALLOWED_PORT} db=${ALLOWED_DB}"
           echo "              dokploy=${ALLOWED_DOKPLOY_SLUG} (${ALLOWED_DOKPLOY_ID})"
@@ -96,7 +85,7 @@ jobs:
       - name: Check out commit
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
         with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.branch_or_ref || github.ref }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && 'refs/heads/feature/course-branding-and-preview' || github.ref }}
           fetch-depth: 0
 
       - name: Verify SHA ancestry under feature branch
@@ -153,11 +142,102 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+  deploy-preview:
+    name: Deploy preview (manual dispatch only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    environment: preview-deploy
+    if: github.event_name == 'workflow_dispatch' && inputs.operation == 'deploy-preview'
+
+    steps:
+      - name: Validate inputs
+        shell: bash
+        env:
+          INPUT_EXPECTED_SHA: ${{ inputs.expected_sha }}
+          INPUT_CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          if ! printf '%s' "${INPUT_EXPECTED_SHA}" | grep -qE '^[0-9a-f]{40}$'; then
+            echo "DEPLOY-DENIED: expected_sha must be exactly 40 lowercase hexadecimal characters" >&2
+            exit 1
+          fi
+          EXPECTED_CONFIRMATION="deploy-staging-feature-tip"
+          if [ "${INPUT_CONFIRMATION}" != "${EXPECTED_CONFIRMATION}" ]; then
+            echo "DEPLOY-DENIED: confirmation must be exactly '${EXPECTED_CONFIRMATION}'" >&2
+            exit 1
+          fi
+
+      - name: Validate deployment boundary
+        shell: bash
+        env:
+          GH_REF_NAME: ${{ github.ref_name }}
+          GH_EVENT_NAME: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          # Canonical staging allow-list — no other target is permitted
+          ALLOWED_BRANCH="feature/course-branding-and-preview"
+          ALLOWED_ORIGIN="https://preview.jpvbootcamp.com"
+          ALLOWED_DOKPLOY_SLUG="clients-jpv-bootcamp-app-tp9xrk"
+          ALLOWED_DOKPLOY_ID="I_2Vukga3cc3ZhaG-mUzU"
+          ALLOWED_SCHEMA="jpvbootcamp_staging"
+          ALLOWED_HOST="10.0.2.4"
+          ALLOWED_PORT="5433"
+          ALLOWED_DB="jpvbootcamp"
+
+          # Reject main branch
+          if [ "${GH_REF_NAME}" = "main" ]; then
+            echo "DEPLOY-DENIED: this workflow must not run on main. Only ${ALLOWED_BRANCH} is allowed." >&2
+            exit 1
+          fi
+          echo "Staging lane: branch=${ALLOWED_BRANCH} origin=${ALLOWED_ORIGIN} schema=${ALLOWED_SCHEMA}"
+          echo "              host=${ALLOWED_HOST} port=${ALLOWED_PORT} db=${ALLOWED_DB}"
+          echo "              dokploy=${ALLOWED_DOKPLOY_SLUG} (${ALLOWED_DOKPLOY_ID})"
+
+      - name: Check out feature branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+        with:
+          ref: refs/heads/feature/course-branding-and-preview
+          fetch-depth: 0
+
+      - name: Verify requested SHA is current remote tip
+        shell: bash
+        run: |
+          set -euo pipefail
+          BRANCH_TIP="$(git rev-parse HEAD)"
+          if [ "$BRANCH_TIP" != "${{ inputs.expected_sha }}" ]; then
+            echo "DEPLOY-DENIED: requested SHA (${{ inputs.expected_sha }}) does not match current tip of feature/course-branding-and-preview ($BRANCH_TIP)" >&2
+            exit 1
+          fi
+          echo "SHA verified: $BRANCH_TIP is the current remote tip"
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1  # v4
+        with:
+          version: 10.33.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
+        with:
+          node-version: '20'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type check payload config
+        run: pnpm type-check:payload
+
+      - name: Build application
+        run: pnpm run build
+
+      - name: Run deterministic non-browser release gate
+        run: pnpm test:release
+
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f  # v3
 
       - name: Log in to GHCR
-        uses: docker/login-action@v3
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9  # v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -169,8 +249,7 @@ jobs:
         run: |
           set -euo pipefail
           sha_tag="ghcr.io/${{ github.repository }}:${{ github.sha }}"
-          branch_ref="${{ github.ref_name }}"
-          branch_tag="ghcr.io/${{ github.repository }}:$(printf '%s' "$branch_ref" | sed 's|/|-|g')"
+          branch_tag="ghcr.io/${{ github.repository }}:feature-course-branding-and-preview"
           {
             echo "tags<<EOF"
             echo "$branch_tag"
@@ -179,23 +258,8 @@ jobs:
             echo "sha_tag=$sha_tag"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Verify Docker build (dry run)
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: Dockerfile
-          platforms: linux/amd64
-          push: false
-          build-args: |
-            NEXT_PUBLIC_APP_URL=https://preview.jpvbootcamp.com
-            APP_BASE_URL=https://preview.jpvbootcamp.com
-            NEXT_PUBLIC_SERVER_URL=https://preview.jpvbootcamp.com
-            IMAGE_TAG=${{ github.sha }}
-            COMMIT_SHA=${{ github.sha }}
-          cache-from: type=gha,scope=preview-deploy
-
       - name: Build and publish immutable image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25  # v6
         with:
           context: .
           file: Dockerfile
@@ -212,6 +276,7 @@ jobs:
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.created=${{ github.event.head_commit.timestamp }}
+            staging-origin=https://preview.jpvbootcamp.com
           cache-from: type=gha,scope=preview-deploy
           cache-to: type=gha,mode=max,scope=preview-deploy
 

@@ -1,5 +1,13 @@
 name: Publish Preview Image
 
+# Third-party action SHAs pinned to verified releases:
+#   actions/checkout@v4          -> 11d5960a326750d5838078e36cf38b85af677262
+#   actions/setup-node@v4        -> 49933ea5288caeca8642d1e84afbd3f7d6820020
+#   docker/setup-buildx-action   -> 8d2750c68a42422c14e847fe6c8ac0403b4cbd6f
+#   docker/login-action          -> c94ce9fb468520275223c153574b00df6fe4bcc9
+#   docker/build-push-action     -> ca052bb54ab0790a636c9b5f226502c73d547a25
+#   actions/upload-artifact@v4   -> ea165f8d65b6e75b540449e92b4886f43607fa02
+
 on:
   workflow_dispatch:
     inputs:
@@ -75,9 +83,14 @@ jobs:
             echo "PUBLISH-DENIED: this workflow must not run from main" >&2
             exit 1
           fi
+          # Require dispatch from the exact staging feature branch
+          if [ "${{ github.ref_name }}" != "feature/course-branding-and-preview" ]; then
+            echo "PUBLISH-DENIED: this workflow may only be dispatched from feature/course-branding-and-preview, got: ${{ github.ref_name }}" >&2
+            exit 1
+          fi
 
       - name: Check out feature branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
         with:
           ref: refs/heads/feature/course-branding-and-preview
           fetch-depth: 0
@@ -100,7 +113,7 @@ jobs:
         run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
         with:
           node-version: '20'
 
@@ -128,10 +141,10 @@ jobs:
             > preview-release-manifest.json
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f  # v3
 
       - name: Log in to GHCR
-        uses: docker/login-action@v3
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9  # v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -152,7 +165,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Build and publish immutable image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25  # v5
         with:
           context: .
           file: Dockerfile
@@ -176,7 +189,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=preview-image-publish
 
       - name: Upload release manifest
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
         with:
           name: preview-release-manifest-${{ steps.checkout-sha.outputs.sha }}
           path: preview-release-manifest.json
