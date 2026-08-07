@@ -86,3 +86,4 @@ jobs:
           echo ""
           echo "Dokploy staging app will pull and redeploy automatically."
           echo "Access preview at: https://preview.jpvbootcamp.com"
+          echo "workflow_dispatch inputs registered: operation, branch_or_ref, expected_sha, confirmation"
