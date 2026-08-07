@@ -531,7 +531,6 @@ jobs:
 
           # Build argument array — EXPECTED_SHA injected via env, never interpolated in source
           PLAN_ARGS=(
-            "tsx"
             "scripts/release/runStagingPayloadMigration.ts"
             "plan"
             "--output=json"
@@ -545,7 +544,8 @@ jobs:
 
           set +e
           # stdout = exactly one JSON document; stderr = operational logs (separated, never merged)
-          pnpm exec "${PLAN_ARGS[@]}" \
+          # Use node_modules/.bin/tsx directly — pnpm exec emits its own stdout that contaminates JSON
+          ./node_modules/.bin/tsx "${PLAN_ARGS[@]}" \
             > "$STDOUT_FILE" \
             2> "$STDERR_FILE"
           PLAN_EXIT=$?
