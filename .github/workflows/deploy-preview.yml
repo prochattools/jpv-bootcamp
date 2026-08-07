@@ -15,10 +15,7 @@ on:
       operation:
         description: 'Operation: deploy-preview or read-only-migration-plan'
         required: false
-        type: choice
-        options:
-          - deploy-preview
-          - read-only-migration-plan
+        type: string
         default: 'deploy-preview'
       branch_or_ref:
         description: Branch or commit SHA to deploy (deploy-preview only)
