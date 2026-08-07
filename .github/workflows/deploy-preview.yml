@@ -32,8 +32,7 @@ on:
         type: string
   push:
     branches:
-      - 'feature/**'
-      - 'pr/**'
+      - 'feature/course-branding-and-preview'
 
 permissions:
   contents: read

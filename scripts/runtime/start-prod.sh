@@ -1,6 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Staging-only execution boundary
+if [ -z "${DATABASE_URL:-}" ]; then
+  echo "FATAL: DATABASE_URL is required (staging-only: schema must be jpvbootcamp_staging)" >&2
+  exit 1
+fi
+if ! echo "$DATABASE_URL" | grep -q 'schema=jpvbootcamp_staging'; then
+  echo "FATAL: DATABASE_URL must use schema=jpvbootcamp_staging (production schema rejected)" >&2
+  exit 1
+fi
+
 BACKUP_ROOT="/var/backups/pgdump"
 STARTUP_MODE="${STARTUP_MODE:-application-only}"
 PAYLOAD_SCHEMA_PREFLIGHT="${PAYLOAD_SCHEMA_PREFLIGHT:-true}"

@@ -21,11 +21,11 @@ ENV DATABASE_URL=postgresql://build:build@localhost:5432/build
 # NODE_ENV must be production for Payload importmap generation to work correctly
 ENV NODE_ENV=production
 # NEXT_PUBLIC_* vars are baked into the client bundle at build time.
-# When building for production: use https://jpvbootcamp.com
-# When building for staging/preview: pass https://preview.jpvbootcamp.com explicitly
-ARG NEXT_PUBLIC_APP_URL=https://jpvbootcamp.com
-ARG APP_BASE_URL=https://jpvbootcamp.com
-ARG NEXT_PUBLIC_SERVER_URL=https://jpvbootcamp.com
+# Staging-only: production defaults removed. Only preview.jpvbootcamp.com is permitted.
+# The default IS the staging URL — no override needed for preview builds.
+ARG NEXT_PUBLIC_APP_URL=https://preview.jpvbootcamp.com
+ARG APP_BASE_URL=https://preview.jpvbootcamp.com
+ARG NEXT_PUBLIC_SERVER_URL=https://preview.jpvbootcamp.com
 ARG IMAGE_TAG=unknown
 ARG COMMIT_SHA=unknown
 ENV NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
