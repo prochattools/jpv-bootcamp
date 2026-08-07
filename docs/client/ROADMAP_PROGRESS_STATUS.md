@@ -1,6 +1,6 @@
 # JPV Bootcamp - Roadmap Progress Status
 
-<!-- Reconciliation note 2026-08-07: Current feature tip is `0cfde15 security: finalize staging-only execution truth [migration-plan-only]`. Ordinary feature pushes validate only; staging deployment requires explicit guarded dispatch. The live staging baseline remains SHA `9c045fa5a5c327014c20fe9377f7d5368b550573`. Migration 29 is implemented in source, but its shared-staging applied state must be established by the guarded read-only migration plan before any apply authorization. -->
+<!-- Reconciliation note 2026-08-08: Verify current feature tip with `git rev-parse HEAD`; ordinary feature pushes validate only; staging deployment requires explicit guarded dispatch. The live staging baseline remains SHA `9c045fa5a5c327014c20fe9377f7d5368b550573`. Migration 29 is implemented in source, but its shared-staging applied state must be established by the guarded read-only migration plan before any apply authorization. -->
 
 ## Current checkpoint — 2026-08-07
 

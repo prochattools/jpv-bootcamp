@@ -1,17 +1,17 @@
 # Payload CMS Integration Plan
 
-## Current implementation checkpoint — 2026-08-02
+## Current staging checkpoint — 2026-08-07
 
-- **IMPLEMENTED:** M0-01 through M0-09, M1-01 through M1-06 in their documented staging state, UI-01 design integration, Payload admin hardening, release/browser automation, media persistence, migration inventory/preflight, email queue/guard, Stripe test-mode behavior, and partner/sponsored staging boundaries.
-- **LOCALLY VERIFIED:** focused Payload design contract, Payload TypeScript, changed-path security scan, application build, and `pnpm test:release` (`163/163`).
-- **STAGING VERIFIED (latest completed verification snapshot):** authenticated Payload DOM verified across dashboard, membership audit history, and course editing at 375/768/1024/1440px; overflow repaired; media persistence confirmed; preview workflow `30756831212` concluded `success` and staging health reported exact SHA `3a6613498241c5dd71761c26c3b1e790764db1d5`. To verify the current live state, run: `git rev-parse HEAD`, then check the latest preview workflow run and `https://preview.jpvbootcamp.com/api/health`.
-- **TECHNICAL STATUS:** `STAGING TECHNICAL IMPLEMENTATION COMPLETE — ACCEPTANCE PENDING EXTERNAL ACTION`.
-- **HARDENING STATUS:** one-time account-action completion still lacks a durable cross-instance reservation/finalization primitive; email-change confirmation consumes its token before its member update succeeds. Design specified in `docs/security/MEMBER_ACCOUNT_ACTION_RESERVATION_FINALIZATION_DESIGN.md`. Implementation and schema application require separate staging authorization.
+- **ONLY PERMITTED OPERATIONAL LANE:** branch `feature/course-branding-and-preview`; staging origin `https://preview.jpvbootcamp.com`; Dokploy slug `clients-jpv-bootcamp-app-tp9xrk`; Dokploy app ID `I_2Vukga3cc3ZhaG-mUzU`; PostgreSQL host `10.0.2.4`, port `5433`, database `jpvbootcamp`, schema `jpvbootcamp_staging`. No alternate target is permitted.
+- **CURRENT FEATURE TIP:** `0cfde15 security: finalize staging-only execution truth [migration-plan-only]`. Ordinary feature pushes validate only; deployment requires an explicit guarded `workflow_dispatch`.
+- **DEPLOYED STAGING BASELINE:** staging remains on `9c045fa5a5c327014c20fe9377f7d5368b550573` until an explicitly authorized staging deployment changes it.
+- **IMPLEMENTED / LOCALLY VERIFIED:** M0-01 through M0-09 and M1-01 through M1-06 in their documented staging state, including durable account-action reservation/finalization source changes and migration `20260804_050000_member_account_action_reservations`; the current release manifest contains `164/164` required gates.
+- **APPLIED DATABASE STATE:** source registration does not prove staging application. Migration 29 is implemented in source, but its shared-staging applied state must be established by the guarded read-only migration plan before any apply decision.
+- **NEXT CORE GATE:** run the guarded read-only staging migration plan against the canonical staging target, capture sanitized evidence, then require separate explicit authorization before any schema write.
 - **DEFERRED BY DESIGN:** M2-01 and Phases 8–11 remain outside the agreed core staging scope unless separately promoted.
 - **EXTERNAL ACTION:** representative content/copy approval, approved provider evidence, approved migration execution, and formal staging sign-off remain pending.
-- **Current design verdict:** `PAYLOAD DESIGN VERIFIED — ADMIN DESIGN REPAIRED AND VERIFIED`.
 
-This is the single canonical product, architecture, security, roadmap, and execution plan for the JPV Bootcamp Payload programme. Code and operational changes must follow this plan in order. Update this document before changing architecture, security, product boundaries, rollout order, or production responsibilities.
+This is the single canonical product, architecture, security, roadmap, and execution plan for the JPV Bootcamp Payload programme. Code and operational changes must follow this plan in order. Update this document before changing architecture, security, product boundaries, rollout order, or staging responsibilities.
 
 ## Documentation hierarchy
 

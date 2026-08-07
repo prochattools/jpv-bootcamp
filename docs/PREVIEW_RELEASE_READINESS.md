@@ -1,12 +1,14 @@
 # JPV Bootcamp Preview Release Readiness
 
-## Current staging-closure checkpoint — 2026-08-04
+## Current staging-closure checkpoint — 2026-08-07
 
-- **IMPLEMENTED / LOCALLY VERIFIED:** core staging scope, Payload admin design, responsive behavior, focused design contract, Payload TypeScript, changed-path security scan, application build, and `pnpm test:release` (`164/164`).
-- **STAGING VERIFIED (latest completed verification snapshot):** preview workflow `30853006495` concluded `success`; staging health reported exact SHA `9c045fa5a5c327014c20fe9377f7d5368b550573`; authenticated staging admin gate passed `14/14`. Earlier snapshots remain historical evidence only. For current live state: compare `git rev-parse HEAD` with `https://preview.jpvbootcamp.com/api/health`.
+- **ONLY PERMITTED OPERATIONAL LANE:** `feature/course-branding-and-preview` → `https://preview.jpvbootcamp.com` → Dokploy `clients-jpv-bootcamp-app-tp9xrk` / `I_2Vukga3cc3ZhaG-mUzU` → PostgreSQL `10.0.2.4:5433`, database `jpvbootcamp`, schema `jpvbootcamp_staging`.
+- **CURRENT FEATURE TIP:** `0cfde15 security: finalize staging-only execution truth [migration-plan-only]`. Ordinary pushes validate only; staging deployment requires explicit guarded `workflow_dispatch`.
+- **LOCALLY VERIFIED CONTRACT:** core staging scope and account-action hardening are implemented in source; the release manifest contains `164/164` required gates and the staging-only invariant contains `52/52` checks. Full validation is rerun before any checkpoint commit.
+- **LIVE STAGING BASELINE:** preview workflow `30853006495` remains the latest established deployment; staging health reported SHA `9c045fa5a5c327014c20fe9377f7d5368b550573` and authenticated staging admin `14/14`. No newer deployment is claimed.
 - **MEDIA PERSISTENCE:** verified via disposable fixture upload, redeployment survival, and Payload API deletion; named staging volume `jpv-bootcamp-preview-media` active.
-- **TECHNICAL STATUS:** `STAGING TECHNICAL IMPLEMENTATION COMPLETE — ACCEPTANCE PENDING EXTERNAL ACTION`.
-- **HARDENING STATUS:** `ACCOUNT-ACTION HARDENING IMPLEMENTED LOCALLY — STAGING MIGRATION AUTHORIZATION REQUIRED`; reservation/finalization is implemented in source and behaviorally tested, but the new schema is not applied or verified on shared staging.
+- **MIGRATION 29:** `20260804_050000_member_account_action_reservations` is implemented in source, but registration inventory is not applied-database evidence. The guarded read-only staging migration plan is the next required gate.
+- **NEXT AUTHORIZATION BOUNDARY:** a successful read-only plan may justify preparing an apply packet, but does not itself authorize any schema write or deployment.
 - **EXTERNAL ACTION:** client content approval, approved provider evidence, approved migration execution, and formal staging sign-off remain separate.
 
 This runbook separates repository changes, image publication, Payload migrations, Prisma startup behavior, provider email delivery, preview deployment, and smoke verification into independent approval categories.
@@ -77,7 +79,7 @@ Static preflight automation is available via `pnpm staging:static-preflight`; it
 - `pnpm build` passed
 - `pnpm exec prisma validate --schema=prisma/system.prisma` passed
 - `pnpm exec prisma validate --schema=prisma/schema.prisma` passed
-- `pnpm exec pnpm audit --prod --audit-level high --ignore-registry-errors` passed the high-severity gate; remaining advisories are `3 moderate` (no high-severity issues)
+- `pnpm exec pnpm audit --prod --audit-level high --ignore-registry-errors` exited non-zero; current status is `3 high + 5 moderate` (in Payload/PostCSS dependencies; inherited from 9c045fa baseline and addressed separately)
 - `pnpm exec tsx scripts/no_legacy_learn_namespace.test.ts` passed
 - no migration, deployment, provider, or push action occurred during this validation baseline
 

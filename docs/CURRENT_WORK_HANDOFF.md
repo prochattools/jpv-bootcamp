@@ -2,15 +2,18 @@
 
 Use this document as the canonical starting point for a new Codex or Workbench conversation.
 
-## Current checkpoint — Payload admin design hardening (2026-07-30)
+## Current checkpoint — staging-only migration readiness (2026-08-07)
 
-- **Branch / baseline:** `feature/course-branding-and-preview` from `524cff2`.
-- **IMPLEMENTED:** neutral Payload application canvas in both theme modes, readable semantic controls, stronger navigation hierarchy, responsive dashboard shell, safe KPI wrapping, and structured quick actions.
-- **LOCALLY VERIFIED:** focused Payload design contract, Payload TypeScript, changed-path security scan, production build, and `pnpm test:release` (`156/156`).
-- **STAGING VERIFIED:** not yet established for the complete real authenticated Payload DOM across all required views and four target widths.
-- **DEFERRED / EXTERNAL:** migration execution, production release, client approval, and any production-only provider proof.
-- **Current verdict:** `PAYLOAD DESIGN NOT YET VERIFIED`. Local implementation is green; final design completion requires authenticated real-DOM staging evidence.
-- **Security decision:** repository documentation uses `$EMAIL_QUEUE_WORKER_SECRET`; the owner explicitly chose not to rotate the current value in this task.
+- **Only permitted branch:** `feature/course-branding-and-preview`.
+- **Only permitted runtime/deployment target:** `https://preview.jpvbootcamp.com`, Dokploy slug `clients-jpv-bootcamp-app-tp9xrk`, app ID `I_2Vukga3cc3ZhaG-mUzU`.
+- **Only permitted database target:** host `10.0.2.4`, port `5433`, database `jpvbootcamp`, schema `jpvbootcamp_staging`.
+- **Current feature tip:** verify exact operator tip with `git rev-parse HEAD`; ordinary feature pushes are validation-only and cannot deploy.
+- **Current live staging baseline:** `9c045fa5a5c327014c20fe9377f7d5368b550573` until an explicit guarded staging deployment changes it.
+- **Implemented locally:** agreed core staging scope plus durable account-action reservation/finalization and migration `20260804_050000_member_account_action_reservations`.
+- **Applied migration state:** unknown until the guarded read-only staging migration plan runs; source inventory is not database evidence.
+- **Next task:** establish read-only staging migration evidence, then prepare a separate apply-authorization packet. Do not apply migration 29 in this checkpoint.
+- **Deferred by design:** M2-01 and Phases 8–11 remain deferred.
+- **Security boundary:** no other branch, application, environment, database, or schema is permitted by current operational tooling.
 
 ---
 
