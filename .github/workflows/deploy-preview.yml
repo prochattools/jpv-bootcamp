@@ -337,9 +337,6 @@ jobs:
     if: github.event_name == 'workflow_dispatch' && inputs.operation == 'read-only-migration-plan'
     permissions:
       contents: read
-    concurrency:
-      group: staging-payload-migration-plan
-      cancel-in-progress: false
 
     steps:
       # ── Input guards (no network, no secrets, no env required) ───────────
