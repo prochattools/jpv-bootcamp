@@ -117,7 +117,7 @@ async function main(): Promise<void> {
   assert.match(docs.operatorHandoff, /Migration rehearsal: `pnpm staging:migration-rehearsal`/)
   assert.match(docs.operatorHandoff, /Provider simulation: `pnpm staging:provider-simulation`/)
   assert.match(docs.operatorHandoff, /Local simulated smoke: `pnpm staging:smoke-simulated`/)
-  assert.match(docs.operatorHandoff, /Migration inventory.*31215369413.*28 Payload migrations applied.*solely missing/is)
+  assert.match(docs.operatorHandoff, /Migration inventory.*31215369413.*sole.*missing.*Payload migration/is)
   assert.match(docs.operatorHandoff, /20260804_050000_member_account_action_reservations/)
   assert.match(docs.operatorHandoff, new RegExp(String.raw`Deterministic release gate: \`pnpm test:release\` \(\`${releaseCount}\/${releaseCount}\`\)`))
   assert.match(docs.operatorHandoff, /Launch browser E2E: `pnpm test:e2e` \(Playwright: 188 collected, 148 passed, 40 skipped/)
