@@ -7,7 +7,7 @@
 - **LOCALLY VERIFIED CONTRACT:** the agreed launch-scope repository implementation and account-action hardening are complete in source; the release manifest contains `164/164` required gates and the staging-only invariant contains `52/52` checks.
 - **LIVE STAGING BASELINE:** preview workflow `30853006495` remains the latest established deployment; staging health reported SHA `9c045fa5a5c327014c20fe9377f7d5368b550573` and authenticated staging admin `14/14`. No newer deployment is claimed.
 - **MEDIA PERSISTENCE:** verified via disposable fixture upload, redeployment survival, and Payload API deletion; named staging volume `jpv-bootcamp-preview-media` active.
-- **AUTHORITATIVE PRE-APPLY EVIDENCE:** the canonical 29-name Payload registry was checked by guarded read-only plan run `31215369413` at reviewed code checkpoint `9e068cc8b0a5ec9573732fee3a78bed9995787a6`; it returned `plan_ok`: 28 Payload migrations applied, migration `20260804_050000_member_account_action_reservations` solely missing, zero unexpected/duplicate/malformed Payload records, and Prisma healthy. No write occurred.
+- **AUTHORITATIVE PRE-APPLY EVIDENCE:** the canonical 29-name Payload registry was checked by guarded read-only plan run `31215369413` at reviewed code checkpoint `9e068cc8b0a5ec9573732fee3a78bed9995787a6`; it returned `plan_ok`: migration `20260804_050000_member_account_action_reservations` solely missing, zero unexpected/duplicate/malformed Payload records, and Prisma healthy. No write occurred.
 - **NEXT AUTHORIZATION BOUNDARY:** after a final CI-green repository checkpoint, rerun the guarded pre-apply plan against that exact SHA. A fresh `plan_ok` makes the migration-29 apply packet ready for separate operator approval; it does not authorize deployment or production.
 - **EXTERNAL ACTION:** client content approval, approved provider evidence, approved migration execution, staging deployment/smoke, and formal staging sign-off remain separate.
 
@@ -20,9 +20,9 @@ The preview release path must use the reviewed feature branch and an exact commi
 Current operator branch: `feature/course-branding-and-preview`.
 Verify the exact branch tip with `git log --oneline -1` before operator action.
 
-**Applied-state evidence is now established for the pre-apply checkpoint.** Registration inventory alone is not applied database state; the applied-state claim here comes from guarded database evidence, not from registration or health inventory. Guarded read-only plan run `31215369413` proved 28 Payload migrations applied, migration 29 solely missing, no unexpected/duplicate/malformed Payload records, and healthy Prisma history at the reviewed code checkpoint. Because the final closure commit changes the exact SHA, operators must obtain a fresh `plan_ok` against that final SHA before apply.
+**Applied-state evidence is now established for the pre-apply checkpoint.** Registration inventory alone is not applied database state; the applied-state claim here comes from guarded database evidence, not from registration or health inventory. Guarded read-only plan run `31215369413` proved migration 29 solely missing, no unexpected/duplicate/malformed Payload records, and healthy Prisma history at the reviewed code checkpoint. Because the final closure commit changes the exact SHA, operators must obtain a fresh `plan_ok` against that final SHA before apply.
 
-`pnpm staging:payload-migration-plan` is a **pre-apply** verifier: it intentionally expects exactly 28 applied Payload migrations and migration 29 as the sole missing migration. After apply, do not expect that pre-apply plan to return `plan_ok`; rely on the guarded apply runner's own post-apply checks plus the general read-only `pnpm staging:migration-status` mechanism to prove all 29 are applied and Prisma remains healthy.
+`pnpm staging:payload-migration-plan` is a **pre-apply** verifier: it intentionally expects migration 29 as the sole missing migration. After apply, do not expect that pre-apply plan to return `plan_ok`; rely on the guarded apply runner's own post-apply checks plus the general read-only `pnpm staging:migration-status` mechanism to prove all 29 are applied and Prisma remains healthy.
 
 Migration apply requires five dynamic operator values in addition to fixed target flags: `expected-hostname`, `operator-id`, `backup-evidence-id`, `maintenance-window-id`, and `rollback-owner`. Any schema write requires exact target authorization, backup evidence, a maintenance window, and rollback ownership.
 
@@ -91,7 +91,7 @@ Static preflight automation is available via `pnpm staging:static-preflight`; it
 
 | Gate | Current status | Evidence owner | Notes |
 | --- | --- | --- | --- |
-| Migration evidence and apply path | Pre-apply evidence clean; final exact-SHA refresh required | `docs/client/MIGRATION_APPROVAL_PACKET.md`, `docs/client/MIGRATION_APPROVAL_STATUS.md` | Run `31215369413` returned `plan_ok`: 28 Payload migrations applied, migration 29 solely missing, zero unexpected/duplicate/malformed records, Prisma healthy. Rerun against the final CI-green SHA before apply authorization. |
+| Migration evidence and apply path | Pre-apply evidence clean; final exact-SHA refresh required | `docs/client/MIGRATION_APPROVAL_PACKET.md`, `docs/client/MIGRATION_APPROVAL_STATUS.md` | Run `31215369413` returned `plan_ok`: migration 29 solely missing, zero unexpected/duplicate/malformed records, Prisma healthy. Rerun against the final CI-green SHA before apply authorization. |
 | Decision packets and owners | Ready for external approval review | `docs/decisions/`, `pnpm staging:decision-readiness` | Repository-owned decision records, owner assignments, dependency order, and rollback statements are now complete and internally validated. |
 | Migration rehearsal and rollback ownership | Static rehearsal passed; disposable execution not yet run | `docs/client/MIGRATION_REHEARSAL_RUNBOOK.md`, `docs/release/ROLLBACK_EVIDENCE_CHECKLIST.md` | Repository-owned static rehearsal and evidence are complete; localhost-only disposable execution stays opt-in and target-environment rehearsal remains gated. |
 | Prisma migration target state | Verified healthy in pre-apply plan | guarded staging plan run `31215369413` | `plan_ok` requires no missing, unexpected, duplicate, failed, in-progress, or rolled-back Prisma migration records. Reconfirm at the final exact SHA before apply. |
@@ -786,7 +786,7 @@ Schema: jpvbootcamp_staging (fixed)
 Database: jpvbootcamp (fixed — not operator-supplied; runner enforces expectedDatabase === actualDatabase === 'jpvbootcamp')
 Expected hostname: <staging-db-host — non-secret identifier; no credentials; must be exact approved hostname>
 Runner: pnpm staging:payload-migration-apply
-Precondition: 28 Payload migrations applied, migration 29 missing, all Prisma migrations applied and healthy, no unexpected/duplicate/failed records
+Precondition: migration 29 missing, all Prisma migrations applied and healthy, no unexpected/duplicate/failed records
 Worktree: all guarded paths must be clean; protected residue (.ai/**, .claude/**, screenshots, logs) is allowed
 Batch evidence: rollback-plan verifies migration 29 is alone in the highest batch via payloadMigrationRecords
 Uncertain apply outcome: if apply command exits non-zero/signal/error, runner returns APPLY_OUTCOME_UNCERTAIN and requires a fresh read-only plan; do not retry automatically; do not execute migrate:down without separate authorization
