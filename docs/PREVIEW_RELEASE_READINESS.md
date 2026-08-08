@@ -46,13 +46,15 @@ Static preflight automation is available via `pnpm staging:static-preflight`; it
 
 **Latest completed staging verification snapshot (2026-08-02):** SHA `c15cd578a953cd6b1dc8a3d4705350a52f7d0812`, preview workflow `30761713446`, conclusion `success`, exact-SHA staging health confirmed. Prior verified snapshot: SHA `3a6613498241c5dd71761c26c3b1e790764db1d5`, workflow `30756831212`, conclusion `success` (retained as historical anchor). The authoritative current branch tip is determined by `git rev-parse HEAD`; do not treat any hardcoded SHA as the immutable current tip.
 
-**Outcome:** `LAUNCH-SCOPE REPOSITORY IMPLEMENTATION COMPLETE — FINAL PRE-MIGRATION CLOSURE IN PROGRESS` — durable account-action reservation/finalization is implemented and behaviorally validated in source; guarded run `31215369413` established the clean pre-apply database state, while migration 29 apply, exact-SHA deployment, smoke, and external acceptance remain separately gated.
+**Outcome:** `LAUNCH-SCOPE REPOSITORY IMPLEMENTATION COMPLETE — FINAL PRE-MIGRATION CLOSURE IN PROGRESS` — **ACCOUNT-ACTION HARDENING IMPLEMENTED LOCALLY**: durable account-action reservation/finalization is implemented and behaviorally validated in source; guarded run `31215369413` established the clean pre-apply database state, while migration 29 apply, exact-SHA deployment, smoke, and external acceptance remain separately gated.
 
 **Technical staging status:** `STAGING TECHNICAL IMPLEMENTATION COMPLETE — ACCEPTANCE PENDING EXTERNAL ACTION`
 
 **Repository-owned staging operations status:** `PRE-APPLY EVIDENCE CLEAN — FINAL EXACT-SHA PLAN AND MIGRATION AUTHORIZATION PENDING`
 
 **Decision-readiness command result:** `DECISION-READY, EXTERNAL APPROVALS PENDING`
+
+**STAGING MIGRATION AUTHORIZATION REQUIRED** — shared staging Payload migration 29 apply, post-apply deployment, and smoke verification remain separate gated operations pending operator authorization.
 
 ### Completed launch-scoped implementation
 
