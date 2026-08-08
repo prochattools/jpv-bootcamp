@@ -87,7 +87,7 @@ function main(): void {
     assert.match(doc, /29\/29.*registration|29 canonical Payload migration registrations|canonical 29-name Payload registry/i)
     assert.match(doc, /not.*applied database state|not database-applied state|not evidence that those migrations were applied/i)
     assert.match(doc, /staging:migration-status/)
-    assert.match(doc, /not (?:been )?run against staging|has not queried staging/i)
+    assert.match(doc, /31215369413/)
     assert.match(doc, /no real source (?:export|import)|no real source export.*no real source import/is)
     assert.match(doc, /programme remains preview-only|programme content is still blocked|representative programme content/i)
     assert.match(doc, /Provider\/email .*pending|provider\/email .*not executed|provider\/email verification/i)
@@ -97,7 +97,7 @@ function main(): void {
   }
 
   assert.match(previewReadiness, /STAGING TECHNICAL IMPLEMENTATION COMPLETE — ACCEPTANCE PENDING EXTERNAL ACTION/)
-  assert.match(previewReadiness, /ACCOUNT-ACTION HARDENING IMPLEMENTED LOCALLY — STAGING MIGRATION AUTHORIZATION REQUIRED/)
+  assert.match(previewReadiness, /LAUNCH-SCOPE REPOSITORY IMPLEMENTATION COMPLETE — FINAL PRE-MIGRATION CLOSURE IN PROGRESS/)
   assert.doesNotMatch(previewReadiness, /STAGING IMPLEMENTATION AND ACCEPTANCE COMPLETE/)
   assert.match(previewReadiness, /9c045fa5a5c327014c20fe9377f7d5368b550573/)
   assert.match(previewReadiness, /30853006495/)
@@ -107,7 +107,7 @@ function main(): void {
   assert.match(previewReadiness, /pnpm staging:decision-readiness/i)
   assert.match(previewReadiness, /pnpm test:release:full/)
   assert.match(previewReadiness, /pnpm staging:static-preflight/)
-  assert.match(previewReadiness, /LOCAL HARDENING COMPLETE — CONTROLLED STAGING MIGRATION APPROVAL REQUIRED/)
+  assert.match(previewReadiness, /PRE-APPLY EVIDENCE CLEAN — FINAL EXACT-SHA PLAN AND MIGRATION AUTHORIZATION PENDING/)
   assert.match(previewReadiness, /pnpm staging:migration-preflight/)
   assert.match(previewReadiness, /pnpm staging:migration-rehearsal/)
   assert.match(previewReadiness, /pnpm staging:provider-simulation/)
@@ -123,7 +123,7 @@ function main(): void {
   assert.doesNotMatch(previewReadiness, /READY FOR PRODUCTION|production-ready|go-live complete/i)
 
   assert.match(roadmap, /STAGING TECHNICAL IMPLEMENTATION COMPLETE — ACCEPTANCE PENDING EXTERNAL ACTION/)
-  assert.match(roadmap, /ACCOUNT-ACTION HARDENING IMPLEMENTED LOCALLY — STAGING MIGRATION AUTHORIZATION REQUIRED/)
+  assert.match(roadmap, /LAUNCH-SCOPE REPOSITORY IMPLEMENTATION COMPLETE — FINAL PRE-MIGRATION CLOSURE IN PROGRESS/)
   assert.match(roadmap, /DECISION-READY, EXTERNAL APPROVALS PENDING/i)
   assert.match(roadmap, /M0-01 through M0-09/)
   assert.match(roadmap, /M1-01 through M1-06/)

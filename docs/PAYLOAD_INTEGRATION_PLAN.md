@@ -1,15 +1,15 @@
 # Payload CMS Integration Plan
 
-## Current staging checkpoint — 2026-08-07
+## Current staging checkpoint — 2026-08-08
 
 - **ONLY PERMITTED OPERATIONAL LANE:** branch `feature/course-branding-and-preview`; staging origin `https://preview.jpvbootcamp.com`; Dokploy slug `clients-jpv-bootcamp-app-tp9xrk`; Dokploy app ID `I_2Vukga3cc3ZhaG-mUzU`; PostgreSQL host `10.0.2.4`, port `5433`, database `jpvbootcamp`, schema `jpvbootcamp_staging`. No alternate target is permitted.
-- **CURRENT FEATURE TIP:** `0cfde15 security: finalize staging-only execution truth [migration-plan-only]`. Ordinary feature pushes validate only; deployment requires an explicit guarded `workflow_dispatch`.
+- **CURRENT FEATURE TIP:** verify the exact operator tip with `git rev-parse HEAD`. Ordinary feature pushes validate only; deployment requires an explicit guarded `workflow_dispatch`.
 - **DEPLOYED STAGING BASELINE:** staging remains on `9c045fa5a5c327014c20fe9377f7d5368b550573` until an explicitly authorized staging deployment changes it.
-- **IMPLEMENTED / LOCALLY VERIFIED:** M0-01 through M0-09 and M1-01 through M1-06 in their documented staging state, including durable account-action reservation/finalization source changes and migration `20260804_050000_member_account_action_reservations`; the current release manifest contains `164/164` required gates.
-- **APPLIED DATABASE STATE:** source registration does not prove staging application. Migration 29 is implemented in source, but its shared-staging applied state must be established by the guarded read-only migration plan before any apply decision.
-- **NEXT CORE GATE:** run the guarded read-only staging migration plan against the canonical staging target, capture sanitized evidence, then require separate explicit authorization before any schema write.
-- **DEFERRED BY DESIGN:** M2-01 and Phases 8–11 remain outside the agreed core staging scope unless separately promoted.
-- **EXTERNAL ACTION:** representative content/copy approval, approved provider evidence, approved migration execution, and formal staging sign-off remain pending.
+- **IMPLEMENTED / LOCALLY VERIFIED:** the agreed launch-scope repository implementation is complete: M0-01 through M0-09 and M1-01 through M1-06 in their documented staging state, including durable account-action reservation/finalization source changes and migration `20260804_050000_member_account_action_reservations`; the release manifest contains `164/164` required gates.
+- **AUTHORITATIVE PRE-APPLY EVIDENCE:** guarded read-only staging plan run `31215369413` at reviewed code checkpoint `9e068cc8b0a5ec9573732fee3a78bed9995787a6` returned `plan_ok`: 28 Payload migrations applied, migration 29 solely missing, zero unexpected/duplicate/malformed Payload records, and Prisma healthy. No schema write occurred.
+- **NEXT CORE GATE:** finish a CI-green repository-closure checkpoint, then rerun the guarded read-only staging migration plan against that exact final SHA. A fresh `plan_ok` makes the migration-29 apply packet ready for separate explicit operator authorization.
+- **DEFERRED BY DESIGN:** M2-01 and Phases 8–11 remain outside the agreed launch scope unless separately promoted; they are not blockers for this migration/cutover sequence.
+- **EXTERNAL ACTION:** representative content/copy approval, approved provider evidence, approved migration execution, staging deployment/smoke, and formal staging sign-off remain separately gated.
 
 This is the single canonical product, architecture, security, roadmap, and execution plan for the JPV Bootcamp Payload programme. Code and operational changes must follow this plan in order. Update this document before changing architecture, security, product boundaries, rollout order, or staging responsibilities.
 

@@ -1,19 +1,20 @@
 # Operator Handoff Summary
 
-<!-- Reconciliation note 2026-08-07: Current feature tip is `0cfde15 security: finalize staging-only execution truth [migration-plan-only]`. The release manifest contains 164 required gates. The live staging baseline remains `9c045fa5a5c327014c20fe9377f7d5368b550573`; migration 29 is implemented in source but its applied staging state must be established by the guarded read-only migration plan. -->
+<!-- Reconciliation note 2026-08-08: Verify the exact feature tip with `git rev-parse HEAD`. The release manifest contains 164 required gates. The live staging baseline remains `9c045fa5a5c327014c20fe9377f7d5368b550573`; guarded read-only plan run `31215369413` established the clean pre-apply state at reviewed code checkpoint `9e068cc8b0a5ec9573732fee3a78bed9995787a6`. -->
 
-## Current staging handoff — 2026-08-07
+## Current staging handoff — 2026-08-08
 
-**Status:** **ACCOUNT-ACTION HARDENING IMPLEMENTED LOCALLY — STAGING MIGRATION AUTHORIZATION REQUIRED**
+**Status:** **LAUNCH-SCOPE REPOSITORY IMPLEMENTATION COMPLETE — FINAL PRE-MIGRATION CLOSURE IN PROGRESS**
 
 - **Only permitted branch:** `feature/course-branding-and-preview`.
 - **Only permitted staging target:** origin `https://preview.jpvbootcamp.com`, Dokploy slug `clients-jpv-bootcamp-app-tp9xrk`, app ID `I_2Vukga3cc3ZhaG-mUzU`, PostgreSQL `10.0.2.4:5433`, database `jpvbootcamp`, schema `jpvbootcamp_staging`.
-- **Current feature tip:** `0cfde15 security: finalize staging-only execution truth [migration-plan-only]`; pushes validate only and deployment requires explicit guarded dispatch.
+- **Current feature tip:** verify the exact operator tip with `git rev-parse HEAD`; pushes validate only and deployment requires explicit guarded dispatch.
 - **Deployed staging baseline:** `9c045fa5a5c327014c20fe9377f7d5368b550573`, preview workflow `30853006495`, authenticated staging admin `14/14`. No newer deployment is claimed.
-- **Implemented locally:** agreed core staging scope plus durable account-action reservation/finalization and reversible migration `20260804_050000_member_account_action_reservations`.
-- **Applied migration state:** not yet established by live evidence. Source registration does not prove database application.
-- **Next operator action:** run the guarded read-only staging migration plan; if it passes, prepare a separate apply-authorization packet. Do not apply migration 29 from this handoff.
-- **External gates:** explicit migration authorization, backup and rollback ownership, exact-SHA staging deployment evidence, provider verification, formal smoke, approved content, and stakeholder acceptance remain separate.
+- **Implemented:** agreed launch-scope staging code plus durable account-action reservation/finalization and reversible migration `20260804_050000_member_account_action_reservations`.
+- **Applied migration state:** guarded read-only plan run `31215369413` returned `plan_ok`: 28 Payload migrations applied, migration 29 solely missing, zero unexpected/duplicate/malformed Payload records, and Prisma healthy. Migration 29 is not applied.
+- **Next operator action:** finish a CI-green repository checkpoint, rerun the guarded pre-apply plan against that exact SHA, then prepare migration-29 apply authorization. Do not apply migration 29 from this handoff.
+- **External gates:** explicit migration authorization, backup evidence, maintenance window, rollback ownership, exact-SHA staging deployment evidence, provider verification, formal smoke, approved content, and stakeholder acceptance remain separate.
+- **Deferred/follow-up:** M2-01 and Phases 8–11 are not launch-scope blockers unless explicitly promoted.
 
 ## Current state
 
@@ -25,7 +26,8 @@
 - Current branch tip: run `git rev-parse HEAD` to confirm; staging health: `https://preview.jpvbootcamp.com/api/health`
 - Branch tip verification: verify the current tip with `git log --oneline -1` before operator action
 - PR / review URL: `https://github.com/prochattools/jpv-bootcamp/pull/3` (draft)
-- Migration inventory: 29/29 canonical Payload migration registrations synchronized; this is not applied database state. Migration `20260804_050000_member_account_action_reservations` exists only in local source until an explicit shared-staging migration authorization and deployment occur. The guarded read-only `pnpm staging:migration-status` CLI has not queried staging.
+- Migration inventory: the canonical 29-name Payload registry is synchronized, and registration inventory alone is not applied database state. Guarded read-only plan run `31215369413` established the pre-apply staging state at reviewed code checkpoint `9e068cc8b0a5ec9573732fee3a78bed9995787a6`: 28 Payload migrations applied, migration `20260804_050000_member_account_action_reservations` solely missing, zero unexpected/duplicate/malformed Payload records, and Prisma healthy. Before apply, rerun the guarded pre-apply plan against the exact final CI-green SHA; migration 29 remains unapplied until separately authorized.
+- Post-apply migration verification: the pre-apply `staging:payload-migration-plan` intentionally expects migration 29 to be missing and is not the all-29-applied verifier. After an authorized apply, use the guarded apply runner's post-check plus the general read-only `pnpm staging:migration-status` mechanism to prove all expected Payload migrations are applied and Prisma remains healthy.
 - Staging deployment target: this feature branch
 - Front-end website go-live milestone: 22 July 2026
 - Internal delivery / handover buffer: 23 July 2026
@@ -104,12 +106,10 @@
 - Representative 8-week programme content approval or explicit placeholder acceptance
 - The repository-owned programme content intake, validation, acceptance report, import plan, and approval record are complete; the client package and approval evidence are still required before the representative programme can leave preview-only state
 - Final public-copy and front-end content approval
-- Support-request migration target state remains unverified pending authorized read-only operator evidence; any write remains separately approval-gated
-- Table-plan-to-Free target-environment approval
-- Account-column rename approval
-- Approved migration path, owner, and rollback confirmation
-- Disposable localhost-only migration rehearsal has not been executed in this branch work beyond the static repository rehearsal unless separately evidenced
-- Rollback/recovery review and execution ownership
+- Migration 29 apply remains pending a fresh guarded `plan_ok` at the final CI-green SHA plus separate explicit operator authorization.
+- Apply authorization requires the five dynamic values: expected hostname, operator ID, backup evidence ID, maintenance-window ID, and rollback owner.
+- Legacy cutover/table-plan/account-column operations remain separately gated and are not part of the migration-29 apply authorization.
+- Rollback planning and rollback execution remain separate decisions with explicit ownership and evidence requirements.
 - Provider/email live verification remains pending
 - Staging smoke execution remains pending
 - Formal go/no-go review

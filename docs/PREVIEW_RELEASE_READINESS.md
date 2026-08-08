@@ -1,15 +1,15 @@
 # JPV Bootcamp Preview Release Readiness
 
-## Current staging-closure checkpoint — 2026-08-07
+## Current staging-closure checkpoint — 2026-08-08
 
 - **ONLY PERMITTED OPERATIONAL LANE:** `feature/course-branding-and-preview` → `https://preview.jpvbootcamp.com` → Dokploy `clients-jpv-bootcamp-app-tp9xrk` / `I_2Vukga3cc3ZhaG-mUzU` → PostgreSQL `10.0.2.4:5433`, database `jpvbootcamp`, schema `jpvbootcamp_staging`.
-- **CURRENT FEATURE TIP:** `0cfde15 security: finalize staging-only execution truth [migration-plan-only]`. Ordinary pushes validate only; staging deployment requires explicit guarded `workflow_dispatch`.
-- **LOCALLY VERIFIED CONTRACT:** core staging scope and account-action hardening are implemented in source; the release manifest contains `164/164` required gates and the staging-only invariant contains `52/52` checks. Full validation is rerun before any checkpoint commit.
+- **CURRENT FEATURE TIP:** verify the exact operator tip with `git rev-parse HEAD`. Ordinary pushes validate only; staging deployment requires explicit guarded `workflow_dispatch`.
+- **LOCALLY VERIFIED CONTRACT:** the agreed launch-scope repository implementation and account-action hardening are complete in source; the release manifest contains `164/164` required gates and the staging-only invariant contains `52/52` checks.
 - **LIVE STAGING BASELINE:** preview workflow `30853006495` remains the latest established deployment; staging health reported SHA `9c045fa5a5c327014c20fe9377f7d5368b550573` and authenticated staging admin `14/14`. No newer deployment is claimed.
 - **MEDIA PERSISTENCE:** verified via disposable fixture upload, redeployment survival, and Payload API deletion; named staging volume `jpv-bootcamp-preview-media` active.
-- **MIGRATION 29:** `20260804_050000_member_account_action_reservations` is implemented in source, but registration inventory is not applied-database evidence. The guarded read-only staging migration plan is the next required gate.
-- **NEXT AUTHORIZATION BOUNDARY:** a successful read-only plan may justify preparing an apply packet, but does not itself authorize any schema write or deployment.
-- **EXTERNAL ACTION:** client content approval, approved provider evidence, approved migration execution, and formal staging sign-off remain separate.
+- **AUTHORITATIVE PRE-APPLY EVIDENCE:** the canonical 29-name Payload registry was checked by guarded read-only plan run `31215369413` at reviewed code checkpoint `9e068cc8b0a5ec9573732fee3a78bed9995787a6`; it returned `plan_ok`: 28 Payload migrations applied, migration `20260804_050000_member_account_action_reservations` solely missing, zero unexpected/duplicate/malformed Payload records, and Prisma healthy. No write occurred.
+- **NEXT AUTHORIZATION BOUNDARY:** after a final CI-green repository checkpoint, rerun the guarded pre-apply plan against that exact SHA. A fresh `plan_ok` makes the migration-29 apply packet ready for separate operator approval; it does not authorize deployment or production.
+- **EXTERNAL ACTION:** client content approval, approved provider evidence, approved migration execution, staging deployment/smoke, and formal staging sign-off remain separate.
 
 This runbook separates repository changes, image publication, Payload migrations, Prisma startup behavior, provider email delivery, preview deployment, and smoke verification into independent approval categories.
 
@@ -20,7 +20,11 @@ The preview release path must use the reviewed feature branch and an exact commi
 Current operator branch: `feature/course-branding-and-preview`.
 Verify the exact branch tip with `git log --oneline -1` before operator action.
 
-**No applied-database-state claim is made by this checkpoint.** The canonical 29-name Payload registry and the health endpoint expose application registration inventory, not evidence that those migrations were applied. The real `pnpm staging:migration-status` read-only CLI is implemented, guarded by explicit staging mode, expected-schema, and acknowledgement flags, but it was not run against staging during this work. An authorized operator must still capture read-only Payload and Prisma migration evidence before any apply decision. Any schema or legacy-domain write requires explicit target authorization, backup, and rollback ownership.
+**Applied-state evidence is now established for the pre-apply checkpoint.** Registration inventory alone is not applied database state; the applied-state claim here comes from guarded database evidence, not from registration or health inventory. Guarded read-only plan run `31215369413` proved 28 Payload migrations applied, migration 29 solely missing, no unexpected/duplicate/malformed Payload records, and healthy Prisma history at the reviewed code checkpoint. Because the final closure commit changes the exact SHA, operators must obtain a fresh `plan_ok` against that final SHA before apply.
+
+`pnpm staging:payload-migration-plan` is a **pre-apply** verifier: it intentionally expects exactly 28 applied Payload migrations and migration 29 as the sole missing migration. After apply, do not expect that pre-apply plan to return `plan_ok`; rely on the guarded apply runner's own post-apply checks plus the general read-only `pnpm staging:migration-status` mechanism to prove all 29 are applied and Prisma remains healthy.
+
+Migration apply requires five dynamic operator values in addition to fixed target flags: `expected-hostname`, `operator-id`, `backup-evidence-id`, `maintenance-window-id`, and `rollback-owner`. Any schema write requires exact target authorization, backup evidence, a maintenance window, and rollback ownership.
 
 Legacy source intake now recognizes reviewed WordPress JSON root arrays and `items`, `posts`, or `lessons` arrays only when each non-empty export has meaningful type, content/title, and identity markers; bounded files are structurally parsed, while larger files retain streaming byte and SHA-256 evidence with record count unavailable. Generic RSS is not WordPress WXR: the reviewed WXR namespace, version, channel, and complete closing structure are required. No real source export was read and no real source import was executed.
 
@@ -42,11 +46,11 @@ Static preflight automation is available via `pnpm staging:static-preflight`; it
 
 **Latest completed staging verification snapshot (2026-08-02):** SHA `c15cd578a953cd6b1dc8a3d4705350a52f7d0812`, preview workflow `30761713446`, conclusion `success`, exact-SHA staging health confirmed. Prior verified snapshot: SHA `3a6613498241c5dd71761c26c3b1e790764db1d5`, workflow `30756831212`, conclusion `success` (retained as historical anchor). The authoritative current branch tip is determined by `git rev-parse HEAD`; do not treat any hardcoded SHA as the immutable current tip.
 
-**Outcome:** `ACCOUNT-ACTION HARDENING IMPLEMENTED LOCALLY — STAGING MIGRATION AUTHORIZATION REQUIRED` — durable reservation/finalization is implemented in source with behavioral concurrency evidence, while formal acceptance and shared-staging schema verification remain separately gated.
+**Outcome:** `LAUNCH-SCOPE REPOSITORY IMPLEMENTATION COMPLETE — FINAL PRE-MIGRATION CLOSURE IN PROGRESS` — durable account-action reservation/finalization is implemented and behaviorally validated in source; guarded run `31215369413` established the clean pre-apply database state, while migration 29 apply, exact-SHA deployment, smoke, and external acceptance remain separately gated.
 
 **Technical staging status:** `STAGING TECHNICAL IMPLEMENTATION COMPLETE — ACCEPTANCE PENDING EXTERNAL ACTION`
 
-**Repository-owned staging operations status:** `LOCAL HARDENING COMPLETE — CONTROLLED STAGING MIGRATION APPROVAL REQUIRED`
+**Repository-owned staging operations status:** `PRE-APPLY EVIDENCE CLEAN — FINAL EXACT-SHA PLAN AND MIGRATION AUTHORIZATION PENDING`
 
 **Decision-readiness command result:** `DECISION-READY, EXTERNAL APPROVALS PENDING`
 
@@ -79,7 +83,7 @@ Static preflight automation is available via `pnpm staging:static-preflight`; it
 - `pnpm build` passed
 - `pnpm exec prisma validate --schema=prisma/system.prisma` passed
 - `pnpm exec prisma validate --schema=prisma/schema.prisma` passed
-- `pnpm exec pnpm audit --prod --audit-level high --ignore-registry-errors` exited non-zero; current status is `3 high + 5 moderate` (in Payload/PostCSS dependencies; inherited from 9c045fa baseline and addressed separately)
+- `pnpm exec pnpm audit --prod --audit-level high --ignore-registry-errors` previously passed the high-severity gate; the last verified residual advisory baseline was `3 moderate` with no high/critical production advisory. The final push CI must re-run this gate; do not infer current registry state from this historical note alone.
 - `pnpm exec tsx scripts/no_legacy_learn_namespace.test.ts` passed
 - no migration, deployment, provider, or push action occurred during this validation baseline
 
@@ -87,10 +91,10 @@ Static preflight automation is available via `pnpm staging:static-preflight`; it
 
 | Gate | Current status | Evidence owner | Notes |
 | --- | --- | --- | --- |
-| Migration evidence and apply path | Blocked | `docs/client/MIGRATION_APPROVAL_PACKET.md`, `docs/client/MIGRATION_APPROVAL_STATUS.md` | Applied state is unverified; authorized read-only evidence is required before any separately authorized write. |
+| Migration evidence and apply path | Pre-apply evidence clean; final exact-SHA refresh required | `docs/client/MIGRATION_APPROVAL_PACKET.md`, `docs/client/MIGRATION_APPROVAL_STATUS.md` | Run `31215369413` returned `plan_ok`: 28 Payload migrations applied, migration 29 solely missing, zero unexpected/duplicate/malformed records, Prisma healthy. Rerun against the final CI-green SHA before apply authorization. |
 | Decision packets and owners | Ready for external approval review | `docs/decisions/`, `pnpm staging:decision-readiness` | Repository-owned decision records, owner assignments, dependency order, and rollback statements are now complete and internally validated. |
 | Migration rehearsal and rollback ownership | Static rehearsal passed; disposable execution not yet run | `docs/client/MIGRATION_REHEARSAL_RUNBOOK.md`, `docs/release/ROLLBACK_EVIDENCE_CHECKLIST.md` | Repository-owned static rehearsal and evidence are complete; localhost-only disposable execution stays opt-in and target-environment rehearsal remains gated. |
-| Support-request migration target state | Blocked / unverified | `prisma/migrations/20260712_151700_add_support_requests/migration.sql` | The additive migration exists in the repository, but its applied state is not established by repository or health evidence. |
+| Prisma migration target state | Verified healthy in pre-apply plan | guarded staging plan run `31215369413` | `plan_ok` requires no missing, unexpected, duplicate, failed, in-progress, or rolled-back Prisma migration records. Reconfirm at the final exact SHA before apply. |
 | Provider/email verification | Repository simulation passed; live verification not executed | `docs/client/PROVIDER_EMAIL_READINESS.md`, `docs/client/PROVIDER_EMAIL_EVIDENCE_TEMPLATE.md` | Mocked/local provider simulation is repository-owned and complete; live verification still requires credentials and operator evidence. |
 | Stripe checkout/webhook/billing portal live verification | Repository simulation passed; live verification not executed | `docs/client/PROVIDER_EMAIL_READINESS.md` | Local validation and provider simulation passed safely; live verification is separate. |
 | Representative programme and public-copy approval | Blocked | `docs/client/FRONTEND_CONTENT_INTAKE_CHECKLIST.md`, `docs/client/FRONTEND_COPY_APPROVAL_PACKET.md` | Programme remains preview-only until approved content exists. |
