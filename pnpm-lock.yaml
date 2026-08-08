@@ -14,8 +14,6 @@ overrides:
   next>postcss: 8.5.22
   js-yaml: 4.3.1
 
-pnpmfileChecksum: sha256-r94xhbkG1+vIcf0zQmXXDyjvZmk03X1fzr2EGVH3jfM=
-
 importers:
 
   .:
