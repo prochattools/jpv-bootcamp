@@ -668,12 +668,12 @@ jobs:
           # Semantic verification: plan_ok requires all evidence fields to match expected values exactly.
           # Wrong-target, wrong-commit, wrong-schema, anomaly counts, or unhealthy Prisma must not pass.
           if [ "$RESULT_CODE" = "plan_ok" ] && [ $PLAN_EXIT -eq 0 ]; then
-            EXPECTED_PENDING_MIGRATIONS='["20260817_193000_bunny_guid_first","20260817_193100_lesson_comments","20260817_193200_space_og_image","20260817_193300_space_reactions"]'
+            EXPECTED_PENDING_MIGRATIONS='["20260818_140000_member_profile_parity","20260818_140100_portal_settings"]'
             REQUIRED_BRANCH="feature/course-branding-and-preview"
             REQUIRED_SCHEMA="jpvbootcamp_staging"
             REQUIRED_ENVIRONMENT="staging"
             REQUIRED_TARGET_ID="jpvbootcamp-staging"
-            EXPECTED_APPLIED_COUNT=29
+            EXPECTED_APPLIED_COUNT=33
             if ! node scripts/staging-gates/validate-plan-result-step3.js plan-result-sanitized.json "$EXPECTED_SHA" "$EXPECTED_PENDING_MIGRATIONS" "$REQUIRED_BRANCH" "$REQUIRED_SCHEMA" "$REQUIRED_ENVIRONMENT" "$REQUIRED_TARGET_ID" "$EXPECTED_APPLIED_COUNT"
             then
               echo "PLAN-BLOCKED: plan_ok semantic verification failed — evidence does not match required values" >&2

@@ -30,24 +30,22 @@ const REQUIRED_SCHEMA = STAGING_TARGET.schema
 const REQUIRED_DATABASE = STAGING_TARGET.database
 const REQUIRED_ENVIRONMENT = STAGING_TARGET.environment
 const REQUIRED_TARGET_ID = STAGING_TARGET.targetId
-const EXPECTED_APPLIED_BEFORE = 29
+const EXPECTED_APPLIED_BEFORE = 33
 const EXPECTED_FORWARD_BATCH = [
-  '20260817_193000_bunny_guid_first',
-  '20260817_193100_lesson_comments',
-  '20260817_193200_space_og_image',
-  '20260817_193300_space_reactions',
+  '20260818_140000_member_profile_parity',
+  '20260818_140100_portal_settings',
 ] as const
-const TARGET_MIGRATIONS = PAYLOAD_MIGRATION_NAMES.slice(EXPECTED_APPLIED_BEFORE)
-const EXPECTED_APPLIED_AFTER = PAYLOAD_MIGRATION_NAMES.length
-const APPLY_CONFIRMATION_VALUE = 'apply_forward_a_b_c_d_to_jpvbootcamp_staging'
-const ROLLBACK_PLAN_CONFIRMATION_VALUE = 'plan_rollback_forward_a_b_c_d_from_jpvbootcamp_staging'
+const EXPECTED_APPLIED_AFTER = EXPECTED_APPLIED_BEFORE + EXPECTED_FORWARD_BATCH.length
+const TARGET_MIGRATIONS = PAYLOAD_MIGRATION_NAMES.slice(EXPECTED_APPLIED_BEFORE, EXPECTED_APPLIED_AFTER)
+const APPLY_CONFIRMATION_VALUE = 'apply_member_profile_portal_settings_to_jpvbootcamp_staging'
+const ROLLBACK_PLAN_CONFIRMATION_VALUE = 'plan_rollback_member_profile_portal_settings_from_jpvbootcamp_staging'
 const FULL_COMMIT_SHA_RE = /^[0-9a-f]{40}$/
 
 if (
   TARGET_MIGRATIONS.length !== EXPECTED_FORWARD_BATCH.length ||
   TARGET_MIGRATIONS.some((name, index) => name !== EXPECTED_FORWARD_BATCH[index])
 ) {
-  throw new Error(`Canonical migration registry does not end with the reviewed Forward A-D batch`)
+  throw new Error(`Canonical migration registry does not contain the reviewed migrations 34-35 at the expected position`)
 }
 
 // Production token labels rejected as whole tokens (exact match against hostname labels or db name components).
@@ -854,7 +852,7 @@ export async function runStagingMigrationPlan(
   }
 
   output(
-    `[staging-migration-plan] PLAN OK: Forward A-D batch is pending in canonical order and all preconditions are met`,
+    `[staging-migration-plan] PLAN OK: Migrations 34-35 batch is pending in canonical order and all preconditions are met`,
   )
   output(`[staging-migration-plan] pending-batch=${TARGET_MIGRATIONS.join(',')}`)
   output(`[staging-migration-plan] To apply: pnpm staging:payload-migration-apply`)
@@ -1073,7 +1071,7 @@ export async function runStagingMigrationApply(
       appliedCount: postStatus.appliedPayloadCount,
       missingMigrations: postStatus.missingPayloadMigrations,
     },
-    message: `Apply completed: Forward A-D batch [${TARGET_MIGRATIONS.join(', ')}] applied to ${REQUIRED_SCHEMA}. Rollback requires separate plan and authorization.`,
+    message: `Apply completed: Migrations 34-35 [${TARGET_MIGRATIONS.join(', ')}] applied to ${REQUIRED_SCHEMA}. Rollback requires separate plan and authorization.`,
   }
 }
 
@@ -1225,7 +1223,7 @@ export async function runStagingMigrationRollbackPlan(
     )
   }
 
-  // Determine latest batch and require exactly the reviewed Forward A-D batch.
+  // Determine latest batch and require exactly the reviewed migrations 34-35 batch.
   const latestBatchRows: string[] = []
   if (!batchEvidenceMalformed) {
     const highestBatch = Math.max(...records.map((r) => r.batch))
@@ -1281,7 +1279,7 @@ export async function runStagingMigrationRollbackPlan(
     latestBatchMigrations: latestBatchRows,
     blockers: [],
     message:
-      `Rollback plan OK: Forward A-D batch [${TARGET_MIGRATIONS.join(', ')}] is the latest applied batch. ` +
+      `Rollback plan OK: Migrations 34-35 [${TARGET_MIGRATIONS.join(', ')}] is the latest applied batch. ` +
       `Rollback execution requires separate authorization.`,
   }
 }
@@ -1428,7 +1426,7 @@ const APPLY_USAGE = [
   '  --rollback-owner=<id> \\',
   `  --confirmation=${APPLY_CONFIRMATION_VALUE}`,
   '',
-  `Applies the exact Forward A-D batch to the ${REQUIRED_SCHEMA} schema.`,
+  `Applies the exact migrations 34-35 batch to the ${REQUIRED_SCHEMA} schema.`,
   'Authorization does NOT authorize push, Dokploy redeployment, Prisma database-deploy,',
   'provider email, post-deployment smoke, or production.',
 ].join('\n')

@@ -49,30 +49,29 @@ const REQUIRED_SCHEMA = 'jpvbootcamp_staging'
 const REQUIRED_DATABASE = 'jpvbootcamp'
 const REQUIRED_TARGET_ID = 'jpvbootcamp-staging'
 const REQUIRED_ENVIRONMENT = 'staging'
-const MIGRATION29 = '20260804_050000_member_account_action_reservations'
+const MIGRATION33 = '20260817_193300_space_reactions'
 const TARGET_MIGRATIONS = [
-  '20260817_193000_bunny_guid_first',
-  '20260817_193100_lesson_comments',
-  '20260817_193200_space_og_image',
-  '20260817_193300_space_reactions',
+  '20260818_140000_member_profile_parity',
+  '20260818_140100_portal_settings',
 ] as const
 const TARGET_MIGRATION = TARGET_MIGRATIONS[0]
-const APPLY_CONFIRMATION = 'apply_forward_a_b_c_d_to_jpvbootcamp_staging'
-const ROLLBACK_CONFIRMATION = 'plan_rollback_forward_a_b_c_d_from_jpvbootcamp_staging'
-const EXPECTED_APPLIED_BEFORE = 29
-const EXPECTED_APPLIED_AFTER = 33
+const APPLY_CONFIRMATION = 'apply_member_profile_portal_settings_to_jpvbootcamp_staging'
+const ROLLBACK_CONFIRMATION = 'plan_rollback_member_profile_portal_settings_from_jpvbootcamp_staging'
+const EXPECTED_APPLIED_BEFORE = 33
+const EXPECTED_APPLIED_AFTER = 35
 // Reviewed staging hostname — matches STAGING_TARGET.hostname in runStagingPayloadMigration.ts.
 const STAGING_HOSTNAME = '10.0.2.4'
 const PRODUCTION_HOSTNAME = 'prod-db.internal'
 
-const FIRST_29 = PAYLOAD_MIGRATION_NAMES.slice(0, EXPECTED_APPLIED_BEFORE)
-const ALL_33 = PAYLOAD_MIGRATION_NAMES
+const FIRST_33 = PAYLOAD_MIGRATION_NAMES.slice(0, EXPECTED_APPLIED_BEFORE)
+const ALL_35 = PAYLOAD_MIGRATION_NAMES.slice(0, EXPECTED_APPLIED_AFTER)
 
 // Registry integrity assertions — fail fast if the registry is out of sync.
-assert.equal(FIRST_29.length, EXPECTED_APPLIED_BEFORE, 'Registry must have exactly 29 applied migrations before Forward A-D')
-assert.equal(FIRST_29.at(-1), MIGRATION29, 'Migration29 must be the last migration in the applied prefix')
-assert.equal(ALL_33.length, EXPECTED_APPLIED_AFTER, 'Registry must have exactly 33 migrations')
-assert.deepEqual(ALL_33.slice(EXPECTED_APPLIED_BEFORE), [...TARGET_MIGRATIONS], 'Forward A-D must be the exact canonical pending suffix')
+assert.equal(PAYLOAD_MIGRATION_NAMES.length, 35, 'Canonical registry must contain the reviewed 35 migrations')
+assert.equal(FIRST_33.length, EXPECTED_APPLIED_BEFORE, 'Registry must have exactly 33 applied migrations before migrations 34-35')
+assert.equal(FIRST_33.at(-1), MIGRATION33, 'Migration33 must be the last migration in the applied prefix')
+assert.equal(ALL_35.length, EXPECTED_APPLIED_AFTER, 'Canonical 33→35 checkpoint must contain all 35 migrations')
+assert.deepEqual(ALL_35.slice(EXPECTED_APPLIED_BEFORE), [...TARGET_MIGRATIONS], 'Migrations 34-35 must be the exact canonical 33→35 batch')
 
 // ─── Confirmed: no self-referential hardcoded commit ──────────────────────────
 // The runner exports no REQUIRED_COMMIT constant.
@@ -140,35 +139,36 @@ function makeClient(opts: {
   }
 }
 
-function make29PreClient(schema = REQUIRED_SCHEMA): PgClientLike {
-  return makeClient({ schema, payloadRows: FIRST_29.map((n) => ({ name: n, batch: 1 })) })
+function make33Client(schema = REQUIRED_SCHEMA): PgClientLike {
+  return makeClient({ schema, payloadRows: FIRST_33.map((n) => ({ name: n, batch: 1 })) })
 }
 
-function make33Client(schema = REQUIRED_SCHEMA): PgClientLike {
+function make35Client(schema = REQUIRED_SCHEMA): PgClientLike {
   return makeClient({
     schema,
     payloadRows: [
-      ...FIRST_29.map((n) => ({ name: n, batch: 1 })),
+      ...FIRST_33.map((n) => ({ name: n, batch: 1 })),
       ...TARGET_MIGRATIONS.map((name) => ({ name, batch: 2 })),
     ],
   })
-}
-
-function clientFactory29Pre(schema = REQUIRED_SCHEMA): PgClientFactory {
-  return () => make29PreClient(schema)
 }
 
 function clientFactory33(schema = REQUIRED_SCHEMA): PgClientFactory {
   return () => make33Client(schema)
 }
 
+function clientFactory35(schema = REQUIRED_SCHEMA): PgClientFactory {
+  return () => make35Client(schema)
+}
+
 function clientFactorySequence(schema = REQUIRED_SCHEMA): PgClientFactory {
   let call = 0
   return () => {
     const idx = call++
-    return idx === 0 ? make29PreClient(schema) : make33Client(schema)
+    return idx === 0 ? make33Client(schema) : make35Client(schema)
   }
 }
+
 
 function goodPlanInput(overrides: Partial<StagingMigrationPlanInput> = {}): StagingMigrationPlanInput {
   return {
@@ -229,7 +229,7 @@ function baseDeps(overrides: Partial<StagingMigrationRunnerDependencies> = {}): 
   return {
     gitResolver: okGit(),
     gitStatusResolver: cleanGitStatus(),
-    clientFactory: clientFactory29Pre(),
+    clientFactory: clientFactory33(),
     commandExecutor: okApplyExecutor(),
     ...overrides,
   }
@@ -283,7 +283,7 @@ async function run(): Promise<void> {
     // Verify the result object is JSON-serializable and parses back to the same values
     const result = await runStagingMigrationPlan(
       stagingUrl(), undefined, goodPlanInput(),
-      baseDeps({ clientFactory: clientFactory29Pre() }), noopOutput(),
+      baseDeps({ clientFactory: clientFactory33() }), noopOutput(),
     )
     const serialized = JSON.stringify(result)
     const parsed = JSON.parse(serialized)
@@ -298,7 +298,7 @@ async function run(): Promise<void> {
   await test('plan: result has all required schema fields of the correct types', async () => {
     const result = await runStagingMigrationPlan(
       stagingUrl(), undefined, goodPlanInput(),
-      baseDeps({ clientFactory: clientFactory29Pre() }), noopOutput(),
+      baseDeps({ clientFactory: clientFactory33() }), noopOutput(),
     )
     assert.equal(typeof result.ok, 'boolean')
     assert.equal(typeof result.mode, 'string')
@@ -317,7 +317,7 @@ async function run(): Promise<void> {
     // The sanitized artifact must not contain raw error text with URLs or credentials
     const result = await runStagingMigrationPlan(
       stagingUrl(), undefined, goodPlanInput(),
-      baseDeps({ clientFactory: clientFactory29Pre() }), noopOutput(),
+      baseDeps({ clientFactory: clientFactory33() }), noopOutput(),
     )
     const serialized = JSON.stringify(result)
     assert.ok(!serialized.includes('postgres://'), 'result must not contain PostgreSQL URL scheme')
@@ -579,7 +579,7 @@ async function run(): Promise<void> {
       stagingUrl(PRODUCTION_HOSTNAME),
       undefined,
       goodPlanInput({ expectedHostname: PRODUCTION_HOSTNAME }),
-      baseDeps({ clientFactory: clientFactory29Pre() }),
+      baseDeps({ clientFactory: clientFactory33() }),
       noopOutput(),
     )
     assert.equal(result.ok, false)
@@ -591,7 +591,7 @@ async function run(): Promise<void> {
       stagingUrl('other-staging-db.internal'),
       undefined,
       goodPlanInput({ expectedHostname: STAGING_HOSTNAME }),
-      baseDeps({ clientFactory: clientFactory29Pre() }),
+      baseDeps({ clientFactory: clientFactory33() }),
       noopOutput(),
     )
     assert.equal(result.ok, false)
@@ -604,7 +604,7 @@ async function run(): Promise<void> {
       stagingUrl('wrong-host.internal'),
       undefined,
       goodPlanInput({ expectedHostname: STAGING_HOSTNAME }),
-      baseDeps({ clientFactory: clientFactory29Pre() }),
+      baseDeps({ clientFactory: clientFactory33() }),
       noopOutput(),
     )
     assert.equal(result.ok, false)
@@ -698,12 +698,12 @@ async function run(): Promise<void> {
 
   // ─── plan: Payload state checks ───────────────────────────────────────────
 
-  await test('plan: ok when 29 applied and exact Forward A-D batch is pending', async () => {
+  await test('plan: ok when 33 applied and exact migrations 34-35 batch is pending', async () => {
     const result = await runStagingMigrationPlan(
       stagingUrl(),
       undefined,
       goodPlanInput(),
-      baseDeps({ clientFactory: clientFactory29Pre() }),
+      baseDeps({ clientFactory: clientFactory33() }),
       noopOutput(),
     )
     assert.equal(result.ok, true)
@@ -715,8 +715,8 @@ async function run(): Promise<void> {
     assert.equal(result.targetId, REQUIRED_TARGET_ID)
   })
 
-  await test('plan: blocks when applied count is not 28', async () => {
-    const all27 = FIRST_29.slice(1)
+  await test('plan: blocks when applied count is not 32', async () => {
+    const all27 = FIRST_33.slice(1)
     const factory27: PgClientFactory = () => makeClient({
       schema: REQUIRED_SCHEMA,
       payloadRows: all27.map((n) => ({ name: n, batch: 1 })),
@@ -729,10 +729,10 @@ async function run(): Promise<void> {
     assert.ok(result.blockers.some((b) => b === 'applied_count_mismatch' || b === 'pending_migration_mismatch' || b.includes('28') || b.includes('count') || b.includes('mismatch')))
   })
 
-  await test('plan: blocks when migration 29 is already applied', async () => {
+  await test('plan: blocks when target batch is already applied', async () => {
     const result = await runStagingMigrationPlan(
       stagingUrl(), undefined, goodPlanInput(),
-      baseDeps({ clientFactory: clientFactory33() }), noopOutput(),
+      baseDeps({ clientFactory: clientFactory35() }), noopOutput(),
     )
     assert.equal(result.ok, false)
     assert.ok(result.blockers.some((b) =>
@@ -745,7 +745,7 @@ async function run(): Promise<void> {
     const factory: PgClientFactory = () => makeClient({
       schema: REQUIRED_SCHEMA,
       payloadRows: [
-        ...FIRST_29.map((n) => ({ name: n, batch: 1 })),
+        ...FIRST_33.map((n) => ({ name: n, batch: 1 })),
         { name: 'unexpected_migration', batch: 1 },
       ],
     })
@@ -761,8 +761,8 @@ async function run(): Promise<void> {
     const factory: PgClientFactory = () => makeClient({
       schema: REQUIRED_SCHEMA,
       payloadRows: [
-        ...FIRST_29.map((n) => ({ name: n, batch: 1 })),
-        { name: FIRST_29[0], batch: 2 }, // duplicate of first
+        ...FIRST_33.map((n) => ({ name: n, batch: 1 })),
+        { name: FIRST_33[0], batch: 2 }, // duplicate of first
       ],
     })
     const result = await runStagingMigrationPlan(
@@ -781,7 +781,7 @@ async function run(): Promise<void> {
   await test('plan: blocks when Prisma migrations are empty', async () => {
     const factory: PgClientFactory = () => makeClient({
       schema: REQUIRED_SCHEMA,
-      payloadRows: FIRST_29.map((n) => ({ name: n, batch: 1 })),
+      payloadRows: FIRST_33.map((n) => ({ name: n, batch: 1 })),
       prismaRows: [],
     })
     const result = await runStagingMigrationPlan(
@@ -806,7 +806,7 @@ async function run(): Promise<void> {
     ]
     const factory: PgClientFactory = () => makeClient({
       schema: REQUIRED_SCHEMA,
-      payloadRows: FIRST_29.map((n) => ({ name: n, batch: 1 })),
+      payloadRows: FIRST_33.map((n) => ({ name: n, batch: 1 })),
       prismaRows,
     })
     const result = await runStagingMigrationPlan(
@@ -831,7 +831,7 @@ async function run(): Promise<void> {
     ]
     const factory: PgClientFactory = () => makeClient({
       schema: REQUIRED_SCHEMA,
-      payloadRows: FIRST_29.map((n) => ({ name: n, batch: 1 })),
+      payloadRows: FIRST_33.map((n) => ({ name: n, batch: 1 })),
       prismaRows,
     })
     const result = await runStagingMigrationPlan(
@@ -856,7 +856,7 @@ async function run(): Promise<void> {
     ]
     const factory: PgClientFactory = () => makeClient({
       schema: REQUIRED_SCHEMA,
-      payloadRows: FIRST_29.map((n) => ({ name: n, batch: 1 })),
+      payloadRows: FIRST_33.map((n) => ({ name: n, batch: 1 })),
       prismaRows,
     })
     const result = await runStagingMigrationPlan(
@@ -871,7 +871,7 @@ async function run(): Promise<void> {
     const prismaRows = REGISTERED_PRISMA_MIGRATIONS.slice(1).map((n) => appliedPrismaRow(n))
     const factory: PgClientFactory = () => makeClient({
       schema: REQUIRED_SCHEMA,
-      payloadRows: FIRST_29.map((n) => ({ name: n, batch: 1 })),
+      payloadRows: FIRST_33.map((n) => ({ name: n, batch: 1 })),
       prismaRows,
     })
     const result = await runStagingMigrationPlan(
@@ -889,7 +889,7 @@ async function run(): Promise<void> {
     ]
     const factory: PgClientFactory = () => makeClient({
       schema: REQUIRED_SCHEMA,
-      payloadRows: FIRST_29.map((n) => ({ name: n, batch: 1 })),
+      payloadRows: FIRST_33.map((n) => ({ name: n, batch: 1 })),
       prismaRows,
     })
     const result = await runStagingMigrationPlan(
@@ -907,7 +907,7 @@ async function run(): Promise<void> {
     ]
     const factory: PgClientFactory = () => makeClient({
       schema: REQUIRED_SCHEMA,
-      payloadRows: FIRST_29.map((n) => ({ name: n, batch: 1 })),
+      payloadRows: FIRST_33.map((n) => ({ name: n, batch: 1 })),
       prismaRows,
     })
     const result = await runStagingMigrationPlan(
@@ -931,7 +931,7 @@ async function run(): Promise<void> {
     const sensitiveUrl = `postgres://user:secret-password@${STAGING_HOSTNAME}/${REQUIRED_DATABASE}?schema=${REQUIRED_SCHEMA}`
     await runStagingMigrationPlan(
       sensitiveUrl, undefined, goodPlanInput(),
-      baseDeps({ clientFactory: clientFactory29Pre() }),
+      baseDeps({ clientFactory: clientFactory33() }),
       (line) => lines.push(line),
     )
     for (const line of lines) {
@@ -1070,11 +1070,11 @@ async function run(): Promise<void> {
     )
   })
 
-  await test('apply: rejects when pre-apply count is not 28', async () => {
+  await test('apply: rejects when pre-apply count is not 33', async () => {
     await assert.rejects(
       () => runStagingMigrationApply(
         stagingUrl(), undefined, goodAuthorization(),
-        baseDeps({ clientFactory: clientFactory33() }),
+        baseDeps({ clientFactory: clientFactory35() }),
         noopOutput(),
       ),
       /pre-apply check failed/i,
@@ -1095,7 +1095,7 @@ async function run(): Promise<void> {
     ]
     const factory: PgClientFactory = () => makeClient({
       schema: REQUIRED_SCHEMA,
-      payloadRows: FIRST_29.map((n) => ({ name: n, batch: 1 })),
+      payloadRows: FIRST_33.map((n) => ({ name: n, batch: 1 })),
       prismaRows,
     })
     await assert.rejects(
@@ -1111,7 +1111,7 @@ async function run(): Promise<void> {
   await test('apply: non-zero exit returns APPLY_OUTCOME_UNCERTAIN (does not throw)', async () => {
     const result = await runStagingMigrationApply(
       stagingUrl(), undefined, goodAuthorization(),
-      baseDeps({ clientFactory: clientFactory29Pre(), commandExecutor: okApplyExecutor(1) }),
+      baseDeps({ clientFactory: clientFactory33(), commandExecutor: okApplyExecutor(1) }),
       noopOutput(),
     )
     assert.equal(result.ok, false)
@@ -1122,7 +1122,7 @@ async function run(): Promise<void> {
   await test('apply: uncertain outcome message does not recommend unconditional migrate:down', async () => {
     const result = await runStagingMigrationApply(
       stagingUrl(), undefined, goodAuthorization(),
-      baseDeps({ clientFactory: clientFactory29Pre(), commandExecutor: okApplyExecutor(1) }),
+      baseDeps({ clientFactory: clientFactory33(), commandExecutor: okApplyExecutor(1) }),
       noopOutput(),
     )
     assert.ok('outcome' in result)
@@ -1175,7 +1175,7 @@ async function run(): Promise<void> {
     await assert.rejects(
       () => runStagingMigrationApply(
         stagingUrl(), undefined, goodAuthorization(),
-        baseDeps({ clientFactory: clientFactory29Pre(), commandExecutor: okApplyExecutor() }),
+        baseDeps({ clientFactory: clientFactory33(), commandExecutor: okApplyExecutor() }),
         noopOutput(),
       ),
       /post-apply verification failed/i,
@@ -1206,25 +1206,25 @@ async function run(): Promise<void> {
     await assert.rejects(
       () => runStagingMigrationRollbackPlan(
         stagingUrl(), undefined, goodRollbackAuthorization({ confirmation: 'wrong' }),
-        baseDeps({ clientFactory: clientFactory33() }), noopOutput(),
+        baseDeps({ clientFactory: clientFactory35() }), noopOutput(),
       ),
       /confirmation/i,
     )
   })
 
-  await test('rollback-plan: rejects when not all 29 are applied', async () => {
-    const result = await runStagingMigrationRollbackPlan(
-      stagingUrl(), undefined, goodRollbackAuthorization(),
-      baseDeps({ clientFactory: clientFactory29Pre() }), noopOutput(),
-    )
-    assert.equal(result.ok, false)
-    assert.ok(result.blockers.some((b) => b.includes('29')))
-  })
-
-  await test('rollback-plan: ok when all 29 applied and migration 29 is last', async () => {
+  await test('rollback-plan: rejects when not all 35 are applied', async () => {
     const result = await runStagingMigrationRollbackPlan(
       stagingUrl(), undefined, goodRollbackAuthorization(),
       baseDeps({ clientFactory: clientFactory33() }), noopOutput(),
+    )
+    assert.equal(result.ok, false)
+    assert.ok(result.blockers.some((b) => b.includes('35') || b.includes('33')))
+  })
+
+  await test('rollback-plan: ok when all 35 applied and target batch is last', async () => {
+    const result = await runStagingMigrationRollbackPlan(
+      stagingUrl(), undefined, goodRollbackAuthorization(),
+      baseDeps({ clientFactory: clientFactory35() }), noopOutput(),
     )
     assert.equal(result.ok, true)
     assert.equal(result.mode, 'rollback-plan')
@@ -1232,11 +1232,11 @@ async function run(): Promise<void> {
     assert.ok(result.message.toLowerCase().includes('separate authorization'))
   })
 
-  await test('rollback-plan: blocks when last applied is not migration 29', async () => {
+  await test('rollback-plan: blocks when last applied is not the target batch', async () => {
     const factory: PgClientFactory = () => makeClient({
       schema: REQUIRED_SCHEMA,
       payloadRows: [
-        ...ALL_33.map((n) => ({ name: n, batch: 1 })),
+        ...ALL_35.map((n) => ({ name: n, batch: 1 })),
         { name: 'extra_migration_after_29', batch: 2 }, // another migration applied after 29
       ],
     })
@@ -1253,7 +1253,7 @@ async function run(): Promise<void> {
     const result = await runStagingMigrationRollbackPlan(
       stagingUrl(), undefined, goodRollbackAuthorization(),
       {
-        ...baseDeps({ clientFactory: clientFactory33() }),
+        ...baseDeps({ clientFactory: clientFactory35() }),
         commandExecutor: () => {
           executorCalled = true
           return { status: 0 }
@@ -1268,7 +1268,7 @@ async function run(): Promise<void> {
   await test('rollback-plan: mode field is always rollback-plan', async () => {
     const result = await runStagingMigrationRollbackPlan(
       stagingUrl(), undefined, goodRollbackAuthorization(),
-      baseDeps({ clientFactory: clientFactory33() }), noopOutput(),
+      baseDeps({ clientFactory: clientFactory35() }), noopOutput(),
     )
     assert.equal(result.mode, 'rollback-plan')
   })
@@ -1307,7 +1307,7 @@ async function run(): Promise<void> {
     await runStagingMigrationPlan(
       stagingUrl(), undefined, goodPlanInput(),
       {
-        ...baseDeps({ clientFactory: clientFactory29Pre() }),
+        ...baseDeps({ clientFactory: clientFactory33() }),
         commandExecutor: () => {
           executorCalled = true
           return { status: 0 }
@@ -1327,7 +1327,7 @@ async function run(): Promise<void> {
       async connect() { dbCallCount++ },
       async query<R extends Record<string, unknown> = Record<string, unknown>>(text: string): Promise<{ rows: R[] }> {
         if (text.includes('current_schema()')) return { rows: [{ current_schema: REQUIRED_SCHEMA }] as unknown as R[] }
-        if (text.includes('.payload_migrations')) return { rows: FIRST_29.map((n) => ({ name: n, batch: 1 })) as unknown as R[] }
+        if (text.includes('.payload_migrations')) return { rows: FIRST_33.map((n) => ({ name: n, batch: 1 })) as unknown as R[] }
         if (text.includes('._prisma_migrations')) return { rows: REGISTERED_PRISMA_MIGRATIONS.map((n) => appliedPrismaRow(n)) as unknown as R[] }
         return { rows: [] as unknown as R[] }
       },
@@ -1344,10 +1344,10 @@ async function run(): Promise<void> {
 
   // ─── Defect 1: batch evidence preservation ────────────────────────────────
 
-  await test('rollback-plan: succeeds when exact Forward A-D batch is highest batch', async () => {
+  await test('rollback-plan: succeeds when exact migrations 34-35 batch is highest batch', async () => {
     const result = await runStagingMigrationRollbackPlan(
       stagingUrl(), undefined, goodRollbackAuthorization(),
-      baseDeps({ clientFactory: clientFactory33() }), noopOutput(),
+      baseDeps({ clientFactory: clientFactory35() }), noopOutput(),
     )
     assert.equal(result.ok, true)
     assert.deepEqual(result.latestBatchMigrations, [...TARGET_MIGRATIONS])
@@ -1357,7 +1357,7 @@ async function run(): Promise<void> {
     const factory: PgClientFactory = () => makeClient({
       schema: REQUIRED_SCHEMA,
       payloadRows: [
-        ...FIRST_29.map((n) => ({ name: n, batch: 1 })),
+        ...FIRST_33.map((n) => ({ name: n, batch: 1 })),
         { name: TARGET_MIGRATION, batch: 2 },
         { name: 'extra_in_same_batch', batch: 2 }, // shares batch with migration 29
       ],
@@ -1374,7 +1374,7 @@ async function run(): Promise<void> {
     const factory: PgClientFactory = () => makeClient({
       schema: REQUIRED_SCHEMA,
       payloadRows: [
-        ...FIRST_29.map((n) => ({ name: n, batch: 1 })),
+        ...FIRST_33.map((n) => ({ name: n, batch: 1 })),
         { name: TARGET_MIGRATION, batch: 2 },
         { name: 'later_migration', batch: 3 }, // later batch
       ],
@@ -1387,11 +1387,11 @@ async function run(): Promise<void> {
     assert.ok(result.blockers.some((b) => b.toLowerCase().includes('batch') || b.toLowerCase().includes('last applied')))
   })
 
-  await test('rollback-plan: blocks when batch metadata is missing (all batch=1 for all 29)', async () => {
-    // All 29 in batch 1 — migration 29 is not alone in highest batch
+  await test('rollback-plan: blocks when batch metadata is missing (all batch=1 for all 35)', async () => {
+    // All 35 in batch 1 — target migrations are not isolated in highest batch
     const factory: PgClientFactory = () => makeClient({
       schema: REQUIRED_SCHEMA,
-      payloadRows: ALL_33.map((n) => ({ name: n, batch: 1 })),
+      payloadRows: ALL_35.map((n) => ({ name: n, batch: 1 })),
     })
     const result = await runStagingMigrationRollbackPlan(
       stagingUrl(), undefined, goodRollbackAuthorization(),
@@ -1405,7 +1405,7 @@ async function run(): Promise<void> {
     const factory: PgClientFactory = () => makeClient({
       schema: REQUIRED_SCHEMA,
       payloadRows: [
-        ...FIRST_29.map((n) => ({ name: n, batch: 1 })),
+        ...FIRST_33.map((n) => ({ name: n, batch: 1 })),
         { name: TARGET_MIGRATION, batch: 2 },
         { name: TARGET_MIGRATION, batch: 2 }, // duplicate
       ],
@@ -1426,7 +1426,7 @@ async function run(): Promise<void> {
   await test('database guard: jpvbootcamp accepted', async () => {
     const result = await runStagingMigrationPlan(
       stagingUrl(), undefined, goodPlanInput({ expectedDatabase: 'jpvbootcamp' }),
-      baseDeps({ clientFactory: clientFactory29Pre() }), noopOutput(),
+      baseDeps({ clientFactory: clientFactory33() }), noopOutput(),
     )
     assert.equal(result.ok, true)
   })
@@ -1436,7 +1436,7 @@ async function run(): Promise<void> {
       `postgres://${STAGING_HOSTNAME}/other_db?schema=${REQUIRED_SCHEMA}`,
       undefined,
       goodPlanInput({ expectedDatabase: 'other_db' }),
-      baseDeps({ clientFactory: clientFactory29Pre() }), noopOutput(),
+      baseDeps({ clientFactory: clientFactory33() }), noopOutput(),
     )
     assert.equal(result.ok, false)
     assert.ok(result.blockers.some((b) =>
@@ -1449,7 +1449,7 @@ async function run(): Promise<void> {
       `postgres://${STAGING_HOSTNAME}/jpvbootcamp_staging?schema=${REQUIRED_SCHEMA}`,
       undefined,
       goodPlanInput({ expectedDatabase: 'jpvbootcamp_staging' }),
-      baseDeps({ clientFactory: clientFactory29Pre() }), noopOutput(),
+      baseDeps({ clientFactory: clientFactory33() }), noopOutput(),
     )
     assert.equal(result.ok, false)
     assert.ok(result.blockers.some((b) =>
@@ -1463,7 +1463,7 @@ async function run(): Promise<void> {
         `postgres://${STAGING_HOSTNAME}/${name}?schema=${REQUIRED_SCHEMA}`,
         undefined,
         goodPlanInput({ expectedDatabase: name }),
-        baseDeps({ clientFactory: clientFactory29Pre() }), noopOutput(),
+        baseDeps({ clientFactory: clientFactory33() }), noopOutput(),
       )
       assert.equal(result.ok, false, `${name} should be rejected`)
     }
@@ -1476,7 +1476,7 @@ async function run(): Promise<void> {
       `postgres://staging-domain.internal/${REQUIRED_DATABASE}?schema=${REQUIRED_SCHEMA}`,
       undefined,
       goodPlanInput({ expectedHostname: 'staging-domain.internal' }),
-      baseDeps({ clientFactory: clientFactory29Pre() }), noopOutput(),
+      baseDeps({ clientFactory: clientFactory33() }), noopOutput(),
     )
     // Should not be blocked by the "domain" substring — only whole-token markers are rejected
     assert.ok(!result.blockers.some((b) => b.includes("production marker 'domain'")))
@@ -1486,7 +1486,7 @@ async function run(): Promise<void> {
     const result = await runStagingMigrationPlan(
       stagingUrl(STAGING_HOSTNAME), undefined,
       goodPlanInput({ expectedHostname: STAGING_HOSTNAME }),
-      baseDeps({ clientFactory: clientFactory29Pre() }), noopOutput(),
+      baseDeps({ clientFactory: clientFactory33() }), noopOutput(),
     )
     assert.equal(result.ok, true)
   })
@@ -1496,7 +1496,7 @@ async function run(): Promise<void> {
       `postgres://${STAGING_HOSTNAME}x/${REQUIRED_DATABASE}?schema=${REQUIRED_SCHEMA}`,
       undefined,
       goodPlanInput({ expectedHostname: STAGING_HOSTNAME }),
-      baseDeps({ clientFactory: clientFactory29Pre() }), noopOutput(),
+      baseDeps({ clientFactory: clientFactory33() }), noopOutput(),
     )
     assert.equal(result.ok, false)
     assert.ok(result.blockers.some((b) => b.toLowerCase().includes('hostname')))
@@ -1509,7 +1509,7 @@ async function run(): Promise<void> {
         `postgres://${hostname}/${REQUIRED_DATABASE}?schema=${REQUIRED_SCHEMA}`,
         undefined,
         goodPlanInput({ expectedHostname: hostname }),
-        baseDeps({ clientFactory: clientFactory29Pre() }), noopOutput(),
+        baseDeps({ clientFactory: clientFactory33() }), noopOutput(),
       )
       assert.equal(result.ok, false, `hostname with '${label}' token should be rejected`)
       assert.ok(
@@ -1530,7 +1530,7 @@ async function run(): Promise<void> {
       `postgres://arbitrary.host/${REQUIRED_DATABASE}?schema=${REQUIRED_SCHEMA}`,
       undefined,
       goodPlanInput({ expectedHostname: 'arbitrary.host', expectedDatabase: REQUIRED_DATABASE }),
-      baseDeps({ clientFactory: clientFactory29Pre() }), noopOutput(),
+      baseDeps({ clientFactory: clientFactory33() }), noopOutput(),
     )
     assert.equal(result.ok, false)
     assert.ok(result.blockers.some((b) => b.toLowerCase().includes('hostname')))
@@ -1543,7 +1543,7 @@ async function run(): Promise<void> {
       () => runStagingMigrationRollbackPlan(
         stagingUrl(), undefined, goodRollbackAuthorization(),
         {
-          ...baseDeps({ clientFactory: clientFactory33() }),
+          ...baseDeps({ clientFactory: clientFactory35() }),
           gitStatusResolver: dirtyGitStatus([
             { status: 'M', path: 'scripts/release/runStagingPayloadMigration.ts' },
           ]),
@@ -1558,7 +1558,7 @@ async function run(): Promise<void> {
     const result = await runStagingMigrationRollbackPlan(
       stagingUrl(), undefined, goodRollbackAuthorization(),
       {
-        ...baseDeps({ clientFactory: clientFactory33() }),
+        ...baseDeps({ clientFactory: clientFactory35() }),
         gitStatusResolver: dirtyGitStatus([
           { status: 'M', path: '.ai/current.md' },
           { status: 'M', path: '.claude/worktrees/wf_abc123' },
@@ -1659,7 +1659,7 @@ async function run(): Promise<void> {
     const result = await runStagingMigrationApply(
       stagingUrl(), undefined, goodAuthorization(),
       {
-        ...baseDeps({ clientFactory: clientFactory29Pre() }),
+        ...baseDeps({ clientFactory: clientFactory33() }),
         commandExecutor: () => ({ status: null, error: new Error('spawn error') }),
       },
       noopOutput(),
@@ -1674,7 +1674,7 @@ async function run(): Promise<void> {
     const result = await runStagingMigrationApply(
       stagingUrl(), undefined, goodAuthorization(),
       {
-        ...baseDeps({ clientFactory: clientFactory29Pre() }),
+        ...baseDeps({ clientFactory: clientFactory33() }),
         commandExecutor: () => ({ status: null }),
       },
       noopOutput(),
@@ -1683,11 +1683,11 @@ async function run(): Promise<void> {
     assert.equal('outcome' in result && result.outcome, APPLY_OUTCOME_UNCERTAIN)
   })
 
-  await test('apply: uncertain outcome at unchanged 29-state reports targetBatchApplied=false', async () => {
+  await test('apply: uncertain outcome at unchanged 33-state reports targetBatchApplied=false', async () => {
     const result = await runStagingMigrationApply(
       stagingUrl(), undefined, goodAuthorization(),
       {
-        ...baseDeps({ clientFactory: clientFactory29Pre() }),
+        ...baseDeps({ clientFactory: clientFactory33() }),
         commandExecutor: () => ({ status: 1 }),
       },
       noopOutput(),
@@ -1696,17 +1696,17 @@ async function run(): Promise<void> {
     if ('outcome' in result) {
       assert.equal(result.schemaIdentityConfirmed, true)
       assert.equal(result.targetBatchApplied, false)
-      assert.equal(result.appliedCount, 29)
+      assert.equal(result.appliedCount, 33)
     }
   })
 
-  await test('apply: uncertain outcome when clean 33-state appears despite command failure', async () => {
-    // Pre-apply sees 29, command fails, uncertain status query sees all 33 applied.
+  await test('apply: uncertain outcome when clean 35-state appears despite command failure', async () => {
+    // Pre-apply sees 33, command fails, uncertain status query sees all 35 applied.
     const factory: PgClientFactory = (() => {
       let call = 0
       return () => {
         const idx = call++
-        return idx === 0 ? make29PreClient() : make33Client()
+        return idx === 0 ? make33Client() : make35Client()
       }
     })()
     const result = await runStagingMigrationApply(
@@ -1729,7 +1729,7 @@ async function run(): Promise<void> {
     let call = 0
     const factory: PgClientFactory = () => {
       const idx = call++
-      if (idx === 0) return make29PreClient() // pre-apply succeeds
+      if (idx === 0) return make33Client() // pre-apply succeeds
       // uncertain status query — fail at connect
       return {
         async connect() { throw new Error('cannot connect for uncertain check') },
@@ -1758,7 +1758,7 @@ async function run(): Promise<void> {
     const result = await runStagingMigrationApply(
       sensitiveUrl, undefined, goodAuthorization(),
       {
-        ...baseDeps({ clientFactory: clientFactory29Pre() }),
+        ...baseDeps({ clientFactory: clientFactory33() }),
         commandExecutor: () => ({ status: 1 }),
       },
       (line) => lines.push(line),
@@ -1775,8 +1775,8 @@ async function run(): Promise<void> {
     return () => makeClient({ schema, payloadRows: payloadRows as Array<{ name: string; batch: number }> })
   }
 
-  await test('malformed-payload: migration 29 row null batch blocks plan', async () => {
-    const rows = [...FIRST_29.map((n) => ({ name: n, batch: 1 })), { name: TARGET_MIGRATION, batch: null }]
+  await test('malformed-payload: target row null batch blocks plan', async () => {
+    const rows = [...FIRST_33.map((n) => ({ name: n, batch: 1 })), { name: TARGET_MIGRATION, batch: null }]
     const result = await runStagingMigrationPlan(
       stagingUrl(), undefined, goodPlanInput(),
       baseDeps({ clientFactory: malformedClientFactory(rows) }), noopOutput(),
@@ -1785,8 +1785,8 @@ async function run(): Promise<void> {
     assert.ok(result.blockers.some((b) => b.toLowerCase().includes('malformed')))
   })
 
-  await test('malformed-payload: migration 29 row negative batch blocks plan', async () => {
-    const rows = [...FIRST_29.map((n) => ({ name: n, batch: 1 })), { name: TARGET_MIGRATION, batch: -1 }]
+  await test('malformed-payload: target row negative batch blocks plan', async () => {
+    const rows = [...FIRST_33.map((n) => ({ name: n, batch: 1 })), { name: TARGET_MIGRATION, batch: -1 }]
     const result = await runStagingMigrationPlan(
       stagingUrl(), undefined, goodPlanInput(),
       baseDeps({ clientFactory: malformedClientFactory(rows) }), noopOutput(),
@@ -1795,8 +1795,8 @@ async function run(): Promise<void> {
     assert.ok(result.blockers.some((b) => b.toLowerCase().includes('malformed')))
   })
 
-  await test('malformed-payload: migration 29 row fractional batch blocks plan', async () => {
-    const rows = [...FIRST_29.map((n) => ({ name: n, batch: 1 })), { name: TARGET_MIGRATION, batch: 1.5 }]
+  await test('malformed-payload: target row fractional batch blocks plan', async () => {
+    const rows = [...FIRST_33.map((n) => ({ name: n, batch: 1 })), { name: TARGET_MIGRATION, batch: 1.5 }]
     const result = await runStagingMigrationPlan(
       stagingUrl(), undefined, goodPlanInput(),
       baseDeps({ clientFactory: malformedClientFactory(rows) }), noopOutput(),
@@ -1806,7 +1806,7 @@ async function run(): Promise<void> {
   })
 
   await test('payload evidence: numeric string batch is normalized before migration-state guards', async () => {
-    const rows = [...FIRST_29.map((n) => ({ name: n, batch: 1 })), { name: TARGET_MIGRATION, batch: '1' }]
+    const rows = [...FIRST_33.map((n) => ({ name: n, batch: 1 })), { name: TARGET_MIGRATION, batch: '1' }]
     const result = await runStagingMigrationPlan(
       stagingUrl(), undefined, goodPlanInput(),
       baseDeps({ clientFactory: malformedClientFactory(rows) }), noopOutput(),
@@ -1819,8 +1819,8 @@ async function run(): Promise<void> {
     ))
   })
 
-  await test('malformed-payload: migration 29 row empty name blocks plan', async () => {
-    const rows = [...FIRST_29.map((n) => ({ name: n, batch: 1 })), { name: '', batch: 1 }]
+  await test('malformed-payload: target row empty name blocks plan', async () => {
+    const rows = [...FIRST_33.map((n) => ({ name: n, batch: 1 })), { name: '', batch: 1 }]
     const result = await runStagingMigrationPlan(
       stagingUrl(), undefined, goodPlanInput(),
       baseDeps({ clientFactory: malformedClientFactory(rows) }), noopOutput(),
@@ -1829,8 +1829,8 @@ async function run(): Promise<void> {
     assert.ok(result.blockers.some((b) => b.toLowerCase().includes('malformed')))
   })
 
-  await test('malformed-payload: migration 29 row non-string name blocks plan', async () => {
-    const rows = [...FIRST_29.map((n) => ({ name: n, batch: 1 })), { name: null, batch: 1 }]
+  await test('malformed-payload: target row non-string name blocks plan', async () => {
+    const rows = [...FIRST_33.map((n) => ({ name: n, batch: 1 })), { name: null, batch: 1 }]
     const result = await runStagingMigrationPlan(
       stagingUrl(), undefined, goodPlanInput(),
       baseDeps({ clientFactory: malformedClientFactory(rows) }), noopOutput(),
@@ -1840,7 +1840,7 @@ async function run(): Promise<void> {
   })
 
   await test('malformed-payload: earlier migration malformed batch blocks plan', async () => {
-    const rows = FIRST_29.map((n, i) => ({ name: n, batch: i === 0 ? -99 : 1 }))
+    const rows = FIRST_33.map((n, i) => ({ name: n, batch: i === 0 ? -99 : 1 }))
     const result = await runStagingMigrationPlan(
       stagingUrl(), undefined, goodPlanInput(),
       baseDeps({ clientFactory: malformedClientFactory(rows) }), noopOutput(),
@@ -1850,7 +1850,7 @@ async function run(): Promise<void> {
   })
 
   await test('malformed-payload: malformed rows block apply pre-apply check', async () => {
-    const rows = [...FIRST_29.map((n) => ({ name: n, batch: 1 })), { name: TARGET_MIGRATION, batch: null }]
+    const rows = [...FIRST_33.map((n) => ({ name: n, batch: 1 })), { name: TARGET_MIGRATION, batch: null }]
     await assert.rejects(
       () => runStagingMigrationApply(
         stagingUrl(), undefined, goodAuthorization(),
@@ -1862,7 +1862,7 @@ async function run(): Promise<void> {
 
   await test('malformed-payload: malformed rows block rollback-plan', async () => {
     const rows = [
-      ...FIRST_29.map((n) => ({ name: n, batch: 1 })),
+      ...FIRST_33.map((n) => ({ name: n, batch: 1 })),
       { name: TARGET_MIGRATION, batch: 2 },
       { name: TARGET_MIGRATION, batch: null }, // duplicate + malformed
     ]
@@ -1880,7 +1880,7 @@ async function run(): Promise<void> {
     const result = await runStagingMigrationPlan(
       stagingUrl(STAGING_HOSTNAME), undefined,
       goodPlanInput({ expectedHostname: STAGING_HOSTNAME }),
-      baseDeps({ clientFactory: clientFactory29Pre() }), noopOutput(),
+      baseDeps({ clientFactory: clientFactory33() }), noopOutput(),
     )
     assert.equal(result.ok, true)
   })
@@ -1891,7 +1891,7 @@ async function run(): Promise<void> {
       `postgres://${oneOff}/${REQUIRED_DATABASE}?schema=${REQUIRED_SCHEMA}`,
       undefined,
       goodPlanInput({ expectedHostname: oneOff }),
-      baseDeps({ clientFactory: clientFactory29Pre() }), noopOutput(),
+      baseDeps({ clientFactory: clientFactory33() }), noopOutput(),
     )
     assert.equal(result.ok, false)
     assert.ok(result.blockers.some((b) => b.toLowerCase().includes('hostname')))
@@ -1902,7 +1902,7 @@ async function run(): Promise<void> {
     const result = await runStagingMigrationPlan(
       stagingUrl(STAGING_HOSTNAME), undefined,
       goodPlanInput({ expectedHostname: STAGING_HOSTNAME }),
-      baseDeps({ clientFactory: clientFactory29Pre() }), noopOutput(),
+      baseDeps({ clientFactory: clientFactory33() }), noopOutput(),
     )
     assert.equal(result.ok, true)
   })
@@ -1913,7 +1913,7 @@ async function run(): Promise<void> {
       `postgres://${trailingDot}/${REQUIRED_DATABASE}?schema=${REQUIRED_SCHEMA}`,
       undefined,
       goodPlanInput({ expectedHostname: STAGING_HOSTNAME }),
-      baseDeps({ clientFactory: clientFactory29Pre() }), noopOutput(),
+      baseDeps({ clientFactory: clientFactory33() }), noopOutput(),
     )
     assert.equal(result.ok, false)
     assert.ok(result.blockers.some((b) => b.toLowerCase().includes('hostname')))
@@ -1925,7 +1925,7 @@ async function run(): Promise<void> {
       `postgres://${STAGING_HOSTNAME}:5433/${REQUIRED_DATABASE}?schema=${REQUIRED_SCHEMA}`,
       undefined,
       goodPlanInput({ expectedHostname: STAGING_HOSTNAME }),
-      baseDeps({ clientFactory: clientFactory29Pre() }), noopOutput(),
+      baseDeps({ clientFactory: clientFactory33() }), noopOutput(),
     )
     assert.equal(result.ok, true)
   })
@@ -1935,7 +1935,7 @@ async function run(): Promise<void> {
     const sensitiveUrl = `postgres://admin:secret123@${STAGING_HOSTNAME}/${REQUIRED_DATABASE}?schema=${REQUIRED_SCHEMA}`
     const result = await runStagingMigrationPlan(
       sensitiveUrl, undefined, goodPlanInput(),
-      baseDeps({ clientFactory: clientFactory29Pre() }),
+      baseDeps({ clientFactory: clientFactory33() }),
       (line) => lines.push(line),
     )
     const allText = lines.join('\n') + JSON.stringify(result)
@@ -1951,7 +1951,7 @@ async function run(): Promise<void> {
     const result = await runStagingMigrationApply(
       stagingUrl(), undefined, goodAuthorization(),
       {
-        ...baseDeps({ clientFactory: clientFactory29Pre() }),
+        ...baseDeps({ clientFactory: clientFactory33() }),
         commandExecutor: () => ({ status: null, error: new Error(`Failed to connect: ${pgUrl}`) }),
       },
       (line) => lines.push(line),
@@ -1967,7 +1967,7 @@ async function run(): Promise<void> {
     const result = await runStagingMigrationApply(
       stagingUrl(), undefined, goodAuthorization(),
       {
-        ...baseDeps({ clientFactory: clientFactory29Pre() }),
+        ...baseDeps({ clientFactory: clientFactory33() }),
         commandExecutor: () => ({ status: null, error: new Error('auth failed: user=admin password=hunter2 host=db') }),
       },
       (line) => lines.push(line),
@@ -1982,7 +1982,7 @@ async function run(): Promise<void> {
     const result = await runStagingMigrationApply(
       stagingUrl(), undefined, goodAuthorization(),
       {
-        ...baseDeps({ clientFactory: clientFactory29Pre() }),
+        ...baseDeps({ clientFactory: clientFactory33() }),
         commandExecutor: () => ({ status: null, error: new Error('Authorization: Bearer supersecret-token-abc123') }),
       },
       (line) => lines.push(line),
@@ -1996,7 +1996,7 @@ async function run(): Promise<void> {
     const result = await runStagingMigrationApply(
       stagingUrl(), undefined, goodAuthorization(),
       {
-        ...baseDeps({ clientFactory: clientFactory29Pre() }),
+        ...baseDeps({ clientFactory: clientFactory33() }),
         commandExecutor: () => ({ status: null, error: new Error('STRIPE_SECRET_KEY=sk_live_ABC123 not found') }),
       },
       (line) => lines.push(line),
@@ -2010,7 +2010,7 @@ async function run(): Promise<void> {
     const result = await runStagingMigrationApply(
       stagingUrl(), undefined, goodAuthorization(),
       {
-        ...baseDeps({ clientFactory: clientFactory29Pre() }),
+        ...baseDeps({ clientFactory: clientFactory33() }),
         commandExecutor: () => ({ status: null, error: new Error('do-not-include-this-in-output') }),
       },
       (line) => lines.push(line),
@@ -2025,7 +2025,7 @@ async function run(): Promise<void> {
     const result = await runStagingMigrationApply(
       stagingUrl(), undefined, goodAuthorization(),
       {
-        ...baseDeps({ clientFactory: clientFactory29Pre() }),
+        ...baseDeps({ clientFactory: clientFactory33() }),
         commandExecutor: () => ({ status: 42 }),
       },
       (line) => lines.push(line),
@@ -2040,7 +2040,7 @@ async function run(): Promise<void> {
     const result = await runStagingMigrationApply(
       stagingUrl(), undefined, goodAuthorization(),
       {
-        ...baseDeps({ clientFactory: clientFactory29Pre() }),
+        ...baseDeps({ clientFactory: clientFactory33() }),
         commandExecutor: () => ({ status: null }),
       },
       (line) => lines.push(line),
@@ -2102,7 +2102,7 @@ async function run(): Promise<void> {
     let call = 0
     const leakyFactory: PgClientFactory = () => {
       const idx = call++
-      if (idx === 0) return make29PreClient()
+      if (idx === 0) return make33Client()
       return {
         async connect() { throw new Error('pg_hba.conf rejection: password=topsecretpwd host=10.0.2.4') },
         async query() { return { rows: [] } },
@@ -2129,7 +2129,7 @@ async function run(): Promise<void> {
     let call = 0
     const leakyFactory: PgClientFactory = () => {
       const idx = call++
-      if (idx === 0) return make29PreClient()
+      if (idx === 0) return make33Client()
       return {
         async connect() { throw new Error('DB_PASSWORD=postapplysecret123 connection refused') },
         async query() { return { rows: [] } },
@@ -2182,7 +2182,7 @@ async function run(): Promise<void> {
     let call = 0
     const leakyFactory: PgClientFactory = () => {
       const idx = call++
-      if (idx === 0) return make29PreClient()
+      if (idx === 0) return make33Client()
       return {
         async connect() { throw new Error('FATAL: password authentication failed for "admin" pw=cliSecret777') },
         async query() { return { rows: [] } },
@@ -2208,8 +2208,8 @@ async function run(): Promise<void> {
 
   // ─── Defect 7: current-checkout git resolver integration test ─────────────
 
-  await test('plan: blocks when migration29 is missing from the applied prefix', async () => {
-    const rows = FIRST_29.filter((name) => name !== MIGRATION29).map((name) => ({ name, batch: 1 }))
+  await test('plan: blocks when migration33 is missing from the applied prefix', async () => {
+    const rows = FIRST_33.filter((name) => name !== MIGRATION33).map((name) => ({ name, batch: 1 }))
     const result = await runStagingMigrationPlan(
       stagingUrl(), undefined, goodPlanInput(),
       baseDeps({ clientFactory: () => makeClient({ schema: REQUIRED_SCHEMA, payloadRows: rows }) }), noopOutput(),
@@ -2218,9 +2218,9 @@ async function run(): Promise<void> {
     assert.ok(result.blockers.some((blocker) => blocker === 'applied_count_mismatch' || blocker === 'pending_migration_mismatch'))
   })
 
-  await test('plan: blocks when only a subset of Forward A-D remains pending', async () => {
+  await test('plan: blocks when only one of migrations 34-35 remains pending', async () => {
     const rows = [
-      ...FIRST_29.map((name) => ({ name, batch: 1 })),
+      ...FIRST_33.map((name) => ({ name, batch: 1 })),
       { name: TARGET_MIGRATIONS[0], batch: 2 },
     ]
     const result = await runStagingMigrationPlan(
@@ -2238,7 +2238,7 @@ async function run(): Promise<void> {
         stagingUrl(), undefined,
         goodAuthorization({ expectedMigrations: [TARGET_MIGRATIONS[0]] }),
         {
-          ...baseDeps({ clientFactory: clientFactory29Pre() }),
+          ...baseDeps({ clientFactory: clientFactory33() }),
           commandExecutor: () => { executorCalled = true; return { status: 0 } },
         },
         noopOutput(),
@@ -2257,7 +2257,7 @@ async function run(): Promise<void> {
         stagingUrl(), undefined,
         goodAuthorization({ expectedMigrations: reordered }),
         {
-          ...baseDeps({ clientFactory: clientFactory29Pre() }),
+          ...baseDeps({ clientFactory: clientFactory33() }),
           commandExecutor: () => { executorCalled = true; return { status: 0 } },
         },
         noopOutput(),
@@ -2267,17 +2267,17 @@ async function run(): Promise<void> {
     assert.equal(executorCalled, false)
   })
 
-  await test('apply: uncertain partial A-D post-state never reports targetBatchApplied=true', async () => {
+  await test('apply: uncertain partial 34-35 post-state never reports targetBatchApplied=true', async () => {
     let call = 0
     const factory: PgClientFactory = () => {
       const idx = call++
-      if (idx === 0) return make29PreClient()
+      if (idx === 0) return make33Client()
+      // Only first of two target migrations applied — partial state, targetBatchApplied must be false
       return makeClient({
         schema: REQUIRED_SCHEMA,
         payloadRows: [
-          ...FIRST_29.map((name) => ({ name, batch: 1 })),
+          ...FIRST_33.map((name) => ({ name, batch: 1 })),
           { name: TARGET_MIGRATIONS[0], batch: 2 },
-          { name: TARGET_MIGRATIONS[1], batch: 2 },
         ],
       })
     }
@@ -2304,7 +2304,7 @@ async function run(): Promise<void> {
       {
         // No gitResolver — uses real git resolver
         gitStatusResolver: cleanGitStatus(),
-        clientFactory: clientFactory29Pre(),
+        clientFactory: clientFactory33(),
         commandExecutor: okApplyExecutor(),
       },
       noopOutput(),
@@ -2325,7 +2325,7 @@ async function run(): Promise<void> {
       goodPlanInput({ expectedCommit: abbrev }),
       {
         gitStatusResolver: cleanGitStatus(),
-        clientFactory: clientFactory29Pre(),
+        clientFactory: clientFactory33(),
         commandExecutor: okApplyExecutor(),
       },
       noopOutput(),
@@ -2340,7 +2340,7 @@ async function run(): Promise<void> {
         goodPlanInput({ expectedCommit: SYNTHETIC_HEAD }),
         {
           gitStatusResolver: cleanGitStatus(),
-          clientFactory: clientFactory29Pre(),
+          clientFactory: clientFactory33(),
           commandExecutor: okApplyExecutor(),
         },
         noopOutput(),
