@@ -20,9 +20,11 @@ import {
   topologicalSort,
   flattenDataForSql,
   runJpvLegacyImport,
+  verifyCanonicalPayloadMigrationState,
   type JpvImportConfig,
 } from './jpvLegacyImportExecutor'
 import type { LegacyPayloadOperationPlan, ProposedPayloadOperation } from './legacyPayloadOperationPlan'
+import { PAYLOAD_MIGRATION_NAMES } from '../../src/lib/payloadMigrationRegistry'
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -358,5 +360,90 @@ describe('runJpvLegacyImport dry-run', () => {
     const result = await runJpvLegacyImport(config)
     assert.equal(result.skippedOperations, 1)
     assert.equal(result.skippedByBlocker['bunny_target_schema_guid_first_compatibility_required'], 1)
+  })
+})
+
+// ─── verifyCanonicalPayloadMigrationState (apply guard) ──────────────────────
+
+type FakeRow = { name: string }
+type FakeClient = { query: (sql: string) => Promise<{ rows: FakeRow[] }> }
+
+function fakeClient(names: string[]): FakeClient {
+  return {
+    query: async (_sql: string) => ({ rows: names.map((name) => ({ name })) }),
+  }
+}
+
+describe('verifyCanonicalPayloadMigrationState', () => {
+  it('passes with exact canonical 35 migrations in correct order', async () => {
+    const client = fakeClient([...PAYLOAD_MIGRATION_NAMES])
+    const count = await verifyCanonicalPayloadMigrationState(client as unknown as import('pg').Client, 'jpvbootcamp_staging')
+    assert.equal(count, PAYLOAD_MIGRATION_NAMES.length)
+  })
+
+  it('throws when count is 34 (one short)', async () => {
+    const client = fakeClient([...PAYLOAD_MIGRATION_NAMES].slice(0, 34))
+    await assert.rejects(
+      () => verifyCanonicalPayloadMigrationState(client as unknown as import('pg').Client, 'jpvbootcamp_staging'),
+      /migration_state_count_mismatch/,
+    )
+  })
+
+  it('throws when count is 33 (stale pre-guard state)', async () => {
+    const client = fakeClient([...PAYLOAD_MIGRATION_NAMES].slice(0, 33))
+    await assert.rejects(
+      () => verifyCanonicalPayloadMigrationState(client as unknown as import('pg').Client, 'jpvbootcamp_staging'),
+      /migration_state_count_mismatch/,
+    )
+  })
+
+  it('throws when two migrations are swapped (order mismatch)', async () => {
+    const swapped = [...PAYLOAD_MIGRATION_NAMES] as string[]
+    const tmp = swapped[11]!
+    swapped[11] = swapped[12]!
+    swapped[12] = tmp
+    const client = fakeClient(swapped)
+    await assert.rejects(
+      () => verifyCanonicalPayloadMigrationState(client as unknown as import('pg').Client, 'jpvbootcamp_staging'),
+      /migration_state_order_mismatch/,
+    )
+  })
+
+  it('throws on duplicate migration names', async () => {
+    const withDup = [...PAYLOAD_MIGRATION_NAMES, PAYLOAD_MIGRATION_NAMES[0]!] as string[]
+    const client = fakeClient(withDup)
+    await assert.rejects(
+      () => verifyCanonicalPayloadMigrationState(client as unknown as import('pg').Client, 'jpvbootcamp_staging'),
+      /migration_state_duplicate_rows|migration_state_count_mismatch/,
+    )
+  })
+})
+
+// ─── guardStagingIdentity — production identity rejection ────────────────────
+
+describe('guardStagingIdentity — production rejection', () => {
+  it('rejects any host not in the allow-list (production risk)', () => {
+    const productionLikeUrls = [
+      'postgresql://user:pass@prod-db.example.com:5432/jpvbootcamp?schema=jpvbootcamp_staging',
+      'postgresql://user:pass@127.0.0.1:5432/jpvbootcamp?schema=jpvbootcamp_staging',
+      'postgresql://user:pass@0.0.0.0:5432/jpvbootcamp?schema=jpvbootcamp_staging',
+    ]
+    for (const url of productionLikeUrls) {
+      assert.throws(
+        () => guardStagingIdentity(url),
+        /staging_guard_failed.*host_rejected/,
+        `should reject: ${url}`,
+      )
+    }
+  })
+
+  it('rejects production schema even on allowed host', () => {
+    const url = 'postgresql://user:pass@10.0.2.4:5432/jpvbootcamp?schema=jpvbootcamp_production'
+    assert.throws(() => guardStagingIdentity(url), /staging_guard_failed.*schema_rejected/)
+  })
+
+  it('rejects production database even on allowed host', () => {
+    const url = 'postgresql://user:pass@10.0.2.4:5432/jpvbootcamp_production?schema=jpvbootcamp_staging'
+    assert.throws(() => guardStagingIdentity(url), /staging_guard_failed.*database_rejected/)
   })
 })

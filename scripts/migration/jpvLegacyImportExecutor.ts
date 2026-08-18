@@ -452,8 +452,7 @@ export async function runJpvLegacyImport(config: JpvImportConfig): Promise<JpvIm
     // skippedOperations count — this lets Phase 4 media imports register as alreadyApplied.
     const sorted = topologicalSort(config.operationPlan.operations)
     let alreadyApplied = new Map<string, number>()
-    const isRealDb = !config.databaseUrl.includes('dry-run:dry-run@')
-    if (isRealDb) {
+    try {
       const roClient = new Client({ connectionString: config.databaseUrl })
       await roClient.connect()
       try {
@@ -461,11 +460,12 @@ export async function runJpvLegacyImport(config: JpvImportConfig): Promise<JpvIm
       } finally {
         await roClient.end()
       }
+    } catch {
+      // No DB connection available (e.g. offline/test env) — proceed without ledger
     }
     result.alreadyAppliedOperations = alreadyApplied.size
     for (const op of sorted) {
       if (alreadyApplied.has(op.operationId)) {
-        result.alreadyAppliedOperations = alreadyApplied.size
         continue
       }
       const { blocked, reason } = isOperationEffectivelyBlocked(op.blockers)

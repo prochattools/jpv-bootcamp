@@ -9,8 +9,8 @@ import * as migration_20260702_001500_member_account_action_purposes from './202
 import * as migration_20260703_000000_partner_affiliate_operations from './20260703_000000_partner_affiliate_operations'
 import * as migration_20260704_090000_partner_schema_reconciliation from './20260704_090000_partner_schema_reconciliation'
 import * as migration_20260707_130000_remove_table_plan_from_payload_enums from './20260707_130000_remove_table_plan_from_payload_enums'
-import * as migration_20260718_103726_membership_support_schema from './20260718_103726_membership_support_schema'
 import * as migration_20260718_000000_live_sessions from './20260718_000000_live_sessions'
+import * as migration_20260718_103726_membership_support_schema from './20260718_103726_membership_support_schema'
 import * as migration_20260718_110000_bunny_videos from './20260718_110000_bunny_videos'
 import * as migration_20260719_150000_subscription_schema_cols from './20260719_150000_subscription_schema_cols'
 import * as migration_20260720_000000_locked_docs_rels_new_collections from './20260720_000000_locked_docs_rels_new_collections'
@@ -47,8 +47,8 @@ const migrationModuleByName = {
   '20260703_000000_partner_affiliate_operations': migration_20260703_000000_partner_affiliate_operations,
   '20260704_090000_partner_schema_reconciliation': migration_20260704_090000_partner_schema_reconciliation,
   '20260707_130000_remove_table_plan_from_payload_enums': migration_20260707_130000_remove_table_plan_from_payload_enums,
-  '20260718_103726_membership_support_schema': migration_20260718_103726_membership_support_schema,
   '20260718_000000_live_sessions': migration_20260718_000000_live_sessions,
+  '20260718_103726_membership_support_schema': migration_20260718_103726_membership_support_schema,
   '20260718_110000_bunny_videos': migration_20260718_110000_bunny_videos,
   '20260719_150000_subscription_schema_cols': migration_20260719_150000_subscription_schema_cols,
   '20260720_000000_locked_docs_rels_new_collections': migration_20260720_000000_locked_docs_rels_new_collections,

@@ -16,7 +16,7 @@
  *   - DATABASE_URL host must be 10.0.2.4 or 100.71.31.88
  *   - DATABASE_URL schema must be jpvbootcamp_staging
  *   - DATABASE_URL database must be jpvbootcamp
- *   - Payload migration count must be exactly 33
+ *   - Payload migration state must exactly match PAYLOAD_MIGRATION_NAMES (identity + order)
  */
 
 import { existsSync, readFileSync } from 'node:fs'
@@ -40,6 +40,7 @@ import {
   verifyCanonicalPayloadMigrationState,
   runJpvLegacyImport,
 } from './jpvLegacyImportExecutor'
+import { PAYLOAD_MIGRATION_NAMES } from '../../src/lib/payloadMigrationRegistry'
 
 interface CliArgs {
   mode: 'dry-run' | 'apply'
@@ -122,7 +123,7 @@ async function main(): Promise<void> {
     return
   }
 
-  // 33/33 migration check — connect briefly then close
+  // Canonical migration state check (exact identity + order) — connect briefly then close
   if (args.mode === 'apply') {
     const checkClient = new Client({ connectionString: databaseUrl })
     await checkClient.connect()
@@ -132,8 +133,9 @@ async function main(): Promise<void> {
     } finally {
       await checkClient.end()
     }
-    if (migrationCount !== 33) {
-      process.stderr.write(`ABORT: migration_count_mismatch: expected 33, got ${migrationCount}\n`)
+    const expected = PAYLOAD_MIGRATION_NAMES.length
+    if (migrationCount !== expected) {
+      process.stderr.write(`ABORT: migration_count_mismatch: expected ${expected}, got ${migrationCount}\n`)
       process.exitCode = 1
       return
     }
