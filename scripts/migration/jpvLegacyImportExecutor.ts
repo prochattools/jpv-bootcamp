@@ -447,9 +447,27 @@ export async function runJpvLegacyImport(config: JpvImportConfig): Promise<JpvIm
   }
 
   if (config.mode === 'dry-run') {
-    // Dry-run classifies planner blockers only; no database connection or writes.
+    // Dry-run classifies planner blockers. When a real DATABASE_URL is provided, reads
+    // jpv_import_run_ledger (READ-ONLY) to exclude already-applied operations from the
+    // skippedOperations count — this lets Phase 4 media imports register as alreadyApplied.
     const sorted = topologicalSort(config.operationPlan.operations)
+    let alreadyApplied = new Map<string, number>()
+    const isRealDb = !config.databaseUrl.includes('dry-run:dry-run@')
+    if (isRealDb) {
+      const roClient = new Client({ connectionString: config.databaseUrl })
+      await roClient.connect()
+      try {
+        alreadyApplied = await readAppliedLedgerMapIfPresent(roClient, schema)
+      } finally {
+        await roClient.end()
+      }
+    }
+    result.alreadyAppliedOperations = alreadyApplied.size
     for (const op of sorted) {
+      if (alreadyApplied.has(op.operationId)) {
+        result.alreadyAppliedOperations = alreadyApplied.size
+        continue
+      }
       const { blocked, reason } = isOperationEffectivelyBlocked(op.blockers)
       if (blocked) {
         result.skippedOperations += 1

@@ -18,6 +18,7 @@ import {
 } from './legacySourceDryRun'
 import {
   convertLegacyHTMLToLexical,
+  type LegacyRichTextConversionOptions,
   type LegacyRichTextConversionResult,
 } from './legacyRichText'
 import {
@@ -77,6 +78,7 @@ export interface LegacyTargetSchemaCapabilities {
 
 export interface BuildLegacyPayloadOperationPlanOptions {
   targetCapabilities?: LegacyTargetSchemaCapabilities
+  resolveImage?: LegacyRichTextConversionOptions['resolveImage']
 }
 
 export const CANONICAL_LEGACY_TARGET_CAPABILITIES: LegacyTargetSchemaCapabilities = {
@@ -401,7 +403,11 @@ function richTextConversionBlockers(result: LegacyRichTextConversionResult): str
   return [...new Set(blockers)]
 }
 
-async function convertRichTextSource(source: string | null | undefined, sourceLabel: string) {
+async function convertRichTextSource(
+  source: string | null | undefined,
+  sourceLabel: string,
+  resolveImage?: LegacyRichTextConversionOptions['resolveImage'],
+) {
   const html = source?.trim() ?? ''
   if (!html) {
     return {
@@ -415,6 +421,7 @@ async function convertRichTextSource(source: string | null | undefined, sourceLa
     const conversion = await convertLegacyHTMLToLexical({
       html,
       sourceLabel,
+      resolveImage,
     })
     return {
       lexical: conversion.lexical as unknown as Record<string, unknown>,
@@ -454,6 +461,7 @@ export async function buildLegacyPayloadOperationPlan(
   options: BuildLegacyPayloadOperationPlanOptions = {},
 ): Promise<LegacyPayloadOperationPlan> {
   const targetCapabilities = options.targetCapabilities ?? CANONICAL_LEGACY_TARGET_CAPABILITIES
+  const resolveImage = options.resolveImage
   const operations: ProposedPayloadOperation[] = []
   const unresolved: LegacyPayloadOperationPlan['unresolved'] = []
   const bunnyByGuid = bunnyInventoryByGuid(bunnyInventory)
@@ -511,6 +519,7 @@ export async function buildLegacyPayloadOperationPlan(
     const biographyRichText = await convertRichTextSource(
       biography.value,
       `fluentcommunity:xprofile:${biography.profileId ?? member.canonicalWpUserId}:biography`,
+      resolveImage,
     )
 
     const profileOp = operation(
@@ -715,6 +724,7 @@ export async function buildLegacyPayloadOperationPlan(
     const lessonRichText = await convertRichTextSource(
       lesson.messageRendered ?? lesson.message,
       `course_lesson:${lesson.id}`,
+      resolveImage,
     )
     const blockers = [
       ...(moduleOp ? [] : ['unresolved_parent_module']),
@@ -1002,6 +1012,7 @@ export async function buildLegacyPayloadOperationPlan(
     const postRichText = await convertRichTextSource(
       post.messageRendered ?? post.message,
       `feed_post:${post.id}`,
+      resolveImage,
     )
     const blockers = [
       ...(spaceOp ? [] : ['unresolved_post_space']),
@@ -1076,6 +1087,7 @@ export async function buildLegacyPayloadOperationPlan(
         const lessonCommentRichText = await convertRichTextSource(
           comment.messageRendered ?? comment.message,
           `lesson_comment:${comment.id}`,
+          resolveImage,
         )
         const canonicalAuthor = comment.userId ? canonicalMemberBySourceWpId.get(comment.userId) : undefined
         const sourceAuthor = comment.userId ? sourceUserById.get(comment.userId) : undefined
@@ -1155,6 +1167,7 @@ export async function buildLegacyPayloadOperationPlan(
     const communityCommentRichText = await convertRichTextSource(
       comment.messageRendered ?? comment.message,
       `community_comment:${comment.id}`,
+      resolveImage,
     )
     const blockers = [
       ...(postOp ? [] : ['unresolved_comment_post']),

@@ -19,7 +19,7 @@
  *   - Payload migration count must be exactly 33
  */
 
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { randomBytes } from 'node:crypto'
 
 import { Client } from 'pg'
@@ -106,11 +106,7 @@ function readJson<T>(filePath: string): T {
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2))
 
-  const databaseUrl = process.env['DATABASE_URL'] ?? (
-    args.mode === 'dry-run'
-      ? 'postgresql://dry-run:dry-run@10.0.2.4:5432/jpvbootcamp?schema=jpvbootcamp_staging'
-      : undefined
-  )
+  const databaseUrl = process.env['DATABASE_URL'] ?? undefined
   if (!databaseUrl) {
     process.stderr.write('ABORT: DATABASE_URL is not set\n')
     process.exitCode = 1
@@ -155,7 +151,20 @@ async function main(): Promise<void> {
   const mediaManifest = buildLocalMediaManifest(args.uploads)
   reconcileWordPressAttachments(wxrItems, mediaManifest)
   reconcileBunnyReferences(normalization.bunnyReferences, bunny)
-  const operationPlan = await buildLegacyPayloadOperationPlan(snapshot, normalization, bunny)
+  // Load richtext inline-image map produced by jpv-import-inline-images.js, if present
+  const richtextImageMapPath = '/tmp/jpv-richtext-image-map.json'
+  const richtextImageMap: Array<{ sourceUrl: string; mediaId: number; relationTo: 'payload_media' | 'payload_private_media' }> =
+    existsSync(richtextImageMapPath) ? JSON.parse(readFileSync(richtextImageMapPath, 'utf8')) : []
+  const richtextImageById = new Map(richtextImageMap.map((e) => [e.sourceUrl, e]))
+
+  const operationPlan = await buildLegacyPayloadOperationPlan(snapshot, normalization, bunny, {
+    resolveImage: richtextImageById.size > 0
+      ? (sourceUrl) => {
+          const entry = richtextImageById.get(sourceUrl)
+          return entry ? { id: entry.mediaId, relationTo: entry.relationTo } : undefined
+        }
+      : undefined,
+  })
 
   const runId = `jpv_import_${args.mode}_${randomBytes(4).toString('hex')}_${Date.now()}`
 
