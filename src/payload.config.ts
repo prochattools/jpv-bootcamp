@@ -4,7 +4,7 @@ import { buildConfig } from 'payload'
 import type { EmailAdapter, SendEmailOptions } from 'payload'
 import { Resend } from 'resend'
 import { postgresAdapter } from '@payloadcms/db-postgres'
-import { lexicalEditor } from '@payloadcms/richtext-lexical'
+import { BlocksFeature, lexicalEditor } from '@payloadcms/richtext-lexical'
 import { s3Storage } from '@payloadcms/storage-s3'
 import { PayloadUsers } from './collections/PayloadUsers'
 import { PayloadMedia } from './collections/PayloadMedia'
@@ -18,6 +18,7 @@ import {
   PayloadCourseModules,
   PayloadCourses,
   PayloadLessons,
+  PayloadLessonComments,
 } from './collections/PayloadCoursePrototype'
 import { accessControlCollections } from './collections/access'
 import { affiliateCollections } from './collections/affiliates'
@@ -35,6 +36,8 @@ import { stagingAutoProvision } from './lib/staging-auto-provision'
 import { migrations } from './migrations'
 import { jpvBrand } from './lib/brand/jpvDesignSystem'
 import { resolveDatabaseConnectionConfig, assertStagingSchema } from './lib/databaseConnectionConfig'
+import { legacyMigrationRichTextBlocks } from './richtext/LegacyMigrationBlocks'
+import { PortalSettings } from './globals/PortalSettings'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -172,6 +175,7 @@ export default buildConfig({
   routes: {
     admin: '/admin',
   },
+  globals: [PortalSettings],
   collections: [
     // Community
     ...communityCollections,
@@ -180,6 +184,7 @@ export default buildConfig({
     PayloadCourses,
     PayloadCourseModules,
     PayloadLessons,
+    PayloadLessonComments,
     PayloadCourseAccessPreview,
     ...courseRuntimeCollections,
     // Content (including Bunny Videos)
@@ -203,7 +208,12 @@ export default buildConfig({
     // Membership Support
     ...membershipSupportCollections,
   ],
-  editor: lexicalEditor(),
+  editor: lexicalEditor({
+    features: ({ defaultFeatures }) => [
+      ...defaultFeatures,
+      BlocksFeature({ blocks: legacyMigrationRichTextBlocks }),
+    ],
+  }),
   plugins: mediaStoragePlugins,
   secret: process.env.PAYLOAD_SECRET || '',
   email: buildPayloadEmailAdapter,

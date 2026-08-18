@@ -7,7 +7,7 @@ import {
   buildPartnerSchemaReconciliationMigrationDownSql,
   buildPartnerSchemaReconciliationMigrationUpSql,
 } from '../src/lib/partnerSchemaReconciliationMigrationSql'
-import { PAYLOAD_MIGRATION_NAMES } from '../src/migrations/migrationRegistry'
+import { PAYLOAD_MIGRATION_NAMES } from '../src/lib/payloadMigrationRegistry'
 
 const stagingUrl = 'postgresql://user:password@db.internal:5432/app?schema=jpvbootcamp_staging'
 const upSql = buildPartnerSchemaReconciliationMigrationUpSql(stagingUrl)

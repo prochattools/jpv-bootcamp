@@ -275,3 +275,88 @@ export const PayloadCourseAccessPreview: CollectionConfig = {
   ],
   timestamps: true,
 }
+
+
+
+export const PayloadLessonComments: CollectionConfig = {
+  slug: 'payload_lesson_comments',
+  dbName: 'payload_lesson_comments',
+  labels: { singular: 'Lesson Comment', plural: 'Lesson Comments' },
+  admin: {
+    group: courseAdminGroup,
+    useAsTitle: 'displayName',
+    defaultColumns: ['displayName', 'lesson', 'author', 'moderationStatus', 'sourceCreatedAt', 'createdAt'],
+    description: 'Lesson-scoped member discussions and migrated historical lesson comments.',
+  },
+  access: {
+    read: adminOnlyWrite,
+    create: adminOnlyWrite,
+    update: adminOnlyWrite,
+    delete: adminOnlyWrite,
+  },
+  fields: [
+    { name: 'displayName', type: 'text', required: true },
+    {
+      name: 'lesson',
+      type: 'relationship',
+      relationTo: 'payload_lessons',
+      required: true,
+      index: true,
+    },
+    {
+      name: 'author',
+      type: 'relationship',
+      relationTo: 'payload_members',
+      required: true,
+      index: true,
+    },
+    {
+      name: 'parent',
+      type: 'relationship',
+      // Generated Payload slugs lag this already-registered collection in the dirty worktree.
+      relationTo: 'payload_lesson_comments' as any,
+      index: true,
+    },
+    { name: 'body', type: 'richText', required: true },
+    {
+      name: 'legacyBodyHtml',
+      type: 'textarea',
+      admin: {
+        description: 'Exact historical rendered/source HTML retained for migration evidence.',
+        readOnly: true,
+      },
+    },
+    {
+      name: 'moderationStatus',
+      type: 'select',
+      required: true,
+      defaultValue: 'visible',
+      options: [
+        { label: 'Visible', value: 'visible' },
+        { label: 'Pending Review', value: 'pending_review' },
+        { label: 'Hidden', value: 'hidden' },
+        { label: 'Deleted', value: 'deleted' },
+      ],
+    },
+    {
+      name: 'legacyCommentId',
+      type: 'text',
+      unique: true,
+      index: true,
+      admin: {
+        description: 'Legacy FluentCommunity comment ID used for deterministic migration idempotency.',
+        readOnly: true,
+      },
+    },
+    {
+      name: 'sourceCreatedAt',
+      type: 'date',
+      admin: {
+        description: 'Original source timestamp retained independently from Payload migration timestamps.',
+        readOnly: true,
+      },
+    },
+    { name: 'metadata', type: 'json', admin: { hidden: true } },
+  ],
+  timestamps: true,
+}

@@ -14,6 +14,7 @@ const portalLinks = [
   { href: '/portal/live-sessions', label: 'Live' },
   { href: '/portal/content', label: 'Updates' },
   { href: '/portal/community', label: 'Community' },
+  { href: '/portal/members', label: 'Members' },
   { href: '/portal/partners', label: 'Partners' },
   { href: '/portal/account', label: 'Account' },
   { href: '/portal/billing', label: 'Billing' },

@@ -10,7 +10,7 @@ import {
 import { REQUIRED_PAYLOAD_MIGRATIONS } from '../src/lib/previewReleasePolicy'
 import { expectedPayloadMigrationOrder } from '../src/lib/previewReleasePreflight'
 import { buildPreviewReleaseManifest, validatePreviewReleaseManifestInput } from '../src/lib/previewReleaseManifest'
-import { PAYLOAD_MIGRATION_NAMES } from '../src/migrations/migrationRegistry'
+import { PAYLOAD_MIGRATION_NAMES } from '../src/lib/payloadMigrationRegistry'
 
 async function main(): Promise<void> {
   const legacyUserColumn = 'wp' + '_user_id'

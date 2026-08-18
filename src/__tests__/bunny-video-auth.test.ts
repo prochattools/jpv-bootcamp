@@ -44,8 +44,10 @@ const { GET } = await import('@/app/api/bunny/video/route')
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function makeRequest(lessonId: string) {
-  return new NextRequest(`http://localhost:3000/api/bunny/video?lessonId=${encodeURIComponent(lessonId)}`)
+function makeRequest(lessonId: string, videoGuid?: string) {
+  const query = new URLSearchParams({ lessonId })
+  if (videoGuid) query.set('videoGuid', videoGuid)
+  return new NextRequest(`http://localhost:3000/api/bunny/video?${query.toString()}`)
 }
 
 function makeContentRequest(kind: 'page' | 'post', slug: string) {
@@ -86,6 +88,7 @@ function makeMockPayload(opts: {
   moduleCourseId?: string | null
   enrollmentFound?: boolean
   videoFound?: boolean
+  inlineVideoGuid?: string | null
 }) {
   const {
     user,
@@ -93,6 +96,7 @@ function makeMockPayload(opts: {
     moduleCourseId = 'course-101',
     enrollmentFound = true,
     videoFound = true,
+    inlineVideoGuid = null,
   } = opts
 
   // Lesson doc returned by depth:1 query (includes module.course)
@@ -102,6 +106,25 @@ function makeMockPayload(opts: {
     module: moduleCourseId !== null
       ? { id: 'module-id-1', course: moduleCourseId }
       : null,
+    ...(inlineVideoGuid
+      ? {
+          content: {
+            root: {
+              type: 'root',
+              children: [
+                {
+                  type: 'block',
+                  fields: {
+                    blockType: 'bunnyVideo',
+                    videoGuid: inlineVideoGuid,
+                    libraryId: 999,
+                  },
+                },
+              ],
+            },
+          },
+        }
+      : {}),
   }
 
   // Lesson doc returned by depth:0 query (flat)
@@ -320,5 +343,64 @@ describe('GET /api/bunny/video — authentication and entitlement', () => {
 
     expect(res.status).toBe(404)
     expect(data.reason).toBe('content_not_found')
+  })
+
+  it('member can play an inline Bunny GUID only when that block exists in the authorized lesson', async () => {
+    const inlineGuid = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
+    const mockPayload = makeMockPayload({
+      user: { id: 'member-42', collection: 'payload_members' },
+      lessonFound: true,
+      moduleCourseId: 'course-101',
+      enrollmentFound: true,
+      videoFound: true,
+      inlineVideoGuid: inlineGuid,
+    })
+    vi.mocked(getPayload).mockResolvedValue(mockPayload as never)
+
+    const res = await GET(makeRequest('intro-to-course', inlineGuid))
+    const data = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(data.ok).toBe(true)
+    expect(data.url).toContain('playlist.m3u8')
+    const videoLookup = mockPayload.find.mock.calls.find((call) => call[0]?.collection === 'bunny_videos')
+    expect(videoLookup?.[0]?.where).toEqual({ videoGuid: { equals: inlineGuid } })
+  })
+
+  it('member cannot request an arbitrary Bunny GUID that is not present in the lesson content', async () => {
+    const inlineGuid = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
+    const arbitraryGuid = 'ffffffff-1111-2222-3333-444444444444'
+    const mockPayload = makeMockPayload({
+      user: { id: 'member-42', collection: 'payload_members' },
+      lessonFound: true,
+      moduleCourseId: 'course-101',
+      enrollmentFound: true,
+      videoFound: true,
+      inlineVideoGuid: inlineGuid,
+    })
+    vi.mocked(getPayload).mockResolvedValue(mockPayload as never)
+
+    const res = await GET(makeRequest('intro-to-course', arbitraryGuid))
+    const data = await res.json()
+
+    expect(res.status).toBe(404)
+    expect(data.reason).toBe('no_video_linked')
+    expect(mockPayload.find.mock.calls.some((call) => call[0]?.collection === 'bunny_videos')).toBe(false)
+  })
+
+  it('page and post playback reject a videoGuid override', async () => {
+    vi.mocked(getPayload).mockResolvedValue(makeContentPayload('page') as never)
+    const pageRequest = new NextRequest('http://localhost:3000/api/bunny/video?pageSlug=published-page&videoGuid=aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee')
+    const pageRes = await GET(pageRequest)
+    const pageData = await pageRes.json()
+    expect(pageRes.status).toBe(400)
+    expect(pageData.reason).toBe('invalid_video_target')
+
+    vi.mocked(getPayload).mockResolvedValue(makeContentPayload('post') as never)
+    const postRequest = new NextRequest('http://localhost:3000/api/bunny/video?postSlug=published-post&videoGuid=aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee')
+    const postRes = await GET(postRequest)
+    const postData = await postRes.json()
+    expect(postRes.status).toBe(400)
+    expect(postData.reason).toBe('invalid_video_target')
   })
 })

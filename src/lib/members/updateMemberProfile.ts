@@ -8,6 +8,13 @@ export type UpdateMemberProfileInput = {
   company?: string | null
   phone?: string | null
   timezone?: string | null
+  website?: string | null
+  biography?: string | null
+  socialInstagram?: string | null
+  socialTwitter?: string | null
+  socialLinkedin?: string | null
+  socialFacebook?: string | null
+  socialYoutube?: string | null
   baseUrl?: string
 }
 
@@ -21,6 +28,15 @@ export type UpdateMemberProfileResult =
         company: string | null
         phone: string | null
         timezone: string | null
+        website: string | null
+        biography: string | null
+        socialLinks: {
+          instagram: string | null
+          twitter: string | null
+          linkedin: string | null
+          facebook: string | null
+          youtube: string | null
+        }
       }
     }
   | {
@@ -31,6 +47,46 @@ export type UpdateMemberProfileResult =
 function normalizeText(value: string | null | undefined, maxLength: number): string | null {
   const normalized = (value ?? '').replace(/\s+/g, ' ').trim().slice(0, maxLength)
   return normalized || null
+}
+
+function normalizeMultilineText(value: string | null | undefined, maxLength: number): string | null {
+  const normalized = (value ?? '').replace(/\r\n/g, '\n').trim().slice(0, maxLength)
+  return normalized || null
+}
+
+function plainTextToLexical(value: string | null): Record<string, unknown> | null {
+  if (!value) return null
+  const paragraphs = value
+    .split(/\n{2,}/)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean)
+
+  return {
+    root: {
+      type: 'root',
+      direction: 'ltr',
+      format: '',
+      indent: 0,
+      version: 1,
+      children: paragraphs.map((paragraph) => ({
+        type: 'paragraph',
+        format: '',
+        indent: 0,
+        version: 1,
+        textFormat: 0,
+        textStyle: '',
+        children: [{
+          type: 'text',
+          detail: 0,
+          format: 0,
+          mode: 'normal',
+          style: '',
+          text: paragraph,
+          version: 1,
+        }],
+      })),
+    },
+  }
 }
 
 export async function updateMemberProfile(
@@ -51,11 +107,22 @@ export async function updateMemberProfile(
     return { ok: false, error: 'account_ineligible' }
   }
 
+  const biographyText = normalizeMultilineText(input.biography, 4_000)
+  const socialLinks = {
+    instagram: normalizeText(input.socialInstagram, 500),
+    twitter: normalizeText(input.socialTwitter, 500),
+    linkedin: normalizeText(input.socialLinkedin, 500),
+    facebook: normalizeText(input.socialFacebook, 500),
+    youtube: normalizeText(input.socialYoutube, 500),
+  }
   const data = {
     displayName,
     company: normalizeText(input.company, 100),
     phone: normalizeText(input.phone, 40),
     timezone: normalizeText(input.timezone, 80),
+    website: normalizeText(input.website, 500),
+    biography: plainTextToLexical(biographyText),
+    socialLinks,
   }
 
   const existing = await payload.find({
@@ -91,7 +158,15 @@ export async function updateMemberProfile(
       eventType: 'profile_changed',
       source: 'member_self_service',
       metadata: {
-        changedFields: ['displayName', 'company', 'phone', 'timezone'],
+        changedFields: [
+          'displayName',
+          'company',
+          'phone',
+          'timezone',
+          'website',
+          'biography',
+          'socialLinks',
+        ],
       },
     },
     overrideAccess: true,
@@ -109,6 +184,9 @@ export async function updateMemberProfile(
           company: before.company,
           phone: before.phone,
           timezone: before.timezone,
+          website: before.website,
+          biography: before.biography,
+          socialLinks: before.socialLinks,
         }
       : null,
     after: data,
@@ -157,6 +235,9 @@ export async function updateMemberProfile(
       company: data.company,
       phone: data.phone,
       timezone: data.timezone,
+      website: data.website,
+      biography: biographyText,
+      socialLinks,
     },
   }
 }

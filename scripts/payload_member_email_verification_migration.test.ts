@@ -10,7 +10,7 @@ import {
   buildReplaceActiveVerificationSql,
   getMemberEmailVerificationSchema,
 } from '../src/lib/auth/memberEmailVerificationSql'
-import { PAYLOAD_MIGRATION_NAMES } from '../src/migrations/migrationRegistry'
+import { PAYLOAD_MIGRATION_NAMES } from '../src/lib/payloadMigrationRegistry'
 
 const stagingUrl = 'postgresql://redacted.invalid/app?schema=jpvbootcamp_staging'
 const upSql = buildMemberEmailVerificationUpSql(stagingUrl)

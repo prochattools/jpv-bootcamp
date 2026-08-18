@@ -1,6 +1,7 @@
 import { execSync, spawnSync } from 'node:child_process'
 import { resolve } from 'node:path'
 
+import { PAYLOAD_MIGRATION_NAMES } from '../../src/lib/payloadMigrationRegistry'
 import {
   buildStagingMigrationStatus,
   createStagingReadOnlyAdapter,
@@ -29,14 +30,25 @@ const REQUIRED_SCHEMA = STAGING_TARGET.schema
 const REQUIRED_DATABASE = STAGING_TARGET.database
 const REQUIRED_ENVIRONMENT = STAGING_TARGET.environment
 const REQUIRED_TARGET_ID = STAGING_TARGET.targetId
-const TARGET_MIGRATION = '20260804_050000_member_account_action_reservations'
-const EXPECTED_APPLIED_BEFORE = 28
-const EXPECTED_APPLIED_AFTER = 29
-const APPLY_CONFIRMATION_VALUE =
-  'apply_account_action_reservation_migration_to_jpvbootcamp_staging'
-const ROLLBACK_PLAN_CONFIRMATION_VALUE =
-  'plan_rollback_account_action_reservation_from_jpvbootcamp_staging'
+const EXPECTED_APPLIED_BEFORE = 29
+const EXPECTED_FORWARD_BATCH = [
+  '20260817_193000_bunny_guid_first',
+  '20260817_193100_lesson_comments',
+  '20260817_193200_space_og_image',
+  '20260817_193300_space_reactions',
+] as const
+const TARGET_MIGRATIONS = PAYLOAD_MIGRATION_NAMES.slice(EXPECTED_APPLIED_BEFORE)
+const EXPECTED_APPLIED_AFTER = PAYLOAD_MIGRATION_NAMES.length
+const APPLY_CONFIRMATION_VALUE = 'apply_forward_a_b_c_d_to_jpvbootcamp_staging'
+const ROLLBACK_PLAN_CONFIRMATION_VALUE = 'plan_rollback_forward_a_b_c_d_from_jpvbootcamp_staging'
 const FULL_COMMIT_SHA_RE = /^[0-9a-f]{40}$/
+
+if (
+  TARGET_MIGRATIONS.length !== EXPECTED_FORWARD_BATCH.length ||
+  TARGET_MIGRATIONS.some((name, index) => name !== EXPECTED_FORWARD_BATCH[index])
+) {
+  throw new Error(`Canonical migration registry does not end with the reviewed Forward A-D batch`)
+}
 
 // Production token labels rejected as whole tokens (exact match against hostname labels or db name components).
 const PRODUCTION_HOST_TOKEN_MARKERS = ['prod', 'production', 'live', 'main']
@@ -49,7 +61,7 @@ const GUARDED_PATHS = [
   'package.json',
   'src/migrations',
   'src/lib/auth/memberAccountActionReservationMigrationSql.ts',
-  'src/migrations/migrationRegistry.ts',
+  'src/lib/payloadMigrationRegistry.ts',
   'src/migrations/index.ts',
   'src/lib/previewMigrationInventory.ts',
   'src/payload.config.ts',
@@ -71,6 +83,7 @@ export type MigrationAuthorizationPacket = {
   expectedSchema: string
   expectedHostname: string
   expectedDatabase: string
+  expectedMigrations: string[]
   confirmation: string
 }
 
@@ -89,7 +102,7 @@ export type RollbackPlanAuthorizationPacket = {
 }
 
 export type SafeMigrationPlanEvidence = {
-  version: 1
+  version: 2
   resultCode: 'plan_ok' | 'plan_blocked'
   blockerCodes: string[]
   branch: string
@@ -98,8 +111,8 @@ export type SafeMigrationPlanEvidence = {
   environment: string
   targetId: string
   appliedPayloadCount: number
-  expectedPendingMigration: string
-  expectedPendingMigrationIsOnlyMissing: boolean
+  expectedPendingMigrations: string[]
+  expectedPendingBatchIsOnlyMissing: boolean
   unexpectedPayloadCount: number
   duplicatePayloadCount: number
   malformedPayloadCount: number
@@ -151,7 +164,7 @@ export function blockerToCode(message: string): string {
   if (message.includes('Malformed Payload migration')) return 'malformed_payload_evidence'
   if (message.includes('Schema identity mismatch') || message.includes('schema identity mismatch')) return 'schema_identity_mismatch'
   if (message.includes('applied Payload migrations before apply') || message.includes('applied Payload migrations, found')) return 'applied_count_mismatch'
-  if (message.includes('Expected exactly one missing') || message.includes('missing Payload migration')) return 'pending_migration_mismatch'
+  if (message.includes('Expected pending Payload migration batch') || message.includes('missing Payload migration')) return 'pending_migration_mismatch'
   if (message.includes('Unexpected Payload migration')) return 'unexpected_payload_migrations'
   if (message.includes('Duplicate Payload migration')) return 'duplicate_payload_migrations'
   if (message.includes('Missing Prisma')) return 'missing_prisma_migrations'
@@ -205,7 +218,7 @@ export type StagingMigrationUncertainOutcome = {
   appliedCount: number | null
   missingMigrations: string[] | null
   unexpectedMigrations: string[] | null
-  migration29Applied: boolean | null
+  targetBatchApplied: boolean | null
   schemaIdentityConfirmed: boolean | null
   prismaHealthy: boolean | null
   statusQuerySucceeded: boolean
@@ -583,11 +596,11 @@ function checkPreApplyPreconditions(status: FullMigrationStatus): string[] {
     )
   }
   if (
-    status.missingPayloadMigrations.length !== 1 ||
-    status.missingPayloadMigrations[0] !== TARGET_MIGRATION
+    status.missingPayloadMigrations.length !== TARGET_MIGRATIONS.length ||
+    status.missingPayloadMigrations.some((name, index) => name !== TARGET_MIGRATIONS[index])
   ) {
     blockers.push(
-      `Expected exactly one missing Payload migration (${TARGET_MIGRATION}), found: [${status.missingPayloadMigrations.join(', ')}]`,
+      `Expected pending Payload migration batch [${TARGET_MIGRATIONS.join(', ')}], found: [${status.missingPayloadMigrations.join(', ')}]`,
     )
   }
   if (status.unexpectedPayloadMigrations.length > 0) {
@@ -841,8 +854,9 @@ export async function runStagingMigrationPlan(
   }
 
   output(
-    `[staging-migration-plan] PLAN OK: ${TARGET_MIGRATION} is pending and all preconditions are met`,
+    `[staging-migration-plan] PLAN OK: Forward A-D batch is pending in canonical order and all preconditions are met`,
   )
+  output(`[staging-migration-plan] pending-batch=${TARGET_MIGRATIONS.join(',')}`)
   output(`[staging-migration-plan] To apply: pnpm staging:payload-migration-apply`)
   return {
     ok: true,
@@ -853,7 +867,7 @@ export async function runStagingMigrationPlan(
     environment: input.environment ?? '',
     targetId: input.targetId ?? '',
     appliedCount: status.appliedPayloadCount,
-    pendingMigrations: [TARGET_MIGRATION],
+    pendingMigrations: [...TARGET_MIGRATIONS],
     blockers: [],
     message: `plan_ok`,
     unexpectedPayloadCount,
@@ -886,6 +900,14 @@ export async function runStagingMigrationApply(
   }
   if (!authorization.rollbackOwner?.trim()) {
     throw new Error('Authorization packet: rollbackOwner is required')
+  }
+  if (
+    authorization.expectedMigrations.length !== TARGET_MIGRATIONS.length ||
+    authorization.expectedMigrations.some((name, index) => name !== TARGET_MIGRATIONS[index])
+  ) {
+    throw new Error(
+      `Authorization packet: expectedMigrations must exactly equal [${TARGET_MIGRATIONS.join(', ')}]`,
+    )
   }
   if (authorization.confirmation !== APPLY_CONFIRMATION_VALUE) {
     throw new Error(
@@ -931,6 +953,7 @@ export async function runStagingMigrationApply(
   output(`[staging-migration-apply] maintenanceWindow=${authorization.maintenanceWindowId}`)
   output(`[staging-migration-apply] backupEvidence=${authorization.backupEvidenceId}`)
   output(`[staging-migration-apply] rollbackOwner=${authorization.rollbackOwner}`)
+  output(`[staging-migration-apply] authorized-batch=${authorization.expectedMigrations.join(',')}`)
 
   output(`[staging-migration-apply] collecting pre-apply migration status...`)
   let preStatus: FullMigrationStatus
@@ -946,7 +969,7 @@ export async function runStagingMigrationApply(
   }
 
   output(`[staging-migration-apply] pre-apply checks PASSED`)
-  output(`[staging-migration-apply] applying migration: ${TARGET_MIGRATION}`)
+  output(`[staging-migration-apply] applying migration batch: ${TARGET_MIGRATIONS.join(',')}`)
   output(`[staging-migration-apply] invoking: ${PAYLOAD_MIGRATE_ARGS.join(' ')}`)
 
   const executor = resolveCommandExecutor(dependencies)
@@ -968,9 +991,8 @@ export async function runStagingMigrationApply(
     } catch {
       // Status query failed — cannot determine outcome
     }
-    const migration29Applied = uncertainStatus
-      ? uncertainStatus.missingPayloadMigrations.every((m) => m !== TARGET_MIGRATION) &&
-        uncertainStatus.appliedPayloadCount >= EXPECTED_APPLIED_AFTER
+    const targetBatchApplied = uncertainStatus
+      ? checkPostApplyPreconditions(uncertainStatus).length === 0
       : null
     const safeStatus =
       execResult.status !== null && Number.isSafeInteger(execResult.status)
@@ -991,7 +1013,7 @@ export async function runStagingMigrationApply(
       appliedCount: uncertainStatus?.appliedPayloadCount ?? null,
       missingMigrations: uncertainStatus?.missingPayloadMigrations ?? null,
       unexpectedMigrations: uncertainStatus?.unexpectedPayloadMigrations ?? null,
-      migration29Applied,
+      targetBatchApplied,
       schemaIdentityConfirmed: uncertainStatus
         ? uncertainStatus.schemaIdentity === REQUIRED_SCHEMA
         : null,
@@ -1041,6 +1063,7 @@ export async function runStagingMigrationApply(
       expectedSchema: authorization.expectedSchema,
       expectedHostname: authorization.expectedHostname,
       expectedDatabase: authorization.expectedDatabase,
+      expectedMigrations: [...authorization.expectedMigrations],
     },
     preApply: {
       appliedCount: preStatus.appliedPayloadCount,
@@ -1050,7 +1073,7 @@ export async function runStagingMigrationApply(
       appliedCount: postStatus.appliedPayloadCount,
       missingMigrations: postStatus.missingPayloadMigrations,
     },
-    message: `Apply completed: ${TARGET_MIGRATION} applied to ${REQUIRED_SCHEMA}. Rollback requires separate plan and authorization.`,
+    message: `Apply completed: Forward A-D batch [${TARGET_MIGRATIONS.join(', ')}] applied to ${REQUIRED_SCHEMA}. Rollback requires separate plan and authorization.`,
   }
 }
 
@@ -1193,35 +1216,29 @@ export async function runStagingMigrationRollbackPlan(
     namesSeen.add(rec.name)
   }
 
-  // Verify migration 29 is the last applied and is alone in its batch
+  // Verify Forward D is the last applied migration.
   const lastApplied = status.report.appliedPayloadMigrations.at(-1)
-  if (lastApplied !== TARGET_MIGRATION) {
+  const expectedLastApplied = TARGET_MIGRATIONS.at(-1)
+  if (lastApplied !== expectedLastApplied) {
     blockers.push(
-      `Rollback plan requires ${TARGET_MIGRATION} to be the last applied migration; got '${lastApplied ?? 'none'}'`,
+      `Rollback plan requires ${expectedLastApplied} to be the last applied migration; got '${lastApplied ?? 'none'}'`,
     )
   }
 
-  // Determine latest batch and validate isolation
+  // Determine latest batch and require exactly the reviewed Forward A-D batch.
   const latestBatchRows: string[] = []
   if (!batchEvidenceMalformed) {
-    const target29Record = records.find((r) => r.name === TARGET_MIGRATION)
-    if (!target29Record) {
-      blockers.push(`${TARGET_MIGRATION} is not in the batch evidence records`)
-    } else {
-      const highestBatch = Math.max(...records.map((r) => r.batch))
-      if (target29Record.batch !== highestBatch) {
-        blockers.push(
-          `${TARGET_MIGRATION} is in batch ${target29Record.batch} but the highest batch is ${highestBatch}`,
-        )
-      }
-      const highestBatchRecords = records.filter((r) => r.batch === highestBatch)
-      if (highestBatchRecords.length !== 1) {
-        blockers.push(
-          `Latest batch ${highestBatch} contains ${highestBatchRecords.length} migration(s); expected exactly 1 (${TARGET_MIGRATION})`,
-        )
-      } else {
-        latestBatchRows.push(highestBatchRecords[0].name)
-      }
+    const highestBatch = Math.max(...records.map((r) => r.batch))
+    const highestBatchRecords = records.filter((r) => r.batch === highestBatch)
+    const highestBatchNames = highestBatchRecords.map((r) => r.name)
+    latestBatchRows.push(...highestBatchNames)
+    if (
+      highestBatchNames.length !== TARGET_MIGRATIONS.length ||
+      highestBatchNames.some((name, index) => name !== TARGET_MIGRATIONS[index])
+    ) {
+      blockers.push(
+        `Latest batch ${highestBatch} must exactly equal [${TARGET_MIGRATIONS.join(', ')}], got [${highestBatchNames.join(', ')}]`,
+      )
     }
   }
 
@@ -1264,7 +1281,7 @@ export async function runStagingMigrationRollbackPlan(
     latestBatchMigrations: latestBatchRows,
     blockers: [],
     message:
-      `Rollback plan OK: ${TARGET_MIGRATION} is the latest applied migration. ` +
+      `Rollback plan OK: Forward A-D batch [${TARGET_MIGRATIONS.join(', ')}] is the latest applied batch. ` +
       `Rollback execution requires separate authorization.`,
   }
 }
@@ -1316,6 +1333,7 @@ export function parseApplyCliArgs(args: string[]): MigrationAuthorizationPacket 
     else if (key === '--expected-schema') result.expectedSchema = value
     else if (key === '--expected-hostname') result.expectedHostname = value
     else if (key === '--expected-database') result.expectedDatabase = value
+    else if (key === '--expected-migrations') result.expectedMigrations = value.split(',').map((item) => item.trim()).filter(Boolean)
     else if (key === '--confirmation') result.confirmation = value
     else throw new Error(`Unknown argument: ${key}`)
   }
@@ -1329,6 +1347,7 @@ export function parseApplyCliArgs(args: string[]): MigrationAuthorizationPacket 
   if (!result.expectedSchema) throw new Error('Missing required argument: --expected-schema')
   if (!result.expectedHostname) throw new Error('Missing required argument: --expected-hostname')
   if (!result.expectedDatabase) throw new Error('Missing required argument: --expected-database')
+  if (!result.expectedMigrations || result.expectedMigrations.length === 0) throw new Error('Missing required argument: --expected-migrations')
   if (!result.confirmation) throw new Error('Missing required argument: --confirmation')
   return result as MigrationAuthorizationPacket
 }
@@ -1402,13 +1421,14 @@ const APPLY_USAGE = [
   '  --expected-schema=jpvbootcamp_staging \\',
   '  --expected-hostname=<staging-db-host> \\',
   '  --expected-database=jpvbootcamp \\',
+  `  --expected-migrations=${TARGET_MIGRATIONS.join(',')} \\`,
   '  --operator-id=<id> \\',
   '  --backup-evidence-id=<id> \\',
   '  --maintenance-window-id=<id> \\',
   '  --rollback-owner=<id> \\',
   `  --confirmation=${APPLY_CONFIRMATION_VALUE}`,
   '',
-  `Applies migration ${TARGET_MIGRATION} to the ${REQUIRED_SCHEMA} schema.`,
+  `Applies the exact Forward A-D batch to the ${REQUIRED_SCHEMA} schema.`,
   'Authorization does NOT authorize push, Dokploy redeployment, Prisma database-deploy,',
   'provider email, post-deployment smoke, or production.',
 ].join('\n')
@@ -1448,7 +1468,7 @@ async function main(): Promise<void> {
     } catch (error: unknown) {
       if (jsonMode) {
         const evidence: SafeMigrationPlanEvidence = {
-          version: 1,
+          version: 2,
           resultCode: 'plan_blocked',
           blockerCodes: ['argument_parse_failed'],
           branch: 'unknown',
@@ -1457,8 +1477,8 @@ async function main(): Promise<void> {
           environment: '',
           targetId: '',
           appliedPayloadCount: 0,
-          expectedPendingMigration: TARGET_MIGRATION,
-          expectedPendingMigrationIsOnlyMissing: false,
+          expectedPendingMigrations: [...TARGET_MIGRATIONS],
+          expectedPendingBatchIsOnlyMissing: false,
           unexpectedPayloadCount: 0,
           duplicatePayloadCount: 0,
           malformedPayloadCount: 0,
@@ -1482,7 +1502,7 @@ async function main(): Promise<void> {
     if (jsonMode) {
       // Emit SafeMigrationPlanEvidence — no free-text messages or raw migration names
       const evidence: SafeMigrationPlanEvidence & { unhealthyPrismaMigrations?: string[] } = {
-        version: 1,
+        version: 2,
         resultCode: result.ok ? 'plan_ok' : 'plan_blocked',
         blockerCodes: result.blockers,
         branch: result.branch,
@@ -1491,12 +1511,10 @@ async function main(): Promise<void> {
         environment: result.environment,
         targetId: result.targetId,
         appliedPayloadCount: result.appliedCount,
-        expectedPendingMigration: TARGET_MIGRATION,
-        expectedPendingMigrationIsOnlyMissing:
-          result.ok ? true : (
-            result.pendingMigrations.length === 1 &&
-            result.pendingMigrations[0] === TARGET_MIGRATION
-          ),
+        expectedPendingMigrations: [...TARGET_MIGRATIONS],
+        expectedPendingBatchIsOnlyMissing:
+          result.pendingMigrations.length === TARGET_MIGRATIONS.length &&
+          result.pendingMigrations.every((name, index) => name === TARGET_MIGRATIONS[index]),
         unexpectedPayloadCount: result.unexpectedPayloadCount,
         duplicatePayloadCount: result.duplicatePayloadCount,
         malformedPayloadCount: result.malformedPayloadCount,

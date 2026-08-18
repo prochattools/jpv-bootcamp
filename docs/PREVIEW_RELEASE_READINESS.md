@@ -344,7 +344,7 @@ The checklist only gates operations. It does not claim live success or imply tha
 
 **Historical snapshot claim (not independently reverified by this checkpoint):** the codebase at `eb03a08` registered 16 Payload migrations; the registry now contains 29. Current applied state must come from the authorized read-only status path (`pnpm staging:payload-migration-plan -- --expected-commit=<HEAD-sha> ...`) before any write authorization is issued. The plan command requires the full 40-character HEAD SHA at runtime; no source-code constant needs changing between deployments.
 
-**Registered migration order (src/migrations/migrationRegistry.ts):**
+**Registered migration order (src/lib/payloadMigrationRegistry.ts):**
 
 1. `20260620_213328`
 2. `20260621_194424_course_system_phase1`
@@ -453,7 +453,7 @@ The checker prints no API keys, database URLs, connection strings, sender addres
 
 ### Staging startup
 
-`scripts/runtime/start-staging.sh` is the Docker CMD. It starts the standalone Next.js server after validating `DATABASE_URL` structurally: exact PostgreSQL protocol, host (`10.0.2.4`), port (`5433`), database (`jpvbootcamp`), and schema (`jpvbootcamp_staging`) are all required. Substring matching is not used; the URL is parsed structurally by Node.js.
+`scripts/release/start-staging.sh` is the Docker CMD. It starts the standalone Next.js server after validating `DATABASE_URL` structurally: exact PostgreSQL protocol, host (`10.0.2.4`), port (`5433`), database (`jpvbootcamp`), and schema (`jpvbootcamp_staging`) are all required. Substring matching is not used; the URL is parsed structurally by Node.js.
 
 It does not run Prisma or Payload migrations. It does not invoke database initialization or backup operations.
 

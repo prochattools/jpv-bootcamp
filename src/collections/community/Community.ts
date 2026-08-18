@@ -144,6 +144,11 @@ export const PayloadSpaces: CollectionConfig = {
       type: 'relationship',
       relationTo: 'payload_courses',
     },
+    {
+      name: 'ogImage',
+      type: 'upload',
+      relationTo: 'payload_media',
+    },
     { name: 'description', type: 'textarea' },
     { name: 'sortOrder', type: 'number', defaultValue: 0 },
     { name: 'metadata', type: 'json', admin: { hidden: true } },
@@ -333,6 +338,60 @@ export const PayloadSpaceComments: CollectionConfig = {
       defaultValue: 'visible',
       options: moderationStatusOptions,
     },
+    { name: 'metadata', type: 'json', admin: { hidden: true } },
+  ],
+  timestamps: true,
+}
+
+export const PayloadSpaceReactions: CollectionConfig = {
+  slug: 'payload_space_reactions',
+  dbName: 'payload_space_reactions',
+  labels: {
+    singular: 'Community Reaction',
+    plural: 'Community Reactions',
+  },
+  admin: {
+    group: communityGroup,
+    useAsTitle: 'legacyReactionId',
+    defaultColumns: ['reactionType', 'targetKind', 'actorMember', 'sourceCreatedAt'],
+    description: 'Community likes, bookmarks, and preserved survey-option votes.',
+  },
+  access: adminOnlyCollectionAccess,
+  fields: [
+    {
+      name: 'actorMember',
+      type: 'relationship',
+      relationTo: 'payload_members',
+      index: true,
+    },
+    {
+      name: 'reactionType',
+      type: 'select',
+      required: true,
+      index: true,
+      options: [
+        { label: 'Like', value: 'like' },
+        { label: 'Bookmark', value: 'bookmark' },
+        { label: 'Survey Vote', value: 'survey_vote' },
+      ],
+    },
+    {
+      name: 'targetKind',
+      type: 'select',
+      required: true,
+      options: [
+        { label: 'Post', value: 'post' },
+        { label: 'Comment', value: 'comment' },
+        { label: 'Survey Option', value: 'survey_option' },
+      ],
+    },
+    { name: 'targetPost', type: 'relationship', relationTo: 'payload_space_posts', index: true },
+    { name: 'targetComment', type: 'relationship', relationTo: 'payload_space_comments', index: true },
+    { name: 'surveyOptionKey', type: 'text' },
+    { name: 'legacyReactionId', type: 'text', unique: true, index: true },
+    { name: 'legacyActorUserId', type: 'text', admin: { hidden: true } },
+    { name: 'legacyActorSourceSystem', type: 'text', admin: { hidden: true } },
+    { name: 'sourceCreatedAt', type: 'date', index: true },
     { name: 'metadata', type: 'json', admin: { hidden: true } },
   ],
   timestamps: true,

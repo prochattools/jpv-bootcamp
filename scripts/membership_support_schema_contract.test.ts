@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 
-import { PAYLOAD_MIGRATION_NAMES } from '../src/migrations/migrationRegistry'
+import { PAYLOAD_MIGRATION_NAMES } from '../src/lib/payloadMigrationRegistry'
 
 function read(relativePath: string): string {
   return readFileSync(relativePath, 'utf8')

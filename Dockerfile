@@ -89,7 +89,7 @@ COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/scripts ./scripts
-COPY --from=builder /app/src/migrations/migrationRegistry.ts ./src/migrations/migrationRegistry.ts
+COPY --from=builder /app/src/lib/payloadMigrationRegistry.ts ./src/lib/payloadMigrationRegistry.ts
 COPY --from=builder /app/package.json ./package.json
 
 EXPOSE 3000
@@ -97,4 +97,4 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=3 \
   CMD node -e "require('http').get('http://127.0.0.1:3000/', res => process.exit(res.statusCode < 500 ? 0 : 1)).on('error', () => process.exit(1))"
 
-CMD ["bash", "scripts/runtime/start-staging.sh"]
+CMD ["bash", "scripts/release/start-staging.sh"]

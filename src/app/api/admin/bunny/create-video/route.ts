@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
 
 	if (!isBunnyConfigured()) {
 		return NextResponse.json(
-			{ error: 'Bunny API not configured: BUNNY_API_KEY or BUNNY_LIBRARY_ID missing' },
+			{ error: 'Bunny API not configured: provide BUNNY_API_KEY/BUNNY_LIBRARY_ID or BUNNY_STREAM_API_KEY/BUNNY_STREAM_LIBRARY_ID' },
 			{ status: 503 },
 		)
 	}
@@ -27,10 +27,10 @@ export async function POST(req: NextRequest) {
 			return NextResponse.json({ error: 'Missing title' }, { status: 400 })
 		}
 
-		// Create video in Bunny Stream
+		// Create video object in Bunny Stream. Bunny returns a GUID as the canonical identifier.
 		const bunnyVideo = await createBunnyVideo({ title })
 
-		// Optionally create Payload record if lessonId provided
+		// Optionally create Payload record if lessonId provided.
 		let payloadVideoId: string | number | null = null
 		if (lessonId) {
 			try {
@@ -40,7 +40,6 @@ export async function POST(req: NextRequest) {
 					data: {
 						title: bunnyVideo.title,
 						libraryId: bunnyVideo.videoLibraryId,
-						videoId: bunnyVideo.videoId,
 						videoGuid: bunnyVideo.videoGuid,
 						lesson: lessonId,
 						status: 'processing',
@@ -59,16 +58,16 @@ export async function POST(req: NextRequest) {
 			}
 		}
 
-		// Return upload initialization response
+		// Keep `videoId` as a response alias for older callers, but its value is the canonical GUID.
 		return NextResponse.json({
 			ok: true,
 			video: {
 				libraryId: bunnyVideo.videoLibraryId,
-				videoId: bunnyVideo.videoId,
+				videoId: bunnyVideo.videoGuid,
 				videoGuid: bunnyVideo.videoGuid,
 				title: bunnyVideo.title,
 				status: 'processing',
-				uploadToken: bunnyVideo.token,
+				uploadToken: null,
 				payloadId: payloadVideoId,
 			},
 		})

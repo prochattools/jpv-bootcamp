@@ -32,14 +32,21 @@ function diagnoseStripe(): ProviderDiagnostic {
 }
 
 function diagnoseBunny(): ProviderDiagnostic {
+  const apiKey = process.env.BUNNY_API_KEY ?? process.env.BUNNY_STREAM_API_KEY
+  const libraryId = process.env.BUNNY_LIBRARY_ID ?? process.env.BUNNY_STREAM_LIBRARY_ID
+  const missingSettings = [
+    ...(apiKey ? [] : ['BUNNY_API_KEY|BUNNY_STREAM_API_KEY']),
+    ...(libraryId ? [] : ['BUNNY_LIBRARY_ID|BUNNY_STREAM_LIBRARY_ID']),
+  ]
+
   return {
     provider: 'Bunny',
-    isConfigured: !!process.env.BUNNY_API_KEY,
-    isTestMode: !process.env.BUNNY_API_KEY?.includes('prod'),
-    hasPlaceholders: process.env.BUNNY_API_KEY === 'bunny_test_placeholder',
-    missingSettings: process.env.BUNNY_API_KEY ? [] : ['BUNNY_API_KEY'],
+    isConfigured: Boolean(apiKey && libraryId),
+    isTestMode: !apiKey?.includes('prod'),
+    hasPlaceholders: apiKey === 'bunny_test_placeholder',
+    missingSettings,
     redactedConfig: {
-      library: 'configured',
+      library: libraryId ? 'configured' : 'missing',
       mode: 'test'
     }
   }

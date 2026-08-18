@@ -101,10 +101,36 @@ async function findVideoById(payload: Awaited<ReturnType<typeof getPayload>>, id
   }
 }
 
+function lexicalContainsBunnyGuid(value: unknown, requestedGuid: string): boolean {
+  if (!value || typeof value !== 'object') return false
+  if (Array.isArray(value)) return value.some((entry) => lexicalContainsBunnyGuid(entry, requestedGuid))
+
+  const record = value as Record<string, unknown>
+  const fields = record.fields
+  if (record.type === 'block' && fields && typeof fields === 'object') {
+    const blockFields = fields as Record<string, unknown>
+    if (blockFields.blockType === 'bunnyVideo' && blockFields.videoGuid === requestedGuid) return true
+  }
+
+  return Object.values(record).some((entry) => lexicalContainsBunnyGuid(entry, requestedGuid))
+}
+
+async function findVideoByGuid(payload: Awaited<ReturnType<typeof getPayload>>, videoGuid: string): Promise<VideoDocument | null> {
+  const result = await payload.find({
+    collection: 'bunny_videos',
+    where: { videoGuid: { equals: videoGuid } },
+    limit: 1,
+    depth: 0,
+    overrideAccess: true,
+  })
+  return (result.docs[0] as VideoDocument | undefined) ?? null
+}
+
 async function resolveLessonVideo(
   payload: Awaited<ReturnType<typeof getPayload>>,
   lessonSlug: string,
   user: { id: string | number; collection?: string },
+  requestedGuid?: string | null,
 ): Promise<{ video: VideoDocument | null; error?: NextResponse }> {
   const lessonResult = await payload.find({
     collection: 'payload_lessons',
@@ -116,6 +142,7 @@ async function resolveLessonVideo(
   const lesson = lessonResult.docs[0] as {
     id: string | number
     bunnyVideo?: PayloadRelationship
+    content?: unknown
     module?: { course?: PayloadRelationship } | null
   } | undefined
 
@@ -164,6 +191,20 @@ async function resolveLessonVideo(
         ),
       }
     }
+  }
+
+  if (requestedGuid) {
+    const normalizedGuid = requestedGuid.trim().toLowerCase()
+    if (!lexicalContainsBunnyGuid(lesson.content, normalizedGuid)) {
+      return {
+        video: null,
+        error: NextResponse.json(
+          { ok: false, reason: 'no_video_linked' } satisfies VideoError,
+          { status: 404 },
+        ),
+      }
+    }
+    return { video: await findVideoByGuid(payload, normalizedGuid) }
   }
 
   const linkedVideoId = relationshipId(lesson.bunnyVideo)
@@ -216,9 +257,17 @@ async function resolvePublishedContentVideo(
 
 export async function GET(request: NextRequest) {
   const target = parseTarget(request)
+  const requestedGuid = request.nextUrl.searchParams.get('videoGuid')?.trim().toLowerCase() || null
   if (!target) {
     return NextResponse.json(
       { ok: false, reason: 'missing_lesson_id' } satisfies VideoError,
+      { status: 400 },
+    )
+  }
+
+  if (requestedGuid && target.kind !== 'lesson') {
+    return NextResponse.json(
+      { ok: false, reason: 'invalid_video_target' } satisfies VideoError,
       { status: 400 },
     )
   }
@@ -236,7 +285,7 @@ export async function GET(request: NextRequest) {
     }
 
     const resolution = target.kind === 'lesson'
-      ? await resolveLessonVideo(payload, target.slug, { id: user.id, collection: user.collection })
+      ? await resolveLessonVideo(payload, target.slug, { id: user.id, collection: user.collection }, requestedGuid)
       : await resolvePublishedContentVideo(payload, target)
 
     if (resolution.error) return resolution.error

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { createRequire } from 'node:module'
 
-import { PAYLOAD_MIGRATION_NAMES } from '../../src/migrations/migrationRegistry'
+import { PAYLOAD_MIGRATION_NAMES } from '../../src/lib/payloadMigrationRegistry'
 
 const require = createRequire(import.meta.url)
 const preflight = require('./payload-migration-preflight.cjs') as {

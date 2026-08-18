@@ -148,9 +148,45 @@ export const PayloadMemberProfiles: CollectionConfig = {
       type: 'upload',
       relationTo: 'payload_media',
     },
+    {
+      name: 'coverImage',
+      type: 'upload',
+      relationTo: 'payload_media',
+      admin: {
+        description: 'Member profile cover image. Migrated from FluentCommunity user_cover_photo where present.',
+      },
+    },
     { name: 'timezone', type: 'text' },
     { name: 'phone', type: 'text' },
     { name: 'company', type: 'text' },
+    {
+      name: 'website',
+      type: 'text',
+      admin: {
+        description: 'Member website URL. Source-proven from FluentCommunity profile metadata.',
+      },
+    },
+    {
+      name: 'biography',
+      type: 'richText',
+      admin: {
+        description: 'Member biography/about content. Migrated losslessly from FluentCommunity profile content.',
+      },
+    },
+    {
+      name: 'socialLinks',
+      type: 'group',
+      fields: [
+        { name: 'instagram', type: 'text' },
+        { name: 'twitter', type: 'text', label: 'X / Twitter' },
+        { name: 'linkedin', type: 'text' },
+        { name: 'facebook', type: 'text' },
+        { name: 'youtube', type: 'text', label: 'YouTube' },
+      ],
+      admin: {
+        description: 'Source-proven legacy member social links.',
+      },
+    },
     { name: 'marketingConsent', type: 'checkbox', defaultValue: false },
     { name: 'transactionalEmailConsent', type: 'checkbox', defaultValue: true },
   ],

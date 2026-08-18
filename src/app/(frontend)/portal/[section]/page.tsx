@@ -17,6 +17,7 @@ import { resolvePortalBillingPresentation } from '@/lib/portal/portalBillingPres
 
 import { EmailChangeForm } from '@/components/member/EmailChangeForm'
 import { PasswordChangeForm } from '@/components/member/PasswordChangeForm'
+import { MemberCoverImageForm } from '@/components/member/MemberCoverImageForm'
 
 const sectionContent = {
   community: {
@@ -175,6 +176,13 @@ async function updatePortalMemberProfileAction(formData: FormData) {
       company: formText(formData.get('company')),
       phone: formText(formData.get('phone')),
       timezone: formText(formData.get('timezone')),
+      website: formText(formData.get('website')),
+      biography: formText(formData.get('biography')),
+      socialInstagram: formText(formData.get('socialInstagram')),
+      socialTwitter: formText(formData.get('socialTwitter')),
+      socialLinkedin: formText(formData.get('socialLinkedin')),
+      socialFacebook: formText(formData.get('socialFacebook')),
+      socialYoutube: formText(formData.get('socialYoutube')),
       baseUrl: resolveMemberVerificationPublicBaseUrl(),
     })
 
@@ -284,6 +292,18 @@ export default async function PortalSectionPage({ params, searchParams }: Portal
 
         <section className={portalCardClass}>
           <div>
+            <h2 className='text-xl font-semibold text-jpv-ink'>Profile cover</h2>
+            <p className='mt-2 text-sm leading-6 text-neutral-600'>
+              Your cover image appears with your member profile. Migrated FluentCommunity cover photos are preserved here.
+            </p>
+          </div>
+          <div className='mt-5'>
+            <MemberCoverImageForm currentCover={account.profile?.coverImage ?? null} />
+          </div>
+        </section>
+
+        <section className={portalCardClass}>
+          <div>
             <h2 className='text-xl font-semibold text-jpv-ink'>Edit profile</h2>
             <p className='mt-2 text-sm leading-6 text-neutral-600'>
               These details are used in your member experience. Internal notes and access settings cannot be changed here.
@@ -350,6 +370,76 @@ export default async function PortalSectionPage({ params, searchParams }: Portal
                 type='text'
                 maxLength={80}
                 defaultValue={account.profile?.timezone ?? ''}
+                className={portalFieldClass}
+              />
+            </label>
+            <label className='text-sm font-medium text-neutral-800 sm:col-span-2'>
+              Website
+              <input
+                name='website'
+                type='text'
+                maxLength={500}
+                defaultValue={account.profile?.website ?? ''}
+                className={portalFieldClass}
+                placeholder='https://example.com'
+              />
+            </label>
+            <label className='text-sm font-medium text-neutral-800 sm:col-span-2'>
+              Biography / about
+              <textarea
+                name='biography'
+                maxLength={4000}
+                defaultValue={account.profile?.biography ?? ''}
+                className={`${portalFieldClass} min-h-36`}
+              />
+            </label>
+            <label className='text-sm font-medium text-neutral-800'>
+              Instagram
+              <input
+                name='socialInstagram'
+                type='text'
+                maxLength={500}
+                defaultValue={account.profile?.socialLinks.instagram ?? ''}
+                className={portalFieldClass}
+              />
+            </label>
+            <label className='text-sm font-medium text-neutral-800'>
+              X / Twitter
+              <input
+                name='socialTwitter'
+                type='text'
+                maxLength={500}
+                defaultValue={account.profile?.socialLinks.twitter ?? ''}
+                className={portalFieldClass}
+              />
+            </label>
+            <label className='text-sm font-medium text-neutral-800'>
+              LinkedIn
+              <input
+                name='socialLinkedin'
+                type='text'
+                maxLength={500}
+                defaultValue={account.profile?.socialLinks.linkedin ?? ''}
+                className={portalFieldClass}
+              />
+            </label>
+            <label className='text-sm font-medium text-neutral-800'>
+              Facebook
+              <input
+                name='socialFacebook'
+                type='text'
+                maxLength={500}
+                defaultValue={account.profile?.socialLinks.facebook ?? ''}
+                className={portalFieldClass}
+              />
+            </label>
+            <label className='text-sm font-medium text-neutral-800'>
+              YouTube
+              <input
+                name='socialYoutube'
+                type='text'
+                maxLength={500}
+                defaultValue={account.profile?.socialLinks.youtube ?? ''}
                 className={portalFieldClass}
               />
             </label>

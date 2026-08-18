@@ -3,14 +3,14 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 import { previewMigrationInventory, previewMigrationInventoryNames } from '../src/lib/previewMigrationInventory'
-import { PAYLOAD_MIGRATION_NAMES } from '../src/migrations/migrationRegistry'
+import { PAYLOAD_MIGRATION_NAMES } from '../src/lib/payloadMigrationRegistry'
 import { REGISTERED_PAYLOAD_MIGRATIONS } from './release/buildStagingMigrationStatus'
 
 const REPO_ROOT = path.resolve(import.meta.dirname, '..')
 const MIGRATIONS_DIR = path.join(REPO_ROOT, 'src', 'migrations')
 const INDEX_FILE = path.join(MIGRATIONS_DIR, 'index.ts')
-const REGISTRY_MODULE_FILE = path.join(MIGRATIONS_DIR, 'migrationRegistry.ts')
-const RUNTIME_PREFLIGHT_FILE = path.join(REPO_ROOT, 'scripts', 'runtime', 'payload-migration-preflight.cjs')
+const REGISTRY_MODULE_FILE = path.join(REPO_ROOT, 'src', 'lib', 'payloadMigrationRegistry.ts')
+const RUNTIME_PREFLIGHT_FILE = path.join(REPO_ROOT, 'scripts', 'release', 'payload-migration-preflight.cjs')
 const DOCKERFILE = path.join(REPO_ROOT, 'Dockerfile')
 const READINESS_MATRIX = path.join(REPO_ROOT, 'docs', 'release', 'STAGING_OPERATIONAL_READINESS_MATRIX.md')
 
@@ -26,11 +26,15 @@ function test(label: string, fn: () => void): void {
   }
 }
 
-const datedModules = fs.readdirSync(MIGRATIONS_DIR)
+const migrationDirectoryFiles = fs.readdirSync(MIGRATIONS_DIR)
+const datedModules = migrationDirectoryFiles
   .filter((filename) => /^\d{8}_\d{6}.*\.ts$/.test(filename))
   .map((filename) => path.basename(filename, '.ts'))
   .sort()
-const jsonSnapshots = fs.readdirSync(MIGRATIONS_DIR).filter((filename) => filename.endsWith('.json'))
+const nonExecutableTypeScriptHelpers = migrationDirectoryFiles.filter((filename) =>
+  filename.endsWith('.ts') && filename !== 'index.ts' && !/^\d{8}_\d{6}.*\.ts$/.test(filename)
+)
+const jsonSnapshots = migrationDirectoryFiles.filter((filename) => filename.endsWith('.json'))
 const indexSource = fs.readFileSync(INDEX_FILE, 'utf8')
 const registryModuleSource = fs.readFileSync(REGISTRY_MODULE_FILE, 'utf8')
 const runtimePreflightSource = fs.readFileSync(RUNTIME_PREFLIGHT_FILE, 'utf8')
@@ -44,18 +48,23 @@ console.log('\nPayload Migration Inventory Contract\n')
 
 test('exactly one dated module exists for every canonical migration', () => {
   assert.equal(datedModules.length, PAYLOAD_MIGRATION_NAMES.length)
-  assert.equal(datedModules.length, 29)
+  assert.equal(datedModules.length, 33)
 })
 
-test('canonical registry is ordered, unique, and has the reviewed 29 names', () => {
+test('canonical registry is ordered, unique, and has the reviewed 33 names', () => {
   assert.match(registryModuleSource, /export const PAYLOAD_MIGRATION_NAMES\s*=\s*\[/)
-  assert.equal(PAYLOAD_MIGRATION_NAMES.length, 29)
+  assert.equal(PAYLOAD_MIGRATION_NAMES.length, 33)
   assert.equal(new Set(PAYLOAD_MIGRATION_NAMES).size, PAYLOAD_MIGRATION_NAMES.length)
-  assert.equal(PAYLOAD_MIGRATION_NAMES.at(-1), '20260804_050000_member_account_action_reservations')
+  assert.equal(PAYLOAD_MIGRATION_NAMES.at(-1), '20260817_193300_space_reactions')
 })
 
 test('every canonical name has one dated TypeScript module', () => {
   assert.deepEqual([...PAYLOAD_MIGRATION_NAMES].sort(), datedModules)
+})
+
+test('migrations directory contains no non-executable TypeScript helpers', () => {
+  assert.deepEqual(nonExecutableTypeScriptHelpers, [])
+  assert.equal(fs.existsSync(path.join(MIGRATIONS_DIR, 'migrationRegistry.ts')), false)
 })
 
 test('runtime Payload migration definitions exactly match the canonical order', () => {
@@ -80,9 +89,9 @@ test('migration-status registered names exactly match the canonical order', () =
 
 test('plain-Node runtime preflight does not maintain a second ordered migration-name list', () => {
   assert.doesNotMatch(runtimePreflightSource, /const REQUIRED_PAYLOAD_MIGRATIONS\s*=\s*\[/)
-  assert.match(runtimePreflightSource, /src\/migrations\/migrationRegistry\.ts/)
+  assert.match(runtimePreflightSource, /src\/lib\/payloadMigrationRegistry\.ts/)
   assert.match(runtimePreflightSource, /loadCanonicalMigrationNames/)
-  assert.match(dockerfileSource, /COPY --from=builder \/app\/src\/migrations\/migrationRegistry\.ts \.\/src\/migrations\/migrationRegistry\.ts/)
+  assert.match(dockerfileSource, /COPY --from=builder \/app\/src\/lib\/payloadMigrationRegistry\.ts \.\/src\/lib\/payloadMigrationRegistry\.ts/)
 })
 
 test('JSON files remain snapshots rather than migration modules', () => {

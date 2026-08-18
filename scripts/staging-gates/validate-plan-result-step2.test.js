@@ -20,7 +20,7 @@ function teardown() {
 function testPreservesApprovedFields() {
   setup()
   const input = {
-    version: '1.0',
+    version: 2,
     resultCode: 'plan_ok',
     blockerCodes: [],
     branch: 'main',
@@ -28,9 +28,9 @@ function testPreservesApprovedFields() {
     schema: 'v1',
     environment: 'staging',
     targetId: 'jpvbootcamp_staging',
-    appliedPayloadCount: 28,
-    expectedPendingMigration: 29,
-    expectedPendingMigrationIsOnlyMissing: true,
+    appliedPayloadCount: 29,
+    expectedPendingMigrations: ['20260817_193000_bunny_guid_first','20260817_193100_lesson_comments','20260817_193200_space_og_image','20260817_193300_space_reactions'],
+    expectedPendingBatchIsOnlyMissing: true,
     unexpectedPayloadCount: 0,
     duplicatePayloadCount: 0,
     malformedPayloadCount: 0,
@@ -50,12 +50,14 @@ function testPreservesApprovedFields() {
   const output = JSON.parse(fs.readFileSync(outputFile, 'utf8'))
 
   // Verify all approved fields are present
-  assert.equal(output.version, '1.0', 'version copied')
+  assert.equal(output.version, 2, 'version copied')
   assert.equal(output.resultCode, 'plan_ok', 'resultCode copied')
   assert.deepEqual(output.blockerCodes, [], 'blockerCodes copied')
   assert.equal(output.branch, 'main', 'branch copied')
   assert.equal(output.commit, 'abc123', 'commit copied')
-  assert.equal(output.appliedPayloadCount, 28, 'appliedPayloadCount copied')
+  assert.equal(output.appliedPayloadCount, 29, 'appliedPayloadCount copied')
+  assert.deepEqual(output.expectedPendingMigrations, ['20260817_193000_bunny_guid_first','20260817_193100_lesson_comments','20260817_193200_space_og_image','20260817_193300_space_reactions'], 'expectedPendingMigrations copied')
+  assert.equal(output.expectedPendingBatchIsOnlyMissing, true, 'expectedPendingBatchIsOnlyMissing copied')
   assert.equal(output.prismaHealthy, true, 'prismaHealthy copied')
 
   // Verify unknown field is NOT present
@@ -68,7 +70,7 @@ function testPreservesApprovedFields() {
 function testPreservesUnhealthyPrismaMigrations() {
   setup()
   const input = {
-    version: '1.0',
+    version: 2,
     resultCode: 'blocked',
     blockerCodes: ['unhealthy_prisma_migrations'],
     branch: 'main',
@@ -76,9 +78,9 @@ function testPreservesUnhealthyPrismaMigrations() {
     schema: 'v1',
     environment: 'staging',
     targetId: 'jpvbootcamp_staging',
-    appliedPayloadCount: 28,
-    expectedPendingMigration: 29,
-    expectedPendingMigrationIsOnlyMissing: true,
+    appliedPayloadCount: 29,
+    expectedPendingMigrations: ['20260817_193000_bunny_guid_first','20260817_193100_lesson_comments','20260817_193200_space_og_image','20260817_193300_space_reactions'],
+    expectedPendingBatchIsOnlyMissing: true,
     unexpectedPayloadCount: 0,
     duplicatePayloadCount: 0,
     malformedPayloadCount: 0,
@@ -111,7 +113,7 @@ function testPreservesUnhealthyPrismaMigrations() {
 function testOmitsUnhealthyPrismaMigrationsWhenAbsent() {
   setup()
   const input = {
-    version: '1.0',
+    version: 2,
     resultCode: 'plan_ok',
     blockerCodes: [],
     branch: 'main',
@@ -119,9 +121,9 @@ function testOmitsUnhealthyPrismaMigrationsWhenAbsent() {
     schema: 'v1',
     environment: 'staging',
     targetId: 'jpvbootcamp_staging',
-    appliedPayloadCount: 28,
-    expectedPendingMigration: 29,
-    expectedPendingMigrationIsOnlyMissing: true,
+    appliedPayloadCount: 29,
+    expectedPendingMigrations: ['20260817_193000_bunny_guid_first','20260817_193100_lesson_comments','20260817_193200_space_og_image','20260817_193300_space_reactions'],
+    expectedPendingBatchIsOnlyMissing: true,
     unexpectedPayloadCount: 0,
     duplicatePayloadCount: 0,
     malformedPayloadCount: 0,

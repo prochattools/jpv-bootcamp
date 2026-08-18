@@ -129,6 +129,13 @@ async function testValidUpdateAndPreservation() {
     company: '  New   Company ',
     phone: ' +31   20  123 ',
     timezone: ' Europe/Amsterdam ',
+    website: ' https://example.test/member ',
+    biography: 'First paragraph.\n\nSecond paragraph.',
+    socialInstagram: 'instagram.com/member',
+    socialTwitter: 'x.com/member',
+    socialLinkedin: 'linkedin.com/in/member',
+    socialFacebook: 'facebook.com/member',
+    socialYoutube: 'youtube.com/@member',
   })
 
   assert.equal(result.ok, true)
@@ -137,8 +144,27 @@ async function testValidUpdateAndPreservation() {
   assert.equal(result.profile.company, 'New Company')
   assert.equal(result.profile.phone, '+31 20 123')
   assert.equal(result.profile.timezone, 'Europe/Amsterdam')
+  assert.equal(result.profile.website, 'https://example.test/member')
+  assert.equal(result.profile.biography, 'First paragraph.\n\nSecond paragraph.')
+  assert.deepEqual(result.profile.socialLinks, {
+    instagram: 'instagram.com/member',
+    twitter: 'x.com/member',
+    linkedin: 'linkedin.com/in/member',
+    facebook: 'facebook.com/member',
+    youtube: 'youtube.com/@member',
+  })
 
   const saved = payload.docs('payload_member_profiles')[0]
+  assert.equal(saved.website, 'https://example.test/member')
+  assert.equal(saved.biography.root.children.length, 2)
+  assert.equal(saved.biography.root.children[0].children[0].text, 'First paragraph.')
+  assert.deepEqual(saved.socialLinks, {
+    instagram: 'instagram.com/member',
+    twitter: 'x.com/member',
+    linkedin: 'linkedin.com/in/member',
+    facebook: 'facebook.com/member',
+    youtube: 'youtube.com/@member',
+  })
   assert.equal(saved.avatar, 'media_1')
   assert.equal(saved.marketingConsent, true)
   assert.equal(saved.transactionalEmailConsent, false)

@@ -10,7 +10,7 @@ export const PayloadBunnyVideo: CollectionConfig = {
 	admin: {
 		group: 'Content',
 		useAsTitle: 'title',
-		defaultColumns: ['title', 'status', 'duration', 'libraryId', 'videoId', 'createdAt'],
+		defaultColumns: ['title', 'status', 'duration', 'libraryId', 'videoGuid', 'createdAt'],
 	},
 	access: {
 		read: ({ req }) => {
@@ -47,17 +47,21 @@ export const PayloadBunnyVideo: CollectionConfig = {
 		{
 			name: 'videoId',
 			type: 'number',
-			required: true,
-			label: 'Bunny Video ID (numeric)',
+			label: 'Legacy Bunny Video ID (numeric)',
+			admin: {
+				description: 'Legacy compatibility only. New Bunny Stream records are identified by videoGuid.',
+				readOnly: true,
+			},
 		},
 		{
 			name: 'videoGuid',
 			type: 'text',
-			label: 'Bunny Video GUID (UUID)',
+			label: 'Bunny Video GUID (canonical)',
+			unique: true,
 			admin: {
 				description:
-					'UUID string from Bunny Stream API (VideoGuid field). Used in CDN delivery URLs. ' +
-					'Required for signed playback. Populated automatically from Bunny webhooks.',
+					'Canonical Bunny Stream video identifier. Required for new writes and signed playback. ' +
+					'Legacy numeric-only rows may remain temporarily until the GUID-first forward migration/backfill is complete.',
 				readOnly: true,
 			},
 		},

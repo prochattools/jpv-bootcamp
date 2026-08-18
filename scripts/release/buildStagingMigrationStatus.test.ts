@@ -4,7 +4,7 @@ import {
   resolveDatabaseConnectionConfig,
   validateDatabaseSchemaIdentifier,
 } from '../../src/lib/databaseConnectionConfig'
-import { PAYLOAD_MIGRATION_NAMES } from '../../src/migrations/migrationRegistry'
+import { PAYLOAD_MIGRATION_NAMES } from '../../src/lib/payloadMigrationRegistry'
 import {
   REGISTERED_PAYLOAD_MIGRATIONS,
   REGISTERED_PRISMA_MIGRATIONS,

@@ -1,4 +1,4 @@
-import { convertLexicalToHTML } from '@payloadcms/richtext-lexical/html'
+import type { SerializedEditorState } from '@payloadcms/richtext-lexical/lexical'
 
 import {
   evaluatePayloadCourseAccess,
@@ -93,7 +93,7 @@ export type MemberPortalLessonDetail = {
     lockState: LessonLockState
     videoProviderLabel: string | null
     videoIdOrPreviewUrl: string | null
-    contentHtml: string | null
+    contentLexical: SerializedEditorState | null
     resources: MemberLessonResource[]
     completed: boolean
   } | null
@@ -118,6 +118,16 @@ export type MemberAccountOverview = {
     timezone: string | null
     phone: string | null
     company: string | null
+    website: string | null
+    biography: string | null
+    socialLinks: {
+      instagram: string | null
+      twitter: string | null
+      linkedin: string | null
+      facebook: string | null
+      youtube: string | null
+    }
+    coverImage: MemberMediaAsset | null
   } | null
   billingAccount: {
     billingStatus: string | null
@@ -158,19 +168,32 @@ function asLockState(value: unknown): LessonLockState {
   return 'available'
 }
 
-function asContentHtml(value: unknown): string | null {
+function asLexicalContent(value: unknown): SerializedEditorState | null {
   if (!value || typeof value !== 'object') return null
-  try {
-    const html = convertLexicalToHTML({
-      data: value as Parameters<typeof convertLexicalToHTML>[0]['data'],
-    })
-    // Return null rather than an empty container div
-    const trimmed = html.trim()
-    if (!trimmed || trimmed === '<div></div>' || trimmed === '<div> </div>') return null
-    return trimmed
-  } catch {
-    return null
+  const record = value as Record<string, unknown>
+  const root = record.root
+  if (!root || typeof root !== 'object') return null
+  const children = (root as Record<string, unknown>).children
+  if (!Array.isArray(children)) return null
+  return value as SerializedEditorState
+}
+
+function lexicalPlainText(value: unknown): string | null {
+  const lexical = asLexicalContent(value)
+  if (!lexical) return null
+
+  function collect(node: unknown): string {
+    if (!node || typeof node !== 'object') return ''
+    const record = node as Record<string, unknown>
+    const text = typeof record.text === 'string' ? record.text : ''
+    const children = Array.isArray(record.children)
+      ? record.children.map(collect).filter(Boolean).join(record.type === 'root' ? '\n\n' : '')
+      : ''
+    return text || children
   }
+
+  const normalized = collect(lexical.root).replace(/\n{3,}/g, '\n\n').trim()
+  return normalized || null
 }
 
 function asDateString(value: unknown): string | null {
@@ -577,7 +600,7 @@ export async function getMemberLessonDetail(
           lockState: asLockState(lesson.lockState),
           videoProviderLabel: asString(lesson.videoProviderLabel),
           videoIdOrPreviewUrl: asString(lesson.videoIdOrPreviewUrl),
-          contentHtml: asContentHtml(lesson.content),
+          contentLexical: asLexicalContent(lesson.content),
           resources,
           completed: completedLessonIds.has(String(lesson.id)),
         }
@@ -593,7 +616,7 @@ export async function getMemberLessonDetail(
           lockState: 'available' as LessonLockState,
           videoProviderLabel: null,
           videoIdOrPreviewUrl: null,
-          contentHtml: null,
+          contentLexical: null,
           resources: [],
           completed: false,
         },
@@ -794,6 +817,10 @@ export async function getMemberAccountOverview(
     }),
   ])
 
+  const profileCoverImage = profile
+    ? await resolveMemberMediaAsset(payload, profile.coverImage)
+    : null
+
   return {
     profile: profile
       ? {
@@ -802,6 +829,16 @@ export async function getMemberAccountOverview(
           timezone: asString(profile.timezone),
           phone: asString(profile.phone),
           company: asString(profile.company),
+          website: asString(profile.website),
+          biography: lexicalPlainText(profile.biography),
+          socialLinks: {
+            instagram: asString(asRecord(profile.socialLinks)?.instagram),
+            twitter: asString(asRecord(profile.socialLinks)?.twitter),
+            linkedin: asString(asRecord(profile.socialLinks)?.linkedin),
+            facebook: asString(asRecord(profile.socialLinks)?.facebook),
+            youtube: asString(asRecord(profile.socialLinks)?.youtube),
+          },
+          coverImage: profileCoverImage,
         }
       : null,
     billingAccount: billingAccount

@@ -6,6 +6,7 @@ import { MemberLoginForm } from '@/components/auth/MemberLoginForm'
 import { MemberVerificationResendForm } from '@/components/auth/MemberVerificationResendForm'
 import { requirePortalMember } from '@/lib/auth/requirePortalMember'
 import { getMemberCourseDashboard } from '@/lib/payloadCourse/memberPortal'
+import { getPortalLoginBranding, type PortalLoginBranding } from '@/lib/portal/portalSettings'
 
 type PortalSearchParams = {
   mode?: string | string[]
@@ -44,13 +45,31 @@ function portalNotice(params: PortalSearchParams | undefined): string | null {
   return null
 }
 
-function PortalLoginMode({ params }: { params: PortalSearchParams | undefined }) {
+function PortalLoginMode({
+  params,
+  branding,
+}: {
+  params: PortalSearchParams | undefined
+  branding: PortalLoginBranding
+}) {
   const requestedDestination = firstValue(params?.next) ?? firstValue(params?.redirect)
   const notice = portalNotice(params)
 
   return (
     <AuthShell
-      description='Use your verified member account to open courses, community, billing, password help, and verification tools.'
+      branding={{
+        siteTitle: branding.siteTitle,
+        logoUrl: branding.logoUrl,
+        bannerTitle: branding.bannerTitle,
+        bannerDescription: branding.bannerDescription,
+        bannerTitleColor: branding.bannerTitleColor,
+        bannerTextColor: branding.bannerTextColor,
+        bannerBackgroundColor: branding.bannerBackgroundColor,
+        formTitleColor: branding.formTitleColor,
+        formTextColor: branding.formTextColor,
+        formBackgroundColor: branding.formBackgroundColor,
+      }}
+      description={branding.formDescription}
       eyebrow='JPV Bootcamp member portal'
       footer={(
         <p className='text-sm text-jpv-muted'>
@@ -67,7 +86,7 @@ function PortalLoginMode({ params }: { params: PortalSearchParams | undefined })
           <Link className='jpv-button-secondary' href='/forgot-password'>Forgot password</Link>
         </div>
       )}
-      title='Welcome back.'
+      title={branding.formTitle}
     >
       <h2 className='text-xl font-bold'>Member sign in</h2>
       <p className='mt-2 text-sm leading-6 text-jpv-muted'>
@@ -78,7 +97,12 @@ function PortalLoginMode({ params }: { params: PortalSearchParams | undefined })
           {notice}
         </p>
       ) : null}
-      <MemberLoginForm requestedDestination={requestedDestination} />
+      <MemberLoginForm
+        requestedDestination={requestedDestination}
+        submitBackgroundColor={branding.buttonColor}
+        submitLabel={branding.buttonLabel}
+        submitTextColor={branding.buttonLabelColor}
+      />
       <MemberVerificationResendForm />
     </AuthShell>
   )
@@ -90,7 +114,8 @@ export default async function PortalDashboardPage({ searchParams }: PortalDashbo
     return redirect('/upgrade')
   }
   if (firstValue(params?.mode) === 'login') {
-    return <PortalLoginMode params={params} />
+    const branding = await getPortalLoginBranding()
+    return <PortalLoginMode branding={branding} params={params} />
   }
 
   const { memberId, payload } = await requirePortalMember('/portal')

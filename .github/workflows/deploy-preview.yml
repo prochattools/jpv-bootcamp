@@ -624,7 +624,7 @@ jobs:
 
           # Fallback schema-valid artifact — used when early guards abort before the runner writes output.
           # Must satisfy all fields required by the schema validation below.
-          FALLBACK_ARTIFACT='{"version":1,"resultCode":"plan_blocked","blockerCodes":["output_format_invalid"],"branch":"unknown","commit":"unknown","schema":"","environment":"","targetId":"","appliedPayloadCount":0,"expectedPendingMigration":"","expectedPendingMigrationIsOnlyMissing":false,"unexpectedPayloadCount":0,"duplicatePayloadCount":0,"malformedPayloadCount":0,"prismaHealthy":false}'
+          FALLBACK_ARTIFACT='{"version":2,"resultCode":"plan_blocked","blockerCodes":["output_format_invalid"],"branch":"unknown","commit":"unknown","schema":"","environment":"","targetId":"","appliedPayloadCount":0,"expectedPendingMigrations":[],"expectedPendingBatchIsOnlyMissing":false,"unexpectedPayloadCount":0,"duplicatePayloadCount":0,"malformedPayloadCount":0,"prismaHealthy":false}'
 
           # Reject mixed output: stdout must begin with '{' — no operational log lines before JSON
           FIRST_CHAR="$(head -c 1 "$STDOUT_FILE" 2>/dev/null || echo '')"
@@ -640,7 +640,7 @@ jobs:
           if ! node scripts/staging-gates/validate-plan-result-step1.js "$STDOUT_FILE" "$ALLOWED_BLOCKER_CODES"
           then
             echo "PLAN-BLOCKED: JSON schema validation failed — required keys, types, or values invalid" >&2
-            printf '%s\n' '{"version":1,"resultCode":"plan_blocked","blockerCodes":["schema_validation_failed"],"branch":"unknown","commit":"unknown","schema":"","environment":"","targetId":"","appliedPayloadCount":0,"expectedPendingMigration":"","expectedPendingMigrationIsOnlyMissing":false,"unexpectedPayloadCount":0,"duplicatePayloadCount":0,"malformedPayloadCount":0,"prismaHealthy":false}' > plan-result-sanitized.json
+            printf '%s\n' '{"version":2,"resultCode":"plan_blocked","blockerCodes":["schema_validation_failed"],"branch":"unknown","commit":"unknown","schema":"","environment":"","targetId":"","appliedPayloadCount":0,"expectedPendingMigrations":[],"expectedPendingBatchIsOnlyMissing":false,"unexpectedPayloadCount":0,"duplicatePayloadCount":0,"malformedPayloadCount":0,"prismaHealthy":false}' > plan-result-sanitized.json
             exit 1
           fi
 
@@ -649,7 +649,7 @@ jobs:
           if ! node scripts/staging-gates/validate-plan-result-step2.js "$STDOUT_FILE" plan-result-sanitized.json
           then
             echo "PLAN-BLOCKED: artifact write failed" >&2
-            printf '%s\n' '{"version":1,"resultCode":"plan_blocked","blockerCodes":["artifact_write_failed"],"branch":"unknown","commit":"unknown","schema":"","environment":"","targetId":"","appliedPayloadCount":0,"expectedPendingMigration":"","expectedPendingMigrationIsOnlyMissing":false,"unexpectedPayloadCount":0,"duplicatePayloadCount":0,"malformedPayloadCount":0,"prismaHealthy":false}' > plan-result-sanitized.json
+            printf '%s\n' '{"version":2,"resultCode":"plan_blocked","blockerCodes":["artifact_write_failed"],"branch":"unknown","commit":"unknown","schema":"","environment":"","targetId":"","appliedPayloadCount":0,"expectedPendingMigrations":[],"expectedPendingBatchIsOnlyMissing":false,"unexpectedPayloadCount":0,"duplicatePayloadCount":0,"malformedPayloadCount":0,"prismaHealthy":false}' > plan-result-sanitized.json
             exit 1
           fi
 
@@ -658,7 +658,7 @@ jobs:
             'postgres(ql)?://|://[^@/]+:[^@/]+@|[Bb]earer [A-Za-z0-9+/=_-]{8,}|[Bb]asic [A-Za-z0-9+/=]{8,}|password[[:space:]]*=|secret[[:space:]]*=|DATABASE_URL[[:space:]]*=|PGPASSWORD[[:space:]]*=' \
             plan-result-sanitized.json; then
             echo "PLAN-BLOCKED: credential-like string detected in sanitized output" >&2
-            printf '%s\n' '{"version":1,"resultCode":"plan_blocked","blockerCodes":["credential_scan_failed"],"branch":"unknown","commit":"unknown","schema":"","environment":"","targetId":"","appliedPayloadCount":0,"expectedPendingMigration":"","expectedPendingMigrationIsOnlyMissing":false,"unexpectedPayloadCount":0,"duplicatePayloadCount":0,"malformedPayloadCount":0,"prismaHealthy":false}' > plan-result-sanitized.json
+            printf '%s\n' '{"version":2,"resultCode":"plan_blocked","blockerCodes":["credential_scan_failed"],"branch":"unknown","commit":"unknown","schema":"","environment":"","targetId":"","appliedPayloadCount":0,"expectedPendingMigrations":[],"expectedPendingBatchIsOnlyMissing":false,"unexpectedPayloadCount":0,"duplicatePayloadCount":0,"malformedPayloadCount":0,"prismaHealthy":false}' > plan-result-sanitized.json
             exit 1
           fi
 
@@ -668,13 +668,13 @@ jobs:
           # Semantic verification: plan_ok requires all evidence fields to match expected values exactly.
           # Wrong-target, wrong-commit, wrong-schema, anomaly counts, or unhealthy Prisma must not pass.
           if [ "$RESULT_CODE" = "plan_ok" ] && [ $PLAN_EXIT -eq 0 ]; then
-            EXPECTED_PENDING_MIGRATION="20260804_050000_member_account_action_reservations"
+            EXPECTED_PENDING_MIGRATIONS='["20260817_193000_bunny_guid_first","20260817_193100_lesson_comments","20260817_193200_space_og_image","20260817_193300_space_reactions"]'
             REQUIRED_BRANCH="feature/course-branding-and-preview"
             REQUIRED_SCHEMA="jpvbootcamp_staging"
             REQUIRED_ENVIRONMENT="staging"
             REQUIRED_TARGET_ID="jpvbootcamp-staging"
-            EXPECTED_APPLIED_COUNT=28
-            if ! node scripts/staging-gates/validate-plan-result-step3.js plan-result-sanitized.json "$EXPECTED_SHA" "$EXPECTED_PENDING_MIGRATION" "$REQUIRED_BRANCH" "$REQUIRED_SCHEMA" "$REQUIRED_ENVIRONMENT" "$REQUIRED_TARGET_ID" "$EXPECTED_APPLIED_COUNT"
+            EXPECTED_APPLIED_COUNT=29
+            if ! node scripts/staging-gates/validate-plan-result-step3.js plan-result-sanitized.json "$EXPECTED_SHA" "$EXPECTED_PENDING_MIGRATIONS" "$REQUIRED_BRANCH" "$REQUIRED_SCHEMA" "$REQUIRED_ENVIRONMENT" "$REQUIRED_TARGET_ID" "$EXPECTED_APPLIED_COUNT"
             then
               echo "PLAN-BLOCKED: plan_ok semantic verification failed — evidence does not match required values" >&2
               exit 1

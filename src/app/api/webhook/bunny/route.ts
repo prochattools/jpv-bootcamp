@@ -11,7 +11,7 @@ import config from '@payload-config'
  * Bunny Stream webhook endpoint for video status updates.
  * Verifies HMAC signature on raw body.
  * Persists video status, metadata, and event logs to Payload bunny_videos collection.
- * Uses unique (libraryId, videoId) constraint for idempotency.
+ * Uses canonical (libraryId, videoGuid) identity for idempotency, with numeric videoId only as legacy fallback.
  *
  * Webhook types handled:
  * - VideoFinishedProcessing
@@ -83,7 +83,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 		const payload = JSON.parse(rawBody) as {
 			Type: string
 			VideoLibraryId: number
-			VideoId: number
+			VideoId?: number // Legacy compatibility only; current Bunny callbacks identify videos by VideoGuid.
 			VideoTitle?: string
 			ThumbnailFileName?: string
 			Status?: number
@@ -99,12 +99,18 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 			ErrorMessage?: string
 		}
 
+		const videoGuid = payload.VideoGuid?.trim() || null
+		const legacyVideoId = Number.isFinite(payload.VideoId) ? Number(payload.VideoId) : null
+		if (!videoGuid && legacyVideoId === null) {
+			return NextResponse.json({ error: 'Missing Bunny video identifier' }, { status: 400 })
+		}
+
 		const payload_inst = await getPayload({ config })
 
 		// Build thumbnail URL using configured CDN hostname if available
 		const cdnHostname = process.env.BUNNY_STREAM_HOSTNAME || 'cdn.bunnycdn.com'
-		const thumbnailUrl = payload.ThumbnailFileName
-			? `https://${cdnHostname}/video/${payload.VideoLibraryId}/${payload.VideoId}/thumbnail.jpg`
+		const thumbnailUrl = payload.ThumbnailFileName && videoGuid
+			? `https://${cdnHostname}/${videoGuid}/${payload.ThumbnailFileName}`
 			: null
 
 		// Map webhook event type to internal status
@@ -118,17 +124,26 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 			errorMessage = payload.ErrorMessage || `${payload.Type} occurred`
 		}
 
-		// Try to find existing video record by (libraryId, videoId)
+		// Current Bunny callbacks are GUID-first. Numeric videoId remains a legacy fallback only.
+		const identifierWhere = videoGuid
+			? {
+				and: [
+					{ libraryId: { equals: payload.VideoLibraryId } },
+					{ videoGuid: { equals: videoGuid } },
+				],
+			}
+			: {
+				and: [
+					{ libraryId: { equals: payload.VideoLibraryId } },
+					{ videoId: { equals: legacyVideoId } },
+				],
+			}
+
 		let existingVideo: any = null
 		try {
 			const result = await payload_inst.find({
 				collection: 'bunny_videos' as any,
-				where: {
-					and: [
-						{ libraryId: { equals: payload.VideoLibraryId } },
-						{ videoId: { equals: payload.VideoId } },
-					],
-				},
+				where: identifierWhere as any,
 				limit: 1,
 				overrideAccess: true,
 			})
@@ -146,17 +161,19 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 			...(errorMessage && { error: errorMessage }),
 		}
 
-		// Build video data, appending new event to prior event log
+		// Build video data, appending new event to prior event log.
 		const buildVideoData = (prior: any): Record<string, unknown> => ({
-			title: payload.VideoTitle || `Video ${payload.VideoId}`,
+			title: payload.VideoTitle || `Video ${videoGuid || legacyVideoId || 'unknown'}`,
 			libraryId: payload.VideoLibraryId,
-			videoId: payload.VideoId,
-			// VideoGuid is the UUID Bunny uses in CDN delivery paths — store whenever present.
-			// Existing value is kept if the event does not carry it (partial update events).
-			...(payload.VideoGuid
-				? { videoGuid: payload.VideoGuid }
+			...(videoGuid
+				? { videoGuid }
 				: prior?.videoGuid
 					? { videoGuid: prior.videoGuid }
+					: {}),
+			...(legacyVideoId !== null
+				? { videoId: legacyVideoId }
+				: prior?.videoId !== undefined && prior?.videoId !== null
+					? { videoId: prior.videoId }
 					: {}),
 			status: videoStatus,
 			duration: payload.Duration || null,
@@ -183,7 +200,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 					data: buildVideoData(existingVideo),
 					overrideAccess: true,
 				})
-				console.log(`Updated bunny_videos record ${existingVideo.id} for video ${payload.VideoId}`)
+				console.log(`Updated bunny_videos record ${existingVideo.id} for video ${videoGuid || legacyVideoId}`)
 			} else {
 				try {
 					await payload_inst.create({
@@ -191,9 +208,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 						data: buildVideoData(null),
 						overrideAccess: true,
 					})
-					console.log(`Created bunny_videos record for video ${payload.VideoId}`)
+					console.log(`Created bunny_videos record for video ${videoGuid || legacyVideoId}`)
 				} catch (createErr: any) {
-					// Unique constraint violation — find failed silently, record already exists
+					// Unique constraint violation — find failed silently, record already exists.
 					const msg = String(createErr?.message ?? createErr ?? '')
 					const isConflict =
 						createErr?.code === '23505' ||
@@ -204,17 +221,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
 					console.warn('bunny_videos create hit unique conflict; retrying as update', {
 						libraryId: payload.VideoLibraryId,
-						videoId: payload.VideoId,
+						videoGuid,
+						legacyVideoId,
 					})
 
 					const retry = await payload_inst.find({
 						collection: 'bunny_videos' as any,
-						where: {
-							and: [
-								{ libraryId: { equals: payload.VideoLibraryId } },
-								{ videoId: { equals: payload.VideoId } },
-							],
-						},
+						where: identifierWhere as any,
 						limit: 1,
 						overrideAccess: true,
 					})
@@ -227,7 +240,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 						data: buildVideoData(found),
 						overrideAccess: true,
 					})
-					console.log(`Conflict-resolved update for bunny_videos record ${found.id}, video ${payload.VideoId}`)
+					console.log(`Conflict-resolved update for bunny_videos record ${found.id}, video ${videoGuid || legacyVideoId}`)
 				}
 			}
 		} catch (err) {

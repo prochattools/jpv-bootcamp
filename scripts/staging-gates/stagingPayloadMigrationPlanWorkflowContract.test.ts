@@ -670,21 +670,23 @@ async function main(): Promise<void> {
     )
   })
 
-  await test('plan_ok semantics: workflow verifies appliedPayloadCount is exactly 28', () => {
+  await test('plan_ok semantics: workflow verifies appliedPayloadCount is exactly 29', () => {
     assert.ok(
       planJobYml.includes('appliedPayloadCount mismatch') || planJobYml.includes('p.appliedPayloadCount !== expectedCount'),
-      'must verify appliedPayloadCount === 28',
+      'must verify appliedPayloadCount === 29',
     )
   })
 
-  await test('plan_ok semantics: workflow verifies expectedPendingMigration and isOnlyMissing', () => {
+  await test('plan_ok semantics: workflow verifies exact ordered Forward A-D batch and only-missing flag', () => {
     assert.ok(
-      planJobYml.includes('expectedPendingMigration mismatch') || planJobYml.includes('p.expectedPendingMigration !== expectedPending'),
-      'must verify expectedPendingMigration field matches the exact migration name',
+      planJobYml.includes('expectedPendingMigrations mismatch') &&
+      planJobYml.includes('p.expectedPendingMigrations.length !== expectedPending.length') &&
+      planJobYml.includes('migration !== expectedPending[index]'),
+      'must compare expectedPendingMigrations by exact length, order, and value',
     )
     assert.ok(
-      planJobYml.includes('expectedPendingMigrationIsOnlyMissing must be true') || planJobYml.includes('!p.expectedPendingMigrationIsOnlyMissing'),
-      'must verify expectedPendingMigrationIsOnlyMissing is true',
+      planJobYml.includes('expectedPendingBatchIsOnlyMissing must be true') || planJobYml.includes('!p.expectedPendingBatchIsOnlyMissing'),
+      'must verify expectedPendingBatchIsOnlyMissing is true',
     )
   })
 

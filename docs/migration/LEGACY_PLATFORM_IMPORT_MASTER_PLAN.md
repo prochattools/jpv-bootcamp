@@ -2,8 +2,8 @@
 
 **Repo:** jpv-bootcamp
 **Branch:** feature/course-branding-and-preview
-**Head:** c15cd578a953cd6b1dc8a3d4705350a52f7d0812
-**Status:** Planning — no apply authorization granted beyond wave 1 (legacy relational, 21-row staging complete)
+**Reviewed application checkpoint:** `43d569211acde5ae80f6e33524d40d432b417ce8`
+**Status:** DRY-8 source reconciliation PASS; no new staging/apply authorization granted. Remaining work is target-design hardening before any staging-write plan.
 
 ---
 
@@ -12,6 +12,10 @@
 This document is the single authoritative plan for migrating all legacy platform data into the Payload CMS-based jpv-bootcamp system. It covers eight source systems, defines the required export specifications, establishes a canonical identity crosswalk, sequences fifteen import waves, specifies validation requirements per wave, and documents the current status of every migration tool.
 
 **Out of scope:** net-new member onboarding, Stripe live-mode billing changes, and any production apply that has not received explicit operator authorization.
+
+> **Current provider-policy supplement (2026-08-12):** `docs/migration/LEGACY_PROVIDER_DISCOVERY_AND_STRIPE_CUTOVER_PLAN.md` is authoritative for the current two-state member policy, legacy Free/Pro/VIP collapse, Stripe sandbox/live separation, provider-discovery evidence, and future Stripe cutover boundaries. Where this older master plan refers to reproducing legacy tier-based access or selecting target access levels from legacy subscription tiers, follow the supplement instead.
+>
+> **Current rehearsal authority (2026-08-13):** `docs/migration/LEGACY_STAGING_DRY_RUN_PLAN.md` is authoritative for implemented migration tooling, the final DRY-8 source reconciliation PASS, exact real-source counts, identity outcomes, Bunny/media/comment handling, and the remaining target-design backlog. Older tooling-status rows and pre-rehearsal assumptions in this master plan are historical planning context only where they conflict with that handoff.
 
 ---
 

@@ -5,7 +5,7 @@ const path = require('node:path')
 const { Client } = require('pg')
 
 function loadCanonicalMigrationNames(
-  registryPath = path.resolve(__dirname, '../../src/migrations/migrationRegistry.ts'),
+  registryPath = path.resolve(__dirname, '../../src/lib/payloadMigrationRegistry.ts'),
 ) {
   try {
     const source = fs.readFileSync(registryPath, 'utf8')

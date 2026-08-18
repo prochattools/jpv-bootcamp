@@ -26,7 +26,7 @@ import {
   buildMemberAccountActionReservationDownSql,
   buildMemberAccountActionReservationUpSql,
 } from '../src/lib/auth/memberAccountActionReservationMigrationSql'
-import { PAYLOAD_MIGRATION_NAMES } from '../src/migrations/migrationRegistry'
+import { PAYLOAD_MIGRATION_NAMES } from '../src/lib/payloadMigrationRegistry'
 
 process.env.DATABASE_URL ??= 'postgresql://redacted.invalid/app?schema=jpvbootcamp_staging'
 

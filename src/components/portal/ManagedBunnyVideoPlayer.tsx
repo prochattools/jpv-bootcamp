@@ -25,12 +25,15 @@ export function ManagedBunnyVideoPlayer({
   title = 'Video',
   thumbnailUrl,
   knownStatus,
+  videoGuid,
 }: {
   target: ManagedVideoTarget
   slug: string
   title?: string
   thumbnailUrl?: string | null
   knownStatus?: 'processing' | 'ready' | 'failed' | null
+  /** Canonical Bunny GUID for inline lesson videos. Valid only with target='lesson'. */
+  videoGuid?: string | null
 }) {
   const [state, setState] = useState<VideoState>(() => {
     if (knownStatus === 'processing') return { status: 'processing' }
@@ -46,6 +49,7 @@ export function ManagedBunnyVideoPlayer({
     async function fetchVideoUrl() {
       try {
         const query = new URLSearchParams({ [QUERY_KEYS[target]]: slug })
+        if (target === 'lesson' && videoGuid) query.set('videoGuid', videoGuid)
         const response = await fetch(`/api/bunny/video?${query.toString()}`)
         const data = (await response.json()) as { ok?: boolean; url?: string; reason?: string }
         if (cancelled) return
@@ -82,7 +86,7 @@ export function ManagedBunnyVideoPlayer({
     return () => {
       cancelled = true
     }
-  }, [knownStatus, slug, target])
+  }, [knownStatus, slug, target, videoGuid])
 
   if (state.status === 'loading') {
     return <p className='mt-4 text-sm text-jpv-muted' role='status' aria-live='polite'>Loading video…</p>

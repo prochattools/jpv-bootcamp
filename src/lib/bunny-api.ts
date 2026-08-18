@@ -2,15 +2,19 @@ import 'server-only'
 
 /**
  * Bunny Stream API integration for video management.
- * Requires: BUNNY_API_KEY, BUNNY_LIBRARY_ID in environment
+ * Accepts the legacy aliases BUNNY_API_KEY/BUNNY_LIBRARY_ID and the
+ * staging/runtime names BUNNY_STREAM_API_KEY/BUNNY_STREAM_LIBRARY_ID.
+ *
+ * Bunny Stream identifies videos by GUID. The API reference names the
+ * route parameter `videoId`, but its value is the GUID string returned as
+ * `guid` by Create/Get Video.
  */
 
-const BUNNY_API_BASE = 'https://api.bunny.net'
-const BUNNY_STREAM_API = `${BUNNY_API_BASE}/stream`
+const BUNNY_STREAM_API_BASE = 'https://video.bunnycdn.com'
 
 function getBunnyConfig() {
-	const apiKey = (process.env.BUNNY_API_KEY || '').trim()
-	const libraryId = (process.env.BUNNY_LIBRARY_ID || '').trim()
+	const apiKey = (process.env.BUNNY_API_KEY || process.env.BUNNY_STREAM_API_KEY || '').trim()
+	const libraryId = (process.env.BUNNY_LIBRARY_ID || process.env.BUNNY_STREAM_LIBRARY_ID || '').trim()
 	return { apiKey, libraryId }
 }
 
@@ -24,45 +28,56 @@ export type BunnyVideoCreateRequest = {
 	collectionId?: string
 }
 
-export type BunnyVideoCreateResponse = {
+export type BunnyVideoApiResponse = {
 	videoLibraryId: number
-	videoGuid: string
-	videoId: number
+	guid: string
 	title: string
-	status: number // 0=queued, 1=processing, 2=error, 3=published, 4=blocked
-	dateUploaded: string
-	storageSize: number
-	views: number
-	isPublic: boolean
-	length: number
-	resolutions: string
-	framerate: number
-	width: number
-	height: number
-	videoCodec: string
-	audioCodec: string
-	captions: unknown[]
-	thumbnail: string
-	token: string
-	accessToken: string
-	accessTokenExpires: string
+	status: number
+	dateUploaded?: string
+	storageSize?: number
+	views?: number
+	isPublic?: boolean
+	length?: number
+	framerate?: number
+	width?: number
+	height?: number
+	outputCodecs?: string | null
+	availableResolutions?: string | null
+	thumbnailFileName?: string | null
+	thumbnailUrl?: string | null
+	collectionId?: string | null
 }
 
-/**
- * Create a new video in Bunny Stream library.
- * Returns video GUID and temporary access token for upload.
- */
+/** App-normalized Bunny video response. `videoGuid` is a compatibility alias for `guid`. */
+export type BunnyVideoCreateResponse = BunnyVideoApiResponse & {
+	videoGuid: string
+}
+
+function normalizeBunnyVideoResponse(raw: BunnyVideoApiResponse): BunnyVideoCreateResponse {
+	if (!raw || typeof raw.guid !== 'string' || !raw.guid.trim()) {
+		throw new Error('Bunny API response missing canonical video guid')
+	}
+	if (!Number.isInteger(raw.videoLibraryId)) {
+		throw new Error('Bunny API response missing videoLibraryId')
+	}
+	return {
+		...raw,
+		guid: raw.guid.trim(),
+		videoGuid: raw.guid.trim(),
+	}
+}
+
+/** Create a new video object in the configured Bunny Stream library. */
 export async function createBunnyVideo(
 	req: BunnyVideoCreateRequest,
 ): Promise<BunnyVideoCreateResponse> {
 	const { apiKey, libraryId } = getBunnyConfig()
 
 	if (!isConfigured()) {
-		throw new Error('Bunny API not configured: BUNNY_API_KEY or BUNNY_LIBRARY_ID missing')
+		throw new Error('Bunny API not configured: provide BUNNY_API_KEY/BUNNY_LIBRARY_ID or BUNNY_STREAM_API_KEY/BUNNY_STREAM_LIBRARY_ID')
 	}
 
-	const url = `${BUNNY_STREAM_API}/${libraryId}/videos`
-
+	const url = `${BUNNY_STREAM_API_BASE}/library/${encodeURIComponent(libraryId)}/videos`
 	const response = await fetch(url, {
 		method: 'POST',
 		headers: {
@@ -80,48 +95,21 @@ export async function createBunnyVideo(
 		throw new Error(`Bunny API error ${response.status}: ${text}`)
 	}
 
-	return response.json()
+	return normalizeBunnyVideoResponse(await response.json() as BunnyVideoApiResponse)
 }
 
 /**
- * Get signed playback token for a video.
- * Token is valid for the specified duration (in seconds).
+ * @deprecated Protected playback is signed locally by bunnyProtectedMedia.ts.
+ * Bunny Stream does not expose the legacy `/token` API used by this helper.
  */
 export async function getBunnyPlaybackToken(
-	videoGuid: string,
-	expirationSeconds: number = 3600,
+	_videoGuid: string,
+	_expirationSeconds: number = 3600,
 ): Promise<string> {
-	const { apiKey, libraryId } = getBunnyConfig()
-
-	if (!isConfigured()) {
-		throw new Error('Bunny API not configured')
-	}
-
-	const url = `${BUNNY_STREAM_API}/${libraryId}/videos/${videoGuid}/token`
-	const expirationTime = Math.floor(Date.now() / 1000) + expirationSeconds
-
-	const response = await fetch(url, {
-		method: 'POST',
-		headers: {
-			'AccessKey': apiKey,
-		},
-		body: JSON.stringify({
-			expirationTime,
-		}),
-	})
-
-	if (!response.ok) {
-		const text = await response.text()
-		throw new Error(`Failed to get playback token: ${response.status} ${text}`)
-	}
-
-	const { token } = await response.json()
-	return token
+	throw new Error('getBunnyPlaybackToken is deprecated; use the local protected-media signer')
 }
 
-/**
- * Get video details from Bunny.
- */
+/** Get video details from Bunny using the canonical GUID. */
 export async function getBunnyVideo(
 	videoGuid: string,
 ): Promise<BunnyVideoCreateResponse> {
@@ -131,8 +119,7 @@ export async function getBunnyVideo(
 		throw new Error('Bunny API not configured')
 	}
 
-	const url = `${BUNNY_STREAM_API}/${libraryId}/videos/${videoGuid}`
-
+	const url = `${BUNNY_STREAM_API_BASE}/library/${encodeURIComponent(libraryId)}/videos/${encodeURIComponent(videoGuid)}`
 	const response = await fetch(url, {
 		method: 'GET',
 		headers: {
@@ -145,7 +132,7 @@ export async function getBunnyVideo(
 		throw new Error(`Failed to get video: ${response.status} ${text}`)
 	}
 
-	return response.json()
+	return normalizeBunnyVideoResponse(await response.json() as BunnyVideoApiResponse)
 }
 
 export { isConfigured as isBunnyConfigured }

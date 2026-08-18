@@ -27,7 +27,11 @@ import * as migration_20260727_200000_email_events_processing_status from './202
 import * as migration_20260730_090000_membership_audit_relationship_columns from './20260730_090000_membership_audit_relationship_columns'
 import * as migration_20260730_100000_email_events_staging_guard_status from './20260730_100000_email_events_staging_guard_status'
 import * as migration_20260804_050000_member_account_action_reservations from './20260804_050000_member_account_action_reservations'
-import { PAYLOAD_MIGRATION_NAMES } from './migrationRegistry'
+import * as migration_20260817_193000_bunny_guid_first from './20260817_193000_bunny_guid_first'
+import * as migration_20260817_193100_lesson_comments from './20260817_193100_lesson_comments'
+import * as migration_20260817_193200_space_og_image from './20260817_193200_space_og_image'
+import * as migration_20260817_193300_space_reactions from './20260817_193300_space_reactions'
+import { PAYLOAD_MIGRATION_NAMES } from '../lib/payloadMigrationRegistry'
 
 const migrationModuleByName = {
   '20260620_213328': migration_20260620_213328,
@@ -59,6 +63,10 @@ const migrationModuleByName = {
   '20260730_090000_membership_audit_relationship_columns': migration_20260730_090000_membership_audit_relationship_columns,
   '20260730_100000_email_events_staging_guard_status': migration_20260730_100000_email_events_staging_guard_status,
   '20260804_050000_member_account_action_reservations': migration_20260804_050000_member_account_action_reservations,
+  '20260817_193000_bunny_guid_first': migration_20260817_193000_bunny_guid_first,
+  '20260817_193100_lesson_comments': migration_20260817_193100_lesson_comments,
+  '20260817_193200_space_og_image': migration_20260817_193200_space_og_image,
+  '20260817_193300_space_reactions': migration_20260817_193300_space_reactions,
 } as const
 
 export const migrations = PAYLOAD_MIGRATION_NAMES.map((name) => ({

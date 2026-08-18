@@ -4,8 +4,15 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 
 import { MemberFeaturedImage } from '@/components/portal/MemberContentMedia'
+import { LegacyLessonRichText } from '@/components/portal/LegacyLessonRichText'
 import { requirePortalMember } from '@/lib/auth/requirePortalMember'
 import type { PayloadCourseWriteAPI } from '@/lib/payloadCourse/accessService'
+import {
+  createLessonComment,
+  listLessonDiscussion,
+  plainTextLessonCommentBody,
+  type LessonDiscussionComment,
+} from '@/lib/payloadCourse/lessonDiscussion'
 import {
   getMemberLessonDetail,
   markMemberLessonComplete,
@@ -14,7 +21,11 @@ import { LessonVideoPlayer } from './LessonVideoPlayer'
 
 type LessonPageProps = {
   params: Promise<{ courseSlug: string; lessonSlug: string }>
-  searchParams?: Promise<{ completed?: string | string[] | undefined }>
+  searchParams?: Promise<{
+    completed?: string | string[] | undefined
+    discussion?: string | string[] | undefined
+    reason?: string | string[] | undefined
+  }>
 }
 
 function getLessonPath(courseSlug: string, lessonSlug: string): string {
@@ -65,9 +76,129 @@ async function completeLesson(formData: FormData) {
   redirect(`${requestedPath}?completed=1`)
 }
 
+function lessonDiscussionErrorReason(error: unknown): 'rate_limit' | 'not_allowed' | 'validation' | 'server' {
+  const message = error instanceof Error ? error.message : String(error)
+  if (message.includes('rate limit')) return 'rate_limit'
+  if (message.includes('unavailable') || message.includes('same lesson') || message.includes('visible comments')) return 'not_allowed'
+  if (message.includes('required') || message.includes('rich text') || message.includes('too long')) return 'validation'
+  return 'server'
+}
+
+async function submitLessonDiscussionComment(formData: FormData) {
+  'use server'
+
+  const courseSlug = formData.get('courseSlug')
+  const lessonSlug = formData.get('lessonSlug')
+  const bodyValue = formData.get('body')
+  const parentValue = formData.get('parentId')
+  if (typeof courseSlug !== 'string' || typeof lessonSlug !== 'string') return
+  if (!courseSlug.trim() || !lessonSlug.trim()) return
+
+  const requestedPath = getLessonPath(courseSlug, lessonSlug)
+  const { memberId, payload } = await requirePortalMember(requestedPath)
+  let errorReason: ReturnType<typeof lessonDiscussionErrorReason> | null = null
+
+  try {
+    const detail = await getMemberLessonDetail(payload, memberId, courseSlug, lessonSlug)
+    if (!detail?.allowed || !detail.lesson?.id) throw new Error('Lesson discussion is unavailable for this member.')
+
+    const bodyText = typeof bodyValue === 'string' ? bodyValue.trim() : ''
+    if (!bodyText) throw new Error('Body is required.')
+    if (bodyText.length > 10_000) throw new Error('Body is too long.')
+    const parentId = typeof parentValue === 'string' && parentValue.trim() ? parentValue.trim() : null
+
+    await createLessonComment(payload as PayloadCourseWriteAPI, {
+      memberId,
+      lessonId: detail.lesson.id,
+      parentId,
+      body: plainTextLessonCommentBody(bodyText) as unknown as Record<string, unknown>,
+    })
+  } catch (error) {
+    console.error('[submitLessonDiscussionComment] submission error:', error instanceof Error ? error.message : String(error))
+    errorReason = lessonDiscussionErrorReason(error)
+  }
+
+  revalidatePath(requestedPath)
+  if (errorReason) {
+    redirect(`${requestedPath}?discussion=error&reason=${errorReason}#lesson-discussion`)
+  }
+  redirect(`${requestedPath}?discussion=posted#lesson-discussion`)
+}
+
 function firstParam(value: string | string[] | undefined): string | null {
   if (Array.isArray(value)) return value[0] ?? null
   return value ?? null
+}
+
+function formatDiscussionDate(value: string): string {
+  const date = new Date(value)
+  if (!Number.isFinite(date.getTime())) return 'Historical comment'
+  return new Intl.DateTimeFormat('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date)
+}
+
+function LessonCommentThread({
+  comments,
+  parentId,
+  courseSlug,
+  lessonSlug,
+  depth = 0,
+}: {
+  comments: LessonDiscussionComment[]
+  parentId: string | null
+  courseSlug: string
+  lessonSlug: string
+  depth?: number
+}) {
+  if (depth > 8) return null
+  const children = comments.filter((comment) => comment.parentId === parentId)
+  if (children.length === 0) return null
+
+  return (
+    <div className={depth === 0 ? 'space-y-5' : 'mt-4 space-y-4 border-l border-neutral-200 pl-4'}>
+      {children.map((comment) => (
+        <article className='rounded-xl border border-neutral-200 bg-neutral-50/60 p-5' key={comment.id}>
+          <div className='flex flex-wrap items-baseline justify-between gap-2'>
+            <p className='font-semibold text-neutral-950'>{comment.displayName}</p>
+            <time className='text-xs text-neutral-500' dateTime={comment.sourceCreatedAt || comment.createdAt}>
+              {formatDiscussionDate(comment.sourceCreatedAt || comment.createdAt)}
+            </time>
+          </div>
+          <LegacyLessonRichText data={comment.body} lessonSlug={lessonSlug} />
+
+          <details className='mt-4'>
+            <summary className='cursor-pointer text-sm font-semibold text-neutral-700'>Reply</summary>
+            <form action={submitLessonDiscussionComment} className='mt-3 space-y-3'>
+              <input name='courseSlug' type='hidden' value={courseSlug} />
+              <input name='lessonSlug' type='hidden' value={lessonSlug} />
+              <input name='parentId' type='hidden' value={comment.id} />
+              <textarea
+                className='min-h-24 w-full rounded-xl border border-neutral-300 bg-white px-4 py-3 text-sm outline-none focus:border-neutral-500'
+                maxLength={10_000}
+                name='body'
+                placeholder={`Reply to ${comment.displayName}`}
+                required
+              />
+              <button className='jpv-button-secondary' type='submit'>Post reply</button>
+            </form>
+          </details>
+
+          <LessonCommentThread
+            comments={comments}
+            parentId={comment.id}
+            courseSlug={courseSlug}
+            lessonSlug={lessonSlug}
+            depth={depth + 1}
+          />
+        </article>
+      ))}
+    </div>
+  )
 }
 
 export default async function PortalLessonPage({ params, searchParams }: LessonPageProps) {
@@ -78,6 +209,10 @@ export default async function PortalLessonPage({ params, searchParams }: LessonP
   const query = searchParams ? await searchParams : undefined
 
   if (!detail) notFound()
+
+  const discussion = detail.allowed && detail.lesson?.id
+    ? await listLessonDiscussion(payload as PayloadCourseWriteAPI, memberId, detail.lesson.id)
+    : null
 
   return (
     <div className='space-y-8'>
@@ -156,12 +291,8 @@ export default async function PortalLessonPage({ params, searchParams }: LessonP
               thumbnailUrl={detail.lesson.managedVideo?.thumbnailUrl}
               title={detail.lesson.managedVideo?.title ?? 'Lesson video'}
             />
-            {detail.lesson.contentHtml ? (
-              <div
-                className='lesson-body mt-8 max-w-none text-sm leading-7 text-neutral-800 [&_h2]:mb-2 [&_h2]:mt-6 [&_h2]:text-xl [&_h2]:font-semibold [&_h3]:mb-2 [&_h3]:mt-4 [&_h3]:text-lg [&_h3]:font-semibold [&_a]:text-neutral-950 [&_a]:underline [&_a]:underline-offset-4 [&_blockquote]:border-l-4 [&_blockquote]:border-neutral-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_li]:ml-4 [&_li]:list-disc [&_ol_li]:list-decimal [&_p]:mb-3'
-                // eslint-disable-next-line react/no-danger
-                dangerouslySetInnerHTML={{ __html: detail.lesson.contentHtml }}
-              />
+            {detail.lesson.contentLexical ? (
+              <LegacyLessonRichText data={detail.lesson.contentLexical} lessonSlug={lessonSlug} />
             ) : null}
 
             {detail.lesson.resources.length > 0 ? (
@@ -199,6 +330,70 @@ export default async function PortalLessonPage({ params, searchParams }: LessonP
                 </div>
               </div>
             ) : null}
+          </section>
+
+          <section className='rounded-2xl border border-neutral-200 bg-white p-8 shadow-sm' id='lesson-discussion'>
+            <div className='flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between'>
+              <div>
+                <p className='jpv-eyebrow'>Community</p>
+                <h2 className='mt-2 text-xl font-semibold text-neutral-950'>Lesson discussion</h2>
+                <p className='mt-2 max-w-2xl text-sm leading-6 text-neutral-600'>
+                  Ask questions, share insights, and reply to other members about this lesson.
+                </p>
+              </div>
+              <span className='rounded-full bg-neutral-100 px-3 py-1 text-xs font-semibold text-neutral-700'>
+                {discussion?.comments.length ?? 0} {(discussion?.comments.length ?? 0) === 1 ? 'comment' : 'comments'}
+              </span>
+            </div>
+
+            {firstParam(query?.discussion) === 'posted' ? (
+              <p className='mt-5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800'>
+                Your discussion comment was posted.
+              </p>
+            ) : null}
+            {firstParam(query?.discussion) === 'error' ? (
+              <p className='jpv-notice jpv-notice-danger mt-5 rounded-xl px-4 py-3 text-sm font-medium'>
+                {firstParam(query?.reason) === 'rate_limit'
+                  ? 'You are posting too quickly. Please try again shortly.'
+                  : firstParam(query?.reason) === 'validation'
+                    ? 'Please enter a valid discussion comment.'
+                    : firstParam(query?.reason) === 'not_allowed'
+                      ? 'This discussion action is not available for your account or lesson.'
+                      : 'Unable to post the discussion comment right now.'}
+              </p>
+            ) : null}
+
+            <div className='mt-6'>
+              {discussion?.allowed && discussion.comments.length > 0 ? (
+                <LessonCommentThread
+                  comments={discussion.comments}
+                  parentId={null}
+                  courseSlug={courseSlug}
+                  lessonSlug={lessonSlug}
+                />
+              ) : (
+                <div className='rounded-xl border border-dashed border-neutral-300 px-5 py-6 text-sm text-neutral-600'>
+                  No discussion comments yet. Start the conversation below.
+                </div>
+              )}
+            </div>
+
+            <form action={submitLessonDiscussionComment} className='mt-7 space-y-3 border-t border-neutral-200 pt-6'>
+              <input name='courseSlug' type='hidden' value={courseSlug} />
+              <input name='lessonSlug' type='hidden' value={lessonSlug} />
+              <label className='block text-sm font-semibold text-neutral-900' htmlFor='lesson-discussion-body'>
+                Add to the discussion
+              </label>
+              <textarea
+                className='min-h-28 w-full rounded-xl border border-neutral-300 bg-white px-4 py-3 text-sm outline-none focus:border-neutral-500'
+                id='lesson-discussion-body'
+                maxLength={10_000}
+                name='body'
+                placeholder='Share a question, insight, or response about this lesson.'
+                required
+              />
+              <button className='jpv-button-primary' type='submit'>Post comment</button>
+            </form>
           </section>
 
           <section className='flex flex-col gap-4 rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm md:flex-row md:items-center md:justify-between'>

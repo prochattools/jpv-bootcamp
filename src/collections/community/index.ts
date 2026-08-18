@@ -6,6 +6,7 @@ import {
   PayloadSpaceFiles,
   PayloadSpaceMemberships,
   PayloadSpacePosts,
+  PayloadSpaceReactions,
   PayloadSpaces,
 } from './Community'
 
@@ -17,6 +18,7 @@ export {
   PayloadSpaceFiles,
   PayloadSpaceMemberships,
   PayloadSpacePosts,
+  PayloadSpaceReactions,
   PayloadSpaces,
 } from './Community'
 
@@ -26,6 +28,7 @@ export const communityCollections = [
   PayloadSpaceMemberships,
   PayloadSpacePosts,
   PayloadSpaceComments,
+  PayloadSpaceReactions,
   PayloadSpaceFiles,
   PayloadChatThreads,
   PayloadChatMessages,

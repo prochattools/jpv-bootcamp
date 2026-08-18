@@ -1,4 +1,4 @@
-import { PAYLOAD_MIGRATION_NAMES } from '../migrations/migrationRegistry'
+import { PAYLOAD_MIGRATION_NAMES } from './payloadMigrationRegistry'
 
 export type PreviewMigrationSystem = 'payload' | 'prisma'
 export type PreviewMigrationRollbackRisk = 'reversible' | 'data_loss' | 'irreversible'
@@ -56,6 +56,10 @@ const PREVIEW_MIGRATION_METADATA = [
   { purpose: 'Reconcile membership audit relationship columns and foreign keys.', rollbackRisk: 'irreversible', verificationChecks: ['registry-match', 'ordered-exactly', 'audit-history-columns'] },
   { purpose: 'Add the terminal email-event state used by the staging recipient guard.', rollbackRisk: 'irreversible', verificationChecks: ['registry-match', 'ordered-exactly', 'staging-email-guard-status'] },
   { purpose: 'Add durable member account-action reservations, lease recovery, and completion fingerprints.', rollbackRisk: 'reversible', verificationChecks: ['registry-match', 'ordered-exactly', 'account-action-reservation', 'rollback-guard'] },
+  { purpose: 'Promote Bunny Stream persistence to canonical GUID-first identity with guarded lesson relationships.', rollbackRisk: 'data_loss', verificationChecks: ['registry-match', 'ordered-exactly', 'bunny-guid-first', 'rollback-guard'] },
+  { purpose: 'Create the physical lesson-comment schema and locked-document relationship.', rollbackRisk: 'data_loss', verificationChecks: ['registry-match', 'ordered-exactly', 'lesson-comments', 'rollback-guard'] },
+  { purpose: 'Add the source-proven community OG image relationship.', rollbackRisk: 'reversible', verificationChecks: ['registry-match', 'ordered-exactly', 'space-og-image', 'rollback-guard'] },
+  { purpose: 'Create community reaction persistence for posts, comments, and preserved survey-option votes.', rollbackRisk: 'data_loss', verificationChecks: ['registry-match', 'ordered-exactly', 'community-reactions', 'rollback-guard'] },
 ] as const satisfies readonly PreviewMigrationMetadata[]
 
 if (PREVIEW_MIGRATION_METADATA.length !== PAYLOAD_MIGRATION_NAMES.length) {

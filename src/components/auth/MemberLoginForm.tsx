@@ -13,9 +13,17 @@ import {
 
 type MemberLoginFormProps = {
   requestedDestination?: string | null
+  submitLabel?: string
+  submitBackgroundColor?: string
+  submitTextColor?: string
 }
 
-export function MemberLoginForm({ requestedDestination }: MemberLoginFormProps) {
+export function MemberLoginForm({
+  requestedDestination,
+  submitLabel = 'Student and member sign in',
+  submitBackgroundColor,
+  submitTextColor,
+}: MemberLoginFormProps) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -141,9 +149,15 @@ export function MemberLoginForm({ requestedDestination }: MemberLoginFormProps) 
       <button
         className='jpv-button-primary w-full'
         disabled={submitting}
+        style={submitBackgroundColor || submitTextColor
+          ? {
+              ...(submitBackgroundColor ? { backgroundColor: submitBackgroundColor } : {}),
+              ...(submitTextColor ? { color: submitTextColor } : {}),
+            }
+          : undefined}
         type='submit'
       >
-        {submitting ? 'Signing in…' : 'Student and member sign in'}
+        {submitting ? 'Signing in…' : submitLabel}
       </button>
     </form>
   )

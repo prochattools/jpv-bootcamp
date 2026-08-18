@@ -76,7 +76,7 @@ echo "[start] target: ${REQUIRED_HOST}:${REQUIRED_PORT}/${REQUIRED_DB}?schema=${
 PAYLOAD_SCHEMA_PREFLIGHT="${PAYLOAD_SCHEMA_PREFLIGHT:-true}"
 if [ "$PAYLOAD_SCHEMA_PREFLIGHT" = "true" ]; then
   echo "[start] checking Payload migration state before application startup"
-  node scripts/runtime/payload-migration-preflight.cjs
+  node scripts/release/payload-migration-preflight.cjs
 fi
 
 echo "[start] starting standalone Next.js server"
