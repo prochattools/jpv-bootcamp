@@ -446,6 +446,53 @@ async function executeInsert(
     return existing.rows[0]!.id
   }
 
+  if (collection === 'bunny_videos') {
+    // bunny_videos has unique video_guid — source may contain duplicates
+    const guidVal = flatData['video_guid']
+    const res = await client.query<{ id: number }>(
+      `INSERT INTO "${schema}"."${collection}" (${colList}) VALUES (${placeholders})
+       ON CONFLICT DO NOTHING RETURNING id`,
+      values,
+    )
+    if (res.rows.length > 0) return res.rows[0]!.id
+    const existing = await client.query<{ id: number }>(
+      `SELECT id FROM "${schema}"."${collection}" WHERE video_guid = $1`,
+      [guidVal],
+    )
+    if (existing.rows.length === 0) throw new Error('bunny_video_insert_conflict_unresolvable')
+    return existing.rows[0]!.id
+  }
+
+  if (collection === 'payload_space_reactions') {
+    // source data may contain duplicate (actor, type, post/comment) reactions
+    const res = await client.query<{ id: number }>(
+      `INSERT INTO "${schema}"."${collection}" (${colList}) VALUES (${placeholders})
+       ON CONFLICT DO NOTHING RETURNING id`,
+      values,
+    )
+    if (res.rows.length > 0) return res.rows[0]!.id
+    // Find the existing row via the unique key that caused the conflict
+    const actorId = flatData['actor_member_id']
+    const reactionType = flatData['reaction_type']
+    const postId = flatData['target_post_id']
+    const commentId = flatData['target_comment_id']
+    if (actorId != null && reactionType != null && postId != null) {
+      const existing = await client.query<{ id: number }>(
+        `SELECT id FROM "${schema}"."${collection}" WHERE actor_member_id = $1 AND reaction_type = $2 AND target_post_id = $3`,
+        [actorId, reactionType, postId],
+      )
+      if (existing.rows.length > 0) return existing.rows[0]!.id
+    }
+    if (actorId != null && reactionType != null && commentId != null) {
+      const existing = await client.query<{ id: number }>(
+        `SELECT id FROM "${schema}"."${collection}" WHERE actor_member_id = $1 AND reaction_type = $2 AND target_comment_id = $3`,
+        [actorId, reactionType, commentId],
+      )
+      if (existing.rows.length > 0) return existing.rows[0]!.id
+    }
+    throw new Error('space_reaction_insert_conflict_unresolvable')
+  }
+
   const res = await client.query<{ id: number }>(
     `INSERT INTO "${schema}"."${collection}" (${colList}) VALUES (${placeholders}) RETURNING id`,
     values,
