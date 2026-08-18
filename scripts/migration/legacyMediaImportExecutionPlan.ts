@@ -51,6 +51,7 @@ export interface LegacyMediaExecutionEntry {
   sourceManifestId: string
   sourceSha256: string | null
   sourceBytes: number | null
+  expectedMime: string | null
   plannerOperationId: string | null
   idempotencyKey: string
   sourceLocatorClass: LegacyMediaManifestRecord['locatorClass']
@@ -172,6 +173,7 @@ function compileEntry(
     sourceManifestId: record.manifestId,
     sourceSha256: record.sha256,
     sourceBytes: record.bytes,
+    expectedMime: record.expectedMime,
     plannerOperationId: record.targetOperationId,
     idempotencyKey: isUploadIntent
       ? `media_execution:${record.idempotencyKey}:${record.sha256 ?? stableId('source', sourceIdentity)}`

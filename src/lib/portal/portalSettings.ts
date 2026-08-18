@@ -59,7 +59,7 @@ export async function getPortalLoginBranding(): Promise<PortalLoginBranding> {
       slug: 'portalSettings' as any,
       depth: 1,
       overrideAccess: true,
-    } as any) as Record<string, unknown>
+    } as any) as unknown as Record<string, unknown>
     const banner = settings.loginBanner && typeof settings.loginBanner === 'object'
       ? settings.loginBanner as Record<string, unknown>
       : null

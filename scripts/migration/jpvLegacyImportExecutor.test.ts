@@ -135,47 +135,43 @@ describe('isOperationEffectivelyBlocked', () => {
     assert.equal(blocked, false)
   })
 
-  it('not blocked when only AD-clearable blockers', () => {
-    const { blocked } = isOperationEffectivelyBlocked([
+  it('treats any remaining planner blocker as blocking', () => {
+    const blockers = [
       'bunny_target_schema_guid_first_compatibility_required',
       'lesson_comment_schema_registration_required',
-    ])
-    assert.equal(blocked, false)
+    ]
+    const { blocked, reason } = isOperationEffectivelyBlocked(blockers)
+    assert.equal(blocked, true)
+    assert.equal(reason, blockers.join(', '))
   })
 
-  it('not blocked when all four AD codes present', () => {
-    const { blocked } = isOperationEffectivelyBlocked([
+  it('blocks the full A-D marker set if planning failed to resolve it', () => {
+    const blockers = [
       'bunny_target_schema_guid_first_compatibility_required',
       'lesson_comment_schema_registration_required',
       'space_media_schema_registration_required',
       'community_reaction_schema_registration_required',
-    ])
-    assert.equal(blocked, false)
+    ]
+    const { blocked, reason } = isOperationEffectivelyBlocked(blockers)
+    assert.equal(blocked, true)
+    assert.equal(reason, blockers.join(', '))
   })
 
-  it('blocked when has non-AD blocker alone', () => {
+  it('blocks media dependency blockers', () => {
     const { blocked, reason } = isOperationEffectivelyBlocked(['richtext_unresolved_image_media_resolution_required'])
     assert.equal(blocked, true)
     assert.ok(reason?.includes('richtext_unresolved_image_media_resolution_required'))
   })
 
-  it('blocked when mixed AD and non-AD blockers', () => {
-    const { blocked } = isOperationEffectivelyBlocked([
-      'lesson_comment_schema_registration_required',
-      'unresolved_comment_author',
-    ])
-    assert.equal(blocked, true)
-  })
-
-  it('reason contains only the non-AD blockers', () => {
-    const { reason } = isOperationEffectivelyBlocked([
+  it('preserves every blocker in the reason', () => {
+    const blockers = [
       'lesson_comment_schema_registration_required',
       'unresolved_comment_author',
       'unresolved_comment_lesson',
-    ])
-    assert.ok(reason?.includes('unresolved_comment_author'))
-    assert.ok(reason?.includes('unresolved_comment_lesson'))
-    assert.ok(!reason?.includes('lesson_comment_schema_registration_required'))
+    ]
+    const { blocked, reason } = isOperationEffectivelyBlocked(blockers)
+    assert.equal(blocked, true)
+    assert.equal(reason, blockers.join(', '))
   })
 })
 
@@ -270,11 +266,19 @@ describe('flattenDataForSql', () => {
     assert.equal(result['account_status'], 'active')
   })
 
-  it('drops columns not in availableColumns', () => {
+  it('reports columns not in availableColumns instead of silently dropping them', () => {
     const cols = new Set(['email'])
-    const result = flattenDataForSql({ email: 'x@y.com', biography: { root: {} } }, cols)
+    const missing = new Set<string>()
+    const result = flattenDataForSql({ email: 'x@y.com', biography: { root: {} } }, cols, missing)
     assert.ok('email' in result)
     assert.ok(!('biography' in result))
+    assert.deepEqual([...missing], ['biography'])
+  })
+
+  it('preserves JSON object fields when the target column exists', () => {
+    const cols = new Set(['biography'])
+    const result = flattenDataForSql({ biography: { root: { type: 'root', children: [] } } }, cols)
+    assert.equal(result['biography'], JSON.stringify({ root: { type: 'root', children: [] } }))
   })
 
   it('flattens group fields with prefix', () => {
@@ -333,14 +337,14 @@ describe('runJpvLegacyImport dry-run', () => {
     assert.equal(result.proposedOperations, 5)
     assert.equal(result.executedOperations, 0, 'dry-run must not execute any writes')
     assert.equal(result.alreadyAppliedOperations, 0)
-    // 1 blocked (non-AD), 1 global (missing table)
+    // Two explicit planner blockers remain; PortalSettings is a normal planned target now.
     assert.equal(result.skippedOperations, 2)
-    assert.equal(result.skippedByMissingTable, 1)
+    assert.equal(result.skippedByMissingTable, 0)
     assert.equal(result.failedOperations, 0)
     assert.ok(result.durationMs >= 0)
   })
 
-  it('AD-only blocked ops are not counted as skipped in dry-run', async () => {
+  it('A-D marker surviving planning is counted as a blocker in dry-run', async () => {
     const ops = [
       makeOp({ operationId: 'op_ad', blockers: ['bunny_target_schema_guid_first_compatibility_required'], dependsOn: [] }),
     ]
@@ -352,6 +356,7 @@ describe('runJpvLegacyImport dry-run', () => {
       operationPlan: plan,
     }
     const result = await runJpvLegacyImport(config)
-    assert.equal(result.skippedOperations, 0)
+    assert.equal(result.skippedOperations, 1)
+    assert.equal(result.skippedByBlocker['bunny_target_schema_guid_first_compatibility_required'], 1)
   })
 })

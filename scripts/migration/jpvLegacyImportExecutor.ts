@@ -5,38 +5,30 @@
  *   - DATABASE_URL host must be 10.0.2.4 or 100.71.31.88
  *   - DATABASE_URL schema must be jpvbootcamp_staging
  *   - DATABASE_URL database must be jpvbootcamp
- *   - Payload migration count must be exactly 33
+ *   - Payload migration rows must exactly match the canonical registry
+ *   - Planned target tables and columns must exist before any write
  *
  * Safety:
  *   - Never logs PII (email, names, raw content) — only IDs, counts, hashes
  *   - Direct SQL only — no getPayload, no Stripe, no Bunny API calls
  *   - Idempotent via jpv_import_run_ledger table
- *   - A-D schema gate blockers cleared when 33/33 verified
- *   - All other blockers cause skip with logged reason
+ *   - Planner owns target-capability resolution; executor never clears blockers implicitly
+ *   - Missing tables/columns fail closed before ledger creation or data writes
  */
 
 import { Client } from 'pg'
 
+import { PAYLOAD_MIGRATION_NAMES } from '../../src/lib/payloadMigrationRegistry'
 import {
   type LegacyPayloadOperationPlan,
   type ProposedPayloadOperation,
 } from './legacyPayloadOperationPlan'
-import { POST_MIGRATION29_FORWARD_BLOCKERS } from './postMigration29ForwardSchemaPlan'
 
 // ─── constants ────────────────────────────────────────────────────────────────
 
 const ALLOWED_HOSTS = ['10.0.2.4', '100.71.31.88']
 const REQUIRED_SCHEMA = 'jpvbootcamp_staging'
 const REQUIRED_DATABASE = 'jpvbootcamp'
-const REQUIRED_MIGRATION_COUNT = 33
-
-const AD_CLEARABLE_BLOCKERS = new Set<string>([
-  POST_MIGRATION29_FORWARD_BLOCKERS.bunnyGuidFirst,
-  POST_MIGRATION29_FORWARD_BLOCKERS.lessonComments,
-  POST_MIGRATION29_FORWARD_BLOCKERS.spaceMedia,
-  POST_MIGRATION29_FORWARD_BLOCKERS.spaceMediaTargetSpace,
-  POST_MIGRATION29_FORWARD_BLOCKERS.spaceReactions,
-])
 
 // ─── public types ─────────────────────────────────────────────────────────────
 
@@ -95,20 +87,32 @@ export function guardStagingIdentity(databaseUrl: string): { hostname: string; d
   return { hostname, database, schema: schemaParam }
 }
 
-export async function verifyPayloadMigrationCount(client: Client, schema: string): Promise<number> {
-  const result = await client.query<{ count: string }>(
-    `SELECT COUNT(*)::text AS count FROM "${schema}".payload_migrations`
+export async function verifyCanonicalPayloadMigrationState(client: Client, schema: string): Promise<number> {
+  const result = await client.query<{ name: string }>(
+    `SELECT name FROM "${schema}".payload_migrations ORDER BY id ASC`,
   )
-  return parseInt(result.rows[0]?.count ?? '0', 10)
+  const names = result.rows.map((row) => row.name)
+  const duplicateNames = names.filter((name, index) => names.indexOf(name) !== index)
+  if (duplicateNames.length > 0) {
+    throw new Error(`migration_state_duplicate_rows: ${[...new Set(duplicateNames)].join(',')}`)
+  }
+  if (names.length !== PAYLOAD_MIGRATION_NAMES.length) {
+    throw new Error(`migration_state_count_mismatch: expected ${PAYLOAD_MIGRATION_NAMES.length}, got ${names.length}`)
+  }
+  const mismatchIndex = PAYLOAD_MIGRATION_NAMES.findIndex((name, index) => names[index] !== name)
+  if (mismatchIndex !== -1) {
+    throw new Error(
+      `migration_state_order_mismatch: index=${mismatchIndex} expected=${PAYLOAD_MIGRATION_NAMES[mismatchIndex]} got=${names[mismatchIndex] ?? 'missing'}`,
+    )
+  }
+  return names.length
 }
 
 // ─── blocker classification ────────────────────────────────────────────────────
 
 export function isOperationEffectivelyBlocked(blockers: string[]): { blocked: boolean; reason: string | null } {
   if (blockers.length === 0) return { blocked: false, reason: null }
-  const nonAdBlockers = blockers.filter((b) => !AD_CLEARABLE_BLOCKERS.has(b))
-  if (nonAdBlockers.length === 0) return { blocked: false, reason: null }
-  return { blocked: true, reason: nonAdBlockers.join(', ') }
+  return { blocked: true, reason: blockers.join(', ') }
 }
 
 // ─── ref resolution ───────────────────────────────────────────────────────────
@@ -182,84 +186,81 @@ function camelToSnake(str: string): string {
   return str.replace(/([A-Z])/g, '_$1').toLowerCase()
 }
 
+function targetTableForOperation(operation: ProposedPayloadOperation): string {
+  return operation.targetType === 'global' ? 'portal_settings' : operation.collection
+}
+
 export function flattenDataForSql(
   data: Record<string, unknown>,
   availableColumns: Set<string>,
+  missingColumns: Set<string> = new Set<string>(),
 ): Record<string, unknown> {
   const flat: Record<string, unknown> = {}
 
   function walk(obj: Record<string, unknown>, prefix: string): void {
     for (const [key, value] of Object.entries(obj)) {
+      if (value === undefined || key === 'id') continue
       const snakeKey = camelToSnake(key)
       const colName = prefix ? `${prefix}_${snakeKey}` : snakeKey
 
       if (typeof value === 'string' && value.startsWith('$ref:')) {
-        // Already resolved by resolveRefs — shouldn't get here with raw $ref
-        // If it does, record as missing
-        continue
-      }
-
-      if (typeof value === 'number' && colName.endsWith('_id') && !prefix) {
-        // Resolved ref: the data key was e.g. "member" but resolveRefs
-        // keeps the key name as-is with numeric value. Map to _id column.
-        const idCol = `${colName}`
-        if (availableColumns.has(idCol)) {
-          flat[idCol] = value
-        }
+        const idCol = camelToSnake(`${key}Id`)
+        if (!prefix && availableColumns.has(idCol)) continue
+        missingColumns.add(prefix ? `${colName}_id` : idCol)
         continue
       }
 
       if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
-        // Group field — recurse with prefix
-        walk(value as Record<string, unknown>, colName)
+        if (availableColumns.has(colName)) {
+          flat[colName] = JSON.stringify(value)
+        } else {
+          const groupPrefix = `${colName}_`
+          const hasGroupedTargetColumns = [...availableColumns].some((column) => column.startsWith(groupPrefix))
+          if (hasGroupedTargetColumns) {
+            walk(value as Record<string, unknown>, colName)
+          } else {
+            missingColumns.add(colName)
+          }
+        }
         continue
       }
 
       if (Array.isArray(value)) {
-        if (availableColumns.has(colName)) {
-          flat[colName] = JSON.stringify(value)
-        }
+        if (availableColumns.has(colName)) flat[colName] = JSON.stringify(value)
+        else missingColumns.add(colName)
         continue
       }
 
       if (availableColumns.has(colName)) {
         flat[colName] = value
+      } else {
+        missingColumns.add(colName)
       }
     }
   }
 
-  // First pass: handle relationship refs (numeric values that were $ref resolved)
-  // resolveRefs converts "$ref:X" → numeric. The key stays camelCase (e.g. "member" → 3).
-  // We need to map "member" → "member_id".
-  const refResolved: Record<string, unknown> = {}
-  const nonRefData: Record<string, unknown> = {}
-
+  const normalized: Record<string, unknown> = {}
+  const numericPlainFields = new Set(['batch', 'sortOrder', 'libraryId', 'videoId', 'duration'])
   for (const [key, value] of Object.entries(data)) {
-    if (typeof value === 'number' && !['id', 'batch', 'sortOrder', 'libraryId', 'videoId', 'duration'].includes(key)) {
-      // Likely a resolved FK ref — try {key}_id column
+    if (value === undefined || key === 'id') continue
+    if (typeof value === 'number' && !numericPlainFields.has(key)) {
       const idCol = camelToSnake(`${key}Id`)
-      if (availableColumns.has(idCol)) {
-        refResolved[idCol] = value
-        continue
-      }
-      // Could also be a plain numeric field
       const plainCol = camelToSnake(key)
-      if (availableColumns.has(plainCol)) {
-        nonRefData[key] = value
+      if (availableColumns.has(idCol)) {
+        flat[idCol] = value
         continue
       }
-      // Otherwise drop (missing column)
-    } else {
-      nonRefData[key] = value
+      if (availableColumns.has(plainCol)) {
+        normalized[key] = value
+        continue
+      }
+      missingColumns.add(idCol)
+      continue
     }
+    normalized[key] = value
   }
 
-  Object.assign(flat, refResolved)
-  walk(nonRefData, '')
-
-  // Remove 'id' column if present (auto-generated)
-  delete flat['id']
-
+  walk(normalized, '')
   return flat
 }
 
@@ -324,6 +325,58 @@ async function buildColumnMap(client: Client, schema: string): Promise<Map<strin
     map.get(row.table_name)!.add(row.column_name)
   }
   return map
+}
+
+async function readAppliedLedgerMapIfPresent(client: Client, schema: string): Promise<Map<string, number>> {
+  const exists = await client.query<{ exists: boolean }>(
+    `SELECT EXISTS (
+       SELECT 1 FROM information_schema.tables
+       WHERE table_schema = $1 AND table_name = 'jpv_import_run_ledger'
+     ) AS exists`,
+    [schema],
+  )
+  if (!exists.rows[0]?.exists) return new Map()
+  const result = await client.query<{ operation_id: string; db_id: number | null }>(
+    `SELECT operation_id, db_id FROM "${schema}".jpv_import_run_ledger WHERE status = 'applied' AND db_id IS NOT NULL`,
+  )
+  return new Map(result.rows.map((row) => [row.operation_id, row.db_id as number]))
+}
+
+function preflightOperationSchema(
+  operations: ProposedPayloadOperation[],
+  columnMap: Map<string, Set<string>>,
+  alreadyApplied: Map<string, number>,
+): void {
+  const blockerIssues: string[] = []
+  const missingTables = new Set<string>()
+  const missingColumns = new Set<string>()
+
+  for (const operation of operations) {
+    if (alreadyApplied.has(operation.operationId)) continue
+    if (operation.blockers.length > 0) {
+      blockerIssues.push(`${operation.operationId}:${operation.blockers.join('|')}`)
+      continue
+    }
+    const tableName = targetTableForOperation(operation)
+    const columns = columnMap.get(tableName)
+    if (!columns) {
+      missingTables.add(tableName)
+      continue
+    }
+    const operationMissingColumns = new Set<string>()
+    flattenDataForSql(operation.data, columns, operationMissingColumns)
+    for (const column of operationMissingColumns) missingColumns.add(`${tableName}.${column}`)
+  }
+
+  if (blockerIssues.length > 0) {
+    throw new Error(`operation_blockers_present: count=${blockerIssues.length} examples=${blockerIssues.slice(0, 5).join(',')}`)
+  }
+  if (missingTables.size > 0) {
+    throw new Error(`target_tables_missing: ${[...missingTables].sort().join(',')}`)
+  }
+  if (missingColumns.size > 0) {
+    throw new Error(`target_columns_missing: ${[...missingColumns].sort().slice(0, 25).join(',')}`)
+  }
 }
 
 // ─── single operation execute ─────────────────────────────────────────────────
@@ -394,21 +447,15 @@ export async function runJpvLegacyImport(config: JpvImportConfig): Promise<JpvIm
   }
 
   if (config.mode === 'dry-run') {
-    // Dry-run: classify operations without connecting
+    // Dry-run classifies planner blockers only; no database connection or writes.
     const sorted = topologicalSort(config.operationPlan.operations)
     for (const op of sorted) {
-      if (op.targetType === 'global') {
-        result.skippedOperations += 1
-        result.skippedByMissingTable += 1
-        continue
-      }
       const { blocked, reason } = isOperationEffectivelyBlocked(op.blockers)
       if (blocked) {
         result.skippedOperations += 1
         const key = reason ?? 'unknown_blocker'
         result.skippedByBlocker[key] = (result.skippedByBlocker[key] ?? 0) + 1
       }
-      // Not counting executedOperations in dry-run — no writes
     }
     result.ok = true
     result.durationMs = Date.now() - startMs
@@ -421,29 +468,19 @@ export async function runJpvLegacyImport(config: JpvImportConfig): Promise<JpvIm
   try {
     await client.query(`SET search_path TO "${schema}", public`)
 
-    const migrationCount = await verifyPayloadMigrationCount(client, schema)
+    const migrationCount = await verifyCanonicalPayloadMigrationState(client, schema)
     result.appliedMigrationCount = migrationCount
-    if (migrationCount !== REQUIRED_MIGRATION_COUNT) {
-      throw new Error(`migration_count_mismatch: expected ${REQUIRED_MIGRATION_COUNT}, got ${migrationCount}`)
-    }
+    const columnMap = await buildColumnMap(client, schema)
+    const sorted = topologicalSort(config.operationPlan.operations)
+    const existingApplied = await readAppliedLedgerMapIfPresent(client, schema)
+    preflightOperationSchema(sorted, columnMap, existingApplied)
 
     await ensureLedgerTable(client, schema)
-    const columnMap = await buildColumnMap(client, schema)
-
-    const sorted = topologicalSort(config.operationPlan.operations)
-    const opIdToDbId = new Map<string, number>()
+    const opIdToDbId = new Map<string, number>(existingApplied)
 
     log(`[jpv-import] mode=apply schema=${schema} run-id=${config.runId} ops=${sorted.length}`)
 
     for (const op of sorted) {
-      // Skip globals — no DB table exists
-      if (op.targetType === 'global') {
-        result.skippedOperations += 1
-        result.skippedByMissingTable += 1
-        await recordLedger(client, schema, op.operationId, config.runId, 'skipped', null, 'portal_settings_table_not_migrated')
-        continue
-      }
-
       // Check run ledger for idempotency
       const existing = await lookupLedger(client, schema, op.operationId)
       if (existing) {
@@ -462,15 +499,9 @@ export async function runJpvLegacyImport(config: JpvImportConfig): Promise<JpvIm
         continue
       }
 
-      // Check table exists
-      const tableName = op.collection as string
+      const tableName = targetTableForOperation(op)
       const availableColumns = columnMap.get(tableName)
-      if (!availableColumns) {
-        result.skippedOperations += 1
-        result.skippedByMissingTable += 1
-        await recordLedger(client, schema, op.operationId, config.runId, 'skipped', null, `table_not_found:${tableName}`)
-        continue
-      }
+      if (!availableColumns) throw new Error(`preflight_invariant_failed_missing_table:${tableName}`)
 
       // Resolve refs
       let resolvedData: Record<string, unknown>
@@ -484,11 +515,12 @@ export async function runJpvLegacyImport(config: JpvImportConfig): Promise<JpvIm
         continue
       }
 
-      // Flatten to SQL columns
-      const beforeCount = Object.keys(resolvedData).length
-      const flatData = flattenDataForSql(resolvedData, availableColumns)
-      const afterCount = Object.keys(flatData).length
-      result.missingColumnSkips += beforeCount - afterCount
+      // Flatten only after preflight proved every planned target column exists.
+      const missingColumns = new Set<string>()
+      const flatData = flattenDataForSql(resolvedData, availableColumns, missingColumns)
+      if (missingColumns.size > 0) {
+        throw new Error(`preflight_invariant_failed_missing_columns:${tableName}:${[...missingColumns].sort().join(',')}`)
+      }
 
       try {
         const dbId = await executeInsert(client, schema, tableName, flatData)

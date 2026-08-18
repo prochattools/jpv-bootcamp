@@ -24,6 +24,7 @@ import {
   LEGACY_SPACE_MEDIA_TARGETS,
   POST_MIGRATION29_FORWARD_BLOCKERS,
 } from './postMigration29ForwardSchemaPlan'
+import { PAYLOAD_MIGRATION_NAMES } from '../../src/lib/payloadMigrationRegistry'
 
 export type PayloadOperationCollection =
   | 'payload_members'
@@ -63,6 +64,28 @@ export interface ProposedPayloadOperation {
     raw?: Record<string, unknown>
   }
   blockers: string[]
+}
+
+export interface LegacyTargetSchemaCapabilities {
+  bunnyGuidFirst: boolean
+  lessonComments: boolean
+  spaceOgImage: boolean
+  spaceReactions: boolean
+  memberProfileParity: boolean
+  portalSettings: boolean
+}
+
+export interface BuildLegacyPayloadOperationPlanOptions {
+  targetCapabilities?: LegacyTargetSchemaCapabilities
+}
+
+export const CANONICAL_LEGACY_TARGET_CAPABILITIES: LegacyTargetSchemaCapabilities = {
+  bunnyGuidFirst: PAYLOAD_MIGRATION_NAMES.includes('20260817_193000_bunny_guid_first'),
+  lessonComments: PAYLOAD_MIGRATION_NAMES.includes('20260817_193100_lesson_comments'),
+  spaceOgImage: PAYLOAD_MIGRATION_NAMES.includes('20260817_193200_space_og_image'),
+  spaceReactions: PAYLOAD_MIGRATION_NAMES.includes('20260817_193300_space_reactions'),
+  memberProfileParity: PAYLOAD_MIGRATION_NAMES.includes('20260818_140000_member_profile_parity'),
+  portalSettings: PAYLOAD_MIGRATION_NAMES.includes('20260818_140100_portal_settings'),
 }
 
 export interface LegacyPayloadOperationPlan {
@@ -428,7 +451,9 @@ export async function buildLegacyPayloadOperationPlan(
   snapshot: LegacySqlSnapshot,
   normalization: LegacyDryRunNormalization,
   bunnyInventory?: BunnyInventoryFile,
+  options: BuildLegacyPayloadOperationPlanOptions = {},
 ): Promise<LegacyPayloadOperationPlan> {
+  const targetCapabilities = options.targetCapabilities ?? CANONICAL_LEGACY_TARGET_CAPABILITIES
   const operations: ProposedPayloadOperation[] = []
   const unresolved: LegacyPayloadOperationPlan['unresolved'] = []
   const bunnyByGuid = bunnyInventoryByGuid(bunnyInventory)
@@ -1822,6 +1847,51 @@ export async function buildLegacyPayloadOperationPlan(
     portalSettingsBlockers,
   ))
 
+  const collectDataRefs = (value: unknown, refs: Set<string>): void => {
+    if (typeof value === 'string' && value.startsWith('$ref:')) {
+      refs.add(value.slice('$ref:'.length))
+      return
+    }
+    if (Array.isArray(value)) {
+      for (const item of value) collectDataRefs(item, refs)
+      return
+    }
+    if (value && typeof value === 'object') {
+      for (const nested of Object.values(value as Record<string, unknown>)) collectDataRefs(nested, refs)
+    }
+  }
+
+  for (const operation of operations) {
+    const refs = new Set<string>()
+    collectDataRefs(operation.data, refs)
+    operation.dependsOn = [...new Set([...operation.dependsOn, ...refs])]
+  }
+
+  const resolvedSchemaBlockers = new Set<string>()
+  if (targetCapabilities.bunnyGuidFirst) resolvedSchemaBlockers.add(POST_MIGRATION29_FORWARD_BLOCKERS.bunnyGuidFirst)
+  if (targetCapabilities.lessonComments) resolvedSchemaBlockers.add(POST_MIGRATION29_FORWARD_BLOCKERS.lessonComments)
+  if (targetCapabilities.spaceOgImage) resolvedSchemaBlockers.add(POST_MIGRATION29_FORWARD_BLOCKERS.spaceMedia)
+  if (targetCapabilities.spaceReactions) resolvedSchemaBlockers.add(POST_MIGRATION29_FORWARD_BLOCKERS.spaceReactions)
+
+  for (const operation of operations) {
+    operation.blockers = operation.blockers.filter((blocker) => !resolvedSchemaBlockers.has(blocker))
+    if (
+      targetCapabilities.spaceOgImage &&
+      operation.source.raw &&
+      operation.source.raw.schemaRegistrationRequired === true &&
+      operation.source.raw.targetCollection === LEGACY_SPACE_MEDIA_TARGETS.communityOgImage.targetCollection &&
+      operation.source.raw.targetField === LEGACY_SPACE_MEDIA_TARGETS.communityOgImage.targetField
+    ) {
+      operation.source.raw.schemaRegistrationRequired = false
+    }
+  }
+
+  const resolvedUnresolvedCodes = new Set<string>()
+  if (targetCapabilities.bunnyGuidFirst) resolvedUnresolvedCodes.add(POST_MIGRATION29_FORWARD_BLOCKERS.bunnyGuidFirst)
+  if (targetCapabilities.lessonComments) resolvedUnresolvedCodes.add(POST_MIGRATION29_FORWARD_BLOCKERS.lessonComments)
+  if (targetCapabilities.spaceOgImage) resolvedUnresolvedCodes.add(POST_MIGRATION29_FORWARD_BLOCKERS.spaceMedia)
+  const unresolvedAfterTargetCapabilities = unresolved.filter((item) => !resolvedUnresolvedCodes.has(item.code))
+
   const byCollection: Record<string, number> = {}
   for (const item of operations) byCollection[item.collection] = (byCollection[item.collection] ?? 0) + 1
   const blockedOperations = operations.filter((item) => item.blockers.length > 0).length
@@ -1838,7 +1908,7 @@ export async function buildLegacyPayloadOperationPlan(
       staffAuthorMirrors: staffUsers.length,
     },
     operations,
-    unresolved,
+    unresolved: unresolvedAfterTargetCapabilities,
     summary: {
       operations: operations.length,
       blockedOperations,

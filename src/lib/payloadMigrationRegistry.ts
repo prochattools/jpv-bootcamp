@@ -32,6 +32,8 @@ export const PAYLOAD_MIGRATION_NAMES = [
   '20260817_193100_lesson_comments',
   '20260817_193200_space_og_image',
   '20260817_193300_space_reactions',
+  '20260818_140000_member_profile_parity',
+  '20260818_140100_portal_settings',
 ] as const
 
 export type PayloadMigrationName = (typeof PAYLOAD_MIGRATION_NAMES)[number]

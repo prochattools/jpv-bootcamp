@@ -31,6 +31,8 @@ import * as migration_20260817_193000_bunny_guid_first from './20260817_193000_b
 import * as migration_20260817_193100_lesson_comments from './20260817_193100_lesson_comments'
 import * as migration_20260817_193200_space_og_image from './20260817_193200_space_og_image'
 import * as migration_20260817_193300_space_reactions from './20260817_193300_space_reactions'
+import * as migration_20260818_140000_member_profile_parity from './20260818_140000_member_profile_parity'
+import * as migration_20260818_140100_portal_settings from './20260818_140100_portal_settings'
 import { PAYLOAD_MIGRATION_NAMES } from '../lib/payloadMigrationRegistry'
 
 const migrationModuleByName = {
@@ -67,6 +69,8 @@ const migrationModuleByName = {
   '20260817_193100_lesson_comments': migration_20260817_193100_lesson_comments,
   '20260817_193200_space_og_image': migration_20260817_193200_space_og_image,
   '20260817_193300_space_reactions': migration_20260817_193300_space_reactions,
+  '20260818_140000_member_profile_parity': migration_20260818_140000_member_profile_parity,
+  '20260818_140100_portal_settings': migration_20260818_140100_portal_settings,
 } as const
 
 export const migrations = PAYLOAD_MIGRATION_NAMES.map((name) => ({

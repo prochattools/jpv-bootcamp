@@ -37,7 +37,7 @@ import {
 import { buildLegacyPayloadOperationPlan } from './legacyPayloadOperationPlan'
 import {
   guardStagingIdentity,
-  verifyPayloadMigrationCount,
+  verifyCanonicalPayloadMigrationState,
   runJpvLegacyImport,
 } from './jpvLegacyImportExecutor'
 
@@ -106,7 +106,11 @@ function readJson<T>(filePath: string): T {
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2))
 
-  const databaseUrl = process.env['DATABASE_URL']
+  const databaseUrl = process.env['DATABASE_URL'] ?? (
+    args.mode === 'dry-run'
+      ? 'postgresql://dry-run:dry-run@10.0.2.4:5432/jpvbootcamp?schema=jpvbootcamp_staging'
+      : undefined
+  )
   if (!databaseUrl) {
     process.stderr.write('ABORT: DATABASE_URL is not set\n')
     process.exitCode = 1
@@ -128,7 +132,7 @@ async function main(): Promise<void> {
     await checkClient.connect()
     let migrationCount = 0
     try {
-      migrationCount = await verifyPayloadMigrationCount(checkClient, 'jpvbootcamp_staging')
+      migrationCount = await verifyCanonicalPayloadMigrationState(checkClient, 'jpvbootcamp_staging')
     } finally {
       await checkClient.end()
     }

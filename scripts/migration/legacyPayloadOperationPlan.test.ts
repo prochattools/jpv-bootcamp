@@ -352,12 +352,12 @@ async function run(): Promise<void> {
   assert.equal(courseCoverMedia.source.raw?.sourceRelationship, 'wp_fcom_media_archive.sub_object_id -> wp_fcom_spaces.id')
   assert.equal(courseCoverMedia.source.raw?.sourceProven, true)
 
-  assert.ok(forumOgMedia.blockers.includes(POST_MIGRATION29_FORWARD_BLOCKERS.spaceMedia))
+  assert.equal(forumOgMedia.blockers.includes(POST_MIGRATION29_FORWARD_BLOCKERS.spaceMedia), false)
   assert.ok(forumOgMedia.blockers.includes('space_media_import_required'))
   assert.equal(forumOgMedia.source.raw?.targetCollection, 'payload_spaces')
   assert.equal(forumOgMedia.source.raw?.targetField, 'ogImage')
   assert.equal(forumOgMedia.source.raw?.sourceSpaceType, 'community')
-  assert.equal(forumOgMedia.source.raw?.schemaRegistrationRequired, true)
+  assert.equal(forumOgMedia.source.raw?.schemaRegistrationRequired, false)
   assert.equal(forumOgMedia.source.raw?.sourceRelationship, 'wp_fcom_media_archive.sub_object_id -> wp_fcom_spaces.id')
   assert.equal(forumOgMedia.source.raw?.sourceProven, true)
 
@@ -370,9 +370,9 @@ async function run(): Promise<void> {
   assert.equal(course.blockers.includes(POST_MIGRATION29_FORWARD_BLOCKERS.spaceMedia), false)
   assert.equal(forumSpace.data.ogImage, `$ref:${forumOgMedia.operationId}`)
   assert.ok(forumSpace.dependsOn.includes(forumOgMedia.operationId))
-  assert.ok(forumSpace.blockers.includes(POST_MIGRATION29_FORWARD_BLOCKERS.spaceMedia))
+  assert.equal(forumSpace.blockers.includes(POST_MIGRATION29_FORWARD_BLOCKERS.spaceMedia), false)
   assert.equal(plan.unresolved.some((item) => item.sourceType === 'community_media' && item.sourceId === '10'), false)
-  assert.equal(plan.unresolved.filter((item) => item.sourceType === 'community_media' && item.sourceId === '12').every((item) => item.code === POST_MIGRATION29_FORWARD_BLOCKERS.spaceMedia), true)
+  assert.equal(plan.unresolved.some((item) => item.sourceType === 'community_media' && item.sourceId === '12' && item.code === POST_MIGRATION29_FORWARD_BLOCKERS.spaceMedia), false)
   assert.equal(plan.unresolved.some((item) => item.sourceType === 'community_media' && ['10', '12'].includes(item.sourceId) && item.code === 'media_asset_requires_target_decision'), false)
 
   const portalSettingsGlobal = plan.operations.find((item) => item.targetType === 'global' && item.globalSlug === 'portalSettings')
@@ -408,10 +408,10 @@ async function run(): Promise<void> {
   assert.equal(lessonComment.data.displayName, 'Nidia Test')
   assert.equal(lessonComment.data.legacyBodyHtml, '<p>Lesson discussion</p>')
   assert.ok(lessonComment.data.body && typeof lessonComment.data.body === 'object')
-  assert.ok(lessonComment.blockers.includes('lesson_comment_schema_registration_required'))
+  assert.equal(lessonComment.blockers.includes('lesson_comment_schema_registration_required'), false)
   assert.equal(lessonComment.blockers.includes('richtext_wordpress_or_html_conversion_required'), false)
   assert.equal(lessonComment.source.raw?.messageRendered, '<p>Lesson discussion</p>')
-  assert.ok(plan.unresolved.some((item) => item.code === 'lesson_comment_schema_registration_required' && item.sourceId === '2'))
+  assert.equal(plan.unresolved.some((item) => item.code === 'lesson_comment_schema_registration_required' && item.sourceId === '2'), false)
   assert.equal(plan.unresolved.some((item) => item.code === 'unresolved_comment_post' && item.sourceId === '2'), false)
   assert.equal(plan.operations.some((item) => item.collection === 'payload_space_comments' && item.idempotencyKey === 'fc_comment_id:2'), false, 'lesson comments must not be forced into space comments')
   const missingParentComment = plan.operations.find((item) => item.collection === 'payload_space_comments' && item.idempotencyKey === 'fc_comment_id:3')
@@ -435,8 +435,8 @@ async function run(): Promise<void> {
   assert.equal(bunnyVideo.data.videoGuid, '56266f09-d651-4bc5-a5b0-ac9185018018')
   assert.equal(bunnyVideo.data.lesson, `$ref:${lesson.operationId}`)
   assert.equal(bunnyVideo.data.status, 'ready')
-  assert.ok(bunnyVideo.blockers.includes('bunny_target_schema_guid_first_compatibility_required'))
-  assert.ok(plan.unresolved.some((item) => item.code === 'bunny_target_schema_guid_first_compatibility_required' && item.sourceId === '11'))
+  assert.equal(bunnyVideo.blockers.includes('bunny_target_schema_guid_first_compatibility_required'), false)
+  assert.equal(plan.unresolved.some((item) => item.code === 'bunny_target_schema_guid_first_compatibility_required' && item.sourceId === '11'), false)
 
   const secondGuid = 'cda4b492-91af-430d-9bba-4268ccaf8cc2'
   const multiVideoSnapshot: LegacySqlSnapshot = {
@@ -541,7 +541,7 @@ async function run(): Promise<void> {
   assert.equal(feedLikeReaction.data.legacyReactionId, '2')
   assert.equal(feedLikeReaction.data.legacyActorUserId, '100')
   assert.equal(feedLikeReaction.data.legacyActorSourceSystem, 'fluentcommunity')
-  assert.ok(feedLikeReaction.blockers.includes('community_reaction_schema_registration_required'))
+  assert.equal(feedLikeReaction.blockers.includes('community_reaction_schema_registration_required'), false)
   assert.equal(feedLikeReaction.blockers.includes('unresolved_reaction_target_post'), false)
 
   const commentBookmarkReaction = plan.operations.find((item) => item.collection === 'payload_space_reactions' && item.idempotencyKey === 'fc_reaction:3')
@@ -552,7 +552,7 @@ async function run(): Promise<void> {
   assert.ok(commentBookmarkReaction.data.targetComment)
   assert.equal(commentBookmarkReaction.data.legacyReactionId, '3')
   assert.equal(commentBookmarkReaction.data.legacyActorUserId, '101')
-  assert.ok(commentBookmarkReaction.blockers.includes('community_reaction_schema_registration_required'))
+  assert.equal(commentBookmarkReaction.blockers.includes('community_reaction_schema_registration_required'), false)
   assert.equal(commentBookmarkReaction.blockers.includes('unresolved_reaction_target_comment'), false)
 
   const surveyVoteReaction = plan.operations.find((item) => item.collection === 'payload_space_reactions' && item.idempotencyKey === 'fc_reaction:4')
@@ -564,7 +564,7 @@ async function run(): Promise<void> {
   assert.equal(surveyVoteReaction.data.surveyOptionKey, 'opt_1')
   assert.equal(surveyVoteReaction.data.legacyReactionId, '4')
   assert.equal(surveyVoteReaction.data.legacyActorUserId, '100')
-  assert.ok(surveyVoteReaction.blockers.includes('community_reaction_schema_registration_required'))
+  assert.equal(surveyVoteReaction.blockers.includes('community_reaction_schema_registration_required'), false)
   assert.equal(surveyVoteReaction.blockers.includes('unresolved_reaction_target_post'), false)
 
   assert.equal(plan.operations.some((item) => item.collection === 'payload_space_reactions' && item.idempotencyKey === 'fc_reaction:1'), false, 'lesson_completed must not produce a space reaction operation')
@@ -576,6 +576,35 @@ async function run(): Promise<void> {
   for (const space of plan.operations.filter((item) => item.collection === 'payload_spaces')) {
     assert.equal(space.data.visibility, 'members')
     assert.equal(Object.prototype.hasOwnProperty.call(space.data, 'requiredAccessGroups'), false)
+  }
+
+  const collectOperationRefs = (value: unknown, refs: Set<string>): void => {
+    if (typeof value === 'string' && value.startsWith('$ref:')) {
+      refs.add(value.slice('$ref:'.length))
+      return
+    }
+    if (Array.isArray(value)) {
+      for (const item of value) collectOperationRefs(item, refs)
+      return
+    }
+    if (value && typeof value === 'object') {
+      for (const nested of Object.values(value as Record<string, unknown>)) collectOperationRefs(nested, refs)
+    }
+  }
+  for (const operation of plan.operations) {
+    const refs = new Set<string>()
+    collectOperationRefs(operation.data, refs)
+    for (const referencedOperationId of refs) {
+      assert.ok(
+        operation.dependsOn.includes(referencedOperationId),
+        `${operation.operationId} missing dependsOn for data ref ${referencedOperationId}`,
+      )
+      assert.equal(
+        plan.operations.filter((candidate) => candidate.operationId === referencedOperationId).length,
+        1,
+        `${operation.operationId} data ref ${referencedOperationId} must resolve to exactly one operation`,
+      )
+    }
   }
 
   console.log('Legacy Payload operation-plan contract: PASS')

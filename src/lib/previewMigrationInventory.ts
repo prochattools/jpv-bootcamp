@@ -60,6 +60,8 @@ const PREVIEW_MIGRATION_METADATA = [
   { purpose: 'Create the physical lesson-comment schema and locked-document relationship.', rollbackRisk: 'data_loss', verificationChecks: ['registry-match', 'ordered-exactly', 'lesson-comments', 'rollback-guard'] },
   { purpose: 'Add the source-proven community OG image relationship.', rollbackRisk: 'reversible', verificationChecks: ['registry-match', 'ordered-exactly', 'space-og-image', 'rollback-guard'] },
   { purpose: 'Create community reaction persistence for posts, comments, and preserved survey-option votes.', rollbackRisk: 'data_loss', verificationChecks: ['registry-match', 'ordered-exactly', 'community-reactions', 'rollback-guard'] },
+  { purpose: 'Persist source-proven member profile cover, website, biography, and social-link fields.', rollbackRisk: 'data_loss', verificationChecks: ['registry-match', 'ordered-exactly', 'member-profile-parity', 'rollback-guard'] },
+  { purpose: 'Create PortalSettings global persistence with grouped branding fields and media relationships.', rollbackRisk: 'data_loss', verificationChecks: ['registry-match', 'ordered-exactly', 'portal-settings', 'rollback-guard'] },
 ] as const satisfies readonly PreviewMigrationMetadata[]
 
 if (PREVIEW_MIGRATION_METADATA.length !== PAYLOAD_MIGRATION_NAMES.length) {
