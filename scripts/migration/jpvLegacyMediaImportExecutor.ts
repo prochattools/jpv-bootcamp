@@ -217,11 +217,12 @@ export async function runJpvLegacyMediaImport(config: JpvLegacyMediaImportConfig
     result.canonicalMigrationCount = await verifyCanonicalMigrations(client, schema)
     await verifyMediaTables(client, schema)
 
-    const sourcePaths = new Map<string, { path: string; sha256: string; bytes: number; storageKey: string }>()
+    const sourcePaths = new Map<string, { path: string; sha256: string; bytes: number; storageKey: string; mediaCollection: 'payload_media' | 'payload_private_media' }>()
     for (const entry of intents) {
-      if (!entry.plannerOperationId || !entry.targetCollection || !['payload_media', 'payload_private_media'].includes(entry.targetCollection)) {
+      if (!entry.plannerOperationId || !['public', 'private'].includes(entry.storageClass)) {
         throw new Error(`media_execution_entry_target_invalid:${entry.executionEntryId}`)
       }
+      const mediaCollection: 'payload_media' | 'payload_private_media' = entry.storageClass === 'public' ? 'payload_media' : 'payload_private_media'
       const sourcePath = resolveMediaSourcePath(entry, config.sourceUploadsRoot, config.acquiredSourcePaths)
       if (!existsSync(sourcePath)) throw new Error(`media_source_missing:${entry.executionEntryId}`)
       const stat = statSync(sourcePath)
@@ -234,6 +235,7 @@ export async function runJpvLegacyMediaImport(config: JpvLegacyMediaImportConfig
         sha256,
         bytes: stat.size,
         storageKey: deterministicMediaStorageKey(entry, sha256, sourcePath),
+        mediaCollection,
       })
     }
 
@@ -246,7 +248,7 @@ export async function runJpvLegacyMediaImport(config: JpvLegacyMediaImportConfig
         continue
       }
       const source = sourcePaths.get(entry.executionEntryId)!
-      const collection = entry.targetCollection as 'payload_media' | 'payload_private_media'
+      const collection = source.mediaCollection
       const storageDir = collection === 'payload_media'
         ? path.resolve(config.publicStorageDir ?? 'public/media')
         : path.resolve(config.privateStorageDir ?? 'private/payload-course-media')
