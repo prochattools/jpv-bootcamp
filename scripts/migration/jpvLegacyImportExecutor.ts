@@ -204,9 +204,10 @@ export function flattenDataForSql(
       const colName = prefix ? `${prefix}_${snakeKey}` : snakeKey
 
       if (typeof value === 'string' && value.startsWith('$ref:')) {
-        const idCol = camelToSnake(`${key}Id`)
-        if (!prefix && availableColumns.has(idCol)) continue
-        missingColumns.add(prefix ? `${colName}_id` : idCol)
+        // The resolved FK column is always colName + '_id' (e.g. login_banner_logo → login_banner_logo_id)
+        const idCol = `${colName}_id`
+        if (availableColumns.has(idCol)) continue
+        missingColumns.add(idCol)
         continue
       }
 
@@ -229,6 +230,24 @@ export function flattenDataForSql(
         if (availableColumns.has(colName)) flat[colName] = JSON.stringify(value)
         else missingColumns.add(colName)
         continue
+      }
+
+      // Numeric FK inside a group (e.g. loginBanner.logo resolved to id number):
+      // prefer colName_id column if it exists (mirrors the outer-loop FK logic)
+      if (typeof value === 'number' && prefix) {
+        const idCol = `${colName}_id`
+        if (availableColumns.has(idCol)) {
+          flat[idCol] = value
+          continue
+        }
+      }
+
+      if (value === null) {
+        const idCol = `${colName}_id`
+        if (availableColumns.has(idCol)) {
+          flat[idCol] = null
+          continue
+        }
       }
 
       if (availableColumns.has(colName)) {

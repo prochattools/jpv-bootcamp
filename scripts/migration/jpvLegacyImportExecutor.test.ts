@@ -333,6 +333,31 @@ describe('flattenDataForSql', () => {
     flattenDataForSql({ targetPost: null }, cols, missing)
     assert.ok(missing.has('target_post_id'))
   })
+
+  it('nested null FK value maps to prefixed _id column', () => {
+    // loginBanner.logo: null → login_banner_logo_id = null
+    const cols = new Set(['login_banner_logo_id', 'login_banner_title'])
+    const result = flattenDataForSql({ loginBanner: { logo: null, title: 'Hello' } }, cols)
+    assert.equal(result['login_banner_logo_id'], null)
+    assert.equal(result['login_banner_title'], 'Hello')
+    assert.ok(!('login_banner_logo' in result))
+  })
+
+  it('nested numeric FK value maps to prefixed _id column', () => {
+    // loginBanner.logo: 42 → login_banner_logo_id = 42
+    const cols = new Set(['login_banner_logo_id'])
+    const result = flattenDataForSql({ loginBanner: { logo: 42 } }, cols)
+    assert.equal(result['login_banner_logo_id'], 42)
+    assert.ok(!('login_banner_logo' in result))
+  })
+
+  it('nested $ref string maps to correct prefixed _id column (no false missing)', () => {
+    // loginBanner.logo: '$ref:op_123' → login_banner_logo_id exists → no missing
+    const cols = new Set(['login_banner_logo_id'])
+    const missing = new Set<string>()
+    flattenDataForSql({ loginBanner: { logo: '$ref:op_123' } }, cols, missing)
+    assert.equal(missing.size, 0, 'should not report login_banner_logo_id as missing')
+  })
 })
 
 // ─── runJpvLegacyImport dry-run ───────────────────────────────────────────────
