@@ -257,6 +257,22 @@ export function flattenDataForSql(
       missingColumns.add(idCol)
       continue
     }
+    // null FK: prefer _id column when available so null FK relationships write to
+    // the correct column (e.g. targetComment: null → target_comment_id = NULL)
+    if (value === null) {
+      const idCol = camelToSnake(`${key}Id`)
+      const plainCol = camelToSnake(key)
+      if (availableColumns.has(idCol)) {
+        flat[idCol] = null
+        continue
+      }
+      if (availableColumns.has(plainCol)) {
+        flat[plainCol] = null
+        continue
+      }
+      missingColumns.add(idCol)
+      continue
+    }
     normalized[key] = value
   }
 

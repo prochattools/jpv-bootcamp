@@ -310,6 +310,29 @@ describe('flattenDataForSql', () => {
     assert.ok(!('id' in result))
     assert.ok('email' in result)
   })
+
+  it('maps null FK value to _id column when _id column exists', () => {
+    const cols = new Set(['target_post_id', 'target_comment_id'])
+    const result = flattenDataForSql({ targetPost: null, targetComment: null }, cols)
+    assert.equal(result['target_post_id'], null)
+    assert.equal(result['target_comment_id'], null)
+    assert.ok(!('target_post' in result))
+    assert.ok(!('target_comment' in result))
+  })
+
+  it('maps null FK to plain column when only plain column exists', () => {
+    const cols = new Set(['login_banner_logo_id'])
+    const result = flattenDataForSql({ loginBannerLogo: null }, cols)
+    assert.equal(result['login_banner_logo_id'], null)
+    assert.ok(!('login_banner_logo' in result))
+  })
+
+  it('null FK with neither column reports missing _id', () => {
+    const cols = new Set<string>()
+    const missing = new Set<string>()
+    flattenDataForSql({ targetPost: null }, cols, missing)
+    assert.ok(missing.has('target_post_id'))
+  })
 })
 
 // ─── runJpvLegacyImport dry-run ───────────────────────────────────────────────
