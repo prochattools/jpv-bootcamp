@@ -311,15 +311,28 @@ test.describe('Staging Smoke Tests - Full Platform Flows', () => {
 
   // ======== ERROR HANDLING ========
   test('ERROR-001: Server errors handled gracefully', async ({ page }) => {
-    await page.goto(`${STAGING_URL}/`, { waitUntil: 'domcontentloaded' })
+    // Capture HTTP-level failures: 5xx = server error; unexpected 403 = access control misconfiguration.
+    // 403 on /api/payload_media/file/ is expected — private media access control denies anonymous
+    // requests by design. All other 403s and any 5xx are genuine failures.
+    const unexpectedFailures: Array<{ url: string; status: number }> = []
+    const pageErrors: string[] = []
 
-    // Monitor console for errors (may be expected in test)
-    const errors: string[] = []
-    page.on('console', msg => {
-      if (msg.type() === 'error') {
-        errors.push(msg.text())
+    page.on('response', resp => {
+      const status = resp.status()
+      const url = resp.url()
+      const isPrivateMediaDenial = status === 403 && url.includes('/api/payload_media/file/')
+      if (status >= 500 || (status === 403 && !isPrivateMediaDenial)) {
+        unexpectedFailures.push({ url: url.replace(/[?#].*/, '…'), status })
       }
     })
+
+    page.on('pageerror', e => {
+      if (!e.message.includes('ResizeObserver')) {
+        pageErrors.push(e.message)
+      }
+    })
+
+    await page.goto(`${STAGING_URL}/`, { waitUntil: 'domcontentloaded' })
 
     // Navigate around the site using hrefs to avoid stale locators after navigation
     const hrefs: string[] = []
@@ -334,13 +347,10 @@ test.describe('Staging Smoke Tests - Full Platform Flows', () => {
       await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {})
     }
 
-    // No unhandled runtime errors
-    const severeErrors = errors.filter(e =>
-      !e.includes('hydration') &&
-      !e.includes('Non-Error promise rejection received') &&
-      !e.includes('ResizeObserver')
-    )
-    expect(severeErrors).toEqual([])
+    // No unhandled JS exceptions
+    expect(pageErrors).toEqual([])
+    // No 5xx or unexpected 403 responses
+    expect(unexpectedFailures).toEqual([])
   })
 })
 
