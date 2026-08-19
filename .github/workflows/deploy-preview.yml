@@ -393,6 +393,10 @@ jobs:
           EXPECTED_DEPLOYMENT_SHA: ${{ github.sha }}
         run: pnpm exec tsx scripts/staging-gates/waitForPreviewDeployment.mts
 
+      - name: Install pinned Chromium browser
+        if: success()
+        run: pnpm exec playwright install --with-deps chromium
+
       - name: Run authenticated admin responsive gate
         if: success()
         env:
