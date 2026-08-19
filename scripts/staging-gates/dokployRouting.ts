@@ -1,14 +1,26 @@
 /**
- * Staging routing guard for Dokploy domain.update calls.
+ * Staging routing guard for Dokploy application.update (labelsSwarm).
  *
- * Dokploy routes HTTP traffic via the Traefik file provider:
- * /etc/dokploy/traefik/dynamic/<appName>.yml is written by manageDomain().
- * manageDomain() is called on domain CREATE and UPDATE — not on application.deploy.
- * After every Dokploy redeploy the file may be stale/absent; calling domain.update
- * forces manageDomain() to re-write it, restoring Traefik routing without manual
- * docker service label manipulation.
+ * Root cause of routing loss after each deploy:
+ * - Dokploy's file provider writes Traefik config to its container-internal
+ *   /etc/dokploy/traefik/dynamic/ — NOT to the host path that Traefik reads.
+ * - Docker Swarm service labels survive as long as labelsSwarm is stored in
+ *   Dokploy's DB. If labelsSwarm=NULL (as with the staging app), labels are
+ *   absent from the service spec on every redeploy.
  *
- * See: Dokploy server.mjs — domain.update mutation → Hh() (manageDomain)
+ * Fix: call application.update with labelsSwarm set to the Traefik routing
+ * labels before application.deploy. Dokploy persists labelsSwarm in its DB and
+ * includes them in the Docker service spec on every deploy.
+ *
+ * The Traefik Swarm provider picks up the labels automatically.
+ *
+ * Confirmed label format from the production app (web-public-jpv-bootcamp-l66egq):
+ *   traefik.enable=true
+ *   traefik.http.routers.<name>.entrypoints=web,websecure
+ *   traefik.http.routers.<name>.rule=Host(`<hostname>`)
+ *   traefik.http.routers.<name>.service=<name>
+ *   traefik.http.services.<name>.loadbalancer.server.port=3000
+ *   traefik.docker.network=dokploy-network
  */
 
 import {
@@ -26,8 +38,25 @@ export const STAGING_DOMAIN_ID = 'lLeympWtBHVcL6R9JeyZQ'
 /** The canonical staging domain hostname. */
 export const STAGING_DOMAIN_HOST = 'preview.jpvbootcamp.com'
 
+/** Router/service name suffix for the staging app Traefik labels. */
+const ROUTER_NAME = `${STAGING_APP_ID}-web`
+
 /**
- * Assert that a domain update targets only the known staging domain and app.
+ * The canonical Traefik routing labels for the staging app.
+ * These match the production app label format exactly.
+ * They are persisted in Dokploy's DB as labelsSwarm and applied on every deploy.
+ */
+export const STAGING_TRAEFIK_LABELS: Record<string, string> = {
+  'traefik.enable': 'true',
+  [`traefik.http.routers.${ROUTER_NAME}.entrypoints`]: 'web,websecure',
+  [`traefik.http.routers.${ROUTER_NAME}.rule`]: `Host(\`${STAGING_DOMAIN_HOST}\`)`,
+  [`traefik.http.routers.${ROUTER_NAME}.service`]: ROUTER_NAME,
+  [`traefik.http.services.${ROUTER_NAME}.loadbalancer.server.port`]: '3000',
+  'traefik.docker.network': 'dokploy-network',
+}
+
+/**
+ * Assert that a routing update targets only the known staging app.
  * Throws on any violation — fail closed.
  */
 export function assertStagingRoutingTarget(domainId: string, appId: string): void {
@@ -71,16 +100,15 @@ export function assertStagingRoutingTarget(domainId: string, appId: string): voi
 }
 
 /**
- * Build the minimal domain.update payload that triggers manageDomain.
+ * Build the application.update payload that persists labelsSwarm in Dokploy's DB.
  *
- * Sends the existing staging domain values back unchanged — the update itself is
- * the side-effect that causes Dokploy to re-write the Traefik config file.
+ * application.deploy reads labelsSwarm from the DB and applies it to the
+ * Docker service spec. Setting it here means every future deploy includes
+ * the Traefik routing labels without any manual intervention.
  */
-export function buildDomainUpdatePayload(): Record<string, unknown> {
+export function buildApplicationUpdatePayload(): Record<string, unknown> {
   return {
-    domainId: STAGING_DOMAIN_ID,
-    host: STAGING_DOMAIN_HOST,
-    https: false,
-    certificateType: 'none',
+    applicationId: STAGING_DOKPLOY_APPLICATION_ID,
+    labelsSwarm: STAGING_TRAEFIK_LABELS,
   }
 }

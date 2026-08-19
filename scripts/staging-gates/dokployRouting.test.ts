@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict'
 import {
   assertStagingRoutingTarget,
-  buildDomainUpdatePayload,
+  buildApplicationUpdatePayload,
   STAGING_DOMAIN_ID,
   STAGING_DOMAIN_HOST,
+  STAGING_TRAEFIK_LABELS,
 } from './dokployRouting'
 import { STAGING_APP_ID, PRODUCTION_DENY_LIST } from './stagingPolicy'
 import { STAGING_DOKPLOY_APPLICATION_ID } from './dokployMediaMount'
@@ -21,6 +22,34 @@ function throws(fn: () => void, pattern: RegExp, label: string): void {
 // --- Constants ---
 assert.equal(STAGING_DOMAIN_ID, 'lLeympWtBHVcL6R9JeyZQ', 'staging domain ID')
 assert.equal(STAGING_DOMAIN_HOST, 'preview.jpvbootcamp.com', 'staging domain host')
+
+// --- STAGING_TRAEFIK_LABELS: required routing labels ---
+assert.equal(STAGING_TRAEFIK_LABELS['traefik.enable'], 'true', 'traefik.enable=true')
+assert.ok(
+  Object.keys(STAGING_TRAEFIK_LABELS).some((k) => k.includes('.rule')),
+  'labels must include a Host() routing rule',
+)
+assert.ok(
+  Object.values(STAGING_TRAEFIK_LABELS).some((v) => v.includes('preview.jpvbootcamp.com')),
+  'labels must reference preview.jpvbootcamp.com',
+)
+assert.ok(
+  Object.keys(STAGING_TRAEFIK_LABELS).some((k) => k.includes('.server.port')),
+  'labels must include loadbalancer server port',
+)
+assert.equal(
+  STAGING_TRAEFIK_LABELS['traefik.docker.network'],
+  'dokploy-network',
+  'labels must include dokploy-network',
+)
+
+// --- STAGING_TRAEFIK_LABELS: must not reference production domain ---
+for (const v of Object.values(STAGING_TRAEFIK_LABELS)) {
+  assert.ok(
+    !v.includes('jpvbootcamp.com') || v.includes('preview.jpvbootcamp.com'),
+    `label value must not reference production domain: ${v}`,
+  )
+}
 
 // --- assertStagingRoutingTarget: valid ---
 assertStagingRoutingTarget(STAGING_DOMAIN_ID, STAGING_APP_ID)
@@ -63,22 +92,28 @@ for (const deniedId of PRODUCTION_DENY_LIST) {
   )
 }
 
-// --- buildDomainUpdatePayload: content ---
-const payload = buildDomainUpdatePayload()
-assert.equal(payload.domainId, STAGING_DOMAIN_ID, 'payload domainId')
-assert.equal(payload.host, STAGING_DOMAIN_HOST, 'payload host')
-assert.equal(payload.https, false, 'payload https=false')
-assert.equal(payload.certificateType, 'none', 'payload certificateType=none')
+// --- buildApplicationUpdatePayload: targets exact staging app ---
+const payload = buildApplicationUpdatePayload()
+assert.equal(payload.applicationId, STAGING_DOKPLOY_APPLICATION_ID, 'payload applicationId')
 
-// --- buildDomainUpdatePayload: no sensitive keys ---
-const sensitiveKeys = ['applicationId', 'apiKey', 'password', 'secret', 'token']
+// --- buildApplicationUpdatePayload: labelsSwarm is the correct labels ---
+const labels = payload.labelsSwarm as Record<string, string>
+assert.ok(typeof labels === 'object' && labels !== null, 'labelsSwarm is an object')
+assert.equal(labels['traefik.enable'], 'true', 'labelsSwarm traefik.enable')
+assert.ok(
+  Object.values(labels).some((v) => v.includes('preview.jpvbootcamp.com')),
+  'labelsSwarm references preview.jpvbootcamp.com',
+)
+
+// --- buildApplicationUpdatePayload: no sensitive keys ---
+const sensitiveKeys = ['apiKey', 'password', 'secret', 'token', 'env', 'DATABASE_URL']
 for (const key of sensitiveKeys) {
   assert.ok(!(key in payload), `payload must not include sensitive key: ${key}`)
 }
 
-// --- buildDomainUpdatePayload: stable across calls (idempotent) ---
-const p1 = buildDomainUpdatePayload()
-const p2 = buildDomainUpdatePayload()
+// --- buildApplicationUpdatePayload: stable across calls (idempotent) ---
+const p1 = buildApplicationUpdatePayload()
+const p2 = buildApplicationUpdatePayload()
 assert.equal(JSON.stringify(p1), JSON.stringify(p2), 'payload is stable across calls')
 
-console.log('dokployRouting.test.ts passed — 16 assertions')
+console.log('dokployRouting.test.ts passed — 22 assertions')
