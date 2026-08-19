@@ -125,8 +125,13 @@ jobs:
       - name: Run deterministic non-browser release gate
         run: pnpm test:release
 
+      - name: Fix apt mirrors (replace dead Azure mirror with public archive)
+        run: |
+          sudo sed -i 's|http://azure.archive.ubuntu.com|https://archive.ubuntu.com|g' \
+            /etc/apt/sources.list /etc/apt/sources.list.d/*.list 2>/dev/null || true
+
       - name: Install pinned Chromium browser
-        timeout-minutes: 15
+        timeout-minutes: 10
         env:
           DEBIAN_FRONTEND: noninteractive
         run: pnpm exec playwright install --with-deps chromium
@@ -396,9 +401,15 @@ jobs:
           EXPECTED_DEPLOYMENT_SHA: ${{ github.sha }}
         run: pnpm exec tsx scripts/staging-gates/waitForPreviewDeployment.mts
 
+      - name: Fix apt mirrors (replace dead Azure mirror with public archive)
+        if: success()
+        run: |
+          sudo sed -i 's|http://azure.archive.ubuntu.com|https://archive.ubuntu.com|g' \
+            /etc/apt/sources.list /etc/apt/sources.list.d/*.list 2>/dev/null || true
+
       - name: Install pinned Chromium browser
         if: success()
-        timeout-minutes: 15
+        timeout-minutes: 10
         env:
           DEBIAN_FRONTEND: noninteractive
         run: pnpm exec playwright install --with-deps chromium
