@@ -1,4 +1,5 @@
 import type { Payload } from 'payload'
+import { createLocalReq } from 'payload'
 
 const STAGING_ENVS = ['preview', 'staging'] as const
 
@@ -118,6 +119,17 @@ async function provisionMember(payload: Payload): Promise<string | null> {
 }
 
 async function provisionMemberSubscription(payload: Payload, memberId: string): Promise<void> {
+  // The Payload Local API creates a req with req.user=null in onInit context.
+  // Field validators call req.payloadDataLoader.find() to verify relationship targets —
+  // that find is called WITHOUT overrideAccess, so payload_members.read returns false
+  // for a null user and the member is not found, causing ValidationError "field is invalid: Member".
+  // Fix: create a system req with a synthetic admin user so the internal validator find
+  // sees an authenticated user and can read the member.
+  const systemReq = await createLocalReq(
+    { user: { id: 0, email: 'system@internal.invalid', collection: 'payload_users' } as never },
+    payload,
+  )
+
   const existing = await payload.find({
     collection: 'payload_subscriptions',
     where: {
@@ -129,6 +141,8 @@ async function provisionMemberSubscription(payload: Payload, memberId: string): 
     },
     limit: 1,
     overrideAccess: true,
+    depth: 0,
+    req: systemReq,
   })
 
   if (existing.docs.length > 0) {
@@ -142,6 +156,8 @@ async function provisionMemberSubscription(payload: Payload, memberId: string): 
     where: { member: { equals: memberId } },
     limit: 1,
     overrideAccess: true,
+    depth: 0,
+    req: systemReq,
   })
 
   let billingAccountId: string
@@ -161,6 +177,7 @@ async function provisionMemberSubscription(payload: Payload, memberId: string): 
         billingEmail: memberEmail,
       } as never,
       overrideAccess: true,
+      req: systemReq,
     })
     billingAccountId = String((newBilling as { id: string | number }).id)
     console.info('staging-auto-provision: billing account created %s', billingAccountId)
@@ -184,6 +201,7 @@ async function provisionMemberSubscription(payload: Payload, memberId: string): 
       cancelAtPeriodEnd: false,
     } as never,
     overrideAccess: true,
+    req: systemReq,
   })
   console.info('staging-auto-provision: member subscription provisioned (plan=jpv_bootcamp_membership, status=active)')
 }
