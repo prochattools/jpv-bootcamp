@@ -361,6 +361,13 @@ jobs:
           echo "Provenance: deployed from $(git rev-parse HEAD)"
 
 
+      - name: Ensure staging Traefik routing (domain.update → manageDomain)
+        if: success()
+        env:
+          DOKPLOY_PREVIEW_APP_ID: ${{ secrets.DOKPLOY_PREVIEW_APP_ID }}
+          DOKPLOY_API_KEY: ${{ secrets.DOKPLOY_API_KEY }}
+        run: pnpm exec tsx scripts/staging-gates/ensurePreviewRouting.mts
+
       - name: Verify staging admin secret readiness
         if: success()
         shell: bash

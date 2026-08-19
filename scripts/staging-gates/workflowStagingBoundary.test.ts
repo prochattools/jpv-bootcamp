@@ -92,7 +92,14 @@ async function main(): Promise<void> {
     'deploy-preview.yml must echo deployment provenance SHA',
   )
 
-  console.log('workflowDeploymentBoundary.test.ts passed — 14 assertions')
+  // Rule 11: deploy-preview.yml must call ensurePreviewRouting after application.deploy
+  // This guard triggers Dokploy domain.update → manageDomain → Traefik file re-written
+  assert.ok(
+    previewYml.includes('ensurePreviewRouting.mts'),
+    'deploy-preview.yml must call ensurePreviewRouting.mts after application.deploy to restore Traefik routing',
+  )
+
+  console.log('workflowDeploymentBoundary.test.ts passed — 15 assertions')
 }
 
 main().catch((e) => {
