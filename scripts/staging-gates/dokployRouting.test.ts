@@ -5,6 +5,7 @@ import {
   STAGING_DOMAIN_ID,
   STAGING_DOMAIN_HOST,
   STAGING_TRAEFIK_LABELS,
+  TRAEFIK_FILE_PROVIDER_PATH,
 } from './dokployRouting'
 import { STAGING_APP_ID, PRODUCTION_DENY_LIST } from './stagingPolicy'
 import { STAGING_DOKPLOY_APPLICATION_ID } from './dokployMediaMount'
@@ -22,6 +23,20 @@ function throws(fn: () => void, pattern: RegExp, label: string): void {
 // --- Constants ---
 assert.equal(STAGING_DOMAIN_ID, 'lLeympWtBHVcL6R9JeyZQ', 'staging domain ID')
 assert.equal(STAGING_DOMAIN_HOST, 'preview.jpvbootcamp.com', 'staging domain host')
+
+// --- TRAEFIK_FILE_PROVIDER_PATH: must reference the staging app and correct directory ---
+assert.ok(
+  TRAEFIK_FILE_PROVIDER_PATH.includes('/etc/dokploy/traefik/dynamic/'),
+  'file provider path must be in /etc/dokploy/traefik/dynamic/',
+)
+assert.ok(
+  TRAEFIK_FILE_PROVIDER_PATH.includes('preview-jpvbootcamp'),
+  'file provider path must reference preview-jpvbootcamp',
+)
+assert.ok(
+  TRAEFIK_FILE_PROVIDER_PATH.endsWith('.yml'),
+  'file provider path must be a .yml file',
+)
 
 // --- STAGING_TRAEFIK_LABELS: required routing labels ---
 assert.equal(STAGING_TRAEFIK_LABELS['traefik.enable'], 'true', 'traefik.enable=true')
@@ -116,4 +131,4 @@ const p1 = buildApplicationUpdatePayload()
 const p2 = buildApplicationUpdatePayload()
 assert.equal(JSON.stringify(p1), JSON.stringify(p2), 'payload is stable across calls')
 
-console.log('dokployRouting.test.ts passed — 22 assertions')
+console.log('dokployRouting.test.ts passed — 25 assertions')

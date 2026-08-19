@@ -1,20 +1,25 @@
 /**
- * Staging routing guard for Dokploy application.update (labelsSwarm).
+ * Staging routing guard for Dokploy + Traefik.
  *
- * Root cause of routing loss after each deploy:
- * - Dokploy's file provider writes Traefik config to its container-internal
- *   /etc/dokploy/traefik/dynamic/ — NOT to the host path that Traefik reads.
- * - Docker Swarm service labels survive as long as labelsSwarm is stored in
- *   Dokploy's DB. If labelsSwarm=NULL (as with the staging app), labels are
- *   absent from the service spec on every redeploy.
+ * Architecture (verified 2026-08-19):
+ * - Traefik's swarm provider reads SERVICE-LEVEL labels (Spec.Labels).
+ * - Dokploy's labelsSwarm writes to TaskTemplate.ContainerSpec.Labels, which
+ *   Traefik's docker provider would read for standalone containers, but NOT
+ *   for Docker Swarm services in this Dokploy configuration.
+ * - All active routing for Swarm services (including production) uses
+ *   SERVICE-LEVEL labels; Dokploy does NOT set these via labelsSwarm.
  *
- * Fix: call application.update with labelsSwarm set to the Traefik routing
- * labels before application.deploy. Dokploy persists labelsSwarm in its DB and
- * includes them in the Docker service spec on every deploy.
+ * Primary routing mechanism for staging:
+ *   Traefik file provider at /etc/dokploy/traefik/dynamic/preview-jpvbootcamp.yml
+ *   on the HOST filesystem. Traefik watches this directory and hot-reloads.
+ *   The file survives all Docker service deploys. See traefik-file-provider-setup.md.
  *
- * The Traefik Swarm provider picks up the labels automatically.
+ * Belt-and-suspenders: labelsSwarm is also set in Dokploy's DB via
+ *   application.update before each deploy. This sets ContainerSpec.Labels on the
+ *   running task containers. If a future Dokploy version writes service-level
+ *   labels instead, these will work automatically.
  *
- * Confirmed label format from the production app (web-public-jpv-bootcamp-l66egq):
+ * Confirmed production label format (web-public-jpv-bootcamp-l66egq, swarm):
  *   traefik.enable=true
  *   traefik.http.routers.<name>.entrypoints=web,websecure
  *   traefik.http.routers.<name>.rule=Host(`<hostname>`)
@@ -37,6 +42,15 @@ export const STAGING_DOMAIN_ID = 'lLeympWtBHVcL6R9JeyZQ'
 
 /** The canonical staging domain hostname. */
 export const STAGING_DOMAIN_HOST = 'preview.jpvbootcamp.com'
+
+/**
+ * Path to the Traefik file provider config on the Dokploy HOST filesystem.
+ * Traefik watches this directory with file.watch=true and hot-reloads.
+ * This file MUST exist and be correct for staging routing to work.
+ * See traefik-file-provider-setup.md for the config template.
+ */
+export const TRAEFIK_FILE_PROVIDER_PATH =
+  '/etc/dokploy/traefik/dynamic/preview-jpvbootcamp.yml'
 
 /** Router/service name suffix for the staging app Traefik labels. */
 const ROUTER_NAME = `${STAGING_APP_ID}-web`

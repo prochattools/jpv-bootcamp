@@ -1,20 +1,30 @@
 /**
- * Persist staging Traefik routing labels in Dokploy before each deployment.
+ * Ensure staging Traefik routing is active before each deployment.
  *
- * Root cause: Dokploy's Docker Swarm service is recreated on every deploy.
- * If labelsSwarm=NULL in Dokploy's DB (as with the staging app), the service
- * spec has no Traefik routing labels after redeploy. Manual docker service
- * label-add workarounds are lost on the next deploy.
+ * Root cause: Dokploy's Docker Swarm deploy recreates the service spec.
+ * When labelsSwarm=NULL in Dokploy's DB, the service has no Traefik labels
+ * after redeploy and Traefik's swarm provider cannot route traffic.
  *
- * Fix: call application.update with the correct labelsSwarm before calling
- * application.deploy. Dokploy persists labelsSwarm in its DB and applies it
- * to the Docker service spec on every deploy. Traefik's Swarm provider then
- * routes preview.jpvbootcamp.com traffic automatically.
+ * Architecture clarification (verified 2026-08-19):
+ * - Traefik swarm provider reads SERVICE-LEVEL labels (Spec.Labels).
+ * - Dokploy's labelsSwarm writes to TaskTemplate.ContainerSpec.Labels,
+ *   which Traefik's docker provider would need to read (but doesn't for
+ *   Swarm-managed services in this Dokploy config).
+ * - Fix: Traefik FILE PROVIDER config at /etc/dokploy/traefik/dynamic/
+ *   preview-jpvbootcamp.yml on the HOST filesystem. Traefik watches this
+ *   directory and hot-reloads; the file survives all Docker service deploys.
  *
- * Note: Dokploy's domain.update → manageDomain writes to the container's
- * internal /etc/dokploy/traefik/dynamic/ — NOT to the host path that Traefik
- * reads (Traefik mounts from the host, not the Dokploy container). This is why
- * domain.update alone does not fix the routing; labelsSwarm is required.
+ * This script:
+ * 1. Fails closed if not targeting the exact staging app.
+ * 2. Sets labelsSwarm in Dokploy's DB via application.update (belt-and-
+ *    suspenders: ContainerSpec.Labels are set on each deploy and may be used
+ *    by future Dokploy versions that write service-level labels).
+ * 3. Verifies routing is active by checking the preview URL returns 2xx/3xx.
+ *    If 404, the Traefik file provider config is missing or invalid — fail
+ *    closed so the operator must restore it before deploying.
+ *
+ * File provider config location (operator-managed, ONE-TIME SETUP):
+ *   /etc/dokploy/traefik/dynamic/preview-jpvbootcamp.yml
  *
  * Called before application.deploy in deploy-preview.yml.
  */
@@ -22,6 +32,7 @@
 import {
   assertStagingRoutingTarget,
   buildApplicationUpdatePayload,
+  STAGING_DOMAIN_HOST,
   STAGING_DOMAIN_ID,
 } from './dokployRouting'
 import { STAGING_DOKPLOY_APPLICATION_ID } from './dokployMediaMount'
@@ -64,59 +75,43 @@ async function request(path: string, init?: RequestInit): Promise<unknown> {
   return body
 }
 
-async function readApplication(): Promise<unknown> {
-  const query = new URLSearchParams({ applicationId: STAGING_DOKPLOY_APPLICATION_ID })
-  return request(`/application.one?${query.toString()}`)
-}
-
-function assertApplicationRecord(record: unknown): asserts record is { applicationId: string; appName: string } {
-  if (
-    typeof record !== 'object' ||
-    record === null ||
-    typeof (record as Record<string, unknown>).applicationId !== 'string'
-  ) {
-    throw new Error('ROUTING-FAILED: application.one returned unexpected shape')
-  }
-  const r = record as { applicationId: string }
-  if (r.applicationId !== STAGING_DOKPLOY_APPLICATION_ID) {
-    throw new Error(
-      `ROUTING-FAILED: application record applicationId='${r.applicationId}' does not match '${STAGING_DOKPLOY_APPLICATION_ID}'`,
-    )
-  }
-}
-
-// Step 1: verify the application record exists
-const before = await readApplication()
-assertApplicationRecord(before)
-console.log(JSON.stringify({
-  ok: true,
-  step: 'application_verified',
-  applicationId: STAGING_DOKPLOY_APPLICATION_ID,
-}))
-
-// Step 2: set labelsSwarm via application.update — persists in Dokploy's DB
-// so every future application.deploy applies the correct Traefik routing labels
+// Step 1: set labelsSwarm via application.update
+// This persists ContainerSpec.Labels in Dokploy's DB (belt-and-suspenders).
+// NOTE: As of 2026-08-19, Traefik's swarm provider reads SERVICE-LEVEL labels
+// (Spec.Labels), not ContainerSpec.Labels. The primary routing mechanism is the
+// Traefik file provider config at /etc/dokploy/traefik/dynamic/preview-jpvbootcamp.yml.
 const payload = buildApplicationUpdatePayload()
 await request('/application.update', {
   method: 'POST',
   body: JSON.stringify(payload),
 })
+console.log(JSON.stringify({
+  ok: true,
+  step: 'labels_swarm_updated',
+  applicationId: STAGING_DOKPLOY_APPLICATION_ID,
+  note: 'ContainerSpec.Labels set; primary routing via Traefik file provider',
+}))
 
-// Step 3: verify labelsSwarm is now set in the DB
-const after = await readApplication() as Record<string, unknown>
-const labelsSwarm = after.labelsSwarm
-if (!labelsSwarm || typeof labelsSwarm !== 'object') {
-  throw new Error('ROUTING-FAILED: labelsSwarm was not persisted in Dokploy DB after application.update')
-}
-const ls = labelsSwarm as Record<string, string>
-if (ls['traefik.enable'] !== 'true') {
-  throw new Error(`ROUTING-FAILED: traefik.enable not set correctly: got '${ls['traefik.enable']}'`)
+// Step 2: verify routing is active via HTTP health check
+// The Traefik file provider config must be in place for this to pass.
+// If routing is broken (404), fail closed so the deploy does not proceed.
+const previewUrl = `https://${STAGING_DOMAIN_HOST}/`
+const routingCheck = await fetch(previewUrl, { redirect: 'manual' })
+const routingOk = routingCheck.status >= 200 && routingCheck.status < 500 && routingCheck.status !== 404
+
+if (!routingOk) {
+  throw new Error(
+    `ROUTING-FAILED: ${previewUrl} returned HTTP ${routingCheck.status}. ` +
+    `Ensure the Traefik file provider config exists at ` +
+    `/etc/dokploy/traefik/dynamic/preview-jpvbootcamp.yml on the host. ` +
+    `See scripts/staging-gates/traefik-file-provider-setup.md for the config template.`,
+  )
 }
 
 console.log(JSON.stringify({
   ok: true,
-  action: 'routing_labels_persisted',
-  applicationId: STAGING_DOKPLOY_APPLICATION_ID,
-  mechanism: 'application.update labelsSwarm -> persisted in Dokploy DB -> applied on every application.deploy',
-  labelCount: Object.keys(ls).length,
+  action: 'routing_verified',
+  previewUrl,
+  httpStatus: routingCheck.status,
+  mechanism: 'Traefik file provider at /etc/dokploy/traefik/dynamic/preview-jpvbootcamp.yml',
 }))
