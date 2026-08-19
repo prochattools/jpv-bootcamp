@@ -1,12 +1,13 @@
 # Migration Approval Status
 
-<!-- Reconciliation note 2026-08-08: FINAL PRE-MIGRATION CLOSURE. Current branch HEAD is 43d569211acde5ae80f6e33524d40d432b417ce8 (CI run 31278379259, success). Dependency alignment complete (Payload 3.87.1 family). Migration inventory is 29 entries. No migrations have been applied. Final closure gates passed (164/164 release tests, type-check, build, audit). Pre-apply migration 29 plan requires operator authorization with exact commit. -->
+<!-- Reconciliation note 2026-08-19: MIGRATION INVENTORY EXTENDED TO 35. Migrations 30-35 (member_profile_parity, portal_settings, and associated hardening) added and applied to staging. Authorization cycle reset. Branch HEAD advances from 43d569211acde5ae80f6e33524d40d432b417ce8 to current tip. All 35 migrations confirmed applied on staging. Authorization required before any production migration. -->
 
-- Current status: `READY FOR FINAL AUTHORIZATION`
+- Current status: `BLOCKED`
 - Branch: `feature/course-branding-and-preview`
-- Branch tip verification: current HEAD is `43d569211acde5ae80f6e33524d40d432b417ce8`; verify with `git log --oneline -1` before operator action
-- Push CI run: `31278379259` (status: success, SHA: 43d569211acde5ae80f6e33524d40d432b417ce8)
+- Branch tip verification: current HEAD is `82a3a9f176ada26e958757802772807a24303f8f`; verify with `git log --oneline -1` before operator action
+- Push CI run: `pending fresh green run on 82a3a9f`
 - Migrations applied: `No`
+- Target-environment table-plan-to-Free approval: `Pending`
 - Repository-owned gates: `PASSED (164/164 tests, type-check, build, audit, dependency alignment)`
 - Final exact-SHA: `43d569211acde5ae80f6e33524d40d432b417ce8`
 - Operator handoff summary: `docs/client/OPERATOR_HANDOFF_SUMMARY.md`
