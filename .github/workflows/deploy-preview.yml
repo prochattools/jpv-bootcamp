@@ -228,6 +228,9 @@ jobs:
         run: pnpm type-check:payload
 
       - name: Build application
+        env:
+          NEXT_PUBLIC_APP_URL: https://preview.jpvbootcamp.com
+          APP_PUBLIC_URL: https://preview.jpvbootcamp.com
         run: pnpm run build
 
       - name: Run deterministic non-browser release gate
