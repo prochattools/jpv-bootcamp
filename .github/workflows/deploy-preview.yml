@@ -126,6 +126,9 @@ jobs:
         run: pnpm test:release
 
       - name: Install pinned Chromium browser
+        timeout-minutes: 15
+        env:
+          DEBIAN_FRONTEND: noninteractive
         run: pnpm exec playwright install --with-deps chromium
 
       - name: Run launch browser E2E
@@ -395,7 +398,9 @@ jobs:
 
       - name: Install pinned Chromium browser
         if: success()
-        timeout-minutes: 8
+        timeout-minutes: 15
+        env:
+          DEBIAN_FRONTEND: noninteractive
         run: pnpm exec playwright install --with-deps chromium
 
       - name: Run authenticated admin responsive gate
