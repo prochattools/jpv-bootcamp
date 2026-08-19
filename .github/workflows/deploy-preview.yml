@@ -395,6 +395,7 @@ jobs:
 
       - name: Install pinned Chromium browser
         if: success()
+        timeout-minutes: 8
         run: pnpm exec playwright install --with-deps chromium
 
       - name: Run authenticated admin responsive gate
