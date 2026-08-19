@@ -469,9 +469,11 @@ test.describe('REM-01 Member Portal Login Proof', () => {
     await page.locator('#member-password').fill(PASSWORD)
     await page.screenshot({ path: 'evidence-rem01-login-form.png' })
 
+    // The submit button label is configurable via PortalSettings branding — use first submit button
+    // on the page (the resend-verification button is the second submit and won't match the form)
     await Promise.all([
       page.waitForResponse((resp) => resp.url().includes('/api/payload_members/login'), { timeout: 15000 }).catch((): null => null),
-      page.locator('button[type="submit"]:has-text("sign in")').click(),
+      page.locator('button[type="submit"]').first().click(),
     ])
     await page.waitForLoadState('networkidle', { timeout: 20000 })
     await page.screenshot({ path: 'evidence-rem01-portal-authenticated.png' })
