@@ -8,6 +8,7 @@
 - Push CI run: `pending fresh green run on 82a3a9f`
 - Migrations applied: `No`
 - Target-environment table-plan-to-Free approval: `Pending`
+- Staging smoke run: `Pending`
 - Repository-owned gates: `PASSED (164/164 tests, type-check, build, audit, dependency alignment)`
 - Final exact-SHA: `43d569211acde5ae80f6e33524d40d432b417ce8`
 - Operator handoff summary: `docs/client/OPERATOR_HANDOFF_SUMMARY.md`
@@ -17,7 +18,7 @@
 - Read-only pre-apply plan: `READY FOR OPERATOR EXECUTION (requires staging database credentials)`
 - Rollback/recovery runbook: `docs/client/MIGRATION_REHEARSAL_RUNBOOK.md`
 - Next allowed task: `Operator runs read-only plan against exact SHA. If plan_ok, operator authorizes migration-29 apply with backup, maintenance window, and rollback ownership.`
-- Not allowed: `Do not apply migrations without written target-environment approval. Do not touch main. Do not run DB-mutating commands without authorization.`
+- Not allowed: `Do not apply migrations. Do not touch main. Written target-environment approval required before any migration. Do not run DB-mutating commands without authorization.`
 
 ## Authorization checklist
 
