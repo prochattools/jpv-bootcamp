@@ -7,6 +7,8 @@ import {
 
 export const STAGING_MEDIA_MOUNT_PATH = '/app/public/media'
 export const STAGING_MEDIA_VOLUME_NAME = 'jpv-bootcamp-preview-media'
+export const STAGING_PRIVATE_MEDIA_MOUNT_PATH = '/app/private/payload-course-media'
+export const STAGING_PRIVATE_MEDIA_VOLUME_NAME = 'jpv-bootcamp-preview-private-media'
 export const STAGING_DOKPLOY_APPLICATION_ID = 'I_2Vukga3cc3ZhaG-mUzU'
 export const PRODUCTION_DOKPLOY_APPLICATION_IDS = [
   'aPR9SvYn_JvGdMTk3CzeI',
@@ -73,6 +75,42 @@ export function assertSingleCompatibleStagingMediaMount(response: unknown): bool
   return true
 }
 
+export function findStagingPrivateMediaMounts(response: unknown): DokployMountRecord[] {
+  const mounts: DokployMountRecord[] = []
+  collectMountRecords(response, mounts)
+  return mounts.filter((mount) => mount.mountPath === STAGING_PRIVATE_MEDIA_MOUNT_PATH)
+}
+
+export function assertCompatibleStagingPrivateMediaMount(mount: DokployMountRecord): void {
+  if (mount.type !== 'volume') {
+    throw new Error(
+      `PRIVATE-MEDIA-MOUNT-DENIED: ${STAGING_PRIVATE_MEDIA_MOUNT_PATH} must use a Docker volume mount`,
+    )
+  }
+
+  if (
+    typeof mount.volumeName !== 'string' ||
+    mount.volumeName.trim() !== STAGING_PRIVATE_MEDIA_VOLUME_NAME
+  ) {
+    throw new Error(
+      `PRIVATE-MEDIA-MOUNT-DENIED: ${STAGING_PRIVATE_MEDIA_MOUNT_PATH} must use volume ${STAGING_PRIVATE_MEDIA_VOLUME_NAME}`,
+    )
+  }
+}
+
+export function assertSingleCompatibleStagingPrivateMediaMount(response: unknown): boolean {
+  const mounts = findStagingPrivateMediaMounts(response)
+  if (mounts.length === 0) return false
+  if (mounts.length !== 1) {
+    throw new Error(
+      `PRIVATE-MEDIA-MOUNT-DENIED: expected one mount at ${STAGING_PRIVATE_MEDIA_MOUNT_PATH}, found ${mounts.length}`,
+    )
+  }
+
+  assertCompatibleStagingPrivateMediaMount(mounts[0])
+  return true
+}
+
 export function assertStagingDokployTarget(target: string): void {
   if ((PRODUCTION_DOKPLOY_APPLICATION_IDS as readonly string[]).includes(target)) {
     throw new Error('DEPLOY-DENIED: Dokploy target is on the production deny-list')
@@ -96,6 +134,18 @@ export function buildStagingMediaMountPayload(target: string): Record<string, st
     type: 'volume',
     volumeName: STAGING_MEDIA_VOLUME_NAME,
     mountPath: STAGING_MEDIA_MOUNT_PATH,
+    serviceType: 'application',
+    serviceId: STAGING_DOKPLOY_APPLICATION_ID,
+  }
+}
+
+export function buildStagingPrivateMediaMountPayload(target: string): Record<string, string> {
+  assertStagingDokployTarget(target)
+
+  return {
+    type: 'volume',
+    volumeName: STAGING_PRIVATE_MEDIA_VOLUME_NAME,
+    mountPath: STAGING_PRIVATE_MEDIA_MOUNT_PATH,
     serviceType: 'application',
     serviceId: STAGING_DOKPLOY_APPLICATION_ID,
   }
