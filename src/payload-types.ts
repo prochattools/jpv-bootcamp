@@ -63,30 +63,39 @@ export type SupportedTimezones =
 
 export interface Config {
   auth: {
-    payload_users: PayloadUserAuthOperations;
     payload_members: PayloadMemberAuthOperations;
+    payload_users: PayloadUserAuthOperations;
   };
   blocks: {};
   collections: {
-    payload_users: PayloadUser;
-    payload_media: PayloadMedia;
-    payload_pages: PayloadPage;
-    payload_posts: PayloadPost;
-    payload_categories: PayloadCategory;
+    payload_member_groups: PayloadMemberGroup;
+    payload_spaces: PayloadSpace;
+    payload_space_memberships: PayloadSpaceMembership;
+    payload_space_posts: PayloadSpacePost;
+    payload_space_comments: PayloadSpaceComment;
+    payload_space_reactions: PayloadSpaceReaction;
+    payload_space_files: PayloadSpaceFile;
+    payload_chat_threads: PayloadChatThread;
+    payload_chat_messages: PayloadChatMessage;
     live_sessions: LiveSession;
-    bunny_videos: BunnyVideo;
     payload_courses: PayloadCourse;
     payload_course_modules: PayloadCourseModule;
     payload_lessons: PayloadLesson;
+    payload_lesson_comments: PayloadLessonComment;
     payload_course_access_preview: PayloadCourseAccessPreview;
-    payload_members: PayloadMember;
-    payload_member_profiles: PayloadMemberProfile;
-    payload_member_security_events: PayloadMemberSecurityEvent;
-    payload_member_verification_tokens: PayloadMemberVerificationToken;
     payload_private_media: PayloadPrivateMedia;
     payload_lesson_resources: PayloadLessonResource;
     payload_course_enrollments: PayloadCourseEnrollment;
     payload_lesson_progress: PayloadLessonProgress;
+    payload_media: PayloadMedia;
+    payload_pages: PayloadPage;
+    payload_posts: PayloadPost;
+    payload_categories: PayloadCategory;
+    bunny_videos: BunnyVideo;
+    payload_members: PayloadMember;
+    payload_member_profiles: PayloadMemberProfile;
+    payload_member_security_events: PayloadMemberSecurityEvent;
+    payload_member_verification_tokens: PayloadMemberVerificationToken;
     payload_access_groups: PayloadAccessGroup;
     payload_access_policies: PayloadAccessPolicy;
     payload_access_grants: PayloadAccessGrant;
@@ -102,6 +111,16 @@ export interface Config {
     payload_payments: PayloadPayment;
     payload_stripe_events: PayloadStripeEvent;
     payload_billing_actions: PayloadBillingAction;
+    payload_users: PayloadUser;
+    payload_audit_events: PayloadAuditEvent;
+    payload_contacts: PayloadContact;
+    payload_crm_tags: PayloadCrmTag;
+    payload_contact_tags: PayloadContactTag;
+    payload_contact_notes: PayloadContactNote;
+    payload_email_templates: PayloadEmailTemplate;
+    payload_email_events: PayloadEmailEvent;
+    payload_email_actions: PayloadEmailAction;
+    payload_admin_notifications: PayloadAdminNotification;
     payload_membership_support_records: PayloadMembershipSupportRecord;
     payload_membership_vouchers: PayloadMembershipVoucher;
     payload_pay_it_forward_funding: PayloadPayItForwardFunding;
@@ -112,23 +131,6 @@ export interface Config {
     payload_operator_notes: PayloadOperatorNote;
     payload_stripe_shadow_projections: PayloadStripeShadowProjection;
     payload_membership_audit_history: PayloadMembershipAuditHistory;
-    payload_contacts: PayloadContact;
-    payload_crm_tags: PayloadCrmTag;
-    payload_contact_tags: PayloadContactTag;
-    payload_contact_notes: PayloadContactNote;
-    payload_email_templates: PayloadEmailTemplate;
-    payload_email_events: PayloadEmailEvent;
-    payload_email_actions: PayloadEmailAction;
-    payload_admin_notifications: PayloadAdminNotification;
-    payload_member_groups: PayloadMemberGroup;
-    payload_spaces: PayloadSpace;
-    payload_space_memberships: PayloadSpaceMembership;
-    payload_space_posts: PayloadSpacePost;
-    payload_space_comments: PayloadSpaceComment;
-    payload_space_files: PayloadSpaceFile;
-    payload_chat_threads: PayloadChatThread;
-    payload_chat_messages: PayloadChatMessage;
-    payload_audit_events: PayloadAuditEvent;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -136,25 +138,34 @@ export interface Config {
   };
   collectionsJoins: {};
   collectionsSelect: {
-    payload_users: PayloadUsersSelect<false> | PayloadUsersSelect<true>;
-    payload_media: PayloadMediaSelect<false> | PayloadMediaSelect<true>;
-    payload_pages: PayloadPagesSelect<false> | PayloadPagesSelect<true>;
-    payload_posts: PayloadPostsSelect<false> | PayloadPostsSelect<true>;
-    payload_categories: PayloadCategoriesSelect<false> | PayloadCategoriesSelect<true>;
+    payload_member_groups: PayloadMemberGroupsSelect<false> | PayloadMemberGroupsSelect<true>;
+    payload_spaces: PayloadSpacesSelect<false> | PayloadSpacesSelect<true>;
+    payload_space_memberships: PayloadSpaceMembershipsSelect<false> | PayloadSpaceMembershipsSelect<true>;
+    payload_space_posts: PayloadSpacePostsSelect<false> | PayloadSpacePostsSelect<true>;
+    payload_space_comments: PayloadSpaceCommentsSelect<false> | PayloadSpaceCommentsSelect<true>;
+    payload_space_reactions: PayloadSpaceReactionsSelect<false> | PayloadSpaceReactionsSelect<true>;
+    payload_space_files: PayloadSpaceFilesSelect<false> | PayloadSpaceFilesSelect<true>;
+    payload_chat_threads: PayloadChatThreadsSelect<false> | PayloadChatThreadsSelect<true>;
+    payload_chat_messages: PayloadChatMessagesSelect<false> | PayloadChatMessagesSelect<true>;
     live_sessions: LiveSessionsSelect<false> | LiveSessionsSelect<true>;
-    bunny_videos: BunnyVideosSelect<false> | BunnyVideosSelect<true>;
     payload_courses: PayloadCoursesSelect<false> | PayloadCoursesSelect<true>;
     payload_course_modules: PayloadCourseModulesSelect<false> | PayloadCourseModulesSelect<true>;
     payload_lessons: PayloadLessonsSelect<false> | PayloadLessonsSelect<true>;
+    payload_lesson_comments: PayloadLessonCommentsSelect<false> | PayloadLessonCommentsSelect<true>;
     payload_course_access_preview: PayloadCourseAccessPreviewSelect<false> | PayloadCourseAccessPreviewSelect<true>;
-    payload_members: PayloadMembersSelect<false> | PayloadMembersSelect<true>;
-    payload_member_profiles: PayloadMemberProfilesSelect<false> | PayloadMemberProfilesSelect<true>;
-    payload_member_security_events: PayloadMemberSecurityEventsSelect<false> | PayloadMemberSecurityEventsSelect<true>;
-    payload_member_verification_tokens: PayloadMemberVerificationTokensSelect<false> | PayloadMemberVerificationTokensSelect<true>;
     payload_private_media: PayloadPrivateMediaSelect<false> | PayloadPrivateMediaSelect<true>;
     payload_lesson_resources: PayloadLessonResourcesSelect<false> | PayloadLessonResourcesSelect<true>;
     payload_course_enrollments: PayloadCourseEnrollmentsSelect<false> | PayloadCourseEnrollmentsSelect<true>;
     payload_lesson_progress: PayloadLessonProgressSelect<false> | PayloadLessonProgressSelect<true>;
+    payload_media: PayloadMediaSelect<false> | PayloadMediaSelect<true>;
+    payload_pages: PayloadPagesSelect<false> | PayloadPagesSelect<true>;
+    payload_posts: PayloadPostsSelect<false> | PayloadPostsSelect<true>;
+    payload_categories: PayloadCategoriesSelect<false> | PayloadCategoriesSelect<true>;
+    bunny_videos: BunnyVideosSelect<false> | BunnyVideosSelect<true>;
+    payload_members: PayloadMembersSelect<false> | PayloadMembersSelect<true>;
+    payload_member_profiles: PayloadMemberProfilesSelect<false> | PayloadMemberProfilesSelect<true>;
+    payload_member_security_events: PayloadMemberSecurityEventsSelect<false> | PayloadMemberSecurityEventsSelect<true>;
+    payload_member_verification_tokens: PayloadMemberVerificationTokensSelect<false> | PayloadMemberVerificationTokensSelect<true>;
     payload_access_groups: PayloadAccessGroupsSelect<false> | PayloadAccessGroupsSelect<true>;
     payload_access_policies: PayloadAccessPoliciesSelect<false> | PayloadAccessPoliciesSelect<true>;
     payload_access_grants: PayloadAccessGrantsSelect<false> | PayloadAccessGrantsSelect<true>;
@@ -170,6 +181,16 @@ export interface Config {
     payload_payments: PayloadPaymentsSelect<false> | PayloadPaymentsSelect<true>;
     payload_stripe_events: PayloadStripeEventsSelect<false> | PayloadStripeEventsSelect<true>;
     payload_billing_actions: PayloadBillingActionsSelect<false> | PayloadBillingActionsSelect<true>;
+    payload_users: PayloadUsersSelect<false> | PayloadUsersSelect<true>;
+    payload_audit_events: PayloadAuditEventsSelect<false> | PayloadAuditEventsSelect<true>;
+    payload_contacts: PayloadContactsSelect<false> | PayloadContactsSelect<true>;
+    payload_crm_tags: PayloadCrmTagsSelect<false> | PayloadCrmTagsSelect<true>;
+    payload_contact_tags: PayloadContactTagsSelect<false> | PayloadContactTagsSelect<true>;
+    payload_contact_notes: PayloadContactNotesSelect<false> | PayloadContactNotesSelect<true>;
+    payload_email_templates: PayloadEmailTemplatesSelect<false> | PayloadEmailTemplatesSelect<true>;
+    payload_email_events: PayloadEmailEventsSelect<false> | PayloadEmailEventsSelect<true>;
+    payload_email_actions: PayloadEmailActionsSelect<false> | PayloadEmailActionsSelect<true>;
+    payload_admin_notifications: PayloadAdminNotificationsSelect<false> | PayloadAdminNotificationsSelect<true>;
     payload_membership_support_records: PayloadMembershipSupportRecordsSelect<false> | PayloadMembershipSupportRecordsSelect<true>;
     payload_membership_vouchers: PayloadMembershipVouchersSelect<false> | PayloadMembershipVouchersSelect<true>;
     payload_pay_it_forward_funding: PayloadPayItForwardFundingSelect<false> | PayloadPayItForwardFundingSelect<true>;
@@ -180,23 +201,6 @@ export interface Config {
     payload_operator_notes: PayloadOperatorNotesSelect<false> | PayloadOperatorNotesSelect<true>;
     payload_stripe_shadow_projections: PayloadStripeShadowProjectionsSelect<false> | PayloadStripeShadowProjectionsSelect<true>;
     payload_membership_audit_history: PayloadMembershipAuditHistorySelect<false> | PayloadMembershipAuditHistorySelect<true>;
-    payload_contacts: PayloadContactsSelect<false> | PayloadContactsSelect<true>;
-    payload_crm_tags: PayloadCrmTagsSelect<false> | PayloadCrmTagsSelect<true>;
-    payload_contact_tags: PayloadContactTagsSelect<false> | PayloadContactTagsSelect<true>;
-    payload_contact_notes: PayloadContactNotesSelect<false> | PayloadContactNotesSelect<true>;
-    payload_email_templates: PayloadEmailTemplatesSelect<false> | PayloadEmailTemplatesSelect<true>;
-    payload_email_events: PayloadEmailEventsSelect<false> | PayloadEmailEventsSelect<true>;
-    payload_email_actions: PayloadEmailActionsSelect<false> | PayloadEmailActionsSelect<true>;
-    payload_admin_notifications: PayloadAdminNotificationsSelect<false> | PayloadAdminNotificationsSelect<true>;
-    payload_member_groups: PayloadMemberGroupsSelect<false> | PayloadMemberGroupsSelect<true>;
-    payload_spaces: PayloadSpacesSelect<false> | PayloadSpacesSelect<true>;
-    payload_space_memberships: PayloadSpaceMembershipsSelect<false> | PayloadSpaceMembershipsSelect<true>;
-    payload_space_posts: PayloadSpacePostsSelect<false> | PayloadSpacePostsSelect<true>;
-    payload_space_comments: PayloadSpaceCommentsSelect<false> | PayloadSpaceCommentsSelect<true>;
-    payload_space_files: PayloadSpaceFilesSelect<false> | PayloadSpaceFilesSelect<true>;
-    payload_chat_threads: PayloadChatThreadsSelect<false> | PayloadChatThreadsSelect<true>;
-    payload_chat_messages: PayloadChatMessagesSelect<false> | PayloadChatMessagesSelect<true>;
-    payload_audit_events: PayloadAuditEventsSelect<false> | PayloadAuditEventsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -206,34 +210,20 @@ export interface Config {
     defaultIDType: number;
   };
   fallbackLocale: null;
-  globals: {};
-  globalsSelect: {};
+  globals: {
+    portalSettings: PortalSetting;
+  };
+  globalsSelect: {
+    portalSettings: PortalSettingsSelect<false> | PortalSettingsSelect<true>;
+  };
   locale: null;
   widgets: {
     collections: CollectionsWidget;
   };
-  user: PayloadUser | PayloadMember;
+  user: PayloadMember | PayloadUser;
   jobs: {
     tasks: unknown;
     workflows: unknown;
-  };
-}
-export interface PayloadUserAuthOperations {
-  forgotPassword: {
-    email: string;
-    password: string;
-  };
-  login: {
-    email: string;
-    password: string;
-  };
-  registerFirstUser: {
-    email: string;
-    password: string;
-  };
-  unlock: {
-    email: string;
-    password: string;
   };
 }
 export interface PayloadMemberAuthOperations {
@@ -254,12 +244,68 @@ export interface PayloadMemberAuthOperations {
     password: string;
   };
 }
+export interface PayloadUserAuthOperations {
+  forgotPassword: {
+    email: string;
+    password: string;
+  };
+  login: {
+    email: string;
+    password: string;
+  };
+  registerFirstUser: {
+    email: string;
+    password: string;
+  };
+  unlock: {
+    email: string;
+    password: string;
+  };
+}
 /**
+ * Member group records used by access and moderation workflows.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload_users".
+ * via the `definition` "payload_member_groups".
  */
-export interface PayloadUser {
+export interface PayloadMemberGroup {
   id: number;
+  name: string;
+  slug: string;
+  status: 'active' | 'archived';
+  visibility: 'public' | 'private' | 'secret';
+  members?: (number | PayloadMember)[] | null;
+  description?: string | null;
+  metadata?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Student and client accounts. This is separate from Payload administrator users.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_members".
+ */
+export interface PayloadMember {
+  id: number;
+  accountStatus: 'pending' | 'active' | 'blocked' | 'suspended' | 'deleted';
+  source: 'self_signup' | 'admin_created' | 'stripe_checkout' | 'migration';
+  emailVerifiedAt?: string | null;
+  billingHoldReason?: string | null;
+  lastLoginAt?: string | null;
+  lastLoginIp?: string | null;
+  /**
+   * Internal administrator notes. Do not show this to members.
+   */
+  notes?: string | null;
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -277,7 +323,105 @@ export interface PayloadUser {
       }[]
     | null;
   password?: string | null;
-  collection: 'payload_users';
+  collection: 'payload_members';
+}
+/**
+ * Community spaces and their visibility rules.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_spaces".
+ */
+export interface PayloadSpace {
+  id: number;
+  name: string;
+  slug: string;
+  status: 'draft' | 'published' | 'archived';
+  spaceType: 'discussion' | 'course_cohort' | 'announcement' | 'chat';
+  visibility: 'public' | 'members' | 'private' | 'secret';
+  requiredAccessGroups?: (number | PayloadAccessGroup)[] | null;
+  linkedCourse?: (number | null) | PayloadCourse;
+  ogImage?: (number | null) | PayloadMedia;
+  description?: string | null;
+  sortOrder?: number | null;
+  metadata?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Member access groups used by course, community, and billing rules.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_access_groups".
+ */
+export interface PayloadAccessGroup {
+  id: number;
+  name: string;
+  slug: string;
+  status: 'active' | 'archived';
+  groupType: 'manual' | 'plan' | 'cohort' | 'migration';
+  /**
+   * Manual group membership. Automated membership should be reflected through grants/events.
+   */
+  members?: (number | PayloadMember)[] | null;
+  description?: string | null;
+  metadata?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Course catalogue. Create, edit and publish courses from here.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_courses".
+ */
+export interface PayloadCourse {
+  id: number;
+  title: string;
+  slug: string;
+  shortDescription?: string | null;
+  description?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  coverImage?: (number | null) | PayloadMedia;
+  status: 'draft' | 'published' | 'archived';
+  visibility: 'public' | 'members' | 'restricted';
+  /**
+   * Legacy compatibility value. Runtime access is controlled by JPV Bootcamp Membership and verified Stripe subscription state.
+   */
+  accessBadge: 'manual';
+  estimatedDuration?: string | null;
+  sortOrder?: number | null;
+  featured?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -299,17 +443,278 @@ export interface PayloadMedia {
   focalY?: number | null;
 }
 /**
- * Publish rich pages with managed images and Bunny video.
+ * Community membership records.
  *
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload_pages".
+ * via the `definition` "payload_space_memberships".
  */
-export interface PayloadPage {
+export interface PayloadSpaceMembership {
+  id: number;
+  displayName: string;
+  member: number | PayloadMember;
+  space: number | PayloadSpace;
+  role: 'member' | 'moderator' | 'admin';
+  status: 'pending' | 'active' | 'muted' | 'blocked' | 'removed';
+  joinedAt?: string | null;
+  expiresAt?: string | null;
+  metadata?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Community post records and moderation state.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_space_posts".
+ */
+export interface PayloadSpacePost {
   id: number;
   title: string;
-  slug: string;
-  summary?: string | null;
-  content?: {
+  space: number | PayloadSpace;
+  author: number | PayloadMember;
+  postType: 'discussion' | 'question' | 'announcement';
+  body: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  };
+  moderationStatus: 'visible' | 'pending_review' | 'hidden' | 'deleted';
+  pinned?: boolean | null;
+  locked?: boolean | null;
+  metadata?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_space_comments".
+ */
+export interface PayloadSpaceComment {
+  id: number;
+  displayName: string;
+  post: number | PayloadSpacePost;
+  author: number | PayloadMember;
+  body: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  };
+  moderationStatus: 'visible' | 'pending_review' | 'hidden' | 'deleted';
+  metadata?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Community likes, bookmarks, and preserved survey-option votes.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_space_reactions".
+ */
+export interface PayloadSpaceReaction {
+  id: number;
+  actorMember?: (number | null) | PayloadMember;
+  reactionType: 'like' | 'bookmark' | 'survey_vote';
+  targetKind: 'post' | 'comment' | 'survey_option';
+  targetPost?: (number | null) | PayloadSpacePost;
+  targetComment?: (number | null) | PayloadSpaceComment;
+  surveyOptionKey?: string | null;
+  legacyReactionId?: string | null;
+  legacyActorUserId?: string | null;
+  legacyActorSourceSystem?: string | null;
+  sourceCreatedAt?: string | null;
+  metadata?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_space_files".
+ */
+export interface PayloadSpaceFile {
+  id: number;
+  title: string;
+  space: number | PayloadSpace;
+  uploadedBy: number | PayloadMember;
+  post?: (number | null) | PayloadSpacePost;
+  comment?: (number | null) | PayloadSpaceComment;
+  attachmentType: 'document' | 'image' | 'external_video' | 'private_video';
+  caption?: string | null;
+  altText?: string | null;
+  sortOrder?: number | null;
+  externalProvider?: ('youtube' | 'vimeo') | null;
+  externalMediaId?: string | null;
+  bunnyVideoId?: string | null;
+  bunnyLibraryId?: string | null;
+  /**
+   * Public media fallback only. Do not use this field for restricted community files.
+   */
+  file?: (number | null) | PayloadMedia;
+  /**
+   * Use this for restricted community files served only through the guarded member route.
+   */
+  protectedFile?: (number | null) | PayloadPrivateMedia;
+  moderationStatus: 'visible' | 'pending_review' | 'hidden' | 'deleted';
+  metadata?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Private media used for protected lesson resources.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_private_media".
+ */
+export interface PayloadPrivateMedia {
+  id: number;
+  /**
+   * Internal label for administrators. Private course files are not publicly linked.
+   */
+  alt: string;
+  updatedAt: string;
+  createdAt: string;
+  url?: string | null;
+  thumbnailURL?: string | null;
+  filename?: string | null;
+  mimeType?: string | null;
+  filesize?: number | null;
+  width?: number | null;
+  height?: number | null;
+  focalX?: number | null;
+  focalY?: number | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_chat_threads".
+ */
+export interface PayloadChatThread {
+  id: number;
+  title: string;
+  space?: (number | null) | PayloadSpace;
+  participants?: (number | PayloadMember)[] | null;
+  status: 'open' | 'locked' | 'archived';
+  lastMessageAt?: string | null;
+  metadata?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_chat_messages".
+ */
+export interface PayloadChatMessage {
+  id: number;
+  displayName: string;
+  thread: number | PayloadChatThread;
+  author: number | PayloadMember;
+  body: string;
+  moderationStatus: 'visible' | 'pending_review' | 'hidden' | 'deleted';
+  metadata?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Schedule and operate LiveKit sessions. Room names and audit history are generated automatically.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "live_sessions".
+ */
+export interface LiveSession {
+  id: number;
+  title: string;
+  status: 'scheduled' | 'live' | 'completed' | 'cancelled';
+  course: number | PayloadCourse;
+  /**
+   * Optional. Select a course first — only modules from that course appear.
+   */
+  module?: (number | null) | PayloadCourseModule;
+  /**
+   * Optional. Select a module first — only lessons from that module appear.
+   */
+  lesson?: (number | null) | PayloadLesson;
+  /**
+   * Auto-generated on creation from course/module/lesson. Cannot be changed.
+   */
+  roomName?: string | null;
+  hostUser: number | PayloadUser;
+  scheduledAt: string;
+  capacity: number;
+  description?: {
     root: {
       type: string;
       children: {
@@ -324,53 +729,17 @@ export interface PayloadPage {
     };
     [k: string]: unknown;
   } | null;
-  featuredImage?: (number | null) | PayloadMedia;
-  gallery?: (number | PayloadMedia)[] | null;
+  startedAt?: string | null;
+  completedAt?: string | null;
+  cancelledAt?: string | null;
   /**
-   * Managed Bunny Stream video displayed with this page.
+   * Set after an approved recording workflow completes.
    */
-  featuredVideo?: (number | null) | BunnyVideo;
-  status: 'draft' | 'published' | 'archived';
-  publishedAt?: string | null;
-  sortOrder?: number | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "bunny_videos".
- */
-export interface BunnyVideo {
-  id: number;
-  title: string;
-  libraryId: number;
-  videoId: number;
+  recordingUrl?: string | null;
   /**
-   * UUID string from Bunny Stream API (VideoGuid field). Used in CDN delivery URLs. Required for signed playback. Populated automatically from Bunny webhooks.
+   * Persisted create, edit, and status-transition history.
    */
-  videoGuid?: string | null;
-  /**
-   * Lesson this video belongs to. One video per lesson.
-   */
-  lesson?: (number | null) | PayloadLesson;
-  status: 'processing' | 'ready' | 'failed';
-  duration?: number | null;
-  frameRate?: number | null;
-  width?: number | null;
-  height?: number | null;
-  videoCodec?: string | null;
-  audioCodec?: string | null;
-  bitrate?: number | null;
-  thumbnailUrl?: string | null;
-  /**
-   * Signed URL for playback (regenerated on demand)
-   */
-  playbackUrl?: string | null;
-  errorMessage?: string | null;
-  /**
-   * Chronological log of Bunny webhook events
-   */
-  webhookEvents?:
+  audit?:
     | {
         [k: string]: unknown;
       }
@@ -379,6 +748,22 @@ export interface BunnyVideo {
     | number
     | boolean
     | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Ordered sections within a course.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_course_modules".
+ */
+export interface PayloadCourseModule {
+  id: number;
+  course: number | PayloadCourse;
+  title: string;
+  description?: string | null;
+  sortOrder: number;
+  publishedPreview?: boolean | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -437,136 +822,92 @@ export interface PayloadLesson {
   createdAt: string;
 }
 /**
- * Ordered sections within a course.
- *
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload_course_modules".
+ * via the `definition` "bunny_videos".
  */
-export interface PayloadCourseModule {
-  id: number;
-  course: number | PayloadCourse;
-  title: string;
-  description?: string | null;
-  sortOrder: number;
-  publishedPreview?: boolean | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * Course catalogue. Create, edit and publish courses from here.
- *
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload_courses".
- */
-export interface PayloadCourse {
+export interface BunnyVideo {
   id: number;
   title: string;
-  slug: string;
-  shortDescription?: string | null;
-  description?: {
-    root: {
-      type: string;
-      children: {
-        type: any;
-        version: number;
-        [k: string]: unknown;
-      }[];
-      direction: ('ltr' | 'rtl') | null;
-      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
-      indent: number;
-      version: number;
-    };
-    [k: string]: unknown;
-  } | null;
-  coverImage?: (number | null) | PayloadMedia;
-  status: 'draft' | 'published' | 'archived';
-  visibility: 'public' | 'members' | 'restricted';
+  libraryId: number;
   /**
-   * Legacy compatibility value. Runtime access is controlled by JPV Bootcamp Membership and verified Stripe subscription state.
+   * Legacy compatibility only. New Bunny Stream records are identified by videoGuid.
    */
-  accessBadge: 'manual';
-  estimatedDuration?: string | null;
-  sortOrder?: number | null;
-  featured?: boolean | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * Publish announcements and articles with pictures, downloads and managed video.
- *
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload_posts".
- */
-export interface PayloadPost {
-  id: number;
-  title: string;
-  slug: string;
-  excerpt?: string | null;
-  content?: {
-    root: {
-      type: string;
-      children: {
-        type: any;
-        version: number;
-        [k: string]: unknown;
-      }[];
-      direction: ('ltr' | 'rtl') | null;
-      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
-      indent: number;
-      version: number;
-    };
-    [k: string]: unknown;
-  } | null;
-  featuredImage?: (number | null) | PayloadMedia;
-  gallery?: (number | PayloadMedia)[] | null;
+  videoId?: number | null;
   /**
-   * Managed Bunny Stream video displayed with this post.
+   * Canonical Bunny Stream video identifier. Required for new writes and signed playback. Legacy numeric-only rows may remain temporarily until the GUID-first forward migration/backfill is complete.
    */
-  featuredVideo?: (number | null) | BunnyVideo;
-  attachments?: (number | PayloadMedia)[] | null;
-  status: 'draft' | 'published' | 'archived';
-  publishedAt?: string | null;
-  categories?: (number | PayloadCategory)[] | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload_categories".
- */
-export interface PayloadCategory {
-  id: number;
-  title: string;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * Schedule and operate LiveKit sessions. Room names and audit history are generated automatically.
- *
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "live_sessions".
- */
-export interface LiveSession {
-  id: number;
-  title: string;
-  status: 'scheduled' | 'live' | 'completed' | 'cancelled';
-  course: number | PayloadCourse;
+  videoGuid?: string | null;
   /**
-   * Optional. Must belong to the selected course.
-   */
-  module?: (number | null) | PayloadCourseModule;
-  /**
-   * Optional. Requires a module and must belong to it.
+   * Lesson this video belongs to. One video per lesson.
    */
   lesson?: (number | null) | PayloadLesson;
+  status: 'processing' | 'ready' | 'failed';
+  duration?: number | null;
+  frameRate?: number | null;
+  width?: number | null;
+  height?: number | null;
+  videoCodec?: string | null;
+  audioCodec?: string | null;
+  bitrate?: number | null;
+  thumbnailUrl?: string | null;
   /**
-   * Generated from the immutable course/module/lesson relationship path.
+   * Signed URL for playback (regenerated on demand)
    */
-  roomName: string;
-  hostUser: number | PayloadUser;
-  scheduledAt: string;
-  capacity: number;
-  description?: {
+  playbackUrl?: string | null;
+  errorMessage?: string | null;
+  /**
+   * Chronological log of Bunny webhook events
+   */
+  webhookEvents?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_users".
+ */
+export interface PayloadUser {
+  id: number;
+  updatedAt: string;
+  createdAt: string;
+  email: string;
+  resetPasswordToken?: string | null;
+  resetPasswordExpiration?: string | null;
+  salt?: string | null;
+  hash?: string | null;
+  loginAttempts?: number | null;
+  lockUntil?: string | null;
+  sessions?:
+    | {
+        id: string;
+        createdAt?: string | null;
+        expiresAt: string;
+      }[]
+    | null;
+  password?: string | null;
+  collection: 'payload_users';
+}
+/**
+ * Lesson-scoped member discussions and migrated historical lesson comments.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_lesson_comments".
+ */
+export interface PayloadLessonComment {
+  id: number;
+  displayName: string;
+  lesson: number | PayloadLesson;
+  author: number | PayloadMember;
+  parent?: (number | null) | PayloadLessonComment;
+  body: {
     root: {
       type: string;
       children: {
@@ -580,18 +921,21 @@ export interface LiveSession {
       version: number;
     };
     [k: string]: unknown;
-  } | null;
-  startedAt?: string | null;
-  completedAt?: string | null;
-  cancelledAt?: string | null;
+  };
   /**
-   * Set after an approved recording workflow completes.
+   * Exact historical rendered/source HTML retained for migration evidence.
    */
-  recordingUrl?: string | null;
+  legacyBodyHtml?: string | null;
+  moderationStatus: 'visible' | 'pending_review' | 'hidden' | 'deleted';
   /**
-   * Persisted create, edit, and status-transition history.
+   * Legacy FluentCommunity comment ID used for deterministic migration idempotency.
    */
-  audit?:
+  legacyCommentId?: string | null;
+  /**
+   * Original source timestamp retained independently from Payload migration timestamps.
+   */
+  sourceCreatedAt?: string | null;
+  metadata?:
     | {
         [k: string]: unknown;
       }
@@ -619,156 +963,6 @@ export interface PayloadCourseAccessPreview {
   visualState: 'available' | 'locked' | 'coming_soon';
   updatedAt: string;
   createdAt: string;
-}
-/**
- * Student and client accounts. This is separate from Payload administrator users.
- *
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload_members".
- */
-export interface PayloadMember {
-  id: number;
-  accountStatus: 'pending' | 'active' | 'blocked' | 'suspended' | 'deleted';
-  source: 'self_signup' | 'admin_created' | 'stripe_checkout' | 'migration';
-  emailVerifiedAt?: string | null;
-  billingHoldReason?: string | null;
-  lastLoginAt?: string | null;
-  lastLoginIp?: string | null;
-  /**
-   * Internal administrator notes. Do not show this to members.
-   */
-  notes?: string | null;
-  updatedAt: string;
-  createdAt: string;
-  email: string;
-  resetPasswordToken?: string | null;
-  resetPasswordExpiration?: string | null;
-  salt?: string | null;
-  hash?: string | null;
-  loginAttempts?: number | null;
-  lockUntil?: string | null;
-  sessions?:
-    | {
-        id: string;
-        createdAt?: string | null;
-        expiresAt: string;
-      }[]
-    | null;
-  password?: string | null;
-  collection: 'payload_members';
-}
-/**
- * Member profile details and communication preferences.
- *
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload_member_profiles".
- */
-export interface PayloadMemberProfile {
-  id: number;
-  member: number | PayloadMember;
-  displayName: string;
-  avatar?: (number | null) | PayloadMedia;
-  timezone?: string | null;
-  phone?: string | null;
-  company?: string | null;
-  marketingConsent?: boolean | null;
-  transactionalEmailConsent?: boolean | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * Member authentication and account-security events for administrator review.
- *
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload_member_security_events".
- */
-export interface PayloadMemberSecurityEvent {
-  id: number;
-  member: number | PayloadMember;
-  eventType:
-    | 'account_created'
-    | 'email_verified'
-    | 'password_reset_requested'
-    | 'password_changed'
-    | 'billing_payment_failed'
-    | 'billing_payment_recovered'
-    | 'billing_payment_refunded'
-    | 'billing_payment_disputed'
-    | 'billing_dispute_resolved'
-    | 'invitation_created'
-    | 'invitation_consumed'
-    | 'profile_changed'
-    | 'email_change_requested'
-    | 'email_changed'
-    | 'login_failed'
-    | 'account_blocked'
-    | 'account_suspended'
-    | 'account_restored'
-    | 'account_deleted';
-  source?: string | null;
-  ipAddress?: string | null;
-  userAgent?: string | null;
-  metadata?:
-    | {
-        [k: string]: unknown;
-      }
-    | unknown[]
-    | string
-    | number
-    | boolean
-    | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * Digest-only, single-use member verification records. Plaintext tokens are never stored.
- *
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload_member_verification_tokens".
- */
-export interface PayloadMemberVerificationToken {
-  id: number;
-  member: number | PayloadMember;
-  email: string;
-  purpose:
-    | 'member_email_verification'
-    | 'member_invitation'
-    | 'set_password'
-    | 'password_reset'
-    | 'email_change_confirmation';
-  tokenDigest: string;
-  expiresAt: string;
-  consumedAt?: string | null;
-  invalidatedAt?: string | null;
-  lastSentAt?: string | null;
-  sendAttempts: number;
-  idempotencyKey: string;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * Private media used for protected lesson resources.
- *
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload_private_media".
- */
-export interface PayloadPrivateMedia {
-  id: number;
-  /**
-   * Internal label for administrators. Private course files are not publicly linked.
-   */
-  alt: string;
-  updatedAt: string;
-  createdAt: string;
-  url?: string | null;
-  thumbnailURL?: string | null;
-  filename?: string | null;
-  mimeType?: string | null;
-  filesize?: number | null;
-  width?: number | null;
-  height?: number | null;
-  focalX?: number | null;
-  focalY?: number | null;
 }
 /**
  * Course file and protected resource records.
@@ -860,22 +1054,179 @@ export interface PayloadLessonProgress {
   createdAt: string;
 }
 /**
- * Member access groups used by course, community, and billing rules.
+ * Publish rich pages with managed images and Bunny video.
  *
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload_access_groups".
+ * via the `definition` "payload_pages".
  */
-export interface PayloadAccessGroup {
+export interface PayloadPage {
   id: number;
-  name: string;
+  title: string;
   slug: string;
-  status: 'active' | 'archived';
-  groupType: 'manual' | 'plan' | 'cohort' | 'migration';
+  summary?: string | null;
+  content?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  featuredImage?: (number | null) | PayloadMedia;
+  gallery?: (number | PayloadMedia)[] | null;
   /**
-   * Manual group membership. Automated membership should be reflected through grants/events.
+   * Managed Bunny Stream video displayed with this page.
    */
-  members?: (number | PayloadMember)[] | null;
-  description?: string | null;
+  featuredVideo?: (number | null) | BunnyVideo;
+  status: 'draft' | 'published' | 'archived';
+  publishedAt?: string | null;
+  sortOrder?: number | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Publish announcements and articles with pictures, downloads and managed video.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_posts".
+ */
+export interface PayloadPost {
+  id: number;
+  title: string;
+  slug: string;
+  excerpt?: string | null;
+  content?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  featuredImage?: (number | null) | PayloadMedia;
+  gallery?: (number | PayloadMedia)[] | null;
+  /**
+   * Managed Bunny Stream video displayed with this post.
+   */
+  featuredVideo?: (number | null) | BunnyVideo;
+  attachments?: (number | PayloadMedia)[] | null;
+  status: 'draft' | 'published' | 'archived';
+  publishedAt?: string | null;
+  categories?: (number | PayloadCategory)[] | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_categories".
+ */
+export interface PayloadCategory {
+  id: number;
+  title: string;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Member profile details and communication preferences.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_member_profiles".
+ */
+export interface PayloadMemberProfile {
+  id: number;
+  member: number | PayloadMember;
+  displayName: string;
+  avatar?: (number | null) | PayloadMedia;
+  /**
+   * Member profile cover image. Migrated from FluentCommunity user_cover_photo where present.
+   */
+  coverImage?: (number | null) | PayloadMedia;
+  timezone?: string | null;
+  phone?: string | null;
+  company?: string | null;
+  /**
+   * Member website URL. Source-proven from FluentCommunity profile metadata.
+   */
+  website?: string | null;
+  /**
+   * Member biography/about content. Migrated losslessly from FluentCommunity profile content.
+   */
+  biography?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  /**
+   * Source-proven legacy member social links.
+   */
+  socialLinks?: {
+    instagram?: string | null;
+    twitter?: string | null;
+    linkedin?: string | null;
+    facebook?: string | null;
+    youtube?: string | null;
+  };
+  marketingConsent?: boolean | null;
+  transactionalEmailConsent?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Member authentication and account-security events for administrator review.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_member_security_events".
+ */
+export interface PayloadMemberSecurityEvent {
+  id: number;
+  member: number | PayloadMember;
+  eventType:
+    | 'account_created'
+    | 'email_verified'
+    | 'password_reset_requested'
+    | 'password_changed'
+    | 'billing_payment_failed'
+    | 'billing_payment_recovered'
+    | 'billing_payment_refunded'
+    | 'billing_payment_disputed'
+    | 'billing_dispute_resolved'
+    | 'invitation_created'
+    | 'invitation_consumed'
+    | 'profile_changed'
+    | 'email_change_requested'
+    | 'email_changed'
+    | 'login_failed'
+    | 'account_blocked'
+    | 'account_suspended'
+    | 'account_restored'
+    | 'account_deleted';
+  source?: string | null;
+  ipAddress?: string | null;
+  userAgent?: string | null;
   metadata?:
     | {
         [k: string]: unknown;
@@ -885,6 +1236,32 @@ export interface PayloadAccessGroup {
     | number
     | boolean
     | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Digest-only, single-use member verification records. Plaintext tokens are never stored.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_member_verification_tokens".
+ */
+export interface PayloadMemberVerificationToken {
+  id: number;
+  member: number | PayloadMember;
+  email: string;
+  purpose:
+    'member_email_verification' | 'member_invitation' | 'set_password' | 'password_reset' | 'email_change_confirmation';
+  tokenDigest: string;
+  expiresAt: string;
+  reservationNonce?: string | null;
+  reservedAt?: string | null;
+  leaseExpiresAt?: string | null;
+  resultFingerprint?: string | null;
+  consumedAt?: string | null;
+  invalidatedAt?: string | null;
+  lastSentAt?: string | null;
+  sendAttempts: number;
+  idempotencyKey: string;
   updatedAt: string;
   createdAt: string;
 }
@@ -1165,7 +1542,7 @@ export interface PayloadPartnerEvent {
   createdAt: string;
 }
 /**
- * Billing account projections are read-only. Use Billing Actions for guarded Stripe test-mode operations.
+ * Billing account projections are read-only. Use Billing Actions to sync, cancel, or resume a subscription.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload_billing_accounts".
@@ -1193,7 +1570,7 @@ export interface PayloadBillingAccount {
   createdAt: string;
 }
 /**
- * Read-only Stripe subscription projection. Create a Billing Action to sync, schedule cancellation, or reverse it.
+ * Read-only subscription record. Create a Billing Action to sync, schedule cancellation, or reverse a cancellation.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload_subscriptions".
@@ -1203,6 +1580,9 @@ export interface PayloadSubscription {
   displayName: string;
   member: number | PayloadMember;
   billingAccount: number | PayloadBillingAccount;
+  /**
+   * Stripe IDs are derived server-side
+   */
   stripeSubscriptionId: string;
   stripeSubscriptionScheduleId?: string | null;
   stripePriceId?: string | null;
@@ -1238,7 +1618,7 @@ export interface PayloadSubscription {
   createdAt: string;
 }
 /**
- * Read-only payment, refund, and dispute history projected from Stripe webhooks.
+ * Read-only payment, refund, and dispute history.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload_payments".
@@ -1294,7 +1674,7 @@ export interface PayloadStripeEvent {
   createdAt: string;
 }
 /**
- * Create a guarded test-mode subscription action. Results are immutable audit records.
+ * Create a subscription action. Select a subscription and choose an action — results are recorded and cannot be edited.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload_billing_actions".
@@ -1303,13 +1683,13 @@ export interface PayloadBillingAction {
   id: number;
   displayName: string;
   /**
-   * Select the Payload subscription. Stripe IDs are derived server-side.
+   * Select the subscription to act on.
    */
   subscription?: (number | null) | PayloadSubscription;
   member?: (number | null) | PayloadMember;
   requestedBy?: (number | null) | PayloadUser;
   /**
-   * Administrators can create only the first three operator actions. Other values are webhook audit history.
+   * Choose an operator action. Sync refreshes the record from Stripe. Cancel at period end marks the subscription to end at the next renewal. Reverse cancellation restores it.
    */
   actionType:
     | 'sync_subscription'
@@ -1342,6 +1722,262 @@ export interface PayloadBillingAction {
     | number
     | boolean
     | null;
+  metadata?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Administrator-visible operational and security audit history.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_audit_events".
+ */
+export interface PayloadAuditEvent {
+  id: number;
+  displayName: string;
+  actorType: 'admin' | 'member' | 'stripe' | 'system' | 'migration';
+  actorId?: string | null;
+  action: string;
+  targetCollection: string;
+  targetId?: string | null;
+  severity: 'info' | 'warning' | 'critical';
+  ipAddress?: string | null;
+  userAgent?: string | null;
+  before?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  after?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  metadata?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_contacts".
+ */
+export interface PayloadContact {
+  id: number;
+  email: string;
+  member?: (number | null) | PayloadMember;
+  firstName?: string | null;
+  lastName?: string | null;
+  company?: string | null;
+  lifecycleStage: 'lead' | 'student' | 'client' | 'partner' | 'churned';
+  emailStatus: 'subscribed' | 'transactional_only' | 'unsubscribed' | 'bounced' | 'complained';
+  marketingConsentAt?: string | null;
+  lastActivityAt?: string | null;
+  source?: string | null;
+  metadata?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_crm_tags".
+ */
+export interface PayloadCrmTag {
+  id: number;
+  name: string;
+  slug: string;
+  status: 'active' | 'archived';
+  description?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_contact_tags".
+ */
+export interface PayloadContactTag {
+  id: number;
+  displayName: string;
+  contact: number | PayloadContact;
+  tag: number | PayloadCrmTag;
+  source: 'manual' | 'stripe' | 'course' | 'migration' | 'automation';
+  sourceId?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_contact_notes".
+ */
+export interface PayloadContactNote {
+  id: number;
+  title: string;
+  contact: number | PayloadContact;
+  noteType: 'admin_note' | 'support' | 'billing' | 'course' | 'migration';
+  body: string;
+  metadata?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_email_templates".
+ */
+export interface PayloadEmailTemplate {
+  id: number;
+  name: string;
+  templateKey: string;
+  status: 'draft' | 'active' | 'archived';
+  purpose:
+    | 'account_created'
+    | 'password_changed'
+    | 'payment_made'
+    | 'subscription_started'
+    | 'subscription_canceled'
+    | 'payment_failed'
+    | 'admin_notification';
+  subject: string;
+  preheader?: string | null;
+  textBody: string;
+  htmlBody?: string | null;
+  /**
+   * When true, email workflows must also notify the configured admin recipient.
+   */
+  adminCopyRequired?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Email delivery log. Use Email Actions to retry a failed delivery.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_email_events".
+ */
+export interface PayloadEmailEvent {
+  id: number;
+  displayName: string;
+  toEmail: string;
+  contact?: (number | null) | PayloadContact;
+  templateKey: string;
+  deliveryStatus:
+    | 'queued'
+    | 'processing'
+    | 'sent'
+    | 'delivered'
+    | 'opened'
+    | 'clicked'
+    | 'bounced'
+    | 'complained'
+    | 'failed'
+    | 'blocked_by_staging_guard'
+    | 'skipped';
+  resendEmailId?: string | null;
+  dedupeKey?: string | null;
+  sentAt?: string | null;
+  deliveredAt?: string | null;
+  failureReason?: string | null;
+  retryCount: number;
+  lastRetryRequestedAt?: string | null;
+  lastRetryRequestedBy?: (number | null) | PayloadUser;
+  claimedAt?: string | null;
+  workerClaimId?: string | null;
+  metadata?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Retry a failed email delivery. Select the failed event and submit — the email will be resent automatically.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_email_actions".
+ */
+export interface PayloadEmailAction {
+  id: number;
+  displayName: string;
+  /**
+   * Only failed deliveries are eligible for retry.
+   */
+  emailEvent: number | PayloadEmailEvent;
+  actionType: 'retry_delivery';
+  requestedBy?: (number | null) | PayloadUser;
+  status: 'pending' | 'completed' | 'failed' | 'skipped';
+  /**
+   * Optional operator reason or support ticket reference.
+   */
+  note?: string | null;
+  completedAt?: string | null;
+  result?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_admin_notifications".
+ */
+export interface PayloadAdminNotification {
+  id: number;
+  title: string;
+  notificationType: 'account' | 'billing' | 'course' | 'community' | 'system';
+  severity: 'info' | 'warning' | 'error' | 'critical';
+  status: 'unread' | 'read' | 'archived';
+  body: string;
+  relatedCollection?: string | null;
+  relatedDocumentId?: string | null;
   metadata?:
     | {
         [k: string]: unknown;
@@ -1558,7 +2194,7 @@ export interface PayloadMembershipFundingSource {
   createdAt: string;
 }
 /**
- * Stripe and membership reconciliation results and webhook projection state.
+ * Membership billing reconciliation results and status history.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload_membership_reconciliations".
@@ -1641,7 +2277,7 @@ export interface PayloadMembershipAuditHistory {
   createdAt: string;
 }
 /**
- * Repository-only shadow of Stripe membership state for reconciliation and audit.
+ * Billing state snapshot used for reconciliation and audit.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload_stripe_shadow_projections".
@@ -1767,505 +2403,6 @@ export interface PayloadMembershipAdministrationAction {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload_contacts".
- */
-export interface PayloadContact {
-  id: number;
-  email: string;
-  member?: (number | null) | PayloadMember;
-  firstName?: string | null;
-  lastName?: string | null;
-  company?: string | null;
-  lifecycleStage: 'lead' | 'student' | 'client' | 'partner' | 'churned';
-  emailStatus: 'subscribed' | 'transactional_only' | 'unsubscribed' | 'bounced' | 'complained';
-  marketingConsentAt?: string | null;
-  lastActivityAt?: string | null;
-  source?: string | null;
-  metadata?:
-    | {
-        [k: string]: unknown;
-      }
-    | unknown[]
-    | string
-    | number
-    | boolean
-    | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload_crm_tags".
- */
-export interface PayloadCrmTag {
-  id: number;
-  name: string;
-  slug: string;
-  status: 'active' | 'archived';
-  description?: string | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload_contact_tags".
- */
-export interface PayloadContactTag {
-  id: number;
-  displayName: string;
-  contact: number | PayloadContact;
-  tag: number | PayloadCrmTag;
-  source: 'manual' | 'stripe' | 'course' | 'migration' | 'automation';
-  sourceId?: string | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload_contact_notes".
- */
-export interface PayloadContactNote {
-  id: number;
-  title: string;
-  contact: number | PayloadContact;
-  noteType: 'admin_note' | 'support' | 'billing' | 'course' | 'migration';
-  body: string;
-  metadata?:
-    | {
-        [k: string]: unknown;
-      }
-    | unknown[]
-    | string
-    | number
-    | boolean
-    | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload_email_templates".
- */
-export interface PayloadEmailTemplate {
-  id: number;
-  name: string;
-  templateKey: string;
-  status: 'draft' | 'active' | 'archived';
-  purpose:
-    | 'account_created'
-    | 'password_changed'
-    | 'payment_made'
-    | 'subscription_started'
-    | 'subscription_canceled'
-    | 'payment_failed'
-    | 'admin_notification';
-  subject: string;
-  preheader?: string | null;
-  textBody: string;
-  htmlBody?: string | null;
-  /**
-   * When true, email workflows must also notify the configured admin recipient.
-   */
-  adminCopyRequired?: boolean | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * Read-only delivery queue and provider status. Use Email Actions to retry failed events.
- *
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload_email_events".
- */
-export interface PayloadEmailEvent {
-  id: number;
-  displayName: string;
-  toEmail: string;
-  contact?: (number | null) | PayloadContact;
-  templateKey: string;
-  deliveryStatus:
-    | 'queued'
-    | 'sent'
-    | 'delivered'
-    | 'opened'
-    | 'clicked'
-    | 'bounced'
-    | 'complained'
-    | 'failed'
-    | 'skipped';
-  resendEmailId?: string | null;
-  dedupeKey?: string | null;
-  sentAt?: string | null;
-  deliveredAt?: string | null;
-  failureReason?: string | null;
-  retryCount: number;
-  lastRetryRequestedAt?: string | null;
-  lastRetryRequestedBy?: (number | null) | PayloadUser;
-  metadata?:
-    | {
-        [k: string]: unknown;
-      }
-    | unknown[]
-    | string
-    | number
-    | boolean
-    | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * Create a retry request for a failed email event. The action only requeues the event; provider sending remains queue-controlled.
- *
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload_email_actions".
- */
-export interface PayloadEmailAction {
-  id: number;
-  displayName: string;
-  /**
-   * Only failed events are eligible. The selected event ID is resolved server-side.
-   */
-  emailEvent: number | PayloadEmailEvent;
-  actionType: 'retry_delivery';
-  requestedBy?: (number | null) | PayloadUser;
-  status: 'pending' | 'completed' | 'failed' | 'skipped';
-  /**
-   * Optional operator reason or support ticket reference.
-   */
-  note?: string | null;
-  completedAt?: string | null;
-  result?:
-    | {
-        [k: string]: unknown;
-      }
-    | unknown[]
-    | string
-    | number
-    | boolean
-    | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload_admin_notifications".
- */
-export interface PayloadAdminNotification {
-  id: number;
-  title: string;
-  notificationType: 'account' | 'billing' | 'course' | 'community' | 'system';
-  severity: 'info' | 'warning' | 'error' | 'critical';
-  status: 'unread' | 'read' | 'archived';
-  body: string;
-  relatedCollection?: string | null;
-  relatedDocumentId?: string | null;
-  metadata?:
-    | {
-        [k: string]: unknown;
-      }
-    | unknown[]
-    | string
-    | number
-    | boolean
-    | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * Member group records used by access and moderation workflows.
- *
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload_member_groups".
- */
-export interface PayloadMemberGroup {
-  id: number;
-  name: string;
-  slug: string;
-  status: 'active' | 'archived';
-  visibility: 'public' | 'private' | 'secret';
-  members?: (number | PayloadMember)[] | null;
-  description?: string | null;
-  metadata?:
-    | {
-        [k: string]: unknown;
-      }
-    | unknown[]
-    | string
-    | number
-    | boolean
-    | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * Community spaces and their visibility rules.
- *
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload_spaces".
- */
-export interface PayloadSpace {
-  id: number;
-  name: string;
-  slug: string;
-  status: 'draft' | 'published' | 'archived';
-  spaceType: 'discussion' | 'course_cohort' | 'announcement' | 'chat';
-  visibility: 'public' | 'members' | 'private' | 'secret';
-  requiredAccessGroups?: (number | PayloadAccessGroup)[] | null;
-  linkedCourse?: (number | null) | PayloadCourse;
-  description?: string | null;
-  sortOrder?: number | null;
-  metadata?:
-    | {
-        [k: string]: unknown;
-      }
-    | unknown[]
-    | string
-    | number
-    | boolean
-    | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * Community membership records.
- *
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload_space_memberships".
- */
-export interface PayloadSpaceMembership {
-  id: number;
-  displayName: string;
-  member: number | PayloadMember;
-  space: number | PayloadSpace;
-  role: 'member' | 'moderator' | 'admin';
-  status: 'pending' | 'active' | 'muted' | 'blocked' | 'removed';
-  joinedAt?: string | null;
-  expiresAt?: string | null;
-  metadata?:
-    | {
-        [k: string]: unknown;
-      }
-    | unknown[]
-    | string
-    | number
-    | boolean
-    | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * Community post records and moderation state.
- *
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload_space_posts".
- */
-export interface PayloadSpacePost {
-  id: number;
-  title: string;
-  space: number | PayloadSpace;
-  author: number | PayloadMember;
-  postType: 'discussion' | 'question' | 'announcement';
-  body: {
-    root: {
-      type: string;
-      children: {
-        type: any;
-        version: number;
-        [k: string]: unknown;
-      }[];
-      direction: ('ltr' | 'rtl') | null;
-      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
-      indent: number;
-      version: number;
-    };
-    [k: string]: unknown;
-  };
-  moderationStatus: 'visible' | 'pending_review' | 'hidden' | 'deleted';
-  pinned?: boolean | null;
-  locked?: boolean | null;
-  metadata?:
-    | {
-        [k: string]: unknown;
-      }
-    | unknown[]
-    | string
-    | number
-    | boolean
-    | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload_space_comments".
- */
-export interface PayloadSpaceComment {
-  id: number;
-  displayName: string;
-  post: number | PayloadSpacePost;
-  author: number | PayloadMember;
-  body: {
-    root: {
-      type: string;
-      children: {
-        type: any;
-        version: number;
-        [k: string]: unknown;
-      }[];
-      direction: ('ltr' | 'rtl') | null;
-      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
-      indent: number;
-      version: number;
-    };
-    [k: string]: unknown;
-  };
-  moderationStatus: 'visible' | 'pending_review' | 'hidden' | 'deleted';
-  metadata?:
-    | {
-        [k: string]: unknown;
-      }
-    | unknown[]
-    | string
-    | number
-    | boolean
-    | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload_space_files".
- */
-export interface PayloadSpaceFile {
-  id: number;
-  title: string;
-  space: number | PayloadSpace;
-  uploadedBy: number | PayloadMember;
-  post?: (number | null) | PayloadSpacePost;
-  comment?: (number | null) | PayloadSpaceComment;
-  attachmentType: 'document' | 'image' | 'external_video' | 'private_video';
-  caption?: string | null;
-  altText?: string | null;
-  sortOrder?: number | null;
-  externalProvider?: ('youtube' | 'vimeo') | null;
-  externalMediaId?: string | null;
-  bunnyVideoId?: string | null;
-  bunnyLibraryId?: string | null;
-  /**
-   * Public media fallback only. Do not use this field for restricted community files.
-   */
-  file?: (number | null) | PayloadMedia;
-  /**
-   * Use this for restricted community files served only through the guarded member route.
-   */
-  protectedFile?: (number | null) | PayloadPrivateMedia;
-  moderationStatus: 'visible' | 'pending_review' | 'hidden' | 'deleted';
-  metadata?:
-    | {
-        [k: string]: unknown;
-      }
-    | unknown[]
-    | string
-    | number
-    | boolean
-    | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload_chat_threads".
- */
-export interface PayloadChatThread {
-  id: number;
-  title: string;
-  space?: (number | null) | PayloadSpace;
-  participants?: (number | PayloadMember)[] | null;
-  status: 'open' | 'locked' | 'archived';
-  lastMessageAt?: string | null;
-  metadata?:
-    | {
-        [k: string]: unknown;
-      }
-    | unknown[]
-    | string
-    | number
-    | boolean
-    | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload_chat_messages".
- */
-export interface PayloadChatMessage {
-  id: number;
-  displayName: string;
-  thread: number | PayloadChatThread;
-  author: number | PayloadMember;
-  body: string;
-  moderationStatus: 'visible' | 'pending_review' | 'hidden' | 'deleted';
-  metadata?:
-    | {
-        [k: string]: unknown;
-      }
-    | unknown[]
-    | string
-    | number
-    | boolean
-    | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * Administrator-visible operational and security audit history.
- *
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload_audit_events".
- */
-export interface PayloadAuditEvent {
-  id: number;
-  displayName: string;
-  actorType: 'admin' | 'member' | 'stripe' | 'system' | 'migration';
-  actorId?: string | null;
-  action: string;
-  targetCollection: string;
-  targetId?: string | null;
-  severity: 'info' | 'warning' | 'critical';
-  ipAddress?: string | null;
-  userAgent?: string | null;
-  before?:
-    | {
-        [k: string]: unknown;
-      }
-    | unknown[]
-    | string
-    | number
-    | boolean
-    | null;
-  after?:
-    | {
-        [k: string]: unknown;
-      }
-    | unknown[]
-    | string
-    | number
-    | boolean
-    | null;
-  metadata?:
-    | {
-        [k: string]: unknown;
-      }
-    | unknown[]
-    | string
-    | number
-    | boolean
-    | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
 export interface PayloadKv {
@@ -2289,8 +2426,80 @@ export interface PayloadLockedDocument {
   id: number;
   document?:
     | ({
-        relationTo: 'payload_users';
-        value: number | PayloadUser;
+        relationTo: 'payload_member_groups';
+        value: number | PayloadMemberGroup;
+      } | null)
+    | ({
+        relationTo: 'payload_spaces';
+        value: number | PayloadSpace;
+      } | null)
+    | ({
+        relationTo: 'payload_space_memberships';
+        value: number | PayloadSpaceMembership;
+      } | null)
+    | ({
+        relationTo: 'payload_space_posts';
+        value: number | PayloadSpacePost;
+      } | null)
+    | ({
+        relationTo: 'payload_space_comments';
+        value: number | PayloadSpaceComment;
+      } | null)
+    | ({
+        relationTo: 'payload_space_reactions';
+        value: number | PayloadSpaceReaction;
+      } | null)
+    | ({
+        relationTo: 'payload_space_files';
+        value: number | PayloadSpaceFile;
+      } | null)
+    | ({
+        relationTo: 'payload_chat_threads';
+        value: number | PayloadChatThread;
+      } | null)
+    | ({
+        relationTo: 'payload_chat_messages';
+        value: number | PayloadChatMessage;
+      } | null)
+    | ({
+        relationTo: 'live_sessions';
+        value: number | LiveSession;
+      } | null)
+    | ({
+        relationTo: 'payload_courses';
+        value: number | PayloadCourse;
+      } | null)
+    | ({
+        relationTo: 'payload_course_modules';
+        value: number | PayloadCourseModule;
+      } | null)
+    | ({
+        relationTo: 'payload_lessons';
+        value: number | PayloadLesson;
+      } | null)
+    | ({
+        relationTo: 'payload_lesson_comments';
+        value: number | PayloadLessonComment;
+      } | null)
+    | ({
+        relationTo: 'payload_course_access_preview';
+        value: number | PayloadCourseAccessPreview;
+      } | null)
+    | ({
+        relationTo: 'payload_private_media';
+        value: number | PayloadPrivateMedia;
+      } | null)
+    | ({
+        relationTo: 'payload_lesson_resources';
+        value: number | PayloadLessonResource;
+      } | null)
+    | ({
+        relationTo: 'payload_course_enrollments';
+        value: number | PayloadCourseEnrollment;
+      } | null)
+    | ({
+        relationTo: 'payload_lesson_progress';
+        value: number | PayloadLessonProgress;
       } | null)
     | ({
         relationTo: 'payload_media';
@@ -2309,28 +2518,8 @@ export interface PayloadLockedDocument {
         value: number | PayloadCategory;
       } | null)
     | ({
-        relationTo: 'live_sessions';
-        value: number | LiveSession;
-      } | null)
-    | ({
         relationTo: 'bunny_videos';
         value: number | BunnyVideo;
-      } | null)
-    | ({
-        relationTo: 'payload_courses';
-        value: number | PayloadCourse;
-      } | null)
-    | ({
-        relationTo: 'payload_course_modules';
-        value: number | PayloadCourseModule;
-      } | null)
-    | ({
-        relationTo: 'payload_lessons';
-        value: number | PayloadLesson;
-      } | null)
-    | ({
-        relationTo: 'payload_course_access_preview';
-        value: number | PayloadCourseAccessPreview;
       } | null)
     | ({
         relationTo: 'payload_members';
@@ -2343,22 +2532,6 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'payload_member_security_events';
         value: number | PayloadMemberSecurityEvent;
-      } | null)
-    | ({
-        relationTo: 'payload_private_media';
-        value: number | PayloadPrivateMedia;
-      } | null)
-    | ({
-        relationTo: 'payload_lesson_resources';
-        value: number | PayloadLessonResource;
-      } | null)
-    | ({
-        relationTo: 'payload_course_enrollments';
-        value: number | PayloadCourseEnrollment;
-      } | null)
-    | ({
-        relationTo: 'payload_lesson_progress';
-        value: number | PayloadLessonProgress;
       } | null)
     | ({
         relationTo: 'payload_access_groups';
@@ -2421,6 +2594,42 @@ export interface PayloadLockedDocument {
         value: number | PayloadBillingAction;
       } | null)
     | ({
+        relationTo: 'payload_users';
+        value: number | PayloadUser;
+      } | null)
+    | ({
+        relationTo: 'payload_audit_events';
+        value: number | PayloadAuditEvent;
+      } | null)
+    | ({
+        relationTo: 'payload_contacts';
+        value: number | PayloadContact;
+      } | null)
+    | ({
+        relationTo: 'payload_crm_tags';
+        value: number | PayloadCrmTag;
+      } | null)
+    | ({
+        relationTo: 'payload_contact_tags';
+        value: number | PayloadContactTag;
+      } | null)
+    | ({
+        relationTo: 'payload_contact_notes';
+        value: number | PayloadContactNote;
+      } | null)
+    | ({
+        relationTo: 'payload_email_templates';
+        value: number | PayloadEmailTemplate;
+      } | null)
+    | ({
+        relationTo: 'payload_email_actions';
+        value: number | PayloadEmailAction;
+      } | null)
+    | ({
+        relationTo: 'payload_admin_notifications';
+        value: number | PayloadAdminNotification;
+      } | null)
+    | ({
         relationTo: 'payload_membership_support_records';
         value: number | PayloadMembershipSupportRecord;
       } | null)
@@ -2459,80 +2668,16 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'payload_membership_audit_history';
         value: number | PayloadMembershipAuditHistory;
-      } | null)
-    | ({
-        relationTo: 'payload_contacts';
-        value: number | PayloadContact;
-      } | null)
-    | ({
-        relationTo: 'payload_crm_tags';
-        value: number | PayloadCrmTag;
-      } | null)
-    | ({
-        relationTo: 'payload_contact_tags';
-        value: number | PayloadContactTag;
-      } | null)
-    | ({
-        relationTo: 'payload_contact_notes';
-        value: number | PayloadContactNote;
-      } | null)
-    | ({
-        relationTo: 'payload_email_templates';
-        value: number | PayloadEmailTemplate;
-      } | null)
-    | ({
-        relationTo: 'payload_email_actions';
-        value: number | PayloadEmailAction;
-      } | null)
-    | ({
-        relationTo: 'payload_admin_notifications';
-        value: number | PayloadAdminNotification;
-      } | null)
-    | ({
-        relationTo: 'payload_member_groups';
-        value: number | PayloadMemberGroup;
-      } | null)
-    | ({
-        relationTo: 'payload_spaces';
-        value: number | PayloadSpace;
-      } | null)
-    | ({
-        relationTo: 'payload_space_memberships';
-        value: number | PayloadSpaceMembership;
-      } | null)
-    | ({
-        relationTo: 'payload_space_posts';
-        value: number | PayloadSpacePost;
-      } | null)
-    | ({
-        relationTo: 'payload_space_comments';
-        value: number | PayloadSpaceComment;
-      } | null)
-    | ({
-        relationTo: 'payload_space_files';
-        value: number | PayloadSpaceFile;
-      } | null)
-    | ({
-        relationTo: 'payload_chat_threads';
-        value: number | PayloadChatThread;
-      } | null)
-    | ({
-        relationTo: 'payload_chat_messages';
-        value: number | PayloadChatMessage;
-      } | null)
-    | ({
-        relationTo: 'payload_audit_events';
-        value: number | PayloadAuditEvent;
       } | null);
   globalSlug?: string | null;
   user:
     | {
-        relationTo: 'payload_users';
-        value: number | PayloadUser;
-      }
-    | {
         relationTo: 'payload_members';
         value: number | PayloadMember;
+      }
+    | {
+        relationTo: 'payload_users';
+        value: number | PayloadUser;
       };
   updatedAt: string;
   createdAt: string;
@@ -2545,12 +2690,12 @@ export interface PayloadPreference {
   id: number;
   user:
     | {
-        relationTo: 'payload_users';
-        value: number | PayloadUser;
-      }
-    | {
         relationTo: 'payload_members';
         value: number | PayloadMember;
+      }
+    | {
+        relationTo: 'payload_users';
+        value: number | PayloadUser;
       };
   key?: string | null;
   value?:
@@ -2578,87 +2723,154 @@ export interface PayloadMigration {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload_users_select".
+ * via the `definition` "payload_member_groups_select".
  */
-export interface PayloadUsersSelect<T extends boolean = true> {
-  updatedAt?: T;
-  createdAt?: T;
-  email?: T;
-  resetPasswordToken?: T;
-  resetPasswordExpiration?: T;
-  salt?: T;
-  hash?: T;
-  loginAttempts?: T;
-  lockUntil?: T;
-  sessions?:
-    | T
-    | {
-        id?: T;
-        createdAt?: T;
-        expiresAt?: T;
-      };
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload_media_select".
- */
-export interface PayloadMediaSelect<T extends boolean = true> {
-  alt?: T;
-  updatedAt?: T;
-  createdAt?: T;
-  url?: T;
-  thumbnailURL?: T;
-  filename?: T;
-  mimeType?: T;
-  filesize?: T;
-  width?: T;
-  height?: T;
-  focalX?: T;
-  focalY?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload_pages_select".
- */
-export interface PayloadPagesSelect<T extends boolean = true> {
-  title?: T;
+export interface PayloadMemberGroupsSelect<T extends boolean = true> {
+  name?: T;
   slug?: T;
-  summary?: T;
-  content?: T;
-  featuredImage?: T;
-  gallery?: T;
-  featuredVideo?: T;
   status?: T;
-  publishedAt?: T;
+  visibility?: T;
+  members?: T;
+  description?: T;
+  metadata?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_spaces_select".
+ */
+export interface PayloadSpacesSelect<T extends boolean = true> {
+  name?: T;
+  slug?: T;
+  status?: T;
+  spaceType?: T;
+  visibility?: T;
+  requiredAccessGroups?: T;
+  linkedCourse?: T;
+  ogImage?: T;
+  description?: T;
   sortOrder?: T;
+  metadata?: T;
   updatedAt?: T;
   createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload_posts_select".
+ * via the `definition` "payload_space_memberships_select".
  */
-export interface PayloadPostsSelect<T extends boolean = true> {
-  title?: T;
-  slug?: T;
-  excerpt?: T;
-  content?: T;
-  featuredImage?: T;
-  gallery?: T;
-  featuredVideo?: T;
-  attachments?: T;
+export interface PayloadSpaceMembershipsSelect<T extends boolean = true> {
+  displayName?: T;
+  member?: T;
+  space?: T;
+  role?: T;
   status?: T;
-  publishedAt?: T;
-  categories?: T;
+  joinedAt?: T;
+  expiresAt?: T;
+  metadata?: T;
   updatedAt?: T;
   createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload_categories_select".
+ * via the `definition` "payload_space_posts_select".
  */
-export interface PayloadCategoriesSelect<T extends boolean = true> {
+export interface PayloadSpacePostsSelect<T extends boolean = true> {
   title?: T;
+  space?: T;
+  author?: T;
+  postType?: T;
+  body?: T;
+  moderationStatus?: T;
+  pinned?: T;
+  locked?: T;
+  metadata?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_space_comments_select".
+ */
+export interface PayloadSpaceCommentsSelect<T extends boolean = true> {
+  displayName?: T;
+  post?: T;
+  author?: T;
+  body?: T;
+  moderationStatus?: T;
+  metadata?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_space_reactions_select".
+ */
+export interface PayloadSpaceReactionsSelect<T extends boolean = true> {
+  actorMember?: T;
+  reactionType?: T;
+  targetKind?: T;
+  targetPost?: T;
+  targetComment?: T;
+  surveyOptionKey?: T;
+  legacyReactionId?: T;
+  legacyActorUserId?: T;
+  legacyActorSourceSystem?: T;
+  sourceCreatedAt?: T;
+  metadata?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_space_files_select".
+ */
+export interface PayloadSpaceFilesSelect<T extends boolean = true> {
+  title?: T;
+  space?: T;
+  uploadedBy?: T;
+  post?: T;
+  comment?: T;
+  attachmentType?: T;
+  caption?: T;
+  altText?: T;
+  sortOrder?: T;
+  externalProvider?: T;
+  externalMediaId?: T;
+  bunnyVideoId?: T;
+  bunnyLibraryId?: T;
+  file?: T;
+  protectedFile?: T;
+  moderationStatus?: T;
+  metadata?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_chat_threads_select".
+ */
+export interface PayloadChatThreadsSelect<T extends boolean = true> {
+  title?: T;
+  space?: T;
+  participants?: T;
+  status?: T;
+  lastMessageAt?: T;
+  metadata?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_chat_messages_select".
+ */
+export interface PayloadChatMessagesSelect<T extends boolean = true> {
+  displayName?: T;
+  thread?: T;
+  author?: T;
+  body?: T;
+  moderationStatus?: T;
+  metadata?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -2682,31 +2894,6 @@ export interface LiveSessionsSelect<T extends boolean = true> {
   cancelledAt?: T;
   recordingUrl?: T;
   audit?: T;
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "bunny_videos_select".
- */
-export interface BunnyVideosSelect<T extends boolean = true> {
-  title?: T;
-  libraryId?: T;
-  videoId?: T;
-  videoGuid?: T;
-  lesson?: T;
-  status?: T;
-  duration?: T;
-  frameRate?: T;
-  width?: T;
-  height?: T;
-  videoCodec?: T;
-  audioCodec?: T;
-  bitrate?: T;
-  thumbnailUrl?: T;
-  playbackUrl?: T;
-  errorMessage?: T;
-  webhookEvents?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -2766,6 +2953,24 @@ export interface PayloadLessonsSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_lesson_comments_select".
+ */
+export interface PayloadLessonCommentsSelect<T extends boolean = true> {
+  displayName?: T;
+  lesson?: T;
+  author?: T;
+  parent?: T;
+  body?: T;
+  legacyBodyHtml?: T;
+  moderationStatus?: T;
+  legacyCommentId?: T;
+  sourceCreatedAt?: T;
+  metadata?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload_course_access_preview_select".
  */
 export interface PayloadCourseAccessPreviewSelect<T extends boolean = true> {
@@ -2775,83 +2980,6 @@ export interface PayloadCourseAccessPreviewSelect<T extends boolean = true> {
   badgeText?: T;
   course?: T;
   visualState?: T;
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload_members_select".
- */
-export interface PayloadMembersSelect<T extends boolean = true> {
-  accountStatus?: T;
-  source?: T;
-  emailVerifiedAt?: T;
-  billingHoldReason?: T;
-  lastLoginAt?: T;
-  lastLoginIp?: T;
-  notes?: T;
-  updatedAt?: T;
-  createdAt?: T;
-  email?: T;
-  resetPasswordToken?: T;
-  resetPasswordExpiration?: T;
-  salt?: T;
-  hash?: T;
-  loginAttempts?: T;
-  lockUntil?: T;
-  sessions?:
-    | T
-    | {
-        id?: T;
-        createdAt?: T;
-        expiresAt?: T;
-      };
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload_member_profiles_select".
- */
-export interface PayloadMemberProfilesSelect<T extends boolean = true> {
-  member?: T;
-  displayName?: T;
-  avatar?: T;
-  timezone?: T;
-  phone?: T;
-  company?: T;
-  marketingConsent?: T;
-  transactionalEmailConsent?: T;
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload_member_security_events_select".
- */
-export interface PayloadMemberSecurityEventsSelect<T extends boolean = true> {
-  member?: T;
-  eventType?: T;
-  source?: T;
-  ipAddress?: T;
-  userAgent?: T;
-  metadata?: T;
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload_member_verification_tokens_select".
- */
-export interface PayloadMemberVerificationTokensSelect<T extends boolean = true> {
-  member?: T;
-  email?: T;
-  purpose?: T;
-  tokenDigest?: T;
-  expiresAt?: T;
-  consumedAt?: T;
-  invalidatedAt?: T;
-  lastSentAt?: T;
-  sendAttempts?: T;
-  idempotencyKey?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -2922,6 +3050,188 @@ export interface PayloadLessonProgressSelect<T extends boolean = true> {
   percentComplete?: T;
   lastPositionSeconds?: T;
   metadata?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_media_select".
+ */
+export interface PayloadMediaSelect<T extends boolean = true> {
+  alt?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  url?: T;
+  thumbnailURL?: T;
+  filename?: T;
+  mimeType?: T;
+  filesize?: T;
+  width?: T;
+  height?: T;
+  focalX?: T;
+  focalY?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_pages_select".
+ */
+export interface PayloadPagesSelect<T extends boolean = true> {
+  title?: T;
+  slug?: T;
+  summary?: T;
+  content?: T;
+  featuredImage?: T;
+  gallery?: T;
+  featuredVideo?: T;
+  status?: T;
+  publishedAt?: T;
+  sortOrder?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_posts_select".
+ */
+export interface PayloadPostsSelect<T extends boolean = true> {
+  title?: T;
+  slug?: T;
+  excerpt?: T;
+  content?: T;
+  featuredImage?: T;
+  gallery?: T;
+  featuredVideo?: T;
+  attachments?: T;
+  status?: T;
+  publishedAt?: T;
+  categories?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_categories_select".
+ */
+export interface PayloadCategoriesSelect<T extends boolean = true> {
+  title?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "bunny_videos_select".
+ */
+export interface BunnyVideosSelect<T extends boolean = true> {
+  title?: T;
+  libraryId?: T;
+  videoId?: T;
+  videoGuid?: T;
+  lesson?: T;
+  status?: T;
+  duration?: T;
+  frameRate?: T;
+  width?: T;
+  height?: T;
+  videoCodec?: T;
+  audioCodec?: T;
+  bitrate?: T;
+  thumbnailUrl?: T;
+  playbackUrl?: T;
+  errorMessage?: T;
+  webhookEvents?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_members_select".
+ */
+export interface PayloadMembersSelect<T extends boolean = true> {
+  accountStatus?: T;
+  source?: T;
+  emailVerifiedAt?: T;
+  billingHoldReason?: T;
+  lastLoginAt?: T;
+  lastLoginIp?: T;
+  notes?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  email?: T;
+  resetPasswordToken?: T;
+  resetPasswordExpiration?: T;
+  salt?: T;
+  hash?: T;
+  loginAttempts?: T;
+  lockUntil?: T;
+  sessions?:
+    | T
+    | {
+        id?: T;
+        createdAt?: T;
+        expiresAt?: T;
+      };
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_member_profiles_select".
+ */
+export interface PayloadMemberProfilesSelect<T extends boolean = true> {
+  member?: T;
+  displayName?: T;
+  avatar?: T;
+  coverImage?: T;
+  timezone?: T;
+  phone?: T;
+  company?: T;
+  website?: T;
+  biography?: T;
+  socialLinks?:
+    | T
+    | {
+        instagram?: T;
+        twitter?: T;
+        linkedin?: T;
+        facebook?: T;
+        youtube?: T;
+      };
+  marketingConsent?: T;
+  transactionalEmailConsent?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_member_security_events_select".
+ */
+export interface PayloadMemberSecurityEventsSelect<T extends boolean = true> {
+  member?: T;
+  eventType?: T;
+  source?: T;
+  ipAddress?: T;
+  userAgent?: T;
+  metadata?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_member_verification_tokens_select".
+ */
+export interface PayloadMemberVerificationTokensSelect<T extends boolean = true> {
+  member?: T;
+  email?: T;
+  purpose?: T;
+  tokenDigest?: T;
+  expiresAt?: T;
+  reservationNonce?: T;
+  reservedAt?: T;
+  leaseExpiresAt?: T;
+  resultFingerprint?: T;
+  consumedAt?: T;
+  invalidatedAt?: T;
+  lastSentAt?: T;
+  sendAttempts?: T;
+  idempotencyKey?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -3223,6 +3533,178 @@ export interface PayloadBillingActionsSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_users_select".
+ */
+export interface PayloadUsersSelect<T extends boolean = true> {
+  updatedAt?: T;
+  createdAt?: T;
+  email?: T;
+  resetPasswordToken?: T;
+  resetPasswordExpiration?: T;
+  salt?: T;
+  hash?: T;
+  loginAttempts?: T;
+  lockUntil?: T;
+  sessions?:
+    | T
+    | {
+        id?: T;
+        createdAt?: T;
+        expiresAt?: T;
+      };
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_audit_events_select".
+ */
+export interface PayloadAuditEventsSelect<T extends boolean = true> {
+  displayName?: T;
+  actorType?: T;
+  actorId?: T;
+  action?: T;
+  targetCollection?: T;
+  targetId?: T;
+  severity?: T;
+  ipAddress?: T;
+  userAgent?: T;
+  before?: T;
+  after?: T;
+  metadata?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_contacts_select".
+ */
+export interface PayloadContactsSelect<T extends boolean = true> {
+  email?: T;
+  member?: T;
+  firstName?: T;
+  lastName?: T;
+  company?: T;
+  lifecycleStage?: T;
+  emailStatus?: T;
+  marketingConsentAt?: T;
+  lastActivityAt?: T;
+  source?: T;
+  metadata?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_crm_tags_select".
+ */
+export interface PayloadCrmTagsSelect<T extends boolean = true> {
+  name?: T;
+  slug?: T;
+  status?: T;
+  description?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_contact_tags_select".
+ */
+export interface PayloadContactTagsSelect<T extends boolean = true> {
+  displayName?: T;
+  contact?: T;
+  tag?: T;
+  source?: T;
+  sourceId?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_contact_notes_select".
+ */
+export interface PayloadContactNotesSelect<T extends boolean = true> {
+  title?: T;
+  contact?: T;
+  noteType?: T;
+  body?: T;
+  metadata?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_email_templates_select".
+ */
+export interface PayloadEmailTemplatesSelect<T extends boolean = true> {
+  name?: T;
+  templateKey?: T;
+  status?: T;
+  purpose?: T;
+  subject?: T;
+  preheader?: T;
+  textBody?: T;
+  htmlBody?: T;
+  adminCopyRequired?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_email_events_select".
+ */
+export interface PayloadEmailEventsSelect<T extends boolean = true> {
+  displayName?: T;
+  toEmail?: T;
+  contact?: T;
+  templateKey?: T;
+  deliveryStatus?: T;
+  resendEmailId?: T;
+  dedupeKey?: T;
+  sentAt?: T;
+  deliveredAt?: T;
+  failureReason?: T;
+  retryCount?: T;
+  lastRetryRequestedAt?: T;
+  lastRetryRequestedBy?: T;
+  claimedAt?: T;
+  workerClaimId?: T;
+  metadata?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_email_actions_select".
+ */
+export interface PayloadEmailActionsSelect<T extends boolean = true> {
+  displayName?: T;
+  emailEvent?: T;
+  actionType?: T;
+  requestedBy?: T;
+  status?: T;
+  note?: T;
+  completedAt?: T;
+  result?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_admin_notifications_select".
+ */
+export interface PayloadAdminNotificationsSelect<T extends boolean = true> {
+  title?: T;
+  notificationType?: T;
+  severity?: T;
+  status?: T;
+  body?: T;
+  relatedCollection?: T;
+  relatedDocumentId?: T;
+  metadata?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload_membership_support_records_select".
  */
 export interface PayloadMembershipSupportRecordsSelect<T extends boolean = true> {
@@ -3484,287 +3966,6 @@ export interface PayloadMembershipAuditHistorySelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload_contacts_select".
- */
-export interface PayloadContactsSelect<T extends boolean = true> {
-  email?: T;
-  member?: T;
-  firstName?: T;
-  lastName?: T;
-  company?: T;
-  lifecycleStage?: T;
-  emailStatus?: T;
-  marketingConsentAt?: T;
-  lastActivityAt?: T;
-  source?: T;
-  metadata?: T;
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload_crm_tags_select".
- */
-export interface PayloadCrmTagsSelect<T extends boolean = true> {
-  name?: T;
-  slug?: T;
-  status?: T;
-  description?: T;
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload_contact_tags_select".
- */
-export interface PayloadContactTagsSelect<T extends boolean = true> {
-  displayName?: T;
-  contact?: T;
-  tag?: T;
-  source?: T;
-  sourceId?: T;
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload_contact_notes_select".
- */
-export interface PayloadContactNotesSelect<T extends boolean = true> {
-  title?: T;
-  contact?: T;
-  noteType?: T;
-  body?: T;
-  metadata?: T;
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload_email_templates_select".
- */
-export interface PayloadEmailTemplatesSelect<T extends boolean = true> {
-  name?: T;
-  templateKey?: T;
-  status?: T;
-  purpose?: T;
-  subject?: T;
-  preheader?: T;
-  textBody?: T;
-  htmlBody?: T;
-  adminCopyRequired?: T;
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload_email_events_select".
- */
-export interface PayloadEmailEventsSelect<T extends boolean = true> {
-  displayName?: T;
-  toEmail?: T;
-  contact?: T;
-  templateKey?: T;
-  deliveryStatus?: T;
-  resendEmailId?: T;
-  dedupeKey?: T;
-  sentAt?: T;
-  deliveredAt?: T;
-  failureReason?: T;
-  retryCount?: T;
-  lastRetryRequestedAt?: T;
-  lastRetryRequestedBy?: T;
-  metadata?: T;
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload_email_actions_select".
- */
-export interface PayloadEmailActionsSelect<T extends boolean = true> {
-  displayName?: T;
-  emailEvent?: T;
-  actionType?: T;
-  requestedBy?: T;
-  status?: T;
-  note?: T;
-  completedAt?: T;
-  result?: T;
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload_admin_notifications_select".
- */
-export interface PayloadAdminNotificationsSelect<T extends boolean = true> {
-  title?: T;
-  notificationType?: T;
-  severity?: T;
-  status?: T;
-  body?: T;
-  relatedCollection?: T;
-  relatedDocumentId?: T;
-  metadata?: T;
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload_member_groups_select".
- */
-export interface PayloadMemberGroupsSelect<T extends boolean = true> {
-  name?: T;
-  slug?: T;
-  status?: T;
-  visibility?: T;
-  members?: T;
-  description?: T;
-  metadata?: T;
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload_spaces_select".
- */
-export interface PayloadSpacesSelect<T extends boolean = true> {
-  name?: T;
-  slug?: T;
-  status?: T;
-  spaceType?: T;
-  visibility?: T;
-  requiredAccessGroups?: T;
-  linkedCourse?: T;
-  description?: T;
-  sortOrder?: T;
-  metadata?: T;
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload_space_memberships_select".
- */
-export interface PayloadSpaceMembershipsSelect<T extends boolean = true> {
-  displayName?: T;
-  member?: T;
-  space?: T;
-  role?: T;
-  status?: T;
-  joinedAt?: T;
-  expiresAt?: T;
-  metadata?: T;
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload_space_posts_select".
- */
-export interface PayloadSpacePostsSelect<T extends boolean = true> {
-  title?: T;
-  space?: T;
-  author?: T;
-  postType?: T;
-  body?: T;
-  moderationStatus?: T;
-  pinned?: T;
-  locked?: T;
-  metadata?: T;
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload_space_comments_select".
- */
-export interface PayloadSpaceCommentsSelect<T extends boolean = true> {
-  displayName?: T;
-  post?: T;
-  author?: T;
-  body?: T;
-  moderationStatus?: T;
-  metadata?: T;
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload_space_files_select".
- */
-export interface PayloadSpaceFilesSelect<T extends boolean = true> {
-  title?: T;
-  space?: T;
-  uploadedBy?: T;
-  post?: T;
-  comment?: T;
-  attachmentType?: T;
-  caption?: T;
-  altText?: T;
-  sortOrder?: T;
-  externalProvider?: T;
-  externalMediaId?: T;
-  bunnyVideoId?: T;
-  bunnyLibraryId?: T;
-  file?: T;
-  protectedFile?: T;
-  moderationStatus?: T;
-  metadata?: T;
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload_chat_threads_select".
- */
-export interface PayloadChatThreadsSelect<T extends boolean = true> {
-  title?: T;
-  space?: T;
-  participants?: T;
-  status?: T;
-  lastMessageAt?: T;
-  metadata?: T;
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload_chat_messages_select".
- */
-export interface PayloadChatMessagesSelect<T extends boolean = true> {
-  displayName?: T;
-  thread?: T;
-  author?: T;
-  body?: T;
-  moderationStatus?: T;
-  metadata?: T;
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload_audit_events_select".
- */
-export interface PayloadAuditEventsSelect<T extends boolean = true> {
-  displayName?: T;
-  actorType?: T;
-  actorId?: T;
-  action?: T;
-  targetCollection?: T;
-  targetId?: T;
-  severity?: T;
-  ipAddress?: T;
-  userAgent?: T;
-  before?: T;
-  after?: T;
-  metadata?: T;
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv_select".
  */
 export interface PayloadKvSelect<T extends boolean = true> {
@@ -3804,6 +4005,100 @@ export interface PayloadMigrationsSelect<T extends boolean = true> {
   createdAt?: T;
 }
 /**
+ * JPV member portal branding and sign-in presentation. Migrated from source-proven FluentCommunity settings.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "portalSettings".
+ */
+export interface PortalSetting {
+  id: number;
+  siteTitle: string;
+  /**
+   * Primary portal logo.
+   */
+  logo?: (number | null) | PayloadMedia;
+  /**
+   * Alternate/light portal logo where a dark surface needs it.
+   */
+  whiteLogo?: (number | null) | PayloadMedia;
+  /**
+   * Portal/social featured image from the legacy community settings.
+   */
+  featuredImage?: (number | null) | PayloadMedia;
+  loginBanner?: {
+    title?: string | null;
+    description?: string | null;
+    titleColor?: string | null;
+    textColor?: string | null;
+    backgroundColor?: string | null;
+    logo?: (number | null) | PayloadMedia;
+    backgroundImage?: (number | null) | PayloadMedia;
+  };
+  loginForm?: {
+    title?: string | null;
+    description?: string | null;
+    titleColor?: string | null;
+    textColor?: string | null;
+    backgroundColor?: string | null;
+    buttonLabel?: string | null;
+    buttonColor?: string | null;
+    buttonLabelColor?: string | null;
+    backgroundImage?: (number | null) | PayloadMedia;
+  };
+  /**
+   * Exact migrated FluentCommunity settings/provenance that are not executed by the new platform.
+   */
+  legacySettings?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "portalSettings_select".
+ */
+export interface PortalSettingsSelect<T extends boolean = true> {
+  siteTitle?: T;
+  logo?: T;
+  whiteLogo?: T;
+  featuredImage?: T;
+  loginBanner?:
+    | T
+    | {
+        title?: T;
+        description?: T;
+        titleColor?: T;
+        textColor?: T;
+        backgroundColor?: T;
+        logo?: T;
+        backgroundImage?: T;
+      };
+  loginForm?:
+    | T
+    | {
+        title?: T;
+        description?: T;
+        titleColor?: T;
+        textColor?: T;
+        backgroundColor?: T;
+        buttonLabel?: T;
+        buttonColor?: T;
+        buttonLabelColor?: T;
+        backgroundImage?: T;
+      };
+  legacySettings?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "collections_widget".
  */
@@ -3812,6 +4107,44 @@ export interface CollectionsWidget {
     [k: string]: unknown;
   };
   width: 'full';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "LegacyHTMLBlock".
+ */
+export interface LegacyHTMLBlock {
+  /**
+   * Inert source HTML preserved by migration. Do not execute scripts from this field.
+   */
+  html: string;
+  /**
+   * Sanitized display HTML derived from the source fragment. The exact source remains in html.
+   */
+  safeHtml: string;
+  reason: string;
+  sourceTag?: string | null;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'legacyHTML';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "BunnyVideoBlock".
+ */
+export interface BunnyVideoBlock {
+  /**
+   * Canonical Bunny Stream GUID. Numeric provider IDs are legacy compatibility only.
+   */
+  videoGuid: string;
+  libraryId: number;
+  title?: string | null;
+  /**
+   * Original legacy embed URL retained for migration provenance.
+   */
+  sourceUrl?: string | null;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'bunnyVideo';
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
