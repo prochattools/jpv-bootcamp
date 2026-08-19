@@ -33,7 +33,7 @@ const ROUTES = [
   {
     path: '/admin/collections/payload_courses/3',
     label: 'course-3',
-    heading: /client accelerator|course/i,
+    heading: /property investment|training|course/i,
   },
 ] as const
 
