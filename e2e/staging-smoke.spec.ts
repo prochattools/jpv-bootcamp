@@ -681,4 +681,55 @@ test.describe('Authenticated Portal Route Coverage', () => {
     expect(finalUrl).toContain('/portal/community')
     expect(finalUrl).toMatch(/submission=(pending|error)/)
   })
+
+  test('PORTAL-011: Account page loads profile, password, and email sections', async ({ page }) => {
+    await loginMember(page)
+    const start = Date.now()
+    await page.goto(`${STAGING_URL}/portal/account`, { waitUntil: 'domcontentloaded' })
+    await page.waitForLoadState('networkidle', { timeout: 20000 })
+    const loadTime = Date.now() - start
+    console.log(`Account page loaded in ${loadTime}ms`)
+
+    expect(page.url()).toContain('/portal')
+    expect(page.url()).not.toMatch(/mode=login/)
+    await expect(page.getByRole('heading', { name: 'Account' })).toBeVisible({ timeout: 5000 })
+    await expect(page.locator('input[name="displayName"]')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Change password' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Change email address' })).toBeVisible()
+  })
+
+  test('PORTAL-012: Billing page loads subscription status', async ({ page }) => {
+    await loginMember(page)
+    const start = Date.now()
+    await page.goto(`${STAGING_URL}/portal/billing`, { waitUntil: 'domcontentloaded' })
+    await page.waitForLoadState('networkidle', { timeout: 20000 })
+    const loadTime = Date.now() - start
+    console.log(`Billing page loaded in ${loadTime}ms`)
+
+    expect(page.url()).toContain('/portal')
+    expect(page.url()).not.toMatch(/mode=login/)
+    await expect(page.getByRole('heading', { name: 'Billing' })).toBeVisible({ timeout: 5000 })
+  })
+
+  test('PORTAL-013: Portal dashboard no unexpected 403 errors', async ({ page }) => {
+    await loginMember(page)
+    const failures: Array<{ url: string; status: number }> = []
+    page.on('response', (resp) => {
+      const status = resp.status()
+      if (status === 403 || status === 401) {
+        const url = resp.url()
+        if (!url.includes('/api/payload_media/file/')) {
+          failures.push({ url: url.replace(/[?#].*/, '…'), status })
+        }
+      }
+    })
+
+    const routes = ['/portal', '/portal/courses', '/portal/community', '/portal/account', '/portal/billing']
+    for (const route of routes) {
+      await page.goto(`${STAGING_URL}${route}`, { waitUntil: 'domcontentloaded' })
+      await page.waitForLoadState('networkidle', { timeout: 15000 })
+    }
+
+    expect(failures).toEqual([])
+  })
 })

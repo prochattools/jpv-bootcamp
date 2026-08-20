@@ -6,6 +6,7 @@ import { redirect } from 'next/navigation'
 import { getPayload } from 'payload'
 
 import { resolvePayloadRequestSession } from '@/lib/auth/payloadSession'
+import { MEMBER_COLLECTION } from '@/lib/auth/payloadSessionMapping'
 import { decideSharedLogin } from '@/lib/auth/sharedLoginDecision'
 import type { PayloadCourseAccessAPI } from '@/lib/payloadCourse/accessService'
 
@@ -35,7 +36,7 @@ export async function requirePortalMember(
     collection: 'payload_members',
     id: session.member.id,
     overrideAccess: false,
-    user: session,
+    user: { id: session.member.id, collection: MEMBER_COLLECTION },
   })
 
   const memberEmail = typeof member?.email === 'string' ? member.email : ''

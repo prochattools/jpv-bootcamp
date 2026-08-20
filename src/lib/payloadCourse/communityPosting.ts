@@ -3,6 +3,7 @@ import type {
   PayloadDocument,
   PayloadId,
 } from '@/lib/payloadCourse/accessService'
+import { notifySpaceMembersOfNewPost } from '@/lib/payloadCourse/communityPostNotifications'
 import {
   createAuditEvent,
   queueAndAttemptEmailEvent,
@@ -29,6 +30,8 @@ type CreateSpacePostInput = {
   postType?: 'discussion' | 'question' | 'announcement'
   rateLimit?: RateLimitInput
   adminEmail?: string | null
+  notifyMembers?: boolean
+  dryRun?: boolean
 }
 
 type CreateSpaceCommentInput = {
@@ -327,7 +330,7 @@ export async function createSpacePost(
     authorId: input.memberId,
     rateLimit: input.rateLimit,
   })
-  await assertSpaceWriteAccess(payload, input.memberId, input.spaceId)
+  const { space } = await assertSpaceWriteAccess(payload, input.memberId, input.spaceId)
 
   const post = await payload.create({
     collection: 'payload_space_posts',
@@ -367,6 +370,18 @@ export async function createSpacePost(
     spaceId: input.spaceId,
     memberId: input.memberId,
   })
+
+  if (input.notifyMembers !== false) {
+    await notifySpaceMembersOfNewPost(payload, {
+      spaceId: input.spaceId,
+      postId: post.id,
+      authorMemberId: input.memberId,
+      postTitle: title,
+      spaceName: asString(space.name) ?? 'Community',
+      spaceSlug: asString(space.slug),
+      dryRun: input.dryRun,
+    })
+  }
 
   return {
     document: post,

@@ -267,10 +267,11 @@ async function buildSpaceProjection(
   memberId: string,
   space: PayloadDocument
 ): Promise<MemberCommunitySpace | null> {
-  const access = await evaluatePayloadSpaceAccess(payload, {
-    memberId,
-    spaceId: space.id,
-  })
+  const [access, membership, linkedCourseSlug] = await Promise.all([
+    evaluatePayloadSpaceAccess(payload, { memberId, spaceId: space.id }),
+    findMemberSpaceMembership(payload, memberId, space.id),
+    findLinkedCourseSlug(payload, space.linkedCourse),
+  ])
   const visibility = normalizeSpaceVisibility(space.visibility)
   const allowed = access.decision.allowed
 
@@ -278,8 +279,6 @@ async function buildSpaceProjection(
     return null
   }
 
-  const membership = await findMemberSpaceMembership(payload, memberId, space.id)
-  const linkedCourseSlug = await findLinkedCourseSlug(payload, space.linkedCourse)
   const postCount = allowed ? await countVisibleSpacePosts(payload, space.id) : null
 
   return {
@@ -317,11 +316,11 @@ export async function getMemberCommunityDashboard(
     limit: 100,
   })
 
-  const projections: MemberCommunitySpace[] = []
-  for (const space of spaces.sort(bySortOrder)) {
-    const projection = await buildSpaceProjection(payload, normalizedMemberId, space)
-    if (projection) projections.push(projection)
-  }
+  const sorted = spaces.sort(bySortOrder)
+  const results = await Promise.all(
+    sorted.map((space) => buildSpaceProjection(payload, normalizedMemberId, space))
+  )
+  const projections = results.filter((p): p is MemberCommunitySpace => p !== null)
 
   return {
     memberId: normalizedMemberId,
@@ -355,17 +354,17 @@ export async function getMemberCommunitySpaceDetail(
   }
 
   const posts = await getVisibleSpacePosts(payload, space.id)
-  const postProjections: MemberCommunityPost[] = []
-  for (const post of posts) {
-    postProjections.push({
-      id: String(post.id),
-      title: asString(post.title) ?? 'Untitled post',
-      postType: asString(post.postType),
-      pinned: asBoolean(post.pinned),
-      createdAt: asDateString(post.createdAt),
-      commentCount: await countVisibleComments(payload, post.id),
-    })
-  }
+  const commentCounts = await Promise.all(
+    posts.map((post) => countVisibleComments(payload, post.id))
+  )
+  const postProjections: MemberCommunityPost[] = posts.map((post, i) => ({
+    id: String(post.id),
+    title: asString(post.title) ?? 'Untitled post',
+    postType: asString(post.postType),
+    pinned: asBoolean(post.pinned),
+    createdAt: asDateString(post.createdAt),
+    commentCount: commentCounts[i],
+  }))
 
   return {
     ...projection,
@@ -391,36 +390,32 @@ export async function getMemberAnnouncements(
     limit: 100,
   })
 
-  const announcements: Array<{
-    post: PayloadDocument
-    space: PayloadDocument
-  }> = []
+  const spaceResults = await Promise.all(
+    spaces.sort(bySortOrder).map(async (space) => {
+      const access = await evaluatePayloadSpaceAccess(payload, {
+        memberId: normalizedMemberId,
+        spaceId: space.id,
+      })
+      if (!access.decision.allowed) return []
 
-  for (const space of spaces.sort(bySortOrder)) {
-    const access = await evaluatePayloadSpaceAccess(payload, {
-      memberId: normalizedMemberId,
-      spaceId: space.id,
+      const posts = await findAll(payload, 'payload_space_posts', {
+        where: {
+          and: [
+            { space: { equals: String(space.id) } },
+            { postType: { equals: 'announcement' } },
+            { moderationStatus: { equals: 'visible' } },
+          ],
+        },
+        sort: '-createdAt',
+        limit: 100,
+      })
+
+      return posts.map((post) => ({ post, space }))
     })
-    if (!access.decision.allowed) continue
+  )
 
-    const posts = await findAll(payload, 'payload_space_posts', {
-      where: {
-        and: [
-          { space: { equals: String(space.id) } },
-          { postType: { equals: 'announcement' } },
-          { moderationStatus: { equals: 'visible' } },
-        ],
-      },
-      sort: '-createdAt',
-      limit: 100,
-    })
-
-    for (const post of posts) {
-      announcements.push({ post, space })
-    }
-  }
-
-  return announcements
+  return spaceResults
+    .flat()
     .sort((a, b) => byPinnedAndDate(a.post, b.post))
     .map(({ post, space }) => ({
       id: String(post.id),
