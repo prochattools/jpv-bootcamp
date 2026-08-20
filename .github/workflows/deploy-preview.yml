@@ -305,6 +305,14 @@ jobs:
           DOKPLOY_API_KEY: ${{ secrets.DOKPLOY_API_KEY }}
         run: pnpm exec tsx scripts/staging-gates/ensurePreviewRouting.mts
 
+      - name: Refresh GHCR registry credentials in Dokploy
+        if: success()
+        env:
+          DOKPLOY_PREVIEW_APP_ID: ${{ secrets.DOKPLOY_PREVIEW_APP_ID }}
+          DOKPLOY_API_KEY: ${{ secrets.DOKPLOY_API_KEY }}
+          GITHUB_TOKEN_LOGIN: ${{ github.token }}
+        run: pnpm exec tsx scripts/staging-gates/ensureGhcrRegistryCredentials.mts
+
       - name: Trigger Dokploy redeploy
         if: success()
         shell: bash
