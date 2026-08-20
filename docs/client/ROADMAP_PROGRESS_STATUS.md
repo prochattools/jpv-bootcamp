@@ -10,7 +10,7 @@
 - **COMPLETE LAUNCH-SCOPE REPOSITORY WORK:** M0-01 through M0-09, M1-01 through M1-06 in their documented state, UI-01 design/admin hardening, release/browser automation, media persistence, migration inventory/preflight, email queue/guard, Stripe test-mode behavior, partner/sponsored staging boundaries, and durable account-action reservation/finalization source hardening. All 35 migrations applied.
 - **LOCALLY VERIFIED CONTRACT:** the release manifest contains `164/164` required gates. Final closure complete at docs-closeout commit a6dccaf.
 - **CANONICAL EVIDENCE:** `docs/client/MIGRATION_APPROVAL_STATUS.md`, `docs/CURRENT_WORK_HANDOFF.md`, and `docs/PREVIEW_RELEASE_READINESS.md` record complete staging migration evidence and acceptance results.
-- **NEXT PHASE RANKING:** (1) Phase 8 — Member Portal Operationalization (**COMPLETE** 2026-08-20, SHA `ef139bb`→final deployed SHA below); (2) Phase 9 — LiveKit Group Calls (REQUIRED pre-cutover); (3) Phase 10 — production cutover only under separate explicit authorization; (4) Phase 11 — Partner Affiliates deferred post-cutover.
+- **NEXT PHASE RANKING:** (1) Phase 8 — Member Portal Operationalization (**COMPLETE** 2026-08-20, SHA `9bd35c0`, deploy run `32384925382`); (2) Phase 9 — LiveKit Group Calls (REQUIRED pre-cutover); (3) Phase 10 — production cutover only under separate explicit authorization; (4) Phase 11 — Partner Affiliates deferred post-cutover.
 - **PRODUCTION OPERATION:** NOT performed, NOT authorized. Staging migration itself has NO remaining engineering blocker.
 - **DEFERRED BY DESIGN:** M2-01 and Phases 8–11 remain outside the agreed launch scope unless separately promoted; they are not blockers for the next roadmap phase.
 
@@ -29,7 +29,7 @@ Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`.
 **Production operation:** NOT performed, NOT authorized. Production jpvbootcamp.com routing was manually restored after an unrelated incident; no production migration or cutover is part of this work.
 
 **Next phase roadmap (ranked):**
-1. **Phase 8 — Member Portal Operationalization** — **COMPLETE** 2026-08-20. Auth 403 root cause fixed, N+1 eliminated, post+comment notification fan-out implemented, courses/community/account/billing functional, 84/84 staging Playwright green, zero unexpected 403/5xx. History: initial deploy SHA `ef139bb`, closeout deploy below.
+1. **Phase 8 — Member Portal Operationalization** — **COMPLETE** 2026-08-20. Auth 403 root cause fixed, N+1 eliminated, post+comment notification fan-out implemented, courses/community/account/billing functional. Closeout CI run `32384013957` green. Deploy run `32384925382` to `clients-jpv-bootcamp-app-tp9xrk`, SHA `9bd35c08ec393d2d097eb0dbcbfbaa159708ebbf`. Staging smoke: 84 passed/0 failed (public+billing+accessibility gates), full portal journey verified by CI.
 2. **Phase 9 — LiveKit Group Calls** — REQUIRED before production cutover. Partial server/client pieces exist; must be completed, tested, and proven on staging before production cutover is authorized.
 3. **Phase 10 — Production cutover** — ONLY under separate explicit authorization; not part of current roadmap.
 4. **Phase 11 — Partner Affiliates and Reporting** — deferred post-cutover. Partner directory, member applications, recording/delivery, reports/export, audit. M2-01 remains post-core unless explicitly promoted.
