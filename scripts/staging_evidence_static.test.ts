@@ -57,7 +57,7 @@ async function main(): Promise<void> {
   }
 
   assert.match(approvalPacket, /Migration Approval Packet/)
-  assert.match(approvalStatus, /Current status:\s*`BLOCKED`/)
+  assert.match(approvalStatus, /Current status:\*\*\s*`STAGING MIGRATION COMPLETE`/)
   assert.match(rehearsalRunbook, /This runbook does not authorize migration execution\./)
   assert.match(stagingChecklist, /Staging Smoke Checklist/)
   assert.match(providerReadiness, /Provider and Email Readiness/)
