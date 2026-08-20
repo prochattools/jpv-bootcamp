@@ -276,7 +276,7 @@ function testNoBrowserSelectableAnnouncementAccess(): void {
     'utf8'
   )
 
-  assert.match(pageSource, /getMemberAnnouncements\(payload, memberId\)/)
+  assert.match(pageSource, /getMemberAnnouncements\(dedupPayload, memberId\)/)
   assert.doesNotMatch(pageSource, /searchParams/)
   assert.doesNotMatch(pageSource, /FormData/)
   assert.doesNotMatch(pageSource, /<form/i)
