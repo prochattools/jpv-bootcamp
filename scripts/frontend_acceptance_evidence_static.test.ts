@@ -51,7 +51,7 @@ function main(): void {
   mustInclude(readme, 'FRONTEND_ACCEPTANCE_EVIDENCE_TEMPLATE.md', readmePath)
   mustInclude(handoff, 'FRONTEND_ACCEPTANCE_EVIDENCE_TEMPLATE.md', handoffPath)
   mustInclude(roadmap, 'Release evidence', roadmapPath)
-  mustInclude(roadmap, 'complete browser smoke evidence', roadmapPath)
+  mustInclude(roadmap, 'Complete staging/browser smoke', roadmapPath)
 
   const forbidden = [
     'prisma ' + 'migrate',
