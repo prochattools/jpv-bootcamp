@@ -484,6 +484,12 @@ export async function buildLegacyPayloadOperationPlan(
         email: member.canonicalEmail,
         accountStatus: member.accountStatus,
         source: 'migration',
+        // Active migrated members had verified emails on the legacy platform; mark them
+        // verified at migration time so they are immediately login-eligible without a
+        // re-verification flow that the legacy email addresses may not receive.
+        ...(member.accountStatus === 'active'
+          ? { emailVerifiedAt: new Date().toISOString() }
+          : {}),
         ...(member.accountStatus === 'blocked'
           ? { billingHoldReason: member.classificationReason === 'stripe_past_due_fail_closed' ? 'legacy_stripe_past_due' : 'legacy_migration_deactivated' }
           : {}),

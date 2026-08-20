@@ -236,6 +236,8 @@ async function run(): Promise<void> {
   assert.ok(nidiaMember)
   assert.equal(nidiaMember.data.email, 'nidia-correct@invalid.example')
   assert.equal(nidiaMember.data.accountStatus, 'active')
+  // Active migrated members must be login-eligible without a re-verification email
+  assert.ok(typeof nidiaMember.data.emailVerifiedAt === 'string' && nidiaMember.data.emailVerifiedAt.length > 0, 'active member must have emailVerifiedAt set')
 
   const nidiaProfile = plan.operations.find((item) => item.collection === 'payload_member_profiles' && item.idempotencyKey === 'wp_member_profile:76')
   assert.ok(nidiaProfile)
@@ -269,6 +271,8 @@ async function run(): Promise<void> {
   assert.ok(staffMember)
   assert.equal(staffMember.data.accountStatus, 'blocked')
   assert.equal(staffMember.data.billingHoldReason, 'legacy_staff_author_only')
+  // Blocked members must not receive emailVerifiedAt — they are intentionally not login-eligible
+  assert.equal(Object.prototype.hasOwnProperty.call(staffMember.data, 'emailVerifiedAt'), false, 'blocked member must not have emailVerifiedAt')
 
   const memberDiscussion = plan.operations.find((item) => item.collection === 'payload_spaces' && item.data.name === 'Member Discussion')
   assert.ok(memberDiscussion)
