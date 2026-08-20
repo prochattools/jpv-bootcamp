@@ -30,22 +30,21 @@ const REQUIRED_SCHEMA = STAGING_TARGET.schema
 const REQUIRED_DATABASE = STAGING_TARGET.database
 const REQUIRED_ENVIRONMENT = STAGING_TARGET.environment
 const REQUIRED_TARGET_ID = STAGING_TARGET.targetId
-const EXPECTED_APPLIED_BEFORE = 33
+const EXPECTED_APPLIED_BEFORE = 35
 const EXPECTED_FORWARD_BATCH = [
-  '20260818_140000_member_profile_parity',
-  '20260818_140100_portal_settings',
+  '20260820_000000_live_session_space',
 ] as const
 const EXPECTED_APPLIED_AFTER = EXPECTED_APPLIED_BEFORE + EXPECTED_FORWARD_BATCH.length
 const TARGET_MIGRATIONS = PAYLOAD_MIGRATION_NAMES.slice(EXPECTED_APPLIED_BEFORE, EXPECTED_APPLIED_AFTER)
-const APPLY_CONFIRMATION_VALUE = 'apply_member_profile_portal_settings_to_jpvbootcamp_staging'
-const ROLLBACK_PLAN_CONFIRMATION_VALUE = 'plan_rollback_member_profile_portal_settings_from_jpvbootcamp_staging'
+const APPLY_CONFIRMATION_VALUE = 'apply_live_session_space_to_jpvbootcamp_staging'
+const ROLLBACK_PLAN_CONFIRMATION_VALUE = 'plan_rollback_live_session_space_from_jpvbootcamp_staging'
 const FULL_COMMIT_SHA_RE = /^[0-9a-f]{40}$/
 
 if (
   TARGET_MIGRATIONS.length !== EXPECTED_FORWARD_BATCH.length ||
   TARGET_MIGRATIONS.some((name, index) => name !== EXPECTED_FORWARD_BATCH[index])
 ) {
-  throw new Error(`Canonical migration registry does not contain the reviewed migrations 34-35 at the expected position`)
+  throw new Error(`Canonical migration registry does not contain the reviewed migration 36 at the expected position`)
 }
 
 // Production token labels rejected as whole tokens (exact match against hostname labels or db name components).

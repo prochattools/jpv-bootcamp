@@ -2,7 +2,7 @@
 
 ## Status
 
-**Phase 9 — REQUIRED PRE-CUTOVER — IN PROGRESS 2026-08-20.**
+**Phase 9 — REQUIRED PRE-CUTOVER — CODE COMPLETE 2026-08-20. Staging migration and deploy pending.**
 
 ~~Future roadmap feature — research and architecture defined; implementation intentionally deferred.~~ *Superseded 2026-08-20. LiveKit group calls are now Phase 9 REQUIRED before production cutover.*
 

@@ -525,7 +525,7 @@ Outside launch scope (documented, not blocking):
 
 ### Phase 9 — LiveKit Group Calls (REQUIRED pre-cutover)
 
-**Status:** REQUIRED before production cutover. Research and architecture defined; partial server/client pieces exist. Must be completed, tested, and proven on staging before production cutover is authorized.
+**Status:** CODE COMPLETE 2026-08-20. Push gate run `32397679498` green (164/164 release, TypeScript, build, Prisma, E2E). Migration `20260820_000000_live_session_space` (registry #36) exists; staging apply and LiveKit config verification are the remaining operator steps before Phase 9 staging acceptance. See `docs/LIVEKIT_PAYLOADCMS_GROUP_CALLS_PLAN.md` for implementation detail.
 
 Detailed research and specification: `docs/LIVEKIT_PAYLOADCMS_GROUP_CALLS_PLAN.md`.
 
