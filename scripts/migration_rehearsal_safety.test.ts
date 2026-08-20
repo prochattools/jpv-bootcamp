@@ -19,9 +19,9 @@ async function main(): Promise<void> {
   ])
 
   assert.match(runbookSource, /This runbook does not authorize migration execution\./)
-  assert.match(approvalStatusSource, /Current status:\s*`BLOCKED`/)
-  assert.match(approvalStatusSource, /Migrations applied:\s*`No`/)
-  assert.match(approvalStatusSource, /Target-environment table-plan-to-Free approval:\s*`Pending`/)
+  assert.match(approvalStatusSource, /Current status:\*\*\s*`STAGING MIGRATION COMPLETE`/)
+  assert.match(approvalStatusSource, /Payload migrations applied:\*\*\s*`35\/35`/)
+  assert.match(approvalStatusSource, /Production migration \/ cutover.*NOT performed, NOT authorized/)
   assert.match(approvalPacketSource, /Approve table-plan-to-Free mapping for the target environment\./)
   assert.match(
     roadmapSource,
