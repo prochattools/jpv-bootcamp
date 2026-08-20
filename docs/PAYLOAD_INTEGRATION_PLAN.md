@@ -1,15 +1,14 @@
 # Payload CMS Integration Plan
 
-## Current staging checkpoint — 2026-08-08
+## Current staging checkpoint — 2026-08-19 (STAGING MIGRATION COMPLETE)
 
 - **ONLY PERMITTED OPERATIONAL LANE:** branch `feature/course-branding-and-preview`; staging origin `https://preview.jpvbootcamp.com`; Dokploy slug `clients-jpv-bootcamp-app-tp9xrk`; Dokploy app ID `I_2Vukga3cc3ZhaG-mUzU`; PostgreSQL host `10.0.2.4`, port `5433`, database `jpvbootcamp`, schema `jpvbootcamp_staging`. No alternate target is permitted.
-- **CURRENT FEATURE TIP:** verify the exact operator tip with `git rev-parse HEAD`. Ordinary feature pushes validate only; deployment requires an explicit guarded `workflow_dispatch`.
-- **DEPLOYED STAGING BASELINE:** staging remains on `9c045fa5a5c327014c20fe9377f7d5368b550573` until an explicitly authorized staging deployment changes it.
-- **IMPLEMENTED / LOCALLY VERIFIED:** the agreed launch-scope repository implementation is complete: M0-01 through M0-09 and M1-01 through M1-06 in their documented staging state, including durable account-action reservation/finalization source changes and migration `20260804_050000_member_account_action_reservations`; the release manifest contains `164/164` required gates.
-- **AUTHORITATIVE PRE-APPLY EVIDENCE:** guarded read-only staging plan run `31215369413` at reviewed code checkpoint `9e068cc8b0a5ec9573732fee3a78bed9995787a6` returned `plan_ok`: 28 Payload migrations applied, migration 29 solely missing, zero unexpected/duplicate/malformed Payload records, and Prisma healthy. No schema write occurred.
-- **NEXT CORE GATE:** finish a CI-green repository-closure checkpoint, then rerun the guarded read-only staging migration plan against that exact final SHA. A fresh `plan_ok` makes the migration-29 apply packet ready for separate explicit operator authorization.
-- **DEFERRED BY DESIGN:** M2-01 and Phases 8–11 remain outside the agreed launch scope unless separately promoted; they are not blockers for this migration/cutover sequence.
-- **EXTERNAL ACTION:** representative content/copy approval, approved provider evidence, approved migration execution, staging deployment/smoke, and formal staging sign-off remain separately gated.
+- **CURRENT DEPLOYED STAGING BASELINE:** SHA `abf43893dc3f9980cc8eadc997cd7935e86e614f`, deploy run 32352382852, deployed 2026-08-19.
+- **IMPLEMENTED / VERIFIED:** all agreed launch-scope repository implementation complete: M0-01 through M0-09, M1-01 through M1-06, UI-01 design/branding, release/browser automation, migration inventory/preflight, email queue/guard, partner/sponsored boundaries, and account-action reservation/finalization. All 35 Payload migrations applied and verified on staging. Release manifest `164/164` gates passed. Legacy import 935/935 complete. Members 51 (12 active, 39 blocked). Staging email operational. Public media 24/24, private 25/25. Lesson resources 25/25 published. Playwright 84/0, admin-responsive 14/14, migration contract PASS. `DEPLOYMENT_ENV=staging` confirmed.
+- **STAGING ACCEPTANCE COMPLETE:** all gates green. No further staging work required.
+- **NEXT CORE PHASE (RANKED):** (1) Phase 8 — complete community publishing and notifications; (2) Phase 9 — partner affiliates/reporting (M2-01 post-core); (3) Phase 10 — production cutover only under separate explicit authorization; (4) Phase 11 — future LiveKit group calls.
+- **PRODUCTION OPERATION:** NOT performed, NOT authorized.
+- **DEFERRED BY DESIGN:** M2-01 and Phases 8–11 remain outside the current agreed launch scope unless separately promoted; Phase 8 now becomes the immediate next phase after staging completion.
 
 This is the single canonical product, architecture, security, roadmap, and execution plan for the JPV Bootcamp Payload programme. Code and operational changes must follow this plan in order. Update this document before changing architecture, security, product boundaries, rollout order, or staging responsibilities.
 
@@ -504,9 +503,10 @@ Validation:
 - server-side identity derivation prevents spoofing;
 - failed, unpaid, canceled, and recovered subscription states have defined, idempotent access outcomes; refunded and disputed payments are projected and communicated without changing access by themselves.
 
+
 ### Phase 8 — Complete community publishing and notifications
 
-**Status:** Payload-backed community services and tests exist under the older member route tree. Canonical `/portal/community` currently renders a local preview model with placeholder threads. Route consolidation, persisted-data acceptance, mentions, digests, richer editor/upload UX, and live acceptance remain incomplete.
+**Status:** NEXT IMMEDIATE PHASE after staging migration completion (2026-08-19). Payload-backed community services and tests exist under the canonical `/portal` member route tree. Route consolidation, persisted-data acceptance, mentions, digests, richer editor/upload UX, and live acceptance remain incomplete. This phase moves ahead of Phase 9 (partner affiliates) as the first post-staging feature delivery.
 
 Tasks:
 
@@ -514,7 +514,7 @@ Tasks:
 - authorized publishing for community and private groups;
 - text, images, video references, links, and documents;
 - moderation and reporting;
-- mentions, replies, announcements, group changes, digests, and preferences through Phase 6.
+- mentions, replies, announcements, group changes, digests, and preferences.
 
 Validation:
 
@@ -526,7 +526,7 @@ Validation:
 
 ### Phase 9 — Complete partner affiliates and reporting
 
-**Status:** Partner application, delivery, reporting, and affiliate service foundations exist. The new partner-referral MVP is client-only and does not persist; it must be connected to the existing service before it is called operational. Live provider verification, reconciliation, payouts, and preview acceptance remain pending.
+**Status:** SECOND immediate post-staging phase. Partner application, delivery, reporting, and affiliate service foundations exist. The new partner-referral MVP is client-only and does not persist; it must be connected to the existing service. M2-01 remains post-core unless separately promoted. Live provider verification, reconciliation, payouts, and preview acceptance remain pending.
 
 Detailed specification: `docs/PAYLOAD_PARTNER_AFFILIATE_PLAN.md`.
 
@@ -537,29 +537,30 @@ Tasks:
 - record applications before redirect or delivery;
 - complete reports, CSV export, delivery modes, retries, and audit;
 - add partner and affiliate communications through Phase 6;
-- reconcile retained legacy partner records before cutover.
+- reconcile retained legacy partner records before production cutover.
 
 Validation:
 
 - members read only their own applications;
 - trusted destinations are never supplied by the browser;
 - delivery is idempotent and retryable where implemented;
-- administrators can filter and export authorized reports; live provider verification remains pending.
+- administrators can filter and export authorized reports.
 
-### Phase 10 — Shadow validation and cutover
+### Phase 10 — Production cutover (separate authorization only)
 
-**Status:** Read-only Payload snapshot reconciliation, the offline rehearsal matrix, and safe evidence validation/export are implemented. Legacy member/billing/access migration tooling (`scripts/migration/legacyMigration.ts`) is complete with full schema parameterisation and a rehearsal guard; a disposable local rehearsal on `jpvbootcamp_rehearsal` (2026-07-20, `b526b19`) passed all steps: apply, idempotency, rollback, and reapply with preexisting rows unchanged. Auth/identity onboarding strategy for the 21-member migrated cohort is defined. Five next-domain sources are inventoried (sponsored grants, email subscribers, support requests, partner attribution, course progress) with source tables, conflict policy, PII treatment, and acceptance criteria documented; row counts and tooling implementation remain pending a live DB query and scope decision. Live staging migration apply, deployment, provider, reconciliation, preview acceptance, and cutover approvals remain pending. Phase 10 is still incomplete until live staging evidence exists.
+**Status:** DEFERRED and NOT part of current roadmap. Distinct from staging migration completion. Requires separate explicit authorization and formal approval process. Read-only Payload snapshot reconciliation, offline rehearsal matrix, and safe evidence validation/export are implemented as references only.
 
-Before replacing any existing production flow:
+Cutover authorization requirements:
 
-1. Apply and verify reviewed migrations only in the approved environment.
-2. Run identity, entitlement, billing, email, content, and partner reconciliation.
-3. Test administrator and member journeys in isolation.
-4. Test rollback without deleting production data.
-5. Confirm monitoring, audit, support, delivery, and recovery procedures.
-6. Obtain explicit approval for each cutover boundary.
+1. Separate explicit go/no-go approval required before any production operation.
+2. Apply and verify reviewed migrations only in the approved production environment.
+3. Run identity, entitlement, billing, email, content, and partner reconciliation.
+4. Test administrator and member journeys in isolation.
+5. Test rollback without deleting production data.
+6. Confirm monitoring, audit, support, delivery, and recovery procedures.
+7. Obtain explicit approval for each cutover boundary.
 
-Only then may an existing production responsibility be disabled or redirected.
+**Staging migration itself has NO remaining engineering blocker. Production migration and cutover remain separately gated.**
 
 ### Phase 11 — Future community group calls with LiveKit
 

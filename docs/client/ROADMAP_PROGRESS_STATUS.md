@@ -1,17 +1,18 @@
 # JPV Bootcamp - Roadmap Progress Status
 
-<!-- Reconciliation note 2026-08-08: Verify the current feature tip with `git rev-parse HEAD`; ordinary feature pushes validate only; staging deployment requires explicit guarded dispatch. The live staging baseline remains SHA `9c045fa5a5c327014c20fe9377f7d5368b550573`. Guarded read-only plan run `31215369413` proved the pre-apply state: 28 Payload migrations applied, migration 29 solely missing, no unexpected/duplicate/malformed Payload evidence, and healthy Prisma history. -->
+<!-- Reconciliation note 2026-08-19: STAGING MIGRATION COMPLETE. Staging baseline updated to SHA `abf43893dc3f9980cc8eadc997cd7935e86e614f`, deploy run 32352382852. All 35 Payload migrations applied. Legacy import 935/935 complete. Members 51 (12 active, 39 blocked). Email, media, resources, and acceptance gates all green. Docs-closeout commit a6dccaf records complete evidence. Production NOT authorized. -->
 
-## Current checkpoint — 2026-08-08
+## Current checkpoint — 2026-08-19 (STAGING MIGRATION COMPLETE)
 
 - **ONLY PERMITTED OPERATIONAL LANE:** `feature/course-branding-and-preview` → `https://preview.jpvbootcamp.com` → Dokploy `clients-jpv-bootcamp-app-tp9xrk` / `I_2Vukga3cc3ZhaG-mUzU` → PostgreSQL `10.0.2.4:5433`, database `jpvbootcamp`, schema `jpvbootcamp_staging`.
-- **COMPLETE LAUNCH-SCOPE REPOSITORY WORK:** M0-01 through M0-09, M1-01 through M1-06 in their documented state, UI-01 design/admin hardening, release/browser automation, media persistence, migration inventory/preflight, email queue/guard, Stripe test-mode behavior, partner/sponsored staging boundaries, and durable account-action reservation/finalization source hardening.
-- **LOCALLY VERIFIED CONTRACT:** the release manifest contains `164/164` required gates and the staging-only invariant is `52/52`; final closure still requires a green push CI at the final documentation SHA.
-- **LIVE STAGING BASELINE:** preview workflow `30853006495` remains the latest established deployed baseline; staging health reported SHA `9c045fa5a5c327014c20fe9377f7d5368b550573` and authenticated staging admin gate `14/14`. No newer deployment is claimed here.
-- **AUTHORITATIVE PRE-APPLY EVIDENCE:** the canonical 29-name Payload registry was checked by run `31215369413`, which returned `plan_ok`: 28 Payload migrations applied, migration `20260804_050000_member_account_action_reservations` solely missing, no unexpected/duplicate/malformed Payload records, and Prisma healthy.
-- **NEXT CORE ACTION:** finish a CI-green repository-closure checkpoint, rerun the guarded pre-apply plan at that exact SHA, then prepare migration-29 apply authorization. No schema write is authorized by this checkpoint.
-- **ACCEPTANCE PENDING EXTERNAL ACTION:** representative programme content, final copy/testimonials/biographies, approved provider evidence, approved migration execution, staging deployment/smoke, and formal staging sign-off.
-- **DEFERRED BY DESIGN:** M2-01 and Phases 8–11 remain outside the agreed launch scope unless separately promoted; they are not blockers for the current migration/cutover sequence.
+- **STAGING MIGRATION COMPLETE — 2026-08-19:** All 35 Payload migrations applied and verified on staging. Legacy import 935/935 complete. Members 51 total (12 active, all with emailVerifiedAt; 39 blocked). Staging email operational. Public media 24/24, private media 25/25. Lesson resources 25/25 published. Playwright tests 84/84 passed. Admin responsive 14/14. Migration contract test PASS. `DEPLOYMENT_ENV=staging` confirmed. Production NOT performed or authorized.
+- **CURRENT DEPLOYED BASELINE:** SHA `abf43893dc3f9980cc8eadc997cd7935e86e614f`, deploy run 32352382852, deployed 2026-08-19. All staging acceptance gates green.
+- **COMPLETE LAUNCH-SCOPE REPOSITORY WORK:** M0-01 through M0-09, M1-01 through M1-06 in their documented state, UI-01 design/admin hardening, release/browser automation, media persistence, migration inventory/preflight, email queue/guard, Stripe test-mode behavior, partner/sponsored staging boundaries, and durable account-action reservation/finalization source hardening. All 35 migrations applied.
+- **LOCALLY VERIFIED CONTRACT:** the release manifest contains `164/164` required gates. Final closure complete at docs-closeout commit a6dccaf.
+- **CANONICAL EVIDENCE:** `docs/client/MIGRATION_APPROVAL_STATUS.md`, `docs/CURRENT_WORK_HANDOFF.md`, and `docs/PREVIEW_RELEASE_READINESS.md` record complete staging migration evidence and acceptance results.
+- **NEXT PHASE RANKING:** (1) Phase 8 — complete community publishing and notifications; (2) Phase 9 — partner affiliates/reporting; M2-01 remains post-core unless promoted; (3) Phase 10 — production cutover only under separate explicit authorization; (4) Phase 11 — LiveKit group calls remains future/deferred.
+- **PRODUCTION OPERATION:** NOT performed, NOT authorized. Staging migration itself has NO remaining engineering blocker.
+- **DEFERRED BY DESIGN:** M2-01 and Phases 8–11 remain outside the agreed launch scope unless separately promoted; they are not blockers for the next roadmap phase.
 
 Historical baseline chain: the 10 July 2026 audit at `236227c fix: require portal auth for member content`, readiness checkpoint `af6de62 docs: record core go-live readiness`, programme-content checkpoint `d55229f test: enforce programme content readiness`, membership checkpoint `8927df9 docs: checkpoint membership implementation readiness`, and earlier staging-smoke checkpoint `690c5f4 docs(release): update GO/NO-GO checklist — staging smoke 58/58 confirmed`. These are retained as history only. The authoritative staging baseline is the exact SHA recorded in the current checkpoint above; verify the branch tip with `git log --oneline -1` before any operator action.
 
@@ -21,19 +22,21 @@ Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`.
 
 ## Current position
 
-**Position:** **STAGING TECHNICAL IMPLEMENTATION COMPLETE — ACCEPTANCE PENDING EXTERNAL ACTION**
+**Position:** **STAGING MIGRATION COMPLETE — 2026-08-19. NEXT PHASE ROADMAP ACTIVE.**
 
-**Closure status:** final pre-migration repository closure is in progress. The agreed launch-scope repository implementation is complete. Live staging remains on verified baseline SHA `9c045fa5a5c327014c20fe9377f7d5368b550573`, workflow `30853006495`, with authenticated admin verification `14/14`; it has not yet been redeployed with the current account-action hardening candidate. Guarded read-only plan run `31215369413` proved the current pre-apply database state at reviewed code checkpoint `9e068cc8b0a5ec9573732fee3a78bed9995787a6`: 28 Payload migrations applied, migration 29 solely missing, and Prisma healthy.
+**Staging migration complete:** SHA `abf43893dc3f9980cc8eadc997cd7935e86e614f`, deploy run 32352382852. All 35 Payload migrations applied and verified. Legacy import 935/935 applied. Members 51 (12 active login-eligible, 39 blocked). Staging email operational. All media and resources complete. Playwright 84/0, admin-responsive 14/14, migration contract PASS. `DEPLOYMENT_ENV=staging` confirmed. Canonical evidence documented in `docs/client/MIGRATION_APPROVAL_STATUS.md` and docs-closeout commit a6dccaf. **Staging migration has NO remaining engineering blocker.**
 
-**Next repository task:** complete this documentation/CI closure, require a green push gate, then run one fresh guarded pre-apply plan against that exact final SHA. If it returns `plan_ok`, repository development stops and migration-29 apply moves to separate operator authorization. `M2-01` and Phases 8–11 remain deferred/follow-up unless explicitly promoted.
+**Production operation:** NOT performed, NOT authorized. Production jpvbootcamp.com routing was manually restored after an unrelated incident; no production migration or cutover is part of this work.
 
-**Next external actions:** authorize migration 29 with backup/window/rollback ownership, verify post-apply migration status, separately authorize exact-SHA staging deployment, run staging smoke/sign-off, then proceed to production migration/cutover gates.
+**Next phase roadmap (ranked):**
+1. **Phase 8 — Complete community publishing and notifications** — member community feed, authorized publishing, text/images/video/links, moderation, mentions, replies, announcements, group changes, digests, preferences.
+2. **Phase 9 — Partner affiliates and reporting** — partner directory, member applications, recording/delivery, reports/export, audit. M2-01 remains post-core unless explicitly promoted.
+3. **Phase 10 — Production cutover** — ONLY under separate explicit authorization; not part of current roadmap.
+4. **Phase 11 — Future LiveKit group calls** — deferred.
 
-**Front-end schedule:** The 22 July front-end milestone is still conditional. Client content was due by 15 July; a landing-page content brief was supplied on 21 July and is mapped in UI-01, while testimonials, teacher/guest-speaker detail, final legal wording, and representative course input remain outstanding. The 23 July handover buffer and 24 July client finished-by date remain.
+**Staging acceptance:** all green. No further staging work required before moving to next phase.
 
-**Cutover schedule:** Full platform cutover on 22-24 July is conditional and at risk. It requires approved migrations, rehearsal and rollback evidence, provider/email verification, complete browser smoke evidence, and explicit go-live approval.
-
-**Hard stops:** Do not apply migrations. Do not touch `main`. Do not describe static prototypes as operational workflows.
+**Hard stops:** Do not apply additional migrations to staging. Do not touch `main`. Do not describe static prototypes as operational workflows. Do not perform production operation or cutover without separate explicit authorization.
 
 ## Launch-critical visual coherence packet (UI-01)
 
