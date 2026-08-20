@@ -409,6 +409,12 @@ jobs:
           EXPECTED_DEPLOYMENT_SHA: ${{ github.sha }}
         run: pnpm exec tsx scripts/staging-gates/waitForPreviewDeployment.mts
 
+      - name: Diagnose Dokploy deployment (on wait failure)
+        if: failure()
+        env:
+          DOKPLOY_API_KEY: ${{ secrets.DOKPLOY_API_KEY }}
+        run: pnpm exec tsx scripts/staging-gates/diagnoseDokployDeployment.mts || true
+
       - name: Fix apt mirrors (replace dead Azure mirror with public archive)
         if: success()
         run: |
