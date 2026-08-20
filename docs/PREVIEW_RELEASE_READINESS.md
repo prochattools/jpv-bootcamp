@@ -1,15 +1,43 @@
 # JPV Bootcamp Preview Release Readiness
 
-## Current staging-closure checkpoint — 2026-08-08
+## STAGING MIGRATION COMPLETE — 2026-08-19
+
+This section supersedes the 2026-08-08 checkpoint below. All staging migration and acceptance gates are now closed.
+
+- **Status:** `STAGING MIGRATION COMPLETE`
+- **Branch:** `feature/course-branding-and-preview`
+- **Deployed SHA:** `abf43893dc3f9980cc8eadc997cd7935e86e614f`
+- **Deploy run:** `32352382852`
+- **Staging app:** `clients-jpv-bootcamp-app-tp9xrk` / `I_2Vukga3cc3ZhaG-mUzU`
+- **Database:** `jpvbootcamp`, schema `jpvbootcamp_staging`
+- **`DEPLOYMENT_ENV`:** `staging` confirmed in running container
+- **Payload migrations:** 35/35 applied (expanded from 29 to 35 to include migrations 30–35)
+- **Legacy import:** 935/935 operations applied; 2 historical failed ledger attempts superseded/audit-history only
+- **Members:** 51 total — 12 active (`emailVerifiedAt` set on all), 39 blocked, 0 active without `emailVerifiedAt`
+- **Login:** `westhoek@hotmail.com` verified on staging
+- **Email:** staging Resend delivery confirmed, ID `3affb3ee-38ad-4e6e-9fe1-55d202712b8c`
+- **Media:** public 24/24, private 25/25
+- **Lesson resources:** 25/25 published
+- **Protected download:** anonymous → 404 ✓; authenticated entitled member → 200 + content ✓
+- **Playwright staging:** 84 passed / 0 failed
+- **Admin responsive:** 14/14
+- **Migration contract test:** PASS
+- **Production migration / cutover:** NOT performed, NOT authorized. Production `jpvbootcamp.com` routing was manually restored after an unrelated incident; no production schema, deployment, or cutover is authorized here.
+- **Next gated step:** Production migration and cutover planning remain a separate, independently gated process.
+
+---
+
+## Historical staging-closure checkpoint — 2026-08-08 (superseded)
+
+> The checkpoint below describes the pre-migration state as of 2026-08-08. It is preserved as audit history. The STAGING MIGRATION COMPLETE section above is the authoritative current state.
 
 - **ONLY PERMITTED OPERATIONAL LANE:** `feature/course-branding-and-preview` → `https://preview.jpvbootcamp.com` → Dokploy `clients-jpv-bootcamp-app-tp9xrk` / `I_2Vukga3cc3ZhaG-mUzU` → PostgreSQL `10.0.2.4:5433`, database `jpvbootcamp`, schema `jpvbootcamp_staging`.
-- **CURRENT FEATURE TIP:** verify the exact operator tip with `git rev-parse HEAD`. Ordinary pushes validate only; staging deployment requires explicit guarded `workflow_dispatch`.
+- **CURRENT FEATURE TIP (historical):** SHA `9c045fa5a5c327014c20fe9377f7d5368b550573` at the 2026-08-08 checkpoint; current deployed tip is `abf43893dc3f9980cc8eadc997cd7935e86e614f`.
 - **LOCALLY VERIFIED CONTRACT:** the agreed launch-scope repository implementation and account-action hardening are complete in source; the release manifest contains `164/164` required gates and the staging-only invariant contains `52/52` checks.
-- **LIVE STAGING BASELINE:** preview workflow `30853006495` remains the latest established deployment; staging health reported SHA `9c045fa5a5c327014c20fe9377f7d5368b550573` and authenticated staging admin `14/14`. No newer deployment is claimed.
+- **LIVE STAGING BASELINE (historical):** preview workflow `30853006495` at SHA `9c045fa5a5c327014c20fe9377f7d5368b550573`; superseded by deploy run `32352382852` at `abf43893dc3f9980cc8eadc997cd7935e86e614f`.
 - **MEDIA PERSISTENCE:** verified via disposable fixture upload, redeployment survival, and Payload API deletion; named staging volume `jpv-bootcamp-preview-media` active.
-- **AUTHORITATIVE PRE-APPLY EVIDENCE:** the canonical 29-name Payload registry was checked by guarded read-only plan run `31215369413` at reviewed code checkpoint `9e068cc8b0a5ec9573732fee3a78bed9995787a6`; it returned `plan_ok`: migration `20260804_050000_member_account_action_reservations` solely missing, zero unexpected/duplicate/malformed Payload records, and Prisma healthy. No write occurred.
-- **NEXT AUTHORIZATION BOUNDARY:** after a final CI-green repository checkpoint, rerun the guarded pre-apply plan against that exact SHA. A fresh `plan_ok` makes the migration-29 apply packet ready for separate operator approval; it does not authorize deployment or production.
-- **EXTERNAL ACTION:** client content approval, approved provider evidence, approved migration execution, staging deployment/smoke, and formal staging sign-off remain separate.
+- **AUTHORITATIVE PRE-APPLY EVIDENCE (historical):** guarded read-only plan run `31215369413` at `9e068cc8b0a5ec9573732fee3a78bed9995787a6` returned `plan_ok`: migration-29 solely missing, zero unexpected/duplicate/malformed Payload records, Prisma healthy. This evidence is superseded by applied state: 35/35 migrations now confirmed applied.
+- **EXTERNAL ACTION (historical):** all gates now closed; see STAGING MIGRATION COMPLETE section above.
 
 This runbook separates repository changes, image publication, Payload migrations, Prisma startup behavior, provider email delivery, preview deployment, and smoke verification into independent approval categories.
 
@@ -46,15 +74,15 @@ Static preflight automation is available via `pnpm staging:static-preflight`; it
 
 **Latest completed staging verification snapshot (2026-08-02):** SHA `c15cd578a953cd6b1dc8a3d4705350a52f7d0812`, preview workflow `30761713446`, conclusion `success`, exact-SHA staging health confirmed. Prior verified snapshot: SHA `3a6613498241c5dd71761c26c3b1e790764db1d5`, workflow `30756831212`, conclusion `success` (retained as historical anchor). The authoritative current branch tip is determined by `git rev-parse HEAD`; do not treat any hardcoded SHA as the immutable current tip.
 
-**Outcome:** `LAUNCH-SCOPE REPOSITORY IMPLEMENTATION COMPLETE — FINAL PRE-MIGRATION CLOSURE IN PROGRESS` — **ACCOUNT-ACTION HARDENING IMPLEMENTED LOCALLY**: durable account-action reservation/finalization is implemented and behaviorally validated in source; guarded run `31215369413` established the clean pre-apply database state, while migration 29 apply, exact-SHA deployment, smoke, and external acceptance remain separately gated.
+**Outcome (2026-08-19):** `STAGING MIGRATION COMPLETE` — all 35 Payload migrations applied to `jpvbootcamp_staging`, SHA `abf43893dc3f9980cc8eadc997cd7935e86e614f` deployed, Playwright 84/0, admin-responsive 14/14, 935/935 legacy operations applied, 25/25 resources published, email delivered. Production migration is NOT authorized.
 
-**Technical staging status:** `STAGING TECHNICAL IMPLEMENTATION COMPLETE — ACCEPTANCE PENDING EXTERNAL ACTION`
+**Technical staging status (2026-08-19):** `STAGING MIGRATION AND ACCEPTANCE COMPLETE`
 
-**Repository-owned staging operations status:** `PRE-APPLY EVIDENCE CLEAN — FINAL EXACT-SHA PLAN AND MIGRATION AUTHORIZATION PENDING`
+**Repository-owned staging operations status (2026-08-19):** `ALL STAGING GATES CLOSED — PRODUCTION CUTOVER SEPARATELY GATED`
 
-**Decision-readiness command result:** `DECISION-READY, EXTERNAL APPROVALS PENDING`
+**Decision-readiness:** `STAGING COMPLETE — production migration requires separate gated approval`
 
-**STAGING MIGRATION AUTHORIZATION REQUIRED** — shared staging Payload migration 29 apply, post-apply deployment, and smoke verification remain separate gated operations pending operator authorization.
+> **Historical status lines (superseded 2026-08-19):** Prior outcome was `LAUNCH-SCOPE REPOSITORY IMPLEMENTATION COMPLETE — FINAL PRE-MIGRATION CLOSURE IN PROGRESS`; prior technical status was `ACCEPTANCE PENDING EXTERNAL ACTION`; prior operations status was `PRE-APPLY EVIDENCE CLEAN — FINAL EXACT-SHA PLAN AND MIGRATION AUTHORIZATION PENDING`; prior decision-readiness was `DECISION-READY, EXTERNAL APPROVALS PENDING`.
 
 ### Completed launch-scoped implementation
 

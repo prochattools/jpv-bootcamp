@@ -1,19 +1,24 @@
 # Staging Operational Readiness Matrix
 
+> **STAGING MIGRATION COMPLETE — 2026-08-19.** The matrix below reflects the 2026-08-04 audit snapshot. It is preserved as audit history. See `docs/client/MIGRATION_APPROVAL_STATUS.md` and `docs/PREVIEW_RELEASE_READINESS.md` for the authoritative current state.
+
 | Field | Value |
 | --- | --- |
-| Audit date | 2026-08-04 |
+| Audit date | 2026-08-04 (historical snapshot) |
+| **Closeout date** | **2026-08-19** |
 | Branch | feature/course-branding-and-preview |
-| Verified deployed baseline HEAD | 9c045fa5a5c327014c20fe9377f7d5368b550573 |
-| Latest preview workflow (verified deployed baseline) | 30853006495 |
+| **Final deployed SHA** | **abf43893dc3f9980cc8eadc997cd7935e86e614f** |
+| **Final deploy run** | **32352382852** |
+| Verified deployed baseline HEAD (historical) | 9c045fa5a5c327014c20fe9377f7d5368b550573 |
+| Latest preview workflow (verified deployed baseline) | 30853006495 (historical; superseded by 32352382852) |
 | Workflow conclusion | success |
-| Verify current live state | `git rev-parse HEAD` and https://preview.jpvbootcamp.com/api/health |
-| Staging health imageTag | 9c045fa5a5c327014c20fe9377f7d5368b550573 |
-| Release suite | 164/164 |
-| Playwright | 188 collected / 148 passed / 40 skipped |
-| Overall verdict | **STAGING OPERATIONAL READINESS REMEDIATION REQUIRED** |
+| Staging health imageTag | abf43893dc3f9980cc8eadc997cd7935e86e614f |
+| Release suite (historical) | 164/164 |
+| **Playwright staging (final)** | **84 passed / 0 failed** |
+| **Admin responsive (final)** | **14/14** |
+| **Overall verdict** | **STAGING MIGRATION COMPLETE** |
 
-Account-action reservation/finalization is implemented and behaviorally validated in repository source. Shared staging still runs the preceding schema, so staging migration authorization, backup evidence, rollback ownership, exact-SHA deployment, migration evidence, provider verification, formal smoke, and client acceptance remain blocking. The local source finding must not be treated as operationally verified until the new migration is explicitly authorized and confirmed on shared staging.
+All staging migration, deployment, acceptance, and email delivery gates are closed as of 2026-08-19. The 2026-08-04 audit finding ("STAGING OPERATIONAL READINESS REMEDIATION REQUIRED" / migration-29 pending) is superseded. Production migration is NOT authorized.
 
 ---
 

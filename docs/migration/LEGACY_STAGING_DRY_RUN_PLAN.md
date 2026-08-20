@@ -987,3 +987,44 @@ Implementation roadmap for this Goal run:
 10. after target schemas/converter/runtime are complete, run one fresh read-only real-source regression plus feature-parity acceptance matrix before any staging-write packet is designed.
 
 No staging database, Stripe, Bunny, Dokploy, deployment, production, or Git commit mutation is authorized by this goal.
+
+---
+
+## 18. STAGING MIGRATION COMPLETE — 2026-08-19
+
+This plan was framed as pre-write preparation. The staging write and all acceptance phases have now been executed and closed. This section is the authoritative final closeout record for this document.
+
+**All phases executed and verified:**
+
+| Phase | Outcome |
+|---|---|
+| DRY-1 through DRY-8 source rehearsal | COMPLETE — all 17 strict source gates passed |
+| Target-design decision closure | COMPLETE — all model ambiguities resolved |
+| Feature-parity preparation | COMPLETE |
+| Staging write authorization and execution | COMPLETE — 935/935 operations applied |
+| Post-write reconciliation | COMPLETE — all counts verified |
+| Staging deployment | COMPLETE — SHA `abf43893dc3f9980cc8eadc997cd7935e86e614f`, deploy run `32352382852` |
+| Playwright acceptance | COMPLETE — 84 passed / 0 failed |
+| Admin responsive | COMPLETE — 14/14 |
+| Migration contract test | PASS |
+| Email delivery | COMPLETE — Resend ID `3affb3ee-38ad-4e6e-9fe1-55d202712b8c` |
+
+**Final staging state:**
+
+- Branch: `feature/course-branding-and-preview`
+- Deployed SHA: `abf43893dc3f9980cc8eadc997cd7935e86e614f`
+- Staging app: `clients-jpv-bootcamp-app-tp9xrk` / `I_2Vukga3cc3ZhaG-mUzU`
+- Database: `jpvbootcamp`, schema `jpvbootcamp_staging`
+- `DEPLOYMENT_ENV=staging` confirmed
+- Payload migrations: 35/35 applied
+- Legacy import: 935/935 applied; 2 historical failed ledger attempts are audit-history only (superseded)
+- Members: 51 total — 12 active (all `emailVerifiedAt` set), 39 blocked, 0 active without `emailVerifiedAt`
+- Public media: 24/24; Private media: 25/25; Lesson resources: 25/25 published
+- Login verified: `westhoek@hotmail.com`
+- Protected download: anonymous → 404 ✓; authenticated entitled member → 200 + content ✓
+
+**Remaining blockers resolved:**
+
+All source-design blockers (Forward A/B/C schema, rich-text conversion, lesson comments, multi-video lesson, binary media execution, migration-29 ordering) were resolved prior to staging write execution. The six Bunny GUID-first compatibility blockers, seven lesson-comment schema-registration blockers, and one community OG blocker mentioned in earlier sections of this document are superseded by the executed migration.
+
+**Production migration:** NOT performed, NOT authorized. Production `jpvbootcamp.com` routing was manually restored after an unrelated incident. Production migration and cutover remain a separate, independently gated process requiring its own authorization packet.

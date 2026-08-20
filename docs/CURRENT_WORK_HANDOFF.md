@@ -2,6 +2,41 @@
 
 Use this document as the canonical starting point for a new Codex or Workbench conversation.
 
+---
+
+## STAGING MIGRATION COMPLETE — 2026-08-19
+
+This section supersedes the 2026-08-08 pre-migration checkpoint below. All staging migration and acceptance gates are closed.
+
+| Item | Value |
+|---|---|
+| Branch | `feature/course-branding-and-preview` |
+| Deployed SHA | `abf43893dc3f9980cc8eadc997cd7935e86e614f` |
+| Deploy run | `32352382852` |
+| Staging app | `clients-jpv-bootcamp-app-tp9xrk` / `I_2Vukga3cc3ZhaG-mUzU` |
+| Database | `jpvbootcamp`, schema `jpvbootcamp_staging` |
+| `DEPLOYMENT_ENV` | `staging` confirmed in running container |
+| Payload migrations | 35/35 applied |
+| Legacy import operations | 935/935 applied; 2 historical failed ledger attempts are audit-history only |
+| Members | 51 total: 12 active (all `emailVerifiedAt` set), 39 blocked, 0 active without `emailVerifiedAt` |
+| Login verified | `westhoek@hotmail.com` confirmed on staging |
+| Staging email | `sent`, Resend ID `3affb3ee-38ad-4e6e-9fe1-55d202712b8c` |
+| Public media | 24/24 |
+| Private media | 25/25 |
+| Lesson resources | 25/25 published |
+| Protected download anonymous | 404 ✓ |
+| Protected download authenticated member | 200 + real file content ✓ |
+| Playwright staging | 84 passed / 0 failed |
+| Admin responsive | 14/14 |
+| Migration contract test | PASS |
+| Production migration / cutover | NOT performed, NOT authorized |
+
+**Production note:** Production `jpvbootcamp.com` routing was manually restored after an unrelated routing incident. No production migration, deployment, or cutover is authorized by this document. Production schema is `jpvbootcamp` (public), not `jpvbootcamp_staging`.
+
+**Remaining work:** Production migration planning and cutover remain a separate, independently gated process. Staging acceptance is complete.
+
+---
+
 ## Current checkpoint — final pre-migration repository closure (2026-08-08)
 
 - **Only permitted branch:** `feature/course-branding-and-preview`.
