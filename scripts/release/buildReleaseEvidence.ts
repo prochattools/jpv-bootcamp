@@ -40,7 +40,7 @@ export function buildReleaseEvidenceMarkdown(): string {
   const browserSourceDeclarations = countPlaywrightSourceDeclarations('e2e')
   const readinessOutcome = extractStatus(
     previewReadiness,
-    /\*\*Outcome:\*\*\s*`([^`]+)`/,
+    /\*\*Outcome(?:\s*\([^)]*\))?:\*\*\s*`([^`]+)`/,
     'NOT READY FOR CONTROLLED STAGING RELEASE PROCESS',
   )
 

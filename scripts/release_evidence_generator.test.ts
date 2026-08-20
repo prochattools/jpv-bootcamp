@@ -9,7 +9,7 @@ function main(): void {
 
   assert.equal(first, second)
   assert.match(first, /# Release Evidence Summary/)
-  assert.match(first, /Repository readiness outcome: `LAUNCH-SCOPE REPOSITORY IMPLEMENTATION COMPLETE — FINAL PRE-MIGRATION CLOSURE IN PROGRESS`/)
+  assert.match(first, /Repository readiness outcome: `STAGING MIGRATION COMPLETE`/)
   assert.match(first, /Browser source-level declarations \(static\):/)
   assert.doesNotMatch(first, /Browser test count:/)
   assert.match(first, /not equivalent to Playwright project-expanded collected runs/)

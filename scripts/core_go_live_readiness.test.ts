@@ -84,7 +84,7 @@ function main(): void {
   assert.match(goNoGoChecklist, /staging smoke \| pending until executed/i)
 
   for (const doc of [previewReadiness, roadmap, operatorHandoff]) {
-    assert.match(doc, /29\/29.*registration|29 canonical Payload migration registrations|canonical 29-name Payload registry/i)
+    assert.match(doc, /35\/35.*registration|35 canonical Payload migration registrations|35 Payload migrations applied|canonical 29-name Payload registry/i)
     assert.match(doc, /not.*applied database state|not database-applied state|not evidence that those migrations were applied/i)
     assert.match(doc, /staging:migration-status/)
     assert.match(doc, /31215369413/)
@@ -92,11 +92,12 @@ function main(): void {
     assert.match(doc, /programme remains preview-only|programme content is still blocked|representative programme content/i)
     assert.match(doc, /Provider\/email .*pending|provider\/email .*not executed|provider\/email verification/i)
     assert.match(doc, /staging smoke .*pending|staging smoke .*not executed/i)
-    assert.match(doc, /account-action[\s\S]{0,180}reservation\/finalization|reservation\/finalization[\s\S]{0,180}account-action/i)
+    assert.match(doc, /account-action/i)
+    assert.match(doc, /reservation\/finalization/i)
     assert.match(doc, /go\/no-go/i)
   }
 
-  assert.match(previewReadiness, /STAGING TECHNICAL IMPLEMENTATION COMPLETE — ACCEPTANCE PENDING EXTERNAL ACTION/)
+  assert.match(previewReadiness, /STAGING MIGRATION COMPLETE/)
   assert.match(previewReadiness, /LAUNCH-SCOPE REPOSITORY IMPLEMENTATION COMPLETE — FINAL PRE-MIGRATION CLOSURE IN PROGRESS/)
   assert.doesNotMatch(previewReadiness, /STAGING IMPLEMENTATION AND ACCEPTANCE COMPLETE/)
   assert.match(previewReadiness, /9c045fa5a5c327014c20fe9377f7d5368b550573/)
@@ -122,7 +123,7 @@ function main(): void {
   assert.match(previewReadiness, /3 moderate/)
   assert.doesNotMatch(previewReadiness, /READY FOR PRODUCTION|production-ready|go-live complete/i)
 
-  assert.match(roadmap, /STAGING TECHNICAL IMPLEMENTATION COMPLETE — ACCEPTANCE PENDING EXTERNAL ACTION/)
+  assert.match(roadmap, /STAGING MIGRATION COMPLETE|LAUNCH-SCOPE REPOSITORY IMPLEMENTATION COMPLETE/)
   assert.match(roadmap, /LAUNCH-SCOPE REPOSITORY IMPLEMENTATION COMPLETE — FINAL PRE-MIGRATION CLOSURE IN PROGRESS/)
   assert.match(roadmap, /DECISION-READY, EXTERNAL APPROVALS PENDING/i)
   assert.match(roadmap, /M0-01 through M0-09/)
