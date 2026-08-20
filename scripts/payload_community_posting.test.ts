@@ -227,6 +227,7 @@ async function run() {
       title: 'New private discussion',
       body: richTextBody,
       adminEmail: 'admin@example.com',
+      notifyMembers: false,
       author: 'member_active',
       moderationStatus: 'visible',
       role: 'admin',
