@@ -442,6 +442,7 @@ async function run() {
       postId: 'post_visible',
       body: richTextBody,
       adminEmail: 'admin@example.com',
+      notifyAuthor: false,
       author: 'member_active',
       moderationStatus: 'visible',
       role: 'admin',

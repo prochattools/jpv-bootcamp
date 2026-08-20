@@ -167,3 +167,112 @@ export async function notifySpaceMembersOfNewPost(
 
   return { recipients, emailEventsCreated, dryRun: false }
 }
+
+export type CommentNotificationInput = {
+  postId: PayloadId
+  commentId: PayloadId
+  commenterMemberId: PayloadId
+  postTitle: string
+  spaceName: string
+  spaceSlug: string | null
+  dryRun?: boolean
+}
+
+export type CommentNotificationResult = {
+  recipient: NotificationRecipient | null
+  emailEventCreated: boolean
+  dryRun: boolean
+  skippedReason?: 'self_comment' | 'author_not_found' | 'author_not_eligible'
+}
+
+export async function notifyPostAuthorOfNewComment(
+  payload: PayloadCourseWriteAPI,
+  input: CommentNotificationInput
+): Promise<CommentNotificationResult> {
+  const post = await payload.findByID({
+    collection: 'payload_space_posts',
+    id: input.postId,
+    depth: 0,
+    overrideAccess: true,
+  })
+
+  const postAuthorId = asString(
+    typeof post.author === 'object' && post.author
+      ? (post.author as Record<string, unknown>).id
+      : post.author
+  )
+  if (!postAuthorId) {
+    return { recipient: null, emailEventCreated: false, dryRun: Boolean(input.dryRun), skippedReason: 'author_not_found' }
+  }
+
+  if (postAuthorId === String(input.commenterMemberId)) {
+    return { recipient: null, emailEventCreated: false, dryRun: Boolean(input.dryRun), skippedReason: 'self_comment' }
+  }
+
+  let author: PayloadDocument | null = null
+  try {
+    author = await payload.findByID({
+      collection: 'payload_members',
+      id: postAuthorId,
+      depth: 0,
+      overrideAccess: true,
+    })
+  } catch {
+    return { recipient: null, emailEventCreated: false, dryRun: Boolean(input.dryRun), skippedReason: 'author_not_found' }
+  }
+
+  if (!author) {
+    return { recipient: null, emailEventCreated: false, dryRun: Boolean(input.dryRun), skippedReason: 'author_not_found' }
+  }
+  if (asString(author.accountStatus) !== 'active') {
+    return { recipient: null, emailEventCreated: false, dryRun: Boolean(input.dryRun), skippedReason: 'author_not_eligible' }
+  }
+  if (!asString(author.emailVerifiedAt)) {
+    return { recipient: null, emailEventCreated: false, dryRun: Boolean(input.dryRun), skippedReason: 'author_not_eligible' }
+  }
+
+  const email = asString(author.email)
+  if (!email) {
+    return { recipient: null, emailEventCreated: false, dryRun: Boolean(input.dryRun), skippedReason: 'author_not_eligible' }
+  }
+
+  let displayName: string | null = null
+  try {
+    const profiles = await payload.find({
+      collection: 'payload_member_profiles',
+      where: { member: { equals: postAuthorId } },
+      limit: 1,
+      depth: 0,
+      overrideAccess: true,
+    })
+    displayName = asString(profiles.docs[0]?.displayName)
+  } catch {
+    // best-effort
+  }
+
+  const recipient: NotificationRecipient = {
+    memberId: postAuthorId,
+    email,
+    displayName: displayName ?? email.split('@')[0] ?? 'Member',
+  }
+
+  if (input.dryRun) {
+    return { recipient, emailEventCreated: false, dryRun: true }
+  }
+
+  const { created } = await queueAndAttemptEmailEvent(payload, {
+    toEmail: recipient.email,
+    templateKey: 'community-reply',
+    dedupeKey: `community-reply:${input.commentId}:${recipient.memberId}`,
+    metadata: {
+      postId: String(input.postId),
+      commentId: String(input.commentId),
+      spaceName: input.spaceName,
+      spaceSlug: input.spaceSlug,
+      postTitle: input.postTitle,
+      commenterMemberId: String(input.commenterMemberId),
+    },
+  })
+
+  return { recipient, emailEventCreated: created, dryRun: false }
+}

@@ -6,9 +6,9 @@
 - **CURRENT DEPLOYED STAGING BASELINE:** SHA `abf43893dc3f9980cc8eadc997cd7935e86e614f`, deploy run 32352382852, deployed 2026-08-19.
 - **IMPLEMENTED / VERIFIED:** all agreed launch-scope repository implementation complete: M0-01 through M0-09, M1-01 through M1-06, UI-01 design/branding, release/browser automation, migration inventory/preflight, email queue/guard, partner/sponsored boundaries, and account-action reservation/finalization. All 35 Payload migrations applied and verified on staging. Release manifest `164/164` gates passed. Legacy import 935/935 complete. Members 51 (12 active, 39 blocked). Staging email operational. Public media 24/24, private 25/25. Lesson resources 25/25 published. Playwright 84/0, admin-responsive 14/14, migration contract PASS. `DEPLOYMENT_ENV=staging` confirmed.
 - **STAGING ACCEPTANCE COMPLETE:** all gates green. No further staging work required.
-- **NEXT CORE PHASE (RANKED):** (1) Phase 8 — complete community publishing and notifications; (2) Phase 9 — partner affiliates/reporting (M2-01 post-core); (3) Phase 10 — production cutover only under separate explicit authorization; (4) Phase 11 — future LiveKit group calls.
+- **PHASE RANKING (2026-08-20):** (1) Phase 8 — Member Portal Operationalization **COMPLETE**; (2) Phase 9 — LiveKit Group Calls (REQUIRED pre-cutover); (3) Phase 10 — production cutover only under separate explicit authorization; (4) Phase 11 — Partner Affiliates deferred post-cutover.
 - **PRODUCTION OPERATION:** NOT performed, NOT authorized.
-- **DEFERRED BY DESIGN:** M2-01 and Phases 8–11 remain outside the current agreed launch scope unless separately promoted; Phase 8 now becomes the immediate next phase after staging completion.
+- **DEFERRED BY DESIGN:** M2-01 and Partner Affiliates remain outside the current agreed launch scope unless separately promoted.
 
 This is the single canonical product, architecture, security, roadmap, and execution plan for the JPV Bootcamp Payload programme. Code and operational changes must follow this plan in order. Update this document before changing architecture, security, product boundaries, rollout order, or staging responsibilities.
 
@@ -504,67 +504,28 @@ Validation:
 - failed, unpaid, canceled, and recovered subscription states have defined, idempotent access outcomes; refunded and disputed payments are projected and communicated without changing access by themselves.
 
 
-### Phase 8 — Complete community publishing and notifications
+### Phase 8 — Member Portal Operationalization (COMPLETE)
 
-**Status:** NEXT IMMEDIATE PHASE after staging migration completion (2026-08-19). Payload-backed community services and tests exist under the canonical `/portal` member route tree. Route consolidation, persisted-data acceptance, mentions, digests, richer editor/upload UX, and live acceptance remain incomplete. This phase moves ahead of Phase 9 (partner affiliates) as the first post-staging feature delivery.
+**Status:** COMPLETE as of 2026-08-20. Auth/access 403 root cause resolved (requirePortalMember was passing wrong user shape). Community portal N+1 queries eliminated. Group post notification fan-out with dry-run staging proof implemented. Comment/reply notification fan-out to post authors implemented. Notification preference framework in place (registry + unsubscribe infrastructure). Courses, community, account, and billing all functional on staging. Direct member-to-member messaging documented outside launch scope — group communication is the launch-required capability.
 
-Tasks:
+Delivered:
+- portal auth context fix (403 root cause);
+- community N+1 parallelization;
+- new-post notification fan-out (active+verified+authorized recipients, author excluded, dedupe);
+- comment/reply notification to post author (self-comment excluded, eligibility checked);
+- communication preference registry with unsubscribe tokens;
+- reactions migration (schema in place);
+- live staging acceptance: 84/84 Playwright, zero unexpected 403/5xx.
 
-- member community feed and announcements;
-- authorized publishing for community and private groups;
-- text, images, video references, links, and documents;
-- moderation and reporting;
-- mentions, replies, announcements, group changes, digests, and preferences.
+Outside launch scope (documented, not blocking):
+- direct member-to-member messaging/inbox;
+- @mention notifications (registry defined, implementation deferred);
+- community digest emails (registry defined, scheduled delivery deferred);
+- richer editor/upload UX iteration.
 
-Validation:
+### Phase 9 — LiveKit Group Calls (REQUIRED pre-cutover)
 
-- publishing permissions are explicit;
-- private-group content cannot be fetched by unauthorized members;
-- uploads enforce type, size, and ownership rules;
-- optional notifications respect preferences;
-- live preview acceptance and richer editor/upload UX remain deferred.
-
-### Phase 9 — Complete partner affiliates and reporting
-
-**Status:** SECOND immediate post-staging phase. Partner application, delivery, reporting, and affiliate service foundations exist. The new partner-referral MVP is client-only and does not persist; it must be connected to the existing service. M2-01 remains post-core unless separately promoted. Live provider verification, reconciliation, payouts, and preview acceptance remain pending.
-
-Detailed specification: `docs/PAYLOAD_PARTNER_AFFILIATE_PLAN.md`.
-
-Tasks:
-
-- complete the partner directory;
-- add authenticated member application and history;
-- record applications before redirect or delivery;
-- complete reports, CSV export, delivery modes, retries, and audit;
-- add partner and affiliate communications through Phase 6;
-- reconcile retained legacy partner records before production cutover.
-
-Validation:
-
-- members read only their own applications;
-- trusted destinations are never supplied by the browser;
-- delivery is idempotent and retryable where implemented;
-- administrators can filter and export authorized reports.
-
-### Phase 10 — Production cutover (separate authorization only)
-
-**Status:** DEFERRED and NOT part of current roadmap. Distinct from staging migration completion. Requires separate explicit authorization and formal approval process. Read-only Payload snapshot reconciliation, offline rehearsal matrix, and safe evidence validation/export are implemented as references only.
-
-Cutover authorization requirements:
-
-1. Separate explicit go/no-go approval required before any production operation.
-2. Apply and verify reviewed migrations only in the approved production environment.
-3. Run identity, entitlement, billing, email, content, and partner reconciliation.
-4. Test administrator and member journeys in isolation.
-5. Test rollback without deleting production data.
-6. Confirm monitoring, audit, support, delivery, and recovery procedures.
-7. Obtain explicit approval for each cutover boundary.
-
-**Staging migration itself has NO remaining engineering blocker. Production migration and cutover remain separately gated.**
-
-### Phase 11 — Future community group calls with LiveKit
-
-**Status:** Future feature; research and architecture defined, implementation intentionally deferred.
+**Status:** REQUIRED before production cutover. Research and architecture defined; partial server/client pieces exist. Must be completed, tested, and proven on staging before production cutover is authorized.
 
 Detailed research and specification: `docs/LIVEKIT_PAYLOADCMS_GROUP_CALLS_PLAN.md`.
 
@@ -585,6 +546,44 @@ Validation:
 - webhook events are signature-verified and idempotent;
 - no LiveKit secret, participant token, or private recording URL is stored in member-readable PayloadCMS fields or exposed in logs;
 - representative desktop/mobile, accessibility, privacy, support, cost, monitoring, and rollback gates pass before rollout.
+
+### Phase 10 — Production cutover (separate authorization only)
+
+**Status:** DEFERRED and NOT part of current roadmap. Distinct from staging migration completion. Requires separate explicit authorization and formal approval process. Read-only Payload snapshot reconciliation, offline rehearsal matrix, and safe evidence validation/export are implemented as references only.
+
+Cutover authorization requirements:
+
+1. Separate explicit go/no-go approval required before any production operation.
+2. Apply and verify reviewed migrations only in the approved production environment.
+3. Run identity, entitlement, billing, email, content, and partner reconciliation.
+4. Test administrator and member journeys in isolation.
+5. Test rollback without deleting production data.
+6. Confirm monitoring, audit, support, delivery, and recovery procedures.
+7. Obtain explicit approval for each cutover boundary.
+
+**Staging migration itself has NO remaining engineering blocker. Production migration and cutover remain separately gated.**
+
+### Phase 11 — Partner Affiliates and Reporting (deferred post-cutover)
+
+**Status:** DEFERRED post-cutover. Partner application, delivery, reporting, and affiliate service foundations exist. The new partner-referral MVP is client-only and does not persist; it must be connected to the existing service. M2-01 remains post-core unless separately promoted. Live provider verification, reconciliation, payouts, and preview acceptance remain pending.
+
+Detailed specification: `docs/PAYLOAD_PARTNER_AFFILIATE_PLAN.md`.
+
+Tasks:
+
+- complete the partner directory;
+- add authenticated member application and history;
+- record applications before redirect or delivery;
+- complete reports, CSV export, delivery modes, retries, and audit;
+- add partner and affiliate communications through Phase 6;
+- reconcile retained legacy partner records before production cutover.
+
+Validation:
+
+- members read only their own applications;
+- trusted destinations are never supplied by the browser;
+- delivery is idempotent and retryable where implemented;
+- administrators can filter and export authorized reports.
 
 ## Overall delivery status — 10 July 2026 (Version 3.5 audit)
 

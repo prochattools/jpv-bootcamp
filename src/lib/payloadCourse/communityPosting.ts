@@ -3,7 +3,10 @@ import type {
   PayloadDocument,
   PayloadId,
 } from '@/lib/payloadCourse/accessService'
-import { notifySpaceMembersOfNewPost } from '@/lib/payloadCourse/communityPostNotifications'
+import {
+  notifyPostAuthorOfNewComment,
+  notifySpaceMembersOfNewPost,
+} from '@/lib/payloadCourse/communityPostNotifications'
 import {
   createAuditEvent,
   queueAndAttemptEmailEvent,
@@ -41,6 +44,8 @@ type CreateSpaceCommentInput = {
   body: Record<string, unknown>
   rateLimit?: RateLimitInput
   adminEmail?: string | null
+  notifyAuthor?: boolean
+  dryRun?: boolean
 }
 
 type ModerateSpacePostInput = {
@@ -415,6 +420,8 @@ export async function createSpaceComment(
   })
   await assertSpaceWriteAccess(payload, input.memberId, spaceId)
 
+  const space = await findByIdSafe(payload, 'payload_spaces', spaceId)
+
   const comment = await payload.create({
     collection: 'payload_space_comments',
     data: {
@@ -452,6 +459,18 @@ export async function createSpaceComment(
     spaceId,
     memberId: input.memberId,
   })
+
+  if (input.notifyAuthor !== false) {
+    await notifyPostAuthorOfNewComment(payload, {
+      postId: input.postId,
+      commentId: comment.id,
+      commenterMemberId: input.memberId,
+      postTitle: asString(post.title) ?? 'Community discussion',
+      spaceName: asString(space?.name) ?? 'Community',
+      spaceSlug: asString(space?.slug),
+      dryRun: input.dryRun,
+    })
+  }
 
   return {
     document: comment,

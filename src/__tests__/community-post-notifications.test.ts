@@ -16,6 +16,7 @@ import { describe, it, expect, vi } from 'vitest'
 import {
   resolvePostNotificationRecipients,
   notifySpaceMembersOfNewPost,
+  notifyPostAuthorOfNewComment,
 } from '@/lib/payloadCourse/communityPostNotifications'
 
 function makeMockPayload(
@@ -159,6 +160,129 @@ describe('notifySpaceMembersOfNewPost', () => {
     expect(result.dryRun).toBe(true)
     expect(result.recipients).toHaveLength(1)
     expect(result.emailEventsCreated).toBe(0)
+    expect(payload.create).not.toHaveBeenCalled()
+  })
+})
+
+describe('notifyPostAuthorOfNewComment', () => {
+  function makeCommentPayload(
+    post: { author: string; title?: string },
+    members: Record<string, { accountStatus: string; emailVerifiedAt: string | null; email: string }>,
+    profiles: Record<string, { displayName: string }> = {},
+  ) {
+    return {
+      find: vi.fn(async ({ collection, where }: any) => {
+        if (collection === 'payload_member_profiles') {
+          const memberId = where?.member?.equals
+          const profile = memberId && profiles[memberId]
+          return { docs: profile ? [profile] : [] }
+        }
+        return { docs: [] }
+      }),
+      findByID: vi.fn(async ({ collection, id }: any) => {
+        if (collection === 'payload_space_posts') {
+          return { id, author: post.author, title: post.title ?? 'Test post' }
+        }
+        if (collection === 'payload_members' && members[id]) {
+          return { id, ...members[id] }
+        }
+        return null
+      }),
+      create: vi.fn(async ({ data }: any) => ({
+        id: `email-${data.dedupeKey}`,
+        ...data,
+      })),
+    } as any
+  }
+
+  it('notifies post author when commenter is different', async () => {
+    const payload = makeCommentPayload(
+      { author: 'post-author' },
+      {
+        'post-author': { accountStatus: 'active', emailVerifiedAt: '2026-01-01', email: 'author@test.com' },
+      },
+      { 'post-author': { displayName: 'Author Name' } },
+    )
+
+    const result = await notifyPostAuthorOfNewComment(payload, {
+      postId: 'post-1',
+      commentId: 'comment-1',
+      commenterMemberId: 'commenter-1',
+      postTitle: 'Test post',
+      spaceName: 'Test Space',
+      spaceSlug: 'test-space',
+    })
+
+    expect(result.recipient).not.toBeNull()
+    expect(result.recipient!.memberId).toBe('post-author')
+    expect(result.recipient!.email).toBe('author@test.com')
+    expect(result.emailEventCreated).toBe(true)
+  })
+
+  it('skips notification when commenter is the post author', async () => {
+    const payload = makeCommentPayload(
+      { author: 'same-member' },
+      {
+        'same-member': { accountStatus: 'active', emailVerifiedAt: '2026-01-01', email: 'self@test.com' },
+      },
+    )
+
+    const result = await notifyPostAuthorOfNewComment(payload, {
+      postId: 'post-1',
+      commentId: 'comment-1',
+      commenterMemberId: 'same-member',
+      postTitle: 'Test post',
+      spaceName: 'Test Space',
+      spaceSlug: 'test-space',
+    })
+
+    expect(result.recipient).toBeNull()
+    expect(result.skippedReason).toBe('self_comment')
+    expect(result.emailEventCreated).toBe(false)
+  })
+
+  it('skips notification when post author is blocked', async () => {
+    const payload = makeCommentPayload(
+      { author: 'blocked-author' },
+      {
+        'blocked-author': { accountStatus: 'blocked', emailVerifiedAt: '2026-01-01', email: 'blocked@test.com' },
+      },
+    )
+
+    const result = await notifyPostAuthorOfNewComment(payload, {
+      postId: 'post-1',
+      commentId: 'comment-1',
+      commenterMemberId: 'commenter-1',
+      postTitle: 'Test post',
+      spaceName: 'Test Space',
+      spaceSlug: 'test-space',
+    })
+
+    expect(result.recipient).toBeNull()
+    expect(result.skippedReason).toBe('author_not_eligible')
+  })
+
+  it('dryRun returns recipient without creating email event', async () => {
+    const payload = makeCommentPayload(
+      { author: 'post-author' },
+      {
+        'post-author': { accountStatus: 'active', emailVerifiedAt: '2026-01-01', email: 'author@test.com' },
+      },
+    )
+
+    const result = await notifyPostAuthorOfNewComment(payload, {
+      postId: 'post-1',
+      commentId: 'comment-1',
+      commenterMemberId: 'commenter-1',
+      postTitle: 'Test post',
+      spaceName: 'Test Space',
+      spaceSlug: 'test-space',
+      dryRun: true,
+    })
+
+    expect(result.dryRun).toBe(true)
+    expect(result.recipient).not.toBeNull()
+    expect(result.emailEventCreated).toBe(false)
     expect(payload.create).not.toHaveBeenCalled()
   })
 })
