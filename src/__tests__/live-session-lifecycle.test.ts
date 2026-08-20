@@ -6,6 +6,7 @@ import {
   assertLiveSessionRelationships,
   assertLiveSessionStatusTransition,
   generateLiveSessionRoomName,
+  generateSpaceLiveSessionRoomName,
   isValidLiveSessionRoomName,
   prepareLiveSessionMutation,
 } from '@/lib/liveSessions/sessionLifecycle'
@@ -22,6 +23,54 @@ describe('Live Session lifecycle', () => {
     expect(isValidLiveSessionRoomName(roomName)).toBe(true)
     expect(isValidLiveSessionRoomName('Invalid Room!')).toBe(false)
     expect(isValidLiveSessionRoomName('')).toBe(false)
+  })
+
+  it('generates valid space room names with timestamp suffix', () => {
+    const fixedNow = new Date('2026-08-20T10:00:00.000Z')
+    const epoch = Math.floor(fixedNow.getTime() / 1000) // 1755691200
+
+    const roomName = generateSpaceLiveSessionRoomName({ spaceId: '7', now: fixedNow })
+    expect(roomName).toBe(`jpv-space-7-${epoch}`)
+    expect(isValidLiveSessionRoomName(roomName)).toBe(true)
+
+    const roomNameSanitized = generateSpaceLiveSessionRoomName({ spaceId: 'My Space!', now: fixedNow })
+    expect(roomNameSanitized).toBe(`jpv-space-my-space-${epoch}`)
+    expect(isValidLiveSessionRoomName(roomNameSanitized)).toBe(true)
+
+    expect(() => generateSpaceLiveSessionRoomName({ spaceId: '---', now: fixedNow })).toThrow(
+      'Space ID cannot generate a valid room name',
+    )
+  })
+
+  it('creates space-based sessions with space room name and no course required', () => {
+    const fixedNow = new Date('2026-08-20T10:00:00.000Z')
+    const created = prepareLiveSessionMutation({
+      operation: 'create',
+      data: {
+        title: 'Cohort call',
+        space: 'space-1',
+        scheduledAt: '2026-08-20T10:00:00.000Z',
+      },
+      operatorId: 'admin-1',
+      now: fixedNow,
+    })
+
+    expect(created.status).toBe('scheduled')
+    expect(created.roomName).toMatch(/^jpv-space-space-1-\d+$/)
+    expect(isValidLiveSessionRoomName(created.roomName)).toBe(true)
+    expect(created.audit).toEqual([
+      expect.objectContaining({ event: 'created', toStatus: 'scheduled' }),
+    ])
+  })
+
+  it('throws when neither course nor space is provided', () => {
+    expect(() =>
+      prepareLiveSessionMutation({
+        operation: 'create',
+        data: { title: 'Orphan session' },
+        operatorId: 'admin-1',
+      }),
+    ).toThrow('requires either a course or a community space')
   })
 
   it('creates scheduled sessions with persisted audit and immutable room names', () => {
@@ -199,6 +248,7 @@ describe('Live Session lifecycle', () => {
 
     expect(collection).toContain("relationTo: 'payload_course_modules'")
     expect(collection).toContain("relationTo: 'payload_lessons'")
+    expect(collection).toContain("relationTo: 'payload_spaces'")
     expect(collection).toContain('prepareLiveSessionMutation')
     expect(collection).toContain('assertLiveSessionRelationships')
     expect(adminPage).toContain('Start')

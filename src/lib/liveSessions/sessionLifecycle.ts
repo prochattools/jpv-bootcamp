@@ -16,6 +16,7 @@ export type LiveSessionDocument = Record<string, unknown> & {
   course?: unknown
   module?: unknown
   lesson?: unknown
+  space?: unknown
   roomName?: string
   hostUser?: unknown
   scheduledAt?: string
@@ -39,6 +40,7 @@ const AUDITED_FIELDS = [
   'course',
   'module',
   'lesson',
+  'space',
   'hostUser',
   'scheduledAt',
   'capacity',
@@ -68,6 +70,20 @@ function sanitizeRoomSegment(value: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
+}
+
+export function generateSpaceLiveSessionRoomName(input: {
+  spaceId: string
+  now?: Date
+}): string {
+  const space = sanitizeRoomSegment(input.spaceId)
+  if (!space) throw new Error('Space ID cannot generate a valid room name.')
+  const ts = Math.floor((input.now ?? new Date()).getTime() / 1000)
+  const roomName = `jpv-space-${space}-${ts}`.slice(0, 128)
+  if (!isValidLiveSessionRoomName(roomName)) {
+    throw new Error('Generated LiveKit room name for space is invalid.')
+  }
+  return roomName
 }
 
 export function generateLiveSessionRoomName(input: {
@@ -116,7 +132,7 @@ export function changedLiveSessionFields(
   next: LiveSessionDocument,
 ): string[] {
   return AUDITED_FIELDS.filter((field) => {
-    if (field === 'course' || field === 'module' || field === 'lesson' || field === 'hostUser') {
+    if (field === 'course' || field === 'module' || field === 'lesson' || field === 'space' || field === 'hostUser') {
       return !sameRelationship(original[field], next[field])
     }
     return comparable(original[field]) !== comparable(next[field])
@@ -154,16 +170,23 @@ export function prepareLiveSessionMutation(params: {
       throw new Error('New live sessions must start in scheduled status.')
     }
     const courseId = liveSessionRelationshipId(params.data.course)
-    if (!courseId) throw new Error('Live session course is required.')
+    const spaceId = liveSessionRelationshipId(params.data.space)
+    if (!courseId && !spaceId) {
+      throw new Error('Live session requires either a course or a community space.')
+    }
+
+    const roomName = spaceId
+      ? generateSpaceLiveSessionRoomName({ spaceId, now })
+      : generateLiveSessionRoomName({
+          courseId: courseId!,
+          moduleId: liveSessionRelationshipId(params.data.module),
+          lessonId: liveSessionRelationshipId(params.data.lesson),
+        })
 
     return {
       ...params.data,
       status,
-      roomName: generateLiveSessionRoomName({
-        courseId,
-        moduleId: liveSessionRelationshipId(params.data.module),
-        lessonId: liveSessionRelationshipId(params.data.lesson),
-      }),
+      roomName,
       audit: appendLiveSessionAudit({
         existing: params.data.audit,
         event: { event: 'created', timestamp, operator, toStatus: status },

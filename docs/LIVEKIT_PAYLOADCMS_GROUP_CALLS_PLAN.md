@@ -1,10 +1,23 @@
-# Future Group Calls — LiveKit and PayloadCMS Research Plan
+# Group Calls — LiveKit and PayloadCMS Implementation Plan
 
 ## Status
 
-**Future roadmap feature — research and architecture defined; implementation intentionally deferred.**
+**Phase 9 — REQUIRED PRE-CUTOVER — IN PROGRESS 2026-08-20.**
 
-This document defines a future group-call capability for JPV Bootcamp community groups. It does not authorize implementation, deployment, provider procurement, recording, migration, or production rollout.
+~~Future roadmap feature — research and architecture defined; implementation intentionally deferred.~~ *Superseded 2026-08-20. LiveKit group calls are now Phase 9 REQUIRED before production cutover.*
+
+This document defines the group-call capability for JPV Bootcamp community groups. The architecture research below has been validated and is now in active implementation.
+
+### Phase 9 implementation summary (2026-08-20)
+
+- `live_sessions` collection extended with optional `space` FK pointing to `payload_spaces`; `course` made optional (either-or constraint enforced at DB and application layer).
+- Migration `20260820_000000_live_session_space`: adds `space_id` nullable column, FK constraint, index, and `CHECK (course_id IS NOT NULL OR space_id IS NOT NULL)`.
+- `/api/livekit/token` POST: space sessions check member `accountStatus: active` + `emailVerifiedAt` + active space membership. All space call participants get `canPublish: true` (group call, not webinar). Host (admin) gets `roomAdmin: true`.
+- `LiveCallRoom` client component: fetches token on join, renders `LiveKitRoom` + `VideoConference` from `@livekit/components-react`.
+- Community portal pages: `/portal/community/[spaceSlug]/calls` (list) and `/portal/community/[spaceSlug]/calls/[sessionId]` (join room).
+- Space detail page: calls banner appears when live or scheduled calls exist.
+- Recording: disabled for launch (no `canRecord` grant issued).
+- Tests: 7 new authorization tests in `livekit-post-behavioral.test.ts`, 4 new lifecycle tests in `live-session-lifecycle.test.ts`.
 
 ## Use case
 

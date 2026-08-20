@@ -7,6 +7,16 @@ import {
   type LiveSessionDocument,
 } from '@/lib/liveSessions/sessionLifecycle'
 
+function hasActiveSpaceMembership(
+  memberships: Array<Record<string, unknown>>,
+  spaceId: string,
+): boolean {
+  return memberships.some(
+    (m) =>
+      liveSessionRelationshipId(m.space) === spaceId && m.status === 'active',
+  )
+}
+
 function filterModulesByCourse({ siblingData }: FilterOptionsProps) {
   const courseId = liveSessionRelationshipId((siblingData as Record<string, unknown>)?.course)
   if (!courseId) return false
@@ -29,31 +39,55 @@ export const PayloadLiveSession: CollectionConfig = {
   admin: {
     group: 'Courses',
     useAsTitle: 'title',
-    defaultColumns: ['title', 'status', 'scheduledAt', 'course', 'hostUser', 'updatedAt'],
-    description: 'Schedule and operate LiveKit sessions. Room names and audit history are generated automatically.',
+    defaultColumns: ['title', 'status', 'scheduledAt', 'course', 'space', 'hostUser', 'updatedAt'],
+    description: 'Schedule and operate LiveKit sessions (course-based or community space). Room names and audit history are generated automatically.',
   },
   access: {
     read: async ({ req }) => {
       if (req.user?.collection === 'payload_users') return true
       if (req.user?.collection !== 'payload_members') return false
 
-      const enrollments = await req.payload.find({
-        collection: 'payload_course_enrollments',
-        where: {
-          and: [
-            { member: { equals: req.user.id } },
-            { status: { equals: 'active' } },
-          ],
-        },
-        limit: 200,
-        depth: 0,
-        overrideAccess: true,
-      })
+      const [enrollments, memberships] = await Promise.all([
+        req.payload.find({
+          collection: 'payload_course_enrollments',
+          where: {
+            and: [
+              { member: { equals: req.user.id } },
+              { status: { equals: 'active' } },
+            ],
+          },
+          limit: 200,
+          depth: 0,
+          overrideAccess: true,
+        }),
+        req.payload.find({
+          collection: 'payload_space_memberships',
+          where: {
+            and: [
+              { member: { equals: req.user.id } },
+              { status: { equals: 'active' } },
+            ],
+          },
+          limit: 200,
+          depth: 0,
+          overrideAccess: true,
+        }),
+      ])
+
       const courseIds = enrollments.docs
-        .map((enrollment) => liveSessionRelationshipId(enrollment.course))
+        .map((e) => liveSessionRelationshipId(e.course))
+        .filter((id): id is string => Boolean(id))
+      const spaceIds = memberships.docs
+        .map((m) => liveSessionRelationshipId(m.space))
         .filter((id): id is string => Boolean(id))
 
-      return courseIds.length > 0 ? { course: { in: courseIds } } : false
+      if (courseIds.length === 0 && spaceIds.length === 0) return false
+      return {
+        or: [
+          ...(courseIds.length > 0 ? [{ course: { in: courseIds } }] : []),
+          ...(spaceIds.length > 0 ? [{ space: { in: spaceIds } }] : []),
+        ],
+      }
     },
     create: ({ req }) => req.user?.collection === 'payload_users',
     update: ({ req }) => req.user?.collection === 'payload_users',
@@ -66,12 +100,19 @@ export const PayloadLiveSession: CollectionConfig = {
           ...(originalDoc as LiveSessionDocument | undefined),
           ...(data as LiveSessionDocument),
         }
-        await assertLiveSessionRelationships({
-          payload: req.payload,
-          course: merged.course,
-          module: merged.module,
-          lesson: merged.lesson,
-        })
+        const mergedCourse = liveSessionRelationshipId(merged.course)
+        const mergedSpace = liveSessionRelationshipId(merged.space)
+        if (!mergedCourse && !mergedSpace) {
+          throw new Error('A live session must be linked to either a course or a community space.')
+        }
+        if (mergedCourse) {
+          await assertLiveSessionRelationships({
+            payload: req.payload,
+            course: merged.course,
+            module: merged.module,
+            lesson: merged.lesson,
+          })
+        }
 
         return prepareLiveSessionMutation({
           operation,
@@ -105,8 +146,10 @@ export const PayloadLiveSession: CollectionConfig = {
       name: 'course',
       type: 'relationship',
       relationTo: 'payload_courses',
-      required: true,
       label: 'Course',
+      admin: {
+        description: 'Required for course-based sessions. Leave blank for community space calls.',
+      },
     },
     {
       name: 'module',
@@ -126,6 +169,15 @@ export const PayloadLiveSession: CollectionConfig = {
       filterOptions: filterLessonsByModule,
       admin: {
         description: 'Optional. Select a module first — only lessons from that module appear.',
+      },
+    },
+    {
+      name: 'space',
+      type: 'relationship',
+      relationTo: 'payload_spaces',
+      label: 'Community Space',
+      admin: {
+        description: 'Required for community group calls. Leave blank for course-based sessions.',
       },
     },
     {

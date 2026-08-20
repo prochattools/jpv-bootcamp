@@ -10,6 +10,7 @@ const contentMigration = read('src/migrations/20260724_120000_operator_content_m
 const billingMigration = read('src/migrations/20260724_121000_billing_operator_actions.ts')
 const liveMigration = read('src/migrations/20260724_122000_live_session_relationships.ts')
 const emailMigration = read('src/migrations/20260724_123000_email_operator_actions.ts')
+const liveSpaceMigration = read('src/migrations/20260820_000000_live_session_space.ts')
 const migrationIndex = read('src/migrations/index.ts')
 const previewInventory = read('src/lib/previewMigrationInventory.ts')
 const generatedTypes = read('src/payload-types.ts')
@@ -58,11 +59,12 @@ describe('consolidated Payload operator migrations', () => {
     expect(recreateTablePosition).toBeGreaterThan(recreateEnumPosition)
   })
 
-  it('records exactly 29 canonical migrations', () => {
+  it('records exactly 36 canonical migrations', () => {
     expect(migrationIndex).toContain("'20260723_000001_migrate_pro_to_membership'")
     expect(migrationIndex).toContain("'20260804_050000_member_account_action_reservations'")
+    expect(migrationIndex).toContain("'20260820_000000_live_session_space'")
     const entries = migrationIndex.match(/'2026\d{4}_\d{6}[a-z0-9_]*'/g) ?? []
-    expect(entries).toHaveLength(29)
+    expect(entries).toHaveLength(36)
   })
 
   it('adds managed Page, Post, and Lesson media with guarded rollback', () => {
@@ -97,6 +99,16 @@ describe('consolidated Payload operator migrations', () => {
     expect(billingMigration).toContain('ADD COLUMN "result" jsonb')
     expect(billingMigration).toContain('rollback requires zero records using added action types')
     expect(billingMigration).toContain('CREATE TYPE ${schema}."enum_payload_billing_actions_action_type" AS ENUM(')
+  })
+
+  it('adds community space support to live sessions without breaking course columns', () => {
+    expect(liveSpaceMigration).toContain('ADD COLUMN "space_id" integer')
+    expect(liveSpaceMigration).toContain('ALTER COLUMN "course_id" DROP NOT NULL')
+    expect(liveSpaceMigration).toContain('live_sessions_space_id_payload_spaces_id_fk')
+    expect(liveSpaceMigration).toContain('live_sessions_course_or_space_required')
+    expect(liveSpaceMigration).toContain('course_id" IS NOT NULL OR "space_id" IS NOT NULL')
+    expect(liveSpaceMigration).toContain('DROP COLUMN IF EXISTS "space_id"')
+    expect(liveSpaceMigration).toContain('ALTER COLUMN "course_id" SET NOT NULL')
   })
 
   it('preserves legacy Live Session text values while adding real relationships', () => {

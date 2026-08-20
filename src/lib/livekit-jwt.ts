@@ -28,6 +28,7 @@ export type LiveKitGrant = {
   roomJoin: boolean
   canPublish: boolean
   canSubscribe: boolean
+  roomAdmin?: boolean
 }
 
 export type LiveKitTokenOptions = {
@@ -50,6 +51,14 @@ export function buildLiveKitToken(opts: LiveKitTokenOptions, cfg: LiveKitConfig)
   const exp = now + ttl
 
   const header = { alg: 'HS256', typ: 'JWT' }
+  const video: Record<string, unknown> = {
+    room: opts.grant.room,
+    roomJoin: opts.grant.roomJoin,
+    canPublish: opts.grant.canPublish,
+    canSubscribe: opts.grant.canSubscribe,
+  }
+  if (opts.grant.roomAdmin) video.roomAdmin = true
+
   const payload = {
     iss: cfg.apiKey,
     sub: opts.identity,
@@ -57,12 +66,7 @@ export function buildLiveKitToken(opts: LiveKitTokenOptions, cfg: LiveKitConfig)
     exp,
     jti: `${opts.identity}-${now}`,
     name: opts.name ?? opts.identity,
-    video: {
-      room: opts.grant.room,
-      roomJoin: opts.grant.roomJoin,
-      canPublish: opts.grant.canPublish,
-      canSubscribe: opts.grant.canSubscribe,
-    },
+    video,
   }
 
   const encodedHeader = base64url(JSON.stringify(header))

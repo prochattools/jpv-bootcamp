@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import { StatusPill } from '@/components/portal/StatusPill'
 import { requirePortalMember } from '@/lib/auth/requirePortalMember'
 import { getMemberCommunitySpaceDetail } from '@/lib/payloadCourse/communityPortal'
+import { listSpaceLiveCalls } from '@/lib/liveSessions/memberSessions'
 import { submitCommunityPost } from '../actions'
 
 export const runtime = 'nodejs'
@@ -37,6 +38,11 @@ export default async function PortalCommunitySpacePage({ params, searchParams }:
 
   const detail = await getMemberCommunitySpaceDetail(payload, memberId, spaceSlug)
   if (!detail) notFound()
+
+  const liveCalls = detail.allowed
+    ? await listSpaceLiveCalls(payload, detail.id)
+    : []
+  const activeCalls = liveCalls.filter((c) => c.status === 'live' || c.status === 'scheduled')
 
   return (
     <div className='space-y-8'>
@@ -77,6 +83,27 @@ export default async function PortalCommunitySpacePage({ params, searchParams }:
 
       {detail.allowed ? (
         <>
+          {activeCalls.length > 0 && (
+            <section className='rounded-jpv-panel border border-jpv-border bg-jpv-canvas p-5 shadow-jpv-card sm:p-6'>
+              <div className='flex items-center justify-between gap-4'>
+                <div>
+                  <p className='text-xs font-bold uppercase tracking-[0.2em] text-jpv-sunshine-ink'>Group calls</p>
+                  <p className='mt-1 text-sm text-jpv-muted'>
+                    {activeCalls.some((c) => c.status === 'live')
+                      ? 'A call is live right now.'
+                      : `${activeCalls.length} call${activeCalls.length > 1 ? 's' : ''} scheduled.`}
+                  </p>
+                </div>
+                <Link
+                  className='jpv-button-primary min-h-10 shrink-0 text-sm'
+                  href={`/portal/community/${encodedSpaceSlug}/calls`}
+                >
+                  {activeCalls.some((c) => c.status === 'live') ? 'Join call' : 'View calls'}
+                </Link>
+              </div>
+            </section>
+          )}
+
           {detail.membership?.status === 'active' && (
             <section className='rounded-jpv-panel border border-jpv-border bg-jpv-canvas p-7 shadow-jpv-card sm:p-8'>
               <h2 className='text-2xl font-bold text-jpv-brand-deep'>Start a discussion</h2>

@@ -86,17 +86,18 @@ describe('POST /api/livekit/token — operator-to-member delivery', () => {
     },
   )
 
-  it('rejects invalid room names and missing course relationships', async () => {
+  it('rejects invalid room names and sessions with no course or space', async () => {
     mockAuth.mockResolvedValue(MEMBER)
     mockFindByID.mockResolvedValue({ ...LIVE_SESSION, roomName: 'Invalid Room!' })
     let response = await postLiveKitToken(request({ sessionId: 'session-1' }))
     expect(response.status).toBe(403)
     expect((await response.json()).reason).toBe('invalid_room_name')
 
-    mockFindByID.mockResolvedValue({ ...LIVE_SESSION, course: null })
+    // session with neither course nor space is misconfigured
+    mockFindByID.mockResolvedValue({ ...LIVE_SESSION, course: null, space: null })
     response = await postLiveKitToken(request({ sessionId: 'session-1' }))
     expect(response.status).toBe(403)
-    expect((await response.json()).reason).toBe('session_course_missing')
+    expect((await response.json()).reason).toBe('session_misconfigured')
   })
 
   it('allows members only for live sessions with active course enrollment', async () => {
@@ -152,6 +153,55 @@ describe('POST /api/livekit/token — operator-to-member delivery', () => {
         },
       }),
     )
+  })
+
+  it('issues a space session token with canPublish=true for all members', async () => {
+    const { buildLiveKitToken } = await import('@/lib/livekit-config')
+    const spaceSession = {
+      id: 'space-session-1',
+      status: 'live',
+      roomName: 'jpv-space-1-1755691200',
+      space: { id: 'space-1' },
+      course: null,
+      hostUser: { id: 'admin-host' },
+    }
+    mockAuth.mockResolvedValue(MEMBER)
+    mockFindByID
+      .mockResolvedValueOnce(spaceSession)
+      .mockResolvedValueOnce({ id: 'member-1', accountStatus: 'active', emailVerifiedAt: '2026-01-01' })
+    mockFind.mockResolvedValue({ docs: [{ id: 'membership-1' }] })
+
+    const response = await postLiveKitToken(request({ sessionId: 'space-session-1' }))
+    const data = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(data.ok).toBe(true)
+    expect(vi.mocked(buildLiveKitToken)).toHaveBeenCalledWith(
+      expect.objectContaining({
+        grant: expect.objectContaining({ canPublish: true, canSubscribe: true }),
+      }),
+      expect.anything(),
+    )
+  })
+
+  it('denies space session access to members without space membership', async () => {
+    const spaceSession = {
+      id: 'space-session-1',
+      status: 'live',
+      roomName: 'jpv-space-1-1755691200',
+      space: { id: 'space-1' },
+      course: null,
+      hostUser: { id: 'admin-host' },
+    }
+    mockAuth.mockResolvedValue(MEMBER)
+    mockFindByID
+      .mockResolvedValueOnce(spaceSession)
+      .mockResolvedValueOnce({ id: 'member-1', accountStatus: 'active', emailVerifiedAt: '2026-01-01' })
+    mockFind.mockResolvedValue({ docs: [] }) // no membership
+
+    const response = await postLiveKitToken(request({ sessionId: 'space-session-1' }))
+    expect(response.status).toBe(403)
+    expect((await response.json()).reason).toBe('not_entitled')
   })
 
   it('allows only the assigned administrator to join as host', async () => {

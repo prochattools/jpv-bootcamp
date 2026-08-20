@@ -18,6 +18,17 @@ export type MemberLiveSessionSummary = {
   canJoin: boolean
 }
 
+export type SpaceLiveCallSummary = {
+  id: string
+  title: string
+  description: null
+  status: LiveSessionStatus
+  scheduledAt: string
+  spaceId: string
+  roomReady: boolean
+  canJoin: boolean
+}
+
 function text(value: unknown): string | null {
   if (typeof value !== 'string') return null
   const normalized = value.trim()
@@ -81,6 +92,44 @@ export async function listMemberLiveSessions(
       courseTitle: relationshipTitle(document.course) ?? 'Course session',
       moduleId: liveSessionRelationshipId(document.module),
       lessonId: liveSessionRelationshipId(document.lesson),
+      roomReady,
+      canJoin: status === 'live' && roomReady,
+    }]
+  })
+}
+
+export async function listSpaceLiveCalls(
+  payload: PayloadCourseAccessAPI,
+  spaceId: string | number,
+): Promise<SpaceLiveCallSummary[]> {
+  const result = await payload.find({
+    collection: 'live_sessions',
+    where: {
+      and: [
+        { space: { equals: String(spaceId) } },
+        { status: { not_equals: 'completed' } },
+      ],
+    },
+    limit: 50,
+    depth: 0,
+    sort: 'scheduledAt',
+    overrideAccess: true,
+  })
+
+  return result.docs.flatMap((document: PayloadDocument): SpaceLiveCallSummary[] => {
+    const docSpaceId = liveSessionRelationshipId(document.space)
+    const status = document.status
+    const scheduledAt = text(document.scheduledAt)
+    if (!docSpaceId || !isLiveSessionStatus(status) || !scheduledAt) return []
+
+    const roomReady = isValidLiveSessionRoomName(document.roomName)
+    return [{
+      id: String(document.id),
+      title: text(document.title) ?? 'Group call',
+      description: null,
+      status,
+      scheduledAt,
+      spaceId: docSpaceId,
       roomReady,
       canJoin: status === 'live' && roomReady,
     }]

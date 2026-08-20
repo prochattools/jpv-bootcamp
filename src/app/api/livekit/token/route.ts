@@ -323,6 +323,7 @@ export async function POST(req: NextRequest) {
     status?: string
     hostUser?: { id?: string | number } | string | number | null
     course?: { id?: string | number } | string | number | null
+    space?: { id?: string | number } | string | number | null
     roomName?: string
   }
 
@@ -342,9 +343,13 @@ export async function POST(req: NextRequest) {
   }
 
   const courseId = liveSessionRelationshipId(session.course)
-  if (!courseId) {
+  const spaceId = liveSessionRelationshipId(session.space)
+  const isSpaceSession = spaceId !== null
+  const isCourseSession = courseId !== null
+
+  if (!isCourseSession && !isSpaceSession) {
     return NextResponse.json(
-      { ok: false, reason: 'session_course_missing' } satisfies TokenErrorResponse,
+      { ok: false, reason: 'session_misconfigured' } satisfies TokenErrorResponse,
       { status: 403 },
     )
   }
@@ -352,6 +357,7 @@ export async function POST(req: NextRequest) {
   const hostUserId = liveSessionRelationshipId(session.hostUser)
   const isHost = hostUserId !== null && String(user.id) === hostUserId
 
+  // Admins may join as host only; non-host admins are denied
   if (isAdmin && !isHost) {
     return NextResponse.json(
       { ok: false, reason: 'host_required' } satisfies TokenErrorResponse,
@@ -367,24 +373,64 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const enrollment = await payloadLib.find({
-      collection: 'payload_course_enrollments',
-      where: {
-        and: [
-          { member: { equals: String(user.id) } },
-          { course: { equals: courseId } },
-          { status: { equals: 'active' } },
-        ],
-      },
-      limit: 1,
-      depth: 0,
-      overrideAccess: true,
-    })
-    if (!enrollment.docs.length) {
-      return NextResponse.json(
-        { ok: false, reason: 'not_entitled' } satisfies TokenErrorResponse,
-        { status: 403 },
-      )
+    // Verify the member is authorized for this session type
+    if (isSpaceSession) {
+      // Space call: member must have active account + active space membership
+      const [memberDoc, membership] = await Promise.all([
+        payloadLib.findByID({
+          collection: 'payload_members',
+          id: user.id,
+          depth: 0,
+          overrideAccess: true,
+        }).catch((): null => null),
+        payloadLib.find({
+          collection: 'payload_space_memberships',
+          where: {
+            and: [
+              { member: { equals: String(user.id) } },
+              { space: { equals: spaceId } },
+              { status: { equals: 'active' } },
+            ],
+          },
+          limit: 1,
+          depth: 0,
+          overrideAccess: true,
+        }),
+      ])
+      const memberRecord = memberDoc as { accountStatus?: string; emailVerifiedAt?: string | null } | null
+      if (!memberRecord || memberRecord.accountStatus !== 'active' || !memberRecord.emailVerifiedAt) {
+        return NextResponse.json(
+          { ok: false, reason: 'not_entitled' } satisfies TokenErrorResponse,
+          { status: 403 },
+        )
+      }
+      if (!membership.docs.length) {
+        return NextResponse.json(
+          { ok: false, reason: 'not_entitled' } satisfies TokenErrorResponse,
+          { status: 403 },
+        )
+      }
+    } else {
+      // Course call: member must have active course enrollment
+      const enrollment = await payloadLib.find({
+        collection: 'payload_course_enrollments',
+        where: {
+          and: [
+            { member: { equals: String(user.id) } },
+            { course: { equals: courseId } },
+            { status: { equals: 'active' } },
+          ],
+        },
+        limit: 1,
+        depth: 0,
+        overrideAccess: true,
+      })
+      if (!enrollment.docs.length) {
+        return NextResponse.json(
+          { ok: false, reason: 'not_entitled' } satisfies TokenErrorResponse,
+          { status: 403 },
+        )
+      }
     }
   }
 
@@ -400,11 +446,19 @@ export async function POST(req: NextRequest) {
     )
   }
 
+  // Space calls: all participants publish (group call); course calls: only host publishes
+  const canPublish = isSpaceSession ? true : isHost
   const jwt = buildLiveKitToken(
     {
       identity: userIdentity,
       name: userIdentity,
-      grant: { room: roomName, roomJoin: true, canPublish: isHost, canSubscribe: true },
+      grant: {
+        room: roomName,
+        roomJoin: true,
+        canPublish,
+        canSubscribe: true,
+        roomAdmin: isHost,
+      },
     },
     livekitConfig
   )
