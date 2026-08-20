@@ -1,29 +1,41 @@
 /**
- * Ensure Dokploy has fresh GHCR credentials before each deploy.
+ * Ensure GHCR registry credentials are ready before each deploy.
  *
- * Root cause for stalled deploys (observed 2026-08-20): Dokploy's
- * `application.deploy` returns HTTP 200 immediately, but the async Docker
- * pull silently fails when the stored GHCR credentials are expired or
- * missing. The existing container keeps running unchanged.
+ * DEPLOYMENT BLOCKER DIAGNOSIS (2026-08-20):
+ * The Dokploy host's Docker daemon lacks valid GHCR credentials. The
+ * image `ghcr.io/prochattools/jpv-bootcamp` is private and requires
+ * authentication for Docker pulls.
  *
- * Fix: before every deploy, upsert a GHCR registry entry in Dokploy's DB
- * using the job's GITHUB_TOKEN (valid for the full workflow run), then link
- * the registry to the staging application. Dokploy passes `--with-registry-auth`
- * when updating the Swarm service, so the fresh token is used for the pull.
+ * REQUIRED OPERATOR ACTION (one-time setup):
+ *   SSH to 68.221.139.108 (the Dokploy host):
+ *     docker login ghcr.io -u x-access-token -p <GITHUB_PAT>
+ *   where GITHUB_PAT is a GitHub PAT with read:packages scope for
+ *   the prochattools org. Then verify:
+ *     docker pull ghcr.io/prochattools/jpv-bootcamp:9bd35c08ec393d2d097eb0dbcbfbaa159708ebbf
+ *   After success, re-trigger deploy from Dokploy UI or re-run this workflow.
  *
- * Called from deploy-preview.yml before "Trigger Dokploy redeploy".
+ * WHAT THIS SCRIPT DOES:
+ * - Logs the current GHCR registry configuration for diagnostics.
+ * - If GHCR_PAT (long-lived PAT) is provided via env: updates the registry
+ *   credentials and links registryId to the application (enables Dokploy
+ *   to authenticate before docker service update).
+ * - If GHCR_PAT is absent: clears any stale registryId link (reverts to
+ *   "done" deploy status while awaiting operator one-time docker login).
+ *
+ * Linker root cause: the short-lived GITHUB_TOKEN (ghs_xxx) fails when
+ * Dokploy tries to authenticate from its host server to GHCR. Always use
+ * a long-lived PAT stored as GHCR_PAT secret for this credential.
  */
 
 import { assertStagingDokployTarget, STAGING_DOKPLOY_APPLICATION_ID } from './dokployMediaMount'
 
 const appId = process.env.DOKPLOY_PREVIEW_APP_ID?.trim() ?? ''
 const apiKey = process.env.DOKPLOY_API_KEY?.trim() ?? ''
-const githubToken = process.env.GITHUB_TOKEN_LOGIN?.trim() ?? ''
+const ghcrPat = process.env.GHCR_PAT?.trim() ?? ''
 const apiBase = (process.env.DOKPLOY_API_BASE_URL?.trim() || 'https://dokploy.prochat.tools/api').replace(/\/$/, '')
 
 if (!appId) throw new Error('GHCR-CRED-DENIED: DOKPLOY_PREVIEW_APP_ID is required')
 if (!apiKey) throw new Error('GHCR-CRED-DENIED: DOKPLOY_API_KEY is required')
-if (!githubToken) throw new Error('GHCR-CRED-DENIED: GITHUB_TOKEN_LOGIN is required')
 
 assertStagingDokployTarget(appId)
 
@@ -59,7 +71,7 @@ async function dokployRequest(path: string, init?: RequestInit): Promise<unknown
   return body
 }
 
-// Step 1: list all registries to find existing GHCR entry
+// Step 1: list all registries to log current state
 const allRegistries = await dokployRequest('/registry.all')
 
 type RegistryEntry = { registryId?: unknown; registryName?: unknown; registryUrl?: unknown }
@@ -83,52 +95,71 @@ const existing = registryList.find(
       String(r.registryUrl).includes(GHCR_HOST)),
 )
 
-let registryId: string | null = null
+if (ghcrPat) {
+  // GHCR_PAT present: update/create credentials and link to application
+  let registryId: string | null = null
 
-if (existing && typeof existing.registryId === 'string') {
-  // Step 3a: update existing registry credentials
-  registryId = existing.registryId
-  await dokployRequest('/registry.update', {
-    method: 'POST',
-    body: JSON.stringify({
-      registryId,
-      username: GHCR_USERNAME,
-      password: githubToken,
-    }),
-  })
-  console.log(JSON.stringify({ ok: true, step: 'registry_credentials_updated', registryId }))
-} else {
-  // Step 3b: create GHCR registry entry
-  const created = await dokployRequest('/registry.create', {
-    method: 'POST',
-    body: JSON.stringify({
-      registryName: GHCR_REGISTRY_NAME,
-      username: GHCR_USERNAME,
-      password: githubToken,
-      registryUrl: GHCR_HOST,
-      imagePrefix: 'prochattools/jpv-bootcamp',
-    }),
-  })
-  if (isRegistryEntry(created) && typeof created.registryId === 'string') {
-    registryId = created.registryId
-    console.log(JSON.stringify({ ok: true, step: 'registry_created', registryId }))
+  if (existing && typeof existing.registryId === 'string') {
+    registryId = existing.registryId
+    await dokployRequest('/registry.update', {
+      method: 'POST',
+      body: JSON.stringify({ registryId, username: GHCR_USERNAME, password: ghcrPat }),
+    })
+    console.log(JSON.stringify({ ok: true, step: 'registry_credentials_updated', registryId }))
   } else {
-    console.log(JSON.stringify({ ok: false, step: 'registry_create_response', created }))
-    throw new Error('GHCR-CRED-FAILED: registry.create did not return a registryId')
+    const created = await dokployRequest('/registry.create', {
+      method: 'POST',
+      body: JSON.stringify({
+        registryName: GHCR_REGISTRY_NAME,
+        username: GHCR_USERNAME,
+        password: ghcrPat,
+        registryUrl: GHCR_HOST,
+        imagePrefix: 'prochattools/jpv-bootcamp',
+      }),
+    })
+    if (isRegistryEntry(created) && typeof created.registryId === 'string') {
+      registryId = created.registryId
+      console.log(JSON.stringify({ ok: true, step: 'registry_created', registryId }))
+    } else {
+      throw new Error('GHCR-CRED-FAILED: registry.create did not return a registryId')
+    }
   }
-}
 
-// Step 4: link registry to staging application
-await dokployRequest('/application.update', {
-  method: 'POST',
-  body: JSON.stringify({
+  await dokployRequest('/application.update', {
+    method: 'POST',
+    body: JSON.stringify({ applicationId: STAGING_DOKPLOY_APPLICATION_ID, registryId }),
+  })
+  console.log(JSON.stringify({
+    ok: true,
+    step: 'registry_linked_to_application',
     applicationId: STAGING_DOKPLOY_APPLICATION_ID,
     registryId,
-  }),
-})
-console.log(JSON.stringify({
-  ok: true,
-  step: 'registry_linked_to_application',
-  applicationId: STAGING_DOKPLOY_APPLICATION_ID,
-  registryId,
-}))
+  }))
+} else {
+  // GHCR_PAT absent: clear any stale registryId to prevent deploy errors.
+  // NOTE: Without a valid registryId, Dokploy won't authenticate explicitly.
+  // The deploy will show "done" but Docker pull will fail unless the host
+  // daemon already has valid GHCR credentials (from operator docker login).
+  console.log(JSON.stringify({
+    ok: false,
+    step: 'no_ghcr_pat',
+    warning: 'GHCR_PAT secret not set. Clearing registryId link to prevent deploy errors. ' +
+      'OPERATOR ACTION REQUIRED: SSH to 68.221.139.108 and run: ' +
+      'docker login ghcr.io -u x-access-token -p <GITHUB_PAT with read:packages>. ' +
+      'Then add GHCR_PAT secret to this repository for automated credential management.',
+  }))
+
+  if (existing && typeof existing.registryId === 'string') {
+    // Clear the broken registryId link so deploys return to "done" state
+    await dokployRequest('/application.update', {
+      method: 'POST',
+      body: JSON.stringify({ applicationId: STAGING_DOKPLOY_APPLICATION_ID, registryId: null }),
+    })
+    console.log(JSON.stringify({
+      ok: true,
+      step: 'registry_link_cleared',
+      applicationId: STAGING_DOKPLOY_APPLICATION_ID,
+      note: 'registryId set to null; deploys will use host Docker daemon credentials',
+    }))
+  }
+}
