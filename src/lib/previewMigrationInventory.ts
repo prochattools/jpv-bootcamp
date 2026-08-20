@@ -62,6 +62,7 @@ const PREVIEW_MIGRATION_METADATA = [
   { purpose: 'Create community reaction persistence for posts, comments, and preserved survey-option votes.', rollbackRisk: 'data_loss', verificationChecks: ['registry-match', 'ordered-exactly', 'community-reactions', 'rollback-guard'] },
   { purpose: 'Persist source-proven member profile cover, website, biography, and social-link fields.', rollbackRisk: 'data_loss', verificationChecks: ['registry-match', 'ordered-exactly', 'member-profile-parity', 'rollback-guard'] },
   { purpose: 'Create PortalSettings global persistence with grouped branding fields and media relationships.', rollbackRisk: 'data_loss', verificationChecks: ['registry-match', 'ordered-exactly', 'portal-settings', 'rollback-guard'] },
+  { purpose: 'Extend live_sessions with optional space FK for group calls; enforce either-or course/space constraint.', rollbackRisk: 'reversible', verificationChecks: ['registry-match', 'ordered-exactly', 'live-session-space', 'rollback-guard'] },
 ] as const satisfies readonly PreviewMigrationMetadata[]
 
 if (PREVIEW_MIGRATION_METADATA.length !== PAYLOAD_MIGRATION_NAMES.length) {
