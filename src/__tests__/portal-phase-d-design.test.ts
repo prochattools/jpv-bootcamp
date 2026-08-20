@@ -27,7 +27,7 @@ describe('portal Phase D design coherence', () => {
     expect(sources.content).toContain('listPublishedMemberContent(payload)')
     expect(sources.liveSessions).toContain("requirePortalMember('/portal/live-sessions')")
     expect(sources.liveSessions).toContain('listMemberLiveSessions(payload, memberId)')
-    expect(sources.communityDetail).toContain('getMemberCommunitySpaceDetail(payload, memberId, spaceSlug)')
+    expect(sources.communityDetail).toContain('getMemberCommunitySpaceDetail(withQueryDedup(payload), memberId, spaceSlug)')
     expect(sources.partners).toContain('listActivePartners(payload as never)')
     expect(sources.partners).toContain('listMemberApplications(payload as never, memberId)')
     expect(sources.partners).toContain('getAffiliateSummary(payload as never, memberId)')

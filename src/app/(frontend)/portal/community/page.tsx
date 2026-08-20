@@ -6,6 +6,7 @@ import { getMemberCommunityFiles } from '@/lib/payloadCourse/communityFileDelive
 import {
   getMemberAnnouncements,
   getMemberCommunityDashboard,
+  withQueryDedup,
 } from '@/lib/payloadCourse/communityPortal'
 
 export const metadata = {
@@ -39,11 +40,12 @@ function formatByteSize(value: number) {
 
 export default async function PortalCommunityPage() {
   const { memberId, payload } = await requirePortalMember('/portal/community')
+  const dedupPayload = withQueryDedup(payload)
 
   const [dashboard, announcements, files] = await Promise.all([
-    getMemberCommunityDashboard(payload, memberId),
-    getMemberAnnouncements(payload, memberId),
-    getMemberCommunityFiles(payload, memberId),
+    getMemberCommunityDashboard(dedupPayload, memberId),
+    getMemberAnnouncements(dedupPayload, memberId),
+    getMemberCommunityFiles(dedupPayload, memberId),
   ])
   const unlockedCount = dashboard.spaces.filter((space) => space.allowed).length
 

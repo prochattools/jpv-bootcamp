@@ -29,6 +29,7 @@ describe('Staging-only invariant', () => {
     '.github/workflows/deploy-preview.yml',
     'scripts/safety/stagingCommunicationAllowlist.ts',
     'scripts/staging-gates/dokployMediaMount.ts',
+    'scripts/staging-gates/dokployRouting.ts',
     'scripts/staging-gates/stagingPolicy.ts',
     'docs/DOKPLOY_DEPLOYMENT_GUIDE.md',
     'docs/product/agent-mode-progress.md',
@@ -99,16 +100,16 @@ describe('Staging-only invariant', () => {
 
   describe('staging startup script', () => {
     it('start-prod.sh must not exist', () => {
-      expect(existsSync(join(ROOT, 'scripts/runtime/start-prod.sh'))).toBe(false)
+      expect(existsSync(join(ROOT, 'scripts/release/start-prod.sh'))).toBe(false)
     })
 
     it('start-staging.sh exists and is executable', () => {
-      const path = join(ROOT, 'scripts/runtime/start-staging.sh')
+      const path = join(ROOT, 'scripts/release/start-staging.sh')
       expect(existsSync(path)).toBe(true)
     })
 
     it('start-staging.sh verifies exact host/port/db/schema', () => {
-      const sh = readFile('scripts/runtime/start-staging.sh')
+      const sh = readFile('scripts/release/start-staging.sh')
       expect(sh).toContain(`REQUIRED_HOST="${STAGING_HOST}"`)
       expect(sh).toContain(`REQUIRED_PORT="${STAGING_PORT}"`)
       expect(sh).toContain(`REQUIRED_DB="${STAGING_DB}"`)
@@ -116,7 +117,7 @@ describe('Staging-only invariant', () => {
     })
 
     it('start-staging.sh has no database-deploy mode', () => {
-      const sh = readFile('scripts/runtime/start-staging.sh')
+      const sh = readFile('scripts/release/start-staging.sh')
       expect(sh).not.toContain('database-deploy')
       expect(sh).not.toContain('DEPLOYMENT_ENV')
       expect(sh).not.toContain('SYSTEM_DATABASE_URL')
@@ -279,28 +280,28 @@ describe('Staging-only invariant', () => {
 
   describe('start-staging.sh uses structural Node.js URL validation', () => {
     it('uses Node.js URL parser, not grep', () => {
-      const sh = readFile('scripts/runtime/start-staging.sh')
+      const sh = readFile('scripts/release/start-staging.sh')
       expect(sh).toContain('new URL(')
       expect(sh).not.toMatch(/grep.*schema.*REQUIRED_SCHEMA/)
     })
 
     it('verifies hostname by field, not substring', () => {
-      const sh = readFile('scripts/runtime/start-staging.sh')
+      const sh = readFile('scripts/release/start-staging.sh')
       expect(sh).toContain('parsed.hostname')
     })
 
     it('verifies port by field, not substring', () => {
-      const sh = readFile('scripts/runtime/start-staging.sh')
+      const sh = readFile('scripts/release/start-staging.sh')
       expect(sh).toContain('parsed.port')
     })
 
     it('verifies database by pathname field, not substring', () => {
-      const sh = readFile('scripts/runtime/start-staging.sh')
+      const sh = readFile('scripts/release/start-staging.sh')
       expect(sh).toContain('parsed.pathname')
     })
 
     it('verifies exactly one schema parameter, not substring', () => {
-      const sh = readFile('scripts/runtime/start-staging.sh')
+      const sh = readFile('scripts/release/start-staging.sh')
       expect(sh).toContain('getAll(')
       expect(sh).toContain('exactly one schema')
     })

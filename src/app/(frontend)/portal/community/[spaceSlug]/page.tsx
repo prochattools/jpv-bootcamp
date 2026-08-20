@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation'
 
 import { StatusPill } from '@/components/portal/StatusPill'
 import { requirePortalMember } from '@/lib/auth/requirePortalMember'
-import { getMemberCommunitySpaceDetail } from '@/lib/payloadCourse/communityPortal'
+import { getMemberCommunitySpaceDetail, withQueryDedup } from '@/lib/payloadCourse/communityPortal'
 import { listSpaceLiveCalls } from '@/lib/liveSessions/memberSessions'
 import { submitCommunityPost } from '../actions'
 
@@ -36,7 +36,7 @@ export default async function PortalCommunitySpacePage({ params, searchParams }:
   const encodedSpaceSlug = encodeURIComponent(spaceSlug)
   const { memberId, memberEmail, payload } = await requirePortalMember(`/portal/community/${encodedSpaceSlug}`)
 
-  const detail = await getMemberCommunitySpaceDetail(payload, memberId, spaceSlug)
+  const detail = await getMemberCommunitySpaceDetail(withQueryDedup(payload), memberId, spaceSlug)
   if (!detail) notFound()
 
   const liveCalls = detail.allowed

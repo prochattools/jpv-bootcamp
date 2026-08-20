@@ -5,6 +5,53 @@ import {
   type PayloadId,
 } from '@/lib/payloadCourse/accessService'
 
+/**
+ * Wraps a PayloadCourseAccessAPI so that identical find/findByID calls within
+ * a single request share the same Promise. Eliminates redundant fetches of
+ * member, access groups, and subscription data when evaluating access for
+ * multiple spaces in parallel.
+ *
+ * The Promise (not the result) is cached: concurrent callers that race to
+ * the same key before the first Promise resolves all receive the same
+ * in-flight Promise — a single DB round-trip regardless of concurrency.
+ *
+ * count is never cached because each call has a distinct where clause.
+ */
+export function withQueryDedup(payload: PayloadCourseAccessAPI): PayloadCourseAccessAPI {
+  const findByIdCache = new Map<string, Promise<unknown>>()
+  const findCache = new Map<string, Promise<unknown>>()
+
+  const wrapped: PayloadCourseAccessAPI = {
+    find(args) {
+      const key = JSON.stringify({
+        c: args.collection,
+        w: args.where ?? null,
+        l: args.limit ?? null,
+        d: args.depth ?? null,
+        s: args.sort ?? null,
+      })
+      if (!findCache.has(key)) {
+        findCache.set(key, payload.find(args))
+      }
+      return findCache.get(key) as ReturnType<typeof payload.find>
+    },
+    findByID(args) {
+      const key = `${String(args.collection)}:${String(args.id)}`
+      if (!findByIdCache.has(key)) {
+        findByIdCache.set(key, payload.findByID(args))
+      }
+      return findByIdCache.get(key) as ReturnType<typeof payload.findByID>
+    },
+  }
+
+  if (payload.count) {
+    const count = payload.count
+    wrapped.count = (args) => count(args)
+  }
+
+  return wrapped
+}
+
 type SpaceVisibility = 'public' | 'members' | 'private' | 'secret'
 
 export type MemberCommunitySpace = {
@@ -232,7 +279,7 @@ async function getVisibleSpacePosts(
       ],
     },
     sort: '-createdAt',
-    limit: 100,
+    limit: 50,
   })
 
   return posts.sort(byPinnedAndDate)
@@ -265,13 +312,17 @@ async function countVisibleComments(
 async function buildSpaceProjection(
   payload: PayloadCourseAccessAPI,
   memberId: string,
-  space: PayloadDocument
+  space: PayloadDocument,
+  membershipMap: Map<string, PayloadDocument> | null
 ): Promise<MemberCommunitySpace | null> {
-  const [access, membership, linkedCourseSlug] = await Promise.all([
+  const [access, linkedCourseSlug] = await Promise.all([
     evaluatePayloadSpaceAccess(payload, { memberId, spaceId: space.id }),
-    findMemberSpaceMembership(payload, memberId, space.id),
     findLinkedCourseSlug(payload, space.linkedCourse),
   ])
+
+  const membership = membershipMap
+    ? (membershipMap.get(String(space.id)) ?? null)
+    : await findMemberSpaceMembership(payload, memberId, space.id)
   const visibility = normalizeSpaceVisibility(space.visibility)
   const allowed = access.decision.allowed
 
@@ -308,17 +359,28 @@ export async function getMemberCommunityDashboard(
   memberId: PayloadId
 ): Promise<MemberCommunityDashboard> {
   const normalizedMemberId = String(memberId)
-  const spaces = await findAll(payload, 'payload_spaces', {
-    where: {
-      status: { equals: 'published' },
-    },
-    sort: 'sortOrder',
-    limit: 100,
-  })
+
+  const [spaces, memberships] = await Promise.all([
+    findAll(payload, 'payload_spaces', {
+      where: { status: { equals: 'published' } },
+      sort: 'sortOrder',
+      limit: 100,
+    }),
+    findAll(payload, 'payload_space_memberships', {
+      where: { member: { equals: normalizedMemberId } },
+      limit: 200,
+    }),
+  ])
+
+  const membershipMap = new Map<string, PayloadDocument>()
+  for (const m of memberships) {
+    const spaceId = getDocumentId(m.space)
+    if (spaceId) membershipMap.set(spaceId, m)
+  }
 
   const sorted = spaces.sort(bySortOrder)
   const results = await Promise.all(
-    sorted.map((space) => buildSpaceProjection(payload, normalizedMemberId, space))
+    sorted.map((space) => buildSpaceProjection(payload, normalizedMemberId, space, membershipMap))
   )
   const projections = results.filter((p): p is MemberCommunitySpace => p !== null)
 
@@ -343,7 +405,7 @@ export async function getMemberCommunitySpaceDetail(
 
   if (!space) return null
 
-  const projection = await buildSpaceProjection(payload, normalizedMemberId, space)
+  const projection = await buildSpaceProjection(payload, normalizedMemberId, space, null)
   if (!projection) return null
 
   if (!projection.allowed) {
