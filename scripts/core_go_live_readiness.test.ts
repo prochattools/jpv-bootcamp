@@ -84,7 +84,7 @@ function main(): void {
   assert.match(goNoGoChecklist, /staging smoke \| pending until executed/i)
 
   for (const doc of [previewReadiness, roadmap, operatorHandoff]) {
-    assert.match(doc, /35\/35.*registration|35 canonical Payload migration registrations|35 Payload migrations applied|canonical 29-name Payload registry/i)
+    assert.match(doc, /35\/35.*registration|35 canonical Payload migration registrations|36 canonical Payload migration registrations|35 Payload migrations applied|canonical 29-name Payload registry/i)
     assert.match(doc, /not.*applied database state|not database-applied state|not evidence that those migrations were applied/i)
     assert.match(doc, /staging:migration-status/)
     assert.match(doc, /31215369413/)

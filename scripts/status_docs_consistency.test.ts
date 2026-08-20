@@ -93,7 +93,7 @@ async function main(): Promise<void> {
   assert.match(docs.roadmap, /30853006495/)
   assert.match(docs.roadmap, /STAGING MIGRATION COMPLETE/)
   assert.match(docs.roadmap, /LAUNCH-SCOPE REPOSITORY IMPLEMENTATION COMPLETE — FINAL PRE-MIGRATION CLOSURE IN PROGRESS/)
-  assert.match(docs.roadmap, /35 canonical Payload migration registrations/)
+  assert.match(docs.roadmap, /36 canonical Payload migration registrations/)
   assert.match(docs.roadmap, /20260804_050000_member_account_action_reservations/)
   assert.match(docs.roadmap, /M0-01 through M0-09/)
   assert.match(docs.roadmap, /M1-01 through M1-06/)
