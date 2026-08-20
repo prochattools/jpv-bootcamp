@@ -276,7 +276,7 @@ The following phases were layered on the same branch after the `9745dac` hardeni
 
 ## Migration status
 
-The repository contains 35 canonical Payload migration registrations. Registration and the deployment health inventory are not database-applied state. The real `pnpm staging:migration-status` adapter is implemented as one guarded PostgreSQL client and one read-only transaction, but it has not been run against staging in this work. Exact Payload and Prisma applied, failed, in-progress, rolled-back, and pending state therefore remains unverified until an authorized operator captures the read-only report.
+The repository contains 36 canonical Payload migration registrations. Registration and the deployment health inventory are not database-applied state. The real `pnpm staging:migration-status` adapter is implemented as one guarded PostgreSQL client and one read-only transaction, but it has not been run against staging in this work. Exact Payload and Prisma applied, failed, in-progress, rolled-back, and pending state therefore remains unverified until an authorized operator captures the read-only report.
 
 Repository documentation identifies the support schema, account-column rename, table-plan enum removal, and a future account-action reservation/finalization schema as migration candidates or open requirements. Their actual target state must not be inferred from repository names or health output. Do not execute any migration until the target owner approves the business mapping, exact database/schema, backup, operator, maintenance window, apply path, verification, and rollback procedure.
 
