@@ -708,7 +708,7 @@ test.describe('Authenticated Portal Route Coverage', () => {
 
     expect(page.url()).toContain('/portal')
     expect(page.url()).not.toMatch(/mode=login/)
-    await expect(page.getByRole('heading', { name: 'Billing' })).toBeVisible({ timeout: 5000 })
+    await expect(page.getByRole('heading', { name: 'Billing', exact: true })).toBeVisible({ timeout: 5000 })
   })
 
   test('PORTAL-013: Portal dashboard no unexpected 403 errors', async ({ page }) => {
