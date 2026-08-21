@@ -274,6 +274,42 @@ The following phases were layered on the same branch after the `9745dac` hardeni
 - `pnpm audit --prod --audit-level high --ignore-registry-errors` now passes the release gate.
 - Global application security headers are not defined in `next.config.js`.
 
+## Final staging readiness checkpoint — 2026-08-21
+
+Status: READY FOR PRODUCTION AUTHORIZATION REVIEW (production operation NOT authorized)
+
+Verified staging state:
+
+- Staging URL: `https://preview.jpvbootcamp.com`
+- Deployment: Dokploy pipeline restored and operational after GHCR registry configuration fix
+- Running baseline: Phase 9 deployed staging state
+- Payload migrations: 36/36 applied
+- Phase 8 Member Portal Operationalization: complete
+- Phase 9 LiveKit Group Calls: complete
+- Portal performance regression: resolved
+- LiveKit browser acceptance: passed
+- Release evidence: 164/164 gates passing
+
+Final readiness scope:
+
+- Confirmed working staging environment
+- Confirmed deployment path
+- Confirmed migration state
+- Confirmed portal acceptance flows
+- Confirmed LiveKit acceptance evidence
+
+Remaining non-blocking operational items:
+
+- Optional real-device audio/video LiveKit validation
+- Optional deployment SSH fallback hardening
+- Final production cutover planning under separate explicit authorization
+
+Hard stops:
+
+- Do not touch production
+- Do not apply additional staging migrations without explicit authorization
+- Do not begin Phase 10 production cutover from this checkpoint
+
 ## Migration status
 
 The repository contains 36 canonical Payload migration registrations. Registration and the deployment health inventory are not database-applied state. The real `pnpm staging:migration-status` adapter is implemented as one guarded PostgreSQL client and one read-only transaction, but it has not been run against staging in this work. Exact Payload and Prisma applied, failed, in-progress, rolled-back, and pending state therefore remains unverified until an authorized operator captures the read-only report.
