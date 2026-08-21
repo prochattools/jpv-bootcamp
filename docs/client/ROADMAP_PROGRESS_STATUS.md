@@ -36,7 +36,7 @@ Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`.
 
 **Staging acceptance:** Phase 8 green. Phase 9 deployed and operational on staging 2026-08-21. Migration 36 applied. LiveKit token endpoint verified auth-gated and config-loaded. GHCR credentials resolved. Deployment convergence fix in place. Next step: create test live session and verify end-to-end token issuance for entitled member.
 
-**Hard stops:** Do not apply additional migrations to staging beyond the current 36. Do not touch `main`. Do not describe static prototypes as operational workflows. Do not perform production operation or cutover without separate explicit authorization.
+**Hard stops:** Do not apply additional migrations to staging. Current state is 36/36 applied; no further migrations are authorized. Do not touch `main`. Do not describe static prototypes as operational workflows. Do not perform production operation or cutover without separate explicit authorization.
 
 ## Launch-critical visual coherence packet (UI-01)
 
