@@ -1,3 +1,4 @@
+import { execSync } from 'node:child_process'
 import { assertStagingOrigin, STAGING_APP_ID } from './stagingPolicy'
 import { STAGING_DOKPLOY_APPLICATION_ID } from './dokployMediaMount'
 
@@ -13,10 +14,14 @@ const apiKey = requireEnvironment('DOKPLOY_API_KEY')
 const appId = requireEnvironment('DOKPLOY_PREVIEW_APP_ID')
 const apiBase = (process.env.DOKPLOY_API_BASE_URL?.trim() || 'https://dokploy.prochat.tools/api').replace(/\/$/, '')
 
+const sshHost = process.env.DEPLOY_SSH_HOST?.trim() || ''
+const sshUser = process.env.DEPLOY_SSH_USER?.trim() || 'ubuntu'
+const serviceName = 'clients-jpv-bootcamp-app-tp9xrk'
+
 const maximumAttempts = 40
 const delayMilliseconds = 15_000
 const retriggerAfterAttempt = 10
-const forceRedeployAfterAttempt = 25
+const sshFallbackAfterAttempt = 18
 
 assertStagingOrigin(stagingUrl)
 if (!/^[0-9a-f]{40}$/i.test(expectedSha)) {
@@ -42,6 +47,13 @@ async function dokployRequest(path: string, body: Record<string, unknown>): Prom
 
 async function retriggerDeploy(): Promise<void> {
   console.log(JSON.stringify({ action: 'retrigger_deploy', reason: 'stale_image_after_initial_polls' }))
+
+  const updateResult = await dokployRequest('/application.update', {
+    applicationId: appId,
+    dockerImage: `ghcr.io/prochattools/jpv-bootcamp:${expectedSha}`,
+  })
+  console.log(JSON.stringify({ action: 'update_image', status: updateResult.status }))
+
   const result = await dokployRequest('/application.deploy', {
     applicationId: appId,
     title: `convergence-retry-${expectedSha.slice(0, 8)}`,
@@ -50,25 +62,27 @@ async function retriggerDeploy(): Promise<void> {
   console.log(JSON.stringify({ action: 'retrigger_deploy_result', status: result.status }))
 }
 
-async function forceRedeploy(): Promise<void> {
-  console.log(JSON.stringify({ action: 'force_redeploy', reason: 'stale_image_after_retrigger' }))
+function sshServiceUpdate(): boolean {
+  if (!sshHost) {
+    console.log(JSON.stringify({ action: 'ssh_fallback_skipped', reason: 'DEPLOY_SSH_HOST not set' }))
+    return false
+  }
 
-  const updateResult = await dokployRequest('/application.update', {
-    applicationId: appId,
-    dockerImage: `ghcr.io/prochattools/jpv-bootcamp:${expectedSha}`,
-  })
-  console.log(JSON.stringify({ action: 'force_image_update', status: updateResult.status }))
-
-  const deployResult = await dokployRequest('/application.deploy', {
-    applicationId: appId,
-    title: `force-convergence-${expectedSha.slice(0, 8)}`,
-    description: `Force redeploy: swarm did not converge after retrigger. Target: ${expectedSha}`,
-  })
-  console.log(JSON.stringify({ action: 'force_deploy_result', status: deployResult.status }))
+  console.log(JSON.stringify({ action: 'ssh_service_update', host: sshHost, user: sshUser }))
+  try {
+    const image = `ghcr.io/prochattools/jpv-bootcamp:${expectedSha}`
+    const cmd = `ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 ${sshUser}@${sshHost} "sudo docker service update --image ${image} --with-registry-auth ${serviceName}"`
+    execSync(cmd, { timeout: 120_000, stdio: 'pipe' })
+    console.log(JSON.stringify({ action: 'ssh_service_update_complete' }))
+    return true
+  } catch (e) {
+    console.log(JSON.stringify({ action: 'ssh_service_update_failed', error: String(e).slice(0, 200) }))
+    return false
+  }
 }
 
 let retriggered = false
-let forceRedeployed = false
+let sshAttempted = false
 
 for (let attempt = 1; attempt <= maximumAttempts; attempt += 1) {
   try {
@@ -82,7 +96,7 @@ for (let attempt = 1; attempt <= maximumAttempts; attempt += 1) {
       const body = (await response.json()) as { imageTag?: unknown }
       const imageTag = typeof body.imageTag === 'string' ? body.imageTag : ''
       if (imageTag === expectedSha) {
-        console.log(JSON.stringify({ ok: true, attempt, imageTag, retriggered, forceRedeployed }))
+        console.log(JSON.stringify({ ok: true, attempt, imageTag, retriggered, sshAttempted }))
         process.exit(0)
       }
       console.log(JSON.stringify({ ok: false, attempt, status: response.status, imageTag }))
@@ -102,15 +116,13 @@ for (let attempt = 1; attempt <= maximumAttempts; attempt += 1) {
   if (attempt === retriggerAfterAttempt && !retriggered) {
     retriggered = true
     try { await retriggerDeploy() } catch (e) {
-      console.log(JSON.stringify({ action: 'retrigger_error', error: String(e) }))
+      console.log(JSON.stringify({ action: 'retrigger_error', error: String(e).slice(0, 200) }))
     }
   }
 
-  if (attempt === forceRedeployAfterAttempt && !forceRedeployed) {
-    forceRedeployed = true
-    try { await forceRedeploy() } catch (e) {
-      console.log(JSON.stringify({ action: 'force_redeploy_error', error: String(e) }))
-    }
+  if (attempt === sshFallbackAfterAttempt && !sshAttempted) {
+    sshAttempted = true
+    sshServiceUpdate()
   }
 
   if (attempt < maximumAttempts) {
@@ -118,4 +130,4 @@ for (let attempt = 1; attempt <= maximumAttempts; attempt += 1) {
   }
 }
 
-throw new Error(`DEPLOYMENT-WAIT-FAILED: staging did not serve ${expectedSha} within 10 minutes (retriggered=${retriggered}, forceRedeployed=${forceRedeployed})`)
+throw new Error(`DEPLOYMENT-WAIT-FAILED: staging did not serve ${expectedSha} within 10 minutes (retriggered=${retriggered}, sshAttempted=${sshAttempted})`)
