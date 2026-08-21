@@ -407,6 +407,8 @@ jobs:
         env:
           STAGING_URL: https://preview.jpvbootcamp.com
           EXPECTED_DEPLOYMENT_SHA: ${{ github.sha }}
+          DOKPLOY_API_KEY: ${{ secrets.DOKPLOY_API_KEY }}
+          DOKPLOY_PREVIEW_APP_ID: ${{ secrets.DOKPLOY_PREVIEW_APP_ID }}
         run: pnpm exec tsx scripts/staging-gates/waitForPreviewDeployment.mts
 
       - name: Diagnose Dokploy deployment (on wait failure)
