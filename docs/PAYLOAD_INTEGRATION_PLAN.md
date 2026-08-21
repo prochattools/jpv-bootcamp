@@ -523,9 +523,9 @@ Outside launch scope (documented, not blocking):
 - community digest emails (registry defined, scheduled delivery deferred);
 - richer editor/upload UX iteration.
 
-### Phase 9 — LiveKit Group Calls (REQUIRED pre-cutover)
+### Phase 9 — LiveKit Group Calls (COMPLETE)
 
-**Status:** CODE COMPLETE 2026-08-20. Push gate run `32397679498` green (164/164 release, TypeScript, build, Prisma, E2E). Migration `20260820_000000_live_session_space` (registry #36) exists; staging apply and LiveKit config verification are the remaining operator steps before Phase 9 staging acceptance. See `docs/LIVEKIT_PAYLOADCMS_GROUP_CALLS_PLAN.md` for implementation detail.
+**Status:** COMPLETE 2026-08-21. Code, migration, staging deployment, backend acceptance, and browser acceptance all green. SHA `9c0debe3bdf0fc5a9c9be99a6697eb6bbff3419d`, deploy run `32462177363`. Migration `20260820_000000_live_session_space` (#36) applied. LiveKit env vars configured (`LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`). **Backend acceptance (2026-08-21):** anonymous → 401 ✓; host JWT (roomAdmin:true, canPublish:true) ✓; member JWT (canPublish:true, no roomAdmin) ✓; LiveKit cloud room verified (SID RM_Su53GS9G5...) ✓. **Browser acceptance (2026-08-21):** Playwright `portal-calls-acceptance.staging.spec.ts` 5/5 PASS — unauthenticated redirect ✓, calls list renders live session ✓, join call page renders LiveCallRoom ✓, "Join call" button issues valid token ✓, unauthenticated join call redirects ✓. **Remaining human-only validation (non-blocking):** actual WebRTC AV stream and two-participant simultaneous call require real device with camera/microphone. **Deployment hardening gap (non-blocking):** `DEPLOY_SSH_HOST`/`DEPLOY_SSH_USER` not yet in `preview-deploy` GitHub environment; SSH fallback in wait script is skipped (retrigger-at-attempt-10 path still active). See `docs/LIVEKIT_PAYLOADCMS_GROUP_CALLS_PLAN.md` for implementation detail.
 
 Detailed research and specification: `docs/LIVEKIT_PAYLOADCMS_GROUP_CALLS_PLAN.md`.
 
