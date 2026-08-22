@@ -62,7 +62,7 @@ export default function SponsoredPayItForward() {
 	}
 
 	return (
-		<div className="rounded-3xl bg-jpv-ink p-6 shadow-lg transition-transform hover:shadow-xl hover:-translate-y-1">
+		<div className="rounded-3xl bg-jpv-ink p-6 shadow-[0_8px_30px_rgba(0,0,0,0.3)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_20px_50px_rgba(0,0,0,0.45)]">
 			<div className="space-y-3">
 				<h3 className="text-xl font-semibold text-jpv-canvas">Pay it forward</h3>
 				<p className="text-sm text-jpv-canvas">
