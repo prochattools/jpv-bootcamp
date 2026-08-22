@@ -65,6 +65,7 @@ export const jpvBrand = {
   logoAlt: 'JPV — Our passion is people',
   logoPath: '/images/jpv-logo.jpg',
   logoHorizontalPath: '/images/jpv-logo-horizontal.png',
+  logoTransparentPath: '/images/jpv-logo.png',
 } as const
 
 export function resolveJpvLogoUrl(baseUrl: string | URL): string {

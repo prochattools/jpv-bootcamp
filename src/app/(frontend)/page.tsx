@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Check, ChevronDown, Menu, X } from "lucide-react";
+import { ArrowRight, Check, ChevronDown, FolderOpen, GraduationCap, Home, Menu, Users, X } from "lucide-react";
 import Image from "next/image";
 import { useState, type FormEvent } from "react";
 
@@ -55,54 +55,30 @@ const programmeCards = [
   },
 ] as const;
 
-const journeyCards = [
+const journeyPillars = [
   {
-    number: "01",
-    title: "Learn",
+    Icon: GraduationCap,
+    title: "Training & Courses",
     description:
-      "Access structured video lessons, practical templates, and seven weekly Friday Zoom sessions.",
-    image: "/events/inheritance-builders/PHOTO-2026-01-27-20-28-15.jpg",
-    items: [
-      "Weekly live online training",
-      "Replays available for later review",
-      "Interactive questions and answers",
-    ],
+      "Learn at your own pace with step-by-step training and expert guidance.",
   },
   {
-    number: "02",
-    title: "Apply",
+    Icon: Users,
+    title: "Community & Connection",
     description:
-      "Analyse investment opportunities, complete practical exercises, and receive expert feedback.",
-    image: "/events/inheritance-builders/PHOTO-2026-01-27-22-09-11.jpg",
-    items: [
-      "Full-day live event",
-      "Real property scenarios",
-      "Practical expert feedback",
-    ],
+      "Join a community of like-minded Christians in property. Share, learn and grow together.",
   },
   {
-    number: "03",
-    title: "Build",
+    Icon: FolderOpen,
+    title: "Resource Library",
     description:
-      "Move from knowledge to action with support around property, finance, renovation, and adding value.",
-    image: "/events/inheritance-builders/PHOTO-2026-01-27-22-09-01.jpg",
-    items: [
-      "Guidance for each next step",
-      "Support through practical decisions",
-      "A path towards a portfolio",
-    ],
+      "Access templates, documents, checklists and tools to support you every step of the way.",
   },
   {
-    number: "04",
-    title: "Belong",
+    Icon: Home,
+    title: "Practical Support",
     description:
-      "Continue the journey with people committed to excellence, accountability, and shared purpose.",
-    image: "/events/inheritance-builders/PHOTO-2026-01-27-22-09-11.jpg",
-    items: [
-      "Member discussions",
-      "Programme questions and answers",
-      "Protected resources",
-    ],
+      "From finding your first property to renovating, financing, and beyond – we've got you.",
   },
 ] as const;
 
@@ -284,10 +260,10 @@ export default function HomePage() {
           >
             <Image
               alt="JPV Jesus Property Venture"
-              className={styles.brandLogo}
+              className={styles.brandLogoTransparent}
               height={44}
               priority
-              src={jpvBrand.logoPath}
+              src={jpvBrand.logoTransparentPath}
               width={44}
             />
             <span className={styles.brandText}>
@@ -482,9 +458,9 @@ export default function HomePage() {
             </div>
             <div className={styles.storyMedia}>
               <Image
-                alt="UK property street — who is JPV Bootcamp for"
+                alt="JPV key handoff — property education with purpose"
                 height={1200}
-                src="/images/redesign/who-is-jpv-for.png"
+                src="/images/redesign/jpv-key-handoff.png"
                 width={960}
               />
               <div className={styles.storyNote}>
@@ -518,24 +494,13 @@ export default function HomePage() {
             </div>
 
             <div className={styles.journeyGrid}>
-              {journeyCards.map((card) => (
-                <article className={styles.journeyCard} key={card.number}>
-                  <div className={styles.journeyMedia}>
-                    <Image alt="" height={720} src={card.image} width={720} />
+              {journeyPillars.map((pillar) => (
+                <article className={styles.journeyCard} key={pillar.title}>
+                  <div className={styles.journeyPillarIcon}>
+                    <pillar.Icon aria-hidden="true" size={28} />
                   </div>
-                  <div className={styles.journeyBody}>
-                    <span className={styles.journeyNumber}>{card.number}</span>
-                    <h3>{card.title}</h3>
-                    <p>{card.description}</p>
-                    <ul>
-                      {card.items.map((item) => (
-                        <li key={item}>
-                          <Check aria-hidden="true" size={13} />
-                          {item}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
+                  <h3>{pillar.title}</h3>
+                  <p>{pillar.description}</p>
                 </article>
               ))}
             </div>
@@ -925,9 +890,10 @@ export default function HomePage() {
           <div className={styles.footerBrand}>
             <Image
               alt="JPV Jesus Property Venture"
-              height={38}
-              src={jpvBrand.logoPath}
-              width={38}
+              className={styles.footerLogoTransparent}
+              height={44}
+              src={jpvBrand.logoTransparentPath}
+              width={44}
             />
             <div>
               <strong>JPV Bootcamp</strong>
