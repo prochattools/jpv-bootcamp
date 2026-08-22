@@ -823,7 +823,7 @@
 }
 
 .membership .eyebrow {
-  color: var(--jpv-brand);
+  color: var(--jpv-canvas);
 }
 
 .membership .sectionHeading {
@@ -855,7 +855,7 @@
 
 .benefitNumber {
   display: block;
-  color: var(--jpv-brand);
+  color: var(--jpv-canvas);
   font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.1em;
@@ -1002,7 +1002,7 @@
 
 .planName {
   margin: 0;
-  color: var(--jpv-brand);
+  color: var(--jpv-brand-deep);
   font-size: 0.64rem;
   font-weight: 600;
   letter-spacing: 0.13em;
