@@ -14,8 +14,8 @@ export const jpvDesignTokens = {
     surface: '#F4F0E8',      // beige-100
     surfaceStrong: '#E9E2D5', // beige-200
     ink: '#3A3428',          // beige-900 — primary text
-    muted: '#A89A80',        // beige-500
-    inverseMuted: '#6E6350', // beige-700
+    muted: '#6E6350',        // beige-700 (darkened from #A89A80 for WCAG AA)
+    inverseMuted: '#5A4D3F', // beige-800 (darkened from #6E6350 for WCAG AA)
     border: '#D9CFBC',       // beige-300
     focus: '#238383',        // teal-600
     // Full teal scale
