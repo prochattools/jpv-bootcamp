@@ -1,10 +1,10 @@
 export const jpvDesignTokens = {
   colors: {
-    // Beige & Teal brand system (accent: #42BEBE)
-    brand: '#42BEBE',        // teal-400 (lightened for contrast on dark backgrounds)
-    brandHover: '#2C9E9E',   // teal-500
-    brandDeep: '#1B6767',    // teal-700
-    brandBright: '#74C4C4',  // teal-300
+    // Beige & Teal brand system (accent: #0E7B7B)
+    brand: '#0E7B7B',        // teal-800 (darker for WCAG AA on light backgrounds)
+    brandHover: '#1B6767',   // teal-700
+    brandDeep: '#0A5555',    // teal-900
+    brandBright: '#4EB0B0',  // teal-400
     sunshine: '#e8c65a',
     sunshineInk: '#6f5a1f',
     danger: '#c94f4f',
