@@ -4,7 +4,7 @@ export function JPVAdminLogo() {
   return (
     <img
       alt={jpvBrand.logoAlt}
-      src={jpvBrand.logoPath}
+      src={jpvBrand.logoHorizontalPath}
       style={{
         display: 'block',
         height: 'auto',
@@ -21,12 +21,12 @@ export function JPVAdminIcon() {
   return (
     <img
       alt={jpvBrand.logoAlt}
-      src={jpvBrand.logoPath}
+      src={jpvBrand.logoHorizontalPath}
       style={{
         display: 'block',
         height: 32,
         objectFit: 'contain',
-        width: 32,
+        width: 'auto',
       }}
     />
   )

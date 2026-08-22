@@ -16,11 +16,7 @@ export default async function PortalLayout({ children }: { children: ReactNode }
       <header className='border-b border-jpv-border bg-jpv-canvas'>
         <div className='mx-auto flex min-h-[4.75rem] max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6'>
           <Link className='flex min-w-0 items-center gap-3' href='/portal'>
-            <img alt={jpvBrand.logoAlt} className='h-10 w-10 shrink-0 rounded-jpv-card object-contain' src={jpvBrand.logoPath} />
-            <span className='min-w-0'>
-              <span className='block truncate text-base font-semibold'>{jpvBrand.name}</span>
-              <span className='block text-xs text-jpv-muted'>Member portal</span>
-            </span>
+            <img alt={jpvBrand.logoAlt} className='h-9 w-auto shrink-0 object-contain' src={jpvBrand.logoHorizontalPath} />
           </Link>
 
           <PortalNavigation showLogout={showLogout} />

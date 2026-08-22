@@ -732,44 +732,52 @@
 
 .teacherCards {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  border-block: 1px solid var(--jpv-border);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2.5rem;
+  margin-top: 2.5rem;
 }
 
 .teacherCard {
-  padding: 2rem 1.4rem;
-  border-right: 1px solid var(--jpv-border);
+  padding: 0;
 }
 
-.teacherCard:last-child {
-  border-right: 0;
+.teacherPhoto {
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: var(--jpv-radius-card);
+  background: var(--jpv-surface);
+  max-width: 22rem;
 }
 
-.teacherInitial {
-  display: grid;
-  width: 2rem;
-  height: 2rem;
-  place-items: center;
-  border-radius: 50%;
-  background: var(--jpv-brand-bright);
-  color: var(--jpv-brand-deep);
-  font-size: 0.7rem;
-  font-weight: 600;
+.teacherPhoto img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
 }
 
 .teacherCard h3 {
-  margin: 1.15rem 0 0;
+  margin: 1.5rem 0 0;
   font:
-    600 0.8rem/1.4 var(--font-jpv),
+    600 1.25rem/1.3 var(--font-jpv),
     sans-serif;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
+  color: var(--jpv-ink);
+}
+
+.teacherRole {
+  margin: 0.4rem 0 0 !important;
+  color: var(--jpv-brand-deep) !important;
+  font-size: 0.75rem !important;
+  font-weight: 600;
+  line-height: 1.5 !important;
 }
 
 .teacherCard p {
-  margin: 0.55rem 0 0;
+  margin: 0.9rem 0 0;
   color: var(--jpv-muted);
-  font-size: 0.62rem;
-  line-height: 1.7;
+  font-size: 0.85rem;
+  line-height: 1.75;
 }
 
 .proof {
@@ -789,6 +797,138 @@
   color: var(--jpv-muted);
   font-size: 0.78rem;
   line-height: 1.75;
+}
+
+/* Membership / 14 Benefits */
+.membership {
+  background: var(--jpv-ink);
+  color: var(--jpv-canvas);
+  padding-block: clamp(4rem, 8vw, 7rem);
+}
+
+.membership .eyebrow {
+  color: var(--jpv-brand);
+}
+
+.membership .sectionHeading {
+  color: var(--jpv-canvas);
+}
+
+.membership .sectionIntro {
+  color: color-mix(in srgb, var(--jpv-canvas) 72%, transparent);
+}
+
+.benefitsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+  gap: 1.5rem;
+  margin-top: 3rem;
+}
+
+.benefitCard {
+  background: color-mix(in srgb, var(--jpv-canvas) 6%, transparent);
+  border: 1px solid color-mix(in srgb, var(--jpv-canvas) 12%, transparent);
+  border-radius: var(--jpv-radius-card);
+  padding: 1.5rem;
+}
+
+.benefitNumber {
+  display: block;
+  color: var(--jpv-brand);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  margin-bottom: 0.75rem;
+}
+
+.benefitCard h3 {
+  font:
+    600 1rem/1.3 var(--font-jpv),
+    sans-serif;
+  letter-spacing: -0.01em;
+  color: var(--jpv-canvas);
+  margin: 0 0 0.6rem;
+}
+
+.benefitCard p {
+  color: color-mix(in srgb, var(--jpv-canvas) 65%, transparent);
+  font-size: 0.82rem;
+  line-height: 1.7;
+  margin: 0;
+}
+
+.membershipCta {
+  max-width: 48rem;
+  margin: 3rem auto 0;
+  text-align: center;
+  color: color-mix(in srgb, var(--jpv-canvas) 75%, transparent);
+  font-size: 1rem;
+  line-height: 1.8;
+  font-style: italic;
+}
+
+/* Testimonials */
+.testimonialGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(22rem, 1fr));
+  gap: 2rem;
+  margin-top: 3rem;
+}
+
+.testimonialCard {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.testimonialVideo {
+  position: relative;
+  width: 100%;
+  padding-top: 56.25%;
+  border-radius: var(--jpv-radius-card);
+  overflow: hidden;
+  background: var(--jpv-ink);
+}
+
+.testimonialQuote {
+  margin: 0;
+  padding: 1.25rem;
+  border-left: 3px solid var(--jpv-brand);
+  background: var(--jpv-surface);
+  border-radius: 0 var(--jpv-radius-card) var(--jpv-radius-card) 0;
+}
+
+.testimonialQuote p {
+  margin: 0 0 0.75rem;
+  color: var(--jpv-ink);
+  font-size: 0.88rem;
+  line-height: 1.7;
+}
+
+.testimonialQuote footer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.testimonialQuote footer strong {
+  color: var(--jpv-brand-deep);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.testimonialQuote footer span {
+  color: var(--jpv-muted);
+  font-size: 0.72rem;
+}
+
+/* Community section */
+.communityMantra {
+  margin-top: 1.5rem !important;
+  font-weight: 600;
+  font-size: 1rem !important;
+  color: var(--jpv-brand-deep) !important;
+  line-height: 1.6 !important;
 }
 
 .pricing {
@@ -1119,6 +1259,15 @@
   .supportBox {
     grid-template-columns: 1fr;
   }
+  .teacherCards {
+    grid-template-columns: 1fr;
+  }
+  .benefitsGrid {
+    grid-template-columns: 1fr;
+  }
+  .testimonialGrid {
+    grid-template-columns: 1fr;
+  }
   .storyMedia {
     max-width: 32rem;
     margin-inline: auto;
@@ -1156,16 +1305,6 @@
   .portalBandInner {
     align-items: flex-start;
     flex-direction: column;
-  }
-  .teacherCards {
-    grid-template-columns: 1fr;
-  }
-  .teacherCard {
-    border-right: 0;
-    border-bottom: 1px solid var(--jpv-border);
-  }
-  .teacherCard:last-child {
-    border-bottom: 0;
   }
   .plans {
     max-width: 28rem;

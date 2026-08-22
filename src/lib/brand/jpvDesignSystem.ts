@@ -1,22 +1,43 @@
 export const jpvDesignTokens = {
   colors: {
-    brand: '#2f805b',
-    brandHover: '#276e4f',
-    brandDeep: '#123d2d',
-    brandBright: '#6bcf8a',
+    // Beige & Teal brand system (accent: #2C9E9E)
+    brand: '#2C9E9E',        // teal-500 — primary accent
+    brandHover: '#238383',   // teal-600
+    brandDeep: '#1B6767',    // teal-700
+    brandBright: '#74C4C4',  // teal-300
     sunshine: '#e8c65a',
     sunshineInk: '#6f5a1f',
     danger: '#c94f4f',
     dangerSurface: '#f8ece8',
     dangerInk: '#78463d',
-    canvas: '#fffefa',
-    surface: '#f5f3ec',
-    surfaceStrong: '#e8ece7',
-    ink: '#24332b',
-    muted: '#687068',
-    inverseMuted: '#c7d3cc',
-    border: '#dedbd1',
-    focus: '#123d2d',
+    canvas: '#FAF8F4',       // beige-50 — page background
+    surface: '#F4F0E8',      // beige-100
+    surfaceStrong: '#E9E2D5', // beige-200
+    ink: '#3A3428',          // beige-900 — primary text
+    muted: '#A89A80',        // beige-500
+    inverseMuted: '#6E6350', // beige-700
+    border: '#D9CFBC',       // beige-300
+    focus: '#238383',        // teal-600
+    // Full teal scale
+    teal50: '#EAF6F6',
+    teal100: '#CFEAEA',
+    teal200: '#A6D9D9',
+    teal300: '#74C4C4',
+    teal400: '#4EB0B0',
+    teal500: '#2C9E9E',
+    teal600: '#238383',
+    teal700: '#1B6767',
+    teal800: '#144E4E',
+    teal900: '#0D3838',
+    // Full beige scale
+    beige50: '#FAF8F4',
+    beige100: '#F4F0E8',
+    beige200: '#E9E2D5',
+    beige300: '#D9CFBC',
+    beige400: '#C2B49B',
+    beige500: '#A89A80',
+    beige700: '#6E6350',
+    beige900: '#3A3428',
   },
   radius: {
     detail: '4px',
@@ -27,8 +48,8 @@ export const jpvDesignTokens = {
     pill: '999px',
   },
   shadow: {
-    raised: '0 18px 50px rgba(18, 61, 45, 0.10)',
-    floating: '0 24px 80px rgba(18, 61, 45, 0.18)',
+    raised: '0 18px 50px rgba(44, 158, 158, 0.10)',
+    floating: '0 24px 80px rgba(44, 158, 158, 0.18)',
   },
   typography: {
     interface: 'var(--font-jpv), Poppins, ui-sans-serif, system-ui, sans-serif',
@@ -41,8 +62,9 @@ export const jpvDesignTokens = {
 export const jpvBrand = {
   name: 'JPV Bootcamp',
   tagline: 'Our passion is people',
-  logoAlt: 'JPV Jesus Property Venture',
-  logoPath: '/images/jpv-logo.jpg',
+  logoAlt: 'JPV — Our passion is people',
+  logoPath: '/images/jpv-logo-stacked.png',
+  logoHorizontalPath: '/images/jpv-logo-horizontal.png',
 } as const
 
 export function resolveJpvLogoUrl(baseUrl: string | URL): string {

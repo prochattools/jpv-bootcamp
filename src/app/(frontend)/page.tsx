@@ -13,11 +13,13 @@ import styles from "./landing.module.scss";
 
 const navLinks = [
   { label: "Home", href: "#home" },
+  { label: "About", href: "#who" },
+  { label: "Membership", href: "#membership" },
   { label: "Community", href: "#community" },
-  { label: "Resources", href: "#how-it-works" },
+  { label: "Events", href: "#how-it-works" },
   { label: "Success Stories", href: "#success-stories" },
-  { label: "Partners", href: "/partners" },
-  { label: "About", href: "#about" },
+  { label: "Pricing", href: "#pricing" },
+  { label: "Contact", href: "#support" },
 ] as const;
 
 const benefitItems = [
@@ -32,24 +34,24 @@ const benefitItems = [
 
 const programmeCards = [
   {
-    title: "Structured learning",
-    description: "Weekly teaching and protected programme resources.",
-    image: "/events/inheritance-builders/PHOTO-2026-01-27-20-28-15.jpg",
+    title: "Knowledge & Guidance",
+    description: "Learn the principles. Build the knowledge. Invest with confidence.",
+    image: "/images/redesign/pillar-structured-learning.png",
   },
   {
-    title: "Practical application",
-    description: "Property scenarios, exercises, and accountable next steps.",
-    image: "/events/inheritance-builders/PHOTO-2026-01-27-22-09-11.jpg",
+    title: "Practical Application",
+    description: "Put learning into action through real property strategies and opportunities.",
+    image: "/images/redesign/pillar-practical-application.png",
   },
   {
-    title: "Live experiences",
-    description: "In-person events that connect learning with action.",
-    image: "/events/inheritance-builders/PHOTO-2026-01-27-22-09-01.jpg",
+    title: "Live Experiences",
+    description: "Connect with experts, gain practical insight and apply action.",
+    image: "/images/redesign/pillar-live-experiences.png",
   },
   {
-    title: "Community support",
-    description: "Shared purpose, practical discussion, and encouragement.",
-    image: "/events/inheritance-builders/PHOTO-2026-01-27-22-09-11.jpg",
+    title: "Community & Accountability",
+    description: "Grow together with people who share your vision, Christian values and ambition.",
+    image: "/images/redesign/pillar-community-support.png",
   },
 ] as const;
 
@@ -428,14 +430,10 @@ export default function HomePage() {
         <section className={styles.programme}>
           <div className={styles.container}>
             <div className={styles.centredHeading}>
-              <p className={styles.eyebrow}>A practical programme</p>
+              <p className={styles.eyebrow}>About JPV Bootcamp</p>
               <h2 className={styles.sectionHeading}>
-                Learn deeply. Apply wisely. Build with purpose.
+                Let&apos;s do it together.
               </h2>
-              <p className={styles.sectionIntro}>
-                Every part of the programme is designed to connect clear
-                teaching with real action and accountable community.
-              </p>
             </div>
             <div className={styles.programmeGrid}>
               {programmeCards.map((card) => (
@@ -484,9 +482,9 @@ export default function HomePage() {
             </div>
             <div className={styles.storyMedia}>
               <Image
-                alt="A JPV learning event in a historic auditorium"
+                alt="UK property street — who is JPV Bootcamp for"
                 height={1200}
-                src="/events/inheritance-builders/PHOTO-2026-01-27-22-09-01.jpg"
+                src="/images/redesign/who-is-jpv-for.png"
                 width={960}
               />
               <div className={styles.storyNote}>
@@ -544,6 +542,47 @@ export default function HomePage() {
           </div>
         </section>
 
+        <section className={styles.membership} id="membership">
+          <div className={styles.container}>
+            <div className={styles.centredHeading}>
+              <p className={styles.eyebrow}>What Your Membership Gives You</p>
+              <h2 className={styles.sectionHeading}>
+                14 Reasons to Join JPV Bootcamp
+              </h2>
+              <p className={styles.sectionIntro}>
+                Your training is only the beginning. We don&apos;t want to train you and then leave you on your own.
+              </p>
+            </div>
+            <div className={styles.benefitsGrid}>
+              {[
+                { title: "Training That Never Stops", body: "Access to property training, courses, workshops and educational content designed to help you grow from your first deal to building a substantial portfolio." },
+                { title: "A Christian Property Community", body: "Connect with like-minded Christians who share your faith, values and desire to build through property while supporting one another." },
+                { title: "Your Own Property Network", body: "Meet people who can become future JV partners, investors, mentors, contractors, deal sourcers and business connections." },
+                { title: "Private Groups & Rooms", body: "Have your own private spaces to communicate with your group, hold video meetings, discuss projects and build relationships away from the wider community." },
+                { title: "1-to-1 & Private Messaging", body: "Communicate privately with other members, build relationships and discuss opportunities directly." },
+                { title: "Property Resources Library", body: "Access documents, templates, guides, checklists and other resources you need throughout your property journey, all in one place." },
+                { title: "Find Your First Property", body: "Get practical guidance on how to identify, assess and secure the right property rather than simply learning the theory." },
+                { title: "Help to Finance Your First Deal", body: "Understand funding options and receive support as you work towards financing your first property." },
+                { title: "Renovation & Development Support", body: "Get guidance through the renovation process, including planning your works, understanding costs and finding suitable contractors." },
+                { title: "Contractor & Professional Connections", body: "Access a growing network of people who can help you move your projects forward." },
+                { title: "Support From Purchase to Exit", body: "Your journey doesn't end when you buy. Get guidance through renovation, letting, refinancing, selling and the next stage of your strategy." },
+                { title: "Build JVs With Other Members", body: "Find people within the community whose skills, experience, capital or opportunities complement your own and explore joint ventures together." },
+                { title: "Build Your Portfolio", body: "Once you complete your first deal, continue using the platform to find your next opportunity and develop a long-term property strategy." },
+                { title: "Stay Accountable", body: "Don't disappear after completing your training. Stay connected to a community that can encourage you, challenge you and help you keep moving forward." },
+              ].map((benefit, i) => (
+                <article className={styles.benefitCard} key={benefit.title}>
+                  <span className={styles.benefitNumber} aria-hidden="true">{String(i + 1).padStart(2, "0")}</span>
+                  <h3>{benefit.title}</h3>
+                  <p>{benefit.body}</p>
+                </article>
+              ))}
+            </div>
+            <p className={styles.membershipCta}>
+              Your membership gives you access to an ongoing Christian property community where you can continue learning, building relationships, finding opportunities and receiving practical support as you build your property journey.
+            </p>
+          </div>
+        </section>
+
         <section className={styles.principle}>
           <div className={styles.narrow}>
             <p className={styles.eyebrow}>A daily principle</p>
@@ -598,43 +637,29 @@ export default function HomePage() {
           <div className={`${styles.container} ${styles.communityGrid}`}>
             <div className={styles.communityMedia}>
               <Image
-                alt="A live learning event with a large audience"
+                alt="Property that serves people — community development"
                 height={900}
-                src="/events/inheritance-builders/PHOTO-2026-01-27-22-09-11.jpg"
+                src="/images/redesign/community-section.png"
                 width={1200}
               />
-              <div className={styles.communityNote}>
-                <strong>Learning is stronger in community.</strong>
-                <span>
-                  Training, practical discussion, and shared purpose stay
-                  connected.
-                </span>
-              </div>
             </div>
             <div className={styles.communityCopy}>
-              <p className={styles.eyebrow}>Community</p>
+              <p className={styles.eyebrow}>More Than Property. A Community With Purpose.</p>
               <h2 className={styles.sectionHeading}>
-                You don&apos;t have to build alone.
+                We Don&apos;t Build Alone.
               </h2>
               <p>
-                Join a community committed to excellence, accountability, and
-                growth. Follow your training content, join available
-                discussions, ask practical questions, and learn alongside other
-                students and members.
+                JPV Bootcamp is a living Christian property investment community — people coming together to learn, pray, take action and build together.
               </p>
-              <ul className={styles.benefitList}>
-                {[
-                  "Available member discussions",
-                  "Programme questions and answers",
-                  "Shared practical learning",
-                  "Protected member resources",
-                ].map((item) => (
-                  <li key={item}>
-                    <Check aria-hidden="true" size={13} />
-                    {item}
-                  </li>
-                ))}
-              </ul>
+              <p>
+                We&apos;re not just learning about property. We&apos;re learning about ourselves. As we grow in knowledge, confidence and faith, we challenge the mindsets that have held us back and discover what we are capable of building.
+              </p>
+              <p>
+                Together, we&apos;re buying properties, developing businesses, creating opportunities and supporting one another through the challenges and victories along the way. There is practical support, prayer, accountability, friendship and genuine partnership.
+              </p>
+              <p className={styles.communityMantra}>
+                We learn together. We pray together. We build together. We grow together.
+              </p>
               <div className={styles.communityActions}>
                 <a className={styles.button} href="#pricing">
                   Become a Member
@@ -660,35 +685,120 @@ export default function HomePage() {
               </h2>
             </div>
             <div className={styles.teacherCards}>
-              {["Athina Amadi", "Koprinka Aksaray", "Guest Speakers"].map(
-                (name) => (
-                  <article className={styles.teacherCard} key={name}>
-                    <span aria-hidden="true" className={styles.teacherInitial}>
-                      {name.charAt(0)}
-                    </span>
-                    <h3>{name}</h3>
-                    <p>
-                      More information will be added when approved content is
-                      available.
-                    </p>
-                  </article>
-                ),
-              )}
+              <article className={styles.teacherCard}>
+                <div className={styles.teacherPhoto}>
+                  <Image
+                    alt="Athina Amadi"
+                    height={400}
+                    src="/images/redesign/instructor-athina.png"
+                    width={400}
+                  />
+                </div>
+                <h3>Athina Amadi</h3>
+                <p className={styles.teacherRole}>
+                  Founder &amp; CEO, JCCP Holdings &amp; JC Citadels Capital Ltd | Founder, JPV Bootcamp
+                </p>
+                <p>
+                  With over 20 years&apos; experience in property and 28 years in Christian ministry, Athina has led major residential, commercial, and social housing projects across the UK and internationally, combining commercial expertise with a passion for creating lasting social impact.
+                </p>
+                <p>
+                  Athina has successfully delivered property transactions ranging from residential developments to landmark commercial projects, working alongside architects, contractors, and planning professionals. She leads several diversified businesses focused on property, sustainable ventures, finance, food, water, and energy, while equipping aspiring Christian property investors with the knowledge and confidence to build wealth through property.
+                </p>
+                <p>
+                  Her mission is to equip people with practical strategies, Kingdom principles, and the mindset to build sustainable wealth, create generational legacy, and become transformational leaders in business and their communities.
+                </p>
+              </article>
+              <article className={styles.teacherCard}>
+                <div className={styles.teacherPhoto}>
+                  <Image
+                    alt="Koprinka Aksaray"
+                    height={400}
+                    src="/images/redesign/instructor-koprinka.png"
+                    width={400}
+                  />
+                </div>
+                <h3>Koprinka Aksaray</h3>
+                <p className={styles.teacherRole}>
+                  Chief Operating Officer, JCCP Holdings | International Property Investment Strategist
+                </p>
+                <p>
+                  With over 20 years of experience across the UK, Europe, and Africa, Koprinka has built extensive expertise in property investment, large-scale developments, and international acquisitions.
+                </p>
+                <p>
+                  Throughout her career, Koprinka has contributed to landmark regeneration projects, including the iconic Battersea Power Station redevelopment, alongside numerous commercial and residential developments. She has successfully raised £22 million for an international development project and gained valuable private equity experience through business acquisitions and cross-sector investments.
+                </p>
+                <p>
+                  Driven by a passion for innovation and sustainability, Koprinka is committed to creating resilient, future-ready communities that generate long-term economic and social impact.
+                </p>
+              </article>
             </div>
           </div>
         </section>
 
         <section className={styles.proof} id="success-stories">
           <div className={styles.container}>
-            <p className={styles.eyebrow}>Success stories</p>
-            <h2 className={styles.sectionHeading}>
-              Real stories will be shared here.
-            </h2>
-            <hr className={styles.proofRule} />
-            <p>
-              Client-approved member stories and testimonials are still being
-              prepared. We will not fill this space with invented claims.
-            </p>
+            <div className={styles.centredHeading}>
+              <p className={styles.eyebrow}>Real Stories &amp; Testimonies</p>
+              <h2 className={styles.sectionHeading}>
+                Across the UK, our members are achieving life-changing results.
+              </h2>
+              <p className={styles.sectionIntro}>
+                From Glasgow to London, Portsmouth, and Bradford, people from a wide range of backgrounds have turned their property ambitions into reality — many securing their very first investment property within just a few months of joining.
+              </p>
+            </div>
+            <div className={styles.testimonialGrid}>
+              {[
+                {
+                  name: "Raouda",
+                  location: "Glasgow, Scotland",
+                  quote: "We've just purchased our first property in Wales. This has been an incredible experience, and I'm so grateful for the support and guidance from Athina and Koprinka throughout the entire process.",
+                  videoId: "ca8db1b6-b7eb-4930-8403-9919d131629c",
+                },
+                {
+                  name: "Chosen",
+                  location: "Portsmouth",
+                  quote: "A couple of months ago, we secured our first property, and it's been incredible to see our dream of property ownership come to life. I truly believe this is just the first of many.",
+                  videoId: "56266f09-d651-4bc5-a5b0-ac9185018018",
+                },
+                {
+                  name: "Tolu",
+                  location: "London",
+                  quote: "One of the biggest highlights for me has been discovering and developing my leadership skills. The experience has been invaluable, not only within the group but also for my own property company.",
+                  videoId: "a2d9e18b-eb0b-4d3f-b0e7-31daf7cd6c62",
+                },
+                {
+                  name: "Adanna",
+                  location: "Bradford",
+                  quote: "In such a short space of time, I've already become a property owner. It's an achievement I truly value, and I wouldn't trade this experience for anything.",
+                  videoId: "4cb8f04f-8b29-4d0d-81b6-5bb4caead36d",
+                },
+                {
+                  name: "Pauline",
+                  location: "London",
+                  quote: "After just a couple of months, I've become a property owner. I truly thank God for that blessing. I would highly recommend JPV Property to anyone looking to start or grow their property journey.",
+                  videoId: "cda4b492-91af-430d-9bba-4268ccaf8cc2",
+                },
+              ].map((t) => (
+                <article className={styles.testimonialCard} key={t.name}>
+                  <div className={styles.testimonialVideo}>
+                    <iframe
+                      allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
+                      allowFullScreen
+                      src={`https://iframe.mediadelivery.net/embed/581531/${t.videoId}?autoplay=false&loop=false&muted=false&preload=true`}
+                      style={{ border: 0, height: "100%", left: 0, position: "absolute", top: 0, width: "100%" }}
+                      title={`${t.name} testimonial`}
+                    />
+                  </div>
+                  <blockquote className={styles.testimonialQuote}>
+                    <p>&ldquo;{t.quote}&rdquo;</p>
+                    <footer>
+                      <strong>{t.name}</strong>
+                      <span>{t.location}</span>
+                    </footer>
+                  </blockquote>
+                </article>
+              ))}
+            </div>
           </div>
         </section>
 
