@@ -41,22 +41,18 @@ export function AuthShell({
   const bannerDescription = branding?.bannerDescription || 'Secure access to your programme, resources, community, and account tools in one connected member experience.'
 
   return (
-    <main className='jpv-auth-shell min-h-screen bg-jpv-canvas px-5 py-8 text-jpv-ink sm:px-8 lg:grid lg:grid-cols-[minmax(0,0.9fr)_minmax(30rem,1.1fr)] lg:gap-8 lg:py-8'>
+    <main className='jpv-auth-shell h-screen overflow-auto bg-jpv-canvas text-jpv-ink lg:grid lg:grid-cols-[minmax(0,0.9fr)_minmax(30rem,1.1fr)] lg:overflow-hidden'>
       <section
-        className='relative hidden min-h-[calc(100vh-4rem)] overflow-hidden rounded-jpv-panel bg-jpv-green-deep p-10 text-jpv-canvas lg:flex lg:flex-col lg:justify-between xl:p-14'
+        className='relative hidden overflow-hidden rounded-r-none bg-jpv-brand-deep p-10 text-jpv-canvas lg:flex lg:h-full lg:flex-col lg:justify-between xl:p-14'
         style={branding?.bannerBackgroundColor ? { backgroundColor: branding.bannerBackgroundColor } : undefined}
       >
-        <Link className='relative flex w-fit items-center gap-3' href='/'>
+        <Link className='relative flex w-fit items-center' href='/'>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img alt={jpvBrand.logoAlt} className='h-12 w-12 rounded-jpv-card object-cover' src={logoUrl} />
-          <span>
-            <span className='block text-base font-bold'>{siteTitle}</span>
-            <span className='block text-xs opacity-70'>{jpvBrand.tagline}</span>
-          </span>
+          <img alt={jpvBrand.logoAlt} className='h-16 w-auto max-w-[12rem] object-contain' src={jpvBrand.logoHorizontalPath} />
         </Link>
 
         <div className='relative max-w-xl py-16'>
-          <p className='jpv-eyebrow text-jpv-green'>Learn. Apply. Build.</p>
+          <p className='jpv-eyebrow text-jpv-brand-bright'>Learn. Apply. Build.</p>
           <p
             className='jpv-editorial-heading mt-5 text-balance text-4xl leading-tight xl:text-5xl'
             style={branding?.bannerTitleColor ? { color: branding.bannerTitleColor } : undefined}
@@ -64,27 +60,26 @@ export function AuthShell({
             {bannerTitle}
           </p>
           <p
-            className='mt-5 max-w-lg text-pretty text-base leading-7 text-jpv-canvas/70'
+            className='mt-5 max-w-lg text-pretty text-base leading-7 text-jpv-canvas/75'
             style={branding?.bannerTextColor ? { color: branding.bannerTextColor } : undefined}
           >
             {bannerDescription}
           </p>
         </div>
 
-        <p className='relative max-w-md border-t border-jpv-sunshine pt-4 text-sm leading-6 text-jpv-canvas/70'>
+        <p className='relative max-w-md border-t border-jpv-canvas/20 pt-4 text-sm leading-6 text-jpv-canvas/70'>
           Invest wisely, steward faithfully, bless generously.
         </p>
       </section>
 
       <section
-        className='flex min-h-[calc(100vh-4rem)] items-center justify-center py-8 lg:min-h-0 lg:py-12'
+        className='flex min-h-full items-center justify-center px-5 py-8 sm:px-8 lg:overflow-y-auto lg:py-12'
         style={branding?.formBackgroundColor ? { backgroundColor: branding.formBackgroundColor } : undefined}
       >
         <div className='w-full max-w-xl'>
-          <Link className='mb-10 flex w-fit items-center gap-3 lg:hidden' href='/'>
+          <Link className='mb-8 flex w-fit items-center lg:hidden' href='/'>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img alt={jpvBrand.logoAlt} className='h-11 w-11 rounded-jpv-card object-cover' src={logoUrl} />
-            <span className='text-base font-bold'>{siteTitle}</span>
+            <img alt={jpvBrand.logoAlt} className='h-14 w-auto max-w-[10rem] object-contain' src={jpvBrand.logoHorizontalPath} />
           </Link>
 
           <div>
