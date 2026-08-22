@@ -169,6 +169,7 @@ export default function HomePage() {
     "idle" | "sending" | "success" | "error"
   >("idle");
   const [supportError, setSupportError] = useState<string | null>(null);
+  const [startedVideos, setStartedVideos] = useState<Set<string>>(new Set());
   const isSupportSending = supportStatus === "sending";
 
   async function handleSupportSubmit(event: FormEvent<HTMLFormElement>) {
@@ -259,17 +260,13 @@ export default function HomePage() {
             href="#home"
           >
             <Image
-              alt="JPV Jesus Property Venture"
+              alt="JPV — Our passion is people"
               className={styles.brandLogoTransparent}
               height={44}
               priority
-              src={jpvBrand.logoTransparentPath}
-              width={44}
+              src={jpvBrand.logoHorizontalPath}
+              width={180}
             />
-            <span className={styles.brandText}>
-              <strong>JPV Bootcamp</strong>
-              <small>Our passion is people</small>
-            </span>
           </a>
 
           <nav aria-label="Main navigation" className={styles.nav}>
@@ -744,12 +741,18 @@ export default function HomePage() {
                   videoId: "cda4b492-91af-430d-9bba-4268ccaf8cc2",
                 },
               ].map((t) => (
-                <article className={styles.testimonialCard} key={t.name}>
+                <article
+                  className={styles.testimonialCard}
+                  key={t.name}
+                  onMouseEnter={() =>
+                    setStartedVideos((prev) => new Set([...prev, t.videoId]))
+                  }
+                >
                   <div className={styles.testimonialVideo}>
                     <iframe
                       allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
                       allowFullScreen
-                      src={`https://iframe.mediadelivery.net/embed/581531/${t.videoId}?autoplay=false&loop=false&muted=false&preload=true`}
+                      src={`https://iframe.mediadelivery.net/embed/581531/${t.videoId}?autoplay=${startedVideos.has(t.videoId) ? "true" : "false"}&loop=false&muted=true&preload=true`}
                       style={{ border: 0, height: "100%", left: 0, position: "absolute", top: 0, width: "100%" }}
                       title={`${t.name} testimonial`}
                     />
@@ -889,18 +892,15 @@ export default function HomePage() {
         <div className={`${styles.container} ${styles.footerInner}`}>
           <div className={styles.footerBrand}>
             <Image
-              alt="JPV Jesus Property Venture"
+              alt="JPV — Our passion is people"
               className={styles.footerLogoTransparent}
-              height={44}
-              src={jpvBrand.logoTransparentPath}
-              width={44}
+              height={40}
+              src={jpvBrand.logoHorizontalPath}
+              width={160}
             />
-            <div>
-              <strong>JPV Bootcamp</strong>
-              <span>
-                © {new Date().getFullYear()} JPV. All rights reserved.
-              </span>
-            </div>
+            <span>
+              © {new Date().getFullYear()} JPV. All rights reserved.
+            </span>
           </div>
           <div className={styles.footerLinks}>
             <a href="/terms">Terms</a>
