@@ -1,30 +1,31 @@
 /**
  * Ensure GHCR registry credentials are ready before each deploy.
  *
- * DEPLOYMENT BLOCKER DIAGNOSIS (2026-08-20):
- * The Dokploy host's Docker daemon lacks valid GHCR credentials. The
- * image `ghcr.io/prochattools/jpv-bootcamp` is private and requires
- * authentication for Docker pulls.
- *
- * REQUIRED OPERATOR ACTION (one-time setup):
- *   SSH to 68.221.139.108 (the Dokploy host):
- *     docker login ghcr.io -u x-access-token -p <GITHUB_PAT>
- *   where GITHUB_PAT is a GitHub PAT with read:packages scope for
- *   the prochattools org. Then verify:
- *     docker pull ghcr.io/prochattools/jpv-bootcamp:9bd35c08ec393d2d097eb0dbcbfbaa159708ebbf
- *   After success, re-trigger deploy from Dokploy UI or re-run this workflow.
- *
  * WHAT THIS SCRIPT DOES:
  * - Logs the current GHCR registry configuration for diagnostics.
- * - If GHCR_PAT (long-lived PAT) is provided via env: updates the registry
- *   credentials and links registryId to the application (enables Dokploy
- *   to authenticate before docker service update).
- * - If GHCR_PAT is absent: clears any stale registryId link (reverts to
- *   "done" deploy status while awaiting operator one-time docker login).
+ * - If GHCR_PAT is present: updates the stored registry record with the
+ *   latest PAT so credentials stay fresh in Dokploy's database.
+ * - Always ensures registryId is NOT linked to the application.
  *
- * Linker root cause: the short-lived GITHUB_TOKEN (ghs_xxx) fails when
- * Dokploy tries to authenticate from its host server to GHCR. Always use
- * a long-lived PAT stored as GHCR_PAT secret for this credential.
+ * WHY registryId must remain null:
+ * When a registryId is linked, Dokploy's "Enabled Registry Swarm" pipeline
+ * activates. It pulls the source image, re-tags it as
+ * {registryUrl}/{imagePrefix}/{imageName}:{tag}, then pushes to the registry
+ * before running docker service update. This pipeline fails because:
+ *   1. The re-tag constructs a doubled namespace path (jpv-bootcamp/jpv-bootcamp).
+ *   2. The push step uses Dokploy's internal OAuth token (gho_...), not our PAT,
+ *      which lacks write:packages scope.
+ *
+ * CORRECT DEPLOY PATH (registryId = null):
+ * Dokploy runs:  docker service update --image <dockerImage> --with-registry-auth <service>
+ * Docker Swarm passes the manager node's Docker daemon credentials to workers.
+ * Workers pull from GHCR using those credentials.
+ *
+ * PREREQUISITE: The Docker daemon on the Swarm manager must be logged in to GHCR.
+ * This was done once via SSH:
+ *   echo "<PAT>" | sudo docker login ghcr.io -u x-access-token --password-stdin
+ * Credentials persist in /root/.docker/config.json until the PAT expires.
+ * To refresh: SSH to the Swarm manager (100.71.47.24 via Tailscale) and re-run docker login.
  */
 
 import { assertStagingDokployTarget, STAGING_DOKPLOY_APPLICATION_ID } from './dokployMediaMount'
@@ -95,71 +96,46 @@ const existing = registryList.find(
       String(r.registryUrl).includes(GHCR_HOST)),
 )
 
+// Step 3: update registry record with latest PAT (for diagnostics / future use)
 if (ghcrPat) {
-  // GHCR_PAT present: update/create credentials and link to application
-  let registryId: string | null = null
-
   if (existing && typeof existing.registryId === 'string') {
-    registryId = existing.registryId
     await dokployRequest('/registry.update', {
       method: 'POST',
-      body: JSON.stringify({ registryId, username: GHCR_USERNAME, password: ghcrPat }),
-    })
-    console.log(JSON.stringify({ ok: true, step: 'registry_credentials_updated', registryId }))
-  } else {
-    const created = await dokployRequest('/registry.create', {
-      method: 'POST',
       body: JSON.stringify({
+        registryId: existing.registryId,
         registryName: GHCR_REGISTRY_NAME,
         username: GHCR_USERNAME,
         password: ghcrPat,
+        imagePrefix: 'prochattools',
         registryUrl: GHCR_HOST,
-        imagePrefix: 'prochattools/jpv-bootcamp',
       }),
     })
-    if (isRegistryEntry(created) && typeof created.registryId === 'string') {
-      registryId = created.registryId
-      console.log(JSON.stringify({ ok: true, step: 'registry_created', registryId }))
-    } else {
-      throw new Error('GHCR-CRED-FAILED: registry.create did not return a registryId')
-    }
+    console.log(JSON.stringify({ ok: true, step: 'registry_credentials_updated', registryId: existing.registryId }))
+  } else {
+    console.log(JSON.stringify({ ok: true, step: 'registry_credentials_skipped', reason: 'no existing registry record found' }))
   }
-
-  await dokployRequest('/application.update', {
-    method: 'POST',
-    body: JSON.stringify({ applicationId: STAGING_DOKPLOY_APPLICATION_ID, registryId }),
-  })
-  console.log(JSON.stringify({
-    ok: true,
-    step: 'registry_linked_to_application',
-    applicationId: STAGING_DOKPLOY_APPLICATION_ID,
-    registryId,
-  }))
 } else {
-  // GHCR_PAT absent: clear any stale registryId to prevent deploy errors.
-  // NOTE: Without a valid registryId, Dokploy won't authenticate explicitly.
-  // The deploy will show "done" but Docker pull will fail unless the host
-  // daemon already has valid GHCR credentials (from operator docker login).
   console.log(JSON.stringify({
     ok: false,
     step: 'no_ghcr_pat',
-    warning: 'GHCR_PAT secret not set. Clearing registryId link to prevent deploy errors. ' +
-      'OPERATOR ACTION REQUIRED: SSH to 68.221.139.108 and run: ' +
-      'docker login ghcr.io -u x-access-token -p <GITHUB_PAT with read:packages>. ' +
-      'Then add GHCR_PAT secret to this repository for automated credential management.',
+    warning: 'GHCR_PAT secret not set — registry credentials not refreshed. ' +
+      'Docker daemon credentials on the Swarm manager should still be valid from the last docker login. ' +
+      'If deploys fail with pull errors, SSH to 100.71.47.24 (Tailscale) and run: ' +
+      'echo "<PAT>" | sudo docker login ghcr.io -u x-access-token --password-stdin',
   }))
-
-  if (existing && typeof existing.registryId === 'string') {
-    // Clear the broken registryId link so deploys return to "done" state
-    await dokployRequest('/application.update', {
-      method: 'POST',
-      body: JSON.stringify({ applicationId: STAGING_DOKPLOY_APPLICATION_ID, registryId: null }),
-    })
-    console.log(JSON.stringify({
-      ok: true,
-      step: 'registry_link_cleared',
-      applicationId: STAGING_DOKPLOY_APPLICATION_ID,
-      note: 'registryId set to null; deploys will use host Docker daemon credentials',
-    }))
-  }
 }
+
+// Step 4: always ensure registryId is NOT linked to the application.
+// Linking registryId activates Dokploy's "Enabled Registry Swarm" pipeline which
+// re-tags and re-pushes the image — this fails due to wrong path construction and
+// expired OAuth push token. Direct docker service update is correct for our setup.
+await dokployRequest('/application.update', {
+  method: 'POST',
+  body: JSON.stringify({ applicationId: STAGING_DOKPLOY_APPLICATION_ID, registryId: null }),
+})
+console.log(JSON.stringify({
+  ok: true,
+  step: 'registry_link_cleared',
+  applicationId: STAGING_DOKPLOY_APPLICATION_ID,
+  note: 'registryId always null; Dokploy uses direct docker service update --with-registry-auth',
+}))
