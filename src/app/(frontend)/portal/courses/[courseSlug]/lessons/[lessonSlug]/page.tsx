@@ -160,25 +160,25 @@ function LessonCommentThread({
   if (children.length === 0) return null
 
   return (
-    <div className={depth === 0 ? 'space-y-5' : 'mt-4 space-y-4 border-l border-neutral-200 pl-4'}>
+    <div className={depth === 0 ? 'space-y-5' : 'mt-4 space-y-4 border-l border-jpv-border pl-4'}>
       {children.map((comment) => (
-        <article className='rounded-xl border border-neutral-200 bg-neutral-50/60 p-5' key={comment.id}>
+        <article className='rounded-xl border border-jpv-border bg-jpv-surface/60 p-5' key={comment.id}>
           <div className='flex flex-wrap items-baseline justify-between gap-2'>
-            <p className='font-semibold text-neutral-950'>{comment.displayName}</p>
-            <time className='text-xs text-neutral-500' dateTime={comment.sourceCreatedAt || comment.createdAt}>
+            <p className='font-semibold text-jpv-ink'>{comment.displayName}</p>
+            <time className='text-xs text-jpv-muted' dateTime={comment.sourceCreatedAt || comment.createdAt}>
               {formatDiscussionDate(comment.sourceCreatedAt || comment.createdAt)}
             </time>
           </div>
           <LegacyLessonRichText data={comment.body} lessonSlug={lessonSlug} />
 
           <details className='mt-4'>
-            <summary className='cursor-pointer text-sm font-semibold text-neutral-700'>Reply</summary>
+            <summary className='cursor-pointer text-sm font-semibold text-jpv-inverse-muted'>Reply</summary>
             <form action={submitLessonDiscussionComment} className='mt-3 space-y-3'>
               <input name='courseSlug' type='hidden' value={courseSlug} />
               <input name='lessonSlug' type='hidden' value={lessonSlug} />
               <input name='parentId' type='hidden' value={comment.id} />
               <textarea
-                className='min-h-24 w-full rounded-xl border border-neutral-300 bg-white px-4 py-3 text-sm outline-none focus:border-neutral-500'
+                className='min-h-24 w-full rounded-xl border border-jpv-border bg-jpv-canvas px-4 py-3 text-sm outline-none focus:border-jpv-brand'
                 maxLength={10_000}
                 name='body'
                 placeholder={`Reply to ${comment.displayName}`}
@@ -217,7 +217,7 @@ export default async function PortalLessonPage({ params, searchParams }: LessonP
   return (
     <div className='space-y-8'>
       <Link
-        className='inline-flex text-sm font-semibold text-neutral-700 underline-offset-4 hover:text-neutral-950 hover:underline'
+        className='inline-flex text-sm font-semibold text-jpv-inverse-muted underline-offset-4 hover:text-jpv-ink hover:underline'
         href={`/portal/courses/${courseSlug}`}
       >
         ← Back to {detail.course.title}
@@ -238,19 +238,19 @@ export default async function PortalLessonPage({ params, searchParams }: LessonP
         </section>
       ) : (
         <>
-          <section className='rounded-2xl border border-neutral-200 bg-white p-8 shadow-sm'>
+          <section className='rounded-2xl border border-jpv-border bg-jpv-canvas p-8 shadow-sm'>
             <p className='jpv-eyebrow'>{detail.module.title}</p>
             <div className='mt-3 flex flex-col gap-5 md:flex-row md:items-start md:justify-between'>
               <div className='max-w-3xl'>
                 <h1 className='text-3xl font-semibold tracking-tight'>{detail.lesson.title}</h1>
                 {detail.lesson.summary ? (
-                  <p className='mt-4 text-sm leading-6 text-neutral-600'>{detail.lesson.summary}</p>
+                  <p className='mt-4 text-sm leading-6 text-jpv-muted'>{detail.lesson.summary}</p>
                 ) : null}
               </div>
 
               <div className='flex flex-wrap gap-2 text-xs font-semibold'>
                 {detail.lesson.estimatedDuration ? (
-                  <span className='rounded-full bg-neutral-100 px-3 py-1 text-neutral-700'>
+                  <span className='rounded-full bg-jpv-surface-strong px-3 py-1 text-jpv-inverse-muted'>
                     {detail.lesson.estimatedDuration}
                   </span>
                 ) : null}
@@ -272,7 +272,7 @@ export default async function PortalLessonPage({ params, searchParams }: LessonP
 
           <MemberFeaturedImage asset={detail.lesson.coverImage} />
 
-          <section className='rounded-2xl border border-neutral-200 bg-white p-8 shadow-sm'>
+          <section className='rounded-2xl border border-jpv-border bg-jpv-canvas p-8 shadow-sm'>
             <h2 className='text-xl font-semibold'>Lesson content</h2>
             {detail.lesson.lockState === 'locked' ? (
               <div className='jpv-notice jpv-notice-danger mt-5 rounded-xl px-4 py-3'>
@@ -303,15 +303,15 @@ export default async function PortalLessonPage({ params, searchParams }: LessonP
                     const formattedSize = formatFileSize(resource.fileSize)
 
                     return (
-                      <article className='rounded-xl border border-neutral-200 p-5' key={resource.downloadUrl}>
+                      <article className='rounded-xl border border-jpv-border p-5' key={resource.downloadUrl}>
                         <div className='flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between'>
                           <div>
-                            <h4 className='font-semibold text-neutral-950'>{resource.title}</h4>
+                            <h4 className='font-semibold text-jpv-ink'>{resource.title}</h4>
                             {resource.description ? (
-                              <p className='mt-2 text-sm leading-6 text-neutral-600'>{resource.description}</p>
+                              <p className='mt-2 text-sm leading-6 text-jpv-muted'>{resource.description}</p>
                             ) : null}
                             {resource.fileName || formattedSize ? (
-                              <p className='mt-3 text-xs text-neutral-500'>
+                              <p className='mt-3 text-xs text-jpv-muted'>
                                 {[resource.fileName, formattedSize].filter(Boolean).join(' · ')}
                               </p>
                             ) : null}
@@ -332,16 +332,16 @@ export default async function PortalLessonPage({ params, searchParams }: LessonP
             ) : null}
           </section>
 
-          <section className='rounded-2xl border border-neutral-200 bg-white p-8 shadow-sm' id='lesson-discussion'>
+          <section className='rounded-2xl border border-jpv-border bg-jpv-canvas p-8 shadow-sm' id='lesson-discussion'>
             <div className='flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between'>
               <div>
                 <p className='jpv-eyebrow'>Community</p>
-                <h2 className='mt-2 text-xl font-semibold text-neutral-950'>Lesson discussion</h2>
-                <p className='mt-2 max-w-2xl text-sm leading-6 text-neutral-600'>
+                <h2 className='mt-2 text-xl font-semibold text-jpv-ink'>Lesson discussion</h2>
+                <p className='mt-2 max-w-2xl text-sm leading-6 text-jpv-muted'>
                   Ask questions, share insights, and reply to other members about this lesson.
                 </p>
               </div>
-              <span className='rounded-full bg-neutral-100 px-3 py-1 text-xs font-semibold text-neutral-700'>
+              <span className='rounded-full bg-jpv-surface-strong px-3 py-1 text-xs font-semibold text-jpv-inverse-muted'>
                 {discussion?.comments.length ?? 0} {(discussion?.comments.length ?? 0) === 1 ? 'comment' : 'comments'}
               </span>
             </div>
@@ -372,20 +372,20 @@ export default async function PortalLessonPage({ params, searchParams }: LessonP
                   lessonSlug={lessonSlug}
                 />
               ) : (
-                <div className='rounded-xl border border-dashed border-neutral-300 px-5 py-6 text-sm text-neutral-600'>
+                <div className='rounded-xl border border-dashed border-jpv-border px-5 py-6 text-sm text-jpv-muted'>
                   No discussion comments yet. Start the conversation below.
                 </div>
               )}
             </div>
 
-            <form action={submitLessonDiscussionComment} className='mt-7 space-y-3 border-t border-neutral-200 pt-6'>
+            <form action={submitLessonDiscussionComment} className='mt-7 space-y-3 border-t border-jpv-border pt-6'>
               <input name='courseSlug' type='hidden' value={courseSlug} />
               <input name='lessonSlug' type='hidden' value={lessonSlug} />
-              <label className='block text-sm font-semibold text-neutral-900' htmlFor='lesson-discussion-body'>
+              <label className='block text-sm font-semibold text-jpv-ink' htmlFor='lesson-discussion-body'>
                 Add to the discussion
               </label>
               <textarea
-                className='min-h-28 w-full rounded-xl border border-neutral-300 bg-white px-4 py-3 text-sm outline-none focus:border-neutral-500'
+                className='min-h-28 w-full rounded-xl border border-jpv-border bg-jpv-canvas px-4 py-3 text-sm outline-none focus:border-jpv-brand'
                 id='lesson-discussion-body'
                 maxLength={10_000}
                 name='body'
@@ -396,10 +396,10 @@ export default async function PortalLessonPage({ params, searchParams }: LessonP
             </form>
           </section>
 
-          <section className='flex flex-col gap-4 rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm md:flex-row md:items-center md:justify-between'>
+          <section className='flex flex-col gap-4 rounded-2xl border border-jpv-border bg-jpv-canvas p-6 shadow-sm md:flex-row md:items-center md:justify-between'>
             <div>
               <h2 className='font-semibold'>Lesson progress</h2>
-              <p className='mt-1 text-sm text-neutral-600'>
+              <p className='mt-1 text-sm text-jpv-muted'>
                 {detail.lesson.completed
                   ? 'This lesson is marked complete.'
                   : 'Mark this lesson complete when you are ready to continue.'}
@@ -420,7 +420,7 @@ export default async function PortalLessonPage({ params, searchParams }: LessonP
           <nav aria-label='Lesson navigation' className='flex items-center justify-between gap-4'>
             {detail.previousLesson?.slug ? (
               <Link
-                className='min-w-0 truncate text-sm font-semibold text-neutral-700 underline-offset-4 hover:text-neutral-950 hover:underline'
+                className='min-w-0 truncate text-sm font-semibold text-jpv-inverse-muted underline-offset-4 hover:text-jpv-ink hover:underline'
                 href={`/portal/courses/${courseSlug}/lessons/${detail.previousLesson.slug}`}
               >
                 ← {detail.previousLesson.title}
@@ -431,7 +431,7 @@ export default async function PortalLessonPage({ params, searchParams }: LessonP
 
             {detail.nextLesson?.slug ? (
               <Link
-                className='min-w-0 truncate text-right text-sm font-semibold text-neutral-700 underline-offset-4 hover:text-neutral-950 hover:underline'
+                className='min-w-0 truncate text-right text-sm font-semibold text-jpv-inverse-muted underline-offset-4 hover:text-jpv-ink hover:underline'
                 href={`/portal/courses/${courseSlug}/lessons/${detail.nextLesson.slug}`}
               >
                 {detail.nextLesson.title} →

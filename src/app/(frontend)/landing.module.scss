@@ -107,16 +107,16 @@
 }
 
 .brandLogo {
-  width: 2.6rem;
-  height: 2.6rem;
+  width: 3.9rem;
+  height: 3.9rem;
   border-radius: var(--jpv-radius-detail);
   object-fit: cover;
 }
 
 .brandLogoTransparent {
-  height: 2.6rem;
+  height: 3.9rem;
   width: auto;
-  max-width: 10rem;
+  max-width: 15rem;
   object-fit: contain;
 }
 
@@ -295,10 +295,10 @@
   inset: -3.5rem -5rem;
   background: radial-gradient(
     ellipse 88% 78% at 44% 50%,
-    rgba(250, 248, 244, 0.88) 0%,
-    rgba(250, 248, 244, 0.72) 28%,
-    rgba(250, 248, 244, 0.38) 55%,
-    rgba(250, 248, 244, 0) 80%
+    rgba(250, 248, 244, 0.9) 0%,
+    rgba(250, 248, 244, 0.75) 28%,
+    rgba(250, 248, 244, 0.42) 55%,
+    rgba(250, 248, 244, 0) 85%
   );
   pointer-events: none;
   z-index: -1;
@@ -315,7 +315,7 @@
 .heroLead {
   max-width: 38rem;
   margin: 1.4rem 0 0;
-  color: var(--jpv-muted);
+  color: #7A6F5F;
   font-size: clamp(0.88rem, 1.4vw, 1rem);
   line-height: 1.8;
   text-wrap: pretty;
@@ -714,6 +714,10 @@
   font-size: 0.72rem;
 }
 
+.portalBandButton {
+  min-width: 12rem;
+}
+
 .communityMedia img {
   aspect-ratio: 4 / 3;
 }
@@ -835,6 +839,11 @@
   grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
   gap: 1.5rem;
   margin-top: 3rem;
+  justify-items: center;
+}
+
+.benefitsGrid > :nth-child(n+13) {
+  max-width: 17rem;
 }
 
 .benefitCard {
@@ -908,6 +917,9 @@
   border-left: 3px solid var(--jpv-brand);
   background: var(--jpv-surface);
   border-radius: 0 var(--jpv-radius-card) var(--jpv-radius-card) 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 16rem;
 }
 
 .testimonialQuote p {
@@ -915,6 +927,7 @@
   color: var(--jpv-ink);
   font-size: 0.88rem;
   line-height: 1.7;
+  flex: 1;
 }
 
 .testimonialQuote footer {
@@ -969,6 +982,7 @@
 }
 
 .planFeatured {
+  border-radius: 0 var(--jpv-radius-card) var(--jpv-radius-card) 0;
   outline: 1px solid var(--jpv-brand-deep);
   outline-offset: -1px;
 }
@@ -1159,15 +1173,15 @@
 }
 
 .footerBrand img {
-  width: 2.2rem;
-  height: 2.2rem;
+  width: 3.3rem;
+  height: 3.3rem;
   border-radius: var(--jpv-radius-detail);
 }
 
 .footerLogoTransparent {
-  height: 2.4rem !important;
+  height: 3.6rem !important;
   width: auto !important;
-  max-width: 9rem !important;
+  max-width: 13.5rem !important;
   border-radius: 0 !important;
   object-fit: contain !important;
 }
@@ -1175,14 +1189,14 @@
 .footerBrand strong {
   display: block;
   font-family: var(--font-jpv-landing-serif), Georgia, serif;
-  font-size: 0.75rem;
+  font-size: 1.125rem;
 }
 
 .footerBrand span {
   display: block;
   margin-top: 0.15rem;
   color: var(--jpv-muted);
-  font-size: 0.54rem;
+  font-size: 0.81rem;
 }
 
 .footerLinks {
@@ -1199,7 +1213,7 @@
   background: transparent;
   color: var(--jpv-muted);
   font:
-    500 0.58rem/1.4 var(--font-jpv),
+    500 0.7rem/1.4 var(--font-jpv),
     sans-serif;
   text-decoration: none;
   cursor: pointer;

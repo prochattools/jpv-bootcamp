@@ -108,11 +108,20 @@ body {
 }
 
 /* The member sign-in view is rendered inside the portal layout. */
-.jpv-product-shell:has(.jpv-auth-shell) > header {
+.jpv-product-shell:has(.jpv-auth-shell) [data-portal-sidebar] {
 	display: none;
 }
 
-.jpv-product-shell:has(.jpv-auth-shell) > main {
+.jpv-product-shell:has(.jpv-auth-shell) [data-portal-topbar] {
+	display: none;
+}
+
+.jpv-product-shell:has(.jpv-auth-shell) .grid {
+	grid-template-columns: 1fr;
+}
+
+.jpv-product-shell:has(.jpv-auth-shell) > main,
+.jpv-product-shell:has(.jpv-auth-shell) main {
 	max-width: none;
 	padding: 0;
 }

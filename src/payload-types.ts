@@ -689,7 +689,7 @@ export interface PayloadChatMessage {
   createdAt: string;
 }
 /**
- * Schedule and operate LiveKit sessions. Room names and audit history are generated automatically.
+ * Schedule and operate LiveKit sessions (course-based or community space). Room names and audit history are generated automatically.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "live_sessions".
@@ -698,7 +698,10 @@ export interface LiveSession {
   id: number;
   title: string;
   status: 'scheduled' | 'live' | 'completed' | 'cancelled';
-  course: number | PayloadCourse;
+  /**
+   * Required for course-based sessions. Leave blank for community space calls.
+   */
+  course?: (number | null) | PayloadCourse;
   /**
    * Optional. Select a course first — only modules from that course appear.
    */
@@ -707,6 +710,10 @@ export interface LiveSession {
    * Optional. Select a module first — only lessons from that module appear.
    */
   lesson?: (number | null) | PayloadLesson;
+  /**
+   * Required for community group calls. Leave blank for course-based sessions.
+   */
+  space?: (number | null) | PayloadSpace;
   /**
    * Auto-generated on creation from course/module/lesson. Cannot be changed.
    */
@@ -2884,6 +2891,7 @@ export interface LiveSessionsSelect<T extends boolean = true> {
   course?: T;
   module?: T;
   lesson?: T;
+  space?: T;
   roomName?: T;
   hostUser?: T;
   scheduledAt?: T;

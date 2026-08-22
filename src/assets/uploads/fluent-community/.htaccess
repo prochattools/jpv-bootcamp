@@ -1,0 +1,1 @@
+# END FluentCommunity\n# Disable parsing of PHP for some server configurations.\n<Files *>\nSetHandler none\nSetHandler default-handler\nOptions -ExecCGI\nRemoveHandler .cgi .php .php3 .php4 .php5 .phtml .pl .py .pyc .pyo\n</Files>\n<IfModule mod_php5.c>\nphp_flag engine off\n</IfModule>\n# END FluentCommunity

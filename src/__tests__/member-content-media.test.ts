@@ -185,7 +185,7 @@ describe('member content media projections', () => {
     )
     const contentRoute = readFileSync(resolve('src/app/(frontend)/portal/content/page.tsx'), 'utf8')
     const contentCardImage = readFileSync(resolve('src/components/portal/ContentCardImage.tsx'), 'utf8')
-    const portalNavigation = readFileSync(resolve('src/components/portal/PortalNavigation.tsx'), 'utf8')
+    const portalNavigation = readFileSync(resolve('src/components/portal/PortalSidebar.tsx'), 'utf8')
 
     expect(pageRoute).toContain("target='page'")
     expect(postRoute).toContain("target='post'")
@@ -198,7 +198,7 @@ describe('member content media projections', () => {
     expect(contentCardImage).toContain("role='img'")
     expect(contentCardImage).toContain("aria-label={alt || 'Image unavailable'}")
     expect(contentCardImage).toContain("className='h-52 w-full object-cover'")
-    expect(portalNavigation).toContain("{ href: '/portal/content', label: 'Updates' }")
+    expect(portalNavigation).toContain("'/portal/content'")
     expect(portalNavigation).toContain("aria-current={active ? 'page' : undefined}")
   })
 })

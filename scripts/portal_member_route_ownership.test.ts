@@ -4,7 +4,7 @@ import { existsSync, readFileSync } from 'node:fs'
 const FILES = {
   portalPage: 'src/app/(frontend)/portal/page.tsx',
   portalLayout: 'src/app/(frontend)/portal/layout.tsx',
-  portalNavigation: 'src/components/portal/PortalNavigation.tsx',
+  portalNavigation: 'src/components/portal/PortalSidebar.tsx',
   programmePreview: 'src/app/(frontend)/portal/programme/page.tsx',
   accountBilling: 'src/app/(frontend)/portal/[section]/page.tsx',
   courseIndex: 'src/app/(frontend)/portal/courses/page.tsx',
@@ -82,7 +82,7 @@ function testPortalLayoutOwnsMemberNavigation(): void {
   const layout = source(FILES.portalLayout)
   const navigation = source(FILES.portalNavigation)
 
-  assert.match(layout, /PortalNavigation/)
+  assert.match(layout, /PortalShell/)
   assert.match(navigation, /\/portal\/courses/)
   assert.match(navigation, /\/portal\/community/)
   assert.match(navigation, /\/portal\/account/)

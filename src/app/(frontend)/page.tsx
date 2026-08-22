@@ -585,10 +585,10 @@ export default function HomePage() {
         <section className={styles.portalBand}>
           <div className={`${styles.container} ${styles.portalBandInner}`}>
             <div>
-              <h2>Your programme, resources, and community in one place.</h2>
+              <h2>Your programme, resources, and community{"\n"}in one place.</h2>
               <p>Member access stays protected inside the JPV portal.</p>
             </div>
-            <a className={styles.buttonLight} href={signInHref}>
+            <a className={`${styles.buttonLight} ${styles.portalBandButton}`} href={signInHref}>
               Enter the member portal{" "}
               <ArrowRight aria-hidden="true" size={15} />
             </a>
