@@ -263,7 +263,7 @@ export async function resolveMemberLessonResourceDownload(
   const access = await evaluatePayloadLessonAccess(payload, {
     memberId,
     lessonId: context.lesson.id,
-    requiresPreviousCompletion: Boolean(context.previousLessonId),
+    requiresPreviousCompletion: false,
     previousLessonId: context.previousLessonId,
   })
 

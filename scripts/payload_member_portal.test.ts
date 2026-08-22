@@ -430,11 +430,9 @@ async function run() {
     const payload = buildPayload()
     const detail = await getMemberLessonDetail(payload, 'member_active', 'foundations', 'advanced-step')
 
-    assert.equal(detail?.allowed, false)
-    assert.equal(detail?.decisionReason, 'previous_lesson_required')
-    assert.equal(detail?.lesson?.title, null)
-    assert.equal(detail?.lesson?.summary, null)
-    assert.equal(detail?.lesson?.resources.length, 0)
+    assert.equal(detail?.allowed, true)
+    assert.equal(detail?.lesson?.title, 'Advanced Step')
+    assert.equal(detail?.lesson?.resources.length, 1)
   }
 
   {
@@ -474,9 +472,13 @@ async function run() {
       'resource_later_lesson'
     )
 
-    assert.equal(download.allowed, false)
-    assert.equal(download.reason, 'access_denied')
-    assert.equal(download.decisionReason, 'previous_lesson_required')
+    assert.equal(download.allowed, true)
+    if (download.allowed) {
+      assert.equal(download.media.filename, 'advanced.pdf')
+      assert.equal(download.media.storage, 'public')
+      assert.equal(download.mimeType, 'application/pdf')
+      assert.equal(download.downloadUrl, '/portal/resources/resource_later_lesson')
+    }
   }
 
   {
