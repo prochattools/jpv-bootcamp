@@ -1,8 +1,8 @@
 export const jpvDesignTokens = {
   colors: {
-    // Beige & Teal brand system (accent: #2C9E9E)
-    brand: '#2C9E9E',        // teal-500 — primary accent
-    brandHover: '#238383',   // teal-600
+    // Beige & Teal brand system (accent: #42BEBE)
+    brand: '#42BEBE',        // teal-400 (lightened for contrast on dark backgrounds)
+    brandHover: '#2C9E9E',   // teal-500
     brandDeep: '#1B6767',    // teal-700
     brandBright: '#74C4C4',  // teal-300
     sunshine: '#e8c65a',
