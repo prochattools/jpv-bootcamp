@@ -331,13 +331,17 @@ async function run() {
   )
   assert.deepEqual(missingMedia, { allowed: false, reason: 'file_not_found' })
 
-  const denied = await resolveMemberLessonResourceDownload(
+  const laterLesson = await resolveMemberLessonResourceDownload(
     payload,
     'member_active',
     'resource_later_lesson',
   )
-  assert.equal(denied.allowed, false)
-  if (!denied.allowed) assert.equal(denied.reason, 'access_denied')
+  assert.equal(laterLesson.allowed, true)
+  if (laterLesson.allowed) {
+    assert.equal(laterLesson.media.filename, 'advanced.pdf')
+    assert.equal(laterLesson.media.storage, 'public')
+    assert.equal(laterLesson.downloadUrl, '/portal/resources/resource_later_lesson')
+  }
 
   const publicDownload = await resolveMemberLessonResourceDownload(
     payload,
