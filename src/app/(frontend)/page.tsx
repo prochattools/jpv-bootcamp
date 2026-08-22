@@ -34,23 +34,23 @@ const benefitItems = [
 
 const programmeCards = [
   {
-    title: "Knowledge & Guidance",
-    description: "Learn the principles. Build the knowledge. Invest with confidence.",
+    title: "Build a Strong Foundation",
+    description: "Step-by-step courses, workshops and resources to grow your property knowledge.",
     image: "/images/redesign/pillar-structured-learning.png",
   },
   {
-    title: "Practical Application",
-    description: "Put learning into action through real property strategies and opportunities.",
+    title: "Put Theory Into Action",
+    description: "Real strategies and guided exercises that move you from learning to doing.",
     image: "/images/redesign/pillar-practical-application.png",
   },
   {
-    title: "Live Experiences",
-    description: "Connect with experts, gain practical insight and apply action.",
+    title: "Learn From Experts in Real Time",
+    description: "Interactive sessions with mentors, guest speakers and fellow investors.",
     image: "/images/redesign/pillar-live-experiences.png",
   },
   {
-    title: "Community & Accountability",
-    description: "Grow together with people who share your vision, Christian values and ambition.",
+    title: "Never Walk Alone",
+    description: "A like-minded Christian community to encourage, challenge and grow with you.",
     image: "/images/redesign/pillar-community-support.png",
   },
 ] as const;
@@ -585,7 +585,7 @@ export default function HomePage() {
         <section className={styles.portalBand}>
           <div className={`${styles.container} ${styles.portalBandInner}`}>
             <div>
-              <h2>Your programme, resources, and community{"\n"}in one place.</h2>
+              <h2>Your programme, resources, and community<br />in one place.</h2>
               <p>Member access stays protected inside the JPV portal.</p>
             </div>
             <a className={`${styles.buttonLight} ${styles.portalBandButton}`} href={signInHref}>
