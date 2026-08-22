@@ -21,7 +21,7 @@ export function JPVAdminIcon() {
   return (
     <img
       alt={jpvBrand.logoAlt}
-      src={jpvBrand.logoHorizontalPath}
+      src={jpvBrand.logoPath}
       style={{
         display: 'block',
         height: 32,

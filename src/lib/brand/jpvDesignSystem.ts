@@ -63,7 +63,7 @@ export const jpvBrand = {
   name: 'JPV Bootcamp',
   tagline: 'Our passion is people',
   logoAlt: 'JPV — Our passion is people',
-  logoPath: '/images/jpv-logo-stacked.png',
+  logoPath: '/images/jpv-logo.jpg',
   logoHorizontalPath: '/images/jpv-logo-horizontal.png',
 } as const
 
