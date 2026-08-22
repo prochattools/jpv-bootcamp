@@ -562,7 +562,7 @@ export async function getMemberLessonDetail(
   const access = await evaluatePayloadLessonAccess(payload, {
     memberId: normalizedMemberId,
     lessonId: lesson.id,
-    requiresPreviousCompletion: Boolean(previous),
+    requiresPreviousCompletion: false,
     previousLessonId: previous?.lesson.id ?? null,
   })
   const allowed = access.decision.allowed
