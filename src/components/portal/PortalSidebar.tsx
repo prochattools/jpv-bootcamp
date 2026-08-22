@@ -93,11 +93,11 @@ function SidebarContent({
 }) {
   return (
     <>
-      <div className='flex h-16 shrink-0 items-center border-b border-jpv-border px-5'>
+      <div className='flex h-20 shrink-0 items-center border-b border-jpv-border px-5'>
         <Link href='/portal' onClick={onNavigate}>
           <img
             alt={jpvBrand.logoAlt}
-            className='h-9 w-auto object-contain'
+            className='h-14 w-auto object-contain'
             src={jpvBrand.logoHorizontalPath}
           />
         </Link>

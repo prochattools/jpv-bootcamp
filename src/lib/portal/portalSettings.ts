@@ -29,7 +29,7 @@ const DEFAULTS: PortalLoginBranding = {
   bannerDescription: 'Join our community and start your journey to success',
   bannerTitleColor: '#FAF8F4',
   bannerTextColor: '#FAF8F4',
-  bannerBackgroundColor: '#1B6767',
+  bannerBackgroundColor: '#144E4E',
   formTitle: 'Login to JPV Bootcamp - Portal',
   formDescription: 'Enter your email and password to login',
   formTitleColor: '#3A3428',
@@ -37,7 +37,7 @@ const DEFAULTS: PortalLoginBranding = {
   formBackgroundColor: '#FAF8F4',
   buttonLabel: 'Login',
   buttonColor: '#2C9E9E',
-  buttonLabelColor: '#FAF8F4',
+  buttonLabelColor: '#FFFFFF',
 }
 
 function asText(value: unknown, fallback: string, maxLength = 300): string {

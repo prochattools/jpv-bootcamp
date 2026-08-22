@@ -15,17 +15,17 @@ export function PortalShell({ children, showLogout }: PortalShellProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   return (
-    <div className='grid lg:grid-cols-[260px_1fr]'>
+    <div className='grid h-full lg:grid-cols-[260px_1fr]'>
       <PortalSidebar
         mobileOpen={mobileMenuOpen}
         onMobileClose={() => setMobileMenuOpen(false)}
         showLogout={showLogout}
       />
-      <div className='flex min-h-screen flex-col'>
+      <div className='flex h-full flex-col'>
         <PortalTopBar
           onMobileMenuOpen={() => setMobileMenuOpen(true)}
         />
-        <main className='flex-1 px-4 py-8 sm:px-6 lg:px-8 lg:py-10'>
+        <main className='flex-1 overflow-y-auto px-4 py-8 sm:px-6 lg:px-8 lg:py-10'>
           {children}
         </main>
       </div>

@@ -1,10 +1,13 @@
 export const jpvDesignTokens = {
   colors: {
-    // Beige & Teal brand system (accent: #0E7B7B)
-    brand: '#0E7B7B',        // teal-800 (darker for WCAG AA on light backgrounds)
-    brandHover: '#1B6767',   // teal-700
-    brandDeep: '#0A5555',    // teal-900
-    brandBright: '#4EB0B0',  // teal-400
+    // Beige & Teal brand system (primary accent: #2C9E9E teal-500)
+    brand: '#2C9E9E',        // teal-500 — primary accent
+    brandHover: '#238383',   // teal-600
+    brandActive: '#1B6767',  // teal-700
+    brandDeep: '#144E4E',    // teal-800
+    brandDarkest: '#0D3838', // teal-900
+    brandLight: '#4EB0B0',   // teal-400
+    brandFaint: '#EAF6F6',   // teal-50
     sunshine: '#e8c65a',
     sunshineInk: '#6f5a1f',
     danger: '#c94f4f',
@@ -14,8 +17,8 @@ export const jpvDesignTokens = {
     surface: '#F4F0E8',      // beige-100
     surfaceStrong: '#E9E2D5', // beige-200
     ink: '#3A3428',          // beige-900 — primary text
-    muted: '#6E6350',        // beige-700 (darkened from #A89A80 for WCAG AA)
-    inverseMuted: '#5A4D3F', // beige-800 (darkened from #6E6350 for WCAG AA)
+    muted: '#A89A80',        // beige-500 — muted text
+    secondary: '#6E6350',    // beige-700 — secondary text
     border: '#D9CFBC',       // beige-300
     focus: '#238383',        // teal-600
     // Full teal scale
@@ -76,7 +79,7 @@ export const jpvCssVariables = {
   '--jpv-brand': jpvDesignTokens.colors.brand,
   '--jpv-brand-hover': jpvDesignTokens.colors.brandHover,
   '--jpv-brand-deep': jpvDesignTokens.colors.brandDeep,
-  '--jpv-brand-bright': jpvDesignTokens.colors.brandBright,
+  '--jpv-brand-bright': jpvDesignTokens.colors.brandLight,
   '--jpv-sunshine': jpvDesignTokens.colors.sunshine,
   '--jpv-sunshine-ink': jpvDesignTokens.colors.sunshineInk,
   '--jpv-danger': jpvDesignTokens.colors.danger,
@@ -87,7 +90,7 @@ export const jpvCssVariables = {
   '--jpv-surface-strong': jpvDesignTokens.colors.surfaceStrong,
   '--jpv-ink': jpvDesignTokens.colors.ink,
   '--jpv-muted': jpvDesignTokens.colors.muted,
-  '--jpv-inverse-muted': jpvDesignTokens.colors.inverseMuted,
+  '--jpv-secondary': jpvDesignTokens.colors.secondary,
   '--jpv-border': jpvDesignTokens.colors.border,
   '--jpv-focus': jpvDesignTokens.colors.focus,
   '--jpv-radius-detail': jpvDesignTokens.radius.detail,

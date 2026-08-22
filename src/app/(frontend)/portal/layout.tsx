@@ -10,7 +10,7 @@ export default async function PortalLayout({ children }: { children: ReactNode }
   const showLogout = Boolean(session.member?.id || session.administratorId)
 
   return (
-    <div className='jpv-product-shell min-h-screen bg-jpv-canvas text-jpv-ink'>
+    <div className='jpv-product-shell h-screen overflow-hidden bg-jpv-canvas text-jpv-ink'>
       <PortalShell showLogout={showLogout}>
         {children}
       </PortalShell>
