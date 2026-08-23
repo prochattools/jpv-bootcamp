@@ -10,10 +10,11 @@ and migration planning records. Those documents remain useful as historical
 evidence or design provenance, but they must not be used to infer the current
 live environment.
 
-**Canonical staging-readiness baseline:** `4853d63c6a006fd27ab66e365f29de9ade9472d8`
-This is the last pushed feature tip with successful CI validation. The local
-documentation-only descendant `729136396081e4b6757fce394101e2d14a7222ff` is
-not staging evidence and must not be described as deployed.
+**Canonical staging release/deployment SHA:** `9d87c4a3eeeffb9afb78a38964054792330ea1cb`
+This is the last exact-SHA staging deployment and health-verified release
+candidate. The current branch tip `626bf3926412065fb7e5655d35c98d8f4be67a58`
+contains documentation-only descendants and is not deployed staging evidence.
+All other SHAs in this document are historical checkpoints.
 
 Related documents:
 
@@ -57,11 +58,11 @@ target, timestamp, artifact, and verification result.
 |---|---|
 | Active branch | `feature/course-branding-and-preview` |
 | Local HEAD | May be a documentation-only descendant; verify with `git rev-parse HEAD` |
-| Canonical staging-readiness baseline | `4853d63c6a006fd27ab66e365f29de9ade9472d8` — last pushed tip with successful CI |
-| Remote feature tip | `4853d63c6a006fd27ab66e365f29de9ade9472d8` at audit time |
+| Canonical staging release/deployment SHA | `9d87c4a3eeeffb9afb78a38964054792330ea1cb` — exact-SHA staging deployment and health verification |
+| Remote feature tip | `626bf3926412065fb7e5655d35c98d8f4be67a58` at this audit |
 | `main` | `6970b3e7d4131abf2614991e694f8713f5168b33` in the separate main worktree |
 | Divergence | `main...feature = 16 769` |
-| Local documentation descendant | `729136396081e4b6757fce394101e2d14a7222ff`; not pushed, not CI-validated, and not staging evidence |
+| Current branch tip | `626bf3926412065fb7e5655d35c98d8f4be67a58`; documentation-only descendant, not deployed staging evidence |
 | Protected residue | `.claude/worktrees/**`, `newrelic_agent.log`, and the tracked `.bak` remain untouched |
 | Branch operations | No merge, reset, rebase, force-push, rename, or deletion performed |
 
@@ -112,7 +113,7 @@ migration or any other staging operation.
 | Subject | Conflicting records | Authoritative interpretation |
 |---|---|---|
 | Migration count | Source has 36 registrations; the closed pre-apply runner path describes 35 applied plus migration 36 pending; older records also describe 29 or 35 total | Current release-lead snapshot is 36/36 applied with no pending migration. The workflow now has explicit current-state mode expecting 36/`[]`; the 35→36 path remains closed apply/rollback safety history. |
-| Feature SHA | Canonical pushed/CI tip is `4853d63...`; local docs-only descendant is `7291363...`; older evidence cites `b771cfc...`, `9c0debe...`, `abf438...`, and `9c045fa...` | `4853d63...` is the canonical staging-readiness baseline. `9c0debe...` and older SHAs are historical deployment/checkpoint evidence. |
+| Feature SHA | Current branch tip is `626bf392...`; exact staging deployment is `9d87c4a...`; older evidence cites `4853d63...`, `7291363...`, `b771cfc...`, `9c0debe...`, `abf438...`, and `9c045fa...` | `9d87c4a...` is the single canonical staging release/deployment SHA. All other SHAs are repository or historical checkpoint evidence only. |
 | Staging readiness | Migration state is currently supplied as 36/36 with no pending migration; older packages also contain deployment and acceptance evidence | Migration truth is current for this reconciliation. Exact-SHA deployment, provider, and acceptance evidence remain historical or require fresh verification. |
 | Acceptance evidence | Historical portal, LiveKit, admin, media, and browser counts are recorded; local release tests pass now | Local validation is current repository evidence. Staging acceptance must be rerun against the final exact SHA. |
 | Roadmap phase | Phase 8 and Phase 9 are recorded complete in historical packages; Phase 10 is production cutover; Phase 11 partner affiliates is deferred | Current project phase is **9.5 Feature Branch Reconciliation & Completion**. Phase 8/9 implementation is locally advanced but not freshly environment-verified. Phase 10 has not started. |
@@ -226,6 +227,7 @@ Phase 9.5 is complete when:
   staging operation.
 
 The implementation backlog below is the only prioritized list for the remaining
-Phase 9.5 work. The canonical staging-readiness baseline is `4853d63...`; any
+Phase 9.5 work. The canonical staging release/deployment baseline is
+`9d87c4a...`; any
 later documentation-only commit requires separate CI and exact-SHA evidence
 before it can replace that baseline.

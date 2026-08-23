@@ -2,7 +2,7 @@
 
 ## Current repository reconciliation — 2026-08-23
 
-- **Working branch:** `feature/course-branding-and-preview`; starting committed tip `ae8c886d125200d94a8ee7aec005b6226a1304e0`. The cleanup documented in `docs/release/BRANCH_RECONCILIATION_2026-08-23.md` is currently uncommitted and must be included before a final cutover SHA is pinned.
+- **Working branch:** `feature/course-branding-and-preview`; current repository tip `626bf3926412065fb7e5655d35c98d8f4be67a58` is documentation-only relative to the canonical staging release. The single canonical staging release/deployment SHA is `9d87c4a3eeeffb9afb78a38964054792330ea1cb`; all other SHAs are historical or repository checkpoints.
 - **Current source truth:** the feature branch is the authoritative implementation under review. The registry contains 36 migrations, ending with `20260820_000000_live_session_space`; the release-lead verified sanitized staging position is 36/36 applied with pending `[]`, and the current workflow checks that post-apply state read-only.
 - **Local evidence:** after cleanup, `pnpm test:release` passed `164/164`, the focused browser set passed `60/60`, and full browser E2E passed `148/148` with 60 declared skips. The initial shared muted-token contrast defect and tracked sponsored-claim backup were corrected.
 - **Live evidence boundary:** migration state is reconciled from the release-lead verified sanitized position; exact-SHA staging deployment, provider state, production schema, production deployment, and cutover approval were not reverified or changed by this reconciliation. Historical deployment/acceptance snapshots below remain audit evidence only.

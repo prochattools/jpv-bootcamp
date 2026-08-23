@@ -6,7 +6,7 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 
 ## Current repository reconciliation — 2026-08-23
 
-- **Working branch:** `feature/course-branding-and-preview`; frozen staging release candidate and deployed SHA are `9d87c4a3eeeffb9afb78a38964054792330ea1cb`.
+- **Working branch:** `feature/course-branding-and-preview`; canonical frozen staging release and deployed SHA are `9d87c4a3eeeffb9afb78a38964054792330ea1cb`. Current repository tip `626bf3926412065fb7e5655d35c98d8f4be67a58` is a documentation-only descendant and is not deployed.
 - **Cleanup record:** `docs/release/BRANCH_RECONCILIATION_2026-08-23.md`.
 - **Source/state:** 36 registered Payload migrations; read-only staging plan run `32648793013` returned `plan_ok`, 36/36 applied, pending `[]`, zero unexpected/duplicate/malformed records, and Prisma healthy. No migration was executed.
 - **Release evidence:** explicit staging deploy run `32649230612` succeeded. `/api/health` returned 200 with `imageTag` and `commit` equal to `9d87c4a3eeeffb9afb78a38964054792330ea1cb` and `deploymentEnv=staging`.

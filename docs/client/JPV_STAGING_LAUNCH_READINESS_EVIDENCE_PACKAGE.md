@@ -6,6 +6,8 @@
 
 > This package records the 2026-08-21 staging snapshot. It does not bind the current feature-branch tip, and its deployed SHA, migration count, provider state, and acceptance results were not reverified by the 2026-08-23 reconciliation. Use `docs/release/FINAL_PRE_PRODUCTION_RECONCILIATION_2026-08-23.md` as the current release baseline.
 
+> Baseline reconciliation: the single canonical staging release/deployment SHA is `9d87c4a3eeeffb9afb78a38964054792330ea1cb`. The current feature-branch tip `626bf3926412065fb7e5655d35c98d8f4be67a58` is a documentation-only descendant and is not deployed. All other SHAs in this package are historical evidence.
+
 > Phase 9.5 current truth is now `docs/release/PHASE_9_5_CURRENT_TRUTH_2026-08-23.md`; remaining completion work is in `docs/release/PHASE_9_5_FINAL_IMPLEMENTATION_BACKLOG_2026-08-23.md`.
 
 ## Executive Summary
