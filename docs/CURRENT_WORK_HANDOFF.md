@@ -6,13 +6,13 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 
 ## Current repository reconciliation — 2026-08-23
 
-- **Working branch:** `feature/course-branding-and-preview`; current local HEAD is an unpushed documentation-only descendant (verify with `git rev-parse HEAD`); canonical pushed/CI-verified staging-readiness baseline is `4853d63c6a006fd27ab66e365f29de9ade9472d8`. Local documentation-only descendants are not staging evidence.
+- **Working branch:** `feature/course-branding-and-preview`; frozen staging release candidate and deployed SHA are `85af61fb467529e943566a6d7e1076dd4b89901a`.
 - **Cleanup record:** `docs/release/BRANCH_RECONCILIATION_2026-08-23.md`.
-- **Source state:** 36 registered Payload migrations; no database migration, deployment, provider mutation, or production operation was performed by this pass.
-- **Local validation:** after cleanup, `pnpm test:release` passed `164/164`; focused browser checks passed `60/60`; full browser E2E passed `148/148` with 60 declared skips. The initial shared `#A89A80` muted-token contrast defect was corrected.
+- **Source/state:** 36 registered Payload migrations; read-only staging plan run `32648793013` returned `plan_ok`, 36/36 applied, pending `[]`, zero unexpected/duplicate/malformed records, and Prisma healthy. No migration was executed.
+- **Release evidence:** push validation run `32647651167` and explicit staging deploy run `32648229013` succeeded. `/api/health` returned 200 with `imageTag` and `commit` equal to `85af61fb467529e943566a6d7e1076dd4b89901a` and `deploymentEnv=staging`.
 - **Protected residue:** pre-existing `.claude/worktrees/**` changes and `newrelic_agent.log` remain untouched.
-- **Next gate:** review the cleanup diff, rerun browser/release validation, then pin a new exact SHA before any cutover work. Historical deployment rows below are not current live evidence.
-- **Current staging migration truth:** the release-lead verified sanitized position is 36/36 Payload migrations applied with no pending migration; the guarded workflow now verifies this through explicit `--current-state=true` read-only mode. Exact-SHA deployment, provider, Prisma-health artifact, and acceptance evidence remain separate gates.
+- **Current staging:** frozen exact-SHA baseline is live and healthy. Public endpoint checks returned 200 for health, home, sign-in, portal, courses, community, account, and billing. LiveKit token validation correctly rejected malformed unauthenticated requests with 400; authenticated token/browser evidence remains historical.
+- **Production boundary:** production remains unauthorized and untouched; Phase 10 has not started.
 - **Phase 9.5 authority:** use `docs/release/PHASE_9_5_CURRENT_TRUTH_2026-08-23.md` for current status and `docs/release/PHASE_9_5_FINAL_IMPLEMENTATION_BACKLOG_2026-08-23.md` for remaining work.
 
 ## Historical staging checkpoint — 2026-08-19/21 (NOT CURRENT LIVE EVIDENCE)

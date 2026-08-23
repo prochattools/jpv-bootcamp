@@ -2,13 +2,13 @@
 
 ## Current repository reconciliation — 2026-08-23
 
-- **Working branch:** `feature/course-branding-and-preview`; current local HEAD is an unpushed documentation-only descendant (verify with `git rev-parse HEAD`); canonical pushed/CI-verified staging-readiness baseline is `4853d63c6a006fd27ab66e365f29de9ade9472d8`. Local documentation-only descendants are not staging evidence.
+- **Working branch:** `feature/course-branding-and-preview`; frozen staging release candidate and deployed SHA are `85af61fb467529e943566a6d7e1076dd4b89901a`.
 - **Cleanup record:** `docs/release/BRANCH_RECONCILIATION_2026-08-23.md`.
-- **Local gate:** after cleanup, `pnpm test:release` passed `164/164`; focused browser checks passed `60/60`; full browser E2E passed `148/148` with 60 declared skips. The shared `#A89A80` contrast defect is corrected.
-- **Operational boundary:** this pass performed no deployment, migration, provider call, production operation, branch merge, push, or worktree cleanup. The release-lead verified sanitized staging migration position is 36/36 applied with pending `[]`; exact-SHA deployment and provider evidence remain separate.
-- **Migrations applied:** current staging position supplied as 36/36 applied with no pending migration; no migration operation was performed in this reconciliation.
-- **Handoff order:** finish local validation, create the exact final SHA, then use the protected integration procedure in `docs/release/FUTURE_BRANCH_CUTOVER_PLAN.md`. Do not use the historical deployment rows below as current evidence.
-- **Current staging:** migration state is reconciled as 36/36 with no pending migration. Exact-SHA deployment, Prisma-health artifact, and acceptance remain unverified; the historical migration-29 handoff below must not be used as a current operator instruction.
+- **Release gate:** push validation run `32647651167` succeeded with the 164/164 release gate; explicit staging deployment run `32648229013` succeeded for this exact SHA.
+- **Current staging:** `/api/health` returned 200 and reported the exact candidate SHA, `deploymentEnv=staging`, and live status. Read-only migration plan run `32648793013` returned 36/36, pending `[]`, Prisma healthy, and no malformed/duplicate/unexpected records.
+- **Migrations applied:** `36/36 Payload migrations applied`; pending migrations: `[]` (read-only plan run `32648793013`).
+- **Operational boundary:** no production operation or migration execution occurred. The only external mutation was the authorized staging deployment of this candidate.
+- **Handoff order:** preserve this evidence as the frozen staging checkpoint. Phase 10 requires separate explicit production authorization.
 - **Phase 9.5 authority:** use `docs/release/PHASE_9_5_CURRENT_TRUTH_2026-08-23.md` for current truth and `docs/release/PHASE_9_5_FINAL_IMPLEMENTATION_BACKLOG_2026-08-23.md` for remaining work.
 
 <!-- Reconciliation note 2026-08-08: Verify the exact feature tip with `git rev-parse HEAD`. The release manifest contains 164 required gates. The live staging baseline remains `9c045fa5a5c327014c20fe9377f7d5368b550573`; guarded read-only plan run `31215369413` established the clean pre-apply state at reviewed code checkpoint `9e068cc8b0a5ec9573732fee3a78bed9995787a6`. -->
