@@ -2,7 +2,7 @@
 
 ## Current repository reconciliation — 2026-08-23
 
-- **Working branch:** `feature/course-branding-and-preview`; current committed tip `065249f88e40096a47ec8306a0e0a746db274a01`.
+- **Working branch:** `feature/course-branding-and-preview`; current committed tip `b771cfca4ab6d2bcaa76f6dc2d2420c114082dd8`.
 - **Implementation state:** the current feature branch remains the source under review; its migration registry contains 36 registered migrations. Registration is not applied database state.
 - **Local validation:** after cleanup, `pnpm test:release` passed `164/164`; focused browser checks passed `60/60`; full browser E2E passed `148/148` with 60 declared skips. The initial 24 shared muted-token contrast failures were cleared.
 - **Cutover state:** production migration, production deployment, provider mutation, and branch advancement were not performed or authorized. Use `docs/release/FUTURE_BRANCH_CUTOVER_PLAN.md` for the later protected integration process.
@@ -12,7 +12,7 @@
 - **Phase 9.5 current truth:** `docs/release/PHASE_9_5_CURRENT_TRUTH_2026-08-23.md`.
 - **Phase 9.5 backlog:** `docs/release/PHASE_9_5_FINAL_IMPLEMENTATION_BACKLOG_2026-08-23.md`.
 - **Current project phase:** Phase 9.5 — Feature Branch Reconciliation & Completion; Phase 10 production cutover has not started.
-- **Final feature-branch baseline:** `065249f88e40096a47ec8306a0e0a746db274a01` is pushed and locally validated; exact-SHA staging deployment and acceptance remain separate, unauthorized gates.
+- **Final feature-branch baseline:** `b771cfca4ab6d2bcaa76f6dc2d2420c114082dd8` is pushed and locally validated; exact-SHA staging deployment and acceptance remain separate, unauthorized gates.
 
 <!-- Historical checkpoint note 2026-08-19/21: this older record reported STAGING MIGRATION COMPLETE at SHA `abf43893dc3f9980cc8eadc997cd7935e86e614f` / deploy run 32352382852 and later `9c0debe...` / run 32462177363. Its 35/35 and acceptance claims are retained below as audit history only. Current truth is 36/36 with pending [] as separately supplied and recorded in the Phase 9.5 baseline. Production NOT authorized. -->
 

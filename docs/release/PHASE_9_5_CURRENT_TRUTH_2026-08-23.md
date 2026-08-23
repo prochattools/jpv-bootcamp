@@ -51,11 +51,11 @@ target, timestamp, artifact, and verification result.
 | Check | Current result |
 |---|---|
 | Active branch | `feature/course-branding-and-preview` |
-| Local HEAD | `065249f88e40096a47ec8306a0e0a746db274a01` |
+| Local HEAD | `b771cfca4ab6d2bcaa76f6dc2d2420c114082dd8` |
 | Remote feature tip | Matches local HEAD after the release-cleanup push |
 | `main` | `6970b3e7d4131abf2614991e694f8713f5168b33` in the separate main worktree |
 | Divergence | `main...feature = 16 769` |
-| Final feature-branch SHA | `065249f88e40096a47ec8306a0e0a746db274a01`; exact-SHA staging evidence is still not established |
+| Final feature-branch SHA | `b771cfca4ab6d2bcaa76f6dc2d2420c114082dd8`; exact-SHA staging evidence is still not established |
 | Protected residue | `.claude/worktrees/**`, `newrelic_agent.log`, and the tracked `.bak` remain untouched |
 | Branch operations | No merge, reset, rebase, force-push, rename, or deletion performed |
 
@@ -106,7 +106,7 @@ migration or any other staging operation.
 | Subject | Conflicting records | Authoritative interpretation |
 |---|---|---|
 | Migration count | Source has 36 registrations; the closed pre-apply runner path describes 35 applied plus migration 36 pending; older records also describe 29 or 35 total | Current release-lead snapshot is 36/36 applied with no pending migration. The workflow now has explicit current-state mode expecting 36/`[]`; the 35→36 path remains closed apply/rollback safety history. |
-| Feature SHA | Current local/remote tip is `ae8c886...`; older evidence cites `9c0debe...`, `abf438...`, and `9c045fa...` | `ae8c886...` is the current committed review starting point, not a final release SHA. All older SHAs are historical deployment/checkpoint evidence. |
+| Feature SHA | Current local/remote tip is `b771cfc...`; older evidence cites `ae8c886...`, `9c0debe...`, `abf438...`, and `9c045fa...` | `b771cfc...` is the final committed feature-branch baseline. All older SHAs are historical deployment/checkpoint evidence. |
 | Staging readiness | Migration state is currently supplied as 36/36 with no pending migration; older packages also contain deployment and acceptance evidence | Migration truth is current for this reconciliation. Exact-SHA deployment, provider, and acceptance evidence remain historical or require fresh verification. |
 | Acceptance evidence | Historical portal, LiveKit, admin, media, and browser counts are recorded; local release tests pass now | Local validation is current repository evidence. Staging acceptance must be rerun against the final exact SHA. |
 | Roadmap phase | Phase 8 and Phase 9 are recorded complete in historical packages; Phase 10 is production cutover; Phase 11 partner affiliates is deferred | Current project phase is **9.5 Feature Branch Reconciliation & Completion**. Phase 8/9 implementation is locally advanced but not freshly environment-verified. Phase 10 has not started. |
@@ -202,7 +202,7 @@ because current exact-SHA staging and provider evidence is absent.
 The migration truth reconciliation and final feature-branch cleanup commit are
 complete for this pass. The next highest-value task is to prepare the
 separately authorized exact-SHA staging deployment and acceptance evidence
-packet for `065249f88e40096a47ec8306a0e0a746db274a01`. That work must preserve
+packet for `b771cfca4ab6d2bcaa76f6dc2d2420c114082dd8`. That work must preserve
 the current 36/36, no-pending migration truth and must not be treated as
 production authorization.
 
