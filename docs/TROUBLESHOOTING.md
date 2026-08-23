@@ -50,11 +50,11 @@
 - Re-upload media
 
 **Option C: Use Bunny CDN (already configured for video)**
-- Bunny Stream is configured at `BUNNY_STREAM_LIBRARY_ID=581531`
-- Integration code exists at `src/app/api/portal/community/upload/route.ts`
-- TODO: Integrate Payload media collection with Bunny
+- Bunny Stream is configured for protected video playback through the Bunny service layer.
+- The canonical entitled-member community attachment route is `src/app/api/community/files/route.ts`; it validates the member's space access, writes private media, creates the Payload media/file records, and leaves the attachment pending moderation review.
+- Live provider/storage round-trip verification remains an operator gate; do not treat a local route test as live Bunny evidence.
 
-**Status:** ⏳ DEFERRED — Post-core M2 storage hardening. Currently impacts community/media features (M2-level).
+**Status:** The current attachment path is implemented and locally covered. Further Bunny/storage hardening is a separate operational/provider gate, not a reason to retain the removed placeholder upload route.
 
 ---
 

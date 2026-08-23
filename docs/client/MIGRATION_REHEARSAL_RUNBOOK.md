@@ -1,5 +1,11 @@
 # Migration Rehearsal Runbook
 
+> **Historical/planning runbook.** The counts, checkpoints, and commands below
+> are retained for safety/design provenance and are not the current migration
+> state or an execution authorization. Current truth is 36/36 applied with
+> pending `[]` in `docs/release/FINAL_PRE_PRODUCTION_RECONCILIATION_2026-08-23.md`.
+> Do not run a migration in Phase 9.5.
+
 Operator-facing runbook for target-environment migration rehearsal preparation on `feature/course-branding-and-preview`.
 
 ## Hard safety rules

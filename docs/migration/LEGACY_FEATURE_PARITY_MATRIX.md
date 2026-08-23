@@ -2,6 +2,8 @@
 
 **Purpose:** durable authority for answering: what existed in legacy JPV Bootcamp, where does it live in the new Payload platform, and how do we prove nothing was lost?
 
+> **Reconciliation note — 2026-08-23:** rows below retain the 2026-08-15 feature-parity planning snapshot. The current source now registers migrations 29–36 and includes the member-directory, reaction, lesson-discussion, cover-image, portal-settings, and LiveKit implementations. Do not interpret the older “undated/unregistered” or “migration29 sole pending” wording as current repository state. Current completion and remaining gaps are in `docs/release/FINAL_PRE_PRODUCTION_RECONCILIATION_2026-08-23.md`.
+
 **Acceptance rule:** every source feature/data family must end in exactly one of these states:
 
 - `TARGET_EQUIVALENT_EXISTS`

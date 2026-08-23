@@ -1,5 +1,10 @@
 # Payload-only Free/Pro Review Packet
 
+> **Historical/non-operative review packet.** The older Free/Pro terminology,
+> branch SHAs, and migration references below are superseded by the current
+> single-membership Phase 9.5 baseline. Retain this packet for audit/design
+> provenance only; it authorizes no migration, deployment, or cutover.
+
 ## Branch
 
 - Branch: `feature/course-branding-and-preview`

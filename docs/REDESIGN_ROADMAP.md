@@ -37,7 +37,7 @@ Three phases in order:
 | `surface` | `#f5f3ec` | `#F4F0E8` | `--beige-100` |
 | `surfaceStrong` | `#e8ece7` | `#E9E2D5` | `--beige-200` |
 | `ink` | `#24332b` | `#3A3428` | `--beige-900` — primary text |
-| `muted` | `#687068` | `#A89A80` | `--beige-500` |
+| `muted` | `#687068` | `#6E6350` | `--beige-700` — accessible body-muted text |
 | `inverseMuted` | `#c7d3cc` | `#6E6350` | `--beige-700` |
 | `border` | `#dedbd1` | `#D9CFBC` | `--beige-300` |
 | `focus` | `#123d2d` | `#238383` | `--teal-600` |

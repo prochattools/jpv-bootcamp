@@ -1,5 +1,10 @@
 # Migration Approval Packet
 
+> **Historical/non-operative packet.** This packet records an older 11-entry,
+> no-migrations-applied checkpoint and must not be used for current action.
+> Phase 9.5 current migration truth is 36/36 applied with pending `[]`; see
+> `docs/release/PHASE_9_5_CURRENT_TRUTH_2026-08-23.md`.
+
 ## Scope
 
 - Branch: `feature/course-branding-and-preview`

@@ -1,5 +1,12 @@
 # JPV Bootcamp — Frozen Launch Readiness Evidence Package (Staging)
 
+> **Historical/non-operative checkpoint — 2026-08-21.** This is a duplicate
+> staging evidence package retained for audit provenance. Its “READY FOR
+> PRODUCTION AUTHORIZATION REVIEW” wording, migration count, deployment SHA,
+> and acceptance claims are not current exact-SHA evidence. Use the canonical
+> Phase 9.5 baseline at `docs/release/FINAL_PRE_PRODUCTION_RECONCILIATION_2026-08-23.md`;
+> production and Phase 10 remain unauthorized.
+
 **Checkpoint date:** 2026-08-21  
 **Environment:** Staging only  
 **Production status:** Not authorized

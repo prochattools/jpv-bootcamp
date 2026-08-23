@@ -1,5 +1,10 @@
 # Migration 29 Authorization Packet
 
+> **Historical/closed/non-operative packet — 2026-08-08.** Do not execute the
+> commands below. This packet describes the old `43d569...` checkpoint and the
+> pre-36 migration lane. The current Phase 9.5 baseline records 36/36 applied
+> with pending `[]`; no migration is authorized by this document set.
+
 **FINAL PRE-MIGRATION CLOSURE — 2026-08-08**
 
 ## Exact commit

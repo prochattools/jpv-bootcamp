@@ -1,11 +1,21 @@
 # Payload CMS Integration Plan
 
-## Current staging checkpoint — 2026-08-19 (STAGING MIGRATION COMPLETE)
+## Current repository reconciliation — 2026-08-23
+
+- **Working branch:** `feature/course-branding-and-preview`; starting committed tip `ae8c886d125200d94a8ee7aec005b6226a1304e0`. The cleanup documented in `docs/release/BRANCH_RECONCILIATION_2026-08-23.md` is currently uncommitted and must be included before a final cutover SHA is pinned.
+- **Current source truth:** the feature branch is the authoritative implementation under review. The registry contains 36 migrations, ending with `20260820_000000_live_session_space`; the release-lead verified sanitized staging position is 36/36 applied with pending `[]`, and the current workflow checks that post-apply state read-only.
+- **Local evidence:** after cleanup, `pnpm test:release` passed `164/164`, the focused browser set passed `60/60`, and full browser E2E passed `148/148` with 60 declared skips. The initial shared muted-token contrast defect and tracked sponsored-claim backup were corrected.
+- **Live evidence boundary:** migration state is reconciled from the release-lead verified sanitized position; exact-SHA staging deployment, provider state, production schema, production deployment, and cutover approval were not reverified or changed by this reconciliation. Historical deployment/acceptance snapshots below remain audit evidence only.
+- **Cutover plan:** use `docs/release/FUTURE_BRANCH_CUTOVER_PLAN.md`; do not rename, reset, or force-push `main`.
+- **Current release dossier:** `docs/release/FINAL_PRE_PRODUCTION_RECONCILIATION_2026-08-23.md` is the authoritative reconciliation of implementation, documentation, branch, and evidence state. Long-form dated sections below remain design or historical records unless explicitly marked current.
+- **Phase 9.5 current truth:** `docs/release/PHASE_9_5_CURRENT_TRUTH_2026-08-23.md` owns current implementation/release status; `docs/release/PHASE_9_5_FINAL_IMPLEMENTATION_BACKLOG_2026-08-23.md` owns the remaining completion work. This plan remains the architecture and implementation-plan authority.
+
+## Historical staging checkpoint — 2026-08-19 (STAGING MIGRATION COMPLETE)
 
 - **ONLY PERMITTED OPERATIONAL LANE:** branch `feature/course-branding-and-preview`; staging origin `https://preview.jpvbootcamp.com`; Dokploy slug `clients-jpv-bootcamp-app-tp9xrk`; Dokploy app ID `I_2Vukga3cc3ZhaG-mUzU`; PostgreSQL host `10.0.2.4`, port `5433`, database `jpvbootcamp`, schema `jpvbootcamp_staging`. No alternate target is permitted.
 - **CURRENT DEPLOYED STAGING BASELINE:** SHA `abf43893dc3f9980cc8eadc997cd7935e86e614f`, deploy run 32352382852, deployed 2026-08-19.
 - **IMPLEMENTED / VERIFIED:** all agreed launch-scope repository implementation complete: M0-01 through M0-09, M1-01 through M1-06, UI-01 design/branding, release/browser automation, migration inventory/preflight, email queue/guard, partner/sponsored boundaries, and account-action reservation/finalization. All 35 Payload migrations applied and verified on staging. Release manifest `164/164` gates passed. Legacy import 935/935 complete. Members 51 (12 active, 39 blocked). Staging email operational. Public media 24/24, private 25/25. Lesson resources 25/25 published. Playwright 84/0, admin-responsive 14/14, migration contract PASS. `DEPLOYMENT_ENV=staging` confirmed.
-- **STAGING ACCEPTANCE COMPLETE:** all gates green. No further staging work required.
+- **HISTORICAL STAGING ACCEPTANCE COMPLETE:** all gates were green at that checkpoint. No further staging work was required in that historical record; current staging still requires fresh exact-SHA verification.
 - **PHASE RANKING (2026-08-20):** (1) Phase 8 — Member Portal Operationalization **COMPLETE**; (2) Phase 9 — LiveKit Group Calls (REQUIRED pre-cutover); (3) Phase 10 — production cutover only under separate explicit authorization; (4) Phase 11 — Partner Affiliates deferred post-cutover.
 - **PRODUCTION OPERATION:** NOT performed, NOT authorized.
 - **DEFERRED BY DESIGN:** M2-01 and Partner Affiliates remain outside the current agreed launch scope unless separately promoted.
@@ -14,7 +24,7 @@ This is the single canonical product, architecture, security, roadmap, and execu
 
 ## Documentation hierarchy
 
-1. **Canonical plan — this document.** Owns philosophy, architecture, security, current status, roadmap order, validation gates, and cutover boundaries.
+1. **Canonical architecture and implementation plan — this document.** Owns philosophy, architecture, security, roadmap order, validation gates, and cutover boundaries. Current Phase 9.5 status is owned by the linked current-truth document above.
 2. **Feature specifications.** Define implementation detail without changing roadmap order:
    - `docs/PAYLOAD_COMMUNICATIONS_PLAN.md` — branded communications, FreeResend delivery, templates, events, preferences, audit, and acceptance criteria for Phase 6.
    - `docs/PAYLOAD_SUPPORT_PAY_IT_FORWARD_PLAN.md` — support funding, voucher-backed access, sponsored access, applicant review, expiry, receipts, and administrator controls for the single-membership model.
@@ -45,8 +55,8 @@ Do not create another general Payload roadmap. New work must first be added here
 - Keep this feature branch Payload-only; removed external community, CRM, and portal integrations must not remain as active code, transition wiring, rollback docs, or archive material here.
 - Prefer small, demonstrable phases over broad rewrites.
 - Keep Payload as the administrative system of record and Next.js as the controlled member experience.
-- Treat historical data only as reviewed import material that maps into neutral account, Free access, Pro subscription, expired, revoked, suspended, or administrator-review states.
-- Keep the public offer simple: Free for approved non-paid access and Pro for the single paid subscription.
+- Treat historical data only as reviewed import material that maps into neutral account, membership entitlement, non-paid access source, expired, revoked, suspended, or administrator-review states.
+- Keep the public offer simple: one JPV Bootcamp Membership with monthly or annual billing; support, pay-it-forward, staff, test, and administrator-created access are not public product tiers.
 
 ## Version 3.7 platform direction and terminology
 
@@ -54,11 +64,11 @@ Version 3.4 remains the prior progress baseline, but the current client plan is 
 
 Canonical product terminology:
 
-- **Free** — non-paid access state for approved support, pay-it-forward recipients, staff/test access, or other administrator-created access. Free may exist in the system and in administrator reporting, but it is not the main public sales offer.
-- **Pro** — the single paid JPV Bootcamp subscription. Public copy should describe Pro with two payment options: monthly with no minimum commitment, and annual upfront with the approved annual discount.
-- **Historical tiers** — old paid and non-paid labels are migration inputs only. They must be mapped into Free, Pro, expired, revoked, suspended, or administrator-approved access states before cutover.
+- **JPV Bootcamp Membership** — the only public paid product, with monthly no-minimum-commitment and annual-upfront billing options.
+- **Non-paid access sources** — support, pay-it-forward, staff, test, administrator-created, and approved migration outcomes grant the same membership entitlement without creating a public product tier.
+- **Historical tiers** — old Free/Pro/VIP and other labels are migration inputs only. They must never drive current checkout or entitlement semantics; they map to the current membership entitlement, blocked, expired, revoked, suspended, or administrator-review states.
 
-The 10 July Version 3.5 codebase audit rebaselines current readiness after separating source presence, static prototypes, operational workflows, and accepted runtime evidence. The current implementation and documentation sync add launch-scoped completion, schema-migration planning, and protected generated-type handling without changing the historical audit itself. See `docs/client/ROADMAP_PROGRESS_STATUS.md` and `docs/V3_5_CODEBASE_ALIGNMENT_ASSESSMENT.md` for evidence.
+The 10 July Version 3.5 codebase audit rebaselines readiness after separating source presence, static prototypes, operational workflows, and accepted runtime evidence. The current implementation has since advanced beyond that audit: there is one public JPV Bootcamp Membership with monthly or annual billing, while historical Free/Pro/VIP labels are migration evidence only. See `docs/ARCHITECTURE.md`, `docs/client/ROADMAP_PROGRESS_STATUS.md`, and `docs/V3_5_CODEBASE_ALIGNMENT_ASSESSMENT.md` for the distinct current and historical evidence layers.
 
 ## Final architecture
 

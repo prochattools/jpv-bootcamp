@@ -1,5 +1,7 @@
 # Deployment Blocker Report — Commit 273bce1
 
+> **Historical/non-operative report.** This records a 2026-07-18 staging incident and is not current deployment evidence or production authorization. Use `docs/release/FUTURE_BRANCH_CUTOVER_PLAN.md` for the future protected cutover procedure.
+
 **Date:** 2026-07-18T13:55:27Z  
 **Session:** Staging verification attempt for commit 273bce1  
 **Status:** **BLOCKED** — Awaiting Dokploy deployment authorization

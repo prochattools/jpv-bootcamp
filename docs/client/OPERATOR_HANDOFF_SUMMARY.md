@@ -1,8 +1,19 @@
 # Operator Handoff Summary
 
+## Current repository reconciliation — 2026-08-23
+
+- **Working branch:** `feature/course-branding-and-preview`; starting committed tip `ae8c886d125200d94a8ee7aec005b6226a1304e0`.
+- **Cleanup record:** `docs/release/BRANCH_RECONCILIATION_2026-08-23.md`.
+- **Local gate:** after cleanup, `pnpm test:release` passed `164/164`; focused browser checks passed `60/60`; full browser E2E passed `148/148` with 60 declared skips. The shared `#A89A80` contrast defect is corrected.
+- **Operational boundary:** this pass performed no deployment, migration, provider call, production operation, branch merge, push, or worktree cleanup. The release-lead verified sanitized staging migration position is 36/36 applied with pending `[]`; exact-SHA deployment and provider evidence remain separate.
+- **Migrations applied:** current staging position supplied as 36/36 applied with no pending migration; no migration operation was performed in this reconciliation.
+- **Handoff order:** finish local validation, create the exact final SHA, then use the protected integration procedure in `docs/release/FUTURE_BRANCH_CUTOVER_PLAN.md`. Do not use the historical deployment rows below as current evidence.
+- **Current staging:** migration state is reconciled as 36/36 with no pending migration. Exact-SHA deployment, Prisma-health artifact, and acceptance remain unverified; the historical migration-29 handoff below must not be used as a current operator instruction.
+- **Phase 9.5 authority:** use `docs/release/PHASE_9_5_CURRENT_TRUTH_2026-08-23.md` for current truth and `docs/release/PHASE_9_5_FINAL_IMPLEMENTATION_BACKLOG_2026-08-23.md` for remaining work.
+
 <!-- Reconciliation note 2026-08-08: Verify the exact feature tip with `git rev-parse HEAD`. The release manifest contains 164 required gates. The live staging baseline remains `9c045fa5a5c327014c20fe9377f7d5368b550573`; guarded read-only plan run `31215369413` established the clean pre-apply state at reviewed code checkpoint `9e068cc8b0a5ec9573732fee3a78bed9995787a6`. -->
 
-## Current staging handoff — 2026-08-08
+## Historical staging handoff — 2026-08-08 (AUDIT RECORD ONLY)
 
 **Status:** **LAUNCH-SCOPE REPOSITORY IMPLEMENTATION COMPLETE — FINAL PRE-MIGRATION CLOSURE IN PROGRESS**
 
@@ -16,7 +27,7 @@
 - **External gates:** explicit migration authorization, backup evidence, maintenance window, rollback ownership, exact-SHA staging deployment evidence, provider verification, formal smoke, approved content, and stakeholder acceptance remain separate.
 - **Deferred/follow-up:** M2-01 and Phases 8–11 are not launch-scope blockers unless explicitly promoted.
 
-## Current state
+## Historical/current-state notes retained for audit — not an execution packet
 
 - Branch: `feature/course-branding-and-preview`
 - Version 3.7 current client go-live plan; Version 3.4 is the prior progress baseline
@@ -26,7 +37,7 @@
 - Current branch tip: run `git rev-parse HEAD` to confirm; staging health: `https://preview.jpvbootcamp.com/api/health`
 - Branch tip verification: verify the current tip with `git log --oneline -1` before operator action
 - PR / review URL: `https://github.com/prochattools/jpv-bootcamp/pull/3` (draft)
-- Migration inventory: the canonical 29-name Payload registry (`29/29` modules) is synchronized, and registration inventory alone is not applied database state. Guarded read-only plan run `31215369413` established the pre-apply staging state at reviewed code checkpoint `9e068cc8b0a5ec9573732fee3a78bed9995787a6`: migration `20260804_050000_member_account_action_reservations` (migration 29) is the sole missing Payload migration, zero unexpected/duplicate/malformed Payload records, and Prisma healthy. Before apply, rerun the guarded pre-apply plan against the exact final CI-green SHA; migration 29 remains unapplied until separately authorized.
+- Migration inventory: guarded read-only plan run `31215369413` reported migration 29 as the sole missing Payload migration at that historical checkpoint. The current source registry contains 36 names; registration inventory alone is not applied database state. The historical run and migration-29 instructions are retained as audit evidence only and must not be treated as current staging state.
 - Post-apply migration verification: the pre-apply `staging:payload-migration-plan` intentionally expects migration 29 to be missing and is not the all-29-applied verifier. After an authorized apply, use the guarded apply runner's post-check plus the general read-only `pnpm staging:migration-status` mechanism (not run against staging at this pre-apply checkpoint) to prove all expected Payload migrations are applied and Prisma remains healthy. Authorized operator evidence remains required before deployment.
 - Staging deployment target: this feature branch
 - Front-end website go-live milestone: 22 July 2026

@@ -1,12 +1,25 @@
 # JPV Bootcamp - Roadmap Progress Status
 
-<!-- Reconciliation note 2026-08-19: STAGING MIGRATION COMPLETE. Staging baseline updated to SHA `abf43893dc3f9980cc8eadc997cd7935e86e614f`, deploy run 32352382852. All 35 Payload migrations applied. Legacy import 935/935 complete. Members 51 (12 active, 39 blocked). Email, media, resources, and acceptance gates all green. Docs-closeout commit a6dccaf records complete evidence. Production NOT authorized. -->
+## Current repository reconciliation — 2026-08-23
 
-## Current checkpoint — 2026-08-19 (STAGING MIGRATION COMPLETE)
+- **Working branch:** `feature/course-branding-and-preview`; starting committed tip `ae8c886d125200d94a8ee7aec005b6226a1304e0`.
+- **Implementation state:** the current feature branch remains the source under review; its migration registry contains 36 registered migrations. Registration is not applied database state.
+- **Local validation:** after cleanup, `pnpm test:release` passed `164/164`; focused browser checks passed `60/60`; full browser E2E passed `148/148` with 60 declared skips. The initial 24 shared muted-token contrast failures were cleared.
+- **Cutover state:** production migration, production deployment, provider mutation, and branch advancement were not performed or authorized. Use `docs/release/FUTURE_BRANCH_CUTOVER_PLAN.md` for the later protected integration process.
+- **Evidence rule:** the dated staging/deployment values below are historical snapshots unless independently reverified against the final cutover SHA.
+- **Current staging migration state:** release-lead verified sanitized position is 36/36 Payload migrations applied with pending `[]`; the guarded workflow now uses explicit `--current-state=true` read-only verification. Exact-SHA deployment, provider, Prisma-health artifact, and acceptance evidence remain separate gates.
+- **Current baseline dossier:** `docs/release/FINAL_PRE_PRODUCTION_RECONCILIATION_2026-08-23.md`.
+- **Phase 9.5 current truth:** `docs/release/PHASE_9_5_CURRENT_TRUTH_2026-08-23.md`.
+- **Phase 9.5 backlog:** `docs/release/PHASE_9_5_FINAL_IMPLEMENTATION_BACKLOG_2026-08-23.md`.
+- **Current project phase:** Phase 9.5 — Feature Branch Reconciliation & Completion; Phase 10 production cutover has not started.
+
+<!-- Historical checkpoint note 2026-08-19/21: this older record reported STAGING MIGRATION COMPLETE at SHA `abf43893dc3f9980cc8eadc997cd7935e86e614f` / deploy run 32352382852 and later `9c0debe...` / run 32462177363. Its 35/35 and acceptance claims are retained below as audit history only. Current truth is 36/36 with pending [] as separately supplied and recorded in the Phase 9.5 baseline. Production NOT authorized. -->
+
+## Historical staging checkpoint — 2026-08-19/21 (NOT CURRENT LIVE EVIDENCE)
 
 - **ONLY PERMITTED OPERATIONAL LANE:** `feature/course-branding-and-preview` → `https://preview.jpvbootcamp.com` → Dokploy `clients-jpv-bootcamp-app-tp9xrk` / `I_2Vukga3cc3ZhaG-mUzU` → PostgreSQL `10.0.2.4:5433`, database `jpvbootcamp`, schema `jpvbootcamp_staging`.
 - **STAGING MIGRATION COMPLETE — 2026-08-19:** All 35 Payload migrations applied and verified on staging. Legacy import 935/935 complete. Members 51 total (12 active, all with emailVerifiedAt; 39 blocked). Staging email operational. Public media 24/24, private media 25/25. Lesson resources 25/25 published. Playwright tests 84/84 passed. Admin responsive 14/14. Migration contract test PASS. `DEPLOYMENT_ENV=staging` confirmed. Production NOT performed or authorized.
-- **CURRENT DEPLOYED BASELINE:** SHA `9c0debe3bdf0fc5a9c9be99a6697eb6bbff3419d`, deploy run 32462177363, deployed 2026-08-21. Phase 9 with LiveKit activation. Migration 36/36 applied. All staging acceptance gates green.
+- **RECORDED DEPLOYED BASELINE:** SHA `9c0debe3bdf0fc5a9c9be99a6697eb6bbff3419d`, deploy run 32462177363, deployed 2026-08-21. The record reports Phase 9 with LiveKit activation, migration 36/36, and green staging acceptance; none of those values is current-live evidence for the 2026-08-23 feature tip.
 - **COMPLETE LAUNCH-SCOPE REPOSITORY WORK:** M0-01 through M0-09, M1-01 through M1-06 in their documented state, UI-01 design/admin hardening, release/browser automation, media persistence, migration inventory/preflight, email queue/guard, Stripe test-mode behavior, partner/sponsored staging boundaries, and durable account-action reservation/finalization source hardening. All 35 migrations applied.
 - **LOCALLY VERIFIED CONTRACT:** the release manifest contains `164/164` required gates. Final closure complete at docs-closeout commit a6dccaf.
 - **CANONICAL EVIDENCE:** `docs/client/MIGRATION_APPROVAL_STATUS.md`, `docs/CURRENT_WORK_HANDOFF.md`, and `docs/PREVIEW_RELEASE_READINESS.md` record complete staging migration evidence and acceptance results.
@@ -20,9 +33,9 @@ Current client truth: `docs/client/JPV_Bootcamp_Platform_Expansion_Go_Live_Plan_
 
 Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`.
 
-## Current position
+## Historical position — retained for audit only
 
-**Position:** **STAGING MIGRATION COMPLETE — 2026-08-19. NEXT PHASE ROADMAP ACTIVE.**
+**Position recorded at the 2026-08-19/21 checkpoint:** **STAGING MIGRATION COMPLETE — NEXT PHASE ROADMAP ACTIVE.** This is retained history, not the current release position.
 
 **Staging migration complete:** SHA `abf43893dc3f9980cc8eadc997cd7935e86e614f`, deploy run 32352382852. All 35 Payload migrations applied and verified. Legacy import 935/935 applied. Members 51 (12 active login-eligible, 39 blocked). Staging email operational. All media and resources complete. Playwright 84/0, admin-responsive 14/14, migration contract PASS. `DEPLOYMENT_ENV=staging` confirmed. Canonical evidence documented in `docs/client/MIGRATION_APPROVAL_STATUS.md` and docs-closeout commit a6dccaf. **Staging migration has NO remaining engineering blocker.**
 
@@ -34,9 +47,9 @@ Status update procedure: `docs/client/STATUS_UPDATE_PROCEDURE.md`.
 3. **Phase 10 — Production cutover** — ONLY under separate explicit authorization; not part of current roadmap.
 4. **Phase 11 — Partner Affiliates and Reporting** — deferred post-cutover. Partner directory, member applications, recording/delivery, reports/export, audit. M2-01 remains post-core unless explicitly promoted.
 
-**Staging acceptance:** Phase 8 green. Phase 9 acceptance complete 2026-08-21. All LiveKit token, room, grant, and browser UI checks passed (5/5 Playwright CALLS-001–005). Remaining human-only validation: actual WebRTC AV stream and two-participant call (non-blocking for staging sign-off). Next: Phase 10 production cutover requires separate explicit authorization.
+**Recorded staging acceptance:** Phase 8 green. Phase 9 acceptance was reported complete on 2026-08-21. All LiveKit token, room, grant, and browser UI checks were reported passed (5/5 Playwright CALLS-001–005). Remaining human-only validation was actual WebRTC AV stream and two-participant call. These are historical results; current exact-SHA staging verification is still required. Phase 10 production cutover requires separate explicit authorization.
 
-**Hard stops:** Do not apply additional migrations to staging. Current state is 36/36 applied; no further migrations are authorized. Do not touch `main`. Do not describe static prototypes as operational workflows. Do not perform production operation or cutover without separate explicit authorization.
+**Historical hard stops:** Do not apply additional migrations to staging. This historical record is not an authorization. The 36/36 value is not current-live evidence; current migration state must be established by the guarded read-only status path before any future authorization. Do not touch `main`. Do not describe static prototypes as operational workflows. Do not perform production operation or cutover without separate explicit authorization.
 
 ## Launch-critical visual coherence packet (UI-01)
 

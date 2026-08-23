@@ -1,8 +1,20 @@
 # JPV Bootcamp Preview Release Readiness
 
-## STAGING MIGRATION COMPLETE — 2026-08-19
+## Current repository reconciliation — 2026-08-23
 
-This section supersedes the 2026-08-08 checkpoint below. All staging migration and acceptance gates are now closed.
+- **Working branch:** `feature/course-branding-and-preview`; starting committed tip `ae8c886d125200d94a8ee7aec005b6226a1304e0`.
+- **Repository gate:** after cleanup, `pnpm test:release` passed `164/164`; focused browser checks passed `60/60`; full browser E2E passed `148/148` with 60 declared skips. The shared `#A89A80` contrast failures are corrected.
+- **Code cleanup:** removed the tracked sponsored-claim `.bak`; the current page remains the only supported implementation.
+- **Migration boundary:** the release-lead verified sanitized staging position is 36/36 Payload migrations applied with pending `[]`; no migration operation was performed by this pass. The source registry and current read-only workflow agree with that state.
+- **Evidence distinction:** registration inventory is not applied database state; the 36/36 position is the separately supplied sanitized staging snapshot, not evidence that the dirty feature worktree is deployed. The general `pnpm staging:migration-status` adapter remains read-only and evidence-gated.
+- **External state:** exact-SHA staging deployment, provider verification, production deployment, production migration, and cutover approval were not performed or reverified by this pass. Keep the final status `NO-GO` until those separate gates have fresh evidence at the final SHA.
+- **Cutover procedure:** `docs/release/FUTURE_BRANCH_CUTOVER_PLAN.md`.
+- **Phase 9.5 current truth:** `docs/release/PHASE_9_5_CURRENT_TRUTH_2026-08-23.md`.
+- **Phase 9.5 backlog:** `docs/release/PHASE_9_5_FINAL_IMPLEMENTATION_BACKLOG_2026-08-23.md`.
+
+## Historical staging checkpoint — 2026-08-19 (STAGING MIGRATION COMPLETE)
+
+This section records the 2026-08-19 historical checkpoint. At that checkpoint, all staging migration and acceptance gates were reported closed; this is not current-live evidence. The Phase 9.5 current-truth document is authoritative for the present state.
 
 - **Status:** `STAGING MIGRATION COMPLETE`
 - **Branch:** `feature/course-branding-and-preview`
@@ -48,9 +60,9 @@ The preview release path must use the reviewed feature branch and an exact commi
 Current operator branch: `feature/course-branding-and-preview`.
 Verify the exact branch tip with `git log --oneline -1` before operator action.
 
-**Applied-state evidence is now established for the pre-apply checkpoint.** Registration inventory alone is not applied database state; the applied-state claim here comes from guarded database evidence, not from registration or health inventory. Guarded read-only plan run `31215369413` proved migration 29 solely missing, no unexpected/duplicate/malformed Payload records, and healthy Prisma history at the reviewed code checkpoint. Because the final closure commit changes the exact SHA, operators must obtain a fresh `plan_ok` against that final SHA before apply.
+**Current migration truth — Phase 9.5:** the release-lead verified sanitized staging position is 36/36 Payload migrations applied with pending `[]`, ending at `20260820_000000_live_session_space`. No migration operation was performed by this reconciliation. The raw timestamped artifact and exact-SHA deployment identity remain separate evidence requirements.
 
-`pnpm staging:payload-migration-plan` is a **pre-apply** verifier: it intentionally expects migration 29 as the sole missing migration. After apply, do not expect that pre-apply plan to return `plan_ok`; rely on the guarded apply runner's own post-apply checks plus the general read-only `pnpm staging:migration-status` mechanism to prove all 29 are applied and Prisma remains healthy.
+`pnpm staging:payload-migration-plan -- --current-state=true` is the current **read-only post-apply state verifier**: it expects all 36 registered Payload migrations applied and no pending batch. The closed 35→36 pre-apply/apply/rollback path remains separately guarded and non-current; no apply is authorized by this document.
 
 Migration apply requires five dynamic operator values in addition to fixed target flags: `expected-hostname`, `operator-id`, `backup-evidence-id`, `maintenance-window-id`, and `rollback-owner`. Any schema write requires exact target authorization, backup evidence, a maintenance window, and rollback ownership.
 
@@ -121,10 +133,10 @@ Static preflight automation is available via `pnpm staging:static-preflight`; it
 
 | Gate | Current status | Evidence owner | Notes |
 | --- | --- | --- | --- |
-| Migration evidence and apply path | Pre-apply evidence clean; final exact-SHA refresh required | `docs/client/MIGRATION_APPROVAL_PACKET.md`, `docs/client/MIGRATION_APPROVAL_STATUS.md` | Run `31215369413` returned `plan_ok`: migration 29 solely missing, zero unexpected/duplicate/malformed records, Prisma healthy. Rerun against the final CI-green SHA before apply authorization. |
+| Migration evidence and apply path | Current sanitized position: 36/36 applied, pending `[]`; exact-SHA artifact refresh required later | `docs/release/PHASE_9_5_CURRENT_TRUTH_2026-08-23.md`, `scripts/release/runStagingPayloadMigration.ts` | Current-state read-only gate expects 36 applied and no pending batch. Historical migration-29/pre-apply evidence remains audit-only. |
 | Decision packets and owners | Ready for external approval review | `docs/decisions/`, `pnpm staging:decision-readiness` | Repository-owned decision records, owner assignments, dependency order, and rollback statements are now complete and internally validated. |
 | Migration rehearsal and rollback ownership | Static rehearsal passed; disposable execution not yet run | `docs/client/MIGRATION_REHEARSAL_RUNBOOK.md`, `docs/release/ROLLBACK_EVIDENCE_CHECKLIST.md` | Repository-owned static rehearsal and evidence are complete; localhost-only disposable execution stays opt-in and target-environment rehearsal remains gated. |
-| Prisma migration target state | Verified healthy in pre-apply plan | guarded staging plan run `31215369413` | `plan_ok` requires no missing, unexpected, duplicate, failed, in-progress, or rolled-back Prisma migration records. Reconfirm at the final exact SHA before apply. |
+| Prisma migration target state | Staging operational supplied; fresh raw Prisma-health field not present in this local snapshot | Phase 9.5 current truth | Retain explicit Prisma-health evidence in the later exact-SHA sanitized packet; no migration operation is implied. |
 | Provider/email verification | Repository simulation passed; live verification not executed | `docs/client/PROVIDER_EMAIL_READINESS.md`, `docs/client/PROVIDER_EMAIL_EVIDENCE_TEMPLATE.md` | Mocked/local provider simulation is repository-owned and complete; live verification still requires credentials and operator evidence. |
 | Stripe checkout/webhook/billing portal live verification | Repository simulation passed; live verification not executed | `docs/client/PROVIDER_EMAIL_READINESS.md` | Local validation and provider simulation passed safely; live verification is separate. |
 | Representative programme and public-copy approval | Blocked | `docs/client/FRONTEND_CONTENT_INTAKE_CHECKLIST.md`, `docs/client/FRONTEND_COPY_APPROVAL_PACKET.md` | Programme remains preview-only until approved content exists. |
@@ -704,12 +716,14 @@ Stop conditions: <conditions>
 This does not authorize Git push, Payload migrations, Prisma/database-deploy startup, provider dry-run, provider apply, preview deployment, production deployment, live smoke checks, merge, rebase, reset, or force-push.
 ```
 
-### Payload migration authorization (historical — non-operative)
+### Payload migration authorization (historical — closed; non-operative)
 
 > **Historical record only.** The generic template below authorized earlier migrations
 > (`20260701_201500_member_email_verification` and `20260702_001500_member_account_action_purposes`)
 > in a prior release cycle. It is **not** the current operative authorization packet.
-> The current operative packet is **§ Payload migration 29 authorization** below.
+> There is no current operative migration-29 packet. The current migration
+> position is 36/36 applied with pending `[]`; see the Phase 9.5 current-truth
+> document. This entire section is retained for audit provenance only.
 > Do not use the template below to authorize any live operation.
 
 <details>
@@ -734,7 +748,7 @@ This does not authorize push, Prisma migrations, schema initialization, provider
 
 </details>
 
-### Payload migration 29 authorization (account_action_reservation columns)
+### Payload migration 29 authorization (historical — closed; non-operative)
 
 Migration 29 (`20260804_050000_member_account_action_reservations`) adds reservation/finalization columns and indexes to `payload_member_verification_tokens`.
 

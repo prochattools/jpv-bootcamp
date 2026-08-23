@@ -1,5 +1,7 @@
 # Post-Migration29 Forward-Schema Preparation
 
+> **Historical planning record — 2026-08-15.** The repository later registered migrations 29–36, including the forward schemas described here. The “undated/unregistered” and “migration29 sole pending” statements below are retained for design provenance only and are not current source or staging state. Current release status is in `docs/release/FINAL_PRE_PRODUCTION_RECONCILIATION_2026-08-23.md`.
+
 **Status:** preparation only. This is not a dated migration module and must not be registered or applied while migration29 remains the sole canonical pending migration.
 
 **Reviewed application checkpoint:** `43d569211acde5ae80f6e33524d40d432b417ce8`.

@@ -1,5 +1,11 @@
 # Main / Feature Branch Business Reconciliation
 
+> **Historical branch reconciliation — 2026-08-02.** The feature tip
+> `c15cd578` and main tip `4995dcc3` below are stale audit checkpoints. This
+> document is not current branch state, a merge instruction, or cutover
+> authorization. Use `docs/release/FINAL_PRE_PRODUCTION_RECONCILIATION_2026-08-23.md`
+> and `docs/release/BRANCH_RECONCILIATION_2026-08-23.md` for current truth.
+
 **Branch:** `feature/course-branding-and-preview`
 **Feature tip:** `c15cd578`
 **Main tip:** `4995dcc3`

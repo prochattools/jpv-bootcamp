@@ -1,5 +1,11 @@
 # Migration Approval Status
 
+> **Historical record — not current operator state.** The 35/35 values and
+> deployment details below belong to the 2026-08-19 checkpoint. Current Phase
+> 9.5 migration truth is 36/36 applied with pending `[]`; see
+> `docs/release/PHASE_9_5_CURRENT_TRUTH_2026-08-23.md`. Production remains
+> unauthorized.
+
 <!-- Reconciliation note 2026-08-19: MIGRATION INVENTORY EXTENDED TO 35. Migrations 30-35 (member_profile_parity, portal_settings, and associated hardening) added and applied to staging. Authorization cycle reset. Branch HEAD advances from 43d569211acde5ae80f6e33524d40d432b417ce8 to current tip. All 35 migrations confirmed applied on staging. Authorization required before any production migration. -->
 
 ## STAGING MIGRATION COMPLETE — 2026-08-19

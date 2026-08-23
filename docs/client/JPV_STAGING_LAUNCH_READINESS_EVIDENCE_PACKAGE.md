@@ -1,12 +1,16 @@
 # JPV Bootcamp Staging Launch Readiness Evidence Package
 
-**Status:** FROZEN STAGING READINESS CHECKPOINT  
+**Status:** HISTORICAL STAGING READINESS CHECKPOINT — NOT CURRENT LIVE EVIDENCE
 **Date:** 2026-08-21  
 **Scope:** Staging only. Production operation is not authorized.
 
+> This package records the 2026-08-21 staging snapshot. It does not bind the current feature-branch tip, and its deployed SHA, migration count, provider state, and acceptance results were not reverified by the 2026-08-23 reconciliation. Use `docs/release/FINAL_PRE_PRODUCTION_RECONCILIATION_2026-08-23.md` as the current release baseline.
+
+> Phase 9.5 current truth is now `docs/release/PHASE_9_5_CURRENT_TRUTH_2026-08-23.md`; remaining completion work is in `docs/release/PHASE_9_5_FINAL_IMPLEMENTATION_BACKLOG_2026-08-23.md`.
+
 ## Executive Summary
 
-JPV Bootcamp staging has reached launch-readiness review status. Phase 8 Member Portal Operationalization and Phase 9 LiveKit Group Calls are complete. The staging environment is operational, deployment reliability issues have been resolved, and acceptance evidence has been recorded.
+The recorded 2026-08-21 staging snapshot reported Phase 8 Member Portal Operationalization and Phase 9 LiveKit Group Calls as complete. Deployment reliability and acceptance evidence were recorded at that time, but the snapshot is not a current-live claim.
 
 This document is an evidence checkpoint, not authorization for production cutover.
 
@@ -65,7 +69,7 @@ Dokploy registry configuration previously generated an incorrect image namespace
 
 ## Migration Evidence
 
-Current migration state:
+Recorded migration snapshot (not current verified state):
 
 - Payload migrations: 36/36 applied
 - Phase 9 migration: `20260820_000000_live_session_space`
@@ -108,9 +112,9 @@ The following remain prohibited without explicit authorization:
 
 ## Final Position
 
-Current state:
+Recorded state at the 2026-08-21 checkpoint:
 
-**STAGING READY**
+**HISTORICAL STAGING SNAPSHOT — CURRENT READINESS NOT VERIFIED**
 
 Completed:
 
@@ -119,7 +123,7 @@ Completed:
 - Deployment recovery
 - Acceptance verification
 
-Next phase requires separate explicit authorization:
+Any current next phase requires separate explicit authorization and a fresh exact-SHA staging evidence packet:
 
 **Phase 10 — Production Cutover**
 

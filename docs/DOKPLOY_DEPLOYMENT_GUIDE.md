@@ -1,5 +1,7 @@
 # Dokploy Deployment Guide — JPV Bootcamp Staging
 
+> **Historical/non-operative reference.** This guide contains staging-era operator detail and must not be used as production authorization. For current Phase 9.5 truth, use `docs/release/PHASE_9_5_CURRENT_TRUTH_2026-08-23.md`; for remaining work use `docs/release/PHASE_9_5_FINAL_IMPLEMENTATION_BACKLOG_2026-08-23.md`; for the protected future cutover procedure use `docs/release/FUTURE_BRANCH_CUTOVER_PLAN.md`. Do not record or expose credentials; live target identity must be independently verified before any authorized operation.
+
 **Target**: clients-jpv-bootcamp-app-tp9xrk  
 **Dokploy app ID**: `I_2Vukga3cc3ZhaG-mUzU`  
 **Domain**: `preview.jpvbootcamp.com`  
@@ -149,7 +151,7 @@ All endpoints under `https://dokploy.prochat.tools/api/` (NOT `/api/trpc`).
 
 ---
 
-## Current State (2026-07-20)
+## Historical State (2026-07-20 — NOT CURRENT LIVE EVIDENCE)
 
 - **HEAD**: `a77ecc9` (feature/course-branding-and-preview)
 - **Deployed image HEAD**: `de1e9c68ba18bc6d1b08894145f69d4ff555c75b`

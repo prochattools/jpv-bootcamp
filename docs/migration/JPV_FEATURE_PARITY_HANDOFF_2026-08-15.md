@@ -1,5 +1,7 @@
 # JPV Bootcamp Feature-Parity Migration Handoff — 2026-08-15
 
+> **Historical handoff — not a current execution packet.** This document records the 2026-08-15 implementation checkpoint and its migration29 safety boundary. The current source has advanced to a 36-migration registry; use `docs/release/FINAL_PRE_PRODUCTION_RECONCILIATION_2026-08-23.md` for current release status. No staging or production action is authorized by this historical handoff.
+
 ## Resume authority
 
 - sourceId: `prochattools-jpv-bootcamp`

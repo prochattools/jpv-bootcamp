@@ -4,9 +4,20 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 
 ---
 
-## STAGING MIGRATION COMPLETE — 2026-08-19
+## Current repository reconciliation — 2026-08-23
 
-This section supersedes the 2026-08-08 pre-migration checkpoint below. All staging migration and acceptance gates are closed.
+- **Working branch:** `feature/course-branding-and-preview`; starting committed tip `ae8c886d125200d94a8ee7aec005b6226a1304e0`.
+- **Cleanup record:** `docs/release/BRANCH_RECONCILIATION_2026-08-23.md`.
+- **Source state:** 36 registered Payload migrations; no database migration, deployment, provider mutation, or production operation was performed by this pass.
+- **Local validation:** after cleanup, `pnpm test:release` passed `164/164`; focused browser checks passed `60/60`; full browser E2E passed `148/148` with 60 declared skips. The initial shared `#A89A80` muted-token contrast defect was corrected.
+- **Protected residue:** pre-existing `.claude/worktrees/**` changes and `newrelic_agent.log` remain untouched.
+- **Next gate:** review the cleanup diff, rerun browser/release validation, then pin a new exact SHA before any cutover work. Historical deployment rows below are not current live evidence.
+- **Current staging migration truth:** the release-lead verified sanitized position is 36/36 Payload migrations applied with no pending migration; the guarded workflow now verifies this through explicit `--current-state=true` read-only mode. Exact-SHA deployment, provider, Prisma-health artifact, and acceptance evidence remain separate gates.
+- **Phase 9.5 authority:** use `docs/release/PHASE_9_5_CURRENT_TRUTH_2026-08-23.md` for current status and `docs/release/PHASE_9_5_FINAL_IMPLEMENTATION_BACKLOG_2026-08-23.md` for remaining work.
+
+## Historical staging checkpoint — 2026-08-19/21 (NOT CURRENT LIVE EVIDENCE)
+
+This section records the 2026-08-19/21 historical checkpoint. At that checkpoint, all staging migration and acceptance gates were reported closed; that claim is not current-live evidence. The Phase 9.5 current-truth document is authoritative for the present state.
 
 | Item | Value |
 |---|---|
@@ -37,7 +48,9 @@ This section supersedes the 2026-08-08 pre-migration checkpoint below. All stagi
 
 ---
 
-## Current checkpoint — final pre-migration repository closure (2026-08-08)
+## Historical checkpoint — final pre-migration repository closure (2026-08-08)
+
+> The remainder of this section is retained as an audit record from the 2026-08-08 pre-migration lane. Its migration-29, deployed-SHA, and operator instructions are not current instructions. The current source registry and current release gaps are recorded in `docs/release/FINAL_PRE_PRODUCTION_RECONCILIATION_2026-08-23.md`.
 
 - **Only permitted branch:** `feature/course-branding-and-preview`.
 - **Only permitted runtime/deployment target:** `https://preview.jpvbootcamp.com`, Dokploy slug `clients-jpv-bootcamp-app-tp9xrk`, app ID `I_2Vukga3cc3ZhaG-mUzU`.

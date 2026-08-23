@@ -1,5 +1,13 @@
 # Go / No-Go Checklist
 
+## Current repository review — 2026-08-23
+
+- **Working branch:** `feature/course-branding-and-preview`; starting committed tip `ae8c886d125200d94a8ee7aec005b6226a1304e0`.
+- **Local evidence:** after cleanup, `pnpm test:release` passed `164/164`; focused browser checks passed `60/60`; full browser E2E passed `148/148` with 60 declared skips. The shared muted-token contrast defect is corrected.
+- **External evidence:** staging/provider/database/production state was not changed or reverified by this pass. Keep the checklist `NO-GO` until exact-SHA operator evidence and approvals exist.
+- The older dated identity and gate rows below are retained as historical evidence and must not be copied as current release identity.
+- **Phase 9.5 current truth:** `docs/release/PHASE_9_5_CURRENT_TRUTH_2026-08-23.md`; **remaining work:** `docs/release/PHASE_9_5_FINAL_IMPLEMENTATION_BACKLOG_2026-08-23.md`.
+
 Default decision state: `NO-GO`
 
 Do not change this checklist to `GO` until the required operator evidence exists.
@@ -8,6 +16,8 @@ Decision-readiness prerequisite: `pnpm staging:decision-readiness`
 Current repository result: `DECISION-READY, EXTERNAL APPROVALS PENDING`
 
 ## Identity
+
+> The identity rows below are historical snapshots retained for audit. They are not the current candidate identity; use `docs/release/PHASE_9_5_CURRENT_TRUTH_2026-08-23.md`.
 
 - Branch: `feature/course-branding-and-preview`
 - Commit: `eb03a08` (local HEAD); staging confirmed running `eb03a08` design tokens (imageTag env var not set in Dokploy — cosmetic only; design confirmed in deployed HTML, 2026-07-21)
