@@ -53,6 +53,10 @@ export type SafeCommunityRichTextNode =
       text: string
       marks: SafeCommunityTextMarks
     }
+  | {
+      type: 'legacy-html'
+      html: string
+    }
 
 export type MemberCommunityComment = {
   id: string
@@ -202,6 +206,19 @@ function safeHttpUrl(value: unknown): string | null {
   }
 }
 
+function safeLegacyHtml(value: unknown): string | null {
+  const html = asString(value)
+  if (!html || html.length > 100_000) return null
+
+  // `safeHtml` is produced by the migration sanitizer. Reject stale or malformed
+  // records defensively rather than allowing executable or remotely embedded HTML
+  // to cross the community renderer boundary.
+  if (/<\s*(?:script|style|iframe|video|audio|object|embed|form|svg)\b/i.test(html)) return null
+  if (/\son[a-z]+\s*=|(?:javascript|vbscript|data):/i.test(html)) return null
+
+  return html
+}
+
 function projectChildren(value: unknown): SafeCommunityRichTextNode[] {
   if (!Array.isArray(value)) return []
 
@@ -271,6 +288,13 @@ function projectNode(value: unknown): SafeCommunityRichTextNode | null {
         text,
         marks: normalizeTextMarks(node.format),
       }
+    }
+    case 'block': {
+      const fields = asRecord(node.fields)
+      if (fields?.blockType !== 'legacyHTML') return null
+      const html = safeLegacyHtml(fields.safeHtml)
+      if (!html) return null
+      return { type: 'legacy-html', html }
     }
     default:
       return null

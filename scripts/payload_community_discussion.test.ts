@@ -582,6 +582,13 @@ function testRichTextProjection(): void {
         { type: 'iframe', src: 'https://example.com' },
         { type: 'embed', url: 'https://example.com' },
         { type: 'component', name: 'ExecutableWidget' },
+        {
+          type: 'block',
+          fields: {
+            blockType: 'legacyHTML',
+            safeHtml: '<div data-legacy-embed-preserved="iframe">Legacy iframe preserved</div>',
+          },
+        },
       ],
     },
   })
@@ -596,6 +603,8 @@ function testRichTextProjection(): void {
   assert.match(serialized, /"italic":true/)
   assert.match(serialized, /"underline":true/)
   assert.match(serialized, /"code":true/)
+  assert.match(serialized, /"type":"legacy-html"/)
+  assert.match(serialized, /Legacy iframe preserved/)
   assert.doesNotMatch(
     serialized,
     /javascript:|data:|file:|blob:|user:pass|<script|"type":"script"|"type":"style"|"type":"iframe"|"type":"embed"|ExecutableWidget/i
@@ -603,14 +612,21 @@ function testRichTextProjection(): void {
 }
 
 function testPageActionAndPostingSources(): void {
-  const renderer = fs.readFileSync(
+const renderer = fs.readFileSync(
     path.resolve(
       process.cwd(),
       'src/components/community/CommunityRichText.tsx'
     ),
     'utf8'
   )
+  const legacyRenderer = fs.readFileSync(
+    path.resolve(process.cwd(), 'src/components/community/CommunityLegacyHtml.tsx'),
+    'utf8',
+  )
   assert.doesNotMatch(renderer, /dangerouslySetInnerHTML/)
+  assert.match(renderer, /CommunityLegacyHtml/)
+  assert.match(legacyRenderer, /safeHtml field/)
+  assert.match(legacyRenderer, /dangerouslySetInnerHTML/)
   assert.match(renderer, /rel='noopener noreferrer'/)
   assert.match(renderer, /target='_blank'/)
 

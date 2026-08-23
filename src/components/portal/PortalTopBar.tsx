@@ -41,10 +41,10 @@ export function PortalTopBar({ onMobileMenuOpen }: PortalTopBarProps) {
 
   return (
     <header
-      className='flex h-16 shrink-0 items-center justify-between border-b border-jpv-border bg-jpv-canvas px-4 sm:px-6 lg:px-8'
+      className='flex h-16 min-w-0 shrink-0 items-center justify-between border-b border-jpv-border bg-jpv-canvas px-2 sm:px-6 lg:px-8'
       data-portal-topbar
     >
-      <div className='flex items-center gap-3'>
+      <div className='flex min-w-0 flex-1 items-center gap-1 sm:gap-3'>
         <button
           aria-label='Open navigation'
           className='flex min-h-11 min-w-11 items-center justify-center rounded-jpv-action text-jpv-ink transition hover:bg-jpv-surface lg:hidden'
@@ -53,10 +53,10 @@ export function PortalTopBar({ onMobileMenuOpen }: PortalTopBarProps) {
         >
           <Menu aria-hidden='true' className='h-5 w-5' />
         </button>
-        <h1 className='text-lg font-semibold text-jpv-ink'>{pageTitle}</h1>
+        <h1 className='min-w-0 truncate text-lg font-semibold text-jpv-ink'>{pageTitle}</h1>
       </div>
 
-      <div className='flex items-center gap-1'>
+      <div className='flex shrink-0 items-center gap-0 sm:gap-1'>
         <ThemeToggle />
         <button
           aria-label='Notifications'

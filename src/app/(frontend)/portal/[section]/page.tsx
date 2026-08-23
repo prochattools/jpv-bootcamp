@@ -625,7 +625,7 @@ export default async function PortalSectionPage({ params, searchParams }: Portal
           </section>
         ) : null}
 
-        {billingStatus.hasActiveSubscription ? (
+        {billingStatus.hasActiveSubscription || billingOverview.hasPaidSubscription ? (
           <>
             <section className={portalCardClass} id='status'>
               <h2 className='text-lg font-semibold text-jpv-ink'>Subscription status</h2>

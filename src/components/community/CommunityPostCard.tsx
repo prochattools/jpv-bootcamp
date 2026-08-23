@@ -41,15 +41,15 @@ export function CommunityPostCard({ href, post }: CommunityPostCardProps) {
   return (
     <Link
       aria-label={`Read discussion: ${post.title}`}
-      className='group block rounded-jpv-card border border-jpv-border bg-jpv-canvas shadow-jpv-card transition hover:-translate-y-0.5 hover:border-jpv-sunshine-ink/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-jpv-green'
+      className='group block min-w-0 rounded-jpv-card border border-jpv-border bg-jpv-canvas shadow-jpv-card transition hover:-translate-y-0.5 hover:border-jpv-sunshine-ink/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-jpv-green'
       href={href}
     >
-      <article className='p-5 sm:p-6'>
-        <div className='flex flex-wrap items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-jpv-sunshine-ink'>
+      <article className='min-w-0 p-5 sm:p-6'>
+        <div className='flex min-w-0 flex-wrap items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-jpv-sunshine-ink'>
           {post.pinned ? <span className='rounded-full bg-jpv-surface-strong px-2.5 py-1'>Pinned</span> : null}
           <span>{post.postType ?? 'discussion'}</span>
           <span aria-hidden='true'>·</span>
-          <time dateTime={post.createdAt ?? undefined}>{formatDate(post.createdAt)}</time>
+          <time className='min-w-0 break-words' dateTime={post.createdAt ?? undefined}>{formatDate(post.createdAt)}</time>
         </div>
 
         <div className='mt-5 flex items-start gap-3'>

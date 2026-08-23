@@ -80,6 +80,7 @@ function testCanonicalBillingParity(): void {
   assert.match(portalSectionsSource, /getBillingStatus\(memberEmail\)/)
   assert.match(portalSectionsSource, /getMemberBillingOverview\(payload, memberId\)/)
   assert.match(portalSectionsSource, /resolvePortalBillingPresentation\(/)
+  assert.match(portalSectionsSource, /billingStatus\.hasActiveSubscription\s*\|\|\s*billingOverview\.hasPaidSubscription/)
   assert.match(portalSectionsSource, /Billing details/)
   assert.match(portalSectionsSource, /Manage subscription/)
   assert.match(portalSectionsSource, /MemberCheckoutButtons/)

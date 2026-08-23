@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 
+import { CommunityLegacyHtml } from '@/components/community/CommunityLegacyHtml'
 import type { SafeCommunityRichTextNode } from '@/lib/payloadCourse/communityDiscussion'
 
 type CommunityRichTextProps = {
@@ -56,6 +57,8 @@ function CommunityRichTextNode({ node }: { node: SafeCommunityRichTextNode }) {
       )
     case 'text':
       return renderMarkedText(node)
+    case 'legacy-html':
+      return <CommunityLegacyHtml html={node.html} />
     default:
       return null
   }
