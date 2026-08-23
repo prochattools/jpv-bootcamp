@@ -51,12 +51,12 @@ target, timestamp, artifact, and verification result.
 | Check | Current result |
 |---|---|
 | Active branch | `feature/course-branding-and-preview` |
-| Local HEAD | `ae8c886d125200d94a8ee7aec005b6226a1304e0` |
-| Remote feature tip | Matched local HEAD at inspection |
+| Local HEAD | `065249f88e40096a47ec8306a0e0a746db274a01` |
+| Remote feature tip | Matches local HEAD after the release-cleanup push |
 | `main` | `6970b3e7d4131abf2614991e694f8713f5168b33` in the separate main worktree |
 | Divergence | `main...feature = 16 769` |
-| Final release SHA | Not established; the worktree is dirty |
-| Protected residue | `.claude/worktrees/**` and `newrelic_agent.log` remain untouched |
+| Final feature-branch SHA | `065249f88e40096a47ec8306a0e0a746db274a01`; exact-SHA staging evidence is still not established |
+| Protected residue | `.claude/worktrees/**`, `newrelic_agent.log`, and the tracked `.bak` remain untouched |
 | Branch operations | No merge, reset, rebase, force-push, rename, or deletion performed |
 
 The dirty worktree also contains intentional documentation and cleanup changes
@@ -199,11 +199,12 @@ media, preview-content/scope, source-disposition, migration-contract, and
 final-SHA items are closed. Launch readiness is not expressed as a percentage
 because current exact-SHA staging and provider evidence is absent.
 
-The migration truth reconciliation is now complete for this pass. The next
-highest-value task is to freeze one intentional final feature-branch SHA and
-prepare the separately authorized exact-SHA staging deployment and acceptance
-evidence packet. That work must preserve the current 36/36, no-pending
-migration truth and must not be treated as production authorization.
+The migration truth reconciliation and final feature-branch cleanup commit are
+complete for this pass. The next highest-value task is to prepare the
+separately authorized exact-SHA staging deployment and acceptance evidence
+packet for `065249f88e40096a47ec8306a0e0a746db274a01`. That work must preserve
+the current 36/36, no-pending migration truth and must not be treated as
+production authorization.
 
 ## 10. Phase 9.5 exit gate
 
