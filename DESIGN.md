@@ -2,20 +2,20 @@
 name: JPV Bootcamp
 description: A bright, purposeful design system for property education, membership, and community.
 colors:
-  brand-green: "#2F805B"
-  brand-green-deep: "#123D2D"
-  brand-green-bright: "#6BCF8A"
+  brand-green: "#2C9E9E"
+  brand-green-deep: "#144E4E"
+  brand-green-bright: "#74C4C4"
   sunshine: "#E8C65A"
   sunshine-ink: "#6F5A1F"
   urgent-red: "#C94F4F"
   danger-surface: "#F8ECE8"
   danger-ink: "#78463D"
-  canvas: "#FFFEFA"
-  surface: "#F5F3EC"
-  surface-strong: "#E8ECE7"
-  ink: "#24332B"
-  muted: "#687068"
-  border: "#DEDBD1"
+  canvas: "#FAF8F4"
+  surface: "#F4F0E8"
+  surface-strong: "#E9E2D5"
+  ink: "#3A3428"
+  muted: "#6E6350"
+  border: "#D9CFBC"
 typography:
   display:
     fontFamily: "Libre Baskerville, Georgia, serif"

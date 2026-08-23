@@ -6,7 +6,7 @@ export const jpvDesignTokens = {
     brandActive: '#1B6767',  // teal-700
     brandDeep: '#144E4E',    // teal-800
     brandDarkest: '#0D3838', // teal-900
-    brandLight: '#4EB0B0',   // teal-400
+    brandLight: '#74C4C4',   // teal-300 — bright text on dark surfaces
     brandFaint: '#EAF6F6',   // teal-50
     sunshine: '#e8c65a',
     sunshineInk: '#6f5a1f',
@@ -17,7 +17,7 @@ export const jpvDesignTokens = {
     surface: '#F4F0E8',      // beige-100
     surfaceStrong: '#E9E2D5', // beige-200
     ink: '#3A3428',          // beige-900 — primary text
-    muted: '#A89A80',        // beige-500 — muted text
+    muted: '#6E6350',        // beige-700 — accessible muted text
     secondary: '#6E6350',    // beige-700 — secondary text
     border: '#D9CFBC',       // beige-300
     focus: '#238383',        // teal-600
@@ -78,6 +78,7 @@ export function resolveJpvLogoUrl(baseUrl: string | URL): string {
 export const jpvCssVariables = {
   '--jpv-brand': jpvDesignTokens.colors.brand,
   '--jpv-brand-hover': jpvDesignTokens.colors.brandHover,
+  '--jpv-brand-active': jpvDesignTokens.colors.brandActive,
   '--jpv-brand-deep': jpvDesignTokens.colors.brandDeep,
   '--jpv-brand-bright': jpvDesignTokens.colors.brandLight,
   '--jpv-sunshine': jpvDesignTokens.colors.sunshine,
