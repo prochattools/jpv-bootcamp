@@ -30,12 +30,13 @@ async function main(): Promise<void> {
     Object.entries(files).map(async ([name, path]) => [name, await readFile(path, 'utf8')] as const),
   )
   const docs = Object.fromEntries(entries) as Record<keyof typeof files, string>
-  const [legacyImportPlan, stagingReadinessMatrix] = await Promise.all([
+  const [legacyImportPlan, stagingReadinessMatrix, launchReadinessEvidence] = await Promise.all([
     readFile('docs/migration/LEGACY_PLATFORM_IMPORT_MASTER_PLAN.md', 'utf8'),
     readFile('docs/release/STAGING_OPERATIONAL_READINESS_MATRIX.md', 'utf8'),
+    readFile('docs/client/JPV_STAGING_LAUNCH_READINESS_EVIDENCE_PACKAGE.md', 'utf8'),
   ])
 
-  const allDocs = Object.values(docs).join('\n')
+  const allDocs = [...Object.values(docs), launchReadinessEvidence].join('\n')
 
   const noSecrets = [
     /sk_live_/i,
@@ -76,7 +77,8 @@ async function main(): Promise<void> {
 
   assert.match(docs.roadmap, /Status update procedure: `docs\/client\/STATUS_UPDATE_PROCEDURE\.md`/)
   assert.match(docs.roadmap, /feature\/course-branding-and-preview/)
-  assert.match(docs.roadmap, /Do not apply additional migrations to staging\./)
+  assert.match(docs.roadmap, /Current staging migration state.*36\/36 Payload migrations applied with pending `\[\]`/)
+  assert.match(docs.roadmap, /production migration, production deployment, provider mutation, and branch advancement were not performed or authorized/i)
   assert.match(docs.roadmap, /Do not touch `main`/)
   assert.match(docs.roadmap, /Applied migration state \| Verified pre-apply state from guarded run `31215369413`/)
   assert.match(docs.roadmap, /Current client truth: `docs\/client\/JPV_Bootcamp_Platform_Expansion_Go_Live_Plan_v3_7\.docx`/)
@@ -179,6 +181,13 @@ async function main(): Promise<void> {
   assert.match(docs.stagingEvidence, /No migrations were applied\./)
   assert.match(docs.stagingEvidence, /main was not touched/)
 
+  assert.match(launchReadinessEvidence, /\*\*Scope:\*\* Staging only/)
+  assert.match(launchReadinessEvidence, /https:\/\/preview\.jpvbootcamp\.com/)
+  assert.match(launchReadinessEvidence, /jpvbootcamp_staging/)
+  assert.match(launchReadinessEvidence, /Payload migrations: 36\/36 applied/)
+  assert.match(launchReadinessEvidence, /Additional staging migrations: NOT authorized/)
+  assert.match(launchReadinessEvidence, /Production: NOT touched, NOT migrated, NOT authorized/)
+
   assert.match(docs.providerReadiness, /checkout accepts only `plan=membership` and optional `billing=monthly\|annual`/)
   assert.match(docs.providerReadiness, /Do not apply migrations from this checklist\./)
   assert.match(docs.providerReadiness, /Migrations applied: `No`/)
@@ -202,7 +211,7 @@ async function main(): Promise<void> {
 
   assert.match(docs.previewReadiness, /feature\/course-branding-and-preview/)
   assert.match(docs.previewReadiness, /Verify the exact branch tip with `git log --oneline -1` before operator action\./)
-  assert.match(docs.previewReadiness, /Applied-state evidence is now established for the pre-apply checkpoint\./)
+  assert.match(docs.previewReadiness, /Current migration truth — Phase 9\.5:/)
   assert.match(docs.previewReadiness, /Do not touch `main`/)
   assert.match(docs.previewReadiness, /Status update procedure: `docs\/client\/STATUS_UPDATE_PROCEDURE\.md`/)
   assert.match(docs.previewReadiness, /`pnpm staging:static-preflight`/)
@@ -224,7 +233,7 @@ async function main(): Promise<void> {
   assert.match(docs.previewReadiness, /`pnpm staging:smoke-plan`/)
   assert.match(docs.previewReadiness, /`pnpm staging:smoke-simulated`/)
   assert.match(docs.previewReadiness, /`pnpm release:evidence:dry-run`/)
-  assert.match(docs.previewReadiness, /Prisma migration target state \| Verified healthy in pre-apply plan/i)
+  assert.match(docs.previewReadiness, /Prisma migration target state \| Staging operational supplied/i)
   assert.match(docs.previewReadiness, /M2-01 remains post-core/i)
 
   for (const currentDoc of [docs.previewReadiness, docs.roadmap, docs.operatorHandoff]) {
