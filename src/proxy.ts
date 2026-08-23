@@ -34,6 +34,11 @@ export function proxy(request: NextRequest) {
 
 		const tokenParam = request.nextUrl.searchParams.get('token')
 		const token = sanitizePartnersToken(tokenParam)
+		// The partners landing page is public. Only tokenized handoffs and
+		// deeper partner paths require session establishment.
+		if (pathname === PARTNERS_DEFAULT_PATH && !token) {
+			return NextResponse.next()
+		}
 		if (isPartnersSession) {
 			if (token) {
 				return NextResponse.next()
