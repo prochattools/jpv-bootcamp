@@ -57,6 +57,10 @@ export type SafeCommunityRichTextNode =
       type: 'legacy-html'
       html: string
     }
+  | {
+      type: 'legacy-bunny-embed'
+      src: string
+    }
 
 export type MemberCommunityComment = {
   id: string
@@ -219,6 +223,16 @@ function safeLegacyHtml(value: unknown): string | null {
   return html
 }
 
+function safeLegacyBunnyEmbed(value: unknown): string | null {
+  const html = asString(value)
+  if (!html || html.length > 100_000) return null
+
+  const match = /<iframe\b[^>]*\bsrc=["'](https:\/\/(?:player|iframe)\.mediadelivery\.net\/embed\/\d+\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:[/?#][^"']*)?["']/i.exec(html)
+  if (!match) return null
+
+  return match[1]
+}
+
 function projectChildren(value: unknown): SafeCommunityRichTextNode[] {
   if (!Array.isArray(value)) return []
 
@@ -292,6 +306,8 @@ function projectNode(value: unknown): SafeCommunityRichTextNode | null {
     case 'block': {
       const fields = asRecord(node.fields)
       if (fields?.blockType !== 'legacyHTML') return null
+      const bunnyEmbed = safeLegacyBunnyEmbed(fields.safeHtml)
+      if (bunnyEmbed) return { type: 'legacy-bunny-embed', src: bunnyEmbed }
       const html = safeLegacyHtml(fields.safeHtml)
       if (!html) return null
       return { type: 'legacy-html', html }

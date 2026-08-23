@@ -59,6 +59,19 @@ function CommunityRichTextNode({ node }: { node: SafeCommunityRichTextNode }) {
       return renderMarkedText(node)
     case 'legacy-html':
       return <CommunityLegacyHtml html={node.html} />
+    case 'legacy-bunny-embed':
+      return (
+        <div className='my-5 aspect-video max-w-full overflow-hidden rounded-jpv-card bg-jpv-ink shadow-jpv-card' data-legacy-bunny-embed='true'>
+          <iframe
+            allow='accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture'
+            allowFullScreen
+            className='h-full w-full border-0'
+            loading='lazy'
+            src={node.src}
+            title='Community video'
+          />
+        </div>
+      )
     default:
       return null
   }

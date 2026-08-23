@@ -589,6 +589,13 @@ function testRichTextProjection(): void {
             safeHtml: '<div data-legacy-embed-preserved="iframe">Legacy iframe preserved</div>',
           },
         },
+        {
+          type: 'block',
+          fields: {
+            blockType: 'legacyHTML',
+            safeHtml: '<div style="position:relative;padding-top:56.25%"><iframe src="https://player.mediadelivery.net/embed/633380/1d8ffa29-8081-486a-ac4a-253dc09cf269"></iframe></div>',
+          },
+        },
       ],
     },
   })
@@ -605,6 +612,8 @@ function testRichTextProjection(): void {
   assert.match(serialized, /"code":true/)
   assert.match(serialized, /"type":"legacy-html"/)
   assert.match(serialized, /Legacy iframe preserved/)
+  assert.match(serialized, /"type":"legacy-bunny-embed"/)
+  assert.match(serialized, /player\.mediadelivery\.net\/embed\/633380\/1d8ffa29-8081-486a-ac4a-253dc09cf269/)
   assert.doesNotMatch(
     serialized,
     /javascript:|data:|file:|blob:|user:pass|<script|"type":"script"|"type":"style"|"type":"iframe"|"type":"embed"|ExecutableWidget/i
