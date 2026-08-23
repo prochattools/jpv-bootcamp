@@ -39,6 +39,10 @@ A separate read-only staging metadata query returned `VERIFIED`:
   testimonial presentation.
 - `/builders-bootcamp` partner/event route.
 - `/sponsored/claim` invalid-token state.
+- `/partners` was attempted but returned a repeated `307 Location: /partners`
+  redirect loop (`ERR_TOO_MANY_REDIRECTS`). This is an operational route defect;
+  the route source does not contain that redirect and it is not caused by the
+  design-token consolidation.
 
 Observed result: JPV palette, typography, controls, surfaces, borders, and
 shadows render consistently with the authority. The partner event page retains
@@ -75,7 +79,9 @@ surfaces, error/empty states, and navigation links render correctly.
 ## Regressions and fixes
 
 No design-system consolidation regression was found in the reviewed staging
-surfaces. No post-deployment fix was required.
+surfaces. No post-deployment fix was applied. The `/partners` redirect loop is
+an independent staging route blocker and requires separate route/deployment
+investigation.
 
 The deployed commit contains only the previously validated design-token
 consolidation and its reconciliation evidence; no product behavior or feature
@@ -93,10 +99,15 @@ scope was added.
 
 ## Readiness decision
 
-**PASS for staging design verification, with the authenticated-member screenshot
-limitation recorded above.** The deployed staging application is a faithful
-implementation of the unified JPV Design System across the verified current
-surfaces and automated authenticated gates.
+**CONDITIONAL PASS for design verification, with two limitations:**
+
+1. Authenticated member screenshots were unavailable in this browser session.
+2. `/partners` is operationally blocked by a repeated self-redirect and was not
+   visually verifiable.
+
+The verified deployed surfaces faithfully implement the unified JPV Design
+System. Do not certify the complete launch surface set until `/partners` is
+repaired and the member-authenticated visual evidence is captured.
 
 This report does not authorize production, start Phase 10, or replace the final
 Design Skill review.
