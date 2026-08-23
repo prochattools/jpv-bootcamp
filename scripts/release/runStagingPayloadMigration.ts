@@ -30,11 +30,16 @@ const REQUIRED_SCHEMA = STAGING_TARGET.schema
 const REQUIRED_DATABASE = STAGING_TARGET.database
 const REQUIRED_ENVIRONMENT = STAGING_TARGET.environment
 const REQUIRED_TARGET_ID = STAGING_TARGET.targetId
+// Closed forward-migration checkpoint retained for guarded apply/rollback
+// contract tests. The current staging release gate uses CURRENT_STATE mode
+// below because migration 36 is already applied.
 const EXPECTED_APPLIED_BEFORE = 35
 const EXPECTED_FORWARD_BATCH = [
   '20260820_000000_live_session_space',
 ] as const
 const EXPECTED_APPLIED_AFTER = EXPECTED_APPLIED_BEFORE + EXPECTED_FORWARD_BATCH.length
+const CURRENT_STAGING_APPLIED_COUNT = PAYLOAD_MIGRATION_NAMES.length
+const CURRENT_STAGING_PENDING_MIGRATIONS: readonly string[] = []
 const TARGET_MIGRATIONS = PAYLOAD_MIGRATION_NAMES.slice(EXPECTED_APPLIED_BEFORE, EXPECTED_APPLIED_AFTER)
 const APPLY_CONFIRMATION_VALUE = 'apply_live_session_space_to_jpvbootcamp_staging'
 const ROLLBACK_PLAN_CONFIRMATION_VALUE = 'plan_rollback_live_session_space_from_jpvbootcamp_staging'
@@ -699,6 +704,8 @@ export type StagingMigrationPlanInput = {
   expectedSchema: string | undefined
   expectedHostname: string | undefined
   expectedDatabase: string | undefined
+  /** Verify the already-applied staging state instead of planning the closed forward batch. */
+  currentState?: boolean
 }
 
 export async function runStagingMigrationPlan(
@@ -820,7 +827,10 @@ export async function runStagingMigrationPlan(
     return blockedResult(['status_query_failed'])
   }
 
-  const rawBlockers = checkPreApplyPreconditions(status)
+  const currentState = input.currentState === true
+  const rawBlockers = currentState
+    ? checkPostApplyPreconditions(status)
+    : checkPreApplyPreconditions(status)
   const blockerCodes = rawBlockers.map(blockerToCode)
 
   output(`[staging-migration-plan] applied-payload=${status.appliedPayloadCount}`)
@@ -850,11 +860,17 @@ export async function runStagingMigrationPlan(
     )
   }
 
-  output(
-    `[staging-migration-plan] PLAN OK: Migrations 34-35 batch is pending in canonical order and all preconditions are met`,
-  )
-  output(`[staging-migration-plan] pending-batch=${TARGET_MIGRATIONS.join(',')}`)
-  output(`[staging-migration-plan] To apply: pnpm staging:payload-migration-apply`)
+  if (currentState) {
+    output(
+      `[staging-migration-plan] CURRENT STATE OK: ${CURRENT_STAGING_APPLIED_COUNT} Payload migrations are applied and no pending migration batch exists`,
+    )
+  } else {
+    output(
+      `[staging-migration-plan] PLAN OK: closed 35-to-36 forward batch is pending in canonical order and all preconditions are met`,
+    )
+    output(`[staging-migration-plan] pending-batch=${TARGET_MIGRATIONS.join(',')}`)
+    output(`[staging-migration-plan] To apply: pnpm staging:payload-migration-apply`)
+  }
   return {
     ok: true,
     mode: 'plan',
@@ -864,7 +880,9 @@ export async function runStagingMigrationPlan(
     environment: input.environment ?? '',
     targetId: input.targetId ?? '',
     appliedCount: status.appliedPayloadCount,
-    pendingMigrations: [...TARGET_MIGRATIONS],
+    pendingMigrations: currentState
+      ? [...CURRENT_STAGING_PENDING_MIGRATIONS]
+      : [...TARGET_MIGRATIONS],
     blockers: [],
     message: `plan_ok`,
     unexpectedPayloadCount,
@@ -1070,7 +1088,7 @@ export async function runStagingMigrationApply(
       appliedCount: postStatus.appliedPayloadCount,
       missingMigrations: postStatus.missingPayloadMigrations,
     },
-    message: `Apply completed: Migrations 34-35 [${TARGET_MIGRATIONS.join(', ')}] applied to ${REQUIRED_SCHEMA}. Rollback requires separate plan and authorization.`,
+    message: `Apply completed: closed 35-to-36 forward batch [${TARGET_MIGRATIONS.join(', ')}] applied to ${REQUIRED_SCHEMA}. Rollback requires separate plan and authorization.`,
   }
 }
 
@@ -1222,7 +1240,7 @@ export async function runStagingMigrationRollbackPlan(
     )
   }
 
-  // Determine latest batch and require exactly the reviewed migrations 34-35 batch.
+  // Determine latest batch and require exactly the reviewed closed 35-to-36 batch.
   const latestBatchRows: string[] = []
   if (!batchEvidenceMalformed) {
     const highestBatch = Math.max(...records.map((r) => r.batch))
@@ -1278,7 +1296,7 @@ export async function runStagingMigrationRollbackPlan(
     latestBatchMigrations: latestBatchRows,
     blockers: [],
     message:
-      `Rollback plan OK: Migrations 34-35 [${TARGET_MIGRATIONS.join(', ')}] is the latest applied batch. ` +
+      `Rollback plan OK: closed 35-to-36 batch [${TARGET_MIGRATIONS.join(', ')}] is the latest applied batch. ` +
       `Rollback execution requires separate authorization.`,
   }
 }
@@ -1301,6 +1319,10 @@ export function parsePlanCliArgs(args: string[]): PlanCliInput {
     else if (key === '--expected-schema') result.expectedSchema = value
     else if (key === '--expected-hostname') result.expectedHostname = value
     else if (key === '--expected-database') result.expectedDatabase = value
+    else if (key === '--current-state') {
+      if (value !== 'true') throw new Error('Expected --current-state=true when current-state mode is requested')
+      result.currentState = true
+    }
     else throw new Error(`Unknown argument: ${key}`)
   }
   if (!result.expectedCommit) throw new Error('Missing required argument: --expected-commit')
@@ -1403,9 +1425,11 @@ const PLAN_USAGE = [
   '  --target-id=jpvbootcamp-staging \\',
   '  --expected-schema=jpvbootcamp_staging \\',
   '  --expected-hostname=<staging-db-host> \\',
-  '  --expected-database=jpvbootcamp',
+  '  --expected-database=jpvbootcamp \\',
+  '  [--current-state=true]',
   '',
   'Performs a read-only pre-flight check. Does NOT mutate the database.',
+  'Use --current-state=true to verify the current applied staging state (36 applied, no pending batch).',
   'Authorization does NOT authorize push, Dokploy redeployment, Prisma database-deploy,',
   'provider email, post-deployment smoke, or production.',
 ].join('\n')
@@ -1425,7 +1449,7 @@ const APPLY_USAGE = [
   '  --rollback-owner=<id> \\',
   `  --confirmation=${APPLY_CONFIRMATION_VALUE}`,
   '',
-  `Applies the exact migrations 34-35 batch to the ${REQUIRED_SCHEMA} schema.`,
+  `Applies the exact closed 35-to-36 forward batch to the ${REQUIRED_SCHEMA} schema.`,
   'Authorization does NOT authorize push, Dokploy redeployment, Prisma database-deploy,',
   'provider email, post-deployment smoke, or production.',
 ].join('\n')
@@ -1474,7 +1498,9 @@ async function main(): Promise<void> {
           environment: '',
           targetId: '',
           appliedPayloadCount: 0,
-          expectedPendingMigrations: [...TARGET_MIGRATIONS],
+          expectedPendingMigrations: rest.includes('--current-state=true')
+            ? [...CURRENT_STAGING_PENDING_MIGRATIONS]
+            : [...TARGET_MIGRATIONS],
           expectedPendingBatchIsOnlyMissing: false,
           unexpectedPayloadCount: 0,
           duplicatePayloadCount: 0,
@@ -1508,10 +1534,13 @@ async function main(): Promise<void> {
         environment: result.environment,
         targetId: result.targetId,
         appliedPayloadCount: result.appliedCount,
-        expectedPendingMigrations: [...TARGET_MIGRATIONS],
-        expectedPendingBatchIsOnlyMissing:
-          result.pendingMigrations.length === TARGET_MIGRATIONS.length &&
-          result.pendingMigrations.every((name, index) => name === TARGET_MIGRATIONS[index]),
+        expectedPendingMigrations: planInput.currentState
+          ? [...CURRENT_STAGING_PENDING_MIGRATIONS]
+          : [...TARGET_MIGRATIONS],
+        expectedPendingBatchIsOnlyMissing: planInput.currentState
+          ? result.pendingMigrations.length === 0
+          : result.pendingMigrations.length === TARGET_MIGRATIONS.length &&
+            result.pendingMigrations.every((name, index) => name === TARGET_MIGRATIONS[index]),
         unexpectedPayloadCount: result.unexpectedPayloadCount,
         duplicatePayloadCount: result.duplicatePayloadCount,
         malformedPayloadCount: result.malformedPayloadCount,

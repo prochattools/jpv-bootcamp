@@ -19,7 +19,7 @@ if (typeof parsed.environment !== 'string') { process.stderr.write('PLAN-BLOCKED
 if (typeof parsed.targetId !== 'string') { process.stderr.write('PLAN-BLOCKED: targetId not string\n'); process.exit(1) }
 if (typeof parsed.appliedPayloadCount !== 'number') { process.stderr.write('PLAN-BLOCKED: appliedPayloadCount not number\n'); process.exit(1) }
 if (!Number.isSafeInteger(parsed.appliedPayloadCount) || parsed.appliedPayloadCount < 0) { process.stderr.write('PLAN-BLOCKED: appliedPayloadCount not nonnegative safe integer\n'); process.exit(1) }
-if (!Array.isArray(parsed.expectedPendingMigrations) || parsed.expectedPendingMigrations.length === 0) { process.stderr.write('PLAN-BLOCKED: expectedPendingMigrations not non-empty array\n'); process.exit(1) }
+if (!Array.isArray(parsed.expectedPendingMigrations)) { process.stderr.write('PLAN-BLOCKED: expectedPendingMigrations not array\n'); process.exit(1) }
 for (const migration of parsed.expectedPendingMigrations) { if (typeof migration !== 'string' || migration.length === 0) { process.stderr.write('PLAN-BLOCKED: expectedPendingMigration entry not non-empty string\n'); process.exit(1) } }
 if (typeof parsed.expectedPendingBatchIsOnlyMissing !== 'boolean') { process.stderr.write('PLAN-BLOCKED: expectedPendingBatchIsOnlyMissing not boolean\n'); process.exit(1) }
 if (typeof parsed.unexpectedPayloadCount !== 'number') { process.stderr.write('PLAN-BLOCKED: unexpectedPayloadCount not number\n'); process.exit(1) }

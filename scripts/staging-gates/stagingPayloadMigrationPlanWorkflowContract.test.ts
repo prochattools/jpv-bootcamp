@@ -321,11 +321,12 @@ async function main(): Promise<void> {
 
   // ─── Exact command ────────────────────────────────────────────────────────
 
-  await test('command: invokes pnpm exec tsx runStagingPayloadMigration.ts plan', () => {
+  await test('command: invokes the guarded runner in explicit current-state mode', () => {
     assert.ok(
       planJobYml.includes('runStagingPayloadMigration.ts') || planJobYml.includes('staging:payload-migration-plan'),
       'must invoke the staging migration plan runner',
     )
+    assert.ok(planJobYml.includes('--current-state=true'), 'must verify the already-applied current staging state')
   })
 
   await test('command: passes --output=json flag (JSON-only stdout mode)', () => {
@@ -670,10 +671,10 @@ async function main(): Promise<void> {
     )
   })
 
-  await test('plan_ok semantics: workflow verifies appliedPayloadCount is exactly 29', () => {
+  await test('plan_ok semantics: workflow verifies appliedPayloadCount is exactly 36', () => {
     assert.ok(
       planJobYml.includes('appliedPayloadCount mismatch') || planJobYml.includes('p.appliedPayloadCount !== expectedCount'),
-      'must verify appliedPayloadCount === 29',
+      'must verify appliedPayloadCount === 36',
     )
   })
 

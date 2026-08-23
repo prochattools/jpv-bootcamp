@@ -351,6 +351,19 @@ async function run(): Promise<void> {
     assert.equal(result.expectedDatabase, REQUIRED_DATABASE)
   })
 
+  await test('parsePlanCliArgs: accepts explicit current-state verification mode', () => {
+    const result = parsePlanCliArgs([
+      `--expected-commit=${SYNTHETIC_HEAD}`,
+      '--environment=staging',
+      '--target-id=jpvbootcamp-staging',
+      '--expected-schema=jpvbootcamp_staging',
+      `--expected-hostname=${STAGING_HOSTNAME}`,
+      '--expected-database=jpvbootcamp',
+      '--current-state=true',
+    ])
+    assert.equal(result.currentState, true)
+  })
+
   await test('parsePlanCliArgs: rejects missing expectedCommit', () => {
     assert.throws(() =>
       parsePlanCliArgs([
@@ -712,6 +725,21 @@ async function run(): Promise<void> {
     assert.equal(result.mode, 'plan')
     assert.equal(result.environment, REQUIRED_ENVIRONMENT)
     assert.equal(result.targetId, REQUIRED_TARGET_ID)
+  })
+
+  await test('plan: current-state mode verifies 36 applied and no pending migrations', async () => {
+    const result = await runStagingMigrationPlan(
+      stagingUrl(),
+      undefined,
+      goodPlanInput({ currentState: true }),
+      baseDeps({ clientFactory: clientFactory36() }),
+      noopOutput(),
+    )
+    assert.equal(result.ok, true)
+    assert.equal(result.appliedCount, EXPECTED_APPLIED_AFTER)
+    assert.deepEqual(result.pendingMigrations, [])
+    assert.equal(result.blockers.length, 0)
+    assert.equal(result.message, 'plan_ok')
   })
 
   await test('plan: blocks when applied count is not 32', async () => {
@@ -1682,7 +1710,7 @@ async function run(): Promise<void> {
     assert.equal('outcome' in result && result.outcome, APPLY_OUTCOME_UNCERTAIN)
   })
 
-  await test('apply: uncertain outcome at unchanged 33-state reports targetBatchApplied=false', async () => {
+  await test('apply: uncertain outcome at unchanged 35-state reports targetBatchApplied=false', async () => {
     const result = await runStagingMigrationApply(
       stagingUrl(), undefined, goodAuthorization(),
       {
@@ -1695,7 +1723,7 @@ async function run(): Promise<void> {
     if ('outcome' in result) {
       assert.equal(result.schemaIdentityConfirmed, true)
       assert.equal(result.targetBatchApplied, false)
-      assert.equal(result.appliedCount, 33)
+      assert.equal(result.appliedCount, 35)
     }
   })
 
@@ -2235,7 +2263,7 @@ async function run(): Promise<void> {
     await assert.rejects(
       () => runStagingMigrationApply(
         stagingUrl(), undefined,
-        goodAuthorization({ expectedMigrations: [TARGET_MIGRATIONS[0]] }),
+        goodAuthorization({ expectedMigrations: [MIGRATION35] }),
         {
           ...baseDeps({ clientFactory: clientFactory35() }),
           commandExecutor: () => { executorCalled = true; return { status: 0 } },
@@ -2247,14 +2275,13 @@ async function run(): Promise<void> {
     assert.equal(executorCalled, false)
   })
 
-  await test('apply: reordered expectedMigrations batch is rejected before executor', async () => {
+  await test('apply: extra expectedMigrations entry is rejected before executor', async () => {
     let executorCalled = false
-    const reordered = [...TARGET_MIGRATIONS]
-    ;[reordered[1], reordered[2]] = [reordered[2], reordered[1]]
+    const extraMigration = [MIGRATION35, ...TARGET_MIGRATIONS]
     await assert.rejects(
       () => runStagingMigrationApply(
         stagingUrl(), undefined,
-        goodAuthorization({ expectedMigrations: reordered }),
+        goodAuthorization({ expectedMigrations: extraMigration }),
         {
           ...baseDeps({ clientFactory: clientFactory35() }),
           commandExecutor: () => { executorCalled = true; return { status: 0 } },
@@ -2266,20 +2293,8 @@ async function run(): Promise<void> {
     assert.equal(executorCalled, false)
   })
 
-  await test('apply: uncertain partial 34-35 post-state never reports targetBatchApplied=true', async () => {
-    let call = 0
-    const factory: PgClientFactory = () => {
-      const idx = call++
-      if (idx === 0) return make35Client()
-      // Only first of two target migrations applied — partial state, targetBatchApplied must be false
-      return makeClient({
-        schema: REQUIRED_SCHEMA,
-        payloadRows: [
-          ...FIRST_35.map((name) => ({ name, batch: 1 })),
-          { name: TARGET_MIGRATIONS[0], batch: 2 },
-        ],
-      })
-    }
+  await test('apply: uncertain outcome with migration 36 applied reports targetBatchApplied=true', async () => {
+    const factory: PgClientFactory = clientFactorySequence()
     const result = await runStagingMigrationApply(
       stagingUrl(), undefined, goodAuthorization(),
       {
@@ -2289,7 +2304,10 @@ async function run(): Promise<void> {
       noopOutput(),
     )
     assert.ok('outcome' in result)
-    if ('outcome' in result) assert.equal(result.targetBatchApplied, false)
+    if ('outcome' in result) {
+      assert.equal(result.appliedCount, EXPECTED_APPLIED_AFTER)
+      assert.equal(result.targetBatchApplied, true)
+    }
   })
 
   await test('git resolver: real HEAD passes guard; abbreviated or prior SHA fails', async () => {
