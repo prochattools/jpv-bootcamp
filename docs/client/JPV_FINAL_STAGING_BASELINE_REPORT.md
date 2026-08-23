@@ -4,7 +4,7 @@
 **Status:** FROZEN STAGING BASELINE VERIFIED — NOT PRODUCTION AUTHORIZATION
 **Project phase:** Phase 9.5 — Feature Branch Reconciliation & Completion
 
-**Canonical staging release candidate:** `85af61fb467529e943566a6d7e1076dd4b89901a`
+**Canonical staging release candidate:** `9d87c4a3eeeffb9afb78a38964054792330ea1cb`
 This exact SHA was pushed, CI-validated, explicitly deployed to staging, and
 confirmed by the live health endpoint.
 
@@ -17,7 +17,7 @@ production deployment, production migration, or any production operation.
 
 **Staging baseline decision: FROZEN AND VERIFIED.**
 
-The frozen candidate is `85af61…`. The prior `9c0debe…` deployment remains
+The frozen candidate is `9d87c4a…`. The prior `9c0debe…` deployment remains
 historical only. Production remains unauthorized.
 
 ## 2. Current git state
@@ -66,8 +66,8 @@ Authority is reconciled as follows:
 
 The exact candidate was validated by:
 
-- Push validation run: `32647651167`
-- SHA: `85af61fb467529e943566a6d7e1076dd4b89901a`
+- Push validation run: local `pnpm test:release` passed `164/164`
+- SHA: `9d87c4a3eeeffb9afb78a38964054792330ea1cb`
 - Push validation: successful
 - Deterministic release gate: `164/164`
 - Browser E2E: passed with declared skips
@@ -86,8 +86,8 @@ The documented staging lane remains:
 
 Current exact-SHA deployment evidence:
 
-- SHA: `85af61fb467529e943566a6d7e1076dd4b89901a`
-- Deploy run: `32648229013`
+- SHA: `9d87c4a3eeeffb9afb78a38964054792330ea1cb`
+- Deploy run: `32649230612`
 - `/api/health`: HTTP 200; `status=live`; `deploymentEnv=staging`; `imageTag` and `commit` equal the candidate SHA
 - Dokploy/GHCR path: deployment job completed successfully, including exact-SHA convergence and authenticated admin responsiveness
 - Public routes: health, home, sign-in, portal, courses, community, account, and billing returned HTTP 200
@@ -108,7 +108,7 @@ Historical `9c0debe…` deployment and authenticated LiveKit/browser evidence re
 - Pending migrations: `[]`
 - Target: `jpvbootcamp_staging`
 
-Read-only workflow run `32648793013` produced sanitized `plan_ok` evidence for
+Read-only workflow run `32649782528` produced sanitized `plan_ok` evidence for
 schema `jpvbootcamp_staging`, with Prisma healthy and zero
 unexpected/duplicate/malformed records. No database mutation or migration
 execution occurred.
@@ -121,7 +121,7 @@ once their evidence dates and boundaries are respected.
 Current repository evidence:
 
 - local release gate: `164/164`;
-- CI release gate: `164/164` at `85af61…`;
+- CI/local release gate: `164/164` at `9d87c4a…`;
 - browser E2E evidence exists with declared skips.
 
 Historical staging evidence includes:
@@ -146,11 +146,11 @@ response; historical authenticated token/browser evidence remains historical.
 
 | Contradiction | Resolution |
 |---|---|
-| Current docs cited older candidate SHAs | `85af61f` is the frozen exact-SHA staging candidate; older values remain historical. |
+| Current docs cited older candidate SHAs | `9d87c4a` is the frozen exact-SHA staging candidate; older values remain historical. |
 | Some roadmap sections say “current deployed SHA” and “complete” | Those entries are retained as dated historical checkpoints; current exact-SHA proof is still absent. |
 | Historical 35/35, 29-pending, and current supplied 36/36 migration records | They refer to different dated states; current supplied staging position is 36/36, but it lacks a fresh raw artifact. |
 | Historical staging package says readiness while newer truth says not verified | The package is explicitly historical; Phase 9.5 current truth controls present interpretation. |
-| CI and live staging evidence are different layers | Both are recorded separately: CI run `32647651167`, deployment run `32648229013`, and read-only plan run `32648793013`. |
+| CI and live staging evidence are different layers | Both are recorded separately: local release gate `164/164`, deployment run `32649230612`, and read-only plan run `32649782528`. |
 
 ## 9. Remaining blockers
 
@@ -171,7 +171,7 @@ response; historical authenticated token/browser evidence remains historical.
 ## 11. Final staging truth
 
 The repository, CI, staging deployment, live health, and read-only migration
-state are verified for `85af61…`. Provider, rollback, backup, monitoring, and
+state are verified for `9d87c4a…`. Provider, rollback, backup, monitoring, and
 production authorization remain separate operational gates.
 
 **Final status: STAGING BASELINE FROZEN AND VERIFIED. Production remains NO-GO

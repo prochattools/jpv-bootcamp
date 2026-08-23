@@ -2,17 +2,17 @@
 
 ## Current repository reconciliation — 2026-08-23
 
-- **Working branch:** `feature/course-branding-and-preview`; frozen staging release candidate and deployed SHA `85af61fb467529e943566a6d7e1076dd4b89901a`.
+- **Working branch:** `feature/course-branding-and-preview`; frozen staging release candidate and deployed SHA `9d87c4a3eeeffb9afb78a38964054792330ea1cb`.
 - **Implementation state:** the current feature branch remains the source under review; its migration registry contains 36 registered migrations. Registration is not applied database state.
 - **Local validation:** after cleanup, `pnpm test:release` passed `164/164`; focused browser checks passed `60/60`; full browser E2E passed `148/148` with 60 declared skips. The initial 24 shared muted-token contrast failures were cleared.
 - **Cutover state:** production migration, production deployment, provider mutation, and branch advancement were not performed or authorized. Use `docs/release/FUTURE_BRANCH_CUTOVER_PLAN.md` for the later protected integration process.
 - **Evidence rule:** dated records below remain historical unless marked as current frozen-candidate evidence.
-- **Current staging migration state:** 36/36 Payload migrations applied with pending `[]`; read-only plan run `32648793013` confirms Prisma healthy and zero unexpected/duplicate/malformed records. Deploy run `32648229013` and health endpoint verification confirm SHA `85af61fb467529e943566a6d7e1076dd4b89901a` is live on staging.
+- **Current staging migration state:** 36/36 Payload migrations applied with pending `[]`; read-only plan run `32649782528` confirms Prisma healthy and zero unexpected/duplicate/malformed records. Deploy run `32649230612` and health endpoint verification confirm SHA `9d87c4a3eeeffb9afb78a38964054792330ea1cb` is live on staging.
 - **Current baseline dossier:** `docs/release/FINAL_PRE_PRODUCTION_RECONCILIATION_2026-08-23.md`.
 - **Phase 9.5 current truth:** `docs/release/PHASE_9_5_CURRENT_TRUTH_2026-08-23.md`.
 - **Phase 9.5 backlog:** `docs/release/PHASE_9_5_FINAL_IMPLEMENTATION_BACKLOG_2026-08-23.md`.
 - **Current project phase:** Phase 9.5 — Feature Branch Reconciliation & Completion; Phase 10 production cutover has not started.
-- **Canonical baseline rule:** `85af61fb467529e943566a6d7e1076dd4b89901a` is the frozen staging candidate and exact deployed SHA. Historical deployment SHA `9c0debe...` is not current. Production remains unauthorized.
+- **Canonical baseline rule:** `9d87c4a3eeeffb9afb78a38964054792330ea1cb` is the frozen staging candidate and exact deployed SHA. Historical deployment SHA `9c0debe...` is not current. Production remains unauthorized.
 
 <!-- Historical checkpoint note 2026-08-19/21: this older record reported STAGING MIGRATION COMPLETE at SHA `abf43893dc3f9980cc8eadc997cd7935e86e614f` / deploy run 32352382852 and later `9c0debe...` / run 32462177363. Its 35/35 and acceptance claims are retained below as audit history only. Current truth is 36/36 with pending [] as separately supplied and recorded in the Phase 9.5 baseline. Production NOT authorized. -->
 

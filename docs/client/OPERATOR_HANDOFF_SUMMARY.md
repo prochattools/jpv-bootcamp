@@ -2,7 +2,7 @@
 
 ## Current repository reconciliation — 2026-08-23
 
-- **Working branch:** `feature/course-branding-and-preview`; frozen staging release candidate and deployed SHA are `85af61fb467529e943566a6d7e1076dd4b89901a`.
+- **Working branch:** `feature/course-branding-and-preview`; frozen staging release candidate and deployed SHA are `9d87c4a3eeeffb9afb78a38964054792330ea1cb`.
 - **Cleanup record:** `docs/release/BRANCH_RECONCILIATION_2026-08-23.md`.
 - **Release gate:** push validation run `32647651167` succeeded with the 164/164 release gate; explicit staging deployment run `32648229013` succeeded for this exact SHA.
 - **Current staging:** `/api/health` returned 200 and reported the exact candidate SHA, `deploymentEnv=staging`, and live status. Read-only migration plan run `32648793013` returned 36/36, pending `[]`, Prisma healthy, and no malformed/duplicate/unexpected records.

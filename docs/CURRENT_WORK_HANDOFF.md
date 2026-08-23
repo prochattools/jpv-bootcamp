@@ -6,10 +6,10 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 
 ## Current repository reconciliation — 2026-08-23
 
-- **Working branch:** `feature/course-branding-and-preview`; frozen staging release candidate and deployed SHA are `85af61fb467529e943566a6d7e1076dd4b89901a`.
+- **Working branch:** `feature/course-branding-and-preview`; frozen staging release candidate and deployed SHA are `9d87c4a3eeeffb9afb78a38964054792330ea1cb`.
 - **Cleanup record:** `docs/release/BRANCH_RECONCILIATION_2026-08-23.md`.
 - **Source/state:** 36 registered Payload migrations; read-only staging plan run `32648793013` returned `plan_ok`, 36/36 applied, pending `[]`, zero unexpected/duplicate/malformed records, and Prisma healthy. No migration was executed.
-- **Release evidence:** push validation run `32647651167` and explicit staging deploy run `32648229013` succeeded. `/api/health` returned 200 with `imageTag` and `commit` equal to `85af61fb467529e943566a6d7e1076dd4b89901a` and `deploymentEnv=staging`.
+- **Release evidence:** explicit staging deploy run `32649230612` succeeded. `/api/health` returned 200 with `imageTag` and `commit` equal to `9d87c4a3eeeffb9afb78a38964054792330ea1cb` and `deploymentEnv=staging`.
 - **Protected residue:** pre-existing `.claude/worktrees/**` changes and `newrelic_agent.log` remain untouched.
 - **Current staging:** frozen exact-SHA baseline is live and healthy. Public endpoint checks returned 200 for health, home, sign-in, portal, courses, community, account, and billing. LiveKit token validation correctly rejected malformed unauthenticated requests with 400; authenticated token/browser evidence remains historical.
 - **Production boundary:** production remains unauthorized and untouched; Phase 10 has not started.
