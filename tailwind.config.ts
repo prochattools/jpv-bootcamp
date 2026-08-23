@@ -71,6 +71,7 @@ const config = {
           ink: "var(--jpv-ink)",
           muted: "var(--jpv-muted)",
           border: "var(--jpv-border)",
+          focus: "var(--jpv-focus)",
           sunshine: "var(--jpv-sunshine)",
           "sunshine-ink": "var(--jpv-sunshine-ink)",
           danger: "var(--jpv-danger)",

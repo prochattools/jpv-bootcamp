@@ -5,19 +5,19 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/helpers/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 dark:ring-offset-slate-950 dark:focus-visible:ring-slate-300",
+  "inline-flex items-center justify-center whitespace-nowrap rounded-jpv-action text-sm font-medium ring-offset-jpv-canvas transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-jpv-focus focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
   {
     variants: {
       variant: {
-        default: "bg-slate-900 text-slate-50 hover:bg-slate-900/90 dark:bg-slate-50 dark:text-slate-900 dark:hover:bg-slate-50/90",
+        default: "bg-jpv-brand-deep text-jpv-canvas hover:bg-jpv-brand hover:text-jpv-canvas",
         destructive:
-          "bg-red-500 text-slate-50 hover:bg-red-500/90 dark:bg-red-900 dark:text-slate-50 dark:hover:bg-red-900/90",
+          "bg-jpv-danger text-jpv-canvas hover:bg-jpv-danger/90",
         outline:
-          "border border-slate-200 bg-white hover:bg-slate-100 hover:text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:hover:bg-slate-800 dark:hover:text-slate-50",
+          "border border-jpv-border bg-jpv-canvas hover:bg-jpv-surface hover:text-jpv-ink",
         secondary:
-          "bg-slate-100 text-slate-900 hover:bg-slate-100/80 dark:bg-slate-800 dark:text-slate-50 dark:hover:bg-slate-800/80",
-        ghost: "hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-slate-50",
-        link: "text-slate-900 underline-offset-4 hover:underline dark:text-slate-50",
+          "bg-jpv-surface text-jpv-ink hover:bg-jpv-surface-strong",
+        ghost: "hover:bg-jpv-surface hover:text-jpv-ink",
+        link: "text-jpv-brand-deep underline-offset-4 hover:text-jpv-brand hover:underline",
       },
       size: {
         default: "h-10 px-4 py-2",

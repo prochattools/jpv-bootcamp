@@ -1,7 +1,7 @@
 import config from '@payload-config'
 import { getPayload } from 'payload'
 
-import { jpvBrand } from '@/lib/brand/jpvDesignSystem'
+import { jpvBrand, jpvDesignTokens } from '@/lib/brand/jpvDesignSystem'
 import { resolveMemberMediaAsset } from '@/lib/payloadContent/memberMedia'
 
 export type PortalLoginBranding = {
@@ -27,17 +27,17 @@ const DEFAULTS: PortalLoginBranding = {
   logoUrl: jpvBrand.logoPath,
   bannerTitle: 'Welcome to JPV Bootcamp - Portal',
   bannerDescription: 'Join our community and start your journey to success',
-  bannerTitleColor: '#FAF8F4',
-  bannerTextColor: '#FAF8F4',
-  bannerBackgroundColor: '#144E4E',
+  bannerTitleColor: jpvDesignTokens.colors.canvas,
+  bannerTextColor: jpvDesignTokens.colors.canvas,
+  bannerBackgroundColor: jpvDesignTokens.colors.brandDeep,
   formTitle: 'Login to JPV Bootcamp - Portal',
   formDescription: 'Enter your email and password to login',
-  formTitleColor: '#3A3428',
-  formTextColor: '#6E6350',
-  formBackgroundColor: '#FAF8F4',
+  formTitleColor: jpvDesignTokens.colors.ink,
+  formTextColor: jpvDesignTokens.colors.muted,
+  formBackgroundColor: jpvDesignTokens.colors.canvas,
   buttonLabel: 'Login',
-  buttonColor: '#2C9E9E',
-  buttonLabelColor: '#FFFFFF',
+  buttonColor: jpvDesignTokens.colors.brand,
+  buttonLabelColor: jpvDesignTokens.colors.canvas,
 }
 
 function asText(value: unknown, fallback: string, maxLength = 300): string {

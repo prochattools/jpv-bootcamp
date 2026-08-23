@@ -81,6 +81,12 @@ components:
 
 # Design System: JPV Bootcamp
 
+> **Authority notice — 2026-08-23:** The single design-system authority is
+> [JPV Design System Authority v1.0](docs/design/JPV_DESIGN_SYSTEM_AUTHORITY_V1.md),
+> backed by `src/lib/brand/jpvDesignSystem.ts`. This document is supporting
+> narrative only; its older palette prose must not override the executable
+> teal/beige tokens.
+
 ## Overview
 
 **Creative North Star: "The Sunlit Workshop"**
