@@ -2,7 +2,7 @@
 
 ## Current repository reconciliation — 2026-08-23
 
-- **Working branch:** `feature/course-branding-and-preview`; verify the current tip with `git rev-parse HEAD`; frozen implementation baseline `b771cfca4ab6d2bcaa76f6dc2d2420c114082dd8`.
+- **Working branch:** `feature/course-branding-and-preview`; current local HEAD is an unpushed documentation-only descendant (verify with `git rev-parse HEAD`); canonical pushed/CI-verified staging-readiness baseline is `4853d63c6a006fd27ab66e365f29de9ade9472d8`. Local documentation-only descendants are not staging evidence.
 - **Cleanup record:** `docs/release/BRANCH_RECONCILIATION_2026-08-23.md`.
 - **Local gate:** after cleanup, `pnpm test:release` passed `164/164`; focused browser checks passed `60/60`; full browser E2E passed `148/148` with 60 declared skips. The shared `#A89A80` contrast defect is corrected.
 - **Operational boundary:** this pass performed no deployment, migration, provider call, production operation, branch merge, push, or worktree cleanup. The release-lead verified sanitized staging migration position is 36/36 applied with pending `[]`; exact-SHA deployment and provider evidence remain separate.

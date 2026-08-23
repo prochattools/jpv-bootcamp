@@ -6,7 +6,8 @@
 
 **Canonical staging-readiness baseline:** `4853d63c6a006fd27ab66e365f29de9ade9472d8`  
 This is the last pushed feature tip with successful CI validation. The local
-documentation-only descendant `729136396081e4b6757fce394101e2d14a7222ff` is
+unpushed documentation-only descendant (verify the exact tip with
+`git rev-parse HEAD`) is
 not deployed, not CI-validated, and not staging evidence.
 
 This report is the final staging-truth layer for future release discussions. It
@@ -20,7 +21,7 @@ production deployment, production migration, or any production operation.
 REMAINS OUTSTANDING.**
 
 The canonical baseline is the pushed/CI-verified `4853d63…`. The local
-documentation-only descendant is deliberately excluded from staging claims.
+unpushed documentation-only descendant is deliberately excluded from staging claims.
 The historical staging deployment still refers to `9c0debe…`, so the baseline
 is suitable as a reproducible repository/CI truth record, not as proof that the
 canonical SHA is currently deployed.
@@ -31,15 +32,15 @@ canonical SHA is currently deployed.
 |---|---|---|
 | Branch | `feature/course-branding-and-preview` | Verified local |
 | Canonical staging-readiness SHA | `4853d63c6a006fd27ab66e365f29de9ade9472d8` | Verified remote and CI |
-| Local HEAD | `729136396081e4b6757fce394101e2d14a7222ff` | Documentation-only descendant |
+| Local HEAD | Unpushed documentation-only descendant; verify with `git rev-parse HEAD` | Documentation-only descendant |
 | Origin feature tip | `4853d63c6a006fd27ab66e365f29de9ade9472d8` | Verified remote |
-| Local/remote relationship | Local is ahead by one documentation-only commit; it is excluded from staging claims | Verified local |
+| Local/remote relationship | Local is ahead by two documentation-only commits; it is excluded from staging claims | Verified local |
 | Main | `6970b3e7d4131abf2614991e694f8713f5168b33` | Verified local |
 | Protected residue | `.claude/worktrees/**`, `newrelic_agent.log`, and tracked `.bak` remain untouched | Verified local |
 | Other uncommitted docs | Cutover candidate and main-reconciliation reports remain untracked | Verified local |
 | Application changes | None made by this audit | Scope invariant |
 
-Older current-truth wording naming `b771cfc` is superseded by the canonical
+Older current-truth wording naming `b771cfc` and `7291363` is superseded by the canonical
 baseline rule in this report. Historical deployment SHA `9c0debe…` remains
 deployment evidence for 2026-08-21 only.
 
@@ -158,7 +159,7 @@ Not currently proven at the latest candidate SHA:
 
 | Contradiction | Resolution |
 |---|---|
-| Current docs cite `b771cfc` while local documentation descended to `7291363` | `4853d63` is canonical for staging readiness; `7291363` is documentation-only and excluded from staging claims. |
+| Current docs cite `b771cfc` or `7291363` while local documentation has advanced | `4853d63` is canonical for staging readiness; local documentation-only descendants are excluded from staging claims. |
 | Some roadmap sections say “current deployed SHA” and “complete” | Those entries are retained as dated historical checkpoints; current exact-SHA proof is still absent. |
 | Historical 35/35, 29-pending, and current supplied 36/36 migration records | They refer to different dated states; current supplied staging position is 36/36, but it lacks a fresh raw artifact. |
 | Historical staging package says readiness while newer truth says not verified | The package is explicitly historical; Phase 9.5 current truth controls present interpretation. |
