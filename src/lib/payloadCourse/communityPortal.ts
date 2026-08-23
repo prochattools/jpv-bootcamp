@@ -85,6 +85,8 @@ export type MemberCommunityPost = {
   pinned: boolean
   createdAt: string | null
   commentCount: number
+  authorName: string
+  excerpt: string | null
 }
 
 export type MemberAnnouncement = {
@@ -119,6 +121,41 @@ function asBoolean(value: unknown): boolean {
 function asDateString(value: unknown): string | null {
   if (value instanceof Date) return value.toISOString()
   return asString(value)
+}
+
+function memberDisplayName(member: PayloadDocument | null): string {
+  const direct =
+    asString(member?.displayName) ??
+    asString(member?.fullName) ??
+    asString(member?.name)
+  if (direct) return direct.slice(0, 120)
+
+  const firstName = asString(member?.firstName)
+  const lastName = asString(member?.lastName)
+  const combined = [firstName, lastName].filter(Boolean).join(' ').trim()
+  return combined ? combined.slice(0, 120) : 'Community member'
+}
+
+function collectRichTextText(value: unknown, output: string[] = []): string[] {
+  const record = asRecord(value)
+  if (!record) return output
+
+  if (typeof record.text === 'string') output.push(record.text)
+  if (Array.isArray(record.children)) {
+    for (const child of record.children) collectRichTextText(child, output)
+  }
+
+  return output
+}
+
+function richTextExcerpt(value: unknown): string | null {
+  const document = asRecord(value)
+  const text = collectRichTextText(document?.root ?? value)
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+  if (!text) return null
+  return text.length > 240 ? `${text.slice(0, 237).trimEnd()}…` : text
 }
 
 function getDocumentId(value: unknown): string | null {
@@ -206,6 +243,25 @@ async function findOne(
 ): Promise<PayloadDocument | null> {
   const docs = await findAll(payload, collection, { where, limit: 1, sort })
   return docs[0] ?? null
+}
+
+async function findByIdSafe(
+  payload: PayloadCourseAccessAPI,
+  collection: string,
+  id: PayloadId | null | undefined
+): Promise<PayloadDocument | null> {
+  if (!id) return null
+
+  try {
+    return await payload.findByID({
+      collection,
+      id,
+      depth: 0,
+      overrideAccess: true,
+    })
+  } catch {
+    return null
+  }
 }
 
 async function countAll(
@@ -419,14 +475,21 @@ export async function getMemberCommunitySpaceDetail(
   const commentCounts = await Promise.all(
     posts.map((post) => countVisibleComments(payload, post.id))
   )
-  const postProjections: MemberCommunityPost[] = posts.map((post, i) => ({
-    id: String(post.id),
-    title: asString(post.title) ?? 'Untitled post',
-    postType: asString(post.postType),
-    pinned: asBoolean(post.pinned),
-    createdAt: asDateString(post.createdAt),
-    commentCount: commentCounts[i],
-  }))
+  const postProjections: MemberCommunityPost[] = await Promise.all(
+    posts.map(async (post, i) => {
+      const author = await findByIdSafe(payload, 'payload_members', getDocumentId(post.author))
+      return {
+        id: String(post.id),
+        title: asString(post.title) ?? 'Untitled post',
+        postType: asString(post.postType),
+        pinned: asBoolean(post.pinned),
+        createdAt: asDateString(post.createdAt),
+        commentCount: commentCounts[i],
+        authorName: memberDisplayName(author),
+        excerpt: richTextExcerpt(post.body),
+      }
+    })
+  )
 
   return {
     ...projection,

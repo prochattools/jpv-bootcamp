@@ -121,10 +121,10 @@ export function ManagedBunnyVideoPlayer({
   }
 
   return (
-    <div className='mt-5 overflow-hidden rounded-jpv-card bg-jpv-ink shadow-jpv-card'>
+    <div className='mt-5 aspect-video overflow-hidden rounded-jpv-card bg-jpv-ink shadow-jpv-card'>
       <video
         aria-label={title}
-        className='w-full'
+        className='h-full w-full object-contain'
         controls
         playsInline
         poster={thumbnailUrl ?? undefined}

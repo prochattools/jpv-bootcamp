@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 
 import { MemberFeaturedImage } from '@/components/portal/MemberContentMedia'
+import { ProgressiveCommentList } from '@/components/community/ProgressiveCommentList'
 import { LegacyLessonRichText } from '@/components/portal/LegacyLessonRichText'
 import { requirePortalMember } from '@/lib/auth/requirePortalMember'
 import type { PayloadCourseWriteAPI } from '@/lib/payloadCourse/accessService'
@@ -159,46 +160,48 @@ function LessonCommentThread({
   const children = comments.filter((comment) => comment.parentId === parentId)
   if (children.length === 0) return null
 
-  return (
-    <div className={depth === 0 ? 'space-y-5' : 'mt-4 space-y-4 border-l border-jpv-border pl-4'}>
-      {children.map((comment) => (
-        <article className='rounded-xl border border-jpv-border bg-jpv-surface/60 p-5' key={comment.id}>
-          <div className='flex flex-wrap items-baseline justify-between gap-2'>
-            <p className='font-semibold text-jpv-ink'>{comment.displayName}</p>
-            <time className='text-xs text-jpv-muted' dateTime={comment.sourceCreatedAt || comment.createdAt}>
-              {formatDiscussionDate(comment.sourceCreatedAt || comment.createdAt)}
-            </time>
-          </div>
-          <LegacyLessonRichText data={comment.body} lessonSlug={lessonSlug} />
+  const commentNodes = children.map((comment) => (
+    <article className='rounded-xl border border-jpv-border bg-jpv-surface/60 p-5' key={comment.id}>
+      <div className='flex flex-wrap items-baseline justify-between gap-2'>
+        <p className='font-semibold text-jpv-ink'>{comment.displayName}</p>
+        <time className='text-xs text-jpv-muted' dateTime={comment.sourceCreatedAt || comment.createdAt}>
+          {formatDiscussionDate(comment.sourceCreatedAt || comment.createdAt)}
+        </time>
+      </div>
+      <LegacyLessonRichText data={comment.body} lessonSlug={lessonSlug} />
 
-          <details className='mt-4'>
-            <summary className='cursor-pointer text-sm font-semibold text-jpv-inverse-muted'>Reply</summary>
-            <form action={submitLessonDiscussionComment} className='mt-3 space-y-3'>
-              <input name='courseSlug' type='hidden' value={courseSlug} />
-              <input name='lessonSlug' type='hidden' value={lessonSlug} />
-              <input name='parentId' type='hidden' value={comment.id} />
-              <textarea
-                className='min-h-24 w-full rounded-xl border border-jpv-border bg-jpv-canvas px-4 py-3 text-sm outline-none focus:border-jpv-brand'
-                maxLength={10_000}
-                name='body'
-                placeholder={`Reply to ${comment.displayName}`}
-                required
-              />
-              <button className='jpv-button-secondary' type='submit'>Post reply</button>
-            </form>
-          </details>
-
-          <LessonCommentThread
-            comments={comments}
-            parentId={comment.id}
-            courseSlug={courseSlug}
-            lessonSlug={lessonSlug}
-            depth={depth + 1}
+      <details className='mt-4'>
+        <summary className='min-h-10 cursor-pointer py-2 text-sm font-semibold text-jpv-inverse-muted outline-none focus-visible:ring-2 focus-visible:ring-jpv-green'>Reply</summary>
+        <form action={submitLessonDiscussionComment} className='mt-3 space-y-3'>
+          <input name='courseSlug' type='hidden' value={courseSlug} />
+          <input name='lessonSlug' type='hidden' value={lessonSlug} />
+          <input name='parentId' type='hidden' value={comment.id} />
+          <textarea
+            className='min-h-24 w-full rounded-xl border border-jpv-border bg-jpv-canvas px-4 py-3 text-sm outline-none focus:border-jpv-brand'
+            maxLength={10_000}
+            name='body'
+            placeholder={`Reply to ${comment.displayName}`}
+            required
           />
-        </article>
-      ))}
-    </div>
-  )
+          <button className='jpv-button-secondary' type='submit'>Post reply</button>
+        </form>
+      </details>
+
+      <LessonCommentThread
+        comments={comments}
+        parentId={comment.id}
+        courseSlug={courseSlug}
+        lessonSlug={lessonSlug}
+        depth={depth + 1}
+      />
+    </article>
+  ))
+
+  if (depth === 0) {
+    return <ProgressiveCommentList totalCount={children.length}>{commentNodes}</ProgressiveCommentList>
+  }
+
+  return <div className='mt-4 space-y-4 border-l border-jpv-border pl-4'>{commentNodes}</div>
 }
 
 export default async function PortalLessonPage({ params, searchParams }: LessonPageProps) {

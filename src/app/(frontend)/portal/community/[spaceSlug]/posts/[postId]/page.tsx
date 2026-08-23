@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
 import { CommunityRichText } from '@/components/community/CommunityRichText'
+import { ProgressiveCommentList } from '@/components/community/ProgressiveCommentList'
 import { StatusPill } from '@/components/portal/StatusPill'
 import { requirePortalMember } from '@/lib/auth/requirePortalMember'
 import { getMemberCommunityPostDetail } from '@/lib/payloadCourse/communityDiscussion'
@@ -142,24 +143,26 @@ export default async function PortalCommunityPostPage({ params, searchParams }: 
           </div>
         </div>
 
-        <div className='mt-7 space-y-5'>
+        <div className='mt-7'>
           {post.comments.length > 0 ? (
-            post.comments.map((comment) => (
-              <article
-                className='rounded-jpv-card border border-jpv-border bg-jpv-canvas p-6 shadow-jpv-card'
-                key={comment.id}
-              >
-                <div className='flex flex-wrap items-center justify-between gap-3'>
-                  <h3 className='font-bold text-jpv-brand-deep'>{comment.authorName}</h3>
-                  <time className='text-xs font-semibold uppercase tracking-[0.1em] text-jpv-sunshine-ink'>
-                    {formatDate(comment.createdAt)}
-                  </time>
-                </div>
-                <div className='mt-4'>
-                  <CommunityRichText value={comment.body} />
-                </div>
-              </article>
-            ))
+            <ProgressiveCommentList totalCount={post.comments.length}>
+              {post.comments.map((comment) => (
+                <article
+                  className='rounded-jpv-card border border-jpv-border bg-jpv-canvas p-6 shadow-jpv-card'
+                  key={comment.id}
+                >
+                  <div className='flex flex-wrap items-center justify-between gap-3'>
+                    <h3 className='font-bold text-jpv-brand-deep'>{comment.authorName}</h3>
+                    <time className='text-xs font-semibold uppercase tracking-[0.1em] text-jpv-sunshine-ink'>
+                      {formatDate(comment.createdAt)}
+                    </time>
+                  </div>
+                  <div className='mt-4'>
+                    <CommunityRichText value={comment.body} />
+                  </div>
+                </article>
+              ))}
+            </ProgressiveCommentList>
           ) : (
             <div className='rounded-jpv-card border border-dashed border-jpv-border bg-jpv-surface p-6 text-sm leading-6 text-jpv-muted'>
               No visible comments have been published for this discussion.

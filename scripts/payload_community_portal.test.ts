@@ -88,6 +88,7 @@ function buildPayload(overrides: Partial<CollectionMap> = {}) {
     payload_members: [
       {
         id: 'member_active',
+        displayName: 'Member Example',
         email: 'student@example.com',
         accountStatus: 'active',
         emailVerifiedAt: '2026-01-01T00:00:00.000Z',
@@ -224,6 +225,13 @@ function buildPayload(overrides: Partial<CollectionMap> = {}) {
         id: 'post_pro_visible',
         title: 'Pro operating thread',
         space: 'space_pro',
+        author: 'member_active',
+        body: {
+          root: {
+            type: 'root',
+            children: [{ type: 'paragraph', children: [{ type: 'text', text: 'A practical operating discussion for the Pro community.' }] }],
+          },
+        },
         postType: 'discussion',
         moderationStatus: 'visible',
         createdAt: '2026-01-03T00:00:00.000Z',
@@ -315,6 +323,8 @@ async function run() {
     assert.equal(detail?.posts.length, 1)
     assert.equal(detail?.posts[0]?.title, 'Pro operating thread')
     assert.equal(detail?.posts[0]?.commentCount, 1)
+    assert.equal(detail?.posts[0]?.authorName, 'Member Example')
+    assert.equal(detail?.posts[0]?.excerpt, 'A practical operating discussion for the Pro community.')
   }
 
   {

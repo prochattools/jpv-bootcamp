@@ -22,15 +22,17 @@ export function MemberFeaturedImage({ asset }: { asset: MemberMediaAsset | null 
   if (!asset) return null
 
   return (
-    <figure className='overflow-hidden rounded-2xl border border-neutral-200 bg-neutral-100'>
-      <img
-        alt={asset.alt}
-        className='h-auto max-h-[34rem] w-full object-cover'
-        height={asset.height ?? undefined}
-        loading='eager'
-        src={asset.url}
-        width={asset.width ?? undefined}
-      />
+    <figure className='mx-auto w-full max-w-5xl overflow-hidden rounded-jpv-panel border border-jpv-border bg-jpv-surface'>
+      <div className='flex aspect-[16/7] w-full items-center justify-center overflow-hidden'>
+        <img
+          alt={asset.alt}
+          className='h-full w-full object-contain'
+          height={asset.height ?? undefined}
+          loading='eager'
+          src={asset.url}
+          width={asset.width ?? undefined}
+        />
+      </div>
     </figure>
   )
 }
@@ -43,7 +45,7 @@ export function MemberMediaGallery({ assets }: { assets: MemberMediaAsset[] }) {
       <h2 className='text-xl font-semibold' id='media-gallery-heading'>Gallery</h2>
       <div className='grid gap-4 sm:grid-cols-2'>
         {assets.map((asset) => (
-          <figure className='overflow-hidden rounded-xl border border-neutral-200 bg-neutral-100' key={asset.id}>
+          <figure className='overflow-hidden rounded-jpv-card border border-jpv-border bg-jpv-surface' key={asset.id}>
             <img
               alt={asset.alt}
               className='h-64 w-full object-cover'
@@ -70,19 +72,19 @@ export function MemberAttachments({ assets }: { assets: MemberMediaAsset[] }) {
           const size = formatFileSize(asset.fileSize)
           return (
             <a
-              className='flex items-center justify-between gap-4 rounded-xl border border-neutral-200 bg-white px-5 py-4 text-sm hover:border-neutral-400'
+              className='flex items-center justify-between gap-4 rounded-jpv-card border border-jpv-border bg-jpv-canvas px-5 py-4 text-sm hover:border-jpv-brand'
               href={asset.url}
               key={asset.id}
             >
               <span>
-                <span className='block font-semibold text-neutral-950'>{asset.filename ?? asset.alt}</span>
+                <span className='block font-semibold text-jpv-ink'>{asset.filename ?? asset.alt}</span>
                 {asset.mimeType || size ? (
-                  <span className='mt-1 block text-xs text-neutral-500'>
+                  <span className='mt-1 block text-xs text-jpv-muted'>
                     {[asset.mimeType, size].filter(Boolean).join(' · ')}
                   </span>
                 ) : null}
               </span>
-              <span className='font-semibold text-neutral-700'>Download</span>
+              <span className='font-semibold text-jpv-brand-deep'>Download</span>
             </a>
           )
         })}
@@ -103,7 +105,7 @@ export function MemberManagedVideoSection({
   if (!video) return null
 
   return (
-    <section aria-labelledby='managed-video-heading' className='rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm'>
+    <section aria-labelledby='managed-video-heading' className='rounded-jpv-panel border border-jpv-border bg-jpv-canvas p-6 shadow-jpv-card'>
       <h2 className='text-xl font-semibold' id='managed-video-heading'>{video.title}</h2>
       <ManagedBunnyVideoPlayer
         knownStatus={video.status}

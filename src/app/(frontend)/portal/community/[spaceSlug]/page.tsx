@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
 import { StatusPill } from '@/components/portal/StatusPill'
+import { CommunityPostCard } from '@/components/community/CommunityPostCard'
 import { requirePortalMember } from '@/lib/auth/requirePortalMember'
 import { getMemberCommunitySpaceDetail, withQueryDedup } from '@/lib/payloadCourse/communityPortal'
 import { listSpaceLiveCalls } from '@/lib/liveSessions/memberSessions'
@@ -18,17 +19,6 @@ type PageProps = {
     submission?: string
     reason?: string
   }>
-}
-
-function formatDate(value: string | null) {
-  if (!value) return 'Date pending'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return 'Date pending'
-  return new Intl.DateTimeFormat('en', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  }).format(date)
 }
 
 export default async function PortalCommunitySpacePage({ params, searchParams }: PageProps) {
@@ -178,21 +168,11 @@ export default async function PortalCommunitySpacePage({ params, searchParams }:
             <div className='mt-8 space-y-4'>
               {detail.posts.length > 0 ? (
                 detail.posts.map((post) => (
-                  <Link
-                    className='block rounded-jpv-card border border-jpv-border bg-jpv-canvas p-6 shadow-jpv-card transition hover:-translate-y-0.5 hover:border-jpv-sunshine-ink/40'
+                  <CommunityPostCard
                     href={`/portal/community/${encodedSpaceSlug}/posts/${encodeURIComponent(post.id)}`}
                     key={post.id}
-                  >
-                    <article>
-                      <div className='flex flex-wrap items-center gap-3 text-xs font-bold uppercase tracking-[0.14em] text-jpv-sunshine-ink'>
-                        {post.pinned && <span>Pinned</span>}
-                        <span>{post.postType ?? 'discussion'}</span>
-                        <span>{formatDate(post.createdAt)}</span>
-                      </div>
-                      <h3 className='mt-3 text-xl font-bold text-jpv-brand-deep'>{post.title}</h3>
-                      <p className='mt-3 text-sm text-jpv-muted'>{post.commentCount} visible comments</p>
-                    </article>
-                  </Link>
+                    post={post}
+                  />
                 ))
               ) : (
                 <div className='rounded-jpv-card border border-jpv-border bg-jpv-canvas p-8 text-jpv-muted'>
