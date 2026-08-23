@@ -68,10 +68,10 @@ const Form = () => {
         onChange={handleChange}
         aria-label="Email address"
       />
-      {error && <p className="text-red-500 mt-2 text-start">{error}</p>}
+      {error && <p className="text-jpv-danger-ink mt-2 text-start">{error}</p>}
       <Button
         type="submit"
-        className="w-[150px] mt-8 bg-[#006fee] border-none scale-1 hover:scale-[1.05] transition-all duration-300 hover:bg-[#006fee]"
+        className="w-[150px] mt-8 bg-jpv-brand border-none scale-1 hover:scale-[1.05] transition-all duration-300 hover:bg-jpv-brand-hover"
       >
         Button
       </Button>

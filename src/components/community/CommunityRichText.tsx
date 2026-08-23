@@ -28,25 +28,25 @@ function CommunityRichTextNode({ node }: { node: SafeCommunityRichTextNode }) {
     case 'root':
       return <>{renderChildren(node.children)}</>
     case 'paragraph':
-      return <p className='text-sm leading-7 text-[#68766f]'>{renderChildren(node.children)}</p>
+      return <p className='text-sm leading-7 text-jpv-muted'>{renderChildren(node.children)}</p>
     case 'heading': {
       const HeadingTag = `h${node.level}` as const
-      return <HeadingTag className='font-bold text-[#153f2e]'>{renderChildren(node.children)}</HeadingTag>
+      return <HeadingTag className='font-bold text-jpv-brand-deep'>{renderChildren(node.children)}</HeadingTag>
     }
     case 'list':
       return node.ordered ? (
-        <ol className='list-decimal space-y-2 pl-6 text-sm leading-7 text-[#68766f]'>{renderChildren(node.children)}</ol>
+        <ol className='list-decimal space-y-2 pl-6 text-sm leading-7 text-jpv-muted'>{renderChildren(node.children)}</ol>
       ) : (
-        <ul className='list-disc space-y-2 pl-6 text-sm leading-7 text-[#68766f]'>{renderChildren(node.children)}</ul>
+        <ul className='list-disc space-y-2 pl-6 text-sm leading-7 text-jpv-muted'>{renderChildren(node.children)}</ul>
       )
     case 'list-item':
       return <li>{renderChildren(node.children)}</li>
     case 'quote':
-      return <blockquote className='border-l-4 border-[#d9c897] pl-4 italic text-[#51645b]'>{renderChildren(node.children)}</blockquote>
+      return <blockquote className='border-l-4 border-jpv-sunshine pl-4 italic text-jpv-muted'>{renderChildren(node.children)}</blockquote>
     case 'link':
       return (
         <a
-          className='font-semibold text-[#153f2e] underline underline-offset-4 hover:text-[#0f3023]'
+          className='font-semibold text-jpv-brand-deep underline underline-offset-4 hover:text-jpv-brand'
           href={node.href}
           rel='noopener noreferrer'
           target='_blank'

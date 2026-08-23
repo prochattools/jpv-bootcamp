@@ -89,24 +89,24 @@ export default function LiveKitJoinPage() {
   return (
     <div className="p-8 max-w-3xl mx-auto">
       <h1 className="text-3xl font-bold mb-2">Join Live Session</h1>
-      <p className="text-sm text-gray-500 mb-6">Session ID: {sessionId}</p>
+      <p className="text-sm text-jpv-muted mb-6">Session ID: {sessionId}</p>
 
       <div className="space-y-4">
         {state === 'idle' && (
           <button
             onClick={requestToken}
-            className="px-4 py-2 bg-blue-600 text-white rounded"
+            className="px-4 py-2 bg-jpv-brand text-jpv-canvas rounded-jpv-action hover:bg-jpv-brand-hover"
           >
             Join Session
           </button>
         )}
 
         {state === 'requesting' && (
-          <p className="text-gray-500 text-sm">Verifying entitlement…</p>
+          <p className="text-jpv-muted text-sm">Verifying entitlement…</p>
         )}
 
         {error && (
-          <div className="p-4 bg-red-50 border border-red-200 rounded text-red-800 text-sm">
+          <div className="p-4 bg-jpv-danger-surface border border-jpv-danger rounded-jpv-card text-jpv-danger-ink text-sm">
             {error}
           </div>
         )}

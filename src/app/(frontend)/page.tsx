@@ -1027,7 +1027,7 @@ export default function HomePage() {
             <div
               aria-atomic="true"
               aria-live="polite"
-              className={`mt-5 rounded-xl border px-4 py-3 text-sm ${supportStatus === "error" ? "border-red-200 bg-red-50 text-red-800" : "border-jpv-border bg-jpv-surface text-jpv-ink"}`}
+              className={`mt-5 rounded-xl border px-4 py-3 text-sm ${supportStatus === "error" ? "border-jpv-danger bg-jpv-danger-surface text-jpv-danger-ink" : "border-jpv-border bg-jpv-surface text-jpv-ink"}`}
               role="status"
             >
               {supportStatus === "success"

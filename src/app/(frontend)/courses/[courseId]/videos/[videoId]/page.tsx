@@ -38,7 +38,7 @@ export default function BunnyVideoPage() {
   }, [videoId])
 
   if (loading) return <div className="p-8" role="status" aria-live="polite">Loading video...</div>
-  if (error) return <div className="p-8 text-red-600">Error: {error}</div>
+  if (error) return <div className="p-8 text-jpv-danger-ink">Error: {error}</div>
   if (!metadata) return <div className="p-8">No video found</div>
 
   return (
@@ -46,28 +46,28 @@ export default function BunnyVideoPage() {
       <h1 className="text-3xl font-bold mb-4">{metadata.title}</h1>
 
       <div className="space-y-4">
-        <div className="bg-gray-200 aspect-video rounded flex items-center justify-center">
+        <div className="bg-jpv-surface aspect-video rounded-jpv-card flex items-center justify-center">
           {metadata.status === 'processing' && (
             <div className="text-center">
               <p className="text-lg font-medium mb-2">Processing Video</p>
-              <p className="text-sm text-gray-600">This video is being transcoded. Please check back soon.</p>
+              <p className="text-sm text-jpv-muted">This video is being transcoded. Please check back soon.</p>
             </div>
           )}
           {metadata.status === 'ready' && (
             <div className="text-center">
               <p className="text-lg font-medium mb-2">Video Ready</p>
-              <p className="text-sm text-gray-600">Bunny Stream player would load here</p>
+              <p className="text-sm text-jpv-muted">Bunny Stream player would load here</p>
             </div>
           )}
           {metadata.status === 'failed' && (
-            <div className="text-center text-red-600">
+            <div className="text-center text-jpv-danger-ink">
               <p className="text-lg font-medium mb-2">Video Failed</p>
               <p className="text-sm">{metadata.errorMessage}</p>
             </div>
           )}
         </div>
 
-        <div className="space-y-2 p-4 bg-gray-50 rounded">
+        <div className="space-y-2 p-4 bg-jpv-canvas rounded-jpv-card">
           <div>
             <p className="text-sm font-medium">Status</p>
             <p className="text-sm">{metadata.status.toUpperCase()}</p>
@@ -78,7 +78,7 @@ export default function BunnyVideoPage() {
               <p className="text-sm">{Math.round(metadata.duration / 60)} minutes</p>
             </div>
           )}
-          <p className="text-xs text-gray-600 mt-4">
+          <p className="text-xs text-jpv-muted mt-4">
             Video ID: {videoId}
           </p>
         </div>

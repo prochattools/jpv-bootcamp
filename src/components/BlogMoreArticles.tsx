@@ -15,7 +15,7 @@ const BlogMoreArticles = ({ currentBlog, AllPosts }: any) => {
 					<Link
 						href={`/blog/${post.slug}`}
 						key={index}
-						className='bg-white  dark:bg-[#1E232C] rounded-xl overflow-hidden shadow-lg dark:border border-solid border-[#373C53] hover:border-[#5b6285] transition-all duration-500 transform hover:scale-105 ease-in-out  '
+						className='overflow-hidden rounded-jpv-card border border-jpv-border bg-jpv-canvas shadow-jpv-card transition-all duration-500 ease-in-out hover:border-jpv-brand hover:shadow-jpv-card'
 					>
 						<Image
 							src={post.featured_img}
@@ -25,10 +25,10 @@ const BlogMoreArticles = ({ currentBlog, AllPosts }: any) => {
 							height={156}
 						/>
 						<div className='p-4'>
-							<h2 className=' font-normal text-[16px] dark:text-white mb-2'>
+							<h2 className='mb-2 text-[16px] font-normal text-jpv-ink'>
 								{post.title.rendered}
 							</h2>
-							<p className='text-gray-400'>
+							<p className='text-jpv-muted'>
 								{convertToReadableDate(post.date)}
 							</p>
 						</div>
