@@ -51,11 +51,11 @@ target, timestamp, artifact, and verification result.
 | Check | Current result |
 |---|---|
 | Active branch | `feature/course-branding-and-preview` |
-| Local HEAD | `b771cfca4ab6d2bcaa76f6dc2d2420c114082dd8` |
+| Local HEAD | Verify with `git rev-parse HEAD`; frozen implementation baseline is `b771cfca4ab6d2bcaa76f6dc2d2420c114082dd8` |
 | Remote feature tip | Matches local HEAD after the release-cleanup push |
 | `main` | `6970b3e7d4131abf2614991e694f8713f5168b33` in the separate main worktree |
 | Divergence | `main...feature = 16 769` |
-| Final feature-branch SHA | `b771cfca4ab6d2bcaa76f6dc2d2420c114082dd8`; exact-SHA staging evidence is still not established |
+| Frozen implementation baseline | `b771cfca4ab6d2bcaa76f6dc2d2420c114082dd8`; later documentation-only commits must be included in the final tip check; exact-SHA staging evidence is still not established |
 | Protected residue | `.claude/worktrees/**`, `newrelic_agent.log`, and the tracked `.bak` remain untouched |
 | Branch operations | No merge, reset, rebase, force-push, rename, or deletion performed |
 

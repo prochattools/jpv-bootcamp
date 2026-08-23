@@ -6,7 +6,7 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 
 ## Current repository reconciliation — 2026-08-23
 
-- **Working branch:** `feature/course-branding-and-preview`; current committed tip `b771cfca4ab6d2bcaa76f6dc2d2420c114082dd8`.
+- **Working branch:** `feature/course-branding-and-preview`; verify the current tip with `git rev-parse HEAD`; frozen implementation baseline `b771cfca4ab6d2bcaa76f6dc2d2420c114082dd8`.
 - **Cleanup record:** `docs/release/BRANCH_RECONCILIATION_2026-08-23.md`.
 - **Source state:** 36 registered Payload migrations; no database migration, deployment, provider mutation, or production operation was performed by this pass.
 - **Local validation:** after cleanup, `pnpm test:release` passed `164/164`; focused browser checks passed `60/60`; full browser E2E passed `148/148` with 60 declared skips. The initial shared `#A89A80` muted-token contrast defect was corrected.
