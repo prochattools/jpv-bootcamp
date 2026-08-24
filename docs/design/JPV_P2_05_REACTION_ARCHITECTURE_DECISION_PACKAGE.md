@@ -1,6 +1,6 @@
 # JPV P2-05 Reaction Architecture Decision Package
 
-Status: **DECISION REQUIRED — P2-05 remains blocked pending explicit approval**
+Status: **FINALIZED FOR APPROVAL — P2-05 remains blocked pending implementation authorization**
 Date: 2026-08-24
 Scope: architecture and migration decision only
 
@@ -180,6 +180,99 @@ The service should use a bounded rate limit consistent with the existing communi
 
 Overall estimated risk: **Medium** for the recommended additive implementation, with **Medium-high migration and security validation risk** until the focused tests and staging-only schema verification are complete. The in-place normalization alternative is **High risk** and is not recommended.
 
+## Final implementation contract
+
+The following is the normative contract for the next implementation goal. It resolves the architecture questions in this package; it does not authorize code or database changes.
+
+### Data model contract
+
+- Collection: `payload_engagement_reactions`.
+- Required owner: `member` relationship to `payload_members`; the value is derived from the authenticated session and is never accepted as authoritative browser input.
+- Reaction vocabulary: `helpful`, `insightful`, `celebrate`.
+- Target vocabulary: `space_post`, `space_comment`, `lesson_comment`.
+- Exactly one target relationship is required and must match `targetKind`.
+- One active row is allowed per `(member, targetKind, targetId)`, independent of reaction type.
+- Selecting a different type updates the existing row; selecting the current type removes it.
+- `metadata` is server-owned and optional; it cannot influence ownership, visibility, counts, or authorization.
+- `createdAt` and `updatedAt` are server-controlled timestamps.
+- Target-specific foreign keys and partial unique indexes are required, together with the target-shape check constraint.
+
+### Lifecycle contract
+
+| Event | Required behavior |
+| --- | --- |
+| Create | Authenticate the member, re-evaluate target access and visibility, validate the allowlisted type/target, then insert idempotently. |
+| Change | In one transaction, update the member’s existing target row to the new type; never create a second row. |
+| Remove | Delete only the authenticated member’s active row for that target and return an idempotent success when no row exists. |
+| Deactivated member | A deactivated member cannot mutate or view member-scoped reaction state. Existing active rows remain countable only where the target is visible and the product privacy policy permits aggregate counts. |
+| Hard-deleted member | The controlled member-deletion workflow cascades active reaction rows. Audit history is retained without restoring the deleted member or exposing private identity data. |
+| Moderated/hidden content | Reactions remain stored while content is temporarily hidden but are excluded from member projections and counts. Restoration makes them eligible again after normal access checks. |
+| Hard-deleted content | The target foreign key cascades active reactions. No orphan reaction row is retained. |
+| Deleted reaction | Member removal is a hard delete of the active row; the audit event records the action without retaining unnecessary reaction content. |
+| Administrative removal | A moderator/admin cannot impersonate a member. A separately audited moderation operation may remove a reaction only if an approved moderation tool and policy exist. |
+
+The hard-delete behavior above is the default contract and must be covered by migration and service tests before execution. The audit record is not a second reaction store.
+
+### Permission contract
+
+- Create/change/remove: authenticated, active, eligible member with access to the target’s course/space/lesson and a visible target.
+- View current member state: the same authenticated member, for their own eligible targets.
+- View aggregate counts: any viewer permitted to view the target; private or members-only targets never expose counts outside the target access boundary. Counts exclude hidden/deleted targets and are server-derived.
+- Moderator/admin read: existing controlled administrative access for review and diagnostics; no implicit member impersonation.
+- Moderator/admin delete: not part of the member API; only a future audited moderation operation may perform it.
+- Public collection writes: denied. The browser cannot choose `member`, collection IDs, target collections, or counts.
+
+### API boundary contract
+
+Use a domain service behind thin same-application server actions:
+
+- `getReactionSummary(target)` returns visible counts, the current member’s reaction when authenticated, and capability flags;
+- `setReaction(target, reactionType)` creates or changes the authenticated member’s reaction;
+- `removeReaction(target)` removes the authenticated member’s reaction.
+
+Server actions are the primary browser boundary because the current member portal is a same-application Next.js surface. A dedicated API route is not required for v1; it may be added later only for an approved non-browser consumer. Direct Payload REST/collection mutations are not allowed.
+
+Validation is layered:
+
+1. The server action validates input shape and allowlisted enum values.
+2. The domain service derives the member, evaluates target access, checks visibility and scope, applies rate limits, and performs the idempotent mutation.
+3. Database constraints enforce target shape, foreign keys, and uniqueness under concurrency.
+
+Errors return typed, non-sensitive results: `unauthenticated`, `ineligible`, `target_not_found`, `target_inaccessible`, `target_hidden`, `invalid_reaction`, `rate_limited`, or `conflict`. Do not reveal whether an inaccessible target exists. Revalidation is limited to the affected course/community route.
+
+### Migration contract
+
+A new additive migration is required for the active collection. It must not alter the existing `payload_space_reactions` table or its readers. The first migration creates an empty active table; it does not backfill legacy rows.
+
+Staging migration procedure, future authorization required:
+
+1. Confirm the approved commit and clean migration diff.
+2. Capture a sanitized pre-migration schema and legacy row-disposition snapshot.
+3. Verify staging identity and schema boundary.
+4. Apply only the new additive migration through the existing guarded runner.
+5. Verify table, foreign keys, target checks, indexes, and zero active rows.
+6. Run focused service/schema tests and the unchanged release gate.
+7. Record the exact migration result and stop before any production action.
+
+Production migration procedure, future-only and separately authorized:
+
+1. Approve a production change window, backup/restore evidence, operator, rollback owner, and monitoring plan.
+2. Promote the exact tested artifact; do not rebuild or hand-edit migration SQL.
+3. Verify production database identity and migration preconditions before execution.
+4. Apply the same additive migration once, verify constraints/indexes, and keep the active write path disabled until application verification passes.
+5. Enable the feature only after application health, authorization, counts, and rollback checks pass.
+6. Record post-migration evidence and retain the legacy table unchanged.
+
+No staging or production migration is authorized by this document.
+
+### Rollback contract
+
+- Before active writes: roll back the application artifact; the empty active table may be removed only through a separately approved down migration.
+- After active writes: roll back the application write path first and preserve the active table; do not delete user engagement as a rollback shortcut.
+- If the active table is empty after a verified write-path shutdown, a guarded down migration may remove only the new table and indexes.
+- If active rows exist, recovery is forward-compatible repair or reviewed data export/reconciliation, not destructive rollback.
+- The legacy `payload_space_reactions` table and its migration history are never part of this rollback.
+
 ## Recommended decision
 
 Approve the following bounded architecture:
@@ -192,7 +285,7 @@ Approve the following bounded architecture:
 6. Do not backfill legacy rows in the initial migration.
 7. Implement member mutations only through a server-side service that reuses existing access checks, audit events, and rate-limit patterns.
 
-This decision unblocks architecture planning without authorizing implementation, migration execution, staging deployment, or production work.
+This finalizes the architecture contract and unblocks preparation of an implementation task without authorizing implementation, migration execution, staging deployment, or production work.
 
 ## Required approval points
 
@@ -205,7 +298,58 @@ Explicit approval is required for each item below before implementation begins:
 5. The member service/API boundary, rate limit, audit event, and count-projection contract.
 6. The later UI activation scope, separately from this schema decision.
 
-Until these approvals are recorded, P2-05 remains blocked at the authorization boundary.
+Until these approvals are recorded, P2-05 remains blocked at the authorization boundary. The contract is finalized for review; it is not self-approving.
+
+## Implementation checklist after approval
+
+- [ ] Record product/engineering approval for this exact contract.
+- [ ] Add `payload_engagement_reactions` collection config with fail-closed collection access.
+- [ ] Add the additive migration, target-shape checks, foreign keys, and target-specific unique indexes.
+- [ ] Register the migration and regenerate Payload types.
+- [ ] Implement the reaction domain service and thin server actions.
+- [ ] Implement access, visibility, ownership, idempotency, rate limits, and audit events.
+- [ ] Add read projections for counts, viewer reaction, and capability flags.
+- [ ] Add focused unit/contract tests for every lifecycle, permission, target, and concurrency rule.
+- [ ] Connect the existing P2-04 presentation only after service and security tests pass.
+- [ ] Run typecheck, focused P2-05 tests, community/lesson regression tests, documentation checks, and the unchanged release gate.
+- [ ] Obtain separate staging migration/deployment authorization and capture fresh evidence.
+
+## Migration checklist
+
+- [ ] Read-only legacy inventory completed and sanitized.
+- [ ] Legacy actor, target, duplicate, orphan, and source-time dispositions documented.
+- [ ] No-backfill decision recorded for the initial active migration.
+- [ ] Active table starts empty and is independent of legacy readers.
+- [ ] Target-shape check and all three target-specific uniqueness indexes verified.
+- [ ] Foreign-key deletion behavior verified for target and member deletion workflows.
+- [ ] Migration runner registry and generated types agree.
+- [ ] Staging-only rehearsal/authorization recorded before any apply operation.
+- [ ] Rollback preflight proves legacy preservation and active-row safety.
+- [ ] Production procedure remains future-only and separately authorized.
+
+## Security checklist
+
+- [ ] Member identity comes only from the authenticated portal session.
+- [ ] Public Payload writes and direct browser collection mutations remain denied.
+- [ ] Space, community-comment, and lesson-comment access evaluators are reused.
+- [ ] Hidden, pending-review, deleted, cross-scope, and orphan targets fail closed.
+- [ ] Counts are server-derived and do not disclose inaccessible content.
+- [ ] One-member/one-target uniqueness is enforced under concurrent requests.
+- [ ] Add/change/remove operations are idempotent and rate-limited.
+- [ ] Moderator/admin operations cannot impersonate a member.
+- [ ] Active mutations emit the existing audit/security events.
+- [ ] Error responses do not reveal inaccessible-target existence or private identity data.
+
+## Architecture finalization validation
+
+The finalization task is complete only when the following evidence is recorded:
+
+- documentation consistency checks pass;
+- the architecture/preflight check passes;
+- existing UX/architecture tests pass;
+- the release gate remains unchanged and green;
+- the staged diff contains documentation only;
+- no Payload collection, migration, API, UI, database, staging, or production state changed.
 
 ## Exact implementation steps after approval
 
