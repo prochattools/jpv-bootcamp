@@ -50,10 +50,10 @@ export function AuthShell({
           <img alt={jpvBrand.logoAlt} className='h-16 w-auto max-w-[12rem] object-contain' src={jpvBrand.logoHorizontalPath} />
         </Link>
 
-        <div className='relative max-w-xl py-10'>
+        <div className='relative max-w-xl py-16'>
           <p className='jpv-eyebrow text-jpv-brand-bright'>Learn. Apply. Build.</p>
           <p
-            className='jpv-editorial-heading mt-3 text-balance text-3xl leading-tight xl:text-4xl'
+            className='jpv-editorial-heading mt-3 text-balance text-4xl leading-tight xl:text-5xl'
             style={branding?.bannerTitleColor ? { color: branding.bannerTitleColor } : undefined}
           >
             {bannerTitle}
@@ -73,7 +73,7 @@ export function AuthShell({
 
       {/* Right form panel */}
       <section
-        className='flex min-h-full items-start justify-start px-4 py-8 sm:px-6 lg:overflow-y-auto lg:py-10'
+        className='flex min-h-full items-center justify-center px-4 py-10 sm:px-6 lg:overflow-y-auto lg:py-16'
         style={branding?.formBackgroundColor ? { backgroundColor: branding.formBackgroundColor } : undefined}
       >
         <div className='w-full max-w-sm'>
@@ -86,7 +86,7 @@ export function AuthShell({
           </div>
 
           {/* Form card */}
-          <div className='rounded-2xl bg-white p-6 shadow-lg dark:bg-neutral-900'>
+          <div className='rounded-2xl bg-white p-8 shadow-lg dark:bg-neutral-900'>
             <p className='jpv-eyebrow'>{eyebrow}</p>
             <h1
               className='mt-3 text-2xl font-bold leading-tight text-jpv-ink'
@@ -100,9 +100,9 @@ export function AuthShell({
             >
               {description}
             </p>
-            {introActions ? <div className='mt-5'>{introActions}</div> : null}
+            {introActions ? <div className='mt-7'>{introActions}</div> : null}
 
-            <div className='mt-5 border-t border-jpv-border pt-4'>{children}</div>
+            <div className='mt-7 border-t border-jpv-border pt-6'>{children}</div>
           </div>
 
           {/* Footer rendered below card */}
