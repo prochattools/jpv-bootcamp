@@ -11,6 +11,7 @@ import {
   EngagementCommentActionBar,
   EngagementFutureActions,
   EngagementReactionBar,
+  reactionErrorMessage,
 } from '@/components/community/EngagementPresentation'
 import { ProgressiveCommentList } from '@/components/community/ProgressiveCommentList'
 import { LegacyLessonRichText } from '@/components/portal/LegacyLessonRichText'
@@ -34,6 +35,7 @@ type LessonPageProps = {
   searchParams?: Promise<{
     completed?: string | string[] | undefined
     discussion?: string | string[] | undefined
+    reaction?: string | string[] | undefined
     reason?: string | string[] | undefined
   }>
 }
@@ -158,6 +160,7 @@ function LessonCommentThread({
   courseSlug,
   lessonSlug,
   reactionSummaries,
+  reactionError,
   depth = 0,
 }: {
   comments: LessonDiscussionComment[]
@@ -165,6 +168,7 @@ function LessonCommentThread({
   courseSlug: string
   lessonSlug: string
   reactionSummaries: ReadonlyMap<string, ReactionSummary>
+  reactionError: string | null
   depth?: number
 }) {
   if (depth > 8) return null
@@ -187,6 +191,7 @@ function LessonCommentThread({
           action={submitReactionAction}
           className='mt-4'
           counts={reactionSummaries.get(comment.id)?.counts}
+          errorMessage={reactionError}
           label='Discussion comment reactions'
           redirectPath={`/portal/courses/${encodeURIComponent(courseSlug)}/lessons/${encodeURIComponent(lessonSlug)}`}
           targetId={comment.id}
@@ -219,6 +224,7 @@ function LessonCommentThread({
         courseSlug={courseSlug}
         lessonSlug={lessonSlug}
         reactionSummaries={reactionSummaries}
+        reactionError={reactionError}
         depth={depth + 1}
       />
     </article>
@@ -244,6 +250,9 @@ export default async function PortalLessonPage({ params, searchParams }: LessonP
     ? await listLessonDiscussion(payload as PayloadCourseWriteAPI, memberId, detail.lesson.id)
     : null
   const reactionSummaries = new Map<string, ReactionSummary>()
+  const reactionError = firstParam(query?.reaction) === 'error'
+    ? reactionErrorMessage(firstParam(query?.reason))
+    : null
   if (discussion?.allowed) {
     try {
       const summaries = await getLessonCommentReactionSummaries(
@@ -446,6 +455,7 @@ export default async function PortalLessonPage({ params, searchParams }: LessonP
                   courseSlug={courseSlug}
                   lessonSlug={lessonSlug}
                   reactionSummaries={reactionSummaries}
+                  reactionError={reactionError}
                 />
               ) : (
                 <div className='rounded-xl border border-dashed border-jpv-border px-5 py-6 text-sm text-jpv-muted'>

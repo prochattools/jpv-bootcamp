@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 
 import { cn } from '@/helpers/utils'
+import { ReactionSubmitButton } from '@/components/community/ReactionSubmitButton'
 
 export type EngagementReactionState = 'idle' | 'selected' | 'unavailable'
 
@@ -11,6 +12,28 @@ export type EngagementReactionCount = {
 }
 
 export type EngagementReactionType = 'helpful' | 'insightful' | 'celebrate'
+
+export function reactionErrorMessage(reason?: string): string | null {
+  switch (reason) {
+    case 'unauthenticated':
+      return 'Your session has expired. Please sign in again.'
+    case 'ineligible':
+      return 'Reactions are unavailable for this account right now.'
+    case 'target_inaccessible':
+    case 'target_hidden':
+    case 'target_not_found':
+    case 'target_not_supported':
+      return 'This reaction target is no longer available.'
+    case 'rate_limited':
+      return 'You are reacting too quickly. Please try again shortly.'
+    case 'conflict':
+      return 'This reaction changed in another request. Refresh and try again.'
+    case 'service_unavailable':
+      return 'Reactions are temporarily unavailable. Please try again shortly.'
+    default:
+      return reason ? 'Unable to save this reaction. Please try again.' : null
+  }
+}
 
 type EngagementReactionAction = (formData: FormData) => void | Promise<void>
 
@@ -137,6 +160,7 @@ type EngagementReactionBarProps = {
   targetKind?: 'space_post' | 'space_comment' | 'lesson_comment'
   targetId?: string | number
   redirectPath?: string
+  errorMessage?: string | null
   label?: string
   className?: string
 }
@@ -149,6 +173,7 @@ export function EngagementReactionBar({
   targetKind,
   targetId,
   redirectPath,
+  errorMessage = null,
   label = 'Engagement',
   className,
 }: EngagementReactionBarProps) {
@@ -161,16 +186,21 @@ export function EngagementReactionBar({
     { type: 'celebrate', label: 'Celebrate' },
   ]
 
-  const buttons = reactionOptions.map((option) => (
-    <EngagementReactionButton
+  const interactive = Boolean(action && targetKind && targetId !== undefined && redirectPath)
+  const buttons = reactionOptions.map((option) => interactive ? (
+    <ReactionSubmitButton
       count={activeCounts.get(option.type) ?? 0}
-      interactive={Boolean(action && targetKind && targetId !== undefined && redirectPath)}
       key={option.type}
       label={option.label}
-      name='reactionType'
-      state={viewerReaction === option.type ? 'selected' : 'idle'}
-      submit={Boolean(action && targetKind && targetId !== undefined && redirectPath)}
+      selected={viewerReaction === option.type}
       value={option.type}
+    />
+  ) : (
+    <EngagementReactionButton
+      count={activeCounts.get(option.type) ?? 0}
+      key={option.type}
+      label={option.label}
+      state={viewerReaction === option.type ? 'selected' : 'idle'}
     />
   ))
 
@@ -180,8 +210,15 @@ export function EngagementReactionBar({
       className={cn('flex flex-col gap-3 border-t border-jpv-border pt-5 sm:flex-row sm:items-center sm:justify-between', className)}
       data-engagement-component='reaction-bar'
     >
-      <EngagementReactionSummary counts={counts} totalCount={totalCount} />
-      {action && targetKind && targetId !== undefined && redirectPath ? (
+      <div className='min-w-0 flex-1 space-y-3'>
+        <EngagementReactionSummary counts={counts} totalCount={totalCount} />
+        {errorMessage ? (
+          <p aria-live='assertive' className='jpv-notice jpv-notice-danger px-3 py-2 text-sm' role='alert'>
+            {errorMessage}
+          </p>
+        ) : null}
+      </div>
+      {interactive ? (
         <form action={action} className='flex flex-wrap items-center gap-3'>
           <input name='targetKind' type='hidden' value={targetKind} />
           <input name='targetId' type='hidden' value={String(targetId)} />

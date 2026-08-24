@@ -7,13 +7,18 @@ import {
   EngagementCommentActionBar,
   EngagementFutureActions,
   EngagementReactionBar,
+  reactionErrorMessage,
 } from '@/components/community/EngagementPresentation'
 import { submitReactionAction } from '@/app/(frontend)/portal/reaction-actions'
 import { ProgressiveCommentList } from '@/components/community/ProgressiveCommentList'
 import { StatusPill } from '@/components/portal/StatusPill'
 import { requirePortalMember } from '@/lib/auth/requirePortalMember'
 import { getMemberCommunityPostDetail } from '@/lib/payloadCourse/communityDiscussion'
-import { getReactionSummary } from '@/lib/payloadCourse/reactions'
+import {
+  getReactionSummary,
+  getSpaceCommentReactionSummaries,
+  type ReactionSummary,
+} from '@/lib/payloadCourse/reactions'
 import type { MemberCommunityAttachmentResolution } from '@/lib/payloadCourse/communityFiles'
 import { submitCommunityComment } from '../../../actions'
 
@@ -26,6 +31,7 @@ type PageProps = {
     postId: string
   }>
   searchParams: Promise<{
+    reaction?: string
     submission?: string
     reason?: string
   }>
@@ -86,10 +92,28 @@ export default async function PortalCommunityPostPage({ params, searchParams }: 
   if (!result.allowed) notFound()
 
   const post = result.post
-  const reactionSummary = await getReactionSummary(payload, memberId, {
-    kind: 'space_post',
-    id: post.id,
-  })
+  let reactionSummary: ReactionSummary | null = null
+  try {
+    reactionSummary = await getReactionSummary(payload, memberId, {
+      kind: 'space_post',
+      id: post.id,
+    })
+  } catch {
+    // Keep the post readable while the separately authorized reaction schema
+    // or projection is unavailable. Mutations remain fail-closed server-side.
+  }
+  let commentReactionSummaries: ReadonlyMap<string, ReactionSummary> = new Map()
+  try {
+    commentReactionSummaries = await getSpaceCommentReactionSummaries(
+      payload,
+      memberId,
+      post.id,
+      post.comments.map((comment) => comment.id),
+    )
+  } catch {
+    // Comment reaction projection is optional until the staging migration and
+    // validation gate have completed.
+  }
   const requestedPath = `/portal/community/${encodeURIComponent(spaceSlug)}/posts/${encodeURIComponent(postId)}`
 
   return (
@@ -139,13 +163,14 @@ export default async function PortalCommunityPostPage({ params, searchParams }: 
           <EngagementReactionBar
             action={submitReactionAction}
             className='mt-8'
-            counts={reactionSummary.counts}
+            counts={reactionSummary?.counts}
+            errorMessage={query.reaction === 'error' ? reactionErrorMessage(query.reason) : null}
             label='Post reactions'
             redirectPath={requestedPath}
             targetId={post.id}
             targetKind='space_post'
-            totalCount={reactionSummary.totalCount}
-            viewerReaction={reactionSummary.viewerReaction}
+            totalCount={reactionSummary?.totalCount}
+            viewerReaction={reactionSummary?.viewerReaction}
           />
           <div className='mt-3'>
             <EngagementFutureActions />
@@ -220,6 +245,20 @@ export default async function PortalCommunityPostPage({ params, searchParams }: 
                   <div className='mt-4'>
                     <CommunityRichText value={comment.body} />
                   </div>
+                  {commentReactionSummaries.get(comment.id) ? (
+                    <EngagementReactionBar
+                      action={submitReactionAction}
+                      className='mt-4'
+                      counts={commentReactionSummaries.get(comment.id)?.counts}
+                      errorMessage={query.reaction === 'error' ? reactionErrorMessage(query.reason) : null}
+                      label='Comment reactions'
+                      redirectPath={requestedPath}
+                      targetId={comment.id}
+                      targetKind='space_comment'
+                      totalCount={commentReactionSummaries.get(comment.id)?.totalCount}
+                      viewerReaction={commentReactionSummaries.get(comment.id)?.viewerReaction}
+                    />
+                  ) : null}
                 </article>
               ))}
             </ProgressiveCommentList>

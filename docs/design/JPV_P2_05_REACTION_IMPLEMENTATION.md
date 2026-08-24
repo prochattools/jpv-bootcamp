@@ -1,8 +1,8 @@
 # JPV P2-05 Reaction Implementation
 
-Status: **IMPLEMENTATION_IN_PROGRESS — STAGING_MIGRATION_PENDING**
+Status: **IMPLEMENTATION_IN_PROGRESS (BACKEND_AND_UI_COMPLETE) — STAGING_MIGRATION_PENDING**
 
-P2-05 is being implemented against the approved additive architecture. The existing reaction collection remains a historical migration/provenance model and is unchanged. This document records implementation evidence; staging migration and deployment are still pending and production remains unauthorized.
+The P2-05 backend foundation and approved UI activation are implemented against the approved additive architecture. The existing reaction collection remains a historical migration/provenance model and is unchanged. This document records local implementation evidence; staging migration, deployment, and production remain separately gated and unauthorized.
 
 ## Preflight decision
 
@@ -74,7 +74,8 @@ The implemented service boundary is `src/lib/payloadCourse/reactions.ts` and the
 - derive `memberId` exclusively from the authenticated portal session;
 - resolve target access through `evaluatePayloadSpaceAccess` or `evaluatePayloadLessonAccess`;
 - require published/visible target state;
-- validate that the target belongs to the requested course/space/lesson;
+- validate that the target belongs to the requested course/space/lesson; space comments re-check their parent post and space access;
+- support visible root lesson discussion comments only; nested lesson replies fail closed with `target_not_supported` in v1;
 - perform add, remove, and change as idempotent server-owned operations;
 - return counts and the current member reaction as a projection;
 - batch-load lesson-discussion projections with paginated reaction rows rather than issuing one count set per comment;
@@ -82,14 +83,30 @@ The implemented service boundary is `src/lib/payloadCourse/reactions.ts` and the
 - write audit events for active mutations;
 - keep counts server-derived and indexed by target.
 
-The existing P2-04 UI remains the presentation boundary. It is now connected only for community posts and lesson-discussion comments. Community-comment reactions, bookmarks, sharing, notifications, and other engagement controls remain outside this implementation scope.
+The P2-04 presentation primitives are now activated through the approved P2-05 server action. Course posts and announcements use the post target; root lesson discussion comments use the lesson-comment target; and visible space comments use the parent post/space projection. Bookmarks, sharing, notifications, and other engagement controls remain outside this implementation scope.
+
+## UI integration
+
+The reusable reaction UI is implemented in:
+
+- `src/components/community/EngagementPresentation.tsx` — token-based summary, selected/idle/read-only states, compact counts, and error presentation;
+- `src/components/community/ReactionSubmitButton.tsx` — accessible SVG action button with `useFormStatus` pending state, keyboard focus treatment, `aria-pressed`, and `aria-busy`;
+- `src/app/(frontend)/portal/reaction-actions.ts` — authenticated server-action boundary for create/change/remove.
+
+Integrated surfaces:
+
+- community course posts and announcements on the existing post detail route;
+- root-level lesson discussion comments only;
+- visible supported space comments on the existing post detail route.
+
+The UI uses confirmed server responses rather than optimistic count mutation. While a form is pending, the submitted reaction controls show `Saving…` and disable duplicate submissions. Server-action errors return to the same portal route and render a compact accessible alert for authentication, permission, target, conflict, rate-limit, and temporary service failures. If the separately authorized reaction schema is unavailable, the page remains readable and the mutation remains fail-closed.
 
 ## Deferred and explicitly out of scope
 
 - No changes to `payload_space_reactions`.
 - No legacy backfill or historical conversion.
 - No direct Payload collection writes from the browser.
-- No comments, threaded replies, bookmarks, sharing, or notifications.
+- No new comments, threaded replies, bookmarks, sharing, or notifications.
 - No changes to historical leaderboard/bookmark behavior.
 - No production migration, deployment, or data action.
 
@@ -97,7 +114,12 @@ The existing P2-04 UI remains the presentation boundary. It is now connected onl
 
 The implementation currently has the following local evidence:
 
-- `pnpm exec vitest run src/__tests__/reactions.test.ts`: 6/6 passed, including the batch lesson-discussion projection.
+- `pnpm exec vitest run src/__tests__/reactions.test.ts`: 12/12 passed, including unauthenticated rejection, space-comment projection, and root-only lesson-discussion coverage.
+- `pnpm exec tsx scripts/p2_05_reaction_ui.test.ts`: PASS.
+- `pnpm exec tsx scripts/p2_04_engagement_ui.test.ts`: PASS.
+- `pnpm exec tsx scripts/course_community_ux_phase1.test.ts`: PASS.
+- `pnpm exec tsx scripts/ux_architecture_consolidation.test.ts`: PASS.
+- `pnpm exec playwright test e2e/visual-systems.spec.ts`: 20/20 passed across 320px, 375px, 768px, 1024px, and 1440px profiles.
 - `pnpm exec tsx scripts/p2_05_reaction_migration_safety.test.ts`: PASS.
 - Payload types regenerated after collection registration.
 - `pnpm exec tsc --noEmit`: PASS.
@@ -143,10 +165,12 @@ Changed files:
 - `src/lib/payloadCourse/reactions.ts`
 - `src/app/(frontend)/portal/reaction-actions.ts`
 - `src/components/community/EngagementPresentation.tsx`
-- community post and lesson page reaction wiring
+- `src/components/community/ReactionSubmitButton.tsx`
+- community post, space-comment, and lesson page reaction wiring
 - `src/payload-types.ts` (generated)
 - `src/__tests__/reactions.test.ts`
+- `scripts/p2_05_reaction_ui.test.ts`
 - `scripts/p2_05_reaction_migration_safety.test.ts`
 - guarded staging migration runner and migration-inventory contract tests
 
-Current status: implementation is local and staging migration is pending. No staging or production write has occurred in this record. Production remains **NOT AUTHORIZED**.
+Current status: backend and UI implementation is locally verified; staging migration is pending. No staging or production write has occurred in this record. Production remains **NOT AUTHORIZED**.

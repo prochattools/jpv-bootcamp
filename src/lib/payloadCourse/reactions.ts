@@ -94,7 +94,11 @@ const targetFieldByKind: Record<ReactionTargetKind, keyof ReactionDocument> = {
   lesson_comment: 'targetLessonComment',
 }
 
-const supportedMutationTargets = new Set<ReactionTargetKind>(['space_post', 'lesson_comment'])
+const supportedMutationTargets = new Set<ReactionTargetKind>([
+  'space_post',
+  'space_comment',
+  'lesson_comment',
+])
 
 function asString(value: unknown): string | null {
   if (typeof value === 'string' && value.trim()) return value.trim()
@@ -220,10 +224,46 @@ async function assertVisibleTarget(
     return post
   }
 
+  if (target.kind === 'space_comment') {
+    const comment = await findById(payload, 'payload_space_comments', target.id)
+    if (!comment) throw new ReactionServiceError('target_not_found', 'Reaction target was not found.')
+    if (comment.moderationStatus !== 'visible') {
+      throw new ReactionServiceError('target_hidden', 'This target is not available for reactions.')
+    }
+
+    const postId = relationshipId(comment.post)
+    if (!postId) throw new ReactionServiceError('target_inaccessible', 'This target is not available for reactions.')
+
+    const post = await findById(payload, 'payload_space_posts', postId)
+    if (!post) throw new ReactionServiceError('target_not_found', 'Reaction target was not found.')
+    if (post.moderationStatus !== 'visible') {
+      throw new ReactionServiceError('target_hidden', 'This target is not available for reactions.')
+    }
+
+    const spaceId = relationshipId(post.space)
+    if (!spaceId) throw new ReactionServiceError('target_inaccessible', 'This target is not available for reactions.')
+
+    const access = await evaluatePayloadSpaceAccess(payload, {
+      memberId,
+      spaceId,
+    })
+    if (!access.decision.allowed) {
+      throw new ReactionServiceError('target_inaccessible', 'This target is not available for reactions.')
+    }
+
+    return comment
+  }
+
   const comment = await findById(payload, 'payload_lesson_comments', target.id)
   if (!comment) throw new ReactionServiceError('target_not_found', 'Reaction target was not found.')
   if (comment.moderationStatus !== 'visible') {
     throw new ReactionServiceError('target_hidden', 'This target is not available for reactions.')
+  }
+  if (relationshipId(comment.parent)) {
+    throw new ReactionServiceError(
+      'target_not_supported',
+      'Nested lesson discussion comments do not support reactions in v1.',
+    )
   }
 
   const lessonId = relationshipId(comment.lesson)
@@ -368,6 +408,7 @@ export async function getLessonCommentReactionSummaries(
   })
   const visibleIds = new Set(
     visibleComments.docs
+      .filter((comment) => !relationshipId(comment.parent))
       .map((comment) => asString(comment.id))
       .filter((id): id is string => Boolean(id && requestedIds.has(id))),
   )
@@ -382,6 +423,58 @@ export async function getLessonCommentReactionSummaries(
   for (const id of visibleIds) {
     const target: ReactionTarget = { kind: 'lesson_comment', id }
     const targetRows = reactionRows.filter((reaction) => relationshipId(reaction.targetLessonComment) === id)
+    summaries.set(id, buildReactionSummary(target, memberId, targetRows))
+  }
+  return summaries
+}
+
+/**
+ * Batch projection for visible comments on one already-accessible community
+ * post. The post access check is performed once, while comment moderation and
+ * post ownership are rechecked before any reaction rows are projected.
+ */
+export async function getSpaceCommentReactionSummaries(
+  payload: PayloadCourseAccessAPI,
+  memberId: PayloadId,
+  postId: PayloadId,
+  rawCommentIds: readonly PayloadId[],
+): Promise<ReadonlyMap<string, ReactionSummary>> {
+  const resolvedPostId = asString(postId)
+  const requestedIds = new Set(rawCommentIds.map(asString).filter((id): id is string => Boolean(id)))
+  const summaries = new Map<string, ReactionSummary>()
+  if (!resolvedPostId || requestedIds.size === 0) return summaries
+
+  await requireEligibleMember(payload, memberId)
+  await assertVisibleTarget(payload, memberId, { kind: 'space_post', id: resolvedPostId })
+
+  const visibleComments = await payload.find({
+    collection: 'payload_space_comments',
+    where: {
+      and: [
+        { post: { equals: resolvedPostId } },
+        { moderationStatus: { equals: 'visible' } },
+      ],
+    },
+    limit: 500,
+    depth: 0,
+    overrideAccess: true,
+  })
+  const visibleIds = new Set(
+    visibleComments.docs
+      .map((comment) => asString(comment.id))
+      .filter((id): id is string => Boolean(id && requestedIds.has(id))),
+  )
+  if (visibleIds.size === 0) return summaries
+
+  const reactionRows = await findAllReactionRows(payload, {
+    and: [
+      { targetKind: { equals: 'space_comment' } },
+      { targetSpaceComment: { in: [...visibleIds] } },
+    ],
+  })
+  for (const id of visibleIds) {
+    const target: ReactionTarget = { kind: 'space_comment', id }
+    const targetRows = reactionRows.filter((reaction) => relationshipId(reaction.targetSpaceComment) === id)
     summaries.set(id, buildReactionSummary(target, memberId, targetRows))
   }
   return summaries

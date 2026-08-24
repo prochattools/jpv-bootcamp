@@ -2,6 +2,8 @@
 
 Status: complete — presentation-only foundation
 
+Historical note: this document records the pre-P2-05 presentation-only checkpoint. P2-05 now activates the approved reaction backend and UI integration through the same presentation primitives; the deferred-work statements below remain historical for P2-04 and do not authorize bookmarks, sharing, notifications, or unrelated engagement work.
+
 This phase adds the first reusable engagement UI layer without activating engagement behavior. It preserves the existing service-layer comment flows and keeps all future persistence work outside the frontend presentation boundary.
 
 ## Components created
