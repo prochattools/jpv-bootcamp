@@ -16,7 +16,7 @@ import { ProgressiveCommentList } from '@/components/community/ProgressiveCommen
 import { LegacyLessonRichText } from '@/components/portal/LegacyLessonRichText'
 import { requirePortalMember } from '@/lib/auth/requirePortalMember'
 import type { PayloadCourseWriteAPI } from '@/lib/payloadCourse/accessService'
-import { getReactionSummary, type ReactionSummary } from '@/lib/payloadCourse/reactions'
+import { getLessonCommentReactionSummaries, type ReactionSummary } from '@/lib/payloadCourse/reactions'
 import {
   createLessonComment,
   listLessonDiscussion,
@@ -245,17 +245,17 @@ export default async function PortalLessonPage({ params, searchParams }: LessonP
     : null
   const reactionSummaries = new Map<string, ReactionSummary>()
   if (discussion?.allowed) {
-    const summaryResults = await Promise.allSettled(
-      discussion.comments.map(async (comment) => ({
-        id: comment.id,
-        summary: await getReactionSummary(payload, memberId, {
-          kind: 'lesson_comment',
-          id: comment.id,
-        }),
-      })),
-    )
-    for (const result of summaryResults) {
-      if (result.status === 'fulfilled') reactionSummaries.set(result.value.id, result.value.summary)
+    try {
+      const summaries = await getLessonCommentReactionSummaries(
+        payload,
+        memberId,
+        discussion.lessonId,
+        discussion.comments.map((comment) => comment.id),
+      )
+      for (const [id, summary] of summaries) reactionSummaries.set(id, summary)
+    } catch {
+      // Preserve the readable lesson discussion if the optional reaction
+      // projection is unavailable; mutations remain fail-closed in the service.
     }
   }
 

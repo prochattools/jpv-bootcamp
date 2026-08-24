@@ -22,12 +22,15 @@ export type PayloadDocument = {
 
 type PayloadFindResult = {
   docs: any[]
+  totalDocs?: number
+  hasNextPage?: boolean
 }
 
 type PayloadFindArgs = {
   collection: any
   where?: any
   limit?: number
+  page?: number
   depth?: number
   sort?: any
   overrideAccess?: boolean

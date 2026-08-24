@@ -77,6 +77,7 @@ The implemented service boundary is `src/lib/payloadCourse/reactions.ts` and the
 - validate that the target belongs to the requested course/space/lesson;
 - perform add, remove, and change as idempotent server-owned operations;
 - return counts and the current member reaction as a projection;
+- batch-load lesson-discussion projections with paginated reaction rows rather than issuing one count set per comment;
 - reject browser-supplied actor IDs, arbitrary target collections, hidden targets, and direct public collection writes;
 - write audit events for active mutations;
 - keep counts server-derived and indexed by target.
@@ -96,7 +97,7 @@ The existing P2-04 UI remains the presentation boundary. It is now connected onl
 
 The implementation currently has the following local evidence:
 
-- `pnpm exec vitest run src/__tests__/reactions.test.ts`: 5/5 passed.
+- `pnpm exec vitest run src/__tests__/reactions.test.ts`: 6/6 passed, including the batch lesson-discussion projection.
 - `pnpm exec tsx scripts/p2_05_reaction_migration_safety.test.ts`: PASS.
 - Payload types regenerated after collection registration.
 - `pnpm exec tsc --noEmit`: PASS.
@@ -146,5 +147,6 @@ Changed files:
 - `src/payload-types.ts` (generated)
 - `src/__tests__/reactions.test.ts`
 - `scripts/p2_05_reaction_migration_safety.test.ts`
+- guarded staging migration runner and migration-inventory contract tests
 
 Current status: implementation is local and staging migration is pending. No staging or production write has occurred in this record. Production remains **NOT AUTHORIZED**.

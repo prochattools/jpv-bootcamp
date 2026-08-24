@@ -281,6 +281,112 @@ async function findViewerReaction(
   }) as Promise<ReactionDocument | null>
 }
 
+function buildReactionSummary(
+  target: ReactionTarget,
+  memberId: PayloadId,
+  reactions: readonly ReactionDocument[],
+): ReactionSummary {
+  const counts = reactionTypes.map((reactionType) => ({
+    reactionType,
+    label: reactionLabels[reactionType],
+    count: reactions.filter((reaction) => reaction.reactionType === reactionType).length,
+  }))
+  const viewerReaction = reactions.find((reaction) => relationshipId(reaction.member) === String(memberId))
+  const normalizedViewerReaction = viewerReaction && reactionTypes.includes(viewerReaction.reactionType as ReactionType)
+    ? viewerReaction.reactionType as ReactionType
+    : null
+
+  return {
+    target,
+    counts,
+    totalCount: reactions.length,
+    viewerReaction: normalizedViewerReaction,
+    canReact: true,
+  }
+}
+
+async function findAllReactionRows(
+  payload: PayloadCourseAccessAPI,
+  where: Record<string, unknown>,
+): Promise<ReactionDocument[]> {
+  const rows: ReactionDocument[] = []
+  const pageSize = 500
+
+  for (let page = 1; page <= 100; page += 1) {
+    const result = await payload.find({
+      collection: REACTION_COLLECTION,
+      where,
+      limit: pageSize,
+      page,
+      depth: 0,
+      overrideAccess: true,
+    })
+    rows.push(...(result.docs as ReactionDocument[]))
+    if (result.docs.length < pageSize || result.hasNextPage === false) return rows
+  }
+
+  throw new ReactionServiceError('service_unavailable', 'Reaction counts are temporarily unavailable.')
+}
+
+/**
+ * Batch projection for one already-loaded lesson discussion. The caller still
+ * supplies target IDs, but this service independently rechecks member
+ * eligibility, lesson entitlement, and visible comments before returning any
+ * reaction state. It avoids one count/viewer query set per comment.
+ */
+export async function getLessonCommentReactionSummaries(
+  payload: PayloadCourseAccessAPI,
+  memberId: PayloadId,
+  lessonId: PayloadId,
+  rawCommentIds: readonly PayloadId[],
+): Promise<ReadonlyMap<string, ReactionSummary>> {
+  const resolvedLessonId = asString(lessonId)
+  const requestedIds = new Set(rawCommentIds.map(asString).filter((id): id is string => Boolean(id)))
+  const summaries = new Map<string, ReactionSummary>()
+  if (!resolvedLessonId || requestedIds.size === 0) return summaries
+
+  await requireEligibleMember(payload, memberId)
+  const access = await evaluatePayloadLessonAccess(payload, {
+    memberId,
+    lessonId: resolvedLessonId,
+  })
+  if (!access.decision.allowed) {
+    throw new ReactionServiceError('target_inaccessible', 'This target is not available for reactions.')
+  }
+
+  const visibleComments = await payload.find({
+    collection: 'payload_lesson_comments',
+    where: {
+      and: [
+        { lesson: { equals: resolvedLessonId } },
+        { moderationStatus: { equals: 'visible' } },
+      ],
+    },
+    limit: 500,
+    depth: 0,
+    overrideAccess: true,
+  })
+  const visibleIds = new Set(
+    visibleComments.docs
+      .map((comment) => asString(comment.id))
+      .filter((id): id is string => Boolean(id && requestedIds.has(id))),
+  )
+  if (visibleIds.size === 0) return summaries
+
+  const reactionRows = await findAllReactionRows(payload, {
+    and: [
+      { targetKind: { equals: 'lesson_comment' } },
+      { targetLessonComment: { in: [...visibleIds] } },
+    ],
+  })
+  for (const id of visibleIds) {
+    const target: ReactionTarget = { kind: 'lesson_comment', id }
+    const targetRows = reactionRows.filter((reaction) => relationshipId(reaction.targetLessonComment) === id)
+    summaries.set(id, buildReactionSummary(target, memberId, targetRows))
+  }
+  return summaries
+}
+
 async function assertRateLimit(
   payload: PayloadCourseWriteAPI,
   memberId: PayloadId,

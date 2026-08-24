@@ -14,6 +14,7 @@ import {
   evaluatePayloadSpaceAccess,
 } from '@/lib/payloadCourse/accessService'
 import {
+  getLessonCommentReactionSummaries,
   getReactionSummary,
   ReactionServiceError,
   setReaction,
@@ -141,6 +142,25 @@ describe('P2-05 member reactions', () => {
       { reactionType: 'insightful', label: 'Insightful', count: 0 },
       { reactionType: 'celebrate', label: 'Celebrate', count: 1 },
     ])
+  })
+
+  it('batch-loads lesson discussion reaction summaries with one projection', async () => {
+    const { payload } = makePayload([
+      { id: 1, member: 42, reactionType: 'helpful', targetKind: 'lesson_comment', targetLessonComment: 11 },
+      { id: 2, member: 99, reactionType: 'celebrate', targetKind: 'lesson_comment', targetLessonComment: 11 },
+    ])
+
+    const summaries = await getLessonCommentReactionSummaries(payload, 42, 30, [11])
+    expect(summaries.get('11')).toMatchObject({
+      totalCount: 2,
+      viewerReaction: 'helpful',
+      counts: [
+        { reactionType: 'helpful', count: 1 },
+        { reactionType: 'insightful', count: 0 },
+        { reactionType: 'celebrate', count: 1 },
+      ],
+    })
+    expect(payload.find.mock.calls.filter(([args]) => args.collection === 'payload_engagement_reactions')).toHaveLength(1)
   })
 
   it('fails closed for hidden, inaccessible, and unsupported targets', async () => {
