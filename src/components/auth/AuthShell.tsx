@@ -35,13 +35,12 @@ export function AuthShell({
   footer,
   branding,
 }: AuthShellProps) {
-  const logoUrl = branding?.logoUrl || jpvBrand.logoPath
-  const siteTitle = branding?.siteTitle || jpvBrand.name
   const bannerTitle = branding?.bannerTitle || 'Property education grounded in purpose and practical action.'
   const bannerDescription = branding?.bannerDescription || 'Secure access to your programme, resources, community, and account tools in one connected member experience.'
 
   return (
-    <main className='jpv-auth-shell h-screen overflow-auto bg-jpv-canvas text-jpv-ink lg:grid lg:grid-cols-[minmax(0,0.9fr)_minmax(30rem,1.1fr)] lg:overflow-hidden'>
+    <main className='jpv-auth-shell min-h-[100dvh] overflow-auto bg-jpv-canvas text-jpv-ink lg:grid lg:h-[100dvh] lg:grid-cols-[minmax(0,0.9fr)_minmax(30rem,1.1fr)] lg:overflow-hidden'>
+      {/* Left banner — desktop only */}
       <section
         className='relative hidden overflow-hidden rounded-r-none bg-jpv-brand-deep p-10 text-jpv-canvas lg:flex lg:h-full lg:flex-col lg:justify-between xl:p-14'
         style={branding?.bannerBackgroundColor ? { backgroundColor: branding.bannerBackgroundColor } : undefined}
@@ -72,35 +71,46 @@ export function AuthShell({
         </p>
       </section>
 
+      {/* Right form panel */}
       <section
-        className='flex min-h-full items-center justify-center px-5 py-8 sm:px-8 lg:overflow-y-auto lg:py-12'
+        className='flex min-h-full items-center justify-center px-4 py-10 sm:px-6 lg:overflow-y-auto lg:py-16'
         style={branding?.formBackgroundColor ? { backgroundColor: branding.formBackgroundColor } : undefined}
       >
-        <div className='w-full max-w-xl'>
-          <Link className='mb-8 flex w-fit items-center lg:hidden' href='/'>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img alt={jpvBrand.logoAlt} className='h-14 w-auto max-w-[10rem] object-contain' src={jpvBrand.logoHorizontalPath} />
-          </Link>
+        <div className='w-full max-w-sm'>
+          {/* Logo above card — visible on mobile; desktop sees logo in the left banner */}
+          <div className='mb-8 flex justify-center lg:hidden'>
+            <Link href='/'>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img alt={jpvBrand.logoAlt} className='h-12 w-auto max-w-[10rem] object-contain' src={jpvBrand.logoHorizontalPath} />
+            </Link>
+          </div>
 
-          <div>
+          {/* Form card */}
+          <div className='rounded-2xl bg-white p-8 shadow-lg dark:bg-neutral-900'>
             <p className='jpv-eyebrow'>{eyebrow}</p>
             <h1
-              className='jpv-editorial-heading mt-4 text-balance text-4xl leading-tight sm:text-5xl'
+              className='mt-3 text-2xl font-bold leading-tight text-jpv-ink'
               style={branding?.formTitleColor ? { color: branding.formTitleColor } : undefined}
             >
               {title}
             </h1>
             <p
-              className='mt-4 max-w-lg text-pretty text-sm leading-7 text-jpv-muted sm:text-base'
+              className='mt-2 text-sm leading-6 text-jpv-muted'
               style={branding?.formTextColor ? { color: branding.formTextColor } : undefined}
             >
               {description}
             </p>
-            {introActions ? <div className='mt-6'>{introActions}</div> : null}
+            {introActions ? <div className='mt-5'>{introActions}</div> : null}
+
+            <div className='mt-7 border-t border-jpv-border pt-6'>{children}</div>
           </div>
 
-          <div className='mt-8 border-t border-jpv-border pt-8'>{children}</div>
-          {footer ? <div className='mt-7 border-t border-jpv-border pt-6'>{footer}</div> : null}
+          {/* Footer rendered below card */}
+          {footer ? (
+            <div className='mt-4 rounded-xl border border-jpv-border bg-jpv-surface px-4 py-3 text-sm text-jpv-muted'>
+              {footer}
+            </div>
+          ) : null}
         </div>
       </section>
     </main>

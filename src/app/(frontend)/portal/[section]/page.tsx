@@ -84,6 +84,31 @@ function accountStatusTone(status: string | null | undefined): 'good' | 'warn' |
   return status === 'active' || status === 'trialing' ? 'good' : status ? 'warn' : 'neutral'
 }
 
+function subscriptionStatusTone(status: string | null | undefined): 'good' | 'warn' | 'danger' | 'neutral' {
+  if (status === 'active' || status === 'trialing') return 'good'
+  if (status === 'past_due' || status === 'unpaid' || status === 'cancelled' || status === 'canceled') return 'danger'
+  if (status === 'incomplete' || status === 'incomplete_expired' || status === 'paused') return 'warn'
+  return 'neutral'
+}
+
+function subscriptionStatusBadgeClass(status: string | null | undefined): string {
+  const tone = subscriptionStatusTone(status)
+  if (tone === 'good') return 'inline-flex rounded-full px-3 py-1 text-xs font-medium bg-emerald-50 text-emerald-700'
+  if (tone === 'danger') return 'inline-flex rounded-full px-3 py-1 text-xs font-medium bg-red-50 text-red-700'
+  if (tone === 'warn') return 'inline-flex rounded-full px-3 py-1 text-xs font-medium bg-orange-50 text-orange-950'
+  return 'inline-flex rounded-full px-3 py-1 text-xs font-medium bg-jpv-surface text-jpv-ink'
+}
+
+function displayPriceForCadence(cadenceLabel: string | null): string | null {
+  if (!cadenceLabel) return null
+  const lower = cadenceLabel.toLowerCase()
+  if (lower === 'annual') return '£800 / year'
+  if (lower === 'monthly') return '£80 / month'
+  return null
+}
+
+const sectionCardTitleClass = 'text-lg font-semibold text-jpv-ink border-b border-jpv-border pb-3'
+
 function currentTier(overview: Awaited<ReturnType<typeof getMemberAccountOverview>>): string {
   const subscription = overview.subscriptions.find((item) => item.status === 'active' || item.status === 'trialing')
   if (subscription?.plan === 'jpv_bootcamp_membership') return 'JPV Bootcamp Membership'
@@ -227,19 +252,13 @@ export default async function PortalSectionPage({ params, searchParams }: Portal
     const fallbackDisplayName = memberEmail.split('@')[0] || 'Member'
 
     return (
-      <div className='space-y-6'>
-        <section className='grid gap-4 lg:grid-cols-[1fr_auto] lg:items-end'>
-          <div>
-            <p className='jpv-eyebrow'>Profile</p>
-            <h1 className='mt-2 text-3xl font-semibold tracking-tight text-jpv-ink'>Account</h1>
-            <p className='mt-2 max-w-2xl text-sm leading-6 text-jpv-muted'>
-              Manage your profile, sign-in email, password, and account security.
-            </p>
-          </div>
-          <div className='rounded-jpv-card border border-jpv-border bg-jpv-surface px-4 py-3 text-sm'>
-            <span className='text-jpv-muted'>Membership</span>
-            <strong className='ml-2 text-jpv-ink'>{currentTier(account)}</strong>
-          </div>
+      <div className='mx-auto max-w-3xl space-y-6'>
+        <section>
+          <p className='jpv-eyebrow'>Profile</p>
+          <h1 className='mt-2 text-3xl font-semibold tracking-tight text-jpv-ink'>Account &amp; Billing</h1>
+          <p className='mt-2 max-w-2xl text-sm leading-6 text-jpv-muted'>
+            Manage your profile, sign-in email, password, and account security.
+          </p>
         </section>
 
         <PortalSectionNavigation
@@ -248,11 +267,13 @@ export default async function PortalSectionPage({ params, searchParams }: Portal
             { href: '#profile', title: 'Profile' },
             { href: '#password', title: 'Password' },
             { href: '#email', title: 'Email' },
+            { href: '/portal/billing', title: 'Billing' },
           ]}
         />
 
         <section className={portalCardClass} id='profile'>
-          <dl className='grid gap-6 sm:grid-cols-2 xl:grid-cols-4'>
+          <h2 className={sectionCardTitleClass}>Profile</h2>
+          <dl className='mt-5 grid gap-6 sm:grid-cols-2'>
             <div>
               <dt className='text-sm font-medium text-neutral-500'>Email</dt>
               <dd className='mt-2 text-base font-semibold text-neutral-950'>
@@ -261,13 +282,13 @@ export default async function PortalSectionPage({ params, searchParams }: Portal
             </div>
             <div>
               <dt className='text-sm font-medium text-neutral-500'>Account status</dt>
-              <dd className='mt-2 text-base font-semibold text-neutral-950'>
+              <dd className='mt-2'>
                 <span
-                  className={`inline-flex rounded-full px-3 py-1 text-sm ${
+                  className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${
                     accountStatusTone(accountStatus) === 'good'
                       ? 'bg-emerald-50 text-emerald-700'
                       : accountStatusTone(accountStatus) === 'warn'
-                        ? 'bg-jpv-sunshine/20 text-jpv-sunshine-ink'
+                        ? 'bg-orange-50 text-orange-950'
                         : 'bg-jpv-surface text-jpv-ink'
                   }`}
                 >
@@ -276,39 +297,44 @@ export default async function PortalSectionPage({ params, searchParams }: Portal
               </dd>
             </div>
             <div>
-              <dt className='text-sm font-medium text-neutral-500'>Member tier</dt>
+              <dt className='text-sm font-medium text-neutral-500'>Member since</dt>
               <dd className='mt-2 text-base font-semibold text-neutral-950'>
-                {currentTier(account)}
+                {formatDate(memberRecord.createdAt)}
               </dd>
             </div>
             <div>
               <dt className='text-sm font-medium text-neutral-500'>Email verified</dt>
               <dd className='mt-2 text-base font-semibold text-neutral-950'>
-                {emailVerifiedAt ? formatDate(emailVerifiedAt) : 'Not verified'}
+                {emailVerifiedAt ? formatDate(emailVerifiedAt) : (
+                  <span className='inline-flex rounded-full px-3 py-1 text-xs font-medium bg-orange-50 text-orange-950'>Not verified</span>
+                )}
+              </dd>
+            </div>
+            <div className='sm:col-span-2 border-t border-jpv-border pt-4'>
+              <dt className='text-sm font-medium text-neutral-500'>Member tier</dt>
+              <dd className='mt-2 flex items-center gap-3'>
+                <span className='text-base font-semibold text-neutral-950'>{currentTier(account)}</span>
+                <a href='/portal/billing' className='text-sm text-jpv-brand hover:underline'>View billing &rarr;</a>
               </dd>
             </div>
           </dl>
         </section>
 
         <section className={portalCardClass}>
-          <div>
-            <h2 className='text-xl font-semibold text-jpv-ink'>Profile cover</h2>
-            <p className='mt-2 text-sm leading-6 text-neutral-600'>
-              Your cover image appears with your member profile. Migrated FluentCommunity cover photos are preserved here.
-            </p>
-          </div>
+          <h2 className={sectionCardTitleClass}>Profile cover</h2>
+          <p className='mt-3 text-sm leading-6 text-neutral-600'>
+            Your cover image appears with your member profile. Migrated FluentCommunity cover photos are preserved here.
+          </p>
           <div className='mt-5'>
             <MemberCoverImageForm currentCover={account.profile?.coverImage ?? null} />
           </div>
         </section>
 
         <section className={portalCardClass}>
-          <div>
-            <h2 className='text-xl font-semibold text-jpv-ink'>Edit profile</h2>
-            <p className='mt-2 text-sm leading-6 text-neutral-600'>
-              These details are used in your member experience. Internal notes and access settings cannot be changed here.
-            </p>
-          </div>
+          <h2 className={sectionCardTitleClass}>Edit profile</h2>
+          <p className='mt-3 text-sm leading-6 text-neutral-600'>
+            These details are used in your member experience. Internal notes and access settings cannot be changed here.
+          </p>
 
           <div className='mt-5' aria-live='polite'>
             {query.updated === '1' ? (
@@ -456,26 +482,20 @@ export default async function PortalSectionPage({ params, searchParams }: Portal
 
         <section className='grid gap-6 lg:grid-cols-2'>
           <article className={portalCardClass} id='password'>
-            <div>
-              <p className='jpv-eyebrow'>Security</p>
-              <h2 className='mt-2 text-2xl font-semibold text-jpv-ink'>Change password</h2>
-              <p className='mt-2 text-sm leading-6 text-neutral-600'>
-                Confirm your current password before choosing a new one.
-              </p>
-            </div>
+            <h2 className={sectionCardTitleClass}>Change password</h2>
+            <p className='mt-3 text-sm leading-6 text-neutral-600'>
+              Confirm your current password before choosing a new one.
+            </p>
             <div className='mt-6'>
               <PasswordChangeForm />
             </div>
           </article>
 
           <article className={portalCardClass} id='email'>
-            <div>
-              <p className='jpv-eyebrow'>Sign-in email</p>
-              <h2 className='mt-2 text-2xl font-semibold text-jpv-ink'>Change email address</h2>
-              <p className='mt-2 text-sm leading-6 text-neutral-600'>
-                Confirm a new address before it replaces your current sign-in email.
-              </p>
-            </div>
+            <h2 className={sectionCardTitleClass}>Change email address</h2>
+            <p className='mt-3 text-sm leading-6 text-neutral-600'>
+              Confirm a new address before it replaces your current sign-in email.
+            </p>
             <div className='mt-6'>
               <EmailChangeForm />
             </div>
@@ -532,19 +552,13 @@ export default async function PortalSectionPage({ params, searchParams }: Portal
     const notice = billingNotice(query)
 
     return (
-      <div className='space-y-6'>
-        <section className='grid gap-4 lg:grid-cols-[1fr_auto] lg:items-end'>
-          <div>
-            <p className='jpv-eyebrow'>Membership</p>
-            <h1 className='mt-2 text-3xl font-semibold tracking-tight text-jpv-ink'>Billing</h1>
-            <p className='mt-2 max-w-2xl text-sm leading-6 text-jpv-muted'>
-              Review your membership, renewal status, invoices, and secure payment settings.
-            </p>
-          </div>
-          <div className='rounded-jpv-card border border-jpv-border bg-jpv-surface px-4 py-3 text-sm'>
-            <span className='text-jpv-muted'>Current membership</span>
-            <strong className='ml-2 text-jpv-ink'>{presentation.displayPlanLabel ?? 'JPV Bootcamp Membership'}</strong>
-          </div>
+      <div className='mx-auto max-w-3xl space-y-6'>
+        <section>
+          <p className='jpv-eyebrow'>Membership</p>
+          <h1 className='mt-2 text-3xl font-semibold tracking-tight text-jpv-ink'>Billing</h1>
+          <p className='mt-2 max-w-2xl text-sm leading-6 text-jpv-muted'>
+            Review your membership, renewal status, invoices, and secure payment settings.
+          </p>
         </section>
 
         <PortalSectionNavigation
@@ -552,7 +566,8 @@ export default async function PortalSectionPage({ params, searchParams }: Portal
           links={[
             { href: '#status', title: 'Status' },
             { href: '#manage', title: 'Manage' },
-            { href: '#projection', title: 'Details' },
+            { href: '#details', title: 'Details' },
+            { href: '/portal/account', title: 'Account' },
           ]}
         />
 
@@ -628,8 +643,8 @@ export default async function PortalSectionPage({ params, searchParams }: Portal
         {billingStatus.hasActiveSubscription || billingOverview.hasPaidSubscription ? (
           <>
             <section className={portalCardClass} id='status'>
-              <h2 className='text-lg font-semibold text-jpv-ink'>Subscription status</h2>
-              <dl className='mt-6 grid gap-6 sm:grid-cols-2'>
+              <h2 className={sectionCardTitleClass}>Subscription</h2>
+              <dl className='mt-5 grid gap-6 sm:grid-cols-2'>
                 {presentation.displayPlanLabel && (
                   <div>
                     <dt className='text-sm font-medium text-neutral-500'>Current plan</dt>
@@ -641,21 +656,49 @@ export default async function PortalSectionPage({ params, searchParams }: Portal
                 {presentation.displaySubscriptionStatus && (
                   <div>
                     <dt className='text-sm font-medium text-neutral-500'>Status</dt>
+                    <dd className='mt-2'>
+                      <span className={subscriptionStatusBadgeClass(presentation.displaySubscriptionStatus)}>
+                        {titleCase(presentation.displaySubscriptionStatus)}
+                      </span>
+                    </dd>
+                  </div>
+                )}
+                {presentation.billingCadenceLabel && (
+                  <div>
+                    <dt className='text-sm font-medium text-neutral-500'>Billing period</dt>
                     <dd className='mt-2 text-base font-semibold text-neutral-950'>
-                      {titleCase(presentation.displaySubscriptionStatus)}
+                      {presentation.billingCadenceLabel}
+                    </dd>
+                  </div>
+                )}
+                {presentation.billingCadenceLabel && displayPriceForCadence(presentation.billingCadenceLabel) && (
+                  <div>
+                    <dt className='text-sm font-medium text-neutral-500'>Price</dt>
+                    <dd className='mt-2 text-base font-semibold text-neutral-950'>
+                      {displayPriceForCadence(presentation.billingCadenceLabel)}
                     </dd>
                   </div>
                 )}
                 <div>
                   <dt className='text-sm font-medium text-neutral-500'>Membership access</dt>
-                  <dd className='mt-2 text-base font-semibold text-neutral-950'>
-                    {billingStatus.billingAccessState === 'available'
-                      ? 'Available'
-                      : billingStatus.billingAccessState === 'billing_hold'
-                        ? 'On billing hold'
-                        : billingStatus.billingAccessState === 'inactive'
-                          ? 'Inactive'
-                          : 'Pending billing status'}
+                  <dd className='mt-2'>
+                    <span className={
+                      billingStatus.billingAccessState === 'available'
+                        ? 'inline-flex rounded-full px-3 py-1 text-xs font-medium bg-emerald-50 text-emerald-700'
+                        : billingStatus.billingAccessState === 'billing_hold'
+                          ? 'inline-flex rounded-full px-3 py-1 text-xs font-medium bg-red-50 text-red-700'
+                          : billingStatus.billingAccessState === 'inactive'
+                            ? 'inline-flex rounded-full px-3 py-1 text-xs font-medium bg-neutral-100 text-neutral-500'
+                            : 'inline-flex rounded-full px-3 py-1 text-xs font-medium bg-orange-50 text-orange-950'
+                    }>
+                      {billingStatus.billingAccessState === 'available'
+                        ? 'Available'
+                        : billingStatus.billingAccessState === 'billing_hold'
+                          ? 'On billing hold'
+                          : billingStatus.billingAccessState === 'inactive'
+                            ? 'Inactive'
+                            : 'Pending'}
+                    </span>
                   </dd>
                 </div>
                 {presentation.displayPeriodEndDate && (
@@ -665,14 +708,6 @@ export default async function PortalSectionPage({ params, searchParams }: Portal
                     </dt>
                     <dd className='mt-2 text-base font-semibold text-neutral-950'>
                       {formatDate(presentation.displayPeriodEndDate)}
-                    </dd>
-                  </div>
-                )}
-                {presentation.billingCadenceLabel && (
-                  <div>
-                    <dt className='text-sm font-medium text-neutral-500'>Billing cadence</dt>
-                    <dd className='mt-2 text-base font-semibold text-neutral-950'>
-                      {presentation.billingCadenceLabel}
                     </dd>
                   </div>
                 )}
@@ -729,32 +764,21 @@ export default async function PortalSectionPage({ params, searchParams }: Portal
             </section>
 
             <section className={portalCardClass} id='manage'>
-              <h2 className='text-lg font-semibold text-jpv-ink'>Manage subscription</h2>
+              <h2 className={sectionCardTitleClass}>Manage subscription</h2>
               {billingStatus.restrictedPortalRequired ? (
-                <p className='mt-2 text-sm leading-6 text-neutral-600'>
+                <p className='mt-3 text-sm leading-6 text-neutral-600'>
                   Your JPV Bootcamp Membership is within its initial 12-month commitment. You can
                   update payment details and view invoices in the secure billing portal. Plan changes
                   require support review, and an ordinary cancellation request takes effect at the
                   commitment end date shown above.
                 </p>
               ) : (
-                <p className='mt-2 text-sm text-neutral-600'>
+                <p className='mt-3 text-sm text-neutral-600'>
                   Update payment methods, view invoices, and manage period-end cancellation.
                 </p>
               )}
-              <div className='mt-6 flex flex-wrap gap-3'>
+              <div className='mt-5 flex flex-wrap gap-3'>
                 <BillingPortalButton />
-                {billingStatus.restrictedPortalRequired &&
-                  billingStatus.commitmentStatus !== 'cancellation_requested' && (
-                    <form action={requestMembershipCancellation}>
-                      <button
-                        type='submit'
-                        className='jpv-button-secondary min-h-11'
-                      >
-                        Request end-of-term cancellation
-                      </button>
-                    </form>
-                  )}
               </div>
               {billingStatus.commitmentStatus === 'cancellation_requested' && (
                 <p className='jpv-notice mt-4'>
@@ -764,12 +788,37 @@ export default async function PortalSectionPage({ params, searchParams }: Portal
               )}
             </section>
 
-            <section className={portalCardClass} id='projection'>
-              <h2 className='text-lg font-semibold text-jpv-ink'>Billing details</h2>
-              <p className='mt-2 text-sm leading-6 text-neutral-600'>
+            {billingStatus.restrictedPortalRequired &&
+              billingStatus.commitmentStatus !== 'cancellation_requested' && (
+                <section
+                  className='rounded-jpv-panel border border-red-200 bg-red-50 p-5 shadow-sm sm:p-6'
+                  id='cancel'
+                >
+                  <h2 className='text-lg font-semibold text-red-700 border-b border-red-200 pb-3'>Cancel membership</h2>
+                  <p className='mt-3 text-sm leading-6 text-neutral-700'>
+                    You are within your initial 12-month commitment period. Requesting cancellation
+                    now will end your membership at the commitment end date — not immediately. Billing
+                    and access continue until then.
+                  </p>
+                  <div className='mt-5'>
+                    <form action={requestMembershipCancellation}>
+                      <button
+                        type='submit'
+                        className='inline-flex min-h-11 items-center rounded-jpv-action border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-700 shadow-sm hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-400'
+                      >
+                        Request end-of-term cancellation
+                      </button>
+                    </form>
+                  </div>
+                </section>
+              )}
+
+            <section className={portalCardClass} id='details'>
+              <h2 className={sectionCardTitleClass}>Billing details</h2>
+              <p className='mt-3 text-sm leading-6 text-neutral-600'>
                 Operational billing controls use the current billing status. This section shows the member billing mirror used for entitlement projection and account summaries.
               </p>
-              <dl className='mt-6 grid gap-6 sm:grid-cols-2'>
+              <dl className='mt-5 grid gap-6 sm:grid-cols-2'>
                 <div>
                   <dt className='text-sm font-medium text-neutral-500'>Projected plan</dt>
                   <dd className='mt-2 text-base font-semibold text-neutral-950'>
@@ -784,8 +833,10 @@ export default async function PortalSectionPage({ params, searchParams }: Portal
                 </div>
                 <div>
                   <dt className='text-sm font-medium text-neutral-500'>Projected subscription status</dt>
-                  <dd className='mt-2 text-base font-semibold text-neutral-950'>
-                    {titleCase(presentation.overviewSubscriptionStatus)}
+                  <dd className='mt-2'>
+                    <span className={subscriptionStatusBadgeClass(presentation.overviewSubscriptionStatus)}>
+                      {titleCase(presentation.overviewSubscriptionStatus) ?? 'Not available'}
+                    </span>
                   </dd>
                 </div>
                 <div>
@@ -799,39 +850,51 @@ export default async function PortalSectionPage({ params, searchParams }: Portal
           </>
         ) : (
           <div className='space-y-6'>
-            <section className='rounded-2xl border border-dashed border-neutral-300 bg-white p-8'>
-              <h2 className='text-lg font-semibold text-neutral-950'>No paid subscription found</h2>
-              <p className='mt-2 max-w-2xl text-sm leading-6 text-neutral-600'>
+            <section className={`${portalCardClass} border-dashed`}>
+              <h2 className={sectionCardTitleClass}>No active subscription</h2>
+              <p className='mt-3 max-w-2xl text-sm leading-6 text-neutral-600'>
                 Your account does not currently have a paid JPV Bootcamp subscription in the billing mirror.
                 Any course access already assigned to your member account remains visible in the portal.
               </p>
             </section>
             {presentation.allowCheckout ? (
-              <section className='rounded-2xl border border-dashed border-neutral-300 bg-white p-8'>
-                <h2 className='text-lg font-semibold text-neutral-950'>Choose a membership</h2>
-                <p className='mt-2 text-sm text-neutral-600'>
+              <section className={portalCardClass}>
+                <h2 className={sectionCardTitleClass}>Choose a membership</h2>
+                <p className='mt-3 text-sm text-neutral-600'>
                   Start a secure Stripe checkout for the membership that fits you.
                 </p>
-                <div className='mt-6'>
+                <div className='mt-5 grid gap-4 sm:grid-cols-2'>
+                  <div className='rounded-jpv-card border border-jpv-border bg-jpv-surface p-4'>
+                    <p className='text-sm font-semibold text-jpv-ink'>Monthly</p>
+                    <p className='mt-1 text-2xl font-bold text-jpv-ink'>£80 <span className='text-base font-normal text-jpv-muted'>/ month</span></p>
+                    <p className='mt-1 text-xs text-jpv-muted'>Billed monthly. Cancel anytime after commitment.</p>
+                  </div>
+                  <div className='rounded-jpv-card border border-jpv-brand bg-emerald-50 p-4'>
+                    <p className='text-sm font-semibold text-jpv-ink'>Annual <span className='ml-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-700'>Save 17%</span></p>
+                    <p className='mt-1 text-2xl font-bold text-jpv-ink'>£800 <span className='text-base font-normal text-jpv-muted'>/ year</span></p>
+                    <p className='mt-1 text-xs text-jpv-muted'>Billed annually. Best value.</p>
+                  </div>
+                </div>
+                <div className='mt-5'>
                   <MemberCheckoutButtons />
                 </div>
               </section>
             ) : null}
             {billingStatus.hasBillingAccount && (
-              <section className='rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm'>
-                <h2 className='text-lg font-semibold text-neutral-950'>Existing billing account</h2>
-                <p className='mt-2 text-sm text-neutral-600'>
+              <section className={portalCardClass}>
+                <h2 className={sectionCardTitleClass}>Billing actions</h2>
+                <p className='mt-3 text-sm text-neutral-600'>
                   Review payment methods or previous invoices in the secure billing portal.
                 </p>
-                <div className='mt-6'>
+                <div className='mt-5'>
                   <BillingPortalButton />
                 </div>
               </section>
             )}
-            <section className={portalCardClass} id='projection'>
-              <h2 className='text-lg font-semibold text-jpv-ink'>Billing details</h2>
+            <section className={portalCardClass} id='details'>
+              <h2 className={sectionCardTitleClass}>Billing details</h2>
               {presentation.hasProjectionData ? (
-                <dl className='mt-6 grid gap-6 sm:grid-cols-2'>
+                <dl className='mt-5 grid gap-6 sm:grid-cols-2'>
                   <div>
                     <dt className='text-sm font-medium text-neutral-500'>Projected plan</dt>
                     <dd className='mt-2 text-base font-semibold text-neutral-950'>
@@ -846,8 +909,10 @@ export default async function PortalSectionPage({ params, searchParams }: Portal
                   </div>
                   <div>
                     <dt className='text-sm font-medium text-neutral-500'>Projected subscription status</dt>
-                    <dd className='mt-2 text-base font-semibold text-neutral-950'>
-                      {titleCase(presentation.overviewSubscriptionStatus)}
+                    <dd className='mt-2'>
+                      <span className={subscriptionStatusBadgeClass(presentation.overviewSubscriptionStatus)}>
+                        {titleCase(presentation.overviewSubscriptionStatus) ?? 'Not available'}
+                      </span>
                     </dd>
                   </div>
                   <div>
@@ -858,7 +923,7 @@ export default async function PortalSectionPage({ params, searchParams }: Portal
                   </div>
                 </dl>
               ) : (
-                <p className='mt-2 text-sm text-neutral-600'>
+                <p className='mt-3 text-sm text-neutral-600'>
                   No member billing projection exists yet for this account.
                 </p>
               )}

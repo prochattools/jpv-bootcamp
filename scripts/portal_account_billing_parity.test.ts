@@ -63,7 +63,7 @@ function testCanonicalAccountParity(): void {
     'Change password',
     'Change email address',
     'Account status',
-    'Member tier',
+    'Membership',
     'Email verified',
   ]) {
     assert.match(portalSectionsSource, new RegExp(expected.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))

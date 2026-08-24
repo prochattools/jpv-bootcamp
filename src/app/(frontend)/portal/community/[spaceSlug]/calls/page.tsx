@@ -21,17 +21,49 @@ function formatDate(value: string): string {
   }).format(date)
 }
 
-function statusLabel(status: string): string {
-  if (status === 'live') return 'Live now'
-  if (status === 'scheduled') return 'Scheduled'
-  if (status === 'cancelled') return 'Cancelled'
-  return status
+function formatRelative(value: string): string {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return 'Date unavailable'
+  const diffMs = Date.now() - date.getTime()
+  const diffMin = Math.round(diffMs / 60_000)
+  if (diffMin < 1) return 'Just started'
+  if (diffMin < 60) return `Started ${diffMin} min ago`
+  const diffHr = Math.round(diffMin / 60)
+  if (diffHr < 24) return `Started ${diffHr}h ago`
+  return formatDate(value)
 }
 
-function statusClass(status: string): string {
-  if (status === 'live') return 'bg-emerald-50 text-emerald-700'
-  if (status === 'scheduled') return 'bg-jpv-surface text-jpv-ink'
-  return 'bg-jpv-surface-strong text-jpv-muted'
+function StatusBadge({ status }: { status: string }) {
+  if (status === 'live') {
+    return (
+      <span className='inline-flex items-center gap-1.5 rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-800'>
+        <span className='relative flex h-2 w-2'>
+          <span className='absolute inline-flex h-full w-full animate-ping rounded-full bg-green-500 opacity-75' />
+          <span className='relative inline-flex h-2 w-2 rounded-full bg-green-500' />
+        </span>
+        Live now
+      </span>
+    )
+  }
+  if (status === 'scheduled') {
+    return (
+      <span className='inline-flex items-center rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700'>
+        Scheduled
+      </span>
+    )
+  }
+  if (status === 'cancelled') {
+    return (
+      <span className='inline-flex items-center rounded-full bg-jpv-surface-strong px-3 py-1 text-xs font-semibold text-jpv-muted'>
+        Cancelled
+      </span>
+    )
+  }
+  return (
+    <span className='inline-flex items-center rounded-full bg-jpv-surface-strong px-3 py-1 text-xs font-semibold text-jpv-muted'>
+      Completed
+    </span>
+  )
 }
 
 export default async function SpaceCallsPage({ params }: PageProps) {
@@ -45,7 +77,7 @@ export default async function SpaceCallsPage({ params }: PageProps) {
   const calls = await listSpaceLiveCalls(payload, detail.id)
 
   return (
-    <div className='space-y-6'>
+    <div className='mx-auto max-w-4xl space-y-6'>
       <Link
         className='text-sm font-bold text-jpv-sunshine-ink hover:text-jpv-brand-deep'
         href={`/portal/community/${encodedSlug}`}
@@ -55,7 +87,7 @@ export default async function SpaceCallsPage({ params }: PageProps) {
 
       <header className='rounded-jpv-panel border border-jpv-border bg-jpv-canvas p-6 shadow-jpv-card sm:p-8'>
         <p className='jpv-eyebrow'>{detail.name}</p>
-        <h1 className='mt-2 text-3xl font-semibold tracking-tight text-jpv-ink'>Group calls</h1>
+        <h1 className='mt-2 text-3xl font-semibold tracking-tight text-jpv-ink'>Live Sessions</h1>
         <p className='mt-3 max-w-3xl text-sm leading-6 text-jpv-muted'>
           Upcoming and live calls for this space. Calls are scheduled by administrators.
           Join becomes available when the host opens the room.
@@ -64,40 +96,51 @@ export default async function SpaceCallsPage({ params }: PageProps) {
 
       {calls.length > 0 ? (
         <section className='grid gap-4'>
-          {calls.map((call) => (
-            <article
-              className='rounded-jpv-card border border-jpv-border bg-jpv-canvas p-5 shadow-jpv-card sm:p-6'
-              key={call.id}
-            >
-              <div className='flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between'>
-                <div className='min-w-0'>
-                  <h2 className='text-xl font-semibold text-jpv-ink'>{call.title}</h2>
-                  <p className='mt-2 text-sm text-jpv-muted'>{formatDate(call.scheduledAt)}</p>
-                  <p
-                    className={`mt-3 inline-flex rounded-jpv-pill px-3 py-1 text-xs font-semibold ${statusClass(call.status)}`}
-                  >
-                    {statusLabel(call.status)}
-                  </p>
+          {calls.map((call) => {
+            const isLive = call.status === 'live'
+            return (
+              <article
+                className={`rounded-xl border bg-white p-5 shadow-sm dark:bg-neutral-900 sm:p-6 ${isLive ? 'border-green-200' : 'border-jpv-border'}`}
+                key={call.id}
+              >
+                <div className='flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between'>
+                  <div className='min-w-0 flex-1'>
+                    <div className='flex flex-wrap items-center gap-2'>
+                      <StatusBadge status={call.status} />
+                    </div>
+                    <h2 className='mt-2 text-xl font-semibold text-jpv-ink'>{call.title}</h2>
+                    <p className='mt-1 text-sm text-jpv-muted'>
+                      {isLive ? formatRelative(call.scheduledAt) : formatDate(call.scheduledAt)}
+                    </p>
+                  </div>
+                  <div className='flex shrink-0 items-center'>
+                    {call.canJoin ? (
+                      <Link
+                        className='jpv-button-primary min-h-[52px] rounded-xl px-6 text-base font-semibold'
+                        href={`/portal/community/${encodedSlug}/calls/${encodeURIComponent(call.id)}`}
+                      >
+                        Join call
+                      </Link>
+                    ) : (
+                      <span className='text-sm text-jpv-muted'>
+                        {call.status === 'scheduled' ? 'Waiting for host' : 'Joining closed'}
+                      </span>
+                    )}
+                  </div>
                 </div>
-                {call.canJoin ? (
-                  <Link
-                    className='jpv-button-primary min-h-11 shrink-0'
-                    href={`/portal/community/${encodedSlug}/calls/${encodeURIComponent(call.id)}`}
-                  >
-                    Join call
-                  </Link>
-                ) : (
-                  <span className='text-sm text-jpv-muted'>
-                    {call.status === 'scheduled' ? 'Waiting for host' : 'Joining closed'}
-                  </span>
-                )}
-              </div>
-            </article>
-          ))}
+              </article>
+            )
+          })}
         </section>
       ) : (
-        <section className='rounded-jpv-card border border-dashed border-jpv-border bg-jpv-canvas p-6 text-sm text-jpv-muted sm:p-8'>
-          No upcoming calls are scheduled for this space yet.
+        <section className='rounded-xl border border-dashed border-jpv-border bg-jpv-canvas p-10 text-center sm:p-12'>
+          <div className='mx-auto max-w-sm'>
+            <p className='text-2xl'>📅</p>
+            <h2 className='mt-3 text-base font-semibold text-jpv-ink'>No sessions yet</h2>
+            <p className='mt-2 text-sm text-jpv-muted'>
+              No calls are scheduled for this space yet. Check back soon — the admin team will post upcoming sessions here.
+            </p>
+          </div>
         </section>
       )}
     </div>

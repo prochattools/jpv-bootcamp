@@ -68,7 +68,7 @@ export default async function JoinCallPage({ params }: PageProps) {
   }
 
   return (
-    <div className='space-y-6'>
+    <div className='mx-auto max-w-4xl space-y-6'>
       <Link
         className='text-sm font-bold text-jpv-sunshine-ink hover:text-jpv-brand-deep'
         href={`/portal/community/${encodedSlug}/calls`}
@@ -82,36 +82,52 @@ export default async function JoinCallPage({ params }: PageProps) {
         <p className='mt-3 text-sm text-jpv-muted'>
           {formatDate(scheduledAt)}
         </p>
-        {isLive && (
-          <p className='mt-3 inline-flex rounded-jpv-pill bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700'>
-            Live now
-          </p>
-        )}
-        {!isLive && sessionStatus === 'scheduled' && (
-          <p className='mt-3 inline-flex rounded-jpv-pill bg-jpv-surface px-3 py-1 text-xs font-semibold text-jpv-ink'>
-            Scheduled
-          </p>
-        )}
+        <div className='mt-3'>
+          {isLive && (
+            <span className='inline-flex items-center gap-1.5 rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-800'>
+              <span className='relative flex h-2 w-2'>
+                <span className='absolute inline-flex h-full w-full animate-ping rounded-full bg-green-500 opacity-75' />
+                <span className='relative inline-flex h-2 w-2 rounded-full bg-green-500' />
+              </span>
+              Live now
+            </span>
+          )}
+          {!isLive && sessionStatus === 'scheduled' && (
+            <span className='inline-flex items-center rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700'>
+              Scheduled
+            </span>
+          )}
+        </div>
       </header>
 
       {isClosed ? (
-        <section className='rounded-jpv-card border border-jpv-border bg-jpv-canvas p-6'>
-          <p className='text-sm text-jpv-muted'>This call has ended.</p>
+        <section className='rounded-xl border border-jpv-border bg-jpv-canvas p-6 text-center sm:p-8'>
+          <p className='text-2xl'>🎬</p>
+          <h2 className='mt-3 text-base font-semibold text-jpv-ink'>This call has ended</h2>
+          <p className='mt-2 text-sm text-jpv-muted'>The session is no longer available to join.</p>
+          <div className='mt-5'>
+            <Link
+              className='jpv-button-secondary'
+              href={`/portal/community/${encodedSlug}/calls`}
+            >
+              Back to sessions
+            </Link>
+          </div>
         </section>
       ) : !isLive ? (
-        <section className='rounded-jpv-card border border-jpv-border bg-jpv-canvas p-6'>
-          <h2 className='text-lg font-semibold text-jpv-ink'>Not started yet</h2>
+        <section className='rounded-xl border border-jpv-border bg-jpv-canvas p-6 text-center sm:p-8'>
+          <p className='text-2xl'>⏳</p>
+          <h2 className='mt-3 text-base font-semibold text-jpv-ink'>Not started yet</h2>
           <p className='mt-2 text-sm text-jpv-muted'>
             The host has not opened this room yet. Come back when the call goes live.
           </p>
         </section>
       ) : !roomReady ? (
-        <section className='rounded-jpv-card border border-jpv-border bg-jpv-canvas p-6'>
+        <section className='rounded-xl border border-jpv-border bg-jpv-canvas p-6 text-center sm:p-8'>
           <p className='text-sm text-jpv-muted'>Room configuration is unavailable. Contact support.</p>
         </section>
       ) : (
         <section className='rounded-jpv-panel border border-jpv-border bg-jpv-canvas p-6 shadow-jpv-card sm:p-8'>
-          <h2 className='mb-5 text-xl font-semibold text-jpv-ink'>Join call</h2>
           <LiveCallRoom sessionId={sessionId} sessionTitle={sessionTitle} />
         </section>
       )}

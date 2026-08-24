@@ -1,5 +1,7 @@
 'use client'
 
+import { Eye, EyeOff } from 'lucide-react'
+import Link from 'next/link'
 import { useState, type FormEvent } from 'react'
 
 import {
@@ -10,6 +12,9 @@ import {
   resolveMemberDestination,
   shouldClearDeniedMemberSession,
 } from '@/lib/auth/memberLoginFlow'
+
+const inputClassName =
+  'h-12 w-full rounded-lg border border-jpv-border bg-jpv-canvas px-4 text-jpv-ink outline-none transition focus:border-jpv-green-deep focus:ring-2 focus:ring-jpv-green/25'
 
 type MemberLoginFormProps = {
   requestedDestination?: string | null
@@ -26,6 +31,7 @@ export function MemberLoginForm({
 }: MemberLoginFormProps) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
@@ -107,14 +113,21 @@ export function MemberLoginForm({
   }
 
   return (
-    <form className='mt-7 grid gap-5' onSubmit={handleSubmit}>
+    <form className='grid gap-4' onSubmit={handleSubmit}>
+      {/* Error alert — shown above fields so it is immediately visible */}
+      {error ? (
+        <p aria-live='polite' className='jpv-notice jpv-notice-danger text-sm' role='alert'>
+          {error}
+        </p>
+      ) : null}
+
       <div>
         <label className='block text-sm font-semibold text-jpv-ink' htmlFor='member-email'>
           Email address
         </label>
         <input
           autoComplete='email'
-          className='mt-2 w-full rounded-lg border border-jpv-border bg-jpv-canvas px-4 py-3 text-jpv-ink outline-none transition focus:border-jpv-green-deep focus:ring-2 focus:ring-jpv-green/25'
+          className={`mt-2 ${inputClassName}`}
           id='member-email'
           name='email'
           onChange={(event) => setEmail(event.target.value)}
@@ -128,23 +141,35 @@ export function MemberLoginForm({
         <label className='block text-sm font-semibold text-jpv-ink' htmlFor='member-password'>
           Password
         </label>
-        <input
-          autoComplete='current-password'
-          className='mt-2 w-full rounded-lg border border-jpv-border bg-jpv-canvas px-4 py-3 text-jpv-ink outline-none transition focus:border-jpv-green-deep focus:ring-2 focus:ring-jpv-green/25'
-          id='member-password'
-          name='password'
-          onChange={(event) => setPassword(event.target.value)}
-          required
-          type='password'
-          value={password}
-        />
+        <div className='relative mt-2'>
+          <input
+            autoComplete='current-password'
+            className={inputClassName}
+            id='member-password'
+            name='password'
+            onChange={(event) => setPassword(event.target.value)}
+            required
+            type={showPassword ? 'text' : 'password'}
+            value={password}
+          />
+          <button
+            aria-label={showPassword ? 'Hide password' : 'Show password'}
+            className='absolute right-3 top-1/2 -translate-y-1/2 p-1 text-jpv-muted transition hover:text-jpv-ink'
+            onClick={() => setShowPassword((v) => !v)}
+            type='button'
+          >
+            {showPassword ? <EyeOff aria-hidden size={16} /> : <Eye aria-hidden size={16} />}
+          </button>
+        </div>
+        <div className='mt-2 text-right'>
+          <Link
+            className='text-xs font-medium text-jpv-brand hover:text-jpv-brand-deep hover:underline underline-offset-4'
+            href='/forgot-password'
+          >
+            Forgot password?
+          </Link>
+        </div>
       </div>
-
-      {error ? (
-        <p aria-live='polite' className='jpv-notice jpv-notice-danger text-sm'>
-          {error}
-        </p>
-      ) : null}
 
       <button
         className='jpv-button-primary w-full'
@@ -159,6 +184,16 @@ export function MemberLoginForm({
       >
         {submitting ? 'Signing in…' : submitLabel}
       </button>
+
+      <p className='text-center text-xs text-jpv-muted'>
+        Not a member yet?{' '}
+        <Link
+          className='font-semibold text-jpv-brand hover:text-jpv-brand-deep hover:underline underline-offset-4'
+          href='/upgrade'
+        >
+          Choose a membership
+        </Link>
+      </p>
     </form>
   )
 }
