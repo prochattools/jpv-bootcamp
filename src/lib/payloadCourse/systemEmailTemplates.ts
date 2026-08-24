@@ -19,6 +19,7 @@ export const ACCESS_SUSPENDED_TEMPLATE_KEY = 'access-suspended'
 export const ACCESS_RESTORED_TEMPLATE_KEY = 'access-restored'
 export const ACCESS_DELETED_TEMPLATE_KEY = 'access-deleted'
 export const SUPPORT_REQUEST_RECEIVED_TEMPLATE_KEY = 'support-request-received'
+export const SUPPORT_REQUEST_ADMIN_NOTIFICATION_TEMPLATE_KEY = 'support-request-admin-notification'
 
 function brandedTemplate(input: {
   key: string
@@ -302,6 +303,19 @@ const templates: Record<string, PayloadDocument> = {
     ],
     actionLabel: 'Return to JPV Bootcamp',
     actionUrlVariable: '{{supportUrl}}',
+  }),
+  [SUPPORT_REQUEST_ADMIN_NOTIFICATION_TEMPLATE_KEY]: brandedTemplate({
+    key: SUPPORT_REQUEST_ADMIN_NOTIFICATION_TEMPLATE_KEY,
+    name: 'Support request — admin notification',
+    subject: 'New support request from {{requesterName}}',
+    preheader: 'A new support request is waiting for review.',
+    heading: 'New support request',
+    paragraphs: [
+      'A new support request has been received from {{requesterName}} ({{requesterEmail}}) and is waiting for review.',
+      'Log in to the JPV Bootcamp admin panel to view and respond.',
+    ],
+    actionLabel: 'Open admin panel',
+    actionUrlVariable: '{{portalUrl}}',
   }),
   [ACCESS_DELETED_TEMPLATE_KEY]: brandedTemplate({
     key: ACCESS_DELETED_TEMPLATE_KEY,

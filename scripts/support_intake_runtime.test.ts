@@ -257,7 +257,7 @@ function testRouteAndFormContracts(): void {
   const serviceIndex = route.indexOf('const service = createSupportIntakeService')
   const persistenceIndex = route.indexOf('prisma.supportRequest.create')
   assert.ok(guardIndex >= 0 && guardIndex < serviceIndex && serviceIndex < persistenceIndex)
-  assert.match(route, /templateKey: 'admin-notification'/)
+  assert.match(route, /SUPPORT_REQUEST_ADMIN_NOTIFICATION_TEMPLATE_KEY/)
   assert.match(route, /supportRequestId: input\.requestId/)
   assert.equal(route.includes('guarded.data.question,'), true)
   assert.equal(route.includes('metadata: {\n          question:'), false)

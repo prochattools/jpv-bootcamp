@@ -95,7 +95,7 @@ function testSupport(): void {
       'prisma.supportRequest.create',
       'prisma.supportRequest.update',
       'queueAndAttemptEmailEvent',
-      "templateKey: 'admin-notification'",
+      "SUPPORT_REQUEST_ADMIN_NOTIFICATION_TEMPLATE_KEY",
       "purpose: 'support_request_pending_review'",
       'SUPPORT_REQUEST_RECEIVED_TEMPLATE_KEY',
       "purpose: 'support_request_received'",

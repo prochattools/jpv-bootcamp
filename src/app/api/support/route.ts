@@ -12,7 +12,10 @@ import {
   trustPublicRequestProxyHeaders,
 } from '@/lib/publicRequestRoute'
 import { queueAndAttemptEmailEvent } from '@/lib/payloadCourse/events'
-import { SUPPORT_REQUEST_RECEIVED_TEMPLATE_KEY } from '@/lib/payloadCourse/systemEmailTemplates'
+import {
+  SUPPORT_REQUEST_ADMIN_NOTIFICATION_TEMPLATE_KEY,
+  SUPPORT_REQUEST_RECEIVED_TEMPLATE_KEY,
+} from '@/lib/payloadCourse/systemEmailTemplates'
 import type { PayloadCourseWriteAPI } from '@/lib/payloadCourse/accessService'
 import {
   createSupportIntakeService,
@@ -81,7 +84,7 @@ export async function POST(req: NextRequest) {
 
       await queueAndAttemptEmailEvent(payloadApi, {
         toEmail: supportTo,
-        templateKey: 'admin-notification',
+        templateKey: SUPPORT_REQUEST_ADMIN_NOTIFICATION_TEMPLATE_KEY,
         dedupeKey: input.dedupeKey,
         displayName: 'Support request pending review',
         metadata: {
