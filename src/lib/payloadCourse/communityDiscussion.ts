@@ -64,7 +64,7 @@ export type SafeCommunityRichTextNode =
 
 export type MemberCommunityComment = {
   id: string
-  authorId: string | null
+  isViewerAuthor: boolean
   authorName: string
   body: SafeCommunityRichTextNode
   bodyPlainText: string
@@ -77,7 +77,7 @@ export type MemberCommunityPostDetail = {
   postType: 'discussion' | 'question' | 'announcement'
   pinned: boolean
   locked: boolean
-  authorId: string | null
+  isViewerAuthor: boolean
   authorName: string
   createdAt: string | null
   space: {
@@ -529,13 +529,14 @@ export async function getMemberCommunityPostDetail(
     }
   }
 
+  const memberIdStr = String(memberId)
   const commentProjections: MemberCommunityComment[] = comments.map((comment) => {
     const authorId = getDocumentId(comment.author)
     const author = authorId ? (commentAuthorMap.get(authorId) ?? null) : null
     const commentBody = projectCommunityRichText(comment.body)
     return {
       id: String(comment.id),
-      authorId: authorId,
+      isViewerAuthor: authorId !== null && authorId === memberIdStr,
       authorName: commentDisplayName(comment, author),
       body: commentBody,
       bodyPlainText: extractPlainText(commentBody),
@@ -551,7 +552,7 @@ export async function getMemberCommunityPostDetail(
       postType: normalizePostType(post.postType),
       pinned: asBoolean(post.pinned),
       locked: asBoolean(post.locked),
-      authorId: postAuthorId,
+      isViewerAuthor: postAuthorId !== null && postAuthorId === memberIdStr,
       authorName: memberDisplayName(postAuthor),
       createdAt: asDateString(post.createdAt),
       space: {

@@ -182,7 +182,7 @@ export default async function PortalCommunityPostPage({ params, searchParams }: 
               <p className='text-xs text-jpv-muted'>{memberEmail}</p>
             </div>
             <div className='ml-auto flex items-center gap-2'>
-              {post.authorId === memberId && (
+              {post.isViewerAuthor && (
                 <PostOwnerActions
                   postBody={post.bodyPlainText.trim()}
                   postId={post.id}
@@ -327,7 +327,7 @@ export default async function PortalCommunityPostPage({ params, searchParams }: 
                       timestampValue={comment.createdAt ?? undefined}
                     />
                     <div className='flex items-center gap-2'>
-                      {comment.authorId === memberId && (
+                      {comment.isViewerAuthor && (
                         <CommentOwnerActions
                           commentBody={comment.bodyPlainText.trim()}
                           commentId={comment.id}
