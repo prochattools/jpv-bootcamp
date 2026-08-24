@@ -25,7 +25,7 @@ export function PortalShell({ children, showLogout }: PortalShellProps) {
         <PortalTopBar
           onMobileMenuOpen={() => setMobileMenuOpen(true)}
         />
-        <main className='min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain px-4 py-8 sm:px-6 lg:px-8 lg:py-10'>
+        <main className='min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6 lg:px-8 lg:py-5'>
           {children}
         </main>
       </div>

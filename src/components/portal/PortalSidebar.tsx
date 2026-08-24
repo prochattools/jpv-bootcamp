@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   LogOut,
   Newspaper,
+  PlayCircle,
   Settings,
   Trophy,
   UserCircle,
@@ -104,6 +105,22 @@ function SidebarContent({
       </div>
 
       <nav aria-label='Member portal' className='flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-4'>
+        {/* Start here — always-visible onboarding entry point */}
+        <div className='mb-3'>
+          <Link
+            aria-current={isActive(pathname, '/portal/community/start-here') ? 'page' : undefined}
+            className={
+              isActive(pathname, '/portal/community/start-here')
+                ? 'flex min-h-11 items-center gap-3 rounded-jpv-action bg-jpv-brand-deep px-3 py-2 text-sm font-semibold text-jpv-canvas'
+                : 'flex min-h-11 items-center gap-3 rounded-jpv-action bg-jpv-brand/10 px-3 py-2 text-sm font-semibold text-jpv-brand-deep transition hover:bg-jpv-brand/20'
+            }
+            href='/portal/community/start-here'
+          >
+            <PlayCircle aria-hidden='true' className='h-4.5 w-4.5 shrink-0' />
+            Start here
+          </Link>
+        </div>
+
         {sidebarGroups.map((group) => (
           <div className='mb-2' key={group.title}>
             <p className='mb-1 px-3 text-[0.6875rem] font-extrabold uppercase tracking-wider text-jpv-muted'>
@@ -190,7 +207,7 @@ export function PortalSidebar({ showLogout, mobileOpen, onMobileClose }: PortalS
   return (
     <>
       <aside
-        className='hidden h-screen flex-col border-r border-jpv-border bg-jpv-surface lg:sticky lg:top-0 lg:flex'
+        className='hidden h-full min-h-0 flex-col border-r border-jpv-border bg-jpv-surface lg:sticky lg:top-0 lg:flex'
         data-portal-sidebar
       >
         <SidebarContent

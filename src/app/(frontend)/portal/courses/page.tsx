@@ -20,11 +20,11 @@ export default async function PortalCoursesPage() {
         : null
 
   return (
-    <div className='mx-auto max-w-5xl space-y-10'>
+    <div className='mx-auto max-w-5xl space-y-6'>
       {/* Page header */}
       <section>
         <p className='jpv-eyebrow'>Learning</p>
-        <h1 className='mt-3 text-3xl font-semibold tracking-tight text-jpv-ink'>Your Courses</h1>
+        <h1 className='mt-3 text-2xl font-semibold tracking-tight text-jpv-ink'>Your Courses</h1>
         <p className='mt-2 max-w-2xl text-sm leading-6 text-jpv-muted'>
           Track your progress and pick up where you left off.
         </p>
@@ -42,7 +42,7 @@ export default async function PortalCoursesPage() {
           </Link>
         </div>
       ) : (
-        <div className='space-y-10'>
+        <div className='space-y-6'>
           {/* Featured in-progress course */}
           {featuredCourse && continueUrl ? (
             <section>

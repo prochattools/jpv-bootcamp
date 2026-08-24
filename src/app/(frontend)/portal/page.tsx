@@ -163,12 +163,12 @@ export default async function PortalDashboardPage({ searchParams }: PortalDashbo
   ]
 
   return (
-    <div className='mx-auto max-w-5xl space-y-8 px-4 py-8'>
+    <div className='mx-auto max-w-5xl space-y-5 px-4 py-4'>
 
       {/* 1. Welcome section */}
       <section>
         <p className='jpv-eyebrow'>JPV Bootcamp</p>
-        <h1 className='mt-2 text-3xl font-semibold tracking-tight text-jpv-ink'>
+        <h1 className='mt-2 text-2xl font-semibold tracking-tight text-jpv-ink'>
           Welcome back{displayName ? `, ${displayName}` : ''}
         </h1>
         <p className='mt-1 text-sm text-jpv-muted'>{todayLabel}</p>
@@ -178,7 +178,7 @@ export default async function PortalDashboardPage({ searchParams }: PortalDashbo
       {dashboard.continueLesson ? (
         <section
           aria-label='Continue learning'
-          className='rounded-jpv-panel border border-jpv-brand-deep bg-jpv-brand-deep p-6 shadow-jpv-card'
+          className='rounded-jpv-panel border border-jpv-brand-deep bg-jpv-brand-deep p-5 shadow-jpv-card'
         >
           <p className='text-xs font-extrabold uppercase tracking-widest text-jpv-brand-bright'>
             Continue learning
@@ -220,7 +220,7 @@ export default async function PortalDashboardPage({ searchParams }: PortalDashbo
           ) : null}
         </section>
       ) : (
-        <section className='rounded-jpv-panel border border-dashed border-jpv-border bg-jpv-canvas p-6'>
+        <section className='rounded-jpv-panel border border-dashed border-jpv-border bg-jpv-canvas p-5'>
           <p className='text-sm text-jpv-muted'>
             No lessons in progress yet.{' '}
             <Link

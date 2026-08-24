@@ -323,40 +323,38 @@ async function getAllowedCourseModules(
     limit: 100,
   })
 
-  const outlines: MemberPortalModule[] = []
-  for (const module of modules.sort(bySortOrder)) {
-    const lessons = await findAll(payload, 'payload_lessons', {
-      where: {
-        module: { equals: String(module.id) },
-      },
-      sort: 'sortOrder',
-      limit: 200,
-    })
-
-    const lessonProjections: MemberPortalLesson[] = []
-    for (const lesson of lessons.sort(bySortOrder)) {
-      lessonProjections.push({
-        id: String(lesson.id),
-        title: asString(lesson.title) ?? 'Untitled lesson',
-        slug: asString(lesson.slug),
-        summary: asString(lesson.summary),
-        coverImage: await resolveMemberMediaAsset(payload, lesson.coverImage),
-        estimatedDuration: asString(lesson.estimatedDuration),
-        previewLesson: asBoolean(lesson.previewLesson),
-        lockState: asLockState(lesson.lockState),
-        completed: completedLessonIds.has(String(lesson.id)),
+  return Promise.all(
+    modules.sort(bySortOrder).map(async (module) => {
+      const lessons = await findAll(payload, 'payload_lessons', {
+        where: {
+          module: { equals: String(module.id) },
+        },
+        sort: 'sortOrder',
+        limit: 200,
       })
-    }
 
-    outlines.push({
-      id: String(module.id),
-      title: asString(module.title) ?? 'Untitled module',
-      description: asString(module.description),
-      lessons: lessonProjections,
+      const lessonProjections = await Promise.all(
+        lessons.sort(bySortOrder).map(async (lesson) => ({
+          id: String(lesson.id),
+          title: asString(lesson.title) ?? 'Untitled lesson',
+          slug: asString(lesson.slug),
+          summary: asString(lesson.summary),
+          coverImage: await resolveMemberMediaAsset(payload, lesson.coverImage),
+          estimatedDuration: asString(lesson.estimatedDuration),
+          previewLesson: asBoolean(lesson.previewLesson),
+          lockState: asLockState(lesson.lockState),
+          completed: completedLessonIds.has(String(lesson.id)),
+        }))
+      )
+
+      return {
+        id: String(module.id),
+        title: asString(module.title) ?? 'Untitled module',
+        description: asString(module.description),
+        lessons: lessonProjections,
+      }
     })
-  }
-
-  return outlines
+  )
 }
 
 async function getCourseSequence(
@@ -371,22 +369,22 @@ async function getCourseSequence(
     limit: 100,
   })
 
-  const sequence: Array<{ module: PayloadDocument; lesson: PayloadDocument }> = []
-  for (const module of modules.sort(bySortOrder)) {
-    const lessons = await findAll(payload, 'payload_lessons', {
-      where: {
-        module: { equals: String(module.id) },
-      },
-      sort: 'sortOrder',
-      limit: 200,
+  const moduleWithLessons = await Promise.all(
+    modules.sort(bySortOrder).map(async (module) => {
+      const lessons = await findAll(payload, 'payload_lessons', {
+        where: {
+          module: { equals: String(module.id) },
+        },
+        sort: 'sortOrder',
+        limit: 200,
+      })
+      return { module, lessons }
     })
+  )
 
-    for (const lesson of lessons.sort(bySortOrder)) {
-      sequence.push({ module, lesson })
-    }
-  }
-
-  return sequence
+  return moduleWithLessons.flatMap(({ module, lessons }) =>
+    lessons.sort(bySortOrder).map((lesson) => ({ module, lesson }))
+  )
 }
 
 async function buildCourseProjection(
@@ -466,24 +464,24 @@ export async function getMemberCourseDashboard(
     getCompletedLessonIds(payload, normalizedMemberId),
   ])
 
-  const dashboardCourses: MemberPortalCourse[] = []
-  for (const course of courses.sort(bySortOrder)) {
-    const access = await evaluatePayloadCourseAccess(payload, {
-      memberId: normalizedMemberId,
-      courseId: course.id,
+  const dashboardCourses = await Promise.all(
+    courses.sort(bySortOrder).map(async (course) => {
+      const access = await evaluatePayloadCourseAccess(payload, {
+        memberId: normalizedMemberId,
+        courseId: course.id,
+      })
+      const allowed = access.decision.allowed
+      const modules = allowed
+        ? await getAllowedCourseModules(payload, course.id, completedLessonIds)
+        : []
+      return buildCourseProjection(payload, {
+        course,
+        allowed,
+        decisionReason: access.decision.reason,
+        modules,
+      })
     })
-    const allowed = access.decision.allowed
-    const modules = allowed
-      ? await getAllowedCourseModules(payload, course.id, completedLessonIds)
-      : []
-
-    dashboardCourses.push(await buildCourseProjection(payload, {
-      course,
-      allowed,
-      decisionReason: access.decision.reason,
-      modules,
-    }))
-  }
+  )
 
   return {
     memberId: normalizedMemberId,
@@ -507,14 +505,14 @@ export async function getMemberCourseOverview(
 
   if (!course) return null
 
-  const access = await evaluatePayloadCourseAccess(payload, {
-    memberId: normalizedMemberId,
-    courseId: course.id,
-  })
+  const [access, completedLessonIds] = await Promise.all([
+    evaluatePayloadCourseAccess(payload, {
+      memberId: normalizedMemberId,
+      courseId: course.id,
+    }),
+    getCompletedLessonIds(payload, normalizedMemberId),
+  ])
   const allowed = access.decision.allowed
-  const completedLessonIds = allowed
-    ? await getCompletedLessonIds(payload, normalizedMemberId)
-    : new Set<string>()
   const modules = allowed
     ? await getAllowedCourseModules(payload, course.id, completedLessonIds)
     : []
@@ -554,8 +552,10 @@ export async function getMemberLessonDetail(
 
   if (!module || !course) return null
 
-  const completedLessonIds = await getCompletedLessonIds(payload, normalizedMemberId)
-  const sequence = await getCourseSequence(payload, course.id)
+  const [completedLessonIds, sequence] = await Promise.all([
+    getCompletedLessonIds(payload, normalizedMemberId),
+    getCourseSequence(payload, course.id),
+  ])
   const index = sequence.findIndex((entry) => String(entry.lesson.id) === String(lesson.id))
   const previous = index > 0 ? sequence[index - 1] : null
   const next = index >= 0 ? sequence[index + 1] ?? null : null
@@ -567,15 +567,11 @@ export async function getMemberLessonDetail(
   })
   const allowed = access.decision.allowed
   const lessonTitle = asString(lesson.title) ?? 'Untitled lesson'
-  const resources = allowed
-    ? await listPublishedLessonResources(payload, lesson.id)
-    : []
-  const coverImage = allowed
-    ? await resolveMemberMediaAsset(payload, lesson.coverImage)
-    : null
-  const managedVideo = allowed
-    ? await resolveMemberLessonManagedVideo(payload, lesson)
-    : null
+  const [resources, coverImage, managedVideo] = await Promise.all([
+    allowed ? listPublishedLessonResources(payload, lesson.id) : Promise.resolve([]),
+    allowed ? resolveMemberMediaAsset(payload, lesson.coverImage) : Promise.resolve(null),
+    allowed ? resolveMemberLessonManagedVideo(payload, lesson) : Promise.resolve(null),
+  ])
 
   return {
     course: {
