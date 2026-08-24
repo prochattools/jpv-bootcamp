@@ -233,7 +233,7 @@ export default async function PortalSectionPage({ params, searchParams }: Portal
   const { memberId, memberEmail, payload } = await requirePortalMember(`/portal/${section}`)
 
   if (section === 'account') {
-    const [account, memberRecord, query] = await Promise.all([
+    const [account, memberRecord, query, billingStatus] = await Promise.all([
       getMemberAccountOverview(payload, memberId),
       payload.findByID({
         collection: 'payload_members',
@@ -242,6 +242,7 @@ export default async function PortalSectionPage({ params, searchParams }: Portal
         overrideAccess: true,
       }),
       searchParams ?? Promise.resolve<{ updated?: string; error?: string }>({}),
+      getBillingStatus(memberEmail),
     ])
     const accountStatus =
       typeof memberRecord.accountStatus === 'string' ? memberRecord.accountStatus : 'pending'
@@ -313,7 +314,11 @@ export default async function PortalSectionPage({ params, searchParams }: Portal
             <div className='sm:col-span-2 border-t border-jpv-border pt-4'>
               <dt className='text-sm font-medium text-neutral-500'>Member tier</dt>
               <dd className='mt-2 flex items-center gap-3'>
-                <span className='text-base font-semibold text-neutral-950'>{currentTier(account)}</span>
+                <span className='text-base font-semibold text-neutral-950'>
+                  {billingStatus.hasActiveSubscription
+                    ? 'JPV Bootcamp Membership'
+                    : currentTier(account)}
+                </span>
                 <a href='/portal/billing' className='text-sm text-jpv-brand hover:underline'>View billing &rarr;</a>
               </dd>
             </div>
@@ -640,7 +645,7 @@ export default async function PortalSectionPage({ params, searchParams }: Portal
           </section>
         ) : null}
 
-        {billingStatus.hasActiveSubscription || billingOverview.hasPaidSubscription ? (
+        {billingStatus.hasActiveSubscription || billingOverview.hasPaidSubscription || !!presentation.displayPlanLabel ? (
           <>
             <section className={portalCardClass} id='status'>
               <h2 className={sectionCardTitleClass}>Subscription</h2>
