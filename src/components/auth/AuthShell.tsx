@@ -53,13 +53,13 @@ export function AuthShell({
         <div className='relative max-w-xl py-16'>
           <p className='jpv-eyebrow text-jpv-brand-bright'>Learn. Apply. Build.</p>
           <p
-            className='jpv-editorial-heading mt-3 text-balance text-4xl leading-tight xl:text-5xl'
+            className='jpv-editorial-heading mt-5 text-balance text-4xl leading-tight xl:text-5xl'
             style={branding?.bannerTitleColor ? { color: branding.bannerTitleColor } : undefined}
           >
             {bannerTitle}
           </p>
           <p
-            className='mt-3 max-w-lg text-pretty text-base leading-7 text-jpv-canvas/75'
+            className='mt-5 max-w-lg text-pretty text-base leading-7 text-jpv-canvas/75'
             style={branding?.bannerTextColor ? { color: branding.bannerTextColor } : undefined}
           >
             {bannerDescription}
@@ -78,7 +78,7 @@ export function AuthShell({
       >
         <div className='w-full max-w-sm'>
           {/* Logo above card — visible on mobile; desktop sees logo in the left banner */}
-          <div className='mb-6 flex justify-center lg:hidden'>
+          <div className='mb-8 flex justify-center lg:hidden'>
             <Link href='/'>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img alt={jpvBrand.logoAlt} className='h-12 w-auto max-w-[10rem] object-contain' src={jpvBrand.logoHorizontalPath} />
@@ -100,7 +100,7 @@ export function AuthShell({
             >
               {description}
             </p>
-            {introActions ? <div className='mt-7'>{introActions}</div> : null}
+            {introActions ? <div className='mt-5'>{introActions}</div> : null}
 
             <div className='mt-7 border-t border-jpv-border pt-6'>{children}</div>
           </div>

@@ -25,24 +25,28 @@ export async function getMemberResourceLibrary(
   for (const course of dashboard.courses) {
     if (!course.allowed) continue
 
-    const courseResources: ResourceLibraryItem[] = []
-
+    const lessonMeta: { moduleTitle: string; lessonTitle: string; lessonId: PayloadId }[] = []
     for (const module of course.modules) {
       for (const lesson of module.lessons) {
         if (lesson.lockState === 'locked') continue
-        const resources = await listPublishedLessonResources(payload, lesson.id)
-        for (const resource of resources) {
-          courseResources.push({
-            ...resource,
-            courseTitle: course.title,
-            courseSlug: course.slug,
-            moduleTitle: module.title,
-            lessonTitle: lesson.title,
-          })
-        }
+        lessonMeta.push({ moduleTitle: module.title, lessonTitle: lesson.title, lessonId: lesson.id })
       }
     }
 
+    const allResources = await Promise.all(
+      lessonMeta.map(async (meta) => {
+        const resources = await listPublishedLessonResources(payload, meta.lessonId)
+        return resources.map((r) => ({
+          ...r,
+          courseTitle: course.title,
+          courseSlug: course.slug,
+          moduleTitle: meta.moduleTitle,
+          lessonTitle: meta.lessonTitle,
+        }))
+      }),
+    )
+
+    const courseResources = allResources.flat()
     if (courseResources.length > 0) {
       groups.push({
         courseTitle: course.title,
