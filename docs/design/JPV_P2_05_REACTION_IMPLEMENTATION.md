@@ -108,7 +108,7 @@ The implementation currently has the following local evidence:
 Staging read-only evidence captured after the implementation commit:
 
 - Workflow: `deploy-preview.yml`, run `32713295944` (`read-only-migration-plan`).
-- Exact branch/SHA: `feature/course-branding-and-preview` / `7a0a97476249159bdeee8ea69eb6d02e8b1ef332`.
+- Implementation SHA: `7a0a97476249159bdeee8ea69eb6d02e8b1ef332` on `feature/course-branding-and-preview`; the later documentation-only tip is `772b0ef`.
 - Target boundary: staging `jpvbootcamp_staging` / `jpvbootcamp` only.
 - Sanitized artifact result: `plan_blocked` with `applied_count_mismatch` and `pending_migration_mismatch` because the source registry now contains migration 37 while staging remains at the verified 36-migration state.
 - Sanitized staging evidence: `appliedPayloadCount=36`, `prismaHealthy=true`, `unexpectedPayloadCount=0`, `duplicatePayloadCount=0`, and `malformedPayloadCount=0`.
