@@ -125,13 +125,13 @@ function SidebarContent({
   return (
     <>
       {/* Logo */}
-      <div className='flex h-20 shrink-0 items-center border-b border-jpv-border px-5'>
+      <div className='flex h-20 shrink-0 items-center border-b border-jpv-border px-5 dark:border-[var(--jpv-border)]'>
         <Link href='/portal' onClick={onNavigate}>
           <img alt={jpvBrand.logoAlt} className='h-14 w-auto object-contain' src={jpvBrand.logoHorizontalPath} />
         </Link>
       </div>
 
-      <nav aria-label='Member portal' className='flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-4'>
+      <nav aria-label='Member portal' className='flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-4 dark:text-[var(--jpv-ink)]'>
         {/* Pinned/highlighted items at top */}
         {pinnedItems.length > 0 && (
           <div className='mb-3'>
@@ -184,7 +184,7 @@ function SidebarContent({
         ))}
 
         {/* Account section — always at bottom */}
-        <div className='mt-auto border-t border-jpv-border pt-3'>
+        <div className='mt-auto border-t border-jpv-border pt-3 dark:border-[var(--jpv-border)]'>
           {accountItems.map((item) => {
             const active = isActive(pathname, item.href)
             return (
@@ -249,7 +249,7 @@ export function PortalSidebar({ showLogout, mobileOpen, onMobileClose, navPinned
   return (
     <>
       <aside
-        className='hidden h-full min-h-0 flex-col border-r border-jpv-border bg-jpv-surface lg:sticky lg:top-0 lg:flex'
+        className='hidden h-full min-h-0 flex-col border-r border-jpv-border bg-jpv-surface lg:sticky lg:top-0 lg:flex dark:border-[var(--jpv-border)] dark:bg-[var(--jpv-surface)]'
         data-portal-sidebar
       >
         <SidebarContent
@@ -269,14 +269,14 @@ export function PortalSidebar({ showLogout, mobileOpen, onMobileClose, navPinned
         open={mobileOpen}
       >
         <div className='flex h-full'>
-          <div className='flex h-full w-[280px] max-w-[calc(100vw-3rem)] flex-col bg-jpv-surface shadow-xl'>
-            <div className='flex items-center justify-between border-b border-jpv-border px-4 py-3'>
-              <h2 className='text-sm font-semibold text-jpv-ink' id='portal-sidebar-title'>
+          <div className='flex h-full w-[280px] max-w-[calc(100vw-3rem)] flex-col bg-jpv-surface shadow-xl dark:bg-[var(--jpv-surface)]'>
+            <div className='flex items-center justify-between border-b border-jpv-border px-4 py-3 dark:border-[var(--jpv-border)]'>
+              <h2 className='text-sm font-semibold text-jpv-ink dark:text-[var(--jpv-ink)]' id='portal-sidebar-title'>
                 Navigation
               </h2>
               <button
                 aria-label='Close navigation'
-                className='flex min-h-11 min-w-11 items-center justify-center rounded-jpv-action text-jpv-ink transition hover:bg-jpv-canvas'
+                className='flex min-h-11 min-w-11 items-center justify-center rounded-jpv-action text-jpv-ink transition hover:bg-jpv-canvas dark:text-[var(--jpv-ink)] dark:hover:bg-[var(--jpv-canvas)]'
                 onClick={onMobileClose}
                 type='button'
               >
@@ -295,7 +295,7 @@ export function PortalSidebar({ showLogout, mobileOpen, onMobileClose, navPinned
               />
             </div>
           </div>
-          <div aria-hidden='true' className='flex-1 bg-jpv-ink/30' onClick={onMobileClose} />
+          <div aria-hidden='true' className='flex-1 bg-jpv-ink/30 dark:bg-[color-mix(in_srgb,var(--jpv-ink)_30%,transparent)]' onClick={onMobileClose} />
         </div>
       </AccessibleDialog>
     </>

@@ -1,9 +1,10 @@
 'use client'
 
-import { Bell, Menu, UserCircle } from 'lucide-react'
+import { Menu, UserCircle } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
+import { NotificationBell } from '@/components/portal/NotificationBell'
 import { ThemeToggle } from '@/components/portal/ThemeToggle'
 
 const PAGE_TITLES: Record<string, string> = {
@@ -41,30 +42,24 @@ export function PortalTopBar({ onMobileMenuOpen }: PortalTopBarProps) {
 
   return (
     <header
-      className='flex h-16 min-w-0 shrink-0 items-center justify-between border-b border-jpv-border bg-jpv-canvas px-2 sm:px-6 lg:px-8'
+      className='flex h-16 min-w-0 shrink-0 items-center justify-between border-b border-jpv-border bg-jpv-canvas px-2 sm:px-6 lg:px-8 dark:border-[var(--jpv-border)] dark:bg-[var(--jpv-canvas)]'
       data-portal-topbar
     >
       <div className='flex min-w-0 flex-1 items-center gap-1 sm:gap-3'>
         <button
           aria-label='Open navigation'
-          className='flex min-h-11 min-w-11 items-center justify-center rounded-jpv-action text-jpv-ink transition hover:bg-jpv-surface lg:hidden'
+          className='flex min-h-11 min-w-11 items-center justify-center rounded-jpv-action text-jpv-ink transition hover:bg-jpv-surface dark:text-[var(--jpv-ink)] dark:hover:bg-[var(--jpv-surface)] lg:hidden'
           onClick={onMobileMenuOpen}
           type='button'
         >
           <Menu aria-hidden='true' className='h-5 w-5' />
         </button>
-        <h1 className='min-w-0 truncate text-lg font-semibold text-jpv-ink'>{pageTitle}</h1>
+        <h1 className='min-w-0 truncate text-lg font-semibold text-jpv-ink dark:text-[var(--jpv-ink)]'>{pageTitle}</h1>
       </div>
 
       <div className='flex shrink-0 items-center gap-0 sm:gap-1'>
         <ThemeToggle />
-        <button
-          aria-label='Notifications'
-          className='flex min-h-11 min-w-11 items-center justify-center rounded-jpv-action text-jpv-muted transition hover:bg-jpv-surface hover:text-jpv-ink'
-          type='button'
-        >
-          <Bell aria-hidden='true' className='h-5 w-5' />
-        </button>
+        <NotificationBell />
         <Link
           aria-label='Account settings'
           className='flex h-9 w-9 items-center justify-center rounded-full bg-jpv-brand-deep text-xs font-bold text-jpv-canvas transition hover:bg-jpv-brand-hover'

@@ -165,6 +165,52 @@ export async function notifySpaceMembersOfNewPost(
     if (created) emailEventsCreated++
   }
 
+  // In-app notifications (non-blocking — failures must not prevent post creation)
+  try {
+    let authorName: string | null = null
+    try {
+      const authorProfiles = await payload.find({
+        collection: 'payload_member_profiles',
+        where: { member: { equals: String(input.authorMemberId) } },
+        limit: 1,
+        depth: 0,
+        overrideAccess: true,
+      })
+      const profileDisplayName = authorProfiles.docs[0]?.displayName
+      authorName = typeof profileDisplayName === 'string' ? profileDisplayName : null
+    } catch {
+      // best-effort profile lookup
+    }
+
+    const href = input.spaceSlug
+      ? `/portal/community/${input.spaceSlug}/posts/${input.postId}`
+      : null
+
+    for (const recipient of recipients) {
+      try {
+        await payload.create({
+          collection: 'payload_member_notifications',
+          data: {
+            member: recipient.memberId,
+            type: 'new_post',
+            actorName: authorName ?? 'A member',
+            title: `posted "${input.postTitle}" in ${input.spaceName}`,
+            href,
+            read: false,
+          },
+          overrideAccess: true,
+        })
+      } catch {
+        // skip individual failures
+      }
+    }
+  } catch (err) {
+    console.error(
+      '[notifySpaceMembersOfNewPost] in-app notification error:',
+      err instanceof Error ? err.message : String(err),
+    )
+  }
+
   return { recipients, emailEventsCreated, dryRun: false }
 }
 
@@ -273,6 +319,46 @@ export async function notifyPostAuthorOfNewComment(
       commenterMemberId: String(input.commenterMemberId),
     },
   })
+
+  // In-app notification for post author (non-blocking)
+  try {
+    let commenterName: string | null = null
+    try {
+      const commenterProfiles = await payload.find({
+        collection: 'payload_member_profiles',
+        where: { member: { equals: String(input.commenterMemberId) } },
+        limit: 1,
+        depth: 0,
+        overrideAccess: true,
+      })
+      const profileDisplayName = commenterProfiles.docs[0]?.displayName
+      commenterName = typeof profileDisplayName === 'string' ? profileDisplayName : null
+    } catch {
+      // best-effort profile lookup
+    }
+
+    const href = input.spaceSlug
+      ? `/portal/community/${input.spaceSlug}/posts/${input.postId}`
+      : null
+
+    await payload.create({
+      collection: 'payload_member_notifications',
+      data: {
+        member: recipient.memberId,
+        type: 'new_comment',
+        actorName: commenterName ?? 'A member',
+        title: `commented on "${input.postTitle}" in ${input.spaceName}`,
+        href,
+        read: false,
+      },
+      overrideAccess: true,
+    })
+  } catch (err) {
+    console.error(
+      '[notifyPostAuthorOfNewComment] in-app notification error:',
+      err instanceof Error ? err.message : String(err),
+    )
+  }
 
   return { recipient, emailEventCreated: created, dryRun: false }
 }

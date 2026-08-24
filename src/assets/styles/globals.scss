@@ -6,6 +6,18 @@
 	color-scheme: light;
 }
 
+.dark {
+	color-scheme: dark;
+	--jpv-canvas: #0f1117;
+	--jpv-surface: #1a1d27;
+	--jpv-surface-strong: #252836;
+	--jpv-border: #2d3148;
+	--jpv-ink: #f0f2f7;
+	--jpv-muted: #8b9abf;
+	--jpv-secondary: #8b9abf;
+	--jpv-inverse-muted: #505b7a;
+}
+
 html {
 	scroll-behavior: smooth;
 	background: var(--jpv-canvas);
@@ -177,10 +189,6 @@ body {
 
 ::-webkit-scrollbar {
 	width: 0px;
-}
-
-.dark {
-	background: color-mix(in srgb, var(--jpv-ink) 94%, black);
 }
 
 .blocks-class a {

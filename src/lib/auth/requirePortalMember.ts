@@ -1,13 +1,12 @@
 import 'server-only'
 
-import config from '@payload-config'
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
-import { getPayload } from 'payload'
 
-import { resolvePayloadRequestSession } from '@/lib/auth/payloadSession'
+import { cachedResolvePayloadRequestSession } from '@/lib/auth/payloadSession'
 import { MEMBER_COLLECTION } from '@/lib/auth/payloadSessionMapping'
 import { decideSharedLogin } from '@/lib/auth/sharedLoginDecision'
+import { getCachedPayload } from '@/lib/payload/getPayload'
 import type { PayloadCourseAccessAPI } from '@/lib/payloadCourse/accessService'
 
 export type PortalMemberContext = {
@@ -20,7 +19,7 @@ export async function requirePortalMember(
   requestedPath = '/portal',
 ): Promise<PortalMemberContext> {
   const requestHeaders = await headers()
-  const session = await resolvePayloadRequestSession(requestHeaders)
+  const session = await cachedResolvePayloadRequestSession(requestHeaders)
   const decision = decideSharedLogin(session, requestedPath)
 
   if (
@@ -31,7 +30,7 @@ export async function requirePortalMember(
     redirect(`/portal?mode=login&next=${encodeURIComponent(requestedPath)}`)
   }
 
-  const payload = await getPayload({ config })
+  const payload = await getCachedPayload()
   const member = await payload.findByID({
     collection: 'payload_members',
     id: session.member.id,

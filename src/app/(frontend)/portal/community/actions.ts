@@ -14,6 +14,63 @@ import {
 import { getPayload } from 'payload'
 import config from '@payload-config'
 
+// ---------------------------------------------------------------------------
+// Mention notification helpers
+// ---------------------------------------------------------------------------
+
+function parseMentions(text: string): string[] {
+  const matches = text.match(/@([\w][^\s@]{0,49})/g) ?? []
+  return [...new Set(matches.map((m) => m.slice(1).trim()).filter(Boolean))]
+}
+
+async function createMentionNotifications(
+  payload: PayloadCourseWriteAPI,
+  bodyText: string,
+  href: string | null,
+  context: { postTitle: string; spaceName: string },
+  actorName: string,
+): Promise<void> {
+  const mentions = parseMentions(bodyText)
+  if (mentions.length === 0) return
+
+  for (const displayName of mentions) {
+    try {
+      const profiles = await payload.find({
+        collection: 'payload_member_profiles',
+        where: { displayName: { like: displayName } },
+        limit: 1,
+        depth: 0,
+        overrideAccess: true,
+      })
+
+      const profile = profiles.docs[0] as Record<string, unknown> | undefined
+      if (!profile) continue
+
+      const memberId =
+        typeof profile.member === 'object' && profile.member !== null
+          ? (profile.member as Record<string, unknown>).id
+          : profile.member
+
+      if (!memberId) continue
+
+      await payload.create({
+        collection: 'payload_member_notifications',
+        data: {
+          member: String(memberId),
+          type: 'mention',
+          actorName,
+          title: `mentioned you in "${context.postTitle}" in ${context.spaceName}`,
+          href,
+          read: false,
+        },
+        overrideAccess: true,
+      })
+    } catch {
+      // best-effort — mention notifications must not break posting
+    }
+  }
+}
+
 type SubmissionErrorCode =
   | 'rate_limit'
   | 'not_allowed'
@@ -171,6 +228,14 @@ export async function submitCommunityPost(spaceSlug: string, formData: FormData)
   const { memberId, payload } = await requirePortalMember(destination)
 
   let errorCode: SubmissionErrorCode | null = null
+  let mentionContext: {
+    bodyText: string
+    postTitle: string
+    spaceName: string
+    href: string
+    actorName: string
+  } | null = null
+
   try {
     const detail = await getMemberCommunitySpaceDetail(payload, memberId, spaceSlug)
     const canSubmit =
@@ -186,18 +251,53 @@ export async function submitCommunityPost(spaceSlug: string, formData: FormData)
 
     const title = boundedText(formText(formData, 'title'), 'Title', 160)
     const bodyText = boundedText(formText(formData, 'body'), 'Body', 10_000)
-
     const videoUrl = formText(formData, 'videoUrl')
 
-    await createSpacePost(payload as unknown as PayloadCourseWriteAPI, {
+    const result = await createSpacePost(payload as unknown as PayloadCourseWriteAPI, {
       memberId,
       spaceId: detail.id,
       title,
       body: buildRichTextBody(bodyText, videoUrl || null),
     })
+
+    // Capture context for mention notifications (resolved after redirect)
+    const postId = String(result.document.id)
+    let actorName = 'A member'
+    try {
+      const member = await (payload as unknown as PayloadCourseWriteAPI).findByID({
+        collection: 'payload_members',
+        id: memberId,
+        depth: 0,
+        overrideAccess: true,
+      })
+      actorName = memberDisplayName(member as Record<string, unknown>)
+    } catch { /* best-effort */ }
+
+    mentionContext = {
+      bodyText,
+      postTitle: title,
+      spaceName: detail.name ?? spaceSlug,
+      href: postPath(spaceSlug, postId),
+      actorName,
+    }
   } catch (err) {
     console.error('[submitCommunityPost] submission error:', err instanceof Error ? err.message : String(err))
     errorCode = classifyError(err)
+  }
+
+  // Mention notifications are non-blocking and must run before redirect() throws
+  if (mentionContext) {
+    try {
+      await createMentionNotifications(
+        payload as unknown as PayloadCourseWriteAPI,
+        mentionContext.bodyText,
+        mentionContext.href,
+        { postTitle: mentionContext.postTitle, spaceName: mentionContext.spaceName },
+        mentionContext.actorName,
+      )
+    } catch {
+      // must not break the posting flow
+    }
   }
 
   if (errorCode) {
@@ -217,6 +317,14 @@ export async function submitCommunityComment(
   const { memberId, payload } = await requirePortalMember(destination)
 
   let errorCode: SubmissionErrorCode | null = null
+  let mentionContext: {
+    bodyText: string
+    postTitle: string
+    spaceName: string
+    href: string
+    actorName: string
+  } | null = null
+
   try {
     const detail = await getMemberCommunityPostDetail(payload, memberId, spaceSlug, postId)
     if (!detail.allowed || !detail.post.canComment) {
@@ -225,18 +333,42 @@ export async function submitCommunityComment(
 
     const member = await loadMemberRecord(payload as unknown as PayloadCourseWriteAPI, memberId)
     const bodyText = boundedText(formText(formData, 'body'), 'Body', 10_000)
-
     const videoUrl = formText(formData, 'videoUrl')
+    const actorName = memberDisplayName(member)
 
     await createSpaceComment(payload as unknown as PayloadCourseWriteAPI, {
       memberId,
       postId: detail.post.id,
-      displayName: memberDisplayName(member),
+      displayName: actorName,
       body: buildRichTextBody(bodyText, videoUrl || null),
     })
+
+    // Capture context for mention notifications
+    mentionContext = {
+      bodyText,
+      postTitle: detail.post.title ?? postId,
+      spaceName: spaceSlug,
+      href: destination,
+      actorName,
+    }
   } catch (err) {
     console.error('[submitCommunityComment] submission error:', err instanceof Error ? err.message : String(err))
     errorCode = classifyError(err)
+  }
+
+  // Mention notifications are non-blocking and must run before redirect() throws
+  if (mentionContext) {
+    try {
+      await createMentionNotifications(
+        payload as unknown as PayloadCourseWriteAPI,
+        mentionContext.bodyText,
+        mentionContext.href,
+        { postTitle: mentionContext.postTitle, spaceName: mentionContext.spaceName },
+        mentionContext.actorName,
+      )
+    } catch {
+      // must not break the posting flow
+    }
   }
 
   if (errorCode) {

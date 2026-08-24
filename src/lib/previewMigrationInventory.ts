@@ -65,6 +65,7 @@ const PREVIEW_MIGRATION_METADATA = [
   { purpose: 'Extend live_sessions with optional space FK for group calls; enforce either-or course/space constraint.', rollbackRisk: 'reversible', verificationChecks: ['registry-match', 'ordered-exactly', 'live-session-space', 'rollback-guard'] },
   { purpose: 'Create additive member-owned reaction persistence without changing legacy space reactions.', rollbackRisk: 'data_loss', verificationChecks: ['registry-match', 'ordered-exactly', 'engagement-reactions', 'no-legacy-backfill', 'rollback-guard'] },
   { purpose: 'Create CMS-configurable portal nav items table and add portal_route column to pages.', rollbackRisk: 'reversible', verificationChecks: ['registry-match', 'ordered-exactly', 'portal-nav-items'] },
+  { purpose: 'Create member notification records for in-app notification delivery.', rollbackRisk: 'reversible', verificationChecks: ['registry-match', 'ordered-exactly', 'member-notifications'] },
 ] as const satisfies readonly PreviewMigrationMetadata[]
 
 if (PREVIEW_MIGRATION_METADATA.length !== PAYLOAD_MIGRATION_NAMES.length) {

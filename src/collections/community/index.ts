@@ -10,6 +10,7 @@ import {
   PayloadSpaces,
 } from './Community'
 import { PayloadEngagementReactions } from './EngagementReactions'
+import { PayloadMemberNotifications } from './MemberNotifications'
 
 export {
   PayloadChatMessages,
@@ -23,6 +24,7 @@ export {
   PayloadSpaces,
 } from './Community'
 export { PayloadEngagementReactions } from './EngagementReactions'
+export { PayloadMemberNotifications } from './MemberNotifications'
 
 export const communityCollections = [
   PayloadMemberGroups,
@@ -35,4 +37,5 @@ export const communityCollections = [
   PayloadSpaceFiles,
   PayloadChatThreads,
   PayloadChatMessages,
+  PayloadMemberNotifications,
 ]

@@ -16,7 +16,7 @@ export function ThemeToggle() {
     return (
       <button
         aria-label='Toggle theme'
-        className='flex min-h-11 min-w-11 items-center justify-center rounded-jpv-action text-jpv-muted transition hover:bg-jpv-surface hover:text-jpv-ink'
+        className='flex min-h-11 min-w-11 items-center justify-center rounded-jpv-action text-jpv-muted transition hover:bg-jpv-surface hover:text-jpv-ink dark:text-[var(--jpv-muted)] dark:hover:bg-[var(--jpv-surface)] dark:hover:text-[var(--jpv-ink)]'
         type='button'
       >
         <Sun aria-hidden='true' className='h-5 w-5' />
@@ -29,7 +29,7 @@ export function ThemeToggle() {
   return (
     <button
       aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-      className='flex min-h-11 min-w-11 items-center justify-center rounded-jpv-action text-jpv-muted transition hover:bg-jpv-surface hover:text-jpv-ink'
+      className='flex min-h-11 min-w-11 items-center justify-center rounded-jpv-action text-jpv-muted transition hover:bg-jpv-surface hover:text-jpv-ink dark:text-[var(--jpv-muted)] dark:hover:bg-[var(--jpv-surface)] dark:hover:text-[var(--jpv-ink)]'
       onClick={() => setTheme(isDark ? 'light' : 'dark')}
       type='button'
     >

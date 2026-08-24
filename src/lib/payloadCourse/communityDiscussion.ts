@@ -507,20 +507,41 @@ export async function getMemberCommunityPostDetail(
   const canPublish = await publishingCapability(payload, memberId, spaceId)
   const attachments = await findVisiblePostAttachments(payload, memberId, postId)
 
-  const commentProjections: MemberCommunityComment[] = []
+  // Collect unique author IDs so we can batch-fetch in a single query (N+1 → 1).
+  const commentAuthorIdSet = new Set<string>()
   for (const comment of comments) {
     const authorId = getDocumentId(comment.author)
-    const author = await findByIdSafe(payload, 'payload_members', authorId)
+    if (authorId) commentAuthorIdSet.add(authorId)
+  }
+
+  const commentAuthorMap = new Map<string, PayloadDocument>()
+  if (commentAuthorIdSet.size > 0) {
+    const uniqueAuthorIds = Array.from(commentAuthorIdSet)
+    const authorBatch = await payload.find({
+      collection: 'payload_members',
+      where: { id: { in: uniqueAuthorIds } },
+      limit: 200,
+      depth: 0,
+      overrideAccess: true,
+    })
+    for (const member of authorBatch.docs) {
+      commentAuthorMap.set(String(member.id), member)
+    }
+  }
+
+  const commentProjections: MemberCommunityComment[] = comments.map((comment) => {
+    const authorId = getDocumentId(comment.author)
+    const author = authorId ? (commentAuthorMap.get(authorId) ?? null) : null
     const commentBody = projectCommunityRichText(comment.body)
-    commentProjections.push({
+    return {
       id: String(comment.id),
       authorId: authorId,
       authorName: commentDisplayName(comment, author),
       body: commentBody,
       bodyPlainText: extractPlainText(commentBody),
       createdAt: asDateString(comment.createdAt),
-    })
-  }
+    }
+  })
 
   return {
     allowed: true,

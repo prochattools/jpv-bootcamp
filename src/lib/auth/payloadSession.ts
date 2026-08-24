@@ -1,7 +1,6 @@
 import 'server-only'
 
-import config from '@payload-config'
-import { getPayload } from 'payload'
+import { cache } from 'react'
 
 import {
   mapPayloadAuthUser,
@@ -9,6 +8,7 @@ import {
   type PayloadRequestSession,
 } from '@/lib/auth/payloadSessionMapping'
 import { resolveEligibleMemberAccountStatus } from '@/lib/members/currentMember'
+import { getCachedPayload } from '@/lib/payload/getPayload'
 
 type PayloadMemberRecord = {
   id: string | number
@@ -20,7 +20,7 @@ type PayloadMemberRecord = {
 export async function resolvePayloadRequestSession(
   requestHeaders: Headers,
 ): Promise<PayloadRequestSession> {
-  const payload = await getPayload({ config })
+  const payload = await getCachedPayload()
   const authResult = await payload.auth({ headers: requestHeaders })
   const mappedSession = mapPayloadAuthUser(authResult.user)
 
@@ -48,3 +48,11 @@ export async function resolvePayloadRequestSession(
     },
   }
 }
+
+/**
+ * Request-scoped memoised version of resolvePayloadRequestSession. React's
+ * cache() deduplicates calls that share the same Headers reference within a
+ * single server render pass, so layout.tsx and requirePortalMember can both
+ * call this without triggering a second auth + DB round-trip.
+ */
+export const cachedResolvePayloadRequestSession = cache(resolvePayloadRequestSession)

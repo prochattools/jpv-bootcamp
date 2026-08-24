@@ -1,5 +1,5 @@
-import { getPayload } from 'payload'
-import config from '@payload-config'
+import { unstable_cache } from 'next/cache'
+import { getCachedPayload } from './payload/getPayload'
 import { DEFAULT_PORTAL_NAV_ITEMS } from './portal-nav-seed'
 
 export type PortalNavItem = {
@@ -18,12 +18,12 @@ export type PortalNavGroup = {
   items: PortalNavItem[]
 }
 
-export async function getPortalNavigation(): Promise<{
+async function fetchPortalNavigation(): Promise<{
   pinned: PortalNavItem[]
   groups: PortalNavGroup[]
 }> {
   try {
-    const payload = await getPayload({ config })
+    const payload = await getCachedPayload()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const result = await (payload as any).find({
       collection: 'payload_portal_nav_items',
@@ -117,3 +117,13 @@ function buildNavFromDefaults() {
 
   return { pinned, groups }
 }
+
+/**
+ * Portal navigation cached for 60 seconds in Next.js Data Cache.
+ * Tag 'portal-nav' can be used with revalidateTag() after admin changes.
+ */
+export const getPortalNavigation = unstable_cache(
+  fetchPortalNavigation,
+  ['portal-nav'],
+  { revalidate: 60, tags: ['portal-nav'] },
+)

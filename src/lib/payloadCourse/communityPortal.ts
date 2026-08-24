@@ -475,21 +475,43 @@ export async function getMemberCommunitySpaceDetail(
   const commentCounts = await Promise.all(
     posts.map((post) => countVisibleComments(payload, post.id))
   )
-  const postProjections: MemberCommunityPost[] = await Promise.all(
-    posts.map(async (post, i) => {
-      const author = await findByIdSafe(payload, 'payload_members', getDocumentId(post.author))
-      return {
-        id: String(post.id),
-        title: asString(post.title) ?? 'Untitled post',
-        postType: asString(post.postType),
-        pinned: asBoolean(post.pinned),
-        createdAt: asDateString(post.createdAt),
-        commentCount: commentCounts[i],
-        authorName: memberDisplayName(author),
-        excerpt: richTextExcerpt(post.body),
-      }
+
+  // Batch-fetch all post authors in a single query (N+1 → 1).
+  const postAuthorIdSet = new Set<string>()
+  for (const post of posts) {
+    const authorId = getDocumentId(post.author)
+    if (authorId) postAuthorIdSet.add(authorId)
+  }
+
+  const postAuthorMap = new Map<string, PayloadDocument>()
+  if (postAuthorIdSet.size > 0) {
+    const uniqueAuthorIds = Array.from(postAuthorIdSet)
+    const authorBatch = await payload.find({
+      collection: 'payload_members',
+      where: { id: { in: uniqueAuthorIds } },
+      limit: 200,
+      depth: 0,
+      overrideAccess: true,
     })
-  )
+    for (const member of authorBatch.docs) {
+      postAuthorMap.set(String(member.id), member)
+    }
+  }
+
+  const postProjections: MemberCommunityPost[] = posts.map((post, i) => {
+    const authorId = getDocumentId(post.author)
+    const author = authorId ? (postAuthorMap.get(authorId) ?? null) : null
+    return {
+      id: String(post.id),
+      title: asString(post.title) ?? 'Untitled post',
+      postType: asString(post.postType),
+      pinned: asBoolean(post.pinned),
+      createdAt: asDateString(post.createdAt),
+      commentCount: commentCounts[i],
+      authorName: memberDisplayName(author),
+      excerpt: richTextExcerpt(post.body),
+    }
+  })
 
   return {
     ...projection,
