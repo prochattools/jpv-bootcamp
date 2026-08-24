@@ -19,6 +19,7 @@ export const PayloadMedia: CollectionConfig = {
     group: 'Content',
     useAsTitle: 'filename',
     defaultColumns: ['filename', 'mimeType', 'filesize', 'updatedAt'],
+    description: 'Publicly served images and files used across courses, pages, and community spaces.',
   },
   fields: [
     { name: 'alt', type: 'text', required: true },

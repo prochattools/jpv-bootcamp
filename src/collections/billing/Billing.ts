@@ -248,6 +248,7 @@ export const PayloadStripeEvents: CollectionConfig = {
     useAsTitle: 'eventId',
     defaultColumns: ['eventId', 'eventType', 'livemode', 'processingStatus', 'processedAt'],
     hidden: true,
+    description: 'Incoming Stripe webhook events. Read-only — written by the webhook processor, not by administrators.',
   },
   access: webhookProjectionCollectionAccess,
   fields: [

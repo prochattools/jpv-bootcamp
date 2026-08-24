@@ -22,6 +22,7 @@ export const PayloadMembers: CollectionConfig = {
   admin: {
     useAsTitle: 'email',
     defaultColumns: ['email', 'accountStatus', 'source', 'billingHoldReason', 'updatedAt'],
+    listSearchableFields: ['email', 'billingHoldReason'],
     group: 'Members',
     description: 'Student and client accounts. This is separate from Payload administrator users.',
   },

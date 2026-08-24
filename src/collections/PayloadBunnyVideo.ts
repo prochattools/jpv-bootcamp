@@ -10,7 +10,8 @@ export const PayloadBunnyVideo: CollectionConfig = {
 	admin: {
 		group: 'Content',
 		useAsTitle: 'title',
-		defaultColumns: ['title', 'status', 'duration', 'libraryId', 'videoGuid', 'createdAt'],
+		defaultColumns: ['title', 'status', 'duration', 'lesson', 'libraryId', 'createdAt'],
+		description: 'Bunny Stream video records. Created automatically by the Bunny webhook — do not create manually.',
 	},
 	access: {
 		read: ({ req }) => {

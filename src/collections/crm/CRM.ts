@@ -20,6 +20,8 @@ export const PayloadContacts: CollectionConfig = {
     hidden: true,
     useAsTitle: 'email',
     defaultColumns: ['email', 'member', 'lifecycleStage', 'emailStatus', 'updatedAt'],
+    listSearchableFields: ['email', 'firstName', 'lastName'],
+    description: 'CRM contact records synced from member accounts and email subscriptions.',
   },
   access: adminOnlyCollectionAccess,
   fields: [
@@ -79,6 +81,7 @@ export const PayloadCrmTags: CollectionConfig = {
     hidden: true,
     useAsTitle: 'name',
     defaultColumns: ['name', 'slug', 'status', 'updatedAt'],
+    description: 'Tags for segmenting and filtering CRM contacts.',
   },
   access: adminOnlyCollectionAccess,
   fields: [
@@ -111,6 +114,7 @@ export const PayloadContactTags: CollectionConfig = {
     hidden: true,
     useAsTitle: 'displayName',
     defaultColumns: ['displayName', 'contact', 'tag', 'source', 'createdAt'],
+    description: 'Tag assignments linking individual contacts to CRM tags.',
   },
   access: adminOnlyCollectionAccess,
   fields: [
@@ -159,6 +163,7 @@ export const PayloadContactNotes: CollectionConfig = {
     hidden: true,
     useAsTitle: 'title',
     defaultColumns: ['title', 'contact', 'noteType', 'createdAt'],
+    description: 'Internal notes attached to CRM contact records.',
   },
   access: adminOnlyCollectionAccess,
   fields: [
@@ -201,6 +206,7 @@ export const PayloadEmailTemplates: CollectionConfig = {
     hidden: true,
     useAsTitle: 'name',
     defaultColumns: ['name', 'templateKey', 'status', 'purpose', 'updatedAt'],
+    description: 'Email templates used by automated transactional and lifecycle email workflows.',
   },
   access: adminOnlyCollectionAccess,
   fields: [
@@ -458,6 +464,7 @@ export const PayloadAdminNotifications: CollectionConfig = {
     hidden: true,
     useAsTitle: 'title',
     defaultColumns: ['title', 'notificationType', 'severity', 'status', 'createdAt'],
+    description: 'Internal system and billing notifications for administrator review.',
   },
   access: adminOnlyCollectionAccess,
   fields: [

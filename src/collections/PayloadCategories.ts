@@ -10,6 +10,7 @@ export const PayloadCategories: CollectionConfig = {
   admin: {
     group: 'Content',
     useAsTitle: 'title',
+    description: 'Taxonomy categories used to organize posts and content.',
   },
   fields: [
     { name: 'title', type: 'text', required: true },

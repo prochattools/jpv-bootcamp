@@ -58,22 +58,34 @@ const Form = () => {
   };
 
   return (
-    <form onSubmit={handleSubmit}>
-      <label htmlFor="waiting-list-email" className="sr-only">Email address</label>
+    <form onSubmit={handleSubmit} noValidate>
+      <label htmlFor="waiting-list-email" className="sr-only">
+        Email address
+      </label>
       <Input
         id="waiting-list-email"
-        placeholder="Email"
-        className="mt-8 mb-2"
+        type="email"
+        placeholder="Your email address"
+        className="mt-4 h-12"
         value={email}
         onChange={handleChange}
-        aria-label="Email address"
+        aria-describedby={error ? "waiting-list-email-error" : undefined}
+        autoComplete="email"
       />
-      {error && <p className="text-jpv-danger-ink mt-2 text-start">{error}</p>}
+      {error && (
+        <p
+          id="waiting-list-email-error"
+          role="alert"
+          className="mt-2 text-sm text-jpv-danger-ink"
+        >
+          {error}
+        </p>
+      )}
       <Button
         type="submit"
-        className="w-[150px] mt-8 bg-jpv-brand border-none scale-1 hover:scale-[1.05] transition-all duration-300 hover:bg-jpv-brand-hover"
+        className="mt-4 w-full sm:w-auto"
       >
-        Button
+        Join the waiting list
       </Button>
     </form>
   );

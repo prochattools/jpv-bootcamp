@@ -11,6 +11,7 @@ export const PayloadUsers: CollectionConfig = {
   admin: {
     useAsTitle: 'email',
     group: 'System',
+    description: 'Payload administrator accounts. These are separate from student and client member accounts.',
   },
   fields: [],
 }

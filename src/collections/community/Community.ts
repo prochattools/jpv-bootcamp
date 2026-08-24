@@ -302,6 +302,7 @@ export const PayloadSpaceComments: CollectionConfig = {
     useAsTitle: 'displayName',
     defaultColumns: ['displayName', 'post', 'author', 'moderationStatus', 'createdAt'],
     hidden: true,
+    description: 'Moderation view for community comments. Visibility changes here affect the member-facing portal immediately.',
   },
   access: {
     admin: adminOnlyCollectionAccess.admin,
@@ -352,7 +353,7 @@ export const PayloadSpaceReactions: CollectionConfig = {
   },
   admin: {
     group: communityGroup,
-    useAsTitle: 'legacyReactionId',
+    useAsTitle: 'reactionType',
     defaultColumns: ['reactionType', 'targetKind', 'actorMember', 'sourceCreatedAt'],
     description: 'Community likes, bookmarks, and preserved survey-option votes.',
   },
@@ -409,6 +410,7 @@ export const PayloadSpaceFiles: CollectionConfig = {
     useAsTitle: 'title',
     defaultColumns: ['title', 'space', 'uploadedBy', 'moderationStatus', 'createdAt'],
     hidden: true,
+    description: 'Files and media attached to community posts and comments.',
   },
   access: {
     admin: adminOnlyCollectionAccess.admin,
@@ -517,6 +519,7 @@ export const PayloadChatThreads: CollectionConfig = {
     useAsTitle: 'title',
     defaultColumns: ['title', 'space', 'status', 'lastMessageAt'],
     hidden: true,
+    description: 'Chat thread records within community spaces.',
   },
   access: adminOnlyCollectionAccess,
   fields: [
@@ -562,6 +565,7 @@ export const PayloadChatMessages: CollectionConfig = {
     useAsTitle: 'displayName',
     defaultColumns: ['displayName', 'thread', 'author', 'moderationStatus', 'createdAt'],
     hidden: true,
+    description: 'Individual chat messages within threads. Moderation changes apply immediately.',
   },
   access: {
     admin: adminOnlyCollectionAccess.admin,

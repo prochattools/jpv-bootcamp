@@ -8,6 +8,7 @@ import {
 	getPlanLabel,
 	type MembershipEmailVariant,
 } from '@/lib/membership-email-copy'
+import { renderBrandedEmail } from '@/lib/communications/brandedEmail'
 import prisma from '@/libs/prisma'
 import crypto from 'crypto'
 import { redactEmail } from '@/lib/log-redact'
@@ -165,21 +166,25 @@ function buildWelcomeEmailContent(params: {
 }): WelcomeEmailContent {
 	const { email: emailConfig } = getServerConfig()
 	const introLine = getMembershipEmailIntro({ plan: params.plan, variant: params.variant })
+	const isUpgrade = params.variant === 'upgrade'
 	const text = [
 		introLine,
 		'',
-		`Log in here: ${emailConfig.portalUrl}`,
+		`Sign in here: ${emailConfig.portalUrl}`,
 		`Set or reset your password here: ${params.resetUrl}`,
 		'',
 		`If you need help, reply to this email: ${emailConfig.replyTo}`,
 	].join('\n')
 
-	const html = `
-		<p>${getMembershipEmailIntroHtml({ plan: params.plan, variant: params.variant })}</p>
-		<p><a href="${emailConfig.portalUrl}">Log in to the portal</a></p>
-		<p><a href="${params.resetUrl}">Set or reset your password</a></p>
-		<p>If you need help, reply to this email: ${emailConfig.replyTo}</p>
-	`
+	const html = renderBrandedEmail({
+		preheader: introLine,
+		heading: isUpgrade ? 'Your plan has been upgraded' : 'Your membership is ready',
+		bodyHtml: `<p style="margin:0 0 16px">${getMembershipEmailIntroHtml({ plan: params.plan, variant: params.variant })}</p><p style="margin:0">Use the links below to sign in or set your password.</p>`,
+		actions: [
+			{ label: 'Sign in to portal', url: emailConfig.portalUrl },
+			{ label: 'Set or reset your password', url: params.resetUrl, tone: 'secondary' },
+		],
+	})
 
 	return {
 		subject: SUBJECT,
@@ -465,7 +470,12 @@ function buildSendParams(params: {
 				'',
 				`If you need help, reply to this email: ${emailConfig.replyTo}`,
 			].join('\n'),
-			html: `<p>Your recent payment did not go through.</p><p><a href="${portalUrl}">Update your payment method</a></p><p>If you need help, reply to this email: ${emailConfig.replyTo}</p>`,
+			html: renderBrandedEmail({
+				preheader: 'Your recent payment needs attention — update your billing details to keep access active.',
+				heading: 'Payment needs attention',
+				bodyHtml: '<p style="margin:0 0 16px">Your recent payment did not go through.</p><p style="margin:0">Update your payment method to keep your membership active.</p>',
+				actions: [{ label: 'Update payment method', url: portalUrl }],
+			}),
 		}
 	}
 
@@ -506,7 +516,12 @@ function buildSendParams(params: {
 				'',
 				`If you need help, reply to this email: ${emailConfig.replyTo}`,
 			].join('\n'),
-			html: `<p>${effectiveLine}</p><p><a href="${portalUrl}">Manage your account</a></p><p>If you need help, reply to this email: ${emailConfig.replyTo}</p>`,
+			html: renderBrandedEmail({
+				preheader: effectiveLine,
+				heading: 'Membership cancelled',
+				bodyHtml: `<p style="margin:0 0 16px">${escapeHtml(effectiveLine)}</p><p style="margin:0">You can manage your account from the member portal.</p>`,
+				actions: [{ label: 'Manage your account', url: portalUrl, tone: 'secondary' }],
+			}),
 		}
 	}
 

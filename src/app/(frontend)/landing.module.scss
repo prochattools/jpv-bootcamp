@@ -224,6 +224,11 @@
   transform: translateY(-1px);
 }
 
+.buttonLight:hover,
+.buttonLight:focus-visible {
+  transform: translateY(-1px);
+}
+
 .buttonOnDark {
   border-color: color-mix(in srgb, var(--jpv-canvas) 35%, transparent);
   color: var(--jpv-canvas);
@@ -250,6 +255,11 @@
   text-decoration-color: var(--jpv-border);
   text-underline-offset: 0.35rem;
   cursor: pointer;
+}
+
+.plainLink:hover,
+.plainLink:focus-visible {
+  text-decoration-color: var(--jpv-ink);
 }
 
 .menuButton {
@@ -1224,6 +1234,14 @@
     sans-serif;
   text-decoration: none;
   cursor: pointer;
+  transition: color 180ms ease;
+}
+
+.footerLinks a:hover,
+.footerLinks button:hover,
+.footerLinks a:focus-visible,
+.footerLinks button:focus-visible {
+  color: var(--jpv-ink);
 }
 
 .modal {
