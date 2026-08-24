@@ -35,19 +35,31 @@ export default async function PortalCommunitySpacePage({ params, searchParams }:
   const activeCalls = liveCalls.filter((c) => c.status === 'live' || c.status === 'scheduled')
 
   return (
-    <div className='space-y-8'>
-      <Link className='text-sm font-bold text-jpv-sunshine-ink hover:text-jpv-brand-deep' href='/portal/community'>
-        Back to community
-      </Link>
+    <div className='mx-auto w-full max-w-6xl space-y-8'>
+      <nav aria-label='Community path' className='flex min-h-11 flex-wrap items-center gap-2 text-sm'>
+        <Link className='font-bold text-jpv-sunshine-ink underline-offset-4 hover:text-jpv-brand-deep hover:underline' href='/portal/community'>
+          Back to community
+        </Link>
+        {detail.linkedCourseSlug ? (
+          <>
+            <span aria-hidden='true' className='text-jpv-muted'>/</span>
+            <Link className='font-semibold text-jpv-muted underline-offset-4 hover:text-jpv-brand-deep hover:underline' href={`/portal/courses/${detail.linkedCourseSlug}`}>
+              Related course
+            </Link>
+          </>
+        ) : null}
+        <span aria-hidden='true' className='text-jpv-muted'>/</span>
+        <span className='text-jpv-muted'>{detail.name}</span>
+      </nav>
 
-      <section className='rounded-jpv-panel bg-jpv-brand-deep p-8 text-jpv-canvas shadow-jpv-card sm:p-10 lg:p-12'>
+      <section aria-labelledby='community-space-heading' className='rounded-jpv-panel bg-jpv-brand-deep p-6 text-jpv-canvas shadow-jpv-card sm:p-10 lg:p-12'>
         <div className='flex flex-wrap gap-3'>
           <StatusPill tone={detail.allowed ? 'good' : 'warn'}>{detail.allowed ? 'Unlocked' : 'Locked'}</StatusPill>
           <StatusPill tone='neutral'>{detail.visibility}</StatusPill>
           {detail.membership?.role && <StatusPill tone='neutral'>{detail.membership.role}</StatusPill>}
         </div>
 
-        <h1 className='mt-7 text-4xl font-bold leading-tight tracking-tight sm:text-5xl'>{detail.name}</h1>
+        <h1 className='mt-7 text-4xl font-bold leading-tight tracking-tight sm:text-5xl' id='community-space-heading'>{detail.name}</h1>
         <p className='mt-5 max-w-2xl text-base leading-7 text-jpv-inverse-muted sm:text-lg'>
           {detail.description ?? 'Space description pending.'}
         </p>
@@ -74,10 +86,10 @@ export default async function PortalCommunitySpacePage({ params, searchParams }:
       {detail.allowed ? (
         <>
           {activeCalls.length > 0 && (
-            <section className='rounded-jpv-panel border border-jpv-border bg-jpv-canvas p-5 shadow-jpv-card sm:p-6'>
+            <section aria-labelledby='community-calls-heading' className='rounded-jpv-panel border border-jpv-border bg-jpv-canvas p-5 shadow-jpv-card sm:p-6'>
               <div className='flex items-center justify-between gap-4'>
                 <div>
-                  <p className='text-xs font-bold uppercase tracking-[0.2em] text-jpv-sunshine-ink'>Group calls</p>
+                  <p className='text-xs font-bold uppercase tracking-[0.2em] text-jpv-sunshine-ink' id='community-calls-heading'>Group calls</p>
                   <p className='mt-1 text-sm text-jpv-muted'>
                     {activeCalls.some((c) => c.status === 'live')
                       ? 'A call is live right now.'
@@ -95,8 +107,9 @@ export default async function PortalCommunitySpacePage({ params, searchParams }:
           )}
 
           {detail.membership?.status === 'active' && (
-            <section className='rounded-jpv-panel border border-jpv-border bg-jpv-canvas p-7 shadow-jpv-card sm:p-8'>
-              <h2 className='text-2xl font-bold text-jpv-brand-deep'>Start a discussion</h2>
+            <section aria-labelledby='community-composer-heading' className='rounded-jpv-panel border border-jpv-border bg-jpv-canvas p-6 shadow-jpv-card sm:p-8'>
+              <h2 className='text-2xl font-bold text-jpv-brand-deep' id='community-composer-heading'>Start a discussion</h2>
+              <p className='mt-2 max-w-2xl text-sm leading-6 text-jpv-muted'>Share a question, update, or insight with members who have access to this space.</p>
               <form
                 action={submitCommunityPost.bind(null, spaceSlug)}
                 className='mt-5 space-y-4'
@@ -154,18 +167,18 @@ export default async function PortalCommunitySpacePage({ params, searchParams }:
             </section>
           )}
 
-          <section>
+          <section aria-labelledby='community-discussions-heading'>
             <div className='flex flex-col justify-between gap-4 sm:flex-row sm:items-end'>
               <div>
                 <p className='text-xs font-bold uppercase tracking-[0.2em] text-jpv-sunshine-ink'>Discussions</p>
-                <h2 className='mt-2 text-3xl font-bold tracking-tight text-jpv-brand-deep'>Visible posts</h2>
+                <h2 className='mt-2 text-3xl font-bold tracking-tight text-jpv-brand-deep' id='community-discussions-heading'>Visible discussions</h2>
               </div>
               <p className='max-w-sm text-sm leading-6 text-jpv-muted'>
                 Open a discussion to read its approved rich-text content and visible replies. Moderator submissions enter review first.
               </p>
             </div>
 
-            <div className='mt-8 space-y-4'>
+            <div aria-live='polite' className='mt-8 space-y-4'>
               {detail.posts.length > 0 ? (
                 detail.posts.map((post) => (
                   <CommunityPostCard
@@ -175,8 +188,9 @@ export default async function PortalCommunitySpacePage({ params, searchParams }:
                   />
                 ))
               ) : (
-                <div className='rounded-jpv-card border border-jpv-border bg-jpv-canvas p-8 text-jpv-muted'>
-                  No visible posts are published in this space yet.
+                <div className='rounded-jpv-card border border-dashed border-jpv-border bg-jpv-surface p-8 text-jpv-muted' role='status'>
+                  <p className='font-semibold text-jpv-brand-deep'>No visible discussions yet.</p>
+                  <p className='mt-2 text-sm leading-6'>Be the first to start a conversation in this space.</p>
                 </div>
               )}
             </div>

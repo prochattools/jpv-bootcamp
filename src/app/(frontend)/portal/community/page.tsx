@@ -50,12 +50,12 @@ export default async function PortalCommunityPage() {
   const unlockedCount = dashboard.spaces.filter((space) => space.allowed).length
 
   return (
-    <div className='space-y-10'>
-      <section className='rounded-jpv-panel bg-jpv-brand-deep p-8 text-jpv-canvas shadow-jpv-card sm:p-10 lg:p-12'>
+    <div className='mx-auto w-full max-w-6xl space-y-10'>
+      <section aria-labelledby='community-overview-heading' className='rounded-jpv-panel bg-jpv-brand-deep p-6 text-jpv-canvas shadow-jpv-card sm:p-10 lg:p-12'>
         <span className='inline-flex rounded-jpv-pill border border-jpv-sunshine/30 bg-jpv-canvas/5 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-jpv-sunshine'>
           Member community
         </span>
-        <h1 className='mt-7 max-w-3xl text-4xl font-bold leading-tight tracking-tight sm:text-5xl'>
+        <h1 className='mt-7 max-w-3xl text-4xl font-bold leading-tight tracking-tight sm:text-5xl' id='community-overview-heading'>
           Your JPV Bootcamp community spaces appear according to your member access.
         </h1>
         <p className='mt-5 max-w-2xl text-base leading-7 text-jpv-inverse-muted sm:text-lg'>
@@ -65,12 +65,20 @@ export default async function PortalCommunityPage() {
           <StatusPill tone='neutral'>{unlockedCount} unlocked</StatusPill>
           <StatusPill tone='neutral'>{dashboard.spaces.length} visible spaces</StatusPill>
         </div>
+        <nav aria-label='Community navigation' className='mt-8 flex flex-wrap gap-x-5 gap-y-3 text-sm font-semibold text-jpv-sunshine'>
+          <Link className='min-h-11 inline-flex items-center underline-offset-4 hover:text-jpv-canvas hover:underline' href='/portal/courses'>
+            Browse courses
+          </Link>
+          <Link className='min-h-11 inline-flex items-center underline-offset-4 hover:text-jpv-canvas hover:underline' href='/portal'>
+            Back to dashboard
+          </Link>
+        </nav>
       </section>
 
-      <section>
+      <section aria-labelledby='community-resources-heading'>
         <div>
           <p className='text-xs font-bold uppercase tracking-[0.2em] text-jpv-sunshine-ink'>Shared files</p>
-          <h2 className='mt-2 text-3xl font-bold tracking-tight text-jpv-brand-deep'>Community resources</h2>
+          <h2 className='mt-2 text-3xl font-bold tracking-tight text-jpv-brand-deep' id='community-resources-heading'>Community resources</h2>
           <p className='mt-2 max-w-2xl text-jpv-muted'>
             Only visible files from community spaces available to your member account appear here.
           </p>
@@ -103,17 +111,17 @@ export default async function PortalCommunityPage() {
               </article>
             ))
           ) : (
-            <div className='rounded-jpv-card border border-dashed border-jpv-border bg-jpv-surface p-6 text-sm leading-6 text-jpv-muted md:col-span-2'>
+            <div className='rounded-jpv-card border border-dashed border-jpv-border bg-jpv-surface p-6 text-sm leading-6 text-jpv-muted md:col-span-2' role='status'>
               No shared community files are currently available to your account.
             </div>
           )}
         </div>
       </section>
 
-      <section>
+      <section aria-labelledby='community-announcements-heading'>
         <div>
           <p className='text-xs font-bold uppercase tracking-[0.2em] text-jpv-sunshine-ink'>Announcements</p>
-          <h2 className='mt-2 text-3xl font-bold tracking-tight text-jpv-brand-deep'>Latest updates</h2>
+          <h2 className='mt-2 text-3xl font-bold tracking-tight text-jpv-brand-deep' id='community-announcements-heading'>Latest updates</h2>
           <p className='mt-2 max-w-2xl text-jpv-muted'>
             Only announcements from community spaces available to your member account appear here.
           </p>
@@ -143,7 +151,7 @@ export default async function PortalCommunityPage() {
               </article>
             ))
           ) : (
-            <div className='rounded-jpv-card border border-dashed border-jpv-border bg-jpv-surface p-7'>
+            <div className='rounded-jpv-card border border-dashed border-jpv-border bg-jpv-surface p-7' role='status'>
               <h3 className='text-xl font-bold text-jpv-brand-deep'>No announcements available</h3>
               <p className='mt-3 text-sm leading-6 text-jpv-muted'>
                 New announcements from your authorized community spaces will appear here.
@@ -153,11 +161,11 @@ export default async function PortalCommunityPage() {
         </div>
       </section>
 
-      <section>
+      <section aria-labelledby='community-spaces-heading'>
         <div className='flex flex-col justify-between gap-4 sm:flex-row sm:items-end'>
           <div>
             <p className='text-xs font-bold uppercase tracking-[0.2em] text-jpv-sunshine-ink'>Community spaces</p>
-            <h2 className='mt-2 text-3xl font-bold tracking-tight text-jpv-brand-deep'>My spaces</h2>
+            <h2 className='mt-2 text-3xl font-bold tracking-tight text-jpv-brand-deep' id='community-spaces-heading'>My spaces</h2>
             <p className='mt-2 max-w-2xl text-jpv-muted'>
               Locked private spaces do not load posts. Secret spaces are omitted until access is granted.
             </p>

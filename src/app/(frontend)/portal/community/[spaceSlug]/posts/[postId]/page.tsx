@@ -34,6 +34,15 @@ function formatDate(value: string | null) {
   }).format(date)
 }
 
+function initials(value: string): string {
+  return value
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('') || 'JP'
+}
+
 function AttachmentCard({ attachment }: { attachment: MemberCommunityAttachmentResolution }) {
   if (!('downloadUrl' in attachment) || !attachment.downloadUrl) return null
 
@@ -71,29 +80,48 @@ export default async function PortalCommunityPostPage({ params, searchParams }: 
   const post = result.post
 
   return (
-    <div className='mx-auto max-w-4xl space-y-10'>
-      <Link
-        className='text-sm font-bold text-jpv-sunshine-ink hover:text-jpv-brand-deep'
-        href={`/portal/community/${encodeURIComponent(post.space.slug)}`}
-      >
-        Back to {post.space.name}
-      </Link>
+    <div className='mx-auto w-full max-w-5xl space-y-10'>
+      <nav aria-label='Discussion path' className='flex min-h-11 flex-wrap items-center gap-2 text-sm'>
+        <Link
+          className='font-bold text-jpv-sunshine-ink underline-offset-4 hover:text-jpv-brand-deep hover:underline'
+          href='/portal/community'
+        >
+          Community
+        </Link>
+        <span aria-hidden='true' className='text-jpv-muted'>/</span>
+        <Link
+          className='font-semibold text-jpv-muted underline-offset-4 hover:text-jpv-brand-deep hover:underline'
+          href={`/portal/community/${encodeURIComponent(post.space.slug)}`}
+        >
+          {post.space.name}
+        </Link>
+        <span aria-hidden='true' className='text-jpv-muted'>/</span>
+        <span className='max-w-full truncate text-jpv-muted'>{post.title}</span>
+      </nav>
 
-      <article className='overflow-hidden rounded-jpv-panel border border-jpv-border bg-jpv-canvas shadow-jpv-card'>
+      <article aria-labelledby='community-post-heading' className='overflow-hidden rounded-jpv-panel border border-jpv-border bg-jpv-canvas shadow-jpv-card'>
         <header className='bg-jpv-brand-deep p-8 text-jpv-canvas sm:p-10'>
           <div className='flex flex-wrap gap-3'>
             <StatusPill tone='neutral'>{post.postType}</StatusPill>
             {post.pinned && <StatusPill tone='neutral'>Pinned</StatusPill>}
             {post.locked && <StatusPill tone='warn'>Comments locked</StatusPill>}
           </div>
-          <h1 className='mt-6 text-4xl font-bold leading-tight tracking-tight sm:text-5xl'>{post.title}</h1>
-          <p className='mt-4 text-sm text-jpv-inverse-muted'>
-            Posted by {post.authorName} · {formatDate(post.createdAt)}
-          </p>
+          <h1 className='mt-6 text-4xl font-bold leading-tight tracking-tight sm:text-5xl' id='community-post-heading'>{post.title}</h1>
+          <div className='mt-6 flex items-center gap-3'>
+            <span aria-hidden='true' className='flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-jpv-canvas text-sm font-bold text-jpv-brand-deep'>
+              {initials(post.authorName)}
+            </span>
+            <div>
+              <p className='text-sm font-semibold text-jpv-canvas'>{post.authorName}</p>
+              <time className='mt-1 block text-xs text-jpv-inverse-muted' dateTime={post.createdAt ?? undefined}>
+                {formatDate(post.createdAt)}
+              </time>
+            </div>
+          </div>
           <p className='mt-2 text-xs text-jpv-inverse-muted'>{memberEmail}</p>
         </header>
 
-        <div className='p-8 sm:p-10'>
+        <div className='p-6 sm:p-10'>
           <CommunityRichText value={post.body} />
         </div>
       </article>
@@ -135,12 +163,15 @@ export default async function PortalCommunityPostPage({ params, searchParams }: 
         </div>
       )}
 
-      <section>
+      <section aria-labelledby='community-comments-heading'>
         <div className='flex flex-wrap items-end justify-between gap-4'>
           <div>
             <p className='text-xs font-bold uppercase tracking-[0.2em] text-jpv-sunshine-ink'>Discussion</p>
-            <h2 className='mt-2 text-3xl font-bold tracking-tight text-jpv-brand-deep'>Comments</h2>
+            <h2 className='mt-2 text-3xl font-bold tracking-tight text-jpv-brand-deep' id='community-comments-heading'>Comments</h2>
           </div>
+          <p className='text-sm font-semibold text-jpv-muted'>
+            {post.comments.length} {post.comments.length === 1 ? 'reply' : 'replies'}
+          </p>
         </div>
 
         <div className='mt-7'>
@@ -148,11 +179,16 @@ export default async function PortalCommunityPostPage({ params, searchParams }: 
             <ProgressiveCommentList totalCount={post.comments.length}>
               {post.comments.map((comment) => (
                 <article
-                  className='rounded-jpv-card border border-jpv-border bg-jpv-canvas p-6 shadow-jpv-card'
+                  className='rounded-jpv-card border border-jpv-border bg-jpv-canvas p-5 shadow-jpv-card sm:p-6'
                   key={comment.id}
                 >
                   <div className='flex flex-wrap items-center justify-between gap-3'>
-                    <h3 className='font-bold text-jpv-brand-deep'>{comment.authorName}</h3>
+                    <div className='flex min-w-0 items-center gap-3'>
+                      <span aria-hidden='true' className='flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-jpv-brand-deep text-xs font-bold text-jpv-canvas'>
+                        {initials(comment.authorName)}
+                      </span>
+                      <h3 className='truncate font-bold text-jpv-brand-deep'>{comment.authorName}</h3>
+                    </div>
                     <time className='text-xs font-semibold uppercase tracking-[0.1em] text-jpv-sunshine-ink'>
                       {formatDate(comment.createdAt)}
                     </time>
@@ -172,8 +208,9 @@ export default async function PortalCommunityPostPage({ params, searchParams }: 
       </section>
 
       {post.canComment && (
-        <section className='rounded-jpv-panel border border-jpv-border bg-jpv-canvas p-7 shadow-jpv-card sm:p-8'>
-          <h2 className='text-2xl font-bold text-jpv-brand-deep'>Leave a reply</h2>
+        <section aria-labelledby='community-reply-heading' className='rounded-jpv-panel border border-jpv-border bg-jpv-canvas p-6 shadow-jpv-card sm:p-8'>
+          <h2 className='text-2xl font-bold text-jpv-brand-deep' id='community-reply-heading'>Leave a reply</h2>
+          <p className='mt-2 text-sm leading-6 text-jpv-muted'>Keep your reply focused on the discussion so it is easy for other learners to follow.</p>
           <form
             action={submitCommunityComment.bind(null, spaceSlug, postId)}
             className='mt-5 space-y-4'
