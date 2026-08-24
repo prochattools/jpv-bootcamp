@@ -1,3 +1,4 @@
+import { GraduationCap, Settings, Users, Video } from 'lucide-react'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
@@ -118,25 +119,97 @@ export default async function PortalDashboardPage({ searchParams }: PortalDashbo
     return <PortalLoginMode branding={branding} params={params} />
   }
 
-  const { memberId, payload } = await requirePortalMember('/portal')
+  const { memberId, memberEmail, payload } = await requirePortalMember('/portal')
   const dashboard = await getMemberCourseDashboard(payload, memberId)
   const availableCourses = dashboard.courses.filter((course) => course.allowed)
 
+  // Derive a friendly display name from the email prefix
+  const emailPrefix = memberEmail.split('@')[0] ?? ''
+  const displayName = emailPrefix.charAt(0).toUpperCase() + emailPrefix.slice(1)
+
+  // Stats derived from already-fetched data
+  const enrolledCount = availableCourses.length
+  const completedLessonsTotal = availableCourses.reduce(
+    (sum, c) => sum + (c.completedLessonCount ?? 0),
+    0,
+  )
+  const totalLessonsCount = availableCourses.reduce(
+    (sum, c) => sum + (c.lessonCount ?? 0),
+    0,
+  )
+  const overallPercent =
+    totalLessonsCount > 0
+      ? Math.round((completedLessonsTotal / totalLessonsCount) * 100)
+      : null
+
+  // Find the course that contains the continue lesson (for its progress bar)
+  const continueCourse = dashboard.continueLesson
+    ? (availableCourses.find((c) => c.slug === dashboard.continueLesson?.courseSlug) ?? null)
+    : null
+
+  // Today's date for the welcome section
+  const todayLabel = new Date().toLocaleDateString('en-GB', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  })
+
+  const quickLinks = [
+    { href: '/portal/courses', label: 'Courses', Icon: GraduationCap },
+    { href: '/portal/live-sessions', label: 'Live', Icon: Video },
+    { href: '/portal/community', label: 'Community', Icon: Users },
+    { href: '/portal/account', label: 'Account', Icon: Settings },
+  ]
+
   return (
-    <div className='space-y-10'>
+    <div className='mx-auto max-w-5xl space-y-8 px-4 py-8'>
+
+      {/* 1. Welcome section */}
       <section>
         <p className='jpv-eyebrow'>JPV Bootcamp</p>
-        <h1 className='mt-3 text-3xl font-semibold tracking-tight'>Welcome back</h1>
-        <p className='mt-3 max-w-2xl text-sm leading-6 text-jpv-muted'>
-          Continue your learning, review your available courses, and manage your member account.
-        </p>
+        <h1 className='mt-2 text-3xl font-semibold tracking-tight text-jpv-ink'>
+          Welcome back{displayName ? `, ${displayName}` : ''}
+        </h1>
+        <p className='mt-1 text-sm text-jpv-muted'>{todayLabel}</p>
       </section>
 
+      {/* 2. Continue learning — primary CTA */}
       {dashboard.continueLesson ? (
-        <section className='rounded-jpv-panel border border-jpv-border bg-jpv-canvas p-6 shadow-sm'>
-          <p className='jpv-eyebrow'>Continue learning</p>
-          <h2 className='mt-3 text-xl font-semibold'>{dashboard.continueLesson.lessonTitle}</h2>
-          <p className='mt-2 text-sm text-jpv-muted'>{dashboard.continueLesson.courseTitle}</p>
+        <section
+          aria-label='Continue learning'
+          className='rounded-jpv-panel border border-jpv-brand-deep bg-jpv-brand-deep p-6 shadow-jpv-card'
+        >
+          <p className='text-xs font-extrabold uppercase tracking-widest text-jpv-brand-bright'>
+            Continue learning
+          </p>
+          <h2 className='mt-2 text-xl font-semibold text-jpv-canvas'>
+            {dashboard.continueLesson.lessonTitle}
+          </h2>
+          <p className='mt-1 text-sm text-jpv-brand-bright'>
+            {dashboard.continueLesson.courseTitle}
+            {dashboard.continueLesson.estimatedDuration
+              ? ` · ${dashboard.continueLesson.estimatedDuration}`
+              : ''}
+          </p>
+
+          {continueCourse && continueCourse.progressPercent !== null ? (
+            <div className='mt-4'>
+              <div className='mb-1 flex items-center justify-between'>
+                <span className='text-xs text-jpv-brand-bright opacity-70'>Course progress</span>
+                <span className='text-xs font-semibold text-jpv-brand-bright'>
+                  {continueCourse.progressPercent}%
+                </span>
+              </div>
+              <div className='h-2 w-full overflow-hidden rounded-full bg-jpv-brand'>
+                <div
+                  className='h-full rounded-full bg-jpv-brand-bright transition-all'
+                  style={{ width: `${continueCourse.progressPercent}%` }}
+                />
+              </div>
+            </div>
+          ) : null}
+
           {dashboard.continueLesson.courseSlug && dashboard.continueLesson.lessonSlug ? (
             <Link
               className='jpv-button-primary mt-5 inline-flex'
@@ -146,54 +219,69 @@ export default async function PortalDashboardPage({ searchParams }: PortalDashbo
             </Link>
           ) : null}
         </section>
-      ) : null}
+      ) : (
+        <section className='rounded-jpv-panel border border-dashed border-jpv-border bg-jpv-canvas p-6'>
+          <p className='text-sm text-jpv-muted'>
+            No lessons in progress yet.{' '}
+            <Link
+              className='font-semibold text-jpv-brand underline-offset-4 hover:underline'
+              href='/portal/courses'
+            >
+              Browse your courses
+            </Link>{' '}
+            to get started.
+          </p>
+        </section>
+      )}
 
-      <section>
-        <div className='flex items-end justify-between gap-4'>
-          <div>
-            <h2 className='text-2xl font-semibold'>Your courses</h2>
-            <p className='mt-2 text-sm text-jpv-muted'>Courses currently available to this member account.</p>
+      {/* 3. Quick stats row */}
+      <section aria-label='Learning stats'>
+        <div className='grid grid-cols-2 gap-4 md:grid-cols-3'>
+          <div className='rounded-xl bg-white p-5 shadow-sm dark:bg-neutral-900'>
+            <p className='text-xs font-semibold uppercase tracking-wider text-jpv-muted'>
+              Courses enrolled
+            </p>
+            <p className='mt-2 text-3xl font-bold text-jpv-ink'>{enrolledCount}</p>
           </div>
-          <Link className='text-sm font-semibold text-jpv-ink underline-offset-4 hover:underline' href='/portal/courses'>
-            View all
-          </Link>
+          <div className='rounded-xl bg-white p-5 shadow-sm dark:bg-neutral-900'>
+            <p className='text-xs font-semibold uppercase tracking-wider text-jpv-muted'>
+              Lessons completed
+            </p>
+            <p className='mt-2 text-3xl font-bold text-jpv-ink'>{completedLessonsTotal}</p>
+            {totalLessonsCount > 0 ? (
+              <p className='mt-1 text-xs text-jpv-muted'>of {totalLessonsCount} total</p>
+            ) : null}
+          </div>
+          <div className='rounded-xl bg-white p-5 shadow-sm dark:bg-neutral-900'>
+            <p className='text-xs font-semibold uppercase tracking-wider text-jpv-muted'>
+              Overall progress
+            </p>
+            <p className='mt-2 text-3xl font-bold text-jpv-ink'>
+              {overallPercent !== null ? `${overallPercent}%` : '—'}
+            </p>
+          </div>
         </div>
-
-        {availableCourses.length > 0 ? (
-          <div className='mt-6 grid gap-5 md:grid-cols-2'>
-            {availableCourses.slice(0, 4).map((course) => (
-              <article className='rounded-jpv-panel border border-jpv-border bg-jpv-canvas p-6 shadow-sm' key={course.id}>
-                <div className='flex items-start justify-between gap-4'>
-                  <div>
-                    <h3 className='text-lg font-semibold'>{course.title}</h3>
-                    {course.shortDescription ? (
-                      <p className='mt-2 text-sm leading-6 text-jpv-muted'>{course.shortDescription}</p>
-                    ) : null}
-                  </div>
-                  {course.progressPercent !== null ? (
-                    <span className='rounded-full bg-jpv-surface-strong px-3 py-1 text-xs font-semibold text-jpv-inverse-muted'>
-                      {course.progressPercent}%
-                    </span>
-                  ) : null}
-                </div>
-
-                {course.slug ? (
-                  <Link
-                    className='mt-5 inline-flex text-sm font-semibold text-jpv-ink underline-offset-4 hover:underline'
-                    href={`/portal/courses/${course.slug}`}
-                  >
-                    Open course
-                  </Link>
-                ) : null}
-              </article>
-            ))}
-          </div>
-        ) : (
-          <div className='mt-6 rounded-jpv-panel border border-dashed border-jpv-border bg-white p-8 text-sm text-jpv-muted'>
-            No courses are currently available for this account.
-          </div>
-        )}
       </section>
+
+      {/* 4. Navigation shortcuts */}
+      <section aria-label='Quick links'>
+        <h2 className='mb-4 text-xs font-extrabold uppercase tracking-widest text-jpv-muted'>
+          Quick links
+        </h2>
+        <div className='grid grid-cols-2 gap-4 sm:grid-cols-4'>
+          {quickLinks.map(({ href, label, Icon }) => (
+            <Link
+              className='flex flex-col items-center gap-3 rounded-jpv-card border border-jpv-border bg-jpv-surface p-5 text-center transition hover:border-jpv-brand hover:bg-jpv-canvas hover:shadow-sm'
+              href={href}
+              key={href}
+            >
+              <Icon aria-hidden='true' className='h-6 w-6 text-jpv-brand' />
+              <span className='text-sm font-semibold text-jpv-ink'>{label}</span>
+            </Link>
+          ))}
+        </div>
+      </section>
+
     </div>
   )
 }
