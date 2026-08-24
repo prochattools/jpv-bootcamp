@@ -102,7 +102,18 @@ The implementation currently has the following local evidence:
 - `pnpm exec tsc --noEmit`: PASS.
 - `pnpm test:release`: PASS, 164/164; the approved migration-order fixture was extended for migration 37.
 - `pnpm exec tsx scripts/release/runStagingPayloadMigration.test.ts`: PASS, 151/151.
-- Documentation and staging migration evidence remain pending until the guarded staging procedure is run.
+- Documentation is locally reconciled; staging migration apply evidence remains pending until the guarded staging procedure is run.
+
+Staging read-only evidence captured after the implementation commit:
+
+- Workflow: `deploy-preview.yml`, run `32712482183` (`read-only-migration-plan`).
+- Exact branch/SHA: `feature/course-branding-and-preview` / `fb68a41721ea5c343d2b967f262083110a7de877`.
+- Target boundary: staging `jpvbootcamp_staging` / `jpvbootcamp` only.
+- Sanitized artifact result: `plan_blocked` with `applied_count_mismatch` and `pending_migration_mismatch` because the source registry now contains migration 37 while staging remains at the verified 36-migration state.
+- Sanitized staging evidence: `appliedPayloadCount=36`, `prismaHealthy=true`, `unexpectedPayloadCount=0`, `duplicatePayloadCount=0`, and `malformedPayloadCount=0`.
+- No migration command, active reaction write, production operation, or deployment was performed by this run.
+
+The next staging apply remains blocked until a fresh authorization packet supplies the exact operator, backup evidence, maintenance window, rollback owner, and protected `DATABASE_URL` through the approved staging execution path.
 
 ## Staging and rollback record
 
