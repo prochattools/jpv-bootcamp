@@ -56,13 +56,20 @@ The focused P2-04 contract test verifies:
 - the existing comment service and collection boundaries remain referenced;
 - no new Payload collection, migration, API route, or server action is introduced by this phase.
 
-Additional validation required before the phase is frozen:
+Recorded validation for the committed implementation:
 
-- TypeScript compilation;
-- P2-04 focused test;
-- P2-01 course hierarchy and P2-02 community regression tests;
-- responsive and accessibility checks;
-- full release gate.
+- `pnpm exec tsx scripts/p2_04_engagement_ui.test.ts` — PASS;
+- `pnpm exec tsx scripts/p2_01_course_learning_hierarchy.test.ts` — PASS;
+- `pnpm exec tsx scripts/p2_02_community_foundation.test.ts` — PASS;
+- `pnpm exec tsx scripts/p2_03_engagement_architecture_contract.test.ts` — PASS;
+- `pnpm exec tsx scripts/course_community_ux_phase1.test.ts` — PASS;
+- `pnpm exec tsx scripts/ux_architecture_consolidation.test.ts` — PASS;
+- `pnpm exec tsc --noEmit --pretty false --incremental false` — PASS;
+- `pnpm exec playwright test e2e/visual-systems.spec.ts` — 20 passed across 320, 375, 768, 1024, and 1440 pixel projects;
+- `pnpm test:release` — `164/164 PASS`;
+- `git diff --check` — PASS.
+
+No staging or production deployment was performed, and no migration or schema operation was run.
 
 ## Deferred backend work
 
