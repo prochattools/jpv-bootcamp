@@ -44,7 +44,19 @@ function parseEmailList(raw: string | undefined): string[] {
 		.filter((value) => value && value.includes('@'))
 }
 
-function getAdminRecipients(): string[] {
+async function getAdminRecipients(): Promise<string[]> {
+	try {
+		const { getPayload } = await import('payload')
+		const { default: config } = await import('@/payload.config')
+		const payload = await getPayload({ config })
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const settings = await (payload as any).findGlobal({ slug: 'payItForwardSettings' })
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const fromPayload = parseEmailList((settings as any)?.adminEmailsText as string | undefined)
+		if (fromPayload.length > 0) return fromPayload
+	} catch {
+		// Fall through to env var
+	}
 	const recipients = parseEmailList(process.env.SPONSORED_APPLICATION_ADMIN_EMAILS)
 	if (recipients.length === 0) {
 		throw new Error('missing_admin_recipients')
@@ -99,7 +111,7 @@ export async function sendSponsoredApplicationAdminEmail(params: {
 }): Promise<void> {
 	const resend = getResendClient()
 	const from = getMailFrom()
-	const to = getAdminRecipients()
+	const to = await getAdminRecipients()
 
 	const safeName = escapeHtml(params.applicantName)
 	const safeEmail = escapeHtml(params.applicantEmail)
@@ -335,7 +347,7 @@ export async function sendSponsoredSeatAdminEmail(params: {
 }): Promise<void> {
 	const resend = getResendClient()
 	const from = getMailFrom()
-	const to = getAdminRecipients()
+	const to = await getAdminRecipients()
 	const donor = params.donorEmail ? escapeHtml(params.donorEmail) : 'unknown'
 	const timestamp = params.occurredAt.toISOString()
 

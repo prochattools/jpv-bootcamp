@@ -114,6 +114,7 @@ async function main(): Promise<void> {
         '20260824_120000_engagement_reactions',
         '20260824_150000_portal_navigation',
         '20260824_200000_member_notifications',
+        '20260824_210000_pay_it_forward_schema',
       ],
       operator: 'migration-op',
       approvalReference: 'approval-1',

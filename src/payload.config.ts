@@ -39,6 +39,7 @@ import { jpvBrand } from './lib/brand/jpvDesignSystem'
 import { resolveDatabaseConnectionConfig, assertStagingSchema } from './lib/databaseConnectionConfig'
 import { legacyMigrationRichTextBlocks } from './richtext/LegacyMigrationBlocks'
 import { PortalSettings } from './globals/PortalSettings'
+import { PayItForwardSettings } from './globals/PayItForwardSettings'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -176,7 +177,7 @@ export default buildConfig({
   routes: {
     admin: '/admin',
   },
-  globals: [PortalSettings],
+  globals: [PortalSettings, PayItForwardSettings],
   collections: [
     // Community
     ...communityCollections,

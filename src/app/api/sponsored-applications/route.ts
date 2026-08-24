@@ -67,9 +67,6 @@ export async function POST(req: NextRequest) {
 
 	const secret = (process.env.SPONSORED_DECISION_SECRET || '').trim()
 	const hasResendKey = Boolean((process.env.RESEND_API_KEY || '').trim())
-	const hasAdminRecipients = Boolean(
-		(process.env.SPONSORED_APPLICATION_ADMIN_EMAILS || '').trim()
-	)
 	const hasMailFrom = Boolean(
 		(
 			process.env.SPONSORED_MAIL_FROM ||
@@ -79,7 +76,7 @@ export async function POST(req: NextRequest) {
 		).trim()
 	)
 
-	if (!secret || !hasResendKey || !hasAdminRecipients || !hasMailFrom) {
+	if (!secret || !hasResendKey || !hasMailFrom) {
 		return NextResponse.json(
 			{ ok: false, reason: 'missing_env' },
 			{ status: 500 }

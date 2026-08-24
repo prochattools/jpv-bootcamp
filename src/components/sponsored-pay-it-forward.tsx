@@ -78,7 +78,7 @@ export default function SponsoredPayItForward() {
 					type="button"
 					onClick={() => handleCheckout()}
 					disabled={loading || !counts.enabled}
-					className="min-h-11 rounded-jpv-action border border-jpv-canvas/70 px-4 py-2 text-sm font-semibold text-jpv-canvas transition-colors hover:border-jpv-canvas hover:bg-jpv-canvas hover:text-jpv-ink disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent"
+					className="min-h-11 rounded-jpv-action border border-jpv-canvas/70 px-4 py-2 text-sm font-semibold text-jpv-canvas transition-colors hover:border-jpv-canvas hover:bg-jpv-canvas hover:text-jpv-ink disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-jpv-canvas"
 				>
 					{loading ? 'Opening secure checkout…' : 'Fund JPV Bootcamp Membership'}
 				</button>

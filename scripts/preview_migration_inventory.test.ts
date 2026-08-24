@@ -15,7 +15,7 @@ import { PAYLOAD_MIGRATION_NAMES } from '../src/lib/payloadMigrationRegistry'
 async function main(): Promise<void> {
   const legacyUserColumn = 'wp' + '_user_id'
   const names = previewMigrationInventoryNames()
-  assert.equal(PREVIEW_MIGRATION_INVENTORY.length, 39)
+  assert.equal(PREVIEW_MIGRATION_INVENTORY.length, 40)
   assert.deepEqual(names, PAYLOAD_MIGRATION_NAMES)
   assert.equal(assertPreviewMigrationInventoryMatch(names), true)
   assert.equal(validatePreviewMigrationInventoryOrder(names), true)

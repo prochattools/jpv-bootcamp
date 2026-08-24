@@ -6,6 +6,41 @@ import {
 	sendSponsoredSeatAdminEmail,
 } from '@/lib/sponsored-email'
 
+async function createPayItForwardPayloadRecord(params: {
+	seatId: string
+	donorEmail: string | null
+	stripeCheckoutSessionId: string
+	stripePaymentIntentId: string
+	createdAt: Date
+}): Promise<void> {
+	try {
+		const { getPayload } = await import('payload')
+		const { default: config } = await import('@/payload.config')
+		const payload = await getPayload({ config })
+		const dateStr = params.createdAt.toISOString().slice(0, 10)
+		const displayName = `Pay it forward — ${params.donorEmail ?? 'anonymous'} — ${dateStr}`
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		await (payload as any).create({
+			collection: 'payload_pay_it_forward_funding',
+			data: {
+				displayName,
+				sponsorEmail: params.donorEmail ?? undefined,
+				stripeCheckoutSessionId: params.stripeCheckoutSessionId,
+				stripePaymentIntentId: params.stripePaymentIntentId,
+				purchasedAt: params.createdAt.toISOString(),
+				seatStatus: 'available',
+				amountPaidMinor: 8000,
+			},
+			overrideAccess: true,
+		})
+	} catch (error) {
+		console.error('pay_it_forward_payload_record_create_failed', {
+			seatId: params.seatId,
+			message: (error as Error).message,
+		})
+	}
+}
+
 export async function notifySponsoredSeatPurchase(params: {
 	seatId: string
 	donorEmail: string | null
@@ -51,5 +86,13 @@ export async function notifySponsoredSeatPurchase(params: {
 				message: (error as Error).message,
 			})
 		}
+
+		await createPayItForwardPayloadRecord({
+			seatId: seat.id,
+			donorEmail,
+			stripeCheckoutSessionId: seat.stripeCheckoutSessionId,
+			stripePaymentIntentId: seat.stripePaymentIntentId,
+			createdAt: seat.createdAt,
+		})
 	}
 }
