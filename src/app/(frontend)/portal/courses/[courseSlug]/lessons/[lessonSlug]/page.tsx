@@ -4,6 +4,13 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 
 import { MemberFeaturedImage } from '@/components/portal/MemberContentMedia'
+import {
+  DiscussionHierarchy,
+  EngagementAuthorIdentity,
+  EngagementCommentActionBar,
+  EngagementFutureActions,
+  EngagementReactionBar,
+} from '@/components/community/EngagementPresentation'
 import { ProgressiveCommentList } from '@/components/community/ProgressiveCommentList'
 import { LegacyLessonRichText } from '@/components/portal/LegacyLessonRichText'
 import { requirePortalMember } from '@/lib/auth/requirePortalMember'
@@ -163,10 +170,11 @@ function LessonCommentThread({
   const commentNodes = children.map((comment) => (
     <article className='rounded-xl border border-jpv-border bg-jpv-surface/60 p-5' key={comment.id}>
       <div className='flex flex-wrap items-baseline justify-between gap-2'>
-        <p className='font-semibold text-jpv-ink'>{comment.displayName}</p>
-        <time className='text-xs text-jpv-muted' dateTime={comment.sourceCreatedAt || comment.createdAt}>
-          {formatDiscussionDate(comment.sourceCreatedAt || comment.createdAt)}
-        </time>
+        <EngagementAuthorIdentity
+          name={comment.displayName}
+          timestampLabel={formatDiscussionDate(comment.sourceCreatedAt || comment.createdAt)}
+          timestampValue={comment.sourceCreatedAt || comment.createdAt}
+        />
       </div>
       <LegacyLessonRichText data={comment.body} lessonSlug={lessonSlug} />
 
@@ -201,7 +209,7 @@ function LessonCommentThread({
     return <ProgressiveCommentList totalCount={children.length}>{commentNodes}</ProgressiveCommentList>
   }
 
-  return <div className='mt-4 space-y-4 border-l border-jpv-border pl-4'>{commentNodes}</div>
+  return <DiscussionHierarchy depth={depth}>{commentNodes}</DiscussionHierarchy>
 }
 
 export default async function PortalLessonPage({ params, searchParams }: LessonPageProps) {
@@ -369,9 +377,15 @@ export default async function PortalLessonPage({ params, searchParams }: LessonP
                   Ask questions, share insights, and reply to other members about this lesson.
                 </p>
               </div>
-              <span className='rounded-full bg-jpv-surface-strong px-3 py-1 text-xs font-semibold text-jpv-inverse-muted'>
-                {discussion?.comments.length ?? 0} {(discussion?.comments.length ?? 0) === 1 ? 'comment' : 'comments'}
-              </span>
+            </div>
+            <EngagementReactionBar className='mt-6' label='Lesson discussion engagement preview' />
+            <EngagementCommentActionBar
+              className='mt-5'
+              commentCount={discussion?.comments.length ?? 0}
+              replyLabel='Replies remain available through the existing discussion flow'
+            />
+            <div className='mt-3'>
+              <EngagementFutureActions />
             </div>
 
             {firstParam(query?.discussion) === 'posted' ? (

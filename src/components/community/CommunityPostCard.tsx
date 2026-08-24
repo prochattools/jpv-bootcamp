@@ -1,5 +1,9 @@
 import Link from 'next/link'
 
+import {
+  EngagementAuthorIdentity,
+  EngagementCommentActionBar,
+} from '@/components/community/EngagementPresentation'
 import type { MemberCommunityPost } from '@/lib/payloadCourse/communityPortal'
 
 type CommunityPostCardProps = {
@@ -16,23 +20,6 @@ function formatDate(value: string | null): string {
     day: 'numeric',
     year: 'numeric',
   }).format(date)
-}
-
-function initials(value: string): string {
-  return value
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? '')
-    .join('') || 'JP'
-}
-
-function CommentIcon() {
-  return (
-    <svg aria-hidden='true' className='h-4 w-4' fill='none' viewBox='0 0 24 24'>
-      <path d='M5 6.5h14v9H9l-4 3v-12Z' stroke='currentColor' strokeLinecap='round' strokeLinejoin='round' strokeWidth='1.75' />
-    </svg>
-  )
 }
 
 export function CommunityPostCard({ href, post }: CommunityPostCardProps) {
@@ -53,13 +40,7 @@ export function CommunityPostCard({ href, post }: CommunityPostCardProps) {
         </div>
 
         <div className='mt-5 flex items-start gap-3'>
-          <span aria-hidden='true' className='flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-jpv-brand-deep text-xs font-bold text-jpv-canvas'>
-            {initials(authorName)}
-          </span>
-          <div className='min-w-0'>
-            <p className='text-sm font-semibold text-jpv-ink'>{authorName}</p>
-            <p className='mt-0.5 text-xs text-jpv-muted'>Community discussion</p>
-          </div>
+          <EngagementAuthorIdentity name={authorName} subtitle='Community discussion' />
         </div>
 
         <h3 className='mt-5 text-xl font-bold leading-snug text-jpv-brand-deep group-hover:text-jpv-brand'>{post.title}</h3>
@@ -69,13 +50,14 @@ export function CommunityPostCard({ href, post }: CommunityPostCardProps) {
           <p className='mt-3 text-sm leading-6 text-jpv-muted'>Open the discussion to read the full post.</p>
         )}
 
-        <div className='mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-jpv-border pt-4 text-sm'>
-          <span className='inline-flex min-h-10 items-center gap-2 font-semibold text-jpv-muted'>
-            <CommentIcon />
-            {post.commentCount} {post.commentCount === 1 ? 'comment' : 'comments'}
-          </span>
-          <span className='font-semibold text-jpv-brand-deep'>Read discussion <span aria-hidden='true'>→</span></span>
-        </div>
+        <EngagementCommentActionBar
+          className='mt-5'
+          commentCount={post.commentCount}
+          replyLabel='Open discussion to reply'
+        />
+        <p className='mt-3 text-right text-sm font-semibold text-jpv-brand-deep'>
+          Read discussion <span aria-hidden='true'>→</span>
+        </p>
       </article>
     </Link>
   )

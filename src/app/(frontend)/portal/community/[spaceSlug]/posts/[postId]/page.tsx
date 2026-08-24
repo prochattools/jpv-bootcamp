@@ -2,6 +2,12 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
 import { CommunityRichText } from '@/components/community/CommunityRichText'
+import {
+  EngagementAuthorIdentity,
+  EngagementCommentActionBar,
+  EngagementFutureActions,
+  EngagementReactionBar,
+} from '@/components/community/EngagementPresentation'
 import { ProgressiveCommentList } from '@/components/community/ProgressiveCommentList'
 import { StatusPill } from '@/components/portal/StatusPill'
 import { requirePortalMember } from '@/lib/auth/requirePortalMember'
@@ -123,6 +129,10 @@ export default async function PortalCommunityPostPage({ params, searchParams }: 
 
         <div className='p-6 sm:p-10'>
           <CommunityRichText value={post.body} />
+          <EngagementReactionBar className='mt-8' label='Post engagement preview' />
+          <div className='mt-3'>
+            <EngagementFutureActions />
+          </div>
         </div>
       </article>
 
@@ -169,10 +179,12 @@ export default async function PortalCommunityPostPage({ params, searchParams }: 
             <p className='text-xs font-bold uppercase tracking-[0.2em] text-jpv-sunshine-ink'>Discussion</p>
             <h2 className='mt-2 text-3xl font-bold tracking-tight text-jpv-brand-deep' id='community-comments-heading'>Comments</h2>
           </div>
-          <p className='text-sm font-semibold text-jpv-muted'>
-            {post.comments.length} {post.comments.length === 1 ? 'reply' : 'replies'}
-          </p>
         </div>
+        <EngagementCommentActionBar
+          className='mt-6'
+          commentCount={post.comments.length}
+          replyLabel={post.canComment ? 'Reply in the composer below' : 'Replies are currently unavailable'}
+        />
 
         <div className='mt-7'>
           {post.comments.length > 0 ? (
@@ -183,12 +195,7 @@ export default async function PortalCommunityPostPage({ params, searchParams }: 
                   key={comment.id}
                 >
                   <div className='flex flex-wrap items-center justify-between gap-3'>
-                    <div className='flex min-w-0 items-center gap-3'>
-                      <span aria-hidden='true' className='flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-jpv-brand-deep text-xs font-bold text-jpv-canvas'>
-                        {initials(comment.authorName)}
-                      </span>
-                      <h3 className='truncate font-bold text-jpv-brand-deep'>{comment.authorName}</h3>
-                    </div>
+                    <EngagementAuthorIdentity name={comment.authorName} />
                     <time className='text-xs font-semibold uppercase tracking-[0.1em] text-jpv-sunshine-ink'>
                       {formatDate(comment.createdAt)}
                     </time>
