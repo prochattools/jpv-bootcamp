@@ -49,10 +49,8 @@ async function getAdminRecipients(): Promise<string[]> {
 		const { getPayload } = await import('payload')
 		const { default: config } = await import('@/payload.config')
 		const payload = await getPayload({ config })
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		const settings = await (payload as any).findGlobal({ slug: 'payItForwardSettings' })
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		const fromPayload = parseEmailList((settings as any)?.adminEmailsText as string | undefined)
+		const settings = await payload.findGlobal({ slug: 'payItForwardSettings' })
+		const fromPayload = parseEmailList(settings?.adminEmailsText ?? undefined)
 		if (fromPayload.length > 0) return fromPayload
 	} catch {
 		// Fall through to env var

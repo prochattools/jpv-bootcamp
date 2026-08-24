@@ -19,8 +19,7 @@ async function createPayItForwardPayloadRecord(params: {
 		const payload = await getPayload({ config })
 		const dateStr = params.createdAt.toISOString().slice(0, 10)
 		const displayName = `Pay it forward — ${params.donorEmail ?? 'anonymous'} — ${dateStr}`
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		await (payload as any).create({
+		await payload.create({
 			collection: 'payload_pay_it_forward_funding',
 			data: {
 				displayName,

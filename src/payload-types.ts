@@ -78,6 +78,7 @@ export interface Config {
     payload_space_files: PayloadSpaceFile;
     payload_chat_threads: PayloadChatThread;
     payload_chat_messages: PayloadChatMessage;
+    payload_member_notifications: PayloadMemberNotification;
     live_sessions: LiveSession;
     payload_courses: PayloadCourse;
     payload_course_modules: PayloadCourseModule;
@@ -132,6 +133,7 @@ export interface Config {
     payload_operator_notes: PayloadOperatorNote;
     payload_stripe_shadow_projections: PayloadStripeShadowProjection;
     payload_membership_audit_history: PayloadMembershipAuditHistory;
+    payload_portal_nav_items: PayloadPortalNavItem;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -149,6 +151,7 @@ export interface Config {
     payload_space_files: PayloadSpaceFilesSelect<false> | PayloadSpaceFilesSelect<true>;
     payload_chat_threads: PayloadChatThreadsSelect<false> | PayloadChatThreadsSelect<true>;
     payload_chat_messages: PayloadChatMessagesSelect<false> | PayloadChatMessagesSelect<true>;
+    payload_member_notifications: PayloadMemberNotificationsSelect<false> | PayloadMemberNotificationsSelect<true>;
     live_sessions: LiveSessionsSelect<false> | LiveSessionsSelect<true>;
     payload_courses: PayloadCoursesSelect<false> | PayloadCoursesSelect<true>;
     payload_course_modules: PayloadCourseModulesSelect<false> | PayloadCourseModulesSelect<true>;
@@ -203,6 +206,7 @@ export interface Config {
     payload_operator_notes: PayloadOperatorNotesSelect<false> | PayloadOperatorNotesSelect<true>;
     payload_stripe_shadow_projections: PayloadStripeShadowProjectionsSelect<false> | PayloadStripeShadowProjectionsSelect<true>;
     payload_membership_audit_history: PayloadMembershipAuditHistorySelect<false> | PayloadMembershipAuditHistorySelect<true>;
+    payload_portal_nav_items: PayloadPortalNavItemsSelect<false> | PayloadPortalNavItemsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -214,9 +218,11 @@ export interface Config {
   fallbackLocale: null;
   globals: {
     portalSettings: PortalSetting;
+    payItForwardSettings: PayItForwardSetting;
   };
   globalsSelect: {
     portalSettings: PortalSettingsSelect<false> | PortalSettingsSelect<true>;
+    payItForwardSettings: PayItForwardSettingsSelect<false> | PayItForwardSettingsSelect<true>;
   };
   locale: null;
   widgets: {
@@ -426,6 +432,8 @@ export interface PayloadCourse {
   createdAt: string;
 }
 /**
+ * Publicly served images and files used across courses, pages, and community spaces.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload_media".
  */
@@ -514,6 +522,8 @@ export interface PayloadSpacePost {
   createdAt: string;
 }
 /**
+ * Moderation view for community comments. Visibility changes here affect the member-facing portal immediately.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload_space_comments".
  */
@@ -729,6 +739,8 @@ export interface PayloadCourseModule {
   createdAt: string;
 }
 /**
+ * Bunny Stream video records. Created automatically by the Bunny webhook — do not create manually.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "bunny_videos".
  */
@@ -778,6 +790,8 @@ export interface BunnyVideo {
   createdAt: string;
 }
 /**
+ * Files and media attached to community posts and comments.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload_space_files".
  */
@@ -842,6 +856,8 @@ export interface PayloadPrivateMedia {
   focalY?: number | null;
 }
 /**
+ * Chat thread records within community spaces.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload_chat_threads".
  */
@@ -865,6 +881,8 @@ export interface PayloadChatThread {
   createdAt: string;
 }
 /**
+ * Individual chat messages within threads. Moderation changes apply immediately.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload_chat_messages".
  */
@@ -884,6 +902,23 @@ export interface PayloadChatMessage {
     | number
     | boolean
     | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * In-app notification records for portal members.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_member_notifications".
+ */
+export interface PayloadMemberNotification {
+  id: number;
+  member: number | PayloadMember;
+  type: 'new_post' | 'new_comment' | 'mention' | 'system';
+  actorName?: string | null;
+  title?: string | null;
+  href?: string | null;
+  read?: boolean | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -958,6 +993,8 @@ export interface LiveSession {
   createdAt: string;
 }
 /**
+ * Payload administrator accounts. These are separate from student and client member accounts.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload_users".
  */
@@ -1098,6 +1135,10 @@ export interface PayloadPage {
   id: number;
   title: string;
   slug: string;
+  /**
+   * Portal URL path this page maps to (e.g. "/portal/community/start-here")
+   */
+  portalRoute?: string | null;
   summary?: string | null;
   content?: {
     root: {
@@ -1166,6 +1207,8 @@ export interface PayloadPost {
   createdAt: string;
 }
 /**
+ * Taxonomy categories used to organize posts and content.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload_categories".
  */
@@ -1684,6 +1727,8 @@ export interface PayloadPayment {
   createdAt: string;
 }
 /**
+ * Incoming Stripe webhook events. Read-only — written by the webhook processor, not by administrators.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload_stripe_events".
  */
@@ -1817,6 +1862,8 @@ export interface PayloadAuditEvent {
   createdAt: string;
 }
 /**
+ * CRM contact records synced from member accounts and email subscriptions.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload_contacts".
  */
@@ -1845,6 +1892,8 @@ export interface PayloadContact {
   createdAt: string;
 }
 /**
+ * Tags for segmenting and filtering CRM contacts.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload_crm_tags".
  */
@@ -1858,6 +1907,8 @@ export interface PayloadCrmTag {
   createdAt: string;
 }
 /**
+ * Tag assignments linking individual contacts to CRM tags.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload_contact_tags".
  */
@@ -1872,6 +1923,8 @@ export interface PayloadContactTag {
   createdAt: string;
 }
 /**
+ * Internal notes attached to CRM contact records.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload_contact_notes".
  */
@@ -1894,6 +1947,8 @@ export interface PayloadContactNote {
   createdAt: string;
 }
 /**
+ * Email templates used by automated transactional and lifecycle email workflows.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload_email_templates".
  */
@@ -2001,6 +2056,8 @@ export interface PayloadEmailAction {
   createdAt: string;
 }
 /**
+ * Internal system and billing notifications for administrator review.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload_admin_notifications".
  */
@@ -2349,7 +2406,7 @@ export interface PayloadStripeShadowProjection {
   createdAt: string;
 }
 /**
- * Funding allocations for pay-it-forward sponsored membership.
+ * Pay-it-forward sponsored seat purchases and funding allocations.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload_pay_it_forward_funding".
@@ -2357,26 +2414,37 @@ export interface PayloadStripeShadowProjection {
 export interface PayloadPayItForwardFunding {
   id: number;
   displayName: string;
-  membershipSupport: number | PayloadMembershipSupportRecord;
-  member: number | PayloadMember;
-  memberEmail: string;
-  donorName: string;
-  approvalState: 'draft' | 'pending_approval' | 'approved' | 'rejected' | 'issued' | 'revoked' | 'failed';
-  billingCadence: 'monthly' | 'annual';
-  allocatedAmountMinor: number;
-  currency: string;
+  sponsorEmail?: string | null;
+  stripeCheckoutSessionId?: string | null;
+  stripePaymentIntentId?: string | null;
+  /**
+   * Amount paid in minor currency units (e.g. 8000 = £80.00).
+   */
+  amountPaidMinor?: number | null;
+  purchasedAt?: string | null;
+  seatStatus?: ('available' | 'reserved' | 'redeemed') | null;
+  redeemedByName?: string | null;
+  redeemedByEmail?: string | null;
+  membershipSupport?: (number | null) | PayloadMembershipSupportRecord;
+  member?: (number | null) | PayloadMember;
+  memberEmail?: string | null;
+  donorName?: string | null;
+  approvalState?: ('draft' | 'pending_approval' | 'approved' | 'rejected' | 'issued' | 'revoked' | 'failed') | null;
+  billingCadence?: ('monthly' | 'annual') | null;
+  allocatedAmountMinor?: number | null;
+  currency?: string | null;
   stripeCustomerId?: string | null;
   stripeCouponId?: string | null;
   stripePromotionCodeId?: string | null;
   stripeSubscriptionId?: string | null;
-  approvalReference: string;
+  approvalReference?: string | null;
   issuedBy?: (number | null) | PayloadUser;
   approvedBy?: (number | null) | PayloadUser;
   issuedAt?: string | null;
   expiresAt?: string | null;
   redeemedAt?: string | null;
   revokedAt?: string | null;
-  reason: string;
+  reason?: string | null;
   operatorNotes?: (number | PayloadOperatorNote)[] | null;
   metadata?:
     | {
@@ -2433,6 +2501,50 @@ export interface PayloadMembershipAdministrationAction {
     | number
     | boolean
     | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Configure the member portal sidebar navigation. Group items under labels like "Learn", "Community", "Explore".
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_portal_nav_items".
+ */
+export interface PayloadPortalNavItem {
+  id: number;
+  /**
+   * Display name in the sidebar (e.g. "Dashboard", "Courses")
+   */
+  label: string;
+  /**
+   * Portal route (e.g. "/portal/courses")
+   */
+  href: string;
+  /**
+   * Lucide icon name (e.g. "LayoutDashboard", "GraduationCap", "Users")
+   */
+  iconName?: string | null;
+  /**
+   * Group title this item belongs to (e.g. "Learn", "Community", "Explore")
+   */
+  navGroup: string;
+  /**
+   * Sort order of the group itself (lower = higher in sidebar)
+   */
+  groupSortOrder?: number | null;
+  /**
+   * Sort order within the group (lower = higher)
+   */
+  itemSortOrder?: number | null;
+  /**
+   * Show with accent background (for onboarding items like "Start here")
+   */
+  highlighted?: boolean | null;
+  /**
+   * Optional: link to a Page for content editing
+   */
+  linkedPage?: (number | null) | PayloadPage;
+  status: 'active' | 'hidden';
   updatedAt: string;
   createdAt: string;
 }
@@ -2499,6 +2611,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'payload_chat_messages';
         value: number | PayloadChatMessage;
+      } | null)
+    | ({
+        relationTo: 'payload_member_notifications';
+        value: number | PayloadMemberNotification;
       } | null)
     | ({
         relationTo: 'live_sessions';
@@ -2707,6 +2823,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'payload_membership_audit_history';
         value: number | PayloadMembershipAuditHistory;
+      } | null)
+    | ({
+        relationTo: 'payload_portal_nav_items';
+        value: number | PayloadPortalNavItem;
       } | null);
   globalSlug?: string | null;
   user:
@@ -2930,6 +3050,20 @@ export interface PayloadChatMessagesSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_member_notifications_select".
+ */
+export interface PayloadMemberNotificationsSelect<T extends boolean = true> {
+  member?: T;
+  type?: T;
+  actorName?: T;
+  title?: T;
+  href?: T;
+  read?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "live_sessions_select".
  */
 export interface LiveSessionsSelect<T extends boolean = true> {
@@ -3133,6 +3267,7 @@ export interface PayloadMediaSelect<T extends boolean = true> {
 export interface PayloadPagesSelect<T extends boolean = true> {
   title?: T;
   slug?: T;
+  portalRoute?: T;
   summary?: T;
   content?: T;
   featuredImage?: T;
@@ -3830,6 +3965,14 @@ export interface PayloadMembershipVouchersSelect<T extends boolean = true> {
  */
 export interface PayloadPayItForwardFundingSelect<T extends boolean = true> {
   displayName?: T;
+  sponsorEmail?: T;
+  stripeCheckoutSessionId?: T;
+  stripePaymentIntentId?: T;
+  amountPaidMinor?: T;
+  purchasedAt?: T;
+  seatStatus?: T;
+  redeemedByName?: T;
+  redeemedByEmail?: T;
   membershipSupport?: T;
   member?: T;
   memberEmail?: T;
@@ -4021,6 +4164,23 @@ export interface PayloadMembershipAuditHistorySelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_portal_nav_items_select".
+ */
+export interface PayloadPortalNavItemsSelect<T extends boolean = true> {
+  label?: T;
+  href?: T;
+  iconName?: T;
+  navGroup?: T;
+  groupSortOrder?: T;
+  itemSortOrder?: T;
+  highlighted?: T;
+  linkedPage?: T;
+  status?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv_select".
  */
 export interface PayloadKvSelect<T extends boolean = true> {
@@ -4116,6 +4276,21 @@ export interface PortalSetting {
   createdAt?: string | null;
 }
 /**
+ * Configuration for pay-it-forward sponsored membership: admin notification recipients and settings.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payItForwardSettings".
+ */
+export interface PayItForwardSetting {
+  id: number;
+  /**
+   * Comma-separated email addresses to notify when a sponsored application is submitted or a seat is purchased.
+   */
+  adminEmailsText?: string | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "portalSettings_select".
  */
@@ -4149,6 +4324,16 @@ export interface PortalSettingsSelect<T extends boolean = true> {
         backgroundImage?: T;
       };
   legacySettings?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payItForwardSettings_select".
+ */
+export interface PayItForwardSettingsSelect<T extends boolean = true> {
+  adminEmailsText?: T;
   updatedAt?: T;
   createdAt?: T;
   globalType?: T;
