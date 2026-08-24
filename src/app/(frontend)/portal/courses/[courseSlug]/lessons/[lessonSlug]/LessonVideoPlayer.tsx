@@ -13,6 +13,7 @@ export function LessonVideoPlayer({
 }) {
   return (
     <ManagedBunnyVideoPlayer
+      containerClassName='mx-auto max-w-4xl'
       knownStatus={status}
       slug={lessonSlug}
       target='lesson'

@@ -26,6 +26,7 @@ type CourseModuleAccordionProps = {
   modules: ModuleItem[]
   courseSlug: string
   allowed: boolean
+  continueHref?: string | null
 }
 
 function lessonBadge(lesson: LessonItem) {
@@ -44,7 +45,7 @@ function lessonBadge(lesson: LessonItem) {
   return null
 }
 
-export function CourseModuleAccordion({ modules, courseSlug, allowed }: CourseModuleAccordionProps) {
+export function CourseModuleAccordion({ modules, courseSlug, allowed, continueHref }: CourseModuleAccordionProps) {
   const defaultOpen = modules.length > 0 ? [String(modules[0].id)] : []
 
   return (
@@ -59,7 +60,7 @@ export function CourseModuleAccordion({ modules, courseSlug, allowed }: CourseMo
           >
             <AccordionPrimitive.Header asChild>
               <div>
-                <AccordionPrimitive.Trigger className='flex w-full items-center justify-between gap-4 px-6 py-5 text-left transition hover:bg-jpv-surface [&[data-state=open]>svg]:rotate-180'>
+                <AccordionPrimitive.Trigger className='flex min-h-11 w-full items-center justify-between gap-4 px-4 py-5 text-left transition hover:bg-jpv-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-jpv-focus sm:px-6 [&[data-state=open]>svg]:rotate-180'>
                   <div className='min-w-0'>
                     <p className='text-[0.6875rem] font-extrabold uppercase tracking-wider text-jpv-muted'>
                       Module {moduleIndex + 1}
@@ -82,27 +83,35 @@ export function CourseModuleAccordion({ modules, courseSlug, allowed }: CourseMo
                   <p className='px-6 pt-4 text-sm leading-6 text-jpv-muted'>{module.description}</p>
                 ) : null}
                 <ol className='divide-y divide-jpv-border'>
-                  {module.lessons.map((lesson, lessonIndex) => (
-                    <li className='flex items-center justify-between gap-4 px-6 py-4' key={lesson.id}>
-                      <div className='min-w-0'>
-                        <p className='text-xs font-medium text-jpv-muted'>Lesson {lessonIndex + 1}</p>
-                        <h3 className='mt-1 font-semibold text-jpv-ink'>{lesson.title}</h3>
-                        {lesson.summary ? <p className='mt-1 text-sm text-jpv-muted'>{lesson.summary}</p> : null}
-                        {lesson.estimatedDuration ? (
-                          <p className='mt-1 text-xs font-medium text-jpv-muted'>{lesson.estimatedDuration}</p>
-                        ) : null}
-                      </div>
+                  {module.lessons.map((lesson, lessonIndex) => {
+                    const isNextLesson = continueHref === `/portal/courses/${courseSlug}/lessons/${lesson.slug}`
 
-                      <div className='flex shrink-0 items-center gap-3'>
-                        {lessonBadge(lesson)}
-                        {allowed && lesson.slug ? (
-                          <Link className='jpv-button-primary' href={`/portal/courses/${courseSlug}/lessons/${lesson.slug}`}>
-                            Open
-                          </Link>
-                        ) : null}
-                      </div>
-                    </li>
-                  ))}
+                    return (
+                      <li className='flex min-w-0 flex-col gap-4 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6' key={lesson.id}>
+                        <div className='min-w-0'>
+                          <p className='text-xs font-medium text-jpv-muted'>Lesson {lessonIndex + 1}</p>
+                          <h3 className='mt-1 break-words font-semibold text-jpv-ink'>{lesson.title}</h3>
+                          {lesson.summary ? <p className='mt-1 break-words text-sm text-jpv-muted'>{lesson.summary}</p> : null}
+                          {lesson.estimatedDuration ? (
+                            <p className='mt-1 text-xs font-medium text-jpv-muted'>{lesson.estimatedDuration}</p>
+                          ) : null}
+                        </div>
+
+                        <div className='flex shrink-0 flex-wrap items-center justify-between gap-3 sm:justify-end'>
+                          {lessonBadge(lesson)}
+                          {allowed && lesson.slug ? (
+                            <Link
+                              className='jpv-button-primary min-h-11'
+                              data-next-lesson={isNextLesson ? 'true' : undefined}
+                              href={`/portal/courses/${courseSlug}/lessons/${lesson.slug}`}
+                            >
+                              Open
+                            </Link>
+                          ) : null}
+                        </div>
+                      </li>
+                    )
+                  })}
                 </ol>
               </div>
             </AccordionPrimitive.Content>

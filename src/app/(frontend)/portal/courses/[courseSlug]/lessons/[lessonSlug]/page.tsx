@@ -218,13 +218,17 @@ export default async function PortalLessonPage({ params, searchParams }: LessonP
     : null
 
   return (
-    <div className='space-y-8'>
-      <Link
-        className='inline-flex text-sm font-semibold text-jpv-inverse-muted underline-offset-4 hover:text-jpv-ink hover:underline'
-        href={`/portal/courses/${courseSlug}`}
-      >
-        ← Back to {detail.course.title}
-      </Link>
+    <div className='mx-auto w-full max-w-5xl space-y-8'>
+      <nav aria-label='Learning path' className='flex min-h-11 flex-wrap items-center gap-2 text-sm'>
+        <Link
+          className='font-semibold text-jpv-inverse-muted underline-offset-4 hover:text-jpv-ink hover:underline'
+          href={`/portal/courses/${courseSlug}`}
+        >
+          ← Back to {detail.course.title}
+        </Link>
+        <span aria-hidden='true' className='text-jpv-muted'>/</span>
+        <span className='text-jpv-muted'>{detail.module.title}</span>
+      </nav>
 
       {!detail.allowed || !detail.lesson ? (
         <section className='jpv-notice jpv-notice-danger rounded-2xl p-8'>
@@ -241,11 +245,11 @@ export default async function PortalLessonPage({ params, searchParams }: LessonP
         </section>
       ) : (
         <>
-          <section className='rounded-2xl border border-jpv-border bg-jpv-canvas p-8 shadow-sm'>
+          <section aria-labelledby='lesson-heading' className='rounded-jpv-panel border border-jpv-border bg-jpv-canvas p-6 shadow-jpv-card sm:p-8'>
             <p className='jpv-eyebrow'>{detail.module.title}</p>
             <div className='mt-3 flex flex-col gap-5 md:flex-row md:items-start md:justify-between'>
               <div className='max-w-3xl'>
-                <h1 className='text-3xl font-semibold tracking-tight'>{detail.lesson.title}</h1>
+                <h1 className='text-3xl font-semibold tracking-tight text-jpv-ink' id='lesson-heading'>{detail.lesson.title}</h1>
                 {detail.lesson.summary ? (
                   <p className='mt-4 text-sm leading-6 text-jpv-muted'>{detail.lesson.summary}</p>
                 ) : null}
@@ -258,25 +262,25 @@ export default async function PortalLessonPage({ params, searchParams }: LessonP
                   </span>
                 ) : null}
                 {detail.lesson.previewLesson ? (
-                  <span className='rounded-full bg-emerald-50 px-3 py-1 text-emerald-700'>Preview</span>
+                  <span className='rounded-full bg-jpv-brand/10 px-3 py-1 text-jpv-brand-deep'>Preview</span>
                 ) : null}
                 {detail.lesson.completed ? (
-                  <span className='rounded-full bg-emerald-50 px-3 py-1 text-emerald-700'>Complete</span>
+                  <span className='rounded-full bg-jpv-brand/10 px-3 py-1 text-jpv-brand-deep'>Complete</span>
                 ) : null}
               </div>
             </div>
           </section>
 
           {firstParam(query?.completed) === '1' ? (
-            <p className='rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800'>
+            <p className='jpv-notice rounded-jpv-card px-4 py-3 text-sm font-medium' role='status'>
               Lesson marked complete.
             </p>
           ) : null}
 
           <MemberFeaturedImage asset={detail.lesson.coverImage} />
 
-          <section className='rounded-2xl border border-jpv-border bg-jpv-canvas p-8 shadow-sm'>
-            <h2 className='text-xl font-semibold'>Lesson content</h2>
+          <section aria-labelledby='lesson-content-heading' className='rounded-jpv-panel border border-jpv-border bg-jpv-canvas p-6 shadow-jpv-card sm:p-8'>
+            <h2 className='text-xl font-semibold text-jpv-ink' id='lesson-content-heading'>Lesson content</h2>
             {detail.lesson.lockState === 'locked' ? (
               <div className='jpv-notice jpv-notice-danger mt-5 rounded-xl px-4 py-3'>
                 <p className='text-sm font-semibold'>Lesson locked</p>
@@ -335,11 +339,32 @@ export default async function PortalLessonPage({ params, searchParams }: LessonP
             ) : null}
           </section>
 
-          <section className='rounded-2xl border border-jpv-border bg-jpv-canvas p-8 shadow-sm' id='lesson-discussion'>
+          <section aria-labelledby='lesson-progress-heading' className='flex flex-col gap-4 rounded-jpv-panel border border-jpv-border bg-jpv-canvas p-6 shadow-jpv-card md:flex-row md:items-center md:justify-between'>
+            <div>
+              <h2 className='font-semibold text-jpv-ink' id='lesson-progress-heading'>Next step: lesson progress</h2>
+              <p className='mt-1 text-sm text-jpv-muted'>
+                {detail.lesson.completed
+                  ? 'This lesson is marked complete.'
+                  : 'Mark this lesson complete when you are ready to continue.'}
+              </p>
+            </div>
+
+            {!detail.lesson.completed ? (
+              <form action={completeLesson}>
+                <input name='courseSlug' type='hidden' value={courseSlug} />
+                <input name='lessonSlug' type='hidden' value={lessonSlug} />
+                <button className='jpv-button-primary min-h-11' type='submit'>
+                  Mark complete
+                </button>
+              </form>
+            ) : null}
+          </section>
+
+          <section aria-labelledby='lesson-discussion-heading' className='scroll-mt-24 rounded-jpv-panel border border-jpv-border bg-jpv-canvas p-6 shadow-jpv-card sm:p-8' id='lesson-discussion'>
             <div className='flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between'>
               <div>
                 <p className='jpv-eyebrow'>Community</p>
-                <h2 className='mt-2 text-xl font-semibold text-jpv-ink'>Lesson discussion</h2>
+                <h2 className='mt-2 text-xl font-semibold text-jpv-ink' id='lesson-discussion-heading'>Lesson discussion</h2>
                 <p className='mt-2 max-w-2xl text-sm leading-6 text-jpv-muted'>
                   Ask questions, share insights, and reply to other members about this lesson.
                 </p>
@@ -350,7 +375,7 @@ export default async function PortalLessonPage({ params, searchParams }: LessonP
             </div>
 
             {firstParam(query?.discussion) === 'posted' ? (
-              <p className='mt-5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800'>
+              <p className='jpv-notice mt-5 rounded-jpv-card px-4 py-3 text-sm font-medium' role='status'>
                 Your discussion comment was posted.
               </p>
             ) : null}
@@ -395,35 +420,14 @@ export default async function PortalLessonPage({ params, searchParams }: LessonP
                 placeholder='Share a question, insight, or response about this lesson.'
                 required
               />
-              <button className='jpv-button-primary' type='submit'>Post comment</button>
+              <button className='jpv-button-primary min-h-11' type='submit'>Post comment</button>
             </form>
-          </section>
-
-          <section className='flex flex-col gap-4 rounded-2xl border border-jpv-border bg-jpv-canvas p-6 shadow-sm md:flex-row md:items-center md:justify-between'>
-            <div>
-              <h2 className='font-semibold'>Lesson progress</h2>
-              <p className='mt-1 text-sm text-jpv-muted'>
-                {detail.lesson.completed
-                  ? 'This lesson is marked complete.'
-                  : 'Mark this lesson complete when you are ready to continue.'}
-              </p>
-            </div>
-
-            {!detail.lesson.completed ? (
-              <form action={completeLesson}>
-                <input name='courseSlug' type='hidden' value={courseSlug} />
-                <input name='lessonSlug' type='hidden' value={lessonSlug} />
-                <button className='jpv-button-primary' type='submit'>
-                  Mark complete
-                </button>
-              </form>
-            ) : null}
           </section>
 
           <nav aria-label='Lesson navigation' className='flex items-center justify-between gap-4'>
             {detail.previousLesson?.slug ? (
               <Link
-                className='min-w-0 truncate text-sm font-semibold text-jpv-inverse-muted underline-offset-4 hover:text-jpv-ink hover:underline'
+                className='inline-flex min-h-11 min-w-0 items-center truncate text-sm font-semibold text-jpv-inverse-muted underline-offset-4 hover:text-jpv-ink hover:underline'
                 href={`/portal/courses/${courseSlug}/lessons/${detail.previousLesson.slug}`}
               >
                 ← {detail.previousLesson.title}
@@ -434,7 +438,7 @@ export default async function PortalLessonPage({ params, searchParams }: LessonP
 
             {detail.nextLesson?.slug ? (
               <Link
-                className='min-w-0 truncate text-right text-sm font-semibold text-jpv-inverse-muted underline-offset-4 hover:text-jpv-ink hover:underline'
+                className='inline-flex min-h-11 min-w-0 items-center truncate text-right text-sm font-semibold text-jpv-inverse-muted underline-offset-4 hover:text-jpv-ink hover:underline'
                 href={`/portal/courses/${courseSlug}/lessons/${detail.nextLesson.slug}`}
               >
                 {detail.nextLesson.title} →

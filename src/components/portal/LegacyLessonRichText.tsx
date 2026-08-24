@@ -48,6 +48,7 @@ function createLessonConverters(lessonSlug: string): JSXConvertersFunction<Lesso
       bunnyVideo: ({ node }) => (
         <div className='my-6' data-inline-bunny-guid={node.fields.videoGuid}>
           <ManagedBunnyVideoPlayer
+            containerClassName='mx-auto max-w-4xl'
             slug={lessonSlug}
             target='lesson'
             title={node.fields.title ?? 'Lesson video'}
@@ -67,7 +68,7 @@ export function LegacyLessonRichText({
   lessonSlug: string
 }) {
   return (
-    <div className='lesson-body mt-8 max-w-none text-sm leading-7 text-neutral-800 [&_h2]:mb-2 [&_h2]:mt-6 [&_h2]:text-xl [&_h2]:font-semibold [&_h3]:mb-2 [&_h3]:mt-4 [&_h3]:text-lg [&_h3]:font-semibold [&_a]:text-neutral-950 [&_a]:underline [&_a]:underline-offset-4 [&_blockquote]:border-l-4 [&_blockquote]:border-neutral-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_li]:ml-4 [&_li]:list-disc [&_ol_li]:list-decimal [&_p]:mb-3'>
+    <div className='lesson-body mx-auto mt-8 max-w-4xl text-sm leading-7 text-jpv-ink [&_h2]:mb-2 [&_h2]:mt-6 [&_h2]:text-xl [&_h2]:font-semibold [&_h3]:mb-2 [&_h3]:mt-4 [&_h3]:text-lg [&_h3]:font-semibold [&_a]:text-jpv-brand-deep [&_a]:underline [&_a]:underline-offset-4 [&_blockquote]:border-l-4 [&_blockquote]:border-jpv-border [&_blockquote]:pl-4 [&_blockquote]:italic [&_li]:ml-4 [&_li]:list-disc [&_ol_li]:list-decimal [&_p]:mb-3'>
       <RichText converters={createLessonConverters(lessonSlug)} data={data} />
     </div>
   )

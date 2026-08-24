@@ -26,12 +26,14 @@ export function ManagedBunnyVideoPlayer({
   thumbnailUrl,
   knownStatus,
   videoGuid,
+  containerClassName,
 }: {
   target: ManagedVideoTarget
   slug: string
   title?: string
   thumbnailUrl?: string | null
   knownStatus?: 'processing' | 'ready' | 'failed' | null
+  containerClassName?: string
   /** Canonical Bunny GUID for inline lesson videos. Valid only with target='lesson'. */
   videoGuid?: string | null
 }) {
@@ -121,7 +123,7 @@ export function ManagedBunnyVideoPlayer({
   }
 
   return (
-    <div className='mt-5 aspect-video overflow-hidden rounded-jpv-card bg-jpv-ink shadow-jpv-card'>
+    <div className={['mt-5 aspect-video w-full overflow-hidden rounded-jpv-card bg-jpv-ink shadow-jpv-card', containerClassName].filter(Boolean).join(' ')}>
       <video
         aria-label={title}
         className='h-full w-full object-contain'
