@@ -634,7 +634,7 @@ jobs:
 
       # ── Read-only plan execution ──────────────────────────────────────────
 
-      - name: Verify current staging Payload migration state (read-only)
+      - name: Plan pending staging Payload migration (read-only)
         id: migration-plan
         shell: bash
         env:
@@ -660,7 +660,6 @@ jobs:
             "--expected-schema=jpvbootcamp_staging"
             "--expected-hostname=10.0.2.4"
             "--expected-database=jpvbootcamp"
-            "--current-state=true"
           )
 
           set +e
@@ -715,10 +714,10 @@ jobs:
           # Read resultCode from the sanitized file — not from the raw stdout file
           RESULT_CODE="$(node -e "process.stdout.write(JSON.parse(require('fs').readFileSync('plan-result-sanitized.json','utf8')).resultCode)" 2>/dev/null || echo 'plan_blocked')"
 
-          # Semantic verification: current-state plan_ok requires all evidence fields to match the verified post-apply state exactly.
+          # Semantic verification: pre-apply plan_ok requires all evidence fields to match the expected 36-applied / migration-37-pending state exactly.
           # Wrong-target, wrong-commit, wrong-schema, anomaly counts, or unhealthy Prisma must not pass.
           if [ "$RESULT_CODE" = "plan_ok" ] && [ $PLAN_EXIT -eq 0 ]; then
-            EXPECTED_PENDING_MIGRATIONS='[]'
+            EXPECTED_PENDING_MIGRATIONS='["20260824_120000_engagement_reactions"]'
             REQUIRED_BRANCH="feature/course-branding-and-preview"
             REQUIRED_SCHEMA="jpvbootcamp_staging"
             REQUIRED_ENVIRONMENT="staging"

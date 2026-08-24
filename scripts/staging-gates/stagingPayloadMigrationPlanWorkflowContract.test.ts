@@ -321,12 +321,12 @@ async function main(): Promise<void> {
 
   // ─── Exact command ────────────────────────────────────────────────────────
 
-  await test('command: invokes the guarded runner in explicit current-state mode', () => {
+  await test('command: invokes the guarded runner in explicit pre-apply plan mode', () => {
     assert.ok(
       planJobYml.includes('runStagingPayloadMigration.ts') || planJobYml.includes('staging:payload-migration-plan'),
       'must invoke the staging migration plan runner',
     )
-    assert.ok(planJobYml.includes('--current-state=true'), 'must verify the already-applied current staging state')
+    assert.ok(!planJobYml.includes('--current-state=true'), 'pre-apply plan must not assert that the full post-migration inventory is already applied')
   })
 
   await test('command: passes --output=json flag (JSON-only stdout mode)', () => {
@@ -675,6 +675,13 @@ async function main(): Promise<void> {
     assert.ok(
       planJobYml.includes('appliedPayloadCount mismatch') || planJobYml.includes('p.appliedPayloadCount !== expectedCount'),
       'must verify appliedPayloadCount === 36',
+    )
+  })
+
+  await test('plan_ok semantics: workflow expects migration 37 as the sole pending batch', () => {
+    assert.ok(
+      planJobYml.includes('20260824_120000_engagement_reactions'),
+      'must expect the additive reaction migration as the sole pending batch',
     )
   })
 
