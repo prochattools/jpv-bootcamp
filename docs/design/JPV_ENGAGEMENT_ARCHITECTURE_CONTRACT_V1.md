@@ -50,11 +50,28 @@ Reactions are lightweight acknowledgement, not a discussion substitute. The firs
 
 The product should allow at most one active reaction per member per target. Selecting another type changes the existing reaction; selecting the active type again removes it. A target may display aggregate counts for supported types and the current member’s selected type. Reaction changes are idempotent and must not create duplicate rows.
 
-Initial target scope: published community posts and visible community comments. Lesson-level reactions require a separate target decision and are not implied by this contract. Announcements use the post target model when they are represented as `payload_space_posts`.
+The v1 target policy is explicit:
+
+| Content surface | Payload target | Reaction policy |
+| --- | --- | --- |
+| Course-linked community posts | `payload_space_posts` in a space linked to `payload_courses` | Supported when the post is published, visible, and the member can access the space. |
+| Lesson discussions | `payload_lesson_comments` attached to an accessible lesson | Supported for visible root discussion comments only in v1; reacting to the lesson article itself is deferred until a lesson-target contract is approved. |
+| Community comments | `payload_space_comments` | Supported for visible comments on accessible posts. |
+| Announcements | `payload_space_posts` with `postType=announcement` | Uses the post reaction policy; no special public visibility or notification behavior is implied. |
+
+Lesson comments and community comments remain distinct target families even though both are “comments” in the UX. A future service projection may present them consistently, but it must preserve their collection-specific access and moderation rules.
 
 ### Comments
 
 Comments remain member-authored, access-scoped content. A comment belongs to one community post and one canonical member. The member-facing service, not the collection endpoint, owns creation, edit, delete, moderation transitions, rate limiting, and projection.
+
+#### Current comment capabilities
+
+Current capabilities are intentionally asymmetric:
+
+- Community posts support member-facing creation of posts and flat comments through the existing service layer. Community comments currently have no parent relationship, so the member projection is a flat list. Moderation supports visible, pending-review, hidden, and deleted states; general member edit/delete behavior is not an approved active contract.
+- Lesson discussions support member-facing creation and replies through `payload_lesson_comments.parent`. The current lesson service validates same-lesson parents, rejects hidden parents, applies access checks and rate limits, and renders a bounded recursive presentation. This is evidence for a future pattern, not permission to change community collections in this phase.
+- Both surfaces retain canonical author identity and historical/source timestamps where available. Neither surface may expose a hidden or pending comment through a member engagement projection.
 
 The proposed community threading model is bounded: a root comment may have direct replies, but the active UI should not create unbounded reply depth. The future schema should use an optional self-relationship (`parent`) with a same-post invariant and a service-enforced maximum depth of two levels. The implementation may preserve deeper historical relationships as migration evidence, but it must not expose arbitrary depth without a deliberate UX and performance review.
 
@@ -86,13 +103,13 @@ Prefer a normalized reaction record with:
 | Field | Requirement |
 | --- | --- |
 | `member` | Required relationship to `payload_members`; derived from the authenticated session. |
-| `targetKind` | Explicit target discriminator; initially `space_post` or `space_comment`. |
-| `targetPost` / `targetComment` | Exactly one target relationship according to `targetKind`. |
+| `targetKind` | Explicit target discriminator: `space_post`, `space_comment`, or `lesson_comment`. |
+| `targetPost` / `targetSpaceComment` / `targetLessonComment` | Exactly one target relationship according to `targetKind`; a polymorphic target is acceptable only if its access and indexing behavior are proven. |
 | `reactionType` | Active v1 vocabulary: `helpful`, `insightful`, or `celebrate`. Historical types remain migration-only. |
 | `createdAt` / `updatedAt` | Server timestamps for idempotency and audit support. |
 | `source` / `metadata` | Optional migration provenance; never client-controlled for active writes. |
 
-The uniqueness contract is `(member, targetKind, targetId)` for one active reaction per target. If the existing table is reused, the future migration must normalize its nullable actor/target semantics, separate bookmark and survey-vote legacy rows, and replace the current per-type uniqueness with the active one-reaction invariant. A new collection is acceptable only if the migration review shows that modifying the existing historical table would make provenance or rollback less safe.
+The uniqueness contract is `(member, targetKind, targetId)` for one active reaction per target. If the existing table is reused, the future migration must normalize its nullable actor/target semantics, add the lesson-comment target shape, separate bookmark and survey-vote legacy rows, and replace the current per-type uniqueness with the active one-reaction invariant. A new collection is acceptable only if the migration review shows that modifying the existing historical table would make provenance or rollback less safe.
 
 ### Community comment record
 
@@ -133,7 +150,7 @@ Do not add a share record until internal sharing is approved for implementation.
 | Read visible target | Existing target access only | Existing administrative access | Controlled operational access |
 | Add/change/remove own reaction | Allowed when target is visible and member is eligible | Same member rules unless an explicit admin tool is approved | Migration-only provenance path |
 | Add own bookmark | Allowed for accessible published posts/lessons | Same member rules; no impersonation | Migration-only reconciliation |
-| Create comment/reply | Allowed when post is open, member is eligible, and rate limit passes | Allowed through same service or explicit moderation tool | Migration-only import path |
+| Create comment/reply | Allowed when the community post or lesson discussion is open, member is eligible, and rate limit passes | Allowed through same service or explicit moderation tool | Migration-only import path |
 | Edit/delete own comment | Allowed under an explicit time/content policy | Moderation action through admin service | Never silently rewrite source evidence |
 | Hide/delete another member’s content | No | Moderator/admin according to space role and audit policy | Controlled reconciliation only |
 | Internal share/copy link | Only if target access allows it | Same or broader only if approved | Not applicable |
@@ -150,7 +167,7 @@ Future member-facing services should be separate from Payload collection configu
 - `engagementBookmarkService`: list, save, remove;
 - `engagementShareService`: resolve approved internal link/share intent only.
 
-Each service accepts a canonical `memberId` from the authenticated session and a target identifier. It must not accept an actor/member identifier from the browser as authority. The UI consumes projections such as `countByType`, `viewerReaction`, `viewerBookmarked`, `canReact`, `canBookmark`, `canComment`, and `canShare`.
+Each service accepts a canonical `memberId` from the authenticated session and a target identifier. It must not accept an actor/member identifier from the browser as authority. The UI consumes projections such as `countByType`, `viewerReaction`, `viewerBookmarked`, `canReact`, `canBookmark`, `canComment`, `canShare`, and an explicit target context (`coursePost`, `lessonDiscussion`, `comment`, or `announcement`).
 
 Server actions should remain thin adapters. They validate form/input shape, call one service, revalidate the affected route, and return or redirect with a typed result. They must not duplicate Payload queries or bypass existing `evaluatePayloadSpaceAccess`/lesson access logic.
 
@@ -199,7 +216,7 @@ No migration is authorized in this phase. When implementation is approved, the s
 
 | Risk/decision | Why it matters | Required resolution |
 | --- | --- | --- |
-| Existing reaction table conflates concepts | Active UI could expose legacy semantics or permit duplicate reactions | Normalize in place or choose a new active model before implementation |
+| Existing reaction table conflates concepts | Active UI could expose legacy semantics or permit duplicate reactions | Normalize in place or choose a new active model before implementation; add lesson-comment target support deliberately |
 | Community comments lack parent | UI cannot truthfully render nested replies today | Approve parent relation, depth limit, orphan handling, and migration policy |
 | Historical rows have nullable actor/legacy targets | Counts and ownership can be wrong | Separate historical/projection rows from active member-owned rows |
 | Private-space sharing | A URL can become an accidental disclosure path | Keep internal-only until token/visibility/privacy review passes |

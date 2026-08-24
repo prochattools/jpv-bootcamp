@@ -7,7 +7,9 @@ async function main(): Promise<void> {
 for (const heading of [
   '## UX requirements',
   '### Reactions',
+  'The v1 target policy is explicit:',
   '### Comments',
+  '#### Current comment capabilities',
   '### Bookmarks',
   '### Sharing',
   '## Current repository findings',
@@ -27,6 +29,10 @@ assert.match(document, /does not implement reaction buttons, comment mutations, 
 assert.match(document, /payload_space_reactions/)
 assert.match(document, /payload_space_comments/)
 assert.match(document, /payload_lesson_comments/)
+assert.match(document, /Course-linked community posts/)
+assert.match(document, /Lesson discussions/)
+assert.match(document, /Announcements/)
+assert.match(document, /lesson_comment/)
 assert.match(document, /Fluent Community/)
 assert.match(document, /Circle/)
 assert.match(document, /Canvas Basics Guide/)
