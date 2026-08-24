@@ -64,8 +64,10 @@ export type SafeCommunityRichTextNode =
 
 export type MemberCommunityComment = {
   id: string
+  authorId: string | null
   authorName: string
   body: SafeCommunityRichTextNode
+  bodyPlainText: string
   createdAt: string | null
 }
 
@@ -75,6 +77,7 @@ export type MemberCommunityPostDetail = {
   postType: 'discussion' | 'question' | 'announcement'
   pinned: boolean
   locked: boolean
+  authorId: string | null
   authorName: string
   createdAt: string | null
   space: {
@@ -83,6 +86,7 @@ export type MemberCommunityPostDetail = {
     slug: string
   }
   body: SafeCommunityRichTextNode
+  bodyPlainText: string
   comments: MemberCommunityComment[]
   attachments: MemberCommunityAttachmentResolution[]
   canPublish: boolean
@@ -507,10 +511,13 @@ export async function getMemberCommunityPostDetail(
   for (const comment of comments) {
     const authorId = getDocumentId(comment.author)
     const author = await findByIdSafe(payload, 'payload_members', authorId)
+    const commentBody = projectCommunityRichText(comment.body)
     commentProjections.push({
       id: String(comment.id),
+      authorId: authorId,
       authorName: commentDisplayName(comment, author),
-      body: projectCommunityRichText(comment.body),
+      body: commentBody,
+      bodyPlainText: extractPlainText(commentBody),
       createdAt: asDateString(comment.createdAt),
     })
   }
@@ -523,6 +530,7 @@ export async function getMemberCommunityPostDetail(
       postType: normalizePostType(post.postType),
       pinned: asBoolean(post.pinned),
       locked: asBoolean(post.locked),
+      authorId: postAuthorId,
       authorName: memberDisplayName(postAuthor),
       createdAt: asDateString(post.createdAt),
       space: {
@@ -531,10 +539,25 @@ export async function getMemberCommunityPostDetail(
         slug: spaceSlug,
       },
       body: projectCommunityRichText(post.body),
+      bodyPlainText: extractPlainText(projectCommunityRichText(post.body)),
       comments: commentProjections,
       attachments,
       canPublish,
       canComment: canPublish && !asBoolean(post.locked),
     },
   }
+}
+
+export function extractPlainText(node: SafeCommunityRichTextNode): string {
+  if (node.type === 'text') return node.text
+  if (node.type === 'legacy-html') return ''
+  if (node.type === 'legacy-bunny-embed') return ''
+  if ('children' in node) {
+    const lines = node.children.map(extractPlainText)
+    if (node.type === 'paragraph' || node.type === 'heading' || node.type === 'list-item') {
+      return lines.join('') + '\n'
+    }
+    return lines.join('')
+  }
+  return ''
 }

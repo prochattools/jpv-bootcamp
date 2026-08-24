@@ -11,6 +11,8 @@ import {
   createSpaceComment,
   createSpacePost,
 } from '@/lib/payloadCourse/communityPosting'
+import { getPayload } from 'payload'
+import config from '@payload-config'
 
 type SubmissionErrorCode =
   | 'rate_limit'
@@ -244,4 +246,173 @@ export async function submitCommunityComment(
   revalidatePath(destination)
   revalidatePath(spacePath(spaceSlug))
   redirect(`${destination}?submission=pending`)
+}
+
+export async function editCommunityPost(
+  spaceSlug: string,
+  postId: string,
+  formData: FormData,
+): Promise<{ ok: boolean; error?: string }> {
+  const destination = postPath(spaceSlug, postId)
+  const { memberId } = await requirePortalMember(destination)
+
+  try {
+    const payload = await getPayload({ config })
+
+    const post = await payload.findByID({
+      collection: 'payload_space_posts',
+      id: postId,
+      depth: 0,
+      overrideAccess: true,
+    })
+
+    const postAuthorId = typeof post.author === 'object' && post.author !== null
+      ? String((post.author as unknown as Record<string, unknown>).id)
+      : String(post.author)
+
+    if (postAuthorId !== String(memberId)) {
+      return { ok: false, error: 'not_owner' }
+    }
+
+    const title = boundedText(formText(formData, 'title'), 'Title', 160)
+    const bodyText = boundedText(formText(formData, 'body'), 'Body', 10_000)
+
+    await payload.update({
+      collection: 'payload_space_posts',
+      id: postId,
+      data: {
+        title,
+        body: plainTextRichText(bodyText),
+      },
+      overrideAccess: true,
+    })
+
+    revalidatePath(destination)
+    revalidatePath(spacePath(spaceSlug))
+    return { ok: true }
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : 'server_error' }
+  }
+}
+
+export async function deleteCommunityPost(
+  spaceSlug: string,
+  postId: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const destination = spacePath(spaceSlug)
+  const { memberId } = await requirePortalMember(destination)
+
+  try {
+    const payload = await getPayload({ config })
+
+    const post = await payload.findByID({
+      collection: 'payload_space_posts',
+      id: postId,
+      depth: 0,
+      overrideAccess: true,
+    })
+
+    const postAuthorId = typeof post.author === 'object' && post.author !== null
+      ? String((post.author as unknown as Record<string, unknown>).id)
+      : String(post.author)
+
+    if (postAuthorId !== String(memberId)) {
+      return { ok: false, error: 'not_owner' }
+    }
+
+    await payload.delete({
+      collection: 'payload_space_posts',
+      id: postId,
+      overrideAccess: true,
+    })
+
+    revalidatePath(destination)
+    return { ok: true }
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : 'server_error' }
+  }
+}
+
+export async function editCommunityComment(
+  spaceSlug: string,
+  postId: string,
+  commentId: string,
+  formData: FormData,
+): Promise<{ ok: boolean; error?: string }> {
+  const destination = postPath(spaceSlug, postId)
+  const { memberId } = await requirePortalMember(destination)
+
+  try {
+    const payload = await getPayload({ config })
+
+    const comment = await payload.findByID({
+      collection: 'payload_space_comments',
+      id: commentId,
+      depth: 0,
+      overrideAccess: true,
+    })
+
+    const commentAuthorId = typeof comment.author === 'object' && comment.author !== null
+      ? String((comment.author as unknown as Record<string, unknown>).id)
+      : String(comment.author)
+
+    if (commentAuthorId !== String(memberId)) {
+      return { ok: false, error: 'not_owner' }
+    }
+
+    const bodyText = boundedText(formText(formData, 'body'), 'Body', 10_000)
+
+    await payload.update({
+      collection: 'payload_space_comments',
+      id: commentId,
+      data: {
+        body: plainTextRichText(bodyText),
+      },
+      overrideAccess: true,
+    })
+
+    revalidatePath(destination)
+    return { ok: true }
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : 'server_error' }
+  }
+}
+
+export async function deleteCommunityComment(
+  spaceSlug: string,
+  postId: string,
+  commentId: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const destination = postPath(spaceSlug, postId)
+  const { memberId } = await requirePortalMember(destination)
+
+  try {
+    const payload = await getPayload({ config })
+
+    const comment = await payload.findByID({
+      collection: 'payload_space_comments',
+      id: commentId,
+      depth: 0,
+      overrideAccess: true,
+    })
+
+    const commentAuthorId = typeof comment.author === 'object' && comment.author !== null
+      ? String((comment.author as unknown as Record<string, unknown>).id)
+      : String(comment.author)
+
+    if (commentAuthorId !== String(memberId)) {
+      return { ok: false, error: 'not_owner' }
+    }
+
+    await payload.delete({
+      collection: 'payload_space_comments',
+      id: commentId,
+      overrideAccess: true,
+    })
+
+    revalidatePath(destination)
+    return { ok: true }
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : 'server_error' }
+  }
 }

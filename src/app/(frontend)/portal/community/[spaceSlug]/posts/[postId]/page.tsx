@@ -8,6 +8,8 @@ import {
   EngagementReactionBar,
   reactionErrorMessage,
 } from '@/components/community/EngagementPresentation'
+import { PostOwnerActions, CommentOwnerActions } from '@/components/community/PostOwnerActions'
+import { ComposerToolbar } from '@/components/community/ComposerToolbar'
 import { submitReactionAction } from '@/app/(frontend)/portal/reaction-actions'
 import { ProgressiveCommentList } from '@/components/community/ProgressiveCommentList'
 import { StatusPill } from '@/components/portal/StatusPill'
@@ -179,13 +181,23 @@ export default async function PortalCommunityPostPage({ params, searchParams }: 
               <p className='text-sm font-semibold text-jpv-ink'>{post.authorName}</p>
               <p className='text-xs text-jpv-muted'>{memberEmail}</p>
             </div>
-            <time
-              className='ml-auto shrink-0 text-xs text-jpv-muted'
-              dateTime={post.createdAt ?? undefined}
-              title={formatDate(post.createdAt)}
-            >
-              {formatRelative(post.createdAt)}
-            </time>
+            <div className='ml-auto flex items-center gap-2'>
+              {post.authorId === memberId && (
+                <PostOwnerActions
+                  postBody={post.bodyPlainText.trim()}
+                  postId={post.id}
+                  postTitle={post.title}
+                  spaceSlug={spaceSlug}
+                />
+              )}
+              <time
+                className='shrink-0 text-xs text-jpv-muted'
+                dateTime={post.createdAt ?? undefined}
+                title={formatDate(post.createdAt)}
+              >
+                {formatRelative(post.createdAt)}
+              </time>
+            </div>
           </div>
         </header>
 
@@ -314,9 +326,19 @@ export default async function PortalCommunityPostPage({ params, searchParams }: 
                       timestampLabel={formatRelative(comment.createdAt)}
                       timestampValue={comment.createdAt ?? undefined}
                     />
-                    <time className='shrink-0 text-xs text-jpv-muted' dateTime={comment.createdAt ?? undefined}>
-                      {formatDate(comment.createdAt)}
-                    </time>
+                    <div className='flex items-center gap-2'>
+                      {comment.authorId === memberId && (
+                        <CommentOwnerActions
+                          commentBody={comment.bodyPlainText.trim()}
+                          commentId={comment.id}
+                          postId={post.id}
+                          spaceSlug={spaceSlug}
+                        />
+                      )}
+                      <time className='shrink-0 text-xs text-jpv-muted' dateTime={comment.createdAt ?? undefined}>
+                        {formatDate(comment.createdAt)}
+                      </time>
+                    </div>
                   </div>
                   <div className='mt-4 border-l-2 border-jpv-border pl-4'>
                     <CommunityRichText value={comment.body} />
@@ -372,18 +394,8 @@ export default async function PortalCommunityPostPage({ params, searchParams }: 
                 rows={4}
               />
             </div>
-            <div>
-              <label className='block text-sm font-bold text-jpv-brand-deep' htmlFor='comment-video'>
-                Video link <span className='font-normal text-jpv-muted'>(optional)</span>
-              </label>
-              <input
-                className='mt-1.5 w-full rounded-jpv-control border border-jpv-border bg-jpv-canvas px-4 py-3 text-sm text-jpv-ink outline-none transition focus:border-jpv-green-deep focus:ring-2 focus:ring-jpv-green/25'
-                id='comment-video'
-                name='videoUrl'
-                placeholder='YouTube, Vimeo, or Bunny Stream URL'
-                type='url'
-              />
-            </div>
+            <ComposerToolbar textareaId='comment-body' />
+            <input id='comment-video' name='videoUrl' type='hidden' />
             <button
               className='jpv-button-primary min-h-11'
               type='submit'

@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 
 import { StatusPill } from '@/components/portal/StatusPill'
 import { CommunityPostCard } from '@/components/community/CommunityPostCard'
+import { ComposerToolbar } from '@/components/community/ComposerToolbar'
 import { requirePortalMember } from '@/lib/auth/requirePortalMember'
 import { getMemberCommunitySpaceDetail, withQueryDedup } from '@/lib/payloadCourse/communityPortal'
 import { listSpaceLiveCalls } from '@/lib/liveSessions/memberSessions'
@@ -142,21 +143,8 @@ export default async function PortalCommunitySpacePage({ params, searchParams }:
                     rows={5}
                   />
                 </div>
-                <div>
-                  <label className='block text-sm font-bold text-jpv-brand-deep' htmlFor='post-video'>
-                    Video link <span className='font-normal text-jpv-muted'>(optional)</span>
-                  </label>
-                  <input
-                    className='mt-2 w-full rounded-jpv-control border border-jpv-border bg-jpv-canvas px-4 py-3 text-sm text-jpv-ink outline-none transition focus:border-jpv-green-deep focus:ring-2 focus:ring-jpv-green/25'
-                    id='post-video'
-                    name='videoUrl'
-                    placeholder='YouTube, Vimeo, or Bunny Stream URL'
-                    type='url'
-                  />
-                  <p className='mt-1.5 text-xs text-jpv-muted'>
-                    Paste a video link to include it in your post.
-                  </p>
-                </div>
+                <ComposerToolbar textareaId='post-body' />
+                <input id='post-video' name='videoUrl' type='hidden' />
                 <button
                   className='jpv-button-primary min-h-11'
                   type='submit'
