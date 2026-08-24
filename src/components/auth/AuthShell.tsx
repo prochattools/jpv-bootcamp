@@ -73,41 +73,38 @@ export function AuthShell({
 
       {/* Right form panel */}
       <section
-        className='flex min-h-full items-center justify-center px-4 py-10 sm:px-6 lg:overflow-y-auto lg:py-16'
+        className='overflow-y-auto px-6 py-10 sm:px-10 lg:py-14'
         style={branding?.formBackgroundColor ? { backgroundColor: branding.formBackgroundColor } : undefined}
       >
-        <div className='w-full max-w-sm'>
-          {/* Logo above card — visible on mobile; desktop sees logo in the left banner */}
-          <div className='mb-8 flex justify-center lg:hidden'>
+        <div className='mx-auto w-full max-w-lg'>
+          {/* Logo — visible on mobile; desktop sees logo in the left banner */}
+          <div className='mb-8 lg:hidden'>
             <Link href='/'>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img alt={jpvBrand.logoAlt} className='h-12 w-auto max-w-[10rem] object-contain' src={jpvBrand.logoHorizontalPath} />
             </Link>
           </div>
 
-          {/* Form card */}
-          <div className='rounded-2xl bg-white p-8 shadow-lg dark:bg-neutral-900'>
-            <p className='jpv-eyebrow'>{eyebrow}</p>
-            <h1
-              className='mt-3 text-2xl font-bold leading-tight text-jpv-ink'
-              style={branding?.formTitleColor ? { color: branding.formTitleColor } : undefined}
-            >
-              {title}
-            </h1>
-            <p
-              className='mt-2 text-sm leading-6 text-jpv-muted'
-              style={branding?.formTextColor ? { color: branding.formTextColor } : undefined}
-            >
-              {description}
-            </p>
-            {introActions ? <div className='mt-5'>{introActions}</div> : null}
+          <p className='jpv-eyebrow'>{eyebrow}</p>
+          <h1
+            className='mt-3 text-3xl font-bold leading-tight text-jpv-ink sm:text-4xl'
+            style={branding?.formTitleColor ? { color: branding.formTitleColor } : undefined}
+          >
+            {title}
+          </h1>
+          <p
+            className='mt-3 text-base leading-7 text-jpv-muted'
+            style={branding?.formTextColor ? { color: branding.formTextColor } : undefined}
+          >
+            {description}
+          </p>
+          {introActions ? <div className='mt-5'>{introActions}</div> : null}
 
-            <div className='mt-7 border-t border-jpv-border pt-6'>{children}</div>
-          </div>
+          <div className='mt-8 border-t border-jpv-border pt-8'>{children}</div>
 
-          {/* Footer rendered below card */}
+          {/* Footer */}
           {footer ? (
-            <div className='mt-4 rounded-xl border border-jpv-border bg-jpv-surface px-4 py-3 text-sm text-jpv-muted'>
+            <div className='mt-6 border-t border-jpv-border pt-4 text-sm text-jpv-muted'>
               {footer}
             </div>
           ) : null}

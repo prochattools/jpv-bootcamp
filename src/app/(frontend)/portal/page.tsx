@@ -82,7 +82,7 @@ function PortalLoginMode({
         </p>
       )}
       introActions={(
-        <div className='flex flex-col gap-3'>
+        <div className='flex flex-wrap gap-3'>
           <Link className='jpv-button-primary' href='/upgrade'>Choose membership</Link>
           <Link className='jpv-button-secondary' href='/forgot-password'>Forgot password</Link>
         </div>
