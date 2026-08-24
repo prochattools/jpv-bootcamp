@@ -25,7 +25,7 @@ assert.match(portalPage, /mode\) === 'register'/)
 assert.match(portalPage, /redirect\('\/upgrade'\)/)
 assert.doesNotMatch(portalPage, /Create free account|New Free accounts/)
 assert.doesNotMatch(portalLayout, /requirePortalMember\('/)
-assert.match(portalLayout, /resolvePayloadRequestSession/)
+assert.match(portalLayout, /cachedResolvePayloadRequestSession|resolvePayloadRequestSession/)
 assert.match(portalLayout, /showLogout/)
 
 assert.match(loginPage, /new URLSearchParams\(\{ mode: 'login' \}\)/)
