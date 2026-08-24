@@ -2,19 +2,129 @@
 
 ## Current repository reconciliation — 2026-08-23
 
-- **Working branch:** `feature/course-branding-and-preview`; current repository tip is `626bf3926412065fb7e5655d35c98d8f4be67a58` and is documentation-only relative to staging. The single canonical staging release/deployment SHA is `9d87c4a3eeeffb9afb78a38964054792330ea1cb`.
-- **Implementation state:** the current feature branch remains the source under review; its migration registry contains 36 registered migrations. Registration is not applied database state.
-- **Local validation:** after cleanup, `pnpm test:release` passed `164/164`; focused browser checks passed `60/60`; full browser E2E passed `148/148` with 60 declared skips. The initial 24 shared muted-token contrast failures were cleared.
+- **Working branch:** `feature/course-branding-and-preview`; current repository tip is `1966197058721ffdfe0d94f24bc3e8e468d4e23b` and is not deployed staging evidence. The single canonical last verified staging release/deployment SHA is `9d87c4a3eeeffb9afb78a38964054792330ea1cb`.
+- **Implementation state:** the current feature branch remains the source under review; its migration registry contains 37 registered migrations, with migration 37 pending in staging. Registration is not applied database state.
+- **Local validation:** after cleanup, `pnpm test:release` passed `166/166`; focused browser checks passed `60/60`; full browser E2E passed `148/148` with 60 declared skips. The initial 24 shared muted-token contrast failures were cleared.
 - **Cutover state:** production migration, production deployment, provider mutation, and branch advancement were not performed or authorized. Use `docs/release/FUTURE_BRANCH_CUTOVER_PLAN.md` for the later protected integration process.
 - **Evidence rule:** dated records below remain historical unless marked as current frozen-candidate evidence.
-- **Current staging migration state:** 36/36 Payload migrations applied with pending `[]`; read-only plan run `32649782528` confirms Prisma healthy and zero unexpected/duplicate/malformed records. Deploy run `32649230612` and health endpoint verification confirm SHA `9d87c4a3eeeffb9afb78a38964054792330ea1cb` is live on staging.
+- **Current staging migration state:** fresh read-only plan run `32731856849` confirms 36 Payload migrations applied, `20260824_120000_engagement_reactions` as the sole pending migration, Prisma healthy, and zero unexpected/duplicate/malformed records. The service is currently rolled back to the previously observed `f1aad077...` image; the last exact-SHA staging release remains `9d87c4a3eeeffb9afb78a38964054792330ea1cb`.
 - **Current baseline dossier:** `docs/release/FINAL_PRE_PRODUCTION_RECONCILIATION_2026-08-23.md`.
 - **Phase 9.5 current truth:** `docs/release/PHASE_9_5_CURRENT_TRUTH_2026-08-23.md`.
 - **Phase 9.5 backlog:** `docs/release/PHASE_9_5_FINAL_IMPLEMENTATION_BACKLOG_2026-08-23.md`.
-- **Current project phase:** Phase 9.5 — Feature Branch Reconciliation & Completion; Phase 10 production cutover has not started.
-- **Canonical baseline rule:** `9d87c4a3eeeffb9afb78a38964054792330ea1cb` is the only canonical staging release and documented deployment SHA. The current branch tip `626bf392...` is not deployed; every other SHA below is historical. Production remains unauthorized.
+- **Current project phase:** Phase 9.5 — Feature Branch Reconciliation & Completion, with product-experience refinement active; Phase 10 production preparation is documentation-only and Phase 11 cutover execution has not started.
+- **Canonical baseline rule:** `9d87c4a3eeeffb9afb78a38964054792330ea1cb` is the only canonical last verified staging release and documented deployment SHA. The current branch candidate `1966197058721ffdfe0d94f24bc3e8e468d4e23b` is not deployed; every other SHA below is historical. Production remains unauthorized.
 
-<!-- Historical checkpoint note 2026-08-19/21: this older record reported STAGING MIGRATION COMPLETE at SHA `abf43893dc3f9980cc8eadc997cd7935e86e614f` / deploy run 32352382852 and later `9c0debe...` / run 32462177363. Its 35/35 and acceptance claims are retained below as audit history only. Current truth is 36/36 with pending [] as separately supplied and recorded in the Phase 9.5 baseline. Production NOT authorized. -->
+## Current sequencing and active work — 2026-08-24
+
+This is the current roadmap interpretation. Older dated sections below remain
+audit history and must not override this sequence.
+
+| Track | Status | Meaning |
+| --- | --- | --- |
+| Phase 8 — Member Portal Operationalization | **COMPLETE** | Completed implementation phase; retain existing portal, account, billing, and performance behavior. |
+| Phase 9 — LiveKit Group Calls | **COMPLETE** | Completed implementation phase; retain access control and existing LiveKit behavior. |
+| Phase 9.5 — Feature Branch Reconciliation & Completion | **ACTIVE** | Close evidence, documentation, approved P2-05 completion work, and final staging verification. |
+| Product Experience Design Analysis / UX refinement | **ACTIVE NEXT WORK** | Complete the approved UX analysis and small, evidence-backed refinement slices without changing business logic or foundational architecture. |
+| Phase 10 — Production Cutover Preparation | **DOCUMENTATION ONLY** | Preparation package exists; no production access, deployment, migration, DNS, secret, or provider action is authorized. |
+| Phase 11 — Production Cutover Execution | **FUTURE / NOT STARTED** | Requires separate written authorization and every pre-cutover gate below. |
+
+The current P2-05 Dokploy convergence incident is recorded in
+`docs/release/STAGING_DEPLOYMENT_CONVERGENCE_INCIDENT.md`. It is a staging
+release-sequencing blocker: the candidate task rolled back because staging is
+still at 36 applied migrations and migration 37 is pending. Fresh read-only plan
+run `32731856849` confirms migration 37 is the sole pending batch with healthy
+Prisma state. It does not authorize another automated repair loop or migration,
+and it does not change the UX priority. Do not call the candidate deployed until
+the separately authorized migration is applied and the exact running SHA is
+independently verified.
+
+### Current priority order
+
+1. Complete global UX/UI and product-experience refinement on the stable
+   foundation.
+2. Complete the final Design Skill review after the evidence-backed UX slices
+   are implemented.
+3. Complete student/member experience improvements from the approved UX
+   roadmap.
+4. Stabilize and freshly verify the staging deployment candidate through the
+   authorized provider path.
+5. Execute production cutover only through the future Phase 11 process and
+   separate explicit authorization.
+
+### Safe preparation versus production cutover
+
+Safe preparation may proceed as documentation or read-only evidence work:
+
+- verify and inventory source users, content, media, subscriptions, and
+  identity relationships without mutating application data;
+- prepare sanitized export/reconciliation checklists and acceptance matrices;
+- document production infrastructure, DNS, TLS, secrets, provider, monitoring,
+  backup, rollback, and communications requirements without reading or changing
+  production values;
+- complete UX/design review and local validation on the feature branch; and
+- record owners, decision points, and approval prerequisites.
+
+Production cutover actions are explicitly deferred to Phase 11 and require
+separate authorization. They include freezing the old platform, final data
+sync, production deployment, production migration or no-migration decision,
+DNS/domain switch, customer communications, monitoring, and any rollback or
+archive action.
+
+## Phase 11 — Production Cutover Execution (FUTURE / NOT STARTED)
+
+Phase 11 is the execution phase after Phase 9.5 completion, UX/design review,
+staging verification, protected branch reconciliation, and a written production
+GO decision. This section is a future roadmap definition, not an operator
+runbook or authorization.
+
+### Phase 11 preparation gates
+
+- production infrastructure, application, database, schema, DNS, TLS, and
+  provider configuration independently verified;
+- final user, content, media, identity, subscription, and entitlement
+  reconciliation completed with row-level evidence;
+- authentication migration decision explicitly approved, including whether
+  existing credentials can be retained or a controlled reset/invitation flow is
+  required;
+- media inventory and delivery verification complete;
+- transactional email templates, sender identity, links, and delivery checks
+  verified;
+- DNS/domain cutover plan, TTL/propagation expectations, and ownership recorded;
+- backup, restore, application rollback, database recovery, and rollback owner
+  approved; and
+- monitoring, alerts, support communications, incident ownership, maintenance
+  window, and abort thresholds approved.
+
+### Phase 11 controlled execution
+
+Only after the gates above are approved:
+
+1. Freeze writes or operational changes on the old platform.
+2. Capture and verify the final source-data sync boundary.
+3. Deploy the approved immutable application artifact to production.
+4. Apply only the explicitly approved production migration set, or record the
+   approved no-migration decision.
+5. Switch the production domain/DNS through the owner-controlled path.
+6. Run health, authentication, entitlement, billing, content, media, email,
+   community, and LiveKit smoke checks.
+7. Monitor agreed metrics and error thresholds during the stabilization window.
+8. Preserve the rollback option until the incident commander records GO.
+
+### Phase 11 post-launch closure
+
+- retain the old platform in a documented read-only or rollback-capable state
+  for the approved retention period;
+- complete the old-platform archive/decommission decision with owners and
+  evidence;
+- close the final migration and data-reconciliation record;
+- record unresolved issues, support handoff, monitoring ownership, and customer
+  communications; and
+- publish the final production release and rollback evidence package.
+
+No Phase 11 step may be inferred from staging health, a green local release
+gate, or a completed Phase 10 preparation document.
+
+<!-- Historical checkpoint note 2026-08-19/21: this older record reported STAGING MIGRATION COMPLETE at SHA `abf43893dc3f9980cc8eadc997cd7935e86e614f` / deploy run 32352382852 and later `9c0debe...` / run 32462177363. Its 35/35 and acceptance claims are retained below as audit history only. Current truth is 36 applied with migration 37 pending, as recorded by fresh read-only plan run 32731856849. Production NOT authorized. -->
 
 ## Historical staging checkpoint — 2026-08-19/21 (NOT CURRENT LIVE EVIDENCE)
 
@@ -254,7 +364,7 @@ The following phases were layered on the same branch after the `9745dac` hardeni
 ### Current HEAD validation (2026-08-06)
 
 - `pnpm exec tsc --noEmit` PASS — TypeScript: No errors found
-- `pnpm test:release` passed `164/164` — includes the account-action hardening-status guard (2026-08-03), staging migration plan workflow contract (2026-08-05), and environment configurator dry-run/apply guard test (2026-08-06)
+- `pnpm test:release` passed `166/166` — includes the account-action hardening-status guard (2026-08-03), staging migration plan workflow contract (2026-08-05), and environment configurator dry-run/apply guard test (2026-08-06)
 - `pnpm build` PASS — Compiled successfully in 7.8s
 - Security scan (`dangerouslySetInnerHTML`, `eval`, `innerHTML` outside approved surfaces): CLEAN
 - All `dangerouslySetInnerHTML` usages confirmed as trusted-source (Payload Lexical rich text → HTML conversion, hardcoded FAQ strings, hardcoded preview lesson content); none accept user-submitted input unescaped.
@@ -289,6 +399,11 @@ The following phases were layered on the same branch after the `9745dac` hardeni
 - Global application security headers are not defined in `next.config.js`.
 
 ## Final staging readiness checkpoint — 2026-08-21
+
+This is a historical checkpoint, superseded by the 2026-08-24 Phase 9.5
+convergence evidence above. Its 36/36 and readiness claims are retained for
+audit only; staging currently has migration 37 pending and the candidate is
+not live.
 
 Status: READY FOR PRODUCTION AUTHORIZATION REVIEW (production operation NOT authorized)
 

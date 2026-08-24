@@ -1,9 +1,10 @@
 'use client'
 
-import { Menu, UserCircle } from 'lucide-react'
+import { Menu, Shield, SquareArrowOutUpRight, UserCircle } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
+import { useAdminMode } from '@/components/portal/AdminModeContext'
 import { NotificationBell } from '@/components/portal/NotificationBell'
 import { ThemeToggle } from '@/components/portal/ThemeToggle'
 
@@ -39,6 +40,7 @@ type PortalTopBarProps = {
 export function PortalTopBar({ onMobileMenuOpen }: PortalTopBarProps) {
   const pathname = usePathname()
   const pageTitle = resolvePageTitle(pathname)
+  const { isAdmin, adminModeOn, toggleAdminMode } = useAdminMode()
 
   return (
     <header
@@ -58,6 +60,31 @@ export function PortalTopBar({ onMobileMenuOpen }: PortalTopBarProps) {
       </div>
 
       <div className='flex shrink-0 items-center gap-0 sm:gap-1'>
+        {isAdmin && (
+          <>
+            <button
+              aria-label={adminModeOn ? 'Disable admin controls' : 'Enable admin controls'}
+              aria-pressed={adminModeOn}
+              className={`flex items-center gap-1.5 rounded-jpv-action px-2 py-1.5 text-xs font-semibold transition sm:px-2.5 ${
+                adminModeOn
+                  ? 'bg-jpv-brand-deep text-jpv-canvas hover:bg-jpv-brand-hover'
+                  : 'bg-jpv-surface text-jpv-muted hover:bg-jpv-border dark:bg-[var(--jpv-surface)] dark:text-[var(--jpv-muted)] dark:hover:bg-[var(--jpv-border)]'
+              }`}
+              onClick={toggleAdminMode}
+              type='button'
+            >
+              <Shield aria-hidden='true' className='h-3.5 w-3.5 shrink-0' />
+              <span className='hidden sm:inline'>{adminModeOn ? 'Admin On' : 'Admin Off'}</span>
+            </button>
+            <Link
+              aria-label='Open Admin Panel'
+              className='flex h-9 w-9 items-center justify-center rounded-full bg-jpv-surface text-jpv-muted transition hover:bg-jpv-border hover:text-jpv-ink dark:bg-[var(--jpv-surface)] dark:text-[var(--jpv-muted)] dark:hover:bg-[var(--jpv-border)] dark:hover:text-[var(--jpv-ink)]'
+              href='/admin'
+            >
+              <SquareArrowOutUpRight aria-hidden='true' className='h-4 w-4' />
+            </Link>
+          </>
+        )}
         <ThemeToggle />
         <NotificationBell />
         <Link

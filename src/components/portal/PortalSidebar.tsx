@@ -11,6 +11,7 @@ import {
   Newspaper,
   PlayCircle,
   Settings,
+  Shield,
   Trophy,
   UserCircle,
   Users,
@@ -24,6 +25,7 @@ import { useState } from 'react'
 import type { ComponentType, SVGProps } from 'react'
 
 import { AccessibleDialog } from '@/components/ui/AccessibleDialog'
+import { useAdminMode } from '@/components/portal/AdminModeContext'
 import { jpvBrand } from '@/lib/brand/jpvDesignSystem'
 import type { PortalNavGroup, PortalNavItem } from '@/lib/portal-navigation'
 
@@ -119,16 +121,23 @@ function SidebarContent({
   navPinned?: PortalNavItem[]
   navGroups?: PortalNavGroup[]
 }) {
+  const { isAdmin } = useAdminMode()
   const pinnedItems: PortalNavItem[] = navPinned ?? [{ label: 'Start here', href: '/portal/community/start-here', iconName: 'PlayCircle', navGroup: '_pinned', groupSortOrder: 0, itemSortOrder: 0, highlighted: true }]
   const groups: PortalNavGroup[] = navGroups ?? sidebarGroups.map(g => ({ title: g.title, sortOrder: 0, items: g.items.map(i => ({ label: i.label, href: i.href, iconName: null as string | null, navGroup: g.title, groupSortOrder: 0, itemSortOrder: 0, highlighted: false })) }))
 
   return (
     <>
       {/* Logo */}
-      <div className='flex h-20 shrink-0 items-center border-b border-jpv-border px-5 dark:border-[var(--jpv-border)]'>
+      <div className='flex h-20 shrink-0 items-center justify-between border-b border-jpv-border px-5 dark:border-[var(--jpv-border)]'>
         <Link href='/portal' onClick={onNavigate}>
           <img alt={jpvBrand.logoAlt} className='h-14 w-auto object-contain' src={jpvBrand.logoHorizontalPath} />
         </Link>
+        {isAdmin && (
+          <span className='ml-2 flex items-center gap-0.5 rounded-sm bg-jpv-brand-deep px-1.5 py-0.5 text-[0.6rem] font-extrabold uppercase tracking-widest text-jpv-canvas'>
+            <Shield aria-hidden='true' className='h-2.5 w-2.5 shrink-0' />
+            Admin
+          </span>
+        )}
       </div>
 
       <nav aria-label='Member portal' className='flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-4 dark:text-[var(--jpv-ink)]'>
