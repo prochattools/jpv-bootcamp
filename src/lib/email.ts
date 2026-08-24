@@ -163,12 +163,26 @@ function buildWelcomeEmailContent(params: {
 	plan: Plan
 	resetUrl: string
 	variant: MembershipEmailVariant
+	credentials?: { email: string; password: string } | null
 }): WelcomeEmailContent {
 	const { email: emailConfig } = getServerConfig()
 	const introLine = getMembershipEmailIntro({ plan: params.plan, variant: params.variant })
 	const isUpgrade = params.variant === 'upgrade'
+
+	const credentialsTextBlock = params.credentials
+		? [
+				'',
+				'Your login credentials:',
+				`  Email: ${params.credentials.email}`,
+				`  Password: ${params.credentials.password}`,
+				'',
+				'Please change your password after your first login.',
+			].join('\n')
+		: ''
+
 	const text = [
 		introLine,
+		credentialsTextBlock,
 		'',
 		`Sign in here: ${emailConfig.portalUrl}`,
 		`Set or reset your password here: ${params.resetUrl}`,
@@ -176,10 +190,14 @@ function buildWelcomeEmailContent(params: {
 		`If you need help, reply to this email: ${emailConfig.replyTo}`,
 	].join('\n')
 
+	const credentialsHtmlBlock = params.credentials
+		? `<div style="margin:16px 0;padding:16px;background:#f7f7f7;border-radius:8px;border:1px solid #e5e5e5"><p style="margin:0 0 8px;font-weight:600">Your login credentials</p><p style="margin:0 0 4px"><strong>Email:</strong> ${escapeHtml(params.credentials.email)}</p><p style="margin:0 0 4px"><strong>Password:</strong> <code style="background:#fff;padding:2px 6px;border-radius:4px;border:1px solid #ddd">${escapeHtml(params.credentials.password)}</code></p><p style="margin:8px 0 0;font-size:13px;color:#666">Please change your password after your first login.</p></div>`
+		: ''
+
 	const html = renderBrandedEmail({
 		preheader: introLine,
 		heading: isUpgrade ? 'Your plan has been upgraded' : 'Your membership is ready',
-		bodyHtml: `<p style="margin:0 0 16px">${getMembershipEmailIntroHtml({ plan: params.plan, variant: params.variant })}</p><p style="margin:0">Use the links below to sign in or set your password.</p>`,
+		bodyHtml: `<p style="margin:0 0 16px">${getMembershipEmailIntroHtml({ plan: params.plan, variant: params.variant })}</p>${credentialsHtmlBlock}<p style="margin:0">Use the links below to sign in or set your password.</p>`,
 		actions: [
 			{ label: 'Sign in to portal', url: emailConfig.portalUrl },
 			{ label: 'Set or reset your password', url: params.resetUrl, tone: 'secondary' },
@@ -444,7 +462,8 @@ function buildSendParams(params: {
 		const plan = payload.plan as Plan
 		const resetUrl = payload.resetUrl as string
 		const variant = (payload.variant as MembershipEmailVariant | undefined) ?? 'welcome'
-		const content = buildWelcomeEmailContent({ plan, resetUrl, variant })
+		const credentials = payload.credentials as { email: string; password: string } | null | undefined
+		const content = buildWelcomeEmailContent({ plan, resetUrl, variant, credentials })
 		return {
 			from: content.from,
 			to: [recipient],
@@ -553,11 +572,13 @@ export async function sendWelcomeEmail({
 	to,
 	plan,
 	resetUrl,
+	credentials,
 	meta,
 }: {
 	to: string
 	plan: Plan
 	resetUrl: string
+	credentials?: { email: string; password: string } | null
 	meta?: EmailAttemptMeta
 }): Promise<void> {
 	const variant = meta?.variant ?? 'welcome'
@@ -596,6 +617,7 @@ export async function sendWelcomeEmail({
 			templateKey,
 			subscriptionId: meta?.subscriptionId ?? null,
 			customerId: meta?.customerId ?? null,
+			credentials: credentials ?? null,
 		},
 		idempotencyKey,
 	})

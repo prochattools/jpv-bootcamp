@@ -9,6 +9,7 @@ import { paymentGraceEnd } from '@/lib/billing/commitmentPolicy'
 import { isMonthlyCommitmentMetadata } from '@/lib/stripe-commitment'
 import { normalizeEmail as normalizeEmailAddress } from '@/lib/normalize-email'
 import { redactEmail } from '@/lib/log-redact'
+import { provisionMemberFromCheckout } from '@/lib/members/provisionMemberFromCheckout'
 
 const ACTIVE_STATUSES = new Set<Stripe.Subscription.Status>([
 	'active',
@@ -1249,6 +1250,24 @@ export async function provisionFromCheckoutSession(
 		immediateAccessConsentAt: monthlyCommitment ? immediateAccessConsentAt : undefined,
 	})
 
+	let memberCredentials: { email: string; password: string } | null = null
+	try {
+		const customerName = (session.customer_details?.name) ?? null
+		const memberResult = await provisionMemberFromCheckout({
+			email,
+			displayName: customerName,
+			stripeCustomerId: customerId,
+		})
+		if (memberResult.created && memberResult.password) {
+			memberCredentials = { email, password: memberResult.password }
+		}
+	} catch (memberError) {
+		console.error('provisionMemberFromCheckout failed (non-blocking)', {
+			email: redactEmail(email),
+			error: (memberError as Error).message,
+		})
+	}
+
 	if (emailEval.shouldSend) {
 		if (disableNonWebhookEmails && emailSource !== 'webhook') {
 			emailSent = false
@@ -1274,6 +1293,7 @@ export async function provisionFromCheckoutSession(
 						to: email,
 						plan,
 						resetUrl: `${portalUrl}/forgot-password`,
+						credentials: memberCredentials,
 						meta: {
 							templateKey: MEMBERSHIP_EMAIL_TEMPLATE_KEY,
 							variant: emailVariant,
