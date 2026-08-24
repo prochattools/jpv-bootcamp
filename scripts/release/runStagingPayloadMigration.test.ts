@@ -50,27 +50,32 @@ const REQUIRED_DATABASE = 'jpvbootcamp'
 const REQUIRED_TARGET_ID = 'jpvbootcamp-staging'
 const REQUIRED_ENVIRONMENT = 'staging'
 const MIGRATION35 = '20260818_140100_portal_settings'
+const MIGRATION36 = '20260820_000000_live_session_space'
 const TARGET_MIGRATIONS = [
-  '20260820_000000_live_session_space',
+  '20260824_120000_engagement_reactions',
 ] as const
 const TARGET_MIGRATION = TARGET_MIGRATIONS[0]
-const APPLY_CONFIRMATION = 'apply_live_session_space_to_jpvbootcamp_staging'
-const ROLLBACK_CONFIRMATION = 'plan_rollback_live_session_space_from_jpvbootcamp_staging'
-const EXPECTED_APPLIED_BEFORE = 35
-const EXPECTED_APPLIED_AFTER = 36
+const APPLY_CONFIRMATION = 'apply_engagement_reactions_to_jpvbootcamp_staging'
+const ROLLBACK_CONFIRMATION = 'plan_rollback_engagement_reactions_from_jpvbootcamp_staging'
+const EXPECTED_APPLIED_BEFORE = 36
+const EXPECTED_APPLIED_AFTER = 37
+const CURRENT_STAGING_APPLIED_COUNT = 37
 // Reviewed staging hostname — matches STAGING_TARGET.hostname in runStagingPayloadMigration.ts.
 const STAGING_HOSTNAME = '10.0.2.4'
 const PRODUCTION_HOSTNAME = 'prod-db.internal'
 
 const FIRST_35 = PAYLOAD_MIGRATION_NAMES.slice(0, EXPECTED_APPLIED_BEFORE)
-const ALL_36 = PAYLOAD_MIGRATION_NAMES.slice(0, EXPECTED_APPLIED_AFTER)
+const HISTORICAL_35 = PAYLOAD_MIGRATION_NAMES.slice(0, 35)
+const ALL_36 = PAYLOAD_MIGRATION_NAMES.slice(0, EXPECTED_APPLIED_BEFORE)
+const ALL_37 = PAYLOAD_MIGRATION_NAMES.slice(0, EXPECTED_APPLIED_AFTER)
 
 // Registry integrity assertions — fail fast if the registry is out of sync.
-assert.equal(PAYLOAD_MIGRATION_NAMES.length, 36, 'Canonical registry must contain the reviewed 36 migrations')
-assert.equal(FIRST_35.length, EXPECTED_APPLIED_BEFORE, 'Registry must have exactly 35 applied migrations before migration 36')
-assert.equal(FIRST_35.at(-1), MIGRATION35, 'Migration35 must be the last migration in the applied prefix')
-assert.equal(ALL_36.length, EXPECTED_APPLIED_AFTER, 'Canonical 35→36 checkpoint must contain all 36 migrations')
-assert.deepEqual(ALL_36.slice(EXPECTED_APPLIED_BEFORE), [...TARGET_MIGRATIONS], 'Migration 36 must be the exact canonical 35→36 batch')
+assert.equal(PAYLOAD_MIGRATION_NAMES.length, CURRENT_STAGING_APPLIED_COUNT, 'Canonical registry must contain the current migration inventory')
+assert.equal(FIRST_35.length, 36, 'Registry must have exactly 36 applied migrations before the reaction migration')
+assert.equal(FIRST_35.at(-1), MIGRATION36, 'Migration 36 must be the last migration in the applied prefix')
+assert.equal(ALL_36.length, EXPECTED_APPLIED_BEFORE, 'Current staging baseline must contain all 36 migrations')
+assert.equal(ALL_37.length, EXPECTED_APPLIED_AFTER, 'Canonical 36→37 checkpoint must contain all 37 migrations')
+assert.deepEqual(ALL_37.slice(EXPECTED_APPLIED_BEFORE), [...TARGET_MIGRATIONS], 'Reaction migration must be the exact canonical 36→37 batch')
 
 // ─── Confirmed: no self-referential hardcoded commit ──────────────────────────
 // The runner exports no REQUIRED_COMMIT constant.
@@ -139,32 +144,49 @@ function makeClient(opts: {
 }
 
 function make35Client(schema = REQUIRED_SCHEMA): PgClientLike {
-  return makeClient({ schema, payloadRows: FIRST_35.map((n) => ({ name: n, batch: 1 })) })
+  return makeClient({ schema, payloadRows: HISTORICAL_35.map((n) => ({ name: n, batch: 1 })) })
 }
 
 function make36Client(schema = REQUIRED_SCHEMA): PgClientLike {
   return makeClient({
     schema,
+    payloadRows: ALL_36.map((name, index) => ({ name, batch: index === EXPECTED_APPLIED_BEFORE - 1 ? 2 : 1 })),
+  })
+}
+
+function make37Client(schema = REQUIRED_SCHEMA): PgClientLike {
+  return makeClient({
+    schema,
     payloadRows: [
-      ...FIRST_35.map((n) => ({ name: n, batch: 1 })),
-      ...TARGET_MIGRATIONS.map((name) => ({ name, batch: 2 })),
+      ...ALL_36.map((name, index) => ({ name, batch: index === EXPECTED_APPLIED_BEFORE - 1 ? 2 : 1 })),
+      { name: TARGET_MIGRATION, batch: 3 },
     ],
   })
 }
 
-function clientFactory35(schema = REQUIRED_SCHEMA): PgClientFactory {
+function clientFactoryHistorical35(schema = REQUIRED_SCHEMA): PgClientFactory {
   return () => make35Client(schema)
+}
+
+// Historical name retained for the broad guard-test fixture: the runner's
+// current pre-apply baseline is the applied 36-migration state.
+function clientFactory35(schema = REQUIRED_SCHEMA): PgClientFactory {
+  return () => make36Client(schema)
 }
 
 function clientFactory36(schema = REQUIRED_SCHEMA): PgClientFactory {
   return () => make36Client(schema)
 }
 
+function clientFactoryCurrent(schema = REQUIRED_SCHEMA): PgClientFactory {
+  return () => make37Client(schema)
+}
+
 function clientFactorySequence(schema = REQUIRED_SCHEMA): PgClientFactory {
   let call = 0
   return () => {
     const idx = call++
-    return idx === 0 ? make35Client(schema) : make36Client(schema)
+    return idx === 0 ? make36Client(schema) : make37Client(schema)
   }
 }
 
@@ -228,7 +250,7 @@ function baseDeps(overrides: Partial<StagingMigrationRunnerDependencies> = {}): 
   return {
     gitResolver: okGit(),
     gitStatusResolver: cleanGitStatus(),
-    clientFactory: clientFactory35(),
+    clientFactory: clientFactory36(),
     commandExecutor: okApplyExecutor(),
     ...overrides,
   }
@@ -282,7 +304,7 @@ async function run(): Promise<void> {
     // Verify the result object is JSON-serializable and parses back to the same values
     const result = await runStagingMigrationPlan(
       stagingUrl(), undefined, goodPlanInput(),
-      baseDeps({ clientFactory: clientFactory35() }), noopOutput(),
+      baseDeps({ clientFactory: clientFactory36() }), noopOutput(),
     )
     const serialized = JSON.stringify(result)
     const parsed = JSON.parse(serialized)
@@ -297,7 +319,7 @@ async function run(): Promise<void> {
   await test('plan: result has all required schema fields of the correct types', async () => {
     const result = await runStagingMigrationPlan(
       stagingUrl(), undefined, goodPlanInput(),
-      baseDeps({ clientFactory: clientFactory35() }), noopOutput(),
+      baseDeps({ clientFactory: clientFactory36() }), noopOutput(),
     )
     assert.equal(typeof result.ok, 'boolean')
     assert.equal(typeof result.mode, 'string')
@@ -316,7 +338,7 @@ async function run(): Promise<void> {
     // The sanitized artifact must not contain raw error text with URLs or credentials
     const result = await runStagingMigrationPlan(
       stagingUrl(), undefined, goodPlanInput(),
-      baseDeps({ clientFactory: clientFactory35() }), noopOutput(),
+      baseDeps({ clientFactory: clientFactory36() }), noopOutput(),
     )
     const serialized = JSON.stringify(result)
     assert.ok(!serialized.includes('postgres://'), 'result must not contain PostgreSQL URL scheme')
@@ -710,12 +732,12 @@ async function run(): Promise<void> {
 
   // ─── plan: Payload state checks ───────────────────────────────────────────
 
-  await test('plan: ok when 35 applied and exact migration 36 batch is pending', async () => {
+  await test('plan: ok when 36 applied and exact reaction migration batch is pending', async () => {
     const result = await runStagingMigrationPlan(
       stagingUrl(),
       undefined,
       goodPlanInput(),
-      baseDeps({ clientFactory: clientFactory35() }),
+      baseDeps({ clientFactory: clientFactory36() }),
       noopOutput(),
     )
     assert.equal(result.ok, true)
@@ -727,16 +749,16 @@ async function run(): Promise<void> {
     assert.equal(result.targetId, REQUIRED_TARGET_ID)
   })
 
-  await test('plan: current-state mode verifies 36 applied and no pending migrations', async () => {
+  await test('plan: current-state mode verifies the current 37 applied migrations and no pending migrations', async () => {
     const result = await runStagingMigrationPlan(
       stagingUrl(),
       undefined,
       goodPlanInput({ currentState: true }),
-      baseDeps({ clientFactory: clientFactory36() }),
+      baseDeps({ clientFactory: clientFactoryCurrent() }),
       noopOutput(),
     )
     assert.equal(result.ok, true)
-    assert.equal(result.appliedCount, EXPECTED_APPLIED_AFTER)
+    assert.equal(result.appliedCount, CURRENT_STAGING_APPLIED_COUNT)
     assert.deepEqual(result.pendingMigrations, [])
     assert.equal(result.blockers.length, 0)
     assert.equal(result.message, 'plan_ok')
@@ -759,7 +781,7 @@ async function run(): Promise<void> {
   await test('plan: blocks when target batch is already applied', async () => {
     const result = await runStagingMigrationPlan(
       stagingUrl(), undefined, goodPlanInput(),
-      baseDeps({ clientFactory: clientFactory36() }), noopOutput(),
+      baseDeps({ clientFactory: clientFactoryCurrent() }), noopOutput(),
     )
     assert.equal(result.ok, false)
     assert.ok(result.blockers.some((b) =>
@@ -1097,11 +1119,11 @@ async function run(): Promise<void> {
     )
   })
 
-  await test('apply: rejects when pre-apply count is not 35', async () => {
+  await test('apply: rejects when pre-apply count is not 36', async () => {
     await assert.rejects(
       () => runStagingMigrationApply(
         stagingUrl(), undefined, goodAuthorization(),
-        baseDeps({ clientFactory: clientFactory36() }),
+        baseDeps({ clientFactory: clientFactoryHistorical35() }),
         noopOutput(),
       ),
       /pre-apply check failed/i,
@@ -1239,10 +1261,10 @@ async function run(): Promise<void> {
     )
   })
 
-  await test('rollback-plan: rejects when not all 36 are applied', async () => {
+  await test('rollback-plan: rejects when not all 37 are applied', async () => {
     const result = await runStagingMigrationRollbackPlan(
       stagingUrl(), undefined, goodRollbackAuthorization(),
-      baseDeps({ clientFactory: clientFactory35() }), noopOutput(),
+      baseDeps({ clientFactory: clientFactory36() }), noopOutput(),
     )
     assert.equal(result.ok, false)
     assert.ok(result.blockers.some((b) => b.includes('36') || b.includes('35')))
@@ -1251,7 +1273,7 @@ async function run(): Promise<void> {
   await test('rollback-plan: ok when all 36 applied and target batch is last', async () => {
     const result = await runStagingMigrationRollbackPlan(
       stagingUrl(), undefined, goodRollbackAuthorization(),
-      baseDeps({ clientFactory: clientFactory36() }), noopOutput(),
+      baseDeps({ clientFactory: clientFactoryCurrent() }), noopOutput(),
     )
     assert.equal(result.ok, true)
     assert.equal(result.mode, 'rollback-plan')
@@ -1280,7 +1302,7 @@ async function run(): Promise<void> {
     const result = await runStagingMigrationRollbackPlan(
       stagingUrl(), undefined, goodRollbackAuthorization(),
       {
-        ...baseDeps({ clientFactory: clientFactory36() }),
+        ...baseDeps({ clientFactory: clientFactoryCurrent() }),
         commandExecutor: () => {
           executorCalled = true
           return { status: 0 }
@@ -1371,10 +1393,10 @@ async function run(): Promise<void> {
 
   // ─── Defect 1: batch evidence preservation ────────────────────────────────
 
-  await test('rollback-plan: succeeds when exact migration 36 batch is highest batch', async () => {
+  await test('rollback-plan: succeeds when exact reaction migration batch is highest batch', async () => {
     const result = await runStagingMigrationRollbackPlan(
       stagingUrl(), undefined, goodRollbackAuthorization(),
-      baseDeps({ clientFactory: clientFactory36() }), noopOutput(),
+      baseDeps({ clientFactory: clientFactoryCurrent() }), noopOutput(),
     )
     assert.equal(result.ok, true)
     assert.deepEqual(result.latestBatchMigrations, [...TARGET_MIGRATIONS])
@@ -1710,7 +1732,7 @@ async function run(): Promise<void> {
     assert.equal('outcome' in result && result.outcome, APPLY_OUTCOME_UNCERTAIN)
   })
 
-  await test('apply: uncertain outcome at unchanged 35-state reports targetBatchApplied=false', async () => {
+  await test('apply: uncertain outcome at unchanged 36-state reports targetBatchApplied=false', async () => {
     const result = await runStagingMigrationApply(
       stagingUrl(), undefined, goodAuthorization(),
       {
@@ -1723,17 +1745,17 @@ async function run(): Promise<void> {
     if ('outcome' in result) {
       assert.equal(result.schemaIdentityConfirmed, true)
       assert.equal(result.targetBatchApplied, false)
-      assert.equal(result.appliedCount, 35)
+      assert.equal(result.appliedCount, 36)
     }
   })
 
   await test('apply: uncertain outcome when clean 36-state appears despite command failure', async () => {
-    // Pre-apply sees 35, command fails, uncertain status query sees all 36 applied.
+    // Pre-apply sees 36, command fails, uncertain status query sees all 37 applied.
     const factory: PgClientFactory = (() => {
       let call = 0
       return () => {
         const idx = call++
-        return idx === 0 ? make35Client() : make36Client()
+        return idx === 0 ? make36Client() : make37Client()
       }
     })()
     const result = await runStagingMigrationApply(
@@ -1752,11 +1774,11 @@ async function run(): Promise<void> {
   })
 
   await test('apply: uncertain outcome when status query also fails', async () => {
-    // Pre-apply succeeds (28), command returns non-zero, then uncertain status query fails
+    // Pre-apply succeeds (36), command returns non-zero, then uncertain status query fails
     let call = 0
     const factory: PgClientFactory = () => {
       const idx = call++
-      if (idx === 0) return make35Client() // pre-apply succeeds
+      if (idx === 0) return make36Client() // pre-apply succeeds
       // uncertain status query — fail at connect
       return {
         async connect() { throw new Error('cannot connect for uncertain check') },
@@ -2125,11 +2147,11 @@ async function run(): Promise<void> {
   })
 
   await test('sanitize: apply uncertain-outcome status-query error with secret is not echoed', async () => {
-    // Pre-apply succeeds (28 rows), command fails (non-zero), uncertain status query leaks secret
+    // Pre-apply succeeds (36 rows), command fails (non-zero), uncertain status query leaks secret
     let call = 0
     const leakyFactory: PgClientFactory = () => {
       const idx = call++
-      if (idx === 0) return make35Client()
+      if (idx === 0) return make36Client()
       return {
         async connect() { throw new Error('pg_hba.conf rejection: password=topsecretpwd host=10.0.2.4') },
         async query() { return { rows: [] } },
@@ -2156,7 +2178,7 @@ async function run(): Promise<void> {
     let call = 0
     const leakyFactory: PgClientFactory = () => {
       const idx = call++
-      if (idx === 0) return make35Client()
+      if (idx === 0) return make36Client()
       return {
         async connect() { throw new Error('DB_PASSWORD=postapplysecret123 connection refused') },
         async query() { return { rows: [] } },
@@ -2209,7 +2231,7 @@ async function run(): Promise<void> {
     let call = 0
     const leakyFactory: PgClientFactory = () => {
       const idx = call++
-      if (idx === 0) return make35Client()
+      if (idx === 0) return make36Client()
       return {
         async connect() { throw new Error('FATAL: password authentication failed for "admin" pw=cliSecret777') },
         async query() { return { rows: [] } },

@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 
 import { MemberFeaturedImage } from '@/components/portal/MemberContentMedia'
+import { submitReactionAction } from '@/app/(frontend)/portal/reaction-actions'
 import {
   DiscussionHierarchy,
   EngagementAuthorIdentity,
@@ -15,6 +16,7 @@ import { ProgressiveCommentList } from '@/components/community/ProgressiveCommen
 import { LegacyLessonRichText } from '@/components/portal/LegacyLessonRichText'
 import { requirePortalMember } from '@/lib/auth/requirePortalMember'
 import type { PayloadCourseWriteAPI } from '@/lib/payloadCourse/accessService'
+import { getReactionSummary, type ReactionSummary } from '@/lib/payloadCourse/reactions'
 import {
   createLessonComment,
   listLessonDiscussion,
@@ -155,12 +157,14 @@ function LessonCommentThread({
   parentId,
   courseSlug,
   lessonSlug,
+  reactionSummaries,
   depth = 0,
 }: {
   comments: LessonDiscussionComment[]
   parentId: string | null
   courseSlug: string
   lessonSlug: string
+  reactionSummaries: ReadonlyMap<string, ReactionSummary>
   depth?: number
 }) {
   if (depth > 8) return null
@@ -177,6 +181,20 @@ function LessonCommentThread({
         />
       </div>
       <LegacyLessonRichText data={comment.body} lessonSlug={lessonSlug} />
+
+      {reactionSummaries.get(comment.id) ? (
+        <EngagementReactionBar
+          action={submitReactionAction}
+          className='mt-4'
+          counts={reactionSummaries.get(comment.id)?.counts}
+          label='Discussion comment reactions'
+          redirectPath={`/portal/courses/${encodeURIComponent(courseSlug)}/lessons/${encodeURIComponent(lessonSlug)}`}
+          targetId={comment.id}
+          targetKind='lesson_comment'
+          totalCount={reactionSummaries.get(comment.id)?.totalCount}
+          viewerReaction={reactionSummaries.get(comment.id)?.viewerReaction}
+        />
+      ) : null}
 
       <details className='mt-4'>
         <summary className='min-h-10 cursor-pointer py-2 text-sm font-semibold text-jpv-inverse-muted outline-none focus-visible:ring-2 focus-visible:ring-jpv-green'>Reply</summary>
@@ -200,6 +218,7 @@ function LessonCommentThread({
         parentId={comment.id}
         courseSlug={courseSlug}
         lessonSlug={lessonSlug}
+        reactionSummaries={reactionSummaries}
         depth={depth + 1}
       />
     </article>
@@ -224,6 +243,21 @@ export default async function PortalLessonPage({ params, searchParams }: LessonP
   const discussion = detail.allowed && detail.lesson?.id
     ? await listLessonDiscussion(payload as PayloadCourseWriteAPI, memberId, detail.lesson.id)
     : null
+  const reactionSummaries = new Map<string, ReactionSummary>()
+  if (discussion?.allowed) {
+    const summaryResults = await Promise.allSettled(
+      discussion.comments.map(async (comment) => ({
+        id: comment.id,
+        summary: await getReactionSummary(payload, memberId, {
+          kind: 'lesson_comment',
+          id: comment.id,
+        }),
+      })),
+    )
+    for (const result of summaryResults) {
+      if (result.status === 'fulfilled') reactionSummaries.set(result.value.id, result.value.summary)
+    }
+  }
 
   return (
     <div className='mx-auto w-full max-w-5xl space-y-8'>
@@ -378,7 +412,6 @@ export default async function PortalLessonPage({ params, searchParams }: LessonP
                 </p>
               </div>
             </div>
-            <EngagementReactionBar className='mt-6' label='Lesson discussion engagement preview' />
             <EngagementCommentActionBar
               className='mt-5'
               commentCount={discussion?.comments.length ?? 0}
@@ -412,6 +445,7 @@ export default async function PortalLessonPage({ params, searchParams }: LessonP
                   parentId={null}
                   courseSlug={courseSlug}
                   lessonSlug={lessonSlug}
+                  reactionSummaries={reactionSummaries}
                 />
               ) : (
                 <div className='rounded-xl border border-dashed border-jpv-border px-5 py-6 text-sm text-jpv-muted'>

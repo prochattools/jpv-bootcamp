@@ -30,26 +30,25 @@ const REQUIRED_SCHEMA = STAGING_TARGET.schema
 const REQUIRED_DATABASE = STAGING_TARGET.database
 const REQUIRED_ENVIRONMENT = STAGING_TARGET.environment
 const REQUIRED_TARGET_ID = STAGING_TARGET.targetId
-// Closed forward-migration checkpoint retained for guarded apply/rollback
-// contract tests. The current staging release gate uses CURRENT_STATE mode
-// below because migration 36 is already applied.
-const EXPECTED_APPLIED_BEFORE = 35
+// The current additive staging batch is the final registered migration. The
+// preceding 36-migration state remains the verified staging baseline.
+const EXPECTED_APPLIED_BEFORE = PAYLOAD_MIGRATION_NAMES.length - 1
 const EXPECTED_FORWARD_BATCH = [
-  '20260820_000000_live_session_space',
+  PAYLOAD_MIGRATION_NAMES.at(-1)!,
 ] as const
 const EXPECTED_APPLIED_AFTER = EXPECTED_APPLIED_BEFORE + EXPECTED_FORWARD_BATCH.length
 const CURRENT_STAGING_APPLIED_COUNT = PAYLOAD_MIGRATION_NAMES.length
 const CURRENT_STAGING_PENDING_MIGRATIONS: readonly string[] = []
 const TARGET_MIGRATIONS = PAYLOAD_MIGRATION_NAMES.slice(EXPECTED_APPLIED_BEFORE, EXPECTED_APPLIED_AFTER)
-const APPLY_CONFIRMATION_VALUE = 'apply_live_session_space_to_jpvbootcamp_staging'
-const ROLLBACK_PLAN_CONFIRMATION_VALUE = 'plan_rollback_live_session_space_from_jpvbootcamp_staging'
+const APPLY_CONFIRMATION_VALUE = 'apply_engagement_reactions_to_jpvbootcamp_staging'
+const ROLLBACK_PLAN_CONFIRMATION_VALUE = 'plan_rollback_engagement_reactions_from_jpvbootcamp_staging'
 const FULL_COMMIT_SHA_RE = /^[0-9a-f]{40}$/
 
 if (
   TARGET_MIGRATIONS.length !== EXPECTED_FORWARD_BATCH.length ||
   TARGET_MIGRATIONS.some((name, index) => name !== EXPECTED_FORWARD_BATCH[index])
 ) {
-  throw new Error(`Canonical migration registry does not contain the reviewed migration 36 at the expected position`)
+  throw new Error(`Canonical migration registry does not contain the current additive migration at the expected position`)
 }
 
 // Production token labels rejected as whole tokens (exact match against hostname labels or db name components).
@@ -866,7 +865,7 @@ export async function runStagingMigrationPlan(
     )
   } else {
     output(
-      `[staging-migration-plan] PLAN OK: closed 35-to-36 forward batch is pending in canonical order and all preconditions are met`,
+      `[staging-migration-plan] PLAN OK: additive reaction migration is pending in canonical order and all preconditions are met`,
     )
     output(`[staging-migration-plan] pending-batch=${TARGET_MIGRATIONS.join(',')}`)
     output(`[staging-migration-plan] To apply: pnpm staging:payload-migration-apply`)
@@ -1088,7 +1087,7 @@ export async function runStagingMigrationApply(
       appliedCount: postStatus.appliedPayloadCount,
       missingMigrations: postStatus.missingPayloadMigrations,
     },
-    message: `Apply completed: closed 35-to-36 forward batch [${TARGET_MIGRATIONS.join(', ')}] applied to ${REQUIRED_SCHEMA}. Rollback requires separate plan and authorization.`,
+    message: `Apply completed: additive reaction batch [${TARGET_MIGRATIONS.join(', ')}] applied to ${REQUIRED_SCHEMA}. Rollback requires separate plan and authorization.`,
   }
 }
 
@@ -1240,7 +1239,7 @@ export async function runStagingMigrationRollbackPlan(
     )
   }
 
-  // Determine latest batch and require exactly the reviewed closed 35-to-36 batch.
+  // Determine latest batch and require exactly the reviewed additive 36-to-37 batch.
   const latestBatchRows: string[] = []
   if (!batchEvidenceMalformed) {
     const highestBatch = Math.max(...records.map((r) => r.batch))
@@ -1296,7 +1295,7 @@ export async function runStagingMigrationRollbackPlan(
     latestBatchMigrations: latestBatchRows,
     blockers: [],
     message:
-      `Rollback plan OK: closed 35-to-36 batch [${TARGET_MIGRATIONS.join(', ')}] is the latest applied batch. ` +
+      `Rollback plan OK: additive 36-to-37 batch [${TARGET_MIGRATIONS.join(', ')}] is the latest applied batch. ` +
       `Rollback execution requires separate authorization.`,
   }
 }
@@ -1429,7 +1428,7 @@ const PLAN_USAGE = [
   '  [--current-state=true]',
   '',
   'Performs a read-only pre-flight check. Does NOT mutate the database.',
-  'Use --current-state=true to verify the current applied staging state (36 applied, no pending batch).',
+  'Use --current-state=true to verify the current applied staging state (the full registered inventory applied, no pending batch).',
   'Authorization does NOT authorize push, Dokploy redeployment, Prisma database-deploy,',
   'provider email, post-deployment smoke, or production.',
 ].join('\n')
@@ -1449,7 +1448,7 @@ const APPLY_USAGE = [
   '  --rollback-owner=<id> \\',
   `  --confirmation=${APPLY_CONFIRMATION_VALUE}`,
   '',
-  `Applies the exact closed 35-to-36 forward batch to the ${REQUIRED_SCHEMA} schema.`,
+  `Applies the exact additive reaction batch to the ${REQUIRED_SCHEMA} schema.`,
   'Authorization does NOT authorize push, Dokploy redeployment, Prisma database-deploy,',
   'provider email, post-deployment smoke, or production.',
 ].join('\n')

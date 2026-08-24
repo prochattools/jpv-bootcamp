@@ -43,9 +43,9 @@ test('portal settings migration creates grouped fields and media relationships',
   ]) assert.match(portalSettings, new RegExp(fragment.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
 })
 
-test('canonical registry ends with post-A-D parity migrations and totals 35', () => {
-  assert.equal(PAYLOAD_MIGRATION_NAMES.length, 35)
-  assert.deepEqual(PAYLOAD_MIGRATION_NAMES.slice(-2), [
+test('canonical registry preserves the post-A-D parity prefix before later additive migrations', () => {
+  assert.equal(PAYLOAD_MIGRATION_NAMES.slice(0, 35).length, 35)
+  assert.deepEqual(PAYLOAD_MIGRATION_NAMES.slice(33, 35), [
     '20260818_140000_member_profile_parity',
     '20260818_140100_portal_settings',
   ])

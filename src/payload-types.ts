@@ -74,6 +74,7 @@ export interface Config {
     payload_space_posts: PayloadSpacePost;
     payload_space_comments: PayloadSpaceComment;
     payload_space_reactions: PayloadSpaceReaction;
+    payload_engagement_reactions: PayloadEngagementReaction;
     payload_space_files: PayloadSpaceFile;
     payload_chat_threads: PayloadChatThread;
     payload_chat_messages: PayloadChatMessage;
@@ -144,6 +145,7 @@ export interface Config {
     payload_space_posts: PayloadSpacePostsSelect<false> | PayloadSpacePostsSelect<true>;
     payload_space_comments: PayloadSpaceCommentsSelect<false> | PayloadSpaceCommentsSelect<true>;
     payload_space_reactions: PayloadSpaceReactionsSelect<false> | PayloadSpaceReactionsSelect<true>;
+    payload_engagement_reactions: PayloadEngagementReactionsSelect<false> | PayloadEngagementReactionsSelect<true>;
     payload_space_files: PayloadSpaceFilesSelect<false> | PayloadSpaceFilesSelect<true>;
     payload_chat_threads: PayloadChatThreadsSelect<false> | PayloadChatThreadsSelect<true>;
     payload_chat_messages: PayloadChatMessagesSelect<false> | PayloadChatMessagesSelect<true>;
@@ -579,6 +581,203 @@ export interface PayloadSpaceReaction {
   createdAt: string;
 }
 /**
+ * Active member-owned reactions. Legacy space reactions remain separate.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_engagement_reactions".
+ */
+export interface PayloadEngagementReaction {
+  id: number;
+  member: number | PayloadMember;
+  reactionType: 'helpful' | 'insightful' | 'celebrate';
+  targetKind: 'space_post' | 'space_comment' | 'lesson_comment';
+  targetPost?: (number | null) | PayloadSpacePost;
+  targetSpaceComment?: (number | null) | PayloadSpaceComment;
+  targetLessonComment?: (number | null) | PayloadLessonComment;
+  metadata?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Lesson-scoped member discussions and migrated historical lesson comments.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_lesson_comments".
+ */
+export interface PayloadLessonComment {
+  id: number;
+  displayName: string;
+  lesson: number | PayloadLesson;
+  author: number | PayloadMember;
+  parent?: (number | null) | PayloadLessonComment;
+  body: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  };
+  /**
+   * Exact historical rendered/source HTML retained for migration evidence.
+   */
+  legacyBodyHtml?: string | null;
+  moderationStatus: 'visible' | 'pending_review' | 'hidden' | 'deleted';
+  /**
+   * Legacy FluentCommunity comment ID used for deterministic migration idempotency.
+   */
+  legacyCommentId?: string | null;
+  /**
+   * Original source timestamp retained independently from Payload migration timestamps.
+   */
+  sourceCreatedAt?: string | null;
+  metadata?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Lesson content. Progress tracking is handled at the application layer.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_lessons".
+ */
+export interface PayloadLesson {
+  id: number;
+  module: number | PayloadCourseModule;
+  title: string;
+  slug: string;
+  summary?: string | null;
+  /**
+   * Optional lesson artwork shown in the member portal.
+   */
+  coverImage?: (number | null) | PayloadMedia;
+  sortOrder: number;
+  estimatedDuration?: string | null;
+  content?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  /**
+   * Managed Bunny Stream video attached to this lesson.
+   */
+  bunnyVideo?: (number | null) | BunnyVideo;
+  /**
+   * Legacy import compatibility only. New lesson video must use Bunny Video.
+   */
+  videoProviderLabel?: ('none' | 'youtube' | 'vimeo' | 'mux' | 'other') | null;
+  /**
+   * Legacy import compatibility only.
+   */
+  videoIdOrPreviewUrl?: string | null;
+  downloads?: (number | PayloadMedia)[] | null;
+  previewLesson?: boolean | null;
+  /**
+   * Controls whether this lesson appears locked in the portal UI.
+   */
+  lockState?: ('available' | 'locked' | 'coming_soon') | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Ordered sections within a course.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_course_modules".
+ */
+export interface PayloadCourseModule {
+  id: number;
+  course: number | PayloadCourse;
+  title: string;
+  description?: string | null;
+  sortOrder: number;
+  publishedPreview?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "bunny_videos".
+ */
+export interface BunnyVideo {
+  id: number;
+  title: string;
+  libraryId: number;
+  /**
+   * Legacy compatibility only. New Bunny Stream records are identified by videoGuid.
+   */
+  videoId?: number | null;
+  /**
+   * Canonical Bunny Stream video identifier. Required for new writes and signed playback. Legacy numeric-only rows may remain temporarily until the GUID-first forward migration/backfill is complete.
+   */
+  videoGuid?: string | null;
+  /**
+   * Lesson this video belongs to. One video per lesson.
+   */
+  lesson?: (number | null) | PayloadLesson;
+  status: 'processing' | 'ready' | 'failed';
+  duration?: number | null;
+  frameRate?: number | null;
+  width?: number | null;
+  height?: number | null;
+  videoCodec?: string | null;
+  audioCodec?: string | null;
+  bitrate?: number | null;
+  thumbnailUrl?: string | null;
+  /**
+   * Signed URL for playback (regenerated on demand)
+   */
+  playbackUrl?: string | null;
+  errorMessage?: string | null;
+  /**
+   * Chronological log of Bunny webhook events
+   */
+  webhookEvents?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload_space_files".
  */
@@ -759,125 +958,6 @@ export interface LiveSession {
   createdAt: string;
 }
 /**
- * Ordered sections within a course.
- *
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload_course_modules".
- */
-export interface PayloadCourseModule {
-  id: number;
-  course: number | PayloadCourse;
-  title: string;
-  description?: string | null;
-  sortOrder: number;
-  publishedPreview?: boolean | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * Lesson content. Progress tracking is handled at the application layer.
- *
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload_lessons".
- */
-export interface PayloadLesson {
-  id: number;
-  module: number | PayloadCourseModule;
-  title: string;
-  slug: string;
-  summary?: string | null;
-  /**
-   * Optional lesson artwork shown in the member portal.
-   */
-  coverImage?: (number | null) | PayloadMedia;
-  sortOrder: number;
-  estimatedDuration?: string | null;
-  content?: {
-    root: {
-      type: string;
-      children: {
-        type: any;
-        version: number;
-        [k: string]: unknown;
-      }[];
-      direction: ('ltr' | 'rtl') | null;
-      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
-      indent: number;
-      version: number;
-    };
-    [k: string]: unknown;
-  } | null;
-  /**
-   * Managed Bunny Stream video attached to this lesson.
-   */
-  bunnyVideo?: (number | null) | BunnyVideo;
-  /**
-   * Legacy import compatibility only. New lesson video must use Bunny Video.
-   */
-  videoProviderLabel?: ('none' | 'youtube' | 'vimeo' | 'mux' | 'other') | null;
-  /**
-   * Legacy import compatibility only.
-   */
-  videoIdOrPreviewUrl?: string | null;
-  downloads?: (number | PayloadMedia)[] | null;
-  previewLesson?: boolean | null;
-  /**
-   * Controls whether this lesson appears locked in the portal UI.
-   */
-  lockState?: ('available' | 'locked' | 'coming_soon') | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "bunny_videos".
- */
-export interface BunnyVideo {
-  id: number;
-  title: string;
-  libraryId: number;
-  /**
-   * Legacy compatibility only. New Bunny Stream records are identified by videoGuid.
-   */
-  videoId?: number | null;
-  /**
-   * Canonical Bunny Stream video identifier. Required for new writes and signed playback. Legacy numeric-only rows may remain temporarily until the GUID-first forward migration/backfill is complete.
-   */
-  videoGuid?: string | null;
-  /**
-   * Lesson this video belongs to. One video per lesson.
-   */
-  lesson?: (number | null) | PayloadLesson;
-  status: 'processing' | 'ready' | 'failed';
-  duration?: number | null;
-  frameRate?: number | null;
-  width?: number | null;
-  height?: number | null;
-  videoCodec?: string | null;
-  audioCodec?: string | null;
-  bitrate?: number | null;
-  thumbnailUrl?: string | null;
-  /**
-   * Signed URL for playback (regenerated on demand)
-   */
-  playbackUrl?: string | null;
-  errorMessage?: string | null;
-  /**
-   * Chronological log of Bunny webhook events
-   */
-  webhookEvents?:
-    | {
-        [k: string]: unknown;
-      }
-    | unknown[]
-    | string
-    | number
-    | boolean
-    | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload_users".
  */
@@ -901,58 +981,6 @@ export interface PayloadUser {
     | null;
   password?: string | null;
   collection: 'payload_users';
-}
-/**
- * Lesson-scoped member discussions and migrated historical lesson comments.
- *
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload_lesson_comments".
- */
-export interface PayloadLessonComment {
-  id: number;
-  displayName: string;
-  lesson: number | PayloadLesson;
-  author: number | PayloadMember;
-  parent?: (number | null) | PayloadLessonComment;
-  body: {
-    root: {
-      type: string;
-      children: {
-        type: any;
-        version: number;
-        [k: string]: unknown;
-      }[];
-      direction: ('ltr' | 'rtl') | null;
-      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
-      indent: number;
-      version: number;
-    };
-    [k: string]: unknown;
-  };
-  /**
-   * Exact historical rendered/source HTML retained for migration evidence.
-   */
-  legacyBodyHtml?: string | null;
-  moderationStatus: 'visible' | 'pending_review' | 'hidden' | 'deleted';
-  /**
-   * Legacy FluentCommunity comment ID used for deterministic migration idempotency.
-   */
-  legacyCommentId?: string | null;
-  /**
-   * Original source timestamp retained independently from Payload migration timestamps.
-   */
-  sourceCreatedAt?: string | null;
-  metadata?:
-    | {
-        [k: string]: unknown;
-      }
-    | unknown[]
-    | string
-    | number
-    | boolean
-    | null;
-  updatedAt: string;
-  createdAt: string;
 }
 /**
  * Access tier examples shown in the portal. Not linked to billing or entitlement enforcement.
@@ -2457,6 +2485,10 @@ export interface PayloadLockedDocument {
         value: number | PayloadSpaceReaction;
       } | null)
     | ({
+        relationTo: 'payload_engagement_reactions';
+        value: number | PayloadEngagementReaction;
+      } | null)
+    | ({
         relationTo: 'payload_space_files';
         value: number | PayloadSpaceFile;
       } | null)
@@ -2824,6 +2856,21 @@ export interface PayloadSpaceReactionsSelect<T extends boolean = true> {
   legacyActorUserId?: T;
   legacyActorSourceSystem?: T;
   sourceCreatedAt?: T;
+  metadata?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_engagement_reactions_select".
+ */
+export interface PayloadEngagementReactionsSelect<T extends boolean = true> {
+  member?: T;
+  reactionType?: T;
+  targetKind?: T;
+  targetPost?: T;
+  targetSpaceComment?: T;
+  targetLessonComment?: T;
   metadata?: T;
   updatedAt?: T;
   createdAt?: T;

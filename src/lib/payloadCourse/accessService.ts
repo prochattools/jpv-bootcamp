@@ -69,6 +69,11 @@ export type PayloadCourseWriteAPI = PayloadCourseAccessAPI & {
     overrideAccess?: boolean
     overrideLock?: boolean
   }): Promise<any>
+  delete?(args: {
+    collection: any
+    id: any
+    overrideAccess?: boolean
+  }): Promise<any>
 }
 
 export type PayloadMemberAuthAPI = PayloadCourseWriteAPI & {

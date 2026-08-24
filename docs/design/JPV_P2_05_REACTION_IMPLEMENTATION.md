@@ -1,8 +1,8 @@
 # JPV P2-05 Reaction Implementation
 
-Status: **BLOCKED_PENDING_SCHEMA_AUTHORIZATION**
+Status: **IMPLEMENTATION_IN_PROGRESS — STAGING_MIGRATION_PENDING**
 
-P2-05 cannot safely activate member reactions against the current Payload architecture. The existing reaction collection is a historical migration/provenance model, not an active member-owned reaction contract. Per the P2-05 safety rule, implementation stopped before adding services, routes, mutations, or schema changes.
+P2-05 is being implemented against the approved additive architecture. The existing reaction collection remains a historical migration/provenance model and is unchanged. This document records implementation evidence; staging migration and deployment are still pending and production remains unauthorized.
 
 ## Preflight decision
 
@@ -28,11 +28,9 @@ The current `payload_space_reactions` collection does **not** safely support the
 - `src/lib/payloadCourse/communityDiscussion.ts` and `src/lib/payloadCourse/lessonDiscussion.ts` — provide target visibility and comment access patterns, but no reaction mutation or projection.
 - `docs/design/JPV_ENGAGEMENT_ARCHITECTURE_CONTRACT_V1.md` — requires canonical member ownership, target-specific access, one active reaction per target, and future lesson-comment target support.
 
-## Required schema decision before implementation
+## Implemented schema decision
 
-An authorized schema design review must choose one of these safe approaches:
-
-### Recommended: additive active collection
+### Active collection
 
 Retain `payload_space_reactions` as historical migration evidence and create a separate active collection, for example `payload_engagement_reactions`, with:
 
@@ -45,29 +43,33 @@ Retain `payload_space_reactions` as historical migration evidence and create a s
 - target-specific unique indexes enforcing one active reaction per member and target, independent of reaction type;
 - indexes supporting target counts and member-owned lookup/removal.
 
-This avoids rewriting historical `like`, `bookmark`, and `survey_vote` rows or changing the meaning of existing leaderboard/bookmark projections.
+Implemented in `src/collections/community/EngagementReactions.ts`. This avoids rewriting historical `like`, `bookmark`, and `survey_vote` rows or changing the meaning of existing leaderboard/bookmark projections.
 
-### Alternative: normalize the existing table
+### Rejected alternative: normalize the existing table
 
 Only after an approved data contract and populated-row preflight could the existing collection be altered. That would require a reversible mapping for legacy rows, separation of bookmark/survey semantics, a lesson-comment target extension, new one-reaction uniqueness, and compatibility updates to every legacy reader. This is higher risk and is not authorized by P2-05.
 
-## Required migration plan — future only
+## Migration implementation record
 
-No migration was created or run. An approved future migration packet must contain:
+Migration name: `20260824_120000_engagement_reactions`
 
-1. Read-only inventory of existing reaction rows, target resolution, actor resolution, and duplicate groups.
-2. Decision whether historical rows remain projection-only or are converted into active rows.
-3. Additive active collection/table DDL and target foreign keys.
-4. Check constraints and target-specific unique indexes.
-5. Rollback preflight proving active rows are preserved and no destructive legacy rewrite occurs.
-6. Generated Payload types and collection registration only after schema approval.
-7. Data-access tests covering counts, add, remove, change, duplicate rejection, hidden targets, and unauthorized targets.
+Affected active collection: `payload_engagement_reactions` only. The migration does not alter `payload_space_reactions` and contains no backfill.
+
+The migration contains:
+
+1. Additive active collection/table DDL and target foreign keys.
+2. Target-shape check and target-specific one-reaction unique indexes.
+3. Locked-document relationship metadata for the new collection.
+4. A down guard that refuses rollback when active rows exist.
+5. No legacy row insert, update, or delete.
+
+Local migration safety evidence: `scripts/p2_05_reaction_migration_safety.test.ts` passes. The migration has not yet been applied to staging in this evidence record.
 
 The migration must remain staging-only until separately authorized. It must not be inferred from this document.
 
-## Future runtime and security model
+## Runtime and security model
 
-After schema approval, implementation should use a dedicated service boundary rather than direct collection writes:
+The implemented service boundary is `src/lib/payloadCourse/reactions.ts` and the server action is `src/app/(frontend)/portal/reaction-actions.ts`:
 
 - derive `memberId` exclusively from the authenticated portal session;
 - resolve target access through `evaluatePayloadSpaceAccess` or `evaluatePayloadLessonAccess`;
@@ -79,22 +81,59 @@ After schema approval, implementation should use a dedicated service boundary ra
 - write audit events for active mutations;
 - keep counts server-derived and indexed by target.
 
-The existing P2-04 UI remains the presentation boundary. Its reaction control is disabled without an approved handler, so the current application does not expose a misleading mutation path.
+The existing P2-04 UI remains the presentation boundary. It is now connected only for community posts and lesson-discussion comments. Community-comment reactions, bookmarks, sharing, notifications, and other engagement controls remain outside this implementation scope.
 
 ## Deferred and explicitly out of scope
 
-- No reaction collection changes.
-- No migration creation or execution.
-- No reaction API route or server action.
-- No reaction persistence or client-side optimistic mutation.
+- No changes to `payload_space_reactions`.
+- No legacy backfill or historical conversion.
+- No direct Payload collection writes from the browser.
 - No comments, threaded replies, bookmarks, sharing, or notifications.
 - No changes to historical leaderboard/bookmark behavior.
-- No staging, production, database, or infrastructure actions.
+- No production migration, deployment, or data action.
 
-## Validation evidence
+## Local validation evidence
 
-The architecture preflight confirmed the mismatch using the source files listed above. Existing P2-03 and P2-04 contracts remain the governing UX and service boundaries. P2-05 implementation validation cannot truthfully be reported until schema authorization and migration planning are complete.
+The implementation currently has the following local evidence:
 
-## Required authorization to resume
+- `pnpm exec vitest run src/__tests__/reactions.test.ts`: 5/5 passed.
+- `pnpm exec tsx scripts/p2_05_reaction_migration_safety.test.ts`: PASS.
+- Payload types regenerated after collection registration.
+- `pnpm exec tsc --noEmit`: PASS.
+- `pnpm test:release`: PASS, 164/164; the approved migration-order fixture was extended for migration 37.
+- `pnpm exec tsx scripts/release/runStagingPayloadMigration.test.ts`: PASS, 151/151.
+- Documentation and staging migration evidence remain pending until the guarded staging procedure is run.
 
-Approve one active reaction storage strategy, its migration/data disposition, and the target/index contract. Until that approval exists, P2-05 remains blocked at the schema boundary and the disabled P2-04 presentation is the correct runtime state.
+## Staging and rollback record
+
+Staging migration procedure, still pending:
+
+1. Confirm the exact implementation commit and staging-only database/schema boundary.
+2. Capture sanitized pre-migration migration state.
+3. Apply only `20260824_120000_engagement_reactions` through the guarded staging runner.
+4. Verify the new table, foreign keys, check constraint, indexes, and zero active rows before member use.
+5. Run staging authenticated add, switch, remove, count, and unauthorized-mutation checks.
+
+Rollback procedure:
+
+- Before active writes, roll back the application and remove the empty active table only through the guarded down migration.
+- After active writes, disable the write path and preserve active rows for forward repair; do not delete engagement data as a rollback shortcut.
+- Never roll back or rewrite `payload_space_reactions`.
+
+Changed files:
+
+- `src/collections/community/EngagementReactions.ts`
+- `src/collections/community/index.ts`
+- `src/migrations/20260824_120000_engagement_reactions.ts`
+- `src/migrations/index.ts`
+- `src/lib/payloadMigrationRegistry.ts`
+- `src/lib/payloadCourse/accessService.ts`
+- `src/lib/payloadCourse/reactions.ts`
+- `src/app/(frontend)/portal/reaction-actions.ts`
+- `src/components/community/EngagementPresentation.tsx`
+- community post and lesson page reaction wiring
+- `src/payload-types.ts` (generated)
+- `src/__tests__/reactions.test.ts`
+- `scripts/p2_05_reaction_migration_safety.test.ts`
+
+Current status: implementation is local and staging migration is pending. No staging or production write has occurred in this record. Production remains **NOT AUTHORIZED**.

@@ -28,12 +28,12 @@ async function main(): Promise<void> {
   includes(migration, 'payload_space_reactions_actor_type_comment_unique_idx', 'reaction migration')
   includes(migration, 'space_reactions_rollback_blocked_populated_table', 'reaction migration')
 
-  includes(documentation, 'BLOCKED_PENDING_SCHEMA_AUTHORIZATION', 'P2-05 documentation')
+  includes(documentation, 'IMPLEMENTATION_IN_PROGRESS', 'P2-05 documentation')
   includes(documentation, 'does **not** safely support', 'P2-05 documentation')
-  includes(documentation, 'No migration was created or run.', 'P2-05 documentation')
+  includes(documentation, 'Migration name: `20260824_120000_engagement_reactions`', 'P2-05 documentation')
   includes(documentation, 'lesson-comment relationship or target kind', 'P2-05 documentation')
   includes(documentation, 'one active reaction per member and target', 'P2-05 documentation')
-  includes(documentation, 'Approve one active reaction storage strategy', 'P2-05 documentation')
+  includes(documentation, 'Staging migration procedure, still pending:', 'P2-05 documentation')
 
   console.log('p2_05_reaction_preflight: PASS')
 }

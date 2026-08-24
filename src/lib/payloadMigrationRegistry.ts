@@ -35,6 +35,7 @@ export const PAYLOAD_MIGRATION_NAMES = [
   '20260818_140000_member_profile_parity',
   '20260818_140100_portal_settings',
   '20260820_000000_live_session_space',
+  '20260824_120000_engagement_reactions',
 ] as const
 
 export type PayloadMigrationName = (typeof PAYLOAD_MIGRATION_NAMES)[number]

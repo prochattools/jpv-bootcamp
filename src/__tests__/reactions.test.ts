@@ -1,0 +1,180 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+vi.mock('@/lib/payloadCourse/accessService', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/payloadCourse/accessService')>('@/lib/payloadCourse/accessService')
+  return {
+    ...actual,
+    evaluatePayloadSpaceAccess: vi.fn(),
+    evaluatePayloadLessonAccess: vi.fn(),
+  }
+})
+
+import {
+  evaluatePayloadLessonAccess,
+  evaluatePayloadSpaceAccess,
+} from '@/lib/payloadCourse/accessService'
+import {
+  getReactionSummary,
+  ReactionServiceError,
+  setReaction,
+  type PayloadReactionWriteAPI,
+} from '@/lib/payloadCourse/reactions'
+
+const mockedSpaceAccess = vi.mocked(evaluatePayloadSpaceAccess)
+const mockedLessonAccess = vi.mocked(evaluatePayloadLessonAccess)
+
+type Document = Record<string, any> & { id: number }
+
+function idOf(value: unknown): string {
+  if (value && typeof value === 'object' && 'id' in value) return String((value as { id: unknown }).id)
+  return String(value)
+}
+
+function matches(document: Document, where: any): boolean {
+  if (!where) return true
+  if (Array.isArray(where.and)) return where.and.every((condition) => matches(document, condition))
+  if (Array.isArray(where.or)) return where.or.some((condition) => matches(document, condition))
+
+  return Object.entries(where).every(([field, condition]: [string, any]) => {
+    const value = document[field]
+    if ('equals' in condition) return idOf(value) === String(condition.equals)
+    if ('greater_than_equal' in condition) return String(value) >= String(condition.greater_than_equal)
+    if ('in' in condition) return condition.in.map(String).includes(idOf(value))
+    return true
+  })
+}
+
+function makePayload(initial: Document[] = []) {
+  const collections: Record<string, Document[]> = {
+    payload_members: [{ id: 42, accountStatus: 'active', emailVerifiedAt: '2026-08-01T00:00:00.000Z', source: 'migration' }],
+    payload_space_posts: [{ id: 10, space: 20, moderationStatus: 'visible' }],
+    payload_lesson_comments: [{ id: 11, lesson: 30, moderationStatus: 'visible' }],
+    payload_audit_events: [],
+    payload_engagement_reactions: initial,
+  }
+  let nextId = 100
+
+  const payload = {
+    find: vi.fn(async (args: any) => ({
+      docs: (collections[args.collection] ?? [])
+        .filter((document) => matches(document, args.where))
+        .slice(0, args.limit ?? Number.MAX_SAFE_INTEGER),
+    })),
+    findByID: vi.fn(async (args: any) => {
+      const document = (collections[args.collection] ?? []).find((candidate) => String(candidate.id) === String(args.id))
+      if (!document) throw new Error('not found')
+      return document
+    }),
+    count: vi.fn(async (args: any) => ({
+      totalDocs: (collections[args.collection] ?? []).filter((document) => matches(document, args.where)).length,
+    })),
+    create: vi.fn(async (args: any) => {
+      const document = { id: nextId++, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), ...args.data }
+      ;(collections[args.collection] ??= []).push(document)
+      return document
+    }),
+    update: vi.fn(async (args: any) => {
+      const document = (collections[args.collection] ?? []).find((candidate) => candidate.id === args.id)
+      if (!document) throw new Error('not found')
+      Object.assign(document, args.data, { updatedAt: new Date().toISOString() })
+      return document
+    }),
+    delete: vi.fn(async (args: any) => {
+      const documents = collections[args.collection] ?? []
+      const index = documents.findIndex((candidate) => candidate.id === args.id)
+      if (index >= 0) documents.splice(index, 1)
+      return { id: args.id }
+    }),
+  }
+
+  return { payload: payload as unknown as PayloadReactionWriteAPI, collections }
+}
+
+beforeEach(() => {
+  vi.clearAllMocks()
+  mockedSpaceAccess.mockResolvedValue({ decision: { allowed: true, reason: 'allowed' } as never, resource: { type: 'space', id: '20' } })
+  mockedLessonAccess.mockResolvedValue({ decision: { allowed: true, reason: 'allowed' } as never, resource: { type: 'lesson', id: '30' } })
+})
+
+describe('P2-05 member reactions', () => {
+  it('creates a member-owned post reaction without touching the legacy collection', async () => {
+    const { payload, collections } = makePayload()
+
+    const result = await setReaction(payload, 42, { kind: 'space_post', id: 10 }, 'helpful')
+
+    expect(result).toEqual({ operation: 'created', reaction: 'helpful' })
+    expect(collections.payload_engagement_reactions).toHaveLength(1)
+    expect(collections.payload_engagement_reactions[0]).toMatchObject({
+      member: 42,
+      reactionType: 'helpful',
+      targetKind: 'space_post',
+      targetPost: 10,
+    })
+    expect(payload.create).not.toHaveBeenCalledWith(expect.objectContaining({ collection: 'payload_space_reactions' }))
+  })
+
+  it('switches reaction type in place and toggles the selected type off', async () => {
+    const { payload, collections } = makePayload()
+
+    await setReaction(payload, 42, { kind: 'space_post', id: 10 }, 'helpful')
+    await setReaction(payload, 42, { kind: 'space_post', id: 10 }, 'insightful')
+    expect(collections.payload_engagement_reactions).toHaveLength(1)
+    expect(collections.payload_engagement_reactions[0].reactionType).toBe('insightful')
+
+    const result = await setReaction(payload, 42, { kind: 'space_post', id: 10 }, 'insightful')
+    expect(result).toEqual({ operation: 'removed', reaction: null })
+    expect(collections.payload_engagement_reactions).toHaveLength(0)
+  })
+
+  it('returns server-derived counts and the authenticated member state', async () => {
+    const { payload } = makePayload([
+      { id: 1, member: 42, reactionType: 'helpful', targetKind: 'space_post', targetPost: 10 },
+      { id: 2, member: 99, reactionType: 'celebrate', targetKind: 'space_post', targetPost: 10 },
+    ])
+
+    const summary = await getReactionSummary(payload, 42, { kind: 'space_post', id: 10 })
+
+    expect(summary.totalCount).toBe(2)
+    expect(summary.viewerReaction).toBe('helpful')
+    expect(summary.counts).toEqual([
+      { reactionType: 'helpful', label: 'Helpful', count: 1 },
+      { reactionType: 'insightful', label: 'Insightful', count: 0 },
+      { reactionType: 'celebrate', label: 'Celebrate', count: 1 },
+    ])
+  })
+
+  it('fails closed for hidden, inaccessible, and unsupported targets', async () => {
+    const { payload } = makePayload()
+    const post = (await payload.findByID({ collection: 'payload_space_posts', id: 10 })) as any
+    post.moderationStatus = 'hidden'
+    await expect(setReaction(payload, 42, { kind: 'space_post', id: 10 }, 'helpful')).rejects.toMatchObject<ReactionServiceError>({ code: 'target_hidden' })
+
+    post.moderationStatus = 'visible'
+    mockedSpaceAccess.mockResolvedValueOnce({ decision: { allowed: false, reason: 'account_ineligible' } as never })
+    await expect(setReaction(payload, 42, { kind: 'space_post', id: 10 }, 'helpful')).rejects.toMatchObject<ReactionServiceError>({ code: 'target_inaccessible' })
+
+    await expect(setReaction(payload, 42, { kind: 'space_comment', id: 99 }, 'helpful')).rejects.toMatchObject<ReactionServiceError>({ code: 'target_not_supported' })
+  })
+
+  it('rejects mutation after the member reaction rate limit is reached', async () => {
+    const { payload } = makePayload()
+    const auditEvents = Array.from({ length: 30 }, (_, index) => ({
+      id: index + 1,
+      actorType: 'member',
+      actorId: '42',
+      action: 'reaction_created',
+      createdAt: new Date().toISOString(),
+    }))
+    payload.create({ collection: 'payload_audit_events', data: auditEvents[0] })
+    const collection = (payload as any)
+    // Seed the fake audit collection without using a production/runtime write path.
+    ;(collection as any).__audit = auditEvents
+    const originalFind = payload.find
+    payload.find = vi.fn(async (args: any) => {
+      if (args.collection === 'payload_audit_events') return { docs: auditEvents }
+      return originalFind(args)
+    }) as any
+
+    await expect(setReaction(payload, 42, { kind: 'space_post', id: 10 }, 'helpful')).rejects.toMatchObject<ReactionServiceError>({ code: 'rate_limited' })
+  })
+})

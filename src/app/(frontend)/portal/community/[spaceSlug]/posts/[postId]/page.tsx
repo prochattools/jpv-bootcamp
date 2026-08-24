@@ -8,10 +8,12 @@ import {
   EngagementFutureActions,
   EngagementReactionBar,
 } from '@/components/community/EngagementPresentation'
+import { submitReactionAction } from '@/app/(frontend)/portal/reaction-actions'
 import { ProgressiveCommentList } from '@/components/community/ProgressiveCommentList'
 import { StatusPill } from '@/components/portal/StatusPill'
 import { requirePortalMember } from '@/lib/auth/requirePortalMember'
 import { getMemberCommunityPostDetail } from '@/lib/payloadCourse/communityDiscussion'
+import { getReactionSummary } from '@/lib/payloadCourse/reactions'
 import type { MemberCommunityAttachmentResolution } from '@/lib/payloadCourse/communityFiles'
 import { submitCommunityComment } from '../../../actions'
 
@@ -84,6 +86,11 @@ export default async function PortalCommunityPostPage({ params, searchParams }: 
   if (!result.allowed) notFound()
 
   const post = result.post
+  const reactionSummary = await getReactionSummary(payload, memberId, {
+    kind: 'space_post',
+    id: post.id,
+  })
+  const requestedPath = `/portal/community/${encodeURIComponent(spaceSlug)}/posts/${encodeURIComponent(postId)}`
 
   return (
     <div className='mx-auto w-full max-w-5xl space-y-10'>
@@ -129,7 +136,17 @@ export default async function PortalCommunityPostPage({ params, searchParams }: 
 
         <div className='p-6 sm:p-10'>
           <CommunityRichText value={post.body} />
-          <EngagementReactionBar className='mt-8' label='Post engagement preview' />
+          <EngagementReactionBar
+            action={submitReactionAction}
+            className='mt-8'
+            counts={reactionSummary.counts}
+            label='Post reactions'
+            redirectPath={requestedPath}
+            targetId={post.id}
+            targetKind='space_post'
+            totalCount={reactionSummary.totalCount}
+            viewerReaction={reactionSummary.viewerReaction}
+          />
           <div className='mt-3'>
             <EngagementFutureActions />
           </div>

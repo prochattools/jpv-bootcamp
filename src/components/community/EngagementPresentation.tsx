@@ -7,7 +7,12 @@ export type EngagementReactionState = 'idle' | 'selected' | 'unavailable'
 export type EngagementReactionCount = {
   label: string
   count: number
+  reactionType?: 'helpful' | 'insightful' | 'celebrate'
 }
+
+export type EngagementReactionType = 'helpful' | 'insightful' | 'celebrate'
+
+type EngagementReactionAction = (formData: FormData) => void | Promise<void>
 
 type EngagementReactionSummaryProps = {
   counts?: readonly EngagementReactionCount[]
@@ -75,6 +80,10 @@ type EngagementReactionButtonProps = {
   state?: EngagementReactionState
   count?: number | null
   onPress?: () => void
+  interactive?: boolean
+  submit?: boolean
+  name?: string
+  value?: string
   className?: string
 }
 
@@ -83,9 +92,13 @@ export function EngagementReactionButton({
   state = 'unavailable',
   count = null,
   onPress,
+  interactive: interactiveOverride,
+  submit = false,
+  name,
+  value,
   className,
 }: EngagementReactionButtonProps) {
-  const interactive = typeof onPress === 'function'
+  const interactive = interactiveOverride ?? typeof onPress === 'function'
   const selected = state === 'selected'
 
   return (
@@ -104,8 +117,10 @@ export function EngagementReactionButton({
       data-engagement-component='reaction-button'
       data-reaction-state={state}
       disabled={!interactive}
+      name={name}
       onClick={onPress}
-      type='button'
+      type={submit ? 'submit' : 'button'}
+      value={value}
     >
       <ReactionIcon />
       <span>{interactive ? label : `${label} coming soon`}</span>
@@ -117,6 +132,11 @@ export function EngagementReactionButton({
 type EngagementReactionBarProps = {
   counts?: readonly EngagementReactionCount[]
   totalCount?: number | null
+  viewerReaction?: EngagementReactionType | null
+  action?: EngagementReactionAction
+  targetKind?: 'space_post' | 'space_comment' | 'lesson_comment'
+  targetId?: string | number
+  redirectPath?: string
   label?: string
   className?: string
 }
@@ -124,9 +144,36 @@ type EngagementReactionBarProps = {
 export function EngagementReactionBar({
   counts,
   totalCount,
+  viewerReaction = null,
+  action,
+  targetKind,
+  targetId,
+  redirectPath,
   label = 'Engagement',
   className,
 }: EngagementReactionBarProps) {
+  const activeCounts = new Map(
+    (counts ?? []).map((entry) => [entry.reactionType ?? entry.label.toLowerCase(), entry.count]),
+  )
+  const reactionOptions: readonly { type: EngagementReactionType; label: string }[] = [
+    { type: 'helpful', label: 'Helpful' },
+    { type: 'insightful', label: 'Insightful' },
+    { type: 'celebrate', label: 'Celebrate' },
+  ]
+
+  const buttons = reactionOptions.map((option) => (
+    <EngagementReactionButton
+      count={activeCounts.get(option.type) ?? 0}
+      interactive={Boolean(action && targetKind && targetId !== undefined && redirectPath)}
+      key={option.type}
+      label={option.label}
+      name='reactionType'
+      state={viewerReaction === option.type ? 'selected' : 'idle'}
+      submit={Boolean(action && targetKind && targetId !== undefined && redirectPath)}
+      value={option.type}
+    />
+  ))
+
   return (
     <section
       aria-label={label}
@@ -134,10 +181,19 @@ export function EngagementReactionBar({
       data-engagement-component='reaction-bar'
     >
       <EngagementReactionSummary counts={counts} totalCount={totalCount} />
-      <div className='flex flex-wrap items-center gap-3'>
-        <EngagementReactionButton />
-        <span className='text-xs text-jpv-muted'>Read-only preview</span>
-      </div>
+      {action && targetKind && targetId !== undefined && redirectPath ? (
+        <form action={action} className='flex flex-wrap items-center gap-3'>
+          <input name='targetKind' type='hidden' value={targetKind} />
+          <input name='targetId' type='hidden' value={String(targetId)} />
+          <input name='redirectPath' type='hidden' value={redirectPath} />
+          {buttons}
+        </form>
+      ) : (
+        <div className='flex flex-wrap items-center gap-3'>
+          <EngagementReactionButton />
+          <span className='text-xs text-jpv-muted'>Read-only preview</span>
+        </div>
+      )}
     </section>
   )
 }
