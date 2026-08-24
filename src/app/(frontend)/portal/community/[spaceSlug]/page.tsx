@@ -178,7 +178,7 @@ export default async function PortalCommunitySpacePage({ params, searchParams }:
               </p>
             </div>
 
-            <div aria-live='polite' className='mt-8 space-y-4'>
+            <div aria-live='polite' className='mx-auto mt-8 max-w-3xl space-y-3'>
               {detail.posts.length > 0 ? (
                 detail.posts.map((post) => (
                   <CommunityPostCard

@@ -5,7 +5,6 @@ import { CommunityRichText } from '@/components/community/CommunityRichText'
 import {
   EngagementAuthorIdentity,
   EngagementCommentActionBar,
-  EngagementFutureActions,
   EngagementReactionBar,
   reactionErrorMessage,
 } from '@/components/community/EngagementPresentation'
@@ -46,6 +45,23 @@ function formatDate(value: string | null) {
     day: 'numeric',
     year: 'numeric',
   }).format(date)
+}
+
+function formatRelative(value: string | null): string {
+  if (!value) return 'Date pending'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return 'Date pending'
+  const diffMs = Date.now() - date.getTime()
+  const diffSec = Math.floor(diffMs / 1000)
+  if (diffSec < 60) return 'just now'
+  const diffMin = Math.floor(diffSec / 60)
+  if (diffMin < 60) return `${diffMin}m ago`
+  const diffHr = Math.floor(diffMin / 60)
+  if (diffHr < 24) return `${diffHr}h ago`
+  const diffDay = Math.floor(diffHr / 24)
+  if (diffDay < 7) return `${diffDay}d ago`
+  if (diffDay < 30) return `${Math.floor(diffDay / 7)}w ago`
+  return formatDate(value)
 }
 
 function initials(value: string): string {
@@ -117,49 +133,79 @@ export default async function PortalCommunityPostPage({ params, searchParams }: 
   const requestedPath = `/portal/community/${encodeURIComponent(spaceSlug)}/posts/${encodeURIComponent(postId)}`
 
   return (
-    <div className='mx-auto w-full max-w-5xl space-y-10'>
-      <nav aria-label='Discussion path' className='flex min-h-11 flex-wrap items-center gap-2 text-sm'>
+    <div className='mx-auto w-full max-w-3xl space-y-6'>
+
+      {/* 1. Breadcrumb */}
+      <nav aria-label='Discussion path' className='flex min-h-11 flex-wrap items-center gap-1.5 text-xs text-jpv-muted'>
         <Link
-          className='font-bold text-jpv-sunshine-ink underline-offset-4 hover:text-jpv-brand-deep hover:underline'
+          className='font-semibold text-jpv-sunshine-ink underline-offset-4 hover:text-jpv-brand-deep hover:underline'
           href='/portal/community'
         >
           Community
         </Link>
-        <span aria-hidden='true' className='text-jpv-muted'>/</span>
+        <span aria-hidden='true'>/</span>
         <Link
-          className='font-semibold text-jpv-muted underline-offset-4 hover:text-jpv-brand-deep hover:underline'
+          className='underline-offset-4 hover:text-jpv-brand-deep hover:underline'
           href={`/portal/community/${encodeURIComponent(post.space.slug)}`}
         >
           {post.space.name}
         </Link>
-        <span aria-hidden='true' className='text-jpv-muted'>/</span>
-        <span className='max-w-full truncate text-jpv-muted'>{post.title}</span>
+        <span aria-hidden='true'>/</span>
+        <span className='max-w-[12rem] truncate sm:max-w-xs'>{post.title}</span>
       </nav>
 
-      <article aria-labelledby='community-post-heading' className='overflow-hidden rounded-jpv-panel border border-jpv-border bg-jpv-canvas shadow-jpv-card'>
-        <header className='bg-jpv-brand-deep p-8 text-jpv-canvas sm:p-10'>
-          <div className='flex flex-wrap gap-3'>
-            <StatusPill tone='neutral'>{post.postType}</StatusPill>
-            {post.pinned && <StatusPill tone='neutral'>Pinned</StatusPill>}
-            {post.locked && <StatusPill tone='warn'>Comments locked</StatusPill>}
-          </div>
-          <h1 className='mt-6 text-4xl font-bold leading-tight tracking-tight sm:text-5xl' id='community-post-heading'>{post.title}</h1>
-          <div className='mt-6 flex items-center gap-3'>
-            <span aria-hidden='true' className='flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-jpv-canvas text-sm font-bold text-jpv-brand-deep'>
-              {initials(post.authorName)}
-            </span>
-            <div>
-              <p className='text-sm font-semibold text-jpv-canvas'>{post.authorName}</p>
-              <time className='mt-1 block text-xs text-jpv-inverse-muted' dateTime={post.createdAt ?? undefined}>
-                {formatDate(post.createdAt)}
-              </time>
+      {/* 2–6. Post card */}
+      <article
+        aria-labelledby='community-post-heading'
+        className='overflow-hidden rounded-xl border border-jpv-border bg-jpv-canvas shadow-jpv-card'
+      >
+        {/* 2. Post header: type badge + author + timestamp */}
+        <header className='border-b border-jpv-border bg-jpv-surface px-6 py-5 sm:px-8'>
+          <div className='flex flex-wrap items-start justify-between gap-3'>
+            <div className='flex flex-wrap gap-2'>
+              <StatusPill tone='neutral'>{post.postType}</StatusPill>
+              {post.pinned && <StatusPill tone='neutral'>Pinned</StatusPill>}
+              {post.locked && <StatusPill tone='warn'>Comments locked</StatusPill>}
             </div>
           </div>
-          <p className='mt-2 text-xs text-jpv-inverse-muted'>{memberEmail}</p>
+          <div className='mt-3 flex items-center gap-3'>
+            <span
+              aria-hidden='true'
+              className='flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-jpv-brand-deep text-xs font-bold text-jpv-canvas'
+            >
+              {initials(post.authorName)}
+            </span>
+            <div className='min-w-0'>
+              <p className='text-sm font-semibold text-jpv-ink'>{post.authorName}</p>
+              <p className='text-xs text-jpv-muted'>{memberEmail}</p>
+            </div>
+            <time
+              className='ml-auto shrink-0 text-xs text-jpv-muted'
+              dateTime={post.createdAt ?? undefined}
+              title={formatDate(post.createdAt)}
+            >
+              {formatRelative(post.createdAt)}
+            </time>
+          </div>
         </header>
 
-        <div className='p-6 sm:p-10'>
+        {/* 3. Post title */}
+        <div className='px-6 pt-6 sm:px-8 sm:pt-8'>
+          <h1
+            className='text-2xl font-bold leading-snug tracking-tight text-jpv-brand-deep sm:text-3xl'
+            id='community-post-heading'
+          >
+            {post.title}
+          </h1>
+        </div>
+
+        {/* 4. Post body */}
+        <div className='px-6 pt-5 sm:px-8'>
           <CommunityRichText value={post.body} />
+        </div>
+
+        {/* Reaction bar */}
+        <div className='px-6 sm:px-8'>
           <EngagementReactionBar
             action={submitReactionAction}
             className='mt-8'
@@ -172,22 +218,41 @@ export default async function PortalCommunityPostPage({ params, searchParams }: 
             totalCount={reactionSummary?.totalCount}
             viewerReaction={reactionSummary?.viewerReaction}
           />
-          <div className='mt-3'>
-            <EngagementFutureActions />
+        </div>
+
+        {/* 6. Action row: bookmark + comment count + share */}
+        <div className='px-6 py-5 sm:px-8 sm:pb-6'>
+          <div className='flex flex-wrap items-center gap-2'>
+            <span className='inline-flex min-h-11 items-center gap-2 rounded-jpv-pill border border-jpv-border bg-jpv-surface px-4 py-2 text-xs font-semibold text-jpv-muted'>
+              <svg aria-hidden='true' className='h-4 w-4' fill='none' viewBox='0 0 24 24'>
+                <path d='M5 5v14l7-4 7 4V5H5Z' stroke='currentColor' strokeLinecap='round' strokeLinejoin='round' strokeWidth='1.75' />
+              </svg>
+              Bookmark
+            </span>
+            <span className='inline-flex min-h-11 items-center gap-2 rounded-jpv-pill border border-jpv-border bg-jpv-surface px-4 py-2 text-xs font-semibold text-jpv-muted'>
+              <svg aria-hidden='true' className='h-4 w-4' fill='none' viewBox='0 0 24 24'>
+                <path d='M5 6.5h14v9H9l-4 3v-12Z' stroke='currentColor' strokeLinecap='round' strokeLinejoin='round' strokeWidth='1.75' />
+              </svg>
+              {post.comments.length} {post.comments.length === 1 ? 'comment' : 'comments'}
+            </span>
+            <span className='inline-flex min-h-11 items-center gap-2 rounded-jpv-pill border border-jpv-border bg-jpv-surface px-4 py-2 text-xs font-semibold text-jpv-muted'>
+              <svg aria-hidden='true' className='h-4 w-4' fill='none' viewBox='0 0 24 24'>
+                <path d='M4 12v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4M16 6l-4-4-4 4M12 2v13' stroke='currentColor' strokeLinecap='round' strokeLinejoin='round' strokeWidth='1.75' />
+              </svg>
+              Share
+            </span>
           </div>
         </div>
       </article>
 
+      {/* 5. Attachments */}
       {post.attachments.length > 0 && (
-        <section>
-          <div className='flex flex-wrap items-end justify-between gap-4'>
-            <div>
-              <p className='text-xs font-bold uppercase tracking-[0.2em] text-jpv-sunshine-ink'>Attachments</p>
-              <h2 className='mt-2 text-3xl font-bold tracking-tight text-jpv-brand-deep'>Visible attachments</h2>
-            </div>
-          </div>
-
-          <div className='mt-6 grid gap-4 md:grid-cols-2'>
+        <section className='rounded-xl border border-jpv-border bg-jpv-canvas p-6 shadow-jpv-card sm:p-8'>
+          <p className='text-xs font-bold uppercase tracking-[0.2em] text-jpv-sunshine-ink'>Attachments</p>
+          <h2 className='mt-1 text-lg font-bold tracking-tight text-jpv-brand-deep'>
+            {post.attachments.length} {post.attachments.length === 1 ? 'file' : 'files'}
+          </h2>
+          <div className='mt-4 grid gap-4 sm:grid-cols-2'>
             {post.attachments.map((attachment, index) => (
               <AttachmentCard
                 attachment={attachment}
@@ -198,6 +263,7 @@ export default async function PortalCommunityPostPage({ params, searchParams }: 
         </section>
       )}
 
+      {/* Submission feedback notices */}
       {query.submission === 'pending' && (
         <div className='jpv-notice'>
           Your reply has been published.
@@ -215,34 +281,44 @@ export default async function PortalCommunityPostPage({ params, searchParams }: 
         </div>
       )}
 
+      {/* 7. Discussion section */}
       <section aria-labelledby='community-comments-heading'>
         <div className='flex flex-wrap items-end justify-between gap-4'>
           <div>
             <p className='text-xs font-bold uppercase tracking-[0.2em] text-jpv-sunshine-ink'>Discussion</p>
-            <h2 className='mt-2 text-3xl font-bold tracking-tight text-jpv-brand-deep' id='community-comments-heading'>Comments</h2>
+            <h2 className='mt-1 text-xl font-bold tracking-tight text-jpv-brand-deep' id='community-comments-heading'>
+              Comments
+            </h2>
           </div>
         </div>
         <EngagementCommentActionBar
-          className='mt-6'
+          className='mt-3'
           commentCount={post.comments.length}
           replyLabel={post.canComment ? 'Reply in the composer below' : 'Replies are currently unavailable'}
         />
 
-        <div className='mt-7'>
+        {/* Divider between post body area and comment list */}
+        <hr className='mt-4 border-jpv-border' />
+
+        <div className='mt-5 space-y-4'>
           {post.comments.length > 0 ? (
             <ProgressiveCommentList totalCount={post.comments.length}>
               {post.comments.map((comment) => (
                 <article
-                  className='rounded-jpv-card border border-jpv-border bg-jpv-canvas p-5 shadow-jpv-card sm:p-6'
+                  className='rounded-xl border border-jpv-border bg-jpv-canvas p-5 shadow-jpv-card sm:p-6'
                   key={comment.id}
                 >
-                  <div className='flex flex-wrap items-center justify-between gap-3'>
-                    <EngagementAuthorIdentity name={comment.authorName} />
-                    <time className='text-xs font-semibold uppercase tracking-[0.1em] text-jpv-sunshine-ink'>
+                  <div className='flex flex-wrap items-start justify-between gap-3'>
+                    <EngagementAuthorIdentity
+                      name={comment.authorName}
+                      timestampLabel={formatRelative(comment.createdAt)}
+                      timestampValue={comment.createdAt ?? undefined}
+                    />
+                    <time className='shrink-0 text-xs text-jpv-muted' dateTime={comment.createdAt ?? undefined}>
                       {formatDate(comment.createdAt)}
                     </time>
                   </div>
-                  <div className='mt-4'>
+                  <div className='mt-4 border-l-2 border-jpv-border pl-4'>
                     <CommunityRichText value={comment.body} />
                   </div>
                   {commentReactionSummaries.get(comment.id) ? (
@@ -263,16 +339,20 @@ export default async function PortalCommunityPostPage({ params, searchParams }: 
               ))}
             </ProgressiveCommentList>
           ) : (
-            <div className='rounded-jpv-card border border-dashed border-jpv-border bg-jpv-surface p-6 text-sm leading-6 text-jpv-muted'>
+            <div className='rounded-xl border border-dashed border-jpv-border bg-jpv-surface p-6 text-sm leading-6 text-jpv-muted'>
               No visible comments have been published for this discussion.
             </div>
           )}
         </div>
       </section>
 
+      {/* 8. Reply form */}
       {post.canComment && (
-        <section aria-labelledby='community-reply-heading' className='rounded-jpv-panel border border-jpv-border bg-jpv-canvas p-6 shadow-jpv-card sm:p-8'>
-          <h2 className='text-2xl font-bold text-jpv-brand-deep' id='community-reply-heading'>Leave a reply</h2>
+        <section
+          aria-labelledby='community-reply-heading'
+          className='rounded-xl border border-jpv-border bg-jpv-canvas p-6 shadow-jpv-card sm:p-8'
+        >
+          <h2 className='text-xl font-bold text-jpv-brand-deep' id='community-reply-heading'>Leave a reply</h2>
           <p className='mt-2 text-sm leading-6 text-jpv-muted'>Keep your reply focused on the discussion so it is easy for other learners to follow.</p>
           <form
             action={submitCommunityComment.bind(null, spaceSlug, postId)}

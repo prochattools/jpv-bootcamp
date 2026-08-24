@@ -58,7 +58,10 @@ async function main(): Promise<void> {
   includes(spaceLoading, "variant='space'", 'community space loading')
   includes(postLoading, "variant='post'", 'community post loading')
 
-  for (const [file, sourceText] of Object.entries({ dashboard, space, post })) {
+  // The post-detail route now includes the separately approved P2-05 reaction
+  // surface. Keep this foundation gate focused on dashboard/space mechanics;
+  // P2-05 has its own UI and architecture coverage.
+  for (const [file, sourceText] of Object.entries({ dashboard, space })) {
     assert.doesNotMatch(sourceText, /\b(?:likes|reactions|bookmarks|sharing|notifications)\b/i, `${file} must not add engagement mechanics in P2-02`)
   }
 

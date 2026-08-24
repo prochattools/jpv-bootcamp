@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { Download, FileText } from 'lucide-react'
 
 import { MemberFeaturedImage } from '@/components/portal/MemberContentMedia'
 import { submitReactionAction } from '@/app/(frontend)/portal/reaction-actions'
@@ -253,6 +254,7 @@ export default async function PortalLessonPage({ params, searchParams }: LessonP
   const reactionError = firstParam(query?.reaction) === 'error'
     ? reactionErrorMessage(firstParam(query?.reason))
     : null
+  const discussionIsOpen = firstParam(query?.discussion) === 'posted' || firstParam(query?.discussion) === 'error'
   if (discussion?.allowed) {
     try {
       const summaries = await getLessonCommentReactionSummaries(
@@ -269,16 +271,22 @@ export default async function PortalLessonPage({ params, searchParams }: LessonP
   }
 
   return (
-    <div className='mx-auto w-full max-w-5xl space-y-8'>
-      <nav aria-label='Learning path' className='flex min-h-11 flex-wrap items-center gap-2 text-sm'>
-        <Link
-          className='font-semibold text-jpv-inverse-muted underline-offset-4 hover:text-jpv-ink hover:underline'
-          href={`/portal/courses/${courseSlug}`}
-        >
-          ← Back to {detail.course.title}
-        </Link>
-        <span aria-hidden='true' className='text-jpv-muted'>/</span>
-        <span className='text-jpv-muted'>{detail.module.title}</span>
+    <div className='mx-auto w-full max-w-4xl space-y-8'>
+      <nav aria-label='Learning path' className='text-sm text-jpv-muted'>
+        <ol className='flex min-h-11 flex-wrap items-center gap-x-2 gap-y-1'>
+          <li>
+            <Link
+              className='font-semibold text-jpv-inverse-muted underline-offset-4 hover:text-jpv-ink hover:underline'
+              href={`/portal/courses/${courseSlug}`}
+            >
+              {detail.course.title}
+            </Link>
+          </li>
+          <li aria-hidden='true'>/</li>
+          <li>{detail.module.title}</li>
+          <li aria-hidden='true'>/</li>
+          <li className='font-medium text-jpv-ink'>{detail.lesson?.title ?? 'Lesson'}</li>
+        </ol>
       </nav>
 
       {!detail.allowed || !detail.lesson ? (
@@ -328,7 +336,22 @@ export default async function PortalLessonPage({ params, searchParams }: LessonP
             </p>
           ) : null}
 
-          <MemberFeaturedImage asset={detail.lesson.coverImage} />
+          <section aria-labelledby='lesson-media-heading' className='space-y-4'>
+            <h2 className='sr-only' id='lesson-media-heading'>Lesson media</h2>
+            {detail.lesson.coverImage ? (
+              <div className='mx-auto max-h-[480px] w-full overflow-hidden rounded-jpv-panel'>
+                <MemberFeaturedImage asset={detail.lesson.coverImage} />
+              </div>
+            ) : null}
+            <div className='mx-auto w-full max-w-4xl [&>div]:max-h-[480px]'>
+              <LessonVideoPlayer
+                lessonSlug={lessonSlug}
+                status={detail.lesson.managedVideo?.status}
+                thumbnailUrl={detail.lesson.managedVideo?.thumbnailUrl}
+                title={detail.lesson.managedVideo?.title ?? 'Lesson video'}
+              />
+            </div>
+          </section>
 
           <section aria-labelledby='lesson-content-heading' className='rounded-jpv-panel border border-jpv-border bg-jpv-canvas p-6 shadow-jpv-card sm:p-8'>
             <h2 className='text-xl font-semibold text-jpv-ink' id='lesson-content-heading'>Lesson content</h2>
@@ -343,166 +366,185 @@ export default async function PortalLessonPage({ params, searchParams }: LessonP
                 <p className='mt-1 text-sm'>This lesson will be available shortly.</p>
               </div>
             ) : null}
-            <LessonVideoPlayer
-              lessonSlug={lessonSlug}
-              status={detail.lesson.managedVideo?.status}
-              thumbnailUrl={detail.lesson.managedVideo?.thumbnailUrl}
-              title={detail.lesson.managedVideo?.title ?? 'Lesson video'}
-            />
             {detail.lesson.contentLexical ? (
               <LegacyLessonRichText data={detail.lesson.contentLexical} lessonSlug={lessonSlug} />
             ) : null}
+          </section>
 
-            {detail.lesson.resources.length > 0 ? (
-              <div className='mt-8 space-y-4'>
-                <h3 className='text-lg font-semibold'>Lesson resources</h3>
-                <div className='grid gap-4'>
-                  {detail.lesson.resources.map((resource) => {
-                    const formattedSize = formatFileSize(resource.fileSize)
-
-                    return (
-                      <article className='rounded-xl border border-jpv-border p-5' key={resource.downloadUrl}>
-                        <div className='flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between'>
-                          <div>
-                            <h4 className='font-semibold text-jpv-ink'>{resource.title}</h4>
-                            {resource.description ? (
-                              <p className='mt-2 text-sm leading-6 text-jpv-muted'>{resource.description}</p>
-                            ) : null}
-                            {resource.fileName || formattedSize ? (
-                              <p className='mt-3 text-xs text-jpv-muted'>
-                                {[resource.fileName, formattedSize].filter(Boolean).join(' · ')}
-                              </p>
-                            ) : null}
-                          </div>
-
-                          <a
-                            className='jpv-button-primary inline-flex shrink-0'
-                            href={resource.downloadUrl}
-                          >
-                            Download
-                          </a>
-                        </div>
-                      </article>
-                    )
-                  })}
+          {detail.lesson.resources.length > 0 ? (
+            <section aria-labelledby='lesson-resources-heading' className='rounded-jpv-panel border border-jpv-border bg-jpv-canvas p-6 shadow-jpv-card sm:p-8'>
+              <div className='flex items-end justify-between gap-4'>
+                <div>
+                  <p className='jpv-eyebrow'>Downloads</p>
+                  <h2 className='mt-2 text-xl font-semibold text-jpv-ink' id='lesson-resources-heading'>Lesson resources</h2>
                 </div>
+                <span className='text-sm text-jpv-muted'>{detail.lesson.resources.length} available</span>
               </div>
-            ) : null}
-          </section>
+              <div className='mt-5 grid gap-3'>
+                {detail.lesson.resources.map((resource) => {
+                  const formattedSize = formatFileSize(resource.fileSize)
 
-          <section aria-labelledby='lesson-progress-heading' className='flex flex-col gap-4 rounded-jpv-panel border border-jpv-border bg-jpv-canvas p-6 shadow-jpv-card md:flex-row md:items-center md:justify-between'>
-            <div>
-              <h2 className='font-semibold text-jpv-ink' id='lesson-progress-heading'>Next step: lesson progress</h2>
-              <p className='mt-1 text-sm text-jpv-muted'>
-                {detail.lesson.completed
-                  ? 'This lesson is marked complete.'
-                  : 'Mark this lesson complete when you are ready to continue.'}
-              </p>
-            </div>
+                  return (
+                    <article className='flex flex-col gap-4 rounded-jpv-card border border-jpv-border bg-jpv-surface p-4 sm:flex-row sm:items-center sm:justify-between' key={resource.downloadUrl}>
+                      <div className='flex min-w-0 items-start gap-3'>
+                        <span aria-hidden='true' className='flex h-10 w-10 shrink-0 items-center justify-center rounded-jpv-card bg-jpv-brand/10 text-jpv-brand-deep'>
+                          <FileText className='h-5 w-5' />
+                        </span>
+                        <div className='min-w-0'>
+                          <h3 className='font-semibold text-jpv-ink'>{resource.title}</h3>
+                          {resource.description ? (
+                            <p className='mt-1 text-sm leading-6 text-jpv-muted'>{resource.description}</p>
+                          ) : null}
+                          {resource.fileName || formattedSize ? (
+                            <p className='mt-2 text-xs text-jpv-muted'>
+                              {[resource.fileName, formattedSize].filter(Boolean).join(' · ')}
+                            </p>
+                          ) : null}
+                        </div>
+                      </div>
 
-            {!detail.lesson.completed ? (
-              <form action={completeLesson}>
-                <input name='courseSlug' type='hidden' value={courseSlug} />
-                <input name='lessonSlug' type='hidden' value={lessonSlug} />
-                <button className='jpv-button-primary min-h-11' type='submit'>
-                  Mark complete
-                </button>
-              </form>
-            ) : null}
-          </section>
+                      <a
+                        aria-label={`Download ${resource.title}`}
+                        className='jpv-button-secondary inline-flex min-h-11 shrink-0 items-center justify-center gap-2'
+                        href={resource.downloadUrl}
+                      >
+                        <Download aria-hidden='true' className='h-4 w-4' />
+                        Download
+                      </a>
+                    </article>
+                  )
+                })}
+              </div>
+            </section>
+          ) : null}
 
           <section aria-labelledby='lesson-discussion-heading' className='scroll-mt-24 rounded-jpv-panel border border-jpv-border bg-jpv-canvas p-6 shadow-jpv-card sm:p-8' id='lesson-discussion'>
-            <div className='flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between'>
-              <div>
-                <p className='jpv-eyebrow'>Community</p>
-                <h2 className='mt-2 text-xl font-semibold text-jpv-ink' id='lesson-discussion-heading'>Lesson discussion</h2>
-                <p className='mt-2 max-w-2xl text-sm leading-6 text-jpv-muted'>
-                  Ask questions, share insights, and reply to other members about this lesson.
-                </p>
-              </div>
-            </div>
-            <EngagementCommentActionBar
-              className='mt-5'
-              commentCount={discussion?.comments.length ?? 0}
-              replyLabel='Replies remain available through the existing discussion flow'
-            />
-            <div className='mt-3'>
-              <EngagementFutureActions />
-            </div>
-
-            {firstParam(query?.discussion) === 'posted' ? (
-              <p className='jpv-notice mt-5 rounded-jpv-card px-4 py-3 text-sm font-medium' role='status'>
-                Your discussion comment was posted.
-              </p>
-            ) : null}
-            {firstParam(query?.discussion) === 'error' ? (
-              <p className='jpv-notice jpv-notice-danger mt-5 rounded-xl px-4 py-3 text-sm font-medium'>
-                {firstParam(query?.reason) === 'rate_limit'
-                  ? 'You are posting too quickly. Please try again shortly.'
-                  : firstParam(query?.reason) === 'validation'
-                    ? 'Please enter a valid discussion comment.'
-                    : firstParam(query?.reason) === 'not_allowed'
-                      ? 'This discussion action is not available for your account or lesson.'
-                      : 'Unable to post the discussion comment right now.'}
-              </p>
-            ) : null}
-
-            <div className='mt-6'>
-              {discussion?.allowed && discussion.comments.length > 0 ? (
-                <LessonCommentThread
-                  comments={discussion.comments}
-                  parentId={null}
-                  courseSlug={courseSlug}
-                  lessonSlug={lessonSlug}
-                  reactionSummaries={reactionSummaries}
-                  reactionError={reactionError}
-                />
-              ) : (
-                <div className='rounded-xl border border-dashed border-jpv-border px-5 py-6 text-sm text-jpv-muted'>
-                  No discussion comments yet. Start the conversation below.
+            <details className='group' open={discussionIsOpen}>
+              <summary className='list-none cursor-pointer rounded-jpv-card outline-none focus-visible:ring-2 focus-visible:ring-jpv-green'>
+                <div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
+                  <div>
+                    <p className='jpv-eyebrow'>Community</p>
+                    <h2 className='mt-2 text-xl font-semibold text-jpv-ink' id='lesson-discussion-heading'>Lesson discussion</h2>
+                    <p className='mt-2 max-w-2xl text-sm leading-6 text-jpv-muted'>
+                      Ask questions, share insights, and reply to other members about this lesson.
+                    </p>
+                  </div>
+                  <div className='flex flex-wrap items-center gap-3'>
+                    <span className='text-sm font-semibold text-jpv-muted'>
+                      {discussion?.comments.length ?? 0} {(discussion?.comments.length ?? 0) === 1 ? 'comment' : 'comments'}
+                    </span>
+                    <span className='jpv-button-secondary inline-flex min-h-11 items-center'>View discussion</span>
+                  </div>
                 </div>
-              )}
-            </div>
+              </summary>
 
-            <form action={submitLessonDiscussionComment} className='mt-7 space-y-3 border-t border-jpv-border pt-6'>
-              <input name='courseSlug' type='hidden' value={courseSlug} />
-              <input name='lessonSlug' type='hidden' value={lessonSlug} />
-              <label className='block text-sm font-semibold text-jpv-ink' htmlFor='lesson-discussion-body'>
-                Add to the discussion
-              </label>
-              <textarea
-                className='min-h-28 w-full rounded-xl border border-jpv-border bg-jpv-canvas px-4 py-3 text-sm outline-none focus:border-jpv-brand'
-                id='lesson-discussion-body'
-                maxLength={10_000}
-                name='body'
-                placeholder='Share a question, insight, or response about this lesson.'
-                required
-              />
-              <button className='jpv-button-primary min-h-11' type='submit'>Post comment</button>
-            </form>
+              <div className='mt-6 border-t border-jpv-border pt-6'>
+                <EngagementCommentActionBar
+                  commentCount={discussion?.comments.length ?? 0}
+                  replyLabel='Replies remain available through the existing discussion flow'
+                />
+                <div className='mt-3'>
+                  <EngagementFutureActions />
+                </div>
+
+                {firstParam(query?.discussion) === 'posted' ? (
+                  <p className='jpv-notice mt-5 rounded-jpv-card px-4 py-3 text-sm font-medium' role='status'>
+                    Your discussion comment was posted.
+                  </p>
+                ) : null}
+                {firstParam(query?.discussion) === 'error' ? (
+                  <p className='jpv-notice jpv-notice-danger mt-5 rounded-xl px-4 py-3 text-sm font-medium'>
+                    {firstParam(query?.reason) === 'rate_limit'
+                      ? 'You are posting too quickly. Please try again shortly.'
+                      : firstParam(query?.reason) === 'validation'
+                        ? 'Please enter a valid discussion comment.'
+                        : firstParam(query?.reason) === 'not_allowed'
+                          ? 'This discussion action is not available for your account or lesson.'
+                          : 'Unable to post the discussion comment right now.'}
+                  </p>
+                ) : null}
+
+                <div className='mt-6'>
+                  {discussion?.allowed && discussion.comments.length > 0 ? (
+                    <LessonCommentThread
+                      comments={discussion.comments}
+                      parentId={null}
+                      courseSlug={courseSlug}
+                      lessonSlug={lessonSlug}
+                      reactionSummaries={reactionSummaries}
+                      reactionError={reactionError}
+                    />
+                  ) : (
+                    <div className='rounded-xl border border-dashed border-jpv-border px-5 py-6 text-sm text-jpv-muted'>
+                      No discussion comments yet. Start the conversation below.
+                    </div>
+                  )}
+                </div>
+
+                <form action={submitLessonDiscussionComment} className='mt-7 space-y-3 border-t border-jpv-border pt-6'>
+                  <input name='courseSlug' type='hidden' value={courseSlug} />
+                  <input name='lessonSlug' type='hidden' value={lessonSlug} />
+                  <label className='block text-sm font-semibold text-jpv-ink' htmlFor='lesson-discussion-body'>
+                    Add to the discussion
+                  </label>
+                  <textarea
+                    className='min-h-28 w-full rounded-xl border border-jpv-border bg-jpv-canvas px-4 py-3 text-sm outline-none focus:border-jpv-brand'
+                    id='lesson-discussion-body'
+                    maxLength={10_000}
+                    name='body'
+                    placeholder='Share a question, insight, or response about this lesson.'
+                    required
+                  />
+                  <button className='jpv-button-primary min-h-11' type='submit'>Post comment</button>
+                </form>
+              </div>
+            </details>
           </section>
 
-          <nav aria-label='Lesson navigation' className='flex items-center justify-between gap-4'>
-            {detail.previousLesson?.slug ? (
-              <Link
-                className='inline-flex min-h-11 min-w-0 items-center truncate text-sm font-semibold text-jpv-inverse-muted underline-offset-4 hover:text-jpv-ink hover:underline'
-                href={`/portal/courses/${courseSlug}/lessons/${detail.previousLesson.slug}`}
-              >
-                ← {detail.previousLesson.title}
-              </Link>
-            ) : (
-              <span />
-            )}
+          <section aria-labelledby='lesson-progress-heading' className='sticky bottom-4 z-20 rounded-jpv-panel border border-jpv-border bg-jpv-canvas p-5 shadow-jpv-card sm:p-6'>
+            <div className='flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between'>
+              <div className='min-w-0'>
+                <h2 className='font-semibold text-jpv-ink' id='lesson-progress-heading'>Next step: lesson progress</h2>
+                <p className='mt-1 text-sm text-jpv-muted'>
+                  {detail.lesson.completed
+                    ? 'This lesson is marked complete.'
+                    : 'Mark this lesson complete when you are ready to continue.'}
+                </p>
+              </div>
 
-            {detail.nextLesson?.slug ? (
-              <Link
-                className='inline-flex min-h-11 min-w-0 items-center truncate text-right text-sm font-semibold text-jpv-inverse-muted underline-offset-4 hover:text-jpv-ink hover:underline'
-                href={`/portal/courses/${courseSlug}/lessons/${detail.nextLesson.slug}`}
-              >
-                {detail.nextLesson.title} →
-              </Link>
-            ) : null}
-          </nav>
+              {!detail.lesson.completed ? (
+                <form action={completeLesson} className='shrink-0'>
+                  <input name='courseSlug' type='hidden' value={courseSlug} />
+                  <input name='lessonSlug' type='hidden' value={lessonSlug} />
+                  <button className='jpv-button-primary min-h-11 w-full sm:w-auto' type='submit'>
+                    Mark complete
+                  </button>
+                </form>
+              ) : null}
+            </div>
+
+            <nav aria-label='Lesson navigation' className='mt-4 grid min-w-0 gap-2 border-t border-jpv-border pt-4 sm:grid-cols-2'>
+              {detail.previousLesson?.slug ? (
+                <Link
+                  className='inline-flex min-h-11 min-w-0 items-center truncate text-sm font-semibold text-jpv-inverse-muted underline-offset-4 hover:text-jpv-ink hover:underline'
+                  href={`/portal/courses/${courseSlug}/lessons/${detail.previousLesson.slug}`}
+                >
+                  ← {detail.previousLesson.title}
+                </Link>
+              ) : (
+                <span />
+              )}
+
+              {detail.nextLesson?.slug ? (
+                <Link
+                  className='inline-flex min-h-11 min-w-0 items-center justify-start truncate text-sm font-semibold text-jpv-inverse-muted underline-offset-4 hover:text-jpv-ink hover:underline sm:justify-end'
+                  href={`/portal/courses/${courseSlug}/lessons/${detail.nextLesson.slug}`}
+                >
+                  {detail.nextLesson.title} →
+                </Link>
+              ) : null}
+            </nav>
+          </section>
         </>
       )}
     </div>
