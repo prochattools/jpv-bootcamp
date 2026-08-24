@@ -45,6 +45,12 @@ function matchesCondition(value: unknown, condition: unknown): boolean {
     return value.some((item) => relationValue(item) === String(record.contains))
   }
 
+  if ('in' in record && Array.isArray(record.in)) {
+    const haystack = record.in.map(String)
+    if (Array.isArray(value)) return value.some((item) => haystack.includes(relationValue(item)))
+    return haystack.includes(relationValue(value))
+  }
+
   return false
 }
 
