@@ -7,6 +7,7 @@ import { postgresAdapter } from '@payloadcms/db-postgres'
 import { BlocksFeature, lexicalEditor } from '@payloadcms/richtext-lexical'
 import { s3Storage } from '@payloadcms/storage-s3'
 import { PayloadUsers } from './collections/PayloadUsers'
+import { PayloadPortalNavItems } from './collections/PayloadPortalNavItems'
 import { PayloadMedia } from './collections/PayloadMedia'
 import { PayloadPages } from './collections/PayloadPages'
 import { PayloadPosts } from './collections/PayloadPosts'
@@ -207,6 +208,8 @@ export default buildConfig({
     ...crmCollections,
     // Membership Support
     ...membershipSupportCollections,
+    // Settings
+    PayloadPortalNavItems,
   ],
   editor: lexicalEditor({
     features: ({ defaultFeatures }) => [

@@ -5,19 +5,24 @@ import { useState } from 'react'
 
 import { PortalSidebar } from '@/components/portal/PortalSidebar'
 import { PortalTopBar } from '@/components/portal/PortalTopBar'
+import type { PortalNavGroup, PortalNavItem } from '@/lib/portal-navigation'
 
 type PortalShellProps = {
   children: ReactNode
   showLogout: boolean
+  navPinned?: PortalNavItem[]
+  navGroups?: PortalNavGroup[]
 }
 
-export function PortalShell({ children, showLogout }: PortalShellProps) {
+export function PortalShell({ children, showLogout, navPinned, navGroups }: PortalShellProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   return (
     <div className='grid h-full min-h-0 min-w-0 lg:grid-cols-[260px_minmax(0,1fr)]'>
       <PortalSidebar
         mobileOpen={mobileMenuOpen}
+        navGroups={navGroups}
+        navPinned={navPinned}
         onMobileClose={() => setMobileMenuOpen(false)}
         showLogout={showLogout}
       />

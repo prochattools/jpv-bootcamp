@@ -35,6 +35,7 @@ import * as migration_20260818_140000_member_profile_parity from './20260818_140
 import * as migration_20260818_140100_portal_settings from './20260818_140100_portal_settings'
 import * as migration_20260820_000000_live_session_space from './20260820_000000_live_session_space'
 import * as migration_20260824_120000_engagement_reactions from './20260824_120000_engagement_reactions'
+import * as migration_20260824_150000_portal_navigation from './20260824_150000_portal_navigation'
 import { PAYLOAD_MIGRATION_NAMES } from '../lib/payloadMigrationRegistry'
 
 const migrationModuleByName = {
@@ -75,6 +76,7 @@ const migrationModuleByName = {
   '20260818_140100_portal_settings': migration_20260818_140100_portal_settings,
   '20260820_000000_live_session_space': migration_20260820_000000_live_session_space,
   '20260824_120000_engagement_reactions': migration_20260824_120000_engagement_reactions,
+  '20260824_150000_portal_navigation': migration_20260824_150000_portal_navigation,
 } as const
 
 export const migrations = PAYLOAD_MIGRATION_NAMES.map((name) => ({

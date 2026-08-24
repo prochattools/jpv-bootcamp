@@ -16,6 +16,7 @@ export const PayloadPages: CollectionConfig = {
   fields: [
     { name: 'title', type: 'text', required: true },
     { name: 'slug', type: 'text', required: true, unique: true, index: true },
+    { name: 'portalRoute', type: 'text', admin: { description: 'Portal URL path this page maps to (e.g. "/portal/community/start-here")' } },
     { name: 'summary', type: 'textarea' },
     { name: 'content', type: 'richText' },
     {
