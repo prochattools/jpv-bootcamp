@@ -671,18 +671,25 @@ async function main(): Promise<void> {
     )
   })
 
-  await test('plan_ok semantics: workflow verifies appliedPayloadCount is exactly 36', () => {
+  await test('plan_ok semantics: workflow verifies the approved staging baseline count', () => {
     assert.ok(
       planJobYml.includes('appliedPayloadCount mismatch') || planJobYml.includes('p.appliedPayloadCount !== expectedCount'),
-      'must verify appliedPayloadCount === 36',
+      'must verify appliedPayloadCount against the reviewed staging baseline',
     )
   })
 
-  await test('plan_ok semantics: workflow expects migration 37 as the sole pending batch', () => {
-    assert.ok(
-      planJobYml.includes('20260824_120000_engagement_reactions'),
-      'must expect the additive reaction migration as the sole pending batch',
-    )
+  await test('plan_ok semantics: workflow expects the exact ordered billing migration batch', () => {
+    const expectedBillingBatch = [
+      '20260825_120000_billing_invoice_visibility',
+      '20260825_121000_membership_support_runtime_alignment',
+      '20260825_122000_membership_support_relationships',
+      '20260825_123000_membership_support_relationship_alignment',
+      '20260825_124000_membership_review_assignee_alignment',
+      '20260825_125000_membership_shadow_state_alignment',
+    ]
+    for (const migration of expectedBillingBatch) {
+      assert.ok(planJobYml.includes(migration), `must expect billing migration '${migration}'`)
+    }
   })
 
   await test('plan_ok semantics: workflow verifies exact ordered Forward A-D batch and only-missing flag', () => {

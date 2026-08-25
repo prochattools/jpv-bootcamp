@@ -204,7 +204,14 @@ export async function projectAsyncCheckoutFailure(params: {
 
 export type CancellationRequestResult =
   | { ok: true; effectiveAt: Date; duringCommitment: boolean; stripeScheduled: boolean }
-  | { ok: false; error: 'invalid_email' | 'billing_record_missing' | 'effective_date_missing' | 'stripe_env_live' }
+  | { ok: false; error:
+      | 'invalid_email'
+      | 'billing_record_missing'
+      | 'effective_date_missing'
+      | 'live_action_disabled'
+      | 'stripe_mode_mismatch'
+      | 'stripe_update_failed'
+    }
 
 export async function recordCancellationRequest(params: {
   memberEmail: string
@@ -238,6 +245,52 @@ export async function recordCancellationRequest(params: {
 
   if (!effectiveAt) return { ok: false, error: 'effective_date_missing' }
 
+  let stripeScheduled = false
+  if (record.stripeSubscriptionId) {
+    try {
+      const { getStripeConfig } = await import('@/lib/stripe-config')
+      const cfg = getStripeConfig()
+      if (
+        cfg.env === 'live' &&
+        process.env.STRIPE_LIVE_MEMBER_BILLING_ACTIONS_ENABLED !== 'true'
+      ) {
+        return { ok: false, error: 'live_action_disabled' }
+      }
+      const { getStripe } = await import('@/lib/stripe')
+      const stripe = getStripe()
+      const subscription = await stripe.subscriptions.retrieve(record.stripeSubscriptionId)
+      if (subscription.livemode !== (cfg.env === 'live')) {
+        return { ok: false, error: 'stripe_mode_mismatch' }
+      }
+      const idempotencyKey = `jpv-member-cancel-${record.id}-${Math.floor(effectiveAt.getTime() / 1000)}`
+      if (duringCommitment && record.commitmentEndAt) {
+        const cancelAt = Math.floor(record.commitmentEndAt.getTime() / 1000)
+        if (subscription.cancel_at !== cancelAt) {
+          await stripe.subscriptions.update(
+            record.stripeSubscriptionId,
+            { cancel_at: cancelAt },
+            { idempotencyKey },
+          )
+        }
+      } else {
+        if (!subscription.cancel_at_period_end) {
+          await stripe.subscriptions.update(
+            record.stripeSubscriptionId,
+            { cancel_at_period_end: true },
+            { idempotencyKey },
+          )
+        }
+      }
+      stripeScheduled = true
+    } catch (stripeError) {
+      console.error('cancellation_stripe_api_failed', {
+        subscriptionId: record.stripeSubscriptionId,
+        errorType: stripeError instanceof Error ? stripeError.name : 'unknown_error',
+      })
+      return { ok: false, error: 'stripe_update_failed' }
+    }
+  }
+
   await prisma.customerProvisioning.update({
     where: { id: record.id },
     data: {
@@ -248,36 +301,84 @@ export async function recordCancellationRequest(params: {
     },
   })
 
-  let stripeScheduled = false
+  return { ok: true, effectiveAt, duringCommitment, stripeScheduled }
+}
+
+export type CancellationReversalResult =
+  | { ok: true }
+  | { ok: false; error:
+      | 'invalid_email'
+      | 'billing_record_missing'
+      | 'cancellation_not_scheduled'
+      | 'live_action_disabled'
+      | 'stripe_mode_mismatch'
+      | 'stripe_update_failed'
+    }
+
+export async function reverseCancellationRequest(params: {
+  memberEmail: string
+}): Promise<CancellationReversalResult> {
+  const normalizedEmail = normalizeEmail(params.memberEmail)
+  if (!normalizedEmail) return { ok: false, error: 'invalid_email' }
+
+  const record = await prisma.customerProvisioning.findUnique({
+    where: { normalizedEmail },
+    select: {
+      id: true,
+      commitmentStatus: true,
+      stripeSubscriptionId: true,
+      subscriptionCancelAtPeriodEnd: true,
+      cancellationRequestedAt: true,
+      cancellationEffectiveAt: true,
+    },
+  })
+  if (!record) return { ok: false, error: 'billing_record_missing' }
+  if (!record.subscriptionCancelAtPeriodEnd && !record.cancellationEffectiveAt) {
+    return { ok: false, error: 'cancellation_not_scheduled' }
+  }
+
   if (record.stripeSubscriptionId) {
     try {
-      const { getStripeConfig } = await import('@/lib/stripe-config')
+      const [{ getStripeConfig }, { getStripe }] = await Promise.all([
+        import('@/lib/stripe-config'),
+        import('@/lib/stripe'),
+      ])
       const cfg = getStripeConfig()
-      if (cfg.env === 'live') {
-        console.error('cancellation_blocked: STRIPE_ENV=live — refusing to cancel live subscription', {
-          subscriptionId: record.stripeSubscriptionId,
-        })
-        return { ok: false, error: 'stripe_env_live' }
+      if (
+        cfg.env === 'live' &&
+        process.env.STRIPE_LIVE_MEMBER_BILLING_ACTIONS_ENABLED !== 'true'
+      ) {
+        return { ok: false, error: 'live_action_disabled' }
       }
-      const { getStripe } = await import('@/lib/stripe')
       const stripe = getStripe()
-      if (duringCommitment && record.commitmentEndAt) {
-        await stripe.subscriptions.update(record.stripeSubscriptionId, {
-          cancel_at: Math.floor(record.commitmentEndAt.getTime() / 1000),
-        })
-      } else {
-        await stripe.subscriptions.update(record.stripeSubscriptionId, {
-          cancel_at_period_end: true,
-        })
+      const subscription = await stripe.subscriptions.retrieve(record.stripeSubscriptionId)
+      if (subscription.livemode !== (cfg.env === 'live')) {
+        return { ok: false, error: 'stripe_mode_mismatch' }
       }
-      stripeScheduled = true
+      if (subscription.cancel_at_period_end || subscription.cancel_at) {
+        await stripe.subscriptions.update(
+          record.stripeSubscriptionId,
+          { cancel_at: null, cancel_at_period_end: false },
+          { idempotencyKey: `jpv-member-resume-${record.id}` },
+        )
+      }
     } catch (stripeError) {
-      console.error('cancellation_stripe_api_failed', {
+      console.error('cancellation_reversal_stripe_api_failed', {
         subscriptionId: record.stripeSubscriptionId,
-        message: (stripeError as Error).message,
+        errorType: stripeError instanceof Error ? stripeError.name : 'unknown_error',
       })
+      return { ok: false, error: 'stripe_update_failed' }
     }
   }
 
-  return { ok: true, effectiveAt, duringCommitment, stripeScheduled }
+  await prisma.customerProvisioning.update({
+    where: { id: record.id },
+    data: {
+      cancellationRequestedAt: null,
+      cancellationEffectiveAt: null,
+      subscriptionCancelAtPeriodEnd: false,
+      commitmentStatus: record.commitmentStatus === 'cancellation_requested' ? 'active' : record.commitmentStatus,
+    },
+  })
+  return { ok: true }
 }

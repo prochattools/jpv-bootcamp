@@ -39,6 +39,12 @@ export const PAYLOAD_MIGRATION_NAMES = [
   '20260824_150000_portal_navigation',
   '20260824_200000_member_notifications',
   '20260824_210000_pay_it_forward_schema',
+  '20260825_120000_billing_invoice_visibility',
+  '20260825_121000_membership_support_runtime_alignment',
+  '20260825_122000_membership_support_relationships',
+  '20260825_123000_membership_support_relationship_alignment',
+  '20260825_124000_membership_review_assignee_alignment',
+  '20260825_125000_membership_shadow_state_alignment',
 ] as const
 
 export type PayloadMigrationName = (typeof PAYLOAD_MIGRATION_NAMES)[number]

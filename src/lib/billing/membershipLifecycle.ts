@@ -73,8 +73,12 @@ export function resolveMembershipLifecycle(params: {
 		return { state: 'expired', accessAllowed: false, reason: 'subscription_ended' }
 	}
 
-	if (subscriptionStatus === 'incomplete' || subscriptionStatus === 'trialing') {
+	if (subscriptionStatus === 'incomplete') {
 		return { state: 'pending', accessAllowed: false, reason: 'pending_activation' }
+	}
+
+	if (subscriptionStatus === 'trialing') {
+		return { state: 'active', accessAllowed: true, reason: 'active_subscription' }
 	}
 
 	if (

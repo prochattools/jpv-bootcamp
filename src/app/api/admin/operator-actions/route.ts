@@ -6,7 +6,7 @@ import config from '@payload-config'
 
 import { resolvePayloadRequestSession } from '@/lib/auth/payloadSession'
 
-const BILLING_ACTIONS = new Set(['sync_subscription', 'cancel_at_period_end', 'resume_subscription'])
+const BILLING_ACTIONS = new Set(['reconcile_all', 'sync_subscription', 'cancel_at_period_end', 'resume_subscription'])
 const EMAIL_ACTIONS = new Set(['retry_delivery'])
 
 const PROVIDER_ID_PATTERNS = [
@@ -57,47 +57,50 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         )
       }
 
-      if (!isValidPayloadId(body.subscription)) {
+      if (actionType !== 'reconcile_all' && !isValidPayloadId(body.subscription)) {
         return NextResponse.json(
           { error: 'invalid_input', message: 'A valid Payload subscription record ID is required.' },
           { status: 400 },
         )
       }
-      const subscriptionId = body.subscription
+      const subscriptionId = actionType === 'reconcile_all' ? null : body.subscription
 
       const payload = await getPayload({ config })
 
-      let subscriptionRecord
-      try {
-        subscriptionRecord = await payload.findByID({
-          collection: 'payload_subscriptions',
-          id: subscriptionId as string | number,
-          depth: 0,
-          overrideAccess: true,
-        })
-      } catch {
-        return NextResponse.json(
-          { error: 'record_not_found', message: 'Subscription record not found.' },
-          { status: 404 },
-        )
-      }
-
-      if (!subscriptionRecord || !subscriptionRecord.id) {
-        return NextResponse.json(
-          { error: 'record_not_found', message: 'Subscription record not found.' },
-          { status: 404 },
-        )
+      let subscriptionRecord = null
+      if (subscriptionId !== null) {
+        try {
+          subscriptionRecord = await payload.findByID({
+            collection: 'payload_subscriptions',
+            id: subscriptionId as string | number,
+            depth: 0,
+            overrideAccess: true,
+          })
+        } catch {
+          return NextResponse.json(
+            { error: 'record_not_found', message: 'Subscription record not found.' },
+            { status: 404 },
+          )
+        }
+        if (!subscriptionRecord?.id) {
+          return NextResponse.json(
+            { error: 'record_not_found', message: 'Subscription record not found.' },
+            { status: 404 },
+          )
+        }
       }
 
       const doc = await payload.create({
         collection: 'payload_billing_actions',
         data: {
-          displayName: `${actionType} subscription ${String(subscriptionRecord.id)}`,
+          displayName: actionType === 'reconcile_all'
+            ? 'Reconcile all Stripe billing'
+            : `${actionType} subscription ${String(subscriptionRecord?.id)}`,
           actionType,
-          subscription: subscriptionRecord.id,
+          subscription: subscriptionRecord?.id,
           requestedBy: session.administratorId,
           status: 'pending',
-          note: typeof body.note === 'string' ? body.note : undefined,
+          notes: typeof body.note === 'string' ? body.note : undefined,
         } as any,
         overrideAccess: true,
         user: { id: session.administratorId, collection: 'payload_users' },

@@ -18,6 +18,7 @@ export type AccountStatusChangeInput = {
   eventId?: string | null
   adminEmail?: string | null
   baseUrl?: string | null
+  suppressCommunications?: boolean
 }
 
 export type AccountStatusChangeResult = {
@@ -125,6 +126,7 @@ async function queueAccountEmails(
   auditEvent: PayloadDocument,
 ): Promise<PayloadDocument[]> {
   const emailEvents: PayloadDocument[] = []
+  if (input.suppressCommunications) return emailEvents
   const email = getEmail(member)
   const sourceEventId = input.eventId ?? String(auditEvent.id)
   const logo = logoUrl(input.baseUrl)

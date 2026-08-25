@@ -1041,7 +1041,9 @@ export function buildIdentityCrosswalk(
     const conflicts: string[] = []
     if (sourceWpUserIds.length > 1) conflicts.push(rule?.reason ?? 'multiple_wordpress_source_accounts')
     if (pastDueMatches.length > 0 && activeMatches.length === 0) conflicts.push('stripe_past_due_fail_closed')
-    if (activeMatches.length > 1) conflicts.push('multiple_active_stripe_records_same_person')
+    const hasUnreviewedMultipleStripeRecords = stripeMatches.length > 1 && !rule
+    if (hasUnreviewedMultipleStripeRecords) conflicts.push('multiple_stripe_records_same_person')
+    const hasUnambiguousActiveSubscription = activeMatches.length === 1 && !hasUnreviewedMultipleStripeRecords
 
     canonicalMembers.push({
       canonicalKey,
@@ -1053,8 +1055,10 @@ export function buildIdentityCrosswalk(
       fluentCrmContactIds: contactRows.map((contact) => contact.id),
       stripeCustomerIds: [...new Set(stripeMatches.map((record) => record.customer_id))],
       stripeSubscriptionIds: [...new Set(stripeMatches.map((record) => record.subscription_id))],
-      accountStatus: activeMatches.length > 0 ? 'active' : 'blocked',
-      classificationReason: activeMatches.length > 0
+      accountStatus: hasUnambiguousActiveSubscription ? 'active' : 'blocked',
+      classificationReason: hasUnreviewedMultipleStripeRecords
+        ? 'multiple_stripe_records_review_required'
+        : hasUnambiguousActiveSubscription
         ? 'current_qualifying_stripe_active'
         : pastDueMatches.length > 0
           ? 'stripe_past_due_fail_closed'

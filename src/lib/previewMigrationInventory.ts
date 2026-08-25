@@ -67,6 +67,12 @@ const PREVIEW_MIGRATION_METADATA = [
   { purpose: 'Create CMS-configurable portal nav items table and add portal_route column to pages.', rollbackRisk: 'reversible', verificationChecks: ['registry-match', 'ordered-exactly', 'portal-nav-items'] },
   { purpose: 'Create member notification records for in-app notification delivery.', rollbackRisk: 'reversible', verificationChecks: ['registry-match', 'ordered-exactly', 'member-notifications'] },
   { purpose: 'Add seat-tracking columns to pay-it-forward funding; make legacy required columns nullable; create PayItForwardSettings global table.', rollbackRisk: 'data_loss', verificationChecks: ['registry-match', 'ordered-exactly', 'pay-it-forward-schema'] },
+  { purpose: 'Expose Stripe invoice totals, attempts, hosted links, next-payment timing, and reconciliation actions in Payload billing projections.', rollbackRisk: 'irreversible', verificationChecks: ['registry-match', 'ordered-exactly', 'billing-invoice-visibility'] },
+  { purpose: 'Align membership-support source and administrator relationship columns with the current Payload runtime schema.', rollbackRisk: 'reversible', verificationChecks: ['registry-match', 'ordered-exactly', 'membership-support-runtime-alignment'] },
+  { purpose: 'Create the missing Payload relationship table for membership-support reverse relationships.', rollbackRisk: 'data_loss', verificationChecks: ['registry-match', 'ordered-exactly', 'membership-support-relationships'] },
+  { purpose: 'Align legacy membership-support relationship columns and review enums with the current Payload runtime contract.', rollbackRisk: 'irreversible', verificationChecks: ['registry-match', 'ordered-exactly', 'membership-support-relationship-alignment'] },
+  { purpose: 'Align the membership review assignee relationship column with the current Payload runtime contract.', rollbackRisk: 'reversible', verificationChecks: ['registry-match', 'ordered-exactly', 'membership-review-assignee-alignment'] },
+  { purpose: 'Add current membership-support Stripe shadow states while preserving historical state values.', rollbackRisk: 'irreversible', verificationChecks: ['registry-match', 'ordered-exactly', 'membership-shadow-state-alignment'] },
 ] as const satisfies readonly PreviewMigrationMetadata[]
 
 if (PREVIEW_MIGRATION_METADATA.length !== PAYLOAD_MIGRATION_NAMES.length) {

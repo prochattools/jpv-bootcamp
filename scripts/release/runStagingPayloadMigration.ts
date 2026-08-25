@@ -30,25 +30,31 @@ const REQUIRED_SCHEMA = STAGING_TARGET.schema
 const REQUIRED_DATABASE = STAGING_TARGET.database
 const REQUIRED_ENVIRONMENT = STAGING_TARGET.environment
 const REQUIRED_TARGET_ID = STAGING_TARGET.targetId
-// The current additive staging batch is the final registered migration. The
-// preceding 36-migration state remains the verified staging baseline.
-const EXPECTED_APPLIED_BEFORE = PAYLOAD_MIGRATION_NAMES.length - 1
+// The reviewed billing release is the exact six-migration batch following the
+// verified 40-migration staging baseline. Keep this explicit: automatically
+// treating every future migration as part of this approval would widen scope.
 const EXPECTED_FORWARD_BATCH = [
-  PAYLOAD_MIGRATION_NAMES.at(-1)!,
+  '20260825_120000_billing_invoice_visibility',
+  '20260825_121000_membership_support_runtime_alignment',
+  '20260825_122000_membership_support_relationships',
+  '20260825_123000_membership_support_relationship_alignment',
+  '20260825_124000_membership_review_assignee_alignment',
+  '20260825_125000_membership_shadow_state_alignment',
 ] as const
+const EXPECTED_APPLIED_BEFORE = PAYLOAD_MIGRATION_NAMES.length - EXPECTED_FORWARD_BATCH.length
 const EXPECTED_APPLIED_AFTER = EXPECTED_APPLIED_BEFORE + EXPECTED_FORWARD_BATCH.length
 const CURRENT_STAGING_APPLIED_COUNT = PAYLOAD_MIGRATION_NAMES.length
 const CURRENT_STAGING_PENDING_MIGRATIONS: readonly string[] = []
 const TARGET_MIGRATIONS = PAYLOAD_MIGRATION_NAMES.slice(EXPECTED_APPLIED_BEFORE, EXPECTED_APPLIED_AFTER)
-const APPLY_CONFIRMATION_VALUE = 'apply_engagement_reactions_to_jpvbootcamp_staging'
-const ROLLBACK_PLAN_CONFIRMATION_VALUE = 'plan_rollback_engagement_reactions_from_jpvbootcamp_staging'
+const APPLY_CONFIRMATION_VALUE = 'apply_billing_reconciliation_to_jpvbootcamp_staging'
+const ROLLBACK_PLAN_CONFIRMATION_VALUE = 'plan_rollback_billing_reconciliation_from_jpvbootcamp_staging'
 const FULL_COMMIT_SHA_RE = /^[0-9a-f]{40}$/
 
 if (
   TARGET_MIGRATIONS.length !== EXPECTED_FORWARD_BATCH.length ||
   TARGET_MIGRATIONS.some((name, index) => name !== EXPECTED_FORWARD_BATCH[index])
 ) {
-  throw new Error(`Canonical migration registry does not contain the current additive migration at the expected position`)
+  throw new Error(`Canonical migration registry does not contain the reviewed billing batch at the expected position`)
 }
 
 // Production token labels rejected as whole tokens (exact match against hostname labels or db name components).
@@ -865,7 +871,7 @@ export async function runStagingMigrationPlan(
     )
   } else {
     output(
-      `[staging-migration-plan] PLAN OK: additive reaction migration is pending in canonical order and all preconditions are met`,
+      `[staging-migration-plan] PLAN OK: reviewed billing migration batch is pending in canonical order and all preconditions are met`,
     )
     output(`[staging-migration-plan] pending-batch=${TARGET_MIGRATIONS.join(',')}`)
     output(`[staging-migration-plan] To apply: pnpm staging:payload-migration-apply`)
@@ -1087,7 +1093,7 @@ export async function runStagingMigrationApply(
       appliedCount: postStatus.appliedPayloadCount,
       missingMigrations: postStatus.missingPayloadMigrations,
     },
-    message: `Apply completed: additive reaction batch [${TARGET_MIGRATIONS.join(', ')}] applied to ${REQUIRED_SCHEMA}. Rollback requires separate plan and authorization.`,
+    message: `Apply completed: reviewed billing batch [${TARGET_MIGRATIONS.join(', ')}] applied to ${REQUIRED_SCHEMA}. Rollback requires separate plan and authorization.`,
   }
 }
 
