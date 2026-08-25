@@ -235,7 +235,10 @@ function testPageUsesOnlyAuthenticatedMemberIdentity(): void {
     'utf8'
   )
 
-  assert.match(pageSource, /requirePortalMember\(`\/portal\/\$\{section\}`\)/)
+  // Migrated to requirePortalAccess (Phase 12.1): admin short-circuits before billing data load
+  assert.match(pageSource, /requirePortalAccess\(/)
+  // Admin guard must block account/billing sections before any member data is loaded
+  assert.match(pageSource, /actor\.kind === 'admin'/)
   assert.match(pageSource, /getMemberBillingOverview\(payload, memberId\)/)
   assert.match(pageSource, /resolvePortalBillingPresentation\(/)
   assert.doesNotMatch(pageSource, /getCurrentPayloadMember\(\)/)

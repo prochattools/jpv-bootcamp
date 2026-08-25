@@ -1,7 +1,7 @@
 import Link from 'next/link'
 
 import { ContentCardImage } from '@/components/portal/ContentCardImage'
-import { requirePortalMember } from '@/lib/auth/requirePortalMember'
+import { requirePortalAccess } from '@/lib/auth/requirePortalAccess'
 import { listPublishedMemberContent } from '@/lib/payloadContent/memberContent'
 
 function formatDate(value: string | null): string | null {
@@ -12,7 +12,7 @@ function formatDate(value: string | null): string | null {
 }
 
 export default async function PortalContentPage() {
-  const { payload } = await requirePortalMember('/portal/content')
+  const { payload } = await requirePortalAccess('/portal/content')
   const content = await listPublishedMemberContent(payload)
 
   return (

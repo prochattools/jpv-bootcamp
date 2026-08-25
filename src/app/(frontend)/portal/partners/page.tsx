@@ -1,6 +1,7 @@
 import Link from 'next/link'
+import { Shield } from 'lucide-react'
 
-import { requirePortalMember } from '@/lib/auth/requirePortalMember'
+import { requirePortalAccess } from '@/lib/auth/requirePortalAccess'
 import { getAffiliateSummary } from '@/lib/payloadCourse/affiliateReporting'
 import { listActivePartners, listMemberApplications } from '@/lib/payloadCourse/partnerApplications'
 
@@ -26,7 +27,25 @@ function formatDate(value: string | null | undefined): string {
 }
 
 export default async function PortalPartnersPage(): Promise<JSX.Element> {
-  const { memberId, payload } = await requirePortalMember('/portal/partners')
+  const { actor, payload } = await requirePortalAccess('/portal/partners')
+
+  if (actor.kind === 'admin') {
+    return (
+      <div className='mx-auto max-w-2xl px-4 py-12 text-center'>
+        <Shield aria-hidden='true' className='mx-auto mb-4 h-10 w-10 text-jpv-brand-deep' />
+        <h1 className='text-xl font-semibold text-jpv-ink'>Administrator view</h1>
+        <p className='mt-2 text-sm text-jpv-muted'>
+          This section shows member-specific data. Use a member account to see the full member experience, or manage content from the admin panel.
+        </p>
+        <div className='mt-6 flex justify-center gap-3'>
+          <Link className='jpv-button-primary' href='/admin'>Admin Panel</Link>
+          <Link className='jpv-button-secondary' href='/portal'>Dashboard</Link>
+        </div>
+      </div>
+    )
+  }
+
+  const memberId = actor.memberId
   const [partners, applications] = await Promise.all([
     listActivePartners(payload as never),
     listMemberApplications(payload as never, memberId),

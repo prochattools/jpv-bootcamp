@@ -211,7 +211,8 @@ function testNoBrowserSelectableBillingIdentity(): void {
     'utf8'
   )
 
-  assert.match(pageSource, /requirePortalMember\(`\/portal\/\$\{section\}`\)/)
+  // Migrated to requirePortalAccess (Phase 12.1): admin short-circuits before billing data load
+  assert.match(pageSource, /requirePortalAccess\(/)
   assert.match(pageSource, /getMemberBillingOverview\(payload, memberId\)/)
   assert.match(pageSource, /getBillingStatus\(memberEmail\)/)
   assert.match(pageSource, /<form action=\{requestMembershipCancellation\}>/)

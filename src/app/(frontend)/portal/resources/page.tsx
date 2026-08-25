@@ -1,6 +1,7 @@
-import { Download } from 'lucide-react'
+import { Download, Shield } from 'lucide-react'
+import Link from 'next/link'
 
-import { requirePortalMember } from '@/lib/auth/requirePortalMember'
+import { requirePortalAccess } from '@/lib/auth/requirePortalAccess'
 import { getMemberResourceLibrary, type ResourceLibraryGroup } from '@/lib/payloadCourse/resourceLibrary'
 
 function formatFileSize(value: number | null): string | null {
@@ -49,7 +50,25 @@ function ResourceGroupSection({ group }: { group: ResourceLibraryGroup }) {
 }
 
 export default async function PortalResourcesPage() {
-  const { memberId, payload } = await requirePortalMember('/portal/resources')
+  const { actor, payload } = await requirePortalAccess('/portal/resources')
+
+  if (actor.kind === 'admin') {
+    return (
+      <div className='mx-auto max-w-2xl px-4 py-12 text-center'>
+        <Shield aria-hidden='true' className='mx-auto mb-4 h-10 w-10 text-jpv-brand-deep' />
+        <h1 className='text-xl font-semibold text-jpv-ink'>Administrator view</h1>
+        <p className='mt-2 text-sm text-jpv-muted'>
+          This section shows member-specific data. Use a member account to see the full member experience, or manage content from the admin panel.
+        </p>
+        <div className='mt-6 flex justify-center gap-3'>
+          <Link className='jpv-button-primary' href='/admin'>Admin Panel</Link>
+          <Link className='jpv-button-secondary' href='/portal'>Dashboard</Link>
+        </div>
+      </div>
+    )
+  }
+
+  const memberId = actor.memberId
   const groups = await getMemberResourceLibrary(payload, memberId)
 
   return (

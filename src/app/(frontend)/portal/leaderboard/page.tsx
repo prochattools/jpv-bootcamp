@@ -1,6 +1,6 @@
 import Link from 'next/link'
 
-import { requirePortalMember } from '@/lib/auth/requirePortalMember'
+import { requirePortalAccess } from '@/lib/auth/requirePortalAccess'
 import { getLeaderboard } from '@/lib/payloadCourse/leaderboard'
 
 export const metadata = {
@@ -14,7 +14,7 @@ export const dynamic = 'force-dynamic'
 const MEDAL: Record<number, string> = { 1: '🥇', 2: '🥈', 3: '🥉' }
 
 export default async function LeaderboardPage() {
-  await requirePortalMember('/portal/leaderboard')
+  await requirePortalAccess('/portal/leaderboard')
 
   const entries = await getLeaderboard(20)
 

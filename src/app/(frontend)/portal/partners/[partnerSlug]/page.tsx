@@ -2,7 +2,7 @@ import { revalidatePath } from 'next/cache'
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 
-import { requirePortalMember } from '@/lib/auth/requirePortalMember'
+import { requirePortalAccess } from '@/lib/auth/requirePortalAccess'
 import { getPartnerApplicationDetail, submitPartnerApplication } from '@/lib/payloadCourse/partnerApplications'
 
 export const dynamic = 'force-dynamic'
@@ -17,7 +17,11 @@ function field(value: FormDataEntryValue | null): string {
 async function submitAction(formData: FormData) {
   'use server'
   const partnerSlug = field(formData.get('partnerSlug'))
-  const { memberId, payload } = await requirePortalMember(`/portal/partners/${partnerSlug}`)
+  const { actor, payload } = await requirePortalAccess(`/portal/partners/${partnerSlug}`)
+  if (actor.kind !== 'member') {
+    redirect('/portal')
+  }
+  const memberId = actor.memberId
   const result = await submitPartnerApplication(payload as never, {
     memberId,
     partnerSlug,
@@ -41,7 +45,11 @@ export default async function PartnerApplicationPage({
   searchParams?: Promise<{ submitted?: string }>
 }): Promise<JSX.Element> {
   const { partnerSlug } = await params
-  const { memberId, payload } = await requirePortalMember(`/portal/partners/${partnerSlug}`)
+  const { actor, payload } = await requirePortalAccess(`/portal/partners/${partnerSlug}`)
+  if (actor.kind !== 'member') {
+    notFound()
+  }
+  const memberId = actor.memberId
   let partner: Awaited<ReturnType<typeof getPartnerApplicationDetail>>
   try {
     partner = await getPartnerApplicationDetail(payload as never, partnerSlug, memberId)

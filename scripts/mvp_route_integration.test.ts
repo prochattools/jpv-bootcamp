@@ -144,8 +144,9 @@ function testDashboardIsRedirectToPortal(): void {
 
 function testPortalHomeRequiresPayloadAuth(): void {
   const content = readFileSync('src/app/(frontend)/portal/page.tsx', 'utf8')
+  // Migrated to requirePortalAccess in Phase 12.1; member path still calls getMemberCourseDashboard
   assert.ok(
-    content.includes('requirePortalMember') && content.includes('getMemberCourseDashboard'),
+    (content.includes('requirePortalAccess') || content.includes('requirePortalMember')) && content.includes('getMemberCourseDashboard'),
     'portal page must use Payload DB-backed auth and course data',
   )
 }

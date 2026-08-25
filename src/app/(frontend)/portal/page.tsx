@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation'
 import { AuthShell } from '@/components/auth/AuthShell'
 import { MemberLoginForm } from '@/components/auth/MemberLoginForm'
 import { MemberVerificationResendForm } from '@/components/auth/MemberVerificationResendForm'
-import { requirePortalMember } from '@/lib/auth/requirePortalMember'
+import { requirePortalAccess } from '@/lib/auth/requirePortalAccess'
 import { getMemberCourseDashboard } from '@/lib/payloadCourse/memberPortal'
 import { getPortalLoginBranding, type PortalLoginBranding } from '@/lib/portal/portalSettings'
 
@@ -119,7 +119,44 @@ export default async function PortalDashboardPage({ searchParams }: PortalDashbo
     return <PortalLoginMode branding={branding} params={params} />
   }
 
-  const { memberId, memberEmail, payload } = await requirePortalMember('/portal')
+  const { actor, payload } = await requirePortalAccess('/portal')
+
+  const quickLinks = [
+    { href: '/portal/courses', label: 'Courses', Icon: GraduationCap },
+    { href: '/portal/live-sessions', label: 'Live', Icon: Video },
+    { href: '/portal/community', label: 'Community', Icon: Users },
+    { href: '/portal/account', label: 'Account', Icon: Settings },
+  ]
+
+  if (actor.kind === 'admin') {
+    return (
+      <div className='mx-auto max-w-5xl space-y-5 px-4 py-4'>
+        <section>
+          <p className='jpv-eyebrow'>JPV Bootcamp — Administrator</p>
+          <h1 className='mt-2 text-2xl font-semibold tracking-tight text-jpv-ink'>Portal overview</h1>
+          <p className='mt-1 text-sm text-jpv-muted'>You are viewing the member portal as a platform administrator. Use the admin panel to manage content, or toggle Admin Mode in the top bar to explore the member experience.</p>
+        </section>
+        <section>
+          <h2 className='mb-4 text-xs font-extrabold uppercase tracking-widest text-jpv-muted'>Quick links</h2>
+          <div className='grid grid-cols-2 gap-4 sm:grid-cols-4'>
+            {quickLinks.map(({ href, label, Icon }) => (
+              <Link
+                className='flex flex-col items-center gap-3 rounded-jpv-card border border-jpv-border bg-jpv-surface p-5 text-center transition hover:border-jpv-brand hover:bg-jpv-canvas hover:shadow-sm'
+                href={href}
+                key={href}
+              >
+                <Icon aria-hidden='true' className='h-6 w-6 text-jpv-brand' />
+                <span className='text-sm font-semibold text-jpv-ink'>{label}</span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      </div>
+    )
+  }
+
+  const memberId = actor.memberId
+  const memberEmail = actor.email
   const dashboard = await getMemberCourseDashboard(payload, memberId)
   const availableCourses = dashboard.courses.filter((course) => course.allowed)
 
@@ -154,13 +191,6 @@ export default async function PortalDashboardPage({ searchParams }: PortalDashbo
     month: 'long',
     day: 'numeric',
   })
-
-  const quickLinks = [
-    { href: '/portal/courses', label: 'Courses', Icon: GraduationCap },
-    { href: '/portal/live-sessions', label: 'Live', Icon: Video },
-    { href: '/portal/community', label: 'Community', Icon: Users },
-    { href: '/portal/account', label: 'Account', Icon: Settings },
-  ]
 
   return (
     <div className='mx-auto max-w-5xl space-y-5 px-4 py-4'>

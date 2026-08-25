@@ -1,10 +1,29 @@
 import Link from 'next/link'
+import { Shield } from 'lucide-react'
 
-import { requirePortalMember } from '@/lib/auth/requirePortalMember'
+import { requirePortalAccess } from '@/lib/auth/requirePortalAccess'
 import { getMemberCourseDashboard } from '@/lib/payloadCourse/memberPortal'
 
 export default async function PortalCoursesPage() {
-  const { memberId, payload } = await requirePortalMember('/portal/courses')
+  const { actor, payload } = await requirePortalAccess('/portal/courses')
+
+  if (actor.kind === 'admin') {
+    return (
+      <div className='mx-auto max-w-2xl px-4 py-12 text-center'>
+        <Shield aria-hidden='true' className='mx-auto mb-4 h-10 w-10 text-jpv-brand-deep' />
+        <h1 className='text-xl font-semibold text-jpv-ink'>Administrator view</h1>
+        <p className='mt-2 text-sm text-jpv-muted'>
+          This section shows member-specific data. Use a member account to see the full member experience, or manage content from the admin panel.
+        </p>
+        <div className='mt-6 flex justify-center gap-3'>
+          <Link className='jpv-button-primary' href='/admin'>Admin Panel</Link>
+          <Link className='jpv-button-secondary' href='/portal'>Dashboard</Link>
+        </div>
+      </div>
+    )
+  }
+
+  const memberId = actor.memberId
   const dashboard = await getMemberCourseDashboard(payload, memberId)
 
   // Identify the course the member should continue (first allowed course with an incomplete lesson)

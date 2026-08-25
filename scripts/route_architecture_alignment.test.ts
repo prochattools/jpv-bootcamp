@@ -172,9 +172,12 @@ function testNoDbNetworkOrMigrationCommands(): void {
 }
 
 function testAuthRequiredForProgrammeAndCommunity(): void {
-  // /portal/programme requires auth
+  // /portal/programme requires auth (migrated to requirePortalAccess in Phase 12.1 for admin support)
   const programmePage = readFileSync('src/app/(frontend)/portal/programme/page.tsx', 'utf8')
-  assert.ok(programmePage.includes('requirePortalMember'), '/portal/programme must import requirePortalMember')
+  assert.ok(
+    programmePage.includes('requirePortalAccess') || programmePage.includes('requirePortalMember'),
+    '/portal/programme must import a portal auth guard'
+  )
   assert.ok(programmePage.includes("'/portal/programme'"), '/portal/programme must require auth for /portal/programme path')
 
   // /portal/community requires auth

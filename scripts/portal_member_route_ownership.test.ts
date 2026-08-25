@@ -34,8 +34,9 @@ function testRouteFilesExist(): void {
 }
 
 function testCanonicalPortalOwnership(): void {
-  assert.match(source(FILES.portalPage), /requirePortalMember/)
-  assert.match(source(FILES.courseIndex), /requirePortalMember\('\/portal\/courses'\)/)
+  // portalPage and courseIndex migrated to requirePortalAccess in Phase 12.1 for admin support
+  assert.match(source(FILES.portalPage), /requirePortalAccess\(/)
+  assert.match(source(FILES.courseIndex), /requirePortalAccess\('\/portal\/courses'\)/)
   assert.match(source(FILES.courseDetail), /requirePortalMember\(requestedPath\)/)
   assert.match(source(FILES.lessonDetail), /requirePortalMember\(requestedPath\)/)
   assert.match(source(FILES.lessonDetail), /markMemberLessonComplete/)

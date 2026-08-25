@@ -1,7 +1,10 @@
 import { revalidatePath } from 'next/cache'
 import { notFound, redirect } from 'next/navigation'
+import Link from 'next/link'
+import { Shield } from 'lucide-react'
 
 import { resolveMemberVerificationPublicBaseUrl } from '@/lib/auth/memberEmailVerificationApplication'
+import { requirePortalAccess } from '@/lib/auth/requirePortalAccess'
 import { requirePortalMember } from '@/lib/auth/requirePortalMember'
 import { updateMemberProfile } from '@/lib/members/updateMemberProfile'
 import type { PayloadCourseWriteAPI } from '@/lib/payloadCourse/accessService'
@@ -230,7 +233,30 @@ export default async function PortalSectionPage({ params, searchParams }: Portal
   const { section } = await params
   if (!isPortalSection(section)) notFound()
 
-  const { memberId, memberEmail, payload } = await requirePortalMember(`/portal/${section}`)
+  const { actor, payload } = await requirePortalAccess(`/portal/${section}`)
+
+  if (section === 'account' || section === 'billing') {
+    if (actor.kind === 'admin') {
+      return (
+        <div className='mx-auto max-w-2xl px-4 py-12 text-center'>
+          <Shield aria-hidden='true' className='mx-auto mb-4 h-10 w-10 text-jpv-brand-deep' />
+          <h1 className='text-xl font-semibold text-jpv-ink'>Administrator view</h1>
+          <p className='mt-2 text-sm text-jpv-muted'>
+            This section shows member-specific data. Use a member account to see the full member experience, or manage content from the admin panel.
+          </p>
+          <div className='mt-6 flex justify-center gap-3'>
+            <Link className='jpv-button-primary' href='/admin'>Admin Panel</Link>
+            <Link className='jpv-button-secondary' href='/portal'>Dashboard</Link>
+          </div>
+        </div>
+      )
+    }
+  }
+
+  // For account and billing: admin returned above, so actor is always MemberActor here.
+  // For community and groups: admin is allowed; empty string sentinel produces benign empty state.
+  const memberId = actor.kind === 'member' ? actor.memberId : ''
+  const memberEmail = actor.kind === 'member' ? actor.email : ''
 
   if (section === 'account') {
     const [account, memberRecord, query, billingStatus] = await Promise.all([
@@ -512,7 +538,8 @@ export default async function PortalSectionPage({ params, searchParams }: Portal
   }
 
   if (section === 'groups') {
-    const account = await getMemberAccountOverview(payload, memberId)
+    const account = memberId ? await getMemberAccountOverview(payload, memberId) : null
+    const groups = account?.groups ?? []
 
     return (
       <div className='space-y-8'>
@@ -524,9 +551,9 @@ export default async function PortalSectionPage({ params, searchParams }: Portal
           </p>
         </section>
 
-        {account.groups.length > 0 ? (
+        {groups.length > 0 ? (
           <div className='grid gap-4 sm:grid-cols-2'>
-            {account.groups.map((group) => (
+            {groups.map((group) => (
               <article className='rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm' key={group.id}>
                 <h2 className='text-lg font-semibold text-neutral-950'>{group.name}</h2>
                 <p className='mt-2 text-sm text-neutral-600'>Active member group</p>

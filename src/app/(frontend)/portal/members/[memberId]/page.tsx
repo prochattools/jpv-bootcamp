@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 
 import { CommunityRichText } from '@/components/community/CommunityRichText'
-import { requirePortalMember } from '@/lib/auth/requirePortalMember'
+import { requirePortalAccess } from '@/lib/auth/requirePortalAccess'
 import { getMemberProfileDetail } from '@/lib/payloadCourse/memberDirectory'
 
 type MemberProfilePageProps = {
@@ -10,7 +10,7 @@ type MemberProfilePageProps = {
 }
 
 export default async function MemberProfilePage({ params }: MemberProfilePageProps) {
-  await requirePortalMember('/portal/members')
+  await requirePortalAccess('/portal/members')
 
   const { memberId } = await params
   const profile = await getMemberProfileDetail(memberId)
