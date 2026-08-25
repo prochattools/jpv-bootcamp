@@ -136,8 +136,6 @@ jobs:
             org.opencontainers.image.version=${{ github.sha }}-legacy
             dev.jpvbootcamp.legacy-origin=https://legacy.jpvbootcamp.com
             dev.jpvbootcamp.branch=release/legacy-domain
-          cache-from: type=gha,scope=legacy-domain-image-publish
-          cache-to: type=gha,mode=max,scope=legacy-domain-image-publish
 
       - name: Report image reference
         run: |
