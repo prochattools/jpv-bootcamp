@@ -180,14 +180,14 @@ function testAuthRequiredForProgrammeAndCommunity(): void {
   )
   assert.ok(programmePage.includes("'/portal/programme'"), '/portal/programme must require auth for /portal/programme path')
 
-  // /portal/community requires auth
+  // /portal/community requires auth (requirePortalAccess after admin migration)
   const communityPage = readFileSync('src/app/(frontend)/portal/community/page.tsx', 'utf8')
-  assert.ok(communityPage.includes('requirePortalMember'), '/portal/community must import requirePortalMember')
+  assert.ok(communityPage.includes('requirePortalAccess') || communityPage.includes('requirePortalMember'), '/portal/community must import requirePortalAccess or requirePortalMember')
   assert.ok(communityPage.includes("'/portal/community'"), '/portal/community must require auth for /portal/community path')
 
   // /portal/community/[spaceSlug] requires auth
   const communitySpacePage = readFileSync('src/app/(frontend)/portal/community/[spaceSlug]/page.tsx', 'utf8')
-  assert.ok(communitySpacePage.includes('requirePortalMember'), '/portal/community/[spaceSlug] must import requirePortalMember')
+  assert.ok(communitySpacePage.includes('requirePortalAccess') || communitySpacePage.includes('requirePortalMember'), '/portal/community/[spaceSlug] must import requirePortalAccess or requirePortalMember')
   assert.ok(communitySpacePage.includes('/portal/community/'), '/portal/community/[spaceSlug] must require auth for portal/community path')
 }
 
