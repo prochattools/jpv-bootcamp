@@ -404,6 +404,24 @@ async function run() {
   }
 
   {
+    const payload = buildPayload()
+    const stripeEvent = event('customer.subscription.updated', subscription(), 'evt_reconcile_unknown_member')
+
+    const result = await mirrorStripeEventToPayload(payload, stripeEvent, {
+      stripe: fakeStripe(),
+      preserveMemberStatus: true,
+      suppressCommunications: true,
+    })
+
+    assert.equal(result.processed, true)
+    assert.ok(result.actions.includes('subscription_review_required_no_matching_local_member'))
+    assert.equal(payload.countDocs('payload_members'), 0)
+    assert.equal(payload.countDocs('payload_billing_accounts'), 0)
+    assert.equal(payload.countDocs('payload_subscriptions'), 0)
+    assert.equal(payload.docs('payload_billing_actions')[0]?.notes, 'no_matching_local_member')
+  }
+
+  {
     const payload = buildPayload({
       payload_members: [{
         id: 'member_stale_guard',

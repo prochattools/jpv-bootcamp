@@ -62,6 +62,7 @@ type Mirror = (
     stripe: Pick<Stripe, 'subscriptions' | 'customers'>
     adminEmail?: string | null
     suppressCommunications?: boolean
+    preserveMemberStatus?: boolean
   },
 ) => Promise<PayloadBillingShadowSyncResult>
 
@@ -363,6 +364,7 @@ export async function reconcileStripeToPayload(
         stripe: options.stripe,
         adminEmail: options.adminEmail,
         suppressCommunications: options.suppressCommunications ?? true,
+        preserveMemberStatus: true,
       })
       rows.push({
         objectType,

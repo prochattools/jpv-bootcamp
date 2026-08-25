@@ -68,6 +68,9 @@ type ShadowSyncOptions = {
   stripe?: ShadowStripeClient
   adminEmail?: string | null
   suppressCommunications?: boolean
+  // Reconciliation must not manufacture identities from historical provider data.
+  // Real-time Stripe checkout/webhook processing retains its existing creation path.
+  preserveMemberStatus?: boolean
 }
 
 export type PayloadBillingShadowSyncResult = {
@@ -888,6 +891,7 @@ async function syncSubscription(
     email: projection.email,
     billingStatus: projection.billingStatus,
     defaultPaymentMethodId: projection.defaultPaymentMethodId,
+    preserveMemberStatus: options.preserveMemberStatus,
   })
 
   if (!subject) {
@@ -895,9 +899,13 @@ async function syncSubscription(
       actionType: 'subscription_updated',
       status: 'skipped',
       eventId: event.id,
-      notes: 'missing_customer_email',
+      notes: options.preserveMemberStatus ? 'no_matching_local_member' : 'missing_customer_email',
     })
-    return ['subscription_review_required_missing_email']
+    return [
+      options.preserveMemberStatus
+        ? 'subscription_review_required_no_matching_local_member'
+        : 'subscription_review_required_missing_email',
+    ]
   }
 
   const resolvedPlanForSync = projection.plan ?? 'jpv_bootcamp_membership'
