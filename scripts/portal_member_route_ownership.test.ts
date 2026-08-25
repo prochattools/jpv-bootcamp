@@ -38,7 +38,7 @@ function testCanonicalPortalOwnership(): void {
   assert.match(source(FILES.portalPage), /requirePortalAccess\(/)
   assert.match(source(FILES.courseIndex), /requirePortalAccess\('\/portal\/courses'\)/)
   assert.match(source(FILES.courseDetail), /requirePortalAccess\(requestedPath\)/)
-  assert.match(source(FILES.lessonDetail), /requirePortalAccess\(requestedPath\)/)
+  assert.match(source(FILES.lessonDetail), /requirePortalMember\(requestedPath\)/)
   assert.match(source(FILES.lessonDetail), /markMemberLessonComplete/)
   // Community routes accept either requirePortalAccess (migrated) or requirePortalMember (pending)
   assert.match(source(FILES.communityIndex), /require(?:PortalAccess|PortalMember)\(/)
