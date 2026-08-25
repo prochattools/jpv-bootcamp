@@ -140,8 +140,6 @@ jobs:
             org.opencontainers.image.version=${{ github.sha }}
             dev.jpvbootcamp.production-origin=https://jpvbootcamp.com
             dev.jpvbootcamp.branch=release/root-domain-cutover
-          cache-from: type=gha,scope=root-domain-image-publish
-          cache-to: type=gha,mode=max,scope=root-domain-image-publish
 
       - name: Report image reference
         run: |
