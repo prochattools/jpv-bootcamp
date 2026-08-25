@@ -51,15 +51,22 @@ const REQUIRED_TARGET_ID = 'jpvbootcamp-staging'
 const REQUIRED_ENVIRONMENT = 'staging'
 const MIGRATION35 = '20260818_140100_portal_settings'
 const MIGRATION36 = '20260820_000000_live_session_space'
+const MIGRATION39 = '20260824_200000_member_notifications'
+const MIGRATION40 = '20260824_210000_pay_it_forward_schema'
 const TARGET_MIGRATIONS = [
-  '20260824_120000_engagement_reactions',
+  '20260825_120000_billing_invoice_visibility',
+  '20260825_121000_membership_support_runtime_alignment',
+  '20260825_122000_membership_support_relationships',
+  '20260825_123000_membership_support_relationship_alignment',
+  '20260825_124000_membership_review_assignee_alignment',
+  '20260825_125000_membership_shadow_state_alignment',
 ] as const
-const TARGET_MIGRATION = TARGET_MIGRATIONS[0]
-const APPLY_CONFIRMATION = 'apply_engagement_reactions_to_jpvbootcamp_staging'
-const ROLLBACK_CONFIRMATION = 'plan_rollback_engagement_reactions_from_jpvbootcamp_staging'
-const EXPECTED_APPLIED_BEFORE = 36
-const EXPECTED_APPLIED_AFTER = 37
-const CURRENT_STAGING_APPLIED_COUNT = 37
+const TARGET_MIGRATION = TARGET_MIGRATIONS.at(-1)!
+const APPLY_CONFIRMATION = 'apply_billing_reconciliation_to_jpvbootcamp_staging'
+const ROLLBACK_CONFIRMATION = 'plan_rollback_billing_reconciliation_from_jpvbootcamp_staging'
+const EXPECTED_APPLIED_BEFORE = 40
+const EXPECTED_APPLIED_AFTER = 46
+const CURRENT_STAGING_APPLIED_COUNT = 46
 // Reviewed staging hostname — matches STAGING_TARGET.hostname in runStagingPayloadMigration.ts.
 const STAGING_HOSTNAME = '10.0.2.4'
 const PRODUCTION_HOSTNAME = 'prod-db.internal'
@@ -71,11 +78,12 @@ const ALL_37 = PAYLOAD_MIGRATION_NAMES.slice(0, EXPECTED_APPLIED_AFTER)
 
 // Registry integrity assertions — fail fast if the registry is out of sync.
 assert.equal(PAYLOAD_MIGRATION_NAMES.length, CURRENT_STAGING_APPLIED_COUNT, 'Canonical registry must contain the current migration inventory')
-assert.equal(FIRST_35.length, 36, 'Registry must have exactly 36 applied migrations before the reaction migration')
-assert.equal(FIRST_35.at(-1), MIGRATION36, 'Migration 36 must be the last migration in the applied prefix')
-assert.equal(ALL_36.length, EXPECTED_APPLIED_BEFORE, 'Current staging baseline must contain all 36 migrations')
-assert.equal(ALL_37.length, EXPECTED_APPLIED_AFTER, 'Canonical 36→37 checkpoint must contain all 37 migrations')
-assert.deepEqual(ALL_37.slice(EXPECTED_APPLIED_BEFORE), [...TARGET_MIGRATIONS], 'Reaction migration must be the exact canonical 36→37 batch')
+assert.equal(FIRST_35.length, 40, 'Registry must have exactly 40 applied migrations before the billing batch')
+assert.equal(FIRST_35.at(-2), MIGRATION39, 'Migration 39 must remain in the applied prefix')
+assert.equal(FIRST_35.at(-1), MIGRATION40, 'Migration 40 must be the last migration in the applied prefix')
+assert.equal(ALL_36.length, EXPECTED_APPLIED_BEFORE, 'Current staging baseline must contain all 40 migrations')
+assert.equal(ALL_37.length, EXPECTED_APPLIED_AFTER, 'Canonical 40→46 checkpoint must contain all 46 migrations')
+assert.deepEqual(ALL_37.slice(EXPECTED_APPLIED_BEFORE), [...TARGET_MIGRATIONS], 'Billing migrations must be the exact canonical 40→46 batch')
 
 // ─── Confirmed: no self-referential hardcoded commit ──────────────────────────
 // The runner exports no REQUIRED_COMMIT constant.
@@ -159,7 +167,7 @@ function make37Client(schema = REQUIRED_SCHEMA): PgClientLike {
     schema,
     payloadRows: [
       ...ALL_36.map((name, index) => ({ name, batch: index === EXPECTED_APPLIED_BEFORE - 1 ? 2 : 1 })),
-      { name: TARGET_MIGRATION, batch: 3 },
+      ...TARGET_MIGRATIONS.map((name) => ({ name, batch: 3 })),
     ],
   })
 }
@@ -1267,7 +1275,7 @@ async function run(): Promise<void> {
       baseDeps({ clientFactory: clientFactory36() }), noopOutput(),
     )
     assert.equal(result.ok, false)
-    assert.ok(result.blockers.some((b) => b.includes('36') || b.includes('35')))
+    assert.ok(result.blockers.some((b) => b.includes(String(EXPECTED_APPLIED_AFTER)) || b.includes(String(EXPECTED_APPLIED_BEFORE))))
   })
 
   await test('rollback-plan: ok when all 36 applied and target batch is last', async () => {
@@ -1745,7 +1753,7 @@ async function run(): Promise<void> {
     if ('outcome' in result) {
       assert.equal(result.schemaIdentityConfirmed, true)
       assert.equal(result.targetBatchApplied, false)
-      assert.equal(result.appliedCount, 36)
+      assert.equal(result.appliedCount, EXPECTED_APPLIED_BEFORE)
     }
   })
 
@@ -2363,6 +2371,7 @@ async function run(): Promise<void> {
       stagingUrl(), undefined,
       goodPlanInput({ expectedCommit: abbrev }),
       {
+        gitResolver: okGit(realHead),
         gitStatusResolver: cleanGitStatus(),
         clientFactory: clientFactory35(),
         commandExecutor: okApplyExecutor(),
@@ -2370,7 +2379,7 @@ async function run(): Promise<void> {
       noopOutput(),
     )
     assert.equal(abbrevResult.ok, false)
-    assert.ok(abbrevResult.blockers.some((b) => b === 'expected_commit_required' || b.includes('40') || b.includes('expected_commit')))
+    assert.ok(abbrevResult.blockers.some((b) => b === 'expected_commit_required' || b.includes('expected_commit')))
 
     // Previous SHA must fail (HEAD is not SYNTHETIC_HEAD unless we are at that exact commit)
     if (realHead !== SYNTHETIC_HEAD) {
@@ -2378,6 +2387,7 @@ async function run(): Promise<void> {
         stagingUrl(), undefined,
         goodPlanInput({ expectedCommit: SYNTHETIC_HEAD }),
         {
+          gitResolver: okGit(realHead),
           gitStatusResolver: cleanGitStatus(),
           clientFactory: clientFactory35(),
           commandExecutor: okApplyExecutor(),
