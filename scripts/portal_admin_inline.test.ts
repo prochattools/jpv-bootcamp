@@ -57,8 +57,8 @@ function testAdminStaysUnderPortal() {
 // ---------------------------------------------------------------------------
 function testNestedRoutesUseRequirePortalAccess() {
   const nestedRoutes = [
-    // course detail migrated in this commit; lesson detail pending future commit
     'src/app/(frontend)/portal/courses/[courseSlug]/page.tsx',
+    'src/app/(frontend)/portal/courses/[courseSlug]/lessons/[lessonSlug]/page.tsx',
   ]
 
   for (const relPath of nestedRoutes) {
@@ -242,8 +242,8 @@ function testAdminActionsResolveAuth() {
 // ---------------------------------------------------------------------------
 function testAdminGateActivated() {
   const pagesWithAdminGate = [
-    // course detail migrated in this commit; lesson detail pending future commit
     'src/app/(frontend)/portal/courses/[courseSlug]/page.tsx',
+    'src/app/(frontend)/portal/courses/[courseSlug]/lessons/[lessonSlug]/page.tsx',
   ]
 
   for (const relPath of pagesWithAdminGate) {
@@ -272,6 +272,15 @@ function testAdminGateActivated() {
   assert.ok(
     closeAdminGateIdx > courseAdminPanelIdx,
     `[test 7] CourseAdminPanel must be inside AdminGate (</AdminGate> must follow <CourseAdminPanel)`,
+  )
+
+  const lessonSrc = source(
+    'src/app/(frontend)/portal/courses/[courseSlug]/lessons/[lessonSlug]/page.tsx',
+  )
+  assert.match(
+    lessonSrc,
+    /getAdminLessonDetail\(payload, courseSlug, lessonSlug\)/,
+    `[test 7] lesson page must load the real admin lesson projection`,
   )
 }
 
