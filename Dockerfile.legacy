@@ -1,0 +1,63 @@
+# Legacy application image for legacy.jpvbootcamp.com.
+# This is built from the frozen legacy source, not from main after cutover.
+
+FROM node:20-bullseye AS base
+WORKDIR /app
+
+RUN npm install -g pnpm@10.33.0
+
+FROM base AS deps
+COPY package.json pnpm-lock.yaml .npmrc ./
+COPY prisma ./prisma
+RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile
+
+FROM base AS builder
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+ENV DATABASE_URL=postgresql://build:build@localhost:5432/build
+ARG NEXT_PUBLIC_APP_URL=https://legacy.jpvbootcamp.com
+ARG APP_BASE_URL=https://legacy.jpvbootcamp.com
+ARG NEXT_PUBLIC_SERVER_URL=https://legacy.jpvbootcamp.com
+ARG NEXT_PUBLIC_APP_DOMAIN=legacy.jpvbootcamp.com
+ENV NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+ENV APP_BASE_URL=${APP_BASE_URL}
+ENV NEXT_PUBLIC_SERVER_URL=${NEXT_PUBLIC_SERVER_URL}
+ENV NEXT_PUBLIC_APP_DOMAIN=${NEXT_PUBLIC_APP_DOMAIN}
+RUN --mount=type=cache,target=/app/.next/cache \
+    node_modules/.bin/prisma generate --schema=prisma/system.prisma && \
+    pnpm run build
+
+FROM node:20-bullseye AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV DEPLOYMENT_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV HOSTNAME=0.0.0.0
+ENV PORT=3000
+ENV NEXT_PUBLIC_APP_DOMAIN=legacy.jpvbootcamp.com
+
+RUN apt-get update && apt-get install -y \
+    lsb-release \
+    curl \
+    gnupg \
+    && curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+       | gpg --dearmor -o /etc/apt/trusted.gpg.d/postgresql.gpg \
+    && echo "deb http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
+    && apt-get update && apt-get install -y postgresql-client-15 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/scripts ./scripts
+COPY --from=builder /app/package.json ./package.json
+
+EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=3 \
+  CMD node -e "require('http').get('http://127.0.0.1:3000/', res => process.exit(res.statusCode < 500 ? 0 : 1)).on('error', () => process.exit(1))"
+
+CMD ["bash", "scripts/runtime/start-legacy-domain.sh"]

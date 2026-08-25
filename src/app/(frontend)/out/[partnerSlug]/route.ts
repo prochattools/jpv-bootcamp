@@ -3,12 +3,13 @@ import prisma from '@/libs/prisma'
 import { getPartnerBySlug } from '@/content/partners'
 import { sanitizeSessionId, getPartnerSession } from '@/lib/partners-session'
 import { sanitizeRefPath } from '@/lib/partners-url'
+import { getPublicBaseUrl } from '@/lib/public-base-url'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 const PORTAL_PARTNERS_URL = 'https://portal.jpvbootcamp.com/go/partners'
-const DEFAULT_PARTNERS_URL = 'https://jpvbootcamp.com/partners'
+const DEFAULT_PARTNERS_URL = `${getPublicBaseUrl()}/partners`
 const CLICK_DEDUPE_WINDOW_MS = 3000
 
 function isSafeAffiliateUrl(url: string): boolean {

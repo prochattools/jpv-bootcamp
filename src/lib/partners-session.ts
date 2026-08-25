@@ -5,7 +5,8 @@ import { enforceSponsoredGrantStatus } from '@/lib/sponsored-grants'
 
 export const PARTNERS_SESSION_COOKIE = 'partners_session'
 export const PARTNERS_SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 7
-export const PARTNERS_COOKIE_DOMAIN = 'jpvbootcamp.com'
+export const PARTNERS_COOKIE_DOMAIN =
+	process.env.NEXT_PUBLIC_APP_DOMAIN?.trim() || 'jpvbootcamp.com'
 
 export type PartnerSessionRecord = {
 	sessionId: string

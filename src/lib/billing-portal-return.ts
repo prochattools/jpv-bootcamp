@@ -1,8 +1,10 @@
 const DEFAULT_RETURN_URL = 'https://portal.jpvbootcamp.com/community/'
+const configuredAppOrigin = (process.env.APP_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || '').trim().replace(/\/$/, '')
 const ALLOWED_RETURN_ORIGINS = new Set([
 	'https://portal.jpvbootcamp.com',
 	'https://jpvbootcamp.com',
 	'https://www.jpvbootcamp.com',
+	...(configuredAppOrigin ? [configuredAppOrigin] : []),
 ])
 const MAX_RETURN_URL_LENGTH = 2048
 
