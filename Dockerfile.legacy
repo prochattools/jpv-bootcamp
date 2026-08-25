@@ -28,6 +28,11 @@ RUN --mount=type=cache,target=/app/.next/cache \
     node_modules/.bin/prisma generate --schema=prisma/system.prisma && \
     pnpm run build
 
+FROM node:20-bullseye-slim AS script-deps
+WORKDIR /script-deps
+RUN echo '{"dependencies":{"newrelic":"^13.18.0","pg":"^8","prisma":"6.15.0"}}' > package.json
+RUN npm install --omit=dev --ignore-scripts 2>&1 | tail -1
+
 FROM node:20-bullseye AS runner
 WORKDIR /app
 
@@ -37,6 +42,10 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV HOSTNAME=0.0.0.0
 ENV PORT=3000
 ENV NEXT_PUBLIC_APP_DOMAIN=legacy.jpvbootcamp.com
+
+COPY --from=script-deps /script-deps/node_modules /script-deps/node_modules
+ENV PATH="/script-deps/node_modules/.bin:${PATH}"
+ENV NODE_PATH=/script-deps/node_modules
 
 RUN apt-get update && apt-get install -y \
     lsb-release \
