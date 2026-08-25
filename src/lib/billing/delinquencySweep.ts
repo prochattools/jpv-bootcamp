@@ -48,20 +48,28 @@ export async function sweepExpiredPaymentGrace(params: {
     failed: 0,
   }
 
-  const subscriptions = await params.payload.find({
-    collection: 'payload_subscriptions',
-    where: {
-      and: [
-        { status: { in: ['past_due', 'unpaid'] } },
-        { paymentGraceEndsAt: { less_than: now.toISOString() } },
-      ],
-    },
-    limit,
-    depth: 0,
-    overrideAccess: true,
-  })
+  const subscriptions: PayloadDocument[] = []
+  for (let page = 1; page <= 10_000; page += 1) {
+    const batch = await params.payload.find({
+      collection: 'payload_subscriptions',
+      where: {
+        and: [
+          { status: { in: ['past_due', 'unpaid'] } },
+          { paymentGraceEndsAt: { less_than: now.toISOString() } },
+        ],
+      },
+      sort: 'id',
+      limit,
+      page,
+      depth: 0,
+      overrideAccess: true,
+    })
+    subscriptions.push(...batch.docs)
+    if (!batch.hasNextPage) break
+    if (page === 10_000) throw new Error('delinquency_sweep_page_limit_exceeded')
+  }
 
-  for (const subscription of subscriptions.docs) {
+  for (const subscription of subscriptions) {
     result.examined += 1
     const memberId = relationshipId(subscription.member)
     if (memberId === null) {

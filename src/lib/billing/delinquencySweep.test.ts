@@ -5,10 +5,19 @@ import { sweepExpiredPaymentGrace } from '@/lib/billing/delinquencySweep'
 
 class FakePayload implements PayloadCourseWriteAPI {
   private nextId = 1
+  readonly findPages: number[] = []
   constructor(readonly data: Record<string, PayloadDocument[]>) {}
 
-  async find(args: { collection: string }) {
-    return { docs: this.data[args.collection] ?? [] }
+  async find(args: { collection: string; limit?: number; page?: number }) {
+    const rows = this.data[args.collection] ?? []
+    const limit = args.limit ?? rows.length
+    const page = args.page ?? 1
+    if (args.collection === 'payload_subscriptions') this.findPages.push(page)
+    const start = (page - 1) * limit
+    return {
+      docs: rows.slice(start, start + limit),
+      hasNextPage: start + limit < rows.length,
+    }
   }
   async findByID(args: { collection: string; id: PayloadId }) {
     const doc = (this.data[args.collection] ?? []).find((row) => String(row.id) === String(args.id))
@@ -49,6 +58,7 @@ async function run() {
   const result = await sweepExpiredPaymentGrace({
     payload,
     now: new Date('2026-08-25T00:00:00Z'),
+    limit: 2,
   })
 
   assert.deepEqual(result, {
@@ -63,6 +73,7 @@ async function run() {
   assert.equal(payload.data.payload_members[1]?.accountStatus, 'suspended')
   assert.equal(payload.data.payload_email_events.length, 1)
   assert.equal(payload.data.payload_member_security_events.length, 1)
+  assert.deepEqual(payload.findPages, [1, 2])
 
   console.log('Delinquency sweep contract: PASS')
 }
