@@ -231,6 +231,21 @@ export const RELEASE_TEST_MANIFEST: ReleaseTestEntry[] = [
   test('routes.mvp-integration', 'route architecture and MVP integration', 'scripts/mvp_route_integration.test.ts', 'Protects cross-feature route integration and imports.', 'Launch-critical routes no longer compose safely.', 'M1-02'),
   test('routes.community-preview', 'route architecture and MVP integration', 'scripts/community_preview_mvp.test.ts', 'Protects community preview routing and access claims.', 'Community preview can over-promise persisted behavior.', 'M1-02'),
 
+  test('portal-admin.source-structure', 'member portal and entitlement behavior', 'scripts/portal_admin_inline.test.ts', 'Validates portal admin component structure and import safety.', 'Portal admin components can import server modules or use unsafe patterns.', 'M1-02'),
+  test('portal-admin.behavioral-contract', 'member portal and entitlement behavior', 'scripts/portal_admin_behavioral.test.ts', 'Validates portal admin behavioral contracts: ownership verification, space validation, audit, and access control patterns.', 'Portal admin actions can bypass ownership checks, skip audit, or use stale client state.', 'M1-02'),
+  {
+    id: 'portal-admin.mutation-smoke-gate',
+    category: 'member portal and entitlement behavior',
+    command: { executable: 'pnpm', args: ['exec', 'tsx', 'scripts/portal-admin-smoke-gate.test.ts'] },
+    testPath: 'scripts/portal-admin-smoke-gate.test.ts',
+    launchCriticalReason: 'Portal admin mutation smoke evidence gate — blocks staging release if real-app mutation smoke (create/edit/delete + reload evidence) has not been run today against staging.',
+    requirement: 'conditional',
+    condition: 'STAGING_GATE',
+    failureMeaning: 'Portal admin staging smoke evidence is missing or has failures — staging release must not proceed.',
+    owner: 'M1-02',
+    covers: [],
+  },
+
   command('audit.production-high', 'dependency audit disposition', 'pnpm', ['exec', 'pnpm', 'audit', '--prod', '--audit-level', 'high', '--ignore-registry-errors'], 'Fails release validation on any high or critical production advisory while tolerating the retired registry audit endpoint transport failure.', 'A high or critical production dependency advisory is unresolved.', 'M0-06/M0-09', ['M0-06', 'M0-09']),
 
   test('evidence.artifact-automation', 'release evidence and operator handoff checks', 'scripts/evidence_artifact_automation.test.ts', 'Protects deterministic local evidence generation boundaries.', 'Release evidence cannot be created safely or repeatably.', 'M1-02'),

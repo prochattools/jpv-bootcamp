@@ -87,6 +87,7 @@ export type MemberCommunityPost = {
   commentCount: number
   authorName: string
   excerpt: string | null
+  moderationStatus?: string | null
 }
 
 export type MemberAnnouncement = {

@@ -68,6 +68,8 @@ export function CommunityPostCard({ href, post }: CommunityPostCardProps) {
               {postTypeLabel(post.postType)}
             </span>
             {post.pinned ? <span className='rounded-full bg-jpv-brand/10 px-2.5 py-1 text-jpv-brand-deep'>Pinned</span> : null}
+            {post.moderationStatus === 'hidden' ? <span className='rounded-full bg-red-100 px-2.5 py-1 text-red-700'>Hidden</span> : null}
+            {post.moderationStatus === 'pending' ? <span className='rounded-full bg-yellow-100 px-2.5 py-1 text-yellow-800'>Pending review</span> : null}
           </div>
 
           <EngagementAuthorIdentity

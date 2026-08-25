@@ -4,8 +4,8 @@ import { notFound } from 'next/navigation'
 import { StatusPill } from '@/components/portal/StatusPill'
 import { CommunityPostCard } from '@/components/community/CommunityPostCard'
 import { ComposerToolbar } from '@/components/community/ComposerToolbar'
-import { requirePortalMember } from '@/lib/auth/requirePortalMember'
-import { getMemberCommunitySpaceDetail, withQueryDedup } from '@/lib/payloadCourse/communityPortal'
+import { requirePortalAccess } from '@/lib/auth/requirePortalAccess'
+import { getMemberCommunitySpaceDetail, withQueryDedup, type MemberCommunityPost } from '@/lib/payloadCourse/communityPortal'
 import { listSpaceLiveCalls } from '@/lib/liveSessions/memberSessions'
 import { submitCommunityPost } from '../actions'
 
@@ -25,10 +25,107 @@ type PageProps = {
 export default async function PortalCommunitySpacePage({ params, searchParams }: PageProps) {
   const [{ spaceSlug }, query] = await Promise.all([params, searchParams])
   const encodedSpaceSlug = encodeURIComponent(spaceSlug)
-  const { memberId, memberEmail, payload } = await requirePortalMember(`/portal/community/${encodedSpaceSlug}`)
+  const { actor, payload } = await requirePortalAccess(`/portal/community/${encodedSpaceSlug}`)
+  const isAdmin = actor.kind === 'admin'
+  const memberId = actor.kind === 'member' ? actor.memberId : ''
+  const memberEmail = actor.kind === 'member' ? actor.email : ''
 
-  const detail = await getMemberCommunitySpaceDetail(withQueryDedup(payload), memberId, spaceSlug)
+  let detail = await getMemberCommunitySpaceDetail(withQueryDedup(payload), memberId, spaceSlug)
   if (!detail) notFound()
+
+  // Admin override: bypass space membership gate and fetch posts directly with real data
+  if (isAdmin && !detail.allowed) {
+    const adminPostsResult = await payload.find({
+      collection: 'payload_space_posts',
+      where: {
+        space: { equals: detail.id },
+      },
+      sort: '-createdAt',
+      limit: 50,
+      depth: 0,
+      overrideAccess: true,
+    })
+
+    const postIds = adminPostsResult.docs.map((p) => String(p.id))
+
+    // Collect unique author IDs from posts to batch-fetch names
+    const resolveDocId = (val: unknown): string | null => {
+      if (typeof val === 'string') return val
+      if (val && typeof val === 'object' && 'id' in val) return String((val as { id: unknown }).id)
+      return null
+    }
+
+    const authorIds = new Set<string>()
+    for (const p of adminPostsResult.docs) {
+      const aid = resolveDocId(p.author)
+      if (aid) authorIds.add(aid)
+    }
+
+    // Batch-fetch member display names
+    const authorMap = new Map<string, string>()
+    if (authorIds.size > 0) {
+      const members = await payload.find({
+        collection: 'payload_members',
+        where: { id: { in: Array.from(authorIds) } },
+        limit: authorIds.size + 10,
+        depth: 0,
+        overrideAccess: true,
+      })
+      for (const m of members.docs) {
+        const display = m.displayName ?? m.fullName ?? m.name
+        const name =
+          typeof display === 'string' && display.trim()
+            ? display.trim().slice(0, 120)
+            : [
+                typeof m.firstName === 'string' ? m.firstName : '',
+                typeof m.lastName === 'string' ? m.lastName : '',
+              ]
+                .filter(Boolean)
+                .join(' ')
+                .trim() || 'Community member'
+        authorMap.set(String(m.id), name)
+      }
+    }
+
+    // Fetch comment counts per post in a single batch query
+    const commentCountMap = new Map<string, number>()
+    if (postIds.length > 0) {
+      const commentsResult = await payload.find({
+        collection: 'payload_space_comments',
+        where: { post: { in: postIds } },
+        limit: 2000,
+        depth: 0,
+        overrideAccess: true,
+      })
+      for (const c of commentsResult.docs) {
+        const pid = resolveDocId(c.post)
+        if (pid) {
+          commentCountMap.set(pid, (commentCountMap.get(pid) ?? 0) + 1)
+        }
+      }
+    }
+
+    detail = {
+      ...detail,
+      allowed: true,
+      // Admin has no membership in the space — they bypass access control, not join it.
+      membership: null,
+      posts: adminPostsResult.docs.map((p): MemberCommunityPost => {
+        const aid = resolveDocId(p.author)
+        return {
+          id: String(p.id),
+          title: String(p.title ?? ''),
+          postType: typeof p.postType === 'string' ? p.postType : null,
+          pinned: Boolean(p.pinned),
+          createdAt: p.createdAt ? String(p.createdAt) : null,
+          commentCount: commentCountMap.get(String(p.id)) ?? 0,
+          authorName: aid ? (authorMap.get(aid) ?? 'Community member') : 'Community member',
+          excerpt: null,
+          moderationStatus: typeof p.moderationStatus === 'string' ? p.moderationStatus : null,
+        }
+      }),
+    }
+  }
 
   const liveCalls = detail.allowed
     ? await listSpaceLiveCalls(payload, detail.id)

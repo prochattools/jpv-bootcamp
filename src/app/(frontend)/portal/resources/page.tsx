@@ -1,5 +1,4 @@
-import { Download, Shield } from 'lucide-react'
-import Link from 'next/link'
+import { Download } from 'lucide-react'
 
 import { requirePortalAccess } from '@/lib/auth/requirePortalAccess'
 import { getMemberResourceLibrary, type ResourceLibraryGroup } from '@/lib/payloadCourse/resourceLibrary'
@@ -54,15 +53,16 @@ export default async function PortalResourcesPage() {
 
   if (actor.kind === 'admin') {
     return (
-      <div className='mx-auto max-w-2xl px-4 py-12 text-center'>
-        <Shield aria-hidden='true' className='mx-auto mb-4 h-10 w-10 text-jpv-brand-deep' />
-        <h1 className='text-xl font-semibold text-jpv-ink'>Administrator view</h1>
-        <p className='mt-2 text-sm text-jpv-muted'>
-          This section shows member-specific data. Use a member account to see the full member experience, or manage content from the admin panel.
-        </p>
-        <div className='mt-6 flex justify-center gap-3'>
-          <Link className='jpv-button-primary' href='/admin'>Admin Panel</Link>
-          <Link className='jpv-button-secondary' href='/portal'>Dashboard</Link>
+      <div className='space-y-6'>
+        <section>
+          <p className='jpv-eyebrow'>Administration</p>
+          <h1 className='mt-3 text-2xl font-semibold tracking-tight text-jpv-ink'>Resources</h1>
+          <p className='mt-2 max-w-2xl text-sm leading-6 text-jpv-muted'>
+            Resources are attached to lessons and served to enrolled members. View specific course lessons to manage their resources.
+          </p>
+        </section>
+        <div className='rounded-jpv-panel border border-dashed border-jpv-border bg-jpv-canvas p-8 text-center text-sm text-jpv-muted'>
+          Navigate to a course and lesson to view or manage attached resources.
         </div>
       </div>
     )

@@ -1,6 +1,7 @@
 import 'server-only'
 
 import { cache } from 'react'
+import { cookies } from 'next/headers'
 
 import {
   mapPayloadAuthUser,
@@ -21,7 +22,23 @@ export async function resolvePayloadRequestSession(
   requestHeaders: Headers,
 ): Promise<PayloadRequestSession> {
   const payload = await getCachedPayload()
-  const authResult = await payload.auth({ headers: requestHeaders })
+
+  // In Next.js server actions the incoming headers() may not include the Cookie
+  // header. Fall back to cookies() to ensure payload.auth() can find the session
+  // token when the cookie header is absent from the action's request headers.
+  let authHeaders = requestHeaders
+  const existingCookie = requestHeaders.get('cookie')
+  if (!existingCookie) {
+    const cookieStore = await cookies()
+    const cookiesFromStore = cookieStore.getAll().map((c) => `${c.name}=${c.value}`).join('; ')
+    if (cookiesFromStore) {
+      const augmented = new Headers(requestHeaders)
+      augmented.set('cookie', cookiesFromStore)
+      authHeaders = augmented
+    }
+  }
+
+  const authResult = await payload.auth({ headers: authHeaders })
   const mappedSession = mapPayloadAuthUser(authResult.user)
 
   if (!mappedSession.member || mappedSession.authenticatedCollection !== MEMBER_COLLECTION) {
