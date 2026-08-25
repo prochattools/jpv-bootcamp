@@ -172,11 +172,13 @@ async function enforceAmbiguousCustomerReview(params: {
   })
   const memberId = payloadRelationshipId(billingAccount?.member)
   let member: PayloadDocument | null = null
+  let wasAlreadyBlocked = false
   if (memberId !== null) {
     member = await params.payload.findByID({
       collection: 'payload_members', id: memberId, depth: 0, overrideAccess: true,
     })
-    if (member.accountStatus === 'active' || member.accountStatus === 'blocked') {
+    wasAlreadyBlocked = member.accountStatus === 'blocked'
+    if (member.accountStatus === 'active') {
       member = await params.payload.update({
         collection: 'payload_members',
         id: member.id,
@@ -227,7 +229,7 @@ async function enforceAmbiguousCustomerReview(params: {
       runId: params.runId,
       stripeCustomerId: params.customerId,
       stripeSubscriptionIds: params.subscriptionIds,
-      manualStatusPreserved: member !== null && member.accountStatus !== 'blocked',
+      manualStatusPreserved: wasAlreadyBlocked,
     },
   })
 }

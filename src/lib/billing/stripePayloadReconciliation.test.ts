@@ -221,6 +221,30 @@ assert.ok(seenEventIds.every((id) => id.startsWith('reconcile_')))
   assert.equal(collections.payload_members[0]?.billingHoldReason, 'manual_review')
   assert.equal(collections.payload_membership_review_queue_items.length, 1)
   assert.equal(collections.payload_audit_events.length, 1)
+
+  collections.payload_members[0] = {
+    ...collections.payload_members[0],
+    accountStatus: 'blocked',
+    billingHoldReason: 'operator_investigation',
+  }
+  await reconcileStripeToPayload({
+    payload: payload as never,
+    stripe: ambiguousStripe,
+    livemode: true,
+    runId: 'ambiguity_preserve_manual_block',
+    mode: 'apply',
+    now: () => new Date('2026-08-25T00:00:00.000Z'),
+    mirror: async (_payload, event) => ({
+      enabled: true,
+      processed: true,
+      deduped: false,
+      eventId: event.id,
+      eventType: event.type,
+      actions: ['subscription_synced'],
+    }),
+  })
+  assert.equal(collections.payload_members[0]?.billingHoldReason, 'operator_investigation')
+  assert.equal((collections.payload_audit_events[1]?.metadata as { manualStatusPreserved?: boolean }).manualStatusPreserved, true)
 }
 
 console.log('Stripe Payload reconciliation contract: PASS (ambiguity fail-closed included)')
