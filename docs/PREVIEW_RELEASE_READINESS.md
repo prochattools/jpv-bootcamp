@@ -3,7 +3,7 @@
 ## Current repository reconciliation — 2026-08-23
 
 - **Working branch:** `feature/course-branding-and-preview`; starting committed tip `ae8c886d125200d94a8ee7aec005b6226a1304e0`.
-- **Repository gate:** after cleanup, `pnpm test:release` passed `166/166`; focused browser checks passed `60/60`; full browser E2E passed `148/148` with 60 declared skips. The shared `#A89A80` contrast failures are corrected.
+- **Repository gate:** after cleanup, `pnpm test:release` passed `169/169`; focused browser checks passed `60/60`; full browser E2E passed `148/148` with 60 declared skips. The shared `#A89A80` contrast failures are corrected.
 - **Code cleanup:** removed the tracked sponsored-claim `.bak`; the current page remains the only supported implementation.
 - **Migration boundary:** the release-lead verified sanitized staging position is 36/36 Payload migrations applied with pending `[]`; no migration operation was performed by this pass. The source registry and current read-only workflow agree with that state.
 - **Evidence distinction:** registration inventory is not applied database state; the 36/36 position is the separately supplied sanitized staging snapshot, not evidence that the dirty feature worktree is deployed. The general `pnpm staging:migration-status` adapter remains read-only and evidence-gated.
@@ -109,7 +109,7 @@ Static preflight automation is available via `pnpm staging:static-preflight`; it
 
 ### Deterministic local validation baseline
 
-- `pnpm test:release` passed `166/166`, including the account-action hardening-status guard (2026-08-03), staging migration plan workflow contract (2026-08-05), unified dispatchable migration plan job (2026-08-05), and environment configurator dry-run/apply guard test (2026-08-06)
+- `pnpm test:release` passed `169/169`, including the account-action hardening-status guard (2026-08-03), staging migration plan workflow contract (2026-08-05), unified dispatchable migration plan job (2026-08-05), environment configurator dry-run/apply guard test (2026-08-06), and portal admin source structure and behavioral contract verification (2026-08-25)
 - `pnpm test:e2e` Playwright execution: 188 collected, 148 passed, 40 skipped; four staging-only spec files not collected (admin-crud-staging, admin-responsive-staging, staging-smoke, stripe-webhook-staging)
 - `pnpm test:release:full` passed
 - `pnpm staging:static-preflight` passed

@@ -4,7 +4,7 @@
 
 - **Working branch:** `feature/course-branding-and-preview`; current repository tip is `1966197058721ffdfe0d94f24bc3e8e468d4e23b` and is not deployed staging evidence. The single canonical last verified staging release/deployment SHA is `9d87c4a3eeeffb9afb78a38964054792330ea1cb`.
 - **Implementation state:** the current feature branch remains the source under review; its migration registry contains 37 registered migrations, with migration 37 pending in staging. Registration is not applied database state.
-- **Local validation:** after cleanup, `pnpm test:release` passed `166/166`; focused browser checks passed `60/60`; full browser E2E passed `148/148` with 60 declared skips. The initial 24 shared muted-token contrast failures were cleared.
+- **Local validation:** after cleanup, `pnpm test:release` passed `169/169`; focused browser checks passed `60/60`; full browser E2E passed `148/148` with 60 declared skips. The initial 24 shared muted-token contrast failures were cleared.
 - **Cutover state:** production migration, production deployment, provider mutation, and branch advancement were not performed or authorized. Use `docs/release/FUTURE_BRANCH_CUTOVER_PLAN.md` for the later protected integration process.
 - **Evidence rule:** dated records below remain historical unless marked as current frozen-candidate evidence.
 - **Current staging migration state:** fresh read-only plan run `32731856849` confirms 36 Payload migrations applied, `20260824_120000_engagement_reactions` as the sole pending migration, Prisma healthy, and zero unexpected/duplicate/malformed records. The service is currently rolled back to the previously observed `f1aad077...` image; the last exact-SHA staging release remains `9d87c4a3eeeffb9afb78a38964054792330ea1cb`.
@@ -364,7 +364,7 @@ The following phases were layered on the same branch after the `9745dac` hardeni
 ### Current HEAD validation (2026-08-06)
 
 - `pnpm exec tsc --noEmit` PASS — TypeScript: No errors found
-- `pnpm test:release` passed `166/166` — includes the account-action hardening-status guard (2026-08-03), staging migration plan workflow contract (2026-08-05), and environment configurator dry-run/apply guard test (2026-08-06)
+- `pnpm test:release` passed `169/169` — includes the account-action hardening-status guard (2026-08-03), staging migration plan workflow contract (2026-08-05), environment configurator dry-run/apply guard test (2026-08-06), and portal admin source structure and behavioral contract verification (2026-08-25)
 - `pnpm build` PASS — Compiled successfully in 7.8s
 - Security scan (`dangerouslySetInnerHTML`, `eval`, `innerHTML` outside approved surfaces): CLEAN
 - All `dangerouslySetInnerHTML` usages confirmed as trusted-source (Payload Lexical rich text → HTML conversion, hardcoded FAQ strings, hardcoded preview lesson content); none accept user-submitted input unescaped.
