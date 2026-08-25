@@ -57,9 +57,9 @@ for (const path of [
 }
 
 const scopeDocument = read('docs/design/JPV_NONOVERLAPPING_UX_FOUNDATION.md')
-assert.match(scopeDocument, /Explicitly deferred: Claude Code-owned work/)
+assert.match(scopeDocument, /Originally deferred while inline administration was in progress/)
 assert.match(scopeDocument, /portal\/courses\/\*\*/)
 assert.match(scopeDocument, /PortalTopBar/)
-assert.match(scopeDocument, /not committed, pushed, merged, or deployed/)
+assert.match(scopeDocument, /later visual-design pass remains separate/)
 
 console.log('non-overlapping UX foundation: all contracts passed')

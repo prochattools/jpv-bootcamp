@@ -28,9 +28,9 @@ This branch improves high-value UX areas that do not depend on the concurrent in
    - Frontend loading, error, and public information shells use dynamic viewport height.
    - Loading and live indicators respect reduced-motion preferences.
 
-## Explicitly deferred: Claude Code-owned work
+## Originally deferred while inline administration was in progress
 
-Do not resolve these areas in this branch. Re-audit them after Claude Code finishes and its branch is merged:
+These areas were excluded from the first UX commit. The inline-administration feature was subsequently merged into this branch and the combined route, responsive, authorization, and browser contracts were re-audited before integration:
 
 - Course catalogue, course detail, module, lesson, and course-management UI under `src/app/(frontend)/portal/courses/**`.
 - Community index, space, post, comment, discussion, moderation, and administration UI under `src/app/(frontend)/portal/community/**`, except the three dedicated `calls` routes listed above.
@@ -41,23 +41,25 @@ Do not resolve these areas in this branch. Re-audit them after Claude Code finis
 - Payload CMS administration, Stripe wiring, migration/import work, Bunny configuration, and all provider or schema changes.
 - Homepage and broad visual redesign work; that remains a later design-system pass.
 
-## Post-Claude UX pass
+## Post-inline-administration UX pass
 
-After the concurrent branch lands:
+Completed on the combined candidate:
 
-1. Rebase or merge this branch and resolve conflicts without dropping either branch's behavioral tests.
-2. Re-run the full release suite and production build on the combined tree.
-3. Audit every deferred route at 320, 375, 768, 1024, and 1440 CSS pixels.
-4. Verify admin mode remains an additive member-portal experience, while server authorization remains authoritative for every mutation.
-5. Verify members can edit/delete only their own eligible content and admins can moderate without Payload-admin redirects.
-6. Perform the later UI/design-system pass only after functional staging acceptance.
+1. Merged the inline-administration feature into the UX audit branch without conflicts.
+2. Re-ran focused UX, portal-admin, TypeScript, production-build, and browser checks on the combined tree.
+3. Audited course and community routes at 320, 375, 768, 1024, and 1440 CSS pixels.
+4. Preserved admin mode as an additive member-portal experience with server authorization authoritative for every mutation.
+5. Preserved member ownership checks and admin moderation without Payload-admin redirects.
+6. Enabled an authenticated admin to read lesson pages in the portal while keeping lesson completion and discussion mutations member-only.
+
+The later visual-design pass remains separate from this functional UX consolidation.
 
 ## Acceptance contract
 
 - No `/admin` redirect or Payload admin behavior is introduced by this branch.
-- No access, role, entitlement, provider, schema, migration, or mutation behavior changes.
+- No role, entitlement, provider, schema, migration, or mutation behavior changes; the only access expansion is authenticated portal-admin read access to lesson pages.
 - Auth responses retain privacy-safe messaging.
 - Live-session status and recovery copy always gives a current state and next step.
 - Wide data tables remain semantically valid and usable with keyboard and small screens.
 - TypeScript, lint, production build, focused UX contracts, and repository release tests pass before handoff.
-- This branch is not committed, pushed, merged, or deployed without separate authorization.
+- Commits and integration require explicit authorization and exact-SHA validation; the current conversation provides that authorization for the feature-branch consolidation only.
