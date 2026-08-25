@@ -40,32 +40,47 @@ export async function POST(request: Request): Promise<Response> {
     // Scheduled calls may omit a body. Normal reconciliation keeps communications enabled.
   }
 
+  const runId = randomUUID()
   try {
     const payload = await getPayload({ config })
     const stripeConfig = getStripeConfig()
-    const reconciliation = await reconcileStripeToPayload({
-      payload,
-      stripe: getStripe(),
-      mode: 'apply',
-      livemode: stripeConfig.env === 'live',
-      runId: randomUUID(),
-      maxObjects,
-      pageSize: 100,
-      suppressCommunications,
-    })
+    let reconciliation: Awaited<ReturnType<typeof reconcileStripeToPayload>> | null = null
+    let reconciliationFailed = false
+    try {
+      reconciliation = await reconcileStripeToPayload({
+        payload,
+        stripe: getStripe(),
+        mode: 'apply',
+        livemode: stripeConfig.env === 'live',
+        runId,
+        maxObjects,
+        pageSize: 100,
+        suppressCommunications,
+      })
+    } catch (error) {
+      reconciliationFailed = true
+      console.error('stripe_billing_reconciliation_phase_failed', {
+        runId,
+        error: error instanceof Error ? error.message : 'unknown_error',
+      })
+    }
+
     const delinquency = await sweepExpiredPaymentGrace({ payload })
-    const failed = reconciliation.totals.failed + delinquency.failed
+    const failed = (reconciliation?.totals.failed ?? 0) + delinquency.failed
+    const ok = !reconciliationFailed && reconciliation !== null && failed === 0
 
     return json({
-      ok: failed === 0,
-      runId: reconciliation.runId,
-      reconciliation: reconciliation.totals,
-      checkpoint: reconciliation.checkpoint,
+      ok,
+      runId,
+      reconciliation: reconciliation?.totals ?? null,
+      reconciliationError: reconciliationFailed ? 'stripe_reconciliation_failed' : null,
+      checkpoint: reconciliation?.checkpoint ?? null,
       communicationsSuppressed: suppressCommunications,
       delinquency,
-    }, failed === 0 ? 200 : 500)
+    }, ok ? 200 : 500)
   } catch (error) {
     console.error('stripe_billing_reconciliation_failed', {
+      runId,
       error: error instanceof Error ? error.message : 'unknown_error',
     })
     return json({ ok: false, error: 'processing_failed' }, 500)
