@@ -82,12 +82,16 @@ describe('Staging-only invariant', () => {
     it('no DEFAULT_PAYLOAD_SCHEMA fallback exists', () => {
       const src = readFile('src/lib/databaseConnectionConfig.ts')
       expect(src).not.toContain('DEFAULT_PAYLOAD_SCHEMA')
-      expect(src).not.toMatch(/= 'jpvbootcamp'[^_]/)
     })
 
     it('exports REQUIRED_STAGING_SCHEMA constant', () => {
       const src = readFile('src/lib/databaseConnectionConfig.ts')
       expect(src).toContain("REQUIRED_STAGING_SCHEMA = 'jpvbootcamp_staging'")
+    })
+
+    it('exports an explicit production schema constant', () => {
+      const src = readFile('src/lib/databaseConnectionConfig.ts')
+      expect(src).toContain("REQUIRED_PRODUCTION_SCHEMA = 'jpvbootcamp'")
     })
 
     it('exports assertStagingSchema enforcement function', () => {
@@ -268,6 +272,12 @@ describe('Staging-only invariant', () => {
       const cfg = readFile('src/payload.config.ts')
       // Must be called for configured URLs — not just exported
       expect(cfg).toMatch(/assertStagingSchema\(databaseConnection\)/)
+    })
+
+    it('calls assertProductionSchema for production Docker runtime', () => {
+      const cfg = readFile('src/payload.config.ts')
+      expect(cfg).toContain('assertProductionSchema(databaseConnection)')
+      expect(cfg).toContain("DEPLOYMENT_ENV ?? '').trim().toLowerCase() === 'production'")
     })
 
     it('guards call behind DEPLOYMENT_RUNTIME check — does not throw at build time', () => {
