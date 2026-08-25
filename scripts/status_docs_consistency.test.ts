@@ -77,7 +77,10 @@ async function main(): Promise<void> {
 
   assert.match(docs.roadmap, /Status update procedure: `docs\/client\/STATUS_UPDATE_PROCEDURE\.md`/)
   assert.match(docs.roadmap, /feature\/course-branding-and-preview/)
-  assert.match(docs.roadmap, /Current staging migration state.*36\/36 Payload migrations applied with pending `\[\]`/)
+  assert.match(
+    docs.roadmap,
+    /Current staging migration state.*36 Payload migrations applied.*20260824_120000_engagement_reactions.*sole pending migration/,
+  )
   assert.match(docs.roadmap, /production migration, production deployment, provider mutation, and branch advancement were not performed or authorized/i)
   assert.match(docs.roadmap, /Do not touch `main`/)
   assert.match(docs.roadmap, /Applied migration state \| Verified pre-apply state from guarded run `31215369413`/)
@@ -95,7 +98,7 @@ async function main(): Promise<void> {
   assert.match(docs.roadmap, /30853006495/)
   assert.match(docs.roadmap, /STAGING MIGRATION COMPLETE/)
   assert.match(docs.roadmap, /LAUNCH-SCOPE REPOSITORY IMPLEMENTATION COMPLETE — FINAL PRE-MIGRATION CLOSURE IN PROGRESS/)
-  assert.match(docs.roadmap, /36 canonical Payload migration registrations/)
+  assert.match(docs.roadmap, /37 registered migrations/)
   assert.match(docs.roadmap, /20260804_050000_member_account_action_reservations/)
   assert.match(docs.roadmap, /M0-01 through M0-09/)
   assert.match(docs.roadmap, /M1-01 through M1-06/)
