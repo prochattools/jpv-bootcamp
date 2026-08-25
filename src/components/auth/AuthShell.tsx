@@ -73,7 +73,7 @@ export function AuthShell({
 
       {/* Right form panel */}
       <section
-        className='overflow-y-auto px-6 py-10 sm:px-10 lg:py-14'
+        className='px-6 py-10 sm:px-10 lg:overflow-y-auto lg:py-14'
         style={branding?.formBackgroundColor ? { backgroundColor: branding.formBackgroundColor } : undefined}
       >
         <div className='mx-auto w-full max-w-lg'>

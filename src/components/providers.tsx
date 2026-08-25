@@ -13,7 +13,7 @@ export function Providers({ children }: { children: ReactNode }) {
         enableSystem
         disableTransitionOnChange
       >
-        <div className="min-h-screen bg-background">
+        <div className="min-h-screen bg-jpv-canvas text-jpv-ink">
           {children}
         </div>
       </ThemeProvider>

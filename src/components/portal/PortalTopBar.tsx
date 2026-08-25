@@ -1,6 +1,6 @@
 'use client'
 
-import { Menu, Shield, SquareArrowOutUpRight, UserCircle } from 'lucide-react'
+import { Menu, Shield, UserCircle } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
@@ -76,13 +76,6 @@ export function PortalTopBar({ onMobileMenuOpen }: PortalTopBarProps) {
               <Shield aria-hidden='true' className='h-3.5 w-3.5 shrink-0' />
               <span className='hidden sm:inline'>{adminModeOn ? 'Admin On' : 'Admin Off'}</span>
             </button>
-            <Link
-              aria-label='Open Admin Panel'
-              className='flex h-9 w-9 items-center justify-center rounded-full bg-jpv-surface text-jpv-muted transition hover:bg-jpv-border hover:text-jpv-ink dark:bg-[var(--jpv-surface)] dark:text-[var(--jpv-muted)] dark:hover:bg-[var(--jpv-border)] dark:hover:text-[var(--jpv-ink)]'
-              href='/admin'
-            >
-              <SquareArrowOutUpRight aria-hidden='true' className='h-4 w-4' />
-            </Link>
           </>
         )}
         <ThemeToggle />

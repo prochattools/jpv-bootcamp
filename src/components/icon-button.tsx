@@ -1,3 +1,5 @@
+import { Button } from "@/components/ui/button";
+
 const IconButton = ({
   text,
   isLeft,
@@ -8,9 +10,9 @@ const IconButton = ({
   isLoading,
 }: any) => {
   return (
-    <button
+    <Button
       type={isSubmit ? "submit" : "button"}
-      className={`text-white font-semibold whitespace-nowrap text-sm px-6 py-4 rounded-lg w-full scale-1 hover:scale-[1.05] transition-all duration-300 bg-primary`}
+      className="w-full px-6"
       disabled={isLoading}
     >
       {!isLoading ? (
@@ -43,7 +45,7 @@ const IconButton = ({
           </svg>
         </div>
       )}
-    </button>
+    </Button>
   );
 };
 

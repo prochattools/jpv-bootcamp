@@ -935,7 +935,7 @@ export default function HomePage() {
       </footer>
 
       <AccessibleDialog
-        className="max-h-[calc(100vh-2.5rem)] w-[calc(100%-2.5rem)] max-w-xl overflow-y-auto"
+        className="max-h-[calc(100dvh-2.5rem)] w-[calc(100%-2.5rem)] max-w-xl overflow-y-auto"
         describedBy="how-it-works-desc"
         labelledBy="how-it-works-title"
         onClose={() => setIsHowItWorksOpen(false)}
@@ -993,7 +993,7 @@ export default function HomePage() {
       </AccessibleDialog>
 
       <AccessibleDialog
-        className="max-h-[calc(100vh-2.5rem)] w-[calc(100%-2.5rem)] max-w-xl overflow-y-auto"
+        className="max-h-[calc(100dvh-2.5rem)] w-[calc(100%-2.5rem)] max-w-xl overflow-y-auto"
         describedBy="support-desc"
         labelledBy="support-title"
         onClose={handleSupportCancel}
