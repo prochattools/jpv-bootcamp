@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useActionState, useState, type FormEvent } from 'react'
 
 import { AuthShell } from '@/components/auth/AuthShell'
+import { AuthFlowNotice } from '@/components/auth/AuthFlowNotice'
 import {
   requestPasswordResetAction,
   type ForgotPasswordActionState,
@@ -58,16 +59,11 @@ export function ForgotPasswordForm() {
       title='Reset your password'
     >
       {state.submitted ? (
-        <div className='jpv-notice text-sm leading-6' role='status'>
-          <p className='font-semibold text-jpv-ink'>Check your inbox</p>
-          <p className='mt-1 text-jpv-muted'>{state.message}</p>
-          <Link
-            className='mt-3 inline-block text-xs font-semibold text-jpv-brand hover:underline underline-offset-4'
-            href='/portal?mode=login'
-          >
-            Back to sign in
-          </Link>
-        </div>
+        <AuthFlowNotice
+          action={{ href: '/portal?mode=login', label: 'Back to sign in' }}
+          message={state.message ?? 'If an eligible account exists, reset instructions will be sent shortly.'}
+          title='Check your inbox'
+        />
       ) : (
         <form action={action} className='grid gap-4'>
           <div>
@@ -213,22 +209,17 @@ export function ResetPasswordForm({ token }: { token: string }) {
   return (
     <AuthCard description='Use at least 12 characters.' title='Choose a new password'>
       {state.ok ? (
-        <div className='jpv-notice text-sm leading-6' role='status'>
-          <p className='font-semibold text-jpv-ink'>Password updated</p>
-          <p className='mt-1 text-jpv-muted'>Your password has been updated. You can now sign in with your new password.</p>
-          <Link
-            className='mt-3 inline-block text-xs font-semibold text-jpv-brand hover:underline underline-offset-4'
-            href='/portal?mode=login'
-          >
-            Sign in
-          </Link>
-        </div>
+        <AuthFlowNotice
+          action={{ href: '/portal?mode=login', label: 'Sign in' }}
+          message='Your password has been updated. You can now sign in with your new password.'
+          title='Password updated'
+        />
       ) : (
         <form onSubmit={handleSubmit}>
           {state.error ? (
-            <p className='jpv-notice jpv-notice-danger mb-4 text-sm' role='alert'>
-              {state.error}
-            </p>
+            <div className='mb-4'>
+              <AuthFlowNotice message={state.error} title='Password could not be updated' tone='error' />
+            </div>
           ) : null}
           <PasswordFields token={token} />
           <button className={buttonClassName} disabled={pending || !token} type='submit'>
@@ -249,22 +240,17 @@ export function SetPasswordForm({ token }: { token: string }) {
   return (
     <AuthCard description='Choose a password with at least 12 characters.' title='Finish setting up your account'>
       {state.ok ? (
-        <div className='jpv-notice text-sm leading-6' role='status'>
-          <p className='font-semibold text-jpv-ink'>Account ready</p>
-          <p className='mt-1 text-jpv-muted'>Your account has been set up. You can now sign in.</p>
-          <Link
-            className='mt-3 inline-block text-xs font-semibold text-jpv-brand hover:underline underline-offset-4'
-            href='/portal?mode=login'
-          >
-            Sign in
-          </Link>
-        </div>
+        <AuthFlowNotice
+          action={{ href: '/portal?mode=login', label: 'Sign in' }}
+          message='Your account has been set up. You can now sign in.'
+          title='Account ready'
+        />
       ) : (
         <form action={action}>
           {state.error ? (
-            <p className='jpv-notice jpv-notice-danger mb-4 text-sm' role='alert'>
-              {state.error}
-            </p>
+            <div className='mb-4'>
+              <AuthFlowNotice message={state.error} title='Account setup could not be completed' tone='error' />
+            </div>
           ) : null}
           <PasswordFields token={token} />
           <button className={buttonClassName} disabled={pending || !token} type='submit'>

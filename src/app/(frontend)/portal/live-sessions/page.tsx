@@ -1,5 +1,6 @@
 import Link from 'next/link'
 
+import { LiveSessionState, liveSessionAvailabilityMessage } from '@/components/portal/LiveSessionState'
 import { requirePortalMember } from '@/lib/auth/requirePortalMember'
 import { listMemberLiveSessions } from '@/lib/liveSessions/memberSessions'
 
@@ -10,24 +11,6 @@ function formatDate(value: string): string {
     dateStyle: 'long',
     timeStyle: 'short',
   }).format(date)
-}
-
-function statusLabel(status: string): string {
-  return status === 'live'
-    ? 'Live now'
-    : status === 'scheduled'
-      ? 'Scheduled'
-      : status === 'completed'
-        ? 'Completed'
-        : 'Cancelled'
-}
-
-function statusClass(status: string): string {
-  return status === 'live'
-    ? 'bg-emerald-50 text-emerald-700'
-    : status === 'scheduled'
-      ? 'bg-jpv-surface text-jpv-ink'
-      : 'bg-jpv-surface-strong text-jpv-muted'
 }
 
 export default async function PortalLiveSessionsPage() {
@@ -53,9 +36,7 @@ export default async function PortalLiveSessionsPage() {
                   <p className='jpv-eyebrow'>{session.courseTitle}</p>
                   <h2 className='mt-2 text-xl font-semibold text-jpv-ink'>{session.title}</h2>
                   <p className='mt-2 text-sm text-jpv-muted'>{formatDate(session.scheduledAt)}</p>
-                  <p className={`mt-3 inline-flex rounded-jpv-pill px-3 py-1 text-xs font-semibold ${statusClass(session.status)}`}>
-                    {statusLabel(session.status)}
-                  </p>
+                  <div className='mt-3'><LiveSessionState status={session.status} /></div>
                 </div>
                 {session.canJoin ? (
                   <Link
@@ -65,12 +46,8 @@ export default async function PortalLiveSessionsPage() {
                     Join session
                   </Link>
                 ) : (
-                  <span className='text-sm text-jpv-muted'>
-                    {session.status === 'scheduled'
-                      ? 'Waiting for host'
-                      : session.status === 'live' && !session.roomReady
-                        ? 'Room unavailable'
-                        : 'Joining closed'}
+                  <span className='max-w-56 text-sm leading-6 text-jpv-muted'>
+                    {liveSessionAvailabilityMessage(session.status, session.roomReady)}
                   </span>
                 )}
               </div>
@@ -79,7 +56,8 @@ export default async function PortalLiveSessionsPage() {
         </section>
       ) : (
         <section className='rounded-jpv-card border border-dashed border-jpv-border bg-jpv-canvas p-6 text-sm text-jpv-muted sm:p-8'>
-          No live sessions are available for your enrolled courses.
+          <h2 className='font-semibold text-jpv-ink'>No sessions available</h2>
+          <p className='mt-2'>New sessions for your enrolled courses will appear here when they are scheduled.</p>
         </section>
       )}
     </div>

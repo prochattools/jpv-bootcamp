@@ -6,6 +6,7 @@ import { getPayload } from 'payload'
 
 import { PARTNERS_SESSION_COOKIE, getPartnerSession, sanitizeSessionId } from '@/lib/partners-session'
 import { buildPartnerAdminReport } from '@/lib/partnerAffiliateReporting'
+import { ResponsiveDataTable } from '@/components/operations/ResponsiveDataTable'
 
 export const dynamic = 'force-dynamic'
 
@@ -73,8 +74,9 @@ export default async function PartnerApplicationsAdminPage({ searchParams }: Pag
         </Link>
       </section>
 
-      <section className='overflow-x-auto rounded-jpv-panel border border-jpv-border bg-jpv-canvas'>
-        <table className='w-full text-sm'>
+      <section className='rounded-jpv-panel border border-jpv-border bg-jpv-canvas'>
+        <ResponsiveDataTable label='Partner applications'>
+          <table className='w-full text-sm'>
           <thead className='bg-jpv-surface text-left'>
             <tr>
               <th className='px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-jpv-muted'>Partner</th>
@@ -107,7 +109,8 @@ export default async function PartnerApplicationsAdminPage({ searchParams }: Pag
               </tr>
             )}
           </tbody>
-        </table>
+          </table>
+        </ResponsiveDataTable>
       </section>
     </main>
   )

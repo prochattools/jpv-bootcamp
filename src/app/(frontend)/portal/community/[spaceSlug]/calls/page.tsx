@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
+import { LiveSessionState, liveSessionAvailabilityMessage } from '@/components/portal/LiveSessionState'
 import { requirePortalMember } from '@/lib/auth/requirePortalMember'
 import { getMemberCommunitySpaceDetail } from '@/lib/payloadCourse/communityPortal'
 import { listSpaceLiveCalls } from '@/lib/liveSessions/memberSessions'
@@ -31,39 +32,6 @@ function formatRelative(value: string): string {
   const diffHr = Math.round(diffMin / 60)
   if (diffHr < 24) return `Started ${diffHr}h ago`
   return formatDate(value)
-}
-
-function StatusBadge({ status }: { status: string }) {
-  if (status === 'live') {
-    return (
-      <span className='inline-flex items-center gap-1.5 rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-800'>
-        <span className='relative flex h-2 w-2'>
-          <span className='absolute inline-flex h-full w-full animate-ping rounded-full bg-green-500 opacity-75' />
-          <span className='relative inline-flex h-2 w-2 rounded-full bg-green-500' />
-        </span>
-        Live now
-      </span>
-    )
-  }
-  if (status === 'scheduled') {
-    return (
-      <span className='inline-flex items-center rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700'>
-        Scheduled
-      </span>
-    )
-  }
-  if (status === 'cancelled') {
-    return (
-      <span className='inline-flex items-center rounded-full bg-jpv-surface-strong px-3 py-1 text-xs font-semibold text-jpv-muted'>
-        Cancelled
-      </span>
-    )
-  }
-  return (
-    <span className='inline-flex items-center rounded-full bg-jpv-surface-strong px-3 py-1 text-xs font-semibold text-jpv-muted'>
-      Completed
-    </span>
-  )
 }
 
 export default async function SpaceCallsPage({ params }: PageProps) {
@@ -106,7 +74,7 @@ export default async function SpaceCallsPage({ params }: PageProps) {
                 <div className='flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between'>
                   <div className='min-w-0 flex-1'>
                     <div className='flex flex-wrap items-center gap-2'>
-                      <StatusBadge status={call.status} />
+                      <LiveSessionState status={call.status} />
                     </div>
                     <h2 className='mt-2 text-xl font-semibold text-jpv-ink'>{call.title}</h2>
                     <p className='mt-1 text-sm text-jpv-muted'>
@@ -122,8 +90,8 @@ export default async function SpaceCallsPage({ params }: PageProps) {
                         Join call
                       </Link>
                     ) : (
-                      <span className='text-sm text-jpv-muted'>
-                        {call.status === 'scheduled' ? 'Waiting for host' : 'Joining closed'}
+                      <span className='max-w-56 text-sm leading-6 text-jpv-muted'>
+                        {liveSessionAvailabilityMessage(call.status)}
                       </span>
                     )}
                   </div>

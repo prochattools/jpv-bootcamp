@@ -8,6 +8,7 @@ import {
 	getPartnerSession,
 } from '@/lib/partners-session'
 import { partnerCategories } from '@/content/partners'
+import { ResponsiveDataTable } from '@/components/operations/ResponsiveDataTable'
 
 export const dynamic = 'force-dynamic'
 
@@ -148,8 +149,9 @@ export default async function PartnersClicksAdminPage({ searchParams }: PageProp
 
 			<section>
 				<h2 className='font-semibold text-jpv-ink'>Recent clicks</h2>
-				<div className='mt-4 overflow-x-auto rounded-jpv-panel border border-jpv-border bg-jpv-canvas'>
-					<table className='w-full text-sm'>
+				<div className='mt-4 rounded-jpv-panel border border-jpv-border bg-jpv-canvas'>
+					<ResponsiveDataTable label='Recent partner clicks'>
+						<table className='w-full text-sm'>
 						<thead className='bg-jpv-surface text-left'>
 							<tr>
 								<th className='px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-jpv-muted'>Time</th>
@@ -176,7 +178,8 @@ export default async function PartnersClicksAdminPage({ searchParams }: PageProp
 								</tr>
 							)}
 						</tbody>
-					</table>
+						</table>
+					</ResponsiveDataTable>
 				</div>
 			</section>
 		</main>

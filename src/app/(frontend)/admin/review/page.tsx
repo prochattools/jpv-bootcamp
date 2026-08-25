@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { getAdminReviewSections, getAdminReviewSummary, getAdminReviewExportRows } from '@/lib/admin/adminReviewModel'
 import { requireCurrentPayloadAdmin } from '@/lib/admin/currentAdmin'
+import { ResponsiveDataTable } from '@/components/operations/ResponsiveDataTable'
 
 export const dynamic = 'force-dynamic'
 
@@ -122,7 +123,7 @@ export default async function AdminReviewPage() {
           <p className='mt-2 text-sm text-jpv-muted'>
             Export checklist for operator preparation.
           </p>
-          <div className='mt-4 overflow-x-auto'>
+          <ResponsiveDataTable className='mt-4' label='Review export preview'>
             <table className='w-full text-left text-sm'>
               <thead>
                 <tr className='border-b border-jpv-border text-xs font-semibold uppercase tracking-wide text-jpv-muted'>
@@ -147,7 +148,7 @@ export default async function AdminReviewPage() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </ResponsiveDataTable>
         </section>
 
         <section className='rounded-jpv-panel border border-jpv-border bg-jpv-canvas p-5 sm:p-6'>
