@@ -59,6 +59,7 @@ describe('POST /api/admin/reconcile-stripe-billing', () => {
     const response = await POST(request('worker-secret', {
       confirmation: 'initial_backfill_suppress_communications',
       maxObjects: 50_000,
+      checkpoint: { phase: 'invoices', startingAfter: 'in_123' },
     }))
     expect(response.status).toBe(200)
     expect(reconcile).toHaveBeenCalledWith(expect.objectContaining({
@@ -66,6 +67,7 @@ describe('POST /api/admin/reconcile-stripe-billing', () => {
       livemode: true,
       maxObjects: 10_000,
       suppressCommunications: true,
+      checkpoint: { phase: 'invoices', startingAfter: 'in_123' },
     }))
     expect(sweep).toHaveBeenCalledWith({ payload })
   })

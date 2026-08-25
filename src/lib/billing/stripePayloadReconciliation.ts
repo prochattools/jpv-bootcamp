@@ -131,9 +131,11 @@ async function inventorySubscriptions(
 }
 
 function ambiguousCustomerIds(subscriptions: Stripe.Subscription[]): Set<string> {
+  const relevant = subscriptions.filter((subscription) =>
+    !['canceled', 'incomplete_expired'].includes(subscription.status))
   const byCustomer = new Map<string, Set<string>>()
   const byEmail = new Map<string, Array<{ customerId: string; subscriptionId: string }>>()
-  for (const subscription of subscriptions) {
+  for (const subscription of relevant) {
     const customerId = relationshipId(subscription.customer)
     if (!customerId) continue
     const ids = byCustomer.get(customerId) ?? new Set<string>()
@@ -395,12 +397,14 @@ export async function reconcileStripeToPayload(
           : 0
         if (startingAfter && startIndex === 0) throw new Error('subscription_checkpoint_not_found')
         const page = subscriptions.slice(startIndex, startIndex + pageSize)
+        let lastProcessedId: string | undefined
         for (const subscription of page) {
           const event = subscriptionEvent(subscription, options.livemode, options.now?.() ?? new Date())
           await processEvent('subscription', subscription.id, relationshipId(subscription.customer), subscription.status, event)
+          lastProcessedId = subscription.id
           if (rows.length >= maxObjects) break
         }
-        startingAfter = page.at(-1)?.id
+        startingAfter = lastProcessedId
         checkpoint = { phase, startingAfter: startingAfter ?? null }
         await options.onCheckpoint?.(checkpoint)
         subscriptionsComplete = startIndex + page.length >= subscriptions.length
@@ -411,6 +415,7 @@ export async function reconcileStripeToPayload(
           starting_after: startingAfter,
           expand: ['data.customer', 'data.subscription'],
         })
+        let lastProcessedId: string | undefined
         for (const invoice of page.data) {
           const event = invoiceEvent(invoice, options.livemode, options.now?.() ?? new Date())
           if (!event) {
@@ -426,9 +431,10 @@ export async function reconcileStripeToPayload(
           } else {
             await processEvent('invoice', invoice.id, relationshipId(invoice.customer), invoice.status ?? 'unknown', event)
           }
+          lastProcessedId = invoice.id
           if (rows.length >= maxObjects) break
         }
-        startingAfter = page.data.at(-1)?.id
+        startingAfter = lastProcessedId
         checkpoint = { phase, startingAfter: startingAfter ?? null }
         await options.onCheckpoint?.(checkpoint)
         if (!page.has_more || rows.length >= maxObjects) break

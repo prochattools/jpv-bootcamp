@@ -5,6 +5,7 @@ import { getPayload } from 'payload'
 
 import { sweepExpiredPaymentGrace } from '@/lib/billing/delinquencySweep'
 import { reconcileStripeToPayload } from '@/lib/billing/stripePayloadReconciliation'
+import type { StripePayloadReconciliationCheckpoint } from '@/lib/billing/stripePayloadReconciliation'
 import { getStripe } from '@/lib/stripe'
 import { getStripeConfig } from '@/lib/stripe-config'
 
@@ -30,11 +31,26 @@ export async function POST(request: Request): Promise<Response> {
 
   let suppressCommunications = false
   let maxObjects = 10_000
+  let checkpoint: StripePayloadReconciliationCheckpoint | null = null
   try {
-    const body = await request.json() as { confirmation?: unknown; maxObjects?: unknown }
+    const body = await request.json() as { confirmation?: unknown; maxObjects?: unknown; checkpoint?: unknown }
     suppressCommunications = body.confirmation === 'initial_backfill_suppress_communications'
     if (typeof body.maxObjects === 'number' && Number.isInteger(body.maxObjects)) {
       maxObjects = Math.min(Math.max(body.maxObjects, 1), 10_000)
+    }
+    if (body.checkpoint && typeof body.checkpoint === 'object') {
+      const candidate = body.checkpoint as { phase?: unknown; startingAfter?: unknown }
+      const startingAfter = candidate.startingAfter
+      if (
+        (candidate.phase === 'subscriptions' || candidate.phase === 'invoices') &&
+        (startingAfter === null || typeof startingAfter === 'string')
+      ) {
+        const normalizedStartingAfter: string | null =
+          typeof startingAfter === 'string' ? startingAfter : null
+        checkpoint = candidate.phase === 'subscriptions'
+          ? { phase: 'subscriptions', startingAfter: normalizedStartingAfter }
+          : { phase: 'invoices', startingAfter: normalizedStartingAfter }
+      }
     }
   } catch {
     // Scheduled calls may omit a body. Normal reconciliation keeps communications enabled.
@@ -56,6 +72,7 @@ export async function POST(request: Request): Promise<Response> {
         maxObjects,
         pageSize: 100,
         suppressCommunications,
+        checkpoint,
       })
     } catch (error) {
       reconciliationFailed = true

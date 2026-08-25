@@ -58,6 +58,48 @@ assert.equal(dryRun.totals.wouldSync, 4)
 assert.equal(dryRun.totals.skipped, 1)
 
 {
+  const historical = [subscription('sub_current'), subscription('sub_historical', 'canceled')]
+  historical[1]!.customer = historical[0]!.customer
+  const report = await reconcileStripeToPayload({
+    payload: {} as never,
+    stripe: {
+      subscriptions: { list: async () => ({ object: 'list', data: historical, has_more: false, url: '' }) },
+      invoices: { list: async () => ({ object: 'list', data: [], has_more: false, url: '' }) },
+      customers: {},
+    } as unknown as Stripe,
+    livemode: true,
+    runId: 'historical_subscription_dry_run',
+    mode: 'dry-run',
+  })
+  assert.equal(report.totals.reviewRequired, 0)
+  assert.equal(report.totals.wouldSync, 2)
+}
+
+{
+  const first = await reconcileStripeToPayload({
+    payload: {} as never,
+    stripe,
+    livemode: true,
+    runId: 'bounded_first',
+    mode: 'dry-run',
+    maxObjects: 1,
+    pageSize: 2,
+  })
+  assert.deepEqual(first.checkpoint, { phase: 'subscriptions', startingAfter: 'sub_1' })
+  const resumed = await reconcileStripeToPayload({
+    payload: {} as never,
+    stripe,
+    livemode: true,
+    runId: 'bounded_resume',
+    mode: 'dry-run',
+    maxObjects: 1,
+    pageSize: 2,
+    checkpoint: first.checkpoint,
+  })
+  assert.equal(resumed.rows[0]?.stripeId, 'sub_2')
+}
+
+{
   const duplicateEmailSubscriptions = [
     subscription('sub_email_1'),
     subscription('sub_email_2'),
@@ -112,7 +154,7 @@ assert.ok(seenEventIds.every((id) => id.startsWith('reconcile_')))
   const sharedCustomer = { id: 'cus_shared', object: 'customer', email: 'shared@example.test' } as Stripe.Customer
   const ambiguousSubscriptions = [
     { ...subscription('sub_shared_active'), customer: sharedCustomer },
-    { ...subscription('sub_shared_expired', 'incomplete_expired'), customer: sharedCustomer },
+    { ...subscription('sub_shared_past_due', 'past_due'), customer: sharedCustomer },
   ] as Stripe.Subscription[]
   const ambiguousStripe = {
     subscriptions: {
