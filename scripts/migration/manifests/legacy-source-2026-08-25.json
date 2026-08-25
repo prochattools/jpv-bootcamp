@@ -1,0 +1,39 @@
+{
+  "manifestVersion": "1.0",
+  "snapshotDate": "2026-08-25",
+  "sources": {
+    "sql": {
+      "sha256": "051d0b99dad751413eac996f4801c3c418d1ed2d2460eb87d92168cf2ac3761f",
+      "bytes": 8290858
+    },
+    "wxr": {
+      "sha256": "3c3053179dfca5336a9a814c6abf0fafbbe98419ee0e698a1e3e98ec08ec316e",
+      "bytes": 299765
+    }
+  },
+  "identity": {
+    "sourceMemberAccounts": 50,
+    "canonicalMembers": 49,
+    "active": 11,
+    "blocked": 38
+  },
+  "content": {
+    "wordpressUsers": 53,
+    "wordpressAdministrators": 3,
+    "fluentCrmContacts": 51,
+    "spaces": 16,
+    "spaceMemberships": 189,
+    "courses": 3,
+    "courseSections": 10,
+    "courseLessons": 61,
+    "feedPosts": 84,
+    "comments": 108,
+    "reactions": 263,
+    "lessonCompletions": 139,
+    "courseCompletions": 8,
+    "communityMedia": 89,
+    "wxrItems": 117,
+    "wxrAttachments": 104,
+    "localMediaFiles": 386
+  }
+}

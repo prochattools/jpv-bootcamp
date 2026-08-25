@@ -16,6 +16,7 @@ import { BillingPortalButton } from '@/components/portal/BillingPortalButton'
 import { MemberCheckoutButtons } from '@/components/portal/MemberCheckoutButtons'
 import { getBillingStatus } from '@/lib/billing/billingStatusHelper'
 import { requestMembershipCancellation } from '@/lib/actions/requestMembershipCancellation'
+import { resumeMembershipCancellation } from '@/lib/actions/resumeMembershipCancellation'
 import { resolvePortalBillingPresentation } from '@/lib/portal/portalBillingPresentation'
 
 import { EmailChangeForm } from '@/components/member/EmailChangeForm'
@@ -46,6 +47,7 @@ type PortalSectionPageProps = {
     cancellation_requested?: string
     cancellation_effective_at?: string
     cancellation_error?: string
+    cancellation_reversed?: string
   }>
 }
 
@@ -150,11 +152,13 @@ function billingNotice(query: {
   cancellation_requested?: string
   cancellation_effective_at?: string
   cancellation_error?: string
+  cancellation_reversed?: string
 }): { tone: 'neutral' | 'success' | 'error'; message: string } | null {
   const checkout = firstParam(query.checkout)
   const cancellationRequested = firstParam(query.cancellation_requested)
   const cancellationEffectiveAt = firstParam(query.cancellation_effective_at)
   const cancellationError = firstParam(query.cancellation_error)
+  const cancellationReversed = firstParam(query.cancellation_reversed)
 
   if (checkout === 'success') {
     return {
@@ -178,6 +182,9 @@ function billingNotice(query: {
           : `Your end-of-term cancellation request has been recorded. Effective date: ${effectiveLabel}.`,
     }
   }
+  if (cancellationReversed === '1') {
+    return { tone: 'success', message: 'Your scheduled cancellation has been reversed.' }
+  }
   if (cancellationError === 'billing_record_missing' || cancellationError === 'effective_date_missing') {
     return {
       tone: 'error',
@@ -188,6 +195,18 @@ function billingNotice(query: {
     return {
       tone: 'error',
       message: 'Unable to confirm your billing identity right now. Sign in again and retry.',
+    }
+  }
+  if (cancellationError === 'live_action_disabled') {
+    return {
+      tone: 'error',
+      message: 'Online cancellation is temporarily unavailable. Please contact support so your request can be recorded safely.',
+    }
+  }
+  if (cancellationError === 'stripe_mode_mismatch' || cancellationError === 'stripe_update_failed') {
+    return {
+      tone: 'error',
+      message: 'Stripe did not confirm the cancellation request, so your local billing status was not changed. Please retry or contact support.',
     }
   }
   return null
@@ -789,9 +808,16 @@ export default async function PortalSectionPage({ params, searchParams }: Portal
                 )}
               </dl>
               {billingStatus.cancelAtPeriodEnd && (
-                <p className='mt-6 border-t border-neutral-200 pt-6 text-sm text-neutral-600'>
-                  Your subscription is scheduled to cancel at the end of the current billing period.
-                </p>
+                <div className='mt-6 border-t border-neutral-200 pt-6'>
+                  <p className='text-sm text-neutral-600'>
+                    Your subscription is scheduled to cancel at the end of the current billing period.
+                  </p>
+                  <form action={resumeMembershipCancellation} className='mt-4'>
+                    <button type='submit' className='jpv-button-secondary min-h-11 px-4'>
+                      Keep my membership
+                    </button>
+                  </form>
+                </div>
               )}
             </section>
 

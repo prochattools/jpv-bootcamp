@@ -1708,6 +1708,20 @@ export interface PayloadPayment {
   subscription?: (number | null) | PayloadSubscription;
   stripeInvoiceId?: string | null;
   stripePaymentIntentId?: string | null;
+  invoiceNumber?: string | null;
+  /**
+   * Stripe-hosted invoice page for secure payment and invoice details.
+   */
+  hostedInvoiceUrl?: string | null;
+  /**
+   * Stripe-generated invoice PDF.
+   */
+  invoicePdfUrl?: string | null;
+  amountDue: number;
+  amountPaid: number;
+  amountRemaining: number;
+  attemptCount: number;
+  nextPaymentAttempt?: string | null;
   amount: number;
   currency: string;
   status: 'pending' | 'paid' | 'failed' | 'action_required' | 'refunded' | 'disputed' | 'dispute_resolved' | 'voided';
@@ -1772,6 +1786,7 @@ export interface PayloadBillingAction {
    * Choose an operator action. Sync refreshes the record from Stripe. Cancel at period end marks the subscription to end at the next renewal. Reverse cancellation restores it.
    */
   actionType:
+    | 'reconcile_all'
     | 'sync_subscription'
     | 'cancel_at_period_end'
     | 'resume_subscription'
@@ -3676,6 +3691,14 @@ export interface PayloadPaymentsSelect<T extends boolean = true> {
   subscription?: T;
   stripeInvoiceId?: T;
   stripePaymentIntentId?: T;
+  invoiceNumber?: T;
+  hostedInvoiceUrl?: T;
+  invoicePdfUrl?: T;
+  amountDue?: T;
+  amountPaid?: T;
+  amountRemaining?: T;
+  attemptCount?: T;
+  nextPaymentAttempt?: T;
   amount?: T;
   currency?: T;
   status?: T;

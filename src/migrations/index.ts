@@ -38,6 +38,12 @@ import * as migration_20260824_120000_engagement_reactions from './20260824_1200
 import * as migration_20260824_150000_portal_navigation from './20260824_150000_portal_navigation'
 import * as migration_20260824_200000_member_notifications from './20260824_200000_member_notifications'
 import * as migration_20260824_210000_pay_it_forward_schema from './20260824_210000_pay_it_forward_schema'
+import * as migration_20260825_120000_billing_invoice_visibility from './20260825_120000_billing_invoice_visibility'
+import * as migration_20260825_121000_membership_support_runtime_alignment from './20260825_121000_membership_support_runtime_alignment'
+import * as migration_20260825_122000_membership_support_relationships from './20260825_122000_membership_support_relationships'
+import * as migration_20260825_123000_membership_support_relationship_alignment from './20260825_123000_membership_support_relationship_alignment'
+import * as migration_20260825_124000_membership_review_assignee_alignment from './20260825_124000_membership_review_assignee_alignment'
+import * as migration_20260825_125000_membership_shadow_state_alignment from './20260825_125000_membership_shadow_state_alignment'
 import { PAYLOAD_MIGRATION_NAMES } from '../lib/payloadMigrationRegistry'
 
 const migrationModuleByName = {
@@ -81,6 +87,12 @@ const migrationModuleByName = {
   '20260824_150000_portal_navigation': migration_20260824_150000_portal_navigation,
   '20260824_200000_member_notifications': migration_20260824_200000_member_notifications,
   '20260824_210000_pay_it_forward_schema': migration_20260824_210000_pay_it_forward_schema,
+  '20260825_120000_billing_invoice_visibility': migration_20260825_120000_billing_invoice_visibility,
+  '20260825_121000_membership_support_runtime_alignment': migration_20260825_121000_membership_support_runtime_alignment,
+  '20260825_122000_membership_support_relationships': migration_20260825_122000_membership_support_relationships,
+  '20260825_123000_membership_support_relationship_alignment': migration_20260825_123000_membership_support_relationship_alignment,
+  '20260825_124000_membership_review_assignee_alignment': migration_20260825_124000_membership_review_assignee_alignment,
+  '20260825_125000_membership_shadow_state_alignment': migration_20260825_125000_membership_shadow_state_alignment,
 } as const
 
 export const migrations = PAYLOAD_MIGRATION_NAMES.map((name) => ({

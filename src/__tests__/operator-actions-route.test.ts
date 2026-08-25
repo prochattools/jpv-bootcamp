@@ -209,7 +209,7 @@ describe('POST /api/admin/operator-actions', () => {
             subscription: '42',
             requestedBy: 'admin-1',
             status: 'pending',
-            note: 'Test cancel',
+            notes: 'Test cancel',
           }),
           overrideAccess: true,
           user: { id: 'admin-1', collection: 'payload_users' },

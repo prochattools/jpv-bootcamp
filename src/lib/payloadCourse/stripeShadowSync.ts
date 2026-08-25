@@ -20,7 +20,15 @@ import { redactEmail } from '@/lib/log-redact'
 import { paymentGraceEnd } from '@/lib/billing/commitmentPolicy'
 import { mirrorMembershipSupportWebhookToPayload } from '@/lib/membership-support/webhookReconciliation'
 
-type Plan = 'pro'
+type Plan = 'jpv_bootcamp_membership'
+
+const APPROVED_LEGACY_MEMBERSHIP_PRODUCT_IDS = new Set([
+  'prod_Tvj8ugfQ2SJUOj',
+  'prod_Tvj8pgx91owYMN',
+  'prod_Tvj8HliPtISF2K',
+  'prod_Tvj7d4LMAxVVta',
+  'prod_TcZanPbgn4ERhq',
+])
 
 type PayloadBillingStatus =
   | 'none'
@@ -59,6 +67,7 @@ type ShadowStripeClient = Pick<Stripe, 'subscriptions' | 'customers'>
 type ShadowSyncOptions = {
   stripe?: ShadowStripeClient
   adminEmail?: string | null
+  suppressCommunications?: boolean
 }
 
 export type PayloadBillingShadowSyncResult = {
@@ -178,8 +187,8 @@ function findPrimaryPrice(subscription: Stripe.Subscription): {
 function normalizePlan(value: string | null | undefined): Plan | null {
   if (!value) return null
   const normalized = value.trim().toLowerCase()
-  if (normalized === 'pro') {
-    return normalized
+  if (normalized === 'pro' || normalized === 'membership' || normalized === 'jpv_bootcamp_membership') {
+    return 'jpv_bootcamp_membership'
   }
   return null
 }
@@ -195,8 +204,10 @@ function resolvePlanFromPriceId(priceId: string | null | undefined): Plan | null
   if (!priceId) return null
 
   for (const suffix of stripeEnvSuffixes()) {
-    if (process.env[`STRIPE_PRICE_PRO_${suffix}`] === priceId) return 'pro'
-    if (process.env[`STRIPE_PRICE_PRO_ANNUAL_${suffix}`] === priceId) return 'pro'
+    if (process.env[`STRIPE_PRICE_MONTHLY_${suffix}`] === priceId) return 'jpv_bootcamp_membership'
+    if (process.env[`STRIPE_PRICE_ANNUALLY_${suffix}`] === priceId) return 'jpv_bootcamp_membership'
+    if (process.env[`STRIPE_PRICE_PRO_${suffix}`] === priceId) return 'jpv_bootcamp_membership'
+    if (process.env[`STRIPE_PRICE_PRO_ANNUAL_${suffix}`] === priceId) return 'jpv_bootcamp_membership'
   }
 
   return null
@@ -205,9 +216,16 @@ function resolvePlanFromPriceId(priceId: string | null | undefined): Plan | null
 function resolvePlanFromProductId(productId: string | null | undefined): Plan | null {
   if (!productId) return null
 
+  if (APPROVED_LEGACY_MEMBERSHIP_PRODUCT_IDS.has(productId)) {
+    return 'jpv_bootcamp_membership'
+  }
+
   for (const suffix of stripeEnvSuffixes()) {
+    if (process.env[`STRIPE_PRODUCT_JPV_BOOTCAMP_MEMBERSHIP_${suffix}`] === productId) {
+      return 'jpv_bootcamp_membership'
+    }
     if (process.env[`STRIPE_PRODUCT_JPV_BOOTCAMP_PRO_MEMBERSHIP_${suffix}`] === productId) {
-      return 'pro'
+      return 'jpv_bootcamp_membership'
     }
   }
 
@@ -255,7 +273,6 @@ function normalizeSubscriptionStatus(status: Stripe.Subscription.Status): Payloa
 }
 
 function billingStatusFromSubscription(subscription: Stripe.Subscription): PayloadBillingStatus {
-  if (subscription.canceled_at) return 'canceled'
   if (subscription.status === 'active') return 'active'
   if (subscription.status === 'trialing') return 'trialing'
   if (subscription.status === 'past_due') return 'past_due'
@@ -811,6 +828,7 @@ async function syncMemberBillingHold(
     reason: string
     eventId: string
     adminEmail?: string | null
+    suppressCommunications?: boolean
   }
 ) {
   const decision = decideBillingAccessTransition(params.member, params.billingStatus)
@@ -823,6 +841,7 @@ async function syncMemberBillingHold(
       reason: params.reason,
       eventId: params.eventId,
       adminEmail: params.adminEmail,
+      suppressCommunications: params.suppressCommunications,
     })
     if (!result.changed) return
     await writeBillingAction(payload, {
@@ -841,6 +860,7 @@ async function syncMemberBillingHold(
     reason: decision.reason,
     eventId: params.eventId,
     adminEmail: params.adminEmail,
+    suppressCommunications: params.suppressCommunications,
   })
   if (!result.changed) return
   await writeBillingAction(payload, {
@@ -877,7 +897,7 @@ async function syncSubscription(
       eventId: event.id,
       notes: 'missing_customer_email',
     })
-    return ['subscription_skipped_missing_email']
+    return ['subscription_review_required_missing_email']
   }
 
   const resolvedPlanForSync = projection.plan ?? 'jpv_bootcamp_membership'
@@ -902,7 +922,10 @@ async function syncSubscription(
       canceledAt: projection.canceledAt ?? undefined,
       lastStripeEventId: event.id,
       lastSyncedAt: new Date(),
-      metadata: projection.metadata,
+      metadata: {
+        ...projection.metadata,
+        lastStripeEventCreatedAt: event.created,
+      },
     }
   )
 
@@ -932,6 +955,7 @@ async function syncSubscription(
     event.type === 'customer.subscription.updated'
 
   if (
+    !options.suppressCommunications &&
     isSubscriptionLifecycleEvent &&
     (projection.billingStatus === 'active' || projection.billingStatus === 'trialing')
   ) {
@@ -951,7 +975,7 @@ async function syncSubscription(
     })
   }
 
-  if (projection.billingStatus === 'canceled') {
+  if (!options.suppressCommunications && projection.billingStatus === 'canceled') {
     await queueBillingEmails(payload, {
       email: subject.email,
       contactId: subject.contact.id,
@@ -974,6 +998,7 @@ async function syncSubscription(
     reason: projection.billingStatus === 'canceled' ? 'canceled' : projection.billingStatus,
     eventId: event.id,
     adminEmail: options.adminEmail,
+    suppressCommunications: options.suppressCommunications,
   })
 
   return ['subscription_synced']
@@ -1009,6 +1034,7 @@ async function syncInvoice(
   const customerId = getCustomerId(invoice.customer as Stripe.Invoice['customer'])
   let subject: BillingSubject | null = null
   let invoiceSubscriptionProjection: SubscriptionProjection | null = null
+  let payloadSubscription: PayloadDocument | null = null
   const paymentAttentionRequired = paymentStatus !== 'paid'
   let billingStatus: PayloadBillingStatus = paymentStatus === 'paid' ? 'active' : 'past_due'
 
@@ -1051,7 +1077,7 @@ async function syncInvoice(
   }
 
   if (invoiceSubscriptionProjection) {
-    await upsertByWhere(
+    const subscriptionResult = await upsertByWhere(
       payload,
       'payload_subscriptions',
       {
@@ -1066,7 +1092,7 @@ async function syncInvoice(
         stripeSubscriptionId: invoiceSubscriptionProjection.stripeSubscriptionId,
         stripePriceId: invoiceSubscriptionProjection.priceId ?? undefined,
         stripeProductId: invoiceSubscriptionProjection.productId ?? undefined,
-        plan: invoiceSubscriptionProjection.plan,
+        plan: invoiceSubscriptionProjection.plan ?? 'jpv_bootcamp_membership',
         status: invoiceSubscriptionProjection.status,
         cancelAtPeriodEnd: invoiceSubscriptionProjection.cancelAtPeriodEnd,
         currentPeriodStart: invoiceSubscriptionProjection.currentPeriodStart ?? undefined,
@@ -1078,9 +1104,13 @@ async function syncInvoice(
           : null,
         lastStripeEventId: event.id,
         lastSyncedAt: new Date(),
-        metadata: invoiceSubscriptionProjection.metadata,
+        metadata: {
+          ...invoiceSubscriptionProjection.metadata,
+          lastStripeEventCreatedAt: event.created,
+        },
       },
     )
+    payloadSubscription = subscriptionResult.doc
   }
 
   const stripeInvoiceId = invoice.id ?? `event:${event.id}`
@@ -1096,8 +1126,17 @@ async function syncInvoice(
     {
       displayName: `${paymentStatus} ${stripeInvoiceId}`,
       member: subject.member.id,
+      subscription: payloadSubscription?.id ?? undefined,
       stripeInvoiceId,
       stripePaymentIntentId: getInvoicePaymentIntentId(invoice) ?? undefined,
+      invoiceNumber: invoice.number ?? undefined,
+      hostedInvoiceUrl: invoice.hosted_invoice_url ?? undefined,
+      invoicePdfUrl: invoice.invoice_pdf ?? undefined,
+      amountDue: Math.max(invoice.amount_due ?? 0, 0),
+      amountPaid: Math.max(invoice.amount_paid ?? 0, 0),
+      amountRemaining: Math.max(invoice.amount_remaining ?? 0, 0),
+      attemptCount: Math.max(invoice.attempt_count ?? 0, 0),
+      nextPaymentAttempt: dateFromUnix(invoice.next_payment_attempt) ?? undefined,
       amount: Math.max(amount ?? 0, 0),
       currency: invoice.currency ?? 'usd',
       status: paymentStatus,
@@ -1112,6 +1151,7 @@ async function syncInvoice(
         eventId: event.id,
         subscriptionId,
         hostedInvoiceUrl: invoice.hosted_invoice_url ?? null,
+        lastStripeEventCreatedAt: event.created,
       },
     }
   )
@@ -1135,7 +1175,7 @@ async function syncInvoice(
       subject.previousBillingStatus === 'unpaid' ||
       subject.previousBillingStatus === 'billing_hold')
 
-  if (paymentAttentionRequired || isRecovery) {
+  if (!options.suppressCommunications && (paymentAttentionRequired || isRecovery)) {
     const templateKey = paymentAttentionRequired
       ? BILLING_PAYMENT_FAILED_TEMPLATE_KEY
       : BILLING_PAYMENT_RECOVERED_TEMPLATE_KEY
@@ -1171,6 +1211,7 @@ async function syncInvoice(
       reason: 'payment_recovered',
       eventId: event.id,
       adminEmail: options.adminEmail,
+      suppressCommunications: options.suppressCommunications,
     })
   }
 
@@ -1437,10 +1478,58 @@ async function markStripeEvent(
       processingStatus: status,
       receivedAt: new Date(event.created * 1000),
       processedAt: status === 'processed' || status === 'skipped' || status === 'deduped' ? new Date() : undefined,
-      failureReason: failureReason ?? undefined,
+      failureReason: failureReason ?? null,
       payload: event as unknown as Record<string, unknown>,
     }
   )
+}
+
+function eventTimestampFromMetadata(document: PayloadDocument | null): number | null {
+  const metadata = document?.metadata
+  if (!metadata || typeof metadata !== 'object') return null
+
+  const value = (metadata as Record<string, unknown>).lastStripeEventCreatedAt
+  return typeof value === 'number' && Number.isFinite(value) ? value : null
+}
+
+async function staleProjectionReason(
+  payload: PayloadCourseWriteAPI,
+  event: Stripe.Event,
+): Promise<string | null> {
+  const object = event.data.object as unknown as Record<string, unknown>
+  let projection: PayloadDocument | null = null
+
+  if (String(event.type).startsWith('customer.subscription.')) {
+    const subscriptionId = typeof object.id === 'string' ? object.id : null
+    if (subscriptionId) {
+      projection = await findOne(payload, 'payload_subscriptions', {
+        stripeSubscriptionId: { equals: subscriptionId },
+      })
+    }
+  } else if (
+    event.type === 'invoice.paid' ||
+    event.type === 'invoice.payment_failed' ||
+    event.type === 'invoice.payment_action_required'
+  ) {
+    const invoiceId = typeof object.id === 'string' ? object.id : null
+    if (invoiceId) {
+      projection = await findOne(payload, 'payload_payments', {
+        stripeInvoiceId: { equals: invoiceId },
+      })
+    }
+  } else if (String(event.type).startsWith('subscription_schedule.')) {
+    const subscriptionId = relationshipId(object.subscription)
+    if (subscriptionId) {
+      projection = await findOne(payload, 'payload_subscriptions', {
+        stripeSubscriptionId: { equals: subscriptionId },
+      })
+    }
+  }
+
+  const lastEventCreatedAt = eventTimestampFromMetadata(projection)
+  return lastEventCreatedAt !== null && event.created < lastEventCreatedAt
+    ? `stale_event_created_at:${event.created}<${lastEventCreatedAt}`
+    : null
 }
 
 async function syncSubscriptionSchedule(
@@ -1489,6 +1578,12 @@ async function syncSubscriptionSchedule(
           : undefined,
       lastStripeEventId: event.id,
       lastSyncedAt: new Date(),
+      metadata: {
+        ...(subscriptionDoc.metadata && typeof subscriptionDoc.metadata === 'object'
+          ? subscriptionDoc.metadata as Record<string, unknown>
+          : {}),
+        lastStripeEventCreatedAt: event.created,
+      },
     },
     overrideAccess: true,
     overrideLock: true,
@@ -1507,6 +1602,14 @@ export async function mirrorStripeEventToPayload(
   })
 
   if (existingEvent?.processingStatus === 'processed') {
+    if (existingEvent.failureReason) {
+      await payload.update({
+        collection: 'payload_stripe_events',
+        id: existingEvent.id,
+        data: { failureReason: null },
+        overrideAccess: true,
+      })
+    }
     return {
       enabled: true,
       processed: false,
@@ -1518,6 +1621,19 @@ export async function mirrorStripeEventToPayload(
   }
 
   await markStripeEvent(payload, event, 'received')
+
+  const staleReason = await staleProjectionReason(payload, event)
+  if (staleReason) {
+    await markStripeEvent(payload, event, 'skipped', staleReason)
+    return {
+      enabled: true,
+      processed: false,
+      deduped: false,
+      eventId: event.id,
+      eventType: event.type,
+      actions: ['stale_event_skipped'],
+    }
+  }
 
   const stripe = options.stripe ?? await getDefaultStripeClient()
   let actions: string[] = []
@@ -1627,7 +1743,13 @@ export async function mirrorStripeEventToPayload(
       actions,
     }
   } catch (error) {
-    await markStripeEvent(payload, event, 'failed', (error as Error).message)
+    let rootCause: unknown = error
+    for (let depth = 0; depth < 6; depth += 1) {
+      if (!(rootCause instanceof Error) || !rootCause.cause) break
+      rootCause = rootCause.cause
+    }
+    const failureReason = rootCause instanceof Error ? rootCause.message : error instanceof Error ? error.message : 'unknown_error'
+    await markStripeEvent(payload, event, 'failed', failureReason)
     throw error
   }
 }

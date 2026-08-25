@@ -9,6 +9,7 @@ import type {
 } from '@/lib/payloadCourse/accessService'
 
 export const STRIPE_OPERATOR_ACTIONS = [
+  'reconcile_all',
   'sync_subscription',
   'cancel_at_period_end',
   'resume_subscription',
@@ -31,6 +32,7 @@ export type StripeOperatorActionDependencies = {
   stripeEnvironment: 'test' | 'live'
   mirrorEvent: StripeOperatorMirror
   adminEmail?: string | null
+  liveOperatorMutationsEnabled?: boolean
   now?: () => Date
 }
 
@@ -47,15 +49,25 @@ export type StripeOperatorActionResult = {
   projectionActions: string[]
 }
 
+export type StripeBulkReconciliationResult = {
+  status: 'completed' | 'failed'
+  action: 'reconcile_all'
+  actionRecordId: string
+  runId: string
+  totals: Record<string, number>
+  checkpoint: { phase: 'subscriptions' | 'invoices'; startingAfter: string | null } | null
+}
+
 export class StripeOperatorActionError extends Error {
   constructor(
     readonly code:
-      | 'live_mode_forbidden'
+      | 'live_mutation_disabled'
+      | 'live_mutation_reason_required'
       | 'subscription_record_missing'
       | 'billing_account_missing'
-      | 'billing_account_not_test'
+      | 'billing_account_mode_mismatch'
       | 'stripe_subscription_missing'
-      | 'stripe_subscription_live'
+      | 'stripe_subscription_mode_mismatch'
       | 'subscription_terminal'
       | 'invalid_operator_action',
     message: string,
@@ -99,7 +111,7 @@ function buildManualStripeEvent(params: {
     api_version: '2024-06-20',
     created: Math.floor(params.now.getTime() / 1000),
     data: { object: params.subscription },
-    livemode: false,
+    livemode: params.subscription.livemode,
     pending_webhooks: 0,
     request: null,
     type: 'customer.subscription.updated',
@@ -173,29 +185,47 @@ async function retrieveStripeSubscription(
   }
 }
 
-function assertTestEnvironmentAndAccount(params: {
+function assertEnvironmentAndAccount(params: {
   stripeEnvironment: 'test' | 'live'
   billingAccount: PayloadDocument
 }) {
-  if (params.stripeEnvironment !== 'test') {
+  if (params.billingAccount.stripeMode !== params.stripeEnvironment) {
     throw new StripeOperatorActionError(
-      'live_mode_forbidden',
-      'Operator subscription actions are restricted to Stripe test mode.',
-    )
-  }
-  if (params.billingAccount.stripeMode !== 'test') {
-    throw new StripeOperatorActionError(
-      'billing_account_not_test',
-      'Payload billing account is not marked as Stripe test mode.',
+      'billing_account_mode_mismatch',
+      'Payload billing account mode does not match the configured Stripe environment.',
     )
   }
 }
 
-function assertTestSubscription(subscription: Stripe.Subscription) {
-  if (subscription.livemode) {
+function assertSubscriptionMode(
+  subscription: Stripe.Subscription,
+  stripeEnvironment: 'test' | 'live',
+) {
+  if (subscription.livemode !== (stripeEnvironment === 'live')) {
     throw new StripeOperatorActionError(
-      'stripe_subscription_live',
-      'Live Stripe subscriptions cannot be changed by this operator action.',
+      'stripe_subscription_mode_mismatch',
+      'Stripe subscription mode does not match the configured Stripe environment.',
+    )
+  }
+}
+
+function assertLiveMutationAuthorized(params: {
+  action: StripeOperatorAction
+  stripeEnvironment: 'test' | 'live'
+  enabled: boolean
+  operatorReason: string | null
+}) {
+  if (params.action === 'sync_subscription' || params.stripeEnvironment !== 'live') return
+  if (!params.enabled) {
+    throw new StripeOperatorActionError(
+      'live_mutation_disabled',
+      'Live subscription changes are disabled until STRIPE_LIVE_OPERATOR_ACTIONS_ENABLED=true.',
+    )
+  }
+  if (!params.operatorReason) {
+    throw new StripeOperatorActionError(
+      'live_mutation_reason_required',
+      'A reason or change-ticket reference is required for live subscription changes.',
     )
   }
 }
@@ -203,7 +233,7 @@ function assertTestSubscription(subscription: Stripe.Subscription) {
 async function applyDesiredCancellationState(params: {
   stripe: StripeOperatorClient
   subscription: Stripe.Subscription
-  action: Exclude<StripeOperatorAction, 'sync_subscription'>
+  action: Exclude<StripeOperatorAction, 'sync_subscription' | 'reconcile_all'>
   actionRecordId: string
 }): Promise<{ subscription: Stripe.Subscription; status: StripeOperatorActionStatus }> {
   if (isTerminalSubscription(params.subscription)) {
@@ -232,7 +262,14 @@ export async function executeStripeOperatorAction(params: {
   actionRecordId: PayloadId
   payloadSubscriptionId: PayloadId
   action: StripeOperatorAction
+  operatorReason?: string | null
 }): Promise<StripeOperatorActionResult> {
+  if (params.action === 'reconcile_all') {
+    throw new StripeOperatorActionError(
+      'invalid_operator_action',
+      'Bulk reconciliation must use the bulk action executor.',
+    )
+  }
   if (!isStripeOperatorAction(params.action)) {
     throw new StripeOperatorActionError(
       'invalid_operator_action',
@@ -258,7 +295,7 @@ export async function executeStripeOperatorAction(params: {
     params.dependencies.payload,
     record.billingAccount,
   )
-  assertTestEnvironmentAndAccount({
+  assertEnvironmentAndAccount({
     stripeEnvironment: params.dependencies.stripeEnvironment,
     billingAccount,
   })
@@ -267,7 +304,13 @@ export async function executeStripeOperatorAction(params: {
     params.dependencies.stripe,
     stripeSubscriptionId,
   )
-  assertTestSubscription(subscription)
+  assertSubscriptionMode(subscription, params.dependencies.stripeEnvironment)
+  assertLiveMutationAuthorized({
+    action: params.action,
+    stripeEnvironment: params.dependencies.stripeEnvironment,
+    enabled: params.dependencies.liveOperatorMutationsEnabled === true,
+    operatorReason: stringValue(params.operatorReason),
+  })
 
   let status: StripeOperatorActionStatus = 'completed'
   if (params.action !== 'sync_subscription') {
@@ -333,18 +376,53 @@ export async function processPayloadBillingAction(params: {
 
   const administrator = params.req.user
   const subscriptionId = relationshipId(params.doc.subscription)
-  if (!administrator?.id || administrator.collection !== 'payload_users' || subscriptionId === null) {
+  if (!administrator?.id || administrator.collection !== 'payload_users') {
     return params.doc
   }
 
-  const [{ getStripe }, { getStripeConfig }, { mirrorStripeEventToPayload }] = await Promise.all([
+  const [{ getStripe }, { getStripeConfig }, { mirrorStripeEventToPayload }, { reconcileStripeToPayload }] = await Promise.all([
     import('@/lib/stripe'),
     import('@/lib/stripe-config'),
     import('@/lib/payloadCourse/stripeShadowSync'),
+    import('@/lib/billing/stripePayloadReconciliation'),
   ])
 
   try {
     const stripeConfig = getStripeConfig()
+    if (params.doc.actionType === 'reconcile_all') {
+      const runId = `operator_${String(params.doc.id)}`
+      const report = await reconcileStripeToPayload({
+        payload: params.req.payload,
+        stripe: getStripe(),
+        mode: 'apply',
+        livemode: stripeConfig.env === 'live',
+        runId,
+        adminEmail: stringValue((administrator as { email?: unknown }).email),
+        maxObjects: 10_000,
+        pageSize: 100,
+      })
+      const status = report.totals.failed === 0 && report.checkpoint === null ? 'completed' : 'failed'
+      return await params.req.payload.update({
+        collection: 'payload_billing_actions',
+        id: params.doc.id,
+        data: {
+          displayName: `Reconcile all Stripe billing ${runId}`,
+          requestedBy: administrator.id,
+          status,
+          completedAt: new Date().toISOString(),
+          result: { runId, totals: report.totals, checkpoint: report.checkpoint },
+          metadata: { operatorAction: true, bulkReconciliation: true, runId },
+        },
+        overrideAccess: true,
+        overrideLock: true,
+      })
+    }
+    if (subscriptionId === null) {
+      throw new StripeOperatorActionError(
+        'subscription_record_missing',
+        'A Payload subscription record is required.',
+      )
+    }
     const result = await executeStripeOperatorAction({
       dependencies: {
         payload: params.req.payload,
@@ -354,10 +432,12 @@ export async function processPayloadBillingAction(params: {
         adminEmail: administrator.collection === 'payload_users'
           ? stringValue((administrator as { email?: unknown }).email)
           : null,
+        liveOperatorMutationsEnabled: process.env.STRIPE_LIVE_OPERATOR_ACTIONS_ENABLED === 'true',
       },
       actionRecordId: params.doc.id,
       payloadSubscriptionId: subscriptionId,
       action: params.doc.actionType,
+      operatorReason: stringValue(params.doc.notes),
     })
 
     return await params.req.payload.update({

@@ -356,7 +356,7 @@ function classifyWebhook(params: {
     if (existing.billingCadence && params.billingCadence && existing.billingCadence !== params.billingCadence) {
       return { classifier: 'cadence_mismatch', reconciliationState: 'mismatch', failureCode: 'cadence_mismatch' }
     }
-    if (existing.fundingSource && params.fundingSource && existing.fundingSource !== params.fundingSource) {
+    if (existing.fundingSourceType && params.fundingSource && existing.fundingSourceType !== params.fundingSource) {
       return { classifier: 'funding_source_mismatch', reconciliationState: 'mismatch', failureCode: 'funding_source_mismatch' }
     }
     if (existing.voucherDuration && params.voucherDuration && existing.voucherDuration !== params.voucherDuration) {
@@ -451,7 +451,7 @@ async function buildProjection(params: {
     ? await findOne(params.payload, 'payload_membership_support_records', supportLookupWhere)
     : null
   const existing = supportRecord ? {
-    fundingSource: text((supportRecord as any).fundingSource),
+    fundingSource: text((supportRecord as any).fundingSourceType),
     voucherDuration: text((supportRecord as any).voucherDuration),
     billingCadence: normalizeCadence((supportRecord as any).billingCadence),
     stripeCustomerId: text((supportRecord as any).stripeCustomerId),
@@ -588,25 +588,29 @@ async function persistProjection(
     return actions
   }
 
+  const memberReference = /^\d+$/.test(projection.memberId)
+    ? Number(projection.memberId)
+    : projection.memberId
+
   const supportData = {
     displayName: `Membership support ${projection.resourceKey}`,
-    member: projection.memberId,
+    member: memberReference,
     memberEmail: projection.memberEmail,
-    fundingSource: projection.fundingSource,
+    fundingSourceType: projection.fundingSource,
     voucherDuration: projection.voucherDuration,
     issuanceState:
-      projection.reconciliationState === 'matched'
-        ? 'issued'
-        : projection.reconciliationState === 'pending'
-          ? 'draft'
-          : 'failed',
+      projection.classifier === 'deleted_subscription'
+        ? 'deactivated'
+        : projection.reconciliationState === 'matched'
+          ? 'issued'
+          : 'draft',
     billingCadence: projection.billingCadence ?? 'monthly',
     stripeCustomerId: projection.stripeCustomerId ?? undefined,
     stripeSubscriptionId: projection.stripeSubscriptionId ?? undefined,
     stripePriceId: projection.membershipPriceId ?? undefined,
     stripeCouponId: projection.stripeCouponId ?? undefined,
     stripePromotionCodeId: projection.stripePromotionCodeId ?? undefined,
-    approvalReference: projection.reconciliationState === 'pending' ? null : `webhook:${event.id}`,
+    approvalReference: `webhook:${event.id}`,
     reconciliationState: projection.reconciliationState,
     lastWebhookAt: new Date(projection.lastWebhookCreatedAt),
     notes: projection.notes,
@@ -626,7 +630,7 @@ async function persistProjection(
     {
       displayName: `Reconciliation ${projection.resourceKey}`,
       membershipSupport: supportResult.doc.id,
-      member: projection.memberId,
+      member: memberReference,
       stripeEventId: event.id,
       stripeEventType: event.type,
       reconciliationState: projection.reconciliationState,
@@ -665,7 +669,7 @@ async function persistProjection(
         displayName: `Review queue ${projection.resourceKey}`,
         membershipSupport: supportResult.doc.id,
         reconciliation: reconciliationResult.doc.id,
-        member: projection.memberId,
+        member: memberReference,
         queueState: projection.reconciliationState === 'matched' ? 'closed' : 'needs_review',
         queueReason: reviewQueueReason,
         priority: reviewProjection.priority,
@@ -712,7 +716,7 @@ async function persistProjection(
     {
       displayName: `Stripe shadow ${projection.resourceKey}`,
       membershipSupport: supportResult.doc.id,
-      member: projection.memberId,
+      member: memberReference,
       stripeCustomerId: projection.stripeCustomerId ?? undefined,
       stripeSubscriptionId: projection.stripeSubscriptionId ?? undefined,
       stripePriceId: projection.stripePriceId ?? undefined,

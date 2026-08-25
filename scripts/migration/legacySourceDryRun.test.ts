@@ -192,6 +192,22 @@ function testIdentityAndNormalization(): void {
   assert.equal(pastDue?.accountStatus, 'blocked')
   assert.equal(pastDue?.classificationReason, 'stripe_past_due_fail_closed')
 
+  const ambiguousStripe = structuredClone(stripe)
+  ambiguousStripe.qualifying_records?.push({
+    subscription_id: 'sub_duplicate_active',
+    customer_id: 'cus_duplicate_active',
+    customer_email: 'member-2@invalid.example',
+    customer_name: null,
+    subscription_status: 'active',
+    legacy_product_id: 'prod_legacy',
+    legacy_price_id: 'price_legacy',
+  })
+  const ambiguousCrosswalk = buildIdentityCrosswalk(snapshot, ambiguousStripe)
+  const ambiguousMember = ambiguousCrosswalk.members.find((member) => member.sourceEmails.includes('member-2@invalid.example'))
+  assert.equal(ambiguousMember?.accountStatus, 'blocked')
+  assert.equal(ambiguousMember?.classificationReason, 'multiple_stripe_records_review_required')
+  assert.ok(ambiguousMember?.conflicts.includes('multiple_stripe_records_same_person'))
+
   const normalized = buildLegacyDryRunNormalization(snapshot, stripe)
   assert.equal(normalized.courses.length, 1)
   assert.equal(normalized.courseSections.length, 1)

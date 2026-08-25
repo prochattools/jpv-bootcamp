@@ -98,6 +98,7 @@ function buildDependencies(options: {
   stripeEnvironment?: 'test' | 'live'
   billingMode?: 'test' | 'live'
   stripeSubscription?: Stripe.Subscription
+  liveOperatorMutationsEnabled?: boolean
 }) {
   const payload = new FakePayload({
     payload_subscriptions: [
@@ -138,6 +139,7 @@ function buildDependencies(options: {
       customers: {} as Stripe.CustomersResource,
     },
     stripeEnvironment: options.stripeEnvironment ?? 'test',
+    liveOperatorMutationsEnabled: options.liveOperatorMutationsEnabled,
     mirrorEvent,
     now: () => new Date('2026-07-24T09:00:00.000Z'),
   }
@@ -148,12 +150,14 @@ function buildDependencies(options: {
 async function runAction(
   dependencies: StripeOperatorActionDependencies,
   action: 'sync_subscription' | 'cancel_at_period_end' | 'resume_subscription',
+  operatorReason?: string,
 ) {
   return executeStripeOperatorAction({
     dependencies,
     actionRecordId: 'action-1',
     payloadSubscriptionId: 'payload-sub-1',
     action,
+    operatorReason,
   })
 }
 
@@ -222,29 +226,34 @@ describe('Stripe operator subscription actions', () => {
     expect(result.cancelAtPeriodEnd).toBe(false)
   })
 
-  it('rejects live configuration before making any Stripe request', async () => {
-    const { dependencies, retrieve, update } = buildDependencies({ stripeEnvironment: 'live' })
+  it('allows read-only synchronization in a consistently live environment', async () => {
+    const { dependencies, retrieve, update, mirrorEvent } = buildDependencies({
+      stripeEnvironment: 'live',
+      billingMode: 'live',
+      stripeSubscription: subscription({ livemode: true }),
+    })
 
-    await expect(runAction(dependencies, 'sync_subscription')).rejects.toMatchObject({
-      code: 'live_mode_forbidden',
-    } satisfies Partial<StripeOperatorActionError>)
-    expect(retrieve).not.toHaveBeenCalled()
+    const result = await runAction(dependencies, 'sync_subscription')
+
+    expect(result.status).toBe('completed')
+    expect(retrieve).toHaveBeenCalledTimes(1)
     expect(update).not.toHaveBeenCalled()
+    expect((mirrorEvent.mock.calls[0]?.[1] as Stripe.Event).livemode).toBe(true)
   })
 
-  it('rejects a Payload billing account marked live before Stripe retrieval', async () => {
+  it('rejects a Payload billing account whose mode differs from Stripe configuration', async () => {
     const { dependencies, retrieve } = buildDependencies({ billingMode: 'live' })
 
     await expect(runAction(dependencies, 'sync_subscription')).rejects.toMatchObject({
-      code: 'billing_account_not_test',
+      code: 'billing_account_mode_mismatch',
     } satisfies Partial<StripeOperatorActionError>)
     expect(retrieve).not.toHaveBeenCalled()
   })
 
-  it('rejects a retrieved live subscription and terminal cancellation reversal', async () => {
+  it('rejects a subscription whose mode differs and a terminal cancellation reversal', async () => {
     const live = buildDependencies({ stripeSubscription: subscription({ livemode: true }) })
     await expect(runAction(live.dependencies, 'sync_subscription')).rejects.toMatchObject({
-      code: 'stripe_subscription_live',
+      code: 'stripe_subscription_mode_mismatch',
     } satisfies Partial<StripeOperatorActionError>)
 
     const terminal = buildDependencies({
@@ -254,6 +263,39 @@ describe('Stripe operator subscription actions', () => {
       code: 'subscription_terminal',
     } satisfies Partial<StripeOperatorActionError>)
     expect(terminal.update).not.toHaveBeenCalled()
+  })
+
+  it('requires both the feature gate and an operator reason for live mutations', async () => {
+    const disabled = buildDependencies({
+      stripeEnvironment: 'live',
+      billingMode: 'live',
+      stripeSubscription: subscription({ livemode: true }),
+    })
+    await expect(runAction(disabled.dependencies, 'cancel_at_period_end', 'member request')).rejects.toMatchObject({
+      code: 'live_mutation_disabled',
+    } satisfies Partial<StripeOperatorActionError>)
+    expect(disabled.update).not.toHaveBeenCalled()
+
+    const missingReason = buildDependencies({
+      stripeEnvironment: 'live',
+      billingMode: 'live',
+      stripeSubscription: subscription({ livemode: true }),
+      liveOperatorMutationsEnabled: true,
+    })
+    await expect(runAction(missingReason.dependencies, 'cancel_at_period_end')).rejects.toMatchObject({
+      code: 'live_mutation_reason_required',
+    } satisfies Partial<StripeOperatorActionError>)
+    expect(missingReason.update).not.toHaveBeenCalled()
+
+    const enabled = buildDependencies({
+      stripeEnvironment: 'live',
+      billingMode: 'live',
+      stripeSubscription: subscription({ livemode: true }),
+      liveOperatorMutationsEnabled: true,
+    })
+    const result = await runAction(enabled.dependencies, 'cancel_at_period_end', 'member request')
+    expect(result.status).toBe('completed')
+    expect(enabled.update).toHaveBeenCalledTimes(1)
   })
 
   it('exposes immutable Payload projections and guarded operator actions', () => {

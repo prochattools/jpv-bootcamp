@@ -388,7 +388,7 @@ async function run() {
     assert.equal(payload.countDocs('payload_billing_accounts'), 1)
     assert.equal(payload.docs('payload_billing_accounts')[0]?.billingStatus, 'active')
     assert.equal(payload.countDocs('payload_subscriptions'), 1)
-    assert.equal(payload.docs('payload_subscriptions')[0]?.plan, 'pro')
+    assert.equal(payload.docs('payload_subscriptions')[0]?.plan, 'jpv_bootcamp_membership')
     assert.equal(payload.countDocs('payload_email_events'), 2)
     assert.equal(payload.docs('payload_stripe_events')[0]?.processingStatus, 'processed')
 
@@ -401,6 +401,39 @@ async function run() {
     assert.equal(payload.countDocs('payload_members'), 1)
     assert.equal(payload.countDocs('payload_subscriptions'), 1)
     assert.equal(payload.countDocs('payload_email_events'), 2)
+  }
+
+  {
+    const payload = buildPayload({
+      payload_members: [{
+        id: 'member_stale_guard',
+        email: 'student@example.com',
+        accountStatus: 'active',
+      }],
+      payload_subscriptions: [{
+        id: 'subscription_stale_guard',
+        stripeSubscriptionId: 'sub_123',
+        status: 'active',
+        metadata: { lastStripeEventCreatedAt: 200 },
+      }],
+    })
+    const staleSubscription = subscription({ status: 'canceled' })
+
+    const result = await mirrorStripeEventToPayload(
+      payload,
+      event('customer.subscription.updated', staleSubscription, 'evt_stale_subscription', 100),
+      { stripe: fakeStripe(staleSubscription), adminEmail: 'admin@example.com' },
+    )
+
+    assert.equal(result.processed, false)
+    assert.deepEqual(result.actions, ['stale_event_skipped'])
+    assert.equal(payload.docs('payload_members')[0]?.accountStatus, 'active')
+    assert.equal(payload.docs('payload_subscriptions')[0]?.status, 'active')
+    assert.equal(payload.docs('payload_stripe_events')[0]?.processingStatus, 'skipped')
+    assert.equal(
+      payload.docs('payload_stripe_events')[0]?.failureReason,
+      'stale_event_created_at:100<200',
+    )
   }
 
   {
@@ -465,11 +498,11 @@ async function run() {
       adminEmail: 'admin@example.com',
     })
 
-    assert.equal(payload.docs('payload_members')[0]?.accountStatus, 'blocked')
-    assert.equal(payload.docs('payload_members')[0]?.billingHoldReason, 'canceled')
+    assert.equal(payload.docs('payload_members')[0]?.accountStatus, 'active')
+    assert.equal(payload.docs('payload_members')[0]?.billingHoldReason, null)
     assert.equal(payload.docs('payload_subscriptions')[0]?.cancelAtPeriodEnd, true)
-    assert.equal(payload.docs('payload_billing_accounts')[0]?.billingStatus, 'canceled')
-    assert.equal(payload.countDocs('payload_member_security_events'), 1)
+    assert.equal(payload.docs('payload_billing_accounts')[0]?.billingStatus, 'active')
+    assert.equal(payload.countDocs('payload_member_security_events'), 0)
   }
 
   {

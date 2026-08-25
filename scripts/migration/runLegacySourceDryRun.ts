@@ -16,6 +16,7 @@ import {
   type StripeEvidenceFile,
 } from './legacySourceDryRun'
 import { buildLegacyPayloadOperationPlan } from './legacyPayloadOperationPlan'
+import { loadAndVerifyLegacySourceManifest } from './legacySourceManifest'
 
 interface CliArgs {
   sql: string
@@ -24,6 +25,7 @@ interface CliArgs {
   bunny: string
   uploads: string
   out: string
+  manifest?: string
 }
 
 function parseArgs(argv: string[]): CliArgs {
@@ -35,6 +37,7 @@ function parseArgs(argv: string[]): CliArgs {
       bunny: '/private/tmp/jpv-bunny-migration-inventory.json',
       uploads: 'src/assets/uploads',
       out: '/private/tmp/jpv-legacy-source-dry-run-2026-08-15.json',
+      manifest: undefined,
     }
   }
 
@@ -59,7 +62,10 @@ function parseArgs(argv: string[]): CliArgs {
     if (!values.get(key)) throw new Error(`MISSING_REQUIRED_ARGUMENT --${key}`)
   }
 
-  return Object.fromEntries(required.map((key) => [key, values.get(key)!])) as unknown as CliArgs
+  return {
+    ...Object.fromEntries(required.map((key) => [key, values.get(key)!])),
+    manifest: values.get('manifest'),
+  } as unknown as CliArgs
 }
 
 function readJson<T>(filePath: string): T {
@@ -74,22 +80,32 @@ async function main(): Promise<void> {
   const wxr = readFileSync(args.wxr, 'utf8')
   const stripe = readJson<StripeEvidenceFile>(args.stripe)
   const bunny = readJson<BunnyInventoryFile>(args.bunny)
+  const manifest = args.manifest
+    ? loadAndVerifyLegacySourceManifest({
+        manifestPath: args.manifest,
+        sqlPath: args.sql,
+        wxrPath: args.wxr,
+      })
+    : null
 
   const snapshot = buildLegacySqlSnapshot(sql)
   const normalization = buildLegacyDryRunNormalization(snapshot, stripe)
-  assertSnapshotExpectations(normalization.identity)
+  assertSnapshotExpectations(normalization.identity, manifest?.identity)
 
   const wxrItems = parseWordPressWxr(wxr)
   const mediaManifest = buildLocalMediaManifest(args.uploads)
-  assertRealSourceContentExpectations(snapshot, normalization, wxrItems, mediaManifest)
+  assertRealSourceContentExpectations(snapshot, normalization, wxrItems, mediaManifest, manifest?.content)
   const attachmentReconciliation = reconcileWordPressAttachments(wxrItems, mediaManifest)
   const bunnyReconciliation = reconcileBunnyReferences(normalization.bunnyReferences, bunny)
   const operationPlan = await buildLegacyPayloadOperationPlan(snapshot, normalization, bunny)
 
   const report = {
-    reportVersion: '1.0',
+    reportVersion: '1.1',
     generatedAt: new Date().toISOString(),
     mutationMode: 'none',
+    sourceManifest: manifest
+      ? { manifestVersion: manifest.manifestVersion, snapshotDate: manifest.snapshotDate }
+      : { manifestVersion: 'legacy-default', snapshotDate: '2026-08-15' },
     source: {
       wordpressMemberAccounts: normalization.identity.sourceMemberAccountCount,
       canonicalMembers: normalization.identity.canonicalMemberCount,

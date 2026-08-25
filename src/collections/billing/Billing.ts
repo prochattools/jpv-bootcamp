@@ -4,6 +4,7 @@ import { isPayloadAdminRequest } from '@/lib/access/payloadAccess'
 
 const billingGroup = 'Billing'
 const stripeOperatorActions = new Set([
+  'reconcile_all',
   'sync_subscription',
   'cancel_at_period_end',
   'resume_subscription',
@@ -190,7 +191,7 @@ export const PayloadPayments: CollectionConfig = {
   admin: {
     group: billingGroup,
     useAsTitle: 'displayName',
-    defaultColumns: ['displayName', 'member', 'amount', 'currency', 'status', 'paidAt'],
+    defaultColumns: ['displayName', 'member', 'invoiceNumber', 'amountDue', 'amountPaid', 'currency', 'status', 'paidAt'],
     description: 'Read-only payment, refund, and dispute history.',
   },
   access: webhookProjectionCollectionAccess,
@@ -210,6 +211,14 @@ export const PayloadPayments: CollectionConfig = {
     },
     { name: 'stripeInvoiceId', type: 'text', unique: true, index: true },
     { name: 'stripePaymentIntentId', type: 'text', index: true },
+    { name: 'invoiceNumber', type: 'text', index: true },
+    { name: 'hostedInvoiceUrl', type: 'text', admin: { description: 'Stripe-hosted invoice page for secure payment and invoice details.' } },
+    { name: 'invoicePdfUrl', type: 'text', admin: { description: 'Stripe-generated invoice PDF.' } },
+    { name: 'amountDue', type: 'number', required: true, defaultValue: 0, min: 0 },
+    { name: 'amountPaid', type: 'number', required: true, defaultValue: 0, min: 0 },
+    { name: 'amountRemaining', type: 'number', required: true, defaultValue: 0, min: 0 },
+    { name: 'attemptCount', type: 'number', required: true, defaultValue: 0, min: 0 },
+    { name: 'nextPaymentAttempt', type: 'date' },
     { name: 'amount', type: 'number', required: true, min: 0 },
     { name: 'currency', type: 'text', required: true, defaultValue: 'usd' },
     {
@@ -305,12 +314,24 @@ export const PayloadBillingActions: CollectionConfig = {
         }
         const subscription = data?.subscription
         const subscriptionId = typeof subscription === 'object' ? subscription?.id : subscription
-        if (subscriptionId === undefined || subscriptionId === null || String(subscriptionId).trim() === '') {
+        if (
+          data.actionType !== 'reconcile_all' &&
+          (subscriptionId === undefined || subscriptionId === null || String(subscriptionId).trim() === '')
+        ) {
           throw new Error('A Payload subscription record is required.')
+        }
+        if (
+          process.env.STRIPE_ENV === 'live' &&
+          data.actionType !== 'sync_subscription' &&
+          (typeof data.notes !== 'string' || data.notes.trim() === '')
+        ) {
+          throw new Error('A reason or change-ticket reference is required for live subscription changes.')
         }
         return {
           ...data,
-          displayName: `${data.actionType} subscription ${String(subscriptionId)}`,
+          displayName: data.actionType === 'reconcile_all'
+            ? 'Reconcile all Stripe billing'
+            : `${data.actionType} subscription ${String(subscriptionId)}`,
           requestedBy: req.user.id,
           status: 'pending',
           sourceEventId: undefined,
@@ -374,7 +395,8 @@ export const PayloadBillingActions: CollectionConfig = {
       type: 'select',
       required: true,
       options: [
-        { label: 'Sync from Stripe test mode', value: 'sync_subscription' },
+        { label: 'Reconcile all subscriptions and invoices from Stripe', value: 'reconcile_all' },
+        { label: 'Sync current state from Stripe', value: 'sync_subscription' },
         { label: 'Cancel at period end', value: 'cancel_at_period_end' },
         { label: 'Reverse scheduled cancellation', value: 'resume_subscription' },
         { label: 'Checkout Completed', value: 'checkout_completed' },
