@@ -64,12 +64,46 @@ describe('POST /api/admin/reconcile-stripe-billing', () => {
     expect(response.status).toBe(200)
     expect(reconcile).toHaveBeenCalledWith(expect.objectContaining({
       payload,
+      mode: 'apply',
       livemode: true,
       maxObjects: 10_000,
       suppressCommunications: true,
       checkpoint: { phase: 'invoices', startingAfter: 'in_123' },
     }))
     expect(sweep).toHaveBeenCalledWith({ payload })
+  })
+
+  it('runs a no-write dry-run without the delinquency sweep', async () => {
+    const response = await POST(request('worker-secret', { mode: 'dry-run', maxObjects: 50 }))
+    const body = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(body.mode).toBe('dry-run')
+    expect(body.delinquency).toBeNull()
+    expect(reconcile).toHaveBeenCalledWith(expect.objectContaining({
+      payload,
+      mode: 'dry-run',
+      maxObjects: 50,
+    }))
+    expect(sweep).not.toHaveBeenCalled()
+  })
+
+  it('rejects an unknown reconciliation mode before any work begins', async () => {
+    const response = await POST(request('worker-secret', { mode: 'preview' }))
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({ ok: false, error: 'invalid_mode' })
+    expect(reconcile).not.toHaveBeenCalled()
+    expect(sweep).not.toHaveBeenCalled()
+  })
+
+  it('does not sweep delinquency when a dry-run cannot reach Stripe', async () => {
+    reconcile.mockRejectedValueOnce(new Error('stripe unavailable'))
+
+    const response = await POST(request('worker-secret', { mode: 'dry-run' }))
+
+    expect(response.status).toBe(500)
+    expect(sweep).not.toHaveBeenCalled()
   })
 
   it('still enforces expired grace periods when Stripe reconciliation fails', async () => {
