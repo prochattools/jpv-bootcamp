@@ -1,7 +1,9 @@
 import Link from 'next/link'
 
+import { AdminGate } from '@/components/portal/AdminGate'
+import { SpaceAdminPanel } from '@/components/portal/admin/SpaceAdminPanel'
 import { StatusPill } from '@/components/portal/StatusPill'
-import { requirePortalMember } from '@/lib/auth/requirePortalMember'
+import { requirePortalAccess } from '@/lib/auth/requirePortalAccess'
 import { getMemberCommunityFiles } from '@/lib/payloadCourse/communityFileDelivery'
 import {
   getMemberAnnouncements,
@@ -42,19 +44,50 @@ const ANNOUNCEMENTS_PREVIEW = 3
 const RESOURCES_PREVIEW = 5
 
 export default async function PortalCommunityPage() {
-  const { memberId, payload } = await requirePortalMember('/portal/community')
+  const { actor, payload } = await requirePortalAccess('/portal/community')
+  const isAdmin = actor.kind === 'admin'
   const dedupPayload = withQueryDedup(payload)
 
-  const [dashboard, announcements, files] = await Promise.all([
+  // For member path use their ID; for admin path use empty string which the
+  // member projection handles by returning only public/members-visible spaces.
+  // Admin sees the real space list via the direct Payload query below.
+  const memberId = actor.kind === 'member' ? actor.memberId : ''
+
+  const [dashboard, announcements, files, adminSpacesResult] = await Promise.all([
     getMemberCommunityDashboard(dedupPayload, memberId),
     getMemberAnnouncements(dedupPayload, memberId),
     getMemberCommunityFiles(dedupPayload, memberId),
+    // Admin-only: fetch all spaces including hidden/archived for the admin panel
+    isAdmin
+      ? dedupPayload.find({
+          collection: 'payload_spaces',
+          sort: 'sortOrder',
+          limit: 200,
+          depth: 0,
+          overrideAccess: true,
+        })
+      : Promise.resolve(null),
   ])
+
   const unlockedCount = dashboard.spaces.filter((space) => space.allowed).length
   const previewAnnouncements = announcements.slice(0, ANNOUNCEMENTS_PREVIEW)
   const hasMoreAnnouncements = announcements.length > ANNOUNCEMENTS_PREVIEW
   const previewFiles = files.slice(0, RESOURCES_PREVIEW)
   const hasMoreFiles = files.length > RESOURCES_PREVIEW
+
+  // Admin panel receives the real all-spaces list (including archived)
+  const adminPanelSpaces = adminSpacesResult
+    ? adminSpacesResult.docs.map((s: Record<string, unknown>) => ({
+        id: String(s['id']),
+        name: String(s['name'] ?? ''),
+        slug: String(s['slug'] ?? ''),
+        description: String(s['description'] ?? ''),
+        visibility: (['public', 'members', 'private', 'secret'].includes(String(s['visibility']))
+          ? s['visibility']
+          : 'members') as 'public' | 'members' | 'private' | 'secret',
+        status: String(s['status'] ?? 'draft'),
+      }))
+    : []
 
   return (
     <div className='mx-auto w-full max-w-5xl space-y-6'>
@@ -80,6 +113,11 @@ export default async function PortalCommunityPage() {
           </Link>
         </div>
       </header>
+
+      {/* Admin space management — uses full admin space list, not member projection */}
+      <AdminGate>
+        <SpaceAdminPanel spaces={adminPanelSpaces} />
+      </AdminGate>
 
       {/* 2. Spaces — primary navigation, shown first */}
       <section aria-labelledby='community-spaces-heading'>
@@ -131,7 +169,7 @@ export default async function PortalCommunityPage() {
                       : 'posts hidden'}
                   </span>
 
-                  {space.allowed && space.slug ? (
+                  {(space.allowed || isAdmin) && space.slug ? (
                     <Link
                       className='shrink-0 text-xs font-bold text-jpv-sunshine-ink underline-offset-4 hover:text-jpv-brand-deep hover:underline'
                       href={`/portal/community/${space.slug}`}

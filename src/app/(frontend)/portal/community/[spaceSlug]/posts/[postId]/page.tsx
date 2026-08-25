@@ -13,8 +13,15 @@ import { ComposerToolbar } from '@/components/community/ComposerToolbar'
 import { submitReactionAction } from '@/app/(frontend)/portal/reaction-actions'
 import { ProgressiveCommentList } from '@/components/community/ProgressiveCommentList'
 import { StatusPill } from '@/components/portal/StatusPill'
-import { requirePortalMember } from '@/lib/auth/requirePortalMember'
-import { getMemberCommunityPostDetail } from '@/lib/payloadCourse/communityDiscussion'
+import { AdminGate } from '@/components/portal/AdminGate'
+import { PostModerationPanel } from '@/components/portal/admin/PostModerationPanel'
+import { CommentModerationActions } from '@/components/portal/admin/CommentModerationActions'
+import { requirePortalAccess } from '@/lib/auth/requirePortalAccess'
+import {
+  getMemberCommunityPostDetail,
+  projectCommunityRichText,
+  type MemberCommunityPostDetail,
+} from '@/lib/payloadCourse/communityDiscussion'
 import {
   getReactionSummary,
   getSpaceCommentReactionSummaries,
@@ -102,14 +109,175 @@ function AttachmentCard({ attachment }: { attachment: MemberCommunityAttachmentR
 
 export default async function PortalCommunityPostPage({ params, searchParams }: PageProps) {
   const [{ spaceSlug, postId }, query] = await Promise.all([params, searchParams])
-  const { memberId, memberEmail, payload } = await requirePortalMember(
-    `/portal/community/${encodeURIComponent(spaceSlug)}/posts/${encodeURIComponent(postId)}`,
-  )
+  const requestedPath = `/portal/community/${encodeURIComponent(spaceSlug)}/posts/${encodeURIComponent(postId)}`
+  const { actor, payload } = await requirePortalAccess(requestedPath)
+  const isAdmin = actor.kind === 'admin'
+  const memberId = actor.kind === 'member' ? actor.memberId : ''
+  const memberEmail = actor.kind === 'member' ? actor.email : ''
 
-  const result = await getMemberCommunityPostDetail(payload, memberId, spaceSlug, postId)
-  if (!result.allowed) notFound()
+  const memberResult = await getMemberCommunityPostDetail(payload, memberId, spaceSlug, postId)
 
-  const post = result.post
+  let post: MemberCommunityPostDetail
+  let postIsHidden = false
+  let commentHiddenMap: Map<string, boolean> = new Map()
+
+  if (memberResult.allowed) {
+    post = memberResult.post
+  } else if (isAdmin) {
+    const [postDoc, spaceResult, commentsResult] = await Promise.all([
+      payload.findByID({
+        collection: 'payload_space_posts',
+        id: postId,
+        depth: 0,
+        overrideAccess: true,
+      }),
+      payload.find({
+        collection: 'payload_spaces',
+        where: { slug: { equals: spaceSlug } },
+        limit: 1,
+        depth: 0,
+        overrideAccess: true,
+      }),
+      payload.find({
+        collection: 'payload_space_comments',
+        where: { post: { equals: postId } },
+        sort: 'createdAt',
+        limit: 500,
+        depth: 0,
+        overrideAccess: true,
+      }),
+    ])
+
+    if (!postDoc) notFound()
+    const spaceDoc = spaceResult.docs[0]
+    if (!spaceDoc) notFound()
+
+    // Verify the post belongs to the space in this route
+    const postSpaceId = typeof postDoc.space === 'object' && postDoc.space !== null
+      ? String((postDoc.space as Record<string, unknown>).id)
+      : String(postDoc.space)
+    if (postSpaceId !== String(spaceDoc.id)) notFound()
+
+    const resolveDocId = (val: unknown): string | null => {
+      if (typeof val === 'string') return val
+      if (val && typeof val === 'object' && 'id' in val) return String((val as { id: unknown }).id)
+      return null
+    }
+    const resolveName = (member: Record<string, unknown> | null): string => {
+      if (!member) return 'Community member'
+      const display = member.displayName ?? member.fullName ?? member.name
+      if (typeof display === 'string' && display.trim()) return display.trim().slice(0, 120)
+      const first = typeof member.firstName === 'string' ? member.firstName : ''
+      const last = typeof member.lastName === 'string' ? member.lastName : ''
+      const combined = [first, last].filter(Boolean).join(' ').trim()
+      return combined || 'Community member'
+    }
+
+    const postAuthorId = resolveDocId(postDoc.author)
+    const commentAuthorIds = new Set<string>()
+    for (const c of commentsResult.docs) {
+      const aid = resolveDocId(c.author)
+      if (aid) commentAuthorIds.add(aid)
+    }
+    if (postAuthorId) commentAuthorIds.add(postAuthorId)
+
+    const authorMap = new Map<string, Record<string, unknown>>()
+    if (commentAuthorIds.size > 0) {
+      const batch = await payload.find({
+        collection: 'payload_members',
+        where: { id: { in: Array.from(commentAuthorIds) } },
+        limit: 200,
+        depth: 0,
+        overrideAccess: true,
+      })
+      for (const m of batch.docs) authorMap.set(String(m.id), m as Record<string, unknown>)
+    }
+
+    const postAuthorMember = postAuthorId ? (authorMap.get(postAuthorId) ?? null) : null
+    const bodyRichText = projectCommunityRichText(postDoc.body)
+    const extractText = (node: unknown): string => {
+      if (!node || typeof node !== 'object') return ''
+      const n = node as Record<string, unknown>
+      if (n.type === 'text' && typeof n.text === 'string') return n.text
+      if (Array.isArray(n.children)) return n.children.map(extractText).join('')
+      if (n.root && typeof n.root === 'object') return extractText(n.root)
+      return ''
+    }
+
+    const attachmentFiles = await payload.find({
+      collection: 'payload_space_files',
+      where: { and: [{ post: { equals: postId } }, { moderationStatus: { equals: 'visible' } }] },
+      sort: 'sortOrder',
+      limit: 100,
+      depth: 0,
+      overrideAccess: true,
+    }).catch(() => ({ docs: [] as Array<Record<string, unknown>> }))
+
+    const spaceId = String(spaceDoc.id)
+    const spaceNameStr = String(spaceDoc.name ?? spaceSlug)
+    const attachments: MemberCommunityAttachmentResolution[] = attachmentFiles.docs.map((file) => ({
+      id: String(file.id),
+      title: String(file.title ?? file.filename ?? 'Attachment'),
+      spaceId,
+      spaceName: spaceNameStr,
+      filename: String(file.filename ?? 'file'),
+      mimeType: (typeof file.mimeType === 'string' ? file.mimeType : 'application/octet-stream') as 'application/pdf',
+      byteSize: typeof file.byteSize === 'number' ? file.byteSize : 0,
+      downloadUrl: typeof file.url === 'string' ? file.url : `/portal/community/files/${file.id}`,
+      allowed: true as const,
+      media: {
+        id: String(file.id),
+        filename: String(file.filename ?? 'file'),
+        mimeType: (typeof file.mimeType === 'string' ? file.mimeType : 'application/octet-stream') as 'application/pdf',
+        byteSize: typeof file.byteSize === 'number' ? file.byteSize : 0,
+        storage: 'private' as const,
+      },
+    })) as unknown as MemberCommunityAttachmentResolution[]
+
+    post = {
+      id: String(postDoc.id),
+      title: String(postDoc.title ?? ''),
+      postType: (postDoc.postType === 'question' || postDoc.postType === 'announcement')
+        ? postDoc.postType
+        : 'discussion',
+      pinned: Boolean(postDoc.pinned),
+      locked: Boolean(postDoc.locked),
+      isViewerAuthor: false,
+      authorName: resolveName(postAuthorMember),
+      createdAt: postDoc.createdAt ? String(postDoc.createdAt) : null,
+      space: {
+        id: String(spaceDoc.id),
+        name: String(spaceDoc.name ?? spaceSlug),
+        slug: String(spaceDoc.slug ?? spaceSlug),
+      },
+      body: bodyRichText,
+      bodyPlainText: extractText(bodyRichText),
+      comments: commentsResult.docs.map((c) => {
+        const cAuthorId = resolveDocId(c.author)
+        const cBody = projectCommunityRichText(c.body)
+        return {
+          id: String(c.id),
+          isViewerAuthor: false,
+          authorName: resolveName(cAuthorId ? (authorMap.get(cAuthorId) ?? null) : null),
+          body: cBody,
+          bodyPlainText: extractText(cBody),
+          createdAt: c.createdAt ? String(c.createdAt) : null,
+        }
+      }),
+      attachments,
+      canPublish: true,
+      canComment: false,
+    }
+
+    // Track post and per-comment hidden state for admin moderation controls
+    postIsHidden = postDoc.moderationStatus === 'hidden'
+    commentHiddenMap = new Map(
+      commentsResult.docs.map((c) => [String(c.id), c.moderationStatus === 'hidden'])
+    )
+  } else {
+    notFound()
+  }
+
   let reactionSummary: ReactionSummary | null = null
   try {
     reactionSummary = await getReactionSummary(payload, memberId, {
@@ -132,7 +300,6 @@ export default async function PortalCommunityPostPage({ params, searchParams }: 
     // Comment reaction projection is optional until the staging migration and
     // validation gate have completed.
   }
-  const requestedPath = `/portal/community/${encodeURIComponent(spaceSlug)}/posts/${encodeURIComponent(postId)}`
 
   return (
     <div className='mx-auto w-full max-w-3xl space-y-6'>
@@ -169,6 +336,18 @@ export default async function PortalCommunityPostPage({ params, searchParams }: 
               {post.pinned && <StatusPill tone='neutral'>Pinned</StatusPill>}
               {post.locked && <StatusPill tone='warn'>Comments locked</StatusPill>}
             </div>
+            <AdminGate>
+              <PostModerationPanel
+                currentBody={post.bodyPlainText.trim()}
+                currentTitle={post.title}
+                hasComments={post.comments.length > 0}
+                hidden={postIsHidden}
+                locked={post.locked}
+                pinned={post.pinned}
+                postId={post.id}
+                spaceId={post.space.id}
+              />
+            </AdminGate>
           </div>
           <div className='mt-3 flex items-center gap-3'>
             <span
@@ -335,6 +514,15 @@ export default async function PortalCommunityPostPage({ params, searchParams }: 
                           spaceSlug={spaceSlug}
                         />
                       )}
+                      <AdminGate>
+                        <CommentModerationActions
+                          commentId={comment.id}
+                          currentBody={comment.bodyPlainText.trim()}
+                          hidden={commentHiddenMap.get(comment.id) ?? false}
+                          postId={post.id}
+                          spaceId={post.space.id}
+                        />
+                      </AdminGate>
                       <time className='shrink-0 text-xs text-jpv-muted' dateTime={comment.createdAt ?? undefined}>
                         {formatDate(comment.createdAt)}
                       </time>

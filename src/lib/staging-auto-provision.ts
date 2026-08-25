@@ -19,6 +19,10 @@ function isStagingEnv(): boolean {
 }
 
 export async function stagingAutoProvision(payload: Payload): Promise<void> {
+  if (process.env.LOCAL_SERVER_TEST_MODE === '1') {
+    console.info('staging-auto-provision: skipped (LOCAL_SERVER_TEST_MODE=1)')
+    return
+  }
   if (!isStagingEnv()) {
     console.info('staging-auto-provision: skipped (DEPLOYMENT_ENV=%s)', process.env.DEPLOYMENT_ENV ?? 'unset')
     return

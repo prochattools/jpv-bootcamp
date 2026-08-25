@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 
+import { requirePortalAccess } from '@/lib/auth/requirePortalAccess'
 import { requirePortalMember } from '@/lib/auth/requirePortalMember'
 import type { PayloadCourseWriteAPI, PayloadDocument } from '@/lib/payloadCourse/accessService'
 import { getMemberCommunityPostDetail } from '@/lib/payloadCourse/communityDiscussion'
@@ -386,10 +387,21 @@ export async function editCommunityPost(
   formData: FormData,
 ): Promise<{ ok: boolean; error?: string }> {
   const destination = postPath(spaceSlug, postId)
-  const { memberId } = await requirePortalMember(destination)
+  const { actor } = await requirePortalAccess(destination)
+  const memberId = actor.kind === 'member' ? actor.memberId : ''
 
   try {
     const payload = await getPayload({ config })
+
+    const space = await payload.find({
+      collection: 'payload_spaces',
+      where: { slug: { equals: spaceSlug } },
+      limit: 1,
+      depth: 0,
+      overrideAccess: true,
+    })
+    if (space.docs.length === 0) return { ok: false, error: 'space_not_found' }
+    const spaceId = String(space.docs[0].id)
 
     const post = await payload.findByID({
       collection: 'payload_space_posts',
@@ -398,11 +410,16 @@ export async function editCommunityPost(
       overrideAccess: true,
     })
 
+    const postSpaceId = typeof post.space === 'object' && post.space !== null
+      ? String((post.space as unknown as Record<string, unknown>).id)
+      : String(post.space)
+    if (postSpaceId !== spaceId) return { ok: false, error: 'post_space_mismatch' }
+
     const postAuthorId = typeof post.author === 'object' && post.author !== null
       ? String((post.author as unknown as Record<string, unknown>).id)
       : String(post.author)
 
-    if (postAuthorId !== String(memberId)) {
+    if (actor.kind !== 'admin' && postAuthorId !== String(memberId)) {
       return { ok: false, error: 'not_owner' }
     }
 
@@ -432,10 +449,21 @@ export async function deleteCommunityPost(
   postId: string,
 ): Promise<{ ok: boolean; error?: string }> {
   const destination = spacePath(spaceSlug)
-  const { memberId } = await requirePortalMember(destination)
+  const { actor } = await requirePortalAccess(destination)
+  const memberId = actor.kind === 'member' ? actor.memberId : ''
 
   try {
     const payload = await getPayload({ config })
+
+    const space = await payload.find({
+      collection: 'payload_spaces',
+      where: { slug: { equals: spaceSlug } },
+      limit: 1,
+      depth: 0,
+      overrideAccess: true,
+    })
+    if (space.docs.length === 0) return { ok: false, error: 'space_not_found' }
+    const spaceId = String(space.docs[0].id)
 
     const post = await payload.findByID({
       collection: 'payload_space_posts',
@@ -444,11 +472,16 @@ export async function deleteCommunityPost(
       overrideAccess: true,
     })
 
+    const postSpaceId = typeof post.space === 'object' && post.space !== null
+      ? String((post.space as unknown as Record<string, unknown>).id)
+      : String(post.space)
+    if (postSpaceId !== spaceId) return { ok: false, error: 'post_space_mismatch' }
+
     const postAuthorId = typeof post.author === 'object' && post.author !== null
       ? String((post.author as unknown as Record<string, unknown>).id)
       : String(post.author)
 
-    if (postAuthorId !== String(memberId)) {
+    if (actor.kind !== 'admin' && postAuthorId !== String(memberId)) {
       return { ok: false, error: 'not_owner' }
     }
 
@@ -472,10 +505,32 @@ export async function editCommunityComment(
   formData: FormData,
 ): Promise<{ ok: boolean; error?: string }> {
   const destination = postPath(spaceSlug, postId)
-  const { memberId } = await requirePortalMember(destination)
+  const { actor } = await requirePortalAccess(destination)
+  const memberId = actor.kind === 'member' ? actor.memberId : ''
 
   try {
     const payload = await getPayload({ config })
+
+    const space = await payload.find({
+      collection: 'payload_spaces',
+      where: { slug: { equals: spaceSlug } },
+      limit: 1,
+      depth: 0,
+      overrideAccess: true,
+    })
+    if (space.docs.length === 0) return { ok: false, error: 'space_not_found' }
+    const spaceId = String(space.docs[0].id)
+
+    const post = await payload.findByID({
+      collection: 'payload_space_posts',
+      id: postId,
+      depth: 0,
+      overrideAccess: true,
+    })
+    const postSpaceId = typeof post.space === 'object' && post.space !== null
+      ? String((post.space as unknown as Record<string, unknown>).id)
+      : String(post.space)
+    if (postSpaceId !== spaceId) return { ok: false, error: 'post_space_mismatch' }
 
     const comment = await payload.findByID({
       collection: 'payload_space_comments',
@@ -484,11 +539,16 @@ export async function editCommunityComment(
       overrideAccess: true,
     })
 
+    const commentPostId = typeof comment.post === 'object' && comment.post !== null
+      ? String((comment.post as unknown as Record<string, unknown>).id)
+      : String(comment.post)
+    if (commentPostId !== postId) return { ok: false, error: 'comment_post_mismatch' }
+
     const commentAuthorId = typeof comment.author === 'object' && comment.author !== null
       ? String((comment.author as unknown as Record<string, unknown>).id)
       : String(comment.author)
 
-    if (commentAuthorId !== String(memberId)) {
+    if (actor.kind !== 'admin' && commentAuthorId !== String(memberId)) {
       return { ok: false, error: 'not_owner' }
     }
 
@@ -516,10 +576,32 @@ export async function deleteCommunityComment(
   commentId: string,
 ): Promise<{ ok: boolean; error?: string }> {
   const destination = postPath(spaceSlug, postId)
-  const { memberId } = await requirePortalMember(destination)
+  const { actor } = await requirePortalAccess(destination)
+  const memberId = actor.kind === 'member' ? actor.memberId : ''
 
   try {
     const payload = await getPayload({ config })
+
+    const space = await payload.find({
+      collection: 'payload_spaces',
+      where: { slug: { equals: spaceSlug } },
+      limit: 1,
+      depth: 0,
+      overrideAccess: true,
+    })
+    if (space.docs.length === 0) return { ok: false, error: 'space_not_found' }
+    const spaceId = String(space.docs[0].id)
+
+    const post = await payload.findByID({
+      collection: 'payload_space_posts',
+      id: postId,
+      depth: 0,
+      overrideAccess: true,
+    })
+    const postSpaceId = typeof post.space === 'object' && post.space !== null
+      ? String((post.space as unknown as Record<string, unknown>).id)
+      : String(post.space)
+    if (postSpaceId !== spaceId) return { ok: false, error: 'post_space_mismatch' }
 
     const comment = await payload.findByID({
       collection: 'payload_space_comments',
@@ -528,11 +610,16 @@ export async function deleteCommunityComment(
       overrideAccess: true,
     })
 
+    const commentPostId = typeof comment.post === 'object' && comment.post !== null
+      ? String((comment.post as unknown as Record<string, unknown>).id)
+      : String(comment.post)
+    if (commentPostId !== postId) return { ok: false, error: 'comment_post_mismatch' }
+
     const commentAuthorId = typeof comment.author === 'object' && comment.author !== null
       ? String((comment.author as unknown as Record<string, unknown>).id)
       : String(comment.author)
 
-    if (commentAuthorId !== String(memberId)) {
+    if (actor.kind !== 'admin' && commentAuthorId !== String(memberId)) {
       return { ok: false, error: 'not_owner' }
     }
 
