@@ -709,10 +709,16 @@ async function persistProjection(
     }
   }
 
+  const shadowWhere = projection.stripeSubscriptionId
+    ? { stripeSubscriptionId: { equals: projection.stripeSubscriptionId } }
+    : projection.stripeCustomerId
+      ? { stripeCustomerId: { equals: projection.stripeCustomerId } }
+      : { displayName: { equals: `Stripe shadow ${projection.resourceKey}` } }
+
   await upsertByWhere(
     payload,
     'payload_stripe_shadow_projections',
-    { displayName: { equals: `Stripe shadow ${projection.resourceKey}` } },
+    shadowWhere,
     {
       displayName: `Stripe shadow ${projection.resourceKey}`,
       membershipSupport: supportResult.doc.id,

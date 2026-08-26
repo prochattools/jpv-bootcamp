@@ -454,6 +454,13 @@ async function run() {
       (payload.docs('payload_stripe_shadow_projections')[0]?.metadata as Record<string, unknown>)?.identityState,
       'unresolved',
     )
+
+    await mirrorStripeEventToPayload(payload, event('customer.subscription.updated', subscription(), 'evt_reconcile_unknown_member_retry'), {
+      stripe: fakeStripe(),
+      preserveMemberStatus: true,
+      suppressCommunications: true,
+    })
+    assert.equal(payload.countDocs('payload_stripe_shadow_projections'), 1)
   }
 
   {
