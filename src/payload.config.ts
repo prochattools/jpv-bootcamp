@@ -150,6 +150,7 @@ if (process.env.DEPLOYMENT_RUNTIME === 'docker') {
 export default buildConfig({
   admin: {
     user: 'payload_users',
+    theme: 'light',
     importMap: {
       baseDir: path.resolve(dirname),
     },

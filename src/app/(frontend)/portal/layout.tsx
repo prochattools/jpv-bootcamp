@@ -24,7 +24,10 @@ export default async function PortalLayout({ children }: { children: ReactNode }
       defaultTheme='light'
       enableSystem={false}
       disableTransitionOnChange
-      forcedTheme={isAuthenticated ? undefined : 'light'}
+      storageKey='jpv-portal-theme'
+      // Keep every portal route light by default. PortalShell mounts a second
+      // provider only for authenticated portal pages where the toggle exists.
+      forcedTheme='light'
     >
       <div className='jpv-product-shell h-[100dvh] min-h-0 min-w-0 overflow-hidden bg-jpv-canvas text-jpv-ink dark:bg-[var(--jpv-canvas)] dark:text-[var(--jpv-ink)]'>
         <PortalShell
