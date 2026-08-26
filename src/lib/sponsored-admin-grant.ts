@@ -10,6 +10,7 @@ import { applySponsoredGrant } from '@/lib/sponsored-grants'
 import { provisionMemberFromCheckout } from '@/lib/members/provisionMemberFromCheckout'
 import { createAuditEvent } from '@/lib/payloadCourse/events'
 import type { PayloadCourseWriteAPI, PayloadDocument, PayloadId } from '@/lib/payloadCourse/accessService'
+import { buildMemberForgotPasswordUrl } from '@/lib/memberAuthUrls'
 
 export type SponsoredGrantMode = 'existing' | 'new'
 
@@ -345,11 +346,11 @@ export async function grantSponsoredApplication(params: {
     let emailSent = false
     if (createdMember && generatedPassword) {
       try {
-        const portalUrl = getServerConfig().email.portalUrl.replace(/\/$/, '')
+        const portalUrl = getServerConfig().email.portalUrl
         await sendWelcomeEmail({
           to: email,
           plan: 'jpv_bootcamp_membership',
-          resetUrl: `${portalUrl}/forgot-password`,
+          resetUrl: buildMemberForgotPasswordUrl(portalUrl),
           credentials: { email, password: generatedPassword },
           meta: {
             templateKey: 'membership_access_ready',
