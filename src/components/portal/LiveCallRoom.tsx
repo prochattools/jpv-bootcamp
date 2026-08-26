@@ -55,10 +55,7 @@ function CallStage({ token, wsUrl, roomName, sessionTitle }: {
         <LiveSessionState compact status='live' />
       </div>
 
-      <div
-        className='overflow-hidden rounded-jpv-panel border border-jpv-border bg-neutral-900'
-        style={{ minHeight: '480px' }}
-      >
+      <div className='jpv-livekit-shell overflow-hidden rounded-jpv-panel border border-jpv-border bg-neutral-900'>
         <LiveKitRoom
           serverUrl={wsUrl}
           token={token}
@@ -66,7 +63,7 @@ function CallStage({ token, wsUrl, roomName, sessionTitle }: {
           audio={true}
           video={false}
           data-lk-theme='default'
-          className='h-full'
+          className='h-full w-full'
         >
           <VideoConference />
           <RoomAudioRenderer />
