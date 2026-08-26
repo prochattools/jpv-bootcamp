@@ -158,6 +158,7 @@ export default buildConfig({
         Logo: './components/payload/JPVAdminBranding#JPVAdminLogo',
         Icon: './components/payload/JPVAdminBranding#JPVAdminIcon',
       },
+      beforeNavLinks: ['./components/payload/JPVAdminDashboardNav#JPVAdminDashboardNav'],
       views: {
         dashboard: {
           Component: './components/payload/JPVAdminDashboard#JPVAdminDashboard',

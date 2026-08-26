@@ -1,17 +1,15 @@
 'use client'
 
-import { createContext, useContext, useState, type ReactNode } from 'react'
+import { createContext, useContext, type ReactNode } from 'react'
 
 export type AdminModeContextValue = {
   isAdmin: boolean
   adminModeOn: boolean
-  toggleAdminMode: () => void
 }
 
 const AdminModeContext = createContext<AdminModeContextValue>({
   isAdmin: false,
   adminModeOn: false,
-  toggleAdminMode: () => {},
 })
 
 export function AdminModeProvider({
@@ -21,14 +19,13 @@ export function AdminModeProvider({
   children: ReactNode
   isAdmin: boolean
 }) {
-  const [adminModeOn, setAdminModeOn] = useState(isAdmin)
-
   return (
     <AdminModeContext.Provider
       value={{
         isAdmin,
-        adminModeOn: isAdmin && adminModeOn,
-        toggleAdminMode: isAdmin ? () => setAdminModeOn((v) => !v) : () => {},
+        // This is a presentation flag only. The server rechecks admin access
+        // for every mutation; an admin should not need a second mode toggle.
+        adminModeOn: isAdmin,
       }}
     >
       {children}

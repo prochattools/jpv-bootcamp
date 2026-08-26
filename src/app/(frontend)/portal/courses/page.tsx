@@ -63,7 +63,7 @@ export default async function PortalCoursesPage() {
                       <span className={`flex-shrink-0 rounded-full px-2.5 py-0.5 text-xs font-bold ${
                         course.status === 'published' ? 'bg-jpv-brand/10 text-jpv-brand-deep'
                           : course.status === 'archived' ? 'bg-red-100 text-red-700'
-                          : 'bg-amber-100 text-amber-700'
+                          : 'bg-jpv-sunshine/20 text-jpv-sunshine-ink'
                       }`}>
                         {course.status}
                       </span>

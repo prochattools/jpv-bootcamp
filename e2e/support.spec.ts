@@ -24,6 +24,7 @@ async function openSupportForm(page: Page): Promise<void> {
 async function fillSupportForm(page: Page): Promise<void> {
   await page.getByLabel('Name').fill('Support Tester')
   await page.getByLabel('Email address').fill(TEST_SUPPORT_EMAIL)
+  await page.getByLabel('Telephone number').fill('+442080922398')
   await page.getByLabel('How can we help?').fill(TEST_SUPPORT_QUESTION)
 }
 
@@ -148,6 +149,8 @@ test.describe('durable support intake browser behavior', () => {
     await expect(page.getByLabel('Name')).toBeFocused()
     await page.keyboard.press('Tab')
     await expect(page.getByLabel('Email address')).toBeFocused()
+    await page.keyboard.press('Tab')
+    await expect(page.getByLabel('Telephone number')).toBeFocused()
     await page.keyboard.press('Tab')
     await expect(page.getByLabel('How can we help?')).toBeFocused()
 

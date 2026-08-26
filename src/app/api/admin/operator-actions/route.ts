@@ -6,7 +6,7 @@ import config from '@payload-config'
 
 import { resolvePayloadRequestSession } from '@/lib/auth/payloadSession'
 
-const BILLING_ACTIONS = new Set(['reconcile_all', 'sync_subscription', 'cancel_at_period_end', 'resume_subscription'])
+const BILLING_ACTIONS = new Set(['reconcile_all', 'sync_subscription', 'cancel_at_period_end', 'resume_subscription', 'pause_subscription', 'resume_paused_subscription'])
 const EMAIL_ACTIONS = new Set(['retry_delivery'])
 
 const PROVIDER_ID_PATTERNS = [

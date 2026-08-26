@@ -17,7 +17,7 @@ export function BillingPortalButton() {
 			if (result.ok === false) {
 				const errorMap: Record<string, string> = {
 					unauthenticated: 'Authentication failed. Please log in again.',
-					no_stripe_customer: 'No billing account found for this member.',
+					no_stripe_customer: 'No linked Stripe customer was found yet. Your billing record is still being synchronized.',
 					stripe_error: 'Billing service is temporarily unavailable.',
 					unexpected_error: 'An unexpected error occurred. Please try again.',
 				}

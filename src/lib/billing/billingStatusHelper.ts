@@ -2,6 +2,7 @@ import 'server-only'
 
 import prisma from '@/libs/prisma'
 import { normalizeEmail } from '@/lib/normalize-email'
+import { getStripe } from '@/lib/stripe'
 import {
   resolveMembershipLifecycle,
   type MembershipLifecycleState,
@@ -101,6 +102,68 @@ function billingAccessStateForLifecycle(params: {
   return 'inactive'
 }
 
+async function getStripeFallbackStatus(normalizedEmail: string): Promise<BillingStatus> {
+  try {
+    const stripe = getStripe()
+    const customers = await stripe.customers.list({ email: normalizedEmail, limit: 10 })
+    const matches = customers.data.filter((customer) => normalizeEmail(customer.email ?? '') === normalizedEmail)
+    if (matches.length !== 1) return emptyBillingStatus()
+
+    const subscriptions = await stripe.subscriptions.list({
+      customer: matches[0].id,
+      status: 'all',
+      limit: 100,
+    })
+    const subscription = [...subscriptions.data].sort((left, right) => right.created - left.created)[0]
+    const subscriptionStatus = subscription?.status ?? null
+    const cancelAtPeriodEnd = subscription?.cancel_at_period_end ?? false
+    const lifecycle = resolveMembershipLifecycle({
+      hasBillingAccount: true,
+      subscriptionStatus,
+      paymentStatus: null,
+      withinPaymentGrace: false,
+      cancelAtPeriodEnd,
+    })
+    const interval = subscription?.items.data[0]?.price?.recurring?.interval
+
+    return {
+      hasBillingAccount: true,
+      hasActiveSubscription: lifecycle.accessAllowed,
+      planLabel: subscription ? 'JPV Bootcamp Membership' : null,
+      subscriptionStatus,
+      membershipStatus: lifecycle.state,
+      billingAccessState: billingAccessStateForLifecycle(lifecycle),
+      periodEndDate: typeof subscription?.current_period_end === 'number'
+        ? new Date(subscription.current_period_end * 1000)
+        : null,
+      cancelAtPeriodEnd,
+      billingCadence: interval === 'year' ? 'annual' : interval === 'month' ? 'monthly_commitment' : null,
+      commitmentStatus: null,
+      commitmentStartAt: null,
+      commitmentEndAt: null,
+      cancellationRequestedAt: null,
+      cancellationEffectiveAt: null,
+      paymentGraceEndsAt: null,
+      withinPaymentGrace: false,
+      restrictedPortalRequired: false,
+      paymentStatus: null,
+      paymentFailedAt: null,
+      paymentRefundedAt: null,
+      paymentDisputeStatus: null,
+      paymentDisputedAt: null,
+      paymentDisputeResolvedAt: null,
+      showPaymentWarning: subscriptionStatus === 'past_due' || subscriptionStatus === 'unpaid',
+      showRefundNotice: false,
+      showDisputeNotice: false,
+      manageBillingAvailable: true,
+    }
+  } catch {
+    // Stripe is an enrichment fallback. The existing local projection remains
+    // the normal fast path and a provider outage must not break the portal.
+    return emptyBillingStatus()
+  }
+}
+
 export async function getBillingStatus(memberEmail: string): Promise<BillingStatus> {
   const normalizedEmail = normalizeEmail(memberEmail)
   if (!normalizedEmail) return emptyBillingStatus()
@@ -128,7 +191,7 @@ export async function getBillingStatus(memberEmail: string): Promise<BillingStat
     },
   })
 
-  if (!record || !record.stripeCustomerId) return emptyBillingStatus()
+  if (!record || !record.stripeCustomerId) return getStripeFallbackStatus(normalizedEmail)
 
   const paymentStatus =
     record.paymentStatus && BILLING_PAYMENT_STATES.has(record.paymentStatus as BillingPaymentState)

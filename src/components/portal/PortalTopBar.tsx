@@ -1,6 +1,6 @@
 'use client'
 
-import { Menu, Shield, UserCircle } from 'lucide-react'
+import { Menu, UserCircle } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
@@ -40,7 +40,7 @@ type PortalTopBarProps = {
 export function PortalTopBar({ onMobileMenuOpen }: PortalTopBarProps) {
   const pathname = usePathname()
   const pageTitle = resolvePageTitle(pathname)
-  const { isAdmin, adminModeOn, toggleAdminMode } = useAdminMode()
+  const { isAdmin } = useAdminMode()
 
   return (
     <header
@@ -60,24 +60,11 @@ export function PortalTopBar({ onMobileMenuOpen }: PortalTopBarProps) {
       </div>
 
       <div className='flex shrink-0 items-center gap-0 sm:gap-1'>
-        {isAdmin && (
-          <>
-            <button
-              aria-label={adminModeOn ? 'Disable admin controls' : 'Enable admin controls'}
-              aria-pressed={adminModeOn}
-              className={`flex items-center gap-1.5 rounded-jpv-action px-2 py-1.5 text-xs font-semibold transition sm:px-2.5 ${
-                adminModeOn
-                  ? 'bg-jpv-brand-deep text-jpv-canvas hover:bg-jpv-brand-hover'
-                  : 'bg-jpv-surface text-jpv-muted hover:bg-jpv-border dark:bg-[var(--jpv-surface)] dark:text-[var(--jpv-muted)] dark:hover:bg-[var(--jpv-border)]'
-              }`}
-              onClick={toggleAdminMode}
-              type='button'
-            >
-              <Shield aria-hidden='true' className='h-3.5 w-3.5 shrink-0' />
-              <span className='hidden sm:inline'>{adminModeOn ? 'Admin On' : 'Admin Off'}</span>
-            </button>
-          </>
-        )}
+        {isAdmin ? (
+          <span className='hidden rounded-jpv-action bg-jpv-brand-deep px-2.5 py-1.5 text-xs font-semibold text-jpv-canvas sm:inline'>
+            Admin On
+          </span>
+        ) : null}
         <ThemeToggle />
         <NotificationBell />
         <Link

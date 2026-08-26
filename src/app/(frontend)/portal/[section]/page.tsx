@@ -915,8 +915,7 @@ export default async function PortalSectionPage({ params, searchParams }: Portal
             <section className={`${portalCardClass} border-dashed`}>
               <h2 className={sectionCardTitleClass}>No active subscription</h2>
               <p className='mt-3 max-w-2xl text-sm leading-6 text-neutral-600'>
-                Your account does not currently have a paid JPV Bootcamp subscription in the billing mirror.
-                Any course access already assigned to your member account remains visible in the portal.
+                No active JPV Bootcamp subscription is currently recorded. Any course access already assigned to your member account remains visible in the portal.
               </p>
             </section>
             {presentation.allowCheckout ? (
@@ -942,17 +941,15 @@ export default async function PortalSectionPage({ params, searchParams }: Portal
                 </div>
               </section>
             ) : null}
-            {billingStatus.hasBillingAccount && (
-              <section className={portalCardClass}>
-                <h2 className={sectionCardTitleClass}>Billing actions</h2>
-                <p className='mt-3 text-sm text-neutral-600'>
-                  Review payment methods or previous invoices in the secure billing portal.
-                </p>
-                <div className='mt-5'>
-                  <BillingPortalButton />
-                </div>
-              </section>
-            )}
+            <section className={portalCardClass}>
+              <h2 className={sectionCardTitleClass}>Billing history and payment settings</h2>
+              <p className='mt-3 text-sm text-neutral-600'>
+                Open your secure Stripe billing portal to review payment methods, invoices, and any expired or cancelled subscription history.
+              </p>
+              <div className='mt-5'>
+                <BillingPortalButton />
+              </div>
+            </section>
             <section className={portalCardClass} id='details'>
               <h2 className={sectionCardTitleClass}>Billing details</h2>
               {presentation.hasProjectionData ? (

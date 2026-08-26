@@ -1790,6 +1790,8 @@ export interface PayloadBillingAction {
     | 'sync_subscription'
     | 'cancel_at_period_end'
     | 'resume_subscription'
+    | 'pause_subscription'
+    | 'resume_paused_subscription'
     | 'checkout_completed'
     | 'subscription_created'
     | 'subscription_updated'

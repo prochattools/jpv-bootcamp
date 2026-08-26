@@ -2,6 +2,7 @@ import config from '@payload-config'
 import { getPayload } from 'payload'
 
 import prisma from '@/libs/prisma'
+import { JPVBillingOverview } from '@/components/payload/JPVBillingOverview'
 
 type CountPayload = {
   count(args: {
@@ -390,6 +391,8 @@ export async function JPVAdminDashboard() {
           )}
         </div>
       </section>
+
+      <JPVBillingOverview />
 
       {/* Quick actions */}
       <section>
