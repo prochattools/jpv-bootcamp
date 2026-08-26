@@ -410,6 +410,58 @@ async function upsertByWhere(
   }
 }
 
+async function upsertUnresolvedStripeShadow(
+  payload: PayloadCourseWriteAPI,
+  params: {
+    objectType: 'subscription' | 'invoice'
+    stripeId: string
+    stripeCustomerId: string | null
+    stripeSubscriptionId?: string | null
+    stripePriceId?: string | null
+    stripeInvoiceId?: string | null
+    event: Stripe.Event
+    observedStatus: string
+    snapshot: Record<string, unknown>
+  },
+): Promise<'stripe_shadow_created' | 'stripe_shadow_updated'> {
+  const where = params.objectType === 'subscription'
+    ? { stripeSubscriptionId: { equals: params.stripeId } }
+    : { stripeInvoiceId: { equals: params.stripeId } }
+  const result = await upsertByWhere(
+    payload,
+    'payload_stripe_shadow_projections',
+    where,
+    {
+      displayName: `Unresolved Stripe ${params.objectType} / ${params.stripeId}`,
+      member: undefined,
+      stripeCustomerId: params.stripeCustomerId ?? undefined,
+      stripeSubscriptionId: params.stripeSubscriptionId ?? undefined,
+      stripePriceId: params.stripePriceId ?? undefined,
+      stripeInvoiceId: params.stripeInvoiceId ?? undefined,
+      stripeEventId: params.event.id,
+      shadowState: 'mismatch',
+      lastWebhookAt: new Date(params.event.created * 1000),
+      shadowedAt: new Date(),
+      observedStatus: params.observedStatus,
+      notes: 'Stripe record is preserved in Payload, but no safe local member identity is available. No entitlement or member was created.',
+      metadata: {
+        source: 'stripe_payload_reconciliation',
+        identityState: 'unresolved',
+        objectType: params.objectType,
+        stripeId: params.stripeId,
+        stripeCustomerId: params.stripeCustomerId,
+        stripeSubscriptionId: params.stripeSubscriptionId ?? null,
+        stripeInvoiceId: params.stripeInvoiceId ?? null,
+        eventId: params.event.id,
+        eventType: params.event.type,
+        observedStatus: params.observedStatus,
+        stripeSnapshot: params.snapshot,
+      },
+    },
+  )
+  return result.created ? 'stripe_shadow_created' : 'stripe_shadow_updated'
+}
+
 async function resolveCustomerEmail(
   stripe: ShadowStripeClient,
   customerId: string,
@@ -905,10 +957,21 @@ async function syncSubscription(
       eventId: event.id,
       notes: options.preserveMemberStatus ? 'no_matching_local_member' : 'missing_customer_email',
     })
+    const shadowAction = await upsertUnresolvedStripeShadow(payload, {
+      objectType: 'subscription',
+      stripeId: projection.stripeSubscriptionId,
+      stripeCustomerId: projection.stripeCustomerId,
+      stripeSubscriptionId: projection.stripeSubscriptionId,
+      stripePriceId: projection.priceId,
+      event,
+      observedStatus: subscription.status,
+      snapshot: subscription as unknown as Record<string, unknown>,
+    })
     return [
       options.preserveMemberStatus
         ? 'subscription_review_required_no_matching_local_member'
         : 'subscription_review_required_missing_email',
+      shadowAction,
     ]
   }
 
@@ -1049,6 +1112,11 @@ async function syncInvoice(
   let payloadSubscription: PayloadDocument | null = null
   const paymentAttentionRequired = paymentStatus === 'failed' || paymentStatus === 'action_required'
   let billingStatus: PayloadBillingStatus = paymentAttentionRequired ? 'past_due' : 'none'
+  const stripeInvoiceId = invoice.id ?? `event:${event.id}`
+  const amount =
+    paymentStatus === 'paid'
+      ? invoice.amount_paid
+      : Math.max(invoice.amount_due ?? 0, invoice.amount_remaining ?? 0)
 
   if (subscriptionId) {
     const subscription = await retrieveSubscription(stripe, subscriptionId)
@@ -1080,13 +1148,66 @@ async function syncInvoice(
   }
 
   if (!subject) {
+    const existingSubscription = subscriptionId
+      ? await findOne(payload, 'payload_subscriptions', {
+          stripeSubscriptionId: { equals: subscriptionId },
+        })
+      : null
+    await upsertByWhere(
+      payload,
+      'payload_payments',
+      { stripeInvoiceId: { equals: stripeInvoiceId } },
+      {
+        displayName: `Unresolved Stripe invoice / ${stripeInvoiceId}`,
+        member: undefined,
+        subscription: existingSubscription?.id ?? undefined,
+        stripeInvoiceId,
+        stripePaymentIntentId: getInvoicePaymentIntentId(invoice) ?? undefined,
+        invoiceNumber: invoice.number ?? undefined,
+        hostedInvoiceUrl: invoice.hosted_invoice_url ?? undefined,
+        invoicePdfUrl: invoice.invoice_pdf ?? undefined,
+        amountDue: Math.max(invoice.amount_due ?? 0, 0),
+        amountPaid: Math.max(invoice.amount_paid ?? 0, 0),
+        amountRemaining: Math.max(invoice.amount_remaining ?? 0, 0),
+        attemptCount: Math.max(invoice.attempt_count ?? 0, 0),
+        nextPaymentAttempt: dateFromUnix(invoice.next_payment_attempt) ?? undefined,
+        amount: Math.max(amount ?? 0, 0),
+        currency: invoice.currency ?? 'usd',
+        status: paymentStatus,
+        paidAt: paymentStatus === 'paid' ? dateFromUnix(invoice.status_transitions?.paid_at) ?? new Date() : undefined,
+        failedAt: paymentAttentionRequired ? new Date(event.created * 1000) : undefined,
+        failureReason: paymentAttentionRequired
+          ? paymentStatus === 'action_required'
+            ? 'invoice_payment_action_required'
+            : invoice.last_finalization_error?.message ?? 'invoice_payment_failed'
+          : undefined,
+        metadata: {
+          source: 'stripe_payload_reconciliation',
+          identityState: 'unresolved',
+          eventId: event.id,
+          subscriptionId,
+          stripeSnapshot: invoice as unknown as Record<string, unknown>,
+        },
+      },
+    )
+    const shadowAction = await upsertUnresolvedStripeShadow(payload, {
+      objectType: 'invoice',
+      stripeId: stripeInvoiceId,
+      stripeCustomerId: customerId,
+      stripeSubscriptionId: subscriptionId,
+      stripeInvoiceId,
+      stripePriceId: invoiceSubscriptionProjection?.priceId,
+      event,
+      observedStatus: invoice.status ?? paymentStatus,
+      snapshot: invoice as unknown as Record<string, unknown>,
+    })
     await writeBillingAction(payload, {
       actionType: paymentStatus === 'paid' ? 'payment_succeeded' : 'payment_failed',
       status: 'skipped',
       eventId: event.id,
       notes: 'missing_customer_or_email',
     })
-    return ['invoice_skipped_missing_subject']
+    return ['invoice_review_required_unresolved_identity', shadowAction]
   }
 
   if (invoiceSubscriptionProjection) {
@@ -1125,12 +1246,6 @@ async function syncInvoice(
     )
     payloadSubscription = subscriptionResult.doc
   }
-
-  const stripeInvoiceId = invoice.id ?? `event:${event.id}`
-  const amount =
-    paymentStatus === 'paid'
-      ? invoice.amount_paid
-      : Math.max(invoice.amount_due ?? 0, invoice.amount_remaining ?? 0)
 
   await upsertByWhere(
     payload,

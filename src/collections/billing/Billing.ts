@@ -76,7 +76,7 @@ export const PayloadBillingAccounts: CollectionConfig = {
     { name: 'defaultPaymentMethodId', type: 'text' },
     { name: 'billingEmail', type: 'email' },
     { name: 'lastSyncedAt', type: 'date' },
-    { name: 'metadata', type: 'json', admin: { hidden: true } },
+    { name: 'metadata', type: 'json', admin: { description: 'Provider snapshot and reconciliation metadata. This collection is read-only.' } },
   ],
   timestamps: true,
 }
@@ -176,7 +176,7 @@ export const PayloadSubscriptions: CollectionConfig = {
     { name: 'canceledAt', type: 'date' },
     { name: 'lastStripeEventId', type: 'text', index: true },
     { name: 'lastSyncedAt', type: 'date' },
-    { name: 'metadata', type: 'json', admin: { hidden: true } },
+    { name: 'metadata', type: 'json', admin: { description: 'Provider snapshot and reconciliation metadata. This collection is read-only.' } },
   ],
   timestamps: true,
 }
