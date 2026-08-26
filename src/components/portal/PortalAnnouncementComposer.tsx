@@ -1,0 +1,24 @@
+'use client'
+
+import { FormEvent, useState } from 'react'
+import { useRouter } from 'next/navigation'
+
+type Option = { id: string; label: string }
+
+export function PortalAnnouncementComposer({ members, media, videos }: { members: Option[]; media: Option[]; videos: Option[] }) {
+  const router = useRouter()
+  const [audience, setAudience] = useState<'all' | 'selected'>('all')
+  const [selectedMembers, setSelectedMembers] = useState<string[]>([])
+  const [pending, setPending] = useState(false)
+  const [message, setMessage] = useState<string | null>(null)
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault(); setPending(true); setMessage(null)
+    const form = new FormData(event.currentTarget)
+    const response = await fetch('/api/portal/announcements', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: form.get('title'), excerpt: form.get('excerpt'), body: form.get('body'), audience, targetMemberIds: selectedMembers, featuredImage: form.get('featuredImage'), featuredVideo: form.get('featuredVideo'), attachments: form.getAll('attachments') }) })
+    const result = await response.json() as { ok?: boolean; message?: string; notificationWarning?: string }
+    setMessage(response.ok && result.ok ? result.notificationWarning || 'Announcement published and notifications queued.' : result.message || 'Unable to publish announcement.')
+    if (response.ok && result.ok) { event.currentTarget.reset(); setSelectedMembers([]); router.refresh() }
+    setPending(false)
+  }
+  return <section className='space-y-5 rounded-jpv-panel border border-jpv-border bg-jpv-canvas p-6 shadow-jpv-card sm:p-8'><div><p className='jpv-eyebrow'>Administrator tools</p><h2 className='mt-2 text-2xl font-semibold text-jpv-ink'>Publish an update</h2><p className='mt-2 text-sm text-jpv-muted'>Members will see it in Updates, receive a notification, and receive an email.</p></div><form className='grid gap-4' onSubmit={submit}><label className='text-sm font-semibold text-jpv-ink'>Title<input className='mt-1.5 w-full rounded-jpv-control border border-jpv-border bg-jpv-canvas px-4 py-3 text-sm text-jpv-ink' name='title' required /></label><label className='text-sm font-semibold text-jpv-ink'>Short summary<input className='mt-1.5 w-full rounded-jpv-control border border-jpv-border bg-jpv-canvas px-4 py-3 text-sm text-jpv-ink' name='excerpt' /></label><label className='text-sm font-semibold text-jpv-ink'>Announcement<textarea className='mt-1.5 min-h-32 w-full rounded-jpv-control border border-jpv-border bg-jpv-canvas px-4 py-3 text-sm text-jpv-ink' name='body' required /></label><label className='text-sm font-semibold text-jpv-ink'>Recipients<select className='mt-1.5 w-full rounded-jpv-control border border-jpv-border bg-jpv-canvas px-4 py-3 text-sm text-jpv-ink' onChange={(event) => setAudience(event.target.value as typeof audience)} value={audience}><option value='all'>All active members</option><option value='selected'>Selected members</option></select></label>{audience === 'selected' ? <fieldset><legend className='text-sm font-semibold text-jpv-ink'>Select members</legend><div className='mt-2 grid max-h-48 gap-2 overflow-y-auto rounded-jpv-card border border-jpv-border p-3 sm:grid-cols-2'>{members.map((member) => <label className='flex items-center gap-2 text-sm text-jpv-ink' key={member.id}><input checked={selectedMembers.includes(member.id)} onChange={() => setSelectedMembers((current) => current.includes(member.id) ? current.filter((id) => id !== member.id) : [...current, member.id])} type='checkbox' />{member.label}</label>)}</div></fieldset> : null}<div className='grid gap-4 sm:grid-cols-3'><label className='text-sm font-semibold text-jpv-ink'>Image<select className='mt-1.5 w-full rounded-jpv-control border border-jpv-border bg-jpv-canvas px-3 py-2 text-sm text-jpv-ink' name='featuredImage'><option value=''>None</option>{media.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label><label className='text-sm font-semibold text-jpv-ink'>Video<select className='mt-1.5 w-full rounded-jpv-control border border-jpv-border bg-jpv-canvas px-3 py-2 text-sm text-jpv-ink' name='featuredVideo'><option value=''>None</option>{videos.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label><label className='text-sm font-semibold text-jpv-ink'>Download<select className='mt-1.5 w-full rounded-jpv-control border border-jpv-border bg-jpv-canvas px-3 py-2 text-sm text-jpv-ink' name='attachments'><option value=''>None</option>{media.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label></div><button className='jpv-button-primary min-h-11 w-fit' disabled={pending} type='submit'>{pending ? 'Publishing…' : 'Publish update'}</button></form>{message ? <p aria-live='polite' className='text-sm text-jpv-muted'>{message}</p> : null}</section>
+}

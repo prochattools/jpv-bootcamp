@@ -944,7 +944,9 @@ export default async function PortalSectionPage({ params, searchParams }: Portal
             <section className={portalCardClass}>
               <h2 className={sectionCardTitleClass}>Billing history and payment settings</h2>
               <p className='mt-3 text-sm text-neutral-600'>
-                Open your secure Stripe billing portal to review payment methods, invoices, and any expired or cancelled subscription history.
+                {billingStatus.hasBillingAccount
+                  ? 'Your Stripe billing account is linked. Open the secure billing portal to review payment methods, invoices, and any expired or cancelled subscription history.'
+                  : 'Open your secure Stripe billing portal to review payment methods, invoices, and any expired or cancelled subscription history.'}
               </p>
               <div className='mt-5'>
                 <BillingPortalButton />

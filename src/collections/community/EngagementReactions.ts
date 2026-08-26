@@ -44,6 +44,8 @@ export const PayloadEngagementReactions: CollectionConfig = {
         { label: 'Community post', value: 'space_post' },
         { label: 'Community comment', value: 'space_comment' },
         { label: 'Lesson discussion', value: 'lesson_comment' },
+        { label: 'Published update', value: 'content_post' },
+        { label: 'Published page', value: 'content_page' },
       ],
     },
     {
@@ -62,6 +64,18 @@ export const PayloadEngagementReactions: CollectionConfig = {
       name: 'targetLessonComment',
       type: 'relationship',
       relationTo: 'payload_lesson_comments',
+      index: true,
+    },
+    {
+      name: 'targetContentPost',
+      type: 'relationship',
+      relationTo: 'payload_posts',
+      index: true,
+    },
+    {
+      name: 'targetContentPage',
+      type: 'relationship',
+      relationTo: 'payload_pages',
       index: true,
     },
     {

@@ -87,7 +87,7 @@ export default async function BookmarksPage() {
                 <h3 className='mt-3 text-xl font-bold text-jpv-brand-deep'>{bookmark.postTitle}</h3>
                 <Link
                   className='mt-4 inline-flex text-sm font-bold text-jpv-sunshine-ink hover:text-jpv-brand-deep'
-                  href={`/portal/community/${bookmark.spaceSlug}`}
+                  href={`/portal/community/${bookmark.spaceSlug}/posts/${bookmark.postId}`}
                 >
                   Open space →
                 </Link>

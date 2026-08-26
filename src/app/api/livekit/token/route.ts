@@ -307,8 +307,10 @@ export async function POST(req: NextRequest) {
       collection: 'live_sessions',
       id: sessionId,
       depth: 1,
-      overrideAccess: false,
-      user: { id: user.id, collection: user.collection } as any,
+      // Audience eligibility is enforced below for enrolled, all, and selected
+      // sessions. Payload's collection read filter only understands the legacy
+      // course/space relationship and would incorrectly hide targeted rooms.
+      overrideAccess: true,
     })
     .catch((): null => null)
 
@@ -325,6 +327,8 @@ export async function POST(req: NextRequest) {
     course?: { id?: string | number } | string | number | null
     space?: { id?: string | number } | string | number | null
     roomName?: string
+    audience?: 'enrolled' | 'all' | 'selected'
+    targetMemberIds?: unknown
   }
 
   if (session.status === 'completed' || session.status === 'cancelled' || session.status === 'ended') {
@@ -373,8 +377,18 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Verify the member is authorized for this session type
-    if (isSpaceSession) {
+    const audience = session.audience === 'all' || session.audience === 'selected' ? session.audience : 'enrolled'
+    if (audience === 'selected') {
+      const selected = Array.isArray(session.targetMemberIds) && session.targetMemberIds.some((value) => String(value) === String(user.id))
+      if (!selected) return NextResponse.json({ ok: false, reason: 'not_entitled' } satisfies TokenErrorResponse, { status: 403 })
+    }
+
+    if (audience === 'all' || audience === 'selected') {
+      const memberDoc = await payloadLib.findByID({ collection: 'payload_members', id: user.id, depth: 0, overrideAccess: true }).catch((): null => null) as { accountStatus?: string; emailVerifiedAt?: string | null } | null
+      if (!memberDoc || memberDoc.accountStatus !== 'active' || !memberDoc.emailVerifiedAt) {
+        return NextResponse.json({ ok: false, reason: 'not_entitled' } satisfies TokenErrorResponse, { status: 403 })
+      }
+    } else if (isSpaceSession) {
       // Space call: member must have active account + active space membership
       const [memberDoc, membership] = await Promise.all([
         payloadLib.findByID({

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import config from '@payload-config'
 import { getPayload } from 'payload'
 
@@ -32,14 +33,16 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     if (body.length > 10_000) return NextResponse.json({ ok: false, message: 'Comment body is too long.' }, { status: 400 })
     const parentId = typeof input.parentId === 'string' && input.parentId.trim() ? input.parentId.trim() : null
 
-    await createLessonComment(payload as PayloadCourseWriteAPI, {
+    const created = await createLessonComment(payload as PayloadCourseWriteAPI, {
       memberId,
       lessonId: detail.lesson.id,
       parentId,
       body: plainTextLessonCommentBody(body) as unknown as Record<string, unknown>,
     })
 
-    return NextResponse.json({ ok: true })
+    revalidatePath(destination)
+
+    return NextResponse.json({ ok: true, commentId: created.document.id, body })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unable to post your comment.'
     const status = /rate limit/i.test(message) ? 429 : /required|too long|not found|unavailable|visible comments|same lesson/i.test(message) ? 400 : 500

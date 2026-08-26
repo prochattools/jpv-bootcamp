@@ -20,6 +20,8 @@ export const ACCESS_RESTORED_TEMPLATE_KEY = 'access-restored'
 export const ACCESS_DELETED_TEMPLATE_KEY = 'access-deleted'
 export const SUPPORT_REQUEST_RECEIVED_TEMPLATE_KEY = 'support-request-received'
 export const SUPPORT_REQUEST_ADMIN_NOTIFICATION_TEMPLATE_KEY = 'support-request-admin-notification'
+export const PORTAL_ANNOUNCEMENT_TEMPLATE_KEY = 'portal-announcement'
+export const LIVE_SESSION_INVITATION_TEMPLATE_KEY = 'live-session-invitation'
 
 function brandedTemplate(input: {
   key: string
@@ -317,6 +319,33 @@ const templates: Record<string, PayloadDocument> = {
     ],
     actionLabel: 'Open admin panel',
     actionUrlVariable: '{{portalUrl}}',
+  }),
+  [PORTAL_ANNOUNCEMENT_TEMPLATE_KEY]: brandedTemplate({
+    key: PORTAL_ANNOUNCEMENT_TEMPLATE_KEY,
+    name: 'Member portal announcement',
+    subject: '{{announcementTitle}} — JPV Bootcamp update',
+    preheader: 'A new update is available in your JPV Bootcamp member portal.',
+    heading: '{{announcementTitle}}',
+    paragraphs: [
+      'A new update has been published for you in the JPV Bootcamp member portal.',
+      '{{announcementBody}}',
+    ],
+    actionLabel: 'Open update',
+    actionUrlVariable: '{{announcementUrl}}',
+  }),
+  [LIVE_SESSION_INVITATION_TEMPLATE_KEY]: brandedTemplate({
+    key: LIVE_SESSION_INVITATION_TEMPLATE_KEY,
+    name: 'Live session invitation',
+    subject: 'You are invited to {{sessionTitle}}',
+    preheader: 'A JPV Bootcamp live session is scheduled for you.',
+    heading: 'Live session invitation',
+    paragraphs: [
+      'You are invited to {{sessionTitle}}.',
+      'Scheduled time: {{scheduledAt}}.',
+      'Open the member portal to see the session and join when the host starts it.',
+    ],
+    actionLabel: 'Open live sessions',
+    actionUrlVariable: '{{sessionUrl}}',
   }),
   [ACCESS_DELETED_TEMPLATE_KEY]: brandedTemplate({
     key: ACCESS_DELETED_TEMPLATE_KEY,

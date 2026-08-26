@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import { AdminGate } from '@/components/portal/AdminGate'
 import { CourseAdminPanel } from '@/components/portal/admin/CourseAdminPanel'
 import { CourseModuleAccordion } from '@/components/portal/CourseModuleAccordion'
+import { MemberFeaturedImage } from '@/components/portal/MemberContentMedia'
 import { requirePortalAccess } from '@/lib/auth/requirePortalAccess'
 import { getAdminCourseOverview } from '@/lib/portalAdmin/adminPortal'
 import { getMemberCourseOverview } from '@/lib/payloadCourse/memberPortal'
@@ -182,19 +183,7 @@ export default async function PortalCoursePage({ params }: CoursePageProps) {
 
       {/* 1. Course hero: cover image + title */}
       <header className='space-y-4'>
-        {course.coverImage ? (
-          <div className='max-h-[300px] w-full overflow-hidden rounded-xl border border-jpv-border bg-jpv-surface'>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              alt={course.coverImage.alt}
-              className='h-full max-h-[300px] w-full object-cover'
-              height={course.coverImage.height ?? undefined}
-              loading='eager'
-              src={course.coverImage.url}
-              width={course.coverImage.width ?? undefined}
-            />
-          </div>
-        ) : null}
+        <MemberFeaturedImage asset={course.coverImage} />
 
         <div>
           <p className='jpv-eyebrow'>Course overview</p>

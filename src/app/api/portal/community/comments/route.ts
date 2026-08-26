@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import config from '@payload-config'
 import { getPayload } from 'payload'
 
@@ -52,12 +53,19 @@ export async function POST(req: NextRequest) {
       body: buildPlainTextRichText(bodyText, videoUrl || null),
     })
 
+    revalidatePath(`/portal/community/${encodeURIComponent(spaceSlug)}/posts/${encodeURIComponent(postId)}`)
+
     void createMentionNotifications(payload, bodyText, `/portal/community/${encodeURIComponent(spaceSlug)}/posts/${encodeURIComponent(postId)}`, {
       postTitle: detail.post.title ?? 'Community discussion',
       spaceName: spaceSlug,
     }, actorName).catch((): void => undefined)
 
-    return NextResponse.json({ ok: true, commentId: created.document.id, createdAt: created.document.createdAt })
+    return NextResponse.json({
+      ok: true,
+      commentId: created.document.id,
+      createdAt: created.document.createdAt,
+      body: bodyText,
+    })
   } catch (error) {
     console.error('[community comments POST] error:', error instanceof Error ? error.message : String(error))
     return NextResponse.json({ ok: false, message: 'Unable to post your reply. Please try again.' }, { status: 500 })

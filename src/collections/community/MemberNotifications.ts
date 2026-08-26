@@ -43,6 +43,8 @@ export const PayloadMemberNotifications: CollectionConfig = {
         { label: 'New Post', value: 'new_post' },
         { label: 'New Comment', value: 'new_comment' },
         { label: 'Mention', value: 'mention' },
+        { label: 'Announcement', value: 'announcement' },
+        { label: 'Live session', value: 'live_session' },
         { label: 'System', value: 'system' },
       ],
     },
