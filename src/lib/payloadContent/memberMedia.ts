@@ -52,6 +52,9 @@ export function asSafeMemberMediaUrl(value: unknown): string | null {
 
   try {
     const parsed = new URL(raw)
+    if (process.env.DEPLOYMENT_ENV === 'production' && parsed.hostname === 'preview.jpvbootcamp.com') {
+      parsed.hostname = 'jpvbootcamp.com'
+    }
     return parsed.protocol === 'https:' || parsed.protocol === 'http:' ? parsed.toString() : null
   } catch {
     return null

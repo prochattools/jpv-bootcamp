@@ -1,24 +1,102 @@
 import Link from 'next/link'
-import { Shield } from 'lucide-react'
 
+import { AdminGate } from '@/components/portal/AdminGate'
+import { CreateCourseButton } from '@/components/portal/admin/CreateCourseButton'
 import { requirePortalAccess } from '@/lib/auth/requirePortalAccess'
+import { getAdminCourseDashboard } from '@/lib/portalAdmin/adminPortal'
 import { getMemberCourseDashboard } from '@/lib/payloadCourse/memberPortal'
 
 export default async function PortalCoursesPage() {
   const { actor, payload } = await requirePortalAccess('/portal/courses')
 
   if (actor.kind === 'admin') {
+    const courses = await getAdminCourseDashboard(payload)
+
     return (
-      <div className='mx-auto max-w-2xl px-4 py-12 text-center'>
-        <Shield aria-hidden='true' className='mx-auto mb-4 h-10 w-10 text-jpv-brand-deep' />
-        <h1 className='text-xl font-semibold text-jpv-ink'>Administrator view</h1>
-        <p className='mt-2 text-sm text-jpv-muted'>
-          This section shows member-specific data. Use a member account to see the full member experience, or manage content from the admin panel.
-        </p>
-        <div className='mt-6 flex justify-center gap-3'>
-          <Link className='jpv-button-primary' href='/admin'>Admin Panel</Link>
-          <Link className='jpv-button-secondary' href='/portal'>Dashboard</Link>
-        </div>
+      <div className='mx-auto max-w-5xl space-y-6'>
+        <section>
+          <p className='jpv-eyebrow'>Administration</p>
+          <h1 className='mt-3 text-2xl font-semibold tracking-tight text-jpv-ink'>All Courses</h1>
+          <p className='mt-2 max-w-2xl text-sm leading-6 text-jpv-muted'>
+            Viewing all courses including draft and archived. Members only see published courses.
+          </p>
+        </section>
+
+        <AdminGate>
+          <div className='flex items-center gap-3'>
+            <CreateCourseButton />
+          </div>
+        </AdminGate>
+
+        {courses.length === 0 ? (
+          <div className='rounded-jpv-panel border border-dashed border-jpv-border bg-jpv-canvas p-10 text-center'>
+            <p className='text-base font-medium text-jpv-ink'>No courses exist</p>
+            <p className='mt-2 text-sm text-jpv-muted'>Create a course to get started.</p>
+          </div>
+        ) : (
+          <div className='grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3'>
+            {courses.map((course) => (
+              <article
+                className='flex flex-col overflow-hidden rounded-jpv-panel border border-jpv-border bg-jpv-canvas shadow-sm'
+                key={course.id}
+              >
+                {course.coverImage ? (
+                  <div className='aspect-video w-full overflow-hidden bg-jpv-surface'>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      alt={course.coverImage.alt}
+                      className='h-full w-full object-cover'
+                      height={course.coverImage.height ?? undefined}
+                      loading='lazy'
+                      src={course.coverImage.url}
+                      width={course.coverImage.width ?? undefined}
+                    />
+                  </div>
+                ) : (
+                  <div className='aspect-video w-full bg-jpv-surface' />
+                )}
+
+                <div className='flex flex-1 flex-col gap-4 p-5'>
+                  <div className='flex-1 space-y-3'>
+                    <div className='flex items-start justify-between gap-2'>
+                      <h3 className='text-base font-semibold text-jpv-ink'>{course.title}</h3>
+                      <span className={`flex-shrink-0 rounded-full px-2.5 py-0.5 text-xs font-bold ${
+                        course.status === 'published' ? 'bg-jpv-brand/10 text-jpv-brand-deep'
+                          : course.status === 'archived' ? 'bg-red-100 text-red-700'
+                          : 'bg-jpv-sunshine/20 text-jpv-sunshine-ink'
+                      }`}>
+                        {course.status}
+                      </span>
+                    </div>
+
+                    <dl className='flex flex-wrap gap-x-4 gap-y-1 text-xs'>
+                      <div>
+                        <dt className='inline text-jpv-muted'>Lessons: </dt>
+                        <dd className='inline font-semibold text-jpv-ink'>{course.lessonCount}</dd>
+                      </div>
+                      <div>
+                        <dt className='inline text-jpv-muted'>Modules: </dt>
+                        <dd className='inline font-semibold text-jpv-ink'>{course.modules.length}</dd>
+                      </div>
+                      <div>
+                        <dt className='inline text-jpv-muted'>Visibility: </dt>
+                        <dd className='inline font-semibold text-jpv-ink'>{course.visibility}</dd>
+                      </div>
+                    </dl>
+                  </div>
+
+                  <div className='mt-auto'>
+                    {course.slug ? (
+                      <Link className='jpv-button-primary inline-flex text-sm' href={`/portal/courses/${course.slug}`}>
+                        View course
+                      </Link>
+                    ) : null}
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
       </div>
     )
   }

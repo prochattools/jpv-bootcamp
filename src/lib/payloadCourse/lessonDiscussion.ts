@@ -254,6 +254,103 @@ export async function createLessonComment(
   return { document: comment, auditEvent }
 }
 
+async function loadOwnedLessonComment(
+  payload: PayloadCourseWriteAPI,
+  memberId: PayloadId,
+  lessonId: PayloadId,
+  commentId: PayloadId,
+): Promise<{ lessonId: string; comment: PayloadDocument }> {
+  const resolvedLessonId = await requireLessonAccess(payload, memberId, lessonId)
+  const comment = await payload.findByID({
+    collection: 'payload_lesson_comments',
+    id: commentId,
+    depth: 0,
+    overrideAccess: true,
+  }) as PayloadDocument
+
+  if (relationshipId(comment.lesson) !== resolvedLessonId) {
+    throw new Error('Lesson comment does not belong to this lesson.')
+  }
+  if (relationshipId(comment.author) !== String(memberId)) {
+    throw new Error('Only the comment author can change this comment.')
+  }
+
+  return { lessonId: resolvedLessonId, comment }
+}
+
+export async function editLessonComment(
+  payload: PayloadCourseWriteAPI,
+  input: {
+    memberId: PayloadId
+    lessonId: PayloadId
+    commentId: PayloadId
+    body: Record<string, unknown>
+  },
+): Promise<PayloadDocument> {
+  assertRichBody(input.body)
+  const { lessonId, comment } = await loadOwnedLessonComment(
+    payload,
+    input.memberId,
+    input.lessonId,
+    input.commentId,
+  )
+  const updated = await payload.update({
+    collection: 'payload_lesson_comments',
+    id: comment.id,
+    data: { body: input.body },
+    overrideAccess: true,
+  }) as PayloadDocument
+
+  await createAuditEvent(payload, {
+    actorType: 'member',
+    actorId: input.memberId,
+    action: 'lesson_comment.updated',
+    targetCollection: 'payload_lesson_comments',
+    targetId: comment.id,
+    before: { lessonId, body: comment.body },
+    after: { lessonId, body: input.body },
+  })
+  return updated
+}
+
+export async function deleteLessonComment(
+  payload: PayloadCourseWriteAPI,
+  input: { memberId: PayloadId; lessonId: PayloadId; commentId: PayloadId },
+): Promise<void> {
+  const { lessonId, comment } = await loadOwnedLessonComment(
+    payload,
+    input.memberId,
+    input.lessonId,
+    input.commentId,
+  )
+  if (typeof payload.delete !== 'function') throw new Error('Comment removal is temporarily unavailable.')
+
+  const replies = await payload.find({
+    collection: 'payload_lesson_comments',
+    where: { parent: { equals: String(comment.id) } },
+    limit: 1,
+    depth: 0,
+    overrideAccess: true,
+  })
+  if (replies.docs.length > 0) {
+    throw new Error('Comments with replies cannot be removed. Edit or ask an administrator to moderate it.')
+  }
+
+  await payload.delete({
+    collection: 'payload_lesson_comments',
+    id: comment.id,
+    overrideAccess: true,
+  })
+  await createAuditEvent(payload, {
+    actorType: 'member',
+    actorId: input.memberId,
+    action: 'lesson_comment.deleted',
+    targetCollection: 'payload_lesson_comments',
+    targetId: comment.id,
+    before: { lessonId, body: comment.body },
+  })
+}
+
 export function plainTextLessonCommentBody(value: string): SerializedEditorState {
   const paragraphs = value
     .split(/\r?\n/)

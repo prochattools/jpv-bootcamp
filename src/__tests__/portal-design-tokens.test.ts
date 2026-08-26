@@ -124,16 +124,16 @@ describe('portal design token compliance', () => {
       expect(read(COURSE_PAGE)).toContain('course.allowed')
     })
 
-    it('course page still checks lesson.lockState', () => {
-      expect(read(COURSE_PAGE)).toContain("lesson.lockState")
+    it('course page still passes lesson lockState through the course projection', () => {
+      expect(read(COURSE_PAGE)).toContain('lockState')
     })
 
-    it('portal page still calls requirePortalMember', () => {
-      expect(read(PORTAL_PAGE)).toContain('requirePortalMember')
+    it('portal page still resolves authenticated portal access', () => {
+      expect(read(PORTAL_PAGE)).toContain('requirePortalAccess')
     })
 
-    it('courses page still calls requirePortalMember', () => {
-      expect(read(COURSES_PAGE)).toContain('requirePortalMember')
+    it('courses page still resolves authenticated portal access', () => {
+      expect(read(COURSES_PAGE)).toContain('requirePortalAccess')
     })
 
     it('billing button still calls openBillingPortal', () => {

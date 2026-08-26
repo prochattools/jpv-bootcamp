@@ -131,6 +131,8 @@ const config = {
       boxShadow: {
         "jpv-glow": "var(--jpv-shadow)",
         "jpv-card": "var(--jpv-shadow)",
+        "jpv-panel": "var(--jpv-shadow)",
+        "jpv-floating": "var(--jpv-shadow-floating)",
       },
       fontFamily: {
         sans: ["var(--font-jpv)", "system-ui", "sans-serif"],
@@ -144,9 +146,11 @@ const config = {
         "2xl": jpvDesignTokens.radius.panel,
         "3xl": jpvDesignTokens.radius.panel,
         full: jpvDesignTokens.radius.pill,
+        "jpv-control": jpvDesignTokens.radius.control,
         "jpv-action": jpvDesignTokens.radius.action,
         "jpv-card": jpvDesignTokens.radius.card,
         "jpv-panel": jpvDesignTokens.radius.panel,
+        "jpv-pill": jpvDesignTokens.radius.pill,
       },
     },
   },

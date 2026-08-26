@@ -34,22 +34,22 @@ const benefitItems = [
 
 const programmeCards = [
   {
-    title: "Build a Strong Foundation",
+    title: "Structured Learning",
     description: "Step-by-step courses, workshops and resources to grow your property knowledge.",
     image: "/images/redesign/pillar-structured-learning.png",
   },
   {
-    title: "Put Theory Into Action",
+    title: "Practical Application",
     description: "Real strategies and guided exercises that move you from learning to doing.",
     image: "/images/redesign/pillar-practical-application.png",
   },
   {
-    title: "Learn From Experts in Real Time",
+    title: "Live Experiences",
     description: "Interactive sessions with mentors, guest speakers and fellow investors.",
     image: "/images/redesign/pillar-live-experiences.png",
   },
   {
-    title: "Never Walk Alone",
+    title: "Community Support",
     description: "A like-minded Christian community to encourage, challenge and grow with you.",
     image: "/images/redesign/pillar-community-support.png",
   },
@@ -157,6 +157,9 @@ const onboardingSteps = [
 const inputClassName =
   "mt-2 w-full rounded-lg border border-jpv-border bg-jpv-canvas px-4 py-3 text-sm text-jpv-ink placeholder:text-jpv-muted/70 transition focus:border-jpv-green-deep focus:outline-none focus:ring-2 focus:ring-jpv-green/25 disabled:cursor-not-allowed disabled:opacity-60";
 
+const SUPPORT_PHONE_DISPLAY = "0208 092 2398";
+const SUPPORT_PHONE_HREF = "tel:+442080922398";
+
 export default function HomePage() {
   const signInHref = "/portal?mode=login";
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
@@ -164,6 +167,7 @@ export default function HomePage() {
   const [isHowItWorksOpen, setIsHowItWorksOpen] = useState(false);
   const [supportName, setSupportName] = useState("");
   const [supportEmail, setSupportEmail] = useState("");
+  const [supportPhone, setSupportPhone] = useState("");
   const [supportQuestion, setSupportQuestion] = useState("");
   const [supportStatus, setSupportStatus] = useState<
     "idle" | "sending" | "success" | "error"
@@ -179,7 +183,7 @@ export default function HomePage() {
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0]?.isIntersecting) {
-          setStartedVideos(new Set(["ca8db1b6-b7eb-4930-8403-9919d131629c", "56266f09-d651-4bc5-a5b0-ac9185018018", "a2d9e18b-eb0b-4d3f-b0e7-31daf7cd6c62", "4cb8f04f-8b29-4d0d-81b6-5bb4caead36d", "cda4b492-91af-430d-9bba-4268ccaf8cc2"]));
+          setStartedVideos(new Set(["56266f09-d651-4bc5-a5b0-ac9185018018", "a2d9e18b-eb0b-4d3f-b0e7-31daf7cd6c62", "4cb8f04f-8b29-4d0d-81b6-5bb4caead36d", "cda4b492-91af-430d-9bba-4268ccaf8cc2"]));
           observer.disconnect();
         }
       },
@@ -203,6 +207,7 @@ export default function HomePage() {
         body: JSON.stringify({
           name: supportName.trim(),
           email: supportEmail.trim(),
+          phone: supportPhone.trim(),
           question: supportQuestion.trim(),
           source: "jpvbootcamp.com footer support modal",
           page: window.location.pathname || "/",
@@ -221,6 +226,7 @@ export default function HomePage() {
         setSupportStatus("success");
         setSupportName("");
         setSupportEmail("");
+        setSupportPhone("");
         setSupportQuestion("");
       } else {
         setSupportStatus("error");
@@ -238,7 +244,7 @@ export default function HomePage() {
 
   function handleSupportCancel() {
     if (
-      (supportName || supportEmail || supportQuestion) &&
+      (supportName || supportEmail || supportPhone || supportQuestion) &&
       !window.confirm(
         "Close the support form and discard what you have written?",
       )
@@ -249,6 +255,7 @@ export default function HomePage() {
     setIsSupportOpen(false);
     setSupportName("");
     setSupportEmail("");
+    setSupportPhone("");
     setSupportQuestion("");
     setSupportStatus("idle");
     setSupportError(null);
@@ -728,12 +735,6 @@ export default function HomePage() {
             <div className={styles.testimonialGrid} ref={testimonialGridRef}>
               {[
                 {
-                  name: "Raouda",
-                  location: "Glasgow, Scotland",
-                  quote: "We've just purchased our first property in Wales. This has been an incredible experience, and I'm so grateful for the support and guidance from Athina and Koprinka throughout the entire process.",
-                  videoId: "ca8db1b6-b7eb-4930-8403-9919d131629c",
-                },
-                {
                   name: "Chosen",
                   location: "Portsmouth",
                   quote: "A couple of months ago, we secured our first property, and it's been incredible to see our dream of property ownership come to life. I truly believe this is just the first of many.",
@@ -935,7 +936,7 @@ export default function HomePage() {
       </footer>
 
       <AccessibleDialog
-        className="max-h-[calc(100vh-2.5rem)] w-[calc(100%-2.5rem)] max-w-xl overflow-y-auto"
+        className="max-h-[calc(100dvh-2.5rem)] w-[calc(100%-2.5rem)] max-w-xl overflow-y-auto"
         describedBy="how-it-works-desc"
         labelledBy="how-it-works-title"
         onClose={() => setIsHowItWorksOpen(false)}
@@ -993,7 +994,7 @@ export default function HomePage() {
       </AccessibleDialog>
 
       <AccessibleDialog
-        className="max-h-[calc(100vh-2.5rem)] w-[calc(100%-2.5rem)] max-w-xl overflow-y-auto"
+        className="max-h-[calc(100dvh-2.5rem)] w-[calc(100%-2.5rem)] max-w-xl overflow-y-auto"
         describedBy="support-desc"
         labelledBy="support-title"
         onClose={handleSupportCancel}
@@ -1011,6 +1012,9 @@ export default function HomePage() {
                 id="support-desc"
               >
                 Send your question to the JPV Bootcamp team.
+              </p>
+              <p className="mt-3 text-sm font-semibold text-jpv-brand-deep">
+                Prefer to call? <a className="underline underline-offset-4" href={SUPPORT_PHONE_HREF}>{SUPPORT_PHONE_DISPLAY}</a>
               </p>
             </div>
             <button
@@ -1075,6 +1079,26 @@ export default function HomePage() {
                 type="email"
                 value={supportEmail}
               />
+            </div>
+            <div>
+              <label className="text-sm font-semibold" htmlFor="support-phone">
+                Telephone number
+              </label>
+              <input
+                autoComplete="tel"
+                className={inputClassName}
+                disabled={isSupportSending}
+                id="support-phone"
+                onChange={(event) => {
+                  setSupportStatus("idle");
+                  setSupportError(null);
+                  setSupportPhone(event.target.value);
+                }}
+                required
+                type="tel"
+                value={supportPhone}
+              />
+              <p className="mt-1 text-xs text-jpv-muted">We may call if your question is easier to resolve by phone.</p>
             </div>
             <div>
               <label

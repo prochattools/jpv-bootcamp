@@ -1,5 +1,4 @@
 import Link from 'next/link'
-import { Shield } from 'lucide-react'
 
 import { requirePortalAccess } from '@/lib/auth/requirePortalAccess'
 import { getMemberBookmarks } from '@/lib/payloadCourse/leaderboard'
@@ -28,15 +27,18 @@ export default async function BookmarksPage() {
 
   if (actor.kind === 'admin') {
     return (
-      <div className='mx-auto max-w-2xl px-4 py-12 text-center'>
-        <Shield aria-hidden='true' className='mx-auto mb-4 h-10 w-10 text-jpv-brand-deep' />
-        <h1 className='text-xl font-semibold text-jpv-ink'>Administrator view</h1>
-        <p className='mt-2 text-sm text-jpv-muted'>
-          This section shows member-specific data. Use a member account to see the full member experience, or manage content from the admin panel.
-        </p>
-        <div className='mt-6 flex justify-center gap-3'>
-          <Link className='jpv-button-primary' href='/admin'>Admin Panel</Link>
-          <Link className='jpv-button-secondary' href='/portal'>Dashboard</Link>
+      <div className='space-y-6'>
+        <section>
+          <p className='jpv-eyebrow'>Administration</p>
+          <h1 className='mt-3 text-2xl font-semibold tracking-tight text-jpv-ink'>Bookmarks</h1>
+          <p className='mt-2 max-w-2xl text-sm leading-6 text-jpv-muted'>
+            Bookmarks are personal to each member. Navigate to community spaces to view and moderate content.
+          </p>
+        </section>
+        <div className='rounded-jpv-panel border border-dashed border-jpv-border bg-jpv-canvas p-8 text-center text-sm text-jpv-muted'>
+          <Link className='font-semibold text-jpv-brand-deep underline-offset-4 hover:underline' href='/portal/community'>
+            Go to Community
+          </Link>
         </div>
       </div>
     )
@@ -85,7 +87,7 @@ export default async function BookmarksPage() {
                 <h3 className='mt-3 text-xl font-bold text-jpv-brand-deep'>{bookmark.postTitle}</h3>
                 <Link
                   className='mt-4 inline-flex text-sm font-bold text-jpv-sunshine-ink hover:text-jpv-brand-deep'
-                  href={`/portal/community/${bookmark.spaceSlug}`}
+                  href={`/portal/community/${bookmark.spaceSlug}/posts/${bookmark.postId}`}
                 >
                   Open space →
                 </Link>

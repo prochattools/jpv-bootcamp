@@ -9,21 +9,27 @@ import {
   reactionErrorMessage,
 } from '@/components/community/EngagementPresentation'
 import { PostOwnerActions, CommentOwnerActions } from '@/components/community/PostOwnerActions'
-import { ComposerToolbar } from '@/components/community/ComposerToolbar'
+import { CommunityCommentComposer } from '@/components/community/CommunityCommentComposer'
 import { ShareBookmarkActions } from '@/components/community/ShareBookmarkActions'
 import { submitReactionAction } from '@/app/(frontend)/portal/reaction-actions'
 import { ProgressiveCommentList } from '@/components/community/ProgressiveCommentList'
 import { StatusPill } from '@/components/portal/StatusPill'
-import { requirePortalMember } from '@/lib/auth/requirePortalMember'
-import { getMemberCommunityPostDetail } from '@/lib/payloadCourse/communityDiscussion'
+import { AdminGate } from '@/components/portal/AdminGate'
+import { PostModerationPanel } from '@/components/portal/admin/PostModerationPanel'
+import { CommentModerationActions } from '@/components/portal/admin/CommentModerationActions'
+import { requirePortalAccess } from '@/lib/auth/requirePortalAccess'
+import {
+  getMemberCommunityPostDetail,
+  projectCommunityRichText,
+  type MemberCommunityPostDetail,
+} from '@/lib/payloadCourse/communityDiscussion'
 import {
   getReactionSummary,
   getSpaceCommentReactionSummaries,
   type ReactionSummary,
 } from '@/lib/payloadCourse/reactions'
-import type { MemberCommunityAttachmentResolution } from '@/lib/payloadCourse/communityFiles'
 import { getMemberBookmarkState } from '@/lib/payloadCourse/bookmarks'
-import { submitCommunityComment } from '../../../actions'
+import type { MemberCommunityAttachmentResolution } from '@/lib/payloadCourse/communityFiles'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -104,15 +110,175 @@ function AttachmentCard({ attachment }: { attachment: MemberCommunityAttachmentR
 
 export default async function PortalCommunityPostPage({ params, searchParams }: PageProps) {
   const [{ spaceSlug, postId }, query] = await Promise.all([params, searchParams])
-  const { memberId, memberEmail, payload } = await requirePortalMember(
-    `/portal/community/${encodeURIComponent(spaceSlug)}/posts/${encodeURIComponent(postId)}`,
-  )
+  const requestedPath = `/portal/community/${encodeURIComponent(spaceSlug)}/posts/${encodeURIComponent(postId)}`
+  const { actor, payload } = await requirePortalAccess(requestedPath)
+  const isAdmin = actor.kind === 'admin'
+  const memberId = actor.kind === 'member' ? actor.memberId : ''
+  const memberEmail = actor.kind === 'member' ? actor.email : ''
 
-  const result = await getMemberCommunityPostDetail(payload, memberId, spaceSlug, postId)
-  if (!result.allowed) notFound()
+  const memberResult = await getMemberCommunityPostDetail(payload, memberId, spaceSlug, postId)
 
-  const post = result.post
-  const bookmarked = await getMemberBookmarkState(payload, memberId, post.id).catch(() => false)
+  let post: MemberCommunityPostDetail
+  let postIsHidden = false
+  let commentHiddenMap: Map<string, boolean> = new Map()
+
+  if (memberResult.allowed) {
+    post = memberResult.post
+  } else if (isAdmin) {
+    const [postDoc, spaceResult, commentsResult] = await Promise.all([
+      payload.findByID({
+        collection: 'payload_space_posts',
+        id: postId,
+        depth: 0,
+        overrideAccess: true,
+      }),
+      payload.find({
+        collection: 'payload_spaces',
+        where: { slug: { equals: spaceSlug } },
+        limit: 1,
+        depth: 0,
+        overrideAccess: true,
+      }),
+      payload.find({
+        collection: 'payload_space_comments',
+        where: { post: { equals: postId } },
+        sort: 'createdAt',
+        limit: 500,
+        depth: 0,
+        overrideAccess: true,
+      }),
+    ])
+
+    if (!postDoc) notFound()
+    const spaceDoc = spaceResult.docs[0]
+    if (!spaceDoc) notFound()
+
+    // Verify the post belongs to the space in this route
+    const postSpaceId = typeof postDoc.space === 'object' && postDoc.space !== null
+      ? String((postDoc.space as Record<string, unknown>).id)
+      : String(postDoc.space)
+    if (postSpaceId !== String(spaceDoc.id)) notFound()
+
+    const resolveDocId = (val: unknown): string | null => {
+      if (typeof val === 'string') return val
+      if (val && typeof val === 'object' && 'id' in val) return String((val as { id: unknown }).id)
+      return null
+    }
+    const resolveName = (member: Record<string, unknown> | null): string => {
+      if (!member) return 'Community member'
+      const display = member.displayName ?? member.fullName ?? member.name
+      if (typeof display === 'string' && display.trim()) return display.trim().slice(0, 120)
+      const first = typeof member.firstName === 'string' ? member.firstName : ''
+      const last = typeof member.lastName === 'string' ? member.lastName : ''
+      const combined = [first, last].filter(Boolean).join(' ').trim()
+      return combined || 'Community member'
+    }
+
+    const postAuthorId = resolveDocId(postDoc.author)
+    const commentAuthorIds = new Set<string>()
+    for (const c of commentsResult.docs) {
+      const aid = resolveDocId(c.author)
+      if (aid) commentAuthorIds.add(aid)
+    }
+    if (postAuthorId) commentAuthorIds.add(postAuthorId)
+
+    const authorMap = new Map<string, Record<string, unknown>>()
+    if (commentAuthorIds.size > 0) {
+      const batch = await payload.find({
+        collection: 'payload_members',
+        where: { id: { in: Array.from(commentAuthorIds) } },
+        limit: 200,
+        depth: 0,
+        overrideAccess: true,
+      })
+      for (const m of batch.docs) authorMap.set(String(m.id), m as Record<string, unknown>)
+    }
+
+    const postAuthorMember = postAuthorId ? (authorMap.get(postAuthorId) ?? null) : null
+    const bodyRichText = projectCommunityRichText(postDoc.body)
+    const extractText = (node: unknown): string => {
+      if (!node || typeof node !== 'object') return ''
+      const n = node as Record<string, unknown>
+      if (n.type === 'text' && typeof n.text === 'string') return n.text
+      if (Array.isArray(n.children)) return n.children.map(extractText).join('')
+      if (n.root && typeof n.root === 'object') return extractText(n.root)
+      return ''
+    }
+
+    const attachmentFiles = await payload.find({
+      collection: 'payload_space_files',
+      where: { and: [{ post: { equals: postId } }, { moderationStatus: { equals: 'visible' } }] },
+      sort: 'sortOrder',
+      limit: 100,
+      depth: 0,
+      overrideAccess: true,
+    }).catch(() => ({ docs: [] as Array<Record<string, unknown>> }))
+
+    const spaceId = String(spaceDoc.id)
+    const spaceNameStr = String(spaceDoc.name ?? spaceSlug)
+    const attachments: MemberCommunityAttachmentResolution[] = attachmentFiles.docs.map((file) => ({
+      id: String(file.id),
+      title: String(file.title ?? file.filename ?? 'Attachment'),
+      spaceId,
+      spaceName: spaceNameStr,
+      filename: String(file.filename ?? 'file'),
+      mimeType: (typeof file.mimeType === 'string' ? file.mimeType : 'application/octet-stream') as 'application/pdf',
+      byteSize: typeof file.byteSize === 'number' ? file.byteSize : 0,
+      downloadUrl: typeof file.url === 'string' ? file.url : `/portal/community/files/${file.id}`,
+      allowed: true as const,
+      media: {
+        id: String(file.id),
+        filename: String(file.filename ?? 'file'),
+        mimeType: (typeof file.mimeType === 'string' ? file.mimeType : 'application/octet-stream') as 'application/pdf',
+        byteSize: typeof file.byteSize === 'number' ? file.byteSize : 0,
+        storage: 'private' as const,
+      },
+    })) as unknown as MemberCommunityAttachmentResolution[]
+
+    post = {
+      id: String(postDoc.id),
+      title: String(postDoc.title ?? ''),
+      postType: (postDoc.postType === 'question' || postDoc.postType === 'announcement')
+        ? postDoc.postType
+        : 'discussion',
+      pinned: Boolean(postDoc.pinned),
+      locked: Boolean(postDoc.locked),
+      isViewerAuthor: false,
+      authorName: resolveName(postAuthorMember),
+      createdAt: postDoc.createdAt ? String(postDoc.createdAt) : null,
+      space: {
+        id: String(spaceDoc.id),
+        name: String(spaceDoc.name ?? spaceSlug),
+        slug: String(spaceDoc.slug ?? spaceSlug),
+      },
+      body: bodyRichText,
+      bodyPlainText: extractText(bodyRichText),
+      comments: commentsResult.docs.map((c) => {
+        const cAuthorId = resolveDocId(c.author)
+        const cBody = projectCommunityRichText(c.body)
+        return {
+          id: String(c.id),
+          isViewerAuthor: false,
+          authorName: resolveName(cAuthorId ? (authorMap.get(cAuthorId) ?? null) : null),
+          body: cBody,
+          bodyPlainText: extractText(cBody),
+          createdAt: c.createdAt ? String(c.createdAt) : null,
+        }
+      }),
+      attachments,
+      canPublish: true,
+      canComment: false,
+    }
+
+    // Track post and per-comment hidden state for admin moderation controls
+    postIsHidden = postDoc.moderationStatus === 'hidden'
+    commentHiddenMap = new Map(
+      commentsResult.docs.map((c) => [String(c.id), c.moderationStatus === 'hidden'])
+    )
+  } else {
+    notFound()
+  }
+
   let reactionSummary: ReactionSummary | null = null
   try {
     reactionSummary = await getReactionSummary(payload, memberId, {
@@ -123,6 +289,7 @@ export default async function PortalCommunityPostPage({ params, searchParams }: 
     // Keep the post readable while the separately authorized reaction schema
     // or projection is unavailable. Mutations remain fail-closed server-side.
   }
+  const bookmarked = await getMemberBookmarkState(payload, memberId, post.id).catch(() => false)
   let commentReactionSummaries: ReadonlyMap<string, ReactionSummary> = new Map()
   try {
     commentReactionSummaries = await getSpaceCommentReactionSummaries(
@@ -135,7 +302,6 @@ export default async function PortalCommunityPostPage({ params, searchParams }: 
     // Comment reaction projection is optional until the staging migration and
     // validation gate have completed.
   }
-  const requestedPath = `/portal/community/${encodeURIComponent(spaceSlug)}/posts/${encodeURIComponent(postId)}`
 
   return (
     <div className='mx-auto w-full max-w-3xl space-y-6'>
@@ -172,6 +338,18 @@ export default async function PortalCommunityPostPage({ params, searchParams }: 
               {post.pinned && <StatusPill tone='neutral'>Pinned</StatusPill>}
               {post.locked && <StatusPill tone='warn'>Comments locked</StatusPill>}
             </div>
+            <AdminGate>
+              <PostModerationPanel
+                currentBody={post.bodyPlainText.trim()}
+                currentTitle={post.title}
+                hasComments={post.comments.length > 0}
+                hidden={postIsHidden}
+                locked={post.locked}
+                pinned={post.pinned}
+                postId={post.id}
+                spaceId={post.space.id}
+              />
+            </AdminGate>
           </div>
           <div className='mt-3 flex items-center gap-3'>
             <span
@@ -238,7 +416,7 @@ export default async function PortalCommunityPostPage({ params, searchParams }: 
         {/* 6. Action row: bookmark + comment count + share */}
         <div className='px-6 py-5 sm:px-8 sm:pb-6'>
           <div className='flex flex-wrap items-center gap-2'>
-            <ShareBookmarkActions initialBookmarked={bookmarked} postId={String(post.id)} />
+            <ShareBookmarkActions initialBookmarked={bookmarked} postId={post.id} />
             <span className='inline-flex min-h-11 items-center gap-2 rounded-jpv-pill border border-jpv-border bg-jpv-surface px-4 py-2 text-xs font-semibold text-jpv-muted'>
               <svg aria-hidden='true' className='h-4 w-4' fill='none' viewBox='0 0 24 24'>
                 <path d='M5 6.5h14v9H9l-4 3v-12Z' stroke='currentColor' strokeLinecap='round' strokeLinejoin='round' strokeWidth='1.75' />
@@ -327,6 +505,15 @@ export default async function PortalCommunityPostPage({ params, searchParams }: 
                           spaceSlug={spaceSlug}
                         />
                       )}
+                      <AdminGate>
+                        <CommentModerationActions
+                          commentId={comment.id}
+                          currentBody={comment.bodyPlainText.trim()}
+                          hidden={commentHiddenMap.get(comment.id) ?? false}
+                          postId={post.id}
+                          spaceId={post.space.id}
+                        />
+                      </AdminGate>
                       <time className='shrink-0 text-xs text-jpv-muted' dateTime={comment.createdAt ?? undefined}>
                         {formatDate(comment.createdAt)}
                       </time>
@@ -368,33 +555,7 @@ export default async function PortalCommunityPostPage({ params, searchParams }: 
         >
           <h2 className='text-xl font-bold text-jpv-brand-deep' id='community-reply-heading'>Leave a reply</h2>
           <p className='mt-2 text-sm leading-6 text-jpv-muted'>Keep your reply focused on the discussion so it is easy for other learners to follow.</p>
-          <form
-            action={submitCommunityComment.bind(null, spaceSlug, postId)}
-            className='mt-5 space-y-4'
-          >
-            <div>
-              <label className='block text-sm font-bold text-jpv-brand-deep' htmlFor='comment-body'>
-                Your reply
-              </label>
-              <textarea
-                className='mt-1.5 w-full rounded-jpv-control border border-jpv-border bg-jpv-canvas px-4 py-3 text-sm text-jpv-ink outline-none transition focus:border-jpv-green-deep focus:ring-2 focus:ring-jpv-green/25'
-                id='comment-body'
-                maxLength={10000}
-                name='body'
-                placeholder='Share your reply…'
-                required
-                rows={4}
-              />
-            </div>
-            <ComposerToolbar textareaId='comment-body' />
-            <input id='comment-video' name='videoUrl' type='hidden' />
-            <button
-              className='jpv-button-primary min-h-11'
-              type='submit'
-            >
-              Submit reply
-            </button>
-          </form>
+          <CommunityCommentComposer postId={postId} spaceSlug={spaceSlug} />
         </section>
       )}
     </div>

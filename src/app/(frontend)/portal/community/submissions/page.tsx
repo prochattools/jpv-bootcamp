@@ -1,7 +1,7 @@
 import Link from 'next/link'
 
 import { StatusPill } from '@/components/portal/StatusPill'
-import { requirePortalMember } from '@/lib/auth/requirePortalMember'
+import { requirePortalAccess } from '@/lib/auth/requirePortalAccess'
 import {
   getMemberCommunitySubmissions,
   type MemberCommunitySubmission,
@@ -57,7 +57,30 @@ function SubmissionCard({ item }: { item: MemberCommunitySubmission }) {
 }
 
 export default async function CommunitySubmissionsPage() {
-  const { memberId, memberEmail, payload } = await requirePortalMember('/portal/community/submissions')
+  const { actor, payload } = await requirePortalAccess('/portal/community/submissions')
+
+  if (actor.kind === 'admin') {
+    return (
+      <div className='space-y-6'>
+        <Link className='inline-flex min-h-11 items-center text-sm font-semibold text-jpv-brand-deep hover:underline' href='/portal/community'>
+          Back to community
+        </Link>
+        <header className='rounded-jpv-panel bg-jpv-brand-deep p-6 text-jpv-canvas shadow-jpv-card sm:p-8'>
+          <StatusPill tone='neutral'>My submissions</StatusPill>
+          <h1 className='mt-5 text-3xl font-semibold leading-tight tracking-tight sm:text-4xl'>Track your community submissions.</h1>
+          <p className='mt-3 max-w-2xl text-sm leading-6 text-jpv-inverse-muted sm:text-base'>
+            Review whether your posts, comments, and files are pending review, published, or no longer published.
+          </p>
+        </header>
+        <section className='rounded-jpv-panel border border-dashed border-jpv-border bg-jpv-surface p-6 text-sm text-jpv-muted'>
+          Admin view — personal submissions are not available for administrator accounts.
+        </section>
+      </div>
+    )
+  }
+
+  const memberId = actor.memberId
+  const memberEmail = actor.email
   const submissions = await getMemberCommunitySubmissions(payload, memberId)
 
   return (

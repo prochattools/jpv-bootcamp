@@ -14,6 +14,7 @@ const requiredFields = [
   'updatedAt',
   'normalizedEmail',
   'name',
+  'phone',
   'question',
   'source',
   'page',
@@ -57,6 +58,7 @@ for (const forbidden of [
 
 assert.match(supportRoute, /guardPublicRequest\(req/)
 assert.match(supportRoute, /prisma\.supportRequest\.create/)
+assert.match(supportRoute, /isValidInternationalPhone/)
 assert.match(supportRoute, /queueAndAttemptEmailEvent/)
 assert.match(supportRoute, /accepted:\s*true/)
 assert.match(supportRoute, /duplicate:\s*result\.duplicate/)

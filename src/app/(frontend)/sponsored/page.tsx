@@ -13,9 +13,9 @@ export default async function SponsoredApplyPage() {
 	}
 
 	return (
-		<main className="flex h-screen flex-col bg-jpv-canvas text-jpv-ink lg:overflow-hidden">
-			<section className="flex flex-1 flex-col px-5 py-6 sm:py-8 md:px-8 lg:py-10 lg:overflow-hidden">
-				<div className="mx-auto flex w-full max-w-[72rem] flex-1 flex-col lg:overflow-hidden">
+		<main className="min-h-[100dvh] bg-jpv-canvas text-jpv-ink">
+			<section className="px-5 py-6 sm:py-8 md:px-8 lg:py-10">
+				<div className="mx-auto w-full max-w-[72rem]">
 					<a
 						className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-jpv-brand-deep transition-colors hover:text-jpv-brand"
 						href="/"
@@ -24,7 +24,7 @@ export default async function SponsoredApplyPage() {
 						Back to JPV Bootcamp
 					</a>
 
-					<div className="mt-6 flex flex-1 overflow-hidden rounded-jpv-panel border border-jpv-border shadow-jpv-card lg:grid lg:grid-cols-[0.82fr_1.18fr]">
+					<div className="mt-6 overflow-hidden rounded-jpv-panel border border-jpv-border shadow-jpv-card lg:grid lg:grid-cols-[0.82fr_1.18fr]">
 						<div className="relative flex flex-col justify-between overflow-hidden bg-jpv-brand-deep px-6 py-10 text-jpv-canvas sm:px-10 sm:py-12 lg:px-12 lg:py-16">
 							<div aria-hidden="true" className="absolute -right-16 -top-16 h-56 w-56 rounded-full border border-jpv-canvas/10" />
 							<div className="relative">
@@ -44,7 +44,7 @@ export default async function SponsoredApplyPage() {
 							</ul>
 						</div>
 
-						<div className="overflow-y-auto bg-jpv-canvas px-6 py-10 sm:px-10 sm:py-12 lg:px-12 lg:py-16">
+						<div className="bg-jpv-canvas px-6 py-10 sm:px-10 sm:py-12 lg:px-12 lg:py-16">
 							<p className="jpv-eyebrow">Application</p>
 							<h2 className="jpv-editorial-heading mt-3 text-3xl text-jpv-ink">Tell us about yourself.</h2>
 							<p className="mt-3 max-w-xl text-sm leading-6 text-jpv-muted">Complete the details below so your application can be reviewed.</p>

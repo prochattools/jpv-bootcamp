@@ -1,5 +1,6 @@
 import Link from 'next/link'
 
+import { EngagementReactionBar } from '@/components/community/EngagementPresentation'
 import {
   MemberAttachments,
   MemberFeaturedImage,
@@ -8,6 +9,7 @@ import {
 } from '@/components/portal/MemberContentMedia'
 import type { ManagedVideoTarget } from '@/components/portal/ManagedBunnyVideoPlayer'
 import type { MemberPublishedContent } from '@/lib/payloadContent/memberContent'
+import type { ReactionSummary } from '@/lib/payloadCourse/reactions'
 
 function formatPublishedDate(value: string | null): string | null {
   if (!value) return null
@@ -19,9 +21,11 @@ function formatPublishedDate(value: string | null): string | null {
 export function MemberPublishedContentView({
   content,
   target,
+  reactionSummary,
 }: {
   content: MemberPublishedContent
   target: Extract<ManagedVideoTarget, 'page' | 'post'>
+  reactionSummary?: ReactionSummary | null
 }) {
   const publishedDate = formatPublishedDate(content.publishedAt)
 
@@ -61,6 +65,17 @@ export function MemberPublishedContentView({
 
         <MemberMediaGallery assets={content.gallery} />
         <MemberAttachments assets={content.attachments} />
+
+        <EngagementReactionBar
+          className='mt-2'
+          counts={reactionSummary?.counts}
+          label={`${target === 'post' ? 'Post' : 'Page'} reactions`}
+          redirectPath={`/portal/${target === 'post' ? 'posts' : 'pages'}/${encodeURIComponent(content.slug)}`}
+          targetId={content.id}
+          targetKind={target === 'post' ? 'content_post' : 'content_page'}
+          totalCount={reactionSummary?.totalCount}
+          viewerReaction={reactionSummary?.viewerReaction}
+        />
       </article>
     </div>
   )

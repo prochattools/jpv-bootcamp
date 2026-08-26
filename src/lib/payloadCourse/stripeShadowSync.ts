@@ -68,7 +68,13 @@ type ShadowSyncOptions = {
   stripe?: ShadowStripeClient
   adminEmail?: string | null
   suppressCommunications?: boolean
-  strictIdentityResolution?: boolean
+  // Reconciliation must not manufacture identities from historical provider data.
+  // Real-time Stripe checkout/webhook processing retains its existing creation path.
+  preserveMemberStatus?: boolean
+  // A reconciliation may refresh a projection even when its deterministic
+  // synthetic event was already recorded as processed. Normal webhook idempotency
+  // remains unchanged when this flag is absent.
+  reconciliationRepair?: boolean
 }
 
 export type PayloadBillingShadowSyncResult = {
@@ -404,6 +410,58 @@ async function upsertByWhere(
   }
 }
 
+async function upsertUnresolvedStripeShadow(
+  payload: PayloadCourseWriteAPI,
+  params: {
+    objectType: 'subscription' | 'invoice'
+    stripeId: string
+    stripeCustomerId: string | null
+    stripeSubscriptionId?: string | null
+    stripePriceId?: string | null
+    stripeInvoiceId?: string | null
+    event: Stripe.Event
+    observedStatus: string
+    snapshot: Record<string, unknown>
+  },
+): Promise<'stripe_shadow_created' | 'stripe_shadow_updated'> {
+  const where = params.objectType === 'subscription'
+    ? { stripeSubscriptionId: { equals: params.stripeId } }
+    : { stripeInvoiceId: { equals: params.stripeId } }
+  const result = await upsertByWhere(
+    payload,
+    'payload_stripe_shadow_projections',
+    where,
+    {
+      displayName: `Unresolved Stripe ${params.objectType} / ${params.stripeId}`,
+      member: undefined,
+      stripeCustomerId: params.stripeCustomerId ?? undefined,
+      stripeSubscriptionId: params.stripeSubscriptionId ?? undefined,
+      stripePriceId: params.stripePriceId ?? undefined,
+      stripeInvoiceId: params.stripeInvoiceId ?? undefined,
+      stripeEventId: params.event.id,
+      shadowState: 'mismatch',
+      lastWebhookAt: new Date(params.event.created * 1000),
+      shadowedAt: new Date(),
+      observedStatus: params.observedStatus,
+      notes: 'Stripe record is preserved in Payload, but no safe local member identity is available. No entitlement or member was created.',
+      metadata: {
+        source: 'stripe_payload_reconciliation',
+        identityState: 'unresolved',
+        objectType: params.objectType,
+        stripeId: params.stripeId,
+        stripeCustomerId: params.stripeCustomerId,
+        stripeSubscriptionId: params.stripeSubscriptionId ?? null,
+        stripeInvoiceId: params.stripeInvoiceId ?? null,
+        eventId: params.event.id,
+        eventType: params.event.type,
+        observedStatus: params.observedStatus,
+        stripeSnapshot: params.snapshot,
+      },
+    },
+  )
+  return result.created ? 'stripe_shadow_created' : 'stripe_shadow_updated'
+}
+
 async function resolveCustomerEmail(
   stripe: ShadowStripeClient,
   customerId: string,
@@ -415,32 +473,6 @@ async function resolveCustomerEmail(
   const customer = await stripe.customers.retrieve(customerId)
   if ('deleted' in customer) return null
   return normalizeEmail(customer.email)
-}
-
-async function findMembersByNormalizedEmail(
-  payload: PayloadCourseWriteAPI,
-  email: string,
-): Promise<PayloadDocument[]> {
-  const normalized = normalizeEmail(email)
-  if (!normalized) return []
-  const matches: PayloadDocument[] = []
-  let page = 1
-  do {
-    const result = await payload.find({
-      collection: 'payload_members',
-      limit: 100,
-      page,
-      depth: 0,
-      overrideAccess: true,
-    })
-    matches.push(...(result.docs as PayloadDocument[]).filter((member) =>
-      normalizeEmail(typeof member.email === 'string' ? member.email : null) === normalized,
-    ))
-    if (!result.hasNextPage) break
-    page += 1
-    if (page > 1000) throw new Error('payload_member_email_search_page_limit_exceeded')
-  } while (true)
-  return matches
 }
 
 function makeShadowPassword(): string {
@@ -716,53 +748,25 @@ async function getBillingSubject(
     billingStatus: PayloadBillingStatus
     defaultPaymentMethodId?: string | null
     preserveMemberStatus?: boolean
-    strictIdentityResolution?: boolean
   }
 ): Promise<BillingSubject | null> {
   const email = await resolveCustomerEmail(stripe, params.stripeCustomerId, params.email)
   if (!email) return null
 
   const memberState = memberStatusForBilling(params.billingStatus)
-  let memberResult: { member: PayloadDocument; created: boolean } | null
-  if (params.strictIdentityResolution) {
-    const billingAccountByCustomer = await findOne(payload, 'payload_billing_accounts', {
-      stripeCustomerId: { equals: params.stripeCustomerId },
-    })
-    if (billingAccountByCustomer) {
-      const memberId = relationshipId(billingAccountByCustomer.member)
-      if (!memberId) return null
-      let member: PayloadDocument
-      try {
-        member = await payload.findByID({ collection: 'payload_members', id: memberId, depth: 0, overrideAccess: true })
-      } catch {
-        return null
-      }
-      memberResult = { member, created: false }
-    } else {
-      const emailMembers = await findMembersByNormalizedEmail(payload, email)
-      if (emailMembers.length !== 1) return null
-      const member = emailMembers[0]!
-      const existingAccount = await findOne(payload, 'payload_billing_accounts', {
-        member: { equals: member.id },
-      })
-      if (existingAccount && String(existingAccount.stripeCustomerId ?? '') !== params.stripeCustomerId) return null
-      memberResult = { member, created: false }
-    }
-  } else {
-    memberResult = params.preserveMemberStatus
-      ? await (async () => {
-          const existingMember = await findOne(payload, 'payload_members', {
-            email: { equals: email },
-          })
-          return existingMember ? { member: existingMember, created: false } : null
-        })()
-      : await upsertMember(payload, {
-          email,
-          targetStatus: memberState.accountStatus,
-          holdReason: memberState.holdReason,
-          eventId: params.eventId,
+  const memberResult = params.preserveMemberStatus
+    ? await (async () => {
+        const existingMember = await findOne(payload, 'payload_members', {
+          email: { equals: email },
         })
-  }
+        return existingMember ? { member: existingMember, created: false } : null
+      })()
+    : await upsertMember(payload, {
+        email,
+        targetStatus: memberState.accountStatus,
+        holdReason: memberState.holdReason,
+        eventId: params.eventId,
+      })
   if (!memberResult) return null
   const lifecycleStage = params.billingStatus === 'canceled' ? 'churned' : 'student'
   const contact = await upsertContact(payload, {
@@ -943,7 +947,7 @@ async function syncSubscription(
     email: projection.email,
     billingStatus: projection.billingStatus,
     defaultPaymentMethodId: projection.defaultPaymentMethodId,
-    strictIdentityResolution: options.strictIdentityResolution,
+    preserveMemberStatus: options.preserveMemberStatus,
   })
 
   if (!subject) {
@@ -951,9 +955,24 @@ async function syncSubscription(
       actionType: 'subscription_updated',
       status: 'skipped',
       eventId: event.id,
-      notes: 'missing_customer_email',
+      notes: options.preserveMemberStatus ? 'no_matching_local_member' : 'missing_customer_email',
     })
-    return ['subscription_review_required_missing_email']
+    const shadowAction = await upsertUnresolvedStripeShadow(payload, {
+      objectType: 'subscription',
+      stripeId: projection.stripeSubscriptionId,
+      stripeCustomerId: projection.stripeCustomerId,
+      stripeSubscriptionId: projection.stripeSubscriptionId,
+      stripePriceId: projection.priceId,
+      event,
+      observedStatus: subscription.status,
+      snapshot: subscription as unknown as Record<string, unknown>,
+    })
+    return [
+      options.preserveMemberStatus
+        ? 'subscription_review_required_no_matching_local_member'
+        : 'subscription_review_required_missing_email',
+      shadowAction,
+    ]
   }
 
   const resolvedPlanForSync = projection.plan ?? 'jpv_bootcamp_membership'
@@ -1083,7 +1102,7 @@ async function syncInvoice(
   stripe: ShadowStripeClient,
   event: Stripe.Event,
   invoice: Stripe.Invoice,
-  paymentStatus: 'paid' | 'failed' | 'action_required',
+  paymentStatus: 'pending' | 'paid' | 'failed' | 'action_required' | 'voided',
   options: ShadowSyncOptions
 ): Promise<string[]> {
   const subscriptionId = getInvoiceSubscriptionId(invoice)
@@ -1091,13 +1110,19 @@ async function syncInvoice(
   let subject: BillingSubject | null = null
   let invoiceSubscriptionProjection: SubscriptionProjection | null = null
   let payloadSubscription: PayloadDocument | null = null
-  const paymentAttentionRequired = paymentStatus !== 'paid'
-  let billingStatus: PayloadBillingStatus = paymentStatus === 'paid' ? 'active' : 'past_due'
+  const paymentAttentionRequired = paymentStatus === 'failed' || paymentStatus === 'action_required'
+  let billingStatus: PayloadBillingStatus = paymentAttentionRequired ? 'past_due' : 'none'
+  const stripeInvoiceId = invoice.id ?? `event:${event.id}`
+  const amount =
+    paymentStatus === 'paid'
+      ? invoice.amount_paid
+      : Math.max(invoice.amount_due ?? 0, invoice.amount_remaining ?? 0)
 
   if (subscriptionId) {
     const subscription = await retrieveSubscription(stripe, subscriptionId)
-    billingStatus =
-      paymentStatus === 'paid' ? billingStatusFromSubscription(subscription) : 'past_due'
+    billingStatus = paymentAttentionRequired
+      ? 'past_due'
+      : billingStatusFromSubscription(subscription)
     const projection = subscriptionProjection(subscription)
     invoiceSubscriptionProjection = projection
     subject = await getBillingSubject(payload, stripe, {
@@ -1123,13 +1148,66 @@ async function syncInvoice(
   }
 
   if (!subject) {
+    const existingSubscription = subscriptionId
+      ? await findOne(payload, 'payload_subscriptions', {
+          stripeSubscriptionId: { equals: subscriptionId },
+        })
+      : null
+    await upsertByWhere(
+      payload,
+      'payload_payments',
+      { stripeInvoiceId: { equals: stripeInvoiceId } },
+      {
+        displayName: `Unresolved Stripe invoice / ${stripeInvoiceId}`,
+        member: undefined,
+        subscription: existingSubscription?.id ?? undefined,
+        stripeInvoiceId,
+        stripePaymentIntentId: getInvoicePaymentIntentId(invoice) ?? undefined,
+        invoiceNumber: invoice.number ?? undefined,
+        hostedInvoiceUrl: invoice.hosted_invoice_url ?? undefined,
+        invoicePdfUrl: invoice.invoice_pdf ?? undefined,
+        amountDue: Math.max(invoice.amount_due ?? 0, 0),
+        amountPaid: Math.max(invoice.amount_paid ?? 0, 0),
+        amountRemaining: Math.max(invoice.amount_remaining ?? 0, 0),
+        attemptCount: Math.max(invoice.attempt_count ?? 0, 0),
+        nextPaymentAttempt: dateFromUnix(invoice.next_payment_attempt) ?? undefined,
+        amount: Math.max(amount ?? 0, 0),
+        currency: invoice.currency ?? 'usd',
+        status: paymentStatus,
+        paidAt: paymentStatus === 'paid' ? dateFromUnix(invoice.status_transitions?.paid_at) ?? new Date() : undefined,
+        failedAt: paymentAttentionRequired ? new Date(event.created * 1000) : undefined,
+        failureReason: paymentAttentionRequired
+          ? paymentStatus === 'action_required'
+            ? 'invoice_payment_action_required'
+            : invoice.last_finalization_error?.message ?? 'invoice_payment_failed'
+          : undefined,
+        metadata: {
+          source: 'stripe_payload_reconciliation',
+          identityState: 'unresolved',
+          eventId: event.id,
+          subscriptionId,
+          stripeSnapshot: invoice as unknown as Record<string, unknown>,
+        },
+      },
+    )
+    const shadowAction = await upsertUnresolvedStripeShadow(payload, {
+      objectType: 'invoice',
+      stripeId: stripeInvoiceId,
+      stripeCustomerId: customerId,
+      stripeSubscriptionId: subscriptionId,
+      stripeInvoiceId,
+      stripePriceId: invoiceSubscriptionProjection?.priceId,
+      event,
+      observedStatus: invoice.status ?? paymentStatus,
+      snapshot: invoice as unknown as Record<string, unknown>,
+    })
     await writeBillingAction(payload, {
       actionType: paymentStatus === 'paid' ? 'payment_succeeded' : 'payment_failed',
       status: 'skipped',
       eventId: event.id,
       notes: 'missing_customer_or_email',
     })
-    return ['invoice_skipped_missing_subject']
+    return ['invoice_review_required_unresolved_identity', shadowAction]
   }
 
   if (invoiceSubscriptionProjection) {
@@ -1169,12 +1247,6 @@ async function syncInvoice(
     payloadSubscription = subscriptionResult.doc
   }
 
-  const stripeInvoiceId = invoice.id ?? `event:${event.id}`
-  const amount =
-    paymentStatus === 'paid'
-      ? invoice.amount_paid
-      : Math.max(invoice.amount_due ?? 0, invoice.amount_remaining ?? 0)
-
   await upsertByWhere(
     payload,
     'payload_payments',
@@ -1212,18 +1284,20 @@ async function syncInvoice(
     }
   )
 
-  await writeBillingAction(payload, {
-    memberId: subject.member.id,
-    actionType: paymentStatus === 'paid' ? 'payment_succeeded' : 'payment_failed',
-    status: 'completed',
-    eventId: event.id,
-    metadata: {
-      stripeInvoiceId,
-      subscriptionId,
-      amount,
-      currency: invoice.currency ?? 'usd',
-    },
-  })
+  if (paymentStatus === 'paid' || paymentAttentionRequired) {
+    await writeBillingAction(payload, {
+      memberId: subject.member.id,
+      actionType: paymentStatus === 'paid' ? 'payment_succeeded' : 'payment_failed',
+      status: 'completed',
+      eventId: event.id,
+      metadata: {
+        stripeInvoiceId,
+        subscriptionId,
+        amount,
+        currency: invoice.currency ?? 'usd',
+      },
+    })
+  }
 
   const isRecovery =
     paymentStatus === 'paid' &&
@@ -1272,7 +1346,11 @@ async function syncInvoice(
   }
 
   return [
-    paymentAttentionRequired
+    paymentStatus === 'voided'
+      ? 'invoice_voided_synced'
+      : paymentStatus === 'pending'
+        ? 'invoice_pending_synced'
+        : paymentAttentionRequired
       ? paymentStatus === 'action_required'
         ? 'invoice_payment_action_required_synced'
         : 'invoice_payment_failed_synced'
@@ -1563,9 +1641,12 @@ async function staleProjectionReason(
       })
     }
   } else if (
+    event.type === 'invoice.created' ||
+    event.type === 'invoice.finalized' ||
     event.type === 'invoice.paid' ||
     event.type === 'invoice.payment_failed' ||
-    event.type === 'invoice.payment_action_required'
+    event.type === 'invoice.payment_action_required' ||
+    event.type === 'invoice.voided'
   ) {
     const invoiceId = typeof object.id === 'string' ? object.id : null
     if (invoiceId) {
@@ -1657,7 +1738,20 @@ export async function mirrorStripeEventToPayload(
     eventId: { equals: event.id },
   })
 
-  if (existingEvent?.processingStatus === 'processed') {
+  const isReconciliationProjectionEvent =
+    String(event.type).startsWith('customer.subscription.') ||
+    event.type === 'invoice.created' ||
+    event.type === 'invoice.finalized' ||
+    event.type === 'invoice.paid' ||
+    event.type === 'invoice.payment_failed' ||
+    event.type === 'invoice.payment_action_required' ||
+    event.type === 'invoice.voided'
+  const shouldRepairProjection =
+    existingEvent?.processingStatus === 'processed' &&
+    options.reconciliationRepair === true &&
+    isReconciliationProjectionEvent
+
+  if (existingEvent?.processingStatus === 'processed' && !shouldRepairProjection) {
     if (existingEvent.failureReason) {
       await payload.update({
         collection: 'payload_stripe_events',
@@ -1733,13 +1827,22 @@ export async function mirrorStripeEventToPayload(
           event.data.object as Stripe.SubscriptionSchedule,
         )
         break
+      case 'invoice.created':
+      case 'invoice.finalized':
+      case 'invoice.voided':
       case 'invoice.paid':
         actions = await syncInvoice(
           payload,
           stripe,
           event,
           event.data.object as Stripe.Invoice,
-          'paid',
+          event.type === 'invoice.voided'
+            ? 'voided'
+            : event.type === 'invoice.paid'
+              ? 'paid'
+              : event.type === 'invoice.finalized'
+                ? 'action_required'
+                : 'pending',
           options
         )
         break

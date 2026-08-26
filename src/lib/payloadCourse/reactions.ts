@@ -14,7 +14,7 @@ export const REACTION_COLLECTION = 'payload_engagement_reactions' as const
 export const reactionTypes = ['helpful', 'insightful', 'celebrate'] as const
 export type ReactionType = (typeof reactionTypes)[number]
 
-export const reactionTargetKinds = ['space_post', 'space_comment', 'lesson_comment'] as const
+export const reactionTargetKinds = ['space_post', 'space_comment', 'lesson_comment', 'content_post', 'content_page'] as const
 export type ReactionTargetKind = (typeof reactionTargetKinds)[number]
 
 export type ReactionTarget = {
@@ -78,6 +78,8 @@ type ReactionDocument = PayloadDocument & {
   targetPost?: PayloadId | Record<string, unknown> | null
   targetSpaceComment?: PayloadId | Record<string, unknown> | null
   targetLessonComment?: PayloadId | Record<string, unknown> | null
+  targetContentPost?: PayloadId | Record<string, unknown> | null
+  targetContentPage?: PayloadId | Record<string, unknown> | null
   createdAt?: string | null
   updatedAt?: string | null
 }
@@ -92,12 +94,16 @@ const targetFieldByKind: Record<ReactionTargetKind, keyof ReactionDocument> = {
   space_post: 'targetPost',
   space_comment: 'targetSpaceComment',
   lesson_comment: 'targetLessonComment',
+  content_post: 'targetContentPost',
+  content_page: 'targetContentPage',
 }
 
 const supportedMutationTargets = new Set<ReactionTargetKind>([
   'space_post',
   'space_comment',
   'lesson_comment',
+  'content_post',
+  'content_page',
 ])
 
 function asString(value: unknown): string | null {
@@ -111,6 +117,12 @@ function relationshipId(value: unknown): string | null {
   if (direct) return direct
   if (!value || typeof value !== 'object') return null
   return asString((value as { id?: unknown }).id)
+}
+
+function isMemberAudienceAllowed(document: PayloadDocument, memberId: PayloadId): boolean {
+  if (document.audience !== 'selected') return true
+  return Array.isArray(document.targetMemberIds)
+    && document.targetMemberIds.some((value) => String(value) === String(memberId))
 }
 
 function asRelationshipId(value: PayloadId): string | number {
@@ -254,6 +266,19 @@ async function assertVisibleTarget(
     return comment
   }
 
+  if (target.kind === 'content_post' || target.kind === 'content_page') {
+    const collection = target.kind === 'content_post' ? 'payload_posts' : 'payload_pages'
+    const content = await findById(payload, collection, target.id)
+    if (!content) throw new ReactionServiceError('target_not_found', 'Reaction target was not found.')
+    if (content.status !== 'published') {
+      throw new ReactionServiceError('target_hidden', 'This target is not available for reactions.')
+    }
+    if (!isMemberAudienceAllowed(content, memberId)) {
+      throw new ReactionServiceError('target_inaccessible', 'This target is not available for reactions.')
+    }
+    return content
+  }
+
   const comment = await findById(payload, 'payload_lesson_comments', target.id)
   if (!comment) throw new ReactionServiceError('target_not_found', 'Reaction target was not found.')
   if (comment.moderationStatus !== 'visible') {
@@ -278,6 +303,48 @@ async function assertVisibleTarget(
   }
 
   return comment
+}
+
+async function notifyReactionTargetAuthor(
+  payload: PayloadCourseWriteAPI,
+  memberId: PayloadId,
+  target: ReactionTarget,
+  targetDocument: PayloadDocument,
+  reactionType: ReactionType,
+): Promise<void> {
+  const authorId = relationshipId(targetDocument.author)
+  if (!authorId || authorId === String(memberId)) return
+
+  let actorName = 'A member'
+  try {
+    const profiles = await payload.find({
+      collection: 'payload_member_profiles',
+      where: { member: { equals: String(memberId) } },
+      limit: 1,
+      depth: 0,
+      overrideAccess: true,
+    })
+    actorName = asString(profiles.docs[0]?.displayName) ?? actorName
+  } catch {
+    // Notification delivery is best-effort and must not affect the reaction.
+  }
+
+  try {
+    await payload.create({
+      collection: 'payload_member_notifications',
+      data: {
+        member: authorId,
+        type: 'system',
+        actorName,
+        title: `reacted ${reactionLabels[reactionType]} to your ${target.kind === 'space_post' || target.kind === 'content_post' || target.kind === 'content_page' ? 'post' : 'comment'}`,
+        href: null,
+        read: false,
+      },
+      overrideAccess: true,
+    })
+  } catch {
+    // Notification delivery is best-effort and must not affect the reaction.
+  }
 }
 
 async function countReactions(
@@ -559,7 +626,7 @@ export async function setReaction(
   const target = normalizeTarget(rawTarget)
   const reactionType = normalizeReactionType(rawReactionType)
   await requireEligibleMember(payload, memberId)
-  await assertVisibleTarget(payload, memberId, target)
+  const targetDocument = await assertVisibleTarget(payload, memberId, target)
   await assertRateLimit(payload, memberId, rateLimit)
 
   const existing = await findViewerReaction(payload, memberId, target)
@@ -596,6 +663,7 @@ export async function setReaction(
       before: { reactionType: previous, targetKind: target.kind, targetId: target.id },
       after: { reactionType, targetKind: target.kind, targetId: target.id },
     })
+    void notifyReactionTargetAuthor(payload, memberId, target, targetDocument, reactionType)
 
     return { operation: 'changed', reaction: reactionType }
   }
@@ -621,6 +689,7 @@ export async function setReaction(
       targetId: created.id,
       after: { reactionType, targetKind: target.kind, targetId: target.id },
     })
+    void notifyReactionTargetAuthor(payload, memberId, target, targetDocument, reactionType)
   } catch (error) {
     if (error instanceof ReactionServiceError) throw error
     throw new ReactionServiceError('conflict', 'The reaction changed concurrently. Please try again.')

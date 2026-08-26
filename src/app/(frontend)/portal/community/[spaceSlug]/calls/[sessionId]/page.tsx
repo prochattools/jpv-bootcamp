@@ -8,6 +8,7 @@ import {
   liveSessionRelationshipId,
 } from '@/lib/liveSessions/sessionLifecycle'
 import LiveCallRoom from '@/components/portal/LiveCallRoom'
+import { LiveSessionState } from '@/components/portal/LiveSessionState'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -82,22 +83,7 @@ export default async function JoinCallPage({ params }: PageProps) {
         <p className='mt-3 text-sm text-jpv-muted'>
           {formatDate(scheduledAt)}
         </p>
-        <div className='mt-3'>
-          {isLive && (
-            <span className='inline-flex items-center gap-1.5 rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-800'>
-              <span className='relative flex h-2 w-2'>
-                <span className='absolute inline-flex h-full w-full animate-ping rounded-full bg-green-500 opacity-75' />
-                <span className='relative inline-flex h-2 w-2 rounded-full bg-green-500' />
-              </span>
-              Live now
-            </span>
-          )}
-          {!isLive && sessionStatus === 'scheduled' && (
-            <span className='inline-flex items-center rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700'>
-              Scheduled
-            </span>
-          )}
-        </div>
+        <div className='mt-3'><LiveSessionState status={sessionStatus} /></div>
       </header>
 
       {isClosed ? (
@@ -121,10 +107,21 @@ export default async function JoinCallPage({ params }: PageProps) {
           <p className='mt-2 text-sm text-jpv-muted'>
             The host has not opened this room yet. Come back when the call goes live.
           </p>
+          <div className='mt-5'>
+            <Link className='jpv-button-secondary' href={`/portal/community/${encodedSlug}/calls`}>
+              Back to sessions
+            </Link>
+          </div>
         </section>
       ) : !roomReady ? (
         <section className='rounded-xl border border-jpv-border bg-jpv-canvas p-6 text-center sm:p-8'>
-          <p className='text-sm text-jpv-muted'>Room configuration is unavailable. Contact support.</p>
+          <h2 className='font-semibold text-jpv-ink'>Room temporarily unavailable</h2>
+          <p className='mt-2 text-sm text-jpv-muted'>The session is live, but the room cannot be opened. Contact support if this continues.</p>
+          <div className='mt-5'>
+            <Link className='jpv-button-secondary' href={`/portal/community/${encodedSlug}/calls`}>
+              Back to sessions
+            </Link>
+          </div>
         </section>
       ) : (
         <section className='rounded-jpv-panel border border-jpv-border bg-jpv-canvas p-6 shadow-jpv-card sm:p-8'>

@@ -25,6 +25,7 @@ import { ItalicFeatureClient as ItalicFeatureClient_e70f5e05f09f93e00b997edb1ef0
 import { default as default_fb745f0085bf64fb2c5547247728f182 } from '../../../components/payload/PayItForwardAdminQueue'
 import { JPVAdminIcon as JPVAdminIcon_e1a31f211abab0fe933e22515323266f } from '../../../components/payload/JPVAdminBranding'
 import { JPVAdminLogo as JPVAdminLogo_e1a31f211abab0fe933e22515323266f } from '../../../components/payload/JPVAdminBranding'
+import { JPVAdminDashboardNav as JPVAdminDashboardNav_26e054d65a1c51bea6cc32ea6991cb1b } from '../../../components/payload/JPVAdminDashboardNav'
 import { JPVAdminDashboard as JPVAdminDashboard_938699ac8009387ebe0ba6157521c00a } from '../../../components/payload/JPVAdminDashboard'
 import { CollectionCards as CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1 } from '@payloadcms/next/rsc'
 
@@ -57,6 +58,7 @@ export const importMap = {
   "./components/payload/PayItForwardAdminQueue#default": default_fb745f0085bf64fb2c5547247728f182,
   "./components/payload/JPVAdminBranding#JPVAdminIcon": JPVAdminIcon_e1a31f211abab0fe933e22515323266f,
   "./components/payload/JPVAdminBranding#JPVAdminLogo": JPVAdminLogo_e1a31f211abab0fe933e22515323266f,
+  "./components/payload/JPVAdminDashboardNav#JPVAdminDashboardNav": JPVAdminDashboardNav_26e054d65a1c51bea6cc32ea6991cb1b,
   "./components/payload/JPVAdminDashboard#JPVAdminDashboard": JPVAdminDashboard_938699ac8009387ebe0ba6157521c00a,
   "@payloadcms/next/rsc#CollectionCards": CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1
 }

@@ -4,7 +4,7 @@ import { Bell } from 'lucide-react'
 import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-type NotificationType = 'new_post' | 'new_comment' | 'mention' | 'system'
+type NotificationType = 'new_post' | 'new_comment' | 'mention' | 'system' | 'announcement' | 'live_session'
 
 type Notification = {
   id: string
@@ -21,9 +21,9 @@ type NotificationsData = {
   unreadCount: number
 }
 
-type Tab = 'recent' | 'unread' | 'mentions' | 'following'
+type Tab = 'recent' | 'unread' | 'mentions'
 
-const TABS: Tab[] = ['recent', 'unread', 'mentions', 'following']
+const TABS: Tab[] = ['recent', 'unread', 'mentions']
 
 function formatRelativeTime(dateStr: string): string {
   try {
@@ -50,8 +50,7 @@ export function NotificationBell() {
 
   const fetchNotifications = useCallback(async (tab: Tab) => {
     try {
-      const apiTab = tab === 'following' ? 'recent' : tab
-      const res = await fetch(`/api/portal/notifications?tab=${apiTab}`)
+      const res = await fetch(`/api/portal/notifications?tab=${tab}`)
       if (res.ok) {
         const json = (await res.json()) as NotificationsData
         setData(json)
@@ -188,11 +187,7 @@ export function NotificationBell() {
 
           {/* Notification list */}
           <div className='max-h-80 overflow-y-auto'>
-            {activeTab === 'following' ? (
-              <div className='px-4 py-8 text-center text-sm text-jpv-muted'>
-                Following notifications coming soon.
-              </div>
-            ) : notifications.length === 0 ? (
+            {notifications.length === 0 ? (
               <div className='px-4 py-8 text-center text-sm text-jpv-muted'>
                 {activeTab === 'unread' ? 'No unread notifications.' : 'No notifications yet.'}
               </div>

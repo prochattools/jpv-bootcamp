@@ -64,6 +64,7 @@ export type PayloadCourseWriteAPI = PayloadCourseAccessAPI & {
     collection: any
     data: any
     overrideAccess?: boolean
+    user?: unknown
   }): Promise<any>
   update(args: {
     collection: any
@@ -71,6 +72,7 @@ export type PayloadCourseWriteAPI = PayloadCourseAccessAPI & {
     data: any
     overrideAccess?: boolean
     overrideLock?: boolean
+    user?: unknown
   }): Promise<any>
   delete?(args: {
     collection: any

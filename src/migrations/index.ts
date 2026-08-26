@@ -44,7 +44,10 @@ import * as migration_20260825_122000_membership_support_relationships from './2
 import * as migration_20260825_123000_membership_support_relationship_alignment from './20260825_123000_membership_support_relationship_alignment'
 import * as migration_20260825_124000_membership_review_assignee_alignment from './20260825_124000_membership_review_assignee_alignment'
 import * as migration_20260825_125000_membership_shadow_state_alignment from './20260825_125000_membership_shadow_state_alignment'
+import * as migration_20260826_090000_payment_action_required_status from './20260826_090000_payment_action_required_status'
 import * as migration_20260826_100000_administrator_member_identity from './20260826_100000_administrator_member_identity'
+import * as migration_20260826_120000_billing_pause_actions from './20260826_120000_billing_pause_actions'
+import * as migration_20260826_130000_portal_engagement_distribution from './20260826_130000_portal_engagement_distribution'
 import { PAYLOAD_MIGRATION_NAMES } from '../lib/payloadMigrationRegistry'
 
 const migrationModuleByName = {
@@ -94,7 +97,10 @@ const migrationModuleByName = {
   '20260825_123000_membership_support_relationship_alignment': migration_20260825_123000_membership_support_relationship_alignment,
   '20260825_124000_membership_review_assignee_alignment': migration_20260825_124000_membership_review_assignee_alignment,
   '20260825_125000_membership_shadow_state_alignment': migration_20260825_125000_membership_shadow_state_alignment,
+  '20260826_090000_payment_action_required_status': migration_20260826_090000_payment_action_required_status,
   '20260826_100000_administrator_member_identity': migration_20260826_100000_administrator_member_identity,
+  '20260826_120000_billing_pause_actions': migration_20260826_120000_billing_pause_actions,
+  '20260826_130000_portal_engagement_distribution': migration_20260826_130000_portal_engagement_distribution,
 } as const
 
 export const migrations = PAYLOAD_MIGRATION_NAMES.map((name) => ({

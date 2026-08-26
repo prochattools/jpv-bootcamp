@@ -4,11 +4,12 @@ import { notFound, redirect } from 'next/navigation'
 
 import { CommunityRichText } from '@/components/community/CommunityRichText'
 import { StatusPill } from '@/components/portal/StatusPill'
-import { requirePortalMember } from '@/lib/auth/requirePortalMember'
+import { requirePortalAccess } from '@/lib/auth/requirePortalAccess'
 import type { PayloadCourseWriteAPI } from '@/lib/payloadCourse/accessService'
 import {
   getPendingCommunityModerationItems,
   moderatePendingCommunityItem,
+  type CommunityModerationActor,
   type PendingCommunityModerationItem,
 } from '@/lib/payloadCourse/communityModeration'
 
@@ -38,7 +39,8 @@ async function submitModerationDecision(formData: FormData): Promise<void> {
   'use server'
 
   const destination = '/portal/community/moderation'
-  const { memberId, payload } = await requirePortalMember(destination)
+  const { actor, payload } = await requirePortalAccess(destination)
+  const memberId = actor.kind === 'member' ? actor.memberId : ''
 
   const kind = formText(formData, 'kind')
   const id = formText(formData, 'id')
@@ -57,7 +59,9 @@ async function submitModerationDecision(formData: FormData): Promise<void> {
   }
 
   const result = await moderatePendingCommunityItem(payload as unknown as PayloadCourseWriteAPI, {
-    actor: { type: 'member', id: memberId },
+    actor: actor.kind === 'admin'
+      ? { type: 'admin' as const, id: actor.administratorId }
+      : { type: 'member' as const, id: memberId },
     kind,
     id,
     decision,
@@ -214,12 +218,15 @@ function ModerationItemCard({ item }: { item: PendingCommunityModerationItem }) 
 
 export default async function CommunityModerationPage({ searchParams }: PageProps) {
   const query = await searchParams
-  const { memberId, memberEmail, payload } = await requirePortalMember('/portal/community/moderation')
+  const { actor, payload } = await requirePortalAccess('/portal/community/moderation')
+  const memberId = actor.kind === 'member' ? actor.memberId : ''
+  const memberEmail = actor.kind === 'member' ? actor.email : ''
 
-  const inbox = await getPendingCommunityModerationItems(payload, {
-    type: 'member',
-    id: memberId,
-  })
+  const serviceActor: CommunityModerationActor = actor.kind === 'admin'
+    ? { type: 'admin', id: actor.administratorId }
+    : { type: 'member', id: memberId }
+
+  const inbox = await getPendingCommunityModerationItems(payload, serviceActor)
   if (!inbox.actorRole) notFound()
 
   const groups = groupItems(inbox.items)

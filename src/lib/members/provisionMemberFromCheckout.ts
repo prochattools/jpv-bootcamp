@@ -43,11 +43,33 @@ export async function provisionMemberFromCheckout(params: {
   })
 
   if (existing.docs[0]) {
+    const existingMember = existing.docs[0] as {
+      id: string | number
+      accountStatus?: string
+      emailVerifiedAt?: string | null
+      source?: string
+    }
+
+    // Older checkout-created rows were stored as active without this marker
+    // and consequently failed the member sign-in eligibility check.
+    if (
+      existingMember.source === 'stripe_checkout' &&
+      existingMember.accountStatus === 'active' &&
+      !existingMember.emailVerifiedAt
+    ) {
+      await payload.update({
+        collection: 'payload_members',
+        id: existingMember.id,
+        data: { emailVerifiedAt: new Date().toISOString() },
+        overrideAccess: true,
+      })
+    }
+
     console.info('provisionMemberFromCheckout: member already exists', {
       email: redactEmail(email),
-      memberId: existing.docs[0].id,
+      memberId: existingMember.id,
     })
-    return { memberId: String(existing.docs[0].id), created: false, password: null }
+    return { memberId: String(existingMember.id), created: false, password: null }
   }
 
   const password = generateReadablePassword()
@@ -58,6 +80,7 @@ export async function provisionMemberFromCheckout(params: {
       email,
       password,
       accountStatus: 'active',
+      emailVerifiedAt: new Date().toISOString(),
       source: params.source ?? 'stripe_checkout',
     },
     overrideAccess: true,

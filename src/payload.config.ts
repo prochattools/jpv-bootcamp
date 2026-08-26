@@ -36,7 +36,11 @@ import { resolvePayloadMediaStorageConfig } from './lib/payload-media-storage'
 import { stagingAutoProvision } from './lib/staging-auto-provision'
 import { migrations } from './migrations'
 import { jpvBrand } from './lib/brand/jpvDesignSystem'
-import { resolveDatabaseConnectionConfig, assertStagingSchema } from './lib/databaseConnectionConfig'
+import {
+  resolveDatabaseConnectionConfig,
+  assertProductionSchema,
+  assertStagingSchema,
+} from './lib/databaseConnectionConfig'
 import { legacyMigrationRichTextBlocks } from './richtext/LegacyMigrationBlocks'
 import { PortalSettings } from './globals/PortalSettings'
 import { PayItForwardSettings } from './globals/PayItForwardSettings'
@@ -136,7 +140,11 @@ const databaseConnection = resolveDatabaseConnectionConfig(
 // DEPLOYMENT_RUNTIME=docker is set in the runner stage (not the builder stage), so this guard
 // fires at server startup but not during Next.js page-data collection at build time.
 if (process.env.DEPLOYMENT_RUNTIME === 'docker') {
-  assertStagingSchema(databaseConnection)
+  if ((process.env.DEPLOYMENT_ENV ?? '').trim().toLowerCase() === 'production') {
+    assertProductionSchema(databaseConnection)
+  } else {
+    assertStagingSchema(databaseConnection)
+  }
 }
 
 export default buildConfig({
@@ -150,6 +158,7 @@ export default buildConfig({
         Logo: './components/payload/JPVAdminBranding#JPVAdminLogo',
         Icon: './components/payload/JPVAdminBranding#JPVAdminIcon',
       },
+      beforeNavLinks: ['./components/payload/JPVAdminDashboardNav#JPVAdminDashboardNav'],
       views: {
         dashboard: {
           Component: './components/payload/JPVAdminDashboard#JPVAdminDashboard',

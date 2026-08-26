@@ -1,22 +1,32 @@
 'use client';
 
 import { ReactNode } from "react";
-import { ThemeProvider } from "next-themes";
+import { usePathname } from "next/navigation";
+import { useEffect } from "react";
 import { Toaster } from "react-hot-toast";
+
+function PublicThemeReset(): null {
+  const pathname = usePathname()
+
+  useEffect(() => {
+    if (pathname?.startsWith('/portal')) return
+
+    // The only supported theme outside the member portal is light. Clear a
+    // class left behind by the portal provider during client-side navigation.
+    document.documentElement.classList.remove('dark')
+    document.documentElement.style.colorScheme = 'light'
+  }, [pathname])
+
+  return null
+}
 
 export function Providers({ children }: { children: ReactNode }) {
   return (
     <>
-      <ThemeProvider
-        attribute="class"
-        defaultTheme="system"
-        enableSystem
-        disableTransitionOnChange
-      >
-        <div className="min-h-screen bg-background">
-          {children}
-        </div>
-      </ThemeProvider>
+      <PublicThemeReset />
+      <div className="min-h-screen bg-jpv-canvas text-jpv-ink">
+        {children}
+      </div>
 
       <Toaster
         position="bottom-center"

@@ -29,11 +29,16 @@ export async function POST(request: Request): Promise<Response> {
   if (!secret) return json({ ok: false, error: 'not_configured' }, 500)
   if (!authorized(request, secret)) return json({ ok: false, error: 'unauthorized' }, 401)
 
+  let mode: 'apply' | 'dry-run' = 'apply'
   let suppressCommunications = false
   let maxObjects = 10_000
   let checkpoint: StripePayloadReconciliationCheckpoint | null = null
   try {
-    const body = await request.json() as { confirmation?: unknown; maxObjects?: unknown; checkpoint?: unknown }
+    const body = await request.json() as { mode?: unknown; confirmation?: unknown; maxObjects?: unknown; checkpoint?: unknown }
+    if (body.mode !== undefined && body.mode !== 'apply' && body.mode !== 'dry-run') {
+      return json({ ok: false, error: 'invalid_mode' }, 400)
+    }
+    mode = body.mode === 'dry-run' ? 'dry-run' : 'apply'
     suppressCommunications = body.confirmation === 'initial_backfill_suppress_communications'
     if (typeof body.maxObjects === 'number' && Number.isInteger(body.maxObjects)) {
       maxObjects = Math.min(Math.max(body.maxObjects, 1), 10_000)
@@ -66,7 +71,7 @@ export async function POST(request: Request): Promise<Response> {
       reconciliation = await reconcileStripeToPayload({
         payload,
         stripe: getStripe(),
-        mode: 'apply',
+        mode,
         livemode: stripeConfig.env === 'live',
         runId,
         maxObjects,
@@ -82,8 +87,8 @@ export async function POST(request: Request): Promise<Response> {
       })
     }
 
-    const delinquency = await sweepExpiredPaymentGrace({ payload })
-    const failed = (reconciliation?.totals.failed ?? 0) + delinquency.failed
+    const delinquency = mode === 'apply' ? await sweepExpiredPaymentGrace({ payload }) : null
+    const failed = (reconciliation?.totals.failed ?? 0) + (delinquency?.failed ?? 0)
     const ok = !reconciliationFailed && reconciliation !== null && failed === 0
 
     return json({
@@ -92,6 +97,7 @@ export async function POST(request: Request): Promise<Response> {
       reconciliation: reconciliation?.totals ?? null,
       reconciliationError: reconciliationFailed ? 'stripe_reconciliation_failed' : null,
       checkpoint: reconciliation?.checkpoint ?? null,
+      mode,
       communicationsSuppressed: suppressCommunications,
       delinquency,
     }, ok ? 200 : 500)

@@ -13,6 +13,8 @@ export const STRIPE_OPERATOR_ACTIONS = [
   'sync_subscription',
   'cancel_at_period_end',
   'resume_subscription',
+  'pause_subscription',
+  'resume_paused_subscription',
 ] as const
 
 export type StripeOperatorAction = (typeof STRIPE_OPERATOR_ACTIONS)[number]
@@ -233,7 +235,7 @@ function assertLiveMutationAuthorized(params: {
 async function applyDesiredCancellationState(params: {
   stripe: StripeOperatorClient
   subscription: Stripe.Subscription
-  action: Exclude<StripeOperatorAction, 'sync_subscription' | 'reconcile_all'>
+  action: Exclude<StripeOperatorAction, 'sync_subscription' | 'reconcile_all' | 'pause_subscription' | 'resume_paused_subscription'>
   actionRecordId: string
 }): Promise<{ subscription: Stripe.Subscription; status: StripeOperatorActionStatus }> {
   if (isTerminalSubscription(params.subscription)) {
@@ -254,6 +256,28 @@ async function applyDesiredCancellationState(params: {
     { idempotencyKey: `jpv-operator-${params.actionRecordId}-${params.action}` },
   )
 
+  return { subscription: updated, status: 'completed' }
+}
+
+async function applyPauseState(params: {
+  stripe: StripeOperatorClient
+  subscription: Stripe.Subscription
+  action: 'pause_subscription' | 'resume_paused_subscription'
+  actionRecordId: string
+}): Promise<{ subscription: Stripe.Subscription; status: StripeOperatorActionStatus }> {
+  if (isTerminalSubscription(params.subscription)) {
+    throw new StripeOperatorActionError('subscription_terminal', 'Canceled or expired subscriptions cannot be paused or resumed.')
+  }
+
+  const shouldPause = params.action === 'pause_subscription'
+  const isPaused = Boolean(params.subscription.pause_collection)
+  if (shouldPause === isPaused) return { subscription: params.subscription, status: 'skipped' }
+
+  const updated = await params.stripe.subscriptions.update(
+    params.subscription.id,
+    { pause_collection: shouldPause ? { behavior: 'void' } : null },
+    { idempotencyKey: `jpv-operator-${params.actionRecordId}-${params.action}` },
+  )
   return { subscription: updated, status: 'completed' }
 }
 
@@ -314,12 +338,19 @@ export async function executeStripeOperatorAction(params: {
 
   let status: StripeOperatorActionStatus = 'completed'
   if (params.action !== 'sync_subscription') {
-    const update = await applyDesiredCancellationState({
-      stripe: params.dependencies.stripe,
-      subscription,
-      action: params.action,
-      actionRecordId,
-    })
+    const update = params.action === 'pause_subscription' || params.action === 'resume_paused_subscription'
+      ? await applyPauseState({
+          stripe: params.dependencies.stripe,
+          subscription,
+          action: params.action,
+          actionRecordId,
+        })
+      : await applyDesiredCancellationState({
+          stripe: params.dependencies.stripe,
+          subscription,
+          action: params.action,
+          actionRecordId,
+        })
     subscription = update.subscription
     status = update.status
   }

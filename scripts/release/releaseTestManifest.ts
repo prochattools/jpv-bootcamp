@@ -112,6 +112,7 @@ export const RELEASE_TEST_MANIFEST: ReleaseTestEntry[] = [
   test('migration.subscription-projection-sql', 'migration inventory, readiness, rehearsal, and rollback safety', 'prisma/migrations/20260703_120000_add_subscription_projection.test.ts', 'Validates additive subscription-projection migration SQL.', 'Subscription projection migration safety regressed.', 'M1-02'),
   test('migration.subscription-commitment-sql', 'migration inventory, readiness, rehearsal, and rollback safety', 'prisma/migrations/20260710_214000_add_subscription_commitment_projection.test.ts', 'Validates additive commitment-projection migration SQL.', 'Commitment migration safety regressed.', 'M0-05', ['M0-05']),
   test('migration.support-request-sql', 'migration inventory, readiness, rehearsal, and rollback safety', 'prisma/migrations/20260712_151700_add_support_requests.test.ts', 'Validates the unapplied support-request migration and rollback notes.', 'Support intake cannot be released safely after migration approval.', 'M1-01', ['M1-01']),
+  test('migration.support-request-phone-sql', 'migration inventory, readiness, rehearsal, and rollback safety', 'prisma/migrations/20260826_100000_add_support_request_phone.test.ts', 'Validates the additive support-request phone migration without modifying existing rows.', 'Support requester phone storage cannot be released safely.', 'M1-01', ['M1-01']),
   test('migration.subscription-contract', 'migration inventory, readiness, rehearsal, and rollback safety', 'scripts/subscription_projection_migration.test.ts', 'Protects the subscription projection schema contract.', 'Webhook projection and schema expectations diverged.', 'M0-05', ['M0-05']),
   test('migration.payload-preferences', 'migration inventory, readiness, rehearsal, and rollback safety', 'scripts/payload_preferences_constraint_migration.test.ts', 'Protects Payload preference constraint migration safety.', 'Payload admin preference migration safety regressed.', 'Payload'),
   test('migration.payload-staging-boundary', 'migration inventory, readiness, rehearsal, and rollback safety', 'scripts/payload_staging_migration_boundary.test.ts', 'Ensures staging migration actions remain separately authorized.', 'Release validation could apply migrations implicitly.', 'M1-02'),
@@ -230,6 +231,21 @@ export const RELEASE_TEST_MANIFEST: ReleaseTestEntry[] = [
   test('routes.no-legacy-learn-namespace', 'route architecture and MVP integration', 'scripts/no_legacy_learn_namespace.test.ts', 'Prevents the removed legacy member namespace from returning to current-state code or docs.', 'The removed member namespace reappeared in runtime code, tests, or active documentation.', 'M1-05', ['M1-05']),
   test('routes.mvp-integration', 'route architecture and MVP integration', 'scripts/mvp_route_integration.test.ts', 'Protects cross-feature route integration and imports.', 'Launch-critical routes no longer compose safely.', 'M1-02'),
   test('routes.community-preview', 'route architecture and MVP integration', 'scripts/community_preview_mvp.test.ts', 'Protects community preview routing and access claims.', 'Community preview can over-promise persisted behavior.', 'M1-02'),
+
+  test('portal-admin.source-structure', 'member portal and entitlement behavior', 'scripts/portal_admin_inline.test.ts', 'Validates portal admin component structure and import safety.', 'Portal admin components can import server modules or use unsafe patterns.', 'M1-02'),
+  test('portal-admin.behavioral-contract', 'member portal and entitlement behavior', 'scripts/portal_admin_behavioral.test.ts', 'Validates portal admin behavioral contracts: ownership verification, space validation, audit, and access control patterns.', 'Portal admin actions can bypass ownership checks, skip audit, or use stale client state.', 'M1-02'),
+  {
+    id: 'portal-admin.mutation-smoke-gate',
+    category: 'member portal and entitlement behavior',
+    command: { executable: 'pnpm', args: ['exec', 'tsx', 'scripts/portal-admin-smoke-gate.test.ts'] },
+    testPath: 'scripts/portal-admin-smoke-gate.test.ts',
+    launchCriticalReason: 'Portal admin mutation smoke evidence gate — blocks staging release if real-app mutation smoke (create/edit/delete + reload evidence) has not been run today against staging.',
+    requirement: 'conditional',
+    condition: 'STAGING_GATE',
+    failureMeaning: 'Portal admin staging smoke evidence is missing or has failures — staging release must not proceed.',
+    owner: 'M1-02',
+    covers: [],
+  },
 
   command('audit.production-high', 'dependency audit disposition', 'pnpm', ['exec', 'pnpm', 'audit', '--prod', '--audit-level', 'high', '--ignore-registry-errors'], 'Fails release validation on any high or critical production advisory while tolerating the retired registry audit endpoint transport failure.', 'A high or critical production dependency advisory is unresolved.', 'M0-06/M0-09', ['M0-06', 'M0-09']),
 

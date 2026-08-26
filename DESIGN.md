@@ -114,14 +114,14 @@ Key characteristics:
 
 The palette is bright without becoming noisy. Green carries identity and action; sunshine brings warmth; red communicates urgency only.
 
-- **JPV Green** (`#2F805B`): primary calls to action, current selection, success accents, and high-value highlights.
-- **JPV Green Deep** (`#123D2D`): accessible green text, strong borders, and pressed states on light surfaces.
-- **JPV Green Bright** (`#6BCF8A`): selective success and supporting accents, never large body text.
+- **JPV Green** (`#2C9E9E`): primary calls to action, current selection, success accents, and high-value highlights.
+- **JPV Green Deep** (`#144E4E`): accessible green text, strong borders, and pressed states on light surfaces.
+- **JPV Green Bright** (`#74C4C4`): selective success and supporting accents, never large body text.
 - **Sunshine** (`#E8C65A`) with **Sunshine Ink** (`#6F5A1F`): badges, section atmosphere, and supportive emphasis. Use the darker ink for readable text on light surfaces.
 - **Urgent Red** (`#C94F4F`) with **Danger Surface** (`#F8ECE8`) and **Danger Ink** (`#78463D`): errors, destructive actions, and genuinely urgent notices. Always pair with text or an icon.
-- **Canvas** (`#FFFEFA`): default page and email background.
-- **Surface** (`#F5F3EC`) and **Surface Strong** (`#E8ECE7`): grouping and tonal elevation.
-- **Ink** (`#24332B`), **Muted** (`#687068`), and **Border** (`#DEDBD1`): green-tinted neutral hierarchy. Muted text remains at least 4.5:1 against both Canvas and Surface.
+- **Canvas** (`#FAF8F4`): default page and email background.
+- **Surface** (`#F4F0E8`) and **Surface Strong** (`#E9E2D5`): grouping and tonal elevation.
+- **Ink** (`#3A3428`), **Muted** (`#6E6350`), and **Border** (`#D9CFBC`): warm neutral hierarchy. Muted text remains at least 4.5:1 against both Canvas and Surface.
 
 Every final combination must meet WCAG AA. Focus uses a high-contrast green ring with a canvas offset. Disabled, warning, error, and success states use shape, copy, and iconography in addition to color.
 

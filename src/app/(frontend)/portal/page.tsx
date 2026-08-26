@@ -134,7 +134,7 @@ export default async function PortalDashboardPage({ searchParams }: PortalDashbo
         <section>
           <p className='jpv-eyebrow'>JPV Bootcamp — Administrator</p>
           <h1 className='mt-2 text-2xl font-semibold tracking-tight text-jpv-ink'>Portal overview</h1>
-          <p className='mt-1 text-sm text-jpv-muted'>You are viewing the member portal as a platform administrator. Use the admin panel to manage content, or toggle Admin Mode in the top bar to explore the member experience.</p>
+          <p className='mt-1 text-sm text-jpv-muted'>You are viewing the member portal as a platform administrator. Toggle Admin Mode in the top bar to access management controls on course and community pages.</p>
         </section>
         <section>
           <h2 className='mb-4 text-xs font-extrabold uppercase tracking-widest text-jpv-muted'>Quick links</h2>
@@ -266,27 +266,27 @@ export default async function PortalDashboardPage({ searchParams }: PortalDashbo
 
       {/* 3. Quick stats row */}
       <section aria-label='Learning stats'>
-        <div className='grid grid-cols-2 gap-4 md:grid-cols-3'>
-          <div className='rounded-xl bg-white p-5 shadow-sm dark:bg-neutral-900'>
-            <p className='text-xs font-semibold uppercase tracking-wider text-jpv-muted'>
+        <div className='grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3'>
+          <div className='rounded-xl bg-jpv-ink p-5 shadow-sm dark:bg-jpv-surface-strong'>
+            <p className='text-xs font-semibold uppercase tracking-wider text-[#A6D9D9] dark:text-jpv-brand'>
               Courses enrolled
             </p>
-            <p className='mt-2 text-3xl font-bold text-jpv-ink'>{enrolledCount}</p>
+            <p className='mt-2 text-3xl font-bold text-[#FAF8F4] dark:text-jpv-ink'>{enrolledCount}</p>
           </div>
-          <div className='rounded-xl bg-white p-5 shadow-sm dark:bg-neutral-900'>
-            <p className='text-xs font-semibold uppercase tracking-wider text-jpv-muted'>
+          <div className='rounded-xl bg-jpv-ink p-5 shadow-sm dark:bg-jpv-surface-strong'>
+            <p className='text-xs font-semibold uppercase tracking-wider text-[#A6D9D9] dark:text-jpv-brand'>
               Lessons completed
             </p>
-            <p className='mt-2 text-3xl font-bold text-jpv-ink'>{completedLessonsTotal}</p>
+            <p className='mt-2 text-3xl font-bold text-[#FAF8F4] dark:text-jpv-ink'>{completedLessonsTotal}</p>
             {totalLessonsCount > 0 ? (
-              <p className='mt-1 text-xs text-jpv-muted'>of {totalLessonsCount} total</p>
+              <p className='mt-1 text-xs text-[#A6D9D9] dark:text-jpv-muted'>of {totalLessonsCount} total</p>
             ) : null}
           </div>
-          <div className='rounded-xl bg-white p-5 shadow-sm dark:bg-neutral-900'>
-            <p className='text-xs font-semibold uppercase tracking-wider text-jpv-muted'>
+          <div className='rounded-xl bg-jpv-ink p-5 shadow-sm dark:bg-jpv-surface-strong'>
+            <p className='text-xs font-semibold uppercase tracking-wider text-[#A6D9D9] dark:text-jpv-brand'>
               Overall progress
             </p>
-            <p className='mt-2 text-3xl font-bold text-jpv-ink'>
+            <p className='mt-2 text-3xl font-bold text-[#FAF8F4] dark:text-jpv-ink'>
               {overallPercent !== null ? `${overallPercent}%` : '—'}
             </p>
           </div>

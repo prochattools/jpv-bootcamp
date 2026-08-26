@@ -27,6 +27,7 @@ export type LiveKitGrant = {
   room: string
   roomJoin: boolean
   canPublish: boolean
+  canPublishData?: boolean
   canSubscribe: boolean
   roomAdmin?: boolean
 }
@@ -41,9 +42,9 @@ export type LiveKitTokenOptions = {
 /**
  * Build a signed LiveKit JWT (HS256).
  *
- * IMPORTANT: The returned token is intended for server-side use only or to be
- * delivered to the client via an httpOnly cookie.  The token MUST NOT appear in
- * a plain JSON response body — the calling route enforces this.
+ * The route delivers this short-lived token to the joining client and also
+ * stores it in an httpOnly cookie for compatibility with existing integrations.
+ * Keep the signing secret server-side; never expose it to the browser.
  */
 export function buildLiveKitToken(opts: LiveKitTokenOptions, cfg: LiveKitConfig): string {
   const now = Math.floor(Date.now() / 1000)
@@ -55,6 +56,7 @@ export function buildLiveKitToken(opts: LiveKitTokenOptions, cfg: LiveKitConfig)
     room: opts.grant.room,
     roomJoin: opts.grant.roomJoin,
     canPublish: opts.grant.canPublish,
+    ...(opts.grant.canPublishData === undefined ? {} : { canPublishData: opts.grant.canPublishData }),
     canSubscribe: opts.grant.canSubscribe,
   }
   if (opts.grant.roomAdmin) video.roomAdmin = true

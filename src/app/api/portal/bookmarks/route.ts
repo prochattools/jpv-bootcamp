@@ -17,11 +17,6 @@ function id(value: unknown): string | null {
   return null
 }
 
-function relationshipId(value: string): number | string {
-  const numeric = Number(value)
-  return Number.isSafeInteger(numeric) ? numeric : value
-}
-
 export async function POST(request: NextRequest) {
   const session = await resolvePayloadRequestSession(request.headers)
   if (!session.member?.id) return NextResponse.json({ ok: false, message: 'Please sign in again.' }, { status: 401 })
@@ -33,15 +28,9 @@ export async function POST(request: NextRequest) {
 
     const payload = await getPayload({ config }) as unknown as PayloadCourseWriteAPI
     const memberId = String(session.member.id)
-    let post: Record<string, unknown>
-    try {
-      post = await payload.findByID({ collection: 'payload_space_posts', id: postId, depth: 0, overrideAccess: true }) as Record<string, unknown>
-    } catch {
-      return NextResponse.json({ ok: false, message: 'This post is no longer available.' }, { status: 404 })
-    }
-
-    const spaceId = id(post.space)
-    if (post.moderationStatus !== 'visible' || !spaceId) {
+    const post = await payload.findByID({ collection: 'payload_space_posts', id: postId, depth: 0, overrideAccess: true }) as Record<string, unknown> | null
+    const spaceId = id(post?.space)
+    if (!post || post.moderationStatus !== 'visible' || !spaceId) {
       return NextResponse.json({ ok: false, message: 'This post is no longer available.' }, { status: 404 })
     }
     const access = await evaluatePayloadSpaceAccess(payload, { memberId, spaceId })
@@ -51,10 +40,10 @@ export async function POST(request: NextRequest) {
       collection: 'payload_space_reactions',
       where: {
         and: [
-          { actorMember: { equals: relationshipId(memberId) } },
+          { actorMember: { equals: memberId } },
           { reactionType: { equals: 'bookmark' } },
           { targetKind: { equals: 'post' } },
-          { targetPost: { equals: relationshipId(postId) } },
+          { targetPost: { equals: postId } },
         ],
       },
       limit: 1,
@@ -62,19 +51,19 @@ export async function POST(request: NextRequest) {
       overrideAccess: true,
     })
 
-    if (existing.docs[0]) {
-      if (!payload.delete) return NextResponse.json({ ok: false, message: 'Bookmark removal is unavailable.' }, { status: 500 })
+    if (existing.docs[0] && payload.delete) {
       await payload.delete({ collection: 'payload_space_reactions', id: existing.docs[0].id, overrideAccess: true })
       return NextResponse.json({ ok: true, bookmarked: false })
     }
+    if (existing.docs[0]) return NextResponse.json({ ok: true, bookmarked: true })
 
     await payload.create({
       collection: 'payload_space_reactions',
       data: {
-        actorMember: relationshipId(memberId),
+        actorMember: memberId,
         reactionType: 'bookmark',
         targetKind: 'post',
-        targetPost: relationshipId(postId),
+        targetPost: postId,
         metadata: { source: 'member_portal' },
       },
       overrideAccess: true,

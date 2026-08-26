@@ -175,8 +175,16 @@ function captureGitStatus(): string {
 }
 
 export function main(): void {
+  const args = process.argv.slice(2)
+  const enabledConditions = new Set<string>()
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '--enable-condition' && args[i + 1]) {
+      enabledConditions.add(args[i + 1] as string)
+      i++
+    }
+  }
   const before = captureGitStatus()
-  runReleaseManifest()
+  runReleaseManifest({ enabledConditions })
   const after = captureGitStatus()
   if (after !== before) {
     throw new Error('Release tests changed tracked or untracked repository paths')

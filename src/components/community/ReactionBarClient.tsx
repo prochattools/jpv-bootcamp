@@ -6,20 +6,13 @@ import { cn } from '@/helpers/utils'
 
 type ReactionType = 'helpful' | 'insightful' | 'celebrate'
 type ReactionCount = { label: string; count: number; reactionType?: ReactionType }
-type ReactionSummary = {
-  counts?: ReactionCount[]
-  totalCount?: number
-  viewerReaction?: ReactionType | null
-}
 
 type ReactionBarClientProps = {
   counts: readonly ReactionCount[]
   totalCount: number | null
   viewerReaction: ReactionType | null
-  targetKind: 'space_post' | 'space_comment' | 'lesson_comment'
+  targetKind: 'space_post' | 'space_comment' | 'lesson_comment' | 'content_post' | 'content_page'
   targetId: string | number
-  errorMessage?: string | null
-  label: string
   className?: string
 }
 
@@ -47,36 +40,34 @@ export function ReactionBarClient({
   viewerReaction,
   targetKind,
   targetId,
-  errorMessage = null,
-  label,
   className,
 }: ReactionBarClientProps) {
   const [currentCounts, setCurrentCounts] = useState(() => countMap(counts))
   const [currentTotal, setCurrentTotal] = useState(totalCount ?? 0)
   const [selected, setSelected] = useState<ReactionType | null>(viewerReaction)
   const [pending, setPending] = useState<ReactionType | null>(null)
-  const [error, setError] = useState<string | null>(errorMessage)
+  const [error, setError] = useState<string | null>(null)
 
   async function toggle(type: ReactionType) {
     if (pending) return
-
+    setError(null)
     const previousCounts = new Map(currentCounts)
     const previousTotal = currentTotal
     const previousSelected = selected
     const nextCounts = new Map(currentCounts)
-    const isRemoving = selected === type
+    let nextSelected: ReactionType | null = type
 
-    if (isRemoving) {
+    if (selected === type) {
       nextCounts.set(type, Math.max(0, (nextCounts.get(type) ?? 0) - 1))
+      nextSelected = null
     } else {
       if (selected) nextCounts.set(selected, Math.max(0, (nextCounts.get(selected) ?? 0) - 1))
       nextCounts.set(type, (nextCounts.get(type) ?? 0) + 1)
     }
 
-    setError(null)
     setCurrentCounts(nextCounts)
-    setCurrentTotal(Math.max(0, currentTotal + (isRemoving ? -1 : selected ? 0 : 1)))
-    setSelected(isRemoving ? null : type)
+    setCurrentTotal(Math.max(0, currentTotal + (selected === type ? -1 : selected ? 0 : 1)))
+    setSelected(nextSelected)
     setPending(type)
 
     try {
@@ -85,11 +76,12 @@ export function ReactionBarClient({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ targetKind, targetId: String(targetId), reactionType: type }),
       })
-      const result = await response.json() as { ok?: boolean; summary?: ReactionSummary; message?: string }
-      if (!response.ok || !result.ok || !result.summary) {
-        throw new Error(result.message || 'Unable to save this reaction.')
+      const result = (await response.json()) as {
+        ok?: boolean
+        summary?: { counts?: ReactionCount[]; totalCount?: number; viewerReaction?: ReactionType | null }
+        message?: string
       }
-
+      if (!response.ok || !result.ok || !result.summary) throw new Error(result.message || 'Unable to save this reaction.')
       setCurrentCounts(countMap(result.summary.counts ?? []))
       setCurrentTotal(result.summary.totalCount ?? 0)
       setSelected(result.summary.viewerReaction ?? null)
@@ -104,7 +96,7 @@ export function ReactionBarClient({
   }
 
   return (
-    <section aria-label={label} className={cn('flex flex-col gap-3 border-t border-jpv-border pt-5 sm:flex-row sm:items-center sm:justify-between', className)} data-engagement-component='reaction-bar'>
+    <section aria-label='Engagement' className={cn('flex flex-col gap-3 border-t border-jpv-border pt-5 sm:flex-row sm:items-center sm:justify-between', className)} data-engagement-component='reaction-bar'>
       <div className='min-w-0 flex-1 space-y-3'>
         <span className='inline-flex min-h-11 items-center gap-2 rounded-jpv-action border border-jpv-border bg-jpv-surface px-3 py-2 text-sm text-jpv-ink'>
           <ReactionIcon />
@@ -127,7 +119,7 @@ export function ReactionBarClient({
               type='button'
             >
               <ReactionIcon />
-              <span>{pending === option.type ? 'Saving…' : option.label}</span>
+              <span>{option.label}</span>
               <span className='tabular-nums'>{currentCounts.get(option.type) ?? 0}</span>
             </button>
           )

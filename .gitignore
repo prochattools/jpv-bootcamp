@@ -10,6 +10,7 @@
 /playwright-report/
 /test-results/
 /blob-report/
+/smoke-evidence/
 *.trace.zip
 
 # next.js

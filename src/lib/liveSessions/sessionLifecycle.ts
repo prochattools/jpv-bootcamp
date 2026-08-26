@@ -21,6 +21,8 @@ export type LiveSessionDocument = Record<string, unknown> & {
   hostUser?: unknown
   scheduledAt?: string
   capacity?: number
+  audience?: 'enrolled' | 'all' | 'selected'
+  targetMemberIds?: unknown
   audit?: unknown
 }
 
@@ -44,6 +46,8 @@ const AUDITED_FIELDS = [
   'hostUser',
   'scheduledAt',
   'capacity',
+  'audience',
+  'targetMemberIds',
 ] as const
 
 const ALLOWED_TRANSITIONS: Record<LiveSessionStatus, readonly LiveSessionStatus[]> = {
@@ -124,6 +128,7 @@ function sameRelationship(left: unknown, right: unknown): boolean {
 
 function comparable(value: unknown): unknown {
   if (value instanceof Date) return value.toISOString()
+  if (Array.isArray(value) || (value && typeof value === 'object')) return JSON.stringify(value)
   return value
 }
 

@@ -604,10 +604,12 @@ export interface PayloadEngagementReaction {
   id: number;
   member: number | PayloadMember;
   reactionType: 'helpful' | 'insightful' | 'celebrate';
-  targetKind: 'space_post' | 'space_comment' | 'lesson_comment';
+  targetKind: 'space_post' | 'space_comment' | 'lesson_comment' | 'content_post' | 'content_page';
   targetPost?: (number | null) | PayloadSpacePost;
   targetSpaceComment?: (number | null) | PayloadSpaceComment;
   targetLessonComment?: (number | null) | PayloadLessonComment;
+  targetContentPost?: (number | null) | PayloadPost;
+  targetContentPage?: (number | null) | PayloadPage;
   metadata?:
     | {
         [k: string]: unknown;
@@ -794,6 +796,115 @@ export interface BunnyVideo {
   createdAt: string;
 }
 /**
+ * Publish announcements and articles with pictures, downloads and managed video.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_posts".
+ */
+export interface PayloadPost {
+  id: number;
+  title: string;
+  slug: string;
+  excerpt?: string | null;
+  content?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  featuredImage?: (number | null) | PayloadMedia;
+  gallery?: (number | PayloadMedia)[] | null;
+  /**
+   * Managed Bunny Stream video displayed with this post.
+   */
+  featuredVideo?: (number | null) | BunnyVideo;
+  attachments?: (number | PayloadMedia)[] | null;
+  status: 'draft' | 'published' | 'archived';
+  /**
+   * Controls which members see this published update in the portal.
+   */
+  audience: 'all' | 'selected';
+  /**
+   * Member IDs selected by the portal announcement composer.
+   */
+  targetMemberIds?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  publishedAt?: string | null;
+  categories?: (number | PayloadCategory)[] | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Taxonomy categories used to organize posts and content.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_categories".
+ */
+export interface PayloadCategory {
+  id: number;
+  title: string;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Publish rich pages with managed images and Bunny video.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_pages".
+ */
+export interface PayloadPage {
+  id: number;
+  title: string;
+  slug: string;
+  /**
+   * Portal URL path this page maps to (e.g. "/portal/community/start-here")
+   */
+  portalRoute?: string | null;
+  summary?: string | null;
+  content?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  featuredImage?: (number | null) | PayloadMedia;
+  gallery?: (number | PayloadMedia)[] | null;
+  /**
+   * Managed Bunny Stream video displayed with this page.
+   */
+  featuredVideo?: (number | null) | BunnyVideo;
+  status: 'draft' | 'published' | 'archived';
+  publishedAt?: string | null;
+  sortOrder?: number | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * Files and media attached to community posts and comments.
  *
  * This interface was referenced by `Config`'s JSON-Schema
@@ -918,7 +1029,7 @@ export interface PayloadChatMessage {
 export interface PayloadMemberNotification {
   id: number;
   member: number | PayloadMember;
-  type: 'new_post' | 'new_comment' | 'mention' | 'system';
+  type: 'new_post' | 'new_comment' | 'mention' | 'announcement' | 'live_session' | 'system';
   actorName?: string | null;
   title?: string | null;
   href?: string | null;
@@ -959,6 +1070,22 @@ export interface LiveSession {
   hostUser: number | PayloadUser;
   scheduledAt: string;
   capacity: number;
+  /**
+   * Controls who can see and join this session in the member portal.
+   */
+  audience: 'enrolled' | 'all' | 'selected';
+  /**
+   * Member IDs selected by the portal administrator when audience is selected.
+   */
+  targetMemberIds?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
   description?: {
     root: {
       type: string;
@@ -1130,99 +1257,6 @@ export interface PayloadLessonProgress {
     | number
     | boolean
     | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * Publish rich pages with managed images and Bunny video.
- *
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload_pages".
- */
-export interface PayloadPage {
-  id: number;
-  title: string;
-  slug: string;
-  /**
-   * Portal URL path this page maps to (e.g. "/portal/community/start-here")
-   */
-  portalRoute?: string | null;
-  summary?: string | null;
-  content?: {
-    root: {
-      type: string;
-      children: {
-        type: any;
-        version: number;
-        [k: string]: unknown;
-      }[];
-      direction: ('ltr' | 'rtl') | null;
-      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
-      indent: number;
-      version: number;
-    };
-    [k: string]: unknown;
-  } | null;
-  featuredImage?: (number | null) | PayloadMedia;
-  gallery?: (number | PayloadMedia)[] | null;
-  /**
-   * Managed Bunny Stream video displayed with this page.
-   */
-  featuredVideo?: (number | null) | BunnyVideo;
-  status: 'draft' | 'published' | 'archived';
-  publishedAt?: string | null;
-  sortOrder?: number | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * Publish announcements and articles with pictures, downloads and managed video.
- *
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload_posts".
- */
-export interface PayloadPost {
-  id: number;
-  title: string;
-  slug: string;
-  excerpt?: string | null;
-  content?: {
-    root: {
-      type: string;
-      children: {
-        type: any;
-        version: number;
-        [k: string]: unknown;
-      }[];
-      direction: ('ltr' | 'rtl') | null;
-      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
-      indent: number;
-      version: number;
-    };
-    [k: string]: unknown;
-  } | null;
-  featuredImage?: (number | null) | PayloadMedia;
-  gallery?: (number | PayloadMedia)[] | null;
-  /**
-   * Managed Bunny Stream video displayed with this post.
-   */
-  featuredVideo?: (number | null) | BunnyVideo;
-  attachments?: (number | PayloadMedia)[] | null;
-  status: 'draft' | 'published' | 'archived';
-  publishedAt?: string | null;
-  categories?: (number | PayloadCategory)[] | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * Taxonomy categories used to organize posts and content.
- *
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "payload_categories".
- */
-export interface PayloadCategory {
-  id: number;
-  title: string;
   updatedAt: string;
   createdAt: string;
 }
@@ -1643,6 +1677,9 @@ export interface PayloadBillingAccount {
   defaultPaymentMethodId?: string | null;
   billingEmail?: string | null;
   lastSyncedAt?: string | null;
+  /**
+   * Provider snapshot and reconciliation metadata. This collection is read-only.
+   */
   metadata?:
     | {
         [k: string]: unknown;
@@ -1691,6 +1728,9 @@ export interface PayloadSubscription {
   canceledAt?: string | null;
   lastStripeEventId?: string | null;
   lastSyncedAt?: string | null;
+  /**
+   * Provider snapshot and reconciliation metadata. This collection is read-only.
+   */
   metadata?:
     | {
         [k: string]: unknown;
@@ -1791,13 +1831,15 @@ export interface PayloadBillingAction {
   member?: (number | null) | PayloadMember;
   requestedBy?: (number | null) | PayloadUser;
   /**
-   * Choose an operator action. Sync refreshes the record from Stripe. Cancel at period end marks the subscription to end at the next renewal. Reverse cancellation restores it.
+   * Choose an operator action. Sync refreshes from Stripe; pause/resume and cancellation changes are guarded, idempotent, audited, and mirrored back into Payload.
    */
   actionType:
     | 'reconcile_all'
     | 'sync_subscription'
     | 'cancel_at_period_end'
     | 'resume_subscription'
+    | 'pause_subscription'
+    | 'resume_paused_subscription'
     | 'checkout_completed'
     | 'subscription_created'
     | 'subscription_updated'
@@ -2416,6 +2458,9 @@ export interface PayloadStripeShadowProjection {
   shadowedAt?: string | null;
   observedStatus?: string | null;
   notes?: string | null;
+  /**
+   * Full provider snapshot and reconciliation metadata. This collection is read-only.
+   */
   metadata?:
     | {
         [k: string]: unknown;
@@ -3014,6 +3059,8 @@ export interface PayloadEngagementReactionsSelect<T extends boolean = true> {
   targetPost?: T;
   targetSpaceComment?: T;
   targetLessonComment?: T;
+  targetContentPost?: T;
+  targetContentPage?: T;
   metadata?: T;
   updatedAt?: T;
   createdAt?: T;
@@ -3100,6 +3147,8 @@ export interface LiveSessionsSelect<T extends boolean = true> {
   hostUser?: T;
   scheduledAt?: T;
   capacity?: T;
+  audience?: T;
+  targetMemberIds?: T;
   description?: T;
   startedAt?: T;
   completedAt?: T;
@@ -3316,6 +3365,8 @@ export interface PayloadPostsSelect<T extends boolean = true> {
   featuredVideo?: T;
   attachments?: T;
   status?: T;
+  audience?: T;
+  targetMemberIds?: T;
   publishedAt?: T;
   categories?: T;
   updatedAt?: T;

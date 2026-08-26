@@ -1,8 +1,10 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useCallback, useState } from 'react'
 import { LiveKitRoom, VideoConference, RoomAudioRenderer } from '@livekit/components-react'
 import '@livekit/components-styles'
+
+import { LiveSessionState } from '@/components/portal/LiveSessionState'
 
 type TokenState =
   | { phase: 'idle' }
@@ -19,7 +21,7 @@ function SpinnerIcon() {
   return (
     <svg
       aria-hidden='true'
-      className='h-5 w-5 animate-spin'
+      className='h-5 w-5 animate-spin motion-reduce:animate-none'
       fill='none'
       viewBox='0 0 24 24'
     >
@@ -50,19 +52,10 @@ function CallStage({ token, wsUrl, roomName, sessionTitle }: {
     <div className='flex flex-col gap-4'>
       <div className='flex items-center justify-between rounded-xl border border-jpv-border bg-jpv-canvas px-5 py-3'>
         <span className='text-sm font-semibold text-jpv-ink'>{sessionTitle}</span>
-        <span className='inline-flex items-center gap-1.5 rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-800'>
-          <span className='relative flex h-2 w-2'>
-            <span className='absolute inline-flex h-full w-full animate-ping rounded-full bg-green-500 opacity-75' />
-            <span className='relative inline-flex h-2 w-2 rounded-full bg-green-500' />
-          </span>
-          Live now
-        </span>
+        <LiveSessionState compact status='live' />
       </div>
 
-      <div
-        className='overflow-hidden rounded-jpv-panel border border-jpv-border bg-neutral-900'
-        style={{ minHeight: '480px' }}
-      >
+      <div className='jpv-livekit-shell overflow-hidden rounded-jpv-panel border border-jpv-border bg-neutral-900'>
         <LiveKitRoom
           serverUrl={wsUrl}
           token={token}
@@ -70,16 +63,21 @@ function CallStage({ token, wsUrl, roomName, sessionTitle }: {
           audio={true}
           video={false}
           data-lk-theme='default'
-          className='h-full'
+          className='h-full w-full'
         >
           <VideoConference />
           <RoomAudioRenderer />
         </LiveKitRoom>
       </div>
 
-      <p className='text-xs text-jpv-muted'>
-        Room: {roomName} · Camera and microphone access required · Leave the page to disconnect
-      </p>
+      <div className='rounded-jpv-card bg-jpv-surface p-4 text-xs leading-5 text-jpv-muted'>
+        <p>
+          <span className='font-semibold text-jpv-ink'>Connected to:</span> {roomName}
+        </p>
+        <p className='mt-1'>
+          Use the room controls for your microphone and camera. Leaving this page disconnects you from the call.
+        </p>
+      </div>
     </div>
   )
 }
@@ -123,7 +121,11 @@ export default function LiveCallRoom({ sessionId, sessionTitle }: Props) {
 
   if (state.phase === 'loading') {
     return (
-      <div className='flex flex-col items-center gap-4 py-8 text-center'>
+      <div
+        aria-live='polite'
+        className='flex flex-col items-center gap-4 py-8 text-center'
+        role='status'
+      >
         <SpinnerIcon />
         <p className='text-sm font-medium text-jpv-muted'>Connecting…</p>
         <p className='text-xs text-jpv-muted'>Your browser will request camera and microphone access.</p>
@@ -134,10 +136,20 @@ export default function LiveCallRoom({ sessionId, sessionTitle }: Props) {
   return (
     <div className='space-y-4'>
       {state.phase === 'error' && (
-        <div className='jpv-notice jpv-notice-danger text-sm'>
-          {errorMessage(state.reason)}
+        <div aria-live='assertive' className='jpv-notice jpv-notice-danger text-sm' role='alert'>
+          <p className='font-semibold text-jpv-ink'>Could not join the call</p>
+          <p className='mt-1 text-jpv-muted'>{errorMessage(state.reason)}</p>
         </div>
       )}
+
+      <div className='rounded-jpv-card bg-jpv-surface p-5 sm:p-6'>
+        <h2 className='text-base font-semibold text-jpv-ink'>Before you join</h2>
+        <ul className='mt-3 space-y-2 text-sm leading-6 text-jpv-muted'>
+          <li>Use a stable internet connection and headphones when possible.</li>
+          <li>Allow browser microphone and camera access when prompted.</li>
+          <li>You can choose whether to enable your camera inside the room.</li>
+        </ul>
+      </div>
 
       <div className='flex flex-col items-center gap-3 py-2'>
         <button

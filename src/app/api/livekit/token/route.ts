@@ -8,10 +8,10 @@
  *     The entitlement check calls /api/entitlements with the user's billing token.
  *     If no active subscription is found the request is rejected with 403.
  *  2. The token is delivered via an httpOnly, Secure, SameSite=Lax Set-Cookie header
- *     named `livekit_room_token` — it is NEVER returned in the JSON response body.
- *  3. The response body only contains { ok: true, roomName, wsUrl } so the client
- *     can connect to LiveKit using document.cookie / the SDK's cookie-based token
- *     picker, without ever exposing the raw JWT in JavaScript-accessible memory.
+ *     named `livekit_room_token` and returned to the joining client in the JSON
+ *     response because the LiveKit React client requires an explicit token.
+ *  3. The signing secret and API key remain server-side; only the short-lived room
+ *     token and websocket URL are sent to the authenticated joining client.
  *  4. The host check: if the authenticated user is the `hostUser` of the session,
  *     they get canPublish:true; all other members get canPublish:false.
  *
@@ -25,6 +25,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { headers } from 'next/headers'
+import { randomUUID } from 'node:crypto'
 import { getPayload } from 'payload'
 import config from '@payload-config'
 import { getLiveKitConfig, buildLiveKitToken } from '@/lib/livekit-config'
@@ -254,9 +255,9 @@ export async function GET(req: NextRequest) {
  *
  * Security:
  *  - Auth is via Payload session cookie, not a billing token.
- *  - The token is NEVER returned in the JSON response body.
- *  - It is set as an httpOnly cookie named `livekit_room_token`.
- *  - Response body only contains { ok: true, roomName, wsUrl }.
+ *  - The short-lived room token is returned to the LiveKit client and also set
+ *    as an httpOnly cookie named `livekit_room_token`.
+ *  - Response body contains { ok: true, roomName, wsUrl, token }.
  */
 export async function POST(req: NextRequest) {
   // Parse body
@@ -307,8 +308,10 @@ export async function POST(req: NextRequest) {
       collection: 'live_sessions',
       id: sessionId,
       depth: 1,
-      overrideAccess: false,
-      user: { id: user.id, collection: user.collection } as any,
+      // Audience eligibility is enforced below for enrolled, all, and selected
+      // sessions. Payload's collection read filter only understands the legacy
+      // course/space relationship and would incorrectly hide targeted rooms.
+      overrideAccess: true,
     })
     .catch((): null => null)
 
@@ -325,6 +328,8 @@ export async function POST(req: NextRequest) {
     course?: { id?: string | number } | string | number | null
     space?: { id?: string | number } | string | number | null
     roomName?: string
+    audience?: 'enrolled' | 'all' | 'selected'
+    targetMemberIds?: unknown
   }
 
   if (session.status === 'completed' || session.status === 'cancelled' || session.status === 'ended') {
@@ -373,8 +378,18 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Verify the member is authorized for this session type
-    if (isSpaceSession) {
+    const audience = session.audience === 'all' || session.audience === 'selected' ? session.audience : 'enrolled'
+    if (audience === 'selected') {
+      const selected = Array.isArray(session.targetMemberIds) && session.targetMemberIds.some((value) => String(value) === String(user.id))
+      if (!selected) return NextResponse.json({ ok: false, reason: 'not_entitled' } satisfies TokenErrorResponse, { status: 403 })
+    }
+
+    if (audience === 'all' || audience === 'selected') {
+      const memberDoc = await payloadLib.findByID({ collection: 'payload_members', id: user.id, depth: 0, overrideAccess: true }).catch((): null => null) as { accountStatus?: string; emailVerifiedAt?: string | null } | null
+      if (!memberDoc || memberDoc.accountStatus !== 'active' || !memberDoc.emailVerifiedAt) {
+        return NextResponse.json({ ok: false, reason: 'not_entitled' } satisfies TokenErrorResponse, { status: 403 })
+      }
+    } else if (isSpaceSession) {
       // Space call: member must have active account + active space membership
       const [memberDoc, membership] = await Promise.all([
         payloadLib.findByID({
@@ -434,7 +449,11 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const userIdentity = user.email ?? String(user.id)
+  // LiveKit identities are connection-scoped. Reusing the account email would
+  // cause a second browser/device using the same account to replace the first
+  // participant in the room.
+  const userName = user.email ?? String(user.id)
+  const userIdentity = `${String(user.id)}-${randomUUID()}`
 
   let livekitConfig
   try {
@@ -451,11 +470,12 @@ export async function POST(req: NextRequest) {
   const jwt = buildLiveKitToken(
     {
       identity: userIdentity,
-      name: userIdentity,
+      name: userName,
       grant: {
         room: roomName,
         roomJoin: true,
         canPublish,
+        canPublishData: true,
         canSubscribe: true,
         roomAdmin: isHost,
       },

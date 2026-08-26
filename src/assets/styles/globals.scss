@@ -8,13 +8,27 @@
 
 .dark {
 	color-scheme: dark;
-	--jpv-canvas: #0f1117;
-	--jpv-surface: #1a1d27;
-	--jpv-surface-strong: #252836;
-	--jpv-border: #2d3148;
-	--jpv-ink: #f0f2f7;
-	--jpv-muted: #8b9abf;
-	--jpv-secondary: #8b9abf;
+	/* The frontend layout intentionally keeps the brand variables inline for
+	 * hydration-safe first paint. Important is required here so the selected
+	 * theme can override those light defaults. */
+	--jpv-canvas: #0f1117 !important;
+	--jpv-surface: #1a1d27 !important;
+	--jpv-surface-strong: #252836 !important;
+	--jpv-border: #2d3148 !important;
+	--jpv-ink: #f0f2f7 !important;
+	--jpv-muted: #c0c8df !important;
+	--jpv-secondary: #c0c8df !important;
+	--jpv-brand: #74c4c4 !important;
+	--jpv-brand-hover: #8bd2d2 !important;
+	--jpv-brand-active: #a6d9d9 !important;
+	--jpv-brand-deep: #a6d9d9 !important;
+	--jpv-brand-bright: #cfeaea !important;
+	--jpv-sunshine: #f1d77e !important;
+	--jpv-sunshine-ink: #f1d77e !important;
+	--jpv-danger: #f08a8a !important;
+	--jpv-danger-surface: #3a2024 !important;
+	--jpv-danger-ink: #ffc0bd !important;
+	--jpv-focus: #8bd2d2 !important;
 	--jpv-inverse-muted: #505b7a;
 }
 
@@ -229,14 +243,6 @@ body {
 	}
 }
 
-#theme-toggle:checked {
-	background-color: var(--jpv-brand-deep);
-}
-
-#theme-toggle:checked ~ span:last-child {
-	--tw-translate-x: 1.75rem;
-}
-
 .close-div button {
 	color: var(--jpv-canvas);
 	display: none;
@@ -244,6 +250,55 @@ body {
 
 .glass {
 	background: color-mix(in srgb, var(--jpv-brand-deep) 92%, transparent);
+}
+
+/* Keep the LiveKit prefab inside the portal content column. The prefab's
+ * default chat width is intentionally generous, which otherwise overflows a
+ * narrow portal page and clips the chat panel and controls. */
+.jpv-livekit-shell {
+	width: 100%;
+	height: min(72dvh, 720px);
+	min-height: 520px;
+	min-width: 0;
+	--lk-control-bar-height: 72px;
+}
+
+.jpv-livekit-shell .lk-video-conference {
+	display: flex;
+	width: 100%;
+	height: 100%;
+	min-width: 0;
+	overflow: hidden;
+}
+
+.jpv-livekit-shell .lk-video-conference-inner {
+	min-width: 0;
+	min-height: 0;
+	flex: 1 1 auto;
+}
+
+.jpv-livekit-shell .lk-chat {
+	width: min(360px, 42%);
+	min-width: 260px;
+	max-width: 360px;
+	flex: 0 1 360px;
+}
+
+@media (max-width: 700px) {
+	.jpv-livekit-shell {
+		height: min(74dvh, 640px);
+		min-height: 460px;
+	}
+
+	.jpv-livekit-shell .lk-chat {
+		position: absolute;
+		top: 0;
+		right: 0;
+		bottom: var(--lk-control-bar-height);
+		z-index: 20;
+		width: min(100%, 360px);
+		max-width: 100%;
+	}
 }
 
 @media (prefers-reduced-motion: reduce) {

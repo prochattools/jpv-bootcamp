@@ -46,6 +46,7 @@ const adminHtml = (title: string, body: string) => `<!doctype html>
     .table { border: 1px solid var(--jpv-border); border-radius: 8px; overflow: hidden; width: 100%; border-collapse: collapse; }
     .table th { background: var(--jpv-surface); color: var(--jpv-muted); font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; padding: 0.625rem 1rem; border-bottom: 1px solid var(--jpv-border); text-align: left; }
     .table td { padding: 0.75rem 1rem; border-bottom: 1px solid var(--jpv-border); }
+    @media (max-width: 768px) { .table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; } }
     .field-type { margin-bottom: 1.5rem; }
     .field-type label { color: var(--jpv-ink); font-size: 0.875rem; font-weight: 500; display: block; margin-bottom: 0.25rem; }
     input, textarea { border: 1px solid var(--jpv-border); border-radius: 6px; padding: 0.5rem; width: 100%; }
@@ -136,7 +137,7 @@ test.describe('Payload admin collection list — visual', () => {
         body: adminHtml('Members — Admin', `
           <main class="view--collection-list">
             <div class="list-header"><h1>Members</h1></div>
-            <table class="table">
+            <table aria-label="Scrollable members table" class="table" tabindex="0">
               <thead>
                 <tr>
                   <th scope="col">Email</th>

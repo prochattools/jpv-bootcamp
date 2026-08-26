@@ -1,5 +1,4 @@
 import Link from 'next/link'
-import { Shield } from 'lucide-react'
 
 import { requirePortalAccess } from '@/lib/auth/requirePortalAccess'
 import { getAffiliateSummary } from '@/lib/payloadCourse/affiliateReporting'
@@ -31,15 +30,16 @@ export default async function PortalPartnersPage(): Promise<JSX.Element> {
 
   if (actor.kind === 'admin') {
     return (
-      <div className='mx-auto max-w-2xl px-4 py-12 text-center'>
-        <Shield aria-hidden='true' className='mx-auto mb-4 h-10 w-10 text-jpv-brand-deep' />
-        <h1 className='text-xl font-semibold text-jpv-ink'>Administrator view</h1>
-        <p className='mt-2 text-sm text-jpv-muted'>
-          This section shows member-specific data. Use a member account to see the full member experience, or manage content from the admin panel.
-        </p>
-        <div className='mt-6 flex justify-center gap-3'>
-          <Link className='jpv-button-primary' href='/admin'>Admin Panel</Link>
-          <Link className='jpv-button-secondary' href='/portal'>Dashboard</Link>
+      <div className='space-y-6'>
+        <section>
+          <p className='jpv-eyebrow'>Administration</p>
+          <h1 className='mt-3 text-2xl font-semibold tracking-tight text-jpv-ink'>Partners</h1>
+          <p className='mt-2 max-w-2xl text-sm leading-6 text-jpv-muted'>
+            Partner management is scoped to billing and referral operations outside the portal admin scope.
+          </p>
+        </section>
+        <div className='rounded-jpv-panel border border-dashed border-jpv-border bg-jpv-canvas p-8 text-center text-sm text-jpv-muted'>
+          Partner and affiliate data is member-specific. Navigate to community or courses to manage content.
         </div>
       </div>
     )

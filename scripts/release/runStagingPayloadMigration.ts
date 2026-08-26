@@ -30,7 +30,7 @@ const REQUIRED_SCHEMA = STAGING_TARGET.schema
 const REQUIRED_DATABASE = STAGING_TARGET.database
 const REQUIRED_ENVIRONMENT = STAGING_TARGET.environment
 const REQUIRED_TARGET_ID = STAGING_TARGET.targetId
-// The reviewed billing release is the exact six-migration batch following the
+// The reviewed forward release is the exact migration batch following the
 // verified 40-migration staging baseline. Keep this explicit: automatically
 // treating every future migration as part of this approval would widen scope.
 const EXPECTED_FORWARD_BATCH = [
@@ -40,6 +40,9 @@ const EXPECTED_FORWARD_BATCH = [
   '20260825_123000_membership_support_relationship_alignment',
   '20260825_124000_membership_review_assignee_alignment',
   '20260825_125000_membership_shadow_state_alignment',
+  '20260826_090000_payment_action_required_status',
+  '20260826_120000_billing_pause_actions',
+  '20260826_130000_portal_engagement_distribution',
 ] as const
 const EXPECTED_APPLIED_BEFORE = PAYLOAD_MIGRATION_NAMES.length - EXPECTED_FORWARD_BATCH.length
 const EXPECTED_APPLIED_AFTER = EXPECTED_APPLIED_BEFORE + EXPECTED_FORWARD_BATCH.length

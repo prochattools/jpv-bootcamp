@@ -164,11 +164,14 @@ await test('admin does not exist: create called with email and password', async 
 
 await test('non-staging env: no find or create called', async () => {
   clearStagingEnv()
-  // DEPLOYMENT_ENV unset and no staging credentials present
+  // Explicit production must remain fail-closed even if stale staging
+  // credentials are still present in the application environment.
   setEnv({
     DEPLOYMENT_ENV: 'production',
-    STAGING_ADMIN_EMAIL: undefined,
-    STAGING_ADMIN_PASSWORD: undefined,
+    STAGING_ADMIN_EMAIL: 'admin@example.com',
+    STAGING_ADMIN_PASSWORD: 'secret',
+    STAGING_MEMBER_EMAIL: 'member@example.com',
+    STAGING_MEMBER_PASSWORD: 'secret',
   })
 
   const { payload, calls } = buildMockPayload([])

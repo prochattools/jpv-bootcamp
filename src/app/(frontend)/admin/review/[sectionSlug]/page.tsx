@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getReviewSectionBySlug, getAdminReviewExportRows } from '@/lib/admin/adminReviewModel'
 import { requireCurrentPayloadAdmin } from '@/lib/admin/currentAdmin'
+import { ResponsiveDataTable } from '@/components/operations/ResponsiveDataTable'
 
 type AdminReviewDetailPageProps = {
   params: Promise<{ sectionSlug: string }>
@@ -104,7 +105,7 @@ export default async function AdminReviewDetailPage({ params }: AdminReviewDetai
             <p className='mt-2 text-sm text-jpv-muted'>
               Static export row entry for operator review preparation. No file is written.
             </p>
-            <div className='mt-4 overflow-x-auto'>
+            <ResponsiveDataTable className='mt-4' label={`${section.title} export row preview`}>
               <table className='w-full text-left text-sm'>
                 <thead>
                   <tr className='border-b border-jpv-border text-xs font-semibold uppercase tracking-wide text-jpv-muted'>
@@ -127,7 +128,7 @@ export default async function AdminReviewDetailPage({ params }: AdminReviewDetai
                   </tr>
                 </tbody>
               </table>
-            </div>
+            </ResponsiveDataTable>
           </section>
         ) : null}
       </div>

@@ -2,11 +2,13 @@
 
 import { FormEvent, useState } from 'react'
 
+import { AuthFlowNotice } from '@/components/auth/AuthFlowNotice'
+
 const GENERIC_MESSAGE = 'If an eligible account exists, a verification email will be sent shortly.'
 
 export function MemberVerificationResendForm() {
   const [email, setEmail] = useState('')
-  const [message, setMessage] = useState<string | null>(null)
+  const [result, setResult] = useState<{ message: string; tone: 'success' | 'error' } | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -14,7 +16,7 @@ export function MemberVerificationResendForm() {
     if (submitting) return
 
     setSubmitting(true)
-    setMessage(null)
+    setResult(null)
     try {
       const response = await fetch('/api/member-email-verification/resend', {
         method: 'POST',
@@ -23,12 +25,12 @@ export function MemberVerificationResendForm() {
         body: JSON.stringify({ email }),
       })
       if (!response.ok && response.status === 400) {
-        setMessage('Enter a valid email address and try again.')
+        setResult({ message: 'Enter a valid email address and try again.', tone: 'error' })
       } else {
-        setMessage(GENERIC_MESSAGE)
+        setResult({ message: GENERIC_MESSAGE, tone: 'success' })
       }
     } catch {
-      setMessage(GENERIC_MESSAGE)
+      setResult({ message: GENERIC_MESSAGE, tone: 'success' })
     } finally {
       setSubmitting(false)
     }
@@ -60,10 +62,14 @@ export function MemberVerificationResendForm() {
       >
         {submitting ? 'Requesting…' : 'Resend verification email'}
       </button>
-      {message ? (
-        <p aria-live='polite' className='jpv-notice mt-3 text-sm leading-6 text-jpv-muted'>
-          {message}
-        </p>
+      {result ? (
+        <div className='mt-3'>
+          <AuthFlowNotice
+            message={result.message}
+            title={result.tone === 'error' ? 'Check your email address' : 'Request received'}
+            tone={result.tone}
+          />
+        </div>
       ) : null}
     </form>
   )

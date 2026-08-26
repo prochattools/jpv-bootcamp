@@ -7,6 +7,8 @@ import { getStripe } from '@/lib/stripe'
 import { getStripeConfig } from '@/lib/stripe-config'
 import { normalizeEmail } from '@/lib/normalize-email'
 import { requirePortalMember } from '@/lib/auth/requirePortalMember'
+import config from '@payload-config'
+import { getPayload } from 'payload'
 
 export type OpenBillingPortalResult =
   | { ok: true; portalUrl: string }
@@ -35,10 +37,12 @@ function resolveReturnUrl(): string {
 
 export async function openBillingPortal(): Promise<OpenBillingPortalResult> {
   let memberEmail: string
+  let memberId: string
 
   try {
     const portalMember = await requirePortalMember('/portal/billing')
     memberEmail = portalMember.memberEmail
+    memberId = portalMember.memberId
   } catch {
     return { ok: false, error: 'unauthenticated' }
   }
@@ -47,19 +51,36 @@ export async function openBillingPortal(): Promise<OpenBillingPortalResult> {
   if (!normalizedEmail) return { ok: false, error: 'unauthenticated' }
 
   try {
+    const payload = await getPayload({ config })
+    const payloadAccounts = await payload.find({
+      collection: 'payload_billing_accounts',
+      where: { member: { equals: memberId } },
+      limit: 2,
+      depth: 0,
+      overrideAccess: true,
+    })
+    const payloadCustomerId = typeof payloadAccounts.docs[0]?.stripeCustomerId === 'string'
+      ? payloadAccounts.docs[0].stripeCustomerId.trim()
+      : ''
+
     const customerRecord = await prisma.customerProvisioning.findUnique({
       where: { normalizedEmail },
       select: { stripeCustomerId: true },
     })
 
-    if (!customerRecord?.stripeCustomerId) {
-      console.warn('No Stripe customer found')
-      return { ok: false, error: 'no_stripe_customer' }
+    let stripeCustomerId = payloadCustomerId || customerRecord?.stripeCustomerId?.trim() || ''
+    if (!stripeCustomerId) {
+      // Read-only recovery for legacy/coupon members whose projection has not
+      // been linked yet. Never auto-link an ambiguous email match.
+      const matches = await getStripe().customers.list({ email: memberEmail, limit: 10 })
+      const exactMatches = matches.data.filter((customer) => normalizeEmail(customer.email ?? '') === normalizedEmail)
+      if (exactMatches.length !== 1) return { ok: false, error: 'no_stripe_customer' }
+      stripeCustomerId = exactMatches[0].id
     }
 
     const stripeConfig = getStripeConfig()
     const session = await getStripe().billingPortal.sessions.create({
-      customer: customerRecord.stripeCustomerId,
+      customer: stripeCustomerId,
       return_url: resolveReturnUrl(),
       configuration: stripeConfig.portalConfigurationId,
     })

@@ -35,6 +35,7 @@ test.describe('cross-surface visual system', () => {
       ['/', 'public-home'],
       ['/privacy', 'privacy'],
       ['/terms', 'terms'],
+      ['/sponsored', 'sponsored-application'],
     ] as const) {
       await page.goto(route)
       await assertVisualSurface(page, testInfo, name)
@@ -44,6 +45,14 @@ test.describe('cross-surface visual system', () => {
     await page.goto('/portal?mode=login')
     await expect(page.getByRole('heading', { name: 'Member sign in' })).toBeVisible()
     await assertVisualSurface(page, testInfo, 'member-login')
+  })
+
+  test('legacy public compatibility route resolves to the canonical shell', async ({ page }) => {
+    await mockSafePublicDependencies(page)
+    await page.goto('/waiting-list')
+    await expect(page).toHaveURL(/\/$/)
+    await expect(page.getByRole('main').first()).toBeVisible()
+    await assertNoHorizontalOverflow(page)
   })
 
   test('member portal shells remain responsive and accessible', async ({ page }, testInfo) => {

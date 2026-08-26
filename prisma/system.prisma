@@ -173,6 +173,7 @@ model SupportRequest {
   updatedAt                 DateTime  @default(now()) @updatedAt @map("updated_at")
   normalizedEmail           String    @map("normalized_email")
   name                      String    @map("name")
+  phone                     String?   @map("phone")
   question                  String    @map("question")
   source                    String?   @map("source")
   page                      String?   @map("page")

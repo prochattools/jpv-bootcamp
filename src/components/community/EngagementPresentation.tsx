@@ -158,7 +158,7 @@ type EngagementReactionBarProps = {
   totalCount?: number | null
   viewerReaction?: EngagementReactionType | null
   action?: EngagementReactionAction
-  targetKind?: 'space_post' | 'space_comment' | 'lesson_comment'
+  targetKind?: 'space_post' | 'space_comment' | 'lesson_comment' | 'content_post' | 'content_page'
   targetId?: string | number
   redirectPath?: string
   errorMessage?: string | null
@@ -187,14 +187,15 @@ export function EngagementReactionBar({
     { type: 'celebrate', label: 'Celebrate' },
   ]
 
-  const interactive = Boolean(action && targetKind && targetId !== undefined && redirectPath)
-  if (targetKind && targetId !== undefined && redirectPath) {
+  // The client component submits through the JSON endpoint. The server action
+  // is retained for the legacy form renderer, but must not gate the real
+  // portal buttons: content pages do not need a redirecting server action.
+  const interactive = Boolean(targetKind && targetId !== undefined && redirectPath)
+  if (interactive && targetKind && targetId !== undefined) {
     return (
       <ReactionBarClient
         className={className}
         counts={counts ?? []}
-        errorMessage={errorMessage}
-        label={label}
         targetId={targetId}
         targetKind={targetKind}
         totalCount={totalCount ?? 0}
@@ -202,6 +203,7 @@ export function EngagementReactionBar({
       />
     )
   }
+
   const buttons = reactionOptions.map((option) => interactive ? (
     <ReactionSubmitButton
       count={activeCounts.get(option.type) ?? 0}

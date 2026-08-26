@@ -16,6 +16,7 @@ const fixedNow = new Date('2026-07-12T12:15:00.000Z')
 const input: SupportIntakeInput = {
   normalizedEmail: 'person@example.com',
   name: '  Example   Person ',
+  phone: '+441234567890',
   question: '  How can I access the programme?  ',
   source: ' footer modal ',
   page: ' / ',
@@ -115,6 +116,7 @@ async function testPersistenceBeforeQueueAndSafeSuccess(): Promise<void> {
     reviewStatus: 'pending',
     requesterEmail: input.normalizedEmail,
     requesterName: input.name,
+    requesterPhone: input.phone,
   })
   assert.equal(updated?.notificationStatus, 'queued')
   assert.equal(updated?.notificationAttemptCount, 1)
@@ -260,6 +262,7 @@ function testRouteAndFormContracts(): void {
   assert.match(route, /SUPPORT_REQUEST_ADMIN_NOTIFICATION_TEMPLATE_KEY/)
   assert.match(route, /supportRequestId: input\.requestId/)
   assert.equal(route.includes('guarded.data.question,'), true)
+  assert.equal(route.includes('guarded.data.phone'), true)
   assert.equal(route.includes('metadata: {\n          question:'), false)
   assert.equal(route.includes('sendSupportEmail'), false)
   assert.equal(route.includes('sponsoredApplication'), false)
@@ -271,6 +274,17 @@ function testRouteAndFormContracts(): void {
   assert.match(page, /payload\?\.ok && payload\.accepted/)
   assert.match(page, /supportStatus === "sending"/)
   assert.match(page, /disabled=\{isSupportSending\}/)
+  assert.match(page, /support-phone/)
+  assert.match(page, /0208 092 2398/)
+  assert.match(page, /Structured Learning/)
+  assert.match(page, /Practical Application/)
+  assert.match(page, /Live Experiences/)
+  assert.match(page, /Community Support/)
+  assert.equal(page.includes('name: "Raouda"'), false)
+  assert.match(page, /pillar-structured-learning\.png/)
+  assert.match(page, /pillar-practical-application\.png/)
+  assert.match(page, /pillar-live-experiences\.png/)
+  assert.match(page, /pillar-community-support\.png/)
   assert.match(page, /saved for review/)
   assert.match(page, /Saving your request/)
   assert.match(page, /We could not save your request\. Please try again shortly\./)
@@ -280,7 +294,13 @@ function testRouteAndFormContracts(): void {
 
   assert.match(schema, /model SupportRequest \{/)
   assert.match(schema, /dedupeKey\s+String\s+@unique/)
+  assert.match(schema, /phone\s+String\?\s+@map\("phone"\)/)
   assert.match(migration, /CREATE UNIQUE INDEX IF NOT EXISTS "support_requests_dedupe_key_key"/)
+
+  const landingStyles = readFileSync('src/app/(frontend)/landing.module.scss', 'utf8')
+  assert.match(landingStyles, /grid-template-columns: repeat\(4, minmax\(0, 1fr\)\)/)
+  assert.match(landingStyles, /aspect-ratio: 4 \/ 3/)
+  assert.match(landingStyles, /grid-column: auto/)
 }
 
 async function main(): Promise<void> {

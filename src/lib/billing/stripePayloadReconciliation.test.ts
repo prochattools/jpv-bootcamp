@@ -54,8 +54,8 @@ const dryRun = await reconcileStripeToPayload({
 })
 assert.equal(dryRun.totals.subscriptions, 2)
 assert.equal(dryRun.totals.invoices, 3)
-assert.equal(dryRun.totals.wouldSync, 4)
-assert.equal(dryRun.totals.skipped, 1)
+assert.equal(dryRun.totals.wouldSync, 5)
+assert.equal(dryRun.totals.skipped, 0)
 
 {
   const historical = [subscription('sub_current'), subscription('sub_historical', 'canceled')]
@@ -146,8 +146,8 @@ const apply = await reconcileStripeToPayload({
     }
   },
 })
-assert.equal(apply.totals.synced, 4)
-assert.equal(new Set(seenEventIds).size, 4)
+assert.equal(apply.totals.synced, 5)
+assert.equal(new Set(seenEventIds).size, 5)
 assert.ok(seenEventIds.every((id) => id.startsWith('reconcile_')))
 
 {

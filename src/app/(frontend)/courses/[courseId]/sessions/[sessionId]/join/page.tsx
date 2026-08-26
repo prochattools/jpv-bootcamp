@@ -1,6 +1,6 @@
 'use client'
 
-import { LiveKitRoom, VideoConference, Chat } from '@livekit/components-react'
+import { LiveKitRoom, VideoConference, RoomAudioRenderer } from '@livekit/components-react'
 import '@livekit/components-styles'
 import { useState } from 'react'
 import { useParams } from 'next/navigation'
@@ -70,7 +70,7 @@ export default function LiveKitJoinPage() {
 
   if (state === 'connected' && wsUrl && token && roomName) {
     return (
-      <div className="h-screen w-full" data-lk-theme="default">
+      <div className="jpv-livekit-shell" data-lk-theme="default">
         <LiveKitRoom
           serverUrl={wsUrl}
           token={token}
@@ -80,7 +80,7 @@ export default function LiveKitJoinPage() {
           onDisconnected={handleDisconnect}
         >
           <VideoConference />
-          <Chat />
+          <RoomAudioRenderer />
         </LiveKitRoom>
       </div>
     )

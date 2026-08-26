@@ -1,4 +1,5 @@
 export const REQUIRED_STAGING_SCHEMA = 'jpvbootcamp_staging'
+export const REQUIRED_PRODUCTION_SCHEMA = 'jpvbootcamp'
 const SAFE_SCHEMA_IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/
 
 export type DatabaseConnectionConfig = {
@@ -167,6 +168,23 @@ export function assertStagingSchema(config: DatabaseConnectionConfig): void {
   if (config.schema !== REQUIRED_STAGING_SCHEMA) {
     throw new Error(
       `Schema '${config.schema}' is not permitted. Only '${REQUIRED_STAGING_SCHEMA}' is allowed in this staging operational lane.`,
+    )
+  }
+}
+
+/**
+ * Asserts that the resolved config targets the explicit production schema.
+ * Production is intentionally separate from the preview/staging boundary.
+ */
+export function assertProductionSchema(config: DatabaseConnectionConfig): void {
+  if (!config.metadata.configured) {
+    throw new Error(
+      `DATABASE_URL is required at runtime. Schema must be exactly '${REQUIRED_PRODUCTION_SCHEMA}'.`,
+    )
+  }
+  if (config.schema !== REQUIRED_PRODUCTION_SCHEMA) {
+    throw new Error(
+      `Schema '${config.schema}' is not permitted. Production requires '${REQUIRED_PRODUCTION_SCHEMA}'.`,
     )
   }
 }

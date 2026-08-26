@@ -44,7 +44,7 @@ function testPortalCommunityPagesUseCanonicalMemberRoutes(): void {
   const communitySpacePage = readFileSync('src/app/(frontend)/portal/community/[spaceSlug]/page.tsx', 'utf8')
   const communityPostPage = readFileSync('src/app/(frontend)/portal/community/[spaceSlug]/posts/[postId]/page.tsx', 'utf8')
 
-  assert.match(communityPage, /requirePortalMember\('\/portal\/community'\)/)
+  assert.match(communityPage, /require(?:PortalAccess|PortalMember)\('\/portal\/community'\)/)
   assert.match(communityPage, /getMemberCommunityDashboard\(dedupPayload, memberId\)/)
   assert.match(communityPage, /getMemberAnnouncements\(dedupPayload, memberId\)/)
   assert.match(communityPage, /getMemberCommunityFiles\(dedupPayload, memberId\)/)
@@ -52,7 +52,7 @@ function testPortalCommunityPagesUseCanonicalMemberRoutes(): void {
   assert.doesNotMatch(communityPage, /\/upgrade/)
   assert.doesNotMatch(communityPage, removedNamespacePattern)
 
-  assert.match(communitySpacePage, /requirePortalMember\(`\/portal\/community\/\$\{encodedSpaceSlug\}`\)/)
+  assert.match(communitySpacePage, /require(?:PortalAccess|PortalMember)\(`\/portal\/community\/\$\{encodedSpaceSlug\}`\)/)
   assert.match(communitySpacePage, /getMemberCommunitySpaceDetail\(withQueryDedup\(payload\), memberId, spaceSlug\)/)
   assert.match(communitySpacePage, /submitCommunityPost/)
   assert.match(communitySpacePage, /Start a discussion/)
@@ -65,7 +65,7 @@ function testPortalCommunityPagesUseCanonicalMemberRoutes(): void {
   assert.doesNotMatch(communitySpacePage, removedNamespacePattern)
 
   assert.match(communityPostPage, /getMemberCommunityPostDetail\(payload, memberId, spaceSlug, postId\)/)
-  assert.match(communityPostPage, /submitCommunityComment/)
+  assert.match(communityPostPage, /CommunityCommentComposer/)
   assert.match(communityPostPage, /Leave a reply/)
   assert.doesNotMatch(communityPostPage, /Read-only discussion view/)
   assert.doesNotMatch(communityPostPage, /Add a comment/)
@@ -98,13 +98,13 @@ function testLegacyTermsNotPresent(): void {
 function testCommunityPagesRequireAuth(): void {
   // /portal/community page must require auth
   const communityPage = readFileSync('src/app/(frontend)/portal/community/page.tsx', 'utf8')
-  assert.ok(communityPage.includes('requirePortalMember'), '/portal/community page must call requirePortalMember')
+  assert.ok(communityPage.includes('requirePortalAccess') || communityPage.includes('requirePortalMember'), '/portal/community page must call requirePortalAccess or requirePortalMember')
   assert.ok(communityPage.includes("export const runtime = 'nodejs'"), '/portal/community page must run on node')
   assert.ok(communityPage.includes("export const dynamic = 'force-dynamic'"), '/portal/community page must be force-dynamic')
 
   // /portal/community/[spaceSlug] page must require auth
   const communitySpacePage = readFileSync('src/app/(frontend)/portal/community/[spaceSlug]/page.tsx', 'utf8')
-  assert.ok(communitySpacePage.includes('requirePortalMember'), '/portal/community/[spaceSlug] page must call requirePortalMember')
+  assert.ok(communitySpacePage.includes('requirePortalAccess') || communitySpacePage.includes('requirePortalMember'), '/portal/community/[spaceSlug] page must call requirePortalAccess or requirePortalMember')
   assert.ok(communitySpacePage.includes("export const runtime = 'nodejs'"), '/portal/community/[spaceSlug] page must run on node')
   assert.ok(communitySpacePage.includes("export const dynamic = 'force-dynamic'"), '/portal/community/[spaceSlug] page must be force-dynamic')
 }

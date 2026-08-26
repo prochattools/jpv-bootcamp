@@ -10,8 +10,11 @@ export type MemberLiveSessionSummary = {
   title: string
   status: LiveSessionStatus
   scheduledAt: string
-  courseId: string
+  courseId: string | null
   courseTitle: string
+  spaceId: string | null
+  spaceTitle: string | null
+  spaceSlug: string | null
   moduleId: string | null
   lessonId: string | null
   roomReady: boolean
@@ -37,11 +40,34 @@ function text(value: unknown): string | null {
 
 function relationshipTitle(value: unknown): string | null {
   if (!value || typeof value !== 'object') return null
-  return text((value as Record<string, unknown>).title)
+  const record = value as Record<string, unknown>
+  return text(record.title) ?? text(record.name)
+}
+
+function relationshipSlug(value: unknown): string | null {
+  if (!value || typeof value !== 'object') return null
+  return text((value as Record<string, unknown>).slug)
 }
 
 function isLiveSessionStatus(value: unknown): value is LiveSessionStatus {
   return value === 'scheduled' || value === 'live' || value === 'completed' || value === 'cancelled'
+}
+
+function targetIds(value: unknown): Set<string> {
+  return new Set(Array.isArray(value) ? value.map((entry) => String(entry)) : [])
+}
+
+export function isLiveSessionAudienceAllowed(
+  document: PayloadDocument,
+  memberId: string,
+  enrolledCourseIds: ReadonlySet<string>,
+  memberSpaceIds: ReadonlySet<string>,
+): boolean {
+  if (document.audience === 'all') return true
+  if (document.audience === 'selected') return targetIds(document.targetMemberIds).has(String(memberId))
+  const courseId = liveSessionRelationshipId(document.course)
+  const spaceId = liveSessionRelationshipId(document.space)
+  return Boolean((courseId && enrolledCourseIds.has(courseId)) || (spaceId && memberSpaceIds.has(spaceId)))
 }
 
 export async function listMemberLiveSessions(
@@ -65,11 +91,23 @@ export async function listMemberLiveSessions(
       .map((enrollment) => liveSessionRelationshipId(enrollment.course))
       .filter((id): id is string => Boolean(id)),
   )]
-  if (courseIds.length === 0) return []
+  const memberships = await payload.find({
+    collection: 'payload_space_memberships',
+    where: {
+      and: [
+        { member: { equals: memberId } },
+        { status: { equals: 'active' } },
+      ],
+    },
+    limit: 500,
+    depth: 0,
+    overrideAccess: true,
+  })
+  const spaceIds = new Set(memberships.docs.map((membership) => liveSessionRelationshipId(membership.space)).filter((id): id is string => Boolean(id)))
 
   const result = await payload.find({
     collection: 'live_sessions',
-    where: { course: { in: courseIds } },
+    where: { status: { in: ['scheduled', 'live'] } },
     limit: 200,
     depth: 1,
     sort: 'scheduledAt',
@@ -78,9 +116,11 @@ export async function listMemberLiveSessions(
 
   return result.docs.flatMap((document: PayloadDocument) => {
     const courseId = liveSessionRelationshipId(document.course)
+    const spaceId = liveSessionRelationshipId(document.space)
     const status = document.status
     const scheduledAt = text(document.scheduledAt)
-    if (!courseId || !isLiveSessionStatus(status) || !scheduledAt) return []
+    if ((!courseId && !spaceId) || !isLiveSessionStatus(status) || !scheduledAt) return []
+    if (!isLiveSessionAudienceAllowed(document, memberId, new Set(courseIds), spaceIds)) return []
 
     const roomReady = isValidLiveSessionRoomName(document.roomName)
     return [{
@@ -89,7 +129,10 @@ export async function listMemberLiveSessions(
       status,
       scheduledAt,
       courseId,
-      courseTitle: relationshipTitle(document.course) ?? 'Course session',
+      courseTitle: relationshipTitle(document.course) ?? 'Live session',
+      spaceId,
+      spaceTitle: relationshipTitle(document.space),
+      spaceSlug: relationshipSlug(document.space),
       moduleId: liveSessionRelationshipId(document.module),
       lessonId: liveSessionRelationshipId(document.lesson),
       roomReady,

@@ -54,6 +54,27 @@ export const PayloadPosts: CollectionConfig = {
       ],
       defaultValue: 'draft',
     },
+    {
+      name: 'audience',
+      type: 'select',
+      required: true,
+      defaultValue: 'all',
+      options: [
+        { label: 'All active members', value: 'all' },
+        { label: 'Selected members', value: 'selected' },
+      ],
+      admin: {
+        description: 'Controls which members see this published update in the portal.',
+      },
+    },
+    {
+      name: 'targetMemberIds',
+      type: 'json',
+      admin: {
+        hidden: true,
+        description: 'Member IDs selected by the portal announcement composer.',
+      },
+    },
     { name: 'publishedAt', type: 'date' },
     {
       name: 'categories',

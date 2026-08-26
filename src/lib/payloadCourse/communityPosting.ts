@@ -461,7 +461,7 @@ export async function createSpaceComment(
   })
 
   if (input.notifyAuthor !== false) {
-    await notifyPostAuthorOfNewComment(payload, {
+    void notifyPostAuthorOfNewComment(payload, {
       postId: input.postId,
       commentId: comment.id,
       commenterMemberId: input.memberId,
@@ -469,6 +469,8 @@ export async function createSpaceComment(
       spaceName: asString(space?.name) ?? 'Community',
       spaceSlug: asString(space?.slug),
       dryRun: input.dryRun,
+    }).catch((error) => {
+      console.error('[createSpaceComment] comment notification error:', error instanceof Error ? error.message : String(error))
     })
   }
 

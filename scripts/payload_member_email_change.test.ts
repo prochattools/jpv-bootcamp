@@ -11,6 +11,7 @@ import {
   requestMemberEmailChange,
 } from '../src/lib/members/changeMemberEmail'
 import { redactDeliveredResetLink } from '../src/lib/members/redactDeliveredResetLink'
+import { buildMemberEmailChangeLoginResultUrl } from '../src/lib/members/memberEmailChangeRedirect'
 import type {
   PayloadDocument,
   PayloadId,
@@ -18,7 +19,6 @@ import type {
 } from '../src/lib/payloadCourse/accessService'
 import {
   GET as completeEmailChangeRoute,
-  buildMemberEmailChangeLoginResultUrl,
 } from '../src/app/api/member-email-change/complete/route'
 
 type CollectionMap = Record<string, PayloadDocument[]>

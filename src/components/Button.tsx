@@ -1,5 +1,5 @@
 import React from "react";
-import { Button as ShadeCnButton } from "@/components/ui/button";
+import { Button as JpvButton } from "@/components/ui/button";
 
 const Button = ({
   text,
@@ -13,14 +13,9 @@ const Button = ({
   isLoading?: boolean;
 }) => {
   return (
-    <ShadeCnButton
-      onClick={() => {
-        if (onClick) {
-          console.log(onClick);
-          onClick();
-        }
-      }}
-      className="bg-[#006fee] scale-1 hover:scale-[1.05] transition-all duration-300 rounded-full px-8 hover:bg-[#006fee] border-none outline-none focus-visible:ring-0"
+    <JpvButton
+      onClick={onClick}
+      className="px-8"
       disabled={disabled || false}
     >
       {isLoading ? (
@@ -28,7 +23,7 @@ const Button = ({
       ) : (
         text
       )}
-    </ShadeCnButton>
+    </JpvButton>
   );
 };
 

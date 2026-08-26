@@ -40,9 +40,9 @@ export function MemberCheckoutButtons() {
 
   return (
     <div className='space-y-5'>
-      <section className='rounded-2xl border border-neutral-200 bg-white p-5'>
-        <h3 className='text-lg font-semibold text-neutral-950'>JPV Bootcamp Membership — Monthly</h3>
-        <p className='mt-2 text-sm leading-6 text-neutral-700'>
+      <section className='rounded-jpv-card border border-jpv-border bg-jpv-canvas p-5 shadow-jpv-card'>
+        <h3 className='text-lg font-semibold text-jpv-ink'>JPV Bootcamp Membership — Monthly</h3>
+        <p className='mt-2 text-sm leading-6 text-jpv-muted'>
           £80 each month. There is no minimum commitment. Your membership renews monthly until you cancel,
           and cancellation takes effect at the end of the current paid month.
         </p>
@@ -59,9 +59,9 @@ export function MemberCheckoutButtons() {
         </button>
       </section>
 
-      <section className='rounded-2xl border border-neutral-200 bg-white p-5'>
-        <h3 className='text-lg font-semibold text-neutral-950'>JPV Bootcamp Membership — Annual</h3>
-        <p className='mt-2 text-sm leading-6 text-neutral-700'>
+      <section className='rounded-jpv-card border border-jpv-border bg-jpv-canvas p-5 shadow-jpv-card'>
+        <h3 className='text-lg font-semibold text-jpv-ink'>JPV Bootcamp Membership — Annual</h3>
+        <p className='mt-2 text-sm leading-6 text-jpv-muted'>
           £800 upfront for 12 months. Your annual membership renews automatically each year unless you cancel
           before the renewal date.
         </p>
@@ -78,10 +78,10 @@ export function MemberCheckoutButtons() {
         </button>
       </section>
 
-      <label className='flex items-start gap-3 rounded-2xl border border-neutral-200 bg-white p-5 text-sm leading-6 text-neutral-700'>
+      <label className='flex items-start gap-3 rounded-jpv-card border border-jpv-border bg-jpv-canvas p-5 text-sm leading-6 text-jpv-muted'>
         <input
           checked={recurringPaymentAccepted}
-          className='mt-1 h-4 w-4 rounded border-neutral-300'
+          className='mt-1 h-4 w-4 rounded border-jpv-border accent-jpv-brand'
           onChange={(event) => setRecurringPaymentAccepted(event.target.checked)}
           type='checkbox'
         />
@@ -93,7 +93,7 @@ export function MemberCheckoutButtons() {
       </label>
 
       {error && (
-        <p role='alert' className='rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800'>
+        <p role='alert' className='jpv-notice jpv-notice-danger'>
           {error}
         </p>
       )}

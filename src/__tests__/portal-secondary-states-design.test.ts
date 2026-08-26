@@ -23,7 +23,7 @@ const sources = Object.fromEntries(
 ) as Record<keyof typeof paths, string>
 
 const scopedSource = Object.values(sources).join('\n')
-const prohibited = /(?:bg|text|border)-(?:amber|blue|gray|slate|sky|orange)-|bg-neutral-950|max-w-7xl|(?:bg|text|border)-\[var\(--jpv|bg-white|text-white|rounded-full/
+const prohibited = /(?:bg|text|border)-(?:amber|blue|gray|slate|sky|orange)-|bg-neutral-950|max-w-7xl|(?:bg|text|border)-\[var\(--jpv|bg-white|text-white/
 
 describe('secondary portal state coherence', () => {
   it('preserves Bunny fetch, entitlement, and fail-closed state handling', () => {
@@ -38,10 +38,10 @@ describe('secondary portal state coherence', () => {
   })
 
   it('preserves programme, submission, and member authorization boundaries', () => {
-    expect(sources.programme).toContain("requirePortalMember('/portal/programme')")
+    expect(sources.programme).toContain("requirePortalAccess('/portal/programme')")
     expect(sources.programme).toContain('getAllWeeks()')
     expect(sources.programme).toContain('getProgrammeSummary()')
-    expect(sources.submissions).toContain("requirePortalMember('/portal/community/submissions')")
+    expect(sources.submissions).toContain("requirePortalAccess('/portal/community/submissions')")
     expect(sources.submissions).toContain('getMemberCommunitySubmissions(payload, memberId)')
     expect(sources.submissions).toContain('href={item.downloadUrl}')
   })
@@ -58,7 +58,7 @@ describe('secondary portal state coherence', () => {
     expect(sources.moderation).toContain('async function submitModerationDecision(formData: FormData)')
     expect(sources.moderation).toContain('action={submitModerationDecision}')
     expect(sources.moderation).toContain('moderatePendingCommunityItem(payload as unknown as PayloadCourseWriteAPI')
-    expect(sources.moderation).toContain("actor: { type: 'member', id: memberId }")
+    expect(sources.moderation).toContain("{ type: 'member' as const, id: memberId }")
     expect(sources.moderation).toContain("decision === 'reject' && !reason")
     expect(sources.moderation).toContain('if (!result.allowed)')
     expect(sources.moderation).toContain('if (!inbox.actorRole) notFound()')
@@ -66,12 +66,13 @@ describe('secondary portal state coherence', () => {
   })
 
   it('preserves discussion authorization, not-found, attachments, and reply action', () => {
-    expect(sources.discussion).toContain('requirePortalMember(')
-    expect(sources.discussion).toContain('if (!result.allowed) notFound()')
+    expect(sources.discussion).toContain('requirePortalAccess(')
+    expect(sources.discussion).toContain('memberResult.allowed')
+    expect(sources.discussion).toContain('notFound()')
     expect(sources.discussion).toContain('post.attachments')
     expect(sources.discussion).toContain('post.locked')
     expect(sources.discussion).toContain('post.canComment')
-    expect(sources.discussion).toContain('action={submitCommunityComment.bind(null, spaceSlug, postId)}')
+    expect(sources.discussion).toContain('<CommunityCommentComposer')
   })
 
   it('uses distinguishable canonical status and notice states', () => {

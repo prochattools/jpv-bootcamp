@@ -14,6 +14,7 @@ const routes = {
   verificationComplete: read('src/app/api/member-email-verification/complete/route.ts'),
   verificationResend: read('src/app/api/member-email-verification/resend/route.ts'),
 }
+const emailChangeRedirect = read('src/lib/members/memberEmailChangeRedirect.ts')
 
 for (const [name, source] of Object.entries(routes)) {
   assert.match(source, /export const dynamic = 'force-dynamic'/, name)
@@ -54,7 +55,8 @@ assert.match(routes.emailChangeRequest, /newEmail\.length > 320/)
 assert.match(routes.emailChangeRequest, /current sign-in email remains active/)
 assert.doesNotMatch(routes.emailChangeRequest, /new Resend|memberId: result|actionUrl|tokenDigest/)
 
-assert.match(routes.emailChangeComplete, /new URL\('\/portal', request\.url\)/)
+assert.match(routes.emailChangeComplete, /buildMemberEmailChangeLoginResultUrl/)
+assert.match(emailChangeRedirect, /new URL\('\/portal', request\.url\)/)
 assert.doesNotMatch(routes.emailChangeComplete, /next|redirect=|callback|returnUrl/)
 assert.match(routes.verificationComplete, /resolveMemberVerificationPublicBaseUrl\(\)/)
 assert.match(routes.verificationComplete, /new URL\('\/portal', resolveMemberVerificationPublicBaseUrl\(\)\)/)

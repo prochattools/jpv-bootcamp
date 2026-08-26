@@ -669,7 +669,7 @@ const renderer = fs.readFileSync(
     ),
     'utf8'
   )
-  assert.match(postPage, /submitCommunityComment/)
+  assert.match(postPage, /CommunityCommentComposer/)
   assert.match(postPage, /Leave a reply/)
   assert.doesNotMatch(postPage, /Read-only discussion view/)
   assert.doesNotMatch(postPage, /Add a comment/)
@@ -681,7 +681,7 @@ const renderer = fs.readFileSync(
   )
   assert.match(actions, /requirePortalMember\(destination\)/)
   assert.match(actions, /memberId,/)
-  assert.match(actions, /buildRichTextBody\(bodyText/)
+  assert.match(actions, /buildPlainTextRichText\(bodyText/)
   assert.doesNotMatch(
     actions,
     /formData\.get\(['"](?:memberId|author|role|status|visibility|moderationStatus|rateLimit|audit)/

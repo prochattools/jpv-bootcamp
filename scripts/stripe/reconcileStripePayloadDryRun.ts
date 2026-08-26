@@ -37,7 +37,6 @@ async function main(): Promise<void> {
     totals: report.totals,
     statusCounts,
     checkpoint: report.checkpoint,
-    readModel: report.readModel,
     reviewRows: report.rows.filter((row) => row.disposition === 'review_required'),
   }, null, 2))
 }

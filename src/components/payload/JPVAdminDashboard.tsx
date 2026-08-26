@@ -2,6 +2,7 @@ import config from '@payload-config'
 import { getPayload } from 'payload'
 
 import prisma from '@/libs/prisma'
+import { JPVBillingOverview } from '@/components/payload/JPVBillingOverview'
 import { getMembershipReadModel } from '@/lib/billing/membershipReadModel'
 
 type CountPayload = {
@@ -92,9 +93,7 @@ export async function JPVAdminDashboard() {
     safeCount(payload, 'payload_space_posts', { moderationStatus: { equals: 'pending_review' } }),
     safeOpenSupportCount(),
     safeSponsoredSeatCount(),
-    prisma.sponsoredSeat.count({
-      where: { tier: 'free', claimedByAccountId: null, reservedByApplicationId: null },
-    }).catch((): null => null),
+    prisma.sponsoredSeat.count({ where: { tier: 'free', claimedByAccountId: null, reservedByApplicationId: null } }).catch((): null => null),
     safeSponsoredApplicationCount(),
   ])
 
@@ -201,6 +200,8 @@ export async function JPVAdminDashboard() {
     activeMembers,
     pendingMembers,
     activeSubscriptions,
+    subscribedMembers,
+    administrators,
     unlinkedAdministrators,
     identityReviewItems,
     billingIssues,
@@ -447,6 +448,8 @@ export async function JPVAdminDashboard() {
           )}
         </div>
       </section>
+
+      <JPVBillingOverview />
 
       {/* Quick actions */}
       <section>

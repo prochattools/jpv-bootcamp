@@ -404,6 +404,103 @@ async function run() {
   }
 
   {
+    const payload = buildPayload()
+    const stripeEvent = event('customer.subscription.updated', subscription(), 'evt_reconcile_repairs_missing_projection')
+
+    await mirrorStripeEventToPayload(payload, stripeEvent, {
+      stripe: fakeStripe(),
+      suppressCommunications: true,
+    })
+    payload.docs('payload_subscriptions').splice(0, 1)
+
+    const normalRetry = await mirrorStripeEventToPayload(payload, stripeEvent, {
+      stripe: fakeStripe(),
+      suppressCommunications: true,
+    })
+    assert.equal(normalRetry.deduped, true)
+    assert.equal(payload.countDocs('payload_subscriptions'), 0)
+
+    const repair = await mirrorStripeEventToPayload(payload, stripeEvent, {
+      stripe: fakeStripe(),
+      suppressCommunications: true,
+      reconciliationRepair: true,
+    })
+    assert.equal(repair.processed, true)
+    assert.equal(repair.deduped, false)
+    assert.equal(payload.countDocs('payload_subscriptions'), 1)
+    assert.equal(payload.docs('payload_subscriptions')[0]?.stripeSubscriptionId, 'sub_123')
+  }
+
+  {
+    const payload = buildPayload()
+    const stripeEvent = event('customer.subscription.updated', subscription(), 'evt_reconcile_unknown_member')
+
+    const result = await mirrorStripeEventToPayload(payload, stripeEvent, {
+      stripe: fakeStripe(),
+      preserveMemberStatus: true,
+      suppressCommunications: true,
+    })
+
+    assert.equal(result.processed, true)
+    assert.ok(result.actions.includes('subscription_review_required_no_matching_local_member'))
+    assert.equal(payload.countDocs('payload_members'), 0)
+    assert.equal(payload.countDocs('payload_billing_accounts'), 0)
+    assert.equal(payload.countDocs('payload_subscriptions'), 0)
+    assert.equal(payload.docs('payload_billing_actions')[0]?.notes, 'no_matching_local_member')
+    assert.equal(payload.countDocs('payload_stripe_shadow_projections'), 1)
+    assert.equal(payload.docs('payload_stripe_shadow_projections')[0]?.shadowState, 'mismatch')
+    assert.equal(payload.docs('payload_stripe_shadow_projections')[0]?.stripeSubscriptionId, 'sub_123')
+    assert.equal(
+      (payload.docs('payload_stripe_shadow_projections')[0]?.metadata as Record<string, unknown>)?.identityState,
+      'unresolved',
+    )
+
+    await mirrorStripeEventToPayload(payload, event('customer.subscription.updated', subscription(), 'evt_reconcile_unknown_member_retry'), {
+      stripe: fakeStripe(),
+      preserveMemberStatus: true,
+      suppressCommunications: true,
+    })
+    assert.equal(payload.countDocs('payload_stripe_shadow_projections'), 1)
+  }
+
+  {
+    const payload = buildPayload()
+    const unresolvedInvoice = invoice({
+      id: 'in_unresolved_1',
+      customer: 'cus_unresolved_1',
+      customer_email: null,
+      subscription: 'sub_unresolved_1',
+      status: 'paid',
+      amount_paid: 8000,
+      amount_due: 8000,
+      amount_remaining: 0,
+    })
+    const unresolvedSubscription = subscription({
+      id: 'sub_unresolved_1',
+      customer: 'cus_unresolved_1',
+      status: 'canceled',
+    })
+    const result = await mirrorStripeEventToPayload(
+      payload,
+      event('invoice.paid', unresolvedInvoice, 'evt_reconcile_unknown_invoice'),
+      {
+        stripe: fakeStripe(unresolvedSubscription),
+        preserveMemberStatus: true,
+        suppressCommunications: true,
+      },
+    )
+
+    assert.equal(result.processed, true)
+    assert.ok(result.actions.includes('invoice_review_required_unresolved_identity'))
+    assert.equal(payload.countDocs('payload_members'), 0)
+    assert.equal(payload.countDocs('payload_payments'), 1)
+    assert.equal(payload.docs('payload_payments')[0]?.stripeInvoiceId, 'in_unresolved_1')
+    assert.equal(payload.docs('payload_payments')[0]?.status, 'paid')
+    assert.equal(payload.countDocs('payload_stripe_shadow_projections'), 1)
+    assert.equal(payload.docs('payload_stripe_shadow_projections')[0]?.stripeInvoiceId, 'in_unresolved_1')
+  }
+
+  {
     const payload = buildPayload({
       payload_members: [{
         id: 'member_stale_guard',

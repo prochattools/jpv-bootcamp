@@ -8,6 +8,8 @@ const stripeOperatorActions = new Set([
   'sync_subscription',
   'cancel_at_period_end',
   'resume_subscription',
+  'pause_subscription',
+  'resume_paused_subscription',
 ])
 
 function isStripeOperatorAction(value: unknown): boolean {
@@ -76,7 +78,7 @@ export const PayloadBillingAccounts: CollectionConfig = {
     { name: 'defaultPaymentMethodId', type: 'text' },
     { name: 'billingEmail', type: 'email' },
     { name: 'lastSyncedAt', type: 'date' },
-    { name: 'metadata', type: 'json', admin: { hidden: true } },
+    { name: 'metadata', type: 'json', admin: { description: 'Provider snapshot and reconciliation metadata. This collection is read-only.' } },
   ],
   timestamps: true,
 }
@@ -176,7 +178,7 @@ export const PayloadSubscriptions: CollectionConfig = {
     { name: 'canceledAt', type: 'date' },
     { name: 'lastStripeEventId', type: 'text', index: true },
     { name: 'lastSyncedAt', type: 'date' },
-    { name: 'metadata', type: 'json', admin: { hidden: true } },
+    { name: 'metadata', type: 'json', admin: { description: 'Provider snapshot and reconciliation metadata. This collection is read-only.' } },
   ],
   timestamps: true,
 }
@@ -310,7 +312,7 @@ export const PayloadBillingActions: CollectionConfig = {
       ({ data, operation, req }) => {
         if (operation !== 'create' || req.user?.collection !== 'payload_users') return data
         if (!isStripeOperatorAction(data?.actionType)) {
-          throw new Error('Administrators may create only sync, cancel-at-period-end, or resume actions.')
+          throw new Error('Administrators may create only sync, cancel-at-period-end, resume, pause, or resume-paused actions.')
         }
         const subscription = data?.subscription
         const subscriptionId = typeof subscription === 'object' ? subscription?.id : subscription
@@ -399,6 +401,8 @@ export const PayloadBillingActions: CollectionConfig = {
         { label: 'Sync current state from Stripe', value: 'sync_subscription' },
         { label: 'Cancel at period end', value: 'cancel_at_period_end' },
         { label: 'Reverse scheduled cancellation', value: 'resume_subscription' },
+        { label: 'Pause subscription', value: 'pause_subscription' },
+        { label: 'Resume paused subscription', value: 'resume_paused_subscription' },
         { label: 'Checkout Completed', value: 'checkout_completed' },
         { label: 'Subscription Created', value: 'subscription_created' },
         { label: 'Subscription Updated', value: 'subscription_updated' },
@@ -412,7 +416,7 @@ export const PayloadBillingActions: CollectionConfig = {
         { label: 'Access Restored', value: 'access_restored' },
       ],
       admin: {
-        description: 'Choose an operator action. Sync refreshes the record from Stripe. Cancel at period end marks the subscription to end at the next renewal. Reverse cancellation restores it.',
+        description: 'Choose an operator action. Sync refreshes from Stripe; pause/resume and cancellation changes are guarded, idempotent, audited, and mirrored back into Payload.',
       },
     },
     {

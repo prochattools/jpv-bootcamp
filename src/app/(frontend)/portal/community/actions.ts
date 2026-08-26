@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 
+import { requirePortalAccess } from '@/lib/auth/requirePortalAccess'
 import { requirePortalMember } from '@/lib/auth/requirePortalMember'
 import type { PayloadCourseWriteAPI, PayloadDocument } from '@/lib/payloadCourse/accessService'
 import { getMemberCommunityPostDetail } from '@/lib/payloadCourse/communityDiscussion'
@@ -13,6 +14,7 @@ import {
 } from '@/lib/payloadCourse/communityPosting'
 import { getPayload } from 'payload'
 import config from '@payload-config'
+import { buildPlainTextRichText } from '@/lib/payloadCourse/plainTextRichText'
 
 // ---------------------------------------------------------------------------
 // Mention notification helpers
@@ -23,7 +25,7 @@ function parseMentions(text: string): string[] {
   return [...new Set(matches.map((m) => m.slice(1).trim()).filter(Boolean))]
 }
 
-async function createMentionNotifications(
+export async function createMentionNotifications(
   payload: PayloadCourseWriteAPI,
   bodyText: string,
   href: string | null,
@@ -96,101 +98,6 @@ function boundedText(value: string, label: string, maxLength: number): string {
   return value
 }
 
-type PlainTextRichTextTextNode = {
-  type: 'text'
-  detail: 0
-  format: 0
-  mode: 'normal'
-  style: ''
-  text: string
-  version: 1
-}
-
-type PlainTextRichTextParagraphNode = {
-  type: 'paragraph'
-  format: ''
-  indent: 0
-  version: 1
-  textFormat: 0
-  textStyle: ''
-  children: PlainTextRichTextTextNode[]
-}
-
-type PlainTextRichTextDocument = {
-  root: {
-    type: 'root'
-    format: ''
-    indent: 0
-    version: 1
-    children: PlainTextRichTextParagraphNode[]
-  }
-}
-
-function plainTextRichText(value: string): PlainTextRichTextDocument {
-  const paragraphs = value
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .slice(0, 100)
-
-  return {
-    root: {
-      type: 'root',
-      format: '',
-      indent: 0,
-      version: 1,
-      children: paragraphs.map((line) => ({
-        type: 'paragraph',
-        format: '',
-        indent: 0,
-        version: 1,
-        textFormat: 0,
-        textStyle: '',
-        children: [
-          {
-            type: 'text',
-            detail: 0,
-            format: 0,
-            mode: 'normal',
-            style: '',
-            text: line,
-            version: 1,
-          },
-        ],
-      })),
-    },
-  }
-}
-
-function buildRichTextBody(text: string, videoUrl: string | null): PlainTextRichTextDocument {
-  const doc = plainTextRichText(text)
-
-  if (videoUrl) {
-    const linkNode: PlainTextRichTextParagraphNode = {
-      type: 'paragraph',
-      format: '',
-      indent: 0,
-      version: 1,
-      textFormat: 0,
-      textStyle: '',
-      children: [
-        {
-          type: 'text',
-          detail: 0,
-          format: 0,
-          mode: 'normal',
-          style: '',
-          text: `Video: ${videoUrl}`,
-          version: 1,
-        },
-      ],
-    }
-    doc.root.children.push(linkNode)
-  }
-
-  return doc
-}
-
 function memberDisplayName(member: Record<string, unknown>): string {
   for (const key of ['displayName', 'fullName', 'name']) {
     const value = member[key]
@@ -257,7 +164,7 @@ export async function submitCommunityPost(spaceSlug: string, formData: FormData)
       memberId,
       spaceId: detail.id,
       title,
-      body: buildRichTextBody(bodyText, videoUrl || null),
+      body: buildPlainTextRichText(bodyText, videoUrl || null),
     })
 
     // Capture context for mention notifications (resolved after redirect)
@@ -288,13 +195,13 @@ export async function submitCommunityPost(spaceSlug: string, formData: FormData)
   // Mention notifications are non-blocking and must run before redirect() throws
   if (mentionContext) {
     try {
-      await createMentionNotifications(
+      void createMentionNotifications(
         payload as unknown as PayloadCourseWriteAPI,
         mentionContext.bodyText,
         mentionContext.href,
         { postTitle: mentionContext.postTitle, spaceName: mentionContext.spaceName },
         mentionContext.actorName,
-      )
+      ).catch((): void => undefined)
     } catch {
       // must not break the posting flow
     }
@@ -340,7 +247,7 @@ export async function submitCommunityComment(
       memberId,
       postId: detail.post.id,
       displayName: actorName,
-      body: buildRichTextBody(bodyText, videoUrl || null),
+      body: buildPlainTextRichText(bodyText, videoUrl || null),
     })
 
     // Capture context for mention notifications
@@ -358,17 +265,13 @@ export async function submitCommunityComment(
 
   // Mention notifications are non-blocking and must run before redirect() throws
   if (mentionContext) {
-    try {
-      await createMentionNotifications(
-        payload as unknown as PayloadCourseWriteAPI,
-        mentionContext.bodyText,
-        mentionContext.href,
-        { postTitle: mentionContext.postTitle, spaceName: mentionContext.spaceName },
-        mentionContext.actorName,
-      )
-    } catch {
-      // must not break the posting flow
-    }
+    void createMentionNotifications(
+      payload as unknown as PayloadCourseWriteAPI,
+      mentionContext.bodyText,
+      mentionContext.href,
+      { postTitle: mentionContext.postTitle, spaceName: mentionContext.spaceName },
+      mentionContext.actorName,
+    ).catch((): void => undefined)
   }
 
   if (errorCode) {
@@ -386,10 +289,21 @@ export async function editCommunityPost(
   formData: FormData,
 ): Promise<{ ok: boolean; error?: string }> {
   const destination = postPath(spaceSlug, postId)
-  const { memberId } = await requirePortalMember(destination)
+  const { actor } = await requirePortalAccess(destination)
+  const memberId = actor.kind === 'member' ? actor.memberId : ''
 
   try {
     const payload = await getPayload({ config })
+
+    const space = await payload.find({
+      collection: 'payload_spaces',
+      where: { slug: { equals: spaceSlug } },
+      limit: 1,
+      depth: 0,
+      overrideAccess: true,
+    })
+    if (space.docs.length === 0) return { ok: false, error: 'space_not_found' }
+    const spaceId = String(space.docs[0].id)
 
     const post = await payload.findByID({
       collection: 'payload_space_posts',
@@ -398,11 +312,16 @@ export async function editCommunityPost(
       overrideAccess: true,
     })
 
+    const postSpaceId = typeof post.space === 'object' && post.space !== null
+      ? String((post.space as unknown as Record<string, unknown>).id)
+      : String(post.space)
+    if (postSpaceId !== spaceId) return { ok: false, error: 'post_space_mismatch' }
+
     const postAuthorId = typeof post.author === 'object' && post.author !== null
       ? String((post.author as unknown as Record<string, unknown>).id)
       : String(post.author)
 
-    if (postAuthorId !== String(memberId)) {
+    if (actor.kind !== 'admin' && postAuthorId !== String(memberId)) {
       return { ok: false, error: 'not_owner' }
     }
 
@@ -414,7 +333,7 @@ export async function editCommunityPost(
       id: postId,
       data: {
         title,
-        body: plainTextRichText(bodyText),
+        body: buildPlainTextRichText(bodyText),
       },
       overrideAccess: true,
     })
@@ -432,10 +351,21 @@ export async function deleteCommunityPost(
   postId: string,
 ): Promise<{ ok: boolean; error?: string }> {
   const destination = spacePath(spaceSlug)
-  const { memberId } = await requirePortalMember(destination)
+  const { actor } = await requirePortalAccess(destination)
+  const memberId = actor.kind === 'member' ? actor.memberId : ''
 
   try {
     const payload = await getPayload({ config })
+
+    const space = await payload.find({
+      collection: 'payload_spaces',
+      where: { slug: { equals: spaceSlug } },
+      limit: 1,
+      depth: 0,
+      overrideAccess: true,
+    })
+    if (space.docs.length === 0) return { ok: false, error: 'space_not_found' }
+    const spaceId = String(space.docs[0].id)
 
     const post = await payload.findByID({
       collection: 'payload_space_posts',
@@ -444,11 +374,16 @@ export async function deleteCommunityPost(
       overrideAccess: true,
     })
 
+    const postSpaceId = typeof post.space === 'object' && post.space !== null
+      ? String((post.space as unknown as Record<string, unknown>).id)
+      : String(post.space)
+    if (postSpaceId !== spaceId) return { ok: false, error: 'post_space_mismatch' }
+
     const postAuthorId = typeof post.author === 'object' && post.author !== null
       ? String((post.author as unknown as Record<string, unknown>).id)
       : String(post.author)
 
-    if (postAuthorId !== String(memberId)) {
+    if (actor.kind !== 'admin' && postAuthorId !== String(memberId)) {
       return { ok: false, error: 'not_owner' }
     }
 
@@ -472,10 +407,32 @@ export async function editCommunityComment(
   formData: FormData,
 ): Promise<{ ok: boolean; error?: string }> {
   const destination = postPath(spaceSlug, postId)
-  const { memberId } = await requirePortalMember(destination)
+  const { actor } = await requirePortalAccess(destination)
+  const memberId = actor.kind === 'member' ? actor.memberId : ''
 
   try {
     const payload = await getPayload({ config })
+
+    const space = await payload.find({
+      collection: 'payload_spaces',
+      where: { slug: { equals: spaceSlug } },
+      limit: 1,
+      depth: 0,
+      overrideAccess: true,
+    })
+    if (space.docs.length === 0) return { ok: false, error: 'space_not_found' }
+    const spaceId = String(space.docs[0].id)
+
+    const post = await payload.findByID({
+      collection: 'payload_space_posts',
+      id: postId,
+      depth: 0,
+      overrideAccess: true,
+    })
+    const postSpaceId = typeof post.space === 'object' && post.space !== null
+      ? String((post.space as unknown as Record<string, unknown>).id)
+      : String(post.space)
+    if (postSpaceId !== spaceId) return { ok: false, error: 'post_space_mismatch' }
 
     const comment = await payload.findByID({
       collection: 'payload_space_comments',
@@ -484,11 +441,16 @@ export async function editCommunityComment(
       overrideAccess: true,
     })
 
+    const commentPostId = typeof comment.post === 'object' && comment.post !== null
+      ? String((comment.post as unknown as Record<string, unknown>).id)
+      : String(comment.post)
+    if (commentPostId !== postId) return { ok: false, error: 'comment_post_mismatch' }
+
     const commentAuthorId = typeof comment.author === 'object' && comment.author !== null
       ? String((comment.author as unknown as Record<string, unknown>).id)
       : String(comment.author)
 
-    if (commentAuthorId !== String(memberId)) {
+    if (actor.kind !== 'admin' && commentAuthorId !== String(memberId)) {
       return { ok: false, error: 'not_owner' }
     }
 
@@ -498,7 +460,7 @@ export async function editCommunityComment(
       collection: 'payload_space_comments',
       id: commentId,
       data: {
-        body: plainTextRichText(bodyText),
+        body: buildPlainTextRichText(bodyText),
       },
       overrideAccess: true,
     })
@@ -516,10 +478,32 @@ export async function deleteCommunityComment(
   commentId: string,
 ): Promise<{ ok: boolean; error?: string }> {
   const destination = postPath(spaceSlug, postId)
-  const { memberId } = await requirePortalMember(destination)
+  const { actor } = await requirePortalAccess(destination)
+  const memberId = actor.kind === 'member' ? actor.memberId : ''
 
   try {
     const payload = await getPayload({ config })
+
+    const space = await payload.find({
+      collection: 'payload_spaces',
+      where: { slug: { equals: spaceSlug } },
+      limit: 1,
+      depth: 0,
+      overrideAccess: true,
+    })
+    if (space.docs.length === 0) return { ok: false, error: 'space_not_found' }
+    const spaceId = String(space.docs[0].id)
+
+    const post = await payload.findByID({
+      collection: 'payload_space_posts',
+      id: postId,
+      depth: 0,
+      overrideAccess: true,
+    })
+    const postSpaceId = typeof post.space === 'object' && post.space !== null
+      ? String((post.space as unknown as Record<string, unknown>).id)
+      : String(post.space)
+    if (postSpaceId !== spaceId) return { ok: false, error: 'post_space_mismatch' }
 
     const comment = await payload.findByID({
       collection: 'payload_space_comments',
@@ -528,11 +512,16 @@ export async function deleteCommunityComment(
       overrideAccess: true,
     })
 
+    const commentPostId = typeof comment.post === 'object' && comment.post !== null
+      ? String((comment.post as unknown as Record<string, unknown>).id)
+      : String(comment.post)
+    if (commentPostId !== postId) return { ok: false, error: 'comment_post_mismatch' }
+
     const commentAuthorId = typeof comment.author === 'object' && comment.author !== null
       ? String((comment.author as unknown as Record<string, unknown>).id)
       : String(comment.author)
 
-    if (commentAuthorId !== String(memberId)) {
+    if (actor.kind !== 'admin' && commentAuthorId !== String(memberId)) {
       return { ok: false, error: 'not_owner' }
     }
 
