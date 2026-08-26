@@ -12,11 +12,19 @@ type PortalShellProps = {
   children: ReactNode
   isAdmin?: boolean
   showLogout: boolean
+  showThemeToggle?: boolean
   navPinned?: PortalNavItem[]
   navGroups?: PortalNavGroup[]
 }
 
-export function PortalShell({ children, isAdmin = false, showLogout, navPinned, navGroups }: PortalShellProps) {
+export function PortalShell({
+  children,
+  isAdmin = false,
+  showLogout,
+  showThemeToggle = false,
+  navPinned,
+  navGroups,
+}: PortalShellProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   return (
@@ -32,6 +40,7 @@ export function PortalShell({ children, isAdmin = false, showLogout, navPinned, 
       <div className='flex h-full min-h-0 min-w-0 flex-col'>
         <PortalTopBar
           onMobileMenuOpen={() => setMobileMenuOpen(true)}
+          showThemeToggle={showThemeToggle}
         />
         <main className='min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6 lg:px-8 lg:py-5'>
           {children}

@@ -54,14 +54,24 @@ export function MemberLoginForm({
     setSubmitting(true)
 
     try {
-      const loginResponse = await fetch('/api/payload_members/login', {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      })
+      const credentials = JSON.stringify({ email, password })
+      const loginRequest = (collection: 'payload_users' | 'payload_members') =>
+        fetch(`/api/${collection}/login`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: credentials,
+        })
+
+      // Payload administrators use the same portal entry point as members, but
+      // authenticate against their administrator collection so the shared
+      // session retains the administrator identity and Admin On mode.
+      let loginResponse = await loginRequest('payload_users')
+      if (!loginResponse.ok) {
+        loginResponse = await loginRequest('payload_members')
+      }
 
       if (!loginResponse.ok) {
         setError(
