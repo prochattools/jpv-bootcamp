@@ -55,25 +55,33 @@ export const PayloadMembers: CollectionConfig = {
     ],
     beforeDelete: [
       async ({ id, req }) => {
-        const member = await req.payload.findByID({
-          collection: 'payload_members',
-          id,
-          depth: 0,
-          overrideAccess: true,
-        })
+        let memberEmail: string | null = null
+        try {
+          const { getMemberEmailForStripeCleanup } = await import('@/lib/members/deleteMemberStripeCustomer')
+          memberEmail = await getMemberEmailForStripeCleanup(req.payload, id)
+        } catch {
+          // The direct lookup is intentionally best effort. It runs outside
+          // Payload's transaction, so a database/config issue cannot poison
+          // the member deletion itself.
+        }
 
-        const [{ deleteStripeCustomersForMemberBestEffort }, { getStripe }, { getStripeEnv }] = await Promise.all([
-          import('@/lib/members/deleteMemberStripeCustomer'),
-          import('@/lib/stripe'),
-          import('@/lib/stripe-config'),
-        ])
-        await deleteStripeCustomersForMemberBestEffort({
-          payload: req.payload,
-          stripe: getStripe(),
-          stripeEnvironment: getStripeEnv(),
-          memberId: id,
-          memberEmail: typeof member.email === 'string' ? member.email : null,
-        })
+        try {
+          const [{ deleteStripeCustomersForMemberBestEffort }, { getStripe }, { getStripeEnv }] = await Promise.all([
+            import('@/lib/members/deleteMemberStripeCustomer'),
+            import('@/lib/stripe'),
+            import('@/lib/stripe-config'),
+          ])
+          await deleteStripeCustomersForMemberBestEffort({
+            payload: req.payload,
+            stripe: getStripe(),
+            stripeEnvironment: getStripeEnv(),
+            memberId: id,
+            memberEmail,
+          })
+        } catch {
+          // Stripe is an external side effect. Never turn a local Payload
+          // member deletion into a deadlock when Stripe/config is unavailable.
+        }
       },
     ],
   },

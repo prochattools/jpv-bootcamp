@@ -10,6 +10,7 @@ import { isMonthlyCommitmentMetadata } from '@/lib/stripe-commitment'
 import { normalizeEmail as normalizeEmailAddress } from '@/lib/normalize-email'
 import { redactEmail } from '@/lib/log-redact'
 import { provisionMemberFromCheckout } from '@/lib/members/provisionMemberFromCheckout'
+import { buildMemberForgotPasswordUrl } from '@/lib/memberAuthUrls'
 
 const ACTIVE_STATUSES = new Set<Stripe.Subscription.Status>([
 	'active',
@@ -1232,8 +1233,6 @@ export async function provisionFromCheckoutSession(
 		emailDomain: getEmailDomain(email),
 	})
 
-	const emailVariant = existing ? 'upgrade' : 'welcome'
-
 	await upsertProvisioningRecord({
 		email,
 		stripeCustomerId: customerId,
@@ -1251,6 +1250,7 @@ export async function provisionFromCheckoutSession(
 	})
 
 	let memberCredentials: { email: string; password: string } | null = null
+	let memberWasCreated = false
 	try {
 		const customerName = (session.customer_details?.name) ?? null
 		const memberResult = await provisionMemberFromCheckout({
@@ -1258,6 +1258,7 @@ export async function provisionFromCheckoutSession(
 			displayName: customerName,
 			stripeCustomerId: customerId,
 		})
+		memberWasCreated = memberResult.created
 		if (memberResult.created && memberResult.password) {
 			memberCredentials = { email, password: memberResult.password }
 		}
@@ -1270,6 +1271,7 @@ export async function provisionFromCheckoutSession(
 		// be created. Stripe will retry the webhook.
 		throw memberError
 	}
+	const emailVariant = memberWasCreated || !existing ? 'welcome' : 'upgrade'
 
 	if (emailEval.shouldSend) {
 		if (disableNonWebhookEmails && emailSource !== 'webhook') {
@@ -1291,11 +1293,11 @@ export async function provisionFromCheckoutSession(
 			while (emailAttempts < maxAttempts && !emailSent) {
 				try {
 					const dedupeKey = `${email}|${subscriptionId ?? 'none'}|${incomingPlan}`
-					const portalUrl = getServerConfig().email.portalUrl.replace(/\/$/, '')
+					const portalUrl = getServerConfig().email.portalUrl
 					await sendWelcomeEmail({
 						to: email,
 						plan,
-						resetUrl: `${portalUrl}/forgot-password`,
+						resetUrl: buildMemberForgotPasswordUrl(portalUrl),
 						credentials: memberCredentials,
 						meta: {
 							templateKey: MEMBERSHIP_EMAIL_TEMPLATE_KEY,
@@ -1725,11 +1727,11 @@ export async function syncFromSubscription(
 		} else {
 			try {
 				const dedupeKey = `${email}|${subscription.id}|${incomingPlan}`
-				const portalUrl = getServerConfig().email.portalUrl.replace(/\/$/, '')
+				const portalUrl = getServerConfig().email.portalUrl
 				await sendWelcomeEmail({
 					to: email,
 					plan: incomingPlan,
-					resetUrl: `${portalUrl}/forgot-password`,
+					resetUrl: buildMemberForgotPasswordUrl(portalUrl),
 					meta: {
 						templateKey: MEMBERSHIP_EMAIL_TEMPLATE_KEY,
 						variant: emailVariant,

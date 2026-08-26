@@ -5,7 +5,6 @@ import type { Plan } from '@/lib/plans'
 import {
 	getMembershipEmailIntro,
 	getMembershipEmailIntroHtml,
-	getPlanLabel,
 	type MembershipEmailVariant,
 } from '@/lib/membership-email-copy'
 import { renderBrandedEmail } from '@/lib/communications/brandedEmail'
@@ -196,7 +195,7 @@ function buildWelcomeEmailContent(params: {
 
 	const html = renderBrandedEmail({
 		preheader: introLine,
-		heading: isUpgrade ? 'Your plan has been upgraded' : 'Your membership is ready',
+		heading: isUpgrade ? 'Your membership has been updated' : 'Your account is activated',
 		bodyHtml: `<p style="margin:0 0 16px">${getMembershipEmailIntroHtml({ plan: params.plan, variant: params.variant })}</p>${credentialsHtmlBlock}<p style="margin:0">Use the links below to sign in or set your password.</p>`,
 		actions: [
 			{ label: 'Sign in to portal', url: emailConfig.portalUrl },

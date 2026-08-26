@@ -221,6 +221,47 @@ async function testBestEffortCleanupHandlesStripeApiFailure(): Promise<void> {
 	}
 }
 
+async function testDirectPoolLookupAvoidsPayloadDeleteTransaction(): Promise<void> {
+	const queries: Array<{ sql: string; values?: readonly unknown[] }> = []
+	const deleted: string[] = []
+	const stripe: FakeStripe = {
+		customers: {
+			list: async () => ({ data: [] }),
+			del: async (customerId) => {
+				deleted.push(customerId)
+			},
+		},
+	}
+
+	const result = await deleteStripeCustomersForMember({
+		payload: {
+			find: async () => {
+				throw new Error('request transaction lookup should not be used when the Payload pool is available')
+			},
+			db: {
+				pool: {
+					query: async (sql: string, values?: readonly unknown[]) => {
+						queries.push({ sql, values })
+						return { rows: [{ stripeCustomerId: 'cus_direct', stripeMode: 'live' }] }
+					},
+				},
+			},
+		} as any,
+		stripe,
+		stripeEnvironment: 'live',
+		memberId: 54,
+	})
+
+	assert.deepEqual(deleted, ['cus_direct'])
+	assert.deepEqual(result, {
+		deletedCustomerIds: ['cus_direct'],
+		alreadyMissingCustomerIds: [],
+	})
+	assert.equal(queries.length, 1)
+	assert.deepEqual(queries[0]?.values, [54])
+	assert.match(queries[0]?.sql ?? '', /payload_billing_accounts/)
+}
+
 await testAlreadyMissingCustomerIsIdempotent()
 await testDuplicateAccountsDeleteOnce()
 await testMismatchedModeFailsClosed()
@@ -228,4 +269,5 @@ await testUnlinkedExactEmailCustomerIsDeleted()
 await testAmbiguousEmailFailsClosed()
 await testBestEffortCleanupDoesNotAbortMemberDelete()
 await testBestEffortCleanupHandlesStripeApiFailure()
+await testDirectPoolLookupAvoidsPayloadDeleteTransaction()
 console.log('deleteMemberStripeCustomer tests passed')

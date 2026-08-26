@@ -6,6 +6,7 @@ const provisioning = readFileSync(resolve(process.cwd(), 'src/lib/provisioning.t
 const webhookHandler = readFileSync(resolve(process.cwd(), 'src/lib/stripe-webhook-handler.ts'), 'utf8')
 const emailGate = readFileSync(resolve(process.cwd(), 'src/lib/stripe-membership-email-gate.ts'), 'utf8')
 const stagingGuard = readFileSync(resolve(process.cwd(), 'src/lib/staging-email-guard.ts'), 'utf8')
+const emailRenderer = readFileSync(resolve(process.cwd(), 'src/lib/email.ts'), 'utf8')
 
 assert.match(
   webhookHandler,
@@ -23,10 +24,19 @@ assert.match(
   'checkout provisioning must treat successful checkout as canonical for the first onboarding email',
 )
 assert.match(
-  provisioning,
-  /await sendWelcomeEmail\(\{[\s\S]*to: email,[\s\S]*resetUrl: `\$\{portalUrl\}\/forgot-password`/,
-  'canonical checkout provisioning must send the welcome email through the existing Resend-backed sender',
+	provisioning,
+	/const emailVariant = memberWasCreated \|\| !existing \? 'welcome' : 'upgrade'[\s\S]*await sendWelcomeEmail\(\{[\s\S]*to: email,[\s\S]*buildMemberForgotPasswordUrl\(portalUrl\)/,
+	'canonical checkout provisioning must send the welcome email through the existing Resend-backed sender',
 )
+assert.match(
+	provisioning,
+	/const memberResult = await provisionMemberFromCheckout\([\s\S]*memberWasCreated = memberResult\.created/,
+	'new Payload member creation must select the onboarding email variant even when a Stripe projection already exists',
+)
+assert.match(emailRenderer, /heading: isUpgrade \? 'Your membership has been updated' : 'Your account is activated'/)
+assert.equal(emailRenderer.includes('Your plan has been upgraded'), false)
+assert.equal(provisioning.includes('/portal/forgot-password'), false)
+assert.equal(emailRenderer.includes('/portal/forgot-password'), false)
 assert.match(
   provisioning,
   /lastNotifiedEventId[\s\S]*recent_duplicate[\s\S]*already_notified_plan/,
