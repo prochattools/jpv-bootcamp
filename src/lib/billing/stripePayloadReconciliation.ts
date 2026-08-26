@@ -63,6 +63,7 @@ type Mirror = (
     adminEmail?: string | null
     suppressCommunications?: boolean
     preserveMemberStatus?: boolean
+    reconciliationRepair?: boolean
   },
 ) => Promise<PayloadBillingShadowSyncResult>
 
@@ -266,20 +267,23 @@ function subscriptionEvent(subscription: Stripe.Subscription, livemode: boolean,
   } as Stripe.Event
 }
 
-function invoiceEventType(invoice: Stripe.Invoice): 'invoice.paid' | 'invoice.payment_failed' | null {
+type ReconciliationInvoiceEventType =
+  | 'invoice.created'
+  | 'invoice.finalized'
+  | 'invoice.paid'
+  | 'invoice.payment_failed'
+  | 'invoice.voided'
+
+function invoiceEventType(invoice: Stripe.Invoice): ReconciliationInvoiceEventType {
   if (invoice.status === 'paid') return 'invoice.paid'
-  if (
-    invoice.status === 'uncollectible' ||
-    (invoice.status === 'open' && (invoice.attempt_count ?? 0) > 0 && (invoice.amount_remaining ?? 0) > 0)
-  ) {
-    return 'invoice.payment_failed'
-  }
-  return null
+  if (invoice.status === 'uncollectible') return 'invoice.payment_failed'
+  if (invoice.status === 'void') return 'invoice.voided'
+  if (invoice.status === 'open') return 'invoice.finalized'
+  return 'invoice.created'
 }
 
-function invoiceEvent(invoice: Stripe.Invoice, livemode: boolean, now: Date): Stripe.Event | null {
+function invoiceEvent(invoice: Stripe.Invoice, livemode: boolean, now: Date): Stripe.Event {
   const type = invoiceEventType(invoice)
-  if (!type) return null
   const eventId = stableEventId('invoice', {
     id: invoice.id,
     status: invoice.status,
@@ -365,6 +369,7 @@ export async function reconcileStripeToPayload(
         adminEmail: options.adminEmail,
         suppressCommunications: options.suppressCommunications ?? true,
         preserveMemberStatus: true,
+        reconciliationRepair: true,
       })
       rows.push({
         objectType,
@@ -422,19 +427,7 @@ export async function reconcileStripeToPayload(
         let lastProcessedId: string | undefined
         for (const invoice of page.data) {
           const event = invoiceEvent(invoice, options.livemode, options.now?.() ?? new Date())
-          if (!event) {
-            rows.push({
-              objectType: 'invoice',
-              stripeId: invoice.id,
-              customerId: relationshipId(invoice.customer),
-              status: invoice.status ?? 'unknown',
-              disposition: 'skipped',
-              reason: 'invoice_state_has_no_payment_projection',
-              eventId: null,
-            })
-          } else {
-            await processEvent('invoice', invoice.id, relationshipId(invoice.customer), invoice.status ?? 'unknown', event)
-          }
+          await processEvent('invoice', invoice.id, relationshipId(invoice.customer), invoice.status ?? 'unknown', event)
           lastProcessedId = invoice.id
           if (rows.length >= maxObjects) break
         }

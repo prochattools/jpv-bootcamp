@@ -71,6 +71,10 @@ type ShadowSyncOptions = {
   // Reconciliation must not manufacture identities from historical provider data.
   // Real-time Stripe checkout/webhook processing retains its existing creation path.
   preserveMemberStatus?: boolean
+  // A reconciliation may refresh a projection even when its deterministic
+  // synthetic event was already recorded as processed. Normal webhook idempotency
+  // remains unchanged when this flag is absent.
+  reconciliationRepair?: boolean
 }
 
 export type PayloadBillingShadowSyncResult = {
@@ -1035,7 +1039,7 @@ async function syncInvoice(
   stripe: ShadowStripeClient,
   event: Stripe.Event,
   invoice: Stripe.Invoice,
-  paymentStatus: 'paid' | 'failed' | 'action_required',
+  paymentStatus: 'pending' | 'paid' | 'failed' | 'action_required' | 'voided',
   options: ShadowSyncOptions
 ): Promise<string[]> {
   const subscriptionId = getInvoiceSubscriptionId(invoice)
@@ -1043,13 +1047,14 @@ async function syncInvoice(
   let subject: BillingSubject | null = null
   let invoiceSubscriptionProjection: SubscriptionProjection | null = null
   let payloadSubscription: PayloadDocument | null = null
-  const paymentAttentionRequired = paymentStatus !== 'paid'
-  let billingStatus: PayloadBillingStatus = paymentStatus === 'paid' ? 'active' : 'past_due'
+  const paymentAttentionRequired = paymentStatus === 'failed' || paymentStatus === 'action_required'
+  let billingStatus: PayloadBillingStatus = paymentAttentionRequired ? 'past_due' : 'none'
 
   if (subscriptionId) {
     const subscription = await retrieveSubscription(stripe, subscriptionId)
-    billingStatus =
-      paymentStatus === 'paid' ? billingStatusFromSubscription(subscription) : 'past_due'
+    billingStatus = paymentAttentionRequired
+      ? 'past_due'
+      : billingStatusFromSubscription(subscription)
     const projection = subscriptionProjection(subscription)
     invoiceSubscriptionProjection = projection
     subject = await getBillingSubject(payload, stripe, {
@@ -1164,18 +1169,20 @@ async function syncInvoice(
     }
   )
 
-  await writeBillingAction(payload, {
-    memberId: subject.member.id,
-    actionType: paymentStatus === 'paid' ? 'payment_succeeded' : 'payment_failed',
-    status: 'completed',
-    eventId: event.id,
-    metadata: {
-      stripeInvoiceId,
-      subscriptionId,
-      amount,
-      currency: invoice.currency ?? 'usd',
-    },
-  })
+  if (paymentStatus === 'paid' || paymentAttentionRequired) {
+    await writeBillingAction(payload, {
+      memberId: subject.member.id,
+      actionType: paymentStatus === 'paid' ? 'payment_succeeded' : 'payment_failed',
+      status: 'completed',
+      eventId: event.id,
+      metadata: {
+        stripeInvoiceId,
+        subscriptionId,
+        amount,
+        currency: invoice.currency ?? 'usd',
+      },
+    })
+  }
 
   const isRecovery =
     paymentStatus === 'paid' &&
@@ -1224,7 +1231,11 @@ async function syncInvoice(
   }
 
   return [
-    paymentAttentionRequired
+    paymentStatus === 'voided'
+      ? 'invoice_voided_synced'
+      : paymentStatus === 'pending'
+        ? 'invoice_pending_synced'
+        : paymentAttentionRequired
       ? paymentStatus === 'action_required'
         ? 'invoice_payment_action_required_synced'
         : 'invoice_payment_failed_synced'
@@ -1515,9 +1526,12 @@ async function staleProjectionReason(
       })
     }
   } else if (
+    event.type === 'invoice.created' ||
+    event.type === 'invoice.finalized' ||
     event.type === 'invoice.paid' ||
     event.type === 'invoice.payment_failed' ||
-    event.type === 'invoice.payment_action_required'
+    event.type === 'invoice.payment_action_required' ||
+    event.type === 'invoice.voided'
   ) {
     const invoiceId = typeof object.id === 'string' ? object.id : null
     if (invoiceId) {
@@ -1609,7 +1623,20 @@ export async function mirrorStripeEventToPayload(
     eventId: { equals: event.id },
   })
 
-  if (existingEvent?.processingStatus === 'processed') {
+  const isReconciliationProjectionEvent =
+    String(event.type).startsWith('customer.subscription.') ||
+    event.type === 'invoice.created' ||
+    event.type === 'invoice.finalized' ||
+    event.type === 'invoice.paid' ||
+    event.type === 'invoice.payment_failed' ||
+    event.type === 'invoice.payment_action_required' ||
+    event.type === 'invoice.voided'
+  const shouldRepairProjection =
+    existingEvent?.processingStatus === 'processed' &&
+    options.reconciliationRepair === true &&
+    isReconciliationProjectionEvent
+
+  if (existingEvent?.processingStatus === 'processed' && !shouldRepairProjection) {
     if (existingEvent.failureReason) {
       await payload.update({
         collection: 'payload_stripe_events',
@@ -1685,13 +1712,22 @@ export async function mirrorStripeEventToPayload(
           event.data.object as Stripe.SubscriptionSchedule,
         )
         break
+      case 'invoice.created':
+      case 'invoice.finalized':
+      case 'invoice.voided':
       case 'invoice.paid':
         actions = await syncInvoice(
           payload,
           stripe,
           event,
           event.data.object as Stripe.Invoice,
-          'paid',
+          event.type === 'invoice.voided'
+            ? 'voided'
+            : event.type === 'invoice.paid'
+              ? 'paid'
+              : event.type === 'invoice.finalized'
+                ? 'action_required'
+                : 'pending',
           options
         )
         break

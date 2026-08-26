@@ -405,6 +405,34 @@ async function run() {
 
   {
     const payload = buildPayload()
+    const stripeEvent = event('customer.subscription.updated', subscription(), 'evt_reconcile_repairs_missing_projection')
+
+    await mirrorStripeEventToPayload(payload, stripeEvent, {
+      stripe: fakeStripe(),
+      suppressCommunications: true,
+    })
+    payload.docs('payload_subscriptions').splice(0, 1)
+
+    const normalRetry = await mirrorStripeEventToPayload(payload, stripeEvent, {
+      stripe: fakeStripe(),
+      suppressCommunications: true,
+    })
+    assert.equal(normalRetry.deduped, true)
+    assert.equal(payload.countDocs('payload_subscriptions'), 0)
+
+    const repair = await mirrorStripeEventToPayload(payload, stripeEvent, {
+      stripe: fakeStripe(),
+      suppressCommunications: true,
+      reconciliationRepair: true,
+    })
+    assert.equal(repair.processed, true)
+    assert.equal(repair.deduped, false)
+    assert.equal(payload.countDocs('payload_subscriptions'), 1)
+    assert.equal(payload.docs('payload_subscriptions')[0]?.stripeSubscriptionId, 'sub_123')
+  }
+
+  {
+    const payload = buildPayload()
     const stripeEvent = event('customer.subscription.updated', subscription(), 'evt_reconcile_unknown_member')
 
     const result = await mirrorStripeEventToPayload(payload, stripeEvent, {
