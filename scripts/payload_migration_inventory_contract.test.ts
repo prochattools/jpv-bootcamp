@@ -48,12 +48,12 @@ console.log('\nPayload Migration Inventory Contract\n')
 
 test('exactly one dated module exists for every canonical migration', () => {
   assert.equal(datedModules.length, PAYLOAD_MIGRATION_NAMES.length)
-  assert.equal(datedModules.length, 49)
+  assert.equal(datedModules.length, 50)
 })
 
 test('canonical registry is ordered, unique, and has the reviewed 49 names', () => {
   assert.match(registryModuleSource, /export const PAYLOAD_MIGRATION_NAMES\s*=\s*\[/)
-  assert.equal(PAYLOAD_MIGRATION_NAMES.length, 49)
+  assert.equal(PAYLOAD_MIGRATION_NAMES.length, 50)
   assert.equal(new Set(PAYLOAD_MIGRATION_NAMES).size, PAYLOAD_MIGRATION_NAMES.length)
   assert.equal(PAYLOAD_MIGRATION_NAMES.at(-1), '20260826_130000_portal_engagement_distribution')
 })

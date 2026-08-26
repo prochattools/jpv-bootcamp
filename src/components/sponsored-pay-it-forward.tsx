@@ -64,14 +64,17 @@ export default function SponsoredPayItForward() {
 	return (
 		<div className="rounded-3xl bg-jpv-ink p-6 shadow-[0_8px_30px_rgba(0,0,0,0.3)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_20px_50px_rgba(0,0,0,0.45)]">
 			<div className="space-y-3">
-				<h3 className="text-xl font-semibold text-jpv-canvas">Pay it forward</h3>
+				<h3 className="text-xl font-semibold text-jpv-canvas">Give a membership place</h3>
 				<p className="text-sm text-jpv-canvas">
-					Some members choose to fund JPV Bootcamp Membership for someone who
-					can&apos;t pay yet.
+					Fund one JPV Bootcamp membership for someone who is ready to learn but cannot pay yet.
 				</p>
-				<p className="text-xs text-jpv-canvas">
-					{counts.available} sponsored access seats currently available
-				</p>
+				<div className="mt-4 rounded-2xl border border-jpv-canvas/25 bg-jpv-canvas/10 px-4 py-3">
+					<p className="text-xs font-semibold uppercase tracking-[0.14em] text-jpv-canvas/75">Available now</p>
+					<p className="mt-1 text-5xl font-bold leading-none tabular-nums text-jpv-canvas">
+						{counts.available}
+						<span className="ml-2 text-base font-medium align-middle">funded membership {counts.available === 1 ? 'place' : 'places'}</span>
+					</p>
+				</div>
 			</div>
 			<div className="mt-6 flex flex-wrap gap-3">
 				<button

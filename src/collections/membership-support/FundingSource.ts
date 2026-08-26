@@ -14,6 +14,7 @@ export const PayloadMembershipFundingSources: CollectionConfig = {
     plural: 'Funding Sources',
   },
   admin: {
+    hidden: true,
     group: membershipSupportGroup,
     useAsTitle: 'displayName',
     defaultColumns: ['displayName', 'sourceType', 'sourceState', 'member', 'updatedAt'],
@@ -106,4 +107,3 @@ export const PayloadMembershipFundingSources: CollectionConfig = {
   ],
   timestamps: true,
 }
-

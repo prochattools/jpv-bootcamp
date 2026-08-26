@@ -13,6 +13,7 @@ export const PayloadStripeShadowProjections: CollectionConfig = {
     plural: 'Stripe Shadow Projections',
   },
   admin: {
+    hidden: true,
     group: membershipSupportGroup,
     useAsTitle: 'displayName',
     defaultColumns: ['displayName', 'shadowState', 'member', 'lastWebhookAt', 'updatedAt'],

@@ -9,6 +9,7 @@ export interface MemberDirectoryItem {
   memberId: string
   displayName: string
   avatarUrl: string | null
+  isAdministrator: boolean
 }
 
 export interface MemberProfileDetail {
@@ -45,11 +46,7 @@ export async function listActiveMembers(): Promise<MemberDirectoryItem[]> {
     collection: 'payload_member_profiles',
     depth: 1,
     limit: 200,
-    where: {
-      and: [
-        { 'member.accountStatus': { equals: 'active' } },
-      ],
-    },
+    where: { 'member.accountStatus': { equals: 'active' } },
     overrideAccess: true,
     select: {
       member: true,
@@ -66,8 +63,9 @@ export async function listActiveMembers(): Promise<MemberDirectoryItem[]> {
       memberId,
       displayName: String(doc.displayName ?? ''),
       avatarUrl: mediaUrl(doc.avatar),
+      isAdministrator: Boolean(typeof member === 'object' && member !== null && (member as Record<string, unknown>).isAdministrator),
     }
-  }).filter((item) => item.memberId)
+  }).filter((item) => item.memberId && !item.isAdministrator)
 }
 
 export async function getMemberProfileDetail(memberId: string): Promise<MemberProfileDetail | null> {

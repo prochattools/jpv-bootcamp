@@ -4,6 +4,7 @@ import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 
 import { cachedResolvePayloadRequestSession } from '@/lib/auth/payloadSession'
+import { ensureAdministratorMemberIdentity } from '@/lib/auth/adminMemberIdentity'
 import { MEMBER_COLLECTION } from '@/lib/auth/payloadSessionMapping'
 import { decideSharedLogin } from '@/lib/auth/sharedLoginDecision'
 import { getCachedPayload } from '@/lib/payload/getPayload'
@@ -20,6 +21,27 @@ export async function requirePortalMember(
 ): Promise<PortalMemberContext> {
   const requestHeaders = await headers()
   const session = await cachedResolvePayloadRequestSession(requestHeaders)
+
+  if (session.administratorId && !session.unresolvedCollection) {
+    const payload = await getCachedPayload()
+    const administrator = await payload.findByID({
+      collection: 'payload_users',
+      id: session.administratorId,
+      depth: 0,
+      overrideAccess: true,
+    })
+    const identity = await ensureAdministratorMemberIdentity(payload as never, administrator as never)
+    const memberEmail = typeof identity?.member.email === 'string' ? identity.member.email : ''
+    if (!identity || !memberEmail) {
+      redirect(`/portal?mode=login&next=${encodeURIComponent(requestedPath)}`)
+    }
+    return {
+      memberId: String(identity.member.id),
+      memberEmail,
+      payload: payload as unknown as PayloadCourseAccessAPI,
+    }
+  }
+
   const decision = decideSharedLogin(session, requestedPath)
 
   if (

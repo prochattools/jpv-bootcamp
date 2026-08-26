@@ -13,6 +13,7 @@ export const PayloadMembershipAuditHistory: CollectionConfig = {
     plural: 'Membership Audit History',
   },
   admin: {
+    hidden: true,
     group: membershipSupportGroup,
     useAsTitle: 'displayName',
     defaultColumns: ['displayName', 'actorType', 'action', 'severity', 'targetCollection', 'createdAt'],
@@ -89,4 +90,3 @@ export const PayloadMembershipAuditHistory: CollectionConfig = {
   ],
   timestamps: true,
 }
-

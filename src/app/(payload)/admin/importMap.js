@@ -22,6 +22,7 @@ import { StrikethroughFeatureClient as StrikethroughFeatureClient_e70f5e05f09f93
 import { UnderlineFeatureClient as UnderlineFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
 import { BoldFeatureClient as BoldFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
 import { ItalicFeatureClient as ItalicFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
+import { default as default_fb745f0085bf64fb2c5547247728f182 } from '../../../components/payload/PayItForwardAdminQueue'
 import { JPVAdminIcon as JPVAdminIcon_e1a31f211abab0fe933e22515323266f } from '../../../components/payload/JPVAdminBranding'
 import { JPVAdminLogo as JPVAdminLogo_e1a31f211abab0fe933e22515323266f } from '../../../components/payload/JPVAdminBranding'
 import { JPVAdminDashboardNav as JPVAdminDashboardNav_26e054d65a1c51bea6cc32ea6991cb1b } from '../../../components/payload/JPVAdminDashboardNav'
@@ -54,6 +55,7 @@ export const importMap = {
   "@payloadcms/richtext-lexical/client#UnderlineFeatureClient": UnderlineFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
   "@payloadcms/richtext-lexical/client#BoldFeatureClient": BoldFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
   "@payloadcms/richtext-lexical/client#ItalicFeatureClient": ItalicFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
+  "./components/payload/PayItForwardAdminQueue#default": default_fb745f0085bf64fb2c5547247728f182,
   "./components/payload/JPVAdminBranding#JPVAdminIcon": JPVAdminIcon_e1a31f211abab0fe933e22515323266f,
   "./components/payload/JPVAdminBranding#JPVAdminLogo": JPVAdminLogo_e1a31f211abab0fe933e22515323266f,
   "./components/payload/JPVAdminDashboardNav#JPVAdminDashboardNav": JPVAdminDashboardNav_26e054d65a1c51bea6cc32ea6991cb1b,

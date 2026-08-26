@@ -28,6 +28,7 @@ export async function applySponsoredGrant(params: {
 	accountId: number
 	tier: SponsoredTier
 	name?: string | null
+	email?: string | null
 }): Promise<SponsoredGrantResult> {
 	const application = await prisma.sponsoredApplication.findFirst({
 		where: { accountId: params.accountId },
@@ -35,7 +36,7 @@ export async function applySponsoredGrant(params: {
 		select: { email: true },
 	})
 
-	const email = normalizeEmail(application?.email ?? null)
+	const email = normalizeEmail(params.email ?? application?.email ?? null)
 	if (!email) {
 		console.warn('sponsored_grant_missing_email', {
 			accountId: params.accountId,

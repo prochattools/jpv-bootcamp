@@ -26,6 +26,9 @@ export const PayloadPayItForwardFunding: CollectionConfig = {
     useAsTitle: 'displayName',
     defaultColumns: ['displayName', 'seatStatus', 'sponsorEmail', 'purchasedAt', 'approvalState', 'updatedAt'],
     description: 'Pay-it-forward sponsored seat purchases and funding allocations.',
+    components: {
+      afterList: ['./components/payload/PayItForwardAdminQueue#default'],
+    },
   },
   access: membershipSupportAccess,
   fields: [

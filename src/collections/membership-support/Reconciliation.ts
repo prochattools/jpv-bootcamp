@@ -14,6 +14,7 @@ export const PayloadMembershipReconciliations: CollectionConfig = {
     plural: 'Reconciliations',
   },
   admin: {
+    hidden: true,
     group: membershipSupportGroup,
     useAsTitle: 'displayName',
     defaultColumns: ['displayName', 'reconciliationState', 'member', 'lastWebhookAt', 'updatedAt'],
@@ -63,4 +64,3 @@ export const PayloadMembershipReconciliations: CollectionConfig = {
   ],
   timestamps: true,
 }
-

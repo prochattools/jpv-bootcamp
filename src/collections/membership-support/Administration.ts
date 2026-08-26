@@ -22,6 +22,7 @@ export const PayloadMembershipAdministrationActions: CollectionConfig = {
     plural: 'Administration Actions',
   },
   admin: {
+    hidden: true,
     group: membershipSupportGroup,
     useAsTitle: 'displayName',
     defaultColumns: ['displayName', 'actionType', 'actionState', 'operator', 'updatedAt'],
@@ -74,4 +75,3 @@ export const PayloadMembershipAdministrationActions: CollectionConfig = {
   ],
   timestamps: true,
 }
-

@@ -2,6 +2,7 @@ export type AdminActor = {
   kind: 'admin'
   administratorId: string
   email?: string
+  memberId?: string
 }
 
 export type MemberActor = {
