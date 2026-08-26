@@ -11,9 +11,9 @@ import {
 
 function basePayload(now: number): PartnersHandoffPayload {
 	return {
-		wp_user_id: 123,
-		wp_email: 'member@example.com',
-		wp_name: 'Member Example',
+		account_id: 123,
+		account_email: 'member@example.com',
+		account_name: 'Member Example',
 		iat: now,
 		exp: now + 300,
 		nonce: 'nonce123',

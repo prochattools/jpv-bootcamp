@@ -10,23 +10,20 @@ type PageProps = {
 export default async function SponsoredThankYouPage({ searchParams }: PageProps) {
 	const params = await searchParams
 	const sessionId = (params?.session_id ?? '').trim()
-	let tierLabel: string | null = null
+	let confirmed = false
 
 	if (sessionId) {
 		try {
 			const stripe = getStripe()
 			const session = await stripe.checkout.sessions.retrieve(sessionId)
-			const tier = isSponsoredSeatSession(session)
-			if (tier) {
-				tierLabel = tier === 'vip' ? 'VIP' : 'Pro'
-			}
+			confirmed = Boolean(isSponsoredSeatSession(session))
 		} catch {
-			tierLabel = null
+			confirmed = false
 		}
 	}
 
-	const heading = tierLabel
-		? `Thanks for sponsoring a ${tierLabel} month.`
+	const heading = confirmed
+		? 'Thanks for funding JPV Bootcamp Membership.'
 		: 'Thanks for your support.'
 
 	return (
@@ -42,8 +39,9 @@ export default async function SponsoredThankYouPage({ searchParams }: PageProps)
 								{heading}
 							</h1>
 							<p className="text-base text-jpv-gray-300">
-								Your purchase added a sponsored seat. You won&apos;t receive access
-								yourself, but someone else will benefit from your generosity.
+								Your purchase added a sponsored access seat. You won&apos;t receive
+								access yourself, but someone else will benefit from your
+								generosity.
 							</p>
 						</div>
 						<div className="mt-6">

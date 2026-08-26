@@ -1,54 +1,62 @@
 import { randomUUID } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/libs/prisma'
-import { normalizeEmail } from '@/lib/normalize-email'
-import { redactEmail } from '@/lib/log-redact'
+import { guardPublicRequest } from '@/lib/publicRequestGuard'
+import {
+	getPublicRequestApplicationOrigin,
+	logPublicRequestGuard,
+	publicRequestFailureResponse,
+	publicRequestRateLimiter,
+	trustPublicRequestProxyHeaders,
+} from '@/lib/publicRequestRoute'
 import { isValidInternationalPhone, normalizePhone } from '@/lib/normalize-phone'
 import { signSponsoredDecisionToken } from '@/lib/sponsored-approval-token'
 import { sendSponsoredApplicationAdminEmail } from '@/lib/sponsored-email'
 import {
 	getSponsoredSeatCounts,
 	hashEmail,
-	normalizeSponsoredTier,
 } from '@/lib/sponsored-seats'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-type ApplicationPayload = {
-	name?: string
-	email?: string
-	phone?: string
-	message?: string
-	tier?: string
-}
+const sponsoredApplicationFields = {
+	name: { type: 'string', required: true, minLength: 2, maxLength: 120 },
+	email: { type: 'email', required: true, maxLength: 320 },
+	phone: { type: 'string', required: true, minLength: 7, maxLength: 40 },
+	message: { type: 'string', maxLength: 2_000 },
+} as const
 
+const SPONSORED_APPLICATION_MAX_BYTES = 12 * 1024
 const ADMIN_EMAIL_THROTTLE_MS = 1000 * 60 * 15
 
 export async function POST(req: NextRequest) {
-	let body: ApplicationPayload | null = null
-	try {
-		body = (await req.json()) as ApplicationPayload
-	} catch {
-		body = null
+	const guarded = await guardPublicRequest(req, {
+		namespace: 'public-sponsored-applications',
+		methods: ['POST'],
+		bodyType: 'json',
+		fields: sponsoredApplicationFields,
+		applicationOrigin: getPublicRequestApplicationOrigin(),
+		missingOrigin: 'reject',
+		maxBytes: SPONSORED_APPLICATION_MAX_BYTES,
+		allowUnknownFields: false,
+		trustProxyHeaders: trustPublicRequestProxyHeaders(),
+		rateLimit: {
+			limiter: publicRequestRateLimiter,
+			limit: 3,
+			windowMs: 15 * 60_000,
+			identityField: 'email',
+			backendFailure: 'deny',
+		},
+		logger: logPublicRequestGuard,
+	})
+
+	if (guarded.ok === false) {
+		return publicRequestFailureResponse(guarded)
 	}
 
-	const name = (body?.name ?? '').trim()
-	const emailInput = typeof body?.email === 'string' ? body?.email : ''
-	const normalizedEmail = normalizeEmail(emailInput)
-	const phone = normalizePhone(body?.phone ?? '')
-	const message = (body?.message ?? '').trim()
-
-	if (!name) {
-		return NextResponse.json({ ok: false, reason: 'missing_name' }, { status: 400 })
-	}
-
-	if (!normalizedEmail || !normalizedEmail.includes('@')) {
-		return NextResponse.json(
-			{ ok: false, reason: 'missing_email' },
-			{ status: 400 }
-		)
-	}
+	const { name, email: normalizedEmail, phone: phoneInput, message } = guarded.data
+	const phone = normalizePhone(phoneInput)
 
 	if (!phone || !isValidInternationalPhone(phone)) {
 		return NextResponse.json(
@@ -57,13 +65,8 @@ export async function POST(req: NextRequest) {
 		)
 	}
 
-	const tier = normalizeSponsoredTier(body?.tier ?? null) ?? 'pro'
-
 	const secret = (process.env.SPONSORED_DECISION_SECRET || '').trim()
 	const hasResendKey = Boolean((process.env.RESEND_API_KEY || '').trim())
-	const hasAdminRecipients = Boolean(
-		(process.env.SPONSORED_APPLICATION_ADMIN_EMAILS || '').trim()
-	)
 	const hasMailFrom = Boolean(
 		(
 			process.env.SPONSORED_MAIL_FROM ||
@@ -73,7 +76,7 @@ export async function POST(req: NextRequest) {
 		).trim()
 	)
 
-	if (!secret || !hasResendKey || !hasAdminRecipients || !hasMailFrom) {
+	if (!secret || !hasResendKey || !hasMailFrom) {
 		return NextResponse.json(
 			{ ok: false, reason: 'missing_env' },
 			{ status: 500 }
@@ -123,7 +126,7 @@ export async function POST(req: NextRequest) {
 					name,
 					phone,
 					message: message || null,
-					tier,
+					tier: 'free',
 				},
 			})
 			applicationId = updated.id
@@ -137,7 +140,7 @@ export async function POST(req: NextRequest) {
 				name,
 				phone,
 				message: message || null,
-				tier,
+				tier: 'free',
 			},
 		})
 		applicationId = created.id
@@ -178,7 +181,7 @@ export async function POST(req: NextRequest) {
 		secret
 	)
 
-	let counts: { pro: number; vip: number } | undefined
+	let counts: { available: number } | undefined
 	try {
 		counts = await getSponsoredSeatCounts()
 	} catch {
@@ -196,7 +199,6 @@ export async function POST(req: NextRequest) {
 				approveToken,
 				rejectToken,
 				counts,
-				tier,
 			})
 			await prisma.sponsoredApplication.updateMany({
 				where: { id: applicationId },
@@ -204,12 +206,11 @@ export async function POST(req: NextRequest) {
 			})
 		} catch (error) {
 			console.error('sponsored_application_admin_email_failed', {
-				applicationId: applicationId,
-				email: redactEmail(normalizedEmail),
-				message: (error as Error).message,
+				applicationId,
+				errorName: error instanceof Error ? error.name : 'unknown',
 			})
 		}
 	}
 
-	return NextResponse.json({ ok: true, outcome, applicationId })
+	return NextResponse.json({ ok: true, outcome })
 }

@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS "jpvbootcamp"."customer_provisioning" (
     "normalized_email" TEXT NOT NULL,
     "stripe_customer_id" TEXT NOT NULL,
     "stripe_subscription_id" TEXT,
-    "wp_user_id" INTEGER,
+    "account_id" INTEGER,
     "plan" TEXT,
     "current_plan" TEXT,
     "status" TEXT NOT NULL DEFAULT 'active',

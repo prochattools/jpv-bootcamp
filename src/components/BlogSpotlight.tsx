@@ -4,8 +4,26 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { FC } from 'react'
 
+type BlogPost = {
+	date: string
+	title?: {
+		rendered?: string
+	}
+	yoast_head_json?: {
+		schema?: {
+			'@graph'?: Array<{
+				'@type'?: string
+				name?: string
+				image?: {
+					contentUrl?: string
+				}
+			}>
+		}
+	}
+}
+
 interface AuthorAvatarProps {
-	post: WPDetailedPost
+	post: BlogPost
 }
 
 const BlogSpotlight: FC<AuthorAvatarProps> = ({ post }) => {

@@ -1,0 +1,8 @@
+email,first_name,last_name,status,tags,lists,created_at,last_activity,company,source,phone,consent_at
+john.smith@example.com,John,Smith,subscribed,bootcamp-2024|early-bird,jpv-jan-2024,2024-01-15T09:00:00Z,2024-06-10T14:30:00Z,Smith Consulting,website,+447700900001,2024-01-15T09:00:00Z
+sarah.jones@example.com,Sarah,Jones,unsubscribed,bootcamp-2024|alumni,jpv-jan-2024,2024-01-16T10:00:00Z,2024-05-20T08:00:00Z,,organic,,
+bounced.user@invalid-domain.xyz,Bounced,User,bounced,,jpv-jan-2024,2024-02-01T11:00:00Z,2024-02-01T11:00:00Z,Acme Ltd,referral,+447700900003,
+JOHN.SMITH@EXAMPLE.COM,John,Smith (Duplicate),subscribed,bootcamp-2024|vip,jpv-feb-2024,2024-01-14T08:00:00Z,2024-07-01T10:00:00Z,Smith Consulting,website,,2024-01-14T08:00:00Z
+priya.patel@example.com,Priya,Patel,subscribed,bootcamp-2024|scholarship,jpv-jan-2024|jpv-feb-2024,2024-01-20T15:00:00Z,2024-06-25T16:45:00Z,Patel Group,fluentcrm:referral,+447700900005,2024-01-20T15:00:00Z
+complained.contact@example.com,Complained,Contact,complained,bootcamp-2024,,2024-03-01T09:00:00Z,2024-03-15T12:00:00Z,,paid-ads,,
+no-consent@example.com,No,Consent,subscribed,newsletter,,2024-04-10T10:00:00Z,2024-04-10T10:00:00Z,,,+447700900007,

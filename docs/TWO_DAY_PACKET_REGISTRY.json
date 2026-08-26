@@ -1,0 +1,1305 @@
+{
+  "generatedFrom": "docs/client/JPV_Bootcamp_Platform_Expansion_Go_Live_Plan_v3_7.docx",
+  "branch": "feature/course-branding-and-preview",
+  "head": "dc7edf9",
+  "note": "Updated 2026-07-20 post-security-cleanup (dc7edf9: plaintext credentials removed from docs); deployment head 5d01aae (frozen); live email/auth B-level verified 70%",
+  "packets": [
+    {
+      "id": "SCHEMA-01",
+      "title": "verify exact Membership Support schema delta",
+      "wave": 1,
+      "lane": "SCHEMA",
+      "priority": 1,
+      "dependencies": [],
+      "sourcePaths": [
+        "src/collections/membership-support/ReviewQueue.ts",
+        "src/lib/membership-support/workflows.ts",
+        "docs/MEMBERSHIP_SUPPORT_SCHEMA_MIGRATION_PLAN.md"
+      ],
+      "acceptanceCriteria": [
+        "The review-queue dedupeKey gap is documented against the live collection declaration.",
+        "A static schema-contract test fails if the current queue contract drifts."
+      ],
+      "validationCommands": [
+        "pnpm exec tsx scripts/membership_support_schema_contract.test.ts"
+      ],
+      "allowedOperations": [
+        "read-only schema inspection",
+        "static contract assertions",
+        "documentation updates"
+      ],
+      "prohibitedOperations": [
+        "migration apply",
+        "type generation in the original worktree",
+        "protected-file overwrite"
+      ],
+      "expectedChangedPaths": [
+        "scripts/membership_support_schema_contract.test.ts",
+        "docs/TWO_DAY_EXECUTION_QUEUE.md",
+        "docs/TWO_DAY_PACKET_REGISTRY.json"
+      ],
+      "expectedCommitMessage": "feat(schema): add membership support schema contract checks",
+      "rollbackCondition": "The static contract no longer matches the declared review queue shape.",
+      "approvalGate": "schema migration approval",
+      "parallelSafe": true,
+      "status": "implemented",
+      "blocker": null,
+      "commit": "8927df9",
+      "tests": [
+        "scripts/membership_support_schema_contract.test.ts"
+      ]
+    },
+    {
+      "id": "SCHEMA-02",
+      "title": "prepare isolated migration-generation worktree procedure",
+      "wave": 1,
+      "lane": "SCHEMA",
+      "priority": 2,
+      "dependencies": [
+        "SCHEMA-01"
+      ],
+      "sourcePaths": [
+        "scripts/release/membershipSupportSchemaIsolation.ts",
+        "docs/MEMBERSHIP_SUPPORT_SCHEMA_MIGRATION_PLAN.md"
+      ],
+      "acceptanceCriteria": [
+        "The original worktree can be validated without touching protected files.",
+        "The isolation plan captures protected diffs and a sibling-worktree procedure."
+      ],
+      "validationCommands": [
+        "pnpm exec tsx scripts/release/membershipSupportSchemaIsolation.test.ts"
+      ],
+      "allowedOperations": [
+        "branch and head validation",
+        "protected-diff capture",
+        "isolated-worktree planning"
+      ],
+      "prohibitedOperations": [
+        "migration generation",
+        "type generation",
+        "protected-file writes"
+      ],
+      "expectedChangedPaths": [
+        "scripts/release/membershipSupportSchemaIsolation.ts",
+        "scripts/release/membershipSupportSchemaIsolation.test.ts"
+      ],
+      "expectedCommitMessage": "feat(schema): add membership support worktree isolation plan",
+      "rollbackCondition": "The plan can reach protected files or imply generation in the original worktree.",
+      "approvalGate": "schema migration approval",
+      "parallelSafe": true,
+      "status": "implemented",
+      "blocker": null,
+      "commit": "8927df9",
+      "tests": [
+        "scripts/release/membershipSupportSchemaIsolation.test.ts"
+      ]
+    },
+    {
+      "id": "SCHEMA-03",
+      "title": "prepare generated-type isolation procedure",
+      "wave": 1,
+      "lane": "SCHEMA",
+      "priority": 3,
+      "dependencies": [
+        "SCHEMA-02"
+      ],
+      "sourcePaths": [
+        "scripts/release/membershipSupportSchemaIsolation.ts",
+        "src/payload-types.ts",
+        "docs/MEMBERSHIP_SUPPORT_SCHEMA_MIGRATION_PLAN.md"
+      ],
+      "acceptanceCriteria": [
+        "The generated-type isolation procedure stays read-only in the original worktree.",
+        "Abort and cleanup checks are explicit and executable."
+      ],
+      "validationCommands": [
+        "pnpm exec tsx scripts/release/membershipSupportSchemaIsolation.test.ts"
+      ],
+      "allowedOperations": [
+        "protected diff capture",
+        "isolated worktree validation",
+        "cleanup and abort planning"
+      ],
+      "prohibitedOperations": [
+        "payload generate:types in the original worktree",
+        "payload generate:importmap in the original worktree",
+        "protected-file overwrite"
+      ],
+      "expectedChangedPaths": [
+        "scripts/release/membershipSupportSchemaIsolation.ts",
+        "scripts/release/membershipSupportSchemaIsolation.test.ts"
+      ],
+      "expectedCommitMessage": "feat(schema): harden generated-type isolation procedure",
+      "rollbackCondition": "Generated-type isolation requires editing protected files in place.",
+      "approvalGate": "generated-type regeneration approval",
+      "parallelSafe": true,
+      "status": "implemented",
+      "blocker": null,
+      "commit": "8927df9",
+      "tests": [
+        "scripts/release/membershipSupportSchemaIsolation.test.ts"
+      ]
+    },
+    {
+      "id": "QA-01",
+      "title": "create launch-critical test command manifest",
+      "wave": 1,
+      "lane": "QA",
+      "priority": 4,
+      "dependencies": [],
+      "sourcePaths": [
+        "scripts/release/launchCriticalTestManifest.ts",
+        "scripts/release/runReleaseTests.ts",
+        "package.json"
+      ],
+      "acceptanceCriteria": [
+        "Billing, membership support, migration, course, frontend, and release commands are grouped deterministically.",
+        "Missing package scripts or missing test files fail validation immediately."
+      ],
+      "validationCommands": [
+        "pnpm exec tsx scripts/release/launchCriticalTestManifest.test.ts"
+      ],
+      "allowedOperations": [
+        "manifest validation",
+        "package-script existence checks",
+        "test-file existence checks"
+      ],
+      "prohibitedOperations": [
+        "live-provider tests",
+        "deployment commands",
+        "migration apply commands"
+      ],
+      "expectedChangedPaths": [
+        "scripts/release/launchCriticalTestManifest.ts",
+        "scripts/release/launchCriticalTestManifest.test.ts"
+      ],
+      "expectedCommitMessage": "feat(qa): add launch-critical test manifest",
+      "rollbackCondition": "The manifest can no longer prove the launch-critical command surface.",
+      "approvalGate": "release validation gate",
+      "parallelSafe": true,
+      "status": "implemented",
+      "blocker": null,
+      "commit": "8927df9",
+      "tests": [
+        "scripts/release/launchCriticalTestManifest.test.ts"
+      ]
+    },
+    {
+      "id": "RELEASE-01",
+      "title": "create packet status/evidence registry",
+      "wave": 1,
+      "lane": "RELEASE",
+      "priority": 5,
+      "dependencies": [
+        "QA-01"
+      ],
+      "sourcePaths": [
+        "docs/TWO_DAY_PACKET_REGISTRY.json",
+        "scripts/release/twoDayPacketRegistry.ts",
+        "scripts/release/runDecisionReadiness.ts"
+      ],
+      "acceptanceCriteria": [
+        "Every packet ID, dependency, status, blocker, commit, and validation command is represented.",
+        "Dependencies are valid and acyclic."
+      ],
+      "validationCommands": [
+        "pnpm exec tsx scripts/release/twoDayPacketRegistry.test.ts"
+      ],
+      "allowedOperations": [
+        "registry validation",
+        "dependency graph checks",
+        "status/evidence bookkeeping"
+      ],
+      "prohibitedOperations": [
+        "live deployment",
+        "provider mutation",
+        "migration apply"
+      ],
+      "expectedChangedPaths": [
+        "docs/TWO_DAY_PACKET_REGISTRY.json",
+        "scripts/release/twoDayPacketRegistry.ts",
+        "scripts/release/twoDayPacketRegistry.test.ts"
+      ],
+      "expectedCommitMessage": "feat(release): add two-day packet registry",
+      "rollbackCondition": "The registry cannot validate its dependency graph or packet inventory.",
+      "approvalGate": "release validation gate",
+      "parallelSafe": true,
+      "status": "implemented",
+      "blocker": null,
+      "commit": "8927df9",
+      "tests": [
+        "scripts/release/twoDayPacketRegistry.test.ts"
+      ]
+    },
+    {
+      "id": "PAYLOAD-01",
+      "title": "complete persisted Membership Support collections",
+      "wave": 2,
+      "lane": "PAYLOAD",
+      "priority": 1,
+      "dependencies": [
+        "SCHEMA-01",
+        "SCHEMA-02",
+        "SCHEMA-03"
+      ],
+      "sourcePaths": [
+        "src/collections/membership-support/*.ts",
+        "src/lib/membership-support/*.ts",
+        "docs/MEMBERSHIP_SUPPORT_SCHEMA_MIGRATION_PLAN.md"
+      ],
+      "acceptanceCriteria": [
+        "The persisted collection shape matches the reviewed membership-support domain.",
+        "The migration remains unapplied until explicit approval."
+      ],
+      "validationCommands": [
+        "pnpm exec tsx scripts/membership_support_collections.test.ts",
+        "pnpm exec tsx scripts/membership_support_schema_contract.test.ts"
+      ],
+      "allowedOperations": [
+        "read-only collection review",
+        "static contract tests",
+        "repository-only documentation"
+      ],
+      "prohibitedOperations": [
+        "migration apply",
+        "generated-type overwrite",
+        "live provider calls"
+      ],
+      "expectedChangedPaths": [
+        "docs/TWO_DAY_EXECUTION_QUEUE.md",
+        "docs/TWO_DAY_PACKET_REGISTRY.json"
+      ],
+      "expectedCommitMessage": "feat(payload): complete persisted membership support collections",
+      "rollbackCondition": "The collection contract can no longer be expressed without migration approval.",
+      "approvalGate": "schema migration approval",
+      "parallelSafe": false,
+      "status": "implemented",
+      "blocker": null,
+      "commit": "8927df9",
+      "tests": [
+        "scripts/membership_support_collections.test.ts",
+        "scripts/membership_support_schema_contract.test.ts"
+      ]
+    },
+    {
+      "id": "BILLING-01",
+      "title": "Stripe test-mode configuration adapter",
+      "wave": 2,
+      "lane": "BILLING",
+      "priority": 2,
+      "dependencies": [
+        "PAYLOAD-01"
+      ],
+      "sourcePaths": [
+        "src/lib/billing/*",
+        "src/lib/membership-support/service.ts",
+        "scripts/stripe_commitment_contract.test.ts"
+      ],
+      "acceptanceCriteria": [
+        "Test-mode Stripe configuration is expressed without live provider calls.",
+        "Adapter inputs remain deterministic and testable."
+      ],
+      "validationCommands": [
+        "pnpm exec tsx scripts/stripe_commitment_contract.test.ts",
+        "pnpm exec tsx scripts/billing_readiness_report.test.ts"
+      ],
+      "allowedOperations": [
+        "test-mode config review",
+        "adapter test doubles",
+        "billing contract validation"
+      ],
+      "prohibitedOperations": [
+        "live Stripe operations",
+        "product creation",
+        "price creation"
+      ],
+      "expectedChangedPaths": [
+        "docs/TWO_DAY_EXECUTION_QUEUE.md",
+        "docs/TWO_DAY_PACKET_REGISTRY.json"
+      ],
+      "expectedCommitMessage": "feat(billing): add Stripe test-mode config adapter",
+      "rollbackCondition": "The adapter requires live Stripe credentials or live mutations.",
+      "approvalGate": "Stripe test-mode approval",
+      "parallelSafe": true,
+      "status": "implemented",
+      "blocker": null,
+      "commit": "8927df9",
+      "tests": [
+        "scripts/stripe_commitment_contract.test.ts",
+        "scripts/billing_readiness_report.test.ts"
+      ]
+    },
+    {
+      "id": "BILLING-02",
+      "title": "Product/Price provisioning plan and test doubles",
+      "wave": 2,
+      "lane": "BILLING",
+      "priority": 3,
+      "dependencies": [
+        "BILLING-01"
+      ],
+      "sourcePaths": [
+        "docs/JPV_MEMBERSHIP_BILLING_AND_VOUCHER_ARCHITECTURE.md",
+        "src/lib/billing/*",
+        "scripts/member_checkout.test.ts"
+      ],
+      "acceptanceCriteria": [
+        "The Product/Price plan is encoded as a testable repository artifact.",
+        "Test doubles cover the monthly and annual pricing paths."
+      ],
+      "validationCommands": [
+        "pnpm exec tsx scripts/member_checkout.test.ts",
+        "pnpm exec tsx scripts/payload_member_billing_portal_refinement.test.ts"
+      ],
+      "allowedOperations": [
+        "planning only",
+        "test doubles",
+        "billing pricing assertions"
+      ],
+      "prohibitedOperations": [
+        "live product creation",
+        "live price creation",
+        "provider checkout calls"
+      ],
+      "expectedChangedPaths": [
+        "docs/TWO_DAY_EXECUTION_QUEUE.md",
+        "docs/TWO_DAY_PACKET_REGISTRY.json"
+      ],
+      "expectedCommitMessage": "feat(billing): add product and price provisioning plan",
+      "rollbackCondition": "The plan needs live Stripe creation to be expressed.",
+      "approvalGate": "Stripe provisioning approval",
+      "parallelSafe": false,
+      "status": "implemented",
+      "blocker": null,
+      "commit": "8927df9",
+      "tests": [
+        "scripts/member_checkout.test.ts",
+        "scripts/payload_member_billing_portal_refinement.test.ts"
+      ]
+    },
+    {
+      "id": "BILLING-03",
+      "title": "voucher and pay-it-forward persistence integration",
+      "wave": 2,
+      "lane": "BILLING",
+      "priority": 4,
+      "dependencies": [
+        "BILLING-02"
+      ],
+      "sourcePaths": [
+        "src/lib/membership-support/service.ts",
+        "src/lib/membership-support/workflows.ts",
+        "scripts/membership_support_workflows.test.ts"
+      ],
+      "acceptanceCriteria": [
+        "Voucher and pay-it-forward persistence remains repository-only until approved.",
+        "Dedupe and reconciliation behavior stays deterministic."
+      ],
+      "validationCommands": [
+        "pnpm exec tsx scripts/membership_support_workflows.test.ts",
+        "pnpm exec tsx scripts/membership_support_review_queue_projection.test.ts"
+      ],
+      "allowedOperations": [
+        "workflow projection review",
+        "persistence-plan validation",
+        "review-queue checks"
+      ],
+      "prohibitedOperations": [
+        "live provider calls",
+        "database writes",
+        "migration apply"
+      ],
+      "expectedChangedPaths": [
+        "docs/TWO_DAY_EXECUTION_QUEUE.md",
+        "docs/TWO_DAY_PACKET_REGISTRY.json"
+      ],
+      "expectedCommitMessage": "feat(billing): integrate voucher and pay-it-forward persistence",
+      "rollbackCondition": "Persistence integration requires live provider operations or schema edits.",
+      "approvalGate": "billing approval",
+      "parallelSafe": false,
+      "status": "implemented",
+      "blocker": null,
+      "commit": "8927df9",
+      "tests": [
+        "scripts/membership_support_workflows.test.ts",
+        "scripts/membership_support_review_queue_projection.test.ts"
+      ]
+    },
+    {
+      "id": "BILLING-04",
+      "title": "subscription and discount reconciliation",
+      "wave": 2,
+      "lane": "BILLING",
+      "priority": 5,
+      "dependencies": [
+        "BILLING-03"
+      ],
+      "sourcePaths": [
+        "src/lib/payloadCourse/stripeShadowSync.ts",
+        "src/lib/membership-support/webhookReconciliation.ts",
+        "scripts/payload_course_stripe_shadow_sync.test.ts"
+      ],
+      "acceptanceCriteria": [
+        "Reconciliation remains deterministic for subscription and discount changes.",
+        "Shadow-sync evidence still maps to the review queue."
+      ],
+      "validationCommands": [
+        "pnpm exec tsx scripts/payload_course_stripe_shadow_sync.test.ts",
+        "pnpm exec tsx scripts/payload_shadow_reconciliation.test.ts"
+      ],
+      "allowedOperations": [
+        "shadow sync review",
+        "reconciliation contract checks",
+        "queue projection validation"
+      ],
+      "prohibitedOperations": [
+        "live Stripe mutation",
+        "unapproved subscription migration",
+        "database writes"
+      ],
+      "expectedChangedPaths": [
+        "docs/TWO_DAY_EXECUTION_QUEUE.md",
+        "docs/TWO_DAY_PACKET_REGISTRY.json"
+      ],
+      "expectedCommitMessage": "feat(billing): add subscription and discount reconciliation",
+      "rollbackCondition": "Reconciliation cannot be validated without live Stripe calls.",
+      "approvalGate": "billing approval",
+      "parallelSafe": false,
+      "status": "implemented",
+      "blocker": null,
+      "commit": "8927df9",
+      "tests": [
+        "scripts/payload_course_stripe_shadow_sync.test.ts",
+        "scripts/payload_shadow_reconciliation.test.ts"
+      ]
+    },
+    {
+      "id": "QA-02",
+      "title": "billing integration suite",
+      "wave": 2,
+      "lane": "QA",
+      "priority": 6,
+      "dependencies": [
+        "BILLING-04"
+      ],
+      "sourcePaths": [
+        "scripts/billing_readiness_report.test.ts",
+        "scripts/stripe_commitment_contract.test.ts",
+        "scripts/member_checkout.test.ts"
+      ],
+      "acceptanceCriteria": [
+        "Billing integration coverage is grouped and deterministic.",
+        "The suite remains free of live-provider tests."
+      ],
+      "validationCommands": [
+        "pnpm exec tsx scripts/billing_readiness_report.test.ts",
+        "pnpm exec tsx scripts/stripe_commitment_contract.test.ts"
+      ],
+      "allowedOperations": [
+        "billing-focused test grouping",
+        "local contract assertions",
+        "release gate planning"
+      ],
+      "prohibitedOperations": [
+        "live provider tests",
+        "checkout mutations",
+        "deployment commands"
+      ],
+      "expectedChangedPaths": [
+        "docs/TWO_DAY_EXECUTION_QUEUE.md",
+        "docs/TWO_DAY_PACKET_REGISTRY.json"
+      ],
+      "expectedCommitMessage": "feat(qa): add billing integration suite",
+      "rollbackCondition": "Billing coverage drifts back toward live-provider checks.",
+      "approvalGate": "release validation gate",
+      "parallelSafe": true,
+      "status": "implemented",
+      "blocker": null,
+      "commit": "8927df9",
+      "tests": [
+        "scripts/billing_readiness_report.test.ts",
+        "scripts/stripe_commitment_contract.test.ts"
+      ]
+    },
+    {
+      "id": "COURSE-01",
+      "title": "complete course persistence and access integration",
+      "wave": 3,
+      "lane": "COURSE",
+      "priority": 1,
+      "dependencies": [
+        "PAYLOAD-01"
+      ],
+      "sourcePaths": [
+        "src/collections/courses/CourseRuntime.ts",
+        "src/lib/payloadCourse/accessService.ts",
+        "src/lib/entitlements/membershipEntitlement.ts",
+        "src/lib/entitlements/evaluateAccess.ts",
+        "scripts/payload_course_access_service.test.ts",
+        "scripts/payload_entitlement_evaluator.test.ts"
+      ],
+      "acceptanceCriteria": [
+        "Course, module, lesson, enrollment, ordering, publication, progress, completion, last-viewed, next-lesson, entitlement-controlled access, administrator visibility, and safe member projections are represented by source and deterministic tests.",
+        "Membership entitlement evaluator remains the sole authorization decision for direct, voucher, and pay-it-forward membership; pending, unreconciled, suspended, revoked, expired, and post-period cancellation fail closed."
+      ],
+      "validationCommands": [
+        "pnpm course:integration",
+        "pnpm exec tsx scripts/payload_course_access_service.test.ts",
+        "pnpm exec tsx scripts/payload_entitlement_evaluator.test.ts"
+      ],
+      "allowedOperations": [
+        "read-only course audit",
+        "entitlement validation",
+        "protected-resource review"
+      ],
+      "prohibitedOperations": [
+        "live provider checks",
+        "media migration",
+        "unapproved access broadening"
+      ],
+      "expectedChangedPaths": [
+        "docs/TWO_DAY_EXECUTION_QUEUE.md",
+        "docs/TWO_DAY_PACKET_REGISTRY.json"
+      ],
+      "expectedCommitMessage": "feat: complete course persistence and access",
+      "rollbackCondition": "Course access auditing requires live provider operations.",
+      "approvalGate": "course approval",
+      "parallelSafe": true,
+      "status": "implemented",
+      "blocker": null,
+      "commit": "57711f9",
+      "tests": [
+        "scripts/payload_course_access_service.test.ts",
+        "scripts/payload_entitlement_evaluator.test.ts"
+      ]
+    },
+    {
+      "id": "COURSE-02",
+      "title": "complete protected media and Bunny adapter",
+      "wave": 3,
+      "lane": "COURSE",
+      "priority": 2,
+      "dependencies": [
+        "COURSE-01"
+      ],
+      "sourcePaths": [
+        "src/lib/payloadCourse/bunnyProtectedMedia.ts",
+        "src/lib/payloadCourse/lessonResourceDelivery.ts",
+        "src/lib/payloadCourse/lessonResources.ts",
+        "src/app/api/bunny/video/route.ts",
+        "scripts/bunny_protected_media.test.ts",
+        "scripts/payload_lesson_resource_delivery.test.ts"
+      ],
+      "acceptanceCriteria": [
+        "Bunny Stream is the only protected course-video provider; protected playback request models are server-derived and require verified membership entitlement.",
+        "Ready, processing, failed, missing-config, expired, unauthorized, wrong-lesson, deterministic signing, secret-redaction, and no Amazon/S3 fallback cases are covered offline.",
+        "Signed playback endpoint (/api/bunny/video) implemented with server-only token generation and membership entitlement checks."
+      ],
+      "validationCommands": [
+        "pnpm course:integration",
+        "pnpm exec tsx scripts/bunny_protected_media.test.ts",
+        "pnpm exec tsx scripts/payload_lesson_resource_delivery.test.ts",
+        "pnpm test:e2e",
+        "BASE_URL=https://preview.jpvbootcamp.com pnpm test:e2e:staging"
+      ],
+      "allowedOperations": [
+        "repository-only Bunny adapter and in-memory test double",
+        "configuration diagnostics",
+        "static protected lesson rendering integration",
+        "signed playback endpoint implementation"
+      ],
+      "prohibitedOperations": [
+        "live Bunny verification",
+        "public protected media URLs",
+        "client secret exposure",
+        "Amazon S3 fallback"
+      ],
+      "expectedChangedPaths": [
+        "src/app/api/bunny/video/route.ts",
+        "docs/TWO_DAY_EXECUTION_QUEUE.md",
+        "docs/TWO_DAY_PACKET_REGISTRY.json"
+      ],
+      "expectedCommitMessage": "feat: add Bunny signed playback endpoint (/api/bunny/video)",
+      "rollbackCondition": "Protected media work requires live provider evidence or public credential exposure.",
+      "approvalGate": "course approval",
+      "parallelSafe": false,
+      "status": "implemented",
+      "blocker": null,
+      "commit": "35e4bd8",
+      "tests": [
+        "scripts/bunny_protected_media.test.ts",
+        "scripts/payload_lesson_resource_delivery.test.ts",
+        "e2e/checkout-and-submissions.spec.ts",
+        "e2e/portal-courses-community.spec.ts"
+      ]
+    },
+    {
+      "id": "LIVEKIT-01",
+      "title": "determine realtime domain scope",
+      "wave": 3,
+      "lane": "LIVEKIT",
+      "priority": 3,
+      "dependencies": [
+        "COURSE-02"
+      ],
+      "sourcePaths": [
+        "docs/LIVEKIT_PAYLOADCMS_GROUP_CALLS_PLAN.md",
+        "docs/PAYLOAD_INTEGRATION_PLAN.md",
+        "docs/ARCHITECTURE.md"
+      ],
+      "acceptanceCriteria": [
+        "Repository evidence places LiveKit in future Phase 11 / controlled follow-up releases, not current core Wave 3 launch scope.",
+        "LIVEKIT_SCOPE_CLARIFICATION_REQUIRED is recorded without inventing server, token, room, or client features."
+      ],
+      "validationCommands": [
+        "pnpm exec tsx scripts/release/twoDayPacketRegistry.test.ts"
+      ],
+      "allowedOperations": [
+        "scope clarification",
+        "read-only architecture review",
+        "documentation only"
+      ],
+      "prohibitedOperations": [
+        "integration design invention",
+        "token issuance",
+        "webhook implementation"
+      ],
+      "expectedChangedPaths": [
+        "docs/TWO_DAY_EXECUTION_QUEUE.md",
+        "docs/TWO_DAY_PACKET_REGISTRY.json"
+      ],
+      "expectedCommitMessage": "docs: record LiveKit scope clarification",
+      "rollbackCondition": "The task begins inventing LiveKit implementation requirements.",
+      "approvalGate": "product scope clarification",
+      "parallelSafe": true,
+      "status": "deferred",
+      "blocker": null,
+      "commit": "57711f9",
+      "tests": [
+        "scripts/release/twoDayPacketRegistry.test.ts"
+      ]
+    },
+    {
+      "id": "LIVEKIT-02",
+      "title": "LiveKit server/token integration",
+      "wave": 3,
+      "lane": "LIVEKIT",
+      "priority": 4,
+      "dependencies": [
+        "LIVEKIT-01"
+      ],
+      "sourcePaths": [
+        "docs/LIVEKIT_PAYLOADCMS_GROUP_CALLS_PLAN.md",
+        "scripts/release/twoDayPacketRegistry.test.ts"
+      ],
+      "acceptanceCriteria": [
+        "Not applicable until LIVEKIT-01 establishes current launch realtime scope."
+      ],
+      "validationCommands": [
+        "pnpm exec tsx scripts/release/twoDayPacketRegistry.test.ts"
+      ],
+      "allowedOperations": [
+        "blocked status reporting",
+        "scope clarification follow-up"
+      ],
+      "prohibitedOperations": [
+        "JWT issuance",
+        "server integration",
+        "token handling design"
+      ],
+      "expectedChangedPaths": [
+        "docs/TWO_DAY_EXECUTION_QUEUE.md",
+        "docs/TWO_DAY_PACKET_REGISTRY.json"
+      ],
+      "expectedCommitMessage": "docs: mark LiveKit server model not applicable",
+      "rollbackCondition": "The task is treated as executable without scope clarification.",
+      "approvalGate": "product scope clarification",
+      "parallelSafe": true,
+      "status": "deferred",
+      "blocker": null,
+      "commit": "57711f9",
+      "tests": [
+        "scripts/release/twoDayPacketRegistry.test.ts"
+      ]
+    },
+    {
+      "id": "LIVEKIT-03",
+      "title": "LiveKit client integration",
+      "wave": 3,
+      "lane": "LIVEKIT",
+      "priority": 5,
+      "dependencies": [
+        "LIVEKIT-02"
+      ],
+      "sourcePaths": [
+        "docs/LIVEKIT_PAYLOADCMS_GROUP_CALLS_PLAN.md",
+        "scripts/release/twoDayPacketRegistry.test.ts"
+      ],
+      "acceptanceCriteria": [
+        "Not applicable until LIVEKIT-01 and LIVEKIT-02 establish current launch realtime scope."
+      ],
+      "validationCommands": [
+        "pnpm exec tsx scripts/release/twoDayPacketRegistry.test.ts"
+      ],
+      "allowedOperations": [
+        "blocked status reporting",
+        "scope clarification follow-up"
+      ],
+      "prohibitedOperations": [
+        "client UI implementation",
+        "media-room wiring",
+        "auth flow invention"
+      ],
+      "expectedChangedPaths": [
+        "docs/TWO_DAY_EXECUTION_QUEUE.md",
+        "docs/TWO_DAY_PACKET_REGISTRY.json"
+      ],
+      "expectedCommitMessage": "docs: mark LiveKit client not applicable",
+      "rollbackCondition": "The task is treated as actionable before LiveKit scope is confirmed.",
+      "approvalGate": "product scope clarification",
+      "parallelSafe": true,
+      "status": "deferred",
+      "blocker": null,
+      "commit": "57711f9",
+      "tests": [
+        "scripts/release/twoDayPacketRegistry.test.ts"
+      ]
+    },
+    {
+      "id": "QA-03",
+      "title": "course and realtime integration tests",
+      "wave": 3,
+      "lane": "QA",
+      "priority": 6,
+      "dependencies": [
+        "COURSE-02",
+        "LIVEKIT-01"
+      ],
+      "sourcePaths": [
+        "scripts/payload_lesson_resource_delivery.test.ts",
+        "scripts/payload_course_stripe_shadow_sync.test.ts",
+        "scripts/release/twoDayPacketRegistry.test.ts"
+      ],
+      "acceptanceCriteria": [
+        "Course integration tests remain local and deterministic.",
+        "Realtime coverage stays blocked until scope is clarified."
+      ],
+      "validationCommands": [
+        "pnpm course:integration",
+        "pnpm exec tsx scripts/release/twoDayPacketRegistry.test.ts"
+      ],
+      "allowedOperations": [
+        "course integration testing",
+        "local realtime planning"
+      ],
+      "prohibitedOperations": [
+        "live realtime integration",
+        "browser-only smoke claims",
+        "provider checks"
+      ],
+      "expectedChangedPaths": [
+        "docs/TWO_DAY_EXECUTION_QUEUE.md",
+        "docs/TWO_DAY_PACKET_REGISTRY.json"
+      ],
+      "expectedCommitMessage": "test: add course integration suite",
+      "rollbackCondition": "Realtime integration becomes implied without scope clarification.",
+      "approvalGate": "release validation gate",
+      "parallelSafe": true,
+      "status": "implemented",
+      "blocker": null,
+      "commit": "57711f9",
+      "tests": [
+        "scripts/bunny_protected_media.test.ts",
+        "scripts/payload_lesson_resource_delivery.test.ts",
+        "scripts/payload_course_access_service.test.ts",
+        "scripts/release/twoDayPacketRegistry.test.ts"
+      ]
+    },
+    {
+      "id": "FRONTEND-01",
+      "title": "onboarding end-to-end",
+      "wave": 3,
+      "lane": "FRONTEND",
+      "priority": 1,
+      "dependencies": [
+        "BILLING-04",
+        "COURSE-02",
+        "QA-02"
+      ],
+      "sourcePaths": [
+        "src/app/(frontend)/portal/page.tsx",
+        "src/app/(frontend)/register/page.tsx",
+        "e2e/public.spec.ts"
+      ],
+      "acceptanceCriteria": [
+        "Onboarding routes lead into the approved portal/member flow only.",
+        "No onboarding surface claims unsupported free registration."
+      ],
+      "validationCommands": [
+        "pnpm exec tsx scripts/member_checkout.test.ts",
+        "pnpm exec tsx scripts/stripe_checkout_validation.test.ts",
+        "pnpm exec tsx scripts/browser_e2e_integrity.test.ts",
+        "pnpm test:e2e"
+      ],
+      "allowedOperations": [
+        "onboarding flow review",
+        "route assertions",
+        "copy alignment"
+      ],
+      "prohibitedOperations": [
+        "public free registration",
+        "unsupported checkout claims",
+        "live provider mutability"
+      ],
+      "expectedChangedPaths": [
+        "docs/TWO_DAY_EXECUTION_QUEUE.md",
+        "docs/TWO_DAY_PACKET_REGISTRY.json"
+      ],
+      "expectedCommitMessage": "feat: complete membership onboarding flow",
+      "rollbackCondition": "Onboarding reintroduces a public free-registration claim.",
+      "approvalGate": "frontend acceptance approval",
+      "parallelSafe": true,
+      "status": "implemented",
+      "blocker": null,
+      "commit": "57711f9",
+      "tests": [
+        "scripts/member_checkout.test.ts",
+        "scripts/stripe_checkout_validation.test.ts",
+        "scripts/browser_e2e_integrity.test.ts",
+        "e2e/checkout-and-submissions.spec.ts"
+      ]
+    },
+    {
+      "id": "FRONTEND-02",
+      "title": "account and billing management",
+      "wave": 3,
+      "lane": "FRONTEND",
+      "priority": 2,
+      "dependencies": [
+        "FRONTEND-01"
+      ],
+      "sourcePaths": [
+        "src/app/(frontend)/portal/[section]/page.tsx",
+        "scripts/portal_account_billing_parity.test.ts",
+        "scripts/payload_member_billing_portal.test.ts"
+      ],
+      "acceptanceCriteria": [
+        "Account and billing management remain under /portal.",
+        "The portal surface matches the approved membership contract."
+      ],
+      "validationCommands": [
+        "pnpm exec tsx scripts/portal_account_billing_parity.test.ts",
+        "pnpm exec tsx scripts/payload_member_billing_portal.test.ts",
+        "pnpm test:e2e"
+      ],
+      "allowedOperations": [
+        "portal parity review",
+        "billing management assertions"
+      ],
+      "prohibitedOperations": [
+        "admin-route migration",
+        "live billing mutation",
+        "public surface leakage"
+      ],
+      "expectedChangedPaths": [
+        "docs/TWO_DAY_EXECUTION_QUEUE.md",
+        "docs/TWO_DAY_PACKET_REGISTRY.json"
+      ],
+      "expectedCommitMessage": "feat: complete account billing management",
+      "rollbackCondition": "Account or billing management leaks outside the portal boundary.",
+      "approvalGate": "frontend acceptance approval",
+      "parallelSafe": true,
+      "status": "implemented",
+      "blocker": null,
+      "commit": "57711f9",
+      "tests": [
+        "scripts/portal_account_billing_parity.test.ts",
+        "scripts/payload_member_billing_portal.test.ts",
+        "e2e/auth-portal-admin.spec.ts"
+      ]
+    },
+    {
+      "id": "FRONTEND-03",
+      "title": "course dashboard and lesson flows",
+      "wave": 3,
+      "lane": "FRONTEND",
+      "priority": 3,
+      "dependencies": [
+        "FRONTEND-02"
+      ],
+      "sourcePaths": [
+        "src/app/(frontend)/portal/courses/page.tsx",
+        "src/app/(frontend)/portal/courses/[courseSlug]/lessons/[lessonSlug]/page.tsx",
+        "scripts/course_programme_mvp.test.ts"
+      ],
+      "acceptanceCriteria": [
+        "Course and lesson routes remain inside the portal boundary.",
+        "Protected resource delivery stays intact."
+      ],
+      "validationCommands": [
+        "pnpm course:integration",
+        "pnpm exec tsx scripts/course_programme_mvp.test.ts",
+        "pnpm exec tsx scripts/payload_lesson_resource_delivery.test.ts",
+        "pnpm test:e2e"
+      ],
+      "allowedOperations": [
+        "course dashboard review",
+        "lesson flow assertions"
+      ],
+      "prohibitedOperations": [
+        "public course leakage",
+        "protected media exposure",
+        "unsupported route ownership"
+      ],
+      "expectedChangedPaths": [
+        "docs/TWO_DAY_EXECUTION_QUEUE.md",
+        "docs/TWO_DAY_PACKET_REGISTRY.json"
+      ],
+      "expectedCommitMessage": "feat: complete course learning experience",
+      "rollbackCondition": "Lesson or course routes leak outside the portal.",
+      "approvalGate": "frontend acceptance approval",
+      "parallelSafe": true,
+      "status": "implemented",
+      "blocker": null,
+      "commit": "57711f9",
+      "tests": [
+        "scripts/course_programme_mvp.test.ts",
+        "scripts/payload_lesson_resource_delivery.test.ts",
+        "e2e/portal-courses-community.spec.ts"
+      ]
+    },
+    {
+      "id": "PAYLOAD-02",
+      "title": "administrator support operations",
+      "wave": 4,
+      "lane": "PAYLOAD",
+      "priority": 4,
+      "dependencies": [
+        "FRONTEND-01"
+      ],
+      "sourcePaths": [
+        "src/collections/membership-support/*.ts",
+        "src/lib/membership-support/cockpit.ts",
+        "scripts/membership_support_cockpit.test.ts"
+      ],
+      "acceptanceCriteria": [
+        "Administrator support operations remain internal and audit-sensitive.",
+        "Support views never expose protected data publicly."
+      ],
+      "validationCommands": [
+        "pnpm exec tsx scripts/membership_support_cockpit.test.ts",
+        "pnpm exec tsx scripts/membership_support_collections.test.ts"
+      ],
+      "allowedOperations": [
+        "administrator cockpit review",
+        "support operation assertions"
+      ],
+      "prohibitedOperations": [
+        "public support leakage",
+        "live admin action",
+        "migration apply"
+      ],
+      "expectedChangedPaths": [
+        "docs/TWO_DAY_EXECUTION_QUEUE.md",
+        "docs/TWO_DAY_PACKET_REGISTRY.json"
+      ],
+      "expectedCommitMessage": "feat(payload): tighten administrator support operations",
+      "rollbackCondition": "Support operations can be accessed or exposed publicly.",
+      "approvalGate": "admin acceptance approval",
+      "parallelSafe": false,
+      "status": "implemented",
+      "blocker": null,
+      "commit": "8927df9",
+      "tests": [
+        "scripts/membership_support_cockpit.test.ts",
+        "scripts/membership_support_collections.test.ts"
+      ]
+    },
+    {
+      "id": "QA-04",
+      "title": "browser E2E launch flows",
+      "wave": 3,
+      "lane": "QA",
+      "priority": 5,
+      "dependencies": [
+        "FRONTEND-03"
+      ],
+      "sourcePaths": [
+        "e2e/public.spec.ts",
+        "e2e/auth-portal-admin.spec.ts",
+        "scripts/browser_e2e_integrity.test.ts"
+      ],
+      "acceptanceCriteria": [
+        "Browser launch flows are deterministic and scoped to local validation.",
+        "No browser suite implies staging acceptance."
+      ],
+      "validationCommands": [
+        "pnpm test:e2e",
+        "pnpm exec tsx scripts/browser_e2e_integrity.test.ts"
+      ],
+      "allowedOperations": [
+        "browser journey validation",
+        "local E2E integrity checks"
+      ],
+      "prohibitedOperations": [
+        "staging acceptance claims",
+        "live provider checks",
+        "deployment commands"
+      ],
+      "expectedChangedPaths": [
+        "docs/TWO_DAY_EXECUTION_QUEUE.md",
+        "docs/TWO_DAY_PACKET_REGISTRY.json"
+      ],
+      "expectedCommitMessage": "test: complete launch browser flows",
+      "rollbackCondition": "The browser suite starts implying staging acceptance.",
+      "approvalGate": "release validation gate",
+      "parallelSafe": true,
+      "status": "implemented",
+      "blocker": null,
+      "commit": "57711f9",
+      "tests": [
+        "e2e/public.spec.ts",
+        "e2e/checkout-and-submissions.spec.ts",
+        "e2e/portal-courses-community.spec.ts",
+        "scripts/browser_e2e_integrity.test.ts"
+      ]
+    },
+    {
+      "id": "BILLING-05",
+      "title": "migration inventory and preview",
+      "wave": 5,
+      "lane": "BILLING",
+      "priority": 1,
+      "dependencies": [
+        "BILLING-04"
+      ],
+      "sourcePaths": [
+        "docs/MEMBERSHIP_SUPPORT_SCHEMA_MIGRATION_PLAN.md",
+        "scripts/release/buildMembershipMigrationPreview.ts",
+        "scripts/preview_migration_inventory.test.ts"
+      ],
+      "acceptanceCriteria": [
+        "The migration inventory remains repository-only and deterministic.",
+        "Preview output does not apply or imply a migration."
+      ],
+      "validationCommands": [
+        "pnpm migration:membership:preview",
+        "pnpm exec tsx scripts/preview_migration_inventory.test.ts"
+      ],
+      "allowedOperations": [
+        "migration inventory review",
+        "preview-only reporting"
+      ],
+      "prohibitedOperations": [
+        "migration apply",
+        "database writes",
+        "generated-type overwrite"
+      ],
+      "expectedChangedPaths": [
+        "docs/TWO_DAY_EXECUTION_QUEUE.md",
+        "docs/TWO_DAY_PACKET_REGISTRY.json"
+      ],
+      "expectedCommitMessage": "feat(billing): refresh migration inventory and preview",
+      "rollbackCondition": "Preview output starts implying execution.",
+      "approvalGate": "migration approval",
+      "parallelSafe": false,
+      "status": "blocked",
+      "blocker": "blocked by BILLING-04 until subscription and discount reconciliation is complete",
+      "commit": "8927df9",
+      "tests": [
+        "scripts/preview_migration_inventory.test.ts",
+        "scripts/release/buildMembershipMigrationPreview.ts"
+      ]
+    },
+    {
+      "id": "BILLING-06",
+      "title": "cohort rehearsal tooling",
+      "wave": 5,
+      "lane": "BILLING",
+      "priority": 2,
+      "dependencies": [
+        "BILLING-05"
+      ],
+      "sourcePaths": [
+        "scripts/release/migrationRehearsal.ts",
+        "scripts/release/buildMigrationRehearsalEvidence.ts",
+        "scripts/migration_rehearsal_evidence.test.ts"
+      ],
+      "acceptanceCriteria": [
+        "Rehearsal tooling remains repository-only and deterministic.",
+        "Evidence generation stays separate from live execution."
+      ],
+      "validationCommands": [
+        "pnpm staging:migration-rehearsal",
+        "pnpm staging:migration-rehearsal:evidence"
+      ],
+      "allowedOperations": [
+        "static rehearsal",
+        "evidence generation",
+        "rollback planning"
+      ],
+      "prohibitedOperations": [
+        "database mutation",
+        "provider mutation",
+        "migration apply"
+      ],
+      "expectedChangedPaths": [
+        "docs/TWO_DAY_EXECUTION_QUEUE.md",
+        "docs/TWO_DAY_PACKET_REGISTRY.json"
+      ],
+      "expectedCommitMessage": "feat(billing): add cohort rehearsal tooling",
+      "rollbackCondition": "Rehearsal tooling reaches live databases or providers.",
+      "approvalGate": "migration approval",
+      "parallelSafe": false,
+      "status": "blocked",
+      "blocker": "blocked by BILLING-05 until the migration inventory and preview are complete",
+      "commit": "8927df9",
+      "tests": [
+        "scripts/migration_rehearsal_evidence.test.ts",
+        "scripts/release/migrationRehearsal.ts"
+      ]
+    },
+    {
+      "id": "QA-05",
+      "title": "migration rollback and reconciliation tests",
+      "wave": 5,
+      "lane": "QA",
+      "priority": 3,
+      "dependencies": [
+        "BILLING-06"
+      ],
+      "sourcePaths": [
+        "scripts/migration_rehearsal_safety.test.ts",
+        "scripts/rollback_evidence_checklist.test.ts",
+        "scripts/staging_migration_preflight.test.ts"
+      ],
+      "acceptanceCriteria": [
+        "Rollback and reconciliation tests remain repository-only.",
+        "Acyclic dependencies are preserved in the packet registry."
+      ],
+      "validationCommands": [
+        "pnpm exec tsx scripts/migration_rehearsal_safety.test.ts",
+        "pnpm exec tsx scripts/rollback_evidence_checklist.test.ts"
+      ],
+      "allowedOperations": [
+        "rollback review",
+        "reconciliation contract checks"
+      ],
+      "prohibitedOperations": [
+        "live rollback execution",
+        "database mutation",
+        "provider mutation"
+      ],
+      "expectedChangedPaths": [
+        "docs/TWO_DAY_EXECUTION_QUEUE.md",
+        "docs/TWO_DAY_PACKET_REGISTRY.json"
+      ],
+      "expectedCommitMessage": "feat(qa): add migration rollback and reconciliation tests",
+      "rollbackCondition": "Rollback checks start implying live execution.",
+      "approvalGate": "migration approval",
+      "parallelSafe": true,
+      "status": "blocked",
+      "blocker": "blocked by BILLING-06 until rehearsal tooling exists",
+      "commit": "8927df9",
+      "tests": [
+        "scripts/migration_rehearsal_safety.test.ts",
+        "scripts/rollback_evidence_checklist.test.ts"
+      ]
+    },
+    {
+      "id": "RELEASE-02",
+      "title": "staging runbook and approval packet",
+      "wave": 5,
+      "lane": "RELEASE",
+      "priority": 4,
+      "dependencies": [
+        "QA-05"
+      ],
+      "sourcePaths": [
+        "docs/release/GO_NO_GO_CHECKLIST.md",
+        "docs/release/ROLLBACK_EVIDENCE_CHECKLIST.md",
+        "docs/release/PROVIDER_VERIFICATION_RUNBOOK.md"
+      ],
+      "acceptanceCriteria": [
+        "The runbook names exact approval gates and owners.",
+        "The packet stays repository-only until approvals exist."
+      ],
+      "validationCommands": [
+        "pnpm staging:decision-readiness",
+        "pnpm release:evidence:dry-run"
+      ],
+      "allowedOperations": [
+        "runbook maintenance",
+        "approval-packet bookkeeping",
+        "evidence dry run"
+      ],
+      "prohibitedOperations": [
+        "live deployment",
+        "live provider verification",
+        "migration apply"
+      ],
+      "expectedChangedPaths": [
+        "docs/TWO_DAY_EXECUTION_QUEUE.md",
+        "docs/TWO_DAY_PACKET_REGISTRY.json"
+      ],
+      "expectedCommitMessage": "docs: add staging runbook and approval packet",
+      "rollbackCondition": "The packet implies approval that does not exist.",
+      "approvalGate": "formal go/no-go",
+      "parallelSafe": true,
+      "status": "blocked",
+      "blocker": "blocked by QA-05 and external approvals",
+      "commit": "8927df9",
+      "tests": [
+        "scripts/decision_readiness_runner.test.ts",
+        "scripts/release_evidence_generator.test.ts"
+      ]
+    },
+    {
+      "id": "RELEASE-03",
+      "title": "go/no-go evidence",
+      "wave": 5,
+      "lane": "RELEASE",
+      "priority": 5,
+      "dependencies": [
+        "RELEASE-02"
+      ],
+      "sourcePaths": [
+        "docs/release/GO_NO_GO_CHECKLIST.md",
+        "docs/client/STATUS_UPDATE_PROCEDURE.md",
+        "scripts/core_go_live_decision.test.ts"
+      ],
+      "acceptanceCriteria": [
+        "Go/no-go evidence stays explicit and non-fabricated.",
+        "The repository remains NO-GO until real external evidence exists."
+      ],
+      "validationCommands": [
+        "pnpm staging:decision-readiness",
+        "pnpm exec tsx scripts/core_go_live_decision.test.ts"
+      ],
+      "allowedOperations": [
+        "go/no-go evidence review",
+        "decision bookkeeping"
+      ],
+      "prohibitedOperations": [
+        "approval inference",
+        "deployment claims",
+        "production claims"
+      ],
+      "expectedChangedPaths": [
+        "docs/TWO_DAY_EXECUTION_QUEUE.md",
+        "docs/TWO_DAY_PACKET_REGISTRY.json"
+      ],
+      "expectedCommitMessage": "docs: record go/no-go evidence",
+      "rollbackCondition": "The evidence packet claims approval that was never granted.",
+      "approvalGate": "formal go/no-go",
+      "parallelSafe": true,
+      "status": "blocked",
+      "blocker": "blocked by RELEASE-02 and external approvals",
+      "commit": "8927df9",
+      "tests": [
+        "scripts/core_go_live_decision.test.ts",
+        "scripts/decision_readiness_runner.test.ts"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,204 @@
+name: Publish Preview Image
+
+# Third-party action SHAs pinned to verified releases:
+#   actions/checkout@v4          -> 11d5960a326750d5838078e36cf38b85af677262
+#   actions/setup-node@v4        -> 49933ea5288caeca8642d1e84afbd3f7d6820020
+#   docker/setup-buildx-action   -> 8d2750c68a42422c14e847fe6c8ac0403b4cbd6f
+#   docker/login-action          -> c94ce9fb468520275223c153574b00df6fe4bcc9
+#   docker/build-push-action     -> ca052bb54ab0790a636c9b5f226502c73d547a25
+#   actions/upload-artifact@v4   -> ea165f8d65b6e75b540449e92b4886f43607fa02
+
+on:
+  workflow_dispatch:
+    inputs:
+      commit_sha:
+        description: Full 40-character commit SHA to publish (must be current tip of feature/course-branding-and-preview)
+        required: true
+        type: string
+      confirmation:
+        description: Type publish-preview-image to confirm image publication only
+        required: true
+        type: string
+      release_label:
+        description: Optional immutable release label for the manifest
+        required: false
+        type: string
+      source_date:
+        description: Reproducible source date or build timestamp for labels and manifest
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: preview-image-publish-staging
+  cancel-in-progress: false
+
+jobs:
+  publish-preview-image:
+    name: Publish preview image
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: preview-image-publish
+
+    env:
+      REQUESTED_SHA: ${{ inputs.commit_sha }}
+      TARGET_ENVIRONMENT: staging
+      STAGING_ORIGIN: https://preview.jpvbootcamp.com
+      CONFIRMATION: ${{ inputs.confirmation }}
+      RELEASE_LABEL: ${{ inputs.release_label }}
+      SOURCE_DATE: ${{ inputs.source_date }}
+      ALLOWED_BRANCH: feature/course-branding-and-preview
+
+    steps:
+      - name: Validate inputs and staging boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Commit SHA format
+          case "$REQUESTED_SHA" in
+            *[!0-9a-fA-F]*)
+              echo "PUBLISH-DENIED: commit_sha must be hexadecimal" >&2
+              exit 1
+              ;;
+          esac
+          if [ "${#REQUESTED_SHA}" -ne 40 ]; then
+            echo "PUBLISH-DENIED: commit_sha must be exactly 40 characters" >&2
+            exit 1
+          fi
+          # Confirmation phrase
+          if [ "$CONFIRMATION" != "publish-preview-image" ]; then
+            echo "PUBLISH-DENIED: confirmation must be 'publish-preview-image'" >&2
+            exit 1
+          fi
+          # Source date
+          if [ -z "$SOURCE_DATE" ]; then
+            echo "PUBLISH-DENIED: source_date is required" >&2
+            exit 1
+          fi
+          # Reject if dispatched from main
+          if [ "${{ github.ref_name }}" = "main" ]; then
+            echo "PUBLISH-DENIED: this workflow must not run from main" >&2
+            exit 1
+          fi
+          # Require dispatch from the exact staging feature branch
+          if [ "${{ github.ref_name }}" != "feature/course-branding-and-preview" ]; then
+            echo "PUBLISH-DENIED: this workflow may only be dispatched from feature/course-branding-and-preview, got: ${{ github.ref_name }}" >&2
+            exit 1
+          fi
+
+      - name: Check out feature branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+        with:
+          ref: refs/heads/feature/course-branding-and-preview
+          fetch-depth: 0
+
+      - name: Verify requested SHA is current remote tip of feature branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          BRANCH_TIP="$(git rev-parse HEAD)"
+          if [ "$BRANCH_TIP" != "$REQUESTED_SHA" ]; then
+            echo "PUBLISH-DENIED: requested SHA ($REQUESTED_SHA) does not match current tip of $ALLOWED_BRANCH ($BRANCH_TIP)" >&2
+            echo "Only the current remote tip may be published." >&2
+            exit 1
+          fi
+          echo "SHA verified: $REQUESTED_SHA is the current tip of $ALLOWED_BRANCH"
+
+      - name: Capture checkout SHA
+        id: checkout-sha
+        shell: bash
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
+        with:
+          node-version: '20'
+
+      - name: Enable Corepack
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.33.0 --activate
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate release manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm --silent preview:release:manifest \
+            --repository="${{ github.repository }}" \
+            --commit-sha="${{ steps.checkout-sha.outputs.sha }}" \
+            --image-reference="ghcr.io/${{ github.repository }}:${{ steps.checkout-sha.outputs.sha }}" \
+            --target-environment="staging" \
+            --startup-mode=application-only \
+            --deployment-runtime=docker \
+            --source-date="$SOURCE_DATE" \
+            --release-label="$RELEASE_LABEL" \
+            > preview-release-manifest.json
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f  # v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9  # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Determine publish tags
+        id: publish-tags
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha_tag="ghcr.io/${{ github.repository }}:${{ steps.checkout-sha.outputs.sha }}"
+          branch_tag="ghcr.io/${{ github.repository }}:feature-course-branding-and-preview"
+          {
+            echo "tags<<EOF"
+            echo "$branch_tag"
+            echo "$sha_tag"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Build and publish immutable image
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25  # v5
+        with:
+          context: .
+          file: Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.publish-tags.outputs.tags }}
+          build-args: |
+            NEXT_PUBLIC_APP_URL=https://preview.jpvbootcamp.com
+            APP_BASE_URL=https://preview.jpvbootcamp.com
+            NEXT_PUBLIC_SERVER_URL=https://preview.jpvbootcamp.com
+            IMAGE_TAG=${{ steps.checkout-sha.outputs.sha }}
+            COMMIT_SHA=${{ steps.checkout-sha.outputs.sha }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ steps.checkout-sha.outputs.sha }}
+            org.opencontainers.image.created=${{ env.SOURCE_DATE }}
+            org.opencontainers.image.version=${{ env.RELEASE_LABEL }}
+            dev.jpvbootcamp.staging-origin=https://preview.jpvbootcamp.com
+            dev.jpvbootcamp.branch=feature/course-branding-and-preview
+          cache-from: type=gha,scope=preview-image-publish
+          cache-to: type=gha,mode=max,scope=preview-image-publish
+
+      - name: Upload release manifest
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        with:
+          name: preview-release-manifest-${{ steps.checkout-sha.outputs.sha }}
+          path: preview-release-manifest.json
+
+      - name: Report image reference
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Published image: ghcr.io/${{ github.repository }}:${{ steps.checkout-sha.outputs.sha }}"
+          echo "Branch tag: ghcr.io/${{ github.repository }}:feature-course-branding-and-preview"
+          echo "Staging origin: https://preview.jpvbootcamp.com"
+          echo "Image publication does not deploy, run migrations, or invoke provider email."

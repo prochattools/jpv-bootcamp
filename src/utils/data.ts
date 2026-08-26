@@ -14,7 +14,7 @@ export const posts = [
     authorName: "Dennis Babych",
     profileImage: `${ProfileImageSrc}`,
     html: `<div class="article">
-  <h2 class="wp-block-heading has-large-font-size">A step-by-step guide for building stunning 3D scenes on the web with example prompts.</h2>
+  <h2 class="article-heading has-large-font-size">A step-by-step guide for building stunning 3D scenes on the web with example prompts.</h2>
   
   
   
@@ -26,11 +26,11 @@ export const posts = [
   
   
   
-  <h2 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#getting-started-with-3d-development">Getting started with 3D development</a></h2>
+  <h2 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#getting-started-with-3d-development">Getting started with 3D development</a></h2>
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#the-3d-scene:-your-canvas-for-creation">The 3D scene: Your canvas for creation</a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#the-3d-scene:-your-canvas-for-creation">The 3D scene: Your canvas for creation</a></h3>
   
   
   
@@ -38,7 +38,7 @@ export const posts = [
   
   
   
-  <figure class="wp-block-image size-large"><img loading="lazy" decoding="async" width="1024" height="576" src="http://localhost:8080/wp-content/uploads/2024/10/Cover-2-2-1024x576.jpg" alt="alternativeIMAGE" class="wp-image-8" srcset="http://localhost:8080/wp-content/uploads/2024/10/Cover-2-2-1024x576.jpg 1024w, http://localhost:8080/wp-content/uploads/2024/10/Cover-2-2-300x169.jpg 300w, http://localhost:8080/wp-content/uploads/2024/10/Cover-2-2-768x432.jpg 768w, http://localhost:8080/wp-content/uploads/2024/10/Cover-2-2-1536x864.jpg 1536w, http://localhost:8080/wp-content/uploads/2024/10/Cover-2-2-2048x1152.jpg 2048w" sizes="(max-width: 1024px) 100vw, 1024px"></figure>
+  <figure class="article-image size-large"><img loading="lazy" decoding="async" width="1024" height="576" src="https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1024&q=80" alt="alternativeIMAGE" class="article-image-8" srcset="https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1024&q=80 1024w, https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1024&q=80 300w, https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1024&q=80 768w, https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1024&q=80 1536w, https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1024&q=80 2048w" sizes="(max-width: 1024px) 100vw, 1024px"></figure>
   
   
   
@@ -46,7 +46,7 @@ export const posts = [
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#key-3d-shapes-and-their-roles">Key 3D shapes and their roles</a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#key-3d-shapes-and-their-roles">Key 3D shapes and their roles</a></h3>
   
   
   
@@ -62,7 +62,7 @@ export const posts = [
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#meshes-and-materials:-bringing-shapes-to-life">Meshes and materials: Bringing shapes to life</a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#meshes-and-materials:-bringing-shapes-to-life">Meshes and materials: Bringing shapes to life</a></h3>
   
   
   
@@ -74,7 +74,7 @@ export const posts = [
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#accessibility-in-3d-web-projects">Accessibility in 3D web projects</a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#accessibility-in-3d-web-projects">Accessibility in 3D web projects</a></h3>
   
   
   
@@ -86,11 +86,11 @@ export const posts = [
   
   
   
-  <h2 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#advanced-features-and-enhancements">Advanced features and enhancements</a></h2>
+  <h2 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#advanced-features-and-enhancements">Advanced features and enhancements</a></h2>
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#working-with-glb-files">Working with GLB files</a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#working-with-glb-files">Working with GLB files</a></h3>
   
   
   
@@ -102,7 +102,7 @@ export const posts = [
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#choosing-the-right-camera-and-lighting">Choosing the right camera and lighting</a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#choosing-the-right-camera-and-lighting">Choosing the right camera and lighting</a></h3>
   
   
   
@@ -110,7 +110,7 @@ export const posts = [
   
   
   
-  <ul class="wp-block-list">
+  <ul class="article-list">
   <li>A&nbsp;<strong>perspective camera</strong>&nbsp;mimics the way the human eye sees the world, making objects appear smaller as they fade into the distance—perfect for creating realistic depth and spatial relationships in your scene.</li>
   
   
@@ -124,7 +124,7 @@ export const posts = [
   
   
   
-  <ul class="wp-block-list">
+  <ul class="article-list">
   <li>​<strong>Ambient light</strong>&nbsp;provides a soft, even illumination that can make your scene feel natural and cohesive.</li>
   
   
@@ -134,11 +134,11 @@ export const posts = [
   
   
   
-  <h2 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#pushing-the-limits-of-3d-development">Pushing the limits of 3D development</a></h2>
+  <h2 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#pushing-the-limits-of-3d-development">Pushing the limits of 3D development</a></h2>
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#enhancing-your-scene-with-%3Cenvironment-/%3E">Enhancing your scene with&nbsp;<code>&lt;environment /&gt;</code></a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#enhancing-your-scene-with-%3Cenvironment-/%3E">Enhancing your scene with&nbsp;<code>&lt;environment /&gt;</code></a></h3>
   
   
   
@@ -146,7 +146,7 @@ export const posts = [
   
   
   
-  <blockquote class="wp-block-quote is-layout-flow wp-block-quote-is-layout-flow">
+  <blockquote class="article-quote is-layout-flow article-quote-is-layout-flow">
   <p>the best quote in the world</p>
   </blockquote>
   
@@ -156,7 +156,7 @@ export const posts = [
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#controls:-navigating-your-3d-scene">Controls: Navigating your 3D scene</a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#controls:-navigating-your-3d-scene">Controls: Navigating your 3D scene</a></h3>
   
   
   
@@ -168,7 +168,7 @@ export const posts = [
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#mixing-3d-with-html-and-css">Mixing 3D with HTML and CSS</a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#mixing-3d-with-html-and-css">Mixing 3D with HTML and CSS</a></h3>
   
   
   
@@ -176,7 +176,7 @@ export const posts = [
   
   
   
-  <figure class="wp-block-embed is-type-video is-provider-youtube wp-block-embed-youtube wp-embed-aspect-16-9 wp-has-aspect-ratio"><div class="wp-block-embed__wrapper">
+  <figure class="article-embed is-type-video is-provider-youtube article-embed-youtube embed-aspect-16-9 has-aspect-ratio"><div class="article-embed__wrapper">
   <iframe loading="lazy" title="Micro SaaS from ZERO to $2,500/m in 6 Simple Steps" width="500" height="281" src="https://www.youtube.com/embed/keX1EGJrO8E?feature=oembed" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen=""></iframe>
   </div></figure>
   
@@ -186,7 +186,7 @@ export const posts = [
   
   
   
-  <div class="schema-faq wp-block-yoast-faq-block"><div class="schema-faq-section" id="faq-question-1728908523777"><strong class="schema-faq-question">How much is the fish?</strong> <p class="schema-faq-answer">With these tools and techniques at your fingertips, you’re ready to start building incredible 3D experiences with v0 and R3F. Whether you’re showcasing products, creating interactive environments, or experimenting with cutting-edge web graphics, it’s never been easier to bring your ideas to life.</p> </div> <div class="schema-faq-section" id="faq-question-1728908544834"><strong class="schema-faq-question">Why the fish?</strong> <p class="schema-faq-answer">With these tools and techniques at your fingertips, you’re ready to start building incredible 3D experiences with v0 and R3F. Whether you’re showcasing products, creating interactive environments, or experimenting with cutting-edge web graphics, it’s never been easier to bring your ideas to life.</p> </div> </div>
+  <div class="schema-faq article-faq-block"><div class="schema-faq-section" id="faq-question-1728908523777"><strong class="schema-faq-question">How much is the fish?</strong> <p class="schema-faq-answer">With these tools and techniques at your fingertips, you’re ready to start building incredible 3D experiences with v0 and R3F. Whether you’re showcasing products, creating interactive environments, or experimenting with cutting-edge web graphics, it’s never been easier to bring your ideas to life.</p> </div> <div class="schema-faq-section" id="faq-question-1728908544834"><strong class="schema-faq-question">Why the fish?</strong> <p class="schema-faq-answer">With these tools and techniques at your fingertips, you’re ready to start building incredible 3D experiences with v0 and R3F. Whether you’re showcasing products, creating interactive environments, or experimenting with cutting-edge web graphics, it’s never been easier to bring your ideas to life.</p> </div> </div>
   
   
   
@@ -203,7 +203,7 @@ export const posts = [
     authorName: "Dennis Babych",
     profileImage: `${ProfileImageSrc}`,
     html: `<div class="article">
-    <h2 class="wp-block-heading has-large-font-size">A step-by-step guide for building stunning 3D scenes on the web with example prompts.</h2>
+    <h2 class="article-heading has-large-font-size">A step-by-step guide for building stunning 3D scenes on the web with example prompts.</h2>
     
     
     
@@ -215,11 +215,11 @@ export const posts = [
     
     
     
-    <h2 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#getting-started-with-3d-development">Getting started with 3D development</a></h2>
+    <h2 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#getting-started-with-3d-development">Getting started with 3D development</a></h2>
     
     
     
-    <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#the-3d-scene:-your-canvas-for-creation">The 3D scene: Your canvas for creation</a></h3>
+    <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#the-3d-scene:-your-canvas-for-creation">The 3D scene: Your canvas for creation</a></h3>
     
     
     
@@ -227,7 +227,7 @@ export const posts = [
     
     
     
-    <figure class="wp-block-image size-large"><img loading="lazy" decoding="async" width="1024" height="576" src="http://localhost:8080/wp-content/uploads/2024/10/Cover-2-2-1024x576.jpg" alt="alternativeIMAGE" class="wp-image-8" srcset="http://localhost:8080/wp-content/uploads/2024/10/Cover-2-2-1024x576.jpg 1024w, http://localhost:8080/wp-content/uploads/2024/10/Cover-2-2-300x169.jpg 300w, http://localhost:8080/wp-content/uploads/2024/10/Cover-2-2-768x432.jpg 768w, http://localhost:8080/wp-content/uploads/2024/10/Cover-2-2-1536x864.jpg 1536w, http://localhost:8080/wp-content/uploads/2024/10/Cover-2-2-2048x1152.jpg 2048w" sizes="(max-width: 1024px) 100vw, 1024px"></figure>
+    <figure class="article-image size-large"><img loading="lazy" decoding="async" width="1024" height="576" src="https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1024&q=80" alt="alternativeIMAGE" class="article-image-8" srcset="https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1024&q=80 1024w, https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1024&q=80 300w, https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1024&q=80 768w, https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1024&q=80 1536w, https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1024&q=80 2048w" sizes="(max-width: 1024px) 100vw, 1024px"></figure>
     
     
     
@@ -235,7 +235,7 @@ export const posts = [
     
     
     
-    <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#key-3d-shapes-and-their-roles">Key 3D shapes and their roles</a></h3>
+    <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#key-3d-shapes-and-their-roles">Key 3D shapes and their roles</a></h3>
     
     
     
@@ -251,7 +251,7 @@ export const posts = [
     
     
     
-    <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#meshes-and-materials:-bringing-shapes-to-life">Meshes and materials: Bringing shapes to life</a></h3>
+    <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#meshes-and-materials:-bringing-shapes-to-life">Meshes and materials: Bringing shapes to life</a></h3>
     
     
     
@@ -263,7 +263,7 @@ export const posts = [
     
     
     
-    <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#accessibility-in-3d-web-projects">Accessibility in 3D web projects</a></h3>
+    <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#accessibility-in-3d-web-projects">Accessibility in 3D web projects</a></h3>
     
     
     
@@ -275,11 +275,11 @@ export const posts = [
     
     
     
-    <h2 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#advanced-features-and-enhancements">Advanced features and enhancements</a></h2>
+    <h2 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#advanced-features-and-enhancements">Advanced features and enhancements</a></h2>
     
     
     
-    <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#working-with-glb-files">Working with GLB files</a></h3>
+    <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#working-with-glb-files">Working with GLB files</a></h3>
     
     
     
@@ -291,7 +291,7 @@ export const posts = [
     
     
     
-    <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#choosing-the-right-camera-and-lighting">Choosing the right camera and lighting</a></h3>
+    <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#choosing-the-right-camera-and-lighting">Choosing the right camera and lighting</a></h3>
     
     
     
@@ -299,7 +299,7 @@ export const posts = [
     
     
     
-    <ul class="wp-block-list">
+    <ul class="article-list">
     <li>A&nbsp;<strong>perspective camera</strong>&nbsp;mimics the way the human eye sees the world, making objects appear smaller as they fade into the distance—perfect for creating realistic depth and spatial relationships in your scene.</li>
     
     
@@ -313,7 +313,7 @@ export const posts = [
     
     
     
-    <ul class="wp-block-list">
+    <ul class="article-list">
     <li>​<strong>Ambient light</strong>&nbsp;provides a soft, even illumination that can make your scene feel natural and cohesive.</li>
     
     
@@ -323,11 +323,11 @@ export const posts = [
     
     
     
-    <h2 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#pushing-the-limits-of-3d-development">Pushing the limits of 3D development</a></h2>
+    <h2 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#pushing-the-limits-of-3d-development">Pushing the limits of 3D development</a></h2>
     
     
     
-    <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#enhancing-your-scene-with-%3Cenvironment-/%3E">Enhancing your scene with&nbsp;<code>&lt;environment /&gt;</code></a></h3>
+    <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#enhancing-your-scene-with-%3Cenvironment-/%3E">Enhancing your scene with&nbsp;<code>&lt;environment /&gt;</code></a></h3>
     
     
     
@@ -335,7 +335,7 @@ export const posts = [
     
     
     
-    <blockquote class="wp-block-quote is-layout-flow wp-block-quote-is-layout-flow">
+    <blockquote class="article-quote is-layout-flow article-quote-is-layout-flow">
     <p>the best quote in the world</p>
     </blockquote>
     
@@ -345,7 +345,7 @@ export const posts = [
     
     
     
-    <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#controls:-navigating-your-3d-scene">Controls: Navigating your 3D scene</a></h3>
+    <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#controls:-navigating-your-3d-scene">Controls: Navigating your 3D scene</a></h3>
     
     
     
@@ -357,7 +357,7 @@ export const posts = [
     
     
     
-    <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#mixing-3d-with-html-and-css">Mixing 3D with HTML and CSS</a></h3>
+    <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#mixing-3d-with-html-and-css">Mixing 3D with HTML and CSS</a></h3>
     
     
     
@@ -365,7 +365,7 @@ export const posts = [
     
     
     
-    <figure class="wp-block-embed is-type-video is-provider-youtube wp-block-embed-youtube wp-embed-aspect-16-9 wp-has-aspect-ratio"><div class="wp-block-embed__wrapper">
+    <figure class="article-embed is-type-video is-provider-youtube article-embed-youtube embed-aspect-16-9 has-aspect-ratio"><div class="article-embed__wrapper">
     <iframe loading="lazy" title="Micro SaaS from ZERO to $2,500/m in 6 Simple Steps" width="500" height="281" src="https://www.youtube.com/embed/keX1EGJrO8E?feature=oembed" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen=""></iframe>
     </div></figure>
     
@@ -375,7 +375,7 @@ export const posts = [
     
     
     
-    <div class="schema-faq wp-block-yoast-faq-block"><div class="schema-faq-section" id="faq-question-1728908523777"><strong class="schema-faq-question">How much is the fish?</strong> <p class="schema-faq-answer">With these tools and techniques at your fingertips, you’re ready to start building incredible 3D experiences with v0 and R3F. Whether you’re showcasing products, creating interactive environments, or experimenting with cutting-edge web graphics, it’s never been easier to bring your ideas to life.</p> </div> <div class="schema-faq-section" id="faq-question-1728908544834"><strong class="schema-faq-question">Why the fish?</strong> <p class="schema-faq-answer">With these tools and techniques at your fingertips, you’re ready to start building incredible 3D experiences with v0 and R3F. Whether you’re showcasing products, creating interactive environments, or experimenting with cutting-edge web graphics, it’s never been easier to bring your ideas to life.</p> </div> </div>
+    <div class="schema-faq article-faq-block"><div class="schema-faq-section" id="faq-question-1728908523777"><strong class="schema-faq-question">How much is the fish?</strong> <p class="schema-faq-answer">With these tools and techniques at your fingertips, you’re ready to start building incredible 3D experiences with v0 and R3F. Whether you’re showcasing products, creating interactive environments, or experimenting with cutting-edge web graphics, it’s never been easier to bring your ideas to life.</p> </div> <div class="schema-faq-section" id="faq-question-1728908544834"><strong class="schema-faq-question">Why the fish?</strong> <p class="schema-faq-answer">With these tools and techniques at your fingertips, you’re ready to start building incredible 3D experiences with v0 and R3F. Whether you’re showcasing products, creating interactive environments, or experimenting with cutting-edge web graphics, it’s never been easier to bring your ideas to life.</p> </div> </div>
     
     
     
@@ -392,7 +392,7 @@ export const posts = [
     authorName: "Dennis Babych",
     profileImage: `${ProfileImageSrc}`,
     html: `<div class="article">
-  <h2 class="wp-block-heading has-large-font-size">A step-by-step guide for building stunning 3D scenes on the web with example prompts.</h2>
+  <h2 class="article-heading has-large-font-size">A step-by-step guide for building stunning 3D scenes on the web with example prompts.</h2>
   
   
   
@@ -404,11 +404,11 @@ export const posts = [
   
   
   
-  <h2 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#getting-started-with-3d-development">Getting started with 3D development</a></h2>
+  <h2 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#getting-started-with-3d-development">Getting started with 3D development</a></h2>
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#the-3d-scene:-your-canvas-for-creation">The 3D scene: Your canvas for creation</a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#the-3d-scene:-your-canvas-for-creation">The 3D scene: Your canvas for creation</a></h3>
   
   
   
@@ -416,7 +416,7 @@ export const posts = [
   
   
   
-  <figure class="wp-block-image size-large"><img loading="lazy" decoding="async" width="1024" height="576" src="http://localhost:8080/wp-content/uploads/2024/10/Cover-2-2-1024x576.jpg" alt="alternativeIMAGE" class="wp-image-8" srcset="http://localhost:8080/wp-content/uploads/2024/10/Cover-2-2-1024x576.jpg 1024w, http://localhost:8080/wp-content/uploads/2024/10/Cover-2-2-300x169.jpg 300w, http://localhost:8080/wp-content/uploads/2024/10/Cover-2-2-768x432.jpg 768w, http://localhost:8080/wp-content/uploads/2024/10/Cover-2-2-1536x864.jpg 1536w, http://localhost:8080/wp-content/uploads/2024/10/Cover-2-2-2048x1152.jpg 2048w" sizes="(max-width: 1024px) 100vw, 1024px"></figure>
+  <figure class="article-image size-large"><img loading="lazy" decoding="async" width="1024" height="576" src="https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1024&q=80" alt="alternativeIMAGE" class="article-image-8" srcset="https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1024&q=80 1024w, https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1024&q=80 300w, https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1024&q=80 768w, https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1024&q=80 1536w, https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1024&q=80 2048w" sizes="(max-width: 1024px) 100vw, 1024px"></figure>
   
   
   
@@ -424,7 +424,7 @@ export const posts = [
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#key-3d-shapes-and-their-roles">Key 3D shapes and their roles</a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#key-3d-shapes-and-their-roles">Key 3D shapes and their roles</a></h3>
   
   
   
@@ -440,7 +440,7 @@ export const posts = [
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#meshes-and-materials:-bringing-shapes-to-life">Meshes and materials: Bringing shapes to life</a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#meshes-and-materials:-bringing-shapes-to-life">Meshes and materials: Bringing shapes to life</a></h3>
   
   
   
@@ -452,7 +452,7 @@ export const posts = [
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#accessibility-in-3d-web-projects">Accessibility in 3D web projects</a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#accessibility-in-3d-web-projects">Accessibility in 3D web projects</a></h3>
   
   
   
@@ -464,11 +464,11 @@ export const posts = [
   
   
   
-  <h2 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#advanced-features-and-enhancements">Advanced features and enhancements</a></h2>
+  <h2 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#advanced-features-and-enhancements">Advanced features and enhancements</a></h2>
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#working-with-glb-files">Working with GLB files</a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#working-with-glb-files">Working with GLB files</a></h3>
   
   
   
@@ -480,7 +480,7 @@ export const posts = [
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#choosing-the-right-camera-and-lighting">Choosing the right camera and lighting</a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#choosing-the-right-camera-and-lighting">Choosing the right camera and lighting</a></h3>
   
   
   
@@ -488,7 +488,7 @@ export const posts = [
   
   
   
-  <ul class="wp-block-list">
+  <ul class="article-list">
   <li>A&nbsp;<strong>perspective camera</strong>&nbsp;mimics the way the human eye sees the world, making objects appear smaller as they fade into the distance—perfect for creating realistic depth and spatial relationships in your scene.</li>
   
   
@@ -502,7 +502,7 @@ export const posts = [
   
   
   
-  <ul class="wp-block-list">
+  <ul class="article-list">
   <li>​<strong>Ambient light</strong>&nbsp;provides a soft, even illumination that can make your scene feel natural and cohesive.</li>
   
   
@@ -512,11 +512,11 @@ export const posts = [
   
   
   
-  <h2 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#pushing-the-limits-of-3d-development">Pushing the limits of 3D development</a></h2>
+  <h2 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#pushing-the-limits-of-3d-development">Pushing the limits of 3D development</a></h2>
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#enhancing-your-scene-with-%3Cenvironment-/%3E">Enhancing your scene with&nbsp;<code>&lt;environment /&gt;</code></a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#enhancing-your-scene-with-%3Cenvironment-/%3E">Enhancing your scene with&nbsp;<code>&lt;environment /&gt;</code></a></h3>
   
   
   
@@ -524,7 +524,7 @@ export const posts = [
   
   
   
-  <blockquote class="wp-block-quote is-layout-flow wp-block-quote-is-layout-flow">
+  <blockquote class="article-quote is-layout-flow article-quote-is-layout-flow">
   <p>the best quote in the world</p>
   </blockquote>
   
@@ -534,7 +534,7 @@ export const posts = [
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#controls:-navigating-your-3d-scene">Controls: Navigating your 3D scene</a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#controls:-navigating-your-3d-scene">Controls: Navigating your 3D scene</a></h3>
   
   
   
@@ -546,7 +546,7 @@ export const posts = [
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#mixing-3d-with-html-and-css">Mixing 3D with HTML and CSS</a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#mixing-3d-with-html-and-css">Mixing 3D with HTML and CSS</a></h3>
   
   
   
@@ -554,7 +554,7 @@ export const posts = [
   
   
   
-  <figure class="wp-block-embed is-type-video is-provider-youtube wp-block-embed-youtube wp-embed-aspect-16-9 wp-has-aspect-ratio"><div class="wp-block-embed__wrapper">
+  <figure class="article-embed is-type-video is-provider-youtube article-embed-youtube embed-aspect-16-9 has-aspect-ratio"><div class="article-embed__wrapper">
   <iframe loading="lazy" title="Micro SaaS from ZERO to $2,500/m in 6 Simple Steps" width="500" height="281" src="https://www.youtube.com/embed/keX1EGJrO8E?feature=oembed" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen=""></iframe>
   </div></figure>
   
@@ -564,7 +564,7 @@ export const posts = [
   
   
   
-  <div class="schema-faq wp-block-yoast-faq-block"><div class="schema-faq-section" id="faq-question-1728908523777"><strong class="schema-faq-question">How much is the fish?</strong> <p class="schema-faq-answer">With these tools and techniques at your fingertips, you’re ready to start building incredible 3D experiences with v0 and R3F. Whether you’re showcasing products, creating interactive environments, or experimenting with cutting-edge web graphics, it’s never been easier to bring your ideas to life.</p> </div> <div class="schema-faq-section" id="faq-question-1728908544834"><strong class="schema-faq-question">Why the fish?</strong> <p class="schema-faq-answer">With these tools and techniques at your fingertips, you’re ready to start building incredible 3D experiences with v0 and R3F. Whether you’re showcasing products, creating interactive environments, or experimenting with cutting-edge web graphics, it’s never been easier to bring your ideas to life.</p> </div> </div>
+  <div class="schema-faq article-faq-block"><div class="schema-faq-section" id="faq-question-1728908523777"><strong class="schema-faq-question">How much is the fish?</strong> <p class="schema-faq-answer">With these tools and techniques at your fingertips, you’re ready to start building incredible 3D experiences with v0 and R3F. Whether you’re showcasing products, creating interactive environments, or experimenting with cutting-edge web graphics, it’s never been easier to bring your ideas to life.</p> </div> <div class="schema-faq-section" id="faq-question-1728908544834"><strong class="schema-faq-question">Why the fish?</strong> <p class="schema-faq-answer">With these tools and techniques at your fingertips, you’re ready to start building incredible 3D experiences with v0 and R3F. Whether you’re showcasing products, creating interactive environments, or experimenting with cutting-edge web graphics, it’s never been easier to bring your ideas to life.</p> </div> </div>
   
   
   
@@ -581,7 +581,7 @@ export const posts = [
     authorName: "Dennis Babych",
     profileImage: `${ProfileImageSrc}`,
     html: `<div class="article">
-  <h2 class="wp-block-heading has-large-font-size">A step-by-step guide for building stunning 3D scenes on the web with example prompts.</h2>
+  <h2 class="article-heading has-large-font-size">A step-by-step guide for building stunning 3D scenes on the web with example prompts.</h2>
   
   
   
@@ -593,11 +593,11 @@ export const posts = [
   
   
   
-  <h2 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#getting-started-with-3d-development">Getting started with 3D development</a></h2>
+  <h2 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#getting-started-with-3d-development">Getting started with 3D development</a></h2>
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#the-3d-scene:-your-canvas-for-creation">The 3D scene: Your canvas for creation</a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#the-3d-scene:-your-canvas-for-creation">The 3D scene: Your canvas for creation</a></h3>
   
   
   
@@ -605,7 +605,7 @@ export const posts = [
   
   
   
-  <figure class="wp-block-image size-large"><img loading="lazy" decoding="async" width="1024" height="576" src="http://localhost:8080/wp-content/uploads/2024/10/Cover-2-2-1024x576.jpg" alt="alternativeIMAGE" class="wp-image-8" srcset="http://localhost:8080/wp-content/uploads/2024/10/Cover-2-2-1024x576.jpg 1024w, http://localhost:8080/wp-content/uploads/2024/10/Cover-2-2-300x169.jpg 300w, http://localhost:8080/wp-content/uploads/2024/10/Cover-2-2-768x432.jpg 768w, http://localhost:8080/wp-content/uploads/2024/10/Cover-2-2-1536x864.jpg 1536w, http://localhost:8080/wp-content/uploads/2024/10/Cover-2-2-2048x1152.jpg 2048w" sizes="(max-width: 1024px) 100vw, 1024px"></figure>
+  <figure class="article-image size-large"><img loading="lazy" decoding="async" width="1024" height="576" src="https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1024&q=80" alt="alternativeIMAGE" class="article-image-8" srcset="https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1024&q=80 1024w, https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1024&q=80 300w, https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1024&q=80 768w, https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1024&q=80 1536w, https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1024&q=80 2048w" sizes="(max-width: 1024px) 100vw, 1024px"></figure>
   
   
   
@@ -613,7 +613,7 @@ export const posts = [
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#key-3d-shapes-and-their-roles">Key 3D shapes and their roles</a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#key-3d-shapes-and-their-roles">Key 3D shapes and their roles</a></h3>
   
   
   
@@ -629,7 +629,7 @@ export const posts = [
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#meshes-and-materials:-bringing-shapes-to-life">Meshes and materials: Bringing shapes to life</a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#meshes-and-materials:-bringing-shapes-to-life">Meshes and materials: Bringing shapes to life</a></h3>
   
   
   
@@ -641,7 +641,7 @@ export const posts = [
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#accessibility-in-3d-web-projects">Accessibility in 3D web projects</a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#accessibility-in-3d-web-projects">Accessibility in 3D web projects</a></h3>
   
   
   
@@ -653,11 +653,11 @@ export const posts = [
   
   
   
-  <h2 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#advanced-features-and-enhancements">Advanced features and enhancements</a></h2>
+  <h2 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#advanced-features-and-enhancements">Advanced features and enhancements</a></h2>
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#working-with-glb-files">Working with GLB files</a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#working-with-glb-files">Working with GLB files</a></h3>
   
   
   
@@ -669,7 +669,7 @@ export const posts = [
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#choosing-the-right-camera-and-lighting">Choosing the right camera and lighting</a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#choosing-the-right-camera-and-lighting">Choosing the right camera and lighting</a></h3>
   
   
   
@@ -677,7 +677,7 @@ export const posts = [
   
   
   
-  <ul class="wp-block-list">
+  <ul class="article-list">
   <li>A&nbsp;<strong>perspective camera</strong>&nbsp;mimics the way the human eye sees the world, making objects appear smaller as they fade into the distance—perfect for creating realistic depth and spatial relationships in your scene.</li>
   
   
@@ -691,7 +691,7 @@ export const posts = [
   
   
   
-  <ul class="wp-block-list">
+  <ul class="article-list">
   <li>​<strong>Ambient light</strong>&nbsp;provides a soft, even illumination that can make your scene feel natural and cohesive.</li>
   
   
@@ -701,11 +701,11 @@ export const posts = [
   
   
   
-  <h2 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#pushing-the-limits-of-3d-development">Pushing the limits of 3D development</a></h2>
+  <h2 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#pushing-the-limits-of-3d-development">Pushing the limits of 3D development</a></h2>
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#enhancing-your-scene-with-%3Cenvironment-/%3E">Enhancing your scene with&nbsp;<code>&lt;environment /&gt;</code></a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#enhancing-your-scene-with-%3Cenvironment-/%3E">Enhancing your scene with&nbsp;<code>&lt;environment /&gt;</code></a></h3>
   
   
   
@@ -713,7 +713,7 @@ export const posts = [
   
   
   
-  <blockquote class="wp-block-quote is-layout-flow wp-block-quote-is-layout-flow">
+  <blockquote class="article-quote is-layout-flow article-quote-is-layout-flow">
   <p>the best quote in the world</p>
   </blockquote>
   
@@ -723,7 +723,7 @@ export const posts = [
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#controls:-navigating-your-3d-scene">Controls: Navigating your 3D scene</a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#controls:-navigating-your-3d-scene">Controls: Navigating your 3D scene</a></h3>
   
   
   
@@ -735,7 +735,7 @@ export const posts = [
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#mixing-3d-with-html-and-css">Mixing 3D with HTML and CSS</a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#mixing-3d-with-html-and-css">Mixing 3D with HTML and CSS</a></h3>
   
   
   
@@ -743,7 +743,7 @@ export const posts = [
   
   
   
-  <figure class="wp-block-embed is-type-video is-provider-youtube wp-block-embed-youtube wp-embed-aspect-16-9 wp-has-aspect-ratio"><div class="wp-block-embed__wrapper">
+  <figure class="article-embed is-type-video is-provider-youtube article-embed-youtube embed-aspect-16-9 has-aspect-ratio"><div class="article-embed__wrapper">
   <iframe loading="lazy" title="Micro SaaS from ZERO to $2,500/m in 6 Simple Steps" width="500" height="281" src="https://www.youtube.com/embed/keX1EGJrO8E?feature=oembed" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen=""></iframe>
   </div></figure>
   
@@ -753,7 +753,7 @@ export const posts = [
   
   
   
-  <div class="schema-faq wp-block-yoast-faq-block"><div class="schema-faq-section" id="faq-question-1728908523777"><strong class="schema-faq-question">How much is the fish?</strong> <p class="schema-faq-answer">With these tools and techniques at your fingertips, you’re ready to start building incredible 3D experiences with v0 and R3F. Whether you’re showcasing products, creating interactive environments, or experimenting with cutting-edge web graphics, it’s never been easier to bring your ideas to life.</p> </div> <div class="schema-faq-section" id="faq-question-1728908544834"><strong class="schema-faq-question">Why the fish?</strong> <p class="schema-faq-answer">With these tools and techniques at your fingertips, you’re ready to start building incredible 3D experiences with v0 and R3F. Whether you’re showcasing products, creating interactive environments, or experimenting with cutting-edge web graphics, it’s never been easier to bring your ideas to life.</p> </div> </div>
+  <div class="schema-faq article-faq-block"><div class="schema-faq-section" id="faq-question-1728908523777"><strong class="schema-faq-question">How much is the fish?</strong> <p class="schema-faq-answer">With these tools and techniques at your fingertips, you’re ready to start building incredible 3D experiences with v0 and R3F. Whether you’re showcasing products, creating interactive environments, or experimenting with cutting-edge web graphics, it’s never been easier to bring your ideas to life.</p> </div> <div class="schema-faq-section" id="faq-question-1728908544834"><strong class="schema-faq-question">Why the fish?</strong> <p class="schema-faq-answer">With these tools and techniques at your fingertips, you’re ready to start building incredible 3D experiences with v0 and R3F. Whether you’re showcasing products, creating interactive environments, or experimenting with cutting-edge web graphics, it’s never been easier to bring your ideas to life.</p> </div> </div>
   
   
   
@@ -770,7 +770,7 @@ export const posts = [
     authorName: "Dennis Babych",
     profileImage: `${ProfileImageSrc}`,
     html: `<div class="article">
-  <h2 class="wp-block-heading has-large-font-size">A step-by-step guide for building stunning 3D scenes on the web with example prompts.</h2>
+  <h2 class="article-heading has-large-font-size">A step-by-step guide for building stunning 3D scenes on the web with example prompts.</h2>
   
   
   
@@ -782,11 +782,11 @@ export const posts = [
   
   
   
-  <h2 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#getting-started-with-3d-development">Getting started with 3D development</a></h2>
+  <h2 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#getting-started-with-3d-development">Getting started with 3D development</a></h2>
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#the-3d-scene:-your-canvas-for-creation">The 3D scene: Your canvas for creation</a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#the-3d-scene:-your-canvas-for-creation">The 3D scene: Your canvas for creation</a></h3>
   
   
   
@@ -794,7 +794,7 @@ export const posts = [
   
   
   
-  <figure class="wp-block-image size-large"><img loading="lazy" decoding="async" width="1024" height="576" src="http://localhost:8080/wp-content/uploads/2024/10/Cover-2-2-1024x576.jpg" alt="alternativeIMAGE" class="wp-image-8" srcset="http://localhost:8080/wp-content/uploads/2024/10/Cover-2-2-1024x576.jpg 1024w, http://localhost:8080/wp-content/uploads/2024/10/Cover-2-2-300x169.jpg 300w, http://localhost:8080/wp-content/uploads/2024/10/Cover-2-2-768x432.jpg 768w, http://localhost:8080/wp-content/uploads/2024/10/Cover-2-2-1536x864.jpg 1536w, http://localhost:8080/wp-content/uploads/2024/10/Cover-2-2-2048x1152.jpg 2048w" sizes="(max-width: 1024px) 100vw, 1024px"></figure>
+  <figure class="article-image size-large"><img loading="lazy" decoding="async" width="1024" height="576" src="https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1024&q=80" alt="alternativeIMAGE" class="article-image-8" srcset="https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1024&q=80 1024w, https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1024&q=80 300w, https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1024&q=80 768w, https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1024&q=80 1536w, https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1024&q=80 2048w" sizes="(max-width: 1024px) 100vw, 1024px"></figure>
   
   
   
@@ -802,7 +802,7 @@ export const posts = [
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#key-3d-shapes-and-their-roles">Key 3D shapes and their roles</a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#key-3d-shapes-and-their-roles">Key 3D shapes and their roles</a></h3>
   
   
   
@@ -818,7 +818,7 @@ export const posts = [
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#meshes-and-materials:-bringing-shapes-to-life">Meshes and materials: Bringing shapes to life</a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#meshes-and-materials:-bringing-shapes-to-life">Meshes and materials: Bringing shapes to life</a></h3>
   
   
   
@@ -830,7 +830,7 @@ export const posts = [
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#accessibility-in-3d-web-projects">Accessibility in 3D web projects</a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#accessibility-in-3d-web-projects">Accessibility in 3D web projects</a></h3>
   
   
   
@@ -842,11 +842,11 @@ export const posts = [
   
   
   
-  <h2 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#advanced-features-and-enhancements">Advanced features and enhancements</a></h2>
+  <h2 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#advanced-features-and-enhancements">Advanced features and enhancements</a></h2>
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#working-with-glb-files">Working with GLB files</a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#working-with-glb-files">Working with GLB files</a></h3>
   
   
   
@@ -858,7 +858,7 @@ export const posts = [
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#choosing-the-right-camera-and-lighting">Choosing the right camera and lighting</a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#choosing-the-right-camera-and-lighting">Choosing the right camera and lighting</a></h3>
   
   
   
@@ -866,7 +866,7 @@ export const posts = [
   
   
   
-  <ul class="wp-block-list">
+  <ul class="article-list">
   <li>A&nbsp;<strong>perspective camera</strong>&nbsp;mimics the way the human eye sees the world, making objects appear smaller as they fade into the distance—perfect for creating realistic depth and spatial relationships in your scene.</li>
   
   
@@ -880,7 +880,7 @@ export const posts = [
   
   
   
-  <ul class="wp-block-list">
+  <ul class="article-list">
   <li>​<strong>Ambient light</strong>&nbsp;provides a soft, even illumination that can make your scene feel natural and cohesive.</li>
   
   
@@ -890,11 +890,11 @@ export const posts = [
   
   
   
-  <h2 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#pushing-the-limits-of-3d-development">Pushing the limits of 3D development</a></h2>
+  <h2 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#pushing-the-limits-of-3d-development">Pushing the limits of 3D development</a></h2>
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#enhancing-your-scene-with-%3Cenvironment-/%3E">Enhancing your scene with&nbsp;<code>&lt;environment /&gt;</code></a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#enhancing-your-scene-with-%3Cenvironment-/%3E">Enhancing your scene with&nbsp;<code>&lt;environment /&gt;</code></a></h3>
   
   
   
@@ -902,7 +902,7 @@ export const posts = [
   
   
   
-  <blockquote class="wp-block-quote is-layout-flow wp-block-quote-is-layout-flow">
+  <blockquote class="article-quote is-layout-flow article-quote-is-layout-flow">
   <p>the best quote in the world</p>
   </blockquote>
   
@@ -912,7 +912,7 @@ export const posts = [
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#controls:-navigating-your-3d-scene">Controls: Navigating your 3D scene</a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#controls:-navigating-your-3d-scene">Controls: Navigating your 3D scene</a></h3>
   
   
   
@@ -924,7 +924,7 @@ export const posts = [
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#mixing-3d-with-html-and-css">Mixing 3D with HTML and CSS</a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#mixing-3d-with-html-and-css">Mixing 3D with HTML and CSS</a></h3>
   
   
   
@@ -932,7 +932,7 @@ export const posts = [
   
   
   
-  <figure class="wp-block-embed is-type-video is-provider-youtube wp-block-embed-youtube wp-embed-aspect-16-9 wp-has-aspect-ratio"><div class="wp-block-embed__wrapper">
+  <figure class="article-embed is-type-video is-provider-youtube article-embed-youtube embed-aspect-16-9 has-aspect-ratio"><div class="article-embed__wrapper">
   <iframe loading="lazy" title="Micro SaaS from ZERO to $2,500/m in 6 Simple Steps" width="500" height="281" src="https://www.youtube.com/embed/keX1EGJrO8E?feature=oembed" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen=""></iframe>
   </div></figure>
   
@@ -942,7 +942,7 @@ export const posts = [
   
   
   
-  <div class="schema-faq wp-block-yoast-faq-block"><div class="schema-faq-section" id="faq-question-1728908523777"><strong class="schema-faq-question">How much is the fish?</strong> <p class="schema-faq-answer">With these tools and techniques at your fingertips, you’re ready to start building incredible 3D experiences with v0 and R3F. Whether you’re showcasing products, creating interactive environments, or experimenting with cutting-edge web graphics, it’s never been easier to bring your ideas to life.</p> </div> <div class="schema-faq-section" id="faq-question-1728908544834"><strong class="schema-faq-question">Why the fish?</strong> <p class="schema-faq-answer">With these tools and techniques at your fingertips, you’re ready to start building incredible 3D experiences with v0 and R3F. Whether you’re showcasing products, creating interactive environments, or experimenting with cutting-edge web graphics, it’s never been easier to bring your ideas to life.</p> </div> </div>
+  <div class="schema-faq article-faq-block"><div class="schema-faq-section" id="faq-question-1728908523777"><strong class="schema-faq-question">How much is the fish?</strong> <p class="schema-faq-answer">With these tools and techniques at your fingertips, you’re ready to start building incredible 3D experiences with v0 and R3F. Whether you’re showcasing products, creating interactive environments, or experimenting with cutting-edge web graphics, it’s never been easier to bring your ideas to life.</p> </div> <div class="schema-faq-section" id="faq-question-1728908544834"><strong class="schema-faq-question">Why the fish?</strong> <p class="schema-faq-answer">With these tools and techniques at your fingertips, you’re ready to start building incredible 3D experiences with v0 and R3F. Whether you’re showcasing products, creating interactive environments, or experimenting with cutting-edge web graphics, it’s never been easier to bring your ideas to life.</p> </div> </div>
   
   
   
@@ -959,7 +959,7 @@ export const posts = [
     authorName: "Dennis Babych",
     profileImage: `${ProfileImageSrc}`,
     html: `<div class="article">
-  <h2 class="wp-block-heading has-large-font-size">A step-by-step guide for building stunning 3D scenes on the web with example prompts.</h2>
+  <h2 class="article-heading has-large-font-size">A step-by-step guide for building stunning 3D scenes on the web with example prompts.</h2>
   
   
   
@@ -971,11 +971,11 @@ export const posts = [
   
   
   
-  <h2 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#getting-started-with-3d-development">Getting started with 3D development</a></h2>
+  <h2 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#getting-started-with-3d-development">Getting started with 3D development</a></h2>
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#the-3d-scene:-your-canvas-for-creation">The 3D scene: Your canvas for creation</a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#the-3d-scene:-your-canvas-for-creation">The 3D scene: Your canvas for creation</a></h3>
   
   
   
@@ -983,7 +983,7 @@ export const posts = [
   
   
   
-  <figure class="wp-block-image size-large"><img loading="lazy" decoding="async" width="1024" height="576" src="http://localhost:8080/wp-content/uploads/2024/10/Cover-2-2-1024x576.jpg" alt="alternativeIMAGE" class="wp-image-8" srcset="http://localhost:8080/wp-content/uploads/2024/10/Cover-2-2-1024x576.jpg 1024w, http://localhost:8080/wp-content/uploads/2024/10/Cover-2-2-300x169.jpg 300w, http://localhost:8080/wp-content/uploads/2024/10/Cover-2-2-768x432.jpg 768w, http://localhost:8080/wp-content/uploads/2024/10/Cover-2-2-1536x864.jpg 1536w, http://localhost:8080/wp-content/uploads/2024/10/Cover-2-2-2048x1152.jpg 2048w" sizes="(max-width: 1024px) 100vw, 1024px"></figure>
+  <figure class="article-image size-large"><img loading="lazy" decoding="async" width="1024" height="576" src="https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1024&q=80" alt="alternativeIMAGE" class="article-image-8" srcset="https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1024&q=80 1024w, https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1024&q=80 300w, https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1024&q=80 768w, https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1024&q=80 1536w, https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1024&q=80 2048w" sizes="(max-width: 1024px) 100vw, 1024px"></figure>
   
   
   
@@ -991,7 +991,7 @@ export const posts = [
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#key-3d-shapes-and-their-roles">Key 3D shapes and their roles</a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#key-3d-shapes-and-their-roles">Key 3D shapes and their roles</a></h3>
   
   
   
@@ -1007,7 +1007,7 @@ export const posts = [
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#meshes-and-materials:-bringing-shapes-to-life">Meshes and materials: Bringing shapes to life</a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#meshes-and-materials:-bringing-shapes-to-life">Meshes and materials: Bringing shapes to life</a></h3>
   
   
   
@@ -1019,7 +1019,7 @@ export const posts = [
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#accessibility-in-3d-web-projects">Accessibility in 3D web projects</a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#accessibility-in-3d-web-projects">Accessibility in 3D web projects</a></h3>
   
   
   
@@ -1031,11 +1031,11 @@ export const posts = [
   
   
   
-  <h2 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#advanced-features-and-enhancements">Advanced features and enhancements</a></h2>
+  <h2 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#advanced-features-and-enhancements">Advanced features and enhancements</a></h2>
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#working-with-glb-files">Working with GLB files</a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#working-with-glb-files">Working with GLB files</a></h3>
   
   
   
@@ -1047,7 +1047,7 @@ export const posts = [
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#choosing-the-right-camera-and-lighting">Choosing the right camera and lighting</a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#choosing-the-right-camera-and-lighting">Choosing the right camera and lighting</a></h3>
   
   
   
@@ -1055,7 +1055,7 @@ export const posts = [
   
   
   
-  <ul class="wp-block-list">
+  <ul class="article-list">
   <li>A&nbsp;<strong>perspective camera</strong>&nbsp;mimics the way the human eye sees the world, making objects appear smaller as they fade into the distance—perfect for creating realistic depth and spatial relationships in your scene.</li>
   
   
@@ -1069,7 +1069,7 @@ export const posts = [
   
   
   
-  <ul class="wp-block-list">
+  <ul class="article-list">
   <li>​<strong>Ambient light</strong>&nbsp;provides a soft, even illumination that can make your scene feel natural and cohesive.</li>
   
   
@@ -1079,11 +1079,11 @@ export const posts = [
   
   
   
-  <h2 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#pushing-the-limits-of-3d-development">Pushing the limits of 3D development</a></h2>
+  <h2 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#pushing-the-limits-of-3d-development">Pushing the limits of 3D development</a></h2>
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#enhancing-your-scene-with-%3Cenvironment-/%3E">Enhancing your scene with&nbsp;<code>&lt;environment /&gt;</code></a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#enhancing-your-scene-with-%3Cenvironment-/%3E">Enhancing your scene with&nbsp;<code>&lt;environment /&gt;</code></a></h3>
   
   
   
@@ -1091,7 +1091,7 @@ export const posts = [
   
   
   
-  <blockquote class="wp-block-quote is-layout-flow wp-block-quote-is-layout-flow">
+  <blockquote class="article-quote is-layout-flow article-quote-is-layout-flow">
   <p>the best quote in the world</p>
   </blockquote>
   
@@ -1101,7 +1101,7 @@ export const posts = [
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#controls:-navigating-your-3d-scene">Controls: Navigating your 3D scene</a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#controls:-navigating-your-3d-scene">Controls: Navigating your 3D scene</a></h3>
   
   
   
@@ -1113,7 +1113,7 @@ export const posts = [
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#mixing-3d-with-html-and-css">Mixing 3D with HTML and CSS</a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#mixing-3d-with-html-and-css">Mixing 3D with HTML and CSS</a></h3>
   
   
   
@@ -1121,7 +1121,7 @@ export const posts = [
   
   
   
-  <figure class="wp-block-embed is-type-video is-provider-youtube wp-block-embed-youtube wp-embed-aspect-16-9 wp-has-aspect-ratio"><div class="wp-block-embed__wrapper">
+  <figure class="article-embed is-type-video is-provider-youtube article-embed-youtube embed-aspect-16-9 has-aspect-ratio"><div class="article-embed__wrapper">
   <iframe loading="lazy" title="Micro SaaS from ZERO to $2,500/m in 6 Simple Steps" width="500" height="281" src="https://www.youtube.com/embed/keX1EGJrO8E?feature=oembed" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen=""></iframe>
   </div></figure>
   
@@ -1131,7 +1131,7 @@ export const posts = [
   
   
   
-  <div class="schema-faq wp-block-yoast-faq-block"><div class="schema-faq-section" id="faq-question-1728908523777"><strong class="schema-faq-question">How much is the fish?</strong> <p class="schema-faq-answer">With these tools and techniques at your fingertips, you’re ready to start building incredible 3D experiences with v0 and R3F. Whether you’re showcasing products, creating interactive environments, or experimenting with cutting-edge web graphics, it’s never been easier to bring your ideas to life.</p> </div> <div class="schema-faq-section" id="faq-question-1728908544834"><strong class="schema-faq-question">Why the fish?</strong> <p class="schema-faq-answer">With these tools and techniques at your fingertips, you’re ready to start building incredible 3D experiences with v0 and R3F. Whether you’re showcasing products, creating interactive environments, or experimenting with cutting-edge web graphics, it’s never been easier to bring your ideas to life.</p> </div> </div>
+  <div class="schema-faq article-faq-block"><div class="schema-faq-section" id="faq-question-1728908523777"><strong class="schema-faq-question">How much is the fish?</strong> <p class="schema-faq-answer">With these tools and techniques at your fingertips, you’re ready to start building incredible 3D experiences with v0 and R3F. Whether you’re showcasing products, creating interactive environments, or experimenting with cutting-edge web graphics, it’s never been easier to bring your ideas to life.</p> </div> <div class="schema-faq-section" id="faq-question-1728908544834"><strong class="schema-faq-question">Why the fish?</strong> <p class="schema-faq-answer">With these tools and techniques at your fingertips, you’re ready to start building incredible 3D experiences with v0 and R3F. Whether you’re showcasing products, creating interactive environments, or experimenting with cutting-edge web graphics, it’s never been easier to bring your ideas to life.</p> </div> </div>
   
   
   
@@ -1149,7 +1149,7 @@ export const posts = [
     authorName: "Dennis Babych",
     profileImage: `${ProfileImageSrc}`,
     html: `<div class="article">
-  <h2 class="wp-block-heading has-large-font-size">A step-by-step guide for building stunning 3D scenes on the web with example prompts.</h2>
+  <h2 class="article-heading has-large-font-size">A step-by-step guide for building stunning 3D scenes on the web with example prompts.</h2>
   
   
   
@@ -1161,11 +1161,11 @@ export const posts = [
   
   
   
-  <h2 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#getting-started-with-3d-development">Getting started with 3D development</a></h2>
+  <h2 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#getting-started-with-3d-development">Getting started with 3D development</a></h2>
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#the-3d-scene:-your-canvas-for-creation">The 3D scene: Your canvas for creation</a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#the-3d-scene:-your-canvas-for-creation">The 3D scene: Your canvas for creation</a></h3>
   
   
   
@@ -1173,7 +1173,7 @@ export const posts = [
   
   
   
-  <figure class="wp-block-image size-large"><img loading="lazy" decoding="async" width="1024" height="576" src="http://localhost:8080/wp-content/uploads/2024/10/Cover-2-2-1024x576.jpg" alt="alternativeIMAGE" class="wp-image-8" srcset="http://localhost:8080/wp-content/uploads/2024/10/Cover-2-2-1024x576.jpg 1024w, http://localhost:8080/wp-content/uploads/2024/10/Cover-2-2-300x169.jpg 300w, http://localhost:8080/wp-content/uploads/2024/10/Cover-2-2-768x432.jpg 768w, http://localhost:8080/wp-content/uploads/2024/10/Cover-2-2-1536x864.jpg 1536w, http://localhost:8080/wp-content/uploads/2024/10/Cover-2-2-2048x1152.jpg 2048w" sizes="(max-width: 1024px) 100vw, 1024px"></figure>
+  <figure class="article-image size-large"><img loading="lazy" decoding="async" width="1024" height="576" src="https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1024&q=80" alt="alternativeIMAGE" class="article-image-8" srcset="https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1024&q=80 1024w, https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1024&q=80 300w, https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1024&q=80 768w, https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1024&q=80 1536w, https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1024&q=80 2048w" sizes="(max-width: 1024px) 100vw, 1024px"></figure>
   
   
   
@@ -1181,7 +1181,7 @@ export const posts = [
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#key-3d-shapes-and-their-roles">Key 3D shapes and their roles</a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#key-3d-shapes-and-their-roles">Key 3D shapes and their roles</a></h3>
   
   
   
@@ -1197,7 +1197,7 @@ export const posts = [
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#meshes-and-materials:-bringing-shapes-to-life">Meshes and materials: Bringing shapes to life</a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#meshes-and-materials:-bringing-shapes-to-life">Meshes and materials: Bringing shapes to life</a></h3>
   
   
   
@@ -1209,7 +1209,7 @@ export const posts = [
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#accessibility-in-3d-web-projects">Accessibility in 3D web projects</a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#accessibility-in-3d-web-projects">Accessibility in 3D web projects</a></h3>
   
   
   
@@ -1221,11 +1221,11 @@ export const posts = [
   
   
   
-  <h2 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#advanced-features-and-enhancements">Advanced features and enhancements</a></h2>
+  <h2 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#advanced-features-and-enhancements">Advanced features and enhancements</a></h2>
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#working-with-glb-files">Working with GLB files</a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#working-with-glb-files">Working with GLB files</a></h3>
   
   
   
@@ -1237,7 +1237,7 @@ export const posts = [
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#choosing-the-right-camera-and-lighting">Choosing the right camera and lighting</a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#choosing-the-right-camera-and-lighting">Choosing the right camera and lighting</a></h3>
   
   
   
@@ -1245,7 +1245,7 @@ export const posts = [
   
   
   
-  <ul class="wp-block-list">
+  <ul class="article-list">
   <li>A&nbsp;<strong>perspective camera</strong>&nbsp;mimics the way the human eye sees the world, making objects appear smaller as they fade into the distance—perfect for creating realistic depth and spatial relationships in your scene.</li>
   
   
@@ -1259,7 +1259,7 @@ export const posts = [
   
   
   
-  <ul class="wp-block-list">
+  <ul class="article-list">
   <li>​<strong>Ambient light</strong>&nbsp;provides a soft, even illumination that can make your scene feel natural and cohesive.</li>
   
   
@@ -1269,11 +1269,11 @@ export const posts = [
   
   
   
-  <h2 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#pushing-the-limits-of-3d-development">Pushing the limits of 3D development</a></h2>
+  <h2 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#pushing-the-limits-of-3d-development">Pushing the limits of 3D development</a></h2>
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#enhancing-your-scene-with-%3Cenvironment-/%3E">Enhancing your scene with&nbsp;<code>&lt;environment /&gt;</code></a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#enhancing-your-scene-with-%3Cenvironment-/%3E">Enhancing your scene with&nbsp;<code>&lt;environment /&gt;</code></a></h3>
   
   
   
@@ -1281,7 +1281,7 @@ export const posts = [
   
   
   
-  <blockquote class="wp-block-quote is-layout-flow wp-block-quote-is-layout-flow">
+  <blockquote class="article-quote is-layout-flow article-quote-is-layout-flow">
   <p>the best quote in the world</p>
   </blockquote>
   
@@ -1291,7 +1291,7 @@ export const posts = [
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#controls:-navigating-your-3d-scene">Controls: Navigating your 3D scene</a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#controls:-navigating-your-3d-scene">Controls: Navigating your 3D scene</a></h3>
   
   
   
@@ -1303,7 +1303,7 @@ export const posts = [
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#mixing-3d-with-html-and-css">Mixing 3D with HTML and CSS</a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#mixing-3d-with-html-and-css">Mixing 3D with HTML and CSS</a></h3>
   
   
   
@@ -1311,7 +1311,7 @@ export const posts = [
   
   
   
-  <figure class="wp-block-embed is-type-video is-provider-youtube wp-block-embed-youtube wp-embed-aspect-16-9 wp-has-aspect-ratio"><div class="wp-block-embed__wrapper">
+  <figure class="article-embed is-type-video is-provider-youtube article-embed-youtube embed-aspect-16-9 has-aspect-ratio"><div class="article-embed__wrapper">
   <iframe loading="lazy" title="Micro SaaS from ZERO to $2,500/m in 6 Simple Steps" width="500" height="281" src="https://www.youtube.com/embed/keX1EGJrO8E?feature=oembed" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen=""></iframe>
   </div></figure>
   
@@ -1321,7 +1321,7 @@ export const posts = [
   
   
   
-  <div class="schema-faq wp-block-yoast-faq-block"><div class="schema-faq-section" id="faq-question-1728908523777"><strong class="schema-faq-question">How much is the fish?</strong> <p class="schema-faq-answer">With these tools and techniques at your fingertips, you’re ready to start building incredible 3D experiences with v0 and R3F. Whether you’re showcasing products, creating interactive environments, or experimenting with cutting-edge web graphics, it’s never been easier to bring your ideas to life.</p> </div> <div class="schema-faq-section" id="faq-question-1728908544834"><strong class="schema-faq-question">Why the fish?</strong> <p class="schema-faq-answer">With these tools and techniques at your fingertips, you’re ready to start building incredible 3D experiences with v0 and R3F. Whether you’re showcasing products, creating interactive environments, or experimenting with cutting-edge web graphics, it’s never been easier to bring your ideas to life.</p> </div> </div>
+  <div class="schema-faq article-faq-block"><div class="schema-faq-section" id="faq-question-1728908523777"><strong class="schema-faq-question">How much is the fish?</strong> <p class="schema-faq-answer">With these tools and techniques at your fingertips, you’re ready to start building incredible 3D experiences with v0 and R3F. Whether you’re showcasing products, creating interactive environments, or experimenting with cutting-edge web graphics, it’s never been easier to bring your ideas to life.</p> </div> <div class="schema-faq-section" id="faq-question-1728908544834"><strong class="schema-faq-question">Why the fish?</strong> <p class="schema-faq-answer">With these tools and techniques at your fingertips, you’re ready to start building incredible 3D experiences with v0 and R3F. Whether you’re showcasing products, creating interactive environments, or experimenting with cutting-edge web graphics, it’s never been easier to bring your ideas to life.</p> </div> </div>
   
   
   
@@ -1338,7 +1338,7 @@ export const posts = [
     authorName: "Dennis Babych",
     profileImage: `${ProfileImageSrc}`,
     html: `<div class="article">
-  <h2 class="wp-block-heading has-large-font-size">A step-by-step guide for building stunning 3D scenes on the web with example prompts.</h2>
+  <h2 class="article-heading has-large-font-size">A step-by-step guide for building stunning 3D scenes on the web with example prompts.</h2>
   
   
   
@@ -1350,11 +1350,11 @@ export const posts = [
   
   
   
-  <h2 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#getting-started-with-3d-development">Getting started with 3D development</a></h2>
+  <h2 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#getting-started-with-3d-development">Getting started with 3D development</a></h2>
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#the-3d-scene:-your-canvas-for-creation">The 3D scene: Your canvas for creation</a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#the-3d-scene:-your-canvas-for-creation">The 3D scene: Your canvas for creation</a></h3>
   
   
   
@@ -1362,7 +1362,7 @@ export const posts = [
   
   
   
-  <figure class="wp-block-image size-large"><img loading="lazy" decoding="async" width="1024" height="576" src="http://localhost:8080/wp-content/uploads/2024/10/Cover-2-2-1024x576.jpg" alt="alternativeIMAGE" class="wp-image-8" srcset="http://localhost:8080/wp-content/uploads/2024/10/Cover-2-2-1024x576.jpg 1024w, http://localhost:8080/wp-content/uploads/2024/10/Cover-2-2-300x169.jpg 300w, http://localhost:8080/wp-content/uploads/2024/10/Cover-2-2-768x432.jpg 768w, http://localhost:8080/wp-content/uploads/2024/10/Cover-2-2-1536x864.jpg 1536w, http://localhost:8080/wp-content/uploads/2024/10/Cover-2-2-2048x1152.jpg 2048w" sizes="(max-width: 1024px) 100vw, 1024px"></figure>
+  <figure class="article-image size-large"><img loading="lazy" decoding="async" width="1024" height="576" src="https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1024&q=80" alt="alternativeIMAGE" class="article-image-8" srcset="https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1024&q=80 1024w, https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1024&q=80 300w, https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1024&q=80 768w, https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1024&q=80 1536w, https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1024&q=80 2048w" sizes="(max-width: 1024px) 100vw, 1024px"></figure>
   
   
   
@@ -1370,7 +1370,7 @@ export const posts = [
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#key-3d-shapes-and-their-roles">Key 3D shapes and their roles</a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#key-3d-shapes-and-their-roles">Key 3D shapes and their roles</a></h3>
   
   
   
@@ -1386,7 +1386,7 @@ export const posts = [
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#meshes-and-materials:-bringing-shapes-to-life">Meshes and materials: Bringing shapes to life</a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#meshes-and-materials:-bringing-shapes-to-life">Meshes and materials: Bringing shapes to life</a></h3>
   
   
   
@@ -1398,7 +1398,7 @@ export const posts = [
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#accessibility-in-3d-web-projects">Accessibility in 3D web projects</a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#accessibility-in-3d-web-projects">Accessibility in 3D web projects</a></h3>
   
   
   
@@ -1410,11 +1410,11 @@ export const posts = [
   
   
   
-  <h2 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#advanced-features-and-enhancements">Advanced features and enhancements</a></h2>
+  <h2 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#advanced-features-and-enhancements">Advanced features and enhancements</a></h2>
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#working-with-glb-files">Working with GLB files</a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#working-with-glb-files">Working with GLB files</a></h3>
   
   
   
@@ -1426,7 +1426,7 @@ export const posts = [
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#choosing-the-right-camera-and-lighting">Choosing the right camera and lighting</a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#choosing-the-right-camera-and-lighting">Choosing the right camera and lighting</a></h3>
   
   
   
@@ -1434,7 +1434,7 @@ export const posts = [
   
   
   
-  <ul class="wp-block-list">
+  <ul class="article-list">
   <li>A&nbsp;<strong>perspective camera</strong>&nbsp;mimics the way the human eye sees the world, making objects appear smaller as they fade into the distance—perfect for creating realistic depth and spatial relationships in your scene.</li>
   
   
@@ -1448,7 +1448,7 @@ export const posts = [
   
   
   
-  <ul class="wp-block-list">
+  <ul class="article-list">
   <li>​<strong>Ambient light</strong>&nbsp;provides a soft, even illumination that can make your scene feel natural and cohesive.</li>
   
   
@@ -1458,11 +1458,11 @@ export const posts = [
   
   
   
-  <h2 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#pushing-the-limits-of-3d-development">Pushing the limits of 3D development</a></h2>
+  <h2 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#pushing-the-limits-of-3d-development">Pushing the limits of 3D development</a></h2>
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#enhancing-your-scene-with-%3Cenvironment-/%3E">Enhancing your scene with&nbsp;<code>&lt;environment /&gt;</code></a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#enhancing-your-scene-with-%3Cenvironment-/%3E">Enhancing your scene with&nbsp;<code>&lt;environment /&gt;</code></a></h3>
   
   
   
@@ -1470,7 +1470,7 @@ export const posts = [
   
   
   
-  <blockquote class="wp-block-quote is-layout-flow wp-block-quote-is-layout-flow">
+  <blockquote class="article-quote is-layout-flow article-quote-is-layout-flow">
   <p>the best quote in the world</p>
   </blockquote>
   
@@ -1480,7 +1480,7 @@ export const posts = [
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#controls:-navigating-your-3d-scene">Controls: Navigating your 3D scene</a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#controls:-navigating-your-3d-scene">Controls: Navigating your 3D scene</a></h3>
   
   
   
@@ -1492,7 +1492,7 @@ export const posts = [
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#mixing-3d-with-html-and-css">Mixing 3D with HTML and CSS</a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#mixing-3d-with-html-and-css">Mixing 3D with HTML and CSS</a></h3>
   
   
   
@@ -1500,7 +1500,7 @@ export const posts = [
   
   
   
-  <figure class="wp-block-embed is-type-video is-provider-youtube wp-block-embed-youtube wp-embed-aspect-16-9 wp-has-aspect-ratio"><div class="wp-block-embed__wrapper">
+  <figure class="article-embed is-type-video is-provider-youtube article-embed-youtube embed-aspect-16-9 has-aspect-ratio"><div class="article-embed__wrapper">
   <iframe loading="lazy" title="Micro SaaS from ZERO to $2,500/m in 6 Simple Steps" width="500" height="281" src="https://www.youtube.com/embed/keX1EGJrO8E?feature=oembed" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen=""></iframe>
   </div></figure>
   
@@ -1510,7 +1510,7 @@ export const posts = [
   
   
   
-  <div class="schema-faq wp-block-yoast-faq-block"><div class="schema-faq-section" id="faq-question-1728908523777"><strong class="schema-faq-question">How much is the fish?</strong> <p class="schema-faq-answer">With these tools and techniques at your fingertips, you’re ready to start building incredible 3D experiences with v0 and R3F. Whether you’re showcasing products, creating interactive environments, or experimenting with cutting-edge web graphics, it’s never been easier to bring your ideas to life.</p> </div> <div class="schema-faq-section" id="faq-question-1728908544834"><strong class="schema-faq-question">Why the fish?</strong> <p class="schema-faq-answer">With these tools and techniques at your fingertips, you’re ready to start building incredible 3D experiences with v0 and R3F. Whether you’re showcasing products, creating interactive environments, or experimenting with cutting-edge web graphics, it’s never been easier to bring your ideas to life.</p> </div> </div>
+  <div class="schema-faq article-faq-block"><div class="schema-faq-section" id="faq-question-1728908523777"><strong class="schema-faq-question">How much is the fish?</strong> <p class="schema-faq-answer">With these tools and techniques at your fingertips, you’re ready to start building incredible 3D experiences with v0 and R3F. Whether you’re showcasing products, creating interactive environments, or experimenting with cutting-edge web graphics, it’s never been easier to bring your ideas to life.</p> </div> <div class="schema-faq-section" id="faq-question-1728908544834"><strong class="schema-faq-question">Why the fish?</strong> <p class="schema-faq-answer">With these tools and techniques at your fingertips, you’re ready to start building incredible 3D experiences with v0 and R3F. Whether you’re showcasing products, creating interactive environments, or experimenting with cutting-edge web graphics, it’s never been easier to bring your ideas to life.</p> </div> </div>
   
   
   
@@ -1530,7 +1530,7 @@ export const post = [
     authorName: "Dennis Babych",
     profileImage: `${ProfileImageSrc}`,
     html: `<div class="article">
-  <h2 class="wp-block-heading has-large-font-size">A step-by-step guide for building stunning 3D scenes on the web with example prompts.</h2>
+  <h2 class="article-heading has-large-font-size">A step-by-step guide for building stunning 3D scenes on the web with example prompts.</h2>
   
   
   
@@ -1542,11 +1542,11 @@ export const post = [
   
   
   
-  <h2 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#getting-started-with-3d-development">Getting started with 3D development</a></h2>
+  <h2 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#getting-started-with-3d-development">Getting started with 3D development</a></h2>
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#the-3d-scene:-your-canvas-for-creation">The 3D scene: Your canvas for creation</a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#the-3d-scene:-your-canvas-for-creation">The 3D scene: Your canvas for creation</a></h3>
   
   
   
@@ -1554,7 +1554,7 @@ export const post = [
   
   
   
-  <figure class="wp-block-image size-large"><img loading="lazy" decoding="async" width="1024" height="576" src="http://localhost:8080/wp-content/uploads/2024/10/Cover-2-2-1024x576.jpg" alt="alternativeIMAGE" class="wp-image-8" srcset="http://localhost:8080/wp-content/uploads/2024/10/Cover-2-2-1024x576.jpg 1024w, http://localhost:8080/wp-content/uploads/2024/10/Cover-2-2-300x169.jpg 300w, http://localhost:8080/wp-content/uploads/2024/10/Cover-2-2-768x432.jpg 768w, http://localhost:8080/wp-content/uploads/2024/10/Cover-2-2-1536x864.jpg 1536w, http://localhost:8080/wp-content/uploads/2024/10/Cover-2-2-2048x1152.jpg 2048w" sizes="(max-width: 1024px) 100vw, 1024px"></figure>
+  <figure class="article-image size-large"><img loading="lazy" decoding="async" width="1024" height="576" src="https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1024&q=80" alt="alternativeIMAGE" class="article-image-8" srcset="https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1024&q=80 1024w, https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1024&q=80 300w, https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1024&q=80 768w, https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1024&q=80 1536w, https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1024&q=80 2048w" sizes="(max-width: 1024px) 100vw, 1024px"></figure>
   
   
   
@@ -1562,7 +1562,7 @@ export const post = [
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#key-3d-shapes-and-their-roles">Key 3D shapes and their roles</a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#key-3d-shapes-and-their-roles">Key 3D shapes and their roles</a></h3>
   
   
   
@@ -1578,7 +1578,7 @@ export const post = [
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#meshes-and-materials:-bringing-shapes-to-life">Meshes and materials: Bringing shapes to life</a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#meshes-and-materials:-bringing-shapes-to-life">Meshes and materials: Bringing shapes to life</a></h3>
   
   
   
@@ -1590,7 +1590,7 @@ export const post = [
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#accessibility-in-3d-web-projects">Accessibility in 3D web projects</a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#accessibility-in-3d-web-projects">Accessibility in 3D web projects</a></h3>
   
   
   
@@ -1602,11 +1602,11 @@ export const post = [
   
   
   
-  <h2 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#advanced-features-and-enhancements">Advanced features and enhancements</a></h2>
+  <h2 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#advanced-features-and-enhancements">Advanced features and enhancements</a></h2>
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#working-with-glb-files">Working with GLB files</a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#working-with-glb-files">Working with GLB files</a></h3>
   
   
   
@@ -1618,7 +1618,7 @@ export const post = [
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#choosing-the-right-camera-and-lighting">Choosing the right camera and lighting</a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#choosing-the-right-camera-and-lighting">Choosing the right camera and lighting</a></h3>
   
   
   
@@ -1626,7 +1626,7 @@ export const post = [
   
   
   
-  <ul class="wp-block-list">
+  <ul class="article-list">
   <li>A&nbsp;<strong>perspective camera</strong>&nbsp;mimics the way the human eye sees the world, making objects appear smaller as they fade into the distance—perfect for creating realistic depth and spatial relationships in your scene.</li>
   
   
@@ -1640,7 +1640,7 @@ export const post = [
   
   
   
-  <ul class="wp-block-list">
+  <ul class="article-list">
   <li>​<strong>Ambient light</strong>&nbsp;provides a soft, even illumination that can make your scene feel natural and cohesive.</li>
   
   
@@ -1650,11 +1650,11 @@ export const post = [
   
   
   
-  <h2 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#pushing-the-limits-of-3d-development">Pushing the limits of 3D development</a></h2>
+  <h2 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#pushing-the-limits-of-3d-development">Pushing the limits of 3D development</a></h2>
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#enhancing-your-scene-with-%3Cenvironment-/%3E">Enhancing your scene with&nbsp;<code>&lt;environment /&gt;</code></a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#enhancing-your-scene-with-%3Cenvironment-/%3E">Enhancing your scene with&nbsp;<code>&lt;environment /&gt;</code></a></h3>
   
   
   
@@ -1662,7 +1662,7 @@ export const post = [
   
   
   
-  <blockquote class="wp-block-quote is-layout-flow wp-block-quote-is-layout-flow">
+  <blockquote class="article-quote is-layout-flow article-quote-is-layout-flow">
   <p>the best quote in the world</p>
   </blockquote>
   
@@ -1672,7 +1672,7 @@ export const post = [
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#controls:-navigating-your-3d-scene">Controls: Navigating your 3D scene</a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#controls:-navigating-your-3d-scene">Controls: Navigating your 3D scene</a></h3>
   
   
   
@@ -1684,7 +1684,7 @@ export const post = [
   
   
   
-  <h3 class="wp-block-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#mixing-3d-with-html-and-css">Mixing 3D with HTML and CSS</a></h3>
+  <h3 class="article-heading"><a href="https://vercel.com/blog/add-3d-to-your-web-projects-with-v0-and-react-three-fiber#mixing-3d-with-html-and-css">Mixing 3D with HTML and CSS</a></h3>
   
   
   
@@ -1692,7 +1692,7 @@ export const post = [
   
   
   
-  <figure class="wp-block-embed is-type-video is-provider-youtube wp-block-embed-youtube wp-embed-aspect-16-9 wp-has-aspect-ratio"><div class="wp-block-embed__wrapper">
+  <figure class="article-embed is-type-video is-provider-youtube article-embed-youtube embed-aspect-16-9 has-aspect-ratio"><div class="article-embed__wrapper">
   <iframe loading="lazy" title="Micro SaaS from ZERO to $2,500/m in 6 Simple Steps" width="500" height="281" src="https://www.youtube.com/embed/keX1EGJrO8E?feature=oembed" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen=""></iframe>
   </div></figure>
   
@@ -1702,7 +1702,7 @@ export const post = [
   
   
   
-  <div class="schema-faq wp-block-yoast-faq-block"><div class="schema-faq-section" id="faq-question-1728908523777"><strong class="schema-faq-question">How much is the fish?</strong> <p class="schema-faq-answer">With these tools and techniques at your fingertips, you’re ready to start building incredible 3D experiences with v0 and R3F. Whether you’re showcasing products, creating interactive environments, or experimenting with cutting-edge web graphics, it’s never been easier to bring your ideas to life.</p> </div> <div class="schema-faq-section" id="faq-question-1728908544834"><strong class="schema-faq-question">Why the fish?</strong> <p class="schema-faq-answer">With these tools and techniques at your fingertips, you’re ready to start building incredible 3D experiences with v0 and R3F. Whether you’re showcasing products, creating interactive environments, or experimenting with cutting-edge web graphics, it’s never been easier to bring your ideas to life.</p> </div> </div>
+  <div class="schema-faq article-faq-block"><div class="schema-faq-section" id="faq-question-1728908523777"><strong class="schema-faq-question">How much is the fish?</strong> <p class="schema-faq-answer">With these tools and techniques at your fingertips, you’re ready to start building incredible 3D experiences with v0 and R3F. Whether you’re showcasing products, creating interactive environments, or experimenting with cutting-edge web graphics, it’s never been easier to bring your ideas to life.</p> </div> <div class="schema-faq-section" id="faq-question-1728908544834"><strong class="schema-faq-question">Why the fish?</strong> <p class="schema-faq-answer">With these tools and techniques at your fingertips, you’re ready to start building incredible 3D experiences with v0 and R3F. Whether you’re showcasing products, creating interactive environments, or experimenting with cutting-edge web graphics, it’s never been easier to bring your ideas to life.</p> </div> </div>
   
   
   

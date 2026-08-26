@@ -1,12 +1,15 @@
 import 'server-only'
 import type Stripe from 'stripe'
 import prisma from '@/libs/prisma'
+import { getServerConfig } from '@/lib/config'
 import { sendWelcomeEmail } from '@/lib/email'
 import { resolvePlanFromStripe, type Plan } from '@/lib/plans'
 import { getStripe } from '@/lib/stripe'
+import { paymentGraceEnd } from '@/lib/billing/commitmentPolicy'
+import { isMonthlyCommitmentMetadata } from '@/lib/stripe-commitment'
 import { normalizeEmail as normalizeEmailAddress } from '@/lib/normalize-email'
 import { redactEmail } from '@/lib/log-redact'
-import { getWpUserExists, provisionWpUser } from '@/lib/wp'
+import { provisionMemberFromCheckout } from '@/lib/members/provisionMemberFromCheckout'
 
 const ACTIVE_STATUSES = new Set<Stripe.Subscription.Status>([
 	'active',
@@ -20,24 +23,21 @@ function isEnvEnabled(value?: string): boolean {
 	return ['1', 'true', 'yes', 'on'].includes(value.trim().toLowerCase())
 }
 
-function isForceProvisionEnabled(): boolean {
-	return isEnvEnabled(process.env.WP_PROVISION_FORCE)
-}
-
-function isDryRunWpSync(options?: { dryRun?: boolean }): boolean {
-	if (typeof options?.dryRun === 'boolean') return options.dryRun
-	return isEnvEnabled(process.env.DRY_RUN_WP_SYNC)
-}
-
 type ProvisioningRecord = {
 	id: string
 	email: string | null
 	normalizedEmail: string | null
 	stripeCustomerId: string | null
 	stripeSubscriptionId: string | null
-	wpUserId: number | null
 	currentPlan: string | null
 	plan: string | null
+	billingCadence: string | null
+	commitmentStatus: string | null
+	commitmentStartAt: Date | null
+	commitmentEndAt: Date | null
+	paymentGraceEndsAt: Date | null
+	lastPaidInvoiceId: string | null
+	lastPaymentFailureAt: Date | null
 	lastNotifiedPlan: string | null
 	lastNotifiedAt: Date | null
 	lastNotifiedEventId: string | null
@@ -45,16 +45,9 @@ type ProvisioningRecord = {
 
 type ProvisioningDecision = 'skip' | 'provision' | 'update_plan'
 
-type WpExistsStatus = boolean | 'unknown'
 type NameSource = 'db' | 'stripe_customer' | 'session_customer_details' | 'none'
 type EmailSource = 'session' | 'stripe_customer' | 'provisioning_record' | 'none'
 type EmailSendSource = 'webhook' | 'manual_sync'
-
-type WpActions = {
-	addTags: string[]
-	removeTags: string[]
-	setMembershipLevel: string | null
-}
 
 export type ProvisioningSummary = {
 	ok: boolean
@@ -71,9 +64,6 @@ export type ProvisioningSummary = {
 	stripeSubscriptionId: string | null
 	plan: string | null
 	priceId: string | null
-	wpUserId: number | null
-	actions: WpActions | null
-	dryRun: boolean
 }
 
 export function logProvisioningDecision(params: {
@@ -92,14 +82,8 @@ export function logProvisioningDecision(params: {
 	newPlan?: string | null
 	emailSent?: boolean
 	emailReason?: string | null
-	dbWpUserId?: number | null
-	wpUserId?: number | null
-	wpExists?: WpExistsStatus
 	decision: ProvisioningDecision
 	reason: string
-	actions?: WpActions | null
-	forceProvision?: boolean
-	dryRun?: boolean
 }) {
 	const payload: Record<string, unknown> = {
 		eventId: params.eventId ?? null,
@@ -109,8 +93,6 @@ export function logProvisioningDecision(params: {
 		subscriptionId: params.subscriptionId ?? null,
 		email: redactEmail(params.email ?? null),
 		incomingPlan: params.incomingPlan ?? null,
-		dbWpUserId: typeof params.dbWpUserId === 'number' ? params.dbWpUserId : null,
-		wpExists: params.wpExists ?? 'unknown',
 		decision: params.decision,
 		reason: params.reason,
 	}
@@ -139,24 +121,8 @@ export function logProvisioningDecision(params: {
 	if (params.emailReason !== undefined) {
 		payload.emailReason = params.emailReason
 	}
-	if (typeof params.wpUserId === 'number') {
-		payload.wpUserId = params.wpUserId
-	}
-	if (params.actions) {
-		payload.actions = params.actions
-	}
-	if (typeof params.forceProvision === 'boolean') {
-		payload.forceProvision = params.forceProvision
-	}
-	if (params.dryRun) {
-		payload.dryRun = true
-	}
 
 	console.info(JSON.stringify(payload))
-}
-
-function normalizeSkipReason(reason: string): string {
-	return reason === 'wp_exists_plan_unchanged' ? 'wp_user_exists' : reason
 }
 
 function logProvisioningSkipDetails(params: {
@@ -175,11 +141,7 @@ function logProvisioningSkipDetails(params: {
 	newPlan?: string | null
 	emailSent?: boolean
 	emailReason?: string | null
-	wpUserId?: number | null
 	reason: string
-	actions?: WpActions | null
-	forceProvision?: boolean
-	dryRun?: boolean
 }) {
 	const payload: Record<string, unknown> = {
 		context: params.context,
@@ -189,8 +151,7 @@ function logProvisioningSkipDetails(params: {
 		stripeSubscriptionId: params.subscriptionId ?? null,
 		email: redactEmail(params.email ?? null),
 		plan: params.plan ?? null,
-		wpUserId: typeof params.wpUserId === 'number' ? params.wpUserId : null,
-		reason: normalizeSkipReason(params.reason),
+		reason: params.reason,
 	}
 
 	if (params.resolvedEmail !== undefined) {
@@ -217,23 +178,20 @@ function logProvisioningSkipDetails(params: {
 	if (params.emailReason !== undefined) {
 		payload.emailReason = params.emailReason
 	}
-	if (params.actions) {
-		payload.actions = params.actions
-	}
-	if (typeof params.forceProvision === 'boolean') {
-		payload.forceProvision = params.forceProvision
-	}
-	if (params.dryRun) {
-		payload.dryRun = true
-	}
 
-	console.info('WP provisioning skipped', payload)
+	console.info('membership_projection_skipped', payload)
 }
 
 function normalizePlanName(value: string | null | undefined): string | null {
 	if (!value) return null
 	const normalized = value.trim().toLowerCase()
 	return normalized.length > 0 ? normalized : null
+}
+
+function dateFromIsoString(value: string | null | undefined): Date | null {
+	if (!value) return null
+	const date = new Date(value)
+	return Number.isNaN(date.getTime()) ? null : date
 }
 
 function safeResolvePlanFromStripe(
@@ -259,26 +217,8 @@ function safeResolvePlanFromStripe(
 	}
 }
 
-function buildWpActions(plan: string | null): WpActions | null {
-	if (plan === 'vip') {
-		return {
-			addTags: ['VIP'],
-			removeTags: ['Pro'],
-			setMembershipLevel: 'vip',
-		}
-	}
-	if (plan === 'pro') {
-		return {
-			addTags: ['Pro'],
-			removeTags: ['VIP'],
-			setMembershipLevel: 'pro',
-		}
-	}
-	return null
-}
-
 function isProvisioningPlan(value: string | null | undefined): value is Plan {
-	return value === 'pro' || value === 'vip'
+	return value === 'jpv_bootcamp_membership'
 }
 
 function evaluateEmailNotification(params: {
@@ -290,6 +230,7 @@ function evaluateEmailNotification(params: {
 	lastNotifiedAt: Date | null
 	lastNotifiedEventId: string | null
 	sendKey?: string | null
+	isNewCustomer?: boolean
 }): { shouldSend: boolean; reason: string } {
 	if (!params.allowEmail) {
 		return { shouldSend: false, reason: params.disabledReason ?? 'disabled' }
@@ -299,6 +240,9 @@ function evaluateEmailNotification(params: {
 	}
 	if (params.sendKey && params.lastNotifiedEventId === params.sendKey) {
 		return { shouldSend: false, reason: 'send_key_already_notified' }
+	}
+	if (params.isNewCustomer) {
+		return { shouldSend: true, reason: 'new_customer_for_email' }
 	}
 	if (params.lastNotifiedPlan === params.newPlan) {
 		if (
@@ -575,9 +519,15 @@ async function findProvisioningRecord(params: {
 				normalizedEmail: true,
 				stripeCustomerId: true,
 				stripeSubscriptionId: true,
-				wpUserId: true,
 				currentPlan: true,
 				plan: true,
+				billingCadence: true,
+				commitmentStatus: true,
+				commitmentStartAt: true,
+				commitmentEndAt: true,
+				paymentGraceEndsAt: true,
+				lastPaidInvoiceId: true,
+				lastPaymentFailureAt: true,
 				lastNotifiedPlan: true,
 				lastNotifiedAt: true,
 				lastNotifiedEventId: true,
@@ -599,9 +549,15 @@ async function findProvisioningRecord(params: {
 			normalizedEmail: true,
 			stripeCustomerId: true,
 			stripeSubscriptionId: true,
-			wpUserId: true,
 			currentPlan: true,
 			plan: true,
+			billingCadence: true,
+			commitmentStatus: true,
+			commitmentStartAt: true,
+			commitmentEndAt: true,
+			paymentGraceEndsAt: true,
+			lastPaidInvoiceId: true,
+			lastPaymentFailureAt: true,
 			lastNotifiedPlan: true,
 			lastNotifiedAt: true,
 			lastNotifiedEventId: true,
@@ -639,18 +595,58 @@ async function upsertProvisioningRecord({
 	email,
 	stripeCustomerId,
 	stripeSubscriptionId,
-	wpUserId,
 	plan,
 	status,
 	lastEventId,
+	stripePriceId,
+	subscriptionStatus,
+	subscriptionCurrentPeriodEnd,
+	subscriptionCancelAtPeriodEnd,
+	subscriptionUpdatedAt,
+	stripeSubscriptionScheduleId,
+	stripeCheckoutSessionId,
+	billingCadence,
+	commitmentStatus,
+	commitmentStartAt,
+	commitmentEndAt,
+	cancellationRequestedAt,
+	cancellationEffectiveAt,
+	paymentGraceEndsAt,
+	lastPaidInvoiceId,
+	lastPaymentFailureAt,
+	contractVersion,
+	contractAcceptedAt,
+	immediateAccessConsentAt,
+	earlyTerminationReason,
+	earlyTerminationApprovedBy,
 }: {
 	email: string
 	stripeCustomerId: string
 	stripeSubscriptionId?: string | null
-	wpUserId?: number | null
 	plan: string
 	status: string
 	lastEventId?: string | null
+	stripePriceId?: string | null
+	subscriptionStatus?: string | null
+	subscriptionCurrentPeriodEnd?: Date | null
+	subscriptionCancelAtPeriodEnd?: boolean | null
+	subscriptionUpdatedAt?: Date | null
+	stripeSubscriptionScheduleId?: string | null
+	stripeCheckoutSessionId?: string | null
+	billingCadence?: string | null
+	commitmentStatus?: string | null
+	commitmentStartAt?: Date | null
+	commitmentEndAt?: Date | null
+	cancellationRequestedAt?: Date | null
+	cancellationEffectiveAt?: Date | null
+	paymentGraceEndsAt?: Date | null
+	lastPaidInvoiceId?: string | null
+	lastPaymentFailureAt?: Date | null
+	contractVersion?: string | null
+	contractAcceptedAt?: Date | null
+	immediateAccessConsentAt?: Date | null
+	earlyTerminationReason?: string | null
+	earlyTerminationApprovedBy?: string | null
 }): Promise<void> {
 	const normalizedEmail = normalizeEmailAddress(email)
 	if (!normalizedEmail) {
@@ -694,11 +690,31 @@ async function upsertProvisioningRecord({
 		normalizedEmail: string
 		stripeCustomerId?: string
 		stripeSubscriptionId?: string | null
-		wpUserId?: number | null
 		plan?: string | null
 		currentPlan?: string | null
 		status: string
 		lastEventId?: string | null
+		stripePriceId?: string | null
+		subscriptionStatus?: string | null
+		subscriptionCurrentPeriodEnd?: Date | null
+		subscriptionCancelAtPeriodEnd?: boolean | null
+		subscriptionUpdatedAt?: Date | null
+		stripeSubscriptionScheduleId?: string | null
+		stripeCheckoutSessionId?: string | null
+		billingCadence?: string | null
+		commitmentStatus?: string | null
+		commitmentStartAt?: Date | null
+		commitmentEndAt?: Date | null
+		cancellationRequestedAt?: Date | null
+		cancellationEffectiveAt?: Date | null
+		paymentGraceEndsAt?: Date | null
+		lastPaidInvoiceId?: string | null
+		lastPaymentFailureAt?: Date | null
+		contractVersion?: string | null
+		contractAcceptedAt?: Date | null
+		immediateAccessConsentAt?: Date | null
+		earlyTerminationReason?: string | null
+		earlyTerminationApprovedBy?: string | null
 	} = {
 		email,
 		normalizedEmail,
@@ -708,10 +724,44 @@ async function upsertProvisioningRecord({
 		currentPlan: plan ?? null,
 		status,
 		lastEventId: lastEventId ?? null,
+		stripePriceId: stripePriceId ?? null,
+		subscriptionStatus: subscriptionStatus ?? null,
+		subscriptionCurrentPeriodEnd: subscriptionCurrentPeriodEnd ?? null,
+		subscriptionCancelAtPeriodEnd: subscriptionCancelAtPeriodEnd ?? null,
+		subscriptionUpdatedAt: subscriptionUpdatedAt ?? null,
 	}
 
-	if (typeof wpUserId === 'number') {
-		updateData.wpUserId = wpUserId
+	if (stripeSubscriptionScheduleId !== undefined) {
+		updateData.stripeSubscriptionScheduleId = stripeSubscriptionScheduleId
+	}
+	if (stripeCheckoutSessionId !== undefined) {
+		updateData.stripeCheckoutSessionId = stripeCheckoutSessionId
+	}
+	if (billingCadence !== undefined) updateData.billingCadence = billingCadence
+	if (commitmentStatus !== undefined) updateData.commitmentStatus = commitmentStatus
+	if (commitmentStartAt !== undefined) updateData.commitmentStartAt = commitmentStartAt
+	if (commitmentEndAt !== undefined) updateData.commitmentEndAt = commitmentEndAt
+	if (cancellationRequestedAt !== undefined) {
+		updateData.cancellationRequestedAt = cancellationRequestedAt
+	}
+	if (cancellationEffectiveAt !== undefined) {
+		updateData.cancellationEffectiveAt = cancellationEffectiveAt
+	}
+	if (paymentGraceEndsAt !== undefined) updateData.paymentGraceEndsAt = paymentGraceEndsAt
+	if (lastPaidInvoiceId !== undefined) updateData.lastPaidInvoiceId = lastPaidInvoiceId
+	if (lastPaymentFailureAt !== undefined) {
+		updateData.lastPaymentFailureAt = lastPaymentFailureAt
+	}
+	if (contractVersion !== undefined) updateData.contractVersion = contractVersion
+	if (contractAcceptedAt !== undefined) updateData.contractAcceptedAt = contractAcceptedAt
+	if (immediateAccessConsentAt !== undefined) {
+		updateData.immediateAccessConsentAt = immediateAccessConsentAt
+	}
+	if (earlyTerminationReason !== undefined) {
+		updateData.earlyTerminationReason = earlyTerminationReason
+	}
+	if (earlyTerminationApprovedBy !== undefined) {
+		updateData.earlyTerminationApprovedBy = earlyTerminationApprovedBy
 	}
 
 	if (existing?.stripeCustomerId && existing.stripeCustomerId !== stripeCustomerId) {
@@ -775,6 +825,158 @@ async function upsertProvisioningRecord({
 	}
 }
 
+export type InvoicePaymentProjectionStatus =
+	| 'failed'
+	| 'action_required'
+	| 'paid'
+	| 'refunded'
+	| 'disputed'
+	| 'dispute_won'
+	| 'dispute_lost'
+	| 'dispute_resolved'
+
+export type InvoicePaymentProjectionResult = {
+	updated: boolean
+	deduped: boolean
+	stale: boolean
+	recovered: boolean
+	previousStatus: string | null
+}
+
+export async function projectInvoicePaymentState(params: {
+	stripeCustomerId?: string | null
+	stripeSubscriptionId?: string | null
+	stripeInvoiceId?: string | null
+	stripeChargeId?: string | null
+	stripePaymentIntentId?: string | null
+	disputeStatus?: string | null
+	eventId: string
+	paymentStatus: InvoicePaymentProjectionStatus
+	occurredAt?: Date
+}): Promise<InvoicePaymentProjectionResult> {
+	const stripeCustomerId = params.stripeCustomerId?.trim() || null
+	const stripeSubscriptionId = params.stripeSubscriptionId?.trim() || null
+	const stripeInvoiceId = params.stripeInvoiceId?.trim() || null
+	const stripeChargeId = params.stripeChargeId?.trim() || null
+	const stripePaymentIntentId = params.stripePaymentIntentId?.trim() || null
+	const disputeStatus = params.disputeStatus?.trim() || null
+	const occurredAt = params.occurredAt ?? new Date()
+	const whereOr: Array<Record<string, unknown>> = []
+	if (stripeCustomerId) whereOr.push({ stripeCustomerId })
+	if (stripeSubscriptionId) whereOr.push({ stripeSubscriptionId })
+	if (stripePaymentIntentId) whereOr.push({ paymentLastPaymentIntentId: stripePaymentIntentId })
+	if (stripeChargeId) whereOr.push({ paymentLastChargeId: stripeChargeId })
+
+	if (whereOr.length === 0) {
+		return { updated: false, deduped: false, stale: false, recovered: false, previousStatus: null }
+	}
+
+	const existing = await prisma.customerProvisioning.findFirst({
+		where: { OR: whereOr },
+		select: {
+			id: true,
+			billingCadence: true,
+			commitmentStatus: true,
+			subscriptionStatus: true,
+			paymentGraceEndsAt: true,
+			lastPaidInvoiceId: true,
+			lastPaymentFailureAt: true,
+			paymentStatus: true,
+			paymentRecoveredAt: true,
+			paymentRefundedAt: true,
+			paymentDisputeStatus: true,
+			paymentDisputedAt: true,
+			paymentDisputeResolvedAt: true,
+			paymentUpdatedAt: true,
+			paymentLastEventId: true,
+			paymentLastInvoiceId: true,
+			paymentLastChargeId: true,
+			paymentLastPaymentIntentId: true,
+		},
+	})
+
+	if (!existing) {
+		return { updated: false, deduped: false, stale: false, recovered: false, previousStatus: null }
+	}
+
+	if (existing.paymentLastEventId === params.eventId) {
+		return {
+			updated: false,
+			deduped: true,
+			stale: false,
+			recovered: false,
+			previousStatus: existing.paymentStatus,
+		}
+	}
+
+	if (existing.paymentUpdatedAt && existing.paymentUpdatedAt.getTime() > occurredAt.getTime()) {
+		return {
+			updated: false,
+			deduped: false,
+			stale: true,
+			recovered: false,
+			previousStatus: existing.paymentStatus,
+		}
+	}
+
+	const paid = params.paymentStatus === 'paid'
+	const paymentAttentionRequired =
+		params.paymentStatus === 'failed' || params.paymentStatus === 'action_required'
+	const recovered = paid && existing.paymentStatus === 'failed'
+	const disputeResolved =
+		params.paymentStatus === 'dispute_won' ||
+		params.paymentStatus === 'dispute_lost' ||
+		params.paymentStatus === 'dispute_resolved'
+	const monthlyCommitment = existing.billingCadence === 'monthly_commitment'
+	const providerAllowsAccess =
+		existing.subscriptionStatus === 'active' || existing.subscriptionStatus === 'trialing'
+	const activateMonthlyAccess = monthlyCommitment && paid && providerAllowsAccess
+
+	await prisma.customerProvisioning.update({
+		where: { id: existing.id },
+		data: {
+			paymentStatus: params.paymentStatus,
+			paymentFailedAt: paymentAttentionRequired ? occurredAt : undefined,
+			paymentRecoveredAt: recovered ? occurredAt : existing.paymentRecoveredAt,
+			paymentRefundedAt:
+				params.paymentStatus === 'refunded' ? occurredAt : existing.paymentRefundedAt,
+			paymentDisputeStatus: disputeStatus ?? existing.paymentDisputeStatus,
+			paymentDisputedAt:
+				params.paymentStatus === 'disputed' ? occurredAt : existing.paymentDisputedAt,
+			paymentDisputeResolvedAt:
+				disputeResolved ? occurredAt : existing.paymentDisputeResolvedAt,
+			paymentUpdatedAt: occurredAt,
+			paymentLastEventId: params.eventId,
+			paymentLastInvoiceId: stripeInvoiceId ?? existing.paymentLastInvoiceId,
+			paymentLastChargeId: stripeChargeId ?? existing.paymentLastChargeId,
+			paymentLastPaymentIntentId:
+				stripePaymentIntentId ?? existing.paymentLastPaymentIntentId,
+			lastPaidInvoiceId: paid ? stripeInvoiceId ?? existing.lastPaidInvoiceId : undefined,
+			lastPaymentFailureAt: paymentAttentionRequired ? occurredAt : undefined,
+			paymentGraceEndsAt: paymentAttentionRequired
+				? paymentGraceEnd(occurredAt)
+				: paid
+					? null
+					: undefined,
+			plan: activateMonthlyAccess ? 'jpv_bootcamp_membership' : undefined,
+			currentPlan: activateMonthlyAccess ? 'jpv_bootcamp_membership' : undefined,
+			status: activateMonthlyAccess ? 'active' : undefined,
+			commitmentStatus:
+				activateMonthlyAccess && existing.commitmentStatus === 'pending'
+					? 'active'
+					: undefined,
+		},
+	})
+
+	return {
+		updated: true,
+		deduped: false,
+		stale: false,
+		recovered,
+		previousStatus: existing.paymentStatus,
+	}
+}
+
 async function markProvisioningNotified(params: {
 	stripeCustomerId: string
 	email: string
@@ -824,20 +1026,6 @@ async function markProvisioningNotified(params: {
 	}
 }
 
-async function markProvisioningNeedsReprovision(
-	recordId: string,
-	lastEventId?: string | null
-): Promise<void> {
-	await prisma.customerProvisioning.update({
-		where: { id: recordId },
-		data: {
-			wpUserId: null,
-			status: 'needs_reprovision',
-			lastEventId: lastEventId ?? null,
-		},
-	})
-}
-
 export async function provisionFromCheckoutSession(
 	session: Stripe.Checkout.Session,
 	eventId?: string | null,
@@ -852,21 +1040,29 @@ export async function provisionFromCheckoutSession(
 	let incomingPlan: string | null = null
 	let resolvedPlan: string | null = null
 	let resolvedPriceId: string | null = null
-	let actions: WpActions | null = null
-	let dbWpUserId: number | null = null
-	let wpExists: WpExistsStatus = 'unknown'
-	let wpUserId: number | null = null
 	let oldPlan: string | null = null
 	let newPlan: string | null = null
 	let emailSent = false
 	let emailReason: string | null = null
-	const forceProvision = isForceProvisionEnabled()
-	const dryRun = isDryRunWpSync(options)
 	const allowEmail = options?.allowEmail ?? false
 	const disableNonWebhookEmails = isEnvEnabled(process.env.DISABLE_NON_WEBHOOK_EMAILS)
 	const eventLivemode =
 		typeof options?.eventLivemode === 'boolean' ? options?.eventLivemode : null
 	const emailSource = resolveEmailSource(eventType)
+	const billingCadence =
+		typeof session.metadata?.billing_cadence === 'string'
+			? session.metadata.billing_cadence
+			: session.metadata?.billing === 'monthly'
+				? 'monthly_commitment'
+				: session.metadata?.billing === 'annual'
+					? 'annual'
+					: null
+	const monthlyCommitment = isMonthlyCommitmentMetadata(session.metadata)
+	const contractVersion = session.metadata?.contract_version ?? null
+	const contractAcceptedAt = dateFromIsoString(session.metadata?.contract_accepted_at)
+	const immediateAccessConsentAt = dateFromIsoString(
+		session.metadata?.immediate_access_consent_at,
+	)
 
 	const logDecision = (decision: ProvisioningDecision, reason: string) => {
 		logProvisioningDecision({
@@ -885,19 +1081,13 @@ export async function provisionFromCheckoutSession(
 			newPlan,
 			emailSent,
 			emailReason,
-			dbWpUserId,
-			wpUserId,
-			wpExists,
 			decision,
 			reason,
-			actions,
-			forceProvision,
-			dryRun,
 		})
 	}
 
 	const buildSummary = (decision: ProvisioningDecision, reason: string): ProvisioningSummary => ({
-		ok: decision !== 'skip' || reason === 'wp_exists_plan_unchanged',
+		ok: decision !== 'skip',
 		decision,
 		reason,
 		oldPlan,
@@ -911,14 +1101,19 @@ export async function provisionFromCheckoutSession(
 		stripeSubscriptionId: subscriptionId,
 		plan: incomingPlan,
 		priceId: resolvedPriceId,
-		wpUserId,
-		actions,
-		dryRun,
 	})
 
 	if (session.mode !== 'subscription') {
 		logDecision('skip', 'non_subscription')
 		return buildSummary('skip', 'non_subscription')
+	}
+
+	if (
+		monthlyCommitment &&
+		(!contractVersion || !contractAcceptedAt || !immediateAccessConsentAt)
+	) {
+		logDecision('skip', 'missing_commitment_consent')
+		return buildSummary('skip', 'missing_commitment_consent')
 	}
 
 	if (session.payment_status && !['paid', 'no_payment_required'].includes(session.payment_status)) {
@@ -955,14 +1150,6 @@ export async function provisionFromCheckoutSession(
 		resolvedEmailSource = 'provisioning_record'
 	}
 	resolvedEmail = email
-	const storedWpUserId =
-		typeof existing?.wpUserId === 'number' && existing.wpUserId > 0
-			? existing.wpUserId
-			: null
-	if (storedWpUserId) {
-		dbWpUserId = storedWpUserId
-		wpUserId = storedWpUserId
-	}
 
 	if (!email) {
 		logDecision('skip', 'missing_email')
@@ -990,8 +1177,8 @@ export async function provisionFromCheckoutSession(
 	const lastNotifiedAt = existing?.lastNotifiedAt ?? null
 	const lastNotifiedEventId = existing?.lastNotifiedEventId ?? null
 
-	if (!plan) {
-		console.error('WP provisioning skipped: invalid plan', {
+	if (!plan || !isProvisioningPlan(plan)) {
+		console.error('membership projection skipped: invalid plan', {
 			sessionId: session.id,
 			email: redactEmail(email),
 			customerId,
@@ -1011,11 +1198,19 @@ export async function provisionFromCheckoutSession(
 	})
 
 	const planChanged = storedPlanName !== incomingPlan
-	let decision: ProvisioningDecision = 'provision'
-	let reason = existing ? 'missing_wp_user_id' : 'no_provisioning_record'
+	const isNewCustomerCheckout = Boolean(existing && existing.stripeCustomerId && existing.stripeCustomerId !== customerId)
+	const decision: ProvisioningDecision = existing
+		? planChanged ? 'update_plan' : isNewCustomerCheckout ? 'update_plan' : 'skip'
+		: 'provision'
+	const reason = existing
+		? planChanged ? 'plan_changed' : isNewCustomerCheckout ? 'new_customer_same_plan' : 'plan_unchanged'
+		: 'no_projection_record'
 	oldPlan = storedPlanName
 	newPlan = incomingPlan
-	const isCanonicalEmailEvent = eventType === 'customer.subscription.updated' || eventType === 'manual_sync'
+	const isCanonicalEmailEvent =
+		eventType === 'checkout.session.completed' ||
+		eventType === 'customer.subscription.updated' ||
+		eventType === 'manual_sync'
 	const emailEval = evaluateEmailNotification({
 		allowEmail: allowEmail && isCanonicalEmailEvent,
 		disabledReason: !isCanonicalEmailEvent ? 'event_not_canonical' : undefined,
@@ -1025,116 +1220,11 @@ export async function provisionFromCheckoutSession(
 		lastNotifiedAt,
 		lastNotifiedEventId,
 		sendKey: emailSendKey,
+		isNewCustomer: isNewCustomerCheckout,
 	})
 	emailReason = emailEval.reason
 
-	if (storedWpUserId) {
-		let lookupFailed = false
-		try {
-			const lookup = await getWpUserExists({
-				wpUserId: storedWpUserId,
-				email,
-			})
-			if (lookup) {
-				wpExists = lookup.exists
-			} else {
-				lookupFailed = true
-			}
-		} catch {
-			lookupFailed = true
-		}
-
-		if (wpExists === false) {
-			await markProvisioningNeedsReprovision(existing.id, eventId ?? null)
-			decision = 'provision'
-			reason = 'wp_missing_reprovision'
-		} else if (wpExists === true) {
-			if (planChanged) {
-				decision = 'update_plan'
-				reason = 'plan_changed'
-			} else {
-				decision = 'skip'
-				reason = 'wp_exists_plan_unchanged'
-			}
-		} else if (lookupFailed) {
-			decision = 'provision'
-			reason = 'wp_lookup_failed'
-		}
-	}
-
-	if (decision === 'skip' && forceProvision && storedWpUserId) {
-		console.info('WP provisioning force enabled; bypassing skip.', {
-			sessionId: session.id,
-			customerId,
-			subscriptionId,
-			wpUserId: storedWpUserId,
-			reason: normalizeSkipReason(reason),
-		})
-		decision = 'provision'
-		reason = 'force_reprovision'
-	}
-
-	if (decision === 'skip') {
-		logProvisioningSkipDetails({
-			context: 'checkout',
-			eventId: eventId ?? null,
-			livemode: eventLivemode,
-			customerId,
-			subscriptionId,
-			email,
-			plan: incomingPlan,
-			resolvedEmail,
-			resolvedEmailSource,
-			resolvedPlan,
-			resolvedPriceId,
-			oldPlan,
-			newPlan,
-			emailSent,
-			emailReason,
-			wpUserId: storedWpUserId,
-			reason,
-			actions,
-			forceProvision,
-			dryRun,
-		})
-		await upsertProvisioningRecord({
-			email,
-			stripeCustomerId: customerId,
-			stripeSubscriptionId: subscriptionId || null,
-			wpUserId: storedWpUserId,
-			plan: incomingPlan,
-			status: 'active',
-			lastEventId: eventId ?? null,
-		})
-		logDecision('skip', reason)
-		return buildSummary('skip', reason)
-	}
-
-	actions = buildWpActions(incomingPlan)
-
-	if (dryRun) {
-		wpUserId = storedWpUserId
-		console.info('WP provisioning dry run', {
-			sessionId: session.id,
-			plan: incomingPlan,
-			customerId,
-			subscriptionId,
-			emailDomain: getEmailDomain(email),
-		})
-		await upsertProvisioningRecord({
-			email,
-			stripeCustomerId: customerId,
-			stripeSubscriptionId: subscriptionId || null,
-			wpUserId: storedWpUserId,
-			plan: incomingPlan,
-			status: 'active',
-			lastEventId: eventId ?? null,
-		})
-		logDecision(decision, reason)
-		return buildSummary(decision, reason)
-	}
-
-	console.debug('Provisioning checkout session', {
+	console.debug('Projecting checkout session', {
 		sessionId: session.id,
 		plan: incomingPlan,
 		customerId,
@@ -1142,52 +1232,43 @@ export async function provisionFromCheckoutSession(
 		emailDomain: getEmailDomain(email),
 	})
 
-	const nameInfo = await resolveProvisioningNames({
-		email,
-		customerId,
-		sessionName: session.customer_details?.name ?? null,
-	})
-
-	console.info('WP provisioning request', {
-		email: redactEmail(email),
-		customerId,
-		subscriptionId,
-		plan,
-	})
-
-	console.info('WP provisioning name fields', {
-		hasName: nameInfo.hasName,
-		source: nameInfo.source,
-	})
-
-	const wpProvision = await provisionWpUser({
-		email,
-		plan,
-		name: nameInfo.fullName || null,
-		firstName: nameInfo.firstName,
-		lastName: nameInfo.lastName,
-		fullName: nameInfo.fullName,
-		stripeCustomerId: customerId,
-		stripeSubscriptionId: subscriptionId || null,
-	})
-	if (!wpProvision) {
-		logDecision('skip', 'wp_provision_disabled')
-		return buildSummary('skip', 'wp_provision_disabled')
-	}
-	wpUserId = wpProvision.wpUserId
-	const emailVariant = wpProvision.created ? 'welcome' : 'upgrade'
+	const emailVariant = existing ? 'upgrade' : 'welcome'
 
 	await upsertProvisioningRecord({
 		email,
 		stripeCustomerId: customerId,
 		stripeSubscriptionId: subscriptionId || null,
-		wpUserId: wpProvision.wpUserId,
-		plan: incomingPlan,
-		status: 'active',
+		plan: monthlyCommitment ? 'none' : incomingPlan,
+		status: monthlyCommitment ? 'pending_payment' : 'active',
 		lastEventId: eventId ?? null,
+		stripePriceId: resolvedPriceId,
+		stripeCheckoutSessionId: session.id,
+		billingCadence,
+		commitmentStatus: monthlyCommitment ? 'pending' : undefined,
+		contractVersion: monthlyCommitment ? contractVersion : undefined,
+		contractAcceptedAt: monthlyCommitment ? contractAcceptedAt : undefined,
+		immediateAccessConsentAt: monthlyCommitment ? immediateAccessConsentAt : undefined,
 	})
 
-	if (emailEval.shouldSend && !dryRun) {
+	let memberCredentials: { email: string; password: string } | null = null
+	try {
+		const customerName = (session.customer_details?.name) ?? null
+		const memberResult = await provisionMemberFromCheckout({
+			email,
+			displayName: customerName,
+			stripeCustomerId: customerId,
+		})
+		if (memberResult.created && memberResult.password) {
+			memberCredentials = { email, password: memberResult.password }
+		}
+	} catch (memberError) {
+		console.error('provisionMemberFromCheckout failed (non-blocking)', {
+			email: redactEmail(email),
+			error: (memberError as Error).message,
+		})
+	}
+
+	if (emailEval.shouldSend) {
 		if (disableNonWebhookEmails && emailSource !== 'webhook') {
 			emailSent = false
 			emailReason = 'non_webhook_disabled'
@@ -1200,48 +1281,77 @@ export async function provisionFromCheckoutSession(
 				dedupeReason: emailReason,
 			})
 		} else {
-			try {
-				const dedupeKey = `${email}|${subscriptionId ?? 'none'}|${incomingPlan}`
-				await sendWelcomeEmail({
-					to: email,
-					plan,
-					resetUrl: wpProvision.resetLink,
-					meta: {
+			let emailAttempts = 0
+			const maxAttempts = 3
+			let lastEmailError: Error | null = null
+
+			while (emailAttempts < maxAttempts && !emailSent) {
+				try {
+					const dedupeKey = `${email}|${subscriptionId ?? 'none'}|${incomingPlan}`
+					const portalUrl = getServerConfig().email.portalUrl.replace(/\/$/, '')
+					await sendWelcomeEmail({
+						to: email,
+						plan,
+						resetUrl: `${portalUrl}/forgot-password`,
+						credentials: memberCredentials,
+						meta: {
+							templateKey: MEMBERSHIP_EMAIL_TEMPLATE_KEY,
+							variant: emailVariant,
+							eventId: eventId ?? null,
+							eventType: eventType ?? null,
+							subscriptionId: subscriptionId ?? null,
+							customerId,
+							source: emailSource,
+							dedupeKey,
+							stackHint: 'lib/provisioning:provisionFromCheckoutSession',
+						},
+					})
+					emailSent = true
+					await markProvisioningNotified({
+						stripeCustomerId: customerId,
+						email,
+						plan,
+						sendKey: emailSendKey ?? null,
+					})
+					console.info('Membership email sent', {
+						email: redactEmail(email),
 						templateKey: MEMBERSHIP_EMAIL_TEMPLATE_KEY,
-						variant: emailVariant,
+						plan: incomingPlan,
 						eventId: eventId ?? null,
-						eventType: eventType ?? null,
-						subscriptionId: subscriptionId ?? null,
-						customerId,
 						source: emailSource,
-						dedupeKey,
-						stackHint: 'lib/provisioning:provisionFromCheckoutSession',
-					},
-				})
-				emailSent = true
-				await markProvisioningNotified({
-					stripeCustomerId: customerId,
-					email,
-					plan,
-					sendKey: emailSendKey ?? null,
-				})
-				console.info('Membership email sent', {
-					email: redactEmail(email),
-					templateKey: MEMBERSHIP_EMAIL_TEMPLATE_KEY,
-					plan: incomingPlan,
-					eventId: eventId ?? null,
-					source: emailSource,
-					dedupeReason: emailReason,
-				})
-			} catch (error) {
-				emailSent = false
-				emailReason = 'send_failed'
-				console.error('Membership email failed', {
-					emailDomain: getEmailDomain(email),
-					plan,
-					eventId: eventId ?? null,
-					message: (error as Error).message ?? 'unknown_error',
-				})
+						dedupeReason: emailReason,
+					})
+				} catch (error) {
+					emailAttempts++
+					lastEmailError = error as Error
+					const errorMsg = (error as Error).message ?? 'unknown_error'
+					const isTransient = errorMsg.includes('timeout') ||
+						errorMsg.includes('ECONNREFUSED') ||
+						errorMsg.includes('ECONNRESET') ||
+						errorMsg.includes('ETIMEDOUT')
+
+					if (emailAttempts < maxAttempts && isTransient) {
+						const backoffMs = Math.min(1000 * Math.pow(2, emailAttempts - 1), 4000)
+						console.warn('Membership email transient error, retrying', {
+							email: redactEmail(email),
+							attempt: emailAttempts,
+							backoffMs,
+							message: errorMsg,
+						})
+						await new Promise(resolve => setTimeout(resolve, backoffMs))
+					} else {
+						emailSent = false
+						emailReason = isTransient ? 'send_timeout' : 'send_failed'
+						console.error('Membership email failed (terminal)', {
+							emailDomain: getEmailDomain(email),
+							plan,
+							eventId: eventId ?? null,
+							attempts: emailAttempts,
+							message: lastEmailError?.message ?? 'unknown_error',
+						})
+						break
+					}
+				}
 			}
 		}
 	}
@@ -1263,16 +1373,10 @@ export async function syncFromSubscription(
 	let incomingPlan: string | null = null
 	let resolvedPlan: string | null = null
 	let resolvedPriceId: string | null = null
-	let actions: WpActions | null = null
-	let dbWpUserId: number | null = null
-	let wpExists: WpExistsStatus = 'unknown'
-	let wpUserId: number | null = null
 	let oldPlan: string | null = null
 	let newPlan: string | null = null
 	let emailSent = false
 	let emailReason: string | null = null
-	const forceProvision = isForceProvisionEnabled()
-	const dryRun = isDryRunWpSync(options)
 	const allowEmail = options?.allowEmail ?? false
 	const disableNonWebhookEmails = isEnvEnabled(process.env.DISABLE_NON_WEBHOOK_EMAILS)
 	const eventLivemode =
@@ -1296,19 +1400,13 @@ export async function syncFromSubscription(
 			newPlan,
 			emailSent,
 			emailReason,
-			dbWpUserId,
-			wpUserId,
-			wpExists,
 			decision,
 			reason,
-			actions,
-			forceProvision,
-			dryRun,
 		})
 	}
 
 	const buildSummary = (decision: ProvisioningDecision, reason: string): ProvisioningSummary => ({
-		ok: decision !== 'skip' || reason === 'wp_exists_plan_unchanged',
+		ok: decision !== 'skip',
 		decision,
 		reason,
 		oldPlan,
@@ -1322,9 +1420,6 @@ export async function syncFromSubscription(
 		stripeSubscriptionId: subscriptionId,
 		plan: incomingPlan,
 		priceId: resolvedPriceId,
-		wpUserId,
-		actions,
-		dryRun,
 	})
 
 	const stripe = getStripe()
@@ -1351,14 +1446,6 @@ export async function syncFromSubscription(
 		resolvedEmailSource = 'provisioning_record'
 	}
 	resolvedEmail = email
-	const storedWpUserId =
-		typeof existing?.wpUserId === 'number' && existing.wpUserId > 0
-			? existing.wpUserId
-			: null
-	if (storedWpUserId) {
-		dbWpUserId = storedWpUserId
-		wpUserId = storedWpUserId
-	}
 
 	if (!email) {
 		logDecision('skip', 'missing_email')
@@ -1417,9 +1504,26 @@ export async function syncFromSubscription(
 	}
 	const storedPlanName = resolveStoredPlanName(existing)
 
+	// Extract subscription projection data for state reconciliation
+	const subscriptionDataForProjection = {
+		stripePriceId: priceId ?? null,
+		subscriptionStatus: subscription.status ?? null,
+		subscriptionCurrentPeriodEnd:
+			typeof subscription.current_period_end === 'number'
+				? new Date(subscription.current_period_end * 1000)
+				: null,
+		subscriptionCancelAtPeriodEnd: subscription.cancel_at_period_end ?? null,
+		subscriptionUpdatedAt: new Date(),
+	}
+
 	const isActive = ACTIVE_STATUSES.has(subscription.status)
-	if (isActive && !plan) {
-		console.error('WP provisioning skipped: invalid plan', {
+	const monthlyCommitment =
+		isMonthlyCommitmentMetadata(subscription.metadata) ||
+		existing?.billingCadence === 'monthly_commitment'
+	const hasVerifiedPaidInvoice = Boolean(existing?.lastPaidInvoiceId)
+	const accessActive = isActive && (!monthlyCommitment || hasVerifiedPaidInvoice)
+	if (accessActive && (!plan || !isProvisioningPlan(plan))) {
+		console.error('membership projection skipped: invalid plan', {
 			subscriptionId: subscription.id,
 			email: redactEmail(email),
 			customerId,
@@ -1428,10 +1532,10 @@ export async function syncFromSubscription(
 		logDecision('skip', 'invalid_plan')
 		return buildSummary('skip', 'invalid_plan')
 	}
-	const nextPlan = isActive ? plan ?? 'none' : 'none'
+	const nextPlan = accessActive ? plan ?? 'none' : 'none'
 	incomingPlan = normalizePlanName(nextPlan)
 	if (!incomingPlan) {
-		console.error('WP provisioning skipped: invalid plan', {
+		console.error('membership projection skipped: invalid plan', {
 			subscriptionId: subscription.id,
 			email: redactEmail(email),
 			customerId,
@@ -1440,7 +1544,19 @@ export async function syncFromSubscription(
 		logDecision('skip', 'invalid_plan')
 		return buildSummary('skip', 'invalid_plan')
 	}
-	const nextStatus = isActive ? 'active' : 'inactive'
+	const nextStatus = accessActive
+		? 'active'
+		: isActive && monthlyCommitment
+			? 'pending_payment'
+			: 'inactive'
+	const projectedBillingCadence = monthlyCommitment
+		? 'monthly_commitment'
+		: subscription.metadata?.billing_cadence === 'annual' || subscription.metadata?.billing === 'annual'
+			? 'annual'
+			: existing?.billingCadence ?? null
+	const projectedCommitmentStatus = monthlyCommitment
+		? existing?.commitmentStatus ?? (hasVerifiedPaidInvoice ? 'active' : 'pending')
+		: undefined
 	const emailSendKey = buildEmailSendKey({
 		eventId: eventId ?? null,
 		subscriptionId: subscription.id,
@@ -1464,6 +1580,7 @@ export async function syncFromSubscription(
 	oldPlan = storedPlanName
 	newPlan = incomingPlan
 	const isCanonicalEmailEvent = eventType === 'customer.subscription.updated' || eventType === 'manual_sync'
+	const isNewCustomer = Boolean(existing && existing.stripeCustomerId && existing.stripeCustomerId !== customerId)
 	const emailEval = evaluateEmailNotification({
 		allowEmail: allowEmail && isCanonicalEmailEvent,
 		disabledReason: !isCanonicalEmailEvent ? 'event_not_canonical' : undefined,
@@ -1473,56 +1590,25 @@ export async function syncFromSubscription(
 		lastNotifiedAt,
 		lastNotifiedEventId,
 		sendKey: emailSendKey,
+		isNewCustomer,
 	})
 	emailReason = emailEval.reason
 
 	const planChanged = incomingPlan !== storedPlanName
 	let decision: ProvisioningDecision = 'provision'
-	let reason = existing ? 'missing_wp_user_id' : 'no_provisioning_record'
+	let reason = 'no_projection_record'
 
-	if (storedWpUserId) {
-		let lookupFailed = false
-		try {
-			const lookup = await getWpUserExists({
-				wpUserId: storedWpUserId,
-				email,
-			})
-			if (lookup) {
-				wpExists = lookup.exists
-			} else {
-				lookupFailed = true
-			}
-		} catch {
-			lookupFailed = true
+	if (existing) {
+		if (planChanged) {
+			decision = 'update_plan'
+			reason = 'plan_changed'
+		} else if (isNewCustomer) {
+			decision = 'update_plan'
+			reason = 'new_customer_same_plan'
+		} else {
+			decision = 'skip'
+			reason = 'plan_unchanged'
 		}
-
-		if (wpExists === false) {
-			await markProvisioningNeedsReprovision(existing.id, eventId ?? null)
-			decision = 'provision'
-			reason = 'wp_missing_reprovision'
-		} else if (wpExists === true) {
-			if (planChanged) {
-				decision = 'update_plan'
-				reason = 'plan_changed'
-			} else {
-				decision = 'skip'
-				reason = 'wp_exists_plan_unchanged'
-			}
-		} else if (lookupFailed) {
-			decision = 'provision'
-			reason = 'wp_lookup_failed'
-		}
-	}
-
-	if (decision === 'skip' && forceProvision && storedWpUserId) {
-		console.info('WP provisioning force enabled; bypassing skip.', {
-			subscriptionId: subscription.id,
-			customerId,
-			wpUserId: storedWpUserId,
-			reason: normalizeSkipReason(reason),
-		})
-		decision = 'provision'
-		reason = 'force_reprovision'
 	}
 
 	if (decision === 'skip') {
@@ -1542,27 +1628,31 @@ export async function syncFromSubscription(
 			newPlan,
 			emailSent,
 			emailReason,
-			wpUserId: storedWpUserId,
 			reason,
-			actions,
-			forceProvision,
-			dryRun,
 		})
 		await upsertProvisioningRecord({
 			email,
 			stripeCustomerId: customerId,
 			stripeSubscriptionId: subscription.id,
-			wpUserId: storedWpUserId,
 			plan: incomingPlan ?? 'none',
 			status: nextStatus,
 			lastEventId: eventId ?? null,
+			stripePriceId: resolvedPriceId,
+			subscriptionStatus: subscription.status,
+			subscriptionCurrentPeriodEnd: subscription.current_period_end
+				? new Date(subscription.current_period_end * 1000)
+				: null,
+			subscriptionCancelAtPeriodEnd: subscription.cancel_at_period_end ?? null,
+			subscriptionUpdatedAt: new Date(),
+			billingCadence: projectedBillingCadence,
+			commitmentStatus: projectedCommitmentStatus,
 		})
 		logDecision('skip', reason)
 		return buildSummary('skip', reason)
 	}
 
 	if (!isProvisioningPlan(incomingPlan)) {
-		console.error('WP provisioning skipped: invalid plan', {
+		console.error('membership projection skipped: invalid plan', {
 			subscriptionId: subscription.id,
 			email,
 			customerId,
@@ -1573,84 +1663,51 @@ export async function syncFromSubscription(
 			email,
 			stripeCustomerId: customerId,
 			stripeSubscriptionId: subscription.id,
-			wpUserId: storedWpUserId,
 			plan: incomingPlan ?? 'none',
 			status: nextStatus,
 			lastEventId: eventId ?? null,
+			stripePriceId: resolvedPriceId,
+			subscriptionStatus: subscription.status,
+			subscriptionCurrentPeriodEnd: subscription.current_period_end
+				? new Date(subscription.current_period_end * 1000)
+				: null,
+			subscriptionCancelAtPeriodEnd: subscription.cancel_at_period_end ?? null,
+			subscriptionUpdatedAt: new Date(),
+			billingCadence: projectedBillingCadence,
+			commitmentStatus: projectedCommitmentStatus,
 		})
 		logDecision('skip', 'invalid_plan')
 		return buildSummary('skip', 'invalid_plan')
 	}
 
-	actions = buildWpActions(incomingPlan)
-
-	if (dryRun) {
-		wpUserId = storedWpUserId
-		console.info('WP provisioning dry run', {
-			subscriptionId: subscription.id,
-			plan: incomingPlan,
-			customerId,
-			emailDomain: getEmailDomain(email),
-		})
-		await upsertProvisioningRecord({
-			email,
-			stripeCustomerId: customerId,
-			stripeSubscriptionId: subscription.id,
-			wpUserId: storedWpUserId,
-			plan: incomingPlan,
-			status: nextStatus,
-			lastEventId: eventId ?? null,
-		})
-		logDecision(decision, reason)
-		return buildSummary(decision, reason)
-	}
-
-	console.info('WP provisioning request', {
+	console.info('membership_projection_sync', {
 		email: redactEmail(email),
 		customerId,
 		subscriptionId: subscription.id,
 		plan: incomingPlan,
 	})
 
-	const nameInfo = await resolveProvisioningNames({
-		email,
-		customerId,
-		stripeCustomerName,
-	})
-
-	console.info('WP provisioning name fields', {
-		hasName: nameInfo.hasName,
-		source: nameInfo.source,
-	})
-
-	const wpProvision = await provisionWpUser({
-		email,
-		plan: incomingPlan,
-		name: nameInfo.fullName || null,
-		firstName: nameInfo.firstName,
-		lastName: nameInfo.lastName,
-		fullName: nameInfo.fullName,
-		stripeCustomerId: customerId || null,
-		stripeSubscriptionId: subscription.id,
-	})
-	if (!wpProvision) {
-		logDecision('skip', 'wp_provision_disabled')
-		return buildSummary('skip', 'wp_provision_disabled')
-	}
-	wpUserId = wpProvision.wpUserId
-	const emailVariant = wpProvision.created ? 'welcome' : 'upgrade'
+	const emailVariant = existing ? 'upgrade' : 'welcome'
 
 	await upsertProvisioningRecord({
 		email,
 		stripeCustomerId: customerId,
 		stripeSubscriptionId: subscription.id,
-		wpUserId: wpProvision.wpUserId,
 		plan: incomingPlan,
 		status: nextStatus,
 		lastEventId: eventId ?? null,
+		stripePriceId: resolvedPriceId,
+		subscriptionStatus: subscription.status,
+		subscriptionCurrentPeriodEnd: subscription.current_period_end
+			? new Date(subscription.current_period_end * 1000)
+			: null,
+		subscriptionCancelAtPeriodEnd: subscription.cancel_at_period_end ?? null,
+		subscriptionUpdatedAt: new Date(),
+		billingCadence: projectedBillingCadence,
+		commitmentStatus: projectedCommitmentStatus,
 	})
 
-	if (emailEval.shouldSend && !dryRun) {
+	if (emailEval.shouldSend) {
 		if (disableNonWebhookEmails && emailSource !== 'webhook') {
 			emailSent = false
 			emailReason = 'non_webhook_disabled'
@@ -1665,10 +1722,11 @@ export async function syncFromSubscription(
 		} else {
 			try {
 				const dedupeKey = `${email}|${subscription.id}|${incomingPlan}`
+				const portalUrl = getServerConfig().email.portalUrl.replace(/\/$/, '')
 				await sendWelcomeEmail({
 					to: email,
 					plan: incomingPlan,
-					resetUrl: wpProvision.resetLink,
+					resetUrl: `${portalUrl}/forgot-password`,
 					meta: {
 						templateKey: MEMBERSHIP_EMAIL_TEMPLATE_KEY,
 						variant: emailVariant,

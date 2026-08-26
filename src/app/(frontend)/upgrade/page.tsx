@@ -1,140 +1,75 @@
-export const metadata = {
-  title: "Upgrade to VIP | JPV Bootcamp",
-  description: "Move from Pro to VIP for hands-on coaching and priority support.",
-};
+'use client'
 
-const signInHref = "https://portal.jpvbootcamp.com/community/?fcom_action=auth";
-const signUpHref = "https://portal.jpvbootcamp.com/community?fcom_action=auth&form=register";
-const portalUpgradeUrl = process.env.NEXT_PUBLIC_PORTAL_UPGRADE_URL || signInHref;
-const supportHref = "mailto:jpvbootcamp@gmail.com?subject=VIP%20Upgrade%20Support";
+import { useMemo, useState } from 'react'
 
-const vipBenefits = [
-  "Weekly group coaching with a senior mentor",
-  "Monthly 1:1 deal review and accountability check-in",
-  "Priority support with faster turnaround",
-  "VIP-only market deep dives and sourcing reviews",
-  "Exclusive templates, calculators, and deal audits",
-];
-
-const upgradeSteps = [
-  {
-    title: "Sign in to the portal",
-    description: "Access your account to manage billing and membership.",
-  },
-  {
-    title: "Open Billing / Membership",
-    description: "Find the billing area in your member dashboard.",
-  },
-  {
-    title: "Choose the VIP upgrade",
-    description: "Confirm the change and your plan updates instantly.",
-  },
-];
+import { PublicInformationShell } from '@/components/public/PublicInformationShell'
 
 export default function UpgradePage() {
+  const [accepted, setAccepted] = useState(false)
+  const monthlyHref = useMemo(
+    () => `/api/stripe/checkout?plan=membership&billing=monthly&recurring_payment_accepted=${accepted}`,
+    [accepted],
+  )
+  const annualHref = useMemo(
+    () => `/api/stripe/checkout?plan=membership&billing=annual&recurring_payment_accepted=${accepted}`,
+    [accepted],
+  )
+
   return (
-    <main className="bg-jpv-gradient min-h-screen text-jpv-gray-50">
-      <section className="px-6 py-24 sm:py-28">
-        <div className="mx-auto flex max-w-6xl flex-col items-center gap-12 text-center">
-          <div className="space-y-6">
-            <p className="text-sm uppercase tracking-[0.4rem] text-jpv-green/80">VIP Upgrade</p>
-            <h1 className="text-4xl font-bold leading-tight sm:text-5xl md:text-6xl">Upgrade to VIP</h1>
-            <p className="mx-auto max-w-2xl text-base text-jpv-gray-400 sm:text-lg">
-              Move from Pro to VIP for hands-on coaching and priority support.
-            </p>
-          </div>
-          <div className="flex flex-col justify-center gap-4 sm:flex-row sm:items-center">
-            <a
-              href={portalUpgradeUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="rounded-full bg-jpv-green px-10 py-3 text-base font-semibold text-black shadow-jpv-glow transition hover:bg-jpv-green-hover"
-            >
-              Go to portal to upgrade
-            </a>
-            <a
-              href={supportHref}
-              className="rounded-full border border-jpv-gray-600 px-10 py-3 text-base font-semibold text-jpv-gray-200 transition hover:border-jpv-green hover:text-white"
-            >
-              Contact support
-            </a>
-          </div>
-          <div className="flex flex-col items-center gap-3 text-sm text-jpv-gray-400 sm:flex-row">
-            <a
-              href={signInHref}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="transition hover:text-jpv-green"
-            >
-              Sign in
-            </a>
-            <span className="text-jpv-green">•</span>
-            <a
-              href={signUpHref}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="transition hover:text-jpv-green"
-            >
-              Create an account
-            </a>
-            <span className="text-jpv-green">•</span>
-            <a href="/" className="transition hover:text-jpv-green">
-              Back to main site
-            </a>
-          </div>
-        </div>
+    <PublicInformationShell
+      backHref='/portal?mode=login'
+      backLabel='Back to sign in'
+      description='One JPV Bootcamp Membership with monthly or annual billing. Checkout collects the details required to create and manage your membership.'
+      eyebrow='JPV Bootcamp Membership'
+      title='Choose your billing cadence'
+    >
+      <section className='grid gap-5 md:grid-cols-2'>
+        <article className='rounded-jpv-panel border border-jpv-border bg-jpv-canvas p-6 shadow-jpv-card sm:p-8'>
+          <p className='jpv-eyebrow'>Monthly</p>
+          <h2 className='mt-2 text-2xl font-semibold text-jpv-ink'>£80/month</h2>
+          <p className='mt-3 text-sm leading-6 text-jpv-muted'>
+            No minimum commitment. Renews monthly until cancelled; cancellation takes effect at the end of the current paid month.
+          </p>
+          <a
+            aria-disabled={!accepted}
+            className='jpv-button-primary mt-6 min-h-11 w-full justify-center aria-disabled:pointer-events-none aria-disabled:opacity-50'
+            href={accepted ? monthlyHref : undefined}
+          >
+            Continue with monthly billing
+          </a>
+        </article>
+
+        <article className='rounded-jpv-panel border border-jpv-brand bg-jpv-surface p-6 shadow-jpv-card sm:p-8'>
+          <p className='jpv-eyebrow'>Annual</p>
+          <h2 className='mt-2 text-2xl font-semibold text-jpv-ink'>£800/year</h2>
+          <p className='mt-3 text-sm leading-6 text-jpv-muted'>
+            Paid upfront for 12 months and renews automatically each year unless cancelled before renewal.
+          </p>
+          <a
+            aria-disabled={!accepted}
+            className='jpv-button-primary mt-6 min-h-11 w-full justify-center aria-disabled:pointer-events-none aria-disabled:opacity-50'
+            href={accepted ? annualHref : undefined}
+          >
+            Continue with annual billing
+          </a>
+        </article>
       </section>
 
-      <section className="px-6 py-24 sm:py-28">
-        <div className="mx-auto max-w-6xl space-y-12">
-          <div className="space-y-4 text-center">
-            <h2 className="text-3xl font-semibold md:text-4xl">What you get</h2>
-            <p className="mx-auto max-w-2xl text-base text-jpv-gray-400 md:text-lg">
-              VIP members get deeper coaching, faster feedback, and higher-touch support.
-            </p>
-          </div>
-          <div className="rounded-3xl border border-jpv-gray-700/50 bg-jpv-bg-dark/60 p-8 shadow-jpv-card backdrop-blur">
-            <ul className="space-y-2 text-left text-sm text-jpv-gray-200">
-              {vipBenefits.map((benefit) => (
-                <li key={benefit} className="flex items-center gap-2">
-                  <span className="text-jpv-green">•</span>
-                  <span>{benefit}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      </section>
+      <label className='flex min-h-11 items-start gap-3 rounded-jpv-panel border border-jpv-border bg-jpv-canvas p-5 text-sm leading-6 text-jpv-ink shadow-jpv-card'>
+        <input
+          checked={accepted}
+          className='mt-1 h-5 w-5 accent-jpv-brand'
+          onChange={(event) => setAccepted(event.target.checked)}
+          type='checkbox'
+        />
+        <span>
+          I understand that the selected membership renews automatically until cancelled. A voucher or pay-it-forward code covers only its approved period, after which the same subscription renews at the normal recurring price.
+        </span>
+      </label>
 
-      <section className="border-y border-jpv-gray-700/40 bg-jpv-bg-dark/70 px-6 py-24 sm:py-28">
-        <div className="mx-auto max-w-6xl space-y-12">
-          <div className="space-y-4">
-            <p className="text-sm uppercase tracking-[0.4rem] text-jpv-green/80">Upgrade steps</p>
-            <h2 className="text-3xl font-semibold md:text-4xl">Upgrade steps</h2>
-            <p className="text-base text-jpv-gray-400 md:text-lg">
-              These steps are placeholders while the upgrade flow is finalized.
-            </p>
-          </div>
-          <div className="grid gap-6 md:grid-cols-3">
-            {upgradeSteps.map((step, index) => (
-              <div
-                key={step.title}
-                className="rounded-2xl border border-jpv-gray-700/60 bg-jpv-bg-dark/70 p-4"
-              >
-                <div className="flex items-start gap-4">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-jpv-green/20 text-sm font-semibold text-jpv-green">
-                    {index + 1}
-                  </span>
-                  <div className="space-y-1">
-                    <p className="text-sm font-semibold text-white">{step.title}</p>
-                    <p className="text-sm text-jpv-gray-400">{step.description}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-    </main>
-  );
+      <div className='flex flex-wrap gap-4'>
+        <a className='jpv-button-secondary min-h-11' href='/'>Back to main site</a>
+      </div>
+    </PublicInformationShell>
+  )
 }

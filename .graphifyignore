@@ -83,8 +83,9 @@ coverage/
 *.wav
 **/*.wav
 
-# Phase 6: bounded deep refinement overlay.
-# Include deeper docs/specs/runbooks/ADR markdown only. No code/config/media full crawl.
+# Phase 3: limited docs batch.
+# Include root README-style files plus first-level docs/*.md only.
+# Skip code/config so this stays a short overlay pass instead of re-scanning the repo.
 *.py
 **/*.py
 *.ts
@@ -151,32 +152,12 @@ coverage/
 **/*.md
 *.mdx
 **/*.mdx
-# Generic bounded deep docs: high-signal index, architecture, design, standard,
-# runbook, spec, ADR, and decision documents only. Avoid recursive all-docs crawls.
 !/README.md
 !/README.mdx
 !/README-*.md
 !/README_*.md
+!/readme.md
+!/Readme.md
 !/docs/
-!/docs/*architecture*.md
-!/docs/*Architecture*.md
-!/docs/*design*.md
-!/docs/*Design*.md
-!/docs/*standard*.md
-!/docs/*Standard*.md
-!/docs/*runbook*.md
-!/docs/*Runbook*.md
-!/docs/*spec*.md
-!/docs/*Spec*.md
-!/docs/*decision*.md
-!/docs/*Decision*.md
-!/docs/*adr*.md
-!/docs/*ADR*.md
-!**/runbooks/
-!**/runbooks/*.md
-!**/specs/
-!**/specs/*.md
-!**/adr/
-!**/adr/*.md
-!**/ADRs/
-!**/ADRs/*.md
+!/docs/*.md
+!/docs/*.mdx

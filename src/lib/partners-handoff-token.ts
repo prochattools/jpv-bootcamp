@@ -2,9 +2,9 @@ import { createHmac, timingSafeEqual } from 'crypto'
 import { sanitizePartnersToken, PARTNERS_MAX_TOKEN_LENGTH } from '@/lib/partners-token-sanitize'
 
 export type PartnersHandoffPayload = {
-	wp_user_id: number
-	wp_email: string
-	wp_name: string
+	account_id: number
+	account_email: string
+	account_name: string
 	iat: number
 	exp: number
 	nonce: string
@@ -27,9 +27,9 @@ export type PartnersHandoffResult =
 const MAX_TOKEN_AGE_SECONDS = 60 * 5
 const MAX_IAT_SKEW_SECONDS = 60
 const ALLOWED_KEYS = new Set([
-	'wp_user_id',
-	'wp_email',
-	'wp_name',
+	'account_id',
+	'account_email',
+	'account_name',
 	'iat',
 	'exp',
 	'nonce',
@@ -121,18 +121,18 @@ export function verifyPartnersHandoffToken(
 		}
 	}
 
-	const wpUserId = Number(payload.wp_user_id)
-	if (!Number.isInteger(wpUserId) || wpUserId <= 0) {
+	const accountId = Number(payload.account_id)
+	if (!Number.isInteger(accountId) || accountId <= 0) {
 		return { ok: false, reason: 'invalid_payload' }
 	}
 
-	const emailRaw = typeof payload.wp_email === 'string' ? payload.wp_email : ''
+	const emailRaw = typeof payload.account_email === 'string' ? payload.account_email : ''
 	const email = emailRaw.trim().toLowerCase()
 	if (!email || !email.includes('@')) {
 		return { ok: false, reason: 'invalid_payload' }
 	}
 
-	const nameRaw = typeof payload.wp_name === 'string' ? payload.wp_name : ''
+	const nameRaw = typeof payload.account_name === 'string' ? payload.account_name : ''
 	const name = nameRaw.trim()
 	if (!name) {
 		return { ok: false, reason: 'invalid_payload' }
@@ -169,9 +169,9 @@ export function verifyPartnersHandoffToken(
 	return {
 		ok: true,
 		payload: {
-			wp_user_id: wpUserId,
-			wp_email: email,
-			wp_name: name,
+			account_id: accountId,
+			account_email: email,
+			account_name: name,
 			iat,
 			exp,
 			nonce,

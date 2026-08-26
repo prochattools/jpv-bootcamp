@@ -1,9 +1,104 @@
-import * as migration_20260620_213328 from './20260620_213328';
+import * as migration_20260620_213328 from './20260620_213328'
+import * as migration_20260621_194424_course_system_phase1 from './20260621_194424_course_system_phase1'
+import * as migration_20260622_093852_course_private_media from './20260622_093852_course_private_media'
+import * as migration_20260627_010700_structured_community_attachments from './20260627_010700_structured_community_attachments'
+import * as migration_20260630_100730_affiliate_reporting from './20260630_100730_affiliate_reporting'
+import * as migration_20260630_190000_payload_preferences_id_constraint from './20260630_190000_payload_preferences_id_constraint'
+import * as migration_20260701_201500_member_email_verification from './20260701_201500_member_email_verification'
+import * as migration_20260702_001500_member_account_action_purposes from './20260702_001500_member_account_action_purposes'
+import * as migration_20260703_000000_partner_affiliate_operations from './20260703_000000_partner_affiliate_operations'
+import * as migration_20260704_090000_partner_schema_reconciliation from './20260704_090000_partner_schema_reconciliation'
+import * as migration_20260707_130000_remove_table_plan_from_payload_enums from './20260707_130000_remove_table_plan_from_payload_enums'
+import * as migration_20260718_000000_live_sessions from './20260718_000000_live_sessions'
+import * as migration_20260718_103726_membership_support_schema from './20260718_103726_membership_support_schema'
+import * as migration_20260718_110000_bunny_videos from './20260718_110000_bunny_videos'
+import * as migration_20260719_150000_subscription_schema_cols from './20260719_150000_subscription_schema_cols'
+import * as migration_20260720_000000_locked_docs_rels_new_collections from './20260720_000000_locked_docs_rels_new_collections'
+import * as migration_20260722_100000_reconcile_lockstate_vip_progress from './20260722_100000_reconcile_lockstate_vip_progress'
+import * as migration_20260723_000000_singular_membership_plan from './20260723_000000_singular_membership_plan'
+import * as migration_20260723_000001_migrate_pro_to_membership from './20260723_000001_migrate_pro_to_membership'
+import * as migration_20260724_120000_operator_content_media from './20260724_120000_operator_content_media'
+import * as migration_20260724_121000_billing_operator_actions from './20260724_121000_billing_operator_actions'
+import * as migration_20260724_122000_live_session_relationships from './20260724_122000_live_session_relationships'
+import * as migration_20260724_123000_email_operator_actions from './20260724_123000_email_operator_actions'
+import * as migration_20260727_000000_partner_applications_source_member_id from './20260727_000000_partner_applications_source_member_id'
+import * as migration_20260727_100000_email_events_lease_columns from './20260727_100000_email_events_lease_columns'
+import * as migration_20260727_200000_email_events_processing_status from './20260727_200000_email_events_processing_status'
+import * as migration_20260730_090000_membership_audit_relationship_columns from './20260730_090000_membership_audit_relationship_columns'
+import * as migration_20260730_100000_email_events_staging_guard_status from './20260730_100000_email_events_staging_guard_status'
+import * as migration_20260804_050000_member_account_action_reservations from './20260804_050000_member_account_action_reservations'
+import * as migration_20260817_193000_bunny_guid_first from './20260817_193000_bunny_guid_first'
+import * as migration_20260817_193100_lesson_comments from './20260817_193100_lesson_comments'
+import * as migration_20260817_193200_space_og_image from './20260817_193200_space_og_image'
+import * as migration_20260817_193300_space_reactions from './20260817_193300_space_reactions'
+import * as migration_20260818_140000_member_profile_parity from './20260818_140000_member_profile_parity'
+import * as migration_20260818_140100_portal_settings from './20260818_140100_portal_settings'
+import * as migration_20260820_000000_live_session_space from './20260820_000000_live_session_space'
+import * as migration_20260824_120000_engagement_reactions from './20260824_120000_engagement_reactions'
+import * as migration_20260824_150000_portal_navigation from './20260824_150000_portal_navigation'
+import * as migration_20260824_200000_member_notifications from './20260824_200000_member_notifications'
+import * as migration_20260824_210000_pay_it_forward_schema from './20260824_210000_pay_it_forward_schema'
+import * as migration_20260825_120000_billing_invoice_visibility from './20260825_120000_billing_invoice_visibility'
+import * as migration_20260825_121000_membership_support_runtime_alignment from './20260825_121000_membership_support_runtime_alignment'
+import * as migration_20260825_122000_membership_support_relationships from './20260825_122000_membership_support_relationships'
+import * as migration_20260825_123000_membership_support_relationship_alignment from './20260825_123000_membership_support_relationship_alignment'
+import * as migration_20260825_124000_membership_review_assignee_alignment from './20260825_124000_membership_review_assignee_alignment'
+import * as migration_20260825_125000_membership_shadow_state_alignment from './20260825_125000_membership_shadow_state_alignment'
+import * as migration_20260826_090000_payment_action_required_status from './20260826_090000_payment_action_required_status'
+import { PAYLOAD_MIGRATION_NAMES } from '../lib/payloadMigrationRegistry'
 
-export const migrations = [
-  {
-    up: migration_20260620_213328.up,
-    down: migration_20260620_213328.down,
-    name: '20260620_213328'
-  },
-];
+const migrationModuleByName = {
+  '20260620_213328': migration_20260620_213328,
+  '20260621_194424_course_system_phase1': migration_20260621_194424_course_system_phase1,
+  '20260622_093852_course_private_media': migration_20260622_093852_course_private_media,
+  '20260627_010700_structured_community_attachments': migration_20260627_010700_structured_community_attachments,
+  '20260630_100730_affiliate_reporting': migration_20260630_100730_affiliate_reporting,
+  '20260630_190000_payload_preferences_id_constraint': migration_20260630_190000_payload_preferences_id_constraint,
+  '20260701_201500_member_email_verification': migration_20260701_201500_member_email_verification,
+  '20260702_001500_member_account_action_purposes': migration_20260702_001500_member_account_action_purposes,
+  '20260703_000000_partner_affiliate_operations': migration_20260703_000000_partner_affiliate_operations,
+  '20260704_090000_partner_schema_reconciliation': migration_20260704_090000_partner_schema_reconciliation,
+  '20260707_130000_remove_table_plan_from_payload_enums': migration_20260707_130000_remove_table_plan_from_payload_enums,
+  '20260718_000000_live_sessions': migration_20260718_000000_live_sessions,
+  '20260718_103726_membership_support_schema': migration_20260718_103726_membership_support_schema,
+  '20260718_110000_bunny_videos': migration_20260718_110000_bunny_videos,
+  '20260719_150000_subscription_schema_cols': migration_20260719_150000_subscription_schema_cols,
+  '20260720_000000_locked_docs_rels_new_collections': migration_20260720_000000_locked_docs_rels_new_collections,
+  '20260722_100000_reconcile_lockstate_vip_progress': migration_20260722_100000_reconcile_lockstate_vip_progress,
+  '20260723_000000_singular_membership_plan': migration_20260723_000000_singular_membership_plan,
+  '20260723_000001_migrate_pro_to_membership': migration_20260723_000001_migrate_pro_to_membership,
+  '20260724_120000_operator_content_media': migration_20260724_120000_operator_content_media,
+  '20260724_121000_billing_operator_actions': migration_20260724_121000_billing_operator_actions,
+  '20260724_122000_live_session_relationships': migration_20260724_122000_live_session_relationships,
+  '20260724_123000_email_operator_actions': migration_20260724_123000_email_operator_actions,
+  '20260727_000000_partner_applications_source_member_id': migration_20260727_000000_partner_applications_source_member_id,
+  '20260727_100000_email_events_lease_columns': migration_20260727_100000_email_events_lease_columns,
+  '20260727_200000_email_events_processing_status': migration_20260727_200000_email_events_processing_status,
+  '20260730_090000_membership_audit_relationship_columns': migration_20260730_090000_membership_audit_relationship_columns,
+  '20260730_100000_email_events_staging_guard_status': migration_20260730_100000_email_events_staging_guard_status,
+  '20260804_050000_member_account_action_reservations': migration_20260804_050000_member_account_action_reservations,
+  '20260817_193000_bunny_guid_first': migration_20260817_193000_bunny_guid_first,
+  '20260817_193100_lesson_comments': migration_20260817_193100_lesson_comments,
+  '20260817_193200_space_og_image': migration_20260817_193200_space_og_image,
+  '20260817_193300_space_reactions': migration_20260817_193300_space_reactions,
+  '20260818_140000_member_profile_parity': migration_20260818_140000_member_profile_parity,
+  '20260818_140100_portal_settings': migration_20260818_140100_portal_settings,
+  '20260820_000000_live_session_space': migration_20260820_000000_live_session_space,
+  '20260824_120000_engagement_reactions': migration_20260824_120000_engagement_reactions,
+  '20260824_150000_portal_navigation': migration_20260824_150000_portal_navigation,
+  '20260824_200000_member_notifications': migration_20260824_200000_member_notifications,
+  '20260824_210000_pay_it_forward_schema': migration_20260824_210000_pay_it_forward_schema,
+  '20260825_120000_billing_invoice_visibility': migration_20260825_120000_billing_invoice_visibility,
+  '20260825_121000_membership_support_runtime_alignment': migration_20260825_121000_membership_support_runtime_alignment,
+  '20260825_122000_membership_support_relationships': migration_20260825_122000_membership_support_relationships,
+  '20260825_123000_membership_support_relationship_alignment': migration_20260825_123000_membership_support_relationship_alignment,
+  '20260825_124000_membership_review_assignee_alignment': migration_20260825_124000_membership_review_assignee_alignment,
+  '20260825_125000_membership_shadow_state_alignment': migration_20260825_125000_membership_shadow_state_alignment,
+  '20260826_090000_payment_action_required_status': migration_20260826_090000_payment_action_required_status,
+} as const
+
+export const migrations = PAYLOAD_MIGRATION_NAMES.map((name) => ({
+  name,
+  up: migrationModuleByName[name].up,
+  down: migrationModuleByName[name].down,
+}))

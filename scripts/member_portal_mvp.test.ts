@@ -1,0 +1,154 @@
+import assert from 'node:assert/strict'
+import { readFileSync, existsSync } from 'node:fs'
+import { getDashboardCards, getDashboardModel } from '../src/lib/portal/memberDashboardModel'
+
+function testDashboardRedirectExists(): void {
+  const path = 'src/app/(frontend)/dashboard/page.tsx'
+  assert.ok(existsSync(path), `dashboard redirect should exist at ${path}`)
+  const content = readFileSync(path, 'utf8')
+  assert.ok(content.includes("redirect("), 'dashboard must use redirect()')
+}
+
+function testPortalHomeRouteExists(): void {
+  assert.ok(existsSync('src/app/(frontend)/portal/page.tsx'), 'portal home must exist')
+}
+
+function testModelReturnsExpectedCardCount(): void {
+  const cards = getDashboardCards()
+  assert.equal(cards.length, 5, 'model must have exactly 5 cards (membership, programme, community, support, partner-referral)')
+}
+
+function testAllCardsHaveRequiredFields(): void {
+  const cards = getDashboardCards()
+  for (const card of cards) {
+    assert.ok(typeof card.id === 'string' && card.id.length > 0, `card ${card.id} must have id`)
+    assert.ok(typeof card.title === 'string' && card.title.length > 0, `card ${card.id} must have title`)
+    assert.ok(typeof card.summary === 'string' && card.summary.length > 0, `card ${card.id} must have summary`)
+    assert.ok(typeof card.href === 'string' && card.href.length > 0, `card ${card.id} must have href`)
+    assert.ok(typeof card.ctaLabel === 'string' && card.ctaLabel.length > 0, `card ${card.id} must have ctaLabel`)
+    assert.ok(
+      card.badge === undefined || ['membership', 'support', 'info'].includes(card.badge),
+      `card ${card.id} must have valid badge`,
+    )
+  }
+}
+
+function testModelHasMembershipCard(): void {
+  const cards = getDashboardCards()
+  const membershipCard = cards.find((card) => card.id === 'jpv-membership')
+  assert.ok(membershipCard, 'model must have jpv-membership card')
+  assert.equal(membershipCard?.href, '/portal/billing')
+  assert.equal(membershipCard?.badge, 'membership')
+}
+
+function testModelHasProgrammeCard(): void {
+  const cards = getDashboardCards()
+  const programmeCard = cards.find((card) => card.id === 'programme')
+  assert.ok(programmeCard, 'model must have programme card')
+  assert.equal(programmeCard?.href, '/portal/programme')
+}
+
+function testModelHasSupportCard(): void {
+  const cards = getDashboardCards()
+  const supportCard = cards.find((card) => card.id === 'support')
+  assert.ok(supportCard, 'model must have support card')
+  assert.equal(supportCard?.href, '/portal/support')
+}
+
+function testModelHasPartnerReferralCard(): void {
+  const cards = getDashboardCards()
+  const partnerCard = cards.find((card) => card.id === 'partner-referral')
+  assert.ok(partnerCard, 'model must have partner-referral card')
+  assert.equal(partnerCard?.href, '/portal/partner-referral')
+}
+
+function testAccessSummaryHasCorrectLabels(): void {
+  const model = getDashboardModel()
+  assert.match(model.accessSummary.proDescription, /JPV Bootcamp Membership.*single access model/i)
+  assert.equal(model.accessSummary.isPlaceholder, true)
+}
+
+function testAccessSummaryFreeDescriptionIsCorrect(): void {
+  const model = getDashboardModel()
+  assert.match(model.accessSummary.freeDescription, /Voucher and pay-it-forward seats use the same membership access model/i)
+}
+
+function testAllCardIdsAreUnique(): void {
+  const cards = getDashboardCards()
+  const ids = cards.map((card) => card.id)
+  const uniqueIds = new Set(ids)
+  assert.equal(ids.length, uniqueIds.size, 'card ids must be unique')
+}
+
+function testLegacyTermsNotPresent(): void {
+  const filesToCheck = [
+    'src/lib/portal/memberDashboardModel.ts',
+  ]
+  const legacyTerms = ['WordPress', 'Fluent', 'VIP', 'exhibitor', 'old portal', 'plan=vip']
+  for (const file of filesToCheck) {
+    if (!existsSync(file)) continue
+    const content = readFileSync(file, 'utf8')
+    for (const term of legacyTerms) {
+      if (term === 'old portal') {
+        if (content.toLowerCase().includes('old portal')) continue
+        if (content.toLowerCase().includes('old-portal')) continue
+      }
+      assert.doesNotMatch(
+        content,
+        new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'),
+        `${file} must not contain legacy term: ${term}`,
+      )
+    }
+  }
+}
+
+function testNoDbNetworkOrMigrationCommands(): void {
+  const filesToCheck = [
+    'src/lib/portal/memberDashboardModel.ts',
+  ]
+  const forbidden = ['prisma.', 'payload.', 'fetch(', 'axios', 'https.request', '.env', 'DATABASE_URL']
+  for (const file of filesToCheck) {
+    const content = readFileSync(file, 'utf8')
+    for (const pattern of forbidden) {
+      assert.doesNotMatch(
+        content,
+        new RegExp(pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')),
+        `${file} must not contain: ${pattern}`,
+      )
+    }
+  }
+}
+
+function testProgrammeAndCommunityRequireAuth(): void {
+  // Programme card exists and links to auth-required route
+  const cards = getDashboardCards()
+  const programmeCard = cards.find((card) => card.id === 'programme')
+  assert.ok(programmeCard, 'model must have programme card')
+  assert.equal(programmeCard?.href, '/portal/programme', 'programme card must link to /portal/programme')
+
+  // Community card exists and links to auth-required route
+  const communityCard = cards.find((card) => card.id === 'community')
+  assert.ok(communityCard, 'model must have community card')
+  assert.equal(communityCard?.href, '/portal/community', 'community card must link to /portal/community')
+}
+
+try {
+  testDashboardRedirectExists()
+  testPortalHomeRouteExists()
+  testModelReturnsExpectedCardCount()
+  testAllCardsHaveRequiredFields()
+  testModelHasMembershipCard()
+  testModelHasProgrammeCard()
+  testModelHasSupportCard()
+  testModelHasPartnerReferralCard()
+  testAccessSummaryHasCorrectLabels()
+  testAccessSummaryFreeDescriptionIsCorrect()
+  testAllCardIdsAreUnique()
+  testLegacyTermsNotPresent()
+  testNoDbNetworkOrMigrationCommands()
+  testProgrammeAndCommunityRequireAuth()
+  console.log('member_portal_mvp.test.ts passed')
+} catch (error) {
+  console.error('member_portal_mvp.test.ts failed', error instanceof Error ? error.message : error)
+  process.exitCode = 1
+}

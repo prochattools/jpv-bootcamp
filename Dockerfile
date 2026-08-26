@@ -17,13 +17,28 @@ FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 # Prisma PrismaClient() reads DATABASE_URL at module-eval during page data collection.
-ENV DATABASE_URL=postgresql://build:build@localhost:5432/build
-# NEXT_PUBLIC_* vars are baked into the client bundle at build time — must use real production value.
-ENV NEXT_PUBLIC_APP_URL=https://jpvbootcamp.com
-ENV APP_BASE_URL=https://jpvbootcamp.com
-ENV NEXT_PUBLIC_SERVER_URL=https://jpvbootcamp.com
+# Schema is required by the structural validator; the build never connects to this address.
+# At runtime, start-staging.sh validates the real DATABASE_URL before the server starts.
+ENV DATABASE_URL=postgresql://build:build@localhost:5432/build?schema=jpvbootcamp_staging
+# NODE_ENV=production is a Next.js/Payload build optimization mode, not the operational environment.
+# It controls bundling, tree-shaking, and importmap generation — not deployment target or staging lane.
+ENV NODE_ENV=production
+# NEXT_PUBLIC_* vars are baked into the client bundle at build time.
+# Staging-only: production defaults removed. Only preview.jpvbootcamp.com is permitted.
+# The default IS the staging URL — no override needed for preview builds.
+ARG NEXT_PUBLIC_APP_URL=https://preview.jpvbootcamp.com
+ARG APP_BASE_URL=https://preview.jpvbootcamp.com
+ARG NEXT_PUBLIC_SERVER_URL=https://preview.jpvbootcamp.com
+ARG IMAGE_TAG=unknown
+ARG COMMIT_SHA=unknown
+ENV NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+ENV APP_BASE_URL=${APP_BASE_URL}
+ENV NEXT_PUBLIC_SERVER_URL=${NEXT_PUBLIC_SERVER_URL}
+ENV IMAGE_TAG=${IMAGE_TAG}
+ENV COMMIT_SHA=${COMMIT_SHA}
 RUN --mount=type=cache,target=/app/.next/cache \
     node_modules/.bin/prisma generate --schema=prisma/system.prisma && \
+    pnpm generate:importmap && \
     pnpm run build
 
 # ---- Script deps (kept separate to avoid conflicting with standalone's pnpm symlinks) ----
@@ -31,7 +46,7 @@ RUN --mount=type=cache,target=/app/.next/cache \
 # causes "cannot copy to non-directory" in buildkit. Separate path avoids the conflict.
 # newrelic: loaded via NODE_OPTIONS=--require newrelic (not traced by Next.js standalone)
 # pg: used by scripts/db/init-tenant.js at deploy time
-# prisma: CLI needed for db:migrate:prod (devDep, not included in standalone)
+# prisma: CLI for authorized migration commands only (devDep, not included in standalone)
 FROM node:20-bullseye-slim AS script-deps
 WORKDIR /script-deps
 RUN echo '{"dependencies":{"newrelic":"^13.18.0","pg":"^8","prisma":"6.15.0"}}' > package.json
@@ -45,6 +60,12 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV HOSTNAME=0.0.0.0
 ENV PORT=3000
+ENV PAYLOAD_SCHEMA_PREFLIGHT=true
+ENV DEPLOYMENT_RUNTIME=docker
+ARG IMAGE_TAG=unknown
+ARG COMMIT_SHA=unknown
+ENV IMAGE_TAG=${IMAGE_TAG}
+ENV COMMIT_SHA=${COMMIT_SHA}
 
 # Install postgresql-client-15
 RUN apt-get update && apt-get install -y \
@@ -68,6 +89,7 @@ COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/scripts ./scripts
+COPY --from=builder /app/src/lib/payloadMigrationRegistry.ts ./src/lib/payloadMigrationRegistry.ts
 COPY --from=builder /app/package.json ./package.json
 
 EXPOSE 3000
@@ -75,4 +97,4 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=3 \
   CMD node -e "require('http').get('http://127.0.0.1:3000/', res => process.exit(res.statusCode < 500 ? 0 : 1)).on('error', () => process.exit(1))"
 
-CMD ["bash", "scripts/runtime/start-prod.sh"]
+CMD ["bash", "scripts/release/start-staging.sh"]

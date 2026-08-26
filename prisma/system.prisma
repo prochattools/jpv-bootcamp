@@ -6,7 +6,6 @@ datasource db {
   provider          = "postgresql"
   url               = env("DATABASE_URL")
   shadowDatabaseUrl = env("SYSTEM_DATABASE_URL")
-  schemas           = ["jpvbootcamp"]
 }
 
 model EmailSubscriber {
@@ -18,7 +17,6 @@ model EmailSubscriber {
   updatedAt DateTime @updatedAt
 
   @@map("email_subscribers")
-  @@schema("jpvbootcamp")
 }
 
 model StripeWebhookEvent {
@@ -30,16 +28,17 @@ model StripeWebhookEvent {
   payload     Json?    @map("payload")
 
   @@map("stripe_webhook_events")
-  @@schema("jpvbootcamp")
 }
 
 model CustomerProvisioning {
   id                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid @map("id")
   email                String
   normalizedEmail      String   @map("normalized_email")
-  stripeCustomerId     String   @unique @map("stripe_customer_id")
-  stripeSubscriptionId String?  @unique @map("stripe_subscription_id")
-  wpUserId             Int?     @map("wp_user_id")
+  stripeCustomerId              String    @unique @map("stripe_customer_id")
+  stripeSubscriptionId          String?   @unique @map("stripe_subscription_id")
+  stripeSubscriptionScheduleId  String?   @unique @map("stripe_subscription_schedule_id")
+  stripeCheckoutSessionId       String?   @unique @map("stripe_checkout_session_id")
+  accountId                     Int?      @map("account_id")
   plan                 String?  @map("plan")
   currentPlan          String?  @map("current_plan")
   status               String   @default("active")
@@ -47,33 +46,62 @@ model CustomerProvisioning {
   lastNotifiedPlan     String?  @map("last_notified_plan")
   lastNotifiedAt       DateTime? @map("last_notified_at")
   lastNotifiedEventId  String?  @map("last_notified_event_id")
+  stripePriceId        String?  @map("stripe_price_id")
+  subscriptionStatus   String?  @map("subscription_status")
+  subscriptionCurrentPeriodEnd DateTime? @map("subscription_current_period_end")
+  subscriptionCancelAtPeriodEnd Boolean? @map("subscription_cancel_at_period_end")
+  subscriptionUpdatedAt          DateTime? @map("subscription_updated_at")
+  billingCadence                  String?   @map("billing_cadence")
+  commitmentStatus                String?   @map("commitment_status")
+  commitmentStartAt               DateTime? @map("commitment_start_at")
+  commitmentEndAt                 DateTime? @map("commitment_end_at")
+  cancellationRequestedAt         DateTime? @map("cancellation_requested_at")
+  cancellationEffectiveAt         DateTime? @map("cancellation_effective_at")
+  paymentGraceEndsAt              DateTime? @map("payment_grace_ends_at")
+  lastPaidInvoiceId               String?   @map("last_paid_invoice_id")
+  lastPaymentFailureAt            DateTime? @map("last_payment_failure_at")
+  contractVersion                 String?   @map("contract_version")
+  contractAcceptedAt              DateTime? @map("contract_accepted_at")
+  immediateAccessConsentAt        DateTime? @map("immediate_access_consent_at")
+  earlyTerminationReason          String?   @map("early_termination_reason")
+  earlyTerminationApprovedBy      String?   @map("early_termination_approved_by")
+  paymentStatus                   String?   @map("payment_status")
+  paymentFailedAt            DateTime? @map("payment_failed_at")
+  paymentRecoveredAt         DateTime? @map("payment_recovered_at")
+  paymentRefundedAt          DateTime? @map("payment_refunded_at")
+  paymentDisputeStatus       String?   @map("payment_dispute_status")
+  paymentDisputedAt          DateTime? @map("payment_disputed_at")
+  paymentDisputeResolvedAt   DateTime? @map("payment_dispute_resolved_at")
+  paymentUpdatedAt           DateTime? @map("payment_updated_at")
+  paymentLastEventId         String?   @map("payment_last_event_id")
+  paymentLastInvoiceId       String?   @map("payment_last_invoice_id")
+  paymentLastChargeId        String?   @map("payment_last_charge_id")
+  paymentLastPaymentIntentId String?   @map("payment_last_payment_intent_id")
   createdAt            DateTime @default(now()) @map("created_at")
   updatedAt            DateTime @default(now()) @updatedAt @map("updated_at")
 
   @@unique([normalizedEmail])
   @@map("customer_provisioning")
-  @@schema("jpvbootcamp")
 }
 
 model PartnerSession {
   sessionId   String   @id @map("session_id")
-  wpUserId    Int      @map("wp_user_id")
-  wpEmailHash String   @map("wp_email_hash")
-  wpName      String   @map("wp_name")
+  accountId    Int      @map("account_id")
+  accountEmailHash String   @map("account_email_hash")
+  accountName      String   @map("account_name")
   createdAt   DateTime @default(now()) @map("created_at")
   expiresAt   DateTime @map("expires_at")
 
-  @@index([wpUserId])
+  @@index([accountId])
   @@index([expiresAt])
   @@map("partner_sessions")
-  @@schema("jpvbootcamp")
 }
 
 model PartnerClick {
   id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid @map("id")
   createdAt    DateTime @default(now()) @map("created_at")
   sessionId    String   @map("session_id")
-  wpUserId     Int      @map("wp_user_id")
+  accountId     Int      @map("account_id")
   partnerSlug  String   @map("partner_slug")
   categorySlug String   @map("category_slug")
   refPath      String?  @map("ref_path")
@@ -81,12 +109,11 @@ model PartnerClick {
   ipHash       String?  @map("ip_hash")
 
   @@index([sessionId])
-  @@index([wpUserId])
+  @@index([accountId])
   @@index([partnerSlug])
   @@index([categorySlug])
   @@index([createdAt])
   @@map("partner_clicks")
-  @@schema("jpvbootcamp")
 }
 
 model SponsoredSeat {
@@ -100,16 +127,15 @@ model SponsoredSeat {
   reservedAt             DateTime? @map("reserved_at")
   donorEmailSentAt       DateTime? @map("donor_email_sent_at")
   adminNotifiedAt        DateTime? @map("admin_notified_at")
-  claimedByWpUserId      Int?     @map("claimed_by_wp_user_id")
+  claimedByAccountId      Int?     @map("claimed_by_account_id")
   claimedAt              DateTime? @map("claimed_at")
 
   grants SponsoredGrant[]
 
-  @@index([claimedByWpUserId])
+  @@index([claimedByAccountId])
   @@index([reservedByApplicationId])
   @@index([createdAt])
   @@map("sponsored_seats")
-  @@schema("jpvbootcamp")
 }
 
 model SponsoredApplication {
@@ -120,7 +146,7 @@ model SponsoredApplication {
   decision           String?  @map("decision")
   decidedAt          DateTime? @map("decided_at")
   tier               String   @map("tier")
-  wpUserId           Int?     @map("wp_user_id")
+  accountId           Int?     @map("account_id")
   email              String?  @map("email")
   emailHash          String   @map("email_hash")
   name               String   @map("name")
@@ -130,22 +156,48 @@ model SponsoredApplication {
   seatId             String?  @db.Uuid @map("seat_id")
   claimTokenSentAt   DateTime? @map("claim_token_sent_at")
   claimedAt          DateTime? @map("claimed_at")
-  reviewedByWpUserId Int?     @map("reviewed_by_wp_user_id")
+  reviewedByAccountId Int?     @map("reviewed_by_account_id")
   reviewedAt         DateTime? @map("reviewed_at")
   decisionNote       String?  @map("decision_note")
 
   @@index([status])
-  @@index([wpUserId])
+  @@index([accountId])
   @@index([email])
   @@index([seatId])
   @@map("sponsored_applications")
-  @@schema("jpvbootcamp")
+}
+
+model SupportRequest {
+  id                        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid @map("id")
+  createdAt                 DateTime  @default(now()) @map("created_at")
+  updatedAt                 DateTime  @default(now()) @updatedAt @map("updated_at")
+  normalizedEmail           String    @map("normalized_email")
+  name                      String    @map("name")
+  phone                     String?   @map("phone")
+  question                  String    @map("question")
+  source                    String?   @map("source")
+  page                      String?   @map("page")
+  dedupeKey                 String    @unique @map("dedupe_key")
+  reviewStatus              String    @default("pending") @map("review_status")
+  notificationStatus        String    @default("pending") @map("notification_status")
+  notificationAttemptCount  Int       @default(0) @map("notification_attempt_count")
+  notificationLastAttemptAt DateTime? @map("notification_last_attempt_at")
+  notificationNextAttemptAt DateTime? @map("notification_next_attempt_at")
+  notificationLastErrorCode String?   @map("notification_last_error_code")
+  reviewedAt                DateTime? @map("reviewed_at")
+  reviewedByAccountId       Int?      @map("reviewed_by_account_id")
+
+  @@index([normalizedEmail])
+  @@index([reviewStatus])
+  @@index([notificationStatus])
+  @@index([createdAt])
+  @@map("support_requests")
 }
 
 model SponsoredGrant {
   id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid @map("id")
   createdAt DateTime @default(now()) @map("created_at")
-  wpUserId  Int      @map("wp_user_id")
+  accountId  Int      @map("account_id")
   tier      String   @map("tier")
   seatId    String   @map("seat_id") @db.Uuid
   startsAt  DateTime @map("starts_at")
@@ -154,10 +206,9 @@ model SponsoredGrant {
 
   seat SponsoredSeat @relation(fields: [seatId], references: [id])
 
-  @@index([wpUserId])
+  @@index([accountId])
   @@index([endsAt])
   @@map("sponsored_grants")
-  @@schema("jpvbootcamp")
 }
 
 model Audiences {
@@ -165,7 +216,7 @@ model Audiences {
   resend_id String @unique
   name      String
 
-  @@schema("jpvbootcamp")
+  @@map("audiences")
 }
 
 model Project {
@@ -180,8 +231,6 @@ model Project {
   updatedAt     DateTime
   assistant_id  String?
   webhookLink   String
-
-  @@schema("jpvbootcamp")
 }
 
 model Subscription {
@@ -195,13 +244,28 @@ model Subscription {
   stripe_customer_id String             @unique
   sub_stripe_id      String?
   user_clerk_id      String             @unique
-
-  @@schema("jpvbootcamp")
 }
 
 enum SubscriptionStatus {
   active
   inactive
+}
 
-  @@schema("jpvbootcamp")
+model EmailEvent {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid @map("id")
+  type           String    @map("type")
+  recipient      String    @map("recipient")
+  payload        Json      @map("payload")
+  idempotencyKey String    @unique @map("idempotency_key")
+  status         String    @default("pending") @map("status")
+  retryCount     Int       @default(0) @map("retry_count")
+  resendId       String?   @map("resend_id")
+  errorMessage   String?   @map("error_message")
+  sentAt         DateTime? @map("sent_at") @db.Timestamptz(3)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime  @default(now()) @map("updated_at") @db.Timestamptz(3)
+
+  @@index([status], name: "email_events_status_idx")
+  @@index([createdAt], name: "email_events_created_at_idx")
+  @@map("email_events")
 }

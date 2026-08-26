@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Toaster, toast } from "react-hot-toast";
+import { toast } from "react-hot-toast";
 
 const Form = () => {
   const [email, setEmail] = useState("");
@@ -58,20 +58,34 @@ const Form = () => {
   };
 
   return (
-    <form onSubmit={handleSubmit}>
-      <Toaster position="top-center" reverseOrder={false} />
+    <form onSubmit={handleSubmit} noValidate>
+      <label htmlFor="waiting-list-email" className="sr-only">
+        Email address
+      </label>
       <Input
-        placeholder="Email"
-        className="mt-8 mb-2"
+        id="waiting-list-email"
+        type="email"
+        placeholder="Your email address"
+        className="mt-4 h-12"
         value={email}
         onChange={handleChange}
+        aria-describedby={error ? "waiting-list-email-error" : undefined}
+        autoComplete="email"
       />
-      {error && <p className="text-red-500 mt-2 text-start">{error}</p>}
+      {error && (
+        <p
+          id="waiting-list-email-error"
+          role="alert"
+          className="mt-2 text-sm text-jpv-danger-ink"
+        >
+          {error}
+        </p>
+      )}
       <Button
         type="submit"
-        className="w-[150px] mt-8 bg-[#006fee] border-none scale-1 hover:scale-[1.05] transition-all duration-300 hover:bg-[#006fee]"
+        className="mt-4 w-full sm:w-auto"
       >
-        Button
+        Join the waiting list
       </Button>
     </form>
   );

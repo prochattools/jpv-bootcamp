@@ -18,7 +18,7 @@ import {
   Tailwind,
   Typescript,
   Ui,
-  Wordpress,
+  Cms,
 } from "@/icons";
 import Image from "next/image";
 import StopCodingBg from "@/assets/images/stop-coding-bg1.svg";
@@ -153,7 +153,7 @@ const data = [
     icon: <Blog />,
     image: `${BlogImgUrl}`,
     title: "Blog CMS",
-    desc: "Google loves WordPress SEO structure. You have your WordPress CMS inside with Next.js wrapper and sexy blog design and all metatags, etc",
+    desc: "Publish SEO-ready content through Payload with Next.js pages, polished article design, and complete metadata.",
     features: [
       "Preview page",
       "Article page",
@@ -164,8 +164,8 @@ const data = [
     time: "12 HOURS SAVED",
     technologies: [
       {
-        icon: <Wordpress />,
-        text: "WordPress",
+        icon: <Cms />,
+        text: "Payload",
       },
     ],
   },

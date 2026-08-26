@@ -48,7 +48,7 @@ const Testimonial = () => {
                   height={50}
                   className="w-20 md:w-24"
                   // Ideally, load from a statically generated image for better SEO performance (import userImage from "@/public/userImage.png")
-                  src="https://logos-world.net/wp-content/uploads/2020/10/Reddit-Logo.png"
+                  src="https://www.redditstatic.com/desktop2x/img/favicon/apple-icon-180x180.png"
                   alt="Reddit logo"
                 />
               </figcaption>

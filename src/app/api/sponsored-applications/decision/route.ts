@@ -8,9 +8,10 @@ import {
 	sendSponsoredApplicantRejectedEmail,
 	sendSponsoredClaimEmail,
 } from '@/lib/sponsored-email'
-import { normalizeSponsoredTier } from '@/lib/sponsored-seats'
 import { signSponsoredClaimToken } from '@/lib/sponsored-claim-token'
 import { getPublicBaseUrl } from '@/lib/public-base-url'
+import { isSponsoredSeatsAdmin } from '@/lib/sponsored-admin'
+import { getPartnerSession, sanitizeSessionId, PARTNERS_SESSION_COOKIE } from '@/lib/partners-session'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -26,7 +27,7 @@ type RedirectResult =
 function buildRedirect(req: NextRequest, result: RedirectResult) {
 	const baseUrl = getPublicBaseUrl()
 	return NextResponse.redirect(
-		`${baseUrl}/admin/sponsored-decision?result=${result}`
+		`${baseUrl}/operations/sponsored-decision?result=${result}`
 	)
 }
 
@@ -73,6 +74,29 @@ export async function GET(req: NextRequest) {
 	}
 
 	const { applicationId, action } = verification.payload
+
+	const sessionCookie = req.cookies.get(PARTNERS_SESSION_COOKIE)?.value
+	const sessionId = sanitizeSessionId(sessionCookie)
+	if (!sessionId) {
+		console.warn('sponsored_decision_unauthorized', {
+			applicationId,
+			action,
+			reason: 'missing_session',
+		})
+		return buildRedirect(req, 'invalid')
+	}
+
+	const session = await getPartnerSession(sessionId)
+	if (!session || !isSponsoredSeatsAdmin(session.accountId)) {
+		console.warn('sponsored_decision_unauthorized', {
+			applicationId,
+			action,
+			reason: 'not_admin',
+			accountId: session?.accountId ?? null,
+		})
+		return buildRedirect(req, 'invalid')
+	}
+
 	{
 		const baseUrl = getPublicBaseUrl()
 		const host = (() => {
@@ -107,7 +131,7 @@ export async function GET(req: NextRequest) {
 				status: 'rejected',
 				decision: 'rejected',
 				decidedAt: new Date(),
-				reviewedByWpUserId: null,
+				reviewedByAccountId: null,
 				reviewedAt: new Date(),
 				decisionNote: null,
 			},
@@ -133,7 +157,6 @@ export async function GET(req: NextRequest) {
 		return buildRedirect(req, 'rejected')
 	}
 
-	const tier = normalizeSponsoredTier(application.tier ?? null) ?? 'pro'
 	const now = new Date()
 	let seatId: string | null = null
 	let applicantEmail = application.email
@@ -167,7 +190,7 @@ export async function GET(req: NextRequest) {
 				throw new Error('missing_email')
 			}
 
-			const lockedTier = normalizeSponsoredTier(locked[0].tier ?? null) ?? tier
+			const lockedTier = 'pro'
 
 			const claimed = await tx.$queryRaw<{ id: string }[]>(Prisma.sql`
 				UPDATE jpvbootcamp.sponsored_seats
@@ -176,7 +199,7 @@ export async function GET(req: NextRequest) {
 				WHERE id = (
 					SELECT id
 					FROM jpvbootcamp.sponsored_seats
-					WHERE claimed_by_wp_user_id IS NULL
+					WHERE claimed_by_account_id IS NULL
 						AND reserved_by_application_id IS NULL
 						AND tier = ${lockedTier}
 					ORDER BY created_at ASC
@@ -200,7 +223,7 @@ export async function GET(req: NextRequest) {
 					decidedAt: now,
 					tier: lockedTier,
 					seatId: seatId,
-					reviewedByWpUserId: null,
+					reviewedByAccountId: null,
 					reviewedAt: now,
 					decisionNote: null,
 				},
@@ -237,7 +260,6 @@ export async function GET(req: NextRequest) {
 		{
 			applicationId,
 			email: applicantEmail,
-			tier,
 			iat: nowEpoch,
 			exp: nowEpoch + 60 * 60 * 24 * 7,
 			nonce: randomUUID(),
@@ -248,7 +270,6 @@ export async function GET(req: NextRequest) {
 	try {
 		await sendSponsoredClaimEmail({
 			to: applicantEmail,
-			tier,
 			claimToken,
 		})
 		await prisma.sponsoredApplication.updateMany({

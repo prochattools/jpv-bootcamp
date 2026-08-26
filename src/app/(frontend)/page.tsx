@@ -1,156 +1,201 @@
 "use client";
 
-import { useState, type FormEvent, type ReactNode } from "react";
+import { ArrowRight, Check, ChevronDown, FolderOpen, GraduationCap, Home, Menu, Users, X } from "lucide-react";
 import Image from "next/image";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+
 import SponsoredPayItForward from "@/components/sponsored-pay-it-forward";
+import { AccessibleDialog } from "@/components/ui/AccessibleDialog";
+import { landingSans, landingSerif } from "@/fonts";
+import { jpvBrand } from "@/lib/brand/jpvDesignSystem";
+
+import styles from "./landing.module.scss";
+
+const navLinks = [
+  { label: "Home", href: "#home" },
+  { label: "About", href: "#who" },
+  { label: "Membership", href: "#membership" },
+  { label: "Community", href: "#community" },
+  { label: "Events", href: "#how-it-works" },
+  { label: "Success Stories", href: "#success-stories" },
+  { label: "Pricing", href: "#pricing" },
+  { label: "Contact", href: "#support" },
+] as const;
+
+const benefitItems = [
+  "Monthly and annual plans",
+  "Instant access when you join",
+  "Live training",
+  "Hands-on approach",
+  "Private live events",
+  "Clear membership options",
+  "Video curriculum",
+] as const;
+
+const programmeCards = [
+  {
+    title: "Structured Learning",
+    description: "Step-by-step courses, workshops and resources to grow your property knowledge.",
+    image: "/images/redesign/pillar-structured-learning.png",
+  },
+  {
+    title: "Practical Application",
+    description: "Real strategies and guided exercises that move you from learning to doing.",
+    image: "/images/redesign/pillar-practical-application.png",
+  },
+  {
+    title: "Live Experiences",
+    description: "Interactive sessions with mentors, guest speakers and fellow investors.",
+    image: "/images/redesign/pillar-live-experiences.png",
+  },
+  {
+    title: "Community Support",
+    description: "A like-minded Christian community to encourage, challenge and grow with you.",
+    image: "/images/redesign/pillar-community-support.png",
+  },
+] as const;
+
+const journeyPillars = [
+  {
+    Icon: GraduationCap,
+    title: "Training & Courses",
+    description:
+      "Learn at your own pace with step-by-step training and expert guidance.",
+  },
+  {
+    Icon: Users,
+    title: "Community & Connection",
+    description:
+      "Join a community of like-minded Christians in property. Share, learn and grow together.",
+  },
+  {
+    Icon: FolderOpen,
+    title: "Resource Library",
+    description:
+      "Access templates, documents, checklists and tools to support you every step of the way.",
+  },
+  {
+    Icon: Home,
+    title: "Practical Support",
+    description:
+      "From finding your first property to renovating, financing, and beyond – we've got you.",
+  },
+] as const;
+
+const faqItems = [
+  {
+    question: "How do payments work?",
+    answer:
+      "Card payments are processed through Stripe. The available monthly and annual options are shown in the pricing section.",
+  },
+  {
+    question: "What does the JPV Bootcamp Membership include?",
+    answer:
+      "The JPV Bootcamp Membership provides access to the current programme, protected resources, and community features available in the member portal.",
+  },
+  {
+    question: "Where can I ask a question?",
+    answer: "Use the support form at the bottom of this page.",
+  },
+] as const;
+
+const pricingPlans = [
+  {
+    name: "Monthly",
+    contractLabel: "JPV Bootcamp Membership — Monthly",
+    contractPrice: "£80/month",
+    price: "£80",
+    suffix: "per month",
+    description: "No minimum commitment",
+    features: [
+      "Renews monthly until cancelled",
+      "Cancellation takes effect at the end of the paid month",
+      "Programme, resources, and community access",
+      "Personal voucher and pay-it-forward codes supported",
+    ],
+    ctaLabel: "Choose monthly membership",
+    ctaHref: "/upgrade",
+    featured: false,
+  },
+  {
+    name: "Annual",
+    contractLabel: "JPV Bootcamp Membership — Annual",
+    contractPrice: "£800/year",
+    price: "£800",
+    suffix: "paid upfront for 12 months",
+    description: "Two months included at no extra cost",
+    features: [
+      "Automatically renews annually unless cancelled",
+      "Programme, resources, and community access",
+      "Personal voucher and pay-it-forward codes supported",
+      "One clear annual payment",
+    ],
+    ctaLabel: "Choose annual membership",
+    ctaHref: "/upgrade",
+    featured: true,
+  },
+] as const;
+
+const onboardingSteps = [
+  {
+    title: "Choose your membership",
+    description:
+      "Select monthly or annual billing through the secure membership checkout.",
+  },
+  {
+    title: "Verify your account",
+    description:
+      "Follow the secure email steps to confirm your address and set your password.",
+  },
+  {
+    title: "Enter the member portal",
+    description:
+      "Continue into your available programme, resources, community, and billing tools.",
+  },
+] as const;
+
+const inputClassName =
+  "mt-2 w-full rounded-lg border border-jpv-border bg-jpv-canvas px-4 py-3 text-sm text-jpv-ink placeholder:text-jpv-muted/70 transition focus:border-jpv-green-deep focus:outline-none focus:ring-2 focus:ring-jpv-green/25 disabled:cursor-not-allowed disabled:opacity-60";
+
+const SUPPORT_PHONE_DISPLAY = "0208 092 2398";
+const SUPPORT_PHONE_HREF = "tel:+442080922398";
 
 export default function HomePage() {
-  const signInHref = "https://portal.jpvbootcamp.com/community/?fcom_action=auth";
-  const signUpHref = "https://portal.jpvbootcamp.com/community?fcom_action=auth&form=register";
-  const portalUpgradeUrl = process.env.NEXT_PUBLIC_PORTAL_UPGRADE_URL;
+  const signInHref = "/portal?mode=login";
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [isSupportOpen, setIsSupportOpen] = useState(false);
   const [isHowItWorksOpen, setIsHowItWorksOpen] = useState(false);
   const [supportName, setSupportName] = useState("");
   const [supportEmail, setSupportEmail] = useState("");
+  const [supportPhone, setSupportPhone] = useState("");
   const [supportQuestion, setSupportQuestion] = useState("");
-  const [supportStatus, setSupportStatus] = useState<"idle" | "sending" | "success" | "error">("idle");
+  const [supportStatus, setSupportStatus] = useState<
+    "idle" | "sending" | "success" | "error"
+  >("idle");
   const [supportError, setSupportError] = useState<string | null>(null);
+  const [startedVideos, setStartedVideos] = useState<Set<string>>(new Set());
+  const testimonialGridRef = useRef<HTMLDivElement>(null);
   const isSupportSending = supportStatus === "sending";
-  const navLinks = [
-    { label: "Curriculum", href: "#curriculum" },
-    { label: "Community", href: "#community" },
-    { label: "Pricing", href: "#pricing" },
-    { label: "FAQ", href: "#faq" },
-    { label: "Events", href: "https://ibbootcamp.co.uk/" },
-  ];
-  const heroNotices: Array<{
-    title: string;
-    meta: string | ReactNode;
-    description: string | ReactNode;
-    bullets?: string[];
-    href?: string;
-    target?: string;
-    rel?: string;
-  }> = [
-    {
-      title: "Next Live Online Bootcamp",
-      meta: "Friday, 11 September | 7:00 PM (BST)",
-      description: "Join our 7-week live online property investment programme, followed by an exclusive full-day, in-person intensive designed to help you build wealth through property with confidence and Kingdom purpose.",
-      bullets: [
-        "7 Weekly Live Online Training Sessions",
-        "1 Full-Day In-Person Intensive",
-        "Available with All Membership Plans",
-      ],
-    },
-    {
-      title: "JV & Networking Summit",
-      meta: "Saturday, 24 October | All Day | London",
-      description: "Take your property journey to the next level at our exclusive in-person summit. Building on the knowledge gained during the 7-week online Bootcamp, this immersive event is designed to connect aspiring investors, form strategic JV partnerships, and equip you with the confidence to secure your first—or next—property investment.",
-      bullets: [
-        "Exclusive Full-Day Live Event",
-        "Build Strategic JV Partnerships",
-        "Network with Like-Minded Investors",
-        "Develop Your Property Acquisition Strategy",
-        "Action Planning with Expert Guidance",
-      ],
-    },
-  ];
-  const learnSections = [
-    {
-      title: "Foundations",
-      points: ["Strategy selection", "Market and area analysis", "Team and power circle"],
-    },
-    {
-      title: "Numbers that matter",
-      points: ["Yield vs ROI", "BRRR and flips", "Risk management"],
-    },
-    {
-      title: "Doing deals",
-      points: ["Sourcing and negotiation", "Funding options", "Refurbs and lettings"],
-    },
-  ];
-  const communityMessages = [
-    { author: "Amelia", content: "Would you do BRRR on a 3-bed terrace in Leeds? Numbers in thread." },
-    { author: "Coach", content: "Post the ARV and refurb budget. Quick rule: 75% ARV − costs = max offer." },
-    { author: "Noah", content: "Used buy-to-let calc → ROI 17.8% assuming 5.5% interest-only." },
-    { author: "Amelia", content: "ARV £195k, refurb £22k, rent est £1,050. Thoughts on lenders?" },
-  ];
-  const faqItems = [
-    {
-      question: "How do payments work?",
-      answer: "We accept debit/credit via Stripe. Subscriptions renew monthly; cancel any time from your account.",
-    },
-    {
-      question: "Do you provide certificates?",
-      answer:
-        "Yes—complete the core modules and quizzes to earn a completion certificate you can add to LinkedIn.",
-    },
-    {
-      question: "Is there support for beginners?",
-      answer: "Absolutely—start with the foundations track and join the weekly newcomer clinic.",
-    },
-    {
-      question: "Can I upgrade later?",
-      answer: "Upgrades pro-rate instantly; your remaining balance is credited automatically.",
-    },
-  ];
-  const pricingPlans: Array<{
-    name: string;
-    price: string;
-    description: string;
-    features: string[];
-    ctaLabel: string;
-    ctaHref: string;
-    ctaTarget?: string;
-    ctaRel?: string;
-    highlight: boolean;
-    badge?: string;
-    subcopy?: string;
-    disabled?: boolean;
-  }> = [
-    {
-      name: "Monthly",
-      price: "£80/mo",
-      description: "Everything to get profitable",
-      features: ["Full course library", "Live Zoom training", "Deal analysis templates", "Active community access"],
-      ctaLabel: "Start Membership",
-      ctaHref: "/api/stripe/checkout?plan=vip",
-      highlight: true,
-      badge: "Most popular",
-      subcopy: "14-day money-back guarantee",
-    },
-    {
-      name: "Annually",
-      price: "£800 annually",
-      description: "Hands-on support",
-      features: ["Same features", "Paid upfront for 12 months", "2 months at no extra cost", "1 clear annual payment"],
-      ctaLabel: "Available Soon",
-      ctaHref: "#",
-      highlight: false,
-      disabled: true,
-    },
-  ];
-  const onboardingSteps = [
-    {
-      title: "Create your account",
-      description: "Sign up, confirm your email, and unlock the member dashboard.",
-    },
-    {
-      title: "Set your strategy",
-      description: "Pick your path and get a starter plan tailored to your goals.",
-    },
-    {
-      title: "Join the community",
-      description: "Introduce yourself, join a channel, and start sharing your first deal.",
-    },
-  ];
-  const handleSupportSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
 
-    if (supportStatus === "sending") {
-      return;
-    }
+  useEffect(() => {
+    const grid = testimonialGridRef.current;
+    if (!grid) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          setStartedVideos(new Set(["56266f09-d651-4bc5-a5b0-ac9185018018", "a2d9e18b-eb0b-4d3f-b0e7-31daf7cd6c62", "4cb8f04f-8b29-4d0d-81b6-5bb4caead36d", "cda4b492-91af-430d-9bba-4268ccaf8cc2"]));
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.2 }
+    );
+    observer.observe(grid);
+    return () => observer.disconnect();
+  }, []);
+
+  async function handleSupportSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (isSupportSending) return;
 
     setSupportStatus("sending");
     setSupportError(null);
@@ -158,714 +203,943 @@ export default function HomePage() {
     try {
       const response = await fetch("/api/support", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: supportName.trim(),
           email: supportEmail.trim(),
+          phone: supportPhone.trim(),
           question: supportQuestion.trim(),
           source: "jpvbootcamp.com footer support modal",
           page: window.location.pathname || "/",
         }),
       });
 
-      type SupportResponse = { ok?: boolean; error?: string };
+      type SupportResponse = { ok?: boolean; accepted?: boolean };
       let payload: SupportResponse | null = null;
-
       try {
         payload = (await response.json()) as SupportResponse;
       } catch {
         payload = null;
       }
 
-      if (response.ok && payload?.ok) {
+      if (response.ok && payload?.ok && payload.accepted) {
         setSupportStatus("success");
         setSupportName("");
         setSupportEmail("");
+        setSupportPhone("");
         setSupportQuestion("");
       } else {
         setSupportStatus("error");
-        setSupportError(payload?.error || "Unable to send your request. Please try again.");
+        setSupportError(
+          "We could not save your request. Please try again shortly.",
+        );
       }
-    } catch (error) {
-      console.error("Support request failed:", error);
+    } catch {
       setSupportStatus("error");
-      setSupportError("Unable to send your request. Please try again.");
+      setSupportError(
+        "We could not save your request. Please try again shortly.",
+      );
     }
-  };
+  }
 
-  const handleSupportCancel = () => {
-    const shouldClose = window.confirm(
-      "Are you sure you want to cancel? You will lose the message you have written."
-    );
-
-    if (!shouldClose) {
+  function handleSupportCancel() {
+    if (
+      (supportName || supportEmail || supportPhone || supportQuestion) &&
+      !window.confirm(
+        "Close the support form and discard what you have written?",
+      )
+    ) {
       return;
     }
 
     setIsSupportOpen(false);
     setSupportName("");
     setSupportEmail("");
+    setSupportPhone("");
     setSupportQuestion("");
     setSupportStatus("idle");
     setSupportError(null);
-  };
+  }
 
-  const handleHowItWorksClose = () => {
+  function openSupportForm() {
+    setIsSupportOpen(true);
     setIsHowItWorksOpen(false);
-  };
+    setSupportStatus("idle");
+    setSupportError(null);
+  }
+
   return (
-    <main className="relative bg-jpv-gradient min-h-screen text-jpv-gray-50">
-      <header className="fixed inset-x-0 top-0 z-50 bg-black/80 backdrop-blur border-b border-jpv-gray-700/40">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-8 px-6 py-5">
-          <div className="flex items-center gap-4">
-            <div className="h-[72px] w-[72px] overflow-hidden rounded-xl">
-              <Image
-                src="/images/jpv-logo.jpg"
-                alt="JPV • Jesus Property Venture logo"
-                width={72}
-                height={72}
-                className="h-full w-full object-cover"
-                priority
-              />
-            </div>
-            <div className="leading-tight">
-              <span className="block text-2xl font-semibold tracking-tight text-white">
-                JPV
-              </span>
-              <span className="block text-base font-medium text-jpv-green">Our passion is people</span>
-            </div>
-          </div>
-          <nav className="hidden lg:flex items-center gap-8 text-sm text-jpv-gray-200">
+    <main
+      className={`${styles.landing} ${landingSerif.variable} ${landingSans.variable}`}
+    >
+      <a className={styles.skipLink} href="#main-content">
+        Skip to content
+      </a>
+
+      <header className={styles.header}>
+        <div className={`${styles.container} ${styles.headerInner}`}>
+          <a
+            aria-label="JPV Bootcamp home"
+            className={styles.brand}
+            href="#home"
+          >
+            <Image
+              alt="JPV — Our passion is people"
+              className={styles.brandLogoTransparent}
+              height={44}
+              priority
+              src={jpvBrand.logoHorizontalPath}
+              width={180}
+            />
+          </a>
+
+          <nav aria-label="Main navigation" className={styles.nav}>
             {navLinks.map((item) => (
-              <a key={item.label} href={item.href} className="transition hover:text-jpv-green">
+              <a href={item.href} key={item.label}>
                 {item.label}
               </a>
             ))}
           </nav>
-          <div className="hidden md:flex items-center gap-3">
-            <a
-              href={signInHref}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="rounded-full border border-jpv-gray-700 px-5 py-2 text-sm text-jpv-gray-200 transition hover:bg-jpv-bg-light hover:text-white"
-            >
+
+          <div className={styles.headerActions}>
+            <a className={styles.buttonOutline} href="#support">
+              Support
+            </a>
+            <a className={styles.buttonOutline} href={signInHref}>
               Sign in
             </a>
-            <a
-              href="#pricing"
-              className="rounded-full bg-jpv-green px-5 py-2 text-sm font-semibold text-black shadow-jpv-glow transition hover:bg-jpv-green-hover"
-            >
+            <a className={styles.button} href="#pricing">
               Join
             </a>
           </div>
+
           <button
-            type="button"
-            onClick={() => setIsMobileNavOpen(!isMobileNavOpen)}
+            aria-controls="mobile-navigation"
             aria-expanded={isMobileNavOpen}
-            aria-label={isMobileNavOpen ? "Close navigation" : "Open navigation"}
-            className="inline-flex items-center justify-center rounded-full border border-jpv-gray-700 p-2 text-jpv-gray-200 transition hover:border-jpv-green hover:text-jpv-green lg:hidden"
+            aria-label={
+              isMobileNavOpen ? "Close navigation" : "Open navigation"
+            }
+            className={styles.menuButton}
+            onClick={() => setIsMobileNavOpen((open) => !open)}
+            type="button"
           >
-            <span className="sr-only">{isMobileNavOpen ? "Close navigation" : "Open navigation"}</span>
             {isMobileNavOpen ? (
-              <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5">
-                <path d="M6 18L18 6M6 6l12 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-              </svg>
+              <X aria-hidden="true" size={19} />
             ) : (
-              <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5">
-                <path d="M5 7h14M5 12h14M5 17h14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-              </svg>
+              <Menu aria-hidden="true" size={19} />
             )}
           </button>
         </div>
-      </header>
-      {isMobileNavOpen && (
-        <div className="fixed inset-x-0 top-[112px] z-40 bg-black/95 backdrop-blur-md border-b border-jpv-gray-700/40 lg:hidden animate-in slide-in-from-top-2 duration-200">
-          <nav className="flex flex-col px-6 py-4 gap-0 max-w-7xl mx-auto">
+
+        {isMobileNavOpen ? (
+          <nav
+            aria-label="Mobile navigation"
+            className={styles.mobileNav}
+            id="mobile-navigation"
+          >
             {navLinks.map((item) => (
               <a
-                key={item.label}
                 href={item.href}
+                key={item.label}
                 onClick={() => setIsMobileNavOpen(false)}
-                className="py-3.5 text-base text-jpv-gray-200 transition hover:text-jpv-green border-b border-jpv-gray-700/30 last:border-0"
               >
                 {item.label}
               </a>
             ))}
-            <div className="flex gap-3 pt-4 pb-2">
+            <div className={styles.mobileActions}>
               <a
-                href={signInHref}
-                target="_blank"
-                rel="noopener noreferrer"
+                className={styles.buttonOutline}
+                href="#support"
                 onClick={() => setIsMobileNavOpen(false)}
-                className="flex-1 text-center rounded-full border border-jpv-gray-700 px-5 py-2.5 text-sm text-jpv-gray-200 transition hover:bg-jpv-bg-light hover:text-white"
+              >
+                Support
+              </a>
+              <a
+                className={styles.buttonOutline}
+                href={signInHref}
+                onClick={() => setIsMobileNavOpen(false)}
               >
                 Sign in
               </a>
               <a
+                className={styles.button}
                 href="#pricing"
                 onClick={() => setIsMobileNavOpen(false)}
-                className="flex-1 text-center rounded-full bg-jpv-green px-5 py-2.5 text-sm font-semibold text-black shadow-jpv-glow transition hover:bg-jpv-green-hover"
               >
                 Join
               </a>
             </div>
           </nav>
-        </div>
-      )}
-      <section className="min-h-[100dvh] flex flex-col items-center justify-start lg:justify-center px-6 pt-28 pb-12">
-        <div className="mx-auto flex max-w-6xl flex-col items-center gap-10 text-center">
-          <div className="space-y-6">
-            <p className="text-sm uppercase tracking-[0.4rem] text-jpv-green/80">Property mastery starts here</p>
-            <h1 className="text-4xl font-bold leading-tight sm:text-5xl md:text-6xl">
-              Train for Property Success with JPV
-              <span className="mt-3 block text-lg font-semibold text-jpv-green sm:text-xl">
-                Empowering Christians through property training to steward wealth with faith and purpose
-              </span>
-            </h1>
-            <p className="mx-auto max-w-2xl text-base text-jpv-gray-400 sm:text-lg">
-              Learn a proven deal-making framework with coaching, tools, and a community built for ambitious property investors.
+        ) : null}
+      </header>
+
+      <div id="main-content">
+        <section className={styles.hero} id="home">
+          <div className={styles.heroContent}>
+            <p className={styles.eyebrow}>
+              For those called beyond the ordinary
             </p>
-          </div>
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-            <a
-              href="#pricing"
-              className="rounded-full bg-jpv-green px-10 py-3 text-base font-semibold text-black shadow-jpv-glow transition hover:bg-jpv-green-hover"
-            >
-              Start learning
-            </a>
-            <a
-              href="#curriculum"
-              className="rounded-full border border-jpv-gray-700 px-10 py-3 text-base font-medium text-white transition hover:bg-jpv-bg-light"
-            >
-              See curriculum
-            </a>
-          </div>
-          <p className="text-sm text-jpv-gray-400 sm:text-base">14-day money-back guarantee · Cancel anytime</p>
-          <div className="w-full">
-            <div className="grid gap-4 text-left sm:grid-cols-2">
-              {heroNotices.map((notice) => {
-                const content = (
-                  <>
-                    <div className="text-base font-bold text-white uppercase tracking-wide">{notice.title}</div>
-                    <div className="mt-1 text-xs uppercase tracking-[0.2rem] text-jpv-green/80">
-                      {notice.meta}
-                    </div>
-                    <p className="mt-2 text-xs text-jpv-gray-300 leading-relaxed">{notice.description}</p>
-                    {notice.bullets && (
-                      <ul className="mt-3 space-y-1 text-sm font-semibold text-jpv-gray-200">
-                        {notice.bullets.map((bullet, idx) => (
-                          <li key={idx} className="flex items-start gap-2">
-                            <span className="text-jpv-green">✓</span>
-                            <span>{bullet}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </>
-                );
-
-                const cardClassName =
-                  "relative flex h-full flex-col rounded-2xl border border-jpv-green/60 bg-jpv-bg-dark/40 p-5 text-sm text-jpv-gray-300 shadow-jpv-card backdrop-blur before:pointer-events-none before:absolute before:inset-0 before:rounded-2xl before:border before:border-jpv-green/90 before:opacity-100 before:animate-pulse";
-
-                if (notice.href) {
-                  return (
-                    <a
-                      key={notice.title}
-                      href={notice.href}
-                      target={notice.target}
-                      rel={notice.rel}
-                      className={`${cardClassName} cursor-pointer transition hover:border-jpv-green`}
-                    >
-                      {content}
-                    </a>
-                  );
-                }
-
-                return (
-                  <div key={notice.title} className={cardClassName}>
-                    {content}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      </section>
-      <section id="curriculum" className="scroll-mt-28 px-6 py-24 sm:py-28">
-        <div className="mx-auto max-w-6xl space-y-12">
-          <div className="text-center">
-            <h2 className="text-3xl font-semibold md:text-4xl">What you&rsquo;ll learn</h2>
-            <p className="mt-4 text-base text-jpv-gray-400 md:text-lg">
-              A practical pathway from first deal to scaling a portfolio.
+            <h1>Choose purpose over comfort.</h1>
+            <p className={styles.heroLead}>
+              <strong>
+                Transforming Lives. Equipping Purpose. Inspiring Freedom.
+              </strong>
+              <br />
+              Invest wisely, steward faithfully, and bless generously through
+              property education shaped by wisdom, strategy, and stewardship.
             </p>
-          </div>
-          <div className="grid gap-6 md:grid-cols-3">
-            {learnSections.map((section) => (
-              <div
-                key={section.title}
-                className="flex h-full flex-col gap-6 rounded-3xl border border-jpv-gray-700/50 bg-jpv-bg-dark/60 p-8 shadow-jpv-card backdrop-blur"
+            <div className={styles.heroActions}>
+              <a className={styles.button} href="#pricing">
+                Become a Member <ArrowRight aria-hidden="true" size={15} />
+              </a>
+              <button
+                className={styles.plainLink}
+                onClick={() => setIsHowItWorksOpen(true)}
+                type="button"
               >
-                <div>
-                  <h3 className="text-xl font-semibold text-jpv-green">{section.title}</h3>
-                </div>
-                <ul className="space-y-3 text-sm text-jpv-gray-200">
-                  {section.points.map((point) => (
-                    <li key={point} className="flex items-start gap-3">
-                      <span className="mt-1 inline-flex h-2.5 w-2.5 flex-shrink-0 rounded-full bg-jpv-green/70 shadow-jpv-glow" />
-                      <span>{point}</span>
-                    </li>
-                  ))}
-                </ul>
+                See how it works
+              </button>
+            </div>
+            <p className={styles.heroMeta}>
+              Plans start at £80 per month, or £800 paid annually.
+            </p>
+          </div>
+        </section>
+
+        <section aria-label="Membership benefits" className={styles.marquee}>
+          <div className={styles.marqueeTrack}>
+            {[false, true].map((duplicate) => (
+              <div
+                aria-hidden={duplicate ? "true" : undefined}
+                className={styles.marqueeGroup}
+                key={duplicate ? "duplicate" : "primary"}
+              >
+                {benefitItems.map((item) => (
+                  <span className={styles.marqueeItem} key={item}>
+                    {item}
+                  </span>
+                ))}
               </div>
             ))}
           </div>
-        </div>
-      </section>
-      <section
-        id="community"
-        className="scroll-mt-28 relative border-y border-jpv-gray-700/40 bg-jpv-bg-dark/70 px-6 py-24 sm:py-28"
-      >
-        <div className="absolute inset-x-0 top-0 -z-10 h-64 bg-jpv-green/5 blur-3xl" />
-        <div className="mx-auto flex max-w-6xl flex-col gap-12 lg:flex-row lg:items-center lg:justify-between">
-          <div className="max-w-xl space-y-6">
-            <p className="text-sm uppercase tracking-[0.4rem] text-jpv-green/80">Community</p>
-            <h2 className="text-3xl font-semibold md:text-4xl">Members-only community</h2>
-            <div className="space-y-4 text-base text-jpv-gray-400 md:text-lg">
-              <p>
-                Ask questions, share deals, and get feedback from peers and mentors. Channels for sourcing, analysis, renovations, lettings, and more.
-              </p>
-              <ul className="space-y-2 text-sm text-jpv-gray-300 md:text-base">
-                <li className="flex items-center gap-2">
-                  <span className="text-jpv-green">•</span>
-                  <span>Accountability squads</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="text-jpv-green">•</span>
-                  <span>Monthly deal review live call</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="text-jpv-green">•</span>
-                  <span>Local meetups calendar</span>
-                </li>
-              </ul>
+        </section>
+
+        <section className={styles.programme}>
+          <div className={styles.container}>
+            <div className={styles.centredHeading}>
+              <p className={styles.eyebrow}>About JPV Bootcamp</p>
+              <h2 className={styles.sectionHeading}>
+                Let&apos;s do it together.
+              </h2>
             </div>
-            <div className="flex flex-wrap gap-3">
-              <a
-                href="#pricing"
-                className="inline-flex items-center justify-center rounded-full bg-jpv-green px-10 py-3 text-base font-semibold text-black shadow-jpv-glow transition hover:bg-jpv-green-hover"
-              >
-                Unlock access
-              </a>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsHowItWorksOpen(true);
-                  setIsSupportOpen(false);
-                }}
-                className="inline-flex items-center justify-center rounded-full border border-jpv-gray-600 px-10 py-3 text-base font-semibold text-jpv-gray-200 transition hover:border-jpv-green hover:text-white"
-              >
-                How it works
-              </button>
-            </div>
-          </div>
-          <div className="w-full max-w-md rounded-3xl border border-jpv-gray-700/50 bg-jpv-bg-light/70 p-8 shadow-jpv-card backdrop-blur">
-            <div className="mb-6 flex items-center justify-between text-sm text-jpv-gray-400">
-              <span>#deal-analysis</span>
-              <span>Demo</span>
-            </div>
-            <div className="space-y-5 text-sm text-jpv-gray-200">
-              {communityMessages.map((message) => {
-                const initial = message.author.charAt(0).toUpperCase();
-                return (
-                  <div
-                    key={message.author + message.content}
-                    className="flex items-start gap-3 rounded-2xl bg-jpv-bg-dark/70 p-4"
-                  >
-                    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-jpv-green/20 text-sm font-semibold text-jpv-green">
-                      {initial}
-                    </span>
-                    <div className="space-y-1">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-jpv-green/90">
-                        {message.author}
-                      </p>
-                      <p className="text-sm text-jpv-gray-200">{message.content}</p>
-                    </div>
+            <div className={styles.programmeGrid}>
+              {programmeCards.map((card) => (
+                <a
+                  className={styles.programmeCard}
+                  href="#how-it-works"
+                  key={card.title}
+                >
+                  <div className={styles.programmeImage}>
+                    <Image alt="" height={960} src={card.image} width={720} />
                   </div>
-                );
-              })}
-            </div>
-            <div className="mt-6 flex items-center gap-3 rounded-full border border-jpv-gray-700/60 bg-jpv-bg-dark/80 px-4 py-2">
-              <input
-                type="text"
-                placeholder="Write a message..."
-                className="w-full bg-transparent text-sm text-jpv-gray-200 placeholder:text-jpv-gray-400 focus:outline-none"
-              />
-              <button
-                type="button"
-                className="rounded-full bg-jpv-green px-4 py-1.5 text-xs font-semibold text-black shadow-jpv-glow transition hover:bg-jpv-green-hover"
-              >
-                Send
-              </button>
+                  <h3>{card.title}</h3>
+                  <p>{card.description}</p>
+                </a>
+              ))}
             </div>
           </div>
-        </div>
-      </section>
-      <section id="pricing" className="scroll-mt-28 px-6 py-24 sm:py-28">
-        <div className="mx-auto max-w-6xl space-y-12 text-center md:text-left">
-          <div className="space-y-4 text-center">
-            <h2 className="text-3xl font-semibold md:text-4xl">Simple pricing</h2>
-            <p className="mx-auto max-w-2xl text-base text-jpv-gray-400 md:text-lg">
-              Choose a plan, cancel anytime.
+        </section>
+
+        <section className={styles.story} id="who">
+          <div className={`${styles.container} ${styles.storyGrid}`}>
+            <div className={styles.storyCopy}>
+              <p className={styles.eyebrow}>Who is JPV Bootcamp for?</p>
+              <h2 className={styles.sectionHeading}>
+                Property education for a purpose bigger than personal success.
+              </h2>
+              <p>
+                We are not just another property training organisation whose
+                sole aim is to provide knowledge and help people achieve
+                financial freedom and build wealth.
+              </p>
+              <p>
+                Our vision goes far beyond personal success. We want to see
+                communities built within the Body of Christ, where believers
+                support one another and work together on investments and
+                transformational projects that benefit families, communities,
+                nations, and generations to come.
+              </p>
+              <p>
+                <strong>
+                  JPV Bootcamp exists to help believers walk in their calling
+                  and become faithful stewards of the resources entrusted to
+                  them.
+                </strong>
+              </p>
+            </div>
+            <div className={styles.storyMedia}>
+              <Image
+                alt="JPV key handoff — property education with purpose"
+                height={1200}
+                src="/images/redesign/jpv-key-handoff.png"
+                width={960}
+              />
+              <div className={styles.storyNote}>
+                <strong>Wisdom becomes action.</strong>
+                <span>
+                  Teaching, practical experience, and shared purpose stay
+                  connected.
+                </span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className={styles.journey} id="how-it-works">
+          <div className={styles.container}>
+            <div className={styles.journeyIntro}>
+              <div>
+                <p className={styles.eyebrow}>How JPV Bootcamp works</p>
+                <h2 className={styles.sectionHeading}>
+                  Everything you need to understand property investment, in one
+                  place.
+                </h2>
+              </div>
+              <div>
+                <p className={styles.sectionIntro}>
+                  Structured teaching, practical application, and ongoing
+                  support stay connected throughout your journey.
+                </p>
+                <p className={styles.sectionIntro}>Final module titles and learning-outcome wording are pending client approval.</p>
+              </div>
+            </div>
+
+            <div className={styles.journeyGrid}>
+              {journeyPillars.map((pillar) => (
+                <article className={styles.journeyCard} key={pillar.title}>
+                  <div className={styles.journeyPillarIcon}>
+                    <pillar.Icon aria-hidden="true" size={28} />
+                  </div>
+                  <h3>{pillar.title}</h3>
+                  <p>{pillar.description}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className={styles.membership} id="membership">
+          <div className={styles.container}>
+            <div className={styles.centredHeading}>
+              <p className={styles.eyebrow}>What Your Membership Gives You</p>
+              <h2 className={styles.sectionHeading}>
+                14 Reasons to Join JPV Bootcamp
+              </h2>
+              <p className={styles.sectionIntro}>
+                Your training is only the beginning. We don&apos;t want to train you and then leave you on your own.
+              </p>
+            </div>
+            <div className={styles.benefitsGrid}>
+              {[
+                { title: "Training That Never Stops", body: "Access to property training, courses, workshops and educational content designed to help you grow from your first deal to building a substantial portfolio." },
+                { title: "A Christian Property Community", body: "Connect with like-minded Christians who share your faith, values and desire to build through property while supporting one another." },
+                { title: "Your Own Property Network", body: "Meet people who can become future JV partners, investors, mentors, contractors, deal sourcers and business connections." },
+                { title: "Private Groups & Rooms", body: "Have your own private spaces to communicate with your group, hold video meetings, discuss projects and build relationships away from the wider community." },
+                { title: "1-to-1 & Private Messaging", body: "Communicate privately with other members, build relationships and discuss opportunities directly." },
+                { title: "Property Resources Library", body: "Access documents, templates, guides, checklists and other resources you need throughout your property journey, all in one place." },
+                { title: "Find Your First Property", body: "Get practical guidance on how to identify, assess and secure the right property rather than simply learning the theory." },
+                { title: "Help to Finance Your First Deal", body: "Understand funding options and receive support as you work towards financing your first property." },
+                { title: "Renovation & Development Support", body: "Get guidance through the renovation process, including planning your works, understanding costs and finding suitable contractors." },
+                { title: "Contractor & Professional Connections", body: "Access a growing network of people who can help you move your projects forward." },
+                { title: "Support From Purchase to Exit", body: "Your journey doesn't end when you buy. Get guidance through renovation, letting, refinancing, selling and the next stage of your strategy." },
+                { title: "Build JVs With Other Members", body: "Find people within the community whose skills, experience, capital or opportunities complement your own and explore joint ventures together." },
+                { title: "Build Your Portfolio", body: "Once you complete your first deal, continue using the platform to find your next opportunity and develop a long-term property strategy." },
+                { title: "Stay Accountable", body: "Don't disappear after completing your training. Stay connected to a community that can encourage you, challenge you and help you keep moving forward." },
+              ].map((benefit, i) => (
+                <article className={styles.benefitCard} key={benefit.title}>
+                  <span className={styles.benefitNumber} aria-hidden="true">{String(i + 1).padStart(2, "0")}</span>
+                  <h3>{benefit.title}</h3>
+                  <p>{benefit.body}</p>
+                </article>
+              ))}
+            </div>
+            <p className={styles.membershipCta}>
+              Your membership gives you access to an ongoing Christian property community where you can continue learning, building relationships, finding opportunities and receiving practical support as you build your property journey.
             </p>
           </div>
-          <div className="grid gap-6 md:grid-cols-2 max-w-3xl mx-auto">
-            {pricingPlans.map((plan) => (
-              <div
-                key={plan.name}
-                className={`flex h-full flex-col justify-between rounded-3xl border p-8 shadow-jpv-card backdrop-blur scroll-mt-32 ${plan.highlight
-                  ? "border-jpv-green/60 bg-jpv-bg-light/80"
-                  : "border-jpv-gray-700/50 bg-jpv-bg-dark/60"
-                  }`}
-                id={plan.name === "Monthly" ? "pricing-pro" : plan.name === "Annually" ? "pricing-vip" : undefined}
-              >
-                <div className="space-y-6">
-                  <div className="space-y-3 text-left">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-semibold text-jpv-gray-400">
-                          {plan.name}
-                        </p>
-                        <div className="mt-2 text-3xl font-semibold text-white md:text-4xl">{plan.price}</div>
-                      </div>
-                      {plan.badge ? (
-                        <span className="rounded-full bg-jpv-green px-3 py-1 text-xs font-semibold text-black">
-                          {plan.badge}
-                        </span>
-                      ) : null}
-                    </div>
-                    <p className="text-sm text-jpv-gray-400">{plan.description}</p>
+        </section>
+
+        <section className={styles.principle}>
+          <div className={styles.narrow}>
+            <p className={styles.eyebrow}>A daily principle</p>
+            <h2 className={styles.sectionHeading}>
+              Invest wisely. Steward faithfully. Bless generously.
+            </h2>
+            <div className={styles.principleCard}>
+              <div className={styles.principleMark}>
+                <span>
+                  LEARN
+                  <br />
+                  APPLY
+                  <br />
+                  BUILD
+                </span>
+              </div>
+              <div className={styles.principleCopy}>
+                <h3>A practical rhythm</h3>
+                <p>
+                  Choose your membership, verify your account, and enter the
+                  member portal. From there, your available programme,
+                  resources, community, and billing tools remain connected in
+                  one place.
+                </p>
+                <button
+                  className={styles.plainLink}
+                  onClick={() => setIsHowItWorksOpen(true)}
+                  type="button"
+                >
+                  See the onboarding steps{" "}
+                  <ArrowRight aria-hidden="true" size={14} />
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className={styles.portalBand}>
+          <div className={`${styles.container} ${styles.portalBandInner}`}>
+            <div>
+              <h2>Your programme, resources, and community<br />in one place.</h2>
+              <p>Member access stays protected inside the JPV portal.</p>
+            </div>
+            <a className={`${styles.buttonLight} ${styles.portalBandButton}`} href={signInHref}>
+              Enter the member portal{" "}
+              <ArrowRight aria-hidden="true" size={15} />
+            </a>
+          </div>
+        </section>
+
+        <section className={styles.community} id="community">
+          <div className={`${styles.container} ${styles.communityGrid}`}>
+            <div className={styles.communityMedia}>
+              <Image
+                alt="Property that serves people — community development"
+                height={900}
+                src="/images/redesign/community-section.png"
+                width={1200}
+              />
+            </div>
+            <div className={styles.communityCopy}>
+              <p className={styles.eyebrow}>More Than Property. A Community With Purpose.</p>
+              <h2 className={styles.sectionHeading}>
+                We Don&apos;t Build Alone.
+              </h2>
+              <p>
+                JPV Bootcamp is a living Christian property investment community — people coming together to learn, pray, take action and build together.
+              </p>
+              <p>
+                We&apos;re not just learning about property. We&apos;re learning about ourselves. As we grow in knowledge, confidence and faith, we challenge the mindsets that have held us back and discover what we are capable of building.
+              </p>
+              <p>
+                Together, we&apos;re buying properties, developing businesses, creating opportunities and supporting one another through the challenges and victories along the way. There is practical support, prayer, accountability, friendship and genuine partnership.
+              </p>
+              <p className={styles.communityMantra}>
+                We learn together. We pray together. We build together. We grow together.
+              </p>
+              <div className={styles.communityActions}>
+                <a className={styles.button} href="#pricing">
+                  Become a Member
+                </a>
+                <button
+                  className={styles.buttonOutline}
+                  onClick={() => setIsHowItWorksOpen(true)}
+                  type="button"
+                >
+                  How onboarding works
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className={styles.teachers} id="about">
+          <div className={`${styles.container} ${styles.teacherGrid}`}>
+            <div>
+              <p className={styles.eyebrow}>Meet your teachers</p>
+              <h2 className={styles.sectionHeading}>
+                Guidance from people who understand the journey.
+              </h2>
+            </div>
+            <div className={styles.teacherCards}>
+              <article className={styles.teacherCard}>
+                <div className={styles.teacherPhoto}>
+                  <Image
+                    alt="Athina Amadi"
+                    height={400}
+                    src="/images/redesign/instructor-athina.png"
+                    width={400}
+                  />
+                </div>
+                <h3>Athina Amadi</h3>
+                <p className={styles.teacherRole}>
+                  Founder &amp; CEO, JCCP Holdings &amp; JC Citadels Capital Ltd | Founder, JPV Bootcamp
+                </p>
+                <p>
+                  With over 20 years&apos; experience in property and 28 years in Christian ministry, Athina has led major residential, commercial, and social housing projects across the UK and internationally, combining commercial expertise with a passion for creating lasting social impact.
+                </p>
+                <p>
+                  Athina has successfully delivered property transactions ranging from residential developments to landmark commercial projects, working alongside architects, contractors, and planning professionals. She leads several diversified businesses focused on property, sustainable ventures, finance, food, water, and energy, while equipping aspiring Christian property investors with the knowledge and confidence to build wealth through property.
+                </p>
+                <p>
+                  Her mission is to equip people with practical strategies, Kingdom principles, and the mindset to build sustainable wealth, create generational legacy, and become transformational leaders in business and their communities.
+                </p>
+              </article>
+              <article className={styles.teacherCard}>
+                <div className={styles.teacherPhoto}>
+                  <Image
+                    alt="Koprinka Aksaray"
+                    height={400}
+                    src="/images/redesign/instructor-koprinka.png"
+                    width={400}
+                  />
+                </div>
+                <h3>Koprinka Aksaray</h3>
+                <p className={styles.teacherRole}>
+                  Chief Operating Officer, JCCP Holdings | International Property Investment Strategist
+                </p>
+                <p>
+                  With over 20 years of experience across the UK, Europe, and Africa, Koprinka has built extensive expertise in property investment, large-scale developments, and international acquisitions.
+                </p>
+                <p>
+                  Throughout her career, Koprinka has contributed to landmark regeneration projects, including the iconic Battersea Power Station redevelopment, alongside numerous commercial and residential developments. She has successfully raised £22 million for an international development project and gained valuable private equity experience through business acquisitions and cross-sector investments.
+                </p>
+                <p>
+                  Driven by a passion for innovation and sustainability, Koprinka is committed to creating resilient, future-ready communities that generate long-term economic and social impact.
+                </p>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section className={styles.proof} id="success-stories">
+          <div className={styles.container}>
+            <div className={styles.centredHeading}>
+              <p className={styles.eyebrow}>Real Stories &amp; Testimonies</p>
+              <h2 className={styles.sectionHeading}>
+                Across the UK, our members are achieving life-changing results.
+              </h2>
+              <p className={styles.sectionIntro}>
+                From Glasgow to London, Portsmouth, and Bradford, people from a wide range of backgrounds have turned their property ambitions into reality — many securing their very first investment property within just a few months of joining.
+              </p>
+            </div>
+            <div className={styles.testimonialGrid} ref={testimonialGridRef}>
+              {[
+                {
+                  name: "Chosen",
+                  location: "Portsmouth",
+                  quote: "A couple of months ago, we secured our first property, and it's been incredible to see our dream of property ownership come to life. I truly believe this is just the first of many.",
+                  videoId: "56266f09-d651-4bc5-a5b0-ac9185018018",
+                },
+                {
+                  name: "Tolu",
+                  location: "London",
+                  quote: "One of the biggest highlights for me has been discovering and developing my leadership skills. The experience has been invaluable, not only within the group but also for my own property company.",
+                  videoId: "a2d9e18b-eb0b-4d3f-b0e7-31daf7cd6c62",
+                },
+                {
+                  name: "Adanna",
+                  location: "Bradford",
+                  quote: "In such a short space of time, I've already become a property owner. It's an achievement I truly value, and I wouldn't trade this experience for anything.",
+                  videoId: "4cb8f04f-8b29-4d0d-81b6-5bb4caead36d",
+                },
+                {
+                  name: "Pauline",
+                  location: "London",
+                  quote: "After just a couple of months, I've become a property owner. I truly thank God for that blessing. I would highly recommend JPV Property to anyone looking to start or grow their property journey.",
+                  videoId: "cda4b492-91af-430d-9bba-4268ccaf8cc2",
+                },
+              ].map((t) => (
+                <article
+                  className={styles.testimonialCard}
+                  key={t.name}
+                >
+                  <div className={styles.testimonialVideo}>
+                    <iframe
+                      allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
+                      allowFullScreen
+                      src={`https://iframe.mediadelivery.net/embed/581531/${t.videoId}?autoplay=${startedVideos.has(t.videoId) ? "true" : "false"}&loop=false&muted=true&preload=true`}
+                      style={{ border: 0, height: "100%", left: 0, position: "absolute", top: 0, width: "100%" }}
+                      title={`${t.name} testimonial`}
+                    />
                   </div>
-                  <ul className="space-y-2 text-left text-sm text-jpv-gray-200">
+                  <blockquote className={styles.testimonialQuote}>
+                    <p>&ldquo;{t.quote}&rdquo;</p>
+                    <footer>
+                      <strong>{t.name}</strong>
+                      <span>{t.location}</span>
+                    </footer>
+                  </blockquote>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className={styles.pricing} id="pricing">
+          <div className={styles.container}>
+            <div className={styles.centredHeading}>
+              <p className={styles.eyebrow}>Choose your plan</p>
+              <h2 className={styles.sectionHeading}>
+                Become a JPV Bootcamp Member.
+              </h2>
+              <p className={styles.sectionIntro}>
+                The same membership and access, with the billing rhythm that
+                works for you.
+              </p>
+            </div>
+            <div className={styles.plans}>
+              {pricingPlans.map((plan) => (
+                <article
+                  aria-label={plan.contractLabel}
+                  className={`${styles.plan} ${plan.featured ? styles.planFeatured : ""}`}
+                  data-contract-price={plan.contractPrice}
+                  id={
+                    plan.name === "Monthly"
+                      ? "pricing-monthly"
+                      : "pricing-annual"
+                  }
+                  key={plan.name}
+                >
+                  {plan.featured ? (
+                    <span className={styles.planBadge}>Best value</span>
+                  ) : null}
+                  <p className={styles.planName}>{plan.name}</p>
+                  <div className={styles.planPrice}>
+                    <strong>{plan.price}</strong>
+                    <span>{plan.suffix}</span>
+                  </div>
+                  <p className={styles.planDescription}>{plan.description}</p>
+                  <ul className={styles.planFeatures}>
                     {plan.features.map((feature) => (
-                      <li key={feature} className="flex items-center gap-2">
-                        <span className="text-jpv-green">•</span>
-                        <span>{feature}</span>
+                      <li key={feature}>
+                        <Check aria-hidden="true" size={13} />
+                        {feature}
                       </li>
                     ))}
                   </ul>
-                </div>
-                <div className="mt-8 space-y-3 text-left">
-                  {plan.disabled ? (
-                    <button
-                      disabled
-                      className="inline-flex w-full items-center justify-center rounded-full border border-jpv-gray-600 px-6 py-3 text-sm font-semibold text-jpv-gray-400 bg-jpv-gray-800/30 cursor-not-allowed opacity-50"
-                    >
-                      {plan.ctaLabel}
-                    </button>
-                  ) : (
-                    <a
-                      href={plan.ctaHref}
-                      {...(plan.ctaTarget && { target: plan.ctaTarget })}
-                      {...(plan.ctaRel && { rel: plan.ctaRel })}
-                      className={`inline-flex w-full items-center justify-center rounded-full px-6 py-3 text-sm font-semibold transition ${plan.highlight
-                        ? "bg-jpv-green text-black shadow-jpv-glow hover:bg-jpv-green-hover"
-                        : "border border-jpv-gray-600 text-jpv-gray-200 hover:border-jpv-green hover:text-white"
-                        }`}
-                    >
-                      {plan.ctaLabel}
-                    </a>
-                  )}
-                  {plan.subcopy ? <p className="text-xs text-jpv-green/80">{plan.subcopy}</p> : null}
-                  {plan.name === "Annually" && portalUpgradeUrl ? (
-                    <a
-                      href={portalUpgradeUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mt-3 block text-center text-sm text-white/60 hover:text-white/80 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-jpv-green/60 rounded"
-                      aria-label="Already a member? Upgrade in portal"
-                    >
-                      Already a member? Upgrade in portal
-                    </a>
-                  ) : null}
+                  <a
+                    className={
+                      plan.featured ? styles.button : styles.buttonOutline
+                    }
+                    href={plan.ctaHref}
+                  >
+                    {plan.ctaLabel} <ArrowRight aria-hidden="true" size={15} />
+                  </a>
+                </article>
+              ))}
+            </div>
+            <p className={styles.legalCopy}>
+              Checkout requires email, telephone number, a payment method, and
+              recurring-payment acknowledgement. Plan changes take effect
+              according to the current billing terms.
+            </p>
+          </div>
+        </section>
+
+        <section className={styles.support} id="support">
+          <div className={styles.container}>
+            <div className={styles.supportBox}>
+              <div>
+                <p className={styles.eyebrow}>Support and pay it forward</p>
+                <h2>Help make access possible.</h2>
+                <p>
+                  Use the existing JPV support and pay-it-forward path.
+                  Questions about your account can be sent through the support
+                  form.
+                </p>
+                <div className={styles.supportActions}>
+                  <button
+                    className={styles.buttonLight}
+                    onClick={openSupportForm}
+                    type="button"
+                  >
+                    Ask for support
+                  </button>
+                  <a
+                    className={`${styles.buttonOutline} ${styles.buttonOnDark}`}
+                    href="/sponsored"
+                  >
+                    Sponsored access
+                  </a>
                 </div>
               </div>
-            ))}
-          </div>
-          <p className="text-sm text-jpv-gray-400">
-            Need invoicing for teams? Contact us for group pricing.
-          </p>
-          <div className="pt-6">
-            <SponsoredPayItForward />
-          </div>
-        </div>
-      </section>
-      <section id="faq" className="scroll-mt-28 px-6 py-24 sm:py-28">
-        <div className="mx-auto max-w-4xl space-y-10">
-          <div className="space-y-3 text-center md:text-left">
-            <h2 className="text-3xl font-semibold md:text-4xl">Frequently asked questions</h2>
-          </div>
-          <div className="space-y-4">
-            {faqItems.map((item) => (
-              <details
-                key={item.question}
-                className="group rounded-2xl border border-jpv-gray-700/50 bg-jpv-bg-dark/60 px-5 py-4 shadow-jpv-card backdrop-blur"
-              >
-                <summary className="flex cursor-pointer list-none items-center text-left text-base font-semibold text-white before:mr-3 before:text-sm before:text-jpv-green before:transition before:content-['▸'] group-open:before:content-['▾']">
-                  {item.question}
-                </summary>
-                <p className="mt-4 text-sm text-jpv-gray-300">{item.answer}</p>
-              </details>
-            ))}
-          </div>
-        </div>
-      </section>
-      <footer className="border-t border-jpv-gray-700/40 px-6 py-10">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-6 text-sm text-jpv-gray-500 sm:flex-row">
-          <div className="flex flex-col items-center gap-3 text-center sm:flex-row sm:text-left">
-            <div className="h-14 w-14 overflow-hidden rounded-xl">
-              <Image
-                src="/images/jpv-logo.jpg"
-                alt="JPV • Jesus Property Venture logo"
-                width={56}
-                height={56}
-                className="h-full w-full object-cover"
-              />
+              <div className={styles.supportWidget}>
+                <SponsoredPayItForward />
+              </div>
             </div>
+          </div>
+        </section>
+
+        <section className={styles.faq} id="faq">
+          <div className={styles.narrow}>
+            <div className={styles.centredHeading}>
+              <p className={styles.eyebrow}>Questions</p>
+              <h2 className={styles.sectionHeading}>
+                Frequently Asked Questions.
+              </h2>
+            </div>
+            <div className={styles.faqList}>
+              {faqItems.map((item) => (
+                <details className={styles.faqItem} key={item.question}>
+                  <summary>
+                    {item.question}
+                    <ChevronDown aria-hidden="true" size={16} />
+                  </summary>
+                  <p>{item.answer}</p>
+                </details>
+              ))}
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <footer className={styles.footer}>
+        <div className={`${styles.container} ${styles.footerInner}`}>
+          <div className={styles.footerBrand}>
+            <Image
+              alt="JPV — Our passion is people"
+              className={styles.footerLogoTransparent}
+              height={40}
+              src={jpvBrand.logoHorizontalPath}
+              width={160}
+            />
             <span>
-              © {new Date().getFullYear()} JPV. All rights reserved. Powered by{" "}
-              <a
-                href="https://prochat.tools"
-                target="_blank"
-                rel="nofollow noopener noreferrer"
-                className="no-underline transition hover:no-underline hover:font-bold hover:text-jpv-green-hover focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-jpv-green/60 focus-visible:ring-offset-2 focus-visible:ring-offset-jpv-bg-dark"
-              >
-                ProChat
-              </a>
+              © {new Date().getFullYear()} JPV. All rights reserved.
             </span>
           </div>
-          <div className="flex items-center gap-6">
-            <a href="/terms" className="transition hover:text-jpv-green">
-              Terms
-            </a>
-            <a href="/privacy" className="transition hover:text-jpv-green">
-              Privacy
-            </a>
-            <a href="/cookies" className="transition hover:text-jpv-green">
-              Cookies
-            </a>
-            <button
-              type="button"
-              onClick={() => {
-                setIsSupportOpen(true);
-                setIsHowItWorksOpen(false);
-                setSupportStatus("idle");
-                setSupportError(null);
-              }}
-              className="transition hover:text-jpv-green"
-            >
+          <div className={styles.footerLinks}>
+            <a href="/terms">Terms</a>
+            <a href="/privacy">Privacy</a>
+            <a href="/cookies">Cookies</a>
+            <button onClick={openSupportForm} type="button">
               Support
             </button>
+            <a
+              href="https://prochat.tools"
+              rel="nofollow noopener noreferrer"
+              target="_blank"
+            >
+              Powered by ProChat
+            </a>
           </div>
         </div>
       </footer>
-      {isHowItWorksOpen ? (
-        <div className="fixed inset-0 z-[55] flex items-center justify-center bg-black/60 px-6 py-10 backdrop-blur-sm animate-[modal-fade_0.35s_ease-out]">
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="how-it-works-title"
-            aria-describedby="how-it-works-desc"
-            className="w-full max-w-xl rounded-3xl border border-jpv-gray-700/60 bg-jpv-bg-dark/90 p-6 shadow-jpv-card backdrop-blur animate-[modal-rise_0.35s_ease-out]"
-          >
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h3 id="how-it-works-title" className="text-xl font-semibold text-white">
-                  How onboarding works
-                </h3>
-                <p id="how-it-works-desc" className="mt-1 text-sm text-jpv-gray-400">
-                  A quick overview of the first steps once you join.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={handleHowItWorksClose}
-                className="rounded-full border border-jpv-gray-700/60 p-2 text-jpv-gray-200 transition hover:border-jpv-green hover:text-jpv-green"
-                aria-label="Close onboarding steps"
+
+      <AccessibleDialog
+        className="max-h-[calc(100dvh-2.5rem)] w-[calc(100%-2.5rem)] max-w-xl overflow-y-auto"
+        describedBy="how-it-works-desc"
+        labelledBy="how-it-works-title"
+        onClose={() => setIsHowItWorksOpen(false)}
+        open={isHowItWorksOpen}
+      >
+        <section className={styles.modal}>
+          <div className="flex items-start justify-between gap-5">
+            <div>
+              <p className="jpv-eyebrow">Your next steps</p>
+              <h2 className="mt-3 text-2xl font-bold" id="how-it-works-title">
+                How onboarding works
+              </h2>
+              <p
+                className="mt-2 text-sm leading-6 text-jpv-muted"
+                id="how-it-works-desc"
               >
-                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none">
-                  <path
-                    d="M7 7l10 10M17 7L7 17"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                  />
-                </svg>
-              </button>
+                A quick overview of what happens after you choose a membership.
+              </p>
             </div>
-            <div className="mt-6 space-y-3">
-              {onboardingSteps.map((step, index) => (
-                <div
-                  key={step.title}
-                  className="rounded-2xl border border-jpv-gray-700/60 bg-jpv-bg-dark/70 p-4"
-                >
-                  <div className="flex items-start gap-4">
-                    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-jpv-green/20 text-sm font-semibold text-jpv-green">
-                      {index + 1}
-                    </span>
-                    <div className="space-y-1">
-                      <p className="text-sm font-semibold text-white">{step.title}</p>
-                      <p className="text-sm text-jpv-gray-400">{step.description}</p>
-                    </div>
-                  </div>
+            <button
+              aria-label="Close onboarding steps"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-jpv-border hover:bg-jpv-surface"
+              onClick={() => setIsHowItWorksOpen(false)}
+              type="button"
+            >
+              <X aria-hidden="true" size={19} />
+            </button>
+          </div>
+          <ol className="mt-7 space-y-4">
+            {onboardingSteps.map((step, index) => (
+              <li
+                className="grid grid-cols-[2.5rem_1fr] gap-4 rounded-2xl bg-jpv-surface p-4"
+                key={step.title}
+              >
+                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-jpv-green text-sm font-bold">
+                  {index + 1}
+                </span>
+                <div>
+                  <p className="font-bold">{step.title}</p>
+                  <p className="mt-1 text-sm leading-6 text-jpv-muted">
+                    {step.description}
+                  </p>
                 </div>
-              ))}
-            </div>
-            <div className="mt-6 flex items-center justify-end">
-              <button
-                type="button"
-                onClick={handleHowItWorksClose}
-                className="inline-flex items-center justify-center rounded-full border border-jpv-gray-600 px-6 py-3 text-sm font-semibold text-jpv-gray-200 transition hover:border-jpv-green hover:text-white"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
-      {isSupportOpen ? (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 px-6 py-10 backdrop-blur-sm animate-[modal-fade_0.35s_ease-out]">
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="support-title"
-            aria-describedby="support-desc"
-            className="w-full max-w-xl rounded-3xl border border-jpv-gray-700/60 bg-jpv-bg-dark/90 p-6 shadow-jpv-card backdrop-blur animate-[modal-rise_0.35s_ease-out]"
+              </li>
+            ))}
+          </ol>
+          <button
+            className={`${styles.buttonOutline} mt-7 w-full`}
+            onClick={() => setIsHowItWorksOpen(false)}
+            type="button"
           >
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h3 id="support-title" className="text-xl font-semibold text-white">
-                  Support
-                </h3>
-                <p id="support-desc" className="mt-1 text-sm text-jpv-gray-400">
-                  Share your question and we will get back to you shortly.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={handleSupportCancel}
-                className="rounded-full border border-jpv-gray-700/60 p-2 text-jpv-gray-200 transition hover:border-jpv-green hover:text-jpv-green"
-                aria-label="Close support form"
+            Close
+          </button>
+        </section>
+      </AccessibleDialog>
+
+      <AccessibleDialog
+        className="max-h-[calc(100dvh-2.5rem)] w-[calc(100%-2.5rem)] max-w-xl overflow-y-auto"
+        describedBy="support-desc"
+        labelledBy="support-title"
+        onClose={handleSupportCancel}
+        open={isSupportOpen}
+      >
+        <section className={styles.modal}>
+          <div className="flex items-start justify-between gap-5">
+            <div>
+              <p className="jpv-eyebrow">We are here to help</p>
+              <h2 className="mt-3 text-2xl font-bold" id="support-title">
+                Support
+              </h2>
+              <p
+                className="mt-2 text-sm leading-6 text-jpv-muted"
+                id="support-desc"
               >
-                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none">
-                  <path
-                    d="M7 7l10 10M17 7L7 17"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                  />
-                </svg>
+                Send your question to the JPV Bootcamp team.
+              </p>
+              <p className="mt-3 text-sm font-semibold text-jpv-brand-deep">
+                Prefer to call? <a className="underline underline-offset-4" href={SUPPORT_PHONE_HREF}>{SUPPORT_PHONE_DISPLAY}</a>
+              </p>
+            </div>
+            <button
+              aria-label="Close support form"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-jpv-border hover:bg-jpv-surface"
+              onClick={handleSupportCancel}
+              type="button"
+            >
+              <X aria-hidden="true" size={19} />
+            </button>
+          </div>
+
+          {supportStatus !== "idle" ? (
+            <div
+              aria-atomic="true"
+              aria-live="polite"
+              className={`mt-5 rounded-xl border px-4 py-3 text-sm ${supportStatus === "error" ? "border-jpv-danger bg-jpv-danger-surface text-jpv-danger-ink" : "border-jpv-border bg-jpv-surface text-jpv-ink"}`}
+              role="status"
+            >
+              {supportStatus === "success"
+                ? "Thanks. Your request has been saved for review."
+                : null}
+              {supportStatus === "error" ? supportError : null}
+              {supportStatus === "sending" ? "Saving your request…" : null}
+            </div>
+          ) : null}
+
+          <form className="mt-6 space-y-5" onSubmit={handleSupportSubmit}>
+            <div>
+              <label className="text-sm font-semibold" htmlFor="support-name">
+                Name
+              </label>
+              <input
+                className={inputClassName}
+                disabled={isSupportSending}
+                id="support-name"
+                onChange={(event) => {
+                  setSupportStatus("idle");
+                  setSupportError(null);
+                  setSupportName(event.target.value);
+                }}
+                required
+                type="text"
+                value={supportName}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-semibold" htmlFor="support-email">
+                Email address
+              </label>
+              <input
+                autoComplete="email"
+                className={inputClassName}
+                disabled={isSupportSending}
+                id="support-email"
+                onChange={(event) => {
+                  setSupportStatus("idle");
+                  setSupportError(null);
+                  setSupportEmail(event.target.value);
+                }}
+                required
+                type="email"
+                value={supportEmail}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-semibold" htmlFor="support-phone">
+                Telephone number
+              </label>
+              <input
+                autoComplete="tel"
+                className={inputClassName}
+                disabled={isSupportSending}
+                id="support-phone"
+                onChange={(event) => {
+                  setSupportStatus("idle");
+                  setSupportError(null);
+                  setSupportPhone(event.target.value);
+                }}
+                required
+                type="tel"
+                value={supportPhone}
+              />
+              <p className="mt-1 text-xs text-jpv-muted">We may call if your question is easier to resolve by phone.</p>
+            </div>
+            <div>
+              <label
+                className="text-sm font-semibold"
+                htmlFor="support-question"
+              >
+                How can we help?
+              </label>
+              <textarea
+                className={`${inputClassName} resize-y`}
+                disabled={isSupportSending}
+                id="support-question"
+                onChange={(event) => {
+                  setSupportStatus("idle");
+                  setSupportError(null);
+                  setSupportQuestion(event.target.value);
+                }}
+                required
+                rows={5}
+                value={supportQuestion}
+              />
+            </div>
+            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <button
+                className={styles.buttonOutline}
+                onClick={handleSupportCancel}
+                type="button"
+              >
+                Keep browsing
+              </button>
+              <button
+                className={styles.button}
+                disabled={isSupportSending}
+                type="submit"
+              >
+                {isSupportSending ? "Sending question…" : "Send question"}
               </button>
             </div>
-            {supportStatus !== "idle" ? (
-              <div className="mt-4 space-y-2 text-sm">
-                {supportStatus === "success" ? (
-                  <p className="text-jpv-green">Thanks! We&rsquo;ll reply shortly.</p>
-                ) : null}
-                {supportStatus === "error" && supportError ? (
-                  <p className="text-red-400">{supportError}</p>
-                ) : null}
-                {supportStatus === "sending" ? (
-                  <p className="text-jpv-gray-400">Sending your request...</p>
-                ) : null}
-              </div>
-            ) : null}
-            <form onSubmit={handleSupportSubmit} className="mt-6 space-y-4">
-              <div className="space-y-2">
-                <label htmlFor="support-name" className="text-sm font-medium text-jpv-gray-200">
-                  Name
-                </label>
-                <input
-                  id="support-name"
-                  type="text"
-                  value={supportName}
-                  onChange={(event) => {
-                    if (supportStatus !== "idle") {
-                      setSupportStatus("idle");
-                      setSupportError(null);
-                    }
-                    setSupportName(event.target.value);
-                  }}
-                  placeholder="Your name"
-                  className="w-full rounded-2xl border border-jpv-gray-700/60 bg-jpv-bg-dark/70 px-4 py-3 text-sm text-jpv-gray-100 placeholder:text-jpv-gray-500 focus:border-jpv-green focus:outline-none focus:ring-2 focus:ring-jpv-green/30"
-                  disabled={isSupportSending}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="support-email" className="text-sm font-medium text-jpv-gray-200">
-                  Email address
-                </label>
-                <input
-                  id="support-email"
-                  type="email"
-                  value={supportEmail}
-                  onChange={(event) => {
-                    if (supportStatus !== "idle") {
-                      setSupportStatus("idle");
-                      setSupportError(null);
-                    }
-                    setSupportEmail(event.target.value);
-                  }}
-                  placeholder="you@email.com"
-                  className="w-full rounded-2xl border border-jpv-gray-700/60 bg-jpv-bg-dark/70 px-4 py-3 text-sm text-jpv-gray-100 placeholder:text-jpv-gray-500 focus:border-jpv-green focus:outline-none focus:ring-2 focus:ring-jpv-green/30"
-                  disabled={isSupportSending}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="support-question" className="text-sm font-medium text-jpv-gray-200">
-                  Question
-                </label>
-                <textarea
-                  id="support-question"
-                  value={supportQuestion}
-                  onChange={(event) => {
-                    if (supportStatus !== "idle") {
-                      setSupportStatus("idle");
-                      setSupportError(null);
-                    }
-                    setSupportQuestion(event.target.value);
-                  }}
-                  placeholder="How can we help?"
-                  rows={4}
-                  className="w-full resize-none rounded-2xl border border-jpv-gray-700/60 bg-jpv-bg-dark/70 px-4 py-3 text-sm text-jpv-gray-100 placeholder:text-jpv-gray-500 focus:border-jpv-green focus:outline-none focus:ring-2 focus:ring-jpv-green/30"
-                  disabled={isSupportSending}
-                  required
-                />
-              </div>
-              <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end">
-                <button
-                  type="button"
-                  onClick={handleSupportCancel}
-                  className="inline-flex items-center justify-center rounded-full border border-jpv-gray-600 px-6 py-3 text-sm font-semibold text-jpv-gray-200 transition hover:border-jpv-green hover:text-white"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSupportSending}
-                  className={`inline-flex items-center justify-center rounded-full bg-jpv-green px-6 py-3 text-sm font-semibold text-black shadow-jpv-glow transition hover:bg-jpv-green-hover ${isSupportSending ? "cursor-not-allowed opacity-70 hover:bg-jpv-green" : ""
-                    }`}
-                >
-                  {isSupportSending ? "Sending..." : "Submit"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      ) : null}
+          </form>
+        </section>
+      </AccessibleDialog>
     </main>
   );
 }

@@ -3,7 +3,7 @@ import type { Plan } from '@/lib/plans'
 export type MembershipEmailVariant = 'welcome' | 'upgrade'
 
 export function getPlanLabel(plan: Plan): string {
-	return plan === 'vip' ? 'VIP' : 'Pro'
+	return 'Pro'
 }
 
 export function getMembershipEmailIntro(params: {

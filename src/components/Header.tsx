@@ -45,20 +45,20 @@ const ThemeSwitch = () => {
 		}
 	}
 	return (
-		<label className='flex items-center relative w-max cursor-pointer select-none'>
+		<label className='flex items-center relative w-max cursor-pointer select-none min-h-11' aria-label='Toggle dark mode'>
 			<input
 				type='checkbox'
 				id='theme-toggle'
 				onChange={handleChnage}
 				className='appearance-none transition-colors cursor-pointer w-14 h-[30px] rounded-full focus:outline-none border border-[#B7B8BB] dark:border-[#373C53] bg-white'
 			/>
-			<span className='absolute font-medium text-xs uppercase right-1 text-white'>
+			<span className='absolute font-medium text-xs uppercase right-1 text-white' aria-hidden='true'>
 				<Sun />
 			</span>
-			<span className='absolute font-medium text-xs uppercase right-8 text-white'>
+			<span className='absolute font-medium text-xs uppercase right-8 text-white' aria-hidden='true'>
 				<Moon />
 			</span>
-			<span className='w-6 h-6 right-[29px] dark:right-[31px] absolute rounded-full transform transition-transform bg-[#0B111B] dark:bg-white' />
+			<span className='w-6 h-6 right-[29px] dark:right-[31px] absolute rounded-full transform transition-transform bg-[#0B111B] dark:bg-white' aria-hidden='true' />
 		</label>
 	)
 }
@@ -66,8 +66,8 @@ const ThemeSwitch = () => {
 const MobileNav = () => {
 	return (
 		<Sheet>
-			<SheetTrigger>
-				<div className='text-black1 dark:text-white'>
+			<SheetTrigger aria-label='Open navigation menu'>
+				<div className='text-black1 dark:text-white' aria-hidden='true'>
 					<OpenNav />
 				</div>
 			</SheetTrigger>

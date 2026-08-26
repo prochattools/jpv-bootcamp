@@ -6,14 +6,13 @@ import {
 	sanitizeSessionId,
 } from '@/lib/partners-session'
 import { isSponsoredSeatsAdmin } from '@/lib/sponsored-admin'
-import { normalizeSponsoredTier } from '@/lib/sponsored-seats'
 import { applySponsoredGrant, getGrantWindow } from '@/lib/sponsored-grants'
+import type { SponsoredTier } from '@/lib/sponsored-seats'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 type ApprovePayload = {
-	tier?: string
 	note?: string
 }
 
@@ -24,7 +23,6 @@ async function parsePayload(req: NextRequest): Promise<ApprovePayload> {
 	}
 	const form = await req.formData()
 	return {
-		tier: form.get('tier')?.toString(),
 		note: form.get('note')?.toString(),
 	}
 }
@@ -40,7 +38,7 @@ export async function POST(
 	}
 
 	const session = await getPartnerSession(sessionId)
-	if (!session || !isSponsoredSeatsAdmin(session.wpUserId)) {
+	if (!session || !isSponsoredSeatsAdmin(session.accountId)) {
 		return NextResponse.json({ ok: false, reason: 'forbidden' }, { status: 403 })
 	}
 
@@ -50,7 +48,7 @@ export async function POST(
 	}
 
 	const payload = await parsePayload(req)
-	const tier = normalizeSponsoredTier(payload.tier ?? 'pro') ?? 'pro'
+	const tier: SponsoredTier = 'free'
 	const note = payload.note?.trim() ?? null
 
 	const application = await prisma.sponsoredApplication.findUnique({
@@ -63,9 +61,9 @@ export async function POST(
 		)
 	}
 
-	if (!application.wpUserId) {
+	if (!application.accountId) {
 		return NextResponse.json(
-			{ ok: false, reason: 'missing_wp_user_id' },
+			{ ok: false, reason: 'missing_account_id' },
 			{ status: 400 }
 		)
 	}
@@ -79,12 +77,12 @@ export async function POST(
 		await prisma.$transaction(async (tx) => {
 			const claimed = await tx.$queryRaw<{ id: string }[]>(Prisma.sql`
 				UPDATE jpvbootcamp.sponsored_seats
-				SET claimed_by_wp_user_id = ${application.wpUserId},
+				SET claimed_by_account_id = ${application.accountId},
 					claimed_at = ${now}
 				WHERE id = (
 					SELECT id
 					FROM jpvbootcamp.sponsored_seats
-					WHERE claimed_by_wp_user_id IS NULL
+					WHERE claimed_by_account_id IS NULL
 						AND tier = ${tier}
 					ORDER BY created_at ASC
 					FOR UPDATE SKIP LOCKED
@@ -101,7 +99,7 @@ export async function POST(
 
 			const grant = await tx.sponsoredGrant.create({
 				data: {
-					wpUserId: application.wpUserId,
+					accountId: application.accountId,
 					tier,
 					seatId: seatId,
 					startsAt,
@@ -114,7 +112,7 @@ export async function POST(
 				where: { id: applicationId },
 				data: {
 					status: 'approved',
-					reviewedByWpUserId: session.wpUserId,
+					reviewedByAccountId: session.accountId,
 					reviewedAt: now,
 					decisionNote: note,
 				},
@@ -133,7 +131,7 @@ export async function POST(
 	}
 
 	const grantResult = await applySponsoredGrant({
-		wpUserId: application.wpUserId,
+		accountId: application.accountId,
 		tier,
 		name: application.name,
 	})

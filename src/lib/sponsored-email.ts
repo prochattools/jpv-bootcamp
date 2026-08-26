@@ -1,12 +1,13 @@
 import 'server-only'
 import { Resend } from 'resend'
+import { renderBrandedEmail } from '@/lib/communications/brandedEmail'
 import { redactEmail } from '@/lib/log-redact'
 import { getPublicBaseUrl } from '@/lib/public-base-url'
 import { formatPhoneForDisplay } from '@/lib/normalize-phone'
+import { assertStagingRecipientAllowed } from '@/lib/staging-email-guard'
 
 type SponsoredCounts = {
-	pro: number
-	vip: number
+	available: number
 }
 
 let resendClient: Resend | null = null
@@ -43,7 +44,17 @@ function parseEmailList(raw: string | undefined): string[] {
 		.filter((value) => value && value.includes('@'))
 }
 
-function getAdminRecipients(): string[] {
+async function getAdminRecipients(): Promise<string[]> {
+	try {
+		const { getPayload } = await import('payload')
+		const { default: config } = await import('@/payload.config')
+		const payload = await getPayload({ config })
+		const settings = await payload.findGlobal({ slug: 'payItForwardSettings' })
+		const fromPayload = parseEmailList(settings?.adminEmailsText ?? undefined)
+		if (fromPayload.length > 0) return fromPayload
+	} catch {
+		// Fall through to env var
+	}
 	const recipients = parseEmailList(process.env.SPONSORED_APPLICATION_ADMIN_EMAILS)
 	if (recipients.length === 0) {
 		throw new Error('missing_admin_recipients')
@@ -54,7 +65,7 @@ function getAdminRecipients(): string[] {
 export function getSponsoredPortalUrl(): string {
 	const raw = (process.env.SPONSORED_PORTAL_URL || '').trim()
 	if (!raw) {
-		return 'https://portal.jpvbootcamp.com/community/'
+		return `${getPublicBaseUrl().replace(/\/$/, '')}/portal`
 	}
 	return raw
 }
@@ -62,7 +73,7 @@ export function getSponsoredPortalUrl(): string {
 function getSponsoredPortalBaseUrl(): string {
 	const raw = (process.env.SPONSORED_PORTAL_BASE_URL || '').trim()
 	if (!raw) {
-		return 'https://portal.jpvbootcamp.com'
+		return getPublicBaseUrl().replace(/\/$/, '')
 	}
 	return raw.replace(/\/$/, '')
 }
@@ -95,11 +106,10 @@ export async function sendSponsoredApplicationAdminEmail(params: {
 	approveToken: string
 	rejectToken: string
 	counts?: SponsoredCounts
-	tier?: 'pro' | 'vip'
 }): Promise<void> {
 	const resend = getResendClient()
 	const from = getMailFrom()
-	const to = getAdminRecipients()
+	const to = await getAdminRecipients()
 
 	const safeName = escapeHtml(params.applicantName)
 	const safeEmail = escapeHtml(params.applicantEmail)
@@ -107,7 +117,7 @@ export async function sendSponsoredApplicationAdminEmail(params: {
 	const safeMessage = params.message ? escapeHtml(params.message) : ''
 
 	const countsLine = params.counts
-		? `Available seats: ${params.counts.pro} Pro / ${params.counts.vip} VIP`
+		? `Available sponsored access seats: ${params.counts.available}`
 		: null
 
 	const baseUrl = getPublicBaseUrl()
@@ -128,31 +138,27 @@ export async function sendSponsoredApplicationAdminEmail(params: {
 		params.rejectToken
 	)}`
 
-	const tierLabel = params.tier === 'vip' ? 'VIP' : 'Pro'
-	const html = `
-		<h2>New sponsored membership application</h2>
-		<p><strong>Requested tier:</strong> ${tierLabel}</p>
-		<p><strong>Name:</strong> ${safeName}</p>
-		<p><strong>Email:</strong> ${safeEmail}</p>
-		<p><strong>Phone:</strong> ${safePhone}</p>
-		${safeMessage ? `<p><strong>Message:</strong><br/>${safeMessage}</p>` : ''}
-		${countsLine ? `<p>${escapeHtml(countsLine)}</p>` : ''}
-		<p>
-			<a href="${approveUrl}" style="display:inline-block;padding:10px 16px;background:#0f172a;color:#ffffff;text-decoration:none;border-radius:6px;margin-right:8px;">
-				Approve
-			</a>
-			<a href="${rejectUrl}" style="display:inline-block;padding:10px 16px;background:#ef4444;color:#ffffff;text-decoration:none;border-radius:6px;">
-				Reject
-			</a>
-		</p>
-		<p style="font-size:12px;color:#6b7280;">Application ID: ${escapeHtml(
-			params.applicationId
-		)}</p>
-	`
+	const html = renderBrandedEmail({
+		preheader: `New sponsored membership application from ${params.applicantName}.`,
+		heading: 'New sponsored application',
+		bodyHtml: `
+			<p style="margin:0 0 12px"><strong>Requested access:</strong> Controlled Free access</p>
+			<p style="margin:0 0 12px"><strong>Name:</strong> ${safeName}</p>
+			<p style="margin:0 0 12px"><strong>Email:</strong> ${safeEmail}</p>
+			<p style="margin:0 0 12px"><strong>Phone:</strong> ${safePhone}</p>
+			${safeMessage ? `<p style="margin:0 0 12px"><strong>Message:</strong><br />${safeMessage}</p>` : ''}
+			${countsLine ? `<p style="margin:0 0 12px">${escapeHtml(countsLine)}</p>` : ''}
+			<p style="margin:0;font-size:12px">Application ID: ${escapeHtml(params.applicationId)}</p>
+		`,
+		actions: [
+			{ label: 'Approve', url: approveUrl },
+			{ label: 'Reject', url: rejectUrl, tone: 'danger' },
+		],
+	})
 
 	const text = [
 		'New sponsored membership application',
-		`Requested tier: ${tierLabel}`,
+		'Requested access: Controlled Free access',
 		`Name: ${params.applicantName}`,
 		`Email: ${params.applicantEmail}`,
 		`Phone: ${formatPhoneForDisplay(params.applicantPhone)}`,
@@ -164,6 +170,8 @@ export async function sendSponsoredApplicationAdminEmail(params: {
 	]
 		.filter(Boolean)
 		.join('\n')
+
+	assertStagingRecipientAllowed(to, 'sponsored-email:sendSponsoredApplicationAdminEmail')
 
 	const { error } = await resend.emails.send({
 		from,
@@ -185,32 +193,33 @@ export async function sendSponsoredApplicationAdminEmail(params: {
 
 export async function sendSponsoredClaimEmail(params: {
 	to: string
-	tier: 'pro' | 'vip'
 	claimToken: string
 }): Promise<void> {
 	const resend = getResendClient()
 	const from = getMailFrom()
-	const tierLabel = params.tier === 'vip' ? 'VIP' : 'Pro'
 	const portalBase = getSponsoredPortalBaseUrl()
 	const claimUrl = `${portalBase}/go/sponsored-claim?token=${encodeURIComponent(
 		params.claimToken
 	)}`
 
-	const html = `
-		<p>Your sponsored ${tierLabel} month is ready.</p>
-		<p><a href="${claimUrl}">Claim your sponsored month</a></p>
-		<p>This link expires in 7 days.</p>
-	`
+	const html = renderBrandedEmail({
+		preheader: 'Your sponsored access is ready to claim.',
+		heading: 'Your sponsored access is ready',
+		bodyHtml: '<p style="margin:0 0 16px">A sponsored JPV Bootcamp place is ready for you.</p><p style="margin:0">This secure link expires in 7 days.</p>',
+		actions: [{ label: 'Claim your sponsored access', url: claimUrl }],
+	})
 	const text = [
-		`Your sponsored ${tierLabel} month is ready.`,
-		`Claim your sponsored month: ${claimUrl}`,
+		'Your sponsored Free access is ready.',
+		`Claim your sponsored access: ${claimUrl}`,
 		'This link expires in 7 days.',
 	].join('\n')
+
+	assertStagingRecipientAllowed([params.to], 'sponsored-email:sendSponsoredClaimEmail')
 
 	const { error } = await resend.emails.send({
 		from,
 		to: [params.to],
-		subject: 'Claim your sponsored month',
+		subject: 'Claim your sponsored access',
 		html,
 		text,
 	})
@@ -218,7 +227,6 @@ export async function sendSponsoredClaimEmail(params: {
 	if (error) {
 		console.error('sponsored_claim_email_failed', {
 			email: redactEmail(params.to),
-			tier: params.tier,
 			message: error.message,
 		})
 		throw error
@@ -233,20 +241,24 @@ export async function sendSponsoredApplicantApprovedEmail(params: {
 	const from = getMailFrom()
 	const portalUrl = params.portalUrl
 
-	const html = `
-		<p>Your sponsored month is now active.</p>
-		<p><a href="${portalUrl}">Visit the JPV Bootcamp portal</a></p>
-	`
+	const html = renderBrandedEmail({
+		preheader: 'Your sponsored JPV Bootcamp access is now active.',
+		heading: 'Your access is active',
+		bodyHtml: '<p style="margin:0">Your sponsored JPV Bootcamp access is now active. Continue to the portal when you are ready.</p>',
+		actions: [{ label: 'Visit the member portal', url: portalUrl }],
+	})
 
 	const text = [
-		'Your sponsored month is now active.',
+		'Your sponsored Free access is now active.',
 		`Visit the JPV Bootcamp portal: ${portalUrl}`,
 	].join('\n')
+
+	assertStagingRecipientAllowed([params.to], 'sponsored-email:sendSponsoredApplicantApprovedEmail')
 
 	const { error } = await resend.emails.send({
 		from,
 		to: [params.to],
-		subject: 'Approved — your sponsored month is active',
+		subject: 'Approved — your sponsored access is active',
 		html,
 		text,
 	})
@@ -267,11 +279,15 @@ export async function sendSponsoredApplicantRejectedEmail(params: {
 	const resend = getResendClient()
 	const from = getMailFrom()
 
-	const html = `
-		<p>Thanks for applying. You did not qualify or no seats are available right now.</p>
-	`
+	const html = renderBrandedEmail({
+		preheader: 'An update about your sponsored membership application.',
+		heading: 'Sponsored membership update',
+		bodyHtml: '<p style="margin:0">Thanks for applying. You did not qualify or no seats are available right now.</p>',
+	})
 	const text =
 		'Thanks for applying. You did not qualify or no seats are available right now.'
+
+	assertStagingRecipientAllowed([params.to], 'sponsored-email:sendSponsoredApplicantRejectedEmail')
 
 	const { error } = await resend.emails.send({
 		from,
@@ -293,22 +309,23 @@ export async function sendSponsoredApplicantRejectedEmail(params: {
 
 export async function sendSponsoredDonorEmail(params: {
 	to: string
-	tier: 'pro' | 'vip'
 }): Promise<void> {
 	const resend = getResendClient()
 	const from = getMailFrom()
-	const tierLabel = params.tier === 'vip' ? 'VIP' : 'Pro'
 
-	const html = `
-		<p>Thanks for sponsoring a ${tierLabel} month.</p>
-		<p>Your purchase has added one sponsored seat. You won&apos;t receive access yourself.</p>
-	`
-	const text = `Thanks for sponsoring a ${tierLabel} month.\nYour purchase has added one sponsored seat. You won't receive access yourself.`
+	const html = renderBrandedEmail({
+		preheader: 'Thank you for helping make JPV Bootcamp access possible.',
+		heading: 'Thank you for sponsoring access',
+		bodyHtml: '<p style="margin:0 0 16px">Your purchase has added one sponsored access seat.</p><p style="margin:0">This contribution supports another person and does not create access for the purchaser.</p>',
+	})
+	const text = `Thanks for sponsoring Free access.\nYour purchase has added one sponsored access seat. You won't receive access yourself.`
+
+	assertStagingRecipientAllowed([params.to], 'sponsored-email:sendSponsoredDonorEmail')
 
 	const { error } = await resend.emails.send({
 		from,
 		to: [params.to],
-		subject: 'Thanks for sponsoring a month',
+		subject: 'Thanks for sponsoring access',
 		html,
 		text,
 	})
@@ -316,7 +333,6 @@ export async function sendSponsoredDonorEmail(params: {
 	if (error) {
 		console.error('sponsored_donor_email_failed', {
 			email: redactEmail(params.to),
-			tier: params.tier,
 			message: error.message,
 		})
 		throw error
@@ -325,28 +341,32 @@ export async function sendSponsoredDonorEmail(params: {
 
 export async function sendSponsoredSeatAdminEmail(params: {
 	donorEmail: string | null
-	tier: 'pro' | 'vip'
 	occurredAt: Date
 }): Promise<void> {
 	const resend = getResendClient()
 	const from = getMailFrom()
-	const to = getAdminRecipients()
-	const tierLabel = params.tier === 'vip' ? 'VIP' : 'Pro'
+	const to = await getAdminRecipients()
 	const donor = params.donorEmail ? escapeHtml(params.donorEmail) : 'unknown'
 	const timestamp = params.occurredAt.toISOString()
 
-	const html = `
-		<p>A sponsored seat purchase was completed.</p>
-		<p><strong>Tier:</strong> ${tierLabel}</p>
-		<p><strong>Donor email:</strong> ${donor}</p>
-		<p><strong>Timestamp:</strong> ${escapeHtml(timestamp)}</p>
-	`
+	const html = renderBrandedEmail({
+		preheader: 'A sponsored access seat purchase was completed.',
+		heading: 'Sponsored seat purchased',
+		bodyHtml: `
+			<p style="margin:0 0 12px">A sponsored seat purchase was completed.</p>
+			<p style="margin:0 0 12px"><strong>Access:</strong> Controlled Free access</p>
+			<p style="margin:0 0 12px"><strong>Donor email:</strong> ${donor}</p>
+			<p style="margin:0"><strong>Timestamp:</strong> ${escapeHtml(timestamp)}</p>
+		`,
+	})
 	const text = [
 		'A sponsored seat purchase was completed.',
-		`Tier: ${tierLabel}`,
+		'Access: Controlled Free access',
 		`Donor email: ${params.donorEmail ?? 'unknown'}`,
 		`Timestamp: ${timestamp}`,
 	].join('\n')
+
+	assertStagingRecipientAllowed(to, 'sponsored-email:sendSponsoredSeatAdminEmail')
 
 	const { error } = await resend.emails.send({
 		from,
@@ -359,7 +379,6 @@ export async function sendSponsoredSeatAdminEmail(params: {
 	if (error) {
 		console.error('sponsored_seat_admin_email_failed', {
 			email: params.donorEmail ? redactEmail(params.donorEmail) : null,
-			tier: params.tier,
 			message: error.message,
 		})
 		throw error

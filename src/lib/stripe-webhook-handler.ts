@@ -2,21 +2,41 @@ import 'server-only'
 
 import { NextResponse } from 'next/server'
 import type Stripe from 'stripe'
-import { getServerConfig } from '@/lib/config'
 import { getStripeConfig, getStripeWebhookSecrets } from '@/lib/stripe-config'
-import { hasProcessed, markProcessed } from '@/lib/idempotency'
-import { logProvisioningDecision, provisionFromCheckoutSession, syncFromSubscription } from '@/lib/provisioning'
+import { atomicCheckAndMarkProcessed, atomicClaimProcessing, finalizeProcessed, hasProcessed, markProcessed, releaseProcessingClaim } from '@/lib/idempotency'
+import {
+	logProvisioningDecision,
+	projectInvoicePaymentState,
+	provisionFromCheckoutSession,
+	syncFromSubscription,
+} from '@/lib/provisioning'
 import { isSponsoredSeatSession, upsertSponsoredSeatFromSession } from '@/lib/sponsored-seats'
 import { notifySponsoredSeatPurchase } from '@/lib/sponsored-seat-notifications'
 import { getStripe } from '@/lib/stripe'
 import { shouldSendMembershipEmailForEvent } from '@/lib/stripe-membership-email-gate'
+import { shadowSyncStripeEventToPayload } from '@/lib/payloadCourse/stripeShadowSync'
+import {
+	projectAsyncCheckoutFailure,
+	projectSubscriptionSchedule,
+} from '@/lib/billing/commitmentProjection'
 
 const PROVISIONING_EVENT_TYPES = new Set([
 	'checkout.session.completed',
+	'checkout.session.async_payment_succeeded',
+	'checkout.session.async_payment_failed',
 	'customer.subscription.created',
 	'customer.subscription.updated',
 	'customer.subscription.deleted',
 	'invoice.paid',
+	'invoice.payment_failed',
+	'invoice.payment_action_required',
+	'subscription_schedule.created',
+	'subscription_schedule.updated',
+	'subscription_schedule.expiring',
+	'subscription_schedule.completed',
+	'subscription_schedule.released',
+	'subscription_schedule.canceled',
+	'subscription_schedule.aborted',
 ])
 const DEBUG_STRIPE_WEBHOOKS = process.env.DEBUG_STRIPE_WEBHOOKS === '1'
 const SKIP_PREDEV = process.env.SKIP_PREDEV === '1'
@@ -30,18 +50,64 @@ type WebhookDebugInfo = {
 	nodeEnv?: string
 }
 
-function isMissingEnvError(error: unknown): boolean {
-	return (
-		error instanceof Error && error.message.startsWith('Missing required env var:')
-	)
-}
-
 function getRequestPath(req: Request): string {
 	try {
 		return new URL(req.url).pathname
 	} catch {
 		return req.url
 	}
+}
+
+function stripeRelationshipId(value: unknown): string | null {
+	if (typeof value === 'string' && value.trim()) return value
+	if (value && typeof value === 'object' && 'id' in value) {
+		const id = (value as { id?: unknown }).id
+		return typeof id === 'string' && id.trim() ? id : null
+	}
+	return null
+}
+
+function stripeChargeContext(value: unknown) {
+	const charge = value && typeof value === 'object'
+		? value as {
+			id?: unknown
+			customer?: unknown
+			invoice?: unknown
+			payment_intent?: unknown
+		}
+		: null
+	const invoice = charge?.invoice && typeof charge.invoice === 'object'
+		? charge.invoice as { id?: unknown; subscription?: unknown }
+		: null
+
+	return {
+		stripeChargeId: stripeRelationshipId(charge),
+		stripeCustomerId: stripeRelationshipId(charge?.customer),
+		stripeInvoiceId: stripeRelationshipId(charge?.invoice),
+		stripeSubscriptionId: stripeRelationshipId(invoice?.subscription),
+		stripePaymentIntentId: stripeRelationshipId(charge?.payment_intent),
+	}
+}
+
+function stripeDisputeContext(dispute: Stripe.Dispute) {
+	const chargeContext = stripeChargeContext(
+		(dispute as Stripe.Dispute & { charge?: unknown }).charge,
+	)
+	return {
+		...chargeContext,
+		stripePaymentIntentId:
+			stripeRelationshipId(
+				(dispute as Stripe.Dispute & { payment_intent?: unknown }).payment_intent,
+			) ?? chargeContext.stripePaymentIntentId,
+	}
+}
+
+function disputeProjectionStatus(
+	status: Stripe.Dispute.Status,
+): 'dispute_won' | 'dispute_lost' | 'dispute_resolved' {
+	if (status === 'won') return 'dispute_won'
+	if (status === 'lost') return 'dispute_lost'
+	return 'dispute_resolved'
 }
 
 function buildDebugInfo(params: {
@@ -104,11 +170,6 @@ function logWebhookEvent(params: {
 	console.info(label, payload)
 }
 
-function isEnvEnabled(value?: string): boolean {
-	if (!value) return false
-	return ['1', 'true', 'yes', 'on'].includes(value.trim().toLowerCase())
-}
-
 function logProvisioningSkip(event: Stripe.Event, reason: string) {
 	let customerId: string | null = null
 	let subscriptionId: string | null = null
@@ -161,7 +222,7 @@ function logProvisioningSkip(event: Stripe.Event, reason: string) {
 			break
 	}
 
-	logProvisioningDecision({
+		logProvisioningDecision({
 		eventId: event.id,
 		type: event.type,
 		livemode: event.livemode,
@@ -169,8 +230,6 @@ function logProvisioningSkip(event: Stripe.Event, reason: string) {
 		subscriptionId,
 		email,
 		incomingPlan,
-		dbWpUserId: null,
-		wpExists: 'unknown',
 		decision: 'skip',
 		reason,
 	})
@@ -188,8 +247,8 @@ export async function handleStripeWebhook(req: Request) {
 			message: (error as Error).message,
 		})
 		return NextResponse.json(
-			{ received: true, skipped: 'config_missing' },
-			{ status: 200 }
+			{ error: 'Stripe config unavailable. Retry later.' },
+			{ status: 503 }
 		)
 	}
 
@@ -255,8 +314,8 @@ export async function handleStripeWebhook(req: Request) {
 			debugInfo,
 		})
 		return NextResponse.json(
-			{ received: true, skipped: 'missing_webhook_secret' },
-			{ status: 200 }
+			{ error: 'Webhook secret unavailable. Retry later.' },
+			{ status: 503 }
 		)
 	}
 
@@ -267,9 +326,8 @@ export async function handleStripeWebhook(req: Request) {
 	let firstError: Error | null = null
 
 	for (let i = 0; i < webhookSecrets.length; i += 1) {
-		const secret = webhookSecrets[i]
 		try {
-			event = stripe.webhooks.constructEvent(rawBuffer, signature, secret)
+			event = stripe.webhooks.constructEvent(rawBuffer, signature, webhookSecrets[i])
 			matchedSecretIndex = i
 			break
 		} catch (error) {
@@ -354,184 +412,323 @@ export async function handleStripeWebhook(req: Request) {
 		return NextResponse.json({ received: true, skipped: 'db' })
 	}
 
-	if (await hasProcessed(event.id)) {
+	// Atomically claim this event for processing before running any effects.
+	// Uses DB unique constraint on eventId as the concurrency mutex.
+	let claimResult
+	try {
+		claimResult = await atomicClaimProcessing({
+			eventId: event.id,
+			eventType: event.type,
+			livemode: event.livemode,
+			payload: event as unknown as Record<string, unknown>,
+		})
+	} catch (claimError) {
+		// Production DB outage — propagate 500 so Stripe retries.
 		logWebhookEvent({
-			message: 'webhook_duplicate_ignored',
 			eventId: event.id,
 			type: event.type,
 			verified: true,
-			outcome: 'deduped',
-			reason: 'already_processed',
+			outcome: 'error',
+			reason: 'idempotency_db_unavailable',
+			meta: {
+				path: debugInfo.path,
+				buildId,
+				message: (claimError as Error).message,
+			},
+			debugInfo,
+		})
+		return NextResponse.json(
+			{ error: 'Internal error. Stripe should retry.' },
+			{ status: 500 }
+		)
+	}
+	const { ownerToken } = claimResult
+
+	if (!claimResult.claimed) {
+		if (claimResult.alreadyProcessed) {
+			// Already fully processed by a prior delivery — idempotent success.
+			logWebhookEvent({
+				message: 'webhook_duplicate_ignored',
+				eventId: event.id,
+				type: event.type,
+				verified: true,
+				outcome: 'deduped',
+				reason: 'already_processed',
+				meta: {
+					path: debugInfo.path,
+					buildId,
+				},
+				debugInfo,
+			})
+			return NextResponse.json({ received: true })
+		}
+		// Another worker is currently processing this event — tell Stripe to retry later.
+		logWebhookEvent({
+			message: 'webhook_processing_conflict',
+			eventId: event.id,
+			type: event.type,
+			verified: true,
+			outcome: 'error',
+			reason: 'concurrent_processing',
 			meta: {
 				path: debugInfo.path,
 				buildId,
 			},
 			debugInfo,
 		})
-		return NextResponse.json({ received: true })
+		return NextResponse.json(
+			{ error: 'Event is currently being processed. Retry later.' },
+			{ status: 503 }
+		)
 	}
 
 	const requiresProvisioning = PROVISIONING_EVENT_TYPES.has(event.type)
-	const provisioningFlag =
-		isEnvEnabled(process.env.PROVISIONING_ENABLED) ||
-		isEnvEnabled(process.env.WP_PROVISION_ENABLED)
-	let provisioningEnabled = false
-	let provisioningStatus: 'enabled' | 'skipped' | 'not_applicable' = 'not_applicable'
-
-	if (requiresProvisioning) {
-		if (!provisioningFlag) {
-			provisioningStatus = 'skipped'
-		} else {
-			try {
-				getServerConfig()
-				provisioningEnabled = true
-				provisioningStatus = 'enabled'
-			} catch (error) {
-				if (isMissingEnvError(error)) {
-					logWebhookEvent({
-						eventId: event.id,
-						type: event.type,
-						verified: true,
-						outcome: 'error',
-						reason: 'provisioning_config_missing',
-						meta: {
-							path: debugInfo.path,
-							buildId,
-							message: (error as Error).message,
-						},
-						debugInfo,
-					})
-					return NextResponse.json(
-						{ received: true, skipped: 'provisioning_config_missing' },
-						{ status: 200 }
-					)
-				}
-				throw error
-			}
-		}
-	}
+	const provisioningStatus: 'enabled' | 'not_applicable' = requiresProvisioning
+		? 'enabled'
+		: 'not_applicable'
 
 	try {
-		if (requiresProvisioning && !provisioningEnabled) {
-			logProvisioningSkip(event, 'provisioning_disabled')
-		}
-
 		const allowMembershipEmail = shouldSendMembershipEmailForEvent(event.type)
 
-		switch (event.type) {
-			case 'checkout.session.completed': {
+		switch (String(event.type)) {
+			case 'checkout.session.completed':
+			case 'checkout.session.async_payment_succeeded': {
 				const session = event.data.object as Stripe.Checkout.Session
-				const sponsoredTier = isSponsoredSeatSession(session)
-				if (sponsoredTier) {
-					const seatResult = await upsertSponsoredSeatFromSession({
-						session,
-						tier: sponsoredTier,
-					})
-					console.info('sponsored_seat_created', {
-						tier: sponsoredTier,
-						seatId: seatResult.seatId ?? null,
-						created: seatResult.created,
-						eventId: event.id,
-					})
-					if (seatResult.seatId) {
-						const donorEmail =
-							session.customer_details?.email ?? session.customer_email ?? null
-						await notifySponsoredSeatPurchase({
-							seatId: seatResult.seatId,
+				if (event.type === 'checkout.session.completed') {
+					const sponsoredTier = isSponsoredSeatSession(session)
+					if (sponsoredTier) {
+						const seatResult = await upsertSponsoredSeatFromSession({
+							session,
 							tier: sponsoredTier,
-							donorEmail,
 						})
+						console.info('sponsored_seat_created', {
+							tier: sponsoredTier,
+							seatId: seatResult.seatId ?? null,
+							created: seatResult.created,
+							eventId: event.id,
+						})
+						if (seatResult.seatId) {
+							const donorEmail =
+								session.customer_details?.email ?? session.customer_email ?? null
+							await notifySponsoredSeatPurchase({
+								seatId: seatResult.seatId,
+								donorEmail,
+							})
+						}
 					}
 				}
-				if (provisioningEnabled) {
-					await provisionFromCheckoutSession(session, event.id, event.type, {
-						allowEmail: allowMembershipEmail,
-						eventLivemode: event.livemode,
+				await provisionFromCheckoutSession(session, event.id, event.type, {
+					allowEmail: allowMembershipEmail,
+					eventLivemode: event.livemode,
+				})
+				break
+			}
+			case 'checkout.session.async_payment_failed': {
+				const session = event.data.object as Stripe.Checkout.Session
+				const projected = await projectAsyncCheckoutFailure({
+					session,
+					eventId: event.id,
+					occurredAt: new Date(event.created * 1000),
+				})
+				if (!projected) {
+					console.warn('monthly_commitment_async_payment_failure_unmatched', {
+						eventId: event.id,
+						checkoutSessionId: session.id,
 					})
 				}
 				break
 			}
 			case 'customer.subscription.created': {
-				if (provisioningEnabled) {
-					const subscription = event.data.object as Stripe.Subscription
-					await syncFromSubscription(subscription.id, event.id, event.type, {
-						allowEmail: allowMembershipEmail,
-						eventLivemode: event.livemode,
-					})
-				}
+				const subscription = event.data.object as Stripe.Subscription
+				await syncFromSubscription(subscription.id, event.id, event.type, {
+					allowEmail: allowMembershipEmail,
+					eventLivemode: event.livemode,
+				})
 				break
 			}
 			case 'customer.subscription.updated': {
-				if (provisioningEnabled) {
-					const subscription = event.data.object as Stripe.Subscription
-					await syncFromSubscription(subscription.id, event.id, event.type, {
-						allowEmail: allowMembershipEmail,
-						eventLivemode: event.livemode,
-					})
-				}
+				const subscription = event.data.object as Stripe.Subscription
+				await syncFromSubscription(subscription.id, event.id, event.type, {
+					allowEmail: allowMembershipEmail,
+					eventLivemode: event.livemode,
+				})
 				break
 			}
 			case 'customer.subscription.deleted': {
-				if (provisioningEnabled) {
-					const subscription = event.data.object as Stripe.Subscription
-					await syncFromSubscription(subscription.id, event.id, event.type, {
-						allowEmail: allowMembershipEmail,
-						eventLivemode: event.livemode,
-					})
-				}
+				const subscription = event.data.object as Stripe.Subscription
+				await syncFromSubscription(subscription.id, event.id, event.type, {
+					allowEmail: allowMembershipEmail,
+					eventLivemode: event.livemode,
+				})
 				break
 			}
 			case 'invoice.paid': {
-				if (provisioningEnabled) {
-					const invoice = event.data.object as Stripe.Invoice
-					const subscriptionId =
-						typeof invoice.subscription === 'string'
-							? invoice.subscription
-							: invoice.subscription?.id ?? null
-					if (subscriptionId) {
-						await syncFromSubscription(subscriptionId, event.id, event.type, {
-							allowEmail: allowMembershipEmail,
-							eventLivemode: event.livemode,
-						})
-					} else {
-						logProvisioningSkip(event, 'missing_subscription_id')
-					}
+				const invoice = event.data.object as Stripe.Invoice
+				const subscriptionId = stripeRelationshipId(
+					(invoice as Stripe.Invoice & { subscription?: unknown }).subscription,
+				)
+				await projectInvoicePaymentState({
+					stripeCustomerId: stripeRelationshipId(invoice.customer),
+					stripeSubscriptionId: subscriptionId,
+					stripeInvoiceId: invoice.id,
+					stripePaymentIntentId: stripeRelationshipId(
+						(invoice as Stripe.Invoice & { payment_intent?: unknown }).payment_intent,
+					),
+					eventId: event.id,
+					paymentStatus: 'paid',
+					occurredAt: new Date(event.created * 1000),
+				})
+				if (subscriptionId) {
+					await syncFromSubscription(subscriptionId, event.id, event.type, {
+						allowEmail: allowMembershipEmail,
+						eventLivemode: event.livemode,
+					})
+				} else {
+					logProvisioningSkip(event, 'missing_subscription_id')
 				}
 				break
 			}
 			case 'invoice.payment_failed': {
+				const invoice = event.data.object as Stripe.Invoice
+				await projectInvoicePaymentState({
+					stripeCustomerId: stripeRelationshipId(invoice.customer),
+					stripeSubscriptionId: stripeRelationshipId(
+						(invoice as Stripe.Invoice & { subscription?: unknown }).subscription,
+					),
+					stripeInvoiceId: invoice.id,
+					stripePaymentIntentId: stripeRelationshipId(
+						(invoice as Stripe.Invoice & { payment_intent?: unknown }).payment_intent,
+					),
+					eventId: event.id,
+					paymentStatus: 'failed',
+					occurredAt: new Date(event.created * 1000),
+				})
+				break
+			}
+			case 'invoice.payment_action_required': {
+				const invoice = event.data.object as Stripe.Invoice
+				await projectInvoicePaymentState({
+					stripeCustomerId: stripeRelationshipId(invoice.customer),
+					stripeSubscriptionId: stripeRelationshipId(
+						(invoice as Stripe.Invoice & { subscription?: unknown }).subscription,
+					),
+					stripeInvoiceId: invoice.id,
+					stripePaymentIntentId: stripeRelationshipId(
+						(invoice as Stripe.Invoice & { payment_intent?: unknown }).payment_intent,
+					),
+					eventId: event.id,
+					paymentStatus: 'action_required',
+					occurredAt: new Date(event.created * 1000),
+				})
+				break
+			}
+			case 'subscription_schedule.created':
+			case 'subscription_schedule.updated':
+			case 'subscription_schedule.expiring':
+			case 'subscription_schedule.completed':
+			case 'subscription_schedule.released':
+			case 'subscription_schedule.canceled':
+			case 'subscription_schedule.aborted': {
+				const eventSchedule = event.data.object as Stripe.SubscriptionSchedule
+				const retrieveCurrentState =
+					event.type === 'subscription_schedule.created' ||
+					event.type === 'subscription_schedule.updated' ||
+					event.type === 'subscription_schedule.expiring'
+				const schedule = retrieveCurrentState
+					? await getStripe().subscriptionSchedules.retrieve(eventSchedule.id)
+					: eventSchedule
+				const projected = await projectSubscriptionSchedule({
+					schedule,
+					eventId: event.id,
+					eventType: event.type,
+				})
+				if (!projected.updated) {
+					console.warn('subscription_schedule_projection_unmatched', {
+						eventId: event.id,
+						type: event.type,
+						scheduleId: eventSchedule.id,
+					})
+				}
+				break
+			}
+			case 'refund.created':
+			case 'refund.updated':
+			case 'refund.failed': {
+				const refund = event.data.object as Stripe.Refund
+				console.info('stripe_refund_lifecycle_observed', {
+					eventId: event.id,
+					type: event.type,
+					refundId: refund.id,
+					status: refund.status ?? null,
+					chargeId: stripeRelationshipId(refund.charge),
+					paymentIntentId: stripeRelationshipId(refund.payment_intent),
+				})
+				break
+			}
+			case 'charge.refunded': {
+				const context = stripeChargeContext(event.data.object)
+				await projectInvoicePaymentState({
+					...context,
+					eventId: event.id,
+					paymentStatus: 'refunded',
+					occurredAt: new Date(event.created * 1000),
+				})
+				break
+			}
+			case 'charge.dispute.created':
+			case 'charge.dispute.updated': {
+				const dispute = event.data.object as Stripe.Dispute
+				await projectInvoicePaymentState({
+					...stripeDisputeContext(dispute),
+					disputeStatus: dispute.status,
+					eventId: event.id,
+					paymentStatus: 'disputed',
+					occurredAt: new Date(event.created * 1000),
+				})
+				break
+			}
+			case 'charge.dispute.closed': {
+				const dispute = event.data.object as Stripe.Dispute
+				await projectInvoicePaymentState({
+					...stripeDisputeContext(dispute),
+					disputeStatus: dispute.status,
+					eventId: event.id,
+					paymentStatus: disputeProjectionStatus(dispute.status),
+					occurredAt: new Date(event.created * 1000),
+				})
 				break
 			}
 			default:
 				break
 		}
 
-		const idempotencyResult = await markProcessed({
-			eventId: event.id,
-			eventType: event.type,
-			livemode: event.livemode,
-			payload: event as unknown as Record<string, unknown>,
-		})
-
-		if (idempotencyResult.dbAttempted && !idempotencyResult.dbSuccess) {
-			console.warn('Stripe webhook idempotency write failed', {
-				table: 'jpvbootcamp.stripe_webhook_events',
-				keys: { eventId: event.id, type: event.type },
-				message: idempotencyResult.error,
+		try {
+			const shadowResult = await shadowSyncStripeEventToPayload(event)
+			if (shadowResult.enabled) {
+				console.info('payload_billing_shadow_sync_result', {
+					eventId: event.id,
+					type: event.type,
+					processed: shadowResult.processed,
+					deduped: shadowResult.deduped,
+					actions: shadowResult.actions,
+				})
+			}
+		} catch (error) {
+			console.error('payload_billing_shadow_sync_failed', {
+				eventId: event.id,
+				type: event.type,
+				message: (error as Error).message,
 			})
 		}
 
-		const reason =
-			provisioningStatus === 'skipped' && requiresProvisioning
-				? 'provisioning_disabled'
-				: undefined
+		// All effects succeeded — mark the event fully processed.
+		await finalizeProcessed(event.id, ownerToken)
 
 		logWebhookEvent({
 			eventId: event.id,
 			type: event.type,
 			verified: true,
 			outcome: 'processed',
-			reason,
 			meta: {
 				path: debugInfo.path,
 				buildId,
@@ -542,6 +739,16 @@ export async function handleStripeWebhook(req: Request) {
 		})
 		return NextResponse.json({ received: true })
 	} catch (error) {
+		// Release the processing claim so Stripe can retry this delivery.
+		// A release failure must not mask the original error — log and continue to 500.
+		try {
+			await releaseProcessingClaim(event.id, ownerToken)
+		} catch (releaseError) {
+			console.error('releaseProcessingClaim failed — stale claim may remain', {
+				eventId: event.id,
+				message: (releaseError as Error).message,
+			})
+		}
 		logWebhookEvent({
 			eventId: event.id,
 			type: event.type,
@@ -555,6 +762,9 @@ export async function handleStripeWebhook(req: Request) {
 			},
 			debugInfo,
 		})
-		return NextResponse.json({ received: true, skipped: 'handler_failed' })
+		return NextResponse.json(
+			{ error: 'Internal error. Stripe should retry.' },
+			{ status: 500 }
+		)
 	}
 }

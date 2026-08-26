@@ -1,65 +1,747 @@
-# Deploy feature branches to preview/staging environment.
-# - Builds Docker image on GitHub
-# - Pushes to GHCR with branch tag
-# - Triggers Dokploy preview app redeployment
-#
-# Required GitHub secrets:
-#   DOKPLOY_PREVIEW_APP_ID — Dokploy application ID for the preview/staging app
-#   DOKPLOY_API_KEY        — Dokploy server API key
-#   DOKPLOY_API_BASE_URL   — Dokploy API base URL (e.g., https://dokploy.prochat.tools)
+name: Preview Build and Deploy
 
-name: Build and Deploy to Preview
+# Third-party action SHAs pinned to verified releases (resolved via GitHub API):
+#   actions/checkout@v4                   -> 11d5960a326750d5838078e36cf38b85af677262
+#   pnpm/action-setup@v4                  -> b906affcce14559ad1aafd4ab0e942779e9f58b1
+#   actions/setup-node@v4                 -> 49933ea5288caeca8642d1e84afbd3f7d6820020
+#   tailscale/github-action@v4.1.3        -> 780049a30b6ff5c378a9e7b389d15ece7a204888
+#   actions/upload-artifact@v4            -> ea165f8d65b6e75b540449e92b4886f43607fa02
+#   docker/setup-buildx-action@v3         -> 8d2750c68a42422c14e847fe6c8ac0403b4cbd6f
+#   docker/login-action@v3                -> c94ce9fb468520275223c153574b00df6fe4bcc9
+#   docker/build-push-action@v6           -> ca052bb54ab0790a636c9b5f226502c73d547a25
+#
+# Tailscale: OAuth scope auth_keys, subnet route 10.0.2.4/32, ACL tag:ci-reader -> 10.0.2.4:5433.
 
 on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: 'Operation: validate-only | deploy-preview | read-only-migration-plan'
+        required: false
+        type: string
+        default: 'validate-only'
+      expected_sha:
+        description: 'Full 40-character SHA (required for deploy-preview and read-only-migration-plan)'
+        required: false
+        type: string
+      confirmation:
+        description: 'Confirmation phrase (deploy-preview: deploy-staging-feature-tip; plan: run-read-only-staging-payload-migration-plan)'
+        required: false
+        type: string
   push:
     branches:
-      - 'feature/**'
-      - 'pr/**'
+      - 'feature/course-branding-and-preview'
+
+permissions:
+  contents: read
+  packages: write
+
+# Operation-aware concurrency: deploy runs share a cancellable group; plan runs
+# use a separate non-cancellable group so a push never kills an in-flight plan.
+concurrency:
+  group: ${{ github.event_name == 'workflow_dispatch' && inputs.operation == 'read-only-migration-plan' && 'staging-payload-migration-plan' || format('preview-deploy-{0}', github.ref) }}
+  cancel-in-progress: ${{ !(github.event_name == 'workflow_dispatch' && inputs.operation == 'read-only-migration-plan') }}
 
 jobs:
-  build-and-deploy-preview:
+  validate-only:
+    name: Validate, build, and test (push gate)
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
+    timeout-minutes: 40
+    if: |
+      (github.event_name == 'push' && !contains(github.event.head_commit.message, '[migration-plan-only]')) ||
+      (github.event_name == 'workflow_dispatch' && (inputs.operation == 'validate-only' || inputs.operation == ''))
+    env:
+      APP_PUBLIC_URL: http://127.0.0.1:3107
+      NEXT_PUBLIC_APP_URL: http://127.0.0.1:3107
+      E2E_BASE_URL: http://127.0.0.1:3107
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Validate deployment boundary
+        shell: bash
+        env:
+          GH_REF_NAME: ${{ github.ref_name }}
+          GH_EVENT_NAME: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          # Canonical staging allow-list — no other target is permitted
+          ALLOWED_BRANCH="feature/course-branding-and-preview"
+          ALLOWED_ORIGIN="https://preview.jpvbootcamp.com"
+          ALLOWED_DOKPLOY_SLUG="clients-jpv-bootcamp-app-tp9xrk"
+          ALLOWED_DOKPLOY_ID="I_2Vukga3cc3ZhaG-mUzU"
+          ALLOWED_SCHEMA="jpvbootcamp_staging"
+          ALLOWED_HOST="10.0.2.4"
+          ALLOWED_PORT="5433"
+          ALLOWED_DB="jpvbootcamp"
 
-      - uses: docker/setup-buildx-action@v3
+          # Reject main branch
+          if [ "${GH_REF_NAME}" = "main" ]; then
+            echo "DEPLOY-DENIED: this workflow must not run on main. Only ${ALLOWED_BRANCH} is allowed." >&2
+            exit 1
+          fi
+          echo "Staging lane: branch=${ALLOWED_BRANCH} origin=${ALLOWED_ORIGIN} schema=${ALLOWED_SCHEMA}"
+          echo "              host=${ALLOWED_HOST} port=${ALLOWED_PORT} db=${ALLOWED_DB}"
+          echo "              dokploy=${ALLOWED_DOKPLOY_SLUG} (${ALLOWED_DOKPLOY_ID})"
 
-      - uses: docker/login-action@v3
+      - name: Check out commit
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && 'refs/heads/feature/course-branding-and-preview' || github.ref }}
+          fetch-depth: 0
+
+      - name: Verify SHA ancestry under feature branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          ALLOWED_BRANCH="origin/feature/course-branding-and-preview"
+          CURRENT_SHA="$(git rev-parse HEAD)"
+          # Confirm HEAD is reachable from the allowed branch
+          if ! git merge-base --is-ancestor "$CURRENT_SHA" "$ALLOWED_BRANCH" 2>/dev/null; then
+            echo "DEPLOY-DENIED: SHA $CURRENT_SHA is not an ancestor of $ALLOWED_BRANCH" >&2
+            echo "Only commits reachable from feature/course-branding-and-preview may be deployed here." >&2
+            exit 1
+          fi
+          echo "SHA ancestry confirmed: $CURRENT_SHA is under $ALLOWED_BRANCH"
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1  # v4
+        with:
+          version: 10.33.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
+        with:
+          node-version: '20'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type check payload config
+        run: pnpm type-check:payload
+
+      - name: Build application
+        run: pnpm run build
+
+      - name: Run deterministic non-browser release gate
+        run: pnpm test:release
+
+      - name: Fix apt mirrors (replace dead Azure mirror with public archive)
+        run: |
+          sudo sed -i 's|http://azure.archive.ubuntu.com|https://archive.ubuntu.com|g' \
+            /etc/apt/sources.list /etc/apt/sources.list.d/*.list 2>/dev/null || true
+
+      - name: Install pinned Chromium browser
+        timeout-minutes: 10
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run launch browser E2E
+        run: pnpm test:e2e
+
+      - name: Upload browser failure evidence
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        with:
+          name: playwright-failure-${{ github.run_id }}
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  deploy-preview:
+    name: Deploy preview (manual dispatch only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    environment: preview-deploy
+    if: github.event_name == 'workflow_dispatch' && inputs.operation == 'deploy-preview'
+
+    steps:
+      - name: Validate inputs
+        shell: bash
+        env:
+          INPUT_EXPECTED_SHA: ${{ inputs.expected_sha }}
+          INPUT_CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          if ! printf '%s' "${INPUT_EXPECTED_SHA}" | grep -qE '^[0-9a-f]{40}$'; then
+            echo "DEPLOY-DENIED: expected_sha must be exactly 40 lowercase hexadecimal characters" >&2
+            exit 1
+          fi
+          EXPECTED_CONFIRMATION="deploy-staging-feature-tip"
+          if [ "${INPUT_CONFIRMATION}" != "${EXPECTED_CONFIRMATION}" ]; then
+            echo "DEPLOY-DENIED: confirmation must be exactly '${EXPECTED_CONFIRMATION}'" >&2
+            exit 1
+          fi
+
+      - name: Validate deployment boundary
+        shell: bash
+        env:
+          GH_REF_NAME: ${{ github.ref_name }}
+          GH_EVENT_NAME: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          # Canonical staging allow-list — no other target is permitted
+          ALLOWED_BRANCH="feature/course-branding-and-preview"
+          ALLOWED_ORIGIN="https://preview.jpvbootcamp.com"
+          ALLOWED_DOKPLOY_SLUG="clients-jpv-bootcamp-app-tp9xrk"
+          ALLOWED_DOKPLOY_ID="I_2Vukga3cc3ZhaG-mUzU"
+          ALLOWED_SCHEMA="jpvbootcamp_staging"
+          ALLOWED_HOST="10.0.2.4"
+          ALLOWED_PORT="5433"
+          ALLOWED_DB="jpvbootcamp"
+
+          # Reject main branch
+          if [ "${GH_REF_NAME}" = "main" ]; then
+            echo "DEPLOY-DENIED: this workflow must not run on main. Only ${ALLOWED_BRANCH} is allowed." >&2
+            exit 1
+          fi
+          echo "Staging lane: branch=${ALLOWED_BRANCH} origin=${ALLOWED_ORIGIN} schema=${ALLOWED_SCHEMA}"
+          echo "              host=${ALLOWED_HOST} port=${ALLOWED_PORT} db=${ALLOWED_DB}"
+          echo "              dokploy=${ALLOWED_DOKPLOY_SLUG} (${ALLOWED_DOKPLOY_ID})"
+
+      - name: Check out feature branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+        with:
+          ref: refs/heads/feature/course-branding-and-preview
+          fetch-depth: 0
+
+      - name: Verify requested SHA is current remote tip
+        shell: bash
+        run: |
+          set -euo pipefail
+          BRANCH_TIP="$(git rev-parse HEAD)"
+          if [ "$BRANCH_TIP" != "${{ inputs.expected_sha }}" ]; then
+            echo "DEPLOY-DENIED: requested SHA (${{ inputs.expected_sha }}) does not match current tip of feature/course-branding-and-preview ($BRANCH_TIP)" >&2
+            exit 1
+          fi
+          echo "SHA verified: $BRANCH_TIP is the current remote tip"
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1  # v4
+        with:
+          version: 10.33.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
+        with:
+          node-version: '20'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type check payload config
+        run: pnpm type-check:payload
+
+      - name: Build application
+        env:
+          NEXT_PUBLIC_APP_URL: https://preview.jpvbootcamp.com
+          APP_PUBLIC_URL: https://preview.jpvbootcamp.com
+        run: pnpm run build
+
+      - name: Run deterministic non-browser release gate
+        run: pnpm test:release
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f  # v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9  # v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ github.token }}
 
-      - name: Determine Docker tag
-        id: docker-tag
+      - name: Determine image tags
+        id: image-tags
+        shell: bash
         run: |
-          if [ "${{ github.ref_name }}" = "main" ]; then
-            TAG="latest"
-          else
-            TAG=$(echo "${{ github.ref_name }}" | sed 's|/|-|g')
-          fi
-          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          set -euo pipefail
+          sha_tag="ghcr.io/${{ github.repository }}:${{ github.sha }}"
+          branch_tag="ghcr.io/${{ github.repository }}:feature-course-branding-and-preview"
+          {
+            echo "tags<<EOF"
+            echo "$branch_tag"
+            echo "$sha_tag"
+            echo "EOF"
+            echo "sha_tag=$sha_tag"
+          } >> "$GITHUB_OUTPUT"
 
-      - name: Build and push
-        uses: docker/build-push-action@v5
+      - name: Build and publish immutable image
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25  # v6
         with:
           context: .
+          file: Dockerfile
           platforms: linux/amd64
           push: true
-          tags: |
-            ghcr.io/${{ github.repository }}:${{ steps.docker-tag.outputs.tag }}
-            ghcr.io/${{ github.repository }}:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          tags: ${{ steps.image-tags.outputs.tags }}
+          build-args: |
+            NEXT_PUBLIC_APP_URL=https://preview.jpvbootcamp.com
+            APP_BASE_URL=https://preview.jpvbootcamp.com
+            NEXT_PUBLIC_SERVER_URL=https://preview.jpvbootcamp.com
+            IMAGE_TAG=${{ github.sha }}
+            COMMIT_SHA=${{ github.sha }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.created=${{ github.event.head_commit.timestamp }}
+            staging-origin=https://preview.jpvbootcamp.com
+          cache-from: type=gha,scope=preview-deploy
+          cache-to: type=gha,mode=max,scope=preview-deploy
 
-      - name: Image pushed to GHCR
+      - name: Ensure durable staging media volume
+        if: success()
+        env:
+          DOKPLOY_PREVIEW_APP_ID: ${{ secrets.DOKPLOY_PREVIEW_APP_ID }}
+          DOKPLOY_API_KEY: ${{ secrets.DOKPLOY_API_KEY }}
+        run: pnpm exec tsx scripts/staging-gates/ensurePreviewMediaMount.mts
+
+      - name: Ensure staging Traefik routing labels (application.update labelsSwarm)
+        if: success()
+        env:
+          DOKPLOY_PREVIEW_APP_ID: ${{ secrets.DOKPLOY_PREVIEW_APP_ID }}
+          DOKPLOY_API_KEY: ${{ secrets.DOKPLOY_API_KEY }}
+        run: pnpm exec tsx scripts/staging-gates/ensurePreviewRouting.mts
+
+      - name: Ensure GHCR registry credentials in Dokploy
+        if: success()
+        env:
+          DOKPLOY_PREVIEW_APP_ID: ${{ secrets.DOKPLOY_PREVIEW_APP_ID }}
+          DOKPLOY_API_KEY: ${{ secrets.DOKPLOY_API_KEY }}
+          GHCR_PAT: ${{ secrets.GHCR_PAT }}
+        run: pnpm exec tsx scripts/staging-gates/ensureGhcrRegistryCredentials.mts
+
+      - name: Trigger Dokploy redeploy
+        if: success()
+        shell: bash
+        env:
+          DOKPLOY_PREVIEW_APP_ID: ${{ secrets.DOKPLOY_PREVIEW_APP_ID }}
+          DOKPLOY_API_KEY: ${{ secrets.DOKPLOY_API_KEY }}
+          GITHUB_TOKEN_LOGIN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "✅ Docker image built and pushed to GHCR:"
-          echo "   ghcr.io/${{ github.repository }}:${{ steps.docker-tag.outputs.tag }}"
-          echo ""
-          echo "Dokploy staging app will pull and redeploy automatically."
-          echo "Access preview at: https://preview.jpvbootcamp.com"
+          set -euo pipefail
+
+          # Positive allow-list: only the canonical staging Dokploy app is permitted
+          ALLOWED_SLUG="clients-jpv-bootcamp-app-tp9xrk"
+          ALLOWED_INTERNAL_ID="I_2Vukga3cc3ZhaG-mUzU"
+
+          if [ -z "$DOKPLOY_PREVIEW_APP_ID" ]; then
+            echo "DEPLOY-DENIED: DOKPLOY_PREVIEW_APP_ID secret is unset or empty" >&2
+            exit 1
+          fi
+          if [ "$DOKPLOY_PREVIEW_APP_ID" != "$ALLOWED_SLUG" ] && [ "$DOKPLOY_PREVIEW_APP_ID" != "$ALLOWED_INTERNAL_ID" ]; then
+            echo "DEPLOY-DENIED: DOKPLOY_PREVIEW_APP_ID ('$DOKPLOY_PREVIEW_APP_ID') does not match allowed staging target" >&2
+            echo "  Allowed: $ALLOWED_SLUG or $ALLOWED_INTERNAL_ID" >&2
+            echo "  No other target is permitted." >&2
+            exit 1
+          fi
+          echo "Deploy guard passed: DOKPLOY_PREVIEW_APP_ID matches canonical staging target"
+
+          NEW_IMAGE="${{ steps.image-tags.outputs.sha_tag }}"
+          COMMIT_MSG=$(git log -1 --pretty=format:"%s" ${{ github.sha }})
+          COMMIT_AUTHOR=$(git log -1 --pretty=format:"%an" ${{ github.sha }})
+          COMMIT_DATE=$(git log -1 --pretty=format:"%ci" ${{ github.sha }})
+          DESCRIPTION="${COMMIT_AUTHOR} · ${COMMIT_DATE}"$'\n\n'"${{ github.sha }}"
+
+          UPDATE_RESPONSE=$(curl -s -o /tmp/dokploy_update_response.json -w "%{http_code}" \
+            -X POST "https://dokploy.prochat.tools/api/application.update" \
+            -H "x-api-key: $DOKPLOY_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"applicationId\": \"$DOKPLOY_PREVIEW_APP_ID\",
+              \"dockerImage\": \"$NEW_IMAGE\"
+            }")
+
+          echo "Image update HTTP status: $UPDATE_RESPONSE"
+          if [ "$UPDATE_RESPONSE" != "200" ]; then
+            echo "Warning: image update returned $UPDATE_RESPONSE — continuing with deploy"
+            cat /tmp/dokploy_update_response.json || true
+          else
+            echo "Image updated to: $NEW_IMAGE"
+          fi
+
+          RESPONSE=$(curl -s -o /tmp/dokploy_response.json -w "%{http_code}" \
+            -X POST "https://dokploy.prochat.tools/api/application.deploy" \
+            -H "x-api-key: $DOKPLOY_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"applicationId\": \"$DOKPLOY_PREVIEW_APP_ID\",
+              \"title\": $(echo \"$COMMIT_MSG\" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read().strip()))'),
+              \"description\": $(echo \"$DESCRIPTION\" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read().strip()))')
+            }")
+
+          echo "HTTP status: $RESPONSE"
+          echo "Deploy API response status recorded (body suppressed from logs)"
+
+          if [ "$RESPONSE" != "200" ]; then
+            echo "Dokploy trigger failed with status $RESPONSE"
+            exit 1
+          fi
+
+          echo "Deployment triggered successfully for: $NEW_IMAGE"
+          echo "Provenance: deployed from $(git rev-parse HEAD)"
+
+
+      - name: Verify staging admin secret readiness
+        if: success()
+        shell: bash
+        env:
+          STAGING_ADMIN_EMAIL: ${{ secrets.STAGING_ADMIN_EMAIL }}
+          STAGING_ADMIN_PASSWORD: ${{ secrets.STAGING_ADMIN_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [ -z "$STAGING_ADMIN_EMAIL" ]; then
+            echo "ADMIN-RESPONSIVE-DENIED: repository or preview environment secret STAGING_ADMIN_EMAIL is missing" >&2
+            exit 1
+          fi
+          if [ -z "$STAGING_ADMIN_PASSWORD" ]; then
+            echo "ADMIN-RESPONSIVE-DENIED: repository or preview environment secret STAGING_ADMIN_PASSWORD is missing" >&2
+            exit 1
+          fi
+          echo "Required staging admin secret names are configured"
+
+      - name: Wait for deployed preview revision
+        if: success()
+        env:
+          STAGING_URL: https://preview.jpvbootcamp.com
+          EXPECTED_DEPLOYMENT_SHA: ${{ github.sha }}
+          DOKPLOY_API_KEY: ${{ secrets.DOKPLOY_API_KEY }}
+          DOKPLOY_PREVIEW_APP_ID: ${{ secrets.DOKPLOY_PREVIEW_APP_ID }}
+          DEPLOY_SSH_HOST: ${{ secrets.DEPLOY_SSH_HOST }}
+          DEPLOY_SSH_USER: ${{ secrets.DEPLOY_SSH_USER }}
+        run: pnpm exec tsx scripts/staging-gates/waitForPreviewDeployment.mts
+
+      - name: Diagnose Dokploy deployment (on wait failure)
+        if: failure()
+        env:
+          DOKPLOY_API_KEY: ${{ secrets.DOKPLOY_API_KEY }}
+        run: pnpm exec tsx scripts/staging-gates/diagnoseDokployDeployment.mts || true
+
+      - name: Fix apt mirrors (replace dead Azure mirror with public archive)
+        if: success()
+        run: |
+          sudo sed -i 's|http://azure.archive.ubuntu.com|https://archive.ubuntu.com|g' \
+            /etc/apt/sources.list /etc/apt/sources.list.d/*.list 2>/dev/null || true
+
+      - name: Install pinned Chromium browser
+        if: success()
+        timeout-minutes: 10
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run authenticated admin responsive gate
+        if: success()
+        env:
+          STAGING_URL: https://preview.jpvbootcamp.com
+          STAGING_ADMIN_EMAIL: ${{ secrets.STAGING_ADMIN_EMAIL }}
+          STAGING_ADMIN_PASSWORD: ${{ secrets.STAGING_ADMIN_PASSWORD }}
+        run: pnpm test:e2e:admin-responsive
+
+      - name: Upload authenticated admin failure evidence
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        with:
+          name: admin-responsive-failure-${{ github.run_id }}
+          path: /tmp/jpv-admin-regression-hardening/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  read-only-plan:
+    name: Read-only staging Payload migration plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: staging-migration-plan
+    if: github.event_name == 'workflow_dispatch' && inputs.operation == 'read-only-migration-plan'
+    permissions:
+      contents: read
+
+    steps:
+      # ── Input guards (no network, no secrets, no env required) ───────────
+
+      - name: Validate inputs — confirmation string
+        shell: bash
+        env:
+          INPUT_CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          EXPECTED_CONFIRMATION="run-read-only-staging-payload-migration-plan"
+          if [ "${INPUT_CONFIRMATION}" != "${EXPECTED_CONFIRMATION}" ]; then
+            echo "PLAN-DENIED: confirmation must be exactly '${EXPECTED_CONFIRMATION}'" >&2
+            exit 1
+          fi
+
+      - name: Validate inputs — expected_sha is full 40-char SHA
+        shell: bash
+        env:
+          INPUT_SHA: ${{ inputs.expected_sha }}
+        run: |
+          set -euo pipefail
+          if ! printf '%s' "${INPUT_SHA}" | grep -qE '^[0-9a-f]{40}$'; then
+            echo "PLAN-DENIED: expected_sha must be exactly 40 lowercase hexadecimal characters" >&2
+            exit 1
+          fi
+
+      - name: Validate trigger — reject main branch
+        shell: bash
+        env:
+          GH_REF: ${{ github.ref }}
+          GH_REF_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          if [ "${GH_REF}" = "refs/heads/main" ] || [ "${GH_REF_NAME}" = "main" ]; then
+            echo "PLAN-DENIED: this workflow must not run on main." >&2
+            exit 1
+          fi
+
+      # ── Environment readiness guards (from injected env vars/secrets) ────
+
+      - name: Verify PLAN_READY_FOR_DISPATCH readiness variable
+        shell: bash
+        env:
+          PLAN_READY_FOR_DISPATCH: ${{ vars.PLAN_READY_FOR_DISPATCH }}
+        run: |
+          set -euo pipefail
+          if [ "${PLAN_READY_FOR_DISPATCH:-}" != "true" ]; then
+            echo "PLAN-DENIED: environment variable PLAN_READY_FOR_DISPATCH must be set to 'true' in the 'staging-migration-plan' environment" >&2
+            echo "Set it via: Settings → Environments → staging-migration-plan → Variables → PLAN_READY_FOR_DISPATCH = true" >&2
+            exit 1
+          fi
+          echo "PLAN_READY_FOR_DISPATCH confirmed: true"
+
+      - name: Verify required secrets are present
+        shell: bash
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          TAILSCALE_OAUTH_CLIENT_ID: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
+          TAILSCALE_OAUTH_SECRET: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
+        run: |
+          set -euo pipefail
+          if [ -z "${DATABASE_URL:-}" ]; then
+            echo "PLAN-DENIED: environment secret DATABASE_URL is absent or empty" >&2
+            exit 1
+          fi
+          if [ -z "${TAILSCALE_OAUTH_CLIENT_ID:-}" ]; then
+            echo "PLAN-DENIED: environment secret TAILSCALE_OAUTH_CLIENT_ID is absent or empty" >&2
+            exit 1
+          fi
+          if [ -z "${TAILSCALE_OAUTH_SECRET:-}" ]; then
+            echo "PLAN-DENIED: environment secret TAILSCALE_OAUTH_SECRET is absent or empty" >&2
+            exit 1
+          fi
+          echo "Required secrets confirmed present (values masked)"
+
+      # ── Source checkout: branch-attached, not detached ───────────────────
+
+      - name: Check out feature branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+        with:
+          ref: refs/heads/feature/course-branding-and-preview
+          fetch-depth: 0
+
+      - name: Verify branch name, HEAD SHA, ancestry, and remote tip
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+        run: |
+          set -euo pipefail
+          BRANCH="$(git branch --show-current)"
+          if [ "$BRANCH" != "feature/course-branding-and-preview" ]; then
+            echo "PLAN-DENIED: expected branch 'feature/course-branding-and-preview', got '$BRANCH'" >&2
+            exit 1
+          fi
+          ACTUAL_SHA="$(git rev-parse HEAD)"
+          if [ "$ACTUAL_SHA" != "${EXPECTED_SHA}" ]; then
+            echo "PLAN-DENIED: branch tip does not match expected_sha" >&2
+            exit 1
+          fi
+          # Reject if SHA is already reachable from main
+          if git merge-base --is-ancestor "$ACTUAL_SHA" "origin/main" 2>/dev/null; then
+            echo "PLAN-DENIED: SHA is already reachable from main." >&2
+            exit 1
+          fi
+          REMOTE_TIP="$(git rev-parse origin/feature/course-branding-and-preview)"
+          if [ "$ACTUAL_SHA" != "$REMOTE_TIP" ]; then
+            echo "PLAN-DENIED: expected_sha is not the current remote tip" >&2
+            echo "Run pnpm staging:payload-migration-plan locally to confirm the remote tip before dispatching." >&2
+            exit 1
+          fi
+          echo "Branch: $BRANCH | HEAD verified | remote tip verified"
+
+      # ── Toolchain ─────────────────────────────────────────────────────────
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1  # v4
+        with:
+          version: 10.33.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
+        with:
+          node-version: '20'
+          cache: pnpm
+
+      - name: Install dependencies (frozen)
+        run: pnpm install --frozen-lockfile
+
+      # ── Credential masking ────────────────────────────────────────────────
+
+      - name: Mask DATABASE_URL
+        shell: bash
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${DATABASE_URL:-}" ]; then
+            echo "PLAN-DENIED: DATABASE_URL is not set. The staging-migration-plan environment must provide it." >&2
+            exit 1
+          fi
+          echo "::add-mask::$DATABASE_URL"
+
+      # ── Network: Tailscale → ping → TCP probe ─────────────────────────────
+
+      - name: Connect to Tailscale
+        uses: tailscale/github-action@780049a30b6ff5c378a9e7b389d15ece7a204888  # v4.1.3
+        with:
+          oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
+          tags: tag:ci-reader
+
+      - name: Ping staging host via Tailscale (connectivity probe)
+        shell: bash
+        run: |
+          set -euo pipefail
+          STAGING_HOST="10.0.2.4"
+          if ! tailscale ping --timeout=10s "$STAGING_HOST" 2>/dev/null; then
+            echo "PLAN-DENIED: Tailscale ping to $STAGING_HOST failed — check tailnet, subnet route, and ACL tag:ci-reader -> $STAGING_HOST:5433" >&2
+            exit 1
+          fi
+          echo "Tailscale ping to $STAGING_HOST confirmed"
+
+      - name: Verify TCP path to staging host port 5433 (fail closed)
+        shell: bash
+        run: |
+          set -euo pipefail
+          STAGING_HOST="10.0.2.4"
+          if ! nc -z -w 5 "$STAGING_HOST" 5433 2>/dev/null; then
+            echo "PLAN-DENIED: cannot reach $STAGING_HOST:5433. The approved Tailscale path is required." >&2
+            echo "Confirm: subnet route 10.0.2.4/32 is exported and ACL allows tag:ci-reader -> 10.0.2.4:5433." >&2
+            exit 1
+          fi
+          echo "TCP path to $STAGING_HOST:5433 confirmed"
+
+      # ── Read-only plan execution ──────────────────────────────────────────
+
+      - name: Plan pending staging Payload migration (read-only)
+        id: migration-plan
+        shell: bash
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PAYLOAD_MIGRATION_SCHEMA: jpvbootcamp_staging
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+        run: |
+          set -euo pipefail
+          STDOUT_FILE=$(mktemp)
+          STDERR_FILE=$(mktemp)
+          chmod 600 "$STDOUT_FILE" "$STDERR_FILE"
+          # Trap deletes both raw files on any exit — credentials never persist
+          trap 'rm -f "$STDOUT_FILE" "$STDERR_FILE"' EXIT
+
+          # Build argument array — EXPECTED_SHA injected via env, never interpolated in source
+          PLAN_ARGS=(
+            "scripts/release/runStagingPayloadMigration.ts"
+            "plan"
+            "--output=json"
+            "--expected-commit=${EXPECTED_SHA}"
+            "--environment=staging"
+            "--target-id=jpvbootcamp-staging"
+            "--expected-schema=jpvbootcamp_staging"
+            "--expected-hostname=10.0.2.4"
+            "--expected-database=jpvbootcamp"
+          )
+
+          set +e
+          # stdout = exactly one JSON document; stderr = operational logs (separated, never merged)
+          # Use node_modules/.bin/tsx directly — pnpm exec emits its own stdout that contaminates JSON
+          ./node_modules/.bin/tsx "${PLAN_ARGS[@]}" \
+            > "$STDOUT_FILE" \
+            2> "$STDERR_FILE"
+          PLAN_EXIT=$?
+          set -e
+
+          # Fallback schema-valid artifact — used when early guards abort before the runner writes output.
+          # Must satisfy all fields required by the schema validation below.
+          FALLBACK_ARTIFACT='{"version":2,"resultCode":"plan_blocked","blockerCodes":["output_format_invalid"],"branch":"unknown","commit":"unknown","schema":"","environment":"","targetId":"","appliedPayloadCount":0,"expectedPendingMigrations":[],"expectedPendingBatchIsOnlyMissing":false,"unexpectedPayloadCount":0,"duplicatePayloadCount":0,"malformedPayloadCount":0,"prismaHealthy":false}'
+
+          # Reject mixed output: stdout must begin with '{' — no operational log lines before JSON
+          FIRST_CHAR="$(head -c 1 "$STDOUT_FILE" 2>/dev/null || echo '')"
+          if [ "$FIRST_CHAR" != "{" ]; then
+            echo "PLAN-BLOCKED: stdout does not begin with '{' — mixed output detected" >&2
+            printf '%s\n' "${FALLBACK_ARTIFACT/output_format_invalid/output_format_invalid}" > plan-result-sanitized.json
+            exit 1
+          fi
+
+          # Reject trailing bytes: use strict Node.js JSON.parse (not jq streaming) for single-document validation
+          # jq -e 'type == "object"' accepts multiple documents; JSON.parse does not.
+          ALLOWED_BLOCKER_CODES='["expected_commit_required","branch_guard_failed","commit_guard_failed","database_url_missing","database_url_invalid","environment_guard_failed","target_identity_guard_failed","production_marker_rejected","hostname_mismatch","worktree_integrity_failed","status_query_failed","malformed_payload_evidence","schema_identity_mismatch","applied_count_mismatch","pending_migration_mismatch","unexpected_payload_migrations","duplicate_payload_migrations","missing_prisma_migrations","unexpected_prisma_migrations","duplicate_prisma_migrations","unhealthy_prisma_migrations","prisma_evidence_empty","plan_blocked_unknown","argument_parse_failed","output_format_invalid","schema_validation_failed","artifact_write_failed","credential_scan_failed"]'
+          if ! node scripts/staging-gates/validate-plan-result-step1.js "$STDOUT_FILE" "$ALLOWED_BLOCKER_CODES"
+          then
+            echo "PLAN-BLOCKED: JSON schema validation failed — required keys, types, or values invalid" >&2
+            printf '%s\n' '{"version":2,"resultCode":"plan_blocked","blockerCodes":["schema_validation_failed"],"branch":"unknown","commit":"unknown","schema":"","environment":"","targetId":"","appliedPayloadCount":0,"expectedPendingMigrations":[],"expectedPendingBatchIsOnlyMissing":false,"unexpectedPayloadCount":0,"duplicatePayloadCount":0,"malformedPayloadCount":0,"prismaHealthy":false}' > plan-result-sanitized.json
+            exit 1
+          fi
+
+          # Write the sanitized artifact by re-serializing only known-good fields via Node.js
+          # Never copy raw stdout or stderr into the artifact
+          if ! node scripts/staging-gates/validate-plan-result-step2.js "$STDOUT_FILE" plan-result-sanitized.json
+          then
+            echo "PLAN-BLOCKED: artifact write failed" >&2
+            printf '%s\n' '{"version":2,"resultCode":"plan_blocked","blockerCodes":["artifact_write_failed"],"branch":"unknown","commit":"unknown","schema":"","environment":"","targetId":"","appliedPayloadCount":0,"expectedPendingMigrations":[],"expectedPendingBatchIsOnlyMissing":false,"unexpectedPayloadCount":0,"duplicatePayloadCount":0,"malformedPayloadCount":0,"prismaHealthy":false}' > plan-result-sanitized.json
+            exit 1
+          fi
+
+          # Credential scan on the sanitized artifact — hard failure on any match
+          if grep -qiE \
+            'postgres(ql)?://|://[^@/]+:[^@/]+@|[Bb]earer [A-Za-z0-9+/=_-]{8,}|[Bb]asic [A-Za-z0-9+/=]{8,}|password[[:space:]]*=|secret[[:space:]]*=|DATABASE_URL[[:space:]]*=|PGPASSWORD[[:space:]]*=' \
+            plan-result-sanitized.json; then
+            echo "PLAN-BLOCKED: credential-like string detected in sanitized output" >&2
+            printf '%s\n' '{"version":2,"resultCode":"plan_blocked","blockerCodes":["credential_scan_failed"],"branch":"unknown","commit":"unknown","schema":"","environment":"","targetId":"","appliedPayloadCount":0,"expectedPendingMigrations":[],"expectedPendingBatchIsOnlyMissing":false,"unexpectedPayloadCount":0,"duplicatePayloadCount":0,"malformedPayloadCount":0,"prismaHealthy":false}' > plan-result-sanitized.json
+            exit 1
+          fi
+
+          # Read resultCode from the sanitized file — not from the raw stdout file
+          RESULT_CODE="$(node -e "process.stdout.write(JSON.parse(require('fs').readFileSync('plan-result-sanitized.json','utf8')).resultCode)" 2>/dev/null || echo 'plan_blocked')"
+
+          # Semantic verification: pre-apply plan_ok requires all evidence fields to match the reviewed 40-applied / six-migration billing batch exactly.
+          # Wrong-target, wrong-commit, wrong-schema, anomaly counts, or unhealthy Prisma must not pass.
+          if [ "$RESULT_CODE" = "plan_ok" ] && [ $PLAN_EXIT -eq 0 ]; then
+            EXPECTED_PENDING_MIGRATIONS='["20260825_120000_billing_invoice_visibility","20260825_121000_membership_support_runtime_alignment","20260825_122000_membership_support_relationships","20260825_123000_membership_support_relationship_alignment","20260825_124000_membership_review_assignee_alignment","20260825_125000_membership_shadow_state_alignment"]'
+            REQUIRED_BRANCH="feature/course-branding-and-preview"
+            REQUIRED_SCHEMA="jpvbootcamp_staging"
+            REQUIRED_ENVIRONMENT="staging"
+            REQUIRED_TARGET_ID="jpvbootcamp-staging"
+            EXPECTED_APPLIED_COUNT=40
+            if ! node scripts/staging-gates/validate-plan-result-step3.js plan-result-sanitized.json "$EXPECTED_SHA" "$EXPECTED_PENDING_MIGRATIONS" "$REQUIRED_BRANCH" "$REQUIRED_SCHEMA" "$REQUIRED_ENVIRONMENT" "$REQUIRED_TARGET_ID" "$EXPECTED_APPLIED_COUNT"
+            then
+              echo "PLAN-BLOCKED: plan_ok semantic verification failed — evidence does not match required values" >&2
+              exit 1
+            fi
+            echo "plan_ok=true" >> "$GITHUB_OUTPUT"
+            PLAN_COMMIT="$(node -e "process.stdout.write(JSON.parse(require('fs').readFileSync('plan-result-sanitized.json','utf8')).commit)" 2>/dev/null || echo 'unknown')"
+            echo "plan_commit=${PLAN_COMMIT:0:40}" >> "$GITHUB_OUTPUT"
+            echo "Read-only plan passed: resultCode=plan_ok, all semantic checks verified"
+          else
+            echo "PLAN-BLOCKED: migration plan did not pass (exit=${PLAN_EXIT}, resultCode=${RESULT_CODE}). See artifact for sanitized details." >&2
+            exit 1
+          fi
+
+      - name: Upload sanitized plan artifact
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        with:
+          name: staging-migration-plan-${{ github.run_id }}
+          path: plan-result-sanitized.json
+          retention-days: 30
+          if-no-files-found: error

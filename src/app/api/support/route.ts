@@ -1,124 +1,148 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { sendSupportEmail } from '@/lib/email'
+import { getPayload } from 'payload'
 
-// Support emails reuse the canonical Resend helpers in src/lib/email.ts.
-const RATE_LIMIT_WINDOW_MS = 60_000
-const lastSupportRequestByIp = new Map<string, number>()
+import payloadConfig from '@/payload.config'
+import { getServerConfig } from '@/lib/config'
+import { isValidInternationalPhone, normalizePhone } from '@/lib/normalize-phone'
+import { guardPublicRequest } from '@/lib/publicRequestGuard'
+import {
+  getPublicRequestApplicationOrigin,
+  logPublicRequestGuard,
+  publicRequestFailureResponse,
+  publicRequestRateLimiter,
+  trustPublicRequestProxyHeaders,
+} from '@/lib/publicRequestRoute'
+import { queueAndAttemptEmailEvent } from '@/lib/payloadCourse/events'
+import {
+  SUPPORT_REQUEST_ADMIN_NOTIFICATION_TEMPLATE_KEY,
+  SUPPORT_REQUEST_RECEIVED_TEMPLATE_KEY,
+} from '@/lib/payloadCourse/systemEmailTemplates'
+import type { PayloadCourseWriteAPI } from '@/lib/payloadCourse/accessService'
+import {
+  createSupportIntakeService,
+  type SupportRequestCreateData,
+  type SupportRequestUpdateData,
+} from '@/lib/support/supportIntake'
+import prisma from '@/libs/prisma'
 
-function getClientIp(req: NextRequest): string {
-	const forwardedFor = req.headers.get('x-forwarded-for')
-	if (forwardedFor) {
-		return forwardedFor.split(',')[0]?.trim() || 'unknown'
-	}
+const SUPPORT_MAX_BYTES = 8 * 1024
 
-	return (
-		req.headers.get('x-real-ip') ??
-		req.headers.get('cf-connecting-ip') ??
-		req.headers.get('true-client-ip') ??
-		'unknown'
-	)
-}
+const supportFields = {
+  name: { type: 'string', required: true, minLength: 2, maxLength: 120 },
+  email: { type: 'email', required: true, maxLength: 320 },
+  phone: { type: 'string', required: true, minLength: 7, maxLength: 40 },
+  question: { type: 'string', required: true, minLength: 10, maxLength: 2_000 },
+  source: { type: 'string', maxLength: 80 },
+  page: { type: 'string', maxLength: 200 },
+} as const
 
-function isValidEmail(value: string): boolean {
-	return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
+function safeSupportLog(event: {
+  event: 'support_intake'
+  decision: 'accepted' | 'duplicate' | 'persistence_failed' | 'queue_failed'
+  reason: string
+}): void {
+  console.info(event.event, {
+    decision: event.decision,
+    reason: event.reason,
+  })
 }
 
 export async function POST(req: NextRequest) {
-	let body: unknown
+  const guarded = await guardPublicRequest(req, {
+    namespace: 'public-support',
+    methods: ['POST'],
+    bodyType: 'json',
+    fields: supportFields,
+    applicationOrigin: getPublicRequestApplicationOrigin(),
+    missingOrigin: 'reject',
+    maxBytes: SUPPORT_MAX_BYTES,
+    allowUnknownFields: false,
+    trustProxyHeaders: trustPublicRequestProxyHeaders(),
+    rateLimit: {
+      limiter: publicRequestRateLimiter,
+      limit: 3,
+      windowMs: 60_000,
+      identityField: 'email',
+      backendFailure: 'deny',
+    },
+    logger: logPublicRequestGuard,
+  })
 
-	try {
-		body = await req.json()
-	} catch {
-		return NextResponse.json(
-			{ ok: false, error: 'Invalid JSON payload.' },
-			{ status: 400 }
-		)
-	}
+  if (guarded.ok === false) {
+    return publicRequestFailureResponse(guarded)
+  }
 
-	if (!body || typeof body !== 'object') {
-		return NextResponse.json(
-			{ ok: false, error: 'Invalid request payload.' },
-			{ status: 400 }
-		)
-	}
+  const phone = normalizePhone(guarded.data.phone)
+  if (!phone || !isValidInternationalPhone(phone)) {
+    return NextResponse.json({ ok: false, reason: 'invalid_phone' }, { status: 400 })
+  }
 
-	const { name, email, question, source, page } = body as Record<string, unknown>
-	const normalizedName = typeof name === 'string' ? name.trim() : ''
-	const normalizedEmail = typeof email === 'string' ? email.trim() : ''
-	const normalizedQuestion = typeof question === 'string' ? question.trim() : ''
-	const normalizedSource =
-		typeof source === 'string' && source.trim() ? source.trim() : 'unknown'
-	const normalizedPage =
-		typeof page === 'string' && page.trim() ? page.trim() : 'unknown'
+  const service = createSupportIntakeService({
+    async createRequest(data: SupportRequestCreateData) {
+      return prisma.supportRequest.create({ data })
+    },
+    async updateRequest(id: string, data: SupportRequestUpdateData) {
+      await prisma.supportRequest.update({ where: { id }, data })
+    },
+    async queueNotification(input) {
+      const payload = await getPayload({ config: payloadConfig })
+      const payloadApi = payload as unknown as PayloadCourseWriteAPI
+      const { supportTo } = getServerConfig().email
 
-	if (normalizedName.length < 2) {
-		return NextResponse.json(
-			{ ok: false, error: 'Name must be at least 2 characters.' },
-			{ status: 400 }
-		)
-	}
+      await queueAndAttemptEmailEvent(payloadApi, {
+        toEmail: supportTo,
+        templateKey: SUPPORT_REQUEST_ADMIN_NOTIFICATION_TEMPLATE_KEY,
+        dedupeKey: input.dedupeKey,
+        displayName: 'Support request pending review',
+        metadata: {
+          purpose: 'support_request_pending_review',
+          supportRequestId: input.requestId,
+          reviewStatus: input.reviewStatus,
+          requesterEmail: input.requesterEmail,
+          requesterName: input.requesterName,
+          requesterPhone: input.requesterPhone,
+        },
+      })
 
-	if (!isValidEmail(normalizedEmail)) {
-		return NextResponse.json(
-			{ ok: false, error: 'Please provide a valid email address.' },
-			{ status: 400 }
-		)
-	}
+      await queueAndAttemptEmailEvent(payloadApi, {
+        toEmail: input.requesterEmail,
+        templateKey: SUPPORT_REQUEST_RECEIVED_TEMPLATE_KEY,
+        dedupeKey: `support-request-acknowledgement:${input.requestId}`,
+        displayName: 'Support request received',
+        metadata: {
+          purpose: 'support_request_received',
+          supportRequestId: input.requestId,
+          displayName: input.requesterName,
+        },
+      })
+    },
+    now: () => new Date(),
+    log: safeSupportLog,
+  })
 
-	if (normalizedQuestion.length < 10) {
-		return NextResponse.json(
-			{ ok: false, error: 'Question must be at least 10 characters.' },
-			{ status: 400 }
-		)
-	}
+  const result = await service({
+    normalizedEmail: guarded.data.email,
+    name: guarded.data.name,
+    phone,
+    question: guarded.data.question,
+    source: guarded.data.source,
+    page: guarded.data.page,
+  })
 
-	const ip = getClientIp(req)
-	const now = Date.now()
-	const lastRequestAt = lastSupportRequestByIp.get(ip)
+  if (result.ok === false) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: result.code,
+        retryable: true,
+      },
+      { status: 503 },
+    )
+  }
 
-	if (lastRequestAt && now - lastRequestAt < RATE_LIMIT_WINDOW_MS) {
-		return NextResponse.json(
-			{
-				ok: false,
-				error: 'Please wait a moment before sending another support request.',
-			},
-			{ status: 429 }
-		)
-	}
-
-	lastSupportRequestByIp.set(ip, now)
-
-	try {
-		if (process.env.NODE_ENV !== 'production') {
-			console.log('[support] resendKeyPresent', Boolean(process.env.RESEND_API_KEY))
-			console.log('[support] resendKeyLen', process.env.RESEND_API_KEY?.length ?? 0)
-			console.log(
-				'[support] resendBaseUrl',
-				process.env.RESEND_BASE_URL ?? 'https://api.resend.com'
-			)
-			console.log('[support] resendAuthHeaderSet', Boolean(process.env.RESEND_API_KEY))
-			console.log('[support] resendUsesSdk', true)
-		}
-
-		await sendSupportEmail({
-			name: normalizedName,
-			email: normalizedEmail,
-			question: normalizedQuestion,
-			source: normalizedSource,
-			page: normalizedPage,
-			submittedAt: new Date().toISOString(),
-		})
-
-		return NextResponse.json({ ok: true })
-	} catch (error) {
-		console.error('Support email send failed:', error)
-		const message =
-			error instanceof Error &&
-			(error.message.startsWith('Support sender missing') ||
-				error.message.startsWith('Support recipient missing') ||
-				error.message.startsWith('FROM must be a verified domain'))
-				? error.message
-				: 'Failed to send support request. Please try again.'
-		return NextResponse.json({ ok: false, error: message }, { status: 500 })
-	}
+  return NextResponse.json({
+    ok: true,
+    accepted: true,
+    duplicate: result.duplicate,
+  })
 }

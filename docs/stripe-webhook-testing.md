@@ -39,14 +39,14 @@ Required env vars for local test:
 - `STRIPE_ENV`
 - `STRIPE_SECRET_KEY_TEST` / `STRIPE_SECRET_KEY_LIVE`
 - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_TEST` / `_LIVE`
-- `STRIPE_PRICE_PRO_TEST` / `_LIVE`
-- `STRIPE_PRICE_VIP_TEST` / `_LIVE`
+- `STRIPE_PRICE_PRO_MONTHLY_TEST` / `_LIVE`
+- `STRIPE_PRICE_PRO_ANNUAL_TEST` / `_LIVE`
 - `STRIPE_WEBHOOK_SECRET_TEST` / `_LIVE`
 - `APP_PUBLIC_URL` (or `NEXT_PUBLIC_APP_URL`)
 
-To enable provisioning, also set:
-- `PROVISIONING_ENABLED=true`
-- `WP_BASE_URL`, `WP_PROVISION_ENDPOINT`, `WP_PROVISION_TOKEN`
+Removed paid-tier price variables are not required for the target Free/Pro webhook test setup.
+
+To enable membership emails, also set Resend sender and support mailbox env vars.
 
 Recommendation: keep one webhook destination per mode. If you need rotation,
 set multiple secrets in `STRIPE_WEBHOOK_SECRET_TEST` or `STRIPE_WEBHOOK_SECRET_LIVE`.

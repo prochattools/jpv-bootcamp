@@ -2,7 +2,15 @@
 
 ProKit is ProChat’s internal SaaS starter (built by Steve Westhoek) for launching micro-SaaS apps quickly. It preserves the existing Next.js + TypeScript + Tailwind/shadcn + Clerk + Postgres/Prisma + Stripe (JPV Bootcamp Stripe account) + Resend + n8n stack while standardizing infra and workflows.
 
-The `jpv-bootcamp` app also includes **Payload CMS** as a content layer alongside WordPress. Both CMS systems run side by side: WordPress handles membership, billing, and WP user provisioning; Payload handles structured content and editorial workflows. The Payload admin panel is accessible at `/app`.
+The `jpv-bootcamp` app uses a strict three-surface architecture:
+
+- `/` is the public website.
+- `/admin` is the administrator-only Payload CMS back office.
+- `/portal` is the member-facing Next.js application.
+
+A shared login entry at `/login` redirects verified administrators to `/admin` and verified members to `/portal`. Payload administrator accounts and member identities are separate security domains, even when one person holds both. Members must never receive Payload admin access, administrator API access, or administrator capabilities. Navigation visibility is not authorization; all access decisions are enforced server-side and fail closed.
+
+Payload is the administrative system for courses, members, access, community, billing visibility, and editorial workflows. Member access to courses, communities, private groups, and billing features is granted only through explicit roles and entitlements. Cutover requires documented validation, rollback, and client approval.
 
 > Stripe note: In this repo, every Stripe reference means the JPV Bootcamp Stripe account.
 
@@ -31,7 +39,7 @@ The `jpv-bootcamp` app also includes **Payload CMS** as a content layer alongsid
 ## Day-to-day dev workflow
 1. `nvm use 20` (Payload requires Node 20; `.nvmrc` is set)
 2. `pnpm install` (pnpm is required for Payload)
-3. `pnpm dev` (auto-writes `.env`, provisions `tenant_dev`, applies Prisma migrations, starts Next.js on 3000; Payload auto-migrates its own tables on first run)
+3. `pnpm dev` (auto-writes `.env`, provisions `tenant_dev`, applies Prisma migrations, starts Next.js on 3000; run reviewed Payload migrations with `pnpm payload migrate` when Payload collection schemas change)
 4. Build: `pnpm build`; Prod start: `pnpm start`
 5. Database tasks: `npm run db:init`, `npm run db:migrate:dev`, `npm run db:migrate:prod`, `npm run db:cleanup`
 6. Payload tasks: `pnpm payload generate:types`, `pnpm payload generate:importmap`

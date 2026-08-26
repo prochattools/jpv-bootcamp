@@ -19,7 +19,7 @@ const ALLOWED_STATUSES = new Set<Stripe.Subscription.Status>([
 // curl -i -H "Authorization: Bearer <token>" https://jpvbootcamp.com/api/entitlements
 
 type EntitlementsResponse = {
-	plan: Plan | 'free'
+	plan: Plan | null
 }
 
 type EntitlementsError = {
@@ -54,9 +54,7 @@ function resolvePlanFromSubscriptions(subscriptions: Stripe.Subscription[]): Pla
 					? price.product
 					: price?.product?.id ?? null
 			const plan = resolvePlanFromStripe({ metadataPlan, priceId, productId })
-			if (plan === 'vip') return 'vip'
-			if (plan === 'pro') found = 'pro'
-			if (plan === 'exhibitor' && !found) found = 'exhibitor'
+			if (plan === 'jpv_bootcamp_membership') found = 'jpv_bootcamp_membership'
 		}
 	}
 	return found
@@ -72,9 +70,7 @@ async function searchStripeCustomerIdByEmail(email: string): Promise<string | nu
 }
 
 export async function GET(req: NextRequest) {
-	const headerToken = extractBearerToken(req)
-	const queryToken = req.nextUrl.searchParams.get('token')
-	const token = headerToken || (queryToken ? queryToken.trim() : null)
+	const token = extractBearerToken(req)
 	const tokenSecret = (process.env.BILLING_PORTAL_HMAC_SECRET || '').trim()
 
 	if (!token) {
@@ -113,10 +109,46 @@ export async function GET(req: NextRequest) {
 			currentPlan: true,
 			plan: true,
 			stripeCustomerId: true,
+			subscriptionStatus: true,
+			billingCadence: true,
+			paymentStatus: true,
+			paymentGraceEndsAt: true,
+			lastPaidInvoiceId: true,
 		},
 	})
 
 	const storedPlan = normalizePlan(record?.currentPlan ?? record?.plan ?? null)
+	const subscriptionStatus = record?.subscriptionStatus ?? null
+	const graceActive = Boolean(
+		record?.paymentGraceEndsAt && record.paymentGraceEndsAt.getTime() >= Date.now(),
+	)
+	const monthlyCommitment = record?.billingCadence === 'monthly_commitment'
+	const monthlyPaymentVerified = !monthlyCommitment || Boolean(record?.lastPaidInvoiceId)
+
+	if (subscriptionStatus === 'unpaid' || subscriptionStatus === 'canceled') {
+		return NextResponse.json({ plan: null } satisfies EntitlementsResponse, { status: 200 })
+	}
+	if (subscriptionStatus === 'past_due') {
+		return NextResponse.json(
+			{ plan: graceActive && storedPlan ? storedPlan : null } satisfies EntitlementsResponse,
+			{ status: 200 },
+		)
+	}
+	if (subscriptionStatus === 'active' || subscriptionStatus === 'trialing') {
+		return NextResponse.json(
+			{ plan: monthlyPaymentVerified && storedPlan ? storedPlan : null } satisfies EntitlementsResponse,
+			{ status: 200 },
+		)
+	}
+	if (record?.paymentStatus === 'failed' || record?.paymentStatus === 'action_required') {
+		return NextResponse.json(
+			{ plan: graceActive && storedPlan ? storedPlan : null } satisfies EntitlementsResponse,
+			{ status: 200 },
+		)
+	}
+	if (subscriptionStatus) {
+		return NextResponse.json({ plan: null } satisfies EntitlementsResponse, { status: 200 })
+	}
 	if (storedPlan) {
 		return NextResponse.json({ plan: storedPlan } satisfies EntitlementsResponse, { status: 200 })
 	}
@@ -147,5 +179,5 @@ export async function GET(req: NextRequest) {
 		}
 	}
 
-	return NextResponse.json({ plan: 'free' } satisfies EntitlementsResponse, { status: 200 })
+	return NextResponse.json({ plan: null } satisfies EntitlementsResponse, { status: 200 })
 }

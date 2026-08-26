@@ -3,14 +3,13 @@ import { createHash } from 'crypto'
 import prisma from '@/libs/prisma'
 import type Stripe from 'stripe'
 
-export type SponsoredTier = 'pro' | 'vip'
+export type SponsoredTier = 'free'
 
 export type SponsoredSeatCounts = {
-	pro: number
-	vip: number
+	available: number
 }
 
-const VALID_TIERS: SponsoredTier[] = ['pro', 'vip']
+const VALID_TIERS: SponsoredTier[] = ['free']
 
 export function normalizeSponsoredTier(
 	value: string | null | undefined
@@ -28,38 +27,22 @@ export function hashEmail(value: string): string {
 }
 
 export async function getSponsoredSeatCounts(): Promise<SponsoredSeatCounts> {
-	const [proCount, vipCount] = await Promise.all([
-		prisma.sponsoredSeat.count({
-			where: {
-				tier: 'pro',
-				claimedByWpUserId: null,
-				reservedByApplicationId: null,
-			},
-		}),
-		prisma.sponsoredSeat.count({
-			where: {
-				tier: 'vip',
-				claimedByWpUserId: null,
-				reservedByApplicationId: null,
-			},
-		}),
-	])
+	const available = await prisma.sponsoredSeat.count({
+		where: {
+			tier: 'free',
+			claimedByAccountId: null,
+			reservedByApplicationId: null,
+		},
+	})
 
-	return {
-		pro: proCount,
-		vip: vipCount,
-	}
+	return { available }
 }
 
-export function getSponsoredPriceId(tier: SponsoredTier): string | null {
+export function getSponsoredPriceId(): string | null {
 	const stripeEnv = (process.env.STRIPE_ENV || '').trim().toLowerCase()
 	const suffix = stripeEnv === 'live' ? 'LIVE' : 'TEST'
-	const envKey =
-		tier === 'vip'
-			? `SPONSORED_VIP_PRICE_ID_${suffix}`
-			: `SPONSORED_PRO_PRICE_ID_${suffix}`
-	const fallbackKey =
-		tier === 'vip' ? 'SPONSORED_VIP_PRICE_ID' : 'SPONSORED_PRO_PRICE_ID'
+	const envKey = `SPONSORED_SUPPORT_PRICE_ID_${suffix}`
+	const fallbackKey = 'SPONSORED_SUPPORT_PRICE_ID'
 	const value = process.env[envKey] || process.env[fallbackKey] || ''
 	const trimmed = value.trim()
 	return trimmed.length > 0 ? trimmed : null
@@ -81,8 +64,8 @@ export function isSponsoredSeatSession(
 	session: Stripe.Checkout.Session
 ): SponsoredTier | null {
 	const purpose = session.metadata?.purpose?.trim().toLowerCase()
-	if (purpose !== 'sponsored_seat') return null
-	return normalizeSponsoredTier(session.metadata?.tier ?? null)
+	if (purpose !== 'support_credit' && purpose !== 'sponsored_seat') return null
+	return 'free'
 }
 
 export async function upsertSponsoredSeatFromSession(params: {

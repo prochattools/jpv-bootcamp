@@ -40,7 +40,7 @@ const LazyLoadIframe = ({
     <div ref={iframeRef} className="relative video-class w-full">
       {!isLoaded && (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-200">
-          <span>Loading...</span>
+          <span role="status" aria-live="polite">Loading...</span>
         </div>
       )}
       {isLoaded && (

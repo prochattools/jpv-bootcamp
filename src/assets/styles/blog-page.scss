@@ -1,10 +1,10 @@
 scss body {
-  font-family: "Inter", sans-serif;
-  background-color: #f9fafb;
-  color: #1f2937;
+  font-family: var(--font-jpv), Poppins, ui-sans-serif, system-ui, sans-serif;
+  background-color: var(--jpv-canvas);
+  color: var(--jpv-ink);
 }
 .article {
-  h2.wp-block-heading {
+  h2.article-heading {
     font-size: 1.2rem;
     font-weight: 600;
     margin-bottom: 1rem;
@@ -13,7 +13,7 @@ scss body {
     }
   }
   a {
-    color: #4099ff;
+    color: var(--jpv-brand-deep);
     text-decoration: none;
     &:hover {
       text-decoration: underline;
@@ -22,19 +22,19 @@ scss body {
   p {
     margin-bottom: 1rem;
     a {
-      color: #4099ff;
+      color: var(--jpv-brand-deep);
       text-decoration: none;
       &:hover {
         text-decoration: underline;
       }
     }
   }
-  h3.wp-block-heading {
+  h3.article-heading {
     font-size: 1.125rem;
     font-weight: 600;
     margin-bottom: 0.5rem;
     a {
-      color: #4099ff;
+      color: var(--jpv-brand-deep);
       text-decoration: none;
 
       &:hover {
@@ -48,10 +48,13 @@ scss body {
   //   border-radius: 0.25rem;
   // }
   code {
-    @apply bg-[#0F1121] dark:bg-gray-500 text-white p-1 rounded-md;
+    background: var(--jpv-ink);
+    color: var(--jpv-canvas);
+    padding: 0.25rem;
+    border-radius: var(--jpv-radius-detail);
   }
 
-  figure.wp-block-image {
+  figure.article-image {
     margin: 1.5rem 0;
     img {
       width: 100%;
@@ -59,7 +62,7 @@ scss body {
       border-radius: 0.5rem;
     }
   }
-  // blockquote.wp-block-quote {
+  // blockquote.article-quote {
   //   background-color: #ffffff;
   //   padding: 1rem;
   //   border-radius: 0.5rem;
@@ -70,20 +73,22 @@ scss body {
   //   }
   // }
 
-  blockquote.wp-block-quote {
-    background-color: #1e293b; // Matching the background color from the image
+  blockquote.article-quote {
+    background-color: var(--jpv-surface-strong);
     padding: 1rem;
     border-radius: 0.5rem;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
     margin-bottom: 1.5rem;
-    border-left: 4px solid #3b82f6; // Adding the blue border on the left
+    border-left: 4px solid var(--jpv-brand);
 
     p {
       margin: 0;
-      @apply text-white p-1 rounded-md;
+      color: var(--jpv-ink);
+      padding: 0.25rem;
+      border-radius: var(--jpv-radius-detail);
     }
   }
-  ul.wp-block-list {
+  ul.article-list {
     list-style-type: disc;
     padding-left: 1.5rem;
     margin-bottom: 1rem;
@@ -91,7 +96,7 @@ scss body {
       margin-bottom: 0.5rem;
     }
   }
-  .wp-block-embed {
+  .article-embed {
     margin: 1.5rem 0;
     &__wrapper {
       position: relative;
@@ -115,10 +120,10 @@ scss body {
     color: black;
     display: none;
     .schema-faq-section {
-      background-color: #ffffff;
+      background-color: var(--jpv-canvas);
       padding: 1rem;
-      border-radius: 0.5rem;
-      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+      border-radius: var(--jpv-radius-card);
+      box-shadow: var(--jpv-shadow);
       margin-bottom: 1rem;
       position: relative;
       input {

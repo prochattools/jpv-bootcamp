@@ -2,8 +2,162 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+	color-scheme: light;
+}
+
+.dark {
+	color-scheme: dark;
+	--jpv-canvas: #0f1117;
+	--jpv-surface: #1a1d27;
+	--jpv-surface-strong: #252836;
+	--jpv-border: #2d3148;
+	--jpv-ink: #f0f2f7;
+	--jpv-muted: #8b9abf;
+	--jpv-secondary: #8b9abf;
+	--jpv-inverse-muted: #505b7a;
+}
+
 html {
 	scroll-behavior: smooth;
+	background: var(--jpv-canvas);
+}
+
+body {
+	background: var(--jpv-canvas);
+	color: var(--jpv-ink);
+	font-family: var(--font-jpv), Poppins, ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer components {
+	.jpv-button-primary,
+	.jpv-button-secondary {
+		display: inline-flex;
+		min-height: 48px;
+		align-items: center;
+		justify-content: center;
+		gap: 0.5rem;
+		border-radius: var(--jpv-radius-action);
+		padding: 0.7rem 1.25rem;
+		font-size: 0.875rem;
+		font-weight: 700;
+		line-height: 1.2;
+		text-align: center;
+		transition: background-color 180ms ease-out, border-color 180ms ease-out, color 180ms ease-out, transform 180ms ease-out;
+	}
+
+	.jpv-button-primary {
+		border: 1px solid var(--jpv-brand-deep);
+		background: var(--jpv-brand-deep);
+		color: var(--jpv-canvas);
+	}
+
+	.jpv-button-primary:hover {
+		border-color: var(--jpv-brand);
+		background: var(--jpv-brand);
+	}
+
+	.jpv-button-secondary {
+		border: 1px solid var(--jpv-border);
+		background: transparent;
+		color: var(--jpv-ink);
+	}
+
+	.jpv-button-secondary:hover {
+		border-color: var(--jpv-brand-deep);
+		background: var(--jpv-surface);
+	}
+
+	.jpv-button-primary:active,
+	.jpv-button-secondary:active {
+		transform: translateY(1px);
+	}
+
+	.jpv-button-primary:disabled,
+	.jpv-button-secondary:disabled {
+		cursor: not-allowed;
+		opacity: 0.55;
+	}
+
+	.jpv-eyebrow {
+		font-size: 0.75rem;
+		font-weight: 700;
+		letter-spacing: 0.12em;
+		line-height: 1.4;
+		text-transform: uppercase;
+		color: var(--jpv-brand-deep);
+	}
+
+	.jpv-editorial-heading {
+		font-family: var(--font-jpv-landing-serif), "Libre Baskerville", Georgia, serif;
+		font-weight: 400;
+		letter-spacing: -0.035em;
+		text-wrap: balance;
+	}
+
+	.jpv-notice {
+		border: 1px solid var(--jpv-border);
+		border-radius: var(--jpv-radius-card);
+		background: var(--jpv-surface);
+		padding: 0.75rem 1rem;
+		color: var(--jpv-ink);
+	}
+
+	.jpv-notice-danger {
+		border-color: color-mix(in srgb, var(--jpv-danger) 38%, var(--jpv-border));
+		background: color-mix(in srgb, var(--jpv-danger) 8%, var(--jpv-canvas));
+		color: color-mix(in srgb, var(--jpv-danger) 82%, var(--jpv-ink));
+	}
+}
+
+/*
+ * Legacy pages used `rounded-full` for both actions and semantic pills.
+ * Normalize clickable actions to the global action radius while leaving
+ * badges, avatars, progress markers, and switch tracks fully rounded.
+ */
+:where(a, button:not([role='switch']), input[type='button'], input[type='submit'])[class~='rounded-full'] {
+	border-radius: var(--jpv-radius-action);
+}
+
+/* The member sign-in view is rendered inside the portal layout. */
+.jpv-product-shell:has(.jpv-auth-shell) [data-portal-sidebar] {
+	display: none;
+}
+
+.jpv-product-shell:has(.jpv-auth-shell) [data-portal-topbar] {
+	display: none;
+}
+
+.jpv-product-shell:has(.jpv-auth-shell) .grid {
+	grid-template-columns: 1fr;
+}
+
+.jpv-product-shell:has(.jpv-auth-shell) > main,
+.jpv-product-shell:has(.jpv-auth-shell) main {
+	max-width: none;
+	padding: 0;
+}
+
+::selection {
+	background: var(--jpv-sunshine);
+	color: var(--jpv-ink);
+}
+
+:where(a, button, input, textarea, select, summary):focus-visible {
+	outline: 3px solid var(--jpv-focus);
+	outline-offset: 3px;
+}
+
+.jpv-dialog {
+	margin: auto;
+	border: 0;
+	background: transparent;
+	padding: 0;
+	color: var(--jpv-ink);
+}
+
+.jpv-dialog::backdrop {
+	background: color-mix(in srgb, var(--jpv-ink) 72%, transparent);
 }
 
 @keyframes modal-fade {
@@ -37,24 +191,20 @@ html {
 	width: 0px;
 }
 
-.dark {
-	background: rgb(1 8 20 / var(--tw-bg-opacity, 1))
-}
-
 .blocks-class a {
-	color: #0000ee !important;
+	color: var(--jpv-brand-deep) !important;
 	text-decoration: underline;
 }
 
 .blocks-class a:hover {
-	color: darkblue !important;
+	color: var(--jpv-brand) !important;
 }
 
 .video-class iframe {
 	max-width: 1050px;
 	width: 100%;
 	height: 550px;
-	border-radius: 16px;
+	border-radius: var(--jpv-radius-panel);
 	margin: 0 auto;
 }
 
@@ -80,7 +230,7 @@ html {
 }
 
 #theme-toggle:checked {
-	background-color: #373c53;
+	background-color: var(--jpv-brand-deep);
 }
 
 #theme-toggle:checked ~ span:last-child {
@@ -88,16 +238,25 @@ html {
 }
 
 .close-div button {
-	color: #fff;
+	color: var(--jpv-canvas);
 	display: none;
 }
 
 .glass {
-	background: #121a32;
-	background: linear-gradient(
-		155deg,
-		rgba(5, 0, 107, 0) 0%,
-		rgba(0, 50, 69, 0.18) 57%,
-		rgba(0, 30, 54, 0.24) 100%
-	);
+	background: color-mix(in srgb, var(--jpv-brand-deep) 92%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	html {
+		scroll-behavior: auto;
+	}
+
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		scroll-behavior: auto !important;
+		transition-duration: 0.01ms !important;
+	}
 }

@@ -3,7 +3,6 @@ import { createHmac, timingSafeEqual } from 'crypto'
 export type SponsoredClaimPayload = {
 	applicationId: string
 	email: string
-	tier: 'pro' | 'vip'
 	iat: number
 	exp: number
 	nonce: string
@@ -129,12 +128,6 @@ export function verifySponsoredClaimToken(
 		return { ok: false, reason: 'invalid_payload' }
 	}
 
-	const tierRaw = typeof payload.tier === 'string' ? payload.tier : ''
-	const tier = tierRaw.trim().toLowerCase()
-	if (tier !== 'pro' && tier !== 'vip') {
-		return { ok: false, reason: 'invalid_payload' }
-	}
-
 	const iat = Number(payload.iat)
 	const exp = Number(payload.exp)
 	if (!Number.isFinite(iat) || !Number.isFinite(exp) || exp < iat) {
@@ -168,7 +161,6 @@ export function verifySponsoredClaimToken(
 		payload: {
 			applicationId,
 			email,
-			tier: tier as 'pro' | 'vip',
 			iat,
 			exp,
 			nonce,

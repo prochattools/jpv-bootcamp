@@ -1,0 +1,312 @@
+{
+  "title": "Stripe Invoice Preview Rehearsal System",
+  "version": "1.0.0",
+  "purpose": "Build candidate inventory, classify into eligibility tiers, run controlled Stripe invoice previews, verify reconciliation, and project webhook events",
+  "safety_boundary": "All operations are read-only or test-mode; no production Stripe mutations occur during rehearsal",
+  "entry_points": {
+    "fixture_based": {
+      "file": "src/lib/billing/stripeInvoicePreviewRehearsal.test.ts",
+      "command": "pnpm tsx src/lib/billing/stripeInvoicePreviewRehearsal.test.ts",
+      "description": "Load from MEMBERSHIP_MIGRATION_PREVIEW_FIXTURE.json and classify"
+    },
+    "end_to_end_scenarios": {
+      "file": "src/lib/billing/stripeInvoicePreviewRehearsal.e2e.test.ts",
+      "command": "pnpm tsx src/lib/billing/stripeInvoicePreviewRehearsal.e2e.test.ts",
+      "description": "Test all 7 classification scenarios (eligible, manual review, ineligible)"
+    },
+    "realistic_migration": {
+      "file": "src/lib/billing/stripeInvoicePreviewRehearsal.realistic.test.ts",
+      "command": "pnpm tsx src/lib/billing/stripeInvoicePreviewRehearsal.realistic.test.ts",
+      "description": "Simulate multi-wave migration with financial projections"
+    }
+  },
+  "workflow_phases": [
+    {
+      "phase": 1,
+      "name": "Build Candidate Inventory",
+      "description": "Load from fixtures or build programmatically with full Stripe context",
+      "inputs": [
+        "Fixture JSON or programmatic candidates",
+        "Customer projection (customerId, normalizedEmail)",
+        "Subscription projection (subscriptionId, itemId, prices, cadences, status, payment status)"
+      ],
+      "outputs": [
+        "MigrationCandidateInput[] with stable IDs and normalized data"
+      ]
+    },
+    {
+      "phase": 2,
+      "name": "Classify Candidates",
+      "description": "Tier into eligible, manual_review, or ineligible with blocking reasons",
+      "inputs": [
+        "MigrationCandidateInput[] from phase 1"
+      ],
+      "outputs": [
+        "ClassifiedMigrationCandidate[] with eligibility and reasons"
+      ],
+      "logic": "classifyMigrationCandidate() applies 32 blocking reason checks"
+    },
+    {
+      "phase": 3,
+      "name": "Run Controlled Stripe Previews",
+      "description": "For eligible candidates only, build and optionally execute invoice preview requests",
+      "inputs": [
+        "ClassifiedMigrationCandidate[] where eligibility='eligible'",
+        "targetPriceId and subscriptionItemId"
+      ],
+      "outputs": [
+        "StripeInvoicePreviewRequest ready for Stripe.invoices.preview()",
+        "ReconciliationResult with extracted invoice data and mismatches"
+      ],
+      "safety": "No production subscriptions modified; read-only preview only"
+    },
+    {
+      "phase": 4,
+      "name": "Verify Reconciliation",
+      "description": "Compare preview results against expected credits, charges, tax, discounts",
+      "verifications": [
+        "Credits matched (unused time credit = proration credit)",
+        "Charges matched (remaining charge = upgrade cost)",
+        "Tax matched (invoice tax = expected)",
+        "Amount due matched (subtotal - discount + tax)",
+        "Billing anchor unchanged",
+        "Next renewal matches period end"
+      ],
+      "outputs": [
+        "reconciliationState: 'matched' | 'mismatch' | 'failed'",
+        "mismatches: string[] (empty if all verified)"
+      ]
+    },
+    {
+      "phase": 5,
+      "name": "Project Webhook Events",
+      "description": "Forecast expected Stripe webhooks and entitlement state changes",
+      "expectations": [
+        "subscription.updated: 1 per eligible candidate (price change)",
+        "invoice.created: 1 per eligible candidate (prorated invoice)",
+        "invoice.paid: 1 per eligible candidate (if amount_due > 0)",
+        "invoice.payment_failed: 0 in success scenario"
+      ],
+      "entitlement_changes": [
+        "Billing anchor: unchanged (unless explicitly set)",
+        "Next renewal: updated to new cadence schedule",
+        "Amount due: reflected in invoice",
+        "Discount/tax: applied and verified"
+      ]
+    },
+    {
+      "phase": 6,
+      "name": "Generate Reports",
+      "description": "Create auditable Markdown and JSON reports",
+      "outputs": [
+        "Classification report (Markdown)",
+        "Classification report (JSON)",
+        "Rehearsal report (Markdown) with reconciliation results"
+      ]
+    }
+  ],
+  "eligibility_tiers": {
+    "eligible": {
+      "description": "Candidate ready for live Stripe preview and subscription update",
+      "requirements": [
+        "Valid customer, subscription, item, prices (all non-null)",
+        "Supported cadences (monthly, annual)",
+        "Active or trialing subscription status",
+        "Paid payment status",
+        "No disputes, no schedule, no pending cancellation",
+        "Single item only",
+        "Not metered billing",
+        "If preview present: all fields reconciled"
+      ],
+      "blocking_reasons": 0
+    },
+    "manual_review": {
+      "description": "Candidate requires human review before approval",
+      "examples": [
+        "Past due subscription (payment issue)",
+        "Unpaid subscription (action required from customer)",
+        "Incomplete setup (payment method incomplete)",
+        "Paused subscription (customer requested pause)",
+        "Failed/disputed payment (payment processor issue)",
+        "Active subscription schedule (another change pending)",
+        "Preview evidence present but mismatched"
+      ]
+    },
+    "ineligible": {
+      "description": "Candidate cannot be migrated (missing core identity)",
+      "reasons": [
+        "Missing customer ID",
+        "Missing subscription ID",
+        "Missing item ID",
+        "Missing current price",
+        "Missing target price"
+      ]
+    }
+  },
+  "blocking_reasons": {
+    "core_identity": [
+      "missing_customer",
+      "missing_subscription",
+      "missing_item_id",
+      "missing_current_price",
+      "missing_target_price",
+      "unsupported_cadence"
+    ],
+    "subscription_state": [
+      "past_due",
+      "unpaid",
+      "incomplete",
+      "paused",
+      "disputed",
+      "cancellation_pending",
+      "schedule_present",
+      "multiple_items",
+      "metered"
+    ],
+    "preview_based": [
+      "preview_missing",
+      "price_mismatch",
+      "cadence_mismatch",
+      "billing_anchor_mismatch",
+      "next_renewal_mismatch",
+      "discount_mismatch",
+      "tax_mismatch",
+      "zero_amount",
+      "net_credit",
+      "unexpected_negative_amount",
+      "reconciliation_mismatch"
+    ]
+  },
+  "stripe_invoice_preview_request": {
+    "description": "Ready-to-execute Stripe.invoices.preview() request",
+    "structure": {
+      "customer": "cus_xxx (Stripe customer ID)",
+      "subscription": "sub_xxx (Stripe subscription ID)",
+      "subscription_details": {
+        "proration_behavior": "create_prorations",
+        "items": [
+          {
+            "id": "si_xxx (subscription item ID)",
+            "price": "price_xxx (target price ID)"
+          }
+        ]
+      }
+    },
+    "api_call": "stripe.invoices.preview(request)",
+    "response_fields_verified": [
+      "amount_due (total due after proration)",
+      "currency (billing currency)",
+      "subtotal (before discount/tax)",
+      "tax (calculated tax amount)",
+      "total_discount_amounts[] (applied discounts)",
+      "lines.data[] (invoice line items)",
+      "period_end (next renewal timestamp)"
+    ]
+  },
+  "reconciliation_result": {
+    "description": "Result of comparing Stripe preview against expected values",
+    "fields": {
+      "candidate": "ClassifiedMigrationCandidate (original data)",
+      "preview": "StripeInvoicePreviewResult | null (Stripe response if succeeded)",
+      "errors": "string[] (error messages if any)",
+      "reconciliation": {
+        "creditsMatched": "boolean (unused time credit matched)",
+        "chargesMatched": "boolean (remaining charge matched)",
+        "taxMatched": "boolean (tax amount matched)",
+        "amountDueMatched": "boolean (total due matched)",
+        "billingAnchorMatched": "boolean (anchor unchanged)",
+        "nextRenewalMatched": "boolean (renewal date matched)",
+        "overallMatched": "boolean (all fields matched)",
+        "reconciliationState": "'matched' | 'mismatch' | 'failed'",
+        "mismatches": "string[] (empty if overallMatched=true)"
+      }
+    }
+  },
+  "safety_boundaries": {
+    "during_rehearsal": [
+      "No Stripe API calls (uses test fixtures or in-memory simulation)",
+      "No database mutations",
+      "No production subscription updates",
+      "All classification is deterministic and auditable",
+      "All reports are human and machine readable"
+    ],
+    "before_live_migration": [
+      "1. Classify all candidates (this rehearsal)",
+      "2. Manually review 'manual_review' tier",
+      "3. Get explicit approval for eligible candidates",
+      "4. IMMEDIATELY before approval: Run live Stripe preview (test mode)",
+      "5. Verify preview matches rehearsal expectations",
+      "6. Approve the migration",
+      "7. Update subscriptions and monitor webhooks"
+    ],
+    "never": [
+      "Auto-approve without live Stripe preview",
+      "Skip manual review tier",
+      "Modify multiple candidates in single transaction",
+      "Run against production subscriptions until rehearsal complete"
+    ]
+  },
+  "example_scenarios": {
+    "scenario_1_monthly_to_annual": {
+      "description": "Eligible: Monthly plan upgrade to annual",
+      "current": "$49.99/month, active, paid",
+      "target": "$499.00/year",
+      "expected_preview": {
+        "unused_time_credit": "~$14 (14 days remaining at daily rate)",
+        "upgrade_charge": "$0 (already paid for month)",
+        "amount_due": "~$485 (499 - 14 credit)"
+      },
+      "blocking_reasons": []
+    },
+    "scenario_2_annual_upgrade": {
+      "description": "Eligible: Annual plan upgrade to premium annual",
+      "current": "$499.00/year, active, paid",
+      "target": "$799.00/year",
+      "expected_preview": {
+        "unused_time_credit": "$0 (no proration on annual)",
+        "upgrade_charge": "$300 (799 - 499)",
+        "amount_due": "$300"
+      },
+      "blocking_reasons": []
+    },
+    "scenario_3_past_due": {
+      "description": "Manual review: Past due subscription",
+      "current": "$49.99/month, past_due, failed payment",
+      "target": "$499.00/year",
+      "blocking_reasons": [
+        "past_due",
+        "disputed"
+      ],
+      "action": "Resolve payment issue before migration"
+    },
+    "scenario_4_multiple_items": {
+      "description": "Ineligible: Multiple items on subscription",
+      "current": "item_1 (price_xxx) + item_2 (price_yyy)",
+      "target": "Cannot migrate multi-item subscriptions",
+      "blocking_reasons": [
+        "multiple_items"
+      ],
+      "action": "Manual consolidation required"
+    }
+  },
+  "candidate_inventory_api": {
+    "fromFixture": "Load candidates from JSON fixture file",
+    "create": "Build candidate programmatically with all fields",
+    "asEligible": "Pre-populate as eligible (sets default values)",
+    "asManualReview": "Pre-populate as manual review (past_due, payment failed)",
+    "asIneligible": "Pre-populate as ineligible (missing customer)"
+  },
+  "reporting_functions": {
+    "buildMembershipMigrationPreviewReport": "Generate structured report with counts, totals, reconciliation expectations",
+    "buildMembershipMigrationPreviewMarkdown": "Generate human-readable Markdown report with tables",
+    "buildMembershipMigrationPreviewJson": "Generate JSON report for machine consumption",
+    "buildRehearseReportMarkdown": "Generate reconciliation report with preview results and webhook projection"
+  },
+  "integration_points": {
+    "stripeAdapter": "src/lib/membership-support/stripeAdapter.ts (previewInvoice, reconcile methods)",
+    "provisioning": "src/lib/provisioning.ts (syncFromSubscription, logProvisioningDecision)",
+    "webhook_handler": "src/lib/stripe-webhook-handler.ts (receives invoice.paid, subscription.updated)"
+  },
+  "fixture_location": "docs/client/fixtures/MEMBERSHIP_MIGRATION_PREVIEW_FIXTURE.json",
+  "documentation": "docs/STRIPE_INVOICE_PREVIEW_REHEARSAL.md"
+}

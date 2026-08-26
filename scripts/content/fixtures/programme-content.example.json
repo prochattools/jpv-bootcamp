@@ -1,0 +1,330 @@
+{
+  "packageFormat": "jpv-programme-content.v1",
+  "packagePurpose": "test_fixture",
+  "programme": {
+    "id": "test-only-programme-package",
+    "title": "TEST ONLY Programme Package",
+    "shortSummary": "TEST ONLY summary for repository validation.",
+    "longDescription": "TEST ONLY long description for repository validation. This package is synthetic and must never be published.",
+    "version": "0.0.0-test",
+    "status": "draft",
+    "locale": "en-GB",
+    "weekCount": 8,
+    "publicationIntent": "preview_only"
+  },
+  "weeks": [
+    {
+      "id": "week-01",
+      "slug": "test-week-01",
+      "sequence": 1,
+      "title": "TEST ONLY Week 01",
+      "summary": "Synthetic week summary for validation.",
+      "learningOutcomes": [
+        "Demonstrate repository-only validation.",
+        "Provide deterministic intake structure."
+      ],
+      "estimatedDuration": "1 hour",
+      "status": "draft",
+      "lessons": [
+        {
+          "id": "lesson-01-01",
+          "slug": "test-lesson-01-01",
+          "sequence": 1,
+          "title": "TEST ONLY Lesson 01",
+          "summary": "Synthetic lesson summary.",
+          "body": "TEST ONLY body reference for validation.",
+          "estimatedDuration": "10 min",
+          "lessonType": "reading",
+          "previewAvailable": true,
+          "videoReference": "https://example.invalid/programme-preview-01",
+          "status": "draft",
+          "resources": [
+            {
+              "id": "resource-01-01",
+              "label": "TEST ONLY resource 01",
+              "resourceType": "link",
+              "source": "https://example.invalid/programme-resource-01",
+              "accessibilityLabel": "Open TEST ONLY resource 01",
+              "status": "draft"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "week-02",
+      "slug": "test-week-02",
+      "sequence": 2,
+      "title": "TEST ONLY Week 02",
+      "summary": "Synthetic week summary for validation.",
+      "learningOutcomes": [
+        "Demonstrate repository-only validation.",
+        "Provide deterministic intake structure."
+      ],
+      "estimatedDuration": "1 hour",
+      "status": "draft",
+      "lessons": [
+        {
+          "id": "lesson-02-01",
+          "slug": "test-lesson-02-01",
+          "sequence": 1,
+          "title": "TEST ONLY Lesson 02",
+          "summary": "Synthetic lesson summary.",
+          "body": "TEST ONLY body reference for validation.",
+          "estimatedDuration": "10 min",
+          "lessonType": "reading",
+          "previewAvailable": false,
+          "videoReference": "https://example.invalid/programme-preview-02",
+          "status": "draft",
+          "resources": [
+            {
+              "id": "resource-02-01",
+              "label": "TEST ONLY resource 02",
+              "resourceType": "link",
+              "source": "https://example.invalid/programme-resource-02",
+              "accessibilityLabel": "Open TEST ONLY resource 02",
+              "status": "draft"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "week-03",
+      "slug": "test-week-03",
+      "sequence": 3,
+      "title": "TEST ONLY Week 03",
+      "summary": "Synthetic week summary for validation.",
+      "learningOutcomes": [
+        "Demonstrate repository-only validation.",
+        "Provide deterministic intake structure."
+      ],
+      "estimatedDuration": "1 hour",
+      "status": "draft",
+      "lessons": [
+        {
+          "id": "lesson-03-01",
+          "slug": "test-lesson-03-01",
+          "sequence": 1,
+          "title": "TEST ONLY Lesson 03",
+          "summary": "Synthetic lesson summary.",
+          "body": "TEST ONLY body reference for validation.",
+          "estimatedDuration": "10 min",
+          "lessonType": "reading",
+          "previewAvailable": false,
+          "videoReference": "https://example.invalid/programme-preview-03",
+          "status": "draft",
+          "resources": [
+            {
+              "id": "resource-03-01",
+              "label": "TEST ONLY resource 03",
+              "resourceType": "link",
+              "source": "https://example.invalid/programme-resource-03",
+              "accessibilityLabel": "Open TEST ONLY resource 03",
+              "status": "draft"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "week-04",
+      "slug": "test-week-04",
+      "sequence": 4,
+      "title": "TEST ONLY Week 04",
+      "summary": "Synthetic week summary for validation.",
+      "learningOutcomes": [
+        "Demonstrate repository-only validation.",
+        "Provide deterministic intake structure."
+      ],
+      "estimatedDuration": "1 hour",
+      "status": "draft",
+      "lessons": [
+        {
+          "id": "lesson-04-01",
+          "slug": "test-lesson-04-01",
+          "sequence": 1,
+          "title": "TEST ONLY Lesson 04",
+          "summary": "Synthetic lesson summary.",
+          "body": "TEST ONLY body reference for validation.",
+          "estimatedDuration": "10 min",
+          "lessonType": "reading",
+          "previewAvailable": false,
+          "videoReference": "https://example.invalid/programme-preview-04",
+          "status": "draft",
+          "resources": [
+            {
+              "id": "resource-04-01",
+              "label": "TEST ONLY resource 04",
+              "resourceType": "link",
+              "source": "https://example.invalid/programme-resource-04",
+              "accessibilityLabel": "Open TEST ONLY resource 04",
+              "status": "draft"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "week-05",
+      "slug": "test-week-05",
+      "sequence": 5,
+      "title": "TEST ONLY Week 05",
+      "summary": "Synthetic week summary for validation.",
+      "learningOutcomes": [
+        "Demonstrate repository-only validation.",
+        "Provide deterministic intake structure."
+      ],
+      "estimatedDuration": "1 hour",
+      "status": "draft",
+      "lessons": [
+        {
+          "id": "lesson-05-01",
+          "slug": "test-lesson-05-01",
+          "sequence": 1,
+          "title": "TEST ONLY Lesson 05",
+          "summary": "Synthetic lesson summary.",
+          "body": "TEST ONLY body reference for validation.",
+          "estimatedDuration": "10 min",
+          "lessonType": "reading",
+          "previewAvailable": false,
+          "videoReference": "https://example.invalid/programme-preview-05",
+          "status": "draft",
+          "resources": [
+            {
+              "id": "resource-05-01",
+              "label": "TEST ONLY resource 05",
+              "resourceType": "link",
+              "source": "https://example.invalid/programme-resource-05",
+              "accessibilityLabel": "Open TEST ONLY resource 05",
+              "status": "draft"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "week-06",
+      "slug": "test-week-06",
+      "sequence": 6,
+      "title": "TEST ONLY Week 06",
+      "summary": "Synthetic week summary for validation.",
+      "learningOutcomes": [
+        "Demonstrate repository-only validation.",
+        "Provide deterministic intake structure."
+      ],
+      "estimatedDuration": "1 hour",
+      "status": "draft",
+      "lessons": [
+        {
+          "id": "lesson-06-01",
+          "slug": "test-lesson-06-01",
+          "sequence": 1,
+          "title": "TEST ONLY Lesson 06",
+          "summary": "Synthetic lesson summary.",
+          "body": "TEST ONLY body reference for validation.",
+          "estimatedDuration": "10 min",
+          "lessonType": "reading",
+          "previewAvailable": false,
+          "videoReference": "https://example.invalid/programme-preview-06",
+          "status": "draft",
+          "resources": [
+            {
+              "id": "resource-06-01",
+              "label": "TEST ONLY resource 06",
+              "resourceType": "link",
+              "source": "https://example.invalid/programme-resource-06",
+              "accessibilityLabel": "Open TEST ONLY resource 06",
+              "status": "draft"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "week-07",
+      "slug": "test-week-07",
+      "sequence": 7,
+      "title": "TEST ONLY Week 07",
+      "summary": "Synthetic week summary for validation.",
+      "learningOutcomes": [
+        "Demonstrate repository-only validation.",
+        "Provide deterministic intake structure."
+      ],
+      "estimatedDuration": "1 hour",
+      "status": "draft",
+      "lessons": [
+        {
+          "id": "lesson-07-01",
+          "slug": "test-lesson-07-01",
+          "sequence": 1,
+          "title": "TEST ONLY Lesson 07",
+          "summary": "Synthetic lesson summary.",
+          "body": "TEST ONLY body reference for validation.",
+          "estimatedDuration": "10 min",
+          "lessonType": "reading",
+          "previewAvailable": false,
+          "videoReference": "https://example.invalid/programme-preview-07",
+          "status": "draft",
+          "resources": [
+            {
+              "id": "resource-07-01",
+              "label": "TEST ONLY resource 07",
+              "resourceType": "link",
+              "source": "https://example.invalid/programme-resource-07",
+              "accessibilityLabel": "Open TEST ONLY resource 07",
+              "status": "draft"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "week-08",
+      "slug": "test-week-08",
+      "sequence": 8,
+      "title": "TEST ONLY Week 08",
+      "summary": "Synthetic week summary for validation.",
+      "learningOutcomes": [
+        "Demonstrate repository-only validation.",
+        "Provide deterministic intake structure."
+      ],
+      "estimatedDuration": "1 hour",
+      "status": "draft",
+      "lessons": [
+        {
+          "id": "lesson-08-01",
+          "slug": "test-lesson-08-01",
+          "sequence": 1,
+          "title": "TEST ONLY Lesson 08",
+          "summary": "Synthetic lesson summary.",
+          "body": "TEST ONLY body reference for validation.",
+          "estimatedDuration": "10 min",
+          "lessonType": "reading",
+          "previewAvailable": false,
+          "videoReference": "https://example.invalid/programme-preview-08",
+          "status": "draft",
+          "resources": [
+            {
+              "id": "resource-08-01",
+              "label": "TEST ONLY resource 08",
+              "resourceType": "link",
+              "source": "https://example.invalid/programme-resource-08",
+              "accessibilityLabel": "Open TEST ONLY resource 08",
+              "status": "draft"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "approval": {
+    "approvalStatus": "not_approved",
+    "approver": null,
+    "approvalDate": null,
+    "approvalReference": null,
+    "explicitClientApproval": false,
+    "publicationApproved": false,
+    "notes": "TEST ONLY fixture. Never publish."
+  }
+}

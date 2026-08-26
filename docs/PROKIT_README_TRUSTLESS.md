@@ -57,10 +57,12 @@ NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_TEST=pk_testkey
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_LIVE=pk_livekey
 STRIPE_WEBHOOK_SECRET_TEST=whsecKey
 STRIPE_WEBHOOK_SECRET_LIVE=whsecKey
-STRIPE_PRICE_PRO_TEST=proPriceId
-STRIPE_PRICE_VIP_TEST=vipPriceId
-STRIPE_PRICE_PRO_LIVE=proPriceId
-STRIPE_PRICE_VIP_LIVE=vipPriceId
+STRIPE_PRICE_PRO_MONTHLY_TEST=proMonthlyPriceId
+STRIPE_PRICE_PRO_MONTHLY_LIVE=proMonthlyPriceId
+STRIPE_PRICE_PRO_ANNUAL_TEST=proAnnualPriceId
+STRIPE_PRICE_PRO_ANNUAL_LIVE=proAnnualPriceId
+# Removed paid-tier price vars are not required for the target Free/Pro setup.
+# They are not required target config and must not power an active checkout option.
 
 # --- Resend (emails) ---
 RESEND_API_KEY=re_XXXXXXX

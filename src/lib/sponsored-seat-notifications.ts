@@ -6,9 +6,42 @@ import {
 	sendSponsoredSeatAdminEmail,
 } from '@/lib/sponsored-email'
 
+async function createPayItForwardPayloadRecord(params: {
+	seatId: string
+	donorEmail: string | null
+	stripeCheckoutSessionId: string
+	stripePaymentIntentId: string
+	createdAt: Date
+}): Promise<void> {
+	try {
+		const { getPayload } = await import('payload')
+		const { default: config } = await import('@/payload.config')
+		const payload = await getPayload({ config })
+		const dateStr = params.createdAt.toISOString().slice(0, 10)
+		const displayName = `Pay it forward — ${params.donorEmail ?? 'anonymous'} — ${dateStr}`
+		await payload.create({
+			collection: 'payload_pay_it_forward_funding',
+			data: {
+				displayName,
+				sponsorEmail: params.donorEmail ?? undefined,
+				stripeCheckoutSessionId: params.stripeCheckoutSessionId,
+				stripePaymentIntentId: params.stripePaymentIntentId,
+				purchasedAt: params.createdAt.toISOString(),
+				seatStatus: 'available',
+				amountPaidMinor: 8000,
+			},
+			overrideAccess: true,
+		})
+	} catch (error) {
+		console.error('pay_it_forward_payload_record_create_failed', {
+			seatId: params.seatId,
+			message: (error as Error).message,
+		})
+	}
+}
+
 export async function notifySponsoredSeatPurchase(params: {
 	seatId: string
-	tier: 'pro' | 'vip'
 	donorEmail: string | null
 }): Promise<void> {
 	const seat = await prisma.sponsoredSeat.findUnique({
@@ -21,7 +54,7 @@ export async function notifySponsoredSeatPurchase(params: {
 
 	if (donorEmail && !seat.donorEmailSentAt) {
 		try {
-			await sendSponsoredDonorEmail({ to: donorEmail, tier: params.tier })
+			await sendSponsoredDonorEmail({ to: donorEmail })
 			await prisma.sponsoredSeat.updateMany({
 				where: { id: seat.id, donorEmailSentAt: null },
 				data: { donorEmailSentAt: now },
@@ -30,7 +63,6 @@ export async function notifySponsoredSeatPurchase(params: {
 			console.error('sponsored_donor_email_failed', {
 				seatId: seat.id,
 				email: redactEmail(donorEmail),
-				tier: params.tier,
 				message: (error as Error).message,
 			})
 		}
@@ -40,7 +72,6 @@ export async function notifySponsoredSeatPurchase(params: {
 		try {
 			await sendSponsoredSeatAdminEmail({
 				donorEmail,
-				tier: params.tier,
 				occurredAt: now,
 			})
 			await prisma.sponsoredSeat.updateMany({
@@ -51,9 +82,16 @@ export async function notifySponsoredSeatPurchase(params: {
 			console.error('sponsored_seat_admin_email_failed', {
 				seatId: seat.id,
 				email: donorEmail ? redactEmail(donorEmail) : null,
-				tier: params.tier,
 				message: (error as Error).message,
 			})
 		}
+
+		await createPayItForwardPayloadRecord({
+			seatId: seat.id,
+			donorEmail,
+			stripeCheckoutSessionId: seat.stripeCheckoutSessionId,
+			stripePaymentIntentId: seat.stripePaymentIntentId,
+			createdAt: seat.createdAt,
+		})
 	}
 }

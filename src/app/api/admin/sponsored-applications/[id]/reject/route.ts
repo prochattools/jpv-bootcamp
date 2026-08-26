@@ -35,7 +35,7 @@ export async function POST(
 	}
 
 	const session = await getPartnerSession(sessionId)
-	if (!session || !isSponsoredSeatsAdmin(session.wpUserId)) {
+	if (!session || !isSponsoredSeatsAdmin(session.accountId)) {
 		return NextResponse.json({ ok: false, reason: 'forbidden' }, { status: 403 })
 	}
 
@@ -61,7 +61,7 @@ export async function POST(
 		where: { id: applicationId },
 		data: {
 			status: 'rejected',
-			reviewedByWpUserId: session.wpUserId,
+			reviewedByAccountId: session.accountId,
 			reviewedAt: new Date(),
 			decisionNote: note,
 		},

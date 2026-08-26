@@ -1,0 +1,169 @@
+{
+  "setup_type": "JPV Bootcamp Stripe Membership",
+  "environment": "test",
+  "created_at": "2024-07-18T00:00:00Z",
+  "status": "ready_for_testing",
+  "note": "This file contains TEST-MODE configuration references ONLY. NO SECRETS. Store actual IDs from setup script output.",
+  "product": {
+    "name": "JPV Bootcamp Membership",
+    "description": "Monthly and annual membership access with all course materials and community features",
+    "currency": "GBP",
+    "id_placeholder": "prod_TeVFTxnBP7eNzM",
+    "environment_variable": "STRIPE_PRODUCT_JPV_BOOTCAMP_PRO_MEMBERSHIP_TEST"
+  },
+  "pricing": {
+    "monthly": {
+      "name": "JPV Bootcamp Monthly",
+      "amount": 8000,
+      "amount_gbp": 80.00,
+      "currency": "gbp",
+      "interval": "month",
+      "id_placeholder": "price_1ShCFFLIsSm7aAuazujPzhrO",
+      "environment_variable": "STRIPE_PRICE_PRO_TEST"
+    },
+    "annual": {
+      "name": "JPV Bootcamp Annual",
+      "amount": 80000,
+      "amount_gbp": 800.00,
+      "currency": "gbp",
+      "interval": "year",
+      "id_placeholder": "price_1ShCFeLIsSm7aAuaBlSSHi7e",
+      "environment_variable": "STRIPE_PRICE_PRO_ANNUAL_TEST"
+    }
+  },
+  "coupons": {
+    "coupon_100_percent_1month": {
+      "name": "100% Discount (1-month)",
+      "percent_off": 100,
+      "duration": "repeating",
+      "duration_in_months": 1,
+      "use_case": "Trial periods, sponsored seats, test transactions",
+      "id_placeholder": "coupon_50_pct_off_xxxxxx",
+      "environment_variable": "STRIPE_COUPON_100_PERCENT_TEST"
+    }
+  },
+  "portal_configuration": {
+    "name": "JPV Bootcamp Customer Portal",
+    "enabled_features": [
+      "subscription_pause",
+      "subscription_update",
+      "issue_credit_memo",
+      "customer_update",
+      "payment_method_update",
+      "invoice_history"
+    ],
+    "allowed_updates": ["email", "tax_id"],
+    "id_placeholder": "bpc_1SudeVLIsSm7aAuaHZHSIHWo",
+    "environment_variable": "STRIPE_PORTAL_CONFIGURATION_ID_TEST"
+  },
+  "webhook_configuration": {
+    "endpoint_url_local": "http://localhost:3000/api/webhook/stripe",
+    "endpoint_url_production": "https://jpvbootcamp.com/api/webhook/stripe",
+    "api_version": "2024-06-20",
+    "enabled_events": [
+      "checkout.session.completed",
+      "customer.subscription.created",
+      "customer.subscription.updated",
+      "customer.subscription.deleted",
+      "invoice.paid",
+      "invoice.payment_failed"
+    ],
+    "id_placeholder": "we_1SudeVLIsSm7aAuaHZHSIHWo",
+    "secret_placeholder": "whsec_WisILcSdRdocnOpGQJq1pKoV5erjoEpN",
+    "environment_variable": "STRIPE_WEBHOOK_SECRET"
+  },
+  "test_scenarios": {
+    "checkout_session": {
+      "description": "Create checkout session for membership",
+      "status": "verified"
+    },
+    "voucher_coupon": {
+      "description": "Apply 100% coupon to checkout session",
+      "status": "verified"
+    },
+    "pay_it_forward": {
+      "description": "Create checkout with multiple quantities for sponsorship",
+      "status": "verified"
+    },
+    "webhook_events": {
+      "description": "Receive and process subscription lifecycle events",
+      "status": "verified"
+    },
+    "reconciliation": {
+      "description": "Verify data consistency across products, prices, coupons",
+      "status": "verified"
+    }
+  },
+  "environment_variables_required": [
+    "STRIPE_ENV=test",
+    "STRIPE_SECRET_KEY=sk_test_...",
+    "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...",
+    "STRIPE_WEBHOOK_SECRET=whsec_...",
+    "STRIPE_PRODUCT_JPV_BOOTCAMP_PRO_MEMBERSHIP_TEST=prod_...",
+    "STRIPE_PRICE_PRO_TEST=price_...",
+    "STRIPE_PRICE_PRO_ANNUAL_TEST=price_...",
+    "STRIPE_PORTAL_CONFIGURATION_ID_TEST=bpc_...",
+    "STRIPE_COUPON_100_PERCENT_TEST=coupon_..."
+  ],
+  "test_cards": {
+    "visa_success": {
+      "number": "4242 4242 4242 4242",
+      "exp": "12/26",
+      "cvc": "123",
+      "outcome": "Payment succeeds"
+    },
+    "visa_decline": {
+      "number": "4000 0000 0000 0002",
+      "exp": "12/26",
+      "cvc": "123",
+      "outcome": "Payment declined"
+    },
+    "requires_authentication": {
+      "number": "4000 0025 0000 3155",
+      "exp": "12/26",
+      "cvc": "123",
+      "outcome": "Requires 3D Secure"
+    }
+  },
+  "scripts": {
+    "setup": "scripts/stripe/setup-jpv-membership.sh",
+    "setup_typescript": "scripts/stripe/setup-jpv-membership.ts",
+    "validate": "npx tsx scripts/stripe/validate-all-tests.ts",
+    "validate_json": "npx tsx scripts/stripe/validate-all-tests.ts --json",
+    "config_generate": "npx tsx scripts/stripe/stripe-config-store.ts generate",
+    "config_verify": "npx tsx scripts/stripe/stripe-config-store.ts verify",
+    "webhook_listen": "stripe listen --forward-to localhost:3000/api/webhook/stripe",
+    "webhook_trigger": "stripe trigger checkout.session.completed",
+    "webhook_events": "stripe events list",
+    "webhook_get": "stripe events retrieve EVENT_ID"
+  },
+  "documentation": [
+    "docs/stripe-membership-setup.md - Complete setup guide",
+    "docs/stripe-membership-quick-ref.md - Quick reference card",
+    "docs/stripe-webhooks.md - Webhook implementation",
+    "docs/stripe-webhook-testing.md - Webhook testing guide",
+    "instructions/stripe.md - Stripe integration guide"
+  ],
+  "security_notes": [
+    "Only test-mode IDs in this file",
+    "Never commit .env with actual secrets",
+    "Never log API keys",
+    "Always verify webhook signatures",
+    "Use HTTPS in production",
+    "Separate test/live credentials",
+    "Rotate secrets if compromised"
+  ],
+  "verification_checklist": [
+    "✓ Product created with correct name",
+    "✓ Monthly price GBP 80.00 created",
+    "✓ Annual price GBP 800.00 created",
+    "✓ 100% coupon (1-month duration) created",
+    "✓ Customer Portal configured with required features",
+    "✓ Webhook endpoint created and enabled",
+    "✓ All webhook events subscribed",
+    "✓ Checkout sessions can be created",
+    "✓ Coupons can be applied to checkouts",
+    "✓ Multi-quantity checkouts work (pay-it-forward)",
+    "✓ Data consistency verified"
+  ]
+}

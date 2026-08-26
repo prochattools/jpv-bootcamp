@@ -1,0 +1,1 @@
+export { denyPublicWrite } from './payloadAccess'

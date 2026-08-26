@@ -6,7 +6,7 @@ This is the working agreement for building SaaS products with ProKit. It keeps t
 - Solo indie workflow.
 - B2B micro-SaaS that copies proven products, fills gaps, and stays small/sane.
 - Default stack: Next.js (App Router preferred), TypeScript, React + Tailwind/shadcn/ui, Clerk, Postgres/Prisma, Resend, Stripe (JPV Bootcamp Stripe account), n8n.
-- **Content layer**: Payload CMS (admin at `/app`), running side by side with WordPress during gradual migration.
+- **Content layer**: Payload CMS (admin at `/admin`) for courses, members, access, and editorial content.
 
 ## Node and package manager requirements (jpv-bootcamp)
 - **Node 20** — Payload 3.x requires Node ≤ 20. Use `nvm use 20` (`.nvmrc` is set to `20`).
@@ -61,7 +61,7 @@ Large refactors should be phased and highlight risk areas (auth, billing, data m
 ```bash
 pnpm payload generate:types       # Regenerate payload-types.ts after schema changes
 pnpm payload generate:importmap   # Regenerate import map after adding collections/plugins
-pnpm dev                          # Payload auto-migrates its tables on first run
+pnpm dev                          # run pnpm payload migrate separately after Payload schema changes
 ```
 
 Payload admin panel: `http://localhost:3000/app` (dev) / `https://jpvbootcamp.com/app` (prod).

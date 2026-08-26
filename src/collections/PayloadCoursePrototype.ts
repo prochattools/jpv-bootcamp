@@ -1,35 +1,47 @@
-import type { CollectionConfig } from 'payload'
+import type { CollectionConfig, PayloadRequest } from 'payload'
+import { isPayloadAdminRequest } from '@/lib/access/payloadAccess'
 
-const prototypeAdminGroup = 'Course Prototype'
+const courseAdminGroup = 'Courses'
+
+// Access helpers: only Payload admin users (payload_users collection) may
+// mutate course content; members cannot create, update, or delete.
+const adminOnlyWrite = ({ req }: { req: PayloadRequest }) => isPayloadAdminRequest(req)
+
+// Read: admins see everything; members and anonymous users get published-only.
+const adminOrPublishedRead = ({ req }: { req: PayloadRequest }) => {
+  if (isPayloadAdminRequest(req)) return true
+  return { status: { equals: 'published' } }
+}
+
+// Lessons have no status field — admins see all; non-admins get preview-only.
+const lessonRead = ({ req }: { req: PayloadRequest }) => {
+  if (isPayloadAdminRequest(req)) return true
+  return { previewLesson: { equals: true } }
+}
+
+export const normalizeLegacyAccessBadge = ({ value }: { value?: unknown }) => {
+  if (value === 'manual' || value === undefined || value === null || value === '') return value
+  if (value === 'free' || value === 'pro' || value === 'vip') return 'manual'
+  return value
+}
 
 export const PayloadCourses: CollectionConfig = {
   slug: 'payload_courses',
   dbName: 'payload_courses',
+  labels: { singular: 'Course', plural: 'Courses' },
   admin: {
-    group: prototypeAdminGroup,
+    group: courseAdminGroup,
     useAsTitle: 'title',
-    defaultColumns: ['title', 'status', 'visibility', 'accessBadge', 'updatedAt'],
-    description: 'Visual prototype only. Not connected to Stripe, WordPress, FluentCRM, or FluentCommunity.',
+    defaultColumns: ['title', 'status', 'visibility', 'coverImage', 'updatedAt'],
+    description: 'Course catalogue. Create, edit and publish courses from here.',
+  },
+  access: {
+    read: adminOrPublishedRead,
+    create: adminOnlyWrite,
+    update: adminOnlyWrite,
+    delete: adminOnlyWrite,
   },
   fields: [
-    {
-      name: 'prototype',
-      type: 'checkbox',
-      defaultValue: true,
-      admin: {
-        readOnly: true,
-        description: 'Marks this record as visual prototype data.',
-      },
-    },
-    {
-      name: 'prototypeKey',
-      type: 'text',
-      unique: true,
-      index: true,
-      admin: {
-        description: 'Stable identifier for local demo content.',
-      },
-    },
     { name: 'title', type: 'text', required: true },
     { name: 'slug', type: 'text', required: true, unique: true, index: true },
     { name: 'shortDescription', type: 'textarea' },
@@ -65,56 +77,45 @@ export const PayloadCourses: CollectionConfig = {
       name: 'accessBadge',
       type: 'select',
       required: true,
-      defaultValue: 'free',
+      defaultValue: 'manual',
       options: [
-        { label: 'Free', value: 'free' },
-        { label: 'Pro', value: 'pro' },
-        { label: 'VIP', value: 'vip' },
-        { label: 'Manual', value: 'manual' },
+        { label: 'Manual (JPV Membership Required)', value: 'manual' },
       ],
       admin: {
-        description: 'Visual label only. This does not grant or enforce access.',
+        description: 'Legacy compatibility value. Runtime access is controlled by JPV Bootcamp Membership and verified Stripe subscription state.',
+        hidden: true,
       },
+      hooks: { beforeValidate: [normalizeLegacyAccessBadge] },
     },
     { name: 'estimatedDuration', type: 'text' },
     { name: 'sortOrder', type: 'number', defaultValue: 0 },
-    {
-      name: 'showInPrototypeDashboard',
-      type: 'checkbox',
-      defaultValue: true,
-    },
     { name: 'featured', type: 'checkbox', defaultValue: false },
-    {
-      name: 'mockProgress',
-      type: 'number',
-      min: 0,
-      max: 100,
-      defaultValue: 0,
-      admin: {
-        description: 'Visual-only progress value for the prototype dashboard.',
-      },
-    },
-    { name: 'prototypeNote', type: 'textarea' },
   ],
   timestamps: true,
+}
+
+const adminOrModuleRead = ({ req }: { req: PayloadRequest }) => {
+  if (isPayloadAdminRequest(req)) return true
+  return { publishedPreview: { equals: true } }
 }
 
 export const PayloadCourseModules: CollectionConfig = {
   slug: 'payload_course_modules',
   dbName: 'payload_course_modules',
+  labels: { singular: 'Course Module', plural: 'Course Modules' },
   admin: {
-    group: prototypeAdminGroup,
+    group: courseAdminGroup,
     useAsTitle: 'title',
     defaultColumns: ['title', 'course', 'sortOrder', 'publishedPreview', 'updatedAt'],
-    description: 'Ordered course sections for the visual prototype.',
+    description: 'Ordered sections within a course.',
+  },
+  access: {
+    read: adminOrModuleRead,
+    create: adminOnlyWrite,
+    update: adminOnlyWrite,
+    delete: adminOnlyWrite,
   },
   fields: [
-    {
-      name: 'prototype',
-      type: 'checkbox',
-      defaultValue: true,
-      admin: { readOnly: true },
-    },
     {
       name: 'course',
       type: 'relationship',
@@ -133,19 +134,20 @@ export const PayloadCourseModules: CollectionConfig = {
 export const PayloadLessons: CollectionConfig = {
   slug: 'payload_lessons',
   dbName: 'payload_lessons',
+  labels: { singular: 'Lesson', plural: 'Lessons' },
   admin: {
-    group: prototypeAdminGroup,
+    group: courseAdminGroup,
     useAsTitle: 'title',
-    defaultColumns: ['title', 'module', 'sortOrder', 'mockCompletionState', 'visualLockState'],
-    description: 'Visual lesson content only. Progress and permissions are not persisted or enforced.',
+    defaultColumns: ['title', 'module', 'sortOrder', 'lockState', 'updatedAt'],
+    description: 'Lesson content. Progress tracking is handled at the application layer.',
+  },
+  access: {
+    read: lessonRead,
+    create: adminOnlyWrite,
+    update: adminOnlyWrite,
+    delete: adminOnlyWrite,
   },
   fields: [
-    {
-      name: 'prototype',
-      type: 'checkbox',
-      defaultValue: true,
-      admin: { readOnly: true },
-    },
     {
       name: 'module',
       type: 'relationship',
@@ -156,9 +158,25 @@ export const PayloadLessons: CollectionConfig = {
     { name: 'title', type: 'text', required: true },
     { name: 'slug', type: 'text', required: true, unique: true, index: true },
     { name: 'summary', type: 'textarea' },
+    {
+      name: 'coverImage',
+      type: 'upload',
+      relationTo: 'payload_media',
+      admin: {
+        description: 'Optional lesson artwork shown in the member portal.',
+      },
+    },
     { name: 'sortOrder', type: 'number', required: true, defaultValue: 0 },
     { name: 'estimatedDuration', type: 'text' },
     { name: 'content', type: 'richText' },
+    {
+      name: 'bunnyVideo',
+      type: 'relationship',
+      relationTo: 'bunny_videos',
+      admin: {
+        description: 'Managed Bunny Stream video attached to this lesson.',
+      },
+    },
     {
       name: 'videoProviderLabel',
       type: 'select',
@@ -170,8 +188,19 @@ export const PayloadLessons: CollectionConfig = {
         { label: 'Other', value: 'other' },
       ],
       defaultValue: 'none',
+      admin: {
+        hidden: true,
+        description: 'Legacy import compatibility only. New lesson video must use Bunny Video.',
+      },
     },
-    { name: 'videoIdOrPreviewUrl', type: 'text' },
+    {
+      name: 'videoIdOrPreviewUrl',
+      type: 'text',
+      admin: {
+        hidden: true,
+        description: 'Legacy import compatibility only.',
+      },
+    },
     {
       name: 'downloads',
       type: 'relationship',
@@ -180,20 +209,7 @@ export const PayloadLessons: CollectionConfig = {
     },
     { name: 'previewLesson', type: 'checkbox', defaultValue: false },
     {
-      name: 'mockCompletionState',
-      type: 'select',
-      defaultValue: 'not_started',
-      options: [
-        { label: 'Not started', value: 'not_started' },
-        { label: 'In progress', value: 'in_progress' },
-        { label: 'Completed', value: 'completed' },
-      ],
-      admin: {
-        description: 'Visual-only completion state.',
-      },
-    },
-    {
-      name: 'visualLockState',
+      name: 'lockState',
       type: 'select',
       defaultValue: 'available',
       options: [
@@ -202,10 +218,9 @@ export const PayloadLessons: CollectionConfig = {
         { label: 'Coming soon', value: 'coming_soon' },
       ],
       admin: {
-        description: 'Visual-only lock state. This is not authorization.',
+        description: 'Controls whether this lesson appears locked in the portal UI.',
       },
     },
-    { name: 'prototypeNote', type: 'textarea' },
   ],
   timestamps: true,
 }
@@ -214,34 +229,33 @@ export const PayloadCourseAccessPreview: CollectionConfig = {
   slug: 'payload_course_access_preview',
   dbName: 'payload_course_access_preview',
   admin: {
-    group: prototypeAdminGroup,
+    group: courseAdminGroup,
     useAsTitle: 'displayLabel',
     defaultColumns: ['displayLabel', 'type', 'visualState', 'course', 'updatedAt'],
-    description: 'Visual access examples only. No real member, billing, or entitlement data is connected.',
+    description: 'Access tier examples shown in the portal. Not linked to billing or entitlement enforcement.',
+    hidden: true,
+  },
+  access: {
+    read: adminOrPublishedRead,
+    create: adminOnlyWrite,
+    update: adminOnlyWrite,
+    delete: adminOnlyWrite,
   },
   fields: [
-    {
-      name: 'prototype',
-      type: 'checkbox',
-      defaultValue: true,
-      admin: { readOnly: true },
-    },
     { name: 'displayLabel', type: 'text', required: true },
     {
       name: 'type',
       type: 'select',
       required: true,
+      defaultValue: 'jpv_bootcamp_membership',
       options: [
-        { label: 'Free', value: 'free' },
-        { label: 'Pro', value: 'pro' },
-        { label: 'VIP', value: 'vip' },
-        { label: 'Manual', value: 'manual' },
+        { label: 'Public', value: 'public' },
+        { label: 'JPV Bootcamp Membership', value: 'jpv_bootcamp_membership' },
         { label: 'Private', value: 'private' },
       ],
     },
     { name: 'description', type: 'textarea' },
     { name: 'badgeText', type: 'text' },
-    { name: 'exampleMemberName', type: 'text' },
     {
       name: 'course',
       type: 'relationship',
@@ -258,6 +272,91 @@ export const PayloadCourseAccessPreview: CollectionConfig = {
         { label: 'Coming soon', value: 'coming_soon' },
       ],
     },
+  ],
+  timestamps: true,
+}
+
+
+
+export const PayloadLessonComments: CollectionConfig = {
+  slug: 'payload_lesson_comments',
+  dbName: 'payload_lesson_comments',
+  labels: { singular: 'Lesson Comment', plural: 'Lesson Comments' },
+  admin: {
+    group: courseAdminGroup,
+    useAsTitle: 'displayName',
+    defaultColumns: ['displayName', 'lesson', 'author', 'moderationStatus', 'sourceCreatedAt', 'createdAt'],
+    description: 'Lesson-scoped member discussions and migrated historical lesson comments.',
+  },
+  access: {
+    read: adminOnlyWrite,
+    create: adminOnlyWrite,
+    update: adminOnlyWrite,
+    delete: adminOnlyWrite,
+  },
+  fields: [
+    { name: 'displayName', type: 'text', required: true },
+    {
+      name: 'lesson',
+      type: 'relationship',
+      relationTo: 'payload_lessons',
+      required: true,
+      index: true,
+    },
+    {
+      name: 'author',
+      type: 'relationship',
+      relationTo: 'payload_members',
+      required: true,
+      index: true,
+    },
+    {
+      name: 'parent',
+      type: 'relationship',
+      // Generated Payload slugs lag this already-registered collection in the dirty worktree.
+      relationTo: 'payload_lesson_comments' as any,
+      index: true,
+    },
+    { name: 'body', type: 'richText', required: true },
+    {
+      name: 'legacyBodyHtml',
+      type: 'textarea',
+      admin: {
+        description: 'Exact historical rendered/source HTML retained for migration evidence.',
+        readOnly: true,
+      },
+    },
+    {
+      name: 'moderationStatus',
+      type: 'select',
+      required: true,
+      defaultValue: 'visible',
+      options: [
+        { label: 'Visible', value: 'visible' },
+        { label: 'Pending Review', value: 'pending_review' },
+        { label: 'Hidden', value: 'hidden' },
+        { label: 'Deleted', value: 'deleted' },
+      ],
+    },
+    {
+      name: 'legacyCommentId',
+      type: 'text',
+      unique: true,
+      index: true,
+      admin: {
+        description: 'Legacy FluentCommunity comment ID used for deterministic migration idempotency.',
+        readOnly: true,
+      },
+    },
+    {
+      name: 'sourceCreatedAt',
+      type: 'date',
+      admin: {
+        description: 'Original source timestamp retained independently from Payload migration timestamps.',
+        readOnly: true,
+      },
+    },
+    { name: 'metadata', type: 'json', admin: { hidden: true } },
   ],
   timestamps: true,
 }

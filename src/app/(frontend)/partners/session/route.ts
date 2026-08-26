@@ -15,7 +15,7 @@ import { redactEmail } from '@/lib/log-redact'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-const PORTAL_PARTNERS_URL = 'https://portal.jpvbootcamp.com/go/partners'
+const PARTNERS_URL = '/partners'
 
 export async function GET(req: NextRequest) {
 	const tokenParam = req.nextUrl.searchParams.get('token')
@@ -23,13 +23,13 @@ export async function GET(req: NextRequest) {
 	const nextParam = req.nextUrl.searchParams.get('next')
 	const nextPath = sanitizePathOnly(nextParam, PARTNERS_DEFAULT_PATH)
 	if (!token) {
-		return NextResponse.redirect(PORTAL_PARTNERS_URL)
+		return NextResponse.redirect(new URL(PARTNERS_URL, req.nextUrl.origin))
 	}
 
 	const secret = (process.env.PARTNERS_HANDOFF_SECRET || '').trim()
 	if (!secret) {
 		console.error('partners_handoff_secret_missing')
-		return NextResponse.redirect(PORTAL_PARTNERS_URL)
+		return NextResponse.redirect(new URL(PARTNERS_URL, req.nextUrl.origin))
 	}
 
 	const verification = verifyPartnersHandoffToken(token, secret)
@@ -38,14 +38,14 @@ export async function GET(req: NextRequest) {
 		console.warn('partners_handoff_invalid', {
 			reason,
 		})
-		return NextResponse.redirect(PORTAL_PARTNERS_URL)
+		return NextResponse.redirect(new URL(PARTNERS_URL, req.nextUrl.origin))
 	}
 
 	try {
 		const session = await createPartnerSession({
-			wpUserId: verification.payload.wp_user_id,
-			wpEmail: verification.payload.wp_email,
-			wpName: verification.payload.wp_name,
+			accountId: verification.payload.account_id,
+			accountEmail: verification.payload.account_email,
+			accountName: verification.payload.account_name,
 		})
 
 		const response = NextResponse.redirect(new URL(nextPath, req.nextUrl.origin))
@@ -56,8 +56,8 @@ export async function GET(req: NextRequest) {
 		)
 		console.info('partners_session_created', {
 			sessionId: session.sessionId.slice(0, 8),
-			wpUserId: session.wpUserId,
-			wpEmail: redactEmail(verification.payload.wp_email),
+			accountId: session.accountId,
+			accountEmail: redactEmail(verification.payload.account_email),
 			expiresAt: session.expiresAt.toISOString(),
 		})
 		return response
@@ -65,6 +65,6 @@ export async function GET(req: NextRequest) {
 		console.error('partners_session_create_failed', {
 			message: (error as Error).message,
 		})
-		return NextResponse.redirect(PORTAL_PARTNERS_URL)
+		return NextResponse.redirect(new URL(PARTNERS_URL, req.nextUrl.origin))
 	}
 }

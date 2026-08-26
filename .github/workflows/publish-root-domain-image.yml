@@ -1,0 +1,213 @@
+name: Publish Root-Domain Image
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      expected_sha:
+        description: Full 40-character SHA to publish
+        required: true
+        type: string
+      confirmation:
+        description: Type publish-root-domain-image to confirm image publication only
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: root-domain-image-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Build and publish root-domain image
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    environment: root-domain-image-publish
+    env:
+      ALLOWED_BRANCH: main
+      TARGET_ORIGIN: https://jpvbootcamp.com
+
+    steps:
+      - name: Validate branch and dispatch boundary
+        shell: bash
+        env:
+          DISPATCH_SHA: ${{ inputs.expected_sha }}
+          DISPATCH_CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          if [ "${GITHUB_REF_NAME}" != "$ALLOWED_BRANCH" ]; then
+            echo "PUBLISH-DENIED: only $ALLOWED_BRANCH is permitted" >&2
+            exit 1
+          fi
+          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
+            if ! printf '%s' "$DISPATCH_SHA" | grep -qE '^[0-9a-f]{40}$'; then
+              echo "PUBLISH-DENIED: expected_sha must be a full lowercase 40-character SHA" >&2
+              exit 1
+            fi
+            if [ "$DISPATCH_CONFIRMATION" != "publish-root-domain-image" ]; then
+              echo "PUBLISH-DENIED: confirmation phrase is invalid" >&2
+              exit 1
+            fi
+          fi
+          echo "Root-domain image lane: branch=$ALLOWED_BRANCH origin=$TARGET_ORIGIN"
+          echo "legacy/production is preserved separately and is not a deployment source for this lane"
+
+      - name: Check out exact source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - name: Verify source branch and SHA
+        shell: bash
+        env:
+          DISPATCH_SHA: ${{ inputs.expected_sha }}
+        run: |
+          set -euo pipefail
+          if [ "$(git branch --show-current)" != "" ]; then
+            echo "Source checkout is detached as expected"
+          fi
+          actual_sha="$(git rev-parse HEAD)"
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] && [ "$actual_sha" != "$DISPATCH_SHA" ]; then
+            echo "PUBLISH-DENIED: checked out SHA does not match requested SHA" >&2
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "$actual_sha" "origin/$ALLOWED_BRANCH"; then
+            echo "PUBLISH-DENIED: source SHA is not reachable from $ALLOWED_BRANCH" >&2
+            exit 1
+          fi
+          echo "Source SHA verified: $actual_sha"
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: 10.33.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '20'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate production runtime contract
+        run: pnpm exec tsx scripts/production/root-domain-runtime-contract.test.ts
+
+      - name: Build application
+        env:
+          APP_PUBLIC_URL: https://jpvbootcamp.com
+          APP_BASE_URL: https://jpvbootcamp.com
+          NEXT_PUBLIC_APP_URL: https://jpvbootcamp.com
+          NEXT_PUBLIC_SERVER_URL: https://jpvbootcamp.com
+        run: pnpm run build
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Build and publish immutable production image
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v6
+        with:
+          context: .
+          file: Dockerfile.production
+          platforms: linux/amd64
+          push: true
+          tags: ghcr.io/${{ github.repository }}:${{ github.sha }}
+          build-args: |
+            NEXT_PUBLIC_APP_URL=https://jpvbootcamp.com
+            APP_BASE_URL=https://jpvbootcamp.com
+            NEXT_PUBLIC_SERVER_URL=https://jpvbootcamp.com
+            IMAGE_TAG=${{ github.sha }}
+            COMMIT_SHA=${{ github.sha }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.created=${{ github.event.head_commit.timestamp }}
+            org.opencontainers.image.version=${{ github.sha }}
+            dev.jpvbootcamp.production-origin=https://jpvbootcamp.com
+            dev.jpvbootcamp.branch=main
+
+      - name: Report image reference
+        run: |
+          echo "Published image: ghcr.io/${{ github.repository }}:${{ github.sha }}"
+
+      - name: Update and trigger root Dokploy deployment
+        if: success()
+        shell: bash
+        env:
+          DOKPLOY_API_KEY: ${{ secrets.DOKPLOY_API_KEY }}
+          DOKPLOY_APPLICATION_ID: I_2Vukga3cc3ZhaG-mUzU
+          DOKPLOY_API_BASE_URL: https://dokploy.prochat.tools/api
+        run: |
+          set -euo pipefail
+
+          # This is the production root app. The legacy application remains
+          # preserved on its separate legacy ref/domain.
+          ALLOWED_APPLICATION_ID="I_2Vukga3cc3ZhaG-mUzU"
+          ALLOWED_APPLICATION_NAME="clients-jpv-bootcamp-app-tp9xrk"
+          NEW_IMAGE="ghcr.io/${{ github.repository }}:${{ github.sha }}"
+
+          if [ -z "$DOKPLOY_API_KEY" ]; then
+            echo "DEPLOY-DENIED: DOKPLOY_API_KEY is unset or empty" >&2
+            exit 1
+          fi
+          if [ "$DOKPLOY_APPLICATION_ID" != "$ALLOWED_APPLICATION_ID" ]; then
+            echo "DEPLOY-DENIED: Dokploy application ID does not match the root production allow-list" >&2
+            exit 1
+          fi
+
+          request_json=$(jq -cn \
+            --arg applicationId "$DOKPLOY_APPLICATION_ID" \
+            --arg dockerImage "$NEW_IMAGE" \
+            '{applicationId:$applicationId,dockerImage:$dockerImage}')
+          update_status=$(curl --silent --show-error --max-time 30 \
+            -o /tmp/dokploy_root_update_response.json \
+            -w '%{http_code}' \
+            -X POST "$DOKPLOY_API_BASE_URL/application.update" \
+            -H "x-api-key: $DOKPLOY_API_KEY" \
+            -H 'Content-Type: application/json' \
+            --data-binary "$request_json")
+          case "$update_status" in
+            2??) echo "Dokploy root image configuration updated: $NEW_IMAGE" ;;
+            *)
+              echo "Dokploy root image update failed with HTTP $update_status" >&2
+              exit 1
+              ;;
+          esac
+
+          deploy_json=$(jq -cn \
+            --arg applicationId "$DOKPLOY_APPLICATION_ID" \
+            --arg title "Deploy $NEW_IMAGE" \
+            --arg description "GitHub Actions run $GITHUB_RUN_ID; source SHA $GITHUB_SHA; target $ALLOWED_APPLICATION_NAME" \
+            '{applicationId:$applicationId,title:$title,description:$description}')
+          deploy_status=$(curl --silent --show-error --max-time 30 \
+            -o /tmp/dokploy_root_deploy_response.json \
+            -w '%{http_code}' \
+            -X POST "$DOKPLOY_API_BASE_URL/application.deploy" \
+            -H "x-api-key: $DOKPLOY_API_KEY" \
+            -H 'Content-Type: application/json' \
+            --data-binary "$deploy_json")
+          case "$deploy_status" in
+            2??)
+              echo "Dokploy root deployment triggered for: $NEW_IMAGE"
+              echo "Dokploy target: $ALLOWED_APPLICATION_NAME"
+              ;;
+            *)
+              echo "Dokploy root deployment trigger failed with HTTP $deploy_status" >&2
+              exit 1
+              ;;
+          esac

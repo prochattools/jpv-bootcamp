@@ -1,38 +1,40 @@
 import 'server-only'
 import { getStripeConfig } from '@/lib/stripe-config'
 
-export type Plan = 'pro' | 'vip' | 'exhibitor'
+export type Plan = 'jpv_bootcamp_membership'
 
 export function normalizePlan(value: string | null | undefined): Plan | null {
 	if (!value) return null
 	const normalized = value.trim().toLowerCase()
-	return normalized === 'pro' || normalized === 'vip' || normalized === 'exhibitor' ? normalized : null
+	// Accept the canonical key and legacy aliases for import compatibility
+	if (
+		normalized === 'jpv_bootcamp_membership' ||
+		normalized === 'membership' ||
+		normalized === 'pro'
+	) {
+		return 'jpv_bootcamp_membership'
+	}
+	return null
 }
 
 let cachedPlanByPriceId: Record<string, Plan> | null = null
 let cachedPlanByProductId: Record<string, Plan> | null = null
 
 function getPlanByPriceId(): Record<string, Plan> {
-	if (cachedPlanByPriceId) {
-		return cachedPlanByPriceId
-	}
-	const { pricePro, priceVip, priceExhibitor } = getStripeConfig()
+	if (cachedPlanByPriceId) return cachedPlanByPriceId
+	const { pricePro, priceProAnnual } = getStripeConfig()
 	cachedPlanByPriceId = {
-		[pricePro]: 'pro',
-		[priceVip]: 'vip',
-		[priceExhibitor]: 'exhibitor',
+		[pricePro]: 'jpv_bootcamp_membership',
+		[priceProAnnual]: 'jpv_bootcamp_membership',
 	}
 	return cachedPlanByPriceId
 }
 
 function getPlanByProductId(): Record<string, Plan> {
-	if (cachedPlanByProductId) {
-		return cachedPlanByProductId
-	}
-	const { productPro, productVip } = getStripeConfig()
+	if (cachedPlanByProductId) return cachedPlanByProductId
+	const { productPro } = getStripeConfig()
 	cachedPlanByProductId = {
-		[productPro]: 'pro',
-		[productVip]: 'vip',
+		[productPro]: 'jpv_bootcamp_membership',
 	}
 	return cachedPlanByProductId
 }
@@ -58,7 +60,5 @@ export function resolvePlanFromStripe(params: {
 	if (hasPrice) return null
 	const fromProduct = getPlanFromProductId(params.productId)
 	if (fromProduct) return fromProduct
-	const fromMetadata = normalizePlan(params.metadataPlan)
-	if (fromMetadata) return fromMetadata
-	return null
+	return normalizePlan(params.metadataPlan)
 }
