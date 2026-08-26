@@ -14,6 +14,11 @@ type StripeCustomerDeleteClient = {
 	}
 }
 
+type StripeCleanupError = {
+	code?: unknown
+	statusCode?: unknown
+}
+
 export type MemberStripeDeletionResult = {
 	deletedCustomerIds: string[]
 	alreadyMissingCustomerIds: string[]
@@ -111,4 +116,31 @@ export async function deleteStripeCustomersForMember(params: {
 	}
 
 	return result
+}
+
+/**
+ * Stripe cleanup is an external side effect and must not poison Payload's
+ * member-delete transaction. The strict helper above remains fail-closed for
+ * callers that need to make a guarded billing decision; the delete hook uses
+ * this boundary so local member deletion can complete when Stripe has drifted
+ * or is temporarily unavailable.
+ */
+export async function deleteStripeCustomersForMemberBestEffort(params: {
+	payload: PayloadCourseAccessAPI
+	stripe: StripeCustomerDeleteClient
+	stripeEnvironment: 'test' | 'live'
+	memberId: PayloadId
+	memberEmail?: string | null
+}): Promise<MemberStripeDeletionResult | null> {
+	try {
+		return await deleteStripeCustomersForMember(params)
+	} catch (error) {
+		const stripeError = (error && typeof error === 'object' ? error : {}) as StripeCleanupError
+		console.error('member_stripe_cleanup_failed', {
+			memberId: String(params.memberId),
+			code: typeof stripeError.code === 'string' ? stripeError.code : undefined,
+			statusCode: typeof stripeError.statusCode === 'number' ? stripeError.statusCode : undefined,
+		})
+		return null
+	}
 }

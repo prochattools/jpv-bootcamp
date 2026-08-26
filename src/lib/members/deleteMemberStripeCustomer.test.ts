@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict'
 
-import { deleteStripeCustomersForMember } from './deleteMemberStripeCustomer'
+import {
+	deleteStripeCustomersForMember,
+	deleteStripeCustomersForMemberBestEffort,
+} from './deleteMemberStripeCustomer'
 
 type FakeStripe = {
 	customers: {
@@ -166,9 +169,63 @@ async function testAmbiguousEmailFailsClosed(): Promise<void> {
 	assert.equal(called, false)
 }
 
+async function testBestEffortCleanupDoesNotAbortMemberDelete(): Promise<void> {
+	const originalConsoleError = console.error
+	console.error = () => undefined
+
+	try {
+		const result = await deleteStripeCustomersForMemberBestEffort({
+			payload: {
+				find: async () => ({
+					docs: [{ stripeCustomerId: 'cus_test', stripeMode: 'test' }],
+				}),
+			},
+			stripe: {
+				list: async () => ({ data: [] }),
+				del: async () => undefined,
+			},
+			stripeEnvironment: 'live',
+			memberId: 54,
+		})
+
+		assert.equal(result, null)
+	} finally {
+		console.error = originalConsoleError
+	}
+}
+
+async function testBestEffortCleanupHandlesStripeApiFailure(): Promise<void> {
+	const originalConsoleError = console.error
+	console.error = () => undefined
+
+	try {
+		const result = await deleteStripeCustomersForMemberBestEffort({
+			payload: {
+				find: async () => ({
+					docs: [{ stripeCustomerId: 'cus_remote_failure', stripeMode: 'live' }],
+				}),
+			},
+			stripe: {
+				list: async () => ({ data: [] }),
+				del: async () => {
+					throw Object.assign(new Error('Stripe temporarily unavailable'), { code: 'api_error' })
+				},
+			},
+			stripeEnvironment: 'live',
+			memberId: 54,
+		})
+
+		assert.equal(result, null)
+	} finally {
+		console.error = originalConsoleError
+	}
+}
+
 await testAlreadyMissingCustomerIsIdempotent()
 await testDuplicateAccountsDeleteOnce()
 await testMismatchedModeFailsClosed()
 await testUnlinkedExactEmailCustomerIsDeleted()
 await testAmbiguousEmailFailsClosed()
+await testBestEffortCleanupDoesNotAbortMemberDelete()
+await testBestEffortCleanupHandlesStripeApiFailure()
 console.log('deleteMemberStripeCustomer tests passed')

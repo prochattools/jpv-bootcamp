@@ -62,12 +62,12 @@ export const PayloadMembers: CollectionConfig = {
           overrideAccess: true,
         })
 
-        const [{ deleteStripeCustomersForMember }, { getStripe }, { getStripeEnv }] = await Promise.all([
+        const [{ deleteStripeCustomersForMemberBestEffort }, { getStripe }, { getStripeEnv }] = await Promise.all([
           import('@/lib/members/deleteMemberStripeCustomer'),
           import('@/lib/stripe'),
           import('@/lib/stripe-config'),
         ])
-        await deleteStripeCustomersForMember({
+        await deleteStripeCustomersForMemberBestEffort({
           payload: req.payload,
           stripe: getStripe(),
           stripeEnvironment: getStripeEnv(),
