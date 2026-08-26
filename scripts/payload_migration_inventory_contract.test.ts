@@ -48,14 +48,14 @@ console.log('\nPayload Migration Inventory Contract\n')
 
 test('exactly one dated module exists for every canonical migration', () => {
   assert.equal(datedModules.length, PAYLOAD_MIGRATION_NAMES.length)
-  assert.equal(datedModules.length, 46)
+  assert.equal(datedModules.length, 47)
 })
 
-test('canonical registry is ordered, unique, and has the reviewed 46 names', () => {
+test('canonical registry is ordered, unique, and has the reviewed 47 names', () => {
   assert.match(registryModuleSource, /export const PAYLOAD_MIGRATION_NAMES\s*=\s*\[/)
-  assert.equal(PAYLOAD_MIGRATION_NAMES.length, 46)
+  assert.equal(PAYLOAD_MIGRATION_NAMES.length, 47)
   assert.equal(new Set(PAYLOAD_MIGRATION_NAMES).size, PAYLOAD_MIGRATION_NAMES.length)
-  assert.equal(PAYLOAD_MIGRATION_NAMES.at(-1), '20260825_125000_membership_shadow_state_alignment')
+  assert.equal(PAYLOAD_MIGRATION_NAMES.at(-1), '20260826_090000_payment_action_required_status')
 })
 
 test('every canonical name has one dated TypeScript module', () => {

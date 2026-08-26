@@ -73,6 +73,7 @@ const PREVIEW_MIGRATION_METADATA = [
   { purpose: 'Align legacy membership-support relationship columns and review enums with the current Payload runtime contract.', rollbackRisk: 'irreversible', verificationChecks: ['registry-match', 'ordered-exactly', 'membership-support-relationship-alignment'] },
   { purpose: 'Align the membership review assignee relationship column with the current Payload runtime contract.', rollbackRisk: 'reversible', verificationChecks: ['registry-match', 'ordered-exactly', 'membership-review-assignee-alignment'] },
   { purpose: 'Add current membership-support Stripe shadow states while preserving historical state values.', rollbackRisk: 'irreversible', verificationChecks: ['registry-match', 'ordered-exactly', 'membership-shadow-state-alignment'] },
+  { purpose: 'Add the action-required payment status used by open Stripe invoices awaiting payment action.', rollbackRisk: 'irreversible', verificationChecks: ['registry-match', 'ordered-exactly', 'payment-action-required-enum'] },
 ] as const satisfies readonly PreviewMigrationMetadata[]
 
 if (PREVIEW_MIGRATION_METADATA.length !== PAYLOAD_MIGRATION_NAMES.length) {

@@ -60,13 +60,14 @@ const TARGET_MIGRATIONS = [
   '20260825_123000_membership_support_relationship_alignment',
   '20260825_124000_membership_review_assignee_alignment',
   '20260825_125000_membership_shadow_state_alignment',
+  '20260826_090000_payment_action_required_status',
 ] as const
 const TARGET_MIGRATION = TARGET_MIGRATIONS.at(-1)!
 const APPLY_CONFIRMATION = 'apply_billing_reconciliation_to_jpvbootcamp_staging'
 const ROLLBACK_CONFIRMATION = 'plan_rollback_billing_reconciliation_from_jpvbootcamp_staging'
 const EXPECTED_APPLIED_BEFORE = 40
-const EXPECTED_APPLIED_AFTER = 46
-const CURRENT_STAGING_APPLIED_COUNT = 46
+const EXPECTED_APPLIED_AFTER = 47
+const CURRENT_STAGING_APPLIED_COUNT = 47
 // Reviewed staging hostname — matches STAGING_TARGET.hostname in runStagingPayloadMigration.ts.
 const STAGING_HOSTNAME = '10.0.2.4'
 const PRODUCTION_HOSTNAME = 'prod-db.internal'
@@ -82,8 +83,8 @@ assert.equal(FIRST_35.length, 40, 'Registry must have exactly 40 applied migrati
 assert.equal(FIRST_35.at(-2), MIGRATION39, 'Migration 39 must remain in the applied prefix')
 assert.equal(FIRST_35.at(-1), MIGRATION40, 'Migration 40 must be the last migration in the applied prefix')
 assert.equal(ALL_36.length, EXPECTED_APPLIED_BEFORE, 'Current staging baseline must contain all 40 migrations')
-assert.equal(ALL_37.length, EXPECTED_APPLIED_AFTER, 'Canonical 40→46 checkpoint must contain all 46 migrations')
-assert.deepEqual(ALL_37.slice(EXPECTED_APPLIED_BEFORE), [...TARGET_MIGRATIONS], 'Billing migrations must be the exact canonical 40→46 batch')
+assert.equal(ALL_37.length, EXPECTED_APPLIED_AFTER, 'Canonical 40→47 checkpoint must contain all 47 migrations')
+assert.deepEqual(ALL_37.slice(EXPECTED_APPLIED_BEFORE), [...TARGET_MIGRATIONS], 'Billing migrations must be the exact canonical 40→47 batch')
 
 // ─── Confirmed: no self-referential hardcoded commit ──────────────────────────
 // The runner exports no REQUIRED_COMMIT constant.

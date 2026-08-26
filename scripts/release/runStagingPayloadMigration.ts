@@ -40,6 +40,7 @@ const EXPECTED_FORWARD_BATCH = [
   '20260825_123000_membership_support_relationship_alignment',
   '20260825_124000_membership_review_assignee_alignment',
   '20260825_125000_membership_shadow_state_alignment',
+  '20260826_090000_payment_action_required_status',
 ] as const
 const EXPECTED_APPLIED_BEFORE = PAYLOAD_MIGRATION_NAMES.length - EXPECTED_FORWARD_BATCH.length
 const EXPECTED_APPLIED_AFTER = EXPECTED_APPLIED_BEFORE + EXPECTED_FORWARD_BATCH.length
