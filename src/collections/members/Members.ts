@@ -55,20 +55,25 @@ export const PayloadMembers: CollectionConfig = {
     ],
     beforeDelete: [
       async ({ id, req }) => {
-        try {
-          await req.payload.delete({
-            collection: 'payload-preferences' as any,
-            where: {
-              and: [
-                { 'user.relationTo': { equals: 'payload_members' } },
-                { 'user.value': { equals: id } },
-              ],
-            },
-            overrideAccess: true,
-          })
-        } catch {
-          // Preferences cleanup is best-effort; the member delete should proceed
-        }
+        const member = await req.payload.findByID({
+          collection: 'payload_members',
+          id,
+          depth: 0,
+          overrideAccess: true,
+        })
+
+        const [{ deleteStripeCustomersForMember }, { getStripe }, { getStripeEnv }] = await Promise.all([
+          import('@/lib/members/deleteMemberStripeCustomer'),
+          import('@/lib/stripe'),
+          import('@/lib/stripe-config'),
+        ])
+        await deleteStripeCustomersForMember({
+          payload: req.payload,
+          stripe: getStripe(),
+          stripeEnvironment: getStripeEnv(),
+          memberId: id,
+          memberEmail: typeof member.email === 'string' ? member.email : null,
+        })
       },
     ],
   },
