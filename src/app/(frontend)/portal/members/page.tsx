@@ -1,18 +1,22 @@
 import Link from 'next/link'
 
 import { requirePortalMember } from '@/lib/auth/requirePortalMember'
+import { getMembershipReadModel } from '@/lib/billing/membershipReadModel'
 import { listActiveMembers } from '@/lib/payloadCourse/memberDirectory'
 
 export default async function MembersDirectoryPage() {
-  await requirePortalMember('/portal/members')
+  const { payload } = await requirePortalMember('/portal/members')
 
-  const members = await listActiveMembers()
+  const [members, membership] = await Promise.all([
+    listActiveMembers(),
+    getMembershipReadModel(payload),
+  ])
 
   return (
     <div>
       <div className='mb-6'>
         <h1 className='text-2xl font-semibold text-jpv-ink'>Members</h1>
-        <p className='mt-1 text-sm text-jpv-muted'>{members.length} active member{members.length !== 1 ? 's' : ''}</p>
+        <p className='mt-1 text-sm text-jpv-muted'>{membership.members.activeProfiles} active member{membership.members.activeProfiles !== 1 ? 's' : ''}</p>
       </div>
 
       {members.length === 0 ? (

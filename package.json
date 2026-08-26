@@ -98,6 +98,7 @@
     "test:payload-member-billing-portal": "tsx scripts/payload_member_billing_portal.test.ts",
     "test:payload-identity": "tsx scripts/payload_identity_destination.test.ts",
     "payload:course:seed": "tsx scripts/payload/seed-course-admin-data.mts",
+    "payload:link-admin-members": "tsx scripts/payload/link-administrator-members.mts",
     "payload:course:reconcile": "tsx scripts/payload/reconcile-entitlements.mts",
     "payload:email:send": "tsx scripts/payload/send-queued-emails.mts",
     "stripe:check-products": "tsx scripts/stripe/check_price_products.ts",

@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 
 import { cn } from '@/helpers/utils'
 import { ReactionSubmitButton } from '@/components/community/ReactionSubmitButton'
+import { ReactionBarClient } from '@/components/community/ReactionBarClient'
 
 export type EngagementReactionState = 'idle' | 'selected' | 'unavailable'
 
@@ -187,6 +188,20 @@ export function EngagementReactionBar({
   ]
 
   const interactive = Boolean(action && targetKind && targetId !== undefined && redirectPath)
+  if (targetKind && targetId !== undefined && redirectPath) {
+    return (
+      <ReactionBarClient
+        className={className}
+        counts={counts ?? []}
+        errorMessage={errorMessage}
+        label={label}
+        targetId={targetId}
+        targetKind={targetKind}
+        totalCount={totalCount ?? 0}
+        viewerReaction={viewerReaction}
+      />
+    )
+  }
   const buttons = reactionOptions.map((option) => interactive ? (
     <ReactionSubmitButton
       count={activeCounts.get(option.type) ?? 0}

@@ -39,6 +39,7 @@ export const PayloadMembershipSupportRecords: CollectionConfig = {
     plural: 'Membership Support Records',
   },
   admin: {
+    hidden: true,
     group: membershipSupportGroup,
     useAsTitle: 'displayName',
     defaultColumns: ['displayName', 'member', 'fundingSourceType', 'issuanceState', 'reconciliationState', 'updatedAt'],

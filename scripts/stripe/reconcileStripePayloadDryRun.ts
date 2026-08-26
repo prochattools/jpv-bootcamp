@@ -1,4 +1,6 @@
 import Stripe from 'stripe'
+import config from '@payload-config'
+import { getPayload } from 'payload'
 
 import { reconcileStripeToPayload } from '../../src/lib/billing/stripePayloadReconciliation'
 
@@ -12,9 +14,10 @@ async function main(): Promise<void> {
   const secretKey = process.env.STRIPE_SECRET_KEY_LIVE?.trim()
   if (!secretKey?.startsWith('sk_live_')) throw new Error('live_stripe_secret_missing_or_invalid')
   const stripe = new Stripe(secretKey, { apiVersion: '2024-06-20' })
+  const payload = await getPayload({ config })
 
   const report = await reconcileStripeToPayload({
-    payload: {} as never,
+    payload,
     stripe,
     mode: 'dry-run',
     livemode: true,
@@ -34,6 +37,8 @@ async function main(): Promise<void> {
     totals: report.totals,
     statusCounts,
     checkpoint: report.checkpoint,
+    readModel: report.readModel,
+    reviewRows: report.rows.filter((row) => row.disposition === 'review_required'),
   }, null, 2))
 }
 

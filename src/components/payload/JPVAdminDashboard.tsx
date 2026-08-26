@@ -2,6 +2,7 @@ import config from '@payload-config'
 import { getPayload } from 'payload'
 
 import prisma from '@/libs/prisma'
+import { getMembershipReadModel } from '@/lib/billing/membershipReadModel'
 
 type CountPayload = {
   count(args: {
@@ -34,6 +35,22 @@ async function safeOpenSupportCount(): Promise<number | null> {
   }
 }
 
+async function safeSponsoredSeatCount(): Promise<number | null> {
+  try {
+    return await prisma.sponsoredSeat.count({ where: { tier: 'free' } })
+  } catch {
+    return null
+  }
+}
+
+async function safeSponsoredApplicationCount(): Promise<number | null> {
+  try {
+    return await prisma.sponsoredApplication.count({ where: { status: 'pending' } })
+  } catch {
+    return null
+  }
+}
+
 function formatCount(value: number | null): string {
   return value === null ? 'Unavailable' : String(value)
 }
@@ -46,11 +63,16 @@ function kpiState(value: number | null, actionable = false): KpiState {
 }
 
 export async function JPVAdminDashboard() {
-  const payload = await getPayload({ config }) as unknown as CountPayload
+  const payload = await getPayload({ config }) as unknown as CountPayload & Parameters<typeof getMembershipReadModel>[0]
+  const membership = await getMembershipReadModel(payload).catch((_error): null => null)
+  const activeMembers = membership?.members.active ?? null
+  const pendingMembers = membership?.members.pending ?? null
+  const activeSubscriptions = membership?.subscriptions.activeRecords ?? null
+  const subscribedMembers = membership?.subscriptions.subscribedMembers ?? null
+  const administrators = membership?.administrators.total ?? null
+  const unlinkedAdministrators = membership?.administrators.unlinked ?? null
+  const identityReviewItems = membership?.reviewQueue ?? null
   const [
-    activeMembers,
-    pendingMembers,
-    activeSubscriptions,
     billingIssues,
     voucherReviewItems,
     payItForwardItems,
@@ -58,10 +80,10 @@ export async function JPVAdminDashboard() {
     pendingAffiliateCommissions,
     communityModeration,
     openSupportRequests,
+    fundedSponsoredSeats,
+    availableSponsoredSeats,
+    pendingSponsoredApplications,
   ] = await Promise.all([
-    safeCount(payload, 'payload_members', { accountStatus: { equals: 'active' } }),
-    safeCount(payload, 'payload_members', { accountStatus: { equals: 'pending' } }),
-    safeCount(payload, 'payload_subscriptions', { status: { equals: 'active' } }),
     safeCount(payload, 'payload_payments', { status: { in: ['failed', 'action_required', 'disputed'] } }),
     safeCount(payload, 'payload_membership_vouchers', { approvalState: { in: ['draft', 'pending_approval'] } }),
     safeCount(payload, 'payload_pay_it_forward_funding', { approvalState: { in: ['draft', 'pending_approval'] } }),
@@ -69,13 +91,28 @@ export async function JPVAdminDashboard() {
     safeCount(payload, 'payload_affiliate_commissions', { status: { equals: 'pending' } }),
     safeCount(payload, 'payload_space_posts', { moderationStatus: { equals: 'pending_review' } }),
     safeOpenSupportCount(),
+    safeSponsoredSeatCount(),
+    prisma.sponsoredSeat.count({
+      where: { tier: 'free', claimedByAccountId: null, reservedByApplicationId: null },
+    }).catch((): null => null),
+    safeSponsoredApplicationCount(),
   ])
 
   const kpis = [
     {
-      label: 'Active members',
+      label: 'Subscribed members',
+      value: formatCount(subscribedMembers),
+      state: kpiState(subscribedMembers),
+    },
+    {
+      label: 'Active member accounts',
       value: formatCount(activeMembers),
       state: kpiState(activeMembers),
+    },
+    {
+      label: 'Administrators',
+      value: formatCount(administrators),
+      state: kpiState(administrators),
     },
     {
       label: 'Pending members',
@@ -86,6 +123,11 @@ export async function JPVAdminDashboard() {
       label: 'Active subscriptions',
       value: formatCount(activeSubscriptions),
       state: kpiState(activeSubscriptions),
+    },
+    {
+      label: 'Pay-it-forward seats funded',
+      value: formatCount(fundedSponsoredSeats),
+      state: kpiState(fundedSponsoredSeats),
     },
     {
       label: 'Billing issues',
@@ -102,6 +144,16 @@ export async function JPVAdminDashboard() {
   type AttentionItem = { label: string; count: number | null; href: string }
   const allAttentionItems: AttentionItem[] = [
     {
+      label: 'Administrators to link',
+      count: unlinkedAdministrators,
+      href: '/admin/collections/payload_users',
+    },
+    {
+      label: 'Stripe identities to review',
+      count: identityReviewItems,
+      href: '/admin/collections/payload_membership_review_queue_items?where[queueState][equals]=needs_review',
+    },
+    {
       label: 'Pending members',
       count: pendingMembers,
       href: '/admin/collections/payload_members?where[accountStatus][equals]=pending',
@@ -117,9 +169,9 @@ export async function JPVAdminDashboard() {
       href: '/admin/collections/payload_membership_vouchers?where[or][0][approvalState][equals]=draft&where[or][1][approvalState][equals]=pending_approval',
     },
     {
-      label: 'Pay-it-forward approvals',
-      count: payItForwardItems,
-      href: '/admin/collections/payload_pay_it_forward_funding?where[or][0][approvalState][equals]=draft&where[or][1][approvalState][equals]=pending_approval',
+      label: 'Sponsored applications to review',
+      count: pendingSponsoredApplications,
+      href: '/admin/collections/payload_pay_it_forward_funding',
     },
     {
       label: 'Partner applications to review',
@@ -149,9 +201,14 @@ export async function JPVAdminDashboard() {
     activeMembers,
     pendingMembers,
     activeSubscriptions,
+    unlinkedAdministrators,
+    identityReviewItems,
     billingIssues,
     voucherReviewItems,
     payItForwardItems,
+    fundedSponsoredSeats,
+    availableSponsoredSeats,
+    pendingSponsoredApplications,
     pendingPartnerApplications,
     pendingAffiliateCommissions,
     communityModeration,

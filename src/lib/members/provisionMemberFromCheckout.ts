@@ -24,6 +24,7 @@ export async function provisionMemberFromCheckout(params: {
   email: string
   displayName?: string | null
   stripeCustomerId?: string | null
+  source?: 'stripe_checkout' | 'admin_created' | 'migration'
 }): Promise<CheckoutMemberProvisionResult> {
   const email = normalizeEmail(params.email)
   if (!email) {
@@ -57,7 +58,7 @@ export async function provisionMemberFromCheckout(params: {
       email,
       password,
       accountStatus: 'active',
-      source: 'stripe_checkout',
+      source: params.source ?? 'stripe_checkout',
     },
     overrideAccess: true,
   })

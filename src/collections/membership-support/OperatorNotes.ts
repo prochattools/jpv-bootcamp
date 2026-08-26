@@ -13,6 +13,7 @@ export const PayloadOperatorNotes: CollectionConfig = {
     plural: 'Operator Notes',
   },
   admin: {
+    hidden: true,
     group: membershipSupportGroup,
     useAsTitle: 'displayName',
     defaultColumns: ['displayName', 'targetType', 'visibility', 'author', 'updatedAt'],
@@ -73,4 +74,3 @@ export const PayloadOperatorNotes: CollectionConfig = {
   ],
   timestamps: true,
 }
-

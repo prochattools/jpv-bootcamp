@@ -10,6 +10,7 @@ import {
 } from '@/components/community/EngagementPresentation'
 import { PostOwnerActions, CommentOwnerActions } from '@/components/community/PostOwnerActions'
 import { ComposerToolbar } from '@/components/community/ComposerToolbar'
+import { ShareBookmarkActions } from '@/components/community/ShareBookmarkActions'
 import { submitReactionAction } from '@/app/(frontend)/portal/reaction-actions'
 import { ProgressiveCommentList } from '@/components/community/ProgressiveCommentList'
 import { StatusPill } from '@/components/portal/StatusPill'
@@ -21,6 +22,7 @@ import {
   type ReactionSummary,
 } from '@/lib/payloadCourse/reactions'
 import type { MemberCommunityAttachmentResolution } from '@/lib/payloadCourse/communityFiles'
+import { getMemberBookmarkState } from '@/lib/payloadCourse/bookmarks'
 import { submitCommunityComment } from '../../../actions'
 
 export const runtime = 'nodejs'
@@ -110,6 +112,7 @@ export default async function PortalCommunityPostPage({ params, searchParams }: 
   if (!result.allowed) notFound()
 
   const post = result.post
+  const bookmarked = await getMemberBookmarkState(payload, memberId, post.id).catch(() => false)
   let reactionSummary: ReactionSummary | null = null
   try {
     reactionSummary = await getReactionSummary(payload, memberId, {
@@ -235,23 +238,12 @@ export default async function PortalCommunityPostPage({ params, searchParams }: 
         {/* 6. Action row: bookmark + comment count + share */}
         <div className='px-6 py-5 sm:px-8 sm:pb-6'>
           <div className='flex flex-wrap items-center gap-2'>
-            <span className='inline-flex min-h-11 items-center gap-2 rounded-jpv-pill border border-jpv-border bg-jpv-surface px-4 py-2 text-xs font-semibold text-jpv-muted'>
-              <svg aria-hidden='true' className='h-4 w-4' fill='none' viewBox='0 0 24 24'>
-                <path d='M5 5v14l7-4 7 4V5H5Z' stroke='currentColor' strokeLinecap='round' strokeLinejoin='round' strokeWidth='1.75' />
-              </svg>
-              Bookmark
-            </span>
+            <ShareBookmarkActions initialBookmarked={bookmarked} postId={String(post.id)} />
             <span className='inline-flex min-h-11 items-center gap-2 rounded-jpv-pill border border-jpv-border bg-jpv-surface px-4 py-2 text-xs font-semibold text-jpv-muted'>
               <svg aria-hidden='true' className='h-4 w-4' fill='none' viewBox='0 0 24 24'>
                 <path d='M5 6.5h14v9H9l-4 3v-12Z' stroke='currentColor' strokeLinecap='round' strokeLinejoin='round' strokeWidth='1.75' />
               </svg>
               {post.comments.length} {post.comments.length === 1 ? 'comment' : 'comments'}
-            </span>
-            <span className='inline-flex min-h-11 items-center gap-2 rounded-jpv-pill border border-jpv-border bg-jpv-surface px-4 py-2 text-xs font-semibold text-jpv-muted'>
-              <svg aria-hidden='true' className='h-4 w-4' fill='none' viewBox='0 0 24 24'>
-                <path d='M4 12v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4M16 6l-4-4-4 4M12 2v13' stroke='currentColor' strokeLinecap='round' strokeLinejoin='round' strokeWidth='1.75' />
-              </svg>
-              Share
             </span>
           </div>
         </div>

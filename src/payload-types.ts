@@ -306,6 +306,10 @@ export interface PayloadMember {
   id: number;
   accountStatus: 'pending' | 'active' | 'blocked' | 'suspended' | 'deleted';
   source: 'self_signup' | 'admin_created' | 'stripe_checkout' | 'migration';
+  /**
+   * This member identity is linked to a Payload administrator. Administrators do not require a subscription.
+   */
+  isAdministrator?: boolean | null;
   emailVerifiedAt?: string | null;
   billingHoldReason?: string | null;
   lastLoginAt?: string | null;
@@ -993,13 +997,17 @@ export interface LiveSession {
   createdAt: string;
 }
 /**
- * Payload administrator accounts. These are separate from student and client member accounts.
+ * Payload administrator accounts. Each administrator is also linked to a member-facing portal profile; billing remains optional.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload_users".
  */
 export interface PayloadUser {
   id: number;
+  /**
+   * Automatically provisioned member identity used for portal participation. It does not create a billing account.
+   */
+  portalMember?: (number | null) | PayloadMember;
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -3354,6 +3362,7 @@ export interface BunnyVideosSelect<T extends boolean = true> {
 export interface PayloadMembersSelect<T extends boolean = true> {
   accountStatus?: T;
   source?: T;
+  isAdministrator?: T;
   emailVerifiedAt?: T;
   billingHoldReason?: T;
   lastLoginAt?: T;
@@ -3749,6 +3758,7 @@ export interface PayloadBillingActionsSelect<T extends boolean = true> {
  * via the `definition` "payload_users_select".
  */
 export interface PayloadUsersSelect<T extends boolean = true> {
+  portalMember?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;

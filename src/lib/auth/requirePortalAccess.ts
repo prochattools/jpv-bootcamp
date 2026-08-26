@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 
 import { cachedResolvePayloadRequestSession } from '@/lib/auth/payloadSession'
 import { MEMBER_COLLECTION } from '@/lib/auth/payloadSessionMapping'
+import { ensureAdministratorMemberIdentity } from '@/lib/auth/adminMemberIdentity'
 import { decideSharedLogin } from '@/lib/auth/sharedLoginDecision'
 import { getCachedPayload } from '@/lib/payload/getPayload'
 import type { PayloadCourseAccessAPI } from '@/lib/payloadCourse/accessService'
@@ -40,9 +41,18 @@ export async function requirePortalAccess(
 
   if (session.administratorId && !session.unresolvedCollection) {
     const payload = await getCachedPayload()
+    const administrator = await payload.findByID({
+      collection: 'payload_users',
+      id: session.administratorId,
+      depth: 0,
+      overrideAccess: true,
+    })
+    const identity = await ensureAdministratorMemberIdentity(payload as never, administrator as never)
     const actor: AdminActor = {
       kind: 'admin',
       administratorId: String(session.administratorId),
+      email: typeof administrator?.email === 'string' ? administrator.email : undefined,
+      memberId: identity ? String(identity.member.id) : undefined,
     }
     return {
       actor,

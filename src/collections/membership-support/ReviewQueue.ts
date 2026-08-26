@@ -13,6 +13,7 @@ export const PayloadMembershipReviewQueueItems: CollectionConfig = {
     plural: 'Review Queue Items',
   },
   admin: {
+    hidden: true,
     group: membershipSupportGroup,
     useAsTitle: 'displayName',
     defaultColumns: ['displayName', 'queueState', 'queueReason', 'priority', 'assignedTo', 'updatedAt'],
@@ -67,4 +68,3 @@ export const PayloadMembershipReviewQueueItems: CollectionConfig = {
   ],
   timestamps: true,
 }
-

@@ -98,6 +98,15 @@ export const PayloadMembers: CollectionConfig = {
         { label: 'Migration', value: 'migration' },
       ],
     },
+    {
+      name: 'isAdministrator',
+      type: 'checkbox',
+      defaultValue: false,
+      admin: {
+        description: 'This member identity is linked to a Payload administrator. Administrators do not require a subscription.',
+        readOnly: true,
+      },
+    },
     { name: 'emailVerifiedAt', type: 'date' },
     { name: 'billingHoldReason', type: 'text' },
     { name: 'lastLoginAt', type: 'date' },

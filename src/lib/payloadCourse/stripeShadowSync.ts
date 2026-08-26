@@ -68,6 +68,7 @@ type ShadowSyncOptions = {
   stripe?: ShadowStripeClient
   adminEmail?: string | null
   suppressCommunications?: boolean
+  strictIdentityResolution?: boolean
 }
 
 export type PayloadBillingShadowSyncResult = {
@@ -416,6 +417,32 @@ async function resolveCustomerEmail(
   return normalizeEmail(customer.email)
 }
 
+async function findMembersByNormalizedEmail(
+  payload: PayloadCourseWriteAPI,
+  email: string,
+): Promise<PayloadDocument[]> {
+  const normalized = normalizeEmail(email)
+  if (!normalized) return []
+  const matches: PayloadDocument[] = []
+  let page = 1
+  do {
+    const result = await payload.find({
+      collection: 'payload_members',
+      limit: 100,
+      page,
+      depth: 0,
+      overrideAccess: true,
+    })
+    matches.push(...(result.docs as PayloadDocument[]).filter((member) =>
+      normalizeEmail(typeof member.email === 'string' ? member.email : null) === normalized,
+    ))
+    if (!result.hasNextPage) break
+    page += 1
+    if (page > 1000) throw new Error('payload_member_email_search_page_limit_exceeded')
+  } while (true)
+  return matches
+}
+
 function makeShadowPassword(): string {
   return randomBytes(36).toString('base64url')
 }
@@ -689,25 +716,53 @@ async function getBillingSubject(
     billingStatus: PayloadBillingStatus
     defaultPaymentMethodId?: string | null
     preserveMemberStatus?: boolean
+    strictIdentityResolution?: boolean
   }
 ): Promise<BillingSubject | null> {
   const email = await resolveCustomerEmail(stripe, params.stripeCustomerId, params.email)
   if (!email) return null
 
   const memberState = memberStatusForBilling(params.billingStatus)
-  const memberResult = params.preserveMemberStatus
-    ? await (async () => {
-        const existingMember = await findOne(payload, 'payload_members', {
-          email: { equals: email },
-        })
-        return existingMember ? { member: existingMember, created: false } : null
-      })()
-    : await upsertMember(payload, {
-        email,
-        targetStatus: memberState.accountStatus,
-        holdReason: memberState.holdReason,
-        eventId: params.eventId,
+  let memberResult: { member: PayloadDocument; created: boolean } | null
+  if (params.strictIdentityResolution) {
+    const billingAccountByCustomer = await findOne(payload, 'payload_billing_accounts', {
+      stripeCustomerId: { equals: params.stripeCustomerId },
+    })
+    if (billingAccountByCustomer) {
+      const memberId = relationshipId(billingAccountByCustomer.member)
+      if (!memberId) return null
+      let member: PayloadDocument
+      try {
+        member = await payload.findByID({ collection: 'payload_members', id: memberId, depth: 0, overrideAccess: true })
+      } catch {
+        return null
+      }
+      memberResult = { member, created: false }
+    } else {
+      const emailMembers = await findMembersByNormalizedEmail(payload, email)
+      if (emailMembers.length !== 1) return null
+      const member = emailMembers[0]!
+      const existingAccount = await findOne(payload, 'payload_billing_accounts', {
+        member: { equals: member.id },
       })
+      if (existingAccount && String(existingAccount.stripeCustomerId ?? '') !== params.stripeCustomerId) return null
+      memberResult = { member, created: false }
+    }
+  } else {
+    memberResult = params.preserveMemberStatus
+      ? await (async () => {
+          const existingMember = await findOne(payload, 'payload_members', {
+            email: { equals: email },
+          })
+          return existingMember ? { member: existingMember, created: false } : null
+        })()
+      : await upsertMember(payload, {
+          email,
+          targetStatus: memberState.accountStatus,
+          holdReason: memberState.holdReason,
+          eventId: params.eventId,
+        })
+  }
   if (!memberResult) return null
   const lifecycleStage = params.billingStatus === 'canceled' ? 'churned' : 'student'
   const contact = await upsertContact(payload, {
@@ -888,6 +943,7 @@ async function syncSubscription(
     email: projection.email,
     billingStatus: projection.billingStatus,
     defaultPaymentMethodId: projection.defaultPaymentMethodId,
+    strictIdentityResolution: options.strictIdentityResolution,
   })
 
   if (!subject) {

@@ -19,6 +19,7 @@ export const PayloadMembershipVouchers: CollectionConfig = {
     plural: 'Vouchers',
   },
   admin: {
+    hidden: true,
     group: membershipSupportGroup,
     useAsTitle: 'displayName',
     defaultColumns: ['displayName', 'member', 'voucherDuration', 'approvalState', 'redemptionState', 'updatedAt'],
@@ -132,4 +133,3 @@ export const PayloadMembershipVouchers: CollectionConfig = {
   ],
   timestamps: true,
 }
-

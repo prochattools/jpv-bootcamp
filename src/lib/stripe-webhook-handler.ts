@@ -494,27 +494,25 @@ export async function handleStripeWebhook(req: Request) {
 			case 'checkout.session.completed':
 			case 'checkout.session.async_payment_succeeded': {
 				const session = event.data.object as Stripe.Checkout.Session
-				if (event.type === 'checkout.session.completed') {
-					const sponsoredTier = isSponsoredSeatSession(session)
-					if (sponsoredTier) {
-						const seatResult = await upsertSponsoredSeatFromSession({
-							session,
-							tier: sponsoredTier,
+				const sponsoredTier = isSponsoredSeatSession(session)
+				if (sponsoredTier) {
+					const seatResult = await upsertSponsoredSeatFromSession({
+						session,
+						tier: sponsoredTier,
+					})
+					console.info('sponsored_seat_created', {
+						tier: sponsoredTier,
+						seatId: seatResult.seatId ?? null,
+						created: seatResult.created,
+						eventId: event.id,
+					})
+					if (seatResult.seatId) {
+						const donorEmail =
+							session.customer_details?.email ?? session.customer_email ?? null
+						await notifySponsoredSeatPurchase({
+							seatId: seatResult.seatId,
+							donorEmail,
 						})
-						console.info('sponsored_seat_created', {
-							tier: sponsoredTier,
-							seatId: seatResult.seatId ?? null,
-							created: seatResult.created,
-							eventId: event.id,
-						})
-						if (seatResult.seatId) {
-							const donorEmail =
-								session.customer_details?.email ?? session.customer_email ?? null
-							await notifySponsoredSeatPurchase({
-								seatId: seatResult.seatId,
-								donorEmail,
-							})
-						}
 					}
 				}
 				await provisionFromCheckoutSession(session, event.id, event.type, {

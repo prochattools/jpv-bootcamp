@@ -14,15 +14,18 @@ assert.doesNotMatch(payloadConfig, /beforeLogin:\s*\[/)
 
 // KPI labels present in new focused dashboard
 for (const label of [
-  'Active members',
+  'Active member accounts',
+  'Subscribed members',
+  'Administrators',
   'Pending members',
   'Active subscriptions',
+  'Pay-it-forward seats funded',
   'Billing issues',
   'Community moderation',
   'Partner applications to review',
   'Affiliate commissions to review',
   'Voucher approvals',
-  'Pay-it-forward approvals',
+  'Sponsored applications to review',
   'Operations',
   'Needs attention',
   'Quick actions',

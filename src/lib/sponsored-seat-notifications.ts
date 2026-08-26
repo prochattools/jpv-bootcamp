@@ -19,6 +19,15 @@ async function createPayItForwardPayloadRecord(params: {
 		const payload = await getPayload({ config })
 		const dateStr = params.createdAt.toISOString().slice(0, 10)
 		const displayName = `Pay it forward — ${params.donorEmail ?? 'anonymous'} — ${dateStr}`
+		const existing = await payload.find({
+			collection: 'payload_pay_it_forward_funding',
+			where: { stripePaymentIntentId: { equals: params.stripePaymentIntentId } },
+			limit: 1,
+			depth: 0,
+			overrideAccess: true,
+		})
+		if (existing.docs[0]) return
+
 		await payload.create({
 			collection: 'payload_pay_it_forward_funding',
 			data: {
@@ -51,6 +60,14 @@ export async function notifySponsoredSeatPurchase(params: {
 
 	const donorEmail = params.donorEmail?.trim() || null
 	const now = new Date()
+
+	await createPayItForwardPayloadRecord({
+		seatId: seat.id,
+		donorEmail,
+		stripeCheckoutSessionId: seat.stripeCheckoutSessionId,
+		stripePaymentIntentId: seat.stripePaymentIntentId,
+		createdAt: seat.createdAt,
+	})
 
 	if (donorEmail && !seat.donorEmailSentAt) {
 		try {
@@ -85,13 +102,5 @@ export async function notifySponsoredSeatPurchase(params: {
 				message: (error as Error).message,
 			})
 		}
-
-		await createPayItForwardPayloadRecord({
-			seatId: seat.id,
-			donorEmail,
-			stripeCheckoutSessionId: seat.stripeCheckoutSessionId,
-			stripePaymentIntentId: seat.stripePaymentIntentId,
-			createdAt: seat.createdAt,
-		})
 	}
 }
