@@ -2,18 +2,13 @@ import { jpvBrand } from '@/lib/brand/jpvDesignSystem'
 
 export function JPVAdminLogo() {
   return (
-    <img
-      alt={jpvBrand.logoAlt}
-      src={jpvBrand.logoHorizontalPath}
-      style={{
-        display: 'block',
-        height: 'auto',
-        margin: '0 auto',
-        maxWidth: 280,
-        objectFit: 'contain',
-        width: '100%',
-      }}
-    />
+    <div className='jpv-admin-logo-surface'>
+      <img
+        alt={jpvBrand.logoAlt}
+        className='jpv-admin-logo'
+        src={jpvBrand.logoHorizontalPath}
+      />
+    </div>
   )
 }
 
