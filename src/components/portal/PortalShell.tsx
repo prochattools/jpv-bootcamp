@@ -35,6 +35,7 @@ export function PortalShell({
 
   const portalContent = (
     <div className='jpv-product-shell h-[100dvh] min-h-0 min-w-0 overflow-hidden bg-jpv-canvas text-jpv-ink dark:bg-[var(--jpv-canvas)] dark:text-[var(--jpv-ink)]'>
+      <a className='jpv-skip-link' href='#portal-main'>Skip to content</a>
       <div className='grid h-full min-h-0 min-w-0 lg:grid-cols-[260px_minmax(0,1fr)]'>
         <PortalSidebar
           mobileOpen={mobileMenuOpen}
@@ -48,7 +49,7 @@ export function PortalShell({
             onMobileMenuOpen={() => setMobileMenuOpen(true)}
             showThemeToggle={showThemeToggle}
           />
-          <main className='min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6 lg:px-8 lg:py-5'>
+          <main className='min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6 lg:px-8 lg:py-5' id='portal-main' tabIndex={-1}>
             {children}
           </main>
         </div>

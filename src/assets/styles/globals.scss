@@ -29,7 +29,7 @@
 	--jpv-danger-surface: #3a2024 !important;
 	--jpv-danger-ink: #ffc0bd !important;
 	--jpv-focus: #8bd2d2 !important;
-	--jpv-inverse-muted: #505b7a;
+	--jpv-inverse-muted: #DDEBE7 !important;
 }
 
 html {
@@ -38,9 +38,42 @@ html {
 }
 
 body {
+	min-width: 320px;
 	background: var(--jpv-canvas);
 	color: var(--jpv-ink);
 	font-family: var(--font-jpv), Poppins, ui-sans-serif, system-ui, sans-serif;
+	overflow-x: clip;
+}
+
+/* Keep shared content surfaces shrinkable at narrow widths. Wide data such as
+ * tables and code provides a local scroll region instead of widening the
+ * document. */
+:where(main, section, article, form, fieldset, header, footer, nav, aside) {
+	min-width: 0;
+}
+
+:where(img, video, iframe) {
+	max-width: 100%;
+}
+
+.jpv-skip-link {
+	position: fixed;
+	top: 0.75rem;
+	left: 0.75rem;
+	z-index: 1000;
+	transform: translateY(-180%);
+	border: 1px solid var(--jpv-brand-deep);
+	border-radius: var(--jpv-radius-action);
+	background: var(--jpv-brand-deep);
+	color: var(--jpv-canvas);
+	padding: 0.7rem 1rem;
+	font-size: 0.875rem;
+	font-weight: 700;
+	transition: transform 150ms ease-out;
+}
+
+.jpv-skip-link:focus {
+	transform: translateY(0);
 }
 
 @layer components {
@@ -201,8 +234,32 @@ body {
 //     height: 24px;
 // }
 
+/* Keep a visible scroll affordance. Hiding the scrollbar makes long
+ * portal/admin pages look truncated on desktop. */
+* {
+	scrollbar-width: thin;
+	scrollbar-color: var(--jpv-border) transparent;
+}
+
 ::-webkit-scrollbar {
-	width: 0px;
+	width: 10px;
+	height: 10px;
+}
+
+::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+	border: 3px solid transparent;
+	border-radius: 999px;
+	background: var(--jpv-border);
+	background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+	background: var(--jpv-muted);
+	background-clip: padding-box;
 }
 
 .blocks-class a {
@@ -261,6 +318,11 @@ body {
 	min-height: 520px;
 	min-width: 0;
 	--lk-control-bar-height: 72px;
+}
+
+.jpv-notification-panel {
+	width: min(24rem, calc(100vw - 2rem));
+	max-width: calc(100vw - 2rem);
 }
 
 .jpv-livekit-shell .lk-video-conference {

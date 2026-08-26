@@ -19,6 +19,7 @@ export const jpvDesignTokens = {
     ink: '#3A3428',          // beige-900 — primary text
     muted: '#6E6350',        // beige-700 — accessible muted text
     secondary: '#6E6350',    // beige-700 — secondary text
+    inverseMuted: '#DDEBE7', // readable secondary text on deep brand surfaces
     border: '#D9CFBC',       // beige-300
     focus: '#238383',        // teal-600
     // Full teal scale
@@ -92,6 +93,7 @@ export const jpvCssVariables = {
   '--jpv-ink': jpvDesignTokens.colors.ink,
   '--jpv-muted': jpvDesignTokens.colors.muted,
   '--jpv-secondary': jpvDesignTokens.colors.secondary,
+  '--jpv-inverse-muted': jpvDesignTokens.colors.inverseMuted,
   '--jpv-border': jpvDesignTokens.colors.border,
   '--jpv-focus': jpvDesignTokens.colors.focus,
   '--jpv-radius-detail': jpvDesignTokens.radius.detail,

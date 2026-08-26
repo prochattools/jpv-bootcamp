@@ -264,25 +264,25 @@ export default async function PortalDashboardPage({ searchParams }: PortalDashbo
       <section aria-label='Learning stats'>
         <div className='grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3'>
           <div className='rounded-xl bg-jpv-ink p-5 shadow-sm dark:bg-jpv-surface-strong'>
-            <p className='text-xs font-semibold uppercase tracking-wider text-[#A6D9D9] dark:text-jpv-brand'>
+            <p className='text-xs font-semibold uppercase tracking-wider text-jpv-inverse-muted dark:text-jpv-brand'>
               Courses enrolled
             </p>
-            <p className='mt-2 text-3xl font-bold text-[#FAF8F4] dark:text-jpv-ink'>{enrolledCount}</p>
+            <p className='mt-2 text-3xl font-bold text-jpv-canvas dark:text-jpv-ink'>{enrolledCount}</p>
           </div>
           <div className='rounded-xl bg-jpv-ink p-5 shadow-sm dark:bg-jpv-surface-strong'>
-            <p className='text-xs font-semibold uppercase tracking-wider text-[#A6D9D9] dark:text-jpv-brand'>
+            <p className='text-xs font-semibold uppercase tracking-wider text-jpv-inverse-muted dark:text-jpv-brand'>
               Lessons completed
             </p>
-            <p className='mt-2 text-3xl font-bold text-[#FAF8F4] dark:text-jpv-ink'>{completedLessonsTotal}</p>
+            <p className='mt-2 text-3xl font-bold text-jpv-canvas dark:text-jpv-ink'>{completedLessonsTotal}</p>
             {totalLessonsCount > 0 ? (
-              <p className='mt-1 text-xs text-[#A6D9D9] dark:text-jpv-muted'>of {totalLessonsCount} total</p>
+              <p className='mt-1 text-xs text-jpv-inverse-muted dark:text-jpv-muted'>of {totalLessonsCount} total</p>
             ) : null}
           </div>
           <div className='rounded-xl bg-jpv-ink p-5 shadow-sm dark:bg-jpv-surface-strong'>
-            <p className='text-xs font-semibold uppercase tracking-wider text-[#A6D9D9] dark:text-jpv-brand'>
+            <p className='text-xs font-semibold uppercase tracking-wider text-jpv-inverse-muted dark:text-jpv-brand'>
               Overall progress
             </p>
-            <p className='mt-2 text-3xl font-bold text-[#FAF8F4] dark:text-jpv-ink'>
+            <p className='mt-2 text-3xl font-bold text-jpv-canvas dark:text-jpv-ink'>
               {overallPercent !== null ? `${overallPercent}%` : '—'}
             </p>
           </div>

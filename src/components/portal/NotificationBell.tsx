@@ -47,6 +47,7 @@ export function NotificationBell() {
   const [activeTab, setActiveTab] = useState<Tab>('recent')
   const panelRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
+  const panelId = 'portal-notifications-panel'
 
   const fetchNotifications = useCallback(async (tab: Tab) => {
     try {
@@ -72,6 +73,12 @@ export function NotificationBell() {
   // Close panel on outside click
   useEffect(() => {
     if (!open) return
+    function handleEscape(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        setOpen(false)
+        buttonRef.current?.focus()
+      }
+    }
     function handleOutsideClick(e: MouseEvent) {
       if (
         panelRef.current &&
@@ -82,8 +89,12 @@ export function NotificationBell() {
         setOpen(false)
       }
     }
+    document.addEventListener('keydown', handleEscape)
     document.addEventListener('mousedown', handleOutsideClick)
-    return () => document.removeEventListener('mousedown', handleOutsideClick)
+    return () => {
+      document.removeEventListener('keydown', handleEscape)
+      document.removeEventListener('mousedown', handleOutsideClick)
+    }
   }, [open])
 
   async function markAllRead() {
@@ -133,6 +144,9 @@ export function NotificationBell() {
       <button
         ref={buttonRef}
         aria-label={`Notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ''}`}
+        aria-controls={panelId}
+        aria-expanded={open}
+        aria-haspopup='dialog'
         className='relative flex min-h-11 min-w-11 items-center justify-center rounded-jpv-action text-jpv-muted transition hover:bg-jpv-surface hover:text-jpv-ink'
         onClick={() => setOpen((v) => !v)}
         type='button'
@@ -150,8 +164,9 @@ export function NotificationBell() {
 
       {open && (
         <div
+          className='jpv-notification-panel absolute right-0 top-12 z-50 rounded-xl border border-jpv-border bg-jpv-canvas shadow-xl'
+          id={panelId}
           ref={panelRef}
-          className='absolute right-0 top-12 z-50 w-80 rounded-xl border border-jpv-border bg-jpv-canvas shadow-xl sm:w-96'
           role='dialog'
           aria-label='Notifications panel'
         >
@@ -159,7 +174,7 @@ export function NotificationBell() {
           <div className='flex items-center justify-between border-b border-jpv-border px-4 py-3'>
             <span className='text-sm font-semibold text-jpv-ink'>Notifications</span>
             <button
-              className='text-xs text-jpv-muted transition hover:text-jpv-ink'
+              className='min-h-11 px-1 text-xs text-jpv-muted transition hover:text-jpv-ink'
               onClick={() => void markAllRead()}
               type='button'
             >
@@ -168,16 +183,19 @@ export function NotificationBell() {
           </div>
 
           {/* Tabs */}
-          <div className='flex border-b border-jpv-border'>
+          <div aria-label='Notification filters' className='flex border-b border-jpv-border' role='tablist'>
             {TABS.map((tab) => (
               <button
                 key={tab}
+                aria-controls={`${panelId}-list`}
+                aria-selected={activeTab === tab}
                 className={`flex-1 py-2 text-xs font-medium capitalize transition ${
                   activeTab === tab
                     ? 'border-b-2 border-jpv-brand-deep text-jpv-ink'
                     : 'text-jpv-muted hover:text-jpv-ink'
                 }`}
                 onClick={() => handleTabChange(tab)}
+                role='tab'
                 type='button'
               >
                 {tab}
@@ -186,7 +204,7 @@ export function NotificationBell() {
           </div>
 
           {/* Notification list */}
-          <div className='max-h-80 overflow-y-auto'>
+          <div aria-live='polite' className='max-h-80 overflow-y-auto' id={`${panelId}-list`} role='tabpanel'>
             {notifications.length === 0 ? (
               <div className='px-4 py-8 text-center text-sm text-jpv-muted'>
                 {activeTab === 'unread' ? 'No unread notifications.' : 'No notifications yet.'}
@@ -208,9 +226,10 @@ export function NotificationBell() {
                         </p>
                       </div>
                       {!notification.read && (
-                        <div
-                          aria-label='Unread'
-                          className='mt-1.5 h-2 w-2 shrink-0 rounded-full bg-blue-500'
+                        <span
+                          aria-label='Unread notification'
+                          className='mt-1.5 h-2 w-2 shrink-0 rounded-full bg-jpv-brand'
+                          role='img'
                         />
                       )}
                     </div>
@@ -254,7 +273,7 @@ export function NotificationBell() {
           {/* Footer */}
           <div className='border-t border-jpv-border px-4 py-3'>
             <Link
-              className='block text-center text-sm text-jpv-brand-deep transition hover:text-jpv-ink'
+              className='block min-h-11 py-2 text-center text-sm text-jpv-brand-deep transition hover:text-jpv-ink'
               href='/portal/notifications'
               onClick={() => setOpen(false)}
             >

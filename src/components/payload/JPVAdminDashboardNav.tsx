@@ -132,7 +132,7 @@ const recordGroups: AdminNavGroup[] = [
 
 export function JPVAdminDashboardNav() {
   return (
-    <div className='jpv-admin-nav' data-jpv-admin-shortcuts>
+    <nav aria-label='JPV admin workspace' className='jpv-admin-nav' data-jpv-admin-shortcuts>
       <p className='jpv-admin-nav__eyebrow'>JPV workspace</p>
       <div className='jpv-admin-nav__primary'>
         {workspaceLinks.map((link) => (
@@ -143,8 +143,8 @@ export function JPVAdminDashboardNav() {
       </div>
 
       <details className='jpv-admin-nav__records'>
-        <summary>All CMS records</summary>
-        <div className='jpv-admin-nav__record-groups'>
+        <summary aria-controls='jpv-admin-record-groups'>All CMS records</summary>
+        <div className='jpv-admin-nav__record-groups' id='jpv-admin-record-groups'>
           {recordGroups.map((group) => (
             <section key={group.label}>
               <h2>{group.label}</h2>
@@ -159,6 +159,6 @@ export function JPVAdminDashboardNav() {
           ))}
         </div>
       </details>
-    </div>
+    </nav>
   )
 }
