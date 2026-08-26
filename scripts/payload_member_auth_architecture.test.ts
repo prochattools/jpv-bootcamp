@@ -11,6 +11,8 @@ const emailChangeComplete = readFileSync('src/app/api/member-email-change/comple
 const emailChangeRedirect = readFileSync('src/lib/members/memberEmailChangeRedirect.ts', 'utf8')
 const passwordReset = readFileSync('src/app/api/member-password/reset/route.ts', 'utf8')
 const memberSetup = readFileSync('src/app/api/member-invitations/complete/route.ts', 'utf8')
+const memberLogin = readFileSync('src/components/auth/MemberLoginForm.tsx', 'utf8')
+const memberSession = readFileSync('src/app/api/member-session/route.ts', 'utf8')
 const removedMemberNamespacePattern = new RegExp(`redirect\\('${'/' + 'learn'}`)
 
 assert.match(requirePortalMember, /\/portal\?mode=login&next=/)
@@ -46,5 +48,18 @@ assert.match(emailChangeComplete, /buildMemberEmailChangeLoginResultUrl/)
 assert.match(emailChangeRedirect, /new URL\('\/portal'/)
 assert.match(passwordReset, /destination: '\/portal\?mode=login'/)
 assert.match(memberSetup, /destination: '\/portal\?mode=login'/)
+
+assert.match(memberLogin, /loginRequest\('payload_users'\)/)
+assert.match(memberLogin, /loginRequest\('payload_members'\)/)
+assert.match(memberSession, /session\.administratorId/)
+assert.match(memberSession, /resolveMemberDestination\(requestedDestination\)/)
+
+assert.match(portalLayout, /defaultTheme='light'/)
+assert.match(portalLayout, /enableSystem=\{false\}/)
+assert.match(portalLayout, /forcedTheme=\{isAuthenticated \? undefined : 'light'\}/)
+assert.match(portalLayout, /showThemeToggle=\{isAuthenticated\}/)
+assert.match(readFileSync('src/components/portal/PortalTopBar.tsx', 'utf8'), /!isPortalLogin/)
+assert.match(portalPage, /Admin Mode is enabled automatically/)
+assert.doesNotMatch(portalPage, /Toggle Admin Mode in the top bar/)
 
 console.log('payload_member_auth_architecture.test.ts passed')

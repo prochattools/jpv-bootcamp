@@ -5,6 +5,7 @@ import { getPayload } from 'payload'
 
 import { resolvePayloadRequestSession } from '@/lib/auth/payloadSession'
 import { decideSharedLogin } from '@/lib/auth/sharedLoginDecision'
+import { resolveMemberDestination } from '@/lib/auth/memberLoginFlow'
 
 function mapDeniedReason(reason: string): 'verification_required' | 'account_unavailable' | 'unauthenticated' {
   if (reason === 'member_email_unverified') return 'verification_required'
@@ -34,6 +35,19 @@ export async function GET(request: Request) {
     const requestUrl = new URL(request.url)
     const requestedDestination = requestUrl.searchParams.get('next')
     const session = await resolvePayloadRequestSession(requestHeaders)
+
+    // The portal is a shared entry point. Payload administrators authenticate
+    // through payload_users but must still be able to land in the member portal
+    // with their administrator identity intact. requirePortalAccess performs
+    // the server-side administrator check and provisions the linked member
+    // identity when the portal route is reached.
+    if (session.administratorId && !session.unresolvedCollection) {
+      return NextResponse.json({
+        allowed: true,
+        destination: resolveMemberDestination(requestedDestination),
+      })
+    }
+
     const decision = decideSharedLogin(session, requestedDestination)
 
     if (

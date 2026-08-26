@@ -14,16 +14,26 @@ export default async function PortalLayout({ children }: { children: ReactNode }
   ])
   const showLogout = Boolean(session.member?.id || session.administratorId)
   const isAdmin = Boolean(session.administratorId && !session.unresolvedCollection)
+  const isAuthenticated = Boolean(
+    (session.member?.id && !session.unresolvedCollection) || isAdmin,
+  )
 
   return (
     <ThemeProvider
       attribute='class'
-      defaultTheme='system'
-      enableSystem
+      defaultTheme='light'
+      enableSystem={false}
       disableTransitionOnChange
+      forcedTheme={isAuthenticated ? undefined : 'light'}
     >
       <div className='jpv-product-shell h-[100dvh] min-h-0 min-w-0 overflow-hidden bg-jpv-canvas text-jpv-ink dark:bg-[var(--jpv-canvas)] dark:text-[var(--jpv-ink)]'>
-        <PortalShell isAdmin={isAdmin} showLogout={showLogout} navPinned={nav.pinned} navGroups={nav.groups}>
+        <PortalShell
+          isAdmin={isAdmin}
+          showLogout={showLogout}
+          showThemeToggle={isAuthenticated}
+          navPinned={nav.pinned}
+          navGroups={nav.groups}
+        >
           {children}
         </PortalShell>
       </div>

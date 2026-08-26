@@ -2,7 +2,7 @@
 
 import { Menu, UserCircle } from 'lucide-react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
 
 import { useAdminMode } from '@/components/portal/AdminModeContext'
 import { NotificationBell } from '@/components/portal/NotificationBell'
@@ -35,12 +35,15 @@ function resolvePageTitle(pathname: string): string {
 
 type PortalTopBarProps = {
   onMobileMenuOpen: () => void
+  showThemeToggle: boolean
 }
 
-export function PortalTopBar({ onMobileMenuOpen }: PortalTopBarProps) {
+export function PortalTopBar({ onMobileMenuOpen, showThemeToggle }: PortalTopBarProps) {
   const pathname = usePathname()
+  const searchParams = useSearchParams()
   const pageTitle = resolvePageTitle(pathname)
   const { isAdmin } = useAdminMode()
+  const isPortalLogin = pathname === '/portal' && searchParams.get('mode') === 'login'
 
   return (
     <header
@@ -65,7 +68,7 @@ export function PortalTopBar({ onMobileMenuOpen }: PortalTopBarProps) {
             Admin On
           </span>
         ) : null}
-        <ThemeToggle />
+        {showThemeToggle && !isPortalLogin ? <ThemeToggle /> : null}
         <NotificationBell />
         <Link
           aria-label='Account settings'
