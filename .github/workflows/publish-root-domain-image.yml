@@ -211,3 +211,12 @@ jobs:
               exit 1
               ;;
           esac
+
+      - name: Wait for root production convergence
+        if: success()
+        shell: bash
+        env:
+          DOKPLOY_API_KEY: ${{ secrets.DOKPLOY_API_KEY }}
+          EXPECTED_DEPLOYMENT_SHA: ${{ github.sha }}
+          DOKPLOY_API_BASE_URL: https://dokploy.prochat.tools/api
+        run: pnpm exec tsx scripts/release/waitForRootDomainDeployment.mts
