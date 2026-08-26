@@ -46,7 +46,7 @@ describe('responsive portal navigation', () => {
   })
 
   it('keeps server-side session resolution and logout visibility', () => {
-    expect(layout).toContain('resolvePayloadRequestSession')
+    expect(layout).toMatch(/(?:cached)?resolvePayloadRequestSession/i)
     expect(shell).toContain('showLogout')
   })
 })

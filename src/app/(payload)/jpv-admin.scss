@@ -148,14 +148,135 @@ body {
   padding: 0.75rem;
 }
 
+// Keep the brand mark readable against the neutral admin canvas.
+.jpv-admin-logo-surface {
+  align-items: center;
+  background: var(--jpv-surface);
+  border: 1px solid var(--jpv-border);
+  border-radius: var(--jpv-radius-card);
+  display: flex;
+  justify-content: center;
+  margin: 0.25rem 0.25rem 0.85rem;
+  min-height: 72px;
+  padding: 0.55rem 0.7rem;
+}
+
+.jpv-admin-logo {
+  display: block;
+  height: auto;
+  max-width: 100%;
+  object-fit: contain;
+  width: 220px;
+}
+
+// The custom workspace panel makes the common admin tasks visible without
+// forcing operators through a long list of technical collections.
+.jpv-admin-nav {
+  border-bottom: 1px solid var(--jpv-border);
+  margin: 0 -0.25rem 0.6rem;
+  padding: 0 0.25rem 0.75rem;
+}
+
+.jpv-admin-nav__eyebrow {
+  color: var(--jpv-brand-deep);
+  font-size: 0.6875rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  margin: 0.25rem 0.625rem 0.4rem;
+  text-transform: uppercase;
+}
+
+.nav .jpv-admin-nav a.jpv-admin-nav__link {
+  color: var(--jpv-ink);
+  font-weight: 650;
+  min-height: 40px;
+  padding: 0.5rem 0.625rem;
+}
+
+.nav .jpv-admin-nav a.jpv-admin-nav__link:hover {
+  background: var(--jpv-surface);
+  color: var(--jpv-brand-deep);
+}
+
+.jpv-admin-nav__records {
+  margin-top: 0.35rem;
+}
+
+.jpv-admin-nav__records > summary {
+  align-items: center;
+  border: 1px solid var(--jpv-border);
+  border-radius: var(--jpv-radius-action);
+  color: var(--jpv-brand-deep);
+  cursor: pointer;
+  display: flex;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  justify-content: space-between;
+  list-style: none;
+  min-height: 40px;
+  padding: 0.5rem 0.625rem;
+}
+
+.jpv-admin-nav__records > summary::-webkit-details-marker {
+  display: none;
+}
+
+.jpv-admin-nav__records > summary::after {
+  content: '+';
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.jpv-admin-nav__records[open] > summary::after {
+  content: '−';
+}
+
+.jpv-admin-nav__records > summary:hover {
+  background: var(--jpv-surface);
+}
+
+.jpv-admin-nav__record-groups {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0.7rem 0.25rem 0;
+}
+
+.jpv-admin-nav__record-groups section {
+  border-left: 2px solid var(--jpv-border);
+  padding-left: 0.55rem;
+}
+
+.jpv-admin-nav__record-groups h2 {
+  color: var(--jpv-muted);
+  font-size: 0.625rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  margin: 0 0 0.2rem;
+  text-transform: uppercase;
+}
+
+.nav .jpv-admin-nav .jpv-admin-nav__record-groups a {
+  border: 0;
+  border-radius: 0;
+  color: var(--jpv-ink);
+  font-size: 0.75rem;
+  min-height: 32px;
+  padding: 0.3rem 0.35rem;
+}
+
+.nav .jpv-admin-nav .jpv-admin-nav__record-groups a:hover {
+  background: var(--jpv-surface);
+  color: var(--jpv-brand-deep);
+}
+
 // Nav group headers (collection groupings)
 .nav-group__toggle {
   color: color-mix(in srgb, var(--jpv-muted) 62%, var(--jpv-ink));
   font-size: 0.6875rem;
   font-weight: 800;
   letter-spacing: 0.085em;
-  min-height: 44px;
-  padding: 0.75rem 0.625rem 0.5rem;
+  min-height: 36px;
+  padding: 0.45rem 0.625rem 0.25rem;
   text-transform: uppercase;
   width: 100%;
 }
@@ -175,8 +296,8 @@ body {
   font-size: 0.875rem;
   font-weight: 500;
   line-height: 1.35;
-  min-height: 44px;
-  padding: 0.625rem 0.75rem;
+  min-height: 40px;
+  padding: 0.5rem 0.75rem;
   text-decoration: none;
   transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
 }
@@ -222,7 +343,27 @@ nav a:not([aria-current='page']):not([data-active='true']):hover,
 
 // Nav toggler (mobile hamburger)
 .nav-toggler {
+  background: var(--jpv-brand-deep);
+  border: 1px solid var(--jpv-brand);
+  border-radius: var(--jpv-radius-action);
   color: var(--jpv-canvas);
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.nav-toggler:hover,
+.nav-toggler:focus-visible {
+  background: var(--jpv-brand);
+  color: var(--jpv-ink);
+}
+
+// The course/community/content collections remain available by direct route
+// through the custom "All CMS records" panel and the member-portal admin mode.
+// Hide only their duplicate primary groupings to reduce navigation noise.
+.nav:has([data-jpv-admin-shortcuts]) .nav-group:has(a[href*='/collections/payload_member_groups']),
+.nav:has([data-jpv-admin-shortcuts]) .nav-group:has(a[href*='/collections/payload_courses']),
+.nav:has([data-jpv-admin-shortcuts]) .nav-group:has(a[href*='/collections/payload_media']) {
+  display: none;
 }
 
 // ─── Login page ───────────────────────────────────────────────────────────────

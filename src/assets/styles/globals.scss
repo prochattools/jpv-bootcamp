@@ -6,7 +6,7 @@
 	color-scheme: light;
 }
 
-.dark {
+.jpv-portal-theme-root.dark {
 	color-scheme: dark;
 	/* The frontend layout intentionally keeps the brand variables inline for
 	 * hydration-safe first paint. Important is required here so the selected
