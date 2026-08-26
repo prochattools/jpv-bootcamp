@@ -7,6 +7,7 @@ export const SUPPORT_DEDUPE_VERSION = 'support-v1'
 export type SupportIntakeInput = {
   normalizedEmail: string
   name: string
+  phone: string
   question: string
   source?: string
   page?: string
@@ -40,6 +41,7 @@ export type SupportIntakeDependencies = {
     reviewStatus: 'pending'
     requesterEmail: string
     requesterName: string
+    requesterPhone: string
   }): Promise<void>
   now(): Date
   log(event: {
@@ -67,6 +69,7 @@ export function buildSupportDedupeKey(input: SupportIntakeInput, now: Date): str
     String(windowBucket(now)),
     input.normalizedEmail.trim().toLowerCase(),
     normalizeText(input.name),
+    normalizeText(input.phone),
     normalizeText(input.question),
     normalizeText(input.source),
     normalizeText(input.page),
@@ -134,6 +137,7 @@ export function createSupportIntakeService(dependencies: SupportIntakeDependenci
         reviewStatus: 'pending',
         requesterEmail: input.normalizedEmail,
         requesterName: input.name,
+        requesterPhone: input.phone,
       })
       await dependencies.updateRequest(request.id, {
         notificationStatus: 'queued',

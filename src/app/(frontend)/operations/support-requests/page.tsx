@@ -1,8 +1,10 @@
 import 'server-only'
 
+import Link from 'next/link'
 import { revalidatePath } from 'next/cache'
 
 import { requireCurrentPayloadAdmin } from '@/lib/admin/currentAdmin'
+import { formatPhoneForDisplay } from '@/lib/normalize-phone'
 import prisma from '@/libs/prisma'
 
 export const dynamic = 'force-dynamic'
@@ -49,6 +51,9 @@ export default async function SupportRequestsPage() {
 
   return (
     <main className='mx-auto w-full max-w-6xl space-y-6 px-4 py-8 sm:px-6 lg:px-8'>
+      <Link className='inline-flex min-h-11 items-center text-sm font-semibold text-jpv-muted underline-offset-4 hover:text-jpv-ink hover:underline' href='/admin'>
+        ← Back to Payload dashboard
+      </Link>
       <header className='rounded-jpv-panel border border-jpv-border bg-jpv-canvas p-6 shadow-jpv-card sm:p-8'>
         <p className='jpv-eyebrow'>Support</p>
         <div className='mt-2 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between'>
@@ -82,6 +87,13 @@ export default async function SupportRequestsPage() {
                   <a className='mt-1 inline-flex min-h-11 items-center break-all text-sm font-semibold text-jpv-brand-deep hover:underline' href={`mailto:${request.normalizedEmail}`}>
                     {request.normalizedEmail}
                   </a>
+                  {request.phone ? (
+                    <a className='mt-1 inline-flex min-h-11 items-center text-sm font-semibold text-jpv-brand-deep hover:underline' href={`tel:${request.phone}`}>
+                      Phone: {formatPhoneForDisplay(request.phone)}
+                    </a>
+                  ) : (
+                    <p className='mt-1 text-sm text-jpv-muted'>Phone: Not provided</p>
+                  )}
                   <p className='mt-4 whitespace-pre-wrap break-words text-sm leading-6 text-jpv-ink'>{request.question}</p>
                   <p className='mt-4 text-xs text-jpv-muted'>Source: {request.source ?? 'support form'}</p>
                 </div>

@@ -1,17 +1,8 @@
 import { getPayloadMemberAccountActionContext } from '@/lib/auth/memberAccountActionApplication'
 import { completeMemberEmailChange } from '@/lib/members/changeMemberEmail'
+import { buildMemberEmailChangeLoginResultUrl } from '@/lib/members/memberEmailChangeRedirect'
 
 export const dynamic = 'force-dynamic'
-
-export function buildMemberEmailChangeLoginResultUrl(
-  request: Request,
-  result: 'success' | 'invalid',
-): URL {
-  const url = new URL('/portal', request.url)
-  url.searchParams.set('mode', 'login')
-  url.searchParams.set('emailChange', result)
-  return url
-}
 
 export async function GET(request: Request): Promise<Response> {
   const token = new URL(request.url).searchParams.get('token')

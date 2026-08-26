@@ -3,7 +3,7 @@ name: Publish Root-Domain Image
 on:
   push:
     branches:
-      - release/root-domain-cutover
+      - main
   workflow_dispatch:
     inputs:
       expected_sha:
@@ -30,7 +30,7 @@ jobs:
     timeout-minutes: 40
     environment: root-domain-image-publish
     env:
-      ALLOWED_BRANCH: release/root-domain-cutover
+      ALLOWED_BRANCH: main
       TARGET_ORIGIN: https://jpvbootcamp.com
 
     steps:
@@ -56,7 +56,7 @@ jobs:
             fi
           fi
           echo "Root-domain image lane: branch=$ALLOWED_BRANCH origin=$TARGET_ORIGIN"
-          echo "main is not an allowed source or deployment target"
+          echo "legacy/production is preserved separately and is not a deployment source for this lane"
 
       - name: Check out exact source
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -139,7 +139,7 @@ jobs:
             org.opencontainers.image.created=${{ github.event.head_commit.timestamp }}
             org.opencontainers.image.version=${{ github.sha }}
             dev.jpvbootcamp.production-origin=https://jpvbootcamp.com
-            dev.jpvbootcamp.branch=release/root-domain-cutover
+            dev.jpvbootcamp.branch=main
 
       - name: Report image reference
         run: |
@@ -155,8 +155,8 @@ jobs:
         run: |
           set -euo pipefail
 
-          # This is the new production root app. main and the legacy app are
-          # intentionally outside this workflow's allow-list.
+          # This is the production root app. The legacy application remains
+          # preserved on its separate legacy ref/domain.
           ALLOWED_APPLICATION_ID="I_2Vukga3cc3ZhaG-mUzU"
           ALLOWED_APPLICATION_NAME="clients-jpv-bootcamp-app-tp9xrk"
           NEW_IMAGE="ghcr.io/${{ github.repository }}:${{ github.sha }}"

@@ -3,6 +3,7 @@ import { getPayload } from 'payload'
 
 import payloadConfig from '@/payload.config'
 import { getServerConfig } from '@/lib/config'
+import { isValidInternationalPhone, normalizePhone } from '@/lib/normalize-phone'
 import { guardPublicRequest } from '@/lib/publicRequestGuard'
 import {
   getPublicRequestApplicationOrigin,
@@ -29,6 +30,7 @@ const SUPPORT_MAX_BYTES = 8 * 1024
 const supportFields = {
   name: { type: 'string', required: true, minLength: 2, maxLength: 120 },
   email: { type: 'email', required: true, maxLength: 320 },
+  phone: { type: 'string', required: true, minLength: 7, maxLength: 40 },
   question: { type: 'string', required: true, minLength: 10, maxLength: 2_000 },
   source: { type: 'string', maxLength: 80 },
   page: { type: 'string', maxLength: 200 },
@@ -70,6 +72,11 @@ export async function POST(req: NextRequest) {
     return publicRequestFailureResponse(guarded)
   }
 
+  const phone = normalizePhone(guarded.data.phone)
+  if (!phone || !isValidInternationalPhone(phone)) {
+    return NextResponse.json({ ok: false, reason: 'invalid_phone' }, { status: 400 })
+  }
+
   const service = createSupportIntakeService({
     async createRequest(data: SupportRequestCreateData) {
       return prisma.supportRequest.create({ data })
@@ -93,6 +100,7 @@ export async function POST(req: NextRequest) {
           reviewStatus: input.reviewStatus,
           requesterEmail: input.requesterEmail,
           requesterName: input.requesterName,
+          requesterPhone: input.requesterPhone,
         },
       })
 
@@ -115,6 +123,7 @@ export async function POST(req: NextRequest) {
   const result = await service({
     normalizedEmail: guarded.data.email,
     name: guarded.data.name,
+    phone,
     question: guarded.data.question,
     source: guarded.data.source,
     page: guarded.data.page,

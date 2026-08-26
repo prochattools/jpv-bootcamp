@@ -312,6 +312,7 @@ const templates: Record<string, PayloadDocument> = {
     heading: 'New support request',
     paragraphs: [
       'A new support request has been received from {{requesterName}} ({{requesterEmail}}) and is waiting for review.',
+      'Requester telephone: {{requesterPhone}}.',
       'Log in to the JPV Bootcamp admin panel to view and respond.',
     ],
     actionLabel: 'Open admin panel',
