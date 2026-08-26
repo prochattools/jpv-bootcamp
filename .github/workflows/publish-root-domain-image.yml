@@ -144,4 +144,70 @@ jobs:
       - name: Report image reference
         run: |
           echo "Published image: ghcr.io/${{ github.repository }}:${{ github.sha }}"
-          echo "Publication only: no Dokploy API call, DNS change, migration, or database write was performed."
+
+      - name: Update and trigger root Dokploy deployment
+        if: success()
+        shell: bash
+        env:
+          DOKPLOY_API_KEY: ${{ secrets.DOKPLOY_API_KEY }}
+          DOKPLOY_APPLICATION_ID: I_2Vukga3cc3ZhaG-mUzU
+          DOKPLOY_API_BASE_URL: https://dokploy.prochat.tools/api
+        run: |
+          set -euo pipefail
+
+          # This is the new production root app. main and the legacy app are
+          # intentionally outside this workflow's allow-list.
+          ALLOWED_APPLICATION_ID="I_2Vukga3cc3ZhaG-mUzU"
+          ALLOWED_APPLICATION_NAME="clients-jpv-bootcamp-app-tp9xrk"
+          NEW_IMAGE="ghcr.io/${{ github.repository }}:${{ github.sha }}"
+
+          if [ -z "$DOKPLOY_API_KEY" ]; then
+            echo "DEPLOY-DENIED: DOKPLOY_API_KEY is unset or empty" >&2
+            exit 1
+          fi
+          if [ "$DOKPLOY_APPLICATION_ID" != "$ALLOWED_APPLICATION_ID" ]; then
+            echo "DEPLOY-DENIED: Dokploy application ID does not match the root production allow-list" >&2
+            exit 1
+          fi
+
+          request_json=$(jq -cn \
+            --arg applicationId "$DOKPLOY_APPLICATION_ID" \
+            --arg dockerImage "$NEW_IMAGE" \
+            '{applicationId:$applicationId,dockerImage:$dockerImage}')
+          update_status=$(curl --silent --show-error --max-time 30 \
+            -o /tmp/dokploy_root_update_response.json \
+            -w '%{http_code}' \
+            -X POST "$DOKPLOY_API_BASE_URL/application.update" \
+            -H "x-api-key: $DOKPLOY_API_KEY" \
+            -H 'Content-Type: application/json' \
+            --data-binary "$request_json")
+          case "$update_status" in
+            2??) echo "Dokploy root image configuration updated: $NEW_IMAGE" ;;
+            *)
+              echo "Dokploy root image update failed with HTTP $update_status" >&2
+              exit 1
+              ;;
+          esac
+
+          deploy_json=$(jq -cn \
+            --arg applicationId "$DOKPLOY_APPLICATION_ID" \
+            --arg title "Deploy $NEW_IMAGE" \
+            --arg description "GitHub Actions run $GITHUB_RUN_ID; source SHA $GITHUB_SHA; target $ALLOWED_APPLICATION_NAME" \
+            '{applicationId:$applicationId,title:$title,description:$description}')
+          deploy_status=$(curl --silent --show-error --max-time 30 \
+            -o /tmp/dokploy_root_deploy_response.json \
+            -w '%{http_code}' \
+            -X POST "$DOKPLOY_API_BASE_URL/application.deploy" \
+            -H "x-api-key: $DOKPLOY_API_KEY" \
+            -H 'Content-Type: application/json' \
+            --data-binary "$deploy_json")
+          case "$deploy_status" in
+            2??)
+              echo "Dokploy root deployment triggered for: $NEW_IMAGE"
+              echo "Dokploy target: $ALLOWED_APPLICATION_NAME"
+              ;;
+            *)
+              echo "Dokploy root deployment trigger failed with HTTP $deploy_status" >&2
+              exit 1
+              ;;
+          esac
