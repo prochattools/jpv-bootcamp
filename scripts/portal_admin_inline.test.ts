@@ -326,19 +326,13 @@ function testMemberServerActionsPreserved() {
     `[test 9] Lesson page must import requirePortalMember for member server actions`,
   )
 
-  // The completeLesson and submitLessonDiscussionComment inline server actions
-  // must call requirePortalMember, NOT requirePortalAccess for member operations
+  // completeLesson remains a member-only server action. Discussion comments
+  // use a member-only API route so submission can stay in place.
   const completeLessonFnIndex = src.indexOf('async function completeLesson')
-  const submitDiscussionFnIndex = src.indexOf('async function submitLessonDiscussionComment')
 
-  // Both inline server action functions must exist
   assert.ok(
     completeLessonFnIndex !== -1,
     `[test 9] completeLesson server action must be present in lesson page`,
-  )
-  assert.ok(
-    submitDiscussionFnIndex !== -1,
-    `[test 9] submitLessonDiscussionComment server action must be present in lesson page`,
   )
 
   // Extract the completeLesson function body and confirm it uses requirePortalMember
@@ -349,12 +343,23 @@ function testMemberServerActionsPreserved() {
     `[test 9] completeLesson must call requirePortalMember, not requirePortalAccess`,
   )
 
-  // Extract the submitLessonDiscussionComment function body and confirm it uses requirePortalMember
-  const submitBody = src.slice(submitDiscussionFnIndex, submitDiscussionFnIndex + 600)
+  const commentRoute = source(
+    'src/app/api/portal/courses/[courseSlug]/lessons/[lessonSlug]/comments/route.ts',
+  )
   assert.match(
-    submitBody,
+    commentRoute,
+    /export async function POST/,
+    `[test 9] lesson discussion route must expose POST`,
+  )
+  assert.match(
+    commentRoute,
     /requirePortalMember/,
-    `[test 9] submitLessonDiscussionComment must call requirePortalMember, not requirePortalAccess`,
+    `[test 9] lesson discussion route must call requirePortalMember`,
+  )
+  assert.match(
+    source('src/components/community/LessonCommentComposer.tsx'),
+    /router\.refresh\(\)/,
+    `[test 9] lesson discussion composer must refresh without navigation`,
   )
 }
 

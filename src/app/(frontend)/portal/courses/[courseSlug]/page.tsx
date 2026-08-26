@@ -67,7 +67,7 @@ export default async function PortalCoursePage({ params }: CoursePageProps) {
               </h1>
             </div>
             <div className='flex flex-wrap items-center gap-2 text-xs font-bold'>
-              <span className={`rounded-full px-2.5 py-1 ${course.status === 'published' ? 'bg-jpv-brand/10 text-jpv-brand-deep' : course.status === 'archived' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
+              <span className={`rounded-full px-2.5 py-1 ${course.status === 'published' ? 'bg-jpv-brand/10 text-jpv-brand-deep' : course.status === 'archived' ? 'bg-red-100 text-red-700' : 'bg-jpv-sunshine/20 text-jpv-sunshine-ink'}`}>
                 {course.status}
               </span>
               <span className='rounded-full bg-jpv-surface-strong px-2.5 py-1 text-jpv-muted'>
@@ -237,7 +237,7 @@ export default async function PortalCoursePage({ params }: CoursePageProps) {
 
           {continueHref ? (
             <Link
-              className='mt-5 inline-flex min-h-[52px] w-full items-center justify-center rounded-lg bg-jpv-brand px-6 py-3 text-base font-semibold text-white shadow-sm transition-colors hover:bg-jpv-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-jpv-focus'
+              className='jpv-button-primary mt-5 min-h-[52px] w-full rounded-lg px-6 py-3 text-base text-white'
               href={continueHref}
             >
               Continue learning

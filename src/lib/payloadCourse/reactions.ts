@@ -280,6 +280,48 @@ async function assertVisibleTarget(
   return comment
 }
 
+async function notifyReactionTargetAuthor(
+  payload: PayloadCourseWriteAPI,
+  memberId: PayloadId,
+  target: ReactionTarget,
+  targetDocument: PayloadDocument,
+  reactionType: ReactionType,
+): Promise<void> {
+  const authorId = relationshipId(targetDocument.author)
+  if (!authorId || authorId === String(memberId)) return
+
+  let actorName = 'A member'
+  try {
+    const profiles = await payload.find({
+      collection: 'payload_member_profiles',
+      where: { member: { equals: String(memberId) } },
+      limit: 1,
+      depth: 0,
+      overrideAccess: true,
+    })
+    actorName = asString(profiles.docs[0]?.displayName) ?? actorName
+  } catch {
+    // Notification delivery is best-effort and must not affect the reaction.
+  }
+
+  try {
+    await payload.create({
+      collection: 'payload_member_notifications',
+      data: {
+        member: authorId,
+        type: 'system',
+        actorName,
+        title: `reacted ${reactionLabels[reactionType]} to your ${target.kind === 'space_post' ? 'discussion' : 'comment'}`,
+        href: null,
+        read: false,
+      },
+      overrideAccess: true,
+    })
+  } catch {
+    // Notification delivery is best-effort and must not affect the reaction.
+  }
+}
+
 async function countReactions(
   payload: PayloadCourseAccessAPI,
   target: ReactionTarget,
@@ -559,7 +601,7 @@ export async function setReaction(
   const target = normalizeTarget(rawTarget)
   const reactionType = normalizeReactionType(rawReactionType)
   await requireEligibleMember(payload, memberId)
-  await assertVisibleTarget(payload, memberId, target)
+  const targetDocument = await assertVisibleTarget(payload, memberId, target)
   await assertRateLimit(payload, memberId, rateLimit)
 
   const existing = await findViewerReaction(payload, memberId, target)
@@ -596,6 +638,7 @@ export async function setReaction(
       before: { reactionType: previous, targetKind: target.kind, targetId: target.id },
       after: { reactionType, targetKind: target.kind, targetId: target.id },
     })
+    void notifyReactionTargetAuthor(payload, memberId, target, targetDocument, reactionType)
 
     return { operation: 'changed', reaction: reactionType }
   }
@@ -621,6 +664,7 @@ export async function setReaction(
       targetId: created.id,
       after: { reactionType, targetKind: target.kind, targetId: target.id },
     })
+    void notifyReactionTargetAuthor(payload, memberId, target, targetDocument, reactionType)
   } catch (error) {
     if (error instanceof ReactionServiceError) throw error
     throw new ReactionServiceError('conflict', 'The reaction changed concurrently. Please try again.')

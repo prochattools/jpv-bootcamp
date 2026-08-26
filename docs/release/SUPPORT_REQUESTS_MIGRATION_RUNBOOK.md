@@ -44,6 +44,25 @@ Run the apply command only from a clean checkout of the approved `main` commit (
 
 ## Approved apply sequence
 
+Run the migration rehearsal before the target apply. This is a local/static
+check and does not connect to or modify the production database:
+
+```bash
+pnpm staging:migration-rehearsal
+```
+
+Capture the rehearsal evidence before applying:
+
+```bash
+pnpm staging:migration-rehearsal:evidence
+```
+
+Run the repository migration preflight before the apply command:
+
+```bash
+pnpm staging:migration-preflight
+```
+
 1. Verify the exact commit with `git log --oneline -1`.
 2. Confirm the target environment variables are already loaded through the approved production environment-management path.
 3. Confirm backup evidence and migration approval reference.

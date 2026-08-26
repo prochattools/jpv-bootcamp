@@ -9,7 +9,7 @@ import {
   reactionErrorMessage,
 } from '@/components/community/EngagementPresentation'
 import { PostOwnerActions, CommentOwnerActions } from '@/components/community/PostOwnerActions'
-import { ComposerToolbar } from '@/components/community/ComposerToolbar'
+import { CommunityCommentComposer } from '@/components/community/CommunityCommentComposer'
 import { submitReactionAction } from '@/app/(frontend)/portal/reaction-actions'
 import { ProgressiveCommentList } from '@/components/community/ProgressiveCommentList'
 import { StatusPill } from '@/components/portal/StatusPill'
@@ -28,7 +28,6 @@ import {
   type ReactionSummary,
 } from '@/lib/payloadCourse/reactions'
 import type { MemberCommunityAttachmentResolution } from '@/lib/payloadCourse/communityFiles'
-import { submitCommunityComment } from '../../../actions'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -564,33 +563,7 @@ export default async function PortalCommunityPostPage({ params, searchParams }: 
         >
           <h2 className='text-xl font-bold text-jpv-brand-deep' id='community-reply-heading'>Leave a reply</h2>
           <p className='mt-2 text-sm leading-6 text-jpv-muted'>Keep your reply focused on the discussion so it is easy for other learners to follow.</p>
-          <form
-            action={submitCommunityComment.bind(null, spaceSlug, postId)}
-            className='mt-5 space-y-4'
-          >
-            <div>
-              <label className='block text-sm font-bold text-jpv-brand-deep' htmlFor='comment-body'>
-                Your reply
-              </label>
-              <textarea
-                className='mt-1.5 w-full rounded-jpv-control border border-jpv-border bg-jpv-canvas px-4 py-3 text-sm text-jpv-ink outline-none transition focus:border-jpv-green-deep focus:ring-2 focus:ring-jpv-green/25'
-                id='comment-body'
-                maxLength={10000}
-                name='body'
-                placeholder='Share your reply…'
-                required
-                rows={4}
-              />
-            </div>
-            <ComposerToolbar textareaId='comment-body' />
-            <input id='comment-video' name='videoUrl' type='hidden' />
-            <button
-              className='jpv-button-primary min-h-11'
-              type='submit'
-            >
-              Submit reply
-            </button>
-          </form>
+          <CommunityCommentComposer postId={postId} spaceSlug={spaceSlug} />
         </section>
       )}
     </div>

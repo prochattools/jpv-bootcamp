@@ -65,7 +65,7 @@ function testPortalCommunityPagesUseCanonicalMemberRoutes(): void {
   assert.doesNotMatch(communitySpacePage, removedNamespacePattern)
 
   assert.match(communityPostPage, /getMemberCommunityPostDetail\(payload, memberId, spaceSlug, postId\)/)
-  assert.match(communityPostPage, /submitCommunityComment/)
+  assert.match(communityPostPage, /CommunityCommentComposer/)
   assert.match(communityPostPage, /Leave a reply/)
   assert.doesNotMatch(communityPostPage, /Read-only discussion view/)
   assert.doesNotMatch(communityPostPage, /Add a comment/)

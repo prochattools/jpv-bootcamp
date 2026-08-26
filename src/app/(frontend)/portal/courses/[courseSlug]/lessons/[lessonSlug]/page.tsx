@@ -15,6 +15,8 @@ import {
   reactionErrorMessage,
 } from '@/components/community/EngagementPresentation'
 import { ProgressiveCommentList } from '@/components/community/ProgressiveCommentList'
+import { LessonCommentOwnerActions } from '@/components/community/LessonCommentOwnerActions'
+import { LessonCommentComposer } from '@/components/community/LessonCommentComposer'
 import { AdminGate } from '@/components/portal/AdminGate'
 import { LegacyLessonRichText } from '@/components/portal/LegacyLessonRichText'
 import { requirePortalAccess } from '@/lib/auth/requirePortalAccess'
@@ -23,9 +25,7 @@ import type { PayloadCourseWriteAPI } from '@/lib/payloadCourse/accessService'
 import { getAdminLessonDetail } from '@/lib/portalAdmin/adminPortal'
 import { getLessonCommentReactionSummaries, type ReactionSummary } from '@/lib/payloadCourse/reactions'
 import {
-  createLessonComment,
   listLessonDiscussion,
-  plainTextLessonCommentBody,
   type LessonDiscussionComment,
 } from '@/lib/payloadCourse/lessonDiscussion'
 import {
@@ -92,55 +92,6 @@ async function completeLesson(formData: FormData) {
   redirect(`${requestedPath}?completed=1`)
 }
 
-function lessonDiscussionErrorReason(error: unknown): 'rate_limit' | 'not_allowed' | 'validation' | 'server' {
-  const message = error instanceof Error ? error.message : String(error)
-  if (message.includes('rate limit')) return 'rate_limit'
-  if (message.includes('unavailable') || message.includes('same lesson') || message.includes('visible comments')) return 'not_allowed'
-  if (message.includes('required') || message.includes('rich text') || message.includes('too long')) return 'validation'
-  return 'server'
-}
-
-async function submitLessonDiscussionComment(formData: FormData) {
-  'use server'
-
-  const courseSlug = formData.get('courseSlug')
-  const lessonSlug = formData.get('lessonSlug')
-  const bodyValue = formData.get('body')
-  const parentValue = formData.get('parentId')
-  if (typeof courseSlug !== 'string' || typeof lessonSlug !== 'string') return
-  if (!courseSlug.trim() || !lessonSlug.trim()) return
-
-  const requestedPath = getLessonPath(courseSlug, lessonSlug)
-  const { memberId, payload } = await requirePortalMember(requestedPath)
-  let errorReason: ReturnType<typeof lessonDiscussionErrorReason> | null = null
-
-  try {
-    const detail = await getMemberLessonDetail(payload, memberId, courseSlug, lessonSlug)
-    if (!detail?.allowed || !detail.lesson?.id) throw new Error('Lesson discussion is unavailable for this member.')
-
-    const bodyText = typeof bodyValue === 'string' ? bodyValue.trim() : ''
-    if (!bodyText) throw new Error('Body is required.')
-    if (bodyText.length > 10_000) throw new Error('Body is too long.')
-    const parentId = typeof parentValue === 'string' && parentValue.trim() ? parentValue.trim() : null
-
-    await createLessonComment(payload as PayloadCourseWriteAPI, {
-      memberId,
-      lessonId: detail.lesson.id,
-      parentId,
-      body: plainTextLessonCommentBody(bodyText) as unknown as Record<string, unknown>,
-    })
-  } catch (error) {
-    console.error('[submitLessonDiscussionComment] submission error:', error instanceof Error ? error.message : String(error))
-    errorReason = lessonDiscussionErrorReason(error)
-  }
-
-  revalidatePath(requestedPath)
-  if (errorReason) {
-    redirect(`${requestedPath}?discussion=error&reason=${errorReason}#lesson-discussion`)
-  }
-  redirect(`${requestedPath}?discussion=posted#lesson-discussion`)
-}
-
 function firstParam(value: string | string[] | undefined): string | null {
   if (Array.isArray(value)) return value[0] ?? null
   return value ?? null
@@ -158,11 +109,24 @@ function formatDiscussionDate(value: string): string {
   }).format(date)
 }
 
+function lessonCommentPlainText(body: LessonDiscussionComment['body']): string {
+  const texts: string[] = []
+  const visit = (value: unknown): void => {
+    if (!value || typeof value !== 'object') return
+    const node = value as Record<string, unknown>
+    if (typeof node.text === 'string') texts.push(node.text)
+    if (Array.isArray(node.children)) node.children.forEach(visit)
+  }
+  visit(body.root)
+  return texts.join(' ').replace(/\s+/g, ' ').trim()
+}
+
 function LessonCommentThread({
   comments,
   parentId,
   courseSlug,
   lessonSlug,
+  viewerMemberId,
   reactionSummaries,
   reactionError,
   depth = 0,
@@ -171,6 +135,7 @@ function LessonCommentThread({
   parentId: string | null
   courseSlug: string
   lessonSlug: string
+  viewerMemberId: string
   reactionSummaries: ReadonlyMap<string, ReactionSummary>
   reactionError: string | null
   depth?: number
@@ -187,6 +152,14 @@ function LessonCommentThread({
           timestampLabel={formatDiscussionDate(comment.sourceCreatedAt || comment.createdAt)}
           timestampValue={comment.sourceCreatedAt || comment.createdAt}
         />
+        {comment.authorId === viewerMemberId ? (
+          <LessonCommentOwnerActions
+            commentId={comment.id}
+            courseSlug={courseSlug}
+            initialBody={lessonCommentPlainText(comment.body)}
+            lessonSlug={lessonSlug}
+          />
+        ) : null}
       </div>
       <LegacyLessonRichText data={comment.body} lessonSlug={lessonSlug} />
 
@@ -207,19 +180,13 @@ function LessonCommentThread({
 
       <details className='mt-4'>
         <summary className='min-h-10 cursor-pointer py-2 text-sm font-semibold text-jpv-inverse-muted outline-none focus-visible:ring-2 focus-visible:ring-jpv-green'>Reply</summary>
-        <form action={submitLessonDiscussionComment} className='mt-3 space-y-3'>
-          <input name='courseSlug' type='hidden' value={courseSlug} />
-          <input name='lessonSlug' type='hidden' value={lessonSlug} />
-          <input name='parentId' type='hidden' value={comment.id} />
-          <textarea
-            className='min-h-24 w-full rounded-xl border border-jpv-border bg-jpv-canvas px-4 py-3 text-sm outline-none focus:border-jpv-brand'
-            maxLength={10_000}
-            name='body'
-            placeholder={`Reply to ${comment.displayName}`}
-            required
-          />
-          <button className='jpv-button-secondary' type='submit'>Post reply</button>
-        </form>
+        <LessonCommentComposer
+          courseSlug={courseSlug}
+          lessonSlug={lessonSlug}
+          parentId={comment.id}
+          placeholder={`Reply to ${comment.displayName}`}
+          submitLabel='Post reply'
+        />
       </details>
 
       <LessonCommentThread
@@ -227,6 +194,7 @@ function LessonCommentThread({
         parentId={comment.id}
         courseSlug={courseSlug}
         lessonSlug={lessonSlug}
+        viewerMemberId={viewerMemberId}
         reactionSummaries={reactionSummaries}
         reactionError={reactionError}
         depth={depth + 1}
@@ -649,6 +617,7 @@ export default async function PortalLessonPage({ params, searchParams }: LessonP
                       parentId={null}
                       courseSlug={courseSlug}
                       lessonSlug={lessonSlug}
+                      viewerMemberId={memberId}
                       reactionSummaries={reactionSummaries}
                       reactionError={reactionError}
                     />
@@ -659,22 +628,9 @@ export default async function PortalLessonPage({ params, searchParams }: LessonP
                   )}
                 </div>
 
-                <form action={submitLessonDiscussionComment} className='mt-7 space-y-3 border-t border-jpv-border pt-6'>
-                  <input name='courseSlug' type='hidden' value={courseSlug} />
-                  <input name='lessonSlug' type='hidden' value={lessonSlug} />
-                  <label className='block text-sm font-semibold text-jpv-ink' htmlFor='lesson-discussion-body'>
-                    Add to the discussion
-                  </label>
-                  <textarea
-                    className='min-h-28 w-full rounded-xl border border-jpv-border bg-jpv-canvas px-4 py-3 text-sm outline-none focus:border-jpv-brand'
-                    id='lesson-discussion-body'
-                    maxLength={10_000}
-                    name='body'
-                    placeholder='Share a question, insight, or response about this lesson.'
-                    required
-                  />
-                  <button className='jpv-button-primary min-h-11' type='submit'>Post comment</button>
-                </form>
+                <div className='mt-7 border-t border-jpv-border pt-6'>
+                  <LessonCommentComposer courseSlug={courseSlug} lessonSlug={lessonSlug} />
+                </div>
               </div>
             </details>
           </section>
