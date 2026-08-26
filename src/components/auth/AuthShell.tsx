@@ -39,7 +39,7 @@ export function AuthShell({
   const bannerDescription = branding?.bannerDescription || 'Secure access to your programme, resources, community, and account tools in one connected member experience.'
 
   return (
-    <main className='jpv-auth-shell min-h-[100dvh] overflow-auto bg-jpv-canvas text-jpv-ink lg:grid lg:h-[100dvh] lg:grid-cols-[minmax(0,0.9fr)_minmax(30rem,1.1fr)] lg:overflow-hidden'>
+    <main className='jpv-auth-shell min-h-[100dvh] overflow-auto bg-jpv-canvas text-jpv-ink lg:grid lg:h-[100dvh] lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:overflow-hidden'>
       {/* Left banner — desktop only */}
       <section
         className='relative hidden overflow-hidden rounded-r-none bg-jpv-brand-deep p-10 text-jpv-canvas lg:flex lg:h-full lg:flex-col lg:justify-between xl:p-14'
@@ -73,7 +73,7 @@ export function AuthShell({
 
       {/* Right form panel */}
       <section
-        className='px-6 py-10 sm:px-10 lg:overflow-y-auto lg:py-14'
+        className='min-w-0 px-5 py-10 sm:px-10 lg:overflow-y-auto lg:py-14'
         style={branding?.formBackgroundColor ? { backgroundColor: branding.formBackgroundColor } : undefined}
       >
         <div className='mx-auto w-full max-w-lg'>

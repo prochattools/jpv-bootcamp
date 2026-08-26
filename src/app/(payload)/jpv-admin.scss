@@ -145,7 +145,7 @@ body {
   min-width: 248px;
   overflow-x: hidden;
   overflow-y: auto;
-  padding: 0.75rem;
+  padding: 0.5rem;
 }
 
 // Keep the brand mark readable against the neutral admin canvas.
@@ -174,7 +174,7 @@ body {
 .jpv-admin-nav {
   border-bottom: 1px solid var(--jpv-border);
   margin: 0 -0.25rem 0.6rem;
-  padding: 0 0.25rem 0.75rem;
+  padding: 0 0.25rem 0.5rem;
 }
 
 .jpv-admin-nav__eyebrow {
@@ -196,6 +196,11 @@ body {
 .nav .jpv-admin-nav a.jpv-admin-nav__link:hover {
   background: var(--jpv-surface);
   color: var(--jpv-brand-deep);
+}
+
+.jpv-admin-nav__primary {
+  display: grid;
+  gap: 0.125rem;
 }
 
 .jpv-admin-nav__records {
@@ -235,13 +240,19 @@ body {
   background: var(--jpv-surface);
 }
 
+.jpv-admin-nav__records > summary:focus-visible {
+  outline: 3px solid var(--jpv-focus);
+  outline-offset: 3px;
+}
+
 .jpv-admin-nav__record-groups {
   display: grid;
-  gap: 0.6rem;
-  margin: 0.7rem 0.25rem 0;
+  gap: 0.45rem;
+  margin: 0.55rem 0.25rem 0;
 }
 
 .jpv-admin-nav__record-groups section {
+  min-width: 0;
   border-left: 2px solid var(--jpv-border);
   padding-left: 0.55rem;
 }
@@ -297,6 +308,7 @@ body {
   font-weight: 500;
   line-height: 1.35;
   min-height: 40px;
+  min-width: 0;
   padding: 0.5rem 0.75rem;
   text-decoration: none;
   transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
@@ -754,6 +766,10 @@ select {
     min-width: 44px;
     display: inline-flex;
     align-items: center;
+  }
+
+  .nav .jpv-admin-nav .jpv-admin-nav__record-groups a {
+    min-height: 44px;
   }
 
   // Prevent long labels or values from forcing a horizontal scroll on forms

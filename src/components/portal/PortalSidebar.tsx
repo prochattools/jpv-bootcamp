@@ -100,8 +100,8 @@ function isActive(pathname: string, href: string): boolean {
 
 function navLinkClass(active: boolean): string {
   return active
-    ? 'flex min-h-11 items-center gap-3 rounded-jpv-action bg-jpv-brand-deep px-3 py-2 text-sm font-semibold text-jpv-canvas'
-    : 'flex min-h-11 items-center gap-3 rounded-jpv-action px-3 py-2 text-sm font-medium text-jpv-ink transition hover:bg-jpv-canvas hover:text-jpv-brand-deep'
+    ? 'flex min-h-11 min-w-0 items-center gap-3 rounded-jpv-action bg-jpv-brand-deep px-3 py-2 text-sm font-semibold text-jpv-canvas'
+    : 'flex min-h-11 min-w-0 items-center gap-3 rounded-jpv-action px-3 py-2 text-sm font-medium text-jpv-ink transition hover:bg-jpv-canvas hover:text-jpv-brand-deep'
 }
 
 function SidebarContent({
@@ -140,10 +140,10 @@ function SidebarContent({
         )}
       </div>
 
-      <nav aria-label='Member portal' className='flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-4 dark:text-[var(--jpv-ink)]'>
+      <nav aria-label='Member portal' className='flex min-w-0 flex-1 flex-col gap-0.5 overflow-y-auto px-2 py-3 sm:px-3 sm:py-4 dark:text-[var(--jpv-ink)]'>
         {/* Pinned/highlighted items at top */}
         {pinnedItems.length > 0 && (
-          <div className='mb-3'>
+          <div className='mb-2'>
             {pinnedItems.map((item) => {
               const Icon = resolveIcon(item.iconName)
               const active = isActive(pathname, item.href)
@@ -153,14 +153,14 @@ function SidebarContent({
                   aria-current={active ? 'page' : undefined}
                   className={
                     active
-                      ? 'flex min-h-11 items-center gap-3 rounded-jpv-action bg-jpv-brand-deep px-3 py-2 text-sm font-semibold text-jpv-canvas'
-                      : 'flex min-h-11 items-center gap-3 rounded-jpv-action bg-jpv-brand/10 px-3 py-2 text-sm font-semibold text-jpv-brand-deep transition hover:bg-jpv-brand/20'
+                      ? 'flex min-h-11 min-w-0 items-center gap-3 rounded-jpv-action bg-jpv-brand-deep px-3 py-2 text-sm font-semibold text-jpv-canvas'
+                      : 'flex min-h-11 min-w-0 items-center gap-3 rounded-jpv-action bg-jpv-brand/10 px-3 py-2 text-sm font-semibold text-jpv-brand-deep transition hover:bg-jpv-brand/20'
                   }
                   href={item.href}
                   onClick={onNavigate}
                 >
                   {Icon && <Icon aria-hidden='true' className='h-4.5 w-4.5 shrink-0' />}
-                  {item.label}
+                  <span className='min-w-0 truncate'>{item.label}</span>
                 </Link>
               )
             })}
@@ -169,7 +169,7 @@ function SidebarContent({
 
         {/* Dynamic nav groups */}
         {groups.map((group) => (
-          <div className='mb-2' key={group.title}>
+          <div className='mb-1' key={group.title}>
             <p className='mb-1 px-3 text-[0.6875rem] font-extrabold uppercase tracking-wider text-jpv-muted'>
               {group.title}
             </p>
@@ -185,7 +185,7 @@ function SidebarContent({
                   onClick={onNavigate}
                 >
                   {Icon && <Icon aria-hidden='true' className='h-4.5 w-4.5 shrink-0' />}
-                  {item.label}
+                  <span className='min-w-0 truncate'>{item.label}</span>
                 </Link>
               )
             })}
@@ -193,7 +193,7 @@ function SidebarContent({
         ))}
 
         {/* Account section — always at bottom */}
-        <div className='mt-auto border-t border-jpv-border pt-3 dark:border-[var(--jpv-border)]'>
+        <div className='mt-auto border-t border-jpv-border pt-2 dark:border-[var(--jpv-border)]'>
           {accountItems.map((item) => {
             const active = isActive(pathname, item.href)
             return (
@@ -205,7 +205,7 @@ function SidebarContent({
                 onClick={onNavigate}
               >
                 <item.Icon aria-hidden='true' className='h-4.5 w-4.5 shrink-0' />
-                {item.label}
+                <span className='min-w-0 truncate'>{item.label}</span>
               </Link>
             )
           })}
@@ -217,7 +217,7 @@ function SidebarContent({
               type='button'
             >
               <LogOut aria-hidden='true' className='h-4.5 w-4.5 shrink-0' />
-              {logoutSubmitting ? 'Signing out…' : 'Sign out'}
+              <span className='min-w-0 truncate'>{logoutSubmitting ? 'Signing out…' : 'Sign out'}</span>
             </button>
           ) : null}
         </div>

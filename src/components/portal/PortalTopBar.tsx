@@ -59,7 +59,9 @@ export function PortalTopBar({ onMobileMenuOpen, showThemeToggle }: PortalTopBar
         >
           <Menu aria-hidden='true' className='h-5 w-5' />
         </button>
-        <h1 className='min-w-0 truncate text-lg font-semibold text-jpv-ink dark:text-[var(--jpv-ink)]'>{pageTitle}</h1>
+        <p aria-label='Current portal section' className='min-w-0 truncate text-lg font-semibold text-jpv-ink dark:text-[var(--jpv-ink)]'>
+          {pageTitle}
+        </p>
       </div>
 
       <div className='flex shrink-0 items-center gap-0 sm:gap-1'>
