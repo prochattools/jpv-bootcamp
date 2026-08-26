@@ -59,30 +59,6 @@ html[data-theme='light'] {
   --theme-warning-800: color-mix(in srgb, var(--jpv-sunshine-ink) 80%, black);
 }
 
-// Payload's built-in theme toggle must not turn the entire admin into a dark
-// green canvas. Both modes deliberately use the same neutral application shell;
-// brand green is reserved for the header, focus, links, and selected actions.
-html[data-theme='dark'] {
-  --theme-bg: var(--jpv-surface);
-  --theme-input-bg: var(--jpv-canvas);
-  --theme-text: var(--jpv-ink);
-  --theme-border-color: var(--jpv-border);
-  --theme-elevation-0: var(--jpv-canvas);
-  --theme-elevation-50: var(--jpv-surface);
-  --theme-elevation-100: var(--jpv-surface-strong);
-  --theme-elevation-150: var(--jpv-border);
-  --theme-elevation-200: color-mix(in srgb, var(--jpv-border) 82%, var(--jpv-muted));
-  --theme-elevation-250: color-mix(in srgb, var(--jpv-border) 68%, var(--jpv-muted));
-  --theme-elevation-300: color-mix(in srgb, var(--jpv-border) 52%, var(--jpv-muted));
-  --theme-elevation-400: color-mix(in srgb, var(--jpv-muted) 86%, var(--jpv-ink));
-  --theme-elevation-500: color-mix(in srgb, var(--jpv-muted) 78%, var(--jpv-ink));
-  --theme-elevation-600: color-mix(in srgb, var(--jpv-muted) 64%, var(--jpv-ink));
-  --theme-elevation-700: color-mix(in srgb, var(--jpv-muted) 46%, var(--jpv-ink));
-  --theme-elevation-800: color-mix(in srgb, var(--jpv-muted) 25%, var(--jpv-ink));
-  --theme-elevation-900: var(--jpv-ink);
-  --theme-elevation-1000: color-mix(in srgb, var(--jpv-ink) 88%, black);
-}
-
 // ─── Base typography and background ──────────────────────────────────────────
 
 body {

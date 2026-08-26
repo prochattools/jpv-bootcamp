@@ -79,15 +79,11 @@ assert.match(
   /overflowWrap:\s*'anywhere'/,
   'Long KPI values must wrap instead of clipping',
 )
-assert.match(
-  adminStyles,
-  /html\[data-theme='dark'\][\s\S]*--theme-bg:\s*var\(--jpv-surface\)[\s\S]*--theme-text:\s*var\(--jpv-ink\)/,
-  'Payload dark mode must retain the neutral readable application shell',
-)
+assert.match(payloadConfig, /theme:\s*'light'/, 'Payload admin must be light-only')
 assert.doesNotMatch(
   adminStyles,
-  /html\[data-theme='dark'\][\s\S]*--theme-bg:\s*var\(--jpv-brand-deep\)/,
-  'Payload dark mode must not turn the full application canvas brand green',
+  /html\[data-theme='dark'\]/,
+  'Payload admin styles must not expose a dark-mode theme branch',
 )
 assert.match(
   adminStyles,

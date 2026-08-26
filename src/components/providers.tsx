@@ -1,21 +1,24 @@
 'use client';
 
 import { ReactNode } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
+import { Suspense } from "react";
 import { Toaster } from "react-hot-toast";
 
 function PublicThemeReset(): null {
   const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const isPortalLogin = pathname === '/portal' && searchParams.get('mode') === 'login'
 
   useEffect(() => {
-    if (pathname?.startsWith('/portal')) return
+    if (pathname?.startsWith('/portal') && !isPortalLogin) return
 
     // The only supported theme outside the member portal is light. Clear a
     // class left behind by the portal provider during client-side navigation.
     document.documentElement.classList.remove('dark')
     document.documentElement.style.colorScheme = 'light'
-  }, [pathname])
+  }, [isPortalLogin, pathname])
 
   return null
 }
@@ -23,7 +26,9 @@ function PublicThemeReset(): null {
 export function Providers({ children }: { children: ReactNode }) {
   return (
     <>
-      <PublicThemeReset />
+      <Suspense fallback={null}>
+        <PublicThemeReset />
+      </Suspense>
       <div className="min-h-screen bg-jpv-canvas text-jpv-ink">
         {children}
       </div>

@@ -74,11 +74,7 @@ function PortalLoginMode({
       eyebrow='JPV Bootcamp member portal'
       footer={(
         <p className='text-sm text-jpv-muted'>
-          Administrator account? Use{' '}
-          <Link className='font-semibold text-jpv-ink underline decoration-jpv-green underline-offset-4' href='/admin/login'>
-            the administrator sign-in
-          </Link>
-          .
+          Members and Payload administrators use this sign-in. Administrator accounts receive portal editing permissions automatically.
         </p>
       )}
       introActions={(
@@ -89,7 +85,7 @@ function PortalLoginMode({
       )}
       title={branding.formTitle}
     >
-      <h2 className='text-xl font-bold'>Member sign in</h2>
+      <h2 className='text-xl font-bold'>Member or administrator sign in</h2>
       <p className='mt-2 text-sm leading-6 text-jpv-muted'>
         Checkout-created and administrator-created accounts must verify their email address before signing in. Resend verification below if needed.
       </p>
