@@ -200,7 +200,7 @@ export async function getMemberBookmarks(memberId: string): Promise<MemberBookma
       reactionId: reaction.id,
       postId: postId,
       postTitle: getString(post, 'title') ?? 'Untitled',
-      postSlug: null,
+      postSlug: getString(post, 'slug'),
       spaceName: getString(space, 'name') ?? spaceSlug,
       spaceSlug,
       createdAt: typeof reaction.createdAt === 'string' ? reaction.createdAt : null,

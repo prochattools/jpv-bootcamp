@@ -14,7 +14,7 @@ export const REACTION_COLLECTION = 'payload_engagement_reactions' as const
 export const reactionTypes = ['helpful', 'insightful', 'celebrate'] as const
 export type ReactionType = (typeof reactionTypes)[number]
 
-export const reactionTargetKinds = ['space_post', 'space_comment', 'lesson_comment'] as const
+export const reactionTargetKinds = ['space_post', 'space_comment', 'lesson_comment', 'content_post', 'content_page'] as const
 export type ReactionTargetKind = (typeof reactionTargetKinds)[number]
 
 export type ReactionTarget = {
@@ -78,6 +78,8 @@ type ReactionDocument = PayloadDocument & {
   targetPost?: PayloadId | Record<string, unknown> | null
   targetSpaceComment?: PayloadId | Record<string, unknown> | null
   targetLessonComment?: PayloadId | Record<string, unknown> | null
+  targetContentPost?: PayloadId | Record<string, unknown> | null
+  targetContentPage?: PayloadId | Record<string, unknown> | null
   createdAt?: string | null
   updatedAt?: string | null
 }
@@ -92,12 +94,16 @@ const targetFieldByKind: Record<ReactionTargetKind, keyof ReactionDocument> = {
   space_post: 'targetPost',
   space_comment: 'targetSpaceComment',
   lesson_comment: 'targetLessonComment',
+  content_post: 'targetContentPost',
+  content_page: 'targetContentPage',
 }
 
 const supportedMutationTargets = new Set<ReactionTargetKind>([
   'space_post',
   'space_comment',
   'lesson_comment',
+  'content_post',
+  'content_page',
 ])
 
 function asString(value: unknown): string | null {
@@ -111,6 +117,12 @@ function relationshipId(value: unknown): string | null {
   if (direct) return direct
   if (!value || typeof value !== 'object') return null
   return asString((value as { id?: unknown }).id)
+}
+
+function isMemberAudienceAllowed(document: PayloadDocument, memberId: PayloadId): boolean {
+  if (document.audience !== 'selected') return true
+  return Array.isArray(document.targetMemberIds)
+    && document.targetMemberIds.some((value) => String(value) === String(memberId))
 }
 
 function asRelationshipId(value: PayloadId): string | number {
@@ -254,6 +266,19 @@ async function assertVisibleTarget(
     return comment
   }
 
+  if (target.kind === 'content_post' || target.kind === 'content_page') {
+    const collection = target.kind === 'content_post' ? 'payload_posts' : 'payload_pages'
+    const content = await findById(payload, collection, target.id)
+    if (!content) throw new ReactionServiceError('target_not_found', 'Reaction target was not found.')
+    if (content.status !== 'published') {
+      throw new ReactionServiceError('target_hidden', 'This target is not available for reactions.')
+    }
+    if (!isMemberAudienceAllowed(content, memberId)) {
+      throw new ReactionServiceError('target_inaccessible', 'This target is not available for reactions.')
+    }
+    return content
+  }
+
   const comment = await findById(payload, 'payload_lesson_comments', target.id)
   if (!comment) throw new ReactionServiceError('target_not_found', 'Reaction target was not found.')
   if (comment.moderationStatus !== 'visible') {
@@ -311,7 +336,7 @@ async function notifyReactionTargetAuthor(
         member: authorId,
         type: 'system',
         actorName,
-        title: `reacted ${reactionLabels[reactionType]} to your ${target.kind === 'space_post' ? 'discussion' : 'comment'}`,
+        title: `reacted ${reactionLabels[reactionType]} to your ${target.kind === 'space_post' || target.kind === 'content_post' || target.kind === 'content_page' ? 'post' : 'comment'}`,
         href: null,
         read: false,
       },

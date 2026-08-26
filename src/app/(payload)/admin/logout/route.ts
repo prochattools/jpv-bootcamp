@@ -41,7 +41,9 @@ function resolvePublicOrigin(request: NextRequest): string {
     return process.env.NEXT_PUBLIC_PAYLOAD_URL.replace(/\/$/, '')
   }
 
-  return 'https://preview.jpvbootcamp.com'
+  return process.env.DEPLOYMENT_ENV === 'production'
+    ? 'https://jpvbootcamp.com'
+    : 'https://preview.jpvbootcamp.com'
 }
 
 function logoutRedirect(request: NextRequest): URL {

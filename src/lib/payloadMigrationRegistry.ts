@@ -47,6 +47,7 @@ export const PAYLOAD_MIGRATION_NAMES = [
   '20260825_125000_membership_shadow_state_alignment',
   '20260826_090000_payment_action_required_status',
   '20260826_120000_billing_pause_actions',
+  '20260826_130000_portal_engagement_distribution',
 ] as const
 
 export type PayloadMigrationName = (typeof PAYLOAD_MIGRATION_NAMES)[number]

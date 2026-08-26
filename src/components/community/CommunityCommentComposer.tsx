@@ -27,7 +27,14 @@ export function CommunityCommentComposer({ spaceSlug, postId }: { spaceSlug: str
       if (!response.ok || !result.ok) throw new Error(result.message || 'Unable to post your reply.')
       formRef.current?.reset()
       setMessage('Reply posted.')
+      const main = document.querySelector('main')
+      const mainScrollTop = main?.scrollTop ?? 0
+      const windowScrollY = window.scrollY
       router.refresh()
+      requestAnimationFrame(() => {
+        if (main) main.scrollTop = mainScrollTop
+        window.scrollTo({ top: windowScrollY, behavior: 'auto' })
+      })
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Unable to post your reply.')
     } finally {

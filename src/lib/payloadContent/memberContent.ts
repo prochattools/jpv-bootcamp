@@ -48,6 +48,7 @@ async function findPublishedBySlug(
   payload: PayloadCourseAccessAPI,
   collection: 'payload_pages' | 'payload_posts',
   slug: string,
+  memberId?: string | null,
 ): Promise<PayloadDocument | null> {
   const result = await payload.find({
     collection,
@@ -62,7 +63,14 @@ async function findPublishedBySlug(
     overrideAccess: true,
   })
 
-  return result.docs[0] ?? null
+  const document = result.docs[0] ?? null
+  return document && isAudienceAllowed(document, memberId) ? document : null
+}
+
+function isAudienceAllowed(document: PayloadDocument, memberId?: string | null): boolean {
+  if (document.audience !== 'selected') return true
+  if (!memberId || !Array.isArray(document.targetMemberIds)) return false
+  return document.targetMemberIds.some((value) => String(value) === String(memberId))
 }
 
 async function projectPublishedContent(
@@ -97,16 +105,18 @@ async function projectPublishedContent(
 export async function getPublishedMemberPage(
   payload: PayloadCourseAccessAPI,
   slug: string,
+  memberId?: string | null,
 ): Promise<MemberPublishedContent | null> {
-  const page = await findPublishedBySlug(payload, 'payload_pages', slug)
+  const page = await findPublishedBySlug(payload, 'payload_pages', slug, memberId)
   return page ? projectPublishedContent(payload, page, 'summary') : null
 }
 
 export async function getPublishedMemberPost(
   payload: PayloadCourseAccessAPI,
   slug: string,
+  memberId?: string | null,
 ): Promise<MemberPublishedContent | null> {
-  const post = await findPublishedBySlug(payload, 'payload_posts', slug)
+  const post = await findPublishedBySlug(payload, 'payload_posts', slug, memberId)
   return post ? projectPublishedContent(payload, post, 'excerpt') : null
 }
 
@@ -125,6 +135,7 @@ async function listPublishedCollection(
   collection: 'payload_pages' | 'payload_posts',
   kind: 'page' | 'post',
   summaryField: 'summary' | 'excerpt',
+  memberId?: string | null,
 ): Promise<MemberPublishedContentSummary[]> {
   const result = await payload.find({
     collection,
@@ -137,6 +148,7 @@ async function listPublishedCollection(
 
   const summaries: MemberPublishedContentSummary[] = []
   for (const document of result.docs) {
+    if (!isAudienceAllowed(document, memberId)) continue
     const slug = asString(document.slug)
     if (!slug) continue
     summaries.push({
@@ -154,10 +166,11 @@ async function listPublishedCollection(
 
 export async function listPublishedMemberContent(
   payload: PayloadCourseAccessAPI,
+  memberId?: string | null,
 ): Promise<MemberPublishedContentSummary[]> {
   const [pages, posts] = await Promise.all([
-    listPublishedCollection(payload, 'payload_pages', 'page', 'summary'),
-    listPublishedCollection(payload, 'payload_posts', 'post', 'excerpt'),
+    listPublishedCollection(payload, 'payload_pages', 'page', 'summary', memberId),
+    listPublishedCollection(payload, 'payload_posts', 'post', 'excerpt', memberId),
   ])
 
   return [...posts, ...pages].sort((left, right) => {

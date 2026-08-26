@@ -11,7 +11,7 @@ type ReactionBarClientProps = {
   counts: readonly ReactionCount[]
   totalCount: number | null
   viewerReaction: ReactionType | null
-  targetKind: 'space_post' | 'space_comment' | 'lesson_comment'
+  targetKind: 'space_post' | 'space_comment' | 'lesson_comment' | 'content_post' | 'content_page'
   targetId: string | number
   className?: string
 }

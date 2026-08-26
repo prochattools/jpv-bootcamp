@@ -15,7 +15,7 @@ import {
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-const targetKinds = new Set<ReactionTargetKind>(['space_post', 'space_comment', 'lesson_comment'])
+const targetKinds = new Set<ReactionTargetKind>(['space_post', 'space_comment', 'lesson_comment', 'content_post', 'content_page'])
 const reactionTypes = new Set<ReactionType>(['helpful', 'insightful', 'celebrate'])
 
 export async function POST(req: NextRequest) {

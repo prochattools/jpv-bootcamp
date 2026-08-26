@@ -221,6 +221,28 @@ export const PayloadLiveSession: CollectionConfig = {
       label: 'Max Participants',
     },
     {
+      name: 'audience',
+      type: 'select',
+      required: true,
+      defaultValue: 'enrolled',
+      options: [
+        { label: 'Members enrolled in the linked course or space', value: 'enrolled' },
+        { label: 'All active members', value: 'all' },
+        { label: 'Selected members', value: 'selected' },
+      ],
+      admin: {
+        description: 'Controls who can see and join this session in the member portal.',
+      },
+    },
+    {
+      name: 'targetMemberIds',
+      type: 'json',
+      admin: {
+        hidden: true,
+        description: 'Member IDs selected by the portal administrator when audience is selected.',
+      },
+    },
+    {
       name: 'description',
       type: 'richText',
       label: 'Session Description',

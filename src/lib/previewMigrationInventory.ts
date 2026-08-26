@@ -75,6 +75,7 @@ const PREVIEW_MIGRATION_METADATA = [
   { purpose: 'Add current membership-support Stripe shadow states while preserving historical state values.', rollbackRisk: 'irreversible', verificationChecks: ['registry-match', 'ordered-exactly', 'membership-shadow-state-alignment'] },
   { purpose: 'Add the action-required payment status used by open Stripe invoices awaiting payment action.', rollbackRisk: 'irreversible', verificationChecks: ['registry-match', 'ordered-exactly', 'payment-action-required-enum'] },
   { purpose: 'Add guarded Payload operator actions for pausing and resuming Stripe subscriptions.', rollbackRisk: 'irreversible', verificationChecks: ['registry-match', 'ordered-exactly', 'billing-pause-actions', 'rollback-guard'] },
+  { purpose: 'Add member-portal audience targeting for live sessions and updates, plus reactions on published content.', rollbackRisk: 'data_loss', verificationChecks: ['registry-match', 'ordered-exactly', 'portal-engagement-distribution', 'rollback-guard'] },
 ] as const satisfies readonly PreviewMigrationMetadata[]
 
 if (PREVIEW_MIGRATION_METADATA.length !== PAYLOAD_MIGRATION_NAMES.length) {
