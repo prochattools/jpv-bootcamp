@@ -136,6 +136,7 @@ describe('POST /api/livekit/token — operator-to-member delivery', () => {
           room: ROOM_NAME,
           roomJoin: true,
           canPublish: false,
+          canPublishData: true,
           canSubscribe: true,
         }),
       }),
@@ -178,7 +179,7 @@ describe('POST /api/livekit/token — operator-to-member delivery', () => {
     expect(data.ok).toBe(true)
     expect(vi.mocked(buildLiveKitToken)).toHaveBeenCalledWith(
       expect.objectContaining({
-        grant: expect.objectContaining({ canPublish: true, canSubscribe: true }),
+        grant: expect.objectContaining({ canPublish: true, canPublishData: true, canSubscribe: true }),
       }),
       expect.anything(),
     )
@@ -213,7 +214,7 @@ describe('POST /api/livekit/token — operator-to-member delivery', () => {
     expect(response.status).toBe(200)
     expect(vi.mocked(buildLiveKitToken)).toHaveBeenCalledWith(
       expect.objectContaining({
-        grant: expect.objectContaining({ canPublish: true, roomJoin: true }),
+        grant: expect.objectContaining({ canPublish: true, canPublishData: true, roomJoin: true }),
       }),
       expect.anything(),
     )

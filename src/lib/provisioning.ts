@@ -1266,6 +1266,9 @@ export async function provisionFromCheckoutSession(
 			email: redactEmail(email),
 			error: (memberError as Error).message,
 		})
+		// Do not acknowledge the Stripe event when the Payload account could not
+		// be created. Stripe will retry the webhook.
+		throw memberError
 	}
 
 	if (emailEval.shouldSend) {
