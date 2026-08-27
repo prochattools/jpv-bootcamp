@@ -14,7 +14,7 @@
  *
  * Required guards before apply:
  *   - Repository exactly: prochattools/jpv-bootcamp
- *   - Branch exactly: feature/course-branding-and-preview
+ *   - Branch exactly: feature/course-branding-and-preview or main
  *   - Current HEAD matches --expected-commit
  *   - Guarded paths (workflow, migration, configurator, package, runbook) clean
  *
@@ -31,7 +31,7 @@ import { spawnSync } from 'node:child_process'
 
 const ENV_NAME = 'staging-migration-plan'
 const REQUIRED_REPO = 'prochattools/jpv-bootcamp'
-const REQUIRED_FEATURE_BRANCH = 'feature/course-branding-and-preview'
+const ALLOWED_RELEASE_BRANCHES = new Set(['feature/course-branding-and-preview', 'main'])
 const REQUIRED_PLAN_READY_VALUE = 'true'
 const REQUIRED_SOLO_OPERATOR_VALUE = 'true'
 const REQUIRED_ENV_SECRETS = ['DATABASE_URL', 'TAILSCALE_OAUTH_CLIENT_ID', 'TAILSCALE_OAUTH_SECRET']
@@ -342,7 +342,7 @@ export async function configureStagingMigrationPlanEnvironment(
     stdio: ['ignore', 'pipe', 'pipe'],
   })
   const currentBranch = (branchResult.status === 0 && branchResult.stdout.trim()) || null
-  if (currentBranch !== REQUIRED_FEATURE_BRANCH) {
+  if (!currentBranch || !ALLOWED_RELEASE_BRANCHES.has(currentBranch)) {
     result.blockers.push('branch_mismatch')
     return result
   }
@@ -368,7 +368,9 @@ export async function configureStagingMigrationPlanEnvironment(
     result.actions.push(`[DRY-RUN] Would create/update environment '${ENV_NAME}'`)
     result.actions.push(`[DRY-RUN] Would set zero reviewers (solo-operator mode)`)
     result.actions.push(`[DRY-RUN] Would set zero wait timer`)
-    result.actions.push(`[DRY-RUN] Would set branch policy: custom, exactly '${REQUIRED_FEATURE_BRANCH}'`)
+    result.actions.push(
+      `[DRY-RUN] Would accept release branch: ${Array.from(ALLOWED_RELEASE_BRANCHES).join(' or ')}`,
+    )
     result.actions.push(`[DRY-RUN] Would set variable PLAN_READY_FOR_DISPATCH=${REQUIRED_PLAN_READY_VALUE}`)
     result.actions.push(`[DRY-RUN] Would set variable SOLO_OPERATOR_MODE=${REQUIRED_SOLO_OPERATOR_VALUE}`)
     for (const [name, present] of secretPresenceByName) {
@@ -516,7 +518,9 @@ export async function configureStagingMigrationPlanEnvironment(
     result.blockers.push('environment_verification_failed')
     return result
   }
-  result.verifiedState.push(`Branch policy: none (in-workflow guards enforce ${REQUIRED_FEATURE_BRANCH})`)
+  result.verifiedState.push(
+    `Branch policy: none (in-workflow guards enforce ${Array.from(ALLOWED_RELEASE_BRANCHES).join(' or ')})`,
+  )
 
   const verifyVars = apiRead({
     args: ['api', `repos/${repo}/environments/${ENV_NAME}/variables`],
