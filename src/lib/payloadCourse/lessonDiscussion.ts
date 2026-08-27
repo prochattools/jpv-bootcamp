@@ -6,6 +6,8 @@ import {
   type PayloadDocument,
   type PayloadId,
 } from '@/lib/payloadCourse/accessService'
+import { normalizeRelationshipId, relationshipId } from '@/lib/domain/relationships'
+import { plainTextToLexical } from '@/lib/content/plainTextToLexical'
 import { createAuditEvent } from '@/lib/payloadCourse/events'
 
 type RateLimitInput = {
@@ -49,21 +51,6 @@ function asString(value: unknown): string | null {
   if (typeof value === 'string' && value.trim()) return value.trim()
   if (typeof value === 'number') return String(value)
   return null
-}
-
-function relationshipId(value: unknown): string | null {
-  const direct = asString(value)
-  if (direct) return direct
-  if (!value || typeof value !== 'object') return null
-  return asString((value as { id?: unknown }).id)
-}
-
-function asRelationshipId(value: PayloadId): number | string {
-  if (typeof value === 'number') return value
-  const trimmed = String(value).trim()
-  if (!trimmed) throw new Error('Relationship ID is required but was empty.')
-  const numeric = Number(trimmed)
-  return Number.isFinite(numeric) ? numeric : trimmed
 }
 
 function assertRichBody(body: Record<string, unknown>) {
@@ -224,9 +211,9 @@ export async function createLessonComment(
     collection: 'payload_lesson_comments',
     data: {
       displayName,
-      lesson: asRelationshipId(lessonId),
-      author: asRelationshipId(input.memberId),
-      parent: parent ? asRelationshipId(parent.id) : undefined,
+      lesson: normalizeRelationshipId(lessonId),
+      author: normalizeRelationshipId(input.memberId),
+      parent: parent ? normalizeRelationshipId(parent.id) : undefined,
       body: input.body,
       moderationStatus: 'visible',
       metadata: {
@@ -352,38 +339,5 @@ export async function deleteLessonComment(
 }
 
 export function plainTextLessonCommentBody(value: string): SerializedEditorState {
-  const paragraphs = value
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .slice(0, 100)
-
-  return {
-    root: {
-      type: 'root',
-      direction: 'ltr',
-      format: '',
-      indent: 0,
-      version: 1,
-      children: paragraphs.map((line) => ({
-        type: 'paragraph',
-        format: '',
-        indent: 0,
-        version: 1,
-        textFormat: 0,
-        textStyle: '',
-        children: [
-          {
-            type: 'text',
-            detail: 0,
-            format: 0,
-            mode: 'normal',
-            style: '',
-            text: line,
-            version: 1,
-          },
-        ],
-      })),
-    },
-  } as SerializedEditorState
+  return plainTextToLexical(value, { maxParagraphs: 100 }) as SerializedEditorState
 }

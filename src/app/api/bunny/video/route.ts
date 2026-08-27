@@ -3,6 +3,7 @@ import { headers } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 import config from '@payload-config'
+import { relationshipId } from '@/lib/domain/relationships'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -13,8 +14,6 @@ type VideoTarget =
   | { kind: 'lesson'; slug: string }
   | { kind: 'page'; slug: string }
   | { kind: 'post'; slug: string }
-
-type PayloadRelationship = string | number | { id?: string | number } | null | undefined
 
 type VideoDocument = {
   id: string | number
@@ -68,12 +67,6 @@ function buildSignedBunnyUrl(params: {
   playbackUrl.searchParams.set('expires', String(expiry))
 
   return playbackUrl.toString()
-}
-
-function relationshipId(value: PayloadRelationship): string | number | null {
-  if (typeof value === 'string' || typeof value === 'number') return value
-  if (value && (typeof value.id === 'string' || typeof value.id === 'number')) return value.id
-  return null
 }
 
 function parseTarget(request: NextRequest): VideoTarget | null {
@@ -141,9 +134,9 @@ async function resolveLessonVideo(
   })
   const lesson = lessonResult.docs[0] as {
     id: string | number
-    bunnyVideo?: PayloadRelationship
+    bunnyVideo?: unknown
     content?: unknown
-    module?: { course?: PayloadRelationship } | null
+    module?: { course?: unknown } | null
   } | undefined
 
   if (!lesson) {
@@ -239,7 +232,7 @@ async function resolvePublishedContentVideo(
     depth: 0,
     overrideAccess: true,
   })
-  const content = result.docs[0] as { featuredVideo?: PayloadRelationship } | undefined
+  const content = result.docs[0] as { featuredVideo?: unknown } | undefined
 
   if (!content) {
     return {

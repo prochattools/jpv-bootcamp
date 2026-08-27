@@ -12,6 +12,7 @@ import {
   type ResourceType,
 } from '@/lib/entitlements/evaluateAccess'
 import { resolveMembershipLifecycle } from '@/lib/billing/membershipLifecycle'
+import { relationshipId } from '@/lib/domain/relationships'
 
 export type PayloadId = string | number
 
@@ -152,33 +153,18 @@ export type EvaluatePayloadLessonAccessArgs = EvaluatePayloadCourseAccessArgs & 
   previousLessonId?: PayloadId | null
 }
 
-function asRecord(value: unknown): Record<string, unknown> | null {
-  if (!value || typeof value !== 'object') return null
-  return value as Record<string, unknown>
-}
-
 function asString(value: unknown): string | null {
   if (typeof value === 'string' && value.trim()) return value
   if (typeof value === 'number') return String(value)
   return null
 }
 
-function getDocumentId(value: unknown): string | null {
-  const direct = asString(value)
-  if (direct) return direct
-
-  const record = asRecord(value)
-  if (!record) return null
-
-  return asString(record.id)
-}
-
 function getRelationshipIds(value: unknown): string[] {
   if (Array.isArray(value)) {
-    return value.map(getDocumentId).filter((id): id is string => Boolean(id))
+    return value.map(relationshipId).filter((id): id is string => Boolean(id))
   }
 
-  const id = getDocumentId(value)
+  const id = relationshipId(value)
   return id ? [id] : []
 }
 
@@ -516,8 +502,8 @@ async function getGrantContexts(
 
   return result.docs.map((doc) => ({
     id: String(doc.id),
-    memberId: getDocumentId(doc.member),
-    groupId: getDocumentId(doc.accessGroup),
+    memberId: relationshipId(doc.member),
+    groupId: relationshipId(doc.accessGroup),
     resourceType: resource.type,
     resourceId: resource.id,
     status: doc.status === 'active' ? 'active' : String(doc.status ?? 'pending') as GrantAccessContext['status'],
@@ -731,9 +717,9 @@ export async function evaluatePayloadLessonAccess(
     return failClosed('content_not_published', { resourceType: 'lesson', notFound: true })
   }
 
-  const moduleId = getDocumentId(lesson.module)
+  const moduleId = relationshipId(lesson.module)
   const module = await findByIdSafe(payload, 'payload_course_modules', moduleId)
-  const courseId = getDocumentId(module?.course)
+  const courseId = relationshipId(module?.course)
   const course = await findByIdSafe(payload, 'payload_courses', courseId)
 
   if (!module || !course) {

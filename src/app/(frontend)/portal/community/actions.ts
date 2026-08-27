@@ -15,6 +15,8 @@ import {
 import { getPayload } from 'payload'
 import config from '@payload-config'
 import { buildPlainTextRichText } from '@/lib/payloadCourse/plainTextRichText'
+import { boundedText } from '@/lib/domain/validation'
+import { relationshipId } from '@/lib/domain/relationships'
 
 // ---------------------------------------------------------------------------
 // Mention notification helpers
@@ -48,10 +50,7 @@ export async function createMentionNotifications(
       const profile = profiles.docs[0] as Record<string, unknown> | undefined
       if (!profile) continue
 
-      const memberId =
-        typeof profile.member === 'object' && profile.member !== null
-          ? (profile.member as Record<string, unknown>).id
-          : profile.member
+      const memberId = relationshipId(profile.member)
 
       if (!memberId) continue
 
@@ -90,12 +89,6 @@ function classifyError(err: unknown): SubmissionErrorCode {
 function formText(formData: FormData, name: string): string {
   const value = formData.get(name)
   return typeof value === 'string' ? value.trim() : ''
-}
-
-function boundedText(value: string, label: string, maxLength: number): string {
-  if (!value) throw new Error(`${label} is required.`)
-  if (value.length > maxLength) throw new Error(`${label} is too long.`)
-  return value
 }
 
 function memberDisplayName(member: Record<string, unknown>): string {
@@ -312,14 +305,10 @@ export async function editCommunityPost(
       overrideAccess: true,
     })
 
-    const postSpaceId = typeof post.space === 'object' && post.space !== null
-      ? String((post.space as unknown as Record<string, unknown>).id)
-      : String(post.space)
+    const postSpaceId = relationshipId(post.space)
     if (postSpaceId !== spaceId) return { ok: false, error: 'post_space_mismatch' }
 
-    const postAuthorId = typeof post.author === 'object' && post.author !== null
-      ? String((post.author as unknown as Record<string, unknown>).id)
-      : String(post.author)
+    const postAuthorId = relationshipId(post.author)
 
     if (actor.kind !== 'admin' && postAuthorId !== String(memberId)) {
       return { ok: false, error: 'not_owner' }
@@ -374,14 +363,10 @@ export async function deleteCommunityPost(
       overrideAccess: true,
     })
 
-    const postSpaceId = typeof post.space === 'object' && post.space !== null
-      ? String((post.space as unknown as Record<string, unknown>).id)
-      : String(post.space)
+    const postSpaceId = relationshipId(post.space)
     if (postSpaceId !== spaceId) return { ok: false, error: 'post_space_mismatch' }
 
-    const postAuthorId = typeof post.author === 'object' && post.author !== null
-      ? String((post.author as unknown as Record<string, unknown>).id)
-      : String(post.author)
+    const postAuthorId = relationshipId(post.author)
 
     if (actor.kind !== 'admin' && postAuthorId !== String(memberId)) {
       return { ok: false, error: 'not_owner' }
@@ -429,9 +414,7 @@ export async function editCommunityComment(
       depth: 0,
       overrideAccess: true,
     })
-    const postSpaceId = typeof post.space === 'object' && post.space !== null
-      ? String((post.space as unknown as Record<string, unknown>).id)
-      : String(post.space)
+    const postSpaceId = relationshipId(post.space)
     if (postSpaceId !== spaceId) return { ok: false, error: 'post_space_mismatch' }
 
     const comment = await payload.findByID({
@@ -441,14 +424,10 @@ export async function editCommunityComment(
       overrideAccess: true,
     })
 
-    const commentPostId = typeof comment.post === 'object' && comment.post !== null
-      ? String((comment.post as unknown as Record<string, unknown>).id)
-      : String(comment.post)
+    const commentPostId = relationshipId(comment.post)
     if (commentPostId !== postId) return { ok: false, error: 'comment_post_mismatch' }
 
-    const commentAuthorId = typeof comment.author === 'object' && comment.author !== null
-      ? String((comment.author as unknown as Record<string, unknown>).id)
-      : String(comment.author)
+    const commentAuthorId = relationshipId(comment.author)
 
     if (actor.kind !== 'admin' && commentAuthorId !== String(memberId)) {
       return { ok: false, error: 'not_owner' }
@@ -500,9 +479,7 @@ export async function deleteCommunityComment(
       depth: 0,
       overrideAccess: true,
     })
-    const postSpaceId = typeof post.space === 'object' && post.space !== null
-      ? String((post.space as unknown as Record<string, unknown>).id)
-      : String(post.space)
+    const postSpaceId = relationshipId(post.space)
     if (postSpaceId !== spaceId) return { ok: false, error: 'post_space_mismatch' }
 
     const comment = await payload.findByID({
@@ -512,14 +489,10 @@ export async function deleteCommunityComment(
       overrideAccess: true,
     })
 
-    const commentPostId = typeof comment.post === 'object' && comment.post !== null
-      ? String((comment.post as unknown as Record<string, unknown>).id)
-      : String(comment.post)
+    const commentPostId = relationshipId(comment.post)
     if (commentPostId !== postId) return { ok: false, error: 'comment_post_mismatch' }
 
-    const commentAuthorId = typeof comment.author === 'object' && comment.author !== null
-      ? String((comment.author as unknown as Record<string, unknown>).id)
-      : String(comment.author)
+    const commentAuthorId = relationshipId(comment.author)
 
     if (actor.kind !== 'admin' && commentAuthorId !== String(memberId)) {
       return { ok: false, error: 'not_owner' }

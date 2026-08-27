@@ -18,6 +18,7 @@ import {
   type MemberManagedVideo,
   type MemberMediaAsset,
 } from '@/lib/payloadContent/memberMedia'
+import { relationshipId } from '@/lib/domain/relationships'
 
 export type LessonLockState = 'available' | 'locked' | 'coming_soon'
 
@@ -201,22 +202,12 @@ function asDateString(value: unknown): string | null {
   return asString(value)
 }
 
-function getDocumentId(value: unknown): string | null {
-  const direct = asString(value)
-  if (direct) return direct
-
-  const record = asRecord(value)
-  if (!record) return null
-
-  return asString(record.id)
-}
-
 function getRelationshipIds(value: unknown): string[] {
   if (Array.isArray(value)) {
-    return value.map(getDocumentId).filter((id): id is string => Boolean(id))
+    return value.map(relationshipId).filter((id): id is string => Boolean(id))
   }
 
-  const id = getDocumentId(value)
+  const id = relationshipId(value)
   return id ? [id] : []
 }
 
@@ -304,7 +295,7 @@ async function getCompletedLessonIds(
     limit: 500,
   })
 
-  return new Set(progress.map((doc) => getDocumentId(doc.lesson)).filter((id): id is string => Boolean(id)))
+  return new Set(progress.map((doc) => relationshipId(doc.lesson)).filter((id): id is string => Boolean(id)))
 }
 
 async function getAllowedCourseModules(
@@ -537,11 +528,11 @@ export async function getMemberLessonDetail(
   })
   if (!lesson) return null
 
-  const moduleId = getDocumentId(lesson.module)
+  const moduleId = relationshipId(lesson.module)
   const module = await findOne(payload, 'payload_course_modules', {
     id: { equals: moduleId },
   })
-  const courseId = getDocumentId(module?.course)
+  const courseId = relationshipId(module?.course)
   const course = await findOne(payload, 'payload_courses', {
     and: [
       { id: { equals: courseId } },

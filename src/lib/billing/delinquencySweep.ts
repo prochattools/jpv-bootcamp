@@ -5,6 +5,7 @@ import type {
   PayloadId,
 } from '@/lib/payloadCourse/accessService'
 import { createAuditEvent } from '@/lib/payloadCourse/events'
+import { relationshipId } from '@/lib/domain/relationships'
 
 export type DelinquencySweepResult = {
   examined: number
@@ -12,15 +13,6 @@ export type DelinquencySweepResult = {
   alreadyBlocked: number
   skippedManualStatus: number
   failed: number
-}
-
-function relationshipId(value: unknown): PayloadId | null {
-  if (typeof value === 'string' || typeof value === 'number') return value
-  if (value && typeof value === 'object' && 'id' in value) {
-    const id = (value as { id?: unknown }).id
-    return typeof id === 'string' || typeof id === 'number' ? id : null
-  }
-  return null
 }
 
 function text(value: unknown): string | null {

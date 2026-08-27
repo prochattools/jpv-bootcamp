@@ -7,6 +7,7 @@ import type {
   PayloadDocument,
   PayloadId,
 } from '@/lib/payloadCourse/accessService'
+import { relationshipId } from '@/lib/domain/relationships'
 
 export const STRIPE_OPERATOR_ACTIONS = [
   'reconcile_all',
@@ -77,15 +78,6 @@ export class StripeOperatorActionError extends Error {
     super(message)
     this.name = 'StripeOperatorActionError'
   }
-}
-
-function relationshipId(value: unknown): PayloadId | null {
-  if (typeof value === 'string' || typeof value === 'number') return value
-  if (value && typeof value === 'object' && 'id' in value) {
-    const id = (value as { id?: unknown }).id
-    return typeof id === 'string' || typeof id === 'number' ? id : null
-  }
-  return null
 }
 
 function stringValue(value: unknown): string | null {

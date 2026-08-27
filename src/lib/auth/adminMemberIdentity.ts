@@ -2,21 +2,13 @@ import { randomBytes } from 'node:crypto'
 
 import type { PayloadCourseWriteAPI, PayloadDocument, PayloadId } from '@/lib/payloadCourse/accessService'
 import { normalizeEmail } from '@/lib/normalize-email'
+import { relationshipId } from '@/lib/domain/relationships'
 
 type AdministratorRecord = PayloadDocument & {
   email?: unknown
   name?: unknown
   displayName?: unknown
   portalMember?: unknown
-}
-
-function relationshipId(value: unknown): PayloadId | null {
-  if (typeof value === 'string' || typeof value === 'number') return value
-  if (value && typeof value === 'object' && 'id' in value) {
-    const id = (value as { id?: unknown }).id
-    if (typeof id === 'string' || typeof id === 'number') return id
-  }
-  return null
 }
 
 function displayNameForAdministrator(admin: AdministratorRecord, email: string): string {

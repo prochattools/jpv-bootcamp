@@ -8,6 +8,7 @@ import {
   createEntitlementEvent,
   queueAndAttemptEmailEvent,
 } from '@/lib/payloadCourse/events'
+import { relationshipId } from '@/lib/domain/relationships'
 
 type ActorInput = {
   type: 'admin' | 'member' | 'system' | 'migration'
@@ -49,21 +50,6 @@ function asString(value: unknown): string | null {
   if (typeof value === 'string' && value.trim()) return value
   if (typeof value === 'number') return String(value)
   return null
-}
-
-function asRecord(value: unknown): Record<string, unknown> | null {
-  if (!value || typeof value !== 'object') return null
-  return value as Record<string, unknown>
-}
-
-function getDocumentId(value: unknown): string | null {
-  const direct = asString(value)
-  if (direct) return direct
-
-  const record = asRecord(value)
-  if (!record) return null
-
-  return asString(record.id)
 }
 
 async function findOne(
@@ -441,8 +427,8 @@ export async function removeSpaceMembership(
     }
   }
 
-  const effectiveMemberId = getDocumentId(existing.member) ?? String(input.memberId)
-  const effectiveSpaceId = getDocumentId(existing.space) ?? String(input.spaceId)
+  const effectiveMemberId = relationshipId(existing.member) ?? String(input.memberId)
+  const effectiveSpaceId = relationshipId(existing.space) ?? String(input.spaceId)
 
   const membership = await payload.update({
     collection: 'payload_space_memberships',

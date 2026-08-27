@@ -11,6 +11,8 @@ import {
   createAuditEvent,
   queueAndAttemptEmailEvent,
 } from '@/lib/payloadCourse/events'
+import { normalizeRelationshipId, relationshipId } from '@/lib/domain/relationships'
+import { boundedText } from '@/lib/domain/validation'
 
 type ActorInput = {
   type: 'admin' | 'member' | 'system' | 'migration'
@@ -79,29 +81,6 @@ function asString(value: unknown): string | null {
   return null
 }
 
-function asRelationshipId(value: PayloadId): number | string {
-  if (typeof value === 'number') return value
-  const trimmed = String(value).trim()
-  if (!trimmed) throw new Error('Relationship ID is required but was empty.')
-  const num = Number(trimmed)
-  return Number.isFinite(num) ? num : trimmed
-}
-
-function asRecord(value: unknown): Record<string, unknown> | null {
-  if (!value || typeof value !== 'object') return null
-  return value as Record<string, unknown>
-}
-
-function getDocumentId(value: unknown): string | null {
-  const direct = asString(value)
-  if (direct) return direct
-
-  const record = asRecord(value)
-  if (!record) return null
-
-  return asString(record.id)
-}
-
 function normalizeModerationStatus(value: ModerationStatus): ModerationStatus {
   if (
     value === 'visible' ||
@@ -118,13 +97,6 @@ function normalizeModerationStatus(value: ModerationStatus): ModerationStatus {
 function normalizePostType(value: CreateSpacePostInput['postType']) {
   if (value === 'question' || value === 'announcement') return value
   return 'discussion'
-}
-
-function assertText(value: string, label: string, maxLength: number) {
-  const trimmed = value.trim()
-  if (!trimmed) throw new Error(`${label} is required.`)
-  if (trimmed.length > maxLength) throw new Error(`${label} is too long.`)
-  return trimmed
 }
 
 function assertBody(body: Record<string, unknown>) {
@@ -327,7 +299,7 @@ export async function createSpacePost(
   payload: PayloadCourseWriteAPI,
   input: CreateSpacePostInput
 ): Promise<CommunityWriteResult> {
-  const title = assertText(input.title, 'Title', 160)
+  const title = boundedText(input.title, 'Title', 160)
   assertBody(input.body)
 
   await assertCreateRateLimit(payload, {
@@ -341,8 +313,8 @@ export async function createSpacePost(
     collection: 'payload_space_posts',
     data: {
       title,
-      space: asRelationshipId(input.spaceId),
-      author: asRelationshipId(input.memberId),
+      space: normalizeRelationshipId(input.spaceId),
+      author: normalizeRelationshipId(input.memberId),
       postType: normalizePostType(input.postType),
       body: input.body,
       moderationStatus: 'visible',
@@ -410,7 +382,7 @@ export async function createSpaceComment(
     throw new Error('Comments are locked for this post.')
   }
 
-  const spaceId = getDocumentId(post.space)
+  const spaceId = relationshipId(post.space)
   if (!spaceId) throw new Error('Post is missing its space relationship.')
 
   await assertCreateRateLimit(payload, {
@@ -426,8 +398,8 @@ export async function createSpaceComment(
     collection: 'payload_space_comments',
     data: {
       displayName: input.displayName ?? `member:${input.memberId} -> post:${input.postId}`,
-      post: asRelationshipId(input.postId),
-      author: asRelationshipId(input.memberId),
+      post: normalizeRelationshipId(input.postId),
+      author: normalizeRelationshipId(input.memberId),
       body: input.body,
       moderationStatus: 'visible',
       metadata: {
@@ -488,7 +460,7 @@ export async function moderateSpacePost(
   const post = await findPost(payload, input.postId)
   if (!post) throw new Error(`Missing space post: ${input.postId}`)
 
-  const spaceId = getDocumentId(post.space)
+  const spaceId = relationshipId(post.space)
   if (!spaceId) throw new Error('Post is missing its space relationship.')
   await assertModeratorAccess(payload, input.actor, spaceId)
 
@@ -536,12 +508,12 @@ export async function moderateSpaceComment(
   const comment = await findComment(payload, input.commentId)
   if (!comment) throw new Error(`Missing space comment: ${input.commentId}`)
 
-  const postId = getDocumentId(comment.post)
+  const postId = relationshipId(comment.post)
   if (!postId) throw new Error('Comment is missing its post relationship.')
 
   const post = await findPost(payload, postId)
   if (!post) throw new Error(`Missing space post: ${postId}`)
-  const spaceId = getDocumentId(post.space)
+  const spaceId = relationshipId(post.space)
   if (!spaceId) throw new Error('Post is missing its space relationship.')
   await assertModeratorAccess(payload, input.actor, spaceId)
 

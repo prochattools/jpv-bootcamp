@@ -7,6 +7,7 @@ import {
   projectCommunityRichText,
   type SafeCommunityRichTextNode,
 } from '@/lib/payloadCourse/communityDiscussion'
+import { relationshipId } from '@/lib/domain/relationships'
 
 export type CommunityModerationActor =
   | {
@@ -115,13 +116,6 @@ function asDateString(value: unknown): string | null {
   if (!text) return null
   const parsed = new Date(text)
   return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString()
-}
-
-function getDocumentId(value: unknown): string | null {
-  const direct = asString(value)
-  if (direct) return direct
-  const record = asRecord(value)
-  return record ? asString(record.id) : null
 }
 
 function normalizePostType(
@@ -241,7 +235,7 @@ async function getModeratedSpaceIds(
         (membership) =>
           membership.role === 'moderator' || membership.role === 'admin'
       )
-      .map((membership) => getDocumentId(membership.space))
+      .map((membership) => relationshipId(membership.space))
       .filter((spaceId): spaceId is string => Boolean(spaceId))
   )
 }
@@ -294,7 +288,7 @@ async function projectPost(
   const author = await findByIdSafe(
     payload,
     'payload_members',
-    getDocumentId(post.author)
+    relationshipId(post.author)
   )
 
   return {
@@ -322,7 +316,7 @@ async function projectComment(
   const author = await findByIdSafe(
     payload,
     'payload_members',
-    getDocumentId(comment.author)
+    relationshipId(comment.author)
   )
 
   return {
@@ -348,7 +342,7 @@ async function projectFile(
   const media = await findByIdSafe(
     payload,
     'payload_private_media',
-    getDocumentId(file.protectedFile)
+    relationshipId(file.protectedFile)
   )
   if (!media) return null
 
@@ -362,7 +356,7 @@ async function projectFile(
   const uploader = await findByIdSafe(
     payload,
     'payload_members',
-    getDocumentId(file.uploadedBy)
+    relationshipId(file.uploadedBy)
   )
 
   return {
@@ -444,7 +438,7 @@ export async function getPendingCommunityModerationItems(
   const items: PendingCommunityModerationItem[] = []
 
   for (const post of posts) {
-    const spaceId = getDocumentId(post.space)
+    const spaceId = relationshipId(post.space)
     if (!spaceId || !permits(spaceId)) continue
     const space = await loadSpace(spaceId)
     if (!space) continue
@@ -453,11 +447,11 @@ export async function getPendingCommunityModerationItems(
   }
 
   for (const comment of comments) {
-    const postId = getDocumentId(comment.post)
+    const postId = relationshipId(comment.post)
     if (!postId) continue
     const post = await loadPost(postId)
     if (!post) continue
-    const spaceId = getDocumentId(post.space)
+    const spaceId = relationshipId(post.space)
     if (!spaceId || !permits(spaceId)) continue
     const space = await loadSpace(spaceId)
     if (!space) continue
@@ -466,7 +460,7 @@ export async function getPendingCommunityModerationItems(
   }
 
   for (const file of files) {
-    const spaceId = getDocumentId(file.space)
+    const spaceId = relationshipId(file.space)
     if (!spaceId || !permits(spaceId)) continue
     const space = await loadSpace(spaceId)
     if (!space) continue
@@ -507,7 +501,7 @@ export async function resolvePendingCommunityModerationItem(
 
   if (kind === 'post') {
     const post = await findByIdSafe(payload, 'payload_space_posts', id)
-    const spaceId = getDocumentId(post?.space)
+    const spaceId = relationshipId(post?.space)
     if (!post || !spaceId || post.moderationStatus !== 'pending_review') return denied()
     const capability = await getCommunityModerationCapability(payload, actor, spaceId)
     if (!capability.allowed) return denied()
@@ -519,9 +513,9 @@ export async function resolvePendingCommunityModerationItem(
 
   if (kind === 'comment') {
     const comment = await findByIdSafe(payload, 'payload_space_comments', id)
-    const postId = getDocumentId(comment?.post)
+    const postId = relationshipId(comment?.post)
     const post = await findByIdSafe(payload, 'payload_space_posts', postId)
-    const spaceId = getDocumentId(post?.space)
+    const spaceId = relationshipId(post?.space)
     if (
       !comment ||
       !post ||
@@ -540,7 +534,7 @@ export async function resolvePendingCommunityModerationItem(
 
   if (kind === 'file') {
     const file = await findByIdSafe(payload, 'payload_space_files', id)
-    const spaceId = getDocumentId(file?.space)
+    const spaceId = relationshipId(file?.space)
     if (!file || !spaceId || file.moderationStatus !== 'pending_review') return denied()
     const capability = await getCommunityModerationCapability(payload, actor, spaceId)
     if (!capability.allowed) return denied()
@@ -595,23 +589,23 @@ async function resolveOutcomeTarget(
 ): Promise<CommunityModerationOutcomeTarget | null> {
   if (kind === 'post') {
     const post = await findByIdSafe(payload, 'payload_space_posts', id)
-    const authorId = getDocumentId(post?.author)
-    const spaceId = getDocumentId(post?.space)
+    const authorId = relationshipId(post?.author)
+    const spaceId = relationshipId(post?.space)
     return authorId && spaceId ? { authorId, spaceId } : null
   }
 
   if (kind === 'comment') {
     const comment = await findByIdSafe(payload, 'payload_space_comments', id)
-    const authorId = getDocumentId(comment?.author)
-    const postId = getDocumentId(comment?.post)
+    const authorId = relationshipId(comment?.author)
+    const postId = relationshipId(comment?.post)
     const post = await findByIdSafe(payload, 'payload_space_posts', postId)
-    const spaceId = getDocumentId(post?.space)
+    const spaceId = relationshipId(post?.space)
     return authorId && spaceId ? { authorId, spaceId } : null
   }
 
   const file = await findByIdSafe(payload, 'payload_space_files', id)
-  const authorId = getDocumentId(file?.uploadedBy)
-  const spaceId = getDocumentId(file?.space)
+  const authorId = relationshipId(file?.uploadedBy)
+  const spaceId = relationshipId(file?.space)
   return authorId && spaceId ? { authorId, spaceId } : null
 }
 
@@ -808,7 +802,7 @@ export async function getMemberCommunitySubmissions(
 
   for (const post of posts) {
     const status = submissionStatus(post.moderationStatus)
-    const spaceId = getDocumentId(post.space)
+    const spaceId = relationshipId(post.space)
     if (!status || !spaceId) continue
     const space = await loadSpace(spaceId)
     if (!space) continue
@@ -825,10 +819,10 @@ export async function getMemberCommunitySubmissions(
 
   for (const comment of comments) {
     const status = submissionStatus(comment.moderationStatus)
-    const postId = getDocumentId(comment.post)
+    const postId = relationshipId(comment.post)
     if (!status || !postId) continue
     const post = await loadPost(postId)
-    const spaceId = getDocumentId(post?.space)
+    const spaceId = relationshipId(post?.space)
     if (!post || !spaceId) continue
     const space = await loadSpace(spaceId)
     if (!space) continue
@@ -845,7 +839,7 @@ export async function getMemberCommunitySubmissions(
 
   for (const file of files) {
     const status = submissionStatus(file.moderationStatus)
-    const spaceId = getDocumentId(file.space)
+    const spaceId = relationshipId(file.space)
     if (!status || !spaceId) continue
     const space = await loadSpace(spaceId)
     if (!space) continue

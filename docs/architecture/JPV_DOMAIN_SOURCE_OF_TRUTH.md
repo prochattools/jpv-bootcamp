@@ -1,6 +1,6 @@
 # JPV Bootcamp Domain Source of Truth
 
-**Status:** CURRENT A0 OWNERSHIP MAP — REVIEW INPUT FOR A1–A4
+**Status:** CURRENT A2 OWNERSHIP MAP — REVIEW INPUT FOR A3–A4
 
 **Date:** 2026-08-27
 
@@ -12,6 +12,29 @@ packet named in the row must resolve the boundary before behavior is changed.
 
 Direct access is a server-side rule. React pages and browser code do not gain
 permission to write merely because a datastore is listed as authoritative.
+
+## A2 boundary clarifications
+
+A2 did not change domain ownership, stored data, routes, provider authority, or
+the split rows below. It established the shared pure primitives used at those
+boundaries and the complete portal administrator service map in
+`JPV_PORTAL_ADMIN_SERVICE_MAP.md`:
+
+- `src/lib/domain/validation.ts` owns slug, title, bounded-text, and scalar
+  record-ID validation.
+- `src/lib/domain/relationships.ts` owns extraction and Payload-write
+  normalization for direct and populated relationship IDs.
+- `src/lib/content/plainTextToLexical.ts` owns deterministic plain-text
+  Payload Lexical serialization. The existing
+  `src/lib/payloadCourse/plainTextRichText.ts` export remains a compatibility
+  facade.
+- `src/lib/normalize-email.ts#normalizeEmail` and
+  `src/lib/payloadCourse/events.ts#createAuditEvent` remain the canonical email
+  and audit primitives; no duplicates were introduced.
+
+These helpers are transport-safe and do not authorize access. Authorization,
+provider truth, cross-store ownership, and split-domain reconciliation remain
+the responsibility of the named services and later packets.
 
 ## Domain map
 

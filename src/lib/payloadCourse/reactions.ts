@@ -8,6 +8,7 @@ import {
 } from '@/lib/payloadCourse/accessService'
 import { createAuditEvent } from '@/lib/payloadCourse/events'
 import { isEligibleCurrentMember } from '@/lib/members/currentMember'
+import { normalizeRelationshipId, relationshipId } from '@/lib/domain/relationships'
 
 export const REACTION_COLLECTION = 'payload_engagement_reactions' as const
 
@@ -112,25 +113,10 @@ function asString(value: unknown): string | null {
   return null
 }
 
-function relationshipId(value: unknown): string | null {
-  const direct = asString(value)
-  if (direct) return direct
-  if (!value || typeof value !== 'object') return null
-  return asString((value as { id?: unknown }).id)
-}
-
 function isMemberAudienceAllowed(document: PayloadDocument, memberId: PayloadId): boolean {
   if (document.audience !== 'selected') return true
   return Array.isArray(document.targetMemberIds)
     && document.targetMemberIds.some((value) => String(value) === String(memberId))
-}
-
-function asRelationshipId(value: PayloadId): string | number {
-  if (typeof value === 'number') return value
-  const trimmed = String(value).trim()
-  if (!trimmed) throw new ReactionServiceError('target_not_found', 'Reaction target was not found.')
-  const numeric = Number(trimmed)
-  return Number.isFinite(numeric) ? numeric : trimmed
 }
 
 function normalizeReactionType(value: unknown): ReactionType {
@@ -672,10 +658,10 @@ export async function setReaction(
     const created = await payload.create({
       collection: REACTION_COLLECTION,
       data: {
-        member: asRelationshipId(memberId),
+        member: normalizeRelationshipId(memberId),
         reactionType,
         targetKind: target.kind,
-        [targetField]: asRelationshipId(target.id),
+        [targetField]: normalizeRelationshipId(target.id),
         metadata: { source: 'member_portal', operation: 'created' },
       },
       overrideAccess: true,

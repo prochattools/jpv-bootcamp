@@ -5,10 +5,11 @@ import { requirePortalAdmin } from '@/lib/auth/requirePortalAdmin'
 import {
   failure,
   normalizePortalAdminError,
-  PortalAdminActionError,
   success,
   type PortalAdminActionResult,
 } from '@/lib/portalAdmin/actionResult'
+import { normalizeSlug, validateTitle } from '@/lib/domain/validation'
+import { plainTextToLexical } from '@/lib/content/plainTextToLexical'
 import { createAuditEvent } from '@/lib/payloadCourse/events'
 
 // ---------------------------------------------------------------------------
@@ -60,41 +61,7 @@ type LessonInput = {
 // ---------------------------------------------------------------------------
 
 function toPlainLexical(text: string): unknown {
-  return {
-    root: {
-      type: 'root',
-      format: '',
-      indent: 0,
-      version: 1,
-      children: text.trim()
-        .split(/\r?\n/)
-        .filter(Boolean)
-        .slice(0, 200)
-        .map((line) => ({
-          type: 'paragraph',
-          format: '',
-          indent: 0,
-          version: 1,
-          textFormat: 0,
-          textStyle: '',
-          children: [{ type: 'text', detail: 0, format: 0, mode: 'normal', style: '', text: line, version: 1 }],
-        })),
-    },
-  }
-}
-
-function validateSlug(slug: string): string {
-  const normalized = slug.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '')
-  if (!normalized || normalized.length < 2) throw new PortalAdminActionError('invalid_input', 'Slug must be at least 2 characters.')
-  if (normalized.length > 100) throw new PortalAdminActionError('invalid_input', 'Slug is too long.')
-  return normalized
-}
-
-function validateTitle(title: string): string {
-  const trimmed = title.trim()
-  if (!trimmed) throw new PortalAdminActionError('invalid_input', 'Title is required.')
-  if (trimmed.length > 200) throw new PortalAdminActionError('invalid_input', 'Title is too long.')
-  return trimmed
+  return plainTextToLexical(text, { maxParagraphs: 200 })
 }
 
 function revalidateCoursePaths(courseSlug?: string | null) {
@@ -111,7 +78,7 @@ export async function createCourseAction(input: CourseInput): Promise<ActionResu
   try {
     const { actor, payload, privilegedAccess } = await requirePortalAdmin('/portal')
     const title = validateTitle(input.title)
-    const slug = validateSlug(input.slug)
+    const slug = normalizeSlug(input.slug)
 
     const existing = await payload.find({
       collection: 'payload_courses',
@@ -182,7 +149,7 @@ export async function updateCourseAction(courseId: string, input: Partial<Course
     const data: Record<string, unknown> = {}
     if (input.title !== undefined) data.title = validateTitle(input.title)
     if (input.slug !== undefined) {
-      const slug = validateSlug(input.slug)
+      const slug = normalizeSlug(input.slug)
       const existing = await payload.find({
         collection: 'payload_courses',
         where: { and: [{ slug: { equals: slug } }, { id: { not_equals: courseId } }] },
@@ -502,7 +469,7 @@ export async function createLessonAction(input: LessonInput): Promise<ActionResu
   try {
     const { actor, payload, privilegedAccess } = await requirePortalAdmin('/portal')
     const title = validateTitle(input.title)
-    const slug = validateSlug(input.slug)
+    const slug = normalizeSlug(input.slug)
 
     const existing = await payload.find({
       collection: 'payload_lessons',
@@ -587,7 +554,7 @@ export async function updateLessonAction(lessonId: string, input: Partial<Omit<L
     const data: Record<string, unknown> = {}
     if (input.title !== undefined) data.title = validateTitle(input.title)
     if (input.slug !== undefined) {
-      const slug = validateSlug(input.slug)
+      const slug = normalizeSlug(input.slug)
       const existing = await payload.find({
         collection: 'payload_lessons',
         where: { and: [{ slug: { equals: slug } }, { id: { not_equals: lessonId } }] },

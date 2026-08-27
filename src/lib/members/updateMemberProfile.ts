@@ -2,6 +2,7 @@ import type { PayloadCourseWriteAPI, PayloadId } from '@/lib/payloadCourse/acces
 import { createAuditEvent, queueAndAttemptEmailEvent } from '@/lib/payloadCourse/events'
 import { isEligibleCurrentMember } from '@/lib/members/currentMember'
 import { resolveJpvLogoUrl } from '@/lib/brand/jpvDesignSystem'
+import { plainTextToLexical } from '@/lib/content/plainTextToLexical'
 
 export type UpdateMemberProfileInput = {
   displayName: string
@@ -54,41 +55,6 @@ function normalizeMultilineText(value: string | null | undefined, maxLength: num
   return normalized || null
 }
 
-function plainTextToLexical(value: string | null): Record<string, unknown> | null {
-  if (!value) return null
-  const paragraphs = value
-    .split(/\n{2,}/)
-    .map((paragraph) => paragraph.trim())
-    .filter(Boolean)
-
-  return {
-    root: {
-      type: 'root',
-      direction: 'ltr',
-      format: '',
-      indent: 0,
-      version: 1,
-      children: paragraphs.map((paragraph) => ({
-        type: 'paragraph',
-        format: '',
-        indent: 0,
-        version: 1,
-        textFormat: 0,
-        textStyle: '',
-        children: [{
-          type: 'text',
-          detail: 0,
-          format: 0,
-          mode: 'normal',
-          style: '',
-          text: paragraph,
-          version: 1,
-        }],
-      })),
-    },
-  }
-}
-
 export async function updateMemberProfile(
   payload: PayloadCourseWriteAPI,
   memberId: PayloadId,
@@ -121,7 +87,9 @@ export async function updateMemberProfile(
     phone: normalizeText(input.phone, 40),
     timezone: normalizeText(input.timezone, 80),
     website: normalizeText(input.website, 500),
-    biography: plainTextToLexical(biographyText),
+    biography: biographyText
+      ? plainTextToLexical(biographyText, { maxCharacters: 4_000, maxParagraphs: 100 })
+      : null,
     socialLinks,
   }
 

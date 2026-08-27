@@ -16,6 +16,7 @@ import {
   type MemberManagedVideo,
   type MemberMediaAsset,
 } from '@/lib/payloadContent/memberMedia'
+import { relationshipId } from '@/lib/domain/relationships'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -123,16 +124,6 @@ function asLexicalContent(value: unknown): SerializedEditorState | null {
   return value as SerializedEditorState
 }
 
-function getDocumentId(value: unknown): string | null {
-  if (typeof value === 'string' && value.trim()) return value
-  if (typeof value === 'number') return String(value)
-  if (value && typeof value === 'object') {
-    const record = value as Record<string, unknown>
-    return asString(record.id)
-  }
-  return null
-}
-
 function extractPlainText(value: unknown): string | null {
   if (typeof value === 'string') return value || null
   if (!value || typeof value !== 'object') return null
@@ -152,7 +143,7 @@ function extractPlainText(value: unknown): string | null {
 
 function extractIdArray(value: unknown): string[] {
   if (!Array.isArray(value)) return []
-  return value.map((item) => getDocumentId(item)).filter((id): id is string => id !== null)
+  return value.map(relationshipId).filter((id): id is string => id !== null)
 }
 
 function bySortOrder(a: PayloadDocument, b: PayloadDocument): number {
@@ -216,7 +207,7 @@ export async function getAdminCourseDashboard(
         lessonCount,
         modules,
         descriptionPlainText: extractPlainText(course.description),
-        coverImageId: getDocumentId(course.coverImage),
+        coverImageId: relationshipId(course.coverImage),
       }
     })
   )
@@ -247,7 +238,7 @@ export async function getAdminCourseOverview(
     lessonCount,
     modules,
     descriptionPlainText: extractPlainText(course.description),
-    coverImageId: getDocumentId(course.coverImage),
+    coverImageId: relationshipId(course.coverImage),
   }
 }
 
@@ -278,10 +269,10 @@ async function getAdminCourseModules(
           previewLesson: asBoolean(lesson.previewLesson),
           lockState: asLockState(lesson.lockState),
           sortOrder: typeof lesson.sortOrder === 'number' ? lesson.sortOrder : 0,
-          bunnyVideoId: getDocumentId(lesson.bunnyVideo),
+          bunnyVideoId: relationshipId(lesson.bunnyVideo),
           downloadIds: extractIdArray(lesson.downloads),
           contentPlainText: extractPlainText(lesson.content),
-          coverImageId: getDocumentId(lesson.coverImage),
+          coverImageId: relationshipId(lesson.coverImage),
         }))
       )
 
@@ -309,9 +300,9 @@ export async function getAdminLessonDetail(
   const lesson = await findOne(payload, 'payload_lessons', { slug: { equals: lessonSlug } })
   if (!lesson) return null
 
-  const moduleId = getDocumentId(lesson.module)
+  const moduleId = relationshipId(lesson.module)
   const module = await findOne(payload, 'payload_course_modules', { id: { equals: moduleId } })
-  const courseId = getDocumentId(module?.course)
+  const courseId = relationshipId(module?.course)
   const course = await findOne(payload, 'payload_courses', {
     and: [{ id: { equals: courseId } }, { slug: { equals: courseSlug } }],
   })

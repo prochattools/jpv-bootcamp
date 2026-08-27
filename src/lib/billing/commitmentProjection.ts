@@ -5,21 +5,13 @@ import type Stripe from 'stripe'
 import prisma from '@/libs/prisma'
 import { normalizeEmail } from '@/lib/normalize-email'
 import type { MonthlyCommitmentScheduleResult } from '@/lib/stripe-commitment'
+import { relationshipId } from '@/lib/domain/relationships'
 
 export type CommitmentProjectionResult = {
   updated: boolean
   commitmentStatus: string | null
   commitmentStartAt: Date | null
   commitmentEndAt: Date | null
-}
-
-function relationshipId(value: unknown): string | null {
-  if (typeof value === 'string' && value.trim()) return value
-  if (value && typeof value === 'object' && 'id' in value) {
-    const id = (value as { id?: unknown }).id
-    return typeof id === 'string' && id.trim() ? id : null
-  }
-  return null
 }
 
 function phaseDates(schedule: Stripe.SubscriptionSchedule): {

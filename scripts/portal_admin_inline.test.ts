@@ -444,7 +444,7 @@ function testDeleteActionsCheckDependencies() {
 }
 
 // ---------------------------------------------------------------------------
-// 12. Slug validation exists in action files
+// 12. Slug validation is delegated to the shared domain primitive
 // ---------------------------------------------------------------------------
 function testSlugValidationExists() {
   const actionFiles = [
@@ -454,11 +454,10 @@ function testSlugValidationExists() {
 
   for (const relPath of actionFiles) {
     const src = source(relPath)
-    // Should have a validateSlug function or inline slug normalization
     assert.match(
       src,
-      /validateSlug|slug.*\.toLowerCase\(\)|slug.*replace/,
-      `[test 12] ${relPath} must include slug normalization/validation logic`,
+      /normalizeSlug/,
+      `[test 12] ${relPath} must use the shared slug normalization/validation primitive`,
     )
   }
 }

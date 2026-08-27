@@ -1,6 +1,6 @@
 # JPV Bootcamp Post-Launch Architecture Consolidation Plan
 
-**Status:** A1 COMPLETE IN THIS IMPLEMENTATION PACKET; A2–A6 NOT STARTED
+**Status:** A2 COMPLETE IN THIS IMPLEMENTATION PACKET; A3–A6 NOT STARTED
 
 **Date:** 2026-08-27
 
@@ -10,6 +10,32 @@ This plan governs the behavior-preserving consolidation of the live JPV
 Bootcamp system. It is intentionally packetized. No packet may absorb another
 packet’s scope, and no implementation begins merely because a related branch or
 historical change exists.
+
+## A2 completion record
+
+A2 is complete locally on `codex/production-architecture-consolidation` at the
+A1 baseline plus the local A2 commit. The packet consolidated shared
+server-safe validation, relationship-ID normalization, and plain-text Payload
+Lexical serialization; replaced equivalent duplicate helpers across the
+reviewed services; added the Portal Admin service map; and added focused
+primitive tests. It did not change behavior, stored data, schemas, providers,
+routes, production refs, or release state.
+
+The active service boundaries and the read-only historical branch findings are
+recorded in `JPV_PORTAL_ADMIN_SERVICE_MAP.md`. The unique no-write billing
+branch delta is intentionally deferred to A4. A3 remains the next packet:
+identity and membership consolidation. A3–A6 are not started by this record.
+
+### A2 branch comparison addendum
+
+The required read-only comparison found the following disposition on the A2
+branch: `codex/portal-admin-flow-production`, `codex/portal-theme-payload-ux`,
+`codex/portal-operations-polish`, `codex/ux-foundation-nonoverlap`, and
+`feature/course-branding-and-preview` are already represented by ancestor
+history and were not replayed. `codex/feature-billing-integration` retains a
+unique no-write Stripe reconciliation route/test delta; it remains intact and
+is deferred to A4 provider/reconciliation review. No historical branch was
+merged, cherry-picked, deleted, rebased, or force-pushed.
 
 ## A0 production truth and repository evidence
 

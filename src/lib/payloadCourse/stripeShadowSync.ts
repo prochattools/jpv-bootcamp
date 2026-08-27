@@ -10,6 +10,7 @@ import type {
   PayloadId,
 } from '@/lib/payloadCourse/accessService'
 import { createAuditEvent, queueAndAttemptEmailEvent } from '@/lib/payloadCourse/events'
+import { relationshipId } from '@/lib/domain/relationships'
 import {
 	BILLING_PAYMENT_DISPUTED_TEMPLATE_KEY,
 	BILLING_PAYMENT_FAILED_TEMPLATE_KEY,
@@ -141,16 +142,6 @@ function asPayloadBillingStatus(value: unknown): PayloadBillingStatus | null {
 function dateFromUnix(value: number | null | undefined): Date | null {
   if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) return null
   return new Date(value * 1000)
-}
-
-function relationshipId(value: unknown): string | null {
-  if (typeof value === 'string' && value.trim()) return value
-  if (typeof value === 'number') return String(value)
-  if (value && typeof value === 'object' && 'id' in value) {
-    const id = (value as { id?: unknown }).id
-    if (typeof id === 'string' || typeof id === 'number') return String(id)
-  }
-  return null
 }
 
 function getCustomerId(

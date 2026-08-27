@@ -1,4 +1,5 @@
 import type { PayloadCourseAccessAPI, PayloadDocument } from '@/lib/payloadCourse/accessService'
+import { relationshipId } from '@/lib/domain/relationships'
 
 export type MembershipReadModel = {
   administrators: {
@@ -24,15 +25,6 @@ export type MembershipReadModel = {
     activeRecords: number | null
     totalRecords: number | null
   }
-}
-
-function relationshipId(value: unknown): string | null {
-  if (typeof value === 'string' || typeof value === 'number') return String(value)
-  if (value && typeof value === 'object' && 'id' in value) {
-    const id = (value as { id?: unknown }).id
-    if (typeof id === 'string' || typeof id === 'number') return String(id)
-  }
-  return null
 }
 
 async function findAll(

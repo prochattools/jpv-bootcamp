@@ -4,6 +4,7 @@ import type {
   PayloadId,
 } from '@/lib/payloadCourse/accessService'
 import { queueAndAttemptEmailEvent } from '@/lib/payloadCourse/events'
+import { relationshipId } from '@/lib/domain/relationships'
 
 export type PostNotificationInput = {
   spaceId: PayloadId
@@ -31,21 +32,6 @@ function asString(value: unknown): string | null {
   if (typeof value === 'string' && value.trim()) return value
   if (typeof value === 'number') return String(value)
   return null
-}
-
-function asRecord(value: unknown): Record<string, unknown> | null {
-  if (!value || typeof value !== 'object') return null
-  return value as Record<string, unknown>
-}
-
-function getDocumentId(value: unknown): string | null {
-  const direct = asString(value)
-  if (direct) return direct
-
-  const record = asRecord(value)
-  if (!record) return null
-
-  return asString(record.id)
 }
 
 async function findAll(
@@ -83,7 +69,7 @@ export async function resolvePostNotificationRecipients(
 
   const authorId = String(input.authorMemberId)
   const memberIds = memberships
-    .map((m) => getDocumentId(m.member))
+    .map((m) => relationshipId(m.member))
     .filter((id): id is string => Boolean(id) && id !== authorId)
 
   if (memberIds.length === 0) return []

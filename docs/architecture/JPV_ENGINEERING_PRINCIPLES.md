@@ -1,13 +1,27 @@
 # JPV Bootcamp Engineering Principles
 
-**Status:** CURRENT A1 ENGINEERING AUTHORITY — APPLIES TO A1–A6
+**Status:** CURRENT A2 ENGINEERING AUTHORITY — APPLIES TO A2–A6
 
 **Date:** 2026-08-27
 
 These principles constrain behavior-preserving consolidation of the production
-system. A1 is complete on the dedicated consolidation branch; A2–A6 remain
-separately gated. A packet may narrow these rules with evidence, but may not
-silently contradict them.
+system. A1 and A2 are complete locally on the dedicated consolidation branch;
+A3–A6 remain separately gated. A packet may narrow these rules with evidence,
+but may not silently contradict them.
+
+## A2 shared primitive authority
+
+- `src/lib/domain/validation.ts` is the canonical source for slug, title,
+  bounded-text, and scalar record-ID normalization. New transport adapters must
+  reuse it rather than introduce local copies.
+- `src/lib/domain/relationships.ts` is the canonical source for extracting
+  direct or populated Payload relationship IDs and normalizing write values.
+- `src/lib/content/plainTextToLexical.ts` is the canonical source for
+  deterministic plain-text Payload Lexical state. Compatibility exports may
+  delegate to it, but equivalent serializers must not diverge.
+- The full current administrator boundary inventory is maintained in
+  `JPV_PORTAL_ADMIN_SERVICE_MAP.md`. A service-map row is documentation of the
+  current boundary, not permission to widen a packet or move ownership.
 
 ## A1 implementation authority
 

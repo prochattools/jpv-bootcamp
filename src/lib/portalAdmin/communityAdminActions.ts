@@ -6,10 +6,12 @@ import { requirePortalAdmin } from '@/lib/auth/requirePortalAdmin'
 import {
   failure,
   normalizePortalAdminError,
-  PortalAdminActionError,
   success,
   type PortalAdminActionResult,
 } from '@/lib/portalAdmin/actionResult'
+import { boundedText, normalizeSlug } from '@/lib/domain/validation'
+import { plainTextToLexical } from '@/lib/content/plainTextToLexical'
+import { relationshipId } from '@/lib/domain/relationships'
 import { createAuditEvent } from '@/lib/payloadCourse/events'
 
 // ---------------------------------------------------------------------------
@@ -30,18 +32,6 @@ type SpaceInput = {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function validateSlug(slug: string): string {
-  const normalized = slug
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9-]/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '')
-  if (!normalized || normalized.length < 2) throw new PortalAdminActionError('invalid_input', 'Slug must be at least 2 characters.')
-  if (normalized.length > 100) throw new PortalAdminActionError('invalid_input', 'Slug is too long.')
-  return normalized
-}
-
 function spacePath(spaceSlug: string) {
   return `/portal/community/${encodeURIComponent(spaceSlug)}`
 }
@@ -55,7 +45,7 @@ export async function createSpaceAction(input: SpaceInput): Promise<ActionResult
     const { actor, payload, privilegedAccess } = await requirePortalAdmin('/portal')
     const name = input.name.trim()
     if (!name) return failure('invalid_input', 'Name is required.')
-    const slug = validateSlug(input.slug)
+    const slug = normalizeSlug(input.slug)
 
     const existing = await payload.find({
       collection: 'payload_spaces',
@@ -116,7 +106,7 @@ export async function updateSpaceAction(
       data.name = name
     }
     if (input.slug !== undefined) {
-      const slug = validateSlug(input.slug)
+      const slug = normalizeSlug(input.slug)
       const existing = await payload.find({
         collection: 'payload_spaces',
         where: { and: [{ slug: { equals: slug } }, { id: { not_equals: spaceId } }] },
@@ -235,9 +225,7 @@ export async function adminPinPostAction(postId: string, expectedSpaceId: string
     })
     if (!post) return failure('not_found', 'Post not found.')
 
-    const postSpaceId = typeof post.space === 'object' && post.space !== null
-      ? String((post.space as Record<string, unknown>).id)
-      : String(post.space)
+    const postSpaceId = relationshipId(post.space)
     if (postSpaceId !== expectedSpaceId) return failure('invalid_input', 'Post does not belong to the specified space.')
 
     await payload.update({
@@ -525,39 +513,16 @@ export async function adminEditPostAction(
 
     const data: Record<string, unknown> = {}
     if (input.title !== undefined) {
-      const trimmed = input.title.trim()
-      if (!trimmed) return failure('invalid_input', 'Title is required.')
-      if (trimmed.length > 300) return failure('invalid_input', 'Title is too long.')
-      data.title = trimmed
+      data.title = boundedText(input.title, 'Title', 300)
     }
     if (input.body !== undefined) {
       if (typeof input.body === 'object' && input.body !== null && 'root' in input.body) {
         data.body = input.body
       } else {
-        const trimmed = (input.body as string).trim()
-        if (!trimmed) return failure('invalid_input', 'Body is required.')
-        if (trimmed.length > 50_000) return failure('invalid_input', 'Body is too long.')
-        data.body = {
-          root: {
-            type: 'root',
-            format: '',
-            indent: 0,
-            version: 1,
-            children: trimmed
-              .split(/\r?\n/)
-              .filter(Boolean)
-              .slice(0, 500)
-              .map((line: string) => ({
-                type: 'paragraph',
-                format: '',
-                indent: 0,
-                version: 1,
-                textFormat: 0,
-                textStyle: '',
-                children: [{ type: 'text', detail: 0, format: 0, mode: 'normal', style: '', text: line, version: 1 }],
-              })),
-          },
-        }
+        data.body = plainTextToLexical(
+          boundedText(input.body as string, 'Body', 50_000),
+          { maxParagraphs: 500 },
+        )
       }
     }
 
@@ -609,56 +574,22 @@ export async function adminEditCommentAction(
     })
     if (!comment) return failure('not_found', 'Comment not found.')
 
-    const commentPostId = typeof comment.post === 'object' && comment.post !== null
-      ? String((comment.post as Record<string, unknown>).id)
-      : String(comment.post)
+    const commentPostId = relationshipId(comment.post)
     if (commentPostId !== expectedPostId) return failure('invalid_input', 'Comment does not belong to the specified post.')
 
     const post = await payload.findByID({ collection: 'payload_space_posts', id: expectedPostId, depth: 0, ...privilegedAccess })
     if (!post) return failure('not_found', 'Post not found.')
-    const postSpaceId = typeof post.space === 'object' && post.space !== null
-      ? String((post.space as Record<string, unknown>).id)
-      : String(post.space)
+    const postSpaceId = relationshipId(post.space)
     if (postSpaceId !== expectedSpaceId) return failure('invalid_input', 'Post does not belong to the specified space.')
 
     let richTextBody: unknown
     if (typeof body === 'object' && body !== null && 'root' in body) {
       richTextBody = body
     } else {
-      const trimmed = (body as string).trim()
-      if (!trimmed) return failure('invalid_input', 'Body is required.')
-      if (trimmed.length > 10_000) return failure('invalid_input', 'Body is too long.')
-      richTextBody = {
-        root: {
-          type: 'root',
-          format: '',
-          indent: 0,
-          version: 1,
-          children: trimmed
-            .split(/\r?\n/)
-            .filter(Boolean)
-            .slice(0, 100)
-            .map((line: string) => ({
-              type: 'paragraph',
-              format: '',
-              indent: 0,
-              version: 1,
-              textFormat: 0,
-              textStyle: '',
-              children: [
-                {
-                  type: 'text',
-                  detail: 0,
-                  format: 0,
-                  mode: 'normal',
-                  style: '',
-                  text: line,
-                  version: 1,
-                },
-              ],
-            })),
-        },
-      }
+      richTextBody = plainTextToLexical(
+        boundedText(body as string, 'Body', 10_000),
+        { maxParagraphs: 100 },
+      )
     }
 
     await payload.update({

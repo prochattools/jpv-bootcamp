@@ -1,6 +1,6 @@
 # JPV Bootcamp Production Architecture v1
 
-**Status:** CURRENT ARCHITECTURE AUTHORITY — A1 FOUNDATION COMPLETE
+**Status:** CURRENT ARCHITECTURE AUTHORITY — A2 FOUNDATION COMPLETE
 
 **Date:** 2026-08-27
 
@@ -55,17 +55,22 @@ providers, routes, or login routing.
   independence, member access preservation, safe error translation, and the
   scoped action adapters.
 
-The next packet is A2. A2–A6 remain not started; no production merge, push,
-build, deployment, migration, provider mutation, or historical branch cleanup
-is authorized by A1.
+The A2 packet is complete locally on the consolidation branch. It adds the
+canonical shared validation, relationship-ID, and plain-text Lexical
+primitives, replaces equivalent duplicate helpers, and records the active
+portal administrator service boundaries in
+`JPV_PORTAL_ADMIN_SERVICE_MAP.md`. No production merge, push, build,
+deployment, migration, provider mutation, or historical branch cleanup was
+performed. A3–A6 remain separately gated.
 
 ## Architectural hold
 
 The system is live. Normal feature development is paused while A0–A6 establish
 one coherent ownership model. This is a behavior-preserving consolidation, not
 a rewrite. A0 established the production truth and A1 established the
-authorization and Server Action foundation. A2–A6 remain gated packets and are
-not implied by this implementation.
+authorization and Server Action foundation, and A2 established the shared
+domain primitives and service-boundary map. A3–A6 remain gated packets and
+are not implied by this implementation.
 
 ## System surfaces
 

@@ -21,20 +21,22 @@ explicitly superseded here.
 - **Current branch:** `codex/production-architecture-consolidation`, descended
   directly from the verified `main` tip and A0 parent
   `c43e899824b993200b05f1b337993eb55fae0905`.
-- **Current packet:** A1 complete locally. It adds the canonical server-only
-  `requirePortalAdmin()` gate, shared `PortalAdminActionResult<T>` error
-  contract, normalized unexpected-error handling, bounded privileged Payload
-  access, and scoped course/community action-adapter consolidation.
+- **Current packet:** A2 complete locally. It retains the A1 authorization and
+  action-result foundation and adds canonical server-safe validation,
+  relationship-ID normalization, deterministic plain-text Payload Lexical
+  serialization, equivalent-helper consolidation across the reviewed services,
+  and the Portal Admin service map.
 - **Behavior boundary:** `requirePortalMember()`, `requirePortalAccess()`,
   login routing, domain operations, schemas, providers, production `main`, and
   production data were not changed. The separate request-header Live Sessions
   API helper remains outside this Server Action packet for behavior-preserving
   follow-up review.
-- **Exact next packet:** A2 — Service, route, and Server Action consolidation.
-- **Hard stops:** do not start A2, merge historical branches, run migrations,
+- **Exact next packet:** A3 — Identity, authorization, and administrator-mode
+  consolidation.
+- **Hard stops:** do not start A3, merge historical branches, run migrations,
   mutate production/providers, delete branches/worktrees, push, build, or
-  deploy from this packet. Preserve unknown residue and route ambiguity to
-  review.
+  deploy from this packet. Preserve unknown residue, route ambiguity, and
+  stale roadmap claims for the packet that owns them.
 - **Architecture authority:** `docs/architecture/` contains the production
   architecture, source-of-truth map, engineering principles, and packet plan.
 
