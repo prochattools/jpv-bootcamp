@@ -10,8 +10,9 @@ import {
 	provisionFromCheckoutSession,
 	syncFromSubscription,
 } from '@/lib/provisioning'
-import { isSponsoredSeatSession, upsertSponsoredSeatFromSession } from '@/lib/sponsored-seats'
+import { isSponsoredRecipientSession, isSponsoredSeatSession, upsertSponsoredSeatFromSession } from '@/lib/sponsored-seats'
 import { notifySponsoredSeatPurchase } from '@/lib/sponsored-seat-notifications'
+import { finalizeSponsoredRecipientCheckout, releaseSponsoredRecipientCheckout } from '@/lib/sponsored-recipient'
 import { getStripe } from '@/lib/stripe'
 import { shouldSendMembershipEmailForEvent } from '@/lib/stripe-membership-email-gate'
 import { shadowSyncStripeEventToPayload } from '@/lib/payloadCourse/stripeShadowSync'
@@ -24,6 +25,7 @@ const PROVISIONING_EVENT_TYPES = new Set([
 	'checkout.session.completed',
 	'checkout.session.async_payment_succeeded',
 	'checkout.session.async_payment_failed',
+	'checkout.session.expired',
 	'customer.subscription.created',
 	'customer.subscription.updated',
 	'customer.subscription.deleted',
@@ -514,11 +516,26 @@ export async function handleStripeWebhook(req: Request) {
 							donorEmail,
 						})
 					}
+					break
+				}
+				if (isSponsoredRecipientSession(session)) {
+					await provisionFromCheckoutSession(session, event.id, event.type, {
+						allowEmail: allowMembershipEmail,
+						eventLivemode: event.livemode,
+						forceWelcomeEmailForNewMember: true,
+					})
+					await finalizeSponsoredRecipientCheckout(session)
+					break
 				}
 				await provisionFromCheckoutSession(session, event.id, event.type, {
 					allowEmail: allowMembershipEmail,
 					eventLivemode: event.livemode,
 				})
+				break
+			}
+			case 'checkout.session.expired': {
+				const session = event.data.object as Stripe.Checkout.Session
+				await releaseSponsoredRecipientCheckout(session)
 				break
 			}
 			case 'checkout.session.async_payment_failed': {

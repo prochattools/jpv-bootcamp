@@ -39,7 +39,7 @@ export type RunOptions = {
   log?: (message: string) => void
 }
 
-const EXPECTED_BRANCH = 'feature/course-branding-and-preview'
+const EXPECTED_BRANCHES = new Set(['feature/course-branding-and-preview', 'main'])
 const APPLY_COMMAND = './node_modules/.bin/prisma migrate deploy --schema=prisma/system.prisma'
 const RUNBOOK_PATH = 'docs/release/SUPPORT_REQUESTS_MIGRATION_RUNBOOK.md'
 const ROLLBACK_PATH = 'docs/client/MIGRATION_REHEARSAL_RUNBOOK.md'
@@ -72,14 +72,16 @@ function defaultExecutor(executable: AllowedExecutable, args: string[], cwd: str
 }
 
 function checkBranch(cwd: string): void {
-  const branch = execFileSync('git', ['branch', '--show-current'], { cwd, encoding: 'utf8' }).trim()
-  if (branch === EXPECTED_BRANCH) return
-  if (branch === '') {
-    const head = execFileSync('git', ['rev-parse', 'HEAD'], { cwd, encoding: 'utf8' }).trim()
-    const isAncestor = spawnSync('git', ['merge-base', '--is-ancestor', head, `origin/${EXPECTED_BRANCH}`], { cwd })
-    if (isAncestor.status === 0) return
-  }
-  throw new Error(`branch_mismatch:${branch}`)
+	const branch = execFileSync('git', ['branch', '--show-current'], { cwd, encoding: 'utf8' }).trim()
+	if (EXPECTED_BRANCHES.has(branch)) return
+	if (branch === '') {
+		const head = execFileSync('git', ['rev-parse', 'HEAD'], { cwd, encoding: 'utf8' }).trim()
+		for (const expectedBranch of EXPECTED_BRANCHES) {
+			const isAncestor = spawnSync('git', ['merge-base', '--is-ancestor', head, `origin/${expectedBranch}`], { cwd })
+			if (isAncestor.status === 0) return
+		}
+	}
+	throw new Error(`branch_mismatch:${branch}`)
 }
 
 function checkPrismaPathsClean(cwd: string): void {
@@ -154,11 +156,11 @@ export function runStagingMigrationPreflight(options: RunOptions = {}): string {
   const cwd = options.cwd ?? process.cwd()
   const executor = options.executor ?? defaultExecutor
   const log = options.log ?? console.log
-  const steps = buildStagingMigrationPreflightSteps()
-  let completed = 0
+	const steps = buildStagingMigrationPreflightSteps()
+	let completed = 0
 
-  log('STAGING MIGRATION PREFLIGHT')
-  log(`Branch must remain: ${EXPECTED_BRANCH}`)
+	log('STAGING MIGRATION PREFLIGHT')
+	log(`Allowed release branches: ${Array.from(EXPECTED_BRANCHES).join(', ')}`)
   log('Mode: read-only')
 
   for (const step of steps) {

@@ -1,38 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { Prisma } from '@prisma/client'
+import { getPayload } from 'payload'
+
+import config from '@payload-config'
 import prisma from '@/libs/prisma'
-import {
-	getPartnerSession,
-	sanitizeSessionId,
-} from '@/lib/partners-session'
+import { getPartnerSession, sanitizeSessionId } from '@/lib/partners-session'
 import { isSponsoredSeatsAdmin } from '@/lib/sponsored-admin'
-import { applySponsoredGrant, getGrantWindow } from '@/lib/sponsored-grants'
-import type { SponsoredTier } from '@/lib/sponsored-seats'
+import { grantSponsoredApplication } from '@/lib/sponsored-admin-grant'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-type ApprovePayload = {
-	note?: string
-}
-
-async function parsePayload(req: NextRequest): Promise<ApprovePayload> {
-	const contentType = req.headers.get('content-type') || ''
-	if (contentType.includes('application/json')) {
-		return (await req.json()) as ApprovePayload
-	}
-	const form = await req.formData()
-	return {
-		note: form.get('note')?.toString(),
-	}
-}
-
 export async function POST(
 	req: NextRequest,
-	{ params }: { params: Promise<{ id: string }> }
+	{ params }: { params: Promise<{ id: string }> },
 ) {
-	const sessionCookie = req.cookies.get('partners_session')?.value
-	const sessionId = sanitizeSessionId(sessionCookie)
+	const sessionId = sanitizeSessionId(req.cookies.get('partners_session')?.value)
 	if (!sessionId) {
 		return NextResponse.json({ ok: false, reason: 'unauthorized' }, { status: 401 })
 	}
@@ -47,101 +29,32 @@ export async function POST(
 		return NextResponse.json({ ok: false, reason: 'missing_id' }, { status: 400 })
 	}
 
-	const payload = await parsePayload(req)
-	const tier: SponsoredTier = 'free'
-	const note = payload.note?.trim() ?? null
-
 	const application = await prisma.sponsoredApplication.findUnique({
 		where: { id: applicationId },
 	})
-	if (!application || application.status !== 'pending') {
-		return NextResponse.json(
-			{ ok: false, reason: 'not_pending' },
-			{ status: 400 }
-		)
+	if (!application) {
+		return NextResponse.json({ ok: false, reason: 'not_found' }, { status: 404 })
 	}
 
-	if (!application.accountId) {
-		return NextResponse.json(
-			{ ok: false, reason: 'missing_account_id' },
-			{ status: 400 }
-		)
-	}
-
-	const now = new Date()
-	const { startsAt, endsAt } = getGrantWindow()
-
-	let seatId: string | null = null
-	let grantId: string | null = null
-	try {
-		await prisma.$transaction(async (tx) => {
-			const claimed = await tx.$queryRaw<{ id: string }[]>(Prisma.sql`
-				UPDATE jpvbootcamp.sponsored_seats
-				SET claimed_by_account_id = ${application.accountId},
-					claimed_at = ${now}
-				WHERE id = (
-					SELECT id
-					FROM jpvbootcamp.sponsored_seats
-					WHERE claimed_by_account_id IS NULL
-						AND tier = ${tier}
-					ORDER BY created_at ASC
-					FOR UPDATE SKIP LOCKED
-					LIMIT 1
-				)
-				RETURNING id
-			`)
-
-			if (!claimed[0]?.id) {
-				throw new Error('no_seat_available')
-			}
-
-			seatId = claimed[0].id
-
-			const grant = await tx.sponsoredGrant.create({
-				data: {
-					accountId: application.accountId,
-					tier,
-					seatId: seatId,
-					startsAt,
-					endsAt,
-				},
+	const payload = await getPayload({ config })
+	const existing = application.email
+		? await payload.find({
+				collection: 'payload_members',
+				where: { email: { equals: application.email } },
+				limit: 1,
+				depth: 0,
+				overrideAccess: true,
 			})
-			grantId = grant.id
+		: null
+	const existingMemberId = existing?.docs[0]?.id
 
-			await tx.sponsoredApplication.update({
-				where: { id: applicationId },
-				data: {
-					status: 'approved',
-					reviewedByAccountId: session.accountId,
-					reviewedAt: now,
-					decisionNote: note,
-				},
-			})
-		})
-	} catch (error) {
-		const message = (error as Error).message
-		return NextResponse.json(
-			{ ok: false, reason: message === 'no_seat_available' ? 'no_seat' : 'failed' },
-			{ status: message === 'no_seat_available' ? 409 : 500 }
-		)
-	}
-
-	if (!seatId || !grantId) {
-		return NextResponse.json({ ok: false, reason: 'failed' }, { status: 500 })
-	}
-
-	const grantResult = await applySponsoredGrant({
-		accountId: application.accountId,
-		tier,
-		name: application.name,
+	const result = await grantSponsoredApplication({
+		payload,
+		applicationId,
+		mode: existingMemberId ? 'existing' : 'new',
+		memberId: existingMemberId ? String(existingMemberId) : null,
+		administratorId: session.accountId,
 	})
 
-	if (!grantResult.ok) {
-		return NextResponse.json(
-			{ ok: false, reason: grantResult.reason ?? 'provision_failed' },
-			{ status: 500 }
-		)
-	}
-
-	return NextResponse.json({ ok: true, seatId, grantId })
+	return NextResponse.json(result, { status: result.ok ? 200 : 400 })
 }

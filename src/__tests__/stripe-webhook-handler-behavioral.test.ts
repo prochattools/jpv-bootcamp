@@ -43,11 +43,17 @@ vi.mock('@/lib/payloadCourse/stripeShadowSync', () => ({
 
 vi.mock('@/lib/sponsored-seats', () => ({
 	isSponsoredSeatSession: vi.fn(() => null),
+	isSponsoredRecipientSession: vi.fn(() => false),
 	upsertSponsoredSeatFromSession: vi.fn(async () => ({ seatId: null, created: false })),
 }))
 
 vi.mock('@/lib/sponsored-seat-notifications', () => ({
 	notifySponsoredSeatPurchase: vi.fn(async () => ({})),
+}))
+
+vi.mock('@/lib/sponsored-recipient', () => ({
+	finalizeSponsoredRecipientCheckout: vi.fn(async () => ({ finalized: true, accountId: 1 })),
+	releaseSponsoredRecipientCheckout: vi.fn(async () => undefined),
 }))
 
 vi.mock('@/lib/stripe-membership-email-gate', () => ({
@@ -67,6 +73,9 @@ import { getStripeConfig, getStripeWebhookSecrets } from '@/lib/stripe-config'
 import { getStripe } from '@/lib/stripe'
 import { provisionFromCheckoutSession, syncFromSubscription } from '@/lib/provisioning'
 import { atomicClaimProcessing, finalizeProcessed, releaseProcessingClaim } from '@/lib/idempotency'
+import { isSponsoredRecipientSession, isSponsoredSeatSession, upsertSponsoredSeatFromSession } from '@/lib/sponsored-seats'
+import { notifySponsoredSeatPurchase } from '@/lib/sponsored-seat-notifications'
+import { finalizeSponsoredRecipientCheckout, releaseSponsoredRecipientCheckout } from '@/lib/sponsored-recipient'
 
 const mockGetStripeConfig = vi.mocked(getStripeConfig)
 const mockGetStripeWebhookSecrets = vi.mocked(getStripeWebhookSecrets)
@@ -76,6 +85,12 @@ const mockSync = vi.mocked(syncFromSubscription)
 const mockAtomicClaim = vi.mocked(atomicClaimProcessing)
 const mockFinalize = vi.mocked(finalizeProcessed)
 const mockRelease = vi.mocked(releaseProcessingClaim)
+const mockSponsoredSeatSession = vi.mocked(isSponsoredSeatSession)
+const mockSponsoredRecipientSession = vi.mocked(isSponsoredRecipientSession)
+const mockUpsertSponsoredSeat = vi.mocked(upsertSponsoredSeatFromSession)
+const mockNotifySponsoredSeatPurchase = vi.mocked(notifySponsoredSeatPurchase)
+const mockFinalizeSponsoredRecipientCheckout = vi.mocked(finalizeSponsoredRecipientCheckout)
+const mockReleaseSponsoredRecipientCheckout = vi.mocked(releaseSponsoredRecipientCheckout)
 
 function makeWebhooksConstructEvent(returnEvent: object | null = null, throwError: Error | null = null) {
 	return {
@@ -155,6 +170,11 @@ const VALID_CONFIG = {
 beforeEach(() => {
 	vi.clearAllMocks()
 	// Healthy defaults — individual tests override as needed
+	mockSponsoredSeatSession.mockReturnValue(null)
+	mockSponsoredRecipientSession.mockReturnValue(false)
+	mockUpsertSponsoredSeat.mockResolvedValue({ seatId: null, created: false })
+	mockFinalizeSponsoredRecipientCheckout.mockResolvedValue({ finalized: true, accountId: 1 })
+	mockReleaseSponsoredRecipientCheckout.mockResolvedValue(undefined)
 	mockGetStripeConfig.mockReturnValue(VALID_CONFIG as ReturnType<typeof getStripeConfig>)
 	mockGetStripeWebhookSecrets.mockReturnValue(['whsec_test_valid'])
 	mockAtomicClaim.mockResolvedValue({ claimed: true } as Awaited<ReturnType<typeof atomicClaimProcessing>>)
@@ -239,6 +259,83 @@ describe('handleStripeWebhook — checkout.session.completed dispatch', () => {
 		const req = buildFakeRequest({ signature: 'valid-sig', body: JSON.stringify(event) })
 		await handleStripeWebhook(req)
 		expect(mockSync).not.toHaveBeenCalled()
+	})
+
+	it('records a donor checkout without provisioning the donor account', async () => {
+		const event = fakeCheckoutEvent({
+			data: {
+				object: {
+					...fakeCheckoutEvent().data.object,
+					metadata: { purpose: 'support_credit' },
+				},
+			},
+		})
+		mockSponsoredSeatSession.mockReturnValue('free')
+		mockUpsertSponsoredSeat.mockResolvedValueOnce({ seatId: 'seat_001', created: true })
+		const fakeStripe = { webhooks: makeWebhooksConstructEvent(event) }
+		mockGetStripe.mockReturnValue(fakeStripe as unknown as ReturnType<typeof getStripe>)
+		const { handleStripeWebhook } = await import('@/lib/stripe-webhook-handler')
+
+		const req = buildFakeRequest({ signature: 'valid-sig', body: JSON.stringify(event) })
+		const res = await handleStripeWebhook(req)
+
+		expect(res.status).toBe(200)
+		expect(mockUpsertSponsoredSeat).toHaveBeenCalled()
+		expect(mockNotifySponsoredSeatPurchase).toHaveBeenCalledWith({ seatId: 'seat_001', donorEmail: null })
+		expect(mockProvision).not.toHaveBeenCalled()
+	})
+
+	it('provisions and finalizes a sponsored recipient checkout', async () => {
+		const event = fakeCheckoutEvent({
+			data: {
+				object: {
+					...fakeCheckoutEvent().data.object,
+					metadata: { purpose: 'sponsored_recipient' },
+				},
+			},
+		})
+		mockSponsoredSeatSession.mockReturnValue(null)
+		mockSponsoredRecipientSession.mockReturnValue(true)
+		const fakeStripe = { webhooks: makeWebhooksConstructEvent(event) }
+		mockGetStripe.mockReturnValue(fakeStripe as unknown as ReturnType<typeof getStripe>)
+		const { handleStripeWebhook } = await import('@/lib/stripe-webhook-handler')
+
+		const req = buildFakeRequest({ signature: 'valid-sig', body: JSON.stringify(event) })
+		const res = await handleStripeWebhook(req)
+
+		expect(res.status).toBe(200)
+		expect(mockProvision).toHaveBeenCalledWith(
+			event.data.object,
+			event.id,
+			event.type,
+			expect.objectContaining({
+				forceWelcomeEmailForNewMember: true,
+			}),
+		)
+		expect(mockFinalizeSponsoredRecipientCheckout).toHaveBeenCalledWith(event.data.object)
+	})
+})
+
+describe('handleStripeWebhook — sponsored recipient expiry', () => {
+	it('releases a reserved sponsored seat when recipient checkout expires', async () => {
+		const event = fakeCheckoutEvent({
+			type: 'checkout.session.expired',
+			data: {
+				object: {
+					...fakeCheckoutEvent().data.object,
+					metadata: { purpose: 'sponsored_recipient' },
+				},
+			},
+		})
+		const fakeStripe = { webhooks: makeWebhooksConstructEvent(event) }
+		mockGetStripe.mockReturnValue(fakeStripe as unknown as ReturnType<typeof getStripe>)
+		const { handleStripeWebhook } = await import('@/lib/stripe-webhook-handler')
+
+		const req = buildFakeRequest({ signature: 'valid-sig', body: JSON.stringify(event) })
+		const res = await handleStripeWebhook(req)
+
+		expect(res.status).toBe(200)
+		expect(mockReleaseSponsoredRecipientCheckout).toHaveBeenCalledWith(event.data.object)
 	})
 })
 

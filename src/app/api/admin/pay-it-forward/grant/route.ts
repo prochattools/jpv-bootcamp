@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
   })
 
   if (req.headers.get('accept')?.includes('text/html')) {
-    return redirectBack(req, result.ok ? 'granted' : ('reason' in result ? result.reason : 'grant_failed'))
+		return redirectBack(req, result.ok ? 'checkout_sent' : ('reason' in result ? result.reason : 'grant_failed'))
   }
 
   return NextResponse.json(result, { status: result.ok ? 200 : 400 })

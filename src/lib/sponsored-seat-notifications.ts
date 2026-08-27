@@ -19,6 +19,15 @@ async function createPayItForwardPayloadRecord(params: {
 		const payload = await getPayload({ config })
 		const dateStr = params.createdAt.toISOString().slice(0, 10)
 		const displayName = `Pay it forward — ${params.donorEmail ?? 'anonymous'} — ${dateStr}`
+		const existingBySession = await payload.find({
+			collection: 'payload_pay_it_forward_funding',
+			where: { stripeCheckoutSessionId: { equals: params.stripeCheckoutSessionId } },
+			limit: 1,
+			depth: 0,
+			overrideAccess: true,
+		})
+		if (existingBySession.docs[0]) return
+
 		const existing = await payload.find({
 			collection: 'payload_pay_it_forward_funding',
 			where: { stripePaymentIntentId: { equals: params.stripePaymentIntentId } },
@@ -46,6 +55,9 @@ async function createPayItForwardPayloadRecord(params: {
 			seatId: params.seatId,
 			message: (error as Error).message,
 		})
+		// Keep the Stripe delivery retryable. A successful donor webhook without
+		// its Payload projection would make the funded seat invisible to admins.
+		throw error
 	}
 }
 

@@ -125,6 +125,7 @@ async function main(): Promise<void> {
         '20260826_100000_administrator_member_identity',
         '20260826_120000_billing_pause_actions',
         '20260826_130000_portal_engagement_distribution',
+        '20260826_150000_member_delete_relationship_safety',
       ],
       operator: 'migration-op',
       approvalReference: 'approval-1',

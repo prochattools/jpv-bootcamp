@@ -1031,7 +1031,12 @@ export async function provisionFromCheckoutSession(
 	session: Stripe.Checkout.Session,
 	eventId?: string | null,
 	eventType?: string | null,
-	options?: { dryRun?: boolean; allowEmail?: boolean; eventLivemode?: boolean | null }
+	options?: {
+		dryRun?: boolean
+		allowEmail?: boolean
+		eventLivemode?: boolean | null
+		forceWelcomeEmailForNewMember?: boolean
+	}
 ): Promise<ProvisioningSummary> {
 	let email: string | null = null
 	let resolvedEmail: string | null = null
@@ -1046,6 +1051,7 @@ export async function provisionFromCheckoutSession(
 	let emailSent = false
 	let emailReason: string | null = null
 	const allowEmail = options?.allowEmail ?? false
+	const forceWelcomeEmailForNewMember = options?.forceWelcomeEmailForNewMember ?? false
 	const disableNonWebhookEmails = isEnvEnabled(process.env.DISABLE_NON_WEBHOOK_EMAILS)
 	const eventLivemode =
 		typeof options?.eventLivemode === 'boolean' ? options?.eventLivemode : null
@@ -1273,7 +1279,13 @@ export async function provisionFromCheckoutSession(
 	}
 	const emailVariant = memberWasCreated || !existing ? 'welcome' : 'upgrade'
 
-	if (emailEval.shouldSend) {
+	const shouldSendWelcomeEmail = emailEval.shouldSend ||
+		(allowEmail && forceWelcomeEmailForNewMember && memberWasCreated)
+	if (allowEmail && forceWelcomeEmailForNewMember && memberWasCreated && !emailEval.shouldSend) {
+		emailReason = 'new_member_account'
+	}
+
+	if (shouldSendWelcomeEmail) {
 		if (disableNonWebhookEmails && emailSource !== 'webhook') {
 			emailSent = false
 			emailReason = 'non_webhook_disabled'

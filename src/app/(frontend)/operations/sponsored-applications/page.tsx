@@ -70,7 +70,7 @@ export default async function SponsoredApplicationsAdminPage() {
 										className='flex flex-col gap-2'
 										method='post'
 									>
-										<input name='tier' type='hidden' value='pro' />
+										<input name='tier' type='hidden' value='free' />
 										<label htmlFor={`note-approve-${application.id}`} className='sr-only'>Decision note</label>
 										<input
 											id={`note-approve-${application.id}`}
