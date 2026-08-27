@@ -1,5 +1,5 @@
 type DecisionResult =
-	| 'approved'
+	| 'checkout_sent'
 	| 'rejected'
 	| 'expired'
 	| 'invalid'
@@ -9,8 +9,8 @@ type DecisionResult =
 
 function getMessage(result: DecisionResult): { text: string; tone: 'success' | 'danger' | 'neutral' } {
 	switch (result) {
-		case 'approved':
-			return { text: 'Application approved. The sponsored month is now active.', tone: 'success' }
+		case 'checkout_sent':
+			return { text: 'Application approved. A standard Stripe membership checkout has been sent; the sponsored month starts after checkout is completed.', tone: 'success' }
 		case 'rejected':
 			return { text: 'Application rejected.', tone: 'neutral' }
 		case 'no_seats':
@@ -35,7 +35,7 @@ export default async function SponsoredDecisionPage({
 	const params = await searchParams
 	const raw = params?.result
 	const result =
-		raw === 'approved' ||
+		raw === 'checkout_sent' ||
 		raw === 'rejected' ||
 		raw === 'already_processed' ||
 		raw === 'no_seats' ||

@@ -41,7 +41,7 @@ export default function PayItForwardAdminQueue() {
           <div>
             <p style={{ color: 'var(--jpv-brand-deep)', fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', margin: 0, textTransform: 'uppercase' }}>Membership support</p>
             <h2 style={{ color: 'var(--jpv-ink)', fontSize: 22, fontWeight: 700, margin: '0.35rem 0 0' }}>Sponsored membership requests</h2>
-            <p style={{ color: 'var(--jpv-muted)', fontSize: 14, margin: '0.45rem 0 0' }}>Review an application and grant one funded membership to a new or existing member account.</p>
+			<p style={{ color: 'var(--jpv-muted)', fontSize: 14, margin: '0.45rem 0 0' }}>Review an application and send a standard Stripe membership checkout to a new or existing member account. The funded first month is applied after checkout is completed.</p>
           </div>
           <div style={{ background: 'color-mix(in srgb, var(--jpv-sunshine) 18%, var(--jpv-canvas))', border: '1px solid var(--jpv-border)', borderRadius: 16, minWidth: 150, padding: '0.75rem 1rem', textAlign: 'center' }}>
             <div style={{ color: 'var(--jpv-brand-deep)', fontSize: 30, fontWeight: 800, lineHeight: 1 }}>{data?.available ?? '—'}</div>
@@ -77,7 +77,7 @@ export default function PayItForwardAdminQueue() {
                         {data.members.map((member) => <option key={String(member.id)} value={String(member.id)}>{String(member.email ?? member.id)}</option>)}
                       </select>
                       <button disabled={data.available < 1} style={{ background: data.available < 1 ? 'var(--jpv-muted)' : 'var(--jpv-brand-deep)', border: 0, borderRadius: 8, color: 'white', cursor: data.available < 1 ? 'not-allowed' : 'pointer', fontWeight: 700, minHeight: 42, padding: '0 1rem' }} type='submit'>
-                        {data.available < 1 ? 'No funded seat available' : 'Grant membership'}
+										{data.available < 1 ? 'No funded seat available' : 'Send checkout link'}
                       </button>
                     </form>
                   </div>

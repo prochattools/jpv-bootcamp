@@ -1,6 +1,7 @@
 import 'server-only'
 import { createHash } from 'crypto'
 import prisma from '@/libs/prisma'
+import { getPublicBaseUrl } from '@/lib/public-base-url'
 import type Stripe from 'stripe'
 
 export type SponsoredTier = 'free'
@@ -52,11 +53,24 @@ export function getSponsoredSeatRedirects(): {
 	successUrl: string
 	cancelUrl: string
 } {
-	const successUrl = (process.env.SPONSORED_SEATS_SUCCESS_URL || '').trim()
-	const cancelUrl = (process.env.SPONSORED_SEATS_CANCEL_URL || '').trim()
-	if (!successUrl || !cancelUrl) {
-		throw new Error('Sponsored seats redirect URLs are not configured.')
+	const baseUrl = (process.env.DEPLOYMENT_ENV?.trim().toLowerCase() === 'production'
+		? 'https://jpvbootcamp.com'
+		: getPublicBaseUrl()
+	).replace(/\/$/, '')
+	const configuredCancelUrl = (process.env.SPONSORED_SEATS_CANCEL_URL || '').trim()
+	let cancelUrl = `${baseUrl}/sponsored`
+	if (configuredCancelUrl) {
+		const resolved = new URL(configuredCancelUrl, baseUrl)
+		if (resolved.origin !== new URL(baseUrl).origin) {
+			throw new Error('Sponsored seats cancel URL must be on the public application origin.')
+		}
+		cancelUrl = resolved.toString()
 	}
+
+	// Donor checkouts must never inherit the normal member success page. The
+	// endpoint is canonical so a stale preview environment variable cannot turn
+	// a donation into a misleading "you're in" confirmation.
+	const successUrl = `${baseUrl}/thank-you/sponsor?session_id={CHECKOUT_SESSION_ID}`
 	return { successUrl, cancelUrl }
 }
 
@@ -66,6 +80,12 @@ export function isSponsoredSeatSession(
 	const purpose = session.metadata?.purpose?.trim().toLowerCase()
 	if (purpose !== 'support_credit' && purpose !== 'sponsored_seat') return null
 	return 'free'
+}
+
+export function isSponsoredRecipientSession(
+	session: Stripe.Checkout.Session
+): boolean {
+	return session.metadata?.purpose?.trim().toLowerCase() === 'sponsored_recipient'
 }
 
 export async function upsertSponsoredSeatFromSession(params: {
@@ -78,15 +98,25 @@ export async function upsertSponsoredSeatFromSession(params: {
 			? params.session.payment_intent
 			: params.session.payment_intent?.id ?? null
 
-	if (!sessionId || !paymentIntentId) {
+	if (!sessionId) {
 		return { seatId: null, created: false }
 	}
 
-	const donatedEmail = params.session.customer_details?.email ?? null
+	// Stripe does not create a PaymentIntent for a payment-mode Checkout
+	// Session whose total is zero after a 100% coupon. Keep the legacy column
+	// populated with a deterministic checkout key so zero-value donor checkouts
+	// are still recorded and remain idempotent without a schema migration.
+	const transactionKey = paymentIntentId ?? `checkout_session:${sessionId}`
+
+	const donatedEmail =
+		params.session.customer_details?.email ?? params.session.customer_email ?? null
 	const donatedHash = donatedEmail ? hashEmail(donatedEmail) : null
 
-	const existing = await prisma.sponsoredSeat.findUnique({
-		where: { stripePaymentIntentId: paymentIntentId },
+	const existingBySession = await prisma.sponsoredSeat.findUnique({
+		where: { stripeCheckoutSessionId: sessionId },
+	})
+	const existing = existingBySession ?? await prisma.sponsoredSeat.findUnique({
+		where: { stripePaymentIntentId: transactionKey },
 	})
 
 	if (existing) {
@@ -112,7 +142,7 @@ export async function upsertSponsoredSeatFromSession(params: {
 	const created = await prisma.sponsoredSeat.create({
 		data: {
 			tier: params.tier,
-			stripePaymentIntentId: paymentIntentId,
+			stripePaymentIntentId: transactionKey,
 			stripeCheckoutSessionId: sessionId,
 			donatedByEmailHash: donatedHash,
 		},

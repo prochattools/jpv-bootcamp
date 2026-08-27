@@ -339,6 +339,47 @@ export async function sendSponsoredDonorEmail(params: {
 	}
 }
 
+export async function sendSponsoredRecipientCheckoutEmail(params: {
+	to: string
+	name: string
+	checkoutUrl: string
+}): Promise<void> {
+	const resend = getResendClient()
+	const from = getMailFrom()
+	const safeName = escapeHtml(params.name)
+
+	const html = renderBrandedEmail({
+		preheader: 'Your sponsored JPV Bootcamp membership is ready.',
+		heading: 'Your sponsored membership is ready',
+		bodyHtml: `<p style="margin:0 0 16px">Hi ${safeName}, your application for sponsored JPV Bootcamp membership has been approved.</p><p style="margin:0 0 16px">The first 30 days of your membership have been funded. Continue below to enter your payment details and activate your account. Your normal membership billing will begin after the sponsored month.</p>`,
+		actions: [{ label: 'Continue to membership checkout', url: params.checkoutUrl }],
+	})
+	const text = [
+		`Hi ${params.name}, your application for sponsored JPV Bootcamp membership has been approved.`,
+		'The first 30 days of your membership have been funded.',
+		'Continue to membership checkout and enter your payment details. Normal membership billing begins after the sponsored month.',
+		`Continue: ${params.checkoutUrl}`,
+	].join('\n')
+
+	assertStagingRecipientAllowed([params.to], 'sponsored-email:sendSponsoredRecipientCheckoutEmail')
+
+	const { error } = await resend.emails.send({
+		from,
+		to: [params.to],
+		subject: 'Your sponsored JPV Bootcamp membership is ready',
+		html,
+		text,
+	})
+
+	if (error) {
+		console.error('sponsored_recipient_checkout_email_failed', {
+			email: redactEmail(params.to),
+			message: error.message,
+		})
+		throw error
+	}
+}
+
 export async function sendSponsoredSeatAdminEmail(params: {
 	donorEmail: string | null
 	occurredAt: Date

@@ -1,145 +1,75 @@
-import { randomUUID } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
-import { Prisma } from '@prisma/client'
+import { getPayload } from 'payload'
+
+import config from '@payload-config'
 import prisma from '@/libs/prisma'
 import { redactEmail } from '@/lib/log-redact'
 import { verifySponsoredDecisionToken } from '@/lib/sponsored-approval-token'
-import {
-	sendSponsoredApplicantRejectedEmail,
-	sendSponsoredClaimEmail,
-} from '@/lib/sponsored-email'
-import { signSponsoredClaimToken } from '@/lib/sponsored-claim-token'
+import { sendSponsoredApplicantRejectedEmail } from '@/lib/sponsored-email'
 import { getPublicBaseUrl } from '@/lib/public-base-url'
 import { isSponsoredSeatsAdmin } from '@/lib/sponsored-admin'
+import { grantSponsoredApplication } from '@/lib/sponsored-admin-grant'
 import { getPartnerSession, sanitizeSessionId, PARTNERS_SESSION_COOKIE } from '@/lib/partners-session'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 type RedirectResult =
-	| 'approved'
+	| 'checkout_sent'
 	| 'rejected'
 	| 'expired'
 	| 'invalid'
 	| 'no_seats'
 	| 'already_processed'
 
-function buildRedirect(req: NextRequest, result: RedirectResult) {
+function buildRedirect(result: RedirectResult) {
 	const baseUrl = getPublicBaseUrl()
 	return NextResponse.redirect(
-		`${baseUrl}/operations/sponsored-decision?result=${result}`
+		`${baseUrl}/operations/sponsored-decision?result=${result}`,
 	)
+}
+
+function redirectForGrantFailure(reason: string): RedirectResult {
+	if (reason === 'no_seat_available') return 'no_seats'
+	if (reason === 'not_pending' || reason === 'in_progress') return 'already_processed'
+	return 'invalid'
 }
 
 export async function GET(req: NextRequest) {
 	const token = req.nextUrl.searchParams.get('token') || ''
 	const secret = (process.env.SPONSORED_DECISION_SECRET || '').trim()
-	if (!secret) {
-		throw new Error('Missing required env var: SPONSORED_DECISION_SECRET')
-	}
+	if (!secret) throw new Error('Missing required env var: SPONSORED_DECISION_SECRET')
 
 	const verification = verifySponsoredDecisionToken(token, secret)
 	if (!verification.ok) {
-		const baseUrl = getPublicBaseUrl()
-		const host = (() => {
-			try {
-				return new URL(baseUrl).host
-			} catch {
-				return 'unknown'
-			}
-		})()
-		const rawReason = 'reason' in verification ? verification.reason : 'malformed'
-		const reason =
-			rawReason === 'missing'
-				? 'missing'
-				: rawReason === 'invalid_signature'
-					? 'bad_sig'
-					: rawReason === 'decode_error'
-						? 'decode_error'
-						: rawReason === 'expired'
-							? 'expired'
-							: 'decode_error'
-		const now = Math.floor(Date.now() / 1000)
-		console.warn('sponsored_decision_token_verify_failed', {
-			reason,
-			now,
-			iat: 'iat' in verification ? verification.iat ?? null : null,
-			exp: 'exp' in verification ? verification.exp ?? null : null,
-			host,
-		})
-		return buildRedirect(
-			req,
-			reason === 'expired' ? 'expired' : 'invalid'
-		)
+		return buildRedirect('expired')
 	}
 
 	const { applicationId, action } = verification.payload
-
-	const sessionCookie = req.cookies.get(PARTNERS_SESSION_COOKIE)?.value
-	const sessionId = sanitizeSessionId(sessionCookie)
-	if (!sessionId) {
-		console.warn('sponsored_decision_unauthorized', {
-			applicationId,
-			action,
-			reason: 'missing_session',
-		})
-		return buildRedirect(req, 'invalid')
-	}
+	const sessionId = sanitizeSessionId(req.cookies.get(PARTNERS_SESSION_COOKIE)?.value)
+	if (!sessionId) return buildRedirect('invalid')
 
 	const session = await getPartnerSession(sessionId)
-	if (!session || !isSponsoredSeatsAdmin(session.accountId)) {
-		console.warn('sponsored_decision_unauthorized', {
-			applicationId,
-			action,
-			reason: 'not_admin',
-			accountId: session?.accountId ?? null,
-		})
-		return buildRedirect(req, 'invalid')
-	}
+	if (!session || !isSponsoredSeatsAdmin(session.accountId)) return buildRedirect('invalid')
 
-	{
-		const baseUrl = getPublicBaseUrl()
-		const host = (() => {
-			try {
-				return new URL(baseUrl).host
-			} catch {
-				return 'unknown'
-			}
-		})()
-		console.info('sponsored_decision_token_verified', {
-			applicationId,
-			action,
-			host,
-		})
-	}
 	const application = await prisma.sponsoredApplication.findUnique({
 		where: { id: applicationId },
 	})
-
-	if (!application) {
-		return buildRedirect(req, 'invalid')
-	}
-
-	if (application.status !== 'pending') {
-		return buildRedirect(req, 'already_processed')
-	}
+	if (!application) return buildRedirect('invalid')
 
 	if (action === 'reject') {
+		if (application.status !== 'pending') return buildRedirect('already_processed')
 		const updated = await prisma.sponsoredApplication.updateMany({
 			where: { id: applicationId, status: 'pending' },
 			data: {
 				status: 'rejected',
 				decision: 'rejected',
 				decidedAt: new Date(),
-				reviewedByAccountId: null,
+				reviewedByAccountId: session.accountId,
 				reviewedAt: new Date(),
-				decisionNote: null,
 			},
 		})
-
-		if (updated.count === 0) {
-			return buildRedirect(req, 'already_processed')
-		}
+		if (updated.count === 0) return buildRedirect('already_processed')
 
 		if (application.email) {
 			try {
@@ -149,140 +79,32 @@ export async function GET(req: NextRequest) {
 					applicationId,
 					email: redactEmail(application.email),
 					status: 'rejected',
-					message: (error as Error).message,
+					message: error instanceof Error ? error.message : 'unknown_error',
 				})
 			}
 		}
-
-		return buildRedirect(req, 'rejected')
+		return buildRedirect('rejected')
 	}
 
-	const now = new Date()
-	let seatId: string | null = null
-	let applicantEmail = application.email
-	let applicantName = application.name
-
-	try {
-		await prisma.$transaction(async (tx) => {
-			const locked = await tx.$queryRaw<
-				{
-					id: string
-					status: string
-					name: string
-					email: string | null
-					tier: string | null
-				}[]
-			>(Prisma.sql`
-				SELECT id, status, name, email, tier
-				FROM jpvbootcamp.sponsored_applications
-				WHERE id = ${applicationId}
-				FOR UPDATE
-			`)
-
-			if (!locked[0] || locked[0].status !== 'pending') {
-				throw new Error('already_processed')
-			}
-
-			applicantName = locked[0].name
-			applicantEmail = locked[0].email
-
-			if (!applicantEmail) {
-				throw new Error('missing_email')
-			}
-
-			const lockedTier = 'pro'
-
-			const claimed = await tx.$queryRaw<{ id: string }[]>(Prisma.sql`
-				UPDATE jpvbootcamp.sponsored_seats
-				SET reserved_by_application_id = ${applicationId},
-					reserved_at = ${now}
-				WHERE id = (
-					SELECT id
-					FROM jpvbootcamp.sponsored_seats
-					WHERE claimed_by_account_id IS NULL
-						AND reserved_by_application_id IS NULL
-						AND tier = ${lockedTier}
-					ORDER BY created_at ASC
-					FOR UPDATE SKIP LOCKED
-					LIMIT 1
-				)
-				RETURNING id
-			`)
-
-			if (!claimed[0]?.id) {
-				throw new Error('no_seat_available')
-			}
-
-			seatId = claimed[0].id
-
-			await tx.sponsoredApplication.update({
-				where: { id: applicationId },
-				data: {
-					status: 'approved',
-					decision: 'approved',
-					decidedAt: now,
-					tier: lockedTier,
-					seatId: seatId,
-					reviewedByAccountId: null,
-					reviewedAt: now,
-					decisionNote: null,
-				},
+	const payload = await getPayload({ config })
+	const existing = application.email
+		? await payload.find({
+				collection: 'payload_members',
+				where: { email: { equals: application.email } },
+				limit: 1,
+				depth: 0,
+				overrideAccess: true,
 			})
-		})
-	} catch (error) {
-		const message = (error as Error).message
-		if (message === 'already_processed') {
-			return buildRedirect(req, 'already_processed')
-		}
+		: null
+	const existingMemberId = existing?.docs[0]?.id
+	const result = await grantSponsoredApplication({
+		payload,
+		applicationId,
+		mode: existingMemberId ? 'existing' : 'new',
+		memberId: existingMemberId ? String(existingMemberId) : null,
+		administratorId: session.accountId,
+	})
 
-		if (message === 'no_seat_available') {
-			return buildRedirect(req, 'no_seats')
-		}
-
-		console.error('sponsored_application_decision_failed', {
-			applicationId,
-			message,
-		})
-		return buildRedirect(req, 'invalid')
-	}
-
-	if (!seatId || !applicantEmail) {
-		return buildRedirect(req, 'invalid')
-	}
-
-	const claimSecret = (process.env.SPONSORED_CLAIM_SECRET || '').trim()
-	if (!claimSecret) {
-		throw new Error('Missing required env var: SPONSORED_CLAIM_SECRET')
-	}
-
-	const nowEpoch = Math.floor(Date.now() / 1000)
-	const claimToken = signSponsoredClaimToken(
-		{
-			applicationId,
-			email: applicantEmail,
-			iat: nowEpoch,
-			exp: nowEpoch + 60 * 60 * 24 * 7,
-			nonce: randomUUID(),
-		},
-		claimSecret
-	)
-
-	try {
-		await sendSponsoredClaimEmail({
-			to: applicantEmail,
-			claimToken,
-		})
-		await prisma.sponsoredApplication.updateMany({
-			where: { id: applicationId },
-			data: { claimTokenSentAt: new Date() },
-		})
-	} catch (error) {
-		console.error('sponsored_claim_email_failed', {
-			applicationId,
-			email: redactEmail(applicantEmail),
-			message: (error as Error).message,
-		})
-	}
-
-	return buildRedirect(req, 'approved')
+	if (result.ok === false) return buildRedirect(redirectForGrantFailure(result.reason))
+	return buildRedirect('checkout_sent')
 }

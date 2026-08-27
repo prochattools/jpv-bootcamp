@@ -161,6 +161,44 @@ function testNoDbNetworkOrMigrationCommands(): void {
   }
 }
 
+function testStripeSponsoredLifecycleContracts(): void {
+	const seats = readFileSync('src/lib/sponsored-seats.ts', 'utf8')
+	assert.match(seats, /checkout_session:/)
+	assert.match(seats, /thank-you\/sponsor/)
+
+	const recipient = readFileSync('src/lib/sponsored-recipient.ts', 'utf8')
+	assert.match(recipient, /sponsored_recipient/)
+	assert.match(recipient, /trial_period_days: SPONSORED_TRIAL_DAYS/)
+	assert.match(recipient, /payment_method_collection: 'always'/)
+	assert.match(recipient, /finalizeSponsoredRecipientCheckout/)
+
+	const webhook = readFileSync('src/lib/stripe-webhook-handler.ts', 'utf8')
+	assert.match(webhook, /isSponsoredRecipientSession/)
+	assert.match(webhook, /finalizeSponsoredRecipientCheckout/)
+	assert.match(webhook, /checkout\.session\.expired/)
+}
+
+function testProductionMigrationContracts(): void {
+	const migration = readFileSync(
+		'prisma/migrations/20260827090000_align_sponsored_seat_lifecycle/migration.sql',
+		'utf8',
+	)
+	assert.match(migration, /tier = 'free'/)
+	assert.match(migration, /status IN \('pending', 'processing', 'approved', 'claimed', 'rejected'\)/)
+	assert.doesNotMatch(migration, /tier IN \('pro'\)/)
+
+	const runner = readFileSync('scripts/release/run-production-prisma-migrations.sh', 'utf8')
+	assert.match(runner, /DEPLOYMENT_ENV.*production/)
+	assert.match(runner, /DATABASE_URL schema does not match the production boundary/)
+	assert.match(runner, /prisma migrate deploy --schema=prisma\/system\.prisma/)
+
+	const workflow = readFileSync('.github/workflows/production-prisma-migrations.yml', 'utf8')
+	assert.match(workflow, /apply-prisma-migrations-production/)
+	assert.match(workflow, /I_2Vukga3cc3ZhaG-mUzU/)
+	assert.match(workflow, /clients-jpv-bootcamp-app-tp9xrk/)
+	assert.match(workflow, /runProductionPrismaMigration\.mts/)
+}
+
 try {
   testValidSponsorIntentAccepted()
   testValidSponsorIntentWithMessage()
@@ -177,6 +215,8 @@ try {
   testPortalSupportPageCopyIsCorrect()
   testLegacyTermsNotPresent()
   testNoDbNetworkOrMigrationCommands()
+  testStripeSponsoredLifecycleContracts()
+  testProductionMigrationContracts()
   console.log('pay_it_forward_mvp.test.ts passed')
 } catch (error) {
   console.error('pay_it_forward_mvp.test.ts failed', error instanceof Error ? error.message : error)

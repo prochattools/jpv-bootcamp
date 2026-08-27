@@ -13,7 +13,7 @@ export default function SponsoredThankYouPage() {
     <PublicInformationShell
       description="Your purchase funded a sponsored JPV Bootcamp membership place. Someone who is ready to learn can now receive access."
       eyebrow='Payment received'
-      title="Thanks — you're in."
+      title='Thank you for paying it forward.'
     >
       <section className='rounded-jpv-panel border border-jpv-border bg-jpv-canvas p-6 shadow-jpv-card sm:p-8'>
         <Suspense fallback={<p className='text-sm text-jpv-muted'>Redirecting to the home page…</p>}>
