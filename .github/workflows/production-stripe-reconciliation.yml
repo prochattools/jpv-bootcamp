@@ -152,14 +152,18 @@ jobs:
           set -euo pipefail
           found_report=false
           for attempt in $(seq 1 30); do
-            status=$(curl --silent --show-error --max-time 30 \
-              -o /tmp/jpv_schedule_details.json \
+            schedules_status=$(curl --silent --show-error --max-time 30 \
+              -o /tmp/jpv_schedule_list.json \
               -w '%{http_code}' \
-              -G "$DOKPLOY_API_BASE_URL/schedule.one" \
+              -G "$DOKPLOY_API_BASE_URL/schedule.list" \
               -H "x-api-key: $DOKPLOY_API_KEY" \
-              --data-urlencode "scheduleId=$SCHEDULE_ID")
-            if [[ "$status" == 2?? ]]; then
-              deployment_id=$(jq -r '.. | objects | select(.deploymentId? != null) | .deploymentId' /tmp/jpv_schedule_details.json | head -1 || true)
+              --data-urlencode "id=$DOKPLOY_APPLICATION_ID" \
+              --data-urlencode 'scheduleType=application')
+            if [[ "$schedules_status" == 2?? ]]; then
+              deployment_id=$(jq -r --arg scheduleId "$SCHEDULE_ID" '
+                [.. | objects | select(.scheduleId? == $scheduleId) | .deployments[]? | .deploymentId // empty]
+                | .[0] // empty
+              ' /tmp/jpv_schedule_list.json | head -1 || true)
               if [ -n "$deployment_id" ]; then
                 deployment_status=$(curl --silent --show-error --max-time 30 \
                   -o /tmp/jpv_deployment_logs.json \
@@ -169,15 +173,16 @@ jobs:
                   --data-urlencode "deploymentId=$deployment_id" \
                   --data-urlencode 'tail=10000')
                 if [[ "$deployment_status" == 2?? ]]; then
-                  report=$(jq -r '.. | strings | select(startswith("JPV_RECONCILIATION_REPORT "))' /tmp/jpv_deployment_logs.json | tail -1 || true)
-                  failure=$(jq -r '.. | strings | select(startswith("JPV_RECONCILIATION_FAILED "))' /tmp/jpv_deployment_logs.json | tail -1 || true)
+                  log_text=$(jq -r 'if type == "string" then . else [.. | strings] | join("\n") end' /tmp/jpv_deployment_logs.json)
+                  report=$(printf '%s\n' "$log_text" | sed -n 's/.*JPV_RECONCILIATION_REPORT //p' | tail -1 || true)
+                  failure=$(printf '%s\n' "$log_text" | sed -n 's/.*JPV_RECONCILIATION_FAILED //p' | tail -1 || true)
                   if [ -n "$report" ]; then
-                    echo "$report"
+                    echo "JPV_RECONCILIATION_REPORT $report"
                     found_report=true
                     break
                   fi
                   if [ -n "$failure" ]; then
-                    echo "$failure" >&2
+                    echo "JPV_RECONCILIATION_FAILED $failure" >&2
                     exit 1
                   fi
                 fi
