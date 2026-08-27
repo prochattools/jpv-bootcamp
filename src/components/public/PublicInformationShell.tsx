@@ -18,7 +18,7 @@ export function PublicInformationShell({
   backLabel?: string
 }) {
   return (
-    <main className='min-h-[100dvh] min-w-0 bg-jpv-canvas text-jpv-ink'>
+    <main className='min-h-[100dvh] min-w-0 bg-jpv-canvas text-jpv-ink' data-jpv-public-shell='true'>
       <section className='px-5 py-8 sm:px-6 sm:py-12 lg:py-16'>
         <div className='mx-auto min-w-0 max-w-4xl'>
           <Link

@@ -56,6 +56,105 @@ body {
 	max-width: 100%;
 }
 
+/* Shared reading contract for migrated rich content. Imported HTML and
+ * editor output must wrap long tokens, keep media inside its card, and give
+ * headings/links/lists the same readable rhythm everywhere they appear. */
+.jpv-rich-text {
+	min-width: 0;
+	max-width: 100%;
+	overflow-wrap: anywhere;
+	color: var(--jpv-ink);
+}
+
+.jpv-rich-text :where(h1, h2, h3, h4, h5, h6) {
+	margin-block: 1.5rem 0.65rem;
+	font-weight: 700;
+	line-height: 1.25;
+	color: var(--jpv-ink);
+}
+
+.jpv-rich-text :where(h1) {
+	font-size: clamp(1.65rem, 4vw, 2.25rem);
+}
+
+.jpv-rich-text :where(h2) {
+	font-size: clamp(1.35rem, 3vw, 1.75rem);
+}
+
+.jpv-rich-text :where(h3, h4, h5, h6) {
+	font-size: 1.15rem;
+}
+
+.jpv-rich-text :where(p) {
+	max-width: 75ch;
+	line-height: 1.75;
+}
+
+.jpv-rich-text :where(ul, ol) {
+	padding-inline-start: 1.5rem;
+}
+
+.jpv-rich-text :where(li) {
+	margin-block: 0.35rem;
+}
+
+.jpv-rich-text :where(a) {
+	color: var(--jpv-brand-deep);
+	text-decoration: underline;
+	text-underline-offset: 0.2em;
+	word-break: break-word;
+}
+
+.jpv-rich-text :where(img, video) {
+	display: block;
+	height: auto;
+	max-height: min(70dvh, 40rem);
+	margin-block: 1.25rem;
+	object-fit: contain;
+}
+
+.jpv-rich-text :where(iframe) {
+	display: block;
+	width: 100%;
+	max-width: 100%;
+	min-height: 16rem;
+	margin-block: 1.25rem;
+	border: 0;
+	border-radius: var(--jpv-radius-card);
+}
+
+.jpv-rich-text :where(blockquote) {
+	margin-block: 1.25rem;
+	border-inline-start: 4px solid var(--jpv-sunshine);
+	padding-inline-start: 1rem;
+	color: var(--jpv-muted);
+	font-style: italic;
+}
+
+.jpv-rich-text :where(pre) {
+	max-width: 100%;
+	overflow-x: auto;
+	padding: 1rem;
+	border: 1px solid var(--jpv-border);
+	border-radius: var(--jpv-radius-card);
+	background: var(--jpv-surface-strong);
+	white-space: pre;
+}
+
+.jpv-rich-text :where(code) {
+	max-width: 100%;
+	font-size: 0.9em;
+	overflow-wrap: anywhere;
+}
+
+/* Form controls should remain usable on narrow phones without changing
+ * Payload's own admin control sizing. */
+:where(.jpv-product-shell, .jpv-auth-shell, [data-jpv-public-shell])
+	:where(input:not([type='checkbox']):not([type='radio']), textarea, select) {
+	max-width: 100%;
+	min-width: 0;
+}
+
 .jpv-skip-link {
 	position: fixed;
 	top: 0.75rem;
@@ -197,9 +296,12 @@ body {
 
 .jpv-dialog {
 	margin: auto;
+	max-width: calc(100vw - 2rem);
+	max-height: calc(100dvh - 2rem);
 	border: 0;
 	background: transparent;
 	padding: 0;
+	overflow: auto;
 	color: var(--jpv-ink);
 }
 
@@ -313,6 +415,8 @@ body {
  * default chat width is intentionally generous, which otherwise overflows a
  * narrow portal page and clips the chat panel and controls. */
 .jpv-livekit-shell {
+	position: relative;
+	isolation: isolate;
 	width: 100%;
 	height: min(72dvh, 720px);
 	min-height: 520px;
@@ -334,19 +438,20 @@ body {
 }
 
 .jpv-livekit-shell .lk-video-conference-inner {
+	width: auto;
 	min-width: 0;
 	min-height: 0;
-	flex: 1 1 auto;
+	flex: 1 1 0;
 }
 
 .jpv-livekit-shell .lk-chat {
 	width: min(360px, 42%);
-	min-width: 260px;
+	min-width: 240px;
 	max-width: 360px;
-	flex: 0 1 360px;
+	flex: 0 1 clamp(240px, 28%, 360px);
 }
 
-@media (max-width: 700px) {
+@media (max-width: 900px) {
 	.jpv-livekit-shell {
 		height: min(74dvh, 640px);
 		min-height: 460px;
@@ -359,6 +464,7 @@ body {
 		bottom: var(--lk-control-bar-height);
 		z-index: 20;
 		width: min(100%, 360px);
+		min-width: 0;
 		max-width: 100%;
 	}
 }

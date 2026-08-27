@@ -64,3 +64,15 @@ Before landing, validate:
 - Payload navigation keeps all operational routes reachable while presenting a tighter hierarchy.
 - Production build and deployment workflow complete on the merged main commit.
 - Live production identity and the public home page are verified after deployment; auth-gated surfaces are reported separately if a test session is unavailable.
+
+## Follow-up implementation
+
+The follow-up pass applies the shared fixes identified above:
+
+- Tailwind `dark:` utilities are scoped to `.jpv-portal-theme-root.dark`, preventing legacy dark branches from activating on public, authentication, checkout, confirmation, or Payload screens.
+- Rich text from community posts, migrated lessons, published member content, and course previews now uses one overflow-safe reading contract for headings, links, lists, images, video, iframes, code, and long tokens.
+- Member/public form controls keep their width inside the available shell, while dialogs are bounded to the viewport and remain locally scrollable.
+- The LiveKit container now establishes an explicit positioning and flex boundary so its video area can shrink and its chat panel remains reachable at desktop, tablet, and phone widths.
+- The repository UX contract now guards these invariants against regression.
+
+No domain behavior, route, access rule, billing integration, notification workflow, or migrated data was changed by this follow-up. Authenticated portal and Payload interaction still require an appropriately configured test session for end-to-end browser verification; the release report must distinguish that limitation from public-route evidence.
