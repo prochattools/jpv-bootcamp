@@ -6,6 +6,10 @@ import { getPayload } from 'payload'
 import { sweepExpiredPaymentGrace } from '@/lib/billing/delinquencySweep'
 import { reconcileStripeToPayload } from '@/lib/billing/stripePayloadReconciliation'
 import type { StripePayloadReconciliationCheckpoint } from '@/lib/billing/stripePayloadReconciliation'
+import {
+  applyStripeMemberIdentityBackfill,
+  buildStripeMemberIdentityReport,
+} from '@/lib/billing/stripeMemberIdentityReconciliation'
 import { getStripe } from '@/lib/stripe'
 import { getStripeConfig } from '@/lib/stripe-config'
 
@@ -29,17 +33,29 @@ export async function POST(request: Request): Promise<Response> {
   if (!secret) return json({ ok: false, error: 'not_configured' }, 500)
   if (!authorized(request, secret)) return json({ ok: false, error: 'unauthorized' }, 401)
 
-  let mode: 'apply' | 'dry-run' = 'apply'
+  let mode: 'apply' | 'dry-run' | 'identity-dry-run' | 'identity-apply' = 'apply'
   let suppressCommunications = false
   let maxObjects = 10_000
+  let expectedUnmatched: number | null = null
   let checkpoint: StripePayloadReconciliationCheckpoint | null = null
   try {
-    const body = await request.json() as { mode?: unknown; confirmation?: unknown; maxObjects?: unknown; checkpoint?: unknown }
-    if (body.mode !== undefined && body.mode !== 'apply' && body.mode !== 'dry-run') {
+    const body = await request.json() as { mode?: unknown; confirmation?: unknown; expectedUnmatched?: unknown; maxObjects?: unknown; checkpoint?: unknown }
+    if (
+      body.mode !== undefined &&
+      body.mode !== 'apply' &&
+      body.mode !== 'dry-run' &&
+      body.mode !== 'identity-dry-run' &&
+      body.mode !== 'identity-apply'
+    ) {
       return json({ ok: false, error: 'invalid_mode' }, 400)
     }
-    mode = body.mode === 'dry-run' ? 'dry-run' : 'apply'
+    mode = body.mode === 'dry-run' || body.mode === 'identity-dry-run' || body.mode === 'identity-apply'
+      ? body.mode
+      : 'apply'
     suppressCommunications = body.confirmation === 'initial_backfill_suppress_communications'
+    if (typeof body.expectedUnmatched === 'number' && Number.isInteger(body.expectedUnmatched)) {
+      expectedUnmatched = body.expectedUnmatched
+    }
     if (typeof body.maxObjects === 'number' && Number.isInteger(body.maxObjects)) {
       maxObjects = Math.min(Math.max(body.maxObjects, 1), 10_000)
     }
@@ -65,6 +81,69 @@ export async function POST(request: Request): Promise<Response> {
   try {
     const payload = await getPayload({ config })
     const stripeConfig = getStripeConfig()
+    if (mode === 'identity-dry-run') {
+      const report = await buildStripeMemberIdentityReport({
+        payload,
+        stripe: getStripe(),
+        livemode: stripeConfig.env === 'live',
+      })
+      return json({
+        ok: report.livemode,
+        runId,
+        mode,
+        identityReport: {
+          livemode: report.livemode,
+          generatedAt: report.generatedAt,
+          totals: report.totals,
+          rows: report.rows.map((row) => ({
+            subscriptionId: row.subscriptionId,
+            customerId: row.customerId,
+            status: row.status,
+            match: row.match,
+            memberId: row.memberId,
+            reason: row.reason,
+          })),
+        },
+      }, report.livemode ? 200 : 500)
+    }
+    if (mode === 'identity-apply') {
+      if (request.headers.get('x-jpv-reconciliation-confirmation') !== 'identity-backfill-production') {
+        return json({ ok: false, error: 'identity_backfill_confirmation_required' }, 400)
+      }
+      if (expectedUnmatched === null || expectedUnmatched < 0) {
+        return json({ ok: false, error: 'expected_unmatched_required' }, 400)
+      }
+      const backfill = await applyStripeMemberIdentityBackfill({
+        payload,
+        stripe: getStripe(),
+        livemode: stripeConfig.env === 'live',
+        expectedUnmatched,
+      })
+      const identityReconciliation = await reconcileStripeToPayload({
+        payload,
+        stripe: getStripe(),
+        mode: 'apply',
+        livemode: stripeConfig.env === 'live',
+        runId,
+        maxObjects,
+        pageSize: 100,
+        suppressCommunications: true,
+      })
+      const identityOk = identityReconciliation.totals.failed === 0 && identityReconciliation.checkpoint === null
+      return json({
+        ok: identityOk,
+        runId,
+        mode,
+        identityBackfill: {
+          before: backfill.report.totals,
+          created: backfill.created,
+          alreadyPresent: backfill.alreadyPresent,
+        },
+        reconciliation: identityReconciliation.totals,
+        checkpoint: identityReconciliation.checkpoint,
+        communicationsSuppressed: true,
+      }, identityOk ? 200 : 500)
+    }
     let reconciliation: Awaited<ReturnType<typeof reconcileStripeToPayload>> | null = null
     let reconciliationFailed = false
     try {
