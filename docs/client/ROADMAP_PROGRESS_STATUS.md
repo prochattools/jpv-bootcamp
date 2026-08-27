@@ -1,6 +1,46 @@
 # JPV Bootcamp - Roadmap Progress Status
 
-## Current repository reconciliation — 2026-08-23
+## CURRENT PRODUCTION CHECKPOINT — 2026-08-27
+
+JPV Bootcamp is live in production. This checkpoint supersedes older
+feature-branch and staging-era “current” statements below; those sections are
+retained as dated audit history.
+
+- **Release authority:** `main`, with local `main` and `origin/main` verified at
+  `08605e52af4abb0b1bdcdfbe6890d010c545b636` after a no-tags fetch.
+- **Production evidence:** GitHub Actions run `33093612107` passed; Dokploy
+  production deployment converged; the live application reported the exact
+  production SHA and `deploymentEnv=production`; the required Payload
+  relationship-table migration was applied; production health was green.
+- **Architectural state:** normal feature development is on hold. This is a
+  behavior-preserving architecture consolidation, not a rewrite.
+- **Current packet:** A0 production truth reconciliation on
+  `codex/production-architecture-consolidation`, documentation-only.
+- **Next packet:** A1 domain boundary and dependency consolidation, only after
+  orchestrator review of the A0 commit and explicit packet authorization.
+- **Hard stops:** do not start A1, add feature work, merge historical branches,
+  mutate production data/providers, run migrations, delete worktrees/branches,
+  or deploy from this A0 packet.
+
+### ARCHITECTURAL HOLD — POST-LAUNCH CONSOLIDATION
+
+The active order of work is:
+
+1. Production stability and exact-live verification.
+2. A0–A6 architecture reconsolidation.
+3. Review and resume of the future feature roadmap after A6.
+
+No major feature batch starts before A6 is complete and explicitly released
+from this hold. The future roadmap remains preserved below for later
+sequencing; it is not being deleted or silently reprioritized by this packet.
+
+- **Canonical A0 authority:**
+  `docs/architecture/JPV_PRODUCTION_ARCHITECTURE_V1.md`,
+  `docs/architecture/JPV_DOMAIN_SOURCE_OF_TRUTH.md`,
+  `docs/architecture/JPV_ENGINEERING_PRINCIPLES.md`, and
+  `docs/architecture/JPV_ARCHITECTURE_CONSOLIDATION_PLAN.md`.
+
+## Historical pre-production repository reconciliation — 2026-08-23
 
 - **Working branch:** `feature/course-branding-and-preview`; current repository tip is `1966197058721ffdfe0d94f24bc3e8e468d4e23b` and is not deployed staging evidence. The single canonical last verified staging release/deployment SHA is `9d87c4a3eeeffb9afb78a38964054792330ea1cb`.
 - **Implementation state:** the current feature branch remains the source under review; its migration registry contains 37 registered migrations, with migration 37 pending in staging. Registration is not applied database state.
@@ -14,7 +54,7 @@
 - **Current project phase:** Phase 9.5 — Feature Branch Reconciliation & Completion, with product-experience refinement active; Phase 10 production preparation is documentation-only and Phase 11 cutover execution has not started.
 - **Canonical baseline rule:** `9d87c4a3eeeffb9afb78a38964054792330ea1cb` is the only canonical last verified staging release and documented deployment SHA. The current branch candidate `1966197058721ffdfe0d94f24bc3e8e468d4e23b` is not deployed; every other SHA below is historical. Production remains unauthorized.
 
-## Current sequencing and active work — 2026-08-24
+## Historical sequencing and active work — 2026-08-24
 
 This is the current roadmap interpretation. Older dated sections below remain
 audit history and must not override this sequence.

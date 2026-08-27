@@ -4,7 +4,33 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 
 ---
 
-## Current repository reconciliation — 2026-08-23
+## CURRENT TRUTH — 2026-08-27
+
+JPV Bootcamp is live in production. This section is the current handoff
+authority; all dated sections below are retained as historical evidence unless
+explicitly superseded here.
+
+- **Release authority:** `main` and `origin/main`, verified after fetch at
+  `08605e52af4abb0b1bdcdfbe6890d010c545b636`.
+- **Production evidence:** GitHub Actions run `33093612107` passed; Dokploy
+  production deployment converged; the live app reported the exact SHA with
+  `deploymentEnv=production`; the required Payload relationship-table
+  migration was applied; production health was green.
+- **Architectural hold:** normal feature development is paused for the
+  behavior-preserving A0–A6 architecture consolidation.
+- **Current branch:** `codex/production-architecture-consolidation` descended
+  directly from the verified `main` tip.
+- **Current packet:** A0, documentation-only. No application, database,
+  provider, branch, or worktree mutation is part of A0.
+- **Exact next packet:** A1 — Domain boundary and dependency consolidation,
+  only after orchestrator review and explicit authorization.
+- **Hard stops:** do not start A1, merge historical branches, run migrations,
+  mutate production/providers, delete branches/worktrees, or deploy from this
+  packet. Preserve unknown residue and route ambiguity to review.
+- **Architecture authority:** `docs/architecture/` contains the production
+  architecture, source-of-truth map, engineering principles, and packet plan.
+
+## Historical pre-production repository reconciliation — 2026-08-23
 
 - **Working branch:** `feature/course-branding-and-preview`; canonical frozen staging release and deployed SHA are `9d87c4a3eeeffb9afb78a38964054792330ea1cb`. Current repository tip `626bf3926412065fb7e5655d35c98d8f4be67a58` is a documentation-only descendant and is not deployed.
 - **Cleanup record:** `docs/release/BRANCH_RECONCILIATION_2026-08-23.md`.
