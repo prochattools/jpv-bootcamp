@@ -1,0 +1,216 @@
+name: Production Stripe Identity Reconciliation
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Run a read-only report or apply the guarded identity backfill
+        required: true
+        type: choice
+        options:
+          - identity-dry-run
+          - identity-apply
+      confirmation:
+        description: Type identity-report-production or identity-backfill-production
+        required: true
+        type: string
+      expected_unmatched:
+        description: Required for identity-apply; use the exact dry-run unmatched count
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-stripe-identity-reconciliation
+  cancel-in-progress: false
+
+jobs:
+  reconcile:
+    name: Run guarded production reconciliation
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: root-domain-image-publish
+    env:
+      ALLOWED_BRANCH: main
+      TARGET_ORIGIN: https://jpvbootcamp.com
+      DOKPLOY_APPLICATION_ID: I_2Vukga3cc3ZhaG-mUzU
+      DOKPLOY_APPLICATION_NAME: clients-jpv-bootcamp-app-tp9xrk
+      DOKPLOY_API_BASE_URL: https://dokploy.prochat.tools/api
+      RECONCILIATION_MODE: ${{ inputs.mode }}
+      RECONCILIATION_CONFIRMATION: ${{ inputs.confirmation }}
+      EXPECTED_UNMATCHED: ${{ inputs.expected_unmatched }}
+
+    steps:
+      - name: Validate production boundary and confirmation
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "$GITHUB_REF_NAME" != "$ALLOWED_BRANCH" ]; then
+            echo "RECONCILIATION-DENIED: only $ALLOWED_BRANCH is permitted" >&2
+            exit 1
+          fi
+          if [ "$RECONCILIATION_MODE" = "identity-dry-run" ] && [ "$RECONCILIATION_CONFIRMATION" != "identity-report-production" ]; then
+            echo "RECONCILIATION-DENIED: dry-run confirmation is invalid" >&2
+            exit 1
+          fi
+          if [ "$RECONCILIATION_MODE" = "identity-apply" ] && [ "$RECONCILIATION_CONFIRMATION" != "identity-backfill-production" ]; then
+            echo "RECONCILIATION-DENIED: apply confirmation is invalid" >&2
+            exit 1
+          fi
+          if [ "$RECONCILIATION_MODE" = "identity-apply" ] && ! printf '%s' "$EXPECTED_UNMATCHED" | grep -qE '^[0-9]+$'; then
+            echo "RECONCILIATION-DENIED: identity-apply requires a non-negative expected_unmatched integer" >&2
+            exit 1
+          fi
+          echo "Production reconciliation lane: $DOKPLOY_APPLICATION_NAME ($DOKPLOY_APPLICATION_ID) at $TARGET_ORIGIN"
+
+      - name: Create temporary application job
+        id: create_schedule
+        shell: bash
+        env:
+          DOKPLOY_API_KEY: ${{ secrets.DOKPLOY_API_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "$DOKPLOY_API_KEY" ]; then
+            echo "RECONCILIATION-DENIED: DOKPLOY_API_KEY is unset or empty" >&2
+            exit 1
+          fi
+
+          schedule_name="jpv-production-reconciliation-${GITHUB_RUN_ID}"
+          command="JPV_RECONCILIATION_MODE=$RECONCILIATION_MODE JPV_RECONCILIATION_EXPECTED_UNMATCHED=${EXPECTED_UNMATCHED:-0} /usr/local/bin/node /app/scripts/production/runReconciliationRoute.mjs"
+          request_json=$(jq -cn \
+            --arg name "$schedule_name" \
+            --arg description "One-off production identity reconciliation for GitHub Actions run $GITHUB_RUN_ID" \
+            --arg cronExpression "0 0 1 1 *" \
+            --arg command "$command" \
+            --arg applicationId "$DOKPLOY_APPLICATION_ID" \
+            '{name:$name,description:$description,cronExpression:$cronExpression,shellType:"bash",scheduleType:"application",command:$command,applicationId:$applicationId,enabled:false}')
+          status=$(curl --silent --show-error --max-time 30 \
+            -o /tmp/jpv_schedule_create.json \
+            -w '%{http_code}' \
+            -X POST "$DOKPLOY_API_BASE_URL/schedule.create" \
+            -H "x-api-key: $DOKPLOY_API_KEY" \
+            -H 'Content-Type: application/json' \
+            --data-binary "$request_json")
+          case "$status" in
+            2??) ;;
+            *)
+              echo "RECONCILIATION-FAILED: schedule.create returned HTTP $status" >&2
+              exit 1
+              ;;
+          esac
+
+          schedule_id=$(jq -r '.scheduleId // .id // .schedule.scheduleId // .schedule.id // .data.scheduleId // .data.id // empty' /tmp/jpv_schedule_create.json)
+          if [ -z "$schedule_id" ] || [ "$schedule_id" = "null" ]; then
+            schedules_status=$(curl --silent --show-error --max-time 30 \
+              -o /tmp/jpv_schedule_list.json \
+              -w '%{http_code}' \
+              -G "$DOKPLOY_API_BASE_URL/schedule.list" \
+              -H "x-api-key: $DOKPLOY_API_KEY" \
+              --data-urlencode "id=$DOKPLOY_APPLICATION_ID" \
+              --data-urlencode 'scheduleType=application')
+            if [[ "$schedules_status" != 2?? ]]; then
+              echo "RECONCILIATION-FAILED: schedule.list returned HTTP $schedules_status while locating the temporary job" >&2
+              exit 1
+            fi
+            schedule_id=$(jq -r --arg name "$schedule_name" '.. | objects | select(.name? == $name) | (.scheduleId // .id) // empty' /tmp/jpv_schedule_list.json | head -1)
+          fi
+          if [ -z "$schedule_id" ] || [ "$schedule_id" = "null" ]; then
+            echo "RECONCILIATION-FAILED: temporary schedule id was not returned" >&2
+            exit 1
+          fi
+          echo "Temporary application job created: $schedule_id"
+          echo "schedule_id=$schedule_id" >> "$GITHUB_OUTPUT"
+
+      - name: Run temporary application job
+        shell: bash
+        env:
+          DOKPLOY_API_KEY: ${{ secrets.DOKPLOY_API_KEY }}
+          SCHEDULE_ID: ${{ steps.create_schedule.outputs.schedule_id }}
+        run: |
+          set -euo pipefail
+          request_json=$(jq -cn --arg scheduleId "$SCHEDULE_ID" '{scheduleId:$scheduleId}')
+          status=$(curl --silent --show-error --max-time 30 \
+            -o /tmp/jpv_schedule_run.json \
+            -w '%{http_code}' \
+            -X POST "$DOKPLOY_API_BASE_URL/schedule.runManually" \
+            -H "x-api-key: $DOKPLOY_API_KEY" \
+            -H 'Content-Type: application/json' \
+            --data-binary "$request_json")
+          case "$status" in
+            2??) echo "Temporary production application job started" ;;
+            *) echo "RECONCILIATION-WARNING: schedule.runManually returned HTTP $status; checking its deployment log" >&2 ;;
+          esac
+
+      - name: Collect the sanitized reconciliation report
+        shell: bash
+        env:
+          DOKPLOY_API_KEY: ${{ secrets.DOKPLOY_API_KEY }}
+          SCHEDULE_ID: ${{ steps.create_schedule.outputs.schedule_id }}
+        run: |
+          set -euo pipefail
+          found_report=false
+          for attempt in $(seq 1 30); do
+            status=$(curl --silent --show-error --max-time 30 \
+              -o /tmp/jpv_schedule_details.json \
+              -w '%{http_code}' \
+              -G "$DOKPLOY_API_BASE_URL/schedule.one" \
+              -H "x-api-key: $DOKPLOY_API_KEY" \
+              --data-urlencode "scheduleId=$SCHEDULE_ID")
+            if [[ "$status" == 2?? ]]; then
+              deployment_id=$(jq -r '.. | objects | select(.deploymentId? != null) | .deploymentId' /tmp/jpv_schedule_details.json | head -1 || true)
+              if [ -n "$deployment_id" ]; then
+                deployment_status=$(curl --silent --show-error --max-time 30 \
+                  -o /tmp/jpv_deployment_logs.json \
+                  -w '%{http_code}' \
+                  -G "$DOKPLOY_API_BASE_URL/deployment.readLogs" \
+                  -H "x-api-key: $DOKPLOY_API_KEY" \
+                  --data-urlencode "deploymentId=$deployment_id" \
+                  --data-urlencode 'tail=10000')
+                if [[ "$deployment_status" == 2?? ]]; then
+                  report=$(jq -r '.. | strings | select(startswith("JPV_RECONCILIATION_REPORT "))' /tmp/jpv_deployment_logs.json | tail -1 || true)
+                  failure=$(jq -r '.. | strings | select(startswith("JPV_RECONCILIATION_FAILED "))' /tmp/jpv_deployment_logs.json | tail -1 || true)
+                  if [ -n "$report" ]; then
+                    echo "$report"
+                    found_report=true
+                    break
+                  fi
+                  if [ -n "$failure" ]; then
+                    echo "$failure" >&2
+                    exit 1
+                  fi
+                fi
+              fi
+            fi
+            echo "Waiting for the temporary production job deployment log (attempt $attempt/30)"
+            sleep 5
+          done
+          if [ "$found_report" != true ]; then
+            echo "RECONCILIATION-FAILED: no report was found in the temporary production deployment log" >&2
+            exit 1
+          fi
+
+      - name: Delete temporary application job
+        if: always() && steps.create_schedule.outputs.schedule_id != ''
+        shell: bash
+        env:
+          DOKPLOY_API_KEY: ${{ secrets.DOKPLOY_API_KEY }}
+          SCHEDULE_ID: ${{ steps.create_schedule.outputs.schedule_id }}
+        run: |
+          set -euo pipefail
+          request_json=$(jq -cn --arg scheduleId "$SCHEDULE_ID" '{scheduleId:$scheduleId}')
+          status=$(curl --silent --show-error --max-time 30 \
+            -o /tmp/jpv_schedule_delete.json \
+            -w '%{http_code}' \
+            -X POST "$DOKPLOY_API_BASE_URL/schedule.delete" \
+            -H "x-api-key: $DOKPLOY_API_KEY" \
+            -H 'Content-Type: application/json' \
+            --data-binary "$request_json")
+          case "$status" in
+            2??) echo "Temporary application job deleted: $SCHEDULE_ID" ;;
+            *)
+              echo "RECONCILIATION-WARNING: temporary job deletion returned HTTP $status (schedule $SCHEDULE_ID)" >&2
+              exit 1
+              ;;
+          esac
