@@ -201,7 +201,7 @@ export default async function LessonPage({
             </section>
           )}
 
-          <section className='prose prose-sm max-w-none text-jpv-ink'>
+          <section className='jpv-rich-text prose prose-sm max-w-none text-jpv-ink'>
             <div dangerouslySetInnerHTML={{ __html: lesson.content }} className='space-y-4 leading-7 [&_p]:mb-4' />
           </section>
 

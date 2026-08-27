@@ -34,7 +34,7 @@ export function PortalShell({
   const allowPortalTheme = showThemeToggle && !isPortalLogin
 
   const portalContent = (
-    <div className='jpv-product-shell h-[100dvh] min-h-0 min-w-0 overflow-hidden bg-jpv-canvas text-jpv-ink dark:bg-[var(--jpv-canvas)] dark:text-[var(--jpv-ink)]'>
+    <div className='jpv-product-shell h-[100dvh] min-h-0 min-w-0 overflow-hidden bg-jpv-canvas text-jpv-ink dark:bg-[var(--jpv-canvas)] dark:text-[var(--jpv-ink)]' data-jpv-portal-shell='true'>
       <a className='jpv-skip-link' href='#portal-main'>Skip to content</a>
       <div className='grid h-full min-h-0 min-w-0 lg:grid-cols-[260px_minmax(0,1fr)]'>
         <PortalSidebar

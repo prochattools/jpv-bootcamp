@@ -78,5 +78,5 @@ function CommunityRichTextNode({ node }: { node: SafeCommunityRichTextNode }) {
 }
 
 export function CommunityRichText({ value }: CommunityRichTextProps) {
-  return <div className='mx-auto max-w-3xl space-y-4'>{<CommunityRichTextNode node={value} />}</div>
+  return <div className='jpv-rich-text mx-auto max-w-3xl space-y-4'>{<CommunityRichTextNode node={value} />}</div>
 }

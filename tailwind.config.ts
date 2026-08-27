@@ -4,7 +4,10 @@ import type { Config } from "tailwindcss";
 import { jpvDesignTokens } from "./src/lib/brand/jpvDesignSystem";
 
 const config = {
-  darkMode: ["class"],
+  // Dark utilities are reserved for the authenticated member portal. The
+  // public site, auth screens, and Payload admin remain light-only even when
+  // navigation happens after a portal session.
+  darkMode: ["class", ".jpv-portal-theme-root.dark"],
   content: [
     "./pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
