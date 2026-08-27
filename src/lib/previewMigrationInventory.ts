@@ -78,6 +78,7 @@ const PREVIEW_MIGRATION_METADATA = [
   { purpose: 'Add guarded Payload operator actions for pausing and resuming Stripe subscriptions.', rollbackRisk: 'irreversible', verificationChecks: ['registry-match', 'ordered-exactly', 'billing-pause-actions', 'rollback-guard'] },
   { purpose: 'Add member-portal audience targeting for live sessions and updates, plus reactions on published content.', rollbackRisk: 'data_loss', verificationChecks: ['registry-match', 'ordered-exactly', 'portal-engagement-distribution', 'rollback-guard'] },
   { purpose: 'Make member deletion safe across Payload-owned relationships while preserving member audit history.', rollbackRisk: 'data_loss', verificationChecks: ['registry-match', 'ordered-exactly', 'member-delete-relationship-safety', 'rollback-guard'] },
+  { purpose: 'Create the missing Payload relationship tables used by membership-support operator notes.', rollbackRisk: 'data_loss', verificationChecks: ['registry-match', 'ordered-exactly', 'membership-support-relationship-tables', 'rollback-guard'] },
 ] as const satisfies readonly PreviewMigrationMetadata[]
 
 if (PREVIEW_MIGRATION_METADATA.length !== PAYLOAD_MIGRATION_NAMES.length) {

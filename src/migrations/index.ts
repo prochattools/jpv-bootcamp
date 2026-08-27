@@ -49,6 +49,7 @@ import * as migration_20260826_100000_administrator_member_identity from './2026
 import * as migration_20260826_120000_billing_pause_actions from './20260826_120000_billing_pause_actions'
 import * as migration_20260826_130000_portal_engagement_distribution from './20260826_130000_portal_engagement_distribution'
 import * as migration_20260826_150000_member_delete_relationship_safety from './20260826_150000_member_delete_relationship_safety'
+import * as migration_20260827_090000_membership_support_relationship_tables from './20260827_090000_membership_support_relationship_tables'
 import { PAYLOAD_MIGRATION_NAMES } from '../lib/payloadMigrationRegistry'
 
 const migrationModuleByName = {
@@ -103,6 +104,7 @@ const migrationModuleByName = {
   '20260826_120000_billing_pause_actions': migration_20260826_120000_billing_pause_actions,
   '20260826_130000_portal_engagement_distribution': migration_20260826_130000_portal_engagement_distribution,
   '20260826_150000_member_delete_relationship_safety': migration_20260826_150000_member_delete_relationship_safety,
+  '20260827_090000_membership_support_relationship_tables': migration_20260827_090000_membership_support_relationship_tables,
 } as const
 
 export const migrations = PAYLOAD_MIGRATION_NAMES.map((name) => ({

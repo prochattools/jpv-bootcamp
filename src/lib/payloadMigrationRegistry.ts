@@ -50,6 +50,7 @@ export const PAYLOAD_MIGRATION_NAMES = [
   '20260826_120000_billing_pause_actions',
   '20260826_130000_portal_engagement_distribution',
   '20260826_150000_member_delete_relationship_safety',
+  '20260827_090000_membership_support_relationship_tables',
 ] as const
 
 export type PayloadMigrationName = (typeof PAYLOAD_MIGRATION_NAMES)[number]

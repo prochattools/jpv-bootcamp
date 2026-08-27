@@ -3,9 +3,9 @@ set -euo pipefail
 
 # Production-only application startup.
 #
-# This intentionally does not run Payload migrations. It verifies that the
-# operator selected production mode, the canonical public origin, and the
-# explicitly approved database target before application-only startup.
+# This applies the guarded bootstrap migration bundled in the production image,
+# then verifies that the operator selected production mode, the canonical public
+# origin, and the explicitly approved database target before application startup.
 
 REQUIRED_PUBLIC_ORIGIN="https://jpvbootcamp.com"
 REQUIRED_HOST="${PRODUCTION_DATABASE_HOST:-}"
@@ -78,6 +78,9 @@ VALIDATE_EOF
 echo "[start] boot at $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 echo "[start] production application startup"
 echo "[start] target: ${REQUIRED_HOST}:${REQUIRED_PORT}/${REQUIRED_DB}?schema=${REQUIRED_SCHEMA}"
+
+echo "[start] applying guarded Payload schema bootstrap"
+node scripts/release/run-production-payload-migrations.mjs
 
 PAYLOAD_SCHEMA_PREFLIGHT="${PAYLOAD_SCHEMA_PREFLIGHT:-true}"
 if [[ "$PAYLOAD_SCHEMA_PREFLIGHT" == "true" ]]; then

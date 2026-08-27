@@ -60,3 +60,12 @@ else
 	echo "JPV_PRISMA_MIGRATION_FAILED Prisma migration command failed" >&2
 	exit 1
 fi
+
+if node scripts/release/run-production-payload-migrations.mjs; then
+	echo "JPV_PAYLOAD_MIGRATION_APPLIED Payload migrations applied successfully"
+else
+	echo "JPV_PRISMA_MIGRATION_FAILED Payload migration command failed" >&2
+	exit 1
+fi
+
+echo "JPV_PRISMA_MIGRATION_APPLIED production Prisma and Payload migrations applied successfully"

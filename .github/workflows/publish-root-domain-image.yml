@@ -145,7 +145,7 @@ jobs:
         run: |
           echo "Published image: ghcr.io/${{ github.repository }}:${{ github.sha }}"
 
-      - name: Update and trigger root Dokploy deployment
+      - name: Update root Dokploy image configuration
         if: success()
         shell: bash
         env:
@@ -188,6 +188,29 @@ jobs:
               exit 1
               ;;
           esac
+
+      - name: Trigger root Dokploy deployment
+        if: success()
+        shell: bash
+        env:
+          DOKPLOY_API_KEY: ${{ secrets.DOKPLOY_API_KEY }}
+          DOKPLOY_APPLICATION_ID: I_2Vukga3cc3ZhaG-mUzU
+          DOKPLOY_API_BASE_URL: https://dokploy.prochat.tools/api
+        run: |
+          set -euo pipefail
+
+          ALLOWED_APPLICATION_ID="I_2Vukga3cc3ZhaG-mUzU"
+          ALLOWED_APPLICATION_NAME="clients-jpv-bootcamp-app-tp9xrk"
+          NEW_IMAGE="ghcr.io/${{ github.repository }}:${{ github.sha }}"
+
+          if [ -z "$DOKPLOY_API_KEY" ]; then
+            echo "DEPLOY-DENIED: DOKPLOY_API_KEY is unset or empty" >&2
+            exit 1
+          fi
+          if [ "$DOKPLOY_APPLICATION_ID" != "$ALLOWED_APPLICATION_ID" ]; then
+            echo "DEPLOY-DENIED: Dokploy application ID does not match the root production allow-list" >&2
+            exit 1
+          fi
 
           deploy_json=$(jq -cn \
             --arg applicationId "$DOKPLOY_APPLICATION_ID" \
