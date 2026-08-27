@@ -37,7 +37,7 @@ export function MemberLoginForm({
 
   async function clearDeniedSession(): Promise<void> {
     try {
-      await fetch('/api/payload_members/logout', {
+      await fetch('/api/portal/logout', {
         method: 'POST',
         credentials: 'include',
       })

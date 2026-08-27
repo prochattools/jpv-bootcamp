@@ -109,6 +109,7 @@ function SidebarContent({
   showLogout,
   onLogout,
   logoutSubmitting,
+  logoutError,
   onNavigate,
   navPinned,
   navGroups,
@@ -117,6 +118,7 @@ function SidebarContent({
   showLogout: boolean
   onLogout: () => void
   logoutSubmitting: boolean
+  logoutError: string | null
   onNavigate?: () => void
   navPinned?: PortalNavItem[]
   navGroups?: PortalNavGroup[]
@@ -210,15 +212,22 @@ function SidebarContent({
             )
           })}
           {showLogout ? (
-            <button
-              className='flex min-h-11 w-full items-center gap-3 rounded-jpv-action px-3 py-2 text-sm font-medium text-jpv-ink transition hover:bg-jpv-canvas hover:text-jpv-brand-deep disabled:cursor-not-allowed disabled:opacity-60'
-              disabled={logoutSubmitting}
-              onClick={onLogout}
-              type='button'
-            >
-              <LogOut aria-hidden='true' className='h-4.5 w-4.5 shrink-0' />
-              <span className='min-w-0 truncate'>{logoutSubmitting ? 'Signing out…' : 'Sign out'}</span>
-            </button>
+            <>
+              <button
+                className='flex min-h-11 w-full items-center gap-3 rounded-jpv-action px-3 py-2 text-sm font-medium text-jpv-ink transition hover:bg-jpv-canvas hover:text-jpv-brand-deep disabled:cursor-not-allowed disabled:opacity-60'
+                disabled={logoutSubmitting}
+                onClick={onLogout}
+                type='button'
+              >
+                <LogOut aria-hidden='true' className='h-4.5 w-4.5 shrink-0' />
+                <span className='min-w-0 truncate'>{logoutSubmitting ? 'Signing out…' : 'Sign out'}</span>
+              </button>
+              {logoutError ? (
+                <p aria-live='polite' className='px-3 pt-1 text-xs text-red-700' role='alert'>
+                  {logoutError}
+                </p>
+              ) : null}
+            </>
           ) : null}
         </div>
       </nav>
@@ -237,19 +246,23 @@ type PortalSidebarProps = {
 export function PortalSidebar({ showLogout, mobileOpen, onMobileClose, navPinned, navGroups }: PortalSidebarProps) {
   const pathname = usePathname()
   const [logoutSubmitting, setLogoutSubmitting] = useState(false)
+  const [logoutError, setLogoutError] = useState<string | null>(null)
 
   async function handleLogout() {
+    setLogoutError(null)
     setLogoutSubmitting(true)
     try {
-      const response = await fetch('/api/payload_members/logout', {
+      const response = await fetch('/api/portal/logout', {
         method: 'POST',
         credentials: 'include',
       })
       if (response.ok) {
         window.location.assign('/portal?mode=login&loggedOut=1')
+      } else {
+        setLogoutError('Sign out could not be completed. Please try again.')
       }
     } catch {
-      // silent fail — user can retry
+      setLogoutError('Sign out is temporarily unavailable. Please try again.')
     } finally {
       setLogoutSubmitting(false)
     }
@@ -262,6 +275,7 @@ export function PortalSidebar({ showLogout, mobileOpen, onMobileClose, navPinned
         data-portal-sidebar
       >
         <SidebarContent
+          logoutError={logoutError}
           logoutSubmitting={logoutSubmitting}
           navGroups={navGroups}
           navPinned={navPinned}
@@ -294,6 +308,7 @@ export function PortalSidebar({ showLogout, mobileOpen, onMobileClose, navPinned
             </div>
             <div className='flex flex-1 flex-col overflow-y-auto'>
               <SidebarContent
+                logoutError={logoutError}
                 logoutSubmitting={logoutSubmitting}
                 navGroups={navGroups}
                 navPinned={navPinned}

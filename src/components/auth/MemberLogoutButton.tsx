@@ -11,7 +11,7 @@ export function MemberLogoutButton() {
     setSubmitting(true)
 
     try {
-      const response = await fetch('/api/payload_members/logout', {
+      const response = await fetch('/api/portal/logout', {
         method: 'POST',
         credentials: 'include',
       })

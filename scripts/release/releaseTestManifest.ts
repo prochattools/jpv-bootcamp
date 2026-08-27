@@ -153,6 +153,7 @@ export const RELEASE_TEST_MANIFEST: ReleaseTestEntry[] = [
 
   test('auth.architecture', 'authentication and account security', 'scripts/payload_member_auth_architecture.test.ts', 'Protects the server-derived Payload member authentication architecture.', 'Authentication ownership or trust boundaries regressed.', 'M1-02'),
   test('auth.flow', 'authentication and account security', 'scripts/payload_member_auth_flow.test.ts', 'Validates member login, session, and logout behavior.', 'Members cannot authenticate safely.', 'M1-02'),
+  test('auth.portal-logout', 'authentication and account security', 'scripts/portal_logout_route.test.ts', 'Protects shared portal logout for both member and administrator sessions.', 'Portal users cannot terminate their session cleanly.', 'M1-02'),
   test('auth.registration', 'authentication and account security', 'scripts/payload_member_registration.test.ts', 'Protects member registration validation and persistence boundaries.', 'Registration can create unsafe or inconsistent accounts.', 'M1-02'),
   test('auth.email-verification', 'authentication and account security', 'scripts/payload_member_email_verification.test.ts', 'Protects verification token and state handling.', 'Unverified identities can bypass account controls.', 'M1-02'),
   test('auth.email-verification-integration', 'authentication and account security', 'scripts/payload_member_email_verification_integration.test.ts', 'Protects verification route and service integration.', 'Verification routes and account state diverged.', 'M1-02'),
