@@ -101,10 +101,6 @@ export const PayloadLiveSession: CollectionConfig = {
           ...(data as LiveSessionDocument),
         }
         const mergedCourse = liveSessionRelationshipId(merged.course)
-        const mergedSpace = liveSessionRelationshipId(merged.space)
-        if (!mergedCourse && !mergedSpace) {
-          throw new Error('A live session must be linked to either a course or a community space.')
-        }
         if (mergedCourse) {
           await assertLiveSessionRelationships({
             payload: req.payload,
@@ -148,7 +144,7 @@ export const PayloadLiveSession: CollectionConfig = {
       relationTo: 'payload_courses',
       label: 'Course',
       admin: {
-        description: 'Required for course-based sessions. Leave blank for community space calls.',
+        description: 'Optional. Link this session to a course when it is course-specific.',
       },
     },
     {
@@ -177,7 +173,7 @@ export const PayloadLiveSession: CollectionConfig = {
       relationTo: 'payload_spaces',
       label: 'Community Space',
       admin: {
-        description: 'Required for community group calls. Leave blank for course-based sessions.',
+        description: 'Optional. Link this session to a community space when it is space-specific.',
       },
     },
     {

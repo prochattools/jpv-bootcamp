@@ -52,11 +52,12 @@ function EmojiIcon({ className }: { className?: string }) {
 type ComposerToolbarProps = {
   textareaId: string
   onInsertVideo?: (url: string) => void
+  onInsertVideoFile?: (file: File) => void | Promise<void>
   onInsertLink?: (url: string) => void
-  onInsertImage?: (file: File) => void
+  onInsertImage?: (file: File) => void | Promise<void>
 }
 
-export function ComposerToolbar({ textareaId, onInsertVideo, onInsertLink, onInsertImage }: ComposerToolbarProps) {
+export function ComposerToolbar({ textareaId, onInsertVideo, onInsertVideoFile, onInsertLink, onInsertImage }: ComposerToolbarProps) {
   const [showVideoInput, setShowVideoInput] = useState(false)
   const [showLinkInput, setShowLinkInput] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -83,29 +84,45 @@ export function ComposerToolbar({ textareaId, onInsertVideo, onInsertLink, onIns
     setShowLinkInput(false)
   }
 
-  function handleImageClick() {
+  function handleFileClick(accept: string) {
+    if (fileInputRef.current) fileInputRef.current.accept = accept
     fileInputRef.current?.click()
   }
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
-    if (file && onInsertImage) {
-      onInsertImage(file)
+    if (file?.type.startsWith('video/') && onInsertVideoFile) {
+      void onInsertVideoFile(file)
+    } else if (file && onInsertImage) {
+      void onInsertImage(file)
     }
     e.target.value = ''
   }
 
   function insertTextAtCursor(text: string) {
-    const textarea = document.getElementById(textareaId) as HTMLTextAreaElement | null
-    if (!textarea) return
-    const start = textarea.selectionStart
-    const end = textarea.selectionEnd
-    const before = textarea.value.slice(0, start)
-    const after = textarea.value.slice(end)
-    textarea.value = before + text + after
-    textarea.selectionStart = textarea.selectionEnd = start + text.length
-    textarea.focus()
-    textarea.dispatchEvent(new Event('input', { bubbles: true }))
+    const target = document.getElementById(textareaId)
+    if (!target) return
+    if (target instanceof HTMLTextAreaElement || target instanceof HTMLInputElement) {
+      const start = target.selectionStart ?? target.value.length
+      const end = target.selectionEnd ?? start
+      target.value = `${target.value.slice(0, start)}${text}${target.value.slice(end)}`
+      target.selectionStart = target.selectionEnd = start + text.length
+      target.focus()
+    } else if (target instanceof HTMLElement && target.isContentEditable) {
+      target.focus()
+      const selection = window.getSelection()
+      const range = selection?.rangeCount ? selection.getRangeAt(0) : document.createRange()
+      if (!selection?.rangeCount || !target.contains(range.commonAncestorContainer)) {
+        range.selectNodeContents(target)
+        range.collapse(false)
+      }
+      range.deleteContents()
+      range.insertNode(document.createTextNode(text))
+      range.collapse(false)
+      selection?.removeAllRanges()
+      selection?.addRange(range)
+    }
+    target.dispatchEvent(new Event('input', { bubbles: true }))
   }
 
   return (
@@ -114,7 +131,7 @@ export function ComposerToolbar({ textareaId, onInsertVideo, onInsertLink, onIns
         <button
           aria-label='Add image'
           className='rounded-md p-1.5 text-jpv-muted transition hover:bg-jpv-canvas hover:text-jpv-ink'
-          onClick={handleImageClick}
+          onClick={() => handleFileClick('image/*')}
           type='button'
         >
           <ImageIcon className='h-5 w-5' />
@@ -171,6 +188,7 @@ export function ComposerToolbar({ textareaId, onInsertVideo, onInsertLink, onIns
             type='url'
           />
           <button className='jpv-button-primary min-h-8 px-3 text-xs' type='submit'>Insert</button>
+          {onInsertVideoFile ? <button className='jpv-button-secondary min-h-8 px-3 text-xs' onClick={() => handleFileClick('video/*')} type='button'>Upload video</button> : null}
           <button className='text-xs text-jpv-muted hover:text-jpv-ink' onClick={() => setShowVideoInput(false)} type='button'>Cancel</button>
         </form>
       )}

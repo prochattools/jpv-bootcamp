@@ -1,6 +1,7 @@
 import Link from 'next/link'
 
 import { ContentCardImage } from '@/components/portal/ContentCardImage'
+import { AdminGate } from '@/components/portal/AdminGate'
 import { PortalAnnouncementComposer } from '@/components/portal/PortalAnnouncementComposer'
 import { requirePortalAccess } from '@/lib/auth/requirePortalAccess'
 import { listPublishedMemberContent } from '@/lib/payloadContent/memberContent'
@@ -16,11 +17,7 @@ export default async function PortalContentPage() {
   const { actor, payload } = await requirePortalAccess('/portal/content')
   const content = await listPublishedMemberContent(payload, actor.kind === 'member' ? actor.memberId : null)
   const adminData = actor.kind === 'admin'
-    ? await Promise.all([
-      payload.find({ collection: 'payload_members', where: { accountStatus: { equals: 'active' } }, limit: 500, depth: 0, overrideAccess: true }),
-      payload.find({ collection: 'payload_media', limit: 500, depth: 0, overrideAccess: true }),
-      payload.find({ collection: 'bunny_videos', limit: 500, depth: 0, overrideAccess: true }),
-    ])
+    ? await payload.find({ collection: 'payload_members', where: { accountStatus: { equals: 'active' } }, limit: 500, depth: 0, overrideAccess: true })
     : null
 
   return (
@@ -34,11 +31,11 @@ export default async function PortalContentPage() {
       </header>
 
       {adminData ? (
-        <PortalAnnouncementComposer
-          members={adminData[0].docs.map((member) => ({ id: String(member.id), label: String(member.displayName ?? member.name ?? member.email ?? 'Member') }))}
-          media={adminData[1].docs.map((item) => ({ id: String(item.id), label: String(item.filename ?? item.title ?? 'Media') }))}
-          videos={adminData[2].docs.map((item) => ({ id: String(item.id), label: String(item.title ?? item.videoGuid ?? 'Video') }))}
-        />
+        <AdminGate>
+          <PortalAnnouncementComposer
+            members={adminData.docs.map((member) => ({ id: String(member.id), label: String(member.displayName ?? member.name ?? member.email ?? 'Member') }))}
+          />
+        </AdminGate>
       ) : null}
 
       {content.length > 0 ? (

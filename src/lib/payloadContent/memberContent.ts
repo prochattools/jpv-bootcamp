@@ -59,7 +59,7 @@ async function findPublishedBySlug(
       ],
     },
     limit: 1,
-    depth: 0,
+    depth: 1,
     overrideAccess: true,
   })
 

@@ -19,14 +19,17 @@ class FakePayload implements PayloadCourseAccessAPI {
     }
 
     if (args.collection === 'live_sessions') {
-      const allowed = new Set(['course-1'])
       return {
         docs: (this.collections.live_sessions ?? []).filter((session) => {
           const course = session.course
+          const space = session.space
+          if (!course && !space) {
+            return session.audience === 'all' || (session.audience === 'selected' && Array.isArray(session.targetMemberIds) && session.targetMemberIds.includes('member-1'))
+          }
           const courseId = typeof course === 'object' && course && 'id' in course
             ? String((course as { id: PayloadId }).id)
             : String(course)
-          return allowed.has(courseId)
+          return courseId === 'course-1'
         }),
       }
     }
@@ -83,12 +86,23 @@ describe('member live session discovery', () => {
           roomName: 'jpv-course-course-2-module-general-lesson-general',
           course: { id: 'course-2', title: 'Other Course' },
         },
+        {
+          id: 'session-targeted',
+          title: 'Targeted portal session',
+          status: 'live',
+          scheduledAt: '2026-07-28T12:00:00.000Z',
+          roomName: 'jpv-live-1724184000-ab12cd34',
+          course: null,
+          space: null,
+          audience: 'selected',
+          targetMemberIds: ['member-1'],
+        },
       ],
     })
 
     const sessions = await listMemberLiveSessions(payload, 'member-1')
 
-    expect(sessions).toHaveLength(3)
+    expect(sessions).toHaveLength(4)
     expect(sessions.find((session) => session.id === 'session-live')).toMatchObject({
       canJoin: true,
       roomReady: true,
@@ -98,6 +112,12 @@ describe('member live session discovery', () => {
     expect(sessions.find((session) => session.id === 'session-invalid-room')).toMatchObject({
       canJoin: false,
       roomReady: false,
+    })
+    expect(sessions.find((session) => session.id === 'session-targeted')).toMatchObject({
+      canJoin: true,
+      roomReady: true,
+      courseId: null,
+      spaceId: null,
     })
   })
 

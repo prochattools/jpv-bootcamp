@@ -54,7 +54,7 @@ function isLiveSessionStatus(value: unknown): value is LiveSessionStatus {
 }
 
 function targetIds(value: unknown): Set<string> {
-  return new Set(Array.isArray(value) ? value.map((entry) => String(entry)) : [])
+  return new Set(Array.isArray(value) ? value.map(liveSessionRelationshipId).filter((id): id is string => Boolean(id)) : [])
 }
 
 export function isLiveSessionAudienceAllowed(
@@ -119,7 +119,7 @@ export async function listMemberLiveSessions(
     const spaceId = liveSessionRelationshipId(document.space)
     const status = document.status
     const scheduledAt = text(document.scheduledAt)
-    if ((!courseId && !spaceId) || !isLiveSessionStatus(status) || !scheduledAt) return []
+    if (!isLiveSessionStatus(status) || !scheduledAt) return []
     if (!isLiveSessionAudienceAllowed(document, memberId, new Set(courseIds), spaceIds)) return []
 
     const roomReady = isValidLiveSessionRoomName(document.roomName)

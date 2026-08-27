@@ -23,6 +23,10 @@ function adminActor(idValue: string | number) {
   return { id: idValue, collection: 'payload_users' as const }
 }
 
+function isStartNow(value: unknown): boolean {
+  return value === true || value === 'true' || value === '1'
+}
+
 async function requireAdmin(request: NextRequest): Promise<string | null> {
   const session = await resolvePayloadRequestSession(request.headers)
   return session.administratorId ? String(session.administratorId) : null
@@ -41,15 +45,19 @@ export async function POST(request: NextRequest) {
   if (!administratorId) return NextResponse.json({ ok: false, message: 'Administrator access is required.' }, { status: 403 })
   try {
     const body = await request.json() as Record<string, unknown>
-    const title = text(body.title)
-    const scheduledAt = new Date(text(body.scheduledAt) || Date.now())
+    const startNow = isStartNow(body.startNow)
+    const title = text(body.title) || 'JPV Live Session'
+    const scheduledAt = new Date(startNow ? Date.now() : text(body.scheduledAt))
     const course = id(body.course)
     const space = id(body.space)
-    const audience = body.audience === 'all' || body.audience === 'selected' ? body.audience : 'enrolled'
+    const audience = body.audience === 'all' || body.audience === 'enrolled' || body.audience === 'selected' ? body.audience : 'selected'
     const targetMemberIds = audience === 'selected' && Array.isArray(body.targetMemberIds) ? body.targetMemberIds.map(id).filter((value): value is string => Boolean(value)) : undefined
     const capacity = Number(body.capacity ?? 50)
-    if (!title || (!course && !space) || (course && space) || Number.isNaN(scheduledAt.getTime())) {
-      return NextResponse.json({ ok: false, message: 'Title, exactly one course or space, and a valid schedule are required.' }, { status: 400 })
+    if ((course && space) || Number.isNaN(scheduledAt.getTime())) {
+      return NextResponse.json({ ok: false, message: 'Choose a valid start time. A course or community space is optional.' }, { status: 400 })
+    }
+    if (!course && !space && audience === 'enrolled') {
+      return NextResponse.json({ ok: false, message: 'For an unlinked session, choose all active members or selected members.' }, { status: 400 })
     }
     if (audience === 'selected' && (!targetMemberIds || targetMemberIds.length === 0)) {
       return NextResponse.json({ ok: false, message: 'Select at least one member for a targeted session.' }, { status: 400 })
@@ -73,16 +81,26 @@ export async function POST(request: NextRequest) {
       overrideAccess: true,
       user: adminActor(administratorId),
     })
+    let session = created
+    if (startNow) {
+      session = await payload.update({
+        collection: 'live_sessions',
+        id: created.id,
+        data: { status: 'live' },
+        overrideAccess: true,
+        user: adminActor(administratorId),
+      })
+    }
     const baseUrl = process.env.APP_BASE_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? 'https://jpvbootcamp.com'
     let emailEventsCreated = 0
     let invitationWarning: string | undefined
     try {
-      emailEventsCreated = await notifyLiveSessionRecipients(payload, created, baseUrl)
+      emailEventsCreated = await notifyLiveSessionRecipients(payload, session, baseUrl)
     } catch (error) {
       invitationWarning = 'The session was created, but invitations could not be fully queued. Review the email queue.'
       console.error('[portal live sessions POST] invitation fan-out failed:', error instanceof Error ? error.message : String(error))
     }
-    return NextResponse.json({ ok: true, session: created, emailEventsCreated, invitationWarning }, { status: 201 })
+    return NextResponse.json({ ok: true, session, emailEventsCreated, invitationWarning }, { status: 201 })
   } catch (error) {
     console.error('[portal live sessions POST] error:', error instanceof Error ? error.message : String(error))
     return NextResponse.json({ ok: false, message: error instanceof Error ? error.message : 'Unable to create live session.' }, { status: 400 })

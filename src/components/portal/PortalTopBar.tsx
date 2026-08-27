@@ -42,7 +42,7 @@ export function PortalTopBar({ onMobileMenuOpen, showThemeToggle }: PortalTopBar
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const pageTitle = resolvePageTitle(pathname)
-  const { isAdmin } = useAdminMode()
+  const { isAdmin, adminModeOn, toggleAdminMode } = useAdminMode()
   const isPortalLogin = pathname === '/portal' && searchParams.get('mode') === 'login'
 
   return (
@@ -66,9 +66,15 @@ export function PortalTopBar({ onMobileMenuOpen, showThemeToggle }: PortalTopBar
 
       <div className='flex shrink-0 items-center gap-0 sm:gap-1'>
         {isAdmin ? (
-          <span className='hidden rounded-jpv-action bg-jpv-brand-deep px-2.5 py-1.5 text-xs font-semibold text-jpv-canvas sm:inline'>
-            Admin On
-          </span>
+          <button
+            aria-pressed={adminModeOn}
+            aria-label={adminModeOn ? 'Turn admin mode off' : 'Turn admin mode on'}
+            className={`inline-flex rounded-jpv-action px-2.5 py-1.5 text-xs font-semibold transition ${adminModeOn ? 'bg-jpv-brand-deep text-jpv-canvas hover:bg-jpv-brand-hover' : 'border border-jpv-border bg-jpv-surface text-jpv-ink hover:bg-jpv-canvas'}`}
+            onClick={toggleAdminMode}
+            type='button'
+          >
+            {adminModeOn ? 'Admin On' : 'Admin Off'}
+          </button>
         ) : null}
         {showThemeToggle && !isPortalLogin ? <ThemeToggle /> : null}
         <NotificationBell />
