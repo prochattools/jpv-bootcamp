@@ -21,22 +21,24 @@ explicitly superseded here.
 - **Current branch:** `codex/production-architecture-consolidation`, descended
   directly from the verified `main` tip and A0 parent
   `c43e899824b993200b05f1b337993eb55fae0905`.
-- **Current packet:** A2 correction complete locally. It retains the A1
-  authorization and action-result foundation and adds canonical server-safe
-  validation, relationship-ID normalization, deterministic plain-text Payload
-  Lexical serialization without silent default character truncation,
-  equivalent-helper consolidation across the reviewed services, and the Portal
-  Admin service map.
+- **Current packet:** A3 Community Domain Convergence complete locally. It
+  retains the A1 authorization/action-result foundation and A2 shared
+  primitives, and adds shared community actor policy, Payload persistence, and
+  edit/delete/moderation commands with thin member/admin transports. The
+  behavior matrix is recorded in
+  `docs/architecture/JPV_COMMUNITY_DOMAIN_CONTRACT.md`.
 - **Behavior boundary:** `requirePortalMember()`, `requirePortalAccess()`,
-  login routing, domain operations, schemas, providers, production `main`, and
-  production data were not changed. The separate request-header Live Sessions
-  API helper remains outside this Server Action packet for behavior-preserving
-  follow-up review.
-- **Exact next packet:** A3 — Community Domain Convergence.
-- **Approved sequence after A2:** A4 — Course/Creator Domain Convergence; A5 —
+  login routing, schemas, providers, production `main`, and production data
+  were not changed. Community post creation remains in
+  `src/lib/payloadCourse/communityPosting.ts` with its existing rate limit,
+  moderation, mention/post notifications, and duplicate-prevention behavior.
+  The separate request-header Live Sessions API helper remains outside this
+  packet.
+- **Exact next packet:** A4 — Course/Creator Domain Convergence.
+- **Approved sequence after A3:** A4 — Course/Creator Domain Convergence; A5 —
   Source-of-Truth and Architecture Enforcement; A6 — Full Regression and
   Controlled Production Integration.
-- **Hard stops:** do not start A3, merge historical branches, run migrations,
+- **Hard stops:** do not start A4, merge historical branches, run migrations,
   mutate production/providers, delete branches/worktrees, push, build, or
   deploy from this packet. Preserve unknown residue, route ambiguity, and
   stale roadmap claims for the packet that owns them.

@@ -1,14 +1,15 @@
 # JPV Portal Admin Service Map
 
-**Status:** A2 SERVICE-BOUNDARY FOUNDATION COMPLETE — LOCAL REVIEW ARTIFACT
+**Status:** A3 COMMUNITY DOMAIN CONVERGENCE COMPLETE — LOCAL REVIEW ARTIFACT
 
 **Date:** 2026-08-27
 
 This map records the active administrator-facing portal transports and the
 service boundaries they currently use. It is a repository map, not a runtime
-or production verification. A2 keeps behavior and persistence unchanged; it
-consolidates shared validation, relationship-ID extraction, and plain-text
-Lexical serialization only.
+or production verification. A2 established shared primitives; A3 keeps
+behavior and persistence unchanged while consolidating overlapping community
+post/comment mutation and moderation semantics behind shared policy,
+persistence, and commands.
 
 ## Boundary vocabulary
 
@@ -46,10 +47,11 @@ transport callers and do not own persistence or authorization.
 
 ## Community administration actions
 
-These actions enter through the same A1 administrator gate and use the existing
-community domain logic. Space actions persist to `payload_spaces`; moderation
-actions persist to `payload_space_posts` or `payload_space_comments`. Every
-successful mutation writes the existing audit event and revalidates the
+These actions enter through the same A1 administrator gate and use the A3
+shared community commands. Space actions persist to `payload_spaces`; post,
+comment, and moderation commands persist through the shared community
+persistence boundary to `payload_space_posts` or `payload_space_comments`.
+Every successful mutation writes the existing audit event and revalidates the
 community/space/post path selected by the adapter.
 
 | Active action | Transport caller | Domain operation/persistence |
@@ -59,18 +61,37 @@ community/space/post path selected by the adapter.
 | `archiveSpaceAction` | `SpaceAdminPanel.tsx` | Status update through `updateSpaceAction`. |
 | `restoreSpaceAction` | `SpaceAdminPanel.tsx` | Status update through `updateSpaceAction`. |
 | `deleteSpaceAction` | `SpaceAdminPanel.tsx` | Confirmed dependency-safe delete of `payload_spaces`. |
-| `adminPinPostAction` | `PostModerationPanel.tsx` | Set `pinned` on `payload_space_posts`. |
-| `adminUnpinPostAction` | `PostModerationPanel.tsx` | Clear `pinned` on `payload_space_posts`. |
-| `adminLockPostAction` | `PostModerationPanel.tsx` | Set `locked` on `payload_space_posts`. |
-| `adminUnlockPostAction` | `PostModerationPanel.tsx` | Clear `locked` on `payload_space_posts`. |
-| `adminHidePostAction` | `PostModerationPanel.tsx` | Set post moderation status to hidden. |
-| `adminUnhidePostAction` | `PostModerationPanel.tsx` | Restore post moderation visibility. |
-| `adminDeletePostAction` | `PostModerationPanel.tsx` | Confirmed delete of a post through the existing moderation rules. |
-| `adminEditPostAction` | `PostModerationPanel.tsx` | Update post title/body with bounded input and canonical Lexical output. |
-| `adminEditCommentAction` | `CommentModerationActions.tsx` | Update comment body with bounded input and canonical Lexical output. |
-| `adminDeleteCommentAction` | `CommentModerationActions.tsx` | Confirmed delete of a comment through moderation rules. |
-| `adminHideCommentAction` | `CommentModerationActions.tsx` | Set comment moderation status to hidden. |
-| `adminUnhideCommentAction` | `CommentModerationActions.tsx` | Restore comment moderation visibility. |
+| `adminPinPostAction` | `PostModerationPanel.tsx` | `commands.ts#moderateCommunityPostCommand`; shared policy/persistence sets `pinned`. |
+| `adminUnpinPostAction` | `PostModerationPanel.tsx` | `commands.ts#moderateCommunityPostCommand`; shared policy/persistence clears `pinned`. |
+| `adminLockPostAction` | `PostModerationPanel.tsx` | `commands.ts#moderateCommunityPostCommand`; shared policy/persistence sets `locked`. |
+| `adminUnlockPostAction` | `PostModerationPanel.tsx` | `commands.ts#moderateCommunityPostCommand`; shared policy/persistence clears `locked`. |
+| `adminHidePostAction` | `PostModerationPanel.tsx` | `commands.ts#moderateCommunityPostCommand`; shared policy/persistence sets post moderation status to hidden. |
+| `adminUnhidePostAction` | `PostModerationPanel.tsx` | `commands.ts#moderateCommunityPostCommand`; shared policy/persistence restores post moderation visibility. |
+| `adminDeletePostAction` | `PostModerationPanel.tsx` | `commands.ts#deleteCommunityPostCommand`; preserves confirmation and dependency-safe moderation deletion. |
+| `adminEditPostAction` | `PostModerationPanel.tsx` | `commands.ts#editCommunityPostCommand`; shared bounded input, relationship checks, and persistence. |
+| `adminEditCommentAction` | `CommentModerationActions.tsx` | `commands.ts#editCommunityCommentCommand`; shared relationship checks and persistence. |
+| `adminDeleteCommentAction` | `CommentModerationActions.tsx` | `commands.ts#deleteCommunityCommentCommand`; shared relationship checks and persistence. |
+| `adminHideCommentAction` | `CommentModerationActions.tsx` | `commands.ts#moderateCommunityCommentCommand`; shared policy/persistence sets hidden. |
+| `adminUnhideCommentAction` | `CommentModerationActions.tsx` | `commands.ts#moderateCommunityCommentCommand`; shared policy/persistence restores visibility. |
+
+### A3 shared community boundary
+
+The shared community implementation is intentionally split into small
+server-safe modules:
+
+| Boundary | Responsibility |
+| --- | --- |
+| `src/lib/community/policy.ts` | Actor-aware ownership and administrator moderation policy. A linked `memberId` does not turn an `AdminActor` into a `MemberActor`. |
+| `src/lib/community/persistence.ts` | Space/post/comment relationship checks and Payload reads/writes behind the narrow mutation access object. |
+| `src/lib/community/commands.ts` | Shared edit/delete/moderation commands, bounded input, dependency checks, audit semantics, and side-effect boundaries. |
+| `src/app/(frontend)/portal/community/actions.ts` | Thin member transport for auth, safe result/redirect contracts, targeted revalidation, and the existing create/mention notification pipeline. |
+| `src/lib/portalAdmin/communityAdminActions.ts` | Thin administrator transport for auth, confirmation/result contracts, targeted revalidation, and existing admin audit action names. |
+
+Community post creation remains in `src/lib/payloadCourse/communityPosting.ts`.
+Its member-specific rate limit, moderation, mention notification, post
+notification, and duplicate-prevention behavior are intentionally not merged
+into the mutation command layer. No member notifications are emitted by admin
+moderation commands.
 
 ## Other administrator-facing portal transports
 
@@ -115,17 +136,26 @@ was merged, cherry-picked, deleted, or rewritten.
 | `feature/course-branding-and-preview` | Tip is an ancestor of this branch; no file delta remains. | Already integrated/superseded; do not replay. |
 | `codex/feature-billing-integration` | One unique no-write Stripe reconciliation commit and focused test delta remain. | Still unique but outside A2; preserve unmerged for A5 source-of-truth and architecture-enforcement review. |
 
-## A2 completion and next boundary
+### A3 branch comparison addendum
 
-A2 is complete when the canonical primitives, this service map, the scoped
-documentation updates, focused tests, broader repository checks, and the local
-commit are present. A2 does not include UI redesign, data/schema migration,
-provider changes, production actions, access-policy changes, service rewrites,
-or branch integration. The next packet is A3 Community Domain Convergence. A4
-is Course / Creator Domain Convergence; A5 is Source-of-Truth + Architecture
-Enforcement; A6 is Full Regression / Controlled Production Integration. These
-packets must remain separately authorized and must preserve the source-of-truth
-and reconciliation rules before any data backfill is proposed.
+The A3 comparison was read-only. No additional community branch was available
+to adopt: `codex/community-route-integrity` and
+`codex/production-app-flow-fix` were not present in the local ref inventory.
+The available older named branches were already ancestors or were classified
+as unique work outside A3; none was merged, cherry-picked, deleted, rebased,
+or force-pushed.
+
+## A3 completion and next boundary
+
+A3 is complete locally when this service map, the community contract, the
+shared policy/persistence/command modules, the thin transports, focused tests,
+broader repository checks, and the local commit are present. A3 does not
+include UI redesign, data/schema migration, provider changes, production
+actions, access-policy changes, or branch integration. A4 is Course / Creator
+Domain Convergence; A5 is Source-of-Truth + Architecture Enforcement; A6 is
+Full Regression / Controlled Production Integration. These packets remain
+separately authorized and must preserve the source-of-truth and
+reconciliation rules before any data backfill is proposed.
 
 ## Approved packet sequence after A2
 

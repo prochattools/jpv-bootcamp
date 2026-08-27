@@ -1,6 +1,6 @@
 # JPV Bootcamp Production Architecture v1
 
-**Status:** CURRENT ARCHITECTURE AUTHORITY — A2 FOUNDATION COMPLETE
+**Status:** CURRENT ARCHITECTURE AUTHORITY — A3 COMPLETE LOCALLY; A4–A6 GATED
 
 **Date:** 2026-08-27
 
@@ -59,18 +59,27 @@ The A2 packet is complete locally on the consolidation branch. It adds the
 canonical shared validation, relationship-ID, and plain-text Lexical
 primitives, replaces equivalent duplicate helpers, and records the active
 portal administrator service boundaries in
-`JPV_PORTAL_ADMIN_SERVICE_MAP.md`. No production merge, push, build,
-deployment, migration, provider mutation, or historical branch cleanup was
-performed. A3–A6 remain separately gated.
+`JPV_PORTAL_ADMIN_SERVICE_MAP.md`.
+
+The A3 Community Domain Convergence packet is complete locally from A2 HEAD
+`45625bd6ea96ce8281021910bad46cc1e6bcd135`. It adds the shared community
+actor policy, Payload persistence boundary, edit/delete/moderation commands,
+and thin member/admin transports. The behavior matrix is recorded in
+`JPV_COMMUNITY_DOMAIN_CONTRACT.md`; member post creation, rate limits, mention
+and post notifications, and admin audit/revalidation semantics remain
+preserved. No production merge, push, build, deployment, migration, provider
+mutation, or historical branch cleanup was performed. A4–A6 remain separately
+gated.
 
 ## Architectural hold
 
 The system is live. Normal feature development is paused while A0–A6 establish
 one coherent ownership model. This is a behavior-preserving consolidation, not
-a rewrite. A0 established the production truth and A1 established the
-authorization and Server Action foundation, and A2 established the shared
-domain primitives and service-boundary map. A3–A6 remain gated packets and
-are not implied by this implementation.
+a rewrite. A0 established the production truth, A1 established the
+authorization and Server Action foundation, A2 established the shared domain
+primitives and service-boundary map, and A3 established the shared community
+mutation boundary. A4–A6 remain gated packets and are not implied by this
+implementation.
 
 ## System surfaces
 

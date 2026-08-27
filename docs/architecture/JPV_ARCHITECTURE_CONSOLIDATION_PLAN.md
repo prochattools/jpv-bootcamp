@@ -1,6 +1,6 @@
 # JPV Bootcamp Post-Launch Architecture Consolidation Plan
 
-**Status:** A2 COMPLETE IN THIS IMPLEMENTATION PACKET; A3–A6 NOT STARTED
+**Status:** A3 COMPLETE LOCALLY IN THIS IMPLEMENTATION PACKET; A4–A6 NOT STARTED
 
 **Date:** 2026-08-27
 
@@ -23,8 +23,9 @@ routes, production refs, or release state.
 
 The active service boundaries and the read-only historical branch findings are
 recorded in `JPV_PORTAL_ADMIN_SERVICE_MAP.md`. The unique no-write billing
-branch delta is intentionally preserved for A5 review. A3 remains the next
-packet: Community Domain Convergence. A3–A6 are not started by this record.
+branch delta is intentionally preserved for A5 review. A3 is complete locally
+in the implementation packet below; A4 is the next packet. A4–A6 remain
+unstarted by this record.
 
 ### A2 branch comparison addendum
 
@@ -167,6 +168,36 @@ The approved packet sequence is fixed:
 | Validation | Member/admin actor matrix, edit/delete post/comment behavior, overlapping moderation behavior, audit/notification/revalidation checks, TypeScript, and `git diff --check`. |
 | Stop | Member/admin semantics diverge, actor policy is bypassed, audit or notification behavior changes without evidence, or the operation cannot remain a thin transport over shared logic. |
 | Rollback | Revert only the A3 commit(s), retaining the existing member/admin entry points and persisted records. |
+
+#### A3 completion record
+
+A3 is complete locally on `codex/production-architecture-consolidation` from
+A2 HEAD `45625bd6ea96ce8281021910bad46cc1e6bcd135`. The implementation adds
+`src/lib/community/policy.ts`, `src/lib/community/persistence.ts`, and
+`src/lib/community/commands.ts`, and routes the member/admin edit, delete, and
+moderation transports through those shared boundaries. The behavior matrix is
+recorded in `docs/architecture/JPV_COMMUNITY_DOMAIN_CONTRACT.md`.
+
+- `PortalActor`, `AdminActor`, and `MemberActor` remain distinct. A linked
+  administrator member profile does not turn an admin actor into a member
+  actor; members can edit/delete their own content only, while moderation is
+  administrator-only.
+- Member post creation remains in `src/lib/payloadCourse/communityPosting.ts` so its existing
+  `communityPosting` rate limit, moderation, mention notifications, post
+  notifications, and duplicate-prevention behavior are preserved. Admin
+  moderation emits no member notification.
+- Existing admin audit action names, confirmation/dependency checks, member
+  `{ok,error}` contracts and redirects, admin `PortalAdminActionResult`, and
+  targeted revalidation remain in their transports or shared commands.
+- The read-only branch comparison found no available
+  `codex/community-route-integrity` or `codex/production-app-flow-fix` refs;
+  available older branches were not replayed. No migration, provider write,
+  production mutation, merge, push, build, deployment, or branch cleanup was
+  performed.
+- Focused community domain, posting, moderation, portal, discussion, admin
+  behavior/inline, TypeScript, documentation, and whitespace checks passed
+  locally. A3 rollback is the single local implementation commit; persisted
+  records and existing entry points remain intact.
 
 ### A4 — Course / Creator domain convergence
 

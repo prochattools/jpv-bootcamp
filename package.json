@@ -92,6 +92,7 @@
     "test:payload-community-file-delivery": "tsx scripts/payload_community_file_delivery.test.ts",
     "test:payload-community-discussion": "tsx scripts/payload_community_discussion.test.ts",
     "test:payload-community-moderation": "tsx scripts/payload_community_moderation.test.ts",
+    "test:payload-community-domain": "tsx scripts/payload_community_domain.test.ts",
     "test:payload-community-posting": "tsx scripts/payload_community_posting.test.ts",
     "test:payload-community-portal": "tsx scripts/payload_community_portal.test.ts",
     "test:payload-member-announcements": "tsx scripts/payload_member_announcements.test.ts",

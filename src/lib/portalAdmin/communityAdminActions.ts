@@ -9,10 +9,17 @@ import {
   success,
   type PortalAdminActionResult,
 } from '@/lib/portalAdmin/actionResult'
-import { boundedText, normalizeSlug } from '@/lib/domain/validation'
-import { plainTextToLexical } from '@/lib/content/plainTextToLexical'
-import { relationshipId } from '@/lib/domain/relationships'
+import { normalizeSlug } from '@/lib/domain/validation'
 import { createAuditEvent } from '@/lib/payloadCourse/events'
+import {
+  editCommunityCommentCommand,
+  editCommunityPostCommand,
+  deleteCommunityCommentCommand,
+  deleteCommunityPostCommand,
+  moderateCommunityCommentCommand,
+  moderateCommunityPostCommand,
+  type CommunityCommandContext,
+} from '@/lib/community/commands'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -27,7 +34,6 @@ type SpaceInput = {
   status?: 'draft' | 'published' | 'archived'
   visibility?: 'public' | 'members' | 'private' | 'secret'
 }
-
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -213,39 +219,21 @@ export async function deleteSpaceAction(spaceId: string, confirmed: boolean): Pr
 // Post moderation
 // ---------------------------------------------------------------------------
 
+function adminCommunityContext(
+  payload: CommunityCommandContext['payload'],
+  actor: CommunityCommandContext['actor'],
+  privilegedAccess: CommunityCommandContext['access'],
+): CommunityCommandContext {
+  return { payload, actor, access: privilegedAccess }
+}
+
 export async function adminPinPostAction(postId: string, expectedSpaceId: string): Promise<ActionResult> {
   try {
     const { actor, payload, privilegedAccess } = await requirePortalAdmin('/portal')
-
-    const post = await payload.findByID({
-      collection: 'payload_space_posts',
-      id: postId,
-      depth: 0,
-      ...privilegedAccess,
-    })
-    if (!post) return failure('not_found', 'Post not found.')
-
-    const postSpaceId = relationshipId(post.space)
-    if (postSpaceId !== expectedSpaceId) return failure('invalid_input', 'Post does not belong to the specified space.')
-
-    await payload.update({
-      collection: 'payload_space_posts',
-      id: postId,
-      data: { pinned: true },
-      ...privilegedAccess,
-      overrideLock: true,
-    })
-
-    await createAuditEvent(payload, {
-      actorType: 'admin',
-      actorId: actor.administratorId,
-      action: 'post.pinned',
-      targetCollection: 'payload_space_posts',
-      targetId: postId,
-      before: { pinned: post.pinned },
-      after: { pinned: true },
-    })
-
+    await moderateCommunityPostCommand(
+      adminCommunityContext(payload, actor, privilegedAccess),
+      { postId, expectedSpaceId, operation: 'pin' },
+    )
     revalidatePath('/portal/community')
     return success({})
   } catch (err) {
@@ -256,31 +244,10 @@ export async function adminPinPostAction(postId: string, expectedSpaceId: string
 export async function adminUnpinPostAction(postId: string, expectedSpaceId: string): Promise<ActionResult> {
   try {
     const { actor, payload, privilegedAccess } = await requirePortalAdmin('/portal')
-
-    const post = await payload.findByID({ collection: 'payload_space_posts', id: postId, depth: 0, ...privilegedAccess })
-    if (!post) return failure('not_found', 'Post not found.')
-    const postSpaceId = typeof post.space === 'object' && post.space !== null
-      ? String((post.space as Record<string, unknown>).id)
-      : String(post.space)
-    if (postSpaceId !== expectedSpaceId) return failure('invalid_input', 'Post does not belong to the specified space.')
-
-    await payload.update({
-      collection: 'payload_space_posts',
-      id: postId,
-      data: { pinned: false },
-      ...privilegedAccess,
-      overrideLock: true,
-    })
-
-    await createAuditEvent(payload, {
-      actorType: 'admin',
-      actorId: actor.administratorId,
-      action: 'post.unpinned',
-      targetCollection: 'payload_space_posts',
-      targetId: postId,
-      after: { pinned: false },
-    })
-
+    await moderateCommunityPostCommand(
+      adminCommunityContext(payload, actor, privilegedAccess),
+      { postId, expectedSpaceId, operation: 'unpin' },
+    )
     revalidatePath('/portal/community')
     return success({})
   } catch (err) {
@@ -291,31 +258,10 @@ export async function adminUnpinPostAction(postId: string, expectedSpaceId: stri
 export async function adminLockPostAction(postId: string, expectedSpaceId: string): Promise<ActionResult> {
   try {
     const { actor, payload, privilegedAccess } = await requirePortalAdmin('/portal')
-
-    const post = await payload.findByID({ collection: 'payload_space_posts', id: postId, depth: 0, ...privilegedAccess })
-    if (!post) return failure('not_found', 'Post not found.')
-    const postSpaceId = typeof post.space === 'object' && post.space !== null
-      ? String((post.space as Record<string, unknown>).id)
-      : String(post.space)
-    if (postSpaceId !== expectedSpaceId) return failure('invalid_input', 'Post does not belong to the specified space.')
-
-    await payload.update({
-      collection: 'payload_space_posts',
-      id: postId,
-      data: { locked: true },
-      ...privilegedAccess,
-      overrideLock: true,
-    })
-
-    await createAuditEvent(payload, {
-      actorType: 'admin',
-      actorId: actor.administratorId,
-      action: 'post.locked',
-      targetCollection: 'payload_space_posts',
-      targetId: postId,
-      after: { locked: true },
-    })
-
+    await moderateCommunityPostCommand(
+      adminCommunityContext(payload, actor, privilegedAccess),
+      { postId, expectedSpaceId, operation: 'lock' },
+    )
     revalidatePath('/portal/community')
     return success({})
   } catch (err) {
@@ -326,31 +272,10 @@ export async function adminLockPostAction(postId: string, expectedSpaceId: strin
 export async function adminUnlockPostAction(postId: string, expectedSpaceId: string): Promise<ActionResult> {
   try {
     const { actor, payload, privilegedAccess } = await requirePortalAdmin('/portal')
-
-    const post = await payload.findByID({ collection: 'payload_space_posts', id: postId, depth: 0, ...privilegedAccess })
-    if (!post) return failure('not_found', 'Post not found.')
-    const postSpaceId = typeof post.space === 'object' && post.space !== null
-      ? String((post.space as Record<string, unknown>).id)
-      : String(post.space)
-    if (postSpaceId !== expectedSpaceId) return failure('invalid_input', 'Post does not belong to the specified space.')
-
-    await payload.update({
-      collection: 'payload_space_posts',
-      id: postId,
-      data: { locked: false },
-      ...privilegedAccess,
-      overrideLock: true,
-    })
-
-    await createAuditEvent(payload, {
-      actorType: 'admin',
-      actorId: actor.administratorId,
-      action: 'post.unlocked',
-      targetCollection: 'payload_space_posts',
-      targetId: postId,
-      after: { locked: false },
-    })
-
+    await moderateCommunityPostCommand(
+      adminCommunityContext(payload, actor, privilegedAccess),
+      { postId, expectedSpaceId, operation: 'unlock' },
+    )
     revalidatePath('/portal/community')
     return success({})
   } catch (err) {
@@ -361,38 +286,10 @@ export async function adminUnlockPostAction(postId: string, expectedSpaceId: str
 export async function adminHidePostAction(postId: string, expectedSpaceId: string): Promise<ActionResult> {
   try {
     const { actor, payload, privilegedAccess } = await requirePortalAdmin('/portal')
-
-    const post = await payload.findByID({
-      collection: 'payload_space_posts',
-      id: postId,
-      depth: 0,
-      ...privilegedAccess,
-    })
-    if (!post) return failure('not_found', 'Post not found.')
-
-    const postSpaceId = typeof post.space === 'object' && post.space !== null
-      ? String((post.space as Record<string, unknown>).id)
-      : String(post.space)
-    if (postSpaceId !== expectedSpaceId) return failure('invalid_input', 'Post does not belong to the specified space.')
-
-    await payload.update({
-      collection: 'payload_space_posts',
-      id: postId,
-      data: { moderationStatus: 'hidden' },
-      ...privilegedAccess,
-      overrideLock: true,
-    })
-
-    await createAuditEvent(payload, {
-      actorType: 'admin',
-      actorId: actor.administratorId,
-      action: 'post.hidden',
-      targetCollection: 'payload_space_posts',
-      targetId: postId,
-      before: { moderationStatus: post.moderationStatus },
-      after: { moderationStatus: 'hidden' },
-    })
-
+    await moderateCommunityPostCommand(
+      adminCommunityContext(payload, actor, privilegedAccess),
+      { postId, expectedSpaceId, operation: 'hide' },
+    )
     revalidatePath('/portal/community')
     return success({})
   } catch (err) {
@@ -403,31 +300,10 @@ export async function adminHidePostAction(postId: string, expectedSpaceId: strin
 export async function adminUnhidePostAction(postId: string, expectedSpaceId: string): Promise<ActionResult> {
   try {
     const { actor, payload, privilegedAccess } = await requirePortalAdmin('/portal')
-
-    const post = await payload.findByID({ collection: 'payload_space_posts', id: postId, depth: 0, ...privilegedAccess })
-    if (!post) return failure('not_found', 'Post not found.')
-    const postSpaceId = typeof post.space === 'object' && post.space !== null
-      ? String((post.space as Record<string, unknown>).id)
-      : String(post.space)
-    if (postSpaceId !== expectedSpaceId) return failure('invalid_input', 'Post does not belong to the specified space.')
-
-    await payload.update({
-      collection: 'payload_space_posts',
-      id: postId,
-      data: { moderationStatus: 'visible' },
-      ...privilegedAccess,
-      overrideLock: true,
-    })
-
-    await createAuditEvent(payload, {
-      actorType: 'admin',
-      actorId: actor.administratorId,
-      action: 'post.unhidden',
-      targetCollection: 'payload_space_posts',
-      targetId: postId,
-      after: { moderationStatus: 'visible' },
-    })
-
+    await moderateCommunityPostCommand(
+      adminCommunityContext(payload, actor, privilegedAccess),
+      { postId, expectedSpaceId, operation: 'unhide' },
+    )
     revalidatePath('/portal/community')
     return success({})
   } catch (err) {
@@ -443,46 +319,10 @@ export async function adminDeletePostAction(
   try {
     if (!confirmed) return failure('invalid_input', 'Deletion requires explicit confirmation.')
     const { actor, payload, privilegedAccess } = await requirePortalAdmin('/portal')
-
-    const post = await payload.findByID({
-      collection: 'payload_space_posts',
-      id: postId,
-      depth: 0,
-      ...privilegedAccess,
-    })
-    if (!post) return failure('not_found', 'Post not found.')
-
-    const postSpaceId = typeof post.space === 'object' && post.space !== null
-      ? String((post.space as Record<string, unknown>).id)
-      : String(post.space)
-    if (postSpaceId !== expectedSpaceId) return failure('invalid_input', 'Post does not belong to the specified space.')
-
-    const comments = await payload.find({
-      collection: 'payload_space_comments',
-      where: { post: { equals: postId } },
-      limit: 1,
-      depth: 0,
-      ...privilegedAccess,
-    })
-    if (comments.docs.length > 0)
-      return failure('dependency_blocked', 'Cannot delete post with comments. Hide it instead.')
-
-    if (!payload.delete) throw new Error('delete not available on this payload instance')
-    await payload.delete({
-      collection: 'payload_space_posts',
-      id: postId,
-      ...privilegedAccess,
-    })
-
-    await createAuditEvent(payload, {
-      actorType: 'admin',
-      actorId: actor.administratorId,
-      action: 'post.deleted',
-      targetCollection: 'payload_space_posts',
-      targetId: postId,
-      before: { title: post.title },
-    })
-
+    await deleteCommunityPostCommand(
+      adminCommunityContext(payload, actor, privilegedAccess),
+      { postId, expectedSpaceId },
+    )
     revalidatePath('/portal/community')
     return success({})
   } catch (err) {
@@ -497,55 +337,10 @@ export async function adminEditPostAction(
 ): Promise<ActionResult> {
   try {
     const { actor, payload, privilegedAccess } = await requirePortalAdmin('/portal')
-
-    const post = await payload.findByID({
-      collection: 'payload_space_posts',
-      id: postId,
-      depth: 0,
-      ...privilegedAccess,
-    })
-    if (!post) return failure('not_found', 'Post not found.')
-
-    const postSpaceId = typeof post.space === 'object' && post.space !== null
-      ? String((post.space as Record<string, unknown>).id)
-      : String(post.space)
-    if (postSpaceId !== expectedSpaceId) return failure('invalid_input', 'Post does not belong to the specified space.')
-
-    const data: Record<string, unknown> = {}
-    if (input.title !== undefined) {
-      data.title = boundedText(input.title, 'Title', 300)
-    }
-    if (input.body !== undefined) {
-      if (typeof input.body === 'object' && input.body !== null && 'root' in input.body) {
-        data.body = input.body
-      } else {
-        data.body = plainTextToLexical(
-          boundedText(input.body as string, 'Body', 50_000),
-          { maxParagraphs: 500 },
-        )
-      }
-    }
-
-    if (Object.keys(data).length === 0) return failure('invalid_input', 'Nothing to update.')
-
-    await payload.update({
-      collection: 'payload_space_posts',
-      id: postId,
-      data,
-      ...privilegedAccess,
-      overrideLock: true,
-    })
-
-    await createAuditEvent(payload, {
-      actorType: 'admin',
-      actorId: actor.administratorId,
-      action: 'post.edited',
-      targetCollection: 'payload_space_posts',
-      targetId: postId,
-      before: { title: post.title },
-      after: data.title ? { title: data.title } : { bodyEdited: true },
-    })
-
+    await editCommunityPostCommand(
+      adminCommunityContext(payload, actor, privilegedAccess),
+      { postId, expectedSpaceId, ...input },
+    )
     revalidatePath('/portal/community')
     return success({})
   } catch (err) {
@@ -565,50 +360,10 @@ export async function adminEditCommentAction(
 ): Promise<ActionResult> {
   try {
     const { actor, payload, privilegedAccess } = await requirePortalAdmin('/portal')
-
-    const comment = await payload.findByID({
-      collection: 'payload_space_comments',
-      id: commentId,
-      depth: 0,
-      ...privilegedAccess,
-    })
-    if (!comment) return failure('not_found', 'Comment not found.')
-
-    const commentPostId = relationshipId(comment.post)
-    if (commentPostId !== expectedPostId) return failure('invalid_input', 'Comment does not belong to the specified post.')
-
-    const post = await payload.findByID({ collection: 'payload_space_posts', id: expectedPostId, depth: 0, ...privilegedAccess })
-    if (!post) return failure('not_found', 'Post not found.')
-    const postSpaceId = relationshipId(post.space)
-    if (postSpaceId !== expectedSpaceId) return failure('invalid_input', 'Post does not belong to the specified space.')
-
-    let richTextBody: unknown
-    if (typeof body === 'object' && body !== null && 'root' in body) {
-      richTextBody = body
-    } else {
-      richTextBody = plainTextToLexical(
-        boundedText(body as string, 'Body', 10_000),
-        { maxParagraphs: 100 },
-      )
-    }
-
-    await payload.update({
-      collection: 'payload_space_comments',
-      id: commentId,
-      data: { body: richTextBody },
-      ...privilegedAccess,
-      overrideLock: true,
-    })
-
-    await createAuditEvent(payload, {
-      actorType: 'admin',
-      actorId: actor.administratorId,
-      action: 'comment.edited',
-      targetCollection: 'payload_space_comments',
-      targetId: commentId,
-      after: { bodyType: typeof body === 'object' ? 'lexical' : 'text' },
-    })
-
+    await editCommunityCommentCommand(
+      adminCommunityContext(payload, actor, privilegedAccess),
+      { commentId, body, expectedPostId, expectedSpaceId },
+    )
     revalidatePath('/portal/community')
     return success({})
   } catch (err) {
@@ -625,43 +380,10 @@ export async function adminDeleteCommentAction(
   try {
     if (!confirmed) return failure('invalid_input', 'Deletion requires explicit confirmation.')
     const { actor, payload, privilegedAccess } = await requirePortalAdmin('/portal')
-
-    const comment = await payload.findByID({
-      collection: 'payload_space_comments',
-      id: commentId,
-      depth: 0,
-      ...privilegedAccess,
-    })
-    if (!comment) return failure('not_found', 'Comment not found.')
-
-    const commentPostId = typeof comment.post === 'object' && comment.post !== null
-      ? String((comment.post as Record<string, unknown>).id)
-      : String(comment.post)
-    if (commentPostId !== expectedPostId) return failure('invalid_input', 'Comment does not belong to the specified post.')
-
-    const post = await payload.findByID({ collection: 'payload_space_posts', id: expectedPostId, depth: 0, ...privilegedAccess })
-    if (!post) return failure('not_found', 'Post not found.')
-    const postSpaceId = typeof post.space === 'object' && post.space !== null
-      ? String((post.space as Record<string, unknown>).id)
-      : String(post.space)
-    if (postSpaceId !== expectedSpaceId) return failure('invalid_input', 'Post does not belong to the specified space.')
-
-    if (!payload.delete) throw new Error('delete not available on this payload instance')
-    await payload.delete({
-      collection: 'payload_space_comments',
-      id: commentId,
-      ...privilegedAccess,
-    })
-
-    await createAuditEvent(payload, {
-      actorType: 'admin',
-      actorId: actor.administratorId,
-      action: 'comment.deleted',
-      targetCollection: 'payload_space_comments',
-      targetId: commentId,
-      before: { displayName: comment.displayName },
-    })
-
+    await deleteCommunityCommentCommand(
+      adminCommunityContext(payload, actor, privilegedAccess),
+      { commentId, expectedPostId, expectedSpaceId },
+    )
     revalidatePath('/portal/community')
     return success({})
   } catch (err) {
@@ -669,41 +391,17 @@ export async function adminDeleteCommentAction(
   }
 }
 
-export async function adminHideCommentAction(commentId: string, expectedPostId: string, expectedSpaceId: string): Promise<ActionResult> {
+export async function adminHideCommentAction(
+  commentId: string,
+  expectedPostId: string,
+  expectedSpaceId: string,
+): Promise<ActionResult> {
   try {
     const { actor, payload, privilegedAccess } = await requirePortalAdmin('/portal')
-
-    const comment = await payload.findByID({ collection: 'payload_space_comments', id: commentId, depth: 0, ...privilegedAccess })
-    if (!comment) return failure('not_found', 'Comment not found.')
-    const commentPostId = typeof comment.post === 'object' && comment.post !== null
-      ? String((comment.post as Record<string, unknown>).id)
-      : String(comment.post)
-    if (commentPostId !== expectedPostId) return failure('invalid_input', 'Comment does not belong to the specified post.')
-
-    const post = await payload.findByID({ collection: 'payload_space_posts', id: expectedPostId, depth: 0, ...privilegedAccess })
-    if (!post) return failure('not_found', 'Post not found.')
-    const postSpaceId = typeof post.space === 'object' && post.space !== null
-      ? String((post.space as Record<string, unknown>).id)
-      : String(post.space)
-    if (postSpaceId !== expectedSpaceId) return failure('invalid_input', 'Post does not belong to the specified space.')
-
-    await payload.update({
-      collection: 'payload_space_comments',
-      id: commentId,
-      data: { moderationStatus: 'hidden' },
-      ...privilegedAccess,
-      overrideLock: true,
-    })
-
-    await createAuditEvent(payload, {
-      actorType: 'admin',
-      actorId: actor.administratorId,
-      action: 'comment.hidden',
-      targetCollection: 'payload_space_comments',
-      targetId: commentId,
-      after: { moderationStatus: 'hidden' },
-    })
-
+    await moderateCommunityCommentCommand(
+      adminCommunityContext(payload, actor, privilegedAccess),
+      { commentId, expectedPostId, expectedSpaceId, hidden: true },
+    )
     revalidatePath('/portal/community')
     return success({})
   } catch (err) {
@@ -711,41 +409,17 @@ export async function adminHideCommentAction(commentId: string, expectedPostId: 
   }
 }
 
-export async function adminUnhideCommentAction(commentId: string, expectedPostId: string, expectedSpaceId: string): Promise<ActionResult> {
+export async function adminUnhideCommentAction(
+  commentId: string,
+  expectedPostId: string,
+  expectedSpaceId: string,
+): Promise<ActionResult> {
   try {
     const { actor, payload, privilegedAccess } = await requirePortalAdmin('/portal')
-
-    const comment = await payload.findByID({ collection: 'payload_space_comments', id: commentId, depth: 0, ...privilegedAccess })
-    if (!comment) return failure('not_found', 'Comment not found.')
-    const commentPostId = typeof comment.post === 'object' && comment.post !== null
-      ? String((comment.post as Record<string, unknown>).id)
-      : String(comment.post)
-    if (commentPostId !== expectedPostId) return failure('invalid_input', 'Comment does not belong to the specified post.')
-
-    const post = await payload.findByID({ collection: 'payload_space_posts', id: expectedPostId, depth: 0, ...privilegedAccess })
-    if (!post) return failure('not_found', 'Post not found.')
-    const postSpaceId = typeof post.space === 'object' && post.space !== null
-      ? String((post.space as Record<string, unknown>).id)
-      : String(post.space)
-    if (postSpaceId !== expectedSpaceId) return failure('invalid_input', 'Post does not belong to the specified space.')
-
-    await payload.update({
-      collection: 'payload_space_comments',
-      id: commentId,
-      data: { moderationStatus: 'visible' },
-      ...privilegedAccess,
-      overrideLock: true,
-    })
-
-    await createAuditEvent(payload, {
-      actorType: 'admin',
-      actorId: actor.administratorId,
-      action: 'comment.unhidden',
-      targetCollection: 'payload_space_comments',
-      targetId: commentId,
-      after: { moderationStatus: 'visible' },
-    })
-
+    await moderateCommunityCommentCommand(
+      adminCommunityContext(payload, actor, privilegedAccess),
+      { commentId, expectedPostId, expectedSpaceId, hidden: false },
+    )
     revalidatePath('/portal/community')
     return success({})
   } catch (err) {
