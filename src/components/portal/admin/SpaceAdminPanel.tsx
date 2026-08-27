@@ -69,7 +69,7 @@ type SpaceDialogProps = {
   onOpenChange: (v: boolean) => void
   title: string
   initial: SpaceFormValues
-  onSubmit: (values: SpaceFormValues) => Promise<{ ok: boolean; error?: string }>
+  onSubmit: (values: SpaceFormValues) => Promise<{ ok: true; data: unknown } | { ok: false; message: string }>
   isPending: boolean
 }
 
@@ -98,7 +98,7 @@ function SpaceFormDialog({
     setFormError(null)
     const result = await onSubmit(values)
     if (result.ok === false) {
-      setFormError(result.error ?? 'Unknown error')
+      setFormError(result.message ?? 'The request could not be completed.')
     }
   }
 
@@ -285,7 +285,7 @@ export function SpaceAdminPanel({ spaces }: SpaceAdminPanelProps) {
     setTimeout(() => setError(null), 4000)
   }
 
-  function handleCreate(values: SpaceFormValues): Promise<{ ok: boolean; error?: string }> {
+  function handleCreate(values: SpaceFormValues): Promise<{ ok: true; data: unknown } | { ok: false; message: string }> {
     return new Promise((resolve) => {
       startTransition(async () => {
         const result = await createSpaceAction({
@@ -306,7 +306,7 @@ export function SpaceAdminPanel({ spaces }: SpaceAdminPanelProps) {
   function handleUpdate(
     spaceId: string,
     values: SpaceFormValues,
-  ): Promise<{ ok: boolean; error?: string }> {
+  ): Promise<{ ok: true; data: unknown } | { ok: false; message: string }> {
     return new Promise((resolve) => {
       startTransition(async () => {
         const result = await updateSpaceAction(spaceId, {
@@ -327,7 +327,7 @@ export function SpaceAdminPanel({ spaces }: SpaceAdminPanelProps) {
   function handleArchive(spaceId: string) {
     startTransition(async () => {
       const result = await archiveSpaceAction(spaceId)
-      if (result.ok === false) showError(result.error ?? 'Unknown error')
+      if (result.ok === false) showError(result.message)
       else router.refresh()
     })
   }
@@ -335,7 +335,7 @@ export function SpaceAdminPanel({ spaces }: SpaceAdminPanelProps) {
   function handleRestore(spaceId: string) {
     startTransition(async () => {
       const result = await restoreSpaceAction(spaceId)
-      if (result.ok === false) showError(result.error ?? 'Unknown error')
+      if (result.ok === false) showError(result.message)
       else router.refresh()
     })
   }
@@ -343,7 +343,7 @@ export function SpaceAdminPanel({ spaces }: SpaceAdminPanelProps) {
   function handleDelete(spaceId: string) {
     startTransition(async () => {
       const result = await deleteSpaceAction(spaceId, true)
-      if (result.ok === false) showError(result.error ?? 'Unknown error')
+      if (result.ok === false) showError(result.message)
       else router.refresh()
     })
   }

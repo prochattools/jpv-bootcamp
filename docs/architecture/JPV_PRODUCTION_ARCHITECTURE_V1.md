@@ -1,6 +1,6 @@
 # JPV Bootcamp Production Architecture v1
 
-**Status:** CURRENT ARCHITECTURE AUTHORITY — A0 RECONSOLIDATION
+**Status:** CURRENT ARCHITECTURE AUTHORITY — A1 FOUNDATION COMPLETE
 
 **Date:** 2026-08-27
 
@@ -28,12 +28,44 @@ the packet-specific authorization and validation described in
 and release branches are evidence or future-review inputs only until a packet
 explicitly classifies and adopts a specific change.
 
+## A1 authorization and Server Action foundation
+
+A1 is complete on `codex/production-architecture-consolidation`, descended
+from A0 commit `c43e899824b993200b05f1b337993eb55fae0905`. The implementation is
+behavior-preserving and does not change `main`, production data, schemas,
+providers, routes, or login routing.
+
+- `requirePortalAdmin()` is the canonical server-only administrator gate. It
+  first uses `requirePortalAccess()`, then narrows the actor to `AdminActor`;
+  `requirePortalMember()` and `requirePortalAccess()` remain separate existing
+  boundaries.
+- Portal administrator Server Actions expose
+  `PortalAdminActionResult<T>`: successful operations return `{ ok: true,
+  data }`; failures return a bounded error code, safe message, and optional
+  field errors. Unexpected failures are logged server-side and become a
+  generic `internal_error` result.
+- `privilegedPayloadAccess()` is the named, server-only boundary for the
+  exceptional `overrideAccess: true` used by these administrator actions. It
+  requires an already-authorized admin actor and an explicit reason; it is not
+  a general Payload bypass.
+- The course and community administrator action adapters now use the canonical
+  gate, typed privileged access, normalized results, targeted revalidation, and
+  their existing domain operations. Client admin UI remains presentation-only.
+- Focused tests cover member/admin/unauthenticated separation, UI-state
+  independence, member access preservation, safe error translation, and the
+  scoped action adapters.
+
+The next packet is A2. A2–A6 remain not started; no production merge, push,
+build, deployment, migration, provider mutation, or historical branch cleanup
+is authorized by A1.
+
 ## Architectural hold
 
 The system is live. Normal feature development is paused while A0–A6 establish
 one coherent ownership model. This is a behavior-preserving consolidation, not
-a rewrite. A0 is documentation-only. No A1 implementation begins in this
-commit.
+a rewrite. A0 established the production truth and A1 established the
+authorization and Server Action foundation. A2–A6 remain gated packets and are
+not implied by this implementation.
 
 ## System surfaces
 

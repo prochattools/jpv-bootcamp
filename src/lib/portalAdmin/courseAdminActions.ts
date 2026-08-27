@@ -1,18 +1,21 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { getPayload } from 'payload'
-import config from '@payload-config'
-
-import { requirePortalAccess } from '@/lib/auth/requirePortalAccess'
+import { requirePortalAdmin } from '@/lib/auth/requirePortalAdmin'
+import {
+  failure,
+  normalizePortalAdminError,
+  PortalAdminActionError,
+  success,
+  type PortalAdminActionResult,
+} from '@/lib/portalAdmin/actionResult'
 import { createAuditEvent } from '@/lib/payloadCourse/events'
-import type { PayloadCourseWriteAPI } from '@/lib/payloadCourse/accessService'
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-type ActionResult = { ok: true; id?: string } | { ok: false; error: string }
+type ActionResult = PortalAdminActionResult<{ id?: string }>
 
 type CourseInput = {
   title: string
@@ -80,23 +83,17 @@ function toPlainLexical(text: string): unknown {
   }
 }
 
-async function requireAdmin() {
-  const { actor, payload } = await requirePortalAccess('/portal')
-  if (actor.kind !== 'admin') throw new Error('forbidden')
-  return { actor, payload: payload as unknown as PayloadCourseWriteAPI }
-}
-
 function validateSlug(slug: string): string {
   const normalized = slug.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '')
-  if (!normalized || normalized.length < 2) throw new Error('Slug must be at least 2 characters.')
-  if (normalized.length > 100) throw new Error('Slug is too long.')
+  if (!normalized || normalized.length < 2) throw new PortalAdminActionError('invalid_input', 'Slug must be at least 2 characters.')
+  if (normalized.length > 100) throw new PortalAdminActionError('invalid_input', 'Slug is too long.')
   return normalized
 }
 
 function validateTitle(title: string): string {
   const trimmed = title.trim()
-  if (!trimmed) throw new Error('Title is required.')
-  if (trimmed.length > 200) throw new Error('Title is too long.')
+  if (!trimmed) throw new PortalAdminActionError('invalid_input', 'Title is required.')
+  if (trimmed.length > 200) throw new PortalAdminActionError('invalid_input', 'Title is too long.')
   return trimmed
 }
 
@@ -112,7 +109,7 @@ function revalidateCoursePaths(courseSlug?: string | null) {
 
 export async function createCourseAction(input: CourseInput): Promise<ActionResult> {
   try {
-    const { actor, payload } = await requireAdmin()
+    const { actor, payload, privilegedAccess } = await requirePortalAdmin('/portal')
     const title = validateTitle(input.title)
     const slug = validateSlug(input.slug)
 
@@ -121,9 +118,9 @@ export async function createCourseAction(input: CourseInput): Promise<ActionResu
       where: { slug: { equals: slug } },
       limit: 1,
       depth: 0,
-      overrideAccess: true,
+      ...privilegedAccess,
     })
-    if (existing.docs.length > 0) return { ok: false, error: 'A course with this slug already exists.' }
+    if (existing.docs.length > 0) return failure('conflict', 'A course with this slug already exists.')
 
     const createData: Record<string, unknown> = {
       title,
@@ -144,12 +141,12 @@ export async function createCourseAction(input: CourseInput): Promise<ActionResu
       doc = await payload.create({
         collection: 'payload_courses',
         data: createData,
-        overrideAccess: true,
+        ...privilegedAccess,
       })
     } catch (writeError) {
       const msg = writeError instanceof Error ? writeError.message : ''
       if (msg.includes('unique') || msg.includes('duplicate') || msg.includes('already exists')) {
-        return { ok: false, error: 'A record with this slug already exists.' }
+        return failure('conflict', 'A record with this slug already exists.')
       }
       throw writeError
     }
@@ -164,23 +161,23 @@ export async function createCourseAction(input: CourseInput): Promise<ActionResu
     })
 
     revalidateCoursePaths(slug)
-    return { ok: true, id: String(doc.id) }
+    return success({ id: String(doc.id) })
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : 'Unknown error' }
+    return normalizePortalAdminError(err, 'createCourseAction')
   }
 }
 
 export async function updateCourseAction(courseId: string, input: Partial<CourseInput>): Promise<ActionResult> {
   try {
-    const { actor, payload } = await requireAdmin()
+    const { actor, payload, privilegedAccess } = await requirePortalAdmin('/portal')
 
     const before = await payload.findByID({
       collection: 'payload_courses',
       id: courseId,
       depth: 0,
-      overrideAccess: true,
+      ...privilegedAccess,
     })
-    if (!before) return { ok: false, error: 'Course not found.' }
+    if (!before) return failure('not_found', 'Course not found.')
 
     const data: Record<string, unknown> = {}
     if (input.title !== undefined) data.title = validateTitle(input.title)
@@ -191,9 +188,9 @@ export async function updateCourseAction(courseId: string, input: Partial<Course
         where: { and: [{ slug: { equals: slug } }, { id: { not_equals: courseId } }] },
         limit: 1,
         depth: 0,
-        overrideAccess: true,
+        ...privilegedAccess,
       })
-      if (existing.docs.length > 0) return { ok: false, error: 'A course with this slug already exists.' }
+      if (existing.docs.length > 0) return failure('conflict', 'A course with this slug already exists.')
       data.slug = slug
     }
     if (input.shortDescription !== undefined) data.shortDescription = input.shortDescription.trim()
@@ -210,7 +207,7 @@ export async function updateCourseAction(courseId: string, input: Partial<Course
       collection: 'payload_courses',
       id: courseId,
       data,
-      overrideAccess: true,
+      ...privilegedAccess,
       overrideLock: true,
     })
 
@@ -227,9 +224,9 @@ export async function updateCourseAction(courseId: string, input: Partial<Course
     const newSlug = typeof data.slug === 'string' ? data.slug : (typeof before.slug === 'string' ? before.slug : null)
     revalidateCoursePaths(newSlug)
     if (before.slug && before.slug !== newSlug) revalidatePath(`/portal/courses/${before.slug}`)
-    return { ok: true }
+    return success({})
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : 'Unknown error' }
+    return normalizePortalAdminError(err, 'updateCourseAction')
   }
 }
 
@@ -239,39 +236,39 @@ export async function archiveCourseAction(courseId: string): Promise<ActionResul
 
 export async function deleteCourseAction(courseId: string, confirmed: boolean): Promise<ActionResult> {
   try {
-    if (!confirmed) return { ok: false, error: 'Deletion requires explicit confirmation.' }
-    const { actor, payload } = await requireAdmin()
+    if (!confirmed) return failure('invalid_input', 'Deletion requires explicit confirmation.')
+    const { actor, payload, privilegedAccess } = await requirePortalAdmin('/portal')
 
     const course = await payload.findByID({
       collection: 'payload_courses',
       id: courseId,
       depth: 0,
-      overrideAccess: true,
+      ...privilegedAccess,
     })
-    if (!course) return { ok: false, error: 'Course not found.' }
+    if (!course) return failure('not_found', 'Course not found.')
 
     const modules = await payload.find({
       collection: 'payload_course_modules',
       where: { course: { equals: courseId } },
       limit: 1,
       depth: 0,
-      overrideAccess: true,
+      ...privilegedAccess,
     })
-    if (modules.docs.length > 0) return { ok: false, error: 'Cannot delete course with existing modules. Archive it or remove modules first.' }
+    if (modules.docs.length > 0) return failure('dependency_blocked', 'Cannot delete course with existing modules. Archive it or remove modules first.')
 
     const enrollments = await payload.find({
       collection: 'payload_course_enrollments',
       where: { course: { equals: courseId } },
       limit: 1,
       depth: 0,
-      overrideAccess: true,
+      ...privilegedAccess,
     })
-    if (enrollments.docs.length > 0) return { ok: false, error: 'Cannot delete course with enrollments. Archive it instead.' }
+    if (enrollments.docs.length > 0) return failure('dependency_blocked', 'Cannot delete course with enrollments. Archive it instead.')
 
     await payload.delete({
       collection: 'payload_courses',
       id: courseId,
-      overrideAccess: true,
+      ...privilegedAccess,
     })
 
     await createAuditEvent(payload, {
@@ -284,9 +281,9 @@ export async function deleteCourseAction(courseId: string, confirmed: boolean): 
     })
 
     revalidateCoursePaths(typeof course.slug === 'string' ? course.slug : null)
-    return { ok: true }
+    return success({})
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : 'Unknown error' }
+    return normalizePortalAdminError(err, 'deleteCourseAction')
   }
 }
 
@@ -296,16 +293,16 @@ export async function deleteCourseAction(courseId: string, confirmed: boolean): 
 
 export async function createModuleAction(input: ModuleInput): Promise<ActionResult> {
   try {
-    const { actor, payload } = await requireAdmin()
+    const { actor, payload, privilegedAccess } = await requirePortalAdmin('/portal')
     const title = validateTitle(input.title)
 
     const course = await payload.findByID({
       collection: 'payload_courses',
       id: input.courseId,
       depth: 0,
-      overrideAccess: true,
+      ...privilegedAccess,
     })
-    if (!course) return { ok: false, error: 'Course not found.' }
+    if (!course) return failure('not_found', 'Course not found.')
 
     const doc = await payload.create({
       collection: 'payload_course_modules',
@@ -316,7 +313,7 @@ export async function createModuleAction(input: ModuleInput): Promise<ActionResu
         sortOrder: input.sortOrder ?? 0,
         publishedPreview: input.publishedPreview ?? true,
       },
-      overrideAccess: true,
+      ...privilegedAccess,
     })
 
     await createAuditEvent(payload, {
@@ -329,23 +326,23 @@ export async function createModuleAction(input: ModuleInput): Promise<ActionResu
     })
 
     revalidateCoursePaths(typeof course.slug === 'string' ? course.slug : null)
-    return { ok: true, id: String(doc.id) }
+    return success({ id: String(doc.id) })
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : 'Unknown error' }
+    return normalizePortalAdminError(err, 'createModuleAction')
   }
 }
 
 export async function updateModuleAction(moduleId: string, input: Partial<Omit<ModuleInput, 'courseId'>>): Promise<ActionResult> {
   try {
-    const { actor, payload } = await requireAdmin()
+    const { actor, payload, privilegedAccess } = await requirePortalAdmin('/portal')
 
     const module = await payload.findByID({
       collection: 'payload_course_modules',
       id: moduleId,
       depth: 0,
-      overrideAccess: true,
+      ...privilegedAccess,
     })
-    if (!module) return { ok: false, error: 'Module not found.' }
+    if (!module) return failure('not_found', 'Module not found.')
 
     const data: Record<string, unknown> = {}
     if (input.title !== undefined) data.title = validateTitle(input.title)
@@ -357,7 +354,7 @@ export async function updateModuleAction(moduleId: string, input: Partial<Omit<M
       collection: 'payload_course_modules',
       id: moduleId,
       data,
-      overrideAccess: true,
+      ...privilegedAccess,
       overrideLock: true,
     })
 
@@ -374,31 +371,31 @@ export async function updateModuleAction(moduleId: string, input: Partial<Omit<M
     const courseId = typeof module.course === 'object' && module.course !== null
       ? String((module.course as Record<string, unknown>).id)
       : String(module.course)
-    const course = await payload.findByID({ collection: 'payload_courses', id: courseId, depth: 0, overrideAccess: true }).catch((): null => null)
+    const course = await payload.findByID({ collection: 'payload_courses', id: courseId, depth: 0, ...privilegedAccess }).catch((): null => null)
     revalidateCoursePaths(course && typeof course.slug === 'string' ? course.slug : null)
-    return { ok: true }
+    return success({})
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : 'Unknown error' }
+    return normalizePortalAdminError(err, 'updateModuleAction')
   }
 }
 
 export async function reorderModulesAction(courseId: string, orderedIds: string[]): Promise<ActionResult> {
   try {
-    const { actor, payload } = await requireAdmin()
+    const { actor, payload, privilegedAccess } = await requirePortalAdmin('/portal')
 
     const modules = await payload.find({
       collection: 'payload_course_modules',
       where: { course: { equals: courseId } },
       limit: 500,
       depth: 0,
-      overrideAccess: true,
+      ...privilegedAccess,
     })
     const realIds = new Set(modules.docs.map((d: { id: unknown }) => String(d.id)))
-    if (orderedIds.length !== realIds.size) return { ok: false, error: 'Module count mismatch.' }
+    if (orderedIds.length !== realIds.size) return failure('invalid_input', 'Module count mismatch.')
     const seen = new Set<string>()
     for (const id of orderedIds) {
-      if (!realIds.has(id)) return { ok: false, error: 'One or more module IDs do not belong to this course.' }
-      if (seen.has(id)) return { ok: false, error: 'Duplicate module ID in order list.' }
+      if (!realIds.has(id)) return failure('invalid_input', 'One or more module IDs do not belong to this course.')
+      if (seen.has(id)) return failure('invalid_input', 'Duplicate module ID in order list.')
       seen.add(id)
     }
 
@@ -413,7 +410,7 @@ export async function reorderModulesAction(courseId: string, orderedIds: string[
           collection: 'payload_course_modules',
           id: orderedIds[i],
           data: { sortOrder: i },
-          overrideAccess: true,
+          ...privilegedAccess,
           overrideLock: true,
         })
       }
@@ -424,12 +421,12 @@ export async function reorderModulesAction(courseId: string, orderedIds: string[
             collection: 'payload_course_modules',
             id: orig.id,
             data: { sortOrder: orig.sortOrder },
-            overrideAccess: true,
+            ...privilegedAccess,
             overrideLock: true,
           })
         } catch { /* best effort rollback */ }
       }
-      return { ok: false, error: 'Reorder failed and was rolled back.' }
+      return failure('conflict', 'Reorder failed and was rolled back.')
     }
 
     await createAuditEvent(payload, {
@@ -441,40 +438,40 @@ export async function reorderModulesAction(courseId: string, orderedIds: string[
       after: { order: orderedIds },
     })
 
-    const course = await payload.findByID({ collection: 'payload_courses', id: courseId, depth: 0, overrideAccess: true }).catch((): null => null)
+    const course = await payload.findByID({ collection: 'payload_courses', id: courseId, depth: 0, ...privilegedAccess }).catch((): null => null)
     revalidateCoursePaths(course && typeof course.slug === 'string' ? course.slug : null)
-    return { ok: true }
+    return success({})
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : 'Unknown error' }
+    return normalizePortalAdminError(err, 'reorderModulesAction')
   }
 }
 
 export async function deleteModuleAction(moduleId: string, confirmed: boolean): Promise<ActionResult> {
   try {
-    if (!confirmed) return { ok: false, error: 'Deletion requires explicit confirmation.' }
-    const { actor, payload } = await requireAdmin()
+    if (!confirmed) return failure('invalid_input', 'Deletion requires explicit confirmation.')
+    const { actor, payload, privilegedAccess } = await requirePortalAdmin('/portal')
 
     const module = await payload.findByID({
       collection: 'payload_course_modules',
       id: moduleId,
       depth: 0,
-      overrideAccess: true,
+      ...privilegedAccess,
     })
-    if (!module) return { ok: false, error: 'Module not found.' }
+    if (!module) return failure('not_found', 'Module not found.')
 
     const lessons = await payload.find({
       collection: 'payload_lessons',
       where: { module: { equals: moduleId } },
       limit: 1,
       depth: 0,
-      overrideAccess: true,
+      ...privilegedAccess,
     })
-    if (lessons.docs.length > 0) return { ok: false, error: 'Cannot delete module with existing lessons. Remove lessons first.' }
+    if (lessons.docs.length > 0) return failure('dependency_blocked', 'Cannot delete module with existing lessons. Remove lessons first.')
 
     await payload.delete({
       collection: 'payload_course_modules',
       id: moduleId,
-      overrideAccess: true,
+      ...privilegedAccess,
     })
 
     await createAuditEvent(payload, {
@@ -489,11 +486,11 @@ export async function deleteModuleAction(moduleId: string, confirmed: boolean): 
     const courseId = typeof module.course === 'object' && module.course !== null
       ? String((module.course as Record<string, unknown>).id)
       : String(module.course)
-    const course = await payload.findByID({ collection: 'payload_courses', id: courseId, depth: 0, overrideAccess: true }).catch((): null => null)
+    const course = await payload.findByID({ collection: 'payload_courses', id: courseId, depth: 0, ...privilegedAccess }).catch((): null => null)
     revalidateCoursePaths(course && typeof course.slug === 'string' ? course.slug : null)
-    return { ok: true }
+    return success({})
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : 'Unknown error' }
+    return normalizePortalAdminError(err, 'deleteModuleAction')
   }
 }
 
@@ -503,7 +500,7 @@ export async function deleteModuleAction(moduleId: string, confirmed: boolean): 
 
 export async function createLessonAction(input: LessonInput): Promise<ActionResult> {
   try {
-    const { actor, payload } = await requireAdmin()
+    const { actor, payload, privilegedAccess } = await requirePortalAdmin('/portal')
     const title = validateTitle(input.title)
     const slug = validateSlug(input.slug)
 
@@ -512,17 +509,17 @@ export async function createLessonAction(input: LessonInput): Promise<ActionResu
       where: { slug: { equals: slug } },
       limit: 1,
       depth: 0,
-      overrideAccess: true,
+      ...privilegedAccess,
     })
-    if (existing.docs.length > 0) return { ok: false, error: 'A lesson with this slug already exists.' }
+    if (existing.docs.length > 0) return failure('conflict', 'A lesson with this slug already exists.')
 
     const module = await payload.findByID({
       collection: 'payload_course_modules',
       id: input.moduleId,
       depth: 0,
-      overrideAccess: true,
+      ...privilegedAccess,
     })
-    if (!module) return { ok: false, error: 'Module not found.' }
+    if (!module) return failure('not_found', 'Module not found.')
 
     const createData: Record<string, unknown> = {
       module: input.moduleId,
@@ -545,12 +542,12 @@ export async function createLessonAction(input: LessonInput): Promise<ActionResu
       doc = await payload.create({
         collection: 'payload_lessons',
         data: createData,
-        overrideAccess: true,
+        ...privilegedAccess,
       })
     } catch (writeError) {
       const msg = writeError instanceof Error ? writeError.message : ''
       if (msg.includes('unique') || msg.includes('duplicate') || msg.includes('already exists')) {
-        return { ok: false, error: 'A record with this slug already exists.' }
+        return failure('conflict', 'A record with this slug already exists.')
       }
       throw writeError
     }
@@ -567,25 +564,25 @@ export async function createLessonAction(input: LessonInput): Promise<ActionResu
     const courseId = typeof module.course === 'object' && module.course !== null
       ? String((module.course as Record<string, unknown>).id)
       : String(module.course)
-    const course = await payload.findByID({ collection: 'payload_courses', id: courseId, depth: 0, overrideAccess: true }).catch((): null => null)
+    const course = await payload.findByID({ collection: 'payload_courses', id: courseId, depth: 0, ...privilegedAccess }).catch((): null => null)
     revalidateCoursePaths(course && typeof course.slug === 'string' ? course.slug : null)
-    return { ok: true, id: String(doc.id) }
+    return success({ id: String(doc.id) })
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : 'Unknown error' }
+    return normalizePortalAdminError(err, 'createLessonAction')
   }
 }
 
 export async function updateLessonAction(lessonId: string, input: Partial<Omit<LessonInput, 'moduleId'>>): Promise<ActionResult> {
   try {
-    const { actor, payload } = await requireAdmin()
+    const { actor, payload, privilegedAccess } = await requirePortalAdmin('/portal')
 
     const lesson = await payload.findByID({
       collection: 'payload_lessons',
       id: lessonId,
       depth: 0,
-      overrideAccess: true,
+      ...privilegedAccess,
     })
-    if (!lesson) return { ok: false, error: 'Lesson not found.' }
+    if (!lesson) return failure('not_found', 'Lesson not found.')
 
     const data: Record<string, unknown> = {}
     if (input.title !== undefined) data.title = validateTitle(input.title)
@@ -596,9 +593,9 @@ export async function updateLessonAction(lessonId: string, input: Partial<Omit<L
         where: { and: [{ slug: { equals: slug } }, { id: { not_equals: lessonId } }] },
         limit: 1,
         depth: 0,
-        overrideAccess: true,
+        ...privilegedAccess,
       })
-      if (existing.docs.length > 0) return { ok: false, error: 'A lesson with this slug already exists.' }
+      if (existing.docs.length > 0) return failure('conflict', 'A lesson with this slug already exists.')
       data.slug = slug
     }
     if (input.summary !== undefined) data.summary = input.summary.trim()
@@ -616,7 +613,7 @@ export async function updateLessonAction(lessonId: string, input: Partial<Omit<L
       collection: 'payload_lessons',
       id: lessonId,
       data,
-      overrideAccess: true,
+      ...privilegedAccess,
       overrideLock: true,
     })
 
@@ -633,37 +630,37 @@ export async function updateLessonAction(lessonId: string, input: Partial<Omit<L
     const moduleId = typeof lesson.module === 'object' && lesson.module !== null
       ? String((lesson.module as Record<string, unknown>).id)
       : String(lesson.module)
-    const module = await payload.findByID({ collection: 'payload_course_modules', id: moduleId, depth: 0, overrideAccess: true }).catch((): null => null)
+    const module = await payload.findByID({ collection: 'payload_course_modules', id: moduleId, depth: 0, ...privilegedAccess }).catch((): null => null)
     const courseId = module && typeof module.course === 'object' && module.course !== null
       ? String((module.course as Record<string, unknown>).id)
       : module ? String(module.course) : null
     if (courseId) {
-      const course = await payload.findByID({ collection: 'payload_courses', id: courseId, depth: 0, overrideAccess: true }).catch((): null => null)
+      const course = await payload.findByID({ collection: 'payload_courses', id: courseId, depth: 0, ...privilegedAccess }).catch((): null => null)
       revalidateCoursePaths(course && typeof course.slug === 'string' ? course.slug : null)
     }
-    return { ok: true }
+    return success({})
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : 'Unknown error' }
+    return normalizePortalAdminError(err, 'updateLessonAction')
   }
 }
 
 export async function reorderLessonsAction(moduleId: string, orderedIds: string[]): Promise<ActionResult> {
   try {
-    const { actor, payload } = await requireAdmin()
+    const { actor, payload, privilegedAccess } = await requirePortalAdmin('/portal')
 
     const lessons = await payload.find({
       collection: 'payload_lessons',
       where: { module: { equals: moduleId } },
       limit: 500,
       depth: 0,
-      overrideAccess: true,
+      ...privilegedAccess,
     })
     const realIds = new Set(lessons.docs.map((d: { id: unknown }) => String(d.id)))
-    if (orderedIds.length !== realIds.size) return { ok: false, error: 'Lesson count mismatch.' }
+    if (orderedIds.length !== realIds.size) return failure('invalid_input', 'Lesson count mismatch.')
     const seen = new Set<string>()
     for (const id of orderedIds) {
-      if (!realIds.has(id)) return { ok: false, error: 'One or more lesson IDs do not belong to this module.' }
-      if (seen.has(id)) return { ok: false, error: 'Duplicate lesson ID in order list.' }
+      if (!realIds.has(id)) return failure('invalid_input', 'One or more lesson IDs do not belong to this module.')
+      if (seen.has(id)) return failure('invalid_input', 'Duplicate lesson ID in order list.')
       seen.add(id)
     }
 
@@ -678,7 +675,7 @@ export async function reorderLessonsAction(moduleId: string, orderedIds: string[
           collection: 'payload_lessons',
           id: orderedIds[i],
           data: { sortOrder: i },
-          overrideAccess: true,
+          ...privilegedAccess,
           overrideLock: true,
         })
       }
@@ -689,12 +686,12 @@ export async function reorderLessonsAction(moduleId: string, orderedIds: string[
             collection: 'payload_lessons',
             id: orig.id,
             data: { sortOrder: orig.sortOrder },
-            overrideAccess: true,
+            ...privilegedAccess,
             overrideLock: true,
           })
         } catch { /* best effort rollback */ }
       }
-      return { ok: false, error: 'Reorder failed and was rolled back.' }
+      return failure('conflict', 'Reorder failed and was rolled back.')
     }
 
     await createAuditEvent(payload, {
@@ -706,17 +703,17 @@ export async function reorderLessonsAction(moduleId: string, orderedIds: string[
       after: { order: orderedIds },
     })
 
-    const module = await payload.findByID({ collection: 'payload_course_modules', id: moduleId, depth: 0, overrideAccess: true }).catch((): null => null)
+    const module = await payload.findByID({ collection: 'payload_course_modules', id: moduleId, depth: 0, ...privilegedAccess }).catch((): null => null)
     const courseId = module && typeof module.course === 'object' && module.course !== null
       ? String((module.course as Record<string, unknown>).id)
       : module ? String(module.course) : null
     if (courseId) {
-      const course = await payload.findByID({ collection: 'payload_courses', id: courseId, depth: 0, overrideAccess: true }).catch((): null => null)
+      const course = await payload.findByID({ collection: 'payload_courses', id: courseId, depth: 0, ...privilegedAccess }).catch((): null => null)
       revalidateCoursePaths(course && typeof course.slug === 'string' ? course.slug : null)
     }
-    return { ok: true }
+    return success({})
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : 'Unknown error' }
+    return normalizePortalAdminError(err, 'reorderLessonsAction')
   }
 }
 
@@ -726,48 +723,48 @@ export async function archiveLessonAction(lessonId: string): Promise<ActionResul
 
 export async function deleteLessonAction(lessonId: string, confirmed: boolean): Promise<ActionResult> {
   try {
-    if (!confirmed) return { ok: false, error: 'Deletion requires explicit confirmation.' }
-    const { actor, payload } = await requireAdmin()
+    if (!confirmed) return failure('invalid_input', 'Deletion requires explicit confirmation.')
+    const { actor, payload, privilegedAccess } = await requirePortalAdmin('/portal')
 
     const lesson = await payload.findByID({
       collection: 'payload_lessons',
       id: lessonId,
       depth: 0,
-      overrideAccess: true,
+      ...privilegedAccess,
     })
-    if (!lesson) return { ok: false, error: 'Lesson not found.' }
+    if (!lesson) return failure('not_found', 'Lesson not found.')
 
     const progress = await payload.find({
       collection: 'payload_lesson_progress',
       where: { lesson: { equals: lessonId } },
       limit: 1,
       depth: 0,
-      overrideAccess: true,
+      ...privilegedAccess,
     })
-    if (progress.docs.length > 0) return { ok: false, error: 'Cannot delete lesson with progress records. Lock it instead.' }
+    if (progress.docs.length > 0) return failure('dependency_blocked', 'Cannot delete lesson with progress records. Lock it instead.')
 
     const comments = await payload.find({
       collection: 'payload_lesson_comments',
       where: { lesson: { equals: lessonId } },
       limit: 1,
       depth: 0,
-      overrideAccess: true,
+      ...privilegedAccess,
     })
-    if (comments.docs.length > 0) return { ok: false, error: 'Cannot delete lesson with discussion comments. Lock it instead.' }
+    if (comments.docs.length > 0) return failure('dependency_blocked', 'Cannot delete lesson with discussion comments. Lock it instead.')
 
     const resources = await payload.find({
       collection: 'payload_lesson_resources',
       where: { lesson: { equals: lessonId } },
       limit: 1,
       depth: 0,
-      overrideAccess: true,
+      ...privilegedAccess,
     })
-    if (resources.docs.length > 0) return { ok: false, error: 'Cannot delete lesson with attached resources. Remove resources first.' }
+    if (resources.docs.length > 0) return failure('dependency_blocked', 'Cannot delete lesson with attached resources. Remove resources first.')
 
     await payload.delete({
       collection: 'payload_lessons',
       id: lessonId,
-      overrideAccess: true,
+      ...privilegedAccess,
     })
 
     await createAuditEvent(payload, {
@@ -782,16 +779,16 @@ export async function deleteLessonAction(lessonId: string, confirmed: boolean): 
     const moduleId = typeof lesson.module === 'object' && lesson.module !== null
       ? String((lesson.module as Record<string, unknown>).id)
       : String(lesson.module)
-    const module = await payload.findByID({ collection: 'payload_course_modules', id: moduleId, depth: 0, overrideAccess: true }).catch((): null => null)
+    const module = await payload.findByID({ collection: 'payload_course_modules', id: moduleId, depth: 0, ...privilegedAccess }).catch((): null => null)
     const courseId = module && typeof module.course === 'object' && module.course !== null
       ? String((module.course as Record<string, unknown>).id)
       : module ? String(module.course) : null
     if (courseId) {
-      const course = await payload.findByID({ collection: 'payload_courses', id: courseId, depth: 0, overrideAccess: true }).catch((): null => null)
+      const course = await payload.findByID({ collection: 'payload_courses', id: courseId, depth: 0, ...privilegedAccess }).catch((): null => null)
       revalidateCoursePaths(course && typeof course.slug === 'string' ? course.slug : null)
     }
-    return { ok: true }
+    return success({})
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : 'Unknown error' }
+    return normalizePortalAdminError(err, 'deleteLessonAction')
   }
 }

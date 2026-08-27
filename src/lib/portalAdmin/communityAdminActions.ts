@@ -2,16 +2,21 @@
 
 import { revalidatePath } from 'next/cache'
 
-import { requirePortalAccess } from '@/lib/auth/requirePortalAccess'
-import type { AdminActor } from '@/lib/auth/portalActor'
-import type { PayloadCourseWriteAPI } from '@/lib/payloadCourse/accessService'
+import { requirePortalAdmin } from '@/lib/auth/requirePortalAdmin'
+import {
+  failure,
+  normalizePortalAdminError,
+  PortalAdminActionError,
+  success,
+  type PortalAdminActionResult,
+} from '@/lib/portalAdmin/actionResult'
 import { createAuditEvent } from '@/lib/payloadCourse/events'
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-type ActionResult = { ok: true; id?: string } | { ok: false; error: string }
+type ActionResult = PortalAdminActionResult<{ id?: string }>
 
 type SpaceInput = {
   name: string
@@ -25,12 +30,6 @@ type SpaceInput = {
 // Helpers
 // ---------------------------------------------------------------------------
 
-async function requireAdmin(): Promise<{ actor: AdminActor; payload: PayloadCourseWriteAPI }> {
-  const { actor, payload } = await requirePortalAccess('/portal')
-  if (actor.kind !== 'admin') throw new Error('forbidden')
-  return { actor, payload: payload as unknown as PayloadCourseWriteAPI }
-}
-
 function validateSlug(slug: string): string {
   const normalized = slug
     .trim()
@@ -38,8 +37,8 @@ function validateSlug(slug: string): string {
     .replace(/[^a-z0-9-]/g, '-')
     .replace(/-+/g, '-')
     .replace(/^-|-$/g, '')
-  if (!normalized || normalized.length < 2) throw new Error('Slug must be at least 2 characters.')
-  if (normalized.length > 100) throw new Error('Slug is too long.')
+  if (!normalized || normalized.length < 2) throw new PortalAdminActionError('invalid_input', 'Slug must be at least 2 characters.')
+  if (normalized.length > 100) throw new PortalAdminActionError('invalid_input', 'Slug is too long.')
   return normalized
 }
 
@@ -53,9 +52,9 @@ function spacePath(spaceSlug: string) {
 
 export async function createSpaceAction(input: SpaceInput): Promise<ActionResult> {
   try {
-    const { actor, payload } = await requireAdmin()
+    const { actor, payload, privilegedAccess } = await requirePortalAdmin('/portal')
     const name = input.name.trim()
-    if (!name) return { ok: false, error: 'Name is required.' }
+    if (!name) return failure('invalid_input', 'Name is required.')
     const slug = validateSlug(input.slug)
 
     const existing = await payload.find({
@@ -63,9 +62,9 @@ export async function createSpaceAction(input: SpaceInput): Promise<ActionResult
       where: { slug: { equals: slug } },
       limit: 1,
       depth: 0,
-      overrideAccess: true,
+      ...privilegedAccess,
     })
-    if (existing.docs.length > 0) return { ok: false, error: 'A space with this slug already exists.' }
+    if (existing.docs.length > 0) return failure('conflict', 'A space with this slug already exists.')
 
     const doc = await payload.create({
       collection: 'payload_spaces',
@@ -76,7 +75,7 @@ export async function createSpaceAction(input: SpaceInput): Promise<ActionResult
         status: input.status ?? 'published',
         visibility: input.visibility ?? 'members',
       },
-      overrideAccess: true,
+      ...privilegedAccess,
     })
 
     await createAuditEvent(payload, {
@@ -89,9 +88,9 @@ export async function createSpaceAction(input: SpaceInput): Promise<ActionResult
     })
 
     revalidatePath('/portal/community')
-    return { ok: true, id: String(doc.id) }
+    return success({ id: String(doc.id) })
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : 'Unknown error' }
+    return normalizePortalAdminError(err, 'createSpaceAction')
   }
 }
 
@@ -100,20 +99,20 @@ export async function updateSpaceAction(
   input: Partial<SpaceInput>,
 ): Promise<ActionResult> {
   try {
-    const { actor, payload } = await requireAdmin()
+    const { actor, payload, privilegedAccess } = await requirePortalAdmin('/portal')
 
     const before = await payload.findByID({
       collection: 'payload_spaces',
       id: spaceId,
       depth: 0,
-      overrideAccess: true,
+      ...privilegedAccess,
     })
-    if (!before) return { ok: false, error: 'Space not found.' }
+    if (!before) return failure('not_found', 'Space not found.')
 
     const data: Record<string, unknown> = {}
     if (input.name !== undefined) {
       const name = input.name.trim()
-      if (!name) return { ok: false, error: 'Name is required.' }
+      if (!name) return failure('invalid_input', 'Name is required.')
       data.name = name
     }
     if (input.slug !== undefined) {
@@ -123,10 +122,10 @@ export async function updateSpaceAction(
         where: { and: [{ slug: { equals: slug } }, { id: { not_equals: spaceId } }] },
         limit: 1,
         depth: 0,
-        overrideAccess: true,
+        ...privilegedAccess,
       })
       if (existing.docs.length > 0)
-        return { ok: false, error: 'A space with this slug already exists.' }
+        return failure('conflict', 'A space with this slug already exists.')
       data.slug = slug
     }
     if (input.description !== undefined) data.description = input.description.trim()
@@ -137,7 +136,7 @@ export async function updateSpaceAction(
       collection: 'payload_spaces',
       id: spaceId,
       data,
-      overrideAccess: true,
+      ...privilegedAccess,
       overrideLock: true,
     })
 
@@ -153,9 +152,9 @@ export async function updateSpaceAction(
 
     revalidatePath('/portal/community')
     if (before.slug) revalidatePath(spacePath(String(before.slug)))
-    return { ok: true }
+    return success({})
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : 'Unknown error' }
+    return normalizePortalAdminError(err, 'updateSpaceAction')
   }
 }
 
@@ -169,39 +168,39 @@ export async function restoreSpaceAction(spaceId: string): Promise<ActionResult>
 
 export async function deleteSpaceAction(spaceId: string, confirmed: boolean): Promise<ActionResult> {
   try {
-    if (!confirmed) return { ok: false, error: 'Deletion requires explicit confirmation.' }
-    const { actor, payload } = await requireAdmin()
+    if (!confirmed) return failure('invalid_input', 'Deletion requires explicit confirmation.')
+    const { actor, payload, privilegedAccess } = await requirePortalAdmin('/portal')
 
     const space = await payload.findByID({
       collection: 'payload_spaces',
       id: spaceId,
       depth: 0,
-      overrideAccess: true,
+      ...privilegedAccess,
     })
-    if (!space) return { ok: false, error: 'Space not found.' }
+    if (!space) return failure('not_found', 'Space not found.')
 
     const posts = await payload.find({
       collection: 'payload_space_posts',
       where: { space: { equals: spaceId } },
       limit: 1,
       depth: 0,
-      overrideAccess: true,
+      ...privilegedAccess,
     })
-    if (posts.docs.length > 0) return { ok: false, error: 'Cannot delete space with existing posts. Archive it instead.' }
+    if (posts.docs.length > 0) return failure('dependency_blocked', 'Cannot delete space with existing posts. Archive it instead.')
 
     const memberships = await payload.find({
       collection: 'payload_space_memberships',
       where: { space: { equals: spaceId } },
       limit: 1,
       depth: 0,
-      overrideAccess: true,
+      ...privilegedAccess,
     })
-    if (memberships.docs.length > 0) return { ok: false, error: 'Cannot delete space with memberships. Archive it instead.' }
+    if (memberships.docs.length > 0) return failure('dependency_blocked', 'Cannot delete space with memberships. Archive it instead.')
 
     await payload.delete({
       collection: 'payload_spaces',
       id: spaceId,
-      overrideAccess: true,
+      ...privilegedAccess,
     })
 
     await createAuditEvent(payload, {
@@ -214,9 +213,9 @@ export async function deleteSpaceAction(spaceId: string, confirmed: boolean): Pr
     })
 
     revalidatePath('/portal/community')
-    return { ok: true }
+    return success({})
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : 'Unknown error' }
+    return normalizePortalAdminError(err, 'deleteSpaceAction')
   }
 }
 
@@ -226,26 +225,26 @@ export async function deleteSpaceAction(spaceId: string, confirmed: boolean): Pr
 
 export async function adminPinPostAction(postId: string, expectedSpaceId: string): Promise<ActionResult> {
   try {
-    const { actor, payload } = await requireAdmin()
+    const { actor, payload, privilegedAccess } = await requirePortalAdmin('/portal')
 
     const post = await payload.findByID({
       collection: 'payload_space_posts',
       id: postId,
       depth: 0,
-      overrideAccess: true,
+      ...privilegedAccess,
     })
-    if (!post) return { ok: false, error: 'Post not found.' }
+    if (!post) return failure('not_found', 'Post not found.')
 
     const postSpaceId = typeof post.space === 'object' && post.space !== null
       ? String((post.space as Record<string, unknown>).id)
       : String(post.space)
-    if (postSpaceId !== expectedSpaceId) return { ok: false, error: 'Post does not belong to the specified space.' }
+    if (postSpaceId !== expectedSpaceId) return failure('invalid_input', 'Post does not belong to the specified space.')
 
     await payload.update({
       collection: 'payload_space_posts',
       id: postId,
       data: { pinned: true },
-      overrideAccess: true,
+      ...privilegedAccess,
       overrideLock: true,
     })
 
@@ -260,28 +259,28 @@ export async function adminPinPostAction(postId: string, expectedSpaceId: string
     })
 
     revalidatePath('/portal/community')
-    return { ok: true }
+    return success({})
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : 'Unknown error' }
+    return normalizePortalAdminError(err, 'adminPinPostAction')
   }
 }
 
 export async function adminUnpinPostAction(postId: string, expectedSpaceId: string): Promise<ActionResult> {
   try {
-    const { actor, payload } = await requireAdmin()
+    const { actor, payload, privilegedAccess } = await requirePortalAdmin('/portal')
 
-    const post = await payload.findByID({ collection: 'payload_space_posts', id: postId, depth: 0, overrideAccess: true })
-    if (!post) return { ok: false, error: 'Post not found.' }
+    const post = await payload.findByID({ collection: 'payload_space_posts', id: postId, depth: 0, ...privilegedAccess })
+    if (!post) return failure('not_found', 'Post not found.')
     const postSpaceId = typeof post.space === 'object' && post.space !== null
       ? String((post.space as Record<string, unknown>).id)
       : String(post.space)
-    if (postSpaceId !== expectedSpaceId) return { ok: false, error: 'Post does not belong to the specified space.' }
+    if (postSpaceId !== expectedSpaceId) return failure('invalid_input', 'Post does not belong to the specified space.')
 
     await payload.update({
       collection: 'payload_space_posts',
       id: postId,
       data: { pinned: false },
-      overrideAccess: true,
+      ...privilegedAccess,
       overrideLock: true,
     })
 
@@ -295,28 +294,28 @@ export async function adminUnpinPostAction(postId: string, expectedSpaceId: stri
     })
 
     revalidatePath('/portal/community')
-    return { ok: true }
+    return success({})
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : 'Unknown error' }
+    return normalizePortalAdminError(err, 'adminUnpinPostAction')
   }
 }
 
 export async function adminLockPostAction(postId: string, expectedSpaceId: string): Promise<ActionResult> {
   try {
-    const { actor, payload } = await requireAdmin()
+    const { actor, payload, privilegedAccess } = await requirePortalAdmin('/portal')
 
-    const post = await payload.findByID({ collection: 'payload_space_posts', id: postId, depth: 0, overrideAccess: true })
-    if (!post) return { ok: false, error: 'Post not found.' }
+    const post = await payload.findByID({ collection: 'payload_space_posts', id: postId, depth: 0, ...privilegedAccess })
+    if (!post) return failure('not_found', 'Post not found.')
     const postSpaceId = typeof post.space === 'object' && post.space !== null
       ? String((post.space as Record<string, unknown>).id)
       : String(post.space)
-    if (postSpaceId !== expectedSpaceId) return { ok: false, error: 'Post does not belong to the specified space.' }
+    if (postSpaceId !== expectedSpaceId) return failure('invalid_input', 'Post does not belong to the specified space.')
 
     await payload.update({
       collection: 'payload_space_posts',
       id: postId,
       data: { locked: true },
-      overrideAccess: true,
+      ...privilegedAccess,
       overrideLock: true,
     })
 
@@ -330,28 +329,28 @@ export async function adminLockPostAction(postId: string, expectedSpaceId: strin
     })
 
     revalidatePath('/portal/community')
-    return { ok: true }
+    return success({})
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : 'Unknown error' }
+    return normalizePortalAdminError(err, 'adminLockPostAction')
   }
 }
 
 export async function adminUnlockPostAction(postId: string, expectedSpaceId: string): Promise<ActionResult> {
   try {
-    const { actor, payload } = await requireAdmin()
+    const { actor, payload, privilegedAccess } = await requirePortalAdmin('/portal')
 
-    const post = await payload.findByID({ collection: 'payload_space_posts', id: postId, depth: 0, overrideAccess: true })
-    if (!post) return { ok: false, error: 'Post not found.' }
+    const post = await payload.findByID({ collection: 'payload_space_posts', id: postId, depth: 0, ...privilegedAccess })
+    if (!post) return failure('not_found', 'Post not found.')
     const postSpaceId = typeof post.space === 'object' && post.space !== null
       ? String((post.space as Record<string, unknown>).id)
       : String(post.space)
-    if (postSpaceId !== expectedSpaceId) return { ok: false, error: 'Post does not belong to the specified space.' }
+    if (postSpaceId !== expectedSpaceId) return failure('invalid_input', 'Post does not belong to the specified space.')
 
     await payload.update({
       collection: 'payload_space_posts',
       id: postId,
       data: { locked: false },
-      overrideAccess: true,
+      ...privilegedAccess,
       overrideLock: true,
     })
 
@@ -365,34 +364,34 @@ export async function adminUnlockPostAction(postId: string, expectedSpaceId: str
     })
 
     revalidatePath('/portal/community')
-    return { ok: true }
+    return success({})
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : 'Unknown error' }
+    return normalizePortalAdminError(err, 'adminUnlockPostAction')
   }
 }
 
 export async function adminHidePostAction(postId: string, expectedSpaceId: string): Promise<ActionResult> {
   try {
-    const { actor, payload } = await requireAdmin()
+    const { actor, payload, privilegedAccess } = await requirePortalAdmin('/portal')
 
     const post = await payload.findByID({
       collection: 'payload_space_posts',
       id: postId,
       depth: 0,
-      overrideAccess: true,
+      ...privilegedAccess,
     })
-    if (!post) return { ok: false, error: 'Post not found.' }
+    if (!post) return failure('not_found', 'Post not found.')
 
     const postSpaceId = typeof post.space === 'object' && post.space !== null
       ? String((post.space as Record<string, unknown>).id)
       : String(post.space)
-    if (postSpaceId !== expectedSpaceId) return { ok: false, error: 'Post does not belong to the specified space.' }
+    if (postSpaceId !== expectedSpaceId) return failure('invalid_input', 'Post does not belong to the specified space.')
 
     await payload.update({
       collection: 'payload_space_posts',
       id: postId,
       data: { moderationStatus: 'hidden' },
-      overrideAccess: true,
+      ...privilegedAccess,
       overrideLock: true,
     })
 
@@ -407,28 +406,28 @@ export async function adminHidePostAction(postId: string, expectedSpaceId: strin
     })
 
     revalidatePath('/portal/community')
-    return { ok: true }
+    return success({})
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : 'Unknown error' }
+    return normalizePortalAdminError(err, 'adminHidePostAction')
   }
 }
 
 export async function adminUnhidePostAction(postId: string, expectedSpaceId: string): Promise<ActionResult> {
   try {
-    const { actor, payload } = await requireAdmin()
+    const { actor, payload, privilegedAccess } = await requirePortalAdmin('/portal')
 
-    const post = await payload.findByID({ collection: 'payload_space_posts', id: postId, depth: 0, overrideAccess: true })
-    if (!post) return { ok: false, error: 'Post not found.' }
+    const post = await payload.findByID({ collection: 'payload_space_posts', id: postId, depth: 0, ...privilegedAccess })
+    if (!post) return failure('not_found', 'Post not found.')
     const postSpaceId = typeof post.space === 'object' && post.space !== null
       ? String((post.space as Record<string, unknown>).id)
       : String(post.space)
-    if (postSpaceId !== expectedSpaceId) return { ok: false, error: 'Post does not belong to the specified space.' }
+    if (postSpaceId !== expectedSpaceId) return failure('invalid_input', 'Post does not belong to the specified space.')
 
     await payload.update({
       collection: 'payload_space_posts',
       id: postId,
       data: { moderationStatus: 'visible' },
-      overrideAccess: true,
+      ...privilegedAccess,
       overrideLock: true,
     })
 
@@ -442,9 +441,9 @@ export async function adminUnhidePostAction(postId: string, expectedSpaceId: str
     })
 
     revalidatePath('/portal/community')
-    return { ok: true }
+    return success({})
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : 'Unknown error' }
+    return normalizePortalAdminError(err, 'adminUnhidePostAction')
   }
 }
 
@@ -454,37 +453,37 @@ export async function adminDeletePostAction(
   expectedSpaceId: string,
 ): Promise<ActionResult> {
   try {
-    if (!confirmed) return { ok: false, error: 'Deletion requires explicit confirmation.' }
-    const { actor, payload } = await requireAdmin()
+    if (!confirmed) return failure('invalid_input', 'Deletion requires explicit confirmation.')
+    const { actor, payload, privilegedAccess } = await requirePortalAdmin('/portal')
 
     const post = await payload.findByID({
       collection: 'payload_space_posts',
       id: postId,
       depth: 0,
-      overrideAccess: true,
+      ...privilegedAccess,
     })
-    if (!post) return { ok: false, error: 'Post not found.' }
+    if (!post) return failure('not_found', 'Post not found.')
 
     const postSpaceId = typeof post.space === 'object' && post.space !== null
       ? String((post.space as Record<string, unknown>).id)
       : String(post.space)
-    if (postSpaceId !== expectedSpaceId) return { ok: false, error: 'Post does not belong to the specified space.' }
+    if (postSpaceId !== expectedSpaceId) return failure('invalid_input', 'Post does not belong to the specified space.')
 
     const comments = await payload.find({
       collection: 'payload_space_comments',
       where: { post: { equals: postId } },
       limit: 1,
       depth: 0,
-      overrideAccess: true,
+      ...privilegedAccess,
     })
     if (comments.docs.length > 0)
-      return { ok: false, error: 'Cannot delete post with comments. Hide it instead.' }
+      return failure('dependency_blocked', 'Cannot delete post with comments. Hide it instead.')
 
     if (!payload.delete) throw new Error('delete not available on this payload instance')
     await payload.delete({
       collection: 'payload_space_posts',
       id: postId,
-      overrideAccess: true,
+      ...privilegedAccess,
     })
 
     await createAuditEvent(payload, {
@@ -497,9 +496,9 @@ export async function adminDeletePostAction(
     })
 
     revalidatePath('/portal/community')
-    return { ok: true }
+    return success({})
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : 'Unknown error' }
+    return normalizePortalAdminError(err, 'adminDeletePostAction')
   }
 }
 
@@ -509,26 +508,26 @@ export async function adminEditPostAction(
   expectedSpaceId: string,
 ): Promise<ActionResult> {
   try {
-    const { actor, payload } = await requireAdmin()
+    const { actor, payload, privilegedAccess } = await requirePortalAdmin('/portal')
 
     const post = await payload.findByID({
       collection: 'payload_space_posts',
       id: postId,
       depth: 0,
-      overrideAccess: true,
+      ...privilegedAccess,
     })
-    if (!post) return { ok: false, error: 'Post not found.' }
+    if (!post) return failure('not_found', 'Post not found.')
 
     const postSpaceId = typeof post.space === 'object' && post.space !== null
       ? String((post.space as Record<string, unknown>).id)
       : String(post.space)
-    if (postSpaceId !== expectedSpaceId) return { ok: false, error: 'Post does not belong to the specified space.' }
+    if (postSpaceId !== expectedSpaceId) return failure('invalid_input', 'Post does not belong to the specified space.')
 
     const data: Record<string, unknown> = {}
     if (input.title !== undefined) {
       const trimmed = input.title.trim()
-      if (!trimmed) return { ok: false, error: 'Title is required.' }
-      if (trimmed.length > 300) return { ok: false, error: 'Title is too long.' }
+      if (!trimmed) return failure('invalid_input', 'Title is required.')
+      if (trimmed.length > 300) return failure('invalid_input', 'Title is too long.')
       data.title = trimmed
     }
     if (input.body !== undefined) {
@@ -536,8 +535,8 @@ export async function adminEditPostAction(
         data.body = input.body
       } else {
         const trimmed = (input.body as string).trim()
-        if (!trimmed) return { ok: false, error: 'Body is required.' }
-        if (trimmed.length > 50_000) return { ok: false, error: 'Body is too long.' }
+        if (!trimmed) return failure('invalid_input', 'Body is required.')
+        if (trimmed.length > 50_000) return failure('invalid_input', 'Body is too long.')
         data.body = {
           root: {
             type: 'root',
@@ -562,13 +561,13 @@ export async function adminEditPostAction(
       }
     }
 
-    if (Object.keys(data).length === 0) return { ok: false, error: 'Nothing to update.' }
+    if (Object.keys(data).length === 0) return failure('invalid_input', 'Nothing to update.')
 
     await payload.update({
       collection: 'payload_space_posts',
       id: postId,
       data,
-      overrideAccess: true,
+      ...privilegedAccess,
       overrideLock: true,
     })
 
@@ -583,9 +582,9 @@ export async function adminEditPostAction(
     })
 
     revalidatePath('/portal/community')
-    return { ok: true }
+    return success({})
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : 'Unknown error' }
+    return normalizePortalAdminError(err, 'adminEditPostAction')
   }
 }
 
@@ -600,35 +599,35 @@ export async function adminEditCommentAction(
   expectedSpaceId: string,
 ): Promise<ActionResult> {
   try {
-    const { actor, payload } = await requireAdmin()
+    const { actor, payload, privilegedAccess } = await requirePortalAdmin('/portal')
 
     const comment = await payload.findByID({
       collection: 'payload_space_comments',
       id: commentId,
       depth: 0,
-      overrideAccess: true,
+      ...privilegedAccess,
     })
-    if (!comment) return { ok: false, error: 'Comment not found.' }
+    if (!comment) return failure('not_found', 'Comment not found.')
 
     const commentPostId = typeof comment.post === 'object' && comment.post !== null
       ? String((comment.post as Record<string, unknown>).id)
       : String(comment.post)
-    if (commentPostId !== expectedPostId) return { ok: false, error: 'Comment does not belong to the specified post.' }
+    if (commentPostId !== expectedPostId) return failure('invalid_input', 'Comment does not belong to the specified post.')
 
-    const post = await payload.findByID({ collection: 'payload_space_posts', id: expectedPostId, depth: 0, overrideAccess: true })
-    if (!post) return { ok: false, error: 'Post not found.' }
+    const post = await payload.findByID({ collection: 'payload_space_posts', id: expectedPostId, depth: 0, ...privilegedAccess })
+    if (!post) return failure('not_found', 'Post not found.')
     const postSpaceId = typeof post.space === 'object' && post.space !== null
       ? String((post.space as Record<string, unknown>).id)
       : String(post.space)
-    if (postSpaceId !== expectedSpaceId) return { ok: false, error: 'Post does not belong to the specified space.' }
+    if (postSpaceId !== expectedSpaceId) return failure('invalid_input', 'Post does not belong to the specified space.')
 
     let richTextBody: unknown
     if (typeof body === 'object' && body !== null && 'root' in body) {
       richTextBody = body
     } else {
       const trimmed = (body as string).trim()
-      if (!trimmed) return { ok: false, error: 'Body is required.' }
-      if (trimmed.length > 10_000) return { ok: false, error: 'Body is too long.' }
+      if (!trimmed) return failure('invalid_input', 'Body is required.')
+      if (trimmed.length > 10_000) return failure('invalid_input', 'Body is too long.')
       richTextBody = {
         root: {
           type: 'root',
@@ -666,7 +665,7 @@ export async function adminEditCommentAction(
       collection: 'payload_space_comments',
       id: commentId,
       data: { body: richTextBody },
-      overrideAccess: true,
+      ...privilegedAccess,
       overrideLock: true,
     })
 
@@ -680,9 +679,9 @@ export async function adminEditCommentAction(
     })
 
     revalidatePath('/portal/community')
-    return { ok: true }
+    return success({})
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : 'Unknown error' }
+    return normalizePortalAdminError(err, 'adminEditCommentAction')
   }
 }
 
@@ -693,34 +692,34 @@ export async function adminDeleteCommentAction(
   expectedSpaceId: string,
 ): Promise<ActionResult> {
   try {
-    if (!confirmed) return { ok: false, error: 'Deletion requires explicit confirmation.' }
-    const { actor, payload } = await requireAdmin()
+    if (!confirmed) return failure('invalid_input', 'Deletion requires explicit confirmation.')
+    const { actor, payload, privilegedAccess } = await requirePortalAdmin('/portal')
 
     const comment = await payload.findByID({
       collection: 'payload_space_comments',
       id: commentId,
       depth: 0,
-      overrideAccess: true,
+      ...privilegedAccess,
     })
-    if (!comment) return { ok: false, error: 'Comment not found.' }
+    if (!comment) return failure('not_found', 'Comment not found.')
 
     const commentPostId = typeof comment.post === 'object' && comment.post !== null
       ? String((comment.post as Record<string, unknown>).id)
       : String(comment.post)
-    if (commentPostId !== expectedPostId) return { ok: false, error: 'Comment does not belong to the specified post.' }
+    if (commentPostId !== expectedPostId) return failure('invalid_input', 'Comment does not belong to the specified post.')
 
-    const post = await payload.findByID({ collection: 'payload_space_posts', id: expectedPostId, depth: 0, overrideAccess: true })
-    if (!post) return { ok: false, error: 'Post not found.' }
+    const post = await payload.findByID({ collection: 'payload_space_posts', id: expectedPostId, depth: 0, ...privilegedAccess })
+    if (!post) return failure('not_found', 'Post not found.')
     const postSpaceId = typeof post.space === 'object' && post.space !== null
       ? String((post.space as Record<string, unknown>).id)
       : String(post.space)
-    if (postSpaceId !== expectedSpaceId) return { ok: false, error: 'Post does not belong to the specified space.' }
+    if (postSpaceId !== expectedSpaceId) return failure('invalid_input', 'Post does not belong to the specified space.')
 
     if (!payload.delete) throw new Error('delete not available on this payload instance')
     await payload.delete({
       collection: 'payload_space_comments',
       id: commentId,
-      overrideAccess: true,
+      ...privilegedAccess,
     })
 
     await createAuditEvent(payload, {
@@ -733,35 +732,35 @@ export async function adminDeleteCommentAction(
     })
 
     revalidatePath('/portal/community')
-    return { ok: true }
+    return success({})
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : 'Unknown error' }
+    return normalizePortalAdminError(err, 'adminDeleteCommentAction')
   }
 }
 
 export async function adminHideCommentAction(commentId: string, expectedPostId: string, expectedSpaceId: string): Promise<ActionResult> {
   try {
-    const { actor, payload } = await requireAdmin()
+    const { actor, payload, privilegedAccess } = await requirePortalAdmin('/portal')
 
-    const comment = await payload.findByID({ collection: 'payload_space_comments', id: commentId, depth: 0, overrideAccess: true })
-    if (!comment) return { ok: false, error: 'Comment not found.' }
+    const comment = await payload.findByID({ collection: 'payload_space_comments', id: commentId, depth: 0, ...privilegedAccess })
+    if (!comment) return failure('not_found', 'Comment not found.')
     const commentPostId = typeof comment.post === 'object' && comment.post !== null
       ? String((comment.post as Record<string, unknown>).id)
       : String(comment.post)
-    if (commentPostId !== expectedPostId) return { ok: false, error: 'Comment does not belong to the specified post.' }
+    if (commentPostId !== expectedPostId) return failure('invalid_input', 'Comment does not belong to the specified post.')
 
-    const post = await payload.findByID({ collection: 'payload_space_posts', id: expectedPostId, depth: 0, overrideAccess: true })
-    if (!post) return { ok: false, error: 'Post not found.' }
+    const post = await payload.findByID({ collection: 'payload_space_posts', id: expectedPostId, depth: 0, ...privilegedAccess })
+    if (!post) return failure('not_found', 'Post not found.')
     const postSpaceId = typeof post.space === 'object' && post.space !== null
       ? String((post.space as Record<string, unknown>).id)
       : String(post.space)
-    if (postSpaceId !== expectedSpaceId) return { ok: false, error: 'Post does not belong to the specified space.' }
+    if (postSpaceId !== expectedSpaceId) return failure('invalid_input', 'Post does not belong to the specified space.')
 
     await payload.update({
       collection: 'payload_space_comments',
       id: commentId,
       data: { moderationStatus: 'hidden' },
-      overrideAccess: true,
+      ...privilegedAccess,
       overrideLock: true,
     })
 
@@ -775,35 +774,35 @@ export async function adminHideCommentAction(commentId: string, expectedPostId: 
     })
 
     revalidatePath('/portal/community')
-    return { ok: true }
+    return success({})
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : 'Unknown error' }
+    return normalizePortalAdminError(err, 'adminHideCommentAction')
   }
 }
 
 export async function adminUnhideCommentAction(commentId: string, expectedPostId: string, expectedSpaceId: string): Promise<ActionResult> {
   try {
-    const { actor, payload } = await requireAdmin()
+    const { actor, payload, privilegedAccess } = await requirePortalAdmin('/portal')
 
-    const comment = await payload.findByID({ collection: 'payload_space_comments', id: commentId, depth: 0, overrideAccess: true })
-    if (!comment) return { ok: false, error: 'Comment not found.' }
+    const comment = await payload.findByID({ collection: 'payload_space_comments', id: commentId, depth: 0, ...privilegedAccess })
+    if (!comment) return failure('not_found', 'Comment not found.')
     const commentPostId = typeof comment.post === 'object' && comment.post !== null
       ? String((comment.post as Record<string, unknown>).id)
       : String(comment.post)
-    if (commentPostId !== expectedPostId) return { ok: false, error: 'Comment does not belong to the specified post.' }
+    if (commentPostId !== expectedPostId) return failure('invalid_input', 'Comment does not belong to the specified post.')
 
-    const post = await payload.findByID({ collection: 'payload_space_posts', id: expectedPostId, depth: 0, overrideAccess: true })
-    if (!post) return { ok: false, error: 'Post not found.' }
+    const post = await payload.findByID({ collection: 'payload_space_posts', id: expectedPostId, depth: 0, ...privilegedAccess })
+    if (!post) return failure('not_found', 'Post not found.')
     const postSpaceId = typeof post.space === 'object' && post.space !== null
       ? String((post.space as Record<string, unknown>).id)
       : String(post.space)
-    if (postSpaceId !== expectedSpaceId) return { ok: false, error: 'Post does not belong to the specified space.' }
+    if (postSpaceId !== expectedSpaceId) return failure('invalid_input', 'Post does not belong to the specified space.')
 
     await payload.update({
       collection: 'payload_space_comments',
       id: commentId,
       data: { moderationStatus: 'visible' },
-      overrideAccess: true,
+      ...privilegedAccess,
       overrideLock: true,
     })
 
@@ -817,8 +816,8 @@ export async function adminUnhideCommentAction(commentId: string, expectedPostId
     })
 
     revalidatePath('/portal/community')
-    return { ok: true }
+    return success({})
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : 'Unknown error' }
+    return normalizePortalAdminError(err, 'adminUnhideCommentAction')
   }
 }

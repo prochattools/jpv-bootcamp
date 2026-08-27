@@ -1,6 +1,6 @@
 # JPV Bootcamp Post-Launch Architecture Consolidation Plan
 
-**Status:** A0 COMPLETE IN THIS DOCUMENTATION PACKET; A1–A6 NOT STARTED
+**Status:** A1 COMPLETE IN THIS IMPLEMENTATION PACKET; A2–A6 NOT STARTED
 
 **Date:** 2026-08-27
 
@@ -74,19 +74,39 @@ The following documents were reviewed against the production checkpoint:
 
 The order is production stability, A0 truth/authority, then A1–A6. A later
 packet cannot start while its predecessor’s evidence and rollback boundary are
-not accepted. A0 contains no application behavior change.
+not accepted. A0 contained no application behavior change. A1 is now complete
+as a behavior-preserving authorization/service-foundation packet; it did not
+change production `main`, data, schemas, providers, or deployment state.
 
-### A1 — Domain boundary and dependency consolidation
+### A1 — Portal administrator authorization and Server Action foundation
 
 | Field | Contract |
 | --- | --- |
-| Objective | Turn the source-of-truth map into a reviewed dependency graph with one owner per business fact and explicit provider/projection boundaries. |
-| Exact scope | Resolve the split/ambiguous rows in `JPV_DOMAIN_SOURCE_OF_TRUTH.md`; name domain services, read models, provider adapters, actor policies, and allowed cross-store transaction boundaries. Documentation and narrowly necessary ownership-preserving refactors only after review. |
-| Likely files | `src/lib/payloadCourse/*`, `src/lib/billing/*`, `src/lib/membership-support/*`, `src/lib/sponsored-*`, `src/lib/partnerAffiliateReporting.ts`, `src/lib/email*`, `src/lib/liveSessions/*`, `src/lib/payload.config.ts`, Prisma schemas. |
-| Forbidden scope | No new product capability, schema migration, provider mutation, identity backfill, deletion, redesign, route removal, or wholesale historical branch merge. |
-| Validation | Source ownership assertions, focused domain tests, dependency/import checks, `git diff --check`, and an explicit datastore/provider review. |
-| Stop | Any fact has two writable authorities, a provider write is required, identity matching is ambiguous, or behavior cannot be proven unchanged. |
-| Rollback | Revert the packet commit(s) or restore the pre-packet branch; do not repair by deleting records or replaying historical branches. |
+| Objective | Establish one server-side administrator authorization boundary, one bounded Server Action result/error contract, and one explicit privileged Payload access boundary for portal Creator/Admin mutations. |
+| Exact scope | On `codex/production-architecture-consolidation` from A0 `c43e899824b993200b05f1b337993eb55fae0905`, add `requirePortalAdmin()`, `PortalAdminActionResult<T>`, normalized error translation, and `privilegedPayloadAccess()`; migrate the course/community administrator action adapters and their direct clients; preserve `requirePortalMember()`, `requirePortalAccess()`, route/login behavior, domain operations, schemas, and provider state. |
+| Likely files | `src/lib/auth/requirePortalAdmin.ts`, `src/lib/portalAdmin/actionResult.ts`, `src/lib/payload/privilegedAccess.ts`, `src/lib/portalAdmin/courseAdminActions.ts`, `src/lib/portalAdmin/communityAdminActions.ts`, five scoped portal admin clients, and focused tests. |
+| Forbidden scope | No product feature, schema migration, provider mutation, identity backfill, deletion, UI redesign, route removal, historical branch merge, production `main` change, push, build, or deployment. |
+| Validation | Focused authorization/result tests, existing portal auth contracts, scoped action/behavior tests, TypeScript, `git diff --check`, and a repository scan for equivalent local administrator gates. |
+| Stop | A member can reach an administrator mutation, client UI state carries authorization, internal error text is serialized, a new broad Payload bypass is introduced, or an unrelated route/domain contract changes. |
+| Rollback | Revert the single A1 commit or restore the A1 branch to the A0 parent; do not repair by deleting records, replaying branches, or changing providers. |
+
+#### A1 completion record
+
+- Start parent: `c43e899824b993200b05f1b337993eb55fae0905`.
+- Canonical authorization: `src/lib/auth/requirePortalAdmin.ts`, built on
+  `requirePortalAccess()` and narrowed to `AdminActor`.
+- Canonical result/error boundary: `src/lib/portalAdmin/actionResult.ts`, with
+  bounded error codes and generic unexpected-error serialization.
+- Privileged Payload boundary: `src/lib/payload/privilegedAccess.ts`, requiring
+  an authorized admin actor and an explicit reason for `overrideAccess: true`.
+- Duplicated local administrator gates removed from the scoped course and
+  community action adapters; their direct UI clients now consume the shared
+  result shape.
+- Security and behavior checks passed locally: the A1 foundation test, portal
+  access and actor tests, portal admin behavior and inline contract tests,
+  Vitest administrator-foundation tests, TypeScript, and `git diff --check`.
+- No database, provider, production `main`, push, build, or deployment action
+  was performed by A1.
 
 ### A2 — Service, route, and Server Action consolidation
 

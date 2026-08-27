@@ -1,12 +1,32 @@
 # JPV Bootcamp Engineering Principles
 
-**Status:** CURRENT A0 ENGINEERING AUTHORITY — APPLIES TO A1–A6
+**Status:** CURRENT A1 ENGINEERING AUTHORITY — APPLIES TO A1–A6
 
 **Date:** 2026-08-27
 
 These principles constrain behavior-preserving consolidation of the production
-system. They are implementation rules, not permission to begin A1. A packet
-may narrow them with evidence, but may not silently contradict them.
+system. A1 is complete on the dedicated consolidation branch; A2–A6 remain
+separately gated. A packet may narrow these rules with evidence, but may not
+silently contradict them.
+
+## A1 implementation authority
+
+- Every portal Creator/Admin Server Action enters through the server-only
+  `requirePortalAdmin()` gate, which builds on `requirePortalAccess()` and
+  rejects a member actor regardless of client AdminGate or Admin Mode state.
+- These actions return the shared `PortalAdminActionResult<T>` contract. Known
+  validation, not-found, conflict, dependency, authentication, authorization,
+  and rate-limit failures use bounded codes; unexpected failures are logged
+  without exposing internal exception text and return `internal_error`.
+- Exceptional privileged Payload operations use the bounded
+  `privilegedPayloadAccess()` helper only after administrator authorization and
+  with an explicit reason. Native Payload access remains preferred where it
+  can express the operation cleanly.
+- Server Action boundaries are transport adapters: receive transport input,
+  establish the actor, call the existing domain operation, translate to the
+  shared result, and perform only targeted cache revalidation or redirect
+  behavior. Long-term domain policy, relationship rules, destructive
+  orchestration, and cross-store persistence remain later packet work.
 
 ## Non-negotiable rules
 

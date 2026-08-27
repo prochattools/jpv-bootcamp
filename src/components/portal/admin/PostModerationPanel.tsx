@@ -38,10 +38,10 @@ type PostModerationPanelProps = {
   currentBody?: string
 }
 
-type ActionResult = { ok: true; id?: string } | { ok: false; error: string }
+type ActionResult = { ok: true; data: unknown } | { ok: false; message: string }
 
 function getError(res: ActionResult): string | null {
-  return res.ok === false ? res.error : null
+  return res.ok === false ? res.message : null
 }
 
 // ---------------------------------------------------------------------------

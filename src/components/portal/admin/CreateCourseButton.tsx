@@ -6,10 +6,10 @@ import { useState, useTransition } from 'react'
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { createCourseAction } from '@/lib/portalAdmin/courseAdminActions'
 
-type ActionResult = { ok: true; id?: string } | { ok: false; error: string }
+type ActionResult = { ok: true; data: unknown } | { ok: false; message: string }
 
 function getError(res: ActionResult): string | null {
-  return res.ok === false ? res.error : null
+  return res.ok === false ? res.message : null
 }
 
 const INPUT_CLS =

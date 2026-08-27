@@ -219,7 +219,7 @@ function testCommunityAdminActionsExist() {
 }
 
 // ---------------------------------------------------------------------------
-// 6. Every admin action re-resolves auth via requirePortalAccess
+// 6. Every admin action re-resolves auth via the canonical administrator gate
 // ---------------------------------------------------------------------------
 function testAdminActionsResolveAuth() {
   const actionFiles = [
@@ -231,8 +231,8 @@ function testAdminActionsResolveAuth() {
     const src = source(relPath)
     assert.match(
       src,
-      /requirePortalAccess/,
-      `[test 6] ${relPath} must import and call requirePortalAccess — no reliance on client state`,
+      /requirePortalAdmin/,
+      `[test 6] ${relPath} must import and call requirePortalAdmin — no reliance on client state`,
     )
   }
 }

@@ -18,15 +18,23 @@ explicitly superseded here.
   migration was applied; production health was green.
 - **Architectural hold:** normal feature development is paused for the
   behavior-preserving A0–A6 architecture consolidation.
-- **Current branch:** `codex/production-architecture-consolidation` descended
-  directly from the verified `main` tip.
-- **Current packet:** A0, documentation-only. No application, database,
-  provider, branch, or worktree mutation is part of A0.
-- **Exact next packet:** A1 — Domain boundary and dependency consolidation,
-  only after orchestrator review and explicit authorization.
-- **Hard stops:** do not start A1, merge historical branches, run migrations,
-  mutate production/providers, delete branches/worktrees, or deploy from this
-  packet. Preserve unknown residue and route ambiguity to review.
+- **Current branch:** `codex/production-architecture-consolidation`, descended
+  directly from the verified `main` tip and A0 parent
+  `c43e899824b993200b05f1b337993eb55fae0905`.
+- **Current packet:** A1 complete locally. It adds the canonical server-only
+  `requirePortalAdmin()` gate, shared `PortalAdminActionResult<T>` error
+  contract, normalized unexpected-error handling, bounded privileged Payload
+  access, and scoped course/community action-adapter consolidation.
+- **Behavior boundary:** `requirePortalMember()`, `requirePortalAccess()`,
+  login routing, domain operations, schemas, providers, production `main`, and
+  production data were not changed. The separate request-header Live Sessions
+  API helper remains outside this Server Action packet for behavior-preserving
+  follow-up review.
+- **Exact next packet:** A2 — Service, route, and Server Action consolidation.
+- **Hard stops:** do not start A2, merge historical branches, run migrations,
+  mutate production/providers, delete branches/worktrees, push, build, or
+  deploy from this packet. Preserve unknown residue and route ambiguity to
+  review.
 - **Architecture authority:** `docs/architecture/` contains the production
   architecture, source-of-truth map, engineering principles, and packet plan.
 
