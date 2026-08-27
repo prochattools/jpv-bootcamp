@@ -23,8 +23,8 @@ routes, production refs, or release state.
 
 The active service boundaries and the read-only historical branch findings are
 recorded in `JPV_PORTAL_ADMIN_SERVICE_MAP.md`. The unique no-write billing
-branch delta is intentionally deferred to A4. A3 remains the next packet:
-identity and membership consolidation. A3–A6 are not started by this record.
+branch delta is intentionally preserved for A5 review. A3 remains the next
+packet: Community Domain Convergence. A3–A6 are not started by this record.
 
 ### A2 branch comparison addendum
 
@@ -34,10 +34,10 @@ branch: `codex/portal-admin-flow-production`, `codex/portal-theme-payload-ux`,
 `feature/course-branding-and-preview` are already represented by ancestor
 history and were not replayed. `codex/feature-billing-integration` retains a
 unique no-write Stripe reconciliation route/test delta; it remains intact and
-is deferred to A4 provider/reconciliation review. No historical branch was
+is deferred to A5 source-of-truth and provider review. No historical branch was
 merged, cherry-picked, deleted, rebased, or force-pushed.
 
-## A0 production truth and repository evidence
+## A0 — Production truth and architecture authority
 
 ### Production baseline
 
@@ -104,7 +104,17 @@ not accepted. A0 contained no application behavior change. A1 is now complete
 as a behavior-preserving authorization/service-foundation packet; it did not
 change production `main`, data, schemas, providers, or deployment state.
 
-### A1 — Portal administrator authorization and Server Action foundation
+The approved packet sequence is fixed:
+
+1. A0 — Production truth and architecture authority
+2. A1 — Authorization/service foundation
+3. A2 — Shared domain primitives
+4. A3 — Community domain convergence
+5. A4 — Course/Creator domain convergence
+6. A5 — Source-of-truth and architecture enforcement
+7. A6 — Full regression and controlled production integration
+
+### A1 — Authorization/service foundation
 
 | Field | Contract |
 | --- | --- |
@@ -134,65 +144,65 @@ change production `main`, data, schemas, providers, or deployment state.
 - No database, provider, production `main`, push, build, or deployment action
   was performed by A1.
 
-### A2 — Service, route, and Server Action consolidation
+### A2 — Shared domain primitives
 
 | Field | Contract |
 | --- | --- |
-| Objective | Make server entry points thin adapters over shared domain operations. |
-| Exact scope | Inventory and, where accepted, consolidate duplicate parsing, serialization, validation, and action orchestration across portal routes, Server Actions, API routes, and Payload hooks. Preserve URLs, response contracts, actor context, idempotency, and failure semantics. |
-| Likely files | `src/app/api/**`, portal page/action files, `src/lib/portalAdmin/*`, `src/lib/payloadCourse/*`, `src/lib/auth/*`, Payload hooks/access modules. |
-| Forbidden scope | No business-rule invention, broad API redesign, permission weakening, page-local persistence, or giant shared action file. |
-| Validation | Focused unit/integration tests per consolidated operation, auth/actor tests, response-contract tests, TypeScript, release contract tests, and `git diff --check`. |
-| Stop | A call site needs different business semantics, a contract change is discovered, or the shared operation cannot preserve audit/idempotency behavior. |
-| Rollback | Revert only the A2 commit(s); keep the prior service entry points intact until replacement validation passes. |
+| Objective | Establish shared, server-safe domain primitives without changing product behavior. |
+| Exact scope | Consolidate equivalent validation, relationship-ID normalization, and plain-text Payload Lexical serialization across the reviewed portal/course/community/member services. Preserve caller-specific paragraph caps, URLs, response contracts, actor context, idempotency, failure semantics, compatibility facades, schemas, providers, stored data, and release state. Explicit character limits reject oversized input rather than silently truncating it. |
+| Likely files | `src/lib/domain/validation.ts`, `src/lib/domain/relationships.ts`, `src/lib/content/plainTextToLexical.ts`, compatibility facades, scoped portal/course/community/member adapters, the Portal Admin service map, and focused tests. |
+| Forbidden scope | No business-rule invention, broad API redesign, permission weakening, page-local persistence, UI redesign, schema/data migration, provider mutation, production action, or giant shared action file. |
+| Validation | Canonical primitive tests, affected course/community/member serializer tests, A1 authorization tests, compatibility checks, TypeScript, architecture/documentation consistency, and `git diff --check`. |
+| Stop | A caller needs different business semantics, a serializer would discard content, a contract change is discovered, or the shared primitive cannot preserve existing behavior. |
+| Rollback | Revert only the A2 correction/implementation commit(s); keep prior facades and service entry points available until replacement validation passes. |
 
-### A3 — Identity, authorization, and administrator-mode consolidation
-
-| Field | Contract |
-| --- | --- |
-| Objective | Establish one explicit actor and identity-link model for members, Payload administrators, Creator Mode, sessions, and provider operations. |
-| Exact scope | Reconcile `payload_users`, `payload_members`, profiles, `portalMember` links, `requirePortalAccess`, actor resolution, admin presentation state, and collection access. Define administrator linking without synthetic billing, and define preview without impersonation. |
-| Likely files | `src/lib/auth/*`, `src/lib/portalAdmin/*`, `src/lib/payloadCourse/accessService.ts`, member collections/access policies, `src/lib/billing/stripeMemberIdentityReconciliation.ts`, `src/lib/billing/membershipReadModel.ts`, portal layout/header/admin controls. |
-| Forbidden scope | No silent identity merges, email-only backfill without an unambiguous match, auth secret changes, permission bypass, or provider billing mutation. |
-| Validation | Positive/negative actor matrix, member/admin/preview separation tests, session tests, collection access tests, no-secret logging check, and exact migration/backfill review if one is proposed. |
-| Stop | Any identity is duplicated, a link would change billing truth, a visual gate is carrying security, or a review queue is bypassed. |
-| Rollback | Disable/revert the link or policy change using the recorded audit entry; preserve original identities and provider records. |
-
-### A4 — Data access, projections, and provider reconciliation
+### A3 — Community domain convergence
 
 | Field | Contract |
 | --- | --- |
-| Objective | Make Stripe, LiveKit, Bunny, Resend, Prisma operational tables, Payload projections, and review queues truthful and non-duplicative. |
-| Exact scope | Close the split/ambiguous source-of-truth rows; document projection refresh, retry, dedupe, review, and failure states. Reconcile read-model counts only through explicit, idempotent, environment-scoped operations. |
-| Likely files | `src/lib/billing/*`, `src/lib/payloadCourse/stripeShadowSync.ts`, webhook routes, `src/lib/liveSessions/*`, `src/lib/livekit-*`, `src/lib/email.ts`, CRM collections, sponsored/support/affiliate modules, Prisma schemas and migration contracts. |
-| Forbidden scope | No unguarded production data mutation, deletion, provider endpoint replacement, migration, or guessed identity assignment. |
-| Validation | Dry-run reports, provider-vs-local count comparisons, idempotency/retry tests, signed webhook tests, projection freshness checks, and explicit live gates approved by the orchestrator. |
-| Stop | Counts disagree without a row-level explanation, provider state is unavailable, a write target is ambiguous, or a destructive repair is proposed. |
-| Rollback | Use provider-supported reversal or local projection replay from preserved events; never roll back by dropping schemas or deleting audit evidence. |
+| Objective | Consolidate duplicated member/admin community mutation logic. |
+| Exact scope | Reconcile the overlapping transports in `src/app/(frontend)/portal/community/actions.ts` and `src/lib/portalAdmin/communityAdminActions.ts` into thin member/admin transports over shared community domain operations, actor-aware policy, Payload persistence, audit/notifications, and revalidation. Shared semantics must cover edit post, delete post, edit comment, delete comment, and moderation actions where behavior overlaps. |
+| Likely files | `src/app/(frontend)/portal/community/actions.ts`, `src/lib/portalAdmin/communityAdminActions.ts`, shared community domain operations, actor policy, Payload discussion persistence, and focused tests. |
+| Forbidden scope | No identity/provider reconciliation, course/creator service split, UI redesign, schema migration, production mutation, or unrelated feature work. |
+| Validation | Member/admin actor matrix, edit/delete post/comment behavior, overlapping moderation behavior, audit/notification/revalidation checks, TypeScript, and `git diff --check`. |
+| Stop | Member/admin semantics diverge, actor policy is bypassed, audit or notification behavior changes without evidence, or the operation cannot remain a thin transport over shared logic. |
+| Rollback | Revert only the A3 commit(s), retaining the existing member/admin entry points and persisted records. |
 
-### A5 — Portal Creator Mode, Payload Admin, and UI architecture
-
-| Field | Contract |
-| --- | --- |
-| Objective | Clarify day-to-day content administration in the member portal while simplifying Payload Admin into an advanced/recovery/system console. |
-| Exact scope | Map course/community/update/live-session admin affordances, navigation hierarchy, AdminGate presentation, Payload admin groups/labels/descriptions, scroll ownership, empty states, and JPV design-token usage. Keep every capability reachable and server-authorized. |
-| Likely files | `src/app/(frontend)/portal/**`, `src/components/portal/**`, `src/lib/portalAdmin/*`, `src/components/payload/*`, `src/payload.config.ts`, `src/lib/brand/jpvDesignSystem.ts`, `DESIGN.md`, portal navigation/settings modules. |
-| Forbidden scope | No route deletion, feature removal, visual-only security, competing design system, broad redesign without acceptance evidence, or backend/data migration disguised as UX work. |
-| Validation | Route/capability inventory, member/admin/preview acceptance matrix, responsive and keyboard checks, scroll-preservation checks, design-token checks, and focused browser tests. |
-| Stop | A capability becomes unreachable, a page owns the wrong scroll container, a hidden control is treated as authorization, or a design change alters domain behavior. |
-| Rollback | Revert the affected UI/admin composition while retaining domain services and records; restore the previous navigation only from the reviewed commit. |
-
-### A6 — Validation, release, and operating contract
+### A4 — Course / Creator domain convergence
 
 | Field | Contract |
 | --- | --- |
-| Objective | Establish one release checklist proving the consolidated system is safe to merge and deploy. |
-| Exact scope | Define unit/integration/release/browser/provider evidence, exact SHA/image/deployment identity, database migration state, rollback owner, monitoring, and post-deploy smoke checks. Update only canonical docs and workflow assertions required by the reviewed contract. |
-| Likely files | `docs/architecture/*`, `docs/release/*`, `.github/workflows/*`, release scripts and focused contract tests. |
-| Forbidden scope | No feature development, undocumented production mutation, branch cleanup, force-push, or declaration of green based on local tests alone. |
-| Validation | Full applicable release contract, `git diff --check`, exact immutable artifact identity, live health, migration state, critical route smoke tests, and separate provider checks. |
-| Stop | Any required evidence is missing, stale, contradictory, or not tied to the exact candidate SHA. |
-| Rollback | Application rollback to the previous immutable artifact; database/provider rollback only through the approved domain-specific procedure with an owner and evidence. |
+| Objective | Break the large course Creator action layer into bounded domain services. |
+| Exact scope | Review `src/lib/portalAdmin/courseAdminActions.ts`, whose responsibilities include auth, validation, relationship checks, business policy, persistence, audit, reorder logic, dependency-safe deletion, and cache revalidation. Separate course, module, and lesson domain operations from transport actions while preserving behavior and the A1 authorization boundary. |
+| Likely files | `src/lib/portalAdmin/courseAdminActions.ts`, course/module/lesson domain services, Payload course persistence, audit/revalidation adapters, and focused tests. |
+| Forbidden scope | No community convergence, identity/provider reconciliation, schema migration, permission weakening, UI redesign, or unrelated feature work. |
+| Validation | Course/module/lesson behavior and dependency tests, actor authorization, relationship checks, audit/reorder/delete semantics, TypeScript, and `git diff --check`. |
+| Stop | A domain operation needs different business semantics, deletion safety changes, an authorization boundary moves, or transport and domain responsibilities cannot be separated without behavior change. |
+| Rollback | Revert only the A4 commit(s), keeping the existing course action boundary available until replacement validation passes. |
+
+### A5 — Source-of-truth + architecture enforcement
+
+| Field | Contract |
+| --- | --- |
+| Objective | Resolve remaining identity/provider/data ambiguities and enforce the architecture. |
+| Exact scope | Review member/admin identity linkage; Payload, Prisma, and Stripe ownership; provider projections; the unique no-write `codex/feature-billing-integration` delta; architecture guards; privileged access enforcement; and source-of-truth closure. The billing branch delta remains preserved and unmerged until this packet reviews it. |
+| Likely files | `src/lib/auth/*`, `src/lib/billing/*`, `src/lib/payloadCourse/*`, provider projection/reconciliation services, architecture guards, privileged access helpers, and source-of-truth documentation. |
+| Forbidden scope | No silent identity merge, guessed provider assignment, unguarded privileged access, schema/provider mutation, destructive backfill, or feature work disguised as reconciliation. |
+| Validation | Environment-scoped read-only reports, ownership and projection tests, identity/admin separation tests, architecture/privileged-access guards, no-secret logging checks, and explicit review of any proposed migration or provider operation. |
+| Stop | A source-of-truth row remains ambiguous, a provider projection is treated as commercial truth, a privileged path lacks a narrow guard, or a write target cannot be proven safe and reversible. |
+| Rollback | Revert the reviewed A5 change or use the recorded domain-specific reversal; preserve source identities, provider records, audit evidence, and review queues. |
+
+### A6 — Full regression / controlled production integration
+
+| Field | Contract |
+| --- | --- |
+| Objective | Complete full regression and make the controlled production integration decision. |
+| Exact scope | Run TypeScript, production build, release gate, browser suites, member/admin matrices, Payload Admin checks, billing regression, migration-state evidence, exact-SHA deployment verification, and production integration review. No feature development is included. |
+| Likely files | `docs/architecture/*`, `docs/release/*`, `.github/workflows/*`, release scripts, and focused contract tests required by the reviewed evidence. |
+| Forbidden scope | No new feature development, undocumented production mutation, branch cleanup, force-push, or declaration of green based on local tests alone. |
+| Validation | Full applicable release contract, exact immutable artifact identity, live health, migration state, critical route smoke tests, provider checks, and explicit production integration approval. |
+| Stop | Any required evidence is missing, stale, contradictory, or not tied to the exact candidate SHA and target environment. |
+| Rollback | Application rollback to the previous immutable artifact; database/provider rollback only through an approved domain-specific procedure with an owner and evidence. |
 
 ## Workbench orchestration contract
 

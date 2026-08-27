@@ -40,7 +40,7 @@ describe('shared domain validation primitives', () => {
 })
 
 describe('plain text Lexical primitive', () => {
-  it('is deterministic and emits one bounded Payload Lexical shape', () => {
+  it('is deterministic and emits one paragraph-bounded Payload Lexical shape', () => {
     const first = plainTextToLexical(' First paragraph \n\nSecond paragraph\nThird paragraph ', {
       maxParagraphs: 2,
     })
@@ -57,7 +57,33 @@ describe('plain text Lexical primitive', () => {
       'Second paragraph',
     ])
     expect(first.root.children.every((node) => node.type === 'paragraph')).toBe(true)
-    expect(plainTextToLexical('123456789', { maxCharacters: 5 }).root.children[0]?.children[0]?.text).toBe('12345')
+    expect(() => plainTextToLexical('123456789', { maxCharacters: 5 })).toThrow('Text is too long.')
     expect(plainTextToLexical('body', { appendText: 'Video: https://example.com' }).root.children).toHaveLength(2)
+  })
+
+  it('does not silently truncate content by default', () => {
+    const text = 'x'.repeat(50_001)
+    const output = plainTextToLexical(text)
+
+    expect(output.root.children).toHaveLength(1)
+    expect(output.root.children[0]?.children[0]?.text).toBe(text)
+  })
+
+  it('preserves the course serializer paragraph cap', () => {
+    const text = Array.from({ length: 201 }, (_, index) => `Course ${index + 1}`).join('\n')
+    const output = plainTextToLexical(text, { maxParagraphs: 200 })
+
+    expect(output.root.children).toHaveLength(200)
+    expect(output.root.children[0]?.children[0]?.text).toBe('Course 1')
+    expect(output.root.children.at(-1)?.children[0]?.text).toBe('Course 200')
+  })
+
+  it('preserves the community serializer paragraph cap', () => {
+    const text = Array.from({ length: 101 }, (_, index) => `Community ${index + 1}`).join('\n')
+    const output = plainTextToLexical(text, { maxParagraphs: 100 })
+
+    expect(output.root.children).toHaveLength(100)
+    expect(output.root.children[0]?.children[0]?.text).toBe('Community 1')
+    expect(output.root.children.at(-1)?.children[0]?.text).toBe('Community 100')
   })
 })

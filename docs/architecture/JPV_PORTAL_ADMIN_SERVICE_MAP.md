@@ -97,7 +97,7 @@ service restructuring or product behavior change.
 | Title validation | `src/lib/domain/validation.ts#validateTitle` | Preserves required/trimmed/200-character behavior. |
 | Bounded text | `src/lib/domain/validation.ts#boundedText` | Uses the shared action error type; existing community error translation remains compatible. |
 | Record/relationship IDs | `src/lib/domain/relationships.ts#relationshipId` and `#normalizeRelationshipId` | Handles direct string/number IDs and populated objects; arrays remain invalid as a scalar relationship. |
-| Plain text to Lexical | `src/lib/content/plainTextToLexical.ts#plainTextToLexical` | Deterministic bounded paragraphs with the existing Payload node shape and `direction: 'ltr'`; `buildPlainTextRichText` remains a compatibility facade. |
+| Plain text to Lexical | `src/lib/content/plainTextToLexical.ts#plainTextToLexical` | Deterministic caller-capped paragraphs with the existing Payload node shape and `direction: 'ltr'`; no silent default character truncation; `buildPlainTextRichText` remains a compatibility facade. |
 | Email normalization | `src/lib/normalize-email.ts#normalizeEmail` | Existing canonical helper reused; A2 adds no replacement. |
 | Audit event | `src/lib/payloadCourse/events.ts#createAuditEvent` | Retained as the canonical audit primitive; no parallel helper or opaque before/after contract added. |
 
@@ -113,7 +113,7 @@ was merged, cherry-picked, deleted, or rewritten.
 | `codex/portal-operations-polish` | Tip is an ancestor of this branch; no file delta remains. | Already integrated/superseded; do not replay. |
 | `codex/ux-foundation-nonoverlap` | Tip is an ancestor of this branch; no file delta remains. | Already integrated/superseded; do not replay. |
 | `feature/course-branding-and-preview` | Tip is an ancestor of this branch; no file delta remains. | Already integrated/superseded; do not replay. |
-| `codex/feature-billing-integration` | One unique no-write Stripe reconciliation commit and focused test delta remain. | Still unique but outside A2; defer to A4 provider/reconciliation review. |
+| `codex/feature-billing-integration` | One unique no-write Stripe reconciliation commit and focused test delta remain. | Still unique but outside A2; preserve unmerged for A5 source-of-truth and architecture-enforcement review. |
 
 ## A2 completion and next boundary
 
@@ -121,6 +121,17 @@ A2 is complete when the canonical primitives, this service map, the scoped
 documentation updates, focused tests, broader repository checks, and the local
 commit are present. A2 does not include UI redesign, data/schema migration,
 provider changes, production actions, access-policy changes, service rewrites,
-or branch integration. The next packet is A3 identity and membership
-consolidation, which must use the source-of-truth and reconciliation rules
-before any data backfill is proposed.
+or branch integration. The next packet is A3 Community Domain Convergence. A4
+is Course / Creator Domain Convergence; A5 is Source-of-Truth + Architecture
+Enforcement; A6 is Full Regression / Controlled Production Integration. These
+packets must remain separately authorized and must preserve the source-of-truth
+and reconciliation rules before any data backfill is proposed.
+
+## Approved packet sequence after A2
+
+| Packet | Exact ownership |
+| --- | --- |
+| A3 | Community domain convergence — shared member/admin post/comment mutation and overlapping moderation semantics. |
+| A4 | Course / Creator domain convergence — bounded course, module, and lesson services separated from transport actions. |
+| A5 | Source-of-truth and architecture enforcement — identity/provider ownership, projections, guards, privileged access, and preserved billing candidate review. |
+| A6 | Full regression and controlled production integration — release evidence and the explicit production integration decision, with no feature development. |

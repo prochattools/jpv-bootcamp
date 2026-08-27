@@ -14,13 +14,19 @@ retained as dated audit history.
   relationship-table migration was applied; production health was green.
 - **Architectural state:** normal feature development is on hold. This is a
   behavior-preserving architecture consolidation, not a rewrite.
-- **Current packet:** A0 production truth reconciliation on
-  `codex/production-architecture-consolidation`, documentation-only.
-- **Next packet:** A1 domain boundary and dependency consolidation, only after
-  orchestrator review of the A0 commit and explicit packet authorization.
-- **Hard stops:** do not start A1, add feature work, merge historical branches,
-  mutate production data/providers, run migrations, delete worktrees/branches,
-  or deploy from this A0 packet.
+- **Current packet:** Corrected A2 shared domain primitives on
+  `codex/production-architecture-consolidation`, complete locally with no
+  production, provider, schema, or stored-data mutation.
+- **Next packet:** A3 Community Domain Convergence, only after orchestrator
+  review of the corrected A2 commit and explicit packet authorization.
+- **Approved sequence:** A0 Production truth and architecture authority; A1
+  Authorization/service foundation; A2 Shared domain primitives; A3 Community
+  domain convergence; A4 Course/Creator domain convergence; A5 Source-of-truth
+  and architecture enforcement; A6 Full regression and controlled production
+  integration.
+- **Hard stops:** do not start A3, add feature work, merge historical
+  branches, mutate production data/providers, run migrations, delete
+  worktrees/branches, or deploy from this A2 correction packet.
 
 ### ARCHITECTURAL HOLD — POST-LAUNCH CONSOLIDATION
 

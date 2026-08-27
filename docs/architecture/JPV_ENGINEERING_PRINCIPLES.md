@@ -5,9 +5,24 @@
 **Date:** 2026-08-27
 
 These principles constrain behavior-preserving consolidation of the production
-system. A1 and A2 are complete locally on the dedicated consolidation branch;
-A3–A6 remain separately gated. A packet may narrow these rules with evidence,
-but may not silently contradict them.
+system. A1 and the corrected A2 are complete locally on the dedicated
+consolidation branch; A3–A6 remain separately gated. A packet may narrow these
+rules with evidence, but may not silently contradict them.
+
+## Approved packet sequence
+
+The architecture packets are fixed in this order:
+
+1. A0 — Production truth and architecture authority
+2. A1 — Authorization/service foundation
+3. A2 — Shared domain primitives
+4. A3 — Community domain convergence
+5. A4 — Course/Creator domain convergence
+6. A5 — Source-of-truth and architecture enforcement
+7. A6 — Full regression and controlled production integration
+
+A3 is the exact next packet. No A3–A6 implementation is implied by this
+document or by the A2 correction.
 
 ## A2 shared primitive authority
 

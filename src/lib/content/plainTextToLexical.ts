@@ -1,3 +1,5 @@
+import { PortalAdminActionError } from '@/lib/portalAdmin/actionResult'
+
 export type PlainTextLexicalTextNode = {
   type: 'text'
   detail: 0
@@ -58,15 +60,20 @@ function paragraph(text: string): PlainTextLexicalParagraphNode {
 /**
  * Builds the single plain-text-to-Payload-Lexical shape used by portal
  * mutations. Blank lines are omitted and every retained line is a paragraph.
+ * Paragraph caps are explicit caller contracts; character caps, when supplied,
+ * reject oversized input rather than silently discarding content.
  */
 export function plainTextToLexical(
   value: string,
   options: PlainTextToLexicalOptions = {},
 ): PlainTextLexicalDocument {
-  const maxCharacters = options.maxCharacters ?? 50_000
+  const maxCharacters = options.maxCharacters
+  if (maxCharacters !== undefined && value.length > Math.max(0, maxCharacters)) {
+    throw new PortalAdminActionError('invalid_input', 'Text is too long.')
+  }
+
   const maxParagraphs = options.maxParagraphs ?? 100
-  const source = value.slice(0, Math.max(0, maxCharacters))
-  const paragraphs = source
+  const paragraphs = value
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter(Boolean)
