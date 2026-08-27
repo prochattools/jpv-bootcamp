@@ -80,12 +80,12 @@ export async function notifyLiveSessionRecipients(
         displayName: recipient.displayName,
         sessionTitle: text(session.title) ?? 'Live session',
         scheduledAt: text(session.scheduledAt) ?? '',
-        sessionUrl: `${baseUrl.replace(/\/$/, '')}/portal/live-sessions#session-${sessionId}`,
+        sessionUrl: `${baseUrl.replace(/\/$/, '')}/portal/live-sessions/${sessionId}`,
       },
     })
     if (emailCreated) created++
     try {
-      const sessionUrl = `/portal/live-sessions#session-${sessionId}`
+      const sessionUrl = `/portal/live-sessions/${sessionId}`
       await createMemberNotificationIfMissing(payload, {
         memberId: recipient.memberId,
         type: 'live_session',

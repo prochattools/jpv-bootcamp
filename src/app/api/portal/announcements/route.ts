@@ -6,7 +6,7 @@ import { getPayload } from 'payload'
 
 import { resolvePayloadRequestSession } from '@/lib/auth/payloadSession'
 import { notifyAnnouncementRecipients } from '@/lib/payloadContent/announcements'
-import { buildPlainTextRichText } from '@/lib/payloadCourse/plainTextRichText'
+import { announcementHTMLToLexical, announcementHTMLToPlainText } from '@/lib/payloadContent/announcementRichText'
 import type { PayloadCourseWriteAPI } from '@/lib/payloadCourse/accessService'
 
 export const runtime = 'nodejs'
@@ -22,7 +22,8 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json() as Record<string, unknown>
     const title = text(body.title)
-    const content = text(body.body)
+    const rawBody = text(body.bodyHtml) || text(body.body)
+    const content = announcementHTMLToPlainText(rawBody)
     const audience = body.audience === 'selected' ? 'selected' : 'all'
     const targetMemberIds = audience === 'selected' ? ids(body.targetMemberIds) : undefined
     if (!title || !content) return NextResponse.json({ ok: false, message: 'Title and announcement text are required.' }, { status: 400 })
@@ -38,7 +39,7 @@ export async function POST(request: NextRequest) {
         title,
         slug: slugify(title),
         excerpt: text(body.excerpt) || content.slice(0, 240),
-        content: buildPlainTextRichText(content),
+        content: await announcementHTMLToLexical(rawBody),
         status: 'published',
         audience,
         targetMemberIds,

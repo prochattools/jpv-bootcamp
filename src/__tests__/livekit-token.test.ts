@@ -181,12 +181,33 @@ describe('POST /api/livekit/token', () => {
     expect(data.reason).toBe('session_closed')
   })
 
-  it('returns 403 when session has no course or space', async () => {
+  it('allows a targeted unlinked portal session', async () => {
+    mockAuth.mockResolvedValue(ACTIVE_MEMBER_AUTH)
+    mockFindByID
+      .mockResolvedValueOnce({
+        id: 'session-x',
+        status: 'live',
+        roomName: 'jpv-live-1724184000-ab12cd34',
+        course: null,
+        space: null,
+        hostUser: { id: 'host-999' },
+        audience: 'selected',
+        targetMemberIds: ['member-123'],
+      })
+      .mockResolvedValueOnce(ACTIVE_MEMBER_DOC)
+    const req = makeRequest({ sessionId: 'session-x' })
+    const res = await postLiveKitToken(req)
+    const data = await res.json()
+    expect(res.status).toBe(200)
+    expect(data.ok).toBe(true)
+  })
+
+  it('rejects a session with an invalid room name', async () => {
     mockAuth.mockResolvedValue(ACTIVE_MEMBER_AUTH)
     mockFindByID.mockResolvedValue({
       id: 'session-x',
       status: 'live',
-      roomName: 'jpv-space-1-1000000000',
+      roomName: 'Invalid Room!',
       course: null,
       space: null,
       hostUser: null,
@@ -195,7 +216,7 @@ describe('POST /api/livekit/token', () => {
     const res = await postLiveKitToken(req)
     const data = await res.json()
     expect(res.status).toBe(403)
-    expect(data.reason).toBe('session_misconfigured')
+    expect(data.reason).toBe('invalid_room_name')
   })
 
   // ---- Space session tests -----------------------------------------------

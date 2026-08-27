@@ -86,18 +86,26 @@ describe('POST /api/livekit/token — operator-to-member delivery', () => {
     },
   )
 
-  it('rejects invalid room names and sessions with no course or space', async () => {
+  it('rejects invalid room names and allows targeted unlinked sessions', async () => {
     mockAuth.mockResolvedValue(MEMBER)
     mockFindByID.mockResolvedValue({ ...LIVE_SESSION, roomName: 'Invalid Room!' })
     let response = await postLiveKitToken(request({ sessionId: 'session-1' }))
     expect(response.status).toBe(403)
     expect((await response.json()).reason).toBe('invalid_room_name')
 
-    // session with neither course nor space is misconfigured
-    mockFindByID.mockResolvedValue({ ...LIVE_SESSION, course: null, space: null })
+    mockFindByID
+      .mockResolvedValueOnce({
+        ...LIVE_SESSION,
+        course: null,
+        space: null,
+        roomName: 'jpv-live-1724184000-ab12cd34',
+        audience: 'selected',
+        targetMemberIds: ['member-1'],
+      })
+      .mockResolvedValueOnce({ id: 'member-1', accountStatus: 'active', emailVerifiedAt: '2026-01-01' })
     response = await postLiveKitToken(request({ sessionId: 'session-1' }))
-    expect(response.status).toBe(403)
-    expect((await response.json()).reason).toBe('session_misconfigured')
+    expect(response.status).toBe(200)
+    expect((await response.json()).ok).toBe(true)
   })
 
   it('allows members only for live sessions with active course enrollment', async () => {

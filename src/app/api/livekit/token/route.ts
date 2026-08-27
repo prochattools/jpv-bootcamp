@@ -352,13 +352,6 @@ export async function POST(req: NextRequest) {
   const isSpaceSession = spaceId !== null
   const isCourseSession = courseId !== null
 
-  if (!isCourseSession && !isSpaceSession) {
-    return NextResponse.json(
-      { ok: false, reason: 'session_misconfigured' } satisfies TokenErrorResponse,
-      { status: 403 },
-    )
-  }
-
   const hostUserId = liveSessionRelationshipId(session.hostUser)
   const isHost = hostUserId !== null && String(user.id) === hostUserId
 
@@ -380,7 +373,7 @@ export async function POST(req: NextRequest) {
 
     const audience = session.audience === 'all' || session.audience === 'selected' ? session.audience : 'enrolled'
     if (audience === 'selected') {
-      const selected = Array.isArray(session.targetMemberIds) && session.targetMemberIds.some((value) => String(value) === String(user.id))
+      const selected = Array.isArray(session.targetMemberIds) && session.targetMemberIds.some((value) => liveSessionRelationshipId(value) === String(user.id))
       if (!selected) return NextResponse.json({ ok: false, reason: 'not_entitled' } satisfies TokenErrorResponse, { status: 403 })
     }
 
@@ -465,8 +458,10 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  // Space calls: all participants publish (group call); course calls: only host publishes
-  const canPublish = isSpaceSession ? true : isHost
+  // Space calls and explicitly targeted/all-member portal sessions are group
+  // calls. Course sessions retain their host-only publishing behavior.
+  const audience = session.audience === 'all' || session.audience === 'selected' ? session.audience : 'enrolled'
+  const canPublish = isHost || isSpaceSession || (!isCourseSession && (audience === 'all' || audience === 'selected'))
   const jwt = buildLiveKitToken(
     {
       identity: userIdentity,

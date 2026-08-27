@@ -130,7 +130,7 @@ export default async function PortalDashboardPage({ searchParams }: PortalDashbo
         <section>
           <p className='jpv-eyebrow'>JPV Bootcamp — Administrator</p>
           <h1 className='mt-2 text-2xl font-semibold tracking-tight text-jpv-ink'>Portal overview</h1>
-          <p className='mt-1 text-sm text-jpv-muted'>You are viewing the member portal as a platform administrator. Admin Mode is enabled automatically, so you can access management controls on course and community pages immediately.</p>
+          <p className='mt-1 text-sm text-jpv-muted'>You are viewing the member portal as a platform administrator. Admin Mode starts on, and you can turn it off or on from the top bar while you participate as a member.</p>
         </section>
         <section>
           <h2 className='mb-4 text-xs font-extrabold uppercase tracking-widest text-jpv-muted'>Quick links</h2>

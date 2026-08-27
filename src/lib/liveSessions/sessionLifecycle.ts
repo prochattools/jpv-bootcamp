@@ -109,6 +109,15 @@ export function generateLiveSessionRoomName(input: {
   return roomName
 }
 
+export function generateGenericLiveSessionRoomName(input: { now?: Date } = {}): string {
+  const timestamp = Math.floor((input.now ?? new Date()).getTime() / 1000)
+  const roomName = `jpv-live-${timestamp}-${randomUUID().slice(0, 8)}`
+  if (!isValidLiveSessionRoomName(roomName)) {
+    throw new Error('Generated LiveKit room name is invalid.')
+  }
+  return roomName
+}
+
 export function isValidLiveSessionRoomName(value: unknown): value is string {
   return typeof value === 'string' && ROOM_NAME_PATTERN.test(value) && value.length <= 128
 }
@@ -176,17 +185,15 @@ export function prepareLiveSessionMutation(params: {
     }
     const courseId = liveSessionRelationshipId(params.data.course)
     const spaceId = liveSessionRelationshipId(params.data.space)
-    if (!courseId && !spaceId) {
-      throw new Error('Live session requires either a course or a community space.')
-    }
-
     const roomName = spaceId
       ? generateSpaceLiveSessionRoomName({ spaceId, now })
-      : generateLiveSessionRoomName({
+      : courseId
+        ? generateLiveSessionRoomName({
           courseId: courseId!,
           moduleId: liveSessionRelationshipId(params.data.module),
           lessonId: liveSessionRelationshipId(params.data.lesson),
         })
+        : generateGenericLiveSessionRoomName({ now })
 
     return {
       ...params.data,
@@ -251,7 +258,7 @@ export async function assertLiveSessionRelationships(params: {
   const courseId = liveSessionRelationshipId(params.course)
   const moduleId = liveSessionRelationshipId(params.module)
   const lessonId = liveSessionRelationshipId(params.lesson)
-  if (!courseId) throw new Error('Live session course is required. Select a course before saving.')
+  if (!courseId) return
   if (lessonId && !moduleId) {
     throw new Error(
       'A lesson was selected without a module. Select the module this lesson belongs to, or clear the lesson field.',
@@ -307,3 +314,4 @@ export async function assertLiveSessionRelationships(params: {
     }
   }
 }
+import { randomUUID } from 'node:crypto'
