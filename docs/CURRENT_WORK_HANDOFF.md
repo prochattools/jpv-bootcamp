@@ -23,9 +23,8 @@ explicitly superseded here.
   `c43e899824b993200b05f1b337993eb55fae0905`.
 - **Current packet:** A6.1 bounded release-control repair is committed as
   `ba87958f4209e5ab4ad88a4b6191ae5b7ee1d483` and pushed to
-  `origin/feature/course-branding-and-preview`; the current remote tip is
-  documentation-only commit `3da499c8e9e7b66832dab300bdf49a4c733072c4`.
-  It preserves the A1
+  `origin/feature/course-branding-and-preview`; later commits on that branch
+  are documentation-only evidence snapshots. It preserves the A1
   authorization/action-result foundation, A2 shared primitives, A3 community
   boundary, A4 course/Creator boundary, A5 architecture guards, and the A6
   first-failure evidence. The repair decouples read-only migration discovery
@@ -33,15 +32,17 @@ explicitly superseded here.
   current-state fallbacks, and adds target/environment/schema apply guards.
   It does not apply migrations or change application, schema, provider, or
   member data.
-- **Current gate:** Fresh exact-current-tip read-only staging-plan run
-  `33185789357` checked out `3da499c8e9e7b66832dab300bdf49a4c733072c4` and
-  passed confirmation, branch/SHA ancestry, target identity, secret-presence,
-  Tailscale, and TCP guards. Its sanitized result is blocked by
-  `status_query_failed` with `prismaHealthy=false`, while confirming
-  `jpvbootcamp_staging`, `jpvbootcamp-staging`, and the exact current tip.
-  Applied/pending staging state is therefore unknown; no staging or
-  production deployment is authorized. The automatic candidate push gate is
-  `33185716475` and remains in progress. The fresh production identity dry-run
+- **Current gate:** Fresh exact-tip read-only staging-plan run
+  `33185789357` checked out the runtime candidate plus its then-current
+  documentation-only descendant `3da499c8e9e7b66832dab300bdf49a4c733072c4`
+  and passed confirmation, branch/SHA ancestry, target identity,
+  secret-presence, Tailscale, and TCP guards. Its sanitized result is blocked
+  by `status_query_failed` with `prismaHealthy=false`, while confirming
+  `jpvbootcamp_staging` and `jpvbootcamp-staging`. Later branch commits are
+  documentation-only and do not change this runtime evidence. Applied/pending
+  staging state is therefore unknown; no staging or production deployment is
+  authorized. Push validation is separate and cannot authorize a deployment.
+  The fresh production identity dry-run
   `33180247113` found 11 active Stripe subscriptions, 10 active Payload
   members, 7 customer-ID matches, 0 unmatched/ambiguous identities, and 4
   subscriptions linked to inactive local members. Those four are explained

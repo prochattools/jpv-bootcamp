@@ -369,9 +369,9 @@ one fresh exact-SHA staging plan; if it does not pass, stop without deploying.
 ## 15. A6.1 current-tip confirmation — `3da499c`
 
 The code repair remains `ba87958f4209e5ab4ad88a4b6191ae5b7ee1d483`.
-Documentation-only commit `3da499c8e9e7b66832dab300bdf49a4c733072c4` is now
-the exact tip of `origin/feature/course-branding-and-preview`; it changed no
-runtime code, database, provider, subscription, reconciliation, or member
+Documentation-only commit `3da499c8e9e7b66832dab300bdf49a4c733072c4` was the
+branch tip when the plan below ran; later documentation-only snapshots changed
+no runtime code, database, provider, subscription, reconciliation, or member
 state.
 
 The final exact-current-tip read-only staging-plan workflow was
