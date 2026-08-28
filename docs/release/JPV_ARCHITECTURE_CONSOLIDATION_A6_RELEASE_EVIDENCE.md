@@ -228,7 +228,9 @@ the follow-up work without reopening A0–A5.1 or entering Gate 2.
   (`fix: decouple migration discovery from apply authorization`).
 - The repair commit was pushed fast-forward to
   `origin/feature/course-branding-and-preview`; the current feature tip is
-  the documentation-only continuation commit
+  the documentation-only evidence snapshot
+  `d9eeb1bbfe3bb632a9ae3e9922aa78f829ea4cc2`. The final exact-SHA staging
+  plan below ran at its parent evidence tip
   `0738687cc71007077e370ca72e83df48b0d4ae1a`, whose parent is the repaired
   application SHA.
 - `main` and `origin/main` remain at

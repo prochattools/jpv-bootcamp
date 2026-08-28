@@ -25,6 +25,8 @@ explicitly superseded here.
   at `323a73a13e6da07ebc3c1b44fc7ee2d1ff178870` and pushed to
   `origin/feature/course-branding-and-preview`; the current remote tip is the
   documentation-only evidence commit
+  `d9eeb1bbfe3bb632a9ae3e9922aa78f829ea4cc2`; the final exact-SHA staging
+  plan ran at its parent evidence tip
   `0738687cc71007077e370ca72e83df48b0d4ae1a`. It preserves the A1
   authorization/action-result foundation, A2 shared primitives, A3 community
   boundary, A4 course/Creator boundary, A5 architecture guards, and the A6
