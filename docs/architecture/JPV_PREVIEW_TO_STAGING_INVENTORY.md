@@ -30,8 +30,8 @@ identifiers remain labelled below until a separately authorized cleanup.
 | Reference | Classification | Observed or intended state |
 | --- | --- | --- |
 | `jpvbootcamp` / `jpvbootcamp` | Production | Current production database/schema pair |
-| `jpvbootcamp_preview` / `jpvbootcamp_staging` | Transitional staging | Current live preview runtime database/schema pair; read-only migration evidence is mismatched |
-| `jpvbootcamp_staging` / `jpvbootcamp` | Intended staging target | Preferred Gate B target; provisioning and migration are not authorized in E1 |
+| `jpvbootcamp` / `jpvbootcamp_staging` (schema absent) | Transitional staging | Current live preview runtime connection; it shares the production database and has no usable migration tables |
+| `jpvbootcamp_staging` / `jpvbootcamp_staging` | Intended staging target | Preferred Gate B target; provisioning and migration are not authorized in E1 |
 | `jpvbootcamp_legacy` / `jpvbootcamp` | Legacy | Separate frozen legacy database/schema pair |
 | `jpvbootcamp_staging_user` | Current observed role label | Used by production and transitional staging; role repair is deferred and fail-closed |
 | `jpvbootcamp_user` | Legacy role | Legacy only |
@@ -71,10 +71,21 @@ adopting them:
   preview origin
 - old preview workflow and Traefik terminology preserved in filenames, secret
   names, and host paths
+- `.deployment-status.json`, which is a dated 2026-07-18 status artifact; its
+  preview URL, branch, and claims are not current live evidence
+- `scripts/run-remediation.sh`, a legacy member-specific utility with hard-coded
+  historical preview endpoints; it is not part of the E1 staging migration lane
+- the `preview:*` package scripts, which generate or validate historical preview
+  packets; current staging plans use `scripts/release/runStagingPayloadMigration.ts`
+  and the `staging:*` package scripts
+- `src/lib/staging-auto-provision.ts` accepting the historical `preview`
+  environment label for compatibility; it does not establish hostname,
+  database, or schema authority
 
-The legacy hostname is not used by current-platform automation except where it
-appears in explicit production/legacy deny-lists, topology documentation, or
-defensive tests. Those references are intentional safety boundaries.
+The legacy hostname and preview-host media rewrite are not used by
+current-platform authority except where they appear in explicit production or
+legacy deny-lists, topology documentation, compatibility code, or defensive
+tests. Those references are intentional safety boundaries.
 
 ## Gate B removal/repoint checklist
 

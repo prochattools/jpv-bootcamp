@@ -37,8 +37,11 @@ explicitly superseded here.
   `f6f293d3b47193d5d3e5a0ae04cc729f5af8ae9f` and passed confirmation,
   branch/SHA ancestry, target identity, secret-presence, Tailscale, and TCP
   guards. Its sanitized result is blocked by `status_query_failed` with
-  `prismaHealthy=false`, while confirming `jpvbootcamp_staging` and
-  `jpvbootcamp-staging`. Applied/pending staging state is therefore unknown;
+  `prismaHealthy=false`, while confirming the logical target
+  `jpvbootcamp_staging` and `jpvbootcamp-staging`. Direct read-only inspection
+  then established that the live transitional runtime connects to database
+  `jpvbootcamp`, where the configured `jpvbootcamp_staging` schema and migration
+  tables are absent. Applied/pending staging state is therefore unavailable;
   no staging or production deployment is authorized. Push validation is
   separate and cannot authorize a deployment. The local `.env` and
   `.env.production` were not used because both target localhost development
@@ -76,15 +79,16 @@ The production application is `JPV Bootcamp` /
 `clients-jpv-bootcamp-preview-wjfqfd` /
 `bZllV93NqsPZAFCsqDskb`, but it currently serves
 `https://preview.jpvbootcamp.com` with `DEPLOYMENT_ENV=preview`, database
-`jpvbootcamp_preview`, and schema `jpvbootcamp_staging`. The intended
+`jpvbootcamp`, and configured schema `jpvbootcamp_staging` absent from that
+database. The intended
 `https://staging.jpvbootcamp.com` origin returns 404. Legacy is isolated at
 `https://legacy.jpvbootcamp.com` on `jpvbootcamp_legacy` / `jpvbootcamp`.
 
-The transitional staging schema is present, but its read-only migration
-evidence is 46 Payload rows and 26 Prisma rows while the repository registers
-52 Payload migrations and additional Prisma migrations. This explains why the
-staging status guard cannot treat the runtime as reconciled. The production
-role's staging-labelled name is recorded drift and was not changed.
+The transitional staging schema is absent, so its read-only migration tables
+cannot be queried. The production connection separately exposes 52 Payload and
+28 Prisma migration rows. This explains why the staging status guard cannot
+treat the runtime as reconciled. The production role's staging-labelled name
+is recorded drift and was not changed.
 
 E1 repository corrections are intentionally local and reversible on the
 current branch. No database/schema/role repair, migration, provider mutation,

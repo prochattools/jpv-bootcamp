@@ -18,9 +18,10 @@ identities, their public origins, database boundaries, migration evidence, and
 repository staging guards. The canonical production app is
 `clients-jpv-bootcamp-app-tp9xrk` at `https://jpvbootcamp.com`; the existing
 staging application still serves the transitional preview runtime at
-`https://preview.jpvbootcamp.com` against `jpvbootcamp_preview` /
-`jpvbootcamp_staging`; and the intended `https://staging.jpvbootcamp.com`
-origin returns 404. Legacy remains isolated at `legacy.jpvbootcamp.com`.
+`https://preview.jpvbootcamp.com` against database `jpvbootcamp` with the
+configured but absent `jpvbootcamp_staging` schema; and the intended
+`https://staging.jpvbootcamp.com` origin returns 404. Legacy remains isolated at
+`legacy.jpvbootcamp.com`.
 
 The repository corrections centralize non-secret topology, constrain staging
 source refs to `feature/*`, `fix/*`, and `release/*`, remove active defaults to

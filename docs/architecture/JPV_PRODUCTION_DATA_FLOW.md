@@ -14,10 +14,11 @@ Production is the root application at `https://jpvbootcamp.com` with database
 `jpvbootcamp` / schema `jpvbootcamp`. Legacy is isolated at
 `https://legacy.jpvbootcamp.com` with database `jpvbootcamp_legacy` / schema
 `jpvbootcamp`. The current non-production runtime still serves
-`https://preview.jpvbootcamp.com` from the transitional
-`jpvbootcamp_preview` / `jpvbootcamp_staging` pair, while the intended
-`https://staging.jpvbootcamp.com` origin returns 404. Its migration evidence is
-not aligned with the repository registry.
+`https://preview.jpvbootcamp.com` with `DEPLOYMENT_ENV=preview`. Its connection
+reaches the production database `jpvbootcamp`, but the configured
+`jpvbootcamp_staging` schema is absent and its migration tables are unavailable.
+The intended `https://staging.jpvbootcamp.com` origin returns 404. This is not a
+usable or isolated staging authority.
 
 The repository now centralizes non-secret environment identities in
 `src/lib/environmentTopology.ts`; active staging checks use the staging origin

@@ -20,8 +20,8 @@ staging target is the existing Dokploy staging application
 origin must be `https://staging.jpvbootcamp.com` and its source boundary is
 `feature/*`, `fix/*`, or `release/*`. At this gate, that application is still
 serving `https://preview.jpvbootcamp.com` with `DEPLOYMENT_ENV=preview` against
-the transitional `jpvbootcamp_preview` database and
-`jpvbootcamp_staging` schema. The intended staging hostname returns 404.
+database `jpvbootcamp`; its configured `jpvbootcamp_staging` schema is absent.
+The intended staging hostname returns 404.
 
 Production is observed on database `jpvbootcamp`, schema `jpvbootcamp`; legacy
 is observed on separate database `jpvbootcamp_legacy`, schema `jpvbootcamp`.

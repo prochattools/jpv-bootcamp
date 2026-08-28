@@ -17,45 +17,46 @@ returns 404.
 | Runtime | Database host | Database | Schema | Role | Current classification |
 | --- | --- | --- | --- | --- | --- |
 | Production | `10.0.2.4:5433` | `jpvbootcamp` | `jpvbootcamp` | `jpvbootcamp_staging_user` | Current production; protected |
-| Transitional staging | `10.0.2.4:5433` | `jpvbootcamp_preview` | `jpvbootcamp_staging` | `jpvbootcamp_staging_user` | Current preview runtime; migration state mismatched |
+| Transitional staging | `10.0.2.4:5433` | `jpvbootcamp` | `jpvbootcamp_staging` (absent) | `jpvbootcamp_staging_user` | Current preview runtime; shares production database and has no configured schema |
 | Legacy | `10.0.2.4:5433` | `jpvbootcamp_legacy` | `jpvbootcamp` | `jpvbootcamp_user` | Frozen legacy; never a current migration target |
 
-The live host therefore exposes three observed database names on one database
+The live host therefore exposes two observed database names on one database
 server. The preferred target for a repaired staging environment is a separate
-`jpvbootcamp_staging` database with schema `jpvbootcamp`; provisioning and
-repair are deferred to E1 Gate B. The production role's staging-labelled name
-is recorded as drift and is not repaired by this gate.
+`jpvbootcamp_staging` database with schema `jpvbootcamp_staging`; provisioning
+and repair are deferred to E1 Gate B. The production role's staging-labelled
+name is recorded as drift and is not repaired by this gate.
 
-The transitional staging schema exists and contains 46 Payload and 26 Prisma
-migration records, while the repository registers 52 Payload migrations and
-additional Prisma migrations not present in applied-state evidence. This is an
-E1 blocker. No migration, database, schema, role, provider, or deployment
-change was executed. See
+The transitional staging connection reaches `jpvbootcamp`, but its configured
+`jpvbootcamp_staging` schema is absent; both migration tables are therefore
+unavailable there. The production connection separately exposes 52 Payload and
+28 Prisma migration records. This is an E1 blocker. No migration, database,
+schema, role, provider, or deployment change was executed. See
 `docs/architecture/JPV_ENVIRONMENT_TOPOLOGY_V1.md` and
 `docs/architecture/JPV_PREVIEW_TO_STAGING_INVENTORY.md` for the full inventory.
 
 ## Historical checkpoints (retained; not current live truth)
 
-## Verified mapping
+## Historical verified mapping
 
 | Application | Runtime image | Database host | Database | Configured schema | Database user | Status |
 | --- | --- | --- | --- | --- | --- | --- |
 | JPV Bootcamp (`clients-jpv-bootcamp-app-tp9xrk`) | `ghcr.io/prochattools/jpv-bootcamp:e39bcce527617fd927303ba8e0f80861e686c75a` | `10.0.2.4:5433` | `jpvbootcamp` | `jpvbootcamp` | `jpvbootcamp_staging_user` | Named production application; authorized migration target |
 | JPV Bootcamp \| Legacy (`web-public-jpv-bootcamp-l66egq`) | `ghcr.io/prochattools/jpv-bootcamp:e88cb8de015c329a64d8aa303bd36c3ff4aa3ec0-legacy` | `10.0.2.4:5433` | `jpvbootcamp_legacy` | `jpvbootcamp` | `jpvbootcamp_user` | Separate legacy database; do not use for current portal migrations |
-| JPV Bootcamp \| Staging (`clients-jpv-bootcamp-preview-wjfqfd`) | `ghcr.io/prochattools/jpv-bootcamp:8388070c9ab79d0799b50adbd77329d982b3f2ef` | `10.0.2.4:5433` | `jpvbootcamp` | `jpvbootcamp_staging` | `jpvbootcamp_staging_user` | Independent preview runtime; configured schema was absent at verification time |
+| JPV Bootcamp \| Staging (`clients-jpv-bootcamp-preview-wjfqfd`) | `ghcr.io/prochattools/jpv-bootcamp:8388070c9ab79d0799b50adbd77329d982b3f2ef` | `10.0.2.4:5433` | `jpvbootcamp` | `jpvbootcamp_staging` | `jpvbootcamp_staging_user` | Transitional preview runtime; configured schema was absent at verification time |
 
 ## Interpretation
 
-There are two databases, not three:
+There are two observed databases, not three:
 
 - `jpvbootcamp` is shared by the named production application and the preview
-  application, with different intended schemas (`jpvbootcamp` and
-  `jpvbootcamp_staging`).
+  application, with production using `jpvbootcamp` and the preview configured
+  for the absent `jpvbootcamp_staging` schema.
 - `jpvbootcamp_legacy` is a separate database used by the legacy application.
 - At verification time, only the `jpvbootcamp` schema was present in the
-  production connection's database, and the preview connection reported that
-  `jpvbootcamp_staging` did not exist. This is configuration drift that must be
-  repaired before the preview runtime is treated as a usable isolated database.
+  shared database's visible schema inventory, and the preview connection
+  reported that `jpvbootcamp_staging` did not exist. This is configuration drift
+  that must be repaired before the preview runtime is treated as a usable
+  isolated database.
 
 ## Migration safety rules
 
@@ -80,7 +81,7 @@ The administrator identity migration and its two target columns were absent. The
 legacy database had only its initial Payload migration record. The preview
 connection could not find its configured schema.
 
-## Post-apply evidence
+## Historical post-apply evidence
 
 The explicitly authorized operation then applied
 `20260826_100000_administrator_member_identity` to the named production
