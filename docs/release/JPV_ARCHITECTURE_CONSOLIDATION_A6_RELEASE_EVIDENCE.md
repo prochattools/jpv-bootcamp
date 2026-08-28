@@ -365,3 +365,32 @@ production deployment was performed, and no provider, subscription,
 reconciliation, administrator-link, or member data was changed. The next
 safe action is a bounded read-only diagnosis of `status_query_failed`, then
 one fresh exact-SHA staging plan; if it does not pass, stop without deploying.
+
+## 15. A6.1 current-tip confirmation — `3da499c`
+
+The code repair remains `ba87958f4209e5ab4ad88a4b6191ae5b7ee1d483`.
+Documentation-only commit `3da499c8e9e7b66832dab300bdf49a4c733072c4` is now
+the exact tip of `origin/feature/course-branding-and-preview`; it changed no
+runtime code, database, provider, subscription, reconciliation, or member
+state.
+
+The final exact-current-tip read-only staging-plan workflow was
+`33185789357`. Its sanitized result was:
+
+```json
+{"version":2,"resultCode":"plan_blocked","blockerCodes":["status_query_failed"],"branch":"feature/course-branding-and-preview","commit":"3da499c8e9e7b66832dab300bdf49a4c733072c4","schema":"jpvbootcamp_staging","environment":"staging","targetId":"jpvbootcamp-staging","appliedPayloadCount":0,"expectedPendingMigrations":[],"expectedPendingBatchIsOnlyMissing":false,"unexpectedPayloadCount":0,"duplicatePayloadCount":0,"malformedPayloadCount":0,"orderingAnomalyCount":0,"prismaHealthy":false}
+```
+
+All pre-database guards passed and the sanitized artifact uploaded. The
+read-only status query failed, so applied/pending staging state remains
+unknown. The deploy and migration-apply jobs were skipped. The automatic
+candidate push validation `33185716475` is separate and remains in progress;
+it does not change this read-only database decision.
+
+### Current Gate 1 decision
+
+`NOT READY FOR PRODUCTION MERGE`
+
+Gate 2 remains unopened. No migration apply, staging deployment, production
+merge, production deployment, provider mutation, reconciliation apply, or
+administrator backfill was performed.
