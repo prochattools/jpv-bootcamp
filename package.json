@@ -58,6 +58,7 @@
     "staging:payload-migration-plan": "tsx scripts/release/runStagingPayloadMigration.ts plan",
     "staging:payload-migration-apply": "tsx scripts/release/runStagingPayloadMigration.ts apply",
     "staging:payload-migration-rollback-plan": "tsx scripts/release/runStagingPayloadMigration.ts rollback-plan",
+    "staging:database-bootstrap": "tsx scripts/release/runStagingDatabaseBootstrap.ts",
     "staging:smoke-plan": "tsx scripts/release/printStagingSmokePlan.ts",
     "staging:smoke-simulated": "tsx scripts/release/simulatedStagingSmoke.ts",
     "release:evidence:dry-run": "tsx scripts/release/buildReleaseEvidence.ts",
