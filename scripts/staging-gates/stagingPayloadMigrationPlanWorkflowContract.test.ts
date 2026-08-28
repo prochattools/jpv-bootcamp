@@ -671,38 +671,26 @@ async function main(): Promise<void> {
     )
   })
 
-  await test('plan_ok semantics: workflow verifies the approved staging baseline count', () => {
+  await test('plan_ok semantics: workflow preserves dynamically discovered applied-count evidence', () => {
     assert.ok(
-      planJobYml.includes('appliedPayloadCount mismatch') || planJobYml.includes('p.appliedPayloadCount !== expectedCount'),
-      'must verify appliedPayloadCount against the reviewed staging baseline',
+      planJobYml.includes('appliedPayloadCount'),
+      'must preserve the appliedPayloadCount evidence field',
     )
+    assert.equal(planJobYml.includes('EXPECTED_APPLIED_COUNT=40'), false)
   })
 
-  await test('plan_ok semantics: workflow expects the exact ordered billing migration batch', () => {
-    const expectedBillingBatch = [
-      '20260825_120000_billing_invoice_visibility',
-      '20260825_121000_membership_support_runtime_alignment',
-      '20260825_122000_membership_support_relationships',
-      '20260825_123000_membership_support_relationship_alignment',
-      '20260825_124000_membership_review_assignee_alignment',
-      '20260825_125000_membership_shadow_state_alignment',
-    ]
-    for (const migration of expectedBillingBatch) {
-      assert.ok(planJobYml.includes(migration), `must expect billing migration '${migration}'`)
-    }
-  })
-
-  await test('plan_ok semantics: workflow verifies exact ordered Forward A-D batch and only-missing flag', () => {
+  await test('plan_ok semantics: workflow accepts the current canonical pending list as discovery evidence', () => {
     assert.ok(
-      planJobYml.includes('expectedPendingMigrations mismatch') &&
-      planJobYml.includes('p.expectedPendingMigrations.length !== expectedPending.length') &&
-      planJobYml.includes('migration !== expectedPending[index]'),
-      'must compare expectedPendingMigrations by exact length, order, and value',
+      planJobYml.includes('expectedPendingMigrations must be an array') ||
+      planJobYml.includes('Array.isArray(p.expectedPendingMigrations)'),
+      'must validate the dynamically discovered canonical pending migration list',
     )
     assert.ok(
       planJobYml.includes('expectedPendingBatchIsOnlyMissing must be true') || planJobYml.includes('!p.expectedPendingBatchIsOnlyMissing'),
       'must verify expectedPendingBatchIsOnlyMissing is true',
     )
+    assert.equal(planJobYml.includes('EXPECTED_APPLIED_COUNT=40'), false)
+    assert.equal(planJobYml.includes('expectedPending = ['), false)
   })
 
   await test('plan_ok semantics: workflow verifies anomaly counts are all zero', () => {
@@ -717,6 +705,10 @@ async function main(): Promise<void> {
     assert.ok(
       planJobYml.includes('malformedPayloadCount must be 0') || planJobYml.includes('p.malformedPayloadCount !== 0'),
       'must verify malformedPayloadCount === 0',
+    )
+    assert.ok(
+      planJobYml.includes('orderingAnomalyCount must be 0') || planJobYml.includes('p.orderingAnomalyCount !== 0'),
+      'must verify orderingAnomalyCount === 0',
     )
   })
 

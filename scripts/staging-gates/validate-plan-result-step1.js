@@ -28,10 +28,12 @@ if (typeof parsed.duplicatePayloadCount !== 'number') { process.stderr.write('PL
 if (!Number.isSafeInteger(parsed.duplicatePayloadCount) || parsed.duplicatePayloadCount < 0) { process.stderr.write('PLAN-BLOCKED: duplicatePayloadCount not nonnegative safe integer\n'); process.exit(1) }
 if (typeof parsed.malformedPayloadCount !== 'number') { process.stderr.write('PLAN-BLOCKED: malformedPayloadCount not number\n'); process.exit(1) }
 if (!Number.isSafeInteger(parsed.malformedPayloadCount) || parsed.malformedPayloadCount < 0) { process.stderr.write('PLAN-BLOCKED: malformedPayloadCount not nonnegative safe integer\n'); process.exit(1) }
+if (typeof parsed.orderingAnomalyCount !== 'number') { process.stderr.write('PLAN-BLOCKED: orderingAnomalyCount not number\n'); process.exit(1) }
+if (!Number.isSafeInteger(parsed.orderingAnomalyCount) || parsed.orderingAnomalyCount < 0) { process.stderr.write('PLAN-BLOCKED: orderingAnomalyCount not nonnegative safe integer\n'); process.exit(1) }
 if (typeof parsed.prismaHealthy !== 'boolean') { process.stderr.write('PLAN-BLOCKED: prismaHealthy not boolean\n'); process.exit(1) }
 if (parsed.unhealthyPrismaMigrations !== undefined) { if (!Array.isArray(parsed.unhealthyPrismaMigrations)) { process.stderr.write('PLAN-BLOCKED: unhealthyPrismaMigrations not array\n'); process.exit(1) } for (const m of parsed.unhealthyPrismaMigrations) { if (typeof m !== 'string') { process.stderr.write('PLAN-BLOCKED: unhealthyPrismaMigration entry not string\n'); process.exit(1) } } }
 // Reject unknown keys
-const ALLOWED_KEYS = new Set(['version','resultCode','blockerCodes','branch','commit','schema','environment','targetId','appliedPayloadCount','expectedPendingMigrations','expectedPendingBatchIsOnlyMissing','unexpectedPayloadCount','duplicatePayloadCount','malformedPayloadCount','prismaHealthy','unhealthyPrismaMigrations'])
+const ALLOWED_KEYS = new Set(['version','resultCode','blockerCodes','branch','commit','schema','environment','targetId','appliedPayloadCount','expectedPendingMigrations','expectedPendingBatchIsOnlyMissing','unexpectedPayloadCount','duplicatePayloadCount','malformedPayloadCount','orderingAnomalyCount','prismaHealthy','unhealthyPrismaMigrations'])
 for (const k of Object.keys(parsed)) { if (!ALLOWED_KEYS.has(k)) { process.stderr.write('PLAN-BLOCKED: unknown key: '+k+'\n'); process.exit(1) } }
 // Validate blockerCodes: strings and from allowlist only
 for (const c of parsed.blockerCodes) {

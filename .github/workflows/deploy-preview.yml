@@ -673,7 +673,7 @@ jobs:
 
           # Fallback schema-valid artifact — used when early guards abort before the runner writes output.
           # Must satisfy all fields required by the schema validation below.
-          FALLBACK_ARTIFACT='{"version":2,"resultCode":"plan_blocked","blockerCodes":["output_format_invalid"],"branch":"unknown","commit":"unknown","schema":"","environment":"","targetId":"","appliedPayloadCount":0,"expectedPendingMigrations":[],"expectedPendingBatchIsOnlyMissing":false,"unexpectedPayloadCount":0,"duplicatePayloadCount":0,"malformedPayloadCount":0,"prismaHealthy":false}'
+          FALLBACK_ARTIFACT='{"version":2,"resultCode":"plan_blocked","blockerCodes":["output_format_invalid"],"branch":"unknown","commit":"unknown","schema":"","environment":"","targetId":"","appliedPayloadCount":0,"expectedPendingMigrations":[],"expectedPendingBatchIsOnlyMissing":false,"unexpectedPayloadCount":0,"duplicatePayloadCount":0,"malformedPayloadCount":0,"orderingAnomalyCount":0,"prismaHealthy":false}'
 
           # Reject mixed output: stdout must begin with '{' — no operational log lines before JSON
           FIRST_CHAR="$(head -c 1 "$STDOUT_FILE" 2>/dev/null || echo '')"
@@ -685,11 +685,11 @@ jobs:
 
           # Reject trailing bytes: use strict Node.js JSON.parse (not jq streaming) for single-document validation
           # jq -e 'type == "object"' accepts multiple documents; JSON.parse does not.
-          ALLOWED_BLOCKER_CODES='["expected_commit_required","branch_guard_failed","commit_guard_failed","database_url_missing","database_url_invalid","environment_guard_failed","target_identity_guard_failed","production_marker_rejected","hostname_mismatch","worktree_integrity_failed","status_query_failed","malformed_payload_evidence","schema_identity_mismatch","applied_count_mismatch","pending_migration_mismatch","unexpected_payload_migrations","duplicate_payload_migrations","missing_prisma_migrations","unexpected_prisma_migrations","duplicate_prisma_migrations","unhealthy_prisma_migrations","prisma_evidence_empty","plan_blocked_unknown","argument_parse_failed","output_format_invalid","schema_validation_failed","artifact_write_failed","credential_scan_failed"]'
+          ALLOWED_BLOCKER_CODES='["expected_commit_required","branch_guard_failed","commit_guard_failed","database_url_missing","database_url_invalid","environment_guard_failed","target_identity_guard_failed","production_marker_rejected","hostname_mismatch","worktree_integrity_failed","status_query_failed","malformed_payload_evidence","schema_identity_mismatch","applied_count_mismatch","pending_migration_mismatch","unexpected_payload_migrations","duplicate_payload_migrations","ordering_anomalies","missing_prisma_migrations","unexpected_prisma_migrations","duplicate_prisma_migrations","unhealthy_prisma_migrations","prisma_evidence_empty","plan_blocked_unknown","argument_parse_failed","output_format_invalid","schema_validation_failed","artifact_write_failed","credential_scan_failed"]'
           if ! node scripts/staging-gates/validate-plan-result-step1.js "$STDOUT_FILE" "$ALLOWED_BLOCKER_CODES"
           then
             echo "PLAN-BLOCKED: JSON schema validation failed — required keys, types, or values invalid" >&2
-            printf '%s\n' '{"version":2,"resultCode":"plan_blocked","blockerCodes":["schema_validation_failed"],"branch":"unknown","commit":"unknown","schema":"","environment":"","targetId":"","appliedPayloadCount":0,"expectedPendingMigrations":[],"expectedPendingBatchIsOnlyMissing":false,"unexpectedPayloadCount":0,"duplicatePayloadCount":0,"malformedPayloadCount":0,"prismaHealthy":false}' > plan-result-sanitized.json
+            printf '%s\n' '{"version":2,"resultCode":"plan_blocked","blockerCodes":["schema_validation_failed"],"branch":"unknown","commit":"unknown","schema":"","environment":"","targetId":"","appliedPayloadCount":0,"expectedPendingMigrations":[],"expectedPendingBatchIsOnlyMissing":false,"unexpectedPayloadCount":0,"duplicatePayloadCount":0,"malformedPayloadCount":0,"orderingAnomalyCount":0,"prismaHealthy":false}' > plan-result-sanitized.json
             exit 1
           fi
 
@@ -698,7 +698,7 @@ jobs:
           if ! node scripts/staging-gates/validate-plan-result-step2.js "$STDOUT_FILE" plan-result-sanitized.json
           then
             echo "PLAN-BLOCKED: artifact write failed" >&2
-            printf '%s\n' '{"version":2,"resultCode":"plan_blocked","blockerCodes":["artifact_write_failed"],"branch":"unknown","commit":"unknown","schema":"","environment":"","targetId":"","appliedPayloadCount":0,"expectedPendingMigrations":[],"expectedPendingBatchIsOnlyMissing":false,"unexpectedPayloadCount":0,"duplicatePayloadCount":0,"malformedPayloadCount":0,"prismaHealthy":false}' > plan-result-sanitized.json
+            printf '%s\n' '{"version":2,"resultCode":"plan_blocked","blockerCodes":["artifact_write_failed"],"branch":"unknown","commit":"unknown","schema":"","environment":"","targetId":"","appliedPayloadCount":0,"expectedPendingMigrations":[],"expectedPendingBatchIsOnlyMissing":false,"unexpectedPayloadCount":0,"duplicatePayloadCount":0,"malformedPayloadCount":0,"orderingAnomalyCount":0,"prismaHealthy":false}' > plan-result-sanitized.json
             exit 1
           fi
 
@@ -707,23 +707,22 @@ jobs:
             'postgres(ql)?://|://[^@/]+:[^@/]+@|[Bb]earer [A-Za-z0-9+/=_-]{8,}|[Bb]asic [A-Za-z0-9+/=]{8,}|password[[:space:]]*=|secret[[:space:]]*=|DATABASE_URL[[:space:]]*=|PGPASSWORD[[:space:]]*=' \
             plan-result-sanitized.json; then
             echo "PLAN-BLOCKED: credential-like string detected in sanitized output" >&2
-            printf '%s\n' '{"version":2,"resultCode":"plan_blocked","blockerCodes":["credential_scan_failed"],"branch":"unknown","commit":"unknown","schema":"","environment":"","targetId":"","appliedPayloadCount":0,"expectedPendingMigrations":[],"expectedPendingBatchIsOnlyMissing":false,"unexpectedPayloadCount":0,"duplicatePayloadCount":0,"malformedPayloadCount":0,"prismaHealthy":false}' > plan-result-sanitized.json
+            printf '%s\n' '{"version":2,"resultCode":"plan_blocked","blockerCodes":["credential_scan_failed"],"branch":"unknown","commit":"unknown","schema":"","environment":"","targetId":"","appliedPayloadCount":0,"expectedPendingMigrations":[],"expectedPendingBatchIsOnlyMissing":false,"unexpectedPayloadCount":0,"duplicatePayloadCount":0,"malformedPayloadCount":0,"orderingAnomalyCount":0,"prismaHealthy":false}' > plan-result-sanitized.json
             exit 1
           fi
 
           # Read resultCode from the sanitized file — not from the raw stdout file
           RESULT_CODE="$(node -e "process.stdout.write(JSON.parse(require('fs').readFileSync('plan-result-sanitized.json','utf8')).resultCode)" 2>/dev/null || echo 'plan_blocked')"
 
-          # Semantic verification: pre-apply plan_ok requires all evidence fields to match the reviewed 40-applied / six-migration billing batch exactly.
-          # Wrong-target, wrong-commit, wrong-schema, anomaly counts, or unhealthy Prisma must not pass.
+          # Semantic verification: plan_ok must carry exact identity and complete
+          # read-only evidence. The pending list is discovered from the current
+          # canonical registry; it is not a migration-apply authorization packet.
           if [ "$RESULT_CODE" = "plan_ok" ] && [ $PLAN_EXIT -eq 0 ]; then
-            EXPECTED_PENDING_MIGRATIONS='["20260825_120000_billing_invoice_visibility","20260825_121000_membership_support_runtime_alignment","20260825_122000_membership_support_relationships","20260825_123000_membership_support_relationship_alignment","20260825_124000_membership_review_assignee_alignment","20260825_125000_membership_shadow_state_alignment"]'
             REQUIRED_BRANCH="feature/course-branding-and-preview"
             REQUIRED_SCHEMA="jpvbootcamp_staging"
             REQUIRED_ENVIRONMENT="staging"
             REQUIRED_TARGET_ID="jpvbootcamp-staging"
-            EXPECTED_APPLIED_COUNT=40
-            if ! node scripts/staging-gates/validate-plan-result-step3.js plan-result-sanitized.json "$EXPECTED_SHA" "$EXPECTED_PENDING_MIGRATIONS" "$REQUIRED_BRANCH" "$REQUIRED_SCHEMA" "$REQUIRED_ENVIRONMENT" "$REQUIRED_TARGET_ID" "$EXPECTED_APPLIED_COUNT"
+            if ! node scripts/staging-gates/validate-plan-result-step3.js plan-result-sanitized.json "$EXPECTED_SHA" "$REQUIRED_BRANCH" "$REQUIRED_SCHEMA" "$REQUIRED_ENVIRONMENT" "$REQUIRED_TARGET_ID"
             then
               echo "PLAN-BLOCKED: plan_ok semantic verification failed — evidence does not match required values" >&2
               exit 1

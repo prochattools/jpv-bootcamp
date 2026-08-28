@@ -67,26 +67,31 @@ const TARGET_MIGRATIONS = [
 const TARGET_MIGRATION = TARGET_MIGRATIONS.at(-1)!
 const APPLY_CONFIRMATION = 'apply_billing_reconciliation_to_jpvbootcamp_staging'
 const ROLLBACK_CONFIRMATION = 'plan_rollback_billing_reconciliation_from_jpvbootcamp_staging'
-const EXPECTED_APPLIED_BEFORE = 40
-const EXPECTED_APPLIED_AFTER = 49
-const CURRENT_STAGING_APPLIED_COUNT = 49
+const REVIEWED_APPLY_SET = new Set<string>(TARGET_MIGRATIONS)
+const EXPECTED_APPLIED_BEFORE = PAYLOAD_MIGRATION_NAMES.length - TARGET_MIGRATIONS.length
+const EXPECTED_APPLIED_AFTER = PAYLOAD_MIGRATION_NAMES.length
+const CURRENT_STAGING_APPLIED_COUNT = PAYLOAD_MIGRATION_NAMES.length
 // Reviewed staging hostname — matches STAGING_TARGET.hostname in runStagingPayloadMigration.ts.
 const STAGING_HOSTNAME = '10.0.2.4'
 const PRODUCTION_HOSTNAME = 'prod-db.internal'
 
-const FIRST_35 = PAYLOAD_MIGRATION_NAMES.slice(0, EXPECTED_APPLIED_BEFORE)
+// Historical checkpoint fixtures remain useful for proving that discovery
+// reports the complete canonical pending set instead of treating it as an
+// apply authorization packet.
+const FIRST_35 = PAYLOAD_MIGRATION_NAMES.slice(0, 40)
 const HISTORICAL_35 = PAYLOAD_MIGRATION_NAMES.slice(0, 35)
-const ALL_36 = PAYLOAD_MIGRATION_NAMES.slice(0, EXPECTED_APPLIED_BEFORE)
-const ALL_37 = PAYLOAD_MIGRATION_NAMES.slice(0, EXPECTED_APPLIED_AFTER)
+const ALL_36 = PAYLOAD_MIGRATION_NAMES.filter((name) => !REVIEWED_APPLY_SET.has(name))
+const ALL_37 = [...PAYLOAD_MIGRATION_NAMES]
 
 // Registry integrity assertions — fail fast if the registry is out of sync.
 assert.equal(PAYLOAD_MIGRATION_NAMES.length, CURRENT_STAGING_APPLIED_COUNT, 'Canonical registry must contain the current migration inventory')
-assert.equal(FIRST_35.length, 40, 'Registry must have exactly 40 applied migrations before the billing batch')
+assert.equal(FIRST_35.length, 40, 'Historical checkpoint must contain exactly 40 migrations')
 assert.equal(FIRST_35.at(-2), MIGRATION39, 'Migration 39 must remain in the applied prefix')
 assert.equal(FIRST_35.at(-1), MIGRATION40, 'Migration 40 must be the last migration in the applied prefix')
-assert.equal(ALL_36.length, EXPECTED_APPLIED_BEFORE, 'Current staging baseline must contain all 40 migrations')
-assert.equal(ALL_37.length, EXPECTED_APPLIED_AFTER, 'Canonical 40→49 checkpoint must contain all 49 migrations')
-assert.deepEqual(ALL_37.slice(EXPECTED_APPLIED_BEFORE), [...TARGET_MIGRATIONS], 'Forward migrations must be the exact canonical 40→49 batch')
+assert.equal(ALL_36.length, EXPECTED_APPLIED_BEFORE, 'Apply baseline must contain every non-reviewed canonical migration')
+assert.equal(ALL_37.length, EXPECTED_APPLIED_AFTER, 'Current canonical registry count must be used dynamically')
+assert.deepEqual(ALL_37, PAYLOAD_MIGRATION_NAMES, 'Current fixture must follow the canonical registry order')
+assert.ok(TARGET_MIGRATIONS.every((name) => PAYLOAD_MIGRATION_NAMES.includes(name)), 'Reviewed apply migrations must remain registered')
 
 // ─── Confirmed: no self-referential hardcoded commit ──────────────────────────
 // The runner exports no REQUIRED_COMMIT constant.
@@ -161,15 +166,29 @@ function make35Client(schema = REQUIRED_SCHEMA): PgClientLike {
 function make36Client(schema = REQUIRED_SCHEMA): PgClientLike {
   return makeClient({
     schema,
-    payloadRows: ALL_36.map((name, index) => ({ name, batch: index === EXPECTED_APPLIED_BEFORE - 1 ? 2 : 1 })),
+    payloadRows: ALL_36.map((name, index) => ({ name, batch: index === ALL_36.length - 1 ? 2 : 1 })),
   })
 }
 
 function make37Client(schema = REQUIRED_SCHEMA): PgClientLike {
   return makeClient({
     schema,
+    payloadRows: ALL_37.map((name) => ({ name, batch: REVIEWED_APPLY_SET.has(name) ? 3 : 1 })),
+  })
+}
+
+function makeHistorical40Client(schema = REQUIRED_SCHEMA): PgClientLike {
+  return makeClient({
+    schema,
+    payloadRows: FIRST_35.map((name) => ({ name, batch: 1 })),
+  })
+}
+
+function makeRollbackReadyClient(schema = REQUIRED_SCHEMA): PgClientLike {
+  return makeClient({
+    schema,
     payloadRows: [
-      ...ALL_36.map((name, index) => ({ name, batch: index === EXPECTED_APPLIED_BEFORE - 1 ? 2 : 1 })),
+      ...ALL_36.map((name, index) => ({ name, batch: index === ALL_36.length - 1 ? 2 : 1 })),
       ...TARGET_MIGRATIONS.map((name) => ({ name, batch: 3 })),
     ],
   })
@@ -179,8 +198,16 @@ function clientFactoryHistorical35(schema = REQUIRED_SCHEMA): PgClientFactory {
   return () => make35Client(schema)
 }
 
+function clientFactoryHistorical40(schema = REQUIRED_SCHEMA): PgClientFactory {
+  return () => makeHistorical40Client(schema)
+}
+
+function clientFactoryRollbackReady(schema = REQUIRED_SCHEMA): PgClientFactory {
+  return () => makeRollbackReadyClient(schema)
+}
+
 // Historical name retained for the broad guard-test fixture: the runner's
-// current pre-apply baseline is the applied 36-migration state.
+// current pre-apply baseline contains every non-reviewed canonical migration.
 function clientFactory35(schema = REQUIRED_SCHEMA): PgClientFactory {
   return () => make36Client(schema)
 }
@@ -743,7 +770,7 @@ async function run(): Promise<void> {
 
   // ─── plan: Payload state checks ───────────────────────────────────────────
 
-  await test('plan: ok when 36 applied and exact reaction migration batch is pending', async () => {
+  await test('plan: reports the explicit reviewed batch when every other canonical migration is applied', async () => {
     const result = await runStagingMigrationPlan(
       stagingUrl(),
       undefined,
@@ -760,7 +787,7 @@ async function run(): Promise<void> {
     assert.equal(result.targetId, REQUIRED_TARGET_ID)
   })
 
-  await test('plan: current-state mode verifies the current 37 applied migrations and no pending migrations', async () => {
+  await test('plan: current-state mode verifies the complete canonical registry and no pending migrations', async () => {
     const result = await runStagingMigrationPlan(
       stagingUrl(),
       undefined,
@@ -775,7 +802,7 @@ async function run(): Promise<void> {
     assert.equal(result.message, 'plan_ok')
   })
 
-  await test('plan: blocks when applied count is not 32', async () => {
+  await test('plan: reports a complete pending list for a historical checkpoint', async () => {
     const all27 = FIRST_35.slice(1)
     const factory27: PgClientFactory = () => makeClient({
       schema: REQUIRED_SCHEMA,
@@ -785,20 +812,31 @@ async function run(): Promise<void> {
       stagingUrl(), undefined, goodPlanInput(),
       baseDeps({ clientFactory: factory27 }), noopOutput(),
     )
-    assert.equal(result.ok, false)
-    assert.ok(result.blockers.some((b) => b === 'applied_count_mismatch' || b === 'pending_migration_mismatch' || b.includes('28') || b.includes('count') || b.includes('mismatch')))
+    assert.equal(result.ok, true)
+    assert.equal(result.appliedCount, all27.length)
+    assert.deepEqual(result.pendingMigrations, PAYLOAD_MIGRATION_NAMES.filter((name) => !all27.includes(name)))
+    assert.equal(result.blockers.length, 0)
   })
 
-  await test('plan: blocks when target batch is already applied', async () => {
+  await test('plan: accepts a complete canonical registry without treating discovery as apply authorization', async () => {
     const result = await runStagingMigrationPlan(
       stagingUrl(), undefined, goodPlanInput(),
       baseDeps({ clientFactory: clientFactoryCurrent() }), noopOutput(),
     )
-    assert.equal(result.ok, false)
-    assert.ok(result.blockers.some((b) =>
-      b === 'applied_count_mismatch' || b === 'pending_migration_mismatch' ||
-      b.includes(TARGET_MIGRATION) || b.includes('missing') || b.includes('count')
-    ))
+    assert.equal(result.ok, true)
+    assert.deepEqual(result.pendingMigrations, [])
+    assert.equal(result.blockers.length, 0)
+  })
+
+  await test('plan: registry growth is reported dynamically and never widened into the reviewed apply batch', async () => {
+    const result = await runStagingMigrationPlan(
+      stagingUrl(), undefined, goodPlanInput(),
+      baseDeps({ clientFactory: clientFactoryHistorical40() }), noopOutput(),
+    )
+    const expectedPending = PAYLOAD_MIGRATION_NAMES.slice(FIRST_35.length)
+    assert.equal(result.ok, true)
+    assert.deepEqual(result.pendingMigrations, expectedPending)
+    assert.notDeepEqual(result.pendingMigrations, [...TARGET_MIGRATIONS])
   })
 
   await test('plan: blocks when unexpected Payload migrations exist', async () => {
@@ -1130,7 +1168,7 @@ async function run(): Promise<void> {
     )
   })
 
-  await test('apply: rejects when pre-apply count is not 36', async () => {
+  await test('apply: rejects when the explicit reviewed pre-apply baseline is incomplete', async () => {
     await assert.rejects(
       () => runStagingMigrationApply(
         stagingUrl(), undefined, goodAuthorization(),
@@ -1272,7 +1310,7 @@ async function run(): Promise<void> {
     )
   })
 
-  await test('rollback-plan: rejects when not all 37 are applied', async () => {
+  await test('rollback-plan: rejects when not all canonical migrations are applied', async () => {
     const result = await runStagingMigrationRollbackPlan(
       stagingUrl(), undefined, goodRollbackAuthorization(),
       baseDeps({ clientFactory: clientFactory36() }), noopOutput(),
@@ -1281,10 +1319,10 @@ async function run(): Promise<void> {
     assert.ok(result.blockers.some((b) => b.includes(String(EXPECTED_APPLIED_AFTER)) || b.includes(String(EXPECTED_APPLIED_BEFORE))))
   })
 
-  await test('rollback-plan: ok when all 36 applied and target batch is last', async () => {
+  await test('rollback-plan: ok when all current canonical migrations are applied and target batch is last', async () => {
     const result = await runStagingMigrationRollbackPlan(
       stagingUrl(), undefined, goodRollbackAuthorization(),
-      baseDeps({ clientFactory: clientFactoryCurrent() }), noopOutput(),
+      baseDeps({ clientFactory: clientFactoryRollbackReady() }), noopOutput(),
     )
     assert.equal(result.ok, true)
     assert.equal(result.mode, 'rollback-plan')
@@ -1313,7 +1351,7 @@ async function run(): Promise<void> {
     const result = await runStagingMigrationRollbackPlan(
       stagingUrl(), undefined, goodRollbackAuthorization(),
       {
-        ...baseDeps({ clientFactory: clientFactoryCurrent() }),
+        ...baseDeps({ clientFactory: clientFactoryRollbackReady() }),
         commandExecutor: () => {
           executorCalled = true
           return { status: 0 }
@@ -1404,10 +1442,10 @@ async function run(): Promise<void> {
 
   // ─── Defect 1: batch evidence preservation ────────────────────────────────
 
-  await test('rollback-plan: succeeds when exact reaction migration batch is highest batch', async () => {
+  await test('rollback-plan: succeeds when the explicit reviewed migration batch is highest batch', async () => {
     const result = await runStagingMigrationRollbackPlan(
       stagingUrl(), undefined, goodRollbackAuthorization(),
-      baseDeps({ clientFactory: clientFactoryCurrent() }), noopOutput(),
+      baseDeps({ clientFactory: clientFactoryRollbackReady() }), noopOutput(),
     )
     assert.equal(result.ok, true)
     assert.deepEqual(result.latestBatchMigrations, [...TARGET_MIGRATIONS])
@@ -1761,7 +1799,7 @@ async function run(): Promise<void> {
   })
 
   await test('apply: uncertain outcome when clean 36-state appears despite command failure', async () => {
-    // Pre-apply sees 36, command fails, uncertain status query sees all 37 applied.
+    // Pre-apply sees the explicit baseline, command fails, uncertain status query sees the full canonical registry.
     const factory: PgClientFactory = (() => {
       let call = 0
       return () => {
@@ -1871,12 +1909,10 @@ async function run(): Promise<void> {
       stagingUrl(), undefined, goodPlanInput(),
       baseDeps({ clientFactory: malformedClientFactory(rows) }), noopOutput(),
     )
-    assert.equal(result.ok, false)
+    assert.equal(result.ok, true)
     assert.equal(result.blockers.some((b) => b.toLowerCase().includes('malformed')), false)
-    assert.ok(result.blockers.some((b) =>
-      b === 'applied_count_mismatch' || b === 'pending_migration_mismatch' ||
-      b.includes(TARGET_MIGRATION) || b.includes('missing') || b.includes('count')
-    ))
+    assert.ok(!result.pendingMigrations.includes(TARGET_MIGRATION))
+    assert.ok(result.pendingMigrations.length > 0)
   })
 
   await test('malformed-payload: target row empty name blocks plan', async () => {
@@ -2268,17 +2304,18 @@ async function run(): Promise<void> {
 
   // ─── Defect 7: current-checkout git resolver integration test ─────────────
 
-  await test('plan: blocks when migration35 is missing from the applied prefix', async () => {
+  await test('plan: reports a missing historical migration without treating it as an apply blocker', async () => {
     const rows = FIRST_35.filter((name) => name !== MIGRATION35).map((name) => ({ name, batch: 1 }))
     const result = await runStagingMigrationPlan(
       stagingUrl(), undefined, goodPlanInput(),
       baseDeps({ clientFactory: () => makeClient({ schema: REQUIRED_SCHEMA, payloadRows: rows }) }), noopOutput(),
     )
-    assert.equal(result.ok, false)
-    assert.ok(result.blockers.some((blocker) => blocker === 'applied_count_mismatch' || blocker === 'pending_migration_mismatch'))
+    assert.equal(result.ok, true)
+    assert.ok(result.pendingMigrations.includes(MIGRATION35))
+    assert.equal(result.blockers.length, 0)
   })
 
-  await test('plan: blocks when migration 36 is already applied (none pending)', async () => {
+  await test('plan: reports remaining canonical migrations after a partial reviewed batch', async () => {
     const rows = [
       ...FIRST_35.map((name) => ({ name, batch: 1 })),
       { name: TARGET_MIGRATIONS[0], batch: 2 },
@@ -2287,8 +2324,9 @@ async function run(): Promise<void> {
       stagingUrl(), undefined, goodPlanInput(),
       baseDeps({ clientFactory: () => makeClient({ schema: REQUIRED_SCHEMA, payloadRows: rows }) }), noopOutput(),
     )
-    assert.equal(result.ok, false)
-    assert.ok(result.blockers.some((blocker) => blocker === 'applied_count_mismatch' || blocker === 'pending_migration_mismatch'))
+    assert.equal(result.ok, true)
+    assert.ok(result.pendingMigrations.length > 0)
+    assert.equal(result.blockers.length, 0)
   })
 
   await test('apply: wrong expectedMigrations batch is rejected before executor', async () => {
@@ -2326,7 +2364,7 @@ async function run(): Promise<void> {
     assert.equal(executorCalled, false)
   })
 
-  await test('apply: uncertain outcome with migration 36 applied reports targetBatchApplied=true', async () => {
+  await test('apply: uncertain outcome with the full canonical registry applied reports targetBatchApplied=true', async () => {
     const factory: PgClientFactory = clientFactorySequence()
     const result = await runStagingMigrationApply(
       stagingUrl(), undefined, goodAuthorization(),
