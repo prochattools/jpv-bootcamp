@@ -25,12 +25,11 @@ const REQUIRED_ENVIRONMENT = 'staging-migration-plan'
 const REQUIRED_SCHEMA = 'jpvbootcamp_staging'
 const REQUIRED_TARGET_ID = 'jpvbootcamp-staging'
 const REQUIRED_HOSTNAME = '10.0.2.4'
-const REQUIRED_DATABASE = 'jpvbootcamp'
+const REQUIRED_DATABASE = 'jpvbootcamp_staging'
 const REQUIRED_ENVIRONMENT_VALUE = 'staging'
 const REQUIRED_PORT = '5433'
 const REQUIRED_PNPM_VERSION = '10.33.0'
 const REQUIRED_NODE_VERSION = '20'
-const ALLOWED_BRANCH = 'feature/course-branding-and-preview'
 const TAILSCALE_PINNED_SHA = '780049a30b6ff5c378a9e7b389d15ece7a204888'
 const CHECKOUT_PINNED_SHA = '11d5960a326750d5838078e36cf38b85af677262'
 const PNPM_PINNED_SHA = 'b906affcce14559ad1aafd4ab0e942779e9f58b1'
@@ -104,14 +103,14 @@ async function main(): Promise<void> {
     )
   })
 
-  await test('push suppression: push deploys skip when commit contains [migration-plan-only]', () => {
+  await test('trigger: staging workflow is manual-only and has no push deployment path', () => {
     assert.ok(
-      yml.includes('[migration-plan-only]'),
-      'must suppress push deploy when commit message contains [migration-plan-only]',
+      !/^\s+push:\s*$/m.test(yml),
+      'must not deploy staging automatically from pushes',
     )
     assert.ok(
-      yml.includes('contains(github.event.head_commit.message'),
-      'must check head_commit.message for the marker',
+      yml.includes('source_ref:'),
+      'must require an explicit approved source_ref for manual runs',
     )
   })
 
@@ -164,11 +163,11 @@ async function main(): Promise<void> {
 
   await test('preflight: PLAN_READY_FOR_DISPATCH variable guard runs before checkout', () => {
     // Scope to planJobYml — other jobs (deploy-preview, validate-only) also checkout
-    // feature/course-branding-and-preview; the ordering invariant is within read-only-plan only.
+    // the source ref; the ordering invariant is within read-only-plan only.
     const readyVarIndex = planJobYml.indexOf('PLAN_READY_FOR_DISPATCH')
-    const checkoutIndex = planJobYml.indexOf('refs/heads/feature/course-branding-and-preview')
+    const checkoutIndex = planJobYml.indexOf('ref: ${{ inputs.source_ref }}')
     assert.ok(readyVarIndex > -1, 'must check PLAN_READY_FOR_DISPATCH readiness variable')
-    assert.ok(checkoutIndex > -1, 'must checkout feature branch by branch ref')
+    assert.ok(checkoutIndex > -1, 'must checkout the explicit source_ref')
     assert.ok(
       readyVarIndex < checkoutIndex,
       'PLAN_READY_FOR_DISPATCH check must precede checkout (no checkout before environment guards)',
@@ -201,10 +200,10 @@ async function main(): Promise<void> {
 
   // ─── Checkout: branch-attached, not detached ──────────────────────────────
 
-  await test('checkout: checks out feature branch by name (not detached SHA)', () => {
+  await test('checkout: checks out approved source ref (not detached SHA)', () => {
     assert.ok(
-      planJobYml.includes('refs/heads/feature/course-branding-and-preview'),
-      'plan job must checkout by branch ref, not a detached SHA',
+      planJobYml.includes('ref: ${{ inputs.source_ref }}'),
+      'plan job must checkout by the explicit source ref, not a detached SHA',
     )
   })
 
@@ -212,7 +211,7 @@ async function main(): Promise<void> {
     assert.ok(planJobYml.includes('git branch --show-current'), 'must verify branch name after checkout')
     assert.ok(planJobYml.includes('git rev-parse HEAD'), 'must verify HEAD SHA after checkout')
     assert.ok(planJobYml.includes('merge-base --is-ancestor'), 'must check SHA ancestry under feature branch')
-    assert.ok(planJobYml.includes('origin/feature/course-branding-and-preview'), 'must compare SHA to remote feature tip')
+    assert.ok(planJobYml.includes('origin/$SOURCE_REF_INPUT'), 'must compare SHA to the remote source-ref tip')
     assert.ok(planJobYml.includes('REMOTE_TIP') || planJobYml.includes('remote tip'), 'must reference remote tip')
     assert.ok(planJobYml.includes('origin/main'), 'must reject SHA already in main')
   })
@@ -649,10 +648,10 @@ async function main(): Promise<void> {
     )
   })
 
-  await test('plan_ok semantics: workflow verifies branch is the exact feature branch', () => {
+  await test('plan_ok semantics: workflow verifies branch matches the approved source ref', () => {
     assert.ok(
       planJobYml.includes('branch mismatch') || planJobYml.includes('p.branch !== requiredBranch'),
-      'must verify branch field equals feature/course-branding-and-preview',
+      'must verify branch field equals the requested source_ref',
     )
   })
 

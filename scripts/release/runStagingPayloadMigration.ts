@@ -2,6 +2,7 @@ import { execSync, spawnSync } from 'node:child_process'
 import { resolve } from 'node:path'
 
 import { PAYLOAD_MIGRATION_NAMES } from '../../src/lib/payloadMigrationRegistry'
+import { ENVIRONMENT_TOPOLOGY, isAllowedStagingSourceRef } from '../../src/lib/environmentTopology'
 import {
   buildStagingMigrationStatus,
   createStagingReadOnlyAdapter,
@@ -12,7 +13,7 @@ import {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const REQUIRED_BRANCH = 'feature/course-branding-and-preview'
+const REQUIRED_SOURCE_REF_DESCRIPTION = 'feature/*, fix/*, or release/*'
 
 // Exact reviewed staging target — all identity checks derive from this one constant.
 // Hostname is the reviewed Supabase private NIC IP (10.0.2.4), documented in
@@ -21,7 +22,7 @@ const STAGING_TARGET = {
   environment: 'staging',
   targetId: 'jpvbootcamp-staging',
   schema: 'jpvbootcamp_staging',
-  database: 'jpvbootcamp',
+  database: ENVIRONMENT_TOPOLOGY.staging.database,
   hostname: '10.0.2.4',
 } as const
 
@@ -371,8 +372,10 @@ function guardBranchAndCommit(
 ): { branch: string; commit: string } {
   const branch = git.branch()
   const commit = git.commit()
-  if (branch !== REQUIRED_BRANCH) {
-    throw new Error(`Branch guard: expected '${REQUIRED_BRANCH}', got '${branch}'`)
+  if (!isAllowedStagingSourceRef(branch)) {
+    throw new Error(
+      `Branch guard: source ref '${branch}' is not allowed; expected ${REQUIRED_SOURCE_REF_DESCRIPTION}`,
+    )
   }
   const normalized = validateFullCommitSha(expectedCommit, 'Expected commit')
   if (commit !== normalized) {

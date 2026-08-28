@@ -24,11 +24,11 @@ ENV DATABASE_URL=postgresql://build:build@localhost:5432/build?schema=jpvbootcam
 # It controls bundling, tree-shaking, and importmap generation — not deployment target or staging lane.
 ENV NODE_ENV=production
 # NEXT_PUBLIC_* vars are baked into the client bundle at build time.
-# Staging-only: production defaults removed. Only preview.jpvbootcamp.com is permitted.
-# The default IS the staging URL — no override needed for preview builds.
-ARG NEXT_PUBLIC_APP_URL=https://preview.jpvbootcamp.com
-ARG APP_BASE_URL=https://preview.jpvbootcamp.com
-ARG NEXT_PUBLIC_SERVER_URL=https://preview.jpvbootcamp.com
+# Staging-only: production defaults removed. Only staging.jpvbootcamp.com is permitted.
+# The default IS the staging URL — no override needed for staging builds.
+ARG NEXT_PUBLIC_APP_URL=https://staging.jpvbootcamp.com
+ARG APP_BASE_URL=https://staging.jpvbootcamp.com
+ARG NEXT_PUBLIC_SERVER_URL=https://staging.jpvbootcamp.com
 ARG IMAGE_TAG=unknown
 ARG COMMIT_SHA=unknown
 ENV NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}

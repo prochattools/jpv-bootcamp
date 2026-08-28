@@ -3,7 +3,9 @@ import {
   assertStagingDeployment,
   assertStagingOrigin,
   STAGING_APP_ID,
-  STAGING_BRANCH,
+  STAGING_APP_INTERNAL_ID,
+  STAGING_SOURCE_REF_EXAMPLE,
+  STAGING_SOURCE_REF_DESCRIPTION,
   STAGING_ORIGIN,
   PRODUCTION_DENY_LIST,
 } from './stagingPolicy'
@@ -19,38 +21,41 @@ function throws(fn: () => void, pattern: RegExp, label: string): void {
 }
 
 // --- Constants ---
-assert.equal(STAGING_APP_ID, 'clients-jpv-bootcamp-app-tp9xrk', 'staging app ID')
-assert.equal(STAGING_ORIGIN, 'https://preview.jpvbootcamp.com', 'staging origin')
-assert.equal(STAGING_BRANCH, 'feature/course-branding-and-preview', 'staging branch')
-assert.ok(PRODUCTION_DENY_LIST.includes('web-public-jpv-bootcamp-l66egq'), 'deny-list has production ID')
+assert.equal(STAGING_APP_ID, 'clients-jpv-bootcamp-preview-wjfqfd', 'staging app slug')
+assert.equal(STAGING_APP_INTERNAL_ID, 'bZllV93NqsPZAFCsqDskb', 'staging app ID')
+assert.equal(STAGING_ORIGIN, 'https://staging.jpvbootcamp.com', 'staging origin')
+assert.equal(STAGING_SOURCE_REF_DESCRIPTION, 'feature/*, fix/*, or release/*', 'staging source refs')
+assert.ok(PRODUCTION_DENY_LIST.includes('clients-jpv-bootcamp-app-tp9xrk'), 'deny-list has production slug')
+assert.ok(PRODUCTION_DENY_LIST.includes('I_2Vukga3cc3ZhaG-mUzU'), 'deny-list has production ID')
+assert.ok(PRODUCTION_DENY_LIST.includes('web-public-jpv-bootcamp-l66egq'), 'deny-list has legacy slug')
 
 // --- assertStagingOrigin: valid ---
-assertStagingOrigin('https://preview.jpvbootcamp.com')
-assertStagingOrigin('https://preview.jpvbootcamp.com/')
+assertStagingOrigin('https://staging.jpvbootcamp.com')
+assertStagingOrigin('https://staging.jpvbootcamp.com/')
 
 // --- assertStagingOrigin: rejects ---
 throws(
-  () => assertStagingOrigin('http://preview.jpvbootcamp.com'),
+  () => assertStagingOrigin('http://staging.jpvbootcamp.com'),
   /HTTPS/,
   'reject HTTP',
 )
 throws(
-  () => assertStagingOrigin('https://preview.jpvbootcamp.com:8443'),
+  () => assertStagingOrigin('https://staging.jpvbootcamp.com:8443'),
   /non-default port/,
   'reject non-default port',
 )
 throws(
-  () => assertStagingOrigin('https://user:pass@preview.jpvbootcamp.com'),
+  () => assertStagingOrigin('https://user:pass@staging.jpvbootcamp.com'),
   /userinfo/,
   'reject userinfo credentials',
 )
 throws(
-  () => assertStagingOrigin('https://evil.preview.jpvbootcamp.com'),
+  () => assertStagingOrigin('https://evil.staging.jpvbootcamp.com'),
   /hostname/,
   'reject subdomain prefix attack',
 )
 throws(
-  () => assertStagingOrigin('https://preview.jpvbootcamp.com.evil.com'),
+  () => assertStagingOrigin('https://staging.jpvbootcamp.com.evil.com'),
   /hostname/,
   'reject suffix domain',
 )
@@ -65,12 +70,12 @@ throws(
   'reject unrelated preview domain',
 )
 throws(
-  () => assertStagingOrigin('https://preview.jpvbootcamp.com/admin'),
+  () => assertStagingOrigin('https://staging.jpvbootcamp.com/admin'),
   /path/,
   'reject URL with path',
 )
 throws(
-  () => assertStagingOrigin('https://preview.jpvbootcamp.com?foo=bar'),
+  () => assertStagingOrigin('https://staging.jpvbootcamp.com?foo=bar'),
   /path/,
   'reject URL with query string',
 )
@@ -84,8 +89,12 @@ throws(
 assertStagingDeployment({
   appId: STAGING_APP_ID,
   origin: STAGING_ORIGIN,
-  branch: STAGING_BRANCH,
+  branch: STAGING_SOURCE_REF_EXAMPLE,
 })
+
+for (const sourceRef of ['feature/course-branding-and-preview', 'fix/recovery', 'release/2026.08.28']) {
+  assertStagingDeployment({ appId: STAGING_APP_INTERNAL_ID, origin: STAGING_ORIGIN, branch: sourceRef })
+}
 
 // --- assertStagingDeployment: deny-listed production app ID ---
 throws(
@@ -93,7 +102,7 @@ throws(
     assertStagingDeployment({
       appId: 'web-public-jpv-bootcamp-l66egq',
       origin: STAGING_ORIGIN,
-      branch: STAGING_BRANCH,
+      branch: STAGING_SOURCE_REF_EXAMPLE,
     }),
   /DEPLOY-DENIED.*deny-list/,
   'deny-listed production app ID blocked',
@@ -105,9 +114,9 @@ throws(
     assertStagingDeployment({
       appId: 'some-other-app',
       origin: STAGING_ORIGIN,
-      branch: STAGING_BRANCH,
+      branch: STAGING_SOURCE_REF_EXAMPLE,
     }),
-  /not the allowed staging app ID/,
+  /not an allowed staging app ID/,
   'wrong app ID blocked',
 )
 
@@ -117,7 +126,7 @@ throws(
     assertStagingDeployment({
       appId: STAGING_APP_ID,
       origin: 'https://jpvbootcamp.com',
-      branch: STAGING_BRANCH,
+      branch: STAGING_SOURCE_REF_EXAMPLE,
     }),
   /hostname/,
   'production origin rejected',
@@ -131,7 +140,7 @@ throws(
       origin: STAGING_ORIGIN,
       branch: 'main',
     }),
-  /not the allowed staging branch/,
+  /not allowed/,
   'main branch rejected',
 )
 
@@ -141,7 +150,7 @@ throws(
     assertStagingDeployment({
       appId: 'web-public-jpv-bootcamp-l66egq',
       origin: STAGING_ORIGIN,
-      branch: STAGING_BRANCH,
+      branch: STAGING_SOURCE_REF_EXAMPLE,
     }),
   /DEPLOY-DENIED/,
   'generic app ID set to production denied',
@@ -153,7 +162,7 @@ throws(
     assertStagingDeployment({
       appId: 'web-public-jpv-bootcamp-l66egq',
       origin: STAGING_ORIGIN,
-      branch: STAGING_BRANCH,
+      branch: STAGING_SOURCE_REF_EXAMPLE,
     }),
   /deny-list/,
   'deny-list checked before any other condition',

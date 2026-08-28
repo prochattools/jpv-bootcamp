@@ -46,7 +46,7 @@ const REQUIRED_BRANCH = 'feature/course-branding-and-preview'
 // This value is never the real HEAD and never requires updating after a commit.
 const SYNTHETIC_HEAD = 'a4081d12c7141ed8f5476077536c5234a555f240'
 const REQUIRED_SCHEMA = 'jpvbootcamp_staging'
-const REQUIRED_DATABASE = 'jpvbootcamp'
+const REQUIRED_DATABASE = 'jpvbootcamp_staging'
 const REQUIRED_TARGET_ID = 'jpvbootcamp-staging'
 const REQUIRED_ENVIRONMENT = 'staging'
 const MIGRATION35 = '20260818_140100_portal_settings'
@@ -397,7 +397,7 @@ async function run(): Promise<void> {
       '--target-id=jpvbootcamp-staging',
       '--expected-schema=jpvbootcamp_staging',
       `--expected-hostname=${STAGING_HOSTNAME}`,
-      '--expected-database=jpvbootcamp',
+      '--expected-database=jpvbootcamp_staging',
     ])
     assert.equal(result.expectedCommit, SYNTHETIC_HEAD)
     assert.equal(result.environment, REQUIRED_ENVIRONMENT)
@@ -414,7 +414,7 @@ async function run(): Promise<void> {
       '--target-id=jpvbootcamp-staging',
       '--expected-schema=jpvbootcamp_staging',
       `--expected-hostname=${STAGING_HOSTNAME}`,
-      '--expected-database=jpvbootcamp',
+      '--expected-database=jpvbootcamp_staging',
       '--current-state=true',
     ])
     assert.equal(result.currentState, true)
@@ -427,7 +427,7 @@ async function run(): Promise<void> {
         '--target-id=jpvbootcamp-staging',
         '--expected-schema=jpvbootcamp_staging',
         `--expected-hostname=${STAGING_HOSTNAME}`,
-        '--expected-database=jpvbootcamp',
+        '--expected-database=jpvbootcamp_staging',
       ]),
       /expected-commit/i,
     )
@@ -456,7 +456,7 @@ async function run(): Promise<void> {
       '--target-id=jpvbootcamp-staging',
       '--expected-schema=jpvbootcamp_staging',
       `--expected-hostname=${STAGING_HOSTNAME}`,
-      '--expected-database=jpvbootcamp',
+      '--expected-database=jpvbootcamp_staging',
       `--expected-migrations=${TARGET_MIGRATIONS.join(',')}`,
       `--confirmation=${APPLY_CONFIRMATION}`,
     ])
@@ -477,7 +477,7 @@ async function run(): Promise<void> {
         '--target-id=jpvbootcamp-staging',
         '--expected-schema=jpvbootcamp_staging',
         `--expected-hostname=${STAGING_HOSTNAME}`,
-        '--expected-database=jpvbootcamp',
+        '--expected-database=jpvbootcamp_staging',
         `--confirmation=${APPLY_CONFIRMATION}`,
       ]),
       /expected-commit/i,
@@ -496,7 +496,7 @@ async function run(): Promise<void> {
         '--target-id=jpvbootcamp-staging',
         '--expected-schema=jpvbootcamp_staging',
         `--expected-hostname=${STAGING_HOSTNAME}`,
-        '--expected-database=jpvbootcamp',
+        '--expected-database=jpvbootcamp_staging',
         `--expected-migrations=${TARGET_MIGRATIONS.join(',')}`,
       ]),
       /confirmation/i,
@@ -1449,7 +1449,7 @@ async function run(): Promise<void> {
       '--target-id=jpvbootcamp-staging',
       '--expected-schema=jpvbootcamp_staging',
       `--expected-hostname=${STAGING_HOSTNAME}`,
-      '--expected-database=jpvbootcamp',
+      '--expected-database=jpvbootcamp_staging',
       `--confirmation=${ROLLBACK_CONFIRMATION}`,
     ])
     assert.equal(result.operatorId, 'ops')
@@ -1586,9 +1586,9 @@ async function run(): Promise<void> {
 
   // ─── Defect 2: exact database identity enforcement ────────────────────────
 
-  await test('database guard: jpvbootcamp accepted', async () => {
+  await test('database guard: jpvbootcamp_staging accepted', async () => {
     const result = await runStagingMigrationPlan(
-      stagingUrl(), undefined, goodPlanInput({ expectedDatabase: 'jpvbootcamp' }),
+      stagingUrl(), undefined, goodPlanInput({ expectedDatabase: 'jpvbootcamp_staging' }),
       baseDeps({ clientFactory: clientFactory35() }), noopOutput(),
     )
     assert.equal(result.ok, true)
@@ -1607,11 +1607,11 @@ async function run(): Promise<void> {
     ))
   })
 
-  await test('database guard: jpvbootcamp_staging rejected even if expected arg matches', async () => {
+  await test('database guard: transitional jpvbootcamp_preview rejected even if expected arg matches', async () => {
     const result = await runStagingMigrationPlan(
-      `postgres://${STAGING_HOSTNAME}/jpvbootcamp_staging?schema=${REQUIRED_SCHEMA}`,
+      `postgres://${STAGING_HOSTNAME}/jpvbootcamp_preview?schema=${REQUIRED_SCHEMA}`,
       undefined,
-      goodPlanInput({ expectedDatabase: 'jpvbootcamp_staging' }),
+      goodPlanInput({ expectedDatabase: 'jpvbootcamp_preview' }),
       baseDeps({ clientFactory: clientFactory35() }), noopOutput(),
     )
     assert.equal(result.ok, false)

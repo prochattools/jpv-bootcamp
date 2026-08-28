@@ -1,7 +1,8 @@
 import { test, expect } from '@playwright/test'
 import { assertStagingOrigin } from '../scripts/staging-gates/stagingPolicy'
+import { ENVIRONMENT_TOPOLOGY } from '../src/lib/environmentTopology'
 
-const STAGING_URL = process.env.STAGING_URL ?? 'https://preview.jpvbootcamp.com'
+const STAGING_URL = process.env.STAGING_URL ?? ENVIRONMENT_TOPOLOGY.staging.origin
 const ADMIN_EMAIL = process.env.STAGING_ADMIN_EMAIL ?? 'info@prochat.tools'
 const ADMIN_PASSWORD = process.env.STAGING_ADMIN_PASSWORD ?? ''
 

@@ -10,13 +10,14 @@
  * Exit 0 = all pass, exit 1 = any failure.
  *
  * Usage:
- *   STAGING_URL=https://preview.jpvbootcamp.com \
+ *   STAGING_URL=https://staging.jpvbootcamp.com \
  *   STAGING_ADMIN_EMAIL=... STAGING_ADMIN_PASSWORD=... \
  *   pnpm exec tsx scripts/portal-admin-mutation-smoke.test.ts
  */
 
 import * as fs from 'node:fs'
 import * as path from 'node:path'
+import { ENVIRONMENT_TOPOLOGY } from '../src/lib/environmentTopology'
 
 // ── types ────────────────────────────────────────────────────────────────────
 
@@ -55,9 +56,9 @@ if (!STAGING_URL) {
 }
 
 const url = new URL(STAGING_URL)
-if (url.hostname !== 'preview.jpvbootcamp.com') {
+if (url.hostname !== new URL(ENVIRONMENT_TOPOLOGY.staging.origin).hostname) {
   console.error(
-    `[portal-admin-mutation-smoke] STAGING_URL hostname must be preview.jpvbootcamp.com, got: ${url.hostname}`,
+    `[portal-admin-mutation-smoke] STAGING_URL hostname must be ${new URL(ENVIRONMENT_TOPOLOGY.staging.origin).hostname}, got: ${url.hostname}`,
   )
   process.exit(1)
 }

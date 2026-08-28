@@ -190,7 +190,7 @@ describe('REM-01: apply guard — DATABASE_URL missing', () => {
   })
 
   test('checkApplyGuards blocks apply without authorization-token', () => {
-    const result = checkApplyGuards('apply', undefined, 'https://preview.jpvbootcamp.com', 'staging', 'qa@example.invalid')
+    const result = checkApplyGuards('apply', undefined, 'https://staging.jpvbootcamp.com', 'staging', 'qa@example.invalid')
 
     expect(result.ok).toBe(false)
   })
@@ -202,7 +202,7 @@ describe('REM-01: apply guard — DATABASE_URL missing', () => {
   })
 
   test('checkApplyGuards blocks apply when NODE_ENV=production', () => {
-    const result = checkApplyGuards('apply', 'some-token', 'https://preview.jpvbootcamp.com', 'production', 'qa@example.invalid')
+    const result = checkApplyGuards('apply', 'some-token', 'https://staging.jpvbootcamp.com', 'production', 'qa@example.invalid')
 
     expect(result.ok).toBe(false)
   })
@@ -214,13 +214,13 @@ describe('REM-01: apply guard — DATABASE_URL missing', () => {
   })
 
   test('checkApplyGuards allows apply with all required flags and non-production env', () => {
-    const result = checkApplyGuards('apply', 'token-123', 'https://preview.jpvbootcamp.com', 'staging', 'qa@example.invalid')
+    const result = checkApplyGuards('apply', 'token-123', 'https://staging.jpvbootcamp.com', 'staging', 'qa@example.invalid')
 
     expect(result.ok).toBe(true)
   })
 
   test('checkApplyGuards rejects apply without --member-email', () => {
-    const result = checkApplyGuards('apply', 'token-123', 'https://preview.jpvbootcamp.com', 'staging', undefined)
+    const result = checkApplyGuards('apply', 'token-123', 'https://staging.jpvbootcamp.com', 'staging', undefined)
 
     expect(result.ok).toBe(false)
     expect(result.reason).toContain('--member-email')

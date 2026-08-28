@@ -1,4 +1,4 @@
-name: Preview Build and Deploy
+name: Staging Build and Deploy
 
 # Third-party action SHAs pinned to verified releases (resolved via GitHub API):
 #   actions/checkout@v4                   -> 11d5960a326750d5838078e36cf38b85af677262
@@ -16,7 +16,7 @@ on:
   workflow_dispatch:
     inputs:
       operation:
-        description: 'Operation: validate-only | deploy-preview | read-only-migration-plan'
+        description: 'Operation: validate-only | deploy-preview (staging) | read-only-migration-plan'
         required: false
         type: string
         default: 'validate-only'
@@ -24,32 +24,31 @@ on:
         description: 'Full 40-character SHA (required for deploy-preview and read-only-migration-plan)'
         required: false
         type: string
+      source_ref:
+        description: 'Approved source ref: feature/*, fix/*, or release/* (never main)'
+        required: true
+        type: string
       confirmation:
         description: 'Confirmation phrase (deploy-preview: deploy-staging-feature-tip; plan: run-read-only-staging-payload-migration-plan)'
         required: false
         type: string
-  push:
-    branches:
-      - 'feature/course-branding-and-preview'
-
 permissions:
   contents: read
   packages: write
 
 # Operation-aware concurrency: deploy runs share a cancellable group; plan runs
-# use a separate non-cancellable group so a push never kills an in-flight plan.
+# use a separate non-cancellable group.
 concurrency:
-  group: ${{ github.event_name == 'workflow_dispatch' && inputs.operation == 'read-only-migration-plan' && 'staging-payload-migration-plan' || format('preview-deploy-{0}', github.ref) }}
+  group: ${{ github.event_name == 'workflow_dispatch' && inputs.operation == 'read-only-migration-plan' && 'staging-payload-migration-plan' || format('staging-deploy-{0}', github.ref) }}
   cancel-in-progress: ${{ !(github.event_name == 'workflow_dispatch' && inputs.operation == 'read-only-migration-plan') }}
 
 jobs:
   validate-only:
-    name: Validate, build, and test (push gate)
+    name: Validate, build, and test (manual staging gate)
     runs-on: ubuntu-latest
     timeout-minutes: 40
     if: |
-      (github.event_name == 'push' && !contains(github.event.head_commit.message, '[migration-plan-only]')) ||
-      (github.event_name == 'workflow_dispatch' && (inputs.operation == 'validate-only' || inputs.operation == ''))
+      github.event_name == 'workflow_dispatch' && (inputs.operation == 'validate-only' || inputs.operation == '')
     env:
       APP_PUBLIC_URL: http://127.0.0.1:3107
       NEXT_PUBLIC_APP_URL: http://127.0.0.1:3107
@@ -59,48 +58,57 @@ jobs:
       - name: Validate deployment boundary
         shell: bash
         env:
-          GH_REF_NAME: ${{ github.ref_name }}
-          GH_EVENT_NAME: ${{ github.event_name }}
+          SOURCE_REF_INPUT: ${{ inputs.source_ref }}
         run: |
           set -euo pipefail
           # Canonical staging allow-list — no other target is permitted
-          ALLOWED_BRANCH="feature/course-branding-and-preview"
-          ALLOWED_ORIGIN="https://preview.jpvbootcamp.com"
-          ALLOWED_DOKPLOY_SLUG="clients-jpv-bootcamp-app-tp9xrk"
-          ALLOWED_DOKPLOY_ID="I_2Vukga3cc3ZhaG-mUzU"
+          ALLOWED_SOURCE_REF_PATTERN='^(feature|fix|release)/[A-Za-z0-9][A-Za-z0-9._-]*$'
+          ALLOWED_ORIGIN="https://staging.jpvbootcamp.com"
+          ALLOWED_DOKPLOY_SLUG="clients-jpv-bootcamp-preview-wjfqfd"
+          ALLOWED_DOKPLOY_ID="bZllV93NqsPZAFCsqDskb"
           ALLOWED_SCHEMA="jpvbootcamp_staging"
           ALLOWED_HOST="10.0.2.4"
           ALLOWED_PORT="5433"
-          ALLOWED_DB="jpvbootcamp"
+          ALLOWED_DB="jpvbootcamp_staging"
 
-          # Reject main branch
-          if [ "${GH_REF_NAME}" = "main" ]; then
-            echo "DEPLOY-DENIED: this workflow must not run on main. Only ${ALLOWED_BRANCH} is allowed." >&2
+          if ! printf '%s' "$SOURCE_REF_INPUT" | grep -qE "$ALLOWED_SOURCE_REF_PATTERN"; then
+            echo "DEPLOY-DENIED: source_ref must match feature/*, fix/*, or release/*; got '$SOURCE_REF_INPUT'" >&2
             exit 1
           fi
-          echo "Staging lane: branch=${ALLOWED_BRANCH} origin=${ALLOWED_ORIGIN} schema=${ALLOWED_SCHEMA}"
+          if [ "$SOURCE_REF_INPUT" = "main" ]; then
+            echo "DEPLOY-DENIED: source_ref main is never allowed for staging" >&2
+            exit 1
+          fi
+          echo "Staging lane: source_ref=${SOURCE_REF_INPUT} origin=${ALLOWED_ORIGIN} schema=${ALLOWED_SCHEMA}"
           echo "              host=${ALLOWED_HOST} port=${ALLOWED_PORT} db=${ALLOWED_DB}"
           echo "              dokploy=${ALLOWED_DOKPLOY_SLUG} (${ALLOWED_DOKPLOY_ID})"
 
       - name: Check out commit
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
         with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && 'refs/heads/feature/course-branding-and-preview' || github.ref }}
+          ref: ${{ inputs.source_ref }}
           fetch-depth: 0
 
-      - name: Verify SHA ancestry under feature branch
+      - name: Attach approved source ref for repository guards
         shell: bash
+        env:
+          SOURCE_REF_INPUT: ${{ inputs.source_ref }}
+        run: git switch --create "$SOURCE_REF_INPUT" HEAD
+
+      - name: Verify SHA ancestry under approved source ref
+        shell: bash
+        env:
+          SOURCE_REF_INPUT: ${{ inputs.source_ref }}
         run: |
           set -euo pipefail
-          ALLOWED_BRANCH="origin/feature/course-branding-and-preview"
+          ALLOWED_REF="origin/${SOURCE_REF_INPUT}"
           CURRENT_SHA="$(git rev-parse HEAD)"
-          # Confirm HEAD is reachable from the allowed branch
-          if ! git merge-base --is-ancestor "$CURRENT_SHA" "$ALLOWED_BRANCH" 2>/dev/null; then
-            echo "DEPLOY-DENIED: SHA $CURRENT_SHA is not an ancestor of $ALLOWED_BRANCH" >&2
-            echo "Only commits reachable from feature/course-branding-and-preview may be deployed here." >&2
+          if ! git merge-base --is-ancestor "$CURRENT_SHA" "$ALLOWED_REF" 2>/dev/null; then
+            echo "DEPLOY-DENIED: SHA $CURRENT_SHA is not an ancestor of $ALLOWED_REF" >&2
+            echo "Only commits reachable from the approved source ref may be deployed here." >&2
             exit 1
           fi
-          echo "SHA ancestry confirmed: $CURRENT_SHA is under $ALLOWED_BRANCH"
+          echo "SHA ancestry confirmed: $CURRENT_SHA is under $ALLOWED_REF"
 
       - name: Set up pnpm
         uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1  # v4
@@ -151,10 +159,10 @@ jobs:
           retention-days: 7
 
   deploy-preview:
-    name: Deploy preview (manual dispatch only)
+    name: Deploy staging (manual dispatch only)
     runs-on: ubuntu-latest
     timeout-minutes: 40
-    environment: preview-deploy
+    environment: staging-deploy
     if: github.event_name == 'workflow_dispatch' && inputs.operation == 'deploy-preview'
 
     steps:
@@ -178,45 +186,66 @@ jobs:
       - name: Validate deployment boundary
         shell: bash
         env:
-          GH_REF_NAME: ${{ github.ref_name }}
-          GH_EVENT_NAME: ${{ github.event_name }}
+          SOURCE_REF_INPUT: ${{ inputs.source_ref }}
         run: |
           set -euo pipefail
           # Canonical staging allow-list — no other target is permitted
-          ALLOWED_BRANCH="feature/course-branding-and-preview"
-          ALLOWED_ORIGIN="https://preview.jpvbootcamp.com"
-          ALLOWED_DOKPLOY_SLUG="clients-jpv-bootcamp-app-tp9xrk"
-          ALLOWED_DOKPLOY_ID="I_2Vukga3cc3ZhaG-mUzU"
+          ALLOWED_SOURCE_REF_PATTERN='^(feature|fix|release)/[A-Za-z0-9][A-Za-z0-9._-]*$'
+          ALLOWED_ORIGIN="https://staging.jpvbootcamp.com"
+          ALLOWED_DOKPLOY_SLUG="clients-jpv-bootcamp-preview-wjfqfd"
+          ALLOWED_DOKPLOY_ID="bZllV93NqsPZAFCsqDskb"
           ALLOWED_SCHEMA="jpvbootcamp_staging"
           ALLOWED_HOST="10.0.2.4"
           ALLOWED_PORT="5433"
-          ALLOWED_DB="jpvbootcamp"
+          ALLOWED_DB="jpvbootcamp_staging"
 
-          # Reject main branch
-          if [ "${GH_REF_NAME}" = "main" ]; then
-            echo "DEPLOY-DENIED: this workflow must not run on main. Only ${ALLOWED_BRANCH} is allowed." >&2
+          if ! printf '%s' "$SOURCE_REF_INPUT" | grep -qE "$ALLOWED_SOURCE_REF_PATTERN"; then
+            echo "DEPLOY-DENIED: source_ref must match feature/*, fix/*, or release/*; got '$SOURCE_REF_INPUT'" >&2
             exit 1
           fi
-          echo "Staging lane: branch=${ALLOWED_BRANCH} origin=${ALLOWED_ORIGIN} schema=${ALLOWED_SCHEMA}"
+          if [ "$SOURCE_REF_INPUT" = "main" ]; then
+            echo "DEPLOY-DENIED: source_ref main is never allowed for staging" >&2
+            exit 1
+          fi
+          echo "Staging lane: source_ref=${SOURCE_REF_INPUT} origin=${ALLOWED_ORIGIN} schema=${ALLOWED_SCHEMA}"
           echo "              host=${ALLOWED_HOST} port=${ALLOWED_PORT} db=${ALLOWED_DB}"
           echo "              dokploy=${ALLOWED_DOKPLOY_SLUG} (${ALLOWED_DOKPLOY_ID})"
 
-      - name: Check out feature branch
+      - name: Check out approved source ref
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
         with:
-          ref: refs/heads/feature/course-branding-and-preview
+          ref: ${{ inputs.source_ref }}
           fetch-depth: 0
 
-      - name: Verify requested SHA is current remote tip
+      - name: Attach approved source ref for repository guards
         shell: bash
+        env:
+          SOURCE_REF_INPUT: ${{ inputs.source_ref }}
+        run: git switch --create "$SOURCE_REF_INPUT" HEAD
+
+      - name: Verify requested SHA is current remote tip of approved source ref
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+          SOURCE_REF_INPUT: ${{ inputs.source_ref }}
         run: |
           set -euo pipefail
           BRANCH_TIP="$(git rev-parse HEAD)"
-          if [ "$BRANCH_TIP" != "${{ inputs.expected_sha }}" ]; then
-            echo "DEPLOY-DENIED: requested SHA (${{ inputs.expected_sha }}) does not match current tip of feature/course-branding-and-preview ($BRANCH_TIP)" >&2
+          if [ "$BRANCH_TIP" != "$EXPECTED_SHA" ]; then
+            echo "DEPLOY-DENIED: requested SHA ($EXPECTED_SHA) does not match the checked-out source ref tip ($BRANCH_TIP)" >&2
             exit 1
           fi
-          echo "SHA verified: $BRANCH_TIP is the current remote tip"
+          REMOTE_TIP="$(git rev-parse "origin/$SOURCE_REF_INPUT")"
+          if [ "$BRANCH_TIP" != "$REMOTE_TIP" ]; then
+            echo "DEPLOY-DENIED: expected_sha is not the current remote tip of $SOURCE_REF_INPUT" >&2
+            exit 1
+          fi
+          echo "SHA verified: $BRANCH_TIP is the current remote tip of $SOURCE_REF_INPUT"
+
+      - name: Capture checkout SHA
+        id: checkout-sha
+        shell: bash
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Set up pnpm
         uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1  # v4
@@ -237,8 +266,8 @@ jobs:
 
       - name: Build application
         env:
-          NEXT_PUBLIC_APP_URL: https://preview.jpvbootcamp.com
-          APP_PUBLIC_URL: https://preview.jpvbootcamp.com
+          NEXT_PUBLIC_APP_URL: https://staging.jpvbootcamp.com
+          APP_PUBLIC_URL: https://staging.jpvbootcamp.com
         run: pnpm run build
 
       - name: Run deterministic non-browser release gate
@@ -259,11 +288,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          sha_tag="ghcr.io/${{ github.repository }}:${{ github.sha }}"
-          branch_tag="ghcr.io/${{ github.repository }}:feature-course-branding-and-preview"
+          sha_tag="ghcr.io/${{ github.repository }}:${{ steps.checkout-sha.outputs.sha }}"
+          staging_tag="ghcr.io/${{ github.repository }}:staging"
           {
             echo "tags<<EOF"
-            echo "$branch_tag"
+            echo "$staging_tag"
             echo "$sha_tag"
             echo "EOF"
             echo "sha_tag=$sha_tag"
@@ -278,18 +307,18 @@ jobs:
           push: true
           tags: ${{ steps.image-tags.outputs.tags }}
           build-args: |
-            NEXT_PUBLIC_APP_URL=https://preview.jpvbootcamp.com
-            APP_BASE_URL=https://preview.jpvbootcamp.com
-            NEXT_PUBLIC_SERVER_URL=https://preview.jpvbootcamp.com
-            IMAGE_TAG=${{ github.sha }}
-            COMMIT_SHA=${{ github.sha }}
+            NEXT_PUBLIC_APP_URL=https://staging.jpvbootcamp.com
+            APP_BASE_URL=https://staging.jpvbootcamp.com
+            NEXT_PUBLIC_SERVER_URL=https://staging.jpvbootcamp.com
+            IMAGE_TAG=${{ steps.checkout-sha.outputs.sha }}
+            COMMIT_SHA=${{ steps.checkout-sha.outputs.sha }}
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
-            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.revision=${{ steps.checkout-sha.outputs.sha }}
             org.opencontainers.image.created=${{ github.event.head_commit.timestamp }}
-            staging-origin=https://preview.jpvbootcamp.com
-          cache-from: type=gha,scope=preview-deploy
-          cache-to: type=gha,mode=max,scope=preview-deploy
+            staging-origin=https://staging.jpvbootcamp.com
+          cache-from: type=gha,scope=staging-deploy
+          cache-to: type=gha,mode=max,scope=staging-deploy
 
       - name: Ensure durable staging media volume
         if: success()
@@ -324,8 +353,8 @@ jobs:
           set -euo pipefail
 
           # Positive allow-list: only the canonical staging Dokploy app is permitted
-          ALLOWED_SLUG="clients-jpv-bootcamp-app-tp9xrk"
-          ALLOWED_INTERNAL_ID="I_2Vukga3cc3ZhaG-mUzU"
+          ALLOWED_SLUG="clients-jpv-bootcamp-preview-wjfqfd"
+          ALLOWED_INTERNAL_ID="bZllV93NqsPZAFCsqDskb"
 
           if [ -z "$DOKPLOY_PREVIEW_APP_ID" ]; then
             echo "DEPLOY-DENIED: DOKPLOY_PREVIEW_APP_ID secret is unset or empty" >&2
@@ -340,10 +369,10 @@ jobs:
           echo "Deploy guard passed: DOKPLOY_PREVIEW_APP_ID matches canonical staging target"
 
           NEW_IMAGE="${{ steps.image-tags.outputs.sha_tag }}"
-          COMMIT_MSG=$(git log -1 --pretty=format:"%s" ${{ github.sha }})
-          COMMIT_AUTHOR=$(git log -1 --pretty=format:"%an" ${{ github.sha }})
-          COMMIT_DATE=$(git log -1 --pretty=format:"%ci" ${{ github.sha }})
-          DESCRIPTION="${COMMIT_AUTHOR} · ${COMMIT_DATE}"$'\n\n'"${{ github.sha }}"
+          COMMIT_MSG=$(git log -1 --pretty=format:"%s" ${{ steps.checkout-sha.outputs.sha }})
+          COMMIT_AUTHOR=$(git log -1 --pretty=format:"%an" ${{ steps.checkout-sha.outputs.sha }})
+          COMMIT_DATE=$(git log -1 --pretty=format:"%ci" ${{ steps.checkout-sha.outputs.sha }})
+          DESCRIPTION="${COMMIT_AUTHOR} · ${COMMIT_DATE}"$'\n\n'"${{ steps.checkout-sha.outputs.sha }}"
 
           UPDATE_RESPONSE=$(curl -s -o /tmp/dokploy_update_response.json -w "%{http_code}" \
             -X POST "https://dokploy.prochat.tools/api/application.update" \
@@ -402,11 +431,11 @@ jobs:
           fi
           echo "Required staging admin secret names are configured"
 
-      - name: Wait for deployed preview revision
+      - name: Wait for deployed staging revision
         if: success()
         env:
-          STAGING_URL: https://preview.jpvbootcamp.com
-          EXPECTED_DEPLOYMENT_SHA: ${{ github.sha }}
+          STAGING_URL: https://staging.jpvbootcamp.com
+          EXPECTED_DEPLOYMENT_SHA: ${{ steps.checkout-sha.outputs.sha }}
           DOKPLOY_API_KEY: ${{ secrets.DOKPLOY_API_KEY }}
           DOKPLOY_PREVIEW_APP_ID: ${{ secrets.DOKPLOY_PREVIEW_APP_ID }}
           DEPLOY_SSH_HOST: ${{ secrets.DEPLOY_SSH_HOST }}
@@ -432,10 +461,10 @@ jobs:
           DEBIAN_FRONTEND: noninteractive
         run: pnpm exec playwright install --with-deps chromium
 
-      - name: Run authenticated admin responsive gate
+      - name: Run authenticated staging admin responsive gate
         if: success()
         env:
-          STAGING_URL: https://preview.jpvbootcamp.com
+          STAGING_URL: https://staging.jpvbootcamp.com
           STAGING_ADMIN_EMAIL: ${{ secrets.STAGING_ADMIN_EMAIL }}
           STAGING_ADMIN_PASSWORD: ${{ secrets.STAGING_ADMIN_PASSWORD }}
         run: pnpm test:e2e:admin-responsive
@@ -484,15 +513,14 @@ jobs:
             exit 1
           fi
 
-      - name: Validate trigger — reject main branch
+      - name: Validate source ref — reject production source
         shell: bash
         env:
-          GH_REF: ${{ github.ref }}
-          GH_REF_NAME: ${{ github.ref_name }}
+          SOURCE_REF_INPUT: ${{ inputs.source_ref }}
         run: |
           set -euo pipefail
-          if [ "${GH_REF}" = "refs/heads/main" ] || [ "${GH_REF_NAME}" = "main" ]; then
-            echo "PLAN-DENIED: this workflow must not run on main." >&2
+          if ! printf '%s' "$SOURCE_REF_INPUT" | grep -qE '^(feature|fix|release)/[A-Za-z0-9][A-Za-z0-9._-]*$'; then
+            echo "PLAN-DENIED: source_ref must match feature/*, fix/*, or release/*; got '$SOURCE_REF_INPUT'" >&2
             exit 1
           fi
 
@@ -535,21 +563,28 @@ jobs:
 
       # ── Source checkout: branch-attached, not detached ───────────────────
 
-      - name: Check out feature branch
+      - name: Check out approved source ref
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
         with:
-          ref: refs/heads/feature/course-branding-and-preview
+          ref: ${{ inputs.source_ref }}
           fetch-depth: 0
+
+      - name: Attach approved source ref for migration runner
+        shell: bash
+        env:
+          SOURCE_REF_INPUT: ${{ inputs.source_ref }}
+        run: git switch --create "$SOURCE_REF_INPUT" HEAD
 
       - name: Verify branch name, HEAD SHA, ancestry, and remote tip
         shell: bash
         env:
           EXPECTED_SHA: ${{ inputs.expected_sha }}
+          SOURCE_REF_INPUT: ${{ inputs.source_ref }}
         run: |
           set -euo pipefail
           BRANCH="$(git branch --show-current)"
-          if [ "$BRANCH" != "feature/course-branding-and-preview" ]; then
-            echo "PLAN-DENIED: expected branch 'feature/course-branding-and-preview', got '$BRANCH'" >&2
+          if [ "$BRANCH" != "$SOURCE_REF_INPUT" ]; then
+            echo "PLAN-DENIED: checked-out source ref does not match source_ref ('$SOURCE_REF_INPUT'), got '$BRANCH'" >&2
             exit 1
           fi
           ACTUAL_SHA="$(git rev-parse HEAD)"
@@ -562,7 +597,7 @@ jobs:
             echo "PLAN-DENIED: SHA is already reachable from main." >&2
             exit 1
           fi
-          REMOTE_TIP="$(git rev-parse origin/feature/course-branding-and-preview)"
+          REMOTE_TIP="$(git rev-parse "origin/$SOURCE_REF_INPUT")"
           if [ "$ACTUAL_SHA" != "$REMOTE_TIP" ]; then
             echo "PLAN-DENIED: expected_sha is not the current remote tip" >&2
             echo "Run pnpm staging:payload-migration-plan locally to confirm the remote tip before dispatching." >&2
@@ -641,6 +676,7 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           PAYLOAD_MIGRATION_SCHEMA: jpvbootcamp_staging
           EXPECTED_SHA: ${{ inputs.expected_sha }}
+          SOURCE_REF_INPUT: ${{ inputs.source_ref }}
         run: |
           set -euo pipefail
           STDOUT_FILE=$(mktemp)
@@ -659,7 +695,7 @@ jobs:
             "--target-id=jpvbootcamp-staging"
             "--expected-schema=jpvbootcamp_staging"
             "--expected-hostname=10.0.2.4"
-            "--expected-database=jpvbootcamp"
+            "--expected-database=jpvbootcamp_staging"
           )
 
           set +e
@@ -718,7 +754,7 @@ jobs:
           # read-only evidence. The pending list is discovered from the current
           # canonical registry; it is not a migration-apply authorization packet.
           if [ "$RESULT_CODE" = "plan_ok" ] && [ $PLAN_EXIT -eq 0 ]; then
-            REQUIRED_BRANCH="feature/course-branding-and-preview"
+            REQUIRED_BRANCH="${SOURCE_REF_INPUT}"
             REQUIRED_SCHEMA="jpvbootcamp_staging"
             REQUIRED_ENVIRONMENT="staging"
             REQUIRED_TARGET_ID="jpvbootcamp-staging"

@@ -28,7 +28,7 @@ assert(
 // Fallback chain
 assert(source.includes('NEXT_PUBLIC_SERVER_URL'), 'must fall back to NEXT_PUBLIC_SERVER_URL')
 assert(source.includes('NEXT_PUBLIC_PAYLOAD_URL'), 'must fall back to NEXT_PUBLIC_PAYLOAD_URL')
-assert(source.includes('preview.jpvbootcamp.com'), 'must have staging fallback origin')
+assert(source.includes("ENVIRONMENT_TOPOLOGY.staging.origin"), 'must have canonical staging fallback origin')
 
 // Redirect target
 assert(source.includes("'/admin/login'"), 'must redirect to /admin/login')

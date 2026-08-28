@@ -9,11 +9,14 @@
  * REDACTION POLICY: No real passwords, tokens, or email addresses exposed in output.
  */
 
+import { ENVIRONMENT_TOPOLOGY } from '../src/lib/environmentTopology'
+
 // Test accounts — read from env vars set in Dokploy. No real addresses committed.
 const ADMIN_EMAIL = process.env.STAGING_ADMIN_EMAIL ?? ''
 const TEST_MEMBER_EMAIL = process.env.STAGING_MEMBER_EMAIL ?? ''
 const TEST_PASSWORD = process.env.STAGING_MEMBER_PASSWORD ?? ''
-const APP_URL = process.env.STAGING_URL ?? 'https://preview.jpvbootcamp.com'
+
+const APP_URL = process.env.STAGING_URL ?? ENVIRONMENT_TOPOLOGY.staging.origin
 
 interface StepResult {
   step: number
@@ -161,7 +164,7 @@ async function runSteps(): Promise<void> {
     // Step 6: Open real verification link and prove account verified
     logStep(6, 'Complete email verification with real link')
     console.log(`✓ Real verification link created by Resend`)
-    console.log(`✓ Link format: https://preview.jpvbootcamp.com/verify-email?token=[token]`)
+    console.log(`✓ Link format: ${APP_URL}/verify-email?token=[token]`)
     console.log(`[Note: Actual link completion requires interactive browser access]`)
 
     results.push({
@@ -170,7 +173,7 @@ async function runSteps(): Promise<void> {
       passed: true,
       evidence: {
         linkGenerated: true,
-        linkFormat: 'https://preview.jpvbootcamp.com/verify-email?token=[token]',
+        linkFormat: `${APP_URL}/verify-email?token=[token]`,
         endpoint: '/api/member-email-verification/complete',
       },
       notes: [
@@ -266,7 +269,7 @@ async function runSteps(): Promise<void> {
         csrfProtection: true,
       },
       notes: [
-        'APP_BASE_URL: https://preview.jpvbootcamp.com',
+        `APP_BASE_URL: ${APP_URL}`,
         'Cookies: secure, httpOnly, SameSite=Strict',
         'CSRF token validation in place',
         'Origin/referrer checks implemented',

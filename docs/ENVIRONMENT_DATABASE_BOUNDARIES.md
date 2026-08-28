@@ -4,6 +4,38 @@ Verified 2026-08-26 from the live Dokploy containers on the authorized host. Thi
 document records runtime facts only; passwords and other secret values are never
 stored here.
 
+## CURRENT E1 GATE A — 2026-08-28
+
+The following read-only evidence supersedes the older checkpoint below. The
+production application is `clients-jpv-bootcamp-app-tp9xrk` at
+`https://jpvbootcamp.com`. The currently serving non-production application is
+still `clients-jpv-bootcamp-preview-wjfqfd` at
+`https://preview.jpvbootcamp.com`; it is a transitional staging runtime, not
+the intended public staging identity. `https://staging.jpvbootcamp.com` currently
+returns 404.
+
+| Runtime | Database host | Database | Schema | Role | Current classification |
+| --- | --- | --- | --- | --- | --- |
+| Production | `10.0.2.4:5433` | `jpvbootcamp` | `jpvbootcamp` | `jpvbootcamp_staging_user` | Current production; protected |
+| Transitional staging | `10.0.2.4:5433` | `jpvbootcamp_preview` | `jpvbootcamp_staging` | `jpvbootcamp_staging_user` | Current preview runtime; migration state mismatched |
+| Legacy | `10.0.2.4:5433` | `jpvbootcamp_legacy` | `jpvbootcamp` | `jpvbootcamp_user` | Frozen legacy; never a current migration target |
+
+The live host therefore exposes three observed database names on one database
+server. The preferred target for a repaired staging environment is a separate
+`jpvbootcamp_staging` database with schema `jpvbootcamp`; provisioning and
+repair are deferred to E1 Gate B. The production role's staging-labelled name
+is recorded as drift and is not repaired by this gate.
+
+The transitional staging schema exists and contains 46 Payload and 26 Prisma
+migration records, while the repository registers 52 Payload migrations and
+additional Prisma migrations not present in applied-state evidence. This is an
+E1 blocker. No migration, database, schema, role, provider, or deployment
+change was executed. See
+`docs/architecture/JPV_ENVIRONMENT_TOPOLOGY_V1.md` and
+`docs/architecture/JPV_PREVIEW_TO_STAGING_INVENTORY.md` for the full inventory.
+
+## Historical checkpoints (retained; not current live truth)
+
 ## Verified mapping
 
 | Application | Runtime image | Database host | Database | Configured schema | Database user | Status |

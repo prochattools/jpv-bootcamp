@@ -15,6 +15,8 @@
  * values are rejected at load time. Operators set real values in Dokploy staging.
  */
 
+import { ENVIRONMENT_TOPOLOGY } from '../../src/lib/environmentTopology'
+
 // ─── Email validation ───────────────────────────────────────────────────────
 
 const SINGLE_EMAIL_RE = /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/
@@ -224,13 +226,21 @@ export function assertInvitationApplyAllowlisted(
 
 // ─── Forbidden app ID guard ─────────────────────────────────────────────────
 
-const FORBIDDEN_PRODUCTION_APP_ID = 'web-public-jpv-bootcamp-l66egq'
-const ALLOWED_STAGING_APP_ID = 'clients-jpv-bootcamp-app-tp9xrk'
+const FORBIDDEN_PRODUCTION_APP_IDS = Object.freeze([
+  ENVIRONMENT_TOPOLOGY.production.dokploySlug,
+  ENVIRONMENT_TOPOLOGY.production.dokployApplicationId,
+  ENVIRONMENT_TOPOLOGY.legacy.dokploySlug,
+  ENVIRONMENT_TOPOLOGY.legacy.dokployApplicationId,
+] as const)
+const ALLOWED_STAGING_APP_IDS = Object.freeze([
+  ENVIRONMENT_TOPOLOGY.staging.dokploySlug,
+  ENVIRONMENT_TOPOLOGY.staging.dokployApplicationId,
+] as const)
 
 export function assertNotProductionApp(appId: string): void {
-  if (appId === FORBIDDEN_PRODUCTION_APP_ID) {
+  if (FORBIDDEN_PRODUCTION_APP_IDS.includes(appId as typeof FORBIDDEN_PRODUCTION_APP_IDS[number])) {
     throw new StagingAllowlistViolation(
-      `FORBIDDEN: attempted to target production app '${FORBIDDEN_PRODUCTION_APP_ID}'`,
+      `FORBIDDEN: attempted to target protected production or legacy app '${appId}'`,
       [],
     )
   }
@@ -238,9 +248,9 @@ export function assertNotProductionApp(appId: string): void {
 
 export function assertStagingAppOnly(appId: string): void {
   assertNotProductionApp(appId)
-  if (appId !== ALLOWED_STAGING_APP_ID) {
+  if (!ALLOWED_STAGING_APP_IDS.includes(appId as typeof ALLOWED_STAGING_APP_IDS[number])) {
     throw new StagingAllowlistViolation(
-      `app ID '${appId}' is not the allowed staging app '${ALLOWED_STAGING_APP_ID}'`,
+      `app ID '${appId}' is not an allowed staging app [${ALLOWED_STAGING_APP_IDS.join(', ')}]`,
       [],
     )
   }
@@ -249,7 +259,7 @@ export function assertStagingAppOnly(appId: string): void {
 // ─── Staging origin guard ───────────────────────────────────────────────────
 
 const ALLOWED_STAGING_ORIGINS = Object.freeze([
-  'https://preview.jpvbootcamp.com',
+  ENVIRONMENT_TOPOLOGY.staging.origin,
 ] as const)
 
 export function assertStagingOrigin(url: string): void {

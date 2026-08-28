@@ -15,7 +15,7 @@
 import { spawnSync } from 'node:child_process'
 
 const ENV_NAME = 'staging-migration-plan'
-const REQUIRED_FEATURE_BRANCH = 'feature/course-branding-and-preview'
+const REQUIRED_SOURCE_REF_DESCRIPTION = 'feature/*, fix/*, or release/*'
 const REQUIRED_ENV_SECRETS = ['DATABASE_URL', 'TAILSCALE_OAUTH_CLIENT_ID', 'TAILSCALE_OAUTH_SECRET']
 const STAGING_HOST = '10.0.2.4'
 const STAGING_PORT = 5433
@@ -150,7 +150,7 @@ export async function runPreflight(deps: PreflightDependencies = {}): Promise<Pr
 
     // GitHub custom deployment branch policies are not supported on public repositories
     // with a free organization plan. Branch enforcement is handled in-workflow via explicit
-    // guards (branch name check, remote tip check, REQUIRED_BRANCH in evidence validation).
+    // guards (source-ref pattern check, remote tip check, and source-ref evidence validation).
     // Verify the environment does NOT have a branch_policy protection rule blocking deployments.
     const branchPolicy = envData.deployment_branch_policy
     if (branchPolicy && (branchPolicy.protected_branches || branchPolicy.custom_branch_policies)) {
@@ -160,7 +160,7 @@ export async function runPreflight(deps: PreflightDependencies = {}): Promise<Pr
           `Remove it at: https://github.com/${repo}/settings/environments`,
       )
     } else {
-      result.info.push(`Branch policy: none (in-workflow guards enforce ${REQUIRED_FEATURE_BRANCH})`)
+      result.info.push(`Branch policy: none (in-workflow guards enforce ${REQUIRED_SOURCE_REF_DESCRIPTION})`)
     }
   }
 

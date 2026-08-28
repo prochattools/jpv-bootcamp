@@ -1,6 +1,6 @@
 # JPV Bootcamp Post-Launch Architecture Consolidation Plan
 
-**Status:** A5.1 COMPLETE LOCALLY IN THIS IMPLEMENTATION PACKET; A6 NOT STARTED
+**Status:** A5.1 COMPLETE LOCALLY IN THIS IMPLEMENTATION PACKET; E1 GATE A BLOCKED
 
 **Date:** 2026-08-28
 
@@ -10,6 +10,27 @@ This plan governs the behavior-preserving consolidation of the live JPV
 Bootcamp system. It is intentionally packetized. No packet may absorb another
 packet’s scope, and no implementation begins merely because a related branch or
 historical change exists.
+
+## E1 Gate A — environment topology reconciliation
+
+E1 Gate A is a read-only reconciliation of the three Dokploy application
+identities, their public origins, database boundaries, migration evidence, and
+repository staging guards. The canonical production app is
+`clients-jpv-bootcamp-app-tp9xrk` at `https://jpvbootcamp.com`; the existing
+staging application still serves the transitional preview runtime at
+`https://preview.jpvbootcamp.com` against `jpvbootcamp_preview` /
+`jpvbootcamp_staging`; and the intended `https://staging.jpvbootcamp.com`
+origin returns 404. Legacy remains isolated at `legacy.jpvbootcamp.com`.
+
+The repository corrections centralize non-secret topology, constrain staging
+source refs to `feature/*`, `fix/*`, and `release/*`, remove active defaults to
+the retired preview origin, and retain immutable provider identifiers. The
+transitional staging migration evidence is incomplete versus the repository
+registry, so E1 is `BLOCKED`. Gate B must explicitly authorize infrastructure
+repair, migration reconciliation, acceptance, and any release operation. No
+database, provider, routing, merge, push, or deployment action is included in
+E1. See `JPV_ENVIRONMENT_TOPOLOGY_V1.md` and
+`JPV_PREVIEW_TO_STAGING_INVENTORY.md`.
 
 ## A5 completion record — 2026-08-28
 

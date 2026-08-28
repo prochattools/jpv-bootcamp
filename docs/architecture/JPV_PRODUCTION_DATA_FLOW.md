@@ -1,12 +1,32 @@
 # JPV Bootcamp Production Data Flow
 
-**Status:** CURRENT A5.1 DATA-FLOW MAP — OWNERSHIP CLOSED; A6 LIVE EVIDENCE GATED
+**Status:** CURRENT A5.1 DATA-FLOW MAP — OWNERSHIP CLOSED; E1 GATE A BLOCKED
 
 **Date:** 2026-08-28
 
 This document maps the current production-shaped repository flow. It is not
 evidence that a provider, database, or deployed runtime is currently healthy;
 the A5 packet performs no live writes and no reconciliation.
+
+## E1 environment boundary
+
+Production is the root application at `https://jpvbootcamp.com` with database
+`jpvbootcamp` / schema `jpvbootcamp`. Legacy is isolated at
+`https://legacy.jpvbootcamp.com` with database `jpvbootcamp_legacy` / schema
+`jpvbootcamp`. The current non-production runtime still serves
+`https://preview.jpvbootcamp.com` from the transitional
+`jpvbootcamp_preview` / `jpvbootcamp_staging` pair, while the intended
+`https://staging.jpvbootcamp.com` origin returns 404. Its migration evidence is
+not aligned with the repository registry.
+
+The repository now centralizes non-secret environment identities in
+`src/lib/environmentTopology.ts`; active staging checks use the staging origin
+and approved source-ref pattern. Existing preview names in old packet evidence,
+workflow filenames, host-managed routing paths, and external secret/volume
+identifiers are retained as classified historical or immutable references. No
+E1 code change mutates the live data flow. See
+`JPV_ENVIRONMENT_TOPOLOGY_V1.md` and
+`JPV_PREVIEW_TO_STAGING_INVENTORY.md`.
 
 ## Global boundary
 

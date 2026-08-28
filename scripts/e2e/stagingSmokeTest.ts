@@ -1,6 +1,7 @@
 import { spawnSync } from 'node:child_process'
 import { writeFileSync, mkdirSync } from 'node:fs'
 import path from 'node:path'
+import { ENVIRONMENT_TOPOLOGY } from '../../src/lib/environmentTopology'
 
 /**
  * Staging Smoke Test Runner
@@ -39,7 +40,7 @@ export async function runStagingSmokeTest(
   options: StagingSmokeTestOptions = {},
 ): Promise<StagingSmokeTestResult> {
   const startTime = Date.now()
-  const stagingUrl = options.stagingUrl ?? 'https://preview.jpvbootcamp.com'
+  const stagingUrl = options.stagingUrl ?? ENVIRONMENT_TOPOLOGY.staging.origin
   const outputDir = options.outputDir ?? './test-results/staging-smoke'
   const now = new Date()
   const timestamp = now.toISOString().replace(/[:.]/g, '-').slice(0, -5) // Remove milliseconds and Z
@@ -213,7 +214,7 @@ Generated: ${new Date().toISOString()}
 if (require.main === module) {
   const args = process.argv.slice(2)
   const options: StagingSmokeTestOptions = {
-    stagingUrl: args.find(a => a.startsWith('--url='))?.split('=')[1] ?? 'https://preview.jpvbootcamp.com',
+    stagingUrl: args.find(a => a.startsWith('--url='))?.split('=')[1] ?? ENVIRONMENT_TOPOLOGY.staging.origin,
     desktopOnly: args.includes('--desktop-only'),
     mobileOnly: args.includes('--mobile-only'),
     debug: args.includes('--debug'),

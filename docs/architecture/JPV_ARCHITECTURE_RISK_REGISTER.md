@@ -1,12 +1,21 @@
 # JPV Bootcamp Architecture Risk Register
 
-**Status:** CURRENT A5.1 RISK REGISTER — ARCHITECTURE CLOSED; A6 LIVE EVIDENCE GATED
+**Status:** CURRENT A5.1 RISK REGISTER — ARCHITECTURE CLOSED; E1 GATE A BLOCKED
 
 **Date:** 2026-08-28
 
 Ratings describe the risk in the current repository, not a claim that the live
 system is broken. A5.1 closes architecture ambiguity; remaining A6 rows are
 runtime evidence requirements only.
+
+## E1 Gate A live topology risks
+
+| Risk | Rating / state | Evidence | Mitigation / required owner |
+| --- | --- | --- | --- |
+| Transitional preview runtime is still the public staging origin | Critical — `E1 BLOCKED` | `https://preview.jpvbootcamp.com` is healthy with `deploymentEnv=preview`; `https://staging.jpvbootcamp.com` returns 404 | Provision and verify the staging hostname/routing in Gate B before retiring preview; keep production deny-lists |
+| Staging database identity is transitional and migration state mismatches the repository | Critical — `E1 BLOCKED` | Current runtime uses `jpvbootcamp_preview` / `jpvbootcamp_staging`; 46 Payload and 26 Prisma rows do not cover all registered migrations | Review the separate `jpvbootcamp_staging` target, reconcile state read-only, then apply only under an exact Gate B authorization |
+| Production database role has a staging-labelled name | High — observed drift | Production metadata reports role `jpvbootcamp_staging_user` | Do not rename or repair during E1; assess least privilege and rollback in Gate B |
+| Preview-era references can be mistaken for current staging authority | High — mitigated in repository | Active staging defaults now use `environmentTopology`; historical and immutable references remain | Use the preview-to-staging inventory and reject unclassified references in later changes |
 
 | Risk | Rating / state | Evidence | Mitigation / required owner |
 | --- | --- | --- | --- |

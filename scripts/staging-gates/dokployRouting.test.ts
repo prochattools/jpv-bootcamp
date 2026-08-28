@@ -22,7 +22,7 @@ function throws(fn: () => void, pattern: RegExp, label: string): void {
 
 // --- Constants ---
 assert.equal(STAGING_DOMAIN_ID, 'lLeympWtBHVcL6R9JeyZQ', 'staging domain ID')
-assert.equal(STAGING_DOMAIN_HOST, 'preview.jpvbootcamp.com', 'staging domain host')
+assert.equal(STAGING_DOMAIN_HOST, 'staging.jpvbootcamp.com', 'staging domain host')
 
 // --- TRAEFIK_FILE_PROVIDER_PATH: must reference the staging app and correct directory ---
 assert.ok(
@@ -45,8 +45,8 @@ assert.ok(
   'labels must include a Host() routing rule',
 )
 assert.ok(
-  Object.values(STAGING_TRAEFIK_LABELS).some((v) => v.includes('preview.jpvbootcamp.com')),
-  'labels must reference preview.jpvbootcamp.com',
+  Object.values(STAGING_TRAEFIK_LABELS).some((v) => v.includes('staging.jpvbootcamp.com')),
+  'labels must reference staging.jpvbootcamp.com',
 )
 assert.ok(
   Object.keys(STAGING_TRAEFIK_LABELS).some((k) => k.includes('.server.port')),
@@ -61,7 +61,7 @@ assert.equal(
 // --- STAGING_TRAEFIK_LABELS: must not reference production domain ---
 for (const v of Object.values(STAGING_TRAEFIK_LABELS)) {
   assert.ok(
-    !v.includes('jpvbootcamp.com') || v.includes('preview.jpvbootcamp.com'),
+    !v.includes('jpvbootcamp.com') || v.includes('staging.jpvbootcamp.com'),
     `label value must not reference production domain: ${v}`,
   )
 }
@@ -116,8 +116,8 @@ const labels = payload.labelsSwarm as Record<string, string>
 assert.ok(typeof labels === 'object' && labels !== null, 'labelsSwarm is an object')
 assert.equal(labels['traefik.enable'], 'true', 'labelsSwarm traefik.enable')
 assert.ok(
-  Object.values(labels).some((v) => v.includes('preview.jpvbootcamp.com')),
-  'labelsSwarm references preview.jpvbootcamp.com',
+  Object.values(labels).some((v) => v.includes('staging.jpvbootcamp.com')),
+  'labelsSwarm references staging.jpvbootcamp.com',
 )
 
 // --- buildApplicationUpdatePayload: no sensitive keys ---

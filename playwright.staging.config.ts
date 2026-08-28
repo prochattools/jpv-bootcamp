@@ -1,6 +1,7 @@
 import { defineConfig, devices } from '@playwright/test'
+import { ENVIRONMENT_TOPOLOGY } from './src/lib/environmentTopology'
 
-const STAGING_URL = process.env.STAGING_URL || 'https://preview.jpvbootcamp.com'
+const STAGING_URL = process.env.STAGING_URL || ENVIRONMENT_TOPOLOGY.staging.origin
 
 export default defineConfig({
   testDir: './e2e',

@@ -67,6 +67,34 @@ explicitly superseded here.
 - **Architecture authority:** `docs/architecture/` contains the production
   architecture, source-of-truth map, engineering principles, and packet plan.
 
+## E1 GATE A — CURRENT ENVIRONMENT TOPOLOGY — 2026-08-28
+
+E1 is `BLOCKED` after a read-only reconciliation of the live Dokploy topology.
+The production application is `JPV Bootcamp` /
+`clients-jpv-bootcamp-app-tp9xrk` at `https://jpvbootcamp.com`, using database
+`jpvbootcamp` and schema `jpvbootcamp`. The staging application identifier is
+`clients-jpv-bootcamp-preview-wjfqfd` /
+`bZllV93NqsPZAFCsqDskb`, but it currently serves
+`https://preview.jpvbootcamp.com` with `DEPLOYMENT_ENV=preview`, database
+`jpvbootcamp_preview`, and schema `jpvbootcamp_staging`. The intended
+`https://staging.jpvbootcamp.com` origin returns 404. Legacy is isolated at
+`https://legacy.jpvbootcamp.com` on `jpvbootcamp_legacy` / `jpvbootcamp`.
+
+The transitional staging schema is present, but its read-only migration
+evidence is 46 Payload rows and 26 Prisma rows while the repository registers
+52 Payload migrations and additional Prisma migrations. This explains why the
+staging status guard cannot treat the runtime as reconciled. The production
+role's staging-labelled name is recorded drift and was not changed.
+
+E1 repository corrections are intentionally local and reversible on the
+current branch. No database/schema/role repair, migration, provider mutation,
+DNS/TLS change, merge, push, or deployment was performed. Active staging tools
+now use the shared `src/lib/environmentTopology.ts` contract and the
+preview-to-staging inventory classifies historical and immutable preview
+references. Gate B remains required before making the staging hostname live or
+applying any migration. See `docs/architecture/JPV_ENVIRONMENT_TOPOLOGY_V1.md`
+and `docs/architecture/JPV_PREVIEW_TO_STAGING_INVENTORY.md`.
+
 ## Historical pre-production repository reconciliation — 2026-08-23
 
 - **Working branch:** `feature/course-branding-and-preview`; canonical frozen staging release and deployed SHA are `9d87c4a3eeeffb9afb78a38964054792330ea1cb`. Current repository tip `626bf3926412065fb7e5655d35c98d8f4be67a58` is a documentation-only descendant and is not deployed.

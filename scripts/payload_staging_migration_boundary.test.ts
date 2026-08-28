@@ -10,12 +10,12 @@ function expectError(fn: () => unknown, pattern: RegExp) {
 }
 
 const accepted = parseStagingDatabaseUrl(
-  'postgresql://staging_user:super-secret@db.preview.internal:5432/jpvbootcamp?schema=jpvbootcamp_staging',
+  'postgresql://staging_user:super-secret@db.staging.internal:5432/jpvbootcamp_staging?schema=jpvbootcamp_staging',
 )
 
 assert.deepEqual(accepted, {
-  hostname: 'db.preview.internal',
-  database: 'jpvbootcamp',
+  hostname: 'db.staging.internal',
+  database: 'jpvbootcamp_staging',
   schema: 'jpvbootcamp_staging',
 })
 
@@ -44,7 +44,7 @@ expectError(
 )
 expectError(
   () => parseStagingDatabaseUrl('postgresql://user:pass@db:5432/other_db?schema=jpvbootcamp_staging'),
-  /database must be exactly jpvbootcamp/,
+  /database must be exactly jpvbootcamp_staging/,
 )
 
 assert.equal(resolveMode(['--status']), 'status')

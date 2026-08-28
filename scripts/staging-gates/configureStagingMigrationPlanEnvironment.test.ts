@@ -247,7 +247,8 @@ async function main(): Promise<void> {
       {
         gitStatus: mockGitStatus(new Map()),
         repoName: () => 'prochattools/jpv-bootcamp',
-        currentHead: () => 'a'.repeat(40),
+          currentHead: () => 'a'.repeat(40),
+          currentBranch: () => 'feature/e1-topology',
       },
     )
 
@@ -266,7 +267,8 @@ async function main(): Promise<void> {
       {
         gitStatus: mockGitStatus(new Map()),
         repoName: () => 'prochattools/jpv-bootcamp',
-        currentHead: () => 'b'.repeat(40),
+          currentHead: () => 'b'.repeat(40),
+          currentBranch: () => 'feature/e1-topology',
       },
     )
 
@@ -287,7 +289,8 @@ async function main(): Promise<void> {
       {
         gitStatus: mockGitStatus(statusMap),
         repoName: () => 'prochattools/jpv-bootcamp',
-        currentHead: () => 'a'.repeat(40),
+          currentHead: () => 'a'.repeat(40),
+          currentBranch: () => 'feature/e1-topology',
       },
     )
 
@@ -306,7 +309,8 @@ async function main(): Promise<void> {
       {
         gitStatus: mockGitStatus(new Map()),
         repoName: () => 'prochattools/jpv-bootcamp',
-        currentHead: () => 'c'.repeat(40),
+          currentHead: () => 'c'.repeat(40),
+          currentBranch: () => 'feature/e1-topology',
       },
     )
 
@@ -331,7 +335,8 @@ async function main(): Promise<void> {
       {
         gitStatus: mockGitStatus(new Map()),
         repoName: () => 'prochattools/jpv-bootcamp',
-        currentHead: () => 'd'.repeat(40),
+          currentHead: () => 'd'.repeat(40),
+          currentBranch: () => 'feature/e1-topology',
       },
     )
     assert(result.ok === true)
@@ -351,7 +356,8 @@ async function main(): Promise<void> {
       {
         gitStatus: mockGitStatus(new Map()),
         repoName: () => 'other-org/other-repo',
-        currentHead: () => 'a'.repeat(40),
+          currentHead: () => 'a'.repeat(40),
+          currentBranch: () => 'feature/e1-topology',
       },
     )
     assert(result.ok === false)
@@ -412,6 +418,7 @@ async function main(): Promise<void> {
           gitStatus: mockGitStatus(new Map()),
           repoName: () => 'prochattools/jpv-bootcamp',
           currentHead: () => 'e'.repeat(40),
+          currentBranch: () => 'feature/e1-topology',
         },
       )
     } finally {
@@ -468,6 +475,7 @@ async function main(): Promise<void> {
           gitStatus: mockGitStatus(new Map()),
           repoName: () => 'prochattools/jpv-bootcamp',
           currentHead: () => 'f'.repeat(40),
+          currentBranch: () => 'feature/e1-topology',
         },
       )
     } finally {
@@ -493,6 +501,7 @@ async function main(): Promise<void> {
         gitStatus: mockGitStatus(new Map()),
         repoName: () => 'prochattools/jpv-bootcamp',
         currentHead: () => 'a'.repeat(40),
+        currentBranch: () => 'feature/e1-topology',
       },
     )
     assert(result.ok === false)
@@ -511,6 +520,7 @@ async function main(): Promise<void> {
         gitStatus: mockGitStatus(new Map()),
         repoName: () => 'prochattools/jpv-bootcamp',
         currentHead: () => 'a'.repeat(40),
+        currentBranch: () => 'feature/e1-topology',
       },
     )
     assert(result.ok === false)

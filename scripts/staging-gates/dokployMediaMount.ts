@@ -1,19 +1,18 @@
 import {
   assertStagingDeployment,
   STAGING_APP_ID,
-  STAGING_BRANCH,
+  STAGING_APP_INTERNAL_ID,
+  STAGING_SOURCE_REF_EXAMPLE,
   STAGING_ORIGIN,
+  PRODUCTION_DENY_LIST,
 } from './stagingPolicy'
 
 export const STAGING_MEDIA_MOUNT_PATH = '/app/public/media'
 export const STAGING_MEDIA_VOLUME_NAME = 'jpv-bootcamp-preview-media'
 export const STAGING_PRIVATE_MEDIA_MOUNT_PATH = '/app/private/payload-course-media'
 export const STAGING_PRIVATE_MEDIA_VOLUME_NAME = 'jpv-bootcamp-preview-private-media'
-export const STAGING_DOKPLOY_APPLICATION_ID = 'I_2Vukga3cc3ZhaG-mUzU'
-export const PRODUCTION_DOKPLOY_APPLICATION_IDS = [
-  'aPR9SvYn_JvGdMTk3CzeI',
-  'web-public-jpv-bootcamp-l66egq',
-] as const
+export const STAGING_DOKPLOY_APPLICATION_ID = STAGING_APP_INTERNAL_ID
+export const PRODUCTION_DOKPLOY_APPLICATION_IDS = PRODUCTION_DENY_LIST
 
 type UnknownRecord = Record<string, unknown>
 
@@ -123,7 +122,7 @@ export function assertStagingDokployTarget(target: string): void {
   assertStagingDeployment({
     appId: STAGING_APP_ID,
     origin: STAGING_ORIGIN,
-    branch: STAGING_BRANCH,
+    branch: STAGING_SOURCE_REF_EXAMPLE,
   })
 }
 

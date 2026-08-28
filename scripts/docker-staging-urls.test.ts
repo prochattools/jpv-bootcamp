@@ -2,8 +2,8 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 
 /**
- * Contract test: Verify that preview/staging Docker builds receive
- * https://preview.jpvbootcamp.com URLs, never production jpvbootcamp.com.
+ * Contract test: Verify that staging Docker builds receive
+ * https://staging.jpvbootcamp.com URLs, never production jpvbootcamp.com.
  *
  * This proves the Docker build does not accidentally bake production
  * URLs into staging preview images.
@@ -41,7 +41,7 @@ assert.ok(
 
 // Verify staging URL is the default (staging-first model — not production)
 assert.ok(
-  dockerfile.includes('ARG NEXT_PUBLIC_APP_URL=https://preview.jpvbootcamp.com'),
+  dockerfile.includes('ARG NEXT_PUBLIC_APP_URL=https://staging.jpvbootcamp.com'),
   'Staging URL must be the build ARG default — production URL must not be the default'
 )
 
@@ -59,4 +59,4 @@ assert.ok(
   'Production URL must not be the ARG default for NEXT_PUBLIC_SERVER_URL'
 )
 
-console.log('✓ docker-staging-urls.test.ts passed: Preview builds default to staging URLs, production URLs excluded')
+console.log('✓ docker-staging-urls.test.ts passed: Staging builds default to staging URLs, production URLs excluded')

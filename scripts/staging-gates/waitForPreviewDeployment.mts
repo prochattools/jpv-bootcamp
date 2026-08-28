@@ -16,7 +16,7 @@ const apiBase = (process.env.DOKPLOY_API_BASE_URL?.trim() || 'https://dokploy.pr
 
 const sshHost = process.env.DEPLOY_SSH_HOST?.trim() || ''
 const sshUser = process.env.DEPLOY_SSH_USER?.trim() || 'ubuntu'
-const serviceName = 'clients-jpv-bootcamp-app-tp9xrk'
+const serviceName = STAGING_APP_ID
 
 const maximumAttempts = 40
 const delayMilliseconds = 15_000

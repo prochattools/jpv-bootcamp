@@ -1,8 +1,9 @@
 import { test, expect } from '@playwright/test'
 import { assertStagingOrigin } from '../scripts/staging-gates/stagingPolicy'
 import crypto from 'crypto'
+import { ENVIRONMENT_TOPOLOGY } from '../src/lib/environmentTopology'
 
-const STAGING_URL = process.env.STAGING_URL ?? 'https://preview.jpvbootcamp.com'
+const STAGING_URL = process.env.STAGING_URL ?? ENVIRONMENT_TOPOLOGY.staging.origin
 const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET ?? ''
 
 assertStagingOrigin(STAGING_URL)

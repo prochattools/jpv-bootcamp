@@ -14,7 +14,7 @@
  *
  * Required guards before apply:
  *   - Repository exactly: prochattools/jpv-bootcamp
- *   - Branch exactly: feature/course-branding-and-preview, codex/production-architecture-consolidation, or main
+ *   - Branch: an approved feature/*, fix/*, or release/* source ref
  *   - Current HEAD matches --expected-commit
  *   - Guarded paths (workflow, migration, configurator, package, runbook) clean
  *
@@ -29,13 +29,11 @@
 
 import { spawnSync } from 'node:child_process'
 
+import { isAllowedStagingSourceRef } from '../../src/lib/environmentTopology'
+
 const ENV_NAME = 'staging-migration-plan'
 const REQUIRED_REPO = 'prochattools/jpv-bootcamp'
-const ALLOWED_RELEASE_BRANCHES = new Set([
-  'feature/course-branding-and-preview',
-  'codex/production-architecture-consolidation',
-  'main',
-])
+const ALLOWED_RELEASE_BRANCH_DESCRIPTION = 'feature/*, fix/*, or release/* (never main)'
 const REQUIRED_PLAN_READY_VALUE = 'true'
 const REQUIRED_SOLO_OPERATOR_VALUE = 'true'
 const REQUIRED_ENV_SECRETS = ['DATABASE_URL', 'TAILSCALE_OAUTH_CLIENT_ID', 'TAILSCALE_OAUTH_SECRET']
@@ -71,6 +69,7 @@ export type GhApiMutateExecutor = (call: GhApiCall) => { ok: boolean; exitCode: 
 export type GitStatusExecutor = (paths: string[]) => Map<string, string> | null
 export type RepoNameExecutor = () => string | null
 export type CurrentHeadExecutor = () => string | null
+export type CurrentBranchExecutor = () => string | null
 
 // ─── Inputs ───────────────────────────────────────────────────────────────────
 
@@ -86,6 +85,7 @@ export type ConfigureEnvDependencies = {
   gitStatus?: GitStatusExecutor
   repoName?: RepoNameExecutor
   currentHead?: CurrentHeadExecutor
+  currentBranch?: CurrentBranchExecutor
 }
 
 // ─── Defaults ─────────────────────────────────────────────────────────────────
@@ -154,6 +154,17 @@ function defaultRepoName(): string | null {
 
 function defaultCurrentHead(): string | null {
   const result = spawnSync('git', ['rev-parse', 'HEAD'], {
+    shell: false,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+    timeout: GH_API_TIMEOUT_MS,
+  })
+  if (result.status !== 0 || result.error) return null
+  return result.stdout.trim() || null
+}
+
+function defaultCurrentBranch(): string | null {
+  const result = spawnSync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], {
     shell: false,
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -290,6 +301,7 @@ export async function configureStagingMigrationPlanEnvironment(
   const gitStatusExec = deps.gitStatus ?? defaultGitStatus
   const repoNameExec = deps.repoName ?? defaultRepoName
   const currentHeadExec = deps.currentHead ?? defaultCurrentHead
+  const currentBranchExec = deps.currentBranch ?? defaultCurrentBranch
 
   const result: ConfigureResult = {
     ok: false,
@@ -340,13 +352,8 @@ export async function configureStagingMigrationPlanEnvironment(
   }
 
   // ── Verify current branch ─────────────────────────────────────────────────
-  const branchResult = spawnSync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], {
-    shell: false,
-    encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'pipe'],
-  })
-  const currentBranch = (branchResult.status === 0 && branchResult.stdout.trim()) || null
-  if (!currentBranch || !ALLOWED_RELEASE_BRANCHES.has(currentBranch)) {
+  const currentBranch = currentBranchExec()
+  if (!currentBranch || !isAllowedStagingSourceRef(currentBranch)) {
     result.blockers.push('branch_mismatch')
     return result
   }
@@ -373,7 +380,7 @@ export async function configureStagingMigrationPlanEnvironment(
     result.actions.push(`[DRY-RUN] Would set zero reviewers (solo-operator mode)`)
     result.actions.push(`[DRY-RUN] Would set zero wait timer`)
     result.actions.push(
-      `[DRY-RUN] Would accept release branch: ${Array.from(ALLOWED_RELEASE_BRANCHES).join(' or ')}`,
+      `[DRY-RUN] Would accept release source ref: ${ALLOWED_RELEASE_BRANCH_DESCRIPTION}`,
     )
     result.actions.push(`[DRY-RUN] Would set variable PLAN_READY_FOR_DISPATCH=${REQUIRED_PLAN_READY_VALUE}`)
     result.actions.push(`[DRY-RUN] Would set variable SOLO_OPERATOR_MODE=${REQUIRED_SOLO_OPERATOR_VALUE}`)
@@ -523,7 +530,7 @@ export async function configureStagingMigrationPlanEnvironment(
     return result
   }
   result.verifiedState.push(
-    `Branch policy: none (in-workflow guards enforce ${Array.from(ALLOWED_RELEASE_BRANCHES).join(' or ')})`,
+    `Branch policy: none (in-workflow guards enforce ${ALLOWED_RELEASE_BRANCH_DESCRIPTION})`,
   )
 
   const verifyVars = apiRead({

@@ -6,8 +6,10 @@ import { createHmac } from 'crypto'
  * Tests actual deployed API endpoints with real request/response validation
  */
 
+import { ENVIRONMENT_TOPOLOGY } from '../src/lib/environmentTopology'
+
 async function main(): Promise<void> {
-  const STAGING_URL = process.env.E2E_BASE_URL || 'https://preview.jpvbootcamp.com'
+  const STAGING_URL = process.env.E2E_BASE_URL || ENVIRONMENT_TOPOLOGY.staging.origin
   const BUNNY_SECRET = process.env.BUNNY_WEBHOOK_SECRET || process.env.BUNNY_STREAM_WEBHOOK_SECRET
   const API_KEY = process.env.STAGING_API_KEY // Would need to be injected for full auth testing
 

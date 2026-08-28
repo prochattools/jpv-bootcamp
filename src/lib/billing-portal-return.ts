@@ -1,8 +1,10 @@
+import { ENVIRONMENT_TOPOLOGY } from './environmentTopology'
+
 const DEFAULT_RETURN_URL = 'https://jpvbootcamp.com/portal/billing'
 const ALLOWED_RETURN_ORIGINS = new Set([
-	'https://jpvbootcamp.com',
+	ENVIRONMENT_TOPOLOGY.production.origin,
 	'https://www.jpvbootcamp.com',
-	'https://preview.jpvbootcamp.com',
+	ENVIRONMENT_TOPOLOGY.staging.origin,
 ])
 const MAX_RETURN_URL_LENGTH = 2048
 

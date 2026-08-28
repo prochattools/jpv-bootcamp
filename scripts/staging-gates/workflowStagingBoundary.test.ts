@@ -37,7 +37,7 @@ async function main(): Promise<void> {
     'deploy-preview.yml must declare ALLOWED_SLUG for positive allow-list',
   )
   assert.ok(
-    previewYml.includes('clients-jpv-bootcamp-app-tp9xrk'),
+    previewYml.includes('clients-jpv-bootcamp-preview-wjfqfd'),
     'deploy-preview.yml must name the canonical staging Dokploy slug',
   )
   assert.ok(
@@ -51,26 +51,26 @@ async function main(): Promise<void> {
     'deploy.yml must not exist — production deployment workflow is not permitted',
   )
 
-  // Rule 5: deploy-preview.yml must verify SHA ancestry under feature branch
+  // Rule 5: deploy-preview.yml must verify SHA ancestry under an approved source ref
   assert.ok(
     previewYml.includes('merge-base --is-ancestor'),
-    'deploy-preview.yml must verify SHA ancestry under feature branch',
+    'deploy-preview.yml must verify SHA ancestry under an approved source ref',
   )
   assert.ok(
-    previewYml.includes('feature/course-branding-and-preview'),
-    'deploy-preview.yml must name the allowed feature branch',
+    previewYml.includes('source_ref:') && previewYml.includes('origin/${SOURCE_REF_INPUT}'),
+    'deploy-preview.yml must use the explicit approved source ref',
   )
 
-  // Rule 6: deploy-preview.yml must reject main branch explicitly
+  // Rule 6: deploy-preview.yml must reject main as a source ref explicitly
   assert.ok(
-    previewYml.includes("ref_name") && previewYml.includes('"main"'),
-    'deploy-preview.yml must reject main branch by name',
+    previewYml.includes('SOURCE_REF_INPUT') && previewYml.includes('source_ref main is never allowed'),
+    'deploy-preview.yml must reject main source ref by name',
   )
 
   // Rule 7: deploy-preview.yml must use staging-specific environment
   assert.ok(
-    previewYml.includes('environment: preview-deploy'),
-    'deploy-preview.yml must use the preview-deploy GitHub environment',
+    previewYml.includes('environment: staging-deploy'),
+    'deploy-preview.yml must use the staging-deploy GitHub environment',
   )
 
   // Rule 8: publish-preview-image.yml must not reference DOKPLOY_APP_ID

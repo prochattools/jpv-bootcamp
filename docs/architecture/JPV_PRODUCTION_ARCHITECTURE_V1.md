@@ -1,6 +1,6 @@
 # JPV Bootcamp Production Architecture v1
 
-**Status:** CURRENT ARCHITECTURE AUTHORITY — A5.1 COMPLETE LOCALLY; A6 LIVE EVIDENCE GATED
+**Status:** CURRENT ARCHITECTURE AUTHORITY — A5.1 COMPLETE LOCALLY; E1 GATE A BLOCKED
 
 **Date:** 2026-08-28
 
@@ -10,6 +10,28 @@ relationship of existing surfaces. It does not authorize a rewrite, schema
 change, provider mutation, migration, or feature batch. Those actions require
 the packet-specific authorization and validation described in
 `JPV_ARCHITECTURE_CONSOLIDATION_PLAN.md`.
+
+## E1 environment authority — read-only reconciliation
+
+The canonical production application is `JPV Bootcamp` /
+`clients-jpv-bootcamp-app-tp9xrk` at `https://jpvbootcamp.com`. The canonical
+staging target is the existing Dokploy staging application
+`clients-jpv-bootcamp-preview-wjfqfd` / `bZllV93NqsPZAFCsqDskb`, but its public
+origin must be `https://staging.jpvbootcamp.com` and its source boundary is
+`feature/*`, `fix/*`, or `release/*`. At this gate, that application is still
+serving `https://preview.jpvbootcamp.com` with `DEPLOYMENT_ENV=preview` against
+the transitional `jpvbootcamp_preview` database and
+`jpvbootcamp_staging` schema. The intended staging hostname returns 404.
+
+Production is observed on database `jpvbootcamp`, schema `jpvbootcamp`; legacy
+is observed on separate database `jpvbootcamp_legacy`, schema `jpvbootcamp`.
+The production role is currently labelled `jpvbootcamp_staging_user`, which is
+recorded drift and is not repaired here. Transitional staging migration
+evidence does not match the repository registry. E1 is therefore `BLOCKED` and
+does not authorize Gate B database/schema/role repair, migration execution,
+Dokploy changes, routing, push, merge, or deployment. See the complete
+topology and preview-to-staging inventory in
+`JPV_ENVIRONMENT_TOPOLOGY_V1.md` and `JPV_PREVIEW_TO_STAGING_INVENTORY.md`.
 
 ## Current production authority
 

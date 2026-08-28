@@ -35,7 +35,7 @@ assert.match(nixpacks, /pnpm install --frozen-lockfile/)
 assert.match(nixpacks, /bash scripts\/release\/start-staging\.sh/)
 assert.doesNotMatch(nixpacks, /start-prod\.sh/)
 
-assert.match(previewWorkflow, /name: Preview Build and Deploy/)
+assert.match(previewWorkflow, /name: Staging Build and Deploy/)
 // Push path is validation-only; deployment is workflow_dispatch with deploy-preview operation
 assert.match(previewWorkflow, /validate-only/)
 assert.match(previewWorkflow, /deploy-preview/)
@@ -46,13 +46,13 @@ assert.match(previewWorkflow, /push: true/)
 assert.match(previewWorkflow, /packages: write/)
 assert.match(previewWorkflow, /Trigger Dokploy redeploy/)
 assert.doesNotMatch(previewWorkflow, /nixpacks/i)
-// branch_or_ref input removed — deploy uses fixed feature branch + expected_sha
+// branch_or_ref input removed — deploy uses an approved source ref + expected_sha
 assert.doesNotMatch(previewWorkflow, /branch_or_ref:/)
 
 // start-staging.sh: staging-only contract — no STARTUP_MODE, no DEPLOYMENT_ENV, no database-deploy
 assert.match(startup, /REQUIRED_HOST="10\.0\.2\.4"/)
 assert.match(startup, /REQUIRED_PORT="5433"/)
-assert.match(startup, /REQUIRED_DB="jpvbootcamp"/)
+assert.match(startup, /REQUIRED_DB="jpvbootcamp_staging"/)
 assert.match(startup, /REQUIRED_SCHEMA="jpvbootcamp_staging"/)
 assert.match(startup, /PAYLOAD_SCHEMA_PREFLIGHT/)
 assert.match(startup, /node scripts\/release\/payload-migration-preflight\.cjs/)

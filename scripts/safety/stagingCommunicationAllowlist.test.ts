@@ -260,7 +260,7 @@ testRejectsForbiddenProductionApp()
 console.log('PASS testRejectsForbiddenProductionApp')
 
 function testAcceptsStagingApp() {
-  assert.doesNotThrow(() => assertNotProductionApp('clients-jpv-bootcamp-app-tp9xrk'))
+  assert.doesNotThrow(() => assertNotProductionApp('clients-jpv-bootcamp-preview-wjfqfd'))
 }
 testAcceptsStagingApp()
 console.log('PASS testAcceptsStagingApp')
@@ -286,19 +286,20 @@ testStagingAppOnlyRejectsUnknown()
 console.log('PASS testStagingAppOnlyRejectsUnknown')
 
 function testStagingAppOnlyAcceptsStaging() {
-  assert.doesNotThrow(() => assertStagingAppOnly('clients-jpv-bootcamp-app-tp9xrk'))
+  assert.doesNotThrow(() => assertStagingAppOnly('clients-jpv-bootcamp-preview-wjfqfd'))
+  assert.doesNotThrow(() => assertStagingAppOnly('bZllV93NqsPZAFCsqDskb'))
 }
 testStagingAppOnlyAcceptsStaging()
 console.log('PASS testStagingAppOnlyAcceptsStaging')
 
 // ─── assertStagingOrigin ────────────────────────────────────────────────────
 
-function testStagingOriginAcceptsPreview() {
-  assert.doesNotThrow(() => assertStagingOrigin('https://preview.jpvbootcamp.com/api/health'))
-  assert.doesNotThrow(() => assertStagingOrigin('https://preview.jpvbootcamp.com'))
+function testStagingOriginAcceptsStaging() {
+  assert.doesNotThrow(() => assertStagingOrigin('https://staging.jpvbootcamp.com/api/health'))
+  assert.doesNotThrow(() => assertStagingOrigin('https://staging.jpvbootcamp.com'))
 }
-testStagingOriginAcceptsPreview()
-console.log('PASS testStagingOriginAcceptsPreview')
+testStagingOriginAcceptsStaging()
+console.log('PASS testStagingOriginAcceptsStaging')
 
 function testStagingOriginRejectsProduction() {
   assert.throws(

@@ -31,7 +31,7 @@
 import {
   assertStagingDeployment,
   STAGING_APP_ID,
-  STAGING_BRANCH,
+  STAGING_SOURCE_REF_EXAMPLE,
   STAGING_ORIGIN,
   PRODUCTION_DENY_LIST,
 } from './stagingPolicy'
@@ -41,7 +41,7 @@ import { STAGING_DOKPLOY_APPLICATION_ID } from './dokployMediaMount'
 export const STAGING_DOMAIN_ID = 'lLeympWtBHVcL6R9JeyZQ'
 
 /** The canonical staging domain hostname. */
-export const STAGING_DOMAIN_HOST = 'preview.jpvbootcamp.com'
+export const STAGING_DOMAIN_HOST = new URL(STAGING_ORIGIN).hostname
 
 /**
  * Path to the Traefik file provider config on the Dokploy HOST filesystem.
@@ -109,7 +109,7 @@ export function assertStagingRoutingTarget(domainId: string, appId: string): voi
   assertStagingDeployment({
     appId: STAGING_APP_ID,
     origin: STAGING_ORIGIN,
-    branch: STAGING_BRANCH,
+    branch: STAGING_SOURCE_REF_EXAMPLE,
   })
 }
 
