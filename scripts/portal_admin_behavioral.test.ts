@@ -88,25 +88,29 @@ function testSpaceAdminPanelWired() {
 // Test 6 — Reorder actions validate ownership
 // ---------------------------------------------------------------------------
 function testReorderValidatesOwnership() {
-  const src = source('src/lib/portalAdmin/courseAdminActions.ts')
+  const moduleCommands = source('src/lib/courseAdmin/moduleCommands.ts')
+  const lessonCommands = source('src/lib/courseAdmin/lessonCommands.ts')
+  const persistence = source('src/lib/courseAdmin/persistence.ts')
 
-  // reorderModulesAction must fetch modules for the course and compare
-  const reorderModules = src.slice(src.indexOf('reorderModulesAction'))
+  // The module command must fetch modules for the course and compare the exact ID set.
+  const reorderModules = moduleCommands.slice(moduleCommands.indexOf('reorderModulesCommand'))
   assert.match(
     reorderModules,
-    /where:.*course.*equals.*courseId/,
-    'reorderModulesAction must fetch modules by course',
+    /findModulesForCourse/,
+    'reorderModulesCommand must fetch modules by course',
   )
-  assert.match(reorderModules, /new Set/, 'reorderModulesAction must build ID set for validation')
+  assert.match(reorderModules, /new Set/, 'reorderModulesCommand must build ID set for validation')
 
-  // reorderLessonsAction must fetch lessons for the module and compare
-  const reorderLessons = src.slice(src.indexOf('reorderLessonsAction'))
+  // The lesson command must fetch lessons for the module and compare the exact ID set.
+  const reorderLessons = lessonCommands.slice(lessonCommands.indexOf('reorderLessonsCommand'))
   assert.match(
     reorderLessons,
-    /where:.*module.*equals.*moduleId/,
-    'reorderLessonsAction must fetch lessons by module',
+    /findLessonsForModule/,
+    'reorderLessonsCommand must fetch lessons by module',
   )
-  assert.match(reorderLessons, /new Set/, 'reorderLessonsAction must build ID set for validation')
+  assert.match(reorderLessons, /new Set/, 'reorderLessonsCommand must build ID set for validation')
+  assert.match(persistence, /course: \{ equals: courseId \}/, 'course persistence must scope modules to the course')
+  assert.match(persistence, /module: \{ equals: moduleId \}/, 'course persistence must scope lessons to the module')
 }
 
 // ---------------------------------------------------------------------------

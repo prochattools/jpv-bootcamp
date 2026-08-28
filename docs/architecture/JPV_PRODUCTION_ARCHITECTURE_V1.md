@@ -1,8 +1,8 @@
 # JPV Bootcamp Production Architecture v1
 
-**Status:** CURRENT ARCHITECTURE AUTHORITY — A3 COMPLETE LOCALLY; A4–A6 GATED
+**Status:** CURRENT ARCHITECTURE AUTHORITY — A4 COMPLETE LOCALLY; A5–A6 GATED
 
-**Date:** 2026-08-27
+**Date:** 2026-08-28
 
 This document is the architectural authority for the live JPV Bootcamp system
 and for the post-launch consolidation packets A1–A6. It describes the target
@@ -68,8 +68,18 @@ and thin member/admin transports. The behavior matrix is recorded in
 `JPV_COMMUNITY_DOMAIN_CONTRACT.md`; member post creation, rate limits, mention
 and post notifications, and admin audit/revalidation semantics remain
 preserved. No production merge, push, build, deployment, migration, provider
-mutation, or historical branch cleanup was performed. A4–A6 remain separately
-gated.
+mutation, or historical branch cleanup was performed.
+
+The A4 Course / Creator Domain Convergence packet is complete locally from
+`876b127145f0c190fb4dfc253cd6eedb2a724d8d`. It moves course, module, and lesson
+validation, relationship/dependency policy, Payload persistence, reorder
+rollback, rich-text/media preservation, and audit orchestration into bounded
+`src/lib/courseAdmin/*` modules while keeping
+`src/lib/portalAdmin/courseAdminActions.ts` as the thin authenticated
+transport. The contract is recorded in `JPV_COURSE_CREATOR_DOMAIN_CONTRACT.md`.
+No member learning, Creator UI, provider, schema, database, migration, or
+production behavior was changed. No production merge, push, deployment, or
+historical branch cleanup was performed. A5–A6 remain separately gated.
 
 ## Architectural hold
 
@@ -78,8 +88,28 @@ one coherent ownership model. This is a behavior-preserving consolidation, not
 a rewrite. A0 established the production truth, A1 established the
 authorization and Server Action foundation, A2 established the shared domain
 primitives and service-boundary map, and A3 established the shared community
-mutation boundary. A4–A6 remain gated packets and are not implied by this
+mutation boundary, and A4 established the bounded course/Creator mutation
+boundary. A5–A6 remain gated packets and are not implied by this
 implementation.
+
+## A4 current implementation boundary
+
+The course Creator transport is intentionally stable and thin:
+
+- `src/lib/portalAdmin/courseAdminActions.ts` owns the public Server Action
+  signatures, `requirePortalAdmin('/portal')`, safe result normalization, and
+  targeted `revalidatePath` calls.
+- `src/lib/courseAdmin/courseCommands.ts`, `moduleCommands.ts`, and
+  `lessonCommands.ts` own the existing operation semantics and canonical audit
+  payloads.
+- `src/lib/courseAdmin/policy.ts` owns explicit deletion confirmation,
+  complete reorder validation, and duplicate-write classification.
+- `src/lib/courseAdmin/persistence.ts` owns Payload reads, relationship
+  traversal, privileged writes, and sequential reorder rollback; it has no
+  actor policy or provider calls.
+
+This is a local architectural boundary, not a production release claim. The
+next packet is A5 Source-of-Truth + Architecture Enforcement.
 
 ## System surfaces
 

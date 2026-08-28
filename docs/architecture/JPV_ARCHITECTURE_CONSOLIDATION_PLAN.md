@@ -1,8 +1,8 @@
 # JPV Bootcamp Post-Launch Architecture Consolidation Plan
 
-**Status:** A3 COMPLETE LOCALLY IN THIS IMPLEMENTATION PACKET; A4–A6 NOT STARTED
+**Status:** A4 COMPLETE LOCALLY IN THIS IMPLEMENTATION PACKET; A5–A6 NOT STARTED
 
-**Date:** 2026-08-27
+**Date:** 2026-08-28
 
 **Release authority:** `main` at `08605e52af4abb0b1bdcdfbe6890d010c545b636`
 
@@ -23,9 +23,9 @@ routes, production refs, or release state.
 
 The active service boundaries and the read-only historical branch findings are
 recorded in `JPV_PORTAL_ADMIN_SERVICE_MAP.md`. The unique no-write billing
-branch delta is intentionally preserved for A5 review. A3 is complete locally
-in the implementation packet below; A4 is the next packet. A4–A6 remain
-unstarted by this record.
+branch delta is intentionally preserved for A5 review. A3 and A4 are complete
+locally in the implementation packet below; A5 is the next packet. A5–A6
+remain unstarted by this record.
 
 ### A2 branch comparison addendum
 
@@ -210,6 +210,20 @@ recorded in `docs/architecture/JPV_COMMUNITY_DOMAIN_CONTRACT.md`.
 | Validation | Course/module/lesson behavior and dependency tests, actor authorization, relationship checks, audit/reorder/delete semantics, TypeScript, and `git diff --check`. |
 | Stop | A domain operation needs different business semantics, deletion safety changes, an authorization boundary moves, or transport and domain responsibilities cannot be separated without behavior change. |
 | Rollback | Revert only the A4 commit(s), keeping the existing course action boundary available until replacement validation passes. |
+
+### A4 completion record — 2026-08-28
+
+A4 is complete locally on `codex/production-architecture-consolidation` from
+A3 HEAD `876b127145f0c190fb4dfc253cd6eedb2a724d8d`. Course, module, and lesson
+operations now use bounded command, policy, and Payload persistence modules
+behind the existing thin administrator Server Actions. The behavior contract
+is recorded in `JPV_COURSE_CREATOR_DOMAIN_CONTRACT.md`; focused behavior,
+security, side-effect, relationship, dependency, reorder, audit, and
+documentation checks are part of the packet.
+
+This completion record does not authorize or claim a merge, push, deployment,
+database/provider mutation, migration, or historical branch cleanup. A5 is the
+exact next packet; A6 remains separately gated.
 
 ### A5 — Source-of-truth + architecture enforcement
 

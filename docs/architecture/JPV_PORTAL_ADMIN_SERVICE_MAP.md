@@ -1,15 +1,15 @@
 # JPV Portal Admin Service Map
 
-**Status:** A3 COMMUNITY DOMAIN CONVERGENCE COMPLETE — LOCAL REVIEW ARTIFACT
+**Status:** A4 COURSE / CREATOR DOMAIN CONVERGENCE COMPLETE — LOCAL REVIEW ARTIFACT
 
-**Date:** 2026-08-27
+**Date:** 2026-08-28
 
 This map records the active administrator-facing portal transports and the
 service boundaries they currently use. It is a repository map, not a runtime
 or production verification. A2 established shared primitives; A3 keeps
 behavior and persistence unchanged while consolidating overlapping community
-post/comment mutation and moderation semantics behind shared policy,
-persistence, and commands.
+post/comment mutation and moderation semantics; A4 applies the same bounded
+separation to course, module, and lesson Creator operations.
 
 ## Boundary vocabulary
 
@@ -23,27 +23,44 @@ persistence, and commands.
 
 ## Course administration actions
 
-All rows below enter through `requirePortalAdmin('/portal')`, use the typed
-privileged Payload access boundary where needed, call Payload course/module/
-lesson operations directly in the action adapter, write the existing audit
-event, and revalidate the affected course route. The browser components are
-transport callers and do not own persistence or authorization.
+All rows below enter through `requirePortalAdmin('/portal')`. The thin action
+adapter establishes the `AdminActor`, creates the named privileged Payload
+access object, calls the bounded course/module/lesson command, returns the
+typed result, and revalidates the affected course route. The browser
+components are transport callers and do not own persistence or authorization.
 
 | Active action | Transport caller | Domain operation/persistence | Audit and cache |
 | --- | --- | --- | --- |
-| `createCourseAction` | `CreateCourseButton.tsx` | Validate title/slug; create `payload_courses`. | `course.created`; `/portal`, `/portal/courses`, new course path. |
-| `updateCourseAction` | `CourseAdminPanel.tsx` | Update `payload_courses`, including description Lexical input. | `course.updated`; course paths. |
-| `archiveCourseAction` | `CourseAdminPanel.tsx` | Course status update through `updateCourseAction`. | `course.updated`; course paths. |
-| `deleteCourseAction` | `CourseAdminPanel.tsx` | Confirmed delete of a dependency-safe `payload_courses` record. | `course.deleted`; course paths. |
-| `createModuleAction` | `CourseAdminPanel.tsx` | Create `payload_course_modules` under a course. | `module.created`; course paths. |
-| `updateModuleAction` | `CourseAdminPanel.tsx` | Update a `payload_course_modules` record. | `module.updated`; course paths. |
-| `reorderModulesAction` | `CourseAdminPanel.tsx` | Update module sort order under a course. | `module.reordered`; course paths. |
-| `deleteModuleAction` | `CourseAdminPanel.tsx` | Confirmed dependency-safe module deletion. | `module.deleted`; course paths. |
-| `createLessonAction` | `CourseAdminPanel.tsx` | Create `payload_lessons` under a module. | `lesson.created`; course paths. |
-| `updateLessonAction` | `CourseAdminPanel.tsx` | Update lesson metadata/content and canonical Lexical input. | `lesson.updated`; course paths. |
-| `reorderLessonsAction` | `CourseAdminPanel.tsx` | Update lesson sort order under a module. | `lesson.reordered`; course paths. |
-| `archiveLessonAction` | `CourseAdminPanel.tsx` | Lesson status update through `updateLessonAction`. | `lesson.updated`; course paths. |
-| `deleteLessonAction` | `CourseAdminPanel.tsx` | Confirmed dependency-safe lesson deletion. | `lesson.deleted`; course paths. |
+| `createCourseAction` | `CreateCourseButton.tsx` | `courseCommands.ts#createCourseCommand`; validate and create `payload_courses`. | `course.created`; `/portal`, `/portal/courses`, new course path. |
+| `updateCourseAction` | `CourseAdminPanel.tsx` | `courseCommands.ts#updateCourseCommand`; update `payload_courses`, including description Lexical input. | `course.updated`; current and previous course paths. |
+| `archiveCourseAction` | `CourseAdminPanel.tsx` | `courseCommands.ts#archiveCourseCommand`; course status update. | `course.updated`; course paths. |
+| `deleteCourseAction` | `CourseAdminPanel.tsx` | `courseCommands.ts#deleteCourseCommand`; confirmed dependency-safe delete. | `course.deleted`; course paths. |
+| `createModuleAction` | `CourseAdminPanel.tsx` | `moduleCommands.ts#createModuleCommand`; create `payload_course_modules` under a course. | `module.created`; course paths. |
+| `updateModuleAction` | `CourseAdminPanel.tsx` | `moduleCommands.ts#updateModuleCommand`; update a `payload_course_modules` record. | `module.updated`; course paths. |
+| `reorderModulesAction` | `CourseAdminPanel.tsx` | `moduleCommands.ts#reorderModulesCommand`; exact order with rollback-aware persistence. | `modules.reordered`; course paths. |
+| `deleteModuleAction` | `CourseAdminPanel.tsx` | `moduleCommands.ts#deleteModuleCommand`; confirmed dependency-safe deletion. | `module.deleted`; course paths. |
+| `createLessonAction` | `CourseAdminPanel.tsx` | `lessonCommands.ts#createLessonCommand`; create `payload_lessons` under a module. | `lesson.created`; course paths. |
+| `updateLessonAction` | `CourseAdminPanel.tsx` | `lessonCommands.ts#updateLessonCommand`; update metadata/content and canonical Lexical input. | `lesson.updated`; course paths. |
+| `reorderLessonsAction` | `CourseAdminPanel.tsx` | `lessonCommands.ts#reorderLessonsCommand`; exact order with rollback-aware persistence. | `lessons.reordered`; course paths. |
+| `archiveLessonAction` | `CourseAdminPanel.tsx` | `lessonCommands.ts#archiveLessonCommand`; lesson lock-state update. | `lesson.updated`; course paths. |
+| `deleteLessonAction` | `CourseAdminPanel.tsx` | `lessonCommands.ts#deleteLessonCommand`; confirmed dependency-safe deletion. | `lesson.deleted`; course paths. |
+
+### A4 shared course/Creator boundary
+
+The A4 implementation is deliberately bounded to preserve the existing public
+Server Action contract while removing domain orchestration from the transport:
+
+| Boundary | Owner | Responsibility |
+| --- | --- | --- |
+| Thin transport | `src/lib/portalAdmin/courseAdminActions.ts` | Stable exports/signatures, `requirePortalAdmin('/portal')`, safe action results, and targeted revalidation. |
+| Course/module/lesson commands | `src/lib/courseAdmin/courseCommands.ts`, `moduleCommands.ts`, `lessonCommands.ts` | Domain validation, relationship/dependency policy, audit payloads, and operation orchestration. |
+| Shared course policy | `src/lib/courseAdmin/policy.ts` | Explicit delete confirmation, complete reorder permutations, and duplicate-write classification. |
+| Payload persistence | `src/lib/courseAdmin/persistence.ts` | Payload reads, relationship traversal, privileged writes, and sequential reorder rollback. No actor policy or provider call. |
+
+Canonical validation, relationship-ID normalization, plain-text Lexical
+serialization, audit, media identifiers, Bunny references, delete safeguards,
+and cache behavior remain unchanged. A4 adds no schema, provider, member
+learning, Creator UI, or production-runtime behavior.
 
 ## Community administration actions
 
@@ -145,17 +162,25 @@ The available older named branches were already ancestors or were classified
 as unique work outside A3; none was merged, cherry-picked, deleted, rebased,
 or force-pushed.
 
-## A3 completion and next boundary
+### A4 branch comparison addendum
 
-A3 is complete locally when this service map, the community contract, the
-shared policy/persistence/command modules, the thin transports, focused tests,
-broader repository checks, and the local commit are present. A3 does not
-include UI redesign, data/schema migration, provider changes, production
-actions, access-policy changes, or branch integration. A4 is Course / Creator
-Domain Convergence; A5 is Source-of-Truth + Architecture Enforcement; A6 is
-Full Regression / Controlled Production Integration. These packets remain
-separately authorized and must preserve the source-of-truth and
-reconciliation rules before any data backfill is proposed.
+The A4 comparison was read-only. `codex/portal-admin-flow-production`,
+`codex/portal-operations-polish`, `codex/portal-theme-payload-ux`,
+`codex/ux-foundation-nonoverlap`, and `feature/course-branding-and-preview`
+were already ancestors of A3 and had no unintegrated course/admin file delta.
+`codex/production-app-flow-fix` was absent from the local ref inventory. No
+branch was merged, cherry-picked, deleted, rebased, or force-pushed.
+
+## A4 completion and next boundary
+
+A4 is complete locally when this service map, the course/Creator contract, the
+bounded policy/persistence/command modules, the thin action transport, focused
+tests, broader repository checks, and the local commit are present. A4 does
+not include UI redesign, data/schema migration, provider changes, production
+actions, access-policy changes, or branch integration. A5 is Source-of-Truth +
+Architecture Enforcement; A6 is Full Regression / Controlled Production
+Integration. A5 and A6 remain separately authorized and must preserve the
+source-of-truth and reconciliation rules before any data backfill is proposed.
 
 ## Approved packet sequence after A2
 

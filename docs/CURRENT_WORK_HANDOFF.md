@@ -4,7 +4,7 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 
 ---
 
-## CURRENT TRUTH — 2026-08-27
+## CURRENT TRUTH — 2026-08-28
 
 JPV Bootcamp is live in production. This section is the current handoff
 authority; all dated sections below are retained as historical evidence unless
@@ -21,12 +21,13 @@ explicitly superseded here.
 - **Current branch:** `codex/production-architecture-consolidation`, descended
   directly from the verified `main` tip and A0 parent
   `c43e899824b993200b05f1b337993eb55fae0905`.
-- **Current packet:** A3 Community Domain Convergence complete locally. It
-  retains the A1 authorization/action-result foundation and A2 shared
-  primitives, and adds shared community actor policy, Payload persistence, and
-  edit/delete/moderation commands with thin member/admin transports. The
-  behavior matrix is recorded in
-  `docs/architecture/JPV_COMMUNITY_DOMAIN_CONTRACT.md`.
+- **Current packet:** A4 Course / Creator Domain Convergence complete locally.
+  It retains the A1 authorization/action-result foundation, A2 shared
+  primitives, and A3 community boundary, and separates course, module, and
+  lesson Creator operations into bounded policy, persistence, and command
+  modules behind the existing thin administrator actions. The behavior matrix
+  is recorded in
+  `docs/architecture/JPV_COURSE_CREATOR_DOMAIN_CONTRACT.md`.
 - **Behavior boundary:** `requirePortalMember()`, `requirePortalAccess()`,
   login routing, schemas, providers, production `main`, and production data
   were not changed. Community post creation remains in
@@ -34,14 +35,14 @@ explicitly superseded here.
   moderation, mention/post notifications, and duplicate-prevention behavior.
   The separate request-header Live Sessions API helper remains outside this
   packet.
-- **Exact next packet:** A4 — Course/Creator Domain Convergence.
-- **Approved sequence after A3:** A4 — Course/Creator Domain Convergence; A5 —
-  Source-of-Truth and Architecture Enforcement; A6 — Full Regression and
-  Controlled Production Integration.
-- **Hard stops:** do not start A4, merge historical branches, run migrations,
-  mutate production/providers, delete branches/worktrees, push, build, or
-  deploy from this packet. Preserve unknown residue, route ambiguity, and
-  stale roadmap claims for the packet that owns them.
+- **Exact next packet:** A5 — Source-of-Truth and Architecture Enforcement.
+- **Approved sequence after A4:** A5 — Source-of-Truth and Architecture
+  Enforcement; A6 — Full Regression and Controlled Production Integration.
+- **Hard stops:** do not start A5, merge historical branches, run migrations,
+  mutate production/providers, delete branches/worktrees, push, or deploy from
+  this packet. Preserve unknown residue, route ambiguity, and stale roadmap
+  claims for the packet that owns them. The A4 local commit may be reviewed or
+  reverted as one bounded unit; production integration remains A6 scope.
 - **Architecture authority:** `docs/architecture/` contains the production
   architecture, source-of-truth map, engineering principles, and packet plan.
 

@@ -95,6 +95,8 @@
     "test:payload-community-domain": "tsx scripts/payload_community_domain.test.ts",
     "test:payload-community-posting": "tsx scripts/payload_community_posting.test.ts",
     "test:payload-community-portal": "tsx scripts/payload_community_portal.test.ts",
+    "test:payload-course-creator-domain": "tsx scripts/payload_course_creator_domain.test.ts",
+    "test:course-creator-contract": "tsx scripts/course_creator_domain_contract.test.ts",
     "test:payload-member-announcements": "tsx scripts/payload_member_announcements.test.ts",
     "test:payload-member-billing": "tsx scripts/payload_member_billing_overview.test.ts",
     "test:payload-member-billing-portal": "tsx scripts/payload_member_billing_portal.test.ts",

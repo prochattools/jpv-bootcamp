@@ -1,8 +1,8 @@
 # JPV Bootcamp Domain Source of Truth
 
-**Status:** CURRENT A2 OWNERSHIP MAP — REVIEW INPUT FOR A3–A4
+**Status:** CURRENT A4 OWNERSHIP MAP — REVIEW INPUT FOR A5–A6
 
-**Date:** 2026-08-27
+**Date:** 2026-08-28
 
 This map records what the current repository proves about each domain. “Source
 of truth” means the system that owns the business fact; a read model, cache,
@@ -36,13 +36,40 @@ These helpers are transport-safe and do not authorize access. Authorization,
 provider truth, cross-store ownership, and split-domain reconciliation remain
 the responsibility of the named services and later packets.
 
+## A4 course / Creator boundary clarifications
+
+A4 preserves Payload as the authority for course, module, and lesson business
+records. It changes only the in-repository service boundary: the public
+administrator Server Actions remain in
+`src/lib/portalAdmin/courseAdminActions.ts`, while bounded domain commands and
+Payload persistence now live in `src/lib/courseAdmin/`:
+
+- `courseCommands.ts` owns course normalization, slug conflicts,
+  dependency-safe deletion, and course audit orchestration.
+- `moduleCommands.ts` owns module validation, course relationships, complete
+  reorder validation, rollback-aware persistence, and module audit
+  orchestration.
+- `lessonCommands.ts` owns lesson validation, module/course relationships,
+  rich-text and media preservation, dependency-safe deletion, reorder
+  validation, and lesson audit orchestration.
+- `persistence.ts` owns Payload reads/writes and relationship traversal behind
+  the named privileged access object; it is not an actor-policy or provider
+  boundary.
+- `policy.ts` owns explicit delete confirmation, exact reorder permutations,
+  and duplicate-write classification.
+
+The A4 refactor does not establish a second course authority, add a schema or
+provider, alter member learning readers, or change Creator UI behavior. A5
+must still resolve the split/ambiguous identity, provider, projection, and
+cross-store rows below before any reconciliation or backfill is proposed.
+
 ## Domain map
 
 | Domain | Authoritative datastore/provider | Read path | Write path | Projection/cache | Owning service/module | Direct Payload/Prisma access |
 | --- | --- | --- | --- | --- | --- | --- |
-| Courses | Payload `payload_courses` | Portal course/member readers and course routes | Payload Admin; portal creator actions where exposed | None established as a second authority | `src/lib/payloadCourse/memberPortal.ts`, `src/lib/portalAdmin/courseAdminActions.ts` | Payload SDK through service boundary; direct Prisma no |
-| Modules | Payload `payload_course_modules` | Course/member portal readers | Payload Admin and course admin operations | None established | Course portal/admin modules | Payload SDK through service boundary; direct Prisma no |
-| Lessons | Payload `payload_lessons` | Lesson routes and course portal readers | Payload Admin and course admin operations | None established | Course portal/admin modules; lesson resource services | Payload SDK through service boundary; direct Prisma no |
+| Courses | Payload `payload_courses` | Portal course/member readers and course routes | Payload Admin; portal creator actions where exposed | None established as a second authority | `src/lib/payloadCourse/memberPortal.ts`, `src/lib/courseAdmin/courseCommands.ts`, `src/lib/courseAdmin/persistence.ts` | Payload SDK through service boundary; direct Prisma no |
+| Modules | Payload `payload_course_modules` | Course/member portal readers | Payload Admin and course Creator commands | None established | `src/lib/courseAdmin/moduleCommands.ts`, `src/lib/courseAdmin/persistence.ts` | Payload SDK through service boundary; direct Prisma no |
+| Lessons | Payload `payload_lessons` | Lesson routes and course portal readers | Payload Admin and course Creator commands | None established | `src/lib/courseAdmin/lessonCommands.ts`, `src/lib/courseAdmin/persistence.ts`, lesson resource services | Payload SDK through service boundary; direct Prisma no |
 | Resources | Payload metadata (`payload_lesson_resources`, private media records) plus Bunny/object storage for binaries | `lessonResources.ts`, `lessonResourceDelivery.ts`, protected media readers | Admin/creator content operations; provider upload/update through guarded service | Payload metadata points to provider asset | `src/lib/payloadCourse/lessonResources.ts`, `bunnyProtectedMedia.ts` | Payload metadata only through service; provider credentials never in UI/Prisma |
 | Community spaces | Payload `payload_member_groups`, `payload_spaces`, `payload_space_memberships` | `communityPortal.ts`, `spaceMemberships.ts`, community routes | `communityAdminActions.ts` and Payload Admin | No independent space authority identified | Community portal/admin modules | Payload SDK through service boundary; direct Prisma no |
 | Community posts/comments | Payload `payload_space_posts`, `payload_space_comments`; lesson discussions use `payload_lesson_comments` | `communityDiscussion.ts`, `lessonDiscussion.ts`, post/lesson routes | `communityPosting.ts`, `lessonDiscussion.ts`, moderation/admin services | Visibility and counts are computed from Payload records | Community posting/discussion/moderation modules | Payload SDK through service boundary; direct Prisma no |
@@ -59,10 +86,10 @@ the responsibility of the named services and later packets.
 | Subscriptions | Stripe subscription is provider truth | Stripe-backed billing/read-model routes and reconciliation | Stripe checkout/operator actions/webhook; local projection sync | Payload `payload_subscriptions`; Prisma legacy/operational records also exist | `stripePayloadReconciliation.ts`, `membershipLifecycle.ts`, `commitmentProjection.ts` | Stripe mutations only through guarded service; local projection writes not from UI |
 | Payments/invoices | Stripe payment/invoice objects | Billing status/portal and reconciliation readers | Stripe checkout/webhook/operator service | Payload `payload_payments` and any operational records are projections/audit | Billing reconciliation and operator action modules | Stripe provider API through service; direct Prisma no |
 | Stripe provider state | Stripe | Stripe SDK calls and signed webhook route | Stripe API through explicit checkout/operator actions; signed `/api/webhook/stripe` | Payload Stripe event/shadow collections and Prisma `stripe_webhook_events` record delivery/processing | `src/app/api/webhook/stripe/route.ts`, `stripeShadowSync.ts` | Never treat local rows as provider truth; no page-level Stripe calls |
-| Support | **Split/ambiguous:** Prisma `support_requests` is the frontend intake record; Payload membership-support records/read models also exist | Support APIs and membership-support admin read models | Frontend support route writes Prisma; operator workflows may write Payload support/audit records | Review/notification statuses exist in both operational paths | `membership-support/*`, support API, `adminReadModel.ts` | Direct access only in named support services; A1/A4 must choose the canonical review record |
-| Sponsored seats/applications | **Split/ambiguous:** Prisma `sponsored_seats`, `sponsored_applications`, `sponsored_grants` hold the operational grant flow; Payload membership-support collections hold funding/review/audit projections | Sponsored pages/APIs plus Payload operations/cockpit | Sponsored services, Stripe webhook, guarded admin grant flow | Availability/counts and admin review projections | `sponsored-seats.ts`, `sponsored-grants.ts`, `membership-support/*` | No ad hoc cross-store writes; A4 must define transaction and reconciliation ownership |
-| Partner/affiliate operations | **Split/ambiguous:** Payload affiliate/partner collections own business records; Prisma `partner_sessions`/`partner_clicks` own hashed click/session telemetry | Partner portal/reporting and admin readers | Partner delivery/application/reporting services | Reporting derives from both records and telemetry | `partnerAffiliateReporting.ts`, `payloadCourse/partner*`, affiliate modules | Named service access only; A4 must define reporting join boundary |
-| Email/outbox | Resend is delivery provider; local outbox is **split/ambiguous** between Payload `payload_email_events` and Prisma `email_events` in `prisma/system.prisma` | `email.ts`, `emailSender.ts`, CRM/email operator actions | Domain event producers enqueue; worker sends through Resend and records delivery | Payload email events expose delivery/audit; Prisma email events are operational legacy/current state depending on workflow | `src/lib/email.ts`, `payloadCourse/emailSender.ts`, `email/emailOperatorActions.ts` | No direct provider calls from pages; A3/A4 must prevent duplicate outboxes |
+| Support | **Split/ambiguous:** Prisma `support_requests` is the frontend intake record; Payload membership-support records/read models also exist | Support APIs and membership-support admin read models | Frontend support route writes Prisma; operator workflows may write Payload support/audit records | Review/notification statuses exist in both operational paths | `membership-support/*`, support API, `adminReadModel.ts` | Direct access only in named support services; A1/A5 must choose the canonical review record |
+| Sponsored seats/applications | **Split/ambiguous:** Prisma `sponsored_seats`, `sponsored_applications`, `sponsored_grants` hold the operational grant flow; Payload membership-support collections hold funding/review/audit projections | Sponsored pages/APIs plus Payload operations/cockpit | Sponsored services, Stripe webhook, guarded admin grant flow | Availability/counts and admin review projections | `sponsored-seats.ts`, `sponsored-grants.ts`, `membership-support/*` | No ad hoc cross-store writes; A5 must define transaction and reconciliation ownership |
+| Partner/affiliate operations | **Split/ambiguous:** Payload affiliate/partner collections own business records; Prisma `partner_sessions`/`partner_clicks` own hashed click/session telemetry | Partner portal/reporting and admin readers | Partner delivery/application/reporting services | Reporting derives from both records and telemetry | `partnerAffiliateReporting.ts`, `payloadCourse/partner*`, affiliate modules | Named service access only; A5 must define reporting join boundary |
+| Email/outbox | Resend is delivery provider; local outbox is **split/ambiguous** between Payload `payload_email_events` and Prisma `email_events` in `prisma/system.prisma` | `email.ts`, `emailSender.ts`, CRM/email operator actions | Domain event producers enqueue; worker sends through Resend and records delivery | Payload email events expose delivery/audit; Prisma email events are operational legacy/current state depending on workflow | `src/lib/email.ts`, `payloadCourse/emailSender.ts`, `email/emailOperatorActions.ts` | No direct provider calls from pages; A3/A5 must prevent duplicate outboxes |
 | Bunny/media | Bunny/object storage is binary/provider authority; Payload `payload_media`, `bunny_videos`, and file/resource rows own application metadata | Protected delivery/media resolver APIs | Guarded upload/import/provider service plus Payload metadata write | Payload records are metadata and entitlement references | `payload-media-storage.ts`, `bunnyProtectedMedia.ts`, `memberMedia.ts` | Provider access server-side only; no direct Prisma media authority |
 
 ## Rules for unresolved ownership
