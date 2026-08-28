@@ -21,33 +21,30 @@ explicitly superseded here.
 - **Current branch:** `codex/production-architecture-consolidation`, descended
   directly from the verified `main` tip and A0 parent
   `c43e899824b993200b05f1b337993eb55fae0905`.
-- **Current packet:** A6.1 bounded release-control repair is committed locally
-  at `323a73a13e6da07ebc3c1b44fc7ee2d1ff178870` and pushed to
-  `origin/feature/course-branding-and-preview`; the current remote tip is the
-  documentation-only evidence commit
-  `d9eeb1bbfe3bb632a9ae3e9922aa78f829ea4cc2`; the final exact-SHA staging
-  plan ran at its parent evidence tip
-  `0738687cc71007077e370ca72e83df48b0d4ae1a`. It preserves the A1
+- **Current packet:** A6.1 bounded release-control repair is committed as
+  `ba87958f4209e5ab4ad88a4b6191ae5b7ee1d483` and pushed to
+  `origin/feature/course-branding-and-preview`. It preserves the A1
   authorization/action-result foundation, A2 shared primitives, A3 community
   boundary, A4 course/Creator boundary, A5 architecture guards, and the A6
   first-failure evidence. The repair decouples read-only migration discovery
-  from the explicit reviewed apply authorization, and adds duplicate/order
-  anomaly evidence. It does not apply migrations or change application,
-  schema, provider, or member data.
-- **Current gate:** Push gate `33180994836` passed at the current feature tip,
-  including build, deterministic release checks, and browser E2E (**190
-  passed, 75 skipped, 0 failed**). The first post-repair read-only staging
-  plan `33179579309` and the final exact-feature-tip plan `33181017493` are
-  both blocked by `status_query_failed` after network and target guards
-  passed. The final plan confirms `jpvbootcamp_staging` /
-  `jpvbootcamp-staging` and `appliedPayloadCount=0`. The staging
-  applied/pending state is therefore unknown; no staging or production
-  deployment is authorized. The fresh
-  production identity dry-run `33180247113` found 11 active Stripe
-  subscriptions, 10 active Payload members, 7 customer-ID matches, 0
-  unmatched/ambiguous identities, and 4 subscriptions linked to inactive
-  local members. Those four are explained lifecycle records, not unresolved
-  identities.
+  from the explicit reviewed apply authorization, removes historical
+  current-state fallbacks, and adds target/environment/schema apply guards.
+  It does not apply migrations or change application, schema, provider, or
+  member data.
+- **Current gate:** Fresh exact-SHA read-only staging-plan run
+  `33184846837` checked out `ba87958f4209e5ab4ad88a4b6191ae5b7ee1d483`
+  and passed confirmation, branch/SHA ancestry, target identity,
+  secret-presence, Tailscale, and TCP guards. Its sanitized result is blocked
+  by `status_query_failed` with `prismaHealthy=false`, while confirming
+  `jpvbootcamp_staging`, `jpvbootcamp-staging`, and the exact candidate SHA.
+  Applied/pending staging state is therefore unknown; no staging or
+  production deployment is authorized. The automatic candidate push gate is
+  `33184787945` and remains separate from the migration-plan gate until its
+  result is recorded. The fresh production identity dry-run
+  `33180247113` found 11 active Stripe subscriptions, 10 active Payload
+  members, 7 customer-ID matches, 0 unmatched/ambiguous identities, and 4
+  subscriptions linked to inactive local members. Those four are explained
+  lifecycle records, not unresolved identities.
 - **Behavior boundary:** `requirePortalMember()`, `requirePortalAccess()`,
   login routing, schemas, providers, production `main`, and production data
   were not changed. Community post creation remains in

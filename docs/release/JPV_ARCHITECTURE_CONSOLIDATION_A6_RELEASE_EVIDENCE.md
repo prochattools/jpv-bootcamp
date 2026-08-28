@@ -298,3 +298,70 @@ deployment, production merge, production deployment, provider mutation, or
 member-data mutation was performed. The next safe action is a bounded
 read-only diagnosis of `status_query_failed`, followed by one fresh exact-SHA
 staging plan; if that plan does not pass, stop without deploying.
+
+## 14. A6.1 resumed Gate 1 evidence — exact candidate `ba87958`
+
+This section supersedes the earlier A6.1 continuation for the current release
+control repair while preserving all earlier attempts above. It remains within
+the A6.1 boundary: no migration apply, provider mutation, member mutation,
+staging deployment, production merge, or production deployment.
+
+### Bounded repair
+
+- Code commit: `ba87958f4209e5ab4ad88a4b6191ae5b7ee1d483`
+  (`fix: decouple migration discovery from apply authorization`).
+- The commit contains only the staging migration runner and its focused test.
+- The candidate was pushed fast-forward to
+  `origin/feature/course-branding-and-preview`.
+- `main` and `origin/main` remain at
+  `08605e52af4abb0b1bdcdfbe6890d010c545b636`.
+- Pre-landing review found no actionable issues in the bounded diff; no PR or
+  Greptile review was available for this candidate branch.
+
+### Validation
+
+All local validation used the repository Node 20.20.2 / pnpm 10.33.0 contract:
+
+| Check | Result |
+|---|---|
+| Focused staging migration runner | **158/158 passed** |
+| Migration status contract | **43/43 passed** |
+| Staging migration-plan workflow contract | **74/74 passed** |
+| Staging migration preflight | **12/12 passed** |
+| TypeScript (`tsc --noEmit`) | **PASS** |
+| Documentation/status consistency | **PASS** |
+| Migration boundary, readiness, and rehearsal safety checks | **PASS** |
+| `pnpm test:release` | **171/171 passed** |
+| `git diff --check` | **PASS** |
+
+The automatic candidate push gate `33184787945` was still running through
+its deterministic release gate and browser E2E when this evidence snapshot
+was written; its build and type-check stages had passed. Its final result must
+be recorded before any future staging decision.
+
+### Fresh guarded staging plan
+
+Read-only staging-plan workflow `33184846837` checked out the exact candidate
+SHA `ba87958f4209e5ab4ad88a4b6191ae5b7ee1d483`. The sanitized artifact
+reported:
+
+```json
+{"version":2,"resultCode":"plan_blocked","blockerCodes":["status_query_failed"],"branch":"feature/course-branding-and-preview","commit":"ba87958f4209e5ab4ad88a4b6191ae5b7ee1d483","schema":"jpvbootcamp_staging","environment":"staging","targetId":"jpvbootcamp-staging","appliedPayloadCount":0,"expectedPendingMigrations":[],"expectedPendingBatchIsOnlyMissing":false,"unexpectedPayloadCount":0,"duplicatePayloadCount":0,"malformedPayloadCount":0,"orderingAnomalyCount":0,"prismaHealthy":false}
+```
+
+Confirmation, branch/SHA ancestry, target identity, required-secret
+presence, Tailscale connectivity, and TCP connectivity passed. The
+read-only database status query did not complete, so the actual staging
+applied/pending migration state remains unknown. The workflow uploaded the
+sanitized artifact and did not run any apply or deploy job. The prior failed
+plans `33179579309` and `33181017493` remain preserved above.
+
+### A6.1 decision
+
+`NOT READY FOR PRODUCTION MERGE`
+
+Gate 2 was not entered. No staging migration was applied, no staging or
+production deployment was performed, and no provider, subscription,
+reconciliation, administrator-link, or member data was changed. The next
+safe action is a bounded read-only diagnosis of `status_query_failed`, then
+one fresh exact-SHA staging plan; if it does not pass, stop without deploying.
