@@ -14,7 +14,7 @@
  *
  * Required guards before apply:
  *   - Repository exactly: prochattools/jpv-bootcamp
- *   - Branch exactly: feature/course-branding-and-preview or main
+ *   - Branch exactly: feature/course-branding-and-preview, codex/production-architecture-consolidation, or main
  *   - Current HEAD matches --expected-commit
  *   - Guarded paths (workflow, migration, configurator, package, runbook) clean
  *
@@ -31,7 +31,11 @@ import { spawnSync } from 'node:child_process'
 
 const ENV_NAME = 'staging-migration-plan'
 const REQUIRED_REPO = 'prochattools/jpv-bootcamp'
-const ALLOWED_RELEASE_BRANCHES = new Set(['feature/course-branding-and-preview', 'main'])
+const ALLOWED_RELEASE_BRANCHES = new Set([
+  'feature/course-branding-and-preview',
+  'codex/production-architecture-consolidation',
+  'main',
+])
 const REQUIRED_PLAN_READY_VALUE = 'true'
 const REQUIRED_SOLO_OPERATOR_VALUE = 'true'
 const REQUIRED_ENV_SECRETS = ['DATABASE_URL', 'TAILSCALE_OAUTH_CLIENT_ID', 'TAILSCALE_OAUTH_SECRET']

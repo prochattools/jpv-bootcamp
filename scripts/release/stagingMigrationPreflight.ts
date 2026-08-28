@@ -39,7 +39,11 @@ export type RunOptions = {
   log?: (message: string) => void
 }
 
-const EXPECTED_BRANCHES = new Set(['feature/course-branding-and-preview', 'main'])
+const EXPECTED_BRANCHES = new Set([
+  'feature/course-branding-and-preview',
+  'codex/production-architecture-consolidation',
+  'main',
+])
 const APPLY_COMMAND = './node_modules/.bin/prisma migrate deploy --schema=prisma/system.prisma'
 const RUNBOOK_PATH = 'docs/release/SUPPORT_REQUESTS_MIGRATION_RUNBOOK.md'
 const ROLLBACK_PATH = 'docs/client/MIGRATION_REHEARSAL_RUNBOOK.md'
