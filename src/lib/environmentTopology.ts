@@ -27,8 +27,10 @@ export const ENVIRONMENT_TOPOLOGY = {
     databaseHost: '10.0.2.4',
     databasePort: '5433',
     database: 'jpvbootcamp_staging',
-    schema: 'jpvbootcamp_staging',
-    databaseRole: 'jpvbootcamp_staging_user',
+    // Canonical migrations use the literal jpvbootcamp schema. Isolation is
+    // provided by the dedicated staging database, role, and deployment lane.
+    schema: 'jpvbootcamp',
+    databaseRole: 'jpvbootcamp_staging_app',
     sourceRef: 'feature/* | fix/* | release/*',
   },
   legacy: {

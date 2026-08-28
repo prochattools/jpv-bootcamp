@@ -9,7 +9,7 @@ import {
 
 const REQUIRED_ENVIRONMENT = 'staging'
 const REQUIRED_TARGET_ID = 'jpvbootcamp-staging'
-const REQUIRED_SCHEMA = 'jpvbootcamp_staging'
+const REQUIRED_SCHEMA = 'jpvbootcamp'
 const REQUIRED_DATABASE = 'jpvbootcamp_staging'
 const REQUIRED_HOSTNAME = '10.0.2.4'
 const REQUIRED_CONFIRMATION = 'bootstrap-empty-staging-database'

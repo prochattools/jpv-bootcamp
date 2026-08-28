@@ -66,7 +66,7 @@ jobs:
           ALLOWED_ORIGIN="https://staging.jpvbootcamp.com"
           ALLOWED_DOKPLOY_SLUG="clients-jpv-bootcamp-preview-wjfqfd"
           ALLOWED_DOKPLOY_ID="bZllV93NqsPZAFCsqDskb"
-          ALLOWED_SCHEMA="jpvbootcamp_staging"
+          ALLOWED_SCHEMA="jpvbootcamp"
           ALLOWED_HOST="10.0.2.4"
           ALLOWED_PORT="5433"
           ALLOWED_DB="jpvbootcamp_staging"
@@ -194,7 +194,7 @@ jobs:
           ALLOWED_ORIGIN="https://staging.jpvbootcamp.com"
           ALLOWED_DOKPLOY_SLUG="clients-jpv-bootcamp-preview-wjfqfd"
           ALLOWED_DOKPLOY_ID="bZllV93NqsPZAFCsqDskb"
-          ALLOWED_SCHEMA="jpvbootcamp_staging"
+          ALLOWED_SCHEMA="jpvbootcamp"
           ALLOWED_HOST="10.0.2.4"
           ALLOWED_PORT="5433"
           ALLOWED_DB="jpvbootcamp_staging"
@@ -509,7 +509,7 @@ jobs:
             exit 1
           fi
           echo "Staging-only bootstrap boundary validated"
-          echo "target=jpvbootcamp_staging schema=jpvbootcamp_staging host=10.0.2.4 port=5433"
+          echo "target=jpvbootcamp_staging schema=jpvbootcamp host=10.0.2.4 port=5433"
 
       - name: Check out approved source ref
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
@@ -603,7 +603,7 @@ jobs:
             --expected-commit="$EXPECTED_SHA" \
             --environment=staging \
             --target-id=jpvbootcamp-staging \
-            --expected-schema=jpvbootcamp_staging \
+            --expected-schema=jpvbootcamp \
             --expected-hostname=10.0.2.4 \
             --expected-database=jpvbootcamp_staging \
             --confirmation=bootstrap-empty-staging-database \
@@ -611,10 +611,15 @@ jobs:
           BOOTSTRAP_EXIT=$?
           set -e
           if [ "$BOOTSTRAP_EXIT" -ne 0 ]; then
-            echo "BOOTSTRAP-DENIED: guarded staging bootstrap failed (exit=$BOOTSTRAP_EXIT)" >&2
+            SAFE_REASON="$(grep -E '^STAGING-BOOTSTRAP-DENIED: [A-Za-z0-9 .(),_:-]+$' "$STDERR_FILE" | tail -n 1 || true)"
+            if [ -n "$SAFE_REASON" ]; then
+              echo "$SAFE_REASON" >&2
+            else
+              echo "BOOTSTRAP-DENIED: controlled failure reason unavailable; raw stderr suppressed" >&2
+            fi
             exit "$BOOTSTRAP_EXIT"
           fi
-          node -e 'const fs=require("fs"); const p=JSON.parse(fs.readFileSync(process.argv[1],"utf8")); if(p.ok!==true||p.mode!=="bootstrap-empty-database"||p.environment!=="staging"||p.targetId!=="jpvbootcamp-staging"||p.database!=="jpvbootcamp_staging"||p.schema!=="jpvbootcamp_staging"||p.preflight?.targetWasEmpty!==true||p.postApply?.migrationState!=="VERIFIED"||p.postApply?.applicationPreflight!=="PASSED") process.exit(1)' "$STDOUT_FILE"
+          node -e 'const fs=require("fs"); const p=JSON.parse(fs.readFileSync(process.argv[1],"utf8")); if(p.ok!==true||p.mode!=="bootstrap-empty-database"||p.environment!=="staging"||p.targetId!=="jpvbootcamp-staging"||p.database!=="jpvbootcamp_staging"||p.schema!=="jpvbootcamp"||p.preflight?.targetWasEmpty!==true||p.postApply?.migrationState!=="VERIFIED"||p.postApply?.applicationPreflight!=="PASSED") process.exit(1)' "$STDOUT_FILE"
           cp "$STDOUT_FILE" staging-bootstrap-result.json
           echo "Staging bootstrap completed and verified"
 
@@ -823,7 +828,7 @@ jobs:
         shell: bash
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          PAYLOAD_MIGRATION_SCHEMA: jpvbootcamp_staging
+          PAYLOAD_MIGRATION_SCHEMA: jpvbootcamp
           EXPECTED_SHA: ${{ inputs.expected_sha }}
           SOURCE_REF_INPUT: ${{ inputs.source_ref }}
         run: |
@@ -842,7 +847,7 @@ jobs:
             "--expected-commit=${EXPECTED_SHA}"
             "--environment=staging"
             "--target-id=jpvbootcamp-staging"
-            "--expected-schema=jpvbootcamp_staging"
+            "--expected-schema=jpvbootcamp"
             "--expected-hostname=10.0.2.4"
             "--expected-database=jpvbootcamp_staging"
           )
@@ -904,7 +909,7 @@ jobs:
           # canonical registry; it is not a migration-apply authorization packet.
           if [ "$RESULT_CODE" = "plan_ok" ] && [ $PLAN_EXIT -eq 0 ]; then
             REQUIRED_BRANCH="${SOURCE_REF_INPUT}"
-            REQUIRED_SCHEMA="jpvbootcamp_staging"
+            REQUIRED_SCHEMA="jpvbootcamp"
             REQUIRED_ENVIRONMENT="staging"
             REQUIRED_TARGET_ID="jpvbootcamp-staging"
             if ! node scripts/staging-gates/validate-plan-result-step3.js plan-result-sanitized.json "$EXPECTED_SHA" "$REQUIRED_BRANCH" "$REQUIRED_SCHEMA" "$REQUIRED_ENVIRONMENT" "$REQUIRED_TARGET_ID"

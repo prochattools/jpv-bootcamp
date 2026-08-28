@@ -43,5 +43,5 @@ for (const c of parsed.blockerCodes) {
 // Validate commit is 40-char hex or 'unknown'
 if (parsed.commit !== 'unknown' && !/^[0-9a-f]{40}$/.test(parsed.commit)) { process.stderr.write('PLAN-BLOCKED: commit format invalid\n'); process.exit(1) }
 // Validate schema matches expected
-if (parsed.schema !== 'jpvbootcamp_staging' && parsed.schema !== '') { process.stderr.write('PLAN-BLOCKED: unexpected schema value\n'); process.exit(1) }
+if (parsed.schema !== 'jpvbootcamp' && parsed.schema !== '') { process.stderr.write('PLAN-BLOCKED: unexpected schema value\n'); process.exit(1) }
 process.exit(0)

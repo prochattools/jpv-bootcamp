@@ -45,7 +45,7 @@ const REQUIRED_BRANCH = 'feature/course-branding-and-preview'
 // Deterministic synthetic SHA used only in injected gitResolver mocks.
 // This value is never the real HEAD and never requires updating after a commit.
 const SYNTHETIC_HEAD = 'a4081d12c7141ed8f5476077536c5234a555f240'
-const REQUIRED_SCHEMA = 'jpvbootcamp_staging'
+const REQUIRED_SCHEMA = 'jpvbootcamp'
 const REQUIRED_DATABASE = 'jpvbootcamp_staging'
 const REQUIRED_TARGET_ID = 'jpvbootcamp-staging'
 const REQUIRED_ENVIRONMENT = 'staging'
@@ -65,8 +65,8 @@ const TARGET_MIGRATIONS = [
   '20260826_130000_portal_engagement_distribution',
 ] as const
 const TARGET_MIGRATION = TARGET_MIGRATIONS.at(-1)!
-const APPLY_CONFIRMATION = 'apply_billing_reconciliation_to_jpvbootcamp_staging'
-const ROLLBACK_CONFIRMATION = 'plan_rollback_billing_reconciliation_from_jpvbootcamp_staging'
+const APPLY_CONFIRMATION = 'apply_billing_reconciliation_to_jpvbootcamp'
+const ROLLBACK_CONFIRMATION = 'plan_rollback_billing_reconciliation_from_jpvbootcamp'
 const REVIEWED_APPLY_SET = new Set<string>(TARGET_MIGRATIONS)
 // Reviewed staging hostname — matches STAGING_TARGET.hostname in runStagingPayloadMigration.ts.
 const STAGING_HOSTNAME = '10.0.2.4'
@@ -395,7 +395,7 @@ async function run(): Promise<void> {
       `--expected-commit=${SYNTHETIC_HEAD}`,
       '--environment=staging',
       '--target-id=jpvbootcamp-staging',
-      '--expected-schema=jpvbootcamp_staging',
+      '--expected-schema=jpvbootcamp',
       `--expected-hostname=${STAGING_HOSTNAME}`,
       '--expected-database=jpvbootcamp_staging',
     ])
@@ -412,7 +412,7 @@ async function run(): Promise<void> {
       `--expected-commit=${SYNTHETIC_HEAD}`,
       '--environment=staging',
       '--target-id=jpvbootcamp-staging',
-      '--expected-schema=jpvbootcamp_staging',
+      '--expected-schema=jpvbootcamp',
       `--expected-hostname=${STAGING_HOSTNAME}`,
       '--expected-database=jpvbootcamp_staging',
       '--current-state=true',
@@ -425,7 +425,7 @@ async function run(): Promise<void> {
       parsePlanCliArgs([
         '--environment=staging',
         '--target-id=jpvbootcamp-staging',
-        '--expected-schema=jpvbootcamp_staging',
+        '--expected-schema=jpvbootcamp',
         `--expected-hostname=${STAGING_HOSTNAME}`,
         '--expected-database=jpvbootcamp_staging',
       ]),
@@ -454,7 +454,7 @@ async function run(): Promise<void> {
       `--expected-commit=${SYNTHETIC_HEAD}`,
       '--environment=staging',
       '--target-id=jpvbootcamp-staging',
-      '--expected-schema=jpvbootcamp_staging',
+      '--expected-schema=jpvbootcamp',
       `--expected-hostname=${STAGING_HOSTNAME}`,
       '--expected-database=jpvbootcamp_staging',
       `--expected-migrations=${TARGET_MIGRATIONS.join(',')}`,
@@ -475,7 +475,7 @@ async function run(): Promise<void> {
         '--rollback-owner=ops',
         '--environment=staging',
         '--target-id=jpvbootcamp-staging',
-        '--expected-schema=jpvbootcamp_staging',
+        '--expected-schema=jpvbootcamp',
         `--expected-hostname=${STAGING_HOSTNAME}`,
         '--expected-database=jpvbootcamp_staging',
         `--confirmation=${APPLY_CONFIRMATION}`,
@@ -494,7 +494,7 @@ async function run(): Promise<void> {
         `--expected-commit=${SYNTHETIC_HEAD}`,
         '--environment=staging',
         '--target-id=jpvbootcamp-staging',
-        '--expected-schema=jpvbootcamp_staging',
+        '--expected-schema=jpvbootcamp',
         `--expected-hostname=${STAGING_HOSTNAME}`,
         '--expected-database=jpvbootcamp_staging',
         `--expected-migrations=${TARGET_MIGRATIONS.join(',')}`,
@@ -1447,7 +1447,7 @@ async function run(): Promise<void> {
       `--expected-commit=${SYNTHETIC_HEAD}`,
       '--environment=staging',
       '--target-id=jpvbootcamp-staging',
-      '--expected-schema=jpvbootcamp_staging',
+      '--expected-schema=jpvbootcamp',
       `--expected-hostname=${STAGING_HOSTNAME}`,
       '--expected-database=jpvbootcamp_staging',
       `--confirmation=${ROLLBACK_CONFIRMATION}`,
@@ -1586,7 +1586,7 @@ async function run(): Promise<void> {
 
   // ─── Defect 2: exact database identity enforcement ────────────────────────
 
-  await test('database guard: jpvbootcamp_staging accepted', async () => {
+  await test('database guard: isolated jpvbootcamp_staging database accepted with canonical schema', async () => {
     const result = await runStagingMigrationPlan(
       stagingUrl(), undefined, goodPlanInput({ expectedDatabase: 'jpvbootcamp_staging' }),
       baseDeps({ clientFactory: clientFactory35() }), noopOutput(),

@@ -22,7 +22,7 @@ const WORKFLOW_PATH = '.github/workflows/deploy-preview.yml'
 const STANDALONE_PATH = '.github/workflows/staging-payload-migration-plan.yml'
 const REQUIRED_CONFIRMATION = 'run-read-only-staging-payload-migration-plan'
 const REQUIRED_ENVIRONMENT = 'staging-migration-plan'
-const REQUIRED_SCHEMA = 'jpvbootcamp_staging'
+const REQUIRED_SCHEMA = 'jpvbootcamp'
 const REQUIRED_TARGET_ID = 'jpvbootcamp-staging'
 const REQUIRED_HOSTNAME = '10.0.2.4'
 const REQUIRED_DATABASE = 'jpvbootcamp_staging'
@@ -344,7 +344,7 @@ async function main(): Promise<void> {
     assert.ok(planJobYml.includes(`--expected-database=${REQUIRED_DATABASE}`), `must pass --expected-database=${REQUIRED_DATABASE}`)
   })
 
-  await test('command: PAYLOAD_MIGRATION_SCHEMA set to jpvbootcamp_staging', () => {
+  await test('command: PAYLOAD_MIGRATION_SCHEMA set to canonical jpvbootcamp schema', () => {
     assert.ok(
       planJobYml.includes(`PAYLOAD_MIGRATION_SCHEMA: ${REQUIRED_SCHEMA}`),
       `must set PAYLOAD_MIGRATION_SCHEMA to ${REQUIRED_SCHEMA}`,
@@ -658,7 +658,7 @@ async function main(): Promise<void> {
   await test('plan_ok semantics: workflow verifies schema, environment, targetId', () => {
     assert.ok(
       planJobYml.includes('schema mismatch') || planJobYml.includes('p.schema !== requiredSchema'),
-      'must verify schema field equals jpvbootcamp_staging',
+      'must verify schema field equals jpvbootcamp',
     )
     assert.ok(
       planJobYml.includes('environment mismatch') || planJobYml.includes('p.environment !== requiredEnv'),

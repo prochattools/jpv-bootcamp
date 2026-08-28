@@ -49,11 +49,11 @@ assert.doesNotMatch(previewWorkflow, /nixpacks/i)
 // branch_or_ref input removed — deploy uses an approved source ref + expected_sha
 assert.doesNotMatch(previewWorkflow, /branch_or_ref:/)
 
-// start-staging.sh: staging-only contract — no STARTUP_MODE, no DEPLOYMENT_ENV, no database-deploy
+// start-staging.sh: staging-only contract — isolated staging database with the canonical migration schema
 assert.match(startup, /REQUIRED_HOST="10\.0\.2\.4"/)
 assert.match(startup, /REQUIRED_PORT="5433"/)
 assert.match(startup, /REQUIRED_DB="jpvbootcamp_staging"/)
-assert.match(startup, /REQUIRED_SCHEMA="jpvbootcamp_staging"/)
+assert.match(startup, /REQUIRED_SCHEMA="jpvbootcamp"/)
 assert.match(startup, /PAYLOAD_SCHEMA_PREFLIGHT/)
 assert.match(startup, /node scripts\/release\/payload-migration-preflight\.cjs/)
 assert.match(startup, /exec node server\.js/)

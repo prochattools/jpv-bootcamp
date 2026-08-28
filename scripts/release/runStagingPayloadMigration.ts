@@ -21,7 +21,7 @@ const REQUIRED_SOURCE_REF_DESCRIPTION = 'feature/*, fix/*, or release/*'
 const STAGING_TARGET = {
   environment: 'staging',
   targetId: 'jpvbootcamp-staging',
-  schema: 'jpvbootcamp_staging',
+  schema: 'jpvbootcamp',
   database: ENVIRONMENT_TOPOLOGY.staging.database,
   hostname: '10.0.2.4',
 } as const
@@ -48,8 +48,8 @@ const EXPECTED_FORWARD_BATCH = [
 const EXPECTED_APPLIED_BEFORE = PAYLOAD_MIGRATION_NAMES.length - EXPECTED_FORWARD_BATCH.length
 const EXPECTED_APPLIED_AFTER = EXPECTED_APPLIED_BEFORE + EXPECTED_FORWARD_BATCH.length
 const TARGET_MIGRATIONS = [...EXPECTED_FORWARD_BATCH]
-const APPLY_CONFIRMATION_VALUE = 'apply_billing_reconciliation_to_jpvbootcamp_staging'
-const ROLLBACK_PLAN_CONFIRMATION_VALUE = 'plan_rollback_billing_reconciliation_from_jpvbootcamp_staging'
+const APPLY_CONFIRMATION_VALUE = 'apply_billing_reconciliation_to_jpvbootcamp'
+const ROLLBACK_PLAN_CONFIRMATION_VALUE = 'plan_rollback_billing_reconciliation_from_jpvbootcamp'
 const FULL_COMMIT_SHA_RE = /^[0-9a-f]{40}$/
 
 function assertReviewedApplyBatchRegistered(): void {
@@ -1514,9 +1514,9 @@ const PLAN_USAGE = [
   '  --expected-commit=<40-char-sha> \\',
   '  --environment=staging \\',
   '  --target-id=jpvbootcamp-staging \\',
-  '  --expected-schema=jpvbootcamp_staging \\',
+  '  --expected-schema=jpvbootcamp \\',
   '  --expected-hostname=<staging-db-host> \\',
-  '  --expected-database=jpvbootcamp \\',
+  '  --expected-database=jpvbootcamp_staging \\',
   '  [--current-state=true]',
   '',
   'Performs a read-only pre-flight check. Does NOT mutate the database.',
@@ -1530,9 +1530,9 @@ const APPLY_USAGE = [
   '  --expected-commit=<40-char-sha> \\',
   '  --environment=staging \\',
   '  --target-id=jpvbootcamp-staging \\',
-  '  --expected-schema=jpvbootcamp_staging \\',
+  '  --expected-schema=jpvbootcamp \\',
   '  --expected-hostname=<staging-db-host> \\',
-  '  --expected-database=jpvbootcamp \\',
+  '  --expected-database=jpvbootcamp_staging \\',
   `  --expected-migrations=${TARGET_MIGRATIONS.join(',')} \\`,
   '  --operator-id=<id> \\',
   '  --backup-evidence-id=<id> \\',
@@ -1550,9 +1550,9 @@ const ROLLBACK_PLAN_USAGE = [
   '  --expected-commit=<40-char-sha> \\',
   '  --environment=staging \\',
   '  --target-id=jpvbootcamp-staging \\',
-  '  --expected-schema=jpvbootcamp_staging \\',
+  '  --expected-schema=jpvbootcamp \\',
   '  --expected-hostname=<staging-db-host> \\',
-  '  --expected-database=jpvbootcamp \\',
+  '  --expected-database=jpvbootcamp_staging \\',
   '  --operator-id=<id> \\',
   '  --backup-evidence-id=<id> \\',
   '  --maintenance-window-id=<id> \\',

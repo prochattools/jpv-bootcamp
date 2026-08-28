@@ -6,7 +6,7 @@ import {
 } from './runStagingDatabaseBootstrap'
 
 const SHA = '4689a9873d52c8d850c577e8df9dfb531c4aef74'
-const DATABASE_URL = 'postgresql://staging_user:masked@10.0.2.4:5433/jpvbootcamp_staging?schema=jpvbootcamp_staging'
+const DATABASE_URL = 'postgresql://staging_user:masked@10.0.2.4:5433/jpvbootcamp_staging?schema=jpvbootcamp'
 
 function authorization(overrides: Partial<StagingDatabaseBootstrapAuthorization> = {}): StagingDatabaseBootstrapAuthorization {
   return {
@@ -17,7 +17,7 @@ function authorization(overrides: Partial<StagingDatabaseBootstrapAuthorization>
     expectedCommit: SHA,
     environment: 'staging',
     targetId: 'jpvbootcamp-staging',
-    expectedSchema: 'jpvbootcamp_staging',
+    expectedSchema: 'jpvbootcamp',
     expectedHostname: '10.0.2.4',
     expectedDatabase: 'jpvbootcamp_staging',
     confirmation: 'bootstrap-empty-staging-database',
@@ -40,7 +40,7 @@ async function main(): Promise<void> {
       preflight: async () => ({
         targetWasEmpty: true,
         currentDatabase: 'jpvbootcamp_staging',
-        currentSchema: 'jpvbootcamp_staging',
+        currentSchema: 'jpvbootcamp',
         currentUserClass: 'staging-role',
       }),
       commandRunner: (executable, args) => {
@@ -110,7 +110,7 @@ async function main(): Promise<void> {
         preflight: async () => ({
           targetWasEmpty: true,
           currentDatabase: 'jpvbootcamp_staging',
-          currentSchema: 'jpvbootcamp_staging',
+          currentSchema: 'jpvbootcamp',
           currentUserClass: 'staging-role',
         }),
         log: () => undefined,

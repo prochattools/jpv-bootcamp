@@ -10,13 +10,13 @@ function expectError(fn: () => unknown, pattern: RegExp) {
 }
 
 const accepted = parseStagingDatabaseUrl(
-  'postgresql://staging_user:super-secret@db.staging.internal:5432/jpvbootcamp_staging?schema=jpvbootcamp_staging',
+  'postgresql://staging_user:super-secret@db.staging.internal:5432/jpvbootcamp_staging?schema=jpvbootcamp',
 )
 
 assert.deepEqual(accepted, {
   hostname: 'db.staging.internal',
   database: 'jpvbootcamp_staging',
-  schema: 'jpvbootcamp_staging',
+  schema: 'jpvbootcamp',
 })
 
 const sanitized = JSON.stringify(accepted)
@@ -26,24 +26,24 @@ assert.equal(sanitized.includes('postgresql://'), false)
 
 expectError(
   () => parseStagingDatabaseUrl('postgresql://user:pass@db:5432/app?schema=jpvbootcamp'),
-  /schema must be exactly jpvbootcamp_staging/,
+  /database must be exactly jpvbootcamp_staging/,
 )
 expectError(
   () => parseStagingDatabaseUrl('postgresql://user:pass@db:5432/app?schema=public'),
-  /schema must be exactly jpvbootcamp_staging/,
+  /schema must be exactly jpvbootcamp/,
 )
 expectError(
   () => parseStagingDatabaseUrl('postgresql://user:pass@db:5432/app'),
-  /schema must be exactly jpvbootcamp_staging/,
+  /schema must be exactly jpvbootcamp/,
 )
 expectError(() => parseStagingDatabaseUrl(undefined), /DATABASE_URL is required/)
 expectError(() => parseStagingDatabaseUrl('not a URL'), /DATABASE_URL is malformed/)
 expectError(
-  () => parseStagingDatabaseUrl('postgresql://user:pass@db:5432/?schema=jpvbootcamp_staging'),
+  () => parseStagingDatabaseUrl('postgresql://user:pass@db:5432/?schema=jpvbootcamp'),
   /database name is missing/,
 )
 expectError(
-  () => parseStagingDatabaseUrl('postgresql://user:pass@db:5432/other_db?schema=jpvbootcamp_staging'),
+  () => parseStagingDatabaseUrl('postgresql://user:pass@db:5432/other_db?schema=jpvbootcamp'),
   /database must be exactly jpvbootcamp_staging/,
 )
 

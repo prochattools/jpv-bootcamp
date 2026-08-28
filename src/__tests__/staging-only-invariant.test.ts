@@ -17,7 +17,7 @@ function trackedFiles(): string[] {
 
 describe('Staging-only invariant', () => {
   const STAGING_ORIGIN = 'https://staging.jpvbootcamp.com'
-  const STAGING_SCHEMA = 'jpvbootcamp_staging'
+  const STAGING_SCHEMA = 'jpvbootcamp'
   const STAGING_HOST = '10.0.2.4'
   const STAGING_PORT = '5433'
   const STAGING_DB = 'jpvbootcamp_staging'
@@ -34,6 +34,7 @@ describe('Staging-only invariant', () => {
     'docs/ENVIRONMENT_DATABASE_BOUNDARIES.md',
     'docs/architecture/JPV_ENVIRONMENT_TOPOLOGY_V1.md',
     'docs/architecture/JPV_PREVIEW_TO_STAGING_INVENTORY.md',
+    'src/lib/environmentTopology.ts',
     'docs/product/agent-mode-progress.md',
     '.ai/DEPLOYMENT_AUTHORIZATION_2026_07_22.md',
   ])
@@ -88,7 +89,7 @@ describe('Staging-only invariant', () => {
 
     it('exports REQUIRED_STAGING_SCHEMA constant', () => {
       const src = readFile('src/lib/databaseConnectionConfig.ts')
-      expect(src).toContain("REQUIRED_STAGING_SCHEMA = 'jpvbootcamp_staging'")
+      expect(src).toContain("REQUIRED_STAGING_SCHEMA = 'jpvbootcamp'")
     })
 
     it('exports an explicit production schema constant', () => {
