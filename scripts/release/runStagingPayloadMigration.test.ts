@@ -68,9 +68,6 @@ const TARGET_MIGRATION = TARGET_MIGRATIONS.at(-1)!
 const APPLY_CONFIRMATION = 'apply_billing_reconciliation_to_jpvbootcamp_staging'
 const ROLLBACK_CONFIRMATION = 'plan_rollback_billing_reconciliation_from_jpvbootcamp_staging'
 const REVIEWED_APPLY_SET = new Set<string>(TARGET_MIGRATIONS)
-const EXPECTED_APPLIED_BEFORE = PAYLOAD_MIGRATION_NAMES.length - TARGET_MIGRATIONS.length
-const EXPECTED_APPLIED_AFTER = PAYLOAD_MIGRATION_NAMES.length
-const CURRENT_STAGING_APPLIED_COUNT = PAYLOAD_MIGRATION_NAMES.length
 // Reviewed staging hostname — matches STAGING_TARGET.hostname in runStagingPayloadMigration.ts.
 const STAGING_HOSTNAME = '10.0.2.4'
 const PRODUCTION_HOSTNAME = 'prod-db.internal'
@@ -82,14 +79,13 @@ const FIRST_35 = PAYLOAD_MIGRATION_NAMES.slice(0, 40)
 const HISTORICAL_35 = PAYLOAD_MIGRATION_NAMES.slice(0, 35)
 const ALL_36 = PAYLOAD_MIGRATION_NAMES.filter((name) => !REVIEWED_APPLY_SET.has(name))
 const ALL_37 = [...PAYLOAD_MIGRATION_NAMES]
+const HISTORICAL_APPLY_BASELINE_COUNT = ALL_36.length
+const CANONICAL_REGISTRY_FIXTURE_COUNT = ALL_37.length
 
 // Registry integrity assertions — fail fast if the registry is out of sync.
-assert.equal(PAYLOAD_MIGRATION_NAMES.length, CURRENT_STAGING_APPLIED_COUNT, 'Canonical registry must contain the current migration inventory')
 assert.equal(FIRST_35.length, 40, 'Historical checkpoint must contain exactly 40 migrations')
 assert.equal(FIRST_35.at(-2), MIGRATION39, 'Migration 39 must remain in the applied prefix')
 assert.equal(FIRST_35.at(-1), MIGRATION40, 'Migration 40 must be the last migration in the applied prefix')
-assert.equal(ALL_36.length, EXPECTED_APPLIED_BEFORE, 'Apply baseline must contain every non-reviewed canonical migration')
-assert.equal(ALL_37.length, EXPECTED_APPLIED_AFTER, 'Current canonical registry count must be used dynamically')
 assert.deepEqual(ALL_37, PAYLOAD_MIGRATION_NAMES, 'Current fixture must follow the canonical registry order')
 assert.ok(TARGET_MIGRATIONS.every((name) => PAYLOAD_MIGRATION_NAMES.includes(name)), 'Reviewed apply migrations must remain registered')
 
@@ -770,7 +766,7 @@ async function run(): Promise<void> {
 
   // ─── plan: Payload state checks ───────────────────────────────────────────
 
-  await test('plan: reports the explicit reviewed batch when every other canonical migration is applied', async () => {
+  await test('plan: reports canonical pending migrations independently of the reviewed apply batch', async () => {
     const result = await runStagingMigrationPlan(
       stagingUrl(),
       undefined,
@@ -779,12 +775,28 @@ async function run(): Promise<void> {
       noopOutput(),
     )
     assert.equal(result.ok, true)
-    assert.equal(result.appliedCount, EXPECTED_APPLIED_BEFORE)
+    assert.equal(result.appliedCount, HISTORICAL_APPLY_BASELINE_COUNT)
     assert.deepEqual(result.pendingMigrations, [...TARGET_MIGRATIONS])
     assert.equal(result.blockers.length, 0)
     assert.equal(result.mode, 'plan')
     assert.equal(result.environment, REQUIRED_ENVIRONMENT)
     assert.equal(result.targetId, REQUIRED_TARGET_ID)
+  })
+
+  await test('plan: reports exactly one pending canonical migration', async () => {
+    const rows = PAYLOAD_MIGRATION_NAMES
+      .filter((name) => name !== TARGET_MIGRATION)
+      .map((name) => ({ name, batch: 1 }))
+    const result = await runStagingMigrationPlan(
+      stagingUrl(),
+      undefined,
+      goodPlanInput(),
+      baseDeps({ clientFactory: () => makeClient({ schema: REQUIRED_SCHEMA, payloadRows: rows }) }),
+      noopOutput(),
+    )
+    assert.equal(result.ok, true)
+    assert.deepEqual(result.pendingMigrations, [TARGET_MIGRATION])
+    assert.equal(result.blockers.length, 0)
   })
 
   await test('plan: current-state mode verifies the complete canonical registry and no pending migrations', async () => {
@@ -796,10 +808,23 @@ async function run(): Promise<void> {
       noopOutput(),
     )
     assert.equal(result.ok, true)
-    assert.equal(result.appliedCount, CURRENT_STAGING_APPLIED_COUNT)
+    assert.equal(result.appliedCount, CANONICAL_REGISTRY_FIXTURE_COUNT)
     assert.deepEqual(result.pendingMigrations, [])
     assert.equal(result.blockers.length, 0)
     assert.equal(result.message, 'plan_ok')
+  })
+
+  await test('plan: current-state mode blocks any pending canonical migration without using the reviewed apply batch', async () => {
+    const result = await runStagingMigrationPlan(
+      stagingUrl(),
+      undefined,
+      goodPlanInput({ currentState: true }),
+      baseDeps({ clientFactory: clientFactoryHistorical40() }),
+      noopOutput(),
+    )
+    assert.equal(result.ok, false)
+    assert.ok(result.pendingMigrations.length > 0)
+    assert.ok(result.blockers.includes('pending_migration_mismatch'))
   })
 
   await test('plan: reports a complete pending list for a historical checkpoint', async () => {
@@ -1153,6 +1178,46 @@ async function run(): Promise<void> {
     )
   })
 
+  await test('apply: rejects a non-staging environment', async () => {
+    await assert.rejects(
+      () => runStagingMigrationApply(
+        stagingUrl(), undefined, goodAuthorization({ environment: 'production' }),
+        baseDeps(), noopOutput(),
+      ),
+      /environment/i,
+    )
+  })
+
+  await test('apply: rejects a non-staging target', async () => {
+    await assert.rejects(
+      () => runStagingMigrationApply(
+        stagingUrl(), undefined, goodAuthorization({ targetId: 'jpvbootcamp-production' }),
+        baseDeps(), noopOutput(),
+      ),
+      /target/i,
+    )
+  })
+
+  await test('apply: rejects a non-staging schema', async () => {
+    await assert.rejects(
+      () => runStagingMigrationApply(
+        stagingUrl(), undefined, goodAuthorization({ expectedSchema: 'public' }),
+        baseDeps(), noopOutput(),
+      ),
+      /schema/i,
+    )
+  })
+
+  await test('apply: rejects a non-staging database', async () => {
+    await assert.rejects(
+      () => runStagingMigrationApply(
+        stagingUrl(), undefined, goodAuthorization({ expectedDatabase: 'other_db' }),
+        baseDeps(), noopOutput(),
+      ),
+      /database/i,
+    )
+  })
+
   await test('apply: dirty guarded path blocks apply', async () => {
     await assert.rejects(
       () => runStagingMigrationApply(
@@ -1251,9 +1316,9 @@ async function run(): Promise<void> {
     assert.equal(result.schema, REQUIRED_SCHEMA)
     assert.equal(result.environment, REQUIRED_ENVIRONMENT)
     assert.equal(result.targetId, REQUIRED_TARGET_ID)
-    assert.equal(result.preApply.appliedCount, EXPECTED_APPLIED_BEFORE)
+    assert.equal(result.preApply.appliedCount, HISTORICAL_APPLY_BASELINE_COUNT)
     assert.deepEqual(result.preApply.missingMigrations, [...TARGET_MIGRATIONS])
-    assert.equal(result.postApply.appliedCount, EXPECTED_APPLIED_AFTER)
+    assert.equal(result.postApply.appliedCount, CANONICAL_REGISTRY_FIXTURE_COUNT)
     assert.deepEqual(result.postApply.missingMigrations, [])
     // Exact CLI args must match PAYLOAD_MIGRATE_ARGS
     assert.deepEqual(commandArgs, PAYLOAD_MIGRATE_ARGS)
@@ -1316,7 +1381,7 @@ async function run(): Promise<void> {
       baseDeps({ clientFactory: clientFactory36() }), noopOutput(),
     )
     assert.equal(result.ok, false)
-    assert.ok(result.blockers.some((b) => b.includes(String(EXPECTED_APPLIED_AFTER)) || b.includes(String(EXPECTED_APPLIED_BEFORE))))
+    assert.ok(result.blockers.some((b) => b.includes(String(CANONICAL_REGISTRY_FIXTURE_COUNT)) || b.includes(String(HISTORICAL_APPLY_BASELINE_COUNT))))
   })
 
   await test('rollback-plan: ok when all current canonical migrations are applied and target batch is last', async () => {
@@ -1794,7 +1859,7 @@ async function run(): Promise<void> {
     if ('outcome' in result) {
       assert.equal(result.schemaIdentityConfirmed, true)
       assert.equal(result.targetBatchApplied, false)
-      assert.equal(result.appliedCount, EXPECTED_APPLIED_BEFORE)
+      assert.equal(result.appliedCount, HISTORICAL_APPLY_BASELINE_COUNT)
     }
   })
 
@@ -2376,7 +2441,7 @@ async function run(): Promise<void> {
     )
     assert.ok('outcome' in result)
     if ('outcome' in result) {
-      assert.equal(result.appliedCount, EXPECTED_APPLIED_AFTER)
+      assert.equal(result.appliedCount, CANONICAL_REGISTRY_FIXTURE_COUNT)
       assert.equal(result.targetBatchApplied, true)
     }
   })

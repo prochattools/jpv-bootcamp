@@ -46,8 +46,6 @@ const EXPECTED_FORWARD_BATCH = [
 ] as const
 const EXPECTED_APPLIED_BEFORE = PAYLOAD_MIGRATION_NAMES.length - EXPECTED_FORWARD_BATCH.length
 const EXPECTED_APPLIED_AFTER = EXPECTED_APPLIED_BEFORE + EXPECTED_FORWARD_BATCH.length
-const CURRENT_STAGING_APPLIED_COUNT = PAYLOAD_MIGRATION_NAMES.length
-const CURRENT_STAGING_PENDING_MIGRATIONS: readonly string[] = []
 const TARGET_MIGRATIONS = [...EXPECTED_FORWARD_BATCH]
 const APPLY_CONFIRMATION_VALUE = 'apply_billing_reconciliation_to_jpvbootcamp_staging'
 const ROLLBACK_PLAN_CONFIRMATION_VALUE = 'plan_rollback_billing_reconciliation_from_jpvbootcamp_staging'
@@ -123,6 +121,7 @@ export type SafeMigrationPlanEvidence = {
   targetId: string
   appliedPayloadCount: number
   expectedPendingMigrations: string[]
+  /** Compatibility field: true means the read-only evidence has no blockers; it never authorizes apply. */
   expectedPendingBatchIsOnlyMissing: boolean
   unexpectedPayloadCount: number
   duplicatePayloadCount: number
@@ -645,6 +644,21 @@ function checkReadOnlyDiscoveryPreconditions(status: FullMigrationStatus): strin
   return blockers
 }
 
+/**
+ * Current-state verification is still read-only discovery. It adds only the
+ * requirement that discovery found no pending canonical migrations; it does
+ * not use or imply the separately reviewed apply batch.
+ */
+function checkCurrentStatePreconditions(status: FullMigrationStatus): string[] {
+  const blockers = checkReadOnlyDiscoveryPreconditions(status)
+  if (status.missingPayloadMigrations.length > 0) {
+    blockers.push(
+      `canonical missing Payload migrations remain: [${status.missingPayloadMigrations.join(', ')}]`,
+    )
+  }
+  return blockers
+}
+
 function checkPreApplyPreconditions(status: FullMigrationStatus): string[] {
   const blockers: string[] = []
 
@@ -900,7 +914,7 @@ export async function runStagingMigrationPlan(
 
   const currentState = input.currentState === true
   const rawBlockers = currentState
-    ? checkPostApplyPreconditions(status)
+    ? checkCurrentStatePreconditions(status)
     : checkReadOnlyDiscoveryPreconditions(status)
   const blockerCodes = rawBlockers.map(blockerToCode)
 
@@ -935,7 +949,7 @@ export async function runStagingMigrationPlan(
 
   if (currentState) {
     output(
-      `[staging-migration-plan] CURRENT STATE OK: ${CURRENT_STAGING_APPLIED_COUNT} Payload migrations are applied and no pending migration batch exists`,
+      `[staging-migration-plan] CURRENT STATE OK: ${status.appliedPayloadCount} canonical Payload migrations are applied and no pending canonical migration records exist`,
     )
   } else {
     output(
@@ -953,9 +967,7 @@ export async function runStagingMigrationPlan(
     environment: input.environment ?? '',
     targetId: input.targetId ?? '',
     appliedCount: status.appliedPayloadCount,
-    pendingMigrations: currentState
-      ? [...CURRENT_STAGING_PENDING_MIGRATIONS]
-      : [...status.missingPayloadMigrations],
+    pendingMigrations: [...status.missingPayloadMigrations],
     blockers: [],
     message: `plan_ok`,
     unexpectedPayloadCount,
@@ -1505,7 +1517,7 @@ const PLAN_USAGE = [
   '  [--current-state=true]',
   '',
   'Performs a read-only pre-flight check. Does NOT mutate the database.',
-  'Use --current-state=true to verify the current applied staging state (the full registered inventory applied, no pending batch).',
+  'Use --current-state=true to verify that the dynamically discovered canonical registry is fully applied with no pending canonical migrations.',
   'Authorization does NOT authorize push, Dokploy redeployment, Prisma database-deploy,',
   'provider email, post-deployment smoke, or production.',
 ].join('\n')
@@ -1574,9 +1586,7 @@ async function main(): Promise<void> {
           environment: '',
           targetId: '',
           appliedPayloadCount: 0,
-          expectedPendingMigrations: rest.includes('--current-state=true')
-            ? [...CURRENT_STAGING_PENDING_MIGRATIONS]
-            : [],
+          expectedPendingMigrations: [],
           expectedPendingBatchIsOnlyMissing: false,
           unexpectedPayloadCount: 0,
           duplicatePayloadCount: 0,
