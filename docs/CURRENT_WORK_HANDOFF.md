@@ -23,17 +23,24 @@ explicitly superseded here.
   `c43e899824b993200b05f1b337993eb55fae0905`.
 - **Current packet:** A6.1 bounded release-control repair is committed locally
   at `323a73a13e6da07ebc3c1b44fc7ee2d1ff178870` and pushed to
-  `origin/feature/course-branding-and-preview`. It preserves the A1
+  `origin/feature/course-branding-and-preview`; the current remote tip is the
+  documentation-only evidence commit
+  `0738687cc71007077e370ca72e83df48b0d4ae1a`. It preserves the A1
   authorization/action-result foundation, A2 shared primitives, A3 community
   boundary, A4 course/Creator boundary, A5 architecture guards, and the A6
   first-failure evidence. The repair decouples read-only migration discovery
   from the explicit reviewed apply authorization, and adds duplicate/order
   anomaly evidence. It does not apply migrations or change application,
   schema, provider, or member data.
-- **Current gate:** The repaired push gate passed, but fresh read-only staging
-  plan `33179579309` is blocked by `status_query_failed` after network and
-  target guards passed. The staging applied/pending state is therefore
-  unknown; no staging or production deployment is authorized. The fresh
+- **Current gate:** Push gate `33180994836` passed at the current feature tip,
+  including build, deterministic release checks, and browser E2E (**190
+  passed, 75 skipped, 0 failed**). The first post-repair read-only staging
+  plan `33179579309` and the final exact-feature-tip plan `33181017493` are
+  both blocked by `status_query_failed` after network and target guards
+  passed. The final plan confirms `jpvbootcamp_staging` /
+  `jpvbootcamp-staging` and `appliedPayloadCount=0`. The staging
+  applied/pending state is therefore unknown; no staging or production
+  deployment is authorized. The fresh
   production identity dry-run `33180247113` found 11 active Stripe
   subscriptions, 10 active Payload members, 7 customer-ID matches, 0
   unmatched/ambiguous identities, and 4 subscriptions linked to inactive
@@ -52,8 +59,9 @@ explicitly superseded here.
   deploy production while that plan is blocked. Preserve the first failed A6
   Gate 1 attempt and the current unknown staging state.
 - **Reversibility boundary:** The A6.1 repair is one reversible code commit;
-  it has not been merged to `main`. No staging migration, production data, or
-  provider state was changed.
+  the later commits are documentation-only evidence snapshots. None has been
+  merged to `main`. No staging migration, production data, or provider state
+  was changed.
 - **Architecture authority:** `docs/architecture/` contains the production
   architecture, source-of-truth map, engineering principles, and packet plan.
 

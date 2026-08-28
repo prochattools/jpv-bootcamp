@@ -229,7 +229,7 @@ the follow-up work without reopening A0–A5.1 or entering Gate 2.
 - The repair commit was pushed fast-forward to
   `origin/feature/course-branding-and-preview`; the current feature tip is
   the documentation-only continuation commit
-  `05728cb6b69fb2cfc23054b6abd43303845a76cc`, whose parent is the repaired
+  `0738687cc71007077e370ca72e83df48b0d4ae1a`, whose parent is the repaired
   application SHA.
 - `main` and `origin/main` remain at
   `08605e52af4abb0b1bdcdfbe6890d010c545b636`; no merge or production change
@@ -242,6 +242,10 @@ the follow-up work without reopening A0–A5.1 or entering Gate 2.
 - Push-gate workflow `33179516087` completed successfully at the repaired SHA;
   its application build, deterministic release gate, and browser E2E passed
   (**190 passed, 75 skipped, 0 failed**).
+- Push-gate workflow `33180994836` completed successfully at the current
+  feature tip `0738687cc71007077e370ca72e83df48b0d4ae1a`; its application
+  build, deterministic release gate, and browser E2E again passed (**190
+  passed, 75 skipped, 0 failed**).
 
 ### Fresh guarded staging plan
 
@@ -250,10 +254,19 @@ SHA and passed confirmation, branch/SHA ancestry, target identity, secret
 presence, Tailscale connectivity, and TCP connectivity to the reviewed
 staging database path. The migration runner then returned the sanitized
 blocker `status_query_failed`; `prismaHealthy=false`. No migration was
-applied, and no deploy job ran. Because the database status query did not
-complete, the actual applied/pending migration state remains **unknown**. The
-staging candidate must not be deployed until the read-only query is repaired
-or its configuration issue is resolved and a fresh exact-SHA plan succeeds.
+applied, and no deploy job ran.
+
+A final exact-feature-tip read-only staging plan, workflow `33181017493`,
+checked out `0738687cc71007077e370ca72e83df48b0d4ae1a` and returned the same
+sanitized blocker `status_query_failed` with `prismaHealthy=false`. Its
+sanitized result confirms `schema=jpvbootcamp_staging`,
+`targetId=jpvbootcamp-staging`, and `appliedPayloadCount=0`; no deploy job
+ran. The underlying database status-query error is intentionally not
+included in the artifact, so its concrete database/configuration cause is
+not established by this run. Because the status query did not complete, the
+actual applied/pending migration state remains **unknown**. The staging
+candidate must not be deployed until the read-only query is diagnosed and a
+fresh exact-SHA plan succeeds.
 
 ### Fresh production identity classification
 
