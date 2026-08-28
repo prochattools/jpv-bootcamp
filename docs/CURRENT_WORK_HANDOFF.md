@@ -21,13 +21,16 @@ explicitly superseded here.
 - **Current branch:** `codex/production-architecture-consolidation`, descended
   directly from the verified `main` tip and A0 parent
   `c43e899824b993200b05f1b337993eb55fae0905`.
-- **Current packet:** A5 Source-of-Truth and Architecture Enforcement complete
-  locally from A4 HEAD `c1fa6a0bdaf908013ed2a215e00ccd5200bf192d`. It retains
+- **Current packet:** A5.1 Ownership Closure and A6 Unblock complete locally
+  from accepted A5 HEAD `9690add2ee0b838df72bfcedc04613b0dcef76ca`. It retains
   the A1 authorization/action-result foundation, A2 shared primitives, A3
-  community boundary, and A4 course/Creator boundary. It adds the privileged
-  access register, production data-flow map, architecture risk register,
-  direct Prisma and server-only import guards, and the mechanically safe
-  Stripe reconciliation dry-run contract.
+  community boundary, A4 course/Creator boundary, and A5 architecture guards.
+  It closes administrator/member identity resolution versus explicit
+  provisioning, selects the Payload billing projection, defines exact-ID-first
+  identity matching and review states, closes support/sponsored/partner/email
+  ownership, and moves reviewed route/page persistence behind named services.
+  The compact decision record is
+  `docs/architecture/JPV_OWNERSHIP_DECISIONS_V1.md`.
 - **Behavior boundary:** `requirePortalMember()`, `requirePortalAccess()`,
   login routing, schemas, providers, production `main`, and production data
   were not changed. Community post creation remains in
@@ -36,15 +39,16 @@ explicitly superseded here.
   The separate request-header Live Sessions API helper remains outside this
   packet.
 - **Exact next packet:** A6 — Full Regression and Controlled Production
-  Integration.
-- **Approved sequence after A5:** A6 is the only next packet. It must review
-  the unresolved ownership rows before any reconciliation or production
-  integration.
-- **A5 stop boundary:** do not merge historical branches, run migrations,
+  Integration; A6 has not started.
+- **Approved sequence after A5.1:** A6 is the only next packet. It may now
+  review live evidence because the architecture rows are closed; it must still
+  prove the exact production environment, read-only inventories, deployed SHA,
+  provider state, and rollback before any apply or release action.
+- **A5.1 stop boundary:** do not merge historical branches, run migrations,
   reconcile or backfill data, mutate production/providers, delete
   branches/worktrees, push, build for release, or deploy from this packet.
   Preserve unknown residue and stale claims for the packet that owns them.
-  The A5 local commit is one reversible architecture-only unit; production
+  The A5.1 local commit is one reversible architecture-only unit; production
   integration remains A6 scope.
 - **Architecture authority:** `docs/architecture/` contains the production
   architecture, source-of-truth map, engineering principles, and packet plan.

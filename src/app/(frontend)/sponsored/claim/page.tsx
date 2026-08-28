@@ -1,5 +1,8 @@
-import prisma from '@/libs/prisma'
 import { verifySponsoredClaimToken } from '@/lib/sponsored-claim-token'
+import {
+	claimSponsoredSeat,
+	getSponsoredClaimApplication,
+} from '@/lib/sponsored/claimSponsoredSeat'
 
 export const dynamic = 'force-dynamic'
 
@@ -66,9 +69,7 @@ export default async function SponsoredClaimPage({ searchParams }: PageProps) {
 	}
 
 	const { applicationId, email } = verification.payload
-	const application = await prisma.sponsoredApplication.findUnique({
-		where: { id: applicationId },
-	})
+	const application = await getSponsoredClaimApplication(applicationId)
 
 	if (!application) {
 		return (
@@ -167,50 +168,16 @@ export default async function SponsoredClaimPage({ searchParams }: PageProps) {
 	}
 
 	const now = new Date()
-	const endsAt = new Date(now.getTime() + 1000 * 60 * 60 * 24 * 30)
 	try {
-		await prisma.$transaction(async (tx) => {
-			const locked = await tx.$queryRaw<Array<{id: string}>>`
-			SELECT id FROM sponsored_seat
-			WHERE id = ${application.seatId!}::uuid
-			  AND reserved_by_application_id = ${applicationId}::uuid
-			  AND claimed_by_account_id IS NULL
-			FOR UPDATE
-		`
-
-		if (locked.length === 0) {
-			throw new Error('seat_unavailable')
+		const result = await claimSponsoredSeat({
+			applicationId,
+			seatId: application.seatId,
+			accountId,
+			now,
+		})
+		if (result === 'already_claimed') {
+			console.info('sponsored_claim_replayed', { applicationId })
 		}
-
-		await tx.sponsoredSeat.update({
-			where: { id: application.seatId! },
-			data: {
-				claimedByAccountId: accountId!,
-				claimedAt: now,
-				reservedByApplicationId: null,
-				reservedAt: null,
-			},
-		})
-
-			await tx.sponsoredGrant.create({
-				data: {
-					accountId: accountId!,
-					tier: 'free',
-					seatId: application.seatId!,
-					startsAt: now,
-					endsAt,
-				},
-			})
-
-			await tx.sponsoredApplication.updateMany({
-				where: { id: applicationId, status: 'approved' },
-				data: {
-					status: 'claimed',
-					claimedAt: now,
-					accountId: accountId!,
-				},
-			})
-		})
 	} catch (error) {
 		console.error('sponsored_claim_finalize_failed', {
 			applicationId,

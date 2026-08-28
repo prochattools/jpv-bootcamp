@@ -4,7 +4,7 @@ import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 
 import { cachedResolvePayloadRequestSession } from '@/lib/auth/payloadSession'
-import { ensureAdministratorMemberIdentity } from '@/lib/auth/adminMemberIdentity'
+import { resolveAdministratorMemberIdentity } from '@/lib/auth/adminMemberIdentity'
 import { MEMBER_COLLECTION } from '@/lib/auth/payloadSessionMapping'
 import { decideSharedLogin } from '@/lib/auth/sharedLoginDecision'
 import { getCachedPayload } from '@/lib/payload/getPayload'
@@ -30,9 +30,9 @@ export async function requirePortalMember(
       depth: 0,
       overrideAccess: true,
     })
-    const identity = await ensureAdministratorMemberIdentity(payload as never, administrator as never)
-    const memberEmail = typeof identity?.member.email === 'string' ? identity.member.email : ''
-    if (!identity || !memberEmail) {
+    const identity = await resolveAdministratorMemberIdentity(payload as never, administrator as never)
+    const memberEmail = typeof identity.member?.email === 'string' ? identity.member.email : ''
+    if (!identity.member || !memberEmail) {
       redirect(`/portal?mode=login&next=${encodeURIComponent(requestedPath)}`)
     }
     return {

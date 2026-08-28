@@ -1,6 +1,6 @@
 # JPV Bootcamp Domain Source of Truth
 
-**Status:** CURRENT A5 OWNERSHIP MAP — A6 INPUT; HIGH-RISK ROWS UNRESOLVED
+**Status:** CURRENT A5.1 OWNERSHIP MAP — ARCHITECTURE CLOSED; A6 LIVE EVIDENCE GATED
 
 **Date:** 2026-08-28
 
@@ -59,28 +59,29 @@ Payload persistence now live in `src/lib/courseAdmin/`:
   and duplicate-write classification.
 
 The A4 refactor does not establish a second course authority, add a schema or
-provider, alter member learning readers, or change Creator UI behavior. A5
-must still resolve the split/ambiguous identity, provider, projection, and
-cross-store rows below before any reconciliation or backfill is proposed.
+provider, alter member learning readers, or change Creator UI behavior. A5.1
+closes the identity, projection, cross-store, and outbox ownership decisions
+below. Runtime inventory, reconciliation, and provider proof remain A6
+evidence requirements; they are not implied by this source map.
 
-## A5 ownership closure — 2026-08-28
+## A5.1 ownership closure — 2026-08-28
 
-The A5 inventory confirms the following ownership boundaries in the current
-repository. This is source evidence, not live production proof. The exact
-production database/schema, deployed runtime, and provider state must still be
-verified by A6 before any apply operation.
+The A5.1 inventory and boundary changes confirm the following ownership
+decisions in the current repository. This is source evidence, not live
+production proof. The exact production database/schema, deployed runtime, and
+provider state must still be verified by A6 before any apply operation.
 
 | Domain | Current authority | Local writes | Projection / read model | A5 state |
 | --- | --- | --- | --- | --- |
-| Administrator identity | Payload `payload_users` | `adminMemberIdentity.ts` currently bridges to `payload_members` and profiles during access resolution | `portalMember` link and member-facing profile | **UNRESOLVED — BLOCKS A6:** separate login-time linking from guarded backfill and define identity lifecycle |
-| Member identity/profile | Payload `payload_members` and `payload_member_profiles` | named member account/profile services and checkout provisioning | portal directory and account read models | **UNRESOLVED — BLOCKS A6:** reconcile all active records with billing identities before count changes |
+| Administrator identity | Payload `payload_users` | Read-only resolver during login; explicit `ensureAdministratorMemberIdentity`/guarded backfill for provisioning | `portalMember` link and member-facing profile | **RESOLVED — architecture closed:** admin identity remains distinct; linking never creates subscription entitlement |
+| Member identity/profile | Payload `payload_members` and `payload_member_profiles` | named member account/profile services and checkout provisioning | shared membership read model and portal directory | **RESOLVED — architecture closed:** provider identities are matched stable-ID-first; unmatched/duplicate rows remain review-required |
 | Courses/modules/lessons | Payload collections | A4 course/module/lesson commands and Payload Admin | member course/access readers | Confirmed Payload authority; A4 boundary preserved |
 | Community/engagement | Payload community and engagement collections | community commands, member transports, moderation services | derived counts, notifications, portal views | Confirmed Payload authority; privileged occurrences registered |
-| Billing/customer/subscription/payment | Stripe | Stripe checkout, webhook, and guarded operator services | Payload billing rows and Prisma operational rows | **UNRESOLVED — BLOCKS A6:** Stripe is commercial truth; one projection/read-model owner and recovery policy are still required |
-| Support | Not singular: Prisma intake and Payload support projections both exist | support routes and membership-support services | admin review/read models | **UNRESOLVED — BLOCKS A6:** choose canonical review record and projection direction |
-| Sponsored access | Not singular: Prisma seats/applications/grants and Payload funding/review records both exist | sponsored seat/grant services and guarded admin actions | public counter and admin review views | **UNRESOLVED — BLOCKS A6:** choose seat ledger, grant transaction, and projection owner |
-| Partner/affiliate | Payload business records plus Prisma telemetry | named partner/application/reporting services | reporting join | **UNRESOLVED — BLOCKS A6:** define join, retention, and recovery boundary |
-| Email | Resend delivery provider plus two local event/outbox surfaces | domain email services and workers | Payload email events / Prisma email events | **UNRESOLVED — BLOCKS A6:** select one delivery ledger and dedupe owner |
+| Billing/customer/subscription/payment | Stripe | Stripe checkout, webhook, and guarded operator services | Payload billing collections are the canonical local projection/read model; Prisma `customer_provisioning` is an operational checkpoint and legacy compatibility surface | **RESOLVED — architecture closed:** Stripe wins conflicts; projection direction is Stripe → Payload; exact-ID-first matching and review-required unknowns/duplicates are mandatory |
+| Support | Prisma `support_requests` | support intake and operator-review service | Payload membership-support records are a one-way membership/billing projection, not the intake authority | **RESOLVED — architecture closed:** Prisma owns intake/review status; writes use the named support persistence service and are idempotent at request/dedupe level |
+| Sponsored access | Prisma `sponsored_seats`, `sponsored_applications`, `sponsored_grants` | named sponsored seat/claim/grant services and guarded admin actions | Payload membership-support/funding/review records are administrative projections; Stripe remains recipient billing truth | **RESOLVED — architecture closed:** Prisma owns seat/grant transactions; an approved application reserves/claims one seat exactly once; review state is projected to Payload |
+| Partner/affiliate | Payload partner/affiliate business records; Prisma hashed session/click telemetry | named partner/application/delivery/reporting services | reports join by explicit Payload partner/application identifiers and optional internal account ID; telemetry never establishes membership or partner state | **RESOLVED — architecture closed:** Payload owns business facts; telemetry is non-authoritative, time-bounded, and reconstructable from source events where retained |
+| Email | Resend provider delivery status | Payload `payload_email_events` enqueue/dedupe/retry path and `emailSender` | Prisma `email_events` is legacy compatibility/history for old workflows; it is not a second sender for new domain events | **RESOLVED — architecture closed:** Payload event `dedupeKey` owns current idempotency; Resend owns provider delivery status; legacy Prisma queue remains directional and must not double-send |
 | Bunny media | Bunny/object storage for binaries; Payload for metadata | guarded provider/media services | protected media metadata and delivery resolver | Provider/Payload split is intentional; live delivery proof belongs to A6 |
 | LiveKit | LiveKit for room/participant runtime; Payload for session metadata | session lifecycle and server token route | audience/session metadata | Provider/Payload split is intentional; multi-client proof belongs to A6 |
 
@@ -108,17 +109,17 @@ synthetic subscription and do not inflate subscribed-member counts.
 | Portal settings/navigation/pages | Payload globals `PortalSettings`, `PayItForwardSettings`; `payload_portal_nav_items`, `payload_pages`, `payload_posts` | `portalSettings.ts`, `portal-navigation.ts`, `payloadContent/*` | Payload Admin today; content-specific Creator Mode writes are an A5 consolidation target | Navigation has a 60-second Next cache tagged `portal-nav`; invalidation contract must be preserved | Portal settings/navigation/content modules | Payload SDK through service boundary; direct Prisma no |
 | LiveKit session metadata | Payload `live_sessions` | `liveSessions/memberSessions.ts`, live-session routes/pages | `sessionLifecycle.ts`, portal admin live-session actions, or Payload Admin | LiveKit room/participant state is provider runtime, not Payload truth | `src/lib/liveSessions/*`, `src/app/api/livekit/*` | Payload via session service; LiveKit API only server-side |
 | LiveKit room state | LiveKit provider | Token route and LiveKit client runtime | Server token/room operations through LiveKit SDK | Payload stores session metadata and room name | `livekit-config.ts`, `livekit-jwt.ts`, session lifecycle | No browser/provider credential or Prisma direct access |
-| Billing accounts | Stripe customer/account is commercial authority; Payload billing account is local projection | Billing portal/read model and `billingStatusHelper.ts` | Stripe checkout/webhook/operator service; projection via shadow sync | Payload `payload_billing_accounts`; Prisma `customer_provisioning` also exists | Billing modules, `stripeShadowSync.ts`, `membershipReadModel.ts` | No direct Payload projection edits; Prisma only in named operational services |
-| Subscriptions | Stripe subscription is provider truth | Stripe-backed billing/read-model routes and reconciliation | Stripe checkout/operator actions/webhook; local projection sync | Payload `payload_subscriptions`; Prisma legacy/operational records also exist | `stripePayloadReconciliation.ts`, `membershipLifecycle.ts`, `commitmentProjection.ts` | Stripe mutations only through guarded service; local projection writes not from UI |
+| Billing accounts | Stripe customer/account is commercial authority; Payload billing account is the canonical local projection | Member billing overview and admin billing read models; Prisma helper is operational enrichment only | Stripe checkout/webhook/operator service; one-way projection via shadow sync | Payload `payload_billing_accounts`; Prisma `customer_provisioning` is an operational checkpoint/legacy fallback | Billing modules, `stripeShadowSync.ts`, `membershipReadModel.ts` | No direct Payload projection edits; Prisma only in named operational services |
+| Subscriptions | Stripe subscription is provider truth | Payload subscription projection for portal/admin display, with explicit operational compatibility fallback | Stripe checkout/operator actions/webhook; one-way local projection sync | Payload `payload_subscriptions` is the canonical local subscription projection; Prisma records are not a competing authority | `stripePayloadReconciliation.ts`, `membershipLifecycle.ts`, `commitmentProjection.ts` | Stripe mutations only through guarded service; local projection writes not from UI |
 | Payments/invoices | Stripe payment/invoice objects | Billing status/portal and reconciliation readers | Stripe checkout/webhook/operator service | Payload `payload_payments` and any operational records are projections/audit | Billing reconciliation and operator action modules | Stripe provider API through service; direct Prisma no |
 | Stripe provider state | Stripe | Stripe SDK calls and signed webhook route | Stripe API through explicit checkout/operator actions; signed `/api/webhook/stripe` | Payload Stripe event/shadow collections and Prisma `stripe_webhook_events` record delivery/processing | `src/app/api/webhook/stripe/route.ts`, `stripeShadowSync.ts` | Never treat local rows as provider truth; no page-level Stripe calls |
-| Support | **Split/ambiguous:** Prisma `support_requests` is the frontend intake record; Payload membership-support records/read models also exist | Support APIs and membership-support admin read models | Frontend support route writes Prisma; operator workflows may write Payload support/audit records | Review/notification statuses exist in both operational paths | `membership-support/*`, support API, `adminReadModel.ts` | Direct access only in named support services; A1/A5 must choose the canonical review record |
-| Sponsored seats/applications | **Split/ambiguous:** Prisma `sponsored_seats`, `sponsored_applications`, `sponsored_grants` hold the operational grant flow; Payload membership-support collections hold funding/review/audit projections | Sponsored pages/APIs plus Payload operations/cockpit | Sponsored services, Stripe webhook, guarded admin grant flow | Availability/counts and admin review projections | `sponsored-seats.ts`, `sponsored-grants.ts`, `membership-support/*` | No ad hoc cross-store writes; A5 must define transaction and reconciliation ownership |
-| Partner/affiliate operations | **Split/ambiguous:** Payload affiliate/partner collections own business records; Prisma `partner_sessions`/`partner_clicks` own hashed click/session telemetry | Partner portal/reporting and admin readers | Partner delivery/application/reporting services | Reporting derives from both records and telemetry | `partnerAffiliateReporting.ts`, `payloadCourse/partner*`, affiliate modules | Named service access only; A5 must define reporting join boundary |
-| Email/outbox | Resend is delivery provider; local outbox is **split/ambiguous** between Payload `payload_email_events` and Prisma `email_events` in `prisma/system.prisma` | `email.ts`, `emailSender.ts`, CRM/email operator actions | Domain event producers enqueue; worker sends through Resend and records delivery | Payload email events expose delivery/audit; Prisma email events are operational legacy/current state depending on workflow | `src/lib/email.ts`, `payloadCourse/emailSender.ts`, `email/emailOperatorActions.ts` | No direct provider calls from pages; A3/A5 must prevent duplicate outboxes |
+| Support | Prisma `support_requests` is the canonical frontend intake and operator-review ledger; Payload membership-support records are projections for membership/billing workflows | Support APIs and operations inbox | Support persistence service writes Prisma; projections/audit may flow to Payload through named workflows | Review/notification statuses are authoritative in Prisma for support intake | `support/persistence.ts`, `membership-support/*`, support API, `adminReadModel.ts` | Direct access only in named support services; no ad hoc cross-store writes |
+| Sponsored seats/applications | Prisma `sponsored_seats`, `sponsored_applications`, `sponsored_grants` own inventory, application, reservation, claim, and grant transactions; Payload membership-support collections are review/funding projections | Sponsored pages/APIs plus Payload operations/cockpit | Sponsored services and guarded admin grant flow; Stripe remains recipient billing truth | Availability/counts are derived from the Prisma seat ledger; admin review is projected to Payload | `sponsored/claimSponsoredSeat.ts`, `sponsored-seats.ts`, `sponsored-grants.ts`, `membership-support/*` | No ad hoc cross-store writes; claim is idempotent and token-bound |
+| Partner/affiliate operations | Payload affiliate/partner collections own business records; Prisma `partner_sessions`/`partner_clicks` own hashed click/session telemetry | Partner portal/reporting and admin readers | Partner delivery/application/reporting services | Reporting joins explicit partner/application identifiers and optional account IDs; telemetry is non-authoritative | `partnerAffiliateReporting.ts`, `payloadCourse/partner*`, affiliate modules | Named service access only; telemetry retention/recovery cannot change business membership state |
+| Email/outbox | Resend is delivery provider; Payload `payload_email_events` is the canonical current outbox/delivery ledger; Prisma `email_events` is legacy compatibility/history | `payloadCourse/events.ts`, `emailSender.ts`, email operator actions | Domain event producers enqueue Payload events; worker sends through Resend and records delivery | Payload events own current dedupe/retry state; old Prisma workflows remain isolated and must not duplicate current sends | `payloadCourse/events.ts`, `payloadCourse/emailSender.ts`, `email/emailOperatorActions.ts`, legacy `email.ts` | No direct provider calls from pages; legacy Prisma queue is not a second current outbox |
 | Bunny/media | Bunny/object storage is binary/provider authority; Payload `payload_media`, `bunny_videos`, and file/resource rows own application metadata | Protected delivery/media resolver APIs | Guarded upload/import/provider service plus Payload metadata write | Payload records are metadata and entitlement references | `payload-media-storage.ts`, `bunnyProtectedMedia.ts`, `memberMedia.ts` | Provider access server-side only; no direct Prisma media authority |
 
-## Rules for unresolved ownership
+## Rules after A5.1 closure
 
 1. A split row is not permission to synchronize both sides opportunistically.
 2. Provider truth, local projection, operational ledger, and audit record must
@@ -128,12 +129,13 @@ synthetic subscription and do not inflate subscribed-member counts.
 4. No migration or backfill may infer ownership from an email address when an
    explicit stable identifier is available or when the email match is not
    unique.
-5. Until the named packet closes the ambiguity, the safe behavior is a truthful
-   unknown/review state rather than a guessed assignment.
+5. After A5.1, architecture is closed but runtime proof is still required:
+   unknown, stale, unmatched, or ambiguous state remains a truthful
+   review-required result rather than a guessed assignment.
 
 ## Evidence and limits
 
-This is a source-repository map produced during A0. It is not a live database
+This is a source-repository map produced during A5.1. It is not a live database
 dump, Stripe inventory, provider audit, or deployed-runtime proof. Runtime and
 data counts must be reverified against the exact production environment before
-any A1–A4 implementation or migration authorization.
+any A6 reconciliation, migration, backfill, or provider authorization.

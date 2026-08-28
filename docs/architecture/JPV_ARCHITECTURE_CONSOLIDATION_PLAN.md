@@ -1,6 +1,6 @@
 # JPV Bootcamp Post-Launch Architecture Consolidation Plan
 
-**Status:** A5 COMPLETE LOCALLY IN THIS IMPLEMENTATION PACKET; A6 NOT STARTED
+**Status:** A5.1 COMPLETE LOCALLY IN THIS IMPLEMENTATION PACKET; A6 NOT STARTED
 
 **Date:** 2026-08-28
 
@@ -24,8 +24,27 @@ The packet reviewed the fresh Workbench branch evidence for
 `codex/feature-billing-integration` without merging or cherry-picking it. The
 production build was run as local validation, but no reconciliation,
 administrator-link backfill, migration, database/provider mutation, push,
-merge, or deployment was performed. High-risk data ownership rows remain
-`UNRESOLVED — BLOCKS A6`; A6 is the next packet.
+merge, or deployment was performed. A5.1 is the required architecture-closure
+follow-up before A6 and is recorded below.
+
+## A5.1 completion record — 2026-08-28
+
+A5.1 is complete locally on `codex/production-architecture-consolidation`,
+starting from accepted A5 HEAD
+`9690add2ee0b838df72bfcedc04613b0dcef76ca`. It closes administrator/member
+identity resolution versus explicit provisioning, selects Payload billing
+collections as the canonical local projection, defines the member/billing
+matching order and review state, and assigns support, sponsored, partner, and
+email ownership. It moves support and sponsored route/page persistence behind
+named server-only services and strengthens the privileged/direct-Prisma guards
+with path allowlists.
+
+The ownership decisions are recorded in
+`docs/architecture/JPV_OWNERSHIP_DECISIONS_V1.md` and reflected in the source
+of truth, data-flow, privileged-access, risk, production-architecture, and
+handoff authorities. The packet performs no production data/provider writes,
+migration, reconciliation, backfill, merge, push, or deployment. A6 remains
+unstarted and is gated only by live evidence and explicit authorization.
 
 ## A2 completion record
 

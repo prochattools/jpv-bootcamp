@@ -1,6 +1,6 @@
 # JPV Bootcamp Production Architecture v1
 
-**Status:** CURRENT ARCHITECTURE AUTHORITY — A5 COMPLETE LOCALLY; A6 GATED
+**Status:** CURRENT ARCHITECTURE AUTHORITY — A5.1 COMPLETE LOCALLY; A6 LIVE EVIDENCE GATED
 
 **Date:** 2026-08-28
 
@@ -79,7 +79,7 @@ rollback, rich-text/media preservation, and audit orchestration into bounded
 transport. The contract is recorded in `JPV_COURSE_CREATOR_DOMAIN_CONTRACT.md`.
 No member learning, Creator UI, provider, schema, database, migration, or
 production behavior was changed. No production merge, push, deployment, or
-historical branch cleanup was performed. A5 is now complete locally and A6
+historical branch cleanup was performed. A5.1 is now complete locally and A6
 remains separately gated.
 
 ## Architectural hold
@@ -90,7 +90,7 @@ a rewrite. A0 established the production truth, A1 established the
 authorization and Server Action foundation, A2 established the shared domain
 primitives and service-boundary map, and A3 established the shared community
 mutation boundary, and A4 established the bounded course/Creator mutation
-boundary. A5 is complete locally and A6 remains a gated packet; A6 is not
+boundary. A5.1 is complete locally and A6 remains a gated packet; A6 is not
 implied by this implementation.
 
 ## A4 current implementation boundary
@@ -124,11 +124,13 @@ helper duplication, design-token declarations, and reconciliation dry-run
 write safety.
 
 The A5 dry-run contract now prevents checkpoint callbacks from running outside
-apply mode. The production build was run as local validation, but no
+apply mode. A5.1 additionally separates read-only administrator resolution
+from explicit provisioning, selects the canonical local billing projection,
+closes support/sponsored/partner/email ownership, moves reviewed route/page
+persistence behind named server-only services, and adds path-aware guards. No
 reconciliation, administrator-link backfill, migration, database/provider
-mutation, merge, push, or deployment was performed by A5. High-risk ownership
-rows remain explicitly `UNRESOLVED — BLOCKS A6` in
-`JPV_ARCHITECTURE_RISK_REGISTER.md`.
+mutation, merge, push, or deployment was performed by A5.1. Remaining A6 rows
+are live-evidence requirements only.
 
 ## System surfaces
 
@@ -205,9 +207,10 @@ operational state, or audit state according to the source-of-truth map.
 
 The repository already contains both Payload collections and Prisma/provider
 integration modules. That is evidence of the current implementation, not proof
-that every split is final. The canonical domain ownership decision is recorded
-in `JPV_DOMAIN_SOURCE_OF_TRUTH.md`; rows marked **split/ambiguous** are
-deliberate A1–A4 review inputs and must not be silently collapsed.
+that every implementation path has live proof. The canonical ownership
+decisions are recorded in `JPV_DOMAIN_SOURCE_OF_TRUTH.md` and
+`JPV_OWNERSHIP_DECISIONS_V1.md`; unknown or duplicate runtime joins remain
+review-required and must not be silently collapsed.
 
 The A0 branch inventory also found historical worktrees and isolated commits.
 They remain intact. No branch, worktree, database, provider record, or runtime

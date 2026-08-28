@@ -1,6 +1,6 @@
 # JPV Bootcamp Production Data Flow
 
-**Status:** CURRENT A5 DATA-FLOW MAP — WRITE OWNERSHIP PRESERVED
+**Status:** CURRENT A5.1 DATA-FLOW MAP — OWNERSHIP CLOSED; A6 LIVE EVIDENCE GATED
 
 **Date:** 2026-08-28
 
@@ -32,20 +32,20 @@ remain behind named services.
 
 | Flow | Authoritative fact | Read path | Write path | Projection / recovery owner |
 | --- | --- | --- | --- | --- |
-| Authentication and portal actor | Payload session and identity records | `requirePortalAccess`, `requirePortalMember`, `currentMember` | Payload auth/member account services | `portalActor`; unresolved admin bridge risk is recorded in the A5 risk register |
+| Authentication and portal actor | Payload session and identity records | `requirePortalAccess`, `requirePortalMember`, `currentMember` | Payload auth/member account services | `portalActor`; administrator resolution is read-only and explicit linking is a separate provisioning path |
 | Admin authorization | Payload administrator account plus explicit linked portal member | `requirePortalAdmin` | No implicit client-side grant | `privilegedPayloadAccess` and audit-aware admin services |
 | Courses/modules/lessons | Payload course collections | course member/access services | `courseCommands`, `moduleCommands`, `lessonCommands`, Payload Admin | Payload remains authority; rollback is commit-level until A6 runtime proof |
 | Community spaces/posts/comments | Payload community collections | community portal/discussion services | community commands and member/admin transports | Payload counts/read views; moderation and notification services |
 | Reactions/bookmarks | Payload engagement rows | `reactions`, `bookmarks`, portal routes | member actor domain services | counts are derived; toggle operations are idempotent at the member/target/type boundary |
 | Checkout and onboarding | Stripe checkout/customer/subscription | signed webhook and billing read model | Stripe checkout plus `provisionMemberFromCheckout` | Payload member/account projection and audit; failed provisioning remains reviewable |
-| Billing | Stripe customer, subscription, invoice, and payment state | Stripe-backed service/read model | guarded Stripe operator/checkout/webhook services | Payload billing projections and Prisma operational rows; Stripe is commercial truth |
+| Billing | Stripe customer, subscription, invoice, and payment state | Payload billing projection/read model for portal/admin display; named Prisma compatibility services only for operational enrichment | guarded Stripe operator/checkout/webhook services, then one-way `stripeShadowSync` projection | Payload billing collections are canonical local projection; Prisma `customer_provisioning` is an operational checkpoint/legacy fallback; Stripe wins conflicts |
 | Stripe reconciliation | Stripe inventory | `stripeMemberIdentityReconciliation`, `stripePayloadReconciliation` | apply-mode mirror only | ambiguous/unmatched identity review queue; dry-run returns a report and cannot checkpoint-write |
-| Support | unresolved split between Prisma intake and Payload support projection | support routes/admin read models | named support workflow | A5 unresolved source-of-truth decision blocks A6 |
-| Sponsored access | unresolved split between Prisma seat/grant flow and Payload review projections | sponsored routes/admin read models | sponsored seat/grant services and Stripe webhook | A5 unresolved transaction/read-model decision blocks A6 |
+| Support | Prisma `support_requests` intake/review ledger | support routes and operations inbox | `src/lib/support/persistence.ts`; one-way Payload membership-support projection where required | Prisma owns review status; existing dedupe/notification semantics remain the retry contract |
+| Sponsored access | Prisma seat/application/grant ledger and Stripe recipient billing | sponsored routes/admin read models | named sponsored seat/claim/grant services and guarded admin actions | Prisma owns reservation/claim/grant transaction; Payload owns review projection; token/application/seat identity is explicit and idempotent |
 | Media | Payload metadata; Bunny/object storage binary | protected media resolvers | guarded media/provider services | Payload metadata references provider asset; missing binary is non-green |
 | LiveKit | Payload session metadata; LiveKit room/participant runtime | session/audience services and token route | session lifecycle plus server LiveKit token boundary | Payload stores room name/status metadata; provider room state is runtime truth |
-| Email | Resend delivery status plus local outbox | email sender/operator services | domain event -> outbox -> Resend | Payload/Prisma outbox split remains unresolved and must not double-send |
-| Partner/affiliate | Payload business records; Prisma click telemetry | partner/reporting services | partner application/delivery services | reporting join boundary remains explicitly split |
+| Email | Resend delivery status | Payload `payload_email_events` sender/operator services | domain event -> Payload outbox -> Resend | Payload event `dedupeKey` owns current retry/idempotency; Prisma `email_events` is isolated legacy compatibility/history and must not double-send |
+| Partner/affiliate | Payload business records; Prisma hashed click telemetry | partner/reporting services | partner application/delivery services | explicit partner/application/account joins; telemetry is non-authoritative and retention/recovery cannot change business state |
 
 ## Ownership rules
 
@@ -63,10 +63,12 @@ remain behind named services.
 6. Unknown, stale, unmatched, or ambiguous joins remain visible as review
    state. They do not become active access through a guessed assignment.
 
-## A5 boundary
+## A5.1 boundary
 
-A5 adds enforcement and documentation only. It does not execute the checkout,
-Stripe reconciliation, administrator-link backfill, migration, provider
-operation, or deployment flow. Those belong to the separately gated A6
-controlled integration packet after the unresolved risk rows have owners and
-live evidence.
+A5.1 closes the architecture and moves the reviewed support and sponsored
+route/page persistence behind named server-only services. It does not execute
+checkout, Stripe reconciliation, administrator-link backfill, migration,
+provider operation, or deployment. A6 is separately gated for exact
+environment identity, read-only production inventory, deployed-SHA health,
+provider configuration/delivery proof, and any explicitly authorized apply
+operation.

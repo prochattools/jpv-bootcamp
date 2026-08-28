@@ -1,12 +1,13 @@
 # JPV Privileged Access Register
 
-**Status:** CURRENT A5 REGISTER — ARCHITECTURE ENFORCEMENT
+**Status:** CURRENT A5.1 REGISTER — ARCHITECTURE ENFORCEMENT
 
 **Date:** 2026-08-28
 
 **Evidence checkout:** `jpv-bootcamp-main`, branch
 `codex/production-architecture-consolidation`, A4 parent
-`c1fa6a0bdaf908013ed2a215e00ccd5200bf192d` before the A5 changes.
+`c1fa6a0bdaf908013ed2a215e00ccd5200bf192d` before the A5 changes; A5.1
+adds the named support and sponsored persistence boundaries.
 
 This is the allowlist for exceptional Payload access in the repository. A
 literal `overrideAccess: true` is not an authorization mechanism. It is a
@@ -78,7 +79,7 @@ new caller.
 | `src/components/payload/JPVAdminDashboard.tsx` | 1 | Server-side admin dashboard read | R | Payload/admin boundary |
 | `src/components/payload/JPVBillingOverview.tsx` | 4 | Server-side billing projection read | R | Payload/admin boundary |
 | `src/lib/actions/openBillingPortal.ts` | 1 | Server action billing portal | R/W | authenticated member action |
-| `src/lib/auth/adminMemberIdentity.ts` | 6 | Admin-to-member bridge | R/W | admin session; A5 risk register applies |
+| `src/lib/auth/adminMemberIdentity.ts` | 7 | Admin-to-member bridge and explicit provisioning path | R/W | read-only resolver during login; explicit provisioning/backfill path |
 | `src/lib/auth/payloadMemberAccountActions.ts` | 2 | Member account operations | R/W | member actor policy |
 | `src/lib/auth/payloadMemberEmailVerification.ts` | 7 | Email verification lifecycle | R/W | member/auth policy |
 | `src/lib/auth/requirePortalAccess.ts` | 1 | Portal actor resolution | R | Payload session boundary |
@@ -117,10 +118,12 @@ new caller.
 | `src/lib/portal/portalSettings.ts` | 1 | Portal settings read | R | admin/settings boundary |
 | `src/lib/portalAdmin/adminPortal.ts` | 1 | Admin portal read model | R | `requirePortalAdmin` |
 | `src/lib/shadowValidationReport.ts` | 2 | Shadow validation read/write | R/W | operator validation boundary |
+| `src/lib/sponsored/claimSponsoredSeat.ts` | 1 | Sponsored claim read/transaction boundary | R/W | verified claim token/application/seat; idempotent claim transaction |
 | `src/lib/sponsored-admin-grant.ts` | 2 | Sponsored grant action | R/W | admin/grant policy |
 | `src/lib/sponsored-recipient.ts` | 7 | Sponsored recipient flow | R/W | token/admin grant policy |
 | `src/lib/sponsored-seat-notifications.ts` | 3 | Sponsored notifications | R/W | grant/email policy |
 | `src/lib/staging-auto-provision.ts` | 10 | Staging-only provisioning | R/W | explicit staging guard |
+| `src/lib/support/persistence.ts` | 1 | Support intake/review persistence | R/W | support route/admin actor policy |
 
 ### Course and community domain services
 
@@ -167,8 +170,9 @@ drift into an unreviewed privileged contract:
 
 ## Enforcement rules
 
-- New page or component persistence is prohibited. Existing route-level
-  Prisma writes are registered legacy exceptions in the A5 risk register.
+- New page or component persistence is prohibited. A5.1 removed the reviewed
+  support and sponsored route/page Prisma writes; persistence now belongs to
+  named server-only services.
 - New direct Prisma imports must update the inventory and identify the domain
   owner; `src/libs/prisma.ts` is the shared client implementation, not an
   application data authority.
@@ -179,3 +183,7 @@ drift into an unreviewed privileged contract:
   Payload variable mapping are the only registered declaration overrides.
 - A dry-run reconciliation must not invoke a persistence-capable checkpoint
   callback. Checkpoint persistence is apply-mode-only.
+- Privileged access allowlists are path-aware as well as count-aware. A new
+  occurrence requires both an intentional register entry and a valid owning
+  service/path; moving an occurrence without updating the register fails the
+  guard.

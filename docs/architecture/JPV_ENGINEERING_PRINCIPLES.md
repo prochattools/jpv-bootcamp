@@ -1,11 +1,11 @@
 # JPV Bootcamp Engineering Principles
 
-**Status:** CURRENT A5 ENGINEERING AUTHORITY — APPLIES TO A5–A6
+**Status:** CURRENT A5.1 ENGINEERING AUTHORITY — APPLIES TO A5.1–A6
 
 **Date:** 2026-08-27
 
 These principles constrain behavior-preserving consolidation of the production
-system. A1 through A5 are complete locally on the dedicated consolidation
+system. A1 through A5.1 are complete locally on the dedicated consolidation
 branch; A6 remains separately gated. A packet may narrow these
 rules with evidence, but may not silently contradict them.
 

@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 
 const schema = readFileSync('prisma/system.prisma', 'utf8')
 const supportRoute = readFileSync('src/app/api/support/route.ts', 'utf8')
+const supportPersistence = readFileSync('src/lib/support/persistence.ts', 'utf8')
 
 const modelMatch = schema.match(/model SupportRequest \{([\s\S]*?)\n\}/)
 assert.ok(modelMatch, 'system Prisma schema must define SupportRequest')
@@ -57,7 +58,8 @@ for (const forbidden of [
 }
 
 assert.match(supportRoute, /guardPublicRequest\(req/)
-assert.match(supportRoute, /prisma\.supportRequest\.create/)
+assert.match(supportRoute, /createSupportRequest/)
+assert.match(supportPersistence, /prisma\.supportRequest\.create/)
 assert.match(supportRoute, /isValidInternationalPhone/)
 assert.match(supportRoute, /queueAndAttemptEmailEvent/)
 assert.match(supportRoute, /accepted:\s*true/)

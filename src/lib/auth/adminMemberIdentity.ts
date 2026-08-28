@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto'
 
-import type { PayloadCourseWriteAPI, PayloadDocument, PayloadId } from '@/lib/payloadCourse/accessService'
+import type { PayloadCourseAccessAPI, PayloadCourseWriteAPI, PayloadDocument, PayloadId } from '@/lib/payloadCourse/accessService'
 import { normalizeEmail } from '@/lib/normalize-email'
 import { relationshipId } from '@/lib/domain/relationships'
 
@@ -11,6 +11,12 @@ type AdministratorRecord = PayloadDocument & {
   portalMember?: unknown
 }
 
+export type AdministratorMemberIdentityResolution = {
+  administratorId: PayloadId
+  member: PayloadDocument | null
+  source: 'linked' | 'email' | 'missing' | 'ambiguous' | 'invalid'
+}
+
 function displayNameForAdministrator(admin: AdministratorRecord, email: string): string {
   for (const value of [admin.displayName, admin.name]) {
     if (typeof value === 'string' && value.trim()) return value.trim()
@@ -19,7 +25,7 @@ function displayNameForAdministrator(admin: AdministratorRecord, email: string):
 }
 
 async function findOne(
-  payload: PayloadCourseWriteAPI,
+  payload: PayloadCourseAccessAPI,
   collection: string,
   where: Record<string, unknown>,
 ): Promise<PayloadDocument | null> {
@@ -28,9 +34,64 @@ async function findOne(
 }
 
 /**
- * Gives every Payload administrator a real member identity and profile while
- * keeping billing optional. The operation is safe to call on every login and
- * after every administrator save.
+ * Resolves an administrator's optional member-facing identity without
+ * creating, updating, or linking any records. Email fallback is accepted only
+ * when exactly one normalized member matches; duplicates stay review-only.
+ */
+export async function resolveAdministratorMemberIdentity(
+  payload: PayloadCourseAccessAPI,
+  administrator: AdministratorRecord,
+): Promise<AdministratorMemberIdentityResolution> {
+  const administratorId = administrator.id
+  const email = normalizeEmail(typeof administrator.email === 'string' ? administrator.email : null)
+  const linkedMemberId = relationshipId(administrator.portalMember)
+
+  if (linkedMemberId !== null) {
+    try {
+      const linkedMember = (await payload.findByID({
+        collection: 'payload_members',
+        id: linkedMemberId,
+        depth: 0,
+        overrideAccess: true,
+      })) as PayloadDocument | null
+      const linkedEmail = normalizeEmail(
+        typeof linkedMember?.email === 'string' ? linkedMember.email : null,
+      )
+      if (linkedMember && email && linkedEmail && linkedEmail !== email) {
+        return { administratorId, member: null, source: 'invalid' }
+      }
+      if (linkedMember) {
+        return { administratorId, member: linkedMember, source: 'linked' }
+      }
+      // A missing target is a stale link, so continue to the guarded,
+      // unambiguous email fallback below.
+    } catch {
+      // A stale link is eligible for the read-only, unambiguous email fallback.
+    }
+  }
+
+  if (!email) return { administratorId, member: null, source: 'invalid' }
+
+  const result = await payload.find({
+    collection: 'payload_members',
+    where: { email: { equals: email } },
+    limit: 2,
+    depth: 0,
+    overrideAccess: true,
+  })
+  if (result.docs.length > 1) {
+    return { administratorId, member: null, source: 'ambiguous' }
+  }
+  if (result.docs.length === 1) {
+    return { administratorId, member: result.docs[0] ?? null, source: 'email' }
+  }
+  return { administratorId, member: null, source: 'missing' }
+}
+
+/**
+ * Explicitly provisions a Payload administrator's member-facing identity and
+ * profile while keeping billing optional. This must only be called from a
+ * guarded provisioning/backfill workflow; access resolution is read-only.
  */
 export async function ensureAdministratorMemberIdentity(
   payload: PayloadCourseWriteAPI,
@@ -40,24 +101,11 @@ export async function ensureAdministratorMemberIdentity(
   const email = normalizeEmail(typeof administrator.email === 'string' ? administrator.email : null)
   if (!email) return null
 
-  let member: PayloadDocument | null = null
-  const linkedMemberId = relationshipId(administrator.portalMember)
-  if (linkedMemberId !== null) {
-    try {
-      member = await payload.findByID({
-        collection: 'payload_members',
-        id: linkedMemberId,
-        depth: 0,
-        overrideAccess: true,
-      })
-    } catch {
-      member = null
-    }
-  }
+  const resolution = await resolveAdministratorMemberIdentity(payload, administrator)
+  if (resolution.source === 'ambiguous' || resolution.source === 'invalid') return null
 
-  if (!member) {
-    member = await findOne(payload, 'payload_members', { email: { equals: email } })
-  }
+  let member: PayloadDocument | null = resolution.member
+  const linkedMemberId = relationshipId(administrator.portalMember)
 
   if (!member) {
     member = await payload.create({

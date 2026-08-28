@@ -80,7 +80,7 @@ const privilegedOverrideCounts: Record<string, number> = {
   'src/components/payload/JPVAdminDashboard.tsx': 1,
   'src/components/payload/JPVBillingOverview.tsx': 4,
   'src/lib/actions/openBillingPortal.ts': 1,
-  'src/lib/auth/adminMemberIdentity.ts': 6,
+  'src/lib/auth/adminMemberIdentity.ts': 7,
   'src/lib/auth/payloadMemberAccountActions.ts': 2,
   'src/lib/auth/payloadMemberEmailVerification.ts': 7,
   'src/lib/auth/requirePortalAccess.ts': 1,
@@ -152,15 +152,34 @@ const privilegedOverrideCounts: Record<string, number> = {
 }
 assertExactCounts('privileged Payload access register', /overrideAccess\s*:\s*true/g, privilegedOverrideCounts)
 
+function assertPathAllowlist(
+  label: string,
+  pattern: RegExp,
+  allowedPaths: Record<string, number>,
+  include: (file: string) => boolean = () => true,
+): void {
+  const allowed = new Set(Object.keys(allowedPaths))
+  const countPattern = new RegExp(pattern.source, pattern.flags.replace('g', ''))
+  for (const [file, content] of files) {
+    if (!include(file)) continue
+    if ((content.match(countPattern) ?? []).length > 0 && !allowed.has(file)) {
+      fail(`${label} contains an unregistered path: ${file}`)
+    }
+  }
+  for (const file of allowed) {
+    if (!files.has(file)) fail(`${label} registers a missing path: ${file}`)
+  }
+}
+
+assertPathAllowlist('privileged Payload access allowlist', /overrideAccess\s*:\s*true/g, privilegedOverrideCounts)
+
 // Direct Prisma imports are legacy/operational boundaries and are inventoried
 // here so a new route-level data owner cannot appear silently.
 const directPrismaImportCounts: Record<string, number> = {
   'src/app/(frontend)/billing/portal/route.ts': 1,
   'src/app/(frontend)/operations/partners-clicks/page.tsx': 2,
   'src/app/(frontend)/operations/sponsored-applications/page.tsx': 1,
-  'src/app/(frontend)/operations/support-requests/page.tsx': 1,
   'src/app/(frontend)/out/[partnerSlug]/route.ts': 1,
-  'src/app/(frontend)/sponsored/claim/page.tsx': 1,
   'src/app/api/admin/pay-it-forward/queue/route.ts': 1,
   'src/app/api/admin/sponsored-applications/[id]/approve/route.ts': 1,
   'src/app/api/admin/sponsored-applications/[id]/reject/route.ts': 1,
@@ -169,7 +188,6 @@ const directPrismaImportCounts: Record<string, number> = {
   'src/app/api/sponsored-applications/route.ts': 1,
   'src/app/api/stripe/billing-portal/route.ts': 1,
   'src/app/api/subscribe/route.ts': 1,
-  'src/app/api/support/route.ts': 1,
   'src/components/payload/JPVAdminDashboard.tsx': 1,
   'src/lib/actions/openBillingPortal.ts': 1,
   'src/lib/actions/startMemberCheckout.ts': 1,
@@ -179,11 +197,13 @@ const directPrismaImportCounts: Record<string, number> = {
   'src/lib/idempotency.ts': 1,
   'src/lib/partners-session.ts': 1,
   'src/lib/provisioning.ts': 1,
+  'src/lib/sponsored/claimSponsoredSeat.ts': 1,
   'src/lib/sponsored-admin-grant.ts': 2,
   'src/lib/sponsored-grants.ts': 1,
   'src/lib/sponsored-recipient.ts': 1,
   'src/lib/sponsored-seat-notifications.ts': 1,
   'src/lib/sponsored-seats.ts': 1,
+  'src/lib/support/persistence.ts': 1,
 }
 assertExactCounts(
   'direct Prisma import register',
@@ -191,11 +211,17 @@ assertExactCounts(
   directPrismaImportCounts,
   (file) => file.startsWith('src/app/') || file.startsWith('src/components/') || file.startsWith('src/lib/'),
 )
+assertPathAllowlist(
+  'direct Prisma import allowlist',
+  /^import\s[^\n;]*(?:from\s+['"][^'"]*prisma[^'"]*['"]|from\s+['"]@prisma\/client['"])/gm,
+  directPrismaImportCounts,
+  (file) => file.startsWith('src/app/') || file.startsWith('src/components/') || file.startsWith('src/lib/'),
+)
 
-const pageWriteExceptions = new Set([
-  'src/app/(frontend)/operations/support-requests/page.tsx',
-  'src/app/(frontend)/sponsored/claim/page.tsx',
-])
+// Persistence writes belong to named server-only services, never pages or
+// components. Keep this empty allowlist explicit so a future exception must
+// be reviewed in this guard and the architecture register.
+const pageWriteExceptions = new Set<string>()
 const pageOrComponentWritePattern = /\b(?:payload|prisma|tx)\s*\.\s*(?:create|update|delete|upsert|\$transaction)\s*\(/g
 for (const [file, content] of files) {
   if (!/(?:\/page\.(?:ts|tsx|js|jsx)$|\/components\/)/.test(`/${file}`)) continue
