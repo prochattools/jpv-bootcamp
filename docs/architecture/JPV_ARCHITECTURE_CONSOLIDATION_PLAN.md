@@ -1,6 +1,6 @@
 # JPV Bootcamp Post-Launch Architecture Consolidation Plan
 
-**Status:** A4 COMPLETE LOCALLY IN THIS IMPLEMENTATION PACKET; A5–A6 NOT STARTED
+**Status:** A5 COMPLETE LOCALLY IN THIS IMPLEMENTATION PACKET; A6 NOT STARTED
 
 **Date:** 2026-08-28
 
@@ -10,6 +10,22 @@ This plan governs the behavior-preserving consolidation of the live JPV
 Bootcamp system. It is intentionally packetized. No packet may absorb another
 packet’s scope, and no implementation begins merely because a related branch or
 historical change exists.
+
+## A5 completion record — 2026-08-28
+
+A5 is complete locally on `codex/production-architecture-consolidation` from
+the verified A4 HEAD `c1fa6a0bdaf908013ed2a215e00ccd5200bf192d`. The packet
+created `JPV_PRIVILEGED_ACCESS_REGISTER.md`, `JPV_PRODUCTION_DATA_FLOW.md`,
+and `JPV_ARCHITECTURE_RISK_REGISTER.md`; updated the source-of-truth and
+engineering authorities; added executable architecture-boundary checks; and
+made Stripe reconciliation dry-run checkpointing mechanically write-incapable.
+
+The packet reviewed the fresh Workbench branch evidence for
+`codex/feature-billing-integration` without merging or cherry-picking it. The
+production build was run as local validation, but no reconciliation,
+administrator-link backfill, migration, database/provider mutation, push,
+merge, or deployment was performed. High-risk data ownership rows remain
+`UNRESOLVED — BLOCKS A6`; A6 is the next packet.
 
 ## A2 completion record
 
@@ -24,8 +40,8 @@ routes, production refs, or release state.
 The active service boundaries and the read-only historical branch findings are
 recorded in `JPV_PORTAL_ADMIN_SERVICE_MAP.md`. The unique no-write billing
 branch delta is intentionally preserved for A5 review. A3 and A4 are complete
-locally in the implementation packet below; A5 is the next packet. A5–A6
-remain unstarted by this record.
+locally in the implementation packet below; A5 is now complete in the
+implementation packet above and A6 remains unstarted by this record.
 
 ### A2 branch comparison addendum
 

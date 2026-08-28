@@ -21,13 +21,13 @@ explicitly superseded here.
 - **Current branch:** `codex/production-architecture-consolidation`, descended
   directly from the verified `main` tip and A0 parent
   `c43e899824b993200b05f1b337993eb55fae0905`.
-- **Current packet:** A4 Course / Creator Domain Convergence complete locally.
-  It retains the A1 authorization/action-result foundation, A2 shared
-  primitives, and A3 community boundary, and separates course, module, and
-  lesson Creator operations into bounded policy, persistence, and command
-  modules behind the existing thin administrator actions. The behavior matrix
-  is recorded in
-  `docs/architecture/JPV_COURSE_CREATOR_DOMAIN_CONTRACT.md`.
+- **Current packet:** A5 Source-of-Truth and Architecture Enforcement complete
+  locally from A4 HEAD `c1fa6a0bdaf908013ed2a215e00ccd5200bf192d`. It retains
+  the A1 authorization/action-result foundation, A2 shared primitives, A3
+  community boundary, and A4 course/Creator boundary. It adds the privileged
+  access register, production data-flow map, architecture risk register,
+  direct Prisma and server-only import guards, and the mechanically safe
+  Stripe reconciliation dry-run contract.
 - **Behavior boundary:** `requirePortalMember()`, `requirePortalAccess()`,
   login routing, schemas, providers, production `main`, and production data
   were not changed. Community post creation remains in
@@ -35,14 +35,17 @@ explicitly superseded here.
   moderation, mention/post notifications, and duplicate-prevention behavior.
   The separate request-header Live Sessions API helper remains outside this
   packet.
-- **Exact next packet:** A5 — Source-of-Truth and Architecture Enforcement.
-- **Approved sequence after A4:** A5 — Source-of-Truth and Architecture
-  Enforcement; A6 — Full Regression and Controlled Production Integration.
-- **Hard stops:** do not start A5, merge historical branches, run migrations,
-  mutate production/providers, delete branches/worktrees, push, or deploy from
-  this packet. Preserve unknown residue, route ambiguity, and stale roadmap
-  claims for the packet that owns them. The A4 local commit may be reviewed or
-  reverted as one bounded unit; production integration remains A6 scope.
+- **Exact next packet:** A6 — Full Regression and Controlled Production
+  Integration.
+- **Approved sequence after A5:** A6 is the only next packet. It must review
+  the unresolved ownership rows before any reconciliation or production
+  integration.
+- **A5 stop boundary:** do not merge historical branches, run migrations,
+  reconcile or backfill data, mutate production/providers, delete
+  branches/worktrees, push, build for release, or deploy from this packet.
+  Preserve unknown residue and stale claims for the packet that owns them.
+  The A5 local commit is one reversible architecture-only unit; production
+  integration remains A6 scope.
 - **Architecture authority:** `docs/architecture/` contains the production
   architecture, source-of-truth map, engineering principles, and packet plan.
 

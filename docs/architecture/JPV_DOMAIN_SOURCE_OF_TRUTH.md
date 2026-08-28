@@ -1,6 +1,6 @@
 # JPV Bootcamp Domain Source of Truth
 
-**Status:** CURRENT A4 OWNERSHIP MAP — REVIEW INPUT FOR A5–A6
+**Status:** CURRENT A5 OWNERSHIP MAP — A6 INPUT; HIGH-RISK ROWS UNRESOLVED
 
 **Date:** 2026-08-28
 
@@ -62,6 +62,32 @@ The A4 refactor does not establish a second course authority, add a schema or
 provider, alter member learning readers, or change Creator UI behavior. A5
 must still resolve the split/ambiguous identity, provider, projection, and
 cross-store rows below before any reconciliation or backfill is proposed.
+
+## A5 ownership closure — 2026-08-28
+
+The A5 inventory confirms the following ownership boundaries in the current
+repository. This is source evidence, not live production proof. The exact
+production database/schema, deployed runtime, and provider state must still be
+verified by A6 before any apply operation.
+
+| Domain | Current authority | Local writes | Projection / read model | A5 state |
+| --- | --- | --- | --- | --- |
+| Administrator identity | Payload `payload_users` | `adminMemberIdentity.ts` currently bridges to `payload_members` and profiles during access resolution | `portalMember` link and member-facing profile | **UNRESOLVED — BLOCKS A6:** separate login-time linking from guarded backfill and define identity lifecycle |
+| Member identity/profile | Payload `payload_members` and `payload_member_profiles` | named member account/profile services and checkout provisioning | portal directory and account read models | **UNRESOLVED — BLOCKS A6:** reconcile all active records with billing identities before count changes |
+| Courses/modules/lessons | Payload collections | A4 course/module/lesson commands and Payload Admin | member course/access readers | Confirmed Payload authority; A4 boundary preserved |
+| Community/engagement | Payload community and engagement collections | community commands, member transports, moderation services | derived counts, notifications, portal views | Confirmed Payload authority; privileged occurrences registered |
+| Billing/customer/subscription/payment | Stripe | Stripe checkout, webhook, and guarded operator services | Payload billing rows and Prisma operational rows | **UNRESOLVED — BLOCKS A6:** Stripe is commercial truth; one projection/read-model owner and recovery policy are still required |
+| Support | Not singular: Prisma intake and Payload support projections both exist | support routes and membership-support services | admin review/read models | **UNRESOLVED — BLOCKS A6:** choose canonical review record and projection direction |
+| Sponsored access | Not singular: Prisma seats/applications/grants and Payload funding/review records both exist | sponsored seat/grant services and guarded admin actions | public counter and admin review views | **UNRESOLVED — BLOCKS A6:** choose seat ledger, grant transaction, and projection owner |
+| Partner/affiliate | Payload business records plus Prisma telemetry | named partner/application/reporting services | reporting join | **UNRESOLVED — BLOCKS A6:** define join, retention, and recovery boundary |
+| Email | Resend delivery provider plus two local event/outbox surfaces | domain email services and workers | Payload email events / Prisma email events | **UNRESOLVED — BLOCKS A6:** select one delivery ledger and dedupe owner |
+| Bunny media | Bunny/object storage for binaries; Payload for metadata | guarded provider/media services | protected media metadata and delivery resolver | Provider/Payload split is intentional; live delivery proof belongs to A6 |
+| LiveKit | LiveKit for room/participant runtime; Payload for session metadata | session lifecycle and server token route | audience/session metadata | Provider/Payload split is intentional; multi-client proof belongs to A6 |
+
+Identity matching is stable-ID-first: Stripe customer ID, then normalized email
+only when the result is unambiguous. Unmatched and duplicate identities remain
+review items; they are never silently assigned. Administrator links create no
+synthetic subscription and do not inflate subscribed-member counts.
 
 ## Domain map
 

@@ -1,6 +1,6 @@
 # JPV Bootcamp - Roadmap Progress Status
 
-## CURRENT PRODUCTION CHECKPOINT — 2026-08-27
+## CURRENT PRODUCTION CHECKPOINT — 2026-08-28
 
 JPV Bootcamp is live in production. This checkpoint supersedes older
 feature-branch and staging-era “current” statements below; those sections are
@@ -14,19 +14,22 @@ retained as dated audit history.
   relationship-table migration was applied; production health was green.
 - **Architectural state:** normal feature development is on hold. This is a
   behavior-preserving architecture consolidation, not a rewrite.
-- **Current packet:** Corrected A2 shared domain primitives on
-  `codex/production-architecture-consolidation`, complete locally with no
-  production, provider, schema, or stored-data mutation.
-- **Next packet:** A3 Community Domain Convergence, only after orchestrator
-  review of the corrected A2 commit and explicit packet authorization.
+- **Current packet:** A5 Source-of-Truth and Architecture Enforcement on
+  `codex/production-architecture-consolidation`, complete locally from A4
+  HEAD `c1fa6a0bdaf908013ed2a215e00ccd5200bf192d`. It adds executable
+  architecture-boundary guards and current ownership/data-flow/risk registers;
+  no production, provider, schema, or stored-data mutation was performed.
+- **Next packet:** A6 Full Regression and Controlled Production Integration,
+  only after review of the A5 guard/docs commit and resolution of rows marked
+  `UNRESOLVED — BLOCKS A6`.
 - **Approved sequence:** A0 Production truth and architecture authority; A1
   Authorization/service foundation; A2 Shared domain primitives; A3 Community
   domain convergence; A4 Course/Creator domain convergence; A5 Source-of-truth
   and architecture enforcement; A6 Full regression and controlled production
   integration.
-- **Hard stops:** do not start A3, add feature work, merge historical
-  branches, mutate production data/providers, run migrations, delete
-  worktrees/branches, or deploy from this A2 correction packet.
+- **Hard stops:** do not start A6 integration, add feature work, merge
+  historical branches, mutate production data/providers, run migrations,
+  delete worktrees/branches, or deploy from this A5 architecture packet.
 
 ### ARCHITECTURAL HOLD — POST-LAUNCH CONSOLIDATION
 

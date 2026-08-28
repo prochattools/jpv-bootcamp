@@ -1,12 +1,12 @@
 # JPV Bootcamp Engineering Principles
 
-**Status:** CURRENT A2 ENGINEERING AUTHORITY — APPLIES TO A2–A6
+**Status:** CURRENT A5 ENGINEERING AUTHORITY — APPLIES TO A5–A6
 
 **Date:** 2026-08-27
 
 These principles constrain behavior-preserving consolidation of the production
-system. A1 and the corrected A2 are complete locally on the dedicated
-consolidation branch; A3–A6 remain separately gated. A packet may narrow these
+system. A1 through A5 are complete locally on the dedicated consolidation
+branch; A6 remains separately gated. A packet may narrow these
 rules with evidence, but may not silently contradict them.
 
 ## Approved packet sequence
@@ -21,8 +21,8 @@ The architecture packets are fixed in this order:
 6. A5 — Source-of-truth and architecture enforcement
 7. A6 — Full regression and controlled production integration
 
-A3 is the exact next packet. No A3–A6 implementation is implied by this
-document or by the A2 correction.
+A6 is the exact next packet. No controlled production integration is implied by
+this document or by A5.
 
 ## A2 shared primitive authority
 
@@ -110,6 +110,25 @@ document or by the A2 correction.
 17. **`main` must remain releasable.** Work is isolated on a dedicated packet
     branch, validated in proportion to risk, and merged only with a reversible
     release record and independently verified production evidence.
+18. **Source-of-truth boundaries are explicit.** Stripe owns commercial
+    customer, subscription, invoice, and payment facts; Payload owns members,
+    courses, community, access, and progress; local records are projections,
+    operational ledgers, or audit rows unless a document names them otherwise.
+19. **Stable identity precedes fallback identity.** Reconciliation matches
+    provider/customer IDs first and normalized email only when unique. Unknown,
+    duplicate, stale, or wrong-environment joins fail closed into review.
+20. **Dry-run means mechanically write-incapable.** A dry-run may read and
+    return a report, but it must not invoke callbacks or hooks that can persist
+    checkpoints, audit rows, provider state, or communications.
+21. **Privileged access is registered.** Every exceptional Payload override,
+    direct Prisma import, and server-only browser boundary is inventoried in
+    `JPV_PRIVILEGED_ACCESS_REGISTER.md` and enforced by the architecture guard.
+22. **Pages and components do not own persistence.** Route/page exceptions are
+    named legacy residue; new persistence belongs behind a domain service with
+    actor policy, idempotency, audit, and failure recovery.
+23. **One design-token authority.** `src/lib/brand/jpvDesignSystem.ts` owns
+    JPV tokens; registered portal theme and Payload mapping files may consume or
+    override presentation variables but may not create a competing palette.
 
 ## Review questions for every packet
 

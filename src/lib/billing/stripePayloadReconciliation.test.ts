@@ -57,6 +57,20 @@ assert.equal(dryRun.totals.invoices, 3)
 assert.equal(dryRun.totals.wouldSync, 5)
 assert.equal(dryRun.totals.skipped, 0)
 
+let dryRunCheckpointCalls = 0
+await reconcileStripeToPayload({
+  payload: {} as never,
+  stripe,
+  livemode: true,
+  runId: 'dry_run_checkpoint_callback',
+  mode: 'dry-run',
+  pageSize: 1,
+  onCheckpoint: () => {
+    dryRunCheckpointCalls += 1
+  },
+})
+assert.equal(dryRunCheckpointCalls, 0)
+
 {
   const historical = [subscription('sub_current'), subscription('sub_historical', 'canceled')]
   historical[1]!.customer = historical[0]!.customer

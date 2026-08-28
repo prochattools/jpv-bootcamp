@@ -1,6 +1,6 @@
 # JPV Bootcamp Production Architecture v1
 
-**Status:** CURRENT ARCHITECTURE AUTHORITY — A4 COMPLETE LOCALLY; A5–A6 GATED
+**Status:** CURRENT ARCHITECTURE AUTHORITY — A5 COMPLETE LOCALLY; A6 GATED
 
 **Date:** 2026-08-28
 
@@ -79,7 +79,8 @@ rollback, rich-text/media preservation, and audit orchestration into bounded
 transport. The contract is recorded in `JPV_COURSE_CREATOR_DOMAIN_CONTRACT.md`.
 No member learning, Creator UI, provider, schema, database, migration, or
 production behavior was changed. No production merge, push, deployment, or
-historical branch cleanup was performed. A5–A6 remain separately gated.
+historical branch cleanup was performed. A5 is now complete locally and A6
+remains separately gated.
 
 ## Architectural hold
 
@@ -89,8 +90,8 @@ a rewrite. A0 established the production truth, A1 established the
 authorization and Server Action foundation, A2 established the shared domain
 primitives and service-boundary map, and A3 established the shared community
 mutation boundary, and A4 established the bounded course/Creator mutation
-boundary. A5–A6 remain gated packets and are not implied by this
-implementation.
+boundary. A5 is complete locally and A6 remains a gated packet; A6 is not
+implied by this implementation.
 
 ## A4 current implementation boundary
 
@@ -109,7 +110,25 @@ The course Creator transport is intentionally stable and thin:
   actor policy or provider calls.
 
 This is a local architectural boundary, not a production release claim. The
-next packet is A5 Source-of-Truth + Architecture Enforcement.
+next packet is A6 Full Regression + Controlled Production Integration.
+
+## A5 source-of-truth and architecture enforcement completion
+
+A5 is complete locally on `codex/production-architecture-consolidation` from
+the verified A4 HEAD `c1fa6a0bdaf908013ed2a215e00ccd5200bf192d`. It records the
+production data-flow map, privileged-access register, direct Prisma inventory,
+provider boundaries, identity/billing ownership, and architecture risks. It
+also adds executable checks for privileged Payload access, page/component
+persistence, direct Prisma drift, browser/server-only imports, administrator
+helper duplication, design-token declarations, and reconciliation dry-run
+write safety.
+
+The A5 dry-run contract now prevents checkpoint callbacks from running outside
+apply mode. The production build was run as local validation, but no
+reconciliation, administrator-link backfill, migration, database/provider
+mutation, merge, push, or deployment was performed by A5. High-risk ownership
+rows remain explicitly `UNRESOLVED — BLOCKS A6` in
+`JPV_ARCHITECTURE_RISK_REGISTER.md`.
 
 ## System surfaces
 

@@ -398,7 +398,7 @@ export async function reconcileStripeToPayload(
         }
         startingAfter = lastProcessedId
         checkpoint = { phase, startingAfter: startingAfter ?? null }
-        await options.onCheckpoint?.(checkpoint)
+        if (mode === 'apply') await options.onCheckpoint?.(checkpoint)
         subscriptionsComplete = startIndex + page.length >= subscriptions.length
         if (subscriptionsComplete || rows.length >= maxObjects) break
       } else {
@@ -416,7 +416,7 @@ export async function reconcileStripeToPayload(
         }
         startingAfter = lastProcessedId
         checkpoint = { phase, startingAfter: startingAfter ?? null }
-        await options.onCheckpoint?.(checkpoint)
+        if (mode === 'apply') await options.onCheckpoint?.(checkpoint)
         if (!page.has_more || rows.length >= maxObjects) break
       }
     }
