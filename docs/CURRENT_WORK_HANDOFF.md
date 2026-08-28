@@ -21,16 +21,24 @@ explicitly superseded here.
 - **Current branch:** `codex/production-architecture-consolidation`, descended
   directly from the verified `main` tip and A0 parent
   `c43e899824b993200b05f1b337993eb55fae0905`.
-- **Current packet:** A5.1 Ownership Closure and A6 Unblock complete locally
-  from accepted A5 HEAD `9690add2ee0b838df72bfcedc04613b0dcef76ca`. It retains
-  the A1 authorization/action-result foundation, A2 shared primitives, A3
-  community boundary, A4 course/Creator boundary, and A5 architecture guards.
-  It closes administrator/member identity resolution versus explicit
-  provisioning, selects the Payload billing projection, defines exact-ID-first
-  identity matching and review states, closes support/sponsored/partner/email
-  ownership, and moves reviewed route/page persistence behind named services.
-  The compact decision record is
-  `docs/architecture/JPV_OWNERSHIP_DECISIONS_V1.md`.
+- **Current packet:** A6.1 bounded release-control repair is committed locally
+  at `323a73a13e6da07ebc3c1b44fc7ee2d1ff178870` and pushed to
+  `origin/feature/course-branding-and-preview`. It preserves the A1
+  authorization/action-result foundation, A2 shared primitives, A3 community
+  boundary, A4 course/Creator boundary, A5 architecture guards, and the A6
+  first-failure evidence. The repair decouples read-only migration discovery
+  from the explicit reviewed apply authorization, and adds duplicate/order
+  anomaly evidence. It does not apply migrations or change application,
+  schema, provider, or member data.
+- **Current gate:** The repaired push gate passed, but fresh read-only staging
+  plan `33179579309` is blocked by `status_query_failed` after network and
+  target guards passed. The staging applied/pending state is therefore
+  unknown; no staging or production deployment is authorized. The fresh
+  production identity dry-run `33180247113` found 11 active Stripe
+  subscriptions, 10 active Payload members, 7 customer-ID matches, 0
+  unmatched/ambiguous identities, and 4 subscriptions linked to inactive
+  local members. Those four are explained lifecycle records, not unresolved
+  identities.
 - **Behavior boundary:** `requirePortalMember()`, `requirePortalAccess()`,
   login routing, schemas, providers, production `main`, and production data
   were not changed. Community post creation remains in
@@ -38,18 +46,14 @@ explicitly superseded here.
   moderation, mention/post notifications, and duplicate-prevention behavior.
   The separate request-header Live Sessions API helper remains outside this
   packet.
-- **Exact next packet:** A6 — Full Regression and Controlled Production
-  Integration; A6 has not started.
-- **Approved sequence after A5.1:** A6 is the only next packet. It may now
-  review live evidence because the architecture rows are closed; it must still
-  prove the exact production environment, read-only inventories, deployed SHA,
-  provider state, and rollback before any apply or release action.
-- **A5.1 stop boundary:** do not merge historical branches, run migrations,
-  reconcile or backfill data, mutate production/providers, delete
-  branches/worktrees, push, build for release, or deploy from this packet.
-  Preserve unknown residue and stale claims for the packet that owns them.
-  The A5.1 local commit is one reversible architecture-only unit; production
-  integration remains A6 scope.
+- **Exact next action:** Diagnose the staging `status_query_failed` path using
+  read-only checks, then run one fresh guarded exact-SHA staging plan. Do not
+  apply migrations, backfill identities, merge to `main`, deploy staging, or
+  deploy production while that plan is blocked. Preserve the first failed A6
+  Gate 1 attempt and the current unknown staging state.
+- **Reversibility boundary:** The A6.1 repair is one reversible code commit;
+  it has not been merged to `main`. No staging migration, production data, or
+  provider state was changed.
 - **Architecture authority:** `docs/architecture/` contains the production
   architecture, source-of-truth map, engineering principles, and packet plan.
 

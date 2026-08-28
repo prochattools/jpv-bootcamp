@@ -15,7 +15,8 @@ provider-state mutation, or email send was performed by this A6 pass.
 | --- | --- |
 | Starting A5.1 SHA | `102d23b5218eadbce13141c61b5a8c7e2fdf3595` |
 | Current production authority | `main` and `origin/main` at `08605e52af4abb0b1bdcdfbe6890d010c545b636` |
-| Immutable application candidate | `69617bd87da256e0c344e01396c61b385fd60783` |
+| First Gate 1 application candidate | `69617bd87da256e0c344e01396c61b385fd60783` |
+| A6.1 repaired application candidate | `323a73a13e6da07ebc3c1b44fc7ee2d1ff178870` |
 | Candidate branch | `codex/production-architecture-consolidation` |
 | Staging lane ref | `origin/feature/course-branding-and-preview` at the immutable application candidate |
 | Production application | `clients-jpv-bootcamp-app-tp9xrk` |
@@ -27,6 +28,13 @@ change in `scripts/release/stagingMigrationPreflight.ts` and
 `scripts/staging-gates/configureStagingMigrationPlanEnvironment.ts`, allowing
 the consolidation branch to pass the guarded staging lane. No application,
 schema, provider, or user-data behavior was changed by that repair.
+
+The paragraph above records the first Gate 1 candidate and is retained as
+historical evidence. A6.1 produced the bounded follow-up repair at
+`323a73a13e6da07ebc3c1b44fc7ee2d1ff178870`. That repair decouples generic
+read-only migration discovery from the explicit reviewed apply batch, adds
+duplicate/order anomaly evidence, and updates the staging-plan semantic gate.
+It does not authorize or execute a migration apply.
 
 ## 2. Main reconciliation
 
@@ -208,3 +216,70 @@ The next safe action is to repair and review the staging migration-plan
 contract, then run a fresh guarded read-only plan against the exact candidate
 before any staging deployment. That repair must be separately validated and
 must not broaden into a migration apply or production change.
+
+## 13. A6.1 continuation — bounded release-control repair
+
+This continuation preserves the first failed Gate 1 attempt above and records
+the follow-up work without reopening A0–A5.1 or entering Gate 2.
+
+### Repair and repository evidence
+
+- Repair commit: `323a73a13e6da07ebc3c1b44fc7ee2d1ff178870`
+  (`fix: decouple migration discovery from apply authorization`).
+- The repair commit was pushed fast-forward to
+  `origin/feature/course-branding-and-preview`; the current feature tip is
+  the documentation-only continuation commit
+  `05728cb6b69fb2cfc23054b6abd43303845a76cc`, whose parent is the repaired
+  application SHA.
+- `main` and `origin/main` remain at
+  `08605e52af4abb0b1bdcdfbe6890d010c545b636`; no merge or production change
+  was performed.
+- Local focused release tests passed: staging runner **152/152**, migration
+  status **43/43**, staging workflow contract **74/74**, and dynamic Step 3
+  semantics passed.
+- `pnpm test:release` passed **171/171**; TypeScript, static preflight,
+  migration preflight, and `git diff --check` passed.
+- Push-gate workflow `33179516087` completed successfully at the repaired SHA;
+  its application build, deterministic release gate, and browser E2E passed
+  (**190 passed, 75 skipped, 0 failed**).
+
+### Fresh guarded staging plan
+
+Read-only staging-plan workflow `33179579309` checked out the exact repaired
+SHA and passed confirmation, branch/SHA ancestry, target identity, secret
+presence, Tailscale connectivity, and TCP connectivity to the reviewed
+staging database path. The migration runner then returned the sanitized
+blocker `status_query_failed`; `prismaHealthy=false`. No migration was
+applied, and no deploy job ran. Because the database status query did not
+complete, the actual applied/pending migration state remains **unknown**. The
+staging candidate must not be deployed until the read-only query is repaired
+or its configuration issue is resolved and a fresh exact-SHA plan succeeds.
+
+### Fresh production identity classification
+
+The authorized read-only production identity dry-run `33180247113` completed
+successfully in live Stripe mode and performed no writes. It reported:
+
+- active Stripe subscriptions: **11**;
+- active Payload members: **10**;
+- customer-ID matches: **7**;
+- email matches: **0**;
+- unmatched: **0**;
+- ambiguous: **0**;
+- active subscriptions linked to inactive Payload members: **4**.
+
+All four exceptional rows were explained by an existing Stripe customer-ID
+link to an inactive local Payload member (member IDs 1, 17, 37, and 40). They
+are not unresolved identities, so no identity backfill was authorized or
+performed. Lifecycle review is still required before any access or status
+repair.
+
+### A6.1 decision
+
+`NOT READY FOR PRODUCTION MERGE`
+
+The release remains outside Gate 2. No staging migration apply, staging
+deployment, production merge, production deployment, provider mutation, or
+member-data mutation was performed. The next safe action is a bounded
+read-only diagnosis of `status_query_failed`, followed by one fresh exact-SHA
+staging plan; if that plan does not pass, stop without deploying.
