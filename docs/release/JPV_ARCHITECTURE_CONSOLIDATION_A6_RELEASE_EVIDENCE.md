@@ -426,3 +426,33 @@ merge, production deployment, provider mutation, reconciliation apply, or
 administrator backfill was performed. The external staging database
 configuration or permissions must be repaired or independently verified
 before another exact-SHA plan can pass.
+
+## 17. A6.1 exact-current-tip confirmation — `f6f293d`
+
+The candidate tip was `f6f293d3b47193d5d3e5a0ae04cc729f5af8ae9f`. This tip
+contains documentation-only evidence changes after the previously reviewed
+runtime repair; it contains no application, migration, provider, or member
+data mutation.
+
+The exact-SHA read-only staging-plan workflow was `33189321596`. Its sanitized
+artifact reported:
+
+```json
+{"version":2,"resultCode":"plan_blocked","blockerCodes":["status_query_failed"],"branch":"feature/course-branding-and-preview","commit":"f6f293d3b47193d5d3e5a0ae04cc729f5af8ae9f","schema":"jpvbootcamp_staging","environment":"staging","targetId":"jpvbootcamp-staging","appliedPayloadCount":0,"expectedPendingMigrations":[],"expectedPendingBatchIsOnlyMissing":false,"unexpectedPayloadCount":0,"duplicatePayloadCount":0,"malformedPayloadCount":0,"orderingAnomalyCount":0,"prismaHealthy":false}
+```
+
+Confirmation, branch/SHA ancestry, target identity, required-secret
+presence, Tailscale connectivity, and TCP connectivity passed. The read-only
+database status query failed, so applied/pending staging state remains
+unknown. The sanitized artifact was uploaded; migration apply, staging
+deploy, and production deploy jobs did not run.
+
+### Current Gate 1 decision
+
+`NOT READY FOR PRODUCTION MERGE`
+
+Gate 2 remains unopened. No migration apply, staging deployment, production
+merge, production deployment, provider mutation, reconciliation apply, or
+administrator backfill was performed. The external staging database
+configuration or permissions must be repaired or independently verified
+before another exact-SHA plan can pass.

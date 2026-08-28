@@ -33,8 +33,8 @@ explicitly superseded here.
   It does not apply migrations or change application, schema, provider, or
   member data.
 - **Current gate:** Fresh exact-tip read-only staging-plan run
-  `33187797302` checked out the exact candidate
-  `1fc02962a138923055dcbd070108ace6e62534fe` and passed confirmation,
+  `33189321596` checked out the exact candidate
+  `f6f293d3b47193d5d3e5a0ae04cc729f5af8ae9f` and passed confirmation,
   branch/SHA ancestry, target identity, secret-presence, Tailscale, and TCP
   guards. Its sanitized result is blocked by `status_query_failed` with
   `prismaHealthy=false`, while confirming `jpvbootcamp_staging` and
