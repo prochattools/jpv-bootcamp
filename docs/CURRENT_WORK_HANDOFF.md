@@ -33,15 +33,16 @@ explicitly superseded here.
   It does not apply migrations or change application, schema, provider, or
   member data.
 - **Current gate:** Fresh exact-tip read-only staging-plan run
-  `33185789357` checked out the runtime candidate plus its then-current
-  documentation-only descendant `3da499c8e9e7b66832dab300bdf49a4c733072c4`
-  and passed confirmation, branch/SHA ancestry, target identity,
-  secret-presence, Tailscale, and TCP guards. Its sanitized result is blocked
-  by `status_query_failed` with `prismaHealthy=false`, while confirming
-  `jpvbootcamp_staging` and `jpvbootcamp-staging`. Later branch commits are
-  documentation-only and do not change this runtime evidence. Applied/pending
-  staging state is therefore unknown; no staging or production deployment is
-  authorized. Push validation is separate and cannot authorize a deployment.
+  `33187797302` checked out the exact candidate
+  `1fc02962a138923055dcbd070108ace6e62534fe` and passed confirmation,
+  branch/SHA ancestry, target identity, secret-presence, Tailscale, and TCP
+  guards. Its sanitized result is blocked by `status_query_failed` with
+  `prismaHealthy=false`, while confirming `jpvbootcamp_staging` and
+  `jpvbootcamp-staging`. Applied/pending staging state is therefore unknown;
+  no staging or production deployment is authorized. Push validation is
+  separate and cannot authorize a deployment. The local `.env` and
+  `.env.production` were not used because both target localhost development
+  Postgres rather than the guarded staging target.
   The fresh production identity dry-run
   `33180247113` found 11 active Stripe subscriptions, 10 active Payload
   members, 7 customer-ID matches, 0 unmatched/ambiguous identities, and 4

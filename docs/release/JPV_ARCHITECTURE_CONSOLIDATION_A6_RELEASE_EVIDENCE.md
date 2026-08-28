@@ -394,3 +394,35 @@ it does not change this read-only database decision.
 Gate 2 remains unopened. No migration apply, staging deployment, production
 merge, production deployment, provider mutation, reconciliation apply, or
 administrator backfill was performed.
+
+## 16. A6.1 exact-current-tip confirmation — `1fc0296`
+
+The candidate tip was `1fc02962a138923055dcbd070108ace6e62534fe`. This tip
+contains the bounded A6.1 release-control repair and documentation-only
+evidence descendants; it contains no application, migration, provider, or
+member-data mutation beyond the already reviewed repair.
+
+The exact-SHA read-only staging-plan workflow was `33187797302`. Its sanitized
+artifact reported:
+
+```json
+{"version":2,"resultCode":"plan_blocked","blockerCodes":["status_query_failed"],"branch":"feature/course-branding-and-preview","commit":"1fc02962a138923055dcbd070108ace6e62534fe","schema":"jpvbootcamp_staging","environment":"staging","targetId":"jpvbootcamp-staging","appliedPayloadCount":0,"expectedPendingMigrations":[],"expectedPendingBatchIsOnlyMissing":false,"unexpectedPayloadCount":0,"duplicatePayloadCount":0,"malformedPayloadCount":0,"orderingAnomalyCount":0,"prismaHealthy":false}
+```
+
+Confirmation, branch/SHA ancestry, target identity, required-secret
+presence, Tailscale connectivity, and TCP connectivity passed. The read-only
+database status query failed, so applied/pending staging state remains
+unknown. The sanitized artifact was uploaded; migration apply, staging
+deploy, and production deploy jobs did not run. A local environment audit
+found only localhost development database URLs, so no local database query
+was attempted.
+
+### Current Gate 1 decision
+
+`NOT READY FOR PRODUCTION MERGE`
+
+Gate 2 remains unopened. No migration apply, staging deployment, production
+merge, production deployment, provider mutation, reconciliation apply, or
+administrator backfill was performed. The external staging database
+configuration or permissions must be repaired or independently verified
+before another exact-SHA plan can pass.
