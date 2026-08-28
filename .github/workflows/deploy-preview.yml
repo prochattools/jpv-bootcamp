@@ -611,7 +611,11 @@ jobs:
           BOOTSTRAP_EXIT=$?
           set -e
           if [ "$BOOTSTRAP_EXIT" -ne 0 ]; then
-            SAFE_REASON="$(grep -E '^STAGING-BOOTSTRAP-DENIED: [A-Za-z0-9 .(),_:=/-]+$' "$STDERR_FILE" | tail -n 1 || true)"
+            # tsx can prefix a thrown Error with stack metadata. Extract only
+            # the bounded, application-controlled denial token and suppress
+            # every other stderr character so secrets and connection details
+            # cannot reach the workflow log.
+            SAFE_REASON="$(grep -oE 'STAGING-BOOTSTRAP-DENIED: [A-Za-z0-9 .(),_:=/-]+' "$STDERR_FILE" | tail -n 1 || true)"
             if [ -n "$SAFE_REASON" ]; then
               echo "$SAFE_REASON" >&2
             else
