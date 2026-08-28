@@ -173,6 +173,11 @@ async function defaultPreflight(databaseUrl: string): Promise<BootstrapPreflight
     await client.query('BEGIN TRANSACTION READ ONLY')
     transactionStarted = true
     await client.query("SET LOCAL statement_timeout = '5000ms'")
+    // The `pg` client does not apply Prisma's `?schema=` URL parameter to
+    // search_path. Set it explicitly inside the read-only transaction before
+    // checking current_schema(), so the identity check validates the approved
+    // canonical schema rather than the server default (usually `public`).
+    await client.query(`SET LOCAL search_path TO "${REQUIRED_SCHEMA}"`)
 
     const identity = await client.query<{
       current_database: string
