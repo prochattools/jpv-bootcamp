@@ -93,7 +93,7 @@ jobs:
         shell: bash
         env:
           SOURCE_REF_INPUT: ${{ inputs.source_ref }}
-        run: git switch --create "$SOURCE_REF_INPUT" HEAD
+        run: git switch --force-create "$SOURCE_REF_INPUT" HEAD
 
       - name: Verify SHA ancestry under approved source ref
         shell: bash
@@ -221,7 +221,7 @@ jobs:
         shell: bash
         env:
           SOURCE_REF_INPUT: ${{ inputs.source_ref }}
-        run: git switch --create "$SOURCE_REF_INPUT" HEAD
+        run: git switch --force-create "$SOURCE_REF_INPUT" HEAD
 
       - name: Verify requested SHA is current remote tip of approved source ref
         shell: bash
@@ -573,7 +573,7 @@ jobs:
         shell: bash
         env:
           SOURCE_REF_INPUT: ${{ inputs.source_ref }}
-        run: git switch --create "$SOURCE_REF_INPUT" HEAD
+        run: git switch --force-create "$SOURCE_REF_INPUT" HEAD
 
       - name: Verify branch name, HEAD SHA, ancestry, and remote tip
         shell: bash

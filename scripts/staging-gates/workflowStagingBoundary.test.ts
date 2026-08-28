@@ -12,6 +12,8 @@
  * 8. publish-preview-image.yml must not reference DOKPLOY_APP_ID
  * 9. deploy-preview.yml must not print full API response body to logs
  * 10. deploy-preview.yml must include provenance SHA echo
+ * 11. deploy-preview.yml must persist staging routing labels before deploy
+ * 12. Source-ref attachment must tolerate checkout-created local branches
  */
 
 import assert from 'node:assert/strict'
@@ -99,7 +101,18 @@ async function main(): Promise<void> {
     'deploy-preview.yml must call ensurePreviewRouting.mts before application.deploy to persist Traefik routing labels',
   )
 
-  console.log('workflowDeploymentBoundary.test.ts passed — 15 assertions')
+  // Rule 12: actions/checkout creates a local branch when ref is a branch;
+  // force-create keeps the guard correct for both branch and detached checkouts.
+  assert.ok(
+    previewYml.includes('git switch --force-create "$SOURCE_REF_INPUT" HEAD'),
+    'deploy-preview.yml must re-anchor the approved source ref without failing when checkout already created it',
+  )
+  assert.ok(
+    publishYml.includes('git switch --force-create "$SOURCE_REF" HEAD'),
+    'publish-preview-image.yml must re-anchor the approved source ref without failing when checkout already created it',
+  )
+
+  console.log('workflowDeploymentBoundary.test.ts passed — 17 assertions')
 }
 
 main().catch((e) => {

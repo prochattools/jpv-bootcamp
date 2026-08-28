@@ -99,7 +99,7 @@ jobs:
 
       - name: Attach approved source ref for provenance
         shell: bash
-        run: git switch --create "$SOURCE_REF" HEAD
+        run: git switch --force-create "$SOURCE_REF" HEAD
 
       - name: Verify requested SHA is current remote tip of approved source ref
         shell: bash
