@@ -5,6 +5,7 @@ import { Client } from 'pg'
 import {
   buildStagingMigrationStatus,
   createStagingReadOnlyAdapter,
+  REGISTERED_PRISMA_MIGRATIONS,
 } from './buildStagingMigrationStatus'
 
 const REQUIRED_ENVIRONMENT = 'staging'
@@ -15,6 +16,28 @@ const REQUIRED_HOSTNAME = '10.0.2.4'
 const REQUIRED_CONFIRMATION = 'bootstrap-empty-staging-database'
 const FULL_COMMIT_SHA_RE = /^[0-9a-f]{40}$/
 const SAFE_ID_RE = /^[A-Za-z0-9][A-Za-z0-9._:-]{1,127}$/
+
+// A staging app restart may apply the system Prisma migrations before the
+// guarded Payload bootstrap runs. That state is safe to continue only when
+// every known Prisma-managed table is present, empty, and the Prisma ledger
+// is complete and healthy. Any other table or any application data remains a
+// hard stop so this operation cannot silently adopt an existing dataset.
+const REVIEWED_PRISMA_TABLES = new Set([
+  'Audiences',
+  'Project',
+  'Subscription',
+  '_prisma_migrations',
+  'customer_provisioning',
+  'email_events',
+  'email_subscribers',
+  'partner_clicks',
+  'partner_sessions',
+  'sponsored_applications',
+  'sponsored_grants',
+  'sponsored_seats',
+  'stripe_webhook_events',
+  'support_requests',
+])
 
 export type StagingDatabaseBootstrapAuthorization = {
   operatorId: string
@@ -45,6 +68,8 @@ export type StagingDatabaseBootstrapResult = {
   rollbackOwner: string
   preflight: {
     targetWasEmpty: boolean
+    prismaOnlyInitialized: boolean
+    applicationDataPresent: boolean
     currentDatabase: string
     currentSchema: string
     currentUserClass: 'staging-role'
@@ -77,7 +102,9 @@ type BootstrapDependencies = {
 }
 
 type BootstrapPreflight = {
-  targetWasEmpty: true
+  targetWasEmpty: boolean
+  prismaOnlyInitialized: boolean
+  applicationDataPresent: boolean
   currentDatabase: string
   currentSchema: string
   currentUserClass: 'staging-role'
@@ -196,12 +223,58 @@ async function defaultPreflight(databaseUrl: string): Promise<BootstrapPreflight
       'SELECT table_name FROM information_schema.tables WHERE table_schema = $1 AND table_type = $2',
       [REQUIRED_SCHEMA, 'BASE TABLE'],
     )
-    if (tables.rows.length > 0) {
-      fail('staging target is not empty; bootstrap refuses to continue')
+
+    const tableNames = tables.rows.map((row) => row.table_name)
+    const unexpectedTables = tableNames.filter((tableName) => !REVIEWED_PRISMA_TABLES.has(tableName))
+    if (unexpectedTables.length > 0) {
+      fail(`staging target contains non-Prisma tables: ${unexpectedTables.join(', ')}`)
+    }
+
+    const applicationTables = tableNames.filter((tableName) => tableName !== '_prisma_migrations')
+    for (const tableName of applicationTables) {
+      const tableIdentifier = `"${tableName.replaceAll('"', '""')}"`
+      const count = await client.query<{ row_count: string }>(
+        `SELECT COUNT(*)::text AS row_count FROM "${REQUIRED_SCHEMA}".${tableIdentifier}`,
+      )
+      if (count.rows[0]?.row_count !== '0') {
+        fail('staging target contains application data; bootstrap refuses to continue')
+      }
+    }
+
+    const hasPrismaLedger = tableNames.includes('_prisma_migrations')
+    if (hasPrismaLedger) {
+      const prismaRows = await client.query<{
+        migration_name: string
+        started_at: string | null
+        finished_at: string | null
+        rolled_back_at: string | null
+        applied_steps_count: string | number
+      }>(
+        `SELECT migration_name, started_at, finished_at, rolled_back_at, applied_steps_count FROM "${REQUIRED_SCHEMA}"."_prisma_migrations" ORDER BY started_at ASC`,
+      )
+      if (prismaRows.rows.length > 0) {
+        const expected = new Set(REGISTERED_PRISMA_MIGRATIONS)
+        const actual = new Set(prismaRows.rows.map((row) => row.migration_name))
+        const unexpected = prismaRows.rows
+          .map((row) => row.migration_name)
+          .filter((name) => !expected.has(name))
+        const missing = REGISTERED_PRISMA_MIGRATIONS.filter((name) => !actual.has(name))
+        const unhealthy = prismaRows.rows.filter((row) =>
+          !row.started_at || !row.finished_at || row.rolled_back_at ||
+          (typeof row.applied_steps_count === 'string'
+            ? !/^\d+$/.test(row.applied_steps_count)
+            : !Number.isSafeInteger(row.applied_steps_count) || row.applied_steps_count < 0),
+        )
+        if (unexpected.length > 0 || missing.length > 0 || unhealthy.length > 0 || actual.size !== prismaRows.rows.length) {
+          fail('pre-existing Prisma migration ledger is incomplete or unhealthy')
+        }
+      }
     }
 
     return {
-      targetWasEmpty: true,
+      targetWasEmpty: applicationTables.length === 0 && !hasPrismaLedger,
+      prismaOnlyInitialized: hasPrismaLedger,
+      applicationDataPresent: false,
       currentDatabase: row.current_database,
       currentSchema: row.current_schema,
       currentUserClass: 'staging-role',
@@ -273,7 +346,7 @@ export async function runStagingDatabaseBootstrap(
 
   const log = dependencies.log ?? console.log
   const preflight = await (dependencies.preflight ?? defaultPreflight)(databaseUrl)
-  log(`[staging-bootstrap] empty target confirmed: ${preflight.currentDatabase}?schema=${preflight.currentSchema}`)
+  log(`[staging-bootstrap] bootstrap-safe target confirmed: ${preflight.currentDatabase}?schema=${preflight.currentSchema}`)
 
   const commandRunner = dependencies.commandRunner ?? defaultCommandRunner
   const commandEnvironment: NodeJS.ProcessEnv = {

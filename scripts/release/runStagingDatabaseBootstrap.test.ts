@@ -39,6 +39,8 @@ async function main(): Promise<void> {
       gitResolver: { branch: () => 'fix/e1-staging-gate-b', commit: () => SHA },
       preflight: async () => ({
         targetWasEmpty: true,
+        prismaOnlyInitialized: false,
+        applicationDataPresent: false,
         currentDatabase: 'jpvbootcamp_staging',
         currentSchema: 'jpvbootcamp',
         currentUserClass: 'staging-role',
@@ -58,6 +60,8 @@ async function main(): Promise<void> {
 
     assert.equal(result.ok, true)
     assert.equal(result.preflight.targetWasEmpty, true)
+    assert.equal(result.preflight.prismaOnlyInitialized, false)
+    assert.equal(result.preflight.applicationDataPresent, false)
     assert.deepEqual(commands, [
       './node_modules/.bin/prisma migrate deploy --schema=prisma/system.prisma',
       './node_modules/.bin/payload migrate',
@@ -109,6 +113,8 @@ async function main(): Promise<void> {
         gitResolver: { branch: () => 'main', commit: () => SHA },
         preflight: async () => ({
           targetWasEmpty: true,
+          prismaOnlyInitialized: false,
+          applicationDataPresent: false,
           currentDatabase: 'jpvbootcamp_staging',
           currentSchema: 'jpvbootcamp',
           currentUserClass: 'staging-role',

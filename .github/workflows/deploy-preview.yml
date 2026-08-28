@@ -623,7 +623,7 @@ jobs:
             fi
             exit "$BOOTSTRAP_EXIT"
           fi
-          node -e 'const fs=require("fs"); const p=JSON.parse(fs.readFileSync(process.argv[1],"utf8")); if(p.ok!==true||p.mode!=="bootstrap-empty-database"||p.environment!=="staging"||p.targetId!=="jpvbootcamp-staging"||p.database!=="jpvbootcamp_staging"||p.schema!=="jpvbootcamp"||p.preflight?.targetWasEmpty!==true||p.postApply?.migrationState!=="VERIFIED"||p.postApply?.applicationPreflight!=="PASSED") process.exit(1)' "$STDOUT_FILE"
+          node -e 'const fs=require("fs"); const p=JSON.parse(fs.readFileSync(process.argv[1],"utf8")); const targetSafe=p.preflight?.targetWasEmpty===true||p.preflight?.prismaOnlyInitialized===true; if(p.ok!==true||p.mode!=="bootstrap-empty-database"||p.environment!=="staging"||p.targetId!=="jpvbootcamp-staging"||p.database!=="jpvbootcamp_staging"||p.schema!=="jpvbootcamp"||!targetSafe||p.preflight?.applicationDataPresent!==false||p.postApply?.migrationState!=="VERIFIED"||p.postApply?.applicationPreflight!=="PASSED") process.exit(1)' "$STDOUT_FILE"
           cp "$STDOUT_FILE" staging-bootstrap-result.json
           echo "Staging bootstrap completed and verified"
 
