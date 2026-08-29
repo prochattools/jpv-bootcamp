@@ -1,7 +1,10 @@
 import config from '@payload-config'
 import { getPayload } from 'payload'
 
-import { ensureAdministratorMemberIdentity } from '../../src/lib/auth/adminMemberIdentity'
+import {
+  ensureAdministratorMemberIdentity,
+  resolveAdministratorMemberIdentity,
+} from '../../src/lib/auth/adminMemberIdentity'
 
 async function main(): Promise<void> {
   const apply = process.argv.includes('--apply')
@@ -28,13 +31,39 @@ async function main(): Promise<void> {
   const rows: Array<{ administratorId: string; email: string; status: string; memberId?: string }> = []
   for (const administrator of administrators) {
     const email = typeof administrator.email === 'string' ? administrator.email.trim().toLowerCase() : ''
-    if (!email) continue
+    if (!email) {
+      rows.push({
+        administratorId: String(administrator.id),
+        email: '',
+        status: 'skipped_missing_email',
+      })
+      continue
+    }
     if (!apply) {
+      const resolution = await resolveAdministratorMemberIdentity(payload, administrator)
+      const status = resolution.source === 'ambiguous'
+        ? 'ambiguous'
+        : resolution.source === 'invalid'
+          ? 'invalid'
+          : resolution.member
+            ? resolution.source === 'linked'
+              ? 'already_linked'
+              : 'matched_by_email'
+            : 'would_link'
       rows.push({
         administratorId: String(administrator.id),
         email,
-        status: administrator.portalMember ? 'already_linked' : 'would_link',
-        ...(administrator.portalMember ? { memberId: String(typeof administrator.portalMember === 'object' ? administrator.portalMember.id : administrator.portalMember) } : {}),
+        status,
+        ...(resolution.member ? { memberId: String(resolution.member.id) } : {}),
+      })
+      continue
+    }
+    const resolution = await resolveAdministratorMemberIdentity(payload, administrator)
+    if (resolution.source === 'ambiguous' || resolution.source === 'invalid') {
+      rows.push({
+        administratorId: String(administrator.id),
+        email,
+        status: `skipped_${resolution.source}`,
       })
       continue
     }

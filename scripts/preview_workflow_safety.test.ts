@@ -8,6 +8,10 @@ function read(path: string): string {
 const unified = read('.github/workflows/deploy-preview.yml')
 const manualPublish = read('.github/workflows/publish-preview-image.yml')
 const docs = read('docs/PREVIEW_RELEASE_READINESS.md')
+const deployStart = unified.indexOf('  deploy-preview:')
+const deployEnd = unified.indexOf('\n  bootstrap-staging-database:', deployStart)
+assert.ok(deployStart > -1 && deployEnd > deployStart, 'deploy-preview job must have a bounded workflow section')
+const deployJob = unified.slice(deployStart, deployEnd)
 
 // Unified staging pipeline: validate → build → publish → deploy
 assert.match(unified, /name: Staging Build and Deploy/)
@@ -23,7 +27,7 @@ assert.match(unified, /pnpm run build/)
 assert.match(unified, /timeout-minutes: 40/)  // Longer for build+deploy
 // Operation-aware concurrency: deploy runs use cancel-in-progress: true (or expression that evaluates true for deploys)
 assert.match(unified, /cancel-in-progress:/)
-assert.doesNotMatch(unified, /payload:staging:migrate|payload:email:send|--apply/)  // No mutations
+assert.doesNotMatch(deployJob, /payload:staging:migrate|payload:email:send|--apply/)  // Deploy operation has no mutations
 
 // Manual publish workflow: workflow_dispatch only, no push triggers
 assert.match(manualPublish, /name: Publish Staging Image/)

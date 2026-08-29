@@ -16,12 +16,12 @@ on:
   workflow_dispatch:
     inputs:
       operation:
-        description: 'Operation: validate-only | deploy-preview (staging) | read-only-migration-plan | bootstrap-staging-database'
+        description: 'Operation: validate-only | deploy-preview (staging) | read-only-migration-plan | bootstrap-staging-database | backfill-administrator-members'
         required: false
         type: string
         default: 'validate-only'
       expected_sha:
-        description: 'Full 40-character SHA (required for deploy-preview, read-only-migration-plan, and bootstrap-staging-database)'
+        description: 'Full 40-character SHA (required for deploy-preview, read-only-migration-plan, bootstrap-staging-database, and backfill-administrator-members)'
         required: false
         type: string
       source_ref:
@@ -29,18 +29,18 @@ on:
         required: true
         type: string
       confirmation:
-        description: 'Confirmation phrase (deploy-preview: deploy-staging-feature-tip; plan: run-read-only-staging-payload-migration-plan; bootstrap: bootstrap-empty-staging-database)'
+        description: 'Confirmation phrase (deploy-preview: deploy-staging-feature-tip; plan: run-read-only-staging-payload-migration-plan; bootstrap: bootstrap-empty-staging-database; backfill: apply-guarded-staging-administrator-member-backfill)'
         required: false
         type: string
 permissions:
   contents: read
   packages: write
 
-# Operation-aware concurrency: deploy runs share a cancellable group; plan and
-# bootstrap runs use separate non-cancellable groups.
+# Operation-aware concurrency: deploy runs share a cancellable group; plan,
+# bootstrap, and administrator backfill runs use separate non-cancellable groups.
 concurrency:
-  group: ${{ github.event_name == 'workflow_dispatch' && inputs.operation == 'read-only-migration-plan' && 'staging-payload-migration-plan' || github.event_name == 'workflow_dispatch' && inputs.operation == 'bootstrap-staging-database' && 'staging-empty-database-bootstrap' || format('staging-deploy-{0}', github.ref) }}
-  cancel-in-progress: ${{ !(github.event_name == 'workflow_dispatch' && (inputs.operation == 'read-only-migration-plan' || inputs.operation == 'bootstrap-staging-database')) }}
+  group: ${{ github.event_name == 'workflow_dispatch' && inputs.operation == 'read-only-migration-plan' && 'staging-payload-migration-plan' || github.event_name == 'workflow_dispatch' && inputs.operation == 'bootstrap-staging-database' && 'staging-empty-database-bootstrap' || github.event_name == 'workflow_dispatch' && inputs.operation == 'backfill-administrator-members' && 'staging-administrator-member-backfill' || format('staging-deploy-{0}', github.ref) }}
+  cancel-in-progress: ${{ !(github.event_name == 'workflow_dispatch' && (inputs.operation == 'read-only-migration-plan' || inputs.operation == 'bootstrap-staging-database' || inputs.operation == 'backfill-administrator-members')) }}
 
 jobs:
   validate-only:
@@ -212,7 +212,7 @@ jobs:
           echo "              dokploy=${ALLOWED_DOKPLOY_SLUG} (${ALLOWED_DOKPLOY_ID})"
 
       - name: Check out approved source ref
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ inputs.source_ref }}
           fetch-depth: 0
@@ -248,14 +248,14 @@ jobs:
         run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Set up pnpm
-        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1  # v4
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
         with:
           version: 10.33.0
 
       - name: Set up Node.js
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: '20'
+          node-version: "20"
           cache: pnpm
 
       - name: Install dependencies
@@ -274,10 +274,10 @@ jobs:
         run: pnpm test:release
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f  # v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
       - name: Log in to GHCR
-        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9  # v3
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -299,7 +299,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Build and publish immutable image
-        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25  # v6
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v6
         with:
           context: .
           file: Dockerfile
@@ -412,7 +412,6 @@ jobs:
           echo "Deployment triggered successfully for: $NEW_IMAGE"
           echo "Provenance: deployed from $(git rev-parse HEAD)"
 
-
       - name: Verify staging admin secret readiness
         if: success()
         shell: bash
@@ -471,7 +470,7 @@ jobs:
 
       - name: Upload authenticated admin failure evidence
         if: failure()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: admin-responsive-failure-${{ github.run_id }}
           path: /tmp/jpv-admin-regression-hardening/
@@ -512,7 +511,7 @@ jobs:
           echo "target=jpvbootcamp_staging schema=jpvbootcamp host=10.0.2.4 port=5433"
 
       - name: Check out approved source ref
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ inputs.source_ref }}
           fetch-depth: 0
@@ -540,14 +539,14 @@ jobs:
           echo "Source branch and remote tip verified"
 
       - name: Set up pnpm
-        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1  # v4
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
         with:
           version: 10.33.0
 
       - name: Set up Node.js
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: '20'
+          node-version: "20"
           cache: pnpm
 
       - name: Install dependencies
@@ -571,7 +570,7 @@ jobs:
           echo "Required staging migration secrets are present"
 
       - name: Connect to staging database network
-        uses: tailscale/github-action@780049a30b6ff5c378a9e7b389d15ece7a204888  # v4.1.3
+        uses: tailscale/github-action@780049a30b6ff5c378a9e7b389d15ece7a204888 # v4.1.3
         with:
           oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
           oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
@@ -633,7 +632,7 @@ jobs:
 
       - name: Upload sanitized bootstrap evidence
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: staging-bootstrap-${{ github.run_id }}
           path: staging-bootstrap-result.json
@@ -726,7 +725,7 @@ jobs:
       # ── Source checkout: branch-attached, not detached ───────────────────
 
       - name: Check out approved source ref
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ inputs.source_ref }}
           fetch-depth: 0
@@ -770,14 +769,14 @@ jobs:
       # ── Toolchain ─────────────────────────────────────────────────────────
 
       - name: Set up pnpm
-        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1  # v4
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
         with:
           version: 10.33.0
 
       - name: Set up Node.js
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: '20'
+          node-version: "20"
           cache: pnpm
 
       - name: Install dependencies (frozen)
@@ -800,7 +799,7 @@ jobs:
       # ── Network: Tailscale → ping → TCP probe ─────────────────────────────
 
       - name: Connect to Tailscale
-        uses: tailscale/github-action@780049a30b6ff5c378a9e7b389d15ece7a204888  # v4.1.3
+        uses: tailscale/github-action@780049a30b6ff5c378a9e7b389d15ece7a204888 # v4.1.3
         with:
           oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
           oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
@@ -936,9 +935,210 @@ jobs:
 
       - name: Upload sanitized plan artifact
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: staging-migration-plan-${{ github.run_id }}
           path: plan-result-sanitized.json
           retention-days: 30
           if-no-files-found: error
+
+  backfill-administrator-members:
+    name: Guarded staging administrator-member backfill
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: staging-migration-plan
+    if: github.event_name == 'workflow_dispatch' && inputs.operation == 'backfill-administrator-members'
+    permissions:
+      contents: read
+
+    steps:
+      - name: Validate inputs and staging boundary
+        shell: bash
+        env:
+          INPUT_SHA: ${{ inputs.expected_sha }}
+          INPUT_SOURCE_REF: ${{ inputs.source_ref }}
+          INPUT_CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          if ! printf '%s' "$INPUT_SHA" | grep -qE '^[0-9a-f]{40}$'; then
+            echo "ADMIN-BACKFILL-DENIED: expected_sha must be a full lowercase SHA" >&2
+            exit 1
+          fi
+          if ! printf '%s' "$INPUT_SOURCE_REF" | grep -qE '^(feature|fix|release)/[A-Za-z0-9][A-Za-z0-9._-]*$'; then
+            echo "ADMIN-BACKFILL-DENIED: source_ref must match feature/*, fix/*, or release/*" >&2
+            exit 1
+          fi
+          if [ "$INPUT_CONFIRMATION" != "apply-guarded-staging-administrator-member-backfill" ]; then
+            echo "ADMIN-BACKFILL-DENIED: confirmation phrase is invalid" >&2
+            exit 1
+          fi
+          echo "Staging-only administrator-member backfill boundary validated"
+          echo "target=jpvbootcamp_staging schema=jpvbootcamp host=10.0.2.4 port=5433"
+
+      - name: Check out approved source ref
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.source_ref }}
+          fetch-depth: 0
+
+      - name: Attach approved source ref
+        shell: bash
+        env:
+          SOURCE_REF_INPUT: ${{ inputs.source_ref }}
+        run: git switch --force-create "$SOURCE_REF_INPUT" HEAD
+
+      - name: Verify exact source tip and reject main ancestry
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+          SOURCE_REF_INPUT: ${{ inputs.source_ref }}
+        run: |
+          set -euo pipefail
+          test "$(git branch --show-current)" = "$SOURCE_REF_INPUT"
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          if git merge-base --is-ancestor "$EXPECTED_SHA" origin/main 2>/dev/null; then
+            echo "ADMIN-BACKFILL-DENIED: source SHA is already reachable from main" >&2
+            exit 1
+          fi
+          test "$(git rev-parse "origin/$SOURCE_REF_INPUT")" = "$EXPECTED_SHA"
+          echo "Source branch and remote tip verified"
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: 10.33.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "20"
+          cache: pnpm
+
+      - name: Install dependencies (frozen)
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify required staging secrets and mask values
+        shell: bash
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PAYLOAD_SECRET: ${{ secrets.PAYLOAD_SECRET }}
+          TAILSCALE_OAUTH_CLIENT_ID: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
+          TAILSCALE_OAUTH_SECRET: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
+        run: |
+          set -euo pipefail
+          test -n "${DATABASE_URL:-}"
+          test -n "${PAYLOAD_SECRET:-}"
+          test -n "${TAILSCALE_OAUTH_CLIENT_ID:-}"
+          test -n "${TAILSCALE_OAUTH_SECRET:-}"
+          echo "::add-mask::$DATABASE_URL"
+          echo "::add-mask::$PAYLOAD_SECRET"
+          echo "Required staging backfill secrets are present"
+
+      - name: Connect to staging database network
+        uses: tailscale/github-action@780049a30b6ff5c378a9e7b389d15ece7a204888 # v4.1.3
+        with:
+          oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
+          tags: tag:ci-reader
+
+      - name: Probe approved staging database path
+        shell: bash
+        run: |
+          set -euo pipefail
+          tailscale ping --timeout=10s 10.0.2.4
+          nc -z -w 5 10.0.2.4 5433
+          echo "Approved staging database path is reachable"
+
+      - name: Dry-run administrator-member backfill
+        shell: bash
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PAYLOAD_SECRET: ${{ secrets.PAYLOAD_SECRET }}
+          DEPLOYMENT_RUNTIME: docker
+          DEPLOYMENT_ENV: staging
+          PAYLOAD_MIGRATION_SCHEMA: jpvbootcamp
+        run: |
+          set -euo pipefail
+          DRY_RUN_FILE="$(mktemp)"
+          DRY_RUN_ERR="$(mktemp)"
+          trap 'rm -f "$DRY_RUN_FILE" "$DRY_RUN_ERR"' EXIT
+          set +e
+          ./node_modules/.bin/tsx scripts/payload/link-administrator-members.mts >"$DRY_RUN_FILE" 2>"$DRY_RUN_ERR"
+          BACKFILL_EXIT=$?
+          set -e
+          if [ "$BACKFILL_EXIT" -ne 0 ]; then
+            echo "ADMIN-BACKFILL-DENIED: dry-run failed; raw diagnostics suppressed" >&2
+            exit "$BACKFILL_EXIT"
+          fi
+          node - "$DRY_RUN_FILE" <<'NODE'
+          const fs = require('node:fs')
+          const data = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
+          if (data.apply !== false || !Array.isArray(data.administrators)) process.exit(1)
+          const blocked = data.administrators.filter((row) => ['ambiguous', 'invalid', 'skipped_missing_email'].includes(row.status))
+          if (blocked.length > 0) {
+            console.error('ADMIN-BACKFILL-DENIED: dry-run found unresolved administrator identities')
+            process.exit(2)
+          }
+          console.log(`Dry-run resolved ${data.administrators.length} administrator identities with no unresolved matches`)
+          NODE
+
+      - name: Apply guarded administrator-member backfill
+        shell: bash
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PAYLOAD_SECRET: ${{ secrets.PAYLOAD_SECRET }}
+          DEPLOYMENT_RUNTIME: docker
+          DEPLOYMENT_ENV: staging
+          PAYLOAD_MIGRATION_SCHEMA: jpvbootcamp
+          ADMIN_MEMBER_IDENTITY_APPLY: "true"
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+          OPERATOR_ID: ${{ github.actor }}
+        run: |
+          set -euo pipefail
+          APPLY_FILE="$(mktemp)"
+          APPLY_ERR="$(mktemp)"
+          trap 'rm -f "$APPLY_FILE" "$APPLY_ERR"' EXIT
+          set +e
+          ./node_modules/.bin/tsx scripts/payload/link-administrator-members.mts --apply >"$APPLY_FILE" 2>"$APPLY_ERR"
+          BACKFILL_EXIT=$?
+          set -e
+          if [ "$BACKFILL_EXIT" -ne 0 ]; then
+            echo "ADMIN-BACKFILL-DENIED: guarded apply failed; raw diagnostics suppressed" >&2
+            exit "$BACKFILL_EXIT"
+          fi
+          node - "$APPLY_FILE" "$EXPECTED_SHA" "$OPERATOR_ID" <<'NODE'
+          const fs = require('node:fs')
+          const data = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
+          if (data.apply !== true || !Array.isArray(data.administrators)) process.exit(1)
+          const blocked = data.administrators.filter((row) => ['ambiguous', 'invalid', 'skipped_missing_email', 'skipped_ambiguous', 'skipped_invalid'].includes(row.status))
+          if (blocked.length > 0) {
+            console.error('ADMIN-BACKFILL-DENIED: apply left unresolved administrator identities')
+            process.exit(2)
+          }
+          const statusCounts = {}
+          for (const row of data.administrators) statusCounts[row.status] = (statusCounts[row.status] || 0) + 1
+          const result = {
+            version: 1,
+            operation: 'guarded-administrator-member-backfill',
+            environment: 'staging',
+            targetId: 'jpvbootcamp-staging',
+            database: 'jpvbootcamp_staging',
+            schema: 'jpvbootcamp',
+            commit: process.argv[3],
+            operator: process.argv[4],
+            administratorCount: data.administrators.length,
+            linkedMemberCount: data.administrators.filter((row) => typeof row.memberId === 'string' && row.memberId.length > 0).length,
+            statusCounts,
+          }
+          fs.writeFileSync('administrator-backfill-result.json', JSON.stringify(result, null, 2) + '\n', { mode: 0o600 })
+          console.log(`Guarded administrator-member backfill applied for ${result.administratorCount} identities`)
+          NODE
+
+      - name: Upload PII-free administrator backfill evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: staging-administrator-member-backfill-${{ github.run_id }}
+          path: administrator-backfill-result.json
+          retention-days: 30
+          if-no-files-found: ignore
