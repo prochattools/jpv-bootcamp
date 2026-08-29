@@ -5,6 +5,7 @@ import { Client } from 'pg'
 import {
   buildStagingMigrationStatus,
   createStagingReadOnlyAdapter,
+  REGISTERED_PAYLOAD_MIGRATIONS,
   REGISTERED_PRISMA_MIGRATIONS,
 } from './buildStagingMigrationStatus'
 
@@ -17,12 +18,14 @@ const REQUIRED_CONFIRMATION = 'bootstrap-empty-staging-database'
 const FULL_COMMIT_SHA_RE = /^[0-9a-f]{40}$/
 const SAFE_ID_RE = /^[A-Za-z0-9][A-Za-z0-9._:-]{1,127}$/
 
-// A staging app restart may apply the system Prisma migrations before the
-// guarded Payload bootstrap runs. That state is safe to continue only when
-// every known Prisma-managed table is present, empty, and the Prisma ledger
-// is complete and healthy. Any other table or any application data remains a
-// hard stop so this operation cannot silently adopt an existing dataset.
-const REVIEWED_PRISMA_TABLES = new Set([
+// A staging app restart may apply the system Prisma and Payload migrations
+// before the guarded bootstrap runs. Continuing is safe only when every
+// reviewed table is present, every application table is empty, and any
+// migration ledgers are complete and healthy. Any other table or application
+// data remains a hard stop so this operation cannot silently adopt a dataset.
+// Keep this allowlist explicit: a broad prefix match could admit an unrelated
+// table into the migration target.
+const REVIEWED_STAGING_TABLES = new Set([
   'Audiences',
   'Project',
   'Subscription',
@@ -37,6 +40,95 @@ const REVIEWED_PRISMA_TABLES = new Set([
   'sponsored_seats',
   'stripe_webhook_events',
   'support_requests',
+  'bunny_videos',
+  'live_sessions',
+  'pay_it_forward_settings',
+  'payload_access_grants',
+  'payload_access_groups',
+  'payload_access_groups_rels',
+  'payload_access_policies',
+  'payload_access_policies_rels',
+  'payload_admin_notifications',
+  'payload_affiliate_commissions',
+  'payload_affiliate_referrals',
+  'payload_affiliates',
+  'payload_audit_events',
+  'payload_billing_accounts',
+  'payload_billing_actions',
+  'payload_categories',
+  'payload_chat_messages',
+  'payload_chat_threads',
+  'payload_chat_threads_rels',
+  'payload_contact_notes',
+  'payload_contact_tags',
+  'payload_contacts',
+  'payload_course_access_preview',
+  'payload_course_enrollments',
+  'payload_course_modules',
+  'payload_courses',
+  'payload_crm_tags',
+  'payload_email_actions',
+  'payload_email_events',
+  'payload_email_templates',
+  'payload_engagement_reactions',
+  'payload_entitlement_events',
+  'payload_kv',
+  'payload_lesson_comments',
+  'payload_lesson_progress',
+  'payload_lesson_resources',
+  'payload_lessons',
+  'payload_lessons_rels',
+  'payload_locked_documents',
+  'payload_locked_documents_rels',
+  'payload_media',
+  'payload_member_groups',
+  'payload_member_groups_rels',
+  'payload_member_notifications',
+  'payload_member_profiles',
+  'payload_member_security_events',
+  'payload_member_verification_tokens',
+  'payload_members',
+  'payload_members_sessions',
+  'payload_membership_administration_actions',
+  'payload_membership_administration_actions_rels',
+  'payload_membership_audit_history',
+  'payload_membership_funding_sources',
+  'payload_membership_reconciliations',
+  'payload_membership_review_queue_items',
+  'payload_membership_support_records',
+  'payload_membership_support_records_rels',
+  'payload_membership_vouchers',
+  'payload_membership_vouchers_rels',
+  'payload_migrations',
+  'payload_operator_notes',
+  'payload_pages',
+  'payload_pages_rels',
+  'payload_partner_affiliates',
+  'payload_partner_affiliates_recipient_emails',
+  'payload_partner_applications',
+  'payload_partner_events',
+  'payload_pay_it_forward_funding',
+  'payload_pay_it_forward_funding_rels',
+  'payload_payments',
+  'payload_portal_nav_items',
+  'payload_posts',
+  'payload_posts_rels',
+  'payload_preferences',
+  'payload_preferences_rels',
+  'payload_private_media',
+  'payload_space_comments',
+  'payload_space_files',
+  'payload_space_memberships',
+  'payload_space_posts',
+  'payload_space_reactions',
+  'payload_spaces',
+  'payload_spaces_rels',
+  'payload_stripe_events',
+  'payload_stripe_shadow_projections',
+  'payload_subscriptions',
+  'payload_users',
+  'payload_users_sessions',
+  'portal_settings',
 ])
 
 export type StagingDatabaseBootstrapAuthorization = {
@@ -69,6 +161,7 @@ export type StagingDatabaseBootstrapResult = {
   preflight: {
     targetWasEmpty: boolean
     prismaOnlyInitialized: boolean
+    payloadAlreadyInitialized: boolean
     applicationDataPresent: boolean
     currentDatabase: string
     currentSchema: string
@@ -104,6 +197,7 @@ type BootstrapDependencies = {
 type BootstrapPreflight = {
   targetWasEmpty: boolean
   prismaOnlyInitialized: boolean
+  payloadAlreadyInitialized: boolean
   applicationDataPresent: boolean
   currentDatabase: string
   currentSchema: string
@@ -225,12 +319,14 @@ async function defaultPreflight(databaseUrl: string): Promise<BootstrapPreflight
     )
 
     const tableNames = tables.rows.map((row) => row.table_name)
-    const unexpectedTables = tableNames.filter((tableName) => !REVIEWED_PRISMA_TABLES.has(tableName))
+    const unexpectedTables = tableNames.filter((tableName) => !REVIEWED_STAGING_TABLES.has(tableName))
     if (unexpectedTables.length > 0) {
-      fail(`staging target contains non-Prisma tables: ${unexpectedTables.join(', ')}`)
+      fail(`staging target contains unreviewed tables: ${unexpectedTables.join(', ')}`)
     }
 
-    const applicationTables = tableNames.filter((tableName) => tableName !== '_prisma_migrations')
+    const applicationTables = tableNames.filter((tableName) =>
+      tableName !== '_prisma_migrations' && tableName !== 'payload_migrations',
+    )
     for (const tableName of applicationTables) {
       const tableIdentifier = `"${tableName.replaceAll('"', '""')}"`
       const count = await client.query<{ row_count: string }>(
@@ -252,28 +348,49 @@ async function defaultPreflight(databaseUrl: string): Promise<BootstrapPreflight
       }>(
         `SELECT migration_name, started_at, finished_at, rolled_back_at, applied_steps_count FROM "${REQUIRED_SCHEMA}"."_prisma_migrations" ORDER BY started_at ASC`,
       )
-      if (prismaRows.rows.length > 0) {
-        const expected = new Set(REGISTERED_PRISMA_MIGRATIONS)
-        const actual = new Set(prismaRows.rows.map((row) => row.migration_name))
-        const unexpected = prismaRows.rows
-          .map((row) => row.migration_name)
-          .filter((name) => !expected.has(name))
-        const missing = REGISTERED_PRISMA_MIGRATIONS.filter((name) => !actual.has(name))
-        const unhealthy = prismaRows.rows.filter((row) =>
-          !row.started_at || !row.finished_at || row.rolled_back_at ||
-          (typeof row.applied_steps_count === 'string'
-            ? !/^\d+$/.test(row.applied_steps_count)
-            : !Number.isSafeInteger(row.applied_steps_count) || row.applied_steps_count < 0),
-        )
-        if (unexpected.length > 0 || missing.length > 0 || unhealthy.length > 0 || actual.size !== prismaRows.rows.length) {
-          fail('pre-existing Prisma migration ledger is incomplete or unhealthy')
-        }
+      const expected = new Set(REGISTERED_PRISMA_MIGRATIONS)
+      const actual = new Set(prismaRows.rows.map((row) => row.migration_name))
+      const unexpected = prismaRows.rows
+        .map((row) => row.migration_name)
+        .filter((name) => !expected.has(name))
+      const missing = REGISTERED_PRISMA_MIGRATIONS.filter((name) => !actual.has(name))
+      const unhealthy = prismaRows.rows.filter((row) =>
+        !row.started_at || !row.finished_at || row.rolled_back_at ||
+        (typeof row.applied_steps_count === 'string'
+          ? !/^\d+$/.test(row.applied_steps_count)
+          : !Number.isSafeInteger(row.applied_steps_count) || row.applied_steps_count < 0),
+      )
+      if (unexpected.length > 0 || missing.length > 0 || unhealthy.length > 0 || actual.size !== prismaRows.rows.length) {
+        fail('pre-existing Prisma migration ledger is incomplete or unhealthy')
+      }
+    }
+
+    const hasPayloadLedger = tableNames.includes('payload_migrations')
+    if (hasPayloadLedger) {
+      const payloadRows = await client.query<{ name: string; batch: string | number }>(
+        `SELECT name, batch FROM "${REQUIRED_SCHEMA}"."payload_migrations" ORDER BY id ASC`,
+      )
+      const expected = [...REGISTERED_PAYLOAD_MIGRATIONS]
+      const actual = payloadRows.rows.map((row) => row.name)
+      const validBatches = payloadRows.rows.every((row) =>
+        typeof row.batch === 'number'
+          ? Number.isSafeInteger(row.batch) && row.batch >= 1
+          : /^\d+$/.test(row.batch) && Number.isSafeInteger(Number(row.batch)) && Number(row.batch) >= 1,
+      )
+      if (
+        actual.length !== expected.length ||
+        actual.some((name, index) => name !== expected[index]) ||
+        new Set(actual).size !== actual.length ||
+        !validBatches
+      ) {
+        fail('pre-existing Payload migration ledger is incomplete or unhealthy')
       }
     }
 
     return {
       targetWasEmpty: applicationTables.length === 0 && !hasPrismaLedger,
-      prismaOnlyInitialized: hasPrismaLedger,
+      prismaOnlyInitialized: hasPrismaLedger && !hasPayloadLedger,
+      payloadAlreadyInitialized: hasPayloadLedger,
       applicationDataPresent: false,
       currentDatabase: row.current_database,
       currentSchema: row.current_schema,
@@ -415,7 +532,12 @@ function parseArgs(args: string[]): StagingDatabaseBootstrapAuthorization {
 async function main(): Promise<void> {
   try {
     const authorization = parseArgs(process.argv.slice(2))
-    const result = await runStagingDatabaseBootstrap(process.env.DATABASE_URL, authorization)
+    // Keep stdout JSON-only for the guarded workflow artifact. Progress logs
+    // belong on stderr so callers can parse the evidence without accepting
+    // mixed human and machine output.
+    const result = await runStagingDatabaseBootstrap(process.env.DATABASE_URL, authorization, {
+      log: (line) => process.stderr.write(`${line}\n`),
+    })
     process.stdout.write(`${JSON.stringify(result)}\n`)
   } catch (error) {
     process.stderr.write(`${error instanceof Error ? error.message : 'STAGING-BOOTSTRAP-DENIED: unknown error'}\n`)

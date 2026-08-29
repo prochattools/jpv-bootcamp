@@ -40,6 +40,7 @@ async function main(): Promise<void> {
       preflight: async () => ({
         targetWasEmpty: true,
         prismaOnlyInitialized: false,
+        payloadAlreadyInitialized: false,
         applicationDataPresent: false,
         currentDatabase: 'jpvbootcamp_staging',
         currentSchema: 'jpvbootcamp',
@@ -61,6 +62,7 @@ async function main(): Promise<void> {
     assert.equal(result.ok, true)
     assert.equal(result.preflight.targetWasEmpty, true)
     assert.equal(result.preflight.prismaOnlyInitialized, false)
+    assert.equal(result.preflight.payloadAlreadyInitialized, false)
     assert.equal(result.preflight.applicationDataPresent, false)
     assert.deepEqual(commands, [
       './node_modules/.bin/prisma migrate deploy --schema=prisma/system.prisma',
@@ -114,6 +116,7 @@ async function main(): Promise<void> {
         preflight: async () => ({
           targetWasEmpty: true,
           prismaOnlyInitialized: false,
+          payloadAlreadyInitialized: false,
           applicationDataPresent: false,
           currentDatabase: 'jpvbootcamp_staging',
           currentSchema: 'jpvbootcamp',

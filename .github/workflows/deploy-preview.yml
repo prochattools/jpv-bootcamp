@@ -557,14 +557,17 @@ jobs:
         shell: bash
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PAYLOAD_SECRET: ${{ secrets.PAYLOAD_SECRET }}
           TAILSCALE_OAUTH_CLIENT_ID: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
           TAILSCALE_OAUTH_SECRET: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
         run: |
           set -euo pipefail
           test -n "${DATABASE_URL:-}"
+          test -n "${PAYLOAD_SECRET:-}"
           test -n "${TAILSCALE_OAUTH_CLIENT_ID:-}"
           test -n "${TAILSCALE_OAUTH_SECRET:-}"
           echo "::add-mask::$DATABASE_URL"
+          echo "::add-mask::$PAYLOAD_SECRET"
           echo "Required staging migration secrets are present"
 
       - name: Connect to staging database network
@@ -586,6 +589,7 @@ jobs:
         shell: bash
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PAYLOAD_SECRET: ${{ secrets.PAYLOAD_SECRET }}
           EXPECTED_SHA: ${{ inputs.expected_sha }}
           OPERATOR_ID: ${{ github.actor }}
         run: |
@@ -623,7 +627,7 @@ jobs:
             fi
             exit "$BOOTSTRAP_EXIT"
           fi
-          node -e 'const fs=require("fs"); const p=JSON.parse(fs.readFileSync(process.argv[1],"utf8")); const targetSafe=p.preflight?.targetWasEmpty===true||p.preflight?.prismaOnlyInitialized===true; if(p.ok!==true||p.mode!=="bootstrap-empty-database"||p.environment!=="staging"||p.targetId!=="jpvbootcamp-staging"||p.database!=="jpvbootcamp_staging"||p.schema!=="jpvbootcamp"||!targetSafe||p.preflight?.applicationDataPresent!==false||p.postApply?.migrationState!=="VERIFIED"||p.postApply?.applicationPreflight!=="PASSED") process.exit(1)' "$STDOUT_FILE"
+          node -e 'const fs=require("fs"); const p=JSON.parse(fs.readFileSync(process.argv[1],"utf8")); const targetSafe=p.preflight?.targetWasEmpty===true||p.preflight?.prismaOnlyInitialized===true||p.preflight?.payloadAlreadyInitialized===true; if(p.ok!==true||p.mode!=="bootstrap-empty-database"||p.environment!=="staging"||p.targetId!=="jpvbootcamp-staging"||p.database!=="jpvbootcamp_staging"||p.schema!=="jpvbootcamp"||!targetSafe||p.preflight?.applicationDataPresent!==false||p.postApply?.migrationState!=="VERIFIED"||p.postApply?.applicationPreflight!=="PASSED") process.exit(1)' "$STDOUT_FILE"
           cp "$STDOUT_FILE" staging-bootstrap-result.json
           echo "Staging bootstrap completed and verified"
 
