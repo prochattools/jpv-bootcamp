@@ -4,40 +4,41 @@
 
 **Decision:** `NOT READY FOR PRODUCTION MERGE`
 
-This is the current A6 Gate 1 evidence section. It supersedes the E1 closeout
-below while preserving all earlier evidence as historical record. The exact
-candidate is `380ec2d28f4f3ede46cb2377e6a76e37c683b990` on branch
-`fix/e1-staging-gate-b`, a linear descendant of the verified production tip
+This is the current A6 Gate 1 evidence section. It supersedes the earlier
+staging snapshot below while preserving all earlier evidence as historical
+record. The exact deployed candidate is
+`c0257c3c21dee7536a749306261bee1e626ab3c5` on branch `fix/e1-staging-gate-b`,
+a linear descendant of the verified production tip
 `08605e52af4abb0b1bdcdfbe6890d010c545b636`.
 
 ### Candidate validation and staging deployment
 
-- Local `pnpm test:release` passed **171/171**, including TypeScript, the
-  production build, Prisma/Payload checks, release guards, portal/auth/course/
-  community/billing/Stripe/checkout/webhook/provisioning/support/sponsored/
-  email/LiveKit/Bunny/static and responsive coverage.
-- GitHub candidate validation run
-  [`33246249497`](https://github.com/prochattools/jpvbootcamp/actions/runs/33246249497)
-  passed against the exact candidate SHA, including deterministic release and
-  browser E2E validation.
+- Local `pnpm test:release` passed **172/172** runnable checks; the release
+  manifest contains 173 entries, including the conditional authenticated A6
+  gate. TypeScript, the production build, Prisma/Payload checks, release
+  guards, and staging static preflight also passed.
+- The first staging dispatch exposed a stale evidence-count assertion and
+  stopped before deployment. That assertion was corrected in the separate
+  commit `c0257c3c21dee7536a749306261bee1e626ab3c5`, which was then validated
+  by the successful staging release workflow.
 - The previously verified read-only staging migration plan remains the
   migration-state authority: 52 applied Payload migrations, zero expected
   pending migrations, zero unexpected/duplicate/malformed/order-anomaly
   records, and healthy Prisma access. This helper-repair deployment did not
   rerun or apply a migration plan.
 - Staging deployment run
-  [`33246658368`](https://github.com/prochattools/jpvbootcamp/actions/runs/33246658368),
-  job `99085189467`, passed exact-SHA checks, type check, build, immutable
-  image publication, staging routing, Dokploy redeploy, revision health, and
-  the authenticated Payload responsive gate. The migration-plan, backfill,
-  bootstrap, and duplicate validation jobs were skipped by the staging-only
-  deployment operation.
+  [`33250316281`](https://github.com/prochattools/jpvbootcamp/actions/runs/33250316281),
+  job `99094772710`, passed exact-SHA checks, type check, build, deterministic
+  release gate, immutable image publication, staging routing, Dokploy
+  redeploy, revision health, and the authenticated Payload responsive gate.
+  The migration-plan, backfill, bootstrap, and duplicate validation jobs were
+  skipped by the staging-only deployment operation.
 - The staging authority is
   `https://staging.jpvbootcamp.com`, Dokploy application
   `clients-jpv-bootcamp-preview-wjfqfd` / `bZllV93NqsPZAFCsqDskb`, database
   `jpvbootcamp_staging`, schema `jpvbootcamp`, and role
   `jpvbootcamp_staging_app`. Its live health response reports the exact
-  image/commit `380ec2d28f4f3ede46cb2377e6a76e37c683b990` and
+  image/commit `c0257c3c21dee7536a749306261bee1e626ab3c5` and
   `deploymentEnv=staging`.
 
 ### Acceptance evidence and remaining boundary
@@ -52,10 +53,13 @@ candidate is `380ec2d28f4f3ede46cb2377e6a76e37c683b990` on branch
   and course-admin responsive matrix at desktop, laptop, tablet, and mobile
   sizes, including mobile account containment and authenticated course API
   access.
-- A complete manually authenticated member and creator-admin portal matrix
-  was not performed because this thread had no authenticated browser session
-  or user credentials. The member/creator acceptance boundary therefore
-  remains open.
+- The exact-SHA authenticated acceptance run
+  [`33250906841`](https://github.com/prochattools/jpvbootcamp/actions/runs/33250906841),
+  job `99096303965`, verified the deployed staging runtime and then stopped at
+  the protected-secret gate because `STAGING_MEMBER_EMAIL` and
+  `STAGING_MEMBER_PASSWORD` are not configured. No browser matrix was claimed
+  or executed. The member/creator-admin acceptance boundary therefore remains
+  open with the exact blocker: `A6 BLOCKED — ADD STAGING_MEMBER_EMAIL AND STAGING_MEMBER_PASSWORD`.
 
 ### Safe provider smoke
 
@@ -80,13 +84,13 @@ candidate is `380ec2d28f4f3ede46cb2377e6a76e37c683b990` on branch
   production data change was performed by this helper repair.
 - The deployed staging application can be rolled back through the guarded
   Dokploy staging path to the prior staging SHA
-  `4eb2288931b56cd53704802c4fa9001ca4ee4a15`; no database rollback is needed
+  `380ec2d28f4f3ede46cb2377e6a76e37c683b990`; no database rollback is needed
   because this gate applied no migration.
 
 Gate 1 remains **NOT READY FOR PRODUCTION MERGE** until the authenticated
-member/creator-admin acceptance matrix is completed. The stale provider smoke
-helper is now corrected, but that alone does not satisfy the authenticated
-acceptance gate.
+member/creator-admin acceptance matrix is completed. The deployed candidate,
+provider smoke, and production-safety checks passed, but the exact protected
+member secrets are required before the authenticated acceptance gate can run.
 
 ## Current E1 final closeout — 2026-08-29
 

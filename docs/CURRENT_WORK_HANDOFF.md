@@ -9,32 +9,35 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 **Status:** `NOT READY FOR PRODUCTION MERGE`
 
 The repaired runtime candidate is now deployed to the real staging authority:
-`380ec2d28f4f3ede46cb2377e6a76e37c683b990` on
-`fix/e1-staging-gate-b`. It descends linearly from the verified production
-`origin/main` tip `08605e52af4abb0b1bdcdfbe6890d010c545b636`.
+`c0257c3c21dee7536a749306261bee1e626ab3c5` on `fix/e1-staging-gate-b`. It
+descends linearly from the verified production `origin/main` tip
+`08605e52af4abb0b1bdcdfbe6890d010c545b636`.
 
 - **Staging:** `https://staging.jpvbootcamp.com`, Dokploy application
   `clients-jpv-bootcamp-preview-wjfqfd` / `bZllV93NqsPZAFCsqDskb`, exact live
-  image/commit `380ec2d28f4f3ede46cb2377e6a76e37c683b990`,
+  image/commit `c0257c3c21dee7536a749306261bee1e626ab3c5`,
   `deploymentEnv=staging`.
 - **Staging database boundary:** database `jpvbootcamp_staging`, schema
   `jpvbootcamp`, role `jpvbootcamp_staging_app`; the read-only plan found 52
   applied Payload migrations, zero expected pending migrations, zero
   unexpected/duplicate/malformed/order anomalies, and healthy Prisma access.
   No migration or administrator backfill was applied in this turn.
-- **Release validation:** local `pnpm test:release` passed **171/171**, with
-  focused LiveKit contract/token tests, Payload type check, and whitespace
-  validation also passing. GitHub candidate validation run `33246249497`
-  passed against the exact SHA.
-- **Deployment:** staging deployment run `33246658368`, job `99085189467`,
-  passed exact-SHA, build, immutable image publication, routing, Dokploy,
-  revision-health, and authenticated Payload responsive checks. The
+- **Release validation:** local `pnpm test:release` passed **172/172** runnable
+  checks; the release manifest contains 173 entries including the conditional
+  authenticated A6 gate. TypeScript, production build, Prisma validation,
+  staging static preflight, and whitespace checks passed. The successful
+  GitHub staging deployment workflow was `33250316281`.
+- **Deployment:** staging deployment run `33250316281`, job `99094772710`,
+  passed exact-SHA, build, deterministic release, immutable image publication,
+  routing, Dokploy, revision-health, and authenticated Payload responsive
+  checks. The
   migration-plan, backfill, bootstrap, and duplicate validation jobs were
   skipped by the staging-only deployment operation.
-- **Authenticated acceptance:** the deployment’s authenticated Payload
-  responsive gate passed. The full manually authenticated member and
-  creator-admin portal matrix remains outstanding because no approved staging
-  member/admin browser session or credentials are available in this thread.
+- **Authenticated acceptance:** exact-SHA acceptance run `33250906841`, job
+  `99096303965`, verified the deployed runtime and stopped at the protected
+  secret gate. The full member and creator-admin portal matrix remains
+  outstanding because `STAGING_MEMBER_EMAIL` and `STAGING_MEMBER_PASSWORD`
+  are not configured. Exact blocker: `A6 BLOCKED — ADD STAGING_MEMBER_EMAIL AND STAGING_MEMBER_PASSWORD`.
 - **Provider smoke:** post-deployment `pnpm test:staging:livekit-bunny` passed
   **4/4**: health `200`, valid-shape unauthenticated LiveKit token `401`, and
   unsigned/invalid-signature Bunny rejection `403`. The stale helper was
