@@ -41,6 +41,9 @@ export default defineConfig({
   testIgnore: [
     '**/admin-responsive-staging.spec.ts',
     '**/admin-crud-staging.spec.ts',
+    // This suite requires protected staging credentials and is executed only by
+    // the dedicated authenticated-staging workflow job.
+    '**/a6-authenticated-staging.spec.ts',
     '**/staging-smoke.spec.ts',
     '**/stripe-webhook-staging.spec.ts',
   ],
