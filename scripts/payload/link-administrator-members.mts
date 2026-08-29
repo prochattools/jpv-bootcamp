@@ -24,6 +24,7 @@ async function main(): Promise<void> {
   })
   let memberLookupConnected = false
   try {
+    console.error('[administrator-backfill] opening lookup client')
     await memberLookupClient.connect()
     memberLookupConnected = true
     await memberLookupClient.query("SET statement_timeout = '15000ms'")
@@ -48,6 +49,7 @@ async function main(): Promise<void> {
     const rows: Array<{ administratorId: string; email: string; status: string; memberId?: string }> = []
     for (const administrator of administrators) {
       const email = typeof administrator.email === 'string' ? administrator.email.trim().toLowerCase() : ''
+      console.error(`[administrator-backfill] resolving administrator ${String(administrator.id)}`)
       if (!email) {
         rows.push({
           administratorId: String(administrator.id),
@@ -58,6 +60,7 @@ async function main(): Promise<void> {
       }
       if (!apply) {
         const resolution = await resolveAdministratorMemberIdentity(identityPayload, administrator)
+        console.error(`[administrator-backfill] resolved administrator ${String(administrator.id)} (${resolution.source})`)
         const status = resolution.source === 'ambiguous'
           ? 'ambiguous'
           : resolution.source === 'invalid'
@@ -76,6 +79,7 @@ async function main(): Promise<void> {
         continue
       }
       const resolution = await resolveAdministratorMemberIdentity(identityPayload, administrator)
+      console.error(`[administrator-backfill] resolved administrator ${String(administrator.id)} (${resolution.source})`)
       if (resolution.source === 'ambiguous' || resolution.source === 'invalid') {
         rows.push({
           administratorId: String(administrator.id),
@@ -93,13 +97,21 @@ async function main(): Promise<void> {
       })
     }
 
+    console.error(`[administrator-backfill] serializing result (${rows.length} rows)`)
     console.log(JSON.stringify({ apply, administrators: rows }, null, 2))
+    console.error('[administrator-backfill] result serialized')
   } finally {
     // Payload's postgres adapter owns a node-postgres pool. Close it after the
     // one-shot reconciliation so CI can finish cleanly instead of waiting on
     // idle sockets indefinitely.
+    console.error('[administrator-backfill] closing Payload pool')
     await payload.db.pool.end()
-    if (memberLookupConnected) await memberLookupClient.end()
+    console.error('[administrator-backfill] Payload pool closed')
+    if (memberLookupConnected) {
+      console.error('[administrator-backfill] closing lookup client')
+      await memberLookupClient.end()
+      console.error('[administrator-backfill] lookup client closed')
+    }
   }
 }
 
