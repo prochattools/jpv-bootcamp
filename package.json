@@ -105,6 +105,7 @@
     "test:payload-member-billing-portal": "tsx scripts/payload_member_billing_portal.test.ts",
     "test:payload-identity": "tsx scripts/payload_identity_destination.test.ts",
     "payload:course:seed": "tsx scripts/payload/seed-course-admin-data.mts",
+    "payload:course:seed:verify-staging-target": "tsx scripts/payload/verify-staging-course-seed-target.mts",
     "payload:link-admin-members": "tsx scripts/payload/link-administrator-members.mts",
     "payload:course:reconcile": "tsx scripts/payload/reconcile-entitlements.mts",
     "payload:email:send": "tsx scripts/payload/send-queued-emails.mts",

@@ -1,6 +1,7 @@
 import { getPayload } from 'payload'
 
 import config from '../../src/payload.config'
+import { createCourseSeedExecutionPlan } from './staging-course-seed-boundary'
 import {
   accessPolicySeeds,
   courseAccessGroupSeeds,
@@ -30,6 +31,24 @@ function log(action: SeedAction, label: string) {
   stats[action] += 1
   const prefix = apply ? '[seed]' : '[seed:dry-run]'
   console.log(`${prefix} ${action.toUpperCase()} ${label}`)
+}
+
+function assertSeedOwnership(
+  existing: ({ id: string | number } & Record<string, unknown>),
+  data: Record<string, unknown>,
+  label: string,
+) {
+  if (data.prototype === true && existing.prototype !== true) {
+    throw new Error(`[seed] Identity collision: ${label} matches a non-prototype record`)
+  }
+
+  const expectedSeedKey = (data.metadata as { seedKey?: unknown } | undefined)?.seedKey
+  if (typeof expectedSeedKey === 'string') {
+    const actualSeedKey = (existing.metadata as { seedKey?: unknown } | undefined)?.seedKey
+    if (actualSeedKey !== expectedSeedKey) {
+      throw new Error(`[seed] Identity collision: ${label} matches a record outside this seed`)
+    }
+  }
 }
 
 async function findOne(
@@ -70,6 +89,8 @@ async function upsertByUnique(
       overrideAccess: true,
     })
   }
+
+  assertSeedOwnership(existing, data, label)
 
   log('update', label)
   if (!apply) return existing
@@ -346,6 +367,8 @@ async function seedAccessPolicies(payload: PayloadClient) {
       continue
     }
 
+    assertSeedOwnership(existing, data, `access policy ${seed.name}`)
+
     log('update', `access policy ${seed.name}`)
     if (apply) {
       await payload.update({
@@ -359,9 +382,15 @@ async function seedAccessPolicies(payload: PayloadClient) {
 }
 
 async function main() {
+  const execution = createCourseSeedExecutionPlan(apply)
   console.log(apply ? '[seed] Applying Payload course admin seed data' : '[seed:dry-run] Previewing Payload course admin seed data')
+  if (execution.target) {
+    console.error(`[seed] guarded target=${execution.target.database}/${execution.target.schema} host=${execution.target.host}:${execution.target.port}`)
+  }
 
-  const payload = await getPayload({ config })
+  // A bounded seed must not trigger application startup work (for example
+  // provisioning or email delivery) merely by opening Payload.
+  const payload = await getPayload({ config, disableOnInit: true })
 
   await seedAccessGroups(payload)
   await seedCourses(payload)
