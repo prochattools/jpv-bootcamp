@@ -255,9 +255,13 @@ test.describe('A6 Gate 1 authenticated member acceptance', () => {
   test('member community space and post engagement surface', async () => {
     await page.setViewportSize({ width: 1440, height: 900 })
     await page.goto(`${STAGING_URL}/portal/community`, { waitUntil: 'networkidle' })
-    const spaceHref = await firstPortalHref(page, /^\/portal\/community\/[^/]+$/)
+    await expect(
+      page.locator('a[href="/portal/community/announcements"]').first(),
+      'canonical announcements QA space must be visible',
+    ).toBeVisible()
+    const spaceHref = '/portal/community/announcements'
     await page.goto(`${STAGING_URL}${spaceHref}`, { waitUntil: 'networkidle' })
-    const postHref = await firstPortalHref(page, /^\/portal\/community\/[^/]+\/posts\/[^/]+$/)
+    const postHref = await firstPortalHref(page, /^\/portal\/community\/announcements\/posts\/[^/]+$/)
     for (const viewport of VIEWPORTS) {
       await page.setViewportSize({ width: viewport.width, height: viewport.height })
       await assertRoute(page, postHref, /discussion|post/i, 'member')
