@@ -18,21 +18,17 @@ async function main(): Promise<void> {
   const payload = await getPayload({ config, disableOnInit: true })
   console.error('[administrator-backfill] Payload initialized')
   try {
-    const administrators: typeof payload extends { find: (...args: any[]) => Promise<infer R> } ? R['docs'] : never = []
-    let page = 1
-    do {
-      const result = await payload.find({
-        collection: 'payload_users',
-        limit: 100,
-        page,
-        depth: 0,
-        overrideAccess: true,
-      })
-      administrators.push(...result.docs)
-      console.error(`[administrator-backfill] read administrator page ${page} (${result.docs.length} records)`)
-      if (!result.hasNextPage) break
-      page += 1
-    } while (page <= 1000)
+    // This is a small, bounded collection. Avoid Payload's paginated find
+    // path here: it performs an additional count/page query that can remain
+    // open on the staging database even after the first page has returned.
+    const result = await payload.find({
+      collection: 'payload_users',
+      depth: 0,
+      overrideAccess: true,
+      pagination: false,
+    })
+    const administrators = result.docs
+    console.error(`[administrator-backfill] read administrators (${administrators.length} records)`)
 
     const rows: Array<{ administratorId: string; email: string; status: string; memberId?: string }> = []
     for (const administrator of administrators) {
