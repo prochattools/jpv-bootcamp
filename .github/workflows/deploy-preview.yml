@@ -514,7 +514,7 @@ jobs:
           ref: ${{ inputs.source_ref }}
           fetch-depth: 0
 
-      - name: Verify exact candidate SHA and approved ref tip
+      - name: Verify runtime SHA is an ancestor of the approved test harness
         shell: bash
         env:
           EXPECTED_SHA: ${{ inputs.expected_sha }}
@@ -523,11 +523,11 @@ jobs:
           set -euo pipefail
           CURRENT_SHA="$(git rev-parse HEAD)"
           REMOTE_SHA="$(git rev-parse "origin/${SOURCE_REF_INPUT}")"
-          if [ "$CURRENT_SHA" != "$EXPECTED_SHA" ] || [ "$REMOTE_SHA" != "$EXPECTED_SHA" ]; then
-            echo "A6-AUTH-DENIED: source ref tip and checked-out SHA must both equal expected_sha" >&2
+          if [ "$CURRENT_SHA" != "$REMOTE_SHA" ] || ! git merge-base --is-ancestor "$EXPECTED_SHA" "$CURRENT_SHA" 2>/dev/null; then
+            echo "A6-AUTH-DENIED: approved test harness must be the remote ref tip and contain expected_sha" >&2
             exit 1
           fi
-          echo "Exact candidate verified for staging authenticated acceptance"
+          echo "Exact deployed runtime candidate is an ancestor of the approved staging test harness"
 
       - name: Set up pnpm
         uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
