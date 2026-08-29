@@ -9,11 +9,10 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 **Status:** `NOT READY FOR PRODUCTION MERGE`
 
 The staging-only credential and authenticated acceptance attempt is recorded
-here as the latest handoff authority. The original packet candidate
-`c0257c3c21dee7536a749306261bee1e626ab3c5` was exercised; a real network-idle
-readiness-helper defect was then repaired in bounded commits, leaving final
-candidate `45524dd331586095a1fd3df43b54deb89fd4dfac` on
-`fix/e1-staging-gate-b`.
+here as the latest handoff authority. The existing staging course collision
+was safely classified as the canonical QA fixture, the ownership fields were
+restored in bounded commit `c28578a192c501317495b5e9747382ae08b73bad`, and the
+guarded staging seed completed successfully on `fix/e1-staging-gate-b`.
 
 - **QA identity:** existing suitable staging-only non-admin member; protected
   member credential rotated through the supported staging application path.
@@ -23,31 +22,31 @@ candidate `45524dd331586095a1fd3df43b54deb89fd4dfac` on
   `STAGING_ADMIN_PASSWORD`.
 - **Staging:** `https://staging.jpvbootcamp.com`, Dokploy application
   `clients-jpv-bootcamp-preview-wjfqfd` / `bZllV93NqsPZAFCsqDskb`, live exact
-  SHA `45524dd331586095a1fd3df43b54deb89fd4dfac`,
+  SHA `c28578a192c501317495b5e9747382ae08b73bad`,
   `deploymentEnv=staging`.
-- **Deployment evidence:** workflow `33255799502`, job `99109162137`, passed
+- **Deployment evidence:** workflow `33275500278` passed
   exact-SHA, build, immutable image, routing, Dokploy, revision-health, and
   authenticated admin-responsive checks.
-- **Authenticated acceptance:** workflow `33256570150`, job `99111241886`,
-  verified both protected actor secret sets and the exact deployed runtime.
-  The run passed 22 checks before failing the course-navigation data gate:
-  `A6-DATA-DENIED: no portal link matched ^/portal/courses/[^/]+$`.
-- **Root cause:** staging currently has zero courses, enrollments, access
-  grants, and access policies, so course/module/lesson/progress acceptance
-  cannot run. No seed or bootstrap was performed because it is outside this
-  packet’s authorization.
-- **Migration plan:** read-only workflow `33256857624` returned semantic
+- **Guarded seed:** workflow `33276012313` passed the dry-run and applied once
+  against the exact staging target, with `create=1`, `update=30`, `skip=0`.
+  The canonical course now carries its prototype ownership markers.
+- **Authenticated acceptance:** workflow `33276119607` verified both protected
+  actor secret sets and the exact deployed runtime, then failed with the one
+  concrete blocker: `A6-DATA-DENIED: no portal link matched
+  ^/portal/community/[^/]+/posts/[^/]+$`. The community post route exists in
+  source, but no eligible member-visible post detail link was rendered.
+- **Migration plan:** read-only workflow `33275184060` returned semantic
   result `plan_ok`; no migration was applied.
 - **Production:** read-only health is live at
   `08605e52af4abb0b1bdcdfbe6890d010c545b636`,
   `deploymentEnv=production`. No production operation was run.
 - **Repository:** branch is pushed and the worktree is clean.
 
-**Next action:** obtain explicit staging-only authorization to restore or seed
-the required course/content fixture, then redeploy only if necessary and rerun
-the authenticated A6 gate. Do not merge `main`, deploy production, apply
+**Next action:** resolve the single authenticated staging community-post data
+gate through a separately authorized, bounded staging-only fixture decision,
+then rerun acceptance. Do not merge `main`, deploy production, apply further
 migrations, run backfill, mutate Stripe/providers, alter legacy/DNS, or retire
-preview under this packet.
+preview while this gate is not ready.
 
 The next section is retained historical evidence and is superseded by this
 attempt.

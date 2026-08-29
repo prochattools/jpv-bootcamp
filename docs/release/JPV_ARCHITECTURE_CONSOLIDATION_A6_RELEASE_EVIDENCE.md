@@ -10,6 +10,16 @@ Stripe/provider mutation, legacy change, or preview retirement.
 
 ### Staging identity and candidate
 
+- The staging course collision was inspected read-only and classified as
+  **safe to adopt as the canonical staging QA fixture**: the existing record
+  matched the repository seed and had no evidence of independent production
+  provenance or meaningful manual content.
+- A narrow code repair restored the existing course/module/lesson ownership
+  fields required by the guarded seed contract. It did not weaken the seed
+  guard or change access or billing behavior. The repair is commit
+  `c28578a192c501317495b5e9747382ae08b73bad`, pushed to
+  `origin/fix/e1-staging-gate-b`.
+
 - The approved staging-only QA identity was classified as an **existing
   suitable non-admin QA member**. Its protected member credential was rotated
   through the supported staging application path; no credential value is
@@ -17,39 +27,39 @@ Stripe/provider mutation, legacy change, or preview retirement.
 - Protected GitHub Actions secret names verified: `STAGING_MEMBER_EMAIL`,
   `STAGING_MEMBER_PASSWORD`, `STAGING_ADMIN_EMAIL`, and
   `STAGING_ADMIN_PASSWORD`.
-- The original packet candidate `c0257c3c21dee7536a749306261bee1e626ab3c5`
-  was exercised. The authenticated gate exposed a genuine readiness-helper
-  defect (network-idle waits on portal routes), so the bounded helper repair
-  produced the final candidate
-  `45524dd331586095a1fd3df43b54deb89fd4dfac` as permitted by the packet.
-- The final candidate is on `fix/e1-staging-gate-b`, is pushed to
+- The candidate is on `fix/e1-staging-gate-b`, is pushed to
   `origin/fix/e1-staging-gate-b`, and is deployed to the canonical staging
   authority `https://staging.jpvbootcamp.com`.
 
 ### Deployment and acceptance evidence
 
 - Staging deployment workflow
-  [`33255799502`](https://github.com/prochattools/jpvbootcamp/actions/runs/33255799502),
-  job `99109162137`, completed successfully with exact-SHA, build,
+  [`33275500278`](https://github.com/prochattools/jpvbootcamp/actions/runs/33275500278)
+  completed successfully with exact-SHA, build,
   deterministic-release, immutable-image, routing, Dokploy, revision-health,
   and authenticated admin-responsive checks passing.
 - The live staging health response reports `status=live`,
   `deploymentEnv=staging`, and both `commit` and `imageTag` equal to
-  `45524dd331586095a1fd3df43b54deb89fd4dfac`.
+  `c28578a192c501317495b5e9747382ae08b73bad`.
+- Guarded seed workflow
+  [`33276012313`](https://github.com/prochattools/jpvbootcamp/actions/runs/33276012313)
+  passed its exact staging target gates, completed a green dry-run, and
+  applied once with `create=1`, `update=30`, `skip=0`. The post-apply course
+  is published, members-visible, and carries
+  `prototype=true` and `prototypeKey=seed:jpv-bootcamp-foundations`.
 - Authenticated acceptance workflow
-  [`33256570150`](https://github.com/prochattools/jpvbootcamp/actions/runs/33256570150),
-  job `99111241886`, consumed both protected actor secret sets and verified
-  the exact deployed candidate. It passed the actor/authentication and portal
-  route checks reached before course navigation, but the overall job failed
-  with the exact blocker:
-  `A6-DATA-DENIED: no portal link matched ^/portal/courses/[^/]+$`.
-- Read-only staging data inspection found zero `payload_courses`, zero
-  `payload_course_enrollments`, zero `payload_access_grants`, and zero
-  `payload_access_policies`. Therefore the course/module/lesson and progress
-  portion of the required acceptance matrix cannot execute.
+  [`33276119607`](https://github.com/prochattools/jpvbootcamp/actions/runs/33276119607)
+  consumed both protected actor secret sets and verified the exact deployed
+  candidate. It passed setup and actor/authentication gates, then failed with
+  the single concrete blocker:
+  `A6-DATA-DENIED: no portal link matched ^/portal/community/[^/]+/posts/[^/]+$`.
+  The canonical community post route exists in source; the member-visible
+  staging page did not render an eligible post link. No route change or
+  additional data mutation was authorized from this failure.
 - Read-only migration-plan workflow
-  [`33256857624`](https://github.com/prochattools/jpvbootcamp/actions/runs/33256857624)
-  passed semantic verification (`plan_ok`). No migration was applied.
+  [`33275184060`](https://github.com/prochattools/jpvbootcamp/actions/runs/33275184060)
+  passed exact target and semantic verification. No schema migration was
+  applied in this turn.
 
 ### Safety boundary
 
@@ -62,10 +72,10 @@ Stripe/provider mutation, legacy change, or preview retirement.
 - No rollback was invoked. The current repository worktree is clean.
 
 Gate 1 remains **NOT READY FOR PRODUCTION MERGE**. The one remaining blocker
-is the absence of the required staging course/content fixture needed to prove
-the authenticated course/module/lesson acceptance paths. A staging-only
-content restoration or seed authorization is required before rerunning the
-gate; this packet does not authorize that data mutation.
+is the authenticated staging acceptance failure because no member-visible
+community post detail link matched
+`^/portal/community/[^/]+/posts/[^/]+$`. The course ownership collision and
+guarded staging seed are resolved; production remains untouched.
 
 ## Historical A6 Gate 1 secret-gate snapshot — 2026-08-29 (superseded)
 
