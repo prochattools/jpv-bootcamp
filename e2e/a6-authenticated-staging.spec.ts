@@ -154,7 +154,12 @@ async function assertRoute(page: Page, path: string, heading: RegExp, role: 'mem
   page.on('request', onRequest)
 
   try {
-    const response = await page.goto(`${STAGING_URL}${path}`, { waitUntil: 'networkidle', timeout: 30000 })
+    // Some portal routes intentionally keep background requests active (for
+    // example live-session state and notification polling). DOM readiness is
+    // the stable route-entry signal; the assertions below still verify the
+    // rendered page and capture page/console failures without waiting for an
+    // impossible network-idle state.
+    const response = await page.goto(`${STAGING_URL}${path}`, { waitUntil: 'domcontentloaded', timeout: 30000 })
     expect(response?.status(), `${role} ${path} must not return an HTTP error`).toBeLessThan(500)
 
     const current = new URL(page.url())
