@@ -16,12 +16,12 @@ on:
   workflow_dispatch:
     inputs:
       operation:
-        description: 'Operation: validate-only | deploy-preview (staging) | read-only-migration-plan | bootstrap-staging-database | backfill-administrator-members'
+        description: 'Operation: validate-only | deploy-preview (staging) | authenticated-acceptance (staging) | read-only-migration-plan | bootstrap-staging-database | backfill-administrator-members'
         required: false
         type: string
         default: 'validate-only'
       expected_sha:
-        description: 'Full 40-character SHA (required for deploy-preview, read-only-migration-plan, bootstrap-staging-database, and backfill-administrator-members)'
+        description: 'Full 40-character SHA (required for deploy-preview, authenticated-acceptance, read-only-migration-plan, bootstrap-staging-database, and backfill-administrator-members)'
         required: false
         type: string
       source_ref:
@@ -29,7 +29,7 @@ on:
         required: true
         type: string
       confirmation:
-        description: 'Confirmation phrase (deploy-preview: deploy-staging-feature-tip; plan: run-read-only-staging-payload-migration-plan; bootstrap: bootstrap-empty-staging-database; backfill: apply-guarded-staging-administrator-member-backfill)'
+        description: 'Confirmation phrase (deploy-preview: deploy-staging-feature-tip; authenticated-acceptance: run-authenticated-staging-acceptance; plan: run-read-only-staging-payload-migration-plan; bootstrap: bootstrap-empty-staging-database; backfill: apply-guarded-staging-administrator-member-backfill)'
         required: false
         type: string
 permissions:
@@ -474,6 +474,159 @@ jobs:
         with:
           name: admin-responsive-failure-${{ github.run_id }}
           path: /tmp/jpv-admin-regression-hardening/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  a6-authenticated-acceptance:
+    name: A6 authenticated member and creator/admin acceptance (staging)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: staging-deploy
+    if: github.event_name == 'workflow_dispatch' && inputs.operation == 'authenticated-acceptance'
+    permissions:
+      contents: read
+
+    steps:
+      - name: Validate exact candidate inputs
+        shell: bash
+        env:
+          INPUT_EXPECTED_SHA: ${{ inputs.expected_sha }}
+          INPUT_SOURCE_REF: ${{ inputs.source_ref }}
+          INPUT_CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          if ! printf '%s' "$INPUT_EXPECTED_SHA" | grep -qE '^[0-9a-f]{40}$'; then
+            echo "A6-AUTH-DENIED: expected_sha must be exactly 40 lowercase hexadecimal characters" >&2
+            exit 1
+          fi
+          if ! printf '%s' "$INPUT_SOURCE_REF" | grep -qE '^(feature|fix|release)/[A-Za-z0-9][A-Za-z0-9._-]*$'; then
+            echo "A6-AUTH-DENIED: source_ref must match feature/*, fix/*, or release/*; main is forbidden" >&2
+            exit 1
+          fi
+          if [ "$INPUT_CONFIRMATION" != "run-authenticated-staging-acceptance" ]; then
+            echo "A6-AUTH-DENIED: confirmation must be exactly 'run-authenticated-staging-acceptance'" >&2
+            exit 1
+          fi
+
+      - name: Check out exact candidate
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.source_ref }}
+          fetch-depth: 0
+
+      - name: Verify exact candidate SHA and approved ref tip
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+          SOURCE_REF_INPUT: ${{ inputs.source_ref }}
+        run: |
+          set -euo pipefail
+          CURRENT_SHA="$(git rev-parse HEAD)"
+          REMOTE_SHA="$(git rev-parse "origin/${SOURCE_REF_INPUT}")"
+          if [ "$CURRENT_SHA" != "$EXPECTED_SHA" ] || [ "$REMOTE_SHA" != "$EXPECTED_SHA" ]; then
+            echo "A6-AUTH-DENIED: source ref tip and checked-out SHA must both equal expected_sha" >&2
+            exit 1
+          fi
+          echo "Exact candidate verified for staging authenticated acceptance"
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: 10.33.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '20'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify deployed staging runtime is the exact candidate
+        shell: bash
+        env:
+          STAGING_URL: https://staging.jpvbootcamp.com
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+        run: |
+          set -euo pipefail
+          HEALTH_FILE="$(mktemp /tmp/jpv-a6-health.XXXXXX.json)"
+          trap 'rm -f "$HEALTH_FILE"' EXIT
+          curl --fail --silent --show-error --max-time 20 "$STAGING_URL/api/health" > "$HEALTH_FILE"
+          HEALTH_FILE="$HEALTH_FILE" EXPECTED_SHA="$EXPECTED_SHA" node <<'NODE'
+          const fs = require('node:fs')
+          const health = JSON.parse(fs.readFileSync(process.env.HEALTH_FILE, 'utf8'))
+          const expected = process.env.EXPECTED_SHA
+          const identities = [
+            health.commit,
+            health.sha,
+            health.image,
+            health.imageTag,
+            health.build?.commit,
+            health.build?.sha,
+            health.build?.image,
+            health.build?.imageTag,
+          ].filter((value) => typeof value === 'string')
+          if (String(health.deploymentEnv ?? '').toLowerCase() !== 'staging') {
+            console.error('A6-AUTH-DENIED: staging health did not report deploymentEnv=staging')
+            process.exit(1)
+          }
+          if (!identities.includes(expected)) {
+            console.error('A6-AUTH-DENIED: staging health did not report the exact expected candidate SHA')
+            process.exit(1)
+          }
+          console.log('Exact staging runtime candidate verified')
+          NODE
+
+      - name: Verify protected actor secrets are present
+        shell: bash
+        env:
+          STAGING_MEMBER_EMAIL: ${{ secrets.STAGING_MEMBER_EMAIL }}
+          STAGING_MEMBER_PASSWORD: ${{ secrets.STAGING_MEMBER_PASSWORD }}
+          STAGING_ADMIN_EMAIL: ${{ secrets.STAGING_ADMIN_EMAIL }}
+          STAGING_ADMIN_PASSWORD: ${{ secrets.STAGING_ADMIN_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [ -z "${STAGING_MEMBER_EMAIL:-}" ] || [ -z "${STAGING_MEMBER_PASSWORD:-}" ]; then
+            echo "A6 BLOCKED — ADD STAGING_MEMBER_EMAIL AND STAGING_MEMBER_PASSWORD" >&2
+            echo "A6-AUTH-DENIED: add STAGING_MEMBER_EMAIL and STAGING_MEMBER_PASSWORD as protected staging secrets" >&2
+            exit 1
+          fi
+          if [ -z "${STAGING_ADMIN_EMAIL:-}" ] || [ -z "${STAGING_ADMIN_PASSWORD:-}" ]; then
+            echo "A6-AUTH-DENIED: STAGING_ADMIN_EMAIL and STAGING_ADMIN_PASSWORD are required protected staging secrets" >&2
+            exit 1
+          fi
+          echo "Protected actor secret names are configured"
+
+      - name: Fix apt mirrors (replace dead Azure mirror with public archive)
+        if: success()
+        run: |
+          sudo sed -i 's|http://azure.archive.ubuntu.com|https://archive.ubuntu.com|g' \
+            /etc/apt/sources.list /etc/apt/sources.list.d/*.list 2>/dev/null || true
+
+      - name: Install pinned Chromium browser
+        if: success()
+        timeout-minutes: 10
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run authenticated member and creator/admin acceptance
+        if: success()
+        env:
+          STAGING_URL: https://staging.jpvbootcamp.com
+          STAGING_MEMBER_EMAIL: ${{ secrets.STAGING_MEMBER_EMAIL }}
+          STAGING_MEMBER_PASSWORD: ${{ secrets.STAGING_MEMBER_PASSWORD }}
+          STAGING_ADMIN_EMAIL: ${{ secrets.STAGING_ADMIN_EMAIL }}
+          STAGING_ADMIN_PASSWORD: ${{ secrets.STAGING_ADMIN_PASSWORD }}
+        run: pnpm test:e2e:staging:authenticated
+
+      - name: Upload aggregate authenticated-gate failure evidence
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: a6-authenticated-failure-${{ github.run_id }}
+          path: /tmp/jpv-a6-authenticated-staging/junit.xml
           if-no-files-found: ignore
           retention-days: 7
 
