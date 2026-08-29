@@ -1069,7 +1069,12 @@ jobs:
           BACKFILL_EXIT=$?
           set -e
           if [ "$BACKFILL_EXIT" -ne 0 ]; then
-            echo "ADMIN-BACKFILL-DENIED: dry-run failed; raw diagnostics suppressed" >&2
+            echo "ADMIN-BACKFILL-DENIED: dry-run failed; sanitized diagnostics follow" >&2
+            sed -E \
+              -e 's#postgres(ql)?://[^[:space:]]+#postgresql://[redacted]#g' \
+              -e 's#(DATABASE_URL|PAYLOAD_SECRET|.*SECRET.*)=([^[:space:]]+)#\1=[redacted]#g' \
+              -e 's#(password|token|secret)[=:][^[:space:]]+#\1=[redacted]#Ig' \
+              "$DRY_RUN_ERR" | tail -n 80 >&2 || true
             exit "$BACKFILL_EXIT"
           fi
           node - "$DRY_RUN_FILE" <<'NODE'
@@ -1107,7 +1112,12 @@ jobs:
           BACKFILL_EXIT=$?
           set -e
           if [ "$BACKFILL_EXIT" -ne 0 ]; then
-            echo "ADMIN-BACKFILL-DENIED: guarded apply failed; raw diagnostics suppressed" >&2
+            echo "ADMIN-BACKFILL-DENIED: guarded apply failed; sanitized diagnostics follow" >&2
+            sed -E \
+              -e 's#postgres(ql)?://[^[:space:]]+#postgresql://[redacted]#g' \
+              -e 's#(DATABASE_URL|PAYLOAD_SECRET|.*SECRET.*)=([^[:space:]]+)#\1=[redacted]#g' \
+              -e 's#(password|token|secret)[=:][^[:space:]]+#\1=[redacted]#Ig' \
+              "$APPLY_ERR" | tail -n 80 >&2 || true
             exit "$BACKFILL_EXIT"
           fi
           node - "$APPLY_FILE" "$EXPECTED_SHA" "$OPERATOR_ID" <<'NODE'
