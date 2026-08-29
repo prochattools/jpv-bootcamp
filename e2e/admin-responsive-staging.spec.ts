@@ -162,7 +162,7 @@ test.describe('Admin responsive layout', () => {
           }))
           expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth)
 
-          const heading = page.locator('h1, h2').filter({ hasText: route.heading }).first()
+          const heading = page.locator('h1:visible, h2:visible').filter({ hasText: route.heading }).first()
           await expect(heading).toBeVisible({ timeout: 5000 })
 
           expect(await tabToVisibleFocus(page), 'Tab must reach a visible focus indicator').toBe(true)
