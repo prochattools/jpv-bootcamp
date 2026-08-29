@@ -1,12 +1,13 @@
 # JPV Architecture Consolidation A6 Release Evidence
 
-## Current A6 Gate 1 final unblock attempt — 2026-08-29
+## Current A6 Gate 1 final unblock — 2026-08-30
 
-**Decision:** `NOT READY FOR PRODUCTION MERGE`
+**Decision:** `READY FOR PRODUCTION MERGE`
 
-This is the latest bounded A6 execution record. It remains staging-only and
-does not authorize a production merge, deployment, migration apply, backfill,
-Stripe/provider mutation, legacy change, or preview retirement.
+This is the completed bounded A6 execution record. It remains staging-only and
+records readiness for a separately authorized production integration step; it
+does not itself authorize or perform a production merge, deployment, migration
+apply, backfill, Stripe/provider mutation, legacy change, or preview retirement.
 
 ### Staging identity and candidate
 
@@ -47,15 +48,25 @@ Stripe/provider mutation, legacy change, or preview retirement.
   applied once with `create=1`, `update=30`, `skip=0`. The post-apply course
   is published, members-visible, and carries
   `prototype=true` and `prototypeKey=seed:jpv-bootcamp-foundations`.
-- Authenticated acceptance workflow
-  [`33276119607`](https://github.com/prochattools/jpvbootcamp/actions/runs/33276119607)
-  consumed both protected actor secret sets and verified the exact deployed
-  candidate. It passed setup and actor/authentication gates, then failed with
-  the single concrete blocker:
-  `A6-DATA-DENIED: no portal link matched ^/portal/community/[^/]+/posts/[^/]+$`.
-  The canonical community post route exists in source; the member-visible
-  staging page did not render an eligible post link. No route change or
-  additional data mutation was authorized from this failure.
+- The initial authenticated acceptance workflow
+  [`33276119607`](https://github.com/prochatools/jpvbootcamp/actions/runs/33276119607)
+  exposed `A6-DATA-DENIED: no portal link matched
+  ^/portal/community/[^/]+/posts/[^/]+$`. This was classified as
+  `A6-COMMUNITY-TEST-SELECTION-BUG`, not a runtime or data failure. The
+  acceptance harness was repaired in focused commits
+  `446b4faaa1bb028970fa18c4e470e6a1d18d256c`,
+  `71ee86d14d5808aa4d5f4ac07e3359e88035271e`, and
+  `2824d0ad112ffa9832ce9aa185daf9c2f7efcbfc` to select the canonical
+  announcements route, assert the real post heading, and scope engagement
+  controls to the visible post. The application runtime was not changed.
+- Final protected authenticated acceptance workflow
+  [`33279806459`](https://github.com/prochattools/jpvbootcamp/actions/runs/33279806459),
+  job `99172941401`, passed **24/24** authenticated tests against the exact
+  staging runtime. The matrix covered widths 320, 375, 768, 1024, and 1440,
+  including member course/module/lesson, canonical community post engagement,
+  and creator/admin acceptance. The final harness tip is
+  `2824d0ad112ffa9832ce9aa185daf9c2f7efcbfc`; the deployed runtime remains
+  `c28578a192c501317495b5e9747382ae08b73bad`.
 - Read-only migration-plan workflow
   [`33275184060`](https://github.com/prochattools/jpvbootcamp/actions/runs/33275184060)
   passed exact target and semantic verification. No schema migration was
@@ -71,11 +82,10 @@ Stripe/provider mutation, legacy change, or preview retirement.
   email send was performed.
 - No rollback was invoked. The current repository worktree is clean.
 
-Gate 1 remains **NOT READY FOR PRODUCTION MERGE**. The one remaining blocker
-is the authenticated staging acceptance failure because no member-visible
-community post detail link matched
-`^/portal/community/[^/]+/posts/[^/]+$`. The course ownership collision and
-guarded staging seed are resolved; production remains untouched.
+Gate 1 is **READY FOR PRODUCTION MERGE**. The earlier community link failure
+was repaired in the acceptance harness and the complete protected staging
+matrix is green. No application runtime or production state was changed by
+this E2E-only closeout.
 
 ## Historical A6 Gate 1 secret-gate snapshot — 2026-08-29 (superseded)
 

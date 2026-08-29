@@ -4,12 +4,12 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 
 ---
 
-## CURRENT A6 GATE 1 FINAL UNBLOCK ATTEMPT — 2026-08-29
+## CURRENT A6 GATE 1 FINAL UNBLOCK — 2026-08-30
 
-**Status:** `NOT READY FOR PRODUCTION MERGE`
+**Status:** `READY FOR PRODUCTION MERGE`
 
-The staging-only credential and authenticated acceptance attempt is recorded
-here as the latest handoff authority. The existing staging course collision
+The completed staging-only credential and authenticated acceptance run is
+recorded here as the latest handoff authority. The existing staging course collision
 was safely classified as the canonical QA fixture, the ownership fields were
 restored in bounded commit `c28578a192c501317495b5e9747382ae08b73bad`, and the
 guarded staging seed completed successfully on `fix/e1-staging-gate-b`.
@@ -30,11 +30,18 @@ guarded staging seed completed successfully on `fix/e1-staging-gate-b`.
 - **Guarded seed:** workflow `33276012313` passed the dry-run and applied once
   against the exact staging target, with `create=1`, `update=30`, `skip=0`.
   The canonical course now carries its prototype ownership markers.
-- **Authenticated acceptance:** workflow `33276119607` verified both protected
-  actor secret sets and the exact deployed runtime, then failed with the one
-  concrete blocker: `A6-DATA-DENIED: no portal link matched
-  ^/portal/community/[^/]+/posts/[^/]+$`. The community post route exists in
-  source, but no eligible member-visible post detail link was rendered.
+- **Classification:** `A6-COMMUNITY-TEST-SELECTION-BUG`. The initial
+  authenticated acceptance workflow `33276119607` selected an arbitrary
+  community route and found no eligible post link. Focused harness commits
+  `446b4faaa1bb028970fa18c4e470e6a1d18d256c`,
+  `71ee86d14d5808aa4d5f4ac07e3359e88035271e`, and
+  `2824d0ad112ffa9832ce9aa185daf9c2f7efcbfc` corrected route, heading, and
+  post-control selection without changing the application runtime.
+- **Authenticated acceptance:** final workflow `33279806459`, job
+  `99172941401`, passed **24/24** protected authenticated tests at widths
+  320, 375, 768, 1024, and 1440. The harness tip is
+  `2824d0ad112ffa9832ce9aa185daf9c2f7efcbfc`; the deployed runtime remains
+  `c28578a192c501317495b5e9747382ae08b73bad`.
 - **Migration plan:** read-only workflow `33275184060` returned semantic
   result `plan_ok`; no migration was applied.
 - **Production:** read-only health is live at
@@ -42,11 +49,10 @@ guarded staging seed completed successfully on `fix/e1-staging-gate-b`.
   `deploymentEnv=production`. No production operation was run.
 - **Repository:** branch is pushed and the worktree is clean.
 
-**Next action:** resolve the single authenticated staging community-post data
-gate through a separately authorized, bounded staging-only fixture decision,
-then rerun acceptance. Do not merge `main`, deploy production, apply further
-migrations, run backfill, mutate Stripe/providers, alter legacy/DNS, or retire
-preview while this gate is not ready.
+**Decision:** A6 Gate 1 is ready for a separately authorized production merge.
+This closeout performed no production merge or deployment, migration apply,
+backfill, Stripe/provider mutation, legacy/DNS change, or preview retirement.
+Those remain outside this packet.
 
 The next section is retained historical evidence and is superseded by this
 attempt.
