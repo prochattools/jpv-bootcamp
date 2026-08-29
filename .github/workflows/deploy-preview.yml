@@ -1054,6 +1054,7 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           PAYLOAD_SECRET: ${{ secrets.PAYLOAD_SECRET }}
+          NODE_ENV: production
           DEPLOYMENT_RUNTIME: docker
           DEPLOYMENT_ENV: staging
           PAYLOAD_MIGRATION_SCHEMA: jpvbootcamp
@@ -1087,6 +1088,7 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           PAYLOAD_SECRET: ${{ secrets.PAYLOAD_SECRET }}
+          NODE_ENV: production
           DEPLOYMENT_RUNTIME: docker
           DEPLOYMENT_ENV: staging
           PAYLOAD_MIGRATION_SCHEMA: jpvbootcamp
