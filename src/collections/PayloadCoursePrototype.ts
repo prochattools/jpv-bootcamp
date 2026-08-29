@@ -42,6 +42,26 @@ export const PayloadCourses: CollectionConfig = {
     delete: adminOnlyWrite,
   },
   fields: [
+    {
+      name: 'prototype',
+      type: 'checkbox',
+      defaultValue: true,
+      admin: {
+        hidden: true,
+        readOnly: true,
+        description: 'Internal ownership marker for guarded staging fixtures.',
+      },
+    },
+    {
+      name: 'prototypeKey',
+      type: 'text',
+      unique: true,
+      index: true,
+      admin: {
+        hidden: true,
+        readOnly: true,
+      },
+    },
     { name: 'title', type: 'text', required: true },
     { name: 'slug', type: 'text', required: true, unique: true, index: true },
     { name: 'shortDescription', type: 'textarea' },
@@ -89,7 +109,26 @@ export const PayloadCourses: CollectionConfig = {
     },
     { name: 'estimatedDuration', type: 'text' },
     { name: 'sortOrder', type: 'number', defaultValue: 0 },
+    {
+      name: 'showInPrototypeDashboard',
+      type: 'checkbox',
+      defaultValue: true,
+      admin: { hidden: true, readOnly: true },
+    },
     { name: 'featured', type: 'checkbox', defaultValue: false },
+    {
+      name: 'mockProgress',
+      type: 'number',
+      min: 0,
+      max: 100,
+      defaultValue: 0,
+      admin: { hidden: true, readOnly: true },
+    },
+    {
+      name: 'prototypeNote',
+      type: 'textarea',
+      admin: { hidden: true, readOnly: true },
+    },
   ],
   timestamps: true,
 }
@@ -116,6 +155,12 @@ export const PayloadCourseModules: CollectionConfig = {
     delete: adminOnlyWrite,
   },
   fields: [
+    {
+      name: 'prototype',
+      type: 'checkbox',
+      defaultValue: true,
+      admin: { hidden: true, readOnly: true },
+    },
     {
       name: 'course',
       type: 'relationship',
@@ -148,6 +193,12 @@ export const PayloadLessons: CollectionConfig = {
     delete: adminOnlyWrite,
   },
   fields: [
+    {
+      name: 'prototype',
+      type: 'checkbox',
+      defaultValue: true,
+      admin: { hidden: true, readOnly: true },
+    },
     {
       name: 'module',
       type: 'relationship',
@@ -208,6 +259,11 @@ export const PayloadLessons: CollectionConfig = {
       hasMany: true,
     },
     { name: 'previewLesson', type: 'checkbox', defaultValue: false },
+    {
+      name: 'prototypeNote',
+      type: 'textarea',
+      admin: { hidden: true, readOnly: true },
+    },
     {
       name: 'lockState',
       type: 'select',
