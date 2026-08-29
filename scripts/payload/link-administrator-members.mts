@@ -101,12 +101,12 @@ async function main(): Promise<void> {
     console.log(JSON.stringify({ apply, administrators: rows }, null, 2))
     console.error('[administrator-backfill] result serialized')
   } finally {
-    // Payload's postgres adapter owns a node-postgres pool. Close it after the
-    // one-shot reconciliation so CI can finish cleanly instead of waiting on
-    // idle sockets indefinitely.
-    console.error('[administrator-backfill] closing Payload pool')
-    await payload.db.pool.end()
-    console.error('[administrator-backfill] Payload pool closed')
+    // Let Payload close its adapter through the supported lifecycle path. The
+    // raw pg pool's `end()` can wait indefinitely for adapter-managed clients;
+    // `destroy()` also releases Payload's transaction/connection state.
+    console.error('[administrator-backfill] destroying Payload')
+    await payload.destroy()
+    console.error('[administrator-backfill] Payload destroyed')
     if (memberLookupConnected) {
       console.error('[administrator-backfill] closing lookup client')
       await memberLookupClient.end()
