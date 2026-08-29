@@ -26,9 +26,9 @@ const VIEWPORTS = [
 const ROUTES = [
   { path: '/admin', label: 'dashboard', heading: /operations|dashboard/i, allowedMutationPaths: [] as string[] },
   {
-    path: '/admin/collections/payload_membership_audit_history',
-    label: 'membership-audit',
-    heading: /membership audit/i,
+    path: '/operations/support-requests',
+    label: 'support-requests',
+    heading: /support requests/i,
     allowedMutationPaths: [] as string[],
   },
   {
