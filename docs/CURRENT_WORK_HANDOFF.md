@@ -4,7 +4,55 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 
 ---
 
-## CURRENT A6 GATE 1 CANDIDATE AND STAGING ACCEPTANCE — 2026-08-29
+## CURRENT A6 GATE 1 FINAL UNBLOCK ATTEMPT — 2026-08-29
+
+**Status:** `NOT READY FOR PRODUCTION MERGE`
+
+The staging-only credential and authenticated acceptance attempt is recorded
+here as the latest handoff authority. The original packet candidate
+`c0257c3c21dee7536a749306261bee1e626ab3c5` was exercised; a real network-idle
+readiness-helper defect was then repaired in bounded commits, leaving final
+candidate `45524dd331586095a1fd3df43b54deb89fd4dfac` on
+`fix/e1-staging-gate-b`.
+
+- **QA identity:** existing suitable staging-only non-admin member; protected
+  member credential rotated through the supported staging application path.
+  No credential value is stored in this handoff.
+- **Protected secret names verified:** `STAGING_MEMBER_EMAIL`,
+  `STAGING_MEMBER_PASSWORD`, `STAGING_ADMIN_EMAIL`,
+  `STAGING_ADMIN_PASSWORD`.
+- **Staging:** `https://staging.jpvbootcamp.com`, Dokploy application
+  `clients-jpv-bootcamp-preview-wjfqfd` / `bZllV93NqsPZAFCsqDskb`, live exact
+  SHA `45524dd331586095a1fd3df43b54deb89fd4dfac`,
+  `deploymentEnv=staging`.
+- **Deployment evidence:** workflow `33255799502`, job `99109162137`, passed
+  exact-SHA, build, immutable image, routing, Dokploy, revision-health, and
+  authenticated admin-responsive checks.
+- **Authenticated acceptance:** workflow `33256570150`, job `99111241886`,
+  verified both protected actor secret sets and the exact deployed runtime.
+  The run passed 22 checks before failing the course-navigation data gate:
+  `A6-DATA-DENIED: no portal link matched ^/portal/courses/[^/]+$`.
+- **Root cause:** staging currently has zero courses, enrollments, access
+  grants, and access policies, so course/module/lesson/progress acceptance
+  cannot run. No seed or bootstrap was performed because it is outside this
+  packet’s authorization.
+- **Migration plan:** read-only workflow `33256857624` returned semantic
+  result `plan_ok`; no migration was applied.
+- **Production:** read-only health is live at
+  `08605e52af4abb0b1bdcdfbe6890d010c545b636`,
+  `deploymentEnv=production`. No production operation was run.
+- **Repository:** branch is pushed and the worktree is clean.
+
+**Next action:** obtain explicit staging-only authorization to restore or seed
+the required course/content fixture, then redeploy only if necessary and rerun
+the authenticated A6 gate. Do not merge `main`, deploy production, apply
+migrations, run backfill, mutate Stripe/providers, alter legacy/DNS, or retire
+preview under this packet.
+
+The next section is retained historical evidence and is superseded by this
+attempt.
+
+## HISTORICAL A6 GATE 1 SECRET-GATE SNAPSHOT — 2026-08-29 (SUPERSEDED)
 
 **Status:** `NOT READY FOR PRODUCTION MERGE`
 

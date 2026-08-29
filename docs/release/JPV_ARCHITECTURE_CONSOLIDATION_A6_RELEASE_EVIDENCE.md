@@ -1,12 +1,79 @@
 # JPV Architecture Consolidation A6 Release Evidence
 
-## Current A6 Gate 1 candidate and staging acceptance — 2026-08-29
+## Current A6 Gate 1 final unblock attempt — 2026-08-29
 
 **Decision:** `NOT READY FOR PRODUCTION MERGE`
 
-This is the current A6 Gate 1 evidence section. It supersedes the earlier
-staging snapshot below while preserving all earlier evidence as historical
-record. The exact deployed candidate is
+This is the latest bounded A6 execution record. It remains staging-only and
+does not authorize a production merge, deployment, migration apply, backfill,
+Stripe/provider mutation, legacy change, or preview retirement.
+
+### Staging identity and candidate
+
+- The approved staging-only QA identity was classified as an **existing
+  suitable non-admin QA member**. Its protected member credential was rotated
+  through the supported staging application path; no credential value is
+  recorded here.
+- Protected GitHub Actions secret names verified: `STAGING_MEMBER_EMAIL`,
+  `STAGING_MEMBER_PASSWORD`, `STAGING_ADMIN_EMAIL`, and
+  `STAGING_ADMIN_PASSWORD`.
+- The original packet candidate `c0257c3c21dee7536a749306261bee1e626ab3c5`
+  was exercised. The authenticated gate exposed a genuine readiness-helper
+  defect (network-idle waits on portal routes), so the bounded helper repair
+  produced the final candidate
+  `45524dd331586095a1fd3df43b54deb89fd4dfac` as permitted by the packet.
+- The final candidate is on `fix/e1-staging-gate-b`, is pushed to
+  `origin/fix/e1-staging-gate-b`, and is deployed to the canonical staging
+  authority `https://staging.jpvbootcamp.com`.
+
+### Deployment and acceptance evidence
+
+- Staging deployment workflow
+  [`33255799502`](https://github.com/prochattools/jpvbootcamp/actions/runs/33255799502),
+  job `99109162137`, completed successfully with exact-SHA, build,
+  deterministic-release, immutable-image, routing, Dokploy, revision-health,
+  and authenticated admin-responsive checks passing.
+- The live staging health response reports `status=live`,
+  `deploymentEnv=staging`, and both `commit` and `imageTag` equal to
+  `45524dd331586095a1fd3df43b54deb89fd4dfac`.
+- Authenticated acceptance workflow
+  [`33256570150`](https://github.com/prochattools/jpvbootcamp/actions/runs/33256570150),
+  job `99111241886`, consumed both protected actor secret sets and verified
+  the exact deployed candidate. It passed the actor/authentication and portal
+  route checks reached before course navigation, but the overall job failed
+  with the exact blocker:
+  `A6-DATA-DENIED: no portal link matched ^/portal/courses/[^/]+$`.
+- Read-only staging data inspection found zero `payload_courses`, zero
+  `payload_course_enrollments`, zero `payload_access_grants`, and zero
+  `payload_access_policies`. Therefore the course/module/lesson and progress
+  portion of the required acceptance matrix cannot execute.
+- Read-only migration-plan workflow
+  [`33256857624`](https://github.com/prochattools/jpvbootcamp/actions/runs/33256857624)
+  passed semantic verification (`plan_ok`). No migration was applied.
+
+### Safety boundary
+
+- Staging is the only runtime changed by this attempt. Production read-only
+  health reports `status=live`, `deploymentEnv=production`, and commit/image
+  `08605e52af4abb0b1bdcdfbe6890d010c545b636`.
+- No production merge, production deployment, production data change,
+  migration apply, administrator backfill, Stripe/provider mutation, or live
+  email send was performed.
+- No rollback was invoked. The current repository worktree is clean.
+
+Gate 1 remains **NOT READY FOR PRODUCTION MERGE**. The one remaining blocker
+is the absence of the required staging course/content fixture needed to prove
+the authenticated course/module/lesson acceptance paths. A staging-only
+content restoration or seed authorization is required before rerunning the
+gate; this packet does not authorize that data mutation.
+
+## Historical A6 Gate 1 secret-gate snapshot — 2026-08-29 (superseded)
+
+**Decision:** `NOT READY FOR PRODUCTION MERGE`
+
+This section is retained as historical evidence. It superseded the earlier
+staging snapshot at the time, but is itself superseded by the final unblock
+attempt above. The exact deployed candidate recorded at that checkpoint was
 `c0257c3c21dee7536a749306261bee1e626ab3c5` on branch `fix/e1-staging-gate-b`,
 a linear descendant of the verified production tip
 `08605e52af4abb0b1bdcdfbe6890d010c545b636`.
