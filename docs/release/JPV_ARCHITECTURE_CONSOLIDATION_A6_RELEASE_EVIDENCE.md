@@ -1,5 +1,93 @@
 # JPV Architecture Consolidation A6 Release Evidence
 
+## Current A6 Gate 1 candidate and staging acceptance — 2026-08-29
+
+**Decision:** `NOT READY FOR PRODUCTION MERGE`
+
+This is the current A6 Gate 1 evidence section. It supersedes the E1 closeout
+below while preserving all earlier evidence as historical record. The exact
+candidate is `4eb2288931b56cd53704802c4fa9001ca4ee4a15` on branch
+`fix/e1-staging-gate-b`, a linear descendant of the verified production tip
+`08605e52af4abb0b1bdcdfbe6890d010c545b636`.
+
+### Candidate validation and staging deployment
+
+- Local `pnpm test:release` passed **171/171**, including TypeScript, the
+  production build, Prisma/Payload checks, release guards, portal/auth/course/
+  community/billing/Stripe/checkout/webhook/provisioning/support/sponsored/
+  email/LiveKit/Bunny/static and responsive coverage.
+- GitHub candidate validation run
+  [`33243293215`](https://github.com/prochattools/jpvbootcamp/actions/runs/33243293215)
+  passed against the exact candidate SHA, including deterministic release and
+  browser E2E validation.
+- The read-only staging migration-plan run
+  [`33243782425`](https://github.com/prochattools/jpvbootcamp/actions/runs/33243782425)
+  passed against the exact candidate. Its sanitized artifact records 52
+  applied Payload migrations, zero expected pending migrations, zero
+  unexpected/duplicate/malformed/order-anomaly records, and healthy Prisma
+  access. No migration was applied during this gate.
+- Staging deployment run
+  [`33243923606`](https://github.com/prochattools/jpvbootcamp/actions/runs/33243923606),
+  job `99077948717`, passed exact-SHA checks, type check, build, Docker image
+  publication, staging routing, Dokploy redeploy, revision health, and the
+  authenticated Payload responsive gate (**14/14**).
+- The staging authority is
+  `https://staging.jpvbootcamp.com`, Dokploy application
+  `clients-jpv-bootcamp-preview-wjfqfd` / `bZllV93NqsPZAFCsqDskb`, database
+  `jpvbootcamp_staging`, schema `jpvbootcamp`, and role
+  `jpvbootcamp_staging_app`. Its live health response reports the exact
+  candidate image/commit and `deploymentEnv=staging`.
+
+### Acceptance evidence and remaining boundary
+
+- The in-app browser checked the public and unauthenticated portal route
+  matrix at widths 320, 375, 768, 1024, and 1440 for `/`, portal login,
+  password recovery, sponsored access, portal shell, courses, community, live
+  sessions, updates, billing, and Payload login. All inspected routes loaded
+  without horizontal overflow, application-error text, route-not-found text,
+  or browser warning/error logs.
+- The CI authenticated browser gate passed the Payload admin, support-request,
+  and course-admin responsive matrix at desktop, laptop, tablet, and mobile
+  sizes, including mobile account containment and authenticated course API
+  access.
+- A complete manually authenticated member and creator-admin portal matrix
+  was not performed because this thread had no authenticated browser session
+  or user credentials. The member/creator acceptance boundary therefore
+  remains open.
+
+### Safe provider smoke
+
+- Valid-shape staging E2E passed the health check, unauthenticated LiveKit
+  token behavior (`401` with a valid `sessionId`), join-page load, Bunny page
+  load, and unsigned/invalid-signature Bunny rejection. No provider mutation
+  or live email send was performed.
+- The older
+  `scripts/staging-livekit-bunny-test.mts` helper reports one failure because
+  it sends a malformed LiveKit request without the now-required `sessionId`;
+  the endpoint correctly returns validation `400 missing_session_id` before
+  authentication. This is a test-harness mismatch, not evidence that the
+  valid-shape endpoint failed, but it remains recorded for follow-up.
+
+### Production safety, billing baseline, and rollback
+
+- Post-deployment health checks confirm production remains at
+  `08605e52af4abb0b1bdcdfbe6890d010c545b636` with
+  `deploymentEnv=production`. The preview compatibility hostname remains on
+  that same production image and was not changed. Legacy remains frozen.
+- The read-only production billing baseline remains 11 active Stripe
+  subscriptions, 10 active Payload members, 7 exact customer-ID matches, 0
+  unmatched identities, 0 ambiguous identities, and 4 subscriptions tied to
+  inactive local lifecycle records. No reconciliation, backfill, Stripe
+  mutation, production migration, or production data change was performed.
+- The deployed staging application can be rolled back through the guarded
+  Dokploy staging path to the prior staging SHA
+  `0515b792f0aa6ab89db94f30e6176421e06546ae`; no database rollback is needed
+  because this gate applied no migration.
+
+Gate 1 remains **NOT READY FOR PRODUCTION MERGE** until the authenticated
+member/creator-admin acceptance matrix is completed and the stale provider
+smoke helper is corrected or explicitly retired under a reviewed follow-up.
+
 ## Current E1 final closeout — 2026-08-29
 
 **Decision:** `READY TO RESUME A6 GATE 1`
