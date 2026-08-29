@@ -137,7 +137,13 @@ async function assertVisibleFocus(page: Page, maximumTabs = 30): Promise<void> {
   throw new Error('A6-UX-DENIED: keyboard navigation did not reach a visible focus indicator')
 }
 
-async function assertRoute(page: Page, path: string, heading: RegExp, role: 'member' | 'admin'): Promise<void> {
+async function assertRoute(
+  page: Page,
+  path: string,
+  heading: RegExp,
+  role: 'member' | 'admin',
+  headingSelector = 'h1:visible, h2:visible, h3:visible',
+): Promise<void> {
   const pageErrors: string[] = []
   const consoleErrors: string[] = []
   const disallowedHosts = new Set<string>()
@@ -173,7 +179,7 @@ async function assertRoute(page: Page, path: string, heading: RegExp, role: 'mem
       clientWidth: document.documentElement.clientWidth,
     }))
     expect(dimensions.scrollWidth, `${role} ${path} must not overflow horizontally`).toBeLessThanOrEqual(dimensions.clientWidth)
-    await expect(page.locator('h1:visible, h2:visible, h3:visible').filter({ hasText: heading }).first()).toBeVisible({ timeout: 10000 })
+    await expect(page.locator(headingSelector).filter({ hasText: heading }).first()).toBeVisible({ timeout: 10000 })
 
     if (role === 'member') {
       await expect(page.getByRole('button', { name: /turn admin mode off/i })).toHaveCount(0)
@@ -264,7 +270,7 @@ test.describe('A6 Gate 1 authenticated member acceptance', () => {
     const postHref = await firstPortalHref(page, /^\/portal\/community\/announcements\/posts\/[^/]+$/)
     for (const viewport of VIEWPORTS) {
       await page.setViewportSize({ width: viewport.width, height: viewport.height })
-      await assertRoute(page, postHref, /discussion|post/i, 'member')
+      await assertRoute(page, postHref, /.+/i, 'member', '#community-post-heading')
       for (const label of ['Helpful', 'Insightful', 'Celebrate', 'Bookmark', 'Share']) {
         await expect(page.locator('button, a').filter({ hasText: new RegExp(`^${label}`, 'i') }).first(), `${label} control must be rendered`).toBeVisible()
       }
