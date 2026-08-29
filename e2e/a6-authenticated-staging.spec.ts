@@ -17,6 +17,9 @@ const MEMBER_EMAIL = process.env.STAGING_MEMBER_EMAIL?.trim() ?? ''
 const MEMBER_PASSWORD = process.env.STAGING_MEMBER_PASSWORD ?? ''
 const ADMIN_EMAIL = process.env.STAGING_ADMIN_EMAIL?.trim() ?? ''
 const ADMIN_PASSWORD = process.env.STAGING_ADMIN_PASSWORD ?? ''
+const STAGING_ORIGIN = STAGING_URL ? new URL(STAGING_URL).origin : ''
+
+const browserAuthTokens = new WeakMap<BrowserContext, string>()
 
 if (STAGING_URL) assertStagingOrigin(STAGING_URL)
 
@@ -67,6 +70,7 @@ function assertConfigured(): void {
 async function login(page: Page, collection: LoginCollection, email: string, password: string): Promise<void> {
   assertConfigured()
   await page.context().clearCookies()
+  browserAuthTokens.delete(page.context())
 
   const response = await page.request.post(`${STAGING_URL}/api/${collection}/login`, {
     data: { email, password },
@@ -81,16 +85,11 @@ async function login(page: Page, collection: LoginCollection, email: string, pas
     throw new Error(`A6-AUTH-DENIED: ${collection} login did not return a session token`)
   }
 
-  await page.context().addCookies([{
-    name: 'payload-token',
-    value: result.token,
-    domain: new URL(STAGING_URL).hostname,
-    path: '/',
-    httpOnly: true,
-    sameSite: 'Lax',
-  }])
+  browserAuthTokens.set(page.context(), result.token)
 
-  const sessionResponse = await page.request.get(`${STAGING_URL}/api/member-session?next=%2Fportal`)
+  const sessionResponse = await page.request.get(`${STAGING_URL}/api/member-session?next=%2Fportal`, {
+    headers: { Authorization: `JWT ${result.token}` },
+  })
   if (sessionResponse.status() !== 200) {
     throw new Error(`A6-AUTH-DENIED: ${collection} session check returned HTTP ${sessionResponse.status()}`)
   }
@@ -98,6 +97,26 @@ async function login(page: Page, collection: LoginCollection, email: string, pas
   if (!session || session.allowed !== true) {
     throw new Error(`A6-AUTH-DENIED: ${collection} session was not accepted by the portal`)
   }
+}
+
+function authenticatedRequestHeaders(page: Page): { Authorization: string } {
+  const token = browserAuthTokens.get(page.context())
+  if (!token) throw new Error('A6-AUTH-DENIED: browser authorization token is not available')
+  return { Authorization: `JWT ${token}` }
+}
+
+async function installBrowserAuthRoute(context: BrowserContext): Promise<void> {
+  await context.route('**/*', async (route) => {
+    const token = browserAuthTokens.get(context)
+    const request = route.request()
+    const headers = { ...request.headers() }
+
+    if (token && new URL(request.url()).origin === STAGING_ORIGIN) {
+      headers.authorization = `JWT ${token}`
+    }
+
+    await route.continue({ headers })
+  })
 }
 
 async function assertVisibleFocus(page: Page, maximumTabs = 30): Promise<void> {
@@ -184,6 +203,7 @@ test.describe('A6 Gate 1 authenticated member acceptance', () => {
   test.beforeAll(async ({ browser }) => {
     assertConfigured()
     context = await browser.newContext({ viewport: { width: 1440, height: 900 } })
+    await installBrowserAuthRoute(context)
     page = await context.newPage()
     await page.goto(`${STAGING_URL}/portal?mode=login`, { waitUntil: 'networkidle' })
     await expect(page.locator('input[type="email"], input[name="email"], input#member-email').first()).toBeVisible()
@@ -193,7 +213,9 @@ test.describe('A6 Gate 1 authenticated member acceptance', () => {
   test.afterAll(async () => { await context?.close() })
 
   test('member session is a normal non-admin portal actor', async () => {
-    const response = await page.request.get(`${STAGING_URL}/api/portal/live-sessions`)
+    const response = await page.request.get(`${STAGING_URL}/api/portal/live-sessions`, {
+      headers: authenticatedRequestHeaders(page),
+    })
     expect(response.status()).toBe(403)
     await expect(page.getByRole('button', { name: /turn admin mode off/i })).toHaveCount(0)
   })
@@ -249,6 +271,7 @@ test.describe('A6 Gate 1 authenticated creator/admin acceptance', () => {
   test.beforeAll(async ({ browser }) => {
     assertConfigured()
     context = await browser.newContext({ viewport: { width: 1440, height: 900 } })
+    await installBrowserAuthRoute(context)
     page = await context.newPage()
     await login(page, 'payload_users', ADMIN_EMAIL, ADMIN_PASSWORD)
   })
@@ -256,7 +279,9 @@ test.describe('A6 Gate 1 authenticated creator/admin acceptance', () => {
   test.afterAll(async () => { await context?.close() })
 
   test('administrator session is server-authorized and linked to a member-facing portal identity', async () => {
-    const liveSessions = await page.request.get(`${STAGING_URL}/api/portal/live-sessions`)
+    const liveSessions = await page.request.get(`${STAGING_URL}/api/portal/live-sessions`, {
+      headers: authenticatedRequestHeaders(page),
+    })
     expect(liveSessions.status()).toBe(200)
     const payload = await liveSessions.json().catch((): null => null) as { ok?: unknown } | null
     expect(payload?.ok).toBe(true)
@@ -286,7 +311,9 @@ test.describe('A6 Gate 1 authenticated creator/admin acceptance', () => {
     await expect(page.getByRole('button', { name: 'Turn admin mode on' })).toBeVisible()
     await expect(page.getByRole('button', { name: /create (a )?course/i })).toHaveCount(0)
 
-    const stillAuthorized = await page.request.get(`${STAGING_URL}/api/portal/live-sessions`)
+    const stillAuthorized = await page.request.get(`${STAGING_URL}/api/portal/live-sessions`, {
+      headers: authenticatedRequestHeaders(page),
+    })
     expect(stillAuthorized.status()).toBe(200)
 
     await page.getByRole('button', { name: 'Turn admin mode on' }).click()
