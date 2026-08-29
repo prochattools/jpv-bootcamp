@@ -115,7 +115,14 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((error) => {
-  console.error(error instanceof Error ? error.message : 'unknown_error')
-  process.exitCode = 1
-})
+main()
+  .then(() => {
+    // This is a one-shot reconciliation process. Payload can leave adapter
+    // lifecycle handles alive after destroy(), so exit explicitly once all
+    // work and teardown have completed instead of waiting on the timeout.
+    process.exit(0)
+  })
+  .catch((error) => {
+    console.error(error instanceof Error ? error.message : 'unknown_error')
+    process.exit(1)
+  })
