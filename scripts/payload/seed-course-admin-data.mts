@@ -309,6 +309,15 @@ async function seedSpaces(payload: PayloadClient) {
 }
 
 async function seedCommunityPost(payload: PayloadClient) {
+  // Dry-run mode must remain a deterministic plan-only operation. In
+  // particular, do not perform a member lookup just to decide whether the
+  // apply phase may create this optional QA fixture. The apply phase repeats
+  // the lookup against the guarded staging target before writing anything.
+  if (!apply) {
+    log('create', 'prototype community post')
+    return
+  }
+
   const space = await findOne(payload, 'payload_spaces', {
     slug: { equals: 'announcements' },
   })
