@@ -58,6 +58,30 @@ assert.equal(second?.member.id, first.member.id)
 assert.equal(collections.payload_members.length, 1)
 assert.equal(collections.payload_member_profiles.length, 1)
 
+const poolQueries: string[] = []
+const poolPayload = {
+  ...payload,
+  db: {
+    pool: {
+      query: async ({ text }: { text: string }) => {
+        poolQueries.push(text)
+        return {
+          rows: text.includes('WHERE "id"')
+            ? [{ id: first.member.id, email: first.member.email, is_administrator: true }]
+            : [],
+        }
+      },
+    },
+  },
+}
+const poolResolved = await resolveAdministratorMemberIdentity(poolPayload as never, {
+  ...collections.payload_users[0],
+  portalMember: first.member.id,
+} as never)
+assert.equal(poolResolved.source, 'linked')
+assert.equal(poolResolved.member?.id, first.member.id)
+assert.equal(poolQueries.length, 1)
+
 const writesBeforeResolution = writes
 const resolved = await resolveAdministratorMemberIdentity(payload as never, {
   ...collections.payload_users[0],

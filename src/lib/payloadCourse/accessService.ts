@@ -58,6 +58,15 @@ export type PayloadCourseAccessAPI = {
   find(args: PayloadFindArgs): Promise<PayloadFindResult>
   findByID(args: PayloadFindByIDArgs): Promise<any>
   count?(args: PayloadCountArgs): Promise<PayloadCountResult>
+  db?: {
+    pool?: {
+      query(args: {
+        text: string
+        values?: readonly unknown[]
+        statement_timeout?: number
+      }): Promise<{ rows: Array<Record<string, unknown>> }>
+    }
+  }
 }
 
 export type PayloadCourseWriteAPI = PayloadCourseAccessAPI & {
