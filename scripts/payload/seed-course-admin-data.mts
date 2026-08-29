@@ -308,6 +308,43 @@ async function seedSpaces(payload: PayloadClient) {
   }
 }
 
+async function seedCommunityPost(payload: PayloadClient) {
+  const space = await findOne(payload, 'payload_spaces', {
+    slug: { equals: 'announcements' },
+  })
+  const member = await findOne(payload, 'payload_members', {
+    accountStatus: { equals: 'active' },
+  })
+
+  const spaceId = space?.id ?? (apply ? null : 'dry-run:payload_spaces:announcements')
+  const memberId = member?.id ?? (apply ? null : 'dry-run:payload_members:active')
+  if (!spaceId || !memberId) {
+    log('skip', 'prototype community post (missing active member)')
+    return
+  }
+
+  await upsertByUnique(
+    payload,
+    'payload_space_posts',
+    'title',
+    'Welcome to the JPV Bootcamp community',
+    {
+      title: 'Welcome to the JPV Bootcamp community',
+      space: spaceId,
+      author: memberId,
+      postType: 'discussion',
+      body: richTextParagraph('Welcome to the JPV Bootcamp community.'),
+      moderationStatus: 'visible',
+      pinned: false,
+      locked: false,
+      metadata: {
+        seedKey: 'course-system:prototype-community-post',
+      },
+    },
+    'prototype community post',
+  )
+}
+
 async function seedAccessPolicies(payload: PayloadClient) {
   for (const seed of accessPolicySeeds) {
     const collection = seed.resourceType === 'course' ? 'payload_courses' : 'payload_spaces'
@@ -396,6 +433,7 @@ async function main() {
   await seedCourses(payload)
   await seedEmailTemplates(payload)
   await seedSpaces(payload)
+  await seedCommunityPost(payload)
   await seedAccessPolicies(payload)
 
   console.log(`[seed${apply ? '' : ':dry-run'}] Summary`, stats)
