@@ -1436,7 +1436,17 @@ jobs:
           OUT="$(mktemp)"; ERR="$(mktemp)"
           trap 'rm -f "$OUT" "$ERR"' EXIT
           if ! timeout --signal=TERM --kill-after=15s 120s pnpm payload:course:seed >"$OUT" 2>"$ERR"; then
-            echo "COURSE-SEED-DENIED: dry-run failed; raw diagnostics suppressed" >&2
+            node - "$ERR" <<'NODE'
+            const fs = require('node:fs')
+            const path = process.argv[2]
+            const value = fs.readFileSync(path, 'utf8')
+              .replaceAll(process.env.DATABASE_URL || '', '[redacted-database-url]')
+              .replaceAll(process.env.PAYLOAD_SECRET || '', '[redacted-payload-secret]')
+              .replace(/postgres(?:ql)?:\/\/[^\s"']+/gi, '[redacted-database-url]')
+              .replace(/(password|secret|token|authorization)\s*[:=]\s*[^\s,}]+/gi, '$1=[redacted]')
+            const lines = value.split(/\r?\n/).filter(Boolean).slice(-8)
+            console.error(`COURSE-SEED-DENIED: dry-run failed (${lines.join(' | ').slice(0, 2400)})`)
+            NODE
             exit 1
           fi
           grep -q '\[seed:dry-run\] Summary' "$OUT"
@@ -1457,7 +1467,17 @@ jobs:
           OUT="$(mktemp)"; ERR="$(mktemp)"
           trap 'rm -f "$OUT" "$ERR"' EXIT
           if ! timeout --signal=TERM --kill-after=15s 120s pnpm payload:course:seed -- --apply >"$OUT" 2>"$ERR"; then
-            echo "COURSE-SEED-DENIED: guarded apply failed; raw diagnostics suppressed" >&2
+            node - "$ERR" <<'NODE'
+            const fs = require('node:fs')
+            const path = process.argv[2]
+            const value = fs.readFileSync(path, 'utf8')
+              .replaceAll(process.env.DATABASE_URL || '', '[redacted-database-url]')
+              .replaceAll(process.env.PAYLOAD_SECRET || '', '[redacted-payload-secret]')
+              .replace(/postgres(?:ql)?:\/\/[^\s"']+/gi, '[redacted-database-url]')
+              .replace(/(password|secret|token|authorization)\s*[:=]\s*[^\s,}]+/gi, '$1=[redacted]')
+            const lines = value.split(/\r?\n/).filter(Boolean).slice(-8)
+            console.error(`COURSE-SEED-DENIED: guarded apply failed (${lines.join(' | ').slice(0, 2400)})`)
+            NODE
             exit 1
           fi
           grep -q '\[seed\] Summary' "$OUT"
