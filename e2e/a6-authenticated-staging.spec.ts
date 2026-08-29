@@ -268,11 +268,12 @@ test.describe('A6 Gate 1 authenticated member acceptance', () => {
     const spaceHref = '/portal/community/announcements'
     await page.goto(`${STAGING_URL}${spaceHref}`, { waitUntil: 'networkidle' })
     const postHref = await firstPortalHref(page, /^\/portal\/community\/announcements\/posts\/[^/]+$/)
+    const postArticle = page.locator('article[aria-labelledby="community-post-heading"]')
     for (const viewport of VIEWPORTS) {
       await page.setViewportSize({ width: viewport.width, height: viewport.height })
       await assertRoute(page, postHref, /.+/i, 'member', '#community-post-heading')
       for (const label of ['Helpful', 'Insightful', 'Celebrate', 'Bookmark', 'Share']) {
-        await expect(page.locator('button, a').filter({ hasText: new RegExp(`^${label}`, 'i') }).first(), `${label} control must be rendered`).toBeVisible()
+        await expect(postArticle.locator('button, a').filter({ hasText: new RegExp(`^${label}`, 'i') }).first(), `${label} control must be rendered`).toBeVisible()
       }
     }
   })
