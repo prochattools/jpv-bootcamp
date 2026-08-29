@@ -12,7 +12,11 @@ async function main(): Promise<void> {
     throw new Error('set ADMIN_MEMBER_IDENTITY_APPLY=true before applying administrator member links')
   }
 
-  const payload = await getPayload({ config })
+  // This is a one-shot data reconciliation. Do not run application startup
+  // hooks (including staging auto-provisioning) while opening Payload.
+  console.error('[administrator-backfill] initializing Payload without onInit hooks')
+  const payload = await getPayload({ config, disableOnInit: true })
+  console.error('[administrator-backfill] Payload initialized')
   try {
     const administrators: typeof payload extends { find: (...args: any[]) => Promise<infer R> } ? R['docs'] : never = []
     let page = 1
@@ -25,6 +29,7 @@ async function main(): Promise<void> {
         overrideAccess: true,
       })
       administrators.push(...result.docs)
+      console.error(`[administrator-backfill] read administrator page ${page} (${result.docs.length} records)`)
       if (!result.hasNextPage) break
       page += 1
     } while (page <= 1000)

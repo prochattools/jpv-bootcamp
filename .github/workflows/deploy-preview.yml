@@ -1055,6 +1055,7 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           PAYLOAD_SECRET: ${{ secrets.PAYLOAD_SECRET }}
           NODE_ENV: production
+          PGOPTIONS: "-c statement_timeout=30000 -c lock_timeout=5000"
           DEPLOYMENT_RUNTIME: docker
           DEPLOYMENT_ENV: staging
           PAYLOAD_MIGRATION_SCHEMA: jpvbootcamp
@@ -1064,7 +1065,7 @@ jobs:
           DRY_RUN_ERR="$(mktemp)"
           trap 'rm -f "$DRY_RUN_FILE" "$DRY_RUN_ERR"' EXIT
           set +e
-          ./node_modules/.bin/tsx scripts/payload/link-administrator-members.mts >"$DRY_RUN_FILE" 2>"$DRY_RUN_ERR"
+          timeout --signal=TERM --kill-after=15s 120s ./node_modules/.bin/tsx scripts/payload/link-administrator-members.mts >"$DRY_RUN_FILE" 2>"$DRY_RUN_ERR"
           BACKFILL_EXIT=$?
           set -e
           if [ "$BACKFILL_EXIT" -ne 0 ]; then
@@ -1089,6 +1090,7 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           PAYLOAD_SECRET: ${{ secrets.PAYLOAD_SECRET }}
           NODE_ENV: production
+          PGOPTIONS: "-c statement_timeout=30000 -c lock_timeout=5000"
           DEPLOYMENT_RUNTIME: docker
           DEPLOYMENT_ENV: staging
           PAYLOAD_MIGRATION_SCHEMA: jpvbootcamp
@@ -1101,7 +1103,7 @@ jobs:
           APPLY_ERR="$(mktemp)"
           trap 'rm -f "$APPLY_FILE" "$APPLY_ERR"' EXIT
           set +e
-          ./node_modules/.bin/tsx scripts/payload/link-administrator-members.mts --apply >"$APPLY_FILE" 2>"$APPLY_ERR"
+          timeout --signal=TERM --kill-after=15s 120s ./node_modules/.bin/tsx scripts/payload/link-administrator-members.mts --apply >"$APPLY_FILE" 2>"$APPLY_ERR"
           BACKFILL_EXIT=$?
           set -e
           if [ "$BACKFILL_EXIT" -ne 0 ]; then
