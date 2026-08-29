@@ -1,4 +1,5 @@
 import config from '@payload-config'
+import { Pool } from 'pg'
 import { getPayload } from 'payload'
 
 import {
@@ -17,6 +18,13 @@ async function main(): Promise<void> {
   console.error('[administrator-backfill] initializing Payload without onInit hooks')
   const payload = await getPayload({ config, disableOnInit: true })
   console.error('[administrator-backfill] Payload initialized')
+  const memberLookupPool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    max: 1,
+    connectionTimeoutMillis: 10_000,
+    idleTimeoutMillis: 10_000,
+    options: '-c statement_timeout=15000 -c lock_timeout=5000',
+  })
   try {
     // This is a small, bounded collection. Avoid Payload's paginated find
     // path here: it performs an additional count/page query that can remain
@@ -29,6 +37,10 @@ async function main(): Promise<void> {
     })
     const administrators = result.docs
     console.error(`[administrator-backfill] read administrators (${administrators.length} records)`)
+    const identityPayload = {
+      ...payload,
+      db: { pool: memberLookupPool },
+    }
 
     const rows: Array<{ administratorId: string; email: string; status: string; memberId?: string }> = []
     for (const administrator of administrators) {
@@ -42,7 +54,7 @@ async function main(): Promise<void> {
         continue
       }
       if (!apply) {
-        const resolution = await resolveAdministratorMemberIdentity(payload, administrator)
+        const resolution = await resolveAdministratorMemberIdentity(identityPayload, administrator)
         const status = resolution.source === 'ambiguous'
           ? 'ambiguous'
           : resolution.source === 'invalid'
@@ -60,7 +72,7 @@ async function main(): Promise<void> {
         })
         continue
       }
-      const resolution = await resolveAdministratorMemberIdentity(payload, administrator)
+      const resolution = await resolveAdministratorMemberIdentity(identityPayload, administrator)
       if (resolution.source === 'ambiguous' || resolution.source === 'invalid') {
         rows.push({
           administratorId: String(administrator.id),
@@ -69,7 +81,7 @@ async function main(): Promise<void> {
         })
         continue
       }
-      const identity = await ensureAdministratorMemberIdentity(payload, administrator)
+      const identity = await ensureAdministratorMemberIdentity(identityPayload, administrator)
       rows.push({
         administratorId: String(administrator.id),
         email,
@@ -84,6 +96,7 @@ async function main(): Promise<void> {
     // one-shot reconciliation so CI can finish cleanly instead of waiting on
     // idle sockets indefinitely.
     await payload.db.pool.end()
+    await memberLookupPool.end()
   }
 }
 
