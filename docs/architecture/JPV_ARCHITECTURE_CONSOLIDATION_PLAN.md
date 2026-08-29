@@ -1,8 +1,8 @@
 # JPV Bootcamp Post-Launch Architecture Consolidation Plan
 
-**Status:** A5.1 COMPLETE LOCALLY IN THIS IMPLEMENTATION PACKET; E1 GATE A BLOCKED
+**Status:** A5.1 COMPLETE; E1 FINAL CLOSEOUT COMPLETE; READY TO RESUME A6 GATE 1
 
-**Date:** 2026-08-28
+**Date:** 2026-08-29
 
 **Release authority:** `main` at `08605e52af4abb0b1bdcdfbe6890d010c545b636`
 
@@ -11,7 +11,39 @@ Bootcamp system. It is intentionally packetized. No packet may absorb another
 packet’s scope, and no implementation begins merely because a related branch or
 historical change exists.
 
-## E1 Gate A — environment topology reconciliation
+## E1 final closeout — environment topology reconciliation
+
+E1 is complete for the read-only staging reconciliation scope. The canonical
+production application remains `clients-jpv-bootcamp-app-tp9xrk` at
+`https://jpvbootcamp.com`. The canonical staging authority is
+`clients-jpv-bootcamp-preview-wjfqfd` /
+`bZllV93NqsPZAFCsqDskb` at `https://staging.jpvbootcamp.com`, deployed with
+`DEPLOYMENT_ENV=staging` at exact image/commit
+`0515b792f0aa6ab89db94f30e6176421e06546ae`.
+
+Staging is isolated on database `jpvbootcamp_staging`, schema `jpvbootcamp`,
+role `jpvbootcamp_staging_app` at `10.0.2.4:5433`. The exact-SHA read-only
+migration plan passed with 52 applied Payload migrations, zero expected pending
+migrations, and zero unexpected, duplicate, malformed, or ordering-anomaly
+records; Prisma health was true. The guarded administrator-member backfill
+resolved one identity with no unresolved matches and did not fabricate a
+subscription.
+
+Production remains healthy and protected at
+`08605e52af4abb0b1bdcdfbe6890d010c545b636` with
+`DEPLOYMENT_ENV=production`; legacy remains isolated and frozen. The preview
+hostname is still HTTP 200 with no redirect but serves the production image and
+`DEPLOYMENT_ENV=production`; it is a stale compatibility endpoint, not staging
+authority. Preview retirement/repointing, production integration, provider
+mutation, and production-data mutation remain separately authorized.
+
+Evidence: staging deployment workflow `33234347436`; read-only migration-plan
+workflow `33235046165`, artifact `9709659401`; guarded backfill workflow
+`33234852975`, artifact `9709600822`. E1 did not dispatch a production or
+legacy workflow or mutate DNS, providers, production data, or legacy data.
+A6 Gate 1 may resume.
+
+## Historical E1 Gate A — environment topology reconciliation (2026-08-28, superseded)
 
 E1 Gate A is a read-only reconciliation of the three Dokploy application
 identities, their public origins, database boundaries, migration evidence, and

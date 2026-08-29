@@ -1,22 +1,42 @@
 # Preview-to-staging inventory
 
-**Status:** E1 Gate A inventory — current, historical, and immutable references
-classified; no live mutation performed
+**Status:** E1 final closeout — staging authority verified; preview compatibility
+state classified; no preview retirement performed
 
-**Evidence date:** 2026-08-28
+**Evidence date:** 2026-08-29
 
 This inventory prevents a retained `preview` string from being mistaken for a
-live environment authority. Current staging behavior must use
+live environment authority. Current staging behavior uses
 `https://staging.jpvbootcamp.com`; historical evidence and external immutable
-identifiers remain labelled below until a separately authorized cleanup.
+identifiers remain labelled below. E1 verified staging without retiring the
+still-active preview hostname.
+
+## E1 final closeout — 2026-08-29
+
+The staging application `clients-jpv-bootcamp-preview-wjfqfd` /
+`bZllV93NqsPZAFCsqDskb` is now live at `https://staging.jpvbootcamp.com` with
+`deploymentEnv=staging` and image/commit
+`0515b792f0aa6ab89db94f30e6176421e06546ae`. Its target is database
+`jpvbootcamp_staging`, schema `jpvbootcamp`, role
+`jpvbootcamp_staging_app`. The exact-SHA read-only plan passed with 52 Payload
+migrations applied, zero expected pending migrations, no unexpected,
+duplicate, malformed, or ordering-anomaly records, and healthy Prisma access.
+The guarded administrator-member backfill resolved and linked one identity.
+
+`https://preview.jpvbootcamp.com` remains HTTP 200 with no redirect, but serves
+the production image/commit
+`08605e52af4abb0b1bdcdfbe6890d010c545b636` with `deploymentEnv=production`.
+It is therefore a stale compatibility endpoint, not staging authority. No DNS,
+provider, preview, production, or legacy mutation was performed by this
+closeout.
 
 ## Runtime and provider inventory
 
 | Reference | Classification | E1 disposition |
 | --- | --- | --- |
 | `https://jpvbootcamp.com` | Current production origin | Canonical production; protected |
-| `https://preview.jpvbootcamp.com` | Current transitional staging origin | Live today, but deprecated as the public staging identity; replace only in Gate B after routing is ready |
-| `https://staging.jpvbootcamp.com` | Intended staging origin | Canonical target; currently returns 404 and is not promoted by E1 |
+| `https://preview.jpvbootcamp.com` | Active stale compatibility endpoint | HTTP 200 with production runtime; not staging authority; retirement/repointing remains separately authorized |
+| `https://staging.jpvbootcamp.com` | Current staging origin | Canonical staging authority; HTTP 200, exact staging SHA, `deploymentEnv=staging` |
 | `https://legacy.jpvbootcamp.com` | Legacy origin | Frozen and retained; no current staging or production authority |
 | `clients-jpv-bootcamp-preview-wjfqfd` | Dokploy application slug | External immutable identifier for the staging application; retain and document |
 | `bZllV93NqsPZAFCsqDskb` | Dokploy application ID | External immutable identifier for the staging application; retain and document |
@@ -30,10 +50,11 @@ identifiers remain labelled below until a separately authorized cleanup.
 | Reference | Classification | Observed or intended state |
 | --- | --- | --- |
 | `jpvbootcamp` / `jpvbootcamp` | Production | Current production database/schema pair |
-| `jpvbootcamp` / `jpvbootcamp_staging` (schema absent) | Transitional staging | Current live preview runtime connection; it shares the production database and has no usable migration tables |
-| `jpvbootcamp_staging` / `jpvbootcamp_staging` | Intended staging target | Preferred Gate B target; provisioning and migration are not authorized in E1 |
+| `jpvbootcamp_staging` / `jpvbootcamp` | Current staging | Verified staging database/schema pair; exact-SHA read-only plan passed with 52 Payload migrations and no expected pending migrations |
+| Preview hostname runtime | Non-authoritative compatibility state | Serves production runtime; do not infer a database or staging authority from the preview hostname |
 | `jpvbootcamp_legacy` / `jpvbootcamp` | Legacy | Separate frozen legacy database/schema pair |
-| `jpvbootcamp_staging_user` | Current observed role label | Used by production and transitional staging; role repair is deferred and fail-closed |
+| `jpvbootcamp_staging_user` | Production role label | Observed on production and retained as configuration drift; no role repair was performed by E1 |
+| `jpvbootcamp_staging_app` | Current staging role | Verified staging application role; no credentials are stored here |
 | `jpvbootcamp_user` | Legacy role | Legacy only |
 
 ## Repository reference inventory
@@ -87,18 +108,22 @@ current-platform authority except where they appear in explicit production or
 legacy deny-lists, topology documentation, compatibility code, or defensive
 tests. Those references are intentional safety boundaries.
 
-## Gate B removal/repoint checklist
+## Preview retirement/repoint checklist — separate authorization
 
-Do not remove or repoint the current preview route until all of the following
-are evidenced in one reviewed packet:
+E1 did not remove or repoint the active preview hostname. Any future retirement
+or repointing must preserve the verified staging authority and evidence all of
+the following in one reviewed packet:
 
-1. The intended staging database/schema/role exists and is independently
-   identified without secrets.
-2. The staging migration state matches the repository registry, or the exact
-   reviewed repair is recorded.
-3. Dokploy environment values use `DEPLOYMENT_ENV=staging` and the staging
-   origin consistently.
-4. `https://staging.jpvbootcamp.com` serves health and the acceptance suite.
+1. The verified staging database/schema/role remains independently identified
+   without secrets.
+2. The staging migration state remains matched to the repository registry.
+3. Dokploy environment values continue to use `DEPLOYMENT_ENV=staging` and the
+   staging origin consistently.
+4. `https://staging.jpvbootcamp.com` continues to serve health and acceptance.
 5. The production and legacy deny-lists still reject accidental targeting.
 6. Rollback to the known current transitional runtime is documented and
    tested.
+
+Earlier Gate-A inventory statements that described preview as current staging
+or staging as a 404 are historical checkpoint evidence, superseded by the E1
+closeout above.

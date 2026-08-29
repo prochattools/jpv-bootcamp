@@ -1,38 +1,45 @@
 # JPV Bootcamp environment and database boundaries
 
-Verified 2026-08-26 from the live Dokploy containers on the authorized host. This
+Verified 2026-08-29 from live staging, production, legacy, DNS, TLS, and health
+evidence on the authorized host. This
 document records runtime facts only; passwords and other secret values are never
 stored here.
 
-## CURRENT E1 GATE A — 2026-08-28
+## CURRENT E1 FINAL CLOSEOUT — 2026-08-29
 
-The following read-only evidence supersedes the older checkpoint below. The
-production application is `clients-jpv-bootcamp-app-tp9xrk` at
-`https://jpvbootcamp.com`. The currently serving non-production application is
-still `clients-jpv-bootcamp-preview-wjfqfd` at
-`https://preview.jpvbootcamp.com`; it is a transitional staging runtime, not
-the intended public staging identity. `https://staging.jpvbootcamp.com` currently
-returns 404.
+The following read-only evidence is current. The production application is
+`clients-jpv-bootcamp-app-tp9xrk` at `https://jpvbootcamp.com`. The staging
+authority is `clients-jpv-bootcamp-preview-wjfqfd` at
+`https://staging.jpvbootcamp.com`, deployed with
+`deploymentEnv=staging` at commit/image
+`0515b792f0aa6ab89db94f30e6176421e06546ae`. The preview hostname remains
+active, but is not staging authority: it serves the production runtime at
+commit/image `08605e52af4abb0b1bdcdfbe6890d010c545b636` with
+`deploymentEnv=production` and no redirect.
 
 | Runtime | Database host | Database | Schema | Role | Current classification |
 | --- | --- | --- | --- | --- | --- |
 | Production | `10.0.2.4:5433` | `jpvbootcamp` | `jpvbootcamp` | `jpvbootcamp_staging_user` | Current production; protected |
-| Transitional staging | `10.0.2.4:5433` | `jpvbootcamp` | `jpvbootcamp_staging` (absent) | `jpvbootcamp_staging_user` | Current preview runtime; shares production database and has no configured schema |
+| Staging | `10.0.2.4:5433` | `jpvbootcamp_staging` | `jpvbootcamp` | `jpvbootcamp_staging_app` | Current staging authority; isolated and verified |
 | Legacy | `10.0.2.4:5433` | `jpvbootcamp_legacy` | `jpvbootcamp` | `jpvbootcamp_user` | Frozen legacy; never a current migration target |
 
-The live host therefore exposes two observed database names on one database
-server. The preferred target for a repaired staging environment is a separate
-`jpvbootcamp_staging` database with schema `jpvbootcamp_staging`; provisioning
-and repair are deferred to E1 Gate B. The production role's staging-labelled
-name is recorded as drift and is not repaired by this gate.
+The live host therefore exposes three database names on one database server:
+`jpvbootcamp` for production, `jpvbootcamp_staging` for staging, and
+`jpvbootcamp_legacy` for the frozen legacy application. The production role
+name `jpvbootcamp_staging_user` remains recorded configuration drift; no role
+repair was performed by E1.
 
-The transitional staging connection reaches `jpvbootcamp`, but its configured
-`jpvbootcamp_staging` schema is absent; both migration tables are therefore
-unavailable there. The production connection separately exposes 52 Payload and
-28 Prisma migration records. This is an E1 blocker. No migration, database,
-schema, role, provider, or deployment change was executed. See
+The exact-SHA staging migration plan was read-only and passed with 52 Payload
+migrations applied, zero expected pending migrations, no unexpected, duplicate,
+malformed, or ordering-anomaly records, and healthy Prisma access. The guarded
+administrator-member backfill resolved and linked one administrator identity
+without unresolved matches or a fabricated subscription. See
 `docs/architecture/JPV_ENVIRONMENT_TOPOLOGY_V1.md` and
 `docs/architecture/JPV_PREVIEW_TO_STAGING_INVENTORY.md` for the full inventory.
+
+No production or legacy database mutation was performed by E1. Staging-only
+deployment, migration, and guarded backfill actions are recorded in the release
+evidence and remain outside the production and legacy boundaries.
 
 ## Historical checkpoints (retained; not current live truth)
 

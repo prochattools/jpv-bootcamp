@@ -1,8 +1,8 @@
 # JPV Bootcamp Production Architecture v1
 
-**Status:** CURRENT ARCHITECTURE AUTHORITY — A5.1 COMPLETE LOCALLY; E1 GATE A BLOCKED
+**Status:** CURRENT ARCHITECTURE AUTHORITY — A5.1 COMPLETE; E1 FINAL CLOSEOUT COMPLETE; READY TO RESUME A6 GATE 1
 
-**Date:** 2026-08-28
+**Date:** 2026-08-29
 
 This document is the architectural authority for the live JPV Bootcamp system
 and for the post-launch consolidation packets A1–A6. It describes the target
@@ -11,26 +11,34 @@ change, provider mutation, migration, or feature batch. Those actions require
 the packet-specific authorization and validation described in
 `JPV_ARCHITECTURE_CONSOLIDATION_PLAN.md`.
 
-## E1 environment authority — read-only reconciliation
+## E1 environment authority — final read-only reconciliation
 
 The canonical production application is `JPV Bootcamp` /
 `clients-jpv-bootcamp-app-tp9xrk` at `https://jpvbootcamp.com`. The canonical
 staging target is the existing Dokploy staging application
-`clients-jpv-bootcamp-preview-wjfqfd` / `bZllV93NqsPZAFCsqDskb`, but its public
-origin must be `https://staging.jpvbootcamp.com` and its source boundary is
-`feature/*`, `fix/*`, or `release/*`. At this gate, that application is still
-serving `https://preview.jpvbootcamp.com` with `DEPLOYMENT_ENV=preview` against
-database `jpvbootcamp`; its configured `jpvbootcamp_staging` schema is absent.
-The intended staging hostname returns 404.
+`clients-jpv-bootcamp-preview-wjfqfd` / `bZllV93NqsPZAFCsqDskb` at
+`https://staging.jpvbootcamp.com`, with source boundary `feature/*`, `fix/*`,
+or `release/*`. It is verified with `DEPLOYMENT_ENV=staging` at exact
+image/commit `0515b792f0aa6ab89db94f30e6176421e06546ae`, database
+`jpvbootcamp_staging`, schema `jpvbootcamp`, and role
+`jpvbootcamp_staging_app`.
 
-Production is observed on database `jpvbootcamp`, schema `jpvbootcamp`; legacy
-is observed on separate database `jpvbootcamp_legacy`, schema `jpvbootcamp`.
-The production role is currently labelled `jpvbootcamp_staging_user`, which is
-recorded drift and is not repaired here. Transitional staging migration
-evidence does not match the repository registry. E1 is therefore `BLOCKED` and
-does not authorize Gate B database/schema/role repair, migration execution,
-Dokploy changes, routing, push, merge, or deployment. See the complete
-topology and preview-to-staging inventory in
+The exact-SHA staging migration plan is read-only and passed with 52 Payload
+migrations applied, zero expected pending migrations, no unexpected, duplicate,
+malformed, or ordering-anomaly records, and healthy Prisma access. The guarded
+administrator-member backfill linked one administrator identity without
+unresolved matches or a fabricated subscription. Production remains healthy at
+`08605e52af4abb0b1bdcdfbe6890d010c545b636` with `DEPLOYMENT_ENV=production`.
+Legacy remains isolated and frozen. The preview hostname is still HTTP 200 with
+no redirect, but serves the production image with `DEPLOYMENT_ENV=production`;
+it is a stale compatibility endpoint and not staging authority.
+
+The production role is still labelled `jpvbootcamp_staging_user`, recorded as
+configuration drift and not repaired here. E1 is complete for staging
+authority, boundary, migration-plan, and guarded administrator-link evidence;
+A6 Gate 1 may resume. Preview retirement/repointing, production integration,
+and any provider or production-data change remain separately authorized. See
+the complete topology and preview-to-staging inventory in
 `JPV_ENVIRONMENT_TOPOLOGY_V1.md` and `JPV_PREVIEW_TO_STAGING_INVENTORY.md`.
 
 ## Current production authority

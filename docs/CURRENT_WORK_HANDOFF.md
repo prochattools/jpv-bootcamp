@@ -4,11 +4,49 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 
 ---
 
-## CURRENT TRUTH — 2026-08-28
+## CURRENT E1 FINAL CLOSEOUT — 2026-08-29
 
-JPV Bootcamp is live in production. This section is the current handoff
-authority; all dated sections below are retained as historical evidence unless
-explicitly superseded here.
+**Status:** `READY TO RESUME A6 GATE 1`
+
+This is the current handoff authority. E1 was completed as a staging-only,
+read-only reconciliation plus the already-authorized staging deployment and
+guarded administrator-member link backfill. No production or legacy workflow,
+database, DNS, or provider mutation was performed.
+
+- **Production:** `https://jpvbootcamp.com`, application
+  `clients-jpv-bootcamp-app-tp9xrk`, healthy at image/commit
+  `08605e52af4abb0b1bdcdfbe6890d010c545b636`,
+  `deploymentEnv=production`.
+- **Staging authority:** `https://staging.jpvbootcamp.com`, application
+  `clients-jpv-bootcamp-preview-wjfqfd` / Dokploy ID
+  `bZllV93NqsPZAFCsqDskb`, exact image/commit
+  `0515b792f0aa6ab89db94f30e6176421e06546ae`,
+  `deploymentEnv=staging`.
+- **Staging database boundary:** database `jpvbootcamp_staging`, schema
+  `jpvbootcamp`, role `jpvbootcamp_staging_app`, host `10.0.2.4:5433`.
+- **Staging migration plan:** workflow `33235046165` passed read-only with 52
+  applied Payload migrations, zero expected pending migrations, zero
+  unexpected/duplicate/malformed/order anomalies, and healthy Prisma access.
+  Sanitized artifact: `9709659401`.
+- **Administrator link backfill:** workflow `33234852975` passed for staging;
+  one administrator identity was resolved and linked with no unresolved match
+  and no fabricated subscription. Sanitized artifact: `9709600822`.
+- **Preview final state:** `https://preview.jpvbootcamp.com` remains HTTP 200
+  with no redirect, but serves the production image with
+  `deploymentEnv=production`. It is a stale compatibility endpoint, not the
+  staging authority, and was not retired by E1.
+- **Next action:** A6 Gate 1 may resume with the exact staging/prod/legacy
+  boundaries above. Preview retirement/repointing and production integration
+  require separate authorization.
+
+All sections below this marker are historical handoff records unless they are
+explicitly marked as current and dated after this closeout.
+
+## Historical current truth snapshot — 2026-08-28 (superseded)
+
+JPV Bootcamp was live in production at this dated checkpoint. This section is
+retained as historical evidence; the current handoff authority is the E1 final
+closeout above.
 
 - **Release authority:** `main` and `origin/main`, verified after fetch at
   `08605e52af4abb0b1bdcdfbe6890d010c545b636`.
@@ -70,7 +108,7 @@ explicitly superseded here.
 - **Architecture authority:** `docs/architecture/` contains the production
   architecture, source-of-truth map, engineering principles, and packet plan.
 
-## E1 GATE A — CURRENT ENVIRONMENT TOPOLOGY — 2026-08-28
+## Historical E1 GATE A — ENVIRONMENT TOPOLOGY — 2026-08-28 (superseded)
 
 E1 is `BLOCKED` after a read-only reconciliation of the live Dokploy topology.
 The production application is `JPV Bootcamp` /

@@ -1,24 +1,33 @@
 # JPV Bootcamp Production Data Flow
 
-**Status:** CURRENT A5.1 DATA-FLOW MAP — OWNERSHIP CLOSED; E1 GATE A BLOCKED
+**Status:** CURRENT A5.1 DATA-FLOW MAP — OWNERSHIP CLOSED; E1 FINAL CLOSEOUT COMPLETE; READY TO RESUME A6 GATE 1
 
-**Date:** 2026-08-28
+**Date:** 2026-08-29
 
-This document maps the current production-shaped repository flow. It is not
-evidence that a provider, database, or deployed runtime is currently healthy;
-the A5 packet performs no live writes and no reconciliation.
+This document maps the current production-shaped repository flow. The E1
+closeout adds read-only staging/runtime evidence; it does not authorize
+production release or provider mutation.
 
 ## E1 environment boundary
 
 Production is the root application at `https://jpvbootcamp.com` with database
-`jpvbootcamp` / schema `jpvbootcamp`. Legacy is isolated at
-`https://legacy.jpvbootcamp.com` with database `jpvbootcamp_legacy` / schema
-`jpvbootcamp`. The current non-production runtime still serves
-`https://preview.jpvbootcamp.com` with `DEPLOYMENT_ENV=preview`. Its connection
-reaches the production database `jpvbootcamp`, but the configured
-`jpvbootcamp_staging` schema is absent and its migration tables are unavailable.
-The intended `https://staging.jpvbootcamp.com` origin returns 404. This is not a
-usable or isolated staging authority.
+`jpvbootcamp` / schema `jpvbootcamp`. Staging is the verified Dokploy target
+`clients-jpv-bootcamp-preview-wjfqfd` / `bZllV93NqsPZAFCsqDskb` at
+`https://staging.jpvbootcamp.com` with `DEPLOYMENT_ENV=staging`, database
+`jpvbootcamp_staging`, schema `jpvbootcamp`, and role
+`jpvbootcamp_staging_app`. Its exact deployed SHA is
+`0515b792f0aa6ab89db94f30e6176421e06546ae`; the read-only migration plan
+reported 52 applied Payload migrations, no expected pending migrations, no
+unexpected/duplicate/malformed/order anomalies, and healthy Prisma access.
+Legacy is isolated at `https://legacy.jpvbootcamp.com` with database
+`jpvbootcamp_legacy` / schema `jpvbootcamp`.
+
+The preview hostname remains active at HTTP 200 with no redirect, but serves the
+production runtime at `08605e52af4abb0b1bdcdfbe6890d010c545b636` with
+`DEPLOYMENT_ENV=production`. It is a stale compatibility endpoint, not staging
+authority. The guarded administrator-member backfill linked one administrator
+identity with no unresolved matches or fabricated subscription. No production
+or legacy mutation was performed by E1.
 
 The repository now centralizes non-secret environment identities in
 `src/lib/environmentTopology.ts`; active staging checks use the staging origin
@@ -84,12 +93,13 @@ remain behind named services.
 6. Unknown, stale, unmatched, or ambiguous joins remain visible as review
    state. They do not become active access through a guessed assignment.
 
-## A5.1 boundary
+## A5.1 / E1 boundary
 
 A5.1 closes the architecture and moves the reviewed support and sponsored
-route/page persistence behind named server-only services. It does not execute
-checkout, Stripe reconciliation, administrator-link backfill, migration,
-provider operation, or deployment. A6 is separately gated for exact
-environment identity, read-only production inventory, deployed-SHA health,
-provider configuration/delivery proof, and any explicitly authorized apply
-operation.
+route/page persistence behind named server-only services. E1 has now verified
+the staging runtime, isolated staging database boundary, read-only migration
+plan, and guarded administrator-link backfill. A6 Gate 1 may resume. E1 did not
+execute a production migration, production reconciliation, provider operation,
+preview retirement, or production deployment. A6 remains separately gated for
+exact production identity, provider configuration/delivery proof, regression
+acceptance, and any explicitly authorized production apply operation.

@@ -1,5 +1,39 @@
 # JPV Architecture Consolidation A6 Release Evidence
 
+## Current E1 final closeout — 2026-08-29
+
+**Decision:** `READY TO RESUME A6 GATE 1`
+
+This current section supersedes older Gate-1 snapshots below. E1 verified the
+staging runtime and boundary without changing production or legacy. The
+canonical staging authority is `https://staging.jpvbootcamp.com` on Dokploy
+application `clients-jpv-bootcamp-preview-wjfqfd` /
+`bZllV93NqsPZAFCsqDskb`, exact image/commit
+`0515b792f0aa6ab89db94f30e6176421e06546ae`, and `deploymentEnv=staging`.
+It uses database `jpvbootcamp_staging`, schema `jpvbootcamp`, and role
+`jpvbootcamp_staging_app`.
+
+The exact-SHA read-only migration-plan workflow `33235046165` passed with 52
+Payload migrations applied, zero expected pending migrations, zero unexpected,
+duplicate, malformed, or ordering-anomaly records, and healthy Prisma access.
+The guarded administrator-member backfill workflow `33234852975` passed with
+one resolved and linked administrator identity, no unresolved matches, and no
+fabricated subscription. The staging deployment workflow was `33234347436`.
+Sanitized artifacts are `9709659401` and `9709600822` respectively.
+
+Production remains healthy and protected at
+`08605e52af4abb0b1bdcdfbe6890d010c545b636` with
+`deploymentEnv=production`; legacy remains isolated and frozen. The preview
+hostname is still HTTP 200 with no redirect, but serves the production image
+and `deploymentEnv=production`. It is a stale compatibility endpoint, not
+staging authority, and was not retired or mutated by E1. Preview retirement,
+production integration, and provider changes remain separately authorized.
+
+The sections below are historical A6 evidence snapshots. Their older preview,
+Gate-A, branch, and staging claims must not be read as current live state.
+
+## Historical A6 evidence snapshots
+
 **Gate:** A6 Gate 1 — full regression, staging acceptance, and controlled production integration
 **Assessment date:** 2026-08-28
 **Decision:** `NOT READY FOR PRODUCTION MERGE`
