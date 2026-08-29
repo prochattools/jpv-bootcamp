@@ -31,7 +31,7 @@ if (!fs.existsSync(evidencePath)) {
     `[portal-admin-smoke-gate] FAIL — Portal admin mutation smoke has not been run today (${today}).`,
   )
   console.error(
-    `[portal-admin-smoke-gate] Run: STAGING_URL=https://preview.jpvbootcamp.com STAGING_ADMIN_EMAIL=... STAGING_ADMIN_PASSWORD=... pnpm exec tsx scripts/portal-admin-mutation-smoke.test.ts`,
+    `[portal-admin-smoke-gate] Run: STAGING_URL=https://staging.jpvbootcamp.com STAGING_ADMIN_EMAIL=... STAGING_ADMIN_PASSWORD=... pnpm exec tsx scripts/portal-admin-mutation-smoke.test.ts`,
   )
   process.exit(1)
 }

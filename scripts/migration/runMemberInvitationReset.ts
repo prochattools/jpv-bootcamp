@@ -11,7 +11,7 @@
  * Usage:
  *   pnpm tsx scripts/migration/runMemberInvitationReset.ts dry-run
  *   pnpm tsx scripts/migration/runMemberInvitationReset.ts apply \
- *     --staging-url https://preview.jpvbootcamp.com \
+ *     --staging-url https://staging.jpvbootcamp.com \
  *     --authorization-token <token>
  *
  * Hard stops:

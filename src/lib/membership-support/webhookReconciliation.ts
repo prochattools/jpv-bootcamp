@@ -1,6 +1,7 @@
 import type Stripe from 'stripe'
 
 import { normalizeEmail } from '@/lib/normalize-email'
+import { relationshipId } from '@/lib/domain/relationships'
 import type { PayloadCourseWriteAPI, PayloadDocument } from '@/lib/payloadCourse/accessService'
 import type { MembershipFundingSource, MembershipSupportReconciliationState, MembershipVoucherDuration } from '@/lib/membership-support/domain'
 import { buildMembershipSupportProjectionRecord, buildMembershipSupportReviewQueueProjection, type MembershipSupportProjectionRecord } from '@/lib/membership-support/workflows'
@@ -71,15 +72,6 @@ function asRecord(value: unknown): Record<string, unknown> {
 
 function text(value: unknown): string | null {
   return typeof value === 'string' && value.trim() ? value.trim() : null
-}
-
-function relationshipId(value: unknown): string | null {
-  if (typeof value === 'string' && value.trim()) return value.trim()
-  if (value && typeof value === 'object' && 'id' in value) {
-    const id = (value as { id?: unknown }).id
-    return typeof id === 'string' && id.trim() ? id.trim() : null
-  }
-  return null
 }
 
 function normalizeFundingSource(value: unknown): Exclude<MembershipFundingSource, 'direct_payment'> | null {

@@ -1,6 +1,17 @@
 # JPV Bootcamp Architecture
 
-This document describes the current Payload-only Version 3.7 system on `feature/course-branding-and-preview`. Current implementation status and hardening order are tracked in `docs/PAYLOAD_INTEGRATION_PLAN.md`; static preview routes do not count as operational architecture until their persistence, authorization, failure handling, and tests pass.
+> **Current production authority — 2026-08-27:** JPV Bootcamp is live on
+> `main` at `08605e52af4abb0b1bdcdfbe6890d010c545b636`; GitHub Actions run
+> `33093612107` passed and the production deployment reported the exact SHA with
+> `deploymentEnv=production`. The post-launch architecture authority is now
+> [`docs/architecture/JPV_PRODUCTION_ARCHITECTURE_V1.md`](architecture/JPV_PRODUCTION_ARCHITECTURE_V1.md).
+
+The feature-branch description and readiness language in the historical body
+below are retained as provenance; they are not current release authority.
+Current implementation status and hardening order are tracked in
+`docs/PAYLOAD_INTEGRATION_PLAN.md`; static preview routes do not count as
+operational architecture until their persistence, authorization, failure
+handling, and tests pass.
 
 > **Infrastructure & networking:** See `docs/INFRASTRUCTURE_NETWORKING.md` for the canonical reference on how the app container reaches the database, Tailscale subnet routing, firewall layers, and incident history.
 

@@ -1,3 +1,7 @@
+import { randomUUID } from 'node:crypto'
+
+import { relationshipId as canonicalRelationshipId } from '@/lib/domain/relationships'
+
 export type LiveSessionStatus = 'scheduled' | 'live' | 'completed' | 'cancelled'
 
 export type LiveSessionAuditEntry = {
@@ -57,16 +61,7 @@ const ALLOWED_TRANSITIONS: Record<LiveSessionStatus, readonly LiveSessionStatus[
   cancelled: ['cancelled'],
 }
 
-export function liveSessionRelationshipId(value: unknown): string | null {
-  if (typeof value === 'string' || typeof value === 'number') {
-    const normalized = String(value).trim()
-    return normalized || null
-  }
-  if (value && typeof value === 'object' && 'id' in value) {
-    return liveSessionRelationshipId((value as { id?: unknown }).id)
-  }
-  return null
-}
+export const liveSessionRelationshipId = canonicalRelationshipId
 
 function sanitizeRoomSegment(value: string): string {
   return value
@@ -314,4 +309,3 @@ export async function assertLiveSessionRelationships(params: {
     }
   }
 }
-import { randomUUID } from 'node:crypto'

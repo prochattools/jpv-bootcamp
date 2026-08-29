@@ -3,6 +3,7 @@ import type {
   PayloadDocument,
   PayloadId,
 } from '@/lib/payloadCourse/accessService'
+import { relationshipId } from '@/lib/domain/relationships'
 
 export type AffiliateSummary = {
   referralCount: number
@@ -17,13 +18,6 @@ function asString(value: unknown): string | null {
   if (typeof value === 'string' && value.trim()) return value.trim()
   if (typeof value === 'number') return String(value)
   return null
-}
-
-function getDocumentId(value: unknown): string | null {
-  const direct = asString(value)
-  if (direct) return direct
-  if (!value || typeof value !== 'object' || !('id' in value)) return null
-  return asString((value as { id?: unknown }).id)
 }
 
 function deny(): never {
@@ -67,7 +61,7 @@ async function findOwnedActiveAffiliate(
 
   if (result.docs.length !== 1) deny()
   const affiliate = result.docs[0] as PayloadDocument
-  if (getDocumentId(affiliate.member) !== memberId || affiliate.status !== 'active') deny()
+  if (relationshipId(affiliate.member) !== memberId || affiliate.status !== 'active') deny()
   return affiliate
 }
 
@@ -112,7 +106,7 @@ export async function getAffiliateSummary(
   ])
 
   const referralCount = referralResult.docs.filter((referral) => {
-    if (getDocumentId(referral.affiliate) !== affiliateId) deny()
+    if (relationshipId(referral.affiliate) !== affiliateId) deny()
     return (
       referral.status === 'tracked' ||
       referral.status === 'converted' ||
@@ -125,7 +119,7 @@ export async function getAffiliateSummary(
   let currency: string | null = null
 
   for (const commission of commissionResult.docs) {
-    if (getDocumentId(commission.affiliate) !== affiliateId) deny()
+    if (relationshipId(commission.affiliate) !== affiliateId) deny()
     if (commission.status === 'void') continue
     if (commission.status !== 'pending' && commission.status !== 'approved') continue
 

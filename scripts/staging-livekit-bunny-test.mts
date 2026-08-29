@@ -9,8 +9,9 @@
  */
 
 import https from 'https'
+import { ENVIRONMENT_TOPOLOGY } from '../src/lib/environmentTopology'
 
-const STAGING_URL = 'https://preview.jpvbootcamp.com'
+const STAGING_URL = ENVIRONMENT_TOPOLOGY.staging.origin
 
 interface TestResult {
 	name: string
@@ -75,16 +76,14 @@ async function testHealthEndpoint(): Promise<void> {
 async function testLiveKitTokenWithoutAuth(): Promise<void> {
 	try {
 		const body = JSON.stringify({
-			courseId: 'test-course',
-			moduleId: 'test-module',
-			lessonId: 'test-lesson',
-			role: 'student',
+			sessionId: 'staging-livekit-smoke-session',
 		})
 
 		const { status, body: responseBody } = await makeRequest('POST', '/api/livekit/token', body)
 
-		// Expected: 401 (no auth) or 200 (if session exists)
-		const passed = status === 401 || status === 200
+		// A syntactically valid request must reach the authentication boundary.
+		// The smoke test intentionally has no session cookie, so 401 is expected.
+		const passed = status === 401
 		results.push({
 			name: 'LiveKit Token (No Auth)',
 			passed,

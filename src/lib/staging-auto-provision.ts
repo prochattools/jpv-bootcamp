@@ -2,6 +2,7 @@ import type { Payload } from 'payload'
 import { createLocalReq } from 'payload'
 
 const STAGING_ENVS = ['preview', 'staging'] as const
+type PayloadRelationshipId = string | number
 
 function isStagingEnv(): boolean {
   const env = (process.env.DEPLOYMENT_ENV ?? '').trim().toLowerCase()
@@ -76,7 +77,7 @@ async function provisionAdmin(payload: Payload): Promise<void> {
   console.info('staging-auto-provision: admin user created')
 }
 
-async function provisionMember(payload: Payload): Promise<string | null> {
+async function provisionMember(payload: Payload): Promise<PayloadRelationshipId | null> {
   const email = process.env.STAGING_MEMBER_EMAIL?.trim()
   const password = process.env.STAGING_MEMBER_PASSWORD?.trim()
   if (!email || !password) {
@@ -105,7 +106,10 @@ async function provisionMember(payload: Payload): Promise<string | null> {
     } else {
       console.info('staging-auto-provision: member already exists, no changes (create-if-missing only)')
     }
-    return String(doc.id)
+    // Payload's default Postgres ID type is numeric in this project. Preserve
+    // the source ID type so relationship validators do not reject a numeric
+    // member ID that was converted to a string.
+    return doc.id as PayloadRelationshipId
   }
 
   const created = await payload.create({
@@ -120,10 +124,10 @@ async function provisionMember(payload: Payload): Promise<string | null> {
     overrideAccess: true,
   })
   console.info('staging-auto-provision: member created')
-  return String((created as { id: string | number }).id)
+  return (created as { id: PayloadRelationshipId }).id
 }
 
-async function provisionMemberSubscription(payload: Payload, memberId: string): Promise<void> {
+async function provisionMemberSubscription(payload: Payload, memberId: PayloadRelationshipId): Promise<void> {
   // The Payload Local API creates a req with req.user=null in onInit context.
   // Field validators call req.payloadDataLoader.find() to verify relationship targets —
   // that find is called WITHOUT overrideAccess, so payload_members.read returns false
@@ -165,9 +169,9 @@ async function provisionMemberSubscription(payload: Payload, memberId: string): 
     req: systemReq,
   })
 
-  let billingAccountId: string
+  let billingAccountId: PayloadRelationshipId
   if (existingBilling.docs.length > 0) {
-    billingAccountId = String((existingBilling.docs[0] as { id: string | number }).id)
+    billingAccountId = (existingBilling.docs[0] as { id: PayloadRelationshipId }).id
     console.info('staging-auto-provision: using existing billing account %s', billingAccountId)
   } else {
     const memberEmail = process.env.STAGING_MEMBER_EMAIL?.trim() ?? 'staging@example.com'
@@ -184,7 +188,7 @@ async function provisionMemberSubscription(payload: Payload, memberId: string): 
       overrideAccess: true,
       req: systemReq,
     })
-    billingAccountId = String((newBilling as { id: string | number }).id)
+    billingAccountId = (newBilling as { id: PayloadRelationshipId }).id
     console.info('staging-auto-provision: billing account created %s', billingAccountId)
   }
 

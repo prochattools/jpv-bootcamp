@@ -6,8 +6,9 @@
 
 import https from 'https'
 import { URL } from 'url'
+import { ENVIRONMENT_TOPOLOGY } from '../src/lib/environmentTopology'
 
-const STAGING_URL = 'https://preview.jpvbootcamp.com'
+const STAGING_URL = ENVIRONMENT_TOPOLOGY.staging.origin
 
 interface TestResult {
 	name: string

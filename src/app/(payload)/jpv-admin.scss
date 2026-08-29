@@ -69,6 +69,15 @@ body {
   line-height: 1.55;
 }
 
+// Payload's flex shell can retain a small intrinsic width when its sidebar
+// collapses at tablet widths. Contain the document viewport while leaving
+// explicitly scrollable tables and panels untouched.
+html,
+body {
+  max-width: 100%;
+  overflow-x: clip;
+}
+
 // Premium application shell: content remains neutral and readable in every
 // Payload theme mode. These selectors target stable semantic elements rather
 // than generated CSS-module class names.
@@ -458,6 +467,8 @@ label {
 .template-default__content,
 .view--collection-list,
 .view--document {
+  box-sizing: border-box;
+  min-width: 0;
   width: 100%;
   max-width: 1280px;
   margin-inline: auto;
@@ -849,6 +860,7 @@ select {
   .template-default__content,
   .view--collection-list,
   .view--document {
+    flex: 1 1 auto;
     padding-inline: 1.5rem;
   }
 }

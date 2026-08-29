@@ -2,6 +2,7 @@ import { execSync, spawnSync } from 'node:child_process'
 import { resolve } from 'node:path'
 
 import { PAYLOAD_MIGRATION_NAMES } from '../../src/lib/payloadMigrationRegistry'
+import { ENVIRONMENT_TOPOLOGY, isAllowedStagingSourceRef } from '../../src/lib/environmentTopology'
 import {
   buildStagingMigrationStatus,
   createStagingReadOnlyAdapter,
@@ -12,7 +13,7 @@ import {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const REQUIRED_BRANCH = 'feature/course-branding-and-preview'
+const REQUIRED_SOURCE_REF_DESCRIPTION = 'feature/*, fix/*, or release/*'
 
 // Exact reviewed staging target — all identity checks derive from this one constant.
 // Hostname is the reviewed Supabase private NIC IP (10.0.2.4), documented in
@@ -20,8 +21,8 @@ const REQUIRED_BRANCH = 'feature/course-branding-and-preview'
 const STAGING_TARGET = {
   environment: 'staging',
   targetId: 'jpvbootcamp-staging',
-  schema: 'jpvbootcamp_staging',
-  database: 'jpvbootcamp',
+  schema: 'jpvbootcamp',
+  database: ENVIRONMENT_TOPOLOGY.staging.database,
   hostname: '10.0.2.4',
 } as const
 
@@ -30,9 +31,9 @@ const REQUIRED_SCHEMA = STAGING_TARGET.schema
 const REQUIRED_DATABASE = STAGING_TARGET.database
 const REQUIRED_ENVIRONMENT = STAGING_TARGET.environment
 const REQUIRED_TARGET_ID = STAGING_TARGET.targetId
-// The reviewed forward release is the exact migration batch following the
-// verified 40-migration staging baseline. Keep this explicit: automatically
-// treating every future migration as part of this approval would widen scope.
+// The reviewed forward release is an explicit migration batch. Keep this
+// separate from read-only discovery: automatically treating every discovered
+// pending migration as part of this approval would widen scope.
 const EXPECTED_FORWARD_BATCH = [
   '20260825_120000_billing_invoice_visibility',
   '20260825_121000_membership_support_runtime_alignment',
@@ -46,18 +47,17 @@ const EXPECTED_FORWARD_BATCH = [
 ] as const
 const EXPECTED_APPLIED_BEFORE = PAYLOAD_MIGRATION_NAMES.length - EXPECTED_FORWARD_BATCH.length
 const EXPECTED_APPLIED_AFTER = EXPECTED_APPLIED_BEFORE + EXPECTED_FORWARD_BATCH.length
-const CURRENT_STAGING_APPLIED_COUNT = PAYLOAD_MIGRATION_NAMES.length
-const CURRENT_STAGING_PENDING_MIGRATIONS: readonly string[] = []
-const TARGET_MIGRATIONS = PAYLOAD_MIGRATION_NAMES.slice(EXPECTED_APPLIED_BEFORE, EXPECTED_APPLIED_AFTER)
-const APPLY_CONFIRMATION_VALUE = 'apply_billing_reconciliation_to_jpvbootcamp_staging'
-const ROLLBACK_PLAN_CONFIRMATION_VALUE = 'plan_rollback_billing_reconciliation_from_jpvbootcamp_staging'
+const TARGET_MIGRATIONS = [...EXPECTED_FORWARD_BATCH]
+const APPLY_CONFIRMATION_VALUE = 'apply_billing_reconciliation_to_jpvbootcamp'
+const ROLLBACK_PLAN_CONFIRMATION_VALUE = 'plan_rollback_billing_reconciliation_from_jpvbootcamp'
 const FULL_COMMIT_SHA_RE = /^[0-9a-f]{40}$/
 
-if (
-  TARGET_MIGRATIONS.length !== EXPECTED_FORWARD_BATCH.length ||
-  TARGET_MIGRATIONS.some((name, index) => name !== EXPECTED_FORWARD_BATCH[index])
-) {
-  throw new Error(`Canonical migration registry does not contain the reviewed billing batch at the expected position`)
+function assertReviewedApplyBatchRegistered(): void {
+  const registered = new Set(PAYLOAD_MIGRATION_NAMES)
+  const missing = EXPECTED_FORWARD_BATCH.filter((name) => !registered.has(name))
+  if (missing.length > 0) {
+    throw new Error(`Canonical migration registry is missing reviewed apply migrations: [${missing.join(', ')}]`)
+  }
 }
 
 // Production token labels rejected as whole tokens (exact match against hostname labels or db name components).
@@ -122,10 +122,12 @@ export type SafeMigrationPlanEvidence = {
   targetId: string
   appliedPayloadCount: number
   expectedPendingMigrations: string[]
+  /** Compatibility field: true means the read-only evidence has no blockers; it never authorizes apply. */
   expectedPendingBatchIsOnlyMissing: boolean
   unexpectedPayloadCount: number
   duplicatePayloadCount: number
   malformedPayloadCount: number
+  orderingAnomalyCount: number
   prismaHealthy: boolean
   unhealthyPrismaMigrations?: string[]
 }
@@ -148,6 +150,7 @@ export const ALLOWED_BLOCKER_CODES = new Set([
   'pending_migration_mismatch',
   'unexpected_payload_migrations',
   'duplicate_payload_migrations',
+  'ordering_anomalies',
   'missing_prisma_migrations',
   'unexpected_prisma_migrations',
   'duplicate_prisma_migrations',
@@ -177,6 +180,7 @@ export function blockerToCode(message: string): string {
   if (message.includes('Expected pending Payload migration batch') || message.includes('missing Payload migration')) return 'pending_migration_mismatch'
   if (message.includes('Unexpected Payload migration')) return 'unexpected_payload_migrations'
   if (message.includes('Duplicate Payload migration')) return 'duplicate_payload_migrations'
+  if (message.includes('ordering anomal')) return 'ordering_anomalies'
   if (message.includes('Missing Prisma')) return 'missing_prisma_migrations'
   if (message.includes('Unexpected Prisma')) return 'unexpected_prisma_migrations'
   if (message.includes('Duplicate Prisma')) return 'duplicate_prisma_migrations'
@@ -200,6 +204,7 @@ export type StagingMigrationPlanResult = {
   unexpectedPayloadCount: number
   duplicatePayloadCount: number
   malformedPayloadCount: number
+  orderingAnomalyCount: number
   prismaHealthy: boolean
   unhealthyPrismaMigrations?: string[]
 }
@@ -367,8 +372,10 @@ function guardBranchAndCommit(
 ): { branch: string; commit: string } {
   const branch = git.branch()
   const commit = git.commit()
-  if (branch !== REQUIRED_BRANCH) {
-    throw new Error(`Branch guard: expected '${REQUIRED_BRANCH}', got '${branch}'`)
+  if (!isAllowedStagingSourceRef(branch)) {
+    throw new Error(
+      `Branch guard: source ref '${branch}' is not allowed; expected ${REQUIRED_SOURCE_REF_DESCRIPTION}`,
+    )
   }
   const normalized = validateFullCommitSha(expectedCommit, 'Expected commit')
   if (commit !== normalized) {
@@ -520,6 +527,7 @@ export type FullMigrationStatus = {
   missingPayloadMigrations: string[]
   unexpectedPayloadMigrations: string[]
   duplicatePayloadMigrations: string[]
+  orderingAnomalies: string[]
   malformedPayloadMigrationCount: number
   schemaIdentity: string | null
   prismaMigrations: ClassifiedPrismaMigration[]
@@ -544,15 +552,7 @@ async function collectFullMigrationStatus(
   })
   const report = await buildStagingMigrationStatus(adapter, REQUIRED_SCHEMA)
 
-  const payloadNames = report.appliedPayloadMigrations
-  const payloadNameSet = new Set<string>()
-  const duplicatePayloadMigrations: string[] = []
-  for (const name of payloadNames) {
-    if (payloadNameSet.has(name)) {
-      duplicatePayloadMigrations.push(name)
-    }
-    payloadNameSet.add(name)
-  }
+  const duplicatePayloadMigrations = [...report.duplicatePayloadMigrations]
 
   const prismaNames = report.prismaMigrations.map((r) => r.migrationName)
   const prismaNamesSet = new Set<string>()
@@ -577,6 +577,7 @@ async function collectFullMigrationStatus(
     missingPayloadMigrations: report.missingPayloadMigrations,
     unexpectedPayloadMigrations: report.unexpectedPayloadMigrations,
     duplicatePayloadMigrations,
+    orderingAnomalies: [...report.orderingAnomalies],
     malformedPayloadMigrationCount: report.malformedPayloadMigrationRecords.length,
     schemaIdentity: report.schemaIdentity,
     prismaMigrations: report.prismaMigrations,
@@ -587,6 +588,78 @@ async function collectFullMigrationStatus(
     allPrismaApplied,
     report,
   }
+}
+
+/**
+ * Read-only discovery guard. Pending canonical migrations are evidence, not
+ * authorization: the caller must receive the complete pending list so a
+ * later explicit apply packet cannot silently widen its scope.
+ */
+function checkReadOnlyDiscoveryPreconditions(status: FullMigrationStatus): string[] {
+  const blockers: string[] = []
+
+  if (status.malformedPayloadMigrationCount > 0) {
+    blockers.push('Malformed Payload migration evidence exists')
+  }
+  if (status.schemaIdentity !== REQUIRED_SCHEMA) {
+    blockers.push(
+      `Schema identity mismatch: expected '${REQUIRED_SCHEMA}', got '${status.schemaIdentity ?? 'null'}'`,
+    )
+  }
+  if (status.unexpectedPayloadMigrations.length > 0) {
+    blockers.push(
+      `Unexpected Payload migration records exist: [${status.unexpectedPayloadMigrations.join(', ')}]`,
+    )
+  }
+  if (status.duplicatePayloadMigrations.length > 0) {
+    blockers.push(
+      `Duplicate Payload migration records exist: [${status.duplicatePayloadMigrations.join(', ')}]`,
+    )
+  }
+  if (status.orderingAnomalies.length > 0) {
+    blockers.push(
+      `Payload migration ordering anomalies exist: [${status.orderingAnomalies.join(', ')}]`,
+    )
+  }
+  if (status.missingPrismaMigrations.length > 0) {
+    blockers.push(
+      `Missing Prisma migrations: [${status.missingPrismaMigrations.join(', ')}]`,
+    )
+  }
+  if (status.unexpectedPrismaMigrations.length > 0) {
+    blockers.push(
+      `Unexpected Prisma migration records: [${status.unexpectedPrismaMigrations.join(', ')}]`,
+    )
+  }
+  if (status.duplicatePrismaMigrations.length > 0) {
+    blockers.push(
+      `Duplicate Prisma migration records: [${status.duplicatePrismaMigrations.join(', ')}]`,
+    )
+  }
+  if (status.unhealthyPrismaMigrations.length > 0) {
+    blockers.push(
+      `Prisma migrations not in 'applied' state: [${status.unhealthyPrismaMigrations.join(', ')}]`,
+    )
+  }
+  if (!status.allPrismaApplied && status.prismaMigrations.length === 0) {
+    blockers.push('Prisma migration evidence is empty')
+  }
+  return blockers
+}
+
+/**
+ * Current-state verification is still read-only discovery. It adds only the
+ * requirement that discovery found no pending canonical migrations; it does
+ * not use or imply the separately reviewed apply batch.
+ */
+function checkCurrentStatePreconditions(status: FullMigrationStatus): string[] {
+  const blockers = checkReadOnlyDiscoveryPreconditions(status)
+  if (status.missingPayloadMigrations.length > 0) {
+    blockers.push(
+      `canonical missing Payload migrations remain: [${status.missingPayloadMigrations.join(', ')}]`,
+    )
+  }
+  return blockers
 }
 
 function checkPreApplyPreconditions(status: FullMigrationStatus): string[] {
@@ -680,6 +753,11 @@ function checkPostApplyPreconditions(status: FullMigrationStatus): string[] {
       `Post-apply: duplicate Payload migration records: [${status.duplicatePayloadMigrations.join(', ')}]`,
     )
   }
+  if (status.orderingAnomalies.length > 0) {
+    blockers.push(
+      `Post-apply: Payload migration ordering anomalies exist: [${status.orderingAnomalies.join(', ')}]`,
+    )
+  }
   if (status.missingPrismaMigrations.length > 0) {
     blockers.push(
       `Post-apply: missing Prisma migrations: [${status.missingPrismaMigrations.join(', ')}]`,
@@ -734,6 +812,7 @@ export async function runStagingMigrationPlan(
     unexpectedPayloadCount = 0,
     duplicatePayloadCount = 0,
     malformedPayloadCount = 0,
+    orderingAnomalyCount = 0,
     prismaHealthy = false,
     unhealthyPrismaMigrations?: string[],
   ): StagingMigrationPlanResult {
@@ -752,6 +831,7 @@ export async function runStagingMigrationPlan(
       unexpectedPayloadCount,
       duplicatePayloadCount,
       malformedPayloadCount,
+      orderingAnomalyCount,
       prismaHealthy,
     }
     if (unhealthyPrismaMigrations && unhealthyPrismaMigrations.length > 0) {
@@ -837,8 +917,8 @@ export async function runStagingMigrationPlan(
 
   const currentState = input.currentState === true
   const rawBlockers = currentState
-    ? checkPostApplyPreconditions(status)
-    : checkPreApplyPreconditions(status)
+    ? checkCurrentStatePreconditions(status)
+    : checkReadOnlyDiscoveryPreconditions(status)
   const blockerCodes = rawBlockers.map(blockerToCode)
 
   output(`[staging-migration-plan] applied-payload=${status.appliedPayloadCount}`)
@@ -849,6 +929,7 @@ export async function runStagingMigrationPlan(
   const unexpectedPayloadCount = status.unexpectedPayloadMigrations.length
   const duplicatePayloadCount = status.duplicatePayloadMigrations.length
   const malformedPayloadCount = status.malformedPayloadMigrationCount
+  const orderingAnomalyCount = status.orderingAnomalies.length
 
   if (blockerCodes.length > 0) {
     for (const code of blockerCodes) {
@@ -857,10 +938,11 @@ export async function runStagingMigrationPlan(
     return blockedResult(
       blockerCodes,
       status.appliedPayloadCount,
-      [],
+      [...status.missingPayloadMigrations],
       unexpectedPayloadCount,
       duplicatePayloadCount,
       malformedPayloadCount,
+      orderingAnomalyCount,
       status.allPrismaApplied,
       status.unhealthyPrismaMigrations && status.unhealthyPrismaMigrations.length > 0
         ? status.unhealthyPrismaMigrations
@@ -870,13 +952,13 @@ export async function runStagingMigrationPlan(
 
   if (currentState) {
     output(
-      `[staging-migration-plan] CURRENT STATE OK: ${CURRENT_STAGING_APPLIED_COUNT} Payload migrations are applied and no pending migration batch exists`,
+      `[staging-migration-plan] CURRENT STATE OK: ${status.appliedPayloadCount} canonical Payload migrations are applied and no pending canonical migration records exist`,
     )
   } else {
     output(
-      `[staging-migration-plan] PLAN OK: reviewed billing migration batch is pending in canonical order and all preconditions are met`,
+      `[staging-migration-plan] PLAN OK: canonical migration discovery completed; pending migrations are reported without apply authorization`,
     )
-    output(`[staging-migration-plan] pending-batch=${TARGET_MIGRATIONS.join(',')}`)
+    output(`[staging-migration-plan] pending-migrations=${status.missingPayloadMigrations.join(',') || 'none'}`)
     output(`[staging-migration-plan] To apply: pnpm staging:payload-migration-apply`)
   }
   return {
@@ -888,14 +970,13 @@ export async function runStagingMigrationPlan(
     environment: input.environment ?? '',
     targetId: input.targetId ?? '',
     appliedCount: status.appliedPayloadCount,
-    pendingMigrations: currentState
-      ? [...CURRENT_STAGING_PENDING_MIGRATIONS]
-      : [...TARGET_MIGRATIONS],
+    pendingMigrations: [...status.missingPayloadMigrations],
     blockers: [],
     message: `plan_ok`,
     unexpectedPayloadCount,
     duplicatePayloadCount,
     malformedPayloadCount,
+    orderingAnomalyCount,
     prismaHealthy: status.allPrismaApplied,
   }
 }
@@ -909,6 +990,7 @@ export async function runStagingMigrationApply(
   dependencies: StagingMigrationRunnerDependencies = {},
   output: (line: string) => void = console.log,
 ): Promise<StagingMigrationApplyResult | StagingMigrationUncertainOutcome> {
+  assertReviewedApplyBatchRegistered()
   if (!authorization.expectedCommit?.trim()) {
     throw new Error('Authorization packet: expectedCommit is required')
   }
@@ -1109,6 +1191,7 @@ export async function runStagingMigrationRollbackPlan(
   dependencies: StagingMigrationRunnerDependencies = {},
   output: (line: string) => void = console.log,
 ): Promise<StagingMigrationRollbackPlanResult> {
+  assertReviewedApplyBatchRegistered()
   if (!authorization.expectedCommit?.trim()) {
     throw new Error('Rollback plan: expectedCommit is required')
   }
@@ -1431,13 +1514,13 @@ const PLAN_USAGE = [
   '  --expected-commit=<40-char-sha> \\',
   '  --environment=staging \\',
   '  --target-id=jpvbootcamp-staging \\',
-  '  --expected-schema=jpvbootcamp_staging \\',
+  '  --expected-schema=jpvbootcamp \\',
   '  --expected-hostname=<staging-db-host> \\',
-  '  --expected-database=jpvbootcamp \\',
+  '  --expected-database=jpvbootcamp_staging \\',
   '  [--current-state=true]',
   '',
   'Performs a read-only pre-flight check. Does NOT mutate the database.',
-  'Use --current-state=true to verify the current applied staging state (the full registered inventory applied, no pending batch).',
+  'Use --current-state=true to verify that the dynamically discovered canonical registry is fully applied with no pending canonical migrations.',
   'Authorization does NOT authorize push, Dokploy redeployment, Prisma database-deploy,',
   'provider email, post-deployment smoke, or production.',
 ].join('\n')
@@ -1447,9 +1530,9 @@ const APPLY_USAGE = [
   '  --expected-commit=<40-char-sha> \\',
   '  --environment=staging \\',
   '  --target-id=jpvbootcamp-staging \\',
-  '  --expected-schema=jpvbootcamp_staging \\',
+  '  --expected-schema=jpvbootcamp \\',
   '  --expected-hostname=<staging-db-host> \\',
-  '  --expected-database=jpvbootcamp \\',
+  '  --expected-database=jpvbootcamp_staging \\',
   `  --expected-migrations=${TARGET_MIGRATIONS.join(',')} \\`,
   '  --operator-id=<id> \\',
   '  --backup-evidence-id=<id> \\',
@@ -1467,9 +1550,9 @@ const ROLLBACK_PLAN_USAGE = [
   '  --expected-commit=<40-char-sha> \\',
   '  --environment=staging \\',
   '  --target-id=jpvbootcamp-staging \\',
-  '  --expected-schema=jpvbootcamp_staging \\',
+  '  --expected-schema=jpvbootcamp \\',
   '  --expected-hostname=<staging-db-host> \\',
-  '  --expected-database=jpvbootcamp \\',
+  '  --expected-database=jpvbootcamp_staging \\',
   '  --operator-id=<id> \\',
   '  --backup-evidence-id=<id> \\',
   '  --maintenance-window-id=<id> \\',
@@ -1506,13 +1589,12 @@ async function main(): Promise<void> {
           environment: '',
           targetId: '',
           appliedPayloadCount: 0,
-          expectedPendingMigrations: rest.includes('--current-state=true')
-            ? [...CURRENT_STAGING_PENDING_MIGRATIONS]
-            : [...TARGET_MIGRATIONS],
+          expectedPendingMigrations: [],
           expectedPendingBatchIsOnlyMissing: false,
           unexpectedPayloadCount: 0,
           duplicatePayloadCount: 0,
           malformedPayloadCount: 0,
+          orderingAnomalyCount: 0,
           prismaHealthy: false,
         }
         process.stdout.write(JSON.stringify(evidence) + '\n')
@@ -1542,16 +1624,12 @@ async function main(): Promise<void> {
         environment: result.environment,
         targetId: result.targetId,
         appliedPayloadCount: result.appliedCount,
-        expectedPendingMigrations: planInput.currentState
-          ? [...CURRENT_STAGING_PENDING_MIGRATIONS]
-          : [...TARGET_MIGRATIONS],
-        expectedPendingBatchIsOnlyMissing: planInput.currentState
-          ? result.pendingMigrations.length === 0
-          : result.pendingMigrations.length === TARGET_MIGRATIONS.length &&
-            result.pendingMigrations.every((name, index) => name === TARGET_MIGRATIONS[index]),
+        expectedPendingMigrations: [...result.pendingMigrations],
+        expectedPendingBatchIsOnlyMissing: result.ok && result.blockers.length === 0,
         unexpectedPayloadCount: result.unexpectedPayloadCount,
         duplicatePayloadCount: result.duplicatePayloadCount,
         malformedPayloadCount: result.malformedPayloadCount,
+        orderingAnomalyCount: result.orderingAnomalyCount,
         prismaHealthy: result.prismaHealthy,
       }
       // Include unhealthyPrismaMigrations when present for diagnostic use

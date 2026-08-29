@@ -12,6 +12,8 @@
  * 8. publish-preview-image.yml must not reference DOKPLOY_APP_ID
  * 9. deploy-preview.yml must not print full API response body to logs
  * 10. deploy-preview.yml must include provenance SHA echo
+ * 11. deploy-preview.yml must persist staging routing labels before deploy
+ * 12. Source-ref attachment must tolerate checkout-created local branches
  */
 
 import assert from 'node:assert/strict'
@@ -37,7 +39,7 @@ async function main(): Promise<void> {
     'deploy-preview.yml must declare ALLOWED_SLUG for positive allow-list',
   )
   assert.ok(
-    previewYml.includes('clients-jpv-bootcamp-app-tp9xrk'),
+    previewYml.includes('clients-jpv-bootcamp-preview-wjfqfd'),
     'deploy-preview.yml must name the canonical staging Dokploy slug',
   )
   assert.ok(
@@ -51,26 +53,26 @@ async function main(): Promise<void> {
     'deploy.yml must not exist — production deployment workflow is not permitted',
   )
 
-  // Rule 5: deploy-preview.yml must verify SHA ancestry under feature branch
+  // Rule 5: deploy-preview.yml must verify SHA ancestry under an approved source ref
   assert.ok(
     previewYml.includes('merge-base --is-ancestor'),
-    'deploy-preview.yml must verify SHA ancestry under feature branch',
+    'deploy-preview.yml must verify SHA ancestry under an approved source ref',
   )
   assert.ok(
-    previewYml.includes('feature/course-branding-and-preview'),
-    'deploy-preview.yml must name the allowed feature branch',
+    previewYml.includes('source_ref:') && previewYml.includes('origin/${SOURCE_REF_INPUT}'),
+    'deploy-preview.yml must use the explicit approved source ref',
   )
 
-  // Rule 6: deploy-preview.yml must reject main branch explicitly
+  // Rule 6: deploy-preview.yml must reject main as a source ref explicitly
   assert.ok(
-    previewYml.includes("ref_name") && previewYml.includes('"main"'),
-    'deploy-preview.yml must reject main branch by name',
+    previewYml.includes('SOURCE_REF_INPUT') && previewYml.includes('source_ref main is never allowed'),
+    'deploy-preview.yml must reject main source ref by name',
   )
 
   // Rule 7: deploy-preview.yml must use staging-specific environment
   assert.ok(
-    previewYml.includes('environment: preview-deploy'),
-    'deploy-preview.yml must use the preview-deploy GitHub environment',
+    previewYml.includes('environment: staging-deploy'),
+    'deploy-preview.yml must use the staging-deploy GitHub environment',
   )
 
   // Rule 8: publish-preview-image.yml must not reference DOKPLOY_APP_ID
@@ -99,7 +101,18 @@ async function main(): Promise<void> {
     'deploy-preview.yml must call ensurePreviewRouting.mts before application.deploy to persist Traefik routing labels',
   )
 
-  console.log('workflowDeploymentBoundary.test.ts passed — 15 assertions')
+  // Rule 12: actions/checkout creates a local branch when ref is a branch;
+  // force-create keeps the guard correct for both branch and detached checkouts.
+  assert.ok(
+    previewYml.includes('git switch --force-create "$SOURCE_REF_INPUT" HEAD'),
+    'deploy-preview.yml must re-anchor the approved source ref without failing when checkout already created it',
+  )
+  assert.ok(
+    publishYml.includes('git switch --force-create "$SOURCE_REF" HEAD'),
+    'publish-preview-image.yml must re-anchor the approved source ref without failing when checkout already created it',
+  )
+
+  console.log('workflowDeploymentBoundary.test.ts passed — 17 assertions')
 }
 
 main().catch((e) => {

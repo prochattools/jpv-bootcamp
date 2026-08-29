@@ -3,6 +3,7 @@ import type { getPayload } from 'payload'
 import type { PayloadCourseWriteAPI, PayloadId } from '@/lib/payloadCourse/accessService'
 import { createAuditEvent } from '@/lib/payloadCourse/events'
 import { isEligibleCurrentMember } from '@/lib/members/currentMember'
+import { relationshipId } from '@/lib/domain/relationships'
 
 const MAX_COVER_IMAGE_BYTES = 8 * 1024 * 1024
 const ALLOWED_COVER_IMAGE_MIME_TYPES = new Set([
@@ -37,13 +38,6 @@ export type MemberCoverUpload = {
   type: string
   size: number
   arrayBuffer(): Promise<ArrayBuffer>
-}
-
-function relationshipId(value: unknown): string | null {
-  if (typeof value === 'string' || typeof value === 'number') return String(value)
-  if (!value || typeof value !== 'object') return null
-  const id = (value as { id?: unknown }).id
-  return typeof id === 'string' || typeof id === 'number' ? String(id) : null
 }
 
 function payloadMemberRelationId(memberId: PayloadId): number {

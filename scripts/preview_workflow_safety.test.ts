@@ -8,11 +8,15 @@ function read(path: string): string {
 const unified = read('.github/workflows/deploy-preview.yml')
 const manualPublish = read('.github/workflows/publish-preview-image.yml')
 const docs = read('docs/PREVIEW_RELEASE_READINESS.md')
+const deployStart = unified.indexOf('  deploy-preview:')
+const deployEnd = unified.indexOf('\n  bootstrap-staging-database:', deployStart)
+assert.ok(deployStart > -1 && deployEnd > deployStart, 'deploy-preview job must have a bounded workflow section')
+const deployJob = unified.slice(deployStart, deployEnd)
 
-// Unified preview pipeline: validate → build → publish → deploy
-assert.match(unified, /name: Preview Build and Deploy/)
-assert.match(unified, /push:/)
-assert.doesNotMatch(unified, /pull_request:/)  // Only pushes trigger the unified pipeline
+// Unified staging pipeline: validate → build → publish → deploy
+assert.match(unified, /name: Staging Build and Deploy/)
+assert.doesNotMatch(unified, /^\s+push:\s*$/m)  // Deployment is manual-only
+assert.doesNotMatch(unified, /pull_request:/)
 assert.match(unified, /permissions:\s*\n\s*contents: read/)
 assert.match(unified, /packages: write/)  // Needs write for GHCR
 assert.match(unified, /docker\/login-action/)  // Logs in to GHCR
@@ -23,16 +27,16 @@ assert.match(unified, /pnpm run build/)
 assert.match(unified, /timeout-minutes: 40/)  // Longer for build+deploy
 // Operation-aware concurrency: deploy runs use cancel-in-progress: true (or expression that evaluates true for deploys)
 assert.match(unified, /cancel-in-progress:/)
-assert.doesNotMatch(unified, /payload:staging:migrate|payload:email:send|--apply/)  // No mutations
+assert.doesNotMatch(deployJob, /payload:staging:migrate|payload:email:send|--apply/)  // Deploy operation has no mutations
 
 // Manual publish workflow: workflow_dispatch only, no push triggers
-assert.match(manualPublish, /name: Publish Preview Image/)
+assert.match(manualPublish, /name: Publish Staging Image/)
 assert.match(manualPublish, /workflow_dispatch:/)
 assert.doesNotMatch(manualPublish, /push:\s*\n\s*branches/)  // No push triggers
 assert.match(manualPublish, /commit_sha:/)
 assert.match(manualPublish, /confirmation:/)
 assert.match(manualPublish, /source_date:/)
-assert.match(manualPublish, /environment: preview-image-publish/)
+assert.match(manualPublish, /environment: staging-image-publish/)
 assert.match(manualPublish, /contents: read/)
 assert.match(manualPublish, /packages: write/)
 assert.match(manualPublish, /REQUESTED_SHA/)
@@ -47,8 +51,8 @@ assert.match(manualPublish, /docker\/login-action@[a-f0-9]{40}/)
 assert.match(manualPublish, /docker\/build-push-action@[a-f0-9]{40}/)
 assert.match(manualPublish, /push: true/)
 assert.match(manualPublish, /Determine publish tags/)
-// Hardened: branch tag is fixed to staging branch slug, not dynamically derived from github.ref_name
-assert.match(manualPublish, /feature-course-branding-and-preview/)
+// Hardened: publication requires an approved staging source-ref pattern.
+assert.match(manualPublish, /feature\/\*|fix\/\*|release\/\*/)
 assert.doesNotMatch(manualPublish, /branch_ref="\$\{\{ github\.ref_name \}\}"/)
 assert.match(manualPublish, /ghcr\.io\/\$\{\{ github\.repository \}\}:\$\{\{ steps\.checkout-sha\.outputs\.sha \}\}/)
 assert.doesNotMatch(manualPublish, /:latest/)

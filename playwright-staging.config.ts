@@ -1,13 +1,14 @@
 import { defineConfig, devices } from '@playwright/test'
 import { assertStagingOrigin } from './scripts/staging-gates/stagingPolicy'
+import { ENVIRONMENT_TOPOLOGY } from './src/lib/environmentTopology'
 
 /**
  * Staging Smoke Test Configuration
- * Runs against https://preview.jpvbootcamp.com with jpvbootcamp_staging schema
+ * Runs against https://staging.jpvbootcamp.com with the staging database boundary
  * No local server startup - targets external staging environment
  */
 
-const STAGING_BASE_URL = process.env.STAGING_URL ?? 'https://preview.jpvbootcamp.com'
+const STAGING_BASE_URL = process.env.STAGING_URL ?? ENVIRONMENT_TOPOLOGY.staging.origin
 
 // Exact origin validation — rejects production, suffix domains, userinfo, HTTP, non-default ports
 assertStagingOrigin(STAGING_BASE_URL.endsWith('/') ? STAGING_BASE_URL : STAGING_BASE_URL)

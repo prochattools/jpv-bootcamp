@@ -1,10 +1,59 @@
 # JPV Bootcamp - Roadmap Progress Status
 
-## Current repository reconciliation — 2026-08-23
+## CURRENT PRODUCTION CHECKPOINT — 2026-08-28
+
+JPV Bootcamp is live in production. This checkpoint supersedes older
+feature-branch and staging-era “current” statements below; those sections are
+retained as dated audit history.
+
+- **Release authority:** `main`, with local `main` and `origin/main` verified at
+  `08605e52af4abb0b1bdcdfbe6890d010c545b636` after a no-tags fetch.
+- **Production evidence:** GitHub Actions run `33093612107` passed; Dokploy
+  production deployment converged; the live application reported the exact
+  production SHA and `deploymentEnv=production`; the required Payload
+  relationship-table migration was applied; production health was green.
+- **Architectural state:** normal feature development is on hold. This is a
+  behavior-preserving architecture consolidation, not a rewrite.
+- **Current packet:** A5 Source-of-Truth and Architecture Enforcement on
+  `codex/production-architecture-consolidation`, complete locally from A4
+  HEAD `c1fa6a0bdaf908013ed2a215e00ccd5200bf192d`. It adds executable
+  architecture-boundary guards and current ownership/data-flow/risk registers;
+  no production, provider, schema, or stored-data mutation was performed.
+- **Next packet:** A6 Full Regression and Controlled Production Integration,
+  only after review of the A5 guard/docs commit and resolution of rows marked
+  `UNRESOLVED — BLOCKS A6`.
+- **Approved sequence:** A0 Production truth and architecture authority; A1
+  Authorization/service foundation; A2 Shared domain primitives; A3 Community
+  domain convergence; A4 Course/Creator domain convergence; A5 Source-of-truth
+  and architecture enforcement; A6 Full regression and controlled production
+  integration.
+- **Hard stops:** do not start A6 integration, add feature work, merge
+  historical branches, mutate production data/providers, run migrations,
+  delete worktrees/branches, or deploy from this A5 architecture packet.
+
+### ARCHITECTURAL HOLD — POST-LAUNCH CONSOLIDATION
+
+The active order of work is:
+
+1. Production stability and exact-live verification.
+2. A0–A6 architecture reconsolidation.
+3. Review and resume of the future feature roadmap after A6.
+
+No major feature batch starts before A6 is complete and explicitly released
+from this hold. The future roadmap remains preserved below for later
+sequencing; it is not being deleted or silently reprioritized by this packet.
+
+- **Canonical A0 authority:**
+  `docs/architecture/JPV_PRODUCTION_ARCHITECTURE_V1.md`,
+  `docs/architecture/JPV_DOMAIN_SOURCE_OF_TRUTH.md`,
+  `docs/architecture/JPV_ENGINEERING_PRINCIPLES.md`, and
+  `docs/architecture/JPV_ARCHITECTURE_CONSOLIDATION_PLAN.md`.
+
+## Historical pre-production repository reconciliation — 2026-08-23
 
 - **Working branch:** `feature/course-branding-and-preview`; current repository tip is `1966197058721ffdfe0d94f24bc3e8e468d4e23b` and is not deployed staging evidence. The single canonical last verified staging release/deployment SHA is `9d87c4a3eeeffb9afb78a38964054792330ea1cb`.
 - **Implementation state:** the current feature branch remains the source under review; its migration registry contains 37 registered migrations, with migration 37 pending in staging. Registration is not applied database state.
-- **Local validation:** after cleanup, `pnpm test:release` passed `172/172`; focused browser checks passed `60/60`; full browser E2E passed `148/148` with 60 declared skips. The initial 24 shared muted-token contrast failures were cleared.
+- **Local validation:** after the A6 authenticated-gate contract was added, `pnpm test:release` passed `172/172`; the release manifest contains 173 entries including one staging-only conditional gate; focused browser checks passed `60/60`; full browser E2E passed `148/148` with 60 declared skips. The initial 24 shared muted-token contrast failures were cleared.
 - **Cutover state:** production migration, production deployment, provider mutation, and branch advancement were not performed or authorized. Use `docs/release/FUTURE_BRANCH_CUTOVER_PLAN.md` for the later protected integration process.
 - **Evidence rule:** dated records below remain historical unless marked as current frozen-candidate evidence.
 - **Current staging migration state:** fresh read-only plan run `32731856849` confirms 36 Payload migrations applied, `20260824_120000_engagement_reactions` as the sole pending migration, Prisma healthy, and zero unexpected/duplicate/malformed records. The service is currently rolled back to the previously observed `f1aad077...` image; the last exact-SHA staging release remains `9d87c4a3eeeffb9afb78a38964054792330ea1cb`.
@@ -14,7 +63,7 @@
 - **Current project phase:** Phase 9.5 — Feature Branch Reconciliation & Completion, with product-experience refinement active; Phase 10 production preparation is documentation-only and Phase 11 cutover execution has not started.
 - **Canonical baseline rule:** `9d87c4a3eeeffb9afb78a38964054792330ea1cb` is the only canonical last verified staging release and documented deployment SHA. The current branch candidate `1966197058721ffdfe0d94f24bc3e8e468d4e23b` is not deployed; every other SHA below is historical. Production remains unauthorized.
 
-## Current sequencing and active work — 2026-08-24
+## Historical sequencing and active work — 2026-08-24
 
 This is the current roadmap interpretation. Older dated sections below remain
 audit history and must not override this sequence.
@@ -364,7 +413,7 @@ The following phases were layered on the same branch after the `9745dac` hardeni
 ### Current HEAD validation (2026-08-06)
 
 - `pnpm exec tsc --noEmit` PASS — TypeScript: No errors found
-- `pnpm test:release` passed `172/172` — includes the account-action hardening-status guard (2026-08-03), staging migration plan workflow contract (2026-08-05), environment configurator dry-run/apply guard test (2026-08-06), portal admin source structure and behavioral contract verification (2026-08-25), and support requester phone migration safety coverage (2026-08-26)
+- `pnpm test:release` passed `172/172` — the release manifest contains 173 entries including the A6 authenticated-gate contract and one staging-only conditional gate; the default run also includes the account-action hardening-status guard (2026-08-03), staging migration plan workflow contract (2026-08-05), environment configurator dry-run/apply guard test (2026-08-06), portal admin source structure and behavioral contract verification (2026-08-25), and support requester phone migration safety coverage (2026-08-26)
 - `pnpm build` PASS — Compiled successfully in 7.8s
 - Security scan (`dangerouslySetInnerHTML`, `eval`, `innerHTML` outside approved surfaces): CLEAN
 - All `dangerouslySetInnerHTML` usages confirmed as trusted-source (Payload Lexical rich text → HTML conversion, hardcoded FAQ strings, hardcoded preview lesson content); none accept user-submitted input unescaped.

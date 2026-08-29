@@ -43,6 +43,7 @@ function main(): void {
     log(message) {
       logs.push(message)
     },
+    branchOverride: 'feature/e1-topology',
   })
   assert.equal(summary, `STAGING MIGRATION PREFLIGHT PASSED: ${steps.length}/${steps.length}`)
   assert.equal(calls.length, commandSteps.length)
@@ -59,6 +60,7 @@ function main(): void {
           }
         },
         log() {},
+        branchOverride: 'feature/e1-topology',
       }),
     /STAGING MIGRATION PREFLIGHT FAILED/,
   )

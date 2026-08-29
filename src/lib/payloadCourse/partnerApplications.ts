@@ -78,13 +78,6 @@ function asDeliveryStatus(value: unknown): PartnerDeliveryStatus {
     : 'draft'
 }
 
-function getDocumentId(value: unknown): string | null {
-  const direct = asString(value)
-  if (direct) return direct
-  if (!value || typeof value !== 'object' || !('id' in value)) return null
-  return asString((value as { id?: unknown }).id)
-}
-
 function deny(): never {
   throw new Error('Partner application was not found.')
 }

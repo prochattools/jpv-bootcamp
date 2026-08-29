@@ -16,7 +16,10 @@ authorities remain:
 - docs/design/JPV_DESIGN_SYSTEM_AUTHORITY_V1.md — design-token authority;
 - src/lib/brand/jpvDesignSystem.ts — executable runtime design authority;
 - docs/design/JPV_COURSE_COMMUNITY_UX_STAGING_VALIDATION.md — Phase 1 staging evidence;
-- docs/design/JPV_UX_ARCHITECTURE_CONSOLIDATION_PLAN.md — accepted shell foundation.
+- docs/architecture/JPV_ARCHITECTURE_CONSOLIDATION_PLAN.md — current
+  post-launch architecture and shell-consolidation authority. The previously
+  referenced `docs/design/JPV_UX_ARCHITECTURE_CONSOLIDATION_PLAN.md` was not
+  present in the production `main` checkout.
 
 The earlier JPV_PRODUCT_UX_REFINEMENT_ROADMAP.md,
 JPV_COURSE_COMMUNITY_EXPERIENCE_PLAN.md, and

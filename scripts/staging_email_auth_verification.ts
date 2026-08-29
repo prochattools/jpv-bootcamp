@@ -2,7 +2,7 @@
  * Staging Email/Auth Live Verification Script
  *
  * This script exercises the real JPV Bootcamp staging deployment at
- * https://preview.jpvbootcamp.com to prove that:
+ * https://staging.jpvbootcamp.com to prove that:
  * 1. Real Resend email delivery works
  * 2. Email verification links complete successfully
  * 3. Member login/logout works with secure session management
@@ -18,9 +18,11 @@
  * with approved test accounts provided by the operator.
  */
 
-const STAGING_BASE_URL = 'https://preview.jpvbootcamp.com'
-const STAGING_DB = 'jpvbootcamp_staging'
-const STAGING_APP_ID = 'I_2Vukga3cc3ZhaG-mUzU'
+import { ENVIRONMENT_TOPOLOGY } from '../src/lib/environmentTopology'
+
+const STAGING_BASE_URL = ENVIRONMENT_TOPOLOGY.staging.origin
+const STAGING_DB = ENVIRONMENT_TOPOLOGY.staging.database
+const STAGING_APP_ID = ENVIRONMENT_TOPOLOGY.staging.dokployApplicationId
 const RESEND_SENDER = 'enquiries@jpvbootcamp.com'
 
 type TestResult = { status: 'pending' | 'passed' | 'failed'; note: string; redactedProviderMessageId?: string }

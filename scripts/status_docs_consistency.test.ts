@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises'
 import { RELEASE_TEST_MANIFEST } from './release/releaseTestManifest'
 
 async function main(): Promise<void> {
-  const releaseCount = RELEASE_TEST_MANIFEST.length
+  const releaseCount = RELEASE_TEST_MANIFEST.filter((entry) => entry.requirement === 'required').length
   const files = {
     approvalPacket: 'docs/client/MIGRATION_APPROVAL_PACKET.md',
     approvalStatus: 'docs/client/MIGRATION_APPROVAL_STATUS.md',

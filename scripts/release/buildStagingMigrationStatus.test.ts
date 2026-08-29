@@ -228,8 +228,8 @@ async function run(): Promise<void> {
     assert.ok(report.malformedPayloadMigrationRecords.some((r) => r.rowIndex === 0 && r.reason === 'invalid_batch'))
   })
 
-  await test('malformed: malformed row plus a valid duplicate row — both classified', async () => {
-    // Row 0 has invalid batch, row n+1 duplicates NON_TARGET_MIG name → both malformed
+  await test('duplicate: malformed row plus a valid duplicate row — each classified separately', async () => {
+    // Row 0 has invalid batch; the later duplicate is a duplicate anomaly, not a second malformed row.
     const rows: Array<{ name: unknown; batch: unknown }> = [
       { name: NON_TARGET_MIG, batch: 0 }, // batch=0 is invalid (must be >= 1)
       ...PAYLOAD_MIGRATION_NAMES.slice(1).map((name) => ({ name, batch: 1 })),
@@ -237,7 +237,30 @@ async function run(): Promise<void> {
     ]
     const report = await buildStagingMigrationStatus(malformedAdapter(rows), 'jpvbootcamp_staging')
     assert.ok(report.blockers.includes('Malformed Payload migration evidence exists'))
-    assert.ok(report.malformedPayloadMigrationRecords.length >= 2)
+    assert.equal(report.malformedPayloadMigrationRecords.length, 1)
+    assert.deepEqual(report.duplicatePayloadMigrations, [NON_TARGET_MIG])
+    assert.ok(report.blockers.includes('Duplicate Payload migration records exist'))
+  })
+
+  await test('duplicate: duplicate names are surfaced even when both batches are valid', async () => {
+    const rows = [
+      ...PAYLOAD_MIGRATION_NAMES.map((name) => ({ name, batch: 1 })),
+      { name: TARGET_MIG, batch: 2 },
+    ]
+    const report = await buildStagingMigrationStatus(malformedAdapter(rows), 'jpvbootcamp_staging')
+    assert.deepEqual(report.duplicatePayloadMigrations, [TARGET_MIG])
+    assert.ok(report.blockers.includes('Duplicate Payload migration records exist'))
+  })
+
+  await test('ordering: applied Payload rows are checked against canonical registry order', async () => {
+    const rows = [
+      { name: PAYLOAD_MIGRATION_NAMES[1], batch: 1 },
+      { name: PAYLOAD_MIGRATION_NAMES[0], batch: 1 },
+      ...PAYLOAD_MIGRATION_NAMES.slice(2).map((name) => ({ name, batch: 1 })),
+    ]
+    const report = await buildStagingMigrationStatus(malformedAdapter(rows), 'jpvbootcamp_staging')
+    assert.deepEqual(report.orderingAnomalies, [PAYLOAD_MIGRATION_NAMES[0]])
+    assert.ok(report.blockers.includes('Payload migration ordering anomalies exist'))
   })
 
   await test('malformed: a malformed row for migration 29 never masquerades as expected pending migration', async () => {

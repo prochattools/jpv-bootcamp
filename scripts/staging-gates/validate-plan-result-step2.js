@@ -16,6 +16,7 @@ const safe = {
   unexpectedPayloadCount: p.unexpectedPayloadCount,
   duplicatePayloadCount: p.duplicatePayloadCount,
   malformedPayloadCount: p.malformedPayloadCount,
+  orderingAnomalyCount: p.orderingAnomalyCount,
   prismaHealthy: p.prismaHealthy,
 }
 if (p.unhealthyPrismaMigrations !== undefined) {

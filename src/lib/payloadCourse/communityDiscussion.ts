@@ -8,6 +8,7 @@ import {
   resolveMemberCommunityAttachment,
   type MemberCommunityAttachmentResolution,
 } from '@/lib/payloadCourse/communityFiles'
+import { relationshipId } from '@/lib/domain/relationships'
 
 export type SafeCommunityTextMarks = {
   bold: boolean
@@ -131,14 +132,6 @@ function asDateString(value: unknown): string | null {
   if (!text) return null
   const parsed = new Date(text)
   return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString()
-}
-
-function getDocumentId(value: unknown): string | null {
-  const direct = asString(value)
-  if (direct) return direct
-
-  const record = asRecord(value)
-  return record ? asString(record.id) : null
 }
 
 function normalizePostType(
@@ -484,7 +477,7 @@ export async function getMemberCommunityPostDetail(
   if (
     !post ||
     post.moderationStatus !== 'visible' ||
-    getDocumentId(post.space) !== spaceId
+    relationshipId(post.space) !== spaceId
   ) {
     return denied()
   }
@@ -502,7 +495,7 @@ export async function getMemberCommunityPostDetail(
     })
   ).sort(byCreatedAtThenId)
 
-  const postAuthorId = getDocumentId(post.author)
+  const postAuthorId = relationshipId(post.author)
   const postAuthor = await findByIdSafe(payload, 'payload_members', postAuthorId)
   const canPublish = await publishingCapability(payload, memberId, spaceId)
   const attachments = await findVisiblePostAttachments(payload, memberId, postId)
@@ -510,7 +503,7 @@ export async function getMemberCommunityPostDetail(
   // Collect unique author IDs so we can batch-fetch in a single query (N+1 → 1).
   const commentAuthorIdSet = new Set<string>()
   for (const comment of comments) {
-    const authorId = getDocumentId(comment.author)
+    const authorId = relationshipId(comment.author)
     if (authorId) commentAuthorIdSet.add(authorId)
   }
 
@@ -531,7 +524,7 @@ export async function getMemberCommunityPostDetail(
 
   const memberIdStr = String(memberId)
   const commentProjections: MemberCommunityComment[] = comments.map((comment) => {
-    const authorId = getDocumentId(comment.author)
+    const authorId = relationshipId(comment.author)
     const author = authorId ? (commentAuthorMap.get(authorId) ?? null) : null
     const commentBody = projectCommunityRichText(comment.body)
     return {

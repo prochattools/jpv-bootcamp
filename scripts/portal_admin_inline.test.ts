@@ -219,7 +219,7 @@ function testCommunityAdminActionsExist() {
 }
 
 // ---------------------------------------------------------------------------
-// 6. Every admin action re-resolves auth via requirePortalAccess
+// 6. Every admin action re-resolves auth via the canonical administrator gate
 // ---------------------------------------------------------------------------
 function testAdminActionsResolveAuth() {
   const actionFiles = [
@@ -231,8 +231,8 @@ function testAdminActionsResolveAuth() {
     const src = source(relPath)
     assert.match(
       src,
-      /requirePortalAccess/,
-      `[test 6] ${relPath} must import and call requirePortalAccess — no reliance on client state`,
+      /requirePortalAdmin/,
+      `[test 6] ${relPath} must import and call requirePortalAdmin — no reliance on client state`,
     )
   }
 }
@@ -397,12 +397,14 @@ function testDeleteActionsRequireConfirmation() {
 // 11. Delete actions check dependencies
 // ---------------------------------------------------------------------------
 function testDeleteActionsCheckDependencies() {
-  const courseActionsSrc = source('src/lib/portalAdmin/courseAdminActions.ts')
+  const courseCommandsSrc = source('src/lib/courseAdmin/courseCommands.ts')
+  const moduleCommandsSrc = source('src/lib/courseAdmin/moduleCommands.ts')
+  const lessonCommandsSrc = source('src/lib/courseAdmin/lessonCommands.ts')
   const communityActionsSrc = source('src/lib/portalAdmin/communityAdminActions.ts')
 
-  // deleteCourseAction checks for modules and enrollments
-  const deleteCourseIdx = courseActionsSrc.indexOf('function deleteCourseAction')
-  const deleteCourseBody = courseActionsSrc.slice(deleteCourseIdx, deleteCourseIdx + 1200)
+  // deleteCourseCommand checks for modules and enrollments
+  const deleteCourseIdx = courseCommandsSrc.indexOf('deleteCourseCommand')
+  const deleteCourseBody = courseCommandsSrc.slice(deleteCourseIdx, deleteCourseIdx + 2400)
   assert.match(
     deleteCourseBody,
     /module/i,
@@ -414,18 +416,18 @@ function testDeleteActionsCheckDependencies() {
     `[test 11] deleteCourseAction must check for existing enrollments`,
   )
 
-  // deleteModuleAction checks for lessons
-  const deleteModuleIdx = courseActionsSrc.indexOf('function deleteModuleAction')
-  const deleteModuleBody = courseActionsSrc.slice(deleteModuleIdx, deleteModuleIdx + 800)
+  // deleteModuleCommand checks for lessons
+  const deleteModuleIdx = moduleCommandsSrc.indexOf('deleteModuleCommand')
+  const deleteModuleBody = moduleCommandsSrc.slice(deleteModuleIdx, deleteModuleIdx + 1200)
   assert.match(
     deleteModuleBody,
     /lesson/i,
     `[test 11] deleteModuleAction must check for existing lessons`,
   )
 
-  // deleteLessonAction checks for progress, comments, and resources
-  const deleteLessonIdx = courseActionsSrc.indexOf('function deleteLessonAction')
-  const deleteLessonBody = courseActionsSrc.slice(deleteLessonIdx, deleteLessonIdx + 1200)
+  // deleteLessonCommand checks for progress, comments, and resources
+  const deleteLessonIdx = lessonCommandsSrc.indexOf('deleteLessonCommand')
+  const deleteLessonBody = lessonCommandsSrc.slice(deleteLessonIdx, deleteLessonIdx + 2400)
   assert.match(
     deleteLessonBody,
     /progress/i,
@@ -444,31 +446,33 @@ function testDeleteActionsCheckDependencies() {
 }
 
 // ---------------------------------------------------------------------------
-// 12. Slug validation exists in action files
+// 12. Slug validation is delegated to the shared domain primitive
 // ---------------------------------------------------------------------------
 function testSlugValidationExists() {
   const actionFiles = [
-    'src/lib/portalAdmin/courseAdminActions.ts',
+    'src/lib/courseAdmin/courseCommands.ts',
     'src/lib/portalAdmin/communityAdminActions.ts',
   ]
 
   for (const relPath of actionFiles) {
     const src = source(relPath)
-    // Should have a validateSlug function or inline slug normalization
     assert.match(
       src,
-      /validateSlug|slug.*\.toLowerCase\(\)|slug.*replace/,
-      `[test 12] ${relPath} must include slug normalization/validation logic`,
+      /normalizeSlug/,
+      `[test 12] ${relPath} must use the shared slug normalization/validation primitive`,
     )
   }
 }
 
 // ---------------------------------------------------------------------------
-// 13. Audit events recorded — all action files import createAuditEvent
+// 13. Audit events recorded — domain commands own course audits; community
+// transport retains its domain audit boundary.
 // ---------------------------------------------------------------------------
 function testAuditEventsRecorded() {
   const actionFiles = [
-    'src/lib/portalAdmin/courseAdminActions.ts',
+    'src/lib/courseAdmin/courseCommands.ts',
+    'src/lib/courseAdmin/moduleCommands.ts',
+    'src/lib/courseAdmin/lessonCommands.ts',
     'src/lib/portalAdmin/communityAdminActions.ts',
   ]
 

@@ -2,6 +2,8 @@ import { execFileSync, spawnSync } from 'node:child_process'
 import { existsSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 
+import { isAllowedStagingSourceRef } from '../../src/lib/environmentTopology'
+
 type AllowedExecutable = 'git' | 'pnpm'
 
 type CommandStep = {
@@ -14,7 +16,7 @@ type CommandStep = {
 type CheckStep = {
   id: string
   label: string
-  run: (cwd: string) => void
+  run: (cwd: string, branchOverride?: string) => void
 }
 
 export type StagingMigrationPreflightStep =
@@ -37,9 +39,11 @@ export type RunOptions = {
   cwd?: string
   executor?: CommandExecutor
   log?: (message: string) => void
+  /** Test-only branch identity override; the CLI never supplies this value. */
+  branchOverride?: string
 }
 
-const EXPECTED_BRANCHES = new Set(['feature/course-branding-and-preview', 'main'])
+const EXPECTED_SOURCE_REF_DESCRIPTION = 'feature/*, fix/*, or release/* (never main)'
 const APPLY_COMMAND = './node_modules/.bin/prisma migrate deploy --schema=prisma/system.prisma'
 const RUNBOOK_PATH = 'docs/release/SUPPORT_REQUESTS_MIGRATION_RUNBOOK.md'
 const ROLLBACK_PATH = 'docs/client/MIGRATION_REHEARSAL_RUNBOOK.md'
@@ -71,17 +75,21 @@ function defaultExecutor(executable: AllowedExecutable, args: string[], cwd: str
   }
 }
 
-function checkBranch(cwd: string): void {
-	const branch = execFileSync('git', ['branch', '--show-current'], { cwd, encoding: 'utf8' }).trim()
-	if (EXPECTED_BRANCHES.has(branch)) return
+function checkBranch(cwd: string, branchOverride?: string): void {
+  const branch = branchOverride ?? execFileSync('git', ['branch', '--show-current'], { cwd, encoding: 'utf8' }).trim()
+	if (isAllowedStagingSourceRef(branch)) return
 	if (branch === '') {
 		const head = execFileSync('git', ['rev-parse', 'HEAD'], { cwd, encoding: 'utf8' }).trim()
-		for (const expectedBranch of EXPECTED_BRANCHES) {
-			const isAncestor = spawnSync('git', ['merge-base', '--is-ancestor', head, `origin/${expectedBranch}`], { cwd })
+		const refs = execFileSync('git', ['for-each-ref', '--format=%(refname:strip=3)', 'refs/remotes/origin'], {
+			cwd,
+			encoding: 'utf8',
+		})
+		for (const sourceRef of refs.split('\n').map((value) => value.trim()).filter(isAllowedStagingSourceRef)) {
+			const isAncestor = spawnSync('git', ['merge-base', '--is-ancestor', head, `origin/${sourceRef}`], { cwd })
 			if (isAncestor.status === 0) return
 		}
 	}
-	throw new Error(`branch_mismatch:${branch}`)
+	throw new Error(`branch_mismatch:${branch}; expected ${EXPECTED_SOURCE_REF_DESCRIPTION}`)
 }
 
 function checkPrismaPathsClean(cwd: string): void {
@@ -160,13 +168,17 @@ export function runStagingMigrationPreflight(options: RunOptions = {}): string {
 	let completed = 0
 
 	log('STAGING MIGRATION PREFLIGHT')
-	log(`Allowed release branches: ${Array.from(EXPECTED_BRANCHES).join(', ')}`)
+	log(`Allowed release source refs: ${EXPECTED_SOURCE_REF_DESCRIPTION}`)
   log('Mode: read-only')
 
   for (const step of steps) {
     log(`RUN ${step.id}: ${step.label}`)
     if (step.kind === 'check') {
-      step.run(cwd)
+      if (step.id === 'branch') {
+        step.run(cwd, options.branchOverride)
+      } else {
+        step.run(cwd)
+      }
       completed += 1
       log(`PASS ${step.id}`)
       continue

@@ -15,7 +15,7 @@
  * Required env:
  *   STAGING_ADMIN_EMAIL / STAGING_ADMIN_PASSWORD
  *   STAGING_MEMBER_EMAIL / STAGING_MEMBER_PASSWORD
- *   STAGING_URL (optional, defaults to https://preview.jpvbootcamp.com)
+ *   STAGING_URL (optional, defaults to https://staging.jpvbootcamp.com)
  *
  * Exit 0: all checks passed
  * Exit 1: one or more checks failed (summary printed to stdout)
@@ -24,8 +24,9 @@
 import { chromium } from 'playwright'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
+import { ENVIRONMENT_TOPOLOGY } from '../src/lib/environmentTopology'
 
-const STAGING_URL = (process.env.STAGING_URL ?? 'https://preview.jpvbootcamp.com').replace(/\/$/, '')
+const STAGING_URL = (process.env.STAGING_URL ?? ENVIRONMENT_TOPOLOGY.staging.origin).replace(/\/$/, '')
 const ADMIN_EMAIL = process.env.STAGING_ADMIN_EMAIL ?? ''
 const ADMIN_PASSWORD = process.env.STAGING_ADMIN_PASSWORD ?? ''
 const MEMBER_EMAIL = process.env.STAGING_MEMBER_EMAIL ?? ''
@@ -38,8 +39,8 @@ if (!ADMIN_EMAIL || !ADMIN_PASSWORD) {
 
 // ── Origin validation (mirrors stagingPolicy.ts guard) ───────────────────────
 const originUrl = new URL(STAGING_URL)
-if (originUrl.hostname !== 'preview.jpvbootcamp.com') {
-  console.error(`FATAL: STAGING_URL must be https://preview.jpvbootcamp.com, got ${STAGING_URL}`)
+if (originUrl.hostname !== new URL(ENVIRONMENT_TOPOLOGY.staging.origin).hostname) {
+  console.error(`FATAL: STAGING_URL must be ${ENVIRONMENT_TOPOLOGY.staging.origin}, got ${STAGING_URL}`)
   process.exit(1)
 }
 

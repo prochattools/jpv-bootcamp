@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache'
 
 import { requireCurrentPayloadAdmin } from '@/lib/admin/currentAdmin'
 import { formatPhoneForDisplay } from '@/lib/normalize-phone'
-import prisma from '@/libs/prisma'
+import { listSupportRequests, setSupportReviewStatus } from '@/lib/support/persistence'
 
 export const dynamic = 'force-dynamic'
 
@@ -27,13 +27,10 @@ async function updateSupportRequest(formData: FormData) {
   if (!Number.isInteger(adminId)) throw new Error('Authenticated administrator ID is invalid')
   if (!requestId || !['pending', 'in_review', 'resolved'].includes(reviewStatus)) return
 
-  await prisma.supportRequest.update({
-    where: { id: requestId },
-    data: {
-      reviewStatus,
-      reviewedAt: reviewStatus === 'pending' ? null : new Date(),
-      reviewedByAccountId: reviewStatus === 'pending' ? null : adminId,
-    },
+  await setSupportReviewStatus({
+    requestId,
+    reviewStatus: reviewStatus as 'pending' | 'in_review' | 'resolved',
+    reviewedByAccountId: adminId,
   })
 
   revalidatePath('/operations/support-requests')
@@ -42,10 +39,7 @@ async function updateSupportRequest(formData: FormData) {
 export default async function SupportRequestsPage() {
   await requireCurrentPayloadAdmin()
 
-  const requests = await prisma.supportRequest.findMany({
-    orderBy: [{ reviewStatus: 'asc' }, { createdAt: 'desc' }],
-    take: 100,
-  })
+  const requests = await listSupportRequests()
 
   const openCount = requests.filter((request) => request.reviewStatus !== 'resolved').length
 

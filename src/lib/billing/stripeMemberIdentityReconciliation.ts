@@ -7,6 +7,7 @@ import type {
   PayloadId,
 } from '@/lib/payloadCourse/accessService'
 import { provisionMemberFromCheckout } from '@/lib/members/provisionMemberFromCheckout'
+import { relationshipId } from '@/lib/domain/relationships'
 
 const ACTIVE_STRIPE_SUBSCRIPTION_STATUSES = new Set(['active', 'trialing'])
 
@@ -53,25 +54,6 @@ type MemberProvisioner = (params: {
   stripeCustomerId?: string | null
   source?: 'stripe_checkout' | 'admin_created' | 'migration'
 }) => Promise<{ memberId: string; created: boolean; password: string | null }>
-
-function relationshipId(value: unknown): string | null {
-  if (typeof value === 'string' && value.trim()) return value
-  if (typeof value === 'number') return String(value)
-  if (value && typeof value === 'object' && 'id' in value) {
-    const id = (value as { id?: unknown }).id
-    if (typeof id === 'string' || typeof id === 'number') return String(id)
-  }
-  return null
-}
-
-function memberId(value: unknown): PayloadId | null {
-  if (typeof value === 'string' || typeof value === 'number') return value
-  if (value && typeof value === 'object' && 'id' in value) {
-    const id = (value as { id?: unknown }).id
-    if (typeof id === 'string' || typeof id === 'number') return id
-  }
-  return null
-}
 
 function customerEmail(customer: Stripe.Customer | Stripe.DeletedCustomer | string | null): string | null {
   if (!customer || typeof customer === 'string' || 'deleted' in customer) return null
@@ -157,7 +139,7 @@ export async function buildStripeMemberIdentityReport(params: {
   const membersByCustomerId = new Map<string, Set<PayloadId>>()
   for (const account of billingAccounts) {
     const customerId = typeof account.stripeCustomerId === 'string' ? account.stripeCustomerId.trim() : ''
-    const linkedMemberId = memberId(account.member)
+    const linkedMemberId = relationshipId(account.member)
     if (!customerId || linkedMemberId === null) continue
     const ids = membersByCustomerId.get(customerId) ?? new Set<PayloadId>()
     ids.add(linkedMemberId)

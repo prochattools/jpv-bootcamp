@@ -4,7 +4,248 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 
 ---
 
-## Current repository reconciliation — 2026-08-23
+## CURRENT A6 GATE 1 FINAL UNBLOCK — 2026-08-30
+
+**Status:** `READY FOR PRODUCTION MERGE`
+
+The completed staging-only credential and authenticated acceptance run is
+recorded here as the latest handoff authority. The existing staging course collision
+was safely classified as the canonical QA fixture, the ownership fields were
+restored in bounded commit `c28578a192c501317495b5e9747382ae08b73bad`, and the
+guarded staging seed completed successfully on `fix/e1-staging-gate-b`.
+
+- **QA identity:** existing suitable staging-only non-admin member; protected
+  member credential rotated through the supported staging application path.
+  No credential value is stored in this handoff.
+- **Protected secret names verified:** `STAGING_MEMBER_EMAIL`,
+  `STAGING_MEMBER_PASSWORD`, `STAGING_ADMIN_EMAIL`,
+  `STAGING_ADMIN_PASSWORD`.
+- **Staging:** `https://staging.jpvbootcamp.com`, Dokploy application
+  `clients-jpv-bootcamp-preview-wjfqfd` / `bZllV93NqsPZAFCsqDskb`, live exact
+  SHA `c28578a192c501317495b5e9747382ae08b73bad`,
+  `deploymentEnv=staging`.
+- **Deployment evidence:** workflow `33275500278` passed
+  exact-SHA, build, immutable image, routing, Dokploy, revision-health, and
+  authenticated admin-responsive checks.
+- **Guarded seed:** workflow `33276012313` passed the dry-run and applied once
+  against the exact staging target, with `create=1`, `update=30`, `skip=0`.
+  The canonical course now carries its prototype ownership markers.
+- **Classification:** `A6-COMMUNITY-TEST-SELECTION-BUG`. The initial
+  authenticated acceptance workflow `33276119607` selected an arbitrary
+  community route and found no eligible post link. Focused harness commits
+  `446b4faaa1bb028970fa18c4e470e6a1d18d256c`,
+  `71ee86d14d5808aa4d5f4ac07e3359e88035271e`, and
+  `2824d0ad112ffa9832ce9aa185daf9c2f7efcbfc` corrected route, heading, and
+  post-control selection without changing the application runtime.
+- **Authenticated acceptance:** final workflow `33279806459`, job
+  `99172941401`, passed **24/24** protected authenticated tests at widths
+  320, 375, 768, 1024, and 1440. The harness tip is
+  `2824d0ad112ffa9832ce9aa185daf9c2f7efcbfc`; the deployed runtime remains
+  `c28578a192c501317495b5e9747382ae08b73bad`.
+- **Migration plan:** read-only workflow `33275184060` returned semantic
+  result `plan_ok`; no migration was applied.
+- **Production:** read-only health is live at
+  `08605e52af4abb0b1bdcdfbe6890d010c545b636`,
+  `deploymentEnv=production`. No production operation was run.
+- **Repository:** branch is pushed and the worktree is clean.
+
+**Decision:** A6 Gate 1 is ready for a separately authorized production merge.
+This closeout performed no production merge or deployment, migration apply,
+backfill, Stripe/provider mutation, legacy/DNS change, or preview retirement.
+Those remain outside this packet.
+
+The next section is retained historical evidence and is superseded by this
+attempt.
+
+## HISTORICAL A6 GATE 1 SECRET-GATE SNAPSHOT — 2026-08-29 (SUPERSEDED)
+
+**Status:** `NOT READY FOR PRODUCTION MERGE`
+
+The repaired runtime candidate is now deployed to the real staging authority:
+`c0257c3c21dee7536a749306261bee1e626ab3c5` on `fix/e1-staging-gate-b`. It
+descends linearly from the verified production `origin/main` tip
+`08605e52af4abb0b1bdcdfbe6890d010c545b636`.
+
+- **Staging:** `https://staging.jpvbootcamp.com`, Dokploy application
+  `clients-jpv-bootcamp-preview-wjfqfd` / `bZllV93NqsPZAFCsqDskb`, exact live
+  image/commit `c0257c3c21dee7536a749306261bee1e626ab3c5`,
+  `deploymentEnv=staging`.
+- **Staging database boundary:** database `jpvbootcamp_staging`, schema
+  `jpvbootcamp`, role `jpvbootcamp_staging_app`; the read-only plan found 52
+  applied Payload migrations, zero expected pending migrations, zero
+  unexpected/duplicate/malformed/order anomalies, and healthy Prisma access.
+  No migration or administrator backfill was applied in this turn.
+- **Release validation:** local `pnpm test:release` passed **172/172** runnable
+  checks; the release manifest contains 173 entries including the conditional
+  authenticated A6 gate. TypeScript, production build, Prisma validation,
+  staging static preflight, and whitespace checks passed. The successful
+  GitHub staging deployment workflow was `33250316281`.
+- **Deployment:** staging deployment run `33250316281`, job `99094772710`,
+  passed exact-SHA, build, deterministic release, immutable image publication,
+  routing, Dokploy, revision-health, and authenticated Payload responsive
+  checks. The
+  migration-plan, backfill, bootstrap, and duplicate validation jobs were
+  skipped by the staging-only deployment operation.
+- **Authenticated acceptance:** exact-SHA acceptance run `33250906841`, job
+  `99096303965`, verified the deployed runtime and stopped at the protected
+  secret gate. The full member and creator-admin portal matrix remains
+  outstanding because `STAGING_MEMBER_EMAIL` and `STAGING_MEMBER_PASSWORD`
+  are not configured. Exact blocker: `A6 BLOCKED — ADD STAGING_MEMBER_EMAIL AND STAGING_MEMBER_PASSWORD`.
+- **Provider smoke:** post-deployment `pnpm test:staging:livekit-bunny` passed
+  **4/4**: health `200`, valid-shape unauthenticated LiveKit token `401`, and
+  unsigned/invalid-signature Bunny rejection `403`. The stale helper was
+  repaired in focused commit `380ec2d28f4f3ede46cb2377e6a76e37c683b990` to
+  send `sessionId` and require the expected authentication boundary. No
+  provider mutation or live email send was performed.
+- **Production protection:** production remains healthy at
+  `08605e52af4abb0b1bdcdfbe6890d010c545b636` with
+  `deploymentEnv=production`; preview still serves that production image and
+  legacy remains frozen. No production merge, deployment, migration,
+  reconciliation/backfill, Stripe mutation, or production data change was
+  performed.
+- **Rollback:** the staging app can be returned through guarded Dokploy to
+  `4eb2288931b56cd53704802c4fa9001ca4ee4a15`; no DB rollback is required.
+
+**Gate decision:** `NOT READY FOR PRODUCTION MERGE` pending the full
+authenticated member/creator-admin acceptance matrix. Production merge and
+production deployment are outside this packet’s authorization boundary.
+
+---
+
+## CURRENT E1 FINAL CLOSEOUT — 2026-08-29
+
+**Status:** `READY TO RESUME A6 GATE 1`
+
+This is the current handoff authority. E1 was completed as a staging-only,
+read-only reconciliation plus the already-authorized staging deployment and
+guarded administrator-member link backfill. No production or legacy workflow,
+database, DNS, or provider mutation was performed.
+
+- **Production:** `https://jpvbootcamp.com`, application
+  `clients-jpv-bootcamp-app-tp9xrk`, healthy at image/commit
+  `08605e52af4abb0b1bdcdfbe6890d010c545b636`,
+  `deploymentEnv=production`.
+- **Staging authority:** `https://staging.jpvbootcamp.com`, application
+  `clients-jpv-bootcamp-preview-wjfqfd` / Dokploy ID
+  `bZllV93NqsPZAFCsqDskb`, exact image/commit
+  `0515b792f0aa6ab89db94f30e6176421e06546ae`,
+  `deploymentEnv=staging`.
+- **Staging database boundary:** database `jpvbootcamp_staging`, schema
+  `jpvbootcamp`, role `jpvbootcamp_staging_app`, host `10.0.2.4:5433`.
+- **Staging migration plan:** workflow `33235046165` passed read-only with 52
+  applied Payload migrations, zero expected pending migrations, zero
+  unexpected/duplicate/malformed/order anomalies, and healthy Prisma access.
+  Sanitized artifact: `9709659401`.
+- **Administrator link backfill:** workflow `33234852975` passed for staging;
+  one administrator identity was resolved and linked with no unresolved match
+  and no fabricated subscription. Sanitized artifact: `9709600822`.
+- **Preview final state:** `https://preview.jpvbootcamp.com` remains HTTP 200
+  with no redirect, but serves the production image with
+  `deploymentEnv=production`. It is a stale compatibility endpoint, not the
+  staging authority, and was not retired by E1.
+- **Next action:** A6 Gate 1 may resume with the exact staging/prod/legacy
+  boundaries above. Preview retirement/repointing and production integration
+  require separate authorization.
+
+All sections below this marker are historical handoff records unless they are
+explicitly marked as current and dated after this closeout.
+
+## Historical current truth snapshot — 2026-08-28 (superseded)
+
+JPV Bootcamp was live in production at this dated checkpoint. This section is
+retained as historical evidence; the current handoff authority is the E1 final
+closeout above.
+
+- **Release authority:** `main` and `origin/main`, verified after fetch at
+  `08605e52af4abb0b1bdcdfbe6890d010c545b636`.
+- **Production evidence:** GitHub Actions run `33093612107` passed; Dokploy
+  production deployment converged; the live app reported the exact SHA with
+  `deploymentEnv=production`; the required Payload relationship-table
+  migration was applied; production health was green.
+- **Architectural hold:** normal feature development is paused for the
+  behavior-preserving A0–A6 architecture consolidation.
+- **Current branch:** `codex/production-architecture-consolidation`, descended
+  directly from the verified `main` tip and A0 parent
+  `c43e899824b993200b05f1b337993eb55fae0905`.
+- **Current packet:** A6.1 bounded release-control repair is committed as
+  `ba87958f4209e5ab4ad88a4b6191ae5b7ee1d483` and pushed to
+  `origin/feature/course-branding-and-preview`; later commits on that branch
+  are documentation-only evidence snapshots. It preserves the A1
+  authorization/action-result foundation, A2 shared primitives, A3 community
+  boundary, A4 course/Creator boundary, A5 architecture guards, and the A6
+  first-failure evidence. The repair decouples read-only migration discovery
+  from the explicit reviewed apply authorization, removes historical
+  current-state fallbacks, and adds target/environment/schema apply guards.
+  It does not apply migrations or change application, schema, provider, or
+  member data.
+- **Current gate:** Fresh exact-tip read-only staging-plan run
+  `33189321596` checked out the exact candidate
+  `f6f293d3b47193d5d3e5a0ae04cc729f5af8ae9f` and passed confirmation,
+  branch/SHA ancestry, target identity, secret-presence, Tailscale, and TCP
+  guards. Its sanitized result is blocked by `status_query_failed` with
+  `prismaHealthy=false`, while confirming the logical target
+  `jpvbootcamp_staging` and `jpvbootcamp-staging`. Direct read-only inspection
+  then established that the live transitional runtime connects to database
+  `jpvbootcamp`, where the configured `jpvbootcamp_staging` schema and migration
+  tables are absent. Applied/pending staging state is therefore unavailable;
+  no staging or production deployment is authorized. Push validation is
+  separate and cannot authorize a deployment. The local `.env` and
+  `.env.production` were not used because both target localhost development
+  Postgres rather than the guarded staging target.
+  The fresh production identity dry-run
+  `33180247113` found 11 active Stripe subscriptions, 10 active Payload
+  members, 7 customer-ID matches, 0 unmatched/ambiguous identities, and 4
+  subscriptions linked to inactive local members. Those four are explained
+  lifecycle records, not unresolved identities.
+- **Behavior boundary:** `requirePortalMember()`, `requirePortalAccess()`,
+  login routing, schemas, providers, production `main`, and production data
+  were not changed. Community post creation remains in
+  `src/lib/payloadCourse/communityPosting.ts` with its existing rate limit,
+  moderation, mention/post notifications, and duplicate-prevention behavior.
+  The separate request-header Live Sessions API helper remains outside this
+  packet.
+- **Exact next action:** Diagnose the staging `status_query_failed` path using
+  read-only checks, then run one fresh guarded exact-SHA staging plan. Do not
+  apply migrations, backfill identities, merge to `main`, deploy staging, or
+  deploy production while that plan is blocked. Preserve the first failed A6
+  Gate 1 attempt and the current unknown staging state.
+- **Reversibility boundary:** The A6.1 repair is one reversible code commit;
+  the later commits are documentation-only evidence snapshots. None has been
+  merged to `main`. No staging migration, production data, or provider state
+  was changed.
+- **Architecture authority:** `docs/architecture/` contains the production
+  architecture, source-of-truth map, engineering principles, and packet plan.
+
+## Historical E1 GATE A — ENVIRONMENT TOPOLOGY — 2026-08-28 (superseded)
+
+E1 is `BLOCKED` after a read-only reconciliation of the live Dokploy topology.
+The production application is `JPV Bootcamp` /
+`clients-jpv-bootcamp-app-tp9xrk` at `https://jpvbootcamp.com`, using database
+`jpvbootcamp` and schema `jpvbootcamp`. The staging application identifier is
+`clients-jpv-bootcamp-preview-wjfqfd` /
+`bZllV93NqsPZAFCsqDskb`, but it currently serves
+`https://preview.jpvbootcamp.com` with `DEPLOYMENT_ENV=preview`, database
+`jpvbootcamp`, and configured schema `jpvbootcamp_staging` absent from that
+database. The intended
+`https://staging.jpvbootcamp.com` origin returns 404. Legacy is isolated at
+`https://legacy.jpvbootcamp.com` on `jpvbootcamp_legacy` / `jpvbootcamp`.
+
+The transitional staging schema is absent, so its read-only migration tables
+cannot be queried. The production connection separately exposes 52 Payload and
+28 Prisma migration rows. This explains why the staging status guard cannot
+treat the runtime as reconciled. The production role's staging-labelled name
+is recorded drift and was not changed.
+
+E1 repository corrections are intentionally local and reversible on the
+current branch. No database/schema/role repair, migration, provider mutation,
+DNS/TLS change, merge, push, or deployment was performed. Active staging tools
+now use the shared `src/lib/environmentTopology.ts` contract and the
+preview-to-staging inventory classifies historical and immutable preview
+references. Gate B remains required before making the staging hostname live or
+applying any migration. See `docs/architecture/JPV_ENVIRONMENT_TOPOLOGY_V1.md`
+and `docs/architecture/JPV_PREVIEW_TO_STAGING_INVENTORY.md`.
+
+## Historical pre-production repository reconciliation — 2026-08-23
 
 - **Working branch:** `feature/course-branding-and-preview`; canonical frozen staging release and deployed SHA are `9d87c4a3eeeffb9afb78a38964054792330ea1cb`. Current repository tip `626bf3926412065fb7e5655d35c98d8f4be67a58` is a documentation-only descendant and is not deployed.
 - **Cleanup record:** `docs/release/BRANCH_RECONCILIATION_2026-08-23.md`.

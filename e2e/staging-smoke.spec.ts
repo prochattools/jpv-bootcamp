@@ -6,8 +6,9 @@ import {
   assertNoHorizontalOverflow,
   assertNoSeriousAccessibilityViolations,
 } from './fixtures/launchFixtures'
+import { ENVIRONMENT_TOPOLOGY } from '../src/lib/environmentTopology'
 
-const STAGING_URL = process.env.STAGING_URL ?? 'https://preview.jpvbootcamp.com'
+const STAGING_URL = process.env.STAGING_URL ?? ENVIRONMENT_TOPOLOGY.staging.origin
 
 // Exact origin validation — rejects production, suffix domains, userinfo, HTTP, non-default ports
 assertStagingOrigin(STAGING_URL)

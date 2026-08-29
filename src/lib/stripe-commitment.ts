@@ -1,6 +1,7 @@
 import 'server-only'
 
 import type Stripe from 'stripe'
+import { relationshipId } from '@/lib/domain/relationships'
 
 export const PRO_MONTHLY_CONTRACT_VERSION = '2026-07-10'
 export const PRO_MONTHLY_COMMITMENT_MONTHS = 12
@@ -56,15 +57,6 @@ export function isMonthlyCommitmentMetadata(
   metadata: Stripe.Metadata | Record<string, string> | null | undefined,
 ): boolean {
   return metadata?.billing_cadence === 'monthly_commitment' || metadata?.billing === 'monthly'
-}
-
-function relationshipId(value: unknown): string | null {
-  if (typeof value === 'string' && value.trim()) return value
-  if (value && typeof value === 'object' && 'id' in value) {
-    const id = (value as { id?: unknown }).id
-    return typeof id === 'string' && id.trim() ? id : null
-  }
-  return null
 }
 
 function firstSubscriptionItem(subscription: Stripe.Subscription): Stripe.SubscriptionItem {

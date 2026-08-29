@@ -88,25 +88,29 @@ function testSpaceAdminPanelWired() {
 // Test 6 — Reorder actions validate ownership
 // ---------------------------------------------------------------------------
 function testReorderValidatesOwnership() {
-  const src = source('src/lib/portalAdmin/courseAdminActions.ts')
+  const moduleCommands = source('src/lib/courseAdmin/moduleCommands.ts')
+  const lessonCommands = source('src/lib/courseAdmin/lessonCommands.ts')
+  const persistence = source('src/lib/courseAdmin/persistence.ts')
 
-  // reorderModulesAction must fetch modules for the course and compare
-  const reorderModules = src.slice(src.indexOf('reorderModulesAction'))
+  // The module command must fetch modules for the course and compare the exact ID set.
+  const reorderModules = moduleCommands.slice(moduleCommands.indexOf('reorderModulesCommand'))
   assert.match(
     reorderModules,
-    /where:.*course.*equals.*courseId/,
-    'reorderModulesAction must fetch modules by course',
+    /findModulesForCourse/,
+    'reorderModulesCommand must fetch modules by course',
   )
-  assert.match(reorderModules, /new Set/, 'reorderModulesAction must build ID set for validation')
+  assert.match(reorderModules, /new Set/, 'reorderModulesCommand must build ID set for validation')
 
-  // reorderLessonsAction must fetch lessons for the module and compare
-  const reorderLessons = src.slice(src.indexOf('reorderLessonsAction'))
+  // The lesson command must fetch lessons for the module and compare the exact ID set.
+  const reorderLessons = lessonCommands.slice(lessonCommands.indexOf('reorderLessonsCommand'))
   assert.match(
     reorderLessons,
-    /where:.*module.*equals.*moduleId/,
-    'reorderLessonsAction must fetch lessons by module',
+    /findLessonsForModule/,
+    'reorderLessonsCommand must fetch lessons by module',
   )
-  assert.match(reorderLessons, /new Set/, 'reorderLessonsAction must build ID set for validation')
+  assert.match(reorderLessons, /new Set/, 'reorderLessonsCommand must build ID set for validation')
+  assert.match(persistence, /course: \{ equals: courseId \}/, 'course persistence must scope modules to the course')
+  assert.match(persistence, /module: \{ equals: moduleId \}/, 'course persistence must scope lessons to the module')
 }
 
 // ---------------------------------------------------------------------------
@@ -176,19 +180,21 @@ function testSpaceVerificationParameter() {
 }
 
 // ---------------------------------------------------------------------------
-// Test 8 — Space verification check enforced
+// Test 8 — Space verification is centralized in the shared boundary
 // ---------------------------------------------------------------------------
 function testSpaceVerificationEnforced() {
   const src = source('src/lib/portalAdmin/communityAdminActions.ts')
+  const domain = source('src/lib/community/persistence.ts')
   assert.match(
-    src,
+    domain,
     /Post does not belong to the specified space/,
-    'space verification must return descriptive error',
+    'shared community persistence must return a descriptive space error',
   )
-  const matches = src.match(/Post does not belong to the specified space/g)
+  assert.match(src, /moderateCommunityPostCommand/)
+  const matches = domain.match(/Post does not belong to the specified space/g)
   assert.ok(
-    matches && matches.length >= 5,
-    `space check must appear in multiple actions (found ${matches?.length ?? 0})`,
+    matches && matches.length === 1,
+    `space check must have one shared implementation (found ${matches?.length ?? 0})`,
   )
 }
 
@@ -409,23 +415,25 @@ function testCommentMandatoryPostIdSpaceId() {
 }
 
 // ---------------------------------------------------------------------------
-// Test 18 — Comment mismatch fail-closed: error strings appear in all 4 actions
+// Test 18 — Comment mismatch fail-closed in the shared boundary
 // ---------------------------------------------------------------------------
 function testCommentMismatchFailClosed() {
   const src = source('src/lib/portalAdmin/communityAdminActions.ts')
+  const domain = source('src/lib/community/persistence.ts')
 
-  const postMatches = src.match(/'Comment does not belong to the specified post\.'/g)
+  const postMatches = domain.match(/'Comment does not belong to the specified post\.'/g)
   assert.ok(
-    postMatches && postMatches.length >= 4,
-    `'Comment does not belong to the specified post.' must appear ≥4 times (found ${postMatches?.length ?? 0})`,
+    postMatches && postMatches.length === 1,
+    `'Comment does not belong to the specified post.' must have one shared implementation (found ${postMatches?.length ?? 0})`,
   )
 
-  // Count total occurrences of both error strings across all 4 comment actions
-  const postErrCount = (src.match(/'Comment does not belong to the specified post\.'/g) ?? []).length
-  const spaceErrCount = (src.match(/'Post does not belong to the specified space\.'/g) ?? []).length
+  // The transports call the shared command boundary rather than duplicating
+  // relationship checks in each action.
+  const postErrCount = (domain.match(/'Comment does not belong to the specified post\.'/g) ?? []).length
+  const spaceErrCount = (domain.match(/'Post does not belong to the specified space\.'/g) ?? []).length
   assert.ok(
-    postErrCount + spaceErrCount >= 8,
-    `Combined comment mismatch error strings must appear ≥8 times total (found ${postErrCount + spaceErrCount})`,
+    postErrCount + spaceErrCount === 2 && /editCommunityCommentCommand/.test(src),
+    'comment actions must route relationship checks through the shared command boundary',
   )
 }
 

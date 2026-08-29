@@ -87,6 +87,14 @@ components:
 > narrative only; its older palette prose must not override the executable
 > teal/beige tokens.
 
+> **Production checkpoint — 2026-08-27:** JPV Bootcamp is live on `main` at
+> `08605e52af4abb0b1bdcdfbe6890d010c545b636`. The architectural hold and
+> post-launch consolidation are governed by
+> `docs/architecture/JPV_PRODUCTION_ARCHITECTURE_V1.md` and
+> `docs/architecture/JPV_ARCHITECTURE_CONSOLIDATION_PLAN.md`. This design
+> document remains the supporting design narrative; it does not authorize a
+> redesign or create a second token authority.
+
 ## Overview
 
 **Creative North Star: "The Sunlit Workshop"**

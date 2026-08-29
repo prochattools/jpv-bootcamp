@@ -111,11 +111,11 @@ describe('provisionMemberSubscription', () => {
     expect(subCreate).toBeTruthy()
 
     const billingData = billingCreate!.options.data as Record<string, unknown>
-    expect(billingData.member).toBe('42')
+    expect(billingData.member).toBe(42)
     expect(billingData.billingStatus).toBe('active')
 
     const subData = subCreate!.options.data as Record<string, unknown>
-    expect(subData.member).toBe('42')
+    expect(subData.member).toBe(42)
     expect(subData.plan).toBe('jpv_bootcamp_membership')
     expect(subData.status).toBe('active')
   })
@@ -157,7 +157,7 @@ describe('provisionMemberSubscription', () => {
     const subCreate = creates.find((c) => c.options.collection === 'payload_subscriptions')
     expect(subCreate).toBeTruthy()
     const subData = subCreate!.options.data as Record<string, unknown>
-    expect(subData.billingAccount).toBe('1')
+    expect(subData.billingAccount).toBe(1)
   })
 
   it('null-user/req context: createLocalReq is called with a non-null system admin user', async () => {

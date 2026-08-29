@@ -34,6 +34,7 @@ function testPreservesApprovedFields() {
     unexpectedPayloadCount: 0,
     duplicatePayloadCount: 0,
     malformedPayloadCount: 0,
+    orderingAnomalyCount: 0,
     prismaHealthy: true,
     // unknown field that should NOT be copied
     unknownField: 'should not appear',
@@ -58,6 +59,7 @@ function testPreservesApprovedFields() {
   assert.equal(output.appliedPayloadCount, 29, 'appliedPayloadCount copied')
   assert.deepEqual(output.expectedPendingMigrations, ['20260817_193000_bunny_guid_first','20260817_193100_lesson_comments','20260817_193200_space_og_image','20260817_193300_space_reactions'], 'expectedPendingMigrations copied')
   assert.equal(output.expectedPendingBatchIsOnlyMissing, true, 'expectedPendingBatchIsOnlyMissing copied')
+  assert.equal(output.orderingAnomalyCount, 0, 'orderingAnomalyCount copied')
   assert.equal(output.prismaHealthy, true, 'prismaHealthy copied')
 
   // Verify unknown field is NOT present
@@ -84,6 +86,7 @@ function testPreservesUnhealthyPrismaMigrations() {
     unexpectedPayloadCount: 0,
     duplicatePayloadCount: 0,
     malformedPayloadCount: 0,
+    orderingAnomalyCount: 0,
     prismaHealthy: false,
     unhealthyPrismaMigrations: [
       { migrationName: '20240115_add_field', status: 'failed' },
@@ -127,6 +130,7 @@ function testOmitsUnhealthyPrismaMigrationsWhenAbsent() {
     unexpectedPayloadCount: 0,
     duplicatePayloadCount: 0,
     malformedPayloadCount: 0,
+    orderingAnomalyCount: 0,
     prismaHealthy: true,
     // unhealthyPrismaMigrations intentionally absent
   }

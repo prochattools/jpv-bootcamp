@@ -1,4 +1,4 @@
-name: Preview Build and Deploy
+name: Staging Build and Deploy
 
 # Third-party action SHAs pinned to verified releases (resolved via GitHub API):
 #   actions/checkout@v4                   -> 11d5960a326750d5838078e36cf38b85af677262
@@ -16,40 +16,39 @@ on:
   workflow_dispatch:
     inputs:
       operation:
-        description: 'Operation: validate-only | deploy-preview | read-only-migration-plan'
+        description: 'Operation: validate-only | deploy-preview (staging) | authenticated-acceptance (staging) | read-only-migration-plan | bootstrap-staging-database | backfill-administrator-members | seed-staging-qa-content'
         required: false
         type: string
         default: 'validate-only'
       expected_sha:
-        description: 'Full 40-character SHA (required for deploy-preview and read-only-migration-plan)'
+        description: 'Full 40-character SHA (required for deploy-preview, authenticated-acceptance, read-only-migration-plan, bootstrap-staging-database, backfill-administrator-members, and seed-staging-qa-content)'
         required: false
+        type: string
+      source_ref:
+        description: 'Approved source ref: feature/*, fix/*, or release/* (never main)'
+        required: true
         type: string
       confirmation:
-        description: 'Confirmation phrase (deploy-preview: deploy-staging-feature-tip; plan: run-read-only-staging-payload-migration-plan)'
+        description: 'Confirmation phrase (deploy-preview: deploy-staging-feature-tip; authenticated-acceptance: run-authenticated-staging-acceptance; plan: run-read-only-staging-payload-migration-plan; bootstrap: bootstrap-empty-staging-database; backfill: apply-guarded-staging-administrator-member-backfill; seed: apply-guarded-staging-qa-content-seed)'
         required: false
         type: string
-  push:
-    branches:
-      - 'feature/course-branding-and-preview'
-
 permissions:
   contents: read
   packages: write
 
-# Operation-aware concurrency: deploy runs share a cancellable group; plan runs
-# use a separate non-cancellable group so a push never kills an in-flight plan.
+# Operation-aware concurrency: deploy runs share a cancellable group; plan,
+# bootstrap, administrator backfill, and QA seed runs use separate non-cancellable groups.
 concurrency:
-  group: ${{ github.event_name == 'workflow_dispatch' && inputs.operation == 'read-only-migration-plan' && 'staging-payload-migration-plan' || format('preview-deploy-{0}', github.ref) }}
-  cancel-in-progress: ${{ !(github.event_name == 'workflow_dispatch' && inputs.operation == 'read-only-migration-plan') }}
+  group: ${{ github.event_name == 'workflow_dispatch' && inputs.operation == 'read-only-migration-plan' && 'staging-payload-migration-plan' || github.event_name == 'workflow_dispatch' && inputs.operation == 'bootstrap-staging-database' && 'staging-empty-database-bootstrap' || github.event_name == 'workflow_dispatch' && inputs.operation == 'backfill-administrator-members' && 'staging-administrator-member-backfill' || github.event_name == 'workflow_dispatch' && inputs.operation == 'seed-staging-qa-content' && 'staging-qa-content-seed' || format('staging-deploy-{0}', github.ref) }}
+  cancel-in-progress: ${{ !(github.event_name == 'workflow_dispatch' && (inputs.operation == 'read-only-migration-plan' || inputs.operation == 'bootstrap-staging-database' || inputs.operation == 'backfill-administrator-members' || inputs.operation == 'seed-staging-qa-content')) }}
 
 jobs:
   validate-only:
-    name: Validate, build, and test (push gate)
+    name: Validate, build, and test (manual staging gate)
     runs-on: ubuntu-latest
     timeout-minutes: 40
     if: |
-      (github.event_name == 'push' && !contains(github.event.head_commit.message, '[migration-plan-only]')) ||
-      (github.event_name == 'workflow_dispatch' && (inputs.operation == 'validate-only' || inputs.operation == ''))
+      github.event_name == 'workflow_dispatch' && (inputs.operation == 'validate-only' || inputs.operation == '')
     env:
       APP_PUBLIC_URL: http://127.0.0.1:3107
       NEXT_PUBLIC_APP_URL: http://127.0.0.1:3107
@@ -59,48 +58,57 @@ jobs:
       - name: Validate deployment boundary
         shell: bash
         env:
-          GH_REF_NAME: ${{ github.ref_name }}
-          GH_EVENT_NAME: ${{ github.event_name }}
+          SOURCE_REF_INPUT: ${{ inputs.source_ref }}
         run: |
           set -euo pipefail
           # Canonical staging allow-list — no other target is permitted
-          ALLOWED_BRANCH="feature/course-branding-and-preview"
-          ALLOWED_ORIGIN="https://preview.jpvbootcamp.com"
-          ALLOWED_DOKPLOY_SLUG="clients-jpv-bootcamp-app-tp9xrk"
-          ALLOWED_DOKPLOY_ID="I_2Vukga3cc3ZhaG-mUzU"
-          ALLOWED_SCHEMA="jpvbootcamp_staging"
+          ALLOWED_SOURCE_REF_PATTERN='^(feature|fix|release)/[A-Za-z0-9][A-Za-z0-9._-]*$'
+          ALLOWED_ORIGIN="https://staging.jpvbootcamp.com"
+          ALLOWED_DOKPLOY_SLUG="clients-jpv-bootcamp-preview-wjfqfd"
+          ALLOWED_DOKPLOY_ID="bZllV93NqsPZAFCsqDskb"
+          ALLOWED_SCHEMA="jpvbootcamp"
           ALLOWED_HOST="10.0.2.4"
           ALLOWED_PORT="5433"
-          ALLOWED_DB="jpvbootcamp"
+          ALLOWED_DB="jpvbootcamp_staging"
 
-          # Reject main branch
-          if [ "${GH_REF_NAME}" = "main" ]; then
-            echo "DEPLOY-DENIED: this workflow must not run on main. Only ${ALLOWED_BRANCH} is allowed." >&2
+          if ! printf '%s' "$SOURCE_REF_INPUT" | grep -qE "$ALLOWED_SOURCE_REF_PATTERN"; then
+            echo "DEPLOY-DENIED: source_ref must match feature/*, fix/*, or release/*; got '$SOURCE_REF_INPUT'" >&2
             exit 1
           fi
-          echo "Staging lane: branch=${ALLOWED_BRANCH} origin=${ALLOWED_ORIGIN} schema=${ALLOWED_SCHEMA}"
+          if [ "$SOURCE_REF_INPUT" = "main" ]; then
+            echo "DEPLOY-DENIED: source_ref main is never allowed for staging" >&2
+            exit 1
+          fi
+          echo "Staging lane: source_ref=${SOURCE_REF_INPUT} origin=${ALLOWED_ORIGIN} schema=${ALLOWED_SCHEMA}"
           echo "              host=${ALLOWED_HOST} port=${ALLOWED_PORT} db=${ALLOWED_DB}"
           echo "              dokploy=${ALLOWED_DOKPLOY_SLUG} (${ALLOWED_DOKPLOY_ID})"
 
       - name: Check out commit
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
         with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && 'refs/heads/feature/course-branding-and-preview' || github.ref }}
+          ref: ${{ inputs.source_ref }}
           fetch-depth: 0
 
-      - name: Verify SHA ancestry under feature branch
+      - name: Attach approved source ref for repository guards
         shell: bash
+        env:
+          SOURCE_REF_INPUT: ${{ inputs.source_ref }}
+        run: git switch --force-create "$SOURCE_REF_INPUT" HEAD
+
+      - name: Verify SHA ancestry under approved source ref
+        shell: bash
+        env:
+          SOURCE_REF_INPUT: ${{ inputs.source_ref }}
         run: |
           set -euo pipefail
-          ALLOWED_BRANCH="origin/feature/course-branding-and-preview"
+          ALLOWED_REF="origin/${SOURCE_REF_INPUT}"
           CURRENT_SHA="$(git rev-parse HEAD)"
-          # Confirm HEAD is reachable from the allowed branch
-          if ! git merge-base --is-ancestor "$CURRENT_SHA" "$ALLOWED_BRANCH" 2>/dev/null; then
-            echo "DEPLOY-DENIED: SHA $CURRENT_SHA is not an ancestor of $ALLOWED_BRANCH" >&2
-            echo "Only commits reachable from feature/course-branding-and-preview may be deployed here." >&2
+          if ! git merge-base --is-ancestor "$CURRENT_SHA" "$ALLOWED_REF" 2>/dev/null; then
+            echo "DEPLOY-DENIED: SHA $CURRENT_SHA is not an ancestor of $ALLOWED_REF" >&2
+            echo "Only commits reachable from the approved source ref may be deployed here." >&2
             exit 1
           fi
-          echo "SHA ancestry confirmed: $CURRENT_SHA is under $ALLOWED_BRANCH"
+          echo "SHA ancestry confirmed: $CURRENT_SHA is under $ALLOWED_REF"
 
       - name: Set up pnpm
         uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1  # v4
@@ -151,10 +159,10 @@ jobs:
           retention-days: 7
 
   deploy-preview:
-    name: Deploy preview (manual dispatch only)
+    name: Deploy staging (manual dispatch only)
     runs-on: ubuntu-latest
     timeout-minutes: 40
-    environment: preview-deploy
+    environment: staging-deploy
     if: github.event_name == 'workflow_dispatch' && inputs.operation == 'deploy-preview'
 
     steps:
@@ -178,55 +186,76 @@ jobs:
       - name: Validate deployment boundary
         shell: bash
         env:
-          GH_REF_NAME: ${{ github.ref_name }}
-          GH_EVENT_NAME: ${{ github.event_name }}
+          SOURCE_REF_INPUT: ${{ inputs.source_ref }}
         run: |
           set -euo pipefail
           # Canonical staging allow-list — no other target is permitted
-          ALLOWED_BRANCH="feature/course-branding-and-preview"
-          ALLOWED_ORIGIN="https://preview.jpvbootcamp.com"
-          ALLOWED_DOKPLOY_SLUG="clients-jpv-bootcamp-app-tp9xrk"
-          ALLOWED_DOKPLOY_ID="I_2Vukga3cc3ZhaG-mUzU"
-          ALLOWED_SCHEMA="jpvbootcamp_staging"
+          ALLOWED_SOURCE_REF_PATTERN='^(feature|fix|release)/[A-Za-z0-9][A-Za-z0-9._-]*$'
+          ALLOWED_ORIGIN="https://staging.jpvbootcamp.com"
+          ALLOWED_DOKPLOY_SLUG="clients-jpv-bootcamp-preview-wjfqfd"
+          ALLOWED_DOKPLOY_ID="bZllV93NqsPZAFCsqDskb"
+          ALLOWED_SCHEMA="jpvbootcamp"
           ALLOWED_HOST="10.0.2.4"
           ALLOWED_PORT="5433"
-          ALLOWED_DB="jpvbootcamp"
+          ALLOWED_DB="jpvbootcamp_staging"
 
-          # Reject main branch
-          if [ "${GH_REF_NAME}" = "main" ]; then
-            echo "DEPLOY-DENIED: this workflow must not run on main. Only ${ALLOWED_BRANCH} is allowed." >&2
+          if ! printf '%s' "$SOURCE_REF_INPUT" | grep -qE "$ALLOWED_SOURCE_REF_PATTERN"; then
+            echo "DEPLOY-DENIED: source_ref must match feature/*, fix/*, or release/*; got '$SOURCE_REF_INPUT'" >&2
             exit 1
           fi
-          echo "Staging lane: branch=${ALLOWED_BRANCH} origin=${ALLOWED_ORIGIN} schema=${ALLOWED_SCHEMA}"
+          if [ "$SOURCE_REF_INPUT" = "main" ]; then
+            echo "DEPLOY-DENIED: source_ref main is never allowed for staging" >&2
+            exit 1
+          fi
+          echo "Staging lane: source_ref=${SOURCE_REF_INPUT} origin=${ALLOWED_ORIGIN} schema=${ALLOWED_SCHEMA}"
           echo "              host=${ALLOWED_HOST} port=${ALLOWED_PORT} db=${ALLOWED_DB}"
           echo "              dokploy=${ALLOWED_DOKPLOY_SLUG} (${ALLOWED_DOKPLOY_ID})"
 
-      - name: Check out feature branch
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+      - name: Check out approved source ref
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: refs/heads/feature/course-branding-and-preview
+          ref: ${{ inputs.source_ref }}
           fetch-depth: 0
 
-      - name: Verify requested SHA is current remote tip
+      - name: Attach approved source ref for repository guards
         shell: bash
+        env:
+          SOURCE_REF_INPUT: ${{ inputs.source_ref }}
+        run: git switch --force-create "$SOURCE_REF_INPUT" HEAD
+
+      - name: Verify requested SHA is current remote tip of approved source ref
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+          SOURCE_REF_INPUT: ${{ inputs.source_ref }}
         run: |
           set -euo pipefail
           BRANCH_TIP="$(git rev-parse HEAD)"
-          if [ "$BRANCH_TIP" != "${{ inputs.expected_sha }}" ]; then
-            echo "DEPLOY-DENIED: requested SHA (${{ inputs.expected_sha }}) does not match current tip of feature/course-branding-and-preview ($BRANCH_TIP)" >&2
+          if [ "$BRANCH_TIP" != "$EXPECTED_SHA" ]; then
+            echo "DEPLOY-DENIED: requested SHA ($EXPECTED_SHA) does not match the checked-out source ref tip ($BRANCH_TIP)" >&2
             exit 1
           fi
-          echo "SHA verified: $BRANCH_TIP is the current remote tip"
+          REMOTE_TIP="$(git rev-parse "origin/$SOURCE_REF_INPUT")"
+          if [ "$BRANCH_TIP" != "$REMOTE_TIP" ]; then
+            echo "DEPLOY-DENIED: expected_sha is not the current remote tip of $SOURCE_REF_INPUT" >&2
+            exit 1
+          fi
+          echo "SHA verified: $BRANCH_TIP is the current remote tip of $SOURCE_REF_INPUT"
+
+      - name: Capture checkout SHA
+        id: checkout-sha
+        shell: bash
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Set up pnpm
-        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1  # v4
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
         with:
           version: 10.33.0
 
       - name: Set up Node.js
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: '20'
+          node-version: "20"
           cache: pnpm
 
       - name: Install dependencies
@@ -237,18 +266,18 @@ jobs:
 
       - name: Build application
         env:
-          NEXT_PUBLIC_APP_URL: https://preview.jpvbootcamp.com
-          APP_PUBLIC_URL: https://preview.jpvbootcamp.com
+          NEXT_PUBLIC_APP_URL: https://staging.jpvbootcamp.com
+          APP_PUBLIC_URL: https://staging.jpvbootcamp.com
         run: pnpm run build
 
       - name: Run deterministic non-browser release gate
         run: pnpm test:release
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f  # v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
       - name: Log in to GHCR
-        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9  # v3
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -259,18 +288,18 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          sha_tag="ghcr.io/${{ github.repository }}:${{ github.sha }}"
-          branch_tag="ghcr.io/${{ github.repository }}:feature-course-branding-and-preview"
+          sha_tag="ghcr.io/${{ github.repository }}:${{ steps.checkout-sha.outputs.sha }}"
+          staging_tag="ghcr.io/${{ github.repository }}:staging"
           {
             echo "tags<<EOF"
-            echo "$branch_tag"
+            echo "$staging_tag"
             echo "$sha_tag"
             echo "EOF"
             echo "sha_tag=$sha_tag"
           } >> "$GITHUB_OUTPUT"
 
       - name: Build and publish immutable image
-        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25  # v6
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v6
         with:
           context: .
           file: Dockerfile
@@ -278,18 +307,18 @@ jobs:
           push: true
           tags: ${{ steps.image-tags.outputs.tags }}
           build-args: |
-            NEXT_PUBLIC_APP_URL=https://preview.jpvbootcamp.com
-            APP_BASE_URL=https://preview.jpvbootcamp.com
-            NEXT_PUBLIC_SERVER_URL=https://preview.jpvbootcamp.com
-            IMAGE_TAG=${{ github.sha }}
-            COMMIT_SHA=${{ github.sha }}
+            NEXT_PUBLIC_APP_URL=https://staging.jpvbootcamp.com
+            APP_BASE_URL=https://staging.jpvbootcamp.com
+            NEXT_PUBLIC_SERVER_URL=https://staging.jpvbootcamp.com
+            IMAGE_TAG=${{ steps.checkout-sha.outputs.sha }}
+            COMMIT_SHA=${{ steps.checkout-sha.outputs.sha }}
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
-            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.revision=${{ steps.checkout-sha.outputs.sha }}
             org.opencontainers.image.created=${{ github.event.head_commit.timestamp }}
-            staging-origin=https://preview.jpvbootcamp.com
-          cache-from: type=gha,scope=preview-deploy
-          cache-to: type=gha,mode=max,scope=preview-deploy
+            staging-origin=https://staging.jpvbootcamp.com
+          cache-from: type=gha,scope=staging-deploy
+          cache-to: type=gha,mode=max,scope=staging-deploy
 
       - name: Ensure durable staging media volume
         if: success()
@@ -324,8 +353,8 @@ jobs:
           set -euo pipefail
 
           # Positive allow-list: only the canonical staging Dokploy app is permitted
-          ALLOWED_SLUG="clients-jpv-bootcamp-app-tp9xrk"
-          ALLOWED_INTERNAL_ID="I_2Vukga3cc3ZhaG-mUzU"
+          ALLOWED_SLUG="clients-jpv-bootcamp-preview-wjfqfd"
+          ALLOWED_INTERNAL_ID="bZllV93NqsPZAFCsqDskb"
 
           if [ -z "$DOKPLOY_PREVIEW_APP_ID" ]; then
             echo "DEPLOY-DENIED: DOKPLOY_PREVIEW_APP_ID secret is unset or empty" >&2
@@ -340,10 +369,10 @@ jobs:
           echo "Deploy guard passed: DOKPLOY_PREVIEW_APP_ID matches canonical staging target"
 
           NEW_IMAGE="${{ steps.image-tags.outputs.sha_tag }}"
-          COMMIT_MSG=$(git log -1 --pretty=format:"%s" ${{ github.sha }})
-          COMMIT_AUTHOR=$(git log -1 --pretty=format:"%an" ${{ github.sha }})
-          COMMIT_DATE=$(git log -1 --pretty=format:"%ci" ${{ github.sha }})
-          DESCRIPTION="${COMMIT_AUTHOR} · ${COMMIT_DATE}"$'\n\n'"${{ github.sha }}"
+          COMMIT_MSG=$(git log -1 --pretty=format:"%s" ${{ steps.checkout-sha.outputs.sha }})
+          COMMIT_AUTHOR=$(git log -1 --pretty=format:"%an" ${{ steps.checkout-sha.outputs.sha }})
+          COMMIT_DATE=$(git log -1 --pretty=format:"%ci" ${{ steps.checkout-sha.outputs.sha }})
+          DESCRIPTION="${COMMIT_AUTHOR} · ${COMMIT_DATE}"$'\n\n'"${{ steps.checkout-sha.outputs.sha }}"
 
           UPDATE_RESPONSE=$(curl -s -o /tmp/dokploy_update_response.json -w "%{http_code}" \
             -X POST "https://dokploy.prochat.tools/api/application.update" \
@@ -383,7 +412,6 @@ jobs:
           echo "Deployment triggered successfully for: $NEW_IMAGE"
           echo "Provenance: deployed from $(git rev-parse HEAD)"
 
-
       - name: Verify staging admin secret readiness
         if: success()
         shell: bash
@@ -402,11 +430,11 @@ jobs:
           fi
           echo "Required staging admin secret names are configured"
 
-      - name: Wait for deployed preview revision
+      - name: Wait for deployed staging revision
         if: success()
         env:
-          STAGING_URL: https://preview.jpvbootcamp.com
-          EXPECTED_DEPLOYMENT_SHA: ${{ github.sha }}
+          STAGING_URL: https://staging.jpvbootcamp.com
+          EXPECTED_DEPLOYMENT_SHA: ${{ steps.checkout-sha.outputs.sha }}
           DOKPLOY_API_KEY: ${{ secrets.DOKPLOY_API_KEY }}
           DOKPLOY_PREVIEW_APP_ID: ${{ secrets.DOKPLOY_PREVIEW_APP_ID }}
           DEPLOY_SSH_HOST: ${{ secrets.DEPLOY_SSH_HOST }}
@@ -432,22 +460,337 @@ jobs:
           DEBIAN_FRONTEND: noninteractive
         run: pnpm exec playwright install --with-deps chromium
 
-      - name: Run authenticated admin responsive gate
+      - name: Run authenticated staging admin responsive gate
         if: success()
         env:
-          STAGING_URL: https://preview.jpvbootcamp.com
+          STAGING_URL: https://staging.jpvbootcamp.com
           STAGING_ADMIN_EMAIL: ${{ secrets.STAGING_ADMIN_EMAIL }}
           STAGING_ADMIN_PASSWORD: ${{ secrets.STAGING_ADMIN_PASSWORD }}
         run: pnpm test:e2e:admin-responsive
 
       - name: Upload authenticated admin failure evidence
         if: failure()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: admin-responsive-failure-${{ github.run_id }}
           path: /tmp/jpv-admin-regression-hardening/
           if-no-files-found: ignore
           retention-days: 7
+
+  a6-authenticated-acceptance:
+    name: A6 authenticated member and creator/admin acceptance (staging)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: staging-deploy
+    if: github.event_name == 'workflow_dispatch' && inputs.operation == 'authenticated-acceptance'
+    permissions:
+      contents: read
+
+    steps:
+      - name: Validate exact candidate inputs
+        shell: bash
+        env:
+          INPUT_EXPECTED_SHA: ${{ inputs.expected_sha }}
+          INPUT_SOURCE_REF: ${{ inputs.source_ref }}
+          INPUT_CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          if ! printf '%s' "$INPUT_EXPECTED_SHA" | grep -qE '^[0-9a-f]{40}$'; then
+            echo "A6-AUTH-DENIED: expected_sha must be exactly 40 lowercase hexadecimal characters" >&2
+            exit 1
+          fi
+          if ! printf '%s' "$INPUT_SOURCE_REF" | grep -qE '^(feature|fix|release)/[A-Za-z0-9][A-Za-z0-9._-]*$'; then
+            echo "A6-AUTH-DENIED: source_ref must match feature/*, fix/*, or release/*; main is forbidden" >&2
+            exit 1
+          fi
+          if [ "$INPUT_CONFIRMATION" != "run-authenticated-staging-acceptance" ]; then
+            echo "A6-AUTH-DENIED: confirmation must be exactly 'run-authenticated-staging-acceptance'" >&2
+            exit 1
+          fi
+
+      - name: Check out exact candidate
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.source_ref }}
+          fetch-depth: 0
+
+      - name: Verify runtime SHA is an ancestor of the approved test harness
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+          SOURCE_REF_INPUT: ${{ inputs.source_ref }}
+        run: |
+          set -euo pipefail
+          CURRENT_SHA="$(git rev-parse HEAD)"
+          REMOTE_SHA="$(git rev-parse "origin/${SOURCE_REF_INPUT}")"
+          if [ "$CURRENT_SHA" != "$REMOTE_SHA" ] || ! git merge-base --is-ancestor "$EXPECTED_SHA" "$CURRENT_SHA" 2>/dev/null; then
+            echo "A6-AUTH-DENIED: approved test harness must be the remote ref tip and contain expected_sha" >&2
+            exit 1
+          fi
+          echo "Exact deployed runtime candidate is an ancestor of the approved staging test harness"
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: 10.33.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '20'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify deployed staging runtime is the exact candidate
+        shell: bash
+        env:
+          STAGING_URL: https://staging.jpvbootcamp.com
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+        run: |
+          set -euo pipefail
+          HEALTH_FILE="$(mktemp /tmp/jpv-a6-health.XXXXXX.json)"
+          trap 'rm -f "$HEALTH_FILE"' EXIT
+          curl --fail --silent --show-error --max-time 20 "$STAGING_URL/api/health" > "$HEALTH_FILE"
+          HEALTH_FILE="$HEALTH_FILE" EXPECTED_SHA="$EXPECTED_SHA" node <<'NODE'
+          const fs = require('node:fs')
+          const health = JSON.parse(fs.readFileSync(process.env.HEALTH_FILE, 'utf8'))
+          const expected = process.env.EXPECTED_SHA
+          const identities = [
+            health.commit,
+            health.sha,
+            health.image,
+            health.imageTag,
+            health.build?.commit,
+            health.build?.sha,
+            health.build?.image,
+            health.build?.imageTag,
+          ].filter((value) => typeof value === 'string')
+          if (String(health.deploymentEnv ?? '').toLowerCase() !== 'staging') {
+            console.error('A6-AUTH-DENIED: staging health did not report deploymentEnv=staging')
+            process.exit(1)
+          }
+          if (!identities.includes(expected)) {
+            console.error('A6-AUTH-DENIED: staging health did not report the exact expected candidate SHA')
+            process.exit(1)
+          }
+          console.log('Exact staging runtime candidate verified')
+          NODE
+
+      - name: Verify protected actor secrets are present
+        shell: bash
+        env:
+          STAGING_MEMBER_EMAIL: ${{ secrets.STAGING_MEMBER_EMAIL }}
+          STAGING_MEMBER_PASSWORD: ${{ secrets.STAGING_MEMBER_PASSWORD }}
+          STAGING_ADMIN_EMAIL: ${{ secrets.STAGING_ADMIN_EMAIL }}
+          STAGING_ADMIN_PASSWORD: ${{ secrets.STAGING_ADMIN_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [ -z "${STAGING_MEMBER_EMAIL:-}" ] || [ -z "${STAGING_MEMBER_PASSWORD:-}" ]; then
+            echo "A6 BLOCKED — ADD STAGING_MEMBER_EMAIL AND STAGING_MEMBER_PASSWORD" >&2
+            echo "A6-AUTH-DENIED: add STAGING_MEMBER_EMAIL and STAGING_MEMBER_PASSWORD as protected staging secrets" >&2
+            exit 1
+          fi
+          if [ -z "${STAGING_ADMIN_EMAIL:-}" ] || [ -z "${STAGING_ADMIN_PASSWORD:-}" ]; then
+            echo "A6-AUTH-DENIED: STAGING_ADMIN_EMAIL and STAGING_ADMIN_PASSWORD are required protected staging secrets" >&2
+            exit 1
+          fi
+          echo "Protected actor secret names are configured"
+
+      - name: Fix apt mirrors (replace dead Azure mirror with public archive)
+        if: success()
+        run: |
+          sudo sed -i 's|http://azure.archive.ubuntu.com|https://archive.ubuntu.com|g' \
+            /etc/apt/sources.list /etc/apt/sources.list.d/*.list 2>/dev/null || true
+
+      - name: Install pinned Chromium browser
+        if: success()
+        timeout-minutes: 10
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run authenticated member and creator/admin acceptance
+        if: success()
+        env:
+          STAGING_URL: https://staging.jpvbootcamp.com
+          STAGING_MEMBER_EMAIL: ${{ secrets.STAGING_MEMBER_EMAIL }}
+          STAGING_MEMBER_PASSWORD: ${{ secrets.STAGING_MEMBER_PASSWORD }}
+          STAGING_ADMIN_EMAIL: ${{ secrets.STAGING_ADMIN_EMAIL }}
+          STAGING_ADMIN_PASSWORD: ${{ secrets.STAGING_ADMIN_PASSWORD }}
+        run: pnpm test:e2e:staging:authenticated
+
+      - name: Upload aggregate authenticated-gate failure evidence
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: a6-authenticated-failure-${{ github.run_id }}
+          path: /tmp/jpv-a6-authenticated-staging/junit.xml
+          if-no-files-found: ignore
+          retention-days: 7
+
+  bootstrap-staging-database:
+    name: Bootstrap isolated staging database
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: staging-migration-plan
+    if: github.event_name == 'workflow_dispatch' && inputs.operation == 'bootstrap-staging-database'
+    permissions:
+      contents: read
+
+    steps:
+      - name: Validate inputs and staging boundary
+        shell: bash
+        env:
+          INPUT_SHA: ${{ inputs.expected_sha }}
+          INPUT_SOURCE_REF: ${{ inputs.source_ref }}
+          INPUT_CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          if ! printf '%s' "$INPUT_SHA" | grep -qE '^[0-9a-f]{40}$'; then
+            echo "BOOTSTRAP-DENIED: expected_sha must be a full lowercase SHA" >&2
+            exit 1
+          fi
+          if ! printf '%s' "$INPUT_SOURCE_REF" | grep -qE '^(feature|fix|release)/[A-Za-z0-9][A-Za-z0-9._-]*$'; then
+            echo "BOOTSTRAP-DENIED: source_ref must match feature/*, fix/*, or release/*" >&2
+            exit 1
+          fi
+          if [ "$INPUT_CONFIRMATION" != "bootstrap-empty-staging-database" ]; then
+            echo "BOOTSTRAP-DENIED: confirmation phrase is invalid" >&2
+            exit 1
+          fi
+          echo "Staging-only bootstrap boundary validated"
+          echo "target=jpvbootcamp_staging schema=jpvbootcamp host=10.0.2.4 port=5433"
+
+      - name: Check out approved source ref
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.source_ref }}
+          fetch-depth: 0
+
+      - name: Attach approved source ref
+        shell: bash
+        env:
+          SOURCE_REF_INPUT: ${{ inputs.source_ref }}
+        run: git switch --force-create "$SOURCE_REF_INPUT" HEAD
+
+      - name: Verify exact source tip and reject main ancestry
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+          SOURCE_REF_INPUT: ${{ inputs.source_ref }}
+        run: |
+          set -euo pipefail
+          test "$(git branch --show-current)" = "$SOURCE_REF_INPUT"
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          if git merge-base --is-ancestor "$EXPECTED_SHA" origin/main 2>/dev/null; then
+            echo "BOOTSTRAP-DENIED: source SHA is already reachable from main" >&2
+            exit 1
+          fi
+          test "$(git rev-parse "origin/$SOURCE_REF_INPUT")" = "$EXPECTED_SHA"
+          echo "Source branch and remote tip verified"
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: 10.33.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "20"
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify required staging secrets and mask database URL
+        shell: bash
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PAYLOAD_SECRET: ${{ secrets.PAYLOAD_SECRET }}
+          TAILSCALE_OAUTH_CLIENT_ID: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
+          TAILSCALE_OAUTH_SECRET: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
+        run: |
+          set -euo pipefail
+          test -n "${DATABASE_URL:-}"
+          test -n "${PAYLOAD_SECRET:-}"
+          test -n "${TAILSCALE_OAUTH_CLIENT_ID:-}"
+          test -n "${TAILSCALE_OAUTH_SECRET:-}"
+          echo "::add-mask::$DATABASE_URL"
+          echo "::add-mask::$PAYLOAD_SECRET"
+          echo "Required staging migration secrets are present"
+
+      - name: Connect to staging database network
+        uses: tailscale/github-action@780049a30b6ff5c378a9e7b389d15ece7a204888 # v4.1.3
+        with:
+          oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
+          tags: tag:ci-reader
+
+      - name: Probe approved staging database path
+        shell: bash
+        run: |
+          set -euo pipefail
+          tailscale ping --timeout=10s 10.0.2.4
+          nc -z -w 5 10.0.2.4 5433
+          echo "Approved staging database path is reachable"
+
+      - name: Run guarded empty-database bootstrap
+        shell: bash
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PAYLOAD_SECRET: ${{ secrets.PAYLOAD_SECRET }}
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+          OPERATOR_ID: ${{ github.actor }}
+        run: |
+          set -euo pipefail
+          STDOUT_FILE="$(mktemp)"
+          STDERR_FILE="$(mktemp)"
+          chmod 600 "$STDOUT_FILE" "$STDERR_FILE"
+          trap 'rm -f "$STDOUT_FILE" "$STDERR_FILE"' EXIT
+          set +e
+          ./node_modules/.bin/tsx scripts/release/runStagingDatabaseBootstrap.ts \
+            --operator-id="$OPERATOR_ID" \
+            --backup-evidence-id=empty-staging-target-no-data \
+            --maintenance-window-id=e1-gate-b-20260828 \
+            --rollback-owner="$OPERATOR_ID" \
+            --expected-commit="$EXPECTED_SHA" \
+            --environment=staging \
+            --target-id=jpvbootcamp-staging \
+            --expected-schema=jpvbootcamp \
+            --expected-hostname=10.0.2.4 \
+            --expected-database=jpvbootcamp_staging \
+            --confirmation=bootstrap-empty-staging-database \
+            >"$STDOUT_FILE" 2>"$STDERR_FILE"
+          BOOTSTRAP_EXIT=$?
+          set -e
+          if [ "$BOOTSTRAP_EXIT" -ne 0 ]; then
+            # tsx can prefix a thrown Error with stack metadata. Extract only
+            # the bounded, application-controlled denial token and suppress
+            # every other stderr character so secrets and connection details
+            # cannot reach the workflow log.
+            SAFE_REASON="$(grep -oE 'STAGING-BOOTSTRAP-DENIED: [A-Za-z0-9 .(),_:=/-]+' "$STDERR_FILE" | tail -n 1 || true)"
+            if [ -n "$SAFE_REASON" ]; then
+              echo "$SAFE_REASON" >&2
+            else
+              echo "BOOTSTRAP-DENIED: controlled failure reason unavailable; raw stderr suppressed" >&2
+            fi
+            exit "$BOOTSTRAP_EXIT"
+          fi
+          node -e 'const fs=require("fs"); const p=JSON.parse(fs.readFileSync(process.argv[1],"utf8")); const targetSafe=p.preflight?.targetWasEmpty===true||p.preflight?.prismaOnlyInitialized===true||p.preflight?.payloadAlreadyInitialized===true; if(p.ok!==true||p.mode!=="bootstrap-empty-database"||p.environment!=="staging"||p.targetId!=="jpvbootcamp-staging"||p.database!=="jpvbootcamp_staging"||p.schema!=="jpvbootcamp"||!targetSafe||p.preflight?.applicationDataPresent!==false||p.postApply?.migrationState!=="VERIFIED"||p.postApply?.applicationPreflight!=="PASSED") process.exit(1)' "$STDOUT_FILE"
+          cp "$STDOUT_FILE" staging-bootstrap-result.json
+          echo "Staging bootstrap completed and verified"
+
+      - name: Upload sanitized bootstrap evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: staging-bootstrap-${{ github.run_id }}
+          path: staging-bootstrap-result.json
+          if-no-files-found: ignore
+          retention-days: 30
 
   read-only-plan:
     name: Read-only staging Payload migration plan
@@ -484,15 +827,14 @@ jobs:
             exit 1
           fi
 
-      - name: Validate trigger — reject main branch
+      - name: Validate source ref — reject production source
         shell: bash
         env:
-          GH_REF: ${{ github.ref }}
-          GH_REF_NAME: ${{ github.ref_name }}
+          SOURCE_REF_INPUT: ${{ inputs.source_ref }}
         run: |
           set -euo pipefail
-          if [ "${GH_REF}" = "refs/heads/main" ] || [ "${GH_REF_NAME}" = "main" ]; then
-            echo "PLAN-DENIED: this workflow must not run on main." >&2
+          if ! printf '%s' "$SOURCE_REF_INPUT" | grep -qE '^(feature|fix|release)/[A-Za-z0-9][A-Za-z0-9._-]*$'; then
+            echo "PLAN-DENIED: source_ref must match feature/*, fix/*, or release/*; got '$SOURCE_REF_INPUT'" >&2
             exit 1
           fi
 
@@ -535,21 +877,28 @@ jobs:
 
       # ── Source checkout: branch-attached, not detached ───────────────────
 
-      - name: Check out feature branch
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+      - name: Check out approved source ref
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: refs/heads/feature/course-branding-and-preview
+          ref: ${{ inputs.source_ref }}
           fetch-depth: 0
+
+      - name: Attach approved source ref for migration runner
+        shell: bash
+        env:
+          SOURCE_REF_INPUT: ${{ inputs.source_ref }}
+        run: git switch --force-create "$SOURCE_REF_INPUT" HEAD
 
       - name: Verify branch name, HEAD SHA, ancestry, and remote tip
         shell: bash
         env:
           EXPECTED_SHA: ${{ inputs.expected_sha }}
+          SOURCE_REF_INPUT: ${{ inputs.source_ref }}
         run: |
           set -euo pipefail
           BRANCH="$(git branch --show-current)"
-          if [ "$BRANCH" != "feature/course-branding-and-preview" ]; then
-            echo "PLAN-DENIED: expected branch 'feature/course-branding-and-preview', got '$BRANCH'" >&2
+          if [ "$BRANCH" != "$SOURCE_REF_INPUT" ]; then
+            echo "PLAN-DENIED: checked-out source ref does not match source_ref ('$SOURCE_REF_INPUT'), got '$BRANCH'" >&2
             exit 1
           fi
           ACTUAL_SHA="$(git rev-parse HEAD)"
@@ -562,7 +911,7 @@ jobs:
             echo "PLAN-DENIED: SHA is already reachable from main." >&2
             exit 1
           fi
-          REMOTE_TIP="$(git rev-parse origin/feature/course-branding-and-preview)"
+          REMOTE_TIP="$(git rev-parse "origin/$SOURCE_REF_INPUT")"
           if [ "$ACTUAL_SHA" != "$REMOTE_TIP" ]; then
             echo "PLAN-DENIED: expected_sha is not the current remote tip" >&2
             echo "Run pnpm staging:payload-migration-plan locally to confirm the remote tip before dispatching." >&2
@@ -573,14 +922,14 @@ jobs:
       # ── Toolchain ─────────────────────────────────────────────────────────
 
       - name: Set up pnpm
-        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1  # v4
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
         with:
           version: 10.33.0
 
       - name: Set up Node.js
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: '20'
+          node-version: "20"
           cache: pnpm
 
       - name: Install dependencies (frozen)
@@ -603,7 +952,7 @@ jobs:
       # ── Network: Tailscale → ping → TCP probe ─────────────────────────────
 
       - name: Connect to Tailscale
-        uses: tailscale/github-action@780049a30b6ff5c378a9e7b389d15ece7a204888  # v4.1.3
+        uses: tailscale/github-action@780049a30b6ff5c378a9e7b389d15ece7a204888 # v4.1.3
         with:
           oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
           oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
@@ -639,8 +988,9 @@ jobs:
         shell: bash
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          PAYLOAD_MIGRATION_SCHEMA: jpvbootcamp_staging
+          PAYLOAD_MIGRATION_SCHEMA: jpvbootcamp
           EXPECTED_SHA: ${{ inputs.expected_sha }}
+          SOURCE_REF_INPUT: ${{ inputs.source_ref }}
         run: |
           set -euo pipefail
           STDOUT_FILE=$(mktemp)
@@ -657,9 +1007,9 @@ jobs:
             "--expected-commit=${EXPECTED_SHA}"
             "--environment=staging"
             "--target-id=jpvbootcamp-staging"
-            "--expected-schema=jpvbootcamp_staging"
+            "--expected-schema=jpvbootcamp"
             "--expected-hostname=10.0.2.4"
-            "--expected-database=jpvbootcamp"
+            "--expected-database=jpvbootcamp_staging"
           )
 
           set +e
@@ -673,7 +1023,7 @@ jobs:
 
           # Fallback schema-valid artifact — used when early guards abort before the runner writes output.
           # Must satisfy all fields required by the schema validation below.
-          FALLBACK_ARTIFACT='{"version":2,"resultCode":"plan_blocked","blockerCodes":["output_format_invalid"],"branch":"unknown","commit":"unknown","schema":"","environment":"","targetId":"","appliedPayloadCount":0,"expectedPendingMigrations":[],"expectedPendingBatchIsOnlyMissing":false,"unexpectedPayloadCount":0,"duplicatePayloadCount":0,"malformedPayloadCount":0,"prismaHealthy":false}'
+          FALLBACK_ARTIFACT='{"version":2,"resultCode":"plan_blocked","blockerCodes":["output_format_invalid"],"branch":"unknown","commit":"unknown","schema":"","environment":"","targetId":"","appliedPayloadCount":0,"expectedPendingMigrations":[],"expectedPendingBatchIsOnlyMissing":false,"unexpectedPayloadCount":0,"duplicatePayloadCount":0,"malformedPayloadCount":0,"orderingAnomalyCount":0,"prismaHealthy":false}'
 
           # Reject mixed output: stdout must begin with '{' — no operational log lines before JSON
           FIRST_CHAR="$(head -c 1 "$STDOUT_FILE" 2>/dev/null || echo '')"
@@ -685,11 +1035,11 @@ jobs:
 
           # Reject trailing bytes: use strict Node.js JSON.parse (not jq streaming) for single-document validation
           # jq -e 'type == "object"' accepts multiple documents; JSON.parse does not.
-          ALLOWED_BLOCKER_CODES='["expected_commit_required","branch_guard_failed","commit_guard_failed","database_url_missing","database_url_invalid","environment_guard_failed","target_identity_guard_failed","production_marker_rejected","hostname_mismatch","worktree_integrity_failed","status_query_failed","malformed_payload_evidence","schema_identity_mismatch","applied_count_mismatch","pending_migration_mismatch","unexpected_payload_migrations","duplicate_payload_migrations","missing_prisma_migrations","unexpected_prisma_migrations","duplicate_prisma_migrations","unhealthy_prisma_migrations","prisma_evidence_empty","plan_blocked_unknown","argument_parse_failed","output_format_invalid","schema_validation_failed","artifact_write_failed","credential_scan_failed"]'
+          ALLOWED_BLOCKER_CODES='["expected_commit_required","branch_guard_failed","commit_guard_failed","database_url_missing","database_url_invalid","environment_guard_failed","target_identity_guard_failed","production_marker_rejected","hostname_mismatch","worktree_integrity_failed","status_query_failed","malformed_payload_evidence","schema_identity_mismatch","applied_count_mismatch","pending_migration_mismatch","unexpected_payload_migrations","duplicate_payload_migrations","ordering_anomalies","missing_prisma_migrations","unexpected_prisma_migrations","duplicate_prisma_migrations","unhealthy_prisma_migrations","prisma_evidence_empty","plan_blocked_unknown","argument_parse_failed","output_format_invalid","schema_validation_failed","artifact_write_failed","credential_scan_failed"]'
           if ! node scripts/staging-gates/validate-plan-result-step1.js "$STDOUT_FILE" "$ALLOWED_BLOCKER_CODES"
           then
             echo "PLAN-BLOCKED: JSON schema validation failed — required keys, types, or values invalid" >&2
-            printf '%s\n' '{"version":2,"resultCode":"plan_blocked","blockerCodes":["schema_validation_failed"],"branch":"unknown","commit":"unknown","schema":"","environment":"","targetId":"","appliedPayloadCount":0,"expectedPendingMigrations":[],"expectedPendingBatchIsOnlyMissing":false,"unexpectedPayloadCount":0,"duplicatePayloadCount":0,"malformedPayloadCount":0,"prismaHealthy":false}' > plan-result-sanitized.json
+            printf '%s\n' '{"version":2,"resultCode":"plan_blocked","blockerCodes":["schema_validation_failed"],"branch":"unknown","commit":"unknown","schema":"","environment":"","targetId":"","appliedPayloadCount":0,"expectedPendingMigrations":[],"expectedPendingBatchIsOnlyMissing":false,"unexpectedPayloadCount":0,"duplicatePayloadCount":0,"malformedPayloadCount":0,"orderingAnomalyCount":0,"prismaHealthy":false}' > plan-result-sanitized.json
             exit 1
           fi
 
@@ -698,7 +1048,7 @@ jobs:
           if ! node scripts/staging-gates/validate-plan-result-step2.js "$STDOUT_FILE" plan-result-sanitized.json
           then
             echo "PLAN-BLOCKED: artifact write failed" >&2
-            printf '%s\n' '{"version":2,"resultCode":"plan_blocked","blockerCodes":["artifact_write_failed"],"branch":"unknown","commit":"unknown","schema":"","environment":"","targetId":"","appliedPayloadCount":0,"expectedPendingMigrations":[],"expectedPendingBatchIsOnlyMissing":false,"unexpectedPayloadCount":0,"duplicatePayloadCount":0,"malformedPayloadCount":0,"prismaHealthy":false}' > plan-result-sanitized.json
+            printf '%s\n' '{"version":2,"resultCode":"plan_blocked","blockerCodes":["artifact_write_failed"],"branch":"unknown","commit":"unknown","schema":"","environment":"","targetId":"","appliedPayloadCount":0,"expectedPendingMigrations":[],"expectedPendingBatchIsOnlyMissing":false,"unexpectedPayloadCount":0,"duplicatePayloadCount":0,"malformedPayloadCount":0,"orderingAnomalyCount":0,"prismaHealthy":false}' > plan-result-sanitized.json
             exit 1
           fi
 
@@ -707,23 +1057,22 @@ jobs:
             'postgres(ql)?://|://[^@/]+:[^@/]+@|[Bb]earer [A-Za-z0-9+/=_-]{8,}|[Bb]asic [A-Za-z0-9+/=]{8,}|password[[:space:]]*=|secret[[:space:]]*=|DATABASE_URL[[:space:]]*=|PGPASSWORD[[:space:]]*=' \
             plan-result-sanitized.json; then
             echo "PLAN-BLOCKED: credential-like string detected in sanitized output" >&2
-            printf '%s\n' '{"version":2,"resultCode":"plan_blocked","blockerCodes":["credential_scan_failed"],"branch":"unknown","commit":"unknown","schema":"","environment":"","targetId":"","appliedPayloadCount":0,"expectedPendingMigrations":[],"expectedPendingBatchIsOnlyMissing":false,"unexpectedPayloadCount":0,"duplicatePayloadCount":0,"malformedPayloadCount":0,"prismaHealthy":false}' > plan-result-sanitized.json
+            printf '%s\n' '{"version":2,"resultCode":"plan_blocked","blockerCodes":["credential_scan_failed"],"branch":"unknown","commit":"unknown","schema":"","environment":"","targetId":"","appliedPayloadCount":0,"expectedPendingMigrations":[],"expectedPendingBatchIsOnlyMissing":false,"unexpectedPayloadCount":0,"duplicatePayloadCount":0,"malformedPayloadCount":0,"orderingAnomalyCount":0,"prismaHealthy":false}' > plan-result-sanitized.json
             exit 1
           fi
 
           # Read resultCode from the sanitized file — not from the raw stdout file
           RESULT_CODE="$(node -e "process.stdout.write(JSON.parse(require('fs').readFileSync('plan-result-sanitized.json','utf8')).resultCode)" 2>/dev/null || echo 'plan_blocked')"
 
-          # Semantic verification: pre-apply plan_ok requires all evidence fields to match the reviewed 40-applied / six-migration billing batch exactly.
-          # Wrong-target, wrong-commit, wrong-schema, anomaly counts, or unhealthy Prisma must not pass.
+          # Semantic verification: plan_ok must carry exact identity and complete
+          # read-only evidence. The pending list is discovered from the current
+          # canonical registry; it is not a migration-apply authorization packet.
           if [ "$RESULT_CODE" = "plan_ok" ] && [ $PLAN_EXIT -eq 0 ]; then
-            EXPECTED_PENDING_MIGRATIONS='["20260825_120000_billing_invoice_visibility","20260825_121000_membership_support_runtime_alignment","20260825_122000_membership_support_relationships","20260825_123000_membership_support_relationship_alignment","20260825_124000_membership_review_assignee_alignment","20260825_125000_membership_shadow_state_alignment"]'
-            REQUIRED_BRANCH="feature/course-branding-and-preview"
-            REQUIRED_SCHEMA="jpvbootcamp_staging"
+            REQUIRED_BRANCH="${SOURCE_REF_INPUT}"
+            REQUIRED_SCHEMA="jpvbootcamp"
             REQUIRED_ENVIRONMENT="staging"
             REQUIRED_TARGET_ID="jpvbootcamp-staging"
-            EXPECTED_APPLIED_COUNT=40
-            if ! node scripts/staging-gates/validate-plan-result-step3.js plan-result-sanitized.json "$EXPECTED_SHA" "$EXPECTED_PENDING_MIGRATIONS" "$REQUIRED_BRANCH" "$REQUIRED_SCHEMA" "$REQUIRED_ENVIRONMENT" "$REQUIRED_TARGET_ID" "$EXPECTED_APPLIED_COUNT"
+            if ! node scripts/staging-gates/validate-plan-result-step3.js plan-result-sanitized.json "$EXPECTED_SHA" "$REQUIRED_BRANCH" "$REQUIRED_SCHEMA" "$REQUIRED_ENVIRONMENT" "$REQUIRED_TARGET_ID"
             then
               echo "PLAN-BLOCKED: plan_ok semantic verification failed — evidence does not match required values" >&2
               exit 1
@@ -739,9 +1088,405 @@ jobs:
 
       - name: Upload sanitized plan artifact
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: staging-migration-plan-${{ github.run_id }}
           path: plan-result-sanitized.json
           retention-days: 30
           if-no-files-found: error
+
+  backfill-administrator-members:
+    name: Guarded staging administrator-member backfill
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: staging-migration-plan
+    if: github.event_name == 'workflow_dispatch' && inputs.operation == 'backfill-administrator-members'
+    permissions:
+      contents: read
+
+    steps:
+      - name: Validate inputs and staging boundary
+        shell: bash
+        env:
+          INPUT_SHA: ${{ inputs.expected_sha }}
+          INPUT_SOURCE_REF: ${{ inputs.source_ref }}
+          INPUT_CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          if ! printf '%s' "$INPUT_SHA" | grep -qE '^[0-9a-f]{40}$'; then
+            echo "ADMIN-BACKFILL-DENIED: expected_sha must be a full lowercase SHA" >&2
+            exit 1
+          fi
+          if ! printf '%s' "$INPUT_SOURCE_REF" | grep -qE '^(feature|fix|release)/[A-Za-z0-9][A-Za-z0-9._-]*$'; then
+            echo "ADMIN-BACKFILL-DENIED: source_ref must match feature/*, fix/*, or release/*" >&2
+            exit 1
+          fi
+          if [ "$INPUT_CONFIRMATION" != "apply-guarded-staging-administrator-member-backfill" ]; then
+            echo "ADMIN-BACKFILL-DENIED: confirmation phrase is invalid" >&2
+            exit 1
+          fi
+          echo "Staging-only administrator-member backfill boundary validated"
+          echo "target=jpvbootcamp_staging schema=jpvbootcamp host=10.0.2.4 port=5433"
+
+      - name: Check out approved source ref
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.source_ref }}
+          fetch-depth: 0
+
+      - name: Attach approved source ref
+        shell: bash
+        env:
+          SOURCE_REF_INPUT: ${{ inputs.source_ref }}
+        run: git switch --force-create "$SOURCE_REF_INPUT" HEAD
+
+      - name: Verify exact source tip and reject main ancestry
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+          SOURCE_REF_INPUT: ${{ inputs.source_ref }}
+        run: |
+          set -euo pipefail
+          test "$(git branch --show-current)" = "$SOURCE_REF_INPUT"
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          if git merge-base --is-ancestor "$EXPECTED_SHA" origin/main 2>/dev/null; then
+            echo "ADMIN-BACKFILL-DENIED: source SHA is already reachable from main" >&2
+            exit 1
+          fi
+          test "$(git rev-parse "origin/$SOURCE_REF_INPUT")" = "$EXPECTED_SHA"
+          echo "Source branch and remote tip verified"
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: 10.33.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "20"
+          cache: pnpm
+
+      - name: Install dependencies (frozen)
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify required staging secrets and mask values
+        shell: bash
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PAYLOAD_SECRET: ${{ secrets.PAYLOAD_SECRET }}
+          TAILSCALE_OAUTH_CLIENT_ID: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
+          TAILSCALE_OAUTH_SECRET: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
+        run: |
+          set -euo pipefail
+          test -n "${DATABASE_URL:-}"
+          test -n "${PAYLOAD_SECRET:-}"
+          test -n "${TAILSCALE_OAUTH_CLIENT_ID:-}"
+          test -n "${TAILSCALE_OAUTH_SECRET:-}"
+          echo "::add-mask::$DATABASE_URL"
+          echo "::add-mask::$PAYLOAD_SECRET"
+          echo "Required staging backfill secrets are present"
+
+      - name: Connect to staging database network
+        uses: tailscale/github-action@780049a30b6ff5c378a9e7b389d15ece7a204888 # v4.1.3
+        with:
+          oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
+          tags: tag:ci-reader
+
+      - name: Probe approved staging database path
+        shell: bash
+        run: |
+          set -euo pipefail
+          tailscale ping --timeout=10s 10.0.2.4
+          nc -z -w 5 10.0.2.4 5433
+          echo "Approved staging database path is reachable"
+
+      - name: Dry-run administrator-member backfill
+        shell: bash
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PAYLOAD_SECRET: ${{ secrets.PAYLOAD_SECRET }}
+          NODE_ENV: production
+          PGOPTIONS: "-c statement_timeout=30000 -c lock_timeout=5000"
+          DEPLOYMENT_RUNTIME: docker
+          DEPLOYMENT_ENV: staging
+          PAYLOAD_MIGRATION_SCHEMA: jpvbootcamp
+        run: |
+          set -euo pipefail
+          DRY_RUN_FILE="$(mktemp)"
+          DRY_RUN_ERR="$(mktemp)"
+          trap 'rm -f "$DRY_RUN_FILE" "$DRY_RUN_ERR"' EXIT
+          set +e
+          timeout --signal=TERM --kill-after=15s 120s ./node_modules/.bin/tsx scripts/payload/link-administrator-members.mts >"$DRY_RUN_FILE" 2>"$DRY_RUN_ERR"
+          BACKFILL_EXIT=$?
+          set -e
+          if [ "$BACKFILL_EXIT" -ne 0 ]; then
+            echo "ADMIN-BACKFILL-DENIED: dry-run failed; sanitized diagnostics follow" >&2
+            sed -E \
+              -e 's#postgres(ql)?://[^[:space:]]+#postgresql://[redacted]#g' \
+              -e 's#(DATABASE_URL|PAYLOAD_SECRET|.*SECRET.*)=([^[:space:]]+)#\1=[redacted]#g' \
+              -e 's#(password|token|secret)[=:][^[:space:]]+#\1=[redacted]#Ig' \
+              "$DRY_RUN_ERR" | tail -n 80 >&2 || true
+            exit "$BACKFILL_EXIT"
+          fi
+          node - "$DRY_RUN_FILE" <<'NODE'
+          const fs = require('node:fs')
+          const data = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
+          if (data.apply !== false || !Array.isArray(data.administrators)) process.exit(1)
+          const blocked = data.administrators.filter((row) => ['ambiguous', 'invalid', 'skipped_missing_email'].includes(row.status))
+          if (blocked.length > 0) {
+            console.error('ADMIN-BACKFILL-DENIED: dry-run found unresolved administrator identities')
+            process.exit(2)
+          }
+          console.log(`Dry-run resolved ${data.administrators.length} administrator identities with no unresolved matches`)
+          NODE
+
+      - name: Apply guarded administrator-member backfill
+        shell: bash
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PAYLOAD_SECRET: ${{ secrets.PAYLOAD_SECRET }}
+          NODE_ENV: production
+          PGOPTIONS: "-c statement_timeout=30000 -c lock_timeout=5000"
+          DEPLOYMENT_RUNTIME: docker
+          DEPLOYMENT_ENV: staging
+          PAYLOAD_MIGRATION_SCHEMA: jpvbootcamp
+          ADMIN_MEMBER_IDENTITY_APPLY: "true"
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+          OPERATOR_ID: ${{ github.actor }}
+        run: |
+          set -euo pipefail
+          APPLY_FILE="$(mktemp)"
+          APPLY_ERR="$(mktemp)"
+          trap 'rm -f "$APPLY_FILE" "$APPLY_ERR"' EXIT
+          set +e
+          timeout --signal=TERM --kill-after=15s 120s ./node_modules/.bin/tsx scripts/payload/link-administrator-members.mts --apply >"$APPLY_FILE" 2>"$APPLY_ERR"
+          BACKFILL_EXIT=$?
+          set -e
+          if [ "$BACKFILL_EXIT" -ne 0 ]; then
+            echo "ADMIN-BACKFILL-DENIED: guarded apply failed; sanitized diagnostics follow" >&2
+            sed -E \
+              -e 's#postgres(ql)?://[^[:space:]]+#postgresql://[redacted]#g' \
+              -e 's#(DATABASE_URL|PAYLOAD_SECRET|.*SECRET.*)=([^[:space:]]+)#\1=[redacted]#g' \
+              -e 's#(password|token|secret)[=:][^[:space:]]+#\1=[redacted]#Ig' \
+              "$APPLY_ERR" | tail -n 80 >&2 || true
+            exit "$BACKFILL_EXIT"
+          fi
+          node - "$APPLY_FILE" "$EXPECTED_SHA" "$OPERATOR_ID" <<'NODE'
+          const fs = require('node:fs')
+          const data = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
+          if (data.apply !== true || !Array.isArray(data.administrators)) process.exit(1)
+          const blocked = data.administrators.filter((row) => ['ambiguous', 'invalid', 'skipped_missing_email', 'skipped_ambiguous', 'skipped_invalid'].includes(row.status))
+          if (blocked.length > 0) {
+            console.error('ADMIN-BACKFILL-DENIED: apply left unresolved administrator identities')
+            process.exit(2)
+          }
+          const statusCounts = {}
+          for (const row of data.administrators) statusCounts[row.status] = (statusCounts[row.status] || 0) + 1
+          const result = {
+            version: 1,
+            operation: 'guarded-administrator-member-backfill',
+            environment: 'staging',
+            targetId: 'jpvbootcamp-staging',
+            database: 'jpvbootcamp_staging',
+            schema: 'jpvbootcamp',
+            commit: process.argv[3],
+            operator: process.argv[4],
+            administratorCount: data.administrators.length,
+            linkedMemberCount: data.administrators.filter((row) => typeof row.memberId === 'string' && row.memberId.length > 0).length,
+            statusCounts,
+          }
+          fs.writeFileSync('administrator-backfill-result.json', JSON.stringify(result, null, 2) + '\n', { mode: 0o600 })
+          console.log(`Guarded administrator-member backfill applied for ${result.administratorCount} identities`)
+          NODE
+
+      - name: Upload PII-free administrator backfill evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: staging-administrator-member-backfill-${{ github.run_id }}
+          path: administrator-backfill-result.json
+          retention-days: 30
+          if-no-files-found: ignore
+
+  seed-staging-qa-content:
+    name: Guarded staging QA course content seed
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: staging-migration-plan
+    if: github.event_name == 'workflow_dispatch' && inputs.operation == 'seed-staging-qa-content'
+    permissions:
+      contents: read
+
+    steps:
+      - name: Validate inputs and staging boundary
+        shell: bash
+        env:
+          INPUT_SHA: ${{ inputs.expected_sha }}
+          INPUT_SOURCE_REF: ${{ inputs.source_ref }}
+          INPUT_CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          if ! printf '%s' "$INPUT_SHA" | grep -qE '^[0-9a-f]{40}$'; then
+            echo "COURSE-SEED-DENIED: expected_sha must be a full lowercase SHA" >&2
+            exit 1
+          fi
+          if ! printf '%s' "$INPUT_SOURCE_REF" | grep -qE '^(feature|fix|release)/[A-Za-z0-9][A-Za-z0-9._-]*$'; then
+            echo "COURSE-SEED-DENIED: source_ref must match feature/*, fix/*, or release/*" >&2
+            exit 1
+          fi
+          if [ "$INPUT_CONFIRMATION" != "apply-guarded-staging-qa-content-seed" ]; then
+            echo "COURSE-SEED-DENIED: confirmation phrase is invalid" >&2
+            exit 1
+          fi
+          echo "Guarded QA seed is restricted to the canonical staging database"
+          echo "target=jpvbootcamp_staging schema=jpvbootcamp host=10.0.2.4 port=5433"
+
+      - name: Check out approved source ref
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.source_ref }}
+          fetch-depth: 0
+
+      - name: Attach and verify exact source tip
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+          SOURCE_REF_INPUT: ${{ inputs.source_ref }}
+        run: |
+          set -euo pipefail
+          git switch --force-create "$SOURCE_REF_INPUT" HEAD
+          test "$(git branch --show-current)" = "$SOURCE_REF_INPUT"
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          if git merge-base --is-ancestor "$EXPECTED_SHA" origin/main 2>/dev/null; then
+            echo "COURSE-SEED-DENIED: source SHA is already reachable from main" >&2
+            exit 1
+          fi
+          test "$(git rev-parse "origin/$SOURCE_REF_INPUT")" = "$EXPECTED_SHA"
+          echo "Source branch and remote tip verified"
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: 10.33.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "20"
+          cache: pnpm
+
+      - name: Install dependencies (frozen)
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify and mask required staging secrets
+        shell: bash
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PAYLOAD_SECRET: ${{ secrets.PAYLOAD_SECRET }}
+          TAILSCALE_OAUTH_CLIENT_ID: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
+          TAILSCALE_OAUTH_SECRET: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
+        run: |
+          set -euo pipefail
+          test -n "${DATABASE_URL:-}"
+          test -n "${PAYLOAD_SECRET:-}"
+          test -n "${TAILSCALE_OAUTH_CLIENT_ID:-}"
+          test -n "${TAILSCALE_OAUTH_SECRET:-}"
+          echo "::add-mask::$DATABASE_URL"
+          echo "::add-mask::$PAYLOAD_SECRET"
+          echo "Required staging QA seed secrets are present"
+
+      - name: Connect to approved staging database network
+        uses: tailscale/github-action@780049a30b6ff5c378a9e7b389d15ece7a204888 # v4.1.3
+        with:
+          oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
+          tags: tag:ci-reader
+
+      - name: Probe approved staging database path
+        shell: bash
+        run: |
+          set -euo pipefail
+          tailscale ping --timeout=10s 10.0.2.4
+          nc -z -w 5 10.0.2.4 5433
+          echo "Approved staging database path is reachable"
+
+      - name: Verify canonical staging target before dry-run or apply
+        shell: bash
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DEPLOYMENT_ENV: staging
+        run: |
+          set -euo pipefail
+          TARGET="$(./node_modules/.bin/tsx scripts/payload/verify-staging-course-seed-target.mts)"
+          node -e 'const t=JSON.parse(process.argv[1]); if(t.environment!=="staging"||t.host!=="10.0.2.4"||t.port!=="5433"||t.database!=="jpvbootcamp_staging"||t.schema!=="jpvbootcamp"||t.role!=="jpvbootcamp_staging_app") process.exit(1)' "$TARGET"
+          echo "Canonical staging target verified"
+
+      - name: Dry-run canonical QA course seed
+        shell: bash
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PAYLOAD_SECRET: ${{ secrets.PAYLOAD_SECRET }}
+          NODE_ENV: production
+          DEPLOYMENT_ENV: staging
+          PGOPTIONS: "-c statement_timeout=30000 -c lock_timeout=5000"
+        run: |
+          set -euo pipefail
+          OUT="$(mktemp)"; ERR="$(mktemp)"
+          trap 'rm -f "$OUT" "$ERR"' EXIT
+          if ! timeout --signal=TERM --kill-after=15s 120s pnpm payload:course:seed >"$OUT" 2>"$ERR"; then
+            node -e 'const fs=require("node:fs"); const value=fs.readFileSync(process.argv[1],"utf8").replaceAll(process.env.DATABASE_URL||"","[redacted-database-url]").replaceAll(process.env.PAYLOAD_SECRET||"","[redacted-payload-secret]"); const lines=value.split(String.fromCharCode(10)).filter(Boolean).slice(-8); console.error(`COURSE-SEED-DENIED: dry-run failed (${lines.join(" | ").slice(0,2400)})`)' "$ERR"
+            exit 1
+          fi
+          grep -q '\[seed:dry-run\] Summary' "$OUT"
+          grep -q 'No records were written' "$OUT"
+          echo "QA seed dry-run passed with no writes"
+
+      - name: Apply guarded canonical QA course seed
+        shell: bash
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PAYLOAD_SECRET: ${{ secrets.PAYLOAD_SECRET }}
+          NODE_ENV: production
+          DEPLOYMENT_ENV: staging
+          PGOPTIONS: "-c statement_timeout=30000 -c lock_timeout=5000"
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+        run: |
+          set -euo pipefail
+          OUT="$(mktemp)"; ERR="$(mktemp)"
+          trap 'rm -f "$OUT" "$ERR"' EXIT
+          if ! timeout --signal=TERM --kill-after=15s 120s pnpm payload:course:seed -- --apply >"$OUT" 2>"$ERR"; then
+            node -e 'const fs=require("node:fs"); const value=fs.readFileSync(process.argv[1],"utf8").replaceAll(process.env.DATABASE_URL||"","[redacted-database-url]").replaceAll(process.env.PAYLOAD_SECRET||"","[redacted-payload-secret]"); const lines=value.split(String.fromCharCode(10)).filter(Boolean).slice(-8); console.error(`COURSE-SEED-DENIED: guarded apply failed (${lines.join(" | ").slice(0,2400)})`)' "$ERR"
+            exit 1
+          fi
+          grep -q '\[seed\] Summary' "$OUT"
+          node - "$OUT" "$EXPECTED_SHA" <<'NODE'
+          const fs = require('node:fs')
+          const output = fs.readFileSync(process.argv[2], 'utf8')
+          const match = output.match(/\[seed\] Summary\s+\{\s*create:\s*(\d+),\s*update:\s*(\d+),\s*skip:\s*(\d+)\s*\}/)
+          if (!match) process.exit(1)
+          const result = {
+            version: 1,
+            operation: 'guarded-staging-qa-content-seed',
+            environment: 'staging',
+            targetId: 'jpvbootcamp-staging',
+            database: 'jpvbootcamp_staging',
+            schema: 'jpvbootcamp',
+            commit: process.argv[3],
+            create: Number(match[1]),
+            update: Number(match[2]),
+            skip: Number(match[3]),
+          }
+          fs.writeFileSync('staging-qa-content-seed-result.json', JSON.stringify(result, null, 2) + '\n', { mode: 0o600 })
+          console.log(`Guarded QA content seed applied: create=${result.create} update=${result.update} skip=${result.skip}`)
+          NODE
+
+      - name: Upload sanitized QA seed evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: staging-qa-content-seed-${{ github.run_id }}
+          path: staging-qa-content-seed-result.json
+          retention-days: 30
+          if-no-files-found: ignore

@@ -11,8 +11,8 @@ set -euo pipefail
 
 REQUIRED_HOST="10.0.2.4"
 REQUIRED_PORT="5433"
-REQUIRED_DB="jpvbootcamp"
-REQUIRED_SCHEMA="jpvbootcamp_staging"
+REQUIRED_DB="jpvbootcamp_staging"
+REQUIRED_SCHEMA="jpvbootcamp"
 
 PORT="${PORT:-3000}"
 export PORT
@@ -29,8 +29,8 @@ const url = process.env.DATABASE_URL
 const REQUIRED = {
   host: '10.0.2.4',
   port: '5433',
-  database: 'jpvbootcamp',
-  schema: 'jpvbootcamp_staging',
+  database: 'jpvbootcamp_staging',
+  schema: 'jpvbootcamp',
 }
 let parsed
 try {

@@ -18,9 +18,8 @@ const sponsored = read('src/app/(frontend)/sponsored/page.tsx')
 assert.doesNotMatch(sponsored, /h-screen|lg:overflow-hidden|overflow-y-auto/, 'sponsored page must not own a forced page-level or nested form scroll')
 assert.match(sponsored, /min-h-\[100dvh\]/, 'sponsored page must retain a dynamic minimum viewport')
 
-const portalLayout = read('src/app/(frontend)/portal/layout.tsx')
 const portalShell = read('src/components/portal/PortalShell.tsx')
-assert.match(portalLayout, /h-\[100dvh\].*overflow-hidden/, 'portal shell must own the dynamic viewport')
+assert.match(portalShell, /h-\[100dvh\].*overflow-hidden/, 'portal shell must own the dynamic viewport')
 assert.match(portalShell, /overflow-y-auto overscroll-contain/, 'portal main content must own vertical scrolling')
 assert.match(portalShell, /min-w-0/, 'portal grid children must be shrinkable')
 

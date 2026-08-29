@@ -12,6 +12,9 @@ import {
   type SupportRequestUpdateData,
 } from '../src/lib/support/supportIntake'
 
+const routeSource = readFileSync('src/app/api/support/route.ts', 'utf8')
+const persistenceSource = readFileSync('src/lib/support/persistence.ts', 'utf8')
+
 const fixedNow = new Date('2026-07-12T12:15:00.000Z')
 const input: SupportIntakeInput = {
   normalizedEmail: 'person@example.com',
@@ -122,6 +125,18 @@ async function testPersistenceBeforeQueueAndSafeSuccess(): Promise<void> {
   assert.equal(updated?.notificationAttemptCount, 1)
   assert.equal(updated?.notificationNextAttemptAt, null)
   assert.equal(updated?.notificationLastErrorCode, null)
+}
+
+function testRoutePersistenceBoundary(): void {
+  const guardIndex = routeSource.indexOf('guardPublicRequest')
+  const serviceIndex = routeSource.indexOf('createSupportIntakeService')
+  assert.ok(guardIndex >= 0, 'support route must enforce portal access')
+  assert.ok(serviceIndex >= 0, 'support route must use the intake service')
+  assert.ok(guardIndex < serviceIndex, 'support access must be checked before intake execution')
+  assert.match(routeSource, /createSupportRequest/)
+  assert.match(routeSource, /updateSupportRequest/)
+  assert.match(persistenceSource, /prisma\.supportRequest\.create/)
+  assert.match(persistenceSource, /prisma\.supportRequest\.update/)
 }
 
 async function testPersistenceFailureStopsQueue(): Promise<void> {
@@ -257,8 +272,11 @@ function testRouteAndFormContracts(): void {
 
   const guardIndex = route.indexOf('guardPublicRequest(req')
   const serviceIndex = route.indexOf('const service = createSupportIntakeService')
-  const persistenceIndex = route.indexOf('prisma.supportRequest.create')
-  assert.ok(guardIndex >= 0 && guardIndex < serviceIndex && serviceIndex < persistenceIndex)
+  assert.ok(guardIndex >= 0 && guardIndex < serviceIndex)
+  assert.match(route, /createSupportRequest/)
+  assert.match(route, /updateSupportRequest/)
+  assert.match(persistenceSource, /prisma\.supportRequest\.create/)
+  assert.match(persistenceSource, /prisma\.supportRequest\.update/)
   assert.match(route, /SUPPORT_REQUEST_ADMIN_NOTIFICATION_TEMPLATE_KEY/)
   assert.match(route, /supportRequestId: input\.requestId/)
   assert.equal(route.includes('guarded.data.question,'), true)
@@ -304,6 +322,7 @@ function testRouteAndFormContracts(): void {
 }
 
 async function main(): Promise<void> {
+  testRoutePersistenceBoundary()
   testDedupePolicy()
   await testPersistenceBeforeQueueAndSafeSuccess()
   await testPersistenceFailureStopsQueue()

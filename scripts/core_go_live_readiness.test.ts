@@ -10,7 +10,7 @@ function commandOf(id: string): string | undefined {
 }
 
 function main(): void {
-  const releaseCount = RELEASE_TEST_MANIFEST.length
+  const releaseCount = RELEASE_TEST_MANIFEST.filter((entry) => entry.requirement === 'required').length
   const previewReadiness = readFileSync('docs/PREVIEW_RELEASE_READINESS.md', 'utf8')
   const roadmap = readFileSync('docs/client/ROADMAP_PROGRESS_STATUS.md', 'utf8')
   const operatorHandoff = readFileSync('docs/client/OPERATOR_HANDOFF_SUMMARY.md', 'utf8')

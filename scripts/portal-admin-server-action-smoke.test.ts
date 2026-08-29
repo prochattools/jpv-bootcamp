@@ -29,6 +29,7 @@ import * as http from 'node:http'
 import * as https from 'node:https'
 import { spawn, type ChildProcess } from 'node:child_process'
 import { SignJWT } from 'jose'
+import { ENVIRONMENT_TOPOLOGY } from '../src/lib/environmentTopology'
 
 // ── types ────────────────────────────────────────────────────────────────────
 
@@ -79,7 +80,7 @@ if (!ADMIN_EMAIL || !ADMIN_PASSWORD) {
 }
 
 const BASE = `http://localhost:${LOCAL_PORT}`
-const STAGING_BASE = 'https://preview.jpvbootcamp.com'
+const STAGING_BASE = ENVIRONMENT_TOPOLOGY.staging.origin
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 

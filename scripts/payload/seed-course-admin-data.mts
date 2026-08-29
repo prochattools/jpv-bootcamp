@@ -1,6 +1,7 @@
 import { getPayload } from 'payload'
 
 import config from '../../src/payload.config'
+import { createCourseSeedExecutionPlan } from './staging-course-seed-boundary'
 import {
   accessPolicySeeds,
   courseAccessGroupSeeds,
@@ -30,6 +31,24 @@ function log(action: SeedAction, label: string) {
   stats[action] += 1
   const prefix = apply ? '[seed]' : '[seed:dry-run]'
   console.log(`${prefix} ${action.toUpperCase()} ${label}`)
+}
+
+function assertSeedOwnership(
+  existing: ({ id: string | number } & Record<string, unknown>),
+  data: Record<string, unknown>,
+  label: string,
+) {
+  if (data.prototype === true && existing.prototype !== true) {
+    throw new Error(`[seed] Identity collision: ${label} matches a non-prototype record`)
+  }
+
+  const expectedSeedKey = (data.metadata as { seedKey?: unknown } | undefined)?.seedKey
+  if (typeof expectedSeedKey === 'string') {
+    const actualSeedKey = (existing.metadata as { seedKey?: unknown } | undefined)?.seedKey
+    if (actualSeedKey !== expectedSeedKey) {
+      throw new Error(`[seed] Identity collision: ${label} matches a record outside this seed`)
+    }
+  }
 }
 
 async function findOne(
@@ -70,6 +89,8 @@ async function upsertByUnique(
       overrideAccess: true,
     })
   }
+
+  assertSeedOwnership(existing, data, label)
 
   log('update', label)
   if (!apply) return existing
@@ -287,6 +308,52 @@ async function seedSpaces(payload: PayloadClient) {
   }
 }
 
+async function seedCommunityPost(payload: PayloadClient) {
+  // Dry-run mode must remain a deterministic plan-only operation. In
+  // particular, do not perform a member lookup just to decide whether the
+  // apply phase may create this optional QA fixture. The apply phase repeats
+  // the lookup against the guarded staging target before writing anything.
+  if (!apply) {
+    log('create', 'prototype community post')
+    return
+  }
+
+  const space = await findOne(payload, 'payload_spaces', {
+    slug: { equals: 'announcements' },
+  })
+  const member = await findOne(payload, 'payload_members', {
+    accountStatus: { equals: 'active' },
+  })
+
+  const spaceId = space?.id ?? (apply ? null : 'dry-run:payload_spaces:announcements')
+  const memberId = member?.id ?? (apply ? null : 'dry-run:payload_members:active')
+  if (!spaceId || !memberId) {
+    log('skip', 'prototype community post (missing active member)')
+    return
+  }
+
+  await upsertByUnique(
+    payload,
+    'payload_space_posts',
+    'title',
+    'Welcome to the JPV Bootcamp community',
+    {
+      title: 'Welcome to the JPV Bootcamp community',
+      space: spaceId,
+      author: memberId,
+      postType: 'discussion',
+      body: richTextParagraph('Welcome to the JPV Bootcamp community.'),
+      moderationStatus: 'visible',
+      pinned: false,
+      locked: false,
+      metadata: {
+        seedKey: 'course-system:prototype-community-post',
+      },
+    },
+    'prototype community post',
+  )
+}
+
 async function seedAccessPolicies(payload: PayloadClient) {
   for (const seed of accessPolicySeeds) {
     const collection = seed.resourceType === 'course' ? 'payload_courses' : 'payload_spaces'
@@ -346,6 +413,8 @@ async function seedAccessPolicies(payload: PayloadClient) {
       continue
     }
 
+    assertSeedOwnership(existing, data, `access policy ${seed.name}`)
+
     log('update', `access policy ${seed.name}`)
     if (apply) {
       await payload.update({
@@ -359,14 +428,21 @@ async function seedAccessPolicies(payload: PayloadClient) {
 }
 
 async function main() {
+  const execution = createCourseSeedExecutionPlan(apply)
   console.log(apply ? '[seed] Applying Payload course admin seed data' : '[seed:dry-run] Previewing Payload course admin seed data')
+  if (execution.target) {
+    console.error(`[seed] guarded target=${execution.target.database}/${execution.target.schema} host=${execution.target.host}:${execution.target.port}`)
+  }
 
-  const payload = await getPayload({ config })
+  // A bounded seed must not trigger application startup work (for example
+  // provisioning or email delivery) merely by opening Payload.
+  const payload = await getPayload({ config, disableOnInit: true })
 
   await seedAccessGroups(payload)
   await seedCourses(payload)
   await seedEmailTemplates(payload)
   await seedSpaces(payload)
+  await seedCommunityPost(payload)
   await seedAccessPolicies(payload)
 
   console.log(`[seed${apply ? '' : ':dry-run'}] Summary`, stats)

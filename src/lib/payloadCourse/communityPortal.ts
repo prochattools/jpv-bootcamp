@@ -4,6 +4,7 @@ import {
   type PayloadDocument,
   type PayloadId,
 } from '@/lib/payloadCourse/accessService'
+import { relationshipId } from '@/lib/domain/relationships'
 
 /**
  * Wraps a PayloadCourseAccessAPI so that identical find/findByID calls within
@@ -159,16 +160,6 @@ function richTextExcerpt(value: unknown): string | null {
   return text.length > 240 ? `${text.slice(0, 237).trimEnd()}…` : text
 }
 
-function getDocumentId(value: unknown): string | null {
-  const direct = asString(value)
-  if (direct) return direct
-
-  const record = asRecord(value)
-  if (!record) return null
-
-  return asString(record.id)
-}
-
 function normalizeSpaceVisibility(value: unknown): SpaceVisibility {
   if (value === 'public' || value === 'members' || value === 'private' || value === 'secret') {
     return value
@@ -290,7 +281,7 @@ async function findLinkedCourseSlug(
   payload: PayloadCourseAccessAPI,
   linkedCourse: unknown
 ): Promise<string | null> {
-  const linkedCourseId = getDocumentId(linkedCourse)
+  const linkedCourseId = relationshipId(linkedCourse)
   if (!linkedCourseId) return null
 
   try {
@@ -431,7 +422,7 @@ export async function getMemberCommunityDashboard(
 
   const membershipMap = new Map<string, PayloadDocument>()
   for (const m of memberships) {
-    const spaceId = getDocumentId(m.space)
+    const spaceId = relationshipId(m.space)
     if (spaceId) membershipMap.set(spaceId, m)
   }
 
@@ -480,7 +471,7 @@ export async function getMemberCommunitySpaceDetail(
   // Batch-fetch all post authors in a single query (N+1 → 1).
   const postAuthorIdSet = new Set<string>()
   for (const post of posts) {
-    const authorId = getDocumentId(post.author)
+    const authorId = relationshipId(post.author)
     if (authorId) postAuthorIdSet.add(authorId)
   }
 
@@ -500,7 +491,7 @@ export async function getMemberCommunitySpaceDetail(
   }
 
   const postProjections: MemberCommunityPost[] = posts.map((post, i) => {
-    const authorId = getDocumentId(post.author)
+    const authorId = relationshipId(post.author)
     const author = authorId ? (postAuthorMap.get(authorId) ?? null) : null
     return {
       id: String(post.id),

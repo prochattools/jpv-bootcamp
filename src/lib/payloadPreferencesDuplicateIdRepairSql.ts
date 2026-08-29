@@ -1,6 +1,7 @@
 import { quotePgIdentifier } from './payloadMigrationSchema'
+import { REQUIRED_STAGING_SCHEMA } from './databaseConnectionConfig'
 
-const requiredSchema = 'jpvbootcamp_staging'
+const requiredSchema = REQUIRED_STAGING_SCHEMA
 const tableName = 'payload_preferences'
 
 export type PayloadPreferencesDuplicateIdRepairDryRun = {

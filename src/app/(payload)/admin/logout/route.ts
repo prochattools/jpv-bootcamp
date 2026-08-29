@@ -2,6 +2,7 @@ import config from '@payload-config'
 import { cookies } from 'next/headers'
 import { NextResponse, type NextRequest } from 'next/server'
 import { getPayload } from 'payload'
+import { ENVIRONMENT_TOPOLOGY } from '@/lib/environmentTopology'
 
 const INTERNAL_HOSTS = ['0.0.0.0', 'localhost', '127.0.0.1', '::1']
 const PUBLIC_ORIGIN_PROTOCOL = 'https'
@@ -42,8 +43,8 @@ function resolvePublicOrigin(request: NextRequest): string {
   }
 
   return process.env.DEPLOYMENT_ENV === 'production'
-    ? 'https://jpvbootcamp.com'
-    : 'https://preview.jpvbootcamp.com'
+    ? ENVIRONMENT_TOPOLOGY.production.origin
+    : ENVIRONMENT_TOPOLOGY.staging.origin
 }
 
 function logoutRedirect(request: NextRequest): URL {

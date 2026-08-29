@@ -1,5 +1,7 @@
-const REQUIRED_SCHEMA = 'jpvbootcamp_staging'
-const REQUIRED_DATABASE = 'jpvbootcamp'
+import { ENVIRONMENT_TOPOLOGY } from '../../src/lib/environmentTopology'
+
+const REQUIRED_SCHEMA = ENVIRONMENT_TOPOLOGY.staging.schema
+const REQUIRED_DATABASE = ENVIRONMENT_TOPOLOGY.staging.database
 
 export type StagingMigrationMode = 'status' | 'apply'
 

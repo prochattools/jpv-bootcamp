@@ -20,10 +20,8 @@ import {
 import type { PayloadCourseWriteAPI } from '@/lib/payloadCourse/accessService'
 import {
   createSupportIntakeService,
-  type SupportRequestCreateData,
-  type SupportRequestUpdateData,
 } from '@/lib/support/supportIntake'
-import prisma from '@/libs/prisma'
+import { createSupportRequest, updateSupportRequest } from '@/lib/support/persistence'
 
 const SUPPORT_MAX_BYTES = 8 * 1024
 
@@ -78,12 +76,8 @@ export async function POST(req: NextRequest) {
   }
 
   const service = createSupportIntakeService({
-    async createRequest(data: SupportRequestCreateData) {
-      return prisma.supportRequest.create({ data })
-    },
-    async updateRequest(id: string, data: SupportRequestUpdateData) {
-      await prisma.supportRequest.update({ where: { id }, data })
-    },
+    createRequest: createSupportRequest,
+    updateRequest: updateSupportRequest,
     async queueNotification(input) {
       const payload = await getPayload({ config: payloadConfig })
       const payloadApi = payload as unknown as PayloadCourseWriteAPI

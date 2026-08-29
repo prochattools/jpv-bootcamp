@@ -70,6 +70,8 @@ export type StagingMigrationStatusReport = {
   malformedPayloadMigrationRecords: MalformedPayloadMigrationRecord[]
   missingPayloadMigrations: string[]
   unexpectedPayloadMigrations: string[]
+  duplicatePayloadMigrations: string[]
+  orderingAnomalies: string[]
   registeredPrismaMigrations: string[]
   missingPrismaMigrations: string[]
   unexpectedPrismaMigrations: string[]
@@ -120,6 +122,8 @@ export async function buildStagingMigrationStatus(
       malformedPayloadMigrationRecords: [],
       missingPayloadMigrations: registered,
       unexpectedPayloadMigrations: [],
+      duplicatePayloadMigrations: [],
+      orderingAnomalies: [],
       registeredPrismaMigrations: [...REGISTERED_PRISMA_MIGRATIONS],
       missingPrismaMigrations: [...REGISTERED_PRISMA_MIGRATIONS],
       unexpectedPrismaMigrations: [],
@@ -133,6 +137,7 @@ export async function buildStagingMigrationStatus(
   // Classify every raw row — never silently discard.
   const payloadMigrationRecords: PayloadMigrationRecord[] = []
   const malformedPayloadMigrationRecords: MalformedPayloadMigrationRecord[] = []
+  const duplicatePayloadMigrations: string[] = []
   const namesSeen = new Set<string>()
 
   for (let rowIndex = 0; rowIndex < evidence.payloadMigrations.length; rowIndex += 1) {
@@ -167,7 +172,10 @@ export async function buildStagingMigrationStatus(
     const isDuplicate = namesSeen.has(row.name)
     namesSeen.add(row.name)
     if (isDuplicate) {
-      malformedPayloadMigrationRecords.push({ rowIndex, reason: 'invalid_name' })
+      duplicatePayloadMigrations.push(row.name)
+      if (!batchValid) {
+        malformedPayloadMigrationRecords.push({ rowIndex, reason: 'invalid_batch' })
+      }
       continue
     }
     if (!batchValid) {
@@ -183,6 +191,16 @@ export async function buildStagingMigrationStatus(
   const registeredSet = new Set<string>(registered)
   const missingPayloadMigrations = registered.filter((name) => !appliedSet.has(name))
   const unexpectedPayloadMigrations = appliedPayloadMigrations.filter((name) => !registeredSet.has(name))
+  const orderingAnomalies: string[] = []
+  let previousRegisteredIndex = -1
+  for (const name of appliedPayloadMigrations) {
+    const registeredIndex = (registered as readonly string[]).indexOf(name)
+    if (registeredIndex < 0) continue
+    if (registeredIndex < previousRegisteredIndex) {
+      orderingAnomalies.push(name)
+    }
+    previousRegisteredIndex = Math.max(previousRegisteredIndex, registeredIndex)
+  }
   const prismaMigrations = evidence.prismaMigrations.map((row) => ({
     migrationName: row.migration_name,
     status: classifyPrismaMigration(row),
@@ -199,6 +217,8 @@ export async function buildStagingMigrationStatus(
   if (evidence.schemaIdentity !== safeExpectedSchema) blockers.push('Database schema identity mismatch')
   if (missingPayloadMigrations.length > 0) blockers.push('Registered Payload migrations are missing from applied-state evidence')
   if (unexpectedPayloadMigrations.length > 0) blockers.push('Unexpected Payload migration records exist')
+  if (duplicatePayloadMigrations.length > 0) blockers.push('Duplicate Payload migration records exist')
+  if (orderingAnomalies.length > 0) blockers.push('Payload migration ordering anomalies exist')
   if (prismaMigrations.length === 0) blockers.push('Prisma migration evidence is empty')
   if (missingPrismaMigrations.length > 0) blockers.push('Registered Prisma migrations are missing from applied-state evidence')
   if (unexpectedPrismaMigrations.length > 0) blockers.push('Unexpected Prisma migration records exist')
@@ -216,6 +236,8 @@ export async function buildStagingMigrationStatus(
     malformedPayloadMigrationRecords,
     missingPayloadMigrations,
     unexpectedPayloadMigrations,
+    duplicatePayloadMigrations,
+    orderingAnomalies,
     registeredPrismaMigrations: [...REGISTERED_PRISMA_MIGRATIONS],
     missingPrismaMigrations,
     unexpectedPrismaMigrations,

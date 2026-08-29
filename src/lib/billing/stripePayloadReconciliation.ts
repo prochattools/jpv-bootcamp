@@ -2,12 +2,13 @@ import { createHash } from 'node:crypto'
 
 import type Stripe from 'stripe'
 
-import type { PayloadCourseWriteAPI, PayloadDocument, PayloadId } from '@/lib/payloadCourse/accessService'
+import type { PayloadCourseWriteAPI, PayloadDocument } from '@/lib/payloadCourse/accessService'
 import { createAuditEvent } from '@/lib/payloadCourse/events'
 import {
   mirrorStripeEventToPayload,
   type PayloadBillingShadowSyncResult,
 } from '@/lib/payloadCourse/stripeShadowSync'
+import { relationshipId } from '@/lib/domain/relationships'
 
 export type StripePayloadReconciliationMode = 'dry-run' | 'apply'
 export type StripePayloadDisposition =
@@ -83,24 +84,6 @@ export type ReconcileStripeToPayloadOptions = {
   onCheckpoint?: (checkpoint: StripePayloadReconciliationCheckpoint) => Promise<void> | void
 }
 
-function relationshipId(value: unknown): string | null {
-  if (typeof value === 'string' && value.trim()) return value
-  if (value && typeof value === 'object' && 'id' in value) {
-    const id = (value as { id?: unknown }).id
-    return typeof id === 'string' && id.trim() ? id : null
-  }
-  return null
-}
-
-function payloadRelationshipId(value: unknown): PayloadId | null {
-  if (typeof value === 'string' || typeof value === 'number') return value
-  if (value && typeof value === 'object' && 'id' in value) {
-    const id = (value as { id?: unknown }).id
-    return typeof id === 'string' || typeof id === 'number' ? id : null
-  }
-  return null
-}
-
 async function findOne(
   payload: PayloadCourseWriteAPI,
   collection: string,
@@ -172,7 +155,7 @@ async function enforceAmbiguousCustomerReview(params: {
   const billingAccount = await findOne(params.payload, 'payload_billing_accounts', {
     stripeCustomerId: { equals: params.customerId },
   })
-  const memberId = payloadRelationshipId(billingAccount?.member)
+  const memberId = relationshipId(billingAccount?.member)
   let member: PayloadDocument | null = null
   let wasAlreadyBlocked = false
   if (memberId !== null) {
@@ -415,7 +398,7 @@ export async function reconcileStripeToPayload(
         }
         startingAfter = lastProcessedId
         checkpoint = { phase, startingAfter: startingAfter ?? null }
-        await options.onCheckpoint?.(checkpoint)
+        if (mode === 'apply') await options.onCheckpoint?.(checkpoint)
         subscriptionsComplete = startIndex + page.length >= subscriptions.length
         if (subscriptionsComplete || rows.length >= maxObjects) break
       } else {
@@ -433,7 +416,7 @@ export async function reconcileStripeToPayload(
         }
         startingAfter = lastProcessedId
         checkpoint = { phase, startingAfter: startingAfter ?? null }
-        await options.onCheckpoint?.(checkpoint)
+        if (mode === 'apply') await options.onCheckpoint?.(checkpoint)
         if (!page.has_more || rows.length >= maxObjects) break
       }
     }

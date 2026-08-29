@@ -3,6 +3,7 @@ import type {
   PayloadDocument,
   PayloadId,
 } from '@/lib/payloadCourse/accessService'
+import { relationshipId } from '@/lib/domain/relationships'
 
 export const EMAIL_OPERATOR_ACTIONS = ['retry_delivery'] as const
 export type EmailOperatorAction = (typeof EMAIL_OPERATOR_ACTIONS)[number]
@@ -19,15 +20,6 @@ export class EmailOperatorActionError extends Error {
     super(message)
     this.name = 'EmailOperatorActionError'
   }
-}
-
-function relationshipId(value: unknown): PayloadId | null {
-  if (typeof value === 'string' || typeof value === 'number') return value
-  if (value && typeof value === 'object' && 'id' in value) {
-    const id = (value as { id?: unknown }).id
-    return typeof id === 'string' || typeof id === 'number' ? id : null
-  }
-  return null
 }
 
 function text(value: unknown): string | null {

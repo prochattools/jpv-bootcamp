@@ -10,6 +10,7 @@ import {
   isSafeResourceId,
   sanitizeDownloadFilename,
 } from '@/lib/payloadCourse/lessonResourceDelivery'
+import { relationshipId } from '@/lib/domain/relationships'
 
 export const COMMUNITY_FILE_MAX_BYTES = 25 * 1024 * 1024
 
@@ -171,21 +172,21 @@ async function hasTrustedCommunityFileParent(
   file: PayloadDocument,
   spaceId: string
 ): Promise<boolean> {
-  const postId = getDocumentId(file.post)
-  const commentId = getDocumentId(file.comment)
+  const postId = relationshipId(file.post)
+  const commentId = relationshipId(file.comment)
   if (postId && commentId) return false
 
   if (postId) {
     const post = await findByIdSafe(payload, 'payload_space_posts', postId)
-    return getDocumentId(post?.space) === spaceId
+    return relationshipId(post?.space) === spaceId
   }
 
   if (commentId) {
     const comment = await findByIdSafe(payload, 'payload_space_comments', commentId)
-    const commentPostId = getDocumentId(comment?.post)
+    const commentPostId = relationshipId(comment?.post)
     if (!commentPostId) return false
     const post = await findByIdSafe(payload, 'payload_space_posts', commentPostId)
-    return getDocumentId(post?.space) === spaceId
+    return relationshipId(post?.space) === spaceId
   }
 
   return true
@@ -204,13 +205,6 @@ function asNumber(value: unknown): number | null {
     return Number.isFinite(parsed) ? parsed : null
   }
   return null
-}
-
-function getDocumentId(value: unknown): string | null {
-  const direct = asString(value)
-  if (direct) return direct
-  if (!value || typeof value !== 'object' || !('id' in value)) return null
-  return asString((value as { id?: unknown }).id)
 }
 
 function assertTitle(value: string): string {
@@ -386,7 +380,7 @@ export async function registerCommunityFileMetadata(
     const post = await findByIdSafe(payload, 'payload_space_posts', requestedPostId)
     if (!post) throw new Error('Parent post was not found.')
 
-    const parentSpaceId = getDocumentId(post.space)
+    const parentSpaceId = relationshipId(post.space)
     if (!parentSpaceId || parentSpaceId !== spaceId) {
       throw new Error('Parent post does not belong to the selected space.')
     }
@@ -397,13 +391,13 @@ export async function registerCommunityFileMetadata(
     const comment = await findByIdSafe(payload, 'payload_space_comments', requestedCommentId)
     if (!comment) throw new Error('Parent comment was not found.')
 
-    const commentPostId = getDocumentId(comment.post)
+    const commentPostId = relationshipId(comment.post)
     if (!commentPostId) throw new Error('Parent comment is not linked to a trusted post.')
 
     const commentPost = await findByIdSafe(payload, 'payload_space_posts', commentPostId)
     if (!commentPost) throw new Error('Parent comment post was not found.')
 
-    const parentSpaceId = getDocumentId(commentPost.space)
+    const parentSpaceId = relationshipId(commentPost.space)
     if (!parentSpaceId || parentSpaceId !== spaceId) {
       throw new Error('Parent comment does not belong to the selected space.')
     }
@@ -553,7 +547,7 @@ async function buildMemberCommunityAttachmentProjection(
     spaceId: String(space.id),
     spaceName: asString(space.name) ?? 'Community space',
   }
-  const protectedMediaId = getDocumentId(file.protectedFile)
+  const protectedMediaId = relationshipId(file.protectedFile)
   const altText = asString(file.altText)
   const hasExternalFields = Boolean(asString(file.externalProvider) || asString(file.externalMediaId))
   const hasBunnyFields = Boolean(asString(file.bunnyVideoId) || asString(file.bunnyLibraryId))
@@ -622,7 +616,7 @@ export async function getMemberCommunityFiles(
   const projections: MemberCommunityFile[] = []
 
   for (const file of files) {
-    const spaceId = getDocumentId(file.space)
+    const spaceId = relationshipId(file.space)
     if (!spaceId) continue
 
     const access = await evaluatePayloadSpaceAccess(payload, { memberId, spaceId })
@@ -652,7 +646,7 @@ export async function resolveMemberCommunityAttachment(
   }
 
   const memberId = String(memberIdInput)
-  const spaceId = getDocumentId(file.space)
+  const spaceId = relationshipId(file.space)
   if (!spaceId) return { allowed: false, reason: 'not_found' }
 
   const access = await evaluatePayloadSpaceAccess(payload, { memberId, spaceId })
@@ -670,7 +664,7 @@ export async function resolveMemberCommunityAttachment(
     return { ...projection, allowed: true }
   }
 
-  const protectedMediaId = getDocumentId(file.protectedFile)
+  const protectedMediaId = relationshipId(file.protectedFile)
   if (!protectedMediaId) return { allowed: false, reason: 'not_found' }
   return {
     ...projection,
@@ -749,7 +743,7 @@ export async function moderateCommunityFile(
     throw new Error('Community file was not found.')
   }
 
-  const spaceId = getDocumentId(file.space)
+  const spaceId = relationshipId(file.space)
   if (!spaceId) throw new Error('Community file was not found.')
 
   const { getCommunityModerationCapability } = await import(
@@ -818,8 +812,8 @@ export async function resolveModerationCommunityFileDownload(
     return { allowed: false, reason: 'not_found' }
   }
 
-  const spaceId = getDocumentId(file.space)
-  const protectedMediaId = getDocumentId(file.protectedFile)
+  const spaceId = relationshipId(file.space)
+  const protectedMediaId = relationshipId(file.protectedFile)
   if (!spaceId || !protectedMediaId) return { allowed: false, reason: 'not_found' }
 
   const { getCommunityModerationCapability } = await import(

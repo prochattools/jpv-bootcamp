@@ -5,6 +5,7 @@ import { getPayload } from 'payload'
 
 import type { PayloadCourseAccessAPI, PayloadDocument } from './accessService'
 import { projectCommunityRichText, type SafeCommunityRichTextNode } from './communityDiscussion'
+import { relationshipId } from '@/lib/domain/relationships'
 
 export interface MemberDirectoryItem {
   memberId: string
@@ -39,15 +40,6 @@ function socialLinkText(links: unknown, key: string): string | null {
   if (!links || typeof links !== 'object') return null
   const value = (links as Record<string, unknown>)[key]
   return typeof value === 'string' && value.trim() ? value.trim() : null
-}
-
-function relationshipId(value: unknown): string | null {
-  if (typeof value === 'string' || typeof value === 'number') return String(value)
-  if (value && typeof value === 'object' && 'id' in value) {
-    const id = (value as { id?: unknown }).id
-    if (typeof id === 'string' || typeof id === 'number') return String(id)
-  }
-  return null
 }
 
 function fallbackDisplayName(member: PayloadDocument): string {

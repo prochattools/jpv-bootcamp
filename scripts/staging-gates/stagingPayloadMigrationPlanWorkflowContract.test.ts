@@ -22,15 +22,14 @@ const WORKFLOW_PATH = '.github/workflows/deploy-preview.yml'
 const STANDALONE_PATH = '.github/workflows/staging-payload-migration-plan.yml'
 const REQUIRED_CONFIRMATION = 'run-read-only-staging-payload-migration-plan'
 const REQUIRED_ENVIRONMENT = 'staging-migration-plan'
-const REQUIRED_SCHEMA = 'jpvbootcamp_staging'
+const REQUIRED_SCHEMA = 'jpvbootcamp'
 const REQUIRED_TARGET_ID = 'jpvbootcamp-staging'
 const REQUIRED_HOSTNAME = '10.0.2.4'
-const REQUIRED_DATABASE = 'jpvbootcamp'
+const REQUIRED_DATABASE = 'jpvbootcamp_staging'
 const REQUIRED_ENVIRONMENT_VALUE = 'staging'
 const REQUIRED_PORT = '5433'
 const REQUIRED_PNPM_VERSION = '10.33.0'
 const REQUIRED_NODE_VERSION = '20'
-const ALLOWED_BRANCH = 'feature/course-branding-and-preview'
 const TAILSCALE_PINNED_SHA = '780049a30b6ff5c378a9e7b389d15ece7a204888'
 const CHECKOUT_PINNED_SHA = '11d5960a326750d5838078e36cf38b85af677262'
 const PNPM_PINNED_SHA = 'b906affcce14559ad1aafd4ab0e942779e9f58b1'
@@ -104,14 +103,14 @@ async function main(): Promise<void> {
     )
   })
 
-  await test('push suppression: push deploys skip when commit contains [migration-plan-only]', () => {
+  await test('trigger: staging workflow is manual-only and has no push deployment path', () => {
     assert.ok(
-      yml.includes('[migration-plan-only]'),
-      'must suppress push deploy when commit message contains [migration-plan-only]',
+      !/^\s+push:\s*$/m.test(yml),
+      'must not deploy staging automatically from pushes',
     )
     assert.ok(
-      yml.includes('contains(github.event.head_commit.message'),
-      'must check head_commit.message for the marker',
+      yml.includes('source_ref:'),
+      'must require an explicit approved source_ref for manual runs',
     )
   })
 
@@ -164,11 +163,11 @@ async function main(): Promise<void> {
 
   await test('preflight: PLAN_READY_FOR_DISPATCH variable guard runs before checkout', () => {
     // Scope to planJobYml — other jobs (deploy-preview, validate-only) also checkout
-    // feature/course-branding-and-preview; the ordering invariant is within read-only-plan only.
+    // the source ref; the ordering invariant is within read-only-plan only.
     const readyVarIndex = planJobYml.indexOf('PLAN_READY_FOR_DISPATCH')
-    const checkoutIndex = planJobYml.indexOf('refs/heads/feature/course-branding-and-preview')
+    const checkoutIndex = planJobYml.indexOf('ref: ${{ inputs.source_ref }}')
     assert.ok(readyVarIndex > -1, 'must check PLAN_READY_FOR_DISPATCH readiness variable')
-    assert.ok(checkoutIndex > -1, 'must checkout feature branch by branch ref')
+    assert.ok(checkoutIndex > -1, 'must checkout the explicit source_ref')
     assert.ok(
       readyVarIndex < checkoutIndex,
       'PLAN_READY_FOR_DISPATCH check must precede checkout (no checkout before environment guards)',
@@ -201,10 +200,10 @@ async function main(): Promise<void> {
 
   // ─── Checkout: branch-attached, not detached ──────────────────────────────
 
-  await test('checkout: checks out feature branch by name (not detached SHA)', () => {
+  await test('checkout: checks out approved source ref (not detached SHA)', () => {
     assert.ok(
-      planJobYml.includes('refs/heads/feature/course-branding-and-preview'),
-      'plan job must checkout by branch ref, not a detached SHA',
+      planJobYml.includes('ref: ${{ inputs.source_ref }}'),
+      'plan job must checkout by the explicit source ref, not a detached SHA',
     )
   })
 
@@ -212,7 +211,7 @@ async function main(): Promise<void> {
     assert.ok(planJobYml.includes('git branch --show-current'), 'must verify branch name after checkout')
     assert.ok(planJobYml.includes('git rev-parse HEAD'), 'must verify HEAD SHA after checkout')
     assert.ok(planJobYml.includes('merge-base --is-ancestor'), 'must check SHA ancestry under feature branch')
-    assert.ok(planJobYml.includes('origin/feature/course-branding-and-preview'), 'must compare SHA to remote feature tip')
+    assert.ok(planJobYml.includes('origin/$SOURCE_REF_INPUT'), 'must compare SHA to the remote source-ref tip')
     assert.ok(planJobYml.includes('REMOTE_TIP') || planJobYml.includes('remote tip'), 'must reference remote tip')
     assert.ok(planJobYml.includes('origin/main'), 'must reject SHA already in main')
   })
@@ -345,7 +344,7 @@ async function main(): Promise<void> {
     assert.ok(planJobYml.includes(`--expected-database=${REQUIRED_DATABASE}`), `must pass --expected-database=${REQUIRED_DATABASE}`)
   })
 
-  await test('command: PAYLOAD_MIGRATION_SCHEMA set to jpvbootcamp_staging', () => {
+  await test('command: PAYLOAD_MIGRATION_SCHEMA set to canonical jpvbootcamp schema', () => {
     assert.ok(
       planJobYml.includes(`PAYLOAD_MIGRATION_SCHEMA: ${REQUIRED_SCHEMA}`),
       `must set PAYLOAD_MIGRATION_SCHEMA to ${REQUIRED_SCHEMA}`,
@@ -649,17 +648,17 @@ async function main(): Promise<void> {
     )
   })
 
-  await test('plan_ok semantics: workflow verifies branch is the exact feature branch', () => {
+  await test('plan_ok semantics: workflow verifies branch matches the approved source ref', () => {
     assert.ok(
       planJobYml.includes('branch mismatch') || planJobYml.includes('p.branch !== requiredBranch'),
-      'must verify branch field equals feature/course-branding-and-preview',
+      'must verify branch field equals the requested source_ref',
     )
   })
 
   await test('plan_ok semantics: workflow verifies schema, environment, targetId', () => {
     assert.ok(
       planJobYml.includes('schema mismatch') || planJobYml.includes('p.schema !== requiredSchema'),
-      'must verify schema field equals jpvbootcamp_staging',
+      'must verify schema field equals jpvbootcamp',
     )
     assert.ok(
       planJobYml.includes('environment mismatch') || planJobYml.includes('p.environment !== requiredEnv'),
@@ -671,38 +670,26 @@ async function main(): Promise<void> {
     )
   })
 
-  await test('plan_ok semantics: workflow verifies the approved staging baseline count', () => {
+  await test('plan_ok semantics: workflow preserves dynamically discovered applied-count evidence', () => {
     assert.ok(
-      planJobYml.includes('appliedPayloadCount mismatch') || planJobYml.includes('p.appliedPayloadCount !== expectedCount'),
-      'must verify appliedPayloadCount against the reviewed staging baseline',
+      planJobYml.includes('appliedPayloadCount'),
+      'must preserve the appliedPayloadCount evidence field',
     )
+    assert.equal(planJobYml.includes('EXPECTED_APPLIED_COUNT=40'), false)
   })
 
-  await test('plan_ok semantics: workflow expects the exact ordered billing migration batch', () => {
-    const expectedBillingBatch = [
-      '20260825_120000_billing_invoice_visibility',
-      '20260825_121000_membership_support_runtime_alignment',
-      '20260825_122000_membership_support_relationships',
-      '20260825_123000_membership_support_relationship_alignment',
-      '20260825_124000_membership_review_assignee_alignment',
-      '20260825_125000_membership_shadow_state_alignment',
-    ]
-    for (const migration of expectedBillingBatch) {
-      assert.ok(planJobYml.includes(migration), `must expect billing migration '${migration}'`)
-    }
-  })
-
-  await test('plan_ok semantics: workflow verifies exact ordered Forward A-D batch and only-missing flag', () => {
+  await test('plan_ok semantics: workflow accepts the current canonical pending list as discovery evidence', () => {
     assert.ok(
-      planJobYml.includes('expectedPendingMigrations mismatch') &&
-      planJobYml.includes('p.expectedPendingMigrations.length !== expectedPending.length') &&
-      planJobYml.includes('migration !== expectedPending[index]'),
-      'must compare expectedPendingMigrations by exact length, order, and value',
+      planJobYml.includes('expectedPendingMigrations must be an array') ||
+      planJobYml.includes('Array.isArray(p.expectedPendingMigrations)'),
+      'must validate the dynamically discovered canonical pending migration list',
     )
     assert.ok(
       planJobYml.includes('expectedPendingBatchIsOnlyMissing must be true') || planJobYml.includes('!p.expectedPendingBatchIsOnlyMissing'),
       'must verify expectedPendingBatchIsOnlyMissing is true',
     )
+    assert.equal(planJobYml.includes('EXPECTED_APPLIED_COUNT=40'), false)
+    assert.equal(planJobYml.includes('expectedPending = ['), false)
   })
 
   await test('plan_ok semantics: workflow verifies anomaly counts are all zero', () => {
@@ -717,6 +704,10 @@ async function main(): Promise<void> {
     assert.ok(
       planJobYml.includes('malformedPayloadCount must be 0') || planJobYml.includes('p.malformedPayloadCount !== 0'),
       'must verify malformedPayloadCount === 0',
+    )
+    assert.ok(
+      planJobYml.includes('orderingAnomalyCount must be 0') || planJobYml.includes('p.orderingAnomalyCount !== 0'),
+      'must verify orderingAnomalyCount === 0',
     )
   })
 

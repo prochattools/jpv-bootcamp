@@ -1,5 +1,10 @@
-export const REQUIRED_STAGING_SCHEMA = 'jpvbootcamp_staging'
+// Staging is isolated by database and role. The canonical migration history
+// targets the literal `jpvbootcamp` schema, so the staging database uses that
+// schema rather than a second schema name inside the isolated database.
+export const REQUIRED_STAGING_SCHEMA = 'jpvbootcamp'
 export const REQUIRED_PRODUCTION_SCHEMA = 'jpvbootcamp'
+export const REQUIRED_STAGING_DATABASE = 'jpvbootcamp_staging'
+export const REQUIRED_PRODUCTION_DATABASE = 'jpvbootcamp'
 const SAFE_SCHEMA_IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/
 
 export type DatabaseConnectionConfig = {
@@ -9,6 +14,7 @@ export type DatabaseConnectionConfig = {
     configured: boolean
     protocol: string | null
     credentialsPresent: boolean
+    database: string | null
     schemaSource: 'override' | 'url' | 'unconfigured'
   }
 }
@@ -129,6 +135,7 @@ export function resolveDatabaseConnectionConfig(
         configured: false,
         protocol: null,
         credentialsPresent: false,
+        database: null,
         schemaSource: 'unconfigured',
       },
     }
@@ -150,19 +157,25 @@ export function resolveDatabaseConnectionConfig(
       configured: true,
       protocol: parsed.protocol,
       credentialsPresent: parsed.credentialsPresent,
+      database: parsed.database,
       schemaSource,
     },
   }
 }
 
 /**
- * Asserts the resolved config targets the required staging schema.
+ * Asserts the resolved config targets the required staging database and schema.
  * Call at server startup — not at module evaluation — to enforce the runtime boundary.
  */
 export function assertStagingSchema(config: DatabaseConnectionConfig): void {
   if (!config.metadata.configured) {
     throw new Error(
       `DATABASE_URL is required at runtime. Schema must be exactly '${REQUIRED_STAGING_SCHEMA}'.`,
+    )
+  }
+  if (config.metadata.database !== REQUIRED_STAGING_DATABASE) {
+    throw new Error(
+      `Database '${config.metadata.database ?? ''}' is not permitted. Staging requires '${REQUIRED_STAGING_DATABASE}'.`,
     )
   }
   if (config.schema !== REQUIRED_STAGING_SCHEMA) {
@@ -173,13 +186,18 @@ export function assertStagingSchema(config: DatabaseConnectionConfig): void {
 }
 
 /**
- * Asserts that the resolved config targets the explicit production schema.
- * Production is intentionally separate from the preview/staging boundary.
+ * Asserts that the resolved config targets the explicit production database and
+ * schema. Production is intentionally separate from the preview/staging boundary.
  */
 export function assertProductionSchema(config: DatabaseConnectionConfig): void {
   if (!config.metadata.configured) {
     throw new Error(
       `DATABASE_URL is required at runtime. Schema must be exactly '${REQUIRED_PRODUCTION_SCHEMA}'.`,
+    )
+  }
+  if (config.metadata.database !== REQUIRED_PRODUCTION_DATABASE) {
+    throw new Error(
+      `Database '${config.metadata.database ?? ''}' is not permitted. Production requires '${REQUIRED_PRODUCTION_DATABASE}'.`,
     )
   }
   if (config.schema !== REQUIRED_PRODUCTION_SCHEMA) {

@@ -7,6 +7,7 @@ const adapter = read('src/lib/publicRequestRoute.ts')
 const guard = read('src/lib/publicRequestGuard.ts')
 const guardTests = read('scripts/public_request_guard.test.ts')
 const support = read('src/app/api/support/route.ts')
+const supportPersistence = read('src/lib/support/persistence.ts')
 const subscribe = read('src/app/api/subscribe/route.ts')
 const applications = read('src/app/api/sponsored-applications/route.ts')
 const seatCheckout = read('src/app/api/sponsored-seats/checkout/route.ts')
@@ -92,8 +93,8 @@ function testSupport(): void {
       "email: { type: 'email', required: true, maxLength: 320 }",
       "question: { type: 'string', required: true, minLength: 10, maxLength: 2_000 }",
       'const service = createSupportIntakeService',
-      'prisma.supportRequest.create',
-      'prisma.supportRequest.update',
+      'createSupportRequest',
+      'updateSupportRequest',
       'queueAndAttemptEmailEvent',
       "SUPPORT_REQUEST_ADMIN_NOTIFICATION_TEMPLATE_KEY",
       "purpose: 'support_request_pending_review'",
@@ -107,6 +108,11 @@ function testSupport(): void {
       '{ status: 503 }',
     ],
     'support route',
+  )
+  assertContains(
+    supportPersistence,
+    ['prisma.supportRequest.create', 'prisma.supportRequest.update'],
+    'support persistence service',
   )
   assertGuardBefore(support, 'const service = createSupportIntakeService', 'support')
   assertGuardBefore(support, 'const result = await service', 'support')

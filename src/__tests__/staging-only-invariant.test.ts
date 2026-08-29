@@ -16,14 +16,13 @@ function trackedFiles(): string[] {
 }
 
 describe('Staging-only invariant', () => {
-  const STAGING_BRANCH = 'feature/course-branding-and-preview'
-  const STAGING_ORIGIN = 'https://preview.jpvbootcamp.com'
-  const STAGING_SCHEMA = 'jpvbootcamp_staging'
+  const STAGING_ORIGIN = 'https://staging.jpvbootcamp.com'
+  const STAGING_SCHEMA = 'jpvbootcamp'
   const STAGING_HOST = '10.0.2.4'
   const STAGING_PORT = '5433'
-  const STAGING_DB = 'jpvbootcamp'
-  const STAGING_DOKPLOY_SLUG = 'clients-jpv-bootcamp-app-tp9xrk'
-  const STAGING_DOKPLOY_ID = 'I_2Vukga3cc3ZhaG-mUzU'
+  const STAGING_DB = 'jpvbootcamp_staging'
+  const STAGING_DOKPLOY_SLUG = 'clients-jpv-bootcamp-preview-wjfqfd'
+  const STAGING_DOKPLOY_ID = 'bZllV93NqsPZAFCsqDskb'
 
   const DENY_LIST_FILES = new Set([
     '.github/workflows/deploy-preview.yml',
@@ -32,15 +31,19 @@ describe('Staging-only invariant', () => {
     'scripts/staging-gates/dokployRouting.ts',
     'scripts/staging-gates/stagingPolicy.ts',
     'docs/DOKPLOY_DEPLOYMENT_GUIDE.md',
+    'docs/ENVIRONMENT_DATABASE_BOUNDARIES.md',
+    'docs/architecture/JPV_ENVIRONMENT_TOPOLOGY_V1.md',
+    'docs/architecture/JPV_PREVIEW_TO_STAGING_INVENTORY.md',
+    'src/lib/environmentTopology.ts',
     'docs/product/agent-mode-progress.md',
     '.ai/DEPLOYMENT_AUTHORIZATION_2026_07_22.md',
   ])
 
   describe('no active workflow triggers for main', () => {
-    it('deploy-preview.yml push branches must not include main', () => {
+    it('deploy-preview.yml has no automatic push deployment trigger', () => {
       const yml = readFile('.github/workflows/deploy-preview.yml')
-      const pushSection = yml.match(/on:[\s\S]*?push:[\s\S]*?branches:([\s\S]*?)(?=\n\S|\n  \w)/)?.[1] ?? ''
-      expect(pushSection).not.toMatch(/\bmain\b/)
+      expect(yml).not.toMatch(/^\s+push:\s*$/m)
+      expect(yml).toContain('source_ref:')
     })
 
     it('production deploy.yml must not exist', () => {
@@ -86,7 +89,7 @@ describe('Staging-only invariant', () => {
 
     it('exports REQUIRED_STAGING_SCHEMA constant', () => {
       const src = readFile('src/lib/databaseConnectionConfig.ts')
-      expect(src).toContain("REQUIRED_STAGING_SCHEMA = 'jpvbootcamp_staging'")
+      expect(src).toContain("REQUIRED_STAGING_SCHEMA = 'jpvbootcamp'")
     })
 
     it('exports an explicit production schema constant', () => {
@@ -149,9 +152,10 @@ describe('Staging-only invariant', () => {
   })
 
   describe('publish-preview-image workflow', () => {
-    it('only allows feature branch SHA', () => {
+    it('only allows approved source-ref SHA', () => {
       const yml = readFile('.github/workflows/publish-preview-image.yml')
-      expect(yml).toContain('refs/heads/feature/course-branding-and-preview')
+      expect(yml).toContain('source_ref:')
+      expect(yml).toContain('^(feature|fix|release)/')
       expect(yml).toContain('current tip')
     })
 
@@ -170,7 +174,7 @@ describe('Staging-only invariant', () => {
   describe('deploy-preview exact staging allow-list', () => {
     it('workflow declares canonical staging coordinates', () => {
       const yml = readFile('.github/workflows/deploy-preview.yml')
-      expect(yml).toContain(`ALLOWED_BRANCH="${STAGING_BRANCH}"`)
+      expect(yml).toContain('ALLOWED_SOURCE_REF_PATTERN=')
       expect(yml).toContain(`ALLOWED_ORIGIN="${STAGING_ORIGIN}"`)
       expect(yml).toContain(`ALLOWED_SCHEMA="${STAGING_SCHEMA}"`)
       expect(yml).toContain(`ALLOWED_HOST="${STAGING_HOST}"`)
@@ -178,10 +182,11 @@ describe('Staging-only invariant', () => {
       expect(yml).toContain(`ALLOWED_DB="${STAGING_DB}"`)
     })
 
-    it('push trigger only allows feature branch', () => {
+    it('manual dispatch requires an approved source ref', () => {
       const yml = readFile('.github/workflows/deploy-preview.yml')
-      const pushBranches = yml.match(/push:\s*\n\s*branches:\s*\n((?:\s*-.*\n)*)/)?.[1] ?? ''
-      expect(pushBranches.trim()).toBe(`- '${STAGING_BRANCH}'`)
+      expect(yml).toContain('source_ref:')
+      expect(yml).toContain('feature/*, fix/*, or release/*')
+      expect(yml).not.toMatch(/^\s+push:\s*$/m)
     })
   })
 
@@ -347,16 +352,16 @@ describe('Staging-only invariant', () => {
       expect(deployJob).toContain('expected_sha')
     })
 
-    it('deploy-preview job checks out fixed feature branch, not generic ref', () => {
+    it('deploy-preview job checks out the explicit source ref', () => {
       const yml = readFile('.github/workflows/deploy-preview.yml')
       const deployJob = yml.match(/  deploy-preview:[\s\S]*?(?=\n  read-only-plan:)/)?.[0] ?? ''
-      expect(deployJob).toContain('refs/heads/feature/course-branding-and-preview')
+      expect(deployJob).toContain('ref: ${{ inputs.source_ref }}')
     })
 
-    it('deploy-preview image tags use fixed branch slug, no dynamic branch_ref variable', () => {
+    it('deploy-preview image tags use stable staging tag, no dynamic branch_ref variable', () => {
       const yml = readFile('.github/workflows/deploy-preview.yml')
       const deployJob = yml.match(/  deploy-preview:[\s\S]*?(?=\n  read-only-plan:)/)?.[0] ?? ''
-      expect(deployJob).toContain('feature-course-branding-and-preview')
+      expect(deployJob).toContain(':staging')
       expect(deployJob).not.toContain('branch_ref=')
     })
 
@@ -366,10 +371,11 @@ describe('Staging-only invariant', () => {
     })
   })
 
-  describe('publish-preview-image requires exact feature branch dispatch', () => {
-    it('rejects dispatch from branches other than the staging feature branch', () => {
+  describe('publish-preview-image requires an approved source ref', () => {
+    it('rejects source refs outside the staging allow-list', () => {
       const yml = readFile('.github/workflows/publish-preview-image.yml')
-      expect(yml).toContain('feature/course-branding-and-preview')
+      expect(yml).toContain('source_ref:')
+      expect(yml).toContain('^(feature|fix|release)/')
       expect(yml).toContain('PUBLISH-DENIED')
     })
 

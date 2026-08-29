@@ -4,6 +4,7 @@ import {
   type PayloadDocument,
   type PayloadId,
 } from '@/lib/payloadCourse/accessService'
+import { relationshipId } from '@/lib/domain/relationships'
 
 export type MemberLessonResource = {
   id: string
@@ -55,16 +56,6 @@ function asNumber(value: unknown): number | null {
     return Number.isFinite(parsed) ? parsed : null
   }
   return null
-}
-
-function getDocumentId(value: unknown): string | null {
-  const direct = asString(value)
-  if (direct) return direct
-
-  const record = asRecord(value)
-  if (!record) return null
-
-  return asString(record.id)
 }
 
 function bySortOrder(a: PayloadDocument, b: PayloadDocument): number {
@@ -154,9 +145,9 @@ async function getLessonContext(
   const lesson = await findByIdSafe(payload, 'payload_lessons', lessonId)
   if (!lesson) return null
 
-  const moduleId = getDocumentId(lesson.module)
+  const moduleId = relationshipId(lesson.module)
   const module = await findByIdSafe(payload, 'payload_course_modules', moduleId)
-  const courseId = getDocumentId(module?.course)
+  const courseId = relationshipId(module?.course)
   const course = await findByIdSafe(payload, 'payload_courses', courseId)
   if (!module || !course) return null
 
@@ -205,7 +196,7 @@ async function getResourceMedia(
   media: PayloadDocument | null
   storage: 'private' | 'public'
 }> {
-  const protectedMediaId = getDocumentId(resource.protectedFile)
+  const protectedMediaId = relationshipId(resource.protectedFile)
   if (protectedMediaId) {
     return {
       media: await findByIdSafe(payload, 'payload_private_media', protectedMediaId),
@@ -213,7 +204,7 @@ async function getResourceMedia(
     }
   }
 
-  const mediaId = getDocumentId(resource.file)
+  const mediaId = relationshipId(resource.file)
   return {
     media: await findByIdSafe(payload, 'payload_media', mediaId),
     storage: 'public',
@@ -254,7 +245,7 @@ export async function resolveMemberLessonResourceDownload(
   if (!resource) return { allowed: false, reason: 'resource_not_found' }
   if (resource.status !== 'published') return { allowed: false, reason: 'resource_not_published' }
 
-  const lessonId = getDocumentId(resource.lesson)
+  const lessonId = relationshipId(resource.lesson)
   if (!lessonId) return { allowed: false, reason: 'lesson_not_found' }
 
   const context = await getLessonContext(payload, lessonId)

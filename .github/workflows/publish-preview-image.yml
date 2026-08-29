@@ -1,4 +1,4 @@
-name: Publish Preview Image
+name: Publish Staging Image
 
 # Third-party action SHAs pinned to verified releases:
 #   actions/checkout@v4          -> 11d5960a326750d5838078e36cf38b85af677262
@@ -12,7 +12,11 @@ on:
   workflow_dispatch:
     inputs:
       commit_sha:
-        description: Full 40-character commit SHA to publish (must be current tip of feature/course-branding-and-preview)
+        description: Full 40-character commit SHA to publish (must be current tip of source_ref)
+        required: true
+        type: string
+      source_ref:
+        description: Approved source ref: feature/*, fix/*, or release/* (never main)
         required: true
         type: string
       confirmation:
@@ -33,24 +37,24 @@ permissions:
   packages: write
 
 concurrency:
-  group: preview-image-publish-staging
+  group: staging-image-publish
   cancel-in-progress: false
 
 jobs:
   publish-preview-image:
-    name: Publish preview image
+    name: Publish staging image
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    environment: preview-image-publish
+    environment: staging-image-publish
 
     env:
       REQUESTED_SHA: ${{ inputs.commit_sha }}
       TARGET_ENVIRONMENT: staging
-      STAGING_ORIGIN: https://preview.jpvbootcamp.com
+      STAGING_ORIGIN: https://staging.jpvbootcamp.com
       CONFIRMATION: ${{ inputs.confirmation }}
       RELEASE_LABEL: ${{ inputs.release_label }}
       SOURCE_DATE: ${{ inputs.source_date }}
-      ALLOWED_BRANCH: feature/course-branding-and-preview
+      SOURCE_REF: ${{ inputs.source_ref }}
 
     steps:
       - name: Validate inputs and staging boundary
@@ -78,34 +82,41 @@ jobs:
             echo "PUBLISH-DENIED: source_date is required" >&2
             exit 1
           fi
-          # Reject if dispatched from main
-          if [ "${{ github.ref_name }}" = "main" ]; then
-            echo "PUBLISH-DENIED: this workflow must not run from main" >&2
+          if ! printf '%s' "$SOURCE_REF" | grep -qE '^(feature|fix|release)/[A-Za-z0-9][A-Za-z0-9._-]*$'; then
+            echo "PUBLISH-DENIED: source_ref must match feature/*, fix/*, or release/*; got '$SOURCE_REF'" >&2
             exit 1
           fi
-          # Require dispatch from the exact staging feature branch
-          if [ "${{ github.ref_name }}" != "feature/course-branding-and-preview" ]; then
-            echo "PUBLISH-DENIED: this workflow may only be dispatched from feature/course-branding-and-preview, got: ${{ github.ref_name }}" >&2
+          if [ "$SOURCE_REF" = "main" ]; then
+            echo "PUBLISH-DENIED: source_ref main is never allowed for staging" >&2
             exit 1
           fi
 
-      - name: Check out feature branch
+      - name: Check out approved source ref
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
         with:
-          ref: refs/heads/feature/course-branding-and-preview
+          ref: ${{ inputs.source_ref }}
           fetch-depth: 0
 
-      - name: Verify requested SHA is current remote tip of feature branch
+      - name: Attach approved source ref for provenance
+        shell: bash
+        run: git switch --force-create "$SOURCE_REF" HEAD
+
+      - name: Verify requested SHA is current remote tip of approved source ref
         shell: bash
         run: |
           set -euo pipefail
           BRANCH_TIP="$(git rev-parse HEAD)"
           if [ "$BRANCH_TIP" != "$REQUESTED_SHA" ]; then
-            echo "PUBLISH-DENIED: requested SHA ($REQUESTED_SHA) does not match current tip of $ALLOWED_BRANCH ($BRANCH_TIP)" >&2
+            echo "PUBLISH-DENIED: requested SHA ($REQUESTED_SHA) does not match current tip of $SOURCE_REF ($BRANCH_TIP)" >&2
             echo "Only the current remote tip may be published." >&2
             exit 1
           fi
-          echo "SHA verified: $REQUESTED_SHA is the current tip of $ALLOWED_BRANCH"
+          REMOTE_TIP="$(git rev-parse "origin/$SOURCE_REF")"
+          if [ "$BRANCH_TIP" != "$REMOTE_TIP" ]; then
+            echo "PUBLISH-DENIED: requested SHA is not the current remote tip of $SOURCE_REF" >&2
+            exit 1
+          fi
+          echo "SHA verified: $REQUESTED_SHA is the current remote tip of $SOURCE_REF"
 
       - name: Capture checkout SHA
         id: checkout-sha
@@ -156,10 +167,10 @@ jobs:
         run: |
           set -euo pipefail
           sha_tag="ghcr.io/${{ github.repository }}:${{ steps.checkout-sha.outputs.sha }}"
-          branch_tag="ghcr.io/${{ github.repository }}:feature-course-branding-and-preview"
+          staging_tag="ghcr.io/${{ github.repository }}:staging"
           {
             echo "tags<<EOF"
-            echo "$branch_tag"
+            echo "$staging_tag"
             echo "$sha_tag"
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
@@ -173,9 +184,9 @@ jobs:
           push: true
           tags: ${{ steps.publish-tags.outputs.tags }}
           build-args: |
-            NEXT_PUBLIC_APP_URL=https://preview.jpvbootcamp.com
-            APP_BASE_URL=https://preview.jpvbootcamp.com
-            NEXT_PUBLIC_SERVER_URL=https://preview.jpvbootcamp.com
+            NEXT_PUBLIC_APP_URL=https://staging.jpvbootcamp.com
+            APP_BASE_URL=https://staging.jpvbootcamp.com
+            NEXT_PUBLIC_SERVER_URL=https://staging.jpvbootcamp.com
             IMAGE_TAG=${{ steps.checkout-sha.outputs.sha }}
             COMMIT_SHA=${{ steps.checkout-sha.outputs.sha }}
           labels: |
@@ -183,10 +194,10 @@ jobs:
             org.opencontainers.image.revision=${{ steps.checkout-sha.outputs.sha }}
             org.opencontainers.image.created=${{ env.SOURCE_DATE }}
             org.opencontainers.image.version=${{ env.RELEASE_LABEL }}
-            dev.jpvbootcamp.staging-origin=https://preview.jpvbootcamp.com
-            dev.jpvbootcamp.branch=feature/course-branding-and-preview
-          cache-from: type=gha,scope=preview-image-publish
-          cache-to: type=gha,mode=max,scope=preview-image-publish
+            dev.jpvbootcamp.staging-origin=https://staging.jpvbootcamp.com
+            dev.jpvbootcamp.source-ref=${{ inputs.source_ref }}
+          cache-from: type=gha,scope=staging-image-publish
+          cache-to: type=gha,mode=max,scope=staging-image-publish
 
       - name: Upload release manifest
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
@@ -199,6 +210,6 @@ jobs:
         run: |
           set -euo pipefail
           echo "Published image: ghcr.io/${{ github.repository }}:${{ steps.checkout-sha.outputs.sha }}"
-          echo "Branch tag: ghcr.io/${{ github.repository }}:feature-course-branding-and-preview"
-          echo "Staging origin: https://preview.jpvbootcamp.com"
+          echo "Staging tag: ghcr.io/${{ github.repository }}:staging"
+          echo "Staging origin: https://staging.jpvbootcamp.com"
           echo "Image publication does not deploy, run migrations, or invoke provider email."
