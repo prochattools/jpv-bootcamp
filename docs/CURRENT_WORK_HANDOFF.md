@@ -8,39 +8,39 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 
 **Status:** `NOT READY FOR PRODUCTION MERGE`
 
-The exact A6 candidate is now deployed to the real staging authority:
-`4eb2288931b56cd53704802c4fa9001ca4ee4a15` on
+The repaired runtime candidate is now deployed to the real staging authority:
+`380ec2d28f4f3ede46cb2377e6a76e37c683b990` on
 `fix/e1-staging-gate-b`. It descends linearly from the verified production
 `origin/main` tip `08605e52af4abb0b1bdcdfbe6890d010c545b636`.
 
 - **Staging:** `https://staging.jpvbootcamp.com`, Dokploy application
   `clients-jpv-bootcamp-preview-wjfqfd` / `bZllV93NqsPZAFCsqDskb`, exact live
-  image/commit `4eb2288931b56cd53704802c4fa9001ca4ee4a15`,
+  image/commit `380ec2d28f4f3ede46cb2377e6a76e37c683b990`,
   `deploymentEnv=staging`.
 - **Staging database boundary:** database `jpvbootcamp_staging`, schema
   `jpvbootcamp`, role `jpvbootcamp_staging_app`; the read-only plan found 52
   applied Payload migrations, zero expected pending migrations, zero
   unexpected/duplicate/malformed/order anomalies, and healthy Prisma access.
-  No migration was applied by this gate.
-- **Release validation:** local `pnpm test:release` passed **171/171**;
-  GitHub candidate validation run `33243293215` passed against the exact SHA.
-- **Deployment:** staging deployment run `33243923606`, job `99077948717`,
-  passed exact-SHA, build, image, routing, Dokploy, revision-health, and
-  authenticated Payload responsive checks (**14/14**).
-- **Browser evidence:** public and unauthenticated routes were checked at
-  widths 320, 375, 768, 1024, and 1440 with no overflow, application-error
-  text, route-not-found text, or browser warning/error logs. The authenticated
-  CI matrix covers Payload admin, support requests, and course-admin routes.
-  A complete manually authenticated member and creator-admin matrix remains
-  outstanding because no authenticated browser session or credentials were
-  available in this thread.
-- **Provider smoke:** valid-shape staging E2E passed health, LiveKit token
-  validation/auth behavior, join-page load, Bunny page load, and Bunny
-  signature rejection. The older LiveKit/Bunny helper still sends a request
-  without required `sessionId` and therefore records a validation `400`; this
-  is a stale test-harness mismatch that must be corrected or explicitly
-  retired before Gate 1 can close. No provider mutation or live email send was
-  performed.
+  No migration or administrator backfill was applied in this turn.
+- **Release validation:** local `pnpm test:release` passed **171/171**, with
+  focused LiveKit contract/token tests, Payload type check, and whitespace
+  validation also passing. GitHub candidate validation run `33246249497`
+  passed against the exact SHA.
+- **Deployment:** staging deployment run `33246658368`, job `99085189467`,
+  passed exact-SHA, build, immutable image publication, routing, Dokploy,
+  revision-health, and authenticated Payload responsive checks. The
+  migration-plan, backfill, bootstrap, and duplicate validation jobs were
+  skipped by the staging-only deployment operation.
+- **Authenticated acceptance:** the deployment’s authenticated Payload
+  responsive gate passed. The full manually authenticated member and
+  creator-admin portal matrix remains outstanding because no approved staging
+  member/admin browser session or credentials are available in this thread.
+- **Provider smoke:** post-deployment `pnpm test:staging:livekit-bunny` passed
+  **4/4**: health `200`, valid-shape unauthenticated LiveKit token `401`, and
+  unsigned/invalid-signature Bunny rejection `403`. The stale helper was
+  repaired in focused commit `380ec2d28f4f3ede46cb2377e6a76e37c683b990` to
+  send `sessionId` and require the expected authentication boundary. No
+  provider mutation or live email send was performed.
 - **Production protection:** production remains healthy at
   `08605e52af4abb0b1bdcdfbe6890d010c545b636` with
   `deploymentEnv=production`; preview still serves that production image and
@@ -48,11 +48,11 @@ The exact A6 candidate is now deployed to the real staging authority:
   reconciliation/backfill, Stripe mutation, or production data change was
   performed.
 - **Rollback:** the staging app can be returned through guarded Dokploy to
-  `0515b792f0aa6ab89db94f30e6176421e06546ae`; no DB rollback is required.
+  `4eb2288931b56cd53704802c4fa9001ca4ee4a15`; no DB rollback is required.
 
-**Gate decision:** `NOT READY FOR PRODUCTION MERGE` pending the authenticated
-member/creator-admin acceptance matrix and closure of the stale provider
-smoke-helper mismatch.
+**Gate decision:** `NOT READY FOR PRODUCTION MERGE` pending the full
+authenticated member/creator-admin acceptance matrix. Production merge and
+production deployment are outside this packet’s authorization boundary.
 
 ---
 
