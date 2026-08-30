@@ -438,6 +438,7 @@ async function runProductionSchedule(payload: ProductionRoomsControlPayload): Pr
 					if (marker) return marker.result
 				}
 			}
+			if ([...deploymentStatuses].some((status) => /^(?:error|failed|cancelled)$/i.test(status))) break
 			if (attempt < 36) await new Promise((resolvePromise) => setTimeout(resolvePromise, 5_000))
 		}
 		console.log(`Rooms ${payload.mode} completion marker missing; schedule_list_http=${lastScheduleListStatus} deployment_list_http=${lastDeploymentListStatus} logs_http=${lastLogsStatus} deployment_records=${lastDeploymentCount} log_bytes=${logBytes} remote_started=${logHasRemoteStart} command_echo=${logEchoesRemoteCommand} execution_banner=${logHasExecutionBanner} success_banner=${logHasSuccessBanner} command_failed=${logHasCommandFailed} failure_kind=${executionFailureKind} deployment_error_kind=${deploymentErrorKind} deployment_error_message_present=${deploymentErrorMessagePresent} control_marker_seen=${logHasControlMarker} known_execution_error=${logHasKnownExecutionError} deployment_statuses=${[...deploymentStatuses].filter((status) => /^(?:queued|running|done|error|failed|cancelled)$/i.test(status)).join(',') || 'none'} log_path_present=${logPathPresent}`)
