@@ -261,6 +261,31 @@ function findDeploymentIdsInList(value: unknown, result = new Set<string>()): Se
 	return result
 }
 
+function collectDeploymentState(
+	value: unknown,
+	deploymentIds: Set<string>,
+	statuses = new Set<string>(),
+): { statuses: Set<string>; logPathPresent: boolean } {
+	let logPathPresent = false
+	if (Array.isArray(value)) {
+		for (const child of value) {
+			const nested = collectDeploymentState(child, deploymentIds, statuses)
+			logPathPresent ||= nested.logPathPresent
+		}
+	}
+	if (isRecord(value)) {
+		if (typeof value.deploymentId === 'string' && deploymentIds.has(value.deploymentId)) {
+			if (typeof value.status === 'string') statuses.add(value.status)
+			if (typeof value.logPath === 'string' && value.logPath.length > 0) logPathPresent = true
+		}
+		for (const child of Object.values(value)) {
+			const nested = collectDeploymentState(child, deploymentIds, statuses)
+			logPathPresent ||= nested.logPathPresent
+		}
+	}
+	return { statuses, logPathPresent }
+}
+
 function logText(value: unknown): string {
 	const values: string[] = []
 	const collect = (child: unknown): void => {
@@ -347,6 +372,11 @@ async function runProductionSchedule(payload: ProductionRoomsControlPayload): Pr
 		let logHasRemoteStart = false
 		let logHasControlMarker = false
 		let logHasKnownExecutionError = false
+		let logEchoesRemoteCommand = false
+		let logHasExecutionBanner = false
+		let logHasSuccessBanner = false
+		let deploymentStatuses = new Set<string>()
+		let logPathPresent = false
 		for (let attempt = 1; attempt <= 36; attempt += 1) {
 			const deploymentIds = new Set(runDeploymentIds)
 			const listed = await dokployRequest(apiBase, apiKey, `/schedule.list?id=${encodeURIComponent(PRODUCTION_ROOMS_TARGET.applicationId)}&scheduleType=application`)
@@ -362,6 +392,9 @@ async function runProductionSchedule(payload: ProductionRoomsControlPayload): Pr
 			lastDeploymentListStatus = deployments.status
 			if (deployments.status >= 200 && deployments.status < 300) {
 				for (const deploymentId of findDeploymentIdsInList(deployments.data)) deploymentIds.add(deploymentId)
+				const deploymentState = collectDeploymentState(deployments.data, deploymentIds)
+				deploymentStatuses = deploymentState.statuses
+				logPathPresent ||= deploymentState.logPathPresent
 			}
 			lastDeploymentCount = deploymentIds.size
 			for (const deploymentId of deploymentIds) {
@@ -370,7 +403,10 @@ async function runProductionSchedule(payload: ProductionRoomsControlPayload): Pr
 				if (logs.status >= 200 && logs.status < 300) {
 					const text = logText(logs.data)
 					logBytes = Math.max(logBytes, text.length)
-					logHasRemoteStart ||= text.includes('JPV_ROOMS_REMOTE_START')
+					logHasRemoteStart ||= /(?:^|\r?\n)JPV_ROOMS_REMOTE_START(?:\r?\n|$)/.test(text)
+					logEchoesRemoteCommand ||= text.includes(command)
+					logHasExecutionBanner ||= /(?:^|\r?\n)Running scheduled command(?:\r?\n|$)/.test(text)
+					logHasSuccessBanner ||= /(?:^|\r?\n)✅ Command executed successfully(?:\r?\n|$)/.test(text)
 					logHasControlMarker ||= /JPV_ROOMS_(?:MIGRATION|NAV)_/.test(text)
 					logHasKnownExecutionError ||= /(?:command not found|cannot find module|no such file|permission denied|exec format error)/i.test(text)
 					const marker = extractMarker(text)
@@ -379,7 +415,7 @@ async function runProductionSchedule(payload: ProductionRoomsControlPayload): Pr
 			}
 			if (attempt < 36) await new Promise((resolvePromise) => setTimeout(resolvePromise, 5_000))
 		}
-		console.log(`Rooms ${payload.mode} completion marker missing; schedule_list_http=${lastScheduleListStatus} deployment_list_http=${lastDeploymentListStatus} logs_http=${lastLogsStatus} deployment_records=${lastDeploymentCount} log_bytes=${logBytes} remote_started=${logHasRemoteStart} control_marker_seen=${logHasControlMarker} known_execution_error=${logHasKnownExecutionError}`)
+		console.log(`Rooms ${payload.mode} completion marker missing; schedule_list_http=${lastScheduleListStatus} deployment_list_http=${lastDeploymentListStatus} logs_http=${lastLogsStatus} deployment_records=${lastDeploymentCount} log_bytes=${logBytes} remote_started=${logHasRemoteStart} command_echo=${logEchoesRemoteCommand} execution_banner=${logHasExecutionBanner} success_banner=${logHasSuccessBanner} control_marker_seen=${logHasControlMarker} known_execution_error=${logHasKnownExecutionError} deployment_statuses=${[...deploymentStatuses].filter((status) => /^(?:queued|running|done|error|failed|cancelled)$/i.test(status)).join(',') || 'none'} log_path_present=${logPathPresent}`)
 		throw new Error('schedule_completion_marker_missing')
 	} finally {
 		if (scheduleId) {
