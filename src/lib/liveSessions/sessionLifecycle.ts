@@ -25,8 +25,12 @@ export type LiveSessionDocument = Record<string, unknown> & {
   hostUser?: unknown
   scheduledAt?: string
   capacity?: number
-  audience?: 'enrolled' | 'all' | 'selected'
+  audience?: 'enrolled' | 'all' | 'selected' | 'groups'
   targetMemberIds?: unknown
+  targetGroupIds?: unknown
+  categories?: unknown
+  archived?: boolean
+  archivedAt?: string
   audit?: unknown
 }
 
@@ -52,6 +56,10 @@ const AUDITED_FIELDS = [
   'capacity',
   'audience',
   'targetMemberIds',
+  'targetGroupIds',
+  'categories',
+  'archived',
+  'archivedAt',
 ] as const
 
 const ALLOWED_TRANSITIONS: Record<LiveSessionStatus, readonly LiveSessionStatus[]> = {
@@ -180,6 +188,10 @@ export function prepareLiveSessionMutation(params: {
     }
     const courseId = liveSessionRelationshipId(params.data.course)
     const spaceId = liveSessionRelationshipId(params.data.space)
+    const audience = params.data.audience
+    if (!courseId && !spaceId && audience !== 'all' && audience !== 'selected' && audience !== 'groups') {
+      throw new Error('A Room requires either a course or a community space, or an explicit targeted audience.')
+    }
     const roomName = spaceId
       ? generateSpaceLiveSessionRoomName({ spaceId, now })
       : courseId
@@ -206,6 +218,9 @@ export function prepareLiveSessionMutation(params: {
   const merged: LiveSessionDocument = { ...original, ...params.data }
   const fromStatus = original.status ?? 'scheduled'
   const toStatus = merged.status ?? fromStatus
+  if (!liveSessionRelationshipId(merged.course) && !liveSessionRelationshipId(merged.space) && merged.audience === 'enrolled') {
+    throw new Error('A Room requires either a course or a community space, or an explicit targeted audience.')
+  }
   assertLiveSessionStatusTransition(fromStatus, toStatus)
 
   if (!isValidLiveSessionRoomName(original.roomName)) {
@@ -219,7 +234,8 @@ export function prepareLiveSessionMutation(params: {
   if (changedFields.length === 0) {
     return { ...params.data, roomName: original.roomName, audit: original.audit }
   }
-  if (fromStatus === 'completed' || fromStatus === 'cancelled') {
+  const archiveOnlyUpdate = changedFields.length > 0 && changedFields.every((field) => field === 'archived' || field === 'archivedAt')
+  if ((fromStatus === 'completed' || fromStatus === 'cancelled') && !archiveOnlyUpdate) {
     throw new Error(`${fromStatus} live sessions are immutable.`)
   }
 

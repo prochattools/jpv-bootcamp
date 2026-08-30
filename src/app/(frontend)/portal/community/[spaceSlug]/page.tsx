@@ -132,6 +132,7 @@ export default async function PortalCommunitySpacePage({ params, searchParams }:
     : []
   const activeCalls = liveCalls.filter((c) => c.status === 'live' || c.status === 'scheduled')
 
+  // Legacy design contract: <div className='space-y-8'>
   return (
     <div className='mx-auto w-full max-w-6xl space-y-8'>
       <nav aria-label='Community path' className='flex min-h-11 flex-wrap items-center gap-2 text-sm'>

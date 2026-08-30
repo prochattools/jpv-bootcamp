@@ -4,7 +4,7 @@ import { Bell } from 'lucide-react'
 import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-type NotificationType = 'new_post' | 'new_comment' | 'mention' | 'system' | 'announcement' | 'live_session'
+type NotificationType = 'new_post' | 'new_comment' | 'mention' | 'system' | 'announcement' | 'live_session' | 'room_invitation'
 
 type Notification = {
   id: string

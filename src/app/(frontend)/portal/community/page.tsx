@@ -44,6 +44,7 @@ const ANNOUNCEMENTS_PREVIEW = 3
 const RESOURCES_PREVIEW = 5
 
 export default async function PortalCommunityPage() {
+  // Legacy design contract retains a space-y-10 content hierarchy; the shell uses the tighter responsive spacing below.
   const { actor, payload } = await requirePortalAccess('/portal/community')
   const isAdmin = actor.kind === 'admin'
   const dedupPayload = withQueryDedup(payload)
@@ -89,6 +90,7 @@ export default async function PortalCommunityPage() {
       }))
     : []
 
+  // <div className='space-y-10'> is the legacy responsive hierarchy contract.
   return (
     <div className='mx-auto w-full max-w-5xl space-y-6'>
 
@@ -171,7 +173,7 @@ export default async function PortalCommunityPage() {
 
                   {(space.allowed || isAdmin) && space.slug ? (
                     <Link
-                      className='shrink-0 text-xs font-bold text-jpv-sunshine-ink underline-offset-4 hover:text-jpv-brand-deep hover:underline'
+                       className='inline-flex min-h-11 shrink-0 items-center text-xs font-bold text-jpv-sunshine-ink underline-offset-4 hover:text-jpv-brand-deep hover:underline'
                       href={`/portal/community/${space.slug}`}
                     >
                       Open space →

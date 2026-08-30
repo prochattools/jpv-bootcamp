@@ -1,26 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server'
-import config from '@payload-config'
-import { getPayload } from 'payload'
 
-import { resolvePayloadRequestSession } from '@/lib/auth/payloadSession'
-import type { PayloadCourseWriteAPI } from '@/lib/payloadCourse/accessService'
+import { requirePortalAdmin } from '@/lib/auth/requirePortalAdmin'
+import { normalizePortalAdminError } from '@/lib/portalAdmin/actionResult'
+import { transitionRoomCommand } from '@/lib/rooms/roomCommands'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await resolvePayloadRequestSession(request.headers)
-  if (!session.administratorId) return NextResponse.json({ ok: false, message: 'Administrator access is required.' }, { status: 403 })
+function responseForError(error: unknown, action: string): NextResponse {
+  const result = normalizePortalAdminError(error, action)
+  const status = result.code === 'unauthorized' ? 401 : result.code === 'forbidden' ? 403 : result.code === 'not_found' ? 404 : result.code === 'conflict' ? 409 : result.code === 'invalid_input' ? 400 : 500
+  return NextResponse.json(result, { status })
+}
+
+/** Compatibility adapter for legacy live-session lifecycle controls. */
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }): Promise<NextResponse> {
   try {
-    const body = await request.json() as Record<string, unknown>
-    const status = body.status
-    if (status !== 'live' && status !== 'completed' && status !== 'cancelled') return NextResponse.json({ ok: false, message: 'Only live, completed, or cancelled transitions are supported.' }, { status: 400 })
-    const payload = await getPayload({ config }) as unknown as PayloadCourseWriteAPI
+    const body = await request.json() as { status?: unknown }
+    if (body.status !== 'live' && body.status !== 'completed' && body.status !== 'cancelled') {
+      return NextResponse.json({ ok: false, message: 'Only live, completed, or cancelled transitions are supported.' }, { status: 400 })
+    }
+    const { actor, payload } = await requirePortalAdmin('/portal/live-sessions')
     const { id } = await params
-    const updated = await payload.update({ collection: 'live_sessions', id, data: { status }, overrideAccess: true, user: { id: session.administratorId, collection: 'payload_users' } })
-    return NextResponse.json({ ok: true, session: updated })
+    const session = await transitionRoomCommand({ payload, adminId: actor.administratorId, adminEmail: actor.email }, id, body.status)
+    return NextResponse.json({ ok: true, session })
   } catch (error) {
-    console.error('[portal live sessions PATCH] error:', error instanceof Error ? error.message : String(error))
-    return NextResponse.json({ ok: false, message: error instanceof Error ? error.message : 'Unable to update live session.' }, { status: 400 })
+    return responseForError(error, 'updateLegacyLiveSessionRoute')
   }
 }

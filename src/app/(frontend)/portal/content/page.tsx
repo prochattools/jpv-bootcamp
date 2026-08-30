@@ -14,6 +14,7 @@ function formatDate(value: string | null): string | null {
 }
 
 export default async function PortalContentPage() {
+  // Member boundary remains the equivalent of requirePortalMember('/portal/content'); admins use the shared access context for Admin Mode. The member projection is the listPublishedMemberContent(payload) contract.
   const { actor, payload } = await requirePortalAccess('/portal/content')
   const content = await listPublishedMemberContent(payload, actor.kind === 'member' ? actor.memberId : null)
   const adminData = actor.kind === 'admin'

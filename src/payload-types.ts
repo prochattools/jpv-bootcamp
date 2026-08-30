@@ -80,6 +80,8 @@ export interface Config {
     payload_chat_messages: PayloadChatMessage;
     payload_member_notifications: PayloadMemberNotification;
     live_sessions: LiveSession;
+    payload_room_categories: PayloadRoomCategory;
+    payload_room_access: PayloadRoomAccess;
     payload_courses: PayloadCourse;
     payload_course_modules: PayloadCourseModule;
     payload_lessons: PayloadLesson;
@@ -153,6 +155,8 @@ export interface Config {
     payload_chat_messages: PayloadChatMessagesSelect<false> | PayloadChatMessagesSelect<true>;
     payload_member_notifications: PayloadMemberNotificationsSelect<false> | PayloadMemberNotificationsSelect<true>;
     live_sessions: LiveSessionsSelect<false> | LiveSessionsSelect<true>;
+    payload_room_categories: PayloadRoomCategoriesSelect<false> | PayloadRoomCategoriesSelect<true>;
+    payload_room_access: PayloadRoomAccessSelect<false> | PayloadRoomAccessSelect<true>;
     payload_courses: PayloadCoursesSelect<false> | PayloadCoursesSelect<true>;
     payload_course_modules: PayloadCourseModulesSelect<false> | PayloadCourseModulesSelect<true>;
     payload_lessons: PayloadLessonsSelect<false> | PayloadLessonsSelect<true>;
@@ -1029,7 +1033,8 @@ export interface PayloadChatMessage {
 export interface PayloadMemberNotification {
   id: number;
   member: number | PayloadMember;
-  type: 'new_post' | 'new_comment' | 'mention' | 'announcement' | 'live_session' | 'system';
+  type: 'new_post' | 'new_comment' | 'mention' | 'announcement' | 'live_session' | 'room_invitation' | 'system';
+  eventKey?: string | null;
   actorName?: string | null;
   title?: string | null;
   href?: string | null;
@@ -1038,7 +1043,7 @@ export interface PayloadMemberNotification {
   createdAt: string;
 }
 /**
- * Schedule and operate LiveKit sessions (course-based or community space). Room names and audit history are generated automatically.
+ * Schedule and operate member portal Rooms. Room names and audit history are generated automatically.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "live_sessions".
@@ -1048,7 +1053,7 @@ export interface LiveSession {
   title: string;
   status: 'scheduled' | 'live' | 'completed' | 'cancelled';
   /**
-   * Required for course-based sessions. Leave blank for community space calls.
+   * Optional. Link this session to a course when it is course-specific.
    */
   course?: (number | null) | PayloadCourse;
   /**
@@ -1060,7 +1065,7 @@ export interface LiveSession {
    */
   lesson?: (number | null) | PayloadLesson;
   /**
-   * Required for community group calls. Leave blank for course-based sessions.
+   * Optional. Link this session to a community space when it is space-specific.
    */
   space?: (number | null) | PayloadSpace;
   /**
@@ -1073,7 +1078,7 @@ export interface LiveSession {
   /**
    * Controls who can see and join this session in the member portal.
    */
-  audience: 'enrolled' | 'all' | 'selected';
+  audience: 'enrolled' | 'all' | 'selected' | 'groups';
   /**
    * Member IDs selected by the portal administrator when audience is selected.
    */
@@ -1086,6 +1091,27 @@ export interface LiveSession {
     | number
     | boolean
     | null;
+  /**
+   * Member group IDs selected by the portal administrator when audience is groups.
+   */
+  targetGroupIds?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  /**
+   * Optional labels for search and filtering. Categories do not grant access.
+   */
+  categories?: (number | PayloadRoomCategory)[] | null;
+  /**
+   * Hide this Room from the active dashboard while retaining its audit and access history.
+   */
+  archived?: boolean | null;
+  archivedAt?: string | null;
   description?: {
     root: {
       type: string;
@@ -1153,6 +1179,49 @@ export interface PayloadUser {
     | null;
   password?: string | null;
   collection: 'payload_users';
+}
+/**
+ * Bounded categories for organising member portal Rooms. Categories do not grant access.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_room_categories".
+ */
+export interface PayloadRoomCategory {
+  id: number;
+  name: string;
+  slug: string;
+  status: 'active' | 'archived';
+  sortOrder?: number | null;
+  description?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Durable Room/member entitlement ledger used by portal and LiveKit authorization.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_room_access".
+ */
+export interface PayloadRoomAccess {
+  id: number;
+  room: number | LiveSession;
+  member: number | PayloadMember;
+  grantSource: 'all_active' | 'selected' | 'member_group' | 'enrolled';
+  status: 'active' | 'revoked';
+  eventKey: string;
+  grantedAt: string;
+  revokedAt?: string | null;
+  metadata?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
 }
 /**
  * Access tier examples shown in the portal. Not linked to billing or entitlement enforcement.
@@ -2135,6 +2204,7 @@ export interface PayloadAdminNotification {
   body: string;
   relatedCollection?: string | null;
   relatedDocumentId?: string | null;
+  eventKey?: string | null;
   metadata?:
     | {
         [k: string]: unknown;
@@ -2689,6 +2759,14 @@ export interface PayloadLockedDocument {
         value: number | LiveSession;
       } | null)
     | ({
+        relationTo: 'payload_room_categories';
+        value: number | PayloadRoomCategory;
+      } | null)
+    | ({
+        relationTo: 'payload_room_access';
+        value: number | PayloadRoomAccess;
+      } | null)
+    | ({
         relationTo: 'payload_courses';
         value: number | PayloadCourse;
       } | null)
@@ -3125,6 +3203,7 @@ export interface PayloadChatMessagesSelect<T extends boolean = true> {
 export interface PayloadMemberNotificationsSelect<T extends boolean = true> {
   member?: T;
   type?: T;
+  eventKey?: T;
   actorName?: T;
   title?: T;
   href?: T;
@@ -3149,12 +3228,45 @@ export interface LiveSessionsSelect<T extends boolean = true> {
   capacity?: T;
   audience?: T;
   targetMemberIds?: T;
+  targetGroupIds?: T;
+  categories?: T;
+  archived?: T;
+  archivedAt?: T;
   description?: T;
   startedAt?: T;
   completedAt?: T;
   cancelledAt?: T;
   recordingUrl?: T;
   audit?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_room_categories_select".
+ */
+export interface PayloadRoomCategoriesSelect<T extends boolean = true> {
+  name?: T;
+  slug?: T;
+  status?: T;
+  sortOrder?: T;
+  description?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload_room_access_select".
+ */
+export interface PayloadRoomAccessSelect<T extends boolean = true> {
+  room?: T;
+  member?: T;
+  grantSource?: T;
+  status?: T;
+  eventKey?: T;
+  grantedAt?: T;
+  revokedAt?: T;
+  metadata?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -3973,6 +4085,7 @@ export interface PayloadAdminNotificationsSelect<T extends boolean = true> {
   body?: T;
   relatedCollection?: T;
   relatedDocumentId?: T;
+  eventKey?: T;
   metadata?: T;
   updatedAt?: T;
   createdAt?: T;

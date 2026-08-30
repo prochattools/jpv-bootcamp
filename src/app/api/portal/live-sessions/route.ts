@@ -1,108 +1,57 @@
 import { NextRequest, NextResponse } from 'next/server'
-import config from '@payload-config'
-import { getPayload } from 'payload'
 
-import { resolvePayloadRequestSession } from '@/lib/auth/payloadSession'
-import { notifyLiveSessionRecipients } from '@/lib/liveSessions/audience'
-import type { PayloadCourseWriteAPI } from '@/lib/payloadCourse/accessService'
+import { requirePortalAdmin } from '@/lib/auth/requirePortalAdmin'
+import { normalizePortalAdminError } from '@/lib/portalAdmin/actionResult'
+import { createRoomCommand } from '@/lib/rooms/roomCommands'
+import { listAdminRooms } from '@/lib/rooms/roomQueries'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-function text(value: unknown): string {
-  return typeof value === 'string' ? value.trim() : ''
+function responseForError(error: unknown, action: string): NextResponse {
+  const result = normalizePortalAdminError(error, action)
+  const status = result.code === 'unauthorized' ? 401 : result.code === 'forbidden' ? 403 : result.code === 'not_found' ? 404 : result.code === 'conflict' ? 409 : result.code === 'invalid_input' ? 400 : 500
+  return NextResponse.json(result, { status })
 }
 
-function id(value: unknown): string | undefined {
-  if (typeof value === 'string' || typeof value === 'number') return String(value).trim() || undefined
-  if (value && typeof value === 'object' && 'id' in value) return id((value as { id: unknown }).id)
-  return undefined
+/** Compatibility adapter for clients that still use the legacy live-sessions API. */
+export async function GET(): Promise<NextResponse> {
+  try {
+    const { payload } = await requirePortalAdmin('/portal/live-sessions')
+    return NextResponse.json({ ok: true, sessions: await listAdminRooms(payload) })
+  } catch (error) {
+    return responseForError(error, 'getLegacyLiveSessionsRoute')
+  }
 }
 
-function adminActor(idValue: string | number) {
-  return { id: idValue, collection: 'payload_users' as const }
-}
-
-function isStartNow(value: unknown): boolean {
-  return value === true || value === 'true' || value === '1'
-}
-
-async function requireAdmin(request: NextRequest): Promise<string | null> {
-  const session = await resolvePayloadRequestSession(request.headers)
-  return session.administratorId ? String(session.administratorId) : null
-}
-
-export async function GET(request: NextRequest) {
-  const administratorId = await requireAdmin(request)
-  if (!administratorId) return NextResponse.json({ ok: false, message: 'Administrator access is required.' }, { status: 403 })
-  const payload = await getPayload({ config })
-  const result = await payload.find({ collection: 'live_sessions', limit: 200, sort: '-scheduledAt', depth: 1, overrideAccess: true })
-  return NextResponse.json({ ok: true, sessions: result.docs })
-}
-
-export async function POST(request: NextRequest) {
-  const administratorId = await requireAdmin(request)
-  if (!administratorId) return NextResponse.json({ ok: false, message: 'Administrator access is required.' }, { status: 403 })
+/** Compatibility adapter; new callers should use /api/portal/rooms. */
+export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     const body = await request.json() as Record<string, unknown>
-    const startNow = isStartNow(body.startNow)
-    const title = text(body.title) || 'JPV Live Session'
-    const scheduledAt = new Date(startNow ? Date.now() : text(body.scheduledAt))
-    const course = id(body.course)
-    const space = id(body.space)
-    const audience = body.audience === 'all' || body.audience === 'enrolled' || body.audience === 'selected' ? body.audience : 'selected'
-    const targetMemberIds = audience === 'selected' && Array.isArray(body.targetMemberIds) ? body.targetMemberIds.map(id).filter((value): value is string => Boolean(value)) : undefined
-    const capacity = Number(body.capacity ?? 50)
-    if ((course && space) || Number.isNaN(scheduledAt.getTime())) {
-      return NextResponse.json({ ok: false, message: 'Choose a valid start time. A course or community space is optional.' }, { status: 400 })
-    }
-    if (!course && !space && audience === 'enrolled') {
-      return NextResponse.json({ ok: false, message: 'For an unlinked session, choose all active members or selected members.' }, { status: 400 })
-    }
-    if (audience === 'selected' && (!targetMemberIds || targetMemberIds.length === 0)) {
-      return NextResponse.json({ ok: false, message: 'Select at least one member for a targeted session.' }, { status: 400 })
-    }
-    if (!Number.isInteger(capacity) || capacity < 1 || capacity > 500) return NextResponse.json({ ok: false, message: 'Capacity must be between 1 and 500.' }, { status: 400 })
-
-    const payload = await getPayload({ config }) as unknown as PayloadCourseWriteAPI
-    const created = await payload.create({
-      collection: 'live_sessions',
-      data: {
-        title,
-        course,
-        space,
-        hostUser: administratorId,
-        scheduledAt: scheduledAt.toISOString(),
-        capacity,
-        audience,
-        targetMemberIds,
-        status: 'scheduled',
+    const { actor, payload } = await requirePortalAdmin('/portal/live-sessions')
+    const result = await createRoomCommand(
+      { payload, adminId: actor.administratorId, adminEmail: actor.email },
+      {
+        title: typeof body.title === 'string' && body.title.trim() ? body.title : 'JPV Live Session',
+        scheduledAt: typeof body.scheduledAt === 'string' ? body.scheduledAt : null,
+        startNow: body.startNow === true || body.startNow === 'true' || body.startNow === '1',
+        capacity: body.capacity as number | string | null | undefined,
+        audience: body.audience === 'all' || body.audience === 'enrolled' || body.audience === 'selected' || body.audience === 'groups'
+          ? body.audience
+          : 'selected',
+        targetMemberIds: Array.isArray(body.targetMemberIds) ? body.targetMemberIds.map(String) : [],
+        targetGroupIds: Array.isArray(body.targetGroupIds) ? body.targetGroupIds.map(String) : [],
+        courseId: typeof body.course === 'string' || typeof body.course === 'number' ? String(body.course) : null,
+        spaceId: typeof body.space === 'string' || typeof body.space === 'number' ? String(body.space) : null,
       },
-      overrideAccess: true,
-      user: adminActor(administratorId),
-    })
-    let session = created
-    if (startNow) {
-      session = await payload.update({
-        collection: 'live_sessions',
-        id: created.id,
-        data: { status: 'live' },
-        overrideAccess: true,
-        user: adminActor(administratorId),
-      })
-    }
-    const baseUrl = process.env.APP_BASE_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? 'https://jpvbootcamp.com'
-    let emailEventsCreated = 0
-    let invitationWarning: string | undefined
-    try {
-      emailEventsCreated = await notifyLiveSessionRecipients(payload, session, baseUrl)
-    } catch (error) {
-      invitationWarning = 'The session was created, but invitations could not be fully queued. Review the email queue.'
-      console.error('[portal live sessions POST] invitation fan-out failed:', error instanceof Error ? error.message : String(error))
-    }
-    return NextResponse.json({ ok: true, session, emailEventsCreated, invitationWarning }, { status: 201 })
+    )
+    return NextResponse.json({
+      ok: true,
+      session: result.room,
+      emailEventsCreated: result.addedMembers,
+      invitationWarning: result.warnings.length ? 'The session was created, but invitations could not be fully queued. Review the email queue.' : undefined,
+    }, { status: 201 })
   } catch (error) {
-    console.error('[portal live sessions POST] error:', error instanceof Error ? error.message : String(error))
-    return NextResponse.json({ ok: false, message: error instanceof Error ? error.message : 'Unable to create live session.' }, { status: 400 })
+    return responseForError(error, 'createLegacyLiveSessionRoute')
   }
 }

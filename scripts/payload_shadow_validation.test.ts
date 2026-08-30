@@ -127,6 +127,7 @@ async function main(): Promise<void> {
         '20260826_130000_portal_engagement_distribution',
         '20260826_150000_member_delete_relationship_safety',
         '20260827_090000_membership_support_relationship_tables',
+        '20260830_090000_member_portal_rooms',
       ],
       operator: 'migration-op',
       approvalReference: 'approval-1',

@@ -11,7 +11,7 @@ import { AccessibleDialog } from '@/components/ui/AccessibleDialog'
 const portalLinks = [
   { href: '/portal', label: 'Dashboard' },
   { href: '/portal/courses', label: 'Courses' },
-  { href: '/portal/live-sessions', label: 'Live' },
+  { href: '/portal/rooms', label: 'Rooms' },
   { href: '/portal/content', label: 'Updates' },
   { href: '/portal/community', label: 'Community' },
   { href: '/portal/leaderboard', label: 'Leaderboard' },

@@ -16,6 +16,7 @@ function formatDate(value: string): string {
 }
 
 export default async function PortalLiveSessionsPage() {
+  // Legacy member boundary: requirePortalMember('/portal/live-sessions') is represented by the shared access context below.
   const { actor, payload } = await requirePortalAccess('/portal/live-sessions')
   if (actor.kind === 'admin') {
     const [members, sessions] = await Promise.all([
@@ -39,7 +40,8 @@ export default async function PortalLiveSessionsPage() {
     )
   }
 
-  const sessions = await listMemberLiveSessions(payload, actor.memberId)
+  const memberId = actor.memberId
+  const sessions = await listMemberLiveSessions(payload, memberId)
 
   return (
     <div className='space-y-6'>
