@@ -157,7 +157,7 @@ export function buildRemoteScheduleCommand(
 	const payloadData = encoded(payload)
 	const temporaryRunnerPath = `/tmp/jpv-rooms-${commandId}.mjs`
 	return [
-		'set -eu',
+		'set -eu; printf \'JPV_ROOMS_REMOTE_START\\n\'',
 		`node -e 'require("fs").writeFileSync("${temporaryRunnerPath}", require("zlib").gunzipSync(Buffer.from("${runner}", "base64")))'`,
 		`trap 'rm -f "${temporaryRunnerPath}"' EXIT`,
 		`ROOMS_MIGRATION_TARGET=production ROOMS_MIGRATION_EXPECTED_RELEASE_SHA='${requiredPayloadReleaseSha(payload)}' EXPECTED_DEPLOYMENT_SHA='${requiredPayloadReleaseSha(payload)}' ROOMS_MIGRATION_PAYLOAD_B64='${payloadData}' node "${temporaryRunnerPath}"`,
@@ -343,6 +343,10 @@ async function runProductionSchedule(payload: ProductionRoomsControlPayload): Pr
 		let lastDeploymentListStatus = 0
 		let lastLogsStatus = 0
 		let lastDeploymentCount = runDeploymentIds.size
+		let logBytes = 0
+		let logHasRemoteStart = false
+		let logHasControlMarker = false
+		let logHasKnownExecutionError = false
 		for (let attempt = 1; attempt <= 36; attempt += 1) {
 			const deploymentIds = new Set(runDeploymentIds)
 			const listed = await dokployRequest(apiBase, apiKey, `/schedule.list?id=${encodeURIComponent(PRODUCTION_ROOMS_TARGET.applicationId)}&scheduleType=application`)
@@ -364,13 +368,18 @@ async function runProductionSchedule(payload: ProductionRoomsControlPayload): Pr
 				const logs = await dokployRequest(apiBase, apiKey, `/deployment.readLogs?deploymentId=${encodeURIComponent(deploymentId)}&tail=10000`)
 				lastLogsStatus = logs.status
 				if (logs.status >= 200 && logs.status < 300) {
-					const marker = extractMarker(logText(logs.data))
+					const text = logText(logs.data)
+					logBytes = Math.max(logBytes, text.length)
+					logHasRemoteStart ||= text.includes('JPV_ROOMS_REMOTE_START')
+					logHasControlMarker ||= /JPV_ROOMS_(?:MIGRATION|NAV)_/.test(text)
+					logHasKnownExecutionError ||= /(?:command not found|cannot find module|no such file|permission denied|exec format error)/i.test(text)
+					const marker = extractMarker(text)
 					if (marker) return marker.result
 				}
 			}
 			if (attempt < 36) await new Promise((resolvePromise) => setTimeout(resolvePromise, 5_000))
 		}
-		console.log(`Rooms ${payload.mode} completion marker missing; schedule_list_http=${lastScheduleListStatus} deployment_list_http=${lastDeploymentListStatus} logs_http=${lastLogsStatus} deployment_records=${lastDeploymentCount}`)
+		console.log(`Rooms ${payload.mode} completion marker missing; schedule_list_http=${lastScheduleListStatus} deployment_list_http=${lastDeploymentListStatus} logs_http=${lastLogsStatus} deployment_records=${lastDeploymentCount} log_bytes=${logBytes} remote_started=${logHasRemoteStart} control_marker_seen=${logHasControlMarker} known_execution_error=${logHasKnownExecutionError}`)
 		throw new Error('schedule_completion_marker_missing')
 	} finally {
 		if (scheduleId) {

@@ -56,6 +56,7 @@ assert.equal(PRODUCTION_ROOMS_TARGET.role, 'jpvbootcamp_production_app')
 process.env.EXPECTED_PRODUCTION_SHA = '89b3ff16563c902db88734c4f512375f47b4e70b'
 const command = buildRemoteScheduleCommand(payload, 'apply-test')
 assert.match(command, /ROOMS_MIGRATION_TARGET=production/)
+assert.match(command, /JPV_ROOMS_REMOTE_START/)
 assert.match(command, /ROOMS_MIGRATION_PAYLOAD_B64=/)
 assert.match(command, /base64/)
 assert.doesNotMatch(command, /postgres(?:ql)?:\/\//i)
