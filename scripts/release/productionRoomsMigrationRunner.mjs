@@ -22,6 +22,8 @@ export const EXPECTED_PRODUCTION = Object.freeze({
   database: 'jpvbootcamp',
   schema: 'jpvbootcamp',
   role: 'jpvbootcamp_production_app',
+  systemSchema: 'public',
+  systemRole: 'supabase_admin',
 })
 export const LEGACY_NAVIGATION = Object.freeze({ label: 'Live', href: '/portal/live-sessions' })
 export const ROOMS_NAVIGATION = Object.freeze({ label: 'Rooms', href: '/portal/rooms' })
@@ -151,20 +153,26 @@ function validateProductionTarget(payload) {
   if (payload.applicationId !== EXPECTED_PRODUCTION.applicationId || payload.applicationName !== EXPECTED_PRODUCTION.applicationName) {
     throw new MigrationControlError('dokploy_application_mismatch')
   }
-  const database = parseDatabaseUrl(requiredEnvironment('DATABASE_URL'), EXPECTED_PRODUCTION.schema)
+  const runtimeDatabase = parseDatabaseUrl(requiredEnvironment('DATABASE_URL'), EXPECTED_PRODUCTION.schema)
+  const systemDatabase = parseDatabaseUrl(requiredEnvironment('SYSTEM_DATABASE_URL'), EXPECTED_PRODUCTION.systemSchema)
   if (
-    database.host !== EXPECTED_PRODUCTION.host ||
-    database.port !== EXPECTED_PRODUCTION.port ||
-    database.database !== EXPECTED_PRODUCTION.database ||
-    database.schema !== EXPECTED_PRODUCTION.schema ||
-    database.role !== EXPECTED_PRODUCTION.role
+    runtimeDatabase.host !== EXPECTED_PRODUCTION.host ||
+    runtimeDatabase.port !== EXPECTED_PRODUCTION.port ||
+    runtimeDatabase.database !== EXPECTED_PRODUCTION.database ||
+    runtimeDatabase.schema !== EXPECTED_PRODUCTION.schema ||
+    runtimeDatabase.role !== EXPECTED_PRODUCTION.role ||
+    systemDatabase.host !== EXPECTED_PRODUCTION.host ||
+    systemDatabase.port !== EXPECTED_PRODUCTION.port ||
+    systemDatabase.database !== EXPECTED_PRODUCTION.database ||
+    systemDatabase.schema !== EXPECTED_PRODUCTION.systemSchema ||
+    systemDatabase.role !== EXPECTED_PRODUCTION.systemRole
   ) {
     throw new MigrationControlError('production_database_boundary_mismatch')
   }
-  if (database.database === 'jpvbootcamp_staging' || database.database === 'jpvbootcamp_legacy') {
+  if (runtimeDatabase.database === 'jpvbootcamp_staging' || runtimeDatabase.database === 'jpvbootcamp_legacy' || systemDatabase.database === 'jpvbootcamp_staging' || systemDatabase.database === 'jpvbootcamp_legacy') {
     throw new MigrationControlError('nonproduction_database_rejected')
   }
-  return database
+  return systemDatabase
 }
 
 function validateRehearsalTarget(payload) {
@@ -733,7 +741,8 @@ async function main() {
     if (payload.target === 'production' && payload.mode === 'finalize' && process.env.ROOMS_MIGRATION_EXPECTED_RELEASE_SHA !== process.env.EXPECTED_DEPLOYMENT_SHA) {
       throw new MigrationControlError('finalize_release_sha_missing')
     }
-    client = new Client({ connectionString: process.env.DATABASE_URL })
+    const connectionString = payload.target === 'production' ? requiredEnvironment('SYSTEM_DATABASE_URL') : requiredEnvironment('DATABASE_URL')
+    client = new Client({ connectionString })
     await client.connect()
     await client.query(`SET search_path TO ${quoteIdentifier(target.schema)}`)
     if (payload.mode === 'plan') {
