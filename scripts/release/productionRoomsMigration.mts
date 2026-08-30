@@ -252,69 +252,29 @@ function findScheduleId(value: unknown, scheduleName: string): string | null {
 	return null
 }
 
-function findNamedRecord(value: unknown, name: string): UnknownRecord | null {
+function findServerIdsByAddressAndType(
+	value: unknown,
+	address: string,
+	serverType: string,
+	result = new Set<string>(),
+): Set<string> {
 	if (Array.isArray(value)) {
 		for (const child of value) {
-			const found = findNamedRecord(child, name)
-			if (found) return found
+			findServerIdsByAddressAndType(child, address, serverType, result)
 		}
 	}
 	if (isRecord(value)) {
-		if (value.name === name) return value
+		if (
+			value.ipAddress === address &&
+			value.serverType === serverType &&
+			typeof value.serverId === 'string' &&
+			value.serverId
+		) result.add(value.serverId)
 		for (const child of Object.values(value)) {
-			const found = findNamedRecord(child, name)
-			if (found) return found
+			findServerIdsByAddressAndType(child, address, serverType, result)
 		}
 	}
-	return null
-}
-
-async function resolveProductionServerId(apiBase: string, apiKey: string, probeName: string): Promise<string> {
-	const created = await dokployRequest(apiBase, apiKey, '/schedule.create', {
-		method: 'POST',
-		body: JSON.stringify({
-			name: probeName,
-			description: 'Disabled Rooms server identity probe',
-			cronExpression: '0 0 1 1 *',
-			command: 'true',
-			shellType: 'sh',
-			scheduleType: 'application',
-			applicationId: PRODUCTION_ROOMS_TARGET.applicationId,
-			enabled: false,
-		}),
-	})
-	if (created.status < 200 || created.status >= 300) throw new Error('server_identity_probe_create_failed')
-	let probeScheduleId = findScheduleId(created.data, probeName) ?? findString(created.data, ['scheduleId'])
-	try {
-		if (!probeScheduleId) {
-			const listed = await dokployRequest(
-				apiBase,
-				apiKey,
-				`/schedule.list?id=${encodeURIComponent(PRODUCTION_ROOMS_TARGET.applicationId)}&scheduleType=application`,
-			)
-			if (listed.status < 200 || listed.status >= 300) throw new Error('server_identity_probe_list_failed')
-			probeScheduleId = findScheduleId(listed.data, probeName)
-		}
-		if (!probeScheduleId) throw new Error('server_identity_probe_id_missing')
-		const listed = await dokployRequest(
-			apiBase,
-			apiKey,
-			`/schedule.list?id=${encodeURIComponent(PRODUCTION_ROOMS_TARGET.applicationId)}&scheduleType=application`,
-		)
-		if (listed.status < 200 || listed.status >= 300) throw new Error('server_identity_probe_list_failed')
-		const probe = findNamedRecord(listed.data, probeName)
-		const serverId = probe ? findString(probe, ['serverId']) : null
-		if (!serverId) throw new Error('application_server_id_missing')
-		return serverId
-	} finally {
-		if (probeScheduleId) {
-			const deleted = await dokployRequest(apiBase, apiKey, '/schedule.delete', {
-				method: 'POST',
-				body: JSON.stringify({ scheduleId: probeScheduleId }),
-			})
-			if (deleted.status < 200 || deleted.status >= 300) throw new Error('server_identity_probe_cleanup_failed')
-		}
-	}
+	return result
 }
 
 function findDeploymentIds(value: unknown, scheduleId: string, result = new Set<string>()): Set<string> {
@@ -430,7 +390,11 @@ async function runProductionSchedule(payload: ProductionRoomsControlPayload): Pr
 	const apiBase = (process.env.DOKPLOY_API_BASE_URL?.trim() || 'https://dokploy.prochat.tools/api').replace(/\/$/, '')
 	const scheduleName = `jpv-production-rooms-${payload.mode}-${process.env.GITHUB_RUN_ID ?? Date.now()}`
 	const command = buildRemoteScheduleCommand(payload, `${payload.mode}-${process.env.GITHUB_RUN_ID ?? 'manual'}`)
-	const serverId = await resolveProductionServerId(apiBase, apiKey, `${scheduleName}-identity-probe`)
+	const servers = await dokployRequest(apiBase, apiKey, '/server.all')
+	if (servers.status < 200 || servers.status >= 300) throw new Error('server_list_failed')
+	const serverIds = findServerIdsByAddressAndType(servers.data, PRODUCTION_ROOMS_TARGET.databaseHost, 'deploy')
+	if (serverIds.size !== 1) throw new Error('production_deploy_server_identity_ambiguous')
+	const serverId = [...serverIds][0]
 	const serverScheduleScript = buildRemoteServerScheduleScript(payload, command)
 	const created = await dokployRequest(apiBase, apiKey, '/schedule.create', {
 		method: 'POST',
