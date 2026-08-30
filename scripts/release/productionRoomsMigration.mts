@@ -375,6 +375,8 @@ async function runProductionSchedule(payload: ProductionRoomsControlPayload): Pr
 		let logEchoesRemoteCommand = false
 		let logHasExecutionBanner = false
 		let logHasSuccessBanner = false
+		let logHasCommandFailed = false
+		let executionFailureKind = 'none'
 		let deploymentStatuses = new Set<string>()
 		let logPathPresent = false
 		for (let attempt = 1; attempt <= 36; attempt += 1) {
@@ -407,6 +409,11 @@ async function runProductionSchedule(payload: ProductionRoomsControlPayload): Pr
 					logEchoesRemoteCommand ||= text.includes(command)
 					logHasExecutionBanner ||= /(?:^|\r?\n)Running scheduled command(?:\r?\n|$)/.test(text)
 					logHasSuccessBanner ||= /(?:^|\r?\n)✅ Command executed successfully(?:\r?\n|$)/.test(text)
+					logHasCommandFailed ||= /(?:^|\r?\n)❌ Command failed(?:\r?\n|$)/.test(text)
+					if (/container .*?(?:not found|does not exist)|no such container/i.test(text)) executionFailureKind = 'container_not_found'
+					else if (/executable file not found|command not found|no such file or directory/i.test(text)) executionFailureKind = 'executable_not_found'
+					else if (/cannot connect to the docker daemon|permission denied/i.test(text)) executionFailureKind = 'docker_access_denied'
+					else if (/remote command failed|ssh|authentication failed/i.test(text)) executionFailureKind = 'remote_exec_failed'
 					logHasControlMarker ||= /JPV_ROOMS_(?:MIGRATION|NAV)_/.test(text)
 					logHasKnownExecutionError ||= /(?:command not found|cannot find module|no such file|permission denied|exec format error)/i.test(text)
 					const marker = extractMarker(text)
@@ -415,7 +422,7 @@ async function runProductionSchedule(payload: ProductionRoomsControlPayload): Pr
 			}
 			if (attempt < 36) await new Promise((resolvePromise) => setTimeout(resolvePromise, 5_000))
 		}
-		console.log(`Rooms ${payload.mode} completion marker missing; schedule_list_http=${lastScheduleListStatus} deployment_list_http=${lastDeploymentListStatus} logs_http=${lastLogsStatus} deployment_records=${lastDeploymentCount} log_bytes=${logBytes} remote_started=${logHasRemoteStart} command_echo=${logEchoesRemoteCommand} execution_banner=${logHasExecutionBanner} success_banner=${logHasSuccessBanner} control_marker_seen=${logHasControlMarker} known_execution_error=${logHasKnownExecutionError} deployment_statuses=${[...deploymentStatuses].filter((status) => /^(?:queued|running|done|error|failed|cancelled)$/i.test(status)).join(',') || 'none'} log_path_present=${logPathPresent}`)
+		console.log(`Rooms ${payload.mode} completion marker missing; schedule_list_http=${lastScheduleListStatus} deployment_list_http=${lastDeploymentListStatus} logs_http=${lastLogsStatus} deployment_records=${lastDeploymentCount} log_bytes=${logBytes} remote_started=${logHasRemoteStart} command_echo=${logEchoesRemoteCommand} execution_banner=${logHasExecutionBanner} success_banner=${logHasSuccessBanner} command_failed=${logHasCommandFailed} failure_kind=${executionFailureKind} control_marker_seen=${logHasControlMarker} known_execution_error=${logHasKnownExecutionError} deployment_statuses=${[...deploymentStatuses].filter((status) => /^(?:queued|running|done|error|failed|cancelled)$/i.test(status)).join(',') || 'none'} log_path_present=${logPathPresent}`)
 		throw new Error('schedule_completion_marker_missing')
 	} finally {
 		if (scheduleId) {
