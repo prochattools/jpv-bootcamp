@@ -16,12 +16,12 @@ on:
   workflow_dispatch:
     inputs:
       operation:
-        description: 'Operation: validate-only | deploy-preview (staging) | authenticated-acceptance (staging) | read-only-migration-plan | bootstrap-staging-database | backfill-administrator-members | seed-staging-qa-content'
+        description: 'Operation: validate-only | deploy-preview (staging) | redeploy-staging-candidate (no build) | authenticated-acceptance (staging) | read-only-migration-plan | apply-rooms-migration (staging) | bootstrap-staging-database | backfill-administrator-members | seed-staging-qa-content'
         required: false
         type: string
         default: 'validate-only'
       expected_sha:
-        description: 'Full 40-character SHA (required for deploy-preview, authenticated-acceptance, read-only-migration-plan, bootstrap-staging-database, backfill-administrator-members, and seed-staging-qa-content)'
+        description: 'Full 40-character SHA (required for deploy-preview, redeploy-staging-candidate, authenticated-acceptance, read-only-migration-plan, apply-rooms-migration, bootstrap-staging-database, backfill-administrator-members, and seed-staging-qa-content)'
         required: false
         type: string
       source_ref:
@@ -29,7 +29,19 @@ on:
         required: true
         type: string
       confirmation:
-        description: 'Confirmation phrase (deploy-preview: deploy-staging-feature-tip; authenticated-acceptance: run-authenticated-staging-acceptance; plan: run-read-only-staging-payload-migration-plan; bootstrap: bootstrap-empty-staging-database; backfill: apply-guarded-staging-administrator-member-backfill; seed: apply-guarded-staging-qa-content-seed)'
+        description: 'Confirmation phrase (deploy: deploy-staging-feature-tip; redeploy: redeploy-published-staging-candidate; acceptance: run-authenticated-staging-acceptance; plan: run-read-only-staging-payload-migration-plan; Rooms migration: apply-rooms-migration-to-jpvbootcamp-staging; bootstrap: bootstrap-empty-staging-database; backfill: apply-guarded-staging-administrator-member-backfill; seed: apply-guarded-staging-qa-content-seed)'
+        required: false
+        type: string
+      backup_evidence_id:
+        description: 'Non-secret backup/snapshot evidence reference (required only for apply-rooms-migration)'
+        required: false
+        type: string
+      maintenance_window_id:
+        description: 'Non-secret staging maintenance-window reference (required only for apply-rooms-migration)'
+        required: false
+        type: string
+      rollback_owner:
+        description: 'Named rollback owner reference (required only for apply-rooms-migration)'
         required: false
         type: string
 permissions:
@@ -39,8 +51,8 @@ permissions:
 # Operation-aware concurrency: deploy runs share a cancellable group; plan,
 # bootstrap, administrator backfill, and QA seed runs use separate non-cancellable groups.
 concurrency:
-  group: ${{ github.event_name == 'workflow_dispatch' && inputs.operation == 'read-only-migration-plan' && 'staging-payload-migration-plan' || github.event_name == 'workflow_dispatch' && inputs.operation == 'bootstrap-staging-database' && 'staging-empty-database-bootstrap' || github.event_name == 'workflow_dispatch' && inputs.operation == 'backfill-administrator-members' && 'staging-administrator-member-backfill' || github.event_name == 'workflow_dispatch' && inputs.operation == 'seed-staging-qa-content' && 'staging-qa-content-seed' || format('staging-deploy-{0}', github.ref) }}
-  cancel-in-progress: ${{ !(github.event_name == 'workflow_dispatch' && (inputs.operation == 'read-only-migration-plan' || inputs.operation == 'bootstrap-staging-database' || inputs.operation == 'backfill-administrator-members' || inputs.operation == 'seed-staging-qa-content')) }}
+  group: ${{ github.event_name == 'workflow_dispatch' && inputs.operation == 'read-only-migration-plan' && 'staging-payload-migration-plan' || github.event_name == 'workflow_dispatch' && inputs.operation == 'apply-rooms-migration' && 'staging-rooms-migration-apply' || github.event_name == 'workflow_dispatch' && inputs.operation == 'bootstrap-staging-database' && 'staging-empty-database-bootstrap' || github.event_name == 'workflow_dispatch' && inputs.operation == 'backfill-administrator-members' && 'staging-administrator-member-backfill' || github.event_name == 'workflow_dispatch' && inputs.operation == 'seed-staging-qa-content' && 'staging-qa-content-seed' || format('staging-deploy-{0}', github.ref) }}
+  cancel-in-progress: ${{ !(github.event_name == 'workflow_dispatch' && (inputs.operation == 'read-only-migration-plan' || inputs.operation == 'apply-rooms-migration' || inputs.operation == 'bootstrap-staging-database' || inputs.operation == 'backfill-administrator-members' || inputs.operation == 'seed-staging-qa-content')) }}
 
 jobs:
   validate-only:
@@ -476,6 +488,385 @@ jobs:
           path: /tmp/jpv-admin-regression-hardening/
           if-no-files-found: ignore
           retention-days: 7
+
+  apply-rooms-migration:
+    name: Apply the exact Rooms Payload migration to staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: staging-migration-plan
+    if: github.event_name == 'workflow_dispatch' && inputs.operation == 'apply-rooms-migration'
+    permissions:
+      contents: read
+
+    steps:
+      - name: Validate exact Rooms migration inputs
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+          SOURCE_REF_INPUT: ${{ inputs.source_ref }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+          BACKUP_EVIDENCE_ID: ${{ inputs.backup_evidence_id }}
+          MAINTENANCE_WINDOW_ID: ${{ inputs.maintenance_window_id }}
+          ROLLBACK_OWNER: ${{ inputs.rollback_owner }}
+        run: |
+          set -euo pipefail
+          if ! printf '%s' "$EXPECTED_SHA" | grep -qE '^[0-9a-f]{40}$'; then
+            echo "ROOMS-MIGRATION-DENIED: expected_sha must be exactly 40 lowercase hexadecimal characters" >&2
+            exit 1
+          fi
+          if ! printf '%s' "$SOURCE_REF_INPUT" | grep -qE '^(feature|fix|release)/[A-Za-z0-9][A-Za-z0-9._-]*$'; then
+            echo "ROOMS-MIGRATION-DENIED: source_ref must match feature/*, fix/*, or release/*" >&2
+            exit 1
+          fi
+          if [ "$CONFIRMATION" != "apply-rooms-migration-to-jpvbootcamp-staging" ]; then
+            echo "ROOMS-MIGRATION-DENIED: confirmation phrase is invalid" >&2
+            exit 1
+          fi
+          if [ -z "${BACKUP_EVIDENCE_ID:-}" ] || [ -z "${MAINTENANCE_WINDOW_ID:-}" ] || [ -z "${ROLLBACK_OWNER:-}" ]; then
+            echo "ROOMS-MIGRATION-DENIED: backup evidence, maintenance window, and rollback owner references are required" >&2
+            exit 1
+          fi
+          echo "Rooms migration dispatch input boundary validated"
+
+      - name: Verify protected migration approval and rollback readiness gates
+        shell: bash
+        env:
+          PLAN_READY_FOR_DISPATCH: ${{ vars.PLAN_READY_FOR_DISPATCH }}
+          SOLO_OPERATOR_MODE: ${{ vars.SOLO_OPERATOR_MODE }}
+          ROOMS_MIGRATION_APPROVED: ${{ vars.ROOMS_MIGRATION_APPROVED }}
+          ROOMS_MIGRATION_ROLLBACK_READY: ${{ vars.ROOMS_MIGRATION_ROLLBACK_READY }}
+        run: |
+          set -euo pipefail
+          if [ "${PLAN_READY_FOR_DISPATCH:-}" != "true" ]; then
+            echo "ROOMS-MIGRATION-DENIED: PLAN_READY_FOR_DISPATCH must be true in staging-migration-plan" >&2
+            exit 1
+          fi
+          if [ "${SOLO_OPERATOR_MODE:-}" != "true" ]; then
+            echo "ROOMS-MIGRATION-DENIED: SOLO_OPERATOR_MODE must be true in staging-migration-plan" >&2
+            exit 1
+          fi
+          if [ "${ROOMS_MIGRATION_APPROVED:-}" != "true" ]; then
+            echo "ROOMS-MIGRATION-DENIED: ROOMS_MIGRATION_APPROVED must be true after explicit staging approval" >&2
+            exit 1
+          fi
+          if [ "${ROOMS_MIGRATION_ROLLBACK_READY:-}" != "true" ]; then
+            echo "ROOMS-MIGRATION-DENIED: ROOMS_MIGRATION_ROLLBACK_READY must be true after external backup/restore evidence is recorded" >&2
+            exit 1
+          fi
+          echo "Protected staging migration approval and rollback-readiness gates confirmed"
+
+      - name: Check out approved source ref
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.source_ref }}
+          fetch-depth: 0
+
+      - name: Verify exact candidate and control-only source delta
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+          SOURCE_REF_INPUT: ${{ inputs.source_ref }}
+        run: |
+          set -euo pipefail
+          git switch --force-create "$SOURCE_REF_INPUT" HEAD
+          SOURCE_TIP="$(git rev-parse HEAD)"
+          if [ "$(git branch --show-current)" != "$SOURCE_REF_INPUT" ]; then
+            echo "ROOMS-MIGRATION-DENIED: checked-out branch does not match source_ref" >&2
+            exit 1
+          fi
+          if [ "$(git rev-parse "origin/$SOURCE_REF_INPUT")" != "$SOURCE_TIP" ]; then
+            echo "ROOMS-MIGRATION-DENIED: source_ref is not the current remote tip" >&2
+            exit 1
+          fi
+          if ! git cat-file -e "$EXPECTED_SHA^{commit}"; then
+            echo "ROOMS-MIGRATION-DENIED: expected candidate SHA is not present in the approved source" >&2
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "$EXPECTED_SHA" "$SOURCE_TIP"; then
+            echo "ROOMS-MIGRATION-DENIED: expected candidate SHA is not an ancestor of the approved source tip" >&2
+            exit 1
+          fi
+          if git merge-base --is-ancestor "$EXPECTED_SHA" origin/main 2>/dev/null; then
+            echo "ROOMS-MIGRATION-DENIED: expected candidate SHA is reachable from main" >&2
+            exit 1
+          fi
+          while IFS= read -r changed; do
+            case "$changed" in
+              .github/workflows/deploy-preview.yml|scripts/release/releaseTestManifest.ts|scripts/release/runRoomsStagingPayloadMigration.ts|scripts/release/runRoomsStagingPayloadMigration.test.ts|scripts/rooms_staging_release_controls.test.ts|docs/client/OPERATOR_HANDOFF_SUMMARY.md|docs/client/ROADMAP_PROGRESS_STATUS.md|docs/PREVIEW_RELEASE_READINESS.md) ;;
+              '') ;;
+              *)
+                echo "ROOMS-MIGRATION-DENIED: source delta after candidate includes non-control path '$changed'" >&2
+                exit 1
+                ;;
+            esac
+          done < <(git diff --name-only "$EXPECTED_SHA" "$SOURCE_TIP")
+          echo "Candidate SHA and control-only source delta verified"
+          echo "source-tip=$SOURCE_TIP"
+          echo "SOURCE_TIP=$SOURCE_TIP" >> "$GITHUB_ENV"
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: 10.33.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "20"
+          cache: pnpm
+
+      - name: Install dependencies (frozen)
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify, mask, and use protected staging migration secrets
+        shell: bash
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PAYLOAD_SECRET: ${{ secrets.PAYLOAD_SECRET }}
+          TAILSCALE_OAUTH_CLIENT_ID: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
+          TAILSCALE_OAUTH_SECRET: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
+        run: |
+          set -euo pipefail
+          if [ -z "${DATABASE_URL:-}" ] || [ -z "${PAYLOAD_SECRET:-}" ] || [ -z "${TAILSCALE_OAUTH_CLIENT_ID:-}" ] || [ -z "${TAILSCALE_OAUTH_SECRET:-}" ]; then
+            echo "ROOMS-MIGRATION-DENIED: required protected staging secrets are missing" >&2
+            exit 1
+          fi
+          echo "::add-mask::$DATABASE_URL"
+          echo "::add-mask::$PAYLOAD_SECRET"
+          echo "Required protected staging migration secrets are present"
+
+      - name: Connect to approved staging database network
+        uses: tailscale/github-action@780049a30b6ff5c378a9e7b389d15ece7a204888 # v4.1.3
+        with:
+          oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TAILSCALE_OAUTH_SECRET }}
+          tags: tag:ci-reader
+
+      - name: Probe approved staging database path
+        shell: bash
+        run: |
+          set -euo pipefail
+          tailscale ping --timeout=10s 10.0.2.4
+          nc -z -w 5 10.0.2.4 5433
+          echo "Approved staging database path is reachable"
+
+      - name: Apply Rooms migration once and capture sanitized evidence
+        shell: bash
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PAYLOAD_SECRET: ${{ secrets.PAYLOAD_SECRET }}
+          PAYLOAD_MIGRATION_SCHEMA: jpvbootcamp
+          NODE_ENV: production
+          DEPLOYMENT_ENV: staging
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+          OPERATOR_ID: ${{ github.actor }}
+          BACKUP_EVIDENCE_ID: ${{ inputs.backup_evidence_id }}
+          MAINTENANCE_WINDOW_ID: ${{ inputs.maintenance_window_id }}
+          ROLLBACK_OWNER: ${{ inputs.rollback_owner }}
+        run: |
+          set -euo pipefail
+          SOURCE_TIP="$(git rev-parse HEAD)"
+          RAW_RESULT="$(mktemp)"
+          RAW_ERROR="$(mktemp)"
+          trap 'rm -f "$RAW_RESULT" "$RAW_ERROR"' EXIT
+          set +e
+          ./node_modules/.bin/tsx scripts/release/runRoomsStagingPayloadMigration.ts \
+            "--operator-id=$OPERATOR_ID" \
+            "--backup-evidence-id=$BACKUP_EVIDENCE_ID" \
+            "--maintenance-window-id=$MAINTENANCE_WINDOW_ID" \
+            "--rollback-owner=$ROLLBACK_OWNER" \
+            "--expected-commit=$EXPECTED_SHA" \
+            "--source-tip=$SOURCE_TIP" \
+            "--environment=staging" \
+            "--target-id=jpvbootcamp-staging" \
+            "--expected-schema=jpvbootcamp" \
+            "--expected-hostname=10.0.2.4" \
+            "--expected-database=jpvbootcamp_staging" \
+            "--expected-port=5433" \
+            "--confirmation=apply-rooms-migration-to-jpvbootcamp-staging" \
+            "--migration-approval=approved" \
+            "--rollback-readiness=ready" \
+            > "$RAW_RESULT" 2> "$RAW_ERROR"
+          APPLY_EXIT=$?
+          set -e
+
+          if [ ! -s "$RAW_RESULT" ]; then
+            printf '%s\n' '{"version":1,"operation":"apply-rooms-migration","ok":false,"resultCode":"blocked","environment":"staging","targetId":"jpvbootcamp-staging","schema":"jpvbootcamp","commit":"unknown","sourceTip":"unknown","migration":"20260830_090000_member_portal_rooms","blockers":["result_missing"]}' > rooms-staging-migration-result.json
+            echo "ROOMS-MIGRATION-DENIED: sanitized result was not produced; raw diagnostics suppressed" >&2
+            exit 1
+          fi
+          if ! node - "$RAW_RESULT" "$EXPECTED_SHA" "$SOURCE_TIP" <<'NODE'
+          const fs = require('node:fs')
+          const [file, expectedSha, sourceTip] = process.argv.slice(2)
+          const raw = fs.readFileSync(file, 'utf8')
+          if (/postgres(ql)?:\/\/|DATABASE_URL|PAYLOAD_SECRET|password\s*=|secret\s*=/i.test(raw)) process.exit(2)
+          let result
+          try { result = JSON.parse(raw) } catch { process.exit(3) }
+          if (result.version !== 1 || result.operation !== 'apply-rooms-migration' || result.migration !== '20260830_090000_member_portal_rooms') process.exit(4)
+          if (result.environment !== 'staging' || result.targetId !== 'jpvbootcamp-staging' || result.schema !== 'jpvbootcamp') process.exit(5)
+          if (result.commit !== expectedSha || result.sourceTip !== sourceTip) process.exit(6)
+          if (!Array.isArray(result.blockers)) process.exit(7)
+          if (result.resultCode === 'applied' && (!result.ok || !Array.isArray(result.postApply?.missingPayloadMigrations) || result.postApply.missingPayloadMigrations.length !== 0)) process.exit(8)
+          if (result.resultCode !== 'applied' && result.ok) process.exit(9)
+          NODE
+          then
+            echo "ROOMS-MIGRATION-DENIED: sanitized result validation failed; raw diagnostics suppressed" >&2
+            exit 1
+          fi
+          cp "$RAW_RESULT" rooms-staging-migration-result.json
+          if [ "$APPLY_EXIT" -ne 0 ]; then
+            echo "ROOMS-MIGRATION-DENIED: migration result is blocked or uncertain; inspect sanitized artifact" >&2
+            exit "$APPLY_EXIT"
+          fi
+          echo "Rooms migration applied and post-apply clean plan verified"
+
+      - name: Upload sanitized Rooms migration evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: staging-rooms-migration-${{ github.run_id }}
+          path: rooms-staging-migration-result.json
+          retention-days: 30
+          if-no-files-found: ignore
+
+  redeploy-staging-candidate:
+    name: Redeploy published staging candidate (no build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment: staging-deploy
+    if: github.event_name == 'workflow_dispatch' && inputs.operation == 'redeploy-staging-candidate'
+    permissions:
+      contents: read
+      packages: read
+
+    steps:
+      - name: Validate no-build candidate redeploy inputs
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+          SOURCE_REF_INPUT: ${{ inputs.source_ref }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          if ! printf '%s' "$EXPECTED_SHA" | grep -qE '^[0-9a-f]{40}$'; then
+            echo "REDEPLOY-DENIED: expected_sha must be exactly 40 lowercase hexadecimal characters" >&2
+            exit 1
+          fi
+          if ! printf '%s' "$SOURCE_REF_INPUT" | grep -qE '^(feature|fix|release)/[A-Za-z0-9][A-Za-z0-9._-]*$'; then
+            echo "REDEPLOY-DENIED: source_ref must match feature/*, fix/*, or release/*" >&2
+            exit 1
+          fi
+          if [ "$CONFIRMATION" != "redeploy-published-staging-candidate" ]; then
+            echo "REDEPLOY-DENIED: confirmation phrase is invalid" >&2
+            exit 1
+          fi
+          echo "No-build staging candidate redeploy boundary validated"
+
+      - name: Check out approved source ref for provenance verification
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.source_ref }}
+          fetch-depth: 0
+
+      - name: Verify candidate ancestry and no-build source boundary
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+          SOURCE_REF_INPUT: ${{ inputs.source_ref }}
+        run: |
+          set -euo pipefail
+          SOURCE_TIP="$(git rev-parse HEAD)"
+          if [ "$(git rev-parse "origin/$SOURCE_REF_INPUT")" != "$SOURCE_TIP" ]; then
+            echo "REDEPLOY-DENIED: source_ref is not the current remote tip" >&2
+            exit 1
+          fi
+          if ! git cat-file -e "$EXPECTED_SHA^{commit}" || ! git merge-base --is-ancestor "$EXPECTED_SHA" "$SOURCE_TIP"; then
+            echo "REDEPLOY-DENIED: expected candidate SHA is not contained in approved source ref" >&2
+            exit 1
+          fi
+          if git merge-base --is-ancestor "$EXPECTED_SHA" origin/main 2>/dev/null; then
+            echo "REDEPLOY-DENIED: expected candidate SHA is reachable from main" >&2
+            exit 1
+          fi
+          echo "Candidate provenance verified; no source build will run"
+
+      - name: Set up Docker Buildx for registry inspection
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      - name: Log in to GHCR for candidate availability check
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Prove immutable candidate image is available
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+        run: |
+          set -euo pipefail
+          IMAGE="ghcr.io/${{ github.repository }}:${EXPECTED_SHA}"
+          docker buildx imagetools inspect "$IMAGE" >/tmp/rooms-candidate-image.txt
+          grep -q "$EXPECTED_SHA" /tmp/rooms-candidate-image.txt
+          echo "Published immutable candidate image is available: $IMAGE"
+
+      - name: Update only canonical staging Dokploy app to the published image
+        shell: bash
+        env:
+          DOKPLOY_PREVIEW_APP_ID: ${{ secrets.DOKPLOY_PREVIEW_APP_ID }}
+          DOKPLOY_API_KEY: ${{ secrets.DOKPLOY_API_KEY }}
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+        run: |
+          set -euo pipefail
+          ALLOWED_SLUG="clients-jpv-bootcamp-preview-wjfqfd"
+          ALLOWED_INTERNAL_ID="bZllV93NqsPZAFCsqDskb"
+          if [ "$DOKPLOY_PREVIEW_APP_ID" != "$ALLOWED_SLUG" ] && [ "$DOKPLOY_PREVIEW_APP_ID" != "$ALLOWED_INTERNAL_ID" ]; then
+            echo "REDEPLOY-DENIED: Dokploy application is not the canonical staging target" >&2
+            exit 1
+          fi
+          IMAGE="ghcr.io/${{ github.repository }}:${EXPECTED_SHA}"
+          UPDATE_PAYLOAD="$(IMAGE="$IMAGE" APP_ID="$DOKPLOY_PREVIEW_APP_ID" python3 - <<'PY'
+          import json, os
+          print(json.dumps({'applicationId': os.environ['APP_ID'], 'dockerImage': os.environ['IMAGE']}))
+          PY
+          )"
+          UPDATE_STATUS="$(curl --silent --show-error --output /tmp/rooms-dokploy-update.json --write-out '%{http_code}' --max-time 20 \
+            -X POST 'https://dokploy.prochat.tools/api/application.update' \
+            -H "x-api-key: $DOKPLOY_API_KEY" -H 'Content-Type: application/json' -d "$UPDATE_PAYLOAD")"
+          if [ "$UPDATE_STATUS" != "200" ]; then
+            echo "REDEPLOY-DENIED: Dokploy image update returned HTTP $UPDATE_STATUS" >&2
+            exit 1
+          fi
+          DEPLOY_PAYLOAD="$(EXPECTED_SHA="$EXPECTED_SHA" APP_ID="$DOKPLOY_PREVIEW_APP_ID" python3 - <<'PY'
+          import json, os
+          print(json.dumps({'applicationId': os.environ['APP_ID'], 'title': 'Rooms staging candidate redeploy', 'description': os.environ['EXPECTED_SHA']}))
+          PY
+          )"
+          DEPLOY_STATUS="$(curl --silent --show-error --output /tmp/rooms-dokploy-deploy.json --write-out '%{http_code}' --max-time 20 \
+            -X POST 'https://dokploy.prochat.tools/api/application.deploy' \
+            -H "x-api-key: $DOKPLOY_API_KEY" -H 'Content-Type: application/json' -d "$DEPLOY_PAYLOAD")"
+          if [ "$DEPLOY_STATUS" != "200" ]; then
+            echo "REDEPLOY-DENIED: Dokploy staging redeploy returned HTTP $DEPLOY_STATUS" >&2
+            exit 1
+          fi
+          echo "Canonical staging Dokploy redeploy triggered for the published candidate image"
+
+      - name: Wait for exact candidate staging runtime
+        env:
+          STAGING_URL: https://staging.jpvbootcamp.com
+          EXPECTED_DEPLOYMENT_SHA: ${{ inputs.expected_sha }}
+          DOKPLOY_API_KEY: ${{ secrets.DOKPLOY_API_KEY }}
+          DOKPLOY_PREVIEW_APP_ID: ${{ secrets.DOKPLOY_PREVIEW_APP_ID }}
+          DEPLOY_SSH_HOST: ${{ secrets.DEPLOY_SSH_HOST }}
+          DEPLOY_SSH_USER: ${{ secrets.DEPLOY_SSH_USER }}
+        run: pnpm exec tsx scripts/staging-gates/waitForPreviewDeployment.mts
+
+      - name: Diagnose no-build staging redeploy on failure
+        if: failure()
+        env:
+          DOKPLOY_API_KEY: ${{ secrets.DOKPLOY_API_KEY }}
+        run: pnpm exec tsx scripts/staging-gates/diagnoseDokployDeployment.mts || true
 
   a6-authenticated-acceptance:
     name: A6 authenticated member and creator/admin acceptance (staging)

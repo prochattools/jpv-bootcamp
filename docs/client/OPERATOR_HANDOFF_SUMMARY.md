@@ -10,7 +10,7 @@
 - **Operational boundary:** no production operation or migration execution occurred. The only external mutation was the authorized staging deployment of this candidate.
 - **Handoff order:** preserve this evidence as the frozen staging checkpoint. Phase 10 requires separate explicit production authorization.
 - **Phase 9.5 authority:** use `docs/release/PHASE_9_5_CURRENT_TRUTH_2026-08-23.md` for current truth and `docs/release/PHASE_9_5_FINAL_IMPLEMENTATION_BACKLOG_2026-08-23.md` for remaining work.
-- **Rooms feature candidate — 2026-08-30:** isolated branch `feature/member-portal-rooms`. Deterministic release gate: `pnpm test:release` (`174/174`). This is local/CI validation only and does not constitute staging or production evidence.
+- **Rooms feature candidate — 2026-08-30:** isolated branch `feature/member-portal-rooms`. Deterministic release gate: `pnpm test:release` (`176/176`). This is local/CI validation only and does not constitute staging or production evidence.
 
 <!-- Reconciliation note 2026-08-08: Verify the exact feature tip with `git rev-parse HEAD`. The release manifest contains 164 required gates. The live staging baseline remains `9c045fa5a5c327014c20fe9377f7d5368b550573`; guarded read-only plan run `31215369413` established the clean pre-apply state at reviewed code checkpoint `9e068cc8b0a5ec9573732fee3a78bed9995787a6`. -->
 
