@@ -282,9 +282,9 @@ function extractMarker(logs: string): { marker: string; result: ProductionRoomsC
 		'JPV_ROOMS_NAV_FINALIZED',
 	]
 	for (const marker of markers) {
-		const index = logs.lastIndexOf(`${marker} `)
+		const index = logs.lastIndexOf(marker)
 		if (index < 0) continue
-		const json = logs.slice(index + marker.length + 1).split('\n', 1)[0]
+		const json = logs.slice(index + marker.length).trimStart().split('\n', 1)[0]
 		try {
 			const result = JSON.parse(json) as ProductionRoomsControlResult
 			if (isRecord(result) && typeof result.resultCode === 'string' && typeof result.ok === 'boolean') return { marker, result }
@@ -337,29 +337,40 @@ async function runProductionSchedule(payload: ProductionRoomsControlPayload): Pr
 			method: 'POST',
 			body: JSON.stringify({ scheduleId }),
 		})
+		const runDeploymentIds = findDeploymentIdsInList(run.data)
 		if (run.status < 200 || run.status >= 300) console.log(`Rooms ${payload.mode} start returned HTTP ${run.status}; polling deployment logs`)
+		let lastScheduleListStatus = 0
+		let lastDeploymentListStatus = 0
+		let lastLogsStatus = 0
+		let lastDeploymentCount = runDeploymentIds.size
 		for (let attempt = 1; attempt <= 36; attempt += 1) {
+			const deploymentIds = new Set(runDeploymentIds)
 			const listed = await dokployRequest(apiBase, apiKey, `/schedule.list?id=${encodeURIComponent(PRODUCTION_ROOMS_TARGET.applicationId)}&scheduleType=application`)
+			lastScheduleListStatus = listed.status
 			if (listed.status >= 200 && listed.status < 300) {
-				const deploymentIds = findDeploymentIds(listed.data, scheduleId)
-				const deployments = await dokployRequest(
-					apiBase,
-					apiKey,
-					`/deployment.allByType?id=${encodeURIComponent(scheduleId)}&type=schedule`,
-				)
-				if (deployments.status >= 200 && deployments.status < 300) {
-					for (const deploymentId of findDeploymentIdsInList(deployments.data)) deploymentIds.add(deploymentId)
-				}
-				for (const deploymentId of deploymentIds) {
-					const logs = await dokployRequest(apiBase, apiKey, `/deployment.readLogs?deploymentId=${encodeURIComponent(deploymentId)}&tail=20000`)
-					if (logs.status >= 200 && logs.status < 300) {
-						const marker = extractMarker(logText(logs.data))
-						if (marker) return marker.result
-					}
+				for (const deploymentId of findDeploymentIds(listed.data, scheduleId)) deploymentIds.add(deploymentId)
+			}
+			const deployments = await dokployRequest(
+				apiBase,
+				apiKey,
+				`/deployment.allByType?id=${encodeURIComponent(scheduleId)}&type=schedule`,
+			)
+			lastDeploymentListStatus = deployments.status
+			if (deployments.status >= 200 && deployments.status < 300) {
+				for (const deploymentId of findDeploymentIdsInList(deployments.data)) deploymentIds.add(deploymentId)
+			}
+			lastDeploymentCount = deploymentIds.size
+			for (const deploymentId of deploymentIds) {
+				const logs = await dokployRequest(apiBase, apiKey, `/deployment.readLogs?deploymentId=${encodeURIComponent(deploymentId)}&tail=20000`)
+				lastLogsStatus = logs.status
+				if (logs.status >= 200 && logs.status < 300) {
+					const marker = extractMarker(logText(logs.data))
+					if (marker) return marker.result
 				}
 			}
 			if (attempt < 36) await new Promise((resolvePromise) => setTimeout(resolvePromise, 5_000))
 		}
+		console.log(`Rooms ${payload.mode} completion marker missing; schedule_list_http=${lastScheduleListStatus} deployment_list_http=${lastDeploymentListStatus} logs_http=${lastLogsStatus} deployment_records=${lastDeploymentCount}`)
 		throw new Error('schedule_completion_marker_missing')
 	} finally {
 		if (scheduleId) {
