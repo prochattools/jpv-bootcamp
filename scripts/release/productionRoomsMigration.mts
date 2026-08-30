@@ -361,7 +361,7 @@ async function runProductionSchedule(payload: ProductionRoomsControlPayload): Pr
 			}
 			lastDeploymentCount = deploymentIds.size
 			for (const deploymentId of deploymentIds) {
-				const logs = await dokployRequest(apiBase, apiKey, `/deployment.readLogs?deploymentId=${encodeURIComponent(deploymentId)}&tail=20000`)
+				const logs = await dokployRequest(apiBase, apiKey, `/deployment.readLogs?deploymentId=${encodeURIComponent(deploymentId)}&tail=10000`)
 				lastLogsStatus = logs.status
 				if (logs.status >= 200 && logs.status < 300) {
 					const marker = extractMarker(logText(logs.data))

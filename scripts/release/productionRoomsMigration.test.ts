@@ -70,6 +70,7 @@ assert.match(runnerSource, /historicalBaselineMatches/)
 assert.match(runnerSource, /compatibility_navigation_restore_failed/)
 assert.match(runnerSource, /critical_integrity_changed/)
 assert.match(controlSource, /deployment\.allByType\?id=/)
+assert.match(controlSource, /deployment\.readLogs\?deploymentId=.*&tail=10000/)
 
 assert.match(workflowSource, /workflow_dispatch:/)
 assert.doesNotMatch(workflowSource, /^\s*push:/m)
