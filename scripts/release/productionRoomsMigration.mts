@@ -168,14 +168,14 @@ export function buildRemoteScheduleCommand(
 	].join('; ')
 }
 
-function buildRemoteServerScheduleScript(payload: ProductionRoomsControlPayload, command: string): string {
+function buildDokployServerScheduleScript(payload: ProductionRoomsControlPayload, command: string): string {
 	const expectedSha = requiredPayloadReleaseSha(payload)
 	const expectedImage = `ghcr.io/prochattools/jpv-bootcamp:${expectedSha}`
 	return [
 		'set -u',
-		`container_id="$(sudo -n docker ps --format '{{.ID}} {{.Names}} {{.Image}}' | grep -F 'clients-jpv-bootcamp-app-tp9xrk' | grep -F '${expectedImage}' | sed -n '1s/ .*//p')"`,
+		`container_id="$(docker ps --format '{{.ID}} {{.Names}} {{.Image}}' | grep -F 'clients-jpv-bootcamp-app-tp9xrk' | grep -F '${expectedImage}' | sed -n '1s/ .*//p')"`,
 		'test -n "$container_id"',
-		`sudo -n docker exec "$container_id" sh -c ${shellQuote(command)}`,
+		`docker exec "$container_id" sh -c ${shellQuote(command)}`,
 	].join('\n')
 }
 
@@ -264,98 +264,6 @@ function findScheduleId(value: unknown, scheduleName: string): string | null {
 		}
 	}
 	return null
-}
-
-function findServerIdsByTypeAndStatus(
-	value: unknown,
-	serverType: string,
-	serverStatus: string,
-	result = new Set<string>(),
-): Set<string> {
-	if (Array.isArray(value)) {
-		for (const child of value) {
-			findServerIdsByTypeAndStatus(child, serverType, serverStatus, result)
-		}
-	}
-	if (isRecord(value)) {
-		if (
-			value.serverType === serverType &&
-			value.serverStatus === serverStatus &&
-			typeof value.serverId === 'string' &&
-			value.serverId
-		) result.add(value.serverId)
-		for (const child of Object.values(value)) {
-			findServerIdsByTypeAndStatus(child, serverType, serverStatus, result)
-		}
-	}
-	return result
-}
-
-function collectServerCandidates(
-	value: unknown,
-	serverType: string,
-	result = new Map<string, { serverId: string; name: string; serverType: string; serverStatus: string; totalSum: string }>(),
-): Map<string, { serverId: string; name: string; serverType: string; serverStatus: string; totalSum: string }> {
-	if (Array.isArray(value)) {
-		for (const child of value) collectServerCandidates(child, serverType, result)
-	}
-	if (isRecord(value)) {
-		if (
-			value.serverType === serverType &&
-			value.serverType === serverType &&
-			typeof value.serverId === 'string' &&
-			value.serverId
-		) {
-			result.set(value.serverId, {
-				serverId: value.serverId,
-				name: typeof value.name === 'string' ? value.name : '',
-				serverType,
-				serverStatus: typeof value.serverStatus === 'string' ? value.serverStatus : '',
-				totalSum: typeof value.totalSum === 'number' || typeof value.totalSum === 'string' ? String(value.totalSum) : '',
-			})
-		}
-		for (const child of Object.values(value)) collectServerCandidates(child, serverType, result)
-	}
-	return result
-}
-
-function collectServerInventory(
-	value: unknown,
-	result: Array<{
-		serverId: string
-		name: string
-		ipAddress: string
-		serverType: string
-		serverStatus: string
-		totalSum: string
-	}> = [],
-): Array<{
-	serverId: string
-	name: string
-	ipAddress: string
-	serverType: string
-	serverStatus: string
-	totalSum: string
-}> {
-	if (Array.isArray(value)) {
-		for (const child of value) collectServerInventory(child, result)
-	}
-	if (isRecord(value)) {
-		const hasServerMetadata = ['serverId', 'ipAddress', 'serverType', 'serverStatus', 'totalSum'].some((key) => key in value)
-		const serverId = typeof value.serverId === 'string' ? value.serverId : typeof value.id === 'string' ? value.id : ''
-		if (hasServerMetadata) {
-			result.push({
-				serverId,
-				name: typeof value.name === 'string' ? value.name : '',
-				ipAddress: typeof value.ipAddress === 'string' ? value.ipAddress : '',
-				serverType: typeof value.serverType === 'string' ? value.serverType : '',
-				serverStatus: typeof value.serverStatus === 'string' ? value.serverStatus : '',
-				totalSum: typeof value.totalSum === 'number' || typeof value.totalSum === 'string' ? String(value.totalSum) : '',
-			})
-		}
-		for (const child of Object.values(value)) collectServerInventory(child, result)
-	}
-	return result
 }
 
 function findDeploymentIds(value: unknown, scheduleId: string, result = new Set<string>()): Set<string> {
@@ -471,18 +379,7 @@ async function runProductionSchedule(payload: ProductionRoomsControlPayload): Pr
 	const apiBase = (process.env.DOKPLOY_API_BASE_URL?.trim() || 'https://dokploy.prochat.tools/api').replace(/\/$/, '')
 	const scheduleName = `jpv-production-rooms-${payload.mode}-${process.env.GITHUB_RUN_ID ?? Date.now()}`
 	const command = buildRemoteScheduleCommand(payload, `${payload.mode}-${process.env.GITHUB_RUN_ID ?? 'manual'}`)
-	const servers = await dokployRequest(apiBase, apiKey, '/server.all')
-	if (servers.status < 200 || servers.status >= 300) throw new Error('server_list_failed')
-	const serverCandidates = collectServerCandidates(servers.data, 'deploy')
-	const serverInventory = collectServerInventory(servers.data)
-	const serverIds = findServerIdsByTypeAndStatus(servers.data, 'deploy', 'active')
-	if (serverIds.size !== 1) {
-		console.log(`Rooms deploy server candidates: ${JSON.stringify([...serverCandidates.values()])}`)
-		console.log(`Rooms server inventory: ${JSON.stringify(serverInventory)}`)
-		throw new Error('production_deploy_server_identity_ambiguous')
-	}
-	const serverId = [...serverIds][0]
-	const serverScheduleScript = buildRemoteServerScheduleScript(payload, command)
+	const serverScheduleScript = buildDokployServerScheduleScript(payload, command)
 	const created = await dokployRequest(apiBase, apiKey, '/schedule.create', {
 		method: 'POST',
 		body: JSON.stringify({
@@ -492,8 +389,7 @@ async function runProductionSchedule(payload: ProductionRoomsControlPayload): Pr
 			command: 'true',
 			script: serverScheduleScript,
 			shellType: 'sh',
-			scheduleType: 'server',
-			serverId,
+			scheduleType: 'dokploy-server',
 			appName: scheduleName,
 			enabled: false,
 		}),
@@ -505,7 +401,7 @@ async function runProductionSchedule(payload: ProductionRoomsControlPayload): Pr
 	let scheduleId = findScheduleId(created.data, scheduleName) ?? findString(created.data, ['scheduleId'])
 	try {
 		if (!scheduleId) {
-			const listed = await dokployRequest(apiBase, apiKey, `/schedule.list?id=${encodeURIComponent(serverId)}&scheduleType=server`)
+			const listed = await dokployRequest(apiBase, apiKey, `/schedule.list?id=${encodeURIComponent(PRODUCTION_ROOMS_TARGET.applicationId)}&scheduleType=dokploy-server`)
 			if (listed.status < 200 || listed.status >= 300) throw new Error('schedule_list_failed')
 			scheduleId = findScheduleId(listed.data, scheduleName)
 		}
@@ -536,7 +432,7 @@ async function runProductionSchedule(payload: ProductionRoomsControlPayload): Pr
 		let deploymentErrorKind = 'none'
 		for (let attempt = 1; attempt <= 36; attempt += 1) {
 			const deploymentIds = new Set(runDeploymentIds)
-			const listed = await dokployRequest(apiBase, apiKey, `/schedule.list?id=${encodeURIComponent(serverId)}&scheduleType=server`)
+			const listed = await dokployRequest(apiBase, apiKey, `/schedule.list?id=${encodeURIComponent(PRODUCTION_ROOMS_TARGET.applicationId)}&scheduleType=dokploy-server`)
 			lastScheduleListStatus = listed.status
 			if (listed.status >= 200 && listed.status < 300) {
 				for (const deploymentId of findDeploymentIds(listed.data, scheduleId)) deploymentIds.add(deploymentId)
