@@ -755,18 +755,18 @@ async function main() {
     const schema = payload.target === 'production' ? EXPECTED_PRODUCTION.schema : target.schema
     await client.query(`SET search_path TO ${quoteIdentifier(schema)}`)
     if (payload.mode === 'plan') {
-      const result = await runPlan(client, target.schema, payload)
+      const result = await runPlan(client, schema, payload)
       process.stdout.write(`${markerFor(result)} ${JSON.stringify(result)}\n`)
       process.exitCode = result.ok ? 0 : 1
       return
     }
     if (payload.mode === 'apply') {
-      const result = await applyMigration(client, target.schema, payload)
+      const result = await applyMigration(client, schema, payload)
       process.stdout.write(`${markerFor(result)} ${JSON.stringify(result)}\n`)
       process.exitCode = result.ok ? 0 : 1
       return
     }
-    const result = await finalizeNavigation(client, target.schema, payload)
+    const result = await finalizeNavigation(client, schema, payload)
     process.stdout.write(`${markerFor(result)} ${JSON.stringify(result)}\n`)
     process.exitCode = result.ok ? 0 : 1
   } catch (error) {
