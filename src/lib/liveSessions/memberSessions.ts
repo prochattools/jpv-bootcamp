@@ -65,6 +65,7 @@ export function isLiveSessionAudienceAllowed(
 ): boolean {
   if (document.audience === 'all') return true
   if (document.audience === 'selected') return targetIds(document.targetMemberIds).has(String(memberId))
+  if (document.audience === 'groups') return false
   const courseId = liveSessionRelationshipId(document.course)
   const spaceId = liveSessionRelationshipId(document.space)
   return Boolean((courseId && enrolledCourseIds.has(courseId)) || (spaceId && memberSpaceIds.has(spaceId)))
@@ -74,7 +75,8 @@ export async function listMemberLiveSessions(
   payload: PayloadCourseAccessAPI,
   memberId: string,
 ): Promise<MemberLiveSessionSummary[]> {
-  const enrollments = await payload.find({
+  const [enrollments, roomAccessResult] = await Promise.all([
+    payload.find({
     collection: 'payload_course_enrollments',
     where: {
       and: [
@@ -85,7 +87,16 @@ export async function listMemberLiveSessions(
     limit: 200,
     depth: 0,
     overrideAccess: true,
-  })
+    }),
+    payload.find({
+      collection: 'payload_room_access',
+      where: { member: { equals: memberId } },
+      limit: 1000,
+      depth: 0,
+      overrideAccess: true,
+    }).catch(() => ({ docs: [] as PayloadDocument[] })),
+  ])
+  const roomAccess = new Map(roomAccessResult.docs.map((grant) => [String(grant.room && typeof grant.room === 'object' ? grant.room.id : grant.room), String(grant.status)]))
   const courseIds = [...new Set(
     enrollments.docs
       .map((enrollment) => liveSessionRelationshipId(enrollment.course))
@@ -120,7 +131,9 @@ export async function listMemberLiveSessions(
     const status = document.status
     const scheduledAt = text(document.scheduledAt)
     if (!isLiveSessionStatus(status) || !scheduledAt) return []
-    if (!isLiveSessionAudienceAllowed(document, memberId, new Set(courseIds), spaceIds)) return []
+    if (document.archived === true) return []
+    const roomGrant = roomAccess.get(String(document.id))
+    if (roomGrant ? roomGrant !== 'active' : !isLiveSessionAudienceAllowed(document, memberId, new Set(courseIds), spaceIds)) return []
 
     const roomReady = isValidLiveSessionRoomName(document.roomName)
     return [{

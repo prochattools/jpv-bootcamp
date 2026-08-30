@@ -94,21 +94,32 @@ export async function queueEmailEvent(
 
   if (existing) return { event: existing, created: false }
 
-  const event = await payload.create({
-    collection: 'payload_email_events',
-    data: {
-      displayName: input.displayName ?? `${input.templateKey} -> ${input.toEmail}`,
-      toEmail: input.toEmail,
-      contact: input.contact ?? undefined,
-      templateKey: input.templateKey,
-      deliveryStatus: 'queued',
-      dedupeKey: input.dedupeKey,
-      metadata: input.metadata ?? undefined,
-    },
-    overrideAccess: true,
-  })
+  try {
+    const event = await payload.create({
+      collection: 'payload_email_events',
+      data: {
+        displayName: input.displayName ?? `${input.templateKey} -> ${input.toEmail}`,
+        toEmail: input.toEmail,
+        contact: input.contact ?? undefined,
+        templateKey: input.templateKey,
+        deliveryStatus: 'queued',
+        dedupeKey: input.dedupeKey,
+        metadata: input.metadata ?? undefined,
+      },
+      overrideAccess: true,
+    })
 
-  return { event, created: true }
+    return { event, created: true }
+  } catch (error) {
+    // The unique dedupe key is the concurrency boundary. If another worker
+    // won the insert between the initial read and create, use that event and
+    // let only the winner attempt immediate delivery.
+    const raced = await findOne(payload, 'payload_email_events', {
+      dedupeKey: { equals: input.dedupeKey },
+    })
+    if (raced) return { event: raced, created: false }
+    throw error
+  }
 }
 
 export async function queueAndAttemptEmailEvent(

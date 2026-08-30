@@ -33,21 +33,21 @@ export const PayloadLiveSession: CollectionConfig = {
   slug: 'live_sessions',
   dbName: 'live_sessions',
   labels: {
-    singular: 'Live Session',
-    plural: 'Live Sessions',
+    singular: 'Room',
+    plural: 'Rooms',
   },
   admin: {
-    group: 'Courses',
+    group: 'Rooms',
     useAsTitle: 'title',
     defaultColumns: ['title', 'status', 'scheduledAt', 'course', 'space', 'hostUser', 'updatedAt'],
-    description: 'Schedule and operate LiveKit sessions (course-based or community space). Room names and audit history are generated automatically.',
+    description: 'Schedule and operate member portal Rooms. Room names and audit history are generated automatically.',
   },
   access: {
     read: async ({ req }) => {
       if (req.user?.collection === 'payload_users') return true
       if (req.user?.collection !== 'payload_members') return false
 
-      const [enrollments, memberships] = await Promise.all([
+      const [enrollments, memberships, roomAccess] = await Promise.all([
         req.payload.find({
           collection: 'payload_course_enrollments',
           where: {
@@ -72,6 +72,18 @@ export const PayloadLiveSession: CollectionConfig = {
           depth: 0,
           overrideAccess: true,
         }),
+        req.payload.find({
+          collection: 'payload_room_access',
+          where: {
+            and: [
+              { member: { equals: req.user.id } },
+              { status: { equals: 'active' } },
+            ],
+          },
+          limit: 500,
+          depth: 0,
+          overrideAccess: true,
+        }),
       ])
 
       const courseIds = enrollments.docs
@@ -80,12 +92,19 @@ export const PayloadLiveSession: CollectionConfig = {
       const spaceIds = memberships.docs
         .map((m) => liveSessionRelationshipId(m.space))
         .filter((id): id is string => Boolean(id))
+      const roomIds = roomAccess.docs
+        .map((grant) => liveSessionRelationshipId(grant.room))
+        .filter((id): id is string => Boolean(id))
 
-      if (courseIds.length === 0 && spaceIds.length === 0) return false
+      if (courseIds.length === 0 && spaceIds.length === 0 && roomIds.length === 0) return false
       return {
         or: [
+          ...(roomIds.length > 0 ? [{ id: { in: roomIds } }] : []),
           ...(courseIds.length > 0 ? [{ course: { in: courseIds } }] : []),
           ...(spaceIds.length > 0 ? [{ space: { in: spaceIds } }] : []),
+          // Legacy all-audience records predate the durable ledger. New Rooms
+          // always receive ledger rows during creation/edit commands.
+          { audience: { equals: 'all' } },
         ],
       }
     },
@@ -225,6 +244,7 @@ export const PayloadLiveSession: CollectionConfig = {
         { label: 'Members enrolled in the linked course or space', value: 'enrolled' },
         { label: 'All active members', value: 'all' },
         { label: 'Selected members', value: 'selected' },
+        { label: 'Member groups', value: 'groups' },
       ],
       admin: {
         description: 'Controls who can see and join this session in the member portal.',
@@ -238,6 +258,32 @@ export const PayloadLiveSession: CollectionConfig = {
         description: 'Member IDs selected by the portal administrator when audience is selected.',
       },
     },
+    {
+      name: 'targetGroupIds',
+      type: 'json',
+      admin: {
+        hidden: true,
+        description: 'Member group IDs selected by the portal administrator when audience is groups.',
+      },
+    },
+    {
+      name: 'categories',
+      type: 'relationship',
+      relationTo: 'payload_room_categories',
+      hasMany: true,
+      admin: {
+        description: 'Optional labels for search and filtering. Categories do not grant access.',
+      },
+    },
+    {
+      name: 'archived',
+      type: 'checkbox',
+      defaultValue: false,
+      admin: {
+        description: 'Hide this Room from the active dashboard while retaining its audit and access history.',
+      },
+    },
+    { name: 'archivedAt', type: 'date', admin: { readOnly: true } },
     {
       name: 'description',
       type: 'richText',

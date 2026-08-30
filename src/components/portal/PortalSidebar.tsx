@@ -67,7 +67,8 @@ const sidebarGroups: NavGroup[] = [
     items: [
       { href: '/portal', label: 'Dashboard', Icon: LayoutDashboard },
       { href: '/portal/courses', label: 'Courses', Icon: GraduationCap },
-      { href: '/portal/live-sessions', label: 'Live', Icon: Video },
+      { href: '/portal/rooms', label: 'Rooms', Icon: Video },
+      // /portal/live-sessions remains a supported legacy alias for Rooms.
       { href: '/portal/content', label: 'Updates', Icon: Newspaper },
     ],
   },

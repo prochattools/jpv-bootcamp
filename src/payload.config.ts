@@ -13,6 +13,8 @@ import { PayloadPages } from './collections/PayloadPages'
 import { PayloadPosts } from './collections/PayloadPosts'
 import { PayloadCategories } from './collections/PayloadCategories'
 import { PayloadLiveSession } from './collections/PayloadLiveSession'
+import { PayloadRoomCategories } from './collections/PayloadRoomCategories'
+import { PayloadRoomAccess } from './collections/PayloadRoomAccess'
 import { PayloadBunnyVideo } from './collections/PayloadBunnyVideo'
 import {
   PayloadCourseAccessPreview,
@@ -193,6 +195,8 @@ export default buildConfig({
     ...communityCollections,
     // Courses
     PayloadLiveSession,
+    PayloadRoomCategories,
+    PayloadRoomAccess,
     PayloadCourses,
     PayloadCourseModules,
     PayloadLessons,

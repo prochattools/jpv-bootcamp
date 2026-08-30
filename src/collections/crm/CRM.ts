@@ -508,6 +508,7 @@ export const PayloadAdminNotifications: CollectionConfig = {
     { name: 'body', type: 'textarea', required: true },
     { name: 'relatedCollection', type: 'text' },
     { name: 'relatedDocumentId', type: 'text' },
+    { name: 'eventKey', type: 'text', unique: true, index: true, admin: { hidden: true } },
     { name: 'metadata', type: 'json', admin: { hidden: true } },
   ],
   timestamps: true,

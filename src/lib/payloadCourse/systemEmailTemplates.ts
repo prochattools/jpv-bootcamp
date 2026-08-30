@@ -22,6 +22,8 @@ export const SUPPORT_REQUEST_RECEIVED_TEMPLATE_KEY = 'support-request-received'
 export const SUPPORT_REQUEST_ADMIN_NOTIFICATION_TEMPLATE_KEY = 'support-request-admin-notification'
 export const PORTAL_ANNOUNCEMENT_TEMPLATE_KEY = 'portal-announcement'
 export const LIVE_SESSION_INVITATION_TEMPLATE_KEY = 'live-session-invitation'
+export const ROOM_INVITATION_TEMPLATE_KEY = 'room-invitation'
+export const ROOM_CREATED_TEMPLATE_KEY = 'room-created'
 
 function brandedTemplate(input: {
   key: string
@@ -346,6 +348,34 @@ const templates: Record<string, PayloadDocument> = {
     ],
     actionLabel: 'Open live sessions',
     actionUrlVariable: '{{sessionUrl}}',
+  }),
+  [ROOM_INVITATION_TEMPLATE_KEY]: brandedTemplate({
+    key: ROOM_INVITATION_TEMPLATE_KEY,
+    name: 'Room invitation',
+    subject: 'You are invited to {{roomTitle}}',
+    preheader: 'A JPV Bootcamp Room is ready for you.',
+    heading: 'Room invitation',
+    paragraphs: [
+      'You are invited to {{roomTitle}} in the JPV Bootcamp member portal.',
+      'Scheduled time: {{scheduledAt}}.',
+      'Open the Room page to see its status and join when the host starts it.',
+    ],
+    actionLabel: 'Open Room',
+    actionUrlVariable: '{{roomUrl}}',
+  }),
+  [ROOM_CREATED_TEMPLATE_KEY]: brandedTemplate({
+    key: ROOM_CREATED_TEMPLATE_KEY,
+    name: 'Room created acknowledgement',
+    subject: 'Room created: {{roomTitle}}',
+    preheader: 'Your JPV Bootcamp Room was created successfully.',
+    heading: 'Room created',
+    paragraphs: [
+      'Your Room, {{roomTitle}}, was created successfully.',
+      'Scheduled time: {{scheduledAt}}.',
+      'Audience reconciliation and invitation delivery have been queued through the application outbox.',
+    ],
+    actionLabel: 'Open Rooms',
+    actionUrlVariable: '{{portalUrl}}',
   }),
   [ACCESS_DELETED_TEMPLATE_KEY]: brandedTemplate({
     key: ACCESS_DELETED_TEMPLATE_KEY,

@@ -27,6 +27,7 @@
     "toolchain:check": "tsx scripts/toolchain_preflight.ts",
     "test:release": "tsx scripts/release/runReleaseTests.ts",
     "test:architecture-boundaries": "tsx scripts/architecture_boundaries.test.ts",
+    "test:rooms": "tsx scripts/rooms.test.ts && tsx scripts/rooms-contract.test.ts",
     "test:release:staging-gate": "tsx scripts/release/runReleaseTests.ts --enable-condition STAGING_GATE",
     "test:e2e": "tsx scripts/e2e/runBrowserTests.ts",
     "test:e2e:install": "playwright install chromium",

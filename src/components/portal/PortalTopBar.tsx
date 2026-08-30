@@ -11,7 +11,8 @@ import { ThemeToggle } from '@/components/portal/ThemeToggle'
 const PAGE_TITLES: Record<string, string> = {
   '/portal': 'Dashboard',
   '/portal/courses': 'Courses',
-  '/portal/live-sessions': 'Live Sessions',
+  '/portal/rooms': 'Rooms',
+  '/portal/live-sessions': 'Rooms',
   '/portal/content': 'Updates',
   '/portal/community': 'Community',
   '/portal/leaderboard': 'Leaderboard',

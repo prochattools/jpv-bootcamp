@@ -119,7 +119,7 @@ export default async function PortalDashboardPage({ searchParams }: PortalDashbo
 
   const quickLinks = [
     { href: '/portal/courses', label: 'Courses', Icon: GraduationCap },
-    { href: '/portal/live-sessions', label: 'Live', Icon: Video },
+    { href: '/portal/rooms', label: 'Rooms', Icon: Video },
     { href: '/portal/community', label: 'Community', Icon: Users },
     { href: '/portal/account', label: 'Account', Icon: Settings },
   ]

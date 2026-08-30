@@ -61,7 +61,7 @@ function CallStage({ token, wsUrl, roomName, sessionTitle }: {
           token={token}
           connect={true}
           audio={true}
-          video={false}
+          video={true}
           data-lk-theme='default'
           className='h-full w-full'
         >
@@ -109,6 +109,7 @@ export default function LiveCallRoom({ sessionId, sessionTitle }: Props) {
   function errorMessage(reason: string): string {
     if (reason === 'session_not_live') return 'This call has not started yet. Refresh when the host opens the room.'
     if (reason === 'session_closed') return 'This call has ended.'
+    if (reason === 'room_archived') return 'This Room has been archived.'
     if (reason === 'not_entitled') return 'You do not have access to this call. Check your space membership.'
     if (reason === 'unauthorized') return 'Sign in to join this call.'
     if (reason === 'server_misconfigured') return 'Live calls are not configured on this server. Contact support.'
