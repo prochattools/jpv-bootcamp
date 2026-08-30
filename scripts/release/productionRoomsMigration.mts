@@ -153,15 +153,14 @@ export function buildRemoteScheduleCommand(
 	commandId = `${payload.mode}-${process.env.GITHUB_RUN_ID ?? 'local'}`,
 ): string {
 	assertReference(commandId, 'command_id')
-	const runner = gzipSync(readFileSync(runnerPath)).toString('base64')
 	const payloadData = encoded(payload)
-	const temporaryRunnerPath = `/tmp/jpv-rooms-${commandId}.mjs`
+	const installedRunnerPath = '/app/scripts/release/productionRoomsMigrationRunner.mjs'
+	const runnerSourceSha256 = fileSha256(runnerPath)
 	return [
 		'set -u; printf \'JPV_ROOMS_REMOTE_START\\n\'',
-		`trap 'rm -f "${temporaryRunnerPath}"' EXIT`,
-		`node -e 'require("fs").writeFileSync("${temporaryRunnerPath}", require("zlib").gunzipSync(Buffer.from("${runner}", "base64")))'`,
-		`setup_status=$?; if [ "$setup_status" -ne 0 ]; then printf 'JPV_ROOMS_REMOTE_EXIT_%s\\n' "$setup_status"; exit "$setup_status"; fi`,
-		`set +e; ROOMS_MIGRATION_TARGET=production ROOMS_MIGRATION_EXPECTED_RELEASE_SHA='${requiredPayloadReleaseSha(payload)}' EXPECTED_DEPLOYMENT_SHA='${requiredPayloadReleaseSha(payload)}' ROOMS_MIGRATION_PAYLOAD_B64='${payloadData}' node "${temporaryRunnerPath}"; runner_status=$?; printf 'JPV_ROOMS_REMOTE_EXIT_%s\\n' "$runner_status"; exit "$runner_status"`,
+		`test -f "${installedRunnerPath}"`,
+		`test "$(sha256sum "${installedRunnerPath}" | awk '{print $1}')" = '${runnerSourceSha256}'`,
+		`set +e; ROOMS_MIGRATION_TARGET=production ROOMS_MIGRATION_EXPECTED_RELEASE_SHA='${requiredPayloadReleaseSha(payload)}' EXPECTED_DEPLOYMENT_SHA='${requiredPayloadReleaseSha(payload)}' ROOMS_MIGRATION_PAYLOAD_B64='${payloadData}' node "${installedRunnerPath}"; runner_status=$?; printf 'JPV_ROOMS_REMOTE_EXIT_%s\\n' "$runner_status"; exit "$runner_status"`,
 	].join('; ')
 }
 
