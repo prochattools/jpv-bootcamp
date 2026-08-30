@@ -265,25 +265,39 @@ function collectDeploymentState(
 	value: unknown,
 	deploymentIds: Set<string>,
 	statuses = new Set<string>(),
-): { statuses: Set<string>; logPathPresent: boolean } {
+): { statuses: Set<string>; logPathPresent: boolean; errorMessagePresent: boolean; errorKind: string } {
 	let logPathPresent = false
+	let errorMessagePresent = false
+	let errorKind = 'none'
 	if (Array.isArray(value)) {
 		for (const child of value) {
 			const nested = collectDeploymentState(child, deploymentIds, statuses)
 			logPathPresent ||= nested.logPathPresent
+			errorMessagePresent ||= nested.errorMessagePresent
+			if (errorKind === 'none') errorKind = nested.errorKind
 		}
 	}
 	if (isRecord(value)) {
 		if (typeof value.deploymentId === 'string' && deploymentIds.has(value.deploymentId)) {
 			if (typeof value.status === 'string') statuses.add(value.status)
 			if (typeof value.logPath === 'string' && value.logPath.length > 0) logPathPresent = true
+			if (typeof value.errorMessage === 'string' && value.errorMessage.length > 0) {
+				errorMessagePresent = true
+				if (/container .*?(?:not found|does not exist)|no such container/i.test(value.errorMessage)) errorKind = 'container_not_found'
+				else if (/executable file not found|command not found|no such file or directory/i.test(value.errorMessage)) errorKind = 'executable_not_found'
+				else if (/cannot connect to the docker daemon|permission denied/i.test(value.errorMessage)) errorKind = 'docker_access_denied'
+				else if (/remote command failed|ssh|authentication failed/i.test(value.errorMessage)) errorKind = 'remote_exec_failed'
+				else errorKind = 'message_present'
+			}
 		}
 		for (const child of Object.values(value)) {
 			const nested = collectDeploymentState(child, deploymentIds, statuses)
 			logPathPresent ||= nested.logPathPresent
+			errorMessagePresent ||= nested.errorMessagePresent
+			if (errorKind === 'none') errorKind = nested.errorKind
 		}
 	}
-	return { statuses, logPathPresent }
+	return { statuses, logPathPresent, errorMessagePresent, errorKind }
 }
 
 function logText(value: unknown): string {
@@ -379,6 +393,8 @@ async function runProductionSchedule(payload: ProductionRoomsControlPayload): Pr
 		let executionFailureKind = 'none'
 		let deploymentStatuses = new Set<string>()
 		let logPathPresent = false
+		let deploymentErrorMessagePresent = false
+		let deploymentErrorKind = 'none'
 		for (let attempt = 1; attempt <= 36; attempt += 1) {
 			const deploymentIds = new Set(runDeploymentIds)
 			const listed = await dokployRequest(apiBase, apiKey, `/schedule.list?id=${encodeURIComponent(PRODUCTION_ROOMS_TARGET.applicationId)}&scheduleType=application`)
@@ -397,6 +413,8 @@ async function runProductionSchedule(payload: ProductionRoomsControlPayload): Pr
 				const deploymentState = collectDeploymentState(deployments.data, deploymentIds)
 				deploymentStatuses = deploymentState.statuses
 				logPathPresent ||= deploymentState.logPathPresent
+				deploymentErrorMessagePresent ||= deploymentState.errorMessagePresent
+				if (deploymentErrorKind === 'none') deploymentErrorKind = deploymentState.errorKind
 			}
 			lastDeploymentCount = deploymentIds.size
 			for (const deploymentId of deploymentIds) {
@@ -422,7 +440,7 @@ async function runProductionSchedule(payload: ProductionRoomsControlPayload): Pr
 			}
 			if (attempt < 36) await new Promise((resolvePromise) => setTimeout(resolvePromise, 5_000))
 		}
-		console.log(`Rooms ${payload.mode} completion marker missing; schedule_list_http=${lastScheduleListStatus} deployment_list_http=${lastDeploymentListStatus} logs_http=${lastLogsStatus} deployment_records=${lastDeploymentCount} log_bytes=${logBytes} remote_started=${logHasRemoteStart} command_echo=${logEchoesRemoteCommand} execution_banner=${logHasExecutionBanner} success_banner=${logHasSuccessBanner} command_failed=${logHasCommandFailed} failure_kind=${executionFailureKind} control_marker_seen=${logHasControlMarker} known_execution_error=${logHasKnownExecutionError} deployment_statuses=${[...deploymentStatuses].filter((status) => /^(?:queued|running|done|error|failed|cancelled)$/i.test(status)).join(',') || 'none'} log_path_present=${logPathPresent}`)
+		console.log(`Rooms ${payload.mode} completion marker missing; schedule_list_http=${lastScheduleListStatus} deployment_list_http=${lastDeploymentListStatus} logs_http=${lastLogsStatus} deployment_records=${lastDeploymentCount} log_bytes=${logBytes} remote_started=${logHasRemoteStart} command_echo=${logEchoesRemoteCommand} execution_banner=${logHasExecutionBanner} success_banner=${logHasSuccessBanner} command_failed=${logHasCommandFailed} failure_kind=${executionFailureKind} deployment_error_kind=${deploymentErrorKind} deployment_error_message_present=${deploymentErrorMessagePresent} control_marker_seen=${logHasControlMarker} known_execution_error=${logHasKnownExecutionError} deployment_statuses=${[...deploymentStatuses].filter((status) => /^(?:queued|running|done|error|failed|cancelled)$/i.test(status)).join(',') || 'none'} log_path_present=${logPathPresent}`)
 		throw new Error('schedule_completion_marker_missing')
 	} finally {
 		if (scheduleId) {
