@@ -90,7 +90,7 @@ jobs:
       PRODUCTION_DATABASE_PORT: '5433'
       PRODUCTION_DATABASE_NAME: jpvbootcamp
       PRODUCTION_DATABASE_SCHEMA: jpvbootcamp
-      PRODUCTION_DATABASE_ROLE: jpvbootcamp_staging_user
+      PRODUCTION_DATABASE_ROLE: jpvbootcamp_production_app
       ROOMS_SOURCE_BRANCH: feature/member-portal-rooms
 
     steps:
@@ -123,7 +123,7 @@ jobs:
           test "$PRODUCTION_DATABASE_PORT" = '5433'
           test "$PRODUCTION_DATABASE_NAME" = 'jpvbootcamp'
           test "$PRODUCTION_DATABASE_SCHEMA" = 'jpvbootcamp'
-          test "$PRODUCTION_DATABASE_ROLE" = 'jpvbootcamp_staging_user'
+          test "$PRODUCTION_DATABASE_ROLE" = 'jpvbootcamp_production_app'
           test "$INPUT_MIGRATION_SOURCE_SHA256" = "071d47dd39d7e832117dd327c035877555542cd4ef11ec0b73050a848d496a9d"
           test "$BACKUP_EVIDENCE_ID" = "rooms-production-rollback-20260830T151139Z"
           test "$BACKUP_SHA256" = "1ad075fcde67b7db99e9703a3f8bdc3795b38057857c3fc1469049fa549c758b"
