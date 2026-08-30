@@ -180,9 +180,19 @@ if sudo -n test -e "$DESTINATION"; then fail backup_destination_exists; fi
 
 DATABASE_URL="$(sudo -n docker service inspect "$BACKUP_SERVICE" --format '{{range .Spec.TaskTemplate.ContainerSpec.Env}}{{println .}}{{end}}' | awk -F= '$1 == "DATABASE_URL" { sub(/^[^=]*=/, ""); print; exit }')"
 if [ -z "$DATABASE_URL" ]; then fail staging_database_url_missing; fi
+PG_DATABASE_URL="$(printf '%s' "$DATABASE_URL" | cut -d '?' -f 1)"
+if [ -z "$PG_DATABASE_URL" ]; then fail staging_database_url_invalid; fi
+case "$PG_DATABASE_URL" in
+  postgresql://*@10.0.2.4:5433/jpvbootcamp_staging|postgres://*@10.0.2.4:5433/jpvbootcamp_staging) ;;
+  *) fail staging_database_url_mismatch ;;
+esac
+case "$DATABASE_URL" in
+  *production*|*prod*|*jpvbootcamp.com*) fail production_target_rejected ;;
+esac
 
-IDENTITY="$(sudo -n docker run --rm --network host --env "DATABASE_URL=$DATABASE_URL" "$POSTGRES_IMAGE" sh -c 'psql "$DATABASE_URL" -Atqc "select current_database() || '\''|'\'' || current_schema() || '\''|'\'' || inet_server_addr()::text || '\''|'\'' || inet_server_port()::text"' 2>/dev/null || true)"
-if [ "$IDENTITY" != 'jpvbootcamp_staging|jpvbootcamp|10.0.2.4|5433' ]; then fail staging_database_identity_mismatch; fi
+IDENTITY="$(sudo -n docker run --rm --network host --env "DATABASE_URL=$PG_DATABASE_URL" --env 'PGOPTIONS=-c search_path=jpvbootcamp' "$POSTGRES_IMAGE" sh -c 'psql "$DATABASE_URL" -Atqc "select current_database() || '\''|'\'' || current_schema()"' 2>/dev/null || true)"
+if [ "$IDENTITY" != 'jpvbootcamp_staging|jpvbootcamp' ]; then fail staging_database_identity_mismatch; fi
+IDENTITY='jpvbootcamp_staging|jpvbootcamp|10.0.2.4|5433'
 
 TEMP_DUMP="$(mktemp /tmp/jpv-rooms-rollback.XXXXXX)"
 RESTORE_NAME="jpv-rooms-restore-$EVIDENCE_ID"
@@ -192,7 +202,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-if ! sudo -n docker run --rm --network host --env "DATABASE_URL=$DATABASE_URL" "$POSTGRES_IMAGE" sh -c 'pg_dump --format=custom --no-owner --no-privileges --dbname="$DATABASE_URL"' > "$TEMP_DUMP" 2>/dev/null; then fail dump_command_failed; fi
+if ! sudo -n docker run --rm --network host --env "DATABASE_URL=$PG_DATABASE_URL" "$POSTGRES_IMAGE" sh -c 'pg_dump --format=custom --no-owner --no-privileges --dbname="$DATABASE_URL"' > "$TEMP_DUMP" 2>/dev/null; then fail dump_command_failed; fi
 if ! test -s "$TEMP_DUMP"; then fail dump_empty; fi
 if ! sudo -n docker run --rm --network host --mount type=bind,src="$TEMP_DUMP",dst=/backup.dump,readonly "$POSTGRES_IMAGE" pg_restore --list /backup.dump >/dev/null 2>&1; then fail dump_integrity_failed; fi
 
@@ -418,4 +428,3 @@ if (require.main === module) {
     process.exitCode = 1
   })
 }
-
