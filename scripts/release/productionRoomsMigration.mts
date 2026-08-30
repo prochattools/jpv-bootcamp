@@ -252,6 +252,17 @@ function findScheduleId(value: unknown, scheduleName: string): string | null {
 	return null
 }
 
+function findServerIdsByAddress(value: unknown, address: string, result = new Set<string>()): Set<string> {
+	if (Array.isArray(value)) {
+		for (const child of value) findServerIdsByAddress(child, address, result)
+	}
+	if (isRecord(value)) {
+		if (value.ipAddress === address && typeof value.serverId === 'string' && value.serverId) result.add(value.serverId)
+		for (const child of Object.values(value)) findServerIdsByAddress(child, address, result)
+	}
+	return result
+}
+
 function findDeploymentIds(value: unknown, scheduleId: string, result = new Set<string>()): Set<string> {
 	if (Array.isArray(value)) {
 		for (const child of value) findDeploymentIds(child, scheduleId, result)
@@ -365,14 +376,11 @@ async function runProductionSchedule(payload: ProductionRoomsControlPayload): Pr
 	const apiBase = (process.env.DOKPLOY_API_BASE_URL?.trim() || 'https://dokploy.prochat.tools/api').replace(/\/$/, '')
 	const scheduleName = `jpv-production-rooms-${payload.mode}-${process.env.GITHUB_RUN_ID ?? Date.now()}`
 	const command = buildRemoteScheduleCommand(payload, `${payload.mode}-${process.env.GITHUB_RUN_ID ?? 'manual'}`)
-	const application = await dokployRequest(
-		apiBase,
-		apiKey,
-		`/application.one?applicationId=${encodeURIComponent(PRODUCTION_ROOMS_TARGET.applicationId)}`,
-	)
-	if (application.status < 200 || application.status >= 300) throw new Error('application_lookup_failed')
-	const serverId = findString(application.data, ['serverId'])
-	if (!serverId) throw new Error('application_server_id_missing')
+	const servers = await dokployRequest(apiBase, apiKey, '/server.all')
+	if (servers.status < 200 || servers.status >= 300) throw new Error('server_list_failed')
+	const serverIds = findServerIdsByAddress(servers.data, PRODUCTION_ROOMS_TARGET.databaseHost)
+	if (serverIds.size !== 1) throw new Error('production_server_identity_ambiguous')
+	const serverId = [...serverIds][0]
 	const serverScheduleScript = buildRemoteServerScheduleScript(payload, command)
 	const created = await dokployRequest(apiBase, apiKey, '/schedule.create', {
 		method: 'POST',

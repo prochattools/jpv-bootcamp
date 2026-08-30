@@ -75,7 +75,7 @@ assert.match(controlSource, /deployment\.allByType\?id=/)
 assert.match(controlSource, /deployment\.readLogs\?deploymentId=.*&tail=10000/)
 assert.match(controlSource, /scheduleType: 'server'/)
 assert.match(controlSource, /sudo -n docker exec/)
-assert.match(controlSource, /application\.one\?applicationId=/)
+assert.match(controlSource, /server\.all/)
 
 assert.match(workflowSource, /workflow_dispatch:/)
 assert.doesNotMatch(workflowSource, /^\s*push:/m)
