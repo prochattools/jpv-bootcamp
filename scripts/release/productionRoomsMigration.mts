@@ -530,7 +530,11 @@ async function runProductionMode(mode: ProductionRoomsMigrationMode): Promise<Pr
 		maintenanceWindowId: required('MAINTENANCE_WINDOW_ID'),
 	})
 	const result = await runProductionSchedule(payload)
-	if (!result.ok) throw new Error(`production_rooms_${result.resultCode}`)
+	if (!result.ok) {
+		const blockers = Array.isArray(result.blockers) ? result.blockers.filter((blocker): blocker is string => typeof blocker === 'string') : []
+		console.log(`Rooms migration result: result_code=${result.resultCode} blockers=${JSON.stringify(blockers)}`)
+		throw new Error(`production_rooms_${result.resultCode}`)
+	}
 	return result
 }
 

@@ -78,6 +78,7 @@ assert.match(controlSource, /docker exec/)
 assert.doesNotMatch(controlSource, /server\.all/)
 assert.doesNotMatch(controlSource, /sudo -n docker exec/)
 assert.match(controlSource, /Rooms schedule create response/)
+assert.match(controlSource, /Rooms migration result/)
 assert.match(controlSource, /schedule\.list\?id=.*applicationId.*scheduleType=dokploy-server/)
 
 assert.match(workflowSource, /workflow_dispatch:/)
