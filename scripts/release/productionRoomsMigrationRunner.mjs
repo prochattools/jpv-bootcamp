@@ -744,7 +744,8 @@ async function main() {
     const connectionString = payload.target === 'production' ? requiredEnvironment('SYSTEM_DATABASE_URL') : requiredEnvironment('DATABASE_URL')
     client = new Client({ connectionString })
     await client.connect()
-    await client.query(`SET search_path TO ${quoteIdentifier(target.schema)}`)
+    const schema = payload.target === 'production' ? EXPECTED_PRODUCTION.schema : target.schema
+    await client.query(`SET search_path TO ${quoteIdentifier(schema)}`)
     if (payload.mode === 'plan') {
       const result = await runPlan(client, target.schema, payload)
       process.stdout.write(`${markerFor(result)} ${JSON.stringify(result)}\n`)
