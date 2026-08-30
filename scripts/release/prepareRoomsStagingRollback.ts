@@ -190,7 +190,7 @@ case "$DATABASE_URL" in
   *production*|*prod*|*jpvbootcamp.com*) fail production_target_rejected ;;
 esac
 
-IDENTITY="$(sudo -n docker run --rm --network host --env "DATABASE_URL=$PG_DATABASE_URL" --env 'PGOPTIONS=-c search_path=jpvbootcamp' "$POSTGRES_IMAGE" sh -c 'psql "$DATABASE_URL" -Atqc "select current_database() || '\''|'\'' || current_schema()"' 2>/dev/null || true)"
+IDENTITY="$(sudo -n docker run --rm --network host --env "DATABASE_URL=$PG_DATABASE_URL" --env 'PGOPTIONS=-c search_path=jpvbootcamp' "$POSTGRES_IMAGE" sh -c 'psql "$DATABASE_URL" -Atqc "select concat(current_database(), chr(124), current_schema())"' 2>/dev/null || true)"
 if [ "$IDENTITY" != 'jpvbootcamp_staging|jpvbootcamp' ]; then fail staging_database_identity_mismatch; fi
 IDENTITY='jpvbootcamp_staging|jpvbootcamp|10.0.2.4|5433'
 

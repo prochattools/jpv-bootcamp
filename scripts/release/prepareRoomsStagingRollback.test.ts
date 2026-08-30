@@ -108,6 +108,7 @@ async function main(): Promise<void> {
   assert.match(commandSeen.input ?? '', /pg_dump --format=custom/)
   assert.match(commandSeen.input ?? '', /pg_restore --exit-on-error/)
   assert.match(commandSeen.input ?? '', /jpvbootcamp_staging/)
+  assert.doesNotMatch(commandSeen.input ?? '', /'''/)
   assert.doesNotMatch(commandSeen.input ?? '', /https?:\/\/jpvbootcamp\.com/i)
 
   const blocked = runRoomsStagingRollbackPreparation(
