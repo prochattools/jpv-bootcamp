@@ -237,43 +237,28 @@ function findScheduleId(value: unknown, scheduleName: string): string | null {
 	return null
 }
 
-function findDeploymentId(value: unknown, scheduleId: string): string | null {
-	if (isRecord(value)) {
-		if (value.scheduleId === scheduleId && Array.isArray(value.deployments)) {
-			for (const deployment of value.deployments) {
-				const found = findString(deployment, ['deploymentId'])
-				if (found) return found
-			}
-		}
-		for (const child of Object.values(value)) {
-			const found = findDeploymentId(child, scheduleId)
-			if (found) return found
-		}
-	}
+function findDeploymentIds(value: unknown, scheduleId: string, result = new Set<string>()): Set<string> {
 	if (Array.isArray(value)) {
-		for (const child of value) {
-			const found = findDeploymentId(child, scheduleId)
-			if (found) return found
-		}
+		for (const child of value) findDeploymentIds(child, scheduleId, result)
 	}
-	return null
+	if (isRecord(value)) {
+		if (value.scheduleId === scheduleId && typeof value.deploymentId === 'string' && value.deploymentId) {
+			result.add(value.deploymentId)
+		}
+		for (const child of Object.values(value)) findDeploymentIds(child, scheduleId, result)
+	}
+	return result
 }
 
-function findDeploymentIdInList(value: unknown): string | null {
+function findDeploymentIdsInList(value: unknown, result = new Set<string>()): Set<string> {
 	if (Array.isArray(value)) {
-		for (const child of value) {
-			const found = findDeploymentIdInList(child)
-			if (found) return found
-		}
+		for (const child of value) findDeploymentIdsInList(child, result)
 	}
 	if (isRecord(value)) {
-		if (typeof value.deploymentId === 'string' && value.deploymentId) return value.deploymentId
-		for (const child of Object.values(value)) {
-			const found = findDeploymentIdInList(child)
-			if (found) return found
-		}
+		if (typeof value.deploymentId === 'string' && value.deploymentId) result.add(value.deploymentId)
+		for (const child of Object.values(value)) findDeploymentIdsInList(child, result)
 	}
-	return null
+	return result
 }
 
 function logText(value: unknown): string {
@@ -356,18 +341,16 @@ async function runProductionSchedule(payload: ProductionRoomsControlPayload): Pr
 		for (let attempt = 1; attempt <= 36; attempt += 1) {
 			const listed = await dokployRequest(apiBase, apiKey, `/schedule.list?id=${encodeURIComponent(PRODUCTION_ROOMS_TARGET.applicationId)}&scheduleType=application`)
 			if (listed.status >= 200 && listed.status < 300) {
-				let deploymentId = findDeploymentId(listed.data, scheduleId)
-				if (!deploymentId) {
-					const deployments = await dokployRequest(
-						apiBase,
-						apiKey,
-						`/deployment.allByType?id=${encodeURIComponent(scheduleId)}&type=schedule`,
-					)
-					if (deployments.status >= 200 && deployments.status < 300) {
-						deploymentId = findDeploymentIdInList(deployments.data)
-					}
+				const deploymentIds = findDeploymentIds(listed.data, scheduleId)
+				const deployments = await dokployRequest(
+					apiBase,
+					apiKey,
+					`/deployment.allByType?id=${encodeURIComponent(scheduleId)}&type=schedule`,
+				)
+				if (deployments.status >= 200 && deployments.status < 300) {
+					for (const deploymentId of findDeploymentIdsInList(deployments.data)) deploymentIds.add(deploymentId)
 				}
-				if (deploymentId) {
+				for (const deploymentId of deploymentIds) {
 					const logs = await dokployRequest(apiBase, apiKey, `/deployment.readLogs?deploymentId=${encodeURIComponent(deploymentId)}&tail=20000`)
 					if (logs.status >= 200 && logs.status < 300) {
 						const marker = extractMarker(logText(logs.data))
