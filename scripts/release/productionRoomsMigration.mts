@@ -232,6 +232,20 @@ function findString(value: unknown, keys: string[]): string | null {
 	return null
 }
 
+function safeErrorDetails(value: unknown): Record<string, string> {
+	const details: Record<string, string> = {}
+	if (Array.isArray(value)) {
+		for (const child of value) Object.assign(details, safeErrorDetails(child))
+		return details
+	}
+	if (!isRecord(value)) return details
+	for (const key of ['code', 'error', 'message', 'status']) {
+		if (typeof value[key] === 'string' && value[key]) details[key] = value[key]
+	}
+	for (const child of Object.values(value)) Object.assign(details, safeErrorDetails(child))
+	return details
+}
+
 function findScheduleId(value: unknown, scheduleName: string): string | null {
 	if (isRecord(value)) {
 		if (value.name === scheduleName) {
@@ -484,7 +498,10 @@ async function runProductionSchedule(payload: ProductionRoomsControlPayload): Pr
 			enabled: false,
 		}),
 	})
-	if (created.status < 200 || created.status >= 300) throw new Error('schedule_create_failed')
+	if (created.status < 200 || created.status >= 300) {
+		console.log(`Rooms schedule create response: status=${created.status} details=${JSON.stringify(safeErrorDetails(created.data))}`)
+		throw new Error('schedule_create_failed')
+	}
 	let scheduleId = findScheduleId(created.data, scheduleName) ?? findString(created.data, ['scheduleId'])
 	try {
 		if (!scheduleId) {

@@ -81,6 +81,7 @@ assert.match(controlSource, /serverStatus === serverStatus/)
 assert.match(controlSource, /findServerIdsByTypeAndStatus\(servers\.data, 'deploy', 'active'\)/)
 assert.match(controlSource, /Rooms deploy server candidates/)
 assert.match(controlSource, /Rooms server inventory/)
+assert.match(controlSource, /Rooms schedule create response/)
 assert.match(controlSource, /schedule\.list\?id=.*serverId.*scheduleType=server/)
 
 assert.match(workflowSource, /workflow_dispatch:/)
