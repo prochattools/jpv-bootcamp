@@ -357,7 +357,7 @@ async function runProductionSchedule(payload: ProductionRoomsControlPayload): Pr
 			description: `One-off guarded Rooms ${payload.mode} for ${PRODUCTION_ROOMS_TARGET.applicationName}`,
 			cronExpression: '0 0 1 1 *',
 			command,
-			shellType: 'bash',
+			shellType: 'sh',
 			scheduleType: 'application',
 			applicationId: PRODUCTION_ROOMS_TARGET.applicationId,
 			enabled: false,
