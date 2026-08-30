@@ -1,5 +1,31 @@
 # JPV Bootcamp - Roadmap Progress Status
 
+## CURRENT ROOMS PRODUCTION RELEASE — 2026-08-30
+
+**ROOMS FEATURE: COMPLETE**
+
+JPV Bootcamp Rooms is deployed from integrated `main` at exact SHA
+`6f88bbdb97c3223f82ef4aa0f7279424b5f525d7`. The live production health
+contract reports `deploymentEnv=production`; root, legacy Live Sessions, and
+`/portal/rooms` returned HTTP 200. The guarded migration sequence passed its
+read-only PLAN (`33334332151`), exact APPLY (`33334388800`), and final
+read-only verification (`33335642826`): 53 Payload migrations, the Rooms
+migration applied once, Prisma healthy, complete Rooms schema, unchanged
+historical/integrity fingerprints, and no new ordering anomalies. FINALIZE
+confirmed that default Rooms navigation is authoritative because production has
+no persisted navigation row; `/portal/live-sessions` remains supported.
+
+The authenticated admin Rooms page rendered its management controls and
+Notifications control with no browser console errors. Anonymous Rooms APIs and
+the valid-shaped LiveKit token request were denied with HTTP 401. No production
+seed, invitation, billing/Stripe, reconciliation, staging-copy, or provider
+mutation was performed.
+
+**READY FOR NEXT FEATURE**
+
+This section supersedes the older dated “current checkpoint” statements below;
+those sections remain retained as audit history.
+
 ## CURRENT PRODUCTION CHECKPOINT — 2026-08-28
 
 JPV Bootcamp is live in production. This checkpoint supersedes older

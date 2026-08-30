@@ -1,5 +1,34 @@
 # JPV Bootcamp Preview Release Readiness
 
+## CURRENT ROOMS PRODUCTION RELEASE — 2026-08-30
+
+**ROOMS FEATURE: COMPLETE**
+
+The Rooms feature is integrated on `main` at exact SHA
+`6f88bbdb97c3223f82ef4aa0f7279424b5f525d7` and live at
+`https://jpvbootcamp.com` with `deploymentEnv=production`. Canonical publish
+run `33335361615` passed exact-source verification and production convergence.
+The guarded database PLAN `33334332151`, APPLY `33334388800`, and final
+read-only verification `33335642826` passed with 53 Payload migrations,
+`20260830_090000_member_portal_rooms` applied once, Prisma healthy, complete
+Rooms schema, unchanged historical/integrity evidence, and no new ordering
+anomalies.
+
+Focused smoke passed: root, legacy Live Sessions, and `/portal/rooms` returned
+HTTP 200; anonymous Rooms APIs and the valid-shaped LiveKit token request were
+denied with HTTP 401; authenticated admin Rooms management and Notifications
+controls rendered with no browser console errors. FINALIZE confirmed no
+persisted navigation row existed, so the default Rooms navigation remains
+authoritative and `/portal/live-sessions` remains supported.
+
+No production seed, invitations, billing/Stripe, reconciliation, staging-copy,
+or provider mutation was performed.
+
+**READY FOR NEXT FEATURE**
+
+This section supersedes the older preview/staging-only current statements below;
+those sections remain retained as audit history.
+
 ## Current repository reconciliation — 2026-08-23
 
 - **Working branch:** `feature/course-branding-and-preview`; starting committed tip `ae8c886d125200d94a8ee7aec005b6226a1304e0`.

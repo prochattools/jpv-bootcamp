@@ -1,5 +1,17 @@
 # Operator Handoff Summary
 
+## CURRENT ROOMS PRODUCTION RELEASE — 2026-08-30
+
+**ROOMS FEATURE: COMPLETE**
+
+- **Release authority:** `main` and `origin/main` are integrated at exact SHA `6f88bbdb97c3223f82ef4aa0f7279424b5f525d7`.
+- **Production identity:** `https://jpvbootcamp.com` reports HTTP 200, `deploymentEnv=production`, and the exact SHA above through `/api/health`; the canonical publish run was `33335361615`.
+- **Guarded database evidence:** read-only PLAN `33334332151`, exact APPLY `33334388800`, and final read-only FINALIZE verification `33335642826` all passed. Production has 53 Payload migrations, `20260830_090000_member_portal_rooms` applied exactly once, Prisma healthy, complete Rooms schema, unchanged historical fingerprint `0fdb089ae8abdeaabb7cacd8ab7452a62d266bb5038d8f470a795e4241ea3f8c`, and preserved historical anomalies `[47,48,49]`.
+- **Navigation:** FINALIZE confirmed no persisted portal-navigation row existed; the default Rooms navigation is authoritative. The legacy `/portal/live-sessions` route remains HTTP 200.
+- **Smoke:** root, legacy Live Sessions, and `/portal/rooms` returned HTTP 200; anonymous Rooms APIs and the correctly shaped LiveKit token request returned HTTP 401; authenticated admin Rooms management and Notifications controls rendered with no browser console errors.
+- **Boundary:** no production seed, invitations, billing/Stripe, reconciliation, staging-copy, or provider mutation was performed. Rollback evidence remains `rooms-production-rollback-20260830T151139Z` with the recorded protected archive checksum.
+- **Next state:** `READY FOR NEXT FEATURE`. The Rooms feature branch is integrated and eligible for exact-SHA closure after the final branch/worktree checks below.
+
 ## Current repository reconciliation — 2026-08-23
 
 - **Working branch:** `feature/course-branding-and-preview`; frozen staging release candidate and deployed SHA are `9d87c4a3eeeffb9afb78a38964054792330ea1cb`.
