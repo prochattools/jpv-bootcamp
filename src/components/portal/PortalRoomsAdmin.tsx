@@ -41,7 +41,7 @@ const inputClass = 'mt-1.5 w-full rounded-jpv-control border border-jpv-border b
 
 function dateLabel(value: string): string {
   const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? 'Date unavailable' : new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium', timeStyle: 'short' }).format(date)
+  return Number.isNaN(date.getTime()) ? 'Date unavailable' : new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' }).format(date)
 }
 
 function audienceLabel(value: string): string {
