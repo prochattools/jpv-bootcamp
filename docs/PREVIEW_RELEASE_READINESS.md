@@ -11,7 +11,7 @@
 - **Cutover procedure:** `docs/release/FUTURE_BRANCH_CUTOVER_PLAN.md`.
 - **Phase 9.5 current truth:** `docs/release/PHASE_9_5_CURRENT_TRUTH_2026-08-23.md`.
 - **Phase 9.5 backlog:** `docs/release/PHASE_9_5_FINAL_IMPLEMENTATION_BACKLOG_2026-08-23.md`.
-- **Rooms feature candidate — 2026-08-30:** isolated branch `feature/member-portal-rooms`; `pnpm test:release` passed `177/177`. This is local/CI validation only and does not constitute staging or production evidence.
+- **Rooms feature candidate — 2026-08-30:** isolated branch `feature/member-portal-rooms`; `pnpm test:release` passed `178/178`. This is local/CI validation only and does not constitute staging or production evidence.
 
 ## Historical staging checkpoint — 2026-08-19 (STAGING MIGRATION COMPLETE)
 

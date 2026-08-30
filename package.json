@@ -63,6 +63,8 @@
     "staging:database-bootstrap": "tsx scripts/release/runStagingDatabaseBootstrap.ts",
     "staging:smoke-plan": "tsx scripts/release/printStagingSmokePlan.ts",
     "staging:smoke-simulated": "tsx scripts/release/simulatedStagingSmoke.ts",
+    "production:rooms:rehearsal": "tsx scripts/release/productionRoomsMigration.mts",
+    "test:production:rooms-control": "tsx scripts/release/productionRoomsMigration.test.ts",
     "release:evidence:dry-run": "tsx scripts/release/buildReleaseEvidence.ts",
     "launch:critical:test-manifest": "tsx scripts/release/launchCriticalTestManifest.ts",
     "test:launch-critical-test-manifest": "tsx scripts/release/launchCriticalTestManifest.test.ts",

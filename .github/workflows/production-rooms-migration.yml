@@ -1,0 +1,174 @@
+name: Guarded Production Rooms Migration
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Read-only plan, exact Rooms apply, or post-deploy navigation finalization
+        required: true
+        type: choice
+        options:
+          - plan
+          - apply
+          - finalize
+      expected_production_sha:
+        description: Full SHA currently serving the guarded production target
+        required: true
+        type: string
+      expected_source_sha:
+        description: Full feature SHA for plan/apply or integrated main SHA for finalize
+        required: true
+        type: string
+      expected_main_sha:
+        description: Expected origin/main baseline SHA for plan/apply
+        required: true
+        type: string
+      migration_source_sha256:
+        description: SHA-256 of the immutable Rooms migration source
+        required: true
+        type: string
+      backup_evidence_id:
+        description: Protected production rollback evidence ID
+        required: true
+        type: string
+      backup_sha256:
+        description: SHA-256 of the protected production rollback archive
+        required: true
+        type: string
+      rehearsal_evidence_id:
+        description: Successful restored-production-backup rehearsal evidence ID
+        required: true
+        type: string
+      operator_id:
+        description: Operator evidence reference
+        required: true
+        type: string
+      rollback_owner:
+        description: Named rollback owner reference
+        required: true
+        type: string
+      maintenance_window_id:
+        description: Approved maintenance/release operation reference
+        required: true
+        type: string
+      confirmation:
+        description: Exact confirmation phrase for the selected operation
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-rooms-migration
+  cancel-in-progress: false
+
+jobs:
+  guarded-rooms-migration:
+    name: Run guarded production Rooms ${{ inputs.mode }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: root-domain-image-publish
+    env:
+      MODE: ${{ inputs.mode }}
+      EXPECTED_PRODUCTION_SHA: ${{ inputs.expected_production_sha }}
+      EXPECTED_SOURCE_SHA: ${{ inputs.expected_source_sha }}
+      EXPECTED_MAIN_SHA: ${{ inputs.expected_main_sha }}
+      INPUT_MIGRATION_SOURCE_SHA256: ${{ inputs.migration_source_sha256 }}
+      BACKUP_EVIDENCE_ID: ${{ inputs.backup_evidence_id }}
+      BACKUP_SHA256: ${{ inputs.backup_sha256 }}
+      REHEARSAL_EVIDENCE_ID: ${{ inputs.rehearsal_evidence_id }}
+      OPERATOR_ID: ${{ inputs.operator_id }}
+      ROLLBACK_OWNER: ${{ inputs.rollback_owner }}
+      MAINTENANCE_WINDOW_ID: ${{ inputs.maintenance_window_id }}
+      CONFIRMATION: ${{ inputs.confirmation }}
+      DOKPLOY_API_BASE_URL: https://dokploy.prochat.tools/api
+      DOKPLOY_APPLICATION_ID: I_2Vukga3cc3ZhaG-mUzU
+      DOKPLOY_APPLICATION_NAME: clients-jpv-bootcamp-app-tp9xrk
+      TARGET_ORIGIN: https://jpvbootcamp.com
+      PRODUCTION_DATABASE_HOST: 10.0.2.4
+      PRODUCTION_DATABASE_PORT: '5433'
+      PRODUCTION_DATABASE_NAME: jpvbootcamp
+      PRODUCTION_DATABASE_SCHEMA: jpvbootcamp
+      PRODUCTION_DATABASE_ROLE: jpvbootcamp_staging_user
+
+    steps:
+      - name: Validate operation boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$MODE" in
+            plan|apply)
+              test "$GITHUB_REF_NAME" = "feature/member-portal-rooms"
+              test "$EXPECTED_MAIN_SHA" = "89b3ff16563c902db88734c4f512375f47b4e70b"
+              ;;
+            finalize)
+              test "$GITHUB_REF_NAME" = "main"
+              ;;
+            *)
+              echo "ROOMS-MIGRATION-DENIED: unsupported mode" >&2
+              exit 1
+              ;;
+          esac
+          if printf '%s\n' "$EXPECTED_PRODUCTION_SHA" "$EXPECTED_SOURCE_SHA" "$EXPECTED_MAIN_SHA" \
+            | grep -vEq '^[0-9a-f]{40}$'; then
+            echo 'expected production/source/main SHA values must all be 40 lowercase hex characters' >&2
+            exit 1
+          fi
+          test "$DOKPLOY_APPLICATION_ID" = 'I_2Vukga3cc3ZhaG-mUzU'
+          test "$DOKPLOY_APPLICATION_NAME" = 'clients-jpv-bootcamp-app-tp9xrk'
+          test "$TARGET_ORIGIN" = 'https://jpvbootcamp.com'
+          test "$PRODUCTION_DATABASE_HOST" = '10.0.2.4'
+          test "$PRODUCTION_DATABASE_PORT" = '5433'
+          test "$PRODUCTION_DATABASE_NAME" = 'jpvbootcamp'
+          test "$PRODUCTION_DATABASE_SCHEMA" = 'jpvbootcamp'
+          test "$PRODUCTION_DATABASE_ROLE" = 'jpvbootcamp_staging_user'
+          test "$INPUT_MIGRATION_SOURCE_SHA256" = "071d47dd39d7e832117dd327c035877555542cd4ef11ec0b73050a848d496a9d"
+          test "$BACKUP_EVIDENCE_ID" = "rooms-production-rollback-20260830T151139Z"
+          test "$BACKUP_SHA256" = "1ad075fcde67b7db99e9703a3f8bdc3795b38057857c3fc1469049fa549c758b"
+          case "$MODE:$CONFIRMATION" in
+            plan:plan-rooms-production-migration|apply:apply-rooms-production-migration-to-jpvbootcamp|finalize:finalize-rooms-production-navigation) ;;
+            *) echo "ROOMS-MIGRATION-DENIED: confirmation phrase is invalid" >&2; exit 1 ;;
+          esac
+          echo "Guarded Rooms operation accepted for $GITHUB_REF_NAME/$MODE"
+
+      - name: Check out exact release source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.expected_source_sha }}
+          fetch-depth: 0
+
+      - name: Verify exact source and main baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SOURCE_SHA"
+          if [ "$MODE" = "plan" ] || [ "$MODE" = "apply" ]; then
+            test "$(git ls-remote origin refs/heads/main | awk '{print $1}')" = "$EXPECTED_MAIN_SHA"
+            git merge-base --is-ancestor "$EXPECTED_MAIN_SHA" "$EXPECTED_SOURCE_SHA"
+          else
+            test "$(git ls-remote origin refs/heads/main | awk '{print $1}')" = "$EXPECTED_SOURCE_SHA"
+          fi
+          actual_migration_sha256="$(sha256sum src/migrations/20260830_090000_member_portal_rooms.ts | awk '{print $1}')"
+          test "$actual_migration_sha256" = "$INPUT_MIGRATION_SOURCE_SHA256"
+          echo "Exact source and immutable migration checksum verified"
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: 10.33.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '20'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run guarded production Rooms control
+        env:
+          DOKPLOY_API_KEY: ${{ secrets.DOKPLOY_API_KEY }}
+          ROOMS_MIGRATION_MODE: ${{ inputs.mode }}
+        run: pnpm exec tsx scripts/release/productionRoomsMigration.mts
