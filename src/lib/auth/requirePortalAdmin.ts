@@ -1,6 +1,6 @@
 import 'server-only'
 
-import { requirePortalAccess, type PortalAccessContext } from '@/lib/auth/requirePortalAccess'
+import { requirePortalAccess, type PortalAccessContext, type PortalAccessOptions } from '@/lib/auth/requirePortalAccess'
 import type { AdminActor } from '@/lib/auth/portalActor'
 import { PortalAdminActionError } from '@/lib/portalAdmin/actionResult'
 import { privilegedPayloadAccess, type PrivilegedPayloadAccess } from '@/lib/payload/privilegedAccess'
@@ -36,6 +36,7 @@ export function assertPortalAdminAccess(access: PortalAccessContext): PortalAdmi
  */
 export async function requirePortalAdmin(
   requestedPath = '/portal',
+  options: PortalAccessOptions = {},
 ): Promise<PortalAdminContext> {
-  return assertPortalAdminAccess(await requirePortalAccess(requestedPath))
+  return assertPortalAdminAccess(await requirePortalAccess(requestedPath, options))
 }

@@ -16,7 +16,7 @@ function responseForError(error: unknown, action: string): NextResponse {
 
 export async function GET(): Promise<NextResponse> {
   try {
-    const { payload } = await requirePortalAdmin('/portal/rooms')
+    const { payload } = await requirePortalAdmin('/portal/rooms', { redirectOnFailure: false })
     const [rooms, groups, categories] = await Promise.all([
       listAdminRooms(payload),
       payload.find({ collection: 'payload_member_groups', where: { status: { equals: 'active' } }, limit: 500, depth: 1, overrideAccess: true }),
@@ -31,7 +31,7 @@ export async function GET(): Promise<NextResponse> {
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     const body = await request.json() as RoomInput
-    const { actor, payload } = await requirePortalAdmin('/portal/rooms')
+    const { actor, payload } = await requirePortalAdmin('/portal/rooms', { redirectOnFailure: false })
     const result = await createRoomCommand({ payload, adminId: actor.administratorId, adminEmail: actor.email }, body)
     return NextResponse.json({ ok: true, room: result.room, addedMembers: result.addedMembers, removedMembers: result.removedMembers, warnings: result.warnings }, { status: 201 })
   } catch (error) {
