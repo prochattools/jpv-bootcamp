@@ -50,6 +50,7 @@ assert.equal(payload.registeredPayloadMigrations.at(-1), PRODUCTION_ROOMS_MIGRAT
 assert.equal(payload.targetOrigin, PRODUCTION_ROOMS_TARGET.origin)
 assert.equal(payload.applicationId, PRODUCTION_ROOMS_TARGET.dokployApplicationId)
 assert.equal(payload.applicationName, PRODUCTION_ROOMS_TARGET.dokploySlug)
+assert.equal(PRODUCTION_ROOMS_TARGET.role, 'jpvbootcamp_production_app')
 
 process.env.EXPECTED_PRODUCTION_SHA = '89b3ff16563c902db88734c4f512375f47b4e70b'
 const command = buildRemoteScheduleCommand(payload, 'apply-test')
@@ -61,6 +62,7 @@ assert.doesNotMatch(command, /DATABASE_URL=/i)
 assert.doesNotMatch(command, /(?:PASSWORD|SECRET|API_KEY)=/i)
 
 assert.match(runnerSource, /DEPLOYMENT_ENV !== EXPECTED_PRODUCTION\.deploymentEnv/)
+assert.match(runnerSource, /role: 'jpvbootcamp_production_app'/)
 assert.match(runnerSource, /jpvbootcamp_staging/)
 assert.match(runnerSource, /jpvbootcamp_legacy/)
 assert.match(runnerSource, /historicalBaselineMatches/)
@@ -77,6 +79,7 @@ assert.match(workflowSource, /I_2Vukga3cc3ZhaG-mUzU/)
 assert.match(workflowSource, /clients-jpv-bootcamp-app-tp9xrk/)
 assert.match(workflowSource, /10\.0\.2\.4/)
 assert.match(workflowSource, /jpvbootcamp/)
+assert.match(workflowSource, /PRODUCTION_DATABASE_ROLE: jpvbootcamp_production_app/)
 assert.match(workflowSource, /ROOMS_SOURCE_BRANCH: feature\/member-portal-rooms/)
 assert.match(workflowSource, /git ls-remote origin "refs\/heads\/\$ROOMS_SOURCE_BRANCH"/)
 assert.match(workflowSource, /20260830_090000_member_portal_rooms/)

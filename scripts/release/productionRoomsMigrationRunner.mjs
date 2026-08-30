@@ -21,7 +21,7 @@ export const EXPECTED_PRODUCTION = Object.freeze({
   port: '5433',
   database: 'jpvbootcamp',
   schema: 'jpvbootcamp',
-  role: 'jpvbootcamp_staging_user',
+  role: 'jpvbootcamp_production_app',
 })
 export const LEGACY_NAVIGATION = Object.freeze({ label: 'Live', href: '/portal/live-sessions' })
 export const ROOMS_NAVIGATION = Object.freeze({ label: 'Rooms', href: '/portal/rooms' })

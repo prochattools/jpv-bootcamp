@@ -16,7 +16,7 @@ export const ENVIRONMENT_TOPOLOGY = {
     databasePort: '5433',
     database: 'jpvbootcamp',
     schema: 'jpvbootcamp',
-    databaseRole: 'jpvbootcamp_staging_user',
+    databaseRole: 'jpvbootcamp_production_app',
     sourceRef: 'main',
   },
   staging: {
