@@ -8,6 +8,7 @@ import { MEMBER_COLLECTION } from '@/lib/auth/payloadSessionMapping'
 import { resolveAdministratorMemberIdentity } from '@/lib/auth/adminMemberIdentity'
 import { decideSharedLogin } from '@/lib/auth/sharedLoginDecision'
 import { getCachedPayload } from '@/lib/payload/getPayload'
+import { PortalAdminActionError } from '@/lib/portalAdmin/actionResult'
 import type { PayloadCourseAccessAPI } from '@/lib/payloadCourse/accessService'
 import {
   derivePortalCapabilities,
@@ -23,6 +24,10 @@ export type PortalAccessContext = {
   capabilities: PortalCapabilities
 }
 
+export type PortalAccessOptions = {
+	redirectOnFailure?: boolean
+}
+
 /**
  * Allows active verified members AND authenticated payload_users admins.
  *
@@ -35,6 +40,7 @@ export type PortalAccessContext = {
  */
 export async function requirePortalAccess(
   requestedPath = '/portal',
+  options: PortalAccessOptions = {},
 ): Promise<PortalAccessContext> {
   const requestHeaders = await headers()
   const session = await cachedResolvePayloadRequestSession(requestHeaders)
@@ -68,6 +74,9 @@ export async function requirePortalAccess(
     decision.identity.kind !== 'member' ||
     !session.member?.id
   ) {
+    if (options.redirectOnFailure === false) {
+      throw new PortalAdminActionError('unauthorized', 'Please sign in and try again.')
+    }
     redirect(`/portal?mode=login&next=${encodeURIComponent(requestedPath)}`)
   }
 
@@ -81,6 +90,9 @@ export async function requirePortalAccess(
 
   const memberEmail = typeof member?.email === 'string' ? member.email : ''
   if (!memberEmail) {
+    if (options.redirectOnFailure === false) {
+      throw new PortalAdminActionError('unauthorized', 'Please sign in and try again.')
+    }
     redirect(`/portal?mode=login&next=${encodeURIComponent(requestedPath)}`)
   }
 

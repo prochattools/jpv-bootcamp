@@ -15,7 +15,7 @@ function responseForError(error: unknown, action: string): NextResponse {
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }): Promise<NextResponse> {
   try {
-    const { payload } = await requirePortalAdmin('/portal/rooms')
+    const { payload } = await requirePortalAdmin('/portal/rooms', { redirectOnFailure: false })
     const { id } = await params
     const room = await payload.findByID({ collection: 'live_sessions', id, depth: 1, overrideAccess: true }).catch((): null => null)
     if (!room) return NextResponse.json({ ok: false, code: 'not_found', message: 'Room not found.' }, { status: 404 })
@@ -28,7 +28,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }): Promise<NextResponse> {
   try {
     const body = await request.json() as RoomUpdateInput & { status?: 'live' | 'completed' | 'cancelled'; archived?: boolean }
-    const { actor, payload } = await requirePortalAdmin('/portal/rooms')
+    const { actor, payload } = await requirePortalAdmin('/portal/rooms', { redirectOnFailure: false })
     const { id } = await params
     const context = { payload, adminId: actor.administratorId, adminEmail: actor.email }
     if (body.status) {
@@ -48,7 +48,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }): Promise<NextResponse> {
   try {
-    const { actor, payload } = await requirePortalAdmin('/portal/rooms')
+    const { actor, payload } = await requirePortalAdmin('/portal/rooms', { redirectOnFailure: false })
     const { id } = await params
     const confirmed = request.headers.get('x-confirm-delete') === 'true'
     await deleteRoomCommand({ payload, adminId: actor.administratorId, adminEmail: actor.email }, id, confirmed)
