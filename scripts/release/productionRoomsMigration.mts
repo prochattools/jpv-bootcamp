@@ -157,10 +157,11 @@ export function buildRemoteScheduleCommand(
 	const payloadData = encoded(payload)
 	const temporaryRunnerPath = `/tmp/jpv-rooms-${commandId}.mjs`
 	return [
-		'set -eu; printf \'JPV_ROOMS_REMOTE_START\\n\'',
-		`node -e 'require("fs").writeFileSync("${temporaryRunnerPath}", require("zlib").gunzipSync(Buffer.from("${runner}", "base64")))'`,
+		'set -u; printf \'JPV_ROOMS_REMOTE_START\\n\'',
 		`trap 'rm -f "${temporaryRunnerPath}"' EXIT`,
-		`ROOMS_MIGRATION_TARGET=production ROOMS_MIGRATION_EXPECTED_RELEASE_SHA='${requiredPayloadReleaseSha(payload)}' EXPECTED_DEPLOYMENT_SHA='${requiredPayloadReleaseSha(payload)}' ROOMS_MIGRATION_PAYLOAD_B64='${payloadData}' node "${temporaryRunnerPath}"`,
+		`node -e 'require("fs").writeFileSync("${temporaryRunnerPath}", require("zlib").gunzipSync(Buffer.from("${runner}", "base64")))'`,
+		`setup_status=$?; if [ "$setup_status" -ne 0 ]; then printf 'JPV_ROOMS_REMOTE_EXIT_%s\\n' "$setup_status"; exit "$setup_status"; fi`,
+		`set +e; ROOMS_MIGRATION_TARGET=production ROOMS_MIGRATION_EXPECTED_RELEASE_SHA='${requiredPayloadReleaseSha(payload)}' EXPECTED_DEPLOYMENT_SHA='${requiredPayloadReleaseSha(payload)}' ROOMS_MIGRATION_PAYLOAD_B64='${payloadData}' node "${temporaryRunnerPath}"; runner_status=$?; printf 'JPV_ROOMS_REMOTE_EXIT_%s\\n' "$runner_status"; exit "$runner_status"`,
 	].join('; ')
 }
 
@@ -391,6 +392,7 @@ async function runProductionSchedule(payload: ProductionRoomsControlPayload): Pr
 		let logHasSuccessBanner = false
 		let logHasCommandFailed = false
 		let executionFailureKind = 'none'
+		let remoteExitCode: number | null = null
 		let deploymentStatuses = new Set<string>()
 		let logPathPresent = false
 		let deploymentErrorMessagePresent = false
@@ -428,6 +430,8 @@ async function runProductionSchedule(payload: ProductionRoomsControlPayload): Pr
 					logHasExecutionBanner ||= /(?:^|\r?\n)Running scheduled command(?:\r?\n|$)/.test(text)
 					logHasSuccessBanner ||= /(?:^|\r?\n)✅ Command executed successfully(?:\r?\n|$)/.test(text)
 					logHasCommandFailed ||= /(?:^|\r?\n)❌ Command failed(?:\r?\n|$)/.test(text)
+					const remoteExit = text.match(/(?:^|\r?\n)JPV_ROOMS_REMOTE_EXIT_(\d+)(?:\r?\n|$)/)
+					if (remoteExit) remoteExitCode = Number(remoteExit[1])
 					if (/container .*?(?:not found|does not exist)|no such container/i.test(text)) executionFailureKind = 'container_not_found'
 					else if (/executable file not found|command not found|no such file or directory/i.test(text)) executionFailureKind = 'executable_not_found'
 					else if (/cannot connect to the docker daemon|permission denied/i.test(text)) executionFailureKind = 'docker_access_denied'
@@ -441,7 +445,7 @@ async function runProductionSchedule(payload: ProductionRoomsControlPayload): Pr
 			if ([...deploymentStatuses].some((status) => /^(?:error|failed|cancelled)$/i.test(status))) break
 			if (attempt < 36) await new Promise((resolvePromise) => setTimeout(resolvePromise, 5_000))
 		}
-		console.log(`Rooms ${payload.mode} completion marker missing; schedule_list_http=${lastScheduleListStatus} deployment_list_http=${lastDeploymentListStatus} logs_http=${lastLogsStatus} deployment_records=${lastDeploymentCount} log_bytes=${logBytes} remote_started=${logHasRemoteStart} command_echo=${logEchoesRemoteCommand} execution_banner=${logHasExecutionBanner} success_banner=${logHasSuccessBanner} command_failed=${logHasCommandFailed} failure_kind=${executionFailureKind} deployment_error_kind=${deploymentErrorKind} deployment_error_message_present=${deploymentErrorMessagePresent} control_marker_seen=${logHasControlMarker} known_execution_error=${logHasKnownExecutionError} deployment_statuses=${[...deploymentStatuses].filter((status) => /^(?:queued|running|done|error|failed|cancelled)$/i.test(status)).join(',') || 'none'} log_path_present=${logPathPresent}`)
+		console.log(`Rooms ${payload.mode} completion marker missing; schedule_list_http=${lastScheduleListStatus} deployment_list_http=${lastDeploymentListStatus} logs_http=${lastLogsStatus} deployment_records=${lastDeploymentCount} log_bytes=${logBytes} remote_started=${logHasRemoteStart} command_echo=${logEchoesRemoteCommand} execution_banner=${logHasExecutionBanner} success_banner=${logHasSuccessBanner} command_failed=${logHasCommandFailed} failure_kind=${executionFailureKind} remote_exit=${remoteExitCode === null ? 'none' : remoteExitCode} deployment_error_kind=${deploymentErrorKind} deployment_error_message_present=${deploymentErrorMessagePresent} control_marker_seen=${logHasControlMarker} known_execution_error=${logHasKnownExecutionError} deployment_statuses=${[...deploymentStatuses].filter((status) => /^(?:queued|running|done|error|failed|cancelled)$/i.test(status)).join(',') || 'none'} log_path_present=${logPathPresent}`)
 		throw new Error('schedule_completion_marker_missing')
 	} finally {
 		if (scheduleId) {
