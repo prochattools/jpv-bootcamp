@@ -91,6 +91,7 @@ jobs:
       PRODUCTION_DATABASE_NAME: jpvbootcamp
       PRODUCTION_DATABASE_SCHEMA: jpvbootcamp
       PRODUCTION_DATABASE_ROLE: jpvbootcamp_staging_user
+      ROOMS_SOURCE_BRANCH: feature/member-portal-rooms
 
     steps:
       - name: Validate operation boundary
@@ -99,8 +100,8 @@ jobs:
           set -euo pipefail
           case "$MODE" in
             plan|apply)
-              test "$GITHUB_REF_NAME" = "feature/member-portal-rooms"
-              test "$EXPECTED_MAIN_SHA" = "89b3ff16563c902db88734c4f512375f47b4e70b"
+              test "$GITHUB_REF_NAME" = "main"
+              test "$ROOMS_SOURCE_BRANCH" = "feature/member-portal-rooms"
               ;;
             finalize)
               test "$GITHUB_REF_NAME" = "main"
@@ -145,7 +146,7 @@ jobs:
           test "$(git rev-parse HEAD)" = "$EXPECTED_SOURCE_SHA"
           if [ "$MODE" = "plan" ] || [ "$MODE" = "apply" ]; then
             test "$(git ls-remote origin refs/heads/main | awk '{print $1}')" = "$EXPECTED_MAIN_SHA"
-            git merge-base --is-ancestor "$EXPECTED_MAIN_SHA" "$EXPECTED_SOURCE_SHA"
+            test "$(git ls-remote origin "refs/heads/$ROOMS_SOURCE_BRANCH" | awk '{print $1}')" = "$EXPECTED_SOURCE_SHA"
           else
             test "$(git ls-remote origin refs/heads/main | awk '{print $1}')" = "$EXPECTED_SOURCE_SHA"
           fi

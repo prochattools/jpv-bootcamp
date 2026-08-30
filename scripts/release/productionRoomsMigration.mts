@@ -27,7 +27,6 @@ const runnerPath = resolve(repoRoot, 'scripts/release/productionRoomsMigrationRu
 const fullSha = /^[0-9a-f]{40}$/
 const sha256 = /^[0-9a-f]{64}$/
 const safeReference = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/
-const productionMainSha = '89b3ff16563c902db88734c4f512375f47b4e70b'
 
 type UnknownRecord = Record<string, unknown>
 
@@ -166,10 +165,7 @@ export function buildRemoteScheduleCommand(
 }
 
 function requiredPayloadReleaseSha(payload: ProductionRoomsControlPayload): string {
-	const value = payload.mode === 'finalize'
-		? process.env.EXPECTED_PRODUCTION_SHA ?? process.env.EXPECTED_SOURCE_SHA ?? ''
-		: process.env.EXPECTED_PRODUCTION_SHA ?? productionMainSha
-	return assertSha(value, 'expected_production_sha')
+	return assertSha(required('EXPECTED_PRODUCTION_SHA'), 'expected_production_sha')
 }
 
 function isRecord(value: unknown): value is UnknownRecord {
@@ -375,9 +371,10 @@ function validateWorkflowInputs(mode: ProductionRoomsMigrationMode): { expectedS
 	const expectedProductionSha = assertSha(required('EXPECTED_PRODUCTION_SHA'), 'expected_production_sha')
 	if (currentCommit() !== expectedSourceSha) throw new Error('source_sha_mismatch')
 	const ref = process.env.GITHUB_REF_NAME?.trim()
-	if ((mode === 'plan' || mode === 'apply') && ref !== 'feature/member-portal-rooms') throw new Error('feature_source_ref_required')
+	if (ref !== 'main') throw new Error('default_branch_control_required')
+	if ((mode === 'plan' || mode === 'apply') && required('ROOMS_SOURCE_BRANCH') !== 'feature/member-portal-rooms') throw new Error('feature_source_branch_required')
 	if (mode === 'finalize' && ref !== 'main') throw new Error('main_source_ref_required')
-	if ((mode === 'plan' || mode === 'apply') && required('EXPECTED_MAIN_SHA') !== productionMainSha) throw new Error('main_baseline_mismatch')
+	assertSha(required('EXPECTED_MAIN_SHA'), 'expected_main_sha')
 	const confirmation = required('CONFIRMATION')
 	const expectedConfirmation = mode === 'plan'
 		? PRODUCTION_ROOMS_MIGRATION_PLAN_CONFIRMATION
@@ -467,5 +464,4 @@ if (isEntrypoint) void main()
 export {
 	PRODUCTION_ROOMS_CRITICAL_TABLES,
 	PRODUCTION_ROOMS_TARGET,
-	productionMainSha,
 }

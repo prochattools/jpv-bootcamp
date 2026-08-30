@@ -77,6 +77,8 @@ assert.match(workflowSource, /I_2Vukga3cc3ZhaG-mUzU/)
 assert.match(workflowSource, /clients-jpv-bootcamp-app-tp9xrk/)
 assert.match(workflowSource, /10\.0\.2\.4/)
 assert.match(workflowSource, /jpvbootcamp/)
+assert.match(workflowSource, /ROOMS_SOURCE_BRANCH: feature\/member-portal-rooms/)
+assert.match(workflowSource, /git ls-remote origin "refs\/heads\/\$ROOMS_SOURCE_BRANCH"/)
 assert.match(workflowSource, /20260830_090000_member_portal_rooms/)
 assert.equal(PRODUCTION_ROOMS_MIGRATION_APPLY_CONFIRMATION, 'apply-rooms-production-migration-to-jpvbootcamp')
 
