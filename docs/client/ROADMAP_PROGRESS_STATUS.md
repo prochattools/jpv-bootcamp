@@ -30,6 +30,7 @@ retained as dated audit history.
 - **Hard stops:** do not start A6 integration, add feature work, merge
   historical branches, mutate production data/providers, run migrations,
   delete worktrees/branches, or deploy from this A5 architecture packet.
+- **Rooms feature candidate — 2026-08-30:** isolated branch `feature/member-portal-rooms`; `pnpm test:release` passed `174/174`. This is local/CI validation only and does not constitute staging or production evidence.
 
 ### ARCHITECTURAL HOLD — POST-LAUNCH CONSOLIDATION
 

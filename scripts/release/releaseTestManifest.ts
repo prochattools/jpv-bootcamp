@@ -236,6 +236,8 @@ export const RELEASE_TEST_MANIFEST: ReleaseTestEntry[] = [
 
   test('portal-admin.source-structure', 'member portal and entitlement behavior', 'scripts/portal_admin_inline.test.ts', 'Validates portal admin component structure and import safety.', 'Portal admin components can import server modules or use unsafe patterns.', 'M1-02'),
   test('portal-admin.behavioral-contract', 'member portal and entitlement behavior', 'scripts/portal_admin_behavioral.test.ts', 'Validates portal admin behavioral contracts: ownership verification, space validation, audit, and access control patterns.', 'Portal admin actions can bypass ownership checks, skip audit, or use stale client state.', 'M1-02'),
+  test('rooms.domain', 'member portal and entitlement behavior', 'scripts/rooms.test.ts', 'Protects Room audience resolution, durable entitlement, invitation dedupe, and LiveKit permission behavior.', 'Room audience or trusted access behavior can regress.', 'M1-02'),
+  test('rooms.contract', 'member portal and entitlement behavior', 'scripts/rooms-contract.test.ts', 'Protects canonical Rooms routes, compatibility routes, category/access separation, and migration contracts.', 'The Rooms feature can drift from its route, schema, or authorization boundaries.', 'M1-02'),
   {
     id: 'portal-admin.mutation-smoke-gate',
     category: 'member portal and entitlement behavior',
