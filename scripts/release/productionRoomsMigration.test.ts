@@ -79,6 +79,7 @@ assert.match(controlSource, /server\.all/)
 assert.match(controlSource, /serverType === serverType/)
 assert.match(controlSource, /serverStatus === serverStatus/)
 assert.match(controlSource, /Rooms deploy server candidates/)
+assert.match(controlSource, /Rooms server inventory/)
 assert.match(controlSource, /schedule\.list\?id=.*serverId.*scheduleType=server/)
 
 assert.match(workflowSource, /workflow_dispatch:/)

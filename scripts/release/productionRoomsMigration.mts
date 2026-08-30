@@ -308,6 +308,45 @@ function collectServerCandidates(
 	return result
 }
 
+function collectServerInventory(
+	value: unknown,
+	result: Array<{
+		serverId: string
+		name: string
+		ipAddress: string
+		serverType: string
+		serverStatus: string
+		totalSum: string
+	}> = [],
+): Array<{
+	serverId: string
+	name: string
+	ipAddress: string
+	serverType: string
+	serverStatus: string
+	totalSum: string
+}> {
+	if (Array.isArray(value)) {
+		for (const child of value) collectServerInventory(child, result)
+	}
+	if (isRecord(value)) {
+		const hasServerMetadata = ['serverId', 'ipAddress', 'serverType', 'serverStatus', 'totalSum'].some((key) => key in value)
+		const serverId = typeof value.serverId === 'string' ? value.serverId : typeof value.id === 'string' ? value.id : ''
+		if (hasServerMetadata) {
+			result.push({
+				serverId,
+				name: typeof value.name === 'string' ? value.name : '',
+				ipAddress: typeof value.ipAddress === 'string' ? value.ipAddress : '',
+				serverType: typeof value.serverType === 'string' ? value.serverType : '',
+				serverStatus: typeof value.serverStatus === 'string' ? value.serverStatus : '',
+				totalSum: typeof value.totalSum === 'number' || typeof value.totalSum === 'string' ? String(value.totalSum) : '',
+			})
+		}
+		for (const child of Object.values(value)) collectServerInventory(child, result)
+	}
+	return result
+}
+
 function findDeploymentIds(value: unknown, scheduleId: string, result = new Set<string>()): Set<string> {
 	if (Array.isArray(value)) {
 		for (const child of value) findDeploymentIds(child, scheduleId, result)
@@ -424,9 +463,11 @@ async function runProductionSchedule(payload: ProductionRoomsControlPayload): Pr
 	const servers = await dokployRequest(apiBase, apiKey, '/server.all')
 	if (servers.status < 200 || servers.status >= 300) throw new Error('server_list_failed')
 	const serverCandidates = collectServerCandidates(servers.data, PRODUCTION_ROOMS_TARGET.databaseHost, 'deploy')
+	const serverInventory = collectServerInventory(servers.data)
 	const serverIds = findServerIdsByAddressAndType(servers.data, PRODUCTION_ROOMS_TARGET.databaseHost, 'deploy', 'active')
 	if (serverIds.size !== 1) {
 		console.log(`Rooms deploy server candidates: ${JSON.stringify([...serverCandidates.values()])}`)
+		console.log(`Rooms server inventory: ${JSON.stringify(serverInventory)}`)
 		throw new Error('production_deploy_server_identity_ambiguous')
 	}
 	const serverId = [...serverIds][0]
