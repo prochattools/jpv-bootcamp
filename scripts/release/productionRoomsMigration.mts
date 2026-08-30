@@ -259,6 +259,23 @@ function findDeploymentId(value: unknown, scheduleId: string): string | null {
 	return null
 }
 
+function findDeploymentIdInList(value: unknown): string | null {
+	if (Array.isArray(value)) {
+		for (const child of value) {
+			const found = findDeploymentIdInList(child)
+			if (found) return found
+		}
+	}
+	if (isRecord(value)) {
+		if (typeof value.deploymentId === 'string' && value.deploymentId) return value.deploymentId
+		for (const child of Object.values(value)) {
+			const found = findDeploymentIdInList(child)
+			if (found) return found
+		}
+	}
+	return null
+}
+
 function logText(value: unknown): string {
 	const values: string[] = []
 	const collect = (child: unknown): void => {
@@ -339,7 +356,17 @@ async function runProductionSchedule(payload: ProductionRoomsControlPayload): Pr
 		for (let attempt = 1; attempt <= 36; attempt += 1) {
 			const listed = await dokployRequest(apiBase, apiKey, `/schedule.list?id=${encodeURIComponent(PRODUCTION_ROOMS_TARGET.applicationId)}&scheduleType=application`)
 			if (listed.status >= 200 && listed.status < 300) {
-				const deploymentId = findDeploymentId(listed.data, scheduleId)
+				let deploymentId = findDeploymentId(listed.data, scheduleId)
+				if (!deploymentId) {
+					const deployments = await dokployRequest(
+						apiBase,
+						apiKey,
+						`/deployment.allByType?id=${encodeURIComponent(scheduleId)}&type=schedule`,
+					)
+					if (deployments.status >= 200 && deployments.status < 300) {
+						deploymentId = findDeploymentIdInList(deployments.data)
+					}
+				}
 				if (deploymentId) {
 					const logs = await dokployRequest(apiBase, apiKey, `/deployment.readLogs?deploymentId=${encodeURIComponent(deploymentId)}&tail=20000`)
 					if (logs.status >= 200 && logs.status < 300) {

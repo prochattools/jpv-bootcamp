@@ -19,6 +19,7 @@ import {
 } from './productionRoomsMigrationConstants'
 
 const migrationSource = readFileSync('src/migrations/20260830_090000_member_portal_rooms.ts', 'utf8')
+const controlSource = readFileSync('scripts/release/productionRoomsMigration.mts', 'utf8')
 const runnerSource = readFileSync('scripts/release/productionRoomsMigrationRunner.mjs', 'utf8')
 const workflowSource = readFileSync('.github/workflows/production-rooms-migration.yml', 'utf8')
 
@@ -68,6 +69,7 @@ assert.match(runnerSource, /jpvbootcamp_legacy/)
 assert.match(runnerSource, /historicalBaselineMatches/)
 assert.match(runnerSource, /compatibility_navigation_restore_failed/)
 assert.match(runnerSource, /critical_integrity_changed/)
+assert.match(controlSource, /deployment\.allByType\?id=/)
 
 assert.match(workflowSource, /workflow_dispatch:/)
 assert.doesNotMatch(workflowSource, /^\s*push:/m)
