@@ -252,28 +252,26 @@ function findScheduleId(value: unknown, scheduleName: string): string | null {
 	return null
 }
 
-function findServerIdsByAddressAndType(
+function findServerIdsByTypeAndStatus(
 	value: unknown,
-	address: string,
 	serverType: string,
 	serverStatus: string,
 	result = new Set<string>(),
 ): Set<string> {
 	if (Array.isArray(value)) {
 		for (const child of value) {
-			findServerIdsByAddressAndType(child, address, serverType, serverStatus, result)
+			findServerIdsByTypeAndStatus(child, serverType, serverStatus, result)
 		}
 	}
 	if (isRecord(value)) {
 		if (
-			value.ipAddress === address &&
 			value.serverType === serverType &&
 			value.serverStatus === serverStatus &&
 			typeof value.serverId === 'string' &&
 			value.serverId
 		) result.add(value.serverId)
 		for (const child of Object.values(value)) {
-			findServerIdsByAddressAndType(child, address, serverType, serverStatus, result)
+			findServerIdsByTypeAndStatus(child, serverType, serverStatus, result)
 		}
 	}
 	return result
@@ -281,16 +279,15 @@ function findServerIdsByAddressAndType(
 
 function collectServerCandidates(
 	value: unknown,
-	address: string,
 	serverType: string,
 	result = new Map<string, { serverId: string; name: string; serverType: string; serverStatus: string; totalSum: string }>(),
 ): Map<string, { serverId: string; name: string; serverType: string; serverStatus: string; totalSum: string }> {
 	if (Array.isArray(value)) {
-		for (const child of value) collectServerCandidates(child, address, serverType, result)
+		for (const child of value) collectServerCandidates(child, serverType, result)
 	}
 	if (isRecord(value)) {
 		if (
-			value.ipAddress === address &&
+			value.serverType === serverType &&
 			value.serverType === serverType &&
 			typeof value.serverId === 'string' &&
 			value.serverId
@@ -303,7 +300,7 @@ function collectServerCandidates(
 				totalSum: typeof value.totalSum === 'number' || typeof value.totalSum === 'string' ? String(value.totalSum) : '',
 			})
 		}
-		for (const child of Object.values(value)) collectServerCandidates(child, address, serverType, result)
+		for (const child of Object.values(value)) collectServerCandidates(child, serverType, result)
 	}
 	return result
 }
@@ -462,9 +459,9 @@ async function runProductionSchedule(payload: ProductionRoomsControlPayload): Pr
 	const command = buildRemoteScheduleCommand(payload, `${payload.mode}-${process.env.GITHUB_RUN_ID ?? 'manual'}`)
 	const servers = await dokployRequest(apiBase, apiKey, '/server.all')
 	if (servers.status < 200 || servers.status >= 300) throw new Error('server_list_failed')
-	const serverCandidates = collectServerCandidates(servers.data, PRODUCTION_ROOMS_TARGET.databaseHost, 'deploy')
+	const serverCandidates = collectServerCandidates(servers.data, 'deploy')
 	const serverInventory = collectServerInventory(servers.data)
-	const serverIds = findServerIdsByAddressAndType(servers.data, PRODUCTION_ROOMS_TARGET.databaseHost, 'deploy', 'active')
+	const serverIds = findServerIdsByTypeAndStatus(servers.data, 'deploy', 'active')
 	if (serverIds.size !== 1) {
 		console.log(`Rooms deploy server candidates: ${JSON.stringify([...serverCandidates.values()])}`)
 		console.log(`Rooms server inventory: ${JSON.stringify(serverInventory)}`)
