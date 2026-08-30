@@ -66,6 +66,8 @@ assert.doesNotMatch(command, /(?:PASSWORD|SECRET|API_KEY)=/i)
 
 assert.match(runnerSource, /DEPLOYMENT_ENV !== EXPECTED_PRODUCTION\.deploymentEnv/)
 assert.match(runnerSource, /role: 'jpvbootcamp_production_app'/)
+assert.match(runnerSource, /systemRole: 'supabase_admin'/)
+assert.match(runnerSource, /SYSTEM_DATABASE_URL/)
 assert.match(runnerSource, /jpvbootcamp_staging/)
 assert.match(runnerSource, /jpvbootcamp_legacy/)
 assert.match(runnerSource, /historicalBaselineMatches/)
