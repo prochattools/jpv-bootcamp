@@ -174,6 +174,9 @@ export default async function PortalCoursesPage() {
                           {featuredCourse.shortDescription}
                         </p>
                       ) : null}
+                      {featuredCourse.description && featuredCourse.description !== featuredCourse.shortDescription ? (
+                        <p className='text-sm leading-6 text-jpv-muted'>{featuredCourse.description}</p>
+                      ) : null}
 
                       <dl className='flex flex-wrap gap-x-6 gap-y-1 text-sm'>
                         {featuredCourse.lessonCount !== null ? (

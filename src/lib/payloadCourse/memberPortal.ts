@@ -46,6 +46,7 @@ export type MemberPortalCourse = {
   title: string
   slug: string | null
   shortDescription: string | null
+  description: string | null
   coverImage: MemberMediaAsset | null
   accessBadge: string | null
   estimatedDuration: string | null
@@ -224,6 +225,7 @@ function courseMetadata(course: PayloadDocument) {
     title: asString(course.title) ?? 'Untitled course',
     slug: asString(course.slug),
     shortDescription: asString(course.shortDescription),
+    description: lexicalPlainText(course.description),
     accessBadge: asString(course.accessBadge),
     estimatedDuration: asString(course.estimatedDuration),
   }

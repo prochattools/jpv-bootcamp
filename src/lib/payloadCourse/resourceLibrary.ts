@@ -15,6 +15,34 @@ export type ResourceLibraryGroup = {
   resources: ResourceLibraryItem[]
 }
 
+async function findAll(payload: PayloadCourseAccessAPI, collection: string, where?: Record<string, unknown>) {
+  const result = await payload.find({ collection, where, limit: 500, depth: 0, overrideAccess: true })
+  return result.docs
+}
+
+export async function getAdminResourceLibrary(payload: PayloadCourseAccessAPI): Promise<ResourceLibraryGroup[]> {
+  const [courses, modules, lessons] = await Promise.all([
+    findAll(payload, 'payload_courses'),
+    findAll(payload, 'payload_course_modules'),
+    findAll(payload, 'payload_lessons'),
+  ])
+  const courseById = new Map(courses.map((course) => [String(course.id), course]))
+  const moduleById = new Map(modules.map((module) => [String(module.id), module]))
+  const groups = new Map<string, ResourceLibraryGroup>()
+  for (const lesson of lessons) {
+    const module = moduleById.get(String(typeof lesson.module === 'object' && lesson.module ? lesson.module.id : lesson.module))
+    const course = module && courseById.get(String(typeof module.course === 'object' && module.course ? module.course.id : module.course))
+    if (!module || !course) continue
+    const resources = await listPublishedLessonResources(payload, lesson.id)
+    if (!resources.length) continue
+    const key = String(course.id)
+    const group: ResourceLibraryGroup = groups.get(key) ?? { courseTitle: String(course.title ?? 'Course'), courseSlug: typeof course.slug === 'string' ? course.slug : null, resources: [] }
+    group.resources.push(...resources.map((resource) => ({ ...resource, courseTitle: group.courseTitle, courseSlug: group.courseSlug, moduleTitle: String(module.title ?? 'Module'), lessonTitle: String(lesson.title ?? 'Lesson') })))
+    groups.set(key, group)
+  }
+  return Array.from(groups.values())
+}
+
 export async function getMemberResourceLibrary(
   payload: PayloadCourseAccessAPI,
   memberId: PayloadId,

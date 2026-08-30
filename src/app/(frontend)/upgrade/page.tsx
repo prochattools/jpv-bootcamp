@@ -23,11 +23,11 @@ export default function UpgradePage() {
       eyebrow='JPV Bootcamp Membership'
       title='Choose your billing cadence'
     >
-      <section className='grid gap-5 md:grid-cols-2'>
-        <article className='rounded-jpv-panel border border-jpv-border bg-jpv-canvas p-6 shadow-jpv-card sm:p-8'>
+      <section className='grid items-stretch gap-5 md:grid-cols-2'>
+        <article className='flex h-full flex-col rounded-jpv-panel border border-jpv-border bg-jpv-canvas p-6 shadow-jpv-card sm:p-8'>
           <p className='jpv-eyebrow'>Monthly</p>
           <h2 className='mt-2 text-2xl font-semibold text-jpv-ink'>£80/month</h2>
-          <p className='mt-3 text-sm leading-6 text-jpv-muted'>
+          <p className='mt-3 flex-1 text-sm leading-6 text-jpv-muted'>
             No minimum commitment. Renews monthly until cancelled; cancellation takes effect at the end of the current paid month.
           </p>
           <a
@@ -39,10 +39,10 @@ export default function UpgradePage() {
           </a>
         </article>
 
-        <article className='rounded-jpv-panel border border-jpv-brand bg-jpv-surface p-6 shadow-jpv-card sm:p-8'>
+        <article className='flex h-full flex-col rounded-jpv-panel border border-jpv-brand bg-jpv-surface p-6 shadow-jpv-card sm:p-8'>
           <p className='jpv-eyebrow'>Annual</p>
           <h2 className='mt-2 text-2xl font-semibold text-jpv-ink'>£800/year</h2>
-          <p className='mt-3 text-sm leading-6 text-jpv-muted'>
+          <p className='mt-3 flex-1 text-sm leading-6 text-jpv-muted'>
             Paid upfront for 12 months and renews automatically each year unless cancelled before renewal.
           </p>
           <a

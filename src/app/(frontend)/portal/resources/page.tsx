@@ -1,7 +1,7 @@
 import { Download } from 'lucide-react'
 
 import { requirePortalAccess } from '@/lib/auth/requirePortalAccess'
-import { getMemberResourceLibrary, type ResourceLibraryGroup } from '@/lib/payloadCourse/resourceLibrary'
+import { getAdminResourceLibrary, getMemberResourceLibrary, type ResourceLibraryGroup } from '@/lib/payloadCourse/resourceLibrary'
 
 function formatFileSize(value: number | null): string | null {
   if (value === null || !Number.isFinite(value) || value < 0) return null
@@ -52,18 +52,15 @@ export default async function PortalResourcesPage() {
   const { actor, payload } = await requirePortalAccess('/portal/resources')
 
   if (actor.kind === 'admin') {
+    const groups = await getAdminResourceLibrary(payload)
     return (
       <div className='space-y-6'>
         <section>
           <p className='jpv-eyebrow'>Administration</p>
           <h1 className='mt-3 text-2xl font-semibold tracking-tight text-jpv-ink'>Resources</h1>
-          <p className='mt-2 max-w-2xl text-sm leading-6 text-jpv-muted'>
-            Resources are attached to lessons and served to enrolled members. View specific course lessons to manage their resources.
-          </p>
+          <p className='mt-2 max-w-2xl text-sm leading-6 text-jpv-muted'>Published resources attached to courses and lessons.</p>
         </section>
-        <div className='rounded-jpv-panel border border-dashed border-jpv-border bg-jpv-canvas p-8 text-center text-sm text-jpv-muted'>
-          Navigate to a course and lesson to view or manage attached resources.
-        </div>
+        {groups.length > 0 ? groups.map((group) => <ResourceGroupSection group={group} key={group.courseTitle} />) : <p className='text-sm text-jpv-muted'>No published resources are available.</p>}
       </div>
     )
   }

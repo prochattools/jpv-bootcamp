@@ -29,7 +29,7 @@ import {
   type ReactionSummary,
 } from '@/lib/payloadCourse/reactions'
 import { getMemberBookmarkState } from '@/lib/payloadCourse/bookmarks'
-import type { MemberCommunityAttachmentResolution } from '@/lib/payloadCourse/communityFiles'
+import { resolveMemberCommunityAttachment, type MemberCommunityAttachmentResolution } from '@/lib/payloadCourse/communityFiles'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -214,26 +214,12 @@ export default async function PortalCommunityPostPage({ params, searchParams }: 
       overrideAccess: true,
     }).catch(() => ({ docs: [] as Array<Record<string, unknown>> }))
 
-    const spaceId = String(spaceDoc.id)
-    const spaceNameStr = String(spaceDoc.name ?? spaceSlug)
-    const attachments: MemberCommunityAttachmentResolution[] = attachmentFiles.docs.map((file) => ({
-      id: String(file.id),
-      title: String(file.title ?? file.filename ?? 'Attachment'),
-      spaceId,
-      spaceName: spaceNameStr,
-      filename: String(file.filename ?? 'file'),
-      mimeType: (typeof file.mimeType === 'string' ? file.mimeType : 'application/octet-stream') as 'application/pdf',
-      byteSize: typeof file.byteSize === 'number' ? file.byteSize : 0,
-      downloadUrl: typeof file.url === 'string' ? file.url : `/portal/community/files/${file.id}`,
-      allowed: true as const,
-      media: {
-        id: String(file.id),
-        filename: String(file.filename ?? 'file'),
-        mimeType: (typeof file.mimeType === 'string' ? file.mimeType : 'application/octet-stream') as 'application/pdf',
-        byteSize: typeof file.byteSize === 'number' ? file.byteSize : 0,
-        storage: 'private' as const,
-      },
-    })) as unknown as MemberCommunityAttachmentResolution[]
+    const resolvedAttachments = await Promise.all(
+      attachmentFiles.docs.map((file) => resolveMemberCommunityAttachment(payload, actor.memberId ?? '', file.id, { allowAdministrator: true })),
+    )
+    const attachments = resolvedAttachments.filter(
+      (attachment): attachment is MemberCommunityAttachmentResolution => attachment.allowed,
+    )
 
     post = {
       id: String(postDoc.id),

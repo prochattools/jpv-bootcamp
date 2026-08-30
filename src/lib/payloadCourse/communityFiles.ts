@@ -635,7 +635,8 @@ export async function getMemberCommunityFiles(
 export async function resolveMemberCommunityAttachment(
   payload: PayloadCourseAccessAPI,
   memberIdInput: PayloadId,
-  fileIdInput: PayloadId
+  fileIdInput: PayloadId,
+  options: { allowAdministrator?: boolean } = {},
 ): Promise<MemberCommunityAttachmentResolution | MemberCommunityFileDownloadDenied> {
   const fileId = String(fileIdInput)
   if (!isSafeResourceId(fileId)) return { allowed: false, reason: 'not_found' }
@@ -649,8 +650,10 @@ export async function resolveMemberCommunityAttachment(
   const spaceId = relationshipId(file.space)
   if (!spaceId) return { allowed: false, reason: 'not_found' }
 
-  const access = await evaluatePayloadSpaceAccess(payload, { memberId, spaceId })
-  if (!access.decision.allowed) return { allowed: false, reason: 'not_found' }
+  if (!options.allowAdministrator) {
+    const access = await evaluatePayloadSpaceAccess(payload, { memberId, spaceId })
+    if (!access.decision.allowed) return { allowed: false, reason: 'not_found' }
+  }
   if (!(await hasTrustedCommunityFileParent(payload, file, spaceId))) {
     return { allowed: false, reason: 'not_found' }
   }

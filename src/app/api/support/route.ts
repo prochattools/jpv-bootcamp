@@ -13,6 +13,7 @@ import {
   trustPublicRequestProxyHeaders,
 } from '@/lib/publicRequestRoute'
 import { queueAndAttemptEmailEvent } from '@/lib/payloadCourse/events'
+import { getPayloadAdministratorRecipients } from '@/lib/payloadCourse/adminRecipients'
 import {
   SUPPORT_REQUEST_ADMIN_NOTIFICATION_TEMPLATE_KEY,
   SUPPORT_REQUEST_RECEIVED_TEMPLATE_KEY,
@@ -70,6 +71,7 @@ export async function POST(req: NextRequest) {
     return publicRequestFailureResponse(guarded)
   }
 
+  const submittedSupport = guarded.data
   const phone = normalizePhone(guarded.data.phone)
   if (!phone || !isValidInternationalPhone(phone)) {
     return NextResponse.json({ ok: false, reason: 'invalid_phone' }, { status: 400 })
@@ -82,11 +84,11 @@ export async function POST(req: NextRequest) {
       const payload = await getPayload({ config: payloadConfig })
       const payloadApi = payload as unknown as PayloadCourseWriteAPI
       const { supportTo } = getServerConfig().email
-
-      await queueAndAttemptEmailEvent(payloadApi, {
-        toEmail: supportTo,
+      const recipients = await getPayloadAdministratorRecipients(payloadApi, [supportTo])
+      await Promise.all(recipients.map((recipient) => queueAndAttemptEmailEvent(payloadApi, {
+        toEmail: recipient.email,
         templateKey: SUPPORT_REQUEST_ADMIN_NOTIFICATION_TEMPLATE_KEY,
-        dedupeKey: input.dedupeKey,
+        dedupeKey: `${input.dedupeKey}:${recipient.id}`,
         displayName: 'Support request pending review',
         metadata: {
           purpose: 'support_request_pending_review',
@@ -95,8 +97,11 @@ export async function POST(req: NextRequest) {
           requesterEmail: input.requesterEmail,
           requesterName: input.requesterName,
           requesterPhone: input.requesterPhone,
+          requesterQuestion: submittedSupport.question,
+          requesterSource: submittedSupport.source ?? '',
+          requesterPage: submittedSupport.page ?? '',
         },
-      })
+      })))
 
       await queueAndAttemptEmailEvent(payloadApi, {
         toEmail: input.requesterEmail,
@@ -115,8 +120,8 @@ export async function POST(req: NextRequest) {
   })
 
   const result = await service({
-    normalizedEmail: guarded.data.email,
-    name: guarded.data.name,
+    normalizedEmail: submittedSupport.email,
+    name: submittedSupport.name,
     phone,
     question: guarded.data.question,
     source: guarded.data.source,

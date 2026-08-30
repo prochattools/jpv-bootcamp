@@ -239,7 +239,8 @@ export async function listPublishedLessonResources(
 export async function resolveMemberLessonResourceDownload(
   payload: PayloadCourseAccessAPI,
   memberId: PayloadId,
-  resourceId: PayloadId
+  resourceId: PayloadId,
+  options: { allowAdministrator?: boolean } = {},
 ): Promise<MemberLessonResourceDownload | MemberLessonResourceDownloadDenied> {
   const resource = await findByIdSafe(payload, 'payload_lesson_resources', resourceId)
   if (!resource) return { allowed: false, reason: 'resource_not_found' }
@@ -251,12 +252,14 @@ export async function resolveMemberLessonResourceDownload(
   const context = await getLessonContext(payload, lessonId)
   if (!context) return { allowed: false, reason: 'lesson_not_found' }
 
-  const access = await evaluatePayloadLessonAccess(payload, {
-    memberId,
-    lessonId: context.lesson.id,
-    requiresPreviousCompletion: false,
-    previousLessonId: context.previousLessonId,
-  })
+  const access = options.allowAdministrator
+    ? { decision: { allowed: true, reason: 'administrator_authenticated' } }
+    : await evaluatePayloadLessonAccess(payload, {
+        memberId,
+        lessonId: context.lesson.id,
+        requiresPreviousCompletion: false,
+        previousLessonId: context.previousLessonId,
+      })
 
   if (!access.decision.allowed) {
     return {

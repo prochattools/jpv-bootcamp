@@ -42,15 +42,17 @@ export async function GET(request: Request, context: ResourceRouteContext): Prom
     const session = await resolvePayloadRequestSession(request.headers)
     const decision = decideSharedLogin(session, '/portal')
 
-    if (!decision.allowed || decision.identity.kind !== 'member' || !session.member?.id) {
+    const administratorAccess = Boolean(session.administratorId && !session.unresolvedCollection)
+    if (!administratorAccess && (!decision.allowed || decision.identity.kind !== 'member' || !session.member?.id)) {
       return notFoundResponse()
     }
 
     const payload = await getPayload({ config })
     const resolution = await resolveMemberLessonResourceDownload(
       payload as unknown as PayloadCourseAccessAPI,
-      session.member.id,
+      administratorAccess ? (session.member?.id ?? session.administratorId!) : session.member.id,
       resourceId,
+      administratorAccess ? { allowAdministrator: true } : undefined,
     )
 
     if (!resolution.allowed) return notFoundResponse()
