@@ -148,6 +148,10 @@ function encoded(value: unknown): string {
 	return gzipSync(Buffer.from(JSON.stringify(value), 'utf8')).toString('base64')
 }
 
+function shellQuote(value: string): string {
+	return `'${value.replaceAll("'", "'\"'\"'")}'`
+}
+
 export function buildRemoteScheduleCommand(
 	payload: ProductionRoomsControlPayload,
 	commandId = `${payload.mode}-${process.env.GITHUB_RUN_ID ?? 'local'}`,
@@ -162,6 +166,17 @@ export function buildRemoteScheduleCommand(
 		`test "$(sha256sum "${installedRunnerPath}" | awk '{print $1}')" = '${runnerSourceSha256}'`,
 		`set +e; ROOMS_MIGRATION_TARGET=production ROOMS_MIGRATION_EXPECTED_RELEASE_SHA='${requiredPayloadReleaseSha(payload)}' EXPECTED_DEPLOYMENT_SHA='${requiredPayloadReleaseSha(payload)}' ROOMS_MIGRATION_PAYLOAD_B64='${payloadData}' node "${installedRunnerPath}"; runner_status=$?; printf 'JPV_ROOMS_REMOTE_EXIT_%s\\n' "$runner_status"; exit "$runner_status"`,
 	].join('; ')
+}
+
+function buildRemoteServerScheduleScript(payload: ProductionRoomsControlPayload, command: string): string {
+	const expectedSha = requiredPayloadReleaseSha(payload)
+	const expectedImage = `ghcr.io/prochattools/jpv-bootcamp:${expectedSha}`
+	return [
+		'set -u',
+		`container_id="$(sudo -n docker ps --format '{{.ID}} {{.Names}} {{.Image}}' | grep -F 'clients-jpv-bootcamp-app-tp9xrk' | grep -F '${expectedImage}' | sed -n '1s/ .*//p')"`,
+		'test -n "$container_id"',
+		`sudo -n docker exec "$container_id" sh -c ${shellQuote(command)}`,
+	].join('\n')
 }
 
 function requiredPayloadReleaseSha(payload: ProductionRoomsControlPayload): string {
@@ -350,16 +365,27 @@ async function runProductionSchedule(payload: ProductionRoomsControlPayload): Pr
 	const apiBase = (process.env.DOKPLOY_API_BASE_URL?.trim() || 'https://dokploy.prochat.tools/api').replace(/\/$/, '')
 	const scheduleName = `jpv-production-rooms-${payload.mode}-${process.env.GITHUB_RUN_ID ?? Date.now()}`
 	const command = buildRemoteScheduleCommand(payload, `${payload.mode}-${process.env.GITHUB_RUN_ID ?? 'manual'}`)
+	const application = await dokployRequest(
+		apiBase,
+		apiKey,
+		`/application.one?applicationId=${encodeURIComponent(PRODUCTION_ROOMS_TARGET.applicationId)}`,
+	)
+	if (application.status < 200 || application.status >= 300) throw new Error('application_lookup_failed')
+	const serverId = findString(application.data, ['serverId'])
+	if (!serverId) throw new Error('application_server_id_missing')
+	const serverScheduleScript = buildRemoteServerScheduleScript(payload, command)
 	const created = await dokployRequest(apiBase, apiKey, '/schedule.create', {
 		method: 'POST',
 		body: JSON.stringify({
 			name: scheduleName,
 			description: `One-off guarded Rooms ${payload.mode} for ${PRODUCTION_ROOMS_TARGET.applicationName}`,
 			cronExpression: '0 0 1 1 *',
-			command,
+			command: 'true',
+			script: serverScheduleScript,
 			shellType: 'sh',
-			scheduleType: 'application',
-			applicationId: PRODUCTION_ROOMS_TARGET.applicationId,
+			scheduleType: 'server',
+			serverId,
+			appName: scheduleName,
 			enabled: false,
 		}),
 	})
@@ -367,7 +393,7 @@ async function runProductionSchedule(payload: ProductionRoomsControlPayload): Pr
 	let scheduleId = findScheduleId(created.data, scheduleName) ?? findString(created.data, ['scheduleId'])
 	try {
 		if (!scheduleId) {
-			const listed = await dokployRequest(apiBase, apiKey, `/schedule.list?id=${encodeURIComponent(PRODUCTION_ROOMS_TARGET.applicationId)}&scheduleType=application`)
+			const listed = await dokployRequest(apiBase, apiKey, `/schedule.list?id=${encodeURIComponent(serverId)}&scheduleType=server`)
 			if (listed.status < 200 || listed.status >= 300) throw new Error('schedule_list_failed')
 			scheduleId = findScheduleId(listed.data, scheduleName)
 		}
