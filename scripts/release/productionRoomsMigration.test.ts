@@ -77,6 +77,7 @@ assert.match(controlSource, /scheduleType: 'server'/)
 assert.match(controlSource, /sudo -n docker exec/)
 assert.match(controlSource, /server\.all/)
 assert.match(controlSource, /serverType === serverType/)
+assert.match(controlSource, /serverStatus === serverStatus/)
 
 assert.match(workflowSource, /workflow_dispatch:/)
 assert.doesNotMatch(workflowSource, /^\s*push:/m)

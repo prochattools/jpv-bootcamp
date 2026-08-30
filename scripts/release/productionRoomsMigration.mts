@@ -256,22 +256,24 @@ function findServerIdsByAddressAndType(
 	value: unknown,
 	address: string,
 	serverType: string,
+	serverStatus: string,
 	result = new Set<string>(),
 ): Set<string> {
 	if (Array.isArray(value)) {
 		for (const child of value) {
-			findServerIdsByAddressAndType(child, address, serverType, result)
+			findServerIdsByAddressAndType(child, address, serverType, serverStatus, result)
 		}
 	}
 	if (isRecord(value)) {
 		if (
 			value.ipAddress === address &&
 			value.serverType === serverType &&
+			value.serverStatus === serverStatus &&
 			typeof value.serverId === 'string' &&
 			value.serverId
 		) result.add(value.serverId)
 		for (const child of Object.values(value)) {
-			findServerIdsByAddressAndType(child, address, serverType, result)
+			findServerIdsByAddressAndType(child, address, serverType, serverStatus, result)
 		}
 	}
 	return result
@@ -392,7 +394,7 @@ async function runProductionSchedule(payload: ProductionRoomsControlPayload): Pr
 	const command = buildRemoteScheduleCommand(payload, `${payload.mode}-${process.env.GITHUB_RUN_ID ?? 'manual'}`)
 	const servers = await dokployRequest(apiBase, apiKey, '/server.all')
 	if (servers.status < 200 || servers.status >= 300) throw new Error('server_list_failed')
-	const serverIds = findServerIdsByAddressAndType(servers.data, PRODUCTION_ROOMS_TARGET.databaseHost, 'deploy')
+	const serverIds = findServerIdsByAddressAndType(servers.data, PRODUCTION_ROOMS_TARGET.databaseHost, 'deploy', 'active')
 	if (serverIds.size !== 1) throw new Error('production_deploy_server_identity_ambiguous')
 	const serverId = [...serverIds][0]
 	const serverScheduleScript = buildRemoteServerScheduleScript(payload, command)
