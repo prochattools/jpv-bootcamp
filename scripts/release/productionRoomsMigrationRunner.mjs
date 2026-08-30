@@ -486,13 +486,21 @@ function stateEvidence(state, prisma, integrity, navigation, roomsSchema) {
 }
 
 async function collectEvidence(client, schema, payload) {
-  const identity = await queryIdentity(client, schema)
-  const payloadRows = await queryPayloadRows(client, schema)
+  const runEvidenceQuery = async (phase, query) => {
+    try {
+      return await query()
+    } catch (error) {
+      if (error && typeof error === 'object') error.roomsEvidencePhase = phase
+      throw error
+    }
+  }
+  const identity = await runEvidenceQuery('identity', () => queryIdentity(client, schema))
+  const payloadRows = await runEvidenceQuery('payload_ledger', () => queryPayloadRows(client, schema))
   const state = migrationState(payloadRows, payload.registeredPayloadMigrations)
-  const prisma = await queryPrismaState(client, schema, payload.registeredPrismaMigrations)
-  const integrity = await queryIntegrity(client, schema)
-  const navigation = await queryNavigation(client, schema)
-  const roomsSchema = await queryRoomsSchema(client, schema)
+  const prisma = await runEvidenceQuery('prisma', () => queryPrismaState(client, schema, payload.registeredPrismaMigrations))
+  const integrity = await runEvidenceQuery('integrity', () => queryIntegrity(client, schema))
+  const navigation = await runEvidenceQuery('navigation', () => queryNavigation(client, schema))
+  const roomsSchema = await runEvidenceQuery('rooms_schema', () => queryRoomsSchema(client, schema))
   return { identity, state, prisma, integrity, navigation, roomsSchema }
 }
 
@@ -768,9 +776,12 @@ async function main() {
     const runtimeName = error && typeof error === 'object' && /^[A-Za-z]+$/.test(String(error.name ?? ''))
       ? `runtime_error_${String(error.name).toLowerCase()}`
       : null
+    const evidencePhase = error && typeof error === 'object' && /^[a-z_]+$/.test(String(error.roomsEvidencePhase ?? ''))
+      ? String(error.roomsEvidencePhase)
+      : null
     const code = error instanceof MigrationControlError && /^[a-z0-9_:-]+$/.test(error.code)
       ? error.code
-      : databaseCode ?? runtimeName ?? 'guard_failed'
+      : databaseCode ? `${databaseCode}${evidencePhase ? `:${evidencePhase}` : ''}` : runtimeName ?? 'guard_failed'
     process.stdout.write(`JPV_ROOMS_MIGRATION_FAILED ${JSON.stringify({ version: 1, ok: false, resultCode: 'blocked', blockers: [code] })}\n`)
     process.exitCode = 1
   } finally {

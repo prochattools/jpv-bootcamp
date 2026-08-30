@@ -68,6 +68,7 @@ assert.match(runnerSource, /DEPLOYMENT_ENV !== EXPECTED_PRODUCTION\.deploymentEn
 assert.match(runnerSource, /role: 'jpvbootcamp_production_app'/)
 assert.match(runnerSource, /systemRole: 'supabase_admin'/)
 assert.match(runnerSource, /SYSTEM_DATABASE_URL/)
+assert.match(runnerSource, /roomsEvidencePhase/)
 assert.match(runnerSource, /jpvbootcamp_staging/)
 assert.match(runnerSource, /jpvbootcamp_legacy/)
 assert.match(runnerSource, /historicalBaselineMatches/)
