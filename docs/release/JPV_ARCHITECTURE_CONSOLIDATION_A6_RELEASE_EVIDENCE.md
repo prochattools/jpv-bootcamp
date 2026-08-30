@@ -1,5 +1,50 @@
 # JPV Architecture Consolidation A6 Release Evidence
 
+## Current A6 Gate 2 production closeout — 2026-08-30
+
+**Decision:** `A6 GATE 2 COMPLETE` · `ARCHITECTURE CONSOLIDATION COMPLETE` ·
+`FEATURE DEVELOPMENT UNBLOCKED`
+
+The approved `fix/e1-staging-gate-b` source was integrated into `main` with
+merge commit `86cedfb9e35002e18e1b412ee43b948f85c88fbe` and deployed to the
+canonical production application `clients-jpv-bootcamp-app-tp9xrk` at
+`https://jpvbootcamp.com`.
+
+### Production release evidence
+
+- Pre-merge `origin/main` was
+  `08605e52af4abb0b1bdcdfbe6890d010c545b636`; the final pre-push worktree was
+  clean and `git diff --check` passed.
+- GitHub Actions run
+  [`33282245611`](https://github.com/prochattools/jpvbootcamp/actions/runs/33282245611)
+  passed exact-source validation, release runtime validation, application
+  build, immutable GHCR image publication, Dokploy image configuration,
+  deployment, and root-production convergence.
+- Independent live verification returned HTTP 200 for the root page. The
+  production health endpoint reported `status=live`,
+  `deploymentEnv=production`, and `imageTag`/`commit` equal to
+  `86cedfb9e35002e18e1b412ee43b948f85c88fbe`.
+- Deployment health reported Node `v20.20.2`, production email readiness,
+  valid import-map/branding assets, and the Docker runtime.
+
+### Production data and migration boundary
+
+- Read-only Stripe identity reconciliation workflow
+  `33281951339` reported 11 active Stripe subscriptions, 10 Payload active
+  members, 7 customer-ID matches, 0 email-only matches, 0 unmatched, 0
+  ambiguous, and 4 subscriptions linked to inactive local records. No apply
+  mode was dispatched.
+- No production migration was applied. The production image retains the
+  guarded `PAYLOAD_SCHEMA_PREFLIGHT=true` startup check, and the live health
+  response proves the deployed runtime passed its startup preflight. There is
+  no canonical externally exposed production migration-plan report endpoint
+  in this repository; no unobserved plan result is being asserted here.
+- No Stripe, billing, membership, legacy, preview, DNS, or production-data
+  mutation was part of this release gate.
+
+The historical Gate 1 evidence below is retained for traceability and is
+superseded by this production closeout.
+
 ## Current A6 Gate 1 final unblock — 2026-08-30
 
 **Decision:** `READY FOR PRODUCTION MERGE`

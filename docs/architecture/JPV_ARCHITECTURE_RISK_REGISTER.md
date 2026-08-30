@@ -1,13 +1,30 @@
 # JPV Bootcamp Architecture Risk Register
 
-**Status:** CURRENT A5.1 RISK REGISTER — ARCHITECTURE CLOSED; E1 FINAL CLOSEOUT COMPLETE; READY TO RESUME A6 GATE 1
+**Status:** CURRENT A6 GATE 2 CLOSEOUT — ARCHITECTURE CONSOLIDATION COMPLETE; FEATURE DEVELOPMENT UNBLOCKED
 
-**Date:** 2026-08-29
+**Date:** 2026-08-30
 
 Ratings describe the risk in the current repository and the verified live
-boundaries. A5.1 closes architecture ambiguity. E1 has closed the staging
-topology and migration-plan evidence; remaining A6 rows are runtime/provider
-acceptance or production-release requirements.
+boundaries. A6 Gate 2 closes the architecture-consolidation release gate.
+Operational/provider risks that are intentionally outside this packet remain
+explicitly open rather than being silently treated as resolved.
+
+## A6 Gate 2 production closeout evidence
+
+- Approved source was merged to `main` as
+  `86cedfb9e35002e18e1b412ee43b948f85c88fbe` and deployed by workflow
+  `33282245611` to `https://jpvbootcamp.com`.
+- Independent live health reports the exact image/commit, production
+  environment, Node `v20.20.2`, ready email/import-map contract, and HTTP 200
+  root response.
+- Read-only production identity reconciliation reports 11 active Stripe
+  subscriptions, 10 Payload active members, 7 customer-ID matches, no
+  email-only/unmatched/ambiguous rows, and 4 inactive-local-member links.
+- No migration apply, Stripe/provider mutation, billing mutation, membership
+  mutation, DNS change, legacy change, or preview change was performed.
+
+The following rows remain operational safeguards or separately scoped risks;
+they do not block this architecture closeout.
 
 ## E1 final closeout evidence
 

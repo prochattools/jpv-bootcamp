@@ -4,6 +4,45 @@ Use this document as the canonical starting point for a new Codex or Workbench c
 
 ---
 
+## CURRENT A6 GATE 2 PRODUCTION CLOSEOUT — 2026-08-30
+
+**Status:** `A6 GATE 2 COMPLETE` · `ARCHITECTURE CONSOLIDATION COMPLETE` · `FEATURE DEVELOPMENT UNBLOCKED`
+
+The approved architecture consolidation was integrated into `main` and
+deployed to the canonical production application. The production release was
+performed from the repository's `main` branch only; the feature branch is no
+longer the release authority.
+
+- **Merge:** `fix/e1-staging-gate-b` at
+  `3db7b2aa9bd7b94a5cb751a95bf1667b2125050e` was merged with merge commit
+  `86cedfb9e35002e18e1b412ee43b948f85c88fbe`.
+- **Pre-merge guard:** `origin/main` was unchanged at
+  `08605e52af4abb0b1bdcdfbe6890d010c545b636`; the worktree was clean and
+  `git diff --check` passed before the push.
+- **Production workflow:** GitHub Actions run
+  `33282245611` passed source/SHA validation, release contract validation,
+  application build, immutable image publication, Dokploy image update,
+  deployment trigger, and root-production convergence.
+- **Live production:** `https://jpvbootcamp.com/api/health` reports
+  `status=live`, `deploymentEnv=production`, and both `imageTag` and `commit`
+  equal to `86cedfb9e35002e18e1b412ee43b948f85c88fbe`; the root page returned
+  HTTP 200. Deployment health reports Node `v20.20.2` and the production
+  email/import-map contract as ready.
+- **Read-only Stripe identity evidence:** production reconciliation workflow
+  `33281951339` succeeded with 11 active Stripe subscriptions, 10 Payload
+  active members, 7 customer-ID matches, 0 email-only matches, 0 unmatched,
+  0 ambiguous, and 4 subscriptions linked to inactive local records. No
+  identity apply or provider/data mutation was run.
+- **Migration boundary:** no production migration apply was performed in
+  this gate. The live Docker runtime is configured with the guarded
+  `PAYLOAD_SCHEMA_PREFLIGHT=true` startup check, and the deployed runtime
+  could only become healthy after that preflight completed. The repository has
+  no canonical externally exposed production migration-plan report endpoint,
+  so this closeout does not claim a plan report that was not available.
+
+This closeout changes no production data, billing state, Stripe configuration,
+legacy runtime, preview runtime, or DNS. Those remain separately governed.
+
 ## CURRENT A6 GATE 1 FINAL UNBLOCK — 2026-08-30
 
 **Status:** `READY FOR PRODUCTION MERGE`

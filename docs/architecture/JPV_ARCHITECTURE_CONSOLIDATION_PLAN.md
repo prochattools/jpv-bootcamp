@@ -1,10 +1,36 @@
 # JPV Bootcamp Post-Launch Architecture Consolidation Plan
 
-**Status:** A5.1 COMPLETE; E1 FINAL CLOSEOUT COMPLETE; READY TO RESUME A6 GATE 1
+**Status:** A6 GATE 2 COMPLETE; ARCHITECTURE CONSOLIDATION COMPLETE; FEATURE DEVELOPMENT UNBLOCKED
 
-**Date:** 2026-08-29
+**Date:** 2026-08-30
 
-**Release authority:** `main` at `08605e52af4abb0b1bdcdfbe6890d010c545b636`
+**Release authority:** `main`, production integration commit `86cedfb9e35002e18e1b412ee43b948f85c88fbe`
+
+## A6 Gate 2 production integration closeout
+
+The approved `fix/e1-staging-gate-b` architecture consolidation was merged
+into `main` and deployed to the canonical production application
+`clients-jpv-bootcamp-app-tp9xrk` at `https://jpvbootcamp.com`.
+
+- GitHub Actions production run `33282245611` passed exact-source validation,
+  release validation, build, immutable image publication, Dokploy deployment,
+  and root-domain convergence.
+- Live health independently reports `status=live`,
+  `deploymentEnv=production`, and the deployed image/commit
+  `86cedfb9e35002e18e1b412ee43b948f85c88fbe`; the root page returns HTTP 200.
+- The production Stripe identity report remains read-only evidence: 11 active
+  Stripe subscriptions, 10 Payload active members, 7 customer-ID matches, no
+  email-only, unmatched, or ambiguous rows, and 4 inactive-local-member
+  links. No apply was run.
+- No production migration apply was run. The Docker production startup
+  preflight is enabled and the live runtime passed it. A canonical production
+  read-only migration-plan report endpoint is not present in this repository,
+  so no unavailable plan output is represented as evidence.
+
+The architecture packet is closed. Future feature work may proceed through
+the normal branch, review, merge-to-`main`, build, and production deployment
+workflow. Billing and provider changes remain separately authorized and
+must preserve the exact-source and environment-boundary controls.
 
 This plan governs the behavior-preserving consolidation of the live JPV
 Bootcamp system. It is intentionally packetized. No packet may absorb another
