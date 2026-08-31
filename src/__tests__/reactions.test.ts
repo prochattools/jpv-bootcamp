@@ -58,13 +58,17 @@ function makePayload(initial: Document[] = []) {
     payload_engagement_reactions: initial,
   }
   let nextId = 100
+  const findCalls: any[] = []
 
   const payload = {
-    find: vi.fn(async (args: any) => ({
-      docs: (collections[args.collection] ?? [])
-        .filter((document) => matches(document, args.where))
-        .slice(0, args.limit ?? Number.MAX_SAFE_INTEGER),
-    })),
+    find: vi.fn(async (args: any) => {
+      findCalls.push(args)
+      return {
+        docs: (collections[args.collection] ?? [])
+          .filter((document) => matches(document, args.where))
+          .slice(0, args.limit ?? Number.MAX_SAFE_INTEGER),
+      }
+    }),
     findByID: vi.fn(async (args: any) => {
       const document = (collections[args.collection] ?? []).find((candidate) => String(candidate.id) === String(args.id))
       if (!document) throw new Error('not found')
@@ -92,7 +96,7 @@ function makePayload(initial: Document[] = []) {
     }),
   }
 
-  return { payload: payload as unknown as PayloadReactionWriteAPI, collections }
+  return { payload: payload as unknown as PayloadReactionWriteAPI, collections, findCalls }
 }
 
 beforeEach(() => {
@@ -163,7 +167,7 @@ describe('P2-05 member reactions', () => {
   })
 
   it('ignores null and invalid rows when returning a reaction summary', async () => {
-    const { payload, collections } = makePayload([
+    const { payload, collections, findCalls } = makePayload([
       { id: 1, member: 42, reactionType: 'helpful', targetKind: 'space_post', targetPost: 10 },
     ])
     ;(collections.payload_engagement_reactions as unknown[]).push(
@@ -176,6 +180,14 @@ describe('P2-05 member reactions', () => {
     expect(summary.totalCount).toBe(1)
     expect(summary.viewerReaction).toBe('helpful')
     expect(summary.counts[0].count).toBe(1)
+
+    const reactionFinds = findCalls.filter((args) => args.collection === 'payload_engagement_reactions')
+    expect(reactionFinds.length).toBeGreaterThan(0)
+    expect(reactionFinds.every((args) =>
+      args.where.and.some((condition: any) =>
+        condition.reactionType?.in?.join(',') === 'helpful,insightful,celebrate',
+      ),
+    )).toBe(true)
   })
 
   it('switches reaction type in place and toggles the selected type off', async () => {
