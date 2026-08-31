@@ -18,6 +18,7 @@ import {
 import { buildLegacyPayloadOperationPlan } from './legacyPayloadOperationPlan'
 import { assertLegacyMediaImportManifest, buildLegacyMediaImportManifest } from './legacyMediaImportManifest'
 import { buildLegacyMediaImportExecutionPlan } from './legacyMediaImportExecutionPlan'
+import { createLegacyStaticImageResolver } from './legacyStaticMedia'
 
 interface CliArgs {
   sql: string
@@ -87,7 +88,9 @@ async function main(): Promise<void> {
   const localMedia = buildLocalMediaManifest(args.uploads)
   assertRealSourceContentExpectations(snapshot, normalization, wxrItems, localMedia)
   const attachments = reconcileWordPressAttachments(wxrItems, localMedia)
-  const operationPlan = await buildLegacyPayloadOperationPlan(snapshot, normalization, bunny)
+  const operationPlan = await buildLegacyPayloadOperationPlan(snapshot, normalization, bunny, {
+    resolveImage: createLegacyStaticImageResolver(localMedia),
+  })
   const manifest = buildLegacyMediaImportManifest({ operationPlan, localMedia, attachments })
   assertLegacyMediaImportManifest(manifest)
   const executionPlan = buildLegacyMediaImportExecutionPlan({ manifest, operationPlan })

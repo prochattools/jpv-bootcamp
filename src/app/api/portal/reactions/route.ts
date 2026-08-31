@@ -39,7 +39,24 @@ export async function POST(req: NextRequest) {
     const summary = await getReactionSummary(payload, String(session.member.id), { kind: targetKind as ReactionTargetKind, id: targetId })
     return NextResponse.json({ ok: true, summary })
   } catch (error) {
-    const status = error instanceof ReactionServiceError && ['target_not_found', 'target_inaccessible', 'target_hidden', 'invalid_reaction', 'rate_limited'].includes(error.code) ? 400 : 500
+    if (!(error instanceof ReactionServiceError)) {
+      console.error('JPV_REACTION_ROUTE_FAILED', {
+        error: error instanceof Error ? error.message : String(error),
+      })
+    }
+    const status = error instanceof ReactionServiceError
+      ? error.code === 'unauthenticated'
+        ? 401
+        : error.code === 'rate_limited'
+          ? 429
+          : error.code === 'conflict'
+            ? 409
+            : error.code === 'service_unavailable'
+              ? 503
+              : ['target_not_found', 'target_inaccessible', 'target_hidden', 'target_not_supported', 'ineligible', 'invalid_reaction'].includes(error.code)
+                ? 400
+                : 500
+      : 500
     return NextResponse.json({ ok: false, message: error instanceof ReactionServiceError ? error.message : 'Unable to save this reaction.' }, { status })
   }
 }

@@ -117,6 +117,50 @@ describe('P2-05 member reactions', () => {
     expect(payload.create).not.toHaveBeenCalledWith(expect.objectContaining({ collection: 'payload_space_reactions' }))
   })
 
+  it('keeps the reaction successful when the non-critical audit write is unavailable', async () => {
+    const { payload, collections } = makePayload()
+    const create = payload.create
+    payload.create = vi.fn(async (args: any) => {
+      if (args.collection === 'payload_audit_events') throw new Error('audit table unavailable')
+      return create(args)
+    }) as any
+
+    await expect(setReaction(payload, 42, { kind: 'space_post', id: 10 }, 'helpful')).resolves.toEqual({
+      operation: 'created',
+      reaction: 'helpful',
+    })
+    expect(collections.payload_engagement_reactions).toHaveLength(1)
+  })
+
+  it('keeps the reaction successful when the audit rate-limit read is unavailable', async () => {
+    const { payload, collections } = makePayload()
+    const find = payload.find
+    payload.find = vi.fn(async (args: any) => {
+      if (args.collection === 'payload_audit_events') throw new Error('audit table unavailable')
+      return find(args)
+    }) as any
+
+    await expect(setReaction(payload, 42, { kind: 'space_post', id: 10 }, 'helpful')).resolves.toEqual({
+      operation: 'created',
+      reaction: 'helpful',
+    })
+    expect(collections.payload_engagement_reactions).toHaveLength(1)
+  })
+
+  it('falls back to find when reaction counts cannot use Payload count', async () => {
+    const { payload } = makePayload([
+      { id: 1, member: 42, reactionType: 'helpful', targetKind: 'space_post', targetPost: 10 },
+    ])
+    payload.count = vi.fn(async () => {
+      throw new Error('count helper unavailable')
+    }) as any
+
+    const summary = await getReactionSummary(payload, 42, { kind: 'space_post', id: 10 })
+
+    expect(summary.totalCount).toBe(1)
+    expect(summary.viewerReaction).toBe('helpful')
+  })
+
   it('switches reaction type in place and toggles the selected type off', async () => {
     const { payload, collections } = makePayload()
 

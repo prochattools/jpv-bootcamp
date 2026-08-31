@@ -21,8 +21,13 @@ export type LegacyMigrationBlockNode =
   | SerializedBlockNode<BunnyVideoBlockFields>
 
 export interface LegacyImageResolution {
-  id: string | number
-  relationTo: 'payload_media' | 'payload_private_media'
+  id?: string | number
+  relationTo?: 'payload_media' | 'payload_private_media'
+  /**
+   * Static public URL used for legacy inline images that are archived in the
+   * production image but do not have a Payload media relationship yet.
+   */
+  publicUrl?: string
   alt?: string
 }
 
@@ -58,6 +63,8 @@ const SAFE_NATIVE_TAGS = new Set([
   'del',
   'div',
   'em',
+  'figcaption',
+  'figure',
   'h1',
   'h2',
   'h3',
@@ -146,10 +153,22 @@ function sanitizeLegacyHTMLForDisplay(html: string): string {
     if (tag === 'img') {
       const sourceUrl = element.getAttribute('src') || ''
       const alt = element.getAttribute('alt') || 'Legacy image'
-      const placeholder = document.createElement('span')
-      placeholder.setAttribute('data-legacy-image-preserved', 'true')
-      placeholder.textContent = sourceUrl ? `${alt} (${sourceUrl})` : alt
-      element.replaceWith(placeholder)
+      const isSafeLocalMedia = /^\/media\/(?:legacy\/)?[^/].*/i.test(sourceUrl)
+      if (!isSafeLocalMedia) {
+        const placeholder = document.createElement('span')
+        placeholder.setAttribute('data-legacy-image-preserved', 'true')
+        placeholder.textContent = sourceUrl ? `${alt} (${sourceUrl})` : alt
+        element.replaceWith(placeholder)
+        continue
+      }
+
+      for (const attribute of Array.from(element.attributes)) {
+        const name = attribute.name.toLowerCase()
+        if (!['src', 'alt', 'width', 'height', 'loading', 'decoding'].includes(name)) {
+          element.removeAttribute(attribute.name)
+        }
+      }
+      element.setAttribute('alt', alt.slice(0, 250))
       continue
     }
 
@@ -233,6 +252,16 @@ function segmentNode(
       return [{ kind: 'fallback', html: element.outerHTML, reason: 'image_media_resolution_required', sourceTag: tag }]
     }
     const clone = element.cloneNode(true) as Element
+    if (resolved.publicUrl) {
+      clone.setAttribute('src', resolved.publicUrl)
+      clone.removeAttribute('srcset')
+      if (resolved.alt && !clone.getAttribute('alt')) clone.setAttribute('alt', resolved.alt)
+      resolvedImages.push(sourceUrl)
+      return [{ kind: 'fallback', html: clone.outerHTML, reason: 'image_static_media', sourceTag: tag }]
+    }
+    if (resolved.id === undefined || !resolved.relationTo) {
+      return [{ kind: 'fallback', html: element.outerHTML, reason: 'image_media_resolution_invalid', sourceTag: tag }]
+    }
     clone.setAttribute('data-lexical-upload-id', String(resolved.id))
     clone.setAttribute('data-lexical-upload-relation-to', resolved.relationTo)
     if (resolved.alt && !clone.getAttribute('alt')) clone.setAttribute('alt', resolved.alt)
