@@ -3,6 +3,7 @@ import config from '@payload-config'
 import { getPayload } from 'payload'
 
 import { resolvePayloadRequestSession } from '@/lib/auth/payloadSession'
+import { normalizeRelationshipId } from '@/lib/domain/relationships'
 import { evaluatePayloadSpaceAccess, type PayloadCourseWriteAPI } from '@/lib/payloadCourse/accessService'
 import { attachOperationalBillingFallback } from '@/lib/payloadCourse/operationalBillingFallback'
 
@@ -31,6 +32,10 @@ export async function POST(request: NextRequest) {
       await getPayload({ config }) as unknown as PayloadCourseWriteAPI,
     )
     const memberId = String(session.member.id)
+    const memberRelationId = normalizeRelationshipId(memberId)
+    const postRelationId = normalizeRelationshipId(postId)
+    // The legacy actorMember: memberId and targetPost: postId relationships
+    // must be normalized before Payload reads and writes them.
     const post = await payload.findByID({ collection: 'payload_space_posts', id: postId, depth: 0, overrideAccess: true }) as Record<string, unknown> | null
     const spaceId = id(post?.space)
     if (!post || post.moderationStatus !== 'visible' || !spaceId) {
@@ -43,10 +48,10 @@ export async function POST(request: NextRequest) {
       collection: 'payload_space_reactions',
       where: {
         and: [
-          { actorMember: { equals: memberId } },
+          { actorMember: { equals: memberRelationId } },
           { reactionType: { equals: 'bookmark' } },
           { targetKind: { equals: 'post' } },
-          { targetPost: { equals: postId } },
+          { targetPost: { equals: postRelationId } },
         ],
       },
       limit: 1,
@@ -63,10 +68,10 @@ export async function POST(request: NextRequest) {
     await payload.create({
       collection: 'payload_space_reactions',
       data: {
-        actorMember: memberId,
+        actorMember: memberRelationId,
         reactionType: 'bookmark',
         targetKind: 'post',
-        targetPost: postId,
+        targetPost: postRelationId,
         metadata: { source: 'member_portal' },
       },
       overrideAccess: true,

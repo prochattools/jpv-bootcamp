@@ -33,7 +33,8 @@ function idOf(value: unknown): string {
   return String(value)
 }
 
-function matches(document: Document, where: any): boolean {
+function matches(document: Document | null, where: any): boolean {
+  if (!document) return false
   if (!where) return true
   if (Array.isArray(where.and)) return where.and.every((condition) => matches(document, condition))
   if (Array.isArray(where.or)) return where.or.some((condition) => matches(document, condition))
@@ -159,6 +160,22 @@ describe('P2-05 member reactions', () => {
 
     expect(summary.totalCount).toBe(1)
     expect(summary.viewerReaction).toBe('helpful')
+  })
+
+  it('ignores null and invalid rows when returning a reaction summary', async () => {
+    const { payload, collections } = makePayload([
+      { id: 1, member: 42, reactionType: 'helpful', targetKind: 'space_post', targetPost: 10 },
+    ])
+    ;(collections.payload_engagement_reactions as unknown[]).push(
+      null,
+      { id: 2, member: 99, reactionType: null, targetKind: 'space_post', targetPost: 10 },
+    )
+
+    const summary = await getReactionSummary(payload, 42, { kind: 'space_post', id: 10 })
+
+    expect(summary.totalCount).toBe(1)
+    expect(summary.viewerReaction).toBe('helpful')
+    expect(summary.counts[0].count).toBe(1)
   })
 
   it('switches reaction type in place and toggles the selected type off', async () => {

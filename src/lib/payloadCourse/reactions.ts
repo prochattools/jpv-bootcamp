@@ -119,6 +119,16 @@ function normalizeReactionType(value: unknown): ReactionType {
   throw new ReactionServiceError('invalid_reaction', 'That reaction type is not available.')
 }
 
+function isReactionType(value: unknown): value is ReactionType {
+  return value === 'helpful' || value === 'insightful' || value === 'celebrate'
+}
+
+function isUsableReactionDocument(value: unknown): value is ReactionDocument {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  const document = value as ReactionDocument
+  return asString(document.id) !== null && isReactionType(document.reactionType)
+}
+
 function normalizeTarget(target: ReactionTarget): ReactionTarget {
   if (!target || !reactionTargetKinds.includes(target.kind)) {
     throw new ReactionServiceError('target_not_found', 'Reaction target was not found.')
@@ -154,7 +164,7 @@ async function findOne(
     depth: 0,
     overrideAccess: true,
   })
-  return result.docs[0] ?? null
+  return result.docs.find(isUsableReactionDocument) ?? null
 }
 
 async function findById(
@@ -351,42 +361,6 @@ async function recordReactionAudit(
   }
 }
 
-async function countReactions(
-  payload: PayloadCourseAccessAPI,
-  target: ReactionTarget,
-  reactionType: ReactionType,
-): Promise<number> {
-  const where = {
-    and: [
-      targetWhere(target),
-      { reactionType: { equals: reactionType } },
-    ],
-  }
-
-  if (typeof payload.count === 'function') {
-    try {
-      const result = await payload.count({
-        collection: REACTION_COLLECTION,
-        where,
-        overrideAccess: true,
-      })
-      return Number.isFinite(result.totalDocs) ? result.totalDocs : 0
-    } catch {
-      // Older production snapshots may not expose Payload's count helper for
-      // this collection. Fall through to the portable find-based projection.
-    }
-  }
-
-  const result = await payload.find({
-    collection: REACTION_COLLECTION,
-    where,
-    limit: 1000,
-    depth: 0,
-    overrideAccess: true,
-  })
-  return result.docs.length
-}
-
 async function findViewerReaction(
   payload: PayloadCourseAccessAPI,
   memberId: PayloadId,
@@ -402,12 +376,13 @@ function buildReactionSummary(
   memberId: PayloadId,
   reactions: readonly ReactionDocument[],
 ): ReactionSummary {
+  const usableReactions = reactions.filter(isUsableReactionDocument)
   const counts = reactionTypes.map((reactionType) => ({
     reactionType,
     label: reactionLabels[reactionType],
-    count: reactions.filter((reaction) => reaction.reactionType === reactionType).length,
+    count: usableReactions.filter((reaction) => reaction.reactionType === reactionType).length,
   }))
-  const viewerReaction = reactions.find((reaction) => relationshipId(reaction.member) === String(memberId))
+  const viewerReaction = usableReactions.find((reaction) => relationshipId(reaction.member) === String(memberId))
   const normalizedViewerReaction = viewerReaction && reactionTypes.includes(viewerReaction.reactionType as ReactionType)
     ? viewerReaction.reactionType as ReactionType
     : null
@@ -415,7 +390,7 @@ function buildReactionSummary(
   return {
     target,
     counts,
-    totalCount: reactions.length,
+    totalCount: usableReactions.length,
     viewerReaction: normalizedViewerReaction,
     canReact: true,
   }
@@ -437,7 +412,7 @@ async function findAllReactionRows(
       depth: 0,
       overrideAccess: true,
     })
-    rows.push(...(result.docs as ReactionDocument[]))
+    rows.push(...result.docs.filter(isUsableReactionDocument))
     if (result.docs.length < pageSize || result.hasNextPage === false) return rows
   }
 
@@ -614,28 +589,11 @@ export async function getReactionSummary(
   await requireEligibleMember(payload, memberId)
   await assertVisibleTarget(payload, memberId, target)
 
-  const [helpful, insightful, celebrate, viewerReaction] = await Promise.all([
-    countReactions(payload, target, 'helpful'),
-    countReactions(payload, target, 'insightful'),
-    countReactions(payload, target, 'celebrate'),
-    findViewerReaction(payload, memberId, target),
-  ])
-
-  const counts = [
-    { reactionType: 'helpful' as const, label: reactionLabels.helpful, count: helpful },
-    { reactionType: 'insightful' as const, label: reactionLabels.insightful, count: insightful },
-    { reactionType: 'celebrate' as const, label: reactionLabels.celebrate, count: celebrate },
-  ]
-
-  return {
-    target,
-    counts,
-    totalCount: counts.reduce((total, entry) => total + entry.count, 0),
-    viewerReaction: viewerReaction && reactionTypes.includes(viewerReaction.reactionType as ReactionType)
-      ? viewerReaction.reactionType as ReactionType
-      : null,
-    canReact: true,
-  }
+  // Project one sanitized row set for both counts and the viewer state. This
+  // keeps malformed/null rows from causing the post-mutation response to fail
+  // after the reaction itself was already saved.
+  const reactions = await findAllReactionRows(payload, targetWhere(target))
+  return buildReactionSummary(target, memberId, reactions)
 }
 
 export async function setReaction(
