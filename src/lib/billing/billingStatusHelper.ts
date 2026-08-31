@@ -102,6 +102,13 @@ function billingAccessStateForLifecycle(params: {
   return 'inactive'
 }
 
+function shouldRefreshProviderStatus(subscriptionStatus: string | null): boolean {
+  // Checkout/shadow-sync ordering can leave an explicit `incomplete` local
+  // projection behind a live Stripe subscription. Re-check only this
+  // recoverable activation state; terminal local states remain authoritative.
+  return subscriptionStatus === null || subscriptionStatus === 'incomplete'
+}
+
 async function getStripeFallbackStatus(
   normalizedEmail: string,
   knownCustomerId?: string,
@@ -203,13 +210,13 @@ export async function getBillingStatus(memberEmail: string): Promise<BillingStat
   // Older operational records can have a linked Stripe customer but no
   // locally mirrored subscription status. Resolve the current provider state
   // before exposing a pending/unknown member experience.
-  const providerFallback = record.subscriptionStatus
-    ? null
-    : await getStripeFallbackStatus(normalizedEmail, record.stripeCustomerId)
-  const subscriptionStatus = record.subscriptionStatus ?? providerFallback?.subscriptionStatus ?? null
-  const cancelAtPeriodEnd = record.subscriptionCancelAtPeriodEnd ?? providerFallback?.cancelAtPeriodEnd ?? false
-  const periodEndDate = record.subscriptionCurrentPeriodEnd ?? providerFallback?.periodEndDate ?? null
-  const billingCadence = record.billingCadence ?? providerFallback?.billingCadence ?? null
+  const providerFallback = shouldRefreshProviderStatus(record.subscriptionStatus)
+    ? await getStripeFallbackStatus(normalizedEmail, record.stripeCustomerId)
+    : null
+  const subscriptionStatus = providerFallback?.subscriptionStatus ?? record.subscriptionStatus ?? null
+  const cancelAtPeriodEnd = providerFallback?.cancelAtPeriodEnd ?? record.subscriptionCancelAtPeriodEnd ?? false
+  const periodEndDate = providerFallback?.periodEndDate ?? record.subscriptionCurrentPeriodEnd ?? null
+  const billingCadence = providerFallback?.billingCadence ?? record.billingCadence ?? null
 
   const paymentStatus =
     record.paymentStatus && BILLING_PAYMENT_STATES.has(record.paymentStatus as BillingPaymentState)

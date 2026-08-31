@@ -1,4 +1,5 @@
 import type { PayloadCourseAccessAPI, PayloadDocument } from '@/lib/payloadCourse/accessService'
+import { resolveAdministratorMemberIdentity } from '@/lib/auth/adminMemberIdentity'
 import { liveSessionRelationshipId } from '@/lib/liveSessions/sessionLifecycle'
 
 export type RoomAudience = 'all' | 'selected' | 'groups' | 'enrolled'
@@ -55,6 +56,30 @@ async function loadMember(
     depth: 0,
     overrideAccess: true,
   }).catch((): null => null) as PayloadDocument | null
+}
+
+/**
+ * Rooms store their creator as a Payload administrator (`hostUser`), while
+ * member visibility and invitations use the linked `payload_members` record.
+ * Resolve that bridge without provisioning or mutating either record.
+ */
+export async function resolveRoomCreatorMemberId(
+  payload: PayloadCourseAccessAPI,
+  room: PayloadDocument,
+): Promise<string | null> {
+  const administratorId = liveSessionRelationshipId(room.hostUser)
+  if (!administratorId) return null
+
+  const administrator = await payload.findByID({
+    collection: 'payload_users',
+    id: administratorId,
+    depth: 0,
+    overrideAccess: true,
+  }).catch((): null => null) as PayloadDocument | null
+  if (!administrator) return null
+
+  const identity = await resolveAdministratorMemberIdentity(payload, administrator)
+  return identity.member ? String(identity.member.id) : null
 }
 
 async function buildRecipients(
@@ -139,12 +164,32 @@ async function enrolledMemberSources(
   return entries
 }
 
+async function includeRoomCreator(
+  payload: PayloadCourseAccessAPI,
+  room: PayloadDocument,
+  recipients: RoomAudienceMember[],
+): Promise<RoomAudienceMember[]> {
+  const creatorMemberId = await resolveRoomCreatorMemberId(payload, room)
+  if (!creatorMemberId || recipients.some((member) => member.memberId === creatorMemberId)) {
+    return recipients
+  }
+
+  // `selected` is the closest existing database enum for an implicit creator
+  // grant; the member identity is recorded in metadata as usual.
+  const creator = await buildRecipients(
+    payload,
+    mergeAudienceSources([{ memberId: creatorMemberId, source: 'selected' }]),
+  )
+  return [...recipients, ...creator]
+}
+
 /** Resolve the trusted, deduplicated, eligible recipient set for a Room. */
 export async function resolveRoomAudience(
   payload: PayloadCourseAccessAPI,
   room: PayloadDocument,
 ): Promise<RoomAudienceMember[]> {
   const audience = normalizeRoomAudience(room.audience)
+  let recipients: RoomAudienceMember[]
   if (audience === 'all') {
     const members = await payload.find({
       collection: 'payload_members',
@@ -153,24 +198,22 @@ export async function resolveRoomAudience(
       depth: 0,
       overrideAccess: true,
     })
-    return buildRecipients(payload, mergeAudienceSources(
+    recipients = await buildRecipients(payload, mergeAudienceSources(
       members.docs.map((member) => ({ memberId: String(member.id), source: 'all_active' as const })),
     ))
-  }
-
-  if (audience === 'selected') {
-    return buildRecipients(payload, mergeAudienceSources(
+  } else if (audience === 'selected') {
+    recipients = await buildRecipients(payload, mergeAudienceSources(
       uniqueRelationshipIds(room.targetMemberIds).map((memberId) => ({ memberId, source: 'selected' as const })),
     ))
-  }
-
-  if (audience === 'groups') {
-    return buildRecipients(payload, mergeAudienceSources(
+  } else if (audience === 'groups') {
+    recipients = await buildRecipients(payload, mergeAudienceSources(
       await groupMemberSources(payload, uniqueRelationshipIds(room.targetGroupIds)),
     ))
+  } else {
+    recipients = await buildRecipients(payload, mergeAudienceSources(await enrolledMemberSources(payload, room)))
   }
 
-  return buildRecipients(payload, mergeAudienceSources(await enrolledMemberSources(payload, room)))
+  return includeRoomCreator(payload, room, recipients)
 }
 
 export function roomAudienceMemberIds(members: RoomAudienceMember[]): string[] {

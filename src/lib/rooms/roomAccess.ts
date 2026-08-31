@@ -4,6 +4,7 @@ import { liveSessionRelationshipId } from '@/lib/liveSessions/sessionLifecycle'
 import {
   normalizeRoomAudience,
   resolveRoomAudience,
+  resolveRoomCreatorMemberId,
   type RoomAudienceMember,
   type RoomGrantSource,
 } from '@/lib/rooms/audience'
@@ -116,6 +117,11 @@ export async function isRoomMemberEntitled(
   const grants = await findRoomGrants(payload, String(room.id))
   const memberGrant = grants.find((grant) => grantMemberId(grant) === normalizedMemberId)
   if (memberGrant) return memberGrant.status === 'active'
+
+  // Keep existing Rooms usable for their creator even when they were created
+  // before creator grants were reconciled. A persisted revoked grant above
+  // still wins and denies access.
+  if (await resolveRoomCreatorMemberId(payload, room) === normalizedMemberId) return true
 
   return legacyAudienceAllows(payload, room, normalizedMemberId)
 }

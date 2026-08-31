@@ -440,9 +440,15 @@ async function getBillingContext(
         : null,
     }
 
-    // A confirmed Payload subscription (including an explicit pending or
-    // terminal state) is authoritative. Only the absence of a local
-    // projection may use the operational billing fallback below.
+    // Checkout/shadow-sync ordering can leave a recoverable `incomplete`
+    // projection behind an active provider subscription. Reconcile that state
+    // at read time; terminal local states remain authoritative.
+    if (subscriptionStatus === 'incomplete' || localContext.reconciliationState === 'pending') {
+      const operationalContext = await payload.resolveOperationalBillingContext?.(memberId, nowValue)
+      if (operationalContext?.subscriptionStatus === 'active' || operationalContext?.subscriptionStatus === 'trialing') {
+        return operationalContext
+      }
+    }
     return localContext
   }
 
