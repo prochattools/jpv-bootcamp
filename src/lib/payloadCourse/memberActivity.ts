@@ -139,13 +139,29 @@ export async function getMemberActivity(
         limit: queryLimit,
         sort: '-createdAt',
       })
-  const reactions = await findAll(payload, 'payload_engagement_reactions', {
-    where: {
-      targetKind: { in: ['space_post', 'space_comment'] },
-    },
-    limit: queryLimit,
-    sort: '-createdAt',
-  })
+  const [engagementReactions, legacyReactions] = await Promise.all([
+    findAll(payload, 'payload_engagement_reactions', {
+      where: {
+        targetKind: { in: ['space_post', 'space_comment'] },
+      },
+      limit: queryLimit,
+      sort: '-createdAt',
+    }),
+    findAll(payload, 'payload_space_reactions', {
+      where: {
+        and: [
+          { reactionType: { equals: 'like' } },
+          { targetKind: { in: ['post', 'comment'] } },
+        ],
+      },
+      limit: queryLimit,
+      sort: '-sourceCreatedAt',
+    }),
+  ])
+  const reactions = [
+    ...engagementReactions.map((document) => ({ source: 'engagement' as const, document })),
+    ...legacyReactions.map((document) => ({ source: 'legacy' as const, document })),
+  ]
 
   const postById = new Map(posts.map((post) => [String(post.id), post]))
   const commentById = new Map(comments.map((comment) => [String(comment.id), comment]))
@@ -190,12 +206,16 @@ export async function getMemberActivity(
     })
   }
 
-  for (const reaction of reactions) {
-    if (!['helpful', 'insightful', 'celebrate'].includes(String(reaction.reactionType))) continue
-    const targetKind = String(reaction.targetKind)
+  for (const entry of reactions) {
+    const reaction = entry.document
+    const targetKind = entry.source === 'legacy'
+      ? String(reaction.targetKind) === 'comment' ? 'space_comment' : 'space_post'
+      : String(reaction.targetKind)
+    const allowedReactionTypes = entry.source === 'legacy' ? ['like'] : ['helpful', 'insightful', 'celebrate']
+    if (!allowedReactionTypes.includes(String(reaction.reactionType))) continue
     const targetId = targetKind === 'space_post'
       ? relationshipId(reaction.targetPost)
-      : relationshipId(reaction.targetSpaceComment)
+      : relationshipId(entry.source === 'legacy' ? reaction.targetComment : reaction.targetSpaceComment)
     const targetPost = targetKind === 'space_post'
       ? (targetId ? postById.get(targetId) : null)
       : (targetId ? commentById.get(targetId) : null)
@@ -205,7 +225,7 @@ export async function getMemberActivity(
     const post = postId ? postById.get(postId) : null
     const spaceId = post ? relationshipId(post.space) : null
     if (!targetId || !post || !spaceId || !spaceById.has(spaceId)) continue
-    const actorId = relationshipId(reaction.member)
+    const actorId = relationshipId(entry.source === 'legacy' ? reaction.actorMember : reaction.member)
     const reactionLabel = String(reaction.reactionType)
     candidateItems.push({
       id: `reaction:${reaction.id}`,
@@ -215,7 +235,7 @@ export async function getMemberActivity(
       actor: { memberId: actorId, displayName: 'Community member', avatarUrl: null },
       context: `${reactionLabel} in ${spaceName(spaceId)}`,
       excerpt: excerpt(targetPost?.body ?? post.body),
-      createdAt: dateValue(reaction.createdAt),
+      createdAt: dateValue(entry.source === 'legacy' ? reaction.sourceCreatedAt : reaction.createdAt),
       href: postHref(spaceId, String(post.id)),
     })
   }

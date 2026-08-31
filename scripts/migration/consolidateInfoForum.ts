@@ -9,7 +9,11 @@ import {
   INFO_FORUM_LEGACY_SLUG,
 } from '../../src/lib/community/infoForumMigration'
 import {
+  applyConsolidationPlanToSnapshot,
+  applyConsolidationPlanWrites,
   buildConsolidationPlan,
+  sourceDependencyCounts,
+  totalSourceDependencyCount,
   type InfoForumSnapshot,
 } from './infoForumConsolidationPlan'
 
@@ -18,7 +22,10 @@ type Document = { id: string | number; [key: string]: unknown }
 
 function flagValue(args: string[], flag: string): string | undefined {
   const index = args.indexOf(flag)
-  return index >= 0 ? args[index + 1] : undefined
+  if (index < 0) return undefined
+  const value = args[index + 1]
+  if (!value || value.startsWith('--')) throw new Error(flag + '_requires_value')
+  return value
 }
 
 async function findAll(payload: PayloadClient, collection: string, where?: Record<string, unknown>): Promise<Document[]> {
@@ -34,7 +41,8 @@ async function findAll(payload: PayloadClient, collection: string, where?: Recor
       overrideAccess: true,
     })
     docs.push(...(result.docs as Document[]))
-    if (!result.hasNextPage || page >= 1000) break
+    if (!result.hasNextPage) break
+    if (page >= 1000) throw new Error(collection + '_pagination_limit_exceeded')
     page += 1
   } while (true)
   return docs
@@ -72,27 +80,27 @@ function ids(value: unknown): string[] {
 
 async function buildSnapshot(payload: PayloadClient, sourceId: string, destinationId: string): Promise<InfoForumSnapshot> {
   const [posts, memberships, files, threads, rooms, policies, grants, entitlementEvents, notifications] = await Promise.all([
-    findAll(payload, 'payload_space_posts', { space: { equals: sourceId } }),
+    findAll(payload, 'payload_space_posts', { space: { in: [sourceId, destinationId] } }),
     findAll(payload, 'payload_space_memberships', { space: { in: [sourceId, destinationId] } }),
-    findAll(payload, 'payload_space_files', { space: { equals: sourceId } }),
-    findAll(payload, 'payload_chat_threads', { space: { equals: sourceId } }),
-    findAll(payload, 'live_sessions', { space: { equals: sourceId } }),
-    findAll(payload, 'payload_access_policies', { and: [{ resourceType: { equals: 'space' } }, { resourceId: { equals: sourceId } }] }),
-    findAll(payload, 'payload_access_grants', { and: [{ resourceType: { equals: 'space' } }, { resourceId: { equals: sourceId } }] }),
-    findAll(payload, 'payload_entitlement_events', { and: [{ resourceType: { equals: 'space' } }, { resourceId: { equals: sourceId } }] }),
+    findAll(payload, 'payload_space_files', { space: { in: [sourceId, destinationId] } }),
+    findAll(payload, 'payload_chat_threads', { space: { in: [sourceId, destinationId] } }),
+    findAll(payload, 'live_sessions', { space: { in: [sourceId, destinationId] } }),
+    findAll(payload, 'payload_access_policies', { and: [{ resourceType: { equals: 'space' } }, { resourceId: { in: [sourceId, destinationId] } }] }),
+    findAll(payload, 'payload_access_grants', { and: [{ resourceType: { equals: 'space' } }, { resourceId: { in: [sourceId, destinationId] } }] }),
+    findAll(payload, 'payload_entitlement_events', { and: [{ resourceType: { equals: 'space' } }, { resourceId: { in: [sourceId, destinationId] } }] }),
     findAll(payload, 'payload_member_notifications'),
   ])
-  const postIds = posts.map((post) => String(post.id))
-  const threadIds = threads.map((thread) => String(thread.id))
+  const sourcePostIds = posts.filter((post) => relationshipId(post.space) === sourceId).map((post) => String(post.id))
+  const sourceThreadIds = threads.filter((thread) => relationshipId(thread.space) === sourceId).map((thread) => String(thread.id))
   const [comments, chatMessages] = await Promise.all([
-    postIds.length ? findAll(payload, 'payload_space_comments', { post: { in: postIds } }) : [],
-    threadIds.length ? findAll(payload, 'payload_chat_messages', { thread: { in: threadIds } }) : [],
+    sourcePostIds.length ? findAll(payload, 'payload_space_comments', { post: { in: sourcePostIds } }) : [],
+    sourceThreadIds.length ? findAll(payload, 'payload_chat_messages', { thread: { in: sourceThreadIds } }) : [],
   ])
   const commentIds = comments.map((comment) => String(comment.id))
-  const [legacyReactions, engagementReactions] = postIds.length || commentIds.length
+  const [legacyReactions, engagementReactions] = sourcePostIds.length || commentIds.length
     ? await Promise.all([
-        findAll(payload, 'payload_space_reactions', { or: [{ targetPost: { in: postIds } }, { targetComment: { in: commentIds } }] }),
-        findAll(payload, 'payload_engagement_reactions', { or: [{ targetPost: { in: postIds } }, { targetSpaceComment: { in: commentIds } }] }),
+        findAll(payload, 'payload_space_reactions', { or: [{ targetPost: { in: sourcePostIds } }, { targetComment: { in: commentIds } }] }),
+        findAll(payload, 'payload_engagement_reactions', { or: [{ targetPost: { in: sourcePostIds } }, { targetSpaceComment: { in: commentIds } }] }),
       ])
     : [[], []]
   return {
@@ -114,6 +122,8 @@ async function buildSnapshot(payload: PayloadClient, sourceId: string, destinati
 }
 
 function summary(plan: ReturnType<typeof buildConsolidationPlan>, snapshot: InfoForumSnapshot, source: Document, destination: Document, mode: 'dry-run' | 'apply') {
+  const simulatedSnapshot = applyConsolidationPlanToSnapshot(snapshot, plan)
+  const simulatedRemaining = sourceDependencyCounts(simulatedSnapshot, String(source.id), INFO_FORUM_LEGACY_SLUG)
   const byCollection = plan.moves.reduce<Record<string, number>>((counts, operation) => {
     counts[operation.collection] = (counts[operation.collection] ?? 0) + 1
     return counts
@@ -143,27 +153,40 @@ function summary(plan: ReturnType<typeof buildConsolidationPlan>, snapshot: Info
       membershipMoves: plan.membershipMoves.length,
       membershipDeduplications: plan.membershipDeletes.length,
       notificationRewrites: plan.notificationRewrites.length,
+      conflicts: plan.conflicts,
     },
+    remainingDependenciesAfterSimulation: simulatedRemaining,
     preservedRelationships: plan.preservedRelationshipCounts,
     productionApply: false,
   }
 }
 
-async function applyPlan(payload: PayloadClient, plan: ReturnType<typeof buildConsolidationPlan>, source: Document): Promise<void> {
-  for (const operation of plan.moves) {
-    await (payload as any).update({ collection: operation.collection as never, id: operation.id, data: { [operation.field]: operation.to }, overrideAccess: true, overrideLock: true })
+export async function applyInfoForumConsolidationPlan(
+  payload: PayloadClient,
+  plan: ReturnType<typeof buildConsolidationPlan>,
+  source: Document,
+  sourceId: string,
+  destinationId: string,
+): Promise<{ remainingDependencies: ReturnType<typeof sourceDependencyCounts>; destinationCounts: Record<string, number> }> {
+  if (plan.conflicts.length > 0) throw new Error('migration_conflicts:' + plan.conflicts.join(','))
+  await applyConsolidationPlanWrites(payload as any, plan)
+  const verifiedSnapshot = await buildSnapshot(payload, sourceId, destinationId)
+  const remaining = sourceDependencyCounts(verifiedSnapshot, sourceId, INFO_FORUM_LEGACY_SLUG)
+  if (totalSourceDependencyCount(remaining) > 0) {
+    throw new Error('source_dependencies_remain:' + JSON.stringify(remaining))
   }
-  for (const operation of plan.membershipMoves) {
-    await (payload as any).update({ collection: 'payload_space_memberships', id: operation.id, data: { space: operation.to }, overrideAccess: true, overrideLock: true })
-  }
-  if (!payload.delete && plan.membershipDeletes.length > 0) throw new Error('membership_deduplication_delete_unavailable')
-  for (const operation of plan.membershipDeletes) {
-    await (payload as any).delete!({ collection: 'payload_space_memberships', id: operation.id, overrideAccess: true })
-  }
-  for (const operation of plan.notificationRewrites) {
-    await (payload as any).update({ collection: 'payload_member_notifications', id: operation.id, data: { href: operation.to }, overrideAccess: true, overrideLock: true })
+  const destinationCounts = {
+    posts: verifiedSnapshot.posts.filter((item) => item.space === destinationId).length,
+    memberships: verifiedSnapshot.memberships.filter((item) => item.space === destinationId).length,
+    files: verifiedSnapshot.files.filter((item) => item.space === destinationId).length,
+    threads: verifiedSnapshot.threads.filter((item) => item.space === destinationId).length,
+    rooms: verifiedSnapshot.rooms.filter((item) => item.space === destinationId).length,
+    policies: verifiedSnapshot.policies.filter((item) => item.resourceType === 'space' && item.resourceId === destinationId).length,
+    grants: verifiedSnapshot.grants.filter((item) => item.resourceType === 'space' && item.resourceId === destinationId).length,
+    entitlementEvents: verifiedSnapshot.entitlementEvents.filter((item) => item.resourceType === 'space' && item.resourceId === destinationId).length,
   }
   await (payload as any).update({ collection: 'payload_spaces', id: source.id, data: { status: 'archived' }, overrideAccess: true, overrideLock: true })
+  return { remainingDependencies: remaining, destinationCounts }
 }
 
 export async function runInfoForumConsolidation(argv = process.argv.slice(2)): Promise<void> {
@@ -181,8 +204,8 @@ export async function runInfoForumConsolidation(argv = process.argv.slice(2)): P
   if (process.env.NODE_ENV === 'production' || process.env.APP_ENV === 'production' || process.env.DEPLOYMENT_ENV === 'production') {
     throw new Error('production_apply_disabled_for_info_forum_consolidation')
   }
-  await applyPlan(payload, plan, source)
-  console.log(JSON.stringify({ applied: true, sourceArchived: true, rerunIsIdempotent: true }))
+  const verification = await applyInfoForumConsolidationPlan(payload, plan, source, String(source.id), String(destination.id))
+  console.log(JSON.stringify({ applied: true, sourceArchived: true, ...verification, rerunIsIdempotent: true }))
 }
 
 if (import.meta.url === new URL(`file://${process.argv[1] ?? ''}`).href) {

@@ -18,6 +18,7 @@ This is a guarded, one-way consolidation of the archived `Info Forum` community 
 | `payload_space_posts.space` | direct | rewrite to destination | Post IDs, authors, moderation, timestamps, and bodies stay unchanged. |
 | `payload_space_comments.post` | indirect through post | preserve | Comments are not recreated or detached; their post relationship remains valid. |
 | `payload_space_reactions.targetPost/targetComment` | indirect through post/comment | preserve | Reaction IDs and targets remain unchanged. |
+| `payload_engagement_reactions.targetPost/targetSpaceComment` | indirect through post/comment | preserve | Current member reactions remain attached to the same post or comment. |
 | `payload_space_files.space` | direct | rewrite to destination | `post` and `comment` relationships remain unchanged. |
 | `payload_space_memberships.space` | direct | rewrite or deduplicate | One destination membership per member is retained; source duplicate is deleted only when the destination membership already exists. |
 | `payload_chat_threads.space` | direct | rewrite to destination | Chat thread IDs and participants remain unchanged. |
@@ -28,7 +29,12 @@ This is a guarded, one-way consolidation of the archived `Info Forum` community 
 | `payload_entitlement_events.resourceId` | polymorphic `resourceType=space` | rewrite to destination | Audit history remains intact and only the resource ID changes. |
 | `payload_member_notifications.href` | route deep link | rewrite exact `/portal/community/info-forum` prefix | Other notification links are untouched. |
 
-The inventory also counts indirect comments, reactions, and chat messages so dry-run output proves they are preserved rather than copied. `payload_spaces.requiredAccessGroups` is not rewritten: it points to the separate `payload_access_groups` product-access domain, not member communication groups.
+The inventory also counts indirect comments, both legacy and current engagement reactions, and chat messages so dry-run output proves they are preserved rather than copied. It reports simulated remaining direct dependencies and conflicts before any apply. `payload_spaces.requiredAccessGroups` is not rewritten: it points to the separate `payload_access_groups` product-access domain, not member communication groups.
+
+A schema search found no direct course, cohort, or enrollment relationship to
+`payload_spaces`; the only current cross-domain Room relationship is
+`live_sessions.space`, which is included above. Unknown future relationships must
+be added to this map before applying the migration.
 
 ## Execution contract
 

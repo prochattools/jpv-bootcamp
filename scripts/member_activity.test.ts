@@ -23,6 +23,10 @@ const records: Record<string, any[]> = {
   ],
   payload_space_comments: [{ id: 'comment-public', post: 'post-public', author: 'member-2', moderationStatus: 'visible', body: paragraph('A public reply.'), createdAt: '2026-08-31T10:30:00.000Z' }],
   payload_engagement_reactions: [{ id: 'reaction-public', member: 'member-2', reactionType: 'helpful', targetKind: 'space_post', targetPost: 'post-public', createdAt: '2026-08-31T10:45:00.000Z' }],
+  payload_space_reactions: [
+    { id: 'legacy-like', actorMember: 'member-1', reactionType: 'like', targetKind: 'post', targetPost: 'post-public', sourceCreatedAt: '2026-08-31T07:30:00.000Z' },
+    { id: 'legacy-bookmark', actorMember: 'member-1', reactionType: 'bookmark', targetKind: 'post', targetPost: 'post-public', sourceCreatedAt: '2026-08-31T07:15:00.000Z' },
+  ],
 }
 
 function matches(doc: any, where: any): boolean {
@@ -60,6 +64,8 @@ assert.equal(secondPage.items.some((item) => item.context.includes('Secret')), f
 
 const adminActivity = await getMemberActivity(payload, { kind: 'admin' }, { pageSize: 20 })
 assert.equal(adminActivity.items.some((item) => item.id === 'post:post-secret'), true)
+assert.equal(adminActivity.items.some((item) => item.id === 'reaction:legacy-like'), true)
+assert.equal(adminActivity.items.some((item) => item.id === 'reaction:legacy-bookmark'), false)
 
 console.log('member_activity.test.ts passed')
 }

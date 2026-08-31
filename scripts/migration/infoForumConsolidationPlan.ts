@@ -21,13 +21,41 @@ export type InfoForumSnapshot = {
 export type ConsolidationPlan = {
   moves: Array<{ collection: string; id: string; field: 'space' | 'resourceId'; from: string; to: string }>
   membershipMoves: Array<{ id: string; from: string; to: string }>
-  membershipDeletes: Array<{ id: string; reason: 'destination_membership_exists' }>
+  membershipDeletes: Array<{ id: string; reason: 'destination_membership_exists' | 'duplicate_destination_membership' }>
   notificationRewrites: Array<{ id: string; from: string; to: string }>
+  conflicts: string[]
   preservedRelationshipCounts: {
     comments: number
     reactions: number
     chatMessages: number
   }
+}
+
+export type SourceDependencyCounts = {
+  posts: number
+  memberships: number
+  files: number
+  threads: number
+  rooms: number
+  policies: number
+  grants: number
+  entitlementEvents: number
+  notificationDeepLinks: number
+}
+
+export type ConsolidationWriteAPI = {
+  update(args: {
+    collection: string
+    id: string
+    data: Record<string, unknown>
+    overrideAccess?: boolean
+    overrideLock?: boolean
+  }): Promise<unknown>
+  delete?: (args: {
+    collection: string
+    id: string
+    overrideAccess?: boolean
+  }) => Promise<unknown>
 }
 
 function directMoves(collection: string, refs: SpaceRef[], sourceId: string, destinationId: string) {
@@ -49,14 +77,26 @@ export function buildConsolidationPlan(
   sourceSlug = 'info-forum',
   destinationSlug = 'forum',
 ): ConsolidationPlan {
-  const destinationMembers = new Set(
-    snapshot.memberships
-      .filter((membership) => membership.space === destinationId)
-      .map((membership) => membership.member),
-  )
+  const destinationMembers = new Set<string>()
   const membershipMoves: ConsolidationPlan['membershipMoves'] = []
   const membershipDeletes: ConsolidationPlan['membershipDeletes'] = []
+  const conflicts: string[] = []
+  for (const membership of snapshot.memberships.filter((item) => item.space === destinationId)) {
+    if (!membership.member) {
+      conflicts.push('membership:' + membership.id + ':missing-member')
+      continue
+    }
+    if (destinationMembers.has(membership.member)) {
+      membershipDeletes.push({ id: membership.id, reason: 'duplicate_destination_membership' })
+      continue
+    }
+    destinationMembers.add(membership.member)
+  }
   for (const membership of snapshot.memberships.filter((item) => item.space === sourceId)) {
+    if (!membership.member) {
+      conflicts.push('membership:' + membership.id + ':missing-member')
+      continue
+    }
     if (destinationMembers.has(membership.member)) {
       membershipDeletes.push({ id: membership.id, reason: 'destination_membership_exists' })
     } else {
@@ -88,6 +128,7 @@ export function buildConsolidationPlan(
     membershipMoves,
     membershipDeletes,
     notificationRewrites,
+    conflicts,
     preservedRelationshipCounts: {
       comments: snapshot.comments,
       reactions: snapshot.reactions,
@@ -98,4 +139,106 @@ export function buildConsolidationPlan(
 
 export function planOperationCount(plan: ConsolidationPlan): number {
   return plan.moves.length + plan.membershipMoves.length + plan.membershipDeletes.length + plan.notificationRewrites.length
+}
+
+export async function applyConsolidationPlanWrites(
+  writer: ConsolidationWriteAPI,
+  plan: ConsolidationPlan,
+): Promise<void> {
+  for (const operation of plan.moves) {
+    await writer.update({
+      collection: operation.collection,
+      id: operation.id,
+      data: { [operation.field]: operation.to },
+      overrideAccess: true,
+      overrideLock: true,
+    })
+  }
+  for (const operation of plan.membershipMoves) {
+    await writer.update({
+      collection: 'payload_space_memberships',
+      id: operation.id,
+      data: { space: operation.to },
+      overrideAccess: true,
+      overrideLock: true,
+    })
+  }
+  if (!writer.delete && plan.membershipDeletes.length > 0) throw new Error('membership_deduplication_delete_unavailable')
+  for (const operation of plan.membershipDeletes) {
+    await writer.delete?.({
+      collection: 'payload_space_memberships',
+      id: operation.id,
+      overrideAccess: true,
+    })
+  }
+  for (const operation of plan.notificationRewrites) {
+    await writer.update({
+      collection: 'payload_member_notifications',
+      id: operation.id,
+      data: { href: operation.to },
+      overrideAccess: true,
+      overrideLock: true,
+    })
+  }
+}
+
+export function applyConsolidationPlanToSnapshot(
+  snapshot: InfoForumSnapshot,
+  plan: ConsolidationPlan,
+): InfoForumSnapshot {
+  const next = structuredClone(snapshot) as InfoForumSnapshot
+  for (const operation of plan.moves) {
+    const collection = operation.collection === 'payload_space_posts'
+      ? next.posts
+      : operation.collection === 'payload_space_files'
+        ? next.files
+        : operation.collection === 'payload_chat_threads'
+          ? next.threads
+          : operation.collection === 'live_sessions'
+            ? next.rooms
+            : operation.collection === 'payload_access_policies'
+              ? next.policies
+              : operation.collection === 'payload_access_grants'
+                ? next.grants
+                : next.entitlementEvents
+    const reference = collection.find((item) => item.id === operation.id)
+    if (!reference) continue
+    if ('space' in reference) reference.space = operation.to
+    if ('resourceId' in reference) reference.resourceId = operation.to
+  }
+  for (const operation of plan.membershipDeletes) {
+    next.memberships = next.memberships.filter((membership) => membership.id !== operation.id)
+  }
+  for (const operation of plan.membershipMoves) {
+    const membership = next.memberships.find((item) => item.id === operation.id)
+    if (membership) membership.space = operation.to
+  }
+  for (const operation of plan.notificationRewrites) {
+    const notification = next.notifications.find((item) => item.id === operation.id)
+    if (notification) notification.href = operation.to
+  }
+  return next
+}
+
+export function sourceDependencyCounts(
+  snapshot: InfoForumSnapshot,
+  sourceId: string,
+  sourceSlug = 'info-forum',
+): SourceDependencyCounts {
+  const oldPrefix = '/portal/community/' + sourceSlug
+  return {
+    posts: snapshot.posts.filter((item) => item.space === sourceId).length,
+    memberships: snapshot.memberships.filter((item) => item.space === sourceId).length,
+    files: snapshot.files.filter((item) => item.space === sourceId).length,
+    threads: snapshot.threads.filter((item) => item.space === sourceId).length,
+    rooms: snapshot.rooms.filter((item) => item.space === sourceId).length,
+    policies: snapshot.policies.filter((item) => item.resourceType === 'space' && item.resourceId === sourceId).length,
+    grants: snapshot.grants.filter((item) => item.resourceType === 'space' && item.resourceId === sourceId).length,
+    entitlementEvents: snapshot.entitlementEvents.filter((item) => item.resourceType === 'space' && item.resourceId === sourceId).length,
+    notificationDeepLinks: snapshot.notifications.filter((item) => item.href === oldPrefix || item.href.startsWith(oldPrefix + '/')).length,
+  }
+}
+
+export function totalSourceDependencyCount(counts: SourceDependencyCounts): number {
+  return Object.values(counts).reduce((total, count) => total + count, 0)
 }
