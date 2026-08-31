@@ -25,13 +25,18 @@ assert.match(
 )
 assert.match(
 	provisioning,
-	/const emailVariant = memberWasCreated \|\| !existing \? 'welcome' : 'upgrade'[\s\S]*await sendWelcomeEmail\(\{[\s\S]*to: email,[\s\S]*buildMemberForgotPasswordUrl\(portalUrl\)/,
+	/const memberWasOnboarded = memberWasCreated \|\| Boolean\(memberCredentials\)[\s\S]*const emailVariant = memberWasOnboarded \|\| !existing \? 'welcome' : 'upgrade'[\s\S]*await sendWelcomeEmail\(\{[\s\S]*to: email,[\s\S]*buildMemberForgotPasswordUrl\(portalUrl\)/,
 	'canonical checkout provisioning must send the welcome email through the existing Resend-backed sender',
 )
 assert.match(
 	provisioning,
-	/const memberResult = await provisionMemberFromCheckout\([\s\S]*memberWasCreated = memberResult\.created/,
+	/const memberResult = await provisionMemberFromCheckout\([\s\S]*issueCredentials: isInitialCheckout \|\| isNewCustomerCheckout,[\s\S]*memberWasCreated = memberResult\.created[\s\S]*if \(memberResult\.password\)/,
 	'new Payload member creation must select the onboarding email variant even when a Stripe projection already exists',
+)
+assert.match(
+	provisioning,
+	/const isInitialCheckout =[\s\S]*eventType === 'checkout\.session\.completed'[\s\S]*isInitialCheckout,/,
+	'first successful checkout must remain the canonical onboarding-email trigger when subscription.created ran first',
 )
 assert.match(emailRenderer, /heading: isUpgrade \? 'Your membership has been updated' : 'Your account is activated'/)
 assert.equal(emailRenderer.includes('Your plan has been upgraded'), false)

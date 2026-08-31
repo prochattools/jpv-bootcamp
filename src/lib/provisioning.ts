@@ -232,6 +232,7 @@ function evaluateEmailNotification(params: {
 	lastNotifiedEventId: string | null
 	sendKey?: string | null
 	isNewCustomer?: boolean
+	isInitialCheckout?: boolean
 }): { shouldSend: boolean; reason: string } {
 	if (!params.allowEmail) {
 		return { shouldSend: false, reason: params.disabledReason ?? 'disabled' }
@@ -241,6 +242,9 @@ function evaluateEmailNotification(params: {
 	}
 	if (params.sendKey && params.lastNotifiedEventId === params.sendKey) {
 		return { shouldSend: false, reason: 'send_key_already_notified' }
+	}
+	if (params.isInitialCheckout) {
+		return { shouldSend: true, reason: 'initial_checkout' }
 	}
 	if (params.isNewCustomer) {
 		return { shouldSend: true, reason: 'new_customer_for_email' }
@@ -1206,6 +1210,10 @@ export async function provisionFromCheckoutSession(
 
 	const planChanged = storedPlanName !== incomingPlan
 	const isNewCustomerCheckout = Boolean(existing && existing.stripeCustomerId && existing.stripeCustomerId !== customerId)
+	const isInitialCheckout =
+		eventType === 'checkout.session.completed' &&
+		!lastNotifiedPlan &&
+		!lastNotifiedAt
 	const decision: ProvisioningDecision = existing
 		? planChanged ? 'update_plan' : isNewCustomerCheckout ? 'update_plan' : 'skip'
 		: 'provision'
@@ -1228,6 +1236,7 @@ export async function provisionFromCheckoutSession(
 		lastNotifiedEventId,
 		sendKey: emailSendKey,
 		isNewCustomer: isNewCustomerCheckout,
+		isInitialCheckout,
 	})
 	emailReason = emailEval.reason
 
@@ -1263,9 +1272,10 @@ export async function provisionFromCheckoutSession(
 			email,
 			displayName: customerName,
 			stripeCustomerId: customerId,
+			issueCredentials: isInitialCheckout || isNewCustomerCheckout,
 		})
 		memberWasCreated = memberResult.created
-		if (memberResult.created && memberResult.password) {
+		if (memberResult.password) {
 			memberCredentials = { email, password: memberResult.password }
 		}
 	} catch (memberError) {
@@ -1277,11 +1287,12 @@ export async function provisionFromCheckoutSession(
 		// be created. Stripe will retry the webhook.
 		throw memberError
 	}
-	const emailVariant = memberWasCreated || !existing ? 'welcome' : 'upgrade'
+	const memberWasOnboarded = memberWasCreated || Boolean(memberCredentials)
+	const emailVariant = memberWasOnboarded || !existing ? 'welcome' : 'upgrade'
 
 	const shouldSendWelcomeEmail = emailEval.shouldSend ||
-		(allowEmail && forceWelcomeEmailForNewMember && memberWasCreated)
-	if (allowEmail && forceWelcomeEmailForNewMember && memberWasCreated && !emailEval.shouldSend) {
+		(allowEmail && forceWelcomeEmailForNewMember && memberWasOnboarded)
+	if (allowEmail && forceWelcomeEmailForNewMember && memberWasOnboarded && !emailEval.shouldSend) {
 		emailReason = 'new_member_account'
 	}
 
