@@ -24,6 +24,12 @@ export async function provisionMemberFromCheckout(params: {
   email: string
   displayName?: string | null
   stripeCustomerId?: string | null
+  /**
+   * The canonical checkout webhook may run after the billing shadow sync.
+   * In that case the shadow sync has created an active checkout member, but
+   * the member has not received onboarding credentials yet.
+   */
+  issueCredentials?: boolean
   source?: 'stripe_checkout' | 'admin_created' | 'migration'
 }): Promise<CheckoutMemberProvisionResult> {
   const email = normalizeEmail(params.email)
@@ -46,8 +52,41 @@ export async function provisionMemberFromCheckout(params: {
     const existingMember = existing.docs[0] as {
       id: string | number
       accountStatus?: string
-      emailVerifiedAt?: string | null
+      emailVerifiedAt?: string | Date | null
       source?: string
+      lastLoginAt?: string | Date | null
+    }
+
+    const isUnclaimedCheckoutMember =
+      params.issueCredentials === true &&
+      existingMember.source === 'stripe_checkout' &&
+      existingMember.accountStatus === 'active' &&
+      !existingMember.lastLoginAt
+
+    // The billing shadow sync can create this row before the canonical
+    // checkout webhook runs. Rotate its one-time password so the canonical
+    // activation email can contain credentials. This is safe for an
+    // unclaimed checkout account because it has never recorded a login.
+    if (isUnclaimedCheckoutMember) {
+      const password = generateReadablePassword()
+      await payload.update({
+        collection: 'payload_members',
+        id: existingMember.id,
+        data: {
+          password,
+          emailVerifiedAt:
+            existingMember.emailVerifiedAt instanceof Date
+              ? existingMember.emailVerifiedAt.toISOString()
+              : existingMember.emailVerifiedAt ?? new Date().toISOString(),
+        },
+        overrideAccess: true,
+      })
+
+      console.info('provisionMemberFromCheckout: checkout credentials prepared', {
+        email: redactEmail(email),
+        memberId: existingMember.id,
+      })
+      return { memberId: String(existingMember.id), created: false, password }
     }
 
     // Older checkout-created rows were stored as active without this marker
