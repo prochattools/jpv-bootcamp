@@ -1,4 +1,5 @@
 import type { PayloadCourseAccessAPI, PayloadCourseWriteAPI, PayloadDocument } from '@/lib/payloadCourse/accessService'
+import { normalizeRelationshipId } from '@/lib/domain/relationships'
 import { liveSessionRelationshipId } from '@/lib/liveSessions/sessionLifecycle'
 import {
   normalizeRoomAudience,
@@ -39,7 +40,7 @@ async function findRoomGrants(
 ): Promise<PayloadDocument[]> {
   const result = await payload.find({
     collection: 'payload_room_access',
-    where: { room: { equals: roomId } },
+    where: { room: { equals: normalizeRelationshipId(roomId) } },
     limit: 5000,
     depth: 0,
     overrideAccess: true,
@@ -161,8 +162,8 @@ export async function synchronizeRoomAccess(
         await payload.create({
           collection: 'payload_room_access',
           data: {
-            room: String(room.id),
-            member: member.memberId,
+            room: normalizeRelationshipId(room.id),
+            member: normalizeRelationshipId(member.memberId),
             grantSource: sourceForMember(member),
             status: 'active',
             eventKey: roomAccessEventKey(String(room.id), member.memberId),
@@ -228,7 +229,7 @@ export async function listActiveRoomGrantMemberIds(
 ): Promise<string[]> {
   const grants = await payload.find({
     collection: 'payload_room_access',
-    where: { and: [{ room: { equals: String(roomId) } }, { status: { equals: 'active' } }] },
+    where: { and: [{ room: { equals: normalizeRelationshipId(roomId) } }, { status: { equals: 'active' } }] },
     limit: 5000,
     depth: 0,
     overrideAccess: true,

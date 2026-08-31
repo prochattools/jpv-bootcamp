@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 
 import { resolveRoomAudience } from '../src/lib/rooms/audience'
+import { createRoomCommand } from '../src/lib/rooms/roomCommands'
 import { isRoomMemberEntitled, roomAccessEventKey, synchronizeRoomAccess } from '../src/lib/rooms/roomAccess'
 import { notifyRoomMember } from '../src/lib/rooms/roomNotifications'
 import { roomLiveKitPermissions } from '../src/lib/rooms/livekitPermissions'
@@ -32,7 +33,7 @@ function matchesWhere(document: PayloadDocument, where?: Record<string, unknown>
 
 class FakePayload implements PayloadCourseWriteAPI {
   private nextId = 100
-  constructor(readonly collections: Collections) {}
+  constructor(readonly collections: Collections, readonly strictRelations = false) {}
 
   async find(args: { collection: string; where?: Record<string, unknown>; limit?: number }) {
     const docs = (this.collections[args.collection] ?? []).filter((doc) => matchesWhere(doc, args.where))
@@ -46,7 +47,20 @@ class FakePayload implements PayloadCourseWriteAPI {
   }
 
   async create(args: { collection: string; data: Record<string, unknown> }) {
-    const document = { id: `${args.collection}_${this.nextId++}`, ...args.data }
+    if (this.strictRelations && args.collection === 'live_sessions') {
+      assert.equal(typeof args.data.hostUser, 'number')
+      assert.deepEqual(args.data.categories, [7])
+      assert.equal(args.data.course, 12)
+    }
+    if (this.strictRelations && args.collection === 'payload_room_access') {
+      assert.equal(typeof args.data.room, 'number')
+      assert.equal(args.data.member, 42)
+    }
+    if (this.strictRelations && args.collection === 'payload_member_notifications') {
+      assert.equal(args.data.member, 42)
+    }
+    const id = this.strictRelations && args.collection === 'live_sessions' ? 101 : `${args.collection}_${this.nextId++}`
+    const document = { id, ...args.data }
     this.collections[args.collection] = [...(this.collections[args.collection] ?? []), document]
     return document
   }
@@ -113,6 +127,29 @@ async function run() {
   assert.equal(payload.collections.payload_member_notifications.length, 1)
   assert.equal(payload.collections.payload_member_notifications[0].type, 'room_invitation')
   assert.equal(payload.collections.payload_member_notifications[0].eventKey, 'room-invitation:room-5:m2')
+
+  const createPayload = new FakePayload({
+    payload_members: [member('42', 'selected@example.com')],
+    payload_member_profiles: [{ id: 'profile-42', member: '42', displayName: 'Selected member' }],
+    payload_room_access: [],
+    payload_email_events: [],
+    payload_member_notifications: [],
+    payload_admin_notifications: [],
+  }, true)
+  const created = await createRoomCommand(
+    { payload: createPayload, adminId: '9' },
+    {
+      title: 'Production relationship test',
+      startNow: true,
+      audience: 'selected',
+      targetMemberIds: ['42'],
+      categoryIds: ['7'],
+      courseId: '12',
+    },
+  )
+  assert.equal(created.room.id, 101)
+  assert.equal(createPayload.collections.payload_room_access.length, 1)
+  assert.equal(createPayload.collections.payload_member_notifications.length, 1)
 
   assert.deepEqual(roomLiveKitPermissions({ isHost: true, audience: 'all', courseSession: true, spaceSession: false }), { canPublish: true, canPublishData: true, canSubscribe: true, roomAdmin: true })
   assert.equal(roomLiveKitPermissions({ isHost: false, audience: 'groups', courseSession: false, spaceSession: false }).canPublish, true)

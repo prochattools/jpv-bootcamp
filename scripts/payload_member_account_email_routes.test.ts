@@ -14,7 +14,6 @@ const routes = {
   verificationComplete: read('src/app/api/member-email-verification/complete/route.ts'),
   verificationResend: read('src/app/api/member-email-verification/resend/route.ts'),
 }
-const emailChangeRedirect = read('src/lib/members/memberEmailChangeRedirect.ts')
 
 for (const [name, source] of Object.entries(routes)) {
   assert.match(source, /export const dynamic = 'force-dynamic'/, name)
@@ -28,7 +27,6 @@ for (const source of [
   routes.forgot,
   routes.reset,
   routes.invitationComplete,
-  routes.emailChangeRequest,
 ]) {
   assert.match(source, /readBoundedJsonObject\(request\)/)
   assert.doesNotMatch(source, /request\.json\(/)
@@ -48,16 +46,11 @@ for (const source of [routes.reset, routes.invitationComplete]) {
   assert.doesNotMatch(source, /memberId|actionUrl|password: input|tokenDigest/)
 }
 
-assert.match(routes.emailChangeRequest, /getCurrentPayloadMember\(\)/)
-assert.match(routes.emailChangeRequest, /sameOriginRequest\(request\)/)
-assert.match(routes.emailChangeRequest, /scope: 'member-email-change-request'/)
-assert.match(routes.emailChangeRequest, /newEmail\.length > 320/)
-assert.match(routes.emailChangeRequest, /current sign-in email remains active/)
-assert.doesNotMatch(routes.emailChangeRequest, /new Resend|memberId: result|actionUrl|tokenDigest/)
-
-assert.match(routes.emailChangeComplete, /buildMemberEmailChangeLoginResultUrl/)
-assert.match(emailChangeRedirect, /new URL\('\/portal', request\.url\)/)
-assert.doesNotMatch(routes.emailChangeComplete, /next|redirect=|callback|returnUrl/)
+for (const source of [routes.emailChangeRequest, routes.emailChangeComplete]) {
+  assert.match(source, /status: 410/)
+  assert.match(source, /email_change_disabled/)
+  assert.doesNotMatch(source, /requestMemberEmailChange|completeMemberEmailChange|getCurrentPayloadMember/)
+}
 assert.match(routes.verificationComplete, /resolveMemberVerificationPublicBaseUrl\(\)/)
 assert.match(routes.verificationComplete, /new URL\('\/portal', resolveMemberVerificationPublicBaseUrl\(\)\)/)
 assert.match(routes.verificationResend, /GENERIC_VERIFICATION_REQUEST_MESSAGE/)

@@ -16,7 +16,7 @@ on:
         required: true
         type: string
       source_ref:
-        description: Approved source ref: feature/*, fix/*, or release/* (never main)
+        description: 'Approved source ref: feature/*, fix/*, or release/* (never main)'
         required: true
         type: string
       confirmation:

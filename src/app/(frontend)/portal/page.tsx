@@ -14,7 +14,6 @@ type PortalSearchParams = {
   next?: string | string[]
   redirect?: string | string[]
   verification?: string | string[]
-  emailChange?: string | string[]
   loggedOut?: string | string[]
   registration?: string | string[]
 }
@@ -30,7 +29,6 @@ function firstValue(value: string | string[] | undefined): string | null {
 
 function portalNotice(params: PortalSearchParams | undefined): string | null {
   const verification = firstValue(params?.verification)
-  const emailChange = firstValue(params?.emailChange)
   const loggedOut = firstValue(params?.loggedOut)
   const registration = firstValue(params?.registration)
 
@@ -41,8 +39,6 @@ function portalNotice(params: PortalSearchParams | undefined): string | null {
   if (verification === 'success') return 'Your email address has been verified. You can now sign in.'
   if (verification === 'used') return 'This verification link has already been used. You can request another email below if needed.'
   if (verification === 'invalid') return 'This verification link is invalid or expired. You can request another email below.'
-  if (emailChange === 'success') return 'Your sign-in email address was changed successfully. Use the new address when you sign in.'
-  if (emailChange === 'invalid') return 'This email-change link is invalid or expired. Sign in with your current address to request another link.'
   return null
 }
 
