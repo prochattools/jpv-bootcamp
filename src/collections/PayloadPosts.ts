@@ -1,5 +1,7 @@
 import type { CollectionConfig } from 'payload'
 
+import { generatePayloadSlugIfMissing } from '@/lib/domain/slugs'
+
 export const PayloadPosts: CollectionConfig = {
   slug: 'payload_posts',
   dbName: 'payload_posts',
@@ -13,9 +15,14 @@ export const PayloadPosts: CollectionConfig = {
     defaultColumns: ['title', 'status', 'featuredImage', 'publishedAt', 'updatedAt'],
     description: 'Publish announcements and articles with pictures, downloads and managed video.',
   },
+  hooks: {
+    beforeValidate: [
+      (args) => generatePayloadSlugIfMissing({ ...args, collection: 'payload_posts', sourceField: 'title' }),
+    ],
+  },
   fields: [
     { name: 'title', type: 'text', required: true },
-    { name: 'slug', type: 'text', required: true, unique: true, index: true },
+    { name: 'slug', type: 'text', required: true, unique: true, index: true, admin: { hidden: true } },
     { name: 'excerpt', type: 'textarea' },
     { name: 'content', type: 'richText' },
     {
@@ -64,7 +71,7 @@ export const PayloadPosts: CollectionConfig = {
         { label: 'Selected members', value: 'selected' },
       ],
       admin: {
-        description: 'Controls which members see this published update in the portal.',
+        description: 'Controls which members see this published update in the portal. Group-targeted rows use selected plus groupIds in the existing target JSON field.',
       },
     },
     {
@@ -72,7 +79,7 @@ export const PayloadPosts: CollectionConfig = {
       type: 'json',
       admin: {
         hidden: true,
-        description: 'Member IDs selected by the portal announcement composer.',
+        description: 'Backward-compatible audience selection object: { memberIds, groupIds }. Older rows may remain a member ID array.',
       },
     },
     { name: 'publishedAt', type: 'date' },

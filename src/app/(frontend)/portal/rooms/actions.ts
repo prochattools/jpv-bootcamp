@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 
 import { requirePortalAdmin } from '@/lib/auth/requirePortalAdmin'
+import { uniqueSlugForName } from '@/lib/domain/slugs'
 import {
   failure,
   normalizePortalAdminError,
@@ -111,17 +112,14 @@ export async function setRoomCategoryAction(
     const { payload } = await requirePortalAdmin('/portal/rooms')
     const name = input.name.trim()
     if (!name) return failure('invalid_input', 'Category name is required.')
-    const slug = (input.slug?.trim() || name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
-    if (!slug) return failure('invalid_input', 'Category slug is required.')
-    const existing = await payload.find({ collection: 'payload_room_categories', where: { and: [{ slug: { equals: slug } }, ...(categoryId !== 'new' ? [{ id: { not_equals: categoryId } }] : [])] }, limit: 1, depth: 0, overrideAccess: true })
-    if (existing.docs.length > 0) return failure('conflict', 'A Room category with this slug already exists.')
     if (categoryId !== 'new') {
       const category = await payload.findByID({ collection: 'payload_room_categories', id: categoryId, depth: 0, overrideAccess: true }).catch((): null => null)
       if (!category) return failure('not_found', 'Room category not found.')
-      await payload.update({ collection: 'payload_room_categories', id: categoryId, data: { name, slug, status: input.status ?? category.status ?? 'active', sortOrder: input.sortOrder ?? category.sortOrder ?? 0, description: input.description?.trim() || undefined }, overrideAccess: true, overrideLock: true })
+      await payload.update({ collection: 'payload_room_categories', id: categoryId, data: { name, status: input.status ?? category.status ?? 'active', sortOrder: input.sortOrder ?? category.sortOrder ?? 0, description: input.description?.trim() || undefined }, overrideAccess: true, overrideLock: true })
       revalidatePath('/portal/rooms')
       return success({ id: categoryId })
     }
+    const slug = await uniqueSlugForName(payload, 'payload_room_categories', name)
     const category = await payload.create({ collection: 'payload_room_categories', data: { name, slug, status: input.status ?? 'active', sortOrder: input.sortOrder ?? 0, description: input.description?.trim() || undefined }, overrideAccess: true })
     revalidatePath('/portal/rooms')
     return success({ id: String(category.id) })

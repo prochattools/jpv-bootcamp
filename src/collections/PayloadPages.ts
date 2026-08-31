@@ -1,5 +1,7 @@
 import type { CollectionConfig } from 'payload'
 
+import { generatePayloadSlugIfMissing } from '@/lib/domain/slugs'
+
 export const PayloadPages: CollectionConfig = {
   slug: 'payload_pages',
   dbName: 'payload_pages',
@@ -13,9 +15,14 @@ export const PayloadPages: CollectionConfig = {
     defaultColumns: ['title', 'status', 'featuredImage', 'updatedAt'],
     description: 'Publish rich pages with managed images and Bunny video.',
   },
+  hooks: {
+    beforeValidate: [
+      (args) => generatePayloadSlugIfMissing({ ...args, collection: 'payload_pages', sourceField: 'title' }),
+    ],
+  },
   fields: [
     { name: 'title', type: 'text', required: true },
-    { name: 'slug', type: 'text', required: true, unique: true, index: true },
+    { name: 'slug', type: 'text', required: true, unique: true, index: true, admin: { hidden: true } },
     { name: 'portalRoute', type: 'text', admin: { description: 'Portal URL path this page maps to (e.g. "/portal/community/start-here")' } },
     { name: 'summary', type: 'textarea' },
     { name: 'content', type: 'richText' },

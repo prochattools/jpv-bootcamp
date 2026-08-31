@@ -1,5 +1,6 @@
 import type { AdminActor } from '@/lib/auth/portalActor'
 import { plainTextToLexical } from '@/lib/content/plainTextToLexical'
+import { uniqueSlugForName } from '@/lib/domain/slugs'
 import { normalizeSlug, validateTitle } from '@/lib/domain/validation'
 import { createAuditEvent } from '@/lib/payloadCourse/events'
 import type { PrivilegedPayloadAccess } from '@/lib/payload/privilegedAccess'
@@ -29,7 +30,7 @@ export type LessonCommandContext = {
 export type LessonInput = {
   moduleId: string
   title: string
-  slug: string
+  slug?: string
   summary?: string
   estimatedDuration?: string
   lockState?: 'available' | 'locked' | 'coming_soon'
@@ -64,7 +65,9 @@ export async function createLessonCommand(
 ): Promise<LessonCommandResult> {
   const persistence = persistenceContext(context)
   const title = validateTitle(input.title)
-  const slug = normalizeSlug(input.slug)
+  const slug = input.slug?.trim()
+    ? normalizeSlug(input.slug)
+    : await uniqueSlugForName(persistence.payload, 'payload_lessons', title)
   if (await findOne(persistence, 'payload_lessons', { slug: { equals: slug } })) {
     throw new PortalAdminActionError('conflict', 'A lesson with this slug already exists.')
   }
@@ -124,14 +127,8 @@ export async function updateLessonCommand(
 
   const data: Record<string, unknown> = {}
   if (input.title !== undefined) data.title = validateTitle(input.title)
-  if (input.slug !== undefined) {
-    const slug = normalizeSlug(input.slug)
-    const existing = await findOne(persistence, 'payload_lessons', {
-      and: [{ slug: { equals: slug } }, { id: { not_equals: lessonId } }],
-    })
-    if (existing) throw new PortalAdminActionError('conflict', 'A lesson with this slug already exists.')
-    data.slug = slug
-  }
+  // Slugs are stable routing identifiers. Renaming a lesson never rewrites an
+  // existing slug; the persisted value is retained for links and bookmarks.
   if (input.summary !== undefined) data.summary = input.summary.trim()
   if (input.estimatedDuration !== undefined) data.estimatedDuration = input.estimatedDuration.trim()
   if (input.lockState !== undefined) data.lockState = input.lockState

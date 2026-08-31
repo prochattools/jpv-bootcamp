@@ -18,18 +18,12 @@ const LABEL_CLS = 'block text-xs font-bold uppercase tracking-[0.12em] text-jpv-
 const BTN_P = 'rounded-jpv-action bg-jpv-brand-deep px-4 py-2 text-sm font-bold text-jpv-canvas transition hover:bg-jpv-brand disabled:opacity-50'
 const BTN_S = 'rounded-jpv-action border border-jpv-border bg-jpv-surface px-4 py-2 text-sm font-bold text-jpv-muted transition hover:border-jpv-brand-deep hover:text-jpv-brand-deep disabled:opacity-50'
 
-function slugify(value: string): string {
-  return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
-}
-
 export function CreateCourseButton() {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [title, setTitle] = useState('')
-  const [slug, setSlug] = useState('')
-  const [autoSlug, setAutoSlug] = useState(true)
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -37,7 +31,6 @@ export function CreateCourseButton() {
     startTransition(async () => {
       const result: ActionResult = await createCourseAction({
         title,
-        slug: slug || slugify(title),
         status: 'draft',
       })
       const err = getError(result)
@@ -46,8 +39,6 @@ export function CreateCourseButton() {
       } else {
         setOpen(false)
         setTitle('')
-        setSlug('')
-        setAutoSlug(true)
         router.refresh()
       }
     })
@@ -69,23 +60,10 @@ export function CreateCourseButton() {
               autoFocus
               className={INPUT_CLS}
               id='cc-title'
-              onChange={(e) => {
-                setTitle(e.target.value)
-                if (autoSlug) setSlug(slugify(e.target.value))
-              }}
+              onChange={(e) => setTitle(e.target.value)}
               placeholder='Course title'
               required
               value={title}
-            />
-          </div>
-          <div className='flex flex-col gap-1.5'>
-            <label className={LABEL_CLS} htmlFor='cc-slug'>Slug</label>
-            <input
-              className={INPUT_CLS}
-              id='cc-slug'
-              onChange={(e) => { setSlug(e.target.value); setAutoSlug(false) }}
-              placeholder='course-slug'
-              value={slug}
             />
           </div>
           {error && <p className='text-xs text-red-600'>{error}</p>}

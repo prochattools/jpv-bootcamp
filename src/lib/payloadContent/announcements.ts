@@ -1,6 +1,12 @@
 import type { PayloadCourseWriteAPI, PayloadDocument } from '@/lib/payloadCourse/accessService'
 import { queueAndAttemptEmailEvent } from '@/lib/payloadCourse/events'
 import { createMemberNotificationIfMissing } from '@/lib/payloadCourse/memberNotifications'
+import {
+  memberIdsForContentAudience,
+  memberIdsForGroups,
+  parseMemberContentTargets,
+  type MemberContentAudience,
+} from '@/lib/payloadContent/audience'
 
 export type AnnouncementRecipient = { memberId: string; email: string; displayName: string }
 
@@ -10,9 +16,16 @@ function text(value: unknown): string | null {
   return null
 }
 
-export async function activeMemberRecipients(payload: PayloadCourseWriteAPI, memberIds?: string[]): Promise<AnnouncementRecipient[]> {
-  const members = memberIds
-    ? await Promise.all(memberIds.map((memberId) => payload.findByID({ collection: 'payload_members', id: memberId, depth: 0, overrideAccess: true }).catch((): null => null)))
+export async function activeMemberRecipients(
+  payload: PayloadCourseWriteAPI,
+  memberIds?: string[],
+  groupIds: string[] = [],
+): Promise<AnnouncementRecipient[]> {
+  const requestedMemberIds = memberIds === undefined && groupIds.length === 0
+    ? undefined
+    : Array.from(new Set([...(memberIds ?? []), ...(await memberIdsForGroups(payload, groupIds))]))
+  const members = requestedMemberIds
+    ? await Promise.all(requestedMemberIds.map((memberId) => payload.findByID({ collection: 'payload_members', id: memberId, depth: 0, overrideAccess: true }).catch((): null => null)))
     : (await payload.find({ collection: 'payload_members', where: { accountStatus: { equals: 'active' } }, limit: 2000, depth: 0, overrideAccess: true })).docs
   const recipients: AnnouncementRecipient[] = []
   for (const member of members as Array<PayloadDocument | null>) {
@@ -31,9 +44,16 @@ export async function notifyAnnouncementRecipients(
   body: string,
   baseUrl: string,
 ): Promise<number> {
-  const audience = post.audience === 'selected' ? 'selected' : 'all'
-  const memberIds = audience === 'selected' && Array.isArray(post.targetMemberIds) ? post.targetMemberIds.map((value) => String(value)) : undefined
-  const recipients = await activeMemberRecipients(payload, memberIds)
+  const targets = parseMemberContentTargets(post.targetMemberIds)
+  const audience: MemberContentAudience = post.audience === 'groups' || (post.audience === 'selected' && targets.groupIds.length > 0)
+    ? 'groups'
+    : post.audience === 'selected'
+      ? 'selected'
+      : 'all'
+  const audienceMemberIds = audience === 'all'
+    ? await memberIdsForContentAudience(payload, 'all', targets)
+    : await memberIdsForContentAudience(payload, audience, targets)
+  const recipients = await activeMemberRecipients(payload, audienceMemberIds)
   let created = 0
   for (const recipient of recipients) {
     const { created: emailCreated } = await queueAndAttemptEmailEvent(payload, {

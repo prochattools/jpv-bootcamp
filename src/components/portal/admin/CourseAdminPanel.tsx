@@ -84,10 +84,6 @@ const ICON_BTN = ' px-2 py-1 text-xs'
 
 // ---------- Micro helpers ----------
 
-function toSlug(s: string) {
-  return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
-}
-
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1">
@@ -145,7 +141,6 @@ function EditCourseDialog(props: Omit<CourseAdminPanelProps, 'modules'>) {
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState({
     title: props.title,
-    slug: props.courseSlug,
     shortDescription: props.shortDescription ?? '',
     status: props.status,
     visibility: props.visibility,
@@ -165,7 +160,7 @@ function EditCourseDialog(props: Omit<CourseAdminPanelProps, 'modules'>) {
     setError(null)
     startTransition(async () => {
       const res = await updateCourseAction(props.courseId, {
-        title: form.title, slug: form.slug, shortDescription: form.shortDescription,
+        title: form.title, shortDescription: form.shortDescription,
         status: form.status as 'draft' | 'published' | 'archived',
         visibility: form.visibility as 'public' | 'members' | 'restricted',
         estimatedDuration: form.estimatedDuration, featured: form.featured,
@@ -185,7 +180,6 @@ function EditCourseDialog(props: Omit<CourseAdminPanelProps, 'modules'>) {
         <DialogHeader><DialogTitle>Edit Course</DialogTitle></DialogHeader>
         <div className="space-y-3">
           <Field label="Title"><input className={INPUT} value={form.title} onChange={set('title')} /></Field>
-          <Field label="Slug"><input className={INPUT} value={form.slug} onChange={set('slug')} /></Field>
           <Field label="Short Description">
             <textarea className={INPUT} rows={3} value={form.shortDescription} onChange={set('shortDescription')} />
           </Field>
@@ -285,7 +279,7 @@ function ModuleFormDialog({
 
 function LessonFormDialog({
   trigger, dialogTitle, moduleId, lessonId,
-  initialTitle = '', initialSlug = '', initialSummary = '',
+  initialTitle = '', initialSummary = '',
   initialDuration = '', initialLockState = 'available' as Lesson['lockState'], initialPreview = false,
   initialContent = '', initialCoverImageId = '', initialBunnyVideoId = '', initialDownloadIds = '',
 }: {
@@ -294,7 +288,6 @@ function LessonFormDialog({
   moduleId: string
   lessonId?: string
   initialTitle?: string
-  initialSlug?: string
   initialSummary?: string
   initialDuration?: string
   initialLockState?: Lesson['lockState']
@@ -307,7 +300,7 @@ function LessonFormDialog({
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState({
-    title: initialTitle, slug: initialSlug, summary: initialSummary,
+    title: initialTitle, summary: initialSummary,
     estimatedDuration: initialDuration, lockState: initialLockState, previewLesson: initialPreview,
     contentText: initialContent, coverImageId: initialCoverImageId,
     bunnyVideoId: initialBunnyVideoId, downloadIds: initialDownloadIds,
@@ -318,17 +311,12 @@ function LessonFormDialog({
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
     setForm((f) => ({ ...f, [k]: e.target.value }))
 
-  function onTitleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const t = e.target.value
-    setForm((f) => ({ ...f, title: t, slug: f.slug === toSlug(f.title) ? toSlug(t) : f.slug }))
-  }
-
   function submit() {
     setError(null)
     startTransition(async () => {
       const downloads = form.downloadIds.split('\n').map(s => s.trim()).filter(Boolean)
       const payload = {
-        title: form.title, slug: form.slug, summary: form.summary,
+        title: form.title, summary: form.summary,
         estimatedDuration: form.estimatedDuration, lockState: form.lockState, previewLesson: form.previewLesson,
         contentText: form.contentText || undefined,
         coverImage: form.coverImageId || null,
@@ -350,8 +338,7 @@ function LessonFormDialog({
         <DialogContent>
           <DialogHeader><DialogTitle>{dialogTitle}</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            <Field label="Title"><input className={INPUT} value={form.title} onChange={onTitleChange} /></Field>
-            <Field label="Slug"><input className={INPUT} value={form.slug} onChange={set('slug')} /></Field>
+            <Field label="Title"><input className={INPUT} value={form.title} onChange={set('title')} /></Field>
             <Field label="Summary (optional)">
               <textarea className={INPUT} rows={2} value={form.summary} onChange={set('summary')} />
             </Field>
@@ -423,7 +410,6 @@ function LessonRow({ lesson, moduleId, isFirst, isLast, allIds }: {
         moduleId={moduleId}
         lessonId={lesson.id}
         initialTitle={lesson.title}
-        initialSlug={lesson.slug ?? ''}
         initialSummary={lesson.summary ?? ''}
         initialDuration={lesson.estimatedDuration ?? ''}
         initialLockState={lesson.lockState}

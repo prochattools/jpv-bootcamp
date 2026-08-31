@@ -36,14 +36,12 @@ type SpaceAdminPanelProps = {
 
 type SpaceFormValues = {
   name: string
-  slug: string
   description: string
   visibility: 'public' | 'members' | 'private' | 'secret'
 }
 
 const EMPTY_FORM: SpaceFormValues = {
   name: '',
-  slug: '',
   description: '',
   visibility: 'members',
 }
@@ -128,22 +126,7 @@ function SpaceFormDialog({
             />
           </div>
 
-          {/* Slug */}
-          <div className='flex flex-col gap-1.5'>
-            <label className={LABEL_CLS} htmlFor='space-slug'>
-              Slug
-            </label>
-            <input
-              className={INPUT_CLS}
-              id='space-slug'
-              maxLength={100}
-              onChange={(e) => set('slug', e.target.value)}
-              placeholder='my-space'
-              required
-              type='text'
-              value={values.slug}
-            />
-          </div>
+          <p className='text-xs leading-5 text-jpv-muted'>The space URL identifier is generated automatically and remains stable after creation.</p>
 
           {/* Description */}
           <div className='flex flex-col gap-1.5'>
@@ -290,7 +273,6 @@ export function SpaceAdminPanel({ spaces }: SpaceAdminPanelProps) {
       startTransition(async () => {
         const result = await createSpaceAction({
           name: values.name,
-          slug: values.slug,
           description: values.description || undefined,
           visibility: values.visibility,
         })
@@ -311,7 +293,6 @@ export function SpaceAdminPanel({ spaces }: SpaceAdminPanelProps) {
       startTransition(async () => {
         const result = await updateSpaceAction(spaceId, {
           name: values.name,
-          slug: values.slug,
           description: values.description || undefined,
           visibility: values.visibility,
         })
@@ -440,7 +421,6 @@ export function SpaceAdminPanel({ spaces }: SpaceAdminPanelProps) {
         <SpaceFormDialog
           initial={{
             name: editTarget.name,
-            slug: editTarget.slug,
             description: editTarget.description,
             visibility: editTarget.visibility,
           }}

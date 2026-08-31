@@ -9,6 +9,7 @@ import {
   success,
   type PortalAdminActionResult,
 } from '@/lib/portalAdmin/actionResult'
+import { uniqueSlugForName } from '@/lib/domain/slugs'
 import { normalizeSlug } from '@/lib/domain/validation'
 import { createAuditEvent } from '@/lib/payloadCourse/events'
 import {
@@ -29,7 +30,7 @@ type ActionResult = PortalAdminActionResult<{ id?: string }>
 
 type SpaceInput = {
   name: string
-  slug: string
+  slug?: string
   description?: string
   status?: 'draft' | 'published' | 'archived'
   visibility?: 'public' | 'members' | 'private' | 'secret'
@@ -51,7 +52,11 @@ export async function createSpaceAction(input: SpaceInput): Promise<ActionResult
     const { actor, payload, privilegedAccess } = await requirePortalAdmin('/portal')
     const name = input.name.trim()
     if (!name) return failure('invalid_input', 'Name is required.')
-    const slug = normalizeSlug(input.slug)
+    // Legacy callers may still provide a slug, but normal portal forms omit it
+    // and use the deterministic name-based generator.
+    const slug = input.slug?.trim()
+      ? normalizeSlug(input.slug)
+      : await uniqueSlugForName(payload, 'payload_spaces', name)
 
     const existing = await payload.find({
       collection: 'payload_spaces',
@@ -111,19 +116,8 @@ export async function updateSpaceAction(
       if (!name) return failure('invalid_input', 'Name is required.')
       data.name = name
     }
-    if (input.slug !== undefined) {
-      const slug = normalizeSlug(input.slug)
-      const existing = await payload.find({
-        collection: 'payload_spaces',
-        where: { and: [{ slug: { equals: slug } }, { id: { not_equals: spaceId } }] },
-        limit: 1,
-        depth: 0,
-        ...privilegedAccess,
-      })
-      if (existing.docs.length > 0)
-        return failure('conflict', 'A space with this slug already exists.')
-      data.slug = slug
-    }
+    // Slugs are stable routing identifiers. A space rename keeps the existing
+    // slug so historical links and notification deep links remain valid.
     if (input.description !== undefined) data.description = input.description.trim()
     if (input.status !== undefined) data.status = input.status
     if (input.visibility !== undefined) data.visibility = input.visibility

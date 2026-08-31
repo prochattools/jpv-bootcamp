@@ -38,12 +38,13 @@ function insertHtmlAtCursor(editor: HTMLElement | null, html: string, savedRange
   editor.dispatchEvent(new Event('input', { bubbles: true }))
 }
 
-export function PortalAnnouncementComposer({ members }: { members: Option[] }) {
+export function PortalAnnouncementComposer({ members, groups }: { members: Option[]; groups: Option[] }) {
   const router = useRouter()
   const editorRef = useRef<HTMLDivElement>(null)
   const savedRange = useRef<Range | null>(null)
-  const [audience, setAudience] = useState<'all' | 'selected'>('all')
+  const [audience, setAudience] = useState<'all' | 'selected' | 'groups'>('all')
   const [selectedMembers, setSelectedMembers] = useState<string[]>([])
+  const [selectedGroups, setSelectedGroups] = useState<string[]>([])
   const [bodyHtml, setBodyHtml] = useState('')
   const [pending, setPending] = useState(false)
   const [published, setPublished] = useState(false)
@@ -104,6 +105,10 @@ export function PortalAnnouncementComposer({ members }: { members: Option[] }) {
       setMessage('Select at least one recipient.')
       return
     }
+    if (audience === 'groups' && selectedGroups.length === 0) {
+      setMessage('Select at least one member group.')
+      return
+    }
 
     setPending(true)
     setMessage(null)
@@ -111,7 +116,7 @@ export function PortalAnnouncementComposer({ members }: { members: Option[] }) {
       const response = await fetch('/api/portal/announcements', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, excerpt, bodyHtml, audience, targetMemberIds: selectedMembers }),
+        body: JSON.stringify({ title, excerpt, bodyHtml, audience, targetMemberIds: selectedMembers, targetGroupIds: selectedGroups }),
       })
       const result = await response.json() as { ok?: boolean; message?: string; notificationWarning?: string }
       if (!response.ok || !result.ok) {
@@ -124,6 +129,7 @@ export function PortalAnnouncementComposer({ members }: { members: Option[] }) {
       if (editorRef.current) editorRef.current.innerHTML = ''
       setBodyHtml('')
       setSelectedMembers([])
+      setSelectedGroups([])
       setAudience('all')
       savedRange.current = null
       router.refresh()
@@ -170,8 +176,9 @@ export function PortalAnnouncementComposer({ members }: { members: Option[] }) {
             />
           </div>
         </div>
-        <label className='text-sm font-semibold text-jpv-ink'>Recipients<select className='mt-1.5 w-full rounded-jpv-control border border-jpv-border bg-jpv-canvas px-4 py-3 text-sm text-jpv-ink' onChange={(event) => setAudience(event.target.value as typeof audience)} value={audience}><option value='all'>All active members</option><option value='selected'>Selected members</option></select></label>
+        <label className='text-sm font-semibold text-jpv-ink'>Recipients<select className='mt-1.5 w-full rounded-jpv-control border border-jpv-border bg-jpv-canvas px-4 py-3 text-sm text-jpv-ink' onChange={(event) => setAudience(event.target.value as typeof audience)} value={audience}><option value='all'>All active members</option><option value='selected'>Selected members</option><option value='groups'>Member groups</option></select></label>
         {audience === 'selected' ? <fieldset><legend className='text-sm font-semibold text-jpv-ink'>Select members <span aria-hidden='true' className='text-jpv-brand-deep'>*</span></legend><div className='mt-2 grid max-h-48 gap-2 overflow-y-auto rounded-jpv-card border border-jpv-border p-3 sm:grid-cols-2'>{members.map((member) => <label className='flex items-center gap-2 text-sm text-jpv-ink' key={member.id}><input checked={selectedMembers.includes(member.id)} onChange={() => setSelectedMembers((current) => current.includes(member.id) ? current.filter((id) => id !== member.id) : [...current, member.id])} type='checkbox' />{member.label}</label>)}</div></fieldset> : null}
+        {audience === 'groups' ? <fieldset><legend className='text-sm font-semibold text-jpv-ink'>Select groups <span aria-hidden='true' className='text-jpv-brand-deep'>*</span></legend><div className='mt-2 grid max-h-48 gap-2 overflow-y-auto rounded-jpv-card border border-jpv-border p-3 sm:grid-cols-2'>{groups.map((group) => <label className='flex items-center gap-2 text-sm text-jpv-ink' key={group.id}><input checked={selectedGroups.includes(group.id)} onChange={() => setSelectedGroups((current) => current.includes(group.id) ? current.filter((id) => id !== group.id) : [...current, group.id])} type='checkbox' />{group.label}</label>)}</div></fieldset> : null}
         <button className='jpv-button-primary min-h-11 w-fit' disabled={pending} type='submit'>{pending ? 'Publishing…' : published ? 'Published' : 'Publish update'}</button>
       </form>
       {message ? <p aria-live='polite' className='text-sm text-jpv-muted'>{message}</p> : null}
