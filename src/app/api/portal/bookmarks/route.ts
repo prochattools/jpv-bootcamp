@@ -4,6 +4,7 @@ import { getPayload } from 'payload'
 
 import { resolvePayloadRequestSession } from '@/lib/auth/payloadSession'
 import { evaluatePayloadSpaceAccess, type PayloadCourseWriteAPI } from '@/lib/payloadCourse/accessService'
+import { attachOperationalBillingFallback } from '@/lib/payloadCourse/operationalBillingFallback'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -26,7 +27,9 @@ export async function POST(request: NextRequest) {
     const postId = id(body.postId)
     if (!postId) return NextResponse.json({ ok: false, message: 'A post is required.' }, { status: 400 })
 
-    const payload = await getPayload({ config }) as unknown as PayloadCourseWriteAPI
+    const payload = attachOperationalBillingFallback(
+      await getPayload({ config }) as unknown as PayloadCourseWriteAPI,
+    )
     const memberId = String(session.member.id)
     const post = await payload.findByID({ collection: 'payload_space_posts', id: postId, depth: 0, overrideAccess: true }) as Record<string, unknown> | null
     const spaceId = id(post?.space)

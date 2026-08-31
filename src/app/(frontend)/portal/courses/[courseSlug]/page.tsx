@@ -39,7 +39,7 @@ export default async function PortalCoursePage({ params }: CoursePageProps) {
     return (
       <div className='mx-auto w-full max-w-4xl space-y-6'>
         <Link
-          className='inline-flex min-h-11 items-center text-sm font-semibold text-jpv-inverse-muted underline-offset-4 hover:text-jpv-ink hover:underline'
+          className='inline-flex min-h-11 items-center text-sm font-semibold text-jpv-brand-deep underline-offset-4 hover:text-jpv-ink hover:underline'
           href='/portal/courses'
         >
           ← Back to courses
@@ -175,7 +175,7 @@ export default async function PortalCoursePage({ params }: CoursePageProps) {
   return (
     <div className='mx-auto w-full max-w-4xl space-y-6'>
       <Link
-        className='inline-flex min-h-11 items-center text-sm font-semibold text-jpv-inverse-muted underline-offset-4 hover:text-jpv-ink hover:underline'
+        className='inline-flex min-h-11 items-center text-sm font-semibold text-jpv-brand-deep underline-offset-4 hover:text-jpv-ink hover:underline'
         href='/portal/courses'
       >
         ← Back to courses

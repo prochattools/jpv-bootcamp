@@ -102,15 +102,22 @@ function billingAccessStateForLifecycle(params: {
   return 'inactive'
 }
 
-async function getStripeFallbackStatus(normalizedEmail: string): Promise<BillingStatus> {
+async function getStripeFallbackStatus(
+  normalizedEmail: string,
+  knownCustomerId?: string,
+): Promise<BillingStatus> {
   try {
     const stripe = getStripe()
-    const customers = await stripe.customers.list({ email: normalizedEmail, limit: 10 })
-    const matches = customers.data.filter((customer) => normalizeEmail(customer.email ?? '') === normalizedEmail)
-    if (matches.length !== 1) return emptyBillingStatus()
+    let customerId = knownCustomerId
+    if (!customerId) {
+      const customers = await stripe.customers.list({ email: normalizedEmail, limit: 10 })
+      const matches = customers.data.filter((customer) => normalizeEmail(customer.email ?? '') === normalizedEmail)
+      if (matches.length !== 1) return emptyBillingStatus()
+      customerId = matches[0].id
+    }
 
     const subscriptions = await stripe.subscriptions.list({
-      customer: matches[0].id,
+      customer: customerId,
       status: 'all',
       limit: 100,
     })
@@ -193,6 +200,17 @@ export async function getBillingStatus(memberEmail: string): Promise<BillingStat
 
   if (!record || !record.stripeCustomerId) return getStripeFallbackStatus(normalizedEmail)
 
+  // Older operational records can have a linked Stripe customer but no
+  // locally mirrored subscription status. Resolve the current provider state
+  // before exposing a pending/unknown member experience.
+  const providerFallback = record.subscriptionStatus
+    ? null
+    : await getStripeFallbackStatus(normalizedEmail, record.stripeCustomerId)
+  const subscriptionStatus = record.subscriptionStatus ?? providerFallback?.subscriptionStatus ?? null
+  const cancelAtPeriodEnd = record.subscriptionCancelAtPeriodEnd ?? providerFallback?.cancelAtPeriodEnd ?? false
+  const periodEndDate = record.subscriptionCurrentPeriodEnd ?? providerFallback?.periodEndDate ?? null
+  const billingCadence = record.billingCadence ?? providerFallback?.billingCadence ?? null
+
   const paymentStatus =
     record.paymentStatus && BILLING_PAYMENT_STATES.has(record.paymentStatus as BillingPaymentState)
       ? (record.paymentStatus as BillingPaymentState)
@@ -200,10 +218,9 @@ export async function getBillingStatus(memberEmail: string): Promise<BillingStat
   const withinPaymentGrace = Boolean(
     record.paymentGraceEndsAt && record.paymentGraceEndsAt.getTime() >= Date.now(),
   )
-  const cancelAtPeriodEnd = record.subscriptionCancelAtPeriodEnd ?? false
   const lifecycle = resolveMembershipLifecycle({
     hasBillingAccount: true,
-    subscriptionStatus: record.subscriptionStatus,
+    subscriptionStatus,
     paymentStatus,
     withinPaymentGrace,
     cancelAtPeriodEnd,
@@ -213,12 +230,12 @@ export async function getBillingStatus(memberEmail: string): Promise<BillingStat
     hasBillingAccount: true,
     hasActiveSubscription: lifecycle.accessAllowed,
     planLabel: 'JPV Bootcamp Membership',
-    subscriptionStatus: record.subscriptionStatus,
+    subscriptionStatus,
     membershipStatus: lifecycle.state,
     billingAccessState: billingAccessStateForLifecycle(lifecycle),
-    periodEndDate: record.subscriptionCurrentPeriodEnd,
+    periodEndDate,
     cancelAtPeriodEnd,
-    billingCadence: record.billingCadence,
+    billingCadence,
     commitmentStatus: record.commitmentStatus,
     commitmentStartAt: record.commitmentStartAt,
     commitmentEndAt: record.commitmentEndAt,
@@ -236,7 +253,7 @@ export async function getBillingStatus(memberEmail: string): Promise<BillingStat
     showPaymentWarning:
       paymentStatus === 'failed' ||
       paymentStatus === 'action_required' ||
-      record.subscriptionStatus === 'past_due',
+      subscriptionStatus === 'past_due',
     showRefundNotice: paymentStatus === 'refunded',
     showDisputeNotice: paymentStatus === 'disputed',
     manageBillingAvailable: true,

@@ -309,14 +309,14 @@ export default async function PortalCommunityPostPage({ params, searchParams }: 
       {/* 1. Breadcrumb */}
       <nav aria-label='Discussion path' className='flex min-h-11 flex-wrap items-center gap-1.5 text-xs text-jpv-muted'>
         <Link
-          className='font-semibold text-jpv-sunshine-ink underline-offset-4 hover:text-jpv-brand-deep hover:underline'
+          className='font-semibold text-jpv-brand-deep underline-offset-4 hover:text-jpv-ink hover:underline'
           href='/portal/community'
         >
           Community
         </Link>
         <span aria-hidden='true'>/</span>
         <Link
-          className='underline-offset-4 hover:text-jpv-brand-deep hover:underline'
+          className='text-jpv-brand-deep underline-offset-4 hover:text-jpv-ink hover:underline'
           href={`/portal/community/${encodeURIComponent(post.space.slug)}`}
         >
           {post.space.name}

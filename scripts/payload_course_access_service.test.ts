@@ -40,6 +40,8 @@ function matchesWhere(doc: Doc, where?: Record<string, unknown>): boolean {
 }
 
 class FakePayload implements PayloadCourseAccessAPI {
+  resolveOperationalBillingContext?: PayloadCourseAccessAPI['resolveOperationalBillingContext']
+
   constructor(private readonly collections: Record<string, Doc[]>) {}
 
   async find(args: {
@@ -146,6 +148,53 @@ async function run() {
     })
     assert.equal(result.decision.allowed, true)
     assert.equal(result.decision.reason, 'required_group')
+  }
+
+  {
+    const payload = buildPayload({
+      payload_subscriptions: [],
+      payload_billing_accounts: [],
+    })
+    payload.resolveOperationalBillingContext = async () => ({
+      status: 'active',
+      lifecycleState: 'active',
+      subscriptionStatus: 'active',
+    })
+
+    const result = await evaluatePayloadLessonAccess(payload, {
+      memberId: 'member_active',
+      lessonSlug: 'private-lesson',
+      now: '2026-01-01T00:00:00.000Z',
+    })
+    assert.equal(result.decision.allowed, true)
+    assert.equal(result.decision.reason, 'required_group')
+  }
+
+  {
+    const payload = buildPayload({
+      payload_subscriptions: [
+        {
+          id: 'sub_pending',
+          member: 'member_active',
+          status: 'incomplete',
+          plan: 'pro',
+          updatedAt: '2026-01-01T00:00:00.000Z',
+        },
+      ],
+    })
+    payload.resolveOperationalBillingContext = async () => ({
+      status: 'active',
+      lifecycleState: 'active',
+      subscriptionStatus: 'active',
+    })
+
+    const result = await evaluatePayloadCourseAccess(payload, {
+      memberId: 'member_active',
+      courseSlug: 'pro-course',
+      now: '2026-01-01T00:00:00.000Z',
+    })
+    assert.equal(result.decision.allowed, false)
+    assert.equal(result.decision.reason, 'billing_not_active')
   }
 
   {

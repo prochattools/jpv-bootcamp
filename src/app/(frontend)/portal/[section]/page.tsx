@@ -532,7 +532,7 @@ export default async function PortalSectionPage({ params, searchParams }: Portal
           </form>
         </section>
 
-        <section className='grid gap-6 lg:grid-cols-2'>
+        <section className='w-full'>
           <article className={portalCardClass} id='password'>
             <h2 className={sectionCardTitleClass}>Change password</h2>
             <p className='mt-3 text-sm leading-6 text-neutral-600'>

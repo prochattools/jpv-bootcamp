@@ -449,7 +449,7 @@ async function publishingCapability(
 
   return (
     membership?.status === 'active' &&
-    (membership.role === 'moderator' || membership.role === 'admin')
+    (membership.role === 'member' || membership.role === 'moderator' || membership.role === 'admin')
   )
 }
 
