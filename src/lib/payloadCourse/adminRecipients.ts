@@ -8,7 +8,9 @@ function validEmail(value: string | null): value is string {
 }
 
 export function parseConfiguredEmailRecipients(value: unknown): string[] {
-  const values = Array.isArray(value) ? value : typeof value === 'string' ? value.split(',') : []
+  const values = (Array.isArray(value) ? value : [value]).flatMap((entry) =>
+    typeof entry === 'string' ? entry.split(',') : [entry]
+  )
   return Array.from(new Set(values.map((entry) => normalizeEmail(String(entry))).filter(validEmail)))
 }
 
