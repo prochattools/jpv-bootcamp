@@ -8,7 +8,7 @@ import {
 } from '@payloadcms/richtext-lexical/react'
 
 import { ManagedBunnyVideoPlayer } from '@/components/portal/ManagedBunnyVideoPlayer'
-import { restoreLegacyLessonImagePlaceholders } from '@/lib/payloadContent/legacyLessonMedia'
+import { restoreLegacyLessonImageSources } from '@/lib/payloadContent/legacyLessonMedia'
 import type {
   BunnyVideoBlockFields,
   LegacyHTMLBlockFields,
@@ -19,12 +19,18 @@ type LessonNodeTypes =
   | SerializedBlockNode<BunnyVideoBlockFields | LegacyHTMLBlockFields>
 
 function createLessonConverters(lessonSlug: string): JSXConvertersFunction<LessonNodeTypes> {
+  let missingLessonImageAdded = false
+
   return ({ defaultConverters }) => ({
     ...defaultConverters,
     blocks: {
       ...(defaultConverters.blocks ?? {}),
       legacyHTML: ({ node }) => {
-        const safeHtml = restoreLegacyLessonImagePlaceholders(node.fields.safeHtml?.trim() ?? '')
+        const repaired = restoreLegacyLessonImageSources(node.fields.safeHtml?.trim() ?? '', lessonSlug, {
+          addMissingLessonImage: !missingLessonImageAdded,
+        })
+        if (repaired.addedMissingLessonImage) missingLessonImageAdded = true
+        const safeHtml = repaired.html
         if (!safeHtml) {
           return (
             <aside className='jpv-notice mt-5' data-legacy-html-preserved='true'>
