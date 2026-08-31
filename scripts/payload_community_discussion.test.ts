@@ -581,8 +581,8 @@ async function testPublishingCapabilities(): Promise<void> {
   )
   assert.equal(regular.allowed, true)
   if (regular.allowed) {
-    assert.equal(regular.post.canPublish, false)
-    assert.equal(regular.post.canComment, false)
+    assert.equal(regular.post.canPublish, true)
+    assert.equal(regular.post.canComment, true)
   }
 
   for (const status of ['pending', 'muted', 'blocked', 'removed'] as const) {

@@ -3,6 +3,7 @@ import config from '@payload-config'
 import { getPayload } from 'payload'
 
 import { resolvePayloadRequestSession } from '@/lib/auth/payloadSession'
+import { attachOperationalBillingFallback } from '@/lib/payloadCourse/operationalBillingFallback'
 import {
   getReactionSummary,
   ReactionServiceError,
@@ -31,7 +32,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, message: 'Invalid reaction request.' }, { status: 400 })
     }
 
-    const payload = (await getPayload({ config })) as unknown as PayloadReactionWriteAPI
+    const payload = attachOperationalBillingFallback(
+      (await getPayload({ config })) as unknown as PayloadReactionWriteAPI,
+    )
     await setReaction(payload, String(session.member.id), { kind: targetKind as ReactionTargetKind, id: targetId }, reactionType)
     const summary = await getReactionSummary(payload, String(session.member.id), { kind: targetKind as ReactionTargetKind, id: targetId })
     return NextResponse.json({ ok: true, summary })

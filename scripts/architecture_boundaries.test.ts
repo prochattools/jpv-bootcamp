@@ -142,6 +142,7 @@ const privilegedOverrideCounts: Record<string, number> = {
   'src/lib/payloadCourse/memberDirectory.ts': 3,
   'src/lib/payloadCourse/memberNotifications.ts': 3,
   'src/lib/payloadCourse/memberPortal.ts': 4,
+  'src/lib/payloadCourse/operationalBillingFallback.ts': 1,
   'src/lib/payloadCourse/partnerApplications.ts': 7,
   'src/lib/payloadCourse/partnerDelivery.ts': 4,
   'src/lib/payloadCourse/reactions.ts': 13,

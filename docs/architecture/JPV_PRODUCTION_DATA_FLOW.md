@@ -93,6 +93,12 @@ remain behind named services.
 6. Unknown, stale, unmatched, or ambiguous joins remain visible as review
    state. They do not become active access through a guessed assignment.
 
+For member-facing access evaluation, an explicit Payload subscription state
+remains authoritative. Only a missing or unreconciled Payload billing
+projection may be enriched from the linked operational customer and Stripe
+subscription state; if that enrichment is unavailable or non-active, access
+continues to fail closed.
+
 ## A5.1 / E1 boundary
 
 A5.1 closes the architecture and moves the reviewed support and sponsored

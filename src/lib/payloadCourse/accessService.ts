@@ -58,6 +58,7 @@ export type PayloadCourseAccessAPI = {
   find(args: PayloadFindArgs): Promise<PayloadFindResult>
   findByID(args: PayloadFindByIDArgs): Promise<any>
   count?(args: PayloadCountArgs): Promise<PayloadCountResult>
+  resolveOperationalBillingContext?: OperationalBillingContextResolver
   db?: {
     pool?: {
       query(args: {
@@ -68,6 +69,11 @@ export type PayloadCourseAccessAPI = {
     }
   }
 }
+
+export type OperationalBillingContextResolver = (
+  memberId: string,
+  now?: Date | string,
+) => Promise<BillingAccessContext | null>
 
 export type PayloadCourseWriteAPI = PayloadCourseAccessAPI & {
   create(args: {
@@ -414,7 +420,7 @@ async function getBillingContext(
       cancelAtPeriodEnd: Boolean(subscription.cancelAtPeriodEnd),
     })
 
-    return {
+    const localContext: BillingAccessContext = {
       status: subscriptionStatus,
       lifecycleState: lifecycle.state,
       subscriptionStatus,
@@ -433,6 +439,11 @@ async function getBillingContext(
         ? subscription.fundingSource
         : null,
     }
+
+    // A confirmed Payload subscription (including an explicit pending or
+    // terminal state) is authoritative. Only the absence of a local
+    // projection may use the operational billing fallback below.
+    return localContext
   }
 
   const billingAccount = await findOne(
@@ -442,9 +453,11 @@ async function getBillingContext(
     '-updatedAt'
   )
 
-  if (!billingAccount) return { status: 'none' }
+  if (!billingAccount) {
+    return (await payload.resolveOperationalBillingContext?.(memberId, nowValue)) ?? { status: 'none' }
+  }
 
-  return {
+  const localBillingAccountContext: BillingAccessContext = {
     status: normalizeBillingStatus(billingAccount.billingStatus),
     lifecycleState: billingAccount.billingStatus === 'past_due' ? 'past_due' : billingAccount.billingStatus === 'paused' ? 'suspended' : billingAccount.billingStatus === 'canceled' ? 'cancelled' : billingAccount.billingStatus === 'unpaid' || billingAccount.billingStatus === 'incomplete_expired' ? 'expired' : billingAccount.billingStatus === 'none' ? 'unreconciled' : 'active',
     subscriptionStatus: normalizeBillingStatus(billingAccount.billingStatus),
@@ -455,6 +468,12 @@ async function getBillingContext(
     reconciliationState: null,
     fundingSource: null,
   }
+
+  if (localBillingAccountContext.status === 'none') {
+    return (await payload.resolveOperationalBillingContext?.(memberId, nowValue)) ?? localBillingAccountContext
+  }
+
+  return localBillingAccountContext
 }
 
 async function getPolicyContext(

@@ -179,7 +179,7 @@ function LessonCommentThread({
       ) : null}
 
       <details className='mt-4'>
-        <summary className='min-h-10 cursor-pointer py-2 text-sm font-semibold text-jpv-inverse-muted outline-none focus-visible:ring-2 focus-visible:ring-jpv-green'>Reply</summary>
+        <summary className='min-h-10 cursor-pointer py-2 text-sm font-semibold text-jpv-brand-deep outline-none focus-visible:ring-2 focus-visible:ring-jpv-green'>Reply</summary>
         <LessonCommentComposer
           courseSlug={courseSlug}
           lessonSlug={lessonSlug}
@@ -225,7 +225,7 @@ export default async function PortalLessonPage({ params, searchParams }: LessonP
           <ol className='flex min-h-11 flex-wrap items-center gap-x-2 gap-y-1'>
             <li>
               <Link
-                className='font-semibold text-jpv-inverse-muted underline-offset-4 hover:text-jpv-ink hover:underline'
+                className='font-semibold text-jpv-brand-deep underline-offset-4 hover:text-jpv-ink hover:underline'
                 href={`/portal/courses/${courseSlug}`}
               >
                 {detail.course.title}
@@ -366,7 +366,7 @@ export default async function PortalLessonPage({ params, searchParams }: LessonP
           <nav aria-label='Lesson navigation' className='grid min-w-0 gap-2 sm:grid-cols-2'>
             {detail.previousLesson?.slug ? (
               <Link
-                className='inline-flex min-h-11 min-w-0 items-center truncate text-sm font-semibold text-jpv-inverse-muted underline-offset-4 hover:text-jpv-ink hover:underline'
+                className='inline-flex min-h-11 min-w-0 items-center truncate text-sm font-semibold text-jpv-brand-deep underline-offset-4 hover:text-jpv-ink hover:underline'
                 href={`/portal/courses/${courseSlug}/lessons/${detail.previousLesson.slug}`}
               >
                 ← {detail.previousLesson.title}
@@ -376,7 +376,7 @@ export default async function PortalLessonPage({ params, searchParams }: LessonP
             )}
             {detail.nextLesson?.slug ? (
               <Link
-                className='inline-flex min-h-11 min-w-0 items-center justify-start truncate text-sm font-semibold text-jpv-inverse-muted underline-offset-4 hover:text-jpv-ink hover:underline sm:justify-end'
+                className='inline-flex min-h-11 min-w-0 items-center justify-start truncate text-sm font-semibold text-jpv-brand-deep underline-offset-4 hover:text-jpv-ink hover:underline sm:justify-end'
                 href={`/portal/courses/${courseSlug}/lessons/${detail.nextLesson.slug}`}
               >
                 {detail.nextLesson.title} →
@@ -422,7 +422,7 @@ export default async function PortalLessonPage({ params, searchParams }: LessonP
         <ol className='flex min-h-11 flex-wrap items-center gap-x-2 gap-y-1'>
           <li>
             <Link
-              className='font-semibold text-jpv-inverse-muted underline-offset-4 hover:text-jpv-ink hover:underline'
+              className='font-semibold text-jpv-brand-deep underline-offset-4 hover:text-jpv-ink hover:underline'
               href={`/portal/courses/${courseSlug}`}
             >
               {detail.course.title}
@@ -660,7 +660,7 @@ export default async function PortalLessonPage({ params, searchParams }: LessonP
             <nav aria-label='Lesson navigation' className='mt-4 grid min-w-0 gap-2 border-t border-jpv-border pt-4 sm:grid-cols-2'>
               {detail.previousLesson?.slug ? (
                 <Link
-                  className='inline-flex min-h-11 min-w-0 items-center truncate text-sm font-semibold text-jpv-inverse-muted underline-offset-4 hover:text-jpv-ink hover:underline'
+                  className='inline-flex min-h-11 min-w-0 items-center truncate text-sm font-semibold text-jpv-brand-deep underline-offset-4 hover:text-jpv-ink hover:underline'
                   href={`/portal/courses/${courseSlug}/lessons/${detail.previousLesson.slug}`}
                 >
                   ← {detail.previousLesson.title}
@@ -671,7 +671,7 @@ export default async function PortalLessonPage({ params, searchParams }: LessonP
 
               {detail.nextLesson?.slug ? (
                 <Link
-                  className='inline-flex min-h-11 min-w-0 items-center justify-start truncate text-sm font-semibold text-jpv-inverse-muted underline-offset-4 hover:text-jpv-ink hover:underline sm:justify-end'
+                  className='inline-flex min-h-11 min-w-0 items-center justify-start truncate text-sm font-semibold text-jpv-brand-deep underline-offset-4 hover:text-jpv-ink hover:underline sm:justify-end'
                   href={`/portal/courses/${courseSlug}/lessons/${detail.nextLesson.slug}`}
                 >
                   {detail.nextLesson.title} →

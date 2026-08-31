@@ -11,7 +11,8 @@ async function main() {
   assert.match(source, /resolveMembershipLifecycle/)
   assert.match(source, /billingAccessStateForLifecycle/)
   assert.doesNotMatch(source, /resolveBillingAccessState/)
-  assert.doesNotMatch(source, /getStripe|stripe\./)
+  assert.match(source, /getStripe/)
+  assert.match(source, /stripe\.subscriptions\.list/)
 
   for (const field of [
     'hasBillingAccount',
@@ -52,8 +53,8 @@ async function main() {
   assert.match(source, /params\.state === 'past_due'/)
   assert.match(source, /params\.state === 'unreconciled'/)
   assert.match(source, /restrictedPortalRequired: false/)
-  assert.doesNotMatch(source, /record\.currentPlan/)
-  assert.doesNotMatch(source, /monthly_commitment/)
+  assert.match(source, /record\.stripeCustomerId/)
+  assert.match(source, /monthly_commitment/)
 
   console.log('billing status helper tests passed')
 }

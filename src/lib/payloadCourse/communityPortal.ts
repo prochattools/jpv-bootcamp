@@ -54,6 +54,10 @@ export function withQueryDedup(payload: PayloadCourseAccessAPI): PayloadCourseAc
     wrapped.count = (args) => count(args)
   }
 
+  if (payload.resolveOperationalBillingContext) {
+    wrapped.resolveOperationalBillingContext = payload.resolveOperationalBillingContext
+  }
+
   return wrapped
 }
 

@@ -7,6 +7,7 @@ import { resolvePayloadRequestSession } from '@/lib/auth/payloadSession'
 import { decideSharedLogin } from '@/lib/auth/sharedLoginDecision'
 import type { PayloadCourseAccessAPI } from '@/lib/payloadCourse/accessService'
 import { getMemberCommunitySpaceDetail } from '@/lib/payloadCourse/communityPortal'
+import { attachOperationalBillingFallback } from '@/lib/payloadCourse/operationalBillingFallback'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -83,7 +84,7 @@ export async function POST(request: Request): Promise<Response> {
     return errorResponse(`File extension "${ext}" is not allowed.`, 415)
   }
 
-  const payload = await getPayload({ config })
+  const payload = attachOperationalBillingFallback(await getPayload({ config }))
   const accessPayload = payload as unknown as PayloadCourseAccessAPI
 
   const detail = await getMemberCommunitySpaceDetail(accessPayload, memberId, spaceSlug)
