@@ -146,7 +146,7 @@ export function PortalRoomsAdmin({ members, groups, categories, rooms }: Props) 
     event.preventDefault()
     setCategoryMessage(null)
     const form = new FormData(event.currentTarget)
-    const result = await setRoomCategoryAction('new', { name: String(form.get('name') ?? ''), slug: String(form.get('slug') ?? '') })
+    const result = await setRoomCategoryAction('new', { name: String(form.get('name') ?? '') })
     setCategoryMessage(result.ok ? 'Category created.' : ('message' in result ? result.message : 'The request could not be completed.'))
     if (result.ok) {
       event.currentTarget.reset()
@@ -202,7 +202,7 @@ export function PortalRoomsAdmin({ members, groups, categories, rooms }: Props) 
         <aside className='space-y-5 rounded-jpv-panel border border-jpv-border bg-jpv-canvas p-6 shadow-jpv-card sm:p-8'>
           <div><p className='jpv-eyebrow'>Taxonomy</p><h2 className='mt-2 text-xl font-semibold text-jpv-ink'>Room categories</h2><p className='mt-2 text-sm leading-6 text-jpv-muted'>Categories help admins filter history. They never grant access.</p></div>
           <div className='flex flex-wrap gap-2'>{categories.map((category) => <span className='rounded-full bg-jpv-surface px-3 py-1.5 text-xs font-semibold text-jpv-ink' key={category.id}>{category.label}</span>)}</div>
-          <form className='space-y-3 border-t border-jpv-border pt-5' onSubmit={createCategory}><label className='text-sm font-semibold text-jpv-ink'>New category<input className={inputClass} name='name' placeholder='Office hours' required /></label><label className='text-sm font-semibold text-jpv-ink'>Slug <span className='font-normal text-jpv-muted'>(optional)</span><input className={inputClass} name='slug' placeholder='office-hours' /></label><button className='jpv-button-secondary min-h-11' type='submit'>Add category</button>{categoryMessage ? <p aria-live='polite' className='text-xs text-jpv-muted'>{categoryMessage}</p> : null}</form>
+          <form className='space-y-3 border-t border-jpv-border pt-5' onSubmit={createCategory}><label className='text-sm font-semibold text-jpv-ink'>New category<input className={inputClass} name='name' placeholder='Office hours' required /></label><p className='text-xs leading-5 text-jpv-muted'>The category URL identifier is generated automatically.</p><button className='jpv-button-secondary min-h-11' type='submit'>Add category</button>{categoryMessage ? <p aria-live='polite' className='text-xs text-jpv-muted'>{categoryMessage}</p> : null}</form>
         </aside>
       </div>
 

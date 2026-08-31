@@ -1,5 +1,6 @@
 import type { CollectionConfig, PayloadRequest } from 'payload'
 import { isPayloadAdminRequest } from '@/lib/access/payloadAccess'
+import { generatePayloadSlugIfMissing } from '@/lib/domain/slugs'
 
 const courseAdminGroup = 'Courses'
 
@@ -41,6 +42,11 @@ export const PayloadCourses: CollectionConfig = {
     update: adminOnlyWrite,
     delete: adminOnlyWrite,
   },
+  hooks: {
+    beforeValidate: [
+      (args) => generatePayloadSlugIfMissing({ ...args, collection: 'payload_courses', sourceField: 'title' }),
+    ],
+  },
   fields: [
     {
       name: 'prototype',
@@ -63,7 +69,7 @@ export const PayloadCourses: CollectionConfig = {
       },
     },
     { name: 'title', type: 'text', required: true },
-    { name: 'slug', type: 'text', required: true, unique: true, index: true },
+    { name: 'slug', type: 'text', required: true, unique: true, index: true, admin: { hidden: true } },
     { name: 'shortDescription', type: 'textarea' },
     { name: 'description', type: 'richText' },
     {
@@ -192,6 +198,11 @@ export const PayloadLessons: CollectionConfig = {
     update: adminOnlyWrite,
     delete: adminOnlyWrite,
   },
+  hooks: {
+    beforeValidate: [
+      (args) => generatePayloadSlugIfMissing({ ...args, collection: 'payload_lessons', sourceField: 'title' }),
+    ],
+  },
   fields: [
     {
       name: 'prototype',
@@ -207,7 +218,7 @@ export const PayloadLessons: CollectionConfig = {
       index: true,
     },
     { name: 'title', type: 'text', required: true },
-    { name: 'slug', type: 'text', required: true, unique: true, index: true },
+    { name: 'slug', type: 'text', required: true, unique: true, index: true, admin: { hidden: true } },
     { name: 'summary', type: 'textarea' },
     {
       name: 'coverImage',

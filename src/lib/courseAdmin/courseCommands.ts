@@ -1,5 +1,6 @@
 import type { AdminActor } from '@/lib/auth/portalActor'
 import { plainTextToLexical } from '@/lib/content/plainTextToLexical'
+import { uniqueSlugForName } from '@/lib/domain/slugs'
 import { normalizeSlug, validateTitle } from '@/lib/domain/validation'
 import { createAuditEvent } from '@/lib/payloadCourse/events'
 import type { PrivilegedPayloadAccess } from '@/lib/payload/privilegedAccess'
@@ -10,7 +11,6 @@ import {
   deleteRecord,
   findCourseById,
   findCourseBySlug,
-  findCourseBySlugExcluding,
   findModulesForCourse,
   updateRecord,
   type CourseAdminPersistenceContext,
@@ -30,7 +30,7 @@ type PersistenceContext = CourseAdminPersistenceContext
 
 export type CourseInput = {
   title: string
-  slug: string
+  slug?: string
   shortDescription?: string
   status?: 'draft' | 'published' | 'archived'
   visibility?: 'public' | 'members' | 'restricted'
@@ -68,7 +68,9 @@ export async function createCourseCommand(
 ): Promise<CourseCommandResult> {
   const persistence = persistenceContext(context)
   const title = validateTitle(input.title)
-  const slug = normalizeSlug(input.slug)
+  const slug = input.slug?.trim()
+    ? normalizeSlug(input.slug)
+    : await uniqueSlugForName(persistence.payload, 'payload_courses', title)
   if (await findCourseBySlug(persistence, slug)) {
     throw new PortalAdminActionError('conflict', 'A course with this slug already exists.')
   }
@@ -119,13 +121,8 @@ export async function updateCourseCommand(
 
   const data: Record<string, unknown> = {}
   if (input.title !== undefined) data.title = validateTitle(input.title)
-  if (input.slug !== undefined) {
-    const slug = normalizeSlug(input.slug)
-    if (await findCourseBySlugExcluding(persistence, slug, courseId)) {
-      throw new PortalAdminActionError('conflict', 'A course with this slug already exists.')
-    }
-    data.slug = slug
-  }
+  // Slugs are stable routing identifiers. Renaming a course never rewrites an
+  // existing slug; the persisted value is retained for links and bookmarks.
   if (input.shortDescription !== undefined) data.shortDescription = input.shortDescription.trim()
   if (input.status !== undefined) data.status = input.status
   if (input.visibility !== undefined) data.visibility = input.visibility

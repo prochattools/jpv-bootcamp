@@ -11,6 +11,7 @@ import {
   type MemberManagedVideo,
   type MemberMediaAsset,
 } from '@/lib/payloadContent/memberMedia'
+import { memberCanAccessContent } from '@/lib/payloadContent/audience'
 
 export type MemberPublishedContent = {
   id: string
@@ -64,13 +65,7 @@ async function findPublishedBySlug(
   })
 
   const document = result.docs[0] ?? null
-  return document && isAudienceAllowed(document, memberId) ? document : null
-}
-
-function isAudienceAllowed(document: PayloadDocument, memberId?: string | null): boolean {
-  if (document.audience !== 'selected') return true
-  if (!memberId || !Array.isArray(document.targetMemberIds)) return false
-  return document.targetMemberIds.some((value) => String(value) === String(memberId))
+  return document && await memberCanAccessContent(payload, document, memberId) ? document : null
 }
 
 async function projectPublishedContent(
@@ -148,7 +143,7 @@ async function listPublishedCollection(
 
   const summaries: MemberPublishedContentSummary[] = []
   for (const document of result.docs) {
-    if (!isAudienceAllowed(document, memberId)) continue
+    if (!await memberCanAccessContent(payload, document, memberId)) continue
     const slug = asString(document.slug)
     if (!slug) continue
     summaries.push({

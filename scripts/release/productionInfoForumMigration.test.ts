@@ -1,0 +1,32 @@
+import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+
+const runner = readFileSync('scripts/release/productionInfoForumMigrationRunner.mjs', 'utf8')
+const controller = readFileSync('scripts/release/productionInfoForumMigration.mts', 'utf8')
+const workflow = readFileSync('.github/workflows/production-info-forum-migration.yml', 'utf8')
+const dockerfile = readFileSync('Dockerfile.production', 'utf8')
+
+assert.match(runner, /INFO_FORUM_MIGRATION_TARGET/)
+assert.match(runner, /I_2Vukga3cc3ZhaG-mUzU/)
+assert.match(runner, /clients-jpv-bootcamp-app-tp9xrk/)
+assert.match(runner, /10\.0\.2\.4/)
+assert.match(runner, /jpvbootcamp/)
+assert.match(runner, /BEGIN'/)
+assert.match(runner, /pg_advisory_xact_lock/)
+assert.match(runner, /INFO_FORUM_EXPECTED_PLAN_FINGERPRINT/)
+assert.match(runner, /INFO_FORUM_PRODUCTION_CONFIRMATION/)
+assert.match(runner, /source_dependencies_remain/)
+assert.match(runner, /indirect_relationships_changed/)
+assert.match(controller, /schedule\.create/)
+assert.match(controller, /schedule\.runManually/)
+assert.match(controller, /schedule\.delete/)
+assert.match(controller, /production_info_forum_control_failed/)
+assert.match(workflow, /branches|refs\/heads\/main/)
+assert.match(workflow, /expected_plan_fingerprint/)
+assert.match(workflow, /expected_source_slug/)
+assert.match(readFileSync('scripts/release/productionInfoForumMigrationConstants.ts', 'utf8'), /apply-info-forum-to-forum-production/)
+assert.doesNotMatch(workflow, /preview\.jpvbootcamp\.com|staging\.jpvbootcamp\.com/)
+assert.match(dockerfile, /outDir \/app\/compiled scripts\/migration\/infoForumConsolidationPlan\.ts/)
+assert.match(dockerfile, /COPY --from=builder \/app\/compiled \.\/compiled/)
+
+console.log('productionInfoForumMigration.test.ts passed')

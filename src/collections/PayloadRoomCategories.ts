@@ -1,6 +1,7 @@
 import type { CollectionConfig } from 'payload'
 
 import { adminOnlyCollectionAccess } from '@/lib/access/payloadAccess'
+import { generatePayloadSlugIfMissing } from '@/lib/domain/slugs'
 
 /**
  * Room-only taxonomy. Categories are presentation/filtering metadata and
@@ -22,22 +23,12 @@ export const PayloadRoomCategories: CollectionConfig = {
   access: adminOnlyCollectionAccess,
   hooks: {
     beforeValidate: [
-      ({ data, operation }) => {
-        if (!data) return data
-        if ((operation === 'create' || !data.slug) && typeof data.name === 'string') {
-          data.slug = data.name
-            .trim()
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, '-')
-            .replace(/^-+|-+$/g, '')
-        }
-        return data
-      },
+      (args) => generatePayloadSlugIfMissing({ ...args, collection: 'payload_room_categories', sourceField: 'name' }),
     ],
   },
   fields: [
     { name: 'name', type: 'text', required: true },
-    { name: 'slug', type: 'text', required: true, unique: true, index: true },
+    { name: 'slug', type: 'text', required: true, unique: true, index: true, admin: { hidden: true } },
     {
       name: 'status',
       type: 'select',

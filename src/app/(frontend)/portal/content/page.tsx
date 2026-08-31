@@ -5,6 +5,7 @@ import { AdminGate } from '@/components/portal/AdminGate'
 import { PortalAnnouncementComposer } from '@/components/portal/PortalAnnouncementComposer'
 import { requirePortalAccess } from '@/lib/auth/requirePortalAccess'
 import { listPublishedMemberContent } from '@/lib/payloadContent/memberContent'
+import { listMemberGroups } from '@/lib/portalAdmin/memberGroupCommands'
 
 function formatDate(value: string | null): string | null {
   if (!value) return null
@@ -20,6 +21,7 @@ export default async function PortalContentPage() {
   const adminData = actor.kind === 'admin'
     ? await payload.find({ collection: 'payload_members', where: { accountStatus: { equals: 'active' } }, limit: 500, depth: 0, overrideAccess: true })
     : null
+  const adminGroups = actor.kind === 'admin' ? await listMemberGroups(payload) : []
 
   return (
     <div className='space-y-6'>
@@ -35,6 +37,7 @@ export default async function PortalContentPage() {
         <AdminGate>
           <PortalAnnouncementComposer
             members={adminData.docs.map((member) => ({ id: String(member.id), label: String(member.displayName ?? member.name ?? member.email ?? 'Member') }))}
+            groups={adminGroups.map((group) => ({ id: group.id, label: `${group.name} (${group.memberCount})` }))}
           />
         </AdminGate>
       ) : null}

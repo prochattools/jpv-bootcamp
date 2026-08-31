@@ -34,6 +34,15 @@ RUN --mount=type=cache,target=/app/.next/cache \
     pnpm generate:importmap && \
     pnpm run build
 
+# The production data-migration bridge imports the already-tested pure
+# consolidation planner. Compile that planner once during the image build so
+# the runtime bridge never needs a TypeScript loader or the application source
+# tree.
+RUN mkdir -p /app/compiled && \
+    node_modules/.bin/tsc --noEmit false --skipLibCheck --target ES2022 \
+      --module NodeNext --moduleResolution NodeNext \
+      --outDir /app/compiled scripts/migration/infoForumConsolidationPlan.ts
+
 FROM node:20-bullseye-slim AS script-deps
 WORKDIR /script-deps
 RUN echo '{"dependencies":{"newrelic":"^13.18.0","pg":"^8","prisma":"6.15.0"}}' > package.json
@@ -73,6 +82,7 @@ COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/scripts ./scripts
+COPY --from=builder /app/compiled ./compiled
 COPY --from=builder /app/src/lib/payloadMigrationRegistry.ts ./src/lib/payloadMigrationRegistry.ts
 COPY --from=builder /app/package.json ./package.json
 

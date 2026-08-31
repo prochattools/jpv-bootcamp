@@ -6,6 +6,7 @@ import {
   requirePayloadAdmin,
   requirePayloadAdminOrRelatedMember,
 } from '@/lib/access/payloadAccess'
+import { generatePayloadSlugIfMissing } from '@/lib/domain/slugs'
 
 const communityGroup = 'Community'
 
@@ -27,12 +28,17 @@ export const PayloadMemberGroups: CollectionConfig = {
     group: 'Community',
     useAsTitle: 'name',
     defaultColumns: ['name', 'slug', 'status', 'visibility', 'updatedAt'],
-    description: 'Member group records used by access and moderation workflows.',
+    description: 'Shared administrator-managed member groups for communication, invitations, and member organization. These do not grant product access.',
   },
   access: adminOnlyCollectionAccess,
+  hooks: {
+    beforeValidate: [
+      (args) => generatePayloadSlugIfMissing({ ...args, collection: 'payload_member_groups', sourceField: 'name' }),
+    ],
+  },
   fields: [
     { name: 'name', type: 'text', required: true },
-    { name: 'slug', type: 'text', required: true, unique: true, index: true },
+    { name: 'slug', type: 'text', required: true, unique: true, index: true, admin: { hidden: true } },
     {
       name: 'status',
       type: 'select',
@@ -82,22 +88,12 @@ export const PayloadSpaces: CollectionConfig = {
   access: adminOnlyCollectionAccess,
   hooks: {
     beforeValidate: [
-      ({ data, operation }) => {
-        if (!data) return data
-        if ((operation === 'create' || !data.slug) && data.name) {
-          data.slug = data.name
-            .trim()
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, '-')
-            .replace(/^-+|-+$/g, '')
-        }
-        return data
-      },
+      (args) => generatePayloadSlugIfMissing({ ...args, collection: 'payload_spaces', sourceField: 'name' }),
     ],
   },
   fields: [
     { name: 'name', type: 'text', required: true },
-    { name: 'slug', type: 'text', required: true, unique: true, index: true },
+    { name: 'slug', type: 'text', required: true, unique: true, index: true, admin: { hidden: true } },
     {
       name: 'status',
       type: 'select',

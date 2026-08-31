@@ -9,6 +9,7 @@ import {
 import { createAuditEvent } from '@/lib/payloadCourse/events'
 import { isEligibleCurrentMember } from '@/lib/members/currentMember'
 import { normalizeRelationshipId, relationshipId } from '@/lib/domain/relationships'
+import { memberCanAccessContent } from '@/lib/payloadContent/audience'
 
 export const REACTION_COLLECTION = 'payload_engagement_reactions' as const
 
@@ -111,12 +112,6 @@ function asString(value: unknown): string | null {
   if (typeof value === 'string' && value.trim()) return value.trim()
   if (typeof value === 'number') return String(value)
   return null
-}
-
-function isMemberAudienceAllowed(document: PayloadDocument, memberId: PayloadId): boolean {
-  if (document.audience !== 'selected') return true
-  return Array.isArray(document.targetMemberIds)
-    && document.targetMemberIds.some((value) => String(value) === String(memberId))
 }
 
 function normalizeReactionType(value: unknown): ReactionType {
@@ -259,7 +254,7 @@ async function assertVisibleTarget(
     if (content.status !== 'published') {
       throw new ReactionServiceError('target_hidden', 'This target is not available for reactions.')
     }
-    if (!isMemberAudienceAllowed(content, memberId)) {
+    if (!await memberCanAccessContent(payload, content, String(memberId))) {
       throw new ReactionServiceError('target_inaccessible', 'This target is not available for reactions.')
     }
     return content
