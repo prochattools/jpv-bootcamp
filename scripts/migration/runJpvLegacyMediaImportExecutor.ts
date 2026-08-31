@@ -17,6 +17,7 @@ import { buildLegacyPayloadOperationPlan } from './legacyPayloadOperationPlan'
 import { assertLegacyMediaImportManifest, buildLegacyMediaImportManifest } from './legacyMediaImportManifest'
 import { buildLegacyMediaImportExecutionPlan } from './legacyMediaImportExecutionPlan'
 import { runJpvLegacyMediaImport } from './jpvLegacyMediaImportExecutor'
+import { createLegacyStaticImageResolver } from './legacyStaticMedia'
 
 interface CliArgs {
   mode: 'dry-run' | 'apply'
@@ -90,7 +91,9 @@ async function main(): Promise<void> {
   const localMedia = buildLocalMediaManifest(args.uploads)
   assertRealSourceContentExpectations(snapshot, normalization, wxrItems, localMedia)
   const attachments = reconcileWordPressAttachments(wxrItems, localMedia)
-  const operationPlan = await buildLegacyPayloadOperationPlan(snapshot, normalization, readJson<BunnyInventoryFile>(args.bunny))
+  const operationPlan = await buildLegacyPayloadOperationPlan(snapshot, normalization, readJson<BunnyInventoryFile>(args.bunny), {
+    resolveImage: createLegacyStaticImageResolver(localMedia),
+  })
   const manifest = buildLegacyMediaImportManifest({ operationPlan, localMedia, attachments })
   assertLegacyMediaImportManifest(manifest)
   const executionPlan = buildLegacyMediaImportExecutionPlan({ manifest, operationPlan })

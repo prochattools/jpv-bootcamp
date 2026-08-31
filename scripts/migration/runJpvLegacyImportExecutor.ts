@@ -35,6 +35,7 @@ import {
   type StripeEvidenceFile,
 } from './legacySourceDryRun'
 import { buildLegacyPayloadOperationPlan } from './legacyPayloadOperationPlan'
+import { createLegacyStaticImageResolver } from './legacyStaticMedia'
 import {
   guardStagingIdentity,
   verifyCanonicalPayloadMigrationState,
@@ -159,13 +160,14 @@ async function main(): Promise<void> {
     existsSync(richtextImageMapPath) ? JSON.parse(readFileSync(richtextImageMapPath, 'utf8')) : []
   const richtextImageById = new Map(richtextImageMap.map((e) => [e.sourceUrl, e]))
 
+  const staticImageResolver = createLegacyStaticImageResolver(mediaManifest)
   const operationPlan = await buildLegacyPayloadOperationPlan(snapshot, normalization, bunny, {
-    resolveImage: richtextImageById.size > 0
-      ? (sourceUrl) => {
-          const entry = richtextImageById.get(sourceUrl)
-          return entry ? { id: entry.mediaId, relationTo: entry.relationTo } : undefined
-        }
-      : undefined,
+    resolveImage: (sourceUrl) => {
+      const entry = richtextImageById.get(sourceUrl)
+      return entry
+        ? { id: entry.mediaId, relationTo: entry.relationTo }
+        : staticImageResolver(sourceUrl)
+    },
   })
 
   const runId = `jpv_import_${args.mode}_${randomBytes(4).toString('hex')}_${Date.now()}`

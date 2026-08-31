@@ -16,6 +16,14 @@ FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
+# The WordPress archive is source evidence in the repository, not a runtime
+# asset directory. Copy only raster images into a deterministic local path so
+# repaired legacy lesson placeholders can render without exposing archived
+# videos, documents, PHP, or server configuration files.
+RUN node scripts/migration/prepareLegacyStaticMedia.mjs \
+      --source src/assets/uploads \
+      --destination public/media/legacy
+
 ENV DATABASE_URL=postgresql://build:build@localhost:5432/build?schema=jpvbootcamp_staging
 ENV NODE_ENV=production
 ARG NEXT_PUBLIC_APP_URL=https://jpvbootcamp.com

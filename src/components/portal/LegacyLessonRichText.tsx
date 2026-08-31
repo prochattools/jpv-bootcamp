@@ -8,6 +8,7 @@ import {
 } from '@payloadcms/richtext-lexical/react'
 
 import { ManagedBunnyVideoPlayer } from '@/components/portal/ManagedBunnyVideoPlayer'
+import { restoreLegacyLessonImagePlaceholders } from '@/lib/payloadContent/legacyLessonMedia'
 import type {
   BunnyVideoBlockFields,
   LegacyHTMLBlockFields,
@@ -23,7 +24,7 @@ function createLessonConverters(lessonSlug: string): JSXConvertersFunction<Lesso
     blocks: {
       ...(defaultConverters.blocks ?? {}),
       legacyHTML: ({ node }) => {
-        const safeHtml = node.fields.safeHtml?.trim() ?? ''
+        const safeHtml = restoreLegacyLessonImagePlaceholders(node.fields.safeHtml?.trim() ?? '')
         if (!safeHtml) {
           return (
             <aside className='jpv-notice mt-5' data-legacy-html-preserved='true'>
@@ -68,7 +69,7 @@ export function LegacyLessonRichText({
   lessonSlug: string
 }) {
   return (
-    <div className='jpv-rich-text lesson-body mx-auto mt-8 max-w-4xl text-sm leading-7 text-jpv-ink [&_h2]:mb-2 [&_h2]:mt-6 [&_h2]:text-xl [&_h2]:font-semibold [&_h3]:mb-2 [&_h3]:mt-4 [&_h3]:text-lg [&_h3]:font-semibold [&_a]:text-jpv-brand-deep [&_a]:underline [&_a]:underline-offset-4 [&_blockquote]:border-l-4 [&_blockquote]:border-jpv-border [&_blockquote]:pl-4 [&_blockquote]:italic [&_li]:ml-4 [&_li]:list-disc [&_ol_li]:list-decimal [&_p]:mb-3'>
+    <div className='jpv-rich-text lesson-body mx-auto mt-8 max-w-4xl text-sm leading-7 text-jpv-ink [&_h2]:mb-2 [&_h2]:mt-6 [&_h2]:text-xl [&_h2]:font-semibold [&_h3]:mb-2 [&_h3]:mt-4 [&_h3]:text-lg [&_h3]:font-semibold [&_a]:text-jpv-brand-deep [&_a]:underline [&_a]:underline-offset-4 [&_blockquote]:border-l-4 [&_blockquote]:border-jpv-border [&_blockquote]:pl-4 [&_blockquote]:italic [&_img]:my-5 [&_img]:h-auto [&_img]:max-w-full [&_li]:ml-4 [&_li]:list-disc [&_ol_li]:list-decimal [&_p]:mb-3'>
       <RichText converters={createLessonConverters(lessonSlug)} data={data} />
     </div>
   )

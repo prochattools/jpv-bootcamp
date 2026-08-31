@@ -328,6 +328,29 @@ async function notifyReactionTargetAuthor(
   }
 }
 
+type ReactionAuditInput = Parameters<typeof createAuditEvent>[1]
+
+/**
+ * Reaction persistence is the user-facing mutation. Audit and notification
+ * records are operational side effects and must not turn a successful
+ * reaction into a false error when their table or schema is unavailable.
+ */
+async function recordReactionAudit(
+  payload: PayloadCourseWriteAPI,
+  input: ReactionAuditInput,
+): Promise<void> {
+  try {
+    await createAuditEvent(payload, input)
+  } catch (error) {
+    console.error('JPV_REACTION_AUDIT_FAILED', {
+      action: input.action,
+      targetCollection: input.targetCollection,
+      targetId: input.targetId ? String(input.targetId) : null,
+      error: error instanceof Error ? error.message : String(error),
+    })
+  }
+}
+
 async function countReactions(
   payload: PayloadCourseAccessAPI,
   target: ReactionTarget,
@@ -341,12 +364,17 @@ async function countReactions(
   }
 
   if (typeof payload.count === 'function') {
-    const result = await payload.count({
-      collection: REACTION_COLLECTION,
-      where,
-      overrideAccess: true,
-    })
-    return Number.isFinite(result.totalDocs) ? result.totalDocs : 0
+    try {
+      const result = await payload.count({
+        collection: REACTION_COLLECTION,
+        where,
+        overrideAccess: true,
+      })
+      return Number.isFinite(result.totalDocs) ? result.totalDocs : 0
+    } catch {
+      // Older production snapshots may not expose Payload's count helper for
+      // this collection. Fall through to the portable find-based projection.
+    }
   }
 
   const result = await payload.find({
@@ -537,27 +565,40 @@ async function assertRateLimit(
   const maxMutations = rateLimit?.maxMutations ?? 30
   const cutoff = new Date(Date.now() - windowMs).toISOString()
 
-  const result = await payload.find({
-    collection: 'payload_audit_events',
-    where: {
-      and: [
-        { actorType: { equals: 'member' } },
-        { actorId: { equals: String(memberId) } },
-        {
-          or: [
-            { action: { equals: 'reaction_created' } },
-            { action: { equals: 'reaction_changed' } },
-            { action: { equals: 'reaction_removed' } },
-          ],
-        },
-        { createdAt: { greater_than_equal: cutoff } },
-      ],
-    },
-    limit: maxMutations + 1,
-    depth: 0,
-    sort: '-createdAt',
-    overrideAccess: true,
-  })
+  let result: { docs: readonly PayloadDocument[] }
+  try {
+    result = await payload.find({
+      collection: 'payload_audit_events',
+      where: {
+        and: [
+          { actorType: { equals: 'member' } },
+          { actorId: { equals: String(memberId) } },
+          {
+            or: [
+              { action: { equals: 'reaction_created' } },
+              { action: { equals: 'reaction_changed' } },
+              { action: { equals: 'reaction_removed' } },
+            ],
+          },
+          { createdAt: { greater_than_equal: cutoff } },
+        ],
+      },
+      limit: maxMutations + 1,
+      depth: 0,
+      sort: '-createdAt',
+      overrideAccess: true,
+    })
+  } catch (error) {
+    // Rate limiting is a guardrail, not the reaction's source of truth. A
+    // missing/unavailable audit projection must not make member reactions
+    // impossible to save; the unique reaction index still prevents duplicate
+    // member/target rows. Keep an explicit operational signal for repair.
+    console.error('JPV_REACTION_RATE_LIMIT_UNAVAILABLE', {
+      memberId: String(memberId),
+      error: error instanceof Error ? error.message : String(error),
+    })
+    return
+  }
 
   if (result.docs.length >= maxMutations) {
     throw new ReactionServiceError('rate_limited', 'Reaction activity is temporarily rate limited.')
@@ -635,7 +676,7 @@ export async function setReaction(
       throw new ReactionServiceError('conflict', 'The reaction changed concurrently. Please try again.')
     }
 
-    await createAuditEvent(payload, {
+    await recordReactionAudit(payload, {
       actorType: 'member',
       actorId: memberId,
       action: 'reaction_changed',
@@ -662,7 +703,7 @@ export async function setReaction(
       overrideAccess: true,
     })
 
-    await createAuditEvent(payload, {
+    await recordReactionAudit(payload, {
       actorType: 'member',
       actorId: memberId,
       action: 'reaction_created',
@@ -700,7 +741,7 @@ export async function removeReaction(
     overrideAccess: true,
   })
 
-  await createAuditEvent(payload, {
+  await recordReactionAudit(payload, {
     actorType: 'member',
     actorId: memberId,
     action: 'reaction_removed',
