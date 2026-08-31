@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     const targetMemberIds = audience === 'selected' ? ids(body.targetMemberIds) : undefined
     const targetGroupIds = requestedAudience === 'groups' ? ids(body.targetGroupIds) : []
     if (!title || !content) return NextResponse.json({ ok: false, message: 'Title and announcement text are required.' }, { status: 400 })
-    if (audience === 'selected' && !targetMemberIds?.length) return NextResponse.json({ ok: false, message: 'Select at least one recipient.' }, { status: 400 })
+    if (requestedAudience === 'selected' && !targetMemberIds?.length) return NextResponse.json({ ok: false, message: 'Select at least one recipient.' }, { status: 400 })
     if (requestedAudience === 'groups' && targetGroupIds.length === 0) return NextResponse.json({ ok: false, message: 'Select at least one member group.' }, { status: 400 })
 
     const { actor, payload } = admin

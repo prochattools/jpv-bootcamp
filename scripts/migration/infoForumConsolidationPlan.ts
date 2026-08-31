@@ -20,6 +20,11 @@ export type InfoForumSnapshot = {
   comments: number
   reactions: number
   chatMessages: number
+  relationshipIds?: {
+    comments: string[]
+    reactions: string[]
+    chatMessages: string[]
+  }
 }
 
 export type ConsolidationPlan = {

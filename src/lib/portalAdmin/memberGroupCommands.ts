@@ -105,6 +105,47 @@ function assertExpectedUpdatedAt(group: PayloadDocument, expectedUpdatedAt?: str
   }
 }
 
+async function updateGroupWithPrecondition(
+  payload: PayloadCourseWriteAPI,
+  groupId: string,
+  data: Record<string, unknown>,
+  expectedUpdatedAt?: string | null,
+): Promise<PayloadDocument> {
+  if (expectedUpdatedAt === undefined) {
+    return await payload.update({
+      collection: 'payload_member_groups',
+      id: groupId,
+      data,
+      overrideAccess: true,
+      overrideLock: true,
+    }) as PayloadDocument
+  }
+
+  // Payload's where-based update is a single conditional database operation.
+  // Keeping the timestamp in the write predicate closes the read/update TOCTOU
+  // window between two administrator tabs.
+  const result = await (payload.update as unknown as (args: Record<string, unknown>) => Promise<unknown>)({
+    collection: 'payload_member_groups',
+    where: {
+      and: [
+        { id: { equals: groupId } },
+        { updatedAt: { equals: expectedUpdatedAt } },
+      ],
+    },
+    limit: 1,
+    data,
+    overrideAccess: true,
+    overrideLock: true,
+  })
+  const docs = result && typeof result === 'object' && Array.isArray((result as { docs?: unknown[] }).docs)
+    ? (result as { docs: unknown[] }).docs
+    : []
+  if (docs.length !== 1) {
+    throw new PortalAdminActionError('conflict', 'This group changed in another session. Refresh and try again.')
+  }
+  return docs[0] as PayloadDocument
+}
+
 export async function listMemberGroups(
   payload: PayloadCourseAccessAPI,
   includeArchived = false,
@@ -173,13 +214,7 @@ export async function updateMemberGroupCommand(
     members: ids,
     description: input.description ? boundedText(input.description, 'Description', 2000) : undefined,
   }
-  const updated = await payload.update({
-    collection: 'payload_member_groups',
-    id: groupId,
-    data,
-    overrideAccess: true,
-    overrideLock: true,
-  })
+  const updated = await updateGroupWithPrecondition(payload, groupId, data, input.expectedUpdatedAt)
   await createAuditEvent(payload, {
     actorType: 'admin',
     actorId,
@@ -201,13 +236,7 @@ export async function archiveMemberGroupCommand(
   const before = await payload.findByID({ collection: 'payload_member_groups', id: groupId, depth: 0, overrideAccess: true }) as PayloadDocument | null
   if (!before) throw new PortalAdminActionError('not_found', 'Member group not found.')
   assertExpectedUpdatedAt(before, expectedUpdatedAt)
-  const updated = await payload.update({
-    collection: 'payload_member_groups',
-    id: groupId,
-    data: { status: 'archived' },
-    overrideAccess: true,
-    overrideLock: true,
-  })
+  const updated = await updateGroupWithPrecondition(payload, groupId, { status: 'archived' }, expectedUpdatedAt)
   await createAuditEvent(payload, {
     actorType: 'admin',
     actorId,

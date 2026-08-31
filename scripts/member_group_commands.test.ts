@@ -47,8 +47,17 @@ class FakePayload {
     return document
   }
 
-  async update(args: { collection: string; id: string; data: Record<string, unknown> }) {
-    const document = await this.findByID(args)
+  async update(args: { collection: string; id?: string; where?: Record<string, unknown>; data: Record<string, unknown> }) {
+    const candidates = args.where
+      ? (this.collections[args.collection] ?? []).filter((document) => matchesWhere(document, args.where))
+      : [await this.findByID({ collection: args.collection, id: args.id ?? '' })]
+    if (args.where) {
+      if (candidates.length === 0) return { docs: [], errors: [] }
+      const document = candidates[0]
+      Object.assign(document, args.data, { updatedAt: 'updated-' + this.sequence++ })
+      return { docs: [document], errors: [] }
+    }
+    const document = candidates[0]
     if (!document) throw new Error('missing update target')
     Object.assign(document, args.data, { updatedAt: 'updated-' + this.sequence++ })
     return document

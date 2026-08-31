@@ -43,7 +43,8 @@ function matches(doc: any, where: any): boolean {
 
 const payload = {
   async find(args: { collection: string; where?: any }) {
-    return { docs: (records[args.collection] ?? []).filter((doc) => matches(doc, args.where)) }
+    const docs = (records[args.collection] ?? []).filter((doc) => matches(doc, args.where))
+    return { docs }
   },
   async findByID(args: { collection: string; id: string }) {
     return (records[args.collection] ?? []).find((doc) => String(doc.id) === String(args.id)) ?? null
@@ -66,6 +67,41 @@ const adminActivity = await getMemberActivity(payload, { kind: 'admin' }, { page
 assert.equal(adminActivity.items.some((item) => item.id === 'post:post-secret'), true)
 assert.equal(adminActivity.items.some((item) => item.id === 'reaction:legacy-like'), true)
 assert.equal(adminActivity.items.some((item) => item.id === 'reaction:legacy-bookmark'), false)
+
+const olderParentPosts = Array.from({ length: 100 }, (_, index) => ({
+  id: `post-${index}`,
+  space: 'space-public',
+  author: 'member-1',
+  moderationStatus: 'visible',
+  body: paragraph(`post ${index}`),
+  createdAt: new Date(Date.UTC(2026, 0, 1, 0, index)).toISOString(),
+}))
+const paginationRecords = {
+  payload_spaces: [{ id: 'space-public', name: 'Open Forum', slug: 'open-forum', status: 'published', visibility: 'public' }],
+  payload_members: [{ id: 'member-1', displayName: 'Ada Member', accountStatus: 'active', emailVerifiedAt: '2026-01-01' }],
+  payload_member_profiles: [],
+  payload_space_memberships: [],
+  payload_space_posts: olderParentPosts,
+  payload_space_comments: [{ id: 'fresh-comment', post: 'post-0', author: 'member-1', moderationStatus: 'visible', body: paragraph('fresh reply on an older post'), createdAt: '2026-12-31T00:00:00.000Z' }],
+  payload_engagement_reactions: [],
+  payload_space_reactions: [],
+}
+const paginationPayload = {
+  async find(args: { collection: string; where?: any; limit?: number; sort?: string }) {
+    let docs = (paginationRecords[args.collection as keyof typeof paginationRecords] ?? []).filter((doc) => matches(doc, args.where))
+    if (args.sort) {
+      const field = args.sort.replace(/^-/, '')
+      const direction = args.sort.startsWith('-') ? -1 : 1
+      docs = [...docs].sort((left, right) => direction * String(right[field] ?? '').localeCompare(String(left[field] ?? '')))
+    }
+    return { docs: docs.slice(0, args.limit ?? docs.length) }
+  },
+  async findByID(args: { collection: string; id: string }) {
+    return (paginationRecords[args.collection as keyof typeof paginationRecords] ?? []).find((doc) => String(doc.id) === String(args.id)) ?? null
+  },
+} as any
+const olderReplyActivity = await getMemberActivity(paginationPayload, { kind: 'admin' }, { page: 1, pageSize: 20 })
+assert.equal(olderReplyActivity.items[0]?.id, 'comment:fresh-comment')
 
 console.log('member_activity.test.ts passed')
 }

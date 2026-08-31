@@ -85,6 +85,16 @@ async function findAll(
   return result.docs as PayloadDocument[]
 }
 
+function uniqueDocuments(documents: PayloadDocument[]): PayloadDocument[] {
+  const seen = new Set<string>()
+  return documents.filter((document) => {
+    const id = String(document.id)
+    if (seen.has(id)) return false
+    seen.add(id)
+    return true
+  })
+}
+
 async function accessibleSpaces(
   payload: PayloadCourseAccessAPI,
   viewer: MemberActivityViewer,
@@ -126,19 +136,14 @@ export async function getMemberActivity(
     limit: queryLimit,
     sort: '-createdAt',
   })
-  const postIds = posts.map((post) => String(post.id))
-  const comments = postIds.length === 0
-    ? []
-    : await findAll(payload, 'payload_space_comments', {
-        where: {
-          and: [
-            { post: { in: postIds } },
-            { moderationStatus: { equals: 'visible' } },
-          ],
-        },
-        limit: queryLimit,
-        sort: '-createdAt',
-      })
+  // Query each activity source by its own recency. A fresh reply or reaction
+  // can target an older post, so limiting comments to the newest posts would
+  // silently omit the newest activity item.
+  const recentComments = await findAll(payload, 'payload_space_comments', {
+    where: { moderationStatus: { equals: 'visible' } },
+    limit: queryLimit,
+    sort: '-createdAt',
+  })
   const [engagementReactions, legacyReactions] = await Promise.all([
     findAll(payload, 'payload_engagement_reactions', {
       where: {
@@ -163,7 +168,69 @@ export async function getMemberActivity(
     ...legacyReactions.map((document) => ({ source: 'legacy' as const, document })),
   ]
 
-  const postById = new Map(posts.map((post) => [String(post.id), post]))
+  const reactionTargetId = (entry: (typeof reactions)[number]): string | null => {
+    const reaction = entry.document
+    const targetKind = entry.source === 'legacy'
+      ? String(reaction.targetKind) === 'comment' ? 'space_comment' : 'space_post'
+      : String(reaction.targetKind)
+    return targetKind === 'space_post'
+      ? relationshipId(reaction.targetPost)
+      : relationshipId(entry.source === 'legacy' ? reaction.targetComment : reaction.targetSpaceComment)
+  }
+  const recentCommentById = new Map(recentComments.map((comment) => [String(comment.id), comment]))
+  const reactionCommentIds = Array.from(new Set(
+    reactions
+      .filter((entry) => {
+        const targetKind = entry.source === 'legacy'
+          ? String(entry.document.targetKind) === 'comment' ? 'space_comment' : 'space_post'
+          : String(entry.document.targetKind)
+        return targetKind === 'space_comment'
+      })
+      .map(reactionTargetId)
+      .filter((id): id is string => Boolean(id)),
+  ))
+  const missingCommentIds = reactionCommentIds.filter((id) => !recentCommentById.has(id))
+  const relatedComments = missingCommentIds.length === 0
+    ? []
+    : await findAll(payload, 'payload_space_comments', {
+        where: {
+          and: [
+            { id: { in: missingCommentIds } },
+            { moderationStatus: { equals: 'visible' } },
+          ],
+        },
+        limit: missingCommentIds.length,
+      })
+  const comments = uniqueDocuments([...recentComments, ...relatedComments])
+  const referencedPostIds = Array.from(new Set([
+    ...posts.map((post) => String(post.id)),
+    ...comments.map((comment) => relationshipId(comment.post)).filter((id): id is string => Boolean(id)),
+    ...reactions
+      .filter((entry) => {
+        const targetKind = entry.source === 'legacy'
+          ? String(entry.document.targetKind) === 'comment' ? 'space_comment' : 'space_post'
+          : String(entry.document.targetKind)
+        return targetKind === 'space_post'
+      })
+      .map(reactionTargetId)
+      .filter((id): id is string => Boolean(id)),
+  ]))
+  const knownPostIds = new Set(posts.map((post) => String(post.id)))
+  const missingPostIds = referencedPostIds.filter((id) => !knownPostIds.has(id))
+  const relatedPosts = missingPostIds.length === 0
+    ? []
+    : await findAll(payload, 'payload_space_posts', {
+        where: {
+          and: [
+            { id: { in: missingPostIds } },
+            { moderationStatus: { equals: 'visible' } },
+            { space: { in: spaceIds } },
+          ],
+        },
+        limit: missingPostIds.length,
+      })
+  const allPosts = uniqueDocuments([...posts, ...relatedPosts])
+  const postById = new Map(allPosts.map((post) => [String(post.id), post]))
   const commentById = new Map(comments.map((comment) => [String(comment.id), comment]))
   const candidateItems: Array<MemberActivityItem & { actorId: string | null }> = []
   const spaceName = (spaceId: string): string => stringValue(spaceById.get(spaceId)?.name) ?? 'Community space'
@@ -187,7 +254,7 @@ export async function getMemberActivity(
     })
   }
 
-  for (const comment of comments) {
+  for (const comment of recentComments) {
     const postId = relationshipId(comment.post)
     const post = postId ? postById.get(postId) : null
     const spaceId = post ? relationshipId(post.space) : null

@@ -26,6 +26,7 @@ export const EXPECTED_PRODUCTION = Object.freeze({
   port: '5433',
   database: 'jpvbootcamp',
   schema: 'jpvbootcamp',
+  databaseRole: 'jpvbootcamp_production_app',
 })
 
 const IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/
@@ -193,13 +194,14 @@ async function buildSnapshot(client, schema, sourceId, destinationId) {
   const grants = await client.query(`SELECT "id", "resource_type", "resource_id" FROM ${ident}."payload_access_grants" WHERE "resource_type" = 'space' AND "resource_id" IN ($1, $2) ORDER BY "id" ASC`, [sourceId, destinationId])
   const entitlementEvents = await client.query(`SELECT "id", "resource_type", "resource_id" FROM ${ident}."payload_entitlement_events" WHERE "resource_type" = 'space' AND "resource_id" IN ($1, $2) ORDER BY "id" ASC`, [sourceId, destinationId])
   const notifications = await client.query(`SELECT "id", "href" FROM ${ident}."payload_member_notifications" WHERE "href" IS NOT NULL ORDER BY "id" ASC`)
-  const comments = await client.query(`SELECT COUNT(*)::text AS count FROM ${ident}."payload_space_comments" comments JOIN ${ident}."payload_space_posts" posts ON posts."id" = comments."post_id" WHERE posts."space_id" = $1`, [sourceId])
-  const reactions = await client.query(`SELECT COUNT(*)::text AS count FROM ${ident}."payload_space_reactions" reactions LEFT JOIN ${ident}."payload_space_posts" posts ON posts."id" = reactions."target_post_id" LEFT JOIN ${ident}."payload_space_comments" comments ON comments."id" = reactions."target_comment_id" WHERE posts."space_id" = $1 OR comments."post_id" IN (SELECT "id" FROM ${ident}."payload_space_posts" WHERE "space_id" = $1)`, [sourceId])
-  const chatMessages = await client.query(`SELECT COUNT(*)::text AS count FROM ${ident}."payload_chat_messages" messages JOIN ${ident}."payload_chat_threads" threads ON threads."id" = messages."thread_id" WHERE threads."space_id" = $1`, [sourceId])
-  const sourcePostIds = posts.rows.filter((row) => String(row.space_id) === sourceId).map((row) => String(row.id))
-  const sourceCommentCount = countFrom(comments)
-  const legacyReactionCount = countFrom(reactions)
-  const engagementReactionCount = countFrom(await client.query(`SELECT COUNT(*)::text AS count FROM ${ident}."payload_engagement_reactions" reactions LEFT JOIN ${ident}."payload_space_posts" posts ON posts."id" = reactions."target_post_id" LEFT JOIN ${ident}."payload_space_comments" comments ON comments."id" = reactions."target_space_comment_id" WHERE posts."space_id" = $1 OR comments."post_id" IN (SELECT "id" FROM ${ident}."payload_space_posts" WHERE "space_id" = $1)`, [sourceId]))
+  const comments = await client.query(`SELECT comments."id", posts."space_id" FROM ${ident}."payload_space_comments" comments JOIN ${ident}."payload_space_posts" posts ON posts."id" = comments."post_id" WHERE posts."space_id" IN ($1, $2) ORDER BY comments."id" ASC`, [sourceId, destinationId])
+  const legacyReactions = await client.query(`SELECT reactions."id", COALESCE(target_posts."space_id", comment_posts."space_id") AS "space_id" FROM ${ident}."payload_space_reactions" reactions LEFT JOIN ${ident}."payload_space_posts" target_posts ON target_posts."id" = reactions."target_post_id" LEFT JOIN ${ident}."payload_space_comments" comments ON comments."id" = reactions."target_comment_id" LEFT JOIN ${ident}."payload_space_posts" comment_posts ON comment_posts."id" = comments."post_id" WHERE target_posts."space_id" IN ($1, $2) OR comment_posts."space_id" IN ($1, $2) ORDER BY reactions."id" ASC`, [sourceId, destinationId])
+  const engagementReactions = await client.query(`SELECT reactions."id", COALESCE(target_posts."space_id", comment_posts."space_id") AS "space_id" FROM ${ident}."payload_engagement_reactions" reactions LEFT JOIN ${ident}."payload_space_posts" target_posts ON target_posts."id" = reactions."target_post_id" LEFT JOIN ${ident}."payload_space_comments" comments ON comments."id" = reactions."target_space_comment_id" LEFT JOIN ${ident}."payload_space_posts" comment_posts ON comment_posts."id" = comments."post_id" WHERE target_posts."space_id" IN ($1, $2) OR comment_posts."space_id" IN ($1, $2) ORDER BY reactions."id" ASC`, [sourceId, destinationId])
+  const chatMessages = await client.query(`SELECT messages."id", threads."space_id" FROM ${ident}."payload_chat_messages" messages JOIN ${ident}."payload_chat_threads" threads ON threads."id" = messages."thread_id" WHERE threads."space_id" IN ($1, $2) ORDER BY messages."id" ASC`, [sourceId, destinationId])
+  const sourceCommentCount = comments.rows.filter((row) => String(row.space_id) === sourceId).length
+  const sourceLegacyReactionCount = legacyReactions.rows.filter((row) => String(row.space_id) === sourceId).length
+  const sourceEngagementReactionCount = engagementReactions.rows.filter((row) => String(row.space_id) === sourceId).length
+  const sourceChatMessageCount = chatMessages.rows.filter((row) => String(row.space_id) === sourceId).length
   return {
     spaces,
     posts: posts.rows.map((row) => relationRow(row)),
@@ -212,8 +214,16 @@ async function buildSnapshot(client, schema, sourceId, destinationId) {
     entitlementEvents: entitlementEvents.rows.map((row) => ({ id: String(row.id), resourceType: String(row.resource_type), resourceId: String(row.resource_id) })),
     notifications: notifications.rows.map((row) => ({ id: String(row.id), href: String(row.href ?? '') })).filter((row) => row.href),
     comments: sourceCommentCount,
-    reactions: legacyReactionCount + engagementReactionCount,
-    chatMessages: countFrom(chatMessages),
+    reactions: sourceLegacyReactionCount + sourceEngagementReactionCount,
+    chatMessages: sourceChatMessageCount,
+    relationshipIds: {
+      comments: comments.rows.map((row) => String(row.id)),
+      reactions: [
+        ...legacyReactions.rows.map((row) => `legacy:${String(row.id)}`),
+        ...engagementReactions.rows.map((row) => `engagement:${String(row.id)}`),
+      ],
+      chatMessages: chatMessages.rows.map((row) => String(row.id)),
+    },
   }
 }
 
@@ -303,6 +313,12 @@ function verifyDirectMoveResults(before, after, plan, sourceId, destinationId) {
   if (beforeSourceMemberships !== plan.membershipMoves.length + plan.membershipDeletes.filter((operation) => before.memberships.find((item) => item.id === operation.id)?.space === sourceId).length || afterSourceMemberships !== 0 || afterDestinationMemberships !== expectedDestinationMemberships) {
     throw new Error('membership_integrity_failed')
   }
+}
+
+function sameStringSet(left = [], right = []) {
+  if (left.length !== right.length) return false
+  const rightSet = new Set(right)
+  return left.every((value) => rightSet.has(value))
 }
 
 async function updateExactlyOne(client, sql, params, code) {
@@ -401,7 +417,11 @@ async function runApply(client, schema, target) {
     verifyDirectMoveResults(before, after, plan, sourceId, destinationId)
     const remaining = sourceDependencyCounts(after, sourceId, source.slug, sourceRouteSlugs)
     if (totalSourceDependencyCount(remaining) > 0) throw new Error('source_dependencies_remain')
-    if (after.comments !== before.comments || after.reactions !== before.reactions || after.chatMessages !== before.chatMessages) throw new Error('indirect_relationship_counts_changed')
+    const beforeRelationships = before.relationshipIds
+    const afterRelationships = after.relationshipIds
+    if (!beforeRelationships || !afterRelationships || !sameStringSet(beforeRelationships.comments, afterRelationships.comments) || !sameStringSet(beforeRelationships.reactions, afterRelationships.reactions) || !sameStringSet(beforeRelationships.chatMessages, afterRelationships.chatMessages)) {
+      throw new Error('indirect_relationships_changed')
+    }
     const afterSource = after.spaces.find((space) => space.id === sourceId)
     const afterDestination = after.spaces.find((space) => space.id === destinationId)
     if (afterSource?.status !== 'archived') throw new Error('source_not_archived')
