@@ -65,7 +65,7 @@ async function run(): Promise<void> {
   const staticImage = await convertLegacyHTMLToLexical({
     html: '<figure><img src="https://portal.jpvbootcamp.com/wp-content/uploads/2025/11/Arrows_houses.png" alt="Arrows"></figure>',
     resolveImage: (sourceUrl) => sourceUrl.endsWith('/Arrows_houses.png')
-      ? { publicUrl: '/media/legacy/2025/11/Arrows_houses.png', alt: 'Arrows' }
+      ? { publicUrl: '/legacy-media/2025/11/Arrows_houses.png', alt: 'Arrows' }
       : undefined,
   })
   assert.deepEqual(staticImage.resolvedImages, ['https://portal.jpvbootcamp.com/wp-content/uploads/2025/11/Arrows_houses.png'])
@@ -73,7 +73,7 @@ async function run(): Promise<void> {
   assert.equal(staticImage.fallbackFragments[0].reason, 'image_static_media')
   const staticBlock = rootChildren(staticImage).find((node) => node.type === 'block' && node.fields?.blockType === 'legacyHTML')
   assert.ok(staticBlock)
-  assert.match(staticBlock.fields.safeHtml, /src="\/media\/legacy\/2025\/11\/Arrows_houses\.png"/)
+  assert.match(staticBlock.fields.safeHtml, /src="\/legacy-media\/2025\/11\/Arrows_houses\.png"/)
 
   delete (globalThis as any).__LEGACY_SCRIPT_EXECUTED
   const unsafe = await convertLegacyHTMLToLexical({

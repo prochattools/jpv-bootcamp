@@ -26,7 +26,7 @@ describe('legacy lesson rich-text rendering contract', () => {
   it('restores only WordPress upload placeholders to the bundled local archive path', () => {
     const safeHtml = '<p>Before</p><span data-legacy-image-preserved="true">Arrows (https://portal.jpvbootcamp.com/wp-content/uploads/2025/11/Arrows_houses.png)</span><p>After</p>'
     const restored = restoreLegacyLessonImagePlaceholders(safeHtml)
-    expect(restored).toContain('src="/media/legacy/2025/11/Arrows_houses.png"')
+    expect(restored).toContain('src="/legacy-media/2025/11/Arrows_houses.png"')
     expect(restored).toContain('alt="Arrows"')
     expect(restored).not.toContain('data-legacy-image-preserved')
   })

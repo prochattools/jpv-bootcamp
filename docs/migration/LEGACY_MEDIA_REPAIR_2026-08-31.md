@@ -26,9 +26,9 @@ The answer to “is all of this imported and linked in production?” is **no**.
 
 ## Isolated repair
 
-- The image build copies only non-empty raster files from `src/assets/uploads` to `public/media/legacy`, preserving the WordPress year/month path.
+- The image build copies only non-empty raster files from `src/assets/uploads` to `public/legacy-media`, preserving the WordPress year/month path. This path intentionally stays outside Dokploy's mounted `/app/public/media` directory, which otherwise masks image files baked into the image.
 - The migration resolver maps exact archive paths, with a unique-basename fallback only when an exact path is unavailable.
-- Sanitized legacy lesson placeholders are repaired at render time to local `/media/legacy/...` images. Raw legacy HTML is never rendered.
+- Sanitized legacy lesson placeholders are repaired at render time to local `/legacy-media/...` images. Raw legacy HTML is never rendered.
 - New migrations resolve legacy images to the static archive path when no Payload media relationship exists, so future imports do not leave image-only blockers.
 - Audit and notification records remain best-effort side effects for reactions. Reaction persistence is independent of audit availability; the unique member/target index remains the duplicate-write guard. Count queries fall back from Payload `count` to `find`.
 
@@ -47,4 +47,4 @@ Passing in this worktree:
 - TypeScript no-emit check;
 - static-media preparation check: 376 raster files copied and a known lesson image verified.
 
-Production was not changed by this repair. A new image build and deployment are required before the repaired media can appear at `jpvbootcamp.com`; an authenticated browser check is also required to verify the reaction mutation against the live schema.
+The first production image build/deployment completed at `f593f90`, and the runtime health endpoint converged to that SHA, but the first static-media probe returned 404. Dokploy inspection confirmed that its `/app/public/media` volume masks image files baked into that directory. This follow-up moves the bundled archive to `public/legacy-media` and emits `/legacy-media/...` URLs outside the mounted directory. The follow-up image must be deployed and its media probes rechecked before declaring image delivery complete. An authenticated browser check is also required to verify the reaction mutation against the live schema.

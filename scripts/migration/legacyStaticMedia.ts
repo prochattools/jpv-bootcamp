@@ -36,7 +36,7 @@ function sourceUploadRelativePath(sourceUrl: string): string | null {
 }
 
 function publicStaticUrl(relativePath: string): string {
-  return `/media/legacy/${relativePath.split('/').map((part) => encodeURIComponent(part)).join('/')}`
+  return `/legacy-media/${relativePath.split('/').map((part) => encodeURIComponent(part)).join('/')}`
 }
 
 /**

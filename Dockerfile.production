@@ -22,7 +22,7 @@ COPY . .
 # videos, documents, PHP, or server configuration files.
 RUN node scripts/migration/prepareLegacyStaticMedia.mjs \
       --source src/assets/uploads \
-      --destination public/media/legacy
+      --destination public/legacy-media
 
 ENV DATABASE_URL=postgresql://build:build@localhost:5432/build?schema=jpvbootcamp_staging
 ENV NODE_ENV=production

@@ -37,7 +37,7 @@ function staticLegacyMediaUrl(source: string): string | null {
   }
   const parts = relative.replace(/\\/g, '/').split('/').filter(Boolean)
   if (!parts.length || parts.some((part) => part === '..' || part === '.')) return null
-  return `/media/legacy/${parts.map((part) => encodeURIComponent(part)).join('/')}`
+  return `/legacy-media/${parts.map((part) => encodeURIComponent(part)).join('/')}`
 }
 
 /**

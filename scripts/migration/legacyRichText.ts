@@ -153,7 +153,7 @@ function sanitizeLegacyHTMLForDisplay(html: string): string {
     if (tag === 'img') {
       const sourceUrl = element.getAttribute('src') || ''
       const alt = element.getAttribute('alt') || 'Legacy image'
-      const isSafeLocalMedia = /^\/media\/(?:legacy\/)?[^/].*/i.test(sourceUrl)
+      const isSafeLocalMedia = /^\/(?:media\/(?:legacy\/)?|legacy-media\/)[^/].*/i.test(sourceUrl)
       if (!isSafeLocalMedia) {
         const placeholder = document.createElement('span')
         placeholder.setAttribute('data-legacy-image-preserved', 'true')
