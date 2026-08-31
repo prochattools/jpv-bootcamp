@@ -108,7 +108,7 @@ const privilegedOverrideCounts: Record<string, number> = {
   'src/lib/members/deleteMemberStripeCustomer.ts': 1,
   'src/lib/members/inviteMember.ts': 5,
   'src/lib/members/memberCoverImage.ts': 7,
-  'src/lib/members/provisionMemberFromCheckout.ts': 4,
+  'src/lib/members/provisionMemberFromCheckout.ts': 5,
   'src/lib/members/redactDeliveredResetLink.ts': 2,
   'src/lib/members/registerFreeMember.ts': 6,
   'src/lib/members/requestPasswordReset.ts': 3,

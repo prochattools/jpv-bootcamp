@@ -154,7 +154,7 @@ function buildRemoteCommand(requestedMode: InfoForumMigrationMode, expectedSha: 
     }
   }
   const assignments = Object.entries(variables).map(([name, value]) => `${name}=${shellQuote(value)}`).join(' ')
-  const runnerSha = execFileSync('shasum', ['-a', '256', runner], { cwd: repoRoot, encoding: 'utf8' }).split(/\s+/)[0]
+  const runnerSha = execFileSync('shasum', ['-a', '256', runnerPath], { cwd: repoRoot, encoding: 'utf8' }).split(/\s+/)[0]
   return [
     'set -u',
     "printf 'JPV_INFO_FORUM_REMOTE_START\\n'",
