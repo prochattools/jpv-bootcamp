@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 
 import { StatusPill } from '@/components/portal/StatusPill'
 import { CommunityPostCard } from '@/components/community/CommunityPostCard'
@@ -8,6 +8,7 @@ import { requirePortalAccess } from '@/lib/auth/requirePortalAccess'
 import { getMemberCommunitySpaceDetail, withQueryDedup, type MemberCommunityPost } from '@/lib/payloadCourse/communityPortal'
 import { listSpaceLiveCalls } from '@/lib/liveSessions/memberSessions'
 import { submitCommunityPost } from '../actions'
+import { FORUM_CANONICAL_SLUG, INFO_FORUM_LEGACY_SLUG } from '@/lib/community/infoForumMigration'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -29,6 +30,14 @@ export default async function PortalCommunitySpacePage({ params, searchParams }:
   const isAdmin = actor.kind === 'admin'
   const memberId = actor.kind === 'member' ? actor.memberId : ''
   const memberEmail = actor.kind === 'member' ? actor.email : ''
+
+  if (spaceSlug === INFO_FORUM_LEGACY_SLUG) {
+    const [legacy, canonical] = await Promise.all([
+      payload.find({ collection: 'payload_spaces', where: { and: [{ slug: { equals: INFO_FORUM_LEGACY_SLUG } }, { status: { equals: 'archived' } }] }, limit: 1, depth: 0, overrideAccess: true }),
+      payload.find({ collection: 'payload_spaces', where: { and: [{ slug: { equals: FORUM_CANONICAL_SLUG } }, { status: { equals: 'published' } }] }, limit: 1, depth: 0, overrideAccess: true }),
+    ])
+    if (legacy.docs[0] && canonical.docs[0]) redirect(`/portal/community/${encodeURIComponent(FORUM_CANONICAL_SLUG)}`)
+  }
 
   let detail = await getMemberCommunitySpaceDetail(withQueryDedup(payload), memberId, spaceSlug)
   if (!detail) notFound()
