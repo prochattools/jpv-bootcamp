@@ -9,8 +9,10 @@ import type {
 } from '../src/lib/payloadCourse/accessService'
 import {
   getMemberCommunityPostDetail,
+  resolveMemberCommunityPostAttachments,
   projectCommunityRichText,
 } from '../src/lib/payloadCourse/communityDiscussion'
+import { getMemberCommunitySpaceDetail } from '../src/lib/payloadCourse/communityPortal'
 
 type CollectionMap = Record<string, PayloadDocument[]>
 
@@ -483,6 +485,49 @@ async function testAuthorizedProjection(): Promise<void> {
   assert.ok(payload.calls.every((call) => call.overrideAccess === true))
 }
 
+async function testSpacePostAttachmentProjection(): Promise<void> {
+  const memberDetail = await getMemberCommunitySpaceDetail(
+    buildPayload(),
+    'member_mod',
+    'private-space',
+  )
+
+  assert.ok(memberDetail)
+  assert.equal(memberDetail.allowed, true)
+  const memberPost = memberDetail.posts.find((post) => post.id === 'post_visible')
+  assert.ok(memberPost)
+  assert.deepEqual(
+    memberPost.attachments.map((attachment) => attachment.id),
+    ['file_document_visible', 'file_image_visible', 'file_video_visible', 'file_private_video_visible'],
+  )
+  const image = memberPost.attachments.find((attachment) => attachment.attachmentType === 'image')
+  assert.equal(image && 'previewUrl' in image ? image.previewUrl : undefined, '/portal/community/files/file_image_visible?inline=1')
+
+  const outsiderDetail = await getMemberCommunitySpaceDetail(
+    buildPayload(),
+    'member_outsider',
+    'private-space',
+  )
+  assert.ok(outsiderDetail)
+  assert.equal(outsiderDetail.allowed, false)
+  assert.deepEqual(outsiderDetail.posts, [])
+
+  const adminAttachments = await resolveMemberCommunityPostAttachments(
+    buildPayload(),
+    'administrator_1',
+    'post_visible',
+    { allowAdministrator: true },
+  )
+  assert.ok(adminAttachments.some((attachment) => attachment.id === 'file_image_visible'))
+
+  const deniedAttachments = await resolveMemberCommunityPostAttachments(
+    buildPayload(),
+    'member_outsider',
+    'post_visible',
+  )
+  assert.deepEqual(deniedAttachments, [])
+}
+
 async function testDeniedAndModerationBoundaries(): Promise<void> {
   for (const [spaceSlug, postId] of [
     ['private-space', 'post_visible'],
@@ -702,6 +747,7 @@ const renderer = fs.readFileSync(
 
 async function main(): Promise<void> {
   await testAuthorizedProjection()
+  await testSpacePostAttachmentProjection()
   await testDeniedAndModerationBoundaries()
   await testPublishingCapabilities()
   testRichTextProjection()

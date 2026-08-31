@@ -6,6 +6,7 @@ import { CommunityPostCard } from '@/components/community/CommunityPostCard'
 import { ComposerToolbar } from '@/components/community/ComposerToolbar'
 import { requirePortalAccess } from '@/lib/auth/requirePortalAccess'
 import { getMemberCommunitySpaceDetail, withQueryDedup, type MemberCommunityPost } from '@/lib/payloadCourse/communityPortal'
+import { resolveMemberCommunityPostAttachments } from '@/lib/payloadCourse/communityDiscussion'
 import { listSpaceLiveCalls } from '@/lib/liveSessions/memberSessions'
 import { submitCommunityPost } from '../actions'
 
@@ -105,6 +106,20 @@ export default async function PortalCommunitySpacePage({ params, searchParams }:
       }
     }
 
+    const postAttachmentMap = new Map(
+      await Promise.all(
+        adminPostsResult.docs.map(async (post) => [
+          String(post.id),
+          await resolveMemberCommunityPostAttachments(
+            payload,
+            actor.administratorId,
+            post.id,
+            { allowAdministrator: true },
+          ),
+        ] as const),
+      ),
+    )
+
     detail = {
       ...detail,
       allowed: true,
@@ -121,6 +136,7 @@ export default async function PortalCommunitySpacePage({ params, searchParams }:
           commentCount: commentCountMap.get(String(p.id)) ?? 0,
           authorName: aid ? (authorMap.get(aid) ?? 'Community member') : 'Community member',
           excerpt: null,
+          attachments: postAttachmentMap.get(String(p.id)) ?? [],
           moderationStatus: typeof p.moderationStatus === 'string' ? p.moderationStatus : null,
         }
       }),

@@ -35,5 +35,16 @@ assert.match(resources, /getAdminResourceLibrary/)
 const community = source('src/app/(frontend)/portal/community/[spaceSlug]/posts/[postId]/page.tsx')
 assert.match(community, /resolveMemberCommunityAttachment/)
 assert.match(community, /allowAdministrator: true/)
+assert.match(community, /imagePreviewUrl/)
+
+const communityCard = source('src/components/community/CommunityPostCard.tsx')
+assert.match(communityCard, /post\.attachments/)
+assert.match(communityCard, /previewUrl/)
+assert.match(communityCard, /loading='lazy'/)
+
+const communityFileRoute = source('src/app/(frontend)/portal/community/files/[fileId]/route.ts')
+assert.match(communityFileRoute, /administratorAccess/)
+assert.match(communityFileRoute, /inlineImage/)
+assert.match(communityFileRoute, /Content-Disposition/)
 
 console.log('six-fix hotfix contracts passed')

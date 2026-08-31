@@ -5,6 +5,10 @@ import {
   type PayloadId,
 } from '@/lib/payloadCourse/accessService'
 import { relationshipId } from '@/lib/domain/relationships'
+import {
+  resolveMemberCommunityPostAttachments,
+} from '@/lib/payloadCourse/communityDiscussion'
+import type { MemberCommunityAttachmentResolution } from '@/lib/payloadCourse/communityFiles'
 
 /**
  * Wraps a PayloadCourseAccessAPI so that identical find/findByID calls within
@@ -88,6 +92,7 @@ export type MemberCommunityPost = {
   commentCount: number
   authorName: string
   excerpt: string | null
+  attachments: MemberCommunityAttachmentResolution[]
   moderationStatus?: string | null
 }
 
@@ -464,9 +469,10 @@ export async function getMemberCommunitySpaceDetail(
   }
 
   const posts = await getVisibleSpacePosts(payload, space.id)
-  const commentCounts = await Promise.all(
-    posts.map((post) => countVisibleComments(payload, post.id))
-  )
+  const [commentCounts, postAttachments] = await Promise.all([
+    Promise.all(posts.map((post) => countVisibleComments(payload, post.id))),
+    Promise.all(posts.map((post) => resolveMemberCommunityPostAttachments(payload, normalizedMemberId, String(post.id)))),
+  ])
 
   // Batch-fetch all post authors in a single query (N+1 → 1).
   const postAuthorIdSet = new Set<string>()
@@ -502,6 +508,7 @@ export async function getMemberCommunitySpaceDetail(
       commentCount: commentCounts[i],
       authorName: memberDisplayName(author),
       excerpt: richTextExcerpt(post.body),
+      attachments: postAttachments[i] ?? [],
     }
   })
 

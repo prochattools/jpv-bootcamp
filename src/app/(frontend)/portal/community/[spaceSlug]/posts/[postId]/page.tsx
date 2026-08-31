@@ -85,9 +85,23 @@ function initials(value: string): string {
 
 function AttachmentCard({ attachment }: { attachment: MemberCommunityAttachmentResolution }) {
   if (!('downloadUrl' in attachment) || !attachment.downloadUrl) return null
+  const imagePreviewUrl = attachment.attachmentType === 'image' && 'previewUrl' in attachment
+    ? attachment.previewUrl
+    : null
 
   return (
     <article className='rounded-jpv-card border border-jpv-border bg-jpv-canvas p-6 shadow-jpv-card'>
+      {imagePreviewUrl ? (
+        <div className='mb-4 overflow-hidden rounded-jpv-card border border-jpv-border bg-jpv-surface'>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            alt={attachment.altText ?? attachment.title}
+            className='max-h-96 w-full object-contain'
+            loading='lazy'
+            src={imagePreviewUrl}
+          />
+        </div>
+      ) : null}
       <p className='text-xs font-bold uppercase tracking-[0.14em] text-jpv-sunshine-ink'>{attachment.spaceName}</p>
       <h3 className='mt-2 text-lg font-bold text-jpv-brand-deep'>{attachment.title}</h3>
       {'filename' in attachment && attachment.filename ? (

@@ -72,6 +72,7 @@ export type MemberCommunityProtectedFile = MemberCommunityAttachmentBase & {
   mimeType: CommunityFileMimeType
   byteSize: number
   downloadUrl: string
+  previewUrl?: string
   altText?: string
 }
 
@@ -574,6 +575,9 @@ async function buildMemberCommunityAttachmentProjection(
         mimeType,
         byteSize,
         downloadUrl: `/portal/community/files/${encodeURIComponent(String(file.id))}`,
+        ...(attachmentType === 'image'
+          ? { previewUrl: `/portal/community/files/${encodeURIComponent(String(file.id))}?inline=1` }
+          : {}),
         ...(attachmentType === 'image' && altText ? { altText } : {}),
       }
     } catch {
