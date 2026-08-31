@@ -377,6 +377,41 @@ async function run() {
   }
 
   {
+    // An active member with authorized space access does not need a separate
+    // membership row just to participate in the discussion.
+    const payload = buildPayload({
+      payload_space_memberships: [],
+      payload_access_policies: [
+        {
+          id: 'policy_member_space',
+          resourceType: 'space',
+          resourceId: 'space_private',
+          status: 'active',
+          privacy: 'members',
+          requireActiveBilling: false,
+          priority: 10,
+        },
+      ],
+    })
+
+    const postResult = await createSpacePost(payload, {
+      memberId: 'member_active',
+      spaceId: 'space_private',
+      title: 'Member access post',
+      body: richTextBody,
+    })
+    const commentResult = await createSpaceComment(payload, {
+      memberId: 'member_active',
+      postId: postResult.document.id,
+      body: richTextBody,
+      notifyAuthor: false,
+    })
+
+    assert.equal(postResult.document.author, 'member_active')
+    assert.equal(commentResult.document.author, 'member_active')
+  }
+
+  {
     const payload = buildPayload({
       payload_space_memberships: [],
     })
@@ -431,7 +466,7 @@ async function run() {
         title: 'Unauthorized post',
         body: richTextBody,
       }),
-      /Active space membership is required/
+      /Space access denied|Active space membership is required/
     )
   }
 

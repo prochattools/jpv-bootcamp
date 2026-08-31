@@ -9,6 +9,7 @@ import { getMemberCommunityPostDetail } from '@/lib/payloadCourse/communityDiscu
 import { createSpaceComment } from '@/lib/payloadCourse/communityPosting'
 import { buildPlainTextRichText } from '@/lib/payloadCourse/plainTextRichText'
 import type { PayloadCourseWriteAPI } from '@/lib/payloadCourse/accessService'
+import { attachOperationalBillingFallback } from '@/lib/payloadCourse/operationalBillingFallback'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -39,7 +40,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, message: 'A reply is required and must be 10,000 characters or fewer.' }, { status: 400 })
     }
 
-    const payload = (await getPayload({ config })) as unknown as PayloadCourseWriteAPI
+    const payload = attachOperationalBillingFallback(
+      (await getPayload({ config })) as unknown as PayloadCourseWriteAPI,
+    )
     const memberId = String(session.member.id)
     const detail = await getMemberCommunityPostDetail(payload, memberId, spaceSlug, postId)
     if (!detail.allowed || !detail.post.canComment) return NextResponse.json({ ok: false, message: 'Replies are unavailable for this discussion.' }, { status: 403 })

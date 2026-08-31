@@ -306,7 +306,9 @@ export default async function PortalLessonPage({ params, searchParams }: LessonP
           <h2 className='text-xl font-semibold text-jpv-ink' id='lesson-content-heading'>Lesson content</h2>
           {detail.lesson.contentLexical ? (
             <LegacyLessonRichText data={detail.lesson.contentLexical} lessonSlug={lessonSlug} />
-          ) : null}
+          ) : (
+            <p className='mt-5 text-sm text-jpv-muted'>Lesson content is not available yet.</p>
+          )}
         </section>
 
         {detail.lesson.resources.length > 0 ? (
@@ -514,7 +516,9 @@ export default async function PortalLessonPage({ params, searchParams }: LessonP
             ) : null}
             {detail.lesson.contentLexical ? (
               <LegacyLessonRichText data={detail.lesson.contentLexical} lessonSlug={lessonSlug} />
-            ) : null}
+            ) : (
+              <p className='mt-5 text-sm text-jpv-muted'>Lesson content is not available yet.</p>
+            )}
           </section>
 
           {detail.lesson.resources.length > 0 ? (

@@ -644,7 +644,7 @@ export async function setReaction(
       before: { reactionType: previous, targetKind: target.kind, targetId: target.id },
       after: { reactionType, targetKind: target.kind, targetId: target.id },
     })
-    void notifyReactionTargetAuthor(payload, memberId, target, targetDocument, reactionType)
+    await notifyReactionTargetAuthor(payload, memberId, target, targetDocument, reactionType)
 
     return { operation: 'changed', reaction: reactionType }
   }
@@ -670,7 +670,7 @@ export async function setReaction(
       targetId: created.id,
       after: { reactionType, targetKind: target.kind, targetId: target.id },
     })
-    void notifyReactionTargetAuthor(payload, memberId, target, targetDocument, reactionType)
+    await notifyReactionTargetAuthor(payload, memberId, target, targetDocument, reactionType)
   } catch (error) {
     if (error instanceof ReactionServiceError) throw error
     throw new ReactionServiceError('conflict', 'The reaction changed concurrently. Please try again.')

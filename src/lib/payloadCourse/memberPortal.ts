@@ -176,7 +176,7 @@ function asLexicalContent(value: unknown): SerializedEditorState | null {
   const root = record.root
   if (!root || typeof root !== 'object') return null
   const children = (root as Record<string, unknown>).children
-  if (!Array.isArray(children)) return null
+  if (!Array.isArray(children) || children.length === 0) return null
   return value as SerializedEditorState
 }
 

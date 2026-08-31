@@ -386,18 +386,16 @@ export async function resolveMemberCommunityPostAttachments(
     limit: 100,
   })
 
-  const attachments: MemberCommunityAttachmentResolution[] = []
-  for (const file of files) {
-    const resolved = await resolveMemberCommunityAttachment(
+  const resolvedAttachments = await Promise.all(files.map((file) => resolveMemberCommunityAttachment(
       payload,
       memberId,
       file.id,
       options,
-    )
-    if (resolved.allowed) attachments.push(resolved)
-  }
+    )))
 
-  return attachments
+  return resolvedAttachments.filter(
+    (attachment): attachment is MemberCommunityAttachmentResolution => attachment.allowed,
+  )
 }
 
 async function findVisiblePostAttachments(
@@ -440,17 +438,8 @@ async function publishingCapability(
   memberId: string,
   spaceId: string
 ): Promise<boolean> {
-  const membership = await findOne(payload, 'payload_space_memberships', {
-    and: [
-      { member: { equals: memberId } },
-      { space: { equals: spaceId } },
-    ],
-  })
-
-  return (
-    membership?.status === 'active' &&
-    (membership.role === 'member' || membership.role === 'moderator' || membership.role === 'admin')
-  )
+  const access = await evaluatePayloadSpaceAccess(payload, { memberId, spaceId })
+  return access.decision.allowed
 }
 
 function denied(): MemberCommunityPostDetailDenied {
