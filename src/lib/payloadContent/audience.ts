@@ -28,15 +28,19 @@ export function parseMemberContentTargets(value: unknown): MemberContentTargetSe
 export async function memberIdsForGroups(
   payload: PayloadCourseAccessAPI,
   groupIds: string[],
+  options: { includeArchived?: boolean } = {},
 ): Promise<string[]> {
   if (groupIds.length === 0) return []
 
+  const status = options.includeArchived
+    ? { in: ['active', 'archived'] }
+    : { equals: 'active' }
   const result = await payload.find({
     collection: 'payload_member_groups',
     where: {
       and: [
         { id: { in: groupIds } },
-        { status: { equals: 'active' } },
+        { status },
       ],
     },
     limit: Math.min(groupIds.length, 200),
@@ -90,5 +94,7 @@ export async function memberCanAccessContent(
 
   if (targets.memberIds.includes(String(memberId))) return true
   if (audience !== 'groups' || targets.groupIds.length === 0) return false
-  return (await memberIdsForGroups(payload, targets.groupIds)).includes(String(memberId))
+  // Archived groups remain valid historical audiences for published Updates.
+  // Active-only filtering is still used when selecting groups for new content.
+  return (await memberIdsForGroups(payload, targets.groupIds, { includeArchived: true })).includes(String(memberId))
 }

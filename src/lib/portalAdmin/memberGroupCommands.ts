@@ -176,7 +176,7 @@ export async function createMemberGroupCommand(
       status: 'active',
       visibility: 'private',
       members: ids,
-        description: input.description ? boundedText(input.description, 'Description', 2000) : undefined,
+      description: input.description?.trim() ? boundedText(input.description, 'Description', 2000) : undefined,
     },
     overrideAccess: true,
   })
@@ -212,7 +212,11 @@ export async function updateMemberGroupCommand(
   const data: Record<string, unknown> = {
     name,
     members: ids,
-    description: input.description ? boundedText(input.description, 'Description', 2000) : undefined,
+  }
+  if (input.description !== undefined) {
+    data.description = input.description.trim()
+      ? boundedText(input.description, 'Description', 2000)
+      : null
   }
   const updated = await updateGroupWithPrecondition(payload, groupId, data, input.expectedUpdatedAt)
   await createAuditEvent(payload, {

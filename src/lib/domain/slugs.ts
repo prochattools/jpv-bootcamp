@@ -24,7 +24,11 @@ export function slugFromName(name: string): string {
     throw new PortalAdminActionError('invalid_input', 'A name must contain at least one letter or number to generate a slug.')
   }
 
-  return normalizeSlug(candidate.slice(0, 100))
+  // `validateTitle` permits one-character names, while routing slugs require
+  // at least two characters. Keep those valid names creatable with a stable,
+  // deterministic slug base that still participates in collision handling.
+  const slugBase = candidate.length === 1 ? `${candidate}-1` : candidate.slice(0, 100)
+  return normalizeSlug(slugBase)
 }
 
 export type SlugLookupAPI = Pick<PayloadCourseAccessAPI, 'find'>

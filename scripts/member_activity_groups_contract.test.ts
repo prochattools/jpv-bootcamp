@@ -45,6 +45,7 @@ const payload = {
 async function main() {
 assert.equal(slugFromName('  Café & Strategy  '), 'cafe-strategy')
 assert.equal(slugFromName('Info Forum'), 'info-forum')
+assert.equal(slugFromName('A'), 'a-1')
 assert.throws(() => slugFromName('---'), /at least one letter or number/)
 
 const collisionPayload = {
@@ -71,7 +72,7 @@ assert.deepEqual(parseMemberContentTargets({ memberIds: ['member-1'], groupIds: 
 assert.deepEqual(await memberIdsForContentAudience(payload, 'groups', { memberIds: [], groupIds: ['group-1', 'group-2', 'group-archived'] }), ['member-1', 'member-2', 'member-3'])
 assert.equal(await memberCanAccessContent(payload, { id: 'post-1', audience: 'groups', targetMemberIds: { memberIds: [], groupIds: ['group-1'] } }, 'member-2'), true)
 assert.equal(await memberCanAccessContent(payload, { id: 'post-1', audience: 'selected', targetMemberIds: { memberIds: [], groupIds: ['group-1'] } }, 'member-2'), true)
-assert.equal(await memberCanAccessContent(payload, { id: 'post-1', audience: 'groups', targetMemberIds: { memberIds: [], groupIds: ['group-archived'] } }, 'member-3'), false)
+assert.equal(await memberCanAccessContent(payload, { id: 'post-1', audience: 'groups', targetMemberIds: { memberIds: [], groupIds: ['group-archived'] } }, 'member-3'), true)
 assert.equal(await memberCanAccessContent(payload, { id: 'post-1', audience: 'selected', targetMemberIds: ['member-1'] }, 'member-2'), false)
 assert.deepEqual(
   (await activeMemberRecipients(payload, undefined, ['group-1', 'group-2', 'group-archived'])).map((recipient) => recipient.memberId),

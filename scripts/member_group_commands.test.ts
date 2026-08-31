@@ -97,6 +97,14 @@ async function main(): Promise<void> {
   })
   assert.equal(renamed.slug, 'cafe-cohort')
   assert.deepEqual(renamed.memberIds, ['member-2'])
+  assert.equal(renamed.description, 'Focused members')
+
+  const cleared = await updateMemberGroupCommand(payload as never, 'admin-1', created.id, {
+    name: renamed.name,
+    description: '',
+    expectedUpdatedAt: renamed.updatedAt,
+  })
+  assert.equal(cleared.description, null)
 
   await assert.rejects(
     updateMemberGroupCommand(payload as never, 'admin-1', created.id, {
@@ -113,7 +121,7 @@ async function main(): Promise<void> {
     (error: unknown) => (error as { code?: string }).code === 'invalid_input',
   )
 
-  const archived = await archiveMemberGroupCommand(payload as never, 'admin-1', created.id, renamed.updatedAt)
+  const archived = await archiveMemberGroupCommand(payload as never, 'admin-1', created.id, cleared.updatedAt)
   assert.equal(archived.status, 'archived')
 
   payload.collections.live_sessions.push({ id: 'room-1', targetGroupIds: [created.id] })
