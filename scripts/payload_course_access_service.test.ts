@@ -193,8 +193,8 @@ async function run() {
       courseSlug: 'pro-course',
       now: '2026-01-01T00:00:00.000Z',
     })
-    assert.equal(result.decision.allowed, false)
-    assert.equal(result.decision.reason, 'billing_not_active')
+    assert.equal(result.decision.allowed, true)
+    assert.equal(result.decision.reason, 'required_group')
   }
 
   {

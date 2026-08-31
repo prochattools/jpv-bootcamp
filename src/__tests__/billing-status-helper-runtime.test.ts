@@ -95,4 +95,49 @@ describe('getBillingStatus', () => {
     expect(result.hasActiveSubscription).toBe(false)
     expect(getStripe).not.toHaveBeenCalled()
   })
+
+  it('refreshes a recoverable incomplete projection from the current provider state', async () => {
+    findUnique.mockResolvedValue({
+      stripeCustomerId: 'cus_member',
+      subscriptionStatus: 'incomplete',
+      subscriptionCurrentPeriodEnd: null,
+      subscriptionCancelAtPeriodEnd: null,
+      billingCadence: null,
+      commitmentStatus: null,
+      commitmentStartAt: null,
+      commitmentEndAt: null,
+      cancellationRequestedAt: null,
+      cancellationEffectiveAt: null,
+      paymentGraceEndsAt: null,
+      paymentStatus: null,
+      paymentFailedAt: null,
+      paymentRefundedAt: null,
+      paymentDisputeStatus: null,
+      paymentDisputedAt: null,
+      paymentDisputeResolvedAt: null,
+    })
+    const subscriptionsList = vi.fn().mockResolvedValue({
+      data: [
+        {
+          created: 2,
+          status: 'active',
+          cancel_at_period_end: false,
+          current_period_end: 1_800_000_000,
+          items: { data: [{ price: { recurring: { interval: 'month' } } }] },
+        },
+      ],
+    })
+    getStripe.mockReturnValue({ subscriptions: { list: subscriptionsList } })
+
+    const result = await getBillingStatus('member@example.com')
+
+    expect(result.subscriptionStatus).toBe('active')
+    expect(result.hasActiveSubscription).toBe(true)
+    expect(result.billingAccessState).toBe('available')
+    expect(subscriptionsList).toHaveBeenCalledWith({
+      customer: 'cus_member',
+      status: 'all',
+      limit: 100,
+    })
+  })
 })
