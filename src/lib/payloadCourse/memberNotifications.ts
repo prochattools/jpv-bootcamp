@@ -1,4 +1,5 @@
 import type { PayloadCourseWriteAPI, PayloadDocument } from '@/lib/payloadCourse/accessService'
+import { normalizeRelationshipId } from '@/lib/domain/relationships'
 
 type MemberNotificationInput = {
   memberId: string
@@ -34,7 +35,7 @@ export async function createMemberNotificationIfMissing(
     return await payload.create({
       collection: 'payload_member_notifications',
       data: {
-        member: input.memberId,
+        member: normalizeRelationshipId(input.memberId),
         type: input.type,
         actorName: 'JPV Bootcamp',
         title: input.title,

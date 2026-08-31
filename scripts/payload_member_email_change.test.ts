@@ -20,6 +20,9 @@ import type {
 import {
   GET as completeEmailChangeRoute,
 } from '../src/app/api/member-email-change/complete/route'
+import {
+  POST as requestEmailChangeRoute,
+} from '../src/app/api/member-profile/email-change/request/route'
 
 type CollectionMap = Record<string, PayloadDocument[]>
 
@@ -433,6 +436,14 @@ async function testExpiredAndPurposeConfusedActions() {
 }
 
 async function testSameOriginRedirectSafety() {
+  const requestResponse = await requestEmailChangeRoute()
+  assert.equal(requestResponse.status, 410)
+  assert.deepEqual(await requestResponse.json(), {
+    ok: false,
+    error: 'email_change_disabled',
+    message: 'Member email changes are disabled. Please contact support.',
+  })
+
   const request = new Request(
     'https://preview.jpvbootcamp.test/api/member-email-change/complete?token=redacted&next=https://evil.test&redirect=//evil.test',
   )
@@ -450,16 +461,12 @@ async function testSameOriginRedirectSafety() {
       'https://preview.jpvbootcamp.test/api/member-email-change/complete?token=short&next=https://evil.test',
     ),
   )
-  assert.equal(invalidResponse.status, 303)
-  const location = invalidResponse.headers.get('location')
-  assert(location)
-  const invalidUrl = new URL(location)
-  assert.equal(invalidUrl.origin, 'https://preview.jpvbootcamp.test')
-  assert.equal(invalidUrl.pathname, '/portal')
-  assert.equal(invalidUrl.searchParams.get('mode'), 'login')
-  assert.equal(invalidUrl.searchParams.get('emailChange'), 'invalid')
-  assert.equal(invalidUrl.searchParams.has('token'), false)
-  assert.equal(invalidUrl.searchParams.has('next'), false)
+  assert.equal(invalidResponse.status, 410)
+  assert.deepEqual(await invalidResponse.json(), {
+    ok: false,
+    error: 'email_change_disabled',
+    message: 'Member email changes are disabled. Please contact support.',
+  })
 }
 
 async function main() {

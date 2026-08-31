@@ -1,4 +1,5 @@
 import type { PayloadCourseWriteAPI, PayloadDocument } from '@/lib/payloadCourse/accessService'
+import { normalizeRelationshipId } from '@/lib/domain/relationships'
 import {
   assertLiveSessionStatusTransition,
   liveSessionRelationshipId,
@@ -92,8 +93,9 @@ function validateAudience(input: {
   return { audience, targetMemberIds, targetGroupIds }
 }
 
-function asRelation(value: string | null | undefined): string | null {
-  return text(value)
+function asRelation(value: string | null | undefined): string | number | null {
+  const normalized = text(value)
+  return normalized ? normalizeRelationshipId(normalized) : null
 }
 
 function changedAtMatches(expected: string | null | undefined, actual: unknown): boolean {
@@ -142,8 +144,8 @@ export async function createRoomCommand(
     audience: audience.audience,
     targetMemberIds: audience.targetMemberIds,
     targetGroupIds: audience.targetGroupIds,
-    categories: categoryIds,
-    hostUser: context.adminId,
+    categories: categoryIds.map(normalizeRelationshipId),
+    hostUser: normalizeRelationshipId(context.adminId),
     course: asRelation(input.courseId),
     space: asRelation(input.spaceId),
     description: text(input.description) ? buildPlainTextRichText(text(input.description)!) : undefined,
@@ -219,7 +221,7 @@ export async function updateRoomCommand(
     data.targetMemberIds = audience.targetMemberIds
     data.targetGroupIds = audience.targetGroupIds
   }
-  if (input.categoryIds !== undefined) data.categories = ids(input.categoryIds)
+  if (input.categoryIds !== undefined) data.categories = ids(input.categoryIds).map(normalizeRelationshipId)
   if (input.courseId !== undefined) data.course = asRelation(input.courseId)
   if (input.spaceId !== undefined) data.space = asRelation(input.spaceId)
   if (input.description !== undefined) data.description = text(input.description) ? buildPlainTextRichText(text(input.description)!) : null
@@ -292,7 +294,7 @@ export async function deleteRoomCommand(
   if (!confirmed) throw new PortalAdminActionError('invalid_input', 'Deletion requires explicit confirmation.')
   const room = await context.payload.findByID({ collection: 'live_sessions', id: roomId, depth: 0, overrideAccess: true }).catch((): null => null) as PayloadDocument | null
   if (!room) throw new PortalAdminActionError('not_found', 'Room not found.')
-  const grants = await context.payload.find({ collection: 'payload_room_access', where: { room: { equals: roomId } }, limit: 1, depth: 0, overrideAccess: true })
+  const grants = await context.payload.find({ collection: 'payload_room_access', where: { room: { equals: normalizeRelationshipId(roomId) } }, limit: 1, depth: 0, overrideAccess: true })
   const audit = Array.isArray(room.audit) ? room.audit : []
   const hasMeaningfulAudit = audit.some((entry) => entry && typeof entry === 'object' && (entry as Record<string, unknown>).event !== 'created')
   if (grants.docs.length > 0 || room.status !== 'scheduled' || hasMeaningfulAudit) {

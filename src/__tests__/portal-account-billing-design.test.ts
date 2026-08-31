@@ -13,7 +13,7 @@ const billingSection = source.slice(billingStart, fallbackStart)
 
 describe('portal account and billing design coherence', () => {
   it('keeps account and billing presentation separated', () => {
-    expect(accountSection).toContain('Manage your profile, sign-in email, password, and account security.')
+    expect(accountSection).toContain('Manage your profile, password, and account security.')
     expect(accountSection).not.toContain('Billing projection summary')
     expect(accountSection).not.toContain('BillingPortalButton')
     expect(billingSection).toContain('Review your membership, renewal status, invoices, and secure payment settings.')
@@ -24,7 +24,7 @@ describe('portal account and billing design coherence', () => {
     expect(source).toContain("className='flex gap-2 overflow-x-auto border-b border-jpv-border pb-3'")
     expect(accountSection).toContain("href: '#profile'")
     expect(accountSection).toContain("href: '#password'")
-    expect(accountSection).toContain("href: '#email'")
+    expect(accountSection).not.toContain("href: '#email'")
     expect(billingSection).toContain("href: '#status'")
     expect(billingSection).toContain("href: '#manage'")
     expect(billingSection).toContain("href: '#projection'")
@@ -39,7 +39,8 @@ describe('portal account and billing design coherence', () => {
   it('preserves existing account and billing actions', () => {
     expect(source).toContain('updateMemberProfile')
     expect(accountSection).toContain('<PasswordChangeForm />')
-    expect(accountSection).toContain('<EmailChangeForm />')
+    expect(accountSection).not.toContain('<EmailChangeForm />')
+    expect(accountSection).not.toContain('Change email address')
     expect(billingSection).toContain('<BillingPortalButton />')
     expect(billingSection).toContain('<MemberCheckoutButtons />')
     expect(billingSection).toContain('action={requestMembershipCancellation}')

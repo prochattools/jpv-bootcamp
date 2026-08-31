@@ -58,10 +58,8 @@ function billingOverview(overrides: Partial<MemberBillingOverview> = {}): Member
 function testCanonicalAccountParity(): void {
   for (const expected of [
     'PasswordChangeForm',
-    'EmailChangeForm',
     'Edit profile',
     'Change password',
-    'Change email address',
     'Account status',
     'Membership',
     'Email verified',
@@ -73,6 +71,7 @@ function testCanonicalAccountParity(): void {
   assert.match(portalSectionsSource, /collection: 'payload_members'/)
   assert.match(portalSectionsSource, /redirect\('\/portal\/account\?updated=1'\)/)
   assert.match(portalSectionsSource, /redirect\(`\/portal\/account\?error=\$\{errorParam\}`\)/)
+  assert.doesNotMatch(portalSectionsSource, /EmailChangeForm|Change email address/)
   assert.doesNotMatch(portalSectionsSource, removedImportPattern)
 }
 

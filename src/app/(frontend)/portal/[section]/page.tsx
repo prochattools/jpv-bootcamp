@@ -18,7 +18,6 @@ import { requestMembershipCancellation } from '@/lib/actions/requestMembershipCa
 import { resumeMembershipCancellation } from '@/lib/actions/resumeMembershipCancellation'
 import { resolvePortalBillingPresentation } from '@/lib/portal/portalBillingPresentation'
 
-import { EmailChangeForm } from '@/components/member/EmailChangeForm'
 import { PasswordChangeForm } from '@/components/member/PasswordChangeForm'
 import { MemberCoverImageForm } from '@/components/member/MemberCoverImageForm'
 
@@ -307,7 +306,7 @@ export default async function PortalSectionPage({ params, searchParams }: Portal
           <p className='jpv-eyebrow'>Profile</p>
           <h1 className='mt-2 text-3xl font-semibold tracking-tight text-jpv-ink'>Account &amp; Billing</h1>
           <p className='mt-2 max-w-2xl text-sm leading-6 text-jpv-muted'>
-            Manage your profile, sign-in email, password, and account security.
+            Manage your profile, password, and account security.
           </p>
         </section>
 
@@ -316,7 +315,6 @@ export default async function PortalSectionPage({ params, searchParams }: Portal
           links={[
             { href: '#profile', title: 'Profile' },
             { href: '#password', title: 'Password' },
-            { href: '#email', title: 'Email' },
             { href: '/portal/billing', title: 'Billing' },
           ]}
         />
@@ -545,15 +543,6 @@ export default async function PortalSectionPage({ params, searchParams }: Portal
             </div>
           </article>
 
-          <article className={portalCardClass} id='email'>
-            <h2 className={sectionCardTitleClass}>Change email address</h2>
-            <p className='mt-3 text-sm leading-6 text-neutral-600'>
-              Confirm a new address before it replaces your current sign-in email.
-            </p>
-            <div className='mt-6'>
-              <EmailChangeForm />
-            </div>
-          </article>
         </section>
 
       </div>

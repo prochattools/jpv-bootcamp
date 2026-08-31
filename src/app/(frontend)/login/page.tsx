@@ -4,7 +4,6 @@ type LoginSearchParams = {
   next?: string | string[]
   redirect?: string | string[]
   verification?: string | string[]
-  emailChange?: string | string[]
   registration?: string | string[]
 }
 
@@ -26,7 +25,6 @@ export default async function SharedLoginPage({ searchParams }: LoginPageProps) 
   const target = new URLSearchParams({ mode: 'login' })
   appendIfPresent(target, 'next', firstValue(params?.next) ?? firstValue(params?.redirect))
   appendIfPresent(target, 'verification', firstValue(params?.verification))
-  appendIfPresent(target, 'emailChange', firstValue(params?.emailChange))
   appendIfPresent(target, 'registration', firstValue(params?.registration))
   redirect(`/portal?${target.toString()}`)
 }
