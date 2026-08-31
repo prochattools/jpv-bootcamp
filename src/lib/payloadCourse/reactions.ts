@@ -152,6 +152,15 @@ function findMemberWhere(memberId: PayloadId): Record<string, unknown> {
   return { member: { equals: String(memberId) } }
 }
 
+function withUsableReactionTypeWhere(where: Record<string, unknown>): Record<string, unknown> {
+  return {
+    and: [
+      where,
+      { reactionType: { in: [...reactionTypes] } },
+    ],
+  }
+}
+
 async function findOne(
   payload: PayloadCourseAccessAPI,
   collection: string,
@@ -159,7 +168,7 @@ async function findOne(
 ): Promise<PayloadDocument | null> {
   const result = await payload.find({
     collection,
-    where,
+    where: withUsableReactionTypeWhere(where),
     limit: 1,
     depth: 0,
     overrideAccess: true,
@@ -406,7 +415,7 @@ async function findAllReactionRows(
   for (let page = 1; page <= 100; page += 1) {
     const result = await payload.find({
       collection: REACTION_COLLECTION,
-      where,
+      where: withUsableReactionTypeWhere(where),
       limit: pageSize,
       page,
       depth: 0,

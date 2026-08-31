@@ -88,7 +88,9 @@ export async function POST(request: Request): Promise<Response> {
   const accessPayload = payload as unknown as PayloadCourseAccessAPI
 
   const detail = await getMemberCommunitySpaceDetail(accessPayload, memberId, spaceSlug)
-  if (!detail?.allowed || detail.membership?.status !== 'active') {
+  // Match the read/post/comment entitlement decision. Paid members and other
+  // authorized members can have access grants without a membership row.
+  if (!detail?.allowed) {
     return errorResponse('Access denied to this space', 403)
   }
 
