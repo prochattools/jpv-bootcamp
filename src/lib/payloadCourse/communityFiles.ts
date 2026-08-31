@@ -208,6 +208,29 @@ function asNumber(value: unknown): number | null {
   return null
 }
 
+async function mapWithConcurrency<T, R>(
+  items: readonly T[],
+  worker: (item: T, index: number) => Promise<R>,
+  concurrency = 16,
+): Promise<R[]> {
+  if (items.length === 0) return []
+
+  const results = new Array<R>(items.length)
+  let nextIndex = 0
+  const workerCount = Math.min(Math.max(1, concurrency), items.length)
+
+  async function runWorker() {
+    while (true) {
+      const index = nextIndex++
+      if (index >= items.length) return
+      results[index] = await worker(items[index], index)
+    }
+  }
+
+  await Promise.all(Array.from({ length: workerCount }, () => runWorker()))
+  return results
+}
+
 function assertTitle(value: string): string {
   const title = value.trim()
   if (!title) throw new Error('File title is required.')
@@ -617,23 +640,20 @@ export async function getMemberCommunityFiles(
     sort: '-createdAt',
     limit: 200,
   })
-  const projections: MemberCommunityFile[] = []
-
-  for (const file of files) {
+  const projections = await mapWithConcurrency(files, async (file) => {
     const spaceId = relationshipId(file.space)
-    if (!spaceId) continue
+    if (!spaceId) return null
 
     const access = await evaluatePayloadSpaceAccess(payload, { memberId, spaceId })
-    if (!access.decision.allowed) continue
-    if (!(await hasTrustedCommunityFileParent(payload, file, spaceId))) continue
+    if (!access.decision.allowed) return null
+    if (!(await hasTrustedCommunityFileParent(payload, file, spaceId))) return null
 
     const space = await findByIdSafe(payload, 'payload_spaces', spaceId)
-    if (!space) continue
-    const projection = await buildMemberCommunityAttachmentProjection(payload, file, space)
-    if (projection) projections.push(projection)
-  }
+    if (!space) return null
+    return buildMemberCommunityAttachmentProjection(payload, file, space)
+  })
 
-  return projections
+  return projections.filter((projection): projection is MemberCommunityFile => projection !== null)
 }
 
 export async function resolveMemberCommunityAttachment(

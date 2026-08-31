@@ -443,7 +443,12 @@ async function getBillingContext(
     // Checkout/shadow-sync ordering can leave a recoverable `incomplete`
     // projection behind an active provider subscription. Reconcile that state
     // at read time; terminal local states remain authoritative.
-    if (subscriptionStatus === 'incomplete' || localContext.reconciliationState === 'pending') {
+    const projectionNeedsReconciliation =
+      rawStatus === 'none' ||
+      subscriptionStatus === 'incomplete' ||
+      localContext.reconciliationState === 'pending'
+
+    if (projectionNeedsReconciliation) {
       const operationalContext = await payload.resolveOperationalBillingContext?.(memberId, nowValue)
       if (operationalContext?.subscriptionStatus === 'active' || operationalContext?.subscriptionStatus === 'trialing') {
         return operationalContext

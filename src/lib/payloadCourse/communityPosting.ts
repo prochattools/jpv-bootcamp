@@ -1,7 +1,8 @@
-import type {
-  PayloadCourseWriteAPI,
-  PayloadDocument,
-  PayloadId,
+import {
+  evaluatePayloadSpaceAccess,
+  type PayloadCourseWriteAPI,
+  type PayloadDocument,
+  type PayloadId,
 } from '@/lib/payloadCourse/accessService'
 import {
   notifyPostAuthorOfNewComment,
@@ -173,17 +174,6 @@ function membershipRole(membership: PayloadDocument | null): SpaceRole | null {
   return null
 }
 
-const approvedPublishingRoles: readonly SpaceRole[] = ['member', 'moderator', 'admin']
-
-function membershipAllowsWrite(membership: PayloadDocument | null) {
-  const role = membershipRole(membership)
-  return (
-    membership?.status === 'active' &&
-    role !== null &&
-    approvedPublishingRoles.includes(role)
-  )
-}
-
 function membershipAllowsModeration(membership: PayloadDocument | null) {
   const role = membershipRole(membership)
   return membership?.status === 'active' && (role === 'moderator' || role === 'admin')
@@ -194,20 +184,20 @@ async function assertSpaceWriteAccess(
   memberId: PayloadId,
   spaceId: PayloadId
 ) {
-  const [space, membership] = await Promise.all([
+  const [space, access] = await Promise.all([
     findSpace(payload, spaceId),
-    findMembership(payload, memberId, spaceId),
+    evaluatePayloadSpaceAccess(payload, { memberId, spaceId }),
   ])
 
   if (!space || space.status !== 'published') {
     throw new Error('Space is not published.')
   }
 
-  if (!membershipAllowsWrite(membership)) {
-    throw new Error('Active space membership is required before posting.')
+  if (!access.decision.allowed) {
+    throw new Error(`Space access denied: ${access.decision.reason}`)
   }
 
-  return { space, membership }
+  return { space }
 }
 
 async function assertModeratorAccess(
@@ -433,17 +423,19 @@ export async function createSpaceComment(
   })
 
   if (input.notifyAuthor !== false) {
-    void notifyPostAuthorOfNewComment(payload, {
-      postId: input.postId,
-      commentId: comment.id,
-      commenterMemberId: input.memberId,
-      postTitle: asString(post.title) ?? 'Community discussion',
-      spaceName: asString(space?.name) ?? 'Community',
-      spaceSlug: asString(space?.slug),
-      dryRun: input.dryRun,
-    }).catch((error) => {
+    try {
+      await notifyPostAuthorOfNewComment(payload, {
+        postId: input.postId,
+        commentId: comment.id,
+        commenterMemberId: input.memberId,
+        postTitle: asString(post.title) ?? 'Community discussion',
+        spaceName: asString(space?.name) ?? 'Community',
+        spaceSlug: asString(space?.slug),
+        dryRun: input.dryRun,
+      })
+    } catch (error) {
       console.error('[createSpaceComment] comment notification error:', error instanceof Error ? error.message : String(error))
-    })
+    }
   }
 
   return {

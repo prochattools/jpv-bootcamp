@@ -4,6 +4,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 import config from '@payload-config'
 import { relationshipId } from '@/lib/domain/relationships'
+import {
+  evaluatePayloadLessonAccess,
+  type PayloadCourseAccessAPI,
+} from '@/lib/payloadCourse/accessService'
+import { attachOperationalBillingFallback } from '@/lib/payloadCourse/operationalBillingFallback'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -20,6 +25,10 @@ type VideoDocument = {
   videoId?: number | null
   videoGuid?: string | null
   status?: string | null
+}
+
+type PayloadVideoAPI = PayloadCourseAccessAPI & {
+  auth(args: { headers: unknown }): Promise<{ user?: unknown | null }>
 }
 
 function getBunnySigningKey(): string | null {
@@ -81,7 +90,7 @@ function parseTarget(request: NextRequest): VideoTarget | null {
   return candidates.length === 1 ? candidates[0] : null
 }
 
-async function findVideoById(payload: Awaited<ReturnType<typeof getPayload>>, id: string | number) {
+async function findVideoById(payload: PayloadCourseAccessAPI, id: string | number) {
   try {
     return (await payload.findByID({
       collection: 'bunny_videos',
@@ -108,7 +117,7 @@ function lexicalContainsBunnyGuid(value: unknown, requestedGuid: string): boolea
   return Object.values(record).some((entry) => lexicalContainsBunnyGuid(entry, requestedGuid))
 }
 
-async function findVideoByGuid(payload: Awaited<ReturnType<typeof getPayload>>, videoGuid: string): Promise<VideoDocument | null> {
+async function findVideoByGuid(payload: PayloadCourseAccessAPI, videoGuid: string): Promise<VideoDocument | null> {
   const result = await payload.find({
     collection: 'bunny_videos',
     where: { videoGuid: { equals: videoGuid } },
@@ -120,7 +129,7 @@ async function findVideoByGuid(payload: Awaited<ReturnType<typeof getPayload>>, 
 }
 
 async function resolveLessonVideo(
-  payload: Awaited<ReturnType<typeof getPayload>>,
+  payload: PayloadCourseAccessAPI,
   lessonSlug: string,
   user: { id: string | number; collection?: string },
   requestedGuid?: string | null,
@@ -136,7 +145,6 @@ async function resolveLessonVideo(
     id: string | number
     bunnyVideo?: unknown
     content?: unknown
-    module?: { course?: unknown } | null
   } | undefined
 
   if (!lesson) {
@@ -150,32 +158,11 @@ async function resolveLessonVideo(
   }
 
   if (user.collection === 'payload_members') {
-    const courseId = relationshipId(lesson.module?.course)
-    if (courseId === null) {
-      return {
-        video: null,
-        error: NextResponse.json(
-          { ok: false, reason: 'not_entitled' } satisfies VideoError,
-          { status: 403 },
-        ),
-      }
-    }
-
-    const enrollment = await payload.find({
-      collection: 'payload_course_enrollments',
-      where: {
-        and: [
-          { member: { equals: String(user.id) } },
-          { course: { equals: String(courseId) } },
-          { status: { equals: 'active' } },
-        ],
-      },
-      limit: 1,
-      depth: 0,
-      overrideAccess: true,
+    const access = await evaluatePayloadLessonAccess(payload, {
+      memberId: user.id,
+      lessonId: lesson.id,
     })
-
-    if (!enrollment.docs.length) {
+    if (!access.decision.allowed) {
       return {
         video: null,
         error: NextResponse.json(
@@ -216,7 +203,7 @@ async function resolveLessonVideo(
 }
 
 async function resolvePublishedContentVideo(
-  payload: Awaited<ReturnType<typeof getPayload>>,
+  payload: PayloadCourseAccessAPI,
   target: Extract<VideoTarget, { kind: 'page' | 'post' }>,
 ): Promise<{ video: VideoDocument | null; error?: NextResponse }> {
   const collection = target.kind === 'page' ? 'payload_pages' : 'payload_posts'
@@ -266,7 +253,9 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const payload = await getPayload({ config })
+    const payload = attachOperationalBillingFallback(
+      (await getPayload({ config })) as unknown as PayloadVideoAPI,
+    )
     const auth = await payload.auth({ headers: await headers() })
     const user = auth.user as { id?: string | number; collection?: string } | null
 

@@ -4,8 +4,8 @@
  * Covers:
  *  1. Unauthenticated request → 401
  *  2. Authenticated member with active enrollment → 200 + signed URL
- *  3. Authenticated member without enrollment → 403
- *  4. Authenticated admin bypasses enrollment check → 200 + signed URL
+ *  3. Authenticated member without a legacy enrollment → central entitlement result
+ *  4. Authenticated admin bypasses member entitlement check → 200 + signed URL
  *  5. Signed URL does not contain the signing key value
  *  6. Valid auth but unknown lessonId → 404
  *
@@ -30,6 +30,8 @@ vi.mock('next/headers', () => ({
   headers: vi.fn().mockResolvedValue(new Headers()),
 }))
 
+vi.mock('server-only', () => ({}))
+
 // Mock Payload module
 vi.mock('payload', () => ({
   getPayload: vi.fn(),
@@ -38,8 +40,21 @@ vi.mock('payload', () => ({
 // Mock @payload-config (not a real file in test env)
 vi.mock('@payload-config', () => ({ default: {} }))
 
+// Lesson playback must use the same centralized entitlement decision as the
+// member lesson page. The service itself is covered by the Payload access
+// tests; this route test verifies delegation and the removal of the legacy
+// enrollment-only gate.
+vi.mock('@/lib/payloadCourse/accessService', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/payloadCourse/accessService')>('@/lib/payloadCourse/accessService')
+  return {
+    ...actual,
+    evaluatePayloadLessonAccess: vi.fn(),
+  }
+})
+
 // Pull the mocked functions after registering mocks
 const { getPayload } = await import('payload')
+const { evaluatePayloadLessonAccess } = await import('@/lib/payloadCourse/accessService')
 const { GET } = await import('@/app/api/bunny/video/route')
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -175,6 +190,9 @@ function makeMockPayload(opts: {
 describe('GET /api/bunny/video — authentication and entitlement', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.mocked(evaluatePayloadLessonAccess).mockResolvedValue({
+      decision: { allowed: true, reason: 'active_member_resource' },
+    } as never)
   })
 
   // ── 1. Unauthenticated → 401 ─────────────────────────────────────────────
@@ -213,9 +231,9 @@ describe('GET /api/bunny/video — authentication and entitlement', () => {
     expect(data.url).toContain('playlist.m3u8')
   })
 
-  // ── 3. Member + no enrollment → 403 ─────────────────────────────────────
+  // ── 3. Member without legacy enrollment uses central entitlement ─────────
 
-  it('authenticated member without enrollment returns 403', async () => {
+  it('authenticated member without legacy enrollment returns a signed URL when central access allows it', async () => {
     const mockPayload = makeMockPayload({
       user: { id: 'member-99', collection: 'payload_members' },
       lessonFound: true,
@@ -227,9 +245,13 @@ describe('GET /api/bunny/video — authentication and entitlement', () => {
     const res = await GET(makeRequest('intro-to-course'))
     const data = await res.json()
 
-    expect(res.status).toBe(403)
-    expect(data.ok).toBe(false)
-    expect(data.reason).toBe('not_entitled')
+    expect(res.status).toBe(200)
+    expect(data.ok).toBe(true)
+    expect(mockPayload.find.mock.calls.some((call) => call[0]?.collection === 'payload_course_enrollments')).toBe(false)
+    expect(evaluatePayloadLessonAccess).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ memberId: 'member-99', lessonId: 'lesson-id-1' }),
+    )
   })
 
   // ── 4. Admin bypasses enrollment check → 200 ────────────────────────────
@@ -298,10 +320,13 @@ describe('GET /api/bunny/video — authentication and entitlement', () => {
     expect(data.reason).toBe('lesson_not_found')
   })
 
-  it('member lesson without a course link fails closed', async () => {
+  it('central entitlement denial fails closed', async () => {
+    vi.mocked(evaluatePayloadLessonAccess).mockResolvedValueOnce({
+      decision: { allowed: false, reason: 'billing_not_active' },
+    } as never)
     const mockPayload = makeMockPayload({
       user: { id: 'member-42', collection: 'payload_members' },
-      moduleCourseId: null,
+      moduleCourseId: 'course-101',
       videoFound: true,
     })
     vi.mocked(getPayload).mockResolvedValue(mockPayload as never)

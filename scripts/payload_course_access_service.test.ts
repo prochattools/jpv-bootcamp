@@ -198,6 +198,52 @@ async function run() {
   }
 
   {
+    // A stale member projection may contain an unrecognized pending status
+    // while the operational billing source already confirms the subscription.
+    // It must use the same narrow recovery path as an incomplete projection.
+    const payload = buildPayload({
+      payload_access_groups: [
+        { id: 'group_pro', slug: 'pro-courses', status: 'active', members: [] },
+      ],
+      payload_subscriptions: [
+        {
+          id: 'sub_pending_projection',
+          member: 'member_active',
+          status: 'pending',
+          plan: 'pro',
+          updatedAt: '2026-01-01T00:00:00.000Z',
+        },
+      ],
+      payload_access_policies: [
+        {
+          id: 'policy_private_without_group',
+          name: 'Private course access',
+          status: 'active',
+          resourceType: 'course',
+          resourceId: 'course_pro',
+          privacy: 'private',
+          requiredGroups: [],
+          requireActiveBilling: true,
+          priority: 10,
+        },
+      ],
+    })
+    payload.resolveOperationalBillingContext = async () => ({
+      status: 'active',
+      lifecycleState: 'active',
+      subscriptionStatus: 'active',
+    })
+
+    const result = await evaluatePayloadCourseAccess(payload, {
+      memberId: 'member_active',
+      courseSlug: 'pro-course',
+      now: '2026-01-01T00:00:00.000Z',
+    })
+    assert.equal(result.decision.allowed, true)
+    assert.equal(result.decision.reason, 'active_member_resource')
+  }
+
+  {
     const result = await evaluatePayloadCourseAccess(buildPayload(), {
       memberId: 'member_blocked',
       courseSlug: 'pro-course',

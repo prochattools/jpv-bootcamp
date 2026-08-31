@@ -30,6 +30,7 @@ import {
 } from '@/lib/payloadCourse/reactions'
 import { getMemberBookmarkState } from '@/lib/payloadCourse/bookmarks'
 import { resolveMemberCommunityAttachment, type MemberCommunityAttachmentResolution } from '@/lib/payloadCourse/communityFiles'
+import { withQueryDedup } from '@/lib/payloadCourse/communityPortal'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -129,8 +130,9 @@ export default async function PortalCommunityPostPage({ params, searchParams }: 
   const isAdmin = actor.kind === 'admin'
   const memberId = actor.kind === 'member' ? actor.memberId : ''
   const memberEmail = actor.kind === 'member' ? actor.email : ''
+  const readPayload = withQueryDedup(payload)
 
-  const memberResult = await getMemberCommunityPostDetail(payload, memberId, spaceSlug, postId)
+  const memberResult = await getMemberCommunityPostDetail(readPayload, memberId, spaceSlug, postId)
 
   let post: MemberCommunityPostDetail
   let postIsHidden = false
@@ -140,20 +142,20 @@ export default async function PortalCommunityPostPage({ params, searchParams }: 
     post = memberResult.post
   } else if (isAdmin) {
     const [postDoc, spaceResult, commentsResult] = await Promise.all([
-      payload.findByID({
+      readPayload.findByID({
         collection: 'payload_space_posts',
         id: postId,
         depth: 0,
         overrideAccess: true,
       }),
-      payload.find({
+      readPayload.find({
         collection: 'payload_spaces',
         where: { slug: { equals: spaceSlug } },
         limit: 1,
         depth: 0,
         overrideAccess: true,
       }),
-      payload.find({
+      readPayload.find({
         collection: 'payload_space_comments',
         where: { post: { equals: postId } },
         sort: 'createdAt',
@@ -198,7 +200,7 @@ export default async function PortalCommunityPostPage({ params, searchParams }: 
 
     const authorMap = new Map<string, Record<string, unknown>>()
     if (commentAuthorIds.size > 0) {
-      const batch = await payload.find({
+      const batch = await readPayload.find({
         collection: 'payload_members',
         where: { id: { in: Array.from(commentAuthorIds) } },
         limit: 200,
@@ -281,7 +283,7 @@ export default async function PortalCommunityPostPage({ params, searchParams }: 
 
   let reactionSummary: ReactionSummary | null = null
   try {
-    reactionSummary = await getReactionSummary(payload, memberId, {
+    reactionSummary = await getReactionSummary(readPayload, memberId, {
       kind: 'space_post',
       id: post.id,
     })
@@ -289,11 +291,11 @@ export default async function PortalCommunityPostPage({ params, searchParams }: 
     // Keep the post readable while the separately authorized reaction schema
     // or projection is unavailable. Mutations remain fail-closed server-side.
   }
-  const bookmarked = await getMemberBookmarkState(payload, memberId, post.id).catch(() => false)
+  const bookmarked = await getMemberBookmarkState(readPayload, memberId, post.id).catch(() => false)
   let commentReactionSummaries: ReadonlyMap<string, ReactionSummary> = new Map()
   try {
     commentReactionSummaries = await getSpaceCommentReactionSummaries(
-      payload,
+      readPayload,
       memberId,
       post.id,
       post.comments.map((comment) => comment.id),

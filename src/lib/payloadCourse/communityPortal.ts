@@ -25,6 +25,10 @@ import type { MemberCommunityAttachmentResolution } from '@/lib/payloadCourse/co
 export function withQueryDedup(payload: PayloadCourseAccessAPI): PayloadCourseAccessAPI {
   const findByIdCache = new Map<string, Promise<unknown>>()
   const findCache = new Map<string, Promise<unknown>>()
+  const operationalBillingCache = new Map<
+    string,
+    ReturnType<NonNullable<PayloadCourseAccessAPI['resolveOperationalBillingContext']>>
+  >()
 
   const wrapped: PayloadCourseAccessAPI = {
     find(args) {
@@ -32,8 +36,10 @@ export function withQueryDedup(payload: PayloadCourseAccessAPI): PayloadCourseAc
         c: args.collection,
         w: args.where ?? null,
         l: args.limit ?? null,
+        p: args.page ?? null,
         d: args.depth ?? null,
         s: args.sort ?? null,
+        o: args.overrideAccess ?? null,
       })
       if (!findCache.has(key)) {
         findCache.set(key, payload.find(args))
@@ -41,7 +47,12 @@ export function withQueryDedup(payload: PayloadCourseAccessAPI): PayloadCourseAc
       return findCache.get(key) as ReturnType<typeof payload.find>
     },
     findByID(args) {
-      const key = `${String(args.collection)}:${String(args.id)}`
+      const key = JSON.stringify({
+        c: args.collection,
+        i: args.id,
+        d: args.depth ?? null,
+        o: args.overrideAccess ?? null,
+      })
       if (!findByIdCache.has(key)) {
         findByIdCache.set(key, payload.findByID(args))
       }
@@ -55,8 +66,19 @@ export function withQueryDedup(payload: PayloadCourseAccessAPI): PayloadCourseAc
   }
 
   if (payload.resolveOperationalBillingContext) {
-    wrapped.resolveOperationalBillingContext = payload.resolveOperationalBillingContext
+    const resolver = payload.resolveOperationalBillingContext
+    wrapped.resolveOperationalBillingContext = (memberId, now) => {
+      const key = `${String(memberId)}:${now instanceof Date ? now.toISOString() : now ?? ''}`
+      const cached = operationalBillingCache.get(key)
+      if (cached) return cached
+
+      const pending = resolver(memberId, now)
+      operationalBillingCache.set(key, pending)
+      return pending
+    }
   }
+
+  if (payload.db) wrapped.db = payload.db
 
   return wrapped
 }

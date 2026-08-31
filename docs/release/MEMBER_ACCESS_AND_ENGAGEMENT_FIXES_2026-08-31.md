@@ -16,10 +16,11 @@ consults the linked operational customer record and Stripe subscription state.
 
 The fallback is deliberately narrow:
 
-1. An explicit Payload subscription state, including pending or terminal states,
-   remains authoritative and continues to fail closed.
-2. Only a missing or unreconciled Payload billing projection can use the
-   operational fallback.
+1. Confirmed terminal Payload subscription states remain authoritative and
+   continue to fail closed.
+2. A missing or unreconciled Payload billing projection, including the stale
+   `pending`/unrecognized status emitted during checkout projection lag, can
+   use the operational fallback.
 3. A linked, confirmed active or trialing subscription unlocks private course,
    lesson, and community access for an active verified member.
 4. Missing, ambiguous, blocked, canceled, paused, or otherwise terminal state
@@ -28,10 +29,26 @@ The fallback is deliberately narrow:
 This keeps a paying member usable while a projection catches up without
 granting private or secret content to an account with no confirmed entitlement.
 
+## Follow-up production repair
+
+The follow-up repair removes the legacy `payload_course_enrollments` gate from
+lesson video playback. Bunny playback now calls the same lesson entitlement
+service used by the lesson page, so a confirmed active member is not blocked by
+an absent legacy enrollment row. The JSON community reply route now receives
+the same operational billing fallback as reactions and bookmarks.
+
+Community dashboard and post reads also reuse request-local entitlement and
+operational billing promises. Community file projections are resolved with a
+bounded concurrency limit instead of serially walking the full file set. These
+changes are read-path and authorization-path changes only; they do not rewrite
+member, billing, enrollment, reaction, bookmark, comment, or notification data
+and do not add a database migration.
+
 ## Community ownership and interaction
 
-- Active members, moderators, and admins can post and reply where their active
-  space membership permits it.
+- Active verified members can post and reply in spaces they are authorized to
+  access; explicit space memberships and role checks remain available for
+  moderation and targeted grants.
 - Reactions are member-owned and can be changed or toggled off by that member.
 - Bookmarks are member-owned and can be toggled off by that member.
 - Members can edit or delete their own posts and comments/replies only.
@@ -51,6 +68,7 @@ portal session and use server-side ownership checks.
 
 ## Verification
 
-The change adds regression coverage for operational billing recovery and the
-fail-closed explicit-pending path. The engagement schema and existing
+The change adds regression coverage for operational billing recovery, stale
+pending projection recovery, central lesson video entitlement, request-local
+deduplication, and the reply-route fallback. The engagement schema and existing
 member-owned mutation tests remain in use. No new migration is required.

@@ -8,6 +8,7 @@ import type {
 import {
   getMemberCommunityDashboard,
   getMemberCommunitySpaceDetail,
+  withQueryDedup,
 } from '../src/lib/payloadCourse/communityPortal'
 
 type CollectionMap = Record<string, PayloadDocument[]>
@@ -280,6 +281,26 @@ function buildPayload(overrides: Partial<CollectionMap> = {}) {
 }
 
 async function run() {
+  {
+    const payload = buildPayload()
+    let resolverCalls = 0
+    payload.resolveOperationalBillingContext = async () => {
+      resolverCalls += 1
+      await new Promise((resolve) => setTimeout(resolve, 1))
+      return {
+        status: 'active',
+        lifecycleState: 'active',
+        subscriptionStatus: 'active',
+      }
+    }
+    const deduped = withQueryDedup(payload)
+    await Promise.all([
+      deduped.resolveOperationalBillingContext?.('member_active'),
+      deduped.resolveOperationalBillingContext?.('member_active'),
+    ])
+    assert.equal(resolverCalls, 1)
+  }
+
   {
     const payload = buildPayload()
     const dashboard = await getMemberCommunityDashboard(payload, 'member_active')
