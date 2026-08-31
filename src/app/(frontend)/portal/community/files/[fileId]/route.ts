@@ -8,6 +8,7 @@ import { getPayload } from 'payload'
 import { resolvePayloadRequestSession } from '@/lib/auth/payloadSession'
 import { decideSharedLogin } from '@/lib/auth/sharedLoginDecision'
 import type { PayloadCourseAccessAPI } from '@/lib/payloadCourse/accessService'
+import { resolveMemberCommunityAttachment } from '@/lib/payloadCourse/communityFiles'
 import { resolveMemberCommunityFileDownload } from '@/lib/payloadCourse/communityFileDelivery'
 import { resolveModerationCommunityFileDownload } from '@/lib/payloadCourse/communityFiles'
 import {
@@ -46,22 +47,35 @@ export async function GET(
     const session = await resolvePayloadRequestSession(request.headers)
     const decision = decideSharedLogin(session, '/portal')
 
-    if (!decision.allowed || decision.identity.kind !== 'member' || !session.member?.id) {
+    const administratorAccess = Boolean(session.administratorId && !session.unresolvedCollection)
+    const memberAccess = Boolean(decision.allowed && decision.identity.kind === 'member' && session.member?.id)
+    if (!administratorAccess && !memberAccess) {
       return notFoundResponse()
     }
 
     const payload = await getPayload({ config })
     const accessPayload = payload as unknown as PayloadCourseAccessAPI
-    const moderationPreview = new URL(request.url).searchParams.get('moderation') === 'preview'
+    const requestUrl = new URL(request.url)
+    const moderationPreview = requestUrl.searchParams.get('moderation') === 'preview'
+    const inlineImage = requestUrl.searchParams.get('inline') === '1'
     const resolution = moderationPreview
       ? await resolveModerationCommunityFileDownload(
           accessPayload,
-          { type: 'member', id: session.member.id },
+          administratorAccess
+            ? { type: 'admin', id: session.administratorId }
+            : { type: 'member', id: session.member!.id },
           fileId,
         )
-      : await resolveMemberCommunityFileDownload(accessPayload, session.member.id, fileId)
+      : administratorAccess
+        ? await resolveMemberCommunityAttachment(
+            accessPayload,
+            session.administratorId!,
+            fileId,
+            { allowAdministrator: true },
+          )
+        : await resolveMemberCommunityFileDownload(accessPayload, session.member!.id, fileId)
 
-    if (!resolution.allowed) return notFoundResponse()
+    if (!resolution.allowed || !('media' in resolution)) return notFoundResponse()
 
     const storageRoot = path.resolve(process.cwd(), 'private/payload-course-media')
     const filePath = resolveSafeStoredFilePath(storageRoot, resolution.media.filename)
@@ -72,12 +86,15 @@ export async function GET(
 
     const nodeStream = createReadStream(filePath)
     const body = Readable.toWeb(nodeStream) as ReadableStream<Uint8Array>
+    const contentDisposition = inlineImage && resolution.media.mimeType.startsWith('image/')
+      ? buildAttachmentContentDisposition(resolution.filename).replace(/^attachment;/, 'inline;')
+      : buildAttachmentContentDisposition(resolution.filename)
 
     return new Response(body, {
       status: 200,
       headers: {
         'Cache-Control': 'private, no-store',
-        'Content-Disposition': buildAttachmentContentDisposition(resolution.filename),
+        'Content-Disposition': contentDisposition,
         'Content-Length': String(fileStat.size),
         'Content-Type': safeMimeType(resolution.mimeType),
         'X-Content-Type-Options': 'nosniff',

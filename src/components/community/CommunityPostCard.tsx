@@ -54,6 +54,9 @@ function postTypeLabel(value: string | null): string {
 export function CommunityPostCard({ href, post }: CommunityPostCardProps) {
   const authorName = post.authorName ?? 'Community member'
   const timestampLabel = formatRelativeDate(post.createdAt)
+  const imageAttachment = post.attachments.find(
+    (attachment) => attachment.attachmentType === 'image' && 'previewUrl' in attachment && attachment.previewUrl,
+  )
 
   return (
     <Link
@@ -82,6 +85,22 @@ export function CommunityPostCard({ href, post }: CommunityPostCardProps) {
         </header>
 
         <h3 className='mt-5 text-xl font-bold leading-snug text-jpv-brand-deep group-hover:text-jpv-brand'>{post.title}</h3>
+        {imageAttachment && 'previewUrl' in imageAttachment ? (
+          <div className='mt-4 overflow-hidden rounded-jpv-card border border-jpv-border bg-jpv-surface'>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              alt={imageAttachment.altText ?? imageAttachment.title}
+              className='aspect-video w-full object-cover'
+              loading='lazy'
+              src={imageAttachment.previewUrl}
+            />
+          </div>
+        ) : null}
+        {post.attachments.length > 0 ? (
+          <p className='mt-3 text-xs font-semibold uppercase tracking-[0.12em] text-jpv-muted'>
+            {post.attachments.length} {post.attachments.length === 1 ? 'attachment' : 'attachments'}
+          </p>
+        ) : null}
         {post.excerpt ? (
           <p className='mt-3 line-clamp-2 text-sm leading-6 text-jpv-muted'>{post.excerpt.slice(0, 140).trimEnd()}{post.excerpt.length > 140 ? '…' : ''}</p>
         ) : (

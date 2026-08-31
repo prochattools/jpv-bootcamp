@@ -29,7 +29,7 @@ import {
   type ReactionSummary,
 } from '@/lib/payloadCourse/reactions'
 import { getMemberBookmarkState } from '@/lib/payloadCourse/bookmarks'
-import type { MemberCommunityAttachmentResolution } from '@/lib/payloadCourse/communityFiles'
+import { resolveMemberCommunityAttachment, type MemberCommunityAttachmentResolution } from '@/lib/payloadCourse/communityFiles'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -85,9 +85,23 @@ function initials(value: string): string {
 
 function AttachmentCard({ attachment }: { attachment: MemberCommunityAttachmentResolution }) {
   if (!('downloadUrl' in attachment) || !attachment.downloadUrl) return null
+  const imagePreviewUrl = attachment.attachmentType === 'image' && 'previewUrl' in attachment
+    ? attachment.previewUrl
+    : null
 
   return (
     <article className='rounded-jpv-card border border-jpv-border bg-jpv-canvas p-6 shadow-jpv-card'>
+      {imagePreviewUrl ? (
+        <div className='mb-4 overflow-hidden rounded-jpv-card border border-jpv-border bg-jpv-surface'>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            alt={attachment.altText ?? attachment.title}
+            className='max-h-96 w-full object-contain'
+            loading='lazy'
+            src={imagePreviewUrl}
+          />
+        </div>
+      ) : null}
       <p className='text-xs font-bold uppercase tracking-[0.14em] text-jpv-sunshine-ink'>{attachment.spaceName}</p>
       <h3 className='mt-2 text-lg font-bold text-jpv-brand-deep'>{attachment.title}</h3>
       {'filename' in attachment && attachment.filename ? (
@@ -214,26 +228,12 @@ export default async function PortalCommunityPostPage({ params, searchParams }: 
       overrideAccess: true,
     }).catch(() => ({ docs: [] as Array<Record<string, unknown>> }))
 
-    const spaceId = String(spaceDoc.id)
-    const spaceNameStr = String(spaceDoc.name ?? spaceSlug)
-    const attachments: MemberCommunityAttachmentResolution[] = attachmentFiles.docs.map((file) => ({
-      id: String(file.id),
-      title: String(file.title ?? file.filename ?? 'Attachment'),
-      spaceId,
-      spaceName: spaceNameStr,
-      filename: String(file.filename ?? 'file'),
-      mimeType: (typeof file.mimeType === 'string' ? file.mimeType : 'application/octet-stream') as 'application/pdf',
-      byteSize: typeof file.byteSize === 'number' ? file.byteSize : 0,
-      downloadUrl: typeof file.url === 'string' ? file.url : `/portal/community/files/${file.id}`,
-      allowed: true as const,
-      media: {
-        id: String(file.id),
-        filename: String(file.filename ?? 'file'),
-        mimeType: (typeof file.mimeType === 'string' ? file.mimeType : 'application/octet-stream') as 'application/pdf',
-        byteSize: typeof file.byteSize === 'number' ? file.byteSize : 0,
-        storage: 'private' as const,
-      },
-    })) as unknown as MemberCommunityAttachmentResolution[]
+    const resolvedAttachments = await Promise.all(
+      attachmentFiles.docs.map((file) => resolveMemberCommunityAttachment(payload, actor.memberId ?? '', file.id, { allowAdministrator: true })),
+    )
+    const attachments = resolvedAttachments.filter(
+      (attachment): attachment is MemberCommunityAttachmentResolution => attachment.allowed,
+    )
 
     post = {
       id: String(postDoc.id),

@@ -243,6 +243,9 @@ export default async function PortalCoursePage({ params }: CoursePageProps) {
       {course.shortDescription ? (
         <p className='text-sm leading-6 text-jpv-muted'>{course.shortDescription}</p>
       ) : null}
+      {course.description && course.description !== course.shortDescription ? (
+        <p className='text-sm leading-6 text-jpv-muted'>{course.description}</p>
+      ) : null}
 
       {/* Locked notice (shown instead of curriculum when access is denied) */}
       {!course.allowed ? (

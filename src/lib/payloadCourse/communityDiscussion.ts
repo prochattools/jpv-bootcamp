@@ -369,10 +369,11 @@ async function findByIdSafe(
   }
 }
 
-async function findVisiblePostAttachments(
+export async function resolveMemberCommunityPostAttachments(
   payload: PayloadCourseAccessAPI,
   memberId: string,
-  postId: string
+  postId: string,
+  options: { allowAdministrator?: boolean } = {},
 ): Promise<MemberCommunityAttachmentResolution[]> {
   const files = await findAll(payload, 'payload_space_files', {
     where: {
@@ -390,12 +391,21 @@ async function findVisiblePostAttachments(
     const resolved = await resolveMemberCommunityAttachment(
       payload,
       memberId,
-      file.id
+      file.id,
+      options,
     )
     if (resolved.allowed) attachments.push(resolved)
   }
 
   return attachments
+}
+
+async function findVisiblePostAttachments(
+  payload: PayloadCourseAccessAPI,
+  memberId: string,
+  postId: string
+): Promise<MemberCommunityAttachmentResolution[]> {
+  return resolveMemberCommunityPostAttachments(payload, memberId, postId)
 }
 
 function memberDisplayName(member: PayloadDocument | null): string {

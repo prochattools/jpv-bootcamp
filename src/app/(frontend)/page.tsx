@@ -2,7 +2,7 @@
 
 import { ArrowRight, Check, ChevronDown, FolderOpen, GraduationCap, Home, Menu, Users, X } from "lucide-react";
 import Image from "next/image";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 
 import SponsoredPayItForward from "@/components/sponsored-pay-it-forward";
 import { AccessibleDialog } from "@/components/ui/AccessibleDialog";
@@ -173,25 +173,7 @@ export default function HomePage() {
     "idle" | "sending" | "success" | "error"
   >("idle");
   const [supportError, setSupportError] = useState<string | null>(null);
-  const [startedVideos, setStartedVideos] = useState<Set<string>>(new Set());
-  const testimonialGridRef = useRef<HTMLDivElement>(null);
   const isSupportSending = supportStatus === "sending";
-
-  useEffect(() => {
-    const grid = testimonialGridRef.current;
-    if (!grid) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0]?.isIntersecting) {
-          setStartedVideos(new Set(["56266f09-d651-4bc5-a5b0-ac9185018018", "a2d9e18b-eb0b-4d3f-b0e7-31daf7cd6c62", "4cb8f04f-8b29-4d0d-81b6-5bb4caead36d", "cda4b492-91af-430d-9bba-4268ccaf8cc2"]));
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.2 }
-    );
-    observer.observe(grid);
-    return () => observer.disconnect();
-  }, []);
 
   async function handleSupportSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -732,7 +714,7 @@ export default function HomePage() {
                 From Glasgow to London, Portsmouth, and Bradford, people from a wide range of backgrounds have turned their property ambitions into reality — many securing their very first investment property within just a few months of joining.
               </p>
             </div>
-            <div className={styles.testimonialGrid} ref={testimonialGridRef}>
+            <div className={styles.testimonialGrid}>
               {[
                 {
                   name: "Chosen",
@@ -767,7 +749,7 @@ export default function HomePage() {
                     <iframe
                       allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
                       allowFullScreen
-                      src={`https://iframe.mediadelivery.net/embed/581531/${t.videoId}?autoplay=${startedVideos.has(t.videoId) ? "true" : "false"}&loop=false&muted=true&preload=true`}
+                      src={`https://iframe.mediadelivery.net/embed/581531/${t.videoId}?autoplay=false&loop=false&muted=true&preload=true`}
                       style={{ border: 0, height: "100%", left: 0, position: "absolute", top: 0, width: "100%" }}
                       title={`${t.name} testimonial`}
                     />

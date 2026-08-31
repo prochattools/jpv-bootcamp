@@ -1,5 +1,7 @@
 import { randomUUID } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
+import { getPayload } from 'payload'
+import config from '@payload-config'
 import prisma from '@/libs/prisma'
 import { guardPublicRequest } from '@/lib/publicRequestGuard'
 import {
@@ -11,7 +13,10 @@ import {
 } from '@/lib/publicRequestRoute'
 import { isValidInternationalPhone, normalizePhone } from '@/lib/normalize-phone'
 import { signSponsoredDecisionToken } from '@/lib/sponsored-approval-token'
-import { sendSponsoredApplicationAdminEmail } from '@/lib/sponsored-email'
+import { queueAndAttemptEmailEvent } from '@/lib/payloadCourse/events'
+import { getPayloadAdministratorRecipients } from '@/lib/payloadCourse/adminRecipients'
+import { SPONSORED_APPLICATION_ADMIN_NOTIFICATION_TEMPLATE_KEY } from '@/lib/payloadCourse/systemEmailTemplates'
+// The legacy sendSponsoredApplicationAdminEmail path is intentionally replaced by the durable outbox below.
 import {
 	getSponsoredSeatCounts,
 	hashEmail,
@@ -66,17 +71,7 @@ export async function POST(req: NextRequest) {
 	}
 
 	const secret = (process.env.SPONSORED_DECISION_SECRET || '').trim()
-	const hasResendKey = Boolean((process.env.RESEND_API_KEY || '').trim())
-	const hasMailFrom = Boolean(
-		(
-			process.env.SPONSORED_MAIL_FROM ||
-			process.env.RESEND_FROM ||
-			process.env.EMAIL_FROM ||
-			''
-		).trim()
-	)
-
-	if (!secret || !hasResendKey || !hasMailFrom) {
+	if (!secret) {
 		return NextResponse.json(
 			{ ok: false, reason: 'missing_env' },
 			{ status: 500 }
@@ -190,16 +185,31 @@ export async function POST(req: NextRequest) {
 
 	if (shouldSendAdminEmail) {
 		try {
-			await sendSponsoredApplicationAdminEmail({
-				applicationId: applicationId,
-				applicantName: name,
-				applicantEmail: normalizedEmail,
-				applicantPhone: phone,
-				message: message || null,
-				approveToken,
-				rejectToken,
-				counts,
-			})
+			const payload = await getPayload({ config })
+			const settings = await payload.findGlobal({ slug: 'payItForwardSettings' }).catch((): null => null)
+			const configuredRecipients = [
+				process.env.SPONSORED_APPLICATION_ADMIN_EMAILS,
+				settings?.adminEmailsText,
+			]
+			const recipients = await getPayloadAdministratorRecipients(payload as never, configuredRecipients)
+			await Promise.all(recipients.map((recipient) => queueAndAttemptEmailEvent(payload as never, {
+				toEmail: recipient.email,
+				templateKey: SPONSORED_APPLICATION_ADMIN_NOTIFICATION_TEMPLATE_KEY,
+				dedupeKey: `sponsored-application-admin-notification:${applicationId}:${recipient.id}`,
+				displayName: 'Sponsored application pending review',
+				metadata: {
+					purpose: 'sponsored_application_pending_review',
+					applicationId,
+					applicationStatus: 'pending',
+					applicantName: name,
+					applicantEmail: normalizedEmail,
+					applicantPhone: phone,
+					applicantMessage: message || '',
+					seatContext: counts ? `Available sponsored access seats: ${counts.available}` : '',
+					approveUrl: `${(process.env.DEPLOYMENT_ENV?.trim().toLowerCase() === 'production' ? 'https://jpvbootcamp.com' : req.nextUrl.origin)}/api/sponsored-applications/decision?token=${encodeURIComponent(approveToken)}`,
+					rejectUrl: `${(process.env.DEPLOYMENT_ENV?.trim().toLowerCase() === 'production' ? 'https://jpvbootcamp.com' : req.nextUrl.origin)}/api/sponsored-applications/decision?token=${encodeURIComponent(rejectToken)}`,
+				},
+			})))
 			await prisma.sponsoredApplication.updateMany({
 				where: { id: applicationId },
 				data: { lastAdminEmailSentAt: new Date() },

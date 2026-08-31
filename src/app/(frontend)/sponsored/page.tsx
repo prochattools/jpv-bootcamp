@@ -39,7 +39,7 @@ export default async function SponsoredApplyPage() {
 
 							<ul className="relative mt-10 space-y-3 text-sm text-jpv-canvas/85" aria-label="Application process">
 								<li className="flex items-center gap-3"><Check aria-hidden="true" className="text-jpv-sunshine" size={17} />Complete the short application</li>
-								<li className="flex items-center gap-3"><Check aria-hidden="true" className="text-jpv-sunshine" size={17} />We review each request</li>
+								<li className="flex items-center gap-3"><Check aria-hidden="true" className="text-jpv-sunshine" size={17} />We review and call you to discuss your request</li>
 								<li className="flex items-center gap-3"><Check aria-hidden="true" className="text-jpv-sunshine" size={17} />You&apos;ll receive an email if approved</li>
 							</ul>
 						</div>

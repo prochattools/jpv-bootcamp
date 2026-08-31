@@ -20,6 +20,7 @@ export const ACCESS_RESTORED_TEMPLATE_KEY = 'access-restored'
 export const ACCESS_DELETED_TEMPLATE_KEY = 'access-deleted'
 export const SUPPORT_REQUEST_RECEIVED_TEMPLATE_KEY = 'support-request-received'
 export const SUPPORT_REQUEST_ADMIN_NOTIFICATION_TEMPLATE_KEY = 'support-request-admin-notification'
+export const SPONSORED_APPLICATION_ADMIN_NOTIFICATION_TEMPLATE_KEY = 'sponsored-application-admin-notification'
 export const PORTAL_ANNOUNCEMENT_TEMPLATE_KEY = 'portal-announcement'
 export const LIVE_SESSION_INVITATION_TEMPLATE_KEY = 'live-session-invitation'
 export const ROOM_INVITATION_TEMPLATE_KEY = 'room-invitation'
@@ -317,10 +318,29 @@ const templates: Record<string, PayloadDocument> = {
     paragraphs: [
       'A new support request has been received from {{requesterName}} ({{requesterEmail}}) and is waiting for review.',
       'Requester telephone: {{requesterPhone}}.',
+      'Question: {{requesterQuestion}}',
+      'Source: {{requesterSource}}. Page: {{requesterPage}}.',
       'Log in to the JPV Bootcamp admin panel to view and respond.',
     ],
     actionLabel: 'Open admin panel',
     actionUrlVariable: '{{portalUrl}}',
+  }),
+  [SPONSORED_APPLICATION_ADMIN_NOTIFICATION_TEMPLATE_KEY]: brandedTemplate({
+    key: SPONSORED_APPLICATION_ADMIN_NOTIFICATION_TEMPLATE_KEY,
+    name: 'Sponsored application — admin notification',
+    subject: 'New sponsored application from {{applicantName}}',
+    preheader: 'A sponsored membership application is waiting for review.',
+    heading: 'New sponsored application',
+    paragraphs: [
+      'A sponsored membership application is waiting for review.',
+      'Name: {{applicantName}}. Email: {{applicantEmail}}. Phone: {{applicantPhone}}.',
+      'Message: {{applicantMessage}}',
+      'Application: {{applicationId}}. Status: {{applicationStatus}}. {{seatContext}}',
+    ],
+    actionLabel: 'Approve application',
+    actionUrlVariable: '{{approveUrl}}',
+    secondaryActionLabel: 'Reject application',
+    secondaryActionUrlVariable: '{{rejectUrl}}',
   }),
   [PORTAL_ANNOUNCEMENT_TEMPLATE_KEY]: brandedTemplate({
     key: PORTAL_ANNOUNCEMENT_TEMPLATE_KEY,
