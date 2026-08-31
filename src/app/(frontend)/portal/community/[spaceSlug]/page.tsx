@@ -9,7 +9,7 @@ import { getMemberCommunitySpaceDetail, withQueryDedup, type MemberCommunityPost
 import { resolveMemberCommunityPostAttachments } from '@/lib/payloadCourse/communityDiscussion'
 import { listSpaceLiveCalls } from '@/lib/liveSessions/memberSessions'
 import { submitCommunityPost } from '../actions'
-import { FORUM_CANONICAL_SLUG, INFO_FORUM_LEGACY_SLUG } from '@/lib/community/infoForumMigration'
+import { FORUM_CANONICAL_SLUG, INFO_FORUM_LEGACY_NAME, INFO_FORUM_LEGACY_SLUG_ALIASES } from '@/lib/community/infoForumMigration'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -32,9 +32,9 @@ export default async function PortalCommunitySpacePage({ params, searchParams }:
   const memberId = actor.kind === 'member' ? actor.memberId : ''
   const memberEmail = actor.kind === 'member' ? actor.email : ''
 
-  if (spaceSlug === INFO_FORUM_LEGACY_SLUG) {
+  if ((INFO_FORUM_LEGACY_SLUG_ALIASES as readonly string[]).includes(spaceSlug)) {
     const [legacy, canonical] = await Promise.all([
-      payload.find({ collection: 'payload_spaces', where: { and: [{ slug: { equals: INFO_FORUM_LEGACY_SLUG } }, { status: { equals: 'archived' } }] }, limit: 1, depth: 0, overrideAccess: true }),
+      payload.find({ collection: 'payload_spaces', where: { and: [{ slug: { in: [...INFO_FORUM_LEGACY_SLUG_ALIASES] } }, { name: { equals: INFO_FORUM_LEGACY_NAME } }, { status: { equals: 'archived' } }] }, limit: 10, depth: 0, overrideAccess: true }),
       payload.find({ collection: 'payload_spaces', where: { and: [{ slug: { equals: FORUM_CANONICAL_SLUG } }, { status: { equals: 'published' } }] }, limit: 1, depth: 0, overrideAccess: true }),
     ])
     if (legacy.docs[0] && canonical.docs[0]) redirect(`/portal/community/${encodeURIComponent(FORUM_CANONICAL_SLUG)}`)

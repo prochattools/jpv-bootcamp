@@ -67,6 +67,8 @@
     "staging:smoke-plan": "tsx scripts/release/printStagingSmokePlan.ts",
     "staging:smoke-simulated": "tsx scripts/release/simulatedStagingSmoke.ts",
     "production:rooms:rehearsal": "tsx scripts/release/productionRoomsMigration.mts",
+    "production:info-forum:control": "tsx scripts/release/productionInfoForumMigration.mts",
+    "test:production:info-forum-control": "tsx scripts/release/productionInfoForumMigration.test.ts",
     "test:production:rooms-control": "tsx scripts/release/productionRoomsMigration.test.ts",
     "release:evidence:dry-run": "tsx scripts/release/buildReleaseEvidence.ts",
     "launch:critical:test-manifest": "tsx scripts/release/launchCriticalTestManifest.ts",

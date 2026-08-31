@@ -6,12 +6,13 @@ import {
   FORUM_CANONICAL_NAME,
   FORUM_CANONICAL_SLUG,
   INFO_FORUM_LEGACY_NAME,
-  INFO_FORUM_LEGACY_SLUG,
+  INFO_FORUM_LEGACY_SLUG_ALIASES,
 } from '../../src/lib/community/infoForumMigration'
 import {
   applyConsolidationPlanToSnapshot,
   applyConsolidationPlanWrites,
   buildConsolidationPlan,
+  consolidationPlanFingerprint,
   sourceDependencyCounts,
   totalSourceDependencyCount,
   type InfoForumSnapshot,
@@ -51,7 +52,7 @@ async function findAll(payload: PayloadClient, collection: string, where?: Recor
 async function resolveSpace(
   payload: PayloadClient,
   label: 'source' | 'destination',
-  slug: string,
+  slugs: readonly string[],
   expectedName: string,
   explicitId?: string,
 ): Promise<Document> {
@@ -59,7 +60,7 @@ async function resolveSpace(
     ? [await payload.findByID({ collection: 'payload_spaces', id: explicitId, depth: 0, overrideAccess: true }) as unknown as Document | null]
     : (await payload.find({
         collection: 'payload_spaces',
-        where: { slug: { equals: slug } },
+        where: { slug: { in: [...slugs] } },
         limit: 10,
         depth: 0,
         overrideAccess: true,
@@ -67,7 +68,7 @@ async function resolveSpace(
   const matches = docs.filter((doc): doc is Document => Boolean(doc))
   if (matches.length !== 1) throw new Error(`${label}_space_identity_not_unique`)
   const space = matches[0]
-  if (String(space.slug) !== slug || String(space.name).trim() !== expectedName) {
+  if (!slugs.includes(String(space.slug)) || String(space.name).trim() !== expectedName) {
     throw new Error(`${label}_space_identity_mismatch`)
   }
   return space
@@ -79,7 +80,8 @@ function ids(value: unknown): string[] {
 }
 
 async function buildSnapshot(payload: PayloadClient, sourceId: string, destinationId: string): Promise<InfoForumSnapshot> {
-  const [posts, memberships, files, threads, rooms, policies, grants, entitlementEvents, notifications] = await Promise.all([
+  const [spaces, posts, memberships, files, threads, rooms, policies, grants, entitlementEvents, notifications] = await Promise.all([
+    findAll(payload, 'payload_spaces', { id: { in: [sourceId, destinationId] } }),
     findAll(payload, 'payload_space_posts', { space: { in: [sourceId, destinationId] } }),
     findAll(payload, 'payload_space_memberships', { space: { in: [sourceId, destinationId] } }),
     findAll(payload, 'payload_space_files', { space: { in: [sourceId, destinationId] } }),
@@ -104,6 +106,7 @@ async function buildSnapshot(payload: PayloadClient, sourceId: string, destinati
       ])
     : [[], []]
   return {
+    spaces: spaces.map((doc) => ({ id: String(doc.id), slug: String(doc.slug ?? ''), name: String(doc.name ?? ''), status: String(doc.status ?? '') })),
     posts: posts.map((doc) => ({ id: String(doc.id), space: relationshipId(doc.space) ?? sourceId })),
     memberships: memberships.map((doc) => ({ id: String(doc.id), member: relationshipId(doc.member) ?? '', space: relationshipId(doc.space) ?? sourceId })),
     files: files.map((doc) => ({ id: String(doc.id), space: relationshipId(doc.space) ?? sourceId })),
@@ -123,7 +126,7 @@ async function buildSnapshot(payload: PayloadClient, sourceId: string, destinati
 
 function summary(plan: ReturnType<typeof buildConsolidationPlan>, snapshot: InfoForumSnapshot, source: Document, destination: Document, mode: 'dry-run' | 'apply') {
   const simulatedSnapshot = applyConsolidationPlanToSnapshot(snapshot, plan)
-  const simulatedRemaining = sourceDependencyCounts(simulatedSnapshot, String(source.id), INFO_FORUM_LEGACY_SLUG)
+  const simulatedRemaining = sourceDependencyCounts(simulatedSnapshot, String(source.id), String(source.slug), INFO_FORUM_LEGACY_SLUG_ALIASES)
   const byCollection = plan.moves.reduce<Record<string, number>>((counts, operation) => {
     counts[operation.collection] = (counts[operation.collection] ?? 0) + 1
     return counts
@@ -133,6 +136,7 @@ function summary(plan: ReturnType<typeof buildConsolidationPlan>, snapshot: Info
     source: { id: String(source.id), slug: String(source.slug) },
     destination: { id: String(destination.id), slug: String(destination.slug) },
     inventory: {
+      spaces: snapshot.spaces.filter((item) => item.id === String(source.id) || item.id === String(destination.id)).map((item) => ({ id: item.id, slug: item.slug, name: item.name, status: item.status })),
       sourcePosts: snapshot.posts.filter((item) => item.space === String(source.id)).length,
       sourceMemberships: snapshot.memberships.filter((item) => item.space === String(source.id)).length,
       destinationMemberships: snapshot.memberships.filter((item) => item.space === String(destination.id)).length,
@@ -157,6 +161,7 @@ function summary(plan: ReturnType<typeof buildConsolidationPlan>, snapshot: Info
     },
     remainingDependenciesAfterSimulation: simulatedRemaining,
     preservedRelationships: plan.preservedRelationshipCounts,
+    planFingerprint: consolidationPlanFingerprint(snapshot, plan, String(source.id), String(destination.id)),
     productionApply: false,
   }
 }
@@ -171,7 +176,7 @@ export async function applyInfoForumConsolidationPlan(
   if (plan.conflicts.length > 0) throw new Error('migration_conflicts:' + plan.conflicts.join(','))
   await applyConsolidationPlanWrites(payload as any, plan)
   const verifiedSnapshot = await buildSnapshot(payload, sourceId, destinationId)
-  const remaining = sourceDependencyCounts(verifiedSnapshot, sourceId, INFO_FORUM_LEGACY_SLUG)
+  const remaining = sourceDependencyCounts(verifiedSnapshot, sourceId, String(source.slug), INFO_FORUM_LEGACY_SLUG_ALIASES)
   if (totalSourceDependencyCount(remaining) > 0) {
     throw new Error('source_dependencies_remain:' + JSON.stringify(remaining))
   }
@@ -194,11 +199,11 @@ export async function runInfoForumConsolidation(argv = process.argv.slice(2)): P
   const sourceId = flagValue(argv, '--source-id')
   const destinationId = flagValue(argv, '--destination-id')
   const payload = await getPayload({ config })
-  const source = await resolveSpace(payload, 'source', INFO_FORUM_LEGACY_SLUG, INFO_FORUM_LEGACY_NAME, sourceId)
-  const destination = await resolveSpace(payload, 'destination', FORUM_CANONICAL_SLUG, FORUM_CANONICAL_NAME, destinationId)
+  const source = await resolveSpace(payload, 'source', INFO_FORUM_LEGACY_SLUG_ALIASES, INFO_FORUM_LEGACY_NAME, sourceId)
+  const destination = await resolveSpace(payload, 'destination', [FORUM_CANONICAL_SLUG], FORUM_CANONICAL_NAME, destinationId)
   if (String(source.id) === String(destination.id)) throw new Error('source_and_destination_must_differ')
   const snapshot = await buildSnapshot(payload, String(source.id), String(destination.id))
-  const plan = buildConsolidationPlan(snapshot, String(source.id), String(destination.id), INFO_FORUM_LEGACY_SLUG, FORUM_CANONICAL_SLUG)
+  const plan = buildConsolidationPlan(snapshot, String(source.id), String(destination.id), String(source.slug), FORUM_CANONICAL_SLUG, INFO_FORUM_LEGACY_SLUG_ALIASES)
   console.log(JSON.stringify(summary(plan, snapshot, source, destination, apply ? 'apply' : 'dry-run'), null, 2))
   if (!apply) return
   if (process.env.NODE_ENV === 'production' || process.env.APP_ENV === 'production' || process.env.DEPLOYMENT_ENV === 'production') {

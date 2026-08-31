@@ -1,9 +1,13 @@
+import { createHash } from 'node:crypto'
+
 export type SpaceRef = { id: string; space: string }
+export type SpaceIdentity = { id: string; slug: string; name: string; status: string }
 export type MembershipRef = { id: string; member: string; space: string }
 export type ResourceRef = { id: string; resourceType: string; resourceId: string }
 export type NotificationRef = { id: string; href: string }
 
 export type InfoForumSnapshot = {
+  spaces: SpaceIdentity[]
   posts: SpaceRef[]
   memberships: MembershipRef[]
   files: SpaceRef[]
@@ -76,6 +80,7 @@ export function buildConsolidationPlan(
   destinationId: string,
   sourceSlug = 'info-forum',
   destinationSlug = 'forum',
+  sourceRouteSlugs: readonly string[] = [sourceSlug],
 ): ConsolidationPlan {
   const destinationMembers = new Set<string>()
   const membershipMoves: ConsolidationPlan['membershipMoves'] = []
@@ -105,15 +110,16 @@ export function buildConsolidationPlan(
     }
   }
 
-  const oldPrefix = `/portal/community/${sourceSlug}`
   const newPrefix = `/portal/community/${destinationSlug}`
   const notificationRewrites = snapshot.notifications
-    .filter((notification) => notification.href === oldPrefix || notification.href.startsWith(`${oldPrefix}/`))
-    .map((notification) => ({
-      id: notification.id,
-      from: notification.href,
-      to: `${newPrefix}${notification.href.slice(oldPrefix.length)}`,
-    }))
+    .flatMap((notification) => {
+      const oldPrefix = sourceRouteSlugs
+        .map((slug) => `/portal/community/${slug}`)
+        .find((prefix) => notification.href === prefix || notification.href.startsWith(`${prefix}/`))
+      return oldPrefix
+        ? [{ id: notification.id, from: notification.href, to: `${newPrefix}${notification.href.slice(oldPrefix.length)}` }]
+        : []
+    })
 
   return {
     moves: [
@@ -224,8 +230,9 @@ export function sourceDependencyCounts(
   snapshot: InfoForumSnapshot,
   sourceId: string,
   sourceSlug = 'info-forum',
+  sourceRouteSlugs: readonly string[] = [sourceSlug],
 ): SourceDependencyCounts {
-  const oldPrefix = '/portal/community/' + sourceSlug
+  const oldPrefixes = sourceRouteSlugs.map((slug) => '/portal/community/' + slug)
   return {
     posts: snapshot.posts.filter((item) => item.space === sourceId).length,
     memberships: snapshot.memberships.filter((item) => item.space === sourceId).length,
@@ -235,10 +242,25 @@ export function sourceDependencyCounts(
     policies: snapshot.policies.filter((item) => item.resourceType === 'space' && item.resourceId === sourceId).length,
     grants: snapshot.grants.filter((item) => item.resourceType === 'space' && item.resourceId === sourceId).length,
     entitlementEvents: snapshot.entitlementEvents.filter((item) => item.resourceType === 'space' && item.resourceId === sourceId).length,
-    notificationDeepLinks: snapshot.notifications.filter((item) => item.href === oldPrefix || item.href.startsWith(oldPrefix + '/')).length,
+    notificationDeepLinks: snapshot.notifications.filter((item) => oldPrefixes.some((prefix) => item.href === prefix || item.href.startsWith(prefix + '/'))).length,
   }
 }
 
 export function totalSourceDependencyCount(counts: SourceDependencyCounts): number {
   return Object.values(counts).reduce((total, count) => total + count, 0)
+}
+
+/**
+ * Stable, non-PII fingerprint for proving that a later guarded apply is
+ * operating on the same target plan and inventory as the approved dry-run.
+ */
+export function consolidationPlanFingerprint(
+  snapshot: InfoForumSnapshot,
+  plan: ConsolidationPlan,
+  sourceId: string,
+  destinationId: string,
+): string {
+  return createHash('sha256')
+    .update(JSON.stringify({ snapshot, plan, sourceId, destinationId }))
+    .digest('hex')
 }

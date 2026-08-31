@@ -1,0 +1,133 @@
+name: Guarded Production Info Forum Consolidation
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Read-only production plan or the single guarded apply
+        required: true
+        type: choice
+        options:
+          - plan
+          - apply
+      expected_production_sha:
+        description: Full SHA currently serving the production app
+        required: true
+        type: string
+      expected_source_sha:
+        description: Full SHA checked out for this control
+        required: true
+        type: string
+      expected_source_id:
+        description: Exact Info Forum space ID
+        required: true
+        type: string
+      expected_source_slug:
+        description: Exact persisted Info Forum source slug (info-forum or start-here)
+        required: false
+        type: string
+      expected_destination_id:
+        description: Exact Forum space ID
+        required: true
+        type: string
+      expected_plan_fingerprint:
+        description: Fingerprint from the approved live dry-run (apply only)
+        required: false
+        type: string
+      backup_evidence_id:
+        description: Protected production rollback evidence ID (apply only)
+        required: false
+        type: string
+      backup_sha256:
+        description: Protected backup checksum (apply only)
+        required: false
+        type: string
+      rehearsal_evidence_id:
+        description: Disposable restored-production rehearsal evidence ID (apply only)
+        required: false
+        type: string
+      operator_id:
+        description: Operator evidence reference (apply only)
+        required: false
+        type: string
+      rollback_owner:
+        description: Rollback owner reference (apply only)
+        required: false
+        type: string
+      operation_id:
+        description: Unique operation reference (apply only)
+        required: false
+        type: string
+      live_dry_run_passed:
+        description: Type true only after the live plan matched rehearsal
+        required: false
+        type: string
+      confirmation:
+        description: Exact apply phrase; use only after all gates pass
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-info-forum-consolidation
+  cancel-in-progress: false
+
+jobs:
+  guarded-consolidation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: root-domain-image-publish
+    env:
+      INFO_FORUM_MIGRATION_MODE: ${{ inputs.mode }}
+      EXPECTED_PRODUCTION_SHA: ${{ inputs.expected_production_sha }}
+      EXPECTED_SOURCE_SHA: ${{ inputs.expected_source_sha }}
+      EXPECTED_SOURCE_ID: ${{ inputs.expected_source_id }}
+      EXPECTED_SOURCE_SLUG: ${{ inputs.expected_source_slug }}
+      EXPECTED_DESTINATION_ID: ${{ inputs.expected_destination_id }}
+      EXPECTED_PLAN_FINGERPRINT: ${{ inputs.expected_plan_fingerprint }}
+      BACKUP_EVIDENCE_ID: ${{ inputs.backup_evidence_id }}
+      BACKUP_SHA256: ${{ inputs.backup_sha256 }}
+      REHEARSAL_EVIDENCE_ID: ${{ inputs.rehearsal_evidence_id }}
+      OPERATOR_ID: ${{ inputs.operator_id }}
+      ROLLBACK_OWNER: ${{ inputs.rollback_owner }}
+      OPERATION_ID: ${{ inputs.operation_id }}
+      LIVE_DRY_RUN_PASSED: ${{ inputs.live_dry_run_passed }}
+      CONFIRMATION: ${{ inputs.confirmation }}
+
+    steps:
+      - name: Check out exact main source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.expected_source_sha }}
+          fetch-depth: 0
+
+      - name: Validate main and exact source boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF_NAME" = main
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SOURCE_SHA"
+          test "$(git ls-remote origin refs/heads/main | awk '{print $1}')" = "$EXPECTED_SOURCE_SHA"
+          test "$EXPECTED_PRODUCTION_SHA" = "$EXPECTED_SOURCE_SHA"
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: 10.33.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '20'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run guarded production control
+        env:
+          DOKPLOY_API_KEY: ${{ secrets.DOKPLOY_API_KEY }}
+          DOKPLOY_API_BASE_URL: https://dokploy.prochat.tools/api
+        run: pnpm production:info-forum:control

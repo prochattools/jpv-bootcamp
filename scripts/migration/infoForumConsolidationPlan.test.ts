@@ -6,6 +6,7 @@ import {
   applyConsolidationPlanWrites,
   applyConsolidationPlanToSnapshot,
   buildConsolidationPlan,
+  consolidationPlanFingerprint,
   planOperationCount,
   sourceDependencyCounts,
   type InfoForumSnapshot,
@@ -15,6 +16,10 @@ const sourceId = 'space-info'
 const destinationId = 'space-forum'
 
 const snapshot: InfoForumSnapshot = {
+  spaces: [
+    { id: sourceId, slug: 'info-forum', name: 'Info Forum', status: 'published' },
+    { id: destinationId, slug: 'forum', name: 'Forum', status: 'published' },
+  ],
   posts: [{ id: 'post-1', space: sourceId }],
   memberships: [
     { id: 'membership-1', member: 'member-1', space: sourceId },
@@ -64,6 +69,16 @@ const appliedSnapshot = applyConsolidationPlanToSnapshot(snapshot, dryRunPlan)
 const rerunPlan = buildConsolidationPlan(appliedSnapshot, sourceId, destinationId)
 assert.equal(planOperationCount(rerunPlan), 0, 'a rerun after apply must be idempotent')
 assert.deepEqual(rerunPlan.preservedRelationshipCounts, { comments: 2, reactions: 3, chatMessages: 4 })
+
+const aliasSnapshot: InfoForumSnapshot = structuredClone(snapshot)
+aliasSnapshot.spaces[0].slug = 'start-here'
+aliasSnapshot.notifications.push(
+  { id: 'notification-alias-1', href: '/portal/community/start-here/posts/post-1' },
+)
+const aliasPlan = buildConsolidationPlan(aliasSnapshot, sourceId, destinationId, 'start-here', 'forum', ['start-here', 'info-forum'])
+assert.equal(aliasPlan.notificationRewrites.length, 2, 'known legacy route aliases should both be rewritten')
+assert.deepEqual(sourceDependencyCounts(aliasSnapshot, sourceId, 'start-here', ['start-here', 'info-forum']).notificationDeepLinks, 2)
+assert.equal(aliasPlan.notificationRewrites.every((operation) => operation.to.startsWith('/portal/community/forum')), true)
 
 function relationValue(value: unknown): string {
   if (value && typeof value === 'object' && 'id' in value) return String((value as { id: string }).id)
@@ -152,6 +167,10 @@ assert.equal(runtime.collections.payload_spaces[0]?.status, 'archived')
 assert.equal(runtime.deletes.length, 2)
 
 const runtimeRerunSnapshot: InfoForumSnapshot = {
+  spaces: [
+    { id: sourceId, slug: 'info-forum', name: 'Info Forum', status: 'archived' },
+    { id: destinationId, slug: 'forum', name: 'Forum', status: 'published' },
+  ],
   posts: [{ id: 'post-1', space: destinationId }],
   memberships: [
     { id: 'membership-2', member: 'member-1', space: destinationId },
@@ -171,6 +190,7 @@ const runtimeRerunSnapshot: InfoForumSnapshot = {
 const actualRerunPlan = buildConsolidationPlan(runtimeRerunSnapshot, sourceId, destinationId)
 assert.equal(planOperationCount(actualRerunPlan), 0)
 assert.equal(Object.values(sourceDependencyCounts(runtimeRerunSnapshot, sourceId)).every((count) => count === 0), true)
+assert.match(consolidationPlanFingerprint(snapshot, dryRunPlan, sourceId, destinationId), /^[0-9a-f]{64}$/)
 
 const communityPageSource = readFileSync(resolve(import.meta.dirname, '../../src/app/(frontend)/portal/community/[spaceSlug]/page.tsx'), 'utf8')
 const migrationRunnerSource = readFileSync(resolve(import.meta.dirname, 'consolidateInfoForum.ts'), 'utf8')

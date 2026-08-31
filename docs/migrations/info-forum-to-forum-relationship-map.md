@@ -1,10 +1,10 @@
 # Info Forum to Forum relationship map
 
-This is a guarded, one-way consolidation of the archived `Info Forum` community space into the canonical `Forum` space. The migration resolves both records by exact slug and verifies the expected name before planning any write. It is dry-run by default; production application is intentionally outside this feature branch.
+This is a guarded, one-way consolidation of the archived `Info Forum` community space into the canonical `Forum` space. The migration resolves the source by an exact allow-listed slug alias and exact name, and resolves the destination by exact slug and name before planning any write. It is dry-run by default. The normal Payload CLI remains production-blocked; production execution uses the separate immutable bridge and its guarded production workflow after rollback, restore-rehearsal, and live-plan gates pass.
 
 ## Identity and safety
 
-- Source: exact slug `info-forum`, expected name `Info Forum`.
+- Source: exact name `Info Forum`, with the known persisted slug aliases `info-forum` and `start-here`.
 - Destination: exact slug `forum`, expected name `Forum`.
 - Source and destination IDs must be different and unique. Optional explicit IDs are checked against the same slug/name contract.
 - The source is archived only after all direct references are rewritten. It is never deleted.
@@ -27,7 +27,7 @@ This is a guarded, one-way consolidation of the archived `Info Forum` community 
 | `payload_access_policies.resourceId` | polymorphic `resourceType=space` | rewrite to destination | Non-space policies are untouched. |
 | `payload_access_grants.resourceId` | polymorphic `resourceType=space` | rewrite to destination | Non-space grants are untouched. |
 | `payload_entitlement_events.resourceId` | polymorphic `resourceType=space` | rewrite to destination | Audit history remains intact and only the resource ID changes. |
-| `payload_member_notifications.href` | route deep link | rewrite exact `/portal/community/info-forum` prefix | Other notification links are untouched. |
+| `payload_member_notifications.href` | route deep link | rewrite exact `/portal/community/info-forum` or `/portal/community/start-here` prefix | Other notification links are untouched. |
 
 The inventory also counts indirect comments, both legacy and current engagement reactions, and chat messages so dry-run output proves they are preserved rather than copied. It reports simulated remaining direct dependencies and conflicts before any apply. `payload_spaces.requiredAccessGroups` is not rewritten: it points to the separate `payload_access_groups` product-access domain, not member communication groups.
 
@@ -44,4 +44,14 @@ pnpm migration:info-forum-to-forum -- --source-id <id> --destination-id <id>
 pnpm migration:info-forum-to-forum -- --apply
 ```
 
-The first two commands only inventory and print a plan. `--apply` is explicit and remains a release/operator action requiring an independently approved environment and backup/preflight packet. This branch must not run it against production.
+The first two commands only inventory and print a plan. `--apply` is explicit and remains a release/operator action requiring an independently approved environment and backup/preflight packet. The production bridge proves the same plan fingerprint and applies only parameterized, allow-listed writes inside one transaction:
+
+```text
+INFO_FORUM_MIGRATION_MODE=plan INFO_FORUM_MIGRATION_TARGET=production \
+  EXPECTED_PRODUCTION_SHA=<exact-serving-sha> \
+  INFO_FORUM_SOURCE_ID=<exact-source-id> \
+  INFO_FORUM_DESTINATION_ID=<exact-destination-id> \
+  node scripts/release/productionInfoForumMigrationRunner.mjs
+```
+
+The single production apply is dispatched through `.github/workflows/production-info-forum-migration.yml` with the exact confirmation phrase `apply-info-forum-to-forum-production`, the approved plan fingerprint, protected backup evidence, rehearsal evidence, and the exact deployed main SHA. No arbitrary SQL or second apply is authorized.

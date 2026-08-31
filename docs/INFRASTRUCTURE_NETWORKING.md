@@ -13,7 +13,7 @@ to its database. Read this before touching `DATABASE_URL`, firewall rules, or Ta
 | Server | Role | Cloud | Public IP | Tailscale IP | Private NIC | SSH |
 |--------|------|-------|-----------|--------------|-------------|-----|
 | `dokploy` | App host — Docker Swarm, Dokploy | Azure `PROCHAT-APPS` / Spain Central | `68.221.139.108` | `100.83.38.48` | `172.16.0.4/24` | `ssh master@68.221.139.108` |
-| `supabase` | Database host — Supabase self-hosted | Azure `PROCHAT-DATA` / Spain Central | `68.221.194.245` | `100.71.31.88` | `10.0.2.4/24` | `ssh master@100.71.31.88` |
+| `supabase` | Database host — Supabase self-hosted | Azure `supabase-azure` / Spain Central | `68.221.194.245` | `100.71.31.88` | `10.0.2.4/24` | `ssh master@100.71.31.88` |
 
 > **Important:** The two servers are in different Azure VNets and different private subnets.
 > The Dokploy server's private NIC is `172.16.0.x`. The Supabase server's private NIC is `10.0.2.x`.
