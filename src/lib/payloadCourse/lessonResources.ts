@@ -38,6 +38,18 @@ export type MemberLessonResourceDownloadDenied = {
   decisionReason?: string
 }
 
+/**
+ * Legacy FluentCommunity migrations stored an implementation prefix in the
+ * original filename. It is not meaningful to learners, so remove it only for
+ * presentation while retaining the stored filename for secure downloads.
+ */
+export function cleanLegacyResourceTitle(value: string): string {
+  const title = value.trim()
+  const withoutHashedPrefixes = title.replace(/^(?:fluent(?:com|crm)-[a-f0-9]{16,}-)+/i, '')
+  const withoutProviderPrefix = withoutHashedPrefixes.replace(/^fluent(?:com|crm)-/i, '')
+  return withoutProviderPrefix.trim() || title
+}
+
 function asRecord(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== 'object') return null
   return value as Record<string, unknown>
@@ -178,9 +190,10 @@ function getMediaFileSize(media: PayloadDocument | null): number | null {
 }
 
 function buildResourceProjection(resource: PayloadDocument, media: PayloadDocument | null): MemberLessonResource {
+  const title = asString(resource.title) ?? getMediaFileName(media) ?? 'Lesson resource'
   return {
     id: String(resource.id),
-    title: asString(resource.title) ?? 'Lesson resource',
+    title: cleanLegacyResourceTitle(title),
     description: asString(resource.description),
     downloadUrl: `/portal/resources/${encodeURIComponent(String(resource.id))}`,
     fileName: getMediaFileName(media),

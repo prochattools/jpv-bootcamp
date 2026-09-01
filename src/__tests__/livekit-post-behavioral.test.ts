@@ -44,6 +44,7 @@ const LIVE_SESSION = {
   id: 'session-1',
   status: 'live',
   roomName: ROOM_NAME,
+  audience: 'enrolled',
   course: { id: 'course-1' },
   hostUser: { id: 'admin-host' },
 }
@@ -54,6 +55,33 @@ const MEMBER = {
 
 const HOST = {
   user: { id: 'admin-host', collection: 'payload_users', email: 'host@example.com' },
+}
+
+const ACTIVE_MEMBER = {
+  id: 'member-1',
+  email: 'member@example.com',
+  accountStatus: 'active',
+  emailVerifiedAt: '2026-01-01',
+}
+
+function configureMemberAccess(
+  session: Record<string, unknown> = LIVE_SESSION,
+  options: { courseEnrollment?: boolean; spaceMembership?: boolean; displayName?: string } = {},
+) {
+  mockFindByID.mockImplementation(async ({ collection }: { collection: string }) => {
+    if (collection === 'live_sessions') return session
+    if (collection === 'payload_members') return ACTIVE_MEMBER
+    if (collection === 'payload_users') return { id: 'admin-host', email: 'host@example.com' }
+    throw new Error(`Unexpected collection: ${collection}`)
+  })
+  mockFind.mockImplementation(async ({ collection }: { collection: string }) => {
+    if (collection === 'payload_room_access') return { docs: [] }
+    if (collection === 'payload_member_profiles') return { docs: options.displayName ? [{ displayName: options.displayName }] : [] }
+    if (collection === 'payload_course_enrollments') return { docs: options.courseEnrollment ? [{ id: 'enrollment-1' }] : [] }
+    if (collection === 'payload_space_memberships') return { docs: options.spaceMembership ? [{ id: 'membership-1' }] : [] }
+    if (collection === 'payload_members' || collection === 'payload_users') return { docs: [] }
+    throw new Error(`Unexpected collection: ${collection}`)
+  })
 }
 
 describe('POST /api/livekit/token — operator-to-member delivery', () => {
@@ -102,7 +130,7 @@ describe('POST /api/livekit/token — operator-to-member delivery', () => {
         audience: 'selected',
         targetMemberIds: ['member-1'],
       })
-      .mockResolvedValueOnce({ id: 'member-1', accountStatus: 'active', emailVerifiedAt: '2026-01-01' })
+      .mockResolvedValueOnce({ id: 'member-1', email: 'member@example.com', accountStatus: 'active', emailVerifiedAt: '2026-01-01' })
     response = await postLiveKitToken(request({ sessionId: 'session-1' }))
     expect(response.status).toBe(200)
     expect((await response.json()).ok).toBe(true)
@@ -110,13 +138,12 @@ describe('POST /api/livekit/token — operator-to-member delivery', () => {
 
   it('allows members only for live sessions with active course enrollment', async () => {
     mockAuth.mockResolvedValue(MEMBER)
-    mockFindByID.mockResolvedValue({ ...LIVE_SESSION, status: 'scheduled' })
+    configureMemberAccess({ ...LIVE_SESSION, status: 'scheduled' })
     let response = await postLiveKitToken(request({ sessionId: 'session-1' }))
     expect(response.status).toBe(403)
     expect((await response.json()).reason).toBe('session_not_live')
 
-    mockFindByID.mockResolvedValue(LIVE_SESSION)
-    mockFind.mockResolvedValue({ docs: [] })
+    configureMemberAccess(LIVE_SESSION)
     response = await postLiveKitToken(request({ sessionId: 'session-1' }))
     expect(response.status).toBe(403)
     expect((await response.json()).reason).toBe('not_entitled')
@@ -125,7 +152,7 @@ describe('POST /api/livekit/token — operator-to-member delivery', () => {
   it('issues an enrolled member token with subscribe-only grants', async () => {
     const { buildLiveKitToken } = await import('@/lib/livekit-config')
     mockAuth.mockResolvedValue(MEMBER)
-    mockFindByID.mockResolvedValue(LIVE_SESSION)
+    configureMemberAccess(LIVE_SESSION, { courseEnrollment: true, displayName: 'Learner Name' })
 
     const response = await postLiveKitToken(request({ sessionId: 'session-1' }))
     const data = await response.json()
@@ -140,6 +167,7 @@ describe('POST /api/livekit/token — operator-to-member delivery', () => {
     expect(response.headers.get('set-cookie')).toContain('livekit_room_token=')
     expect(vi.mocked(buildLiveKitToken)).toHaveBeenCalledWith(
       expect.objectContaining({
+        name: 'Learner Name',
         grant: expect.objectContaining({
           room: ROOM_NAME,
           roomJoin: true,
@@ -173,12 +201,10 @@ describe('POST /api/livekit/token — operator-to-member delivery', () => {
       space: { id: 'space-1' },
       course: null,
       hostUser: { id: 'admin-host' },
+      audience: 'enrolled',
     }
     mockAuth.mockResolvedValue(MEMBER)
-    mockFindByID
-      .mockResolvedValueOnce(spaceSession)
-      .mockResolvedValueOnce({ id: 'member-1', accountStatus: 'active', emailVerifiedAt: '2026-01-01' })
-    mockFind.mockResolvedValue({ docs: [{ id: 'membership-1' }] })
+    configureMemberAccess(spaceSession, { spaceMembership: true })
 
     const response = await postLiveKitToken(request({ sessionId: 'space-session-1' }))
     const data = await response.json()
@@ -201,12 +227,10 @@ describe('POST /api/livekit/token — operator-to-member delivery', () => {
       space: { id: 'space-1' },
       course: null,
       hostUser: { id: 'admin-host' },
+      audience: 'enrolled',
     }
     mockAuth.mockResolvedValue(MEMBER)
-    mockFindByID
-      .mockResolvedValueOnce(spaceSession)
-      .mockResolvedValueOnce({ id: 'member-1', accountStatus: 'active', emailVerifiedAt: '2026-01-01' })
-    mockFind.mockResolvedValue({ docs: [] }) // no membership
+    configureMemberAccess(spaceSession) // no membership
 
     const response = await postLiveKitToken(request({ sessionId: 'space-session-1' }))
     expect(response.status).toBe(403)
@@ -216,23 +240,35 @@ describe('POST /api/livekit/token — operator-to-member delivery', () => {
   it('allows only the assigned administrator to join as host', async () => {
     const { buildLiveKitToken } = await import('@/lib/livekit-config')
     mockAuth.mockResolvedValue(HOST)
-    mockFindByID.mockResolvedValue({ ...LIVE_SESSION, status: 'scheduled' })
+    mockFindByID.mockImplementation(async ({ collection, id }: { collection: string; id: string }) => {
+      if (collection === 'live_sessions') return { ...LIVE_SESSION, status: 'scheduled' }
+      if (collection === 'payload_users' && id === 'admin-host') return { id, email: 'host@example.com', portalMember: 'member-host' }
+      if (collection === 'payload_users') return { id, email: 'other@example.com' }
+      if (collection === 'payload_members' && id === 'member-host') return { id, email: 'host@example.com', accountStatus: 'active', emailVerifiedAt: '2026-01-01' }
+      throw new Error(`Unexpected collection: ${collection}`)
+    })
+    mockFind.mockImplementation(async ({ collection }: { collection: string }) => {
+      if (collection === 'payload_member_profiles') return { docs: [{ displayName: 'Host Name' }] }
+      if (collection === 'payload_room_access' || collection === 'payload_members') return { docs: [] }
+      throw new Error(`Unexpected collection: ${collection}`)
+    })
 
     let response = await postLiveKitToken(request({ sessionId: 'session-1' }))
     expect(response.status).toBe(200)
     expect(vi.mocked(buildLiveKitToken)).toHaveBeenCalledWith(
       expect.objectContaining({
+        name: 'Host Name',
         grant: expect.objectContaining({ canPublish: true, canPublishData: true, roomJoin: true }),
       }),
       expect.anything(),
     )
-    expect(mockFind).not.toHaveBeenCalled()
+    expect(mockFind).toHaveBeenCalledWith(expect.objectContaining({ collection: 'payload_member_profiles' }))
 
     mockAuth.mockResolvedValue({
       user: { id: 'other-admin', collection: 'payload_users', email: 'other@example.com' },
     })
     response = await postLiveKitToken(request({ sessionId: 'session-1' }))
     expect(response.status).toBe(403)
-    expect((await response.json()).reason).toBe('host_required')
+    expect((await response.json()).reason).toBe('not_entitled')
   })
 })

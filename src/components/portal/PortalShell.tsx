@@ -8,6 +8,7 @@ import { AdminModeProvider } from '@/components/portal/AdminModeContext'
 import { PortalSidebar } from '@/components/portal/PortalSidebar'
 import { PortalTopBar } from '@/components/portal/PortalTopBar'
 import { PortalThemeProvider } from '@/components/theme-provider'
+import { PersistentLiveCallProvider } from '@/components/portal/PersistentLiveCallProvider'
 import type { PortalNavGroup, PortalNavItem } from '@/lib/portal-navigation'
 
 type PortalShellProps = {
@@ -59,7 +60,9 @@ export function PortalShell({
 
   return (
     <AdminModeProvider isAdmin={isAdmin}>
-      <PortalThemeProvider enabled={allowPortalTheme}>{portalContent}</PortalThemeProvider>
+      <PortalThemeProvider enabled={allowPortalTheme}>
+        <PersistentLiveCallProvider>{portalContent}</PersistentLiveCallProvider>
+      </PortalThemeProvider>
     </AdminModeProvider>
   )
 }

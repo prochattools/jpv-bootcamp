@@ -27,6 +27,12 @@ describe('legacy lesson rich-text rendering contract', () => {
     expect(player).toContain("if (target === 'lesson' && videoGuid) query.set('videoGuid', videoGuid)")
   })
 
+  it('keeps migrated tables readable by preserving their structure and providing horizontal overflow', () => {
+    expect(renderer).toContain('[&_.legacy-html-fragment]:overflow-x-auto')
+    expect(renderer).toContain('[&_.legacy-html-fragment_table]:min-w-[720px]')
+    expect(renderer).toContain('[&_.legacy-html-fragment_td]:p-3')
+  })
+
   it('restores only WordPress upload placeholders to the bundled local archive path', () => {
     const safeHtml = '<p>Before</p><span data-legacy-image-preserved="true">Arrows (https://portal.jpvbootcamp.com/wp-content/uploads/2025/11/Arrows_houses.png)</span><p>After</p>'
     const restored = restoreLegacyLessonImagePlaceholders(safeHtml)

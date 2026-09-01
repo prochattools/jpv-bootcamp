@@ -15,6 +15,13 @@ export type ResourceLibraryGroup = {
   resources: ResourceLibraryItem[]
 }
 
+/** The legacy migration models the standalone library as its own course. */
+export function isResourcesLibraryCourse(course: { title?: unknown; slug?: unknown }): boolean {
+  const title = typeof course.title === 'string' ? course.title.trim().toLowerCase() : ''
+  const slug = typeof course.slug === 'string' ? course.slug.trim().toLowerCase() : ''
+  return title === 'resources library' || slug === 'resources-library' || slug === 'resources_library'
+}
+
 async function findAll(payload: PayloadCourseAccessAPI, collection: string, where?: Record<string, unknown>) {
   const result = await payload.find({ collection, where, limit: 500, depth: 0, overrideAccess: true })
   return result.docs
@@ -32,7 +39,7 @@ export async function getAdminResourceLibrary(payload: PayloadCourseAccessAPI): 
   for (const lesson of lessons) {
     const module = moduleById.get(String(typeof lesson.module === 'object' && lesson.module ? lesson.module.id : lesson.module))
     const course = module && courseById.get(String(typeof module.course === 'object' && module.course ? module.course.id : module.course))
-    if (!module || !course) continue
+    if (!module || !course || !isResourcesLibraryCourse(course)) continue
     const resources = await listPublishedLessonResources(payload, lesson.id)
     if (!resources.length) continue
     const key = String(course.id)
@@ -51,7 +58,7 @@ export async function getMemberResourceLibrary(
   const groups: ResourceLibraryGroup[] = []
 
   for (const course of dashboard.courses) {
-    if (!course.allowed) continue
+    if (!course.allowed || !isResourcesLibraryCourse(course)) continue
 
     const lessonMeta: { moduleTitle: string; lessonTitle: string; lessonId: PayloadId }[] = []
     for (const module of course.modules) {
