@@ -108,9 +108,10 @@ export function classifyPrismaMigration(row: PrismaMigrationRow): PrismaMigratio
 export async function buildStagingMigrationStatus(
   adapter: MigrationEvidenceAdapter | null,
   expectedSchema: string,
+  registeredPayloadMigrationNames: readonly string[] = REGISTERED_PAYLOAD_MIGRATIONS,
 ): Promise<StagingMigrationStatusReport> {
   const safeExpectedSchema = validateDatabaseSchemaIdentifier(expectedSchema)
-  const registered = [...REGISTERED_PAYLOAD_MIGRATIONS]
+  const registered = [...registeredPayloadMigrationNames]
 
   if (!adapter) {
     return {

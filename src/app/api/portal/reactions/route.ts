@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import config from '@payload-config'
-import { getPayload } from 'payload'
-
-import { resolvePayloadRequestSession } from '@/lib/auth/payloadSession'
+import { revalidatePath } from 'next/cache'
+import { resolvePortalRequestMember } from '@/lib/auth/resolvePortalRequestMember'
 import { attachOperationalBillingFallback } from '@/lib/payloadCourse/operationalBillingFallback'
 import {
   getReactionSummary,
@@ -20,8 +18,8 @@ const targetKinds = new Set<ReactionTargetKind>(['space_post', 'space_comment', 
 const reactionTypes = new Set<ReactionType>(['helpful', 'insightful', 'celebrate'])
 
 export async function POST(req: NextRequest) {
-  const session = await resolvePayloadRequestSession(req.headers)
-  if (!session.member?.id) return NextResponse.json({ ok: false, message: 'Please sign in again.' }, { status: 401 })
+  const requestMember = await resolvePortalRequestMember(req.headers)
+  if (!requestMember) return NextResponse.json({ ok: false, message: 'Please sign in again.' }, { status: 401 })
 
   try {
     const body = (await req.json()) as Record<string, unknown>
@@ -33,10 +31,11 @@ export async function POST(req: NextRequest) {
     }
 
     const payload = attachOperationalBillingFallback(
-      (await getPayload({ config })) as unknown as PayloadReactionWriteAPI,
+      requestMember.payload as PayloadReactionWriteAPI,
     )
-    await setReaction(payload, String(session.member.id), { kind: targetKind as ReactionTargetKind, id: targetId }, reactionType)
-    const summary = await getReactionSummary(payload, String(session.member.id), { kind: targetKind as ReactionTargetKind, id: targetId })
+    await setReaction(payload, requestMember.memberId, { kind: targetKind as ReactionTargetKind, id: targetId }, reactionType)
+    const summary = await getReactionSummary(payload, requestMember.memberId, { kind: targetKind as ReactionTargetKind, id: targetId })
+    revalidatePath('/portal/leaderboard')
     return NextResponse.json({ ok: true, summary })
   } catch (error) {
     if (!(error instanceof ReactionServiceError)) {

@@ -51,6 +51,8 @@ import * as migration_20260826_130000_portal_engagement_distribution from './202
 import * as migration_20260826_150000_member_delete_relationship_safety from './20260826_150000_member_delete_relationship_safety'
 import * as migration_20260827_090000_membership_support_relationship_tables from './20260827_090000_membership_support_relationship_tables'
 import * as migration_20260830_090000_member_portal_rooms from './20260830_090000_member_portal_rooms'
+import * as migration_20260901_210000_notification_event_key from './20260901_210000_notification_event_key'
+import * as migration_20260901_220000_member_follows from './20260901_220000_member_follows'
 import { PAYLOAD_MIGRATION_NAMES } from '../lib/payloadMigrationRegistry'
 
 const migrationModuleByName = {
@@ -107,6 +109,8 @@ const migrationModuleByName = {
   '20260826_150000_member_delete_relationship_safety': migration_20260826_150000_member_delete_relationship_safety,
   '20260827_090000_membership_support_relationship_tables': migration_20260827_090000_membership_support_relationship_tables,
   '20260830_090000_member_portal_rooms': migration_20260830_090000_member_portal_rooms,
+  '20260901_210000_notification_event_key': migration_20260901_210000_notification_event_key,
+  '20260901_220000_member_follows': migration_20260901_220000_member_follows,
 } as const
 
 export const migrations = PAYLOAD_MIGRATION_NAMES.map((name) => ({

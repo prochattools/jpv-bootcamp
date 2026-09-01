@@ -1,7 +1,4 @@
-import config from '@payload-config'
-import { getPayload } from 'payload'
-
-import { resolvePayloadRequestSession } from '@/lib/auth/payloadSession'
+import { resolvePortalRequestMember } from '@/lib/auth/resolvePortalRequestMember'
 import {
   removeMemberCoverImage,
   uploadMemberCoverImage,
@@ -15,9 +12,8 @@ function errorResponse(reason: string, status: number): Response {
 }
 
 export async function POST(request: Request): Promise<Response> {
-  const session = await resolvePayloadRequestSession(request.headers)
-  if (!session.member?.id) return errorResponse('unauthorized', 401)
-  if (session.member.accountStatus !== 'active') return errorResponse('account_ineligible', 403)
+  const requestMember = await resolvePortalRequestMember(request.headers)
+  if (!requestMember) return errorResponse('unauthorized', 401)
 
   let formData: FormData
   try {
@@ -29,8 +25,7 @@ export async function POST(request: Request): Promise<Response> {
   const file = formData.get('file')
   if (!(file instanceof File)) return errorResponse('missing_file', 400)
 
-  const payload = await getPayload({ config })
-  const result = await uploadMemberCoverImage(payload, session.member.id, file)
+  const result = await uploadMemberCoverImage(requestMember.payload as never, requestMember.memberId, file)
   if (result.ok === false) {
     const status = result.error === 'account_ineligible'
       ? 403
@@ -50,12 +45,10 @@ export async function POST(request: Request): Promise<Response> {
 }
 
 export async function DELETE(request: Request): Promise<Response> {
-  const session = await resolvePayloadRequestSession(request.headers)
-  if (!session.member?.id) return errorResponse('unauthorized', 401)
-  if (session.member.accountStatus !== 'active') return errorResponse('account_ineligible', 403)
+  const requestMember = await resolvePortalRequestMember(request.headers)
+  if (!requestMember) return errorResponse('unauthorized', 401)
 
-  const payload = await getPayload({ config })
-  const result = await removeMemberCoverImage(payload, session.member.id)
+  const result = await removeMemberCoverImage(requestMember.payload as never, requestMember.memberId)
   if (result.ok === false) {
     return errorResponse(result.error, result.error === 'account_ineligible' ? 403 : 400)
   }

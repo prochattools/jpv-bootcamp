@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 
 import { CommunityRichText } from '@/components/community/CommunityRichText'
+import { MemberFollowButton } from '@/components/portal/MemberFollowButton'
 import { requirePortalAccess } from '@/lib/auth/requirePortalAccess'
 import { getMemberProfileDetail } from '@/lib/payloadCourse/memberDirectory'
 
@@ -10,10 +11,10 @@ type MemberProfilePageProps = {
 }
 
 export default async function MemberProfilePage({ params }: MemberProfilePageProps) {
-  await requirePortalAccess('/portal/members')
+  const { actor } = await requirePortalAccess('/portal/members')
 
   const { memberId } = await params
-  const profile = await getMemberProfileDetail(memberId)
+  const profile = await getMemberProfileDetail(memberId, actor.memberId)
   if (!profile) notFound()
 
   return (
@@ -39,6 +40,8 @@ export default async function MemberProfilePage({ params }: MemberProfilePagePro
           )}
           <div className='min-w-0'>
             <h1 className='text-xl font-semibold text-jpv-ink'>{profile.displayName}</h1>
+            {!profile.isSelf ? <MemberFollowButton initialFollowing={profile.follow.isFollowing} memberId={profile.memberId} /> : null}
+            <p className='mt-2 text-xs text-jpv-muted'>{profile.follow.followerCount} follower{profile.follow.followerCount === 1 ? '' : 's'}</p>
             {profile.website ? (
               <a
                 className='mt-1 block truncate text-sm text-jpv-brand-deep hover:underline'

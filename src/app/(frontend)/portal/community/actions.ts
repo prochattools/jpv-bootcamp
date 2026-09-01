@@ -27,15 +27,23 @@ import {
 } from '@/lib/payloadCourse/communityPosting'
 import { buildPlainTextRichText } from '@/lib/payloadCourse/plainTextRichText'
 import { boundedText } from '@/lib/domain/validation'
-import { relationshipId } from '@/lib/domain/relationships'
+import { createMemberNotificationIfMissing } from '@/lib/payloadCourse/memberNotifications'
+import { listActiveMembers } from '@/lib/payloadCourse/memberDirectory'
 
 // ---------------------------------------------------------------------------
 // Mention notification helpers
 // ---------------------------------------------------------------------------
 
-function parseMentions(text: string): string[] {
-  const matches = text.match(/@([\w][^\s@]{0,49})/g) ?? []
-  return [...new Set(matches.map((m) => m.slice(1).trim()).filter(Boolean))]
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+async function parseMentions(payload: PayloadCourseWriteAPI, text: string): Promise<Array<{ memberId: string; displayName: string }>> {
+  const members = await listActiveMembers(payload)
+  return members
+    .filter((member) => new RegExp(`@${escapeRegExp(member.displayName)}(?=$|[\\s.,!?;:)])`, 'iu').test(text))
+    .sort((left, right) => right.displayName.length - left.displayName.length)
+    .map((member) => ({ memberId: member.memberId, displayName: member.displayName }))
 }
 
 export async function createMentionNotifications(
@@ -44,38 +52,21 @@ export async function createMentionNotifications(
   href: string | null,
   context: { postTitle: string; spaceName: string },
   actorName: string,
+  actorMemberId?: string,
 ): Promise<void> {
-  const mentions = parseMentions(bodyText)
+  const mentions = await parseMentions(payload, bodyText)
   if (mentions.length === 0) return
 
-  for (const displayName of mentions) {
+  for (const mention of mentions) {
+    if (mention.memberId === actorMemberId) continue
     try {
-      const profiles = await payload.find({
-        collection: 'payload_member_profiles',
-        where: { displayName: { like: displayName } },
-        limit: 1,
-        depth: 0,
-        overrideAccess: true,
-      })
-
-      const profile = profiles.docs[0] as Record<string, unknown> | undefined
-      if (!profile) continue
-
-      const memberId = relationshipId(profile.member)
-
-      if (!memberId) continue
-
-      await payload.create({
-        collection: 'payload_member_notifications',
-        data: {
-          member: String(memberId),
-          type: 'mention',
-          actorName,
-          title: `mentioned you in "${context.postTitle}" in ${context.spaceName}`,
-          href,
-          read: false,
-        },
-        overrideAccess: true,
+      await createMemberNotificationIfMissing(payload, {
+        memberId: mention.memberId,
+        type: 'mention',
+        actorName,
+        title: `mentioned you in "${context.postTitle}" in ${context.spaceName}`,
+        href: href ?? '/portal/notifications',
+        eventKey: `mention:${mention.memberId}:${href ?? 'notifications'}`,
       })
     } catch {
       // best-effort — mention notifications must not break posting
@@ -214,12 +205,13 @@ export async function submitCommunityPost(spaceSlug: string, formData: FormData)
   // Mention notifications are non-blocking and must run before redirect() throws
   if (mentionContext) {
     try {
-      void createMentionNotifications(
+      await createMentionNotifications(
         payload as unknown as PayloadCourseWriteAPI,
         mentionContext.bodyText,
         mentionContext.href,
         { postTitle: mentionContext.postTitle, spaceName: mentionContext.spaceName },
         mentionContext.actorName,
+        memberId,
       ).catch((): void => undefined)
     } catch {
       // must not break the posting flow
@@ -284,12 +276,13 @@ export async function submitCommunityComment(
 
   // Mention notifications are non-blocking and must run before redirect() throws
   if (mentionContext) {
-    void createMentionNotifications(
+    await createMentionNotifications(
       payload as unknown as PayloadCourseWriteAPI,
       mentionContext.bodyText,
       mentionContext.href,
       { postTitle: mentionContext.postTitle, spaceName: mentionContext.spaceName },
       mentionContext.actorName,
+      memberId,
     ).catch((): void => undefined)
   }
 

@@ -1,9 +1,5 @@
-import config from '@payload-config'
 import path from 'node:path'
-import { getPayload } from 'payload'
-
-import { resolvePayloadRequestSession } from '@/lib/auth/payloadSession'
-import { decideSharedLogin } from '@/lib/auth/sharedLoginDecision'
+import { resolvePortalRequestMember } from '@/lib/auth/resolvePortalRequestMember'
 import { evaluatePayloadSpaceAccess, type PayloadCourseAccessAPI } from '@/lib/payloadCourse/accessService'
 import { relationshipId } from '@/lib/domain/relationships'
 import { attachOperationalBillingFallback } from '@/lib/payloadCourse/operationalBillingFallback'
@@ -39,14 +35,12 @@ function sanitizeFilename(original: string): string {
 }
 
 export async function POST(request: Request): Promise<Response> {
-  const session = await resolvePayloadRequestSession(request.headers)
-  const decision = decideSharedLogin(session, '/portal')
-
-  if (!decision.allowed || decision.identity.kind !== 'member' || !session.member?.id) {
+  const requestMember = await resolvePortalRequestMember(request.headers)
+  if (!requestMember) {
     return errorResponse('Unauthorized', 401)
   }
 
-  const memberId = session.member.id
+  const memberId = requestMember.memberId
   let formData: FormData
 
   try {
@@ -90,7 +84,7 @@ export async function POST(request: Request): Promise<Response> {
     return errorResponse(`File extension "${ext}" is not allowed.`, 415)
   }
 
-  const payload = attachOperationalBillingFallback(await getPayload({ config }))
+  const payload = attachOperationalBillingFallback(requestMember.payload)
   const accessPayload = payload as unknown as PayloadCourseAccessAPI
 
   // Authorize against the exact post that will consume the file. Do not load
@@ -139,7 +133,7 @@ export async function POST(request: Request): Promise<Response> {
         size: file.size,
       },
       overrideAccess: true,
-    })
+    } as never)
   } catch (error) {
     console.error('[community files POST] media upload error:', error instanceof Error ? error.message : String(error))
     return errorResponse('Unable to upload this file. Please try again.', 500)

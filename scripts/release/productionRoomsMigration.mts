@@ -27,6 +27,12 @@ const runnerPath = resolve(repoRoot, 'scripts/release/productionRoomsMigrationRu
 const fullSha = /^[0-9a-f]{40}$/
 const sha256 = /^[0-9a-f]{64}$/
 const safeReference = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/
+const roomsMigrationIndex = PAYLOAD_MIGRATION_NAMES.indexOf(PRODUCTION_ROOMS_MIGRATION)
+if (roomsMigrationIndex < 0) throw new Error('rooms_migration_not_registered')
+// Keep the historical Rooms control scoped to the migration it was approved
+// to apply. Newer migrations require their own rollout and must not widen this
+// production bridge implicitly.
+const ROOMS_REGISTERED_PAYLOAD_MIGRATIONS = PAYLOAD_MIGRATION_NAMES.slice(0, roomsMigrationIndex + 1)
 
 type UnknownRecord = Record<string, unknown>
 
@@ -135,7 +141,7 @@ export function buildMigrationPayload(
 		migrationSql: migration.migrationSql,
 		migrationSqlSha256: migration.migrationSqlSha256,
 		historicalBaselineSha256: PRODUCTION_ROOMS_HISTORICAL_BASELINE_SHA256,
-		registeredPayloadMigrations: [...PAYLOAD_MIGRATION_NAMES],
+		registeredPayloadMigrations: [...ROOMS_REGISTERED_PAYLOAD_MIGRATIONS],
 		registeredPrismaMigrations: registeredPrismaMigrations(),
 		targetOrigin: PRODUCTION_ROOMS_TARGET.origin,
 		applicationId: PRODUCTION_ROOMS_TARGET.dokployApplicationId,

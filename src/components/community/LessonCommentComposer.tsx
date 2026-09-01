@@ -4,6 +4,7 @@ import { FormEvent, startTransition, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 import { ComposerToolbar } from '@/components/community/ComposerToolbar'
+import { MentionTextarea } from '@/components/community/MentionTextarea'
 import { readResponseJson } from '@/components/community/readResponseJson'
 
 export function LessonCommentComposer({
@@ -23,6 +24,7 @@ export function LessonCommentComposer({
   const formRef = useRef<HTMLFormElement>(null)
   const [pending, setPending] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
+  const [body, setBody] = useState('')
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -30,19 +32,19 @@ export function LessonCommentComposer({
     setPending(true)
     setMessage(null)
 
-    const form = new FormData(event.currentTarget)
     try {
       const response = await fetch(
         `/api/portal/courses/${encodeURIComponent(courseSlug)}/lessons/${encodeURIComponent(lessonSlug)}/comments`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ body: form.get('body'), parentId: parentId ?? null }),
+          body: JSON.stringify({ body, parentId: parentId ?? null }),
         },
       )
       const result = await readResponseJson<{ ok?: boolean; message?: string }>(response)
       if (!response.ok || !result?.ok) throw new Error(result?.message || 'Unable to post your comment.')
       formRef.current?.reset()
+      setBody('')
       setMessage('Comment posted.')
       const main = document.querySelector('main')
       const mainScrollTop = main?.scrollTop ?? 0
@@ -66,13 +68,16 @@ export function LessonCommentComposer({
       <label className='block text-sm font-semibold text-jpv-ink' htmlFor={textareaId}>
         {parentId ? `Reply to this comment` : 'Add to the discussion'}
       </label>
-      <textarea
+      <MentionTextarea
         className='min-h-28 w-full rounded-xl border border-jpv-border bg-jpv-canvas px-4 py-3 text-sm text-jpv-ink outline-none focus:border-jpv-brand'
         id={textareaId}
         maxLength={10_000}
         name='body'
+        onValueChange={setBody}
         placeholder={placeholder}
         required
+        rows={4}
+        value={body}
       />
       <ComposerToolbar textareaId={textareaId} />
       <button className='jpv-button-primary min-h-11 disabled:cursor-wait disabled:opacity-70' disabled={pending} type='submit'>

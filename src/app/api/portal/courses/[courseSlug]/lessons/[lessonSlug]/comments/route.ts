@@ -4,6 +4,7 @@ import config from '@payload-config'
 import { getPayload } from 'payload'
 
 import { requirePortalMember } from '@/lib/auth/requirePortalMember'
+import { createMentionNotifications } from '@/app/(frontend)/portal/community/actions'
 import type { PayloadCourseWriteAPI } from '@/lib/payloadCourse/accessService'
 import {
   createLessonComment,
@@ -41,6 +42,24 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     })
 
     revalidatePath(destination)
+    const profiles = await payload.find({
+      collection: 'payload_member_profiles',
+      where: { member: { equals: memberId } },
+      limit: 1,
+      depth: 0,
+      overrideAccess: true,
+    })
+    const actorName = typeof profiles.docs[0]?.displayName === 'string' && profiles.docs[0].displayName.trim()
+      ? profiles.docs[0].displayName.trim()
+      : 'A member'
+    await createMentionNotifications(
+      payload as PayloadCourseWriteAPI,
+      body,
+      destination,
+      { postTitle: detail.lesson.title ?? lessonSlug, spaceName: courseSlug },
+      actorName,
+      memberId,
+    ).catch((): void => undefined)
 
     return NextResponse.json({ ok: true, commentId: created.document.id, body })
   } catch (error) {

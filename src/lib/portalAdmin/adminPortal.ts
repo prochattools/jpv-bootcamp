@@ -18,6 +18,11 @@ import {
   type MemberManagedVideo,
   type MemberMediaAsset,
 } from '@/lib/payloadContent/memberMedia'
+import type {
+  AdminCourseMediaLibrary,
+  AdminCourseMediaOption,
+  AdminCourseVideoOption,
+} from '@/lib/portalAdmin/courseMediaTypes'
 import { sanitizeAnnouncementHTML } from '@/lib/payloadContent/announcementRichText'
 import { relationshipId } from '@/lib/domain/relationships'
 import { decodeHtmlEntities, isHiddenLegacyWelcomeLesson } from '@/lib/payloadCourse/curriculum'
@@ -84,26 +89,11 @@ export type AdminPortalCourse = {
   coverImageId: string | null
 }
 
-export type AdminCourseMediaOption = {
-  id: string
-  label: string
-  url: string
-  mimeType: string | null
-  kind: 'image' | 'file'
-}
-
-export type AdminCourseVideoOption = {
-  id: string
-  title: string
-  status: MemberManagedVideo['status']
-  thumbnailUrl: string | null
-}
-
-export type AdminCourseMediaLibrary = {
-  images: AdminCourseMediaOption[]
-  files: AdminCourseMediaOption[]
-  videos: AdminCourseVideoOption[]
-}
+export type {
+  AdminCourseMediaLibrary,
+  AdminCourseMediaOption,
+  AdminCourseVideoOption,
+} from '@/lib/portalAdmin/courseMediaTypes'
 
 export type AdminPortalLessonDetail = {
   course: { id: string; title: string; slug: string | null; status: CourseStatus }
