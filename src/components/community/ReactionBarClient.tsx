@@ -3,6 +3,7 @@
 import { useState } from 'react'
 
 import { cn } from '@/helpers/utils'
+import { readResponseJson } from '@/components/community/readResponseJson'
 
 type ReactionType = 'helpful' | 'insightful' | 'celebrate'
 type ReactionCount = { label: string; count: number; reactionType?: ReactionType }
@@ -76,12 +77,12 @@ export function ReactionBarClient({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ targetKind, targetId: String(targetId), reactionType: type }),
       })
-      const result = (await response.json()) as {
+      const result = await readResponseJson<{
         ok?: boolean
         summary?: { counts?: ReactionCount[]; totalCount?: number; viewerReaction?: ReactionType | null }
         message?: string
-      }
-      if (!response.ok || !result.ok || !result.summary) throw new Error(result.message || 'Unable to save this reaction.')
+      }>(response)
+      if (!response.ok || !result?.ok || !result.summary) throw new Error(result?.message || 'Unable to save this reaction.')
       setCurrentCounts(countMap(result.summary.counts ?? []))
       setCurrentTotal(result.summary.totalCount ?? 0)
       setSelected(result.summary.viewerReaction ?? null)

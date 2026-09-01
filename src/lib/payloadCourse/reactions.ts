@@ -823,23 +823,26 @@ export async function setReaction(
       return { operation: 'removed', reaction: null }
     }
 
-    try {
-      await payload.update({
-        collection: REACTION_COLLECTION,
-        id: existing.id,
-        data: {
-          reactionType,
-          metadata: { source: 'member_portal', operation: 'changed' },
-        },
-        overrideAccess: true,
-      })
-    } catch (error) {
-      const updated = await updateReactionWithPool(payload, memberId, target, existing.id, reactionType)
-      if (!updated) {
-        console.error('JPV_REACTION_UPDATE_FAILED', {
-          error: error instanceof Error ? error.message : String(error),
+    const updatedWithPool = await updateReactionWithPool(payload, memberId, target, existing.id, reactionType)
+    if (!updatedWithPool) {
+      try {
+        await payload.update({
+          collection: REACTION_COLLECTION,
+          id: existing.id,
+          data: {
+            reactionType,
+            metadata: { source: 'member_portal', operation: 'changed' },
+          },
+          overrideAccess: true,
         })
-        throw new ReactionServiceError('conflict', 'The reaction changed concurrently. Please try again.')
+      } catch (error) {
+        const updated = await updateReactionWithPool(payload, memberId, target, existing.id, reactionType)
+        if (!updated) {
+          console.error('JPV_REACTION_UPDATE_FAILED', {
+            error: error instanceof Error ? error.message : String(error),
+          })
+          throw new ReactionServiceError('conflict', 'The reaction changed concurrently. Please try again.')
+        }
       }
     }
 
@@ -859,27 +862,35 @@ export async function setReaction(
 
   try {
     let created: PayloadDocument
-    try {
-      created = await payload.create({
-        collection: REACTION_COLLECTION,
-        data: {
-          member: normalizeRelationshipId(memberId),
-          reactionType,
-          targetKind: target.kind,
-          [targetField]: normalizeRelationshipId(target.id),
-          metadata: { source: 'member_portal', operation: 'created' },
-        },
-        overrideAccess: true,
-      })
-    } catch (error) {
-      const fallback = await createReactionWithPool(payload, memberId, target, reactionType)
-      if (!fallback) {
-        console.error('JPV_REACTION_CREATE_FAILED', {
-          error: error instanceof Error ? error.message : String(error),
-        })
+    const createdWithPool = await createReactionWithPool(payload, memberId, target, reactionType)
+    if (createdWithPool !== undefined) {
+      if (!createdWithPool) {
         throw new ReactionServiceError('conflict', 'The reaction changed concurrently. Please try again.')
       }
-      created = fallback
+      created = createdWithPool
+    } else {
+      try {
+        created = await payload.create({
+          collection: REACTION_COLLECTION,
+          data: {
+            member: normalizeRelationshipId(memberId),
+            reactionType,
+            targetKind: target.kind,
+            [targetField]: normalizeRelationshipId(target.id),
+            metadata: { source: 'member_portal', operation: 'created' },
+          },
+          overrideAccess: true,
+        })
+      } catch (error) {
+        const fallback = await createReactionWithPool(payload, memberId, target, reactionType)
+        if (!fallback) {
+          console.error('JPV_REACTION_CREATE_FAILED', {
+            error: error instanceof Error ? error.message : String(error),
+          })
+          throw new ReactionServiceError('conflict', 'The reaction changed concurrently. Please try again.')
+        }
+        created = fallback
+      }
     }
 
     await recordReactionAudit(payload, {
@@ -914,19 +925,22 @@ export async function removeReaction(
   if (!existing) return { operation: 'removed', reaction: null }
 
   const previous = normalizeReactionType(existing.reactionType)
-  try {
-    await payload.delete({
-      collection: REACTION_COLLECTION,
-      id: existing.id,
-      overrideAccess: true,
-    })
-  } catch (error) {
-    const deleted = await deleteReactionWithPool(payload, memberId, target, existing.id)
-    if (!deleted) {
-      console.error('JPV_REACTION_DELETE_FAILED', {
-        error: error instanceof Error ? error.message : String(error),
+  const deletedWithPool = await deleteReactionWithPool(payload, memberId, target, existing.id)
+  if (!deletedWithPool) {
+    try {
+      await payload.delete({
+        collection: REACTION_COLLECTION,
+        id: existing.id,
+        overrideAccess: true,
       })
-      throw new ReactionServiceError('conflict', 'The reaction changed concurrently. Please try again.')
+    } catch (error) {
+      const deleted = await deleteReactionWithPool(payload, memberId, target, existing.id)
+      if (!deleted) {
+        console.error('JPV_REACTION_DELETE_FAILED', {
+          error: error instanceof Error ? error.message : String(error),
+        })
+        throw new ReactionServiceError('conflict', 'The reaction changed concurrently. Please try again.')
+      }
     }
   }
 

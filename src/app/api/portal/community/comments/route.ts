@@ -5,8 +5,12 @@ import { getPayload } from 'payload'
 
 import { resolvePayloadRequestSession } from '@/lib/auth/payloadSession'
 import { createMentionNotifications } from '@/app/(frontend)/portal/community/actions'
-import { getMemberCommunityPostDetail } from '@/lib/payloadCourse/communityDiscussion'
+import { evaluatePayloadSpaceAccess } from '@/lib/payloadCourse/accessService'
 import { createSpaceComment } from '@/lib/payloadCourse/communityPosting'
+import {
+  safeCommunityExternalUrl,
+  safeCommunityVideoEmbed,
+} from '@/lib/payloadCourse/communityRichMedia'
 import { buildPlainTextRichText } from '@/lib/payloadCourse/plainTextRichText'
 import { isSafeResourceId } from '@/lib/payloadCourse/lessonResourceDelivery'
 import { normalizeRelationshipId, relationshipId } from '@/lib/domain/relationships'
@@ -24,26 +28,6 @@ function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character] ?? character)
 }
 
-function safeExternalUrl(value: string): string | null {
-  if (!value || value.length > 2048) return null
-  try {
-    const url = new URL(value)
-    if ((url.protocol !== 'http:' && url.protocol !== 'https:') || url.username || url.password) return null
-    return url.toString()
-  } catch {
-    return null
-  }
-}
-
-function safeBunnyEmbedUrl(value: string): string | null {
-  const safeUrl = safeExternalUrl(value)
-  if (!safeUrl) return null
-  const url = new URL(safeUrl)
-  if (!/^(?:player|iframe)\.mediadelivery\.net$/i.test(url.hostname)) return null
-  if (!/^\/embed\/\d+\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/?$/i.test(url.pathname)) return null
-  return `https://${url.hostname}${url.pathname.replace(/\/$/, '')}`
-}
-
 class ReplyValidationError extends Error {
   constructor(message: string) {
     super(message)
@@ -59,7 +43,7 @@ function normalizeUrlList(value: unknown, label: string): string[] {
 
   const urls: string[] = []
   for (const candidate of value) {
-    const url = safeExternalUrl(text(candidate))
+    const url = safeCommunityExternalUrl(text(candidate))
     if (!url) throw new ReplyValidationError(`Every ${label} must be a valid http or https URL.`)
     if (!urls.includes(url)) urls.push(url)
   }
@@ -104,8 +88,7 @@ async function resolveReplyImages(
   memberId: string,
   spaceId: string,
 ): Promise<ReplyImage[]> {
-  const images: ReplyImage[] = []
-  for (const attachmentId of attachmentIds) {
+  return Promise.all(attachmentIds.map(async (attachmentId) => {
     const file = await findByIdSafe(payload, 'payload_space_files', attachmentId)
     const protectedFileId = relationshipId(file?.protectedFile)
     const media = protectedFileId
@@ -128,12 +111,11 @@ async function resolveReplyImages(
       throw new ReplyValidationError('One of the selected images is no longer available.')
     }
 
-    images.push({
+    return {
       id: String(file.id),
       filename: text(media.filename) || text(file.title) || 'Reply image',
-    })
-  }
-  return images
+    }
+  }))
 }
 
 function legacyHtmlBlock(safeHtml: string): Record<string, unknown> {
@@ -146,6 +128,26 @@ function legacyHtmlBlock(safeHtml: string): Record<string, unknown> {
   }
 }
 
+function bodyExternalUrls(value: string): string[] {
+  const urls = value.match(/https?:\/\/[^\s<>"']+/gi) ?? []
+  return [...new Set(urls.map((url) => safeCommunityExternalUrl(url.replace(/[.,!?;:]+$/, ''))).filter((url): url is string => Boolean(url)))]
+}
+
+function appendLinkBlock(blocks: Array<Record<string, unknown>>, url: string, label = url): void {
+  blocks.push(legacyHtmlBlock(`<p><a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(label)}</a></p>`))
+}
+
+function appendVideoContent(blocks: Array<Record<string, unknown>>, url: string): void {
+  const embed = safeCommunityVideoEmbed(url)
+  const label = embed ? `${embed.provider === 'youtube' ? 'YouTube' : embed.provider === 'vimeo' ? 'Vimeo' : 'Bunny'} video` : 'Open video link'
+  appendLinkBlock(blocks, url, label)
+  if (!embed) return
+
+  blocks.push(legacyHtmlBlock(
+    `<div data-community-video="${embed.provider}"><iframe src="${escapeHtml(embed.src)}" title="${escapeHtml(label)}" allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe></div>`,
+  ))
+}
+
 function buildReplyBody(
   bodyText: string,
   videoUrl: string | null,
@@ -154,18 +156,18 @@ function buildReplyBody(
 ) {
   const document = buildPlainTextRichText(bodyText)
   const blocks = document.root.children as unknown as Array<Record<string, unknown>>
+  const embeddedVideoUrls = new Set<string>()
 
-  if (videoUrl) {
-    const bunnyUrl = safeBunnyEmbedUrl(videoUrl)
-    blocks.push(legacyHtmlBlock(
-      bunnyUrl
-        ? `<div><iframe src="${escapeHtml(bunnyUrl)}" title="Bunny video" allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe></div>`
-        : `<p><a href="${escapeHtml(videoUrl)}" target="_blank" rel="noopener noreferrer">Watch video: ${escapeHtml(videoUrl)}</a></p>`,
-    ))
+  for (const url of [...bodyExternalUrls(bodyText), videoUrl, ...links]) {
+    if (!url || !safeCommunityVideoEmbed(url) || embeddedVideoUrls.has(url)) continue
+    appendVideoContent(blocks, url)
+    embeddedVideoUrls.add(url)
   }
 
+  if (videoUrl && !safeCommunityVideoEmbed(videoUrl)) appendLinkBlock(blocks, videoUrl, 'Open video link')
+
   for (const link of links) {
-    blocks.push(legacyHtmlBlock(`<p><a href="${escapeHtml(link)}" target="_blank" rel="noopener noreferrer">${escapeHtml(link)}</a></p>`))
+    if (!safeCommunityVideoEmbed(link)) appendLinkBlock(blocks, link)
   }
 
   for (const image of images) {
@@ -194,7 +196,7 @@ export async function POST(req: NextRequest) {
     const postId = text(body.postId)
     const bodyText = text(body.body)
     const rawVideoUrl = text(body.videoUrl)
-    const videoUrl = rawVideoUrl ? safeExternalUrl(rawVideoUrl) : null
+    const videoUrl = rawVideoUrl ? safeCommunityExternalUrl(rawVideoUrl) : null
     if (rawVideoUrl && !videoUrl) throw new ReplyValidationError('The video URL must be a valid http or https URL.')
     const links = normalizeUrlList(body.links, 'links')
     const attachmentIds = normalizeAttachmentIds(body.attachmentIds)
@@ -206,15 +208,37 @@ export async function POST(req: NextRequest) {
       (await getPayload({ config })) as unknown as PayloadCourseWriteAPI,
     )
     const memberId = String(session.member.id)
-    const detail = await getMemberCommunityPostDetail(payload, memberId, spaceSlug, postId)
-    if (!detail.allowed || !detail.post.canComment) return NextResponse.json({ ok: false, message: 'Replies are unavailable for this discussion.' }, { status: 403 })
-    const member = await payload.findByID({ collection: 'payload_members', id: memberId, depth: 0, overrideAccess: true }) as Record<string, unknown>
+    const [post, spaceResult] = await Promise.all([
+      findByIdSafe(payload, 'payload_space_posts', postId),
+      payload.find({
+        collection: 'payload_spaces',
+        where: {
+          and: [
+            { slug: { equals: spaceSlug } },
+            { status: { equals: 'published' } },
+          ],
+        },
+        limit: 1,
+        depth: 0,
+        overrideAccess: true,
+      }),
+    ])
+    const space = spaceResult.docs[0] ?? null
+    if (!post || !space || post.moderationStatus !== 'visible' || post.locked === true || relationshipId(post.space) !== String(space.id)) {
+      return NextResponse.json({ ok: false, message: 'Replies are unavailable for this discussion.' }, { status: 403 })
+    }
+    const access = await evaluatePayloadSpaceAccess(payload, { memberId, spaceId: space.id })
+    if (!access.decision.allowed) return NextResponse.json({ ok: false, message: 'Replies are unavailable for this discussion.' }, { status: 403 })
+
+    const [member, images] = await Promise.all([
+      payload.findByID({ collection: 'payload_members', id: memberId, depth: 0, overrideAccess: true }) as Promise<Record<string, unknown>>,
+      resolveReplyImages(payload, attachmentIds, memberId, String(space.id)),
+    ])
     const actorName = displayName(member)
-    const images = await resolveReplyImages(payload, attachmentIds, memberId, detail.post.space.id)
 
     const created = await createSpaceComment(payload, {
       memberId,
-      postId: detail.post.id,
+      postId: post.id,
       displayName: actorName,
       body: buildReplyBody(bodyText, videoUrl, links, images),
     })
@@ -241,8 +265,8 @@ export async function POST(req: NextRequest) {
     revalidatePath(`/portal/community/${encodeURIComponent(spaceSlug)}/posts/${encodeURIComponent(postId)}`)
 
     void createMentionNotifications(payload, bodyText, `/portal/community/${encodeURIComponent(spaceSlug)}/posts/${encodeURIComponent(postId)}`, {
-      postTitle: detail.post.title ?? 'Community discussion',
-      spaceName: spaceSlug,
+      postTitle: text(post.title) || 'Community discussion',
+      spaceName: text(space.name) || spaceSlug,
     }, actorName).catch((): void => undefined)
 
     return NextResponse.json({

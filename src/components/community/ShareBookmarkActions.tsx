@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 
+import { readResponseJson } from '@/components/community/readResponseJson'
+
 function BookmarkIcon() {
   return <svg aria-hidden='true' className='h-4 w-4' fill='none' viewBox='0 0 24 24'><path d='M5 5v14l7-4 7 4V5H5Z' stroke='currentColor' strokeLinecap='round' strokeLinejoin='round' strokeWidth='1.75' /></svg>
 }
@@ -27,8 +29,8 @@ export function ShareBookmarkActions({ postId, initialBookmarked }: { postId: st
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ postId }),
       })
-      const result = await response.json() as { ok?: boolean; bookmarked?: boolean; message?: string }
-      if (!response.ok || !result.ok) throw new Error(result.message || 'Unable to update bookmark.')
+      const result = await readResponseJson<{ ok?: boolean; bookmarked?: boolean; message?: string }>(response)
+      if (!response.ok || !result?.ok) throw new Error(result?.message || 'Unable to update bookmark.')
       setBookmarked(Boolean(result.bookmarked))
       setMessage(result.bookmarked ? 'Bookmarked' : 'Bookmark removed')
     } catch (error) {

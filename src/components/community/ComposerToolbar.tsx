@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useRef, useState, type ChangeEvent, type FormEvent } from 'react'
 
 function ImageIcon({ className }: { className?: string }) {
   return (
@@ -30,14 +30,6 @@ function LinkIcon({ className }: { className?: string }) {
   )
 }
 
-function PollIcon({ className }: { className?: string }) {
-  return (
-    <svg aria-hidden='true' className={className} fill='none' viewBox='0 0 24 24'>
-      <path d='M18 20V10M12 20V4M6 20v-6' stroke='currentColor' strokeLinecap='round' strokeLinejoin='round' strokeWidth='1.75' />
-    </svg>
-  )
-}
-
 function EmojiIcon({ className }: { className?: string }) {
   return (
     <svg aria-hidden='true' className={className} fill='none' viewBox='0 0 24 24'>
@@ -48,6 +40,16 @@ function EmojiIcon({ className }: { className?: string }) {
     </svg>
   )
 }
+
+const EMOJIS = [
+  '😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '🙃', '😉', '😊', '😇', '🥰', '😍', '🤩',
+  '😘', '😗', '😚', '😋', '😛', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤗', '🤭', '🫢', '🤔', '🫡',
+  '😐', '😑', '😶', '🙄', '😏', '😣', '😥', '😮', '🤐', '😯', '😪', '😫', '🥱', '😴', '😌', '🤓',
+  '🤤', '😒', '😓', '😔', '😕', '🙁', '☹️', '😖', '😞', '😟', '😤', '😢', '😭', '😦', '😧', '😨',
+  '😩', '🤯', '😬', '😰', '😱', '🥳', '😳', '🤪', '😵', '🥶', '🥵', '🤠', '🤡', '🤥', '😷', '🤒',
+  '🤕', '🤢', '🤮', '🤧', '😈', '👿', '💀', '☠️', '👻', '👽', '🤖', '💩', '😺', '😸', '😹', '😻',
+  '😼', '🙌', '👏', '🤝', '👍', '👎', '🙏', '💪', '👀', '💡', '🔥', '❤️', '💯', '✅', '🎉', '⭐',
+] as const
 
 type ComposerToolbarProps = {
   textareaId: string
@@ -62,7 +64,9 @@ export function ComposerToolbar({ textareaId, onInsertVideo, onInsertVideoFile, 
   const [showLinkInput, setShowLinkInput] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  function handleVideoSubmit(e: React.FormEvent<HTMLFormElement>) {
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false)
+
+  function handleVideoSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
     const form = e.currentTarget
     const urlInput = form.elements.namedItem('videoUrl') as HTMLInputElement
@@ -73,7 +77,7 @@ export function ComposerToolbar({ textareaId, onInsertVideo, onInsertVideoFile, 
     setShowVideoInput(false)
   }
 
-  function handleLinkSubmit(e: React.FormEvent<HTMLFormElement>) {
+  function handleLinkSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
     const form = e.currentTarget
     const urlInput = form.elements.namedItem('linkUrl') as HTMLInputElement
@@ -89,7 +93,7 @@ export function ComposerToolbar({ textareaId, onInsertVideo, onInsertVideoFile, 
     fileInputRef.current?.click()
   }
 
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleFileChange(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (file?.type.startsWith('video/') && onInsertVideoFile) {
       void onInsertVideoFile(file)
@@ -128,43 +132,42 @@ export function ComposerToolbar({ textareaId, onInsertVideo, onInsertVideoFile, 
   return (
     <div className='space-y-2'>
       <div className='flex items-center gap-1 rounded-lg border border-jpv-border bg-jpv-surface px-2 py-1.5'>
-        <button
-          aria-label='Add image'
-          className='rounded-md p-1.5 text-jpv-muted transition hover:bg-jpv-canvas hover:text-jpv-ink'
-          onClick={() => handleFileClick('image/*')}
-          type='button'
-        >
-          <ImageIcon className='h-5 w-5' />
-        </button>
-        <button
-          aria-label='Add video'
-          className={`rounded-md p-1.5 transition ${showVideoInput ? 'bg-jpv-canvas text-jpv-ink' : 'text-jpv-muted hover:bg-jpv-canvas hover:text-jpv-ink'}`}
-          onClick={() => { setShowVideoInput(!showVideoInput); setShowLinkInput(false) }}
-          type='button'
-        >
-          <VideoIcon className='h-5 w-5' />
-        </button>
-        <button
-          aria-label='Add link'
-          className={`rounded-md p-1.5 transition ${showLinkInput ? 'bg-jpv-canvas text-jpv-ink' : 'text-jpv-muted hover:bg-jpv-canvas hover:text-jpv-ink'}`}
-          onClick={() => { setShowLinkInput(!showLinkInput); setShowVideoInput(false) }}
-          type='button'
-        >
-          <LinkIcon className='h-5 w-5' />
-        </button>
-        <button
-          aria-label='Add poll (coming soon)'
-          className='rounded-md p-1.5 text-jpv-muted/50 cursor-not-allowed'
-          disabled
-          title='Polls coming soon'
-          type='button'
-        >
-          <PollIcon className='h-5 w-5' />
-        </button>
+        {onInsertImage ? (
+          <button
+            aria-label='Add image'
+            className='rounded-md p-1.5 text-jpv-muted transition hover:bg-jpv-canvas hover:text-jpv-ink'
+            onClick={() => handleFileClick('image/*')}
+            type='button'
+          >
+            <ImageIcon className='h-5 w-5' />
+          </button>
+        ) : null}
+        {onInsertVideo || onInsertVideoFile ? (
+          <button
+            aria-label='Add video'
+            className={`rounded-md p-1.5 transition ${showVideoInput ? 'bg-jpv-canvas text-jpv-ink' : 'text-jpv-muted hover:bg-jpv-canvas hover:text-jpv-ink'}`}
+            onClick={() => { setShowVideoInput(!showVideoInput); setShowLinkInput(false) }}
+            type='button'
+          >
+            <VideoIcon className='h-5 w-5' />
+          </button>
+        ) : null}
+        {onInsertLink ? (
+          <button
+            aria-label='Add link'
+            className={`rounded-md p-1.5 transition ${showLinkInput ? 'bg-jpv-canvas text-jpv-ink' : 'text-jpv-muted hover:bg-jpv-canvas hover:text-jpv-ink'}`}
+            onClick={() => { setShowLinkInput(!showLinkInput); setShowVideoInput(false) }}
+            type='button'
+          >
+            <LinkIcon className='h-5 w-5' />
+          </button>
+        ) : null}
         <button
           aria-label='Add emoji'
-          className='rounded-md p-1.5 text-jpv-muted transition hover:bg-jpv-canvas hover:text-jpv-ink'
-          onClick={() => insertTextAtCursor('😊')}
+          aria-expanded={showEmojiPicker}
+          aria-haspopup='dialog'
+          className={`rounded-md p-1.5 transition ${showEmojiPicker ? 'bg-jpv-canvas text-jpv-ink' : 'text-jpv-muted hover:bg-jpv-canvas hover:text-jpv-ink'}`}
+          onClick={() => setShowEmojiPicker((current) => !current)}
           type='button'
         >
           <EmojiIcon className='h-5 w-5' />
@@ -177,6 +180,25 @@ export function ComposerToolbar({ textareaId, onInsertVideo, onInsertVideoFile, 
           type='file'
         />
       </div>
+
+      {showEmojiPicker ? (
+        <div aria-label='Choose an emoji' className='rounded-lg border border-jpv-border bg-jpv-surface p-3 shadow-jpv-card' role='dialog'>
+          <p className='mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-jpv-muted'>Choose an emoji</p>
+          <div className='grid grid-cols-8 gap-1 sm:grid-cols-12'>
+            {EMOJIS.map((emoji, index) => (
+              <button
+                aria-label={`Insert ${emoji}`}
+                className='flex h-9 w-9 items-center justify-center rounded-md text-xl transition hover:bg-jpv-canvas focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-jpv-focus'
+                key={`${emoji}-${index}`}
+                onClick={() => { insertTextAtCursor(emoji); setShowEmojiPicker(false) }}
+                type='button'
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       {showVideoInput && (
         <form className='flex gap-2' onSubmit={handleVideoSubmit}>
