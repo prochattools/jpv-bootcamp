@@ -1,5 +1,5 @@
 import type { PayloadCourseAccessAPI, PayloadCourseWriteAPI, PayloadDocument } from '@/lib/payloadCourse/accessService'
-import { relationshipId } from '@/lib/domain/relationships'
+import { normalizeRelationshipId, relationshipId } from '@/lib/domain/relationships'
 import { uniqueSlugForName } from '@/lib/domain/slugs'
 import { boundedText, validateTitle } from '@/lib/domain/validation'
 import { createAuditEvent } from '@/lib/payloadCourse/events'
@@ -74,6 +74,13 @@ async function findAll(
 
 function normalizedMemberIds(input: string[] | undefined): string[] {
   return Array.from(new Set((input ?? []).map((value) => String(value).trim()).filter(Boolean)))
+}
+
+function memberRelationshipIds(ids: string[]): Array<string | number> {
+  // Payload's relationship adapter expects numeric IDs as numbers. Keeping
+  // UUIDs as strings makes this work for both the current numeric schema and
+  // installations that use string IDs.
+  return ids.map(normalizeRelationshipId)
 }
 
 async function assertActiveMembers(payload: PayloadCourseWriteAPI, ids: string[]): Promise<void> {
@@ -175,7 +182,7 @@ export async function createMemberGroupCommand(
       slug,
       status: 'active',
       visibility: 'private',
-      members: ids,
+      members: memberRelationshipIds(ids),
       description: input.description?.trim() ? boundedText(input.description, 'Description', 2000) : undefined,
     },
     overrideAccess: true,
@@ -211,7 +218,7 @@ export async function updateMemberGroupCommand(
   await assertActiveMembers(payload, ids)
   const data: Record<string, unknown> = {
     name,
-    members: ids,
+    members: memberRelationshipIds(ids),
   }
   if (input.description !== undefined) {
     data.description = input.description.trim()

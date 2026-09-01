@@ -35,6 +35,14 @@ function resolveReturnUrl(): string {
   }
 }
 
+function isMissingStripeCustomer(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false
+  const stripeError = error as { code?: string; message?: string }
+  return stripeError.code === 'resource_missing' || Boolean(
+    stripeError.message?.includes('No such customer') || stripeError.message?.includes('Invalid customer ID')
+  )
+}
+
 export async function openBillingPortal(): Promise<OpenBillingPortalResult> {
   let memberEmail: string
   let memberId: string
@@ -68,23 +76,35 @@ export async function openBillingPortal(): Promise<OpenBillingPortalResult> {
       select: { stripeCustomerId: true },
     })
 
-    let stripeCustomerId = payloadCustomerId || customerRecord?.stripeCustomerId?.trim() || ''
-    if (!stripeCustomerId) {
-      // Read-only recovery for legacy/coupon members whose projection has not
-      // been linked yet. Never auto-link an ambiguous email match.
-      const matches = await getStripe().customers.list({ email: memberEmail, limit: 10 })
-      const exactMatches = matches.data.filter((customer) => normalizeEmail(customer.email ?? '') === normalizedEmail)
-      if (exactMatches.length !== 1) return { ok: false, error: 'no_stripe_customer' }
-      stripeCustomerId = exactMatches[0].id
+    const stripeConfig = getStripeConfig()
+    const stripe = getStripe()
+    const knownCustomerIds = [payloadCustomerId, customerRecord?.stripeCustomerId?.trim() || '']
+      .filter((id, index, values): id is string => Boolean(id) && values.indexOf(id) === index)
+
+    async function createSession(customerId: string) {
+      return stripe.billingPortal.sessions.create({
+        customer: customerId,
+        return_url: resolveReturnUrl(),
+        configuration: stripeConfig.portalConfigurationId,
+      })
     }
 
-    const stripeConfig = getStripeConfig()
-    const session = await getStripe().billingPortal.sessions.create({
-      customer: stripeCustomerId,
-      return_url: resolveReturnUrl(),
-      configuration: stripeConfig.portalConfigurationId,
-    })
+    // Try trusted local links first. If a legacy link points at a deleted
+    // customer, recover by exact email without creating a new Stripe customer.
+    for (const customerId of knownCustomerIds) {
+      try {
+        const session = await createSession(customerId)
+        if (session.url) return { ok: true, portalUrl: session.url }
+      } catch (error) {
+        if (!isMissingStripeCustomer(error)) throw error
+      }
+    }
 
+    const matches = await stripe.customers.list({ email: normalizedEmail, limit: 10 })
+    const exactMatches = matches.data.filter((customer) => normalizeEmail(customer.email ?? '') === normalizedEmail)
+    if (exactMatches.length !== 1) return { ok: false, error: 'no_stripe_customer' }
+
+    const session = await createSession(exactMatches[0].id)
     if (!session.url) {
       console.error('Billing portal session created but no URL returned')
       return { ok: false, error: 'stripe_error' }

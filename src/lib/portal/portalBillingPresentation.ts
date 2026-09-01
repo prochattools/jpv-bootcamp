@@ -67,30 +67,38 @@ export function resolvePortalBillingPresentation(
   overview: MemberBillingOverview,
 ): PortalBillingPresentation {
   const hasProjectionData = Boolean(overview.billingAccount || overview.subscription)
+  const hasOperationalMembership = billingStatus.hasActiveSubscription
 
   const overviewPlanLabel =
-    overview.hasPaidSubscription && overview.plan != null
+    (overview.hasPaidSubscription && overview.plan != null) || hasOperationalMembership
       ? 'JPV Bootcamp Membership'
       : 'No active membership'
+
+  const overviewSubscriptionStatus = overview.subscriptionStatus ?? (
+    hasOperationalMembership ? billingStatus.subscriptionStatus : null
+  )
+  const overviewPeriodEndDate = parseDate(overview.currentPeriodEnd) ?? (
+    hasOperationalMembership ? billingStatus.periodEndDate : null
+  )
 
   const projectionSyncState =
     !billingStatus.hasBillingAccount && (overview.billingAccount || overview.hasPaidSubscription)
       ? 'status_missing'
-      : billingStatus.hasBillingAccount && !hasProjectionData
+      : billingStatus.hasBillingAccount && !hasProjectionData && !hasOperationalMembership
         ? 'projection_missing'
         : null
 
   return {
     displayPlanLabel:
       billingStatus.planLabel ??
-      (overview.hasPaidSubscription ? overviewPlanLabel : null),
+      (overview.hasPaidSubscription || hasOperationalMembership ? overviewPlanLabel : null),
     displaySubscriptionStatus:
-      billingStatus.subscriptionStatus ?? overview.subscriptionStatus,
+      billingStatus.subscriptionStatus ?? overviewSubscriptionStatus,
     displayPeriodEndDate:
-      billingStatus.periodEndDate ?? parseDate(overview.currentPeriodEnd),
+      billingStatus.periodEndDate ?? overviewPeriodEndDate,
     overviewPlanLabel,
-    overviewSubscriptionStatus: overview.subscriptionStatus,
-    overviewPeriodEndDate: parseDate(overview.currentPeriodEnd),
+    overviewSubscriptionStatus,
+    overviewPeriodEndDate,
     billingCadenceLabel: billingCadenceLabel(billingStatus.billingCadence),
     commitmentStatusLabel: commitmentStatusLabel(billingStatus.commitmentStatus),
     allowCheckout: !billingStatus.hasActiveSubscription && !overview.hasPaidSubscription,

@@ -44,6 +44,14 @@ function parseEmailList(raw: string | undefined): string[] {
 		.filter((value) => value && value.includes('@'))
 }
 
+function getSupportNotifierRecipients(): string[] {
+	const recipients = parseEmailList(process.env.SUPPORT_NOTIFIER)
+	if (recipients.length === 0) {
+		throw new Error('missing_support_notifier')
+	}
+	return recipients
+}
+
 async function getAdminRecipients(): Promise<string[]> {
 	try {
 		const { getPayload } = await import('payload')
@@ -109,7 +117,7 @@ export async function sendSponsoredApplicationAdminEmail(params: {
 }): Promise<void> {
 	const resend = getResendClient()
 	const from = getMailFrom()
-	const to = await getAdminRecipients()
+	const to = getSupportNotifierRecipients()
 
 	const safeName = escapeHtml(params.applicantName)
 	const safeEmail = escapeHtml(params.applicantEmail)

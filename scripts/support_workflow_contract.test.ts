@@ -27,6 +27,8 @@ assert.match(intake, /requesterName:\s*input\.name/)
 assert.match(intake, /requesterPhone:\s*input\.phone/)
 
 assert.match(route, /templateKey:\s*SUPPORT_REQUEST_ADMIN_NOTIFICATION_TEMPLATE_KEY/)
+assert.match(route, /parseConfiguredEmailRecipients\(process\.env\.SUPPORT_NOTIFIER\)/)
+assert.doesNotMatch(route, /getPayloadAdministratorRecipients/)
 assert.match(route, /purpose:\s*'support_request_pending_review'/)
 assert.match(route, /templateKey:\s*SUPPORT_REQUEST_RECEIVED_TEMPLATE_KEY/)
 assert.match(route, /purpose:\s*'support_request_received'/)
