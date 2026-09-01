@@ -56,7 +56,7 @@ retained as dated audit history.
 - **Hard stops:** do not start A6 integration, add feature work, merge
   historical branches, mutate production data/providers, run migrations,
   delete worktrees/branches, or deploy from this A5 architecture packet.
-- **Rooms feature candidate — 2026-08-31:** isolated branch `codex/room-creator-invitation-fixes`; `pnpm test:release` passed `179/179` required checks (180 manifest entries including one deferred browser gate). This is local/CI validation only and does not constitute staging or production evidence.
+- **Member groups and update administration candidate — 2026-09-01:** isolated branch `codex/member-groups-admin-updates`; `pnpm test:release` passed `181/181` required checks (182 manifest entries including one deferred browser gate). This is local/CI validation only and does not constitute staging or production evidence.
 
 ### ARCHITECTURAL HOLD — POST-LAUNCH CONSOLIDATION
 

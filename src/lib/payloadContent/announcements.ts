@@ -1,6 +1,7 @@
 import type { PayloadCourseWriteAPI, PayloadDocument } from '@/lib/payloadCourse/accessService'
 import { queueAndAttemptEmailEvent } from '@/lib/payloadCourse/events'
 import { createMemberNotificationIfMissing } from '@/lib/payloadCourse/memberNotifications'
+import { relationshipId } from '@/lib/domain/relationships'
 import {
   memberIdsForContentAudience,
   memberIdsForGroups,
@@ -24,12 +25,19 @@ export async function activeMemberRecipients(
   const requestedMemberIds = memberIds === undefined && groupIds.length === 0
     ? undefined
     : Array.from(new Set([...(memberIds ?? []), ...(await memberIdsForGroups(payload, groupIds))]))
-  const members = requestedMemberIds
-    ? await Promise.all(requestedMemberIds.map((memberId) => payload.findByID({ collection: 'payload_members', id: memberId, depth: 0, overrideAccess: true }).catch((): null => null)))
-    : (await payload.find({ collection: 'payload_members', where: { accountStatus: { equals: 'active' } }, limit: 2000, depth: 0, overrideAccess: true })).docs
+  const [members, administrators] = requestedMemberIds
+    ? await Promise.all([
+        Promise.all(requestedMemberIds.map((memberId) => payload.findByID({ collection: 'payload_members', id: memberId, depth: 0, overrideAccess: true }).catch((): null => null))),
+        payload.find({ collection: 'payload_users', where: { portalMember: { in: requestedMemberIds } }, limit: requestedMemberIds.length, depth: 0, overrideAccess: true }).then((result) => result.docs).catch(() => [] as PayloadDocument[]),
+      ])
+    : [(await payload.find({ collection: 'payload_members', where: { accountStatus: { equals: 'active' } }, limit: 2000, depth: 0, overrideAccess: true })).docs, []]
+  const administratorMemberIds = new Set(
+    administrators.map((administrator) => relationshipId(administrator.portalMember)).filter((id): id is string => Boolean(id)),
+  )
   const recipients: AnnouncementRecipient[] = []
   for (const member of members as Array<PayloadDocument | null>) {
-    if (!member || member.accountStatus !== 'active' || !member.emailVerifiedAt) continue
+    const isAdministrator = Boolean(member && (member.isAdministrator === true || administratorMemberIds.has(String(member.id))))
+    if (!member || (!isAdministrator && (member.accountStatus !== 'active' || !member.emailVerifiedAt))) continue
     const email = text(member.email)
     if (!email) continue
     const profiles = await payload.find({ collection: 'payload_member_profiles', where: { member: { equals: String(member.id) } }, limit: 1, depth: 0, overrideAccess: true }).catch(() => ({ docs: [] as PayloadDocument[] }))

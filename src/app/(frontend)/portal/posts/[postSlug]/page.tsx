@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 
 import { MemberPublishedContentView } from '@/components/portal/MemberPublishedContentView'
-import { requirePortalMember } from '@/lib/auth/requirePortalMember'
+import { requirePortalAccess } from '@/lib/auth/requirePortalAccess'
 import { getPublishedMemberPost } from '@/lib/payloadContent/memberContent'
 import { getReactionSummary } from '@/lib/payloadCourse/reactions'
 
@@ -12,17 +12,20 @@ type PageProps = {
 export default async function PortalPublishedPost({ params }: PageProps) {
   const { postSlug } = await params
   const requestedPath = `/portal/posts/${postSlug}`
-  const { memberId, payload } = await requirePortalMember(requestedPath)
-  const post = await getPublishedMemberPost(payload, postSlug, memberId)
+  const { actor, payload } = await requirePortalAccess(requestedPath)
+  const memberId = actor.memberId ?? null
+  const post = await getPublishedMemberPost(payload, postSlug, memberId, { includeRestricted: actor.kind === 'admin' })
 
   if (!post) notFound()
 
   let reactionSummary = null
-  try {
-    reactionSummary = await getReactionSummary(payload, memberId, { kind: 'content_post', id: post.id })
-  } catch {
-    // A missing optional engagement projection must not make published content unreadable.
+  if (actor.kind === 'member') {
+    try {
+      reactionSummary = await getReactionSummary(payload, memberId, { kind: 'content_post', id: post.id })
+    } catch {
+      // A missing optional engagement projection must not make published content unreadable.
+    }
   }
 
-  return <MemberPublishedContentView content={post} reactionSummary={reactionSummary} target='post' />
+  return <MemberPublishedContentView content={post} enableReactions={actor.kind === 'member'} reactionSummary={reactionSummary} target='post' />
 }

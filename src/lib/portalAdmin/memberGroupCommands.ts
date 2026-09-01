@@ -83,24 +83,37 @@ function memberRelationshipIds(ids: string[]): Array<string | number> {
   return ids.map(normalizeRelationshipId)
 }
 
-async function assertActiveMembers(payload: PayloadCourseWriteAPI, ids: string[]): Promise<void> {
+async function assertGroupMemberTargets(payload: PayloadCourseWriteAPI, ids: string[]): Promise<void> {
   if (ids.length === 0) return
-  const result = await payload.find({
-    collection: 'payload_members',
-    where: {
-      and: [
-        { id: { in: ids } },
-        { accountStatus: { equals: 'active' } },
-      ],
-    },
-    limit: Math.min(ids.length, 500),
-    depth: 0,
-    overrideAccess: true,
-  })
-  const found = new Set(result.docs.map((member) => String(member.id)))
-  const missing = ids.filter((id) => !found.has(id))
+  const [members, administrators] = await Promise.all([
+    payload.find({
+      collection: 'payload_members',
+      where: { id: { in: ids } },
+      limit: Math.min(ids.length, 500),
+      depth: 0,
+      overrideAccess: true,
+    }),
+    payload.find({
+      collection: 'payload_users',
+      where: { portalMember: { in: ids } },
+      limit: Math.min(ids.length, 500),
+      depth: 0,
+      overrideAccess: true,
+    }),
+  ])
+  const administratorMemberIds = new Set(
+    administrators.docs
+      .map((administrator) => relationshipId(administrator.portalMember))
+      .filter((id): id is string => Boolean(id)),
+  )
+  const allowed = new Set(
+    members.docs
+      .filter((member) => member.accountStatus === 'active' || member.isAdministrator === true || administratorMemberIds.has(String(member.id)))
+      .map((member) => String(member.id)),
+  )
+  const missing = ids.filter((id) => !allowed.has(id))
   if (missing.length > 0) {
-    throw new PortalAdminActionError('invalid_input', 'Groups can only include active members.')
+    throw new PortalAdminActionError('invalid_input', 'Groups can only include active members or administrators.')
   }
 }
 
@@ -173,7 +186,7 @@ export async function createMemberGroupCommand(
 ): Promise<MemberGroupSummary> {
   const name = validateTitle(input.name)
   const ids = normalizedMemberIds(input.memberIds)
-  await assertActiveMembers(payload, ids)
+  await assertGroupMemberTargets(payload, ids)
   const slug = await uniqueSlugForName(payload, 'payload_member_groups', name)
   const created = await payload.create({
     collection: 'payload_member_groups',
@@ -215,7 +228,7 @@ export async function updateMemberGroupCommand(
 
   const name = validateTitle(input.name)
   const ids = input.memberIds === undefined ? memberIds(before.members) : normalizedMemberIds(input.memberIds)
-  await assertActiveMembers(payload, ids)
+  await assertGroupMemberTargets(payload, ids)
   const data: Record<string, unknown> = {
     name,
     members: memberRelationshipIds(ids),

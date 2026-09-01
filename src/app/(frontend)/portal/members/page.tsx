@@ -5,7 +5,7 @@ import { MemberActivityFeed } from '@/components/portal/MemberActivityFeed'
 import { MemberGroupsAdmin } from '@/components/portal/MemberGroupsAdmin'
 import { requirePortalAccess } from '@/lib/auth/requirePortalAccess'
 import { getMemberActivity } from '@/lib/payloadCourse/memberActivity'
-import { listActiveMembers } from '@/lib/payloadCourse/memberDirectory'
+import { listActiveMembers, listMemberGroupCandidates } from '@/lib/payloadCourse/memberDirectory'
 import { listMemberGroups } from '@/lib/portalAdmin/memberGroupCommands'
 
 type PageProps = {
@@ -24,13 +24,19 @@ export default async function MembersDirectoryPage({ searchParams }: PageProps) 
   ])
   const activityPage = pageNumber(rawActivityPage)
 
-  const [members, activity, adminGroups] = await Promise.all([
+  const [members, activity, adminGroups, groupCandidates] = await Promise.all([
     listActiveMembers(payload),
     getMemberActivity(payload, actor.kind === 'admin' ? { kind: 'admin' } : { kind: 'member', memberId: actor.memberId }, { page: activityPage }),
     actor.kind === 'admin' ? listMemberGroups(payload, true) : Promise.resolve([]),
+    actor.kind === 'admin' ? listMemberGroupCandidates(payload) : Promise.resolve([]),
   ])
   const adminMemberOptions = actor.kind === 'admin'
-    ? members.map((member) => ({ id: member.memberId, label: member.displayName }))
+    ? groupCandidates.map((member) => ({
+        id: member.memberId,
+        label: member.displayName,
+        email: member.email,
+        isAdministrator: member.isAdministrator,
+      }))
     : []
   const filteredMembers = memberSearch?.trim()
     ? members.filter((member) => member.displayName.toLowerCase().includes(memberSearch.trim().toLowerCase()))

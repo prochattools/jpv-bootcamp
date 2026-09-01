@@ -3,8 +3,10 @@ import Link from 'next/link'
 import { ContentCardImage } from '@/components/portal/ContentCardImage'
 import { AdminGate } from '@/components/portal/AdminGate'
 import { PortalAnnouncementComposer } from '@/components/portal/PortalAnnouncementComposer'
+import { PortalAnnouncementManagement } from '@/components/portal/PortalAnnouncementManagement'
 import { requirePortalAccess } from '@/lib/auth/requirePortalAccess'
 import { listPublishedMemberContent } from '@/lib/payloadContent/memberContent'
+import { listPortalAdminUpdates } from '@/lib/portalAdmin/announcementCommands'
 import { listMemberGroups } from '@/lib/portalAdmin/memberGroupCommands'
 
 function formatDate(value: string | null): string | null {
@@ -17,11 +19,15 @@ function formatDate(value: string | null): string | null {
 export default async function PortalContentPage() {
   // Member boundary remains the equivalent of requirePortalMember('/portal/content'); admins use the shared access context for Admin Mode. The member projection is the listPublishedMemberContent(payload) contract.
   const { actor, payload } = await requirePortalAccess('/portal/content')
-  const content = await listPublishedMemberContent(payload, actor.kind === 'member' ? actor.memberId : null)
-  const adminData = actor.kind === 'admin'
-    ? await payload.find({ collection: 'payload_members', where: { accountStatus: { equals: 'active' } }, limit: 500, depth: 0, overrideAccess: true })
-    : null
-  const adminGroups = actor.kind === 'admin' ? await listMemberGroups(payload) : []
+  const isAdmin = actor.kind === 'admin'
+  const [content, adminData, adminGroups, adminUpdates] = await Promise.all([
+    listPublishedMemberContent(payload, isAdmin ? null : actor.memberId, { includeRestricted: isAdmin }),
+    isAdmin
+      ? payload.find({ collection: 'payload_members', where: { accountStatus: { equals: 'active' } }, limit: 500, depth: 0, overrideAccess: true })
+      : Promise.resolve(null),
+    isAdmin ? listMemberGroups(payload) : Promise.resolve([]),
+    isAdmin ? listPortalAdminUpdates(payload) : Promise.resolve([]),
+  ])
 
   return (
     <div className='space-y-6'>
@@ -36,9 +42,15 @@ export default async function PortalContentPage() {
       {adminData ? (
         <AdminGate>
           <PortalAnnouncementComposer
-            members={adminData.docs.map((member) => ({ id: String(member.id), label: String(member.displayName ?? member.name ?? member.email ?? 'Member') }))}
+            members={adminData.docs.map((member: { id: string | number; [key: string]: unknown }) => ({ id: String(member.id), label: String(member.displayName ?? member.name ?? member.email ?? 'Member') }))}
             groups={adminGroups.map((group) => ({ id: group.id, label: `${group.name} (${group.memberCount})` }))}
           />
+        </AdminGate>
+      ) : null}
+
+      {adminData ? (
+        <AdminGate>
+          <PortalAnnouncementManagement updates={adminUpdates} />
         </AdminGate>
       ) : null}
 

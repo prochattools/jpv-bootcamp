@@ -2,6 +2,8 @@ import assert from 'node:assert/strict'
 import { existsSync, readFileSync } from 'node:fs'
 
 import { jpvBrand } from '../src/lib/brand/jpvDesignSystem'
+import { resolveJpvLogoUrl } from '../src/lib/brand/jpvDesignSystem'
+import { getPublicBaseUrl } from '../src/lib/public-base-url'
 
 const payloadConfig = readFileSync('src/payload.config.ts', 'utf8')
 const brandingSource = readFileSync('src/components/payload/JPVAdminBranding.tsx', 'utf8')
@@ -14,6 +16,11 @@ const iconKey = './components/payload/JPVAdminBranding#JPVAdminIcon'
 
 assert.ok(payloadConfig.includes(logoKey), 'payload.config.ts must configure JPVAdminLogo')
 assert.ok(payloadConfig.includes(iconKey), 'payload.config.ts must configure JPVAdminIcon')
+assert.match(payloadConfig, /resolveJpvLogoUrl\(getPublicBaseUrl\(\)\)/, 'Payload metadata icons must use an absolute public logo URL')
+const resolvedLogoUrl = resolveJpvLogoUrl(getPublicBaseUrl())
+assert.equal(resolvedLogoUrl, new URL(jpvBrand.logoPath, getPublicBaseUrl()).toString())
+assert.match(resolvedLogoUrl, /^https:\/\//, 'Payload metadata logo URL must be absolute HTTPS')
+assert.doesNotMatch(payloadConfig, /url:\s*jpvBrand\.logoPath/, 'Payload metadata must not receive a relative logo path')
 assert.doesNotMatch(
   payloadConfig,
   /beforeLogin:\s*\[/,

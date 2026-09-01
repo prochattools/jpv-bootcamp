@@ -50,6 +50,7 @@ async function findPublishedBySlug(
   collection: 'payload_pages' | 'payload_posts',
   slug: string,
   memberId?: string | null,
+  includeRestricted = false,
 ): Promise<PayloadDocument | null> {
   const result = await payload.find({
     collection,
@@ -65,7 +66,7 @@ async function findPublishedBySlug(
   })
 
   const document = result.docs[0] ?? null
-  return document && await memberCanAccessContent(payload, document, memberId) ? document : null
+  return document && (includeRestricted || await memberCanAccessContent(payload, document, memberId)) ? document : null
 }
 
 async function projectPublishedContent(
@@ -101,8 +102,9 @@ export async function getPublishedMemberPage(
   payload: PayloadCourseAccessAPI,
   slug: string,
   memberId?: string | null,
+  options: { includeRestricted?: boolean } = {},
 ): Promise<MemberPublishedContent | null> {
-  const page = await findPublishedBySlug(payload, 'payload_pages', slug, memberId)
+  const page = await findPublishedBySlug(payload, 'payload_pages', slug, memberId, options.includeRestricted === true)
   return page ? projectPublishedContent(payload, page, 'summary') : null
 }
 
@@ -110,8 +112,9 @@ export async function getPublishedMemberPost(
   payload: PayloadCourseAccessAPI,
   slug: string,
   memberId?: string | null,
+  options: { includeRestricted?: boolean } = {},
 ): Promise<MemberPublishedContent | null> {
-  const post = await findPublishedBySlug(payload, 'payload_posts', slug, memberId)
+  const post = await findPublishedBySlug(payload, 'payload_posts', slug, memberId, options.includeRestricted === true)
   return post ? projectPublishedContent(payload, post, 'excerpt') : null
 }
 
@@ -131,6 +134,7 @@ async function listPublishedCollection(
   kind: 'page' | 'post',
   summaryField: 'summary' | 'excerpt',
   memberId?: string | null,
+  includeRestricted = false,
 ): Promise<MemberPublishedContentSummary[]> {
   const result = await payload.find({
     collection,
@@ -143,7 +147,7 @@ async function listPublishedCollection(
 
   const summaries: MemberPublishedContentSummary[] = []
   for (const document of result.docs) {
-    if (!await memberCanAccessContent(payload, document, memberId)) continue
+    if (!includeRestricted && !await memberCanAccessContent(payload, document, memberId)) continue
     const slug = asString(document.slug)
     if (!slug) continue
     summaries.push({
@@ -162,10 +166,12 @@ async function listPublishedCollection(
 export async function listPublishedMemberContent(
   payload: PayloadCourseAccessAPI,
   memberId?: string | null,
+  options: { includeRestricted?: boolean } = {},
 ): Promise<MemberPublishedContentSummary[]> {
+  const includeRestricted = options.includeRestricted === true
   const [pages, posts] = await Promise.all([
-    listPublishedCollection(payload, 'payload_pages', 'page', 'summary', memberId),
-    listPublishedCollection(payload, 'payload_posts', 'post', 'excerpt', memberId),
+    listPublishedCollection(payload, 'payload_pages', 'page', 'summary', memberId, includeRestricted),
+    listPublishedCollection(payload, 'payload_posts', 'post', 'excerpt', memberId, includeRestricted),
   ])
 
   return [...posts, ...pages].sort((left, right) => {
