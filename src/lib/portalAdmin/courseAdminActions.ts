@@ -35,7 +35,7 @@ import {
 
 export type { CourseInput, LessonInput, ModuleInput }
 
-type ActionResult = PortalAdminActionResult<{ id?: string }>
+type ActionResult = PortalAdminActionResult<{ id?: string; coursePath?: string | null }>
 
 function revalidateCoursePaths(courseSlug?: string | null): void {
   revalidatePath('/portal')
@@ -59,7 +59,7 @@ export async function createCourseAction(input: CourseInput): Promise<ActionResu
   return runAdminAction('createCourseAction', async (context) => {
     const result = await createCourseCommand(context, input)
     revalidateCoursePaths(result.courseSlug)
-    return { id: result.id }
+    return { id: result.id, coursePath: result.courseSlug ? `/portal/courses/${encodeURIComponent(result.courseSlug)}` : null }
   })
 }
 

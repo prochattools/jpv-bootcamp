@@ -1,5 +1,7 @@
 import type { AdminActor } from '@/lib/auth/portalActor'
+import { normalizeRelationshipId } from '@/lib/domain/relationships'
 import { plainTextToLexical } from '@/lib/content/plainTextToLexical'
+import { announcementHTMLToLexical } from '@/lib/payloadContent/announcementRichText'
 import { uniqueSlugForName } from '@/lib/domain/slugs'
 import { normalizeSlug, validateTitle } from '@/lib/domain/validation'
 import { createAuditEvent } from '@/lib/payloadCourse/events'
@@ -41,6 +43,7 @@ export type LessonInput = {
   bunnyVideo?: string | null
   downloads?: string[]
   contentText?: string
+  contentHtml?: string
 }
 
 export type LessonUpdateInput = Partial<Omit<LessonInput, 'moduleId'>>
@@ -75,7 +78,7 @@ export async function createLessonCommand(
   if (!module) throw new PortalAdminActionError('not_found', 'Module not found.')
 
   const data: Record<string, unknown> = {
-    module: input.moduleId,
+    module: normalizeRelationshipId(input.moduleId),
     title,
     slug,
     summary: input.summary?.trim() || undefined,
@@ -85,10 +88,11 @@ export async function createLessonCommand(
     sortOrder: input.sortOrder ?? 0,
   }
   if (input.content !== undefined) data.content = input.content
-  if (input.contentText !== undefined) data.content = toPlainLexical(input.contentText)
-  if (input.coverImage !== undefined) data.coverImage = input.coverImage ?? null
-  if (input.bunnyVideo !== undefined) data.bunnyVideo = input.bunnyVideo ?? null
-  if (input.downloads !== undefined) data.downloads = input.downloads
+  if (input.contentHtml !== undefined) data.content = await announcementHTMLToLexical(input.contentHtml)
+  else if (input.contentText !== undefined) data.content = toPlainLexical(input.contentText)
+  if (input.coverImage !== undefined) data.coverImage = input.coverImage ? normalizeRelationshipId(input.coverImage) : null
+  if (input.bunnyVideo !== undefined) data.bunnyVideo = input.bunnyVideo ? normalizeRelationshipId(input.bunnyVideo) : null
+  if (input.downloads !== undefined) data.downloads = input.downloads.map(normalizeRelationshipId)
 
   let document
   try {
@@ -135,10 +139,11 @@ export async function updateLessonCommand(
   if (input.previewLesson !== undefined) data.previewLesson = input.previewLesson
   if (input.sortOrder !== undefined) data.sortOrder = input.sortOrder
   if (input.content !== undefined) data.content = input.content
-  if (input.contentText !== undefined) data.content = toPlainLexical(input.contentText)
-  if (input.coverImage !== undefined) data.coverImage = input.coverImage ?? null
-  if (input.bunnyVideo !== undefined) data.bunnyVideo = input.bunnyVideo ?? null
-  if (input.downloads !== undefined) data.downloads = input.downloads
+  if (input.contentHtml !== undefined) data.content = await announcementHTMLToLexical(input.contentHtml)
+  else if (input.contentText !== undefined) data.content = toPlainLexical(input.contentText)
+  if (input.coverImage !== undefined) data.coverImage = input.coverImage ? normalizeRelationshipId(input.coverImage) : null
+  if (input.bunnyVideo !== undefined) data.bunnyVideo = input.bunnyVideo ? normalizeRelationshipId(input.bunnyVideo) : null
+  if (input.downloads !== undefined) data.downloads = input.downloads.map(normalizeRelationshipId)
   await updateRecord(persistence, 'payload_lessons', lessonId, data)
   await createAuditEvent(context.payload, {
     ...auditActor(context),

@@ -1,7 +1,6 @@
-import 'server-only'
-
 import {
   convertHTMLToLexical,
+  EXPERIMENTAL_TableFeature,
   editorConfigFactory,
 } from '@payloadcms/richtext-lexical'
 import type { SerializedEditorState } from '@payloadcms/richtext-lexical/lexical'
@@ -17,6 +16,7 @@ const minimalSanitizedConfig = {
 const SAFE_TAGS = new Set([
   'a', 'b', 'blockquote', 'br', 'div', 'em', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
   'hr', 'i', 'li', 'ol', 'p', 's', 'span', 'strong', 'u', 'ul', 'img',
+  'caption', 'table', 'tbody', 'td', 'tfoot', 'th', 'thead', 'tr',
 ])
 const REMOVE_TAGS = new Set(['audio', 'canvas', 'embed', 'form', 'iframe', 'object', 'script', 'style', 'svg', 'video'])
 
@@ -25,7 +25,10 @@ let editorConfigPromise: ReturnType<typeof editorConfigFactory.fromFeatures> | u
 async function getEditorConfig() {
   editorConfigPromise ??= editorConfigFactory.fromFeatures({
     config: minimalSanitizedConfig,
-    features: ({ defaultFeatures }) => defaultFeatures,
+    features: ({ defaultFeatures }) => [
+      ...defaultFeatures,
+      EXPERIMENTAL_TableFeature(),
+    ],
   })
   return editorConfigPromise
 }

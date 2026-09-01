@@ -4,7 +4,7 @@ import { buildConfig } from 'payload'
 import type { EmailAdapter, SendEmailOptions } from 'payload'
 import { Resend } from 'resend'
 import { postgresAdapter } from '@payloadcms/db-postgres'
-import { BlocksFeature, lexicalEditor } from '@payloadcms/richtext-lexical'
+import { BlocksFeature, EXPERIMENTAL_TableFeature, lexicalEditor } from '@payloadcms/richtext-lexical'
 import { s3Storage } from '@payloadcms/storage-s3'
 import { PayloadUsers } from './collections/PayloadUsers'
 import { PayloadPortalNavItems } from './collections/PayloadPortalNavItems'
@@ -230,6 +230,7 @@ export default buildConfig({
   editor: lexicalEditor({
     features: ({ defaultFeatures }) => [
       ...defaultFeatures,
+      EXPERIMENTAL_TableFeature(),
       BlocksFeature({ blocks: legacyMigrationRichTextBlocks }),
     ],
   }),

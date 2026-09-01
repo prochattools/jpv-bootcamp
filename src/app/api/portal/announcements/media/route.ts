@@ -13,6 +13,11 @@ const MAX_FILE_SIZE = 50 * 1024 * 1024
 const ALLOWED_MIME_TYPES = new Set([
   'image/gif', 'image/jpeg', 'image/png', 'image/webp',
   'video/mp4', 'video/webm', 'video/quicktime',
+  'application/pdf', 'application/msword',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'text/csv', 'text/plain',
 ])
 
 function safeFilename(name: string, mimeType: string): string {
@@ -28,9 +33,9 @@ export async function POST(request: NextRequest) {
 
   try {
     const file = (await request.formData()).get('file')
-    if (!(file instanceof File)) return NextResponse.json({ ok: false, message: 'Choose an image or video first.' }, { status: 400 })
+    if (!(file instanceof File)) return NextResponse.json({ ok: false, message: 'Choose an image, video, or document first.' }, { status: 400 })
     const mimeType = file.type.toLowerCase()
-    if (!ALLOWED_MIME_TYPES.has(mimeType)) return NextResponse.json({ ok: false, message: 'Only common image and video formats are supported.' }, { status: 415 })
+    if (!ALLOWED_MIME_TYPES.has(mimeType)) return NextResponse.json({ ok: false, message: 'Only common image, video, and document formats are supported.' }, { status: 415 })
     if (file.size <= 0 || file.size > MAX_FILE_SIZE) return NextResponse.json({ ok: false, message: 'Media must be smaller than 50 MB.' }, { status: 413 })
 
     const payload = await getPayload({ config }) as unknown as PayloadCourseWriteAPI

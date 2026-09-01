@@ -1,4 +1,6 @@
 import type { AdminActor } from '@/lib/auth/portalActor'
+import { normalizeRelationshipId } from '@/lib/domain/relationships'
+import { announcementHTMLToLexical } from '@/lib/payloadContent/announcementRichText'
 import { plainTextToLexical } from '@/lib/content/plainTextToLexical'
 import { uniqueSlugForName } from '@/lib/domain/slugs'
 import { normalizeSlug, validateTitle } from '@/lib/domain/validation'
@@ -11,6 +13,7 @@ import {
   deleteRecord,
   findCourseById,
   findCourseBySlug,
+  findCourseBySlugExcluding,
   findModulesForCourse,
   updateRecord,
   type CourseAdminPersistenceContext,
@@ -40,6 +43,7 @@ export type CourseInput = {
   description?: unknown
   coverImage?: string | null
   descriptionText?: string
+  descriptionHtml?: string
 }
 
 export type CourseUpdateInput = Partial<CourseInput>
@@ -86,8 +90,9 @@ export async function createCourseCommand(
     sortOrder: input.sortOrder ?? 0,
   }
   if (input.description !== undefined) data.description = input.description
-  if (input.descriptionText !== undefined) data.description = toPlainLexical(input.descriptionText)
-  if (input.coverImage !== undefined) data.coverImage = input.coverImage ?? null
+  if (input.descriptionHtml !== undefined) data.description = await announcementHTMLToLexical(input.descriptionHtml)
+  else if (input.descriptionText !== undefined) data.description = toPlainLexical(input.descriptionText)
+  if (input.coverImage !== undefined) data.coverImage = input.coverImage ? normalizeRelationshipId(input.coverImage) : null
 
   let document
   try {
@@ -121,8 +126,12 @@ export async function updateCourseCommand(
 
   const data: Record<string, unknown> = {}
   if (input.title !== undefined) data.title = validateTitle(input.title)
-  // Slugs are stable routing identifiers. Renaming a course never rewrites an
-  // existing slug; the persisted value is retained for links and bookmarks.
+  if (input.slug !== undefined) {
+    const slug = normalizeSlug(input.slug)
+    const conflict = await findCourseBySlugExcluding(persistence, slug, courseId)
+    if (conflict) throw new PortalAdminActionError('conflict', 'A course with this URL already exists.')
+    data.slug = slug
+  }
   if (input.shortDescription !== undefined) data.shortDescription = input.shortDescription.trim()
   if (input.status !== undefined) data.status = input.status
   if (input.visibility !== undefined) data.visibility = input.visibility
@@ -130,8 +139,9 @@ export async function updateCourseCommand(
   if (input.featured !== undefined) data.featured = input.featured
   if (input.sortOrder !== undefined) data.sortOrder = input.sortOrder
   if (input.description !== undefined) data.description = input.description
-  if (input.descriptionText !== undefined) data.description = toPlainLexical(input.descriptionText)
-  if (input.coverImage !== undefined) data.coverImage = input.coverImage ?? null
+  if (input.descriptionHtml !== undefined) data.description = await announcementHTMLToLexical(input.descriptionHtml)
+  else if (input.descriptionText !== undefined) data.description = toPlainLexical(input.descriptionText)
+  if (input.coverImage !== undefined) data.coverImage = input.coverImage ? normalizeRelationshipId(input.coverImage) : null
 
   await updateRecord(persistence, 'payload_courses', courseId, data)
   await createAuditEvent(context.payload, {

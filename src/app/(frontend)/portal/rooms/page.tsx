@@ -36,10 +36,10 @@ export default async function PortalRoomsPage() {
   const { actor, payload } = await requirePortalAccess('/portal/rooms')
 
   if (actor.kind === 'admin') {
-    const [members, groups, categories, documents, memberRooms] = await Promise.all([
+    const [members, groups, categoryDocuments, documents, memberRooms] = await Promise.all([
       listMemberGroupCandidates(payload),
       payload.find({ collection: 'payload_member_groups', where: { status: { equals: 'active' } }, limit: 500, depth: 1, overrideAccess: true }),
-      payload.find({ collection: 'payload_room_categories', where: { status: { equals: 'active' } }, limit: 500, sort: 'sortOrder', depth: 0, overrideAccess: true }),
+      payload.find({ collection: 'payload_room_categories', limit: 500, sort: 'sortOrder', depth: 0, overrideAccess: true }),
       listAdminRooms(payload),
       actor.memberId ? listMemberRooms(payload, actor.memberId) : Promise.resolve([] as RoomSummary[]),
     ])
@@ -53,6 +53,13 @@ export default async function PortalRoomsPage() {
         targetGroupIds: (Array.isArray(document.targetGroupIds) ? document.targetGroupIds : []).map(liveSessionRelationshipId).filter((id): id is string => Boolean(id)),
       } : null
     })).then((items) => items.filter((item): item is NonNullable<typeof item> => Boolean(item)))
+    const allCategories = categoryDocuments.docs.map((category) => ({
+      id: String(category.id),
+      label: String(category.name ?? category.slug ?? 'Category'),
+      status: category.status === 'archived' ? 'archived' as const : 'active' as const,
+      description: typeof category.description === 'string' ? category.description : null,
+    }))
+    const activeCategories = allCategories.filter((category) => category.status === 'active')
 
     return (
       <div className='space-y-6'>
@@ -64,7 +71,8 @@ export default async function PortalRoomsPage() {
               <p className='mt-3 max-w-3xl text-sm leading-6 text-jpv-muted'>Create and operate private member Rooms with clear audience grants, LiveKit video, and realtime chat.</p>
             </header>
             <PortalRoomsAdmin
-              categories={categories.docs.map((category) => ({ id: String(category.id), label: String(category.name ?? category.slug ?? 'Category') }))}
+              allCategories={allCategories}
+              categories={activeCategories}
               groups={groups.docs.map((group) => ({ id: String(group.id), label: String(group.name ?? 'Member group'), memberCount: Array.isArray(group.members) ? group.members.length : 0 }))}
               members={members.map((member) => ({ id: member.memberId, label: member.displayName, email: member.email, isAdministrator: member.isAdministrator }))}
               rooms={rooms}
