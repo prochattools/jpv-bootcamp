@@ -57,6 +57,7 @@ export function CommunityCommentComposer({ spaceSlug, postId }: { spaceSlug: str
     setMessage(null)
     const data = new FormData()
     data.append('spaceSlug', spaceSlug)
+    data.append('postId', postId)
     data.append('file', file)
     data.append('title', file.name)
 

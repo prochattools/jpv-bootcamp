@@ -24,9 +24,11 @@ export default async function MembersDirectoryPage({ searchParams }: PageProps) 
   ])
   const activityPage = pageNumber(rawActivityPage)
 
-  const members = await listActiveMembers(payload)
-  const activity = await getMemberActivity(payload, actor.kind === 'admin' ? { kind: 'admin' } : { kind: 'member', memberId: actor.memberId }, { page: activityPage })
-  const adminGroups = actor.kind === 'admin' ? await listMemberGroups(payload, true) : []
+  const [members, activity, adminGroups] = await Promise.all([
+    listActiveMembers(payload),
+    getMemberActivity(payload, actor.kind === 'admin' ? { kind: 'admin' } : { kind: 'member', memberId: actor.memberId }, { page: activityPage }),
+    actor.kind === 'admin' ? listMemberGroups(payload, true) : Promise.resolve([]),
+  ])
   const adminMemberOptions = actor.kind === 'admin'
     ? members.map((member) => ({ id: member.memberId, label: member.displayName }))
     : []

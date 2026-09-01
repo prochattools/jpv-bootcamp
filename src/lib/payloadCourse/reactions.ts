@@ -10,6 +10,7 @@ import { createAuditEvent } from '@/lib/payloadCourse/events'
 import { isEligibleCurrentMember } from '@/lib/members/currentMember'
 import { normalizeRelationshipId, relationshipId } from '@/lib/domain/relationships'
 import { memberCanAccessContent } from '@/lib/payloadContent/audience'
+import { getPayloadMigrationSchemaSqlPrefix } from '@/lib/payloadMigrationSchema'
 
 export const REACTION_COLLECTION = 'payload_engagement_reactions' as const
 
@@ -100,6 +101,14 @@ const targetFieldByKind: Record<ReactionTargetKind, keyof ReactionDocument> = {
   content_page: 'targetContentPage',
 }
 
+const targetColumnByKind: Record<ReactionTargetKind, string> = {
+  space_post: 'target_post_id',
+  space_comment: 'target_space_comment_id',
+  lesson_comment: 'target_lesson_comment_id',
+  content_post: 'target_content_post_id',
+  content_page: 'target_content_page_id',
+}
+
 const supportedMutationTargets = new Set<ReactionTargetKind>([
   'space_post',
   'space_comment',
@@ -174,6 +183,167 @@ async function findOne(
     overrideAccess: true,
   })
   return result.docs.find(isUsableReactionDocument) ?? null
+}
+
+type ReactionPoolRow = Record<string, unknown>
+
+function numericId(value: unknown): number | null {
+  const normalized = asString(value)
+  if (!normalized || !/^\d+$/.test(normalized)) return null
+  const parsed = Number(normalized)
+  return Number.isSafeInteger(parsed) ? parsed : null
+}
+
+function reactionDocumentFromPoolRow(row: ReactionPoolRow): ReactionDocument {
+  return {
+    id: row.id as PayloadId,
+    member: row.member_id as PayloadId,
+    reactionType: typeof row.reaction_type === 'string' ? row.reaction_type : null,
+    targetKind: typeof row.target_kind === 'string' ? row.target_kind : null,
+    targetPost: row.target_post_id as PayloadId | null,
+    targetSpaceComment: row.target_space_comment_id as PayloadId | null,
+    targetLessonComment: row.target_lesson_comment_id as PayloadId | null,
+    targetContentPost: row.target_content_post_id as PayloadId | null,
+    targetContentPage: row.target_content_page_id as PayloadId | null,
+    createdAt: typeof row.created_at === 'string' ? row.created_at : null,
+    updatedAt: typeof row.updated_at === 'string' ? row.updated_at : null,
+  }
+}
+
+function reactionPool(payload: PayloadCourseAccessAPI) {
+  return payload.db?.pool ?? null
+}
+
+/**
+ * Payload's relationship adapter has historically attempted to hydrate
+ * malformed legacy rows before the query-level reactionType filter ran. The
+ * reaction table is deliberately narrow, so use its SQL shape as a fallback
+ * when that adapter cannot read or write it. The schema name is validated by
+ * getPayloadMigrationSchemaSqlPrefix; values remain parameterized.
+ */
+async function findReactionRowsWithPool(
+  payload: PayloadCourseAccessAPI,
+  filter: { kind: ReactionTargetKind; ids: readonly string[] },
+  memberId?: PayloadId,
+): Promise<ReactionDocument[] | undefined> {
+  const pool = reactionPool(payload)
+  const column = targetColumnByKind[filter.kind]
+  const ids = filter.ids.map(numericId).filter((id): id is number => id !== null)
+  if (!pool || ids.length !== filter.ids.length || ids.length === 0) return undefined
+
+  const values: unknown[] = [filter.kind, ...ids]
+  let memberClause = ''
+  if (memberId !== undefined) {
+    const resolvedMemberId = numericId(memberId)
+    if (resolvedMemberId === null) return undefined
+    values.push(resolvedMemberId)
+    memberClause = ` AND "member_id" = $${values.length}`
+  }
+
+  const placeholders = ids.map((_, index) => `$${index + 2}`).join(', ')
+  const schema = getPayloadMigrationSchemaSqlPrefix()
+  try {
+    const result = await pool.query({
+      text: `SELECT "id", "member_id", "reaction_type", "target_kind", "target_post_id", "target_space_comment_id", "target_lesson_comment_id", "target_content_post_id", "target_content_page_id", "created_at", "updated_at" FROM ${schema}."payload_engagement_reactions" WHERE "target_kind" = $1 AND "${column}" IN (${placeholders}) AND "reaction_type" IN ('helpful', 'insightful', 'celebrate')${memberClause} ORDER BY "id" ASC LIMIT 500`,
+      values,
+      statement_timeout: 3000,
+    })
+    return result.rows.map(reactionDocumentFromPoolRow).filter(isUsableReactionDocument)
+  } catch (error) {
+    console.error('JPV_REACTION_SQL_FALLBACK_UNAVAILABLE', {
+      error: error instanceof Error ? error.message : String(error),
+    })
+    return undefined
+  }
+}
+
+async function updateReactionWithPool(
+  payload: PayloadCourseAccessAPI,
+  memberId: PayloadId,
+  target: ReactionTarget,
+  reactionId: PayloadId,
+  reactionType: ReactionType,
+): Promise<boolean> {
+  const pool = reactionPool(payload)
+  const member = numericId(memberId)
+  const id = numericId(reactionId)
+  const targetId = numericId(target.id)
+  if (!pool || member === null || id === null || targetId === null) return false
+
+  const schema = getPayloadMigrationSchemaSqlPrefix()
+  const column = targetColumnByKind[target.kind]
+  try {
+    const result = await pool.query({
+      text: `UPDATE ${schema}."payload_engagement_reactions" SET "reaction_type" = $1, "metadata" = $2::jsonb, "updated_at" = now() WHERE "id" = $3 AND "member_id" = $4 AND "target_kind" = $5 AND "${column}" = $6 RETURNING "id"`,
+      values: [reactionType, JSON.stringify({ source: 'member_portal', operation: 'changed' }), id, member, target.kind, targetId],
+      statement_timeout: 3000,
+    })
+    return result.rows.length > 0
+  } catch (error) {
+    console.error('JPV_REACTION_SQL_UPDATE_UNAVAILABLE', {
+      error: error instanceof Error ? error.message : String(error),
+    })
+    return false
+  }
+}
+
+async function createReactionWithPool(
+  payload: PayloadCourseAccessAPI,
+  memberId: PayloadId,
+  target: ReactionTarget,
+  reactionType: ReactionType,
+): Promise<ReactionDocument | null | undefined> {
+  const pool = reactionPool(payload)
+  const member = numericId(memberId)
+  const targetId = numericId(target.id)
+  if (!pool || member === null || targetId === null) return undefined
+
+  const schema = getPayloadMigrationSchemaSqlPrefix()
+  const column = targetColumnByKind[target.kind]
+  try {
+    const result = await pool.query({
+      text: `INSERT INTO ${schema}."payload_engagement_reactions" ("member_id", "reaction_type", "target_kind", "${column}", "metadata") VALUES ($1, $2, $3, $4, $5::jsonb) ON CONFLICT DO NOTHING RETURNING "id", "member_id", "reaction_type", "target_kind", "target_post_id", "target_space_comment_id", "target_lesson_comment_id", "target_content_post_id", "target_content_page_id", "created_at", "updated_at"`,
+      values: [member, reactionType, target.kind, targetId, JSON.stringify({ source: 'member_portal', operation: 'created' })],
+      statement_timeout: 3000,
+    })
+    if (result.rows.length > 0) return reactionDocumentFromPoolRow(result.rows[0])
+    const existing = await findReactionRowsWithPool(payload, { kind: target.kind, ids: [String(target.id)] }, memberId)
+    return existing?.[0] ?? null
+  } catch (error) {
+    console.error('JPV_REACTION_SQL_CREATE_UNAVAILABLE', {
+      error: error instanceof Error ? error.message : String(error),
+    })
+    return undefined
+  }
+}
+
+async function deleteReactionWithPool(
+  payload: PayloadCourseAccessAPI,
+  memberId: PayloadId,
+  target: ReactionTarget,
+  reactionId: PayloadId,
+): Promise<boolean> {
+  const pool = reactionPool(payload)
+  const member = numericId(memberId)
+  const id = numericId(reactionId)
+  const targetId = numericId(target.id)
+  if (!pool || member === null || id === null || targetId === null) return false
+
+  const schema = getPayloadMigrationSchemaSqlPrefix()
+  const column = targetColumnByKind[target.kind]
+  try {
+    const result = await pool.query({
+      text: `DELETE FROM ${schema}."payload_engagement_reactions" WHERE "id" = $1 AND "member_id" = $2 AND "target_kind" = $3 AND "${column}" = $4 RETURNING "id"`,
+      values: [id, member, target.kind, targetId],
+      statement_timeout: 3000,
+    })
+    return result.rows.length > 0
+  } catch (error) {
+    console.error('JPV_REACTION_SQL_DELETE_UNAVAILABLE', {
+      error: error instanceof Error ? error.message : String(error),
+    })
+    return false
+  }
 }
 
 async function findById(
@@ -375,9 +545,19 @@ async function findViewerReaction(
   memberId: PayloadId,
   target: ReactionTarget,
 ): Promise<ReactionDocument | null> {
-  return findOne(payload, REACTION_COLLECTION, {
-    and: [findMemberWhere(memberId), targetWhere(target)],
-  }) as Promise<ReactionDocument | null>
+  const sqlRows = await findReactionRowsWithPool(payload, { kind: target.kind, ids: [String(target.id)] }, memberId)
+  if (sqlRows) return sqlRows[0] ?? null
+
+  try {
+    return await findOne(payload, REACTION_COLLECTION, {
+      and: [findMemberWhere(memberId), targetWhere(target)],
+    }) as ReactionDocument | null
+  } catch (error) {
+    console.error('JPV_REACTION_PAYLOAD_READ_FAILED', {
+      error: error instanceof Error ? error.message : String(error),
+    })
+    return null
+  }
 }
 
 function buildReactionSummary(
@@ -408,19 +588,33 @@ function buildReactionSummary(
 async function findAllReactionRows(
   payload: PayloadCourseAccessAPI,
   where: Record<string, unknown>,
+  sqlFilter?: { kind: ReactionTargetKind; ids: readonly string[] },
 ): Promise<ReactionDocument[]> {
+  if (sqlFilter) {
+    const sqlRows = await findReactionRowsWithPool(payload, sqlFilter)
+    if (sqlRows) return sqlRows
+  }
+
   const rows: ReactionDocument[] = []
   const pageSize = 500
 
   for (let page = 1; page <= 100; page += 1) {
-    const result = await payload.find({
-      collection: REACTION_COLLECTION,
-      where: withUsableReactionTypeWhere(where),
-      limit: pageSize,
-      page,
-      depth: 0,
-      overrideAccess: true,
-    })
+    let result: { docs: any[]; hasNextPage?: boolean }
+    try {
+      result = await payload.find({
+        collection: REACTION_COLLECTION,
+        where: withUsableReactionTypeWhere(where),
+        limit: pageSize,
+        page,
+        depth: 0,
+        overrideAccess: true,
+      })
+    } catch (error) {
+      if (!sqlFilter) throw error
+      const sqlRows = await findReactionRowsWithPool(payload, sqlFilter)
+      if (sqlRows) return sqlRows
+      throw error
+    }
     rows.push(...result.docs.filter(isUsableReactionDocument))
     if (result.docs.length < pageSize || result.hasNextPage === false) return rows
   }
@@ -479,7 +673,7 @@ export async function getLessonCommentReactionSummaries(
       { targetKind: { equals: 'lesson_comment' } },
       { targetLessonComment: { in: [...visibleIds] } },
     ],
-  })
+  }, { kind: 'lesson_comment', ids: [...visibleIds] })
   for (const id of visibleIds) {
     const target: ReactionTarget = { kind: 'lesson_comment', id }
     const targetRows = reactionRows.filter((reaction) => relationshipId(reaction.targetLessonComment) === id)
@@ -531,7 +725,7 @@ export async function getSpaceCommentReactionSummaries(
       { targetKind: { equals: 'space_comment' } },
       { targetSpaceComment: { in: [...visibleIds] } },
     ],
-  })
+  }, { kind: 'space_comment', ids: [...visibleIds] })
   for (const id of visibleIds) {
     const target: ReactionTarget = { kind: 'space_comment', id }
     const targetRows = reactionRows.filter((reaction) => relationshipId(reaction.targetSpaceComment) === id)
@@ -601,7 +795,7 @@ export async function getReactionSummary(
   // Project one sanitized row set for both counts and the viewer state. This
   // keeps malformed/null rows from causing the post-mutation response to fail
   // after the reaction itself was already saved.
-  const reactions = await findAllReactionRows(payload, targetWhere(target))
+  const reactions = await findAllReactionRows(payload, targetWhere(target), { kind: target.kind, ids: [String(target.id)] })
   return buildReactionSummary(target, memberId, reactions)
 }
 
@@ -639,8 +833,14 @@ export async function setReaction(
         },
         overrideAccess: true,
       })
-    } catch {
-      throw new ReactionServiceError('conflict', 'The reaction changed concurrently. Please try again.')
+    } catch (error) {
+      const updated = await updateReactionWithPool(payload, memberId, target, existing.id, reactionType)
+      if (!updated) {
+        console.error('JPV_REACTION_UPDATE_FAILED', {
+          error: error instanceof Error ? error.message : String(error),
+        })
+        throw new ReactionServiceError('conflict', 'The reaction changed concurrently. Please try again.')
+      }
     }
 
     await recordReactionAudit(payload, {
@@ -658,17 +858,29 @@ export async function setReaction(
   }
 
   try {
-    const created = await payload.create({
-      collection: REACTION_COLLECTION,
-      data: {
-        member: normalizeRelationshipId(memberId),
-        reactionType,
-        targetKind: target.kind,
-        [targetField]: normalizeRelationshipId(target.id),
-        metadata: { source: 'member_portal', operation: 'created' },
-      },
-      overrideAccess: true,
-    })
+    let created: PayloadDocument
+    try {
+      created = await payload.create({
+        collection: REACTION_COLLECTION,
+        data: {
+          member: normalizeRelationshipId(memberId),
+          reactionType,
+          targetKind: target.kind,
+          [targetField]: normalizeRelationshipId(target.id),
+          metadata: { source: 'member_portal', operation: 'created' },
+        },
+        overrideAccess: true,
+      })
+    } catch (error) {
+      const fallback = await createReactionWithPool(payload, memberId, target, reactionType)
+      if (!fallback) {
+        console.error('JPV_REACTION_CREATE_FAILED', {
+          error: error instanceof Error ? error.message : String(error),
+        })
+        throw new ReactionServiceError('conflict', 'The reaction changed concurrently. Please try again.')
+      }
+      created = fallback
+    }
 
     await recordReactionAudit(payload, {
       actorType: 'member',
@@ -702,11 +914,21 @@ export async function removeReaction(
   if (!existing) return { operation: 'removed', reaction: null }
 
   const previous = normalizeReactionType(existing.reactionType)
-  await payload.delete({
-    collection: REACTION_COLLECTION,
-    id: existing.id,
-    overrideAccess: true,
-  })
+  try {
+    await payload.delete({
+      collection: REACTION_COLLECTION,
+      id: existing.id,
+      overrideAccess: true,
+    })
+  } catch (error) {
+    const deleted = await deleteReactionWithPool(payload, memberId, target, existing.id)
+    if (!deleted) {
+      console.error('JPV_REACTION_DELETE_FAILED', {
+        error: error instanceof Error ? error.message : String(error),
+      })
+      throw new ReactionServiceError('conflict', 'The reaction changed concurrently. Please try again.')
+    }
+  }
 
   await recordReactionAudit(payload, {
     actorType: 'member',

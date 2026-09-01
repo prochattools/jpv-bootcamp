@@ -122,6 +122,59 @@ describe('P2-05 member reactions', () => {
     expect(payload.create).not.toHaveBeenCalledWith(expect.objectContaining({ collection: 'payload_space_reactions' }))
   })
 
+  it('keeps reaction mutations working when Payload relationship persistence fails', async () => {
+    const { payload } = makePayload()
+    const sqlRows: any[] = []
+    const query = vi.fn(async ({ text, values }: { text: string; values?: readonly unknown[] }) => {
+      if (text.startsWith('SELECT')) return { rows: [...sqlRows] }
+      if (text.startsWith('INSERT')) {
+        const row = {
+          id: 501,
+          member_id: Number(values?.[0]),
+          reaction_type: values?.[1],
+          target_kind: values?.[2],
+          target_post_id: Number(values?.[3]),
+        }
+        sqlRows.push(row)
+        return { rows: [row] }
+      }
+      if (text.startsWith('UPDATE')) {
+        sqlRows[0].reaction_type = values?.[0]
+        return { rows: [{ id: sqlRows[0].id }] }
+      }
+      sqlRows.splice(0, 1)
+      return { rows: [{ id: 501 }] }
+    })
+    ;(payload as any).db = { pool: { query } }
+    const originalCreate = payload.create
+    payload.create = vi.fn(async (args: any) => {
+      if (args.collection === 'payload_engagement_reactions') throw new Error('relationship validation failed')
+      return originalCreate(args)
+    }) as any
+    payload.update = vi.fn(async (args: any) => {
+      if (args.collection === 'payload_engagement_reactions') throw new Error('relationship validation failed')
+      return args
+    }) as any
+    payload.delete = vi.fn(async (args: any) => {
+      if (args.collection === 'payload_engagement_reactions') throw new Error('relationship validation failed')
+      return args
+    }) as any
+
+    await expect(setReaction(payload, 42, { kind: 'space_post', id: 10 }, 'helpful')).resolves.toEqual({
+      operation: 'created',
+      reaction: 'helpful',
+    })
+    await expect(setReaction(payload, 42, { kind: 'space_post', id: 10 }, 'insightful')).resolves.toEqual({
+      operation: 'changed',
+      reaction: 'insightful',
+    })
+    await expect(setReaction(payload, 42, { kind: 'space_post', id: 10 }, 'insightful')).resolves.toEqual({
+      operation: 'removed',
+      reaction: null,
+    })
+    expect(sqlRows).toHaveLength(0)
+  })
+
   it('keeps the reaction successful when the non-critical audit write is unavailable', async () => {
     const { payload, collections } = makePayload()
     const create = payload.create

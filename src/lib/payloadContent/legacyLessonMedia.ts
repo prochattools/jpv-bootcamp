@@ -103,6 +103,54 @@ function missingLessonImageHtml(image: MissingLessonImage): string {
   return `<img src="${escapeAttribute(image.publicUrl)}" alt="${escapeAttribute(image.alt)}" loading="lazy" decoding="async" />`
 }
 
+/**
+ * Adds a source-backed image that was omitted before the lesson was converted
+ * to Lexical. The legacyHTML converter already repairs the banner image for
+ * lesson 6 in-place, so only standalone fallbacks are appended here.
+ */
+export function appendMissingLegacyLessonImageBlock(
+  data: Record<string, unknown>,
+  lessonSlug: string,
+): { data: Record<string, unknown>; addedMissingLessonImage: boolean } {
+  let normalizedLessonSlug = lessonSlug
+  try {
+    normalizedLessonSlug = decodeURIComponent(lessonSlug)
+  } catch {
+    // Invalid escapes cannot match a known source-backed lesson.
+  }
+
+  const image = MISSING_LEGACY_LESSON_IMAGES[normalizedLessonSlug.toLowerCase()]
+  if (!image || image.insertAfterFirstImage || !data.root || typeof data.root !== 'object') {
+    return { data, addedMissingLessonImage: false }
+  }
+
+  const serialized = JSON.stringify(data)
+  if (serialized.includes(image.filename)) return { data, addedMissingLessonImage: false }
+
+  const root = data.root as { children?: unknown }
+  if (!Array.isArray(root.children)) return { data, addedMissingLessonImage: false }
+
+  return {
+    data: {
+      ...data,
+      root: {
+        ...root,
+        children: [
+          ...root.children,
+          {
+            type: 'block',
+            fields: {
+              blockType: 'legacyHTML',
+              safeHtml: missingLessonImageHtml(image),
+            },
+          },
+        ],
+      },
+    },
+    addedMissingLessonImage: true,
+  }
+}
+
 export function restoreLegacyLessonImageSources(
   safeHtml: string,
   lessonSlug: string,
