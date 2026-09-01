@@ -25,6 +25,7 @@ The production health endpoint returned HTTP 200 and the expected `f93ffac7` ima
 - A temporary parity worktree and branch were created only for the guarded read-only staging plan, then removed after the plan failed before database access.
 - Client repository disk usage: approximately 22G → 16G.
 - Local branches: 64 → 40. Remote branches: 39 → 21 (excluding the symbolic `origin` ref).
+- The counts above are the cleanup counts before this report artifact was added; the final docs-only branch `codex/overnight-reconciliation-report-20260902` is intentionally retained separately and is excluded from those counts.
 - Retired 24 local refs and 18 exact remote refs. Each remote ref was independently confirmed ancestry-merged, unreferenced by workflows/docs, and covered by zero open PRs.
 - Preserved active/dirty/unique work, including `codex/ux-architecture-consolidation`, the dirty Stripe reconciliation worktree, billing and leaderboard branches, `feature/payload-v2`, the legacy release line, webhook retry-safety work, portal visual work, community-admin work, all dirty nested worktrees, and documented historical refs.
 - Preserved `feature/course-branding-and-preview` because current staging workflows and runbooks still name it as the operational staging authority, even though its tip is already reachable from `main`.
