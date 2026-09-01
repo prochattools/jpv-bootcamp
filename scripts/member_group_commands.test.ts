@@ -72,9 +72,9 @@ class FakePayload {
 async function main(): Promise<void> {
   const payload = new FakePayload({
     payload_members: [
-      { id: 'member-1', accountStatus: 'active' },
-      { id: 'member-2', accountStatus: 'active' },
-      { id: 'member-blocked', accountStatus: 'blocked' },
+      { id: '1', accountStatus: 'active' },
+      { id: '2', accountStatus: 'active' },
+      { id: '3', accountStatus: 'blocked' },
     ],
     payload_member_groups: [],
     payload_audit_events: [],
@@ -85,18 +85,19 @@ async function main(): Promise<void> {
   const created = await createMemberGroupCommand(payload as never, 'admin-1', {
     name: 'Café Cohort',
     description: 'Focused members',
-    memberIds: ['member-1', 'member-2'],
+    memberIds: ['1', '2'],
   })
   assert.equal(created.slug, 'cafe-cohort')
   assert.equal(created.memberCount, 2)
+  assert.deepEqual(payload.collections.payload_member_groups[0]?.members, [1, 2])
 
   const renamed = await updateMemberGroupCommand(payload as never, 'admin-1', created.id, {
     name: 'Renamed Cohort',
-    memberIds: ['member-2'],
+    memberIds: ['2'],
     expectedUpdatedAt: created.updatedAt,
   })
   assert.equal(renamed.slug, 'cafe-cohort')
-  assert.deepEqual(renamed.memberIds, ['member-2'])
+  assert.deepEqual(renamed.memberIds, ['2'])
   assert.equal(renamed.description, 'Focused members')
 
   const cleared = await updateMemberGroupCommand(payload as never, 'admin-1', created.id, {
@@ -116,7 +117,7 @@ async function main(): Promise<void> {
   await assert.rejects(
     updateMemberGroupCommand(payload as never, 'admin-1', created.id, {
       name: 'Invalid member',
-      memberIds: ['member-blocked'],
+      memberIds: ['3'],
     }),
     (error: unknown) => (error as { code?: string }).code === 'invalid_input',
   )

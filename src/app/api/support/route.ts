@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 
 import payloadConfig from '@/payload.config'
-import { getServerConfig } from '@/lib/config'
 import { isValidInternationalPhone, normalizePhone } from '@/lib/normalize-phone'
 import { guardPublicRequest } from '@/lib/publicRequestGuard'
 import {
@@ -13,7 +12,7 @@ import {
   trustPublicRequestProxyHeaders,
 } from '@/lib/publicRequestRoute'
 import { queueAndAttemptEmailEvent } from '@/lib/payloadCourse/events'
-import { getPayloadAdministratorRecipients } from '@/lib/payloadCourse/adminRecipients'
+import { parseConfiguredEmailRecipients } from '@/lib/payloadCourse/adminRecipients'
 import {
   SUPPORT_REQUEST_ADMIN_NOTIFICATION_TEMPLATE_KEY,
   SUPPORT_REQUEST_RECEIVED_TEMPLATE_KEY,
@@ -83,12 +82,12 @@ export async function POST(req: NextRequest) {
     async queueNotification(input) {
       const payload = await getPayload({ config: payloadConfig })
       const payloadApi = payload as unknown as PayloadCourseWriteAPI
-      const { supportTo } = getServerConfig().email
-      const recipients = await getPayloadAdministratorRecipients(payloadApi, [supportTo])
+      const recipients = parseConfiguredEmailRecipients(process.env.SUPPORT_NOTIFIER)
+      if (recipients.length === 0) throw new Error('SUPPORT_NOTIFIER is not configured.')
       await Promise.all(recipients.map((recipient) => queueAndAttemptEmailEvent(payloadApi, {
-        toEmail: recipient.email,
+        toEmail: recipient,
         templateKey: SUPPORT_REQUEST_ADMIN_NOTIFICATION_TEMPLATE_KEY,
-        dedupeKey: `${input.dedupeKey}:${recipient.id}`,
+        dedupeKey: `${input.dedupeKey}:support-notifier:${recipient}`,
         displayName: 'Support request pending review',
         metadata: {
           purpose: 'support_request_pending_review',

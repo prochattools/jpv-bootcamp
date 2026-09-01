@@ -1,4 +1,5 @@
 import 'server-only'
+import type Stripe from 'stripe'
 
 import prisma from '@/libs/prisma'
 import { normalizeEmail } from '@/lib/normalize-email'
@@ -109,6 +110,14 @@ function shouldRefreshProviderStatus(subscriptionStatus: string | null): boolean
   return subscriptionStatus === null || subscriptionStatus === 'incomplete'
 }
 
+function isMissingStripeCustomer(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false
+  const stripeError = error as { code?: string; message?: string }
+  return stripeError.code === 'resource_missing' || Boolean(
+    stripeError.message?.includes('No such customer') || stripeError.message?.includes('Invalid customer ID'),
+  )
+}
+
 async function getStripeFallbackStatus(
   normalizedEmail: string,
   knownCustomerId?: string,
@@ -116,19 +125,45 @@ async function getStripeFallbackStatus(
   try {
     const stripe = getStripe()
     let customerId = knownCustomerId
+    let subscriptions: Stripe.Subscription[] | null = null
     if (!customerId) {
-      const customers = await stripe.customers.list({ email: normalizedEmail, limit: 10 })
-      const matches = customers.data.filter((customer) => normalizeEmail(customer.email ?? '') === normalizedEmail)
-      if (matches.length !== 1) return emptyBillingStatus()
-      customerId = matches[0].id
+      subscriptions = null
+    } else {
+      try {
+        subscriptions = (await stripe.subscriptions.list({
+          customer: customerId,
+          status: 'all',
+          limit: 100,
+        })).data
+      } catch (error) {
+        if (!isMissingStripeCustomer(error)) throw error
+        subscriptions = null
+      }
     }
 
-    const subscriptions = await stripe.subscriptions.list({
-      customer: customerId,
-      status: 'all',
-      limit: 100,
-    })
-    const subscription = [...subscriptions.data].sort((left, right) => right.created - left.created)[0]
+    // A stale local customer link must not hide a real active subscription.
+    // Re-resolve only when the linked customer is missing or has no records;
+    // the normal linked-customer path stays a single provider request.
+    if (!subscriptions || subscriptions.length === 0) {
+      const customers = await stripe.customers.list({ email: normalizedEmail, limit: 10 })
+      const matches = customers.data.filter((customer) => normalizeEmail(customer.email ?? '') === normalizedEmail)
+      if (matches.length !== 1) {
+        if (knownCustomerId && subscriptions) customerId = knownCustomerId
+        else return emptyBillingStatus()
+      } else {
+        const resolvedCustomerId = matches[0].id
+        if (!subscriptions || resolvedCustomerId !== customerId) {
+          subscriptions = (await stripe.subscriptions.list({
+            customer: resolvedCustomerId,
+            status: 'all',
+            limit: 100,
+          })).data
+        }
+        customerId = resolvedCustomerId
+      }
+    }
+
+    const subscription = [...(subscriptions ?? [])].sort((left, right) => right.created - left.created)[0]
     const subscriptionStatus = subscription?.status ?? null
     const cancelAtPeriodEnd = subscription?.cancel_at_period_end ?? false
     const lifecycle = resolveMembershipLifecycle({

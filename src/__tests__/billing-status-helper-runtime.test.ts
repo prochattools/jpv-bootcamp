@@ -140,4 +140,57 @@ describe('getBillingStatus', () => {
       limit: 100,
     })
   })
+
+  it('recovers an active subscription when the stored Stripe customer link is stale', async () => {
+    findUnique.mockResolvedValue({
+      stripeCustomerId: 'cus_deleted',
+      subscriptionStatus: null,
+      subscriptionCurrentPeriodEnd: null,
+      subscriptionCancelAtPeriodEnd: null,
+      billingCadence: null,
+      commitmentStatus: null,
+      commitmentStartAt: null,
+      commitmentEndAt: null,
+      cancellationRequestedAt: null,
+      cancellationEffectiveAt: null,
+      paymentGraceEndsAt: null,
+      paymentStatus: null,
+      paymentFailedAt: null,
+      paymentRefundedAt: null,
+      paymentDisputeStatus: null,
+      paymentDisputedAt: null,
+      paymentDisputeResolvedAt: null,
+    })
+    const subscriptionsList = vi.fn()
+      .mockRejectedValueOnce({ code: 'resource_missing', message: 'No such customer' })
+      .mockResolvedValueOnce({
+        data: [
+          {
+            created: 3,
+            status: 'active',
+            cancel_at_period_end: false,
+            current_period_end: 1_800_000_000,
+            items: { data: [{ price: { recurring: { interval: 'month' } } }] },
+          },
+        ],
+      })
+    const customersList = vi.fn().mockResolvedValue({
+      data: [{ id: 'cus_live', email: 'Member@Example.com' }],
+    })
+    getStripe.mockReturnValue({
+      subscriptions: { list: subscriptionsList },
+      customers: { list: customersList },
+    })
+
+    const result = await getBillingStatus('member@example.com')
+
+    expect(result.subscriptionStatus).toBe('active')
+    expect(result.hasActiveSubscription).toBe(true)
+    expect(customersList).toHaveBeenCalledWith({ email: 'member@example.com', limit: 10 })
+    expect(subscriptionsList).toHaveBeenNthCalledWith(2, {
+      customer: 'cus_live',
+      status: 'all',
+      limit: 100,
+    })
+  })
 })

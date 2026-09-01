@@ -14,7 +14,7 @@ import {
 import { isValidInternationalPhone, normalizePhone } from '@/lib/normalize-phone'
 import { signSponsoredDecisionToken } from '@/lib/sponsored-approval-token'
 import { queueAndAttemptEmailEvent } from '@/lib/payloadCourse/events'
-import { getPayloadAdministratorRecipients } from '@/lib/payloadCourse/adminRecipients'
+import { parseConfiguredEmailRecipients } from '@/lib/payloadCourse/adminRecipients'
 import { SPONSORED_APPLICATION_ADMIN_NOTIFICATION_TEMPLATE_KEY } from '@/lib/payloadCourse/systemEmailTemplates'
 // The legacy sendSponsoredApplicationAdminEmail path is intentionally replaced by the durable outbox below.
 import {
@@ -186,16 +186,12 @@ export async function POST(req: NextRequest) {
 	if (shouldSendAdminEmail) {
 		try {
 			const payload = await getPayload({ config })
-			const settings = await payload.findGlobal({ slug: 'payItForwardSettings' }).catch((): null => null)
-			const configuredRecipients = [
-				process.env.SPONSORED_APPLICATION_ADMIN_EMAILS,
-				settings?.adminEmailsText,
-			]
-			const recipients = await getPayloadAdministratorRecipients(payload as never, configuredRecipients)
+			const recipients = parseConfiguredEmailRecipients(process.env.SUPPORT_NOTIFIER)
+			if (recipients.length === 0) throw new Error('SUPPORT_NOTIFIER is not configured.')
 			await Promise.all(recipients.map((recipient) => queueAndAttemptEmailEvent(payload as never, {
-				toEmail: recipient.email,
+				toEmail: recipient,
 				templateKey: SPONSORED_APPLICATION_ADMIN_NOTIFICATION_TEMPLATE_KEY,
-				dedupeKey: `sponsored-application-admin-notification:${applicationId}:${recipient.id}`,
+				dedupeKey: `sponsored-application-admin-notification:${applicationId}:support-notifier:${recipient}`,
 				displayName: 'Sponsored application pending review',
 				metadata: {
 					purpose: 'sponsored_application_pending_review',
