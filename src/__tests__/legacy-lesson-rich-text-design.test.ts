@@ -3,6 +3,7 @@ import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 import {
+  appendMissingLegacyLessonImageBlock,
   restoreLegacyLessonImagePlaceholders,
   restoreLegacyLessonImageSources,
 } from '@/lib/payloadContent/legacyLessonMedia'
@@ -60,5 +61,19 @@ describe('legacy lesson rich-text rendering contract', () => {
     )
     expect(christian.addedMissingLessonImage).toBe(true)
     expect(christian.html.indexOf('christiansonfire.png')).toBeLessThan(christian.html.indexOf('banner1.png'))
+  })
+
+  it('repairs a source-backed image when the imported lesson has no legacyHTML block', () => {
+    const repaired = appendMissingLegacyLessonImageBlock({
+      root: { type: 'root', children: [{ type: 'paragraph', children: [] }] },
+    }, 'lesson-5-the-legal-agreement')
+
+    expect(repaired.addedMissingLessonImage).toBe(true)
+    expect(repaired.data.root).toMatchObject({
+      children: [
+        { type: 'paragraph' },
+        { type: 'block', fields: { blockType: 'legacyHTML' } },
+      ],
+    })
   })
 })

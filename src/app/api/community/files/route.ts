@@ -1,12 +1,12 @@
 import config from '@payload-config'
-import { writeFile } from 'node:fs/promises'
+import { mkdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { getPayload } from 'payload'
 
 import { resolvePayloadRequestSession } from '@/lib/auth/payloadSession'
 import { decideSharedLogin } from '@/lib/auth/sharedLoginDecision'
 import type { PayloadCourseAccessAPI } from '@/lib/payloadCourse/accessService'
-import { getMemberCommunitySpaceDetail } from '@/lib/payloadCourse/communityPortal'
+import { getMemberCommunityPostDetail } from '@/lib/payloadCourse/communityDiscussion'
 import { attachOperationalBillingFallback } from '@/lib/payloadCourse/operationalBillingFallback'
 
 export const runtime = 'nodejs'
@@ -57,11 +57,15 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   const spaceSlug = formData.get('spaceSlug')
+  const postId = formData.get('postId')
   const file = formData.get('file')
   const title = formData.get('title')
 
   if (typeof spaceSlug !== 'string' || !spaceSlug.trim()) {
     return errorResponse('Missing spaceSlug', 400)
+  }
+  if (typeof postId !== 'string' || !postId.trim()) {
+    return errorResponse('Missing postId', 400)
   }
   if (!(file instanceof File)) {
     return errorResponse('Missing file', 400)
@@ -87,10 +91,11 @@ export async function POST(request: Request): Promise<Response> {
   const payload = attachOperationalBillingFallback(await getPayload({ config }))
   const accessPayload = payload as unknown as PayloadCourseAccessAPI
 
-  const detail = await getMemberCommunitySpaceDetail(accessPayload, memberId, spaceSlug)
-  // Match the read/post/comment entitlement decision. Paid members and other
-  // authorized members can have access grants without a membership row.
-  if (!detail?.allowed) {
+  // Authorize the upload against the exact post that will consume it. This
+  // keeps media uploads on the same entitlement and locked-post rules as the
+  // reply mutation and avoids a space-level slug/access mismatch.
+  const detail = await getMemberCommunityPostDetail(accessPayload, memberId, spaceSlug, postId)
+  if (!detail.allowed || !detail.post.canComment) {
     return errorResponse('Access denied to this space', 403)
   }
 
@@ -103,6 +108,7 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   const buffer = Buffer.from(await file.arrayBuffer())
+  await mkdir(storageDir, { recursive: true })
   await writeFile(filePath, buffer)
 
   const mediaDoc = await payload.create({
@@ -122,7 +128,8 @@ export async function POST(request: Request): Promise<Response> {
     collection: 'payload_space_files',
     data: {
       title: title.trim().slice(0, 160),
-      space: String(detail.id) as unknown as number,
+      space: String(detail.post.space.id) as unknown as number,
+      post: String(detail.post.id) as unknown as number,
       uploadedBy: String(memberId) as unknown as number,
       attachmentType,
       protectedFile: mediaDoc.id,

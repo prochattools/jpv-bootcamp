@@ -17,7 +17,8 @@ assert.match(
 assert.match(directory, /fallbackDisplayName/, 'members without profiles must still receive a safe display name')
 assert.doesNotMatch(directory, /!item\.isAdministrator/, 'administrator-linked members must remain visible in the directory')
 assert.match(directory, /member\.accountStatus !== 'active'/, 'profile pages must only expose active members')
-assert.match(page, /const members = await listActiveMembers\(payload\)/, 'the page must use the shared Payload client')
+assert.match(page, /listActiveMembers\(payload\)/, 'the page must use the shared Payload client')
+assert.match(page, /const \[members, activity, adminGroups\] = await Promise\.all\(/, 'independent member page queries must run in parallel')
 assert.match(page, /\{members\.length\} active member/, 'the visible count must match the rendered directory')
 
 console.log('portal_member_directory.test.ts passed')

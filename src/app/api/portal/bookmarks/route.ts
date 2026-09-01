@@ -3,8 +3,8 @@ import config from '@payload-config'
 import { getPayload } from 'payload'
 
 import { resolvePayloadRequestSession } from '@/lib/auth/payloadSession'
-import { normalizeRelationshipId } from '@/lib/domain/relationships'
 import { evaluatePayloadSpaceAccess, type PayloadCourseWriteAPI } from '@/lib/payloadCourse/accessService'
+import { toggleMemberBookmark } from '@/lib/payloadCourse/bookmarks'
 import { attachOperationalBillingFallback } from '@/lib/payloadCourse/operationalBillingFallback'
 
 export const runtime = 'nodejs'
@@ -32,10 +32,6 @@ export async function POST(request: NextRequest) {
       await getPayload({ config }) as unknown as PayloadCourseWriteAPI,
     )
     const memberId = String(session.member.id)
-    const memberRelationId = normalizeRelationshipId(memberId)
-    const postRelationId = normalizeRelationshipId(postId)
-    // The legacy actorMember: memberId and targetPost: postId relationships
-    // must be normalized before Payload reads and writes them.
     const post = await payload.findByID({ collection: 'payload_space_posts', id: postId, depth: 0, overrideAccess: true }) as Record<string, unknown> | null
     const spaceId = id(post?.space)
     if (!post || post.moderationStatus !== 'visible' || !spaceId) {
@@ -43,40 +39,8 @@ export async function POST(request: NextRequest) {
     }
     const access = await evaluatePayloadSpaceAccess(payload, { memberId, spaceId })
     if (!access.decision.allowed) return NextResponse.json({ ok: false, message: 'This post is not available to you.' }, { status: 403 })
-
-    const existing = await payload.find({
-      collection: 'payload_space_reactions',
-      where: {
-        and: [
-          { actorMember: { equals: memberRelationId } },
-          { reactionType: { equals: 'bookmark' } },
-          { targetKind: { equals: 'post' } },
-          { targetPost: { equals: postRelationId } },
-        ],
-      },
-      limit: 1,
-      depth: 0,
-      overrideAccess: true,
-    })
-
-    if (existing.docs[0] && payload.delete) {
-      await payload.delete({ collection: 'payload_space_reactions', id: existing.docs[0].id, overrideAccess: true })
-      return NextResponse.json({ ok: true, bookmarked: false })
-    }
-    if (existing.docs[0]) return NextResponse.json({ ok: true, bookmarked: true })
-
-    await payload.create({
-      collection: 'payload_space_reactions',
-      data: {
-        actorMember: memberRelationId,
-        reactionType: 'bookmark',
-        targetKind: 'post',
-        targetPost: postRelationId,
-        metadata: { source: 'member_portal' },
-      },
-      overrideAccess: true,
-    })
-    return NextResponse.json({ ok: true, bookmarked: true })
+    const bookmarked = await toggleMemberBookmark(payload, memberId, postId)
+    return NextResponse.json({ ok: true, bookmarked })
   } catch (error) {
     console.error('[portal bookmarks POST] error:', error instanceof Error ? error.message : String(error))
     return NextResponse.json({ ok: false, message: 'Unable to update this bookmark.' }, { status: 500 })
