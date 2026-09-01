@@ -10,6 +10,8 @@ import { requirePortalMember } from '@/lib/auth/requirePortalMember'
 import config from '@payload-config'
 import { getPayload } from 'payload'
 
+const BILLING_PORTAL_RETURN_PATH = '/billing-return'
+
 export type OpenBillingPortalResult =
   | { ok: true; portalUrl: string }
   | {
@@ -28,10 +30,10 @@ function resolveReturnUrl(): string {
     process.env.NEXT_PUBLIC_SERVER_URL ||
     'https://jpvbootcamp.com'
   try {
-    const url = new URL('/portal/billing', base)
+    const url = new URL(BILLING_PORTAL_RETURN_PATH, base)
     return url.toString()
   } catch {
-    return 'https://jpvbootcamp.com/portal/billing'
+    return `https://jpvbootcamp.com${BILLING_PORTAL_RETURN_PATH}`
   }
 }
 
