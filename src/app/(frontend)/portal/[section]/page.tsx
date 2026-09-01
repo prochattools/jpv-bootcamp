@@ -252,33 +252,28 @@ export default async function PortalSectionPage({ params, searchParams }: Portal
 
   const { actor, payload } = await requirePortalAccess(`/portal/${section}`)
 
-  if (section === 'account' || section === 'billing') {
-    if (actor.kind === 'admin') {
-      return (
-        <div className='space-y-6'>
-          <section>
-            <p className='jpv-eyebrow'>Administration</p>
-            <h1 className='mt-3 text-2xl font-semibold tracking-tight text-jpv-ink'>
-              {section === 'account' ? 'Account' : 'Billing'}
-            </h1>
-            <p className='mt-2 max-w-2xl text-sm leading-6 text-jpv-muted'>
-              {section === 'account'
-                ? 'Account settings are personal to each member. Admin accounts do not have a member profile.'
-                : 'Billing is personal to each member subscription. Admin accounts do not have billing.'}
-            </p>
-          </section>
-          <div className='rounded-jpv-panel border border-dashed border-jpv-border bg-jpv-canvas p-8 text-center text-sm text-jpv-muted'>
-            Navigate to <Link className='font-semibold text-jpv-brand-deep underline-offset-4 hover:underline' href='/portal/courses'>Courses</Link> or <Link className='font-semibold text-jpv-brand-deep underline-offset-4 hover:underline' href='/portal/community'>Community</Link> to manage content.
-          </div>
+  if (section === 'billing' && actor.kind === 'admin') {
+    return (
+      <div className='space-y-6'>
+        <section>
+          <p className='jpv-eyebrow'>Administration</p>
+          <h1 className='mt-3 text-2xl font-semibold tracking-tight text-jpv-ink'>Billing</h1>
+          <p className='mt-2 max-w-2xl text-sm leading-6 text-jpv-muted'>
+            Billing is personal to each member subscription. Admin accounts do not have billing.
+          </p>
+        </section>
+        <div className='rounded-jpv-panel border border-dashed border-jpv-border bg-jpv-canvas p-8 text-center text-sm text-jpv-muted'>
+          Navigate to <Link className='font-semibold text-jpv-brand-deep underline-offset-4 hover:underline' href='/portal/courses'>Courses</Link> or <Link className='font-semibold text-jpv-brand-deep underline-offset-4 hover:underline' href='/portal/community'>Community</Link> to manage content.
         </div>
-      )
-    }
+      </div>
+    )
   }
 
-  // For account and billing: admin returned above, so actor is always MemberActor here.
-  // For community and groups: admin is allowed; empty string sentinel produces benign empty state.
-  const memberId = actor.kind === 'member' ? actor.memberId : ''
-  const memberEmail = actor.kind === 'member' ? actor.email : ''
+  // Administrators have a provisioned member-facing identity for profile and
+  // community features. Billing remains a separate disabled admin surface.
+  const memberId = actor.memberId ?? ''
+  const memberEmail = actor.email ?? ''
+  const isAdministrator = actor.kind === 'admin'
 
   if (section === 'account') {
     const [account, memberRecord, query, billingStatus] = await Promise.all([
@@ -314,7 +309,7 @@ export default async function PortalSectionPage({ params, searchParams }: Portal
           label='Account sections'
           links={[
             { href: '#profile', title: 'Profile' },
-            { href: '#password', title: 'Password' },
+            ...(!isAdministrator ? [{ href: '#password', title: 'Password' }] : []),
             { href: '/portal/billing', title: 'Billing' },
           ]}
         />
@@ -362,11 +357,13 @@ export default async function PortalSectionPage({ params, searchParams }: Portal
               <dt className='text-sm font-medium text-neutral-500'>Member tier</dt>
               <dd className='mt-2 flex items-center gap-3'>
                 <span className='text-base font-semibold text-neutral-950'>
-                  {billingStatus.hasActiveSubscription
+                    {isAdministrator
+                      ? 'Administrator account'
+                      : billingStatus.hasActiveSubscription
                     ? 'JPV Bootcamp Membership'
                     : currentTier(account)}
                 </span>
-                <a href='/portal/billing' className='text-sm text-jpv-brand hover:underline'>View billing &rarr;</a>
+                {!isAdministrator ? <a href='/portal/billing' className='text-sm text-jpv-brand hover:underline'>View billing &rarr;</a> : <span className='text-sm text-neutral-500'>Billing disabled</span>}
               </dd>
             </div>
           </dl>
@@ -532,7 +529,7 @@ export default async function PortalSectionPage({ params, searchParams }: Portal
           </form>
         </section>
 
-        <section className='w-full'>
+        {!isAdministrator ? <section className='w-full'>
           <article className={portalCardClass} id='password'>
             <h2 className={sectionCardTitleClass}>Change password</h2>
             <p className='mt-3 text-sm leading-6 text-neutral-600'>
@@ -543,7 +540,7 @@ export default async function PortalSectionPage({ params, searchParams }: Portal
             </div>
           </article>
 
-        </section>
+        </section> : null}
 
       </div>
     )

@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
-import config from '@payload-config'
-import { getPayload } from 'payload'
-
-import { resolvePayloadRequestSession } from '@/lib/auth/payloadSession'
+import { resolvePortalRequestMember } from '@/lib/auth/resolvePortalRequestMember'
 import { createMentionNotifications } from '@/app/(frontend)/portal/community/actions'
 import { evaluatePayloadSpaceAccess } from '@/lib/payloadCourse/accessService'
 import { createSpaceComment } from '@/lib/payloadCourse/communityPosting'
@@ -178,17 +175,9 @@ function buildReplyBody(
   return document
 }
 
-function displayName(member: Record<string, unknown>): string {
-  for (const key of ['displayName', 'fullName', 'name']) {
-    if (typeof member[key] === 'string' && member[key].trim()) return member[key].trim().slice(0, 120)
-  }
-  const names = [member.firstName, member.lastName].filter((value) => typeof value === 'string' && value.trim()).map((value) => String(value))
-  return names.join(' ').slice(0, 120) || 'Community member'
-}
-
 export async function POST(req: NextRequest) {
-  const session = await resolvePayloadRequestSession(req.headers)
-  if (!session.member?.id) return NextResponse.json({ ok: false, message: 'Please sign in again.' }, { status: 401 })
+  const requestMember = await resolvePortalRequestMember(req.headers)
+  if (!requestMember) return NextResponse.json({ ok: false, message: 'Please sign in again.' }, { status: 401 })
 
   try {
     const body = (await req.json()) as Record<string, unknown>
@@ -205,9 +194,9 @@ export async function POST(req: NextRequest) {
     }
 
     const payload = attachOperationalBillingFallback(
-      (await getPayload({ config })) as unknown as PayloadCourseWriteAPI,
+      requestMember.payload,
     )
-    const memberId = String(session.member.id)
+    const memberId = requestMember.memberId
     const [post, spaceResult] = await Promise.all([
       findByIdSafe(payload, 'payload_space_posts', postId),
       payload.find({
@@ -230,11 +219,8 @@ export async function POST(req: NextRequest) {
     const access = await evaluatePayloadSpaceAccess(payload, { memberId, spaceId: space.id })
     if (!access.decision.allowed) return NextResponse.json({ ok: false, message: 'Replies are unavailable for this discussion.' }, { status: 403 })
 
-    const [member, images] = await Promise.all([
-      payload.findByID({ collection: 'payload_members', id: memberId, depth: 0, overrideAccess: true }) as Promise<Record<string, unknown>>,
-      resolveReplyImages(payload, attachmentIds, memberId, String(space.id)),
-    ])
-    const actorName = displayName(member)
+    const images = await resolveReplyImages(payload, attachmentIds, memberId, String(space.id))
+    const actorName = requestMember.displayName
 
     const created = await createSpaceComment(payload, {
       memberId,
@@ -264,10 +250,10 @@ export async function POST(req: NextRequest) {
 
     revalidatePath(`/portal/community/${encodeURIComponent(spaceSlug)}/posts/${encodeURIComponent(postId)}`)
 
-    void createMentionNotifications(payload, bodyText, `/portal/community/${encodeURIComponent(spaceSlug)}/posts/${encodeURIComponent(postId)}`, {
+    await createMentionNotifications(payload, bodyText, `/portal/community/${encodeURIComponent(spaceSlug)}/posts/${encodeURIComponent(postId)}`, {
       postTitle: text(post.title) || 'Community discussion',
       spaceName: text(space.name) || spaceSlug,
-    }, actorName).catch((): void => undefined)
+    }, actorName, memberId).catch((): void => undefined)
 
     return NextResponse.json({
       ok: true,

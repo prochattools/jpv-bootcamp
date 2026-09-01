@@ -11,6 +11,7 @@ import {
 } from './Community'
 import { PayloadEngagementReactions } from './EngagementReactions'
 import { PayloadMemberNotifications } from './MemberNotifications'
+import { PayloadMemberFollows } from './MemberFollows'
 
 export {
   PayloadChatMessages,
@@ -25,6 +26,7 @@ export {
 } from './Community'
 export { PayloadEngagementReactions } from './EngagementReactions'
 export { PayloadMemberNotifications } from './MemberNotifications'
+export { PayloadMemberFollows } from './MemberFollows'
 
 export const communityCollections = [
   PayloadMemberGroups,
@@ -38,4 +40,5 @@ export const communityCollections = [
   PayloadChatThreads,
   PayloadChatMessages,
   PayloadMemberNotifications,
+  PayloadMemberFollows,
 ]

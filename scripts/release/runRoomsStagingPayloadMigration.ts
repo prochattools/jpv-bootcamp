@@ -11,6 +11,12 @@ import {
 } from './buildStagingMigrationStatus'
 
 export const ROOMS_STAGING_MIGRATION = '20260830_090000_member_portal_rooms' as const
+const roomsMigrationIndex = PAYLOAD_MIGRATION_NAMES.indexOf(ROOMS_STAGING_MIGRATION)
+if (roomsMigrationIndex < 0) throw new Error('rooms_staging_migration_not_registered')
+// This control is intentionally frozen at the Rooms migration boundary. Later
+// migrations must be released through their own approved rollout, never as an
+// accidental side effect of replaying this historical migration control.
+export const ROOMS_STAGING_REGISTERED_PAYLOAD_MIGRATIONS = PAYLOAD_MIGRATION_NAMES.slice(0, roomsMigrationIndex + 1)
 export const ROOMS_STAGING_CONFIRMATION = 'apply-rooms-migration-to-jpvbootcamp-staging' as const
 export const ROOMS_STAGING_TARGET = {
   environment: 'staging',
@@ -241,7 +247,11 @@ async function collectState(
     schemaOverride,
     clientFactory: dependencies.clientFactory,
   })
-  const report = await buildStagingMigrationStatus(adapter, ROOMS_STAGING_TARGET.schema)
+  const report = await buildStagingMigrationStatus(
+    adapter,
+    ROOMS_STAGING_TARGET.schema,
+    ROOMS_STAGING_REGISTERED_PAYLOAD_MIGRATIONS,
+  )
   const names = report.prismaMigrations.map((row) => row.migrationName)
   const duplicatePrismaNames = names.filter((name, index) => names.indexOf(name) !== index)
   const unhealthyPrismaMigrations = report.prismaMigrations
@@ -283,7 +293,7 @@ function evidence(state: MigrationState): MigrationStateEvidence {
 
 function preApplyBlockers(state: MigrationState): string[] {
   const blockers: string[] = []
-  const expectedApplied = PAYLOAD_MIGRATION_NAMES.length - 1
+  const expectedApplied = ROOMS_STAGING_REGISTERED_PAYLOAD_MIGRATIONS.length - 1
   if (state.schemaIdentity !== ROOMS_STAGING_TARGET.schema) blockers.push('schema_identity_mismatch')
   if (state.appliedPayloadCount !== expectedApplied) blockers.push('applied_count_mismatch')
   if (state.missingPayloadMigrations.length !== 1 || state.missingPayloadMigrations[0] !== ROOMS_STAGING_MIGRATION) {
@@ -300,7 +310,7 @@ function preApplyBlockers(state: MigrationState): string[] {
 function postApplyBlockers(state: MigrationState): string[] {
   const blockers: string[] = []
   if (state.schemaIdentity !== ROOMS_STAGING_TARGET.schema) blockers.push('schema_identity_mismatch')
-  if (state.appliedPayloadCount !== PAYLOAD_MIGRATION_NAMES.length) blockers.push('applied_count_mismatch')
+  if (state.appliedPayloadCount !== ROOMS_STAGING_REGISTERED_PAYLOAD_MIGRATIONS.length) blockers.push('applied_count_mismatch')
   if (state.missingPayloadMigrations.length > 0) blockers.push('pending_migrations_remain')
   if (state.unexpectedPayloadMigrations.length > 0) blockers.push('unexpected_payload_migrations')
   if (state.duplicatePayloadMigrations.length > 0) blockers.push('duplicate_payload_migrations')

@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation'
 
 import { cachedResolvePayloadRequestSession } from '@/lib/auth/payloadSession'
 import { MEMBER_COLLECTION } from '@/lib/auth/payloadSessionMapping'
-import { resolveAdministratorMemberIdentity } from '@/lib/auth/adminMemberIdentity'
+import { ensureAdministratorMemberIdentity } from '@/lib/auth/adminMemberIdentity'
 import { decideSharedLogin } from '@/lib/auth/sharedLoginDecision'
 import { getCachedPayload } from '@/lib/payload/getPayload'
 import { PortalAdminActionError } from '@/lib/portalAdmin/actionResult'
@@ -17,6 +17,7 @@ import {
   type PortalActor,
   type PortalCapabilities,
 } from '@/lib/auth/portalActor'
+import { ensureMemberProfileNameNotification } from '@/lib/payloadCourse/memberNotifications'
 
 export type PortalAccessContext = {
   actor: PortalActor
@@ -53,12 +54,15 @@ export async function requirePortalAccess(
       depth: 0,
       overrideAccess: true,
     })
-    const identity = await resolveAdministratorMemberIdentity(payload as never, administrator as never)
+    const identity = await ensureAdministratorMemberIdentity(payload as never, administrator as never)
     const actor: AdminActor = {
       kind: 'admin',
       administratorId: String(session.administratorId),
       email: typeof administrator?.email === 'string' ? administrator.email : undefined,
-      memberId: identity.member ? String(identity.member.id) : undefined,
+      memberId: identity?.member ? String(identity.member.id) : undefined,
+    }
+    if (identity?.member) {
+      try { await ensureMemberProfileNameNotification(payload as never, String(identity.member.id)) } catch { /* profile reminder is non-blocking */ }
     }
     return {
       actor,
@@ -102,6 +106,7 @@ export async function requirePortalAccess(
     email: memberEmail,
   }
 
+  try { await ensureMemberProfileNameNotification(payload as never, String(session.member.id)) } catch { /* profile reminder is non-blocking */ }
   return {
     actor,
     payload: payload as unknown as PayloadCourseAccessAPI,

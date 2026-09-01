@@ -4,6 +4,7 @@ import { FormEvent, startTransition, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 import { ComposerToolbar } from '@/components/community/ComposerToolbar'
+import { MentionTextarea } from '@/components/community/MentionTextarea'
 import { readResponseJson } from '@/components/community/readResponseJson'
 
 type ImageAttachment = { id: string; filename: string }
@@ -27,6 +28,7 @@ export function CommunityCommentComposer({ spaceSlug, postId }: { spaceSlug: str
   const [links, setLinks] = useState<string[]>([])
   const [images, setImages] = useState<ImageAttachment[]>([])
   const [message, setMessage] = useState<string | null>(null)
+  const [body, setBody] = useState('')
 
   function insertVideo(url: string) {
     const safeUrl = safeExternalUrl(url)
@@ -79,7 +81,6 @@ export function CommunityCommentComposer({ spaceSlug, postId }: { spaceSlug: str
     if (pending || uploadingImage) return
     setPending(true)
     setMessage(null)
-    const form = new FormData(event.currentTarget)
     try {
       const response = await fetch('/api/portal/community/comments', {
         method: 'POST',
@@ -87,7 +88,7 @@ export function CommunityCommentComposer({ spaceSlug, postId }: { spaceSlug: str
         body: JSON.stringify({
           spaceSlug,
           postId,
-          body: form.get('body'),
+          body,
           videoUrl,
           links,
           attachmentIds: images.map((image) => image.id),
@@ -96,6 +97,7 @@ export function CommunityCommentComposer({ spaceSlug, postId }: { spaceSlug: str
       const result = await readResponseJson<{ ok?: boolean; message?: string; attachmentWarning?: string | null }>(response)
       if (!response.ok || !result?.ok) throw new Error(result?.message || 'Unable to post your reply.')
       formRef.current?.reset()
+      setBody('')
       setVideoUrl(null)
       setLinks([])
       setImages([])
@@ -119,7 +121,7 @@ export function CommunityCommentComposer({ spaceSlug, postId }: { spaceSlug: str
     <form className='mt-5 space-y-4' onSubmit={submit} ref={formRef}>
       <div>
         <label className='block text-sm font-bold text-jpv-brand-deep' htmlFor='comment-body'>Your reply</label>
-      <textarea className='mt-1.5 w-full rounded-jpv-control border border-jpv-border bg-jpv-canvas px-4 py-3 text-sm text-jpv-ink outline-none transition focus:border-jpv-green-deep focus:ring-2 focus:ring-jpv-green/25' id='comment-body' maxLength={10000} name='body' placeholder='Share your reply…' required rows={4} />
+      <MentionTextarea className='mt-1.5 w-full rounded-jpv-control border border-jpv-border bg-jpv-canvas px-4 py-3 text-sm text-jpv-ink outline-none transition focus:border-jpv-green-deep focus:ring-2 focus:ring-jpv-green/25' id='comment-body' maxLength={10000} name='body' onValueChange={setBody} placeholder='Share your reply…' required rows={4} value={body} />
       </div>
       <ComposerToolbar
         onInsertImage={(file) => uploadImage(file)}

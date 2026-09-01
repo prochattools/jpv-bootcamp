@@ -4,11 +4,12 @@ import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 
 import { cachedResolvePayloadRequestSession } from '@/lib/auth/payloadSession'
-import { resolveAdministratorMemberIdentity } from '@/lib/auth/adminMemberIdentity'
+import { ensureAdministratorMemberIdentity } from '@/lib/auth/adminMemberIdentity'
 import { MEMBER_COLLECTION } from '@/lib/auth/payloadSessionMapping'
 import { decideSharedLogin } from '@/lib/auth/sharedLoginDecision'
 import { getCachedPayload } from '@/lib/payload/getPayload'
 import type { PayloadCourseAccessAPI } from '@/lib/payloadCourse/accessService'
+import { ensureMemberProfileNameNotification } from '@/lib/payloadCourse/memberNotifications'
 
 export type PortalMemberContext = {
   memberId: string
@@ -30,11 +31,12 @@ export async function requirePortalMember(
       depth: 0,
       overrideAccess: true,
     })
-    const identity = await resolveAdministratorMemberIdentity(payload as never, administrator as never)
-    const memberEmail = typeof identity.member?.email === 'string' ? identity.member.email : ''
-    if (!identity.member || !memberEmail) {
+    const identity = await ensureAdministratorMemberIdentity(payload as never, administrator as never)
+    const memberEmail = typeof identity?.member?.email === 'string' ? identity.member.email : ''
+    if (!identity?.member || !memberEmail) {
       redirect(`/portal?mode=login&next=${encodeURIComponent(requestedPath)}`)
     }
+    try { await ensureMemberProfileNameNotification(payload as never, String(identity.member.id)) } catch { /* profile reminder is non-blocking */ }
     return {
       memberId: String(identity.member.id),
       memberEmail,
@@ -65,6 +67,7 @@ export async function requirePortalMember(
     redirect(`/portal?mode=login&next=${encodeURIComponent(requestedPath)}`)
   }
 
+  try { await ensureMemberProfileNameNotification(payload as never, String(session.member.id)) } catch { /* profile reminder is non-blocking */ }
   return {
     memberId: String(session.member.id),
     memberEmail,

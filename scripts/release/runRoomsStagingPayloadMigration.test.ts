@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict'
 
-import { PAYLOAD_MIGRATION_NAMES } from '../../src/lib/payloadMigrationRegistry'
 import {
   ROOMS_STAGING_CONFIRMATION,
   ROOMS_STAGING_MIGRATION,
+  ROOMS_STAGING_REGISTERED_PAYLOAD_MIGRATIONS,
   runRoomsStagingMigrationApply,
   parseRoomsStagingMigrationArgs,
   type RoomsStagingMigrationAuthorization,
@@ -16,8 +16,8 @@ import {
 
 const EXPECTED_COMMIT = 'a4081d12c7141ed8f5476077536c5234a555f240'
 const DATABASE_URL = 'postgresql://user:secret@10.0.2.4:5433/jpvbootcamp_staging?schema=jpvbootcamp'
-const FIRST_52 = PAYLOAD_MIGRATION_NAMES.slice(0, -1)
-const CURRENT_53 = [...PAYLOAD_MIGRATION_NAMES]
+const FIRST_52 = ROOMS_STAGING_REGISTERED_PAYLOAD_MIGRATIONS.slice(0, -1)
+const CURRENT_53 = [...ROOMS_STAGING_REGISTERED_PAYLOAD_MIGRATIONS]
 
 function prismaRows() {
   return REGISTERED_PRISMA_MIGRATIONS.map((migration_name) => ({

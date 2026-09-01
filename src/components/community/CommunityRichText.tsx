@@ -14,7 +14,11 @@ function renderChildren(children: SafeCommunityRichTextNode[]): ReactNode {
 }
 
 function renderMarkedText(node: Extract<SafeCommunityRichTextNode, { type: 'text' }>) {
-  let content: ReactNode = node.text
+  const parts = node.text.split(/(@[\p{L}\p{N}_][\p{L}\p{N}._-]*(?:\s+[\p{L}\p{N}_][\p{L}\p{N}._-]*)?)/giu)
+  const mentionContent = parts.map((part, index) => part.startsWith('@')
+    ? <mark className='rounded bg-jpv-sunshine/30 px-0.5 text-jpv-brand-deep' key={`${part}-${index}`}>{part}</mark>
+    : part)
+  let content: ReactNode = mentionContent
 
   if (node.marks.code) content = <code>{content}</code>
   if (node.marks.bold) content = <strong>{content}</strong>

@@ -4,6 +4,7 @@ import { notFound, redirect } from 'next/navigation'
 import { StatusPill } from '@/components/portal/StatusPill'
 import { CommunityPostCard } from '@/components/community/CommunityPostCard'
 import { ComposerToolbar } from '@/components/community/ComposerToolbar'
+import { MentionTextarea } from '@/components/community/MentionTextarea'
 import { requirePortalAccess } from '@/lib/auth/requirePortalAccess'
 import { getMemberCommunitySpaceDetail, withQueryDedup, type MemberCommunityPost } from '@/lib/payloadCourse/communityPortal'
 import { resolveMemberCommunityPostAttachments } from '@/lib/payloadCourse/communityDiscussion'
@@ -256,7 +257,7 @@ export default async function PortalCommunitySpacePage({ params, searchParams }:
                   <label className='block text-sm font-bold text-jpv-brand-deep' htmlFor='post-body'>
                     Body
                   </label>
-                  <textarea
+                  <MentionTextarea
                     className='mt-2 w-full rounded-jpv-control border border-jpv-border bg-jpv-canvas px-4 py-3 text-sm text-jpv-ink outline-none transition focus:border-jpv-green-deep focus:ring-2 focus:ring-jpv-green/25'
                     id='post-body'
                     maxLength={10000}

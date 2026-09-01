@@ -3,6 +3,9 @@ import 'server-only'
 import config from '@payload-config'
 import { getPayload } from 'payload'
 
+import type { PayloadCourseAccessAPI, PayloadDocument } from './accessService'
+import { listActiveMembers, type MemberDirectoryItem } from './memberDirectory'
+
 export interface LeaderboardEntry {
   rank: number
   memberId: string
@@ -24,12 +27,6 @@ export interface MemberBookmark {
   createdAt: string | null
 }
 
-function mediaUrl(media: unknown): string | null {
-  if (!media || typeof media !== 'object') return null
-  const m = media as Record<string, unknown>
-  return typeof m.url === 'string' ? m.url : null
-}
-
 function getId(value: unknown): string | null {
   if (!value) return null
   if (typeof value === 'number' || typeof value === 'string') return String(value)
@@ -42,130 +39,129 @@ function getId(value: unknown): string | null {
 
 function getString(obj: unknown, key: string): string | null {
   if (!obj || typeof obj !== 'object') return null
-  const v = (obj as Record<string, unknown>)[key]
-  return typeof v === 'string' && v.trim() ? v.trim() : null
+  const value = (obj as Record<string, unknown>)[key]
+  return typeof value === 'string' && value.trim() ? value.trim() : null
+}
+
+export type LeaderboardActivity = {
+  posts: readonly PayloadDocument[]
+  comments: readonly PayloadDocument[]
+  reactions: readonly PayloadDocument[]
+  legacyLikes?: readonly PayloadDocument[]
+}
+
+function increment(counts: Map<string, number>, memberId: string): void {
+  counts.set(memberId, (counts.get(memberId) ?? 0) + 1)
+}
+
+/** Pure scoring projection kept separate so the formula is regression-tested. */
+export function calculateLeaderboardEntries(
+  members: readonly MemberDirectoryItem[],
+  activity: LeaderboardActivity,
+  limit = 20,
+): LeaderboardEntry[] {
+  const activeMemberIds = new Set(members.map((member) => member.memberId))
+  const postAuthors = new Map<string, string>()
+  const commentAuthors = new Map<string, string>()
+  const postCounts = new Map<string, number>()
+  const commentCounts = new Map<string, number>()
+  const likesReceived = new Map<string, number>()
+
+  for (const post of activity.posts) {
+    const authorId = getId(post.author)
+    if (!authorId || !activeMemberIds.has(authorId)) continue
+    postAuthors.set(String(post.id), authorId)
+    increment(postCounts, authorId)
+  }
+  for (const comment of activity.comments) {
+    const authorId = getId(comment.author)
+    if (!authorId || !activeMemberIds.has(authorId)) continue
+    commentAuthors.set(String(comment.id), authorId)
+    increment(commentCounts, authorId)
+  }
+
+  const countReaction = (reaction: PayloadDocument, legacy = false): void => {
+    const kind = reaction.targetKind
+    const targetId = kind === 'space_post' || (legacy && kind === 'post')
+      ? getId(reaction.targetPost)
+      : kind === 'space_comment' || (legacy && kind === 'comment')
+        ? getId(reaction.targetSpaceComment ?? reaction.targetComment)
+        : kind === 'lesson_comment'
+          ? getId(reaction.targetLessonComment)
+          : null
+    const authorId = targetId
+      ? kind === 'space_post' || (legacy && kind === 'post')
+        ? postAuthors.get(targetId)
+        : commentAuthors.get(targetId)
+      : undefined
+    if (authorId) increment(likesReceived, authorId)
+  }
+
+  for (const reaction of activity.reactions) countReaction(reaction)
+  for (const reaction of activity.legacyLikes ?? []) countReaction(reaction, true)
+
+  const memberMap = new Map(members.map((member) => [member.memberId, member]))
+  const activeIds = new Set([...postCounts.keys(), ...commentCounts.keys(), ...likesReceived.keys()])
+  const entries = Array.from(activeIds).map((memberId): LeaderboardEntry => {
+    const member = memberMap.get(memberId)
+    const postCount = postCounts.get(memberId) ?? 0
+    const commentCount = commentCounts.get(memberId) ?? 0
+    const likes = likesReceived.get(memberId) ?? 0
+    return {
+      rank: 0,
+      memberId,
+      displayName: member?.displayName ?? 'Member',
+      avatarUrl: member?.avatarUrl ?? null,
+      postCount,
+      commentCount,
+      likesReceived: likes,
+      totalScore: postCount * 5 + commentCount * 2 + likes * 3,
+    }
+  })
+
+  entries.sort((left, right) => right.totalScore - left.totalScore || right.postCount - left.postCount || left.displayName.localeCompare(right.displayName))
+  return entries.slice(0, limit).map((entry, index) => ({ ...entry, rank: index + 1 }))
+}
+
+async function findAll(
+  payload: PayloadCourseAccessAPI,
+  collection: string,
+  where?: Record<string, unknown>,
+): Promise<PayloadDocument[]> {
+  const documents: PayloadDocument[] = []
+  for (let page = 1; page <= 1000; page += 1) {
+    const result = await payload.find({
+      collection,
+      limit: 100,
+      page,
+      depth: 0,
+      overrideAccess: true,
+      ...(where ? { where } : {}),
+    })
+    documents.push(...(result.docs as PayloadDocument[]))
+    if (!result.hasNextPage) return documents
+  }
+  throw new Error(`leaderboard_${collection}_page_limit_exceeded`)
 }
 
 export async function getLeaderboard(limit = 20): Promise<LeaderboardEntry[]> {
-  const payload = await getPayload({ config })
-
-  const [postsResult, commentsResult, reactionsResult, profilesResult] = await Promise.all([
-    payload.find({
-      collection: 'payload_space_posts',
-      limit: 500,
-      depth: 0,
-      overrideAccess: true,
-      select: { author: true },
-    }),
-    payload.find({
-      collection: 'payload_space_comments',
-      limit: 500,
-      depth: 0,
-      overrideAccess: true,
-      select: { author: true, post: true },
-    }),
-    payload.find({
-      collection: 'payload_space_reactions',
-      limit: 500,
-      depth: 2,
-      overrideAccess: true,
-      where: { reactionType: { equals: 'like' } },
-      select: { targetKind: true, targetPost: true, targetComment: true },
-    }),
-    payload.find({
-      collection: 'payload_member_profiles',
-      limit: 200,
-      depth: 1,
-      overrideAccess: true,
-      select: { member: true, displayName: true, avatar: true },
-    }),
+  const payload = await getPayload({ config }) as unknown as PayloadCourseAccessAPI
+  const visibleOnly = { moderationStatus: { equals: 'visible' } }
+  const [members, posts, comments, lessonComments, reactions, legacyLikes] = await Promise.all([
+    listActiveMembers(payload),
+    findAll(payload, 'payload_space_posts', visibleOnly),
+    findAll(payload, 'payload_space_comments', visibleOnly),
+    findAll(payload, 'payload_lesson_comments', visibleOnly),
+    findAll(payload, 'payload_engagement_reactions'),
+    findAll(payload, 'payload_space_reactions'),
   ])
 
-  // Map member ID → post count
-  const postCounts = new Map<string, number>()
-  for (const post of postsResult.docs) {
-    const authorId = getId(post.author)
-    if (authorId) postCounts.set(authorId, (postCounts.get(authorId) ?? 0) + 1)
-  }
-
-  // Map post ID → author member ID (for computing likes received)
-  const postAuthorMap = new Map<string, string>()
-  for (const post of postsResult.docs) {
-    const postId = String(post.id)
-    const authorId = getId(post.author)
-    if (authorId) postAuthorMap.set(postId, authorId)
-  }
-
-  // Map comment ID → author member ID
-  const commentAuthorMap = new Map<string, string>()
-  const commentCounts = new Map<string, number>()
-  for (const comment of commentsResult.docs) {
-    const commentId = String(comment.id)
-    const authorId = getId(comment.author)
-    if (authorId) {
-      commentAuthorMap.set(commentId, authorId)
-      commentCounts.set(authorId, (commentCounts.get(authorId) ?? 0) + 1)
-    }
-  }
-
-  // Map member ID → likes received
-  const likesReceived = new Map<string, number>()
-  for (const reaction of reactionsResult.docs) {
-    const kind = reaction.targetKind
-    let authorId: string | null = null
-
-    if (kind === 'post' && reaction.targetPost) {
-      const postId = getId(reaction.targetPost)
-      if (postId) authorId = postAuthorMap.get(postId) ?? null
-    } else if (kind === 'comment' && reaction.targetComment) {
-      const commentId = getId(reaction.targetComment)
-      if (commentId) authorId = commentAuthorMap.get(commentId) ?? null
-    }
-
-    if (authorId) likesReceived.set(authorId, (likesReceived.get(authorId) ?? 0) + 1)
-  }
-
-  // Build profile map
-  const profileMap = new Map<string, { displayName: string; avatarUrl: string | null }>()
-  for (const profile of profilesResult.docs) {
-    const memberId = getId(profile.member)
-    if (!memberId) continue
-    profileMap.set(memberId, {
-      displayName: String(profile.displayName ?? ''),
-      avatarUrl: mediaUrl(profile.avatar),
-    })
-  }
-
-  // Collect all member IDs that have any activity
-  const allMemberIds = new Set([
-    ...postCounts.keys(),
-    ...commentCounts.keys(),
-    ...likesReceived.keys(),
-  ])
-
-  const entries: LeaderboardEntry[] = []
-  for (const memberId of allMemberIds) {
-    const profile = profileMap.get(memberId)
-    if (!profile) continue
-    const posts = postCounts.get(memberId) ?? 0
-    const comments = commentCounts.get(memberId) ?? 0
-    const likes = likesReceived.get(memberId) ?? 0
-    const score = posts * 5 + comments * 2 + likes * 3
-    entries.push({
-      rank: 0,
-      memberId,
-      displayName: profile.displayName,
-      avatarUrl: profile.avatarUrl,
-      postCount: posts,
-      commentCount: comments,
-      likesReceived: likes,
-      totalScore: score,
-    })
-  }
-
-  entries.sort((a, b) => b.totalScore - a.totalScore || b.postCount - a.postCount)
-
-  return entries.slice(0, limit).map((entry, i) => ({ ...entry, rank: i + 1 }))
+  return calculateLeaderboardEntries(members, {
+    posts,
+    comments: [...comments, ...lessonComments],
+    reactions,
+    legacyLikes: legacyLikes.filter((reaction) => reaction.reactionType === 'like'),
+  }, limit)
 }
 
 export async function getMemberBookmarks(memberId: string): Promise<MemberBookmark[]> {

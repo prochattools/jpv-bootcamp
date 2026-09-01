@@ -23,7 +23,7 @@ import {
   updateLessonAction,
   updateModuleAction,
 } from '@/lib/portalAdmin/courseAdminActions'
-import type { AdminCourseMediaLibrary, AdminCourseMediaOption } from '@/lib/portalAdmin/adminPortal'
+import type { AdminCourseMediaLibrary, AdminCourseMediaOption } from '@/lib/portalAdmin/courseMediaTypes'
 import { RichContentEditor } from '@/components/portal/admin/RichContentEditor'
 
 // ---------- Types ----------
@@ -228,7 +228,7 @@ function ConfirmDeleteDialog({ label, onDelete, onSuccess }: { label: string; on
     <>
       <button className={BTN_D + ICON_BTN} type='button' onClick={() => { setOpen(true); setConfirm(''); setError(null) }}>{label}</button>
       <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setConfirm(''); setError(null) } }}>
-        <DialogContent>
+        <DialogContent className="max-w-lg">
           <DialogHeader><DialogTitle>Confirm Delete</DialogTitle></DialogHeader>
           <p className="text-sm text-jpv-muted">Irreversible. Type <strong>DELETE</strong> to confirm.</p>
           <Field label="Confirmation">
@@ -289,7 +289,7 @@ function EditCourseDialog(props: Omit<CourseAdminPanelProps, 'modules'>) {
     <>
       <button className={BTN_S} onClick={() => setOpen(true)}>Edit Course</button>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-5xl">
         <DialogHeader><DialogTitle>Edit Course</DialogTitle></DialogHeader>
         <div className="space-y-3">
           <Field label="Title"><input className={INPUT} value={form.title} onChange={set('title')} /></Field>
@@ -373,7 +373,7 @@ function ModuleFormDialog({
     <>
       {isValidElement(trigger) ? cloneElement(trigger as React.ReactElement<React.HTMLAttributes<HTMLButtonElement>>, { onClick: () => setOpen(true) }) : trigger}
       <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setError(null) }}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl">
           <DialogHeader><DialogTitle>{dialogTitle}</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <Field label="Title"><input className={INPUT} value={title} onChange={(e) => setTitle(e.target.value)} /></Field>
@@ -453,7 +453,7 @@ function LessonFormDialog({
     <>
       {isValidElement(trigger) ? cloneElement(trigger as React.ReactElement<React.HTMLAttributes<HTMLButtonElement>>, { onClick: () => setOpen(true) }) : trigger}
       <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setError(null) }}>
-        <DialogContent>
+        <DialogContent className="max-w-5xl">
           <DialogHeader><DialogTitle>{dialogTitle}</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <Field label="Title"><input className={INPUT} value={form.title} onChange={set('title')} /></Field>

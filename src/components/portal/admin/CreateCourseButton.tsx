@@ -65,7 +65,7 @@ export function CreateCourseButton() {
           Create course
         </button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className='max-w-5xl'>
         <DialogTitle>Create new course</DialogTitle>
         <form className='flex flex-col gap-4 pt-2' onSubmit={handleSubmit}>
           <p className='text-sm leading-6 text-jpv-muted'>Start with the basics. You can add modules and lessons immediately after the course is created.</p>

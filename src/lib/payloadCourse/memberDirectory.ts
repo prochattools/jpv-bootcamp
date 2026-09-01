@@ -6,6 +6,7 @@ import { getPayload } from 'payload'
 import type { PayloadCourseAccessAPI, PayloadDocument } from './accessService'
 import { projectCommunityRichText, type SafeCommunityRichTextNode } from './communityDiscussion'
 import { relationshipId } from '@/lib/domain/relationships'
+import { getMemberFollowState, type MemberFollowState } from './memberFollows'
 
 export interface MemberDirectoryItem {
   memberId: string
@@ -31,6 +32,8 @@ export interface MemberProfileDetail {
     facebook: string | null
     youtube: string | null
   }
+  follow: MemberFollowState
+  isSelf: boolean
 }
 
 function mediaUrl(media: unknown): string | null {
@@ -180,7 +183,7 @@ export async function listMemberGroupCandidates(
     .sort((left, right) => left.displayName.localeCompare(right.displayName) || left.email.localeCompare(right.email))
 }
 
-export async function getMemberProfileDetail(memberId: string): Promise<MemberProfileDetail | null> {
+export async function getMemberProfileDetail(memberId: string, viewerMemberId?: string): Promise<MemberProfileDetail | null> {
   const payload = await getPayload({ config })
   const [profileResult, member] = await Promise.all([
     payload.find({
@@ -197,6 +200,9 @@ export async function getMemberProfileDetail(memberId: string): Promise<MemberPr
   if (!member || member.accountStatus !== 'active') return null
 
   const doc = (profileResult.docs[0] as unknown as PayloadDocument | undefined) ?? null
+  const follow = viewerMemberId && viewerMemberId !== memberId
+    ? await getMemberFollowState(payload as unknown as import('./accessService').PayloadCourseWriteAPI, viewerMemberId, memberId)
+    : { isFollowing: false, followerCount: 0, followingCount: 0 }
 
   return {
     memberId,
@@ -212,5 +218,7 @@ export async function getMemberProfileDetail(memberId: string): Promise<MemberPr
       facebook: socialLinkText(doc?.socialLinks, 'facebook'),
       youtube: socialLinkText(doc?.socialLinks, 'youtube'),
     },
+    follow,
+    isSelf: viewerMemberId === memberId,
   }
 }

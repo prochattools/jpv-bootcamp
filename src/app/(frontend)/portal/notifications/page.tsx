@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic'
 
 type Notification = {
   id: string
-  type: 'new_post' | 'new_comment' | 'mention' | 'system' | 'announcement' | 'live_session'
+  type: 'new_post' | 'new_comment' | 'mention' | 'system' | 'announcement' | 'live_session' | 'room_invitation'
   actorName?: string | null
   title?: string | null
   href?: string | null

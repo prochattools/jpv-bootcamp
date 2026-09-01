@@ -80,6 +80,8 @@ const PREVIEW_MIGRATION_METADATA = [
   { purpose: 'Make member deletion safe across Payload-owned relationships while preserving member audit history.', rollbackRisk: 'data_loss', verificationChecks: ['registry-match', 'ordered-exactly', 'member-delete-relationship-safety', 'rollback-guard'] },
   { purpose: 'Create the missing Payload relationship tables used by membership-support operator notes.', rollbackRisk: 'data_loss', verificationChecks: ['registry-match', 'ordered-exactly', 'membership-support-relationship-tables', 'rollback-guard'] },
   { purpose: 'Add durable member-portal Room audiences, categories, access grants, and notification idempotency keys.', rollbackRisk: 'data_loss', verificationChecks: ['registry-match', 'ordered-exactly', 'member-portal-rooms', 'rollback-guard'] },
+  { purpose: 'Add idempotent event keys to member notifications for reliable mention and profile reminders.', rollbackRisk: 'reversible', verificationChecks: ['registry-match', 'ordered-exactly', 'notification-event-key', 'rollback-guard'] },
+  { purpose: 'Create the persistent member-to-member follow relationship used by public member profiles.', rollbackRisk: 'data_loss', verificationChecks: ['registry-match', 'ordered-exactly', 'member-follows', 'rollback-guard'] },
 ] as const satisfies readonly PreviewMigrationMetadata[]
 
 if (PREVIEW_MIGRATION_METADATA.length !== PAYLOAD_MIGRATION_NAMES.length) {
