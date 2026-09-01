@@ -5,6 +5,7 @@ import { getPayload } from 'payload'
 import config from '@payload-config'
 
 import { getLiveKitConfig, buildLiveKitToken } from '@/lib/livekit-config'
+import { resolveAdministratorMemberIdentity } from '@/lib/auth/adminMemberIdentity'
 import { liveSessionRelationshipId, isValidLiveSessionRoomName } from '@/lib/liveSessions/sessionLifecycle'
 import { isRoomMemberEntitled } from '@/lib/rooms/roomAccess'
 import type { PayloadDocument } from '@/lib/payloadCourse/accessService'
@@ -58,8 +59,21 @@ export async function issueRoomLiveKitToken(req: NextRequest): Promise<NextRespo
 
   const isAdmin = user.collection === 'payload_users'
   const isHost = liveSessionRelationshipId(room.hostUser) === String(user.id)
-  if (isAdmin && !isHost) return NextResponse.json({ ok: false, reason: 'host_required' } satisfies TokenErrorResponse, { status: 403 })
-  if (!isAdmin) {
+  if (isAdmin && !isHost) {
+    const administrator = await payload.findByID({
+      collection: 'payload_users',
+      id: user.id,
+      depth: 0,
+      overrideAccess: true,
+    }).catch((): null => null) as unknown as PayloadDocument | null
+    const identity = administrator
+      ? await resolveAdministratorMemberIdentity(payload, administrator).catch((): null => null)
+      : null
+    const memberId = identity?.member ? String(identity.member.id) : null
+    if (room.status !== 'live' || !memberId || !(await isRoomMemberEntitled(payload, room, memberId))) {
+      return NextResponse.json({ ok: false, reason: 'not_entitled' } satisfies TokenErrorResponse, { status: 403 })
+    }
+  } else if (!isAdmin) {
     if (room.status !== 'live') return NextResponse.json({ ok: false, reason: 'session_not_live' } satisfies TokenErrorResponse, { status: 403 })
     if (!(await isRoomMemberEntitled(payload, room, String(user.id)))) {
       return NextResponse.json({ ok: false, reason: 'not_entitled' } satisfies TokenErrorResponse, { status: 403 })

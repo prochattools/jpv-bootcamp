@@ -5,6 +5,7 @@ import { LiveSessionState } from '@/components/portal/LiveSessionState'
 import { MemberModeGate } from '@/components/portal/MemberModeGate'
 import { PortalRoomsAdmin } from '@/components/portal/PortalRoomsAdmin'
 import { requirePortalAccess } from '@/lib/auth/requirePortalAccess'
+import { listMemberGroupCandidates } from '@/lib/payloadCourse/memberDirectory'
 import { listAdminRooms, listMemberRooms, roomSummary, type RoomSummary } from '@/lib/rooms/roomQueries'
 import { getRoomParticipantCount } from '@/lib/rooms/participantCount'
 import { liveSessionRelationshipId } from '@/lib/liveSessions/sessionLifecycle'
@@ -36,7 +37,7 @@ export default async function PortalRoomsPage() {
 
   if (actor.kind === 'admin') {
     const [members, groups, categories, documents, memberRooms] = await Promise.all([
-      payload.find({ collection: 'payload_members', where: { accountStatus: { equals: 'active' } }, limit: 1000, depth: 0, overrideAccess: true }),
+      listMemberGroupCandidates(payload),
       payload.find({ collection: 'payload_member_groups', where: { status: { equals: 'active' } }, limit: 500, depth: 1, overrideAccess: true }),
       payload.find({ collection: 'payload_room_categories', where: { status: { equals: 'active' } }, limit: 500, sort: 'sortOrder', depth: 0, overrideAccess: true }),
       listAdminRooms(payload),
@@ -65,7 +66,7 @@ export default async function PortalRoomsPage() {
             <PortalRoomsAdmin
               categories={categories.docs.map((category) => ({ id: String(category.id), label: String(category.name ?? category.slug ?? 'Category') }))}
               groups={groups.docs.map((group) => ({ id: String(group.id), label: String(group.name ?? 'Member group'), memberCount: Array.isArray(group.members) ? group.members.length : 0 }))}
-              members={members.docs.map((member) => ({ id: String(member.id), label: String(member.displayName ?? member.name ?? member.email ?? 'Member'), email: String(member.email ?? '') }))}
+              members={members.map((member) => ({ id: member.memberId, label: member.displayName, email: member.email, isAdministrator: member.isAdministrator }))}
               rooms={rooms}
             />
           </>

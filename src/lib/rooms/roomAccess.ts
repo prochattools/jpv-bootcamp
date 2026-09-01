@@ -21,8 +21,25 @@ function text(value: unknown): string | null {
   return null
 }
 
-function isMemberEligible(member: PayloadDocument | null): boolean {
-  return Boolean(member && member.accountStatus === 'active' && member.emailVerifiedAt && text(member.email))
+async function memberIsAdministrator(
+  payload: PayloadCourseAccessAPI,
+  member: PayloadDocument,
+): Promise<boolean> {
+  if (member.isAdministrator === true) return true
+  const email = text(member.email)
+  const result = await payload.find({
+    collection: 'payload_users',
+    where: {
+      or: [
+        { portalMember: { equals: String(member.id) } },
+        ...(email ? [{ email: { equals: email } }] : []),
+      ],
+    },
+    limit: 1,
+    depth: 0,
+    overrideAccess: true,
+  }).catch(() => ({ docs: [] as PayloadDocument[] }))
+  return result.docs.length > 0
 }
 
 async function memberIsEligible(payload: PayloadCourseAccessAPI, memberId: string): Promise<boolean> {
@@ -32,7 +49,9 @@ async function memberIsEligible(payload: PayloadCourseAccessAPI, memberId: strin
     depth: 0,
     overrideAccess: true,
   }).catch((): null => null) as PayloadDocument | null
-  return isMemberEligible(member)
+  if (!member || !text(member.email) || member.accountStatus === 'deleted') return false
+  if (member.accountStatus === 'active' && Boolean(member.emailVerifiedAt)) return true
+  return memberIsAdministrator(payload, member)
 }
 
 async function findRoomGrants(

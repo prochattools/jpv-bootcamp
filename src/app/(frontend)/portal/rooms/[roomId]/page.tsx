@@ -32,8 +32,16 @@ export default async function PortalRoomPage({ params }: PageProps) {
     if (!entitled) notFound()
     room = entitled.document
   } else {
-    room = await payload.findByID({ collection: 'live_sessions', id: roomId, depth: 1, overrideAccess: true }).catch((): null => null) as PayloadDocument | null
-    if (!room || liveSessionRelationshipId(room.hostUser) !== actor.administratorId) notFound()
+    const ownedRoom = await payload.findByID({ collection: 'live_sessions', id: roomId, depth: 1, overrideAccess: true }).catch((): null => null) as PayloadDocument | null
+    if (!ownedRoom) notFound()
+    if (liveSessionRelationshipId(ownedRoom.hostUser) === actor.administratorId) {
+      room = ownedRoom
+    } else {
+      if (!actor.memberId) notFound()
+      const entitled = await findMemberRoom(payload, roomId, actor.memberId)
+      if (!entitled) notFound()
+      room = entitled.document
+    }
   }
   if (!room) notFound()
 
