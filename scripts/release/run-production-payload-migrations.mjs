@@ -44,7 +44,8 @@ function requiredEnvironment(name) {
 }
 
 function validateProductionDatabaseBoundary() {
-  const databaseUrl = requiredEnvironment('DATABASE_URL')
+  const runtimeDatabaseUrl = requiredEnvironment('DATABASE_URL')
+  const systemDatabaseUrl = requiredEnvironment('SYSTEM_DATABASE_URL')
   const expected = {
     host: requiredEnvironment('PRODUCTION_DATABASE_HOST'),
     port: requiredEnvironment('PRODUCTION_DATABASE_PORT'),
@@ -59,27 +60,47 @@ function validateProductionDatabaseBoundary() {
     throw new Error('JPV_PAYLOAD_MIGRATION_FAILED production schema identifier is invalid')
   }
 
-  let parsed
+  let runtimeDatabase
   try {
-    parsed = new URL(databaseUrl)
+    runtimeDatabase = new URL(runtimeDatabaseUrl)
   } catch {
     throw new Error('JPV_PAYLOAD_MIGRATION_FAILED DATABASE_URL is not a valid URL')
   }
-  if (parsed.protocol !== 'postgresql:' && parsed.protocol !== 'postgres:') {
+  if (runtimeDatabase.protocol !== 'postgresql:' && runtimeDatabase.protocol !== 'postgres:') {
     throw new Error('JPV_PAYLOAD_MIGRATION_FAILED DATABASE_URL protocol is invalid')
   }
-  if (parsed.hostname !== expected.host || (parsed.port || '5432') !== expected.port) {
+  if (runtimeDatabase.hostname !== expected.host || (runtimeDatabase.port || '5432') !== expected.port) {
     throw new Error('JPV_PAYLOAD_MIGRATION_FAILED DATABASE_URL host or port does not match the production boundary')
   }
-  if (parsed.pathname.replace(/^\//, '') !== expected.database) {
+  if (runtimeDatabase.pathname.replace(/^\//, '') !== expected.database) {
     throw new Error('JPV_PAYLOAD_MIGRATION_FAILED DATABASE_URL database does not match the production boundary')
   }
-  const schemas = parsed.searchParams.getAll('schema')
-  if (schemas.length !== 1 || schemas[0] !== expected.schema) {
+  const runtimeSchemas = runtimeDatabase.searchParams.getAll('schema')
+  if (runtimeSchemas.length !== 1 || runtimeSchemas[0] !== expected.schema) {
     throw new Error('JPV_PAYLOAD_MIGRATION_FAILED DATABASE_URL schema does not match the production boundary')
   }
 
-  return { databaseUrl, schema: expected.schema }
+  let systemDatabase
+  try {
+    systemDatabase = new URL(systemDatabaseUrl)
+  } catch {
+    throw new Error('JPV_PAYLOAD_MIGRATION_FAILED SYSTEM_DATABASE_URL is not a valid URL')
+  }
+  if (systemDatabase.protocol !== 'postgresql:' && systemDatabase.protocol !== 'postgres:') {
+    throw new Error('JPV_PAYLOAD_MIGRATION_FAILED SYSTEM_DATABASE_URL protocol is invalid')
+  }
+  if (systemDatabase.hostname !== expected.host || (systemDatabase.port || '5432') !== expected.port) {
+    throw new Error('JPV_PAYLOAD_MIGRATION_FAILED SYSTEM_DATABASE_URL host or port does not match the production boundary')
+  }
+  if (systemDatabase.pathname.replace(/^\//, '') !== expected.database) {
+    throw new Error('JPV_PAYLOAD_MIGRATION_FAILED SYSTEM_DATABASE_URL database does not match the production boundary')
+  }
+  const systemSchemas = systemDatabase.searchParams.getAll('schema')
+  if (systemSchemas.length !== 1 || systemSchemas[0] !== 'public') {
+    throw new Error('JPV_PAYLOAD_MIGRATION_FAILED SYSTEM_DATABASE_URL schema must be public')
+  }
+
+  return { databaseUrl: systemDatabaseUrl, schema: expected.schema }
 }
 
 async function tableExists(client, schema, table) {
