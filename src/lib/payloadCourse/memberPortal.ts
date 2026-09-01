@@ -19,6 +19,8 @@ import {
   type MemberMediaAsset,
 } from '@/lib/payloadContent/memberMedia'
 import { relationshipId } from '@/lib/domain/relationships'
+import { decodeHtmlEntities, isHiddenLegacyWelcomeLesson } from '@/lib/payloadCourse/curriculum'
+import { getPayloadMigrationSchemaSqlPrefix } from '@/lib/payloadMigrationSchema'
 
 export type LessonLockState = 'available' | 'locked' | 'coming_soon'
 
@@ -39,6 +41,17 @@ export type MemberPortalModule = {
   title: string
   description: string | null
   lessons: MemberPortalLesson[]
+}
+
+export type MemberPortalLessonNavigation = {
+  id: string
+  title: string
+  lessons: Array<{
+    id: string
+    title: string
+    slug: string | null
+    completed: boolean
+  }>
 }
 
 export type MemberPortalCourse = {
@@ -111,6 +124,7 @@ export type MemberPortalLessonDetail = {
     title: string
     slug: string | null
   } | null
+  courseNavigation: MemberPortalLessonNavigation[]
 }
 
 export type MemberAccountOverview = {
@@ -156,7 +170,7 @@ function asRecord(value: unknown): Record<string, unknown> | null {
 }
 
 function asString(value: unknown): string | null {
-  if (typeof value === 'string' && value.trim()) return value
+  if (typeof value === 'string' && value.trim()) return decodeHtmlEntities(value.trim())
   if (typeof value === 'number') return String(value)
   return null
 }
@@ -303,7 +317,8 @@ async function getCompletedLessonIds(
 async function getAllowedCourseModules(
   payload: PayloadCourseAccessAPI,
   courseId: PayloadId,
-  completedLessonIds: Set<string>
+  completedLessonIds: Set<string>,
+  courseSlug?: string | null,
 ): Promise<MemberPortalModule[]> {
   const modules = await findAll(payload, 'payload_course_modules', {
     where: {
@@ -327,17 +342,25 @@ async function getAllowedCourseModules(
       })
 
       const lessonProjections = await Promise.all(
-        lessons.sort(bySortOrder).map(async (lesson) => ({
-          id: String(lesson.id),
-          title: asString(lesson.title) ?? 'Untitled lesson',
-          slug: asString(lesson.slug),
-          summary: asString(lesson.summary),
-          coverImage: await resolveMemberMediaAsset(payload, lesson.coverImage),
-          estimatedDuration: asString(lesson.estimatedDuration),
-          previewLesson: asBoolean(lesson.previewLesson),
-          lockState: asLockState(lesson.lockState),
-          completed: completedLessonIds.has(String(lesson.id)),
-        }))
+        lessons
+          .sort(bySortOrder)
+          .filter((lesson) => !isHiddenLegacyWelcomeLesson({
+            courseSlug,
+            moduleTitle: asString(module.title),
+            lessonSlug: asString(lesson.slug),
+            lessonTitle: asString(lesson.title),
+          }))
+          .map(async (lesson) => ({
+            id: String(lesson.id),
+            title: asString(lesson.title) ?? 'Untitled lesson',
+            slug: asString(lesson.slug),
+            summary: asString(lesson.summary),
+            coverImage: await resolveMemberMediaAsset(payload, lesson.coverImage),
+            estimatedDuration: asString(lesson.estimatedDuration),
+            previewLesson: asBoolean(lesson.previewLesson),
+            lockState: asLockState(lesson.lockState),
+            completed: completedLessonIds.has(String(lesson.id)),
+          }))
       )
 
       return {
@@ -352,7 +375,8 @@ async function getAllowedCourseModules(
 
 async function getCourseSequence(
   payload: PayloadCourseAccessAPI,
-  courseId: PayloadId
+  courseId: PayloadId,
+  courseSlug?: string | null,
 ): Promise<Array<{ module: PayloadDocument; lesson: PayloadDocument }>> {
   const modules = await findAll(payload, 'payload_course_modules', {
     where: {
@@ -376,8 +400,45 @@ async function getCourseSequence(
   )
 
   return moduleWithLessons.flatMap(({ module, lessons }) =>
-    lessons.sort(bySortOrder).map((lesson) => ({ module, lesson }))
+    lessons
+      .sort(bySortOrder)
+      .filter((lesson) => !isHiddenLegacyWelcomeLesson({
+        courseSlug,
+        moduleTitle: asString(module.title),
+        lessonSlug: asString(lesson.slug),
+        lessonTitle: asString(lesson.title),
+      }))
+      .map((lesson) => ({ module, lesson }))
   )
+}
+
+function buildLessonNavigation(
+  sequence: Array<{ module: PayloadDocument; lesson: PayloadDocument }>,
+  completedLessonIds: Set<string>,
+): MemberPortalLessonNavigation[] {
+  const modules: MemberPortalLessonNavigation[] = []
+
+  for (const entry of sequence) {
+    const moduleId = String(entry.module.id)
+    let module = modules.find((item) => item.id === moduleId)
+    if (!module) {
+      module = {
+        id: moduleId,
+        title: asString(entry.module.title) ?? 'Untitled module',
+        lessons: [],
+      }
+      modules.push(module)
+    }
+
+    module.lessons.push({
+      id: String(entry.lesson.id),
+      title: asString(entry.lesson.title) ?? 'Untitled lesson',
+      slug: asString(entry.lesson.slug),
+      completed: completedLessonIds.has(String(entry.lesson.id)),
+    })
+  }
+
+  return modules
 }
 
 async function buildCourseProjection(
@@ -465,7 +526,7 @@ export async function getMemberCourseDashboard(
       })
       const allowed = access.decision.allowed
       const modules = allowed
-        ? await getAllowedCourseModules(payload, course.id, completedLessonIds)
+        ? await getAllowedCourseModules(payload, course.id, completedLessonIds, asString(course.slug))
         : []
       return buildCourseProjection(payload, {
         course,
@@ -507,7 +568,7 @@ export async function getMemberCourseOverview(
   ])
   const allowed = access.decision.allowed
   const modules = allowed
-    ? await getAllowedCourseModules(payload, course.id, completedLessonIds)
+    ? await getAllowedCourseModules(payload, course.id, completedLessonIds, asString(course.slug))
     : []
 
   return buildCourseProjection(payload, {
@@ -545,13 +606,21 @@ export async function getMemberLessonDetail(
 
   if (!module || !course) return null
 
+  if (isHiddenLegacyWelcomeLesson({
+    courseSlug: asString(course.slug),
+    moduleTitle: asString(module.title),
+    lessonSlug: asString(lesson.slug),
+    lessonTitle: asString(lesson.title),
+  })) return null
+
   const [completedLessonIds, sequence] = await Promise.all([
     getCompletedLessonIds(payload, normalizedMemberId),
-    getCourseSequence(payload, course.id),
+    getCourseSequence(payload, course.id, courseSlug),
   ])
   const index = sequence.findIndex((entry) => String(entry.lesson.id) === String(lesson.id))
   const previous = index > 0 ? sequence[index - 1] : null
   const next = index >= 0 ? sequence[index + 1] ?? null : null
+  const courseNavigation = buildLessonNavigation(sequence, completedLessonIds)
   const access = await evaluatePayloadLessonAccess(payload, {
     memberId: normalizedMemberId,
     lessonId: lesson.id,
@@ -625,6 +694,60 @@ export async function getMemberLessonDetail(
           slug: asString(next.lesson.slug),
         }
       : null,
+    courseNavigation,
+  }
+}
+
+function numericPayloadId(value: PayloadId): number | null {
+  const normalized = String(value)
+  if (!/^\d+$/.test(normalized)) return null
+  const parsed = Number(normalized)
+  return Number.isSafeInteger(parsed) ? parsed : null
+}
+
+function lessonProgressDocumentFromRow(row: Record<string, unknown>): PayloadDocument {
+  return {
+    id: row.id as PayloadId,
+    displayName: row.display_name,
+    member: row.member_id as PayloadId,
+    lesson: row.lesson_id as PayloadId,
+    status: row.status,
+    startedAt: row.started_at,
+    completedAt: row.completed_at,
+    percentComplete: row.percent_complete,
+    lastPositionSeconds: row.last_position_seconds,
+    metadata: row.metadata,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  }
+}
+
+async function markMemberLessonCompleteWithPool(
+  payload: PayloadCourseAccessAPI,
+  memberId: PayloadId,
+  lessonId: PayloadId,
+  lessonTitle: string,
+  completedAt: string,
+): Promise<PayloadDocument | null> {
+  const pool = payload.db?.pool
+  const member = numericPayloadId(memberId)
+  const lesson = numericPayloadId(lessonId)
+  if (!pool || member === null || lesson === null) return null
+
+  const schema = getPayloadMigrationSchemaSqlPrefix()
+  try {
+    const result = await pool.query({
+      text: `INSERT INTO ${schema}."payload_lesson_progress" AS progress ("display_name", "member_id", "lesson_id", "status", "percent_complete", "completed_at", "started_at") VALUES ($1, $2, $3, 'completed', 100, $4, $4) ON CONFLICT ("member_id", "lesson_id") DO UPDATE SET "display_name" = EXCLUDED."display_name", "status" = EXCLUDED."status", "percent_complete" = EXCLUDED."percent_complete", "completed_at" = EXCLUDED."completed_at", "started_at" = COALESCE(progress."started_at", EXCLUDED."started_at"), "updated_at" = now() RETURNING "id", "display_name", "member_id", "lesson_id", "status", "started_at", "completed_at", "percent_complete", "last_position_seconds", "metadata", "created_at", "updated_at"`,
+      values: [`${String(memberId)}:${lessonTitle}`, member, lesson, completedAt],
+      statement_timeout: 3000,
+    })
+    const row = result.rows[0]
+    return row ? lessonProgressDocumentFromRow(row) : null
+  } catch (error) {
+    console.error('JPV_LESSON_PROGRESS_SQL_FALLBACK_UNAVAILABLE', {
+      error: error instanceof Error ? error.message : String(error),
+    })
+    return null
   }
 }
 
@@ -637,6 +760,19 @@ export async function markMemberLessonComplete(
   const normalizedMemberId = String(memberId)
   const normalizedLessonId = String(lessonId)
   const completedAt = new Date().toISOString()
+
+  // Production has legacy Payload rows whose relationship adapter rejects
+  // valid numeric member/lesson IDs during this write. Use the existing
+  // schema-qualified pool only when both IDs are safe integers; the Payload
+  // adapter remains the fallback for tests and non-numeric installations.
+  const persistedWithPool = await markMemberLessonCompleteWithPool(
+    payload,
+    memberId,
+    lessonId,
+    lessonTitle,
+    completedAt,
+  )
+  if (persistedWithPool) return persistedWithPool
   const progressWhere = {
     and: [
       { member: { equals: normalizedMemberId } },

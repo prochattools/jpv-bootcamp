@@ -17,6 +17,7 @@ import {
   type MemberMediaAsset,
 } from '@/lib/payloadContent/memberMedia'
 import { relationshipId } from '@/lib/domain/relationships'
+import { decodeHtmlEntities, isHiddenLegacyWelcomeLesson } from '@/lib/payloadCourse/curriculum'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -48,6 +49,17 @@ export type AdminPortalModule = {
   sortOrder: number
   publishedPreview: boolean
   lessons: AdminPortalLesson[]
+}
+
+export type AdminPortalLessonNavigation = {
+  id: string
+  title: string
+  lessons: Array<{
+    id: string
+    title: string
+    slug: string | null
+    completed: boolean
+  }>
 }
 
 export type AdminPortalCourse = {
@@ -88,6 +100,7 @@ export type AdminPortalLessonDetail = {
   }
   previousLesson: { title: string; slug: string | null } | null
   nextLesson: { title: string; slug: string | null } | null
+  courseNavigation: AdminPortalLessonNavigation[]
 }
 
 // ---------------------------------------------------------------------------
@@ -95,7 +108,7 @@ export type AdminPortalLessonDetail = {
 // ---------------------------------------------------------------------------
 
 function asString(value: unknown): string | null {
-  if (typeof value === 'string' && value.trim()) return value
+  if (typeof value === 'string' && value.trim()) return decodeHtmlEntities(value.trim())
   if (typeof value === 'number') return String(value)
   return null
 }
@@ -189,7 +202,7 @@ export async function getAdminCourseDashboard(
 
   return Promise.all(
     courses.sort(bySortOrder).map(async (course) => {
-      const modules = await getAdminCourseModules(payload, course.id)
+      const modules = await getAdminCourseModules(payload, course.id, asString(course.slug))
       const lessonCount = modules.reduce((n, m) => n + m.lessons.length, 0)
       const coverImage = await resolveMemberMediaAsset(payload, course.coverImage)
 
@@ -220,7 +233,7 @@ export async function getAdminCourseOverview(
   const course = await findOne(payload, 'payload_courses', { slug: { equals: courseSlug } })
   if (!course) return null
 
-  const modules = await getAdminCourseModules(payload, course.id)
+  const modules = await getAdminCourseModules(payload, course.id, asString(course.slug))
   const lessonCount = modules.reduce((n, m) => n + m.lessons.length, 0)
   const coverImage = await resolveMemberMediaAsset(payload, course.coverImage)
 
@@ -244,7 +257,8 @@ export async function getAdminCourseOverview(
 
 async function getAdminCourseModules(
   payload: PayloadCourseAccessAPI,
-  courseId: unknown
+  courseId: unknown,
+  courseSlug?: string | null,
 ): Promise<AdminPortalModule[]> {
   const modules = await findAll(payload, 'payload_course_modules', {
     where: { course: { equals: String(courseId) } },
@@ -259,21 +273,29 @@ async function getAdminCourseModules(
       })
 
       const lessonProjections: AdminPortalLesson[] = await Promise.all(
-        lessons.sort(bySortOrder).map(async (lesson) => ({
-          id: String(lesson.id),
-          title: asString(lesson.title) ?? 'Untitled lesson',
-          slug: asString(lesson.slug),
-          summary: asString(lesson.summary),
-          coverImage: await resolveMemberMediaAsset(payload, lesson.coverImage),
-          estimatedDuration: asString(lesson.estimatedDuration),
-          previewLesson: asBoolean(lesson.previewLesson),
-          lockState: asLockState(lesson.lockState),
-          sortOrder: typeof lesson.sortOrder === 'number' ? lesson.sortOrder : 0,
-          bunnyVideoId: relationshipId(lesson.bunnyVideo),
-          downloadIds: extractIdArray(lesson.downloads),
-          contentPlainText: extractPlainText(lesson.content),
-          coverImageId: relationshipId(lesson.coverImage),
-        }))
+        lessons
+          .sort(bySortOrder)
+          .filter((lesson) => !isHiddenLegacyWelcomeLesson({
+            courseSlug,
+            moduleTitle: asString(module.title),
+            lessonSlug: asString(lesson.slug),
+            lessonTitle: asString(lesson.title),
+          }))
+          .map(async (lesson) => ({
+            id: String(lesson.id),
+            title: asString(lesson.title) ?? 'Untitled lesson',
+            slug: asString(lesson.slug),
+            summary: asString(lesson.summary),
+            coverImage: await resolveMemberMediaAsset(payload, lesson.coverImage),
+            estimatedDuration: asString(lesson.estimatedDuration),
+            previewLesson: asBoolean(lesson.previewLesson),
+            lockState: asLockState(lesson.lockState),
+            sortOrder: typeof lesson.sortOrder === 'number' ? lesson.sortOrder : 0,
+            bunnyVideoId: relationshipId(lesson.bunnyVideo),
+            downloadIds: extractIdArray(lesson.downloads),
+            contentPlainText: extractPlainText(lesson.content),
+            coverImageId: relationshipId(lesson.coverImage),
+          }))
       )
 
       return {
@@ -309,10 +331,18 @@ export async function getAdminLessonDetail(
 
   if (!module || !course) return null
 
-  const sequence = await getAdminCourseSequence(payload, course.id)
+  if (isHiddenLegacyWelcomeLesson({
+    courseSlug: asString(course.slug),
+    moduleTitle: asString(module.title),
+    lessonSlug: asString(lesson.slug),
+    lessonTitle: asString(lesson.title),
+  })) return null
+
+  const sequence = await getAdminCourseSequence(payload, course.id, asString(course.slug))
   const index = sequence.findIndex((e) => String(e.lesson.id) === String(lesson.id))
   const previous = index > 0 ? sequence[index - 1] : null
   const next = index >= 0 ? sequence[index + 1] ?? null : null
+  const courseNavigation = buildAdminLessonNavigation(sequence)
 
   const [resources, coverImage, managedVideo] = await Promise.all([
     listPublishedLessonResources(payload, lesson.id),
@@ -354,12 +384,42 @@ export async function getAdminLessonDetail(
     nextLesson: next
       ? { title: asString(next.lesson.title) ?? 'Next lesson', slug: asString(next.lesson.slug) }
       : null,
+    courseNavigation,
   }
+}
+
+function buildAdminLessonNavigation(
+  sequence: Array<{ module: PayloadDocument; lesson: PayloadDocument }>,
+): AdminPortalLessonNavigation[] {
+  const modules: AdminPortalLessonNavigation[] = []
+
+  for (const entry of sequence) {
+    const moduleId = String(entry.module.id)
+    let module = modules.find((item) => item.id === moduleId)
+    if (!module) {
+      module = {
+        id: moduleId,
+        title: asString(entry.module.title) ?? 'Untitled module',
+        lessons: [],
+      }
+      modules.push(module)
+    }
+
+    module.lessons.push({
+      id: String(entry.lesson.id),
+      title: asString(entry.lesson.title) ?? 'Untitled lesson',
+      slug: asString(entry.lesson.slug),
+      completed: false,
+    })
+  }
+
+  return modules
 }
 
 async function getAdminCourseSequence(
   payload: PayloadCourseAccessAPI,
-  courseId: unknown
+  courseId: unknown,
+  courseSlug?: string | null,
 ): Promise<Array<{ module: PayloadDocument; lesson: PayloadDocument }>> {
   const modules = await findAll(payload, 'payload_course_modules', {
     where: { course: { equals: String(courseId) } },
@@ -372,7 +432,15 @@ async function getAdminCourseSequence(
         where: { module: { equals: String(module.id) } },
         sort: 'sortOrder',
       })
-      return lessons.sort(bySortOrder).map((lesson) => ({ module, lesson }))
+      return lessons
+        .sort(bySortOrder)
+        .filter((lesson) => !isHiddenLegacyWelcomeLesson({
+          courseSlug,
+          moduleTitle: asString(module.title),
+          lessonSlug: asString(lesson.slug),
+          lessonTitle: asString(lesson.title),
+        }))
+        .map((lesson) => ({ module, lesson }))
     })
   )
 

@@ -19,6 +19,7 @@ import { LessonCommentOwnerActions } from '@/components/community/LessonCommentO
 import { LessonCommentComposer } from '@/components/community/LessonCommentComposer'
 import { AdminGate } from '@/components/portal/AdminGate'
 import { LegacyLessonRichText } from '@/components/portal/LegacyLessonRichText'
+import { LessonCourseNavigation } from '@/components/portal/LessonCourseNavigation'
 import { requirePortalAccess } from '@/lib/auth/requirePortalAccess'
 import { requirePortalMember } from '@/lib/auth/requirePortalMember'
 import type { PayloadCourseWriteAPI } from '@/lib/payloadCourse/accessService'
@@ -220,7 +221,8 @@ export default async function PortalLessonPage({ params, searchParams }: LessonP
     if (!detail) notFound()
 
     return (
-      <div className='mx-auto w-full max-w-4xl space-y-8'>
+      <div className='mx-auto grid w-full max-w-[90rem] gap-8 lg:grid-cols-[minmax(0,1fr)_22rem]'>
+        <main className='min-w-0 space-y-8'>
         <nav aria-label='Learning path' className='text-sm text-jpv-muted'>
           <ol className='flex min-h-11 flex-wrap items-center gap-x-2 gap-y-1'>
             <li>
@@ -364,28 +366,12 @@ export default async function PortalLessonPage({ params, searchParams }: LessonP
           </p>
         </section>
 
-        <section className='rounded-jpv-panel border border-jpv-border bg-jpv-canvas p-5 shadow-jpv-card sm:p-6'>
-          <nav aria-label='Lesson navigation' className='grid min-w-0 gap-2 sm:grid-cols-2'>
-            {detail.previousLesson?.slug ? (
-              <Link
-                className='inline-flex min-h-11 min-w-0 items-center truncate text-sm font-semibold text-jpv-brand-deep underline-offset-4 hover:text-jpv-ink hover:underline'
-                href={`/portal/courses/${courseSlug}/lessons/${detail.previousLesson.slug}`}
-              >
-                ← {detail.previousLesson.title}
-              </Link>
-            ) : (
-              <span />
-            )}
-            {detail.nextLesson?.slug ? (
-              <Link
-                className='inline-flex min-h-11 min-w-0 items-center justify-start truncate text-sm font-semibold text-jpv-brand-deep underline-offset-4 hover:text-jpv-ink hover:underline sm:justify-end'
-                href={`/portal/courses/${courseSlug}/lessons/${detail.nextLesson.slug}`}
-              >
-                {detail.nextLesson.title} →
-              </Link>
-            ) : null}
-          </nav>
-        </section>
+        </main>
+        <LessonCourseNavigation
+          courseSlug={courseSlug}
+          currentLessonSlug={lessonSlug}
+          modules={detail.courseNavigation}
+        />
       </div>
     )
   }
@@ -419,7 +405,8 @@ export default async function PortalLessonPage({ params, searchParams }: LessonP
   }
 
   return (
-    <div className='mx-auto w-full max-w-4xl space-y-8'>
+    <div className='mx-auto grid w-full max-w-[90rem] gap-8 lg:grid-cols-[minmax(0,1fr)_22rem]'>
+      <main className='min-w-0 space-y-8'>
       <nav aria-label='Learning path' className='text-sm text-jpv-muted'>
         <ol className='flex min-h-11 flex-wrap items-center gap-x-2 gap-y-1'>
           <li>
@@ -639,7 +626,7 @@ export default async function PortalLessonPage({ params, searchParams }: LessonP
             </details>
           </section>
 
-          <section aria-labelledby='lesson-progress-heading' className='sticky bottom-4 z-20 rounded-jpv-panel border border-jpv-border bg-jpv-canvas p-5 shadow-jpv-card sm:p-6'>
+          <section aria-labelledby='lesson-progress-heading' className='rounded-jpv-panel border border-jpv-border bg-jpv-canvas p-5 shadow-jpv-card sm:p-6'>
             <div className='flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between'>
               <div className='min-w-0'>
                 <h2 className='font-semibold text-jpv-ink' id='lesson-progress-heading'>Next step: lesson progress</h2>
@@ -661,30 +648,17 @@ export default async function PortalLessonPage({ params, searchParams }: LessonP
               ) : null}
             </div>
 
-            <nav aria-label='Lesson navigation' className='mt-4 grid min-w-0 gap-2 border-t border-jpv-border pt-4 sm:grid-cols-2'>
-              {detail.previousLesson?.slug ? (
-                <Link
-                  className='inline-flex min-h-11 min-w-0 items-center truncate text-sm font-semibold text-jpv-brand-deep underline-offset-4 hover:text-jpv-ink hover:underline'
-                  href={`/portal/courses/${courseSlug}/lessons/${detail.previousLesson.slug}`}
-                >
-                  ← {detail.previousLesson.title}
-                </Link>
-              ) : (
-                <span />
-              )}
-
-              {detail.nextLesson?.slug ? (
-                <Link
-                  className='inline-flex min-h-11 min-w-0 items-center justify-start truncate text-sm font-semibold text-jpv-brand-deep underline-offset-4 hover:text-jpv-ink hover:underline sm:justify-end'
-                  href={`/portal/courses/${courseSlug}/lessons/${detail.nextLesson.slug}`}
-                >
-                  {detail.nextLesson.title} →
-                </Link>
-              ) : null}
-            </nav>
           </section>
         </>
       )}
+      </main>
+      {detail.allowed ? (
+        <LessonCourseNavigation
+          courseSlug={courseSlug}
+          currentLessonSlug={lessonSlug}
+          modules={detail.courseNavigation}
+        />
+      ) : null}
     </div>
   )
 }
