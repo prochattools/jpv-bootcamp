@@ -80,12 +80,14 @@ function member(id: string, email: string, eligible = true): PayloadDocument {
 
 function buildPayload(): FakePayload {
   return new FakePayload({
-    payload_members: [member('m1', 'one@example.com'), member('m2', 'two@example.com'), member('m3', 'three@example.com', false), member('m4', 'four@example.com')],
+    payload_members: [member('m1', 'one@example.com'), member('m2', 'two@example.com'), member('m3', 'three@example.com', false), member('m4', 'four@example.com'), member('m5', 'admin@example.com', false)],
     payload_member_profiles: [{ id: 'p1', member: 'm1', displayName: 'One' }, { id: 'p2', member: 'm2', displayName: 'Two' }],
+    payload_users: [{ id: 'admin-1', email: 'admin@example.com', portalMember: 'm5' }],
     payload_member_groups: [
       { id: 'g1', status: 'active', members: ['m1', 'm2'] },
       { id: 'g2', status: 'active', members: ['m2', 'm4'] },
       { id: 'g3', status: 'archived', members: ['m1', 'm4'] },
+      { id: 'g4', status: 'active', members: ['m5'] },
     ],
     payload_room_access: [],
     payload_email_events: [],
@@ -101,10 +103,27 @@ async function run() {
   assert.deepEqual(groupAudience.find((item) => item.memberId === 'm2')?.sources, ['member_group'])
 
   const allAudience = await resolveRoomAudience(payload, { id: 'room-2', audience: 'all' })
-  assert.deepEqual(allAudience.map((item) => item.memberId), ['m1', 'm2', 'm4'])
+  assert.deepEqual(allAudience.map((item) => item.memberId), ['m1', 'm2', 'm4', 'm5'])
+
+  const administratorGroupAudience = await resolveRoomAudience(payload, { id: 'room-admin-group', audience: 'groups', targetGroupIds: ['g4'] })
+  assert.deepEqual(administratorGroupAudience.map((item) => item.memberId), ['m5'])
+  assert.equal(administratorGroupAudience[0]?.email, 'admin@example.com')
 
   const selectedAudience = await resolveRoomAudience(payload, { id: 'room-3', audience: 'selected', targetMemberIds: ['m1', 'm1', 'm3'] })
   assert.deepEqual(selectedAudience.map((item) => item.memberId), ['m1'])
+
+  const selectedAdministratorAudience = await resolveRoomAudience(payload, { id: 'room-admin-selected', audience: 'selected', targetMemberIds: ['m5'] })
+  assert.deepEqual(selectedAdministratorAudience.map((item) => item.memberId), ['m5'])
+
+  const administratorCallbacks: string[] = []
+  const administratorRoom = { id: 'room-admin-sync', audience: 'groups', targetGroupIds: ['g4'], status: 'scheduled' }
+  const administratorSync = await synchronizeRoomAccess(payload, administratorRoom, {
+    onAdded: async (recipient) => { administratorCallbacks.push(`${recipient.memberId}:${recipient.email}`) },
+    now: new Date('2026-08-30T09:00:00.000Z'),
+  })
+  assert.deepEqual(administratorSync.added, ['m5'])
+  assert.deepEqual(administratorCallbacks, ['m5:admin@example.com'])
+  assert.equal(await isRoomMemberEntitled(payload, administratorRoom, 'm5'), true)
 
   const room = { id: 'room-4', audience: 'selected', targetMemberIds: ['m1', 'm2'], status: 'scheduled' }
   const callbacks: string[] = []

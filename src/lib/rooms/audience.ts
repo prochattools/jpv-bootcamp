@@ -1,5 +1,6 @@
 import type { PayloadCourseAccessAPI, PayloadDocument } from '@/lib/payloadCourse/accessService'
 import { resolveAdministratorMemberIdentity } from '@/lib/auth/adminMemberIdentity'
+import { normalizeEmail } from '@/lib/normalize-email'
 import { liveSessionRelationshipId } from '@/lib/liveSessions/sessionLifecycle'
 
 export type RoomAudience = 'all' | 'selected' | 'groups' | 'enrolled'
@@ -42,8 +43,60 @@ export function mergeAudienceSources(
   return result
 }
 
-function isEligibleMember(member: PayloadDocument): boolean {
-  return member.accountStatus === 'active' && Boolean(member.emailVerifiedAt) && Boolean(text(member.email))
+type AdministratorIdentityIndex = {
+  memberIds: Set<string>
+  emails: Set<string>
+}
+
+async function loadAdministratorIdentityIndex(
+  payload: PayloadCourseAccessAPI,
+): Promise<AdministratorIdentityIndex> {
+  const [administrators, administratorMembers] = await Promise.all([
+    payload.find({
+      collection: 'payload_users',
+      limit: 5000,
+      depth: 0,
+      overrideAccess: true,
+    }),
+    payload.find({
+      collection: 'payload_members',
+      where: { isAdministrator: { equals: true } },
+      limit: 5000,
+      depth: 0,
+      overrideAccess: true,
+    }),
+  ])
+
+  const memberIds = new Set(
+    administratorMembers.docs.map((member) => String(member.id)),
+  )
+  const emails = new Set<string>()
+  for (const administrator of administrators.docs as PayloadDocument[]) {
+    const memberId = liveSessionRelationshipId(administrator.portalMember)
+    if (memberId) memberIds.add(memberId)
+    const email = normalizeEmail(typeof administrator.email === 'string' ? administrator.email : null)
+    if (email) emails.add(email)
+  }
+  return { memberIds, emails }
+}
+
+function isAdministratorMember(
+  member: PayloadDocument,
+  administrators: AdministratorIdentityIndex,
+): boolean {
+  const email = normalizeEmail(typeof member.email === 'string' ? member.email : null)
+  return member.isAdministrator === true
+    || administrators.memberIds.has(String(member.id))
+    || Boolean(email && administrators.emails.has(email))
+}
+
+function isEligibleMember(
+  member: PayloadDocument,
+  administrators: AdministratorIdentityIndex,
+): boolean {
+  if (!text(member.email) || member.accountStatus === 'deleted') return false
+  if (isAdministratorMember(member, administrators)) return true
+  return member.accountStatus === 'active' && Boolean(member.emailVerifiedAt)
 }
 
 async function loadMember(
@@ -85,11 +138,12 @@ export async function resolveRoomCreatorMemberId(
 async function buildRecipients(
   payload: PayloadCourseAccessAPI,
   memberSources: Map<string, RoomGrantSource[]>,
+  administrators: AdministratorIdentityIndex,
 ): Promise<RoomAudienceMember[]> {
   const recipients: RoomAudienceMember[] = []
   for (const [memberId, sources] of memberSources) {
     const member = await loadMember(payload, memberId)
-    if (!member || !isEligibleMember(member)) continue
+    if (!member || !isEligibleMember(member, administrators)) continue
     const profiles = await payload.find({
       collection: 'payload_member_profiles',
       where: { member: { equals: memberId } },
@@ -168,6 +222,7 @@ async function includeRoomCreator(
   payload: PayloadCourseAccessAPI,
   room: PayloadDocument,
   recipients: RoomAudienceMember[],
+  administrators: AdministratorIdentityIndex,
 ): Promise<RoomAudienceMember[]> {
   const creatorMemberId = await resolveRoomCreatorMemberId(payload, room)
   if (!creatorMemberId || recipients.some((member) => member.memberId === creatorMemberId)) {
@@ -179,6 +234,7 @@ async function includeRoomCreator(
   const creator = await buildRecipients(
     payload,
     mergeAudienceSources([{ memberId: creatorMemberId, source: 'selected' }]),
+    administrators,
   )
   return [...recipients, ...creator]
 }
@@ -188,6 +244,7 @@ export async function resolveRoomAudience(
   payload: PayloadCourseAccessAPI,
   room: PayloadDocument,
 ): Promise<RoomAudienceMember[]> {
+  const administrators = await loadAdministratorIdentityIndex(payload)
   const audience = normalizeRoomAudience(room.audience)
   let recipients: RoomAudienceMember[]
   if (audience === 'all') {
@@ -198,22 +255,33 @@ export async function resolveRoomAudience(
       depth: 0,
       overrideAccess: true,
     })
+    const administratorEmailMembers = administrators.emails.size > 0
+      ? await payload.find({
+          collection: 'payload_members',
+          where: { email: { in: Array.from(administrators.emails) } },
+          limit: 5000,
+          depth: 0,
+          overrideAccess: true,
+        })
+      : { docs: [] as PayloadDocument[] }
     recipients = await buildRecipients(payload, mergeAudienceSources(
-      members.docs.map((member) => ({ memberId: String(member.id), source: 'all_active' as const })),
-    ))
+      [...members.docs, ...administratorEmailMembers.docs]
+        .map((member) => ({ memberId: String(member.id), source: 'all_active' as const }))
+        .concat(Array.from(administrators.memberIds).map((memberId) => ({ memberId, source: 'all_active' as const }))),
+    ), administrators)
   } else if (audience === 'selected') {
     recipients = await buildRecipients(payload, mergeAudienceSources(
       uniqueRelationshipIds(room.targetMemberIds).map((memberId) => ({ memberId, source: 'selected' as const })),
-    ))
+    ), administrators)
   } else if (audience === 'groups') {
     recipients = await buildRecipients(payload, mergeAudienceSources(
       await groupMemberSources(payload, uniqueRelationshipIds(room.targetGroupIds)),
-    ))
+    ), administrators)
   } else {
-    recipients = await buildRecipients(payload, mergeAudienceSources(await enrolledMemberSources(payload, room)))
+    recipients = await buildRecipients(payload, mergeAudienceSources(await enrolledMemberSources(payload, room)), administrators)
   }
 
-  return includeRoomCreator(payload, room, recipients)
+  return includeRoomCreator(payload, room, recipients, administrators)
 }
 
 export function roomAudienceMemberIds(members: RoomAudienceMember[]): string[] {
